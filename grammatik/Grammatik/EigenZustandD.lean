@@ -777,10 +777,10 @@ theorem retGrund_slots_fest (O : Orakel D) (passes : Nat)
 
 /-- `leave` keeps every table slot (control step, memory-free). -/
 theorem leave_slots_fest (O : Orakel D) (passes : Nat)
-    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
-    {h : true = true}
-    (s : Stmt D V true Γ Λ Λ)
-    (hs : s = Stmt.leave (V := V) h)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {h : l = true}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.leave (V := V) (l := l) h)
     (sg : World D) (rho : Env D Γ) (sg' : World D)
     (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
     (t : D.Tab) (k : Int) (f : D.Feld t) :
@@ -792,10 +792,10 @@ theorem leave_slots_fest (O : Orakel D) (passes : Nat)
 
 /-- `next` keeps every table slot (control step, memory-free). -/
 theorem next_slots_fest (O : Orakel D) (passes : Nat)
-    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
-    {h : true = true}
-    (s : Stmt D V true Γ Λ Λ)
-    (hs : s = Stmt.next (V := V) h)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {h : l = true}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.next (V := V) (l := l) h)
     (sg : World D) (rho : Env D Γ) (sg' : World D)
     (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
     (t : D.Tab) (k : Int) (f : D.Feld t) :
@@ -1133,5 +1133,126 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
             rw [hrfl, hAns, Ausgang.welt]
           rw [hcomp, Ausgang.welt] at hstep
           simp at hstep
+
+/-! ## 9. The leaf dispatch: every firing leaf either records `t`, keeps it,
+    or is a declared oracle write to `t`.
+
+  `blattSlots_dispatch`: for a fired leaf `s` with recorded list `neu`, one
+  of three holds: some recorded event carries `Sum.inl t` (the four writing
+  forms, §2); the outcome keeps every slot of `t` (the §4/§7/§8 lemmas);
+  or `s` is an `axiomCall a` whose declared writes cover `t`
+  (`D.aschreibt a t = true`) -- the open remainder (see CUTS): `GutO` keeps
+  the oracle spur unchanged, so no event records the write, yet slots may
+  change. Compound statements cannot fire (`istBlatt = false` contradicts
+  `hleaf`). Every premise is used: `hleaf` rules compounds out,
+  `hstep`/`hneu` feed the arm lemmas, `hO` feeds the oracle arm. -/
+
+theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
+    (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
+    (σ σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur)
+    (t : D.Tab) :
+    (∃ ev ∈ neu, ev.traeger = some (Sum.inl t)) ∨
+      (∀ k f, σ'.slots t k f = σ.slots t k f) ∨
+      (∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+        (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (execStmt O passes keinRuf
+          (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+          some σ' ∧
+          D.aschreibt a t = true) := by
+  cases s with
+  | assignSlot t2 f2 i e hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        exact Or.inl ⟨_, assignSlot_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
+      · exact Or.inr (Or.inl fun k f =>
+          assignSlot_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | assignDurch p t2 ht2 f2 i e hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        exact Or.inl ⟨_, assignDurch_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
+      · exact Or.inr (Or.inl fun k f =>
+          assignDurch_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | assignGlob g e hw hL =>
+      exact Or.inr (Or.inl fun k f =>
+        assignGlob_slots_fest O passes σ ρ σ' hstep t k f)
+  | schreibBytes t2 f2 hf2 n i hlo hhi e hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        by_cases hn : 0 < n
+        · obtain ⟨ev, hmem, htr⟩ :=
+            schreibBytes_neu (Λ' := Λ) O passes hn σ ρ σ' neu hstep hneu
+          exact Or.inl ⟨ev, hmem, htr⟩
+        · have hn0 : n = 0 := by omega
+          subst hn0
+          exact Or.inr (Or.inl fun k f =>
+            schreibBytes_null_fest (Λ' := Λ) O passes σ ρ σ' hstep k f)
+      · exact Or.inr (Or.inl fun k f =>
+          schreibBytes_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | assignVar x e =>
+      exact Or.inr (Or.inl fun k f =>
+        assignVar_slots_fest O passes σ ρ σ' hstep t k f)
+  | uebergang t2 f2 hτ i von nach hn he hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        exact Or.inl ⟨_, uebergang_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
+      · exact Or.inr (Or.inl fun k f =>
+          uebergang_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | ite c tb eb => simp [Stmt.istBlatt] at hleaf
+  | onOption o p a => simp [Stmt.istBlatt] at hleaf
+  | onTag v arms => simp [Stmt.istBlatt] at hleaf
+  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | call fn args hp hr =>
+      exact Or.inr (Or.inl fun k f =>
+        call_slots_fest O passes (Stmt.call fn args hp hr) rfl σ ρ σ' hstep t k f)
+  | callInd p args hp hr =>
+      exact Or.inr (Or.inl fun k f =>
+        callInd_slots_fest O passes (Stmt.callInd p args hp hr) rfl σ ρ σ' hstep t k f)
+  | locks L hr body => simp [Stmt.istBlatt] at hleaf
+  | breaking ii body => simp [Stmt.istBlatt] at hleaf
+  | traverse tt inv body => simp [Stmt.istBlatt] at hleaf
+  | retry n bis body ueb => simp [Stmt.istBlatt] at hleaf
+  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+  | axiomCall a args h hw hg =>
+      by_cases ht : D.aschreibt a t = true
+      · exact Or.inr (Or.inr ⟨a, args, h, hw, hg, hstep, ht⟩)
+      · have htF : D.aschreibt a t = false := by
+          cases hT : D.aschreibt a t with
+          | true => exact absurd hT (by simp [ht])
+          | false => rfl
+        exact Or.inr (Or.inl fun k f =>
+          axiomCall_nichtschreibt_fest (Λ' := Λ) O hO passes (Stmt.axiomCall (V := V) (l := l) a args h hw hg) rfl t htF σ ρ σ' hstep k f)
+  | regSchreib r hk e =>
+      exact Or.inr (Or.inl fun k f =>
+        regSchreib_slots_fest O passes σ ρ σ' hstep t k f)
+  | transition r hk m hm hl maske bits =>
+      exact Or.inr (Or.inl fun k f =>
+        transition_slots_fest O passes (Stmt.transition r hk m hm hl maske bits) rfl σ ρ σ' hstep t k f)
+  | publish g e payload hp hw hL =>
+      exact Or.inr (Or.inl fun k f =>
+        publish_slots_fest O passes σ ρ σ' hstep t k f)
+  | advances mm a h hs =>
+      exact Or.inr (Or.inl fun k f =>
+        advances_slots_fest (Λ' := ((Λ.erase (.marke mm a)) ++ [.marke mm (a + 1)])) O passes (Stmt.advances (V := V) (l := l) mm a h hs) rfl σ ρ σ' hstep t k f)
+  | retires mm s2 h a =>
+      exact Or.inr (Or.inl fun k f =>
+        retires_slots_fest (Λ' := (Λ.erase (.marke mm s2))) O passes (Stmt.retires (V := V) (l := l) mm s2 h a) rfl σ ρ σ' hstep t k f)
+  | ret e hΛ =>
+      exact Or.inr (Or.inl fun k f =>
+        ret_slots_fest O passes σ ρ σ' hstep t k f)
+  | retGrund r hΛ =>
+      exact Or.inr (Or.inl fun k f =>
+        retGrund_slots_fest O passes (Stmt.retGrund r hΛ) rfl σ ρ σ' hstep t k f)
+  | leave h =>
+      exact Or.inr (Or.inl fun k f =>
+        leave_slots_fest O passes (Stmt.leave h) rfl σ ρ σ' hstep t k f)
+  | next h =>
+      exact Or.inr (Or.inl fun k f =>
+        next_slots_fest O passes (Stmt.next h) rfl σ ρ σ' hstep t k f)
 
 end Gabbro.Grammatik.EZD
