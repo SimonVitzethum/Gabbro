@@ -64,7 +64,7 @@ theorem konstZert_mem {t : List Nat} {f : Nat → Nat → Bool}
 
 /-- The 64-entry square table: the witness the checker evaluates and
     certifies (`i * i` for `i` in `0 .. 64`). -/
-def quadrate64 : List Nat :=
+def squares64 : List Nat :=
   [0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256,
     289, 324, 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900,
     961, 1024, 1089, 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764,
@@ -73,8 +73,8 @@ def quadrate64 : List Nat :=
 
 /-- The square table satisfies its defining equation, entry by entry,
     closed by `decide` (encoding N). -/
-theorem quadrate64_zert :
-    konstZert quadrate64 (fun i v => v == i * i) = true := by
+theorem squares64_zert :
+    konstZert squares64 (fun i v => v == i * i) = true := by
   decide
 
 /-- Witness for `konstZert_mem`: all premises instantiated jointly at the
@@ -82,7 +82,7 @@ theorem quadrate64_zert :
     entry 63 (`3969 = 63 * 63`). -/
 theorem konstZert_mem_zeuge :
     (fun i v => v == i * i) 63 3969 = true :=
-  konstZert_mem quadrate64_zert (j := 63) (v := 3969) rfl
+  konstZert_mem squares64_zert (j := 63) (v := 3969) rfl
 
 end Gabbro.Grammatik.Konstanten
 
@@ -94,7 +94,7 @@ end Gabbro.Grammatik.Konstanten
      equals the evaluated table is trust base at the printer (`crates/
      gabbro-check/src/konstanten.rs`), exactly as booked for every
      certificate channel. The Rust test holds the printed literal against
-     `quadrate64` above, so a drift breaks the build on the Rust side.
+     `squares64` above, so a drift breaks the build on the Rust side.
    - No block fallback: at 64 entries the single `decide` is far below any
      cliff (the measurement closes 2048 the same way); larger tables
      re-measure before use.
@@ -104,5 +104,5 @@ end Gabbro.Grammatik.Konstanten
 #print axioms Gabbro.Grammatik.Konstanten.mem_zipIdx_aux
 #print axioms Gabbro.Grammatik.Konstanten.mem_zipIdx_of_getElem?
 #print axioms Gabbro.Grammatik.Konstanten.konstZert_mem
-#print axioms Gabbro.Grammatik.Konstanten.quadrate64_zert
+#print axioms Gabbro.Grammatik.Konstanten.squares64_zert
 #print axioms Gabbro.Grammatik.Konstanten.konstZert_mem_zeuge

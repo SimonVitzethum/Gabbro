@@ -1827,8 +1827,8 @@ pub fn emittiere_mit(
             // computes it for `table … count N` anyway -- a second evaluator
             // beside it would be the second register over the same fact, W7).
             // Anything the folder does not fold is `C001`, never guessed.
-            if let ExprArt::ArrayLit(elemente) = &k.wert.art {
-                match konst_tabelle(k, elemente, modul, baum) {
+            if let ExprArt::ArrayLit(elements) = &k.wert.art {
+                match const_table(k, elements, modul, baum) {
                     Some(zeile) => aus.push_str(&zeile),
                     None => weigere(
                         absagen,
@@ -3049,37 +3049,37 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// on a checked tree it equals the declared count (`K191` holds that), and
 /// on an unchecked one the literal is the honest number. `None` anywhere is
 /// `C001` at the caller, never a guess.
-fn konst_tabelle(
+fn const_table(
     k: &KonstDecl,
-    elemente: &[Expr],
-    modul: &str,
-    baum: &Programm,
+    elements: &[Expr],
+    module: &str,
+    tree: &Programm,
 ) -> Option<String> {
-    let TypExpr::Feld(feld) = &k.typ else {
+    let TypExpr::Feld(field) = &k.typ else {
         return None;
     };
-    let wort = ctyp_primitiv(&feld.element)?;
-    let umg = crate::umgebung::Umgebung::sammle(baum);
-    let mut werte = Vec::with_capacity(elemente.len());
-    for e in elemente {
-        werte.push(umg.konst_wert(modul, e)?);
+    let word = ctyp_primitiv(&field.element)?;
+    let env = crate::umgebung::Umgebung::sammle(tree);
+    let mut values = Vec::with_capacity(elements.len());
+    for e in elements {
+        values.push(env.konst_wert(module, e)?);
     }
-    let vorzeichenlos = wort.starts_with('u');
-    let mut literale = String::new();
-    for (i, w) in werte.iter().enumerate() {
+    let unsigned = word.starts_with('u');
+    let mut literals = String::new();
+    for (i, w) in values.iter().enumerate() {
         if i > 0 {
-            literale.push_str(", ");
+            literals.push_str(", ");
         }
-        if *w < 0 || !vorzeichenlos {
-            literale.push_str(&w.to_string());
+        if *w < 0 || !unsigned {
+            literals.push_str(&w.to_string());
         } else {
-            literale.push_str(&format!("{w}u"));
+            literals.push_str(&format!("{w}u"));
         }
     }
     Some(format!(
-        "\nstatic const {wort} {}[{}] __attribute__((unused)) = {{{literale}}};\n",
+        "\nstatic const {word} {}[{}] __attribute__((unused)) = {{{literals}}};\n",
         k.name.text,
-        elemente.len()
+        elements.len()
     ))
 }
 

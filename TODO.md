@@ -1322,7 +1322,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      163 EBNF-Regeln und 226 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      ~~163~~ 169 EBNF-Regeln (2026-09-12, lane 111: `constwert` und `arraylit` kamen dazu) und 226 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -4238,8 +4238,8 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 118 Sätze über 304 Codes, 53 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
-Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.)
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 124 Sätze über 319 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
+Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane 111: heute 124 Sätze über 319 Codes, 55 ohne — +3 Sätze mit fünf Codes, `consts.evaluable/table/callhull` über `K190`-`K194`; the E1 figures stood three sentences and ten codes behind the register already at the branch.)
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -5102,7 +5102,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 163 / 226) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 169 / 226) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

@@ -250,9 +250,16 @@ accdecl    = "accumulates" ident ":" typeexpr
    current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
-constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
+constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constwert ";" ;
 constexpr  = expr ;                    (* evaluable at translation time; no call of a function
                                           with effects, no place on `mut` *)
+constwert  = constexpr | arraylit ;
+(* CHANGED lane 111: a const-table literal. It stands ONLY as a `const`
+   initializer of array type (`const T : [u32; N] = […]`); the general
+   expression reader never reads `[`, so anywhere else it is `P011` by
+   grammar shape. The checker holds it element-wise (`K190`-`K194`); the
+   emitter writes one `static const` array. *)
+arraylit   = "[" [ expr { "," expr } [ "," ] ] "]" ;
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
 ```
@@ -264,6 +271,7 @@ world before the first body and has no run-time meaning of its own.
 |---|---|---|
 | `program`, `moduledecl`, `usedecl` | names are static; a module is a namespace, not a construct | `Deklaration` — one per translation unit |
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
+| `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
 | `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
@@ -557,6 +565,7 @@ placelist  = place { "," place } ;
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.altGlob hL`, `Expr.altSlot hL` |
 | `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
+| `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
 | `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
