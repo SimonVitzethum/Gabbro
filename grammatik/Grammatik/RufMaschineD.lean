@@ -27,6 +27,19 @@
     predicate ON generated runs, not a firing condition.
   - The `rueck` event carries the return world `s1` next to the entry world
     `s0`, so `EnsAmRueck` (which needs both) is stated per event.
+
+  REVIEWER NOTE (merge 2026-09-12, read before building on this file):
+  - Frames carry NO local environment. `blatt`, `ruf` and `rueck` each take a
+    free `ρ : Env D Γ`, so a step may run under ANY values of the locals:
+    the machine over-approximates the program. A contract theorem over its
+    runs cannot follow from the body's proof until the frame carries the
+    environment of its current context and `blatt` threads it (lane 28's
+    `rho : Env D ctx` field is the shape).
+  - `RufLogPasstD` is proved to imply return fidelity, but its preservation
+    along `RufErreichbarD` is NOT proved. The invariant as stated compares
+    whole frames including `rest`, which `blatt` changes; it must be taken
+    up to the residue (function, rho, s0) before it can be preserved.
+  - The CUTS note "`blatt` never advances the residue" is stale: it does.
 -/
 import Grammatik.Maschine
 import Grammatik.VertragOrtB
