@@ -709,4 +709,62 @@ theorem bswap64n_invol (x : Nat) (hx : x < 256 ^ 8) :
     exact bswap64n_nest b7 b6 b5 b4 b3 b2 b1 b0
   rw [hsplit, hswap, hfin]
 
+/-! ## `Zahl` wrappers: the PLAN-BITS.md section 3 signatures.
+
+    Width is `w + 1` (never `w - 1`), so `w = 0` gives width 1, not a
+    truncation. `clz` / `ctz` / `log2` take `Zahl 1 (2^(w+1) - 1)`: zero is
+    inexpressible, so the C lowering never reaches `__builtin_clz(0)`. -/
+
+/-- The `Nat` value inside a nonzero field element. -/
+def zahlNat (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) : Nat :=
+  x.n.toNat
+
+/-- The `Nat` value is positive and in range. -/
+theorem zahlNat_bounds (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
+    0 < zahlNat w x ∧ zahlNat w x < 2 ^ (w + 1) := by
+  have hlo := x.lo_le
+  have hhi := x.le_hi
+  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  simp only [zahlNat]
+  constructor
+  · have hpos : (0 : Int) < x.n := by omega
+    have := Int.toNat_of_nonneg (show (0 : Int) ≤ x.n by omega)
+    omega
+  · have hlt : x.n < ((2 ^ (w + 1) : Nat) : Int) := by omega
+    exact (Int.toNat_lt (show (0 : Int) ≤ x.n by omega)).mpr hlt
+
+/-- `Nat.log2` of a field element fits the index range. -/
+theorem log2n_le_of_bounds (w xn : Nat) (hx0 : 0 < xn)
+    (hxW : xn < 2 ^ (w + 1)) : Nat.log2 xn ≤ w := by
+  cases Decidable.em (Nat.log2 xn ≤ w) with
+  | inl h => exact h
+  | inr h =>
+    exfalso
+    have hne : xn ≠ 0 := Nat.ne_of_gt hx0
+    have hge : w + 1 ≤ Nat.log2 xn := by omega
+    have hmono : 2 ^ (w + 1) ≤ 2 ^ Nat.log2 xn :=
+      Nat.pow_le_pow_right (by decide) hge
+    have hspec := (Nat.log2_eq_iff hne).mp rfl
+    omega
+
+/-- `Zahl.clz`: leading zeros over width `w + 1`. -/
+def Zahl.clz (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
+    Zahl 0 (w : Int) :=
+  ⟨(clzn w (zahlNat w x) : Nat), by simp,
+    Int.ofNat_le.mpr (Nat.sub_le w (Nat.log2 (zahlNat w x)))⟩
+
+/-- `Zahl.ctz`: trailing zeros over width `w + 1`. -/
+def Zahl.ctz (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
+    Zahl 0 (w : Int) :=
+  ⟨(ctzn w (zahlNat w x) : Nat), by simp,
+    Int.ofNat_le.mpr
+      (ctzn_le (zahlNat_bounds w x).1 (zahlNat_bounds w x).2)⟩
+
+/-- `Zahl.log2_floor`: floor log2 over width `w + 1`. -/
+def Zahl.log2_floor (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
+    Zahl 0 (w : Int) :=
+  ⟨(Nat.log2 (zahlNat w x) : Nat), by simp,
+    Int.ofNat_le.mpr
+      (log2n_le_of_bounds w _ (zahlNat_bounds w x).1 (zahlNat_bounds w x).2)⟩
+
 end Gabbro.Grammatik
