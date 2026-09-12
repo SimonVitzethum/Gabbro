@@ -1061,4 +1061,77 @@ theorem schreibBytes_null_fest (O : Orakel D) (passes : Nat)
   rw [hσ', hlen0]
   rfl
 
+/-! ## 8. The non-writing oracle arm: `axiomCall` with `aschreibt = false`.
+
+  When the axiom declares no write to `t`, the `GutO` frame keeps every slot
+  of `t`: the `lese` prefix keeps slots by `rfl`, the oracle answer by
+  `axiomCall_slots_frame` (§3). Failed `einpassen` yields no world. Both `hO`
+  (frame) and `hstep` (outcome) are used. -/
+
+/-- `axiomCall a` with `D.aschreibt a t = false` keeps every slot of `t`. -/
+theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {h : D.aerg a = none}
+    {hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true}
+    {hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.axiomCall (V := V) a args h hw hg)
+    (t : D.Tab) (ht : D.aschreibt a t = false)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
+    (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  subst hs
+  -- Name the oracle answer and split on its result.
+  cases hAns : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  | mk fst snd =>
+      cases snd with
+      | some v =>
+          have hcomp : (execStmt O passes keinRuf
+              (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+              some fst := by
+            have hrfl : (execStmt O passes keinRuf
+                (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+                (match axiomAntwort O a (σ.lese Λ args.orte)
+                  (evalArgs (σ.lese Λ args.orte) args
+                    (σ.lese Λ args.orte) ρ) with
+                | (sg₂, Option.some w) => (Ausgang.ok sg₂ ρ : Ausgang V l Γ)
+                | (_, Option.none) =>
+                  (Ausgang.hardware (D := D) (.annahme a) : Ausgang V l Γ)).welt := rfl
+            rw [hrfl, hAns, Ausgang.welt]
+          rw [hcomp] at hstep
+          have hsg' : σ' = fst := Option.some_inj.mp hstep.symm
+          rw [hsg']
+          have hfst : fst = (O.wirkt a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args
+                (σ.lese Λ args.orte) ρ)).1 := by
+            have hA := hAns
+            simp only [axiomAntwort] at hA
+            have hF := congrArg Prod.fst hA
+            simp only at hF
+            exact hF.symm
+          have hlese : (σ.lese Λ args.orte).slots t k f = σ.slots t k f := rfl
+          rw [hfst]
+          have hframe := axiomCall_slots_frame O hO a t ht
+            (σ.lese Λ args.orte)
+            (evalArgs (σ.lese Λ args.orte) args
+              (σ.lese Λ args.orte) ρ) k f
+          rw [hframe, hlese]
+      | none =>
+          have hcomp : (execStmt O passes keinRuf
+              (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+              (Ausgang.hardware (D := D) (.annahme a) : Ausgang V l Γ).welt := by
+            have hrfl : (execStmt O passes keinRuf
+                (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+                (match axiomAntwort O a (σ.lese Λ args.orte)
+                  (evalArgs (σ.lese Λ args.orte) args
+                    (σ.lese Λ args.orte) ρ) with
+                | (sg₂, Option.some w) => (Ausgang.ok sg₂ ρ : Ausgang V l Γ)
+                | (_, Option.none) =>
+                  (Ausgang.hardware (D := D) (.annahme a) : Ausgang V l Γ)).welt := rfl
+            rw [hrfl, hAns, Ausgang.welt]
+          rw [hcomp, Ausgang.welt] at hstep
+          simp at hstep
+
 end Gabbro.Grammatik.EZD
