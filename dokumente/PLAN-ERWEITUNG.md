@@ -19,6 +19,29 @@ and termination are a signature, not a convention, and the expansion is an objec
 talk about: the certificate says "this source expands to this core term", and Lean re-checks
 the expansion without knowing the expander.
 
+## 0b. Decision (owner, 2026-09-12): executed at run time, checked at translation time
+
+`@<library>#<function> ( args ) { region }` is a **run-time call** of `<function>` in
+`<library>`. The region is read and checked when the program is translated; at run time the
+program calls the library -- for a GPU kernel, the launch through the driver. So:
+
+* **At translation time** the library's declared *translator* (a pure, total Gabbro function,
+  as the expander of §0) turns the region into a **payload**: a value of a payload type the
+  library declares (for a kernel: a descriptor table, or the kernel code in a closed target
+  subset). The checker checks that the payload is a well-typed value of that type. The
+  translator is not trusted; a wrong translator produces a payload the checker refuses.
+* **At run time** the call is a library call with a contract (`requires`, `ensures`,
+  `effects`), exactly like a foreign body or the `syscall` construct of `PLAN-SYSCALL.md`:
+  in Lean an `Ax` whose arguments include the payload. What the library does at run time is
+  its exported, named assumption (§4, E6) -- unless the library function is itself Gabbro code
+  with a proved contract, in which case the call is an ordinary proved call and no assumption
+  is named (the same pairing idea as `PLAN-SYSCALL.md` item 4).
+* **The verification reaches the hand-over:** arguments, payload type, contract and effects at
+  the call are checked; the library's run-time behaviour is the assumption it exports.
+
+Compile-time expansion of regions into core Gabbro (§0) stays possible as a later form, but it
+is not what `@lib#func` means.
+
 ## 1. Extension slots, not free mixfix
 
 `@spirv#kernel ( … ) { … }` marks a **delimited region**: up to the matching brace, the named
@@ -99,21 +122,22 @@ AST from the start as something that may be the output of a program (on the Rust
 the planned `Ableitung` datum of `PLAN-UMSETZUNG.md` §1). Both cost almost nothing now and
 decide whether this road is open later.
 
-## 6. Scope for the next wave: the structure only (owner decision, 2026-09-12)
+## 6. Scope for the next wave: the structure only (owner decisions, 2026-09-12)
 
-**Only the structure that makes extensions possible is built -- no GPU backend, no concrete
-expander, no second emitter.** Each lane gets a fixed deliverable; "done" means the mechanism
-exists, is checked, and has one minimal example plus poison probes.
+**Only the structure that makes run-time library calls with checked regions possible is built
+-- no GPU backend, no concrete translator, no second emitter.** Each lane gets a fixed
+deliverable; "done" means the mechanism exists, is checked, and has one minimal example plus
+poison probes.
 
 | # | lane | deliverable | depends on |
 |---|---|---|---|
-| E1 | extension slot | `@<library>#<name> ( … ) { … }` in `SYNTAX.md` -- **guardian patterns first** (vocabulary, grammar table), then the document; the parser captures the region as a brace-balanced token tree without interpreting it; poison probes: unbalanced region, unknown library, a slot outside an item position | -- |
-| E2 | expander declaration | a library declares an expander whose signature is checked to be `effects { pure }` with `decreases` (the checker refuses anything else); in Lean, an expander is a total function from AST to AST | -- |
-| E3 | the AST as a data type | a generated tree-table schema for the core AST with de Bruijn binding (mirroring `Var Γ τ`); Lean theorem: well-scoped terms are closed under the operations an expander may use -- hygiene by construction | -- |
-| E4 | compile-time arena | `arena A capacity lo .. hi` as a linear mark: allocation within the reservation needs no `or R`, `reset` consumes the mark and allocates a fresh one; Lean: an index into a reset arena is not expressible, and a monotone arena has no fragmentation | -- |
-| E6 | exported assumptions | a library exports named assumptions (`assume … falsifier …`); every importing unit's manifest lists them with their origin library | -- |
-| E7 | error mapping | a span map from expanded core nodes back to positions in the extension region; one checker diagnostic routed through it, with a test | E1 |
-| E5 | expansion stage with certificate | the checker runs expanders at compile time and checks the resulting core term; the certificate is the core term's derivation, so Lean checks the OUTPUT and never needs the expander | the compile-time evaluator (`PLAN-BITS.md` §6) -- **therefore the wave after next** |
+| E1 | call syntax | `@<library>#<function> ( args ) { region }` in `SYNTAX.md` as a call in statement and binding position -- **guardian patterns first** (vocabulary, grammar table), then the document; the parser captures the region as a brace-balanced token tree without interpreting it; poison probes: unbalanced region, unknown library, unknown function | -- |
+| E2 | library function declaration | a library declares a run-time function with a contract and a PAYLOAD TYPE; the call is checked like any call (arguments, effects, `or R`) plus the payload's type; in Lean the call is an `Ax` whose arguments include the payload -- no new statement constructor | E1 |
+| E3 | translator declaration | a library declares the translator from region to payload; the checker holds its signature to `effects { pure }` with `decreases`; the payload type is a table/tree type (trees as tables, §2). Running the translator needs the compile-time evaluator -- **only the declaration and the typing are built now** | -- |
+| E4 | arena | `arena A capacity lo .. hi` as a linear mark (§3): allocation within the reservation needs no `or R`, `reset` consumes the mark and allocates a fresh one; Lean: an index into a reset arena is not expressible, a monotone arena has no fragmentation. Serves the translator (compile time) and run-time code alike | -- |
+| E6 | exported assumptions | a library exports named assumptions (`assume … falsifier …`); every importing unit's manifest lists them with their origin library and the calls that rely on them; a library function that is Gabbro code with a proved contract exports none | E2 |
+| E7 | error mapping | a span map from payload values (and later expanded terms) back to positions in the region; one checker diagnostic routed through it, with a test | E1 |
+| E5 | translation stage with certificate | the checker runs translators at compile time and checks the payload; the certificate is the payload's typing derivation, so Lean checks the OUTPUT and never needs the translator | the compile-time evaluator (`PLAN-BITS.md` §6) -- **therefore the wave after next** |
 
-E1-E4, E6 and E7 run in parallel. E5 waits for the compile-time evaluator, which itself waits
-for the certificate measurement of `PLAN-BITS.md` §6.
+E1, E3 and E4 start in parallel; E2, E6 and E7 follow E1 within the wave. E5 waits for the
+compile-time evaluator, which itself waits for the certificate measurement of `PLAN-BITS.md` §6.
