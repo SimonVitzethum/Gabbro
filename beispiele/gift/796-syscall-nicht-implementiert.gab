@@ -1,0 +1,21 @@
+-- erwartet: P042
+-- **A `syscall` declaration, specified and not implemented.**
+--
+-- The grammar production `syscalldecl` stands since lane S1 (`SYNTAX.md`
+-- §12.1, «SS-1»); the checker, the emitter ruling and the corpus example
+-- (lanes S5-S7) are written against it. Until then every `syscall` item
+-- falls HERE, by name -- a controlled refusal, never silent acceptance
+-- and never a crash. `entry syscall …` keeps parsing: the entry NAME is an
+-- identifier, and `syscall` as a `ctx` word stays one there.
+module gift::syscall_nicht_implementiert {
+
+syscall write(fd : u64) -> u64
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier probe_write;
+
+}

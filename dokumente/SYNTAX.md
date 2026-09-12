@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **161** measured (`pruefe-syntax.sh` EBNF branch: 161 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»); nothing removed |
+| defined EBNF rules | 132 | **163** measured (`pruefe-syntax.sh` EBNF branch: 163 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»); `syscalldecl`, `errmap` («SS-1», §12.1); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, specified not implemented — lexer/table gates red until S5, G6b) |
+| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, refused as `P042` until S5-S7) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -169,13 +169,10 @@ optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `f
 the vocabulary — identifiers in a fixed position, counted and named by the guardian.
 
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
-words of the vocabulary but not terminals the lexer knows — specified in §12.1
-(«SS-1»), not yet implemented by the checker (S5 owns the lexer entries). The
-guardian counts them as table words and the EBNF side carries them through
-`syscalldecl`; `crates/gabbro-syntax/tests/wortschatz.rs` (lexer against table)
-and `zaehle-wortschatz.py` (macro-call count) go red until S5 lands, by
-construction. *A specified word that the lexer refuses is a named handoff, not
-a silent gap — and the red gates that name it are the receipt.*
+words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
+side carries them through `syscalldecl`, and a `syscall` item is refused BY NAME
+as `P042` until lanes S5-S7 implement it. `entry syscall …` keeps parsing: the
+entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
 reports, the vocabulary table. German stays in the working documents of the folder, in source
@@ -266,7 +263,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **specified, not yet implemented by the checker** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
+| `syscalldecl` (§12.1) | **refused as `P042` until S5-S7** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -1324,14 +1321,15 @@ footnote: *memory-safe under A1…An*.
 > parameter `O : Orakel D`, and `#print axioms` at the end of `Satz.lean` shows that nothing
 > else was assumed.
 
-### 12.1 `syscall` — the user side of a system call (specified, not yet implemented)
+### 12.1 `syscall` — the user side of a system call (refused as `P042` until S5-S7)
 
-**Specified, not yet implemented by the checker («SS-1»).** What follows is the
-surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks and one
-example, so that the checker lane (S5), the emitter lane (S6) and the corpus
-lane (S7) have a text to build against. Until S5 lands, every `syscall` is
-refused with a named error; nothing below is checked by any pass. The example
-block is an excerpt (`…`), not a translation unit.
+**Specified, the words lexed, the item refused by name («SS-1», `P042`).** What
+follows is the surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks
+and one example, so that the checker lane (S5), the emitter lane (S6) and the
+corpus lane (S7) have a text to build against. Until S5-S7 land, every `syscall`
+item falls at `P042` -- a controlled refusal, never silent acceptance; nothing
+below is checked by any pass. The example block is an excerpt (`…`), not a
+translation unit.
 
 **The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
 `entrydecl`; `A005` at `assume`). The `syscalldecl` production whose lines
