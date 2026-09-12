@@ -98,3 +98,22 @@ mechanism (b) is a hole with a library label. Two further facts for GPU work:
 AST from the start as something that may be the output of a program (on the Rust side this is
 the planned `Ableitung` datum of `PLAN-UMSETZUNG.md` §1). Both cost almost nothing now and
 decide whether this road is open later.
+
+## 6. Scope for the next wave: the structure only (owner decision, 2026-09-12)
+
+**Only the structure that makes extensions possible is built -- no GPU backend, no concrete
+expander, no second emitter.** Each lane gets a fixed deliverable; "done" means the mechanism
+exists, is checked, and has one minimal example plus poison probes.
+
+| # | lane | deliverable | depends on |
+|---|---|---|---|
+| E1 | extension slot | `@<library>#<name> ( … ) { … }` in `SYNTAX.md` -- **guardian patterns first** (vocabulary, grammar table), then the document; the parser captures the region as a brace-balanced token tree without interpreting it; poison probes: unbalanced region, unknown library, a slot outside an item position | -- |
+| E2 | expander declaration | a library declares an expander whose signature is checked to be `effects { pure }` with `decreases` (the checker refuses anything else); in Lean, an expander is a total function from AST to AST | -- |
+| E3 | the AST as a data type | a generated tree-table schema for the core AST with de Bruijn binding (mirroring `Var Γ τ`); Lean theorem: well-scoped terms are closed under the operations an expander may use -- hygiene by construction | -- |
+| E4 | compile-time arena | `arena A capacity lo .. hi` as a linear mark: allocation within the reservation needs no `or R`, `reset` consumes the mark and allocates a fresh one; Lean: an index into a reset arena is not expressible, and a monotone arena has no fragmentation | -- |
+| E6 | exported assumptions | a library exports named assumptions (`assume … falsifier …`); every importing unit's manifest lists them with their origin library | -- |
+| E7 | error mapping | a span map from expanded core nodes back to positions in the extension region; one checker diagnostic routed through it, with a test | E1 |
+| E5 | expansion stage with certificate | the checker runs expanders at compile time and checks the resulting core term; the certificate is the core term's derivation, so Lean checks the OUTPUT and never needs the expander | the compile-time evaluator (`PLAN-BITS.md` §6) -- **therefore the wave after next** |
+
+E1-E4, E6 and E7 run in parallel. E5 waits for the compile-time evaluator, which itself waits
+for the certificate measurement of `PLAN-BITS.md` §6.
