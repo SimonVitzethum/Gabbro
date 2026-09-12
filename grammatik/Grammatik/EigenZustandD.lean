@@ -2071,6 +2071,72 @@ theorem ezdLeave_step (M : GenMaschine refD) (hempty : M.spuren 0 = []) :
   · intro e he o ho
     simp at he
 
+/-- Joint witness for `pcSchritt_fremd_fest` (rule 13): all premises
+    instantiated together on `refD` -- the foreign `leave` step by thread
+    `0 ≠ 1` from the reached machine `refPC2`, `hNurG` by `ezdProg_nurG`,
+    `hNoAx` vacuous over the empty `Ax` (provable here, as the reviewer
+    asked to check) -- plus the conclusion proved by the theorem itself
+    and the non-degeneracy evidence (`refEin` writes `konto`; the
+    `refB_prog` run reaches `refPC2` with a memory-changing write). -/
+theorem pcSchritt_fremd_fest_zeuge :
+    ∃ (P : Programm refD) (O : Orakel refD) (passes : Nat) (hO : GutO O)
+      (prog : PCProg refD) (M : GenMaschine refD) (pc : PCStand) (h : Faden)
+      (M' : GenMaschine refD) (pc' : PCStand) (g : Faden) (t : refD.Tab)
+      (hs : PCSchritt P O passes prog M pc h M' pc')
+      (hOg : h ≠ g)
+      (hNurG : ∀ a ∈ prog h,
+        (Sum.inl t : refD.Tab ⊕ refD.Glob) ∉ PCAtom.carriers a)
+      (hNoAx : ∀ (V : Vertrag refD) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res refD))
+        (s : Stmt refD V l Γ Λ Λ') (ρ : Env refD Γ)
+        (σ' : World refD) (neu : List (Ereignis refD))
+        (hstep : (execStmt O passes keinRuf s (M.weltVon h) ρ).welt = some σ')
+        (Λa : List (Res refD)) (cs : List (refD.Tab ⊕ refD.Glob))
+        (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
+        ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
+          (hh : refD.aerg a = none)
+          (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
+          (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+          (execStmt O passes keinRuf
+            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+            (M.weltVon h) ρ).welt = some σ' ∧ refD.aschreibt a t = true)
+      (k : Int) (f : refD.Feld t),
+      M'.speicher.slots t k f = M.speicher.slots t k f ∧
+      (∃ fn : refD.Fn, (vertragVon refD fn).schreibt t = true) ∧
+      (∃ (prog2 : PCProg refD) (M2 : GenMaschine refD) (pc2 : PCStand),
+        PCReach P O passes prog2 (GenStart refSp0) M2 pc2 ∧
+        M2.speicher.slots t 0 () ≠ refSp0.slots t 0 ()) := by
+  have hs0 : PCSchritt (P := refP) (O := refO) 0 ezdProg refPC2 (fun _ => 0) 0
+      ⟨(refPC2.weltVon 0).speicher, genUpdate refPC2.spuren 0 (refPC2.weltVon 0).spur,
+        refPC2.lauf ++ genEigen 0 [], refPC2.start,
+        refPC2.welten ++ [(refPC2.weltVon 0)], refPC2.tiefe + 1⟩
+      (pcAdvance (fun _ => 0) 0) :=
+    ezdLeave_step refPC2 rfl
+  have hNurG0 : ∀ a ∈ ezdProg 0,
+      (Sum.inl () : refD.Tab ⊕ refD.Glob) ∉ PCAtom.carriers a :=
+    fun a ha => ezdProg_nurG 0 a ha
+  have hNoAx0 : ∀ (V : Vertrag refD) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res refD))
+      (s : Stmt refD V l Γ Λ Λ') (ρ : Env refD Γ)
+      (σ' : World refD) (neu : List (Ereignis refD))
+      (hstep : (execStmt refO 0 keinRuf s (refPC2.weltVon 0) ρ).welt = some σ')
+      (Λa : List (Res refD)) (cs : List (refD.Tab ⊕ refD.Glob))
+      (hpc : (ezdProg 0)[(fun _ : Faden => 0) 0]? = some (PCAtom.leaf Λa cs)),
+      ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
+        (hh : refD.aerg a = none)
+        (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
+        (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+        (execStmt refO 0 keinRuf
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (refPC2.weltVon 0) ρ).welt = some σ' ∧ refD.aschreibt a () = true := by
+    intro V l Γ Λ Λ' s ρ σ' neu hstep Λa cs hpc hEx
+    obtain ⟨a, _, _, _, _, _, _⟩ := hEx
+    exact nomatch a
+  refine ⟨refP, refO, 0, refO_gut, ezdProg, refPC2, fun _ => 0, 0, _, _,
+    1, (), hs0, by decide, hNurG0, hNoAx0, 0, (), ?_, ?_, ?_⟩
+  · exact pcSchritt_fremd_fest refP refO refO_gut 0 ezdProg refPC2 (fun _ => 0) 0 _ _
+      1 () hs0 (by decide) hNurG0 hNoAx0 0 ()
+  · exact ⟨refEin, refEin_schreibt ()⟩
+  · exact ⟨refB_prog, refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
+
 
 /-! CUTS: what is not proved.
 
