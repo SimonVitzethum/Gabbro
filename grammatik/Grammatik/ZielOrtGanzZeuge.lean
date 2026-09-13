@@ -394,6 +394,35 @@ theorem ziel_ort_ganz_schleife :
   rw [hZ2.welt]
   exact lInv_wahr _ _ _
 
+/-- **`ziel_ort_ganz_fortschritt_zeuge`.** On the loop program, the machine
+    reached after two steps of thread 0 stands at a `logik` check
+    (`AnPruefungG`: the `traverse` boundary), its head's holdings are exactly
+    the held lock, and the progress theorem `ziel_ort_ganz_fortschritt`
+    yields a step of thread 0 there. -/
+theorem ziel_ort_ganz_fortschritt_zeuge :
+    ∃ M2 : RufMaschineG zD, RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 ∧
+      AnPruefungG M2 0 ∧ HeldGenau (M2.faeden 0).kopf.rest.2.2.1 (offen (M2.faeden 0).spur) ∧
+      ∃ M3 : RufMaschineG zD, RufSchrittG lP zO 0 M2 0 M3 := by
+  have h00 : (RufStartG lP zSp lInit).faeden 0 = ⟨[], ⟨zWrap, .nil, zSp.welt [],
+      ⟨false, [], zL, .nil, .ende lRumpfWrap⟩⟩, startSpur zWrap,
+      [RufEreignisF.eintritt zWrap .nil (zSp.welt [])]⟩ := rfl
+  obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := lP) (O := zO) (passes := 0) h00 lTrav
+    (.ret .keine (by rfl)) .nil rfl rfl
+  obtain ⟨M2, s2, hZ2⟩ := w_dannTrav (P := lP) (O := zO) (passes := 0) hZ1.1 () lInv .nil .nil
+    (.ende (.ret .keine (by rfl))) .nil rfl
+  have hr2 : RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 :=
+    .schritt _ _ _ (.schritt _ _ _ .start s1) s2
+  have hA : AnPruefungG M2 0 := by
+    unfold AnPruefungG
+    rw [hZ2.1]
+    exact Or.inl ⟨_, _, _, _, _, _, _, _, _, rfl⟩
+  have hH : HeldGenau (M2.faeden 0).kopf.rest.2.2.1 (offen (M2.faeden 0).spur) := by
+    rw [hZ2.1]
+    exact hgL (by rw [← hZ2.spur, hZ2.spur, offen_weltVon, hZ1.spur]; rfl)
+  exact ⟨M2, hr2, hA, hH, ziel_ort_ganz_fortschritt lP zO 0 (axWahr zD) zFs zSp lInit zE0 zO_gut
+    zO_lokal (axVertragO_wahr zO) axEnsLokal_wahr zFs_voll lP_fragmentG lP_fussG lP_koerperZ
+    lP_start lInit_exklusiv M2 hr2 0 hH hA⟩
+
 /-! ## 5. Declared axiom ensures inside the one theorem -/
 
 theorem axO_lokal : RegLokal axO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ => nomatch g)⟩
@@ -435,6 +464,7 @@ theorem ziel_ort_ganz_ax_zeuge :
 
 #print axioms Gabbro.Grammatik.lP_koerperZ
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_schleife
+#print axioms Gabbro.Grammatik.ziel_ort_ganz_fortschritt_zeuge
 
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_ref104
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_zeuge

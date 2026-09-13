@@ -787,4 +787,149 @@ theorem ziel_ort_rahmen_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat) 
 #print axioms Gabbro.Grammatik.ziel_ort_voll_ax_lokal_aus_ganz
 #print axioms Gabbro.Grammatik.ziel_ort_rahmen_aus_ganz
 
+/-! ## 8. G moves at every `logik` check
+
+  `KeinLogikHaltG` says the checks PASS. Here the step itself: at every
+  place where a rule of G tests a `logik` condition, the rule fires -- given
+  the one side condition every reading rule of G carries, `HeldGenau` of
+  the head's static holdings (a lock-bookkeeping fact, not a `logik` check;
+  `rufG_haelt_statisch` proves its `⊆` half on every reachable machine, the
+  `⊇` half is not proved -- `SATZKARTE.md` §13.5). -/
+
+/-- **Thread `t` of `M` stands at a `logik` check of G**: a `traverse`
+    boundary, a `forever` boundary with budget left, a `leave` out of a
+    `traverse` body, or a `state` transition at the head of an end block or
+    of a block. -/
+def AnPruefungG (M : RufMaschineG D) (t : Faden) : Prop :=
+  (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
+      (inv : Expr D Γ Λ .bool)
+      (body : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λ Λ)
+      (ks : List (Wert D (.index (D.count tb))))
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .trav tb inv body ks k⟩) ∨
+  (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (a : D.Annahme) (n : Nat)
+      (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ)
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a (n + 1) inv body k⟩) ∨
+  (∃ (l : Bool) (Γ : Ctx) (Λ Λx : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
+      (inv : Expr D Γ Λ .bool)
+      (body : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λ Λ)
+      (is : List (Wert D (.index (D.count tb))))
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
+      (rest : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λx Λ)
+      (hl : true = true) (i : Wert D (.index (D.count tb))),
+    (M.faeden t).kopf.rest = ⟨true, .index (D.count tb) :: Γ, Λx, .cons i ρ,
+      .dann (.cons (.leave hl) rest) (.travRest tb inv body is k)⟩) ∨
+  (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (lo hi : Int) (tb : D.Tab)
+      (fl : D.Feld tb) (hτ : D.typ tb fl = .int lo hi) (i : Expr D Γ Λ (.index (D.count tb)))
+      (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi) (he : D.erlaubt tb fl von nach = true)
+      (hw : (vertragVon D (M.faeden t).kopf.f).schreibt tb = true) (hL : darf D tb Λ)
+      (K : Endblock D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+    (M.faeden t).kopf.rest =
+      ⟨l, Γ, Λ, ρ, .ende (.cons (.uebergang tb fl hτ i von nach hn he hw hL) K)⟩) ∨
+  (∃ (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D)) (ρ : Env D Γ) (lo hi : Int) (tb : D.Tab)
+      (fl : D.Feld tb) (hτ : D.typ tb fl = .int lo hi) (i : Expr D Γ Λ (.index (D.count tb)))
+      (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi) (he : D.erlaubt tb fl von nach = true)
+      (hw : (vertragVon D (M.faeden t).kopf.f).schreibt tb = true) (hL : darf D tb Λ)
+      (rst : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ'')
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ''),
+    (M.faeden t).kopf.rest =
+      ⟨l, Γ, Λ, ρ, .dann (.cons (.uebergang tb fl hτ i von nach hn he hw hL) rst) k⟩)
+
+/-- A `state` transition whose outcome is no `logik` outcome is an `ok`
+    step that only adds accesses to the trace. -/
+theorem uebergang_ok {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
+    (O : Orakel D) (passes : Nat) (tb : D.Tab) (fl : D.Feld tb) (hτ : D.typ tb fl = .int lo hi)
+    (i : Expr D Γ Λ (.index (D.count tb))) (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi)
+    (he : D.erlaubt tb fl von nach = true) (hw : V.schreibt tb = true) (hL : darf D tb Λ)
+    (W : World D) (ρ : Env D Γ)
+    (hno : ∀ e : Logik D, execStmt O passes keinRuf
+      (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL) W ρ ≠ .logik e) :
+    ∃ σ' ρ', execStmt O passes keinRuf (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL)
+      W ρ = .ok σ' ρ' ∧ Erw W σ' := by
+  cases hx : execStmt O passes keinRuf (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL)
+      W ρ with
+  | ok σ' ρ' =>
+      refine ⟨σ', ρ', rfl, ?_⟩
+      simp only [execStmt] at hx
+      split at hx
+      · cases hx
+        exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
+      · cases hx
+  | logik e => exact absurd hx (hno e)
+  | _ =>
+      simp only [execStmt] at hx
+      split at hx <;> cases hx
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat}
+
+/-- **At a `logik` check whose test passes, G fires.** From `PrueftG` (the
+    conclusion of the goal theorem) and `HeldGenau` of the head's static
+    holdings: `travNext`/`travDone`, `ewigWeiter`, `dannLeaveTrav`, and
+    `blatt`/`dannBlatt` on a `state` transition. -/
+theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O passes M t)
+    (hH : HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
+    (hA : AnPruefungG M t) : ∃ M', RufSchrittG P O passes M t M' := by
+  rcases hA with ⟨l, Γ, Λ, ρ, tb, inv, body, ks, k, hr⟩ | ⟨l, Γ, Λ, ρ, a, n, inv, body, k, hr⟩ |
+      ⟨l, Γ, Λ, Λx, ρ, tb, inv, body, is, k, rest, hl, i, hr⟩ |
+      ⟨l, Γ, Λ, ρ, lo, hi, tb, fl, hτ, i, von, nach, hn, he, hw, hL, K, hr⟩ |
+      ⟨l, Γ, Λ, Λ'', ρ, lo, hi, tb, fl, hτ, i, von, nach, hn, he, hw, hL, rst, k, hr⟩
+  · have hwahr := hP.1 l Γ Λ ρ tb inv body ks k hr
+    rw [hr] at hH
+    cases ks with
+    | nil =>
+        obtain ⟨M', hs, _⟩ := w_travDone (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+          tb inv body k ρ hr hwahr hH
+        exact ⟨M', hs⟩
+    | cons j js =>
+        obtain ⟨M', hs, _⟩ := w_travNext (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+          tb inv body j js k ρ hr hwahr hH
+        exact ⟨M', hs⟩
+  · have hwahr := hP.2.1 l Γ Λ ρ a n inv body k hr
+    rw [hr] at hH
+    obtain ⟨M', hs, _⟩ := w_ewigWeiter (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+      a n inv body k ρ hr hwahr hH
+    exact ⟨M', hs⟩
+  · have hwahr := hP.2.2.1 l Γ Λ Λx ρ tb inv body is k rest hl i hr
+    rw [hr] at hH
+    obtain ⟨M', hs, _⟩ := w_leaveTrav (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+      tb inv body is k rest i ρ hr hwahr hH
+    exact ⟨M', hs⟩
+  · have hno := hP.2.2.2.1 l Γ Λ Λ ρ _ K rfl hr
+    rw [hr] at hH
+    obtain ⟨σ', ρ', hst, herw⟩ := uebergang_ok O passes tb fl hτ i von nach hn he hw hL _ ρ hno
+    obtain ⟨M', hs, _⟩ := w_blatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+      _ K ρ rfl hr hH σ' ρ' hst herw
+    exact ⟨M', hs⟩
+  · have hno := hP.2.2.2.2 l Γ Λ Λ Λ'' ρ _ rst k rfl hr
+    rw [hr] at hH
+    obtain ⟨σ', ρ', hst, herw⟩ := uebergang_ok O passes tb fl hτ i von nach hn he hw hL _ ρ hno
+    obtain ⟨M', hs, _⟩ := w_dannBlatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
+      _ rst k ρ rfl hr hH σ' ρ' hst herw
+    exact ⟨M', hs⟩
+
+/-- **G MOVES AT EVERY `logik` CHECK -- the progress half of the goal
+    theorem.** Under the premises of `ziel_ort_ganz`, on every reachable
+    machine, a thread that stands at a `logik` check of G (`AnPruefungG`)
+    and whose head's static holdings are exactly its held locks can step.
+    No reachable machine is stuck at a loop invariant, a `forever`
+    boundary with budget left, a `leave` out of a `traverse`, or a `state`
+    transition. What else can stop a thread: `SATZKARTE.md` §13.5. -/
+theorem ziel_ort_ganz_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutZ P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+        AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
+  intro M hr t hH hA
+  exact schritt_an_pruefung t ((ziel_ort_ganz P O passes Q fs sp init e0 hO hRL hQ hlok hvoll
+    hFrag hFuss hK hStart hex M hr).2 t) hH hA
+
+#print axioms Gabbro.Grammatik.schritt_an_pruefung
+#print axioms Gabbro.Grammatik.ziel_ort_ganz_fortschritt
+
 end Gabbro.Grammatik
