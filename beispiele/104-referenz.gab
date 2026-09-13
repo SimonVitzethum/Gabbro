@@ -7,7 +7,9 @@
 -- parameters, one `0 .. 100` result, reads, ensures the answer equals the
 -- slot). Both run under the held lock (`requires Held(M)`, the `beispiele/01`
 -- idiom: the caller's duty, so the bodies touch the guarded slot directly).
--- `concurrent { einzahlen, lies }` declares the two threads of the fixture
+-- Not declared `concurrent`: both functions hold `M` by signature, and the
+-- start rule N240 (the goal theorem's `StartExklusiv`) forbids two threads
+-- starting in functions that share a signature lock. The earlier note: the declaration
 -- (lane 141: the certificate census classifies `concurrent` as erased -- the
 -- emitter writes nothing for it -- so the declaration passes stage 7 of
 -- `pruefe-emission.sh`). Threads cannot be driven from a C driver anyway, so
@@ -50,6 +52,5 @@ impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand
     return k.slots[i].stand;
 }
 
-concurrent { einzahlen, lies };
 
 }

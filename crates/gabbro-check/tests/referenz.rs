@@ -274,11 +274,17 @@ fn lean_program_view_carries_refD() {
 /// passes over a concurrent program.
 #[test]
 fn concurrent_is_classified() {
-    let b = baum();
+    // 104 no longer declares `concurrent` (N240: its two functions share the
+    // signature lock M); the census is pinned on `beispiele/108`, whose
+    // declared pair starts under disjoint locks.
+    let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../beispiele/108-disjoint-start-locks.gab");
+    let q = std::fs::read_to_string(&pfad).expect("108 is readable");
+    let (b, _) = gabbro_syntax::lies("108.gab", &q);
     let e = gabbro_check::zeugnis::erhebe(&b);
     assert!(
         e.unzugeordnet.is_empty(),
-        "every construct of 104 must classify: {:?}",
+        "every construct of 108 must classify: {:?}",
         e.unzugeordnet
     );
     assert_eq!(
