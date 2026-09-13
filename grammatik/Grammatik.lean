@@ -126,3 +126,6 @@ import Grammatik.ZielOrtGeraetZeuge
 import Grammatik.KostenG
 import Grammatik.KostenGZeuge
 import Grammatik.AuditFinal
+import Grammatik.RennfreiVoll
+import Grammatik.TravAwaitsZeuge
+import Grammatik.TravAwaitsLauf
