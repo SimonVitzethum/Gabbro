@@ -24,7 +24,7 @@ variable {D : Deklaration}
 
 section Akteur
 
-variable {P : Programm D} {O : Orakel D} {passes : Nat}
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
 
 /-- The residue of a frame, read off its rest. -/
 theorem rest_okR {F : RufRahmenG D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
@@ -45,25 +45,26 @@ theorem rest_okR {F : RufRahmenG D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {�
     `sichtbar_gleich`: the device carriers and the awaited global are in
     the footprint, on which the sequential world agrees with the machine
     world). -/
-theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P passes f)
+theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hK : ∀ f, KoerperGutRQ P passes Q f)
     (hFrag : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) = true)
     (e0 : Ereignis D)
     {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (hF : FadenR P O passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
+    (hF : FadenR P O passes Q (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
     (hRS : RahmenStapel P M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel) :
-    FadenR P O passes (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
+    FadenR P O passes Q (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenR_blatt e0 hO hF hhead s (.ende rest)
+    refine ⟨fadenR_blatt e0 hO hQ hlok hF hhead s (.ende rest)
       (fun O' R σ => semV_ende_cons O' passes R s rest σ ρ)
       (fun hok => by
         obtain ⟨_, hss, hrest⟩ := okG_ende_cons hok
         exact ⟨hss, hrest⟩) hleaf σ' ρ' hstep, hL⟩
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenR_blatt e0 hO hF hhead s (.dann rest k)
+    refine ⟨fadenR_blatt e0 hO hQ hlok hF hhead s (.dann rest k)
       (fun O' R σ => semV_dann_cons O' passes R s rest k σ ρ)
       (fun hok => by
         obtain ⟨_, hss, hrest⟩ := okG_dann_cons hok
@@ -551,7 +552,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
       (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
-      hfr (fun O' R σ hwk => ?_), hL⟩
+      hfr hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw') (fun O' R σ hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
     simp only [execBlock, axiomAntwort, hwk, hv]
@@ -560,7 +561,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hK hFrag hF hhead g args
+    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hQ hK hFrag hF hhead g args
       (fun hok => by
         obtain ⟨_, hss, _⟩ := okG_ende_cons hok
         simp only [stmtOrteP, List.append_subset] at hss
@@ -585,7 +586,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hK hFrag hF hhead g args
+    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hQ hK hFrag hF hhead g args
       (fun hok => by
         obtain ⟨_, hss, _⟩ := okG_dann_cons hok
         simp only [stmtOrteP, List.append_subset] at hss
@@ -610,7 +611,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hK hFrag hF hhead g args
+    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hQ hK hFrag hF hhead g args
       (fun hok => by
         obtain ⟨_, hss, _⟩ := hok
         simp only [blockOrteP, List.append_subset] at hss
@@ -644,7 +645,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
       hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hK hFrag hF hhead g args
+    obtain ⟨hFad, hReq⟩ := pushR_ok hO hRL hQ hK hFrag hF hhead g args
       (fun hok => by
         obtain ⟨_, hss, _⟩ := hok
         simp only [blockOrteP, List.append_subset] at hss
@@ -693,7 +694,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hQ hK hFrag hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
       (fun _ σ hgσ => by
         show umsig hg _ = umsig hg _
@@ -727,7 +728,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hQ hK hFrag hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
       (fun _ σ hgσ => by
         show umsig hg _ = umsig hg _
@@ -763,7 +764,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => hss.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushR_gen hO hRL hQ hK hFrag hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
       (fun _ σ hgσ => by
         show umsig hg _ = umsig hg _
@@ -801,7 +802,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := kopfR_okG hF.1 hhead
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2
       (fun O' R σ => semV_rueck O' passes R e hperm σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -818,7 +819,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := okG_ende_cons (kopfR_okG hF.1 hhead)
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2.1
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2.1
       (fun O' R σ => semV_rueckCons O' passes R e hperm rest σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -835,7 +836,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := okG_dann_cons (kopfR_okG hF.1 hhead)
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2.1
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2.1
       (fun O' R σ => semV_dannRet O' passes R e hperm rest k σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -852,7 +853,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := kopfR_okG hF.1 hhead
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2
       (fun O' R σ => semV_rueck O' passes R e hperm σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -876,7 +877,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := okG_dann_cons (kopfR_okG hF.1 hhead)
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2.1
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2.1
       (fun O' R σ => semV_dannRet O' passes R e hperm restk kk σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -900,7 +901,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutR P pass
     subst hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hok := okG_ende_cons (kopfR_okG hF.1 hhead)
-    have hens := popR_ens hO hRL hK hF.1 hhead e hok.2.1
+    have hens := popR_ens hO hRL hQ hK hF.1 hhead e hok.2.1
       (fun O' R σ => semV_rueckCons O' passes R e hperm restk σ ρ)
     have hSt := hF.2
     rw [hpop] at hSt
@@ -1039,7 +1040,7 @@ end Akteur
 
 section Ziel
 
-variable {P : Programm D} {O : Orakel D} {passes : Nat}
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
 
 /-- **The rely for the replay** (as `andere_ok`): a step of thread `u`
     leaves the footprint of every head frame of another thread alone. -/
@@ -1048,8 +1049,8 @@ theorem andereR (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (t : Faden) (htu : t ≠ u)
-    (hF : FadenR P O passes (M.faeden t) (M.weltVon t)) :
-    FadenR P O passes (M'.faeden t) (M'.weltVon t) := by
+    (hF : FadenR P O passes Q (M.faeden t) (M.weltVon t)) :
+    FadenR P O passes Q (M'.faeden t) (M'.weltVon t) := by
   have e : M'.faeden t = M.faeden t := rufSchrittG_fremd hs t htu
   have hW : M'.weltVon t = M'.speicher.welt (M.faeden t).spur := by
     unfold RufMaschineG.weltVon; rw [e]
@@ -1065,7 +1066,7 @@ theorem zielInvR_start
     (hFrag : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) = true)
     (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hStart : StartGut P sp init) :
-    ZielInvR P O passes (RufStartG P sp init) := by
+    ZielInvR P O passes Q (RufStartG P sp init) := by
   have hz : ∀ t, (RufStartG P sp init).faeden t =
       ⟨[], ⟨(init t).1, (init t).2, sp.welt [], ⟨false, D.params (init t).1,
         Signatur.anfang D (D.signatur (init t).1), (init t).2, .ende (P.rumpf (init t).1)⟩⟩,
@@ -1081,32 +1082,56 @@ theorem zielInvR_start
   · unfold RufMaschineG.weltVon
     rw [hz t]
     exact ⟨⟨[], [], sp.welt [], hStart t, funkV_nil, vertraegeOkR_nil P, kurzV_nil _, funkA_nil,
-      rahmenA_nil, kurzA_nil _, GleichAuf.vonSpeicher rfl, ⟨hFrag _, fuss_rumpfG P _⟩,
+      rahmenA_nil, vertragA_nil Q, kurzA_nil _, GleichAuf.vonSpeicher rfl, ⟨hFrag _, fuss_rumpfG P _⟩,
       fun R O' _ _ _ => ZErg.folgt_refl _⟩, trivial⟩
   · rw [hz t]
     exact logOk_eintritt (fun _ h => absurd h List.not_mem_nil) (hStart t)
 
 /-- One step keeps the global invariant; the acting thread uses the
     machine's frame fact at the pre-step machine (`rufG_rahmen`). -/
-theorem zielInvR_schritt (hO : GutO O) (hRL : RegLokal O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hFuss : fussOrtGB P fs = true) (hK : ∀ f, KoerperGutR P passes f)
+theorem zielInvR_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFuss : fussOrtGB P fs = true) (hK : ∀ f, KoerperGutRQ P passes Q f)
     (hFrag : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) = true)
     (e0 : Ereignis D) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
-    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvR P O passes M) :
-    ZielInvR P O passes M' := by
+    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvR P O passes Q M) :
+    ZielInvR P O passes Q M' := by
   have hRS := rufG_rahmen hO hvoll hFuss sp init hex hr
   refine ⟨fun t => ?_, fun t => ?_⟩
   · by_cases htu : t = u
     · subst htu
-      exact (akteurR hO hRL hK hFrag e0 hs (hI.1 t) (hI.2 t) (hRS t)).1
+      exact (akteurR hO hRL hQ hlok hK hFrag e0 hs (hI.1 t) (hI.2 t) (hRS t)).1
     · exact andereR hO hvoll hFuss sp init hex hr hs t htu (hI.1 t)
   · by_cases htu : t = u
     · subst htu
-      exact (akteurR hO hRL hK hFrag e0 hs (hI.1 t) (hI.2 t) (hRS t)).2
+      exact (akteurR hO hRL hQ hlok hK hFrag e0 hs (hI.1 t) (hI.2 t) (hRS t)).2
     · rw [rufSchrittG_fremd hs t htu]
       exact hI.2 t
+
+/-- **The replay invariant on every reachable machine**, generic in the
+    declared axiom ensures `Q` (the oracle meets it, `AxVertragO Q O`; it
+    reads only the declared carriers, `AxEnsLokal Q`) and over the
+    obligation `KoerperGutRQ`. `ziel_ort_rahmen` is its instance at the
+    trivial ensures; the goal theorem `ziel_ort_ganz` (`ZielOrtGanz.lean`)
+    reads the head replay it carries. -/
+theorem zielInvR_erreichbar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutRQ P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      ZielInvR P O passes Q M := by
+  have hFragF : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) = true :=
+    programmImFragmentG_ok P hvoll hFrag
+  intro M hr
+  induction hr with
+  | start => exact zielInvR_start hFragF sp init hStart
+  | schritt M M' u hr' hs ih =>
+      exact zielInvR_schritt hO hRL hQ hlok hvoll hFuss hK hFragF e0 sp init hex hr' hs ih
 
 /-- **ZIEL AM ORT AGAINST DECLARED FRAMES -- contracts hold at their place
     on every machine of the repaired concurrent call machine G, for the
@@ -1141,14 +1166,9 @@ theorem ziel_ort_rahmen (P : Programm D) (O : Orakel D) (passes : Nat) (fs : Lis
     (hex : StartExklusiv init) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       VertragAmOrtG P M := by
-  have hFragF : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) = true :=
-    programmImFragmentG_ok P hvoll hFrag
   intro M hr
-  have hI : ZielInvR P O passes M := by
-    induction hr with
-    | start => exact zielInvR_start hFragF sp init hStart
-    | schritt M M' u hr' hs ih =>
-        exact zielInvR_schritt hO hRL hvoll hFuss hK hFragF e0 sp init hex hr' hs ih
+  have hI := zielInvR_erreichbar P O passes (axWahr D) fs sp init e0 hO hRL (axVertragO_wahr O)
+    axEnsLokal_wahr hvoll hFrag hFuss (fun f => koerperGutRQ_of_R (axWahr D) (hK f)) hStart hex M hr
   exact fun t ev hev => hI.2 t ev hev
 
 end Ziel
@@ -1242,6 +1262,7 @@ theorem ziel_ort_lokal_aus_rahmen (P : Programm D) (O : Orakel D) (passes : Nat)
 
 #print axioms Gabbro.Grammatik.akteurR
 #print axioms Gabbro.Grammatik.andereR
+#print axioms Gabbro.Grammatik.zielInvR_erreichbar
 #print axioms Gabbro.Grammatik.ziel_ort_rahmen
 #print axioms Gabbro.Grammatik.ziel_ort_geraet_aus_rahmen
 #print axioms Gabbro.Grammatik.ziel_ort_voll_lokal_aus_rahmen
