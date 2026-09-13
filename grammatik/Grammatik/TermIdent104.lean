@@ -66,19 +66,20 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
       (Expr.lit 6) (Expr.lit 3))
     = some (CertExpr.bxor (D := refD) 3 (.lit 6) (.lit 3)) := rfl
 
-/-- Differential witness 7 (MISMATCH, see the script report): the Lean side
-    prints the width (`shl_prints_and_scales_by_shift` on the Rust side
-    prints `(.shl (.lit 3) (.lit 2))` with NO width, which is not a
-    `CertExpr.shl` term). What the Lean side prints for the checked term: -/
+/-- Differential witness 7 (MATCH since lane 159: the Rust side prints the
+    width -- `Shl(3, lit 3, lit 2)` prints `(.shl 3 (.lit 3) (.lit 2))`
+    (`shl_prints_with_width_and_scales_by_shift`) -- exactly what the Lean
+    side prints for the checked term: -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.shl (w := 3) (l1 := 3) (h1 := 3) (l2 := 2) (h2 := 2)
       (by decide) (by decide) (by decide) (by decide)
       (Expr.lit 3) (Expr.lit 2))
     = some (CertExpr.shl (D := refD) 3 (.lit 3) (.lit 2)) := rfl
 
-/-- Differential witness 8 (MISMATCH, same cause as witness 7): the Lean
-    side prints the width; Rust `Shr(lit 12, lit 2)` prints
-    `(.shr (.lit 12) (.lit 2))` (`shr_prints_and_claims`). -/
+/-- Differential witness 8 (MATCH since lane 159, same fix as witness 7):
+    Rust `Shr(4, lit 12, lit 2)` prints `(.shr 4 (.lit 12) (.lit 2))`
+    (`shr_prints_with_width_and_claims`), exactly what the Lean side
+    prints: -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.shr (w := 4) (l1 := 12) (h1 := 12) (l2 := 2) (h2 := 2)
       (by decide) (by decide) (by decide) (by decide)
@@ -122,12 +123,10 @@ example (D : Deklaration) (g : D.Glob) (h : gdarf D g [])
   CUTS: what is not proved here.
   - Every `CertExpr` shape the Rust printer (`certemit.rs`) can emit is
     witnessed above (`lit`, `add`, `div`, `band`, `bor`, `bxor`, `shl`,
-    `shr`, `wide`, `var`, `slot`, `glob`) -- except that the Rust
-    `shl`/`shr` prints carry NO width while `CertExpr.shl/shr` (and
-    `printInt`) do (witnesses 7-8 state the Lean-side truth; the Rust
-    strings `(.shl …)`/`(.shr …)` with two arguments are not `CertExpr`
-    terms at all). That mismatch is a finding of the differential script
-    (`instrumente/pruefe-termidentitaet.py`), not weakened here.
+    `shr`, `wide`, `var`, `slot`, `glob`); since lane 159 the Rust
+    `shl`/`shr` prints carry the width (witnesses 7-8), so all twelve
+    agree and the differential script
+    (`instrumente/pruefe-termidentitaet.py`) reports zero mismatches.
   - The Rust side has NO `sub`/`neg`/`mul`/`rem`/`sdiv`/`srem` variants
     while `printInt` prints them: nothing to compare, booked in the script
     report (same gap as `ZeugnisIdent.lean` CUTS).

@@ -32,9 +32,11 @@ terms). So the corpus contributes bare-numeral `const` values, each
 checked as `printInt (.lit n) = some (.lit n)` by `rfl`.
 
 KNOWN MISMATCHES (expected findings, exit stays 0):
-- Rust `Shl`/`Shr` carry no width (`(.shl a b)`) while `CertExpr.shl/shr`
-  and `printInt` do (`(.shl w a b)`): the Rust strings are not `CertExpr`
-  terms at all (demonstrated by a generated file that fails to elaborate).
+- None open: lane 159 gave Rust `Shl`/`Shr` the width (`(.shl w a b)`,
+  `(.shl 3 (.lit 3) (.lit 2))`), so all twelve shapes both sides print
+  agree. The mismatch demos below now paste the Rust strings as expected
+  `CertExpr` terms and must ELABORATE (0 errors) -- a red run reopens the
+  lane-158 finding instead of confirming it.
 - Rust has no `sub`/`neg`/`mul`/`rem`/`sdiv`/`srem` variants while
   `printInt` prints them: not comparable.
 
@@ -75,10 +77,10 @@ VECTORS = [
      "(.bor 3 (.lit 6) (.lit 3))", "bor_prints_with_width_and_claims_full_width"),
     ("bxor", "Bxor(3, lit 6, lit 3)", "(.bxor 3 (.lit 6) (.lit 3))",
      "(.bxor 3 (.lit 6) (.lit 3))", "bxor_prints_with_width_and_claims_full_width"),
-    ("shl", "Shl(lit 3, lit 2)", "(.shl (.lit 3) (.lit 2))",
-     "(.shl 3 (.lit 3) (.lit 2))", "shl_prints_and_scales_by_shift"),
-    ("shr", "Shr(lit 12, lit 2)", "(.shr (.lit 12) (.lit 2))",
-     "(.shr 4 (.lit 12) (.lit 2))", "shr_prints_and_claims"),
+    ("shl", "Shl(3, lit 3, lit 2)", "(.shl 3 (.lit 3) (.lit 2))",
+     "(.shl 3 (.lit 3) (.lit 2))", "shl_prints_with_width_and_scales_by_shift"),
+    ("shr", "Shr(4, lit 12, lit 2)", "(.shr 4 (.lit 12) (.lit 2))",
+     "(.shr 4 (.lit 12) (.lit 2))", "shr_prints_with_width_and_claims"),
     ("wide", "Wide(0, 7, lit 3)", "(.wide 0 7 (.lit 3))",
      "(.wide 0 7 (.lit 3))", "wide_narrows_within_bounds"),
     ("var", "Var(0) over [(3, 3)]", "(.var 0)",
@@ -147,13 +149,15 @@ def check_rust_source(src):
             bad.append("rust-src %s: unexpected CertExpr variant (%d uses)" % (shape, len(uses)))
         else:
             ok.append("rust-src %s: no CertExpr variant, as booked" % shape)
-    # shl/shr widthlessness is the mismatch: the print arms must format with
-    # two placeholders (no width), quoted exactly.
-    for pat, name in [(r'\(.shl \{\} \{\}\)', "shl"), (r'\(.shr \{\} \{\}\)', "shr")]:
+    # shl/shr carry the width since lane 159: the print arms must format
+    # with the width first (`(.shl w a b)`), exactly as `CertExpr.shl/shr`
+    # (and `printInt`) spell it. A widthless arm reopens the lane-158
+    # finding instead of closing it.
+    for pat, name in [(r'\(.shl \{w\} \{\} \{\}\)', "shl"), (r'\(.shr \{w\} \{\} \{\}\)', "shr")]:
         if re.search(pat, src):
-            ok.append("rust-src %s: print arm carries no width (mismatch source)" % name)
+            ok.append("rust-src %s: print arm carries the width (match)" % name)
         else:
-            bad.append("rust-src %s: widthless print arm NOT found -- recheck mismatch" % name)
+            bad.append("rust-src %s: width-carrying print arm NOT found -- recheck match" % name)
     return ok, bad
 
 
@@ -227,11 +231,11 @@ def combined_file(vals):
     return LEAN_HEAD + body + LEAN_TAIL
 
 
-def mismatch_demo_file(shape, rust_string):
+def match_confirm_file(shape, rust_string):
     """A file that pastes the Rust string as the expected CertExpr term.
-    For shl/shr the Rust string has two arguments where Lean needs three
-    (the width), so this file must FAIL to elaborate -- that failure is the
-    mismatch evidence."""
+    Since lane 159 the Rust strings carry the width Lean needs, so this
+    file must ELABORATE (0 errors) -- that success is the match evidence
+    (it reopens the lane-158 finding if it ever goes red)."""
     if shape == "shl":
         expr = ("(Expr.shl (w := 3) (l1 := 3) (h1 := 3) (l2 := 2) (h2 := 2)\n"
                 "      (by decide) (by decide) (by decide) (by decide)\n"
@@ -241,7 +245,7 @@ def mismatch_demo_file(shape, rust_string):
                 "      (by decide) (by decide) (by decide) (by decide)\n"
                 "      (Expr.lit 12) (Expr.lit 2))")
     return (LEAN_HEAD
-            + "-- Mismatch demo: Rust prints %s\n-- which is not a CertExpr term.\n" % rust_string
+            + "-- Match confirmation: Rust prints %s\n-- which is a CertExpr term.\n" % rust_string
             + "example : printInt (D := refD) (Γ := []) (Λ := []) %s\n" % expr
             + "    = some %s := rfl\n" % rust_string.replace("(.lit", "(CertExpr.lit")
             + LEAN_TAIL)
@@ -352,15 +356,16 @@ def main():
         errs = lean_probe(TERMIDENT)
         evidence["TermIdent104 shape battery"] = errs
         print("LEAN   TermIdent104 shape battery -> %s error(s)" % errs)
-        # Mismatch demos: must FAIL.
+        # Match confirmations: the Rust strings now carry the width, so
+        # pasting one as the expected term must elaborate (0 errors).
         for shape, _desc, rust, _lean, _test in VECTORS:
             if shape not in ("shl", "shr"):
                 continue
-            demo = outdir / ("mismatch-" + shape + ".lean")
-            demo.write_text(mismatch_demo_file(shape, rust), encoding="utf-8")
+            demo = outdir / ("match-" + shape + ".lean")
+            demo.write_text(match_confirm_file(shape, rust), encoding="utf-8")
             errs = lean_probe(demo)
-            evidence["mismatch demo " + shape] = errs
-            print("LEAN   mismatch demo %s -> %s error(s) (nonzero = mismatch confirmed)" % (shape, errs))
+            evidence["match confirmation " + shape] = errs
+            print("LEAN   match confirmation %s -> %s error(s) (zero = match confirmed)" % (shape, errs))
         # Per-program verdicts ride on the combined run + content identity.
         combo_errs = evidence["combined %d distinct const values" % len(all_vals)]
         for stem, vals in sorted(with_consts.items()):
