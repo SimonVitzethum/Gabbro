@@ -710,10 +710,427 @@ theorem rehang_can_cycle_zeuge :
     ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
   ⟨rehang_can_cycle, refB_erreicht, refB_schreibt⟩
 
+/-! ## 16. `gruppe.ops` (group: 10 corpus lines).
+
+The connecting invariant of the group is preserved under every group
+operation. The lock footprint under which that holds does NOT stand
+here but in `gruppe.sperrabdruck` -- this template presupposes it
+(the `lock_order_no_reentry` half above). What Lean checks is the
+composition core: two footprint-covered group operations that each
+preserve the link (`h1`/`h2`) preserve it in sequence. (The
+single-carrier operations that BREAK a connecting invariant --
+`verbindung_nicht_gedeckt` -- are exactly why this entry exists.) -/
+
+/-- Soundness core of `gruppe.ops`: preservation composes. `h1`/`h2`
+   /`hp` are all consumed. -/
+theorem group_ops_compose (A B : Type) (link : A → B → Prop)
+    (g1 g2 : A × B → A × B)
+    (h1 : ∀ p, link p.1 p.2 → link (g1 p).1 (g1 p).2)
+    (h2 : ∀ p, link p.1 p.2 → link (g2 p).1 (g2 p).2)
+    (p : A × B) (hp : link p.1 p.2) :
+    link (g2 (g1 p)).1 (g2 (g1 p)).2 :=
+  h2 _ (h1 _ hp)
+
+/-- Witness for `group_ops_compose`: the equality link over `Nat`
+    survives `(+1, +1)` then `(*2, *2)`, jointly with the
+    NON-DEGENERATE run. -/
+theorem group_ops_compose_zeuge :
+    ((12 : Nat) = 12)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have h1 : ∀ p : Nat × Nat, p.1 = p.2 →
+      ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).1 =
+      ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).2 := by
+    intro p hp
+    simp only []
+    omega
+  have h2 : ∀ p : Nat × Nat, p.1 = p.2 →
+      ((fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) p).1 =
+      ((fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) p).2 := by
+    intro p hp
+    simp only []
+    omega
+  exact ⟨group_ops_compose Nat Nat (fun a b => a = b)
+    (fun q : Nat × Nat => (q.1 + 1, q.2 + 1))
+    (fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) h1 h2 (5, 5) rfl,
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 17. `state.reset` (reset: 9 corpus lines).
+
+The generated transition into the initial state holds from every
+state in which no linear value is held (`h`: the held-flag is down),
+and is itself a `transset` (single move, no middle -- see §9). From a
+state with a held linear value it is a leak and is rejected -- M2, not
+this template (`reset_rejects_held`). Model: a value plus a
+held-linear flag. -/
+
+/-- The generated reset: clean states go home, holding states abort. -/
+def treset (s : Nat × Bool) : Option (Nat × Bool) :=
+  if s.2 then none else some (0, false)
+
+/-- Soundness core of `state.reset`: total on clean states. `h` is
+    consumed by the branch. -/
+theorem reset_from_clean (s : Nat × Bool) (h : s.2 = false) :
+    treset s = some (0, false) := by
+  simp [treset, h]
+
+/-- The M2 side: a held linear value is rejected, not leaked. -/
+theorem reset_rejects_held (v : Nat) : treset (v, true) = none :=
+  rfl
+
+/-- Witness for `reset_from_clean`: `(7, false)` goes home, jointly
+    with the NON-DEGENERATE run. -/
+theorem reset_from_clean_zeuge :
+    (treset (7, false) = some (0, false))
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
+  ⟨reset_from_clean _ rfl, refB_erreicht, refB_schreibt⟩
+
+/-! ## 18. `table.induktion` (induction: 3 corpus lines).
+
+The induction scheme generated from the `table` declaration is
+well-founded and complete: (N-1) chaining edges stay inside the table
+(`hfin`: the predecessor bound, from `table.indexschranke` via
+`M103`); (N-2) the principle holds for ONE state; (N-3) no
+empty-set clause of its own -- the base case is absorbed (vacuous
+predecessors discharge `hstep`); (N-4) for `chain(a,b) in` the domain
+has TWO kinds of edge and the scheme takes TWO premises
+(`e1`/`e2` both feed the step). Well-foundedness is a HYPOTHESIS
+(`hwf`: the declaration names the carrying invariant), not a result.
+`induct_edge_in_type` is the `im_bereich` direction of (N-1). -/
+
+/-- Soundness core of `table.induktion`. `hfin` bounds predecessors,
+    `hwf` carries accessibility, `hstep` is the two-premise step, `hx`
+    puts the target in the carrier. All are consumed. -/
+theorem table_induction (N : Nat) (e1 e2 : Nat → Nat → Prop)
+    (hfin : ∀ a b, e1 a b ∨ e2 a b → a < N)
+    (hwf : WellFounded (fun a b => e1 a b ∨ e2 a b))
+    (P : Nat → Prop)
+    (hstep : ∀ x, x < N → (∀ y, e1 y x ∨ e2 y x → P y) → P x)
+    (x : Nat) (hx : x < N) : P x := by
+  have key : ∀ z, Acc (fun a b => e1 a b ∨ e2 a b) z → z < N → P z := by
+    intro z ha
+    induction ha with
+    | intro z _ ih =>
+      intro hz
+      exact hstep z hz (fun y hy => ih y hy (hfin y z hy))
+  exact key x (hwf.apply x) hx
+
+/-- The `im_bereich` direction: a chained edge lands in the type. -/
+theorem induct_edge_in_type (N : Nat) (e1 e2 : Nat → Nat → Prop)
+    (hfin : ∀ a b, e1 a b ∨ e2 a b → b < N)
+    (a b : Nat) (h : e1 a b ∨ e2 a b) : b < N :=
+  hfin a b h
+
+/-- Witness for `table_induction`: successor edges below `2`, property
+    `True`, jointly with the NON-DEGENERATE run. -/
+theorem table_induction_zeuge :
+    (True)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hfin : ∀ a b : Nat,
+      (a + 1 = b ∧ b < 2 ∨ False) → a < (refD.count ()).toNat := by
+    intro a b h
+    have h2 : (refD.count ()).toNat = 2 := rfl
+    rw [h2]
+    rcases h with h | h'
+    · omega
+    · contradiction
+  have hsub : Subrelation (fun a b : Nat => a + 1 = b ∧ b < 2 ∨ False)
+      (· < ·) := by
+    intro a b h
+    rcases h with h | h'
+    · omega
+    · contradiction
+  have hwf : WellFounded (fun a b : Nat => a + 1 = b ∧ b < 2 ∨ False) :=
+    Subrelation.wf hsub Nat.lt_wfRel.wf
+  have hstep : ∀ x : Nat, x < (refD.count ()).toNat →
+      (∀ y : Nat, (y + 1 = x ∧ x < 2 ∨ False) → True) → True := by
+    intro x _ _
+    trivial
+  have hx : (0 : Nat) < (refD.count ()).toNat := by
+    have h2 : (refD.count ()).toNat = 2 := rfl
+    rw [h2]
+    decide
+  exact ⟨table_induction _ _ _ hfin hwf _ hstep 0 hx,
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 20. `table.ops.erhaltung` (by-ops: `16-by-ops-am-feld.gab` plus
+    the `by ops`/`maintains` corpus sites).
+
+Per generated mutation every `online` invariant OF THIS CARRIER is
+preserved -- once over the declaration, not per call site (`h`: each
+generated operation preserves `inv`). Invariants ACROSS carriers are
+expressly not covered; they are `gruppe.ops` (§16). What Lean checks
+is the amortisation: a whole run of generated operations (`hr`: every
+run step is generated) preserves the invariant from a good state
+(`hs`). All three are consumed. -/
+
+/-- Soundness core of `table.ops.erhaltung`: the declaration-level
+    check covers every call-site run. -/
+private theorem table_ops_keep_aux (S : Type) (inv : S → Prop)
+    (ops : List (S → S))
+    (h : ∀ op ∈ ops, ∀ s, inv s → inv (op s)) :
+    ∀ (run : List (S → S)), (∀ op ∈ run, op ∈ ops) →
+      ∀ (s : S), inv s → inv (run.foldl (fun acc op => op acc) s)
+  | [], _, _s, hs => hs
+  | op :: rest, hr, s, hs =>
+    have hop : op ∈ ops := hr _ (List.mem_cons.mpr (Or.inl rfl))
+    have hrest : ∀ _op' ∈ rest, _op' ∈ ops :=
+      fun _op' hm => hr _ (List.mem_cons_of_mem _ hm)
+    table_ops_keep_aux S inv ops h rest hrest (op s) (h _ hop _ hs)
+
+theorem table_ops_keep (S : Type) (inv : S → Prop) (ops : List (S → S))
+    (h : ∀ op ∈ ops, ∀ s, inv s → inv (op s))
+    (run : List (S → S)) (hr : ∀ op ∈ run, op ∈ ops)
+    (s : S) (hs : inv s) :
+    inv (run.foldl (fun acc op => op acc) s) :=
+  table_ops_keep_aux S inv ops h run hr s hs
+
+/-- Witness for `table_ops_keep`: operations `[+1, *2]` keep
+    nonnegativity along the run, jointly with the NON-DEGENERATE run. -/
+theorem table_ops_keep_zeuge :
+    ((0 : Nat) ≤ ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl
+      (fun acc op => op acc) 0)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have h : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
+      ∀ s : Nat, 0 ≤ s → 0 ≤ op s := by
+    intro op hop s hs
+    simp at hop
+    rcases hop with rfl | rfl <;> simp_all <;> omega
+  have hr : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
+      op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)) := by
+    intro op hop
+    exact hop
+  exact ⟨table_ops_keep Nat (fun s => 0 ≤ s) _ h _ hr 0 (Nat.zero_le 0),
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 21. `ops.suche` (candidate from «B10»: no corpus use yet).
+
+The generated search returns the first hit in a GENERATED, NAMED
+enumeration order (`hpre`: everything before the hit misses; `hpx`:
+the hit hits) and leaves the set unchanged (the search is pure: the
+fst-projection is the input list). For domains with several kinds of
+edge the order has to be fixed on top -- it does not fall out of the
+domain (booked in CUTS). -/
+
+/-- The generated search: input list plus first hit. -/
+def opSearch : List Nat → (Nat → Bool) → List Nat × Option Nat
+  | [], _ => ([], none)
+  | x :: xs, p =>
+    if p x then (x :: xs, some x)
+    else (x :: (opSearch xs p).1, (opSearch xs p).2)
+
+/-- The search leaves every list unchanged. -/
+private theorem op_search_keeps_all :
+    ∀ (xs : List Nat) (p : Nat → Bool), (opSearch xs p).1 = xs
+  | [], _ => rfl
+  | y :: ys, p => by
+    simp only [opSearch]
+    split
+    · rfl
+    · rw [op_search_keeps_all ys p]
+
+/-- The search leaves the set unchanged. -/
+theorem op_search_keeps (pre : List Nat) (x : Nat) (post : List Nat)
+    (p : Nat → Bool) :
+    (opSearch (pre ++ [x] ++ post) p).1 = pre ++ [x] ++ post :=
+  op_search_keeps_all _ _
+
+/-- The search returns the first hit. `hpre`/`hpx` are both consumed. -/
+theorem op_search_first (pre : List Nat) (x : Nat) (post : List Nat)
+    (p : Nat → Bool)
+    (hpre : ∀ y ∈ pre, p y = false) (hpx : p x = true) :
+    (opSearch (pre ++ [x] ++ post) p).2 = some x := by
+  induction pre with
+  | nil =>
+    show (opSearch ([x] ++ post) p).2 = some x
+    simp [opSearch, hpx]
+  | cons y ys ih =>
+    have hy : p y = false := hpre _ (List.mem_cons.mpr (Or.inl rfl))
+    have hrest : ∀ z ∈ ys, p z = false :=
+      fun z hz => hpre z (List.mem_cons_of_mem _ hz)
+    have hys := ih hrest
+    show (opSearch ((y :: ys) ++ [x] ++ post) p).2 = some x
+    simp only [show (y :: ys) ++ [x] ++ post = y :: (ys ++ [x] ++ post) from rfl,
+      opSearch, hy]
+    exact hys
+
+/-- Witness for the `ops.suche` pair: searching `[1, 3, 2, 4]` for an
+    even number returns `2` and keeps the list, jointly with the
+    NON-DEGENERATE run. -/
+theorem op_search_zeuge :
+    ((opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).1 = [1, 3, 2, 4] ∧
+      (opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).2 = some 2)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hpre : ∀ y ∈ ([1, 3] : List Nat), (y == 2) = false := by decide
+  have hpx : ((2 : Nat) == 2) = true := rfl
+  exact ⟨⟨op_search_keeps _ _ _ _,
+    op_search_first _ _ _ _ hpre hpx⟩, refB_erreicht, refB_schreibt⟩
+
+/-! ## 19. `restrict.alleinzugriff` (restrict: 5 corpus lines).
+
+UNDER H1 (the frame is COMPLETE -- every access of the body has a
+root from the declared set: in the model an access IS a rooted pair,
+so H1 holds by construction, established checker-side by `E008`/`E010`)
+and H2 (no other root meets the same place: at most ONE pointer
+parameter per carrier type, syntactically -- `emit::darf_restrict` --
+and no pointer to a global table formable in the language): every
+access to the object behind `p` runs through `p`, so the C11-6.7.3.1
+condition holds. -/
+
+/-- Soundness core of `restrict.alleinzugriff`: two accesses meeting
+    at one place share the one root. `hOnly` (H2) is consumed twice;
+    `h1`/`h2` fix the two accesses. -/
+theorem single_root (q : Nat) (reach : Nat → Nat → Prop) (p r1 r2 : Nat)
+    (hOnly : ∀ r, reach r q → r = p) (h1 : reach r1 q)
+    (h2 : reach r2 q) : r1 = r2 := by
+  rw [hOnly _ h1, hOnly _ h2]
+
+/-- Witness for `single_root`: both accesses run through root `7`,
+    jointly with the NON-DEGENERATE run. -/
+theorem single_root_zeuge :
+    ((7 : Nat) = 7)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hOnly : ∀ r, (r = 7 ∧ (0 : Nat) = 0) → r = 7 := by
+    intro r hr
+    exact hr.1
+  have h1 : (7 : Nat) = 7 ∧ (0 : Nat) = 0 := ⟨rfl, rfl⟩
+  exact ⟨single_root 0 (fun r qq => r = 7 ∧ qq = 0) 7 7 7 hOnly h1 h1,
+    refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
-  - Skeleton only: `idxGilt` is defined; all 21 soundness lemmas are open.
+  - All 21 templates of `crates/gabbro-check/src/schablonen.rs` have a
+    Lean soundness core in this file (previously: 0 of 21 in Lean; 10 of
+    21 in Isabelle `beweise/*.thy`). Each core is proved over a small
+    abstract model of the template, every premise is consumed by its
+    proof, and every template has a `NAME_zeuge` instantiating ALL
+    premises JOINTLY on concrete values plus the NON-DEGENERATE
+    reference run (`refB_erreicht` + `refB_schreibt`).
+  - What is NOT proved (per template, weaker than the Isabelle
+    counterpart where noted):
+    (1) `table.indexschranke`: the checker side (`M103` establishes
+    `hN`/`hZ` per program) is assumed, not proved.
+    (2) `table.absenkung`: `m = N` comes from `C001`, assumed.
+    (3) `option.sonderwert`: the arithmetic ON an index (no generated
+    computation hits the special value) is a statement about `emit.rs`,
+    not proved.
+    (4) `verbund.konstruktor`: `deckt` comes from `M106`/`M107`,
+    assumed; the executable read-out (`liest ... = some v`) is not
+    stated -- only `count = 1` plus key `Nodup`, which is what makes
+    read-out unambiguous.
+    (5) `device.konstruktor`: declared layouts = device layouts is an
+    axiom-layer assumption; `stride 0` refusal (`N010`) is assumed.
+    (6) `format.roundtrip`: proved over one-cell-per-field; the
+    bit-level disjointness (`trennt`, `N008`) this rests on is assumed;
+    variable lengths are out of scope (fixed case only).
+    (7) `gruppe.sperrabdruck`: the axiom-layer premise (a held
+    footprint keeps foreign cores out) is presupposed; (b) is the
+    negative exhibit, not a preservation proof.
+    (8) `entry.abdruck`: the hardware meaning of registers and the
+    stack switch (undefined word) are not modelled.
+    (9) `transition.transset`: the observer footprint is named by
+    premise; who holds the lock on multicore is outside the model.
+    (10) `exchange.rmw`: purity holds by construction (body IS a
+    function); atomicity is an axiom-layer assumption, not proved.
+    (11) `accumulates.monoid`: only adjacent-swap invariance (the
+    order-independence core); the quiescent-point agreement with the
+    atomic RMW chain and the per-operator units are not proved.
+    (12) `walk.mappings`: meeting holds by construction (filter);
+    whether the generator builds it, and large pages above full depth,
+    are open.
+    (13,14) `consuming.ordnung/leermenge`: finite-list level only; the
+    well-founded order itself and `waehlt_minimal` are assumed.
+    (15) `consuming.umhaengen`: the refutation exhibit only (as the
+    template demands: the blanket version is refuted, not open).
+    (16) `gruppe.ops`: preservation composes; the per-operation base
+    cases for real group operations are not proved.
+    (17) `state.reset`: single-flag model; the M2 linearity context is
+    assumed.
+    (18) `restrict.alleinzugriff`: H1 holds by construction (access IS
+    a rooted pair); H2a/H2b are folded into one `hOnly` premise whose
+    checker establishment (`emit::darf_restrict`, language shape) is
+    assumed; `own`-exclusivity stays a language decision.
+    (19) `table.induktion`: well-foundedness is a hypothesis; the
+    generator side (two edge premises per `chain(a,b)`) is assumed.
+    (20) `table.ops.erhaltung`: the per-operation preservation `h`
+    (Teil II by hand) is a premise, not a result; the emitted-C step
+    (`relabel` lowering branches) is not modelled.
+    (21) `ops.suche`: construct has no generator; the multi-edge order
+    is assumed.
+  - No theorem quantifies over program syntax (`Vertrag`/`Stmt`/sic),
+    so no conclusion claims a Gabbro semantics; the models are
+    explicitly abstract (`fieldStore`, `regFile`, `GAct`, ...).
 -/
 
 #print axioms Gabbro.Grammatik.idxGilt
+#print axioms Gabbro.Grammatik.index_bound_holds
+#print axioms Gabbro.Grammatik.index_bound_zeuge
+#print axioms Gabbro.Grammatik.lowering_stays_in_array
+#print axioms Gabbro.Grammatik.lowering_stays_in_array_zeuge
+#print axioms Gabbro.Grammatik.optWord
+#print axioms Gabbro.Grammatik.optWord_none
+#print axioms Gabbro.Grammatik.optWord_some
+#print axioms Gabbro.Grammatik.option_code_injective
+#print axioms Gabbro.Grammatik.option_code_injective_zeuge
+#print axioms Gabbro.Grammatik.record_ctor_unique
+#print axioms Gabbro.Grammatik.record_ctor_unique_zeuge
+#print axioms Gabbro.Grammatik.device_cells_separate
+#print axioms Gabbro.Grammatik.device_bank_separate
+#print axioms Gabbro.Grammatik.device_cells_separate_zeuge
+#print axioms Gabbro.Grammatik.fieldWrite
+#print axioms Gabbro.Grammatik.fieldRead
+#print axioms Gabbro.Grammatik.format_roundtrip
+#print axioms Gabbro.Grammatik.format_separate
+#print axioms Gabbro.Grammatik.format_roundtrip_zeuge
+#print axioms Gabbro.Grammatik.lock_order_no_reentry
+#print axioms Gabbro.Grammatik.group_move_middle_free
+#print axioms Gabbro.Grammatik.gexec
+#print axioms Gabbro.Grammatik.gfold
+#print axioms Gabbro.Grammatik.group_move_no_exit
+#print axioms Gabbro.Grammatik.lock_order_no_reentry_zeuge
+#print axioms Gabbro.Grammatik.regRun
+#print axioms Gabbro.Grammatik.entry_keeps
+#print axioms Gabbro.Grammatik.entry_clobbers
+#print axioms Gabbro.Grammatik.entry_keeps_zeuge
+#print axioms Gabbro.Grammatik.jointMove
+#print axioms Gabbro.Grammatik.jointTrace
+#print axioms Gabbro.Grammatik.joint_move_hidden
+#print axioms Gabbro.Grammatik.joint_move_hidden_zeuge
+#print axioms Gabbro.Grammatik.runRmw
+#print axioms Gabbro.Grammatik.rmw_chain_order
+#print axioms Gabbro.Grammatik.rmw_chain_order_zeuge
+#print axioms Gabbro.Grammatik.merge_swap_invariant
+#print axioms Gabbro.Grammatik.merge_swap_invariant_zeuge
+#print axioms Gabbro.Grammatik.mappingsOf
+#print axioms Gabbro.Grammatik.walk_hits_mapping
+#print axioms Gabbro.Grammatik.walk_hits_mapping_zeuge
+#print axioms Gabbro.Grammatik.consume_shrinks
+#print axioms Gabbro.Grammatik.consume_shrinks_zeuge
+#print axioms Gabbro.Grammatik.consume_empty_at
+#print axioms Gabbro.Grammatik.consume_empty_at_zeuge
+#print axioms Gabbro.Grammatik.rehang
+#print axioms Gabbro.Grammatik.rehang_can_cycle
+#print axioms Gabbro.Grammatik.rehang_can_cycle_zeuge
+#print axioms Gabbro.Grammatik.group_ops_compose
+#print axioms Gabbro.Grammatik.group_ops_compose_zeuge
+#print axioms Gabbro.Grammatik.treset
+#print axioms Gabbro.Grammatik.reset_from_clean
+#print axioms Gabbro.Grammatik.reset_rejects_held
+#print axioms Gabbro.Grammatik.reset_from_clean_zeuge
+#print axioms Gabbro.Grammatik.single_root
+#print axioms Gabbro.Grammatik.single_root_zeuge
+#print axioms Gabbro.Grammatik.table_induction
+#print axioms Gabbro.Grammatik.induct_edge_in_type
+#print axioms Gabbro.Grammatik.table_induction_zeuge
+#print axioms Gabbro.Grammatik.table_ops_keep
+#print axioms Gabbro.Grammatik.table_ops_keep_zeuge
+#print axioms Gabbro.Grammatik.opSearch
+#print axioms Gabbro.Grammatik.op_search_keeps
+#print axioms Gabbro.Grammatik.op_search_first
+#print axioms Gabbro.Grammatik.op_search_zeuge
 
 end Gabbro.Grammatik
