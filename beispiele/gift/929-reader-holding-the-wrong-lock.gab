@@ -1,0 +1,45 @@
+-- erwartet: N256
+-- **A reader holding the WRONG lock falls the same way.**
+--
+-- `lesen` holds `Anderes`, and `Anderes` guards `Fremd` -- every name in
+-- place, none of them over `Zustand`. The guard must cover THE carrier the
+-- register rests on, not merely exist somewhere in the signature. The twin
+-- of `926`, which holds nothing at all; both fall with N256 ALONE.
+module gift::depends_falsche_wache {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+table Fremd count 2 {
+    slot { x : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+lock Anderes protects { Fremd } rank 1;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand }
+}
+
+-- Must fall: `Anderes` is held and guards `Fremd`, not `Zustand`.
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Anderes)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}

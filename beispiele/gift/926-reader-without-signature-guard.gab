@@ -1,0 +1,39 @@
+-- erwartet: N256
+-- **A reader of a written carrier without a signature-held guard falls.**
+--
+-- `ST` rests on `Zustand`, `Zustand` is written by `schreiben` below, and
+-- `lesen` holds no lock at all. The writer holds `Sperre`, so the lock is
+-- taken and nothing else speaks: N256 ALONE. A lock taken only in a `locks`
+-- block would fall the same way -- the repaired machine has no bare lock
+-- steps, so only `requires Held(L)` counts.
+module gift::depends_leser_ohne_wache {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand }
+}
+
+-- Must fall: no `Held` over the carrier `schreiben` writes.
+impl fn lesen(d : Geraet) -> u32
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}

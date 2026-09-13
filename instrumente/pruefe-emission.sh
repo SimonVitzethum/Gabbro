@@ -843,10 +843,15 @@ int main(void) {
 #            sind also gar nicht mehr da. *Der Ausschnitt sagt weniger, als er zu sagen
 #            scheint; die Zeile bleibt trotzdem stehen, denn sie ist die des Menschen.*
 #      9  -- `reason` traegt die DEKLARIERTE Zahl, nicht die Reihenfolge der Aufzaehlung
+# **3 -> 20 assumptions on 2026-09-13, and the OBJECT grew.** Lane 140 lists the
+# `RegLokal` assumption per register in the manifest (`reglokal.<device>.<reg>`
+# with its carriers, structural class): F02 declares 17 registers, so its
+# certificate counts 17 more. *The certificate got longer because the trust
+# base got HONEST, not because it grew* -- same ledger as the 2 -> 3 above.
 lauf "fragment2" "$W/messung/fragmente/F02.gab" "$TREIBER2" \
      "4096 153 7 3 256 1 6 2 1 1 0 9" \
      's/uint32_t _s = (\*(volatile uint32_t \*)(d->basis + 28));/uint32_t _s = 0;/' \
-     "3 assumptions (1 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 3 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "20 assumptions (18 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 3 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4b. «B22-nah»: ABWESENHEIT und ABSAGE sind zwei Antworten ---------------------------
 #
@@ -969,10 +974,14 @@ int main(void) {
 # falsifier -- and it is now two assumptions, each with `arch x86_64` and its own probe.
 # `F04.gab` names it, so its certificate counts one more. *The certificate got longer
 # because the trust base got HONEST, not because it grew.*
+# **3 -> 26 assumptions on 2026-09-13, and the OBJECT grew.** Lane 140 lists the
+# `RegLokal` assumption per register in the manifest: F04 declares 23 counted
+# registers, so its certificate counts 23 more (all NOT FALSIFIABLE, held by
+# structure). *The certificate got longer because the trust base got HONEST.*
 lauf "fragment4" "$W/messung/fragmente/F04.gab" "$TREIBER4" \
      "42 1 7 99" \
      's/% q->n/% 1/g' \
-     "3 assumptions (0 of them NOT FALSIFIABLE, 3 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "26 assumptions (23 of them NOT FALSIFIABLE, 3 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4d. Das Fragment F6: die Stack-Wasserstandsmarke, und sie MISST DEN INDEX ------------
 #
@@ -1645,9 +1654,11 @@ int main(void) {
 #     64  -- das NACHBARREGISTER bei 0x104 ist unberuehrt geblieben
 #      8  -- der Griff ist ein Zeiger, kein abgebildeter Registersatz: kein `struct` mit
 #            Fuellung, ueber die der Uebersetzer entscheidet
+# **0 -> 2 assumptions on 2026-09-13 (lane 140).** The two registers of
+# `beispiel12` each get their `reglokal.*` manifest line now.
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
      's/+ 258/+ 260/' \
-     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "2 assumptions (2 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
 #
@@ -1692,9 +1703,11 @@ int main(void) {
 #      Zustandsbit, das niemand mitgeschrieben hat, waere geloescht -- und die Einheit haette
 #      die Uebersetzung mitten im Betrieb abgeschaltet. *Genau dafuer hat der Bestand eine
 #      Maske und eine Kommentarwand; hier ist es eine Zeile.*
+# **0 -> 2 assumptions on 2026-09-13 (lane 140).** The two registers of
+# `beispiel20` each get their `reglokal.*` manifest line now.
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
      's/(_s \& /(0*_s \& /' \
-     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "2 assumptions (2 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
@@ -2088,9 +2101,11 @@ int main(void) {
     return 0;
 }
 '
+# **0 -> 1 assumptions on 2026-09-13 (lane 140).** The register of
+# `beispiel37` gets its `reglokal.*` manifest line now.
 lauf "beispiel37" "$W/beispiele/37-umlauf-rechnet.gab" "$TREIBER37" "63744" \
      's/) \* (uint32_t)/) + (uint32_t)/' \
-     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "1 assumptions (1 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 19. «B41b»: der BAUMDURCHLAUF, und er ist die Einheit, auf die es hier ankommt ------
 #
@@ -2997,7 +3012,12 @@ fi
 # and `111-rufzulassung` (this lane: the guarded footprint and the admitted
 # indirect call). Both emit and compile under `cc -Werror -fsyntax-only`;
 # the other 91 stand as booked.
-MARKE_EMIT=93
+# **93 -> 95 on 2026-09-13 (lane 140, measured on the merged tree).** `+2` are
+# `112-register-traeger-bewacht` and `113-register-traeger-ungeschrieben`
+# (this lane: the `depends` clause over a guarded and an unwritten carrier).
+# Both emit and compile under `cc -Werror` at `-O0` and `-O2`; the other 93
+# stand as booked.
+MARKE_EMIT=95
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

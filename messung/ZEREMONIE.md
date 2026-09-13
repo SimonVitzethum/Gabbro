@@ -9,8 +9,12 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       88        A1  4 · A4 84
   redundant        0
   tragend       1281
-111 von 1548 Stellen dürfen sinken
+111 von 1559 Stellen dürfen sinken
 
+> **111 von 1559 on 2026-09-13 (lane 140, measured on the lane tree).**
+> The delta against lane E5/129's 1548 is exactly this lane's 11 sites
+> (`beispiele/112`/`113` and gift `925`-`929`). Booked as measured, not
+> added up.
 > **Lane-126 merge resolution (2026-09-12, measured).** Master's `108 von
 > 1445` stood on the pre-merge tree; the run above reads `111 von 1501` on
 > the merged tree (which adds `beispiele/104-referenz.gab` among other

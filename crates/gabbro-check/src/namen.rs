@@ -11,7 +11,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     sichtbarkeit(baum, absagen);
@@ -31,6 +31,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     maschineneigenschaft(baum, absagen);
     merkmalsname_ist_ein_name(baum, absagen);
     geraetezusage_nennt_ihre_stelle(baum, absagen);
+    geraetetraeger_pruefen(baum, absagen);
     verbund_ohne_groesse(baum, absagen);
     check_traegt_seine_pflicht(baum, absagen);
     spiegel_und_sonde(baum, absagen);
@@ -1225,6 +1226,354 @@ fn binder_im_praedikat(p: &Pred, aus: &mut HashSet<String>) {
             }
         }
         PredArt::Erreicht { .. } | PredArt::Held { .. } => {}
+    }
+}
+
+/// **Lane 140 -- `N255`-`N258`: a register names the carriers its answer may rest on.**
+///
+/// `ziel_ort_geraet` admits a register read under `RegLokal` (the answer of `r`
+/// depends on the carriers `D.rtraeger r` alone) and under the widened footprint
+/// check `fussOrtGB` (every such carrier is guarded by a lock the reading function
+/// holds BY SIGNATURE, or is written by no function). The `depends { … }` clause
+/// at `reg` (`SYNTAX.md` §10) is where the declaration names those carriers.
+/// Four refusals, one per decidable half:
+///
+/// * **`N255` -- the name nothing declares.** The head of a `depends` entry names
+///   no item of this unit (and no `use` tail -- the house answer of `N033` and
+///   `N053` beside it: a fragment naming outside the cut is refused, never
+///   silently believed).
+/// * **`N257` -- declared, but no carrier.** A lock, a device, a register, a
+///   bank, a function -- anything whose declaration stands here but holds no
+///   device state. Only tables and globals are carriers in the model
+///   (`Tab ⊕ Glob`).
+/// * **`N258` -- below carrier granularity.** `T.feld` parses and is refused,
+///   never truncated to `T`: `GleichAuf` and `fussOrteG` cannot see a slot, and
+///   a checker that silently widened the entry would establish a footprint the
+///   theorem never reads (W16).
+/// * **`N256` -- the reader holds no guard.** For every function that reads a
+///   register with carriers, every carrier some function declares `writes` for
+///   must be guarded by a lock the reader holds BY SIGNATURE (`requires
+///   Held(L)` with the carrier in `L`'s `protects`). A lock taken only in a
+///   `locks` block does not count -- the repaired machine has no bare lock
+///   steps (`SATZKARTE.md` §11.3) -- and neither does a callee's hull: the
+///   check is per function over its own body, mirroring `fussOrteG`.
+///
+/// `N259` stays reserved for the writer side (the `hWatch` half, D6 territory):
+/// a function that WRITES a device carrier owes the guard at its own access,
+/// and that is `H007`'s question, not this rule's.
+///
+/// Two deliberate boundaries, both booked rather than denied: "written" reads
+/// the DECLARED `writes` effects -- the surface of `D.schreibt`/`D.gschreibt`
+/// (a body write without declared cover is refused elsewhere, and generated
+/// ops force the caller's declaration); and the cut is this unit (a write
+/// from another unit is missed, the N025/N038 reticence, and the sentence in
+/// `saetze.rs` says so).
+fn geraetetraeger_pruefen(baum: &Programm, absagen: &mut Absagen) {
+    // The known names (N053's set: declared items plus `use` tails) and, beside
+    // it, the carriers (tables and globals) and every declared kind for N257.
+    let mut bekannt: HashSet<String> = HashSet::new();
+    let mut traeger: HashSet<String> = HashSet::new();
+    let mut art: HashMap<String, &'static str> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let Some(n) = i.art.name() {
+            bekannt.insert(n.text.clone());
+        }
+        if let ItemArt::Use(u) = &i.art {
+            if let Some(n) = u.pfad.teile.last() {
+                bekannt.insert(n.text.clone());
+                // An imported name arrives without its declaration: its kind is
+                // unreadable here, so it reads as a carrier rather than as a
+                // refusal. The same reticence as N025/N038.
+                traeger.insert(n.text.clone());
+            }
+        }
+        match &i.art {
+            ItemArt::Tabelle(t) => {
+                traeger.insert(t.name.text.clone());
+                art.insert(t.name.text.clone(), "table");
+            }
+            ItemArt::Statisch(s) => {
+                traeger.insert(s.name.text.clone());
+                art.insert(s.name.text.clone(), "global");
+            }
+            ItemArt::Lock(l) => {
+                art.insert(l.name.text.clone(), "lock");
+            }
+            ItemArt::Device(d) => {
+                art.insert(d.name.text.clone(), "device");
+                for r in &d.register {
+                    art.insert(r.name.text.clone(), "register");
+                }
+                for b in &d.baenke {
+                    art.insert(b.name.text.clone(), "bank");
+                    for r in &b.register {
+                        art.insert(r.name.text.clone(), "register");
+                    }
+                }
+            }
+            ItemArt::Funktion(f) => {
+                art.insert(f.name.text.clone(), "function");
+            }
+            _ => {}
+        }
+    });
+    // The clause itself: N255 (unknown), N257 (no carrier), N258 (a slot).
+    // Unknown first, then kind, then granularity: `nix.feld` misnames its head
+    // before anything else, and `Sperre.x` is already no carrier at the head.
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Device(d) = &i.art else { return };
+        let mut reg = |r: &RegDecl| {
+            for c in &r.depends {
+                let kopf = &c.basis.text;
+                if !bekannt.contains(kopf) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N255",
+                            c.span,
+                            format!(
+                                "`{}` in `depends` of `{}` names nothing this unit declares",
+                                c.text(),
+                                r.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "only tables and globals hold device state (`Tab ⊕ Glob`); a \
+                             name from outside the cut is refused, never silently believed \
+                             (the N033/N053 house answer)",
+                        ),
+                    );
+                } else if !traeger.contains(kopf) {
+                    let was = art.get(kopf).copied().unwrap_or("declaration");
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N257",
+                            c.span,
+                            format!(
+                                "`{kopf}` in `depends` of `{}` is a {was}, and no {was} \
+                                 holds device state",
+                                r.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "only tables and globals are carriers in the model -- name the \
+                             carrier holding the state, not the item beside it",
+                        ),
+                    );
+                } else if !c.suffixe.is_empty() {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N258",
+                            c.span,
+                            format!(
+                                "`{}` in `depends` of `{}` names below carrier granularity \
+                                 -- name `{kopf}`",
+                                c.text(),
+                                r.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "GleichAuf and the footprint cannot see a slot; a checker that \
+                             silently widened the entry would establish a footprint the \
+                             theorem never reads",
+                        ),
+                    );
+                }
+            }
+        };
+        for r in &d.register {
+            reg(r);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                reg(r);
+            }
+        }
+    });
+    // Declared writers per carrier: the surface of `D.schreibt`/`D.gschreibt`.
+    // A `spec fn` touches nothing at run time (the geteilt reading).
+    let mut schreibt: HashMap<String, Vec<String>> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        let Some(w) = &f.effects else { return };
+        for e in &w.liste {
+            if let WirkungArt::Schreibt(o) = &e.art {
+                schreibt
+                    .entry(o.basis.text.clone())
+                    .or_default()
+                    .push(f.name.text.clone());
+            }
+        }
+    });
+    // Guards per carrier: locks whose `protects` names this head.
+    let mut wache: HashMap<String, Vec<String>> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Lock(l) = &i.art else { return };
+        for o in &l.schuetzt {
+            wache
+                .entry(o.basis.text.clone())
+                .or_default()
+                .push(l.name.text.clone());
+        }
+    });
+    // The carriers each register carries into the footprint: declared
+    // tables/globals, bare. Anything N255-N258 already refused stays out, so
+    // one defect draws one refusal and never a second one downstream.
+    let mut traeger_von: HashMap<(String, String), Vec<String>> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Device(d) = &i.art else { return };
+        let mut nimm = |r: &RegDecl| {
+            traeger_von.insert(
+                (d.name.text.clone(), r.name.text.clone()),
+                r.depends
+                    .iter()
+                    .filter(|c| traeger.contains(&c.basis.text) && c.suffixe.is_empty())
+                    .map(|c| c.basis.text.clone())
+                    .collect(),
+            );
+        };
+        for r in &d.register {
+            nimm(r);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                nimm(r);
+            }
+        }
+    });
+    if traeger_von.values().all(|v| v.is_empty()) {
+        return;
+    }
+    let tabelle = crate::m3::geraetetabelle(baum);
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        let griffe = crate::m3::griffe_von(f, &tabelle);
+        if griffe.is_empty() {
+            return;
+        }
+        // Locks held BY SIGNATURE: `requires Held(L)`. The strength travels
+        // beside the name and is H001's question, not this rule's.
+        let mut gehalten: HashSet<String> = HashSet::new();
+        for p in &f.requires {
+            let mut h = Vec::new();
+            crate::aufrufgraph::held_aus_pred(p, &mut h);
+            for (n, _) in h {
+                gehalten.insert(n);
+            }
+        }
+        let mut lesungen = Vec::new();
+        registerlesungen(b, &tabelle, &griffe, &mut lesungen);
+        for (span, geraet, reg) in lesungen {
+            let Some(cars) = traeger_von.get(&(geraet.clone(), reg.clone())) else {
+                continue;
+            };
+            for c in cars {
+                let Some(schreiber) = schreibt.get(c) else {
+                    continue;
+                };
+                if schreiber.is_empty() {
+                    continue;
+                }
+                let haelt_wache = wache
+                    .get(c)
+                    .is_some_and(|ls| ls.iter().any(|l| gehalten.contains(l)));
+                if haelt_wache {
+                    continue;
+                }
+                let mut a = Absage::fehler(
+                    "N256",
+                    span,
+                    format!(
+                        "`{}` reads `{}` of `device {}`, whose `depends` names \
+                         `{}` -- written by {} but no lock guarding `{}` is held here",
+                        f.name.text,
+                        reg,
+                        geraet,
+                        c,
+                        schreiber.join(", "),
+                        c,
+                    ),
+                );
+                match wache.get(c) {
+                    Some(ls) => {
+                        let wer = ls
+                            .iter()
+                            .map(|l| format!("`{l}`"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        let welchen = if ls.len() == 1 { "it" } else { "one of them" };
+                        a = a.mit_notiz(format!(
+                            "guarded by {wer} -- add {welchen} to the signature's `requires \
+                             Held(…)`; a lock taken only in a `locks` block does not count",
+                        ));
+                    }
+                    None => {
+                        let nachricht = format!(
+                            "no lock guards `{c}` at all -- protect it and require Held, or \
+                             stop writing it; an unwritten carrier needs no guard"
+                        );
+                        a = a.mit_notiz(nachricht);
+                    }
+                }
+                absagen.schiebe(a.mit_notiz(
+                    "a register answer is hardware (`RegLokal`): it may follow the carriers \
+                     its declaration names, so a reader of a written carrier holds the guard \
+                     (`fussOrtGB`)",
+                ));
+            }
+        }
+    });
+}
+
+/// Every register read of one body: the place span with its device and register.
+///
+/// Expression places (including bare-call arguments, the R011 reading), `let …
+/// else` place sources (which live beside the expressions), and read-modify-write
+/// targets (the m3 reading of `klassenblock`). Plain assignment targets are pure
+/// writes: the oracle is never asked, so `RegLokal` owes them nothing.
+fn registerlesungen(
+    b: &Block,
+    geraete: &BTreeMap<String, BTreeMap<String, crate::m3::RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    aus: &mut Vec<(Span, String, String)>,
+) {
+    for s in &b.anweisungen {
+        let mut orte: Vec<&Ort> = Vec::new();
+        for e in crate::eigene_ausdruecke(s) {
+            orte.extend(crate::alle_orte(e));
+        }
+        if let StmtArt::Ruf(r) = &s.art {
+            for a in &r.argumente {
+                orte.extend(crate::alle_orte(a));
+            }
+        }
+        if let StmtArt::LetSonst(x) = &s.art {
+            if let LetQuelle::Ort(o) = &x.quelle {
+                orte.push(o);
+            }
+        }
+        if let StmtArt::Zuweisung(z) = &s.art {
+            if !matches!(z.op, ZuwOp::Setzt) {
+                orte.push(&z.ziel);
+            }
+        }
+        for o in orte {
+            let Some(t) = crate::m3::ort_register(o, geraete, griffe) else {
+                continue;
+            };
+            if let Some(dev) = griffe.get(&o.basis.text) {
+                aus.push((o.span, dev.clone(), t.reg.text.clone()));
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            registerlesungen(k, geraete, griffe, aus);
+        }
     }
 }
 

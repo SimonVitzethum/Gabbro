@@ -84,7 +84,15 @@ MARK_ADMITTED = 1
 # structure (`N215`/`N218`), never executed. Written as one helper, so the
 # site count moves by exactly one; the population does not move (no
 # `unfalsifiable` clause was added anywhere).
-MARK_RS_SITES = 5
+#
+# **5 -> 6 on 2026-09-13 (lane 140).** The sixth site is `reglokalklasse` in
+# `manifest.rs`: the class of a register-locality entry, register locality
+# (`RegLokal`) held by structure (`N255`-`N258`, `N256`), never executed.
+# Written as one helper, so the site count moves by exactly one; the
+# population does not move (no `unfalsifiable` clause was added anywhere --
+# the generated `reglokal.*` names are computed, so the scanner above does
+# not see them, and that is the shape the blind-tooth exists for).
+MARK_RS_SITES = 6
 
 # A row of the register: `| 1 | **name** | `site`:12 | ADMITTED | `U2` | 2026-09-04 |`
 ROW = re.compile(r"^\|\s*\d+\s*\|\s*\*\*([A-Za-z_][A-Za-z_0-9]*)\*\*\s*\|"

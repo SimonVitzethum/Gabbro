@@ -1876,6 +1876,14 @@ pub struct RegDecl {
     /// falsifier is a fact, and a fact about a volatile register a hostile device may
     /// contradict at will -- that would be the «B33» error again.*
     pub requires_grund: Option<(Ident, Ident)>,
+    /// **Lane 140: the device-state carriers (`depends { … }`, `SYNTAX.md` §10).**
+    ///
+    /// The tables or globals the register's answer may rest on -- the surface
+    /// of `D.rtraeger`. Each entry parses as `ident ["." ident]`; a dotted
+    /// form is refused by the checker (`N258`), never silently truncated.
+    /// Empty means the register names no carriers, and the footprint check
+    /// is vacuous for it.
+    pub depends: Vec<Ort>,
     pub span: Span,
 }
 

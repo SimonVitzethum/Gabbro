@@ -4759,6 +4759,29 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // Lane 140: `depends { C1, C2 }` -- the device-state carriers whose
+        // change the register's answer may follow (`SYNTAX.md` §10). Bare
+        // carrier names with at most one `.field` suffix; a deeper form is no
+        // carrier shape and is refused HERE, while one suffix parses and falls
+        // to the checker (`N258`), which can name the carrier it should have
+        // been. **One new word, and the ledger line stands at `Kw::Depends`.**
+        let depends = if self.friss_kw(Kw::Depends) {
+            self.erwarte_z(Z::GeschweiftAuf)?;
+            let mut liste = Vec::new();
+            if !self.ist_z(Z::GeschweiftZu) {
+                liste.push(self.carrier()?);
+                while self.friss_z(Z::Komma) {
+                    if self.ist_z(Z::GeschweiftZu) {
+                        break;
+                    }
+                    liste.push(self.carrier()?);
+                }
+            }
+            self.erwarte_z(Z::GeschweiftZu)?;
+            liste
+        } else {
+            Vec::new()
+        };
         Ok(RegDecl {
             name,
             typ,
@@ -4769,7 +4792,22 @@ impl<'a> Parser<'a> {
             phasen,
             requires,
             requires_grund,
+            depends,
             span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// Lane 140: one `depends` entry -- `ident ["." ident]`.
+    fn carrier(&mut self) -> Erg<Ort> {
+        let basis = self.erwarte_ident()?;
+        let mut suffixe = Vec::new();
+        if self.friss_z(Z::Punkt) {
+            suffixe.push(OrtSuffix::Feld(self.erwarte_feldname()?));
+        }
+        Ok(Ort {
+            span: basis.span.bis_zu(self.vorheriger_span()),
+            basis,
+            suffixe,
         })
     }
 

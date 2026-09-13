@@ -119,7 +119,14 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # would collide with the served function -- and the reason stands at each
 # entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
 # so the third mark does not move either.
-MARKE_WOERTER = 242
+#
+# **242 -> 243 on 2026-09-13 (lane 140).** `depends` names the device-state
+# carriers of a register (`dokumente/SYNTAX.md` §10): no existing form
+# carries them -- `requires` states a promise about the value, `fields`
+# names bit groups of the same word, `mirrors` names the source of carried
+# bits -- and the reason stands at the entry in `kw.rs`. The second mark
+# does NOT move; the word is `ctx`, so the third mark does not move either.
+MARKE_WOERTER = 243
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

@@ -3866,6 +3866,63 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/namen.rs::geraetezusage_nennt_ihre_stelle",
     },
     Satz {
+        name: "namen.geraetetraeger_nennt_traeger",
+        kennungen: &["N255", "N257", "N258"],
+        aussage: "Every entry of a `reg … depends { … }` names a CARRIER: a bare table or \
+                  global of this unit (or a `use` tail, the N033/N053 house answer). A name \
+                  nothing declares (`N255`), a declared item that holds no device state -- \
+                  a lock, a device, a register, a bank, a function (`N257`) -- and a dotted \
+                  place below carrier granularity (`N258`) are refused before they can enter \
+                  any footprint: `GleichAuf` and `fussOrteG` cannot see a slot, so a clause \
+                  that named one would establish a footprint the theorem never reads.",
+        vorbehalt: "**The clause is named, not verified.** Whether the answer REALLY rests \
+                    on those carriers is hardware (`RegLokal`): the program cannot establish \
+                    it, no pass should pretend to, and the manifest lists it per register \
+                    beside the named assumptions (`hardware (reglokal R)`). What this rule \
+                    takes is only the half that needs no machine -- the same cut N053 makes \
+                    one clause up. **The known set is this unit**, so a carrier written from \
+                    another unit is missed, the N025/N038 reticence. And an imported name \
+                    arrives without its kind: it reads as a carrier rather than as a \
+                    refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/925-depends-names-nothing-declared.gab (`N255`), \
+                      beispiele/gift/927-depends-names-a-lock.gab (`N257`), \
+                      beispiele/gift/928-depends-names-a-slot.gab (`N258`); each falls with \
+                      its code ALONE. The silent direction is beispiele/112 and /113, whose \
+                      `depends` clauses name tables and a global and pass.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::geraetetraeger_pruefen",
+    },
+    Satz {
+        name: "namen.geraeteleser_haelt_wache",
+        kennungen: &["N256"],
+        aussage: "A function that reads a register with `depends` carriers holds, BY \
+                  SIGNATURE, a lock guarding every carrier some function declares `writes` \
+                  for -- `requires Held(L)` with the carrier in `L`'s `protects` -- or the \
+                  carrier is written by no function at all. That is the decidable half of \
+                  `ziel_ort_geraet`'s widened footprint check (`fussOrtGB`): the reader's \
+                  sequential world agrees with the machine's on the footprint, hence on \
+                  the device carriers, hence the sequential answer of a local oracle is \
+                  the machine's answer.",
+        vorbehalt: "**Signature only, and that is the theorem's shape, not the checker's \
+                    strictness.** A lock taken in a `locks` block does not count -- the \
+                    repaired machine has no bare lock steps -- and neither does a callee's \
+                    hull: the check is per function over its own body, mirroring \
+                    `fussOrteG`. **\"Written\" reads the DECLARED `writes` effects** (the \
+                    surface of `D.schreibt`/`D.gschreibt`); generated ops force the \
+                    caller's declaration, and a body write without declared cover is \
+                    refused elsewhere. The strength of `Held` (shared or exclusive) is \
+                    H001's question, not this rule's. The writer side -- a function that \
+                    WRITES a device carrier owing the guard at its own access -- stays \
+                    `H007`'s (`N259` reserved).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/926-reader-without-signature-guard.gab (no `Held` at \
+                      all) and beispiele/gift/929-reader-holding-the-wrong-lock.gab (a \
+                      `Held` of a lock guarding elsewhere); both fall with N256 ALONE. The \
+                      silent direction is beispiele/112 (guarded reader, written carrier) \
+                      and beispiele/113 (unwritten carrier, no guard owed).",
+        fundstelle: "crates/gabbro-check/src/namen.rs::geraetetraeger_pruefen",
+    },
+    Satz {
         name: "namen.erzeugter_name_zweimal",
         kennungen: &["N042"],
         aussage: "Two Gabbro declarations that get the SAME C name are refused at the second \

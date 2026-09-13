@@ -395,6 +395,20 @@ wortschatz! {
     Backed        => "backed",        ctx;
     Mirrors       => "mirrors",       ctx;
     From          => "from",          ctx;
+    // **Lane 140 (2026-09-13): the device-state carriers of a register.**
+    //
+    // A register is outside the world: its answer is whatever the oracle
+    // says. `ziel_ort_geraet` admits the read only under `RegLokal` -- the
+    // answer depends on the device-state carriers `D.rtraeger r` alone --
+    // and under the widened footprint check `fussOrtGB`, which the checker
+    // can only establish if the declaration NAMES those carriers
+    // (`dokumente/SYNTAX.md` §10, `depends { … }` at `reg`). No existing
+    // form carries them: `requires` states a promise about the VALUE,
+    // `fields` names bit groups of the same word, and `mirrors` names the
+    // source of carried bits -- none of them names a table or global
+    // holding device state. CONTEXTUAL like every other clause word:
+    // everywhere a name stands, it stays an identifier.
+    Depends       => "depends",       ctx;
     Assume        => "assume",        ctx;
     Falsifier     => "falsifier",     ctx;
     Unfalsifiable => "unfalsifiable", ctx;

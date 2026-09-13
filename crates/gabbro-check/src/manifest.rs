@@ -286,9 +286,82 @@ pub fn sammle_mit_quelle(baum: &Programm, quelle: &str) -> Vec<Eintrag> {
     stilllegungsannahmen(baum, &mut out);
     fristannahmen(baum, &mut out);
     profil_und_bedarf(baum, &mut out);
+    reglokalannahmen(baum, &mut out);
     sammle_items(&baum.items, quelle, &mut out);
     out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out
+}
+
+/// **Lane 140: the register-locality assumption per register.**
+///
+/// `ziel_ort_geraet` admits register reads under `RegLokal`: the answer of `r`
+/// depends on the device-state carriers `D.rtraeger r` alone. The `depends`
+/// clause names those carriers, so the manifest lists the assumption per
+/// register WITH them -- one line `reglokal.<device>.<reg>` (bank registers
+/// under `reglokal.<device>.<bank>.<reg>`), beside the named `assume` items:
+/// it is a hardware assumption, not a proof. A register without a `depends`
+/// clause gets its line too, saying so: `RegLokal` over empty carriers claims
+/// the answer moves with nothing, and an unwritten line would read as no
+/// claim at all.
+///
+/// The class is structural, the E6 reading for keyed modes: held by the
+/// checker rules (`N255`-`N258` hold the names, `N256` the reader side), not
+/// by execution -- hence `NichtFalsifizierbar` with the ground, counted by
+/// `instrumente/pruefe-unfalsifizierbar.py` beside the other generated
+/// entries (the site mark moves with this function and not without it).
+fn reglokalannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Device(d) = &i.art else { return };
+        let mut nimm = |reg: &str, traeger: &[Ort]| {
+            let liste = traeger
+                .iter()
+                .map(|c| c.text())
+                .collect::<Vec<_>>()
+                .join(", ");
+            out.push(Eintrag {
+                name: format!("reglokal.{}.{}", d.name.text, reg),
+                art: "assume",
+                arch: None,
+                klasse: reglokalklasse(),
+                aussage: if liste.is_empty() {
+                    format!(
+                        "register {} of device {} answers independently of any carrier \
+                         (no `depends` clause)",
+                        reg, d.name.text
+                    )
+                } else {
+                    format!(
+                        "register {} of device {} answers from these carriers only: \
+                         {liste}",
+                        reg, d.name.text
+                    )
+                },
+                voraussetzungen: 0,
+                voraussetzung_text: None,
+            });
+        };
+        for r in &d.register {
+            nimm(&r.name.text, &r.depends);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                nimm(&format!("{}.{}", b.name.text, r.name.text), &r.depends);
+            }
+        }
+    });
+}
+
+/// **Lane 140: the class of a register-locality entry -- one construction site.**
+///
+/// Register locality is not executed, it is declared: the checker holds the
+/// carrier names over it (`N255`-`N258`) and the reader side (`N256`).
+/// No probe runs against the locality itself, and the reason says so.
+fn reglokalklasse() -> Klasse {
+    Klasse::NichtFalsifizierbar {
+        grund: "register locality (RegLokal), held by structure (N255-N258, N256), \
+                not by execution"
+            .to_string(),
+    }
 }
 
 /// **«E6»: the hardware profile and library requirements in the manifest.**

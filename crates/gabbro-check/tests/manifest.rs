@@ -350,3 +350,47 @@ requires profile {
     assert!(streit.is_empty(), "reference and declaration are no dispute: {streit:?}");
     assert_eq!(menge.len(), 2, "zwei Zeilen: {menge:?}");
 }
+
+#[test]
+fn reglokal_steht_pro_register_mit_traegern() {
+    // Lane 140: every register gets its `RegLokal` line with the carriers its
+    // `depends` clause names -- beside the named assumptions, not instead of
+    // them. A register without a clause gets its line too, saying so.
+    let q = "module t {
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+static mut melder : u32 = 0;
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand, melder }
+    reg FREI : u32 @0x04 class r
+    bank B at 0 stride 16 count 4 { reg FR : u64 @0x8 class rw depends { Zustand } }
+}
+}";
+    let e = sammle(&baum(q));
+    let st = e.iter().find(|x| x.name == "reglokal.Geraet.ST").expect("reglokal.Geraet.ST");
+    assert_eq!(st.art, "assume", "a hardware assumption, like `assume`: {st:?}");
+    assert!(
+        matches!(st.klasse, Klasse::NichtFalsifizierbar { .. }),
+        "held by structure, not by execution: {:?}",
+        st.klasse
+    );
+    assert!(
+        st.aussage.contains("Zustand") && st.aussage.contains("melder"),
+        "both carriers travel into the line: {:?}",
+        st.aussage
+    );
+    let frei = e.iter().find(|x| x.name == "reglokal.Geraet.FREI").expect("reglokal.Geraet.FREI");
+    assert!(
+        frei.aussage.contains("no `depends` clause"),
+        "an empty carrier set is a claim, not a gap: {:?}",
+        frei.aussage
+    );
+    let fr = e.iter().find(|x| x.name == "reglokal.Geraet.B.FR").expect("reglokal.Geraet.B.FR");
+    assert!(fr.aussage.contains("Zustand"), "bank carriers travel too: {:?}", fr.aussage);
+    assert_eq!(
+        e.iter().filter(|x| x.name.starts_with("reglokal.")).count(),
+        3,
+        "one line per register, nothing else: {e:?}"
+    );
+}
