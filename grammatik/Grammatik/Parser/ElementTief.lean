@@ -233,7 +233,6 @@ def beqOptPaarWort : Option (String × String) → Option (String × String) →
 structure SReg where
   rname : String
   rtyp : STyp
-  wrapping : Bool
   adresse : SExpr
   klasse : String
   phasen : List String
@@ -245,7 +244,7 @@ structure SReg where
 
 def beqSReg : SReg → SReg → Bool
   | a, b => strEq a.rname b.rname && beqSTyp a.rtyp b.rtyp &&
-    (a.wrapping == b.wrapping) && beqSExpr a.adresse b.adresse &&
+    beqSExpr a.adresse b.adresse &&
     strEq a.klasse b.klasse && beqWorte a.phasen b.phasen &&
     beqSRegFeldList a.felder b.felder && beqOptExpr a.voraus b.voraus &&
     beqOptPaarWort a.vorausSonst b.vorausSonst &&
@@ -1252,6 +1251,412 @@ def parseBitpos : List Token → Except String (String × List Token)
       | .zahl _ => .ok (zeigeTok t, rest)
       | _ => .error "bitpos expected"
   | [] => .error "bitpos expected"
+/-- A `{` … `}` field list (slots and formats share the shape). -/
+def parseFeldListe (f : Nat) (toks : List Token) :
+    Except String (List SFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match parseFeld f r with
+        | .error e => .error e
+        | .ok (fd, r1) => match r1 with
+          | .zeichen "," :: r2 => match r2 with
+            | .zeichen "}" :: r3 => .ok ([fd], r3)
+            | _ => match parseFeldListe f r2 with
+              | .error e => .error e
+              | .ok (fds, r') => .ok (fd :: fds, r')
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok ([fd], r')
+/-- One register bit field: `name @bitpos [class c]`. -/
+def parseRegFeld (f : Nat) (toks : List Token) :
+    Except String (SRegFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | _f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (n, r1) => match fordereZeichen "@" r1 with
+      | .error e => .error e
+      | .ok r2 => match parseBitpos r2 with
+        | .error e => .error e
+        | .ok (b, r3) => match r3 with
+          | .wort s :: r4 =>
+            if strEq s "class" then match nimmName r4 with
+              | .error e => .error e
+              | .ok (c, r) => .ok ({ rfname := n, pos := b, klasse := some c }, r)
+            else .ok ({ rfname := n, pos := b, klasse := none }, r3)
+          | _ => .ok ({ rfname := n, pos := b, klasse := none }, r3)
+def parseRegFeldListe (f : Nat) (toks : List Token) :
+    Except String (List SRegFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match parseRegFeld f r with
+        | .error e => .error e
+        | .ok (fd, r1) => match r1 with
+          | .zeichen "," :: r2 => match r2 with
+            | .zeichen "}" :: r3 => .ok ([fd], r3)
+            | _ => match parseRegFeldListe f r2 with
+              | .error e => .error e
+              | .ok (fds, r') => .ok (fd :: fds, r')
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok ([fd], r')
+/- The `in`-stage tail behind a register class. -/
+def parsePhasen (f : Nat) : List Token →
+    Except String (List String × List Token)
+  | [] => .ok ([], [])
+  | toks => match f with
+    | 0 => .error "out of fuel"
+    | f + 1 => match toks with
+      | .wort s :: rest =>
+        if strEq s "in" then match nimmName rest with
+          | .error e => .error e
+          | .ok (st, r) => match parsePhasenRest f r with
+            | .error e => .error e
+            | .ok (ws, r') => .ok ("in" :: st :: ws, r')
+        else .ok ([], toks)
+      | _ => .ok ([], toks)
+def parsePhasenRest (f : Nat) : List Token →
+    Except String (List String × List Token)
+  | [] => .ok ([], [])
+  | toks => match f with
+    | 0 => .error "out of fuel"
+    | f + 1 => match toks with
+      | .zeichen "," :: rest => match nimmName rest with
+        | .error e => .error e
+        | .ok (k, r1) => match nimmWort "in" r1 with
+          | .error e => .error e
+          | .ok r2 => match nimmName r2 with
+            | .error e => .error e
+            | .ok (st, r3) => match parsePhasenRest f r3 with
+              | .error e => .error e
+              | .ok (ws, r) => .ok ("," :: k :: "in" :: st :: ws, r)
+      | _ => .ok ([], toks)
+/-- One device register: `reg n : T [@ e] class c [phases]
+    [fields {…}] [requires p [else A::B]] [depends {…}] ;`. -/
+def parseReg (f : Nat) (toks : List Token) :
+    Except String (SReg × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "reg" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmName r1 with
+      | .error e => .error e
+      | .ok (n, r2) => match fordereZeichen ":" r2 with
+        | .error e => .error e
+        | .ok r3 => match parseTyp f r3 with
+          | .error e => .error e
+          | .ok (t, r4) => match parseRegRest f
+              ({ rname := n, rtyp := t,
+                 adresse := .variable "", klasse := "", phasen := [],
+                 felder := [], voraus := none, vorausSonst := none,
+                 abhaengt := [] } : SReg) r4 with
+            | .error e => .error e
+            | .ok (rg, r) => .ok (rg, r)
+def parseRegRest (f : Nat) (rg : SReg) (toks : List Token) :
+    Except String (SReg × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "@" :: rest => match parseOr f rest with
+      | .error e => .error e
+      | .ok (e, r) => parseRegRest f { rg with adresse := e } r
+    | .wort s :: rest =>
+      if strEq s "class" then match nimmName rest with
+        | .error e => .error e
+        | .ok (c, r1) => match parsePhasen f r1 with
+          | .error e => .error e
+          | .ok (ph, r) =>
+            parseRegRest f { rg with klasse := c, phasen := ph } r
+      else if strEq s "fields" then match parseRegFeldListe f rest with
+        | .error e => .error e
+        | .ok (fds, r) => parseRegRest f { rg with felder := fds } r
+      else if strEq s "requires" then match parseOr f rest with
+        | .error e => .error e
+        | .ok (p, r1) => match r1 with
+          | .wort t :: r2 =>
+            if strEq t "else" then match nimmPfad r2 with
+              | .error e => .error e
+              | .ok ([a, b], r) => parseRegRest f
+                { rg with voraus := some p,
+                          vorausSonst := some (a, b) } r
+              | .ok _ => .error "else expected"
+            else parseRegRest f { rg with voraus := some p } r1
+          | _ => parseRegRest f { rg with voraus := some p } r1
+      else if strEq s "depends" then match parseTraegerListe f rest with
+        | .error e => .error e
+        | .ok (cs, r) => parseRegRest f { rg with abhaengt := cs } r
+      else match fordereZeichen ";" toks with
+        | .error e => .error e
+        | .ok r => .ok (rg, r)
+    | _ => match fordereZeichen ";" toks with
+      | .error e => .error e
+      | .ok r => .ok (rg, r)
+/-- A `depends`/carrier list: `{` … `}` of one- or two-segment
+    names (trailing commas allowed). -/
+def parseTraegerListe (f : Nat) (toks : List Token) :
+    Except String (List (List String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match parseTraeger r with
+        | .error e => .error e
+        | .ok (c, r1) => match r1 with
+          | .zeichen "," :: r2 => match r2 with
+            | .zeichen "}" :: r3 => .ok ([c], r3)
+            | _ => match parseTraegerListe f r2 with
+              | .error e => .error e
+              | .ok (cs, r') => .ok (c :: cs, r')
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok ([c], r')
+def parseTraeger : List Token → Except String (List String × List Token)
+  | toks => match nimmName toks with
+    | .error e => .error e
+    | .ok (a, r) => match r with
+      | .zeichen "." :: r' => match nimmName r' with
+        | .error e => .error e
+        | .ok (b, r'') => .ok ([a, b], r'')
+      | _ => .ok ([a], r)
+/-- One transition: `transition n { p : a -> b, … }
+    [requires p] [effects {…}]`. -/
+def parseTrans (f : Nat) (toks : List Token) :
+    Except String (STrans × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "transition" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmName r1 with
+      | .error e => .error e
+      | .ok (n, r2) => match fordereZeichen "{" r2 with
+        | .error e => .error e
+        | .ok r3 => match parseSchritte f r3 with
+          | .error e => .error e
+          | .ok (ss, r4) => match fordereZeichen "}" r4 with
+            | .error e => .error e
+            | .ok r5 => match parseTransRest f
+                ({ tname := n, schritte := ss, voraus := none,
+                   wirkung := [] } : STrans) r5 with
+              | .error e => .error e
+              | .ok (tr, r) => .ok (tr, r)
+def parseSchritte (f : Nat) (toks : List Token) :
+    Except String (List (SExpr × SExpr × SExpr) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseOr f toks with
+    | .error e => .error e
+    | .ok (p, r1) => match fordereZeichen ":" r1 with
+      | .error e => .error e
+      | .ok r2 => match parseOr f r2 with
+        | .error e => .error e
+        | .ok (a, r3) => match fordereZeichen "->" r3 with
+          | .error e => .error e
+          | .ok r4 => match parseOr f r4 with
+            | .error e => .error e
+            | .ok (b, r5) => match r5 with
+              | .zeichen "," :: r6 => match parseSchritte f r6 with
+                | .error e => .error e
+                | .ok (ss, r) => .ok ((p, a, b) :: ss, r)
+              | _ => .ok ([(p, a, b)], r5)
+def parseTransRest (f : Nat) (tr : STrans) (toks : List Token) :
+    Except String (STrans × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .wort s :: rest =>
+      if strEq s "requires" then match parseOr f rest with
+        | .error e => .error e
+        | .ok (p, r) => parseTransRest f { tr with voraus := some p } r
+      else if strEq s "effects" then match parseEffektBlock f rest with
+        | .error e => .error e
+        | .ok (es, r) => parseTransRest f { tr with wirkung := es } r
+      else .ok (tr, toks)
+    | _ => .ok (tr, toks)
+/-- An `effects {…}` group behind `transition` (the `fndecl`
+    clause reader covers the signature site). -/
+def parseEffektBlock (f : Nat) (toks : List Token) :
+    Except String (List SEffekt × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r1 => match r1 with
+      | .zeichen "}" :: r2 => .ok ([], r2)
+      | _ => match parseEffektListe f r1 with
+        | .error e => .error e
+        | .ok (es, r2) => match fordereZeichen "}" r2 with
+          | .error e => .error e
+          | .ok r => .ok (es, r)
+/-- One invariant: `invariant n cost O(e) runs m [by …] : p ;`. -/
+def parseGruppenInv (f : Nat) (toks : List Token) :
+    Except String (SGruppenInv × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "invariant" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmName r1 with
+      | .error e => .error e
+      | .ok (n, r2) => match nimmWort "cost" r2 with
+        | .error e => .error e
+        | .ok r3 => match nimmWort "O" r3 with
+          | .error e => .error e
+          | .ok r4 => match fordereZeichen "(" r4 with
+            | .error e => .error e
+            | .ok r5 => match parseOr f r5 with
+              | .error e => .error e
+              | .ok (c, r6) => match fordereZeichen ")" r6 with
+                | .error e => .error e
+                | .ok r7 => match nimmWort "runs" r7 with
+                  | .error e => .error e
+                  | .ok r8 => match r8 with
+                    | .wort m :: r9 =>
+                      if strEq m "online" || strEq m "offline" then
+                        match parseInvRest f r9 with
+                        | .error e => .error e
+                        | .ok ((dabei, p), r) => .ok
+                          ({ gname := n, kosten := c,
+                             online := strEq m "online", dabei := dabei,
+                             aussage := p }, r)
+                      else .error "runs expected"
+                    | _ => .error "runs expected"
+def parseInvRest (f : Nat) (toks : List Token) :
+    Except String ((Option String × SExpr) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .wort s :: rest =>
+      if strEq s "by" then match nimmBisKopf rest with
+        | .error e => .error e
+        | .ok (h, r1) => match fordereZeichen ":" r1 with
+          | .error e => .error e
+          | .ok r2 => match parseOr f r2 with
+            | .error e => .error e
+            | .ok (p, r3) => match fordereZeichen ";" r3 with
+              | .error e => .error e
+              | .ok r => .ok (((some h, p)), r)
+      else match fordereZeichen ":" toks with
+        | .error e => .error e
+        | .ok r1 => match parseOr f r1 with
+          | .error e => .error e
+          | .ok (p, r2) => match fordereZeichen ";" r2 with
+            | .error e => .error e
+            | .ok r => .ok (((none, p)), r)
+    | _ => match fordereZeichen ":" toks with
+      | .error e => .error e
+      | .ok r1 => match parseOr f r1 with
+        | .error e => .error e
+        | .ok (p, r2) => match fordereZeichen ";" r2 with
+          | .error e => .error e
+          | .ok r => .ok (((none, p)), r)
+/-- A `{` … `}` place list (`protects`, `measures`, `reclaims`
+    tails; trailing commas allowed). -/
+def parsePlatzListe (f : Nat) (toks : List Token) :
+    Except String (List SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match parsePredListe f r with
+        | .error e => .error e
+        | .ok (ps, r1) => match r1 with
+          | .zeichen "," :: r2 => match fordereZeichen "}" r2 with
+            | .ok r' => .ok (ps, r')
+            | .error _ => .error "} expected"
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok (ps, r')
+/-- A `{` … `}` register map (`regs in` / `regs out`). -/
+def parseRegBindListe (f : Nat) (toks : List Token) :
+    Except String (List SRegBind × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match parseRegBind r with
+        | .error e => .error e
+        | .ok (b, r1) => match r1 with
+          | .zeichen "," :: r2 => match r2 with
+            | .zeichen "}" :: r3 => .ok ([b], r3)
+            | _ => match parseRegBindListe f r2 with
+              | .error e => .error e
+              | .ok (bs, r') => .ok (b :: bs, r')
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok ([b], r')
+def parseRegBind : List Token → Except String (SRegBind × List Token)
+  | toks => match nimmName toks with
+    | .error e => .error e
+    | .ok (a, r) => match r with
+      | .zeichen s :: r' =>
+        if strEq s "=" || strEq s ":" then match nimmName r' with
+          | .error e => .error e
+          | .ok (b, r'') => .ok (.bindet a b, r'')
+        else .ok (.register a, r)
+      | _ => .ok (.register a, r)
+/-- A `{` … `}` path list (`concurrent`, `group over`;
+    trailing commas allowed). -/
+def parsePfadListe (f : Nat) (toks : List Token) :
+    Except String (List (List String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "{" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen "}" :: r' => .ok ([], r')
+      | _ => match nimmPfad r with
+        | .error e => .error e
+        | .ok (p, r1) => match r1 with
+          | .zeichen "," :: r2 => match r2 with
+            | .zeichen "}" :: r3 => .ok ([p], r3)
+            | _ => match parsePfadListe f r2 with
+              | .error e => .error e
+              | .ok (ps, r') => .ok (p :: ps, r')
+          | _ => match fordereZeichen "}" r1 with
+            | .error e => .error e
+            | .ok r' => .ok ([p], r')
+/-- One boot step: `step f(args) ;` or `step n = e ;`. -/
+def parseBootSchritt (f : Nat) (toks : List Token) :
+    Except String (SBootSchritt × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "step" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmPfad r1 with
+      | .error e => .error e
+      | .ok (p, r2) => match r2 with
+        | .zeichen "(" :: r3 => match r3 with
+          | .zeichen ")" :: r4 => match fordereZeichen ";" r4 with
+            | .error e => .error e
+            | .ok r => .ok (.rufSchritt p [], r)
+          | _ => match parsePredListe f r3 with
+            | .error e => .error e
+            | .ok (as, r4) => match fordereZeichen ")" r4 with
+              | .error e => .error e
+              | .ok r5 => match fordereZeichen ";" r5 with
+                | .error e => .error e
+                | .ok r => .ok (.rufSchritt p as, r)
+        | .zeichen "=" :: r3 => match parseOr f r3 with
+          | .error e => .error e
+          | .ok (e, r4) => match fordereZeichen ";" r4 with
+            | .error e => .error e
+            | .ok r => match p with
+              | [n] => .ok (.setztSchritt n e, r)
+              | _ => .error "step expected"
+        | _ => .error "step expected"
 end
 
 end Gabbro.Grammatik.Parser
