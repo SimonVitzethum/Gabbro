@@ -838,5 +838,52 @@ theorem t41 : beqTopTief (parseTopTief tt41)
   decide
 -- beispiele/90-syscall-errno.gab:22-31. Rust: `Syscall` with an
 -- error channel, maps and contracts -- same shape.
+def tt42 : List Token :=
+  [.wort "library", .wort "fn", .ident "sum", .zeichen "(",
+   .ident "t", .zeichen ":", .wort "ptr", .zeichen "<",
+   .wort "normal", .zeichen ",", .wort "r", .zeichen ">",
+   .ident "SumTab", .zeichen ")", .zeichen "->", .wort "u32",
+   .wort "in", .zahl 0, .zeichen "..", .zahl 400, .wort "payload",
+   .ident "SumTab", .wort "ensures", .wort "result",
+   .zeichen "<=", .zahl 400, .wort "effects", .zeichen "{",
+   .wort "reads", .ident "t", .zeichen ".", .wort "slots",
+   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 16,
+   .wort "ops", .zeichen "{", .wort "return", .ident "t",
+   .zeichen ".", .wort "slots", .zeichen "[", .zahl 0,
+   .zeichen "]", .zeichen ".", .ident "v", .zeichen "+",
+   .ident "t", .zeichen ".", .wort "slots", .zeichen "[",
+   .zahl 1, .zeichen "]", .zeichen ".", .ident "v",
+   .zeichen "+", .ident "t", .zeichen ".", .wort "slots",
+   .zeichen "[", .zahl 2, .zeichen "]", .zeichen ".",
+   .ident "v", .zeichen "+", .ident "t", .zeichen ".",
+   .wort "slots", .zeichen "[", .zahl 3, .zeichen "]",
+   .zeichen ".", .ident "v", .zeichen ";", .zeichen "}",
+   .ende]
+theorem t42_lex :
+    lex "library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab ensures result <= 400 effects { reads t.slots } costs <= 16 ops { return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v; }" =
+      .ok tt42 := by
+  decide
+theorem t42 : beqTopTief (parseTopTief tt42)
+    (.ok [.funktionT { art := "library", name := "sum", params := [(("t", (.ptr "normal" "r" (.atom "SumTab"))))], ergebnis := (.some ((.bereich (.atom "u32") (.lit 0) (.lit 400) false))), fehler := .none, klauseln := [(.nutzlast ["SumTab"]), (.sichert ((.bin "<=" .ergebnis (.lit 400)))), (.wirkung [(.liest ((.feld (.variable "t") "slots")))]), (.kosten (.lit 16))] } (.block [] (.some (.ret (.some ((.bin "+" ((.bin "+" ((.bin "+" ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 0))) "v")) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 1))) "v")))) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 2))) "v")))) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 3))) "v"))))))))]) = true := by
+  decide
+-- beispiele/106-summe-uebersetzt.gab:16-23 (the `sum` library).
+-- Rust: `Funktion` with a payload type and a ranged result --
+-- same shape.
+def tt43 : List Token :=
+  [.wort "lock", .ident "KAPPEN", .wort "protects", .zeichen "{",
+   .ident "belegt", .zeichen ",", .ident "rechte", .zeichen ",",
+   .ident "objekt", .zeichen "}", .wort "rank", .zahl 0,
+   .wort "held", .zeichen "<=", .zahl 3, .wort "ops",
+   .wort "shared", .wort "held", .zeichen "<=", .zahl 4,
+   .wort "ops", .zeichen ";", .ende]
+theorem t43_lex :
+    lex "lock KAPPEN protects { belegt, rechte, objekt } rank 0 held <= 3 ops shared held <= 4 ops;" =
+      .ok tt43 := by
+  decide
+theorem t43 : beqTopTief (parseTopTief tt43)
+    (.ok [.sperreT "KAPPEN" [.variable "belegt", .variable "rechte", .variable "objekt"] (.lit 0) (.some (.lit 3)) (.some (.lit 4)) .none]) = true := by
+  decide
+-- beispiele/10-geteilte-sperre.gab (the `KAPPEN` reader-writer
+-- lock). Rust: `Lock` with both held bounds -- same shape.
 
 end Gabbro.Grammatik.Parser
