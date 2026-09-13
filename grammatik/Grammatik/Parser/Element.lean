@@ -1,16 +1,18 @@
 /-
   File:      Grammatik/Parser/Element.lean
   Subject:   T3 PART 2: Gabbro items (SYNTAX.md section 1, `item`) over
-              the Lean statement reader, step 1.
+              the Lean statement reader.
 
-  Skeleton: the surface AST `SItem`. Readers land in the next steps.
+  The surface type `SItem` with fuel-indexed readers
+  (`parseItem`, `parseItems`, `parseTopItems`). Probes live in
+  `Parser/AnweisungProben.lean`.
 -/
 import Grammatik.Parser.Anweisung
 
 namespace Gabbro.Grammatik.Parser
 
 /- A surface item: SYNTAX.md section 1 `item` without types, spans
-    or checks. Function and translator bodies ride as `SBlock`;
+    or checks. Function and translator bodies ride as `SAnw`;
     every other body is skipped balanced (see CUTS). Against
     `ast.rs` `ItemArt`: `modul` = `Modul`, `useS` = `Use`, `typS` =
     `Typ`, `konstS` = `Konst`, `statikS` = `Statisch`, `funktion` =
@@ -31,7 +33,7 @@ inductive SItem
   | typS : String → SItem
   | konstS : String → SItem
   | statikS : String → SItem
-  | funktion : String → SBlock → SItem
+  | funktion : String → SAnw → SItem
   | protoS : String → SItem
   | formatS : String → SItem
   | tabelle : String → SItem
@@ -53,13 +55,13 @@ inductive SItem
   | anvertrautS : String → SItem
   | startS : String → SItem
   | sysrufS : String → SItem
-  | uebersetzerS : String → SBlock → SItem
+  | uebersetzerS : String → SAnw → SItem
   | profilS : Bool → SItem
   | torS : SItem → SItem
   deriving Repr
 
 -- Shape equality on surface items, as a `Bool` (same reason as
--- `beqSStmt`: the probes compare by kernel evaluation).
+-- `beqSAnw`: the probes compare by kernel evaluation).
 mutual
 def beqSItem : SItem → SItem → Bool
   | .modul p a, .modul q b => strEq p q && beqSItemList a b
@@ -67,7 +69,7 @@ def beqSItem : SItem → SItem → Bool
   | .typS a, .typS b => strEq a b
   | .konstS a, .konstS b => strEq a b
   | .statikS a, .statikS b => strEq a b
-  | .funktion n b, .funktion m d => strEq n m && beqSBlock b d
+  | .funktion n b, .funktion m d => strEq n m && beqSAnw b d
   | .protoS a, .protoS b => strEq a b
   | .formatS a, .formatS b => strEq a b
   | .tabelle a, .tabelle b => strEq a b
@@ -89,7 +91,7 @@ def beqSItem : SItem → SItem → Bool
   | .anvertrautS a, .anvertrautS b => strEq a b
   | .startS a, .startS b => strEq a b
   | .sysrufS a, .sysrufS b => strEq a b
-  | .uebersetzerS n b, .uebersetzerS m d => strEq n m && beqSBlock b d
+  | .uebersetzerS n b, .uebersetzerS m d => strEq n m && beqSAnw b d
   | .profilS a, .profilS b => a == b
   | .torS a, .torS b => beqSItem a b
   | _, _ => false
@@ -344,8 +346,32 @@ end
 end Gabbro.Grammatik.Parser
 
 /-
-  CUTS: the readers land in the next steps; this skeleton only fixes
-  the surface type.
+  CUTS: what is not proved here, and every shape difference against
+  `crates/gabbro-syntax` found by the probes.
+
+  1. Item bodies are skipped, not validated: only `module`
+     (member items), `fn`/`translator` (statement blocks) and the
+     item NAME ride structured; every other body (`table`,
+     `device`, `format`, contracts, maps, profiles) is stepped
+     over balanced by `ueberspringe`. A misspelled clause word
+     inside such a body reads clean here and falls in `parse.rs`.
+  2. `ueberspringe` stops without consuming at `}` and at the end
+     of input: a missing `;` before either is accepted here and
+     refused by `parse.rs`. (Brace-bodied items take no `;` at
+     all, so the skipper cannot demand one.)
+  3. `fnStart` assumes the `effects {…}` group is the only header
+     brace group (same cut as item 4 of `Anweisung.lean`); an
+     anonymous `structty` in a signature would stop it early. No
+     corpus signature carries one.
+  4. `pub` placement is not held against the twelve carrying
+     kinds (`P041` in `parse.rs`); modifiers are skipped without
+     recording.
+  5. `spec fn … = pred;` and `= asm {…};` both ride `protoS`: the
+     predicate and the assembler body are skipped, not split.
+  6. `beqSItem`/`beqTopItems` are not proved sound or complete
+     (same cut as item 8 of `Anweisung.lean`).
+  7. `parseTopItems` is total but not complete (same fuel cut as
+     item 9 of `Anweisung.lean`).
 -/
 
-#print axioms Gabbro.Grammatik.Parser.SItem.modul
+#print axioms Gabbro.Grammatik.Parser.parseTopItems
