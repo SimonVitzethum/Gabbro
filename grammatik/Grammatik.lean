@@ -139,3 +139,4 @@ import Grammatik.Referenz104
 import Grammatik.CFormen
 import Grammatik.CFormenI
 import Grammatik.CFormenM
+import Grammatik.CFormenZeuge
