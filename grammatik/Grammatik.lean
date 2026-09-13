@@ -105,6 +105,7 @@ import Grammatik.RufAdaequatRufG
 import Grammatik.KetteVoll
 import Grammatik.Uebersetzung
 import Grammatik.CSemantik
+import Grammatik.CSpeicher
 import Grammatik.RufUmkehrRufG
 import Grammatik.RufHaeltG
 import Grammatik.ZielOrt
