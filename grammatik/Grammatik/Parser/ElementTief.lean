@@ -851,6 +851,12 @@ def parseTyp (f : Nat) (toks : List Token) :
           | [] => .error "type expected"
           | [a] => parseTypNach f (.atom a) r
           | _ => parseTypNach f (.pfad segs) r
+    | .ident _ :: _ => match nimmPfad toks with
+      | .error e => .error e
+      | .ok (segs, r) => match segs with
+        | [] => .error "type expected"
+        | [a] => parseTypNach f (.atom a) r
+        | _ => parseTypNach f (.pfad segs) r
     | .zeichen "{" :: rest => match nimmBereichWorte rest 1 with
       | .error e => .error e
       | .ok (h, r) => .ok (.roh ("{ " ++ h), r)

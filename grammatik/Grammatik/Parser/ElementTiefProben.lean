@@ -72,5 +72,63 @@ theorem t03 : beqTopTief (parseTopTief tt03)
   decide
 -- beispiele/112 (the `Geraet` device). Rust: `Device` with one
 -- parameter and one `depends` register -- same shape.
+def tt04 : List Token :=
+  [.wort "impl", .wort "fn", .ident "lesen", .zeichen "(",
+   .ident "d", .zeichen ":", .ident "Geraet", .zeichen ")",
+   .zeichen "->", .wort "u32", .wort "requires", .ident "Held",
+   .zeichen "(", .ident "Sperre", .zeichen ")", .wort "effects",
+   .zeichen "{", .wort "reads", .ident "d", .zeichen "}",
+   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .zeichen "{", .wort "let", .ident "stand", .zeichen "=",
+   .ident "d", .zeichen ".", .ident "ST", .zeichen ";",
+   .wort "return", .ident "stand", .zeichen ";", .zeichen "}",
+   .ende]
+theorem t04_lex :
+    lex "impl fn lesen(d : Geraet) -> u32 requires Held(Sperre) effects { reads d } costs <= 8 ops { let stand = d.ST; return stand; }" =
+      .ok tt04 := by
+  decide
+theorem t04 : beqTopTief (parseTopTief tt04)
+    (.ok [.funktionT
+      { art := "impl", name := "lesen", params := [("d", .atom "Geraet")],
+        ergebnis := .some (.atom "u32"), fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
+          .wirkung [.liest (.variable "d")], .kosten (.lit 8)] }
+      (.block [.lass false "stand" (.feld (.variable "d") "ST")]
+        (.some (.ret (.some (.variable "stand")))))]) = true := by
+  decide
+-- beispiele/112 (the `lesen` reader). Rust: `Funktion` with one
+-- `requires`, an `effects` and a `costs` clause -- same shape.
+def tt05 : List Token :=
+  [.wort "impl", .wort "fn", .ident "schreiben", .zeichen "(",
+   .ident "i", .zeichen ":", .wort "index", .wort "into",
+   .ident "Zustand", .zeichen ",", .wort "w", .zeichen ":",
+   .wort "u32", .zeichen ")", .zeichen "->", .wort "u32",
+   .wort "requires", .ident "Held", .zeichen "(", .ident "Sperre",
+   .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
+   .ident "Zustand", .zeichen "}", .wort "costs", .zeichen "<=",
+   .zahl 8, .wort "ops", .zeichen "{", .ident "Zustand",
+   .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
+   .zeichen "]", .zeichen ".", .ident "bereit", .zeichen "=",
+   .wort "w", .zeichen ";", .wort "return", .zahl 0,
+   .zeichen ";", .zeichen "}", .ende]
+theorem t05_lex :
+    lex "impl fn schreiben(i : index into Zustand, w : u32) -> u32 requires Held(Sperre) effects { writes Zustand } costs <= 8 ops { Zustand.slots[i].bereit = w; return 0; }" =
+      .ok tt05 := by
+  decide
+theorem t05 : beqTopTief (parseTopTief tt05)
+    (.ok [.funktionT
+      { art := "impl", name := "schreiben",
+        params := [("i", .index false "Zustand"), ("w", .atom "u32")],
+        ergebnis := .some (.atom "u32"), fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
+          .wirkung [.schreibt (.variable "Zustand")], .kosten (.lit 8)] }
+      (.block [.zuweis
+        (.feld (.index (.feld (.variable "Zustand") "slots")
+          (.variable "i")) "bereit")
+        "=" (.variable "w")]
+        (.some (.ret (.some (.lit 0)))))]) = true := by
+  decide
+-- beispiele/112 (the `schreiben` writer). Rust: `Funktion` over
+-- an `index into` parameter -- same shape.
 
 end Gabbro.Grammatik.Parser
