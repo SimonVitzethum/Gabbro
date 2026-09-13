@@ -18,6 +18,8 @@ Prior maps are kept below unchanged: §§1-5 (draft A, lane 16) and §6
 proposals for each (d) item, §9 the `#print axioms` record, §10 the
 distance to the goal.
 
+> §§7-10 are superseded by §11 (goal restated and proved over machine G, 2026-09-13); kept unchanged for history.
+
 ## 7. Re-measured premise table (2026-09-12)
 
 One row per premise of the flagship `ziel_nutzer_last_aus_pc_Q`
@@ -458,5 +460,168 @@ Flag-by-flag verdicts for §§3 and 5:
   premise `hmem_all` is uninhabitable outside the fragment where every leaf writes the
   same table (witnessed at `assignVar`, `Audit24.lean:107-112` over
   `stmtTraeger` at `Extraktion.lean:2421-2428`) — so witness production for C12-style
-  accesses is itself fragment-restricted, as the flag's "restoring writers stay open"
-  already suspects.
+   accesses is itself fragment-restricted, as the flag's "restoring writers stay open"
+   already suspects.
+
+## 11. The goal over machine G (2026-09-13)
+
+Since §§7-10 the goal was restated and proved over the repaired concurrent
+call machine G (no bare lock steps; every memory step carries `HeldGenau`;
+`rufG_haelt_statisch` in `RufHaeltG.lean:800`, `exklusivG` in
+`ZielOrt.lean:424`). Three theorems, each subsuming the previous one on its
+fragment: `ziel_ort` (`ZielOrtBeweis.lean:1098`), `ziel_ort_voll`
+(`ZielOrtVoll.lean:1031`, via `ziel_ort_aus_voll` at `:1283`), and the
+flagship `ziel_ort_geraet` (`ZielOrtGeraet.lean:1105`, with `ziel_ort_voll`
+as the special case `ziel_ort_voll_lokal` at `:1133` on register-local
+oracles). Data-race freedom is a separate proved theorem, `rennfrei_g`
+(`RennfreiG.lean:64`). Line numbers below refer to branch `muse/133`.
+
+### 11.1 Exact statement of `ziel_ort_geraet` (copied, `ZielOrtGeraet.lean:1105-1112`)
+
+```lean
+theorem ziel_ort_geraet (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutG P passes f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      vertragAmOrtG P M
+```
+
+Conclusion (`VertragAmOrtG`, `ZielOrt.lean:67`): at every `eintritt` event of
+every thread log the callee's `requires` holds with the logged actual
+parameters at the logged entry world (`ReqAmEintritt`, `VertragOrtB.lean:114`);
+at every `rueck` event the `ensures` holds with the logged entry world as the
+`old` side, the logged return world, and the actual parameters and result
+(`EnsAmRueck`, `VertragOrtB.lean:120`). Nothing is quantified away (audit
+probe E, `audit_cross_thread_return`, `AuditZiel.lean:98`).
+
+### 11.2 Every premise, classified
+
+Classes: (a) USER obligation, (b) HARDWARE assumption, (c) decidable program
+fact, (d) anything else. DATA = object binder, not an obligation.
+
+| Premise | Meaning | Class | Justifying theorem |
+|---|---|---|---|
+| `P`, `O`, `passes`, `fs` | program, oracle, `forever` budget, complete member list | DATA | — |
+| `sp`, `init` | start memory, boot assignment | DATA | — |
+| `e0 : Ereignis D` | the declaration has a table, global or lock | (d) declaration-shape datum | load-bearing: `audit_antwortWelt_uses_e0` (`AuditZiel.lean:117`, fresh trace position of every recorded answer) |
+| `hO : GutO O` | axiom answers inside declared frames, held locks and trace untouched (`Satz.lean:875`) | (b) HARDWARE | frame half via `gutO_rahmenO` (`ZielOrtVollBeweis.lean:51`); rely/locks consumed in `zielInv_schritt` |
+| `hRL : RegLokal O` | register answers from its device carriers `D.rtraeger r`; `awaits g` visibility from `g` only (`ZielOrtGeraetSem.lean:48`) | (b) HARDWARE, named | transfer `regLies_gleich`/`sichtbar_gleich` (`:70`/`:76`); record closure `regLokal_orakelAus` (`:64`); exclusion `ziel_ort_register_ausgeschlossen` (`ZielOrtGeraetAus.lean`) |
+| `hvoll : ∀ g, g ∈ fs` | member list complete | (c) finite enumeration check | consumed by `programmImFragmentG_ok` (`:497`) and `fussOrtGB_ok` (`:469`) |
+| `hFrag : programmImFragmentG P fs = true` | every body in widened fragment `gOk`; indirect call admitted where `KandOk` holds | (c) DECIDABLE | soundness `programmImFragmentG_ok` (`ZielOrtGeraetSem.lean:497`); `kandB_kandP` (`ZielOrtVollSem.lean:132`) |
+| `hFuss : fussOrtGB P fs = true` | every widened-footprint carrier (device carriers included) guarded by a signature lock of its function or written by none | (c) DECIDABLE | soundness `fussOrtGB_ok` (`ZielOrtGeraetSem.lean:469`); covers old check via `fussOrtB_of_G` |
+| `hK : ∀ f, KoerperGutG P passes f` | per-function sequential triple + caller duty, for EVERY frame-respecting register-local oracle (`ZielOrtGeraetSem.lean:93`) | (a) USER | weakening chain `koerperGutG_of_V` (`:96`), `koerperGutV_of_kOk` (`ZielOrtVoll.lean:1270`); joint witnesses `ziel_ort_geraet_zeuge`, `ziel_ort_voll_zeuge`, `ziel_ort_zeuge` |
+| `hStart : StartGut P sp init` | every start function's `requires` at the start world (`ZielOrt.lean:113`) | (a) USER | consumed by `zielInv_start` |
+| `hex : StartExklusiv init` | no two threads start in functions sharing a signature lock (`RufMaschineG.lean:2011`) | (d) start-configuration fact (audit's corrected class, `AuditZiel.lean:12-18`) | finite collapse for constant assignments `audit_startExklusiv_const` (`:43`); exclusion `audit_same_lock_start_excluded` (`:57`); consumed by `exklusivG` (`ZielOrt.lean:424`) |
+| `hr : RufErreichbarG …` (in conclusion) | the machine is reached from the start machine | run DATA | — |
+
+The older theorems differ only in the (a)/(c) column: `ziel_ort_voll` asks
+`KoerperGutV` + `programmImFragmentV` + `fussOrtB`; `ziel_ort` asks
+`KoerperGut` + `programmImFragment` + `fussOrtB`. The place-check repair of
+§§3.1/6-R3 is built in: contracts are checked at entry/return with actual
+values, never `Post`-at-entry.
+
+### 11.3 What the three theorems do NOT cover (every CUTS block)
+
+- **Fragment limits.** `ziel_ort` covers only `kOk` bodies (no loops,
+  exits, error channel, indirect calls, axioms, oracle forms —
+  `ZielOrtBeweis.lean` CUTS; `semZ` gives those residues no meaning,
+  `ZielOrtSem.lean` CUTS). `ziel_ort_voll` adds loops/exits/reasons/axioms/
+  indirect calls but excludes `regLies`, `regLiesElse`, `awaits`
+  (`ZielOrtVoll.lean` CUTS). `ziel_ort_geraet` admits those under `RegLokal`
+  + `fussOrtGB`; the unrepaired widening is provably false
+  (`ziel_ort_register_falsch`, `ZielOrtRegister.lean`; no analogous
+  refutation built for `awaits`, `ZielOrtGeraetAus.lean` CUTS). Indirect
+  calls stay restricted to `KandOk`: every function of the pointer's
+  signature must have its contract carriers in the caller's footprint, so the
+  caller must read those carriers or name them in its own contract.
+- **`e0` (no carrier).** Declarations with no table, global or lock are out
+  of all three: every world has the empty trace, record keys collapse to
+  (callee, parameters), and the replay would need an unproved determinism
+  lemma for G (`ZielOrtBeweis.lean`, `ZielOrtVoll.lean` CUTS; audit probe F).
+- **Locks-block-only guards.** `fussOrtB`/`fussOrtGB` demand a guard held BY
+  SIGNATURE (or no writer at all). A reader — of a footprint carrier or of a
+  device carrier — that takes the lock only in a `locks` block is not covered
+  (`ZielOrtGeraet.lean` CUTS).
+- **Non-local oracles.** `ziel_ort_geraet` needs `RegLokal`; `ziel_ort_voll`
+  for non-local oracles stays as proved and does not cover registers/awaits.
+  `RegLokal`'s visibility half is minimal (awaited global only); answers
+  depending on `publishes` payload globals are outside it. No asynchronous
+  device step exists in G (`GeraetSchreibt` is a shape beside the run): a
+  register whose answer changes between reads with no write to its carriers
+  violates `RegLokal`.
+- **Costs/time.** MISSING: no `KostenG.lean` exists in the tree. Per
+  `ZielOrt.lean` CUTS, the repaired G has no bare lock steps, so the
+  non-lock steps of a `kOk`-body frame are bounded by syntax size plus
+  callees' — the natural first cost theorem once a declared bound exists. The
+  `forever` budget `passes` bounds unfoldings only. Stuck states (false loop
+  invariant, spent budget, `leave`/`next` in an `else` block) are not
+  violations — G does not step, and `VertragAmOrtG` covers only logged steps.
+- **Converse adequacy limits.** Forward adequacy (`RufAdaequatG`,
+  `RufAdaequatRufG`) is existential (SOME f-only run), against the
+  contract-ignoring handler `rufRumpf`, not the checking `rufAt`
+  (`befund_vertrag`); calls need `Tief` depth admission (recursion past `n`
+  is `logik (abstieg f)`; indirect calls not done — `D.Fn` has no
+  finiteness); axioms/`bindAxiom` not simulated (no oracle premise taken);
+  `ret` under `locks` excluded (untypable in bodies); TARGET B needs
+  `ohneOrakel` and concludes memory-only agreement. The converse
+  (`RufUmkehrRufG`: ALL runs to the first pop) covers only the loop-free,
+  error-channel-free, axiom-free, oracle-free fragment (`TiefK`/`semK` give
+  loop shims and waiting residues no meaning); the loop-carrying replay that
+  `ziel_ort_voll` needs uses `semV` instead.
+- **Lock-free sharing in race freedom.** `rennfrei_g`/`rennfrei_g_nah`
+  cover guarded carriers only, in holder form (writer holds every guard
+  before, excludes all others after) and adjacent double-write form. Atomic
+  globals (`AtomarAusgenommen`) and published payloads
+  (`PaarungAusgenommen`) are allowed races by design, excluded from
+  `SchreibRasse`; unshared carriers are NOT covered (checker text-check duty
+  `PCUnsharedSep`, §7 D2); no per-rule actor characterisation of `zugriffe`,
+  no read/write formulation over it, no non-adjacent race with explicit
+  release (`RennfreiG.lean` CUTS).
+- **Witness limits.** The `voll` witness runs thread 0 only with `true`
+  contracts (joint satisfiability, no frame reasoning —
+  `ZielOrtVollZeuge.lean` CUTS); the `geraet` witness has no device-driven
+  change and no `awaits` (declaration has no global —
+  `ZielOrtGeraetZeuge.lean` CUTS); no interleaving inside a critical section
+  anywhere (the lock forbids it — `ZielOrtZeuge.lean` CUTS).
+
+### 11.4 Axiom record (probe `.tmp/sonde133.lean`, `./lean-probe` 0 errors)
+
+```text
+'Gabbro.Grammatik.ziel_ort' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_voll' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_geraet' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.rennfrei_g' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+No `sorryAx`, no extra axiom. (`./lean-bau`: 0 error lines, 86 jobs.)
+
+### 11.5 Distance to the goal (adversarial)
+
+For the covered fragment — `gOk` bodies whose widened footprint check passes,
+on declarations with at least one carrier — the slogan is nearly true: the
+user proves per-function sequential triples plus caller duty (`KoerperGutG`)
+and the boot contracts (`StartGut`), plus two named hardware assumptions
+(`GutO`, `RegLokal`); everything else is carried by named theorems. Three
+premises fall outside the slogan and must be named as such: `StartExklusiv`
+is a start-configuration fact (undecidable over infinite `Faden` in general;
+it bans the most ordinary multithreaded shape — same lock-holding routine on
+two threads), `e0` is a declaration-shape datum (carrier-less programs are
+out entirely), and `hvoll`/`hFrag`/`hFuss` are checker computations the
+emitter must still implement and wire per program. Adversarial deductions
+from the price of the repair: `KoerperGutG` quantifies over ALL
+frame-respecting register-local oracles, so the user's sequential proof must
+survive adversarial register answers that change between reads whenever
+another thread writes the device carriers — locality may be assumed, stability
+may not; reason returns (`grund`) carry no contract at all (`rufG_grund_treu`
+is machine-faithfulness only); and the adequacy the user leans on relates the
+machine to the contract-ignoring `rufRumpf`, never to the checking `rufAt` —
+so sequential reasoning with contracts reaches G only through the handler
+record, not through a proved equivalence. Outside the fragment the gaps are
+total, not gradual: no costs or time anywhere, no lock-free sharing
+guarantees, no stuck-state behaviour, no carrier-less declarations, no
+locks-block-only readers, no non-local-register programs.
+
+(End of file — §11 added 2026-09-13, lane 133; §§1-10 history above.)
