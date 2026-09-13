@@ -2886,6 +2886,7 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
         (erwartet.zeile, erwartet.spalte),
         "N069 must point at the region token, not at the call"
     );
+}
 
 // -- Lane E6: the hardware profile and library requirements ------------------------------
 // A profile with keyed entries and a referenced assumption, plus a library
@@ -3029,6 +3030,7 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
 // beside the E7 span tests for the same `N069`.
 
 
+#[test]
 fn profil_doppelte_belegung_schweigt() {
     // Duplicates with one value are silent: a set holds them once.
     faellt_nicht(&profil_rahmen(
