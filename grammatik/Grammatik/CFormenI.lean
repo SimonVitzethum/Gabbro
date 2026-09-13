@@ -2173,7 +2173,10 @@ CUTS: what this pass does not do, by name.
   after the last pass. Gabbro's `retryLauf 0` runs the overflow block
   without that check. When the n-th pass makes `bis` true, Gabbro runs
   the overflow block and C does not: a FINDING about model and emitter
-  (one of them has to move), reported, not fixed.
+  (one of them has to move). DECIDED in `CFormenW.lean` (2026-09-13):
+  the model moves (`retryLaufC`, the one-line change to `retryLauf`'s
+  `0` case); `scorr_retry` covers the emitted loop against the model as
+  it stands, because the emitter admits only a `never` overflow.
 - `forever` (`for (;;)`) is not given its lemma: its Gabbro meaning after
   `passes` rounds is the hardware assumption, so only its `leave` and
   `return` exits carry obligations; the shape is `CS.loop`.
