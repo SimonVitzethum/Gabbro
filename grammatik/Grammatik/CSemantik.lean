@@ -393,3 +393,176 @@ theorem cExprUB_stuck : ∀ (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom),
     CExprUB e m ρ g → aEval e m ρ g = none := by
   intro e m ρ g h
   exact aEval_none_of_ok_false e m ρ g (cExprUB_ok e m ρ g h)
+
+/-! ## Form C. assignment to a struct field of a table slot -/
+
+/-- C statements for the five forms: `skip`, the slot-field store
+    `t->slots[i].f = e;` with the declared field type, sequencing,
+    `if`/`else` on a nonzero test (form D), and the counting `for`
+    `for (x = lo; x < hi; x++) body` (form E). -/
+inductive CStmt where
+  | skip
+  | assign (t : Nat) (i : CExpr) (f : Nat) (sgn : Bool) (w : CWidth) (e : CExpr)
+  | seq (a b : CStmt)
+  | cif (c : CExpr) (t e : CStmt)
+  | cfor (x : Nat) (lo hi : Int) (body : CStmt)
+  deriving DecidableEq, Repr
+
+/-- Update one variable: the loop counter write. -/
+def cUpd (ρ : CEnv) (x : Nat) (v : Int) : CEnv :=
+  fun y => if y = x then v else ρ y
+
+/-- The counting loop with fuel: `none` is out of fuel (NOT UB -- the
+    progress theorem assumes enough fuel). The counter ends at the exit
+    value, as in C. `runBody` is the body executor. -/
+def cForRun (runBody : CMem → CEnv → Nat → Option (CMem × CEnv)) (x : Nat)
+    (cur hi : Int) (m : CMem) (ρ : CEnv) (fuel : Nat) : Option (CMem × CEnv) :=
+  match fuel with
+  | 0 => none
+  | n + 1 =>
+      if cur < hi then
+        match runBody m (cUpd ρ x cur) n with
+        | some (m', ρ') => cForRun runBody x (cur + 1) hi m' ρ' n
+        | none => none
+      else some (m, cUpd ρ x cur)
+
+/-- Statement execution: `none` is STUCK (UB) or out of fuel. The store
+    fires only when the index is in bounds AND the value fits the
+    declared field type -- the emitter's range guarantee. -/
+def cExec : CStmt → CMem → CEnv → CGeom → Nat → Option (CMem × CEnv)
+  | .skip, m, ρ, _, _ => some (m, ρ)
+  | .assign t i f sgn w e, m, ρ, g, _ =>
+      match aEval i m ρ g, aEval e m ρ g with
+      | some k, some v =>
+          if 0 ≤ k ∧ k < (g t : Int) ∧ cLo sgn w ≤ v ∧ v ≤ cHi sgn w then
+            some ((fun t' k' f' =>
+              if t' = t ∧ k' = k.toNat ∧ f' = f then v else m t' k' f'), ρ)
+          else none
+      | _, _ => none
+  | .seq a b, m, ρ, g, fuel =>
+      match cExec a m ρ g fuel with
+      | some (m', ρ') => cExec b m' ρ' g fuel
+      | none => none
+  | .cif c t e, m, ρ, g, fuel =>
+      match aEval c m ρ g with
+      | some v => if v ≠ 0 then cExec t m ρ g fuel else cExec e m ρ g fuel
+      | none => none
+  | .cfor x lo hi body, m, ρ, g, fuel =>
+      cForRun (fun m ρ f => cExec body m ρ g f) x lo hi m ρ fuel
+
+/-- Statement-level UB: subexpression UB, out-of-bounds store index,
+    value outside the declared field type, first-iteration body UB.
+    Later-iteration body UB is covered by the progress side (form E):
+    the body must run from every reachable counter state. -/
+inductive CStmtUB : CStmt → CMem → CEnv → CGeom → Prop where
+  | assignIdx (t i f sgn w e m ρ g) (h : CExprUB i m ρ g) :
+      CStmtUB (.assign t i f sgn w e) m ρ g
+  | assignVal (t i f sgn w e m ρ g) (h : CExprUB e m ρ g) :
+      CStmtUB (.assign t i f sgn w e) m ρ g
+  | assignIdxOut (t i f sgn w e m ρ g k) (hk : aEval i m ρ g = some k)
+      (h : IdxUB g t k) : CStmtUB (.assign t i f sgn w e) m ρ g
+  | assignRange (t i f sgn w e m ρ g k v) (hk : aEval i m ρ g = some k)
+      (hv : aEval e m ρ g = some v)
+      (h : v < cLo sgn w ∨ cHi sgn w < v) :
+      CStmtUB (.assign t i f sgn w e) m ρ g
+  | seqL (a b m ρ g) (h : CStmtUB a m ρ g) : CStmtUB (.seq a b) m ρ g
+  | seqR (a b m ρ g)
+      (h : ∀ fuel m' ρ', cExec a m ρ g fuel = some (m', ρ') →
+        CStmtUB b m' ρ' g) : CStmtUB (.seq a b) m ρ g
+  | ifCond (c t e m ρ g) (h : CExprUB c m ρ g) : CStmtUB (.cif c t e) m ρ g
+  | forFirst (x lo hi body m ρ g) (hlt : lo < hi)
+      (h : CStmtUB body m (cUpd ρ x lo) g) :
+      CStmtUB (.cfor x lo hi body) m ρ g
+
+/-- Every inventoried statement UB gets the execution stuck, at any fuel.
+    Induction is over the STATEMENT (so both sequence parts and the loop
+    body have hypotheses); the UB proof selects the firing case. -/
+theorem cStmtUB_stuck : ∀ (s : CStmt) (m : CMem) (ρ : CEnv) (g : CGeom),
+    CStmtUB s m ρ g → ∀ fuel, cExec s m ρ g fuel = none := by
+  intro s
+  induction s with
+  | skip => intro m ρ g h fuel; cases h
+  | assign t i f sgn w e =>
+      intro m ρ g h fuel
+      cases h
+      case assignIdx =>
+          rename_i h'
+          have hi := cExprUB_stuck _ _ _ _ h'
+          simp [cExec, hi]
+      case assignVal =>
+          rename_i h'
+          have he := cExprUB_stuck _ _ _ _ h'
+          simp [cExec, he]
+      case assignIdxOut =>
+          rename_i k hIdx hEval
+          simp only [cExec, hEval]
+          cases he : aEval e m ρ g with
+          | some v =>
+              show (if 0 ≤ k ∧ k < (g t : Int) ∧ cLo sgn w ≤ v ∧ v ≤ cHi sgn w then
+                some ((fun t' k' f' =>
+                  if t' = t ∧ k' = k.toNat ∧ f' = f then v else m t' k' f'), ρ)
+                else none) = none
+              cases hIdx
+              case outLo => rename_i h''; exact if_neg (by omega)
+              case outHi => rename_i h''; exact if_neg (by omega)
+          | none => rfl
+      case assignRange =>
+          rename_i k v hRg hki hve
+          simp only [cExec, hki, hve]
+          show (if 0 ≤ k ∧ k < (g t : Int) ∧ cLo sgn w ≤ v ∧ v ≤ cHi sgn w then
+            some ((fun t' k' f' =>
+              if t' = t ∧ k' = k.toNat ∧ f' = f then v else m t' k' f'), ρ)
+            else none) = none
+          exact if_neg (by cases hRg with | inl h'' => omega | inr h'' => omega)
+  | seq a b iha ihb =>
+      intro m ρ g h fuel
+      cases h
+      case seqL =>
+          rename_i h'
+          have ha := iha m ρ g h' fuel
+          simp [cExec, ha]
+      case seqR =>
+          rename_i h'
+          simp only [cExec]
+          cases hac : cExec a m ρ g fuel with
+          | some pm =>
+              cases pm with
+              | mk m' ρ' =>
+                  have hb := h' fuel m' ρ' hac
+                  exact ihb m' ρ' g hb fuel
+          | none => rfl
+  | cif c t e _ _ =>
+      intro m ρ g h fuel
+      cases h
+      case ifCond =>
+          rename_i h'
+          have hc := cExprUB_stuck _ _ _ _ h'
+          simp [cExec, hc]
+  | cfor x lo hi body ih =>
+      intro m ρ g h fuel
+      cases h
+      case forFirst =>
+          rename_i hlt h'
+          cases fuel with
+          | zero => rfl
+          | succ n =>
+              simp only [cExec, cForRun]
+              have hb : cExec body m (cUpd ρ x lo) g n = none :=
+                ih m (cUpd ρ x lo) g h' n
+              rw [if_pos hlt, hb]
+
+/-- Progress for the store: clean subexpressions plus the emitter's
+    range guarantee reach a successor memory. -/
+theorem cExec_assign_progress : ∀ (t : Nat) (i : CExpr) (f : Nat) (sgn : Bool)
+    (w : CWidth) (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom) (fuel : Nat),
+    cOk i m ρ g = true → cOk e m ρ g = true →
+    (∀ k v, aEval i m ρ g = some k → aEval e m ρ g = some v →
+      0 ≤ k ∧ k < (g t : Int) ∧ cLo sgn w ≤ v ∧ v ≤ cHi sgn w) →
+    ∃ m', cExec (.assign t i f sgn w e) m ρ g fuel = some (m', ρ) := by
+  intro t i f sgn w e m ρ g fuel hi he hrange
+  obtain ⟨k, hk⟩ := cOk_progress i m ρ g hi
+  obtain ⟨v, hv⟩ := cOk_progress e m ρ g he
+  have hc := hrange k v hk hv
+  exact ⟨(fun t' k' f' =>
+    if t' = t ∧ k' = k.toNat ∧ f' = f then v else m t' k' f'),
+    by simp [cExec, hk, hv, hc]⟩
