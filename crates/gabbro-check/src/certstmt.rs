@@ -18,14 +18,21 @@
 //! integer locals, `if` with a printable condition and falling branches,
 //! direct calls with arguments (`consCall`: the count and flow print, the
 //! `RufPasst` travels as `?hp`, filled at paste like `refHpLiesAt` was).
+//! Integer expressions cover literals, places, `+ - * / %`, unary minus,
+//! `&`, `|`/`^`/`<<`/`>>` (with the smallest width both legs admit -- the
+//! `maske` bound, so the claim is the checker's range exactly), `~` (as
+//! `a ^ (2^B - 1)` in the storage word, exactly like the checker),
+//! lossless integer conversions (the bare argument term, like the checker),
+//! and `u32::max`-style limit words (the folded literal).
 //! Everything else is a named refusal, never a truncation:
 //!
 //! * `CS001` statement form with no printed `CertStmt`/`CertStmt2` shape
 //!   (indirect calls, matches, loops, `let-else`,
 //!   `leave`/`next` outside loops, register/mark/float/global steps, ...)
-//! * `CS002` expression with no `CertExpr` shape (bitwise and
-//!   shift operators, division, calls, quantifiers, non-place call
-//!   arguments, pointer reads outside `return`, ...)
+//! * `CS002` expression with no `CertExpr` shape (calls that are not
+//!   lossless integer conversions, wrapping/saturating operators,
+//!   quantifiers, non-place call arguments, pointer reads outside
+//!   `return`, ...)
 //! * `CS003` index or variable with no recomputable range (reads of
 //!   non-integer locals)
 //! * `CS004` nullary direct call: the `CertStmt.call` shape exists but its
@@ -40,7 +47,10 @@
 //! resource list prints as `[]` (the Lean side recomputes validity over it,
 //! so a wrong flow fails `decide` loudly instead of passing silently).
 //! Counts resolve from literals or `const` aliases, field ranges and alias
-//! ranges from literal declarations only; anything else is `CS005`. Table
+//! ranges from literal declarations, `const` bounds, or bare machine words
+//! (`u32` is its full range, the `breite_von`/`grenzen` table the checker
+//! computes with -- the same spelling `lean-g` exports); anything else is
+//! `CS005`. Table
 //! numbers are declaration order (the `tabNr` convention of `lean-g`).
 //! Values print under `wide` exactly where the checker elaborates `weiter`
 //! (a contained range narrows to the claim, an exact one prints bare); an
@@ -84,25 +94,30 @@ pub enum BodyCert {
     Abgewiesen { weigerung: Refusal },
 }
 
-/// One table as the printer sees it: literal `count`, literal field ranges.
+/// One table as the printer sees it: literal `count`, literal field ranges
+/// with the storage representation of the field type (`~` needs the word).
 struct TableInfo {
     name: String,
     count: Option<i128>,
-    felder: Vec<(String, Option<(i128, i128)>)>,
+    felder: Vec<(String, Option<(i128, i128)>, Option<(u8, bool)>)>,
 }
 
 /// What the printer resolves from the declarations: tables and int aliases.
+/// An alias carries its range and the storage representation behind it.
 struct DeclInfo {
     tabellen: Vec<TableInfo>,
-    alias: Vec<(String, (i128, i128))>,
+    alias: Vec<(String, (i128, i128), Option<(u8, bool)>)>,
     konstanten: Vec<(String, i128)>,
     funktionen: Vec<(String, usize)>,
 }
 
 /// One context entry: an integer or boolean local, a pointer parameter, or
-/// something else.
+/// something else. An integer carries its storage representation
+/// (`breite_von` width plus signedness, read off the declared type) beside
+/// its range: `~` complements within the storage word, so the print needs
+/// the word, not just the range.
 enum CtxEintrag {
-    Ganz(String, i128, i128),
+    Ganz(String, i128, i128, Option<(u8, bool)>),
     Wahr(String),
     Zeiger(String, usize, bool),
     Sonst(String),
@@ -117,7 +132,7 @@ impl Ctx {
     /// The de Bruijn index of a name: position from the head.
     fn index_von(&self, name: &str) -> Option<(usize, &CtxEintrag)> {
         let pos = self.eintraege.iter().rposition(|e| match e {
-            CtxEintrag::Ganz(n, _, _)
+            CtxEintrag::Ganz(n, _, _, _)
             | CtxEintrag::Wahr(n)
             | CtxEintrag::Zeiger(n, _, _)
             | CtxEintrag::Sonst(n) => n == name,
@@ -138,27 +153,67 @@ fn als_zahl_mit(info: &DeclInfo, e: &Expr) -> Option<i128> {
     }
 }
 
-/// A literal integer value of an expression, or `None` where it is not one.
-fn als_zahl(e: &Expr) -> Option<u128> {
-    match &e.art {
-        ExprArt::Zahl(n) => Some(*n),
-        ExprArt::Klammer(x) => als_zahl(x),
+/// The storage representation behind an integer type: `breite_von` width
+/// plus signedness, the same pair the checker computes with. The word
+/// already names the storage (`u13` parses with `wort = u16`), so sugar
+/// needs no special case here -- and `~` complements within that storage
+/// word (`m1.rs`: `grenzen(b.breite)`), which is exactly what the print
+/// below replays. An `index into T` has none here (its width lives in the
+/// checker's index form, not in a word).
+fn wort_repr(t: &TypExpr, info: &DeclInfo) -> Option<(u8, bool)> {
+    match t {
+        TypExpr::Int(i) => crate::umgebung::breite_von(i.wort),
+        TypExpr::Pfad(p) => {
+            let name = p.teile.last()?.text.clone();
+            info.alias.iter().find(|(n, _, _)| *n == name).and_then(|(_, _, r)| *r)
+        }
         _ => None,
     }
 }
 
-/// An integer range spelled in a type: a literal `in lo .. hi` or an alias.
+/// An integer range spelled in a type: a literal `in lo .. hi`, a bare
+/// machine word, or an alias for one. A bare word (`u32`) travels as its
+/// full range -- the same numbers the checker computes with
+/// (`breite_von`/`grenzen`) and the same spelling `lean-g` exports
+/// (`int_range` there): the Lean side recomputes validity over the printed
+/// bounds, so a wrong table fails `decide` loudly instead of passing
+/// silently. Bounds resolve `const` names exactly like counts do
+/// (`als_zahl_mit`, and `numeral` in `lean-g`): the value is declared, not
+/// guessed. A sugared width without its desugared range is refused: the
+/// storage word is wider than the exact `N`-bit range, and the parser
+/// always fills the range in, so meeting one without the other means the
+/// tree is not what the parser builds.
 fn bereich_von_typ(t: &TypExpr, info: &DeclInfo) -> Option<(i128, i128)> {
     match t {
         TypExpr::Int(i) => {
-            let b = i.bereich.as_ref()?;
-            let lo = als_zahl(&b.von).and_then(|n| i128::try_from(n).ok())?;
-            let hi = als_zahl(&b.bis).and_then(|n| i128::try_from(n).ok())?;
-            Some((lo, if b.exklusiv { hi - 1 } else { hi }))
+            if let Some(z) = i.zucker {
+                // The exact `N`-bit range the sugar promises (`zucker_bereich`
+                // over the same width, so the type and the constant can never
+                // disagree -- and the desugared lower bound of a signed sugar
+                // is a unary minus, not a literal, so reading the sugar is
+                // also the only way that resolves). Checked shifts refuse a
+                // width no parser builds instead of wrapping.
+                if z.vorzeichen {
+                    let halb = 1i128.checked_shl(z.breite.checked_sub(1)?)?;
+                    Some((halb.checked_neg()?, halb.checked_sub(1)?))
+                } else {
+                    Some((0, 1i128.checked_shl(z.breite)?.checked_sub(1)?))
+                }
+            } else if let Some(b) = i.bereich.as_ref() {
+                let lo = als_zahl_mit(info, &b.von)?;
+                let hi = als_zahl_mit(info, &b.bis)?;
+                Some((lo, if b.exklusiv { hi - 1 } else { hi }))
+            } else {
+                let (breite, vz) = crate::umgebung::breite_von(i.wort)?;
+                Some(crate::typen::grenzen(breite, vz))
+            }
         }
         TypExpr::Pfad(p) => {
             let name = p.teile.last()?.text.clone();
-            info.alias.iter().find(|(n, _)| *n == name).map(|(_, r)| *r)
+            info.alias
+                .iter()
+                .find(|(n, _, _)| *n == name)
+                .map(|(_, r, _)| *r)
         }
         _ => None,
     }
@@ -186,7 +241,8 @@ fn sammle(baum: &Programm) -> DeclInfo {
         ItemArt::Typ(t) => {
             if let Some(rumpf) = &t.rumpf {
                 if let Some(r) = bereich_von_typ(rumpf, &info) {
-                    info.alias.push((t.name.text.clone(), r));
+                    let repr = wort_repr(rumpf, &info);
+                    info.alias.push((t.name.text.clone(), r, repr));
                 }
             }
         }
@@ -202,7 +258,11 @@ fn sammle(baum: &Programm) -> DeclInfo {
                         SlotTyp::Typ(te) => bereich_von_typ(te, &info),
                         SlotTyp::Wrapping(_) => None,
                     };
-                    felder.push((f.name.text.clone(), r));
+                    let repr = match &f.typ {
+                        SlotTyp::Typ(te) => wort_repr(te, &info),
+                        SlotTyp::Wrapping(_) => None,
+                    };
+                    felder.push((f.name.text.clone(), r, repr));
                 }
             }
             info.tabellen.push(TableInfo {
@@ -227,7 +287,9 @@ fn param_eintrag(name: &str, typ: &TypExpr, info: &DeclInfo) -> CtxEintrag {
                 return CtxEintrag::Sonst(name.to_string());
             }
             match tabelle_text(tabelle, info) {
-                Some((_, count)) => CtxEintrag::Ganz(name.to_string(), 0, count - 1),
+                Some((_, count)) => {
+                    CtxEintrag::Ganz(name.to_string(), 0, count - 1, None)
+                }
                 None => CtxEintrag::Sonst(name.to_string()),
             }
         }
@@ -250,7 +312,9 @@ fn param_eintrag(name: &str, typ: &TypExpr, info: &DeclInfo) -> CtxEintrag {
             }
         }
         _ => match bereich_von_typ(typ, info) {
-            Some((lo, hi)) => CtxEintrag::Ganz(name.to_string(), lo, hi),
+            Some((lo, hi)) => {
+                CtxEintrag::Ganz(name.to_string(), lo, hi, wort_repr(typ, info))
+            }
             None if matches!(typ, TypExpr::Bool(_)) => CtxEintrag::Wahr(name.to_string()),
             None => CtxEintrag::Sonst(name.to_string()),
         },
@@ -331,7 +395,7 @@ fn drucke_index(
     info: &DeclInfo,
     count: i128,
 ) -> Result<String, Refusal> {
-    let (t, r) = drucke_expr(funktion, idx, ctx, info)?;
+    let (t, r, _) = drucke_expr(funktion, idx, ctx, info)?;
     verenge(funktion, wo, t, r, (0, count - 1))
 }
 
@@ -391,34 +455,149 @@ fn binop_name(op: BinOp) -> &'static str {
     }
 }
 
-/// Print an integer expression as `CertExpr` with its recomputed range.
+/// The smallest `w` with `bound < 2^w` (the `maske` bound of `typen.rs`):
+/// what `|`/`^` carry, and the value leg of `<<`/`>>`. `None` for a
+/// negative bound or one no `i128` shift reaches -- never a guess.
+fn kleinste_breite(bound: i128) -> Option<u32> {
+    if bound < 0 {
+        return None;
+    }
+    for w in 0..127u32 {
+        if bound < 1i128.checked_shl(w)? {
+            return Some(w);
+        }
+    }
+    None
+}
+
+/// The storage word a conversion call targets, if this call IS one: a
+/// single-segment path naming an integer word (`u64(a)`, M144/M145 in
+/// `m1.rs`) or a sugared width (which converts to its storage word,
+/// PLAN-BITS section 1). Anything else -- including a word with the wrong
+/// arity -- is an ordinary call, refused downstream as before.
+fn umwandlung_ziel(r: &Ruf) -> Option<gabbro_syntax::kw::Kw> {
+    use gabbro_syntax::kw::Kw;
+    if r.argumente.len() != 1 {
+        return None;
+    }
+    let name = r.path()?.einfach()?;
+    if let Some(k) = Kw::suche(&name.text).filter(|k| k.ist_intty()) {
+        return Some(k);
+    }
+    gabbro_syntax::zucker_speicher(&name.text)
+}
+
+/// Print an integer expression as `CertExpr` with its recomputed range
+/// and, where the declared type names one, its storage representation
+/// (`breite_von` width plus signedness).
 ///
 /// The range mirrors `certRange` (`Zeugnis.lean`): unbounded `Int`
 /// arithmetic would lie on overflow, so checked `i128` answers `CS005`.
+/// Widths track declarations, never computations: a literal carries none
+/// (it takes the other side's form), and neither does a computed value --
+/// `~` over either refuses, exactly like the checker (M137).
 fn drucke_expr(
     funktion: &str,
     e: &Expr,
     ctx: &Ctx,
     info: &DeclInfo,
-) -> Result<(String, (i128, i128)), Refusal> {
+) -> Result<(String, (i128, i128), Option<(u8, bool)>), Refusal> {
     match &e.art {
         ExprArt::Zahl(n) => {
             let v = i128::try_from(*n).map_err(|_| {
                 refuse("CS005", format!("function {funktion}: literal {n} too large"))
             })?;
-            Ok((format!("(.lit {v})"), (v, v)))
+            Ok((format!("(.lit {v})"), (v, v), None))
         }
         ExprArt::Klammer(x) => drucke_expr(funktion, x, ctx, info),
         ExprArt::Binaer(op, a, b) => {
-            let (ta, (l1, h1)) = drucke_expr(funktion, a, ctx, info)?;
-            let (tb, (l2, h2)) = drucke_expr(funktion, b, ctx, info)?;
+            let (ta, (l1, h1), _) = drucke_expr(funktion, a, ctx, info)?;
+            let (tb, (l2, h2), _) = drucke_expr(funktion, b, ctx, info)?;
             // The bound mirrors `certRange` (`Zeugnis.lean`); `None` is
-            // overflow (or an uncovered operator), never a guess.
+            // overflow (or an uncovered operator), never a guess. Division
+            // and remainder claim M102 (`(0, h1)` under `0 <= l1`, `1 <= l2`;
+            // `%` claims `(0, h2 - 1)`), `&` claims M137 (`(0, h1)` under
+            // nonnegativity) -- the same arms `certemit.rs` recomputes.
+            // `|`/`^` carry the smallest covering width (the `maske` bound
+            // of `typen.rs`, so the claim is the checker's range exactly);
+            // `<<`/`>>` carry the smallest width both legs admit (the value
+            // and the claim ignore it -- `Zahl.shl/shr` compute `a * 2^b`
+            // and `a / 2^b` whatever `w` says). A failed leg is `CS005`
+            // (the shape exists, the instance has no range), never a weaker
+            // claim.
+            if matches!(op, BinOp::BitOder | BinOp::BitXor) {
+                if !(0 <= l1 && 0 <= l2) {
+                    return Err(refuse(
+                        "CS005",
+                        format!("function {funktion}: {} has no range", expr_name(e)),
+                    ));
+                }
+                let w = kleinste_breite(h1.max(h2)).ok_or_else(|| {
+                    refuse(
+                        "CS005",
+                        format!("function {funktion}: {} has no range", expr_name(e)),
+                    )
+                })?;
+                let hi = 1i128
+                    .checked_shl(w)
+                    .and_then(|v| v.checked_sub(1))
+                    .ok_or_else(|| {
+                        refuse(
+                            "CS005",
+                            format!("function {funktion}: {} overflows", expr_name(e)),
+                        )
+                    })?;
+                let name = if *op == BinOp::BitOder { "bor" } else { "bxor" };
+                return Ok((format!("(.{name} {w} {ta} {tb})"), (0, hi), None));
+            }
+            if matches!(op, BinOp::SchiebLinks | BinOp::SchiebRechts) {
+                if !(0 <= l1 && 0 <= l2) {
+                    return Err(refuse(
+                        "CS005",
+                        format!("function {funktion}: {} has no range", expr_name(e)),
+                    ));
+                }
+                let no_range = || {
+                    refuse(
+                        "CS005",
+                        format!("function {funktion}: {} has no range", expr_name(e)),
+                    )
+                };
+                let w = kleinste_breite(h1)
+                    .ok_or_else(no_range)?
+                    .max(u32::try_from(h2.checked_add(1).ok_or_else(no_range)?).map_err(
+                        |_| no_range(),
+                    )?);
+                if *op == BinOp::SchiebLinks {
+                    let h2u = u32::try_from(h2).map_err(|_| no_range())?;
+                    let hi = h1
+                        .checked_mul(1i128.checked_shl(h2u).ok_or_else(no_range)?)
+                        .ok_or_else(|| {
+                            refuse(
+                                "CS005",
+                                format!("function {funktion}: {} overflows", expr_name(e)),
+                            )
+                        })?;
+                    return Ok((format!("(.shl {w} {ta} {tb})"), (0, hi), None));
+                }
+                return Ok((format!("(.shr {w} {ta} {tb})"), (0, h1), None));
+            }
             let ecken: Option<((i128, i128), &'static str)> = match op {
                 BinOp::Plus => l1
                     .checked_add(l2)
                     .and_then(|lo| h1.checked_add(h2).map(|hi| (lo, hi)))
                     .map(|r| (r, "add")),
+                BinOp::Geteilt if 0 <= l1 && 1 <= l2 => Some(((0, h1), "div")),
+                BinOp::Rest if 0 <= l1 && 1 <= l2 => h2
+                    .checked_sub(1)
+                    .map(|hi| ((0, hi), "rem")),
+                BinOp::BitUnd if 0 <= l1 && 0 <= l2 => Some(((0, h1), "band")),
+                BinOp::Geteilt | BinOp::Rest | BinOp::BitUnd => {
+                    return Err(refuse(
+                        "CS005",
+                        format!("function {funktion}: {} has no range", expr_name(e)),
+                    ))
+                }
                 BinOp::Minus => l1
                     .checked_sub(h2)
                     .and_then(|lo| h1.checked_sub(l2).map(|hi| (lo, hi)))
@@ -450,7 +629,7 @@ fn drucke_expr(
                         "CS002",
                         format!("{} has no CertExpr shape", expr_name(e)),
                     )
-                    .map(|s| (s, (0, 0)));
+                    .map(|s| (s, (0, 0), None));
                 }
             };
             let ((lo, hi), name) = ecken.ok_or_else(|| {
@@ -459,10 +638,10 @@ fn drucke_expr(
                     format!("function {funktion}: {} overflows", expr_name(e)),
                 )
             })?;
-            Ok((format!("(.{name} {ta} {tb})"), (lo, hi)))
+            Ok((format!("(.{name} {ta} {tb})"), (lo, hi), None))
         }
         ExprArt::Unaer(UnOp::Negativ, x) => {
-            let (t, (l1, h1)) = drucke_expr(funktion, x, ctx, info)?;
+            let (t, (l1, h1), _) = drucke_expr(funktion, x, ctx, info)?;
             let (lo, hi) = (h1.checked_neg().and_then(|a| l1.checked_neg().map(|b| (a, b))))
                 .ok_or_else(|| {
                     refuse(
@@ -470,16 +649,102 @@ fn drucke_expr(
                         format!("function {funktion}: {} overflows", expr_name(e)),
                     )
                 })?;
-            Ok((format!("(.neg {t})"), (lo, hi)))
+            Ok((format!("(.neg {t})"), (lo, hi), None))
+        }
+        ExprArt::Unaer(UnOp::BitNicht, x) => {
+            let (t, (l1, h1), repr) = drucke_expr(funktion, x, ctx, info)?;
+            // `~a` is `a ^ (2^B - 1)` within the storage word (`m1.rs`,
+            // M137): unsigned and non-literal only, exactly like the
+            // checker. A literal carries no width (its `None` IS the
+            // refusal -- `~5` is a different number in every width), a
+            // signed operand is C's `-x-1` (a different operation), and a
+            // computed value carries no word (widths track declarations).
+            let no_range = || {
+                refuse(
+                    "CS005",
+                    format!("function {funktion}: {} has no range", expr_name(e)),
+                )
+            };
+            let (breite, vz) = repr.ok_or_else(no_range)?;
+            if vz {
+                return Err(no_range());
+            }
+            let b = u32::from(breite);
+            let voll = 1i128.checked_shl(b).ok_or_else(no_range)?;
+            if !(0 <= l1 && h1 < voll) {
+                return Err(no_range());
+            }
+            let maske = voll.checked_sub(1).ok_or_else(no_range)?;
+            Ok((
+                format!("(.bxor {b} {t} (.lit {maske}))"),
+                (0, maske),
+                Some((breite, false)),
+            ))
         }
         ExprArt::Ort(o) => drucke_ort_wert(funktion, o, ctx, info),
+        ExprArt::Ruf(r) => {
+            let Some(ziel) = umwandlung_ziel(r) else {
+                return fehlschlag(
+                    funktion,
+                    "CS002",
+                    format!("{} has no CertExpr shape", expr_name(e)),
+                )
+                .map(|s| (s, (0, 0), None));
+            };
+            // An integer conversion (`u64(a)`, M144/M145): lossless only.
+            // The checker keeps the proved range then (same value, wider
+            // type), so the print is the bare argument term; a lossy
+            // conversion wraps, and no `CertExpr` shape certifies a wrapped
+            // value. The target representation travels for a later `~`.
+            let (t, (l1, h1), _) = drucke_expr(funktion, &r.argumente[0], ctx, info)?;
+            let (breite, vz) = crate::umgebung::breite_von(ziel).ok_or_else(|| {
+                refuse(
+                    "CS005",
+                    format!("function {funktion}: {} has no range", expr_name(e)),
+                )
+            })?;
+            let (zlo, zhi) = crate::typen::grenzen(breite, vz);
+            if !(zlo <= l1 && h1 <= zhi) {
+                return Err(refuse(
+                    "CS005",
+                    format!("function {funktion}: {} has no range", expr_name(e)),
+                ));
+            }
+            Ok((t, (l1, h1), Some((breite, vz))))
+        }
         _ => fehlschlag(
             funktion,
             "CS002",
             format!("{} has no CertExpr shape", expr_name(e)),
         )
-        .map(|s| (s, (0, 0))),
+        .map(|s| (s, (0, 0), None)),
     }
+}
+
+/// `u32::max` / `u13::min` -- the edge of the promised range, read off the
+/// same words the checker folds (`grenzwort` for standard widths,
+/// `zucker_bereich` for sugared ones, `m1.rs` W7): the print is the folded
+/// literal, in the storage representation the checker types it at.
+fn wort_grenze(o: &Ort) -> Option<(i128, (u8, bool))> {
+    if o.suffixe.len() != 1 {
+        return None;
+    }
+    let f = match o.suffixe.first() {
+        Some(OrtSuffix::Feld(f)) => f.text.as_str(),
+        _ => return None,
+    };
+    if let Some((lo, hi)) = gabbro_syntax::zucker_bereich(&o.basis.text) {
+        let speicher = gabbro_syntax::zucker_speicher(&o.basis.text)
+            .and_then(crate::umgebung::breite_von)?;
+        let w = match f {
+            "max" => hi,
+            "min" => lo,
+            _ => return None,
+        };
+        return Some((w, speicher));
+    }
+    let (breite, vz, w) = crate::umgebung::grenzwort(o)?;
+    Some((w, (breite, vz)))
 }
 
 /// Print a place in value position: an integer local or a direct slot read
@@ -491,25 +756,27 @@ fn drucke_ort_wert(
     o: &Ort,
     ctx: &Ctx,
     info: &DeclInfo,
-) -> Result<(String, (i128, i128)), Refusal> {
+) -> Result<(String, (i128, i128), Option<(u8, bool)>), Refusal> {
     if o.suffixe.is_empty() {
         match ctx.index_von(&o.basis.text) {
-            Some((k, CtxEintrag::Ganz(_, lo, hi))) => {
-                Ok((format!("(.var {k})"), (*lo, *hi)))
+            Some((k, CtxEintrag::Ganz(_, lo, hi, repr))) => {
+                Ok((format!("(.var {k})"), (*lo, *hi), *repr))
             }
             Some(_) => fehlschlag(
                 funktion,
                 "CS003",
                 format!("place {} has no integer range", o.text()),
             )
-            .map(|s| (s, (0, 0))),
+            .map(|s| (s, (0, 0), None)),
             None => fehlschlag(
                 funktion,
                 "CS005",
                 format!("unknown name {} in {funktion}", o.basis.text),
             )
-            .map(|s| (s, (0, 0))),
+            .map(|s| (s, (0, 0), None)),
         }
+    } else if let Some((w, repr)) = wort_grenze(o) {
+        Ok((format!("(.lit {w})"), (w, w), Some(repr)))
     } else if let [OrtSuffix::Feld(_), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] =
         o.suffixe.as_slice()
     {
@@ -540,25 +807,25 @@ fn drucke_ort_wert(
             info,
             count,
         )?;
-        let (_, fr) = tab
+        let (_, fr, frepr) = tab
             .felder
             .iter()
-            .find(|(n, _)| *n == feld.text)
-            .and_then(|(n, r)| r.map(|rr| (n.clone(), rr)))
+            .find(|(n, _, _)| *n == feld.text)
+            .and_then(|(n, r, rp)| r.map(|rr| (n.clone(), rr, *rp)))
             .ok_or_else(|| {
                 refuse(
                     "CS005",
                     format!("field {} has no integer range", o.text()),
                 )
             })?;
-        Ok((format!("(.slot {} {} {iterm})", tab.name, feld.text), fr))
+        Ok((format!("(.slot {} {} {iterm})", tab.name, feld.text), fr, frepr))
     } else {
         fehlschlag(
             funktion,
             "CS002",
             format!("place {} has no CertExpr shape", o.text()),
         )
-        .map(|s| (s, (0, 0)))
+        .map(|s| (s, (0, 0), None))
     }
 }
 
@@ -609,8 +876,8 @@ fn drucke_bedingung(
                     )
                 }
             };
-            let (ta, _) = drucke_expr(funktion, links, ctx, info)?;
-            let (tb, _) = drucke_expr(funktion, rechts, ctx, info)?;
+            let (ta, _, _) = drucke_expr(funktion, links, ctx, info)?;
+            let (tb, _, _) = drucke_expr(funktion, rechts, ctx, info)?;
             let inner = format!("(.{name} {ta} {tb})");
             Ok(if negiert {
                 format!("(.nicht {inner})")
@@ -687,7 +954,7 @@ fn drucke_seq(
         match &s.art {
             StmtArt::Let(l) => {
                 let (lo, hi) = claimed_range(funktion, l, info)?;
-                let (t, r) = drucke_expr(funktion, &l.wert, ctx, info)?;
+                let (t, r, _) = drucke_expr(funktion, &l.wert, ctx, info)?;
                 let t = verenge(
                     funktion,
                     &format!("let {}", l.name.text),
@@ -695,7 +962,11 @@ fn drucke_seq(
                     r,
                     (lo, hi),
                 )?;
-                ctx.eintraege.push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi));
+                // The bound local's storage is the annotation's, not the
+                // value's: `let y : u8 = x` complements in eight bits.
+                let repr = l.typ.as_ref().and_then(|t| wort_repr(t, info));
+                ctx.eintraege
+                    .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi, repr));
                 schritte.push(SeqSchritt::Binde { term: t, lo, hi });
             }
             StmtArt::Zuweisung(z) => {
@@ -820,7 +1091,7 @@ fn drucke_zuweisung(
     let o = &z.ziel;
     if o.suffixe.is_empty() {
         let (k, lo, hi) = match ctx.index_von(&o.basis.text) {
-            Some((k, CtxEintrag::Ganz(_, lo, hi))) => (k, *lo, *hi),
+            Some((k, CtxEintrag::Ganz(_, lo, hi, _))) => (k, *lo, *hi),
             _ => {
                 return Err(refuse(
                     "CS003",
@@ -828,7 +1099,7 @@ fn drucke_zuweisung(
                 ))
             }
         };
-        let (t, r) = drucke_expr(funktion, &z.wert, ctx, info)?;
+        let (t, r, _) = drucke_expr(funktion, &z.wert, ctx, info)?;
         let t = verenge(
             funktion,
             &format!("assignment to {}", o.text()),
@@ -862,15 +1133,15 @@ fn drucke_zuweisung(
                 info,
                 count,
             )?;
-            let fr = tab
+            let (fr, _) = tab
                 .felder
                 .iter()
-                .find(|(n, _)| *n == feld.text)
-                .and_then(|(_, r)| *r)
+                .find(|(n, _, _)| *n == feld.text)
+                .and_then(|(_, r, rp)| r.map(|rr| (rr, *rp)))
                 .ok_or_else(|| {
                     refuse("CS005", format!("field {} has no integer range", o.text()))
                 })?;
-            let (t, r) = drucke_expr(funktion, &z.wert, ctx, info)?;
+            let (t, r, _) = drucke_expr(funktion, &z.wert, ctx, info)?;
             let t = verenge(
                 funktion,
                 &format!("value of {}", o.text()),
@@ -922,15 +1193,15 @@ fn drucke_zuweisung(
             info,
             count,
         )?;
-        let fr = tab
+        let (fr, _) = tab
             .felder
             .iter()
-            .find(|(n, _)| *n == feld.text)
-            .and_then(|(_, r)| *r)
+            .find(|(n, _, _)| *n == feld.text)
+            .and_then(|(_, r, rp)| r.map(|rr| (rr, *rp)))
             .ok_or_else(|| {
                 refuse("CS005", format!("field {} has no integer range", o.text()))
             })?;
-        let (t, r) = drucke_expr(funktion, &z.wert, ctx, info)?;
+        let (t, r, _) = drucke_expr(funktion, &z.wert, ctx, info)?;
         let t = verenge(
             funktion,
             &format!("value of {}", o.text()),
@@ -1029,7 +1300,7 @@ fn drucke_ende(
                                 ),
                             )
                         })?;
-                    let (t, r) = drucke_expr(funktion, e, ctx, info)?;
+                    let (t, r, _) = drucke_expr(funktion, e, ctx, info)?;
                     let t = verenge(funktion, "return", t, r, (lo, hi))?;
                     Ok(format!("(.retWert {t} {lo} {hi})"))
                 }
@@ -1049,7 +1320,7 @@ fn drucke_ende(
                     ),
                 ));
             }
-            let (t, r) = drucke_expr(funktion, &l.wert, ctx, info)?;
+            let (t, r, _) = drucke_expr(funktion, &l.wert, ctx, info)?;
             let t = verenge(
                 funktion,
                 &format!("let {}", l.name.text),
@@ -1057,8 +1328,9 @@ fn drucke_ende(
                 r,
                 (lo, hi),
             )?;
+            let repr = l.typ.as_ref().and_then(|t| wort_repr(t, info));
             ctx.eintraege
-                .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi));
+                .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi, repr));
             let weiter = drucke_ende(funktion, rest, ctx, info, ergebnis)?;
             Ok(format!("(.bind {t} {lo} {hi} {weiter})"))
         }
@@ -1263,7 +1535,7 @@ fn drucke_rueck_durch(
         }
     };
     let tab = &info.tabellen[ti];
-    if !tab.felder.iter().any(|(n, _)| *n == feld.text) {
+    if !tab.felder.iter().any(|(n, _, _)| *n == feld.text) {
         return Err(refuse(
             "CS005",
             format!("unknown field {} in {funktion}", o.text()),
@@ -1354,7 +1626,7 @@ fn drucke_ende104(
                                 ),
                             )
                         })?;
-                    let (t, rr) = drucke_expr(funktion, e, ctx, info)?;
+                    let (t, rr, _) = drucke_expr(funktion, e, ctx, info)?;
                     let t = verenge(funktion, "return", t, rr, (lo, hi))?;
                     Ok(format!("(.retWert {t} {lo} {hi})"))
                 }
@@ -1364,9 +1636,7 @@ fn drucke_ende104(
             let (lo, hi) = claimed_range(funktion, l, info)?;
             if !matches!(
                 &l.typ,
-                Some(TypExpr::Int(_))
-                    | Some(TypExpr::Pfad(_))
-                    | Some(TypExpr::Index { .. })
+                Some(TypExpr::Int(_)) | Some(TypExpr::Pfad(_)) | Some(TypExpr::Index { .. })
             ) {
                 return Err(refuse(
                     "CS001",
@@ -1376,7 +1646,7 @@ fn drucke_ende104(
                     ),
                 ));
             }
-            let (t, rr) = drucke_expr(funktion, &l.wert, ctx, info)?;
+            let (t, rr, _) = drucke_expr(funktion, &l.wert, ctx, info)?;
             let t = verenge(
                 funktion,
                 &format!("let {}", l.name.text),
@@ -1384,8 +1654,9 @@ fn drucke_ende104(
                 rr,
                 (lo, hi),
             )?;
+            let repr = l.typ.as_ref().and_then(|t| wort_repr(t, info));
             ctx.eintraege
-                .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi));
+                .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi, repr));
             let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
             Ok(format!("(.bind {t} {lo} {hi} {weiter})"))
         }

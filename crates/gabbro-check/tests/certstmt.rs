@@ -203,17 +203,71 @@ fn call_literal_arg_refused() {
     assert_eq!(w.code, "CS002", "{}", w.grund);
 }
 
-/// A division has no `CertExpr` shape in this printer.
+/// A division prints `div` with the M102 claim `(0, h1)`.
 #[test]
-fn division_refused() {
+fn division_prints() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn f(x : K) -> K effects { pure } costs <= 2 ops
           { let y : K = x / 2; return y; } }",
     );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.div (.var 0) (.lit 2)) 0 10 (.retWert (.var 0) 0 10)))"
+    );
+}
+
+/// A division whose divisor may be zero has no range: the shape exists,
+// the instance claims nothing.
+#[test]
+fn division_by_zero_has_no_range() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = x / 0; return y; } }",
+    );
     let w = abgewiesen(&b, "f");
-    assert_eq!(w.code, "CS002", "{}", w.grund);
-    assert!(w.grund.contains('/'), "names the operator: {}", w.grund);
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// A remainder prints `rem` with the M102 claim `(0, h2 - 1)`.
+#[test]
+fn remainder_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = x % 4; return y; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.wide 0 10 (.rem (.var 0) (.lit 4))) 0 10 (.retWert (.var 0) 0 10)))"
+    );
+}
+
+/// `&` prints `band` with the M137 claim `(0, h1)`.
+#[test]
+fn band_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = x & 6; return y; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.band (.var 0) (.lit 6)) 0 10 (.retWert (.var 0) 0 10)))"
+    );
+}
+
+/// `&` with a possibly negative side has no range.
+#[test]
+fn band_negative_has_no_range() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = (0 - 1) & x; return y; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
 }
 
 /// A direct table write with an index variable prints `assignSlot`: the
@@ -367,11 +421,51 @@ fn unknown_table_refused() {
     assert!(w.grund.contains('T'), "names the table: {}", w.grund);
 }
 
-/// A bare `u32` result type claims no range.
+/// A bare `u32` result type claims its full range (the `breite_von`/
+/// `grenzen` table the checker computes with, the same spelling `lean-g`
+/// exports): the literal narrows under `wide`, like `weiter`.
 #[test]
-fn unranged_result_refused() {
+fn bare_word_result_prints() {
     let b = parse(
         "module m { impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide 0 4294967295 (.lit 1)) 0 4294967295))"
+    );
+}
+
+/// A bare-word alias (`type W = u16`) claims the word range through the
+/// alias table, exactly as a literal range does.
+#[test]
+fn bare_word_alias_prints() {
+    let b = parse(
+        "module m { type W = u16;
+          impl fn f(x : W) -> W effects { pure } costs <= 1 ops { return x; } }",
+    );
+    assert_eq!(gedruckt(&b, "f"), "(.liftE (.retWert (.var 0) 0 65535))");
+}
+
+/// A `let` with a bare-word annotation binds the word range.
+#[test]
+fn bare_word_let_prints() {
+    let b = parse(
+        "module m { impl fn f(x : u16) -> u16 effects { pure } costs <= 2 ops
+          { let y : u16 = x; return y; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.var 0) 0 65535 (.retWert (.var 0) 0 65535)))"
+    );
+}
+
+/// A `bool` result type still claims no integer range: there is no
+/// bool-return `CertEnd` shape.
+#[test]
+fn bool_result_refused() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> bool effects { pure } costs <= 1 ops { return x == x; } }",
     );
     let w = abgewiesen(&b, "f");
     assert_eq!(w.code, "CS005", "{}", w.grund);
@@ -391,5 +485,163 @@ fn reference_104_prints() {
     assert_eq!(
         gedruckt(&b, "lies"),
         "(.retDurch Konto stand 0 (.var 1))"
+    );
+}
+
+/// `|` prints `bor` with the smallest covering width (the `maske` bound,
+// so the claim is the checker's range exactly).
+#[test]
+fn bor_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 15;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = x | 6; return y; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.bor 4 (.var 0) (.lit 6)) 0 15 (.retWert (.var 0) 0 15)))"
+    );
+}
+
+/// `^` prints `bxor` the same way.
+#[test]
+fn bxor_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 15;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = x ^ 6; return y; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.bind (.bxor 4 (.var 0) (.lit 6)) 0 15 (.retWert (.var 0) 0 15)))"
+    );
+}
+
+/// `|` with a possibly negative side has no range.
+#[test]
+fn bor_negative_has_no_range() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 15;
+          impl fn f(x : K) -> K effects { pure } costs <= 2 ops
+          { let y : K = (0 - 1) | x; return y; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// `<<` prints `shl` with the smallest width both legs admit.
+#[test]
+fn shl_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> u32 effects { pure } costs <= 1 ops { return x << 2; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide 0 4294967295 (.shl 4 (.var 0) (.lit 2))) 0 4294967295))"
+    );
+}
+
+/// `>>` prints `shr` the same way.
+#[test]
+fn shr_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> u32 effects { pure } costs <= 1 ops { return x >> 2; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide 0 4294967295 (.shr 4 (.var 0) (.lit 2))) 0 4294967295))"
+    );
+}
+
+/// A shift amount no `i128` shift reaches has no range.
+#[test]
+fn shl_huge_amount_has_no_range() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(x : K) -> u32 effects { pure } costs <= 1 ops { return x << 200; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// `~` prints `bxor` with the all-ones mask of the storage word.
+#[test]
+fn bnot_prints() {
+    let b = parse(
+        "module m { impl fn f(m : u8) -> u8 effects { pure } costs <= 1 ops { return ~m; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.bxor 8 (.var 0) (.lit 255)) 0 255))"
+    );
+}
+
+/// `~` over a signed operand is C's `-x-1`, not a word complement.
+#[test]
+fn bnot_signed_refused() {
+    let b = parse(
+        "module m { impl fn f(m : i8) -> i8 effects { pure } costs <= 1 ops { return ~m; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// `~` over a literal carries no width: a different number in every one.
+#[test]
+fn bnot_literal_refused() {
+    let b = parse(
+        "module m { impl fn f() -> u8 effects { pure } costs <= 1 ops { return ~5; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// A lossless conversion prints the bare argument term, like the checker.
+#[test]
+fn conversion_prints() {
+    let b = parse(
+        "module m { impl fn f(a : u32) -> u64 effects { pure } costs <= 1 ops
+          { return u64(a); } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide 0 18446744073709551615 (.var 0)) 0 18446744073709551615))"
+    );
+}
+
+/// A lossy conversion wraps: no `CertExpr` shape certifies the value.
+#[test]
+fn conversion_lossy_refused() {
+    let b = parse(
+        "module m { impl fn f(a : u32) -> u8 effects { pure } costs <= 1 ops
+          { return u8(a); } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+}
+
+/// `u32::max` prints the folded literal.
+#[test]
+fn grenzwort_prints() {
+    let b = parse(
+        "module m { impl fn f() -> u32 effects { pure } costs <= 1 ops { return u32::max; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide 0 4294967295 (.lit 4294967295)) 0 4294967295))"
+    );
+}
+
+/// A signed sugar width claims its exact range.
+#[test]
+fn signed_sugar_prints() {
+    let b = parse(
+        "module m { impl fn f(x : i37) -> i64 effects { pure } costs <= 1 ops { return x; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.wide -9223372036854775808 9223372036854775807 (.var 0)) -9223372036854775808 9223372036854775807))"
     );
 }

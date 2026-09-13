@@ -139,10 +139,11 @@ pub enum CertExpr {
     Bor(u32, Box<CertExpr>, Box<CertExpr>),
     /// `(.bxor w a b)` -- same arm as `bor`.
     Bxor(u32, Box<CertExpr>, Box<CertExpr>),
-    /// `(.shl a b)` -- `(0, h1 * 2^h2)` under nonnegativity (M137).
-    Shl(Box<CertExpr>, Box<CertExpr>),
-    /// `(.shr a b)` -- `(0, h1)` under nonnegativity (M137).
-    Shr(Box<CertExpr>, Box<CertExpr>),
+    /// `(.shl w a b)` -- `(0, h1 * 2^h2)` under nonnegativity plus the
+    /// value-width leg `h1 < 2^w` and the amount leg `h2 < w` (M137).
+    Shl(u32, Box<CertExpr>, Box<CertExpr>),
+    /// `(.shr w a b)` -- `(0, h1)` under the same two width legs (M137).
+    Shr(u32, Box<CertExpr>, Box<CertExpr>),
     /// `(.wide lo' hi' a)` -- `(lo', hi')` under `lo' <= l1` and `h1 <= hi'`.
     Wide(i128, i128, Box<CertExpr>),
     /// `(.var k)` -- de Bruijn index against the context (`ctxTyp`).
@@ -171,8 +172,12 @@ impl CertExpr {
             CertExpr::Bxor(w, a, b) => {
                 format!("(.bxor {w} {} {})", a.print(), b.print())
             }
-            CertExpr::Shl(a, b) => format!("(.shl {} {})", a.print(), b.print()),
-            CertExpr::Shr(a, b) => format!("(.shr {} {})", a.print(), b.print()),
+            CertExpr::Shl(w, a, b) => {
+                format!("(.shl {w} {} {})", a.print(), b.print())
+            }
+            CertExpr::Shr(w, a, b) => {
+                format!("(.shr {w} {} {})", a.print(), b.print())
+            }
             CertExpr::Wide(lo, hi, a) => format!("(.wide {lo} {hi} {})", a.print()),
             CertExpr::Var(k) => format!("(.var {k})"),
             CertExpr::Glob(g) => format!("(.glob {g})"),
@@ -219,20 +224,23 @@ impl CertExpr {
                     None
                 }
             }
-            CertExpr::Shl(a, b) => {
+            CertExpr::Shl(w, a, b) => {
                 let x = a.cert_range(ctx, world)?;
                 let y = b.cert_range(ctx, world)?;
-                if 0 <= x.lo && 0 <= y.lo {
+                let bound = pow2(*w)?;
+                // The amount leg `h2 < w`, exactly as `certRange` spells it.
+                if 0 <= x.lo && 0 <= y.lo && x.hi < bound && y.hi < i128::from(*w) {
                     let shift: u32 = y.hi.try_into().ok()?;
                     Some(Range::new(0, x.hi.checked_mul(pow2(shift)?)?))
                 } else {
                     None
                 }
             }
-            CertExpr::Shr(a, b) => {
+            CertExpr::Shr(w, a, b) => {
                 let x = a.cert_range(ctx, world)?;
                 let y = b.cert_range(ctx, world)?;
-                if 0 <= x.lo && 0 <= y.lo {
+                let bound = pow2(*w)?;
+                if 0 <= x.lo && 0 <= y.lo && x.hi < bound && y.hi < i128::from(*w) {
                     Some(Range::new(0, x.hi))
                 } else {
                     None
@@ -343,37 +351,15 @@ impl CertExpr {
                 b.sides_into(ctx, world, out);
                 out.push(width_side("bxor", *w, a, b, ctx, world));
             }
-            CertExpr::Shl(a, b) => {
+            CertExpr::Shl(w, a, b) => {
                 a.sides_into(ctx, world, out);
                 b.sides_into(ctx, world, out);
-                match (a.cert_range(ctx, world), b.cert_range(ctx, world)) {
-                    (Some(x), Some(y)) => {
-                        let ok = 0 <= x.lo && 0 <= y.lo;
-                        out.push(format!(
-                            "shl: needs 0 <= l1 and 0 <= l2; have l1 = {}, l2 = {} -- {}",
-                            x.lo,
-                            y.lo,
-                            verdict(ok)
-                        ));
-                    }
-                    _ => out.push("shl: a child has no range -- FAILS".to_string()),
-                }
+                out.push(shift_side("shl", *w, a, b, ctx, world));
             }
-            CertExpr::Shr(a, b) => {
+            CertExpr::Shr(w, a, b) => {
                 a.sides_into(ctx, world, out);
                 b.sides_into(ctx, world, out);
-                match (a.cert_range(ctx, world), b.cert_range(ctx, world)) {
-                    (Some(x), Some(y)) => {
-                        let ok = 0 <= x.lo && 0 <= y.lo;
-                        out.push(format!(
-                            "shr: needs 0 <= l1 and 0 <= l2; have l1 = {}, l2 = {} -- {}",
-                            x.lo,
-                            y.lo,
-                            verdict(ok)
-                        ));
-                    }
-                    _ => out.push("shr: a child has no range -- FAILS".to_string()),
-                }
+                out.push(shift_side("shr", *w, a, b, ctx, world));
             }
             CertExpr::Wide(lo, hi, a) => {
                 a.sides_into(ctx, world, out);
@@ -474,6 +460,38 @@ fn width_side(
             let ok = 0 <= x.lo && 0 <= y.lo && x.hi < bound && y.hi < bound;
             format!(
                 "{name} (w = {w}): needs 0 <= l1, 0 <= l2, h1 < 2^w and h2 < 2^w; \
+                 have ({}, {}) and ({}, {}), 2^w = {bound} -- {}",
+                x.lo,
+                x.hi,
+                y.lo,
+                y.hi,
+                verdict(ok)
+            )
+        }
+        _ => format!("{name} (w = {w}): a child has no range or 2^w overflows -- FAILS"),
+    }
+}
+
+/// The shared width side condition of `shl`/`shr`: nonnegativity plus the
+/// value-width leg `h1 < 2^w` and the amount leg `h2 < w` both sides of
+/// `CertExpr.shl/shr` (and `printInt`) carry.
+fn shift_side(
+    name: &str,
+    w: u32,
+    a: &CertExpr,
+    b: &CertExpr,
+    ctx: &Ctx,
+    world: &World,
+) -> String {
+    match (
+        a.cert_range(ctx, world),
+        b.cert_range(ctx, world),
+        pow2(w),
+    ) {
+        (Some(x), Some(y), Some(bound)) => {
+            let ok = 0 <= x.lo && 0 <= y.lo && x.hi < bound && y.hi < i128::from(w);
+            format!(
+                "{name} (w = {w}): needs 0 <= l1, 0 <= l2, h1 < 2^w and h2 < w; \
                  have ({}, {}) and ({}, {}), 2^w = {bound} -- {}",
                 x.lo,
                 x.hi,
@@ -679,19 +697,43 @@ mod tests {
     }
 
     #[test]
-    fn shl_prints_and_scales_by_shift() {
+    fn shl_prints_with_width_and_scales_by_shift() {
         let (ctx, world) = empty();
-        let e = CertExpr::Shl(lit(3), lit(2));
-        assert_eq!(e.print(), "(.shl (.lit 3) (.lit 2))");
+        let e = CertExpr::Shl(3, lit(3), lit(2));
+        assert_eq!(e.print(), "(.shl 3 (.lit 3) (.lit 2))");
         assert_eq!(e.cert_range(&ctx, &world), Some(Range::new(0, 12)));
     }
 
     #[test]
-    fn shr_prints_and_claims() {
+    fn shl_value_past_the_width_has_no_range() {
+        // `h1 < 2^w` fails (8 is not below 8).
         let (ctx, world) = empty();
-        let e = CertExpr::Shr(lit(12), lit(2));
-        assert_eq!(e.print(), "(.shr (.lit 12) (.lit 2))");
+        let e = CertExpr::Shl(3, lit(8), lit(2));
+        assert_eq!(e.cert_range(&ctx, &world), None);
+    }
+
+    #[test]
+    fn shl_amount_past_the_width_has_no_range() {
+        // `h2 < w` fails (3 is not below 3).
+        let (ctx, world) = empty();
+        let e = CertExpr::Shl(3, lit(3), lit(3));
+        assert_eq!(e.cert_range(&ctx, &world), None);
+    }
+
+    #[test]
+    fn shr_prints_with_width_and_claims() {
+        let (ctx, world) = empty();
+        let e = CertExpr::Shr(4, lit(12), lit(2));
+        assert_eq!(e.print(), "(.shr 4 (.lit 12) (.lit 2))");
         assert_eq!(e.cert_range(&ctx, &world), Some(Range::new(0, 12)));
+    }
+
+    #[test]
+    fn shr_amount_past_the_width_has_no_range() {
+        // `h2 < w` fails (4 is not below 4).
+        let (ctx, world) = empty();
+        let e = CertExpr::Shr(4, lit(12), lit(4));
+        assert_eq!(e.cert_range(&ctx, &world), None);
     }
 
     #[test]
