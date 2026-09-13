@@ -149,3 +149,8 @@ import Grammatik.CFormenH
 import Grammatik.CFormenDet
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
+import Grammatik.SperreSem
+import Grammatik.SperreFuss
+import Grammatik.SperreBeweis
+import Grammatik.SperreMaschine
+import Grammatik.ZielOrtSperre
