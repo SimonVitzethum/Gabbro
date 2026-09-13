@@ -168,6 +168,12 @@ structure Deklaration where
       wird an jeder Lesung gehalten, und ihr Bruch ist `Hardware.geraet r` -- die Annahme
       ueber das Geraet, benannt am Register. -/
   rzusage : ∀ r : Reg, Val Fn sig (rtyp r) → Bool
+  /-- The carriers that hold the state of `r`'s device: the tables and
+      globals a read of `r` may depend on (`RegLokal`, `ZielOrtGeraet.lean`).
+      A device whose state changes by itself changes these carriers, through
+      a declared write (an axiom whose frame names them). Default: none --
+      the answer depends on no memory at all. -/
+  rtraeger : Reg → List (Tab ⊕ Glob) := fun _ => []
   /-- `assume a "…" falsifier …` -- die benannten Annahmen, an `progress` und `retires`. -/
   Annahme : Type
   /-- A10: das Speichermodell -- `publishes`/`awaits` ordnen, wie die Maschine es zusagt. -/
