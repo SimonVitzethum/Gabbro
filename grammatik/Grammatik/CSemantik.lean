@@ -20,6 +20,12 @@
   behaviour the five forms can trigger is an INVENTORIED predicate, and
   the semantics gets STUCK (returns `none`) there -- so "no UB" is
   "the semantics makes progress".
+
+  SUCCESSOR: the memory model of this file is superseded by the block
+  memory of `CSpeicher.lean` (design: `dokumente/C-SPEICHERMODELL.md`).
+  There this file's `CMem` is a projection of the new memory
+  (`projMem`, `bExec_refines`), and `cCorr_assignSlot` is carried over
+  as `cCorr_assignSlot_blk`.
 -/
 import Grammatik.ReferenzB
 
