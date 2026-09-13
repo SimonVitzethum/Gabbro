@@ -98,7 +98,8 @@ def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErg (vertragVon D F.f))
         (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ →
         ∀ hn : D.gruende g = n,
-          X.folgt (semH S O' U passes R (.ende err) σa (.cons (Fin.cast hn r) ρc))
+          X.folgt (semH S O' U passes R (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σa
+            (.cons (Fin.cast hn r) ρc))
   | _ => True
 
 /-- **The replay of a head frame** `F` whose thread world is `W`, with lock

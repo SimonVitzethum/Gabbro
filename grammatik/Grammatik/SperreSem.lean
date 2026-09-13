@@ -833,6 +833,10 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       match o with
       | .ok _ _ => .sonst
       | o => weiterH k o
+  | _, _, _, .abbruch k, o =>
+      match o with
+      | .ok _ _ => .sonst
+      | o => weiterH k o
 
 /-- The frame semantics of a residue with lock invariants: run it from `σ`,
     `ρ`. -/
@@ -875,6 +879,7 @@ theorem weiterH_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .ewigRest _ _ _ _ k, e => weiterH_logik k e
   | _, _, _, .wartet _ k, e => weiterH_logik k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterH_logik k e
+  | _, _, _, .abbruch k, e => weiterH_logik k e
 
 theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (v : ErgVal D V.erg),
@@ -892,6 +897,7 @@ theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .ewigRest _ _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .wartet _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterH_zurueck k σ v
+  | _, _, _, .abbruch k, σ, v => weiterH_zurueck k σ v
 
 /-- **An end block replacing a residue** (as `weiterZ_ende_folgt`). -/
 theorem weiterH_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : EndAusgang V l Γ) :
@@ -900,6 +906,40 @@ theorem weiterH_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : End
   | zurueck σ v => exact ZErg.folgt_of_gleich (weiterH_zurueck S O U passes R k σ v)
   | logik e => exact ZErg.folgt_of_eq (weiterH_logik S O U passes R k e)
   | _ => exact ZErg.folgt_sonst _
+
+/-- `execBlockH` of an end block run as a block (`Endblock.alsBlock`) is
+    the end block's own outcome (as `Endblock.execBlock_alsBlock`). -/
+theorem Endblock.execBlockH_alsBlock :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
+      execBlockH S O U passes R e.alsBlock.2 σ ρ = (execEndH S O U passes R e σ ρ).zuAusgang
+  | _, _, .ret _ _, _, _ => rfl
+  | _, _, .retGrund _ _, _, _ => rfl
+  | _, _, .leave _, _, _ => rfl
+  | _, _, .next _, _, _ => rfl
+  | _, _, .cons s rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      cases execStmtH S O U passes R s σ ρ with
+      | ok σ' ρ' => exact Endblock.execBlockH_alsBlock rest σ' ρ'
+      | _ => rfl
+  | _, _, .bind e rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      rw [Endblock.execBlockH_alsBlock rest]
+      cases execEndH S O U passes R rest _ _ <;> rfl
+
+/-- Past `abbruch`, an end outcome continues as without it. -/
+theorem weiterH_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :
+    weiterH S O U passes R (.abbruch (Λ := Λ) k) eo.zuAusgang =
+      weiterH S O U passes R k eo.zuAusgang := by
+  cases eo <;> rfl
+
+/-- **The residue of an `else` branch** (`.dann e.alsBlock.2 (.abbruch k)`)
+    means the end block's outcome continued by `k`: a `leave`/`next` in
+    it reaches the loop in `k`. -/
+theorem semH_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GRest D V l Γ Λk)
+    (σ : World D) (ρ : Env D Γ) :
+    semH S O U passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ =
+      weiterH S O U passes R k (execEndH S O U passes R e σ ρ).zuAusgang := by
+  rw [semH_dann, Endblock.execBlockH_alsBlock, weiterH_abbruch_zu]
 
 /-- `execArmsH` runs the arm `armWahlG` selects. -/
 theorem execArmsH_wahl {Λ Λ' : List (Res D)} :
@@ -1103,10 +1143,11 @@ theorem semH_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ 
     (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
     (semH S O U passes R (.dann (.narrow e lo' hi' sonst rest) k) σ ρ).folgt
-      (semH S O U passes R (.ende sonst) (σ.lese Λ e.orte) ρ) := by
+      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, dif_neg h]
-  exact weiterH_ende_folgt S O U passes R k _
+  rw [semH_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semH_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
@@ -1123,10 +1164,11 @@ theorem semH_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
     (semH S O U passes R (.dann (.pruefung c sonst rest) k) σ ρ).folgt
-      (semH S O U passes R (.ende sonst) (σ.lese Λ c.orte) ρ) := by
+      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hw, Bool.false_eq_true, if_false]
-  exact weiterH_ende_folgt S O U passes R k _
+  rw [semH_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semH_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
     (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
@@ -1189,10 +1231,11 @@ theorem semH_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     (semH S O U passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ).folgt
-      (semH S O U passes R (.ende sonst) (σ.lese Λ e.orte) ρ) := by
+      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hn]
-  exact weiterH_ende_folgt S O U passes R k _
+  rw [semH_alsBlock]
+  exact ZErg.folgt_refl _
 
 /-! ### Loops -/
 
@@ -1435,6 +1478,23 @@ theorem semH_peelFrei_falsch {Γ : Ctx} {Λ Λ1 : List (Res D)} (L : D.Lock)
     simp only [freiH, hi, Bool.false_eq_true, if_false]
     exact weiterH_logik S O U passes R k _
 
+theorem semH_peelAbbruch {Γ : Ctx} {Λ Λ1 Λk : List (Res D)}
+    (rest : Block D V true Γ Λ Λ1) (k : GRest D V true Γ Λk)
+    (σ : World D) (ρ : Env D Γ) (h : true = true) (x : Bool) :
+    semH S O U passes R (.dann (.cons (if x then .leave h else .next h) rest) (.abbruch k)) σ ρ =
+      semH S O U passes R (.dann (.cons (if x then .leave h else .next h) .nil) k) σ ρ := by
+  rw [semH_dann_cons, semH_dann_cons]
+  cases x <;> rfl
+
+/-- The `else` residue after a reason answer (`.abbruch (.schrumpf k)`)
+    means the end block's outcome, the reason dropped, continued by `k`. -/
+theorem semH_alsBlock_schrumpf {Λ Λk : List (Res D)} {τ : Ty} (e : Endblock D V l (τ :: Γ) Λ)
+    (k : GRest D V l Γ Λk) (σ : World D) (ρ : Env D (τ :: Γ)) :
+    semH S O U passes R (.dann e.alsBlock.2 (.abbruch (.schrumpf k))) σ ρ =
+      weiterH S O U passes R k (execEndH S O U passes R e σ ρ).schrumpf.zuAusgang := by
+  rw [semH_alsBlock]
+  cases execEndH S O U passes R e σ ρ <;> rfl
+
 /-! ### Returns -/
 
 theorem semH_rueck {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
@@ -1488,10 +1548,11 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semH S O U passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
-      (semH S O U passes R (.ende sonst) (σ.lese Λ zusage.orte) ρ) := by
+      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hw, Bool.false_eq_true, if_false]
-  exact weiterH_ende_folgt S O U passes R k _
+  rw [semH_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semH_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')

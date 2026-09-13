@@ -778,7 +778,8 @@ theorem gepopptGrundG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
 
 /-- How a caller resumes when the callee `fn` answers a reason: only a
     caller waiting in `let x = g(…) else { err }` (`wartetSonst`) can, and
-    it runs `err` with the reason bound. `zielG r` is the resumed frame. -/
+    it runs `err` with the reason bound, as a block in front of its loop
+    continuation (`GRest.abbruch`). `zielG r` is the resumed frame. -/
 inductive PopGrund (fn : D.Fn) (caller : RufRahmenG D) :
     (Fin (D.gruende fn) → RufRahmenG D) → Prop where
   | sonst {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
@@ -787,7 +788,7 @@ inductive PopGrund (fn : D.Fn) (caller : RufRahmenG D) :
       (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ)
       (hc : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst (D.gruende fn) err restb k⟩) :
       PopGrund fn caller (fun r => ⟨caller.f, caller.rho, caller.s0,
-        ⟨l, .grund (D.gruende fn) :: Γ, Λ, .cons r ρc, .ende err⟩⟩)
+        ⟨l, .grund (D.gruende fn) :: Γ, Λ, .cons r ρc, .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩)
 
 section SchritteGrund
 
@@ -4112,7 +4113,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         have hl12 := RufLaufG.schritt hs1 hl2
         have ho12 : offen σ2.spur = offen σ.spur := by rw [ho2, (Erw.lese _ _ _).offen]
         exact gepoppt_laufR P O passes f fn rst rho s0 ziel zielG hl12 ho12
-          (endRetR err herr _ _ _ _ hpe hex M2 hZ2 hΛ2 (hA.lauf hl12))
+          (alsRetR err herr _ _ _ _ hpe
+            (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M2 _ hZ2 hΛ2 (hA.lauf hl12))
       · simp [Ausgang.ende?] at hex
       · simp [Ausgang.ende?] at hex
   | _, _, _, _, .bindAxiom .., hb => by cases hb
@@ -4157,7 +4159,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (by rw [hW]; simpa using hw0)
           rw [hW] at hZ1
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-            (endRetR sonst hs _ _ _ _ hpe hex M1 hZ1 (heldB_lese _ hΛ)
+            (alsRetR sonst hs _ _ _ _ hpe
+              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
       · simp [Ausgang.ende?] at hex
   | _, _, _, _, .awaits g payload hp hL rest, hb => by
@@ -4210,7 +4213,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           lo' hi' e sonst rest k ρ rfl (by rw [hW]; exact hin)
         rw [hW] at hZ1
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-          (endRetR sonst hs _ _ _ _ hpe hex M1 hZ1 (heldB_lese _ hΛ)
+          (alsRetR sonst hs _ _ _ _ hpe
+              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, _, .pruefung c sonst rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
@@ -4231,7 +4235,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           c sonst rest k ρ rfl (by rw [hW]; simpa using hc)
         rw [hW] at hZ1
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-          (endRetR sonst hs _ _ _ _ hpe hex M1 hZ1 (heldB_lese _ hΛ)
+          (alsRetR sonst hs _ _ _ _ hpe
+              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, _, .gleit op a b lo hi rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
@@ -4297,7 +4302,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           e lo hi sonst rest k ρ rfl (by rw [hW]; exact hn)
         rw [hW] at hZ1
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-          (endRetR sonst hs _ _ _ _ hpe hex M1 hZ1 (heldB_lese _ hΛ)
+          (alsRetR sonst hs _ _ _ _ hpe
+              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
 
 theorem endRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -4347,6 +4353,58 @@ theorem endRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rw [hW] at hZ1
       exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
         (endRetR rest hr _ _ _ _ hpe hex M1 hZ1 (heldB_lese _ hΛ)
+          (hA.lauf (RufLaufG.einzeln hs1)))
+
+/-- A covered end block run as a BLOCK (the residue of an `else` branch
+    or of the reason block of `let … else`, `Endblock.alsBlock`) ends the
+    frame on the machine as the end block does. -/
+theorem alsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (eb : Endblock D (vertragVon D fn) l Γ Λ), EndR A C eb →
+    SimRetBR P O passes f fn caller rst rho s0 A R ziel zielG eb.alsBlock.2
+  | _, _, _, .ret e hperm, _ => by
+      intro log σ ρ E hpe hex M k hZ hΛ _
+      have hW := hZ.welt
+      simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.ende?,
+        Option.some.injEq] at hex
+      subst hex
+      obtain ⟨M1, hs1, hG⟩ := w_dannRetP (P := P) (O := O) (passes := passes) hZ.1
+        caller rst rfl hpe e hperm .nil k ρ rfl hΛ.heldIn
+      rw [hW] at hG
+      exact ⟨M1, [], RufLaufG.einzeln hs1, hG, (Erw.lese _ _ _).offen⟩
+  | _, _, _, .retGrund r hperm, _ => by
+      intro log σ ρ E hpe hex M k hZ hΛ _
+      have hW := hZ.welt
+      simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.ende?,
+        Option.some.injEq] at hex
+      subst hex
+      obtain ⟨M1, hs1, hG⟩ := w_dannRetGrundP (P := P) (O := O) (passes := passes) hZ.1
+        caller rst rfl hpe r hperm .nil k ρ rfl hΛ.heldIn
+      rw [hW] at hG
+      exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
+  | _, _, _, .leave .., he => by cases he
+  | _, _, _, .next .., he => by cases he
+  | _, _, _, .cons s rest, he => by
+      intro log σ ρ E hpe hex M k hZ hΛ hA
+      obtain ⟨hs, hr, _⟩ := he.cons_inv
+      rcases execBlock_cons_ende O passes R s _ hex with h | ⟨σ1, ρ1, h1, h2⟩
+      · exact stmtRetR s hs _ _ _ _ hpe h M _ k hZ hΛ hA
+      · obtain ⟨M1, e1, hl1, hZ1, ho1⟩ := stmtOkR P O passes f fn (caller :: rst) rho s0 A R C hRuf
+          s hs _ _ _ _ _ h1 M _ k hZ hΛ hA
+        have hΛ1 := heldB_iff (s.held_iff) hΛ
+        rw [← ho1] at hΛ1
+        exact gepoppt_laufR P O passes f fn rst rho s0 ziel zielG hl1 ho1
+          (alsRetR rest hr _ _ _ _ hpe h2 M1 k hZ1 hΛ1 (hA.lauf hl1))
+  | _, _, _, .bind e rest, he => by
+      intro log σ ρ E hpe hex M k hZ hΛ hA
+      have hr := he.bind_inv
+      have hW := hZ.welt
+      simp only [Endblock.alsBlock, execBlock] at hex
+      rw [ende_schrumpf] at hex
+      obtain ⟨M1, hs1, hZ1⟩ := w_dannBind (P := P) (O := O) (passes := passes) hZ.1
+        e _ k ρ rfl
+      rw [hW] at hZ1
+      exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
+        (alsRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
 
 theorem armsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -5197,6 +5255,8 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
   | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
   | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg

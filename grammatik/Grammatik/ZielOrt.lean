@@ -214,6 +214,20 @@ def grundArmsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ
 
 end
 
+/-- An end block run as a block (`Endblock.alsBlock`) reads the places the
+    end block reads. -/
+theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
+      blockOrteP P e.alsBlock.2 = endblockOrteP P e
+  | _, _, .ret _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .retGrund _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .leave _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .next _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .cons s rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bind e rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+
 /-- The footprint of `f`: its contract carriers, its body reads, and the
     contract carriers of every function it calls directly. A foreign step
     must leave exactly these carriers alone for `f`'s sequential reasoning

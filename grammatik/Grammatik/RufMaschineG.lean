@@ -30,6 +30,22 @@ variable {D : Deklaration}
 
 /-! ## 1. Residues with continuations -/
 
+/-- An end block as a block, with the holdings it ends at. An end block
+    never falls through (it ends in `return`, a reason, `leave` or `next`),
+    so the block's end holdings are those of its last statement. The
+    residue of an `else` branch runs it in BLOCK position, so that a
+    `leave`/`next` in it reaches the enclosing loop (`GRest.abbruch`,
+    2026-09-13; before, the else branch replaced the residue and dropped the
+    loop's continuation). -/
+def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Res D)} →
+    Endblock D V l Γ Λ → Σ Λ' : List (Res D), Block D V l Γ Λ Λ'
+  | _, Λ, .ret e h => ⟨Λ, .cons (.ret e h) .nil⟩
+  | _, Λ, .retGrund r h => ⟨Λ, .cons (.retGrund r h) .nil⟩
+  | _, Λ, .leave h => ⟨Λ, .cons (.leave h) .nil⟩
+  | _, Λ, .next h => ⟨Λ, .cons (.next h) .nil⟩
+  | _, _, .cons s rest => ⟨rest.alsBlock.1, .cons s rest.alsBlock.2⟩
+  | _, _, .bind e rest => ⟨rest.alsBlock.1, .bind e rest.alsBlock.2⟩
+
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
     drops one bound value from the environment; `frei L` releases the lock
@@ -79,6 +95,32 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       (err : Endblock D V l (.grund n :: Γ) Λ)
       (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') :
       GRest D V l Γ Λ
+  /-- The continuation behind an `else` branch (and behind the reason
+      block of `let … else`): the branch never falls through; a `leave` or
+      `next` in it reaches `k` (`peelAbbruchLeave`/`peelAbbruchNext`), a
+      return pops the frame. Its holdings index is free. -/
+  | abbruch {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} :
+      GRest D V l Γ Λk → GRest D V l Γ Λ
+
+/-- **An end block run as a block means what it meant**: its outcome is
+    the end block's, as an `Ausgang` (it never ends normally). -/
+theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
+      execBlock O passes R e.alsBlock.2 σ ρ = (execEnd O passes R e σ ρ).zuAusgang
+  | _, _, .ret _ _, _, _ => rfl
+  | _, _, .retGrund _ _, _, _ => rfl
+  | _, _, .leave _, _, _ => rfl
+  | _, _, .next _, _, _ => rfl
+  | _, _, .cons s rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      cases execStmt O passes R s σ ρ with
+      | ok σ' ρ' => exact Endblock.execBlock_alsBlock O passes R rest σ' ρ'
+      | _ => rfl
+  | _, _, .bind e rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
     only a BINDING pop may resume it. -/
@@ -565,7 +607,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, Γ, Λ, ρ, .ende sonst⟩⟩,
+             ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannPruefWahr (M : RufMaschineG D) (f : Faden)
@@ -607,7 +649,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, Γ, Λ, ρ, .ende sonst⟩⟩,
+             ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannBreaking (M : RufMaschineG D) (f : Faden)
@@ -1470,6 +1512,49 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
+  /-- `leave` out of an `else` branch: it reaches the continuation the
+      branch was run in front of (`GRest.abbruch`, 2026-09-13). -/
+  | peelAbbruchLeave (M : RufMaschineG D) (f : Faden)
+      (Γ : Ctx) (Λ Λ1 Λk : List (Res D))
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λk)
+      (ρ : Env D Γ)
+      (hleave : true = true)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨true, Γ, Λ, ρ,
+         .dann (.cons ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
+            true Γ Λ Λ) rest) (.abbruch k)⟩) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨true, Γ, Λk, ρ,
+              .dann (.cons ((.leave hleave) : Stmt D
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λk Λk) .nil) k⟩⟩,
+            (M.faeden f).spur, (M.faeden f).log⟩,
+         M.lauf, M.start⟩
+  /-- `next` out of an `else` branch, likewise. -/
+  | peelAbbruchNext (M : RufMaschineG D) (f : Faden)
+      (Γ : Ctx) (Λ Λ1 Λk : List (Res D))
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λk)
+      (ρ : Env D Γ)
+      (hnext : true = true)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨true, Γ, Λ, ρ,
+         .dann (.cons ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
+            true Γ Λ Λ) rest) (.abbruch k)⟩) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨true, Γ, Λk, ρ,
+              .dann (.cons ((.next hnext) : Stmt D
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λk Λk) .nil) k⟩⟩,
+            (M.faeden f).spur, (M.faeden f).log⟩,
+         M.lauf, M.start⟩
   | dannRet (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D))
       (e : ErgExpr D Γ Λ (vertragVon D (M.faeden f).kopf.f).erg)
@@ -1639,7 +1724,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨rst,
             ⟨caller.f, caller.rho, caller.s0,
-             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc,
+              .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
          M.lauf, M.start⟩
@@ -1670,7 +1756,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨rst,
             ⟨caller.f, caller.rho, caller.s0,
-             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc,
+              .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
          M.lauf, M.start⟩
@@ -1702,7 +1789,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨rst,
             ⟨caller.f, caller.rho, caller.s0,
-             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc,
+              .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
          M.lauf, M.start⟩
@@ -1774,7 +1862,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, Γ, Λ, ρ, .ende sonst⟩⟩,
+             ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannAwaits (M : RufMaschineG D) (f : Faden)
@@ -1933,7 +2021,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, Γ, Λ, ρ, .ende sonst⟩⟩,
+             ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannBindAxiom (M : RufMaschineG D) (f : Faden)
@@ -2765,6 +2853,7 @@ def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ewigRest _ _ _ _ k => k.sauber
   | .wartet _ _ => false
   | .wartetSonst _ _ _ _ => false
+  | .abbruch k => k.sauber
 
 /-- A stacked residue: clean, or waiting over a clean continuation. -/
 def GRest.stapelSauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -2837,18 +2926,21 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
     refine ⟨?_, hr⟩
     rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc <;>
       simpa [GRest.sauber, GRest.stapelSauber] using hc
-  | rueckGrund _ _ _ _ caller rst hpop =>
-    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+  | rueckGrund _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
     simp only [rufUpdateG_self]
-    exact ⟨rfl, hr⟩
-  | rueckConsGrund _ _ _ _ _ caller rst hpop =>
-    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+    rw [hcaller] at hc
+    exact ⟨by simpa [GRest.sauber, GRest.stapelSauber] using hc, hr⟩
+  | rueckConsGrund _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
     simp only [rufUpdateG_self]
-    exact ⟨rfl, hr⟩
-  | dannRetGrund _ _ _ _ _ _ caller rst hpop =>
-    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+    rw [hcaller] at hc
+    exact ⟨by simpa [GRest.sauber, GRest.stapelSauber] using hc, hr⟩
+  | dannRetGrund _ _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
     simp only [rufUpdateG_self]
-    exact ⟨rfl, hr⟩
+    rw [hcaller] at hc
+    exact ⟨by simpa [GRest.sauber, GRest.stapelSauber] using hc, hr⟩
   | _ =>
     simp only [rufUpdateG_self]
     rw [‹(M.faeden f).kopf.rest = _›] at hk

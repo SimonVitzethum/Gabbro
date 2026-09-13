@@ -990,7 +990,7 @@ theorem w_narrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
-        (.ende sonst) ((M.weltVon f).lese Λ e.orte) := by
+        (.dann sonst.alsBlock.2 (.abbruch k)) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannNarrowElse M f l Γ Λ Λ' Λ' lo hi lo' hi' e sonst rest k ρ hhead
     _ rfl h _ rfl hΛ, zustandG_neu rfl rfl⟩
@@ -1021,7 +1021,8 @@ theorem w_pruefFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
       = false)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
-      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.ende sonst)
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
+        (.dann sonst.alsBlock.2 (.abbruch k))
         ((M.weltVon f).lese Λ c.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannPruefFalsch M f l Γ Λ Λ' Λ' c sonst rest k ρ hhead _ rfl hw _ rfl hΛ,
@@ -1079,7 +1080,7 @@ theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
-        (.ende sonst) ((M.weltVon f).lese Λ zusage.orte) := by
+        (.dann sonst.alsBlock.2 (.abbruch k)) ((M.weltVon f).lese Λ zusage.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannRegLiesElseFalsch M f l Γ Λ Λ' r hk zusage sonst rest k ρ hhead
     v hv _ rfl hw _ rfl hΛ, zustandG_neu rfl rfl⟩
@@ -1204,7 +1205,8 @@ theorem w_gleitNarrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
       ((M.weltVon f).lese Λ e.orte) ρ).x = none)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
-      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.ende sonst)
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
+        (.dann sonst.alsBlock.2 (.abbruch k))
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannGleitNarrowElse M f l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead
@@ -2411,7 +2413,9 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (by rw [hW]; simpa using hw0)
           rw [hW] at hZ1
           exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
-            (endRet sonst hs _ _ _ _ (zuAusgang_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
+            (alsRet sonst hs _ _ _ _
+              (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
+              (heldGenau_lese _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
       · cases hex
   | _, _, _, _, .awaits g payload hp hL rest, hb => by
@@ -2460,7 +2464,9 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           lo' hi' e sonst rest k ρ rfl (by rw [hW]; exact hin)
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
-          (endRet sonst hs _ _ _ _ (zuAusgang_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
+          (alsRet sonst hs _ _ _ _
+              (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
+              (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, _, .pruefung c sonst rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
@@ -2480,7 +2486,9 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           c sonst rest k ρ rfl (by rw [hW]; simpa using hc)
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
-          (endRet sonst hs _ _ _ _ (zuAusgang_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
+          (alsRet sonst hs _ _ _ _
+              (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
+              (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, _, .gleit op a b lo hi rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
@@ -2542,7 +2550,9 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           e lo hi sonst rest k ρ rfl (by rw [hW]; exact hn)
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
-          (endRet sonst hs _ _ _ _ (zuAusgang_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
+          (alsRet sonst hs _ _ _ _
+              (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
+              (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
 
 theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -2585,6 +2595,48 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rw [hW] at hZ1
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (endRet rest hr _ _ _ _ (endSchrumpf_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
+          (hA.lauf (RufLaufG.einzeln hs1)))
+
+/-- A covered end block run as a BLOCK (the residue of an `else` branch,
+    `Endblock.alsBlock`) returns on the machine as the end block does. -/
+theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e : Endblock D (vertragVon D fn) l Γ Λ), EndG A e →
+    SimRetB P O passes f fn caller rst rho s0 log A e.alsBlock.2
+  | _, _, _, .ret e hperm, he => by
+      intro σ σ' ρ v hex M k hZ hΛ hA
+      have hl := he.ret_inv
+      subst hl
+      have hW := hZ.welt
+      simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.zurueck.injEq] at hex
+      obtain ⟨rfl, rfl⟩ := hex
+      obtain ⟨M1, hs1, hG⟩ := w_dannRet (P := P) (O := O) (passes := passes) hZ.1
+        caller rst rfl e hperm .nil k ρ rfl hΛ.heldIn hnw
+      rw [hW] at hG
+      exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
+  | _, _, _, .retGrund .., he => by cases he
+  | _, _, _, .leave .., he => by cases he
+  | _, _, _, .next .., he => by cases he
+  | _, _, _, .cons s rest, he => by
+      intro σ σ' ρ v hex M k hZ hΛ hA
+      obtain ⟨hs, hr, _⟩ := he.cons_inv
+      rcases execBlock_cons_zurueck O passes keinRuf s _ hex with h | ⟨σ1, ρ1, h1, h2⟩
+      · exact stmtRet s hs _ _ _ _ h M _ k hZ hΛ hA
+      · obtain ⟨M1, hl1, hZ1, ho1⟩ := stmtOk P O passes f fn (caller :: rst) rho s0 log A
+          s hs _ _ _ _ h1 M _ k hZ hΛ hA
+        have hΛ1 := heldGenau_iff (s.held_iff) hΛ
+        rw [← ho1] at hΛ1
+        exact gepoppt_lauf P O passes f fn caller rst rho s0 log hl1
+          (alsRet rest hr _ _ _ _ h2 M1 k hZ1 hΛ1 (hA.lauf hl1))
+  | _, _, _, .bind e rest, he => by
+      intro σ σ' ρ v hex M k hZ hΛ hA
+      have hr := he.bind_inv
+      have hW := hZ.welt
+      simp only [Endblock.alsBlock, execBlock] at hex
+      obtain ⟨M1, hs1, hZ1⟩ := w_dannBind (P := P) (O := O) (passes := passes) hZ.1
+        e _ k ρ rfl
+      rw [hW] at hZ1
+      exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
+        (alsRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
 
 theorem armsRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -3635,6 +3687,7 @@ def semR : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .ewigRest .., _, _ => .sonst
   | _, _, _, .wartet .., _, _ => .sonst
   | _, _, _, .wartetSonst .., _, _ => .sonst
+  | _, _, _, .abbruch .., _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
@@ -3718,6 +3771,8 @@ inductive RestG {V : Vertrag D} (A : D.Lock → Prop) :
       (hk : RestG A k) : RestG A (.schrumpf (τ := τ) k)
   | frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ)
       (hk : RestG A k) : RestG A (.frei L k)
+  | abbruch {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk)
+      (hk : RestG A k) : RestG A (.abbruch (Λ := Λ) k)
 
 section RestInv
 
@@ -3794,6 +3849,7 @@ theorem semR_SG (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Pr
   | _, _, _, .ewigRest .., hr => by cases hr
   | _, _, _, .wartet .., hr => by cases hr
   | _, _, _, .wartetSonst .., hr => by cases hr
+  | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 theorem REnde.gleich_of_eq {V : Vertrag D} {r r' : REnde V} (h : r = r') : r.gleich r' := by
   rw [h]
@@ -3944,13 +4000,44 @@ theorem sem_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.i
   unfold narrowWeiter
   rw [dif_pos h, nachA_schrumpf, semR_dann]
 
+theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
+      e.alsBlock.2.ohneOrakel = e.ohneOrakel
+  | _, _, .ret _ _ => rfl
+  | _, _, .retGrund _ _ => rfl
+  | _, _, .leave _ => rfl
+  | _, _, .next _ => rfl
+  | _, _, .cons s rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .bind _ rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+
+/-- A covered end block run as a block is a covered block. -/
+theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ},
+      EndG A e → BlockG A true e.alsBlock.2
+  | _, _, _, _, .ret e hΛ => .cons _ _ (.ret e hΛ) .nil
+  | _, _, _, _, .cons s _ hs hr => .cons s _ hs (EndG.alsBlock hr)
+  | _, _, _, _, .bind e _ hr => .bind e _ (EndG.alsBlock hr)
+
+/-- An end block run as a block in front of any continuation means the end
+    block (it never ends normally). -/
+theorem semR_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ)
+    (k : GRest D V l Γ Λk) (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann e.alsBlock.2 (.abbruch k)) σ ρ = semR O passes (.ende e) σ ρ := by
+  rw [semR_dann, Endblock.execBlock_alsBlock, nachA_zuAusgang]
+  rfl
+
 theorem sem_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
-    semR O passes (.ende sonst) (σ.lese Λ e.orte) ρ =
+    semR O passes (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
       semR O passes (.dann (.narrow e lo' hi' sonst rest) k) σ ρ := by
+  rw [semR_alsBlock]
   rw [semR_dann O passes (.narrow e lo' hi' sonst rest), execBlock_narrow]
   unfold narrowWeiter
   rw [dif_neg h, nachA_zuAusgang]
@@ -3969,8 +4056,9 @@ theorem sem_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
-    semR O passes (.ende sonst) (σ.lese Λ c.orte) ρ =
+    semR O passes (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ =
       semR O passes (.dann (.pruefung c sonst rest) k) σ ρ := by
+  rw [semR_alsBlock]
   rw [semR_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
   rw [nachA_zuAusgang]
@@ -4039,8 +4127,9 @@ theorem sem_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
-    semR O passes (.ende sonst) (σ.lese Λ e.orte) ρ =
+    semR O passes (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
       semR O passes (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+  rw [semR_alsBlock]
   rw [semR_dann]
   simp only [execBlock, hn]
   rw [nachA_zuAusgang]
@@ -4307,7 +4396,9 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.narrow_inv
     simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestG.dann _ _ (EndG.alsBlock hs) (by rw [Endblock.ohneOrakel_alsBlock]; exact ho.1)
+        (RestG.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_narrowElse O passes e lo' hi' sonst rest k _ _ h)
   | dannPruefWahr l2 Γ2 Λ2 Λ2' Λ2'' c sonst rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
@@ -4327,7 +4418,9 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
     simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestG.dann _ _ (EndG.alsBlock hs) (by rw [Endblock.ohneOrakel_alsBlock]; exact ho.1)
+        (RestG.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_pruefFalsch O passes c sonst rest k _ _ hw)
   | dannBreaking l2 Γ2 Λ2 Λ2' Λ2'' i body rest k ρ2 hhead =>
@@ -4399,6 +4492,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | dannRet l2 Γ2 Λ2 Λ2'' e hperm rest k ρ2 hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu =>
     rw [hR] at hhead
     cases hhead
@@ -4486,7 +4581,9 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
     simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestG.dann _ _ (EndG.alsBlock hs) (by rw [Endblock.ohneOrakel_alsBlock]; exact ho.1)
+        (RestG.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_gleitNarrowElse O passes e lo hi sonst rest k _ _ hn)
   | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
@@ -4740,6 +4837,8 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
   | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
   | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
@@ -4828,6 +4927,8 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
   | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
   | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
@@ -4920,6 +5021,8 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
   | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
   | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
@@ -5087,6 +5190,8 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
   | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
   | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg

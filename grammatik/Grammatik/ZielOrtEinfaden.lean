@@ -186,6 +186,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
   | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet
+  | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
+    rw [hhead] at hRet
+    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+  | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
+    rw [hhead] at hRet
+    simp [GRest.istRetEnde, Endblock.istRet] at hRet
   | dannExchange l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet

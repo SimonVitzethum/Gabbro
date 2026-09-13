@@ -562,8 +562,8 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   have e5 := hG5.1
   try dsimp only at e5
   -- `mid` returns to `haupt`
-  obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := vP) (O := vO) (passes := 0) e5 _ _ rfl
-    (PopArt.wie rfl) .keine List.Perm.nil _ rfl (vHg0 (vHoff_e e5 hoff5)).heldIn
+  obtain ⟨M6, s6, hG6⟩ := w_dannRetP (P := vP) (O := vO) (passes := 0) e5 _ _ rfl
+    (PopArt.wie rfl) .keine List.Perm.nil .nil _ _ rfl (vHg0 (vHoff_e e5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 0).spur = [] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5

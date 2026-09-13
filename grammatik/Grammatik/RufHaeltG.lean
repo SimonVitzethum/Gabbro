@@ -52,6 +52,8 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, Λ, .ewigRest _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .wartet _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .wartetSonst _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
+  | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
+      (∀ L ∈ A, Res.held L ∈ Λ) ∧ (∀ L, Res.held L ∈ Λk → Res.held L ∈ Λ) ∧ k.kette A
 
 /-- The top node of a chain names `A`. -/
 theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
@@ -69,6 +71,7 @@ theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
   | _, _, _, .ewigRest _ _ _ _ _, h => h.1
   | _, _, _, .wartet _ _, h => h.1
   | _, _, _, .wartetSonst _ _ _ _, h => h.1
+  | _, _, _, .abbruch _, h => h.1
 
 /-- Naming `A` carries along a block (`Block.held_iff`). -/
 theorem nennt_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -123,6 +126,17 @@ def GRest.freis {V : Vertrag D} :
   | _, _, _, .ewigRest _ _ _ _ k => k.freis
   | _, _, _, .wartet _ k => k.freis
   | _, _, _, .wartetSonst _ _ _ k => k.freis
+  | _, _, _, .abbruch k => k.freis
+
+/-- The chain behind an `else` branch run in block position: the branch
+    keeps the held locks of its start, and so does the block its
+    continuation stood behind. -/
+theorem kette_abbruch {V : Vertrag D} {A : List D.Lock} {l : Bool} {Γ : Ctx}
+    {Λ Λs Λ' : List (Res D)} (b : Block D V l Γ Λ Λs) (hA : ∀ L ∈ A, Res.held L ∈ Λ)
+    (k : GRest D V l Γ Λ') (hk : k.kette A) (hr : ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ) :
+    (GRest.dann b (.abbruch k) : GRest D V l Γ Λ).kette A :=
+  ⟨hA, fun L hL => (Block.held_iff b L).mpr (hA L hL),
+    fun L hL => (Block.held_iff b L).mpr (hr L hL), hk⟩
 
 /-- The release markers of a frame's residue. -/
 def RufRahmenG.freis (F : RufRahmenG D) : List D.Lock := F.rest.2.2.2.2.freis
@@ -490,7 +504,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.1 ?_
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk.1 k hk.2 (fun L hL => (Block.held_iff rest L).mp hL)) ?_
     rw [hs₁, offen_lese]; exact hh
   | dannPruefWahr l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [rufUpdateG_self]
@@ -502,7 +517,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.1 ?_
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk.1 k hk.2 (fun L hL => (Block.held_iff rest L).mp hL)) ?_
     rw [hs₁, offen_lese]; exact hh
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
     simp only [rufUpdateG_self]
@@ -749,6 +765,18 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hKL : K ≠ L := fun e => hk.2.1 (e ▸ hK)
     exact (List.mem_erase_of_ne hKL).mpr
       (heldIn_block rest hh K (List.mem_cons_of_mem _ hK))
+  | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hl hhead =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨GRest.kette_top k hk.2.2.2, hk.2.2.2⟩ ?_
+    exact fun L hL => heldIn_block rest hh L (hk.2.2.1 L hL)
+  | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hl hhead =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨GRest.kette_top k hk.2.2.2, hk.2.2.2⟩ ?_
+    exact fun L hL => heldIn_block rest hh L (hk.2.2.1 L hL)
   | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv
       neu hneu hnw =>
     simp only [rufUpdateG_self]
@@ -788,7 +816,9 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
       h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
-    have hck := (kette_von hcaller hc).1
+    have hcw := kette_von hcaller hc
+    have hck := kette_abbruch (Endblock.alsBlock err).2 hcw.1 (.schrumpf k)
+      ⟨GRest.kette_top k hcw.2, hcw.2⟩ (fun L hL => (Block.held_iff restb L).mp hL)
     refine haeltInvG_pop h hpop _ _ _ rfl ?_ (by fr_pop) hck rfl
     intro L hL
     rw [hcaller]; exact hL
@@ -797,7 +827,9 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
       h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
-    have hck := (kette_von hcaller hc).1
+    have hcw := kette_von hcaller hc
+    have hck := kette_abbruch (Endblock.alsBlock err).2 hcw.1 (.schrumpf k)
+      ⟨GRest.kette_top k hcw.2, hcw.2⟩ (fun L hL => (Block.held_iff restb L).mp hL)
     refine haeltInvG_pop h hpop _ _ _ rfl ?_ (by fr_pop) hck rfl
     intro L hL
     rw [hcaller]; exact hL
@@ -806,7 +838,9 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
       h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
-    have hck := (kette_von hcaller hc).1
+    have hcw := kette_von hcaller hc
+    have hck := kette_abbruch (Endblock.alsBlock err).2 hcw.1 (.schrumpf k)
+      ⟨GRest.kette_top k hcw.2, hcw.2⟩ (fun L hL => (Block.held_iff restb L).mp hL)
     refine haeltInvG_pop h hpop _ _ _ rfl ?_ (by fr_pop) hck rfl
     intro L hL
     rw [hcaller]; exact hL
@@ -825,7 +859,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.1 ?_
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk.1 k hk.2 (fun L hL => (Block.held_iff rest L).mp hL)) ?_
     rw [hs₁, offen_lese]; exact hh
   | dannAwaits l Γ Λ Λ' g payload hp hL rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     simp only [rufUpdateG_self]
@@ -866,7 +901,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.1 ?_
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk.1 k hk.2 (fun L hL => (Block.held_iff rest L).mp hL)) ?_
     rw [hs₁, offen_lese]; exact hh
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     simp only [rufUpdateG_self]

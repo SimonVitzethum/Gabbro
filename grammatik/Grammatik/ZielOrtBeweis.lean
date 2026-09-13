@@ -714,16 +714,19 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     exact ZErg.gleich_of_eq h1
   | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenOk_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenOk_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have he' : eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ = eval σ₁ e σ₁ ρ := by
       rw [hs₁]; exact eval_gleichAuf e (fun _ h => hes h) (hg.lese Λ Λ e.orte e.orte) ρ
     have h' : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
         (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') := by rw [he']; exact h
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
-      fun R => ZErg.gleich_of_eq (semZ_narrowElse O passes R e lo' hi' sonst rest k σ ρ h')⟩
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg,
+      ⟨by rw [Endblock.kOk_alsBlock]; exact hkS, by rw [blockOrteP_alsBlock]; exact hsS, hrk⟩,
+      fun R => ZErg.gleich_of_eq ((semZ_alsBlock O passes R sonst k _ ρ).trans
+        (semZ_narrowElse O passes R e lo' hi' sonst rest k σ ρ h'))⟩
   | dannPruefWahr l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenOk_lokal hF hhead ρ (.dann rest k) σ₁.spur (fun σ hg hok => ?_), hL⟩
@@ -736,14 +739,17 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
       fun R => ZErg.gleich_of_eq (semZ_pruefWahr O passes R c sonst rest k σ ρ hw')⟩
   | dannPruefFalsch l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenOk_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenOk_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hc, hsS, _⟩ := teile2 hss
     have hw' : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false := by
       rw [eval_gleichAuf c (fun _ h => hc h) (hg.lese Λ Λ c.orte c.orte) ρ, ← hs₁]; exact hw
-    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
-      fun R => ZErg.gleich_of_eq (semZ_pruefFalsch O passes R c sonst rest k σ ρ hw')⟩
+    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg,
+      ⟨by rw [Endblock.kOk_alsBlock]; exact hkS, by rw [blockOrteP_alsBlock]; exact hsS, hrk⟩,
+      fun R => ZErg.gleich_of_eq ((semZ_alsBlock O passes R sonst k _ ρ).trans
+        (semZ_pruefFalsch O passes R c sonst rest k σ ρ hw'))⟩
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenOk_lokal hF hhead ρ (.dann body (.dann rest k)) (M.faeden u).spur
@@ -839,14 +845,17 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
       fun R => ZErg.gleich_of_eq (semZ_gleitNarrowOk O passes R e lo hi sonst rest k σ ρ v hv')⟩
   | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenOk_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenOk_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have hn' : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none := by
       rw [eval_gleichAuf e (fun _ h => hes h) (hg.lese Λ Λ e.orte e.orte) ρ, ← hs₁]; exact hn
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
-      fun R => ZErg.gleich_of_eq (semZ_gleitNarrowElse O passes R e lo hi sonst rest k σ ρ hn')⟩
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg,
+      ⟨by rw [Endblock.kOk_alsBlock]; exact hkS, by rw [blockOrteP_alsBlock]; exact hsS, hrk⟩,
+      fun R => ZErg.gleich_of_eq ((semZ_alsBlock O passes R sonst k _ ρ).trans
+        (semZ_gleitNarrowElse O passes R e lo hi sonst rest k σ ρ hn'))⟩
   -- pushes
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho

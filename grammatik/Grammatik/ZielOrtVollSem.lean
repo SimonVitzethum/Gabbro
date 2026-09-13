@@ -108,6 +108,17 @@ def GrundArms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 end
 
+theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.vOk K = e.vOk K
+  | _, _, .ret _ _ => rfl
+  | _, _, .retGrund _ _ => rfl
+  | _, _, .leave _ => rfl
+  | _, _, .next _ => rfl
+  | _, _, .cons s rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bind _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+
 /-- The candidates of an indirect call through a pointer of signature `n`
     -- every function of that signature -- have their contract carriers in
     the footprint `S`. -/
@@ -577,6 +588,10 @@ def weiterZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       match o with
       | .ok _ _ => .sonst
       | o => weiterZ k o
+  | _, _, _, .abbruch k, o =>
+      match o with
+      | .ok _ _ => .sonst
+      | o => weiterZ k o
 
 /-- The frame semantics of a residue: run it from `σ`, `ρ`. -/
 def semV {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) (σ : World D)
@@ -623,6 +638,7 @@ theorem weiterZ_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .ewigRest _ _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .wartet _ k, e => weiterZ_logik k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterZ_logik k e
+  | _, _, _, .abbruch k, e => weiterZ_logik k e
 
 theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (r : Fin V.gruende), weiterZ O passes R k (.grund σ r) = .sonst
@@ -638,6 +654,7 @@ theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .ewigRest _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .wartet _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .wartetSonst _ _ _ k, σ, r => weiterZ_grund k σ r
+  | _, _, _, .abbruch k, σ, r => weiterZ_grund k σ r
 
 theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (e : Hardware D), weiterZ O passes R k (.hardware e) = .sonst
@@ -653,6 +670,7 @@ theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
   | _, _, _, .ewigRest _ _ _ _ k, e => weiterZ_hardware k e
   | _, _, _, .wartet _ k, e => weiterZ_hardware k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterZ_hardware k e
+  | _, _, _, .abbruch k, e => weiterZ_hardware k e
 
 theorem sg_gibt (σ : World D) (L : D.Lock) : SG (σ.gibt L) σ := ⟨rfl, rfl⟩
 
@@ -672,6 +690,7 @@ theorem weiterZ_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .ewigRest _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .wartet _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterZ_zurueck k σ v
+  | _, _, _, .abbruch k, σ, v => weiterZ_zurueck k σ v
 
 /-- **An end block replacing a residue.** Where G replaces the whole residue
     by an end block (the `else` block of `narrow`/`pruefung`/float
@@ -685,6 +704,20 @@ theorem weiterZ_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : End
   | zurueck σ v => exact ZErg.folgt_of_gleich (weiterZ_zurueck O passes R k σ v)
   | logik e => exact ZErg.folgt_of_eq (weiterZ_logik O passes R k e)
   | _ => exact ZErg.folgt_sonst _
+
+/-- Past `abbruch`, an end outcome continues as without it. -/
+theorem weiterZ_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :
+    weiterZ O passes R (.abbruch (Λ := Λ) k) eo.zuAusgang = weiterZ O passes R k eo.zuAusgang := by
+  cases eo <;> rfl
+
+/-- **The residue of an `else` branch** (`.dann e.alsBlock.2 (.abbruch k)`)
+    means the end block's outcome continued by `k`: a `leave`/`next` in
+    it reaches the loop in `k`. -/
+theorem semV_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GRest D V l Γ Λk)
+    (σ : World D) (ρ : Env D Γ) :
+    semV O passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ =
+      weiterZ O passes R k (execEnd O passes R e σ ρ).zuAusgang := by
+  rw [semV_dann, Endblock.execBlock_alsBlock, weiterZ_abbruch_zu]
 
 end Weiter
 
@@ -718,6 +751,8 @@ def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
   | _, _, _, .wartetSonst _ err b k =>
       err.vOk (kandP P S) = true ∧ endblockOrteP P err ⊆ S ∧ b.vOk (kandP P S) = true ∧
         blockOrteP P b ⊆ S ∧ k.okV P S
+  | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
+      (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okV P S
 
 section OkV
 
@@ -739,6 +774,15 @@ theorem okV_ende_cons {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
   simp only [Endblock.vOk, Bool.and_eq_true] at hk
   simp only [endblockOrteP] at hs
   exact ⟨hk.1, (teil_append hs).1, hk.2, (teil_append hs).2⟩
+
+/-- **The residue of an `else` branch is in the fragment** when the end
+    block is and the continuation is (its held set agreeing). -/
+theorem okV_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GRest D V l Γ Λk)
+    (hΛ : ∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) (he : e.vOk (kandP P S) = true)
+    (heS : endblockOrteP P e ⊆ S) (hk : k.okV P S) :
+    (GRest.dann e.alsBlock.2 (.abbruch k)).okV P S :=
+  ⟨by rw [Endblock.vOk_alsBlock]; exact he, by rw [blockOrteP_alsBlock]; exact heS,
+    fun L => (hΛ L).trans (e.alsBlock.2.held_iff L).symm, hk⟩
 
 end OkV
 
@@ -910,11 +954,12 @@ theorem semV_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ 
     (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
     (semV O passes R (.dann (.narrow e lo' hi' sonst rest) k) σ ρ).folgt
-      (semV O passes R (.ende sonst) (σ.lese Λ e.orte) ρ) := by
+      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ) := by
   rw [semV_dann, execBlock_narrowK]
   unfold narrowWeiterK
   rw [dif_neg h]
-  exact weiterZ_ende_folgt O passes R k _
+  rw [semV_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semV_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
@@ -931,10 +976,11 @@ theorem semV_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
     (semV O passes R (.dann (.pruefung c sonst rest) k) σ ρ).folgt
-      (semV O passes R (.ende sonst) (σ.lese Λ c.orte) ρ) := by
+      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
-  exact weiterZ_ende_folgt O passes R k _
+  rw [semV_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semV_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
     (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
@@ -997,10 +1043,11 @@ theorem semV_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     (semV O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ).folgt
-      (semV O passes R (.ende sonst) (σ.lese Λ e.orte) ρ) := by
+      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hn]
-  exact weiterZ_ende_folgt O passes R k _
+  rw [semV_alsBlock]
+  exact ZErg.folgt_refl _
 
 /-! ### Loops -/
 
@@ -1216,6 +1263,23 @@ theorem semV_peelFrei {Γ : Ctx} {Λ Λ1 : List (Res D)} (L : D.Lock)
       semV O passes R (.dann (.cons (if x then .leave h else .next h) .nil) k) (σ.gibt L) ρ := by
   rw [semV_dann_cons, semV_dann_cons]
   cases x <;> rfl
+
+theorem semV_peelAbbruch {Γ : Ctx} {Λ Λ1 Λk : List (Res D)}
+    (rest : Block D V true Γ Λ Λ1) (k : GRest D V true Γ Λk)
+    (σ : World D) (ρ : Env D Γ) (h : true = true) (x : Bool) :
+    semV O passes R (.dann (.cons (if x then .leave h else .next h) rest) (.abbruch k)) σ ρ =
+      semV O passes R (.dann (.cons (if x then .leave h else .next h) .nil) k) σ ρ := by
+  rw [semV_dann_cons, semV_dann_cons]
+  cases x <;> rfl
+
+/-- The `else` residue after a reason answer (`.abbruch (.schrumpf k)`)
+    means the end block's outcome, the reason dropped, continued by `k`. -/
+theorem semV_alsBlock_schrumpf {Λ Λk : List (Res D)} {τ : Ty} (e : Endblock D V l (τ :: Γ) Λ)
+    (k : GRest D V l Γ Λk) (σ : World D) (ρ : Env D (τ :: Γ)) :
+    semV O passes R (.dann e.alsBlock.2 (.abbruch (.schrumpf k))) σ ρ =
+      weiterZ O passes R k (execEnd O passes R e σ ρ).schrumpf.zuAusgang := by
+  rw [semV_alsBlock]
+  cases execEnd O passes R e σ ρ <;> rfl
 
 /-! ### Returns -/
 
