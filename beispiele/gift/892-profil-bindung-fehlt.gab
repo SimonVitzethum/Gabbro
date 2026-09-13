@@ -1,0 +1,26 @@
+-- erwartet: N217
+-- Lane E6: linking refuses a library whose requirements are not in the
+-- profile. The library requires `assume tickt`, and the program profile
+-- holds no such entry -- the keyed requirement beside it IS covered, so
+-- exactly one `N217` falls and nothing else speaks.
+
+module gift::profil_bindung_fehlt {
+
+assume tickt
+    "The platform clock advances steadily."
+    falsifier sonde_tick;
+
+module gpu {
+
+requires profile {
+    arch x86_64;
+    assume tickt;
+};
+
+}
+
+profile {
+    arch x86_64;
+};
+
+}

@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **173** measured (`pruefe-syntax.sh` EBNF branch: 173 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); nothing removed |
+| defined EBNF rules | 132 | **176** measured (`pruefe-syntax.sh` EBNF branch: 176 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **234 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 234 EBNF terminals against 234 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1) |
+| vocabulary words | 221 | **239 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 239 EBNF terminals against 239 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 238 words
+## Vocabulary — closed, 243 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -94,6 +94,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              library payload translator for
+             profile rounding fp_contract memory_model interrupt_routing
              arena capacity alloc reset
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
@@ -197,7 +198,7 @@ item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | arena | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
-             | bootdecl | syscalldecl | translatordecl ) ;
+             | bootdecl | syscalldecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
@@ -1667,6 +1668,89 @@ map, clobbers — consumed only by the emitter); the answer type is the sum
 `ok value | reason r`, filled by the generated errno decoding; `einpassen`
 holds the raw answer against it. Ghost OS state (`os.fds`, …) is tables the
 semantics treats like any carrier and the emitter omits.
+
+### 12.2 `profile` — the one hardware profile, and what libraries require (lane E6)
+
+**Specified and checked («E6», the checker half of `PLAN-ERWEITUNG.md`
+§0c).** The main program declares the profile: the one set of hardware
+assumptions the whole program runs under. A library does not assert
+assumptions; it requires profile entries, by reference to the declared
+assumption, never by a copy of its text. Linking refuses a library whose
+requirements are not in the profile — consistency is a subset check
+against one set, decidable and cheap.
+
+```ebnf
+profiledecl     = "profile" "{" { profileentry } "}" ";" ;
+requiresprofile = "requires" "profile" "{" { profileentry } "}" ";" ;
+profileentry    = ( "arch" | "rounding" | "fp_contract" | "memory_model"
+                  | "interrupt_routing" ) ident ";"
+                | "assume" ident ";" ;
+```
+
+```gabbro
+assume gpu_progress
+    "The GPU retires one work item per clock."
+    falsifier sonde_gpu_tick;
+
+module gpu::spirv {
+…
+requires profile {
+    arch x86_64;
+    fp_contract off;
+    assume gpu_progress;
+};
+…
+}
+
+profile {
+    arch x86_64;
+    rounding nearest;
+    fp_contract off;
+    memory_model c11;
+    assume gpu_progress;
+};
+```
+
+**The checks** — each names what the declaration carries, plus the five
+things only a profile can fail:
+
+* **one profile** — at most one `profile` block per unit; the second falls
+  (`N219`). Two profiles are two sets, and merging them silently would hide
+  exactly the conflict below.
+* **key agreement** — two keyed entries with one key and different values
+  are refused at the block itself (`N215`), in `profile` and in `requires
+  profile` alike. Duplicates with one value are silent: a set holds them
+  once.
+* **same name, same content** — an `assume <name>` entry references the
+  declared assumption; where two declarations under that name carry
+  different statements, the reference is ambiguous and falls (`N216`). A
+  reference naming no declared assumption falls beside it (`N219`).
+* **linking** — every requirement of every library stands in the program's
+  profile with identical content (`N217`): a keyed requirement needs the
+  key with the value, an `assume` requirement a profile reference to a
+  declaration with the same name and content.
+* **platform** — `fp_contract` other than `off` contradicts the float
+  prelude, which binds `-ffp-contract=off` for every compiler
+  (`PLAN-BITS.md` §5); an `arch` the unit never declares contradicts the
+  declared machines (`N218`). Without declared machines nothing is
+  refused — a unit with no machine named constrains no machine.
+
+**The manifest** lists every keyed profile entry (with the
+`-ffp-contract=off` flag where the profile says `fp_contract off`) and
+every requirement with its library and the calls relying on it
+(`gabbro annahmen`).
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `profile { … }` | the ONE assumption set of the program theorem | `Profil`, `Profil.gut`, `profil_modell` |
+| `requires profile { … }` | the library's requirements as name references | `Bibliothek`, `Profil.bindet`, `bindung_fuegt_nichts_hinzu` |
+| `arch x86_64;` etc. | a keyed mode assumption: key plus value | `AnnahmeEintrag.modus`, `istModus` |
+| `assume a;` | the declared assumption, referenced, never copied | `AnnahmeEintrag.frei`, `anforderungEintrag` |
+
+*Lean:* the program theorem takes one assumption set, the profile; a
+library's set is required to be a subset, so linking adds no premise. For
+keyed mode assumptions the profile induces its own model
+(`modusVonProfil`). All in `grammatik/Grammatik/Profil.lean`, witnessed.
 
 ---
 

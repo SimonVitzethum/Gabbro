@@ -1,0 +1,31 @@
+-- erwartet: N216
+-- Lane E6: a same-named assumption with different content is refused. Two
+-- modules declare `takt` with different statements; the profile's reference
+-- is ambiguous and falls. The library's keyed requirement is covered by the
+-- profile, so `N217` stays silent; each key holds one value, so `N215`
+-- stays silent too. Exactly one `N216` falls.
+
+module gift::profil_gleicher_name {
+
+assume takt
+    "The platform clock advances steadily."
+    falsifier sonde_tick;
+
+module innen {
+
+assume takt
+    "The platform clock advances in bursts."
+    falsifier sonde_tick;
+
+requires profile {
+    arch x86_64;
+};
+
+}
+
+profile {
+    arch x86_64;
+    assume takt;
+};
+
+}

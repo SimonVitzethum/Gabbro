@@ -737,7 +737,14 @@ impl<'a> Parser<'a> {
             // A monotone region beside the table: the declaration holds the
             // reservation and the hard bound, the checker (`arena.rs`) the
             // rest. `pub` is carried like at every other carrier.
-            Art::Wort(Kw::Arena) => ItemArt::Arena(self.arena(oeffentlich)?),
+            // Parsed through `arena_item`, not inline: `arena` answers
+            // `ArenaDecl` by value, and holding that temporary in `item`'s
+            // frame costs one `ArenaDecl` of stack on EVERY nested `module`
+            // level -- the same shape `translator_item` above was built for
+            // (`die_beiden_wachen…` overflowed before the depth guard could
+            // fire). The helper frame is entered once per arena and freed
+            // on return; it never nests with itself.
+            Art::Wort(Kw::Arena) => return self.arena_item(oeffentlich, anfang, when),
             Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
             Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
@@ -748,6 +755,17 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Rcu) => ItemArt::Rcu(self.rcudecl()?),
             Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
             Art::Wort(Kw::Concurrent) => ItemArt::Concurrent(self.concurrentdecl()?),
+            // **«E6»: `profile { … }` -- the one hardware profile of the program.**
+            Art::Wort(Kw::Profile) => ItemArt::Profil(self.profildecl()?),
+            // **«E6»: `requires profile { … }` -- what a library asks of the
+            // profile.** A bare `requires` starts no item, then as now: the
+            // guard is one word further, like `const fn` above -- no context
+            // switch, the second word decides.
+            Art::Wort(Kw::Requires)
+                if matches!(self.blick_n(1).art, Art::Wort(Kw::Profile)) =>
+            {
+                ItemArt::ProfilBedarf(self.profilbedarf()?)
+            }
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
@@ -793,6 +811,32 @@ impl<'a> Parser<'a> {
         Ok(Item {
             when,
             art: ItemArt::Funktion(f),
+            span,
+        })
+    }
+
+    /// **Merge fix (lane 117): the `arena` item, outside `item`'s frame.**
+    ///
+    /// Same shape as `translator_item` above, for the same measured reason:
+    /// `arena` answers `ArenaDecl` by value, and holding that temporary in
+    /// `item`'s frame costs one `ArenaDecl` of stack on every nested
+    /// `module` level -- the merged tree overflowed a 2 MB test thread at
+    /// 31 nested modules, before the depth guard could fire
+    /// (`die_beiden_wachen_sitzen_an_allen_ihren_stellen`). The helper
+    /// frame is entered once per arena and freed on return; it never nests
+    /// with itself. E4's declaration, checker and probes are untouched --
+    /// only where the value is built moved.
+    fn arena_item(
+        &mut self,
+        oeffentlich: bool,
+        anfang: Span,
+        when: Option<Expr>,
+    ) -> Erg<Item> {
+        let a = self.arena(oeffentlich)?;
+        let span = anfang.bis_zu(self.vorheriger_span());
+        Ok(Item {
+            when,
+            art: ItemArt::Arena(a),
             span,
         })
     }
@@ -4904,6 +4948,101 @@ impl<'a> Parser<'a> {
     /// One path at least (the EBNF names no empty set); a trailing comma is allowed,
     /// the same rule as everywhere since 2026-08-16. No name of its own -- the set
     /// is its members, and what stands in no set never runs concurrently.
+    /// **«E6»: `profile { … }` -- the one hardware profile of the program.**
+    ///
+    /// Keyed mode entries (`arch x86_64;`) from the fixed key set plus
+    /// references to declared `assume` items (`assume <name>;`), never a
+    /// copy of their text (`PLAN-ERWEITUNG.md` §0c). At most one block per
+    /// unit -- the second one is the checker's (`N219`), not the reader's.
+    fn profildecl(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.erwarte_kw(Kw::Profile)?;
+        let block = self.profilblock()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ProfilBlock {
+            eintraege: block.eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **«E6»: `requires profile { … }` -- what a library asks of the profile.**
+    ///
+    /// The same entries as `profile`, standing in the library's module.
+    /// Linking refuses a requirement the program's profile does not carry
+    /// (`N217`) -- the checker's half, never the reader's.
+    fn profilbedarf(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.erwarte_kw(Kw::Requires)?;
+        self.erwarte_kw(Kw::Profile)?;
+        let block = self.profilblock()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ProfilBlock {
+            eintraege: block.eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **«E6»: the shared body of both profile heads.**
+    ///
+    /// Every entry ends in `;`, like every `assume` line: `arch x86_64;`
+    /// names the key's value, `assume <name>;` the declared assumption it
+    /// references. Values are identifiers -- modes, not numbers -- so a
+    /// computed value has no spelling here.
+    fn profilblock(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.span();
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut eintraege = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let t = self.blick();
+            let schluessel = match t.art {
+                Art::Wort(Kw::Arch) => ProfilSchluessel::Arch,
+                Art::Wort(Kw::Rounding) => ProfilSchluessel::Rundung,
+                Art::Wort(Kw::FpContract) => ProfilSchluessel::FpKontraktion,
+                Art::Wort(Kw::MemoryModel) => ProfilSchluessel::SpeicherModell,
+                Art::Wort(Kw::InterruptRouting) => ProfilSchluessel::InterruptRouting,
+                Art::Wort(Kw::Assume) => {
+                    self.pos += 1;
+                    let name = self.erwarte_ident()?;
+                    let ende = self.erwarte_z(Z::Semi)?;
+                    eintraege.push(ProfilEintrag::Annahme {
+                        name,
+                        span: t.span.bis_zu(ende),
+                    });
+                    continue;
+                }
+                _ => {
+                    self.absage(
+                        Absage::fehler(
+                            "P006",
+                            t.span,
+                            format!(
+                                "no profile entry starts here: {}",
+                                t.benennung(self.quelle)
+                            ),
+                        )
+                        .mit_notiz(
+                            "a profile entry is `arch <name>;`, `rounding <name>;`, \
+                             `fp_contract <name>;`, `memory_model <name>;`, \
+                             `interrupt_routing <name>;` or `assume <name>;`",
+                        ),
+                    );
+                    return Err(Abbruch);
+                }
+            };
+            self.pos += 1;
+            let wert = self.erwarte_ident()?;
+            let ende = self.erwarte_z(Z::Semi)?;
+            eintraege.push(ProfilEintrag::Modus {
+                schluessel,
+                wert,
+                span: t.span.bis_zu(ende),
+            });
+        }
+        let ende = self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(ProfilBlock {
+            eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
     fn concurrentdecl(&mut self) -> Erg<ConcurrentDecl> {
         let anfang = self.erwarte_kw(Kw::Concurrent)?;
         self.erwarte_z(Z::GeschweiftAuf)?;

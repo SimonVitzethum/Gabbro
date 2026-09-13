@@ -78,7 +78,13 @@ MARK_ADMITTED = 1
 # *The count stands beside it because the scanner would be BLIND to a fifth site written in
 # another shape* -- and a blind scanner over a shrunken population reads exactly like a clean
 # tree (`W17`). If this breaks, the reader is not wrong, the reader is out of date.
-MARK_RS_SITES = 4
+#
+# **4 -> 5 on 2026-09-12 («E6»).** The fifth site is `profilklasse` in
+# `manifest.rs`: the class of a keyed profile entry, a mode selected by
+# structure (`N215`/`N218`), never executed. Written as one helper, so the
+# site count moves by exactly one; the population does not move (no
+# `unfalsifiable` clause was added anywhere).
+MARK_RS_SITES = 5
 
 # A row of the register: `| 1 | **name** | `site`:12 | ADMITTED | `U2` | 2026-09-04 |`
 ROW = re.compile(r"^\|\s*\d+\s*\|\s*\*\*([A-Za-z_][A-Za-z_0-9]*)\*\*\s*\|"

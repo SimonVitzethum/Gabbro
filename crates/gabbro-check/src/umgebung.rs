@@ -272,6 +272,25 @@ pub struct Umgebung {
     /// above: qualifying here would break exactly when the table lives in
     /// an enclosing module.
     pub nutzlasten: HashMap<String, (String, String, gabbro_syntax::span::Span)>,
+    /// **The hardware profile blocks of the unit, with their modules
+    /// (lane E6, «E6»).**
+    ///
+    /// At most one per unit (`N219` in `namen.rs` refuses the second);
+    /// stored RAW like the payload above, resolved at the read site.
+    pub profile: Vec<(String, ProfilBlock)>,
+    /// **The library requirements of the unit, with their modules (lane
+    /// E6, «E6»).**
+    ///
+    /// One entry per `requires profile` block; linking holds each of them
+    /// against the profile (`N217`).
+    pub bedarfe: Vec<(String, ProfilBlock)>,
+    /// **Every declared `assume` by qualified name (lane E6, «E6»).**
+    ///
+    /// What a profile `assume <name>` reference resolves to -- own module,
+    /// enclosing, root, `use` lines, through `kandidaten_aufloesbar` at the
+    /// read site. Cloned, because the closure that walks the tree lends
+    /// nothing outward.
+    pub annahmen: HashMap<String, Assume>,
 }
 
 /// **A resolved library call (lane E2): the module the call named and the
@@ -700,6 +719,21 @@ impl Umgebung {
                         self.roh_konst
                             .insert(qualifiziere(pfad, &k.name.text), k.wert.clone());
                     }
+                }
+                // **Lane E6 («E6»): the hardware profile and its
+                // requirements.** Stored RAW with their modules, resolved
+                // at the read site (`namen.rs`, `manifest.rs`) -- the same
+                // decision `nutzlasten` documents above. Cloned: the walk
+                // lends nothing outward.
+                ItemArt::Profil(b) => {
+                    self.profile.push((pfad.to_string(), b.clone()));
+                }
+                ItemArt::ProfilBedarf(b) => {
+                    self.bedarfe.push((pfad.to_string(), b.clone()));
+                }
+                ItemArt::Assume(a) => {
+                    self.annahmen
+                        .insert(qualifiziere(pfad, &a.name.text), a.clone());
                 }
                 _ => {}
             }

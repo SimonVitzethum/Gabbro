@@ -814,6 +814,10 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        // **«E6»: a profile block carries modes and references, never a
+        // float type.** Keys and `assume` names, like the assumptions above.
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     });
     ja
@@ -1181,6 +1185,11 @@ pub fn emittiere_mit(
         // result types travel through `Umgebung`, and its own lowering
         // (`syscall_stumpf`) reads the register map straight from the tree.
         | ItemArt::Syscall(_)
+        // **«E6»: a profile block declares modes and references, no name a
+        // lowering looks up.** Keyed entries and `assume` references travel
+        // into the manifest (`manifest::profil_und_bedarf`), never into C.
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     });
     // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
@@ -1606,6 +1615,10 @@ pub fn emittiere_mit(
             // machine -- the stub template (`syscall_stumpf`) reads the
             // register map, not carrier names.
             | ItemArt::Syscall(_)
+            // **«E6»: a profile block names no table.** Modes and references
+            // are manifest entries, not carriers.
+            | ItemArt::Profil(_)
+            | ItemArt::ProfilBedarf(_)
             | ItemArt::Concurrent(_) => {}
         });
         // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
@@ -1995,6 +2008,10 @@ pub fn emittiere_mit(
         // **A `syscall` hoists no constant.** Its `number` may name one, but the
         // number is read by the stub (lane S6), not emitted as a `#define`.
         | ItemArt::Syscall(_)
+        // **«E6»: a profile block hoists no constant.** Values are mode
+        // names, not numbers.
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         // **«E4»:** an arena hoists no constant either. Its bounds may name
         // `const`s, but they are read where they are spelled (`zahltext`
         // in `arena()`), not hoisted.
@@ -2631,6 +2648,12 @@ pub fn emittiere_mit(
                 absagen,
             );
         }
+        // **`assume` and `axiom` emit no code -- but they emit the PROMISE**
+        // (see the header above): the profile blocks beside them emit
+        // nothing at all. Their entries already stand in the emitted
+        // header through `manifest::sammle` -- a second emission here
+        // would print every mode twice.
+        ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => {}
     });
     // **«SG-24»: every counter of the unit, defined.** Between the declarations and
     // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
@@ -2781,6 +2804,10 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         | ItemArt::Gruppe(_)
         | ItemArt::Concurrent(_)
         | ItemArt::State(_)
+        // **«E6»: a profile block earns no correspondence row.** It lowers
+        // to no C -- its entries are manifest lines, not forms.
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         | ItemArt::Syscall(_) => None,
     }
 }

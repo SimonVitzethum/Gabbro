@@ -2886,6 +2886,30 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
         (erwartet.zeile, erwartet.spalte),
         "N069 must point at the region token, not at the call"
     );
+
+// -- Lane E6: the hardware profile and library requirements ------------------------------
+// A profile with keyed entries and a referenced assumption, plus a library
+// requiring a subset of it, passes every rule of the lane. Each refusal has
+// its falling direction here and its poison probe under `beispiele/gift/`.
+
+/// A profile frame: one assumption, one profile, one library requiring a
+/// subset -- the positive shape every falling test below breaks once.
+fn profil_rahmen(bedarf: &str, profil: &str) -> String {
+    format!(
+        "module app {{
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module gpu {{
+requires profile {{
+    {bedarf}
+}};
+}}
+profile {{
+    {profil}
+}};
+}}"
+    )
 }
 
 // -- Lane E3: the translator declaration side (SYNTAX.md §7.2) ----------------------------
@@ -2917,6 +2941,28 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
 }}
 "
     )
+}
+
+#[test]
+fn profil_gedeckte_anforderung_schweigt() {
+    // The positive direction: every requirement stands in the profile with
+    // identical content -- keyed and referenced alike.
+    faellt_nicht(&profil_rahmen(
+        "arch x86_64;\n    assume takt;",
+        "arch x86_64;\n    rounding nearest;\n    assume takt;",
+    ));
+}
+
+#[test]
+fn profil_schluesselkonflikt_n215() {
+    faellt_mit(
+        &profil_rahmen("arch x86_64;", "arch x86_64;\n    arch aarch64;"),
+        "N215",
+    );
+    faellt_genau(
+        &profil_rahmen("arch x86_64;", "arch x86_64;\n    arch aarch64;"),
+        &["N215"],
+    );
 }
 
 #[test]
@@ -2981,6 +3027,37 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
 // -- Lane E3 (continued): translator declaration refusals -------------------------------
 // `translator_modul_src` and `translator_declared_call_names_it_n069` stand above,
 // beside the E7 span tests for the same `N069`.
+
+
+fn profil_doppelte_belegung_schweigt() {
+    // Duplicates with one value are silent: a set holds them once.
+    faellt_nicht(&profil_rahmen(
+        "arch x86_64;",
+        "arch x86_64;\n    arch x86_64;",
+    ));
+}
+
+#[test]
+fn profil_gleicher_name_n216() {
+    // Two declarations under one name with different statements make the
+    // profile's reference ambiguous.
+    faellt_mit(
+        "module app {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module innen {
+assume takt
+    \"The platform clock advances in bursts.\"
+    falsifier sonde_tick;
+}
+profile {
+    assume takt;
+};
+}",
+        "N216",
+    );
+}
 
 #[test]
 fn translator_missing_n200() {
@@ -3068,6 +3145,25 @@ fn translator_no_effects_n202() {
 }
 
 #[test]
+fn profil_eindeutiger_name_schweigt() {
+    // One declaration under the name -- however often referenced -- is no
+    // ambiguity, even across profile and requirements.
+    faellt_nicht(&profil_rahmen(
+        "assume takt;",
+        "assume takt;\n    assume takt;",
+    ));
+}
+
+#[test]
+fn profil_fehlende_bindung_n217() {
+    // The library requires `assume takt`, the profile holds no such entry.
+    faellt_genau(
+        &profil_rahmen("arch x86_64;\n    assume takt;", "arch x86_64;"),
+        &["N217"],
+    );
+}
+
+#[test]
 fn translator_no_decreases_n203() {
     faellt_genau(
         &translator_modul_src(
@@ -3079,6 +3175,15 @@ fn translator_no_decreases_n203() {
 }"
         ),
         &["N203"],
+    );
+}
+
+#[test]
+fn profil_fehlender_schluessel_n217() {
+    // The library requires a keyed entry the profile lacks.
+    faellt_genau(
+        &profil_rahmen("arch x86_64;\n    rounding nearest;", "arch x86_64;"),
+        &["N217"],
     );
 }
 
@@ -3117,6 +3222,65 @@ translator build for kernel(region : Andere) -> Andere
         .to_string(),
         &["N204"],
     );
+}
+
+#[test]
+fn profil_ohne_profil_n217() {
+    // Requirements with no profile anywhere: linking without a set.
+    faellt_mit(
+        "module app {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module gpu {
+requires profile {
+    arch x86_64;
+};
+}
+}",
+        "N217",
+    );
+}
+
+#[test]
+fn profil_fp_kontraktion_n218() {
+    // `fp_contract` other than `off` contradicts the float prelude binding
+    // `-ffp-contract=off`; `off` itself is the manifest flag and silent.
+    faellt_genau(
+        &profil_rahmen("", "fp_contract fast;"),
+        &["N218"],
+    );
+    faellt_nicht(&profil_rahmen("", "fp_contract off;"));
+}
+
+#[test]
+fn profil_arch_ohne_maschine_schweigt() {
+    // Without declared machines nothing is refused (R16 shape): a unit
+    // with no machine named constrains no machine.
+    faellt_nicht(&profil_rahmen("", "arch x86_64;"));
+}
+
+#[test]
+fn profil_zweites_profil_n219() {
+    // One hardware profile per program: the second block falls, never
+    // silently merged.
+    faellt_mit(
+        "module app {
+profile {
+    arch x86_64;
+};
+profile {
+    rounding nearest;
+};
+}",
+        "N219",
+    );
+}
+
+#[test]
+fn profil_haengender_verweis_n219() {
+    // A reference naming no declared assumption is a link against air.
+    faellt_genau(&profil_rahmen("", "assume nirgends_erklaert;"), &["N219"]);
 }
 
 #[test]

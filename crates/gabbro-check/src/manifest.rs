@@ -8,6 +8,7 @@
 //! Wer eine Annahme austauscht, aendert eine Zeile; die Zahl allein haette sich nicht geruehrt.
 
 use gabbro_syntax::ast::*;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Klasse {
@@ -284,9 +285,188 @@ pub fn sammle_mit_quelle(baum: &Programm, quelle: &str) -> Vec<Eintrag> {
     sperrabdruckannahme(baum, &mut out);
     stilllegungsannahmen(baum, &mut out);
     fristannahmen(baum, &mut out);
+    profil_und_bedarf(baum, &mut out);
     sammle_items(&baum.items, quelle, &mut out);
     out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out
+}
+
+/// **«E6»: the hardware profile and library requirements in the manifest.**
+///
+/// The manifest lists every REQUIREMENT with its library and the calls
+/// relying on it (`PLAN-ERWEITUNG.md` §0c, point 5): one line per keyed
+/// profile entry (the mode the program runs under -- including the
+/// `-ffp-contract=off` flag the float prelude binds, `PLAN-BITS.md` §5)
+/// and one line per library requirement. A requirement's name carries its
+/// library (`lib#name`), so it never collides with the assumption it
+/// references: [`vereinige`] keys on the name, and two lines under one
+/// name with different content are a contradiction, not a duplicate.
+///
+/// A profile's own `assume <name>` references need no line of their own:
+/// the declared assumption already stands in the manifest with its class
+/// and probe, and a second line would double-book it.
+fn profil_und_bedarf(baum: &Programm, out: &mut Vec<Eintrag>) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    // Every declared `assume` by qualified name, for the class a
+    // requirement clones -- owned by `Umgebung`, no new construction site
+    // either way.
+    let annahmen = &u.annahmen;
+    // The calls relying on each library: resolved module -> caller -> count.
+    // Sorted throughout, so the manifest reads the same on every run.
+    let mut rufer: BTreeMap<String, BTreeMap<String, usize>> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let rufname = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        rufe_im_block(b, &mut |r| {
+            if let Some(ziel) = u.bibliothek_modul(modul, &r.library.text) {
+                *rufer.entry(ziel).or_default().entry(rufname.clone()).or_default() += 1;
+            }
+        });
+    });
+    fn rufe_im_block(b: &Block, f: &mut impl FnMut(&LibraryCall)) {
+        for s in &b.anweisungen {
+            if let StmtArt::LibraryCall(r) = &s.art {
+                f(r);
+            }
+            for e in crate::eigene_ausdruecke(s) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::LibraryCall(r) = &x.art {
+                        f(r);
+                    }
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                rufe_im_block(k, f);
+            }
+        }
+    }
+    /// Who relies on this library's requirements, in manifest words.
+    fn rufer_text(rufer: &BTreeMap<String, BTreeMap<String, usize>>, modul: &str) -> String {
+        match rufer.get(modul) {
+            None => "no call in this unit".to_string(),
+            Some(rufe) => rufe
+                .iter()
+                .map(|(r, n)| {
+                    format!("`{r}` ({} call{})", n, if *n == 1 { "" } else { "s" })
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+        }
+    }
+    // The blocks with their modules -- owned by `Umgebung`, in source
+    // order, so the manifest reads the same on every run.
+    for (_modul, b) in &u.profile {
+        for e in &b.eintraege {
+            let ProfilEintrag::Modus { schluessel, wert, .. } = e else {
+                continue;
+            };
+            out.push(Eintrag {
+                name: format!("profile.{}", schluessel.text()),
+                art: "profile",
+                arch: None,
+                klasse: profilklasse(profil_grund(schluessel, &wert.text)),
+                aussage: profil_aussage(schluessel, &wert.text),
+                voraussetzungen: 0,
+                voraussetzung_text: None,
+            });
+        }
+    }
+    for (modul, b) in &u.bedarfe {
+        let bibliothek = if modul.is_empty() {
+            "unit".to_string()
+        } else {
+            modul.clone()
+        };
+        let rufe = rufer_text(&rufer, modul);
+        for e in &b.eintraege {
+            match e {
+                ProfilEintrag::Modus { schluessel, wert, .. } => {
+                    out.push(Eintrag {
+                        name: format!("{bibliothek}#{}", schluessel.text()),
+                        art: "requires",
+                        arch: None,
+                        klasse: profilklasse(profil_grund(schluessel, &wert.text)),
+                        aussage: format!(
+                            "{} {} -- required by library `{bibliothek}`; \
+                             relied on by {rufe}",
+                            schluessel.text(),
+                            wert.text
+                        ),
+                        voraussetzungen: 0,
+                        voraussetzung_text: None,
+                    });
+                }
+                ProfilEintrag::Annahme { name, .. } => {
+                    let gesucht = u
+                        .kandidaten_aufloesbar(modul, &name.text)
+                        .into_iter()
+                        .find_map(|k| annahmen.get(&k));
+                    let (kl, inhalt) = match gesucht {
+                        Some(a) => (klasse(&a.klasse), a.text.text.clone()),
+                        // **A requirement naming nothing -- the checker
+                        // refuses it (`N219`), the manifest still books
+                        // it.** No new class site: the conversion above
+                        // builds the value, this arm only names a probe
+                        // no program stands for (struck downstream).
+                        None => (
+                            klasse(&AnnahmeKlasse::Falsifizierbar(Ident {
+                                text: "sonde_unbekannt".to_string(),
+                                span: gabbro_syntax::span::Span::neu(0, 0),
+                            })),
+                            "(undeclared)".to_string(),
+                        ),
+                    };
+                    out.push(Eintrag {
+                        name: format!("{bibliothek}#{}", name.text),
+                        art: "requires",
+                        arch: None,
+                        klasse: kl,
+                        aussage: format!(
+                            "assume {} (\"{inhalt}\") -- required by library \
+                             `{bibliothek}`; relied on by {rufe}",
+                            name.text
+                        ),
+                        voraussetzungen: 0,
+                        voraussetzung_text: None,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// **«E6»: the class of a keyed profile entry -- one construction site.**
+///
+/// A mode is not executed, it is selected: key agreement over it is held by
+/// `N215`, the platform binding by `N218`. No probe runs against the
+/// selection itself, and the reason says so. (Counted by
+/// `instrumente/pruefe-unfalsifizierbar.py` beside the other generated
+/// entries: the second mark there moves with this function and not without
+/// it.)
+fn profilklasse(grund: String) -> Klasse {
+    Klasse::NichtFalsifizierbar { grund }
+}
+
+/// The reason a keyed entry stands unfalsified: what holds it.
+fn profil_grund(schluessel: &ProfilSchluessel, wert: &str) -> String {
+    format!(
+        "keyed mode of the hardware profile (`{} {wert}`), held by structure (N215/N218), not by execution",
+        schluessel.text()
+    )
+}
+
+/// What a keyed profile entry says -- and for `fp_contract` that includes
+/// the build flag the float prelude binds (`PLAN-BITS.md` §5): if the
+/// profile says `fp_contract off`, the manifest carries the flag.
+fn profil_aussage(schluessel: &ProfilSchluessel, wert: &str) -> String {
+    match schluessel {
+        ProfilSchluessel::FpKontraktion => format!(
+            "fp_contract {wert} -- build with -ffp-contract=off \
+             (binding for every compiler, PLAN-BITS.md §5)"
+        ),
+        _ => format!("{} {wert}", schluessel.text()),
+    }
 }
 
 fn sammle_items(items: &[Item], quelle: &str, out: &mut Vec<Eintrag>) {

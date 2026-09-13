@@ -1,0 +1,26 @@
+-- erwartet: N219
+-- Lane E6: one hardware profile per program, and every reference resolving.
+-- The second `profile` block falls, never silently merged; the requirement
+-- naming no declared assumption falls beside it as a link against air. The
+-- unresolvable requirement is already `N219`, so `N217` stays silent over
+-- it. Exactly two `N219` fall.
+
+module gift::profil_gestalt {
+
+profile {
+    arch x86_64;
+};
+
+profile {
+    rounding nearest;
+};
+
+module leer {
+
+requires profile {
+    assume nirgends_erklaert;
+};
+
+}
+
+}

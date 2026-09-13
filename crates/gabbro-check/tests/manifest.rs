@@ -231,3 +231,122 @@ fn zwei_vorbedingungen_unter_einem_namen_sind_ein_widerspruch() {
     assert!(streit.is_empty(), "gleiche Vorbedingung ist kein Streit: {streit:?}");
     assert_eq!(menge.len(), 1);
 }
+
+// -- Lane E6: the profile and its requirements in the manifest ---------------------------
+// One line per keyed profile entry (the mode, including the
+// `-ffp-contract=off` flag where the profile says `fp_contract off`) and
+// one line per library requirement, each with its library and the calls
+// relying on it.
+
+#[test]
+fn profil_schluessel_stehen_im_manifest() {
+    let q = "module t {
+profile {
+    arch x86_64;
+    fp_contract off;
+};
+}";
+    let e = sammle(&baum(q));
+    assert_eq!(e.len(), 2, "two keys, two lines: {e:?}");
+    let arch = e.iter().find(|x| x.name == "profile.arch").expect("profile.arch");
+    assert_eq!(arch.art, "profile");
+    assert_eq!(arch.aussage, "arch x86_64");
+    let fp = e.iter().find(|x| x.name == "profile.fp_contract").expect("fp_contract");
+    assert!(
+        fp.aussage.contains("-ffp-contract=off"),
+        "where the profile says `fp_contract off`, the manifest carries the flag: {}",
+        fp.aussage
+    );
+}
+
+#[test]
+fn bedarf_nennt_bibliothek_und_rufer() {
+    // A keyed requirement of `lib`, relied on by one `@lib` call in
+    // `app::f` -- the manifest names both.
+    let q = "module lib {
+requires profile {
+    arch x86_64;
+};
+}
+module app {
+use lib;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
+    @lib#g(a) { dispatch 0 };
+    return a;
+}
+}";
+    let e = sammle(&baum(q));
+    let req = e.iter().find(|x| x.name == "lib#arch").expect("lib#arch");
+    assert_eq!(req.art, "requires");
+    assert!(
+        req.aussage.contains("required by library `lib`"),
+        "the library stands in the line: {}",
+        req.aussage
+    );
+    assert!(
+        req.aussage.contains("`app::f` (1 call)"),
+        "the relying call stands in the line: {}",
+        req.aussage
+    );
+}
+
+#[test]
+fn bedarf_ohne_rufer_sagt_das() {
+    // No call into the library: the line says so instead of going quiet.
+    let q = "module lib {
+requires profile {
+    arch x86_64;
+};
+}";
+    let e = sammle(&baum(q));
+    let req = e.iter().find(|x| x.name == "lib#arch").expect("lib#arch");
+    assert!(
+        req.aussage.contains("no call in this unit"),
+        "with no call that stands there instead of nothing: {}",
+        req.aussage
+    );
+}
+
+#[test]
+fn bedarf_annahme_klont_die_klasse() {
+    // An `assume` requirement carries the referenced assumption's class --
+    // the probe travels with the reference, not behind a second entry.
+    let q = "module lib {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+requires profile {
+    assume takt;
+};
+}";
+    let e = sammle(&baum(q));
+    let req = e.iter().find(|x| x.name == "lib#takt").expect("lib#takt");
+    assert_eq!(
+        req.klasse,
+        Klasse::Falsifizierbar { sonde: "sonde_tick".into() },
+        "the class travels along: {:?}",
+        req.klasse
+    );
+    // And the declaration itself still stands as its own line -- the
+    // reference double-books nothing.
+    assert!(e.iter().any(|x| x.name == "takt" && x.art == "assume"));
+}
+
+#[test]
+fn bedarf_kollidiert_nicht_mit_der_annahme() {
+    // `vereinige` keys on the name: the requirement carries its library
+    // (`lib#takt`), so it never collides with the assumption it
+    // references -- same name, different content would be a contradiction.
+    let q = "module lib {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+requires profile {
+    assume takt;
+};
+}";
+    let e = sammle(&baum(q));
+    let (menge, streit) = vereinige(e);
+    assert!(streit.is_empty(), "reference and declaration are no dispute: {streit:?}");
+    assert_eq!(menge.len(), 2, "zwei Zeilen: {menge:?}");
+}

@@ -93,7 +93,13 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         // **A `module` and a `use` bind no symbol.** The module is a namespace the C does
         // not know; a `use` declares nothing, it fetches. **Lane C: a `concurrent` set
         // binds none either** -- it names bodies, and the set itself has no name.
-        ItemArt::Modul(_) | ItemArt::Use(_) | ItemArt::Concurrent(_) => None,
+        // **Lane E6: a profile block binds none either** -- entries are modes
+        // and references, and neither is a symbol.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Concurrent(_)
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_) => None,
         // The constructs without `pub` -- the grammar gives them none, so nothing of them
         // crosses the boundary either. **Written out and not swept up**, so that a `pub` on
         // one of them shows up here instead of vanishing quietly. A `syscall` joins
@@ -274,6 +280,9 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
         // **Written out, no `_`** -- see [`ausgefuehrter_name`]. **Lane C: `concurrent`
         // joins this group** -- like `entry`/`boot` it carries paths, and like them it
         // binds nothing outward; the member paths are resolved by `nebeneinander.rs`.
+        // **Lane E6: the profile blocks join it too** -- an `assume <name>`
+        // reference is not an exported name; the declaration travels, never
+        // the reference.
         ItemArt::Typ(_)
         | ItemArt::Format(_)
         | ItemArt::Modul(_)
@@ -286,6 +295,8 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
         | ItemArt::Rcu(_)
         | ItemArt::Gruppe(_)
         | ItemArt::Accumulates(_)
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
