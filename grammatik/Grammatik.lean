@@ -141,3 +141,4 @@ import Grammatik.ZielOrtRahmenBeweis
 import Grammatik.ZielOrtRahmen
 import Grammatik.Referenz104Rahmen
 import Grammatik.ZielOrtGanz
+import Grammatik.ZielOrtGanzZeuge
