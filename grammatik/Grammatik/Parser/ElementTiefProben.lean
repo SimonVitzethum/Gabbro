@@ -130,5 +130,122 @@ theorem t05 : beqTopTief (parseTopTief tt05)
   decide
 -- beispiele/112 (the `schreiben` writer). Rust: `Funktion` over
 -- an `index into` parameter -- same shape.
+def tt06 : List Token :=
+  [.wort "use", .ident "beispiel", .zeichen "::",
+   .ident "adressen", .zeichen "::", .ident "Pa", .zeichen ";",
+   .ende]
+theorem t06_lex :
+    lex "use beispiel::adressen::Pa;" = .ok tt06 := by
+  decide
+theorem t06 : beqTopTief (parseTopTief tt06)
+    (.ok [.useT ["beispiel", "adressen", "Pa"]]) = true := by
+  decide
+-- beispiele/29-undurchsichtig.gab:42. Rust: `Use` -- same shape
+-- (the path rides split here, raw in `SItem`).
+def tt07 : List Token :=
+  [.wort "opaque", .wort "type", .ident "Pa", .zeichen "=",
+   .wort "u64", .zeichen ";", .ende]
+theorem t07_lex :
+    lex "opaque type Pa = u64;" = .ok tt07 := by
+  decide
+theorem t07 : beqTopTief (parseTopTief tt07)
+    (.ok [.typT ["opaque"] "Pa" [] [] (.some (.atom "u64"))]) = true := by
+  decide
+-- beispiele/01-tabelle.gab:18. Rust: `Typ` with the `opaque`
+-- flag -- same shape.
+def tt08 : List Token :=
+  [.wort "type", .ident "Zaehler", .zeichen "=", .wort "u32",
+   .wort "in", .zahl 0, .zeichen "..", .zahl 65535, .zeichen ";",
+   .ende]
+theorem t08_lex :
+    lex "type Zaehler = u32 in 0 .. 65535;" = .ok tt08 := by
+  decide
+theorem t08 : beqTopTief (parseTopTief tt08)
+    (.ok [.typT [] "Zaehler" [] []
+      (.some (.bereich (.atom "u32") (.lit 0) (.lit 65535) false))]) = true := by
+  decide
+-- beispiele/01-tabelle.gab:16. Rust: `Typ` over a ranged
+-- integer -- same shape.
+def tt09 : List Token :=
+  [.wort "tagged", .wort "type", .ident "ObjektArt", .zeichen "=",
+   .zeichen "{", .ident "Speicher", .zeichen "(", .ident "Pa",
+   .zeichen ")", .zeichen ",", .ident "Endpunkt", .zeichen "(",
+   .ident "EpId", .zeichen ")", .zeichen ",", .ident "Faden",
+   .zeichen "(", .ident "FadenId", .zeichen ")", .zeichen ",",
+   .ident "Antwort", .zeichen "(", .ident "EpId", .zeichen ")",
+   .zeichen "}", .zeichen ";", .ende]
+theorem t09_lex :
+    lex "tagged type ObjektArt = { Speicher(Pa), Endpunkt(EpId), Faden(FadenId), Antwort(EpId) };" =
+      .ok tt09 := by
+  decide
+theorem t09 : beqTopTief (parseTopTief tt09)
+    (.ok [.typT ["tagged"] "ObjektArt" [] [] (.some (.roh
+      "{ Speicher ( Pa ) , Endpunkt ( EpId ) , Faden ( FadenId ) , Antwort ( EpId ) } "))]) = true := by
+  decide
+-- beispiele/01-tabelle.gab:22. Rust: `Typ` over variants -- the
+-- payload types ride raw and balanced (see CUTS).
+def tt10 : List Token :=
+  [.wort "linear", .wort "ghost", .wort "type",
+   .ident "QueuePhase", .wort "order", .zeichen "{",
+   .ident "setup", .zeichen ",", .ident "live", .zeichen "}",
+   .zeichen ";", .ende]
+theorem t10_lex :
+    lex "linear ghost type QueuePhase order { setup, live };" =
+      .ok tt10 := by
+  decide
+theorem t10 : beqTopTief (parseTopTief tt10)
+    (.ok [.typT ["linear", "ghost"] "QueuePhase" [] ["setup", "live"]
+      .none]) = true := by
+  decide
+-- beispiele/02-geraet.gab:115. Rust: `Typ` with a mark order --
+-- same shape.
+def tt11 : List Token :=
+  [.wort "const", .ident "NSLOTS", .zeichen ":", .wort "u32",
+   .zeichen "=", .zahl 4096, .zeichen ";", .ende]
+theorem t11_lex :
+    lex "const NSLOTS : u32 = 4096;" = .ok tt11 := by
+  decide
+theorem t11 : beqTopTief (parseTopTief tt11)
+    (.ok [.konstT "NSLOTS" (.atom "u32") (.einzeln (.lit 4096))]) = true := by
+  decide
+-- beispiele/01-tabelle.gab:10. Rust: `Konst` -- same shape.
+def tt12 : List Token :=
+  [.wort "static", .wort "mut", .ident "zaehler", .zeichen ":",
+   .wort "u32", .zeichen "=", .zahl 0, .zeichen ";", .ende]
+theorem t12_lex :
+    lex "static mut zaehler : u32 = 0;" = .ok tt12 := by
+  decide
+theorem t12 : beqTopTief (parseTopTief tt12)
+    (.ok [.statikT true "zaehler" (.atom "u32") (.lit 0) .none
+      false]) = true := by
+  decide
+-- beispiele/110-fussgarantie.gab:12. Rust: `Statisch` -- same
+-- shape.
+def tt13 : List Token :=
+  [.wort "static", .ident "KERNZAHL", .zeichen ":", .wort "u32",
+   .zeichen "=", .zahl 64, .wort "section", .text ".rodata",
+   .zeichen ";", .ende]
+theorem t13_lex :
+    lex "static KERNZAHL : u32 = 64 section \".rodata\";" =
+      .ok tt13 := by
+  decide
+theorem t13 : beqTopTief (parseTopTief tt13)
+    (.ok [.statikT false "KERNZAHL" (.atom "u32") (.lit 64)
+      (.some ".rodata") false]) = true := by
+  decide
+-- beispiele/05-nebenlaeufigkeit.gab:44. Rust: `Statisch` with a
+-- section -- same shape.
+def tt14 : List Token :=
+  [.wort "static", .wort "mut", .ident "zaehl", .zeichen ":",
+   .wort "u32", .zeichen "=", .zahl 0, .wort "shared",
+   .zeichen ";", .ende]
+theorem t14_lex :
+    lex "static mut zaehl : u32 = 0 shared;" = .ok tt14 := by
+  decide
+theorem t14 : beqTopTief (parseTopTief tt14)
+    (.ok [.statikT true "zaehl" (.atom "u32") (.lit 0) .none true]) = true := by
+  decide
+-- Synthetic (no corpus occurrence, measured 2026-09-13): the
+-- `shared` tail of `staticdecl`. Rust: `Statisch`.
 
 end Gabbro.Grammatik.Parser
