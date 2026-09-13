@@ -8609,6 +8609,35 @@ fn anweisung(
                 aus.push_str(&c);
                 return;
             }
+            // **An `atomic` target is not read through `ort()` (lane 152).**
+            //
+            // The read branch in `ort()` lowers a bare atomic to
+            // `atomic_load_explicit` -- an rvalue, which is exactly what a
+            // store target must not be. The checker refuses the bare store
+            // (`N270`), so through `gabbro emit` this line is unreachable;
+            // what reaches it is the counterfactual -- `emittiere` on the
+            // parsed tree, which the `-- erwartet: … allein` probes compile
+            // to prove the checker is the ONLY guard on the form. For that
+            // the old spelling must stand here unchanged: the plain name,
+            // exactly as the generic tail wrote it before the read branch
+            // existed. A name bound here shadows the atomic (the same four
+            // function-scoped views as in `ort()`), and then the plain name
+            // is the C local either way.
+            if z.ziel.suffixe.is_empty()
+                && u.atomics.contains_key(&z.ziel.basis.text)
+                && !u.parametertyp.contains_key(&z.ziel.basis.text)
+                && !u.lokaltyp.contains_key(&z.ziel.basis.text)
+                && !u.werte.contains(&z.ziel.basis.text)
+                && !u.laufvariablen.contains(&z.ziel.basis.text)
+            {
+                aus.push_str(&format!(
+                    "{e}{} {} {};\n",
+                    z.ziel.basis.text,
+                    zuw_op(&z.op),
+                    wert
+                ));
+                return;
+            }
             aus.push_str(&format!(
                 "{e}{} {} {};\n",
                 ort(&z.ziel, u, absagen),
@@ -13055,6 +13084,40 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // das es im C nicht gibt.
     if o.suffixe.is_empty() && u.akkus.contains(&o.basis.text) {
         return format!("{}_lies()", o.basis.text);
+    }
+    // **A bare read of an `atomic` is an explicit load in its declared order**
+    // (lane 152). Until now it fell to the generic walk below and came out as
+    // the plain name -- over `_Atomic uint32_t AT` a plain access, which C
+    // treats as `seq_cst` while the declaration said `relaxed`, and which the
+    // C model (`C-SPEICHERMODELL.md` §1c) makes stuck: every atomic access
+    // goes through an explicit `atomic_*_explicit` call, none is a plain
+    // access to an `_Atomic` object.
+    //
+    // The order is the LOAD side of the declaration (`u.atomics` carries both;
+    // a `release` declaration loads `acquire`, and C11 has no releasing load).
+    // The STORE side is not lowered here: every store to an atomic is a
+    // `publishstmt` (`SPRACHE.md` §11.3), where the payload promise stands,
+    // and the checker refuses the bare store (`N270`) -- so no store reaches
+    // this reader through this place. What does reach it: expression reads,
+    // `retry … until` conditions (`pred_c` lowers through `ausdruck`), narrow
+    // bounds, indices -- every one of them a load, and every one now explicit.
+    //
+    // A name bound HERE shadows the atomic, and then the plain name is right:
+    // a parameter or `let` of the same name is a C local that covers the
+    // global, a record value in `werte` is no atomic at all, and a traverse
+    // binder in `laufvariablen` is a loop counter. All four views are
+    // function-scoped (`eigene_sicht`, `laufsicht`), so a shadowing in one
+    // function changes nothing in another.
+    if o.suffixe.is_empty() {
+        if let Some((_, _, laden)) = u.atomics.get(&o.basis.text) {
+            if !u.parametertyp.contains_key(&o.basis.text)
+                && !u.lokaltyp.contains_key(&o.basis.text)
+                && !u.werte.contains(&o.basis.text)
+                && !u.laufvariablen.contains(&o.basis.text)
+            {
+                return format!("atomic_load_explicit(&{}, {laden})", o.basis.text);
+            }
+        }
     }
     // **Direct byte reads take the `leseBytes` arm, not the generic walk
     // (lane-141).** `None` falls through and the walk below runs exactly as

@@ -1,0 +1,25 @@
+-- erwartet: N270 allein
+-- **A bare store to an `atomic` has no form -- every store to one is a `publishstmt`.**
+--
+-- `AT = w;` on `atomic AT : u32 relaxed` used to check clean and emit `AT = w;`
+-- over `_Atomic uint32_t AT` -- a plain store, which C treats as `seq_cst` while
+-- the declaration said `relaxed`, and which the C model (`C-SPEICHERMODELL.md`
+-- §1c) makes stuck. Lowering the bare store to an explicit
+-- `atomic_store_explicit` is no fix either: the store is where the payload
+-- promise stands (`publishes { … }` / `publishes nothing`, held by V001-V004),
+-- and an explicit store without one would carry the pairing past the checker
+-- in silence. So the checker refuses the bare store with N270 ALONE -- and
+-- `cc` still accepts the emitted C, which is why this probe says `allein`:
+-- the checker is the only guard on this form.
+module gift::bare_store_to_atomic {
+
+atomic AT : u32 relaxed;
+
+impl fn schreibe(w : u32)
+    effects { writes AT }
+    costs   <= 4 ops
+{
+    AT = w;
+}
+
+}

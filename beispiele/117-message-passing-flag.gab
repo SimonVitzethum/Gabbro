@@ -1,0 +1,36 @@
+-- 117 -- **Message passing in miniature: the payload stands at the store, the
+-- reception at the load.**
+--
+-- `melde` publishes `bericht` on the flag, `lies` awaits it back. The pairing
+-- (`publishes { bericht }` / `awaits { bericht }`, V001-V004) is the whole
+-- form: no bare store appears, so `N270` stays silent, and both atomic
+-- accesses lower through explicit calls in the declared order
+-- (`atomic_store_explicit` with `BEREIT_ORDER`, `atomic_load_explicit` with
+-- the load side). The twin of `beispiele/116`: there the atomic carries no
+-- payload and the load reads bare; here it carries one and the load awaits.
+module beispiel117 {
+
+static mut bericht : u64 = 0;
+
+atomic BEREIT : bool acquire;
+
+impl fn melde(w : u64)
+    effects { writes bericht, publishes BEREIT }
+    costs   <= 8 ops
+{
+    bericht = w;
+    BEREIT = true publishes { bericht };
+}
+
+impl fn lies() -> u64
+    effects { reads BEREIT, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = BEREIT awaits { bericht };
+    if fertig {
+        return bericht;
+    }
+    return 0;
+}
+
+}

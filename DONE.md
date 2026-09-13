@@ -1559,7 +1559,7 @@ with no site is the thing this folder hunts, not the thing it adds.*
 
 ## Probes
 
-**~~71~~ ~~74~~ ~~76~~ ~~89~~ ~~91~~ 95 clean examples, ~~471~~ ~~479~~ ~~488~~ ~~498~~ ~~500~~ ~~501~~ ~~550~~ ~~569~~ ~~585~~ ~~587~~ ~~618~~ ~~623~~ ~~624~~ 640 poison probes, ~~451~~ ~~688~~ 693 tests · 55 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
+**~~71~~ ~~74~~ ~~76~~ ~~89~~ ~~91~~ ~~95~~ 97 clean examples, ~~471~~ ~~479~~ ~~488~~ ~~498~~ ~~500~~ ~~501~~ ~~550~~ ~~569~~ ~~585~~ ~~587~~ ~~618~~ ~~623~~ ~~624~~ ~~640~~ 644 poison probes, ~~451~~ ~~688~~ ~~693~~ 775 tests · 55 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
 > | | booked | measured | by what |
 > |---|---:|---:|---|
 > | clean examples | 25 | **54** | `ls beispiele/*.gab` |

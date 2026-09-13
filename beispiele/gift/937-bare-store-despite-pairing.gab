@@ -1,0 +1,43 @@
+-- erwartet: N270 allein
+-- **A live pairing does not bless the bare store -- the payload promise stands
+-- at the store, and this store names none.**
+--
+-- `FLAG` carries a full pairing: `melde` publishes `bericht` on it, `lies`
+-- awaits it back. The third function stores bare (`FLAG = false;`), and that
+-- store carries no payload -- neither `{ bericht }` nor `nothing`. N270 falls
+-- ALONE: the pairing holds for the two shapes that name it, and the bare
+-- store is refused for exactly what it is missing. `cc` still accepts the
+-- emitted C, so the probe says `allein`.
+module gift::bare_store_despite_pairing {
+
+static mut bericht : u64 = 0;
+
+atomic FLAG : bool release;
+
+impl fn melde(w : u64)
+    effects { writes bericht, publishes FLAG }
+    costs   <= 8 ops
+{
+    bericht = w;
+    FLAG = true publishes { bericht };
+}
+
+impl fn lies() -> u64
+    effects { reads FLAG, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = FLAG awaits { bericht };
+    if fertig {
+        return bericht;
+    }
+    return 0;
+}
+
+impl fn rueck()
+    effects { writes FLAG }
+    costs   <= 4 ops
+{
+    FLAG = false;
+}
+
+}
