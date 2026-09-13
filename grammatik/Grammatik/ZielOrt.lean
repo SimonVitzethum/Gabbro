@@ -1085,8 +1085,16 @@ theorem vertragAmOrtG_refP_zeuge : ∃ M : RufMaschineG refD,
   contract) and the non-vacuity witness on `refP`
   (`vertragAmOrtG_refP_zeuge`).
 
-  What is NOT proved in this file: `ziel_ort` itself (see
-  `ZielOrtBeweis.lean`); costs (no declared per-function cost exists; the
+  Where the rest is: `ziel_ort` is proved in `ZielOrtBeweis.lean` (with
+  premises `GutO`, `hvoll`, `programmImFragment`, `fussOrtB`, `KoerperGut`,
+  `StartGut`, `StartExklusiv` and the data `e0`); its witnesses
+  (`ziel_ort_zeuge`, `ziel_ort_zeuge_interferenz`) are in
+  `ZielOrtZeuge.lean`. `schreiberHaeltB` is proved sound here but is NOT a
+  premise of `ziel_ort`: the repaired G enforces the writer discipline per
+  step (`HeldGenau`), and the static version would make a written guarded
+  carrier the property of one thread forever.
+
+  What is NOT proved in this file: costs (no declared per-function cost exists; the
   repaired G has no bare lock steps, so the non-lock steps of a frame of a
   `kOk` body are bounded by its syntax size plus its callees', which is the
   natural first cost theorem once a declared bound exists).

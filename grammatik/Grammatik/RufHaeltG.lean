@@ -822,7 +822,9 @@ theorem rufG_haelt_signatur {P : Programm D} {O : Orakel D} {passes : Nat} (hO :
   only locks its thread holds (`rufG_haelt_statisch`), in particular its
   function's signature locks (`rufG_haelt_signatur`); the thread invariant
   `HaeltInvG` is kept by every one of the 70 rules
-  (`rufSchrittG_haeltInv`).
+  (`rufSchrittG_haeltInv`). The witnesses on a non-degenerate two-thread
+  program are in `ZielOrtZeuge.lean` (`rufG_haelt_statisch_zeuge`,
+  `rufG_haelt_signatur_zeuge`).
 
   What is NOT proved here: exclusivity of held locks across threads needs
   a fact about the start assignment (`StartExklusiv`) and is in
