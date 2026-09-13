@@ -580,6 +580,136 @@ theorem merge_swap_invariant_zeuge :
     ([] : List Nat) [] 1 2 0
   exact ⟨h, refB_erreicht, refB_schreibt⟩
 
+/-! ## 12. `walk.mappings` (mappings: 23 corpus lines).
+
+The generated domain `mappings of` meets every reachable entry that
+CARRIES a mapping -- together with va and level. That is not the same
+as `leaf entry`: a large page maps above the full depth. The meeting
+holds BY CONSTRUCTION of the domain (filter); whether the generator
+builds that filter -- and whether it meets large pages -- is the open
+half, booked in CUTS. -/
+
+/-- A page-table entry: address, level, and whether it carries a mapping. -/
+def ptEntry : Type := Nat × Nat × Bool
+
+/-- It carries a mapping (possibly above the full depth). -/
+def carriesMapping (e : ptEntry) : Bool := e.2.2
+
+/-- The generated domain: every entry that carries a mapping. -/
+def mappingsOf (entries : List ptEntry) : List ptEntry :=
+  entries.filter carriesMapping
+
+/-- Soundness core of `walk.mappings`: a carried mapping is met.
+    `hmem`/`hcar` are both consumed. -/
+theorem walk_hits_mapping (entries : List ptEntry) (e : ptEntry)
+    (hmem : e ∈ entries) (hcar : carriesMapping e = true) :
+    e ∈ mappingsOf entries :=
+  List.mem_filter.mpr ⟨hmem, hcar⟩
+
+/-- Witness for `walk_hits_mapping`: entry `(7, 1, true)` is met,
+    jointly with the NON-DEGENERATE run. -/
+theorem walk_hits_mapping_zeuge :
+    ((7, 1, true) ∈ mappingsOf [(7, 1, true), (8, 2, false)])
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hmem : ((7, 1, true) : ptEntry) ∈ [(7, 1, true), (8, 2, false)] := by
+    decide
+  have hcar : carriesMapping (7, 1, true) = true := rfl
+  exact ⟨walk_hits_mapping _ _ hmem hcar, refB_erreicht, refB_schreibt⟩
+
+/-! ## 13. `consuming.ordnung` (consuming: 13 corpus lines).
+
+The domain delivers its witnesses in the generated well-founded
+order. Under the REMOVAL of the visited witness the order is
+preserved -- the edge set shrinks (`wf_subset` at list level: what
+remains was there), and consumption strictly drops the domain measure,
+so the traversal terminates. Leaf status at the moment of consumption
+does NOT follow -- it additionally requires the choice to be MINIMAL
+(`waehlt_minimal`, owed by the witness-order generator). -/
+
+/-- Soundness core of `consuming.ordnung`: removal shrinks the domain
+    (`hrem`: the consumed witness is gone from the rest is NOT needed --
+    only the membership `hmem` in the remainder) and drops its measure
+    (`ha`: the consumed witness was there). Both are consumed. -/
+theorem consume_shrinks (domain : List Nat) (a x : Nat)
+    (hmem : x ∈ domain.erase a) (ha : a ∈ domain) :
+    x ∈ domain ∧ (domain.erase a).length < domain.length := by
+  have hpos : 0 < domain.length := by
+    cases he : domain with
+    | nil =>
+      rw [he] at ha
+      exact absurd ha List.not_mem_nil
+    | cons _ _ => exact Nat.zero_lt_succ _
+  exact ⟨List.mem_of_mem_erase hmem,
+    by rw [List.length_erase_of_mem ha]; omega⟩
+
+/-- Witness for `consume_shrinks`: consuming `1` out of `[0, 1]`
+    leaves `[0]` present and shorter, jointly with the NON-DEGENERATE
+    run. -/
+theorem consume_shrinks_zeuge :
+    ((0 : Nat) ∈ [0, 1] ∧ (([0, 1] : List Nat).erase 1).length < [0, 1].length)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hmem : (0 : Nat) ∈ ([0, 1] : List Nat).erase 1 := by decide
+  have ha : (1 : Nat) ∈ ([0, 1] : List Nat) := by decide
+  exact ⟨consume_shrinks _ 1 0 hmem ha, refB_erreicht, refB_schreibt⟩
+
+/-! ## 14. `consuming.leermenge`.
+
+The generated witness set is COMPLETE at a NAMED state (`hC`: every
+domain element at that state is witnessed) -- if it is empty there
+(`hempty`), the domain is empty there. Without the named state the
+sentence is ambiguous in a consuming traversal
+(`leermenge_ist_zustandsabhaengig`). -/
+
+/-- Soundness core of `consuming.leermenge`. The named state is the
+    explicit pair `(domain, wit)`; `hC`/`hempty` are both consumed. -/
+theorem consume_empty_at (domain wit : List Nat)
+    (hC : ∀ x ∈ domain, x ∈ wit) (hempty : wit = []) :
+    domain = [] := by
+  rw [List.eq_nil_iff_forall_not_mem]
+  intro x hx
+  have h := hC x hx
+  rw [hempty] at h
+  exact absurd h List.not_mem_nil
+
+/-- Witness for `consume_empty_at`: empty witnesses over `[]`,
+    jointly with the NON-DEGENERATE run. -/
+theorem consume_empty_at_zeuge :
+    (([] : List Nat) = [])
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hC : ∀ x ∈ ([] : List Nat), x ∈ ([] : List Nat) := by
+    intro x hx
+    contradiction
+  exact ⟨consume_empty_at [] [] hC rfl, refB_erreicht, refB_schreibt⟩
+
+/-! ## 15. `consuming.umhaengen` (the refuted blanket version).
+
+A generated mutation that ADDS edges preserves well-foundedness -- and
+that is NOT covered by `wf_subset`; it has to be shown per mutation.
+The blanket version is REFUTED, not open
+(`umhaengen_kann_zyklus_erzeugen`): one re-hang turns the acyclic edge
+`(0, 1)` into a self-loop. What Lean exhibits is that loop. -/
+
+/-- Re-hang the head edge's target. -/
+def rehang (edges : List (Nat × Nat)) (a b c : Nat) : List (Nat × Nat) :=
+  (edges.erase (a, b)) ++ [(a, c)]
+
+/-- The refutation exhibit: re-hanging `(0, 1)` onto `0` leaves the
+    self-loop `(0, 0)` -- a cycle from one move. -/
+theorem rehang_can_cycle : (0, 0) ∈ rehang [(0, 1)] 0 1 0 := by
+  decide
+
+/-- Witness for `rehang_can_cycle`: the loop exhibit, jointly with the
+    NON-DEGENERATE run (the run shows the program side is real; the
+    loop shows the template side falls). -/
+theorem rehang_can_cycle_zeuge :
+    ((0, 0) ∈ rehang [(0, 1)] 0 1 0)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
+  ⟨rehang_can_cycle, refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - Skeleton only: `idxGilt` is defined; all 21 soundness lemmas are open.
 -/
