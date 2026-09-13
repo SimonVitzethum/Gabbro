@@ -148,7 +148,14 @@ NICHT = {"saetze.rs"}
 # foreign index, store outside `alloc`), one rule like `N065`'s three, similarity
 # 0.25. Recomputed here rather than incremented, because incrementing a forgotten
 # figure carries the forgetting forward (2026-09-02 entry).
-MARKE = 25
+# **25 -> 28 on 2026-09-12 (lane-89 merge resolution, measured against the
+# booking commit).** The booking commit `963ac4a4` reads 25/81 on its own tree;
+# the merged tree reads 28/83, and the delta is exactly three identifiers and
+# two probes, all one lane: `N218` + `N219` (profile rules) and the second
+# `P006` site (profile entries in `parse.rs`, lane E6/117 `06e3e5e4`), with
+# probes `893`/`894` on the two new codes. Measured by diffing the affected
+# sets, not by subtracting totals. All three are new rules, not double issues.
+MARKE = 28
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -248,7 +255,12 @@ MARKE = 25
 # says 81 against a booked 68: twelve are wave drift (80 on the unchanged tree),
 # and one is mine -- `beispiele/gift/889` on the three-faced `N214` above, which
 # falls green without proving WHICH face fell, exactly like `gift/242` on `E008`.
-MARKE_PROBEN = 81
+# **81 -> 83 on 2026-09-12 (lane-89 merge resolution, measured against the
+# booking commit).** The booking commit reads 81 on its own tree; the merged
+# tree reads 83, and the delta is exactly the two E6 probes above (`893` on
+# `N218`, `894` on `N219`) -- measured by diffing the affected sets, which are
+# otherwise identical. Two correct probes inherit a new ambiguity.
+MARKE_PROBEN = 83
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

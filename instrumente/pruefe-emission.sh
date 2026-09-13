@@ -2930,7 +2930,11 @@ fi
 # **83 -> 85 on 2026-09-12 (merge resolution, lane E4/116).** `+2` are
 # `98-arena-erklaert` and `99-arena-grenze` (this lane, counted above).
 # Provisional sum -- re-measured by the run below, not added up.
-MARKE_EMIT=85
+# **85 -> 87 on 2026-09-12 (lane-89 merge resolution, measured file by file).**
+# `+2` are `100-hardwareprofil` and `101-hardwareprofil-schluessel` (lane 117:
+# examples following the merged language, translator per library function).
+# Both emit and compile; the other 85 stand as booked.
+MARKE_EMIT=87
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
