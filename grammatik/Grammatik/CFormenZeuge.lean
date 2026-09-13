@@ -30,7 +30,7 @@
   `i` holds `0` (`K.ks`). C numbering: function 0 is `einzahlen`,
   function 1 is `lies`; locals `k = 0`, `i = 1`, `b = 2`.
 -/
-import Grammatik.CFormenM
+import Grammatik.CFormenH
 
 namespace Gabbro.Grammatik
 
@@ -236,10 +236,201 @@ theorem einzahlen_zeuge :
   refine ⟨_, st', rfl, hC, hc, rfl, rfl, rfl, ?_⟩
   exact (hc.1 () rfl).2 0 () (by decide) (by decide)
 
+/-! ## 6. A byte view and an atomic, instantiated
+
+A second fixture, `bvD`: a byte carrier `Puffer` of 8 bytes (one field
+`b : u8`, emitted as `uint8_t` records of one byte) and one `atomic`
+global `A : u32 in 0 .. 100`. The C side: the carrier is table block 0
+(`natLay 8 [uint8_t]`), `A` is global block 0 (`_Atomic uint32_t`), and a
+byte view `V v = { .bytes = Puffer_speicher.slots, .len = 8 };` is the
+stack local 0 of frame 1 (`natLay 1 [uint8_t *, uint32_t]`). -/
+
+def bvD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 8
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 255
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Unit
+  decGlob := inferInstance
+  gtyp := fun _ => .int 0 100
+  nutzlast := fun _ => []
+  atomar := fun _ => true
+  geteilt := fun _ => false
+  ggeteilt := fun _ => false
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun _ => []
+  eigner := fun _ => []
+  Fn := Empty
+  sig := fun f => nomatch f
+  sigNr := fun _ =>
+    { params := [], erg := none, gruende := 0, haelt := [], schreibt := fun _ => false,
+      gschreibt := fun _ => true, konsumiert := [], produziert := [] }
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun _ _ => Or.inr rfl
+
+/-- The byte carrier's records: one `uint8_t`, one byte each. -/
+def pufferLay : RecLay := natLay 8 [.int false .w8]
+
+/-- The view struct `{ uint8_t *bytes; uint32_t len; }`. -/
+def viewLay : RecLay := natLay 1 [.ptr, .int false .w32]
+
+/-- The objects of the fixture: the carrier, the atomic, the view local. -/
+def bvLay : CLayout := fun b =>
+  match b with
+  | .tab 0 => some { lay := pufferLay, kind := .plain, base := 0 }
+  | .glob 0 => some { lay := scalarRec (.int false .w32), kind := .atomic, base := 0 }
+  | .stk 1 0 => some { lay := viewLay, kind := .plain, base := 0 }
+  | _ => none
+
+theorem pufferLay_werte : pufferLay.ssize = 1 ∧ pufferLay.off 0 = 0 ∧ pufferLay.count = 8 ∧
+    pufferLay.fty 0 = .int false .w8 ∧ viewLay.off 0 = 0 ∧ viewLay.ssize = 16 := by
+  decide
+
+def bvEL : EmitLay bvD where
+  lay := bvLay
+  tnr := fun _ => 0
+  tnr_inj := fun t t' _ => by cases t; cases t'; rfl
+  trec := fun _ => pufferLay
+  lay_tab := fun _ => rfl
+  trec_wf := fun _ => by decide
+  trec_count := fun _ => rfl
+  fnr := fun _ _ => 0
+  fnr_lt := fun _ _ => by decide
+  fnr_inj := fun _ f f' _ => by cases f; cases f'; rfl
+  fnr_fits := fun _ _ => rfl
+  gnr := fun _ => 0
+  gnr_inj := fun g g' _ => by cases g; cases g'; rfl
+  gty := fun _ => .int false .w32
+  lay_glob := fun _ => rfl
+  gty_fits := fun _ => rfl
+
+def bvO : Orakel bvD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun _ _ => true
+
+/-- Frame 1, no calls. -/
+def xBv : TVCtx bvD := ⟨bvEL, tvOrc, 1, tvXR, tvXR, bvO, 0, fun f => nomatch f⟩
+
+/-- The bytes `1, 2, 3, 4, 0, 0, 0, 0`. -/
+def bvByte (k : Int) : Int := if k = 0 then 1 else if k = 1 then 2 else if k = 2 then 3 else
+  if k = 3 then 4 else 0
+
+def bvByteZ (k : Int) : Zahl 0 255 :=
+  ⟨bvByte k, by unfold bvByte; split <;> (try split) <;> (try split) <;> (try split) <;> decide,
+    by unfold bvByte; split <;> (try split) <;> (try split) <;> (try split) <;> decide⟩
+
+/-- The Gabbro world: the carrier holds the bytes, `A` holds `0`. -/
+def bvW : World bvD :=
+  { slots := fun _ k _ => bvByteZ k, globs := fun _ => ⟨0, by decide, by decide⟩, spur := [] }
+
+/-- The C state: the carrier's cells, `A`'s cell, and the view's `bytes`
+    cell pointing to the carrier; everything alive; no observation. -/
+def bvSt : CSt where
+  mem := fun b o => match b with
+    | .tab 0 => .int (bvByte o)
+    | .glob 0 => .int 0
+    | .stk 1 0 => if o = 0 then .ptr ⟨.tab 0, 0⟩ else .int 8
+    | _ => .undef
+  live := fun _ => true
+  obs := []
+
+theorem bv_corr : corrW bvEL bvW bvSt := by
+  refine ⟨?_, ?_⟩
+  · intro t _
+    refine ⟨rfl, ?_⟩
+    intro k f hk0 hk
+    cases t
+    cases f
+    show CVal.int (bvByte (k.toNat * 1 + 0 : Nat)) = .int (bvByte k)
+    congr 2
+    omega
+  · intro g _
+    exact ⟨rfl, rfl⟩
+
+/-- The carrier needs no guard. -/
+theorem bvDarf : darf bvD () [] := fun _ h => nomatch h
+
+/-- `(&v)->bytes`: the view's pointer, loaded from the view local. -/
+def cViewBytes : CX := .ld (.fld (.addrL 0) 0) .ptr
+
+theorem viewBytes_ev (ρ : CLok) :
+    ev bvEL.lay tvOrc 1 cViewBytes bvSt ρ = some (.ptr ⟨.tab 0, 0⟩, bvSt) := by
+  rfl
+
+/-- WITNESS, byte view: `gabbro_le32(v->bytes + 0)` through the view local
+    reads `0x04030201 = 67305985`, and it is the Gabbro reading
+    `leseBytes Puffer.b 4 0` of the related world. -/
+theorem bytesicht_zeuge (ρG : Env bvD []) (ρC : CLok) :
+    ev bvEL.lay tvOrc 1 (le32 (.padd cViewBytes (.lit 0))) bvSt ρC =
+      some (.int 67305985, bvSt) ∧
+    (eval bvW (Expr.leseBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4 (Expr.lit ((0 : Nat) : Int))
+      (Int.natCast_nonneg 0) (by decide) bvDarf) bvW ρG).n = 67305985 := by
+  have h := le32_corr_at xBv (Γ := []) (Λ := []) () () rfl rfl rfl rfl rfl 0 (by decide)
+    bvDarf bvW bvSt bv_corr ρG ρC cViewBytes (viewBytes_ev ρC)
+  have hv : (eval bvW (Expr.leseBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4
+      (Expr.lit ((0 : Nat) : Int)) (Int.natCast_nonneg 0) (by decide)
+      bvDarf) bvW ρG).n = 67305985 := by
+    rfl
+  refine ⟨?_, hv⟩
+  rw [← hv]
+  exact h
+
+/-- WITNESS, atomic: a strong compare-exchange on `A` expecting its value
+    `0` succeeds and writes `42` (one observation carrying both orders),
+    relating to Gabbro's write of `A`; a second one, still expecting `0`,
+    fails, sees `42`, writes nothing (one observation), relation kept. -/
+theorem atomar_zeuge :
+    ∃ st1, aCas bvEL.lay bvSt (bvEL.globPtr ()) (.int false .w32) .acqRel .acquire 0 42 =
+        some (true, 0, st1) ∧
+      corrW bvEL (bvW.schreibGlob () [] ⟨42, by decide, by decide⟩) st1 ∧
+      st1.obs = [.acas ⟨.glob 0, 0⟩ .acqRel .acquire 0 42 true] ∧
+      st1.mem (.glob 0) 0 = .int 42 ∧
+      aCas bvEL.lay st1 (bvEL.globPtr ()) (.int false .w32) .acqRel .acquire 0 42 =
+        some (false, 42, CSt.mk st1.mem st1.live
+          (.acas ⟨.glob 0, 0⟩ .acqRel .acquire 42 42 false :: st1.obs)) := by
+  obtain ⟨st1, h1, hc1, ho1⟩ := cas_success bvEL bvW bvSt bv_corr () rfl rfl []
+    ⟨42, by decide, by decide⟩ .acqRel .acquire rfl
+  have hm : st1.mem (.glob 0) 0 = .int 42 := (hc1.2 () rfl).2
+  obtain ⟨h2, -⟩ := cas_failure bvEL (bvW.schreibGlob () [] ⟨42, by decide, by decide⟩) st1 hc1 ()
+    rfl rfl 0 ⟨42, by decide, by decide⟩ .acqRel .acquire rfl (by decide)
+  exact ⟨st1, h1, hc1, ho1, hm, h2⟩
+
 #print axioms lies_fn
 #print axioms ein_end
 #print axioms ein_block
 #print axioms ein_fn
 #print axioms einzahlen_zeuge
+#print axioms bytesicht_zeuge
+#print axioms atomar_zeuge
 
 end Gabbro.Grammatik
