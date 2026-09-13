@@ -334,13 +334,13 @@ def ruhig : List Token → Bool
   | .zeichen s :: _ => !istSchleifenOp s
   | _ :: _ => true
 
--- A benign suffix follow: `.`, `->` and `[` continue a suffix
--- chain, everything else (including every loop operator) stops
--- `parseSuffixe`.
+-- A benign suffix follow: `.`, `->`, `[` and `::` continue a
+-- suffix or segment chain, everything else (including every loop
+-- operator) stops `parseSuffixe` and `sammleSegmente`.
 def ruhigSuff : List Token → Bool
   | [] => true
   | .zeichen s :: _ =>
-    !(strEq s "." || strEq s "->" || strEq s "[")
+    !(strEq s "." || strEq s "->" || strEq s "[" || strEq s "::")
   | _ :: _ => true
 
 -- From a false character-list comparison to the inequality (for
@@ -619,7 +619,7 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
       simp only [Bool.or_eq_false_iff, and_assoc] at hf
-      obtain ⟨c1, c2, c3⟩ := hf
+      obtain ⟨c1, c2, c3, -⟩ := hf
       have ne1 := strNe_of s "." c1
       have ne2 := strNe_of s "->" c2
       have ne3 := strNe_of s "[" c3
@@ -1257,6 +1257,402 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         simp at h
       · intro h
         simp at h
+
+-- A printed `gut` tree never starts with `)` (heads are literals,
+-- names or openers; suffix chains delver into the base, operators
+-- are lawful). `parseArgs` needs it to choose its recursive arm.
+-- The head equation (`hT`) splits by constructor injectivity; only
+-- operator heads need `gut`.
+theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
+    gut e = true →
+    ∀ (a : Token) (R : List Token), druckToks e = a :: R →
+    a ≠ .zeichen ")" := by
+  intro n
+  induction n with
+  | zero =>
+    intro e hs _ _ _ _
+    have hp := groesse_pos e
+    omega
+  | succ n ih =>
+    intro e hs hg a R hT
+    cases e with
+    | lit m =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | gleit s =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | wahr =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | falsch =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | «variable» s =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | feld x f =>
+      simp only [gut] at hg
+      have hne : druckToks x ≠ [] := by
+        intro he
+        have hlen := toksLang (groesse x) x (Nat.le_refl _)
+        rw [he] at hlen
+        simp at hlen
+      obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
+      simp only [druckToks] at hT
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have ihb := ih x hx (gut_of_gutPlatz x hg) b R2 hxb
+      rw [hxb] at hT
+      simp only [List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      exact ihb
+    | index x i =>
+      simp only [gut, Bool.and_eq_true] at hg
+      obtain ⟨hpx, -⟩ := hg
+      have hne : druckToks x ≠ [] := by
+        intro he
+        have hlen := toksLang (groesse x) x (Nat.le_refl _)
+        rw [he] at hlen
+        simp at hlen
+      obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
+      simp only [druckToks] at hT
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have ihb := ih x hx (gut_of_gutPlatz x hpx) b R2 hxb
+      rw [hxb] at hT
+      simp only [List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      exact ihb
+    | pfeil x f =>
+      simp only [gut] at hg
+      have hne : druckToks x ≠ [] := by
+        intro he
+        have hlen := toksLang (groesse x) x (Nat.le_refl _)
+        rw [he] at hlen
+        simp at hlen
+      obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
+      simp only [druckToks] at hT
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have ihb := ih x hx (gut_of_gutPlatz x hg) b R2 hxb
+      rw [hxb] at hT
+      simp only [List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      exact ihb
+    | un o x =>
+      simp only [gut, Bool.and_eq_true] at hg
+      obtain ⟨hop, -⟩ := hg
+      have hne : o ≠ ")" := by
+        intro he
+        subst he
+        exact absurd hop (by decide)
+      simp only [druckToks, List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      injection h with ho
+      exact hne ho
+    | bin o l r =>
+      simp only [druckToks, List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | ruf f xs =>
+      simp only [druckToks, List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | fnwert p =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | eingebaut f xs =>
+      simp only [druckToks, List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | alt x =>
+      simp only [druckToks, List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | ergebnis =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | grund g f =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+
+-- The round-trip invariant at size bound `n`: every level parses
+-- every `gut` tree from its printed tokens with fuel linear in
+-- the tree size. Levels take a benign follow (`ruhig` for the
+-- loops, `ruhigSuff` for the suffixes); `parsePrimary` takes only
+-- the suffix follow (it has no loops) plus `unFrei` (prefix trees
+-- live at the unary level); `parseOrt` takes places. Fuel is
+-- absolute in the tree's own size; `parsePrimary` and `parseOrt`
+-- carry descent slack (`+7`/`+8`, discharged by `omega` from the
+-- size equations wherever they are applied at reduced fuel).
+def R (n : Nat) : Prop :=
+  (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseOr F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseAnd F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseCmp F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseBit F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseAdd F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseMul F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F →
+    parseUnary F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
+    gut e = true → unFrei e = true → ruhigSuff rest = true →
+    12 * (groesse e + 1) ≤ F + 7 →
+    parsePrimary F (druckToks e ++ rest) = .ok (e, rest))
+  ∧ (∀ (p : SExpr) (rest : List Token) (F : Nat), groesse p ≤ n →
+    gutPlatz p = true → ruhigSuff rest = true →
+    12 * (groesse p + 1) ≤ F + 8 →
+    parseOrt F (druckToks p ++ rest) = .ok (p, rest))
+
+-- The binary-inner parse: a parenthesised operator's inside
+-- (`l op r` between the parens), by operator level. No follow
+-- premise: the tail after `)` is never inspected.
+def B (n : Nat) : Prop :=
+  ∀ (o : String) (l r : SExpr) (W : List Token) (F : Nat),
+    groesse l + groesse r ≤ n → gutOpBin o = true →
+    gut l = true → gut r = true →
+    12 * (groesse l + groesse r + 1) ≤ F →
+    parseOr F (druckToks l ++ [.zeichen o] ++ druckToks r ++
+      [.zeichen ")"] ++ W) =
+      .ok (.bin o l r, [.zeichen ")"] ++ W)
+
+-- `sammleSegmente` stops on a benign suffix follow (pure: no fuel
+-- needed). The `::` arm is the only continuer; anything else
+-- returns the accumulator untouched.
+theorem sammleSeg_stop : ∀ (segs : List String) (t : List Token),
+    ruhigSuff t = true → sammleSegmente t segs = (segs, t) := by
+  intro segs t h
+  cases t with
+  | nil => rfl
+  | cons hd tl =>
+    cases hd with
+    | ident s => rfl
+    | wort s => rfl
+    | zahl n => rfl
+    | gleit s => rfl
+    | text s => rfl
+    | zeichen s =>
+      simp only [ruhigSuff] at h
+      have hf := nichtWahr_falsch _ h
+      simp only [Bool.or_eq_false_iff, and_assoc] at hf
+      obtain ⟨-, -, -, hDc⟩ := hf
+      have ne := strNe_of s "::" hDc
+      simp [sammleSegmente, ne]
+    | ende => rfl
+
+-- One argument through `parseArg`: the label strip misses (the
+-- second token is never `:`), then the expression parses. The
+-- strip-fire case dies by positional injection (`keinDP_tree` for
+-- the tail token, the separator spelling for the empty tail).
+theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
+    (x : SExpr) (sep : Token) (S : List Token) (F : Nat),
+    groesse x ≤ n → gut x = true →
+    (sep = .zeichen "," ∨ sep = .zeichen ")") →
+    12 * (groesse x + 1) + 1 ≤ F →
+    parseArg F (druckToks x ++ [sep] ++ S) = .ok (x, [sep] ++ S) := by
+  intro n Rn x sep S F hx hxg hsep hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hmiss : ∀ (t0 : Token) (rest : List Token),
+      druckToks x ++ [sep] ++ S ≠ t0 :: .zeichen ":" :: rest := by
+    intro t0 rest hcon
+    have hne : druckToks x ≠ [] := by
+      intro he
+      have hlen := toksLang (groesse x) x (Nat.le_refl _)
+      rw [he] at hlen
+      simp at hlen
+    obtain ⟨a, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
+    rw [hxb] at hcon
+    simp only [List.cons_append] at hcon
+    injection hcon with _ ht
+    cases hR : R2 with
+    | nil =>
+      rw [hR] at ht
+      simp only [List.nil_append, List.cons_append] at ht
+      injection ht with hsep2 _
+      cases hsep with
+      | inl h =>
+        subst h
+        simp at hsep2
+      | inr h =>
+        subst h
+        simp at hsep2
+    | cons b R3 =>
+      rw [hR] at ht
+      simp only [List.cons_append] at ht
+      injection ht with hb _
+      have hbmem : b ∈ druckToks x := by simp [hxb, hR]
+      have hne2 := keinDP_tree n x hx hxg b hbmem
+      exact hne2 hb
+  simp only [parseArg] at ⊢
+  have hr1 : ruhig ([sep] ++ S) = true := by
+    cases hsep with
+    | inl h => subst h; rfl
+    | inr h => subst h; rfl
+  have hr2 : ruhigSuff ([sep] ++ S) = true := by
+    cases hsep with
+    | inl h => subst h; rfl
+    | inr h => subst h; rfl
+  have hFr : 12 * (groesse x + 1) ≤ F' := by omega
+  obtain ⟨hOr, -⟩ := Rn
+  simpa only [List.append_assoc] using hOr x ([sep] ++ S) F' hx hxg hr1 hr2 hFr
+
+-- Whole argument lists through `parseArgs`: head by `toksKopf`
+-- (never `)`, so the recursive arm is taken), element by
+-- `arg_einzeln`, tail by list induction. Ends at `)`, which is
+-- consumed (like every `parseArgs` arm).
+theorem args_rund : ∀ (n : Nat) (Rn : R n)
+    (xs : List SExpr) (rest : List Token) (F : Nat),
+    groesseListe xs ≤ n → gutListe xs = true →
+    12 * (groesseListe xs + 1) + 2 ≤ F →
+    parseArgs F (druckToksListe xs ++ [.zeichen ")"] ++ rest) =
+      .ok (xs, rest) := by
+  intro n Rn xs
+  induction xs with
+  | nil =>
+    intro rest F hs hg hF
+    have hF1 : 1 ≤ F := by omega
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [parseArgs, druckToksListe, List.nil_append,
+      List.cons_append]
+  | cons x zs ihzs =>
+    intro rest F hs hg hF
+    cases zs with
+    | nil =>
+      -- Singleton: `T(x)` then `)`. One `parseArg`, then close.
+      have hx : groesse x ≤ n := by
+        simp only [groesseListe] at hs
+        omega
+      have hxg : gut x = true := gutListe_Kopf x [] hg
+      have hkop : ∀ (a : Token) (R : List Token),
+          druckToks x = a :: R → a ≠ .zeichen ")" :=
+        toksKopf n x hx hxg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      rw [args_einzeln] at ⊢
+      have hmiss2 : ∀ (R2 : List Token),
+          druckToks x ++ [.zeichen ")"] ++ rest ≠
+            .zeichen ")" :: R2 := by
+        intro R2 hcon
+        have hne : druckToks x ≠ [] := by
+          intro he
+          have hlen := toksLang (groesse x) x (Nat.le_refl _)
+          rw [he] at hlen
+          simp at hlen
+        obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
+        have ha := hkop a R3 hxb
+        rw [hxb] at hcon
+        simp only [List.cons_append] at hcon
+        injection hcon with ha2 _
+        exact ha ha2
+      simp only [parseArgs, hmiss2] at ⊢
+      have harg := arg_einzeln n Rn x (.zeichen ")") rest F' hx hxg
+        (Or.inr rfl) (by simp only [groesseListe] at hF ⊢; omega)
+      simp only [harg, List.cons_append] at ⊢
+      rfl
+    | cons y ys =>
+      -- Cons: `T(x)` then `,`. Parse the head, step, recurse.
+      have hx : groesse x ≤ n := by
+        simp only [groesseListe] at hs
+        omega
+      have hxg : gut x = true := gutListe_Kopf x (y :: ys) hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      rw [args_cons] at ⊢
+      have hmiss2 : ∀ (R2 : List Token),
+          druckToks x ++ [.zeichen ","] ++ druckToksListe (y :: ys) ++
+            [.zeichen ")"] ++ rest ≠
+            .zeichen ")" :: R2 := by
+        intro R2 hcon
+        have hkop : ∀ (a : Token) (R : List Token),
+            druckToks x = a :: R → a ≠ .zeichen ")" :=
+          toksKopf n x hx hxg
+        have hne : druckToks x ≠ [] := by
+          intro he
+          have hlen := toksLang (groesse x) x (Nat.le_refl _)
+          rw [he] at hlen
+          simp at hlen
+        obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
+        have ha := hkop a R3 hxb
+        rw [hxb] at hcon
+        simp only [List.cons_append] at hcon
+        injection hcon with ha2 _
+        exact ha ha2
+      simp only [parseArgs, hmiss2] at ⊢
+      have harg := arg_einzeln n Rn x (.zeichen ",")
+        (druckToksListe (y :: ys) ++ [.zeichen ")"] ++ rest) F'
+        hx hxg (Or.inl rfl) (by simp only [groesseListe] at hF ⊢; omega)
+      -- ⊢ : match parseArgs F' (rest-args) ... — the `,` arm was taken;
+      -- recurse on the tail.
+      have hzs : groesseListe (y :: ys) ≤ n := by
+        simp only [groesseListe] at hs ⊢
+        omega
+      have hxp := groesse_pos x
+      have htail := ihzs rest F'
+        hzs (gutListe_Schwanz x (y :: ys) hg)
+        (by simp only [groesseListe] at hF ⊢; omega)
+      simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ harg htail
+      simp only [harg, htail, List.cons_append, List.nil_append] at ⊢
 
 end Gabbro.Grammatik.Parser
 
