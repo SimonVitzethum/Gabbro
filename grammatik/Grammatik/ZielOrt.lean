@@ -47,8 +47,12 @@
      the RUN. So the premise "every live frame's thread holds the locks its
      frame names, from entry to return" is not reducible to (a) user, (b)
      hardware or (c) decidable program facts on G -- the theorem `ziel_ort`
-     of the fixed shape is FALSE over G, whatever decidable premises it
+     of the fixed shape is FALSE over G (`ziel_ort_form_falsch`, quantified
+     over every declaration and program), whatever decidable premises it
      takes that this disciplined program satisfies.
+  4. The conclusion is not vacuous (§6, `vertragAmOrtG_refP_zeuge`): on the
+     reference program `refP` itself, a reached run with a memory change, a
+     logged call and a logged return satisfies `VertragAmOrtG`.
 
   The repair belongs to G, not to this file (see CUTS): restrict the bare
   `gibt` to locks no frame of the thread names, and let a start frame begin
@@ -931,5 +935,192 @@ theorem ziel_ort_gegenbeispiel :
   · obtain ⟨M4, M12, hr4, hr12, _, _, _, _, rho, v, s0, s1, hmem, hens⟩ := geg_lauf
     exact ⟨M12, rufErreichbarG_trans hr4 hr12,
       fun h => hens ((h 0 _ hmem).2 refLies rho v s0 s1 rfl)⟩
+
+/-- **The fixed shape of `ziel_ort`, with every candidate premise, is FALSE
+    over G.** Quantified over every declaration, program, oracle, forever
+    budget, complete member list, start memory and start assignment. -/
+theorem ziel_ort_form_falsch :
+    ¬ (∀ (D : Deklaration) (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
+        (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)),
+        GutO O →
+        (∀ g : D.Fn, g ∈ fs) →
+        programmImFragment P fs = true →
+        fussOrtB P fs = true →
+        schreiberHaeltB P fs = true →
+        (∀ f : D.Fn, KoerperGut P O passes f) →
+        StartGut P sp init →
+        ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+          VertragAmOrtG P M) := by
+  intro h
+  obtain ⟨hO, hFrag, _, hFuss, hSchr, hK, hStart, M, hr, hnot⟩ := ziel_ort_gegenbeispiel
+  exact hnot (h refD gegP refO 0 refFs refSp0 gegInit hO refFs_voll hFrag hFuss hSchr hK hStart
+    M hr)
+
+/-! ## 6. The conclusion is not vacuous: the reference program on G
+
+    On `refP` itself (`einzahlen` = write 100, call `lies`, return), a
+    reached run of G with a memory change (`konto[0]` from 0 to 100), a call
+    and a return logged satisfies `VertragAmOrtG`: the reference contracts
+    hold at their place there. -/
+
+/-- The start thread state of `refP` with every thread in `einzahlen 7`. -/
+def refZ0 : RufFadenG refD :=
+  ⟨[], ⟨refEin, refRho7, refSp0.welt [],
+    ⟨false, refD.params refEin, Signatur.anfang refD (refD.signatur refEin), refRho7,
+     .ende (refP.rumpf refEin)⟩⟩, [], [RufEreignisF.eintritt refEin refRho7 (refSp0.welt [])]⟩
+
+theorem refM0G_faden (t : Faden) : (RufStartG refP refSp0 gegInit).faeden t = refZ0 := rfl
+
+/-- Both reference `requires` are `true`. -/
+theorem refP_req (g : refD.Fn) (s : World refD) (rho : Env refD (refD.params g)) :
+    ReqAmEintritt refP g s rho := by
+  cases g <;> rfl
+
+/-- The rest of the reference `einzahlen` after its write. -/
+def refRestEin : Endblock refD (vertragVon refD refEin) false [.int 0 10]
+    [Res.held (D := refD) ()] :=
+  .cons (.call (V := vertragVon refD refEin) refLies refArgsLies refHpLiesAt rfl)
+    (.ret .keine (by rfl))
+
+/-- **Witness that `VertragAmOrtG` is satisfiable with memory change, a call
+    and a return**: thread 1 of the reference program takes the lock, writes
+    `konto[0] := 100`, calls `lies` (entry logged) and returns from it
+    (return logged, result 100 in a world with `konto[0] = 100`); at the
+    machine reached, the contracts hold at every logged event of every
+    thread. -/
+theorem vertragAmOrtG_refP_zeuge : ∃ M : RufMaschineG refD,
+    RufErreichbarG refP refO 0 (RufStartG refP refSp0 gegInit) M ∧
+    (M.speicher.slots () 0 ()).n = 100 ∧
+    (∃ rho s0, RufEreignisF.eintritt refLies rho s0 ∈ (M.faeden 1).log) ∧
+    (∃ rho v s0 s1, RufEreignisF.rueck refLies rho v s0 s1 ∈ (M.faeden 1).log) ∧
+    VertragAmOrtG refP M := by
+  have h0 := refM0G_faden (1 : Faden)
+  obtain ⟨M1, s1, h1f, h1sp⟩ := w_nimmt (P := refP) (O := refO) (passes := 0) h0 ()
+    (nicht_in_nil _) (fun _ h => nomatch h)
+    (fun g _ => by rw [refM0G_faden]; exact nicht_in_nil _)
+  obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := refP) (O := refO) (passes := 0) h1f refWriteStAt
+    refRestEin refRho7 rfl rfl (heldGenau_ref rfl) _ _ rfl
+    ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+  have hoff2 : offen (M2.faeden 1).spur = [()] := by
+    rw [hZ2.spur]
+    exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans
+      (by show offen (M1.faeden 1).spur = [()]; rw [h1f]; rfl)
+  obtain ⟨M3, s3, hZ3⟩ := w_rufEnde (P := refP) (O := refO) (passes := 0) hZ2.1 refLies
+    refArgsLies refHpLiesAt rfl (.ret .keine (by rfl)) refRho7 rfl
+    (heldGenau_ref (by rw [hZ2.1] at hoff2; exact hoff2))
+  have hoff3 : offen (M3.faeden 1).spur = [()] := by
+    rw [hZ3.spur]
+    exact ((Erw.lese _ _ _).offen).trans hoff2
+  obtain ⟨M4, s4, hG4⟩ := w_rueckP (P := refP) (O := refO) (passes := 0) hZ3.1 _ _ rfl
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by rw [hZ3.1] at hoff3; exact hoff3))
+  have hfremd : ∀ t : Faden, t ≠ 1 → M4.faeden t = refZ0 := by
+    intro t ht
+    rw [rufSchrittG_fremd s4 t ht, rufSchrittG_fremd s3 t ht, rufSchrittG_fremd s2 t ht,
+      rufSchrittG_fremd s1 t ht, refM0G_faden]
+  refine ⟨M4, .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4,
+    ?_, ⟨_, _, by rw [hG4.1]; exact List.mem_cons_of_mem _ List.mem_cons_self⟩,
+    ⟨_, _, _, _, by rw [hG4.1]; exact List.mem_cons_self⟩, ?_⟩
+  · rw [hG4.2]
+    show (M3.speicher.slots () 0 ()).n = 100
+    rw [hZ3.2]
+    show (M2.speicher.slots () 0 ()).n = 100
+    rw [hZ2.2]
+    rfl
+  · intro t ev hev
+    refine ⟨fun g rho s0 _ => refP_req g s0 rho, ?_⟩
+    intro g rho v s0 s1' he
+    subst he
+    by_cases ht : t = 1
+    · subst ht
+      rw [hG4.1] at hev
+      rcases List.mem_cons.mp hev with h | h
+      · cases h
+        show decide (_ = _) = true
+        exact decide_eq_true rfl
+      · rcases List.mem_cons.mp h with h | h
+        · cases h
+        · rcases List.mem_cons.mp h with h | h
+          · cases h
+          · exact absurd h (fun h' => nomatch h')
+    · rw [hfremd t ht] at hev
+      rcases List.mem_cons.mp hev with h | h
+      · cases h
+      · exact absurd h (fun h' => nomatch h')
+
+/-! ## CUTS:
+
+  What is proved: the conclusion `VertragAmOrtG`, the per-function user
+  obligation `KoerperGut`, the start obligation `StartGut`, three decidable
+  program facts with soundness (`programmImFragment`, `fussOrtB` ->
+  `FussOrtOk`, `schreiberHaeltB`), the lock facts on the CURRENT rules of G
+  (`offen_schrittG`, `exklusivG`, `relyG_tab`), the finding
+  (`geg_lauf`, `ziel_ort_gegenbeispiel`, `ziel_ort_form_falsch`) and the
+  non-vacuity witness on `refP` (`vertragAmOrtG_refP_zeuge`).
+
+  What is NOT proved, and why:
+
+  - `ziel_ort` itself. Over G as it stands it is FALSE with every candidate
+    premise (`ziel_ort_form_falsch`). The missing premise class is: "while a
+    frame is live, its thread holds every lock the frame names in its static
+    holdings" (static holdings ⊆ held locks, from entry to return). It is a
+    fact about the RUN: the bare `gibt` step (`RufMaschineG.lean:224`) may
+    release any held lock at any time, and the bare `nimmt` step
+    (`RufMaschineG.lean:212`) is how a start thread acquires its signature
+    locks, AFTER its entry is logged. Neither a user obligation, nor a
+    hardware assumption, nor a decidable program fact can exclude a step the
+    machine offers to every run. Not formalised but of the same class: the
+    unfold steps (`dannIte*`, `dannOnOption*`, `endeBind`, `dannBind`, ...),
+    `dannExchange`, `dannAwaits` and `dannBindAxiom` read or write memory
+    WITHOUT a `HeldGenau` premise, so a start frame that has not yet taken
+    its signature locks can read a guarded carrier (and `exchange` can write
+    a guarded global) without holding its guard; `relyG_tab` therefore
+    covers tables only, and needs "no axiom writes the table".
+  - The repair (a change to G, for its owner): (1) bare `gibt L` only when
+    no frame of the thread names `held L` in its static holdings; (2) every
+    step that reads or writes memory demands `HeldGenau` (or `⊆`) of its
+    static holdings, so a start frame touches memory only after its
+    signature locks are taken. Then static holdings ⊆ held locks is an
+    invariant of every run (lock unfolds, `frei`, calls via `RufPasst.hh`,
+    returns via `nach` all keep it), and with `exklusivG` and the rely it
+    covers the whole call interval. The start obligation must then read
+    `requires` at the world where the start thread has taken its locks --
+    decidably: the `requires` of start functions read only carriers no
+    function writes.
+  - After the repair the remaining mathematics is the INTERLEAVING form of
+    the converse: `rufG_adaequat_ruf_umkehr` relates runs of ONE thread to
+    `execEnd` with `rufRumpf`; under interleaving, foreign steps change
+    carriers outside the frame's footprint, so the demand `Anspruch`
+    (equality of the frame's result up to the trace) must be weakened to
+    agreement on the footprint plus equality of the value, and the
+    sequential semantics needs a locality theorem (results depend on the
+    footprint only). The requires-at-calls leg needs a prefix form of the
+    converse (calls made BEFORE the frame returns), which `KoerperGut`'s
+    gated conjunct is shaped for.
+  - Fragment: `programmImFragment` is the syntactic check `kOk` of the
+    converse (no loops, no `leave`/`next`, no error channel, no indirect
+    call, no axiom, no oracle form); the semantic coverage `TiefK` is proved
+    for the fixture, not decided by a `Bool` here.
+  - Costs: not within reach. `Programm`/`Signatur` carry no declared
+    per-function cost (`Budget.lean`'s `Op.cost` is not attached to
+    statements), G counts no steps, and the bare lock steps make the raw
+    number of steps of a live frame UNBOUNDED (a thread may alternate
+    `gibt`/`nimmt` forever while its frame is live). A cost statement over G
+    runs needs a declared cost per function and must count non-lock steps
+    only; for the `kOk` fragment the non-lock steps of one frame (callee
+    frames excluded) are bounded by the body's syntax size, which is the
+    natural first theorem once a declared bound exists.
+-/
+
+#print axioms Gabbro.Grammatik.fussOrtB_ok
+#print axioms Gabbro.Grammatik.schreiberHaeltB_ok
+#print axioms Gabbro.Grammatik.offen_schrittG
+#print axioms Gabbro.Grammatik.exklusivG
+#print axioms Gabbro.Grammatik.relyG_tab
+#print axioms Gabbro.Grammatik.gegP_koerper_lies
+#print axioms Gabbro.Grammatik.gegP_koerper_ein
+#print axioms Gabbro.Grammatik.geg_lauf
+#print axioms Gabbro.Grammatik.ziel_ort_gegenbeispiel
+#print axioms Gabbro.Grammatik.ziel_ort_form_falsch
+#print axioms Gabbro.Grammatik.vertragAmOrtG_refP_zeuge
 
 end Gabbro.Grammatik
