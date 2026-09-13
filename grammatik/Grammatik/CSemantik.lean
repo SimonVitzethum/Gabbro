@@ -413,18 +413,19 @@ def cUpd (ρ : CEnv) (x : Nat) (v : Int) : CEnv :=
   fun y => if y = x then v else ρ y
 
 /-- The counting loop with fuel: `none` is out of fuel (NOT UB -- the
-    progress theorem assumes enough fuel). The counter ends at the exit
-    value, as in C. `runBody` is the body executor. -/
+    progress theorem assumes enough fuel). Fuel counts ITERATIONS: with
+    no iteration left the loop exits on any fuel. The counter ends at
+    the exit value, as in C. `runBody` is the body executor. -/
 def cForRun (runBody : CMem → CEnv → Nat → Option (CMem × CEnv)) (x : Nat)
     (cur hi : Int) (m : CMem) (ρ : CEnv) (fuel : Nat) : Option (CMem × CEnv) :=
-  match fuel with
-  | 0 => none
-  | n + 1 =>
-      if cur < hi then
+  if cur < hi then
+    match fuel with
+    | 0 => none
+    | n + 1 =>
         match runBody m (cUpd ρ x cur) n with
         | some (m', ρ') => cForRun runBody x (cur + 1) hi m' ρ' n
         | none => none
-      else some (m, cUpd ρ x cur)
+  else some (m, cUpd ρ x cur)
 
 /-- Statement execution: `none` is STUCK (UB) or out of fuel. The store
     fires only when the index is in bounds AND the value fits the
@@ -544,11 +545,13 @@ theorem cStmtUB_stuck : ∀ (s : CStmt) (m : CMem) (ρ : CEnv) (g : CGeom),
       case forFirst =>
           rename_i hlt h'
           cases fuel with
-          | zero => rfl
-          | succ n =>
+          | zero =>
               simp only [cExec, cForRun]
+              rw [if_pos hlt]
+          | succ n =>
               have hb : cExec body m (cUpd ρ x lo) g n = none :=
                 ih m (cUpd ρ x lo) g h' n
+              simp only [cExec, cForRun]
               rw [if_pos hlt, hb]
 
 /-- Progress for the store: clean subexpressions plus the emitter's
@@ -583,3 +586,61 @@ theorem cExec_cif_progress : ∀ (c : CExpr) (t e : CStmt) (m : CMem) (ρ : CEnv
   by_cases hz : v = 0
   · simp [hz, he]
   · simp [hz, ht]
+
+/-! ## Form E. the admitted counting `for` -/
+
+/-- An exited loop returns at any fuel: the exit costs no iteration. -/
+theorem cForRun_exit : ∀ (runBody : CMem → CEnv → Nat → Option (CMem × CEnv))
+    (x : Nat) (cur hi : Int) (m : CMem) (ρ : CEnv) (fuel : Nat),
+    ¬ cur < hi → cForRun runBody x cur hi m ρ fuel = some (m, cUpd ρ x cur) := by
+  intro runBody x cur hi m ρ fuel hlt
+  cases fuel with
+  | zero => simp [cForRun, hlt]
+  | succ n => simp [cForRun, hlt]
+
+/-- Progress for the counting loop: the body runs from every counter
+    state in range, and the fuel covers the remaining iterations. -/
+theorem cForRun_progress : ∀ (runBody : CMem → CEnv → Nat → Option (CMem × CEnv))
+    (x : Nat) (lo hi cur : Int) (m : CMem) (ρ : CEnv) (fuel : Nat),
+    lo ≤ cur → cur ≤ hi → (hi - cur).toNat ≤ fuel →
+    (∀ k m' ρ' f', lo ≤ k → k < hi → runBody m' (cUpd ρ' x k) f' ≠ none) →
+    ∃ m' ρ', cForRun runBody x cur hi m ρ fuel = some (m', ρ') := by
+  intro runBody x lo hi cur m ρ fuel hlo hcur hfuel hbody
+  induction fuel generalizing cur m ρ with
+  | zero =>
+      have heq : cur = hi := by omega
+      subst heq
+      exact ⟨m, cUpd ρ x cur, cForRun_exit _ _ _ _ _ _ _ (by omega)⟩
+  | succ n ih =>
+      by_cases hlt : cur < hi
+      · have hne := hbody cur m ρ n hlo hlt
+        obtain ⟨pm, hpm⟩ : ∃ pm, runBody m (cUpd ρ x cur) n = some pm := by
+          cases hpm : runBody m (cUpd ρ x cur) n with
+          | some pm => exact ⟨pm, rfl⟩
+          | none => simp [hpm] at hne
+        obtain ⟨m', ρ'⟩ := pm
+        obtain ⟨m'', ρ'', h''⟩ :=
+          ih (cur + 1) m' ρ' (by omega) (by omega) (by omega)
+        exact ⟨m'', ρ'', by simp [cForRun, hlt, hpm, h'']⟩
+      · have heq : cur = hi := by omega
+        subst heq
+        exact ⟨m, cUpd ρ x cur, cForRun_exit _ _ _ _ _ _ _ (by omega)⟩
+
+/-- Progress for the `for` statement: iterations covered, body clean
+    from every reachable counter state. A finished range (`hi ≤ lo`)
+    exits on any fuel. -/
+theorem cExec_cfor_progress : ∀ (x : Nat) (lo hi : Int) (body : CStmt) (m : CMem)
+    (ρ : CEnv) (g : CGeom) (fuel : Nat),
+    (hi - lo).toNat ≤ fuel →
+    (∀ k m' ρ' f', lo ≤ k → k ≤ hi →
+      cExec body m' (cUpd ρ' x k) g f' ≠ none) →
+    ∃ m' ρ', cExec (.cfor x lo hi body) m ρ g fuel = some (m', ρ') := by
+  intro x lo hi body m ρ g fuel hfuel hbody
+  by_cases hle : lo ≤ hi
+  · simp only [cExec]
+    exact cForRun_progress _ x lo hi lo m ρ fuel (by omega) hle hfuel
+      (fun k m' ρ' f' hk1 hk2 => hbody k m' ρ' f' hk1 (by omega))
+  · have hlt : ¬ lo < hi := by omega
+    cases fuel with
+    | zero => exact ⟨m, cUpd ρ x lo, by simp [cExec, cForRun, hlt]⟩
+    | succ n => exact ⟨m, cUpd ρ x lo, by simp [cExec, cForRun, hlt]⟩
