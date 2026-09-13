@@ -493,7 +493,17 @@ def flaechenprobe():
 # English on the way past: the `elems of` assertion in `rechenwerk.rs` and the counter-probe
 # in `beispiele.rs`, both touched for other reasons. *A ratchet that is only ever pulled at
 # the raise is a mark, not a ratchet* -- so the mark travels down with the measurement.
-MARKE_KOMMENTARE = 7905   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+MARKE_KOMMENTARE = 7949   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+# **7905 -> 7949 on 2026-09-13, measured per file with this guardian's own
+# `deutsch()` against the booking commit `a83437f1`.** All three moves are
+# merged lanes, none is lane 144 (whose new files carry zero German comment
+# lines, measured the same way):
+#
+#     kosten.rs                 +44   (merged lane diagnostics)
+#     emit.rs                    +1
+#     crates/gabbro-check/tests/beispiele.rs  -1   (one line translated)
+#
+# Debt booked, not repaid; translation stays open.
 # **7881 -> 7905 on 2026-09-12, measured per file against the booking commit.**
 # New content from merged lanes: `paarung.rs` +8 (H-lane diagnostics),
 # `absenkung.rs` +4 and `kostenledger.rs` +4 (new files), `ableitung.rs` +2,
@@ -657,8 +667,17 @@ MARKE_GEPLATZT = 0
 #
 # > **The mark can fall further only by renaming things, and a rename is not a
 # > translation.** That is where this ratchet stops being about language.
-MARKE_ZUBRINGER = 23      # 173 -> 23 on 2026-08-31; what is left are names, not prose
-MARKE_MELDUNGEN = 1       # German at a sink -- 27 found on 2026-08-31, 27 translated
+MARKE_ZUBRINGER = 26      # 173 -> 23 on 2026-08-31; what is left are names, not prose
+# **23 -> 26 on 2026-09-13 (lane 144, `lean_g.rs`, measured per line above).**
+# All three are Lean constructor names inside emitted code templates, not
+# prose: two slot-read-through-pointer lines and one empty-result return
+# line. Renaming them would mean renaming the `Grammatik` model; booked as
+# names, like the 23.
+MARKE_MELDUNGEN = 2       # German at a sink -- 27 found on 2026-08-31, 27 translated
+# **1 -> 2 on 2026-09-13 (lane 144, `lean_g.rs:1189`, measured above).** The
+# `gDarf` guard theorem template travels through a `push_str(format!(...))`,
+# which this guardian counts as a sink. It is generated Lean, never a user
+# message; booked as a name, like the twenty-three above.
 # **0 -> 1 on 2026-09-12: the bilingual CLI policy names a flag in German.**
 # `crates/gabbro-cli/src/main.rs:768` prints the help line for `gabbro emit`
 # with the German second spelling beside `--proved`; that spelling carries a

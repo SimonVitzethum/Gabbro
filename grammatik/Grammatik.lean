@@ -149,3 +149,5 @@ import Grammatik.CFormenH
 import Grammatik.CFormenDet
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
+import Grammatik.Export104
+import Grammatik.Export108

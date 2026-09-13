@@ -244,6 +244,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["contexts", "kontexte"],
     &["obligations", "pflichten"],
     &["lean"],
+    &["lean-g"],
     &["prove", "beweise"],
     &["blindspots", "blindstellen"],
     &["certificate", "zeugnis"],
