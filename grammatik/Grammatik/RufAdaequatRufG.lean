@@ -1021,8 +1021,8 @@ theorem w_wiederUeber {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .wieder 0 bis body ueber k⟩) :
     ∃ M', RufSchrittG P O passes M f M' ∧
-      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann ueber k)
-        (M.weltVon f) := by
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
+        (.dann (.cons (.ite bis .nil ueber) .nil) k) (M.weltVon f) := by
   subst hz
   exact ⟨_, RufSchrittG.wiederUeber M f l Γ Λ bis body ueber k ρ hhead, zustandG_neu rfl rfl⟩
 
@@ -1323,7 +1323,11 @@ theorem retryLauf_ohneAbbruch (schritt : World D → Env D Γ → Ausgang V true
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
     (hu : ∀ σ ρ, (ueberlauf σ ρ).ohneAbbruch) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ), (retryLauf schritt bis ueberlauf n σ ρ).ohneAbbruch
-  | 0, σ, ρ => hu σ ρ
+  | 0, σ, ρ => by
+      simp only [retryLauf]
+      split
+      · trivial
+      · exact hu _ ρ
   | n + 1, σ, ρ => by
       simp only [retryLauf]
       split
@@ -1362,7 +1366,11 @@ theorem retryLauf_nicht_zurueck (schritt : World D → Env D Γ → Ausgang V tr
     (hu : ∀ (σ σ' : World D) (ρ : Env D Γ) (v : ErgVal D V.erg), ueberlauf σ ρ ≠ .zurueck σ' v) :
     ∀ (n : Nat) (σ σ' : World D) (ρ : Env D Γ) (v : ErgVal D V.erg),
       retryLauf schritt bis ueberlauf n σ ρ ≠ .zurueck σ' v
-  | 0, σ, σ', ρ, v => hu σ σ' ρ v
+  | 0, σ, σ', ρ, v => by
+      simp only [retryLauf]
+      split
+      · intro h; cases h
+      · exact hu _ σ' ρ v
   | n + 1, σ, σ', ρ, v => by
       simp only [retryLauf]
       split
@@ -1571,7 +1579,11 @@ theorem retryLauf_ende_none {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (hs : ∀ σ ρ, (schritt σ ρ).ende? = none) (hu : ∀ σ ρ, (ueberlauf σ ρ).ende? = none) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
       (retryLauf schritt bis ueberlauf n σ ρ).ende? = none
-  | 0, σ, ρ => hu σ ρ
+  | 0, σ, ρ => by
+      simp only [retryLauf]
+      split
+      · rfl
+      · exact hu _ ρ
   | n + 1, σ, ρ => by
       simp only [retryLauf]
       split
@@ -1863,7 +1875,8 @@ theorem travOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Exp
 
 /-- **The loop of a `retry`, normal completion.** From `wieder n bis body
     ueber k` the machine runs to `k` exactly as `retryLauf` with bound `n`
-    ends normally: the overflow block at bound `0` (`wiederUeber`), a read
+    ends normally: at bound `0` the check `if bis {} else { overflow }`
+    (`wiederUeber`, then the `if` and the overflow block), a read
     of `bis` before each try (`wiederWeiter` on `true`, `wiederSchritt`
     into the body on `false`), the body to its normal end (`wiederFort`),
     to `next` (`dannNextWieder`, the next try) or to `leave`
@@ -1889,9 +1902,33 @@ theorem retryOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ .
       obtain ⟨M1, hs1, hZ1⟩ := w_wiederUeber (P := P) (O := O) (passes := passes) hZ.1
         bis body ueber k ρ rfl
       rw [hW] at hZ1
-      obtain ⟨M2, e2, hr2, hZ2, ho2⟩ := hueber log _ _ _ _ hex M1 _ hZ1 hΛ
-        (hA.lauf (RufLaufG.einzeln hs1))
-      exact ⟨M2, e2, RufLaufG.schritt hs1 hr2, hZ2, ho2⟩
+      have hW1 := hZ1.welt
+      have hA1 := hA.lauf (RufLaufG.einzeln hs1)
+      split at hex
+      · rename_i hw
+        simp only [Ausgang.ok.injEq] at hex
+        obtain ⟨rfl, rfl⟩ := hex
+        obtain ⟨M2, hs2, hZ2⟩ := w_iteWahr (P := P) (O := O) (passes := passes) hZ1.1
+          bis .nil ueber .nil k ρ rfl (by rw [hW1]; simpa using hw)
+        rw [hW1] at hZ2
+        obtain ⟨M3, hs3, hZ3⟩ := w_dannLeer (P := P) (O := O) (passes := passes) hZ2.1 _ ρ rfl
+        rw [hZ2.welt] at hZ3
+        obtain ⟨M4, hs4, hZ4⟩ := w_dannLeer (P := P) (O := O) (passes := passes) hZ3.1 _ ρ rfl
+        rw [hZ3.welt] at hZ4
+        exact ⟨M4, [], RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.schritt hs3
+          (RufLaufG.einzeln hs4))), hZ4, (Erw.lese _ _ _).offen⟩
+      · rename_i hw
+        have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
+          simpa using hw
+        obtain ⟨M2, hs2, hZ2⟩ := w_iteFalsch (P := P) (O := O) (passes := passes) hZ1.1
+          bis .nil ueber .nil k ρ rfl (by rw [hW1]; exact hw')
+        rw [hW1] at hZ2
+        obtain ⟨M3, e3, hr3, hZ3, ho3⟩ := hueber log _ _ _ _ hex M2 _ hZ2
+          (heldB_lese bis.orte hΛ (Λ₀ := Λ)) (hA1.lauf (RufLaufG.einzeln hs2))
+        obtain ⟨M4, hs4, hZ4⟩ := w_dannLeer (P := P) (O := O) (passes := passes) hZ3.1 k ρ' rfl
+        rw [hZ3.welt] at hZ4
+        exact ⟨M4, e3, RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (hr3.trans (RufLaufG.einzeln hs4))),
+          hZ4, by rw [ho3, (Erw.lese _ _ _).offen]⟩
   | n + 1, log, σ, σ', ρ, ρ', hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [retryLauf] at hex
@@ -2068,12 +2105,24 @@ theorem retryAbbR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (hl : l = true)
   | 0, log, σ, σ', ρ, ρ', w, hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [retryLauf] at hex
-      obtain ⟨M1, hs1, hZ1⟩ := w_wiederUeber (P := P) (O := O) (passes := passes) hZ.1
-        bis body ueber k ρ rfl
-      rw [hW] at hZ1
-      obtain ⟨M2, e2, Λx, r, hr2, hZ2, ho2⟩ := hueberA hl log _ _ _ _ w hex M1 _ hZ1 hΛ
-        (hA.lauf (RufLaufG.einzeln hs1))
-      exact ⟨M2, e2, Λx, r, RufLaufG.schritt hs1 hr2, hZ2, ho2⟩
+      split at hex
+      · simp [Ausgang.abb?] at hex
+      · rename_i hw
+        have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
+          simpa using hw
+        obtain ⟨M1, hs1, hZ1⟩ := w_wiederUeber (P := P) (O := O) (passes := passes) hZ.1
+          bis body ueber k ρ rfl
+        rw [hW] at hZ1
+        have hW1 := hZ1.welt
+        obtain ⟨M2, hs2, hZ2⟩ := w_iteFalsch (P := P) (O := O) (passes := passes) hZ1.1
+          bis .nil ueber .nil k ρ rfl (by rw [hW1]; exact hw')
+        rw [hW1] at hZ2
+        obtain ⟨M3, e3, Λx, r, hr3, hZ3, ho3⟩ := hueberA hl log _ _ _ _ w hex M2 _ hZ2
+          (heldB_lese bis.orte hΛ (Λ₀ := Λ))
+          ((hA.lauf (RufLaufG.einzeln hs1)).lauf (RufLaufG.einzeln hs2))
+        obtain ⟨M4, hs4, hZ4⟩ := peelDannR P O passes f fn stapel rho s0 hl hZ3
+        exact ⟨M4, e3, Λ, .nil, RufLaufG.schritt hs1 (RufLaufG.schritt hs2
+          (hr3.trans (RufLaufG.einzeln hs4))), hZ4, by rw [ho3, (Erw.lese _ _ _).offen]⟩
   | n + 1, log, σ, σ', ρ, ρ', w, hex, M, hZ, hΛ, hA => by
       subst hl
       have hW := hZ.welt
@@ -3622,11 +3671,22 @@ theorem retryRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ 
   | 0, log, σ, ρ, e, hpe, hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [retryLauf] at hex
-      obtain ⟨M1, hs1, hZ1⟩ := w_wiederUeber (P := P) (O := O) (passes := passes) hZ.1
-        bis body ueber k ρ rfl
-      rw [hW] at hZ1
-      exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 rfl
-        (hueberRet log _ _ e hpe hex M1 _ hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1)))
+      split at hex
+      · simp [Ausgang.ende?] at hex
+      · rename_i hw
+        have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
+          simpa using hw
+        obtain ⟨M1, hs1, hZ1⟩ := w_wiederUeber (P := P) (O := O) (passes := passes) hZ.1
+          bis body ueber k ρ rfl
+        rw [hW] at hZ1
+        have hW1 := hZ1.welt
+        obtain ⟨M2, hs2, hZ2⟩ := w_iteFalsch (P := P) (O := O) (passes := passes) hZ1.1
+          bis .nil ueber .nil k ρ rfl (by rw [hW1]; exact hw')
+        rw [hW1] at hZ2
+        exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 rfl
+          (gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs2 (Erw.lese _ _ _).offen
+            (hueberRet log _ _ e hpe hex M2 _ hZ2 (heldB_lese bis.orte hΛ (Λ₀ := Λ))
+              ((hA.lauf (RufLaufG.einzeln hs1)).lauf (RufLaufG.einzeln hs2))))
   | n + 1, log, σ, ρ, e, hpe, hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [retryLauf] at hex

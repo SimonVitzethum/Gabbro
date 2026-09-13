@@ -292,9 +292,13 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
       fun R O' => ZErg.folgt_of_eq (semV_dannRetry O' passes R n bis body ueber rest k σ ρ)⟩
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenG_lokal hF hhead ρ (.dann ueber k) (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨_, _, _, hu, huS, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨hu, huS, hk⟩,
+    refine ⟨fadenG_lokal hF hhead ρ (.dann (.cons (.ite bis .nil ueber) .nil) k) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hbS, _, _, hu, huS, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨by simp_all [Block.gOk, Stmt.gOk],
+      fun x hx => by
+        simp only [blockOrteP, stmtOrteP, List.append_nil, List.mem_append] at hx
+        rcases hx with h | h <;> first | exact hbS h | exact huS h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_wiederUeber O' passes R bis body ueber k σ ρ)⟩
   | wiederWeiter l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]

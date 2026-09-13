@@ -337,7 +337,12 @@ theorem retryLauf_ohneLogik {l : Bool} {Γ : Ctx} (schritt : World D → Env D �
     (hs : ∀ σ ρ e, schritt σ ρ ≠ .logik e) (hu : ∀ σ ρ e, ueber σ ρ ≠ .logik e) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (e : Logik D),
       retryLauf schritt bis ueber n σ ρ ≠ .logik e
-  | 0, σ, ρ, e => hu σ ρ e
+  | 0, σ, ρ, e => by
+      intro h
+      simp only [retryLauf] at h
+      split at h
+      · cases h
+      · exact hu _ ρ e h
   | n + 1, σ, ρ, e => by
       intro h
       simp only [retryLauf] at h

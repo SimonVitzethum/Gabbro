@@ -5,13 +5,14 @@
   1. THE DIFFERENCE, as a run (`retry_unterschied_zeuge`): on `refD`
      (ReferenzB.lean), `retry 1 until konto[0] == 100 { konto[0] = 100; }`
      with an overflow block that writes `konto[1] = 100`. The one pass
-     makes the condition true. The model (`execStmt`, `retryLauf`) runs
-     the overflow block and writes `konto[1]`; the corrected run
-     (`retryLaufC`) and the emitted loop do not (`retry_c_zeuge`: the C
-     run from the zero state ends with `konto[0] = 100`, `konto[1] = 0`).
-     The overflow block is a fixture: the emitter admits only a `never`
-     exit there, and with one the difference is an error run of the model
-     against a success of the C -- a write makes it visible in memory.
+     makes the condition true. The OLD model (`retryLaufAlt`, the `0`
+     case of `retryLauf` before 2026-09-13) runs the overflow block and
+     writes `konto[1]`; the corrected model (`execStmt` with the corrected
+     `retryLauf`, = `retryLaufC`) and the emitted loop do not
+     (`retry_c_zeuge`: the C run from the zero state ends with
+     `konto[0] = 100`, `konto[1] = 0`). The overflow block is a fixture:
+     the emitter admits only a `never` exit there -- a write makes the
+     difference visible in memory.
 
   2. THE EMITTED LOOP OF A CORPUS PROGRAM against the model as it stands
      (`warte_zeuge`): `beispiele/66-transport-rueckgabe.gab`,
@@ -65,15 +66,20 @@ def wRetry : Stmt refD (vertragVon refD refEin) false [.int 0 10] [Res.held (D :
     [Res.held (D := refD) ()] :=
   .retry 1 wBis wBody wUeb
 
-/-- WITNESS, the difference: from `refW0` (both slots `0`), the model's
-    run writes `konto[1]` (the overflow block ran after the one pass made
-    the condition true), the corrected run does not. -/
+/-- WITNESS, the difference: from `refW0` (both slots `0`), the OLD
+    model's run writes `konto[1]` (the overflow block ran after the one
+    pass made the condition true); the corrected model (`execStmt`) and
+    `retrySemC` do not. -/
 theorem retry_unterschied_zeuge :
-    (∃ σ', execStmt refO 0 (rufAt refP refO 0 1) wRetry refW0 refRho7 = .ok σ' refRho7 ∧
+    (∃ σ', retryLaufAlt (fun σ ρ => execBlock refO 0 (rufAt refP refO 0 1) wBody σ ρ)
+        (travInv wBis) (fun σ ρ => execBlock refO 0 (rufAt refP refO 0 1) wUeb σ ρ) 1
+        refW0 refRho7 = .ok σ' refRho7 ∧
       (σ'.slots () 0 ()).n = 100 ∧ (σ'.slots () 1 ()).n = 100) ∧
+    (∃ σ', execStmt refO 0 (rufAt refP refO 0 1) wRetry refW0 refRho7 = .ok σ' refRho7 ∧
+      (σ'.slots () 0 ()).n = 100 ∧ (σ'.slots () 1 ()).n = 0) ∧
     (∃ σ', retrySemC xEin 1 wBis wBody wUeb refW0 refRho7 = .ok σ' refRho7 ∧
       (σ'.slots () 0 ()).n = 100 ∧ (σ'.slots () 1 ()).n = 0) :=
-  ⟨⟨_, rfl, rfl, rfl⟩, ⟨_, rfl, rfl, rfl⟩⟩
+  ⟨⟨_, rfl, rfl, rfl⟩, ⟨_, rfl, rfl, rfl⟩, ⟨_, rfl, rfl, rfl⟩⟩
 
 /-- The same run, located by `retryLauf_C_verschieden`: the budget is
     spent after one pass, and there the condition holds. -/
@@ -125,6 +131,14 @@ theorem wRetry_corrC (m m' : Nat) :
   scorrC_retry xEin m m' kEin (z := 3) rfl rfl 1 (by decide) wBis_corr wBody cWBody
     (wBody_corr m') rfl wUeb cWUeb (wUeb_corr m)
 
+/-- **Witness of `scorr_retry_voll`**: the fixture's `retry` -- whose
+    overflow block WRITES memory, no `never` exit -- corresponds to the
+    emitted loop against the corrected `execStmt` itself. -/
+theorem wRetry_corr (m m' : Nat) :
+    StmtCorr xEin m kEin wRetry (retryCS 3 1 cWBis cWBody m' cWUeb) :=
+  scorr_retry_voll xEin m m' kEin (z := 3) rfl rfl 1 (by decide) wBis_corr wBody cWBody
+    (wBody_corr m') rfl wUeb cWUeb (wUeb_corr m)
+
 /-- WITNESS, the C side of the difference: the emitted loop, run from the
     zero state with the arguments of `einzahlen(k, 0, 7)`, ends normally
     with `konto[0] = 100` and `konto[1] = 0` -- the corrected run, not the
@@ -134,7 +148,7 @@ theorem retry_c_zeuge :
         (lokUpd (lokUpd (lokUpd (fun _ => .undef) 2 (.int 7)) 1 (.int 0)) 0 (.ptr ⟨.tab 0, 0⟩))
         (.norm st' ρ') ∧
       st'.mem (.tab 0) 0 = .int 100 ∧ st'.mem (.tab 0) 4 = .int 0 := by
-  obtain ⟨σ', hsem, h0, h1⟩ := retry_unterschied_zeuge.2
+  obtain ⟨σ', hsem, h0, h1⟩ := retry_unterschied_zeuge.2.2
   obtain ⟨o, hx, hO⟩ := wRetry_corrC 0 0 refW0 refSt0 refRho7 _ refW0_corr ein_envRel
     (by rw [hsem]; rfl)
   have hO' := @Eq.subst _ (fun A => StOut xEin 0 kEin A o) _ _ hsem hO
@@ -352,6 +366,7 @@ theorem warte_zeuge :
   exact ⟨_, st', rfl, hC, hc⟩
 
 #print axioms retry_unterschied_zeuge
+#print axioms wRetry_corr
 #print axioms retry_unterschied_ort
 #print axioms retry_c_zeuge
 #print axioms w66_retry

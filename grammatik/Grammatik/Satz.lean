@@ -1026,7 +1026,12 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
       GutAusgang W G σ (retryLauf schritt bis ueberlauf n σ ρ) := by
   intro n
   induction n with
-  | zero => intro σ ρ hh; exact hu σ ρ hh
+  | zero =>
+      intro σ ρ hh σ' h
+      simp only [retryLauf] at h
+      split at h
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
+      · exact (hb σ ρ hh).trans (hu _ ρ ((hb σ ρ hh).heldB hh) σ' h)
   | succ n ih =>
       intro σ ρ hh σ' h
       simp only [retryLauf] at h

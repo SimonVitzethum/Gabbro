@@ -781,6 +781,9 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ, .wieder n bis body ueber (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
+  /-- The budget is spent: `bis` is checked once more, as an `if` over the
+      overflow block (a pass that made `bis` true is a success) -- the
+      sequential `retryLauf`'s `0` case, corrected 2026-09-13. -/
   | wiederUeber (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (bis : Expr D Γ Λ .bool)
@@ -795,7 +798,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, Γ, Λ, ρ, .dann ueber k⟩⟩,
+             ⟨l, Γ, Λ, ρ, .dann (.cons (.ite bis .nil ueber) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
   | wiederWeiter (M : RufMaschineG D) (f : Faden)

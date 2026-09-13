@@ -1052,10 +1052,33 @@ theorem semV_dannRetry {Λ Λ'' : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .b
   rw [semV_dann_cons]
   rfl
 
+/-- A block `.nil` in front of a residue changes nothing. -/
+theorem weiterZ_dannLeer {Λ : List (Res D)} (k : GRest D V l Γ Λ) (o : Ausgang V l Γ) :
+    weiterZ O passes R (.dann .nil k) o = weiterZ O passes R k o := by
+  cases o <;> rfl
+
+/-- The spent `retry` (corrected 2026-09-13): `if bis {} else { overflow }`. -/
 theorem semV_wiederUeber {Λ : List (Res D)} (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
     (σ : World D) (ρ : Env D Γ) :
-    semV O passes R (.wieder 0 bis body ueber k) σ ρ = semV O passes R (.dann ueber k) σ ρ := rfl
+    semV O passes R (.wieder 0 bis body ueber k) σ ρ =
+      semV O passes R (.dann (.cons (.ite bis .nil ueber) .nil) k) σ ρ := by
+  cases hb : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) with
+  | true =>
+      rw [semV_ite O passes R bis .nil ueber .nil k σ ρ true hb]
+      show weiterZ O passes R k (retryLauf (fun σ ρ => execBlock O passes R body σ ρ) (leseB bis)
+        (fun σ ρ => execBlock O passes R ueber σ ρ) 0 σ ρ) = _
+      have hl : (leseB bis σ ρ).2 = true := hb
+      simp only [retryLauf, hl, if_true]
+      rfl
+  | false =>
+      rw [semV_ite O passes R bis .nil ueber .nil k σ ρ false hb]
+      show weiterZ O passes R k (retryLauf (fun σ ρ => execBlock O passes R body σ ρ) (leseB bis)
+        (fun σ ρ => execBlock O passes R ueber σ ρ) 0 σ ρ) = _
+      have hl : (leseB bis σ ρ).2 = false := hb
+      simp only [retryLauf, hl, Bool.false_eq_true, if_false]
+      show _ = weiterZ O passes R (.dann .nil k) (execBlock O passes R ueber (leseB bis σ ρ).1 ρ)
+      rw [weiterZ_dannLeer]
 
 theorem semV_wiederWeiter {Λ : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)

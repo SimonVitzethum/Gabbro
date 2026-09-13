@@ -167,7 +167,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .traverse t inv body =>
       2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2)
   | .retry n bis body ueber =>
-      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + kostenBlock c pa ueber
+      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
   | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
   | .axiomCall _ args _ _ _ _ _ => 1 + kostenArgs args
   | .regSchreib _ _ e => 1 + kostenExpr e
@@ -339,10 +339,10 @@ def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .travRest _ inv body ks k =>
       2 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
   | .wieder n bis body ueber k =>
-      1 + n * (kostenBlock c pa body + kostenExpr bis + 2) + kostenBlock c pa ueber +
+      1 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
         potRest c pa k
   | .wiederRest n bis body ueber k =>
-      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + kostenBlock c pa ueber +
+      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
         potRest c pa k
   | .ewig _ n inv body k =>
       1 + n * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
@@ -668,6 +668,12 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     kopfA
     · simp_all
     · have := kostenBlock_pos c pa rest; omega
+  | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
+    kopfA
+    · simp_all
+    · have := kostenBlock_pos c pa ueber
+      have hm : max 1 (kostenBlock c pa ueber) = kostenBlock c pa ueber := Nat.max_eq_right this
+      omega
   | _ =>
     kopfA
     · simp_all

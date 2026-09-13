@@ -1273,5 +1273,35 @@ thread holds `L`) and thread 1 calls `helfer(3)` holding nothing; both
 logged returns meet `result == x` (values `5` and `3`) BY THE THEOREM.
 `ntStufen`: the floors are respected.
 
+### 15.2 `retry`: the bound is checked after the last pass
+
+*The finding* (T4 continuation, `CFormenW.lean` header): the sequential
+`retryLauf` ran the overflow block as soon as the budget was spent,
+without looking at `bis`; the emitted C checks `bis` once more after the
+last pass (`if (z >= N && !(bis))`), so a pass that makes the condition
+true is a success there. The emitter is right (it is what `retry until p
+bounded N` promises).
+
+*The repair.* `retryLauf`'s `0` case (`Semantik.lean`) is now `if bis
+then ok else overflow` (from the world that recorded the read). Machine
+G's `wiederUeber` unfolds a spent loop into `if bis {} else { overflow }`
+(the existing `ite` rules do the read), so G and the sequential semantics
+agree again. Carried: `retryLauf_gut` (Satz), `retryLauf_ohneLogik`
+(`ZielOrtGanz`), `retryLauf_ohneAbbruch`/`_nicht_zurueck`/`_ende_none` and
+the three `retry` simulations (`retryOkR`, `retryAbbR`, `retryRetR`,
+`RufAdaequatRufG`), `semV_wiederUeber`/`semH_wiederUeber` (the frame
+semantics of the replays of every goal theorem, flagship included), the
+cost model (`KostenG`: a `retry` and its loop states pay `2 + cost(bis)`
+for the last check; the loop witness's bound is now 20, not 18).
+`CFormenW.lean`: `retryLaufC_eq` is now the equality `retryLaufC =
+retryLauf`; `retrySemC` is defined by `retryLauf`; the old run is kept as
+`retryLaufAlt` (`retryLauf_eq_alt`, `retryLauf_C_verschieden`: where the
+old model ran the overflow block and the corrected one succeeds).
+`scorr_retry_voll`: the emitted loop corresponds to `execStmt` for EVERY
+overflow block (no `never` premise); `scorr_retry` keeps its statement.
+Witnesses: `retry_unterschied_zeuge` (the old model writes `konto[1]`,
+the corrected model and the C do not), `wRetry_corr` (a writing overflow
+block, now covered).
+
 (End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
 

@@ -244,13 +244,14 @@ instance rufDF_fn_deq : DecidableEq rufDF.Fn := inferInstanceAs (DecidableEq Boo
 
 theorem hP_start_fn : (initF 0).1 = rufCallerF := rfl
 theorem hP_tief : rufTief hP 2 (initF 0).1 = true := by decide
-theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 18 := by decide
+theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 20 := by decide
 
 /-- **`frame_schritte_beschraenkt_zeuge_schleife`.** The start frame of
     `hP` (thread 0, the driver `false`) runs `retry 1 { let x = true(…);
-    leave; }` and then its return: the bound by call depth is 18 (the
+    leave; }` and then its return: the bound by call depth is 20 (the
     loop's one try is counted once: body plus `until` plus the loop
-    bookkeeping, the callee's 5 inside it), and the witness run of
+    bookkeeping, the callee's 5 inside it, and 2 more for the check of
+    `until` after the last try since the `retry` correction), and the witness run of
     RufMaschineG §10 takes 9 own steps (`endeEntf`, `dannRetry`,
     `wiederSchritt` with `until` false, the `dannBindCall` push, the
     callee's leaf, `rueckBind` into the waiting binder, `peelSchrumpfLeave`,
@@ -258,7 +259,7 @@ theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 18 := by decide
     included, since they are steps of thread 0 while the driver's frame is
     below them. -/
 theorem frame_schritte_beschraenkt_zeuge_schleife :
-    rufTief hP 2 (initF 0).1 = true ∧ kostenTief hP 0 2 (initF 0).1 = 18 ∧
+    rufTief hP 2 (initF 0).1 = true ∧ kostenTief hP 0 2 (initF 0).1 = 20 ∧
     ∃ lauf : SegLauf hP rufOF 0 M0H H9H,
       aktivVor 0 0 lauf ∧ segZaehle lauf 0 = 9 ∧
       segZaehle lauf 0 ≤ kostenTief hP 0 2 (initF 0).1 := by
