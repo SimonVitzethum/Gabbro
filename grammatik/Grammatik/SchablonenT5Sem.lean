@@ -321,6 +321,65 @@ theorem sperrabdruck_zeuge :
   intro x xs hc
   exact kein_wartezyklus _ hE x xs hc
 
+/-! ## 4. `option.sonderwert` -- `Some` is never `None`, payloads are
+    in range.
+
+`option index into T` is `Expr.some (e : Expr Γ Λ (.index n))` and
+`None` is `Expr.none n`; `eval` sends them to `Option.some` /
+`Option.none` of the value world. So a `Some`-constructed value is
+always distinguishable from `None` (the `kodiere_injektiv`
+`None`/`Some` cases), and its payload is an in-range index by §1.
+Modelled on `beweise/Option_Sonderwert.thy`, first half. The word
+half (`N < 2^w`, collapse at `N = 2^w`) has NO counterpart: the model
+has no machine-word lowering (`roh` maps `none` to `-1` with no
+modulus) -- see the skip note. -/
+
+/-- Soundness of `option.sonderwert`, disjointness: `Some` never
+    evaluates to `None`. The expression is consumed by the `eval`
+    computation. -/
+theorem sonderwert_disjoint (e : Expr D Γ Λ (.index n))
+    (σ₀ σ : World D) (ρ : Env D Γ) :
+    eval σ₀ (.some e) σ ρ ≠
+      eval σ₀ ((.none n) : Expr D Γ Λ (.opt n)) σ ρ := by
+  have hsome : eval σ₀ (.some e) σ ρ =
+      Option.some (eval σ₀ e σ ρ) := rfl
+  have hnone : eval σ₀ ((.none n) : Expr D Γ Λ (.opt n)) σ ρ =
+      Option.none := rfl
+  rw [hsome, hnone]
+  intro h
+  cases h
+
+/-- Soundness of `option.sonderwert`, payload bound: the payload of a
+    `Some` is an in-range index, via §1. `h` is consumed by the
+    injection, `e` by the bound. -/
+theorem sonderwert_schranke (e : Expr D Γ Λ (.index n))
+    (σ₀ σ : World D) (ρ : Env D Γ)
+    (k : Zahl 0 (n - 1))
+    (h : eval σ₀ (.some e) σ ρ = Option.some k) :
+    0 ≤ k.n ∧ k.n ≤ n - 1 := by
+  have he : eval σ₀ e σ ρ = k := Option.some_inj.mp h
+  have hb := indexschranke_eval n e σ₀ σ ρ
+  rw [he] at hb
+  exact hb
+
+/-- Witness for the `option.sonderwert` pair: `refP`'s index
+    `refIdxEin` (fired by the run at `refSchrittBF`), wrapped in
+    `some`, is apart from `none` with an in-range payload; the run
+    reaches `MB` with slot `0` moved. -/
+theorem sonderwert_zeuge :
+    eval semW0 (.some refIdxEin) semW0 refRho7 ≠
+      eval semW0 ((.none (refD.count ())) :
+        Expr refD [.int 0 10] [Res.held (D := refD) ()]
+          (.opt (refD.count ()))) semW0 refRho7 ∧
+    (∀ k : Zahl 0 (refD.count () - 1),
+      eval semW0 (.some refIdxEin) semW0 refRho7 = Option.some k →
+      0 ≤ k.n ∧ k.n ≤ refD.count () - 1) ∧
+    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  refine ⟨sonderwert_disjoint refIdxEin semW0 semW0 refRho7,
+    fun k h => sonderwert_schranke refIdxEin semW0 semW0 refRho7 k h,
+    refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - Skeleton only: `semW0` is defined; the five tied templates are open.
 -/
