@@ -1,0 +1,34 @@
+-- erwartet: N231
+-- Lane E5: the translator body is not the runnable shape. The ordinary
+-- checker accepts it -- a pure `let` and the region back -- but the
+-- first cut runs only `return <region>;`, so the stage refuses it by
+-- name instead of guessing what the extra line means.
+module m {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    let x = 1;
+    return region;
+}
+impl fn f() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 64 ops
+{
+    let s = @m#sum() { 10 20 30 40 };
+    return s;
+}
+}

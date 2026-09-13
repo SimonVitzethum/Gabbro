@@ -52,6 +52,12 @@ const BENANNT: &[&str] = &[
     // second or dangling translator, `N202` a translator with effects,
     // `N203` one without `decreases`, `N204` one answering another type.
     "N200", "N201", "N202", "N203", "N204",
+    // Lane E5: the translation stage, first cut -- `N230` a region whose
+    // integer count misses the payload count, `N231` a translator body
+    // outside the runnable fragment, `N232` a payload entry outside the
+    // field range, `N233` a declaration the cut cannot carry, `N234` a
+    // contract over the payload parameter.
+    "N230", "N231", "N232", "N233", "N234",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

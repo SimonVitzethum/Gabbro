@@ -2888,6 +2888,211 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
     );
 }
 
+// -- Lane E5: the translation stage, first cut --------------------------------------------
+// An exact-length integer region fills the payload table row by row through
+// the identity translator; the call passes one argument short, the region
+// filling the payload pointer. Each refusal below falls with exactly its
+// own code -- one fault keeps one refusal.
+
+/// The accepted shape: a summing library over one integer field, with the
+/// translator body and the caller body as parameters.
+fn uebersetzung_summe(uebersetzer_rumpf: &str, rumpf: &str) -> String {
+    format!(
+        "module m {{
+table SumTab count 4 {{
+    slot {{
+        v : u32 in 0 .. 100,
+    }}
+}}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects {{ reads t.slots }}
+    costs <= 16 ops
+{{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}}
+translator build for sum(region : SumTab) -> SumTab
+    effects {{ pure }}
+    costs <= 8 ops
+    decreases region.v
+{{
+    {uebersetzer_rumpf}
+}}
+impl fn f() -> u32 in 0 .. 400
+    effects {{ reads SumTab.slots }}
+    costs <= 128 ops
+{{
+    {rumpf}
+}}
+}}"
+    )
+}
+
+#[test]
+fn translation_accepts_integer_region_in_binding_position() {
+    faellt_nicht(&uebersetzung_summe(
+        "return region;",
+        "let s = @m#sum() { 10 20 30 40 };\n    return s;",
+    ));
+}
+
+#[test]
+fn translation_accepts_integer_region_in_statement_position() {
+    faellt_nicht(&uebersetzung_summe(
+        "return region;",
+        "@m#sum() { 10 20 30 40 };\n    return 0;",
+    ));
+}
+
+#[test]
+fn translation_accepts_two_calls_with_two_payloads() {
+    faellt_nicht(&uebersetzung_summe(
+        "return region;",
+        "@m#sum() { 1 2 3 4 };\n    let s = @m#sum() { 2 4 6 8 };\n    return s;",
+    ));
+}
+
+#[test]
+fn translation_arity_too_many_n230() {
+    faellt_genau(
+        &uebersetzung_summe(
+            "return region;",
+            "let s = @m#sum() { 10 20 30 40 50 };\n    return s;",
+        ),
+        &["N230"],
+    );
+}
+
+#[test]
+fn translation_arity_too_few_n230() {
+    faellt_genau(
+        &uebersetzung_summe(
+            "return region;",
+            "let s = @m#sum() { 10 20 };\n    return s;",
+        ),
+        &["N230"],
+    );
+}
+
+#[test]
+fn translation_range_violation_n232() {
+    faellt_genau(
+        &uebersetzung_summe(
+            "return region;",
+            "let s = @m#sum() { 10 200 30 40 };\n    return s;",
+        ),
+        &["N232"],
+    );
+}
+
+#[test]
+fn translation_range_violation_points_at_the_offending_token() {
+    let quelle = uebersetzung_summe(
+        "return region;",
+        "let s = @m#sum() { 10 200 30 40 };\n    return s;",
+    );
+    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    let _ = pruefe(&baum, &mut absagen);
+    let weigerung = absagen
+        .absagen
+        .iter()
+        .find(|a| a.code == "N232")
+        .expect("N232 fired");
+    let index = gabbro_syntax::span::Zeilenindex::neu(&quelle);
+    let gemeldet = index.stelle(&quelle, weigerung.span.von);
+    let token_versatz = quelle.find("200").expect("the region names `200`") as u32;
+    let erwartet = index.stelle(&quelle, token_versatz);
+    assert_eq!(
+        (gemeldet.zeile, gemeldet.spalte),
+        (erwartet.zeile, erwartet.spalte),
+        "N232 must point at the offending region token, not at the call"
+    );
+}
+
+#[test]
+fn translation_non_identity_translator_n231() {
+    faellt_genau(
+        &uebersetzung_summe(
+            "let x = 1;\n    return region;",
+            "let s = @m#sum() { 10 20 30 40 };\n    return s;",
+        ),
+        &["N231"],
+    );
+}
+
+#[test]
+fn translation_non_integer_region_stays_n069() {
+    // A word in the region is outside the first cut: the region is
+    // captured, not interpreted, exactly as before. The missing pointer
+    // argument is M143's -- the region fills nothing here.
+    faellt_genau(
+        &uebersetzung_summe(
+            "return region;",
+            "@m#sum() { dispatch 0 };\n    return 0;",
+        ),
+        &["M143", "N069"],
+    );
+}
+
+/// A library with an ordinary parameter beside the payload pointer: the
+/// ordinary arguments are checked against the shortened signature like
+/// any call's.
+fn uebersetzung_skaliert(ruf: &str) -> String {
+    format!(
+        "module m {{
+table SumTab count 4 {{
+    slot {{
+        v : u32 in 0 .. 100,
+    }}
+}}
+library fn scaled(f : u32 in 0 .. 10, t : ptr<normal, r> SumTab) -> u32 in 0 .. 4000 payload SumTab
+    ensures result <= 4000
+    effects {{ reads t.slots }}
+    costs <= 16 ops
+{{
+    return f * (t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v);
+}}
+translator build for scaled(region : SumTab) -> SumTab
+    effects {{ pure }}
+    costs <= 8 ops
+    decreases region.v
+{{
+    return region;
+}}
+impl fn f() -> u32 in 0 .. 4000
+    effects {{ reads SumTab.slots }}
+    costs <= 128 ops
+{{
+    {ruf}
+}}
+}}"
+    )
+}
+
+#[test]
+fn translation_ordinary_argument_checked_against_shortened_signature() {
+    faellt_nicht(&uebersetzung_skaliert(
+        "let s = @m#scaled(3) { 1 2 3 4 };\n    return s;",
+    ));
+}
+
+#[test]
+fn translation_wrong_ordinary_argument_falls_without_translation_code() {
+    // The payload is fine, so no N-code fires; the `bool` where `u32`
+    // stands is the ordinary per-argument diagnostic.
+    faellt_genau(&uebersetzung_skaliert("let s = @m#scaled(true) { 1 2 3 4 };\n    return s;"), &["M135"]);
+}
+
+#[test]
+fn translation_explicit_payload_argument_n233() {
+    // Both arguments passed: the region would have nowhere to go, and an
+    // explicit payload value would bypass the translation.
+    faellt_genau(
+        &uebersetzung_skaliert("let s = @m#scaled(3, 4) { 1 2 3 4 };\n    return s;"),
+        &["N233"],
+    );
+}
+
 // -- Lane E6: the hardware profile and library requirements ------------------------------
 // A profile with keyed entries and a referenced assumption, plus a library
 // requiring a subset of it, passes every rule of the lane. Each refusal has

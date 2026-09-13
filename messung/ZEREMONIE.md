@@ -9,7 +9,7 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       88        A1  4 · A4 84
   redundant        0
   tragend       1281
-111 von 1526 Stellen dürfen sinken
+111 von 1548 Stellen dürfen sinken
 
 > **Lane-126 merge resolution (2026-09-12, measured).** Master's `108 von
 > 1445` stood on the pre-merge tree; the run above reads `111 von 1501` on
@@ -19,6 +19,11 @@ $ ./instrumente/zaehle-zeremonie.py
 > **Lane-89 merge resolution (2026-09-12, measured).** The `92 von 1404`
 > stood on the pre-merge lane tree; the run on the union reads `111 von
 > 1526`. Booked as measured, not added up.
+>
+> **111 von 1548 on 2026-09-13 (lane E5/129, measured on the merged tree).**
+> The delta against lane 89's 1526 is exactly this lane's 22 sites
+> (`beispiele/106`/`107`, 11 each, none may-fall; the five poison probes
+> are refused before the count). Booked as measured, not added up.
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.

@@ -2376,6 +2376,55 @@ lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf '
      's/"syscall\\n"/"nop\\n"/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 13 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 23. The translated library call, running (lane E5/129) -------------------------------
+#
+# `beispiele/106` is the first cut of the translation stage
+# (`PLAN-ERWEITUNG.md` §6, lane E5): the region `{ 10 20 30 40 }` becomes
+# the four rows of `SumTab` through the identity translator, and the call
+# passes the payload as a `static const` table argument
+# (`&sum__nutzlast_*`). The driver runs the call and reads the sum:
+#
+#    Expected: 100 -- 10 + 20 + 30 + 40, summed at run time out of the
+#    translated payload, not out of the source text.
+#
+# The poison moves one payload entry (`{40u}` to `{41u}` in the EMITTED
+# C): the run then answers 101, so the comparison measures that the
+# observed value comes OUT OF THE PAYLOAD and not out of the region text
+# (which the run never sees).
+TREIBER106='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", hole_summe());
+    return 0;
+}
+'
+lauf "beispiel106" "$W/beispiele/106-summe-uebersetzt.gab" "$TREIBER106" "100" \
+     's/{40u}/{41u}/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 24. Two translated calls, both positions (lane E5/129) ------------------------------
+#
+# `beispiele/107` calls the same sum library twice -- once in statement
+# position, once in binding position, with a different payload each. Every
+# call site gets its own `static const` table (named by call span, so the
+# two never share); the driver runs the binding call:
+#
+#    Expected: 20 -- 2 + 4 + 6 + 8. The statement call answers nothing --
+#    it exercises the lowering arm, not the value.
+#
+# The poison moves one entry of the SECOND payload (`{8u}` to `{9u}`):
+# the run answers 21, so a shared or swapped table would show here.
+TREIBER107='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", hole_zwanzig());
+    return 0;
+}
+'
+lauf "beispiel107" "$W/beispiele/107-summe-zwei-rufe.gab" "$TREIBER107" "20" \
+     's/{8u}/{9u}/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2934,7 +2983,11 @@ fi
 # `+2` are `100-hardwareprofil` and `101-hardwareprofil-schluessel` (lane 117:
 # examples following the merged language, translator per library function).
 # Both emit and compile; the other 85 stand as booked.
-MARKE_EMIT=87
+# **87 -> 89 on 2026-09-13 (lane E5/129, measured on the merged tree).** `+2`
+# are `106-summe-uebersetzt` and `107-summe-zwei-rufe` (this lane, counted
+# above: the first translated library calls, each with its own `lauf`).
+# Both emit, compile and run; the other 87 stand as booked.
+MARKE_EMIT=89
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

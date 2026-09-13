@@ -369,13 +369,15 @@ pub const NAMEN: &[Satz] = &[
     Satz {
         name: "namen.bibliothek_ruf",
         kennungen: &["N069"],
-        aussage: "Every RESOLVED library call is refused with the translation \
-                  diagnostic -- once per call, in both positions, naming the \
-                  translator that WOULD run the region. Its arguments, \
-                  effects, error channel and costs are checked exactly like an \
-                  ordinary call's; only the region is still not interpreted, so \
-                  until a translator RUNS it (declared since lane E3, running \
-                  it is lane E5) the call cannot pass.",
+        aussage: "Every resolved library call OUTSIDE the first translation \
+                  cut is refused with the translation diagnostic -- once per \
+                  call, in both positions, naming the translator that WOULD \
+                  run the region. Its arguments, effects, error channel and \
+                  costs are checked exactly like an ordinary call's; only the \
+                  region is still not interpreted, so until a translator RUNS \
+                  it the call cannot pass. Calls the first cut translates \
+                  (exact-length integer regions, `namen.ubersetzung_lauf`) \
+                  never reach this code.",
         vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
                     without a payload would be a silent acceptance of a region \
                     nobody compiled. `beispiele/gift/820` carries a declaration, \
@@ -384,6 +386,7 @@ pub const NAMEN: &[Satz] = &[
                     the region -- at its first token, carried back through \
                     the region span map (`regionkarte.rs`) -- never at the \
                     call around it.",
+        stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/820` (declaration plus translator plus \
                       calls, `N069` only); `/823` (wrong argument type beside \
                       it); `beispiele/gift/870` (the E3-numbered positive); \
@@ -391,8 +394,8 @@ pub const NAMEN: &[Satz] = &[
                       region token, in statement and in binding position); \
                       counter-direction in `paesse.rs` (`bibliothek_*`, \
                       `translator_declared_call_names_it_n069`, \
-                      `library_n069_points_*`).",
-        stand: Satzstand::Gemessen,
+                      `library_n069_points_*`, \
+                      `translation_non_integer_region_stays_n069`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
     },
     Satz {
@@ -439,6 +442,54 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
+    },
+    // --- lane E5, 2026-09-13: the translation stage, first cut ------------------------
+    //
+    // **The structure lane of PLAN-ERWEITUNG.md §6 that runs translators.**
+    // An exact-length integer region fills the payload table row by row
+    // through the identity translator; the call passes one argument short,
+    // the region filling the payload pointer, and the emitter hands the
+    // function a `static const` table. Five refusals hold the five things
+    // no ordinary check can: the arity against the payload count (`N230`),
+    // a translator body outside the runnable fragment (`N231`), a value
+    // outside the field range (`N232`, at the offending region token), a
+    // declaration the first cut cannot carry (`N233`), and a contract over
+    // the payload parameter no source value could discharge (`N234`). The
+    // translator itself is never verified: the certificate checks the
+    // payload's TYPING, every entry in its field range, by `decide`.
+    Satz {
+        name: "namen.ubersetzung_lauf",
+        kennungen: &["N230", "N231", "N232", "N233", "N234"],
+        aussage: "Every resolved library call with an exact-length integer \
+                  region is translated: the region becomes the payload row by \
+                  row through the identity translator, the call passes one \
+                  argument short with the region filling the payload pointer, \
+                  and the emitter passes the payload as a `static const` \
+                  table argument. A mistranslated call is refused in exactly \
+                  one of the five codes, at the offending site -- the region \
+                  token for arity and range, the declaration for the rest.",
+        vorbehalt: "First cut, and narrow in four named directions: \
+                    non-integer regions stay `N069` (the region is captured, \
+                    not interpreted, exactly as before); payload tables with \
+                    anything but one integer field and a constant count are \
+                    `N233`; translators between two different tables have no \
+                    runnable body and are `N231`; the Lean program-logic \
+                    channel still maps every library call to \
+                    `CallStatement`. One fault keeps one refusal: declaration \
+                    defects fire once per library function, call defects once \
+                    per call.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/106-summe-uebersetzt` (accepted, emits, the \
+                      emission check runs it); `/107` (two calls, both \
+                      positions, two payloads); `beispiele/gift/905` \
+                      (`N230`, long region, span at the homeless token); \
+                      `/906` (`N231`, non-identity body); `/907` (`N232`, \
+                      span at the offending token); `/908` (`N233`, no \
+                      payload parameter); `/909` (`N234`, contract over the \
+                      payload parameter); counter-direction in `paesse.rs` \
+                      (`translation_*`) and `tests/uebersetzung.rs` \
+                      (acceptance, lowering, certificate mirror).",
+        fundstelle: "crates/gabbro-check/src/uebersetzung.rs; SYNTAX.md §7.3; PLAN-ERWEITUNG.md §6",
     },
     // --- lane E6, 2026-09-12: the hardware profile and library requirements ------------
     //

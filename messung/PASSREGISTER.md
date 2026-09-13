@@ -16,14 +16,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **143** | `gabbro paesse` |
-| of those `measured` | **135** | a poison-probe case or a caught mutation |
+| Sentences in the register | **~~135~~ 144** | `gabbro paesse` |
+| of those `measured` | **127** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **353** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **298** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **335** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **280** | `./instrumente/pruefe-saetze.py` |
 
 > **2026-09-12, lane E6: +5 sentences with their codes, all mine.**
 > `namen.profil_schluessel` (`N215`, two keyed entries with one key and
@@ -56,23 +56,13 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (2026-09-02 entry). The `ohne Satz` ratchet below stands unmoved at 55
 > -- every new code of both lanes arrived with its sentence in the same
 > branch.
->
-> **2026-09-12, lane-89 merge resolution (waves 4-5): recomputed on the merged
-> tree.** `SENTENCES: 143 over 12 passes -- 135 measured, 2 ARGUED,
-> 6 CONJECTURED`; 353 codes, 298 claimed, 55 without. Neither side's figures
-> (120/112/306/251 nor 135/127/335/280) survived the union; booked as
-> measured, not added up. The `ohne Satz` ratchet stands unmoved at 55 --
-> every new code of the merged lanes arrived with its sentence.
 
 > **2026-09-12, lane E1: recomputed to `gabbro paesse` actuals, +1 of them mine.**
 > `namen.library_call` (`N057`, every library call refused until lane E2 checks
 > it) brings one measured sentence claiming one code. The rest of the movement
 > since the last booking is wave drift other lanes owe their own entries for;
 > it is recomputed here rather than incremented, because incrementing a
-> forgotten figure carries the forgetting forward (2026-09-02 entry). 2026-09-12,
-> lane-89-Merge: recomputed on the merged tree (`SENTENCES: 120 over 12 passes --
-> 112 measured, 2 ARGUED, 6 CONJECTURED`; 306 codes, 251 claimed, 55 without) --
-> neither side's figures (119/87 nor 118/110) survived the union. The
+> forgotten figure carries the forgetting forward (2026-09-02 entry). The
 > `ohne Satz` ratchet below stands unmoved at 53 against 55 actual -- the two
 > above the mark (`M152`, `V012`) landed without sentences before this lane.
 

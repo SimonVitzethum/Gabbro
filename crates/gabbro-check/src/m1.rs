@@ -1526,7 +1526,20 @@ impl<'a> Pruefer<'a> {
                 if let Some(z) =
                     self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
                 {
-                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                    if let Some(mut sig) = self.u.funktionen.get(&z.name).cloned() {
+                        // **Lane E5:** the region fills the library function's
+                        // last parameter (a pointer at the payload table), so
+                        // the call passes one argument short and is held
+                        // against the shortened signature. `requires` over the
+                        // filled parameter goes quiet here (`position` misses
+                        // it) -- the translation stage refuses it by name
+                        // (`N234`) instead of checking around it.
+                        if let Some(n) =
+                            crate::uebersetzung::fuell_index(&self.u, &self.modul, r)
+                        {
+                            sig.parameter.truncate(n);
+                            argtypen.truncate(n);
+                        }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
                         let _ = self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
                     }
@@ -2022,7 +2035,18 @@ impl<'a> Pruefer<'a> {
                 if let Some(z) =
                     self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
                 {
-                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                    if let Some(mut sig) = self.u.funktionen.get(&z.name).cloned() {
+                        // **Lane E5:** same shortened signature as at the
+                        // statement form -- the region fills the last
+                        // parameter, so the binding call passes one short.
+                        // The bypassed slot draws no second diagnostic here;
+                        // the stage refuses it (`N233`) where it stands.
+                        if let Some(n) =
+                            crate::uebersetzung::fuell_index(&self.u, &self.modul, r)
+                        {
+                            sig.parameter.truncate(n);
+                            argtypen.truncate(n);
+                        }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
                         return self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
                     }

@@ -155,7 +155,14 @@ NICHT = {"saetze.rs"}
 # `P006` site (profile entries in `parse.rs`, lane E6/117 `06e3e5e4`), with
 # probes `893`/`894` on the two new codes. Measured by diffing the affected
 # sets, not by subtracting totals. All three are new rules, not double issues.
-MARKE = 28
+# **28 -> 29 on 2026-09-13 («E5», recomputed to actuals, not incremented).**
+# The merged run says 29: the delta against 28 is exactly one identifier --
+# `N233` with three faces (untranslatable payload table, missing payload
+# parameter, explicit payload argument), one three-clause shape rule like
+# `N065`'s three, similarity 0.35. The five-code budget of the lane
+# (230-234, all taken) leaves no number for a split; whoever finds a sixth
+# splits `N233` and may lower both marks.
+MARKE = 29
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -260,7 +267,11 @@ MARKE = 28
 # tree reads 83, and the delta is exactly the two E6 probes above (`893` on
 # `N218`, `894` on `N219`) -- measured by diffing the affected sets, which are
 # otherwise identical. Two correct probes inherit a new ambiguity.
-MARKE_PROBEN = 83
+# **83 -> 84 on 2026-09-13 («E5», recomputed to actuals, not incremented).**
+# The merged run says 84: the delta against 83 is exactly one probe --
+# `beispiele/gift/908` on the three-faced `N233` above, which falls green
+# without proving WHICH face fell, exactly like `gift/242` on `E008`.
+MARKE_PROBEN = 84
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

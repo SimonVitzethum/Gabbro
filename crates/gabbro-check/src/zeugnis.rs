@@ -495,17 +495,19 @@ pub const EINORDNUNG: &[Posten] = &[
                 through an exit of its own, because `reason` values are handed out by people \
                 and no word is free for „no error\"",
     },
-    // **Lane E2: booked, although nothing lowers it.** An entry without a
-    // lowering is harmless by this table's own contract; a lowering without
-    // an entry is `UNZUGEORDNET`. The checker refuses every library call
-    // (`N057` unresolved, `N069` resolved), so no C carries this mark --
-    // the translation lane re-books it with the lowering it brings.
+    // **Lane E5: booked with the lowering it brings.** An accepted call
+    // lowers with its payload (`static const` table argument); the entry
+    // stays `Fremd`, because the region -- the user's syntax -- still has
+    // no derivation of its own. Only the payload's TYPING is certified
+    // (lane E5 certificate), never the translator that filled it.
     Posten {
         konstrukt: "library call",
         traegt: Traegt::Fremd,
         grund: "a run-time call of a function someone else provides (the checker \
-                refuses every such call -- `N057` unresolved, `N069` resolved) \
-                -- no prototype, no lowering, only the refusal",
+                refuses an untranslated one -- `N057` unresolved, `N069` outside \
+                the first cut, `N230`-`N234` a mistranslated one -- and lowers an \
+                accepted one with its payload) -- no prototype of its own, only \
+                the call with the payload beside it",
     },
 ];
 

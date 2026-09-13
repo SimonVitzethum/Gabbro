@@ -1,0 +1,33 @@
+-- erwartet: N232
+-- Lane E5: the translator's output violates the payload range. The
+-- region fills the rows, and `200` leaves `0 .. 100` -- the payload
+-- check refuses it at the offending region token (lane E7), never at
+-- the call around it.
+module m {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    return region;
+}
+impl fn f() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 64 ops
+{
+    let s = @m#sum() { 10 200 30 40 };
+    return s;
+}
+}
