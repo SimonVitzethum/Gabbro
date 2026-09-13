@@ -1393,12 +1393,8 @@ def parseRegRest (f : Nat) (rg : SReg) (toks : List Token) :
       else if strEq s "depends" then match parseTraegerListe f rest with
         | .error e => .error e
         | .ok (cs, r) => parseRegRest f { rg with abhaengt := cs } r
-      else match fordereZeichen ";" toks with
-        | .error e => .error e
-        | .ok r => .ok (rg, r)
-    | _ => match fordereZeichen ";" toks with
-      | .error e => .error e
-      | .ok r => .ok (rg, r)
+      else .ok (rg, toks)
+    | _ => .ok (rg, toks)
 /-- A `depends`/carrier list: `{` … `}` of one- or two-segment
     names (trailing commas allowed). -/
 def parseTraegerListe (f : Nat) (toks : List Token) :
