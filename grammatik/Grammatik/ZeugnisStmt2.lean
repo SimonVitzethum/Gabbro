@@ -312,4 +312,247 @@ theorem onGrund_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   obtain ⟨as, _⟩ := grundArms2_sound D V l Γ Λ Λ arms harms
   exact ⟨Stmt.onGrund (Expr.grund n ⟨r, hlt⟩) as, trivial⟩
 
+/-! ## Block certificates: the five remaining `Block` shapes
+
+    `CertSeq` (in `ZeugnisStmt.lean`) is a closed inductive and cannot be
+    extended from here; `CertSeq2` therefore carries the five new shapes
+    with `CertSeq2` tails and a `lift` arm that reuses every old block
+    print (validity and soundness delegate). -/
+
+/-- The five remaining `Block` shapes as plain data: `bindCallInd`
+    (nullary through a signature number, the R-2 fragment, `RufPasst` as
+    proof) and the four float steps (`gleit` over two `CertFl` reads,
+    `gleitLit` over literal data, `gleitVon` over the int fragment,
+    `gleitNarrow` with a falling branch). -/
+inductive CertSeq2 (D : Deklaration) (V : Vertrag D) where
+  | lift (q : CertSeq D V)
+  | cons2 (s : CertStmt2 D V) (Λm : List (Res D)) (rest : CertSeq2 D V)
+  | bindCallInd (f : D.Fn) (n : Nat) (lo hi : Int) (Λc : List (Res D))
+    (hp : RufPasst D V (D.sigNr n) Λc) (rest : CertSeq2 D V)
+  | gleit (op : GleitOp) (a b : CertFl D) (lo hi : Int × Int) (rest : CertSeq2 D V)
+  | gleitLit (q lo hi : Int × Int) (rest : CertSeq2 D V)
+  | gleitVon (e : CertExpr D) (lo hi : Int × Int) (rest : CertSeq2 D V)
+  | gleitNarrow (e : CertFl D) (lo hi : Int × Int) (sonst : CertEnd D V)
+    (rest : CertSeq2 D V)
+
+/-- Second-batch block validity. `bindCallInd` recomputes the signature
+    equation, the nullary shape, the reason freedom and the claimed
+    result type; `gleit`/`gleitNarrow` the float bounds on every operand;
+    `gleitVon` the int range; `gleitLit` carries literal data the model
+    does not constrain, so only the tail recomputes. -/
+def certSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) : CertSeq2 D V → Prop
+  | .lift q => certSeqGueltig D V l Γ Λ Λ' q
+  | .cons2 s Λm rest =>
+    certStmt2Gueltig D V l Γ Λ Λm s ∧ certSeq2Gueltig D V l Γ Λm Λ' rest
+  | .bindCallInd f n lo hi Λc _ rest =>
+    D.sig f = n ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
+      (D.sigNr n).gruende = 0 ∧ (D.sigNr n).erg = some (.int lo hi) ∧
+      certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest
+  | .gleit _ a b lo hi rest =>
+    certFlTyp D Γ Λ a ≠ none ∧ certFlTyp D Γ Λ b ≠ none ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+  | .gleitLit _ lo hi rest =>
+    certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+  | .gleitVon e lo hi rest =>
+    certRange D Γ Λ e ≠ none ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+  | .gleitNarrow e lo hi sonst rest =>
+    certFlTyp D Γ Λ e ≠ none ∧ certEndGueltig D V l Γ Λ sonst ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+
+/-- Second-batch block validity as `Decidable`, by structural recursion. -/
+def decSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (q : CertSeq2 D V) :
+    Decidable (certSeq2Gueltig D V l Γ Λ Λ' q) :=
+  match q with
+  | .lift r =>
+    inferInstanceAs (Decidable (certSeqGueltig D V l Γ Λ Λ' r))
+  | .cons2 s Λm rest =>
+    haveI := decStmt2Gueltig D V l Γ Λ Λm s
+    haveI := decSeq2Gueltig D V l Γ Λm Λ' rest
+    inferInstanceAs (Decidable (certStmt2Gueltig D V l Γ Λ Λm s ∧
+      certSeq2Gueltig D V l Γ Λm Λ' rest))
+  | .bindCallInd f n lo hi Λc _ rest =>
+    haveI := decSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest
+    inferInstanceAs (Decidable (D.sig f = n ∧ Λ = Λc ∧
+      (D.sigNr n).params = [] ∧ (D.sigNr n).gruende = 0 ∧
+      (D.sigNr n).erg = some (.int lo hi) ∧
+      certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest))
+  | .gleit _ a b lo hi rest =>
+    haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (certFlTyp D Γ Λ a ≠ none ∧
+      certFlTyp D Γ Λ b ≠ none ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
+  | .gleitLit _ lo hi rest =>
+    haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs
+      (Decidable (certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
+  | .gleitVon e lo hi rest =>
+    haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (certRange D Γ Λ e ≠ none ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
+  | .gleitNarrow e lo hi sonst rest =>
+    haveI := decEndGueltig D V l Γ Λ sonst
+    haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (certFlTyp D Γ Λ e ≠ none ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
+
+instance instDecSeq2 (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (q : CertSeq2 D V) :
+    Decidable (certSeq2Gueltig D V l Γ Λ Λ' q) :=
+  decSeq2Gueltig D V l Γ Λ Λ' q
+
+/-! ## Joint second-batch statement soundness -/
+
+/-- Joint second-batch statement soundness: dispatch to the four
+    per-constructor lemmas. -/
+theorem stmt2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (s : CertStmt2 D V)
+    (h : certStmt2Gueltig D V l Γ Λ Λ' s) :
+    ∃ _ : Stmt D V l Γ Λ Λ', True := by
+  revert h
+  match s with
+  | .assignDurch t f n rw i e =>
+    intro h
+    exact assignDurch_sound D V l Γ Λ Λ' t f n rw i e h
+  | .callInd f n Λc hp =>
+    intro h
+    exact callInd_sound D V l Γ Λ Λ' f n Λc hp h
+  | .onTag cs i p arms =>
+    intro h
+    exact onTag_sound D V l Γ Λ Λ' cs i p arms h
+  | .onGrund n r arms =>
+    intro h
+    exact onGrund_sound D V l Γ Λ Λ' n r arms h
+
+/-! ## Joint second-batch block soundness: structural, all cases inline
+
+    The five new shapes elaborate here (not in the per-constructor
+    lemmas below, which are single-constructor corollaries of this
+    function): splitting them into a `mutual` block defeats structural
+    recursion, since each helper recurses on a certificate it receives
+    as an argument rather than on its own matched subterm. -/
+
+/-- Joint second-batch block soundness: `lift` reuses the old layer,
+    `cons2` threads through both statement layers, the five new shapes
+    elaborate inline. Every hypothesis is used. -/
+theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (q : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ' q) :
+    ∃ _ : Block D V l Γ Λ Λ', True := by
+  revert h
+  match q with
+  | .lift r =>
+    intro h
+    obtain ⟨r', _⟩ := seq_sound D V l Γ Λ Λ' r h
+    exact ⟨r', trivial⟩
+  | .cons2 s Λm rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    obtain ⟨hs, hrest⟩ := h
+    obtain ⟨s', _⟩ := stmt2_sound D V l Γ Λ Λm s hs
+    obtain ⟨r', _⟩ := seq2_sound D V l Γ Λm Λ' rest hrest
+    exact ⟨Block.cons s' r', trivial⟩
+  | .bindCallInd f n lo hi Λc hp rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    obtain ⟨hsig, hΛc, hpar, hgr, he, hrest⟩ := h
+    subst hΛc
+    obtain ⟨r', _⟩ :=
+      seq2_sound D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest hrest
+    exact ⟨Block.bindCallInd (Expr.fnref f n hsig)
+      (by rw [hpar]; exact Args.nil) he hp hgr r', trivial⟩
+  | .gleit op a b lo hi rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    cases ha : certFlTyp D Γ Λ a with
+    | none => exact absurd ha h.1
+    | some _ =>
+      cases hb : certFlTyp D Γ Λ b with
+      | none => exact absurd hb h.2.1
+      | some _ =>
+        obtain ⟨ea, _⟩ := certFl_sound a _ _ ha
+        obtain ⟨eb, _⟩ := certFl_sound b _ _ hb
+        obtain ⟨r', _⟩ :=
+          seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest h.2.2
+        exact ⟨Block.gleit op ea eb lo hi r', trivial⟩
+  | .gleitLit q lo hi rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest h
+    exact ⟨Block.gleitLit q lo hi r', trivial⟩
+  | .gleitVon e lo hi rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    obtain ⟨hne, hrest⟩ := h
+    cases he : certRange D Γ Λ e with
+    | none => exact absurd he hne
+    | some p =>
+      obtain ⟨l1, h1⟩ := p
+      obtain ⟨ee, _⟩ := zeugnis_sound e l1 h1 he
+      obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest hrest
+      exact ⟨Block.gleitVon ee lo hi r', trivial⟩
+  | .gleitNarrow e lo hi sonst rest =>
+    intro h
+    simp only [certSeq2Gueltig] at h
+    obtain ⟨hne, hsonst, hrest⟩ := h
+    cases hf : certFlTyp D Γ Λ e with
+    | none => exact absurd hf hne
+    | some q =>
+      obtain ⟨l1, h1⟩ := q
+      obtain ⟨ee, _⟩ := certFl_sound e l1 h1 hf
+      obtain ⟨es, _⟩ := end_sound D V l Γ Λ sonst hsonst
+      obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest hrest
+      exact ⟨Block.gleitNarrow ee lo hi es r', trivial⟩
+
+/-! ## Block soundness, one lemma per constructor
+
+    Single-constructor corollaries of `seq2_sound`: each states the
+    elaboration of one new shape and proves it by applying the joint
+    lemma to the certificate the hypotheses form. -/
+
+/-- `bindCallInd` soundness (nullary callees, the R-2 fragment). -/
+theorem bindCallInd_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
+    (Γ : Ctx) (Λ Λ' : List (Res D)) (f : D.Fn) (n : Nat) (lo hi : Int)
+    (Λc : List (Res D)) (hp : RufPasst D V (D.sigNr n) Λc)
+    (rest : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ'
+      (.bindCallInd f n lo hi Λc hp rest)) :
+    ∃ _ : Block D V l Γ Λ Λ', True :=
+  seq2_sound D V l Γ Λ Λ' (.bindCallInd f n lo hi Λc hp rest) h
+
+/-- `gleit` soundness. -/
+theorem gleit_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (op : GleitOp) (a b : CertFl D) (lo hi : Int × Int)
+    (rest : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleit op a b lo hi rest)) :
+    ∃ _ : Block D V l Γ Λ Λ', True :=
+  seq2_sound D V l Γ Λ Λ' (.gleit op a b lo hi rest) h
+
+/-- `gleitLit` soundness. -/
+theorem gleitLit_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (q lo hi : Int × Int) (rest : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleitLit q lo hi rest)) :
+    ∃ _ : Block D V l Γ Λ Λ', True :=
+  seq2_sound D V l Γ Λ Λ' (.gleitLit q lo hi rest) h
+
+/-- `gleitVon` soundness. -/
+theorem gleitVon_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+    (Λ Λ' : List (Res D)) (e : CertExpr D) (lo hi : Int × Int)
+    (rest : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleitVon e lo hi rest)) :
+    ∃ _ : Block D V l Γ Λ Λ', True :=
+  seq2_sound D V l Γ Λ Λ' (.gleitVon e lo hi rest) h
+
+/-- `gleitNarrow` soundness. -/
+theorem gleitNarrow_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
+    (Γ : Ctx) (Λ Λ' : List (Res D)) (e : CertFl D) (lo hi : Int × Int)
+    (sonst : CertEnd D V) (rest : CertSeq2 D V)
+    (h : certSeq2Gueltig D V l Γ Λ Λ'
+      (.gleitNarrow e lo hi sonst rest)) :
+    ∃ _ : Block D V l Γ Λ Λ', True :=
+  seq2_sound D V l Γ Λ Λ' (.gleitNarrow e lo hi sonst rest) h
+
 end Gabbro.Grammatik
