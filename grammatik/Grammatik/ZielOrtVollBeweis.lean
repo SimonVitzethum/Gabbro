@@ -555,7 +555,7 @@ theorem popV_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     frame becomes a fresh replayed head. The callee's `requires` holds at
     the machine's entry world (`pushV_req`), for the log. -/
 theorem pushV_ok (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
-    (hFrag : ∀ f, (P.rumpf f).vOk = true)
+    (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true)
     {z : RufFadenG D} {W : World D} (hF : FadenV P passes z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
@@ -614,6 +614,68 @@ theorem pushV_ok (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       kurzA_mono hka (lese_laenge _ _ _), hrc hok', hreqκ, hctrκ, ?_⟩, hSt⟩, hreq0⟩
   intro R O' hR hA
   have hw := hweiter O' R σ
+  rw [hρk] at hw
+  exact fortV_mono (F := ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩)
+    (heq' R O' hR hA) hw
+
+/-- **A push through a read set `os` and a parameter function `rhoF`** --
+    the shape of an indirect call, whose callee `g` the pointer read at the
+    key names (the sequential side only needs it at worlds agreeing with the
+    machine world on the footprint, `hlogik`, `hweiter`). -/
+theorem pushV_gen (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
+    (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true)
+    {z : RufFadenG D} {W : World D} (hF : FadenV P passes z W)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
+    (os : List (D.Tab ⊕ D.Glob)) (g : D.Fn) (rhoF : World D → Env D (D.params g))
+    (hS : r.okV P (fussOrte P z.kopf.f) →
+      (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrte P z.kopf.f)
+    (hrho : r.okV P (fussOrte P z.kopf.f) → ∀ σ : World D,
+      GleichAuf (fussOrte P z.kopf.f) σ W → rhoF (σ.lese Λ os) = rhoF (W.lese Λ os))
+    {lc : Bool} {Γc : Ctx} {Λc : List (Res D)} (ρc : Env D Γc)
+    (rc : GRest D (vertragVon D z.kopf.f) lc Γc Λc)
+    (hrc : r.okV P (fussOrte P z.kopf.f) → rc.okV P (fussOrte P z.kopf.f))
+    (hlogik : ∀ (O' : Orakel D) R σ (e : Logik D), GleichAuf (fussOrte P z.kopf.f) σ W →
+      R g (σ.lese Λ os) (rhoF (σ.lese Λ os)) = .logik e → semV O' passes R r σ ρ = .logik e)
+    (hweiter : ∀ (O' : Orakel D) R σ, GleichAuf (fussOrte P z.kopf.f) σ W →
+      FortV passes ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩ g
+        (semV O' passes R r σ ρ) R O' (R g (σ.lese Λ os) (rhoF (σ.lese Λ os)))) :
+    FadenV P passes
+      ⟨⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩ :: z.stapel,
+        ⟨g, rhoF (W.lese Λ os), W.lese Λ os,
+          ⟨false, D.params g, Signatur.anfang D (D.signatur g), rhoF (W.lese Λ os),
+            .ende (P.rumpf g)⟩⟩,
+        (W.lese Λ os).spur,
+        RufEreignisF.eintritt g (rhoF (W.lese Λ os)) (W.lese Λ os) :: z.log⟩
+      (W.lese Λ os) ∧
+    ReqAmEintritt P g (W.lese Λ os) (rhoF (W.lese Λ os)) := by
+  obtain ⟨⟨H, HA, σ, hreq, hf, hv, hk, hfa, hra, hka, hg, hok, heq⟩, hSt⟩ := hF
+  have hok' : r.okV P (fussOrte P z.kopf.f) := by rw [hr] at hok; exact hok
+  have heq' : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
+      PasstV R H → PasstA O' HA →
+      (zErg (execEnd (V := vertragVon D z.kopf.f) O' passes R (P.rumpf z.kopf.f) z.kopf.s0
+        z.kopf.rho)).folgt (semV O' passes R r σ ρ) := by
+    intro R O' hR hA
+    have := heq R O' hR hA
+    rw [hr] at this
+    exact this
+  have hctr := hS hok'
+  have hgκ : GleichAuf (fussOrte P z.kopf.f) (σ.lese Λ os) (W.lese Λ os) := hg.lese Λ Λ os os
+  have hρk : rhoF (σ.lese Λ os) = rhoF (W.lese Λ os) := hrho hok' σ hg
+  have hreqκ := pushV_req hO hK hreq hf hv hfa hra r heq' g (σ.lese Λ os) (rhoF (σ.lese Λ os))
+    (fun O' R e h => hlogik O' R σ e hg h)
+  rw [hρk] at hreqκ
+  have hctrκ : GleichAuf ((P.requires g).orte ++ (P.ensures g).orte) (σ.lese Λ os)
+      (W.lese Λ os) := GleichAuf.mono (fun _ h => hctr h) hgκ
+  have hreq0 := req_transfer hreqκ
+    (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hctrκ)
+  refine ⟨⟨⟨[], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkV_nil P, kurzV_nil _,
+    funkA_nil, rahmenA_nil, kurzA_nil _,
+    GleichAuf.refl _ _, ⟨hFrag g, fuss_rumpf P g⟩, fun R O' _ _ => ZErg.folgt_refl _⟩,
+    ⟨H, HA, σ.lese Λ os, hreq, hf, hv, kurzV_mono hk (lese_laenge _ _ _), hfa, hra,
+      kurzA_mono hka (lese_laenge _ _ _), hrc hok', hreqκ, hctrκ, ?_⟩, hSt⟩, hreq0⟩
+  intro R O' hR hA
+  have hw := hweiter O' R σ hg
   rw [hρk] at hw
   exact fortV_mono (F := ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩)
     (heq' R O' hR hA) hw

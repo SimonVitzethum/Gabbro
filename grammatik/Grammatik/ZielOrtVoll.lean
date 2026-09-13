@@ -30,11 +30,14 @@ theorem rest_okV {F : RufRahmenG D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {�
 /-- **The acting thread keeps its replay and its log** -- every rule of G:
     the head-local steps by the residue step lemmas at the sequential
     world, the leaves by leaf locality or by recording an axiom answer, the
-    pushes by `pushV_ok`, the normal pops by `popV_ens` and `popV_kopf`,
-    the reason pops by `popV_kopf`; the rules outside the fragment (indirect
-    calls, register reads, `awaits`) find a head residue that is not in it. -/
+    pushes by `pushV_ok` (direct) and `pushV_gen` (indirect: the pointer
+    read at the key names the callee, whose contract carriers the fragment
+    puts in the footprint), the normal pops by `popV_ens` and `popV_kopf`,
+    the reason pops by `popV_kopf`; the rules outside the fragment (register
+    reads, `awaits`) find a head residue that is not in it. -/
 theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
-    (hFrag : ∀ f, (P.rumpf f).vOk = true) (e0 : Ereignis D) {M M' : RufMaschineG D} {u : Faden}
+    (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (e0 : Ereignis D)
+    {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
     (hF : FadenV P passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log) :
     FadenV P passes (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
@@ -666,6 +669,120 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
+  -- indirect calls: the pointer read at the key names the callee
+  | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
+    subst hs0 hrho
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    obtain ⟨hks, hss, _⟩ := okV_dann_cons (kopfV_okV hF.1 hhead)
+    simp only [stmtOrteP, List.append_subset] at hss
+    have hkand : KandOk P (fussOrte P (M.faeden u).kopf.f) n := kandP_ok hks
+    have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
+        eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
+      intro σ hgσ
+      rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
+      exact hv
+    obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
+      (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
+      (fun _ σ hgσ => by
+        show umsig hg _ = umsig hg _
+        rw [evalArgs_gleichAuf args (fun _ h => hss.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      ρ (.dann rest k) (fun hok => (okV_dann_cons hok).2.2)
+      (fun O' R σ e hgσ h => by
+        rw [semV_dann_cons]
+        simp only [execStmt, hev σ hgσ, h]
+        exact weiterZ_logik O' passes R _ e)
+      (fun O' R σ hgσ => by
+        rw [semV_dann_cons]
+        simp only [execStmt, hev σ hgσ]
+        cases R g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+        | ok σa v =>
+            exact ⟨fun _ => ZErg.folgt_refl _,
+              fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
+        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | logik e => trivial
+        | hardware e => trivial)
+    exact ⟨hFad, logOk_eintritt hL hReq⟩
+  | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
+    subst hs0 hrho
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    obtain ⟨hks, hss, _⟩ := okV_ende_cons (kopfV_okV hF.1 hhead)
+    simp only [stmtOrteP, List.append_subset] at hss
+    have hkand : KandOk P (fussOrte P (M.faeden u).kopf.f) n := kandP_ok hks
+    have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
+        eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
+      intro σ hgσ
+      rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
+      exact hv
+    obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
+      (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
+      (fun _ σ hgσ => by
+        show umsig hg _ = umsig hg _
+        rw [evalArgs_gleichAuf args (fun _ h => hss.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      ρ (.ende rest) (fun hok => (okV_ende_cons hok).2.2)
+      (fun O' R σ e hgσ h => by
+        rw [semV_ende_cons]
+        simp only [execStmt, hev σ hgσ, h]
+        rfl)
+      (fun O' R σ hgσ => by
+        rw [semV_ende_cons]
+        simp only [execStmt, hev σ hgσ]
+        cases R g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+        | ok σa v =>
+            exact ⟨fun _ => ZErg.folgt_refl _,
+              fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
+        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | logik e => trivial
+        | hardware e => trivial)
+    exact ⟨hFad, logOk_eintritt hL hReq⟩
+  | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu
+      hneu =>
+    subst hs0 hrho
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    obtain ⟨hks, hss, _⟩ := kopfV_okV hF.1 hhead
+    simp only [Block.vOk, Bool.and_eq_true] at hks
+    simp only [blockOrteP, List.append_subset] at hss
+    have hkand : KandOk P (fussOrte P (M.faeden u).kopf.f) n := kandP_ok hks.1
+    have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
+        eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
+      intro σ hgσ
+      rw [eval_gleichAuf p (fun _ h => hss.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
+      exact hv
+    obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
+      (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
+      (fun _ σ hgσ => by
+        show umsig hg _ = umsig hg _
+        rw [evalArgs_gleichAuf args (fun _ h => hss.1.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      ρ (.wartet rest k)
+      (fun hok => by
+        obtain ⟨hks', hss', hk⟩ := hok
+        simp only [Block.vOk, Bool.and_eq_true] at hks'
+        simp only [blockOrteP, List.append_subset] at hss'
+        exact ⟨hks'.2, hss'.2, hk⟩)
+      (fun O' R σ e hgσ h => by
+        rw [semV_dann]
+        simp only [execBlock, hev σ hgσ, h]
+        exact weiterZ_logik O' passes R _ e)
+      (fun O' R σ hgσ => by
+        rw [semV_dann]
+        simp only [execBlock, hev σ hgσ]
+        cases R g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+        | ok σa v =>
+            refine ⟨fun hw => by simp [RufRahmenG.wartend, GRest.wartend] at hw,
+              fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
+            rcases hc with hc | ⟨_, _, hc⟩
+            · cases hc
+              exact ZErg.folgt_refl _
+            · cases hc
+        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | logik e => trivial
+        | hardware e => trivial)
+    exact ⟨hFad, logOk_eintritt hL hReq⟩
   -- normal pops
   | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     subst hfg hs0 hs1 hv
@@ -844,7 +961,7 @@ theorem andereV (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
   · exact schritt_traeger hO hs c (Or.inr (hfrei _))
 
 /-- **The start machine is replayed.** -/
-theorem zielInvV_start (hFrag : ∀ f, (P.rumpf f).vOk = true) (sp : Speicher D)
+theorem zielInvV_start (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hStart : StartGut P sp init) :
     ZielInvV P passes (RufStartG P sp init) := by
   have hz : ∀ t, (RufStartG P sp init).faeden t =
@@ -870,7 +987,7 @@ theorem zielInvV_start (hFrag : ∀ f, (P.rumpf f).vOk = true) (sp : Speicher D)
 /-- One step keeps the global invariant. -/
 theorem zielInvV_schritt (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFuss : fussOrtB P fs = true) (hK : ∀ f, KoerperGutV P passes f)
-    (hFrag : ∀ f, (P.rumpf f).vOk = true) (e0 : Ereignis D) (sp : Speicher D)
+    (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (e0 : Ereignis D) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvV P passes M) :
@@ -898,8 +1015,10 @@ theorem zielInvV_schritt (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g
       `StartExklusiv` (the boot assignment);
     * (b) hardware: `GutO O`;
     * (c) decidable program facts over a complete member list `fs`: the
-      covered fragment (`programmImFragmentV`: no indirect call, no
-      register read, no `awaits`) and the footprint check (`fussOrtB`);
+      covered fragment (`programmImFragmentV`: no register read, no
+      `awaits`; an indirect call only where every function of its
+      signature has its contract carriers in the caller's footprint) and
+      the footprint check (`fussOrtB`);
     * the declaration declares a table, a global or a lock (`e0`: an event
       exists; it gives each recorded call answer and each recorded axiom
       answer a fresh trace position).
@@ -917,8 +1036,8 @@ theorem ziel_ort_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List 
     (hex : StartExklusiv init) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       VertragAmOrtG P M := by
-  have hFragF : ∀ f, (P.rumpf f).vOk = true :=
-    fun f => (List.all_eq_true.mp hFrag) f (hvoll f)
+  have hFragF : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true :=
+    programmImFragmentV_ok P hvoll hFrag
   intro M hr
   have hI : ZielInvV P passes M := by
     induction hr with
@@ -1179,7 +1298,9 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
   whose bodies are in the fragment `vOk` (loops `traverse`/`retry`/
   `forever` with the `forever` budget `passes`, the exits `leave`/`next`,
   reason returns and `let … else`, axiom calls in statement and binding
-  position, and everything `ziel_ort` covered), whose footprint check
+  position, indirect calls whose candidates' contract carriers are in the
+  caller's footprint, and everything `ziel_ort` covered), whose footprint
+  check
   passes, whose bodies satisfy `KoerperGutV`, whose start assignment is
   exclusive and meets `StartGut`, with an oracle satisfying `GutO`, every
   reachable machine satisfies `VertragAmOrtG`. Every premise is used:
@@ -1212,10 +1333,12 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
     (Axiom calls do not have this problem: every axiom answer appends to
     the sequential trace in the recorded oracle, so no two consultations
     share a key.)
-  - Indirect calls (`callInd`, `bindCallInd`): the footprint `fussOrte`
-    does not contain the contract carriers of indirect callees; covering
-    them needs a footprint over every function of the pointer's signature
-    (finite by `hvoll`) -- a change of `fussOrte`/`fussOrtB`, not done.
+  - Indirect calls are covered only where every function of the
+    pointer's signature has its contract carriers in the caller's footprint
+    (`KandOk`, decided by `kandB` over the complete list `fs`); the
+    footprint `fussOrte` itself is unchanged, so an indirect caller that
+    wants a candidate's contract in its footprint must read those carriers
+    (or name them in its own contract).
   - Declarations without any table, global and lock (the `e0` premise):
     recorded answers need a fresh trace position; without events every
     world has the empty trace, keys collapse to (callee, parameters), and

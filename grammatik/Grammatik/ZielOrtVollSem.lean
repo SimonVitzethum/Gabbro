@@ -28,9 +28,12 @@
     blocks, the `else` block of `let … else` on a reason): if that end
     block ends in `leave`/`next` inside a loop, G is stuck there, and the
     new residue predicts nothing (`sonst`). A preorder with `sonst` on top.
-  * `vOk`: the covered fragment -- every form but the indirect calls and
-    the register and visibility forms (`regLies`, `regLiesElse`,
-    `awaits`); and `GRest.okV`, residues in it that read inside a footprint.
+  * `vOk K`: the covered fragment -- every form but the register and
+    visibility forms (`regLies`, `regLiesElse`, `awaits`); an indirect call
+    through a pointer of signature `n` where `K n` holds (every function of
+    that signature has its contract carriers in the footprint, `KandOk`;
+    decided over the complete member list, `kandB`); and `GRest.okV`,
+    residues in it that read inside a footprint.
 -/
 import Grammatik.ZielOrtSem
 
@@ -38,77 +41,118 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-! ## 1. The covered fragment -/
+/-! ## 1. The covered fragment
+
+    `vOk K`: every form but the register and visibility forms; an indirect
+    call through a pointer of signature `n` is admitted where `K n` holds.
+    The replay takes `K n` to be "every function of signature `n` has its
+    contract carriers in the caller's footprint" (`KandOk`); the decidable
+    program fact computes it over the complete member list (`kandB`). -/
 
 mutual
 
-/-- The statement is in the covered fragment: no indirect call. -/
-def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+/-- The statement is in the covered fragment. -/
+def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : Nat → Bool) :
     Stmt D V l Γ Λ Λ' → Bool
-  | .ite _ t e => t.vOk && e.vOk
-  | .onOption _ p a => p.vOk && a.vOk
-  | .onTag _ arms => arms.vOk
-  | .onGrund _ arms => arms.vOk
-  | .locks _ _ body => body.vOk
-  | .breaking _ body => body.vOk
-  | .traverse _ _ body => body.vOk
-  | .retry _ _ body ueber => body.vOk && ueber.vOk
-  | .forever _ _ body => body.vOk
-  | .callInd .. => false
+  | .ite _ t e => t.vOk K && e.vOk K
+  | .onOption _ p a => p.vOk K && a.vOk K
+  | .onTag _ arms => arms.vOk K
+  | .onGrund _ arms => arms.vOk K
+  | .locks _ _ body => body.vOk K
+  | .breaking _ body => body.vOk K
+  | .traverse _ _ body => body.vOk K
+  | .retry _ _ body ueber => body.vOk K && ueber.vOk K
+  | .forever _ _ body => body.vOk K
+  | .callInd (n := n) .. => K n
   | _ => true
 
-/-- The block is in the covered fragment: no indirect bind-call, no
-    register read, no `awaits`. -/
-def Block.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+/-- The block is in the covered fragment: no register read, no `awaits`. -/
+def Block.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : Nat → Bool) :
     Block D V l Γ Λ Λ' → Bool
   | .nil => true
-  | .cons s rest => s.vOk && rest.vOk
-  | .bind _ rest => rest.vOk
-  | .bindCall _ _ _ _ _ rest => rest.vOk
-  | .bindCallInd .. => false
-  | .bindCallElse _ _ _ _ _ err rest => err.vOk && rest.vOk
-  | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk
+  | .cons s rest => s.vOk K && rest.vOk K
+  | .bind _ rest => rest.vOk K
+  | .bindCall _ _ _ _ _ rest => rest.vOk K
+  | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
+  | .bindCallElse _ _ _ _ _ err rest => err.vOk K && rest.vOk K
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
   | .regLies .. => false
   | .regLiesElse .. => false
   | .awaits .. => false
-  | .exchange _ _ _ _ rest => rest.vOk
-  | .narrow _ _ _ sonst rest => sonst.vOk && rest.vOk
-  | .pruefung _ sonst rest => sonst.vOk && rest.vOk
-  | .gleit _ _ _ _ _ rest => rest.vOk
-  | .gleitLit _ _ _ rest => rest.vOk
-  | .gleitVon _ _ _ rest => rest.vOk
-  | .gleitNarrow _ _ _ sonst rest => sonst.vOk && rest.vOk
+  | .exchange _ _ _ _ rest => rest.vOk K
+  | .narrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
+  | .pruefung _ sonst rest => sonst.vOk K && rest.vOk K
+  | .gleit _ _ _ _ _ rest => rest.vOk K
+  | .gleitLit _ _ _ rest => rest.vOk K
+  | .gleitVon _ _ _ rest => rest.vOk K
+  | .gleitNarrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
 
-def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : Nat → Bool) :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retGrund .. => true
   | .leave .. => true
   | .next .. => true
-  | .cons s rest => s.vOk && rest.vOk
-  | .bind _ rest => rest.vOk
+  | .cons s rest => s.vOk K && rest.vOk K
+  | .bind _ rest => rest.vOk K
 
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
-  | .cons b rest => b.vOk && rest.vOk
+  | .cons b rest => b.vOk K && rest.vOk K
 
 def GrundArms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {n : Nat} : GrundArms D V l Γ Λ Λ' n → Bool
+    {n : Nat} (K : Nat → Bool) : GrundArms D V l Γ Λ Λ' n → Bool
   | .nil => true
-  | .cons b rest => b.vOk && rest.vOk
+  | .cons b rest => b.vOk K && rest.vOk K
 
 end
 
-/-- **The covered fragment, as a decidable program fact**: every body is in
-    `vOk` (loops, exits, the error channel, axiom calls admitted; indirect
-    calls, register reads and `awaits` not). -/
-def programmImFragmentV (P : Programm D) (fs : List D.Fn) : Bool :=
-  fs.all fun f => (P.rumpf f).vOk
+/-- The candidates of an indirect call through a pointer of signature `n`
+    -- every function of that signature -- have their contract carriers in
+    the footprint `S`. -/
+def KandOk (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Prop :=
+  ∀ g : D.Fn, D.sig g = n → (P.requires g).orte ++ (P.ensures g).orte ⊆ S
 
-theorem armWahlG_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+/-- `KandOk` as the admissibility predicate of the fragment (for the replay). -/
+noncomputable def kandP (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Bool :=
+  @decide (KandOk P S n) (Classical.propDecidable _)
+
+theorem kandP_ok {P : Programm D} {S : List (D.Tab ⊕ D.Glob)} {n : Nat}
+    (h : kandP P S n = true) : KandOk P S n := by
+  unfold kandP at h
+  exact @of_decide_eq_true _ (Classical.propDecidable _) h
+
+/-- `KandOk`, decided over a member list of the functions. -/
+def kandB (P : Programm D) (fs : List D.Fn) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Bool :=
+  fs.all fun g => !(decide (D.sig g = n)) ||
+    ((P.requires g).orte ++ (P.ensures g).orte).all fun o => S.any fun o' => decide (o' = o)
+
+/-- Soundness of `kandB` over a complete member list. -/
+theorem kandB_kandP (P : Programm D) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (S : List (D.Tab ⊕ D.Glob)) (n : Nat) (h : kandB P fs S n = true) : kandP P S n = true := by
+  unfold kandP
+  refine @decide_eq_true _ (Classical.propDecidable _) fun g hg o ho => ?_
+  have h1 := (List.all_eq_true.mp h) g (hvoll g)
+  simp only [Bool.or_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at h1
+  rcases h1 with h1 | h1
+  · exact absurd hg h1
+  · obtain ⟨o', ho', he⟩ := List.any_eq_true.mp ((List.all_eq_true.mp h1) o ho)
+    rw [← of_decide_eq_true he]
+    exact ho'
+
+/-- **The covered fragment, as a decidable program fact**: every body is in
+    `vOk` (loops, exits, the error channel, axiom calls admitted; an
+    indirect call admitted where every function of its signature has its
+    contract carriers in the caller's footprint; register reads and
+    `awaits` not). -/
+def programmImFragmentV (P : Programm D) (fs : List D.Fn) : Bool :=
+  fs.all fun f => (P.rumpf f).vOk (kandB P fs (fussOrte P f))
+
+theorem armWahlG_vOk {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
-    arms.vOk = true → (armWahlG arms v).2.1.vOk = true
+    arms.vOk K = true → (armWahlG arms v).2.1.vOk K = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
       simp only [Arms.vOk, Bool.and_eq_true] at h
@@ -117,18 +161,19 @@ theorem armWahlG_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [Arms.vOk, Bool.and_eq_true] at h
       exact armWahlG_vOk rest _ h.2
 
-theorem armWahlG_vOk' {V : Vertrag D} {l : Bool} {Γ : Ctx}
+theorem armWahlG_vOk' {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
     (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.vOk = true) :
-    b.vOk = true := by
+    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.vOk K = true) :
+    b.vOk K = true := by
   have h0 := armWahlG_vOk arms v h
   rw [hw] at h0
   exact h0
 
-theorem grundWahlG_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+theorem grundWahlG_vOk {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
     ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
-    arms.vOk = true → (grundWahlG arms r).vOk = true
+    arms.vOk K = true → (grundWahlG arms r).vOk K = true
   | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨0, _⟩, h => by
       simp only [GrundArms.vOk, Bool.and_eq_true] at h
@@ -137,12 +182,160 @@ theorem grundWahlG_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       simp only [GrundArms.vOk, Bool.and_eq_true] at h
       exact grundWahlG_vOk rest _ h.2
 
+/-! ### The admissibility predicate is monotone -/
+
+section Mono
+
+variable {K K' : Nat → Bool} (hKK : ∀ n, K n = true → K' n = true)
+include hKK
+
+mutual
+
+theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (s : Stmt D V l Γ Λ Λ') → s.vOk K = true → s.vOk K' = true
+  | .ite _ t e, h => by
+      simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Block.vOk_mono t h.1, Block.vOk_mono e h.2⟩
+  | .onOption _ p a, h => by
+      simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Block.vOk_mono p h.1, Block.vOk_mono a h.2⟩
+  | .onTag _ arms, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Arms.vOk_mono arms h
+  | .onGrund _ arms, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact GrundArms.vOk_mono arms h
+  | .locks _ _ body, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Block.vOk_mono body h
+  | .breaking _ body, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Block.vOk_mono body h
+  | .traverse _ _ body, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Block.vOk_mono body h
+  | .retry _ _ body ueber, h => by
+      simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Block.vOk_mono body h.1, Block.vOk_mono ueber h.2⟩
+  | .forever _ _ body, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Block.vOk_mono body h
+  | .callInd .., h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact hKK _ h
+  | .assignSlot .., _ => rfl
+  | .assignDurch .., _ => rfl
+  | .assignGlob .., _ => rfl
+  | .schreibBytes .., _ => rfl
+  | .assignVar .., _ => rfl
+  | .uebergang .., _ => rfl
+  | .call .., _ => rfl
+  | .axiomCall .., _ => rfl
+  | .regSchreib .., _ => rfl
+  | .transition .., _ => rfl
+  | .publish .., _ => rfl
+  | .advances .., _ => rfl
+  | .retires .., _ => rfl
+  | .ret .., _ => rfl
+  | .retGrund .., _ => rfl
+  | .leave .., _ => rfl
+  | .next .., _ => rfl
+
+theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (b : Block D V l Γ Λ Λ') → b.vOk K = true → b.vOk K' = true
+  | .nil, _ => rfl
+  | .cons s rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Stmt.vOk_mono s h.1, Block.vOk_mono rest h.2⟩
+  | .bind _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .bindCall _ _ _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .bindCallInd _ _ _ _ _ rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨hKK _ h.1, Block.vOk_mono rest h.2⟩
+  | .bindCallElse _ _ _ _ _ err rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono err h.1, Block.vOk_mono rest h.2⟩
+  | .bindAxiom _ _ _ _ _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .regLies .., h => by simp [Block.vOk] at h
+  | .regLiesElse .., h => by simp [Block.vOk] at h
+  | .awaits .., h => by simp [Block.vOk] at h
+  | .exchange _ _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .narrow _ _ _ sonst rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
+  | .pruefung _ sonst rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
+  | .gleit _ _ _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .gleitLit _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .gleitVon _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .gleitNarrow _ _ _ sonst rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
+
+theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    (e : Endblock D V l Γ Λ) → e.vOk K = true → e.vOk K' = true
+  | .ret .., _ => rfl
+  | .retGrund .., _ => rfl
+  | .leave .., _ => rfl
+  | .next .., _ => rfl
+  | .cons s rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Stmt.vOk_mono s h.1, Endblock.vOk_mono rest h.2⟩
+  | .bind _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+
+theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} :
+    (a : Arms D V l Γ Λ Λ' cs) → a.vOk K = true → a.vOk K' = true
+  | .nil, _ => rfl
+  | .cons b rest, h => by
+      simp only [Arms.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Block.vOk_mono b h.1, Arms.vOk_mono rest h.2⟩
+
+theorem GrundArms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat} : (a : GrundArms D V l Γ Λ Λ' n) → a.vOk K = true → a.vOk K' = true
+  | .nil, _ => rfl
+  | .cons b rest, h => by
+      simp only [GrundArms.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Block.vOk_mono b h.1, GrundArms.vOk_mono rest h.2⟩
+
+end
+
+end Mono
+
+/-- The decided fragment gives the fragment the replay reads: every body is
+    in `vOk` with the admissibility `KandOk` of its own footprint. -/
+theorem programmImFragmentV_ok (P : Programm D) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (h : programmImFragmentV P fs = true) (f : D.Fn) :
+    (P.rumpf f).vOk (kandP P (fussOrte P f)) = true :=
+  Endblock.vOk_mono (kandB_kandP P hvoll _) _ ((List.all_eq_true.mp h) f (hvoll f))
+
 /-! ### The old fragment is inside the new one -/
+
+section AusAlt
+
+variable {K : Nat → Bool}
 
 mutual
 
 theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (s : Stmt D V l Γ Λ Λ') → s.kOk = true → s.vOk = true
+    (s : Stmt D V l Γ Λ Λ') → s.kOk = true → s.vOk K = true
   | .ite _ t e, h => by
       simp only [Stmt.kOk, Stmt.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Block.vOk_of_kOk t h.1, Block.vOk_of_kOk e h.2⟩
@@ -184,7 +377,7 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .next .., _ => rfl
 
 theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (b : Block D V l Γ Λ Λ') → b.kOk = true → b.vOk = true
+    (b : Block D V l Γ Λ Λ') → b.kOk = true → b.vOk K = true
   | .nil, _ => rfl
   | .cons s rest, h => by
       simp only [Block.kOk, Block.vOk, Bool.and_eq_true] at h ⊢
@@ -224,7 +417,7 @@ theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       exact ⟨Endblock.vOk_of_kOk sonst h.1, Block.vOk_of_kOk rest h.2⟩
 
 theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
-    (e : Endblock D V l Γ Λ) → e.kOk = true → e.vOk = true
+    (e : Endblock D V l Γ Λ) → e.kOk = true → e.vOk K = true
   | .ret .., _ => rfl
   | .retGrund .., _ => rfl
   | .leave .., _ => rfl
@@ -237,20 +430,23 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       exact Endblock.vOk_of_kOk rest h
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : (a : Arms D V l Γ Λ Λ' cs) → a.kOk = true → a.vOk = true
+    {cs : List (Option (Int × Int))} :
+    (a : Arms D V l Γ Λ Λ' cs) → a.kOk = true → a.vOk K = true
   | .nil, _ => rfl
   | .cons b rest, h => by
       simp only [Arms.kOk, Arms.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Block.vOk_of_kOk b h.1, Arms.vOk_of_kOk rest h.2⟩
 
 theorem GrundArms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {n : Nat} : (a : GrundArms D V l Γ Λ Λ' n) → a.kOk = true → a.vOk = true
+    {n : Nat} : (a : GrundArms D V l Γ Λ Λ' n) → a.kOk = true → a.vOk K = true
   | .nil, _ => rfl
   | .cons b rest, h => by
       simp only [GrundArms.kOk, GrundArms.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Block.vOk_of_kOk b h.1, GrundArms.vOk_of_kOk rest h.2⟩
 
 end
+
+end AusAlt
 
 /-- The old fragment check implies the new one. -/
 theorem programmImFragmentV_of (P : Programm D) (fs : List D.Fn)
@@ -498,27 +694,30 @@ end Weiter
     read only inside the footprint `S`. -/
 def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ → Prop
-  | _, _, _, .ende e => e.vOk = true ∧ endblockOrteP P e ⊆ S
-  | _, _, _, .dann b k => b.vOk = true ∧ blockOrteP P b ⊆ S ∧ k.okV P S
+  | _, _, _, .ende e => e.vOk (kandP P S) = true ∧ endblockOrteP P e ⊆ S
+  | _, _, _, .dann b k => b.vOk (kandP P S) = true ∧ blockOrteP P b ⊆ S ∧ k.okV P S
   | _, _, _, .schrumpf k => k.okV P S
   | _, _, _, .frei _ k => k.okV P S
   | _, _, _, .trav _ inv body _ k =>
-      inv.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+      inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .travRest _ inv body _ k =>
-      inv.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+      inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .wieder _ bis body ueber k =>
-      bis.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ ueber.vOk = true ∧
+      bis.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧
+        ueber.vOk (kandP P S) = true ∧
         blockOrteP P ueber ⊆ S ∧ k.okV P S
   | _, _, _, .wiederRest _ bis body ueber k =>
-      bis.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ ueber.vOk = true ∧
+      bis.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧
+        ueber.vOk (kandP P S) = true ∧
         blockOrteP P ueber ⊆ S ∧ k.okV P S
   | _, _, _, .ewig _ _ inv body k =>
-      inv.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+      inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .ewigRest _ _ inv body k =>
-      inv.orte ⊆ S ∧ body.vOk = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
-  | _, _, _, .wartet b k => b.vOk = true ∧ blockOrteP P b ⊆ S ∧ k.okV P S
+      inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+  | _, _, _, .wartet b k => b.vOk (kandP P S) = true ∧ blockOrteP P b ⊆ S ∧ k.okV P S
   | _, _, _, .wartetSonst _ err b k =>
-      err.vOk = true ∧ endblockOrteP P err ⊆ S ∧ b.vOk = true ∧ blockOrteP P b ⊆ S ∧ k.okV P S
+      err.vOk (kandP P S) = true ∧ endblockOrteP P err ⊆ S ∧ b.vOk (kandP P S) = true ∧
+        blockOrteP P b ⊆ S ∧ k.okV P S
 
 section OkV
 
@@ -527,7 +726,7 @@ variable {P : Programm D} {S : List (D.Tab ⊕ D.Glob)} {V : Vertrag D} {l : Boo
 theorem okV_dann_cons {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
     {rest : Block D V l Γ Λ' Λ''} {k : GRest D V l Γ Λ''}
     (h : (GRest.dann (.cons s rest) k).okV P S) :
-    s.vOk = true ∧ stmtOrteP P s ⊆ S ∧ (GRest.dann rest k).okV P S := by
+    s.vOk (kandP P S) = true ∧ stmtOrteP P s ⊆ S ∧ (GRest.dann rest k).okV P S := by
   obtain ⟨hk, hs, hk'⟩ := h
   simp only [Block.vOk, Bool.and_eq_true] at hk
   simp only [blockOrteP] at hs
@@ -535,7 +734,7 @@ theorem okV_dann_cons {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
 
 theorem okV_ende_cons {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
     {rest : Endblock D V l Γ Λ'} (h : (GRest.ende (.cons s rest)).okV P S) :
-    s.vOk = true ∧ stmtOrteP P s ⊆ S ∧ (GRest.ende rest).okV P S := by
+    s.vOk (kandP P S) = true ∧ stmtOrteP P s ⊆ S ∧ (GRest.ende rest).okV P S := by
   obtain ⟨hk, hs⟩ := h
   simp only [Endblock.vOk, Bool.and_eq_true] at hk
   simp only [endblockOrteP] at hs

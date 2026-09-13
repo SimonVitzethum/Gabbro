@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/ZielOrtVollZeuge.lean
   Subject:   WITNESS FOR `ziel_ort_voll` -- a two-thread program whose bodies
-             use a loop with `leave`, a reason return caught by
+             use an indirect call, a loop with `leave`, a reason return caught by
              `let … else`, and an axiom call writing a guarded table under
              its lock; every premise jointly, and a reached run of G with a
              memory change.
@@ -13,9 +13,10 @@
   * `mid`: `if true { let x = ferr() else r => { return } }; return` --
     the reason is caught by the `else` block;
   * `haupt` (holds no lock; every thread's entry):
-    `mid(); retry 1 until false { leave } on_exceeded { };
-     locks L { ax() }; return` -- a loop left by `leave`, then the axiom
-    call under the table's lock.
+    `(&mid)(); retry 1 until false { leave } on_exceeded { };
+     locks L { ax() }; return` -- an indirect call of `mid` through a
+    function pointer, a loop left by `leave`, then the axiom call under the
+    table's lock.
 
   All contracts are `true`: the witness is about the premises and the run,
   not about a clever contract. The oracle `vO` sets the slot to `true` and
@@ -189,9 +190,16 @@ def vLocks : Stmt vD (vertragVon vD vHaupt) false [] [] [] :=
 def vRestHaupt : Endblock vD (vertragVon vD vHaupt) false [] (nach vD vMid []) :=
   .cons vRetry (.cons vLocks (.ret .keine List.Perm.nil))
 
-/-- `haupt`: `mid(); retry …; locks L { ax() }; return`. -/
+/-- The pointer `&mid`. -/
+def vZeigerMid {Γ : Ctx} {Λ : List (Res vD)} : Expr vD Γ Λ (.fnptr 1) := .fnref vMid 1 rfl
+
+/-- `(&mid)()` -- an indirect call. -/
+def vRufMid : Stmt vD (vertragVon vD vHaupt) false [] [] (nach vD vMid []) :=
+  .callInd vZeigerMid .nil vHpMid rfl
+
+/-- `haupt`: `(&mid)(); retry …; locks L { ax() }; return`. -/
 def vRumpfHaupt : Endblock vD (vertragVon vD vHaupt) false [] [] :=
-  .cons (.call vMid .nil vHpMid rfl) vRestHaupt
+  .cons vRufMid vRestHaupt
 
 /-- The witness program: all contracts `true`. -/
 def vP : Programm vD where
@@ -374,7 +382,7 @@ theorem vP_koerper_haupt : KoerperGutV vP 0 vHaupt := by
   have hr : vP.rumpf vHaupt = vRumpfHaupt := rfl
   rw [hr] at hrun
   rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
-  · simp only [execStmt, vTor] at h1
+  · simp only [vRufMid, vZeigerMid, execStmt, eval, vTor] at h1
     split at h1
     · cases h1
     · rename_i r _
@@ -458,6 +466,35 @@ theorem vHoff_e {M : RufMaschineG vD} {f : Faden} {z : RufFadenG vD} {x : List v
     (e : M.faeden f = z) (ho : offen (M.faeden f).spur = x) : offen z.spur = x := by
   rw [← e]; exact ho
 
+/-- `rufCallInd` over a thread state (as `w_rufEnde`): the pointer read at
+    the key names the callee `g`. -/
+theorem w_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (hp : RufPasst D (vertragVon D z.kopf.f) (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
+    (rest : Endblock D (vertragVon D z.kopf.f) l Γ (nachSig D (D.sigNr n) Λ)) (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.cons (.callInd p args hp hr) rest)⟩)
+    (hΛ : HeldGenau Λ (offen z.spur)) (g : D.Fn) (hg : D.sig g = n)
+    (hv : eval ((M.weltVon f).lese Λ (p.orte ++ args.orte)) p
+      ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      ZustandG M' f (⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
+          ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩ :: z.stapel) g
+        (umsig hg (evalArgs ((M.weltVon f).lese Λ (p.orte ++ args.orte)) args
+          ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ))
+        ((M.weltVon f).lese Λ (p.orte ++ args.orte))
+        (RufEreignisF.eintritt g
+          (umsig hg (evalArgs ((M.weltVon f).lese Λ (p.orte ++ args.orte)) args
+            ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ))
+          ((M.weltVon f).lese Λ (p.orte ++ args.orte)) :: z.log)
+        (umsig hg (evalArgs ((M.weltVon f).lese Λ (p.orte ++ args.orte)) args
+          ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ))
+        (.ende (P.rumpf g)) ((M.weltVon f).lese Λ (p.orte ++ args.orte)) := by
+  subst hz
+  exact ⟨_, RufSchrittG.rufCallInd M f l Γ Λ n p args hp hr rest ρ hhead hΛ _ rfl g hg hv _ rfl
+    _ rfl, zustandG_neu rfl rfl⟩
+
 /-- The axiom's answer world appends only access events. -/
 theorem vO_erw (σ : World vD) (ρ : Env vD (vD.aparams ())) :
     Erw σ (vO.wirkt () σ ρ).1 :=
@@ -468,7 +505,8 @@ theorem vO_erw (σ : World vD) (ρ : Env vD (vD.aparams ())) :
     · exact nomatch g⟩
 
 /-- **The run.** Fourteen steps of thread 0 of G from the start machine of
-    `vP` (every thread in `haupt`, the slot `false`): `haupt` calls `mid`,
+    `vP` (every thread in `haupt`, the slot `false`): `haupt` calls `mid`
+    through the pointer `&mid`,
     `mid` unfolds its `if` and calls `ferr` in `let … else`; `ferr` returns
     its reason, which pops into `mid`'s `else` block (logged `grund`);
     `mid` returns to `haupt` (logged `rueck`); `haupt` enters the `retry`
@@ -484,8 +522,8 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   have h0 := vM0_faden (0 : Faden)
   have hoff0 : offen ((RufStartG vP vSp vInit).faeden 0).spur = [] := rfl
   -- `haupt` calls `mid`
-  obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := vP) (O := vO) (passes := 0) h0 vMid .nil vHpMid rfl
-    vRestHaupt .nil rfl (vHg0 hoff0)
+  obtain ⟨M1, s1, hZ1⟩ := w_rufCallInd (P := vP) (O := vO) (passes := 0) h0 vZeigerMid .nil vHpMid
+    rfl vRestHaupt .nil rfl (vHg0 hoff0) vMid rfl rfl
   have hoff1 : offen (M1.faeden 0).spur = [] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff0
   have e1 := hZ1.1
@@ -614,9 +652,10 @@ theorem vLauf : ∃ M : RufMaschineG vD,
 /-! ## 4. The witness -/
 
 /-- **`ziel_ort_voll_zeuge`.** On the two-thread program `vP` (every thread
-    starts in `haupt`), whose bodies use a `retry` loop left by `leave`, a
-    reason return (`ferr`) caught by `let … else` (`mid`) and an axiom call
-    writing the guarded table under its lock (`haupt`) -- a program OUTSIDE
+    starts in `haupt`), whose bodies use an indirect call (`haupt` calls
+    `mid` through `&mid`), a `retry` loop left by `leave`, a reason return
+    (`ferr`) caught by `let … else` (`mid`) and an axiom call writing the
+    guarded table under its lock (`haupt`) -- a program OUTSIDE
     the fragment of `ziel_ort` -- every premise of `ziel_ort_voll` holds
     jointly: the hardware assumption for the writing oracle, the complete
     member list, both decidable checks, the user obligation `KoerperGutV`
@@ -646,8 +685,8 @@ theorem ziel_ort_voll_zeuge :
 
   What is proved: all premises of `ziel_ort_voll` hold jointly on `vP`
   (`vP_vertragAmOrt` is the instance), `vP` is outside the old fragment
-  (`vP_nicht_alt`), and a reached run of fourteen steps of G through a
-  push, a `let … else` push, a reason pop into the `else` block, a normal
+  (`vP_nicht_alt`), and a reached run of fourteen steps of G through an
+  indirect push (`rufCallInd`), a `let … else` push, a reason pop into the `else` block, a normal
   pop, the `retry` unfold, a failed bound, the `leave` exit, the `locks`
   take and the axiom leaf (`vLauf`), with the memory change done by the
   axiom (`ziel_ort_voll_zeuge`).
