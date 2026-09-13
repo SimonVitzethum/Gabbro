@@ -30,7 +30,7 @@ fn read(relativ: &str) -> Programm {
 
 fn gedruckt(baum: &Programm, name: &str) -> String {
     match zeuge_funktion(baum, name).unwrap_or_else(|| panic!("no function {name}")) {
-        BodyCert::Gedruckt { lean } => lean,
+        BodyCert::Gedruckt { lean, .. } => lean,
         BodyCert::Abgewiesen { weigerung } => {
             panic!("{name} refused {}: {}", weigerung.code, weigerung.grund)
         }
@@ -40,7 +40,7 @@ fn gedruckt(baum: &Programm, name: &str) -> String {
 fn abgewiesen(baum: &Programm, name: &str) -> gabbro_check::certstmt::Refusal {
     match zeuge_funktion(baum, name).unwrap_or_else(|| panic!("no function {name}")) {
         BodyCert::Abgewiesen { weigerung } => weigerung,
-        BodyCert::Gedruckt { lean } => panic!("{name} printed, expected refusal: {lean}"),
+        BodyCert::Gedruckt { lean, .. } => panic!("{name} printed, expected refusal: {lean}"),
     }
 }
 
@@ -150,17 +150,57 @@ fn nullary_call_needs_proof() {
     assert!(w.grund.contains('g'), "names the callee: {}", w.grund);
 }
 
-/// A call with arguments has no `CertStmt` shape at all.
+/// A call with arguments prints `consCall`: the count prints, the
+/// `RufPasst` travels as `?hp` (filled at paste, like `refHpLiesAt`).
 #[test]
-fn call_with_args_refused() {
+fn call_with_args_prints() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn g(x : K) effects { pure } costs <= 1 ops { return; }
+          impl fn f(a : K) effects { pure } costs <= 2 ops { g(a); return; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.consCall g 1 [] ?hp .ret)"
+    );
+}
+
+/// A call with the wrong argument count names the mismatch.
+#[test]
+fn call_arg_count_mismatch_refused() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn g(x : K) effects { pure } costs <= 1 ops { return; }
+          impl fn f(a : K, c : K) effects { pure } costs <= 2 ops { g(a, c); return; } }",
+    );
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+    assert!(w.grund.contains('g'), "names the callee: {}", w.grund);
+}
+
+/// A call to an unknown function names the missing declaration.
+#[test]
+fn call_unknown_callee_refused() {
+    let b = parse(
+        "module m { impl fn f() effects { pure } costs <= 2 ops { g(1); return; } }",
+    );
+    // `g` is declared nowhere: without an arity the count cannot print.
+    // (`1` is no parameter place either; the callee check fires first.)
+    let w = abgewiesen(&b, "f");
+    assert_eq!(w.code, "CS005", "{}", w.grund);
+    assert!(w.grund.contains('g'), "names the callee: {}", w.grund);
+}
+
+/// A call argument that names no parameter place has no printed shape.
+#[test]
+fn call_literal_arg_refused() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn g(x : K) effects { pure } costs <= 1 ops { return; }
           impl fn f() effects { pure } costs <= 2 ops { g(1); return; } }",
     );
     let w = abgewiesen(&b, "f");
-    assert_eq!(w.code, "CS001", "{}", w.grund);
-    assert!(w.grund.contains('g'), "names the callee: {}", w.grund);
+    assert_eq!(w.code, "CS002", "{}", w.grund);
 }
 
 /// A division has no `CertExpr` shape in this printer.
@@ -176,17 +216,78 @@ fn division_refused() {
     assert!(w.grund.contains('/'), "names the operator: {}", w.grund);
 }
 
-/// A variable slot index has no recomputable range.
+/// A direct table write with an index variable prints `assignSlot`: the
+/// `index into T` parameter carries `(0, count - 1)` and recomputes.
 #[test]
-fn index_var_refused() {
+fn index_var_prints() {
     let b = parse(
         "module m { type X = u32 in 0 .. 100;
           table T count 8 { slot { x : X, } }
           impl fn f(i : index into T) effects { writes T.slots } costs <= 2 ops
           { T.slots[i].x = 1; return; } }",
     );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.cons (.assignSlot T x (.var 0) (.wide 0 100 (.lit 1))) [] .ret))"
+    );
+}
+
+/// The first parameter is de Bruijn 0 (the `gCtx` convention of `lean-g`):
+/// `return b` with `(a, b)` reads index 1.
+#[test]
+fn first_param_is_index_zero() {
+    let b = parse(
+        "module m { type K = u32 in 0 .. 10;
+          impl fn f(a : K, c : K) -> K effects { pure } costs <= 1 ops { return c; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.liftE (.retWert (.var 1) 0 10))"
+    );
+}
+
+/// A write through a read-only pointer has no printable shape.
+#[test]
+fn readonly_ptr_write_refused() {
+    let b = parse(
+        "module m { type X = u32 in 0 .. 100;
+          table T count 8 { slot { x : X, } }
+          impl fn f(k : ptr<normal, r> T, i : index into T) effects { reads T.slots } costs <= 2 ops
+          { k.slots[i].x = 1; return; } }",
+    );
     let w = abgewiesen(&b, "f");
-    assert_eq!(w.code, "CS003", "{}", w.grund);
+    assert_eq!(w.code, "CS002", "{}", w.grund);
+}
+
+/// A write through an `rw` pointer with an index variable prints
+/// `assignDurch` (table number is declaration order).
+#[test]
+fn ptr_write_var_index_prints() {
+    let b = parse(
+        "module m { type X = u32 in 0 .. 100;
+          table T count 8 { slot { x : X, } }
+          impl fn f(k : ptr<normal, rw> T, i : index into T) effects { writes T.slots } costs <= 2 ops
+          { k.slots[i].x = 1; return; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.cons2 (.assignDurch T x 0 true (.var 1) (.wide 0 100 (.lit 1))) [] .ret)"
+    );
+}
+
+/// A return through a pointer prints `retDurch`.
+#[test]
+fn ptr_return_prints() {
+    let b = parse(
+        "module m { type X = u32 in 0 .. 100;
+          table T count 8 { slot { x : X, } }
+          impl fn f(k : ptr<normal, r> T, i : index into T) -> X effects { reads T.slots } costs <= 2 ops
+          { return k.slots[i].x; } }",
+    );
+    assert_eq!(
+        gedruckt(&b, "f"),
+        "(.retDurch T x 0 (.var 1))"
+    );
 }
 
 /// A `match` needs arm elaboration the printer does not do.
@@ -276,22 +377,19 @@ fn unranged_result_refused() {
     assert_eq!(w.code, "CS005", "{}", w.grund);
 }
 
-/// `beispiele/104-referenz.gab`: both bodies are refused by name.
-///
-/// The write goes through a pointer with an index variable (`CS003`), the
-/// call carries arguments (`CS001`), the return reads through a pointer
-/// (`CS002`/`CS005`). The printer measures the boundary instead of
-/// truncating it.
+/// `beispiele/104-referenz.gab`: both bodies print (lane 155 target).
+/// `einzahlen` writes through the pointer with the index variable, then
+/// calls `lies(k, i)`; `lies` returns through the pointer. The `const`
+/// count `NKONTO` resolves, the first parameter is index 0.
 #[test]
-fn reference_104_refused() {
+fn reference_104_prints() {
     let b = read("beispiele/104-referenz.gab");
-    let aus = gabbro_check::certstmt::zeige(&b);
-    assert!(
-        aus.contains("einzahlen") && aus.contains("REFUSED"),
-        "einzahlen refused: {aus}"
+    assert_eq!(
+        gedruckt(&b, "einzahlen"),
+        "(.cons2 (.assignDurch Konto stand 0 true (.var 1) (.wide 0 100 (.lit 100))) [] (.consCall lies 2 [] ?hp .ret))"
     );
-    assert!(
-        aus.contains("lies") && aus.contains("REFUSED"),
-        "lies refused: {aus}"
+    assert_eq!(
+        gedruckt(&b, "lies"),
+        "(.retDurch Konto stand 0 (.var 1))"
     );
 }

@@ -1,44 +1,64 @@
-//! Statement certificates from Rust (T1 transfer printer, lane 153).
+//! Statement certificates from Rust (T1 transfer printer, lanes 153/155).
 //!
 //! The Lean side holds statement/block certificates with decidable validity
 //! (`ZeugnisStmt.lean`: `CertStmt`/`CertSeq`/`CertEnd`, `ZeugnisStmt2.lean`:
-//! `CertStmt2`/`CertSeq2`/`CertEnd2`). The Rust side printed only expression
+//! `CertStmt2`/`CertSeq2`/`CertEnd2`, `ZeugnisStmt104b.lean`: `CertEnd104`
+//! with `consCall` for calls with arguments and `retDurch` for a return
+//! through a pointer). The Rust side printed only expression
 //! certificates (`certemit.rs`). This module prints, per function body, a Lean
-//! term of the `CertEnd`/`CertEnd2` shape for the forms both Lean files cover,
+//! term of the `CertEnd2`/`CertEnd104` shape for the forms both Lean files cover,
 //! and REFUSES by name every body with a form outside them.
 //!
 //! ## Fragment boundary (measured, not hoped)
 //!
-//! Printable today: `return;`, `return <int-expr>;`, `let x : <range> = ...;`,
-//! direct table writes with literal indices, integer locals, `if` with a
-//! printable condition and falling branches. Everything else is a named
-//! refusal, never a truncation:
+//! Printable today: `return;`, `return <int-expr>;`, `return <ptr-read>;`
+//! (`retDurch`, the pointer proof is filled at paste), `let x : <range> = ...;`,
+//! direct table writes with recomputable indices, pointer writes with
+//! recomputable indices (`assignDurch`, table number = declaration order),
+//! integer locals, `if` with a printable condition and falling branches,
+//! direct calls with arguments (`consCall`: the count and flow print, the
+//! `RufPasst` travels as `?hp`, filled at paste like `refHpLiesAt` was).
+//! Everything else is a named refusal, never a truncation:
 //!
 //! * `CS001` statement form with no printed `CertStmt`/`CertStmt2` shape
-//!   (calls with arguments, indirect calls, matches, loops, `let-else`,
+//!   (indirect calls, matches, loops, `let-else`,
 //!   `leave`/`next` outside loops, register/mark/float/global steps, ...)
-//! * `CS002` expression with no `CertExpr` shape (pointer reads, bitwise and
-//!   shift operators, division, calls, quantifiers, ...)
-//! * `CS003` index or variable with no recomputable range (non-literal slot
-//!   indices, reads of non-integer locals)
+//! * `CS002` expression with no `CertExpr` shape (bitwise and
+//!   shift operators, division, calls, quantifiers, non-place call
+//!   arguments, pointer reads outside `return`, ...)
+//! * `CS003` index or variable with no recomputable range (reads of
+//!   non-integer locals)
 //! * `CS004` nullary direct call: the `CertStmt.call` shape exists but its
 //!   `RufPasst` travels as proof (R-3), which plain data cannot carry
 //! * `CS005` unresolvable name, count, rank or range for the claim (unknown
-//!   table, non-literal `count`, result type with no integer range, ...)
+//!   table, callee or parameter, non-literal `count`, result type with no
+//!   integer range, call argument count mismatch, ...)
 //!
 //! ## Conventions of the printed term
 //!
 //! Table, field and function names print as written in surface syntax; every
 //! resource list prints as `[]` (the Lean side recomputes validity over it,
 //! so a wrong flow fails `decide` loudly instead of passing silently).
-//! Counts, field ranges and alias ranges resolve from literal declarations
-//! only; anything else is `CS005`. Values print under `wide` exactly where
-//! the checker elaborates `weiter` (a contained range narrows to the claim,
-//! an exact one prints bare); an uncontained value is refused, since the
-//! checker would reject it as a type error. The printed term is linked to
+//! Counts resolve from literals or `const` aliases, field ranges and alias
+//! ranges from literal declarations only; anything else is `CS005`. Table
+//! numbers are declaration order (the `tabNr` convention of `lean-g`).
+//! Values print under `wide` exactly where the checker elaborates `weiter`
+//! (a contained range narrows to the claim, an exact one prints bare); an
+//! uncontained value is refused, since the checker would reject it as a type
+//! error. Index positions print the same way: whatever `CertExpr` the index
+//! elaborates to, narrowed to exactly `0 .. count - 1` (a literal index
+//! prints exactly as before). `index into T` parameters and locals carry
+//! `(0, count - 1)` like any integer, so an index variable prints as
+//! `(.var k)` and recomputes. Pointer parameters are context entries with
+//! their table and rights; only `rw` pointers write, only through the
+//! `slots` field path the `lean-g` export uses. De Bruijn indices count the
+//! FIRST parameter as 0 (the `gCtx` convention of `lean-g`: the head of the
+//! context is the first parameter). The printed term is linked to
 //! the checked body by construction of this printer only; term identity
 //! (`print (elab x) = x`) is proved nowhere yet (the `ZeugnisStmt2.lean`
-//! CUTS booking).
+//! CUTS booking). Call arguments print nothing: each must name a bare
+//! parameter place (checked here), and the elaborated `Args` travel as
+//! proof, filled at paste.
 
 use gabbro_syntax::ast::*;
 
@@ -59,7 +79,7 @@ fn refuse(code: &'static str, grund: String) -> Refusal {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BodyCert {
     /// A Lean `CertEnd2` term (as text) for this body.
-    Gedruckt { lean: String },
+    Gedruckt { lean: String, neu: bool },
     /// The body has a form outside the covered fragment.
     Abgewiesen { weigerung: Refusal },
 }
@@ -75,12 +95,16 @@ struct TableInfo {
 struct DeclInfo {
     tabellen: Vec<TableInfo>,
     alias: Vec<(String, (i128, i128))>,
+    konstanten: Vec<(String, i128)>,
+    funktionen: Vec<(String, usize)>,
 }
 
-/// One context entry: an integer or boolean local, or something else.
+/// One context entry: an integer or boolean local, a pointer parameter, or
+/// something else.
 enum CtxEintrag {
     Ganz(String, i128, i128),
     Wahr(String),
+    Zeiger(String, usize, bool),
     Sonst(String),
 }
 
@@ -93,11 +117,24 @@ impl Ctx {
     /// The de Bruijn index of a name: position from the head.
     fn index_von(&self, name: &str) -> Option<(usize, &CtxEintrag)> {
         let pos = self.eintraege.iter().rposition(|e| match e {
-            CtxEintrag::Ganz(n, _, _) | CtxEintrag::Wahr(n) | CtxEintrag::Sonst(n) => {
-                n == name
-            }
+            CtxEintrag::Ganz(n, _, _)
+            | CtxEintrag::Wahr(n)
+            | CtxEintrag::Zeiger(n, _, _)
+            | CtxEintrag::Sonst(n) => n == name,
         })?;
         Some((self.eintraege.len() - 1 - pos, &self.eintraege[pos]))
+    }
+}
+
+/// A literal integer value of an expression: a literal, or a `const` name.
+fn als_zahl_mit(info: &DeclInfo, e: &Expr) -> Option<i128> {
+    match &e.art {
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
+        ExprArt::Klammer(x) => als_zahl_mit(info, x),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            info.konstanten.iter().find(|(n, _)| *n == o.basis.text).map(|(_, v)| *v)
+        }
+        _ => None,
     }
 }
 
@@ -132,8 +169,20 @@ fn sammle(baum: &Programm) -> DeclInfo {
     let mut info = DeclInfo {
         tabellen: Vec::new(),
         alias: Vec::new(),
+        konstanten: Vec::new(),
+        funktionen: Vec::new(),
     };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Konst(k) => {
+            if let ExprArt::Zahl(n) = &k.wert.art {
+                if let Ok(v) = i128::try_from(*n) {
+                    info.konstanten.push((k.name.text.clone(), v));
+                }
+            }
+        }
+        ItemArt::Funktion(f) => {
+            info.funktionen.push((f.name.text.clone(), f.parameter.len()));
+        }
         ItemArt::Typ(t) => {
             if let Some(rumpf) = &t.rumpf {
                 if let Some(r) = bereich_von_typ(rumpf, &info) {
@@ -145,8 +194,7 @@ fn sammle(baum: &Programm) -> DeclInfo {
             let count = t
                 .kapazitaet
                 .as_ref()
-                .and_then(als_zahl)
-                .and_then(|n| i128::try_from(n).ok());
+                .and_then(|e| als_zahl_mit(&info, e));
             let mut felder = Vec::new();
             if let Some(slot) = &t.slot {
                 for f in &slot.felder {
@@ -168,8 +216,72 @@ fn sammle(baum: &Programm) -> DeclInfo {
     info
 }
 
+/// The context entry for one surface parameter: an `index into T` carries
+/// `(0, count - 1)` like any integer (the `Ty.index` convention: an index
+/// variable recomputes), a `normal` pointer its table and rights, an integer
+/// range its bounds, a boolean its flag. Anything else is opaque.
+fn param_eintrag(name: &str, typ: &TypExpr, info: &DeclInfo) -> CtxEintrag {
+    match typ {
+        TypExpr::Index { tabelle, optional, .. } => {
+            if *optional {
+                return CtxEintrag::Sonst(name.to_string());
+            }
+            match tabelle_text(tabelle, info) {
+                Some((_, count)) => CtxEintrag::Ganz(name.to_string(), 0, count - 1),
+                None => CtxEintrag::Sonst(name.to_string()),
+            }
+        }
+        TypExpr::Zeiger(p) => {
+            if !matches!(p.raum, Raum::Normal) {
+                return CtxEintrag::Sonst(name.to_string());
+            }
+            let ziel = match &p.ziel {
+                TypExpr::Pfad(pfad) => pfad.teile.last().map(|i| i.text.clone()),
+                _ => None,
+            };
+            match ziel.and_then(|z| tabellen_nr(info, &z)) {
+                Some(ti) => {
+                    let rw = p.rechte.iter().any(|r| {
+                        matches!(r, Recht::LesenSchreiben | Recht::Schreiben)
+                    });
+                    CtxEintrag::Zeiger(name.to_string(), ti, rw)
+                }
+                None => CtxEintrag::Sonst(name.to_string()),
+            }
+        }
+        _ => match bereich_von_typ(typ, info) {
+            Some((lo, hi)) => CtxEintrag::Ganz(name.to_string(), lo, hi),
+            None if matches!(typ, TypExpr::Bool(_)) => CtxEintrag::Wahr(name.to_string()),
+            None => CtxEintrag::Sonst(name.to_string()),
+        },
+    }
+}
+
+/// The table and count behind an `index into T` name.
+fn tabelle_text(tabelle: &Ident, info: &DeclInfo) -> Option<(usize, i128)> {
+    let ti = tabellen_nr(info, &tabelle.text)?;
+    let count = info.tabellen[ti].count?;
+    Some((ti, count))
+}
+
 fn tabelle<'a>(info: &'a DeclInfo, name: &str) -> Option<&'a TableInfo> {
     info.tabellen.iter().find(|t| t.name == name)
+}
+
+/// The table number: declaration order, the `tabNr` convention of `lean-g`.
+fn tabellen_nr(info: &DeclInfo, name: &str) -> Option<usize> {
+    info.tabellen.iter().position(|t| t.name == name)
+}
+
+/// The parameter count of a callee by its last path segment.
+fn callee_nargs(info: &DeclInfo, ziel: &CallTarget) -> Option<(String, usize)> {
+    match ziel {
+        CallTarget::Path(p) => {            let name = p.teile.last()?.text.clone();
+            let nargs = info.funktionen.iter().find(|(n, _)| *n == name)?.1;
+            Some((name, nargs))
+        }
+        CallTarget::Place(_) => None,
+    }
 }
 
 fn fehlschlag(
@@ -206,6 +318,21 @@ fn verenge(
             ),
         ))
     }
+}
+
+/// Print an index position: whatever `CertExpr` the index elaborates to,
+/// narrowed to exactly `0 .. count - 1` (mirrors `weiter`: a literal prints
+/// exactly as before, an index variable as `(.var k)`).
+fn drucke_index(
+    funktion: &str,
+    wo: &str,
+    idx: &Expr,
+    ctx: &Ctx,
+    info: &DeclInfo,
+    count: i128,
+) -> Result<String, Refusal> {
+    let (t, r) = drucke_expr(funktion, idx, ctx, info)?;
+    verenge(funktion, wo, t, r, (0, count - 1))
 }
 
 /// The short name of an expression form, for refusals.
@@ -356,7 +483,9 @@ fn drucke_expr(
 }
 
 /// Print a place in value position: an integer local or a direct slot read
-/// with a literal index. Pointer steps (`->`) have no `CertExpr` shape.
+/// with a recomputable index. Pointer steps (`->`) and reads through a
+/// pointer parameter have no `CertExpr` shape (a `return` through a pointer
+/// prints as `retDurch` at the body level).
 fn drucke_ort_wert(
     funktion: &str,
     o: &Ort,
@@ -403,24 +532,14 @@ fn drucke_ort_wert(
                 format!("count of table {} is not a literal", tab.name),
             )
         })?;
-        let k = als_zahl(idx).ok_or_else(|| {
-            refuse(
-                "CS003",
-                format!("index of {} is not a literal", o.text()),
-            )
-        })?;
-        let kv = i128::try_from(k).map_err(|_| {
-            refuse(
-                "CS005",
-                format!("function {funktion}: index {k} too large"),
-            )
-        })?;
-        if kv < 0 || kv >= count {
-            return Err(refuse(
-                "CS005",
-                format!("index {kv} of {} is outside count {count}", o.text()),
-            ));
-        }
+        let iterm = drucke_index(
+            funktion,
+            &format!("index of {}", o.text()),
+            idx,
+            ctx,
+            info,
+            count,
+        )?;
         let (_, fr) = tab
             .felder
             .iter()
@@ -432,15 +551,7 @@ fn drucke_ort_wert(
                     format!("field {} has no integer range", o.text()),
                 )
             })?;
-        Ok((
-            format!(
-                "(.slot {} {} (.wide 0 {} (.lit {kv})))",
-                tab.name,
-                feld.text,
-                count - 1
-            ),
-            fr,
-        ))
+        Ok((format!("(.slot {} {} {iterm})", tab.name, feld.text), fr))
     } else {
         fehlschlag(
             funktion,
@@ -588,9 +699,19 @@ fn drucke_seq(
                 schritte.push(SeqSchritt::Binde { term: t, lo, hi });
             }
             StmtArt::Zuweisung(z) => {
-                schritte.push(SeqSchritt::Schritt {
-                    term: drucke_zuweisung(funktion, z, ctx, info)?,
-                });
+                match drucke_zuweisung(funktion, z, ctx, info)? {
+                    StmtTerm::Alt(term) => schritte.push(SeqSchritt::Schritt { term }),
+                    StmtTerm::Neu2(_) => {
+                        return fehlschlag(
+                            funktion,
+                            "CS001",
+                            format!(
+                                "assignment to {} falls through nowhere printable",
+                                z.ziel.text()
+                            ),
+                        )
+                    }
+                }
             }
             StmtArt::Wenn(w) => {
                 schritte.push(SeqSchritt::Schritt {
@@ -618,13 +739,34 @@ fn drucke_seq(
     Ok(aus)
 }
 
-/// The claimed range of a `let`: its annotation, never inferred.
+/// The claimed range of a `let`: its annotation, never inferred. An
+/// `index into T` annotation claims `(0, count - 1)`.
 fn claimed_range(
     funktion: &str,
     l: &LetStmt,
     info: &DeclInfo,
 ) -> Result<(i128, i128), Refusal> {
     match &l.typ {
+        Some(TypExpr::Index { tabelle, optional, .. }) => {
+            if *optional {
+                return Err(refuse(
+                    "CS005",
+                    format!(
+                        "function {funktion}: let {} has no range annotation",
+                        l.name.text
+                    ),
+                ));
+            }
+            tabelle_text(tabelle, info).map(|(_, count)| (0, count - 1)).ok_or_else(|| {
+                refuse(
+                    "CS005",
+                    format!(
+                        "function {funktion}: let {} has no range annotation",
+                        l.name.text
+                    ),
+                )
+            })
+        }
         Some(t) => bereich_von_typ(t, info).ok_or_else(|| {
             refuse(
                 "CS005",
@@ -644,13 +786,24 @@ fn claimed_range(
     }
 }
 
-/// Print an assignment as a `CertStmt` without its resource flow.
+/// One printed assignment: a `CertStmt` term (old layer) or a `CertStmt2`
+/// term (a write through a pointer, `assignDurch`).
+enum StmtTerm {
+    Alt(String),
+    Neu2(String),
+}
+
+/// Print an assignment as a `CertStmt`/`CertStmt2` without its resource flow.
+/// A direct write prints `assignSlot`; a write through a pointer parameter
+/// (`k.slots[i].f`, the `slots` path) prints `assignDurch` with the table
+/// number in declaration order (the pointer proof is rebuilt from `tabNr`
+/// on the Lean side, so only an `rw` pointer writes).
 fn drucke_zuweisung(
     funktion: &str,
     z: &Zuweisung,
     ctx: &Ctx,
     info: &DeclInfo,
-) -> Result<String, Refusal> {
+) -> Result<StmtTerm, Refusal> {
     if z.op != ZuwOp::Setzt {
         let op = match z.op {
             ZuwOp::Setzt => "=",
@@ -659,22 +812,20 @@ fn drucke_zuweisung(
             ZuwOp::Und => "&=",
             ZuwOp::Oder => "|=",
         };
-        return fehlschlag(
-            funktion,
+        return Err(refuse(
             "CS001",
             format!("assignment {op} to {} has no CertStmt shape", z.ziel.text()),
-        );
+        ));
     }
     let o = &z.ziel;
     if o.suffixe.is_empty() {
         let (k, lo, hi) = match ctx.index_von(&o.basis.text) {
             Some((k, CtxEintrag::Ganz(_, lo, hi))) => (k, *lo, *hi),
             _ => {
-                return fehlschlag(
-                    funktion,
+                return Err(refuse(
                     "CS003",
                     format!("assignment to {} is not an integer local", o.text()),
-                )
+                ))
             }
         };
         let (t, r) = drucke_expr(funktion, &z.wert, ctx, info)?;
@@ -685,45 +836,92 @@ fn drucke_zuweisung(
             r,
             (lo, hi),
         )?;
-        return Ok(format!("(.assignVar {k} {lo} {hi} {t})"));
+        return Ok(StmtTerm::Alt(format!("(.assignVar {k} {lo} {hi} {t})")));
     }
-    if let [OrtSuffix::Feld(_), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] =
+    if let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] =
         o.suffixe.as_slice()
     {
-        let tab = tabelle(info, &o.basis.text).ok_or_else(|| {
-            if ctx.index_von(&o.basis.text).is_some() {
-                refuse(
-                    "CS002",
-                    format!("pointer write {} has no CertStmt shape", o.text()),
-                )
-            } else {
+        if slots.text != "slots" {
+            return Err(refuse(
+                "CS002",
+                format!("assignment to {} has no CertStmt shape", o.text()),
+            ));
+        }
+        if let Some(tab) = tabelle(info, &o.basis.text) {
+            let count = tab.count.ok_or_else(|| {
                 refuse(
                     "CS005",
-                    format!("unknown table {} in {funktion}", o.basis.text),
+                    format!("count of table {} is not a literal", tab.name),
                 )
+            })?;
+            let iterm = drucke_index(
+                funktion,
+                &format!("index of {}", o.text()),
+                idx,
+                ctx,
+                info,
+                count,
+            )?;
+            let fr = tab
+                .felder
+                .iter()
+                .find(|(n, _)| *n == feld.text)
+                .and_then(|(_, r)| *r)
+                .ok_or_else(|| {
+                    refuse("CS005", format!("field {} has no integer range", o.text()))
+                })?;
+            let (t, r) = drucke_expr(funktion, &z.wert, ctx, info)?;
+            let t = verenge(
+                funktion,
+                &format!("value of {}", o.text()),
+                t,
+                r,
+                fr,
+            )?;
+            return Ok(StmtTerm::Alt(format!(
+                "(.assignSlot {} {} {iterm} {t})",
+                tab.name, feld.text,
+            )));
+        }
+        let (ti, rw) = match ctx.index_von(&o.basis.text) {
+            Some((_, CtxEintrag::Zeiger(_, ti, rw))) => (*ti, *rw),
+            Some(_) => {
+                return Err(refuse(
+                    "CS002",
+                    format!("pointer write {} has no CertStmt shape", o.text()),
+                ))
             }
-        })?;
+            None => {
+                return Err(refuse(
+                    "CS005",
+                    format!("unknown table {} in {funktion}", o.basis.text),
+                ))
+            }
+        };
+        if !rw {
+            return Err(refuse(
+                "CS002",
+                format!(
+                    "write through read-only pointer {} has no CertStmt shape",
+                    o.text()
+                ),
+            ));
+        }
+        let tab = &info.tabellen[ti];
         let count = tab.count.ok_or_else(|| {
             refuse(
                 "CS005",
                 format!("count of table {} is not a literal", tab.name),
             )
         })?;
-        let k = als_zahl(idx).ok_or_else(|| {
-            refuse(
-                "CS003",
-                format!("index of {} is not a literal", o.text()),
-            )
-        })?;
-        let kv = i128::try_from(k).map_err(|_| {
-            refuse("CS005", format!("function {funktion}: index {k} too large"))
-        })?;
-        if kv < 0 || kv >= count {
-            return Err(refuse(
-                "CS005",
-                format!("index {kv} of {} is outside count {count}", o.text()),
-            ));
-        }
+        let iterm = drucke_index(
+            funktion,
+            &format!("index of {}", o.text()),
+            idx,
+            ctx,
+            info,
+            count,
+        )?;
         let fr = tab
             .felder
             .iter()
@@ -740,18 +938,15 @@ fn drucke_zuweisung(
             r,
             fr,
         )?;
-        return Ok(format!(
-            "(.assignSlot {} {} (.wide 0 {} (.lit {kv})) {t})",
-            tab.name,
-            feld.text,
-            count - 1
-        ));
+        return Ok(StmtTerm::Neu2(format!(
+            "(.assignDurch {} {} {ti} true {iterm} {t})",
+            tab.name, feld.text,
+        )));
     }
-    fehlschlag(
-        funktion,
+    Err(refuse(
         "CS002",
         format!("assignment to {} has no CertStmt shape", o.text()),
-    )
+    ))
 }
 
 /// Print an `if` with falling branches as a `CertStmt` without its flow.
@@ -841,29 +1036,10 @@ fn drucke_ende(
             }
         }
         StmtArt::Let(l) => {
-            let (lo, hi) = match &l.typ {
-                Some(t) => bereich_von_typ(t, info).ok_or_else(|| {
-                    refuse(
-                        "CS005",
-                        format!(
-                            "function {funktion}: let {} has no range annotation",
-                            l.name.text
-                        ),
-                    )
-                })?,
-                None => {
-                    return Err(refuse(
-                        "CS005",
-                        format!(
-                            "function {funktion}: let {} has no range annotation",
-                            l.name.text
-                        ),
-                    ))
-                }
-            };
+            let (lo, hi) = claimed_range(funktion, l, info)?;
             if !matches!(
                 &l.typ,
-                Some(TypExpr::Int(_)) | Some(TypExpr::Pfad(_))
+                Some(TypExpr::Int(_)) | Some(TypExpr::Pfad(_)) | Some(TypExpr::Index { .. })
             ) {
                 return Err(refuse(
                     "CS001",
@@ -887,7 +1063,16 @@ fn drucke_ende(
             Ok(format!("(.bind {t} {lo} {hi} {weiter})"))
         }
         StmtArt::Zuweisung(z) => {
-            let t = drucke_zuweisung(funktion, z, ctx, info)?;
+            let StmtTerm::Alt(t) = drucke_zuweisung(funktion, z, ctx, info)? else {
+                return fehlschlag(
+                    funktion,
+                    "CS001",
+                    format!(
+                        "assignment to {} falls through nowhere printable",
+                        z.ziel.text()
+                    ),
+                );
+            };
             let weiter = drucke_ende(funktion, rest, ctx, info, ergebnis)?;
             Ok(format!("(.cons {t} [] {weiter})"))
         }
@@ -922,6 +1107,329 @@ fn drucke_ende(
     }
 }
 
+/// Whether a body needs the `CertEnd104` layer: a call with arguments, a
+/// write through a pointer parameter, or a return through one. Anything
+/// inside an `if` branch stays on the old layer (and refuses there).
+fn benutzt_neu(f: &FnDecl, info: &DeclInfo) -> bool {
+    let FnRumpf::Block(b) = &f.rumpf else {
+        return false;
+    };
+    let ptrs: Vec<String> = f
+        .parameter
+        .iter()
+        .filter(|p| {
+            matches!(
+                param_eintrag(&p.name.text, &p.typ, info),
+                CtxEintrag::Zeiger(..)
+            )
+        })
+        .map(|p| p.name.text.clone())
+        .collect();
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Ruf(r) => {
+                if matches!(&r.ziel, CallTarget::Path(_)) && !r.argumente.is_empty() {
+                    return true;
+                }
+            }
+            StmtArt::Zuweisung(z) => {
+                if ptrs.contains(&z.ziel.basis.text) && z.ziel.suffixe.len() == 3 {
+                    return true;
+                }
+            }
+            StmtArt::Return(e) => {
+                if let Some(x) = e {
+                    let mut inner = x;
+                    while let ExprArt::Klammer(y) = &inner.art {
+                        inner = y;
+                    }
+                    if let ExprArt::Ort(o) = &inner.art {
+                        if ptrs.contains(&o.basis.text) && !o.suffixe.is_empty() {
+                            return true;
+                        }
+                    }
+                }
+                break;
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// A call with arguments as `consCall` data: the callee name and count.
+/// Every argument must name a bare parameter place (checked here); the
+/// elaborated `Args` travel as proof, filled at paste beside `?hp`.
+fn drucke_ruf_mit_args(
+    funktion: &str,
+    r: &Ruf,
+    ctx: &Ctx,
+    info: &DeclInfo,
+) -> Result<(String, usize), Refusal> {
+    match &r.ziel {
+        CallTarget::Place(o) => Err(refuse(
+            "CS001",
+            format!("indirect call {} has no printable CertStmt shape", o.text()),
+        )),
+        CallTarget::Path(p) => {
+            let (name, nargs) = callee_nargs(info, &r.ziel).ok_or_else(|| {
+                refuse(
+                    "CS005",
+                    format!("function {funktion}: callee {} is unknown", p.text()),
+                )
+            })?;
+            if r.argumente.len() != nargs {
+                return Err(refuse(
+                    "CS005",
+                    format!(
+                        "function {funktion}: call {name} takes {} arguments, not {}",
+                        nargs,
+                        r.argumente.len()
+                    ),
+                ));
+            }
+            for a in &r.argumente {
+                match &a.art {
+                    ExprArt::Ort(o)
+                        if o.suffixe.is_empty()
+                            && ctx.index_von(&o.basis.text).is_some() => {}
+                    _ => {
+                        return Err(refuse(
+                            "CS002",
+                            format!(
+                                "call argument {} has no printed shape",
+                                expr_name(a)
+                            ),
+                        ))
+                    }
+                }
+            }
+            Ok((name, nargs))
+        }
+    }
+}
+
+/// A `return` through a pointer parameter as `retDurch` data: the table,
+/// field, table number and index term. The pointer proof is rebuilt from
+/// the parameter at paste; the field-type equation recomputes in Lean.
+/// Returns `None` when the base names a table (a direct read, which the
+/// `retWert` path prints).
+fn drucke_rueck_durch(
+    funktion: &str,
+    o: &Ort,
+    ctx: &Ctx,
+    info: &DeclInfo,
+    ergebnis: &Option<TypExpr>,
+) -> Result<Option<String>, Refusal> {
+    if tabelle(info, &o.basis.text).is_some() {
+        return Ok(None);
+    }
+    if ergebnis.is_none() {
+        return Err(refuse(
+            "CS005",
+            format!(
+                "function {funktion}: return {} has no result type",
+                o.text()
+            ),
+        ));
+    }
+    let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] =
+        o.suffixe.as_slice()
+    else {
+        return Err(refuse(
+            "CS002",
+            format!("place {} has no CertExpr shape", o.text()),
+        ));
+    };
+    if slots.text != "slots" {
+        return Err(refuse(
+            "CS002",
+            format!("place {} has no CertExpr shape", o.text()),
+        ));
+    }
+    let ti = match ctx.index_von(&o.basis.text) {
+        Some((_, CtxEintrag::Zeiger(_, ti, _))) => *ti,
+        Some(_) => {
+            return Err(refuse(
+                "CS002",
+                format!("place {} has no CertExpr shape", o.text()),
+            ))
+        }
+        None => {
+            return Err(refuse(
+                "CS005",
+                format!("unknown name {} in {funktion}", o.basis.text),
+            ))
+        }
+    };
+    let tab = &info.tabellen[ti];
+    if !tab.felder.iter().any(|(n, _)| *n == feld.text) {
+        return Err(refuse(
+            "CS005",
+            format!("unknown field {} in {funktion}", o.text()),
+        ));
+    }
+    let count = tab.count.ok_or_else(|| {
+        refuse(
+            "CS005",
+            format!("count of table {} is not a literal", tab.name),
+        )
+    })?;
+    let iterm = drucke_index(
+        funktion,
+        &format!("index of {}", o.text()),
+        idx,
+        ctx,
+        info,
+        count,
+    )?;
+    Ok(Some(format!(
+        "(.retDurch {} {} {ti} {iterm})",
+        tab.name, feld.text,
+    )))
+}
+
+/// Print a function body as a `CertEnd104`: the old shapes travel through
+/// `cons1`/`bind104`/terminals, pointer writes through `cons2`
+/// (`assignDurch`), calls with arguments through `consCall` (the `RufPasst`
+/// prints as `?hp`, filled at paste), and a return through a pointer as
+/// `retDurch`.
+fn drucke_ende104(
+    funktion: &str,
+    stmts: &[Stmt],
+    ctx: &mut Ctx,
+    info: &DeclInfo,
+    ergebnis: &Option<TypExpr>,
+) -> Result<String, Refusal> {
+    let Some((s, rest)) = stmts.split_first() else {
+        match ergebnis {
+            None => return Ok(".ret".to_string()),
+            Some(_) => {
+                return fehlschlag(
+                    funktion,
+                    "CS005",
+                    "body falls off the end with a result type".to_string(),
+                )
+            }
+        }
+    };
+    match &s.art {
+        StmtArt::Return(r) => {
+            if !rest.is_empty() {
+                return fehlschlag(
+                    funktion,
+                    "CS001",
+                    "statements after return have no CertEnd shape".to_string(),
+                );
+            }
+            match r {
+                None => match ergebnis {
+                    None => Ok(".ret".to_string()),
+                    Some(_) => fehlschlag(
+                        funktion,
+                        "CS005",
+                        "bare return with a result type".to_string(),
+                    ),
+                },
+                Some(e) => {
+                    let mut inner = e;
+                    while let ExprArt::Klammer(y) = &inner.art {
+                        inner = y;
+                    }
+                    if let ExprArt::Ort(o) = &inner.art {
+                        if let Some(t) =
+                            drucke_rueck_durch(funktion, o, ctx, info, ergebnis)?
+                        {
+                            return Ok(t);
+                        }
+                    }
+                    let (lo, hi) = ergebnis
+                        .as_ref()
+                        .and_then(|t| bereich_von_typ(t, info))
+                        .ok_or_else(|| {
+                            refuse(
+                                "CS005",
+                                format!(
+                                    "function {funktion}: result type has no integer range"
+                                ),
+                            )
+                        })?;
+                    let (t, rr) = drucke_expr(funktion, e, ctx, info)?;
+                    let t = verenge(funktion, "return", t, rr, (lo, hi))?;
+                    Ok(format!("(.retWert {t} {lo} {hi})"))
+                }
+            }
+        }
+        StmtArt::Let(l) => {
+            let (lo, hi) = claimed_range(funktion, l, info)?;
+            if !matches!(
+                &l.typ,
+                Some(TypExpr::Int(_))
+                    | Some(TypExpr::Pfad(_))
+                    | Some(TypExpr::Index { .. })
+            ) {
+                return Err(refuse(
+                    "CS001",
+                    format!(
+                        "function {funktion}: let {} binds no integer",
+                        l.name.text
+                    ),
+                ));
+            }
+            let (t, rr) = drucke_expr(funktion, &l.wert, ctx, info)?;
+            let t = verenge(
+                funktion,
+                &format!("let {}", l.name.text),
+                t,
+                rr,
+                (lo, hi),
+            )?;
+            ctx.eintraege
+                .push(CtxEintrag::Ganz(l.name.text.clone(), lo, hi));
+            let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
+            Ok(format!("(.bind {t} {lo} {hi} {weiter})"))
+        }
+        StmtArt::Zuweisung(z) => {
+            match drucke_zuweisung(funktion, z, ctx, info)? {
+                StmtTerm::Alt(t) => {
+                    let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
+                    Ok(format!("(.cons1 {t} [] {weiter})"))
+                }
+                StmtTerm::Neu2(t) => {
+                    let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
+                    Ok(format!("(.cons2 {t} [] {weiter})"))
+                }
+            }
+        }
+        StmtArt::Wenn(w) => {
+            let t = drucke_wenn_seq(funktion, w, ctx, info)?;
+            let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
+            Ok(format!("(.cons1 {t} [] {weiter})"))
+        }
+        StmtArt::Ruf(r) => match &r.ziel {
+            CallTarget::Path(p) if r.argumente.is_empty() => Err(refuse(
+                "CS004",
+                format!(
+                    "function {funktion}: call {} needs RufPasst as proof",
+                    p.text()
+                ),
+            )),
+            _ => {
+                let (name, nargs) = drucke_ruf_mit_args(funktion, r, ctx, info)?;
+                let weiter = drucke_ende104(funktion, rest, ctx, info, ergebnis)?;
+                Ok(format!("(.consCall {name} {nargs} [] ?hp {weiter})"))
+            }
+        },
+        _ => Err(refuse(
+            "CS001",
+            format!(
+                "function {funktion}: {} has no printable CertStmt shape",
+                stmt_name(s)
+            ),
+        )),
+    }
+}
+
 /// Print the statement certificate for one checked function body.
 pub fn zeige_rumpf(f: &FnDecl, info: &DeclInfo) -> BodyCert {
     let funktion = f.name.text.clone();
@@ -936,22 +1444,27 @@ pub fn zeige_rumpf(f: &FnDecl, info: &DeclInfo) -> BodyCert {
     let mut ctx = Ctx {
         eintraege: Vec::new(),
     };
-    for p in &f.parameter {
-        if let Some((lo, hi)) = bereich_von_typ(&p.typ, info) {
-            // An integer parameter reads through `ctxTyp`.
-            ctx.eintraege
-                .push(CtxEintrag::Ganz(p.name.text.clone(), lo, hi));
-        } else if matches!(p.typ, TypExpr::Bool(_)) {
-            ctx.eintraege.push(CtxEintrag::Wahr(p.name.text.clone()));
-        } else {
-            ctx.eintraege.push(CtxEintrag::Sonst(p.name.text.clone()));
-        }
+    // Head-first: the FIRST parameter is de Bruijn 0 (the `gCtx` convention
+    // of `lean-g`), so parameters push in reverse.
+    for p in f.parameter.iter().rev() {
+        ctx.eintraege
+            .push(param_eintrag(&p.name.text, &p.typ, info));
     }
-    match drucke_ende(&funktion, &b.anweisungen, &mut ctx, info, &f.ergebnis) {
-        Ok(ende) => BodyCert::Gedruckt {
-            lean: format!("(.liftE {ende})"),
-        },
-        Err(weigerung) => BodyCert::Abgewiesen { weigerung },
+    if benutzt_neu(f, info) {
+        // A call with arguments, a write through a pointer, or a return
+        // through one: the `CertEnd104` layer.
+        match drucke_ende104(&funktion, &b.anweisungen, &mut ctx, info, &f.ergebnis) {
+            Ok(lean) => BodyCert::Gedruckt { lean, neu: true },
+            Err(weigerung) => BodyCert::Abgewiesen { weigerung },
+        }
+    } else {
+        match drucke_ende(&funktion, &b.anweisungen, &mut ctx, info, &f.ergebnis) {
+            Ok(ende) => BodyCert::Gedruckt {
+                lean: format!("(.liftE {ende})"),
+                neu: false,
+            },
+            Err(weigerung) => BodyCert::Abgewiesen { weigerung },
+        }
     }
 }
 
@@ -970,8 +1483,9 @@ pub fn zeuge_funktion(baum: &Programm, name: &str) -> Option<BodyCert> {
     gef
 }
 
-/// The per-function section of `gabbro certificate`: one `CertEnd2` term
-/// per block body, or a named refusal for every body outside the fragment.
+/// The per-function section of `gabbro certificate`: one `CertEnd2` (or
+/// `CertEnd104`) term per block body, or a named refusal for every body
+/// outside the fragment.
 pub fn zeige(baum: &Programm) -> String {
     let info = sammle(baum);
     let mut aus = String::new();
@@ -984,9 +1498,10 @@ pub fn zeige(baum: &Programm) -> String {
             }
             n += 1;
             match zeige_rumpf(f, &info) {
-                BodyCert::Gedruckt { lean } => {
+                BodyCert::Gedruckt { lean, neu } => {
+                    let schicht = if neu { "CertEnd104" } else { "CertEnd2" };
                     aus.push_str(&format!(
-                        "   function {}: CertEnd2 term:\n     {lean}\n",
+                        "   function {}: {schicht} term:\n     {lean}\n",
                         f.name.text
                     ));
                 }
@@ -1039,7 +1554,7 @@ mod tests {
             "module m { impl fn f() effects { pure } costs <= 1 ops { return; } }",
         );
         let (f, info) = funktion(&baum);
-        let BodyCert::Gedruckt { lean } = zeige_rumpf(&f, &info) else {
+        let BodyCert::Gedruckt { lean, .. } = zeige_rumpf(&f, &info) else {
             panic!("a bare return prints");
         };
         assert_eq!(lean, "(.liftE .ret)");
