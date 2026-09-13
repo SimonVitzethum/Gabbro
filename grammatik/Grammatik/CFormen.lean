@@ -192,11 +192,12 @@ theorem conv_u {t : CIT} (hs : t.sgn = false) (v : Int) :
 
 /-! ## 3. The operators and their UB inventory
 
-Lane 128's `cBinApply` is NOT reused: it computes signed `/` and `%` with
-Lean's `Int./` and `Int.%`, which round toward minus infinity
-(`Int.ediv`), where C truncates toward zero (C11 6.5.5p6: `-7 / 2 == -3`,
-Lean `-7 / 2 = -4`); and it makes every bitwise operator on a signed type
-stuck, which would make `a & b` on two `uint8_t` (computed in `int`) UB.
+Lane 128's `cBinApply` is NOT reused: it makes every bitwise operator on
+a signed type stuck, which would make `a & b` on two `uint8_t` (computed in
+`int`) UB. (It also computed signed `/` and `%` with Lean's `Int./` and
+`Int.%`, which round toward minus infinity, where C truncates toward zero
+(C11 6.5.5p6: `-7 / 2 == -3`, Lean `-7 / 2 = -4`); that was corrected on
+2026-09-13, `cBinApply_c_rundung`, and the two now agree, `tdiv_ne_ediv`.)
 Here `/` and `%` are `Int.tdiv`/`Int.tmod`, and a bitwise operator is
 defined on non-negative operands of any signedness. -/
 
@@ -340,10 +341,13 @@ theorem cArith_none_iff (op : CBinOp) (t : CIT) (a b : Int) :
     cArith op t a b = none ↔ OpUB t op a b :=
   ⟨opUB_of_stuck, opUB_stuck⟩
 
-/-- C's truncating division against lane 128's: they differ on a negative
-    dividend (the finding in the section header, computed). -/
+/-- C's truncating division against Lean's Euclidean one: they differ on a
+    negative dividend (`-7 / 2`: C `-3`, `Int./` `-4`). Lane 128's
+    `cBinApply` used `Int./` until 2026-09-13 and now agrees with C
+    (the name records the finding; the statement is the corrected one). -/
 theorem tdiv_ne_ediv : cArith .div CIT.i32 (-7) 2 = some (-3) ∧
-    cBinApply .div true .w32 (-7) 2 = some (-4) := by
+    cBinApply .div true .w32 (-7) 2 = some (-3) ∧ (-7 : Int) / 2 = -4 ∧
+    cArith .mod CIT.i32 (-7) 2 = cBinApply .mod true .w32 (-7) 2 := by
   decide
 
 /-- The comparison operators; the result is an `int` `0` or `1`. -/
@@ -1132,10 +1136,10 @@ CUTS: what this file does not do, by name.
 - FRAMES are numbered by call depth (`CallAt`): the stack discipline, not
   fresh block identities; a pointer into a dead frame revives when a call
   at the same depth reuses the frame number (CSpeicher.lean's CUT).
-- Lane 128's `cBinApply` computes signed `/` and `%` with Euclidean
-  rounding, which is not C's (`tdiv_ne_ediv`); `CSemantik.lean` is left
-  as it is (its theorems are about unsigned `uint32_t`, where the two
-  agree), and this file does not use it.
+- Lane 128's `cBinApply` computed signed `/` and `%` with Euclidean
+  rounding, which is not C's; corrected in `CSemantik.lean` on 2026-09-13
+  (`cBinApply_c_rundung`, `tdiv_ne_ediv`). This file still does not use
+  it (its bitwise operators are stuck on every signed type).
 -/
 
 #print axioms uac_werte

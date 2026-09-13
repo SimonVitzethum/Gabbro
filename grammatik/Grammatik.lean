@@ -157,3 +157,10 @@ import Grammatik.ZeugnisStmt3
 import Grammatik.Parser.Lexer
 import Grammatik.Parser.Ausdruck
 import Grammatik.Parser.AusdruckProben
+import Grammatik.CFormenW
+import Grammatik.CFormenWZeuge
+import Grammatik.CFormenR
+import Grammatik.CFormenRZeuge
+import Grammatik.CFormenRZeuge2
+import Grammatik.CFormenR2
+import Grammatik.CFormenR2Zeuge
