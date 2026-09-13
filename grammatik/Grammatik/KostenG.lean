@@ -38,6 +38,7 @@
 
 import Grammatik.RufMaschineG
 import Grammatik.RufAdaequatG
+import Grammatik.RufUmkehrRufG
 
 namespace Gabbro.Grammatik
 
@@ -983,4 +984,681 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
     hE () (hfs g hg).2 run hA
   exact Nat.le_trans hb (hfs g hg).1
 
+/-! ## 11. TARGET 3: the checker's number
+
+    `kosten.rs` counts OPERATIONS (SPRACHE.md §7: `1 op` = one assignment,
+    arithmetic operation, load or store; a call counts the callee's
+    declared `costs`; branches the maximum; `traverse` the body times the
+    domain bound). The bound above counts STEPS of machine G. The two are
+    different units, and the Lean number is NOT at most the checker's
+    number: G takes steps the checker prices at `0` (an `if` branch, a
+    `leave`, a `return`, a lock take and release, an empty-block close).
+
+    What holds, per statement form, is the converse with a remainder:
+    `kostenK` is the checker's number as `kosten.rs` computes it, written
+    over the Lean syntax (for the forms where the Lean term determines it,
+    `spiegelS`), `zusatz` the remainder, and
+
+      `kostenStmt c pa s ≤ kostenKS c s + zusatzS s`   (`spiegel_stmt`,
+      likewise for blocks and end blocks), with the SAME callee table `c`.
+
+    `zusatz` is, form by form:
+    * the G dispatch steps, a constant per node: `ite` 1, `match` (option,
+      tag) 2, `match` on a reason 1, a call 1 (the push; the pop is paid by
+      the callee's `return`), `locks` 2 (take, release), `breaking` 1,
+      `let` 1, `let x = g(…)` 1, `return`/`leave`/`next`/`retGrund` 1, an
+      empty block 1, a compound in end position 2 (`entfZ`), per
+      `traverse` iteration 2 plus the invariant, `awaits`/`exchange` 1;
+    * and the parts the checker does not count at all (FINDINGS below):
+      the index expressions of an assignment's TARGET place (F1), the
+      `requires` predicate of a failable register read (F4), the subject
+      of a `narrow` (F5), a `traverse` invariant (F6).
+
+    FINDINGS for the transfer phase (kosten.rs vs. the Lean model):
+    * F1 -- `StmtArt::Zuweisung` counts `1 + ausdruck(wert)` and never
+      looks at the target place `ziel`: `t.slots[teuer()].x = 5` pays no
+      op for `teuer()`, while a READ of the same place pays it (the
+      2026-09-02 repair covered loads only). The same for compound
+      assignment (`+=`: the load and the arithmetic are not counted).
+    * F2 -- `retry … bounded N ops` costs `N` (`schleife`), and `K006`
+      checks only that ONE pass fits `N`. The Lean loop `retry n` runs up
+      to `n` passes (tries, not ops); the machine bound is
+      `n * (pass + 2) + overflow`. Unless the lowering enforces the ops
+      budget at run time, `N` does not bound the loop.
+    * F3 -- `forever` has no checker number (`Unbekannt`, `K003` under a
+      `costs` clause); the Lean bound multiplies by the machine budget
+      `passes`, which the surface language names nowhere (`per_pass`
+      bounds one pass; the number of passes is the `progress` assumption).
+    * F4 -- `let x = R else …` (`LetSonst` over a place) counts `1 + 1 +
+      sonst` and not the device `requires` predicate G evaluates.
+    * F5 -- `narrow` counts `1 + sonst` and not its subject expression.
+    * F6 -- `traverse` counts `body × bound` and not the loop invariant
+      that G evaluates before every iteration (`travNext`, `travDone`).
+    * F7 -- a recursive call under `decreases` costs NOTHING in kosten.rs
+      («K5.4»); in the Lean check it costs the callee's `decl`, so such a
+      function never passes `kostenPasst` (a direct self-call exceeds its
+      own declaration).
+    * F8 -- an indirect call costs its POINTER TYPE's `costs` in kosten.rs;
+      the Lean signature has no cost field, so the bound excludes indirect
+      calls (`rufeS`), and `spiegelS` excludes them too.
+    * F9 -- constant expressions cost `0` in kosten.rs (`konst_wert`);
+      `kostenExpr` counts their operators. G evaluates every expression in
+      the step that uses it, so this only makes the Lean number larger.
+    Not mirrored (no checker number determined by the Lean term): indirect
+    calls (F8), `retry` (F2), `forever` (F3), axiom calls (foreign costs are
+    certificate lines, the Lean `Ax` has none), `transition`, `advances`,
+    `retires`. -/
+
+mutual
+/-- The forms whose checker number the Lean term determines. -/
+def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Bool
+  | .ite _ t e => spiegelB t && spiegelB e
+  | .onOption _ p a => spiegelB p && spiegelB a
+  | .onTag _ arms => spiegelArms arms
+  | .onGrund _ arms => spiegelGArms arms
+  | .locks _ _ body => spiegelB body
+  | .breaking _ body => spiegelB body
+  | .traverse _ _ body => spiegelB body
+  | .callInd .. => false
+  | .retry .. => false
+  | .forever .. => false
+  | .axiomCall .. => false
+  | .transition .. => false
+  | .advances .. => false
+  | .retires .. => false
+  | .assignSlot .. => true
+  | .assignDurch .. => true
+  | .assignGlob .. => true
+  | .schreibBytes .. => true
+  | .assignVar .. => true
+  | .uebergang .. => true
+  | .call .. => true
+  | .regSchreib .. => true
+  | .publish .. => true
+  | .ret .. => true
+  | .retGrund .. => true
+  | .leave _ => true
+  | .next _ => true
+
+def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Block D V l Γ Λ Λ' → Bool
+  | .nil => true
+  | .cons s rest => spiegelS s && spiegelB rest
+  | .bind _ rest => spiegelB rest
+  | .bindCall _ _ _ _ _ rest => spiegelB rest
+  | .bindCallInd .. => false
+  | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelB rest
+  | .bindAxiom .. => false
+  | .regLies _ _ rest => spiegelB rest
+  | .regLiesElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+  | .awaits _ _ _ _ rest => spiegelB rest
+  | .exchange _ _ _ _ rest => spiegelB rest
+  | .narrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+  | .pruefung _ sonst rest => spiegelE sonst && spiegelB rest
+  | .gleit _ _ _ _ _ rest => spiegelB rest
+  | .gleitLit _ _ _ rest => spiegelB rest
+  | .gleitVon _ _ _ rest => spiegelB rest
+  | .gleitNarrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+
+def spiegelArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+  | .nil => true
+  | .cons b rest => spiegelB b && spiegelArms rest
+
+def spiegelGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat} : GrundArms D V l Γ Λ Λ' n → Bool
+  | .nil => true
+  | .cons b rest => spiegelB b && spiegelGArms rest
+
+def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → Bool
+  | .ret .. => true
+  | .retGrund .. => true
+  | .leave _ => true
+  | .next _ => true
+  | .cons s rest => spiegelS s && spiegelE rest
+  | .bind _ rest => spiegelE rest
+end
+
+mutual
+/-- **The checker's number**, `kosten.rs::anweisung`/`block`/`ruf` read
+    over the Lean syntax (meaningful where `spiegelS` holds). -/
+def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
+  -- `Zuweisung`: `1 + ausdruck(wert)` -- the target place is not read (F1)
+  | .assignSlot _ _ _ e _ _ => 1 + kostenExpr e
+  | .assignDurch _ _ _ _ _ e _ _ => 1 + kostenExpr e
+  | .assignGlob _ e _ _ => 1 + kostenExpr e
+  | .schreibBytes _ _ _ _ _ _ _ e _ _ => 1 + kostenExpr e
+  | .assignVar _ e => 1 + kostenExpr e
+  | .uebergang .. => 1
+  -- `Wenn`: conditions plus the maximum over the arms, the branch free
+  | .ite b t e => kostenExpr b + max (kostenKB c t) (kostenKB c e)
+  -- `Match`: subject plus the maximum over the arms
+  | .onOption o p a => kostenExpr o + max (kostenKB c p) (kostenKB c a)
+  | .onTag v arms => kostenExpr v + kostenKArms c arms
+  | .onGrund r arms => kostenExpr r + kostenKGArms c arms
+  -- `ruf`: declared costs plus arguments
+  | .call g args _ _ => kostenArgs args + c g
+  | .callInd _ args _ _ => kostenArgs args
+  -- `Sperrt`, `Bricht`: the body
+  | .locks _ _ body => kostenKB c body
+  | .breaking _ body => kostenKB c body
+  -- `Traverse`: body times domain bound
+  | .traverse t _ body => (D.count t).toNat * kostenKB c body
+  | .retry .. => 0
+  | .forever .. => 0
+  | .axiomCall _ args _ _ _ _ _ => kostenArgs args
+  | .regSchreib _ _ e => 1 + kostenExpr e
+  | .transition .. => 0
+  | .publish _ e _ _ _ _ => 1 + kostenExpr e
+  | .advances .. => 0
+  | .retires .. => 0
+  -- `Return(Some e)`: the expression; `Return(None)`, `Leave`, `Next`: `0`
+  | .ret e _ => kostenErg e
+  | .retGrund .. => 0
+  | .leave _ => 0
+  | .next _ => 0
+
+def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
+  | .nil => 0
+  | .cons s rest => kostenKS c s + kostenKB c rest
+  -- `Let`: `1 + ausdruck(wert)`; over a call, the call
+  | .bind e rest => 1 + kostenExpr e + kostenKB c rest
+  | .bindCall g args _ _ _ rest => 1 + kostenArgs args + c g + kostenKB c rest
+  | .bindCallInd _ _ _ _ _ rest => kostenKB c rest
+  -- `LetSonst` over a call: `1 + ruf + block(sonst)`, summed
+  | .bindCallElse g args _ _ _ err rest =>
+      1 + kostenArgs args + c g + kostenKE c err + kostenKB c rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => kostenKB c rest
+  -- `Let x = R`: `1 +` one load
+  | .regLies _ _ rest => 2 + kostenKB c rest
+  -- `LetSonst` over a place: `1 + 1 + block(sonst)`; the predicate is not read (F4)
+  | .regLiesElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKB c rest
+  -- `AwaitLoad`: `1`
+  | .awaits _ _ _ _ rest => 1 + kostenKB c rest
+  -- `Exchange` update: `1 + block(rumpf)`
+  | .exchange _ neu _ _ rest => 1 + kostenExpr neu + kostenKB c rest
+  -- `Narrow`: `1 + max(0, sonst)`; the subject is not read (F5)
+  | .narrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
+  -- a named refusal: `if !c { sonst }` with an always-leaving arm -- the
+  -- two-way rule of `block`: condition plus the maximum
+  | .pruefung b sonst rest => kostenExpr b + max (kostenKE c sonst) (kostenKB c rest)
+  -- float `let`s: `1 + ausdruck(wert)`
+  | .gleit _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenKB c rest
+  | .gleitLit _ _ _ rest => 1 + kostenKB c rest
+  | .gleitVon e _ _ rest => 2 + kostenExpr e + kostenKB c rest
+  | .gleitNarrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
+
+def kostenKArms (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+  | .nil => 0
+  | .cons b rest => max (kostenKB c b) (kostenKArms c rest)
+
+def kostenKGArms (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} : GrundArms D V l Γ Λ Λ' n → Nat
+  | .nil => 0
+  | .cons b rest => max (kostenKB c b) (kostenKGArms c rest)
+
+def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
+  | .ret e _ => kostenErg e
+  | .retGrund .. => 0
+  | .leave _ => 0
+  | .next _ => 0
+  | .cons s rest => kostenKS c s + kostenKE c rest
+  | .bind e rest => 1 + kostenExpr e + kostenKE c rest
+end
+
+mutual
+/-- **The remainder**: G's dispatch steps plus what the checker does not
+    read (F1, F4, F5, F6). No callee table: a call's callee cost is the
+    same on both sides. -/
+def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Nat
+  | .assignSlot _ _ i _ _ _ => kostenExpr i
+  | .assignDurch p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
+  | .assignGlob .. => 0
+  | .schreibBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i
+  | .assignVar .. => 0
+  | .uebergang _ _ _ i _ _ _ _ _ _ => kostenExpr i
+  | .ite _ t e => 1 + max (zusatzB t) (zusatzB e)
+  | .onOption _ p a => 2 + max (zusatzB p) (zusatzB a)
+  | .onTag _ arms => 2 + zusatzArms arms
+  | .onGrund _ arms => 1 + zusatzGArms arms
+  | .call .. => 1
+  | .callInd .. => 0
+  | .locks _ _ body => 2 + zusatzB body
+  | .breaking _ body => 1 + zusatzB body
+  | .traverse t inv body => 2 + (D.count t).toNat * (zusatzB body + kostenExpr inv + 2)
+  | .retry .. => 0
+  | .forever .. => 0
+  | .axiomCall .. => 0
+  | .regSchreib .. => 0
+  | .transition .. => 0
+  | .publish .. => 0
+  | .advances .. => 0
+  | .retires .. => 0
+  | .ret .. => 1
+  | .retGrund .. => 1
+  | .leave _ => 1
+  | .next _ => 1
+
+def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Block D V l Γ Λ Λ' → Nat
+  | .nil => 1
+  | .cons s rest => zusatzS s + zusatzB rest
+  | .bind _ rest => 1 + zusatzB rest
+  | .bindCall _ _ _ _ _ rest => 1 + zusatzB rest
+  | .bindCallInd .. => 0
+  | .bindCallElse _ _ _ _ _ err rest => 2 + zusatzE err + zusatzB rest
+  | .bindAxiom .. => 0
+  | .regLies _ _ rest => zusatzB rest
+  | .regLiesElse _ _ z sonst rest => 1 + kostenExpr z + zusatzE sonst + zusatzB rest
+  | .awaits _ _ _ _ rest => 1 + zusatzB rest
+  | .exchange _ _ _ _ rest => 1 + zusatzB rest
+  | .narrow e _ _ sonst rest => 2 + kostenExpr e + zusatzE sonst + zusatzB rest
+  | .pruefung _ sonst rest => 1 + max (zusatzE sonst) (zusatzB rest)
+  | .gleit _ _ _ _ _ rest => zusatzB rest
+  | .gleitLit _ _ _ rest => 1 + zusatzB rest
+  | .gleitVon _ _ _ rest => zusatzB rest
+  | .gleitNarrow e _ _ sonst rest => 2 + kostenExpr e + zusatzE sonst + zusatzB rest
+
+def zusatzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+  | .nil => 0
+  | .cons b rest => max (zusatzB b) (zusatzArms rest)
+
+def zusatzGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat} : GrundArms D V l Γ Λ Λ' n → Nat
+  | .nil => 0
+  | .cons b rest => max (zusatzB b) (zusatzGArms rest)
+
+def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → Nat
+  | .ret .. => 1
+  | .retGrund .. => 1
+  | .leave _ => 1
+  | .next _ => 1
+  | .cons s rest => entfZ s + zusatzS s + zusatzE rest
+  | .bind _ rest => zusatzE rest
+end
+
+mutual
+/-- **The correspondence, per statement form**: the Lean bound is at most
+    the checker's number plus the remainder `zusatz`. -/
+theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
+    (s : Stmt D V l Γ Λ Λ') → spiegelS s = true →
+      kostenStmt c pa s ≤ kostenKS c s + zusatzS s
+  | .ite b t e, h => by
+      simp only [spiegelS, Bool.and_eq_true] at h
+      have h1 := spiegel_block c pa t h.1
+      have h2 := spiegel_block c pa e h.2
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .onOption o p a, h => by
+      simp only [spiegelS, Bool.and_eq_true] at h
+      have h1 := spiegel_block c pa p h.1
+      have h2 := spiegel_block c pa a h.2
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .onTag v arms, h => by
+      have h1 := spiegel_arms c pa arms h
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .onGrund r arms, h => by
+      have h1 := spiegel_garms c pa arms h
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .locks _ _ body, h => by
+      have h1 := spiegel_block c pa body h
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .breaking _ body, h => by
+      have h1 := spiegel_block c pa body h
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .traverse t inv body, h => by
+      have h1 := spiegel_block c pa body h
+      have h2 : (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2) ≤
+          (D.count t).toNat * kostenKB c body +
+            (D.count t).toNat * (zusatzB body + kostenExpr inv + 2) := by
+        rw [← Nat.mul_add]
+        exact Nat.mul_le_mul_left _ (by omega)
+      simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .callInd .., h => by simp [spiegelS] at h
+  | .retry .., h => by simp [spiegelS] at h
+  | .forever .., h => by simp [spiegelS] at h
+  | .axiomCall .., h => by simp [spiegelS] at h
+  | .transition .., h => by simp [spiegelS] at h
+  | .advances .., h => by simp [spiegelS] at h
+  | .retires .., h => by simp [spiegelS] at h
+  | .assignSlot .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .assignDurch .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .assignGlob .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .schreibBytes .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .assignVar .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .uebergang .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .call .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .regSchreib .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .publish .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .ret .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .retGrund .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .leave _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .next _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+
+theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
+    (b : Block D V l Γ Λ Λ') → spiegelB b = true →
+      kostenBlock c pa b ≤ kostenKB c b + zusatzB b
+  | .nil, _ => by simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .cons s rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_stmt c pa s h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .bind _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .bindCall _ _ _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .bindCallInd .., h => by simp [spiegelB] at h
+  | .bindCallElse _ _ _ _ _ err rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_end c pa err h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .bindAxiom .., h => by simp [spiegelB] at h
+  | .regLies _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .regLiesElse _ _ _ sonst rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_end c pa sonst h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .awaits _ _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .exchange _ _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .narrow _ _ _ sonst rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_end c pa sonst h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .pruefung _ sonst rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_end c pa sonst h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .gleit _ _ _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .gleitLit _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .gleitVon _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .gleitNarrow _ _ _ sonst rest, h => by
+      simp only [spiegelB, Bool.and_eq_true] at h
+      have h1 := spiegel_end c pa sonst h.1
+      have h2 := spiegel_block c pa rest h.2
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
+
+theorem spiegel_arms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+    (arms : Arms D V l Γ Λ Λ' cs) → spiegelArms arms = true →
+      kostenArms c pa arms ≤ kostenKArms c arms + zusatzArms arms
+  | .nil, _ => by simp only [kostenArms, kostenKArms, zusatzArms]; omega
+  | .cons b rest, h => by
+      simp only [spiegelArms, Bool.and_eq_true] at h
+      have h1 := spiegel_block c pa b h.1
+      have h2 := spiegel_arms c pa rest h.2
+      simp only [kostenArms, kostenKArms, zusatzArms]; omega
+
+theorem spiegel_garms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} :
+    (arms : GrundArms D V l Γ Λ Λ' n) → spiegelGArms arms = true →
+      kostenGrundArms c pa arms ≤ kostenKGArms c arms + zusatzGArms arms
+  | .nil, _ => by simp only [kostenGrundArms, kostenKGArms, zusatzGArms]; omega
+  | .cons b rest, h => by
+      simp only [spiegelGArms, Bool.and_eq_true] at h
+      have h1 := spiegel_block c pa b h.1
+      have h2 := spiegel_garms c pa rest h.2
+      simp only [kostenGrundArms, kostenKGArms, zusatzGArms]; omega
+
+theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} :
+    (e : Endblock D V l Γ Λ) → spiegelE e = true →
+      kostenEnd c pa e ≤ kostenKE c e + zusatzE e
+  | .ret .., _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .retGrund .., _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .leave _, _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .next _, _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .cons s rest, h => by
+      simp only [spiegelE, Bool.and_eq_true] at h
+      have h1 := spiegel_stmt c pa s h.1
+      have h2 := spiegel_end c pa rest h.2
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .bind _ rest, h => by
+      have h1 := spiegel_end c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+end
+
+/-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own
+    steps of its frame are at most the checker's number of the body plus
+    the remainder -- with calls counting the callee's cost one depth down
+    on both sides. -/
+theorem frame_schritte_pruefer (P : Programm D) (O : Orakel D) (passes : Nat)
+    (f : Faden) (g : D.Fn) (n : Nat) (hadm : rufTief P (n + 1) g = true)
+    (hsp : spiegelE (P.rumpf g) = true)
+    {rho : Env D (D.params g)} {s0 : World D} {k : Nat} {M1 M2 : RufMaschineG D}
+    (hE : Eintritt P f g rho s0 k M1)
+    (run : SegLauf P O passes M1 M2) (hA : aktivVor f k run) :
+    segZaehle run f ≤ kostenKE (kostenTief P passes n) (P.rumpf g) + zusatzE (P.rumpf g) :=
+  Nat.le_trans (frame_schritte_beschraenkt P O passes f g n hadm hE run hA)
+    (spiegel_end (kostenTief P passes n) passes (P.rumpf g) hsp)
+
+/-! ## 12. The admission depth of the adequacy theorems
+
+    `Tief P A n` (RufAdaequatRufG.lean) and `TiefK P A n`
+    (RufUmkehrRufG.lean) admit a callee at depth `n + 1` when its body is
+    covered with callees admitted at depth `n`. Every function they admit
+    is admitted by `rufTief` at the same depth, so every frame the
+    adequacy theorems speak about has the step bound. -/
+
+section Tiefe
+
+variable {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
+
+mutual
+theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} :
+    StmtR A C mr s → rufeS Z s = true
+  | .blatt _ hb => by cases hb <;> rfl
+  | .ite _ _ _ ht he => by
+      simp only [rufeS, Bool.and_eq_true]
+      exact ⟨rufeB_of_BlockR Z hZ ht, rufeB_of_BlockR Z hZ he⟩
+  | .onOption _ _ _ hp ha => by
+      simp only [rufeS, Bool.and_eq_true]
+      exact ⟨rufeB_of_BlockR Z hZ hp, rufeB_of_BlockR Z hZ ha⟩
+  | .onTag _ _ ha => by
+      simp only [rufeS]; exact rufeArms_of_ArmsR Z hZ ha
+  | .onGrund _ _ ha => by
+      simp only [rufeS]; exact rufeGArms_of_GrundArmsR Z hZ ha
+  | .breaking _ _ hb => by
+      simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
+  | .locks _ _ _ _ hb => by
+      simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
+  | .ret _ _ => rfl
+  | .call s g hg hC => by
+      cases s <;> simp only [Stmt.rufZiel, Option.some.injEq, reduceCtorEq] at hg
+      subst hg
+      exact hZ _ hC
+  | .traverse _ _ _ hb => by
+      simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
+  | .retry _ _ _ _ hb hu => by
+      simp only [rufeS, Bool.and_eq_true]
+      exact ⟨rufeB_of_BlockR Z hZ hb, rufeB_of_BlockR Z hZ hu⟩
+  | .forever _ _ _ hb => by
+      simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
+  | .leave _ => rfl
+  | .next _ => rfl
+  | .retGrund _ _ => rfl
+
+theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {b : Block D V l Γ Λ Λ'} :
+    BlockR A C mr b → rufeB Z b = true
+  | .nil => rfl
+  | .cons _ _ hs hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨rufeS_of_StmtR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
+  | .bind _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .bindCall _ _ _ _ _ _ hC hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨hZ _ hC, rufeB_of_BlockR Z hZ hr⟩
+  | .regLies _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .regLiesElse _ _ _ _ _ hs hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
+  | .awaits _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .exchange _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .narrow _ _ _ _ _ hs hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
+  | .pruefung _ _ _ hs hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
+  | .gleit _ _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .gleitLit _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .gleitVon _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .gleitNarrow _ _ _ _ _ hs hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
+  | .bindCallElse _ _ _ _ _ _ _ hC herr hr => by
+      simp only [rufeB, Bool.and_eq_true]
+      exact ⟨⟨hZ _ hC, rufeE_of_EndR Z hZ herr⟩, rufeB_of_BlockR Z hZ hr⟩
+
+theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ} :
+    EndR A C e → rufeE Z e = true
+  | .ret _ _ => rfl
+  | .cons _ _ hs hr => by
+      simp only [rufeE, Bool.and_eq_true]
+      exact ⟨rufeS_of_StmtR Z hZ hs, rufeE_of_EndR Z hZ hr⟩
+  | .bind _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
+  | .retGrund _ _ => rfl
+
+theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z arms = true
+  | .nil => rfl
+  | .cons _ _ hb hr => by
+      simp only [rufeArms, Bool.and_eq_true]
+      exact ⟨rufeB_of_BlockR Z hZ hb, rufeArms_of_ArmsR Z hZ hr⟩
+
+theorem rufeGArms_of_GrundArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    {arms : GrundArms D V l Γ Λ Λ' n} : GrundArmsR A C mr arms → rufeGArms Z arms = true
+  | .nil => rfl
+  | .cons _ _ hb hr => by
+      simp only [rufeGArms, Bool.and_eq_true]
+      exact ⟨rufeB_of_BlockR Z hZ hb, rufeGArms_of_GrundArmsR Z hZ hr⟩
+end
+
+end Tiefe
+
+/-- `Tief` admits no more than `rufTief`. -/
+theorem tief_rufTief (P : Programm D) (A : D.Lock → Prop) :
+    ∀ (n : Nat) (g : D.Fn), Tief P A n g → rufTief P n g = true
+  | 0, _, h => (h : False).elim
+  | n + 1, _, h => rufeE_of_EndR (rufTief P n) (fun g' hg' => tief_rufTief P A n g' hg') h
+
+/-- `TiefK` admits no more than `rufTief`. -/
+theorem tiefK_rufTief (P : Programm D) (A : D.Lock → Prop) :
+    ∀ (n : Nat) (g : D.Fn), TiefK P A n g → rufTief P n g = true
+  | 0, _, h => (h : False).elim
+  | n + 1, _, h => rufeE_of_EndR (rufTief P n) (fun g' hg' => tiefK_rufTief P A n g' hg') h.1
+
+/-- **The bound for the frames of the adequacy theorems**: a frame of a
+    function admitted by `Tief` at depth `n + 1` takes at most
+    `kostenTief P passes (n + 1) g` own steps. -/
+theorem frame_schritte_beschraenkt_tief (P : Programm D) (O : Orakel D) (passes : Nat)
+    (A : D.Lock → Prop) (f : Faden) (g : D.Fn) (n : Nat) (hT : Tief P A (n + 1) g)
+    {rho : Env D (D.params g)} {s0 : World D} {k : Nat} {M1 M2 : RufMaschineG D}
+    (hE : Eintritt P f g rho s0 k M1)
+    (run : SegLauf P O passes M1 M2) (hA : aktivVor f k run) :
+    segZaehle run f ≤ kostenTief P passes (n + 1) g :=
+  frame_schritte_beschraenkt P O passes f g n (tief_rufTief P A (n + 1) g hT) hE run hA
+
 end Gabbro.Grammatik
+
+/-! ## CUTS:
+
+  What is proved (no premise beyond the Bool checks and the run itself):
+  * `schrittArt` -- all 72 rules of `RufSchrittG`: a head move lowers the
+    potential by at least one, a push hands the callee at most the cost the
+    caller counted for it, a pop drops a frame of potential at least one.
+  * `frame_schritte_beschraenkt` (TARGET 1) -- callees admitted by call
+    depth (`rufTief`, decidable): own steps between entry and return
+    `≤ kostenTief P passes (n + 1) g`; `frame_schritte_beschraenkt_tief`
+    the same for every function `Tief` admits (`tief_rufTief`,
+    `tiefK_rufTief`).
+  * `kosten_passt_deklaration` (TARGET 2) -- the Bool `kostenPasst` over a
+    closed list with a declared table: own steps `≤ decl g`.
+  * `spiegel_stmt`/`spiegel_block`/`spiegel_end`, `frame_schritte_pruefer`
+    (TARGET 3) -- Lean bound `≤` checker number `+ zusatz`, per form; the
+    findings F1-F9 in §11.
+  * `eintritt_start`, `eintritt_push` -- every frame begins in `Eintritt`;
+    `segLauf_erreichbar`/`erreichbar_segLauf` -- counted runs are exactly
+    the reachability derivations.
+
+  What the bound does NOT say:
+  * WAITING. A step that cannot fire is no step: `dannLocks` needs the lock
+    free at every other thread (`RufFreiG`), `dannAwaits` needs the oracle's
+    `sichtbar`. The time a thread waits is a SCHEDULER ASSUMPTION -- fair
+    scheduling and bounded lock hold time -- named here and proved nowhere.
+    The hold bound exists in the surface language (`lock L … held <= N
+    ops`, checked by `K002`), but `Deklaration` has no field for it, so no
+    waiting bound under fairness is stated (TARGET 4 not done: not in the
+    model).
+  * TERMINATION. The theorems bound the steps UNTIL the return; they do
+    not say the frame returns. A frame may stop taking steps for good: a
+    lock never freed, an `awaits` never visible, a `forever` whose budget
+    `passes` ran out (`ewig 0` has no rule), a leaf whose `execStmt` is not
+    `ok` (a logic or hardware outcome), an end block `leave`/`next` (no
+    rule steps it). Then it takes fewer steps, never more.
+  * TIME. Steps of G are not operations of kosten.rs and not cycles; §11
+    relates the first two, `Ziel.lean` `fristAlsAnnahme` the last.
+  * Indirect calls (`callInd`, `bindCallInd`) are excluded (`rufeS`): the
+    Lean signature carries no cost, so a pointer's callee has no number
+    (F8). The declared costs are an explicit table `decl`, not a field of
+    `Signatur` (a field broke the anonymous constructors in `Satz.lean` and
+    `Zeugnis.lean`, lane 132).
+  * `kostenK` is a READING of `kosten.rs` over the Lean syntax, written by
+    hand from the Rust source; it is not extracted from the checker, and
+    the correspondence is only as good as that reading. Forms without a
+    checker number in the Lean term are outside `spiegelS`.
+  * `forever`: the bound is relative to the machine budget `passes`.
+
+  Reused from lane 132 (`muse-archiv/132`): `kostenExpr`/`kostenArgs`/
+  `kostenErg`, the `SegLauf`/`segZaehle`/`aktivVor`/`Eintritt` idea, the
+  depth-indexed admission. Redone: the costs (lane 132's end-block bonus
+  `1` for an unfoldable compound made `endeEntf` keep the potential equal,
+  `1 + k s + k r = k s + 1 + k r` against an empty block of cost `1` -- no
+  strict drop, so its step lemma could not close; here the bonus is `2`,
+  `entfZ`), the fragment (lane 132 covered leaves, calls, `ite`, `locks`,
+  `breaking`; here every form except indirect calls), and the invariant
+  (lane 132 tracked the entry frame's key; the bound needs only the
+  potential of the frames above the entry depth).
+-/
+
+#print axioms Gabbro.Grammatik.schrittArt
+#print axioms Gabbro.Grammatik.frame_schritte_beschraenkt
+#print axioms Gabbro.Grammatik.frame_schritte_beschraenkt_tief
+#print axioms Gabbro.Grammatik.kosten_passt_deklaration
+#print axioms Gabbro.Grammatik.frame_schritte_pruefer
+#print axioms Gabbro.Grammatik.spiegel_end
+#print axioms Gabbro.Grammatik.eintritt_push
+#print axioms Gabbro.Grammatik.erreichbar_segLauf

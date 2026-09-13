@@ -124,3 +124,4 @@ import Grammatik.ZielOrtGeraet
 import Grammatik.ZielOrtGeraetAus
 import Grammatik.ZielOrtGeraetZeuge
 import Grammatik.KostenG
+import Grammatik.KostenGZeuge
