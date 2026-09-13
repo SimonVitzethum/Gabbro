@@ -464,6 +464,27 @@ theorem ziel_ort_ganz_ax_zeuge :
     axP_start, axInit_exklusiv, inc_ensures_nicht_V, M, hr, rfl, hslot,
     ⟨rho, v, s0, s1, hv, hlog, (hV.1 0 _ hlog).2 axZaehle rho v s0 s1 rfl⟩, hV.1, hV.2.1⟩
 
+/-- **`ziel_ort_ganz_vertrag_zeuge`** -- the contract half with a non-trivial
+    declared ensures, its premises jointly on `axP`. -/
+theorem ziel_ort_ganz_vertrag_zeuge :
+    (∀ f : axD.Fn, KoerperGutRQ axP 0 axQ f) ∧
+    ∀ M : RufMaschineG axD, RufErreichbarG axP axO 0 (RufStartG axP axSp axInit) M →
+      VertragAmOrtG axP M :=
+  ⟨fun f => (axP_koerperZ f).1,
+    ziel_ort_ganz_vertrag axP axO 0 axQ axFs axSp axInit axE0 axO_gut axO_lokal axO_vertrag
+      axQ_lokal axFs_voll (programmImFragmentG_of_V axP axFs axP_fragment)
+      (fussOrtGB_of_V axP axFs axP_fragment axP_fuss) (fun f => (axP_koerperZ f).1) axP_start
+      axInit_exklusiv⟩
+
+/-- **`ziel_ort_voll_ax_lokal_aus_ganz_zeuge`** -- the premises of
+    `ziel_ort_voll_ax` (plus `RegLokal`) jointly on `axP`, through the new
+    derivation. -/
+theorem ziel_ort_voll_ax_lokal_aus_ganz_zeuge :
+    ∀ M : RufMaschineG axD, RufErreichbarG axP axO 0 (RufStartG axP axSp axInit) M →
+      VertragAmOrtG axP M :=
+  ziel_ort_voll_ax_lokal_aus_ganz axP axO 0 axQ axFs axSp axInit axE0 axO_gut axO_lokal axO_vertrag
+    axQ_lokal axFs_voll axP_fragment axP_fuss axP_koerperA axP_start axInit_exklusiv
+
 /-! ## CUTS:
 
   What is proved: all premises of `ziel_ort_ganz` jointly on four programs
@@ -493,6 +514,8 @@ theorem ziel_ort_ganz_ax_zeuge :
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_ref104
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_zeuge
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_ax_zeuge
+#print axioms Gabbro.Grammatik.ziel_ort_ganz_vertrag_zeuge
+#print axioms Gabbro.Grammatik.ziel_ort_voll_ax_lokal_aus_ganz_zeuge
 #print axioms Gabbro.Grammatik.paP_rahmen_zertifiziert
 #print axioms Gabbro.Grammatik.paP_nicht_ganz
 #print axioms Gabbro.Grammatik.paP_halt
