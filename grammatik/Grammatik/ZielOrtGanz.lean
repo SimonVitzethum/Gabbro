@@ -693,101 +693,7 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
 
 end Halt
 
-/-! ## 7. The goal theorem -/
-
-/-- **ZIEL AM ORT, GANZ -- the goal theorem.** Over the repaired machine G,
-    for every program in the widened fragment (`programmImFragmentG`: every
-    form, indirect calls under `KandOk`, register reads under `RegLokal`)
-    whose widened footprint check passes (`fussOrtGB`), from an exclusive
-    start that meets the entry contracts, with an oracle that keeps the
-    declared axiom frames and the held locks (`GutO`), answers registers and
-    `awaits` from the declared carriers (`RegLokal`) and meets the declared
-    axiom ensures `Q` (`AxVertragO Q O`, `Q` reading only the declared
-    carriers, `AxEnsLokal Q`), and whose every function meets the user
-    obligation `KoerperGutZ` -- the body triple and caller duty against
-    frame-respecting handlers and the oracles meeting `Q`, and NO `logik`
-    outcome of the body -- EVERY reachable machine satisfies
-    * `VertragAmOrtG`: `requires` at every logged entry, `ensures` at every
-      logged return, with the actual values; and
-    * `KeinLogikHaltG`: no thread is stopped at a `logik` check of G -- every
-      loop invariant G tests holds where G tests it, and every `state`
-      transition finds its pre-state.
-
-    Premises, by class: (a) user logic `KoerperGutZ` (per function, over the
-    SEQUENTIAL semantics), `StartGut`; (b) hardware `GutO`, `RegLokal`,
-    `AxVertragO Q`; (c) decidable program facts `hvoll`, `programmImFragmentG`,
-    `fussOrtGB`, `StartExklusiv` (N240 for constant starts), `AxEnsLokal Q`;
-    the declaration has an event (`e0`). -/
-theorem ziel_ort_ganz (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
-    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
-    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
-    (hK : ∀ f : D.Fn, KoerperGutZ P passes Q f) (hStart : StartGut P sp init)
-    (hex : StartExklusiv init) :
-    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-      VertragAmOrtG P M ∧ KeinLogikHaltG O passes M := by
-  intro M hr
-  have hI := zielInvR_erreichbar P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss
-    (fun f => (hK f).1) hStart hex M hr
-  exact ⟨fun t ev hev => hI.2 t ev hev,
-    fun t => fadenR_prueft hO hRL hQ (fun f => (hK f).2) t (hI.1 t)⟩
-
-/-- **The contract half alone** needs only the first conjunct of the
-    obligation: `ziel_ort_rahmen` with declared axiom ensures (callee
-    frames, registers, `awaits` and `Q` in one statement). -/
-theorem ziel_ort_ganz_vertrag (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
-    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
-    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
-    (hK : ∀ f : D.Fn, KoerperGutRQ P passes Q f) (hStart : StartGut P sp init)
-    (hex : StartExklusiv init) :
-    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-      VertragAmOrtG P M := by
-  intro M hr
-  have hI := zielInvR_erreichbar P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss
-    hK hStart hex M hr
-  exact fun t ev hev => hI.2 t ev hev
-
-/-- **`ziel_ort_voll_ax` on register-local oracles is a special case**:
-    its fragment and footprint check give the widened ones, its obligation
-    `KoerperGutA` gives `KoerperGutRQ` (`koerperGutRQ_of_A`). -/
-theorem ziel_ort_voll_ax_lokal_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat)
-    (Q : AxEns D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
-    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
-    (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hFrag : programmImFragmentV P fs = true) (hFuss : fussOrtB P fs = true)
-    (hK : ∀ f : D.Fn, KoerperGutA P passes Q f) (hStart : StartGut P sp init)
-    (hex : StartExklusiv init) :
-    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-      VertragAmOrtG P M :=
-  ziel_ort_ganz_vertrag P O passes Q fs sp init e0 hO hRL hQ hlok hvoll
-    (programmImFragmentG_of_V P fs hFrag) (fussOrtGB_of_V P fs hFrag hFuss)
-    (fun f => koerperGutRQ_of_A (hK f)) hStart hex
-
-/-- **`ziel_ort_rahmen` is the contract half at the trivial ensures.** -/
-theorem ziel_ort_rahmen_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
-    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
-    (hO : GutO O) (hRL : RegLokal O) (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
-    (hK : ∀ f : D.Fn, KoerperGutR P passes f) (hStart : StartGut P sp init)
-    (hex : StartExklusiv init) :
-    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-      VertragAmOrtG P M :=
-  ziel_ort_ganz_vertrag P O passes (axWahr D) fs sp init e0 hO hRL (axVertragO_wahr O)
-    axEnsLokal_wahr hvoll hFrag hFuss (fun f => koerperGutRQ_of_R (axWahr D) (hK f)) hStart hex
-
-#print axioms Gabbro.Grammatik.kopfR_keineLogik
-#print axioms Gabbro.Grammatik.blatt_logik
-#print axioms Gabbro.Grammatik.fadenR_prueft
-#print axioms Gabbro.Grammatik.ziel_ort_ganz
-#print axioms Gabbro.Grammatik.ziel_ort_ganz_vertrag
-#print axioms Gabbro.Grammatik.ziel_ort_voll_ax_lokal_aus_ganz
-#print axioms Gabbro.Grammatik.ziel_ort_rahmen_aus_ganz
-
-/-! ## 8. G moves at every `logik` check
+/-! ## 7. G moves at every `logik` check
 
   `KeinLogikHaltG` says the checks PASS. Here the step itself: at every
   place where a rule of G tests a `logik` condition, the rule fires -- given
@@ -861,6 +767,8 @@ theorem uebergang_ok {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {
       simp only [execStmt] at hx
       split at hx <;> cases hx
 
+section Schritt
+
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
 /-- **At a `logik` check whose test passes, G fires.** From `PrueftG` (the
@@ -908,8 +816,103 @@ theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O pas
       _ rst k ρ rfl hr hH σ' ρ' hst herw
     exact ⟨M', hs⟩
 
-/-- **G MOVES AT EVERY `logik` CHECK -- the progress half of the goal
-    theorem.** Under the premises of `ziel_ort_ganz`, on every reachable
+end Schritt
+
+/-! ## 8. The goal theorem -/
+
+/-- **ZIEL AM ORT, GANZ -- the goal theorem.** Over the repaired machine G,
+    for every program in the widened fragment (`programmImFragmentG`: every
+    form, indirect calls under `KandOk`, register reads under `RegLokal`)
+    whose widened footprint check passes (`fussOrtGB`), from an exclusive
+    start that meets the entry contracts, with an oracle that keeps the
+    declared axiom frames and the held locks (`GutO`), answers registers and
+    `awaits` from the declared carriers (`RegLokal`) and meets the declared
+    axiom ensures `Q` (`AxVertragO Q O`, `Q` reading only the declared
+    carriers, `AxEnsLokal Q`), and whose every function meets the user
+    obligation `KoerperGutZ` -- the body triple and caller duty against
+    frame-respecting handlers and the oracles meeting `Q`, and NO `logik`
+    outcome of the body -- EVERY reachable machine satisfies
+    * `VertragAmOrtG`: `requires` at every logged entry, `ensures` at every
+      logged return, with the actual values; and
+    * `KeinLogikHaltG`: no thread is stopped at a `logik` check of G -- every
+      loop invariant G tests holds where G tests it, and every `state`
+      transition finds its pre-state; and
+    * progress at the checks: a thread standing at a `logik` check
+      (`AnPruefungG`) whose head's static holdings are exactly its held locks
+      (`HeldGenau`, the lock side condition of every reading rule) CAN STEP.
+      What else can stop a thread is named in `SATZKARTE.md` §13.5.
+
+    Premises, by class: (a) user logic `KoerperGutZ` (per function, over the
+    SEQUENTIAL semantics), `StartGut`; (b) hardware `GutO`, `RegLokal`,
+    `AxVertragO Q`; (c) decidable program facts `hvoll`, `programmImFragmentG`,
+    `fussOrtGB`, `StartExklusiv` (N240 for constant starts), `AxEnsLokal Q`;
+    the declaration has an event (`e0`). -/
+theorem ziel_ort_ganz (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutZ P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M ∧ KeinLogikHaltG O passes M ∧
+      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+        AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
+  intro M hr
+  have hI := zielInvR_erreichbar P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss
+    (fun f => (hK f).1) hStart hex M hr
+  have hP : KeinLogikHaltG O passes M :=
+    fun t => fadenR_prueft hO hRL hQ (fun f => (hK f).2) t (hI.1 t)
+  exact ⟨fun t ev hev => hI.2 t ev hev, hP, fun t hH hA => schritt_an_pruefung t (hP t) hH hA⟩
+
+/-- **The contract half alone** needs only the first conjunct of the
+    obligation: `ziel_ort_rahmen` with declared axiom ensures (callee
+    frames, registers, `awaits` and `Q` in one statement). -/
+theorem ziel_ort_ganz_vertrag (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutRQ P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M := by
+  intro M hr
+  have hI := zielInvR_erreichbar P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss
+    hK hStart hex M hr
+  exact fun t ev hev => hI.2 t ev hev
+
+/-- **`ziel_ort_voll_ax` on register-local oracles is a special case**:
+    its fragment and footprint check give the widened ones, its obligation
+    `KoerperGutA` gives `KoerperGutRQ` (`koerperGutRQ_of_A`). -/
+theorem ziel_ort_voll_ax_lokal_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat)
+    (Q : AxEns D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentV P fs = true) (hFuss : fussOrtB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutA P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M :=
+  ziel_ort_ganz_vertrag P O passes Q fs sp init e0 hO hRL hQ hlok hvoll
+    (programmImFragmentG_of_V P fs hFrag) (fussOrtGB_of_V P fs hFrag hFuss)
+    (fun f => koerperGutRQ_of_A (hK f)) hStart hex
+
+/-- **`ziel_ort_rahmen` is the contract half at the trivial ensures.** -/
+theorem ziel_ort_rahmen_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutR P passes f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M :=
+  ziel_ort_ganz_vertrag P O passes (axWahr D) fs sp init e0 hO hRL (axVertragO_wahr O)
+    axEnsLokal_wahr hvoll hFrag hFuss (fun f => koerperGutRQ_of_R (axWahr D) (hK f)) hStart hex
+
+/-- **G MOVES AT EVERY `logik` CHECK -- the progress conjunct of
+    `ziel_ort_ganz`, stated alone.** Under the premises of `ziel_ort_ganz`, on every reachable
     machine, a thread that stands at a `logik` check of G (`AnPruefungG`)
     and whose head's static holdings are exactly its held locks can step.
     No reachable machine is stuck at a loop invariant, a `forever`
@@ -925,9 +928,17 @@ theorem ziel_ort_ganz_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat)
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
-  intro M hr t hH hA
-  exact schritt_an_pruefung t ((ziel_ort_ganz P O passes Q fs sp init e0 hO hRL hQ hlok hvoll
-    hFrag hFuss hK hStart hex M hr).2 t) hH hA
+  intro M hr
+  exact (ziel_ort_ganz P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss hK hStart hex
+    M hr).2.2
+
+#print axioms Gabbro.Grammatik.kopfR_keineLogik
+#print axioms Gabbro.Grammatik.blatt_logik
+#print axioms Gabbro.Grammatik.fadenR_prueft
+#print axioms Gabbro.Grammatik.ziel_ort_ganz
+#print axioms Gabbro.Grammatik.ziel_ort_ganz_vertrag
+#print axioms Gabbro.Grammatik.ziel_ort_voll_ax_lokal_aus_ganz
+#print axioms Gabbro.Grammatik.ziel_ort_rahmen_aus_ganz
 
 #print axioms Gabbro.Grammatik.schritt_an_pruefung
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_fortschritt

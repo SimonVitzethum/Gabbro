@@ -60,7 +60,9 @@ theorem ziel_ort_ganz_ref104 :
     (∀ f : r4D.Fn, KoerperGutZ r4P 0 (axWahr r4D) f) ∧ StartGut r4P r4Sp r4Init ∧
     StartExklusiv (D := r4D) r4Init ∧
     (∀ M : RufMaschineG r4D, RufErreichbarG r4P r4O 0 (RufStartG r4P r4Sp r4Init) M →
-      VertragAmOrtG r4P M ∧ KeinLogikHaltG r4O 0 M) ∧
+      VertragAmOrtG r4P M ∧ KeinLogikHaltG r4O 0 M ∧
+      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+        AnPruefungG M t → ∃ M', RufSchrittG r4P r4O 0 M t M') ∧
     ∃ M : RufMaschineG r4D, RufErreichbarG r4P r4O 0 (RufStartG r4P r4Sp r4Init) M ∧
       (r4Sp.slots () 0 ()).n = 0 ∧ (M.speicher.slots () 0 ()).n = 100 ∧
       (∃ (rho : Env r4D (r4D.params r4Ein)) (s0 s1 : World r4D),
@@ -74,7 +76,7 @@ theorem ziel_ort_ganz_ref104 :
   have hV := hZ M hr
   refine ⟨r4O_gut, r4O_lokal, axVertragO_wahr r4O, axEnsLokal_wahr, r4Fs_voll, r4P_fragmentG,
     r4P_fussG, r4P_koerperZ, r4P_start, r4Init_exklusiv, hZ, M, hr, rfl, hsp,
-    ⟨rho, s0, s1, hlog, ?_⟩, hV.1, hV.2⟩
+    ⟨rho, s0, s1, hlog, ?_⟩, hV.1, hV.2.1⟩
   exact (hV.1 0 _ hlog).2 r4Ein rho () s0 s1 rfl
 
 /-! ## 2. The concurrent program `zP` -/
@@ -120,7 +122,7 @@ theorem ziel_ort_ganz_zeuge :
   have hV := hZ M18 h18'
   exact ⟨zO_gut, zO_lokal, axVertragO_wahr zO, axEnsLokal_wahr, zFs_voll, zP_fragmentG, zP_fussG,
     zP_koerperZ, zP_start, zInit_exklusiv, M18, h18', rfl,
-    ⟨rho, v, s0, s1, hm, hv, (hV.1 0 _ hm).2 _ _ _ _ _ rfl⟩, hV.1, hV.2⟩
+    ⟨rho, v, s0, s1, hm, hv, (hV.1 0 _ hm).2 _ _ _ _ _ rfl⟩, hV.1, hV.2.1⟩
 
 /-! ## 3. Probe A: a false loop invariant -/
 
@@ -379,7 +381,7 @@ theorem ziel_ort_ganz_schleife :
     (.ende (.ret .keine (by rfl))) .nil rfl
   have hr2 : RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 :=
     .schritt _ _ _ (.schritt _ _ _ .start s1) s2
-  have h0 := (hZ M2 hr2).2 0
+  have h0 := (hZ M2 hr2).2.1 0
   unfold PrueftG at h0
   rw [hZ2.1] at h0
   have hw := h0.1 _ _ _ _ _ _ _ _ _ rfl
@@ -460,7 +462,7 @@ theorem ziel_ort_ganz_ax_zeuge :
   have hV := hZ M hr
   exact ⟨axO_gut, axO_lokal, axO_vertrag, axQ_lokal, axFs_voll, hFragG, hFussG, axP_koerperZ,
     axP_start, axInit_exklusiv, inc_ensures_nicht_V, M, hr, rfl, hslot,
-    ⟨rho, v, s0, s1, hv, hlog, (hV.1 0 _ hlog).2 axZaehle rho v s0 s1 rfl⟩, hV.1, hV.2⟩
+    ⟨rho, v, s0, s1, hv, hlog, (hV.1 0 _ hlog).2 axZaehle rho v s0 s1 rfl⟩, hV.1, hV.2.1⟩
 
 #print axioms Gabbro.Grammatik.lP_koerperZ
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_schleife
