@@ -1531,9 +1531,42 @@ def lowerWertLies (tabs : List UTab) (pnamen : List String)
 
 /-- The body of `lies`: empty with a trailing value return
     (a read-only function; statements have no lowered proofs
-    here -- an explicit error). -/
+    here -- an explicit error). A same-range slot read returns
+    bare (the no-op arm of the exporter's `fit`); every other
+    value widens. -/
 def lowerSaetzeLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UStmt → URet → Except String UKoerpLies
+  | [], .wert (.slot b f ix) =>
+    if !(strEq b "k" && strEq f "stand") then
+      .error "Rueckgabe ohne G-Form"
+    else
+      match uFeldWeite tabs "Konto" "stand" 0 100 with
+      | .error e => .error e
+      | .ok _ =>
+        match lowerIdxLies ix with
+        | .error e => .error e
+        | .ok i =>
+          .ok (Endblock.ret
+            (ErgExpr.wert (Expr.durch (Expr.var Var.hier)
+              G104_referenz.GTab.Konto rfl
+              G104_referenz.GKontoFeld.stand i
+              G104_referenz.gDarf_lies_Konto))
+            (List.Perm.refl _))
+  | [], .wert (.tab b f ix) =>
+    if !(strEq b "Konto" && strEq f "stand") then
+      .error "Rueckgabe ohne G-Form"
+    else
+      match uFeldWeite tabs "Konto" "stand" 0 100 with
+      | .error e => .error e
+      | .ok _ =>
+        match lowerIdxLies ix with
+        | .error e => .error e
+        | .ok i =>
+          .ok (Endblock.ret
+            (ErgExpr.wert (Expr.slot G104_referenz.GTab.Konto
+              G104_referenz.GKontoFeld.stand i
+              G104_referenz.gDarf_lies_Konto))
+            (List.Perm.refl _))
   | [], .wert s =>
     match lowerWertLies tabs pnamen ptypen 0 100 s with
     | .error e => .error e
@@ -1677,3 +1710,405 @@ theorem u104lex :
     lex "module beispiel::referenz { const NKONTO : u32 = 2; type Betrag = u32 in 0 .. 10; type Stand = u32 in 0 .. 100; table Konto count NKONTO { slot { stand : Stand, } } lock M protects { stand } rank 0 held <= 50 ops; impl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag) requires Held(M) ensures old(k.slots[i].stand) <= k.slots[i].stand effects { reads k.slots, writes k.slots, locks M } costs <= 16 ops { k.slots[i].stand = 100; lies(k, i); } impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand requires Held(M) ensures result == k.slots[i].stand effects { reads k.slots, locks M } costs <= 8 ops { return k.slots[i].stand; } }" =
       .ok tt104 := by
   decide
+
+/-! ## The 104 instance: parse tree -/
+
+/-- The slot read `k.slots[i].stand` shared by every 104
+    contract and body (see `sonde04`/`sonde05`). -/
+def uStand104 : SExpr :=
+  .feld (.index (.feld (.variable "k") "slots") (.variable "i")) "stand"
+
+/-- The parsed surface tree of `beispiele/104-referenz.gab`
+    (`u104parse` checks it against the reader). -/
+def items104 : List SItemTief :=
+  [.modulT "beispiel::referenz" [
+    .konstT "NKONTO" (.atom "u32") (.einzeln (.lit 2)),
+    .typT [] "Betrag" [] []
+      (.some (.bereich (.atom "u32") (.lit 0) (.lit 10) false)),
+    .typT [] "Stand" [] []
+      (.some (.bereich (.atom "u32") (.lit 0) (.lit 100) false)),
+    .tabelleT "Konto" (.some (.variable "NKONTO")) .none .none false
+      [.tPlatz [{ fname := "stand", ftyp := .atom "Stand",
+                  pos := .none, bezug := .none, wo := .none,
+                  reserviert := false, byOps := false }]],
+    .sperreT "M" [.variable "stand"] (.lit 0)
+      (.some (.lit 50)) .none .none,
+    .funktionT
+      { art := "impl", name := "einzahlen",
+        params := [("k", .ptr "normal" "rw" (.atom "Konto")),
+          ("i", .index false "Konto"), ("b", .atom "Betrag")],
+        ergebnis := .none, fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "M"]),
+          .sichert (.bin "<=" (.alt uStand104) uStand104),
+          .wirkung [.liest (.feld (.variable "k") "slots"),
+            .schreibt (.feld (.variable "k") "slots"),
+            .sperrt false (.variable "M")],
+          .kosten (.lit 16)] }
+      (.block [.zuweis uStand104 "=" (.lit 100),
+        .ruf "lies" [.variable "k", .variable "i"]] .none),
+    .funktionT
+      { art := "impl", name := "lies",
+        params := [("k", .ptr "normal" "r" (.atom "Konto")),
+          ("i", .index false "Konto")],
+        ergebnis := .some (.atom "Stand"), fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "M"]),
+          .sichert (.bin "==" .ergebnis uStand104),
+          .wirkung [.liest (.feld (.variable "k") "slots"),
+            .sperrt false (.variable "M")],
+          .kosten (.lit 8)] }
+      (.block [] (.some (.ret (.some uStand104))))]]
+
+theorem u104parse : beqTopTief (parseTopTief tt104) (.ok items104) = true := by
+  decide
+
+/-! ## The 104 instance: elaboration -/
+
+/-- The elaborated 104 program (`u104elab` checks it against
+    the elaborator). -/
+def uExp104 : UProg :=
+  { tabellen := [{ name := "Konto", count := 2,
+                   felder := [("stand", (0, 100))] }],
+    sperren := [{ name := "M", rank := 0, schutz := ["Konto"] }],
+    fns := [
+      { name := "einzahlen",
+        params := [("k", .ptr 0 true), ("i", .index 2),
+          ("b", .int 0 10)],
+        parten := [.ptr 0 true, .index 0, .int],
+        ergebnis := .none,
+        held := ["M"], schreibt := ["Konto"],
+        sichert := [.cmp "<="
+          (.alt "k" "stand" (.param "i"))
+          (.slot "k" "stand" (.param "i"))],
+        saetze := [.assign "k" "stand" (.param "i") (.lit 100),
+          .call "lies" [.freshPtr "Konto" false,
+            .wert (.param "i")]],
+        rueck := .keine },
+      { name := "lies",
+        params := [("k", .ptr 0 false), ("i", .index 2)],
+        parten := [.ptr 0 false, .index 0],
+        ergebnis := .some (0, 100),
+        held := ["M"], schreibt := [],
+        sichert := [.cmp "==" .erg
+          (.slot "k" "stand" (.param "i"))],
+        saetze := [],
+        rueck := .wert (.slot "k" "stand" (.param "i")) }] }
+
+/-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
+
+def beqIntPair : Int × Int → Int × Int → Bool
+  | (a, b), (c, d) => a == c && b == d
+
+def beqOptIntPair : Option (Int × Int) → Option (Int × Int) → Bool
+  | none, none => true
+  | some a, some b => beqIntPair a b
+  | _, _ => false
+
+def beqOptIntPairList : List (Option (Int × Int)) →
+    List (Option (Int × Int)) → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqOptIntPair x y && beqOptIntPairList xs ys
+  | _, _ => false
+
+/-- Shape equality on `Ty` as a `Bool` (kernel evaluation,
+    no nested `decide`). -/
+def beqTy : Ty → Ty → Bool
+  | .int a b, .int c d => a == c && b == d
+  | .bool, .bool => true
+  | .opt n, .opt m => n == m
+  | .sum cs, .sum ds => beqOptIntPairList cs ds
+  | .grund n, .grund m => n == m
+  | .never, .never => true
+  | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
+  | .fnptr n, .fnptr m => n == m
+  | .ptr t w, .ptr s v => t == s && w == v
+  | _, _ => false
+
+def beqUIdx : UIdx → UIdx → Bool
+  | .lit a, .lit b => a == b
+  | .param a, .param b => strEq a b
+  | _, _ => false
+
+def beqUSide : USide → USide → Bool
+  | .lit a, .lit b => a == b
+  | .param a, .param b => strEq a b
+  | .slot a f x, .slot b g y =>
+    strEq a b && strEq f g && beqUIdx x y
+  | .tab a f x, .tab b g y =>
+    strEq a b && strEq f g && beqUIdx x y
+  | .alt a f x, .alt b g y =>
+    strEq a b && strEq f g && beqUIdx x y
+  | .erg, .erg => true
+  | _, _ => false
+
+def beqUEns : UEns → UEns → Bool
+  | .cmp o a b, .cmp p c d =>
+    strEq o p && beqUSide a c && beqUSide b d
+  | .wahr, .wahr => true
+  | .falsch, .falsch => true
+  | .und a b, .und c d => beqUEns a c && beqUEns b d
+  | .oder a b, .oder c d => beqUEns a c && beqUEns b d
+  | .nicht a, .nicht b => beqUEns a b
+  | _, _ => false
+
+def beqUEnsList : List UEns → List UEns → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUEns x y && beqUEnsList xs ys
+  | _, _ => false
+
+def beqUArg : UArg → UArg → Bool
+  | .var a, .var b => strEq a b
+  | .freshPtr a w, .freshPtr b v => strEq a b && w == v
+  | .wert a, .wert b => beqUSide a b
+  | _, _ => false
+
+def beqUArgList : List UArg → List UArg → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUArg x y && beqUArgList xs ys
+  | _, _ => false
+
+def beqUStmt : UStmt → UStmt → Bool
+  | .assign a f x s, .assign b g y t =>
+    strEq a b && strEq f g && beqUIdx x y && beqUSide s t
+  | .assignTab a f x s, .assignTab b g y t =>
+    strEq a b && strEq f g && beqUIdx x y && beqUSide s t
+  | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
+  | _, _ => false
+
+def beqUStmtList : List UStmt → List UStmt → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUStmt x y && beqUStmtList xs ys
+  | _, _ => false
+
+def beqURet : URet → URet → Bool
+  | .keine, .keine => true
+  | .wert a, .wert b => beqUSide a b
+  | _, _ => false
+
+def beqUParamArt : UParamArt → UParamArt → Bool
+  | .ptr a w, .ptr b v => a == b && w == v
+  | .index a, .index b => a == b
+  | .int, .int => true
+  | _, _ => false
+
+def beqUParamArtList : List UParamArt → List UParamArt → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUParamArt x y && beqUParamArtList xs ys
+  | _, _ => false
+
+def beqTyParam : String × Ty → String × Ty → Bool
+  | (a, x), (b, y) => strEq a b && beqTy x y
+
+def beqTyParamList : List (String × Ty) → List (String × Ty) → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqTyParam x y && beqTyParamList xs ys
+  | _, _ => false
+
+def beqFeld : String × (Int × Int) → String × (Int × Int) → Bool
+  | (a, x), (b, y) => strEq a b && beqIntPair x y
+
+def beqFeldList : List (String × (Int × Int)) →
+    List (String × (Int × Int)) → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqFeld x y && beqFeldList xs ys
+  | _, _ => false
+
+def beqStrList : List String → List String → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => strEq x y && beqStrList xs ys
+  | _, _ => false
+
+def beqOptWeite : Option (Int × Int) → Option (Int × Int) → Bool
+  | none, none => true
+  | some a, some b => beqIntPair a b
+  | _, _ => false
+
+def beqUTab : UTab → UTab → Bool
+  | a, b => strEq a.name b.name && a.count == b.count &&
+    beqFeldList a.felder b.felder
+
+def beqUTabList : List UTab → List UTab → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUTab x y && beqUTabList xs ys
+  | _, _ => false
+
+def beqULock : ULock → ULock → Bool
+  | a, b => strEq a.name b.name && a.rank == b.rank &&
+    beqStrList a.schutz b.schutz
+
+def beqULockList : List ULock → List ULock → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqULock x y && beqULockList xs ys
+  | _, _ => false
+
+def beqUFn : UFn → UFn → Bool
+  | a, b => strEq a.name b.name &&
+    beqTyParamList a.params b.params &&
+    beqUParamArtList a.parten b.parten &&
+    beqOptWeite a.ergebnis b.ergebnis &&
+    beqStrList a.held b.held && beqStrList a.schreibt b.schreibt &&
+    beqUEnsList a.sichert b.sichert &&
+    beqUStmtList a.saetze b.saetze && beqURet a.rueck b.rueck
+
+def beqUFnList : List UFn → List UFn → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUFn x y && beqUFnList xs ys
+  | _, _ => false
+
+def beqUProg : UProg → UProg → Bool
+  | a, b => beqUTabList a.tabellen b.tabellen &&
+    beqULockList a.sperren b.sperren && beqUFnList a.fns b.fns
+
+/-- Shape equality on elaboration outcomes, as a `Bool`. -/
+def beqElabU : Except String UProg → Except String UProg → Bool
+  | .ok a, .ok b => beqUProg a b
+  | .error e1, .error e2 => e1 == e2
+  | _, _ => false
+
+theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
+  decide
+
+/-! ## The 104 instance: lowering pin, data, checks -/
+
+/-- The lowered 104 program is the exporter's `gP`/`gFs`
+    (definitional: proof irrelevance covers the proof terms). -/
+theorem u104lower :
+    lowerProg uExp104 =
+      .ok (G104_referenz.gP, G104_referenz.gFs) := rfl
+
+/-- Projections of the elaborated program (the left column of
+    the data agreement below). -/
+def uAnzahl104 (u : UProg) : Int :=
+  match u.tabellen with
+  | [t] => t.count
+  | _ => -1
+
+def uWeite104 (u : UProg) : Int × Int :=
+  match u.tabellen with
+  | [{ name := _, count := _, felder := [(_, w)] }] => w
+  | _ => (-1, -1)
+
+def uRang104 (u : UProg) : Int :=
+  match u.sperren with
+  | [l] => l.rank
+  | _ => -1
+
+def uFn104 (u : UProg) (n : String) : Option UFn :=
+  u.fns.find? (fun f => strEq f.name n)
+
+def uParams104 (u : UProg) (n : String) : List Ty :=
+  match uFn104 u n with
+  | .some f => f.params.map (·.2)
+  | .none => []
+
+def uHeld104 (u : UProg) (n : String) : List String :=
+  match uFn104 u n with
+  | .some f => f.held
+  | .none => []
+
+def uSchreibt104 (u : UProg) (n : String) : List String :=
+  match uFn104 u n with
+  | .some f => f.schreibt
+  | .none => []
+
+/-- Declaration data agreement, construct by construct: the
+    elaborated data agrees with the exporter's `gD` (via
+    `u104lower`) and with the hand translation's `r4D` -- same
+    shape as `export104_data`. -/
+theorem u104data :
+    uAnzahl104 uExp104 = 2 ∧
+    r4D.count () = 2 ∧
+    uWeite104 uExp104 = (0, 100) ∧
+    r4D.typ () () = .int 0 100 ∧
+    uRang104 uExp104 = 0 ∧
+    r4D.rang () = 0 ∧
+    uParams104 uExp104 "einzahlen" = [.ptr 0 true, .index 2, .int 0 10] ∧
+    r4D.params r4Ein = [.ptr 0 true, .index 2, .int 0 10] ∧
+    uParams104 uExp104 "lies" = [.ptr 0 false, .index 2] ∧
+    r4D.params r4Lies = [.ptr 0 false, .index 2] ∧
+    uHeld104 uExp104 "einzahlen" = ["M"] ∧
+    r4D.haelt r4Ein = [()] ∧
+    uSchreibt104 uExp104 "einzahlen" = ["Konto"] ∧
+    r4D.schreibt r4Ein () = true ∧
+    uSchreibt104 uExp104 "lies" = [] ∧
+    r4D.schreibt r4Lies () = false := by
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+    rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The fragment check on the Lean-parsed program. -/
+theorem u104fragment :
+    (match lowerProg uExp104 with
+     | .ok (P, fs) => programmImFragmentG P fs
+     | .error _ => false) = true := by
+  decide
+
+/-- The footprint check on the Lean-parsed program. -/
+theorem u104fuss :
+    (match lowerProg uExp104 with
+     | .ok (P, fs) => fussOrtGB P fs
+     | .error _ => false) = true := by
+  decide
+
+end Gabbro.Grammatik.Parser.Uebersetze
+
+/-
+  CUTS: what is not proved here, and every deliberate
+  difference against `crates/gabbro-check/src/lean_g.rs`.
+
+  1. No single whole-pipeline `decide`: `lex` + `parseTopTief`
+     + `elabU` + `lowerProg` in one kernel evaluation exceeds
+     the heartbeat budget (the lane-135 finding), and
+     `Except String UProg` has no `DecidableEq` instance for a
+     propositional pin. The loop closes in stages instead,
+     each with its own kernel check: `u104lex` (source to
+     tokens), `u104parse` (tokens to `items104`, a `beqTopTief`
+     pin like `tEnd`), `u104elab` (surface to `uExp104`, a
+     `beqElabU` pin), `u104lower` (U to `(gP, gFs)` by `rfl`,
+     proof irrelevance covering the proof terms). Chaining
+     them is prose, as in `Export104.lean` (whose equality
+     across declaration types is not even statable).
+  2. `beqTy`/`beqUIdx`/`beqUSide`/`beqUEns`/`beqUArg`/
+     `beqUStmt`/`beqURet`/`beqUTab`/`beqULock`/`beqUFn`/
+     `beqUProg`/`beqElabU` are not proved sound or complete
+     (the same cut as `beqSItemTief` in `ElementTief.lean`).
+  3. The lowering targets the exporter's declaration universe
+     `G104_referenz.gD` only: any table but `Konto`, any lock
+     but `M`, any field but `stand`, any function but
+     `einzahlen`/`lies` is an explicit error. The surface to U
+     stage (`elabU`) is generic over the fragment; the proof
+     carrying lowerers (`varNumEin`, `varNumLies`,
+     `varEnsLies`, the `darf`/`RufPasst` witnesses) are keyed
+     to the known signatures.
+  4. Lowering restrictions beyond `elabU` (each an explicit
+     error): at most one call per body and none after a call
+     (no second `RufPasst` proof); `lies` bodies are empty
+     with a value return (a statement in a read-only function
+     has no lowered guard proof here); calls only to `lies`
+     from `einzahlen` (the one named `RufPasst` proof);
+     the `lies` return of a same-range slot read is direct
+     (the no-op arm of the exporter's `fit`), every other
+     value widens through `weiter`.
+  5. Against `lean_g.rs`, deliberately: bare-word types are
+     refused (no full-range rule; 104 needs none); slot
+     extras (`@bitpos`, `offset_into`, `where`, `reserved`,
+     `by ops`) are refused where the exporter ignores some;
+     `use` items and nested modules are refused; an index
+     literal is range-checked against `count`. Mirrored
+     exactly: the refused clause rows, the one-directional
+     `locks`-without-`Held` refusal, writes deduplication,
+     the `rw`-to-`r` fresh pointer, the fall-off rule, and
+     ignoring `reads`/`costs`/`section`/`payload`.
+  6. The `u104fragment`/`u104fuss` match form carries a
+     `false` error branch; `u104lower` shows it dead for 104.
+  7. Corpus text is quoted comment-free (comments lex away,
+     the probe precedent); `u104lex` runs at 3200000
+     heartbeats, `u104parse`/`u104elab`/`u104fragment`/
+     `u104fuss` at default.
+-/
+
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104lex
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104parse
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104elab
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104lower
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104data
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104fragment
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104fuss
