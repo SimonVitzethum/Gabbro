@@ -380,10 +380,131 @@ theorem sonderwert_zeuge :
     fun k h => sonderwert_schranke refIdxEin semW0 semW0 refRho7 k h,
     refB_erreicht, refB_schreibt⟩
 
+/-! ## 5. `device.konstruktor`, model-facing half -- trace reads never
+    move memory.
+
+`World.lese` only prepends trace events; slots and globals are
+untouched. That is ALL any device statement (`regSchreib`,
+`transition`, `regLies`) does to the world -- their clauses call
+`lese` and then the oracle, which cannot touch the world by its type
+(`regSchreib` returns `Unit`). The layout arithmetic of
+`beweise/Device_Konstruktor.thy` (separate declared layouts meet
+separate cells for every base; bank stride) has NO counterpart and is
+skipped, precisely: `World.slots` is keyed by table, index and field
+with no base, offset or width; registers live behind
+`Orakel.regLies`/`regSchreib`, and every fixture but the locked
+`ZielOrt*` ones has `Reg := Empty`. -/
+
+/-- The engine: trace reads preserve every slot. -/
+theorem device_lese_frame_slots (σ : World D) (Λ : List (Res D))
+    (orte : List (D.Tab ⊕ D.Glob)) (t : D.Tab) (k : Int) (f : D.Feld t) :
+    (σ.lese Λ orte).slots t k f = σ.slots t k f := rfl
+
+/-- The engine: trace reads preserve every global. -/
+theorem device_lese_frame_globs (σ : World D) (Λ : List (Res D))
+    (orte : List (D.Tab ⊕ D.Glob)) (g : D.Glob) :
+    (σ.lese Λ orte).globs g = σ.globs g := rfl
+
+/-- Witness for the frame engine: reading `konto` on `semW0` moves no
+    slot; the reference run is non-degenerate. -/
+theorem device_lese_zeuge :
+    (semW0.lese [Res.held (D := refD) ()] [.inl ()]).slots () 0 () =
+      semW0.slots () 0 () ∧
+    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  refine ⟨device_lese_frame_slots semW0 _ _ () 0 (),
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 6. `entry.abdruck` -- skipped: no counterpart in the model.
+
+The template demands: (1) the generated entry path preserves every
+register from `preserves`; (2) it writes no register outside
+`clobbers`; (3) the stack switch is correct. None of the three is
+statable over the Lean semantics:
+(a) there is NO entry-path syntax -- the only function-entry
+    construct is the foreign body (`D.Ax`: every `extern fn`,
+    `prim fn`, `asm`, `entry`, `entrust`), whose body is invisible
+    (it acts through `Orakel.wirkt`);
+(b) `World` has NO register file -- registers live behind
+    `Orakel.regLies` / `Orakel.regSchreib`; no world transition can
+    even name "register `r` is preserved";
+(c) `Deklaration` has NO preserves/clobbers sets -- there is nothing
+    for the premise ("path respects `P`/`C`") to be about.
+The only register-touching statements (`regSchreib`, `regLies`,
+`regLiesElse`, `transition`) go through the oracle; what they do to
+the world is exactly `lese` (§5). This is a finding about the model,
+not a proof: `entry.abdruck` stays entirely on the abstract side
+(`SchablonenT5.lean`). -/
+
 /-! ## CUTS:
-  - Skeleton only: `semW0` is defined; the five tied templates are open.
+  - Tied and proved (premise = generator shape, conclusion =
+    discharged obligation, witness = real program + run):
+    (1) `table.indexschranke`: every `Expr (.index n)` evaluates in
+    `0 ..< n` (`indexschranke_eval`); the occupancy half has no
+    counterpart (`World.slots` is total). Witness on `refIdxEin`,
+    fired by the run.
+    (2) `table.absenkung`: layout/count agreement (`trec_count`) plus
+    an in-range index name a laid-out cell
+    (`absenkung_index_im_feld`), with both failure directions
+    (`absenkung_zu_kurz`, `absenkung_zu_lang`). Witness on
+    `refIdxEin` + `refEL` (`m = N = 2` by `rfl`).
+    (3) `gruppe.sperrabdruck`: wait edges over `Ereignis`, rank chains
+    rise (`kette_steigt`), no wait cycle (`kein_wartezyklus`), the
+    `locks` footprint shape (`sperrabdruck_form`), and the
+    `fragLocks` fragment computed end to end (take, write under the
+    held lock, give back, memory moved, trace rank-ordered). Parts
+    (b)/(c) of the Isabelle locale (invariant at begin/end, no
+    intermediate exit) have no counterpart in `execStmt` and are
+    skipped with reason.
+    (4) `option.sonderwert`: `Some` is never `None`
+    (`sonderwert_disjoint`), payloads are in range
+    (`sonderwert_schranke` via §1). The word half (`N < 2^w`,
+    collapse at `N = 2^w`) has no counterpart (no machine-word
+    lowering in the model) and is skipped with reason. Witness on
+    `refIdxEin` wrapped in `some`.
+    (5) `device.konstruktor`, model-facing half only: trace reads
+    preserve memory (`device_lese_frame_slots/globs`). The layout
+    arithmetic has no counterpart (no address cells) and is skipped
+    with reason.
+  - Skipped entirely, with reason in §6: `entry.abdruck` (no
+    entry-path syntax, no register file in `World`, no
+    preserves/clobbers sets in `Deklaration`).
+  - No theorem quantifies over `Vertrag`; `∀`-premises over `Expr`
+    (`indexschranke_eval`, `sonderwert_*`) and over `Stmt` fragments
+    are all witnessed on `refD`/`refP` JOINTLY with the
+    non-degenerate run that fires them. Data-level companions
+    (`ketteR`, `waitEdges`, `wohlgeordnet`, `lese`-frame) carry no
+    syntax premises.
 -/
 
 #print axioms Gabbro.Grammatik.semW0
+#print axioms Gabbro.Grammatik.indexschranke_eval
+#print axioms Gabbro.Grammatik.indexschranke_zeuge
+#print axioms Gabbro.Grammatik.absenkung_index_im_feld
+#print axioms Gabbro.Grammatik.absenkung_zu_kurz
+#print axioms Gabbro.Grammatik.absenkung_zu_lang
+#print axioms Gabbro.Grammatik.absenkung_zeuge
+#print axioms Gabbro.Grammatik.waitEdges
+#print axioms Gabbro.Grammatik.wohlgeordnet
+#print axioms Gabbro.Grammatik.ketteR
+#print axioms Gabbro.Grammatik.kette_steigt
+#print axioms Gabbro.Grammatik.kein_wartezyklus
+#print axioms Gabbro.Grammatik.sperrabdruck_form
+#print axioms Gabbro.Grammatik.fragHr
+#print axioms Gabbro.Grammatik.fragLocks
+#print axioms Gabbro.Grammatik.ausgangSpur
+#print axioms Gabbro.Grammatik.ausgangWelt
+#print axioms Gabbro.Grammatik.fragLocks_spur
+#print axioms Gabbro.Grammatik.fragLocks_geschlossen
+#print axioms Gabbro.Grammatik.fragLocks_schreibt_bewacht
+#print axioms Gabbro.Grammatik.fragLocks_schreibt
+#print axioms Gabbro.Grammatik.fragLocks_wohlgeordnet
+#print axioms Gabbro.Grammatik.sperrabdruck_zeuge
+#print axioms Gabbro.Grammatik.sonderwert_disjoint
+#print axioms Gabbro.Grammatik.sonderwert_schranke
+#print axioms Gabbro.Grammatik.sonderwert_zeuge
+#print axioms Gabbro.Grammatik.device_lese_frame_slots
+#print axioms Gabbro.Grammatik.device_lese_frame_globs
+#print axioms Gabbro.Grammatik.device_lese_zeuge
 
 end Gabbro.Grammatik
