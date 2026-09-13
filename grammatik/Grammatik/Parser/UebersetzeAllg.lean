@@ -258,4 +258,361 @@ theorem typAt_of (u : UProg) (t : Fin u.tabellen.length)
   unfold typAt
   rw [h]
 
+/-- `tabNr` at a live number. -/
+theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabellen.length) :
+    (declOf u).tabNr num = some (⟨num, h⟩ : Fin u.tabellen.length) := by
+  show (if h' : num < u.tabellen.length then
+    (some ⟨num, h'⟩ : Option (Fin u.tabellen.length)) else none) = _
+  rw [dif_pos h]
+
+/-! ## Generic lowering: field search, variables -/
+
+/-- Position of the first field with a name. -/
+def fieldPos : List (String × (Int × Int)) → String → Nat
+  | [], _ => 0
+  | (m, _) :: rest, n => if m == n then 0 else fieldPos rest n + 1
+
+/-- Range of the first field with a name. -/
+def fieldAtPos : List (String × (Int × Int)) → String → Option (Int × Int)
+  | [], _ => none
+  | (m, w) :: rest, n => if m == n then some w else fieldAtPos rest n
+
+/-- A found field is inside the list. -/
+theorem fieldPos_lt (fs : List (String × (Int × Int))) (n : String)
+    (w : Int × Int) (h : fieldAtPos fs n = some w) :
+    fieldPos fs n < fs.length := by
+  induction fs with
+  | nil => simp [fieldAtPos] at h
+  | cons hd tl ih =>
+    cases he : (hd.1 == n) with
+    | true =>
+      have h1 : fieldPos (hd :: tl) n = 0 := by simp [fieldPos, he]
+      rw [h1]
+      exact Nat.zero_lt_succ _
+    | false =>
+      have h1 : fieldPos (hd :: tl) n = fieldPos tl n + 1 := by
+        simp [fieldPos, he]
+      have h2 : fieldAtPos (hd :: tl) n = fieldAtPos tl n := by
+        simp [fieldAtPos, he]
+      rw [h2] at h
+      have hi := ih h
+      rw [h1]
+      show fieldPos tl n + 1 < tl.length + 1
+      omega
+
+/-- The range at the found position is the found range. -/
+theorem fieldAtPos_get (fs : List (String × (Int × Int))) (n : String)
+    (w : Int × Int) (h : fieldAtPos fs n = some w) :
+    (fs[fieldPos fs n]?).map (·.2) = some w := by
+  induction fs with
+  | nil => simp [fieldAtPos] at h
+  | cons hd tl ih =>
+    cases he : (hd.1 == n) with
+    | true =>
+      have h1 : fieldPos (hd :: tl) n = 0 := by simp [fieldPos, he]
+      have h2 : fieldAtPos (hd :: tl) n = some hd.2 := by
+        simp [fieldAtPos, he]
+      rw [h2] at h
+      rw [h1]
+      have g0 : (((hd :: tl)[0]?).map (·.2)) = some hd.2 := rfl
+      rw [g0]
+      exact h
+    | false =>
+      have h1 : fieldPos (hd :: tl) n = fieldPos tl n + 1 := by
+        simp [fieldPos, he]
+      have h2 : fieldAtPos (hd :: tl) n = fieldAtPos tl n := by
+        simp [fieldAtPos, he]
+      rw [h2] at h
+      have ih' := ih h
+      rw [h1]
+      have g1 : ((hd :: tl)[fieldPos tl n + 1]?) = (tl[fieldPos tl n]?) := rfl
+      rw [g1]
+      exact ih'
+
+/-- A field hit: the index, its range, and the lookup equation. -/
+structure FieldHit (u : UProg) (t : Fin u.tabellen.length) where
+  idx : Fin (fieldCount u t)
+  weit : Int × Int
+  hit : fieldRangeO u t idx = some weit
+
+/-- Find a field of a table by name. -/
+def fieldHit (u : UProg) (t : Fin u.tabellen.length) (fname : String) :
+    Except String (FieldHit u t) :=
+  match h : fieldAtPos (tabAt u t).felder fname with
+  | none => .error "field unknown"
+  | some w =>
+    have hlt : fieldPos (tabAt u t).felder fname < fieldCount u t :=
+      fieldPos_lt _ _ _ h
+    .ok ⟨⟨fieldPos (tabAt u t).felder fname, hlt⟩, w,
+      fieldAtPos_get _ _ _ h⟩
+
+/-- A variable by position and expected type (the `beq` re-checks the
+    context, so a divergent caller is an explicit error). -/
+def lowVar : (Γ : Ctx) → (j : Nat) → (τ : Ty) → Except String (Var Γ τ)
+  | [], _, _ => .error "parameter outside"
+  | σ :: Γ, 0, τ =>
+    if h : σ = τ then by rw [h]; exact .ok Var.hier
+    else .error "parameter shape foreign"
+  | _ :: Γ, j + 1, τ =>
+    match lowVar Γ j τ with
+    | .error e => .error e
+    | .ok v => .ok (Var.dort v)
+
+/-- Position of a parameter name. -/
+def paramPos : List (String × Ty) → String → Except String Nat
+  | [], p => .error ("name unknown: " ++ p)
+  | (q, _) :: rest, p =>
+    if q == p then .ok 0
+    else
+      match paramPos rest p with
+      | .error e => .error e
+      | .ok k => .ok (k + 1)
+
+/-! ## Generic lowering: indices, sides, contracts -/
+
+/-- An index into a table: a literal inside `count`, or an index
+    parameter for the same table. -/
+def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (t : Fin u.tabellen.length) : UIdx →
+    Except String (Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+  | .lit n =>
+    if h1 : 0 ≤ n then
+      if h2 : n ≤ (declOf u).count t - 1 then
+        .ok (Expr.weiter h1 h2 (Expr.lit n))
+      else .error "index outside count"
+    else .error "index outside count"
+  | .param p =>
+    match paramPos fn.params p with
+    | .error e => .error e
+    | .ok j =>
+      match fn.parten[j]? with
+      | some (.index m) =>
+        if m == t.val then
+          match lowVar Γ j (.index ((declOf u).count t)) with
+          | .error e => .error e
+          | .ok v => .ok (Expr.var v)
+        else .error "index of foreign table"
+      | _ => .error "index without G form"
+
+/-- A sided term with its range. -/
+structure LowSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  weit : Int × Int
+  term : Expr (declOf u) Γ Λ (.int weit.1 weit.2)
+
+/-- The table a basis names: a pointer parameter's target, or a
+    table (for `old`, where both spellings travel). -/
+def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
+    Except String (Fin u.tabellen.length) :=
+  match paramPos fn.params b with
+  | .ok j =>
+    match fn.parten[j]? with
+    | some (.ptr num _) =>
+      if h : num < u.tabellen.length then .ok ⟨num, h⟩
+      else .error "pointer table unknown"
+    | _ => .error "place without G form"
+  | .error _ =>
+    match tabIdx u.tabellen b with
+    | .ok t => .ok t
+    | .error e => .error e
+
+/-- A numeric parameter as a side. -/
+def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (p : String) : Except String (LowSide u Γ Λ) :=
+  match paramPos fn.params p with
+  | .error e => .error e
+  | .ok j =>
+    match fn.parten[j]? with
+    | some (.ptr _ _) => .error "pointer as value without G form"
+    | some _ =>
+      match fn.params[j]? with
+      | some (_, .int a b) =>
+        match lowVar Γ j (.int a b) with
+        | .error e => .error e
+        | .ok v => .ok { weit := (a, b), term := Expr.var v }
+      | _ => .error "parameter without G form"
+    | none => .error "parameter without G form"
+
+/-- A `durch` term at its recorded range (the `rw` turns the
+    goal into the field type, where the constructor fits). -/
+def durchTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (num : Nat) (w : Bool) (h : num < u.tabellen.length)
+    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr num w))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
+    (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+  rw [← typAt_of u ⟨num, h⟩ fh.idx fh.weit fh.hit]
+  exact Expr.durch (D := declOf u) (Expr.var v) ⟨num, h⟩
+    (tabNr_some u num h) fh.idx i hL
+
+/-- A `slot` term at its recorded range. -/
+def slotTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (t : Fin u.tabellen.length) (fh : FieldHit u t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+  rw [← typAt_of u t fh.idx fh.weit fh.hit]
+  exact Expr.slot (D := declOf u) t fh.idx i hL
+
+/-- An `altSlot` term at its recorded range. -/
+def altTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (t : Fin u.tabellen.length) (fh : FieldHit u t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+  rw [← typAt_of u t fh.idx fh.weit fh.hit]
+  exact Expr.altSlot (D := declOf u) t fh.idx i hL
+
+/-- A slot read through a pointer parameter. -/
+def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (b fname : String) (ix : UIdx) :
+    Except String (LowSide u Γ Λ) :=
+  match paramPos fn.params b with
+  | .error e => .error e
+  | .ok j =>
+    match fn.parten[j]? with
+    | some (.ptr num w) =>
+      if h : num < u.tabellen.length then
+        match fieldHit u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok fh =>
+          match lowVar Γ j (.ptr num w) with
+          | .error e => .error e
+          | .ok v =>
+            match lowIdx u Γ Λ fn ⟨num, h⟩ ix with
+            | .error e => .error e
+            | .ok i =>
+              if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                  Res.von (declOf u) wdd ∈ Λ) then
+                .ok { weit := fh.weit, term := durchTerm u Γ Λ num w h fh v i hL }
+              else .error "access without held guard"
+      else .error "pointer table unknown"
+    | _ => .error "place without G form"
+
+/-- A slot read at a table. -/
+def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (b fname : String) (ix : UIdx) :
+    Except String (LowSide u Γ Λ) :=
+  match tabIdx u.tabellen b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHit u t fname with
+    | .error e => .error e
+    | .ok fh =>
+      match lowIdx u Γ Λ fn t ix with
+      | .error e => .error e
+      | .ok i =>
+        if hL : (∀ wdd ∈ (declOf u).braucht t,
+            Res.von (declOf u) wdd ∈ Λ) then
+          .ok { weit := fh.weit, term := slotTerm u Γ Λ t fh i hL }
+        else .error "access without held guard"
+
+/-- An entry read (`old`) at a resolved table. -/
+def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (b fname : String) (ix : UIdx) :
+    Except String (LowSide u Γ Λ) :=
+  match lowBasisTab u fn b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHit u t fname with
+    | .error e => .error e
+    | .ok fh =>
+      match lowIdx u Γ Λ fn t ix with
+      | .error e => .error e
+      | .ok i =>
+        if hL : (∀ wdd ∈ (declOf u).braucht t,
+            Res.von (declOf u) wdd ∈ Λ) then
+          .ok { weit := fh.weit, term := altTerm u Γ Λ t fh i hL }
+        else .error "access without held guard"
+
+/-- A value side in a body: a literal, a numeric parameter or a
+    slot read (`result` and `old` have no G form here). -/
+def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) : USide → Except String (LowSide u Γ Λ)
+  | .lit n => .ok { weit := (n, n), term := Expr.lit n }
+  | .param p => lowParamSide u Γ Λ fn p
+  | .slot b f ix => lowDurch u Γ Λ fn b f ix
+  | .tab b f ix => lowTabRead u Γ Λ fn b f ix
+  | _ => .error "side in body without G form"
+
+/-- A comparison side in `ensures`: literals, numeric parameters,
+    slot reads, `old` and `result` travel. -/
+def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option (Int × Int)) :
+    USide → Except String (LowSide u Γ Λ)
+  | .lit n => .ok { weit := (n, n), term := Expr.lit n }
+  | .param p => lowParamSide u Γ Λ fn p
+  | .slot b f ix => lowDurch u Γ Λ fn b f ix
+  | .tab b f ix => lowTabRead u Γ Λ fn b f ix
+  | .alt b f ix => lowAltRead u Γ Λ fn b f ix
+  | .erg =>
+    match er with
+    | some (a, b) =>
+      match lowVar Γ 0 (.int a b) with
+      | .error e => .error e
+      | .ok v => .ok { weit := (a, b), term := Expr.var v }
+    | none => .error "result without result"
+
+/-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
+def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option (Int × Int)) :
+    String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
+  | op, a, b =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok s1 =>
+      match lowSideEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok s2 =>
+        match op with
+        | "==" => .ok (Expr.eq s1.term s2.term)
+        | "!=" => .ok (Expr.nicht (Expr.eq s1.term s2.term))
+        | "<" => .ok (Expr.lt s1.term s2.term)
+        | "<=" => .ok (Expr.le s1.term s2.term)
+        | ">" => .ok (Expr.lt s2.term s1.term)
+        | ">=" => .ok (Expr.le s2.term s1.term)
+        | _ => .error "operator without G form"
+
+/-- One `ensures` predicate. -/
+def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option (Int × Int)) :
+    UEns → Except String (Expr (declOf u) Γ Λ .bool)
+  | .cmp op a b => lowCmp u Γ Λ fn er op a b
+  | .wahr => .ok Expr.wahr
+  | .falsch => .ok Expr.falsch
+  | .und a b =>
+    match lowEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x =>
+      match lowEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok y => .ok (Expr.und x y)
+  | .oder a b =>
+    match lowEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x =>
+      match lowEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok y => .ok (Expr.oder x y)
+  | .nicht a =>
+    match lowEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x => .ok (Expr.nicht x)
+
+/-- The `ensures` conjunction (empty is `.wahr`). -/
+def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option (Int × Int)) :
+    List UEns → Except String (Expr (declOf u) Γ Λ .bool)
+  | [] => .ok Expr.wahr
+  | e :: rest =>
+    match lowEns u Γ Λ fn er e with
+    | .error err => .error err
+    | .ok x =>
+      match lowEnsList u Γ Λ fn er rest with
+      | .error err => .error err
+      | .ok y =>
+        match y with
+        | Expr.wahr => .ok x
+        | _ => .ok (Expr.und x y)
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
