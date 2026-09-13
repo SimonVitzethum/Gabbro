@@ -1,0 +1,67 @@
+-- erwartet: N240
+-- **A boot root and an entry sharing one signature lock fall.**
+--
+-- Boot roots join the start pool: one boot assignment starts every thread,
+-- so `boot starter` (dispatching to `read_a`) and `entry_a` (dispatching to
+-- `read_b`) are two distinct starts, and both require `Held(L)` -- N240
+-- falls once for the pair. `boot` is no `entry` context (`H013` excludes it
+-- by construction), and both bodies only READ (no `W002` write overlap):
+-- the refusal set is exactly `[N240]`. The second entry dispatches to
+-- `idle`, which holds nothing -- the positive twin: a lock-free start stays
+-- silent beside either holder.
+module gift915 {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with each other): both start holding `L` by signature.
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_b() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+-- Must pass N240: starts holding nothing.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+boot starter arch x86_64 {
+    dispatch gift915::read_a;
+}
+
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift915::read_b;
+}
+
+entry entry_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift915::idle;
+}
+
+}

@@ -62,15 +62,17 @@ fn disjoint_locks_stay_silent() {
 }
 
 #[test]
-fn shared_shared_stays_silent() {
+fn shared_shared_falls() {
+    // Strict transfer: the model premise bans ANY common signature lock,
+    // and knows no compatible shared holding -- so shared-shared falls too.
     let codes = fehler(&einheit(&format!(
         "{} {}\nconcurrent {{ read_a, read_b }};\n",
         reader("read_a", "requires Held(L, shared)"),
         reader("read_b", "requires Held(L, shared)")
     )));
     assert!(
-        !codes.iter().any(|c| c == "N240"),
-        "shared-shared co-holding must stay silent for N240: {codes:?}"
+        codes.iter().any(|c| c == "N240"),
+        "two shared starts under one signature lock must fall with N240: {codes:?}"
     );
 }
 

@@ -25,11 +25,18 @@ its own -- a rule of the same column, like `kontexte::pass`):
 - Signature-held locks per start function: `requires Held(L)` flat over
   the predicate tree (`aufrufgraph::held_aus_pred`), short-name identity
   like the pair check beside it.
-- Refusal: any lock required by two distinct starts, unless both sides
-  hold it `shared` -- once per (function pair, lock), span at the second
-  start, naming both starts, both functions and the lock, with the model
-  premise (`StartExklusiv`, `exklusivG`, `ziel_ort_geraet`) and the remedy
+- Refusal: any lock required by two distinct starts, at ANY strength --
+  once per (function pair, lock), span at the second start, naming both
+  starts, both functions and the lock, with the model premise
+  (`StartExklusiv`, `exklusivG`, `ziel_ort_geraet`) and the remedy
   (lock-free entry + `locks` inside, or disjoint locks) in the notes.
+  REVIEW (accepted): the first version exempted shared-shared
+  co-holding; the reviewer refused it -- `StartExklusiv` bans ANY common
+  signature lock between distinct starts and the model has no notion
+  under which two `Held(L, shared)` starts are compatible, so a checker
+  that accepts such a program defeats the transfer. Strength is now read
+  and dropped. The pass docs note where a future per-holder shared-lock
+  model could land a relaxation.
 
 ## Corpus measurement (before the rule could bite)
 
@@ -43,15 +50,18 @@ and `jedes_beispiel_geht_sauber_durch` never went red for this rule.
 
 - `beispiele/gift/910` two entries, one lock; `911` declared pair;
   `912` same routine on two entries (the audit's excluded shape);
-  `913` shared-shared silence beside an exclusive fall; `914`
-  exclusive-vs-shared fall. Each falls with exactly `[N240]` (measured
-  per file with the built binary, not just contains-checked).
+  `913` shared-shared fall (strict transfer -- first version pinned it
+  silent, review reversed it); `914` exclusive-vs-shared fall (twin set
+  rebuilt with bodies of its own after the strict rule made the reused
+  `read_b` a self-pair refusal); `915` boot root plus entry (the boot
+  leg of the start pool, previously built but unprobed). Each falls with
+  exactly `[N240]` (measured per file with the built binary).
 - `beispiele/108` declared pair over disjoint locks, `109` two entries
   over lock-free dispatch roots: fully clean (0 errors), emit C, `cc
   -Werror` accepts both.
 - `crates/gabbro-check/tests/startexklusiv.rs`: 5 snippet tests --
-  shared-lock pair falls, disjoint stays silent, shared-shared stays
-  silent for N240, same-function entries fall, lock-free entries silent.
+  shared-lock pair falls, disjoint stays silent, shared-shared falls
+  (strict transfer), same-function entries fall, lock-free entries silent.
 - Sentence `nebeneinander.startexklusiv` (N240) in the register, with the
   Lean counterpart (`RufMaschineG.lean`, `AuditZiel.lean` probe B) as
   `fundstelle`.
@@ -82,7 +92,9 @@ no change (it already skips the item).
 
 ## Last results
 
-- `./cargo-pruef`: `== exit 0; failing tests: 0` (re-run after all fixes).
+- `./cargo-pruef`: `== exit 0; failing tests: 0` (initial run, and
+  again after the review change -- strict rule, repurposed 913/914, new
+  915, flipped snippet test).
 - `./emission-pruef`: `== exit 0`, `EMISSION: ALL PASS -- 232 von 232`.
 - `./lean-bau`: `Build completed successfully (89 jobs).` (no Lean file
   touched; rule 13 is vacuous -- no new Lean theorems).
@@ -99,23 +111,18 @@ no change (it already skips the item).
 
 ## Numbers moved (guardian-checked ones first)
 
-README: 359 diagnostics, 91 clean examples (91 emit C), 623 poison
+README: 359 diagnostics, 91 clean examples (91 emit C), 624 poison
 files, 693 tests, 95 sentences claiming 228 codes, 232/232 emission.
-DONE: 91 clean examples, 623 poison probes, 693 tests.
+DONE: 91 clean examples, 624 poison probes, 693 tests.
 
 ## What remains open / what I believe is wrong
 
-- The shared-shared exemption is a checker judgment, not a model
-  deduction: `StartExklusiv` as stated bans ANY common signature lock,
-  while this rule lets two `Held(L, shared)` starts pass. The defense
-  (shared locks exist to be co-held; H005 already splits strength) is
-  written in the pass docs and the sentence's `vorbehalt`, pinned by
-  gifts 913/914 -- but a strict transfer would refuse shared-shared too.
-  If the model ever maps `Held(L, shared)` to a distinct lock value per
-  holder, the exemption is exact; today it is documented judgment.
+- The strictness is now the reviewer's call, and it stands as built:
+  shared-shared starts fall. The earlier exemption paragraph is kept in
+  history above (gifts 913/914 first versions) but no longer in the rule.
 - Same-function starts in a lock-FREE routine are silent (correct: the
   collapsed check holds vacuously). Same-function starts only refuse via
-  a non-empty exclusive held set -- matching the counter-lemma exactly.
+  a non-empty held set -- matching the counter-lemma exactly.
 - No Lean work: the task names no Lean file, TARGET, or ZEUGE line.
   The transfer is one-directional (checker enforces a model premise);
   no soundness theorem connects N240 acceptance to `StartExklusiv`

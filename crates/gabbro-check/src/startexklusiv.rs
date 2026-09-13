@@ -20,16 +20,19 @@
 //! predicate tree (`aufrufgraph::held_aus_pred`).
 //!
 //! The rule (`N240`): the start functions of distinct thread starts have
-//! disjoint signature-held lock sets. A lock both starts require -- unless
-//! both sides require it `shared` -- falls once per function pair and lock,
+//! disjoint signature-held lock sets. A lock both starts require -- at ANY
+//! strength, `shared` included -- falls once per function pair and lock,
 //! naming both starts, both functions and the lock.
 //!
 //! ## What this pass does NOT do
 //!
-//! * `shared` + `shared` is allowed: a shared lock exists to be co-held, and
-//!   `H005` already tells the strengths apart. `exclusive` against anything
-//!   falls -- an exclusive holder excludes every other holder, and G's
-//!   `exklusivG` (two threads never hold one lock) is exactly that.
+//! * No strength exemption: `StartExklusiv` bans ANY common signature lock
+//!   between distinct starts, and the model has no notion under which two
+//!   `Held(L, shared)` starts are compatible. A checker that accepts a
+//!   program for which the goal premise is false is the defect the transfer
+//!   phase exists to remove. Should a future model carry per-holder shared
+//!   locks, this rule -- and gifts 913/914 beside it -- is where the
+//!   relaxation lands.
 //! * Unresolvable starts are skipped, not cleared: a `concurrent` member that
 //!   resolves to nothing is already refused (`W003`), a dangling `dispatch`
 //!   likewise (`N018`). A second refusal here would pin the same defect twice.
@@ -55,18 +58,20 @@ struct Start {
     quelle: String,
 }
 
-/// The signature-held locks of every function: `(short lock, shared?)` per
-/// `requires Held(L)` / `requires Held(L, shared)`, flat over the tree.
-fn gehalten(baum: &Programm) -> BTreeMap<String, Vec<(String, bool)>> {
-    let mut aus: BTreeMap<String, Vec<(String, bool)>> = BTreeMap::new();
+/// The signature-held locks of every function: short lock names over all
+/// `requires Held(L)` / `requires Held(L, shared)` -- strength is read and
+/// then DROPPED, because the model premise bans any common signature lock
+/// and knows no compatible shared holding.
+fn gehalten(baum: &Programm) -> BTreeMap<String, BTreeSet<String>> {
+    let mut aus: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
-            let mut v = Vec::new();
+            let mut v = BTreeSet::new();
             for p in &f.requires {
                 let mut h = Vec::new();
                 crate::aufrufgraph::held_aus_pred(p, &mut h);
-                for (sperre, geteilt) in h {
-                    v.push((kurz(&sperre).to_string(), geteilt));
+                for (sperre, _) in h {
+                    v.insert(kurz(&sperre).to_string());
                 }
             }
             aus.insert(crate::umgebung::qualifiziere(modul, &f.name.text), v);
@@ -126,7 +131,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let gehalten = gehalten(baum);
     let startet = startet(baum, &g);
-    let leer: Vec<(String, bool)> = Vec::new();
+    let leer: BTreeSet<String> = BTreeSet::new();
     // One refusal per (function pair, lock): the same pair is reachable as
     // entries and as a declared set, and must not fall twice.
     let mut gefallen: BTreeSet<(String, String, String)> = BTreeSet::new();
@@ -135,43 +140,38 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             let (fa, fb) = (&startet[i].funktion, &startet[j].funktion);
             let ha = gehalten.get(fa).unwrap_or(&leer);
             let hb = gehalten.get(fb).unwrap_or(&leer);
-            for (la, ta) in ha {
-                for (lb, tb) in hb {
-                    if la != lb || (*ta && *tb) {
-                        continue;
-                    }
-                    let paar = if fa <= fb {
-                        (fa.clone(), fb.clone(), la.clone())
-                    } else {
-                        (fb.clone(), fa.clone(), la.clone())
-                    };
-                    if !gefallen.insert(paar) {
-                        continue;
-                    }
-                    absagen.schiebe(
-                        Absage::fehler(
-                            "N240",
-                            startet[j].span,
-                            format!(
-                                "thread starts {} and {} share a signature-held lock: \
-                                 `{}` requires Held({la}) and `{}` requires Held({la}) -- \
-                                 two threads never start holding one lock",
-                                startet[i].quelle, startet[j].quelle, fa, fb
-                            ),
-                        )
-                        .mit_notiz(
-                            "the model premise is `StartExklusiv` (`RufMaschineG.lean`): \
-                             no two threads start in functions holding a common lock by \
-                             signature, consumed by `exklusivG` on the way to \
-                             `ziel_ort_geraet`",
-                        )
-                        .mit_notiz(
-                            "in the usual shape a thread ENTRY function holds no lock by \
-                             signature -- take the lock inside (`locks L { … }`) instead \
-                             of requiring it, or give the two starts disjoint locks",
-                        ),
-                    );
+            for la in ha.intersection(hb) {
+                let paar = if fa <= fb {
+                    (fa.clone(), fb.clone(), la.clone())
+                } else {
+                    (fb.clone(), fa.clone(), la.clone())
+                };
+                if !gefallen.insert(paar) {
+                    continue;
                 }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N240",
+                        startet[j].span,
+                        format!(
+                            "thread starts {} and {} share a signature-held lock: \
+                             `{}` requires Held({la}) and `{}` requires Held({la}) -- \
+                             two threads never start holding one lock",
+                            startet[i].quelle, startet[j].quelle, fa, fb
+                        ),
+                    )
+                    .mit_notiz(
+                        "the model premise is `StartExklusiv` (`RufMaschineG.lean`): \
+                         no two threads start in functions holding a common lock by \
+                         signature, consumed by `exklusivG` on the way to \
+                         `ziel_ort_geraet`",
+                    )
+                    .mit_notiz(
+                        "in the usual shape a thread ENTRY function holds no lock by \
+                         signature -- take the lock inside (`locks L { … }`) instead \
+                         of requiring it, or give the two starts disjoint locks",
+                    ),
+                );
             }
         }
     }

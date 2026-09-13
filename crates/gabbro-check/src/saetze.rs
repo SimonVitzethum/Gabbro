@@ -4176,19 +4176,21 @@ pub const SPERREN: &[Satz] = &[
         kennungen: &["N240"],
         aussage: "The start functions of distinct threads have disjoint signature-held \
                   lock sets: no lock stands in `requires Held(L)` of two thread starts \
-                  (`concurrent` members, `entry`/`boot` dispatch roots) unless both \
-                  sides hold it `shared`.",
-        vorbehalt: "**`shared` + `shared` is allowed and stays silent** -- a shared lock \
-                    exists to be co-held, and `H005` already tells the strengths apart; \
-                    an exclusive side against anything falls, which is what `exklusivG` \
-                    (two threads never hold one lock) needs. Unresolvable starts are \
-                    skipped, not cleared (`W003` refuses the member, `N018` the dangling \
-                    `dispatch`); `entrust` roots are skipped (the guest is unknown). \
-                    Lock identity is the short name, like the pair check beside it.",
+                  (`concurrent` members, `entry`/`boot` dispatch roots), at any strength.",
+        vorbehalt: "**No strength exemption, by review**: `StartExklusiv` bans ANY common \
+                    signature lock between distinct starts, and the model has no notion \
+                    under which two `Held(L, shared)` starts are compatible -- a checker \
+                    that accepts a program for which the goal premise is false is the \
+                    defect the transfer phase exists to remove. Should a future model \
+                    carry per-holder shared locks, this rule is where the relaxation \
+                    lands. Unresolvable starts are skipped, not cleared (`W003` refuses \
+                    the member, `N018` the dangling `dispatch`); `entrust` roots are \
+                    skipped (the guest is unknown). Lock identity is the short name, \
+                    like the pair check beside it.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/910 (two entries, one lock) and /911 (declared \
-                      pair, one lock); /912 pins the same-function shape the audit \
-                      excludes; /913 the shared-shared silence beside an exclusive \
+        gemessen_an: "beispiele/gift/910 (two entries, one lock), /911 (declared \
+                      pair, one lock) and /915 (boot root plus entry); /912 pins the \
+                      same-function shape the audit excludes; /913 the shared-shared \
                       fall; /914 the exclusive-vs-shared fall. The clean side is \
                       beispiele/108 (declared pair, disjoint locks) and /109 (two \
                       entries over lock-free dispatch roots).",
