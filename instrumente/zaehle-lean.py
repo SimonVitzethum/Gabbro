@@ -160,6 +160,12 @@ ARTEN = [
     ("W", "an invariant owed by no function -- a `walk`, or an unmaintained `table`/`group`"),
     ("N", "a POSTCONDITION"),
     ("R", "a REFINEMENT of a specification"),
+    # **Lane 156 -- `Art` has NINE letters now.** The `L` obligation (a lock
+    # invariant, re-established at every release) is refused by kind in this
+    # channel under the `table-invariant` reason -- counted in its own row,
+    # never in `nach_art`. (A reason of its own would need a constructor in
+    # `programmlogik/Gabbro/Coverage.lean`, which lane 156 does not touch.)
+    ("L", "a lock invariant -- re-established at every release"),
 ]
 
 KOPF = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")

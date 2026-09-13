@@ -1,0 +1,29 @@
+-- erwartet: N276
+-- **A lock invariant naming `old` falls -- it is not pure.**
+--
+-- A lock invariant is a predicate over a memory snapshot (`SperrInv.inv`):
+-- there is no entry world here, so `old(...)` denotes nothing. N276 ALONE.
+module gift::invariant_mit_old {
+
+const NSLOTS : u32 = 2;
+
+type Stand = u32 in 0 .. 100;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+lock K protects { A } rank 0 held <= 50 ops
+    invariant A.slots[0].x == old(A.slots[0].x);
+
+impl fn setze(k : ptr<normal, rw> A)
+    requires Held(K)
+    effects  { writes k.slots, locks K }
+    costs    <= 8 ops
+{
+    k.slots[0].x = 40;
+}
+
+}

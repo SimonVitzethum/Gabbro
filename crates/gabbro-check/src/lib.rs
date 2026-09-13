@@ -48,6 +48,12 @@ pub mod paarung;
 pub mod gruppe;
 pub mod emit;
 pub mod geteilt;
+/// **Lane 156 -- lock invariants (`lock L protects { ... } invariant <pred>`).**
+/// The decidable thirds of `SperrInvOk` (footprint `N275`, purity `N276`,
+/// unknown names `N277`); the re-establishment duty is recorded, not refused
+/// (`pflichten::Art::Sperrinvariante`). No pass number of its own: like
+/// `kontexte` below it is a rule of the lock column, not a new one.
+pub mod sperrinv;
 // **Emission-side enforcement, unwired pending hooks (central assembly).**
 // `absenkung` refuses over-budget primitives (bound 18); `tearing` refuses
 // shared-carrier sequences. Both are pure check modules until hooked.
@@ -450,6 +456,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
+        z!("sperrinv", sperrinv::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
         z!("startexklusiv", startexklusiv::pass(baum, absagen));
@@ -495,6 +502,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
     geteilt::pass(baum, absagen);
+    // **Lane 156, beside the lock pass whose `protects` set it reads.**
+    // No pass number of its own (see the module head).
+    sperrinv::pass(baum, absagen);
     // **«B38» -- die Kopplung zwischen benanntem Traeger und Eintrittszustand.**
     //
     // Direkt hinter `geteilt`, weil sie zur Kontextmatrix («K5.3») gehoert und dieselbe

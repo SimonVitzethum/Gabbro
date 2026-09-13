@@ -115,6 +115,10 @@ const BENANNT: &[&str] = &[
     // lane-133): each member without `decreases` falls; K008 fires beside
     // it. Gifts 746/747/748 pin the exact sets.
     "H022",
+    // 2026-09-13, lock invariants (`sperren.invariante`, lane 156): `N275`
+    // a read outside the `protects` set, `N276` a non-pure predicate, `N277`
+    // a name nothing declares. Gifts 940/941/942/943 pin each, each ALONE.
+    "N275", "N276", "N277",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine

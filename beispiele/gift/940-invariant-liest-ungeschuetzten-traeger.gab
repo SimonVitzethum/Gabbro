@@ -1,0 +1,45 @@
+-- erwartet: N275
+-- **A lock invariant reading a carrier the lock does not protect falls.**
+--
+-- `K` protects `A` and `B`, but the invariant also reads `C`. An invariant
+-- over carriers the lock does not guard is not a resource invariant
+-- (`SperrInvOk`): the acquiring thread's environment move may change exactly
+-- the protected carriers, so anything wider is stale at the first acquire.
+module gift::invariant_liest_ungeschuetzten_traeger {
+
+const NSLOTS : u32 = 2;
+const SUMME : u32 = 100;
+
+type Stand = u32 in 0 .. 100;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+table B count NSLOTS {
+    slot {
+        y : Stand,
+    }
+}
+
+table C count NSLOTS {
+    slot {
+        z : Stand,
+    }
+}
+
+lock K protects { A, B } rank 0 held <= 50 ops
+    invariant A.slots[0].x + C.slots[0].z == SUMME;
+
+impl fn gib(k : ptr<normal, rw> A, m : ptr<normal, rw> B)
+    requires Held(K)
+    effects  { writes k.slots, writes m.slots, locks K }
+    costs    <= 16 ops
+{
+    k.slots[0].x = 30;
+    m.slots[0].y = 70;
+}
+
+}

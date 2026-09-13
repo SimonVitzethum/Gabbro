@@ -1,0 +1,37 @@
+-- erwartet: N276
+-- **A lock invariant calling a function falls -- it is not pure.**
+--
+-- Every `Ruf` runs code, and a predicate over a memory snapshot runs none:
+-- conversions and `Some`/`None` included, each of them is a call. N276 ALONE.
+module gift::invariant_mit_ruf {
+
+const NSLOTS : u32 = 2;
+
+type Stand = u32 in 0 .. 100;
+type Klein = u32 in 0 .. 50;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+lock K protects { A } rank 0 held <= 50 ops
+    invariant A.slots[0].x == doppel(21);
+
+impl fn doppel(n : Klein) -> Stand
+    effects  { pure }
+    costs    <= 4 ops
+{
+    return n + n;
+}
+
+impl fn setze(k : ptr<normal, rw> A)
+    requires Held(K)
+    effects  { writes k.slots, locks K }
+    costs    <= 8 ops
+{
+    k.slots[0].x = 40;
+}
+
+}

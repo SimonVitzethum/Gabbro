@@ -3431,6 +3431,34 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/geteilt.rs (`h020`)",
     },
     Satz {
+        name: "sperren.invariante",
+        kennungen: &["N275", "N276", "N277"],
+        aussage: "A lock with an `invariant` clause carries a resource invariant over
+                  exactly the carriers it protects: every carrier the predicate reads
+                  stands in the lock's `protects` set (`N275`), the predicate is a pure
+                  contract expression over a memory snapshot (`N276`), and every name
+                  it uses is a protected carrier or a named constant (`N277`).",
+        vorbehalt: "**Decided, never proved.** The checker holds the invariant's shape;
+                    its TRUTH at every release is the user's obligation, recorded per
+                    lock beside the `ensures` duties (`pflichten::Art::Sperrinvariante`)
+                    and printed by `gabbro lean-g` as the `SperrInv` family -- like
+                    `ensures`, it is counted, not discharged. **Three strictnesses stand
+                    beside the rule.** (1) Option constructors are calls (`Some(x)` is a
+                    `Ruf`), so an invariant over an option-index field is refused with
+                    `N276`: there is no call-free spelling of the constructor. (2)
+                    Quantifiers are refused with `N276` even over protected tables: the
+                    export fragment (`lean_g.rs`) has no domain form for them. (3)
+                    `N278`/`N279` stay reserved for the writer side and the release
+                    shape; neither is refused here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/940 (unprotected read, N275), 941 (`old`, N276),
+                      942 (call, N276), 943 (unknown name, N277) -- each falls with
+                      its code ALONE. The silent direction is beispiele/118 (two
+                      functions, two carriers, one conserved-sum invariant) and
+                      beispiele/119 (single carrier with a bound).",
+        fundstelle: "crates/gabbro-check/src/sperrinv.rs",
+    },
+    Satz {
         name: "ableitung.kante",
         kennungen: &["H021"],
         aussage: "A dropped derivation edge falls once per (caller, target) --

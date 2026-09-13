@@ -1,0 +1,31 @@
+-- erwartet: N277
+-- **A lock invariant naming what is neither a carrier nor a constant falls.**
+--
+-- `NIX` is neither a protected carrier nor a named constant -- and a lock
+-- declaration binds no parameters, so a body name would dangle here too.
+-- N277 ALONE.
+module gift::invariant_nennt_nichts {
+
+const NSLOTS : u32 = 2;
+const SUMME : u32 = 100;
+
+type Stand = u32 in 0 .. 100;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+lock K protects { A } rank 0 held <= 50 ops
+    invariant A.slots[0].x + NIX.slots[0].z == SUMME;
+
+impl fn setze(k : ptr<normal, rw> A)
+    requires Held(K)
+    effects  { writes k.slots, locks K }
+    costs    <= 8 ops
+{
+    k.slots[0].x = 40;
+}
+
+}

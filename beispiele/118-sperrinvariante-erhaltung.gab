@@ -1,0 +1,53 @@
+-- 118 -- A lock invariant on the lock declaration (lane 156).
+--
+-- One lock `K` protects two carriers `A` and `B`, and the clause
+-- `invariant A.slots[0].x + B.slots[0].y == SUMME` states the conserved sum:
+-- what holds whenever `K` is free. The checker holds the clause's SHAPE --
+-- both carriers stand in the `protects` set (`N275`), the predicate is pure
+-- (`N276`), every name resolves (`N277`) -- and records its TRUTH at every
+-- release as obligation `L`, like an `ensures`. Both functions hold `K` by
+-- signature (`requires Held(K)`, the `beispiele/01` idiom), so their bodies
+-- touch the guarded slots directly; each writes both carriers and keeps the
+-- sum. Not declared `concurrent`: both share the signature lock `K`, and the
+-- start rule N240 forbids two threads starting under one such lock.
+module beispiel::sperrinvariante_erhaltung {
+
+const NSLOTS : u32 = 2;
+const SUMME : u32 = 100;
+
+type Stand = u32 in 0 .. 100;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+table B count NSLOTS {
+    slot {
+        y : Stand,
+    }
+}
+
+lock K protects { A, B } rank 0 held <= 50 ops
+    invariant A.slots[0].x + B.slots[0].y == SUMME;
+
+impl fn gib(k : ptr<normal, rw> A, m : ptr<normal, rw> B)
+    requires Held(K)
+    effects  { writes k.slots, writes m.slots, locks K }
+    costs    <= 16 ops
+{
+    k.slots[0].x = 30;
+    m.slots[0].y = 70;
+}
+
+impl fn nimm(k : ptr<normal, rw> A, m : ptr<normal, rw> B)
+    requires Held(K)
+    effects  { writes k.slots, writes m.slots, locks K }
+    costs    <= 16 ops
+{
+    k.slots[0].x = 10;
+    m.slots[0].y = 90;
+}
+
+}
