@@ -136,3 +136,4 @@ import Grammatik.ZielOrtAxBeweis
 import Grammatik.ZielOrtAx
 import Grammatik.ZielOrtAxZeuge
 import Grammatik.Referenz104
+import Grammatik.CFormen
