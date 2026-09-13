@@ -102,3 +102,4 @@ import Grammatik.Trennung
 import Grammatik.AuditW5
 import Grammatik.RufAdaequatG
 import Grammatik.RufAdaequatRufG
+import Grammatik.RufUmkehrRufG
