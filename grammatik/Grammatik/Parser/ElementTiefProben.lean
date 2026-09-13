@@ -947,5 +947,101 @@ theorem t46 : beqTopTief (parseTopTief tt46)
 -- beispiele/20-falle-vier.gab (the `Einheit` device). Rust:
 -- `Device` with `mirrors`, a bit-field register and a guarded
 -- transition -- same shape.
+def tt47 : List Token :=
+  [.wort "profile", .zeichen "{", .wort "arch", .ident "x86_64",
+   .zeichen ";", .wort "rounding", .ident "nearest",
+   .zeichen ";", .wort "fp_contract", .ident "off", .zeichen ";",
+   .wort "assume", .ident "plattform_takt_stabil", .zeichen ";",
+   .zeichen "}", .zeichen ";", .ende]
+theorem t47_lex :
+    lex "profile { arch x86_64; rounding nearest; fp_contract off; assume plattform_takt_stabil; };" =
+      .ok tt47 := by
+  decide
+theorem t47 : beqTopTief (parseTopTief tt47)
+    (.ok [.profilT false
+      [.modusEintrag "arch" "x86_64",
+        .modusEintrag "rounding" "nearest",
+        .modusEintrag "fp_contract" "off",
+        .annahmeEintrag "plattform_takt_stabil"]]) = true := by
+  decide
+-- beispiele/100-hardwareprofil.gab:50-55. Rust: `Profil` with
+-- keyed modes and an assumption -- same shape.
+def tt48 : List Token :=
+  [.wort "requires", .wort "profile", .zeichen "{",
+   .wort "arch", .ident "x86_64", .zeichen ";", .wort "assume",
+   .ident "plattform_takt_stabil", .zeichen ";", .zeichen "}",
+   .zeichen ";", .ende]
+theorem t48_lex :
+    lex "requires profile { arch x86_64; assume plattform_takt_stabil; };" =
+      .ok tt48 := by
+  decide
+theorem t48 : beqTopTief (parseTopTief tt48)
+    (.ok [.profilT true
+      [.modusEintrag "arch" "x86_64",
+        .annahmeEintrag "plattform_takt_stabil"]]) = true := by
+  decide
+-- beispiele/100-hardwareprofil.gab:26-29. Rust: `ProfilBedarf`
+-- -- same shape.
+def tt49 : List Token :=
+  [.wort "when", .ident "TESTBUILD", .wort "static", .wort "mut",
+   .ident "hoechstmarke", .zeichen ":", .ident "Fuellstand",
+   .zeichen "=", .zahl 0, .zeichen ";", .ende]
+theorem t49_lex :
+    lex "when TESTBUILD static mut hoechstmarke : Fuellstand = 0;" =
+      .ok tt49 := by
+  decide
+theorem t49 : beqTopTief (parseTopTief tt49)
+    (.ok [.torT (.statikT true "hoechstmarke" (.atom "Fuellstand")
+      (.lit 0) .none false)]) = true := by
+  decide
+-- beispiele/52-baugatter.gab:61-62. Rust: a gated `Statisch` --
+-- same shape.
+def tt50 : List Token :=
+  [.wort "const", .wort "fn", .ident "quad", .zeichen "(",
+   .ident "i", .zeichen ":", .wort "u32", .wort "in", .zahl 0,
+   .zeichen "..", .zahl 64, .zeichen ")", .zeichen "->",
+   .wort "u32", .wort "effects", .zeichen "{", .wort "pure",
+   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 4,
+   .wort "ops", .zeichen "{", .wort "return", .ident "i",
+   .zeichen "*", .ident "i", .zeichen ";", .zeichen "}",
+   .ende]
+theorem t50_lex :
+    lex "const fn quad(i : u32 in 0 .. 64) -> u32 effects { pure } costs <= 4 ops { return i * i; }" =
+      .ok tt50 := by
+  decide
+theorem t50 : beqTopTief (parseTopTief tt50)
+    (.ok [.funktionT { art := "const", name := "quad", params := [(("i", (.bereich (.atom "u32") (.lit 0) (.lit 64) false)))], ergebnis := (.some (.atom "u32")), fehler := .none, klauseln := [(.wirkung [(.rein)]), (.kosten (.lit 4))] } (.block [] (.some (.ret (.some (.bin "*" (.variable "i") (.variable "i"))))))]) = true := by
+  decide
+-- beispiele/92-const-squares.gab:11. Rust: `Funktion` with the
+-- `const` modifier and a ranged parameter -- same shape.
+def tt51 : List Token :=
+  [.wort "impl", .wort "fn", .ident "freigeben", .zeichen "(",
+   .ident "p", .zeichen ":", .wort "index", .wort "into",
+   .ident "Buch", .zeichen ")", .wort "refines", .ident "ist_frei",
+   .wort "requires", .ident "Held", .zeichen "(", .ident "BUCH",
+   .zeichen ")", .zeichen ",", .ident "Buch", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "p", .zeichen "]",
+   .zeichen ".", .ident "belegt", .wort "effects", .zeichen "{",
+   .wort "reads", .ident "Buch", .zeichen ".", .wort "slots",
+   .zeichen ",", .wort "writes", .ident "Buch", .zeichen ".",
+   .wort "slots", .zeichen ",", .wort "locks", .ident "BUCH",
+   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 8,
+   .wort "ops", .zeichen "{", .ident "Buch", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "p", .zeichen "]",
+   .zeichen ".", .ident "belegt", .zeichen "=", .wort "false",
+   .zeichen ";", .ident "Buch", .zeichen ".", .wort "slots",
+   .zeichen "[", .ident "p", .zeichen "]", .zeichen ".",
+   .ident "wert", .zeichen "=", .zahl 0, .zeichen ";",
+   .zeichen "}", .ende]
+theorem t51_lex :
+    lex "impl fn freigeben(p : index into Buch) refines ist_frei requires Held(BUCH), Buch.slots[p].belegt effects { reads Buch.slots, writes Buch.slots, locks BUCH } costs <= 8 ops { Buch.slots[p].belegt = false; Buch.slots[p].wert = 0; }" =
+      .ok tt51 := by
+  decide
+theorem t51 : beqTopTief (parseTopTief tt51)
+    (.ok [.funktionT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], ergebnis := .none, fehler := .none, klauseln := [.verfeinert ["ist_frei"], .voraus (.ruf "Held" [.variable "BUCH"]), .voraus (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt"), .wirkung [.liest (.feld (.variable "Buch") "slots"), .schreibt (.feld (.variable "Buch") "slots"), .sperrt false (.variable "BUCH")], .kosten (.lit 8)] } (.block [.zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .falsch, .zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
+  decide
+-- beispiele/50-verfeinerung.gab (the `freigeben` refinement).
+-- Rust: `Funktion` with `refines`, two `requires` and three
+-- effects -- same shape.
 
 end Gabbro.Grammatik.Parser
