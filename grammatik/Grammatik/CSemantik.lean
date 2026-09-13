@@ -644,3 +644,139 @@ theorem cExec_cfor_progress : ∀ (x : Nat) (lo hi : Int) (body : CStmt) (m : CM
     cases fuel with
     | zero => exact ⟨m, cUpd ρ x lo, by simp [cExec, cForRun, hlt]⟩
     | succ n => exact ⟨m, cUpd ρ x lo, by simp [cExec, cForRun, hlt]⟩
+
+/-! ## Correspondence: `assignSlot` against the emitted store -/
+
+/-- Geometry of the reference declaration: `konto` (table 0) has 2 slots. -/
+def cGeomRef : CGeom
+  | 0 => 2
+  | _ => 0
+
+/-- The C the emitter produces for `konto[0] := 100` (`emit.rs`: the slot
+    store shape `t->slots[s].f = v;`): table 0, index `0`, field 0,
+    value `100`, at the declared field type. The type travels as the
+    emitter's range guarantee (`hrange` below). -/
+def cEmitWrite (sgn : Bool) (w : CWidth) : CStmt :=
+  .assign 0 (.lit 0) 0 sgn w (.lit 100)
+
+/-- Memory correspondence on `refD`: both `konto` cells agree. The trace
+    is C-side absent (C has no event trace); correspondence is on memory. -/
+def corrMemW (σ : World refD) (m : CMem) : Prop :=
+  m 0 0 0 = (σ.slots () 0 ()).n ∧ m 0 1 0 = (σ.slots () 1 ()).n
+
+/-- The evaluated index of the reference write is `0`. -/
+theorem cRefIdx : ∀ (σ : World refD) (ρG : Env refD [.int 0 10]),
+    (eval σ refIdxEin σ ρG).n = 0 := by
+  intro σ ρG
+  rfl
+
+/-- The evaluated value of the reference write is `100`. -/
+theorem cRefVal : ∀ (σ : World refD) (ρG : Env refD [.int 0 10]),
+    eval σ refHundert σ ρG = refV100 := by
+  intro σ ρG
+  rfl
+
+/-- ONE correspondence theorem: the Gabbro statement `assignSlot` (the
+    smallest writing statement) and the C the emitter produces for it
+    reach the same memory -- under the emitter's range guarantee, from
+    corresponding memories. Stated for the concrete store form. -/
+theorem cCorr_assignSlot (σ : World refD) (ρG : Env refD [.int 0 10])
+    (m : CMem) (ρC : CEnv) (sgn : Bool) (w : CWidth)
+    (hrange : cLo sgn w ≤ 100 ∧ 100 ≤ cHi sgn w)
+    (hcorr : corrMemW σ m) :
+    ∃ (σ' : World refD) (m' : CMem),
+      execStmt refO 0 keinRuf refWriteStAt σ ρG = .ok σ' ρG ∧
+      cExec (cEmitWrite sgn w) m ρC cGeomRef 0 = some (m', ρC) ∧
+      corrMemW σ' m' := by
+  have eI := cRefIdx σ ρG
+  have hG : execStmt refO 0 keinRuf refWriteStAt σ ρG =
+      .ok ((σ.lese [Res.held (D := refD) ()]
+        (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
+        [Res.held (D := refD) ()] (eval σ refIdxEin σ ρG).n ()
+        (eval σ refHundert σ ρG)) ρG := rfl
+  refine ⟨(σ.lese [Res.held (D := refD) ()]
+      (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
+      [Res.held (D := refD) ()] 0 () refV100,
+    (fun t' k' f' =>
+      if t' = 0 ∧ k' = (0 : Int).toNat ∧ f' = 0 then 100 else m t' k' f'),
+    ?_, ?_, ?_⟩
+  · rw [hG, eI]
+    rfl
+  · simp only [cEmitWrite, cExec, aEval, cGeomRef]
+    rw [if_pos ⟨by decide, by decide, hrange.1, hrange.2⟩]
+  · constructor
+    · rfl
+    · exact ((rfl : (fun t' k' f' =>
+          if t' = 0 ∧ k' = (0 : Int).toNat ∧ f' = 0 then 100
+          else m t' k' f') 0 1 0 = m 0 1 0)).trans
+        (hcorr.2.trans (rfl : (((σ.lese [Res.held (D := refD) ()]
+          (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
+          [Res.held (D := refD) ()] 0 () refV100).slots () 1 ()).n =
+          (σ.slots () 1 ()).n))
+
+/-- Witness for the correspondence theorem, on the reference fixture:
+    `einzahlen` writes `konto` (`refEin_schreibt`), the reached run
+    fires that write (`refSchrittB`: thread 1, `konto[0] := 100`), and
+    both semantics reach the same memory from the pre-write world.
+    This is the rule-13 witness for `cCorr_assignSlot`. -/
+theorem cCorr_assignSlot_zeuge :
+    ∃ (ρG : Env refD [.int 0 10]) (ρC : CEnv),
+      corrMemW (refM1B.weltVon 1) (fun _ _ _ => 0) ∧
+      (cLo false .w32 ≤ 100 ∧ 100 ≤ cHi false .w32) ∧
+      (vertragVon refD refEin).schreibt () = true ∧
+      RufSchrittD refP refO 0 refM1B 1 refM2B ∧
+      ∃ (σ' : World refD) (m' : CMem),
+        execStmt refO 0 keinRuf refWriteStAt (refM1B.weltVon 1) ρG = .ok σ' ρG ∧
+        cExec (cEmitWrite false .w32) (fun _ _ _ => 0) ρC cGeomRef 0 =
+          some (m', ρC) ∧
+        corrMemW σ' m' := by
+  have hcorr : corrMemW (refM1B.weltVon 1) (fun _ _ _ => 0) := by
+    constructor <;> rfl
+  refine ⟨refRho7, fun _ => 0, hcorr, by decide, refEin_schreibt (),
+    refSchrittB, ?_⟩
+  exact cCorr_assignSlot _ refRho7 _ _ false .w32 (by decide) hcorr
+
+/-
+CUTS: what is not proved in this file.
+- Later-iteration body UB of `for` is not inventoried: `CStmtUB.forFirst`
+  covers only the first iteration; iterations 2..n are covered by the
+  progress side (`cForRun_progress` needs the body clean from every
+  counter state). A per-iteration UB predicate needs a reachable-states
+  relation over `cForRun` prefixes.
+- Out-of-range SIGNED operands to signed operators are not UB here (only
+  the result range is checked); C converts the operands first. The
+  emitter's range guarantees make the gap unreachable for emitted code,
+  but the semantics does not state it.
+- Checker completeness (`cOk = false` traces back to one inventory
+  entry) is not proved: the file shows UB implies stuck
+  (`cExprUB_stuck`, `cStmtUB_stuck`, `aBinUB_stuck`, `cIdxRead_stuck`)
+  and clean implies progress (`cOk_progress`, `cExec_assign_progress`,
+  `cExec_cif_progress`, `cForRun_progress`, `cExec_cfor_progress`,
+  `cIdxRead_progress`), but a stuck evaluation is not traced back to
+  its inventory entry.
+- Correspondence covers ONE statement (`assignSlot` on `refD`) against
+  ONE emitted shape. Sequencing, calls, loops, and the remaining forms
+  have no correspondence statement yet.
+- The C memory has no object layout, padding, or aliasing: one cell per
+    (table, index, field), widths travelling with the statements.
+    Pointer forms (`zeigerArithmetik`, `zeigerIndex`, `deref`,
+    `adressVon`) are out of scope for the five measured forms.
+- The exact emitter width choice per Gabbro range is not pinned:
+  `cCorr_assignSlot` is generic over widths satisfying the range
+  guarantee.
+- `Function.update` does not exist in this Lean core: `cUpd` is local.
+  `by_contra` is unavailable in this build: contradictions go through
+  `Classical.em` case splits.
+-/
+
+#print axioms cCorr_assignSlot
+#print axioms cCorr_assignSlot_zeuge
+#print axioms cOk_progress
+#print axioms cExprUB_stuck
+#print axioms cStmtUB_stuck
+#print axioms cExec_assign_progress
+#print axioms cExec_cif_progress
+#print axioms cForRun_progress
+#print axioms cExec_cfor_progress
+#print axioms aBinUB_stuck
+#print axioms cIdxRead_stuck
