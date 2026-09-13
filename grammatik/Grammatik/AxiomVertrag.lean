@@ -422,7 +422,7 @@ theorem axP_koerperA : ∀ f, KoerperGutA axP 0 axQ f := by
 /-! ## CUTS:
 
   What is proved: the finding -- on the axiom-calling body `zaehle`, every
-  `ensures E` that `KoerperGutV` admits holds at every result and every
+  `ensures E` that `KoerperGutV` accepts holds at every result and every
   post value of the written slot (`koerperGutV_nur_rahmen`), so the
   result-dependent contract `result == tab[0]` is refuted
   (`inc_ensures_nicht_V`); the strengthening -- declared axiom ensures
@@ -434,7 +434,7 @@ theorem axP_koerperA : ∀ f, KoerperGutA axP 0 axQ f := by
 
   What the finding does NOT say: `KoerperGutV` is not vacuous for axiom
   bodies -- contracts that hold over the whole frame (typing bounds, the
-  unchanged carriers outside the frame) are admitted. It says precisely
+  unchanged carriers outside the frame) are accepted. It says precisely
   that a contract cannot depend on what the axiom answers or writes inside
   its frame, which is why the declared ensures is needed.
 -/
