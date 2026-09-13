@@ -747,12 +747,13 @@ theorem w_iteWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ite c t e) rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann t (.dann rest k))
         ((M.weltVon f).lese Λ c.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannIteWahr M f l Γ Λ Λ' Λ'' c t e rest k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.dannIteWahr M f l Γ Λ Λ' Λ'' c t e rest k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_iteFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -762,12 +763,13 @@ theorem w_iteFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ite c t e) rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
-      = false) :
+      = false)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann e (.dann rest k))
         ((M.weltVon f).lese Λ c.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannIteFalsch M f l Γ Λ Λ' Λ'' c t e rest k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.dannIteFalsch M f l Γ Λ Λ' Λ'' c t e rest k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_optSome {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -780,13 +782,14 @@ theorem w_optSome {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onOption o p a) rest) k⟩)
     (v : Wert D (.index n))
     (hv : eval ((M.weltVon f).lese Λ o.orte) o ((M.weltVon f).lese Λ o.orte) ρ =
-      Option.some v) :
+      Option.some v)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann p (.schrumpf (.dann rest k))) ((M.weltVon f).lese Λ o.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnOptionSome M f l Γ Λ Λ' Λ'' n o p a rest k ρ hhead _ rfl
-    v hv _ rfl, zustandG_neu rfl rfl⟩
+    v hv _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_optNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {n : Int}
@@ -797,13 +800,14 @@ theorem w_optNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onOption o p a) rest) k⟩)
     (hv : eval ((M.weltVon f).lese Λ o.orte) o ((M.weltVon f).lese Λ o.orte) ρ =
-      Option.none) :
+      Option.none)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.dann a (.dann rest k)) ((M.weltVon f).lese Λ o.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnOptionNone M f l Γ Λ Λ' Λ'' n o p a rest k ρ hhead _ rfl
-    hv _ rfl, zustandG_neu rfl rfl⟩
+    hv _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_tagSome {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
@@ -816,13 +820,14 @@ theorem w_tagSome {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (b : Block D (vertragVon D z.kopf.f) l (.int lo hi :: Γ) Λ Λ')
     (nutz : Nutzlast (some (lo, hi)))
     (hw : armWahlG arms (eval ((M.weltVon f).lese Λ v.orte) v
-      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨some (lo, hi), b, nutz⟩) :
+      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨some (lo, hi), b, nutz⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (armEnv nutz ρ)
         (.dann b (.schrumpf (.dann rest k))) ((M.weltVon f).lese Λ v.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnTagSome M f l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead _ rfl
-    lo hi b nutz hw _ rfl, zustandG_neu rfl rfl⟩
+    lo hi b nutz hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_tagNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
@@ -833,13 +838,14 @@ theorem w_tagNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onTag v arms) rest) k⟩)
     (b : Block D (vertragVon D z.kopf.f) l Γ Λ Λ') (nutz : Nutzlast none)
     (hw : armWahlG arms (eval ((M.weltVon f).lese Λ v.orte) v
-      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
+      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨none, b, nutz⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (armEnv nutz ρ)
         (.dann b (.dann rest k)) ((M.weltVon f).lese Λ v.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnTagNone M f l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead _ rfl
-    b nutz hw _ rfl, zustandG_neu rfl rfl⟩
+    b nutz hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_grund {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {n : Nat}
@@ -847,14 +853,15 @@ theorem w_grund {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (arms : GrundArms D (vertragVon D z.kopf.f) l Γ Λ Λ' n)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onGrund r arms) rest) k⟩) :
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onGrund r arms) rest) k⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.dann (grundWahlG arms (eval ((M.weltVon f).lese Λ r.orte) r
           ((M.weltVon f).lese Λ r.orte) ρ)) (.dann rest k)) ((M.weltVon f).lese Λ r.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnGrund M f l Γ Λ Λ' Λ'' n r arms rest k ρ hhead _ rfl
-    _ rfl _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_breaking {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
@@ -907,25 +914,27 @@ theorem w_schrumpf {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
 theorem w_endeBind {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (e : Expr D Γ Λ τ) (rest : Endblock D (vertragVon D z.kopf.f) l (τ :: Γ) Λ)
-    (ρ : Env D Γ) (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.bind e rest)⟩) :
+    (ρ : Env D Γ) (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.bind e rest)⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (.cons (eval ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ) ρ)
         (.ende rest) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.endeBind M f l Γ Λ τ e rest ρ hhead _ rfl _ rfl, zustandG_neu rfl rfl⟩
+  exact ⟨_, RufSchrittG.endeBind M f l Γ Λ τ e rest ρ hhead _ rfl _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_dannBind {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
     (e : Expr D Γ Λ τ) (rest : Block D (vertragVon D z.kopf.f) l (τ :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.bind e rest) k⟩) :
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.bind e rest) k⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (.cons (eval ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ) ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannBind M f l Γ Λ Λ' Λ' τ e rest k ρ hhead _ rfl _ rfl,
+  exact ⟨_, RufSchrittG.dannBind M f l Γ Λ Λ' Λ' τ e rest k ρ hhead _ rfl _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_narrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -937,7 +946,8 @@ theorem w_narrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.narrow e lo' hi' sonst rest) k⟩)
     {σ : World D} (hW : M.weltVon f = σ)
     (h : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
-      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') :
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (Env.cons (τ := .int lo' hi')
@@ -946,7 +956,7 @@ theorem w_narrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   subst hz
   subst hW
   exact ⟨_, RufSchrittG.dannNarrowOk M f l Γ Λ Λ' Λ' lo hi lo' hi' e sonst rest k ρ hhead
-    _ rfl h _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl h _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_narrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo hi : Int}
@@ -956,13 +966,14 @@ theorem w_narrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.narrow e lo' hi' sonst rest) k⟩)
     (h : ¬ (lo' ≤ (eval ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ).n ∧
-      (eval ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ).n ≤ hi')) :
+      (eval ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ).n ≤ hi'))
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.ende sonst) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannNarrowElse M f l Γ Λ Λ' Λ' lo hi lo' hi' e sonst rest k ρ hhead
-    _ rfl h _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl h _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_pruefWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -971,12 +982,13 @@ theorem w_pruefWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.pruefung c sonst rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann rest k)
         ((M.weltVon f).lese Λ c.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannPruefWahr M f l Γ Λ Λ' Λ' c sonst rest k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.dannPruefWahr M f l Γ Λ Λ' Λ' c sonst rest k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_pruefFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -986,12 +998,13 @@ theorem w_pruefFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.pruefung c sonst rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
-      = false) :
+      = false)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.ende sonst)
         ((M.weltVon f).lese Λ c.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannPruefFalsch M f l Γ Λ Λ' Λ' c sonst rest k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.dannPruefFalsch M f l Γ Λ Λ' Λ' c sonst rest k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_regLies {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1002,12 +1015,13 @@ theorem w_regLies {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLies r hk rest) k⟩)
     (v : Wert D (D.rtyp r))
     (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
-    (hzs : D.rzusage r v = true) :
+    (hzs : D.rzusage r v = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann rest (.schrumpf k)) (M.weltVon f) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannRegLies M f l Γ Λ Λ' r hk rest k ρ hhead v hv hzs,
+  exact ⟨_, RufSchrittG.dannRegLies M f l Γ Λ Λ' r hk rest k ρ hhead v hv hzs hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_regLiesElseWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1021,13 +1035,14 @@ theorem w_regLiesElseWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (v : Wert D (D.rtyp r))
     (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
-      ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = true) :
+      ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ zusage.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannRegLiesElseWahr M f l Γ Λ Λ' r hk zusage sonst rest k ρ hhead
-    v hv _ rfl hw _ rfl, zustandG_neu rfl rfl⟩
+    v hv _ rfl hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1040,13 +1055,14 @@ theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (v : Wert D (D.rtyp r))
     (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
-      ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = false) :
+      ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = false)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.ende sonst) ((M.weltVon f).lese Λ zusage.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannRegLiesElseFalsch M f l Γ Λ Λ' r hk zusage sonst rest k ρ hhead
-    v hv _ rfl hw _ rfl, zustandG_neu rfl rfl⟩
+    v hv _ rfl hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_awaits {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1055,14 +1071,15 @@ theorem w_awaits {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (rest : Block D (vertragVon D z.kopf.f) l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.awaits g payload hp hL rest) k⟩)
-    (hvis : O.sichtbar g (M.weltVon f) = true) :
+    (hvis : O.sichtbar g (M.weltVon f) = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (.cons (((M.weltVon f).lese Λ [.inr g]).globs g) ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ [.inr g]) := by
   subst hz
   exact ⟨_, RufSchrittG.dannAwaits M f l Γ Λ Λ' g payload hp hL rest k ρ hhead hvis _ rfl
-    _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_exchange {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1070,7 +1087,8 @@ theorem w_exchange {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hw : (vertragVon D z.kopf.f).gschreibt g = true) (hL : gdarf D g Λ)
     (rest : Block D (vertragVon D z.kopf.f) l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.exchange g neuE hw hL rest) k⟩) :
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.exchange g neuE hw hL rest) k⟩)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (.cons (((M.weltVon f).lese Λ (.inr g :: neuE.orte)).globs g) ρ)
@@ -1083,7 +1101,7 @@ theorem w_exchange {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   exact ⟨_, RufSchrittG.dannExchange M f l Γ Λ Λ' g neuE hw hL rest k ρ hhead _ rfl _ rfl
     ([Ereignis.gzugriff g true Λ ((M.weltVon f).lese Λ (.inr g :: neuE.orte)).haelt] ++
       leseEv (M.weltVon f) Λ (.inr g :: neuE.orte))
-    (by rw [List.append_assoc]; rfl), zustandG_neu rfl rfl⟩
+    (by rw [List.append_assoc]; rfl) hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_gleit {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1097,13 +1115,14 @@ theorem w_gleit {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
       (eval ((M.weltVon f).lese Λ (a.orte ++ b.orte)) a
         ((M.weltVon f).lese Λ (a.orte ++ b.orte)) ρ).x
       (eval ((M.weltVon f).lese Λ (a.orte ++ b.orte)) b
-        ((M.weltVon f).lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
+        ((M.weltVon f).lese Λ (a.orte ++ b.orte)) ρ).x) = some v)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ (a.orte ++ b.orte)) := by
   subst hz
   exact ⟨_, RufSchrittG.dannGleit M f l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead
-    _ rfl v hv _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl v hv _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_gleitLit {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1127,13 +1146,14 @@ theorem w_gleitVon {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩)
     (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (Float.ofInt (eval ((M.weltVon f).lese Λ e.orte) e
-      ((M.weltVon f).lese Λ e.orte) ρ).n) = some v) :
+      ((M.weltVon f).lese Λ e.orte) ρ).n) = some v)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannGleitVon M f l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead _ rfl v hv
-    _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_gleitNarrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1144,13 +1164,14 @@ theorem w_gleitNarrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitNarrow e lo hi sonst rest) k⟩)
     (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval ((M.weltVon f).lese Λ e.orte) e
-      ((M.weltVon f).lese Λ e.orte) ρ).x = some v) :
+      ((M.weltVon f).lese Λ e.orte) ρ).x = some v)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannGleitNarrowOk M f l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead
-    _ rfl v hv _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl v hv _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_gleitNarrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1160,13 +1181,14 @@ theorem w_gleitNarrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitNarrow e lo hi sonst rest) k⟩)
     (hn : gleitPasst lo hi (eval ((M.weltVon f).lese Λ e.orte) e
-      ((M.weltVon f).lese Λ e.orte) ρ).x = none) :
+      ((M.weltVon f).lese Λ e.orte) ρ).x = none)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.ende sonst)
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannGleitNarrowElse M f l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead
-    _ rfl hn _ rfl, zustandG_neu rfl rfl⟩
+    _ rfl hn _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_rueck {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
@@ -2973,9 +2995,9 @@ theorem rufG_adaequat_R_zeuge :
 
 /-! ## 13. Toward TARGET B: forms that never consult the oracle
 
-    The converse must survive the machine's bare `nimmt`/`gibt` steps (a
-    thread may take and release a free lock at any time, outside any
-    `locks` statement). They change only the thread's trace. The sequential
+    The converse was written to survive the machine's bare `nimmt`/`gibt`
+    steps (removed from G on 2026-09-13; the statements below hold a
+    fortiori): they changed only the thread's trace. The sequential
     semantics depends on the trace only through the oracle (`regLies`,
     `regLiesElse`, `awaits` hand the whole world to `O`), so the converse
     is stated for bodies without those forms. -/
@@ -4107,18 +4129,6 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     refine Or.inl ⟨_, _, _, _, .ende rest, _, rufUpdateG_self _ _ _, RestG.ende rest hr ho.2, ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_blatt O passes s rest _ _ _ ρ' hstep)
-  | nimmt L _ _ _ =>
-    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.nimmt L (offen (M.faeden f).spur) ::
-      (M.faeden f).spur, ?_, hcov, ?_⟩
-    · rw [faeden_upd, ← hR]
-    · rw [weltVon_upd]
-      exact semR_SG O passes A r hcov _ _ ρ ⟨rfl, rfl⟩
-  | gibt L _ =>
-    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.gibt L ::
-      (M.faeden f).spur, ?_, hcov, ?_⟩
-    · rw [faeden_upd, ← hR]
-    · rw [weltVon_upd]
-      exact semR_SG O passes A r hcov _ _ ρ ⟨rfl, rfl⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | rueck caller rst hpop Γ2 Λ2 e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu =>
     rw [hR] at hhead
@@ -4518,10 +4528,10 @@ theorem invB_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock →
     shared memory as the logged `s1'`; the logged parameters and entry
     world are the frame's.
 
-    The run may interleave the machine's bare `nimmt`/`gibt` steps (a
-    thread may take and release a free lock outside any `locks`
-    statement); they change only the trace, so the logged `s1'` agrees with
-    `execEnd`'s world in memory, not necessarily in trace. No lock-freedom
+    The statement was written for runs that interleave bare
+    `nimmt`/`gibt` steps (removed from G on 2026-09-13; it holds a
+    fortiori): the logged `s1'` agrees with `execEnd`'s world in memory,
+    not necessarily in trace. No lock-freedom
     or holdings premise is needed: the statement is about runs that exist.
     `b.ohneOrakel` excludes `regLies`/`regLiesElse`/`awaits`, whose oracle
     sees the whole world, trace included (see the CUTS block). -/
@@ -4631,8 +4641,10 @@ macro "kopfweg" : tactic => `(tactic| (
   | (rw [hR] at hhead; cases hhead; simp [execStmt] at hstep; done)
   | (rw [hS] at hpop; cases hpop; done)))
 
-/-- At a head `ende (traverse …; rest)` every step of `f` is a bare lock step
-    (frame, stack and log kept) or the unfold `endeEntf`. -/
+/-- At a head `ende (traverse …; rest)` every step of `f` is the unfold
+    `endeEntf`. (The first disjunct, frame, stack and log kept, was the bare
+    lock steps, removed from G on 2026-09-13; it is kept in the statement
+    and no longer produced.) -/
 theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -4646,8 +4658,6 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   subst hz
   cases hs with
   | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-  | nimmt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
-  | gibt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => (rw [hR] at hhead; cases hhead; exact Or.inr ⟨_, rufUpdateG_self _ _ _⟩)
@@ -4736,8 +4746,6 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   subst hz
   cases hs with
   | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-  | nimmt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
-  | gibt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
@@ -4812,8 +4820,8 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
 
 /-- **A `traverse` whose invariant reads false is stuck.** At a head
     `trav t inv body (i :: is) k` whose invariant, read at the thread's
-    current world, is false, every step of `f` is a bare lock step: frame,
-    stack and log stay. The machine never runs the next iteration and never
+    current world, is false, no step of `f` changes frame, stack or log
+    (only the bare lock steps, removed from G on 2026-09-13, fired there). The machine never runs the next iteration and never
     returns from the frame -- where `traverseLauf` ends in
     `logik .schleife`. -/
 theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -4830,8 +4838,6 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   subst hz
   cases hs with
   | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
-  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
@@ -4986,8 +4992,9 @@ theorem trav_einig :
     in the sequential semantics. Bodies with calls are adequate in general
     (`RufAdaequatRufG.lean`). -/
 
-/-- At an EMPTY stack a head `ende (ret e)` is final for the log: every step
-    of `f` is a bare lock step (no frame to pop to, no call to make). -/
+/-- At an EMPTY stack a head `ende (ret e)` is final for the log: no step
+    of `f` changes frame, stack or log (no frame to pop to, no call to make;
+    the bare lock steps that fired here were removed on 2026-09-13). -/
 theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (z : RufFadenG D) (hz : M.faeden f = z) (hS : z.stapel = []) {l : Bool} {Γ : Ctx}
@@ -4998,8 +5005,6 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   subst hz
   cases hs with
   | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
-  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
@@ -5134,7 +5139,9 @@ theorem ruf_fortsetzung :
     trace-reading oracle can then answer differently. TARGET A covers
     them (its run has no bare lock steps). B relates the logged world to
     `execEnd`'s world in MEMORY only (`σ'.speicher = s1'.speicher`), since
-    bare lock steps add trace events; A states full equality `s1 = σ'`.
+    bare lock steps added trace events (they are gone from G since
+    2026-09-13; B is kept in its weaker form); A states full equality
+    `s1 = σ'`.
   - Only single-thread runs (`RufLaufG` = steps of thread `f`); no
     statement about interleavings with other threads beyond the
     lock-freedom premise of A (`hfrei`, on the locks the body may take).
