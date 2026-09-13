@@ -3019,7 +3019,9 @@ fi
 # **96 -> 99 on 2026-09-13 (merge review, measured on the merged tree).** Lanes
 # 138/140/151 each counted against their own base; stage 9 on the merged tree
 # counts 99 emitting files in beispiele/. Nothing new, only the sum re-measured.
-MARKE_EMIT=99
+# **-> 101 on 2026-09-13 (merge review, measured on the merged tree after lanes
+# 156/157).** From here on lanes do NOT book this mark; the merge re-measures it.
+MARKE_EMIT=101
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
