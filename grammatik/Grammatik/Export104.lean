@@ -123,7 +123,8 @@ theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatu
   hw := fun t => by cases t <;> decide
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by cases L <;> decide
+  hh := RufPasst.hh_von (fun L => by cases L <;> decide)
+  hx := RufPasst.hx_von (fun L => by cases L <;> decide)
 
 def gEns_einzahlen : Expr gD (ErgCtx (gD.params g_einzahlen) (gD.erg g_einzahlen)) (vertragVon gD g_einzahlen).ende .bool :=
   (.le (Expr.altSlot (D := gD) GTab.Konto GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto) (Expr.durch (D := gD) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto))

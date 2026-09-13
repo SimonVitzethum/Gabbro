@@ -796,33 +796,33 @@ theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O pas
     cases ks with
     | nil =>
         obtain ⟨M', hs, _⟩ := w_travDone (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-          tb inv body k ρ hr hwahr hH
+          tb inv body k ρ hr hwahr hH.heldIn
         exact ⟨M', hs⟩
     | cons j js =>
         obtain ⟨M', hs, _⟩ := w_travNext (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-          tb inv body j js k ρ hr hwahr hH
+          tb inv body j js k ρ hr hwahr hH.heldIn
         exact ⟨M', hs⟩
   · have hwahr := hP.2.1 l Γ Λ ρ a n inv body k hr
     rw [hr] at hH
     obtain ⟨M', hs, _⟩ := w_ewigWeiter (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-      a n inv body k ρ hr hwahr hH
+      a n inv body k ρ hr hwahr hH.heldIn
     exact ⟨M', hs⟩
   · have hwahr := hP.2.2.1 l Γ Λ Λx ρ tb inv body is k rest hl i hr
     rw [hr] at hH
     obtain ⟨M', hs, _⟩ := w_leaveTrav (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-      tb inv body is k rest i ρ hr hwahr hH
+      tb inv body is k rest i ρ hr hwahr hH.heldIn
     exact ⟨M', hs⟩
   · have hno := hP.2.2.2.1 l Γ Λ Λ ρ _ K rfl hr
     rw [hr] at hH
     obtain ⟨σ', ρ', hst, herw⟩ := uebergang_ok O passes tb fl hτ i von nach hn he hw hL _ ρ hno
     obtain ⟨M', hs, _⟩ := w_blatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-      _ K ρ rfl hr hH σ' ρ' hst herw
+      _ K ρ rfl hr hH.heldIn σ' ρ' hst herw
     exact ⟨M', hs⟩
   · have hno := hP.2.2.2.2 l Γ Λ Λ Λ'' ρ _ rst k rfl hr
     rw [hr] at hH
     obtain ⟨σ', ρ', hst, herw⟩ := uebergang_ok O passes tb fl hτ i von nach hn he hw hL _ ρ hno
     obtain ⟨M', hs, _⟩ := w_dannBlatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
-      _ rst k ρ rfl hr hH σ' ρ' hst herw
+      _ rst k ρ rfl hr hH.heldIn σ' ρ' hst herw
     exact ⟨M', hs⟩
 
 end Schritt

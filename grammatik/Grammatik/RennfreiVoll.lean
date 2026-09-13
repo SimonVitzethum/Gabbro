@@ -84,8 +84,8 @@ theorem sperrDelta_gibt (s : List (Ereignis D)) (L : D.Lock) :
 
 /-- The static holdings of a residue give the held set of the thread world. -/
 theorem heldIn_weltVon {M : RufMaschineG D} {f : Faden} {Λ : List (Res D)}
-    (h : HeldGenau Λ (offen (M.faeden f).spur)) : HeldIn Λ (M.weltVon f).haelt :=
-  h.heldIn
+    (h : HeldIn Λ (offen (M.faeden f).spur)) : HeldIn Λ (M.weltVon f).haelt :=
+  h
 
 /-! ## 2. Every step moves the acting thread's trace by one of the two deltas -/
 
@@ -108,14 +108,14 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       left
       have hw : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ' := by
         rw [hstep]; rfl
-      exact zugriffsDelta_brav ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ)
+      exact zugriffsDelta_brav ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ)
         σ' hw).2 neu hneu hkein
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
       simp only [rufUpdateG_self]
       left
       have hw : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ' := by
         rw [hstep]; rfl
-      exact zugriffsDelta_brav ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ)
+      exact zugriffsDelta_brav ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ)
         σ' hw).2 neu hneu hkein
   | dannLocks l Γ Λ Λ'' L hr body rest k ρ hhead hself hrang hfrei =>
       simp only [rufUpdateG_self]
@@ -135,7 +135,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       left
       rw [hs₁, leave_welt' _ _ _ _ _ _ _ _ hstep]
       exact zugriffsDelta_lese _ Λ _ (Expr.orte_darf inv)
-        (fun L hL => (hΛ L).mp (Block.held_mono rest L hL))
+        (fun L hL => hΛ L (Block.held_mono rest L hL))
   | dannNextTrav l Γ Λ t inv body is k rest i ρ hl hhead σ' ρ' neu hstep =>
       simp only [rufUpdateG_self]
       left
@@ -170,13 +170,13 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         rcases List.mem_cons.mp ho with rfl | ho
         · exact hL
         · exact Expr.orte_darf neuE o ho
-      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ ho hΛ.heldIn
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ ho hΛ
       have hs := gut_schreibGlob (W := fun _ => true) (G := fun _ => true)
         ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) g Λ
         (eval ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) neuE
           ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte))
           (.cons (((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).globs g) ρ)) rfl hL
-        (hl.heldGenau hΛ).heldIn
+        (hl.heldIn hΛ)
       refine zugriffsDelta_brav (hl.2.trans hs.2)
         (Ereignis.gzugriff g true Λ ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).haelt ::
           leseEv (M.weltVon f) Λ (Sum.inr g :: neuE.orte)) rfl ?_
@@ -189,8 +189,8 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       left
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-        (Args.orte_darf args) hΛ.heldIn
-      have hh1 : HeldGenau Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldGenau hΛ
+        (Args.orte_darf args) hΛ
+      have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
       have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte)
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
         hd hgd hh1
@@ -201,10 +201,10 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact this.symm
       have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
           L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-        fun t hwr L hL => (hh1 L).mp (hd t hwr _ hL)
+        fun t hwr L hL => hh1 L (hd t hwr _ hL)
       have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
           L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-        fun g hwr L hL => (hh1 L).mp (hgd g hwr _ hL)
+        fun g hwr L hL => hh1 L (hgd g hwr _ hL)
       obtain ⟨_, _, hcond⟩ := hO a ((M.weltVon f).lese Λ args.orte)
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
       obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg

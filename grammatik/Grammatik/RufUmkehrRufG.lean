@@ -491,7 +491,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .callInd .., _, ho => by simp [Stmt.kOk] at ho
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
-      obtain ⟨_, hb⟩ := hs.locks_inv
+      obtain ⟨_, hb, _⟩ := hs.locks_inv
       simp only [Stmt.kOk] at ho
       simp only [execStmt]
       exact AusSG.gibt (blockSGK body hb ho _ _ _ (h.nimmt L)) L
@@ -1405,7 +1405,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hhead
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨hst, hr⟩ := hb.cons_inv
-    obtain ⟨_, hbd⟩ := hst.locks_inv
+    obtain ⟨_, hbd, _⟩ := hst.locks_inv
     simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho
     refine Or.inl ⟨_, _, _, _, .dann body (.frei L (.dann rest k)), _, rufUpdateG_self _ _ _, RestK.dann _ _ hbd ho.1 (RestK.frei _ _ (RestK.dann _ _ hr ho.2 hk)), ?_⟩
     rw [weltVon_upd]

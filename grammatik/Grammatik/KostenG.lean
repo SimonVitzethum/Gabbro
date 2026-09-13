@@ -1489,7 +1489,7 @@ theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr 
       simp only [rufeS]; exact rufeGArms_of_GrundArmsR Z hZ ha
   | .breaking _ _ hb => by
       simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
-  | .locks _ _ _ _ hb => by
+  | .locks _ _ _ _ _ hb => by
       simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
   | .ret _ _ => rfl
   | .call s g hg hC => by

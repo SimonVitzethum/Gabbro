@@ -390,7 +390,7 @@ theorem ziel_ort_ganz_schleife :
     rfl
   obtain ⟨M3, s3, _⟩ := w_travNext (P := lP) (O := zO) (passes := 0) hZ2.1 () lInv .nil _ _
     (.dann .nil (.ende (.ret .keine (by rfl)))) .nil rfl
-    (by rw [hZ2.welt] at hw ⊢; exact hw) (hgL (by rw [← hZ2.spur]; exact hoff))
+    (by rw [hZ2.welt] at hw ⊢; exact hw) (hgL (by rw [← hZ2.spur]; exact hoff)).heldIn
   refine ⟨zO_gut, zO_lokal, zFs_voll, lP_fragmentG, lP_fussG, lP_koerperZ, lP_start,
     lInit_exklusiv, M2, hr2, ⟨_, _, hZ2.1⟩, ?_, M3, s3⟩
   rw [hZ2.welt]

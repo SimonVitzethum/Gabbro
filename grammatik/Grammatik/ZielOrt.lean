@@ -302,12 +302,12 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
 /-- A leaf keeps the held locks (`stmt_gut`, `Brav` leg). -/
 theorem blatt_offen (hO : GutO O) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
-    (hΛ : HeldGenau Λ (offen σ.spur)) (σ' : World D) (ρ' : Env D Γ)
+    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true) (σ : World D)
+    (ρ : Env D Γ) (hΛ : HeldIn Λ (offen σ.spur)) (σ' : World D) (ρ' : Env D Γ)
     (hst : execStmt O passes keinRuf s σ ρ = Ausgang.ok σ' ρ') :
     offen σ'.spur = offen σ.spur := by
   have hw : (execStmt O passes keinRuf s σ ρ).welt = some σ' := by rw [hst]; rfl
-  exact ((stmt_gut O passes keinRuf keinRuf_gut hO s σ ρ hΛ) σ' hw).2.1
+  exact ((Stmt.gut_blatt O passes keinRuf hO s hleaf σ ρ hΛ) σ' hw).2.1
 
 /-- Reads keep the held locks. -/
 theorem lese_offen (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
@@ -328,12 +328,12 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     (∃ L, Res.held L ∈ (M.faeden f).kopf.rest.2.2.1 ∧
       offen (M'.faeden f).spur = (offen (M.faeden f).spur).erase L) := by
   cases hs with
-  | blatt l Γ Λ Λ' s rest ρ _ _ hΛ σ' ρ' _ hstep =>
+  | blatt l Γ Λ Λ' s rest ρ hleaf _ hΛ σ' ρ' _ hstep =>
       simp only [rufUpdateG_self]
-      exact Or.inl (blatt_offen hO s _ ρ hΛ σ' ρ' hstep)
-  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ _ _ hΛ σ' ρ' _ hstep =>
+      exact Or.inl (blatt_offen hO s hleaf _ ρ hΛ σ' ρ' hstep)
+  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf _ hΛ σ' ρ' _ hstep =>
       simp only [rufUpdateG_self]
-      exact Or.inl (blatt_offen hO s _ ρ hΛ σ' ρ' hstep)
+      exact Or.inl (blatt_offen hO s hleaf _ ρ hΛ σ' ρ' hstep)
   | dannLocks l Γ Λ Λ'' L _ _ _ _ _ _ _ _ hfrei =>
       simp only [rufUpdateG_self]
       exact Or.inr (Or.inl ⟨L, hfrei, rfl⟩)
@@ -493,7 +493,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       have hw : (execStmt O passes keinRuf s ((genAusG M).weltVon u) ρ).welt = some σ' := by
         show (execStmt O passes keinRuf s (M.weltVon u) ρ).welt = some σ'
         rw [hstep]; rfl
-      have hR := ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon u) ρ hΛ) σ'
+      have hR := ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon u) ρ hΛ) σ'
         (by rw [hstep]; rfl)).1
       cases c with
       | inl t =>
@@ -511,7 +511,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       have hw : (execStmt O passes keinRuf s ((genAusG M).weltVon u) ρ).welt = some σ' := by
         show (execStmt O passes keinRuf s (M.weltVon u) ρ).welt = some σ'
         rw [hstep]; rfl
-      have hR := ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon u) ρ hΛ) σ'
+      have hR := ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon u) ρ hΛ) σ'
         (by rw [hstep]; rfl)).1
       cases c with
       | inl t =>
@@ -556,7 +556,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
             · have hmem : Res.held L ∈ Λ := by
                 have := hL _ hB
                 simpa [Res.von] using this
-              exact hfrei ((hΛ L).mp hmem)
+              exact hfrei (hΛ L hmem)
             · have : TraegerSchreibt (M.faeden u).kopf.f (.inr x) = true := hw
               rw [hW] at this
               exact Bool.false_ne_true this
@@ -581,7 +581,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                 · have hmem : Res.held L ∈ Λ := by
                     have := hd t hat _ hB
                     simpa [Res.von] using this
-                  exact hfrei ((hΛ L).mp hmem)
+                  exact hfrei (hΛ L hmem)
                 · have : TraegerSchreibt (M.faeden u).kopf.f (.inl t) = true := hw t hat
                   rw [hW] at this
                   exact Bool.false_ne_true this
@@ -599,7 +599,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                 · have hmem : Res.held L ∈ Λ := by
                     have := hgd x hax' _ hB
                     simpa [Res.von] using this
-                  exact hfrei ((hΛ L).mp hmem)
+                  exact hfrei (hΛ L hmem)
                 · have : TraegerSchreibt (M.faeden u).kopf.f (.inr x) = true := hg x hax'
                   rw [hW] at this
                   exact Bool.false_ne_true this
@@ -856,12 +856,12 @@ theorem geg_lauf : ∃ M : RufMaschineG refD,
   -- thread 0: call `lies`, bind `konto[0]`
   have h0 := gegM0_faden (0 : Faden)
   obtain ⟨M2, s2, hZ2⟩ := w_rufEnde (P := gegP) (O := refO) (passes := 0) h0 refLies
-    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref offen_gegZ0)
+    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref offen_gegZ0).heldIn
   have hoff2 : offen (M2.faeden 0).spur = [()] := by
     rw [hZ2.1]
     exact ((Erw.lese _ _ _).offen).trans offen_gegZ0
   obtain ⟨M3, s3, hZ3⟩ := w_endeBind (P := gegP) (O := refO) (passes := 0) hZ2.1 _ _ _ rfl
-    (heldGenau_ref (by first | exact hoff2 | (rw [hZ2.1] at hoff2; exact hoff2)))
+    (heldGenau_ref (by first | exact hoff2 | (rw [hZ2.1] at hoff2; exact hoff2))).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [()] := by
     rw [hZ3.1]
     exact ((Erw.lese _ _ _).offen).trans hoff2
@@ -873,25 +873,25 @@ theorem geg_lauf : ∃ M : RufMaschineG refD,
   -- thread 1: call `lies`, bind, return, write 100
   have h13 : M3.faeden 1 = gegZ0 := hfremd3 1 (by decide)
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := gegP) (O := refO) (passes := 0) h13 refLies
-    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref offen_gegZ0)
+    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref offen_gegZ0).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.1]
     refine ((Erw.lese _ _ _).offen).trans ?_
     show offen (M3.faeden 1).spur = [()]
     rw [h13]; rfl
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := gegP) (O := refO) (passes := 0) hZ4.1 _ _ _ rfl
-    (heldGenau_ref (by first | exact hoff4 | (rw [hZ4.1] at hoff4; exact hoff4)))
+    (heldGenau_ref (by first | exact hoff4 | (rw [hZ4.1] at hoff4; exact hoff4))).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.1]
     exact ((Erw.lese _ _ _).offen).trans hoff4
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := gegP) (O := refO) (passes := 0) hZ5.1 _ [] rfl
-    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff5 | (rw [hZ5.1] at hoff5; exact hoff5)))
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff5 | (rw [hZ5.1] at hoff5; exact hoff5))).heldIn
   have hoff6 : offen (M6.faeden 1).spur = [()] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_blatt (P := gegP) (O := refO) (passes := 0) hG6.1 refWriteStAt
     (.ret .keine (by rfl)) refRho7 rfl rfl
-    (heldGenau_ref (by first | exact hoff6 | (rw [hG6.1] at hoff6; exact hoff6))) _ _ rfl
+    (heldGenau_ref (by first | exact hoff6 | (rw [hG6.1] at hoff6; exact hoff6))).heldIn _ _ rfl
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   -- thread 0 again: return the stale value
   have hfremd7 : ∀ t : Faden, t ≠ 1 → M7.faeden t = M3.faeden t := by
@@ -900,7 +900,7 @@ theorem geg_lauf : ∃ M : RufMaschineG refD,
       rufSchrittG_fremd s4 t ht]
   have h7_0 : M7.faeden 0 = _ := (hfremd7 0 (by decide)).trans hZ3.1
   obtain ⟨M8, s8, hG8⟩ := w_rueckP (P := gegP) (O := refO) (passes := 0) h7_0 _ [] rfl
-    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff3 | (rw [hZ3.1] at hoff3; exact hoff3)))
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff3 | (rw [hZ3.1] at hoff3; exact hoff3))).heldIn
   have hr8 : RufErreichbarG gegP refO 0 (RufStartG gegP refSp0 gegInit) M8 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ hr3 s4) s5)
       s6) s7) s8
@@ -1021,19 +1021,19 @@ theorem vertragAmOrtG_refP_zeuge : ∃ M : RufMaschineG refD,
     VertragAmOrtG refP M := by
   have h0 := refM0G_faden (1 : Faden)
   obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := refP) (O := refO) (passes := 0) h0 refWriteStAt
-    refRestEin refRho7 rfl rfl (heldGenau_ref rfl) _ _ rfl
+    refRestEin refRho7 rfl rfl (heldGenau_ref rfl).heldIn _ _ rfl
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff2 : offen (M2.faeden 1).spur = [()] := by
     rw [hZ2.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufEnde (P := refP) (O := refO) (passes := 0) hZ2.1 refLies
     refArgsLies refHpLiesAt rfl (.ret .keine (by rfl)) refRho7 rfl
-    (heldGenau_ref (by first | exact hoff2 | (rw [hZ2.1] at hoff2; exact hoff2)))
+    (heldGenau_ref (by first | exact hoff2 | (rw [hZ2.1] at hoff2; exact hoff2))).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur]
     exact ((Erw.lese _ _ _).offen).trans hoff2
   obtain ⟨M4, s4, hG4⟩ := w_rueckP (P := refP) (O := refO) (passes := 0) hZ3.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff3 | (rw [hZ3.1] at hoff3; exact hoff3)))
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by first | exact hoff3 | (rw [hZ3.1] at hoff3; exact hoff3))).heldIn
   have hfremd : ∀ t : Faden, t ≠ 1 → M4.faeden t = refZ0 := by
     intro t ht
     rw [rufSchrittG_fremd s4 t ht, rufSchrittG_fremd s3 t ht, rufSchrittG_fremd s2 t ht,

@@ -96,11 +96,11 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     the outcome world carries the full trace with `Brav` provenance from empty
     (`exec_spur` read as `Brav`, the same step `Ziel.lean` closes per body). -/
 def MaschinenFaden.spawn (P : Programm D) (O : Orakel D) (passes fuel : Nat)
-    (hO : GutO O) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hO : GutO O) (hP : StufenOk P) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
     (hh : HeldGenau Λ σ.haelt) (hempty : σ.spur = [])
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
     MaschinenFaden D :=
-  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO b σ ρ hh σ' h, rfl⟩
+  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO hP b σ ρ hh σ' h, rfl⟩
 
 /-! ## 2. The machine run -- interleaving over the grammar, reachable by construction -/
 
@@ -393,6 +393,86 @@ def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
   | .ite .. | .onOption .. | .onTag .. | .onGrund .. | .call .. | .callInd ..
   | .locks .. | .breaking .. | .traverse .. | .retry .. | .forever .. => false
   | _ => true
+
+/-- **Frame and trace of a LEAF, under held static holdings only.** A leaf
+    takes no lock and calls nothing, so `HeldIn` (every lock the static
+    holdings name is held -- the side condition of machine G since the
+    held-set relaxation) suffices; no floor, no handler premise. -/
+theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hO : GutO O) :
+    ∀ (s : Stmt D V l Γ Λ Λ'), s.istBlatt = true → ∀ (σ : World D) (ρ : Env D Γ),
+      HeldIn Λ σ.haelt → GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
+  | .assignSlot t f i e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
+  | .assignDurch p t _ f i e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
+        (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
+  | .assignGlob g e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh
+      exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hh))
+  | .schreibBytes t f hf n i _ _ e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
+      exact hl.trans (gut_schreibBytes _ t f hf Λ hw hL _ _ (hl.heldIn hh))
+  | .assignVar x e, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh
+  | .uebergang t f hτ i von nach hn he hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt] at h
+      split at h
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_tab hL) i.orte_darf) hh
+        exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
+      · simp [Ausgang.welt] at h
+  | .axiomCall a args _ hw hg hd hgd, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh
+      split at h
+      · rename_i σ1 v ha
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        have := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldIn hh)
+        rw [ha] at this
+        exact hl.trans (Gut.weiter hw hg this)
+      · simp [Ausgang.welt] at h
+  | .regSchreib r _ e, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh
+  | .transition .., _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .publish g e _ _ hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh
+      exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hh))
+  | .advances .., _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .retires .., _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .ret e _, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh
+  | .retGrund .., _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .leave _, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .next _, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .ite .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .onOption .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .onTag .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .onGrund .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .call .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .callInd .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .locks .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .breaking .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .traverse .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .retry .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .forever .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+
 
 /-- The generated machine: shared memory, one trace per thread, the run so far,
     the start world, the world history (one entry per step, with live memory),

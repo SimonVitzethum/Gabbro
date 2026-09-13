@@ -136,11 +136,16 @@ theorem vHp (caller callee : vD.Fn) (hw : ∀ t, (vD.signatur callee).schreibt t
     RufPasst vD (vertragVon vD caller) (vD.signatur callee) [] where
   hw := hw
   hg := fun g => nomatch g
+  hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
   hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
-  hh := by
+  hh := RufPasst.hh_von (by
     intro L
     rw [hh]
-    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
+  hx := RufPasst.hx_von (by
+    intro L
+    rw [hh]
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
 
 theorem vHpErr : RufPasst vD (vertragVon vD vMid) (vD.signatur vErr) [] :=
   vHp vMid vErr (fun t h => by cases t; exact absurd h (by decide)) rfl rfl
@@ -492,7 +497,7 @@ theorem w_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {passes :
           ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ))
         (.ende (P.rumpf g)) ((M.weltVon f).lese Λ (p.orte ++ args.orte)) := by
   subst hz
-  exact ⟨_, RufSchrittG.rufCallInd M f l Γ Λ n p args hp hr rest ρ hhead hΛ _ rfl g hg hv _ rfl
+  exact ⟨_, RufSchrittG.rufCallInd M f l Γ Λ n p args hp hr rest ρ hhead hΛ.heldIn _ rfl g hg hv _ rfl
     _ rfl, zustandG_neu rfl rfl⟩
 
 /-- The axiom's answer world appends only access events. -/
@@ -536,14 +541,14 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   have e2 := hZ2.1
   try dsimp only at e2
   obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := vP) (O := vO) (passes := 0) e2 .wahr vLetElse .nil
-    .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl rfl (vHg0 (vHoff_e e2 hoff2))
+    .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl rfl (vHg0 (vHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff2
   have e3 := hZ3.1
   try dsimp only at e3
   obtain ⟨M4, s4, hZ4⟩ := w_bindCallElse (P := vP) (O := vO) (passes := 0) e3 vErr .nil rfl
     vHpErr (by decide) vErrBlock .nil (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil rfl
-    (vHg0 (vHoff_e e3 hoff3))
+    (vHg0 (vHoff_e e3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 0).spur = [] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff3
   have e4 := hZ4.1
@@ -551,14 +556,14 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   -- `ferr` returns its reason; `mid` runs its `else` block
   obtain ⟨M5, s5, hG5⟩ := w_rueckGrundP (P := vP) (O := vO) (passes := 0) e4 _ _ rfl
     (PopGrund.sonst vErrBlock .nil (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil rfl)
-    vR0 List.Perm.nil .nil rfl (vHg0 (vHoff_e e4 hoff4))
+    vR0 List.Perm.nil .nil rfl (vHg0 (vHoff_e e4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 0).spur = [] := by
     rw [hG5.1]; exact hoff4
   have e5 := hG5.1
   try dsimp only at e5
   -- `mid` returns to `haupt`
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := vP) (O := vO) (passes := 0) e5 _ _ rfl
-    (PopArt.wie rfl) .keine List.Perm.nil _ rfl (vHg0 (vHoff_e e5 hoff5))
+    (PopArt.wie rfl) .keine List.Perm.nil _ rfl (vHg0 (vHoff_e e5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 0).spur = [] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
@@ -579,14 +584,14 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e8
   obtain ⟨M9, s9, hZ9⟩ := w_wiederSchritt (P := vP) (O := vO) (passes := 0) e8 0 .falsch vLeave
     .nil (.dann .nil (.ende (.cons vLocks (.ret .keine List.Perm.nil)))) .nil rfl rfl
-    (vHg0 (vHoff_e e8 hoff8))
+    (vHg0 (vHoff_e e8 hoff8)).heldIn
   have hoff9 : offen (M9.faeden 0).spur = [] := by
     rw [hZ9.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff8
   have e9 := hZ9.1
   try dsimp only at e9
   obtain ⟨M10, s10, hZ10⟩ := w_abbWieder (P := vP) (O := vO) (passes := 0) e9 true 0 .falsch
     vLeave .nil (.dann .nil (.ende (.cons vLocks (.ret .keine List.Perm.nil)))) .nil .nil rfl
-    (vHg0 (vHoff_e e9 hoff9))
+    (vHg0 (vHoff_e e9 hoff9)).heldIn
   have hoff10 : offen (M10.faeden 0).spur = [] := by
     rw [hZ10.spur, vOffen_weltVon]; exact hoff9
   have e10 := hZ10.1
@@ -624,7 +629,7 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e13
   obtain ⟨M14, s14, hZ14⟩ := w_dannBlatt (P := vP) (O := vO) (passes := 0) e13 vAx .nil
     _ .nil rfl rfl
-    (vHgL (vHoff_e e13 hoff13)) _ _ rfl (vO_erw _ .nil)
+    (vHgL (vHoff_e e13 hoff13)).heldIn _ _ rfl (vO_erw _ .nil)
   have hr14 : RufErreichbarG vP vO 0 (RufStartG vP vSp vInit) M14 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
       (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _

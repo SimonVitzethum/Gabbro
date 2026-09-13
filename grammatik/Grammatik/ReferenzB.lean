@@ -221,7 +221,7 @@ theorem refHpLiesAt :
   hw := fun t ht => by cases t <;> rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := by
+  hh := RufPasst.hh_von (by
     intro L
     have eH : (refD.signatur refLies).haelt = [()] := rfl
     constructor
@@ -240,7 +240,27 @@ theorem refHpLiesAt :
         exact (List.mem_singleton.mp hmem)
       show Res.held (D := refD) _ ∈ _
       rw [eL]
-      exact List.mem_singleton.mpr rfl
+      exact List.mem_singleton.mpr rfl)
+  hx := RufPasst.hx_von (by
+    intro L
+    have eH : (refD.signatur refLies).haelt = [()] := rfl
+    constructor
+    · intro hL
+      have eL : L = () := by
+        have hmem : Res.held (D := refD) L ∈ [Res.held (D := refD) ()] := hL
+        have heq : Res.held (D := refD) L = Res.held (D := refD) () :=
+          (List.mem_singleton.mp hmem)
+        cases heq
+        rfl
+      rw [eH]
+      exact eL ▸ List.mem_singleton.mpr rfl
+    · intro hL
+      have eL : L = () := by
+        have hmem : L ∈ [()] := by rw [← eH]; exact hL
+        exact (List.mem_singleton.mp hmem)
+      show Res.held (D := refD) _ ∈ _
+      rw [eL]
+      exact List.mem_singleton.mpr rfl)
 
 /-- No arguments for the `lies` call. -/
 def refArgsLies :

@@ -89,10 +89,10 @@ theorem blatt_erhaelt_globs
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
     (x : D.Glob) (L : D.Lock)
     (hGuard : Sum.inl L ∈ D.gbraucht x)
-    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (hΛ : HeldIn Λ (offen (M.spuren f)))
     (hfrei : L ∉ offen (M.spuren f)) :
     σ'.globs x = (M.weltVon f).globs x := by
-  have hheld : Res.held L ∈ Λ → L ∈ offen (M.spuren f) := fun h => (hΛ L).mp h
+  have hheld : Res.held L ∈ Λ → L ∈ offen (M.spuren f) := fun h => hΛ L h
   cases s with
   | assignSlot u fld i e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
@@ -376,7 +376,7 @@ theorem rely_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Gut
       intro k fld
       show σ'.speicher.slots t k fld = M.speicher.slots t k fld
       exact blatt_erhaelt_slots O passes hO M g s ρ hleaf σ' hstep t L
-        hGuard hΛ hfrei k fld
+        hGuard hΛ.heldIn hfrei k fld
   | take L hself hrang hfrei' hpc =>
       intro k fld
       rfl
@@ -407,7 +407,7 @@ theorem rely_aus_sperre_global (P : Programm D) (O : Orakel D) (passes : Nat) (h
   | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn Λa cs hpc hΛa hmark hcar =>
       show σ'.speicher.globs x = M.speicher.globs x
       exact blatt_erhaelt_globs O passes hO M g s ρ hleaf σ' hstep x L
-        hGuard hΛ hfrei
+        hGuard hΛ.heldIn hfrei
   | take L hself hrang hfrei' hpc =>
       rfl
   | rel L hhaelt hpc =>

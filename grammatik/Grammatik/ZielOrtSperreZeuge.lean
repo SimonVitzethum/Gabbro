@@ -304,43 +304,43 @@ theorem zPB_lauf : ∃ M : RufMaschineG zD,
     rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := zPB) (O := zO) (passes := 0) hZ2.1 zWrap .nil zHpWrap
     rfl _ _ .nil rfl
-    (hgL (hoff_z hZ2 hoff2))
+    (hgL (hoff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zPB) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
     rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
-    (hgL (hoff_z hZ3 hoff3))
+    (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zPB) (O := zO) (passes := 0) hZ4.1
     (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
-    (hgL (hoff_z hZ4 hoff4))
+    (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := zPB) (O := zO) (passes := 0) hZ5.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 1).spur = [()] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zPB) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
     (.ret .keine (by rfl)) .nil rfl
-    (hgL (hoff_g hG6 hoff6))
+    (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6
   obtain ⟨M8, s8, hZ8⟩ := w_blatt (P := zPB) (O := zO) (passes := 0) hZ7.1
     _ _ _ rfl rfl
-    (hgL (hoff_z hZ7 hoff7)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    (hgL (hoff_z hZ7 hoff7)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff8 : offen (M8.faeden 1).spur = [()] := by
     rw [hZ8.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff7
   obtain ⟨M9, s9, hG9⟩ := w_rueckP (P := zPB) (O := zO) (passes := 0) hZ8.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8)).heldIn
   have hoff9 : offen (M9.faeden 1).spur = [()] := by
     rw [hG9.1]
     exact ((Erw.lese _ _ _).offen).trans hoff8
   obtain ⟨M10, s10, hG10⟩ := w_rueckP (P := zPB) (O := zO) (passes := 0) hG9.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9)).heldIn
   have hr10 : RufErreichbarG zPB zO 0 (RufStartG zPB zSp zInit) M10 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
       (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4) s5)
@@ -536,10 +536,14 @@ theorem sHp : RufPasst sD (vertragVon sD sHaupt) (sD.signatur sSetze) sL where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := by
+  hh := RufPasst.hh_von (by
     intro L
     cases L
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (by
+    intro L
+    cases L
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 /-- The call `setze(x)` inside the lock. -/
 def sRuf : Stmt sD (vertragVon sD sHaupt) false [.int 0 100] sL sL :=
@@ -818,23 +822,23 @@ theorem sAbschnitt {M : RufMaschineG sD} (hr : RufErreichbarG sP sO 0 (RufStartG
     rw [sOffen_weltVon, hZ1.spur, sOffen_weltVon, hoff0]
     rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := sP) (O := sO) (passes := 0) hZ2.1 sSetze
-    (.cons (.var .hier) .nil) sHp rfl .nil _ x rfl (shgL (soff_z hZ2 hoff2))
+    (.cons (.var .hier) .nil) sHp rfl .nil _ x rfl (shgL (soff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden t).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_blatt (P := sP) (O := sO) (passes := 0) hZ3.1
-    _ _ _ rfl rfl (shgL (soff_z hZ3 hoff3)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    _ _ _ rfl rfl (shgL (soff_z hZ3 hoff3)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff4 : offen (M4.faeden t).spur = [()] := by
     rw [hZ4.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_blatt (P := sP) (O := sO) (passes := 0) hZ4.1
-    _ _ _ rfl rfl (shgL (soff_z hZ4 hoff4)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    _ _ _ rfl rfl (shgL (soff_z hZ4 hoff4)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff5 : offen (M5.faeden t).spur = [()] := by
     rw [hZ5.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff4
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := sP) (O := sO) (passes := 0) hZ5.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (shgL (soff_z hZ5 hoff5))
+    (PopArt.wie rfl) _ _ _ rfl (shgL (soff_z hZ5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden t).spur = [()] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5

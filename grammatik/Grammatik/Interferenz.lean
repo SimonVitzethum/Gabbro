@@ -146,11 +146,11 @@ structure ZweiFaden (Nb : Nebeneinander) where
 /-- Die Rahmenpraemisse ist genau das, was `exec_rahmen` je Rumpf liefert: ein Rumpf unter
     Vertrag `V`, gestartet mit den genannten Zeugnissen, schreibt nur, was `V` nennt. -/
 theorem rahmen_aus_exec (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
-    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (hP : StufenOk P) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
     Rahmen V.schreibt V.gschreibt σ σ' :=
-  exec_rahmen P O passes fuel hO b σ ρ hh σ' h
+  exec_rahmen P O passes fuel hO hP b σ ρ hh σ' h
 
 /-! ## 4. Invarianten am Paar: U003 und `schuldet` -/
 

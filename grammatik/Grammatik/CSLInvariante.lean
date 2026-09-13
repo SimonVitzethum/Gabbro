@@ -52,10 +52,10 @@ theorem blatt_erhaelt_slots
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
     (t : D.Tab) (L : D.Lock)
     (hGuard : Sum.inl L ∈ D.braucht t)
-    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (hΛ : HeldIn Λ (offen (M.spuren f)))
     (hfrei : L ∉ offen (M.spuren f)) :
     ∀ (k : Int) (fld : D.Feld t), σ'.slots t k fld = (M.weltVon f).slots t k fld := by
-  have hheld : Res.held L ∈ Λ → L ∈ offen (M.spuren f) := fun h => (hΛ L).mp h
+  have hheld : Res.held L ∈ Λ → L ∈ offen (M.spuren f) := fun h => hΛ L h
   cases s with
   | assignSlot u fld i e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
@@ -357,7 +357,7 @@ theorem csl_ressourceninvariante
               intro k fld
               show M.speicher.slots t k fld = σ'.slots t k fld
               exact (blatt_erhaelt_slots O passes hO M f s ρ hleaf σ' hstep t L
-                hGuard hΛ hLf k fld).symm
+                hGuard hΛ.heldIn hLf k fld).symm
             exact ((hLokal M.speicher σ'.speicher hslots).mp hmem)
       | take L' _ _ _ _ =>
           show inv M.speicher

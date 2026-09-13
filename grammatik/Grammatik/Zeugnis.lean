@@ -626,11 +626,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 /-- Nullary test signature: no params, no result, no reasons, no rights,
     no marks, no held locks. -/
 def TestSig0 : Signatur Unit Unit Unit Empty :=
-  ⟨[], none, 0, [], fun _ => false, fun _ => false, [], []⟩
+  ⟨[], none, 0, [], fun _ => false, fun _ => false, [], [], none⟩
 
 /-- Unary test signature: one int param -- for the negative call probe. -/
 def TestSig1 : Signatur Unit Unit Unit Empty :=
-  ⟨[.int 0 5], none, 0, [], fun _ => false, fun _ => false, [], []⟩
+  ⟨[.int 0 5], none, 0, [], fun _ => false, fun _ => false, [], [], none⟩
 
 /-- A one-glob, one-table, one-lock test world: every access is guarded. -/
 def TestD : Deklaration where
@@ -679,11 +679,11 @@ def TestD : Deklaration where
 
 /-- Procedure contract: no result, holds nothing, produces nothing. -/
 def TestV : Vertrag TestD :=
-  ⟨fun _ => true, fun _ => true, none, 0, [], []⟩
+  ⟨fun _ => true, fun _ => true, none, 0, [], [], none⟩
 
 /-- Value contract: returns an int in `1 .. 1`. -/
 def TestVw : Vertrag TestD :=
-  ⟨fun _ => true, fun _ => true, some (.int 1 1), 0, [], []⟩
+  ⟨fun _ => true, fun _ => true, some (.int 1 1), 0, [], [], none⟩
 
 /-- The nullary call fits the procedure contract at empty resources: no
     rights to check (both write maps are `false`), nothing consumed, and the
@@ -692,7 +692,8 @@ theorem TestHp : RufPasst TestD TestV (TestD.signatur false) [] where
   hw := fun t h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
   hg := fun g h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
-  hh := fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
 
 /-- Same fit for the unary callee: `RufPasst` never constrained the params,
     so the same vacuous proofs go through -- and the table still rejects the
@@ -701,7 +702,8 @@ theorem TestHp1 : RufPasst TestD TestV (TestD.signatur true) [] where
   hw := fun t h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
   hg := fun g h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
-  hh := fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
 
 /-! ## Witness pairs: acceptance and rejection, both by `decide` -/
 

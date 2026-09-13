@@ -138,7 +138,8 @@ theorem rHpLeserC :
   hw := fun t h => by cases t; exact nomatch h
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+  hh := RufPasst.hh_von (fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
+  hx := RufPasst.hx_von (fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
 
 def rLeserC : (rDc c).Fn := RFn.leser
 

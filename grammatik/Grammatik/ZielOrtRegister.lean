@@ -206,7 +206,8 @@ theorem rHpLeser : RufPasst rD (vertragVon rD rHaupt) (rD.signatur rLeser) [] wh
   hw := fun t h => by cases t; exact absurd h (by decide)
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+  hh := RufPasst.hh_von (fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
+  hx := RufPasst.hx_von (fun L => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
 
 /-- `R; R; return x == y` inside `if true`. -/
 def rLesBlock : Block rD (vertragVon rD rLeser) false [] [] [] :=
@@ -417,7 +418,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   have h0 := rM0_faden0
   have hoff0 : offen ((RufStartG rP rSp rInit).faeden 0).spur = [] := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := rP) (O := rO) (passes := 0) h0 rLeser .nil rHpLeser rfl
-    (.ret .keine List.Perm.nil) .nil rfl (rHg0 hoff0)
+    (.ret .keine List.Perm.nil) .nil rfl (rHg0 hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen, rOffen_weltVon]; exact hoff0
   have e1 := hZ1.1
@@ -429,7 +430,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   have e2 := hZ2.1
   try dsimp only at e2
   obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := rP) (O := rO) (passes := 0) e2 .wahr rLesBlock .nil
-    .nil (.ende (.ret (.wert .wahr) List.Perm.nil)) .nil rfl rfl (rHg0 (rHoff_e e2 hoff2))
+    .nil (.ende (.ret (.wert .wahr) List.Perm.nil)) .nil rfl rfl (rHg0 (rHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, rOffen_weltVon]; exact hoff2
   have e3 := hZ3.1
@@ -445,7 +446,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   obtain ⟨M4, s4, hZ4⟩ := w_regLies (P := rP) (O := rO) (passes := 0) e3 () rfl _ _ .nil rfl rNull
     (by show einpassen (.int 0 1) ((M3.speicher.slots () 0 ()).n) = some rNull
         rw [hsp3]; rfl)
-    rfl (rHg0 (rHoff_e e3 hoff3))
+    rfl (rHg0 (rHoff_e e3 hoff3)).heldIn
   have e4 := hZ4.1
   try dsimp only at e4
   -- thread 1 writes the slot
@@ -453,7 +454,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
     rw [rufSchrittG_fremd s4 1 (by decide), rufSchrittG_fremd s3 1 (by decide),
       rufSchrittG_fremd s2 1 (by decide), rufSchrittG_fremd s1 1 (by decide), rM0_faden1]
   obtain ⟨M5, s5, hZ5⟩ := w_blatt (P := rP) (O := rO) (passes := 0) h41
-    (.assignSlot () () rIdx rEins rfl rDarf) (.ret .keine (by rfl)) .nil rfl rfl (rHgL rfl) _ _
+    (.assignSlot () () rIdx rEins rfl rDarf) (.ret .keine (by rfl)) .nil rfl rfl (rHgL rfl).heldIn _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have h50 : M5.faeden 0 = M4.faeden 0 := rufSchrittG_fremd s5 0 (by decide)
@@ -465,14 +466,14 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   obtain ⟨M6, s6, hZ6⟩ := w_regLies (P := rP) (O := rO) (passes := 0) e4' () rfl _ _ _ rfl rEinsW
     (by show einpassen (.int 0 1) ((M5.speicher.slots () 0 ()).n) = some rEinsW
         rw [hsp5]; rfl)
-    rfl (rHg0 (rHoff_e e4' (by rw [h50, hZ4.spur, rOffen_weltVon]; exact hoff3)))
+    rfl (rHg0 (rHoff_e e4' (by rw [h50, hZ4.spur, rOffen_weltVon]; exact hoff3))).heldIn
   have e6 := hZ6.1
   try dsimp only at e6
   have hoff6 : offen (M6.faeden 0).spur = [] := by
     rw [hZ6.spur, rOffen_weltVon, h50, hZ4.spur, rOffen_weltVon]; exact hoff3
   -- return `x == y`, which is `false`
   obtain ⟨M7, s7, hG7⟩ := w_dannRetP (P := rP) (O := rO) (passes := 0) e6 _ _ rfl
-    (PopArt.wie rfl) _ List.Perm.nil .nil _ _ rfl (rHg0 (rHoff_e e6 hoff6))
+    (PopArt.wie rfl) _ List.Perm.nil .nil _ _ rfl (rHg0 (rHoff_e e6 hoff6)).heldIn
   refine ⟨M7, .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
     (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4) s5) s6) s7, _, _, _, _,
     by rw [hG7.1]; exact List.mem_cons_self, ?_⟩

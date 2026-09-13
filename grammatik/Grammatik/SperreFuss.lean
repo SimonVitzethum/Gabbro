@@ -246,7 +246,7 @@ theorem vertrag_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
     (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ :=
   fun _ ho => stabil_of_fuss hF (h ho) fun L hB =>
-    (hp.hh L).mpr (vertrag_darf P g _ ho L hB)
+    hp.hh L (vertrag_darf P g _ ho L hB)
 
 /-- The same for a callee named through a pointer of signature `n`. -/
 theorem vertrag_stabil_ind {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}

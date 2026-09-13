@@ -185,12 +185,18 @@ theorem zHp (caller callee : zD.Fn) (hw : ∀ t, (zD.signatur callee).schreibt t
     RufPasst zD (vertragVon zD caller) (zD.signatur callee) zL where
   hw := hw
   hg := fun g => nomatch g
+  hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
   hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
-  hh := by
+  hh := RufPasst.hh_von (by
     intro L
     cases L
     rw [hh]
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (by
+    intro L
+    cases L
+    rw [hh]
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 theorem zHpLies : RufPasst zD (vertragVon zD zWrap) (zD.signatur zLies) zL :=
   zHp zWrap zLies (fun t h => by cases t; exact absurd h (by decide)) rfl rfl
@@ -497,39 +503,39 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
     rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := zP) (O := zO) (passes := 0) hZ2.1 zWrap .nil zHpWrap
     rfl _ _ .nil rfl
-    (hgL (hoff_z hZ2 hoff2))
+    (hgL (hoff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
     rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
-    (hgL (hoff_z hZ3 hoff3))
+    (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ4.1
     (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
-    (hgL (hoff_z hZ4 hoff4))
+    (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
   -- return from `lies`, call `einzahlen`, write, return
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hZ5.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 1).spur = [()] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
     (.ret .keine (by rfl)) .nil rfl
-    (hgL (hoff_g hG6 hoff6))
+    (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6
   obtain ⟨M8, s8, hZ8⟩ := w_blatt (P := zP) (O := zO) (passes := 0) hZ7.1
     _ _ _ rfl rfl
-    (hgL (hoff_z hZ7 hoff7)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    (hgL (hoff_z hZ7 hoff7)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff8 : offen (M8.faeden 1).spur = [()] := by
     rw [hZ8.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff7
   obtain ⟨M9, s9, hG9⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hZ8.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8)).heldIn
   have hoff9 : offen (M9.faeden 1).spur = [()] := by
     rw [hG9.1]
     exact ((Erw.lese _ _ _).offen).trans hoff8
@@ -543,7 +549,7 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
     rfl
   -- return from `wrap`, leave the `locks`
   obtain ⟨M10, s10, hG10⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hG9.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9)).heldIn
   have hoff10 : offen (M10.faeden 1).spur = [()] := by
     rw [hG10.1]
     exact ((Erw.lese _ _ _).offen).trans hoff9
@@ -582,22 +588,22 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
     rfl
   obtain ⟨M15, s15, hZ15⟩ := w_rufDann (P := zP) (O := zO) (passes := 0) hZ14.1 zWrap .nil zHpWrap
     rfl _ _ .nil rfl
-    (hgL (hoff_z hZ14 hoff14))
+    (hgL (hoff_z hZ14 hoff14)).heldIn
   have hoff15 : offen (M15.faeden 0).spur = [()] := by
     rw [hZ15.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff14
   obtain ⟨M16, s16, hZ16⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ15.1 zLies .nil zHpLies
     rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
-    (hgL (hoff_z hZ15 hoff15))
+    (hgL (hoff_z hZ15 hoff15)).heldIn
   have hoff16 : offen (M16.faeden 0).spur = [()] := by
     rw [hZ16.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff15
   obtain ⟨M17, s17, hZ17⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ16.1
     (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
-    (hgL (hoff_z hZ16 hoff16))
+    (hgL (hoff_z hZ16 hoff16)).heldIn
   have hoff17 : offen (M17.faeden 0).spur = [()] := by
     rw [hZ17.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff16
   obtain ⟨M18, s18, hG18⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hZ17.1 _ _ rfl
     (PopArt.wie rfl) _ _ _ rfl
-    (hgL (hoff_z hZ17 hoff17))
+    (hgL (hoff_z hZ17 hoff17)).heldIn
   have e9 : M9.speicher = M8.speicher := by rw [hG9.2]; rfl
   have e10 : M10.speicher = M9.speicher := by rw [hG10.2]; rfl
   have e11 : M11.speicher = M10.speicher := by rw [hZ11.2]; rfl
