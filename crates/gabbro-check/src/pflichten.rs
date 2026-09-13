@@ -269,6 +269,20 @@ pub enum Art {
     /// decided by nothing: that an entry with `!PS` really points at a next level of that
     /// node type is a statement about the hardware table, owed by no function.
     Walkinvariante,
+    /// **`L` -- the invariant of a lock (lane 156).**
+    ///
+    /// `lock L protects { A, B } invariant I` says: *I holds whenever `L` is
+    /// free.* The checker holds the invariant's SHAPE (`sperrinv.rs`: `N275`
+    /// footprint, `N276` purity, `N277` names); its TRUTH at every release is
+    /// the user's sequential proof obligation (the `freiH` check in
+    /// `SperreSem.lean`, which fails as `logik schleife`).
+    ///
+    /// *It stands beside `N` and not inside it:* an `ensures` is owed by the
+    /// FUNCTION that returns, a lock invariant by every `locks L` body at its
+    /// release. Both need the meaning of a body -- they are not the same
+    /// duty, and a register that merged them could not say which release a
+    /// prover had taken up. One line per lock invariant, named by its lock.
+    Sperrinvariante,
 }
 
 impl Art {
@@ -282,6 +296,7 @@ impl Art {
             Art::Geraetezusage => "D",
             Art::Schleifeninvariante => "S",
             Art::Walkinvariante => "W",
+            Art::Sperrinvariante => "L",
         }
     }
     pub fn name(self) -> &'static str {
@@ -320,6 +335,7 @@ impl Art {
             // visible is this line**, and it now says what the entries under it are.
             Art::Walkinvariante => "Invariant owed by NO function -- a `walk`, \
                                     or a `table`/`group` that no `maintains` names",
+            Art::Sperrinvariante => "Lock invariant -- re-established at every release",
         }
     }
 }
@@ -1031,6 +1047,26 @@ fn lauf(
                     });
                 }
             }
+            // **`lock L ... invariant I` -- the release obligation (lane 156).**
+            //
+            // One line per lock that carries an invariant, named by its lock --
+            // the same shape as one line per `ensures`. `rumpf_da: true` because
+            // Gabbro sees the bodies that must re-establish it; `Material::Body`
+            // because a prover needs their effect, exactly as for `E` and `N`.
+            ItemArt::Lock(l) => {
+                if let Some(inv) = &l.invariante {
+                    aus.push(Pflicht {
+                        art: Art::Sperrinvariante,
+                        funktion: l.name.text.clone(),
+                        gegenstand: "invariant".to_string(),
+                        span: inv.span,
+                        textspan: Some(inv.span),
+                        kein_text: None,
+                        rumpf_da: true,
+                        material: Material::Body,
+                    });
+                }
+            }
             _ => {}
         }
     }
@@ -1130,7 +1166,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     let mut gruende: Vec<&'static str> = Vec::new();
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
                Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante,
-               Art::Walkinvariante] {
+               Art::Walkinvariante, Art::Sperrinvariante] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -1176,6 +1212,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     let dz = p.iter().filter(|x| x.art == Art::Geraetezusage).count();
     let si = p.iter().filter(|x| x.art == Art::Schleifeninvariante).count();
     let wi = p.iter().filter(|x| x.art == Art::Walkinvariante).count();
+    let li = p.iter().filter(|x| x.art == Art::Sperrinvariante).count();
     // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
     // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
     // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
@@ -1187,8 +1224,11 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     //
     // **A THIRD time on 2026-08-31, when `W` came** -- and again before the first report was
     // read. *Three for three: the line has now caught every kind that was added after it.*
+    //
+    // **A FOURTH time on 2026-09-13, when `L` came** (lane 156) -- caught here, in the same
+    // line, before the first report was read.
     debug_assert_eq!(
-        r + e + n + f + v + dz + si + wi,
+        r + e + n + f + v + dz + si + wi + li,
         p.len(),
         "the obligation balance does not add up"
     );
@@ -1202,7 +1242,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
          {f} foreign, {v} precondition, {dz} device, {si} loop invariant, \
-         {wi} unowned invariant ==\n",
+         {wi} unowned invariant, {li} lock invariant ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");

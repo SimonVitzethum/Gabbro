@@ -19,6 +19,13 @@
 //! * `lock L protects { ... } rank N` -- `Lock`/`rang`/`braucht` (the `held`
 //!   budget, the pointer address spaces and the `reads` effects
 //!   have NO FORM and are ignored, each named in the printed header)
+//! * `lock L ... invariant <pred>` -- the `SperrInv` family `gS` (lane 156):
+//!   `orte` is the `protects` set, `inv` the predicate over the memory
+//!   snapshot (table-slot reads with literal indices, named constants,
+//!   integer arithmetic and comparisons). The guard half of `SperrInvOk`
+//!   travels as `List.elem … = true` by `decide`, per lock and protected
+//!   carrier in both directions; the read half and the release duty are the
+//!   user's, booked beside the `ensures` duties.
 //! * `impl fn` with pointer/index/range parameters, `requires Held(L)`,
 //!   `ensures` over comparisons of slot reads, `old`, `result` and literals,
 //!   `effects { reads/writes/locks }`, and a straight-line body of slot
@@ -73,6 +80,9 @@ struct LockModel {
     name: String,
     rank: i128,
     guards: Vec<usize>,
+    /// `invariant <pred>` -- `None` where the lock carries none (its `inv`
+    /// arm is `fun _ => true`, the empty-family shape over its carriers).
+    invariant: Option<Pred>,
 }
 
 struct FnModel {
@@ -454,7 +464,7 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
             guards.push(ti);
         }
     }
-    Ok(LockModel { name: l.name.text.clone(), rank, guards })
+    Ok(LockModel { name: l.name.text.clone(), rank, guards, invariant: l.invariante.clone() })
 }
 
 /// Export the checked unit as a Lean file, or refuse it by name.
@@ -469,7 +479,8 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
         check_contracts(c, &model)?;
         check_body(c, &model)?;
     }
-    Ok(emit(source_name, &model, &checked)?)
+    check_locks(&model, &scope)?;
+    Ok(emit(source_name, &model, &checked, &scope)?)
 }
 
 /// Rebuild the constant/alias scope (pass one of `collect`, rerun for the
@@ -781,6 +792,145 @@ fn tr_cmp(op: &BinOp, l: &Expr, r: &Expr, ctx: &Ctx, model: &Model, fname: &str)
     }
 }
 
+/// A lock invariant as a `Speicher gD → Bool` body (lane 156): the `inv`
+/// arm of the `SperrInv` family `gS`. Only the checker-pure fragment over
+/// TABLE slots travels -- globals have no G form at all (`Glob := Empty`),
+/// a pointer basis names no parameter at lock scope, and indices are
+/// literals (a lock invariant binds no index). Anything else is refused here
+/// with the same codes the contract channel uses (`LG003`/`LG005`).
+fn tr_sinv_pred(p: &Pred, model: &Model, scope: &Scope, lock: &str) -> Result<String, Refusal> {
+    match &p.art {
+        PredArt::Vergleich(e) => match &e.art {
+            ExprArt::Binaer(op, l, r) if op.ist_vergleich() => tr_sinv_cmp(op, l, r, model, scope, lock),
+            ExprArt::Wahr => Ok("true".to_string()),
+            ExprArt::Falsch => Ok("false".to_string()),
+            _ => Err(refuse("LG003", format!("lock invariant of {lock} has no G form"))),
+        },
+        PredArt::Klammer(q) => tr_sinv_pred(q, model, scope, lock),
+        PredArt::Und(a, b) => Ok(format!(
+            "({} && {})",
+            tr_sinv_pred(a, model, scope, lock)?,
+            tr_sinv_pred(b, model, scope, lock)?
+        )),
+        PredArt::Oder(a, b) => Ok(format!(
+            "({} || {})",
+            tr_sinv_pred(a, model, scope, lock)?,
+            tr_sinv_pred(b, model, scope, lock)?
+        )),
+        PredArt::Nicht(q) => Ok(format!("(!{})", tr_sinv_pred(q, model, scope, lock)?)),
+        _ => Err(refuse("LG003", format!("lock invariant of {lock} has no G form"))),
+    }
+}
+
+/// One invariant comparison. `==`/`!=` are `Bool` already; `<`/`≤` over `Int`
+/// are `Prop`, so they travel under `decide`.
+fn tr_sinv_cmp(
+    op: &BinOp,
+    l: &Expr,
+    r: &Expr,
+    model: &Model,
+    scope: &Scope,
+    lock: &str,
+) -> Result<String, Refusal> {
+    let ls = tr_sinv_val(l, model, scope, lock)?;
+    let rs = tr_sinv_val(r, model, scope, lock)?;
+    match op {
+        BinOp::Gleich => Ok(format!("({ls} == {rs})")),
+        BinOp::Ungleich => Ok(format!("({ls} != {rs})")),
+        BinOp::Kleiner => Ok(format!("(decide ({ls} < {rs}))")),
+        BinOp::KleinerGleich => Ok(format!("(decide ({ls} ≤ {rs}))")),
+        BinOp::Groesser => Ok(format!("(decide ({rs} < {ls}))")),
+        BinOp::GroesserGleich => Ok(format!("(decide ({rs} ≤ {ls}))")),
+        _ => Err(refuse("LG003", format!("operator in the lock invariant of {lock} has no G form"))),
+    }
+}
+
+/// One invariant value as an `Int` term: literals (inlined constants
+/// included), table-slot reads with literal indices, and `+`/`-`/`*` over
+/// them. Division, remainders and bit operations have no `Int` form here --
+/// the snapshot arithmetic the invariant needs is conserved sums, and a wider
+/// fragment would move the goal from `decide`-closed guards to unproved
+/// arithmetic.
+fn tr_sinv_val(e: &Expr, model: &Model, scope: &Scope, lock: &str) -> Result<String, Refusal> {
+    match &e.art {
+        ExprArt::Zahl(n) => {
+            let n = i128::try_from(*n)
+                .map_err(|_| refuse("LG003", format!("literal in the lock invariant of {lock} too large")))?;
+            Ok(format!("({n} : Int)"))
+        }
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            let Some(v) = scope.consts.get(&o.basis.text) else {
+                return Err(refuse(
+                    "LG005",
+                    format!("lock invariant of {lock} names unknown {}", o.basis.text),
+                ));
+            };
+            Ok(format!("({v} : Int)"))
+        }
+        ExprArt::Ort(o) => {
+            let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(f)] =
+                o.suffixe.as_slice()
+            else {
+                return Err(refuse(
+                    "LG003",
+                    format!("place {} in the lock invariant of {lock} has no G form", o.text()),
+                ));
+            };
+            if slots.text != "slots" {
+                return Err(refuse(
+                    "LG003",
+                    format!("place {} in the lock invariant of {lock} has no G form", o.text()),
+                ));
+            }
+            let Some(t) = model.tables.iter().position(|t| t.name == o.basis.text) else {
+                return Err(refuse(
+                    "LG005",
+                    format!("lock invariant of {lock} names unknown {}", o.basis.text),
+                ));
+            };
+            let Some(fi) = model.tables[t].fields.iter().position(|(n, _, _)| n == &f.text) else {
+                return Err(refuse(
+                    "LG005",
+                    format!("unknown field {} in the lock invariant of {lock}", o.text()),
+                ));
+            };
+            let ExprArt::Zahl(n) = &idx.art else {
+                return Err(refuse(
+                    "LG003",
+                    format!("non-literal index in the lock invariant of {lock} has no G form"),
+                ));
+            };
+            let n = i128::try_from(*n).map_err(|_| {
+                refuse("LG003", format!("index in the lock invariant of {lock} too large"))
+            })?;
+            if n < 0 || n >= model.tables[t].count {
+                return Err(refuse(
+                    "LG003",
+                    format!("index {n} in the lock invariant of {lock} is outside its `count`"),
+                ));
+            }
+            let _ = fi;
+            Ok(format!("((s.slots {} {n} {}).n)", tab_ctor(model, t), feld_ctor(model, t, fi)))
+        }
+        ExprArt::Klammer(x) => tr_sinv_val(x, model, scope, lock),
+        ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(-{})", tr_sinv_val(x, model, scope, lock)?)),
+        ExprArt::Binaer(op, a, b) => {
+            let l = tr_sinv_val(a, model, scope, lock)?;
+            let r = tr_sinv_val(b, model, scope, lock)?;
+            match op {
+                BinOp::Plus => Ok(format!("({l} + {r})")),
+                BinOp::Minus => Ok(format!("({l} - {r})")),
+                BinOp::Mal => Ok(format!("({l} * {r})")),
+                _ => Err(refuse(
+                    "LG003",
+                    format!("operator in the lock invariant of {lock} has no G form"),
+                )),
+            }
+        }
+        _ => Err(refuse("LG003", format!("expression in the lock invariant of {lock} has no G form"))),
+    }
+}
+
 /// One `ensures` predicate.
 fn tr_ensures(p: &Pred, ctx: &Ctx, model: &Model, fname: &str) -> Result<String, Refusal> {
     match &p.art {
@@ -796,6 +946,16 @@ fn tr_ensures(p: &Pred, ctx: &Ctx, model: &Model, fname: &str) -> Result<String,
         PredArt::Nicht(q) => Ok(format!("(.nicht {})", tr_ensures(q, ctx, model, fname)?)),
         _ => Err(refuse("LG003", format!("ensures-clause in {fname} has no G form"))),
     }
+}
+
+/// Every lock invariant must translate (the `inv` arm is the predicate).
+fn check_locks(model: &Model, scope: &Scope) -> Result<(), Refusal> {
+    for l in &model.locks {
+        if let Some(p) = &l.invariant {
+            tr_sinv_pred(p, model, scope, &l.name)?;
+        }
+    }
+    Ok(())
 }
 
 /// Every `ensures` clause must translate (the conjunction is the contract).
@@ -980,7 +1140,7 @@ fn namespace_of(source_name: &str) -> String {
 }
 
 /// The printed Lean file.
-fn emit(source_name: &str, model: &Model, fns: &[CheckedFn]) -> Result<String, Refusal> {
+fn emit(source_name: &str, model: &Model, fns: &[CheckedFn], scope: &Scope) -> Result<String, Refusal> {
     let nt = model.tables.len();
     let nl = model.locks.len();
     let mut out = String::new();
@@ -1019,7 +1179,7 @@ fn emit(source_name: &str, model: &Model, fns: &[CheckedFn]) -> Result<String, R
         }
         out.push_str(")\n");
     }
-    out.push_str("import Grammatik.ZielOrtGeraetSem\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
+    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
     let ns = namespace_of(source_name);
     out.push_str(&ns);
     out.push_str("\n\n");
@@ -1243,6 +1403,62 @@ fn emit(source_name: &str, model: &Model, fns: &[CheckedFn]) -> Result<String, R
         fns.iter().map(|f| format!("g_{}", lean_fn(&f.name))).collect::<Vec<_>>().join(", ")));
     out.push_str("example : programmImFragmentG gP gFs = true := by decide\n\n");
     out.push_str("example : fussOrtGB gP gFs = true := by decide\n\n");
+    // The lock invariant family `gS` (lane 156): `orte` is the `protects`
+    // set, `inv` the predicate over the memory snapshot (`fun _ => true`
+    // where the lock carries none). The guard half of `SperrInvOk` travels
+    // as `List.elem … = true` by `decide`, per lock and protected carrier in
+    // both directions (the carrier in `orte`, the guard in `braucht`) -- the
+    // universal over all carriers is not decidable (memories are functions),
+    // so the decidable content is stated carrier by carrier; the read half
+    // and the release duty are the user's, booked beside the `ensures` duties.
+    out.push_str("-- The lock invariant family `gS` (`SperrInv`, `SperreSem.lean`):\n");
+    for l in &model.locks {
+        match &l.invariant {
+            None => out.push_str(&format!("-- lock {}: no invariant (arm `fun _ => true`)\n", l.name)),
+            Some(_) => out.push_str(&format!("-- lock {}: invariant below\n", l.name)),
+        }
+    }
+    let mut orte_arms = Vec::new();
+    let mut inv_arms = Vec::new();
+    for l in &model.locks {
+        let mut cs = String::new();
+        for g in &l.guards {
+            cs.push_str(&format!(
+                "{}.inl {}",
+                if cs.is_empty() { "" } else { ", " },
+                tab_ctor(model, *g)
+            ));
+        }
+        orte_arms.push(format!("| .{} => [{}]", l.name, cs));
+        let body = match &l.invariant {
+            None => "fun _ => true".to_string(),
+            Some(p) => format!("fun s => {}", tr_sinv_pred(p, model, scope, &l.name)?),
+        };
+        inv_arms.push(format!("| .{} => {}", l.name, body));
+    }
+    out.push_str("def gS : SperrInv gD where\n");
+    out.push_str(&format!("  orte := fun {}\n", orte_arms.join(" ")));
+    out.push_str(&format!("  inv := fun {}\n\n", inv_arms.join(" ")));
+    for l in &model.locks {
+        for g in &l.guards {
+            let li = model.locks.iter().position(|x| x.name == l.name).expect("lock present");
+            // Membership `∈` does not decide over sum carriers in this
+            // toolchain (`Decidable (x ∈ l)` fails where `x : T ⊕ Empty`,
+            // measured 2026-09-13); `List.elem … = true` is the same
+            // computation and decides.
+            out.push_str(&format!(
+                "example : ((gS.orte {}).elem (.inl {}) = true) := by decide\n",
+                lock_ctor(model, li),
+                tab_ctor(model, *g)
+            ));
+            out.push_str(&format!(
+                "example : ((gD.braucht {}).elem (Sum.inl {}) = true) := by decide\n",
+                tab_ctor(model, *g),
+                lock_ctor(model, li)
+            ));
+        }
+    }
+    out.push('\n');
     out.push_str(&format!("end {ns}\n\nend Gabbro.Grammatik\n"));
     Ok(out)
 }

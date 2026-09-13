@@ -2634,10 +2634,10 @@ impl<'a> Parser<'a> {
     }
 
     /// Read `f` as a CONTRACT: inside it `old` and `result` are words, outside they are
-    /// names. The seven callers are every place the grammar puts a promise -- the `requires`
+    /// names. The eight callers are every place the grammar puts a promise -- the `requires`
     /// / `ensures` of a `fn` and of an `fn` pointer, the body of a `spec fn`, a loop
-    /// invariant, a `table` invariant, the `when` of an `exchange`, an `axiom`'s
-    /// precondition and a `check`'s `floor`.
+    /// invariant, a `table` invariant, a lock invariant, the `when` of an `exchange`, an
+    /// `axiom`'s precondition and a `check`'s `floor`.
     fn vertrag<T>(&mut self, f: impl FnOnce(&mut Self) -> Erg<T>) -> Erg<T> {
         let alt = self.im_vertrag;
         self.im_vertrag = true;
@@ -5163,6 +5163,18 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **`invariant <pred>` -- the lock invariant (lane 156).** No new word:
+        // `invariant` is vocabulary already (loops, tables, groups) and keeps
+        // one job -- a predicate that must hold across steps. It stands last,
+        // before the `;`, so every existing `lockdecl` parses unchanged.
+        // Read as a CONTRACT (`vertrag`): `old` and `result` are words here,
+        // so the checker can refuse them by name (`N276`) instead of
+        // misreading `old(...)` as a call.
+        let invariante = if self.friss_kw(Kw::Invariant) {
+            Some(self.vertrag(|s| s.pred())?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(LockDecl {
             name,
@@ -5172,6 +5184,7 @@ impl<'a> Parser<'a> {
             haltezeit,
             geteilte_haltezeit,
             maskiert,
+            invariante,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }

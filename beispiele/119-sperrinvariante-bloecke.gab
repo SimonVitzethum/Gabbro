@@ -1,0 +1,33 @@
+-- 119 -- A lock invariant re-established inside `locks` blocks (lane 156).
+--
+-- The same shape as `beispiele/118` over a single carrier: `K` protects `A`
+-- with an upper bound, and the one function takes the lock around its writes
+-- (`locks K { ... }`, the `beispiele/10` idiom) instead of holding it by
+-- signature. The body re-establishes the bound before the release -- that
+-- re-establishment is the user's obligation `L`, recorded, not decided.
+module beispiel::sperrinvariante_bloecke {
+
+const NSLOTS : u32 = 2;
+const GRENZE : u32 = 100;
+
+type Stand = u32 in 0 .. 100;
+
+table A count NSLOTS {
+    slot {
+        x : Stand,
+    }
+}
+
+lock K protects { A } rank 0 held <= 50 ops
+    invariant A.slots[0].x <= GRENZE;
+
+impl fn auffuellen(k : ptr<normal, rw> A)
+    effects  { writes k.slots, locks K }
+    costs    <= 8 ops
+{
+    locks K {
+        k.slots[0].x = 40;
+    }
+}
+
+}

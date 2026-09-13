@@ -1544,7 +1544,8 @@ publishstmt = place "=" expr "publishes" nutzlast ";" ;
 nutzlast   = "{" placelist "}" | "nothing" ;
 lockdecl   = [ "pub" ] "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
-             [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
+             [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ]
+             [ "invariant" pred ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
 rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
@@ -1570,6 +1571,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | spelling | attribute | Lean |
 |---|---|---|
 | `lock L protects { T, G } rank n` | every access to `T`/`G` carries **`Held(L) ∈ Λ`** (`H007`); reads and writes alike («SG-6a») | `D.Lock`, `D.rang`, `D.braucht t = [.inl L]`, `darf` |
+| `lock L protects { T, G } rank n invariant p` (lane 156) | **`p` reads only `T`/`G` and named constants** (`N275`/`N277`) and is a **pure** contract expression — no `old`, no `result`, no call, no `Held`, no quantifier (`N276`); every `locks L` body re-establishes it at release, and that duty is **recorded, not decided** (obligation kind `L`, like `ensures`) | `SperrInv` (`SperreSem.lean`): `orte L = [T, G]`, `inv L` the predicate over the snapshot; `gabbro lean-g` prints the family with the guard half of `SperrInvOk` by `decide` |
 | `locks L blk` | **`rank(L) > rank(M)` for every `Held(M) ∈ Λ`** (`H006`) — CHANGED «SG-7»; the body's Λ is `Λ + Held(L)` and ends with it (the witness is not consumable); the lock is released at the closing `}` | `Stmt.locks L hr body` with `hr : ∀ M, Res.held M ∈ Λ → rang M < rang L`; theorem `sperre_steigt`, **`keine_verklemmung`**: two bodies each holding one lock and each deriving a `locks` on the other's do not exist — `rang L1 < rang L2 < rang L1` |
 | `locks shared L blk` | a second witness kind on the same lock: `Held(L, shared)`; a write under it is not derivable | a second `D.Lock` value paired with `L` in `D` (SUGAR) |
 | `held <= n ops`, `shared held <= n ops` | cost bounds — the emitter's, §16 (7) | none |

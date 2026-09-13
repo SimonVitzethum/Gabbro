@@ -243,3 +243,68 @@ fn refuses_concurrent_unknown() {
     ));
     assert_eq!(w.code, "LG005", "{w}");
 }
+
+/// **Lane 156 -- the lock invariant family travels.** A lock with an
+/// `invariant` clause exports `gS : SperrInv gD` (`orte` is the `protects`
+/// set, `inv` the predicate over the snapshot) plus one `by decide` per
+/// protected carrier for the guard half of `SperrInvOk`.
+#[test]
+fn export_lock_invariant_family() {
+    let q = "module test::leang_inv {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 4 { slot { w : u32, } }\n\
+        lock L protects { T, U } rank 0 held <= 100 ops invariant T.slots[0].v + U.slots[1].w == 7;\n\
+        impl fn f(t : ptr<normal, rw> T, u : ptr<normal, rw> U)\n\
+        requires Held(L)\n\
+        effects { writes t.slots, writes u.slots, locks L } costs <= 16 ops\n\
+        {\n    t.slots[0].v = 3;\n    u.slots[1].w = 4;\n}\n\
+        }\n";
+    let text = export("leang_inv", &tree(q)).expect("must export");
+    for teil in [
+        "def gS : SperrInv gD where",
+        "fun s =>",
+        "gS.orte",
+        "gD.braucht",
+        "by decide",
+    ] {
+        assert!(text.contains(teil), "invariant export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **Lane 156 -- `beispiele/118` exports**: the conserved-sum program prints
+/// the family its checker duty stands beside.
+#[test]
+fn export_118_succeeds() {
+    let text = export_file("118-sperrinvariante-erhaltung.gab");
+    for teil in [
+        "namespace G118_sperrinvariante_erhaltung",
+        "def gS : SperrInv gD where",
+        "by decide",
+    ] {
+        assert!(text.contains(teil), "118 export must contain {teil:?}");
+    }
+}
+
+/// **LG003**: `old` in a lock invariant has no snapshot form.
+#[test]
+fn refuses_old_in_invariant() {
+    let q = "module test::leang_old {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops invariant T.slots[0].v == old(T.slots[0].v);\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let w = export("leang_old", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **LG003**: a non-literal index in a lock invariant has no snapshot form.
+#[test]
+fn refuses_param_index_in_invariant() {
+    let q = "module test::leang_idx {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops invariant T.slots[k].v == 1;\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let w = export("leang_idx", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG003", "{w}");
+}

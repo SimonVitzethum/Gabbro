@@ -1997,6 +1997,11 @@ pub struct LockDecl {
     /// a lock taken shared (MESSUNGEN.md, side finding N3).
     pub geteilte_haltezeit: Option<Expr>,
     pub maskiert: Option<Ident>,
+    /// `invariant <pred>` -- the lock invariant over the protected carriers
+    /// (lane 156). `None` where the declaration carries none; the checker
+    /// holds a present one against the `protects` set (`N275`), against
+    /// purity (`N276`), and records its re-establishment as an obligation.
+    pub invariante: Option<Pred>,
     pub span: Span,
 }
 

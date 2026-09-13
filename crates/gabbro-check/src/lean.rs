@@ -76,9 +76,11 @@ pub enum LeanReason {
     /// in `Assumed ρ` as the callee's `Contract`, visibly, and every caller's wiring rests
     /// on it.
     ForeignBody,
-    /// `maintains I` names an invariant this channel could not translate -- a domain other
-    /// than `slots of`, or a form without a term. (A translatable one is carried by the
-    /// routine's theorem since 2026-09-07.)
+    /// `maintains I` -- or a lock `invariant I` (lane 156) -- names an invariant
+    /// this channel could not translate: a domain other than `slots of`, a form
+    /// without a term, or a release duty over `locks` bodies (which `gabbro
+    /// lean-g` carries as the `SperrInv` family instead). (A translatable one
+    /// is carried by the routine's theorem since 2026-09-07.)
     Invariant,
     /// **`passes` where the loop cannot count** (agent b, 2026-09-08): the pass counter is
     /// readable in a `traverse` whose domain has a `count` -- the number that bounds how
@@ -304,7 +306,7 @@ impl LeanReason {
                 "an `ensures` at a body Gabbro never sees: an ASSUMPTION, stated in `Assumed`"
             }
             LeanReason::Invariant => {
-                "`maintains` names an invariant this channel has no term for"
+                "`maintains` -- or a lock `invariant` -- names an invariant this channel has no term for"
             }
             LeanReason::CallSite => {
                 "a precondition at a call site whose caller this channel could not translate"
@@ -4036,6 +4038,17 @@ fn verdicts_over(
                         },
                         None => LeanVerdict::Assumed(LeanReason::WalkInvariant),
                     }
+                }
+                Art::Sperrinvariante => {
+                    // **A lock invariant is refused by kind in this channel** (lane
+                    // 156): the release proof is sequential over `locks` bodies,
+                    // and the family for it is printed by `gabbro lean-g`
+                    // (`SperrInv`), not here. It shares the `Invariant` reason
+                    // with `maintains` -- this channel has a term for neither
+                    // (a new `LeanReason` would need a constructor in
+                    // `programmlogik/Gabbro/Coverage.lean`, which this lane
+                    // does not touch).
+                    LeanVerdict::Refused(LeanReason::Invariant)
                 }
             };
             // **A refusal whose reason is an assumption IS an assumption** -- a promise
