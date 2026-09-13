@@ -1,0 +1,41 @@
+-- erwartet: Hinweis E247
+-- **A body that reads a written carrier with effects cover but no signature guard falls.**
+--
+-- The footprint is not the contract alone: what the body reads, the sequential proof
+-- relies on, and a foreign step may move it. `leser` declares `reads zaehler` (so E010
+-- stays silent) but holds no guard, and `zaehler` is written below. `bewacht` holds
+-- the guard by signature and stays silent. Neither function carries a contract, so
+-- E245 and E246 have nothing to read here. H007 stands beside E247 (the read of a
+-- protected place without holding it) -- the guard gap from the lock side.
+module gift::fuss_wache_rumpf {
+
+static mut zaehler : u32 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+-- Must fall: the body reads a written carrier with cover but without guard.
+impl fn leser() -> u32
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return zaehler;
+}
+
+-- Must pass: the same read guarded by signature.
+impl fn bewacht() -> u32
+    requires Held(ZAEHLER)
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return zaehler;
+}
+
+-- The writer that makes `zaehler` non-read-only; takes the lock in the body.
+impl fn schreibt() effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = 1;
+    }
+}
+
+}

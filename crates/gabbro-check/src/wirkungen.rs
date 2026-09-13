@@ -58,6 +58,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
         _ => {}
     });
+    footprint_against_guards(baum, &g, &konstanten, &weltnamen, &schreiber, absagen);
 }
 
 /// **The `can_fail` body carries an implicit contract, and it is `pure`** (2026-08-25).
@@ -1435,6 +1436,43 @@ fn merke_schreiber(
     }
 }
 
+/// **E245-E249 -- the footprint guard (`fussOrtGB` of `ziel_ort_geraet`).**
+///
+/// The goal theorem asks, per function `f` over the complete member list, that every
+/// carrier of the widened footprint `fussOrteG P f` be guarded by a lock `f` holds BY
+/// SIGNATURE, or be written by no function at all (`ZielOrtGeraetSem.lean:459-480`,
+/// soundness `fussOrtGB_ok`). Lane 120 built the weaker effects-cover form (E220/E221:
+/// contract carriers in `reads`/`writes` or unwritten). This section brings the exact
+/// shape: contract carriers AND direct callees' contract carriers (1), guarded by a
+/// signature-held lock -- `requires Held(L)` with `lock L protects` over the carrier --
+/// not merely named in `effects`, or never written (2), plus the indirect-call admission
+/// `kandB`/`KandOk` (3): an indirect call is admitted only if every function behind the
+/// pointer keeps its contract carriers inside the caller's footprint
+/// (`ZielOrtVollSem.lean:111-143`).
+///
+/// Carriers are whole tables and globals (roots), exactly the granularity of
+/// `D.Tab + D.Glob` in the model: a place counts by its root before the first
+/// `.`, `[` or `-`, the same root the writer set and the E220 leg use.
+///
+/// Five codes, one per footprint leg, all at HINT level: the strict premise refuses
+/// ordinary single-threaded corpus programs (a reader over a written carrier with no
+/// lock in the whole unit -- measured over `beispiele/*.gab`, reported in the lane
+/// report), so refusing at error level would declare the corpus wrong. The condition
+/// itself is exact; only the severity is not. One refusal per (function, carrier, leg).
+///
+/// Deliberate boundaries, each with its Lean ground:
+/// * device-rooted reads are NO footprint: a register read contributes no `Orte` in the
+///   model (`blockOrteP` for `regLies` reads only the rest, `ZielOrt.lean:180`), and the
+///   device carriers enter only through `D.rtraeger`, which the surface cannot declare
+///   (default none, `ZielOrtGeraetSem.lean:17-29`). The day the surface names them, the
+///   `geraete` filter below is where they slot in.
+/// * `syscall`/`axiom` contracts, `maintains` and `= pred ;` bodies are not read -- the
+///   same boundary the E220 leg draws.
+/// * lock identity is by short name (what `Held(L)` spells); a `Held` naming no declared
+///   lock guards nothing (the `PHASE_ROH` precedent `geteilt.rs` documents for `H016`).
+/// * shared holding counts as holding: the model keeps one lock list per signature, and
+///   whether a shared guard suffices for a WRITER is `H001`'s question, not this one's.
+///
 /// The contract half of the frame promise: every KNOWN world carrier a `requires`
 /// (E220) or `ensures` (E221) clause reads must be covered by a declared `reads` or
 /// `writes` effect, unless no function of the program writes it at all. Same filters
@@ -1523,6 +1561,420 @@ fn vertrag_gegen_wirkungen(
                         }
                     )),
                 );
+            }
+        }
+    }
+}
+
+/// The root of a place: everything before the first `.`, `[` or `-`. Carriers are
+/// whole tables and globals in the model, so the footprint compares roots.
+fn carrier_root(ort: &str) -> &str {
+    ort.split(['.', '[', '-']).next().unwrap_or(ort)
+}
+
+/// Full places one contract side reads, as (root, span) pairs. Same read detection
+/// as the E220 leg (`vertrag_orte`: quantifier binders scoped, `Erreicht` places and
+/// domains counted, `Held` naming no read) with the same filters (parameters, binders,
+/// constants, unknown names), plus one: device-rooted reads are no footprint carriers
+/// (see the section header).
+fn clause_roots(
+    klauseln: &[Pred],
+    f: &FnDecl,
+    konstanten: &[String],
+    weltnamen: &[String],
+    geraete: &std::collections::BTreeSet<String>,
+) -> Vec<(String, Span)> {
+    let mut aus = Vec::new();
+    for p in klauseln {
+        let mut taten = Taten::default();
+        let mut binder = Vec::new();
+        vertrag_orte(p, &mut binder, &mut taten);
+        for (ort, span) in &taten.liest {
+            let grund = carrier_root(ort);
+            if f.parameter.iter().any(|x| x.name.text == grund) {
+                continue;
+            }
+            if binder.iter().any(|x| x == grund) {
+                continue;
+            }
+            if konstanten.iter().any(|k| k == grund) {
+                continue;
+            }
+            if !weltnamen.iter().any(|k| k == grund) {
+                continue;
+            }
+            if geraete.contains(grund) {
+                continue;
+            }
+            aus.push((grund.to_string(), *span));
+        }
+    }
+    aus
+}
+
+/// Full places a body reads, as (root, span) pairs. The same deed walk the E005/E010
+/// halves use (`sammle_taten`), the same stack filter (`lokale`), the same world
+/// filters as the E010 read half (parameters, constants, unknown names), plus the
+/// device-root exception of the section header. First span wins per root.
+fn body_roots(
+    f: &FnDecl,
+    b: &Block,
+    konstanten: &[String],
+    weltnamen: &[String],
+    geraete: &std::collections::BTreeSet<String>,
+) -> Vec<(String, Span)> {
+    let mut taten = Taten::default();
+    sammle_taten(b, &mut taten);
+    let mut lok = Vec::new();
+    lokale(b, &mut lok);
+    let mut aus: Vec<(String, Span)> = Vec::new();
+    for (ort, span) in &taten.liest {
+        let grund = carrier_root(ort);
+        if lok.iter().any(|l| l == grund) {
+            continue;
+        }
+        if f.parameter.iter().any(|p| p.name.text == grund) {
+            continue;
+        }
+        if konstanten.iter().any(|k| k == grund) {
+            continue;
+        }
+        if !weltnamen.iter().any(|k| k == grund) {
+            continue;
+        }
+        if geraete.contains(grund) {
+            continue;
+        }
+        if aus.iter().any(|(g, _)| g == grund) {
+            continue;
+        }
+        aus.push((grund.to_string(), *span));
+    }
+    aus
+}
+
+/// Direct calls of a body with their spans: statement calls and calls inside
+/// expressions, over the same exhaustive walkers the graph uses. Predicate words
+/// (`Has`/`Held`) are no calls. Indirect calls (`t->f()`) have no name and stand
+/// apart -- the graph carries them, and E249 reads them there.
+fn calls_with_spans(b: &Block, aus: &mut Vec<(String, Span)>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Ruf(r) = &s.art {
+            if let Some(p) = r.path() {
+                aus.push((p.text(), r.span));
+            }
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    if crate::ist_praedikatswort(r) {
+                        continue;
+                    }
+                    if let Some(p) = r.path() {
+                        aus.push((p.text(), x.span));
+                    }
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            calls_with_spans(k, aus);
+        }
+    }
+}
+
+/// Every `&f` producer of the unit, by short name: the functions that can flow into
+/// a pointer. Read from function bodies and `check` bodies alike -- a producer the
+/// walk misses would shrink the E249 candidate set in the unsound direction.
+fn address_taken(baum: &Programm) -> std::collections::BTreeSet<String> {
+    let mut aus = std::collections::BTreeSet::new();
+    let mut in_block = |b: &Block| {
+        for s in &b.anweisungen {
+            for e in crate::eigene_ausdruecke(s) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::FnWert(p) = &x.art {
+                        if let Some(letztes) = p.teile.last() {
+                            aus.insert(letztes.text.clone());
+                        }
+                    }
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                let mut stapel = vec![k];
+                while let Some(bb) = stapel.pop() {
+                    for ss in &bb.anweisungen {
+                        for e in crate::eigene_ausdruecke(ss) {
+                            for x in crate::alle_ausdruecke(e) {
+                                if let ExprArt::FnWert(p) = &x.art {
+                                    if let Some(letztes) = p.teile.last() {
+                                        aus.insert(letztes.text.clone());
+                                    }
+                                }
+                            }
+                        }
+                        for kk in crate::unterbloecke(ss) {
+                            stapel.push(kk);
+                        }
+                    }
+                }
+            }
+        }
+    };
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Funktion(f) => {
+            if let FnRumpf::Block(b) = &f.rumpf {
+                in_block(b);
+            }
+        }
+        ItemArt::Check(c) => in_block(&c.can_fail),
+        _ => {}
+    });
+    aus
+}
+
+/// Whether a signature-held lock guards a carrier root: some `requires Held` lock of
+/// the function whose `protects` names the root. Short names on both sides, the same
+/// approximation the declaration gives `Held(L)`.
+fn held_guards(
+    gehalten: &[String],
+    schutz: &std::collections::BTreeMap<String, Vec<String>>,
+    wurzel: &str,
+) -> bool {
+    gehalten.iter().any(|l| {
+        schutz
+            .get(l)
+            .is_some_and(|plaetze| plaetze.iter().any(|p| p == wurzel))
+    })
+}
+
+/// **The footprint guard (E245-E249), read off `fussOrtGB` and `kandB`.**
+///
+/// Per function: its contract roots (E245 `requires`, E246 `ensures`), its body-read
+/// roots (E247) and its direct callees' contract roots (E248) form the footprint; every
+/// root some function writes must be held by signature through a guarding lock, or the
+/// leg refuses. Indirect calls (E249) are admitted only where every function behind a
+/// pointer keeps its contract roots inside the caller's footprint.
+#[allow(clippy::too_many_arguments)]
+fn footprint_against_guards(
+    baum: &Programm,
+    g: &crate::aufrufgraph::Graph,
+    konstanten: &[String],
+    weltnamen: &[String],
+    schreiber: &std::collections::BTreeSet<String>,
+    absagen: &mut Absagen,
+) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let mut schutz: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    let mut geraete: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut funktionen: std::collections::BTreeMap<String, FnDecl> =
+        std::collections::BTreeMap::new();
+    let mut kurz: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Lock(l) => {
+            schutz.insert(
+                l.name.text.clone(),
+                l.schuetzt
+                    .iter()
+                    .map(|o| carrier_root(&o.text()).to_string())
+                    .collect(),
+            );
+        }
+        ItemArt::Device(d) => {
+            geraete.insert(d.name.text.clone());
+        }
+        ItemArt::Funktion(f) => {
+            let schluessel = g.schluessel_von(modul, &f.name.text);
+            funktionen.insert(schluessel.clone(), f.clone());
+            kurz.entry(f.name.text.clone()).or_default().push(schluessel);
+        }
+        _ => {}
+    });
+    let genommen = address_taken(baum);
+    // The E249 candidate pool: the functions behind a pointer where the unit takes
+    // addresses, else every function of the unit (the complete member list the
+    // soundness lemma quantifies over -- a pointer from outside could carry any of
+    // them, and admitting on a smaller pool would be the unsound direction).
+    let kandidaten: Vec<String> = if genommen.is_empty() {
+        funktionen.keys().cloned().collect()
+    } else {
+        let mut pool = std::collections::BTreeSet::new();
+        for name in &genommen {
+            if let Some(schluessel) = kurz.get(name) {
+                pool.extend(schluessel.iter().cloned());
+            }
+        }
+        pool.into_iter().collect()
+    };
+    // Contract roots per function, memoised: callees and candidates read them often,
+    // and recomputing walks every contract once per caller.
+    let mut vertragskarte: std::collections::BTreeMap<String, Vec<(String, Span)>> =
+        std::collections::BTreeMap::new();
+    for (schluessel, f) in &funktionen {
+        let mut orte = clause_roots(&f.requires, f, konstanten, weltnamen, &geraete);
+        orte.extend(clause_roots(&f.ensures, f, konstanten, weltnamen, &geraete));
+        let mut eng: Vec<(String, Span)> = Vec::new();
+        for (w, sp) in orte {
+            if eng.iter().any(|(g, _)| g == &w) {
+                continue;
+            }
+            eng.push((w, sp));
+        }
+        vertragskarte.insert(schluessel.clone(), eng);
+    }
+    for (rufer_key, f) in &funktionen {
+        let mut gehalten: Vec<String> = Vec::new();
+        for p in &f.requires {
+            let mut h = Vec::new();
+            crate::aufrufgraph::held_aus_pred(p, &mut h);
+            for (name, _geteilt) in h {
+                if schutz.contains_key(&name) && !gehalten.contains(&name) {
+                    gehalten.push(name);
+                }
+            }
+        }
+        let rufer = f.name.text.clone();
+        let req = clause_roots(&f.requires, f, konstanten, weltnamen, &geraete);
+        let ens = clause_roots(&f.ensures, f, konstanten, weltnamen, &geraete);
+        let rumpf = match &f.rumpf {
+            FnRumpf::Block(b) => body_roots(f, b, konstanten, weltnamen, &geraete),
+            _ => Vec::new(),
+        };
+        // Direct callees with their call spans, resolved exactly like the graph
+        // resolves them; an unresolvable path names nothing and contributes no
+        // contract (its own pass refuses it elsewhere).
+        let mut rufe: Vec<(String, Span)> = Vec::new();
+        if let FnRumpf::Block(b) = &f.rumpf {
+            calls_with_spans(b, &mut rufe);
+        }
+        let mut gerufene: Vec<(String, String, Span)> = Vec::new();
+        for (pfad, span) in &rufe {
+            if let Some(schluessel) = g.aufloesen(&u, rufer_key, pfad) {
+                if funktionen.contains_key(&schluessel) {
+                    let kurzname = pfad
+                        .rsplit("::")
+                        .next()
+                        .unwrap_or(pfad)
+                        .to_string();
+                    gerufene.push((schluessel, kurzname, *span));
+                }
+            }
+        }
+        let mut fuss: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for (w, _) in req.iter().chain(ens.iter()).chain(rumpf.iter()) {
+            fuss.insert(w.clone());
+        }
+        for (schluessel, _, _) in &gerufene {
+            if let Some(orte) = vertragskarte.get(schluessel) {
+                for (w, _) in orte {
+                    fuss.insert(w.clone());
+                }
+            }
+        }
+        let mut gemeldet: Vec<(&str, String)> = Vec::new();
+        let mut refuse = |code: &'static str,
+                          wort: &str,
+                          wurzel: &str,
+                          span: Span,
+                          extra: Option<String>,
+                          absagen: &mut Absagen| {
+            if !schreiber.contains(wurzel) {
+                return;
+            }
+            if held_guards(&gehalten, &schutz, wurzel) {
+                return;
+            }
+            let merker = (code, wurzel.to_string());
+            if gemeldet.contains(&merker) {
+                return;
+            }
+            gemeldet.push((code, wurzel.to_string()));
+            let mut text = format!(
+                "`{wurzel}` is read by the {wort} of `{rufer}` but no signature lock \
+                 guarding it is held, and some function writes it",
+            );
+            if let Some(zusatz) = extra {
+                text.push_str(&zusatz);
+            }
+            absagen.schiebe(
+                Absage::hinweis(code, span, text)
+                    .mit_notiz(
+                        "the footprint carries what the contract saw: every written \
+                         carrier wants a `requires Held(L)` guard over a `lock L \
+                         protects` line, not merely a `reads` or `writes` entry in \
+                         `effects`",
+                    )
+                    .mit_notiz(
+                        "carriers no function writes need no guard; device registers \
+                         read bare carry none either, until the declaration names \
+                         their carriers",
+                    ),
+            );
+        };
+        for (w, sp) in &req {
+            refuse("E245", "`requires`", w, *sp, None, absagen);
+        }
+        for (w, sp) in &ens {
+            refuse("E246", "`ensures`", w, *sp, None, absagen);
+        }
+        for (w, sp) in &rumpf {
+            refuse("E247", "body", w, *sp, None, absagen);
+        }
+        for (schluessel, kurzname, span) in &gerufene {
+            if let Some(orte) = vertragskarte.get(schluessel) {
+                for (w, _) in orte {
+                    refuse(
+                        "E248",
+                        "contract of the callee",
+                        w,
+                        *span,
+                        Some(format!(" (read by `{kurzname}`)")),
+                        absagen,
+                    );
+                }
+            }
+        }
+        // E249 -- the indirect-call admission: every candidate's contract roots must
+        // lie in the caller footprint. Read at the first indirect site of the caller.
+        if let Some(knoten) = g.knoten.get(rufer_key) {
+            if !knoten.indirect.is_empty() {
+                let span = knoten.indirect[0].span;
+                for kand in &kandidaten {
+                    let kname = kand
+                        .rsplit("::")
+                        .next()
+                        .unwrap_or(kand)
+                        .to_string();
+                    if let Some(orte) = vertragskarte.get(kand) {
+                        for (w, _) in orte {
+                            if fuss.contains(w) {
+                                continue;
+                            }
+                            let merker = ("E249", format!("{kname}:{w}"));
+                            if gemeldet.contains(&merker) {
+                                continue;
+                            }
+                            gemeldet.push(("E249", format!("{kname}:{w}")));
+                            absagen.schiebe(
+                                Absage::hinweis(
+                                    "E249",
+                                    span,
+                                    format!(
+                                        "the indirect call in `{rufer}` may reach `{kname}`, \
+                                         whose contract reads `{w}` outside the caller \
+                                         footprint",
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "an indirect call is admitted only if every function \
+                                     behind the pointer keeps its contract carriers inside \
+                                     the caller footprint -- read the carrier in the caller \
+                                     contract or body, or guard it, or write it nowhere",
+                                ),
+                            );
+                        }
+                    }
+                }
             }
         }
     }

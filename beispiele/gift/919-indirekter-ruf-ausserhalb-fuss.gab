@@ -1,0 +1,65 @@
+-- erwartet: Hinweis E249
+-- **An indirect call whose candidate reads outside the caller footprint falls.**
+--
+-- The admission `kandB`/`KandOk`: an indirect call is admitted only if every function
+-- behind the pointer keeps its contract carriers inside the caller footprint.
+-- `hart_senden` carries `requires zaehler == 0` into the pointer `t->senden`, and
+-- `ausgeben` never names `zaehler` -- so the call falls with E249. `ausgeben2` names
+-- the carrier in its own contract under the signature guard and stays silent.
+-- `schreibt` takes the lock in the body, so no `H008` joins in; `hart_senden` holds
+-- the guard itself, so no `H007` joins in either.
+module gift::fuss_wache_indirekt {
+
+static mut zaehler : u8 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+type Treiber = {
+    senden : fn(u8)
+        effects { writes zaehler }
+        costs   <= 4 ops,
+};
+
+-- The producer behind the pointer: contract over a written carrier, guarded itself.
+impl fn hart_senden(b : u8)
+    requires Held(ZAEHLER), zaehler == 0
+    effects { writes zaehler }
+    costs   <= 3 ops
+{
+    zaehler = b;
+}
+
+-- The producer form: `&f` is the one shape in which a function becomes a value.
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(senden: &hart_senden);
+}
+
+-- Must fall: the caller footprint never names `zaehler`.
+impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes zaehler }
+    costs   <= 12 ops
+{
+    t->senden(b);
+}
+
+-- Must pass: the caller names the carrier under the signature guard.
+impl fn ausgeben2(t : ptr<normal, r> Treiber, b : u8)
+    requires Held(ZAEHLER), zaehler == 0
+    effects { reads t, reads zaehler, writes zaehler }
+    costs   <= 12 ops
+{
+    t->senden(b);
+}
+
+-- The writer that keeps the lock taken.
+impl fn schreibt(v : u8) effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = v;
+    }
+}
+
+}

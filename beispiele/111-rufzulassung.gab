@@ -1,0 +1,56 @@
+-- 111 -- **The admitted indirect call: the candidate contract stays inside the
+-- caller footprint.**
+--
+-- The positive shape beside `gift/919`: `hart_senden` carries
+-- `requires zaehler == 0` into the pointer `t->senden`, and `ausgeben` names the same
+-- carrier in its own contract under the signature guard -- so the admission holds and
+-- E249 stays silent, with E245 through E248 silent beside it. The shape is the one
+-- `beispiele/49` measures for the hull; the contract at the pointer type is what lets
+-- both halves meet.
+module beispiel::rufzulassung {
+
+static mut zaehler : u8 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+type Treiber = {
+    senden : fn(u8)
+        effects { writes zaehler }
+        costs   <= 4 ops,
+};
+
+-- The producer behind the pointer: contract over a written carrier, guarded itself.
+impl fn hart_senden(b : u8)
+    requires Held(ZAEHLER), zaehler == 0
+    effects { writes zaehler }
+    costs   <= 3 ops
+{
+    zaehler = b;
+}
+
+-- The producer form: `&f` is the one shape in which a function becomes a value.
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(senden: &hart_senden);
+}
+
+-- The admitted call: the candidate carrier lies in the caller footprint.
+impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
+    requires Held(ZAEHLER), zaehler == 0
+    effects { reads t, reads zaehler, writes zaehler }
+    costs   <= 12 ops
+{
+    t->senden(b);
+}
+
+-- The writer that keeps the lock taken.
+impl fn schreibt(v : u8) effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = v;
+    }
+}
+
+}

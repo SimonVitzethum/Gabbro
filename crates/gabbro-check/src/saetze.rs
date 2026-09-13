@@ -2713,6 +2713,33 @@ pub const WIRKUNGEN: &[Satz] = &[
                       twins pass.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs (`vertrag_gegen_wirkungen`)",
     },
+    Satz {
+        name: "wirkungen.fusswache",
+        kennungen: &["E245", "E246", "E247", "E248", "E249"],
+        aussage: "The footprint guard of the goal theorem: every carrier of a function \
+                  footprint -- its `requires` (`E245`) and `ensures` (`E246`) carriers, \
+                  its body reads (`E247`), the contract carriers of the functions it \
+                  calls directly (`E248`) -- is guarded by a lock the function holds by \
+                  signature (`requires Held(L)` over a `lock L protects` line), or no \
+                  function of the program writes it. An indirect call (`E249`) is \
+                  admitted only if every function behind the pointer keeps its contract \
+                  carriers inside the caller footprint. All five report at hint level: \
+                  the strict premise refuses ordinary single-threaded corpus programs, \
+                  so the condition is exact and only the severity is not.",
+        vorbehalt: "Same read detection as the E220/E221 leg (parameters, binders, \
+                    constants, unknown names are no reads); device-rooted reads carry \
+                    no footprint, the surface cannot declare their carriers. `syscall`/ \
+                    `axiom` contracts, `maintains` and `= pred ;` bodies are not read. \
+                    Lock identity is by short name; shared holding counts as holding. \
+                    Candidates behind a pointer are the address-taken functions, else \
+                    every function of the unit.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/915-919 (one leg each, guarded twins pass); \
+                      beispiele/110-111 (guarded and admitted shapes, fully silent). \
+                      15 of 89 older examples fire -- the strictness finding, not new \
+                      noise: readers over written carriers with no lock in the unit.",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs (`footprint_against_guards`)",
+    },
 ];
 
 // ===================================================================================

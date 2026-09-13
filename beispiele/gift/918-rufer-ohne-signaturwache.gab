@@ -1,0 +1,51 @@
+-- erwartet: Hinweis E248
+-- **A caller over a callee contract with cover but no signature guard falls.**
+--
+-- A caller reasons through the callee contract, so the callee carriers join the caller
+-- footprint (`fussOrte`: contract carriers of direct callees). `geber` reads `zaehler`
+-- in its `requires` (E245 fires there as the companion, as H013 stands beside H222 in
+-- `gift/897`). `rufer` declares the cover but holds no guard and falls with E248 at
+-- the call. `rufer2` holds the guard by signature and stays silent.
+module gift::fuss_wache_rufer {
+
+static mut zaehler : u32 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+-- The callee: its contract reads a written carrier without guard (E245 beside E248).
+impl fn geber() -> u32
+    requires zaehler == 0
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- Must fall: the caller inherits the callee carrier with cover but without guard.
+impl fn rufer() -> u32
+    effects { reads zaehler }
+    costs   <= 16 ops
+{
+    let x = geber();
+    return x;
+}
+
+-- Must pass: the same call guarded by signature.
+impl fn rufer2() -> u32
+    requires Held(ZAEHLER)
+    effects { reads zaehler }
+    costs   <= 16 ops
+{
+    let x = geber();
+    return x;
+}
+
+-- The writer that makes `zaehler` non-read-only; takes the lock in the body.
+impl fn schreibt() effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = 1;
+    }
+}
+
+}
