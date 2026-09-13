@@ -1043,5 +1043,79 @@ theorem t51 : beqTopTief (parseTopTief tt51)
 -- beispiele/50-verfeinerung.gab (the `freigeben` refinement).
 -- Rust: `Funktion` with `refines`, two `requires` and three
 -- effects -- same shape.
+def tt52 : List Token :=
+  [.wort "extern", .wort "fn", .ident "groesse_gemessen",
+   .zeichen "(", .zeichen ")", .zeichen "->", .ident "Stapelgroesse",
+   .wort "or", .ident "MessFehler", .wort "ensures",
+   .wort "result", .zeichen ">=", .zahl 1, .wort "effects",
+   .zeichen "{", .wort "reads", .ident "stapel", .zeichen "}",
+   .zeichen ";", .ende]
+theorem t52_lex :
+    lex "extern fn groesse_gemessen() -> Stapelgroesse or MessFehler ensures result >= 1 effects { reads stapel };" =
+      .ok tt52 := by
+  decide
+theorem t52 : beqTopTief (parseTopTief tt52)
+    (.ok [.protoT { art := "extern", name := "groesse_gemessen", params := [], ergebnis := (.some (.atom "Stapelgroesse")), fehler := (.some "MessFehler"), klauseln := [(.sichert ((.bin ">=" .ergebnis (.lit 1)))), (.wirkung [(.liest (.variable "stapel"))])] }]) = true := by
+  decide
+-- beispiele/06-annahmen.gab:163-165. Rust: `Funktion` with the
+-- `or` error channel -- same shape.
+def tt53 : List Token :=
+  [.wort "prim", .wort "fn", .ident "wechseln", .zeichen "(",
+   .ident "von", .zeichen ":", .wort "ptr", .zeichen "<",
+   .wort "normal", .zeichen ",", .wort "rw", .zeichen ">",
+   .ident "Kontext", .zeichen ",", .ident "nach", .zeichen ":",
+   .wort "ptr", .zeichen "<", .wort "normal", .zeichen ",",
+   .wort "r", .zeichen ">", .ident "Kontext", .zeichen ")",
+   .zeichen "->", .wort "never", .wort "effects", .zeichen "{",
+   .wort "writes", .ident "maschinenzustand", .zeichen ",",
+   .wort "writes", .ident "stapel", .zeichen ",", .wort "diverges",
+   .zeichen "}", .zeichen ";", .ende]
+theorem t53_lex :
+    lex "prim fn wechseln(von : ptr<normal, rw> Kontext, nach : ptr<normal, r> Kontext) -> never effects { writes maschinenzustand, writes stapel, diverges };" =
+      .ok tt53 := by
+  decide
+theorem t53 : beqTopTief (parseTopTief tt53)
+    (.ok [.protoT { art := "prim", name := "wechseln", params := [(("von", (.ptr "normal" "rw" (.atom "Kontext")))), (("nach", (.ptr "normal" "r" (.atom "Kontext"))))], ergebnis := (.some (.atom "never")), fehler := .none, klauseln := [(.wirkung [(.schreibt (.variable "maschinenzustand")), (.schreibt (.variable "stapel")), .weichtAb])] }]) = true := by
+  decide
+-- beispiele/07-eintritt-und-boot.gab:148-149. Rust: `Funktion`
+-- over `never` with a diverging effect -- same shape.
+def tt54 : List Token :=
+  [.wort "impl", .wort "fn", .ident "f", .zeichen "(",
+   .zeichen ")", .wort "maintains", .ident "invA", .zeichen ",",
+   .ident "invB", .wort "by", .wort "induction", .wort "over",
+   .wort "descendants", .wort "of", .ident "s",
+   .wort "section", .text ".text", .wort "arch", .ident "x86_64",
+   .wort "advances", .ident "roh", .zeichen "->", .ident "mmu",
+   .wort "retires", .ident "t", .wort "from", .ident "boot",
+   .wort "falsifier", .ident "p", .zeichen ";", .ende]
+theorem t54_lex :
+    lex "impl fn f() maintains invA, invB by induction over descendants of s section \".text\" arch x86_64 advances roh -> mmu retires t from boot falsifier p;" =
+      .ok tt54 := by
+  decide
+theorem t54 : beqTopTief (parseTopTief tt54)
+    (.ok [.protoT { art := "impl", name := "f", params := [], ergebnis := .none, fehler := .none, klauseln := [(.erhaelt ["invA", "invB"]), (.induktion "induction over descendants of s "), (.abschnitt ".text"), (.rechenart "x86_64"), (.schreitetVor "roh" "mmu"), (.ziehtZurueck "t from boot falsifier p")] }]) = true := by
+  decide
+-- Synthetic carrier for the remaining clause forms; each cites
+-- its corpus shape: `maintains` (beispiele/01-tabelle.gab:94),
+-- `by induction over` (beispiele/01-tabelle.gab:77),
+-- `section`/`arch` (beispiele/36-asm.gab:27),
+-- `advances a -> b` (beispiele/02-geraet.gab:129),
+-- `retires` (beispiele/07-eintritt-und-boot.gab:137).
+def tt55 : List Token :=
+  [.wort "table", .ident "Halde", .wort "count", .zahl 1048576,
+   .wort "backed", .ident "hinterlegt", .zeichen "{",
+   .wort "slot", .zeichen "{", .ident "b", .zeichen ":",
+   .wort "bool", .zeichen ",", .zeichen "}", .zeichen "}",
+   .ende]
+theorem t55_lex :
+    lex "table Halde count 1048576 backed hinterlegt { slot { b : bool, } }" =
+      .ok tt55 := by
+  decide
+theorem t55 : beqTopTief (parseTopTief tt55)
+    (.ok [.tabelleT "Halde" (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tPlatz [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
+  decide
+-- beispiele/28-reserve-und-hinterlegung.gab:19 (the header;
+-- memory kinds are values, not checked here). Rust: `Tabelle`
+-- with a `backed` bound -- same shape.
 
 end Gabbro.Grammatik.Parser
