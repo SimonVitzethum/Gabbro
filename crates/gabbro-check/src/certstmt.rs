@@ -385,10 +385,17 @@ fn drucke_ort_wert(
         o.suffixe.as_slice()
     {
         let tab = tabelle(info, &o.basis.text).ok_or_else(|| {
-            refuse(
-                "CS005",
-                format!("unknown table {} in {funktion}", o.basis.text),
-            )
+            if ctx.index_von(&o.basis.text).is_some() {
+                refuse(
+                    "CS002",
+                    format!("pointer access {} has no CertExpr shape", o.text()),
+                )
+            } else {
+                refuse(
+                    "CS005",
+                    format!("unknown table {} in {funktion}", o.basis.text),
+                )
+            }
         })?;
         let count = tab.count.ok_or_else(|| {
             refuse(
@@ -568,7 +575,7 @@ fn drucke_seq(
     for s in &block.anweisungen {
         match &s.art {
             StmtArt::Let(l) => {
-                let (lo, hi) = geliehen(funktion, l, info)?;
+                let (lo, hi) = claimed_range(funktion, l, info)?;
                 let (t, r) = drucke_expr(funktion, &l.wert, ctx, info)?;
                 let t = verenge(
                     funktion,
@@ -612,7 +619,7 @@ fn drucke_seq(
 }
 
 /// The claimed range of a `let`: its annotation, never inferred.
-fn geliehen(
+fn claimed_range(
     funktion: &str,
     l: &LetStmt,
     info: &DeclInfo,
@@ -684,10 +691,17 @@ fn drucke_zuweisung(
         o.suffixe.as_slice()
     {
         let tab = tabelle(info, &o.basis.text).ok_or_else(|| {
-            refuse(
-                "CS005",
-                format!("unknown table {} in {funktion}", o.basis.text),
-            )
+            if ctx.index_von(&o.basis.text).is_some() {
+                refuse(
+                    "CS002",
+                    format!("pointer write {} has no CertStmt shape", o.text()),
+                )
+            } else {
+                refuse(
+                    "CS005",
+                    format!("unknown table {} in {funktion}", o.basis.text),
+                )
+            }
         })?;
         let count = tab.count.ok_or_else(|| {
             refuse(

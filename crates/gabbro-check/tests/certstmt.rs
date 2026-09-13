@@ -46,14 +46,14 @@ fn abgewiesen(baum: &Programm, name: &str) -> gabbro_check::certstmt::Refusal {
 
 /// A bare `return;` prints the `.ret` body.
 #[test]
-fn return_ohne_wert() {
+fn bare_return_prints() {
     let b = parse("module m { impl fn f() effects { pure } costs <= 1 ops { return; } }");
     assert_eq!(gedruckt(&b, "f"), "(.liftE .ret)");
 }
 
 /// Returning an integer parameter prints `retWert` with the result range.
 #[test]
-fn return_mit_parameter() {
+fn return_param_prints() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn f(x : K) -> K effects { pure } costs <= 1 ops { return x; } }",
@@ -63,7 +63,7 @@ fn return_mit_parameter() {
 
 /// `let` with a range annotation prints `bind`; the tail reads the new head.
 #[test]
-fn let_bindet() {
+fn let_binds() {
     let b = parse(
         "module m { type D3 = u32 in 3 .. 3;
           impl fn f() -> D3 effects { pure } costs <= 2 ops
@@ -77,7 +77,7 @@ fn let_bindet() {
 
 /// A direct table write with a literal index prints `assignSlot`.
 #[test]
-fn schreiben_trifft_tabelle() {
+fn table_write_prints() {
     let b = parse(
         "module m { type X = u32 in 0 .. 100;
           table T count 2 { slot { x : X, } }
@@ -92,7 +92,7 @@ fn schreiben_trifft_tabelle() {
 
 /// A literal value narrows to the field range under `wide`, like `weiter`.
 #[test]
-fn wert_wird_verengt() {
+fn literal_widens() {
     let b = parse(
         "module m { type D10 = u32 in 0 .. 10;
           impl fn f() -> D10 effects { pure } costs <= 1 ops { return 5; } }",
@@ -105,7 +105,7 @@ fn wert_wird_verengt() {
 
 /// An integer local assignment prints `assignVar` at its context index.
 #[test]
-fn zuweisung_trifft_variable() {
+fn local_assign_prints() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn f(x : K) -> K effects { pure } costs <= 3 ops
@@ -124,7 +124,7 @@ fn zuweisung_trifft_variable() {
 
 /// `if` with a printable condition and falling branches prints `ite`.
 #[test]
-fn wenn_druckt() {
+fn if_prints() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn f(x : K) -> K effects { pure } costs <= 3 ops
@@ -140,7 +140,7 @@ fn wenn_druckt() {
 
 /// A nullary direct call has the shape but needs `RufPasst` as proof.
 #[test]
-fn ruf_braucht_beweis() {
+fn nullary_call_needs_proof() {
     let b = parse(
         "module m { impl fn g() effects { pure } costs <= 1 ops { return; }
           impl fn f() effects { pure } costs <= 2 ops { g(); return; } }",
@@ -152,7 +152,7 @@ fn ruf_braucht_beweis() {
 
 /// A call with arguments has no `CertStmt` shape at all.
 #[test]
-fn ruf_mit_argumenten_faellt() {
+fn call_with_args_refused() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn g(x : K) effects { pure } costs <= 1 ops { return; }
@@ -165,7 +165,7 @@ fn ruf_mit_argumenten_faellt() {
 
 /// A division has no `CertExpr` shape in this printer.
 #[test]
-fn division_faellt() {
+fn division_refused() {
     let b = parse(
         "module m { type K = u32 in 0 .. 10;
           impl fn f(x : K) -> K effects { pure } costs <= 2 ops
@@ -178,7 +178,7 @@ fn division_faellt() {
 
 /// A variable slot index has no recomputable range.
 #[test]
-fn index_variable_faellt() {
+fn index_var_refused() {
     let b = parse(
         "module m { type X = u32 in 0 .. 100;
           table T count 8 { slot { x : X, } }
@@ -191,7 +191,7 @@ fn index_variable_faellt() {
 
 /// A `match` needs arm elaboration the printer does not do.
 #[test]
-fn match_faellt() {
+fn match_refused() {
     let b = parse(
         "module probe::grund {
         reason HolFehler {
@@ -214,7 +214,7 @@ fn match_faellt() {
 
 /// A `let-else` needs the error-channel shape the printer does not do.
 #[test]
-fn let_else_faellt() {
+fn let_else_refused() {
     let b = parse(
         "module probe::grund {
         reason HolFehler {
@@ -234,7 +234,7 @@ fn let_else_faellt() {
 
 /// A `traverse` loop is refused by name on a real corpus file.
 #[test]
-fn schleife_faellt() {
+fn loop_refused() {
     let b = read("beispiele/04-schleifen.gab");
     let aus = gabbro_check::certstmt::zeige(&b);
     assert!(
@@ -245,7 +245,7 @@ fn schleife_faellt() {
 
 /// A bare `leave` outside a loop has no printable shape.
 #[test]
-fn leave_faellt() {
+fn leave_refused() {
     let b = parse(
         "module m { impl fn f() effects { pure } costs <= 1 ops
           { leave a; return; } }",
@@ -256,7 +256,7 @@ fn leave_faellt() {
 
 /// A write to an unknown table names the missing declaration.
 #[test]
-fn unbekannte_tabelle_faellt() {
+fn unknown_table_refused() {
     let b = parse(
         "module m { impl fn f() effects { pure } costs <= 2 ops
           { T.slots[0].x = 1; return; } }",
@@ -268,7 +268,7 @@ fn unbekannte_tabelle_faellt() {
 
 /// A bare `u32` result type claims no range.
 #[test]
-fn ergebnis_ohne_bereich_faellt() {
+fn unranged_result_refused() {
     let b = parse(
         "module m { impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }",
     );
@@ -283,7 +283,7 @@ fn ergebnis_ohne_bereich_faellt() {
 /// (`CS002`/`CS005`). The printer measures the boundary instead of
 /// truncating it.
 #[test]
-fn referenz_104_ist_abgewiesen() {
+fn reference_104_refused() {
     let b = read("beispiele/104-referenz.gab");
     let aus = gabbro_check::certstmt::zeige(&b);
     assert!(

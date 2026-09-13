@@ -152,3 +152,4 @@ import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
 import Grammatik.Export104
 import Grammatik.Export108
+import Grammatik.ZeugnisStmt104

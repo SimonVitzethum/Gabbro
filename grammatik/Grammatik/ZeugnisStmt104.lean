@@ -7,9 +7,10 @@
   see `crates/gabbro-check/tests/certstmt.rs` for the pinned probes).
   Each `example` runs the Lean checker (`certEnd2Ok ... = true` by
   `decide`); each soundness corollary applies `zeugnisStmt2_sound`.
-  The `beispiele/104-referenz.gab` bodies themselves are REFUSED by the
-  printer (pointer write, call with arguments, pointer read -- see CUTS);
-  the checked terms below come from the fitting probe bodies.
+  `csCertDoppelt` is verbatim output for a real corpus body
+  (`beispiele/93-const-scalars.gab`, `doppelt`); the rest are the pinned
+  probe bodies. The `beispiele/104-referenz.gab` bodies themselves are
+  REFUSED by the printer -- section 3 records the exact output.
 -/
 import Grammatik.ZeugnisStmt2
 
@@ -33,13 +34,15 @@ inductive CSFeld where
   | x
   deriving DecidableEq
 
-/-- The probe functions: one per pinned probe body. -/
+/-- The probe functions: one per pinned probe body, plus `doppelt`
+    (`beispiele/93-const-scalars.gab`, a real corpus body). -/
 inductive CSFn where
   | fRet
   | fBind
   | fVar
   | fWenn
   | fSlot
+  | fDoppelt
   deriving DecidableEq
 
 /-- Elimination out of `Empty` for the unused carrier maps: a plain
@@ -57,6 +60,8 @@ def csSig : CSFn → Signatur CSTab Empty Empty Empty
   | .fWenn => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
     csElimBool, [], []⟩
   | .fSlot => ⟨[], none, 0, [], fun _ => true,
+    csElimBool, [], []⟩
+  | .fDoppelt => ⟨[.int 0 1000], some (.int 0 2000), 0, [], fun _ => false,
     csElimBool, [], []⟩
 
 /-- The demo declaration. -/
@@ -82,13 +87,20 @@ def csD : Deklaration where
   gbraucht := fun e => nomatch e
   eigner := fun _ => []
   Fn := CSFn
-  sig := fun | .fRet => 0 | .fBind => 1 | .fVar => 2 | .fWenn => 3 | .fSlot => 4
+  sig := fun
+    | .fRet => 0
+    | .fBind => 1
+    | .fVar => 2
+    | .fWenn => 3
+    | .fSlot => 4
+    | .fDoppelt => 5
   sigNr := fun
     | 0 => csSig .fRet
     | 1 => csSig .fBind
     | 2 => csSig .fVar
     | 3 => csSig .fWenn
-    | _ => csSig .fSlot
+    | 4 => csSig .fSlot
+    | _ => csSig .fDoppelt
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
   Inv := Empty
   traeger := fun e => nomatch e
@@ -116,6 +128,7 @@ def csV : CSFn → Vertrag csD
   | .fVar => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], []⟩
   | .fWenn => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], []⟩
   | .fSlot => ⟨fun _ => true, csElimBool, none, 0, [], []⟩
+  | .fDoppelt => ⟨fun _ => false, csElimBool, some (.int 0 2000), 0, [], []⟩
 
 /-! ## 2. Generated certificates: the fitting probe bodies
 
@@ -183,7 +196,109 @@ example : ∃ _ : Endblock csD (csV .fWenn) false [.int 0 10, .int 0 10] [],
     True :=
   zeugnisStmt2_sound csD _ false _ _ csCertWenn (by decide)
 
+/-- Printer output for `T.slots[0].x = 42; return;` (`count 2`, `0 .. 100`). -/
+def csCertSlot : CertEnd2 csD (csV .fSlot) :=
+  (.liftE (.cons (.assignSlot .T .x (.wide 0 1 (.lit 0))
+    (.wide 0 100 (.lit 42))) [] .ret))
+
+/-- The print is valid, by `decide`. -/
+example : certEnd2Ok csD (csV .fSlot) false [] [] csCertSlot = true := by
+  decide
+
+/-- End to end: the valid print YIELDS an accepted body. -/
+example : ∃ _ : Endblock csD (csV .fSlot) false [] [], True :=
+  zeugnisStmt2_sound csD _ false _ _ csCertSlot (by decide)
+
+/-- Printer output for `return 5;` at result `0 .. 10`: the literal
+    narrows under `wide`, exactly where the checker elaborates `weiter`. -/
+def csCertWide5 : CertEnd2 csD (csV .fRet) :=
+  (.liftE (.retWert (.wide 0 10 (.lit 5)) 0 10))
+
+/-- The print is valid, by `decide`. -/
+example : certEnd2Ok csD (csV .fRet) false [] [] csCertWide5 = true := by
+  decide
+
+/-- End to end: the valid print YIELDS an accepted body. -/
+example : ∃ _ : Endblock csD (csV .fRet) false [] [], True :=
+  zeugnisStmt2_sound csD _ false _ _ csCertWide5 (by decide)
+
+/-- VERBATIM printer output for `doppelt` (`beispiele/93-const-scalars.gab`):
+    `const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000`
+    with body `return n + n;`. A real corpus body, checked by `decide`. -/
+def csCertDoppelt : CertEnd2 csD (csV .fDoppelt) :=
+  (.liftE (.retWert (.add (.var 0) (.var 0)) 0 2000))
+
+/-- The print is valid, by `decide`. -/
+example : certEnd2Ok csD (csV .fDoppelt) false [.int 0 1000] []
+    csCertDoppelt = true := by
+  decide
+
+/-- End to end: the valid print YIELDS an accepted body. -/
+example : ∃ _ : Endblock csD (csV .fDoppelt) false [.int 0 1000] [], True :=
+  zeugnisStmt2_sound csD _ false _ _ csCertDoppelt (by decide)
+
+/-! ## 3. The 104 record: what the printer says about the reference program
+
+    Verbatim output of `gabbro certificate beispiele/104-referenz.gab`
+    (section S). Both bodies are refused, each at its first outside form:
+    `einzahlen` writes through the pointer `k` with the index variable `i`
+    (`CertStmt2.assignDurch` needs a recomputable index range; an
+    index-typed variable has none) and then calls `lies(k, i)` with
+    arguments (calls with arguments have no `CertStmt` shape -- the R-2
+    fragment is nullary only); `lies` returns `k.slots[i].stand`, a
+    pointer read (`durch` has no `CertExpr` shape). No truncation: every
+    refusal names the function and the form.
+
+    ```text
+    S  STATEMENT CERTIFICATES (transfer printer)
+       function einzahlen: REFUSED CS002: pointer write k.slots[…].stand
+         has no CertStmt shape
+       function lies: REFUSED CS002: pointer access k.slots[…].stand
+         has no CertExpr shape
+    ```
+
+    No corpus body with a loop or a match prints either: the survey over
+    `beispiele/*.gab` (lane report) finds `CertEnd2` terms only for
+    straight-line integer bodies (`doppelt` above; `(.liftE .ret)` for the
+    `abnahme`/`freigabe` acceptance bodies of `06`, `43`, `52`; the
+    eight-variable sum of `70-kernel-namen.gab`). Every loop (`traverse`,
+    `retry`, `forever`) and every `match` is refused by name -- the
+    fragment boundary is measured, not hoped. -/
+
 end Gabbro.Grammatik
+
+/-! ## CUTS: what is not proved
+
+    - The file holds NO theorems, only generated data (`csCert*`) plus
+      `decide` examples and soundness corollaries. Rule-13 witnesses are
+      owed by none of them; the joint witnesses of `zeugnisStmt_sound`
+      and `zeugnisStmt2_sound` (`ZeugnisStmt.lean`, `ZeugnisStmt2.lean`)
+      already instantiate the soundness conclusions on the reference
+      fixture with its non-degenerate run.
+    - 104 does not check: its bodies fall outside `CertEnd`/`CertEnd2`
+      (pointer write/read, call with arguments, index variable), so there
+      is no `certEnd2Ok ... = true` for them -- the refusal above is the
+      honest artifact. A lane that wires index-typed variables or
+      with-arguments calls into new certificate rows extends this file.
+    - Resource flow erases to `[]`: the demo declaration is lock-free by
+      construction (`braucht` empty, `haelt` empty), so `darf` holds
+      vacuously. Guarded tables fail `decide` loudly; they are not
+      silently certified.
+    - `RufPasst` travels as proof (R-3): bodies with calls print nothing
+      (`CS004`), so no pasted term owes a proof hole.
+    - Term identity (`print (elab x) = x`) is proved NOWHERE -- the
+      `ZeugnisStmt2.lean` CUTS booking. The terms below are linked to
+      their bodies by construction of the printer, pinned in
+      `crates/gabbro-check/tests/certstmt.rs`.
+-/
+
+#print axioms Gabbro.Grammatik.csCertRet
+#print axioms Gabbro.Grammatik.csCertBind
+#print axioms Gabbro.Grammatik.csCertVar
+#print axioms Gabbro.Grammatik.csCertWenn
+#print axioms Gabbro.Grammatik.csCertSlot
+#print axioms Gabbro.Grammatik.csCertWide5
+#print axioms Gabbro.Grammatik.csCertDoppelt
 
 /-! ## CUTS: what is not proved (skeleton; filled with the transfer) -/
 
