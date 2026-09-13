@@ -1,0 +1,29 @@
+-- erwartet: N067
+-- **Gift 812 -- an errors map with no channel has nowhere to deliver.**
+--
+-- The arms name targets, but the signature declares no `or R` -- so no arm has
+-- a declared target, and the map falls once (not once per arm), by name. Same
+-- rule as gifts 804/811 (`N067`): one rule, and each probe pins one of its
+-- directions.
+
+module gift::syscall_ohne_kanal {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall ohne_kanal(fd : u64) -> u64
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

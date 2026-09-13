@@ -38,7 +38,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
-    library_call_not_checked(baum, absagen);
+    bibliothek_pruefen(baum, absagen);
+    profil_pruefen(baum, absagen);
+    intrinsik_name_vergeben(baum, absagen);
 }
 
 /// **`N042` -- two declarations, one C name, and the generator formed both.**
@@ -279,6 +281,54 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
                  the table and its command stand in `messung/C-NAMEN.md`",
             )
             .mit_notiz(hinweis),
+        );
+    });
+}
+
+/// **`N058` -- a declaration carrying the name of a bit intrinsic.**
+///
+/// The seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, `rotr` and
+/// `bswap` are claimed calls (`m1.rs::intrinsik_ruf` types them, `emit.rs::ruf`
+/// lowers them): a call in that spelling never reaches a declared callee. A
+/// declaration of the same name would therefore stand uncalled -- not dead code
+/// the writer can find, but a callee the language routes around. That is the
+/// prohibition-without-replacement shape `opsruf.rs` documents: the call form
+/// was never missing, the callee it names would be.
+///
+/// The rule holds every named item except `module` and `use` (neither declares
+/// a name a call could reach), the same line `N041` draws. Locals and
+/// parameters keep the names: they are not callees, and the call form
+/// `clz(x)` types as the intrinsic the way `u64(a)` converts despite a local
+/// named `u64` -- the conversion precedent (`G9`), not a new distinction.
+fn intrinsik_name_vergeben(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if matches!(item.art, ItemArt::Modul(_) | ItemArt::Use(_)) {
+            return;
+        }
+        let Some(name) = item.art.name() else { return };
+        if !crate::ist_bitintrinsik(&name.text) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "N058",
+                name.span,
+                format!(
+                    "`{}` names a bit intrinsic -- a call in this spelling never \
+                     reaches a declaration",
+                    name.text
+                ),
+            )
+            .mit_notiz(
+                "the seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, \
+                 `rotr` and `bswap` are claimed calls: the checker types them \
+                 (`M157`-`M160`) and the emitter lowers them (`__builtin_*`, \
+                 `gabbro_rot*`) without asking any declaration",
+            )
+            .mit_notiz(
+                "rename the declaration -- the name is fine everywhere except at \
+                 an item, where it promises a callee the call form routes around",
+            ),
         );
     });
 }
@@ -1623,6 +1673,41 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
             Some(true) => {}
         }
     });
+    // **A `syscall` names its assumption the same way (lane 86, SYNTAX.md §12.1:
+    // `N004`/`N005` shape).** The per-call assumption is a clause that names
+    // something, so it names something this unit declares -- and what no probe
+    // can ever refute belongs in the certificate, not in a pass. The falsifier
+    // itself stays an external probe, as at `assume`/`axiom` (`N056` reads its
+    // shape where it resolves; the manifest books where it does not).
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Syscall(s) = &item.art else { return };
+        let SyscallPaarung::Annahme { annahme, .. } = &s.paarung else { return };
+        match annahmen.get(&annahme.text) {
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N004",
+                    annahme.span,
+                    format!("`syscall {}` names no declared assumption", s.name.text),
+                )
+                .mit_notiz(
+                    "the syscall gets a number, a register map and an errno decoding -- \
+                        and Gabbro owes it no proof, only the named assumption",
+                ),
+            ),
+            Some(false) => absagen.schiebe(
+                Absage::fehler(
+                    "N005",
+                    annahme.span,
+                    format!("`syscall {}` rests on an unfalsifiable assumption", s.name.text),
+                )
+                .mit_notiz(
+                    "an assumption about the kernel that no probe can ever refute \
+                        belongs in the certificate, not in a pass",
+                ),
+            ),
+            Some(true) => {}
+        }
+    });
 }
 
 fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
@@ -1808,6 +1893,13 @@ fn auswahl(item: &Item) -> Auswahl {
         if let Some(a) = &f.arch {
             return Auswahl::Arch(a.text.clone());
         }
+    }
+    // **A `syscall` names its machine, like a function with `arch`.** Two
+    // declarations of one name for DIFFERENT architectures are one declaration
+    // per target, not a duplication -- the same conditional-translation form
+    // `prim fn … arch` already carries.
+    if let ItemArt::Syscall(s) = &item.art {
+        return Auswahl::Arch(s.arch.text.clone());
     }
     Auswahl::Immer
 }
@@ -2919,6 +3011,8 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                     match &s.art {
                         StmtArt::Let(l) => aus.push(l.name.text.clone()),
                         StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+                        // **«E4»:** the bound index is visible like any `let`.
+                        StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
                         StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
                         StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
                         _ => {}
@@ -3497,75 +3591,851 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **`N057` -- a library call is parsed, not checked** (lane E1).
+/// **Lane E3 -- one translator declaration (`SYNTAX.md` §7.2).**
 ///
-/// `@library#function ( args ) { region }` reads as a run-time call whose
-/// region the reader captures without interpreting (`SYNTAX.md` §7). What the
-/// region means -- compiled at translation time into a payload -- is not
-/// implemented yet, so there is nothing to hold the call against: no declared
-/// function, no contract, no payload type. Letting it through would be a
-/// silent acceptance; crashing on it would be worse. What stands instead is
-/// the controlled refusal, once per call, in both positions.
+/// A translator is parsed into an ordinary `FnDecl` with `translator_fuer`
+/// set, so every pass checks its body like any function body; what only
+/// the name pass holds is the linkage to the served `library fn` and the
+/// signature the translation stage needs. Kept whole (effects, decreases,
+/// result) because the linkage checks read all three and the call side
+/// names the serving translator in `N069`.
+#[derive(Clone)]
+struct Uebersetzer {
+    qual: String,
+    modul: String,
+    ziel: String,
+    span: Span,
+    effects: Option<Wirkungen>,
+    decreases: Option<Expr>,
+    ergebnis: Option<TypExpr>,
+}
+
+/// The tables a path names, resolved from the using module outward --
+/// the read side of the raw payload paths (`Umgebung::nutzlasten`).
+fn benannte_tabellen(
+    u: &crate::umgebung::Umgebung,
+    von: &str,
+    pfad: &str,
+) -> Vec<String> {
+    u.kandidaten_aufloesbar(von, pfad)
+        .into_iter()
+        .filter(|k| u.tabellen.contains_key(k))
+        .collect()
+}
+
+/// **Lane E3: what a serving translator promises (`N202`/`N203`/`N204`).**
 ///
-/// Lane E2 checks the call like any call and retires this rule; the hook is
-/// `lane_e2_checks_calls` below, which answers what the tree declares.
-fn library_call_not_checked(baum: &Programm, absagen: &mut Absagen) {
-    if lane_e2_checks_calls(baum) {
+/// Called for every translator that serves a `library fn` (the first
+/// declaration by position where several name one function): its effects
+/// are exactly `pure`, it carries a `decreases` witness, and its result
+/// names the served function's payload table. A payload that itself names
+/// no table (`N060` beside it) pins no `N204` -- one refusal per defect.
+fn pruefe_uebersetzer_signatur(
+    t: &Uebersetzer,
+    bibliothek: &str,
+    u: &crate::umgebung::Umgebung,
+    absagen: &mut Absagen,
+) {
+    let rein = t.effects.as_ref().is_some_and(|w| {
+        w.liste.len() == 1 && matches!(w.liste[0].art, WirkungArt::Rein)
+    });
+    if !rein {
+        absagen.schiebe(
+            Absage::fehler(
+                "N202",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` must carry `effects {{ pure }}`",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: a translator is a total, effect-free map from \
+                 the region AST to the payload -- anything but `pure` would \
+                 run effects at translation time",
+            ),
+        );
+    }
+    if t.decreases.is_none() {
+        absagen.schiebe(
+            Absage::fehler(
+                "N203",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` carries no `decreases` clause",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: a translator is total -- the `decreases` \
+                 witness is the signature, not a convention",
+            ),
+        );
+    }
+    let nutzlast_tabellen = u
+        .nutzlasten
+        .get(bibliothek)
+        .map(|(modul, pfad, _)| benannte_tabellen(u, modul, pfad))
+        .unwrap_or_default();
+    if nutzlast_tabellen.is_empty() {
         return;
     }
-    fn im_block(b: &Block, absagen: &mut Absagen) {
+    let ergebnis_tabellen = match &t.ergebnis {
+        Some(TypExpr::Pfad(p)) => benannte_tabellen(u, &t.modul, &p.text()),
+        _ => Vec::new(),
+    };
+    if !nutzlast_tabellen
+        .iter()
+        .any(|n| ergebnis_tabellen.contains(n))
+    {
+        absagen.schiebe(
+            Absage::fehler(
+                "N204",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` must answer the payload type",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: the translator fills the served function's \
+                 payload -- a result naming anything else leaves the call \
+                 without a payload of its type",
+            ),
+        );
+    }
+}
+
+/// **`N057` -- an unresolved library call; `N069` -- a resolved one;
+/// `N059` -- a foreign body in a library hull; `N060` -- a payload that
+/// names no table; `N061` -- a direct call to a library function**
+/// (lanes E1+E2).
+///
+/// `@library#function ( args ) { region }` reads as a run-time call whose
+/// region the reader captures without interpreting (`SYNTAX.md` §7). Lane
+/// E1 refused every such call with `N057`; lane E2 checks the call like
+/// any call and narrows the codes to what each statement can still mean:
+///
+/// * the call resolves `lib` to a used module and `function` to a
+///   declared `library fn` in it -- otherwise `N057`, naming which half
+///   failed (unknown library vs unknown function, including the case
+///   where the name stands for an ordinary function);
+/// * a resolved call is refused with `N069`: arguments, effects, `or R`
+///   and costs are checked exactly like an ordinary call (m1, the call
+///   graph, kosten), but the region is still not interpreted -- the
+///   translator is declared (lane E3, `SYNTAX.md` §7.2) but does not run
+///   yet (lane E5), so there is no payload to hold the call against and
+///   the refusal stands instead of a silent acceptance; the refusal names
+///   the translator that WOULD run the region;
+/// * the declaration side is held here too: the payload must name a
+///   declared table (`N060`), and the library function's transitive hull
+///   must hold no `extern`/`raw`/`prim`/`asm` (`N059`,
+///   `PLAN-ERWEITUNG.md` §0c);
+/// * a DIRECT call to a library function is refused with `N061`: without
+///   a region there is no payload, so the call would silently bypass the
+///   mechanism the declaration stands for.
+///
+/// Every diagnostic fires once per site, in both call positions.
+fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    // Declaration side first: one diagnostic per declaration, so a
+    // library function called ten times does not report its payload
+    // ten times.
+    let mut bibs: Vec<&String> = u.bibliotheken.iter().collect();
+    bibs.sort();
+    for qual in &bibs {
+        if let Some((decl_modul, nutzlast, span)) = u.nutzlasten.get(*qual) {
+            let benennt_tabelle = u
+                .kandidaten_aufloesbar(decl_modul, nutzlast)
+                .into_iter()
+                .any(|k| u.tabellen.contains_key(&k));
+            if !benennt_tabelle {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N060",
+                        *span,
+                        format!(
+                            "`payload {nutzlast}` of `library fn {qual}` names no declared table"
+                        ),
+                    )
+                    .mit_notiz(
+                        "the payload is a table or tree type (PLAN-ERWEITUNG.md §0b/§2): \
+                         a tree table is a table, anything else is not a payload",
+                    ),
+                );
+            }
+        }
+        let span = u
+            .funktionen
+            .get(*qual)
+            .map(|s| s.span)
+            .unwrap_or(gabbro_syntax::span::Span::neu(0, 0));
+        for fremd in g.fremde_in_huelle(qual) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N059",
+                    span,
+                    format!(
+                        "`library fn {qual}` reaches the foreign body `{fremd}`"
+                    ),
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: a function reachable through `@lib#f` \
+                     is safe Gabbro -- `extern`, `raw`, `prim` and `asm` are \
+                     refused anywhere in its call hull, including itself",
+                ),
+            );
+        }
+    }
+    // **Lane E3 (`SYNTAX.md` §7.2): the translator declaration side.**
+    // Translators are ordinary functions for every pass (they parsed into
+    // `ItemArt::Funktion` with `translator_fuer` set); here stand only the
+    // linkage and the signature -- exactly one translator per `library
+    // fn` (`N200`/`N201`), `effects { pure }` (`N202`), a `decreases`
+    // clause (`N203`), and the result against the payload (`N204`). The
+    // hull carries the same `N059` as a library body: a translator the
+    // translation stage would run is safe Gabbro or it is nothing.
+    let mut uebersetzer: Vec<Uebersetzer> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let Some(fuer) = &f.translator_fuer else { return };
+        uebersetzer.push(Uebersetzer {
+            qual: crate::umgebung::qualifiziere(modul, &f.name.text),
+            modul: modul.to_string(),
+            ziel: fuer.text.clone(),
+            span: f.span,
+            effects: f.effects.clone(),
+            decreases: f.decreases.clone(),
+            ergebnis: f.ergebnis.clone(),
+        });
+    });
+    uebersetzer.sort_by(|a, b| a.qual.cmp(&b.qual).then(a.span.von.cmp(&b.span.von)));
+    for qual in &bibs {
+        let modul = crate::umgebung::modul_von(qual);
+        let kurz = crate::umgebung::kurzname(qual);
+        let mut diener: Vec<&Uebersetzer> = uebersetzer
+            .iter()
+            .filter(|t| t.modul == modul && t.ziel == kurz)
+            .collect();
+        diener.sort_by_key(|t| t.span.von);
+        let span = u
+            .funktionen
+            .get(*qual)
+            .map(|s| s.span)
+            .unwrap_or(gabbro_syntax::span::Span::neu(0, 0));
+        if diener.is_empty() {
+            // Without a payload clause (`P043` beside it) there is no call
+            // shape to translate into -- one refusal per defect.
+            if !u.nutzlasten.contains_key(*qual) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "N200",
+                    span,
+                    format!("`library fn {qual}` declares no translator"),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: every library function with a payload type \
+                     has exactly one translator in its module -- `translator \
+                     <name> for <function> (region : <table>) -> <payload>`; \
+                     without it no region can ever become a payload",
+                ),
+            );
+            continue;
+        }
+        for doppelt in diener.iter().skip(1) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N201",
+                    doppelt.span,
+                    format!(
+                        "`translator {}` is a second translator for `{qual}`",
+                        doppelt.qual
+                    ),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: exactly one translator serves a library \
+                     function -- the first declaration (by position) serves \
+                     it, every further one serves nothing",
+                ),
+            );
+        }
+        for t in &diener {
+            pruefe_uebersetzer_signatur(t, qual, &u, absagen);
+        }
+    }
+    for t in &uebersetzer {
+        let bedient = bibs.iter().any(|q| {
+            crate::umgebung::modul_von(*q) == t.modul
+                && crate::umgebung::kurzname(*q) == t.ziel
+        });
+        if !bedient {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N201",
+                    t.span,
+                    format!(
+                        "`translator {}` names no library function `{}` in its module",
+                        t.qual, t.ziel
+                    ),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: a translator serves exactly one `library \
+                     fn` in its own module, named by the `for` link -- \
+                     without it the translator can never run",
+                ),
+            );
+            continue;
+        }
+        for fremd in g.fremde_in_huelle(&t.qual) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N059",
+                    t.span,
+                    format!("`translator {}` reaches the foreign body `{fremd}`", t.qual),
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: what the translation stage would \
+                     run is safe Gabbro -- `extern`, `raw`, `prim` and `asm` \
+                     are refused anywhere in a translator's call hull, \
+                     including itself",
+                ),
+            );
+        }
+    }
+    // Call side, with the caller's module for resolution.
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        im_block(b, modul, &u, &uebersetzer, absagen);
+    });
+    fn im_block(
+        b: &Block,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        uebersetzer: &[Uebersetzer],
+        absagen: &mut Absagen,
+    ) {
         for s in &b.anweisungen {
             if let StmtArt::LibraryCall(r) = &s.art {
-                melde(r, absagen);
+                melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen);
+            }
+            if let StmtArt::Ruf(r) = &s.art {
+                melde_direkt_ruf(r, modul, u, absagen);
+            }
+            if let StmtArt::LetSonst(l) = &s.art {
+                if let Some(r) = l.als_ruf() {
+                    melde_direkt_ruf(r, modul, u, absagen);
+                }
             }
             for e in crate::eigene_ausdruecke(s) {
                 for x in crate::alle_ausdruecke(e) {
-                    if let ExprArt::LibraryCall(r) = &x.art {
-                        melde(r, absagen);
+                    match &x.art {
+                        ExprArt::LibraryCall(r) => {
+                            melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen)
+                        }
+                        ExprArt::Ruf(r) => melde_direkt_ruf(r, modul, u, absagen),
+                        _ => {}
+                    }
+                }
+            }
+            // A direct call in a contract names the same callee; the form
+            // is wrong there too. (A library call cannot stand here: the
+            // reader wires `libcall` only into statement and binding
+            // position.)
+            for pr in crate::eigene_praedikate(s) {
+                for e in crate::ausdruecke_im_praedikat(pr) {
+                    for x in crate::alle_ausdruecke(e) {
+                        if let ExprArt::Ruf(r) = &x.art {
+                            melde_direkt_ruf(r, modul, u, absagen);
+                        }
                     }
                 }
             }
             for k in crate::unterbloecke(s) {
-                im_block(k, absagen);
+                im_block(k, modul, u, uebersetzer, absagen);
             }
         }
     }
-    fn melde(r: &LibraryCall, absagen: &mut Absagen) {
+    /// `N057`: the call resolves nowhere -- naming which half failed.
+    fn melde_bibliothek_ruf(
+        r: &LibraryCall,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        uebersetzer: &[Uebersetzer],
+        absagen: &mut Absagen,
+    ) {
+        if let Some(z) = u.bibliothek(modul, &r.library.text, &r.function.text) {
+            // **Lane E3:** the refusal names the translator that WOULD run
+            // the region -- declared since lane E3, running it is lane E5.
+            let diener = uebersetzer.iter().find(|t| {
+                t.modul == z.modul && t.ziel == crate::umgebung::kurzname(&z.name)
+            });
+            let (text, hinweis) = match diener {
+                Some(t) => (
+                    format!(
+                        "library call checked -- translator `{}` would run the region, \
+                         and translators do not run yet",
+                        t.qual
+                    ),
+                    "the region is compiled at translation time into a payload \
+                     (PLAN-ERWEITUNG.md §0b); the translator is declared and \
+                     typed (SYNTAX.md §7.2), but running it needs the \
+                     compile-time evaluator (lane E5) -- until then every \
+                     resolved call is refused here: never silently accepted, \
+                     never crashed on",
+                ),
+                None => (
+                    "library call checked -- no translator declared yet".to_string(),
+                    "the region is compiled at translation time into a payload \
+                     (PLAN-ERWEITUNG.md §0b); until a translator is declared \
+                     (SYNTAX.md §7.2, `N200` beside the function) every \
+                     resolved call is refused here: never silently accepted, \
+                     never crashed on",
+                ),
+            };
+            // **Lane E7: the refusal points INTO the region.** The diagnostic
+            // is about region content nobody compiled yet, so its span is the
+            // first region token's (`RegionKarte`), not the call around it --
+            // a diagnostic about a library call's region must point at the
+            // line and column inside the region the user wrote.
+            let karte = crate::regionkarte::RegionKarte::vom_ruf(r);
+            let mut absage = Absage::fehler("N069", karte.ruf_span(r), text).mit_notiz(format!(
+                "`@{}#{}` resolves: arguments, effects, `or R` and costs \
+                 are checked like an ordinary call -- but the region is \
+                 captured, not interpreted, so there is no payload yet",
+                r.library.text, r.function.text
+            ));
+            // An empty region has no first token and the span above is the
+            // call itself (`RegionKarte::ruf_span` falls back to it); naming
+            // a token there would name nothing.
+            if let Some(t) = r.region.first() {
+                let erster = t.text.clone();
+                absage = absage.mit_notiz(format!(
+                    "the refusal names the region's first token `{erster}`: \
+                     the span above is its site, carried back through the \
+                     region span map (PLAN-ERWEITUNG.md §6, lane E7)",
+                ));
+            }
+            absagen.schiebe(absage.mit_notiz(hinweis));
+            return;
+        }
+        match u.bibliothek_modul(modul, &r.library.text) {
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N057",
+                    r.span,
+                    format!(
+                        "`@{}` names no used module -- the library call resolves nowhere",
+                        r.library.text
+                    ),
+                )
+                .mit_notiz(
+                    "the library is the module the function stands in, visible \
+                     from the caller like any name (own module, enclosing \
+                     modules, root, `use` lines)",
+                ),
+            ),
+            Some(gefunden) => {
+                let qual = crate::umgebung::qualifiziere(&gefunden, &r.function.text);
+                let is_ordinary = u.funktionen.contains_key(&qual);
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N057",
+                        r.span,
+                        format!(
+                            "`@{}` resolves to module `{gefunden}`, which declares no \
+                             library function `{}`",
+                            r.library.text, r.function.text
+                        ),
+                    )
+                    .mit_notiz(if is_ordinary {
+                        format!(
+                            "`{qual}` is an ordinary function -- a library call \
+                             names a `library fn`; an ordinary call to it would \
+                             bypass the payload (`N061`)"
+                        )
+                    } else {
+                        "a library call names a `library fn` declared in the \
+                         named module -- no such declaration, no call"
+                            .to_string()
+                    }),
+                );
+            }
+        }
+    }
+    /// `N061`: a direct call names a `library fn` -- without a region
+    /// there is no payload, so the call would silently bypass the
+    /// mechanism. Constructors (`P(a: 1)`), `Some`/`None`, conversions
+    /// and indirect calls never resolve to a declared function and fall
+    /// through here without a word.
+    fn melde_direkt_ruf(
+        r: &Ruf,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        absagen: &mut Absagen,
+    ) {
+        if r.ist_verbundwert() {
+            return;
+        }
+        let Some(p) = r.path() else { return };
+        let text = p.text();
+        let ziel = u
+            .kandidaten_aufloesbar(modul, &text)
+            .into_iter()
+            .find(|k| u.funktionen.contains_key(k));
+        if ziel.is_some_and(|k| u.ist_bibliothek(&k)) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N061",
+                    r.span,
+                    format!(
+                        "direct call to the library function `{text}` -- call it \
+                         through `@lib#f` with a region"
+                    ),
+                )
+                .mit_notiz(
+                    "the region compiles at translation time into the payload \
+                     the call carries (PLAN-ERWEITUNG.md §0b); a direct call \
+                     has no region, so it would run the body with no payload",
+                ),
+            );
+        }
+    }
+}
+
+/// **`N215` -- two keyed entries, one key, different values; `N216` -- a
+/// same-named assumption with different content; `N217` -- a library
+/// requirement outside the program's profile; `N218` -- the profile against
+/// the platform; `N219` -- profile structure** (lane E6, checker half).
+///
+/// The main program declares ONE hardware profile (`profile { … }`); a
+/// library REQUIRES profile entries by reference (`requires profile { … }`),
+/// never by a copy of their text (`PLAN-ERWEITUNG.md` §0c). Consistency is a
+/// subset check against the one set -- decidable and cheap -- plus the two
+/// halves of `Profil.gut` (`grammatik/Grammatik/Profil.lean`): key agreement
+/// (`einigung`, `N215`) and same-name content agreement
+/// (`namensGleichheit`, `N216`).
+///
+/// * unit-wide, module by module: the unit IS the program, so a requirement
+///   in an unused module is still a requirement -- linking sees the whole
+///   unit, not the call graph;
+/// * every diagnostic fires once per site: one `N215` per conflicting key
+///   and block, one `N217` per uncovered requirement, one `N218` per
+///   contradicting entry.
+fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
+    // The blocks with their modules, and every declared `assume` by
+    // qualified name -- owned by `Umgebung`, in source order, so two
+    // conflicts come out in the same order on every run.
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let profile = &u.profile;
+    let bedarfe = &u.bedarfe;
+    let annahmen = &u.annahmen;
+    /// The content of a declared assumption: text, class and machine.
+    /// Two declarations with one name and different content are the
+    /// `N216` shape -- the checker never compares prose, only this triple.
+    fn inhalt(a: &Assume) -> (String, String, Option<String>) {
+        let klasse = match &a.klasse {
+            AnnahmeKlasse::Falsifizierbar(s) => format!("falsifier {}", s.text),
+            AnnahmeKlasse::NichtFalsifizierbar(g) => format!("unfalsifiable {}", g.text),
+        };
+        (
+            a.text.text.clone(),
+            klasse,
+            a.arch.as_ref().map(|x| x.text.clone()),
+        )
+    }
+    /// The declaration an `assume <name>` reference resolves to from its
+    /// block's module -- own module, enclosing, root, `use` lines, the
+    /// same candidate order every other name uses.
+    fn loese_auf<'a>(
+        u: &crate::umgebung::Umgebung,
+        annahmen: &'a HashMap<String, Assume>,
+        modul: &str,
+        name: &str,
+    ) -> Option<&'a Assume> {
+        u.kandidaten_aufloesbar(modul, name)
+            .into_iter()
+            .find_map(|k| annahmen.get(&k))
+    }
+    // `N219`: the second `profile` block -- one hardware profile per
+    // program (`PLAN-ERWEITUNG.md` §0c, point 2). The first block stands;
+    // every further one falls here, never silently merged.
+    for (_, b) in profile.iter().skip(1) {
         absagen.schiebe(
             Absage::fehler(
-                "N057",
-                r.span,
-                "library calls are parsed but not yet checked",
+                "N219",
+                b.span,
+                "a second `profile` block -- one hardware profile per program",
             )
-            .mit_notiz(format!(
-                "`@{}#{}` is a run-time call with {} arguments and a region of {} \
-                 raw tokens -- the region is captured, not interpreted",
-                r.library.text,
-                r.function.text,
-                r.args.len(),
-                r.region.len()
-            ))
             .mit_notiz(
-                "the region is compiled at translation time into a payload \
-                 (PLAN-ERWEITUNG.md §0b); until lane E2 discharges that \
-                 obligation -- checking arguments, payload and contract -- \
-                 every such call is refused here: never silently accepted, \
-                 never crashed on",
+                "consistency is a subset check against ONE set \
+                 (PLAN-ERWEITUNG.md §0c): two profiles are two sets, and \
+                 merging them silently would hide exactly the conflict \
+                 `N215` exists to refuse; the single set is the promise \
+                 linking relies on",
             ),
         );
     }
-    crate::fuer_jedes_item(baum, &mut |i| {
-        let ItemArt::Funktion(f) = &i.art else { return };
-        let FnRumpf::Block(b) = &f.rumpf else { return };
-        im_block(b, absagen);
-    });
-}
-
-/// Whether lane E2 has landed: the tree declares library functions such a
-/// call could be checked against. No such declaration exists yet, so this
-/// answers `false`; when E2 lands it reads that declaration here instead.
-fn lane_e2_checks_calls(_baum: &Programm) -> bool {
-    false
+    // `N215`: two keyed entries with one key and different values, per
+    // block. Duplicates with one value are silent -- a set holds them
+    // once, like `manifest::vereinige` holds one line.
+    for (modul, b) in profile.iter().chain(bedarfe.iter()) {
+        let mut gesehen: HashMap<ProfilSchluessel, &Ident> = HashMap::new();
+        for e in &b.eintraege {
+            let ProfilEintrag::Modus { schluessel, wert, span } = e else {
+                continue;
+            };
+            match gesehen.get(schluessel) {
+                None => {
+                    gesehen.insert(*schluessel, wert);
+                }
+                Some(erste) if erste.text == wert.text => {}
+                Some(erste) => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N215",
+                            *span,
+                            format!(
+                                "two keyed entries with one key and different values: \
+                                 `{}` holds `{}` and `{}`",
+                                schluessel.text(),
+                                erste.text,
+                                wert.text
+                            ),
+                        )
+                        .mit_notiz(format!(
+                            "in {} -- contradictory modes make every proof over \
+                             the combined program vacuous, and every caller \
+                             relies on one mode (PLAN-ERWEITUNG.md §0c)",
+                            if modul.is_empty() {
+                                "this unit".to_string()
+                            } else {
+                                format!("module `{modul}`")
+                            }
+                        )),
+                    );
+                }
+            }
+        }
+    }
+    // `N219`/`N216` over every `assume <name>` reference: the name must
+    // resolve to a declared assumption, and one name must not carry two
+    // contents. The check runs over profile and requirements alike -- a
+    // requirement naming nothing is a link against air.
+    for (modul, b) in profile.iter().chain(bedarfe.iter()) {
+        for e in &b.eintraege {
+            let ProfilEintrag::Annahme { name, span } = e else {
+                continue;
+            };
+            if loese_auf(&u, annahmen, modul, &name.text).is_none() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N219",
+                        *span,
+                        format!(
+                            "`assume {}` names no declared assumption",
+                            name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a profile entry references the declared assumption, \
+                         never a copy of its text (PLAN-ERWEITUNG.md §0c) -- \
+                         and there is no declaration here to reference; \
+                         a reference with no declaration promises nothing",
+                    ),
+                );
+                continue;
+            }
+            // Every declaration under this short name, unit-wide: two
+            // contents under one name make the reference ambiguous.
+            let mut inhalte: Vec<(&str, (String, String, Option<String>))> = annahmen
+                .iter()
+                .filter(|(q, _)| crate::umgebung::kurzname(q.as_str()) == name.text)
+                .map(|(q, a)| (q.as_str(), inhalt(a)))
+                .collect();
+            inhalte.sort();
+            inhalte.dedup_by(|a, b| a.1 == b.1);
+            if inhalte.len() > 1 {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N216",
+                        *span,
+                        format!(
+                            "a same-named assumption with different content: \
+                             `{}` is declared {} with different statements",
+                            name.text,
+                            inhalte
+                                .iter()
+                                .map(|(q, _)| format!("`{q}`"))
+                                .collect::<Vec<_>>()
+                                .join(" and ")
+                        ),
+                    )
+                    .mit_notiz(
+                        "the profile holds the NAME, so two statements under \
+                         it are two assumptions wearing one name -- linking \
+                         relies on the name meaning one statement \
+                         (PLAN-ERWEITUNG.md §0c)",
+                    ),
+                );
+            }
+        }
+    }
+    // `N217`: linking -- every requirement of every library stands in the
+    // program's profile with identical content. A keyed requirement needs
+    // the key with the value; an `assume` requirement needs a reference to
+    // a declaration with the same name and content (`Profil.bindet`).
+    let profil_eintraege: &[ProfilEintrag] = match profile.first() {
+        Some((_, b)) => &b.eintraege,
+        None => &[],
+    };
+    for (modul, b) in bedarfe.iter() {
+        let bibliothek = if modul.is_empty() {
+            "this unit".to_string()
+        } else {
+            format!("module `{modul}`")
+        };
+        for e in &b.eintraege {
+            match e {
+                ProfilEintrag::Modus { schluessel, wert, span } => {
+                    let gedeckt = profil_eintraege.iter().any(|p| match p {
+                        ProfilEintrag::Modus { schluessel: k, wert: v, .. } => {
+                            *k == *schluessel && v.text == wert.text
+                        }
+                        ProfilEintrag::Annahme { .. } => false,
+                    });
+                    if !gedeckt {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N217",
+                                *span,
+                                format!(
+                                    "library {bibliothek} requires `{} {}`, and the \
+                                     program profile holds no such entry",
+                                    schluessel.text(),
+                                    wert.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "linking refuses a library whose requirements are \
+                                 not in the profile -- the main program must add \
+                                 them to its profile, where they meet everything \
+                                 else; every call into the library relies on them \
+                                 (PLAN-ERWEITUNG.md §0c)",
+                            ),
+                        );
+                    }
+                }
+                ProfilEintrag::Annahme { name, span } => {
+                    // The requirement's own declaration, resolved from the
+                    // library: content the profile must agree with.
+                    let gefordert = loese_auf(&u, annahmen, modul, &name.text)
+                        .map(inhalt);
+                    // The profile half resolves from the profile's own
+                    // module, not from the library's.
+                    let profil_modul: &str =
+                        profile.first().map(|(m, _)| m.as_str()).unwrap_or("");
+                    let gedeckt = match gefordert {
+                        None => true,
+                        Some(inhalt_fordert) => profil_eintraege.iter().any(|p| match p {
+                            ProfilEintrag::Annahme { name: n, .. } => {
+                                n.text == name.text
+                                    && loese_auf(&u, annahmen, profil_modul, &n.text)
+                                        .is_some_and(|a| inhalt(a) == inhalt_fordert)
+                            }
+                            ProfilEintrag::Modus { .. } => false,
+                        }),
+                    };
+                    // An unresolvable requirement is already `N219` above;
+                    // here only the uncovered one falls.
+                    if !gedeckt {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N217",
+                                *span,
+                                format!(
+                                    "library {bibliothek} requires `assume {}`, and the \
+                                     program profile holds no such entry",
+                                    name.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "linking refuses a library whose requirements are \
+                                 not in the profile -- the main program must add \
+                                 them to its profile, where they meet everything \
+                                 else; every call into the library relies on them \
+                                 (PLAN-ERWEITUNG.md §0c)",
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // `N218`: the profile against the platform. `fp_contract` other than
+    // `off` contradicts the float prelude, which binds
+    // `-ffp-contract=off` for every compiler (`PLAN-BITS.md` §5); an
+    // `arch` the unit never declares contradicts the declared machines.
+    // Without `arch` declarations nothing is refused (R16): a unit with no
+    // machine named constrains no machine.
+    if let Some((_, b)) = profile.first() {
+        let archs = crate::deklarierte_architekturen(baum);
+        for e in &b.eintraege {
+            let ProfilEintrag::Modus { schluessel, wert, span } = e else {
+                continue;
+            };
+            match schluessel {
+                ProfilSchluessel::FpKontraktion if wert.text != "off" => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N218",
+                            *span,
+                            format!(
+                                "`fp_contract {}` contradicts the float prelude, which \
+                                 binds `-ffp-contract=off`",
+                                wert.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "the prelude carries no pragma and the manifest \
+                             carries the flag for every compiler \
+                             (PLAN-BITS.md §5) -- a profile promising \
+                             contraction re-opens what the prelude closed, \
+                             and every bound the checker computed relies on \
+                             the flag staying off",
+                        ),
+                    );
+                }
+                ProfilSchluessel::Arch
+                    if !archs.is_empty() && !archs.contains(&wert.text) =>
+                {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N218",
+                            *span,
+                            format!(
+                                "`arch {}` names a machine this unit never declares \
+                                 ({})",
+                                wert.text,
+                                archs.join(", ")
+                            ),
+                        )
+                        .mit_notiz(
+                            "the profile is the one set of hardware assumptions \
+                             the program runs under -- an `arch` beside every \
+                             declared one is a second machine wearing one name, \
+                             and every foreign body relies on running on the \
+                             declared one",
+                        ),
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 /// **What a declared function's result can SAY** -- the four states `N056` tells apart.
@@ -3890,6 +4760,46 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
             ),
         );
     });
+    // **A `syscall` names its machine the same way (lane 86, PLAN-SYSCALL.md §1).**
+    //
+    // The rule is the same rule, asked of the declaration instead of the
+    // assumption: a syscall for a machine no `arch` declares can never be in
+    // force here. The sealed-architecture half (`A006`, anything but x86_64)
+    // is a sentence of its own in `syscall.rs` -- what fires there is not a
+    // mismatch but a machine the emitter cannot lower at all.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Syscall(s) = &item.art else { return };
+        if s.arch.text != "x86_64" {
+            return;
+        }
+        if bekannt.contains(&s.arch.text) {
+            return;
+        }
+        let mut genannt: Vec<&str> = bekannt.iter().map(|s| s.as_str()).collect();
+        genannt.sort_unstable();
+        genannt.dedup();
+        absagen.schiebe(
+            Absage::fehler(
+                "A005",
+                s.arch.span,
+                format!(
+                    "`{}` is a syscall for `{}`, and this unit declares only `{}`",
+                    s.name.text,
+                    s.arch.text,
+                    genannt.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "a syscall that can never be in force here still travels in the \
+                 artefact under `proved under A1…An` -- and a reader takes a reach out of \
+                 it that does not exist",
+            )
+            .mit_notiz(
+                "name the machine at an `entry`, a `boot`, an `entrust` or an `asm` \
+                 body -- that is where this unit says which machine it runs on",
+            ),
+        );
+    });
 }
 
 fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
@@ -4009,6 +4919,15 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
         if let ItemArt::Funktion(f) = &item.art {
             if let Some(r) = &f.fehler {
                 kann_scheitern.insert(f.name.text.clone(), r.text.clone());
+            }
+        }
+        // **A `syscall` with `or R` can fail like an `extern fn` with one.** The
+        // `let … else` at its call sites is the only error propagation, so the
+        // channel has to stand in this map -- otherwise every honest syscall
+        // call falls at `N028`, and every bare one passes `N029` in silence.
+        if let ItemArt::Syscall(s) = &item.art {
+            if let Some(r) = &s.fehler {
+                kann_scheitern.insert(s.name.text.clone(), r.text.clone());
             }
         }
     });

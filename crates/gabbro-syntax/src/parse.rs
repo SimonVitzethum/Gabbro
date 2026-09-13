@@ -641,6 +641,8 @@ impl<'a> Parser<'a> {
         // to say so with. *An implicit export set is exactly what D2 forbids.* The word
         // now stands at the carrier, and the closure is caught by `N038` in
         // `gabbro-check/src/bindung.rs`.
+        // **Since «E4» (2026-09-12) TWELVE: `arena` is a carrier too** -- it emits
+        // storage like a table, so it carries the word like one.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -657,6 +659,8 @@ impl<'a> Parser<'a> {
                         | Kw::Tagged
                         | Kw::Type
                         | Kw::Fn
+                        | Kw::Library
+                        | Kw::Translator
                         | Kw::Spec
                         | Kw::Impl
                         | Kw::Raw
@@ -665,6 +669,7 @@ impl<'a> Parser<'a> {
                         | Kw::Extern
                         | Kw::Atomic
                         | Kw::Table
+                        | Kw::Arena
                         | Kw::Device
                         | Kw::Format
                         | Kw::Lock
@@ -690,10 +695,10 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "`[ \"pub\" ]` stands at eleven item kinds: module use const static \
-                     type fn atomic table device format lock -- the parser accepted it \
-                     everywhere and threw it away",
-                ),
+                        "`[ \"pub\" ]` stands at twelve item kinds: module use const static \
+                      type fn atomic table arena device format lock -- the parser accepted it \
+                      everywhere and threw it away",
+                    ),
             );
         }
         let art = match t.art {
@@ -711,11 +716,35 @@ impl<'a> Parser<'a> {
                 ItemArt::Typ(self.typedecl(oeffentlich)?)
             }
             Art::Wort(
-                Kw::Fn | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
+                Kw::Fn | Kw::Library | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
             ) => ItemArt::Funktion(self.fndecl(oeffentlich)?),
+            // **Lane E3:** a translator declaration is an ordinary function
+            // with a `for` link (`translator_fuer`); every pass reads its
+            // body through `ItemArt::Funktion`, the linkage is the checker's.
+            // Parsed through `translator_item`, not inline: `translatordecl`
+            // answers `FnDecl` by value, and holding that temporary in
+            // `item`'s frame costs one `FnDecl` of stack on EVERY nested
+            // `module` level -- measured 2026-09-12, the depth guard
+            // (`die_beiden_wachen…`, 80 nested modules on a 2 MB test
+            // thread) overflowed before it could fire. The helper frame is
+            // entered once per translator and freed on return; it never
+            // nests with itself.
+            Art::Wort(Kw::Translator) => return self.translator_item(oeffentlich, anfang, when),
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
             Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
             Art::Wort(Kw::Table) => ItemArt::Tabelle(self.table(oeffentlich)?),
+            // **«E4» (2026-09-12): `arena A capacity lo .. hi of T;`.**
+            // A monotone region beside the table: the declaration holds the
+            // reservation and the hard bound, the checker (`arena.rs`) the
+            // rest. `pub` is carried like at every other carrier.
+            // Parsed through `arena_item`, not inline: `arena` answers
+            // `ArenaDecl` by value, and holding that temporary in `item`'s
+            // frame costs one `ArenaDecl` of stack on EVERY nested `module`
+            // level -- the same shape `translator_item` above was built for
+            // (`die_beiden_wachen…` overflowed before the depth guard could
+            // fire). The helper frame is entered once per arena and freed
+            // on return; it never nests with itself.
+            Art::Wort(Kw::Arena) => return self.arena_item(oeffentlich, anfang, when),
             Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
             Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
@@ -726,64 +755,28 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Rcu) => ItemArt::Rcu(self.rcudecl()?),
             Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
             Art::Wort(Kw::Concurrent) => ItemArt::Concurrent(self.concurrentdecl()?),
+            // **«E6»: `profile { … }` -- the one hardware profile of the program.**
+            Art::Wort(Kw::Profile) => ItemArt::Profil(self.profildecl()?),
+            // **«E6»: `requires profile { … }` -- what a library asks of the
+            // profile.** A bare `requires` starts no item, then as now: the
+            // guard is one word further, like `const fn` above -- no context
+            // switch, the second word decides.
+            Art::Wort(Kw::Requires)
+                if matches!(self.blick_n(1).art, Art::Wort(Kw::Profile)) =>
+            {
+                ItemArt::ProfilBedarf(self.profilbedarf()?)
+            }
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
-            // **«SS-1» (2026-09-12): `syscall` is specified (`SYNTAX.md` §12.1)
-            // and not implemented.** The grammar production stands, the lexer
-            // knows the words, and the parser refuses the item BY NAME -- a
-            // controlled refusal, never silent acceptance and never a crash.
-            // *`entry syscall …` keeps parsing: the entry NAME is an
-            // identifier, and `syscall` as a `ctx` word stays one there.*
-            Art::Wort(Kw::Syscall) => {
-                // **Skip the whole item before refusing it.** The caller
-                // (`programm`/`synchronisiere`) recovers at the next item head
-                // or `;` at depth 0 -- and a `syscall` body carries no `;`
-                // until its closing line, so recovery would re-enter MID-ITEM
-                // (`abi`, `regs`, …) and bury the one refusal under knock-on
-                // errors. *One fault, one refusal:* consume to the balancing
-                // `}` (or `;`, for the one-line shape), THEN refuse by name.
-                let sp = self.span();
-                let mut tiefe = 0i32;
-                loop {
-                    match self.blick().art {
-                        Art::Ende => break,
-                        Art::Zeichen(Z::GeschweiftAuf) => {
-                            tiefe += 1;
-                            self.pos += 1;
-                        }
-                        Art::Zeichen(Z::GeschweiftZu) => {
-                            self.pos += 1;
-                            if tiefe <= 0 {
-                                break;
-                            }
-                            tiefe -= 1;
-                        }
-                        Art::Zeichen(Z::Semi) if tiefe <= 0 => {
-                            self.pos += 1;
-                            break;
-                        }
-                        _ => {
-                            self.pos += 1;
-                        }
-                    }
-                }
-                self.absage(
-                    Absage::fehler(
-                        "P042",
-                        sp,
-                        "`syscall` declarations are specified (SYNTAX.md \u{00a7}12.1) \
-                         but not yet implemented",
-                    )
-                    .mit_notiz(
-                        "the grammar production `syscalldecl` stands since lane S1; \
-                         the checker, the emitter ruling and the corpus example \
-                         (lanes S5-S7) are written against it -- until then every \
-                         `syscall` item falls here, by name",
-                    ),
-                );
-                return Err(Abbruch);
-            }
+            // **«SS-1» (2026-09-12), built in lane S5: `syscall` parses into
+            // `SyscallDecl` (SYNTAX.md §12.1, `syscalldecl`).** The grammar
+            // production stands beside `entrydecl`; the checks live in the
+            // checker (`gabbro-check/src/syscall.rs`), the stub refusal in
+            // the emitter. *`entry syscall …` keeps parsing: the entry NAME
+            // is an identifier, and `syscall` as a `ctx` word stays one
+            // there.*
+            Art::Wort(Kw::Syscall) => ItemArt::Syscall(self.syscalldecl()?),
             Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
@@ -804,6 +797,48 @@ impl<'a> Parser<'a> {
         };
         let span = anfang.bis_zu(self.vorheriger_span());
         Ok(Item { when, art, span })
+    }
+
+    /// **Lane E3: the `translator` item, outside `item`'s frame (see above).**
+    fn translator_item(
+        &mut self,
+        oeffentlich: bool,
+        anfang: Span,
+        when: Option<Expr>,
+    ) -> Erg<Item> {
+        let f = self.translatordecl(oeffentlich)?;
+        let span = anfang.bis_zu(self.vorheriger_span());
+        Ok(Item {
+            when,
+            art: ItemArt::Funktion(f),
+            span,
+        })
+    }
+
+    /// **Merge fix (lane 117): the `arena` item, outside `item`'s frame.**
+    ///
+    /// Same shape as `translator_item` above, for the same measured reason:
+    /// `arena` answers `ArenaDecl` by value, and holding that temporary in
+    /// `item`'s frame costs one `ArenaDecl` of stack on every nested
+    /// `module` level -- the merged tree overflowed a 2 MB test thread at
+    /// 31 nested modules, before the depth guard could fire
+    /// (`die_beiden_wachen_sitzen_an_allen_ihren_stellen`). The helper
+    /// frame is entered once per arena and freed on return; it never nests
+    /// with itself. E4's declaration, checker and probes are untouched --
+    /// only where the value is built moved.
+    fn arena_item(
+        &mut self,
+        oeffentlich: bool,
+        anfang: Span,
+        when: Option<Expr>,
+    ) -> Erg<Item> {
+        let a = self.arena(oeffentlich)?;
+        let span = anfang.bis_zu(self.vorheriger_span());
+        Ok(Item {
+            when,
+            art: ItemArt::Arena(a),
+            span,
+        })
     }
 
     fn vorheriger_span(&self) -> Span {
@@ -864,13 +899,45 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
         self.erwarte_z(Z::Gleich)?;
-        let wert = self.expr()?;
+        // **The const-table literal lives HERE and nowhere else.** `self.expr()`
+        // never reads `[`, so an array literal in any other position is a parse
+        // refusal (`P001`) by grammar shape, and no checker pass ever meets one
+        // outside a `const` initializer.
+        let wert = if self.ist_z(Z::EckAuf) {
+            self.arraylit()?
+        } else {
+            self.expr()?
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(KonstDecl {
             oeffentlich,
             name,
             typ,
             wert,
+        })
+    }
+
+    /// `[e0, e1, ...]` -- elements are ordinary expressions, each held
+    /// element-wise by the checker. A trailing comma is admitted, as in
+    /// call argument lists.
+    fn arraylit(&mut self) -> Erg<Expr> {
+        let anfang = self.blick().span;
+        self.erwarte_z(Z::EckAuf)?;
+        let mut elemente = Vec::new();
+        if !self.ist_z(Z::EckZu) {
+            elemente.push(self.expr()?);
+            while self.friss_z(Z::Komma) {
+                if self.ist_z(Z::EckZu) {
+                    break;
+                }
+                elemente.push(self.expr()?);
+            }
+        }
+        let ende = self.erwarte_z(Z::EckZu)?;
+        let span = anfang.bis_zu(ende);
+        Ok(Expr {
+            art: ExprArt::ArrayLit(elemente),
+            span,
         })
     }
 
@@ -1771,6 +1838,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Dach) => BinOp::BitXor,
                 Art::Zeichen(Z::SchiebLinks) => BinOp::SchiebLinks,
                 Art::Zeichen(Z::SchiebRechts) => BinOp::SchiebRechts,
+                // PLAN-BITS section 4 (lane 88): `<<%` rides with the shifts.
+                Art::Zeichen(Z::SchiebLinksProzent) => BinOp::SchiebLinksWrap,
                 _ => break,
             };
             self.pos += 1;
@@ -1789,6 +1858,11 @@ impl<'a> Parser<'a> {
             let op = match self.blick().art {
                 Art::Zeichen(Z::Plus) => BinOp::Plus,
                 Art::Zeichen(Z::Minus) => BinOp::Minus,
+                // PLAN-BITS section 4 (lane 88): `+%`, `-%` and `+|` ride
+                // with `+`/`-` (same level, same left associativity).
+                Art::Zeichen(Z::PlusProzent) => BinOp::PlusWrap,
+                Art::Zeichen(Z::MinusProzent) => BinOp::MinusWrap,
+                Art::Zeichen(Z::PlusStrich) => BinOp::PlusSat,
                 _ => break,
             };
             self.pos += 1;
@@ -1808,6 +1882,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Stern) => BinOp::Mal,
                 Art::Zeichen(Z::Schraeg) => BinOp::Geteilt,
                 Art::Zeichen(Z::Prozent) => BinOp::Rest,
+                // PLAN-BITS section 4 (lane 88): `*%` rides with `*`.
+                Art::Zeichen(Z::SternProzent) => BinOp::MalWrap,
                 _ => break,
             };
             self.pos += 1;
@@ -2808,6 +2884,13 @@ impl<'a> Parser<'a> {
 
     fn fndecl(&mut self, oeffentlich: bool) -> Erg<FnDecl> {
         let anfang = self.span();
+        // **Lane E2: `library fn`.** `library` fills the same prefix slot the
+        // class words fill, and it is orthogonal to them: a library function
+        // is an ordinary Gabbro function (any implementor kind) with a body,
+        // a contract and a payload type. `library extern fn … ;` parses and
+        // falls in the checker (`N059` holds the hull, `P044` the body) --
+        // the reader refuses a FORM, never a combination it cannot judge.
+        let bibliothek = self.friss_kw(Kw::Library);
         let klasse = match self.blick().art {
             Art::Wort(Kw::Spec) => Some(FnKlasse::Spec),
             Art::Wort(Kw::Const) => Some(FnKlasse::Konst),
@@ -2848,6 +2931,33 @@ impl<'a> Parser<'a> {
         // sentence -- and this folder has 45 of those.*
         let verfeinert = if self.friss_kw(Kw::Refines) {
             Some(self.pfad()?)
+        } else {
+            None
+        };
+        // **Lane E2: `payload <path>`.** The payload type of a `library fn`
+        // stands directly behind the signature: it extends the call shape
+        // (what the translator fills), not the contract (what the function
+        // promises). Fixed position (E4): after `or R`, before `requires`.
+        // Missing on a `library fn` is `P043` -- the grammar carries the
+        // clause, so the reader holds it, not a pass behind it.
+        let nutzlast = if bibliothek {
+            if self.friss_kw(Kw::Payload) {
+                Some(self.pfad()?)
+            } else {
+                self.absage(
+                    Absage::fehler(
+                        "P043",
+                        anfang.bis_zu(self.vorheriger_span()),
+                        "a `library fn` declares a payload type -- `payload <table>`",
+                    )
+                    .mit_notiz(
+                        "the payload is the value the translator fills at translation \
+                         time (PLAN-ERWEITUNG.md §0b); a library function without one \
+                         has no call shape for `@lib#f` to check against",
+                    ),
+                );
+                return Err(Abbruch);
+            }
         } else {
             None
         };
@@ -2983,9 +3093,33 @@ impl<'a> Parser<'a> {
             self.erwarte_z(Z::Semi)?;
             FnRumpf::Keiner
         };
+        // **Lane E2: a library function IS Gabbro code (`P044`).** The hull
+        // check (`N059`) walks bodies; a declaration without one (`;`), a
+        // spec contract (`= pred ;`) or a sealed block (`= asm`) leaves it
+        // nothing to walk. What the body must NOT call is a statement about
+        // the program and belongs in the checker (`N059`), not here.
+        if bibliothek && !matches!(rumpf, FnRumpf::Block(_)) {
+            self.absage(
+                Absage::fehler(
+                    "P044",
+                    anfang.bis_zu(self.vorheriger_span()),
+                    "a `library fn` carries a Gabbro body -- `{ … }`, not `;`",
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: a function reachable through `@lib#f` \
+                     is safe Gabbro checked by the same checker -- a bodyless \
+                     declaration would be a foreign promise, exactly what the \
+                     library mechanism stands against",
+                ),
+            );
+            return Err(Abbruch);
+        }
         Ok(FnDecl {
             oeffentlich,
             klasse,
+            bibliothek,
+            nutzlast,
+            translator_fuer: None,
             name,
             parameter,
             ergebnis,
@@ -3004,6 +3138,120 @@ impl<'a> Parser<'a> {
             section,
             arch,
             when,
+            rumpf,
+            span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// **`translator build for kernel(region : AstTab) -> Nutzlast` (lane E3,
+    /// `SYNTAX.md` §7.2).** The declaration side of translators: a total,
+    /// effect-free map from the region AST to the served library function's
+    /// payload type. Parsed into an ordinary `FnDecl` with `translator_fuer`
+    /// set, so every pass checks the body like any function body; the
+    /// linkage (exactly one per `library fn`, `effects { pure }`,
+    /// `decreases`, result against payload) is the checker's (`N200`-`N204`
+    /// in namen.rs). The grammar fixes what the signature promises -- one
+    /// parameter, a Gabbro block (`P044` for anything else, the same rule
+    /// that holds a `library fn` to real code) -- and leaves what must be
+    /// REFUSED to the checker: a missing or impure `effects` (`N202`), a
+    /// missing `decreases` (`N203`), a missing or foreign result (`N204`).
+    fn translatordecl(&mut self, oeffentlich: bool) -> Erg<FnDecl> {
+        let anfang = self.span();
+        self.erwarte_kw(Kw::Translator)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::For)?;
+        let fuer = self.erwarte_ident()?;
+        self.erwarte_z(Z::RundAuf)?;
+        let pname = self.erwarte_ident()?;
+        self.erwarte_z(Z::Kolon)?;
+        let ptyp = self.typeexpr()?;
+        self.erwarte_z(Z::RundZu)?;
+        let ergebnis = if self.friss_z(Z::Pfeil) {
+            Some(self.typeexpr()?)
+        } else {
+            None
+        };
+        // The fixed clause order is the `fndecl` order (E4); only the
+        // clauses a pure total map can carry stand here.
+        let requires = if self.friss_kw(Kw::Requires) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let ensures = if self.friss_kw(Kw::Ensures) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let effects = if self.ist_kw(Kw::Effects) {
+            Some(self.effects_block()?)
+        } else {
+            None
+        };
+        let costs = if self.friss_kw(Kw::Costs) {
+            self.erwarte_z(Z::KleinerGleich)?;
+            let e = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            Some(e)
+        } else {
+            None
+        };
+        let decreases = if self.friss_kw(Kw::Decreases) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
+        let rumpf = if self.ist_z(Z::GeschweiftAuf) {
+            FnRumpf::Block(self.block()?)
+        } else {
+            if self.friss_z(Z::Gleich) {
+                let _ = self.vertrag(|s| s.pred())?;
+                self.erwarte_z(Z::Semi)?;
+            } else {
+                self.erwarte_z(Z::Semi)?;
+            }
+            self.absage(
+                Absage::fehler(
+                    "P044",
+                    anfang.bis_zu(self.vorheriger_span()),
+                    "a `translator` carries a Gabbro body -- `{ … }`, not `;`",
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: what a translator fills is checked \
+                     like any Gabbro body -- a bodyless declaration would be \
+                     a foreign promise, exactly what the library mechanism \
+                     stands against",
+                ),
+            );
+            return Err(Abbruch);
+        };
+        Ok(FnDecl {
+            oeffentlich,
+            klasse: None,
+            bibliothek: false,
+            nutzlast: None,
+            translator_fuer: Some(fuer),
+            name,
+            parameter: vec![Parameter {
+                name: pname,
+                typ: ptyp,
+            }],
+            ergebnis,
+            fehler: None,
+            verfeinert: None,
+            requires,
+            ensures,
+            maintains: Vec::new(),
+            advances: None,
+            retires: None,
+            effects,
+            costs,
+            deadline: None,
+            decreases,
+            by: Vec::new(),
+            section: None,
+            arch: None,
+            when: None,
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
@@ -3215,9 +3463,24 @@ impl<'a> Parser<'a> {
         }
         // Refuse, never interpret: the forms that deliberately do not exist get a refusal of
         // their own instead of a knock-on error three tokens later.
-        if self.blick().art == Art::Ident {
-            let wort = self.blick().text(self.quelle);
-            if let Some(grund) = abgeschaffte_form(wort) {
+        // **Lane E3:** `for` lexes as a contextual word (the translator
+        // link), not as an identifier -- the abolished `for` loop must
+        // still be refused as `for`, so the gate reads the text of any
+        // name-usable word, not only `Art::Ident`. Words the gate does not
+        // name (`match`, `table`, ...) fall through exactly as before --
+        // and a contextual word followed by a place continuation (`for = 1`)
+        // IS the place it spells: `wort_ist_anweisungskopf` decides, so a
+        // variable called `for` stays assignable.
+        let blick = self.blick().art;
+        let wort: Option<String> = match blick {
+            Art::Ident => Some(self.blick().text(self.quelle).to_string()),
+            Art::Wort(k) if !k.reserviert() && self.wort_ist_anweisungskopf() => {
+                Some(k.text().to_string())
+            }
+            _ => None,
+        };
+        if let Some(wort) = wort {
+            if let Some(grund) = abgeschaffte_form(&wort) {
                 self.absage(
                     Absage::fehler("P035", anfang, format!("`{wort}` does not exist in Gabbro"))
                         .mit_notiz(grund)
@@ -3323,6 +3586,17 @@ impl<'a> Parser<'a> {
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::Return(wert)
             }
+            // **«E4»: `reset A;` -- a fresh generation of the arena.**
+            //
+            // The head word decides, like at every other keyword statement:
+            // `reset = 1;` and `reset.f = x;` continue with a place
+            // continuation and stay assignments to a name of that spelling.
+            Art::Wort(Kw::Reset) => {
+                self.pos += 1;
+                let tisch = self.erwarte_ident()?;
+                self.erwarte_z(Z::Semi)?;
+                StmtArt::ResetArena(tisch)
+            }
             _ => self.zuweisung_oder_ruf()?,
         };
         Ok(Stmt {
@@ -3352,6 +3626,36 @@ impl<'a> Parser<'a> {
                 art: ExprArt::LibraryCall(ruf),
                 span,
             }
+        // **«E4»: `let i = alloc A (v) [else block];`.**
+        //
+        // Only when the word is followed by a name and `(`: a bare `alloc`
+        // stays an ordinary expression (a variable, a call of a function
+        // of that name). The `else` needs no error binder -- like `narrow`,
+        // the failure continuation carries no value, only the decision to
+        // continue elsewhere.
+        } else if self.ist_kw(Kw::Alloc)
+            && matches!(self.blick_n(1).art, Art::Ident | Art::Wort(_))
+            && matches!(self.blick_n(2).art, Art::Zeichen(Z::RundAuf))
+        {
+            self.pos += 1;
+            let tisch = self.erwarte_ident()?;
+            self.erwarte_z(Z::RundAuf)?;
+            let wert = self.expr()?;
+            self.erwarte_z(Z::RundZu)?;
+            let sonst = if self.friss_kw(Kw::Else) {
+                Some(self.block()?)
+            } else {
+                None
+            };
+            self.erwarte_z(Z::Semi)?;
+            return Ok(StmtArt::Alloc(AllocStmt {
+                veraenderlich,
+                name,
+                typ,
+                tisch,
+                wert,
+                sonst,
+            }));
         } else {
             self.expr()?
         };
@@ -3947,6 +4251,35 @@ impl<'a> Parser<'a> {
             ops,
             baum,
             belegt,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **`arena A capacity lo .. hi of T;` («E4»).**
+    ///
+    /// A monotone region beside `table`: no body, no slots, no guards --
+    /// the declaration holds the reservation `lo`, the hard bound `hi`
+    /// and the element type `T`, and nothing else. Both bounds are full
+    /// `constexpr` positions (a literal or a `const` name); the checker
+    /// holds them constant and ordered (`N210`). Only `..` joins the two
+    /// bounds: both count elements, so an exclusive upper bound would be a
+    /// second spelling of `hi - 1`.
+    fn arena(&mut self, oeffentlich: bool) -> Erg<ArenaDecl> {
+        let anfang = self.erwarte_kw(Kw::Arena)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Capacity)?;
+        let lo = self.expr()?;
+        self.erwarte_z(Z::Bereich)?;
+        let hi = self.expr()?;
+        self.erwarte_kw(Kw::Of)?;
+        let element = self.typeexpr()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ArenaDecl {
+            name,
+            oeffentlich,
+            lo,
+            hi,
+            element,
             span: anfang.bis_zu(ende),
         })
     }
@@ -4615,6 +4948,101 @@ impl<'a> Parser<'a> {
     /// One path at least (the EBNF names no empty set); a trailing comma is allowed,
     /// the same rule as everywhere since 2026-08-16. No name of its own -- the set
     /// is its members, and what stands in no set never runs concurrently.
+    /// **«E6»: `profile { … }` -- the one hardware profile of the program.**
+    ///
+    /// Keyed mode entries (`arch x86_64;`) from the fixed key set plus
+    /// references to declared `assume` items (`assume <name>;`), never a
+    /// copy of their text (`PLAN-ERWEITUNG.md` §0c). At most one block per
+    /// unit -- the second one is the checker's (`N219`), not the reader's.
+    fn profildecl(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.erwarte_kw(Kw::Profile)?;
+        let block = self.profilblock()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ProfilBlock {
+            eintraege: block.eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **«E6»: `requires profile { … }` -- what a library asks of the profile.**
+    ///
+    /// The same entries as `profile`, standing in the library's module.
+    /// Linking refuses a requirement the program's profile does not carry
+    /// (`N217`) -- the checker's half, never the reader's.
+    fn profilbedarf(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.erwarte_kw(Kw::Requires)?;
+        self.erwarte_kw(Kw::Profile)?;
+        let block = self.profilblock()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ProfilBlock {
+            eintraege: block.eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **«E6»: the shared body of both profile heads.**
+    ///
+    /// Every entry ends in `;`, like every `assume` line: `arch x86_64;`
+    /// names the key's value, `assume <name>;` the declared assumption it
+    /// references. Values are identifiers -- modes, not numbers -- so a
+    /// computed value has no spelling here.
+    fn profilblock(&mut self) -> Erg<ProfilBlock> {
+        let anfang = self.span();
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut eintraege = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let t = self.blick();
+            let schluessel = match t.art {
+                Art::Wort(Kw::Arch) => ProfilSchluessel::Arch,
+                Art::Wort(Kw::Rounding) => ProfilSchluessel::Rundung,
+                Art::Wort(Kw::FpContract) => ProfilSchluessel::FpKontraktion,
+                Art::Wort(Kw::MemoryModel) => ProfilSchluessel::SpeicherModell,
+                Art::Wort(Kw::InterruptRouting) => ProfilSchluessel::InterruptRouting,
+                Art::Wort(Kw::Assume) => {
+                    self.pos += 1;
+                    let name = self.erwarte_ident()?;
+                    let ende = self.erwarte_z(Z::Semi)?;
+                    eintraege.push(ProfilEintrag::Annahme {
+                        name,
+                        span: t.span.bis_zu(ende),
+                    });
+                    continue;
+                }
+                _ => {
+                    self.absage(
+                        Absage::fehler(
+                            "P006",
+                            t.span,
+                            format!(
+                                "no profile entry starts here: {}",
+                                t.benennung(self.quelle)
+                            ),
+                        )
+                        .mit_notiz(
+                            "a profile entry is `arch <name>;`, `rounding <name>;`, \
+                             `fp_contract <name>;`, `memory_model <name>;`, \
+                             `interrupt_routing <name>;` or `assume <name>;`",
+                        ),
+                    );
+                    return Err(Abbruch);
+                }
+            };
+            self.pos += 1;
+            let wert = self.erwarte_ident()?;
+            let ende = self.erwarte_z(Z::Semi)?;
+            eintraege.push(ProfilEintrag::Modus {
+                schluessel,
+                wert,
+                span: t.span.bis_zu(ende),
+            });
+        }
+        let ende = self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(ProfilBlock {
+            eintraege,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
     fn concurrentdecl(&mut self) -> Erg<ConcurrentDecl> {
         let anfang = self.erwarte_kw(Kw::Concurrent)?;
         self.erwarte_z(Z::GeschweiftAuf)?;
@@ -5011,6 +5439,175 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// **`syscalldecl` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+    ///
+    /// ```ebnf
+    /// syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+    ///               "abi" ident "arch" ident "number" constexpr
+    ///               "regs" "in"  "{" [ sysregbind { "," sysregbind } [ "," ] ] "}"
+    ///               "regs" "out" "{" [ ident { "," ident } [ "," ] ] "}"
+    ///               "clobbers" "{" [ identlist ] "}"
+    ///               "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
+    ///               [ "requires" predlist ]
+    ///               [ "ensures"  predlist ]
+    ///               "effects" "{" efflist "}"
+    ///               ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
+    ///               | "kernel" path ";" ) ;
+    /// sysregbind = ident ( "=" | ":" ) ident ;   (* register first, parameter second *)
+    /// errmap     = ident "=>" ident ;
+    /// ```
+    ///
+    /// **Two places where the written examples fix the production's letter.** The §1
+    /// production line says `regbind` (`ident ":" ident`, entry order) for both maps,
+    /// but every written example -- PLAN-SYSCALL.md §1, SYNTAX.md §12.1, the gift probe
+    /// and the speech test -- writes `regs in { rdi = fd }` (register first, `=`) and
+    /// `regs out { rax }` (bare registers). The examples agree with each other and the
+    /// production agrees with `entrydecl`; what is built here is what the examples
+    /// write, with `:` accepted beside `=` at `regs in` so the production's spelling
+    /// reads too. *A `regs out` pair has no meaning -- the out value has no Gabbro-side
+    /// name, the generated decoding fills `result` -- so only the bare form reads
+    /// there, and a pair falls at `P001`.*
+    fn syscalldecl(&mut self) -> Erg<SyscallDecl> {
+        let anfang = self.erwarte_kw(Kw::Syscall)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_z(Z::RundAuf)?;
+        let parameter = if self.ist_z(Z::RundZu) {
+            Vec::new()
+        } else {
+            self.params()?
+        };
+        self.erwarte_z(Z::RundZu)?;
+        let ergebnis = if self.friss_z(Z::Pfeil) {
+            Some(self.typeexpr()?)
+        } else {
+            None
+        };
+        let fehler = if self.friss_kw(Kw::Or) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
+        self.erwarte_kw(Kw::Abi)?;
+        let abi = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Arch)?;
+        let arch = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Sysnumber)?;
+        let nummer = self.expr()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::In)?;
+        let regs_in = self.sysregs_in()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::Out)?;
+        let regs_out = self.sysregs_out()?;
+        self.erwarte_kw(Kw::Clobbers)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let clobbers = self.identlist_leer_erlaubt()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        self.erwarte_kw(Kw::Errors)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let errors = self.errmaps()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        // E4: the clauses stand in a FIXED order, as at an `fn` -- a tool that has to
+        // sort cannot say "`effects` is missing here".
+        let requires = if self.friss_kw(Kw::Requires) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let ensures = if self.friss_kw(Kw::Ensures) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let effects = self.effects_block()?;
+        // `assume … falsifier …` or `kernel <path>` -- exactly one of the two (E3:
+        // nothing is implicit, and a missing counterpart is the absence of both
+        // entries, a compile error at `P001`/`P029`).
+        let paarung = if self.friss_kw(Kw::Assume) {
+            let annahme = self.erwarte_ident()?;
+            let klasse = self.annahmeklasse()?;
+            self.erwarte_z(Z::Semi)?;
+            SyscallPaarung::Annahme { annahme, klasse }
+        } else {
+            self.erwarte_kw(Kw::Kernel)?;
+            let pfad = self.pfad()?;
+            self.erwarte_z(Z::Semi)?;
+            SyscallPaarung::Kernel { pfad }
+        };
+        Ok(SyscallDecl {
+            name,
+            parameter,
+            ergebnis,
+            fehler,
+            abi,
+            arch,
+            nummer,
+            regs_in,
+            regs_out,
+            clobbers,
+            errors,
+            requires,
+            ensures,
+            effects,
+            paarung,
+            span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// `sysregbind = ident ( "=" | ":" ) ident` -- register first, parameter second.
+    ///
+    /// The mirror image of `entry`'s `regbind`: at an entry the Gabbro side names the
+    /// slot (`nr : rax`), here the ABI fixes the register and Gabbro binds its
+    /// parameter into it (`rdi = fd`). Both separators read -- the examples write `=`,
+    /// the §1 production line writes `:` -- and both carry the same order.
+    fn sysregs_in(&mut self) -> Erg<Vec<(Ident, Ident)>> {
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let reg = self.erwarte_ident()?;
+            if !self.friss_z(Z::Gleich) {
+                self.erwarte_z(Z::Kolon)?;
+            }
+            let param = self.erwarte_ident()?;
+            liste.push((reg, param));
+            // The trailing comma is optional, as at `regsliste` (G4).
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(liste)
+    }
+
+    /// Bare out registers (`regs out { rax }`), with the optional trailing comma.
+    fn sysregs_out(&mut self) -> Erg<Vec<Ident>> {
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            liste.push(self.erwarte_ident()?);
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(liste)
+    }
+
+    /// `errmap = ident "=>" ident` -- errno to reason case, trailing comma optional.
+    fn errmaps(&mut self) -> Erg<Vec<(Ident, Ident)>> {
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let errno = self.erwarte_ident()?;
+            self.erwarte_z(Z::Doppelpfeil)?;
+            let grund = self.erwarte_ident()?;
+            liste.push((errno, grund));
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        Ok(liste)
+    }
+
     fn regsliste(&mut self) -> Erg<Vec<(Ident, Ident)>> {
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut liste = Vec::new();
@@ -5181,6 +5778,8 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Const
             | Kw::Static
             | Kw::Fn
+            | Kw::Library
+            | Kw::Translator
             | Kw::Spec
             | Kw::Impl
             | Kw::Raw
@@ -5203,6 +5802,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Entry
             | Kw::Entrust
             | Kw::Boot
+            | Kw::Arena
             | Kw::Syscall
             | Kw::Pub
             | Kw::When

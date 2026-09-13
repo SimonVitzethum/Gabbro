@@ -278,6 +278,12 @@ for _w, _s in _ITEM.items():
     probe(f"item.{_w}", "item", "", "    " + _s)
 probe("item.pub", "item", "    const Q : u32 = 1;", "    pub const Q : u32 = 1;")
 probe("item.when", "item", "    const Q : u32 = 1;", "    when TESTBUILD const Q : u32 = 1;")
+# Lane 111 (`constdecl.[`, the const-table literal): the base holds a scalar
+# const, the variant the table form -- the C gains the `static const` array,
+# so the form scores CARRIES. The broken twin (a short literal) is refused by
+# name (`K191`, gift 861), which the `gegenprobe` column carries.
+probe("constdecl.[", "modul", "    const Q : u32 = 1;",
+      "    const Q : [u32; 2] = [1, 2];")
 
 # -- statement heads ---------------------------------------------------------------------
 _STMT = {
@@ -322,11 +328,21 @@ probe("zuweisung_oder_ruf.publishes", "rumpf", "        r = r;", NICHT)
 # -- expressions -------------------------------------------------------------------------
 for _k, _e in (("+", "a + b"), ("-", "a - b")):
     probe(f"addexpr.{_k}", "ausdruck", "a", _e)
+# PLAN-BITS section 4 (lane 88): the overflow operators ride at the precedence
+# of their base operator. On the `ausdruck` host neither operand has an exact
+# unsigned range, so the wrapping variants score REFUSES (M153) and the
+# saturating one REFUSES (M154) -- both are carried verdicts: the checker has
+# a sentence about the form. The accept direction is pinned by
+# `crates/gabbro-check/tests/ueberlauf.rs`.
+for _k, _e in (("+%", "a +% b"), ("-%", "a -% b"), ("+|", "a +| b")):
+    probe(f"addexpr.{_k}", "ausdruck", "a", _e)
 for _k, _e in (("*", "a * b"), ("/", "a / b"), ("%", "a % b")):
     probe(f"mulexpr.{_k}", "ausdruck", "a", _e)
+probe("mulexpr.*%", "ausdruck", "a", "a *% b")
 for _k, _e in (("&", "a & b"), ("|", "a | b"), ("^", "a ^ b"),
                ("<<", "a << 1"), (">>", "a >> 1")):
     probe(f"bitexpr.{_k}", "ausdruck", "a", _e)
+probe("bitexpr.<<%", "ausdruck", "a", "a <<% b")
 for _k, _e in (("!", "!(a == b)"), ("-", "0 - a"), ("~", "~a")):
     probe(f"unary.{_k}", "ausdruck", "a", _e)
 probe("orexpr.||", "praedikat", "", " || true")

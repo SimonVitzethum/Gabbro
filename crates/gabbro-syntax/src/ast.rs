@@ -86,6 +86,34 @@ pub enum ItemArt {
     Entry(EntryDecl),
     Entrust(EntrustDecl),
     Boot(BootDecl),
+    /// **`syscall` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+    ///
+    /// Parsed since lane S5; refused by name as `P042` before. The declaration is an
+    /// `extern`-like head with an ABI binding (`abi`/`arch`/`number`), a register map
+    /// (`regs in`/`regs out`/`clobbers`), a total errno decoding (`errors` over the
+    /// `or R` channel) and either a named assumption (`assume … falsifier …`) or a
+    /// kernel pairing (`kernel <path>`, refused until lane S6's stub lands).
+    Syscall(SyscallDecl),
+    /// **`profile { … }` -- the ONE hardware profile of the program** («E6»).
+    ///
+    /// The one set of hardware assumptions the whole program runs under
+    /// (`PLAN-ERWEITUNG.md` §0c): keyed mode entries plus references to
+    /// declared `assume` items. At most one block per unit (`N219`).
+    Profil(ProfilBlock),
+    /// **`requires profile { … }` -- what a library asks of the profile** («E6»).
+    ///
+    /// A library does not assert assumptions; it requires profile entries
+    /// by reference. Linking refuses a requirement the program's profile
+    /// does not carry (`N217`).
+    ProfilBedarf(ProfilBlock),
+    /// **`arena` -- a monotone region with a lower and an upper bound**
+    /// («E4», SYNTAX.md §9.1, `PLAN-ERWEITUNG.md` §3).
+    ///
+    /// The declaration holds the reservation `lo` and the hard bound `hi`
+    /// (`capacity lo .. hi`) plus the element type. Allocation is monotone
+    /// (no per-element release, no fragmentation); `reset` starts a fresh
+    /// generation and invalidates every index bound before it.
+    Arena(ArenaDecl),
 }
 
 impl ItemArt {
@@ -116,6 +144,11 @@ impl ItemArt {
             ItemArt::Entry(e) => Some(&e.name),
             ItemArt::Entrust(e) => Some(&e.name),
             ItemArt::Boot(b) => Some(&b.name),
+            ItemArt::Syscall(s) => Some(&s.name),
+            // **«E6»:** a profile block carries entries, not a name -- like
+            // `use` and `concurrent` it names nothing into the scope.
+            ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => None,
+            ItemArt::Arena(a) => Some(&a.name),
         }
     }
 
@@ -146,6 +179,10 @@ impl ItemArt {
             ItemArt::Entry(_) => "entry",
             ItemArt::Entrust(_) => "entrust",
             ItemArt::Boot(_) => "boot",
+            ItemArt::Syscall(_) => "syscall",
+            ItemArt::Profil(_) => "profile",
+            ItemArt::ProfilBedarf(_) => "requires profile",
+            ItemArt::Arena(_) => "arena",
         }
     }
 }
@@ -589,6 +626,15 @@ pub enum ExprArt {
     },
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
+    /// **`[e0, e1, ...]` -- the const-table literal, and ONLY that.**
+    ///
+    /// Parsed exclusively as a `const` initializer (`constdecl`); the general
+    /// expression reader never produces it, so no body ever holds one. The
+    /// checker holds it against the declared array type element-wise
+    /// (`konstanten.rs`, `K190`-`K194`) and the emitter lowers it to one
+    /// `static const` C array. Any other position never parses, which is a
+    /// grammar fact rather than a refusal.
+    ArrayLit(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -630,6 +676,16 @@ pub enum BinOp {
     Mal,
     Geteilt,
     Rest,
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.** Each rides at
+    /// the precedence of its base operator (`parse.rs`: `addexpr` for the `+`-
+    /// family, `mulexpr` for `*%`, `bitexpr` for `<<%`). `PlusWrap`/`MinusWrap`/
+    /// `MalWrap`/`SchiebLinksWrap` wrap modulo 2^N on an exact unsigned range
+    /// `0 .. 2^N-1`; `PlusSat` clamps a sum into the shared operand range.
+    PlusWrap,
+    MinusWrap,
+    MalWrap,
+    SchiebLinksWrap,
+    PlusSat,
 }
 
 impl BinOp {
@@ -942,6 +998,36 @@ impl Domaene {
 pub struct FnDecl {
     pub oeffentlich: bool,
     pub klasse: Option<FnKlasse>,
+    /// **`library fn` -- a run-time library function (lane E2).**
+    ///
+    /// An ordinary Gabbro function with a body, a contract and a payload
+    /// type, called through `@lib#name`. The flag stands beside `klasse`
+    /// instead of inside it: the hull check (`N059`) and the payload check
+    /// (`N060`) ask about library functions of any implementor kind, and a
+    /// second `FnKlasse` variant would force every `klasse` match to decide
+    /// what a library is. `library extern fn` never parses: `library`
+    /// fills the same prefix slot the class words fill.
+    pub bibliothek: bool,
+    /// **`payload <path>` -- the payload type of a `library fn` (lane E2).**
+    ///
+    /// Names the table (a tree table is a table) the translator fills at
+    /// translation time (`PLAN-ERWEITUNG.md` §0b); `None` on every other
+    /// function. The parser demands the clause on a `library fn`
+    /// (`P043`); the checker holds the name against the declared tables
+    /// (`N060`). A path and not a bare name, so the table may stand in
+    /// another module than the function.
+    pub nutzlast: Option<Pfad>,
+    /// **`translator build for kernel` -- the served library function (lane E3).**
+    ///
+    /// `Some(kernel)` on a translator declaration: the `library fn` in the
+    /// same module whose payload type this translator fills at translation
+    /// time (`SYNTAX.md` §7.2). `None` on every other function. The parser
+    /// fills it from the `for` link; the checker holds exactly-one per
+    /// library function (`N200`/`N201`), `effects { pure }` (`N202`), a
+    /// `decreases` clause (`N203`) and the result against the payload
+    /// (`N204`). Read by the name pass; the body is checked by every pass
+    /// like any function body.
+    pub translator_fuer: Option<Ident>,
     pub name: Ident,
     pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,
@@ -1235,6 +1321,18 @@ pub enum StmtArt {
     /// `@library#function ( args ) { region };` -- a run-time library call
     /// (lane E1), refused by the checker with `N057` until lane E2 checks it.
     LibraryCall(LibraryCall),
+    /// `let i = alloc A (v) [else block];` -- monotone allocation («E4»).
+    ///
+    /// Stores `wert` in the next free slot of arena `tisch` and binds its
+    /// index to `name`. The `else` runs when the arena is full; it is owed
+    /// exactly when the static allocation count since the last reset may
+    /// exceed the reservation (`N212` in the checker).
+    Alloc(AllocStmt),
+    /// `reset A;` -- start a fresh generation of arena `tisch` («E4»).
+    ///
+    /// Sets the used counter to zero; every index bound before is stale
+    /// afterwards (`N211` in the checker).
+    ResetArena(Ident),
 }
 
 #[derive(Debug, Clone)]
@@ -1275,6 +1373,20 @@ impl LetSonst {
             LetQuelle::Ort(_) => None,
         }
     }
+}
+
+/// `let i = alloc A (v) [else block];` -- the bound index has the type
+/// `index into A` of the CURRENT generation; the checker tracks which.
+#[derive(Debug, Clone)]
+pub struct AllocStmt {
+    pub veraenderlich: bool,
+    pub name: Ident,
+    pub typ: Option<TypExpr>,
+    pub tisch: Ident,
+    pub wert: Expr,
+    /// The full-arena continuation. Owed exactly when the static count
+    /// since the last reset may exceed the reservation.
+    pub sonst: Option<Block>,
 }
 
 #[derive(Debug, Clone)]
@@ -1585,6 +1697,22 @@ pub struct Baumkanten {
     pub elter: Option<Ident>,
     pub kind: Option<Ident>,
     pub geschwister: Option<Ident>,
+    pub span: Span,
+}
+
+/// **`arena A capacity lo .. hi of T;` -- a monotone region («E4»).**
+///
+/// `lo` is the reservation: allocations statically within it owe no `else`.
+/// `hi` is the hard bound: the emitted array holds exactly `hi` elements.
+/// Both are translation-time constants with `lo <= hi` (`N210`).
+/// `T` is the element type; `A[i]` reads it, `alloc` stores it.
+#[derive(Debug, Clone)]
+pub struct ArenaDecl {
+    pub name: Ident,
+    pub oeffentlich: bool,
+    pub lo: Expr,
+    pub hi: Expr,
+    pub element: TypExpr,
     pub span: Span,
 }
 
@@ -2031,4 +2159,115 @@ pub struct BootDecl {
 pub enum BootSchritt {
     Ruf(Ruf),
     Setzt { name: Ident, wert: Expr },
+}
+
+/// **`syscall` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+///
+/// One EBNF rule (`syscalldecl`), one node here. What is optional in the grammar is
+/// `Option` here; what is mandatory there is a plain field here -- except `effects`,
+/// which the grammar makes mandatory (like at an `fn`, the clause is not fail-open).
+///
+/// The register side reads **register first, parameter second** (`rdi = fd`): the
+/// mirror image of `entry` (`nr : rax`), where the Gabbro side names the slot and the
+/// machine provides the register. Here the ABI fixes the register and Gabbro binds
+/// its parameter into it. `regs out` names bare registers (`rax`): the out value has
+/// no Gabbro-side name to bind, the generated errno decoding fills `result`.
+#[derive(Debug, Clone)]
+pub struct SyscallDecl {
+    pub name: Ident,
+    pub parameter: Vec<Parameter>,
+    pub ergebnis: Option<TypExpr>,
+    /// **`or R` -- the declared reason channel of the errno decoding.**
+    ///
+    /// Every target of the `errors` map must be a case of this `reason`; without it no
+    /// arm has a declared target.
+    pub fehler: Option<Ident>,
+    pub abi: Ident,
+    pub arch: Ident,
+    /// The call number -- a `constexpr`, read by the emitter's stub (lane S6).
+    pub nummer: Expr,
+    /// `(register, parameter)` -- every parameter bound exactly once.
+    pub regs_in: Vec<(Ident, Ident)>,
+    /// Bare out registers -- never clobbered.
+    pub regs_out: Vec<Ident>,
+    pub clobbers: Vec<Ident>,
+    /// `(errno, reason case)` -- total over the listed errnos.
+    pub errors: Vec<(Ident, Ident)>,
+    pub requires: Vec<Pred>,
+    pub ensures: Vec<Pred>,
+    pub effects: Wirkungen,
+    pub paarung: SyscallPaarung,
+    pub span: Span,
+}
+
+/// **`assume … falsifier …` or `kernel <path>`** -- the counterpart of a syscall.
+///
+/// With `assume` the per-call assumption is named with its falsifier, as for a
+/// device. With `kernel` the call is paired with a Gabbro kernel's dispatch entry
+/// for the same number and no assumption is named -- refused until the pairing
+/// check and the stub land (lane S6).
+#[derive(Debug, Clone)]
+pub enum SyscallPaarung {
+    Annahme { annahme: Ident, klasse: AnnahmeKlasse },
+    Kernel { pfad: Pfad },
+}
+
+// ---------------------------------------------------------------------------------------
+// E6. The hardware profile and library requirements
+// ---------------------------------------------------------------------------------------
+
+/// **The fixed key set of the hardware profile (lane E6, «E6»).**
+///
+/// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Profil.lean`
+/// (`PLAN-ERWEITUNG.md` §0c, point 3): an assumption fixing a mode or a
+/// resource names its key and value. `arch` reuses the existing word; the
+/// other four are words of their own so a typo falls at the reader, not in
+/// a string comparison nobody reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProfilSchluessel {
+    Arch,
+    Rundung,
+    FpKontraktion,
+    SpeicherModell,
+    InterruptRouting,
+}
+
+impl ProfilSchluessel {
+    /// The spelling in the source -- the word the reader matched.
+    pub const fn text(self) -> &'static str {
+        match self {
+            ProfilSchluessel::Arch => "arch",
+            ProfilSchluessel::Rundung => "rounding",
+            ProfilSchluessel::FpKontraktion => "fp_contract",
+            ProfilSchluessel::SpeicherModell => "memory_model",
+            ProfilSchluessel::InterruptRouting => "interrupt_routing",
+        }
+    }
+}
+
+/// One entry of a `profile` or `requires profile` block: a keyed mode
+/// assumption (`arch x86_64;`) or a reference to a declared `assume` item
+/// (`assume <name>;`), never a copy of its text (`PLAN-ERWEITUNG.md` §0c,
+/// point 2).
+#[derive(Debug, Clone)]
+pub enum ProfilEintrag {
+    Modus { schluessel: ProfilSchluessel, wert: Ident, span: Span },
+    Annahme { name: Ident, span: Span },
+}
+
+impl ProfilEintrag {
+    pub fn span(&self) -> Span {
+        match self {
+            ProfilEintrag::Modus { span, .. } => *span,
+            ProfilEintrag::Annahme { span, .. } => *span,
+        }
+    }
+}
+
+/// The shared shape of `profile { … }` and `requires profile { … }`:
+/// the entries in source order with the block's site.
+#[derive(Debug, Clone)]
+pub struct ProfilBlock {
+    pub eintraege: Vec<ProfilEintrag>,
+    pub span: Span,
 }

@@ -700,6 +700,15 @@ fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Um
         StmtArt::LetSonst(l) => {
             karte.insert(l.name.text.clone(), Typ::Unbekannt);
         }
+        // **«E4»:** the bound index carries `index into A` -- the
+        // annotation, or the arena's own index type, like in `kosten.rs`.
+        StmtArt::Alloc(a) => {
+            let t = match &a.typ {
+                Some(td) => u.typ_von_ausdruck_decl(modul, td),
+                None => u.indextyp(modul, &a.tisch.text, false),
+            };
+            karte.insert(a.name.text.clone(), t);
+        }
         StmtArt::AwaitLoad(a) => {
             let t = u.typ_von_ort(modul, &a.quelle, karte);
             karte.insert(a.name.text.clone(), t);
@@ -1033,7 +1042,9 @@ fn d027_orte_aus_expr(e: &Expr, verweise: &HashSet<String>, aus: &mut Vec<Ort>) 
         | ExprArt::Unaer(_, _)
         // **Lane E1:** the arguments of a library call name places like any
         // call's; the descent runs through `unterausdruecke` like the rest.
+        // **Lane 111:** the elements of a table literal the same way.
         | ExprArt::Binaer(_, _, _)
+        | ExprArt::ArrayLit(_)
         | ExprArt::LibraryCall(_) => {
             for k in crate::unterausdruecke(e) {
                 d027_orte_aus_expr(k, verweise, aus);

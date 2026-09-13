@@ -1,0 +1,48 @@
+-- 90 -- the error path of a system call: the kernel says no.
+--
+-- The same `write` shape as `beispiele/74`, called on a descriptor that is
+-- never open. The kernel answers `EBADF`, the generated decoding delivers
+-- `BadFd` through the `or IoError` channel, and the wrapper names it. The
+-- emission check runs this file beside 74: 74 measures the value path (a
+-- `write(1, "ok\n", 3)` returns 3), this one the reason path.
+
+module beispiel::syscall_errno {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    WouldBlock  = 11 "the descriptor is non-blocking and the write would block"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+-- Descriptor 9999 is never open in a test process (and out of range where the
+-- table is smaller) -- either way the kernel answers `EBADF`, deterministically.
+impl fn schreibe_ungueltig(buf : u64, len : u64) -> u64
+    effects { pure }
+{
+    let n = write(9999, buf, len) else (e) {
+        match e {
+            BadFd       => { return 777; }
+            Interrupted => { return 0; }
+            WouldBlock  => { return 0; }
+        }
+    }
+    return n;
+}
+
+}

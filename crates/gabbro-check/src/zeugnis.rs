@@ -129,6 +129,15 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Schablone("table.absenkung"),
         grund: "slot struct plus a fixed array; `count N` is the reason it is fixed",
     },
+    // **«E4»:** the buffer plus its counter -- a fixed array for the same
+    // reason as the table's, and the reservation is a checker fact (W6),
+    // not a second object.
+    Posten {
+        konstrukt: "arena",
+        traegt: Traegt::Direkt,
+        grund: "`buf[hi]` beside a `uint32_t used`; `hi` is the reason the \
+                array is fixed, `reset` stores zero into the counter",
+    },
     Posten {
         konstrukt: "format",
         traegt: Traegt::Schablone("format.roundtrip"),
@@ -208,6 +217,27 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Geloescht,
         grund: "stands as an assumption in the head of the artefact, not as code (SYNTAX.md 12)",
     },
+    Posten {
+        konstrukt: "profile",
+        traegt: Traegt::Geloescht,
+        grund: "the one hardware profile of the program (SYNTAX.md 12.2): its entries \
+                are manifest lines (`manifest::profil_und_bedarf`), not code",
+    },
+    Posten {
+        konstrukt: "requires profile",
+        traegt: Traegt::Geloescht,
+        grund: "what a library asks of the profile (SYNTAX.md 12.2): name references \
+                held by linking (`N217`), manifest lines, not code",
+    },
+    Posten {
+        konstrukt: "syscall",
+        traegt: Traegt::Fremd,
+        grund: "the USER side is generated -- the stub (inline `syscall` with the declared \
+                register binding, clobbers, and the errno decoding over the `or R` channel) \
+                is `syscall_stumpf` since lane S6. What stays foreign is the OTHER side: \
+                the number, the errno table, the kept contract -- the kernel's, under the \
+                named assumption this row carries beside the stub",
+    },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
         konstrukt: "let",
@@ -277,6 +307,23 @@ pub const EINORDNUNG: &[Posten] = &[
         konstrukt: "narrow",
         traegt: Traegt::Direkt,
         grund: "the one place where a range check REMAINS in the C — and there it stands",
+    },
+    // **«E4»:** the checked bump and the counter store. The `else` is the
+    // failure branch the reservation owes; without one the checker has
+    // counted the room, and the bump is unconditional (W6 in reverse: what
+    // the checker carries is NOT repeated in the C).
+    Posten {
+        konstrukt: "alloc",
+        traegt: Traegt::Direkt,
+        grund: "`i = used; buf[used++] = (v)`, guarded by `used < hi` where \
+                the `else` stands -- the reservation decides statically \
+                whether the guard is owed",
+    },
+    Posten {
+        konstrukt: "arena reset",
+        traegt: Traegt::Direkt,
+        grund: "`used = 0` -- the generation moves in the checker alone, and \
+                every older index is stale by the rule, not by a runtime check",
     },
     // **The nine traversal domains, one entry each** *(2026-08-31)*.
     //
@@ -448,17 +495,17 @@ pub const EINORDNUNG: &[Posten] = &[
                 through an exit of its own, because `reason` values are handed out by people \
                 and no word is free for „no error\"",
     },
-    // **Lane E1: booked, although nothing lowers it.** An entry without a
+    // **Lane E2: booked, although nothing lowers it.** An entry without a
     // lowering is harmless by this table's own contract; a lowering without
     // an entry is `UNZUGEORDNET`. The checker refuses every library call
-    // (`N057`) until lane E2 checks it, so no C carries this mark yet --
-    // lane E2 re-books it with the lowering it brings.
+    // (`N057` unresolved, `N069` resolved), so no C carries this mark --
+    // the translation lane re-books it with the lowering it brings.
     Posten {
         konstrukt: "library call",
         traegt: Traegt::Fremd,
-        grund: "a run-time call of a function someone else provides (`N057` refuses \
-                every such call until lane E2 checks arguments, payload and \
-                contract) -- no prototype, no lowering, only the refusal",
+        grund: "a run-time call of a function someone else provides (the checker \
+                refuses every such call -- `N057` unresolved, `N069` resolved) \
+                -- no prototype, no lowering, only the refusal",
     },
 ];
 
@@ -598,6 +645,9 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             }
         }
         ItemArt::Tabelle(_) => zaehle(&mut e, "table"),
+        // **«E4»:** the buffer type beside its counter -- booked like the
+        // table, because the emitter lowers it.
+        ItemArt::Arena(_) => zaehle(&mut e, "arena"),
         ItemArt::Format(_) => zaehle(&mut e, "format"),
         ItemArt::Device(d) => {
             zaehle(&mut e, "device");
@@ -626,6 +676,11 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
+        // **Lane E6:** the profile and its requirements lower to no C --
+        // their entries are manifest lines (`manifest::profil_und_bedarf`),
+        // booked here like the assumptions beside them.
+        ItemArt::Profil(_) => zaehle(&mut e, "profile"),
+        ItemArt::ProfilBedarf(_) => zaehle(&mut e, "requires profile"),
         ItemArt::Reason(_) => zaehle(&mut e, "reason"),
         ItemArt::Rcu(r) => {
             zaehle(&mut e, "rcu");
@@ -738,11 +793,51 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "check");
             block(&c.can_fail, &mut e, &geister);
         }
+        // **A `syscall` is a generated stub over a foreign kernel** -- and the one
+        // line for which the word exists. It names the whole contract outward:
+        // the ABI table, the machine, the number, and the counterpart the call
+        // rests on. *A syscall without this line would be a foreign body the
+        // certificate hides.* The stub itself is lane S6's (`syscall_stumpf`);
+        // the promise stands here beside it, not instead of it.
+        ItemArt::Syscall(s) => {
+            zaehle(&mut e, "syscall");
+            let gegenueber = match &s.paarung {
+                SyscallPaarung::Annahme { annahme, .. } => {
+                    format!("`assume {}` holds", annahme.text)
+                }
+                SyscallPaarung::Kernel { pfad } => {
+                    format!("paired with kernel `{}`", pfad.text())
+                }
+            };
+            e.fremde.push((
+                s.name.text.clone(),
+                format!(
+                    "SYSCALL under abi `{}` on `{}`, number {} -- {}; the errno \
+                     decoding is generated over the `or {}` channel",
+                    s.abi.text,
+                    s.arch.text,
+                    nummer_text(&s.nummer),
+                    gegenueber,
+                    s.fehler.as_ref().map(|r| r.text.as_str()).unwrap_or("-"),
+                ),
+            ));
+        }
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
         // stillschweigend mitnimmt — es faellt als `UNZUGEORDNET` auf.
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
     });
     e
+}
+
+/// The call number of a `syscall` as the certificate prints it: the literal
+/// where one stands, and the shape where a `constexpr` does. The checker does
+/// not evaluate it -- the stub (lane S6) reads the value, the certificate only
+/// names which declaration it came from.
+fn nummer_text(n: &Expr) -> String {
+    match &n.art {
+        ExprArt::Zahl(v) => v.to_string(),
+        _ => "constexpr".to_string(),
+    }
 }
 
 /// **Sagt diese Deklaration, was ihr Rumpf HERSTELLEN muss?**
@@ -807,6 +902,16 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Gruppe(_) => "group",
         // **Lane C, additive:** the new declaration reports its kind like every other.
         ItemArt::Concurrent(_) => "concurrent",
+        // **Lane E6, additive:** the profile blocks report their kind like
+        // every other -- the entries themselves are manifest lines.
+        ItemArt::Profil(_) => "profile",
+        ItemArt::ProfilBedarf(_) => "requires profile",
+        // **Lane S6, additive:** a `syscall` lowers to its stub, so the
+        // certificate books the kind beside the generated body -- the
+        // counterpart line above carries what the stub assumes.
+        ItemArt::Syscall(_) => "syscall",
+        // **«E4», additive:** the buffer type beside the generated storage.
+        ItemArt::Arena(_) => "arena",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
@@ -822,8 +927,8 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Zuweisung(_) => zaehle(e, "assignment"),
             StmtArt::Return(_) => zaehle(e, "return"),
             StmtArt::Ruf(_) => zaehle(e, "call"),
-            // **Lane E1:** a library call is refused by the checker (`N057`)
-            // until lane E2 checks it -- the entry vouches nothing beyond that.
+            // **Lane E2:** a library call is refused by the checker
+            // (`N057`/`N069`) -- the entry vouches nothing beyond that.
             StmtArt::LibraryCall(_) => zaehle(e, "library call"),
             StmtArt::Wenn(w) => {
                 zaehle(e, "if");
@@ -877,6 +982,16 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 zaehle(e, "let … else");
                 block(&l.sonst, e, geister);
             }
+            // **«E4»:** the allocation and the reset lower to a checked
+            // bump and a counter store -- both are derivation steps the
+            // certificate counts, like the `narrow` above.
+            StmtArt::Alloc(a) => {
+                zaehle(e, "alloc");
+                if let Some(sonst) = &a.sonst {
+                    block(sonst, e, geister);
+                }
+            }
+            StmtArt::ResetArena(_) => zaehle(e, "arena reset"),
             // **`breaking` is a booked construct since 2026-08-31.** It used to be pushed
             // straight onto `unzugeordnet` because the emitter refused it -- and the two
             // halves moved together: the lowering and its entry in `EINORDNUNG`.

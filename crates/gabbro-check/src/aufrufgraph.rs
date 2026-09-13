@@ -72,6 +72,12 @@ pub struct Knoten {
     pub verlangt: Vec<(String, bool)>,
     /// Hat sie überhaupt eine `effects`-Klausel? Ohne sie ist nichts ableitbar.
     pub hat_effects: bool,
+    /// **Lane E2: a foreign body (`extern`/`raw`/`prim`/`asm`).**
+    ///
+    /// Set at build time from the declaration; read by `fremde_in_huelle`
+    /// for the library-hull check (`N059`). Only function nodes can carry
+    /// it -- transitions, devices, generated heads and conversions never do.
+    pub fremd: bool,
     pub span: gabbro_syntax::span::Span,
 }
 
@@ -151,6 +157,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                     ruft: BTreeSet::new(),
                     verlangt: Vec::new(),
                     hat_effects: ue.effects.is_some(),
+                    fremd: false,
                     parameter: Vec::new(),
                     rufe: Vec::new(),
                     indirect: Vec::new(),
@@ -182,6 +189,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 ruft: BTreeSet::new(),
                 verlangt: Vec::new(),
                 hat_effects: true,
+                fremd: false,
                 parameter: Vec::new(),
                 rufe: Vec::new(),
                 indirect: Vec::new(),
@@ -209,6 +217,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 ruft: BTreeSet::new(),
                 verlangt: Vec::new(),
                 hat_effects: true,
+                fremd: false,
                 parameter: kopf.parameter.iter().map(|(n, _)| n.clone()).collect(),
                 rufe: Vec::new(),
                 indirect: Vec::new(),
@@ -227,6 +236,8 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             ruft: BTreeSet::new(),
             verlangt: Vec::new(),
             hat_effects: f.effects.is_some(),
+            fremd: matches!(f.klasse, Some(FnKlasse::Extern) | Some(FnKlasse::Raw) | Some(FnKlasse::Prim))
+                || matches!(f.rumpf, FnRumpf::Asm(_)),
             parameter: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             rufe: Vec::new(),
             indirect: Vec::new(),
@@ -280,6 +291,11 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         }
         if let FnRumpf::Block(b) = &f.rumpf {
             sammle_rufe(b, &mut k.ruft);
+            // **Lane E2: library calls are edges too** -- resolved to the
+            // callee's key, unresolved to their own spelling (which matches
+            // no key, so the hull turns incomplete instead of silently
+            // dropping the call). See `nimm_bibliothek`.
+            sammle_bibliothek(b, u, modul, &mut k.ruft, &mut k.rufe);
             // **The local type picture an indirect call needs** (2026-08-21). A call through
             // a place can only be read if the type of that place is known -- the parameters
             // cover `t->senden`, the globals cover `TAB.bereit`, and the annotated `let`
@@ -308,6 +324,53 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
+    // **A `syscall` is a callee with declared effects, exactly like an `extern
+    // fn`.** Without a node here the call effects of every caller are
+    // undecidable (`E009`) over a CORRECT program -- a hole in the GRAPH, not
+    // in the program. The node carries the declared effects, the parameter
+    // names for the cross-boundary bridge, and the `Held` requirements; the
+    // contract calls of `requires`/`ensures` are edges like at an `fn`. There
+    // is no body to scan -- the body is the machine.
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Syscall(s) = &item.art else {
+            return;
+        };
+        let mut k = Knoten {
+            eigen: BTreeSet::new(),
+            ruft: BTreeSet::new(),
+            verlangt: Vec::new(),
+            hat_effects: true,
+            // Lane E2: a syscall is no foreign body -- PLAN-ERWEITUNG.md
+            // §0c names it as a construct a library may reach hardware
+            // through. Its assumptions are named, not smuggled.
+            fremd: false,
+            parameter: s.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            rufe: Vec::new(),
+            indirect: Vec::new(),
+            modul: modul.to_string(),
+            span: s.name.span,
+        };
+        for e in &s.effects.liste {
+            k.eigen.insert(e.art.text());
+        }
+        for p in &s.requires {
+            held_aus_pred(p, &mut k.verlangt);
+        }
+        for p in s.requires.iter().chain(&s.ensures) {
+            for e in crate::ausdruecke_im_praedikat(p) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        if crate::ist_praedikatswort(r) {
+                            continue;
+                        }
+                        nimm(r, &mut k.ruft);
+                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None);
+                    }
+                }
+            }
+        }
+        g.knoten.insert(schluessel(modul, &s.name.text), k);
+    });
     // **G9, 2026-09-04 -- the eight integer conversions are CALLEES with declared
     // effects, exactly the gap the three comments above already name.** Without a node
     // here, `u64(a)` inside a `pure` function made that function's OWN effect hull
@@ -334,6 +397,47 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 ruft: BTreeSet::new(),
                 verlangt: Vec::new(),
                 hat_effects: true,
+                fremd: false,
+                parameter: Vec::new(),
+                rufe: Vec::new(),
+                indirect: Vec::new(),
+                modul: String::new(),
+                span: gabbro_syntax::span::Span::neu(0, 0),
+            },
+        );
+    }
+    // **Bit intrinsics (PLAN-BITS §3): the seven claimed calls are CALLEES with
+    // declared effects, for the same reason the eight conversions above are.**
+    // Without a node here, `clz(x)` inside a `pure` function made that function's
+    // own hull undecidable (*"`f` are undecidable: `clz` is unknown to the
+    // graph"*) and drew `H021` over a correct program. An intrinsic reads its
+    // arguments and writes nothing -- `pure` is what `emit.rs::ruf` lowers it
+    // to (a `__builtin_*` expression or a `gabbro_rot*` helper call), so the
+    // node says `pure` the way the conversion nodes do. Read off
+    // `crate::ist_bitintrinsik`, never repeated by hand: a name the predicate
+    // does not know gets no node here and falls where undeclared callees fall.
+    for wort in [
+        "clz",
+        "ctz",
+        "log2_floor",
+        "popcount",
+        "rotl",
+        "rotr",
+        "bswap",
+    ] {
+        debug_assert!(crate::ist_bitintrinsik(wort));
+        let mut eigen = BTreeSet::new();
+        eigen.insert("pure".to_string());
+        g.knoten.insert(
+            wort.to_string(),
+            Knoten {
+                eigen,
+                ruft: BTreeSet::new(),
+                verlangt: Vec::new(),
+                hat_effects: true,
+                // Lane E2: a bit intrinsic is a pure compiler op, no
+                // foreign body.
+                fremd: false,
                 parameter: Vec::new(),
                 rufe: Vec::new(),
                 indirect: Vec::new(),
@@ -398,6 +502,37 @@ impl Graph {
     /// parameters. *They stood in the node and had no reader.*
     pub fn parameter(&self, start: &str) -> Vec<String> {
         self.knoten.get(start).map(|k| k.parameter.clone()).unwrap_or_default()
+    }
+
+    /// **Lane E2: foreign bodies reachable from here, transitively.**
+    ///
+    /// Walks the resolved `rufe` keys with a visited set (cycles end the
+    /// walk, they do not end the answer) and names every reached node
+    /// flagged `fremd` (`extern`/`raw`/`prim`/`asm`), sorted. Powers the
+    /// library-hull check (`N059` in namen.rs): a library function whose
+    /// hull holds a foreign body is refused. Calls through a place have
+    /// no key and are not walked -- their effects stay guarded by `E009`,
+    /// and this function says nothing about them.
+    pub fn fremde_in_huelle(&self, start: &str) -> Vec<String> {
+        let mut gesehen = BTreeSet::new();
+        let mut fremd = Vec::new();
+        let mut stapel = vec![start.to_string()];
+        while let Some(s) = stapel.pop() {
+            if !gesehen.insert(s.clone()) {
+                continue;
+            }
+            let Some(k) = self.knoten.get(&s) else {
+                continue;
+            };
+            if k.fremd {
+                fremd.push(s.clone());
+            }
+            for (ziel, _) in &k.rufe {
+                stapel.push(ziel.clone());
+            }
+        }
+        fremd.sort();
+        fremd
     }
 
     pub fn huelle(&self, start: &str) -> Huelle {
@@ -864,6 +999,66 @@ fn sammle_kanten(
         }
         for k in crate::unterbloecke(s) {
             sammle_kanten(k, aus, indirect, vertrag);
+        }
+    }
+}
+/// **Lane E2: a library call is an edge.**
+///
+/// A resolved `@lib#f` files the callee's qualified key into `ruft` and
+/// the `(key, argument places)` pair into `rufe` -- exactly what
+/// `nimm`/`nimm_ruf` file for an ordinary call, so the caller's hull
+/// carries the library function's effects and `E008` reads them like any
+/// call's. An unresolved one files its own spelling (`@lib#f`), which
+/// matches no key: the hull turns incomplete (`E009`) instead of silently
+/// dropping the call. The argument places go beside the key exactly as
+/// `nimm_ruf` files them, so parameter substitution (`writes p.slots`)
+/// works across the edge.
+fn nimm_bibliothek(
+    r: &LibraryCall,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    ruft: &mut BTreeSet<String>,
+    rufe: &mut Vec<(String, Vec<Option<String>>)>,
+) {
+    let args: Vec<Option<String>> = r
+        .args
+        .iter()
+        .map(|a| ort_unter_klammern(a).map(|o| o.text()))
+        .collect();
+    let schluessel = match u.bibliothek(modul, &r.library.text, &r.function.text) {
+        Some(z) => z.name,
+        None => format!("@{}#{}", r.library.text, r.function.text),
+    };
+    ruft.insert(schluessel.clone());
+    rufe.push((schluessel, args));
+}
+
+/// The block walk for `nimm_bibliothek`: statement position directly,
+/// binding position through the shared expression walkers, nested blocks
+/// through `unterbloecke`. Contracts cannot hold a library call (the
+/// reader wires `libcall` only into statement and binding position), so
+/// unlike `sammle_kanten` there is no predicate leg -- and if a later
+/// lane adds one, this walk goes quiet instead of covering it.
+fn sammle_bibliothek(
+    b: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    ruft: &mut BTreeSet<String>,
+    rufe: &mut Vec<(String, Vec<Option<String>>)>,
+) {
+    for s in &b.anweisungen {
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::LibraryCall(r) = &x.art {
+                    nimm_bibliothek(r, u, modul, ruft, rufe);
+                }
+            }
+        }
+        if let StmtArt::LibraryCall(r) = &s.art {
+            nimm_bibliothek(r, u, modul, ruft, rufe);
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_bibliothek(k, u, modul, ruft, rufe);
         }
     }
 }

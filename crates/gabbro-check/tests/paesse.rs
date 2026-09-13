@@ -2518,3 +2518,929 @@ fn library_call_labelled_argument_falls() {
         "P036",
     );
 }
+
+// -- Lane E2: the checked library call ---------------------------------------------------
+// A library module declares a run-time function with a contract and a
+// payload type; the call resolves and is checked like an ordinary call,
+// then refused with `N069` until the translator exists. Unresolved calls
+// stay `N057`; the declaration side has `N059`/`N060`/`P043`/`P044`, and a
+// direct call to a library function is `N061`.
+
+/// The exact Fehler set, sorted -- for probes that must fall with
+/// nothing beside the pinned codes.
+fn faellt_genau(quelle: &str, erwartet: &[&str]) {
+    let mut gefallen: Vec<&str> = codes(quelle)
+        .iter()
+        .filter(|(_, s)| *s == Stufe::Fehler)
+        .map(|(k, _)| *k)
+        .collect();
+    gefallen.sort_unstable();
+    let mut soll: Vec<&str> = erwartet.to_vec();
+    soll.sort_unstable();
+    assert_eq!(
+        gefallen, soll,
+        "expected exactly {soll:?}, got {gefallen:?}\n{quelle}"
+    );
+}
+
+fn library_module_src() -> String {
+    "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+-- **Lane E3:** the serving translator -- identity, the region already in
+-- payload form. Without it every fixture below would carry `N200` beside
+-- the code it pins.
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+"
+    .to_string()
+}
+
+fn library_call_src(stmt: &str) -> String {
+    format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    {stmt}
+    return a;
+}}
+}}",
+        library_module_src()
+    )
+}
+
+#[test]
+fn library_resolved_n058_and_nothing_else() {
+    // The positive probe: two resolving calls, and nothing fires beside
+    // the translation refusal -- no N057, no M143, no E009, no H021, no
+    // K003. Arguments, effects and costs are all clean.
+    faellt_genau(
+        &library_call_src(
+            "@spirv#kernel(a) { dispatch 0 };\n    let code = @spirv#kernel(a) { dispatch 0 };",
+        ),
+        &["N069", "N069"],
+    );
+}
+
+#[test]
+fn library_unknown_module_n057() {
+    faellt_mit(
+        "module app {
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @nope#kernel(a) { dispatch 0 };
+    return a;
+}
+}",
+        "N057",
+    );
+}
+
+#[test]
+fn library_unknown_function_n057() {
+    // The module resolves, the function does not -- including the case
+    // where the name stands for an ordinary function (named in the note).
+    faellt_mit(&library_call_src("@spirv#missing(a) { dispatch 0 };"), "N057");
+    faellt_genau(
+        "module gpu::spirv {
+impl fn helper(n : u32) -> u32 effects { pure } costs <= 1 ops {
+    return n;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @spirv#helper(a) { dispatch 0 };
+    return a;
+}
+}",
+        &["N057", "H021", "K003"],
+    );
+}
+
+#[test]
+fn library_wrong_argument_like_ordinary() {
+    // A resolving call with a `bool` where `u32` stands: the ordinary
+    // per-argument diagnostic fires beside the translation refusal.
+    faellt_genau(
+        &library_call_src("@spirv#kernel(true) { dispatch 0 };"),
+        &["M135", "N069"],
+    );
+}
+
+#[test]
+fn library_wrong_arity_m143() {
+    // Arity is held at the library edge exactly as at a direct call.
+    faellt_mit(&library_call_src("@spirv#kernel(a, a) { dispatch 0 };"), "M143");
+    faellt_genau(
+        &library_call_src("@spirv#kernel(a, a) { dispatch 0 };"),
+        &["M143", "N069"],
+    );
+}
+
+#[test]
+fn library_effect_edge_e008() {
+    // Effects cross the library edge through the call graph: a writing
+    // library function under a `pure` caller is E008, like any call.
+    faellt_mit(
+        "module gpu::spirv {
+table KernelTab count 4 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn store(i : index into KernelTab) payload KernelTab
+    effects { writes KernelTab.slots }
+    costs <= 8 ops
+{
+    KernelTab.slots[i].words = 1;
+    return;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#store(a) { dispatch 0 };
+    return a;
+}
+}",
+        "E008",
+    );
+}
+
+#[test]
+fn library_foreign_hull_n059() {
+    // Direct (`launch`) and transitive (`mid` -> `launch`) foreign bodies
+    // are both named; the resolving call still carries N069 beside it.
+    faellt_genau(
+        "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+extern fn launch(d : u32) -> u32 effects { pure } costs <= 1 ops;
+impl fn mid(n : u32) -> u32 effects { pure } costs <= 2 ops {
+    return launch(n);
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 16 ops
+{
+    return mid(n);
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#kernel(a) { dispatch 0 };
+    return a;
+}
+}",
+        &["N069", "N059"],
+    );
+}
+
+#[test]
+fn library_payload_no_table_n060() {
+    // The translator answers `u32` -- neither side names a table, so the
+    // payload refusal stands alone: `N204` pins only a translator whose
+    // result misses a NAMED payload.
+    faellt_genau(
+        "module gpu::spirv {
+pub library fn kernel(n : u32) -> u32 payload NoSuchTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator build for kernel(region : u32) -> u32
+    effects { pure }
+    costs <= 8 ops
+    decreases region
+{
+    return region;
+}
+}",
+        &["N060"],
+    );
+}
+
+#[test]
+fn library_missing_payload_p043() {
+    faellt_genau(
+        "module m {
+library fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
+    return a;
+}
+}",
+        &["P043"],
+    );
+}
+
+#[test]
+fn library_missing_body_p044() {
+    // The translator stands -- the body refusal pins the library
+    // declaration alone, not its linkage.
+    faellt_genau(
+        "module m {
+table T count 1 {
+    slot {
+        w : u32,
+    }
+}
+library fn f(a : u32) -> u32 payload T effects { pure } costs <= 1 ops;
+translator b for f(region : T) -> T
+    effects { pure }
+    costs <= 1 ops
+    decreases region.w
+{
+    return region;
+}
+}",
+        &["P044"],
+    );
+}
+
+#[test]
+fn library_direct_call_n061() {
+    // A direct call to a library function -- from its own module and from
+    // another one -- has no region and no payload: refused by form.
+    faellt_genau(
+        "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+pub impl fn direct(n : u32) -> u32 effects { pure } costs <= 16 ops {
+    return kernel(n);
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+module app {
+use gpu::spirv;
+impl fn g(a : u32) -> u32 effects { pure } costs <= 16 ops {
+    return gpu::spirv::kernel(a);
+}
+}",
+        &["N061", "N061"],
+    );
+}
+
+// -- Lane E7: error mapping into the region --------------------------------------------
+// The translation refusal (`N069`) is about region content nobody compiled
+// yet, so its span sits INSIDE the region -- at the first region token --
+// not at the call. This pins the line AND the column over a region that
+// spans several lines: the reported site must equal the token's own site.
+
+#[test]
+fn library_n069_points_at_first_region_token_across_lines() {
+    let quelle = format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    @spirv#kernel(a) {{
+        dispatch
+        0
+    }};
+    return a;
+}}
+}}",
+        library_module_src()
+    );
+    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    let _ = pruefe(&baum, &mut absagen);
+    let mut gefallen: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    gefallen.sort_unstable();
+    assert_eq!(
+        gefallen,
+        vec!["N069"],
+        "a clean resolving call falls with exactly one N069:\n{}",
+        absagen.zeige(&quelle)
+    );
+    let weigerung = absagen
+        .absagen
+        .iter()
+        .find(|a| a.code == "N069")
+        .expect("N069 fired");
+    let index = gabbro_syntax::span::Zeilenindex::neu(&quelle);
+    let gemeldet = index.stelle(&quelle, weigerung.span.von);
+    // The first region token is `dispatch`, on its own line below the call.
+    let token_versatz = quelle.find("dispatch").expect("the region names `dispatch`") as u32;
+    let erwartet = index.stelle(&quelle, token_versatz);
+    let ruf_zeile = index.stelle(&quelle, quelle.find("@spirv").expect("the call") as u32).zeile;
+    assert!(
+        erwartet.zeile > ruf_zeile,
+        "the probe must span lines: call on {ruf_zeile}, token on {}",
+        erwartet.zeile
+    );
+    assert_eq!(
+        (gemeldet.zeile, gemeldet.spalte),
+        (erwartet.zeile, erwartet.spalte),
+        "N069 must point at the region token, not at the call"
+    );
+}
+
+// -- Lane E6: the hardware profile and library requirements ------------------------------
+// A profile with keyed entries and a referenced assumption, plus a library
+// requiring a subset of it, passes every rule of the lane. Each refusal has
+// its falling direction here and its poison probe under `beispiele/gift/`.
+
+/// A profile frame: one assumption, one profile, one library requiring a
+/// subset -- the positive shape every falling test below breaks once.
+fn profil_rahmen(bedarf: &str, profil: &str) -> String {
+    format!(
+        "module app {{
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module gpu {{
+requires profile {{
+    {bedarf}
+}};
+}}
+profile {{
+    {profil}
+}};
+}}"
+    )
+}
+
+// -- Lane E3: the translator declaration side (SYNTAX.md §7.2) ----------------------------
+// Every `library fn` with a payload type has exactly one translator in its
+// module; the translator is `effects { pure }` with a `decreases` clause
+// and answers the payload type. Its body is checked by the ordinary
+// checker; the region still is not translated, so the call refusal
+// (`N069`) names the translator that WOULD run.
+
+/// A library module with a payload table and a library function, and a
+/// translator head behind it -- the caller fills the translator tail.
+fn translator_modul_src(translator: &str) -> String {
+    format!(
+        "module gpu::spirv {{
+table KernelTab count 1 {{
+    slot {{
+        words : u32,
+    }}
+}}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects {{ pure }}
+    costs <= 8 ops
+{{
+    return n;
+}}
+{translator}
+}}
+"
+    )
+}
+
+#[test]
+fn profil_gedeckte_anforderung_schweigt() {
+    // The positive direction: every requirement stands in the profile with
+    // identical content -- keyed and referenced alike.
+    faellt_nicht(&profil_rahmen(
+        "arch x86_64;\n    assume takt;",
+        "arch x86_64;\n    rounding nearest;\n    assume takt;",
+    ));
+}
+
+#[test]
+fn profil_schluesselkonflikt_n215() {
+    faellt_mit(
+        &profil_rahmen("arch x86_64;", "arch x86_64;\n    arch aarch64;"),
+        "N215",
+    );
+    faellt_genau(
+        &profil_rahmen("arch x86_64;", "arch x86_64;\n    arch aarch64;"),
+        &["N215"],
+    );
+}
+
+#[test]
+fn translator_declared_call_names_it_n069() {
+    // The positive direction: declaration plus translator, and the call
+    // falls with nothing but the translation refusal -- no N200-N204.
+    faellt_genau(
+        &format!(
+            "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 32 ops {{
+    @spirv#kernel(a) {{ dispatch 0 }};
+    return a;
+}}
+}}",
+            translator_modul_src(
+                "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+            )
+        ),
+        &["N069"],
+    );
+}
+
+#[test]
+fn library_n069_points_into_binding_position_region_too() {
+    // The same routing in binding position: `let code = @lib#f …`.
+    let quelle = format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    let code = @spirv#kernel(a) {{
+        dispatch 0
+    }};
+    return code;
+}}
+}}",
+        library_module_src()
+    );
+    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    let _ = pruefe(&baum, &mut absagen);
+    let weigerung = absagen
+        .absagen
+        .iter()
+        .find(|a| a.code == "N069" && a.stufe == Stufe::Fehler)
+        .expect("N069 fired in binding position");
+    let index = gabbro_syntax::span::Zeilenindex::neu(&quelle);
+    let gemeldet = index.stelle(&quelle, weigerung.span.von);
+    let erwartet = index.stelle(&quelle, quelle.find("dispatch").expect("the region") as u32);
+    assert_eq!(
+        (gemeldet.zeile, gemeldet.spalte),
+        (erwartet.zeile, erwartet.spalte),
+        "N069 must point at the region token in binding position too"
+    );
+}
+
+// -- Lane E3 (continued): translator declaration refusals -------------------------------
+// `translator_modul_src` and `translator_declared_call_names_it_n069` stand above,
+// beside the E7 span tests for the same `N069`.
+
+
+#[test]
+fn profil_doppelte_belegung_schweigt() {
+    // Duplicates with one value are silent: a set holds them once.
+    faellt_nicht(&profil_rahmen(
+        "arch x86_64;",
+        "arch x86_64;\n    arch x86_64;",
+    ));
+}
+
+#[test]
+fn profil_gleicher_name_n216() {
+    // Two declarations under one name with different statements make the
+    // profile's reference ambiguous.
+    faellt_mit(
+        "module app {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module innen {
+assume takt
+    \"The platform clock advances in bursts.\"
+    falsifier sonde_tick;
+}
+profile {
+    assume takt;
+};
+}",
+        "N216",
+    );
+}
+
+#[test]
+fn translator_missing_n200() {
+    // No translator serves the function: the declaration-side refusal.
+    faellt_genau(
+        &translator_modul_src(""),
+        &["N200"],
+    );
+}
+
+#[test]
+fn translator_second_n201() {
+    // Two translators name one function: the first (by position) serves
+    // it, the second serves nothing.
+    faellt_genau(
+        &translator_modul_src(
+            "translator eins for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+translator zwei for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N201"],
+    );
+}
+
+#[test]
+fn translator_dangling_n201() {
+    // A translator naming no library function serves nothing either.
+    faellt_genau(
+        &translator_modul_src(
+            "translator b for missing(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N200", "N201"],
+    );
+}
+
+#[test]
+fn translator_effects_n202() {
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { writes KernelTab.slots }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N202"],
+    );
+}
+
+#[test]
+fn translator_no_effects_n202() {
+    // A missing clause is not a silent `pure`: without the line nobody
+    // promised anything. The ordinary missing-`effects` refusal (`E001`)
+    // fires beside it -- two rules, two diagnostics.
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}",
+        ),
+        &["N202", "E001"],
+    );
+}
+
+#[test]
+fn profil_eindeutiger_name_schweigt() {
+    // One declaration under the name -- however often referenced -- is no
+    // ambiguity, even across profile and requirements.
+    faellt_nicht(&profil_rahmen(
+        "assume takt;",
+        "assume takt;\n    assume takt;",
+    ));
+}
+
+#[test]
+fn profil_fehlende_bindung_n217() {
+    // The library requires `assume takt`, the profile holds no such entry.
+    faellt_genau(
+        &profil_rahmen("arch x86_64;\n    assume takt;", "arch x86_64;"),
+        &["N217"],
+    );
+}
+
+#[test]
+fn translator_no_decreases_n203() {
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+{
+    return region;
+}"
+        ),
+        &["N203"],
+    );
+}
+
+#[test]
+fn profil_fehlender_schluessel_n217() {
+    // The library requires a keyed entry the profile lacks.
+    faellt_genau(
+        &profil_rahmen("arch x86_64;\n    rounding nearest;", "arch x86_64;"),
+        &["N217"],
+    );
+}
+
+#[test]
+fn translator_result_mismatch_n204() {
+    // The translator answers another declared table: not the payload.
+    faellt_genau(
+        &"module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+table Andere count 2 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator build for kernel(region : Andere) -> Andere
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+"
+        .to_string(),
+        &["N204"],
+    );
+}
+
+#[test]
+fn profil_ohne_profil_n217() {
+    // Requirements with no profile anywhere: linking without a set.
+    faellt_mit(
+        "module app {
+assume takt
+    \"The platform clock advances steadily.\"
+    falsifier sonde_tick;
+module gpu {
+requires profile {
+    arch x86_64;
+};
+}
+}",
+        "N217",
+    );
+}
+
+#[test]
+fn profil_fp_kontraktion_n218() {
+    // `fp_contract` other than `off` contradicts the float prelude binding
+    // `-ffp-contract=off`; `off` itself is the manifest flag and silent.
+    faellt_genau(
+        &profil_rahmen("", "fp_contract fast;"),
+        &["N218"],
+    );
+    faellt_nicht(&profil_rahmen("", "fp_contract off;"));
+}
+
+#[test]
+fn profil_arch_ohne_maschine_schweigt() {
+    // Without declared machines nothing is refused (R16 shape): a unit
+    // with no machine named constrains no machine.
+    faellt_nicht(&profil_rahmen("", "arch x86_64;"));
+}
+
+#[test]
+fn profil_zweites_profil_n219() {
+    // One hardware profile per program: the second block falls, never
+    // silently merged.
+    faellt_mit(
+        "module app {
+profile {
+    arch x86_64;
+};
+profile {
+    rounding nearest;
+};
+}",
+        "N219",
+    );
+}
+
+#[test]
+fn profil_haengender_verweis_n219() {
+    // A reference naming no declared assumption is a link against air.
+    faellt_genau(&profil_rahmen("", "assume nirgends_erklaert;"), &["N219"]);
+}
+
+#[test]
+fn translator_foreign_hull_n059() {
+    // A translator calling an `extern fn` carries the hull refusal with
+    // the translator named -- the same rule as a library body.
+    faellt_genau(
+        &"module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+extern fn launch(d : u32) -> u32 effects { pure } costs <= 1 ops;
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 16 ops
+{
+    return n;
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 16 ops
+    decreases region.words
+{
+    launch(region.words);
+    return region;
+}
+}
+"
+        .to_string(),
+        &["N059"],
+    );
+}
+
+#[test]
+fn translator_without_body_p044() {
+    // A bodyless translator is a foreign promise, like a bodyless
+    // `library fn` -- the same rule refuses both.
+    faellt_mit(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words;",
+        ),
+        "P044",
+    );
+}
+
+// -- Lane E4 («E4»): the monotone arena --------------------------------------------------
+// Each rule with its poison shape and its clean counter-direction. `faellt_genau`
+// pins the exact code set: a second rule firing beside the meant one is a finding
+// here, not tolerance.
+
+#[test]
+fn arena_verkehrte_schranke_n210() {
+    faellt_genau(
+        "arena Falsch capacity 8 .. 2 of u32;
+impl fn f() -> u32 effects { pure } costs <= 1 ops {
+    return 0;
+}",
+        &["N210"],
+    );
+    faellt_nicht(
+        "arena Gut capacity 2 .. 8 of u32;
+impl fn f() -> u32 effects { pure } costs <= 1 ops {
+    return 0;
+}",
+    );
+}
+
+#[test]
+fn arena_alter_index_n211() {
+    faellt_genau(
+        "arena Kasse capacity 4 .. 8 of u32;
+impl fn f() -> u32 effects { writes Kasse } costs <= 8 ops {
+    let i = alloc Kasse (7);
+    reset Kasse;
+    return Kasse[i];
+}",
+        &["N211"],
+    );
+    // The same index read before the reset is its own generation -- clean.
+    faellt_nicht(
+        "arena Kasse capacity 4 .. 8 of u32;
+impl fn f() -> u32 effects { writes Kasse } costs <= 8 ops {
+    let i = alloc Kasse (7);
+    let v = Kasse[i];
+    reset Kasse;
+    return v;
+}",
+    );
+}
+
+#[test]
+fn arena_ohne_else_n212() {
+    faellt_genau(
+        "arena Eng capacity 1 .. 4 of u16;
+impl fn f() -> u32 effects { writes Eng } costs <= 8 ops {
+    let a = alloc Eng (1);
+    let b = alloc Eng (2);
+    if a == b {
+        return Eng[a];
+    }
+    return Eng[b];
+}",
+        &["N212"],
+    );
+    // Inside the reservation no `else` is owed.
+    faellt_nicht(
+        "arena Eng capacity 1 .. 4 of u16;
+impl fn f() -> u32 effects { writes Eng } costs <= 8 ops {
+    let a = alloc Eng (1);
+    return Eng[a];
+}",
+    );
+}
+
+#[test]
+fn arena_unbekannt_n213() {
+    faellt_genau(
+        "impl fn f() -> u32 effects { writes Nirgendwo } costs <= 4 ops {
+    reset Nirgendwo;
+    return 0;
+}",
+        &["N213"],
+    );
+}
+
+#[test]
+fn arena_fremder_index_n214() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
+    let i = alloc A (1);
+    let j = alloc B (2);
+    if i == j {
+        return B[i];
+    }
+    return A[j];
+}",
+        &["N214", "N214"],
+    );
+    // Each index on its own arena is clean.
+    faellt_nicht(
+        "arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
+    let i = alloc A (1);
+    let j = alloc B (2);
+    if i == j {
+        return A[i];
+    }
+    return B[j];
+}",
+    );
+}

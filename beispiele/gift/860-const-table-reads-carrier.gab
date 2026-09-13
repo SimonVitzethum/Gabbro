@@ -1,0 +1,14 @@
+-- erwartet: K190
+-- **Gift 860 -- a table read inside a const-table element does not fold.**
+--
+-- `T.slots[0].a` is a carrier read, not a translation-time number: the folder
+-- (`umgebung.rs`) answers `None` for every place with a suffix, and `K190`
+-- names the element that leaves the evaluable fragment.
+
+module gift::const_table_reads_carrier {
+
+table T count 4 { slot { a : u32, } }
+
+const Q : [u32; 2] = [1, T.slots[0].a];
+
+}

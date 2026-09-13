@@ -347,6 +347,10 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 > **NINETEEN since 2026-09-12** (lane 89 booking): eleven more pairs, each with
 > its reason in the new rows below. The heading stays frozen for the same
 > reason as above; the mark in `instrumente/zaehle-gifttreffer.py` stands at 19.
+>
+> **TWENTY-FOUR since 2026-09-12** (lane-89 merge resolution): five more pairs
+> from the merged waves (library, profile, unshared-carrier lanes), each with
+> its reason below. The mark stands at 24; the heading stays frozen.
 
 | Probe | erwartet | Kette | warum es nicht geht |
 |---|---|---|---|
@@ -370,6 +374,11 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 | `758-v003-hint-skips-orphan-check` | `V003` (hint) | E009?@29 · V003?@35 | **Doubt needs a partial hull, and the partiality is itself a hint.** `V003` doubt about the pairing is only expressible where the call graph is incomplete; the incompleteness is the `E009` hint at the same declaration. Same for `777`. |
 | `776-v003-hint-await-only-hull` | `V003` (hint) | M148@31 · M148@33 · E009?@25 · V003?@30 | **The staging trips the newer rule.** The await-only shape needs valued returns in a result-less body, which `M148` (lane 72, newer than the probe) refuses; the pairing doubt stands beside it. |
 | `777-v003-hint-counterpart-behind-hull` | `V003` (hint) | E009?@25 · V003?@31 · V003?@42 | Same pair as `758`: doubt behind an incomplete hull, incompleteness as `E009` hint. |
+| `823-library-wrong-argument` | `N069` | N200@11 · **N069**@23 · M135@23 | **No library probe without the untranslated library.** The call has no translator declared yet (`N200`), and a wrong-argument call (`N069`) can only be staged on such a call. New probe under a known cover (lane E2/91). |
+| `828-library-direct-call` | `N061` | N200@11 · **N061**@20 | Same pair as `823`: the direct call stages on the translator-less library `N200` names first. |
+| `891-profil-gleicher-name` | `N216` | N024@18 · **N216**@28 | **The staging needs the doubly-obligated probe.** The same-named assumption pair (`N216`) is staged with a probe that already carries a falsifier obligation, which `N024` names first. New probe under a known cover (lane E6/117). |
+| `897-unshared-carrier-two-threads` | `H222` | H013@28 · H013@44 · **H222**@36 | **The declaration and the two-thread write are two halves of one shape.** The two threads write an unshared carrier (`H222`); each unguarded write is what `H013` names. Same class as `141`/H020 (lane 120). `899` is the transitive form of the same pair. |
+| `899-unshared-carrier-transitive-thread` | `H222` | H013@39 · **H222**@47 | Same pair as `897`, transitive form. |
 
 > **Fünf der sieben sind keine Nachlässigkeit, sondern eine Aussage über die Sprache.**
 > `F001`/`M101`, `N021`/`N027`, `L102`/`E008`, `U003`/`H007`, `O006`/`L108` — das sind

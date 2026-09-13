@@ -1,6 +1,8 @@
 -- erwartet: N057
--- Lane E1: every library call is refused with N057 until lane E2 checks
--- it -- once per call, in statement and in binding position alike.
+-- Lane E1, narrowed by lane E2: the call resolves nowhere (no library
+-- module in scope), so it is refused as UNRESOLVED (N057) -- once per
+-- call, in statement and in binding position alike. A resolving call is
+-- `N069` instead (`beispiele/gift/820`).
 module gift805 {
 impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
     @spirv#kernel(a) { dispatch 0 };

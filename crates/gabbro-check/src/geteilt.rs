@@ -367,6 +367,14 @@ pub fn pass_mit(
                     }
                 }
             }
+            // **A `syscall` at the call boundary (lane 86): body-less by
+            // construction, so its declared `reads`/`writes` places owe the
+            // protecting lock HELD at every call site -- the same snapshot as
+            // for an `extern fn`, read from the declaration.**
+            if let ItemArt::Syscall(s) = &item.art {
+                let fe = FremdEffekte::aus_syscall(s, modul);
+                fremd.insert(crate::umgebung::qualifiziere(modul, &s.name.text), fe);
+            }
         });
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             let ItemArt::Funktion(f) = &item.art else { return };
@@ -692,6 +700,13 @@ pub fn pass_mit(
                 welt.push(x.name.text.clone());
                 tabellen.push(x.name.text.clone());
             }
+            // **«E4»:** an arena is global mutable state like a table -- its
+            // storage outlives every function -- so it joins the world. It
+            // is no table for `ist_tab` (no slots, no guards), so only
+            // `welt` grows.
+            ItemArt::Arena(x) => {
+                welt.push(x.name.text.clone());
+            }
             ItemArt::State(x) => welt.push(x.name.text.clone()),
             _ => {}
         });
@@ -755,7 +770,8 @@ pub fn pass_mit(
             }
         }
 
-        // **W5 beside `H013` (lane 132): the built `Bau` answers the same question.**
+        // **H222 beside `H013` (lane 120): the built `Bau` refuses what it used to
+        // accompany silently.**
         //
         // `bau::erhebe` builds `Geteilt.Bau` from this unit -- call edges from the
         // bodies (the graph's resolved direct calls; an indirect call carries no
@@ -764,17 +780,54 @@ pub fn pass_mit(
         // above reads (`welt`, `geschuetzt`; unknown means shared, S5), the
         // Tab/Glob tag from the table roots among them (`tabellen`, handed in;
         // every other world member is the Glob half, §7), and the
-        // pair list from the `concurrent` sets (`nebenAus`). `pruefe_ungeteilt`
-        // evaluates the W5 premise (`pruefeUngeteilt`) over it. It stands BESIDE
-        // the verdict above, not instead of it: the refusal above decides, this
-        // answer is computed and pinned silent, so the observable behaviour is
-        // unchanged by construction. A divergence between the two is a finding
-        // about the derivation, never a refusal -- it stays out of `absagen` for
-        // exactly that reason. Per-probe agreement is booked in
-        // `messung/BAU-NOTIZ.md`.
+        // pair list from the `concurrent` sets (`nebenAus`).
+        // `ungeteilt_mit_faeden` evaluates the W5 premise (`pruefeUngeteilt`)
+        // over it -- the SAME computation `pruefe_ungeteilt` runs, extended by
+        // the thread witnesses, not a second reachability beside it.
+        //
+        // H013 refuses per entry (one context writing unshared state is already
+        // shared with every other core in the same entry); H222 refuses per
+        // CARRIER once two entries reach it -- the own-state text fact lane 100
+        // found without a Rust check (`nurGB` in `Trennung.lean`). The two are
+        // companions, not duplicates: H013 fires on one thread, H222 only on a
+        // pair. No `ein_kern`/`masks` exemption is applied here: masking orders
+        // one core against preemption, while state written by two entries persists
+        // across both however they interleave.
         {
             let bau = bau::erhebe(baum, &u, &g, &kontexte, &welt, &geschuetzt, &tabellen);
-            let _w5_traeger = bau::pruefe_ungeteilt(&bau, bau::sattigung(&bau));
+            for (traeger, faeden) in bau::ungeteilt_mit_faeden(&bau, bau::sattigung(&bau)) {
+                // Two witnesses mean two entries, so a context span always exists;
+                // the last fallback is belt and braces, never a measured path.
+                let span = faeden
+                    .get(1)
+                    .and_then(|zweiter| span_des_eintritts(&kontexte, &u, &g, zweiter))
+                    .or_else(|| {
+                        faeden
+                            .first()
+                            .and_then(|erster| span_des_eintritts(&kontexte, &u, &g, erster))
+                    })
+                    .unwrap_or_else(|| kontexte.first().map(|k| k.span).unwrap_or(Span::neu(0, 0)));
+                let paar = faeden.iter().take(2).cloned().collect::<Vec<_>>().join("` and `");
+                absagen.schiebe(
+                    Absage::fehler(
+                        "H222",
+                        span,
+                        format!(
+                            "`{traeger}` is not declared shared but written by the code \
+                             of two threads (`{paar}`)"
+                        ),
+                    )
+                    .mit_notiz(
+                        "a carrier no other thread names is own state -- two entries \
+                         reaching it for writing share it without saying so",
+                    )
+                    .mit_notiz(
+                        "declared shared by: a `lock … protects`, an `rcu … protects`, \
+                         an `atomic`, or `accumulates … per cpu` -- the same \
+                         declarations H013 reads",
+                    ),
+                );
+            }
         }
     }
 
@@ -831,6 +884,24 @@ pub fn pass_mit(
 }
 
 /// `offen` ist der Stapel der geteilt gehaltenen Sperren — er trägt die Verschachtelung.
+/// The declaration site of the entry that resolves to `wurzel` -- for H222.
+/// Entries are resolved exactly as `bau::erhebe` resolves them (`S4` drops what
+/// does not resolve, in both places), so a witness root always finds its context.
+fn span_des_eintritts(
+    kontexte: &[crate::kontexte::Kontext],
+    u: &crate::umgebung::Umgebung,
+    g: &crate::aufrufgraph::Graph,
+    wurzel: &str,
+) -> Option<Span> {
+    kontexte.iter().find_map(|k| {
+        if g.aufloesen(u, &k.modul, &k.wurzel).as_deref() == Some(wurzel) {
+            Some(k.span)
+        } else {
+            None
+        }
+    })
+}
+
 /// Alle Sperren, die ein Rumpf nimmt -- fuer `H008`.
 fn sperrnahmen(b: &Block, aus: &mut Vec<String>) {
     for s in &b.anweisungen {
@@ -1624,6 +1695,35 @@ impl FremdEffekte {
                 .map(|p| (p.name.text.clone(), p.typ.clone()))
                 .collect(),
         })
+    }
+
+    /// **A `syscall` is body-less by construction.** Its declared `reads`/`writes`
+    /// places owe the protecting lock HELD at the call site, exactly like an
+    /// `extern fn`'s -- the same snapshot, read from the declaration instead of
+    /// an `FnDecl`. The effects clause is mandatory in the grammar, so this
+    /// always yields a snapshot, never `None`.
+    fn aus_syscall(s: &SyscallDecl, modul: &str) -> FremdEffekte {
+        let mut plaetze = Vec::new();
+        let mut nimmt = Vec::new();
+        for e in &s.effects.liste {
+            match &e.art {
+                WirkungArt::Liest(o) => plaetze.push((e.art.text(), o.text(), false)),
+                WirkungArt::Schreibt(o) => plaetze.push((e.art.text(), o.text(), true)),
+                WirkungArt::Sperrt(o) => nimmt.push((o.text(), false)),
+                WirkungArt::SperrtGeteilt(o) => nimmt.push((o.text(), true)),
+                _ => {}
+            }
+        }
+        FremdEffekte {
+            plaetze,
+            nimmt,
+            modul: modul.to_string(),
+            parameter: s
+                .parameter
+                .iter()
+                .map(|p| (p.name.text.clone(), p.typ.clone()))
+                .collect(),
+        }
     }
 }
 

@@ -1,0 +1,13 @@
+-- erwartet: N218
+-- Lane E6: a profile that contradicts the float prelude is refused. The
+-- prelude binds `-ffp-contract=off` for every compiler (PLAN-BITS.md §5),
+-- so `fp_contract fast` re-opens what the prelude closed. The key holds
+-- one value, so `N215` stays silent. Exactly one `N218` falls.
+
+module gift::profil_gegen_vorsatz {
+
+profile {
+    fp_contract fast;
+};
+
+}

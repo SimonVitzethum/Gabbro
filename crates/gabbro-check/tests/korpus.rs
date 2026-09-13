@@ -28,12 +28,30 @@ const BENANNT: &[&str] = &[
     // `P041` -- split off from `P034` on 2026-08-30. `P034` kept the missing catch-all arm,
     // `P041` took the stray `pub`: two unrelated rules stood under one identifier, and each
     // of their two poison probes would have stayed green while the OTHER rule was out.
-    "P032", "P035", "P041", "P042", // Grammatik
+    // `P042` stood here until lane S5 (2026-09-12) for the refused `syscall`
+    // item; since the declaration parses and checks, the code is issued
+    // nowhere and the entry goes.
+    "P032", "P035", "P041", // Grammatik
+    // Lane E2: `P043` a `library fn` without its `payload` clause, `P044`
+    // one without a Gabbro body.
+    "P043", "P044",
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     // Lane E1: `N057` -- every library call is parsed and refused until lane
     // E2 checks it. Named here so the corpus run counts the rule, not noise.
     "N057",
+    // Lane E2: `N069` the resolved call (payload translation missing),
+    // `N059` a foreign body in a library hull, `N060` a payload naming no
+    // table, `N061` a direct call to a library function.
+    "N069", "N059", "N060", "N061",
+    // Lane E4 («E4»): `N210` unusable arena bounds, `N211` a stale index,
+    // `N212` a missing `else` past the reservation, `N213` an undeclared
+    // arena, `N214` a place or index of another kind.
+    "N210", "N211", "N212", "N213", "N214",
+    // Lane E3: `N200` a library function without its translator, `N201` a
+    // second or dangling translator, `N202` a translator with effects,
+    // `N203` one without `decreases`, `N204` one answering another type.
+    "N200", "N201", "N202", "N203", "N204",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein
@@ -482,6 +500,14 @@ const BENANNT: &[&str] = &[
     // pin the two spellings (`p + 1`, `p += 1`); the Lean discharge behind the
     // admitted index form is `validiert_entlaedt_schritt` (`Adressraum.lean`).
     "C001",
+    // 2026-09-12, lane S5: the `syscall` declaration parses and checks, so the
+    // `SYNTAX.md` §12.1 excerpt -- `Fd`/`Bytes`/`IoError` undeclared in
+    // the cut -- falls where a whole unit would not. `N004` (the named
+    // assumption is declared nowhere in the excerpt) and `N067` (the `or
+    // IoError` channel has no `reason` in the excerpt) are CORRECT here for the
+    // same reason `M126` is two entries up: in the full unit the names
+    // resolve, in the excerpt they do not.
+    "N004", "N067",
 ];
 
 #[test]

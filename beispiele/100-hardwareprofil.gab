@@ -1,0 +1,57 @@
+-- 100 -- **The hardware profile, with a library requiring a subset of it.**
+--
+-- Lane E6 (`PLAN-ERWEITUNG.md` §0c, `SYNTAX.md` §12.2): the program declares
+-- ONE hardware profile -- keyed mode entries plus a reference to the
+-- declared assumption, never a copy of its text. The library module
+-- requires a subset of it by reference: the key with the value, the
+-- assumption with the name. Every rule of the lane reads this file and
+-- stays silent -- the refusals live in the poison corpus
+-- (`beispiele/gift/890`-`894`), not here. A CALL (`@gpu#kernel`) would
+-- carry the translation refusal (`N069`), so calls live there too.
+
+module beispiel::profil {
+
+assume plattform_takt_stabil
+    "The platform clock advances steadily."
+    falsifier sonde_tick;
+
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+
+module gpu {
+
+requires profile {
+    arch x86_64;
+    assume plattform_takt_stabil;
+};
+
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+
+}
+
+profile {
+    arch x86_64;
+    rounding nearest;
+    fp_contract off;
+    assume plattform_takt_stabil;
+};
+
+}

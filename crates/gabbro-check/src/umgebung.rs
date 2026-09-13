@@ -106,6 +106,13 @@ pub struct Umgebung {
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
     /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
     pub kapazitaeten: HashMap<String, u128>,
+    /// **Arenaname -> reservation, hard bound and element type («E4»).**
+    ///
+    /// The declaration holds both bounds even when they are unusable
+    /// (non-constant, inverted): the refusal (`N210` in `arena.rs`) names
+    /// the declaration, so the map must too. `lo`/`hi` are `None` exactly
+    /// when the bound expression is no translation-time constant.
+    pub arenen: HashMap<String, ArenaSig>,
     /// **Tabelle -> der Name des Werts, bis zu dem sie HINTERLEGT ist** (`backed k`).
     ///
     /// `count` ist Adressraum, `backed` ist Speicher. Steht hier ein Eintrag, reicht `i < N`
@@ -241,6 +248,72 @@ pub struct Umgebung {
     /// `pruefe-zahlen.py` als „Blicke ohne Modulkandidaten -- jeder ein moegliches
     /// `M103`-Loch" zaehlt.* Aufgeloest wird beim Nachschlagen, ueber `kandidaten`.
     pub fehlerkanaele: HashMap<String, (String, String)>,
+    /// **Every declared module, by qualified path (lane E2).**
+    ///
+    /// `verwendet` keys only the modules that CARRY a `use` line; a library
+    /// module without one would be invisible to the `@lib#f` resolution,
+    /// and `N057` would fire on a declaration standing right there. The
+    /// set is filled beside `sammle_roh`'s recursion, never queried
+    /// directly (`.get(` on a short name is the `M103` shape) -- only
+    /// through `bibliothek` below.
+    pub module: std::collections::HashSet<String>,
+    /// **Qualified names of `library fn` declarations (lane E2).**
+    ///
+    /// A library function IS an ordinary function too: its signature
+    /// stands in `funktionen` like any other, so every declaration-side
+    /// check reads it. This set answers the other question -- may
+    /// `@lib#f` name it, and must a direct call avoid it (`N061`).
+    pub bibliotheken: std::collections::HashSet<String>,
+    /// **Qualified library-function name -> (declaring module, payload
+    /// table path as written, clause span) (lane E2).**
+    ///
+    /// The payload is stored RAW, resolved at the read site from the
+    /// declaring module outward -- the same decision `walkknoten` documents
+    /// above: qualifying here would break exactly when the table lives in
+    /// an enclosing module.
+    pub nutzlasten: HashMap<String, (String, String, gabbro_syntax::span::Span)>,
+    /// **The hardware profile blocks of the unit, with their modules
+    /// (lane E6, «E6»).**
+    ///
+    /// At most one per unit (`N219` in `namen.rs` refuses the second);
+    /// stored RAW like the payload above, resolved at the read site.
+    pub profile: Vec<(String, ProfilBlock)>,
+    /// **The library requirements of the unit, with their modules (lane
+    /// E6, «E6»).**
+    ///
+    /// One entry per `requires profile` block; linking holds each of them
+    /// against the profile (`N217`).
+    pub bedarfe: Vec<(String, ProfilBlock)>,
+    /// **Every declared `assume` by qualified name (lane E6, «E6»).**
+    ///
+    /// What a profile `assume <name>` reference resolves to -- own module,
+    /// enclosing, root, `use` lines, through `kandidaten_aufloesbar` at the
+    /// read site. Cloned, because the closure that walks the tree lends
+    /// nothing outward.
+    pub annahmen: HashMap<String, Assume>,
+}
+
+/// **A resolved library call (lane E2): the module the call named and the
+/// qualified function behind it.**
+pub struct BibliotheksZiel {
+    /// The module, qualified (`gpu::spirv`).
+    pub modul: String,
+    /// The function, qualified (`gpu::spirv::kernel`).
+    pub name: String,
+}
+
+/// **One `arena` declaration, resolved («E4»).**
+///
+/// `lo`/`hi` are the evaluated bounds (`None` = no translation-time
+/// constant); `element` is the resolved element type. The checker holds
+/// `Some(lo) <= Some(hi)` (`N210`); an arena whose bounds never resolve
+/// is still listed, so every later use names the declaration and not a
+/// missing entry.
+#[derive(Debug, Clone)]
+pub struct ArenaSig {
+    pub lo: Option<i128>,
+    pub hi: Option<i128>,
+    pub element: Typ,
 }
 
 /// Das Modul, in dem ein qualifizierter Name steht.
@@ -353,6 +426,24 @@ impl Umgebung {
                             .insert(qualifiziere(pfad, &t.name.text), k.text.clone());
                     }
                 }
+                // **«E4»: the arena bounds, collected beside the table capacities.**
+                //
+                // Both bounds are evaluated here so that `index into A` and the
+                // reservation count read one map. A bound that is no constant
+                // is `None`, not zero: zero would be a bound, and the refusal
+                // (`N210`) belongs to the pass, not to this map.
+                ItemArt::Arena(a) => {
+                    let lo = self.konst_wert(pfad, &a.lo);
+                    let hi = self.konst_wert(pfad, &a.hi);
+                    self.arenen.insert(
+                        qualifiziere(pfad, &a.name.text),
+                        ArenaSig {
+                            lo,
+                            hi,
+                            element: Typ::Unbekannt,
+                        },
+                    );
+                }
                 _ => {}
             }
         }
@@ -389,6 +480,18 @@ impl Umgebung {
         self.kandidaten(von, name)
             .into_iter()
             .find(|k| self.tabellen.contains_key(k))
+    }
+
+    /// **Does this bare name stand for an `arena` («E4»)**, resolved from the
+    /// using module? The qualified name, or `None`.
+    ///
+    /// Beside `nennt_tabelle`, and for the same reason: the arena is no
+    /// value in `globale`, so a reader that only asks the value maps finds
+    /// nothing where the declaration stands.
+    pub fn nennt_arena(&self, von: &str, name: &str) -> Option<String> {
+        self.kandidaten(von, name)
+            .into_iter()
+            .find(|k| self.arenen.contains_key(k))
     }
 
     /// Does this bare name stand for a `walk`? -- `walknamen`, not `walkschranken`: whether
@@ -494,6 +597,38 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **Resolves `@lib#func` from the caller's module (lane E2).**
+    ///
+    /// `lib` goes through the same candidate order every other name uses
+    /// (own module, enclosing, root, `use` lines); the first candidate
+    /// naming a declared module wins, and `func` must name a `library fn`
+    /// declared directly in it. Anything else is `None`; the two public
+    /// halves below let the caller tell "unknown library" from "unknown
+    /// function" without re-resolving by hand.
+    pub fn bibliothek(&self, von: &str, lib: &str, func: &str) -> Option<BibliotheksZiel> {
+        let modul = self.bibliothek_modul(von, lib)?;
+        let name = qualifiziere(&modul, func);
+        if self.ist_bibliothek(&name) {
+            Some(BibliotheksZiel { modul, name })
+        } else {
+            None
+        }
+    }
+
+    /// **The module half of `bibliothek` (lane E2):** the first candidate
+    /// for `lib` that names a declared module, if any.
+    pub fn bibliothek_modul(&self, von: &str, lib: &str) -> Option<String> {
+        self.kandidaten(von, lib)
+            .into_iter()
+            .find(|k| self.module.contains(k))
+    }
+
+    /// **The function half of `bibliothek` (lane E2):** does this
+    /// qualified name stand for a declared `library fn`?
+    pub fn ist_bibliothek(&self, qualifiziert: &str) -> bool {
+        self.bibliotheken.contains(qualifiziert)
+    }
+
     /// **Does this path name a `transition`?** Its `Signatur` carries an empty parameter
     /// list that is a placeholder, not a declaration -- see `Umgebung::uebergangsnamen`.
     pub fn ist_uebergang(&self, von: &str, pfad: &Pfad) -> bool {
@@ -545,6 +680,9 @@ impl Umgebung {
             match &i.art {
                 ItemArt::Modul(m) => {
                     let innen = qualifiziere(pfad, &m.pfad.text());
+                    // **Lane E2:** every module is named, whether or not it
+                    // carries a `use` line -- see the `module` field.
+                    self.module.insert(innen.clone());
                     self.sammle_roh(&m.items, &innen);
                 }
                 ItemArt::Use(u) => {
@@ -581,6 +719,21 @@ impl Umgebung {
                         self.roh_konst
                             .insert(qualifiziere(pfad, &k.name.text), k.wert.clone());
                     }
+                }
+                // **Lane E6 («E6»): the hardware profile and its
+                // requirements.** Stored RAW with their modules, resolved
+                // at the read site (`namen.rs`, `manifest.rs`) -- the same
+                // decision `nutzlasten` documents above. Cloned: the walk
+                // lends nothing outward.
+                ItemArt::Profil(b) => {
+                    self.profile.push((pfad.to_string(), b.clone()));
+                }
+                ItemArt::ProfilBedarf(b) => {
+                    self.bedarfe.push((pfad.to_string(), b.clone()));
+                }
+                ItemArt::Assume(a) => {
+                    self.annahmen
+                        .insert(qualifiziere(pfad, &a.name.text), a.clone());
                 }
                 _ => {}
             }
@@ -706,6 +859,23 @@ impl Umgebung {
                             span: k.span,
                         };
                         self.funktionen.insert(q(&k.pfad()), sig);
+                    }
+                }
+                // **«E4»: the arena element type, resolved beside the table slots.**
+                //
+                // The bounds already stand (first phase); only the element is
+                // still `Unbekannt`. An arena the first phase never saw (it
+                // always does -- both phases walk the same tree) is entered
+                // whole, so the two phases cannot drift apart.
+                ItemArt::Arena(a) => {
+                    let element = self.typ_von_ausdruck_decl(pfad, &a.element);
+                    let qn = q(&a.name.text);
+                    if let Some(sig) = self.arenen.get_mut(&qn) {
+                        sig.element = element;
+                    } else {
+                        let lo = self.konst_wert(pfad, &a.lo);
+                        let hi = self.konst_wert(pfad, &a.hi);
+                        self.arenen.insert(qn, ArenaSig { lo, hi, element });
                     }
                 }
                 ItemArt::Format(f) => {
@@ -861,6 +1031,52 @@ impl Umgebung {
                         span: f.span,
                     };
                     self.funktionen.insert(q(&f.name.text), sig);
+                    // **Lane E2:** the signature above already carries
+                    // everything the call-site checks read; what remains is
+                    // the library flag and the raw payload path.
+                    if f.bibliothek {
+                        self.bibliotheken.insert(q(&f.name.text));
+                        if let Some(nutz) = &f.nutzlast {
+                            self.nutzlasten.insert(
+                                q(&f.name.text),
+                                (pfad.to_string(), nutz.text(), nutz.span),
+                            );
+                        }
+                    }
+                }
+                ItemArt::Syscall(s) => {
+                    // **A `syscall` is callable exactly like an `extern fn`.**
+                    // The declaration carries its contract (parameters, result,
+                    // `or R` channel, `requires`/`ensures`, declared effects);
+                    // the body is the machine, so `rumpf_da` is false and there
+                    // is no `costs` clause to evaluate -- a caller with a cost
+                    // promise meets `K003` over it, as over an `extern fn`
+                    // without `costs`. *Without this entry every call site
+                    // reads the callee as unknown.*
+                    if let Some(r) = &s.fehler {
+                        self.fehlerkanaele
+                            .insert(q(&s.name.text), (pfad.to_string(), r.text.clone()));
+                    }
+                    let sig = Signatur {
+                        parameter: s
+                            .parameter
+                            .iter()
+                            .map(|p| (p.name.text.clone(), self.typ_von_ausdruck_decl(pfad, &p.typ)))
+                            .collect(),
+                        ergebnis: s.ergebnis.as_ref().map(|t| self.typ_von_ausdruck_decl(pfad, t)),
+                        ensures: s.ensures.clone(),
+                        requires: s.requires.clone(),
+                        rumpf_da: false,
+                        effect_list: s
+                            .effects
+                            .liste
+                            .iter()
+                            .map(|e| e.art.text())
+                            .collect(),
+                        cost_bound: None,
+                        span: s.span,
+                    };
+                    self.funktionen.insert(q(&s.name.text), sig);
                 }
                 ItemArt::Axiom(a) => {
                     let sig = Signatur {
@@ -1034,6 +1250,32 @@ impl Umgebung {
                     unterwegs,
                 )
             }
+            // **Lane 121: a nested `const fn` call keeps the bindings.** The
+            // fallback below (`auswerten` without `werte`) silently dropped
+            // the parameters, so `doppelt(doppelt(n))` evaluated to nothing
+            // while the printer printed it -- values and source parted ways
+            // exactly where this lane joins them. Same recursion guard and
+            // arity check as `auswerten`; only the bindings travel.
+            ExprArt::Ruf(r) => {
+                let name = self
+                    .kandidaten(von, &r.path()?.text())
+                    .into_iter()
+                    .find(|k| self.konst_fn.contains_key(k))?;
+                if !unterwegs.insert(format!("constfn:{name}")) {
+                    return None;
+                }
+                let (params, rumpf) = self.konst_fn.get(&name)?.clone();
+                if params.len() != r.argumente.len() {
+                    return None;
+                }
+                let mut neu = HashMap::new();
+                for (p, a) in params.iter().zip(r.argumente.iter()) {
+                    neu.insert(p.clone(), self.auswerten_mit(von, a, werte, unterwegs)?);
+                }
+                let erg = self.auswerten_mit(modul_von(&name), &rumpf, &neu, unterwegs);
+                unterwegs.remove(&format!("constfn:{name}"));
+                erg
+            }
             _ => self.auswerten(von, e, unterwegs),
         }
     }
@@ -1122,6 +1364,16 @@ impl Umgebung {
                     BinOp::GroesserGleich => i128::from(x >= y),
                     BinOp::Und => i128::from(x != 0 && y != 0),
                     BinOp::Oder => i128::from(x != 0 || y != 0),
+                    // PLAN-BITS section 4 (lane 88): the overflow operators are
+                    // not constant-folded here. The modulus of a wrap and the
+                    // interval of a clamp live in the CHECKER's ranges, not in
+                    // the two values -- folding `(a + b) mod 2^N` without `N`
+                    // would be a guess, and this function does not guess.
+                    BinOp::PlusWrap
+                    | BinOp::MinusWrap
+                    | BinOp::MalWrap
+                    | BinOp::SchiebLinksWrap
+                    | BinOp::PlusSat => return None,
                 })
             }
             // **Ein `const fn` wird HIER gerechnet, und nur hier.**
@@ -1404,11 +1656,21 @@ impl Umgebung {
     /// the declaration rather than a convention.
     pub fn indextyp(&self, von: &str, tabelle: &str, optional: bool) -> Typ {
         let sonderwert = i128::from(optional);
+        // **«E4»: an arena carries its hard bound the same way.** `index into
+        // A` is the type of an allocated slot number: `0 .. hi - 1`. A table
+        // reads `kapazitaeten`, an arena its `hi`; both answer one bound, so
+        // there is one place to change the range of either.
         let bereich = self
             .kandidaten(von, tabelle)
             .into_iter()
-            .find_map(|k| self.kapazitaeten.get(&k).copied())
-            .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))
+            .find_map(|k| {
+                self.kapazitaeten
+                    .get(&k)
+                    .copied()
+                    .map(|n| n as i128)
+                    .or_else(|| self.arenen.get(&k).and_then(|a| a.hi))
+            })
+            .map(|n| IntBereich::genau(32, false, 0, n - 1 + sonderwert))
             .unwrap_or_else(|| IntBereich::voll(32, false));
         let vorsatz = if optional { "option " } else { "" };
         Typ::Benannt {
@@ -1547,6 +1809,22 @@ impl Umgebung {
             .cloned()
             .or_else(|| self.suche(&self.globale, von, &ort.basis.text).cloned())
             .unwrap_or(Typ::Unbekannt);
+
+        // **«E4»: `A[i]` reads the arena element.** The arena is no value in
+        // `globale` (a declaration name is no value -- see `nennt_tabelle`),
+        // so the one well-shaped arena place resolves here: exactly one
+        // `[index]` suffix. Any other shape stays `Unbekannt`, and M1 names
+        // it (`N214`); a local of the same name shadows the arena through
+        // the lookup above, as everywhere else.
+        if aktuell.ist_unbekannt() && ort.suffixe.len() == 1 {
+            if let OrtSuffix::Index(_) = &ort.suffixe[0] {
+                if let Some(q) = self.nennt_arena(von, &ort.basis.text) {
+                    if let Some(a) = self.arenen.get(&q) {
+                        return a.element.clone();
+                    }
+                }
+            }
+        }
 
         for suffix in &ort.suffixe {
             aktuell = match suffix {

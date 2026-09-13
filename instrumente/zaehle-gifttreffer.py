@@ -35,10 +35,10 @@ DIE MARKEN
 *Die Richtung ist der Ertrag.* Eine verdeckte Probe mehr ist kein Wachstum, sondern eine
 Probe, die etwas anderes misst als das, was ueber ihr steht. **Steigt die Decke, gehoert der
 Grund an die Marke** -- und in `messung/GIFT-GEGEN-ZUSAGE.md` §10 steht, welche Paare aus
-einem SPRACHGRUND nicht trennbar sind (19 seit dem 2026-09-12: `F001`/`M101`, `N021`/`N027`,
+einem SPRACHGRUND nicht trennbar sind (24 seit dem 2026-09-12: `F001`/`M101`, `N021`/`N027`,
 `L102`/`E008`, `U003`/`H007`, `O006`/`L108`, `O009`/`O010`, `M140`/`C001`, `H011`/`H020`,
 `K008`/`H022`, `K003`/`H021`, `H018`/`M104`+`M101`+`E006`, `H021`/`E001`, `V003`/`E009`,
-`V003`/`M148`).
+`V003`/`M148`, `N069`/`N200`, `N061`/`N200`, `N216`/`N024`, `H222`/`H013`).
 
     ./instrumente/zaehle-gifttreffer.py            die Tafel
     ./instrumente/zaehle-gifttreffer.py --lang     dazu jede nicht-saubere Probe einzeln
@@ -118,7 +118,18 @@ MARKE_SAUBER = 271
 # refuses the valued return the V003 staging is built on -- rule newer than probe).
 # `411` (N046 over M134) is NOT lifted past: it falls with M134 alone since the
 # repair and counts as clean. *Eleven inseparable pairs, eleven rows in §10.*
-MARKE_VERDECKT = 19
+#
+# **19 -> 24 on 2026-09-12 (lane-89 merge resolution, measured).** Five new
+# probes under known covers, each named in §10: `823`/`828` (library-call
+# probes trip `N200`, no translator declared yet -- a library probe cannot
+# exist without the untranslated library), `891` (the N216 staging needs a
+# doubly-obligated probe, which `N024` names first), `897`/`899` (an H222
+# two-thread write is an unshared write, which `H013` names first -- same
+# class as `141`/H020). The five `FEHLT` beside them (`850`-`854`, C180-C184)
+# are NOT booked here: they fall at the EMITTER, which this counter never
+# runs (it reads `pruefe` for every code but C001) -- reported as F-GIFT-1,
+# not absorbed into the ceiling.
+MARKE_VERDECKT = 24
 # The population is a floor of its own: a corpus that SHRINKS says the checker lost a probe,
 # and neither of the two marks above would notice.
 MARKE_PROBEN = 333

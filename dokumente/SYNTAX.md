@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **167** measured (`pruefe-syntax.sh` EBNF branch: 167 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); nothing removed |
+| defined EBNF rules | 132 | **176** measured (`pruefe-syntax.sh` EBNF branch: 176 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, refused as `P042` until S5-S7) |
+| vocabulary words | 221 | **239 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 239 EBNF terminals against 239 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 230 words
+## Vocabulary — closed, 243 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -93,6 +93,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
+             library payload translator for
+             profile rounding fp_contract memory_model interrupt_routing
+             arena capacity alloc reset
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
@@ -170,8 +173,9 @@ the vocabulary — identifiers in a fixed position, counted and named by the gua
 
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
 words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
-side carries them through `syscalldecl`, and a `syscall` item is refused BY NAME
-as `P042` until lanes S5-S7 implement it. `entry syscall …` keeps parsing: the
+side carries them through `syscalldecl`, and a `syscall` item has been checked
+since lane S5 (`N063`-`N068`, `A005`/`A006`; emission refused as `C001` until the
+lane-S6 stub lands). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
@@ -192,9 +196,9 @@ exists. Nothing in the theorem depends on it.
 program    = { item } ;
 item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
-             | format | table | reason | state | device | assume | axiom | check
+             | format | table | arena | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
-             | bootdecl | syscalldecl ) ;
+             | bootdecl | syscalldecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
@@ -224,8 +228,10 @@ entrustdecl = "entrust" ident "at" ident "arch" ident "{"
    falsifiable (`N004`/`N005`), the same rule as `progress`. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
-(* Specified, NOT yet implemented by the checker («SS-1», §12.1): the user side of a
-   system call. The checker refuses every `syscall` with a named error until S5 lands;
+(* Checked since lane S5 («SS-1», §12.1): the user side of a
+   system call. The checker holds the declaration against its own shape
+   (`N063`-`N068`, `A005`/`A006`) and refuses the emission as `C001` until
+   the lane-S6 stub lands;
    the grammar below is the surface the checker, the emitter ruling and the corpus
    example (§12.1) are written against. *)
 syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
@@ -247,9 +253,16 @@ accdecl    = "accumulates" ident ":" typeexpr
    current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
-constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
+constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constwert ";" ;
 constexpr  = expr ;                    (* evaluable at translation time; no call of a function
                                           with effects, no place on `mut` *)
+constwert  = constexpr | arraylit ;
+(* CHANGED lane 111: a const-table literal. It stands ONLY as a `const`
+   initializer of array type (`const T : [u32; N] = […]`); the general
+   expression reader never reads `[`, so anywhere else it is `P011` by
+   grammar shape. The checker holds it element-wise (`K190`-`K194`); the
+   emitter writes one `static const` array. *)
+arraylit   = "[" [ expr { "," expr } [ "," ] ] "]" ;
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
 ```
@@ -261,9 +274,10 @@ world before the first body and has no run-time meaning of its own.
 |---|---|---|
 | `program`, `moduledecl`, `usedecl` | names are static; a module is a namespace, not a construct | `Deklaration` — one per translation unit |
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
+| `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **refused as `P042` until S5-S7** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -477,9 +491,11 @@ expr       = orexpr ;
 orexpr     = andexpr { "||" andexpr } ;
 andexpr    = cmpexpr { "&&" cmpexpr } ;
 cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
-bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
-addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
-mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
+bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" | "<<%" ) addexpr } ;
+addexpr    = mulexpr { ( "+" | "-" | "+%" | "-%" | "+|" ) mulexpr } ;
+mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
+(* PLAN-BITS section 4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
+   each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
    carries a width. *)
@@ -529,6 +545,9 @@ placelist  = place { "," place } ;
 | `a & b` | both `0 ..` | `0 .. hi₁` | `Expr.band` |
 | `a \| b`, `a ^ b`, `~a` | both `0 ..`, and the declared width `w` with `hi₁, hi₂ < 2^w` (`M137`) | `0 .. 2^w − 1` | `Expr.bor w`, `Expr.bxor w` |
 | `a << b`, `a >> b` | both `0 ..` | `0 .. hi₁·2^hi₂`, `0 .. hi₁` | `Expr.shl`, `Expr.shr` |
+| `a +% b`, `a -% b`, `a *% b` | both exactly `0 .. 2^N − 1`, unsigned, same width (`M153` otherwise, naming `+\|`); a literal operand takes the other's range when its value lies in it | `0 .. 2^N − 1` | `Zahl.addW/subW/mulW` |
+| `a <<% b` | `a` exactly `0 .. 2^N − 1` unsigned, `b : 0 .. N − 1` | `0 .. 2^N − 1` | `Zahl.shlW` |
+| `a +\| b` | one shared integer range `lo .. hi` (`M154` otherwise); a literal operand takes the other's range | `lo .. hi`, the sum clamped to it | `Zahl.addS` |
 | `< <= == != > >=` on integers | | `bool` | `Expr.lt le eq` (the rest by `nicht`, swapped operands) |
 | `< <=` on floats | both operands finite by type — the comparison is **total**, the NaN quadrant of «F» does not exist («SG-17») | `bool` | `Expr.fllt`, `Expr.flle` |
 | `&& \|\| !` | | `bool` | `Expr.und oder nicht` |
@@ -549,6 +568,7 @@ placelist  = place { "," place } ;
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.altGlob hL`, `Expr.altSlot hL` |
 | `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
+| `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
 | `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
@@ -626,9 +646,14 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 ## 6. Functions and contracts — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
+fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
+           [ "payload" path ]
+           (* «E2» (§7.1): only on a `library fn` (`P043` without it) -- the payload
+              type, a table (a tree table is a table), held against the declared
+              tables (`N060`). It stands behind the signature because it extends
+              the call shape, not the contract. *)
            [ "refines"   path ]
            (* «P6a»: only at an `impl fn`; the path names a declared `spec fn` (`M130`/`M131`). *)
            [ "requires"  predlist ]
@@ -657,7 +682,8 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
               off. A function with a return type ends in `return e;`, one without in `return;`
               or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
-              `spec fn`. *)
+              `spec fn`. «E2» (§7.1): a `library fn` takes the `endblock` and nothing else
+              (`P044`) -- it IS safe Gabbro, not a foreign promise. *)
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
@@ -757,7 +783,7 @@ endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
    register read and a `format` check ends here; the second version said (§7, line 1029) that
    the branch "must diverge or return" and never wrote it. `leave`/`next` only under a loop. A
    `return R::F;` is a `return expr;` whose expression is a ground. *)
-stmt       = letstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
+stmt       = letstmt | allocstmt | resetstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
            | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
            | libcall ";" ;                                       (* lane E1: statement position *)
@@ -800,6 +826,16 @@ narrowstmt = "narrow" place "to" ( range | "finite" ) "else" endblock ;   (* CHA
 (* «F»: `finite` establishes not-NaN-ness. CHANGED «SG-17»: in the core every float is finite
    by type, so `narrow x to finite` is `narrow x to <its whole range>` -- a range narrowing;
    the form stays for the corpus. *)
+allocstmt  = "let" [ "mut" ] ident [ ":" typeexpr ] "=" "alloc" ident "(" expr ")"
+             [ "else" block ] ";" ;                             (* «E4», §9.1 *)
+(* Monotone allocation: `i` is the next free slot of the named arena, holding the value.
+   The `else` runs when the arena is full; it is owed exactly when the static allocation
+   count since the last reset may exceed the reservation (`N212`). A bare `alloc` stays an
+   ordinary expression -- only a name followed by `(` gives the word its meaning. *)
+resetstmt  = "reset" ident ";" ;                                (* «E4», §9.1 *)
+(* A fresh generation of the named arena: the used counter goes back to zero, and every
+   index bound before is stale afterwards (`N211`). `reset = 1;` stays an assignment --
+   the head word decides, like at every other keyword statement. *)
 ```
 
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
@@ -840,6 +876,8 @@ enclosing `locks` blocks and the statements before the position:
 | `if c blk else blk` | | — | `Stmt.ite` |
 | `match e { arms }` | one arm per case (see production) | — | `Stmt.onTag`, `Stmt.onOption`, `Stmt.onGrund`; `Arms`, `GrundArms` |
 | `narrow x to lo .. hi else endblock` | the `else` does not fall off; after it `x : lo .. hi` | — | `Block.narrow e lo hi sonst rest` |
+| `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | the model function `Arena.alloc` (`grammatik/Grammatik/Arena.lean`); no `Stmt` constructor — the generation is checker state, the bound is the model |
+| `reset A;` | `A` is a declared arena; `writes A` | — | the model function `Arena.reset`: the generation moves, every older index is stale by typing |
 | `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
 | `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`hardware ieee`** if the result is outside or not finite | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
 | `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
@@ -905,11 +943,13 @@ is the ordinary argument list. The region is a brace-balanced token tree the
 reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
 the closing `}`. What the region MEANS — compiled at translation time into a
 payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
-yet**: no translator runs and no payload type is checked. The checker refuses
-every library call with `N057` (`library calls are parsed but not yet
-checked`); the refusal is controlled — never a crash and never a silent
-acceptance — and stands until lane E2 checks the call like any call. In any
-other expression position the reader refuses the `@` with `P011`.
+yet**: no translator runs. A call that resolves `lib` to a used module and
+`function` to a declared `library fn` in it (§7.1) is checked like an
+ordinary call — arguments, effects, `or R`, costs — and then refused with
+`N069`, which names the translator that WOULD run it (§7.2). A call
+that resolves nowhere is refused with `N057`; the refusal is controlled —
+never a crash and never a silent acceptance. In any other expression position
+the reader refuses the `@` with `P011`.
 
 ```gabbro
 @spirv#kernel(n) { dispatch 0 };
@@ -918,8 +958,157 @@ let code = @spirv#kernel(n) { dispatch 0 };
 
 | spelling | attribute | Lean |
 |---|---|---|
-| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; refused | no term — refused by `N057` |
-| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057` |
+| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls refused with `N069`, unresolved with `N057` | no term — refused by `N057`/`N069` |
+| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057`/`N069` |
+
+### 7.1 `library fn` — the declaration with a payload type (lane E2)
+
+**Specified, the words lexed, the declaration checked («E2»).** A library
+module declares a run-time function with a contract and a PAYLOAD TYPE; the
+example block is an excerpt (`…`), not a translation unit.
+
+**The surface** — a `library fn` is an ordinary function with a body, every
+clause in the fixed order of §6, and one extra clause behind the signature:
+
+```gabbro
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+…
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+…
+```
+
+```gabbro
+module app {
+use gpu::spirv;
+…
+@spirv#kernel(n) { dispatch 0 };
+…
+}
+```
+
+**The checks** — each names what an ordinary declaration already carries,
+plus the four things only a library declaration can fail:
+
+* **payload** — the clause is mandatory on a `library fn` (`P043`); it names
+  a declared table — a tree table is a table — resolved from the declaring
+  module outward (`N060`). It stands behind the signature because it extends
+  the call shape (what the translator fills), not the contract.
+* **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
+  no `= asm`). The transitive call hull holds no `extern`, `raw`, `prim`
+  or `asm` (`N059`, `PLAN-ERWEITUNG.md` §0c) — structure, never prose
+  comparison.
+* **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
+  root, `use` lines) and `f` to a `library fn` in it; arguments, effects
+  (through the call graph), `or R` and costs are checked exactly like an
+  ordinary call. Resolved calls are refused with `N069` until a
+  translator RUNS them (declared since lane E3, §7.2; running them is lane
+  E5); unresolved calls with `N057`.
+* **no bypass** — a direct call to a `library fn` is refused (`N061`):
+  without a region there is no payload.
+
+*Lean:* a library call is an `Ax` whose parameter list is the ordinary
+parameters with the payload appended — no new statement constructor.
+Theorem `bibliotheksruf_ist_ax`
+(`grammatik/Grammatik/Bibliothek.lean`): the typing and effect obligations
+of such a call are exactly the `Stmt.axiomCall` premises for the serving
+axiom, as an equivalence; witnessed on a one-table declaration with a
+reached two-step run that moves memory
+(`bibliotheksruf_ist_ax_zeuge`).
+
+### 7.2 `translator` — the declaration from region to payload (lane E3)
+
+**Specified, the words lexed, the declaration checked («E3»).** A library
+declares, for each of its run-time functions, the *translator*: a total,
+effect-free Gabbro function from the call region's AST (a tree table type,
+`PLAN-ERWEITUNG.md` §2) to the function's payload type. Running it needs
+the compile-time evaluator — **only the declaration and the typing are
+built now** (`PLAN-ERWEITUNG.md` §6, lane E3). The region still is not
+translated: a resolved call is still refused with `N069`, which now names
+the translator that WOULD run.
+
+**The surface** — one translator per library function, in the same module,
+named after its own job and linked with `for`:
+
+```ebnf
+translatordecl = [ "pub" ] "translator" ident "for" ident "(" ident ":" typeexpr ")"
+                 [ "->" typeexpr ]
+                 (* The result names the served function's payload table;
+                    absent or naming anything else it is `N204`. *)
+                 [ "requires" predlist ] [ "ensures" predlist ]
+                 [ "effects" "{" efflist "}" ]
+                 (* `effects { pure }`, held by `N202`, not by the grammar:
+                    a translator with effects must be REFUSED, not unwritable. *)
+                 [ "costs" "<=" expr "ops" ]
+                 [ "decreases" expr ]
+                 (* The termination witness, held by `N203` for the same reason. *)
+                 endblock ;
+                 (* A Gabbro block, nothing else (`P044`) -- the translator IS
+                    ordinary Gabbro checked by the ordinary checker. *)
+```
+
+```gabbro
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+…
+pub translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+…
+```
+
+The example translates by identity: the region AST already stands in
+payload form. A translator between two DIFFERENT tables needs
+translation-time value construction -- building a fresh payload value
+without a run-time effect -- and that is lane E5's compile-time
+evaluator, not this lane: under the current checker a `pure` body cannot
+construct a table value out of another table's (`M140` is nominal, and a
+carrier read under `pure` is `E010`). What this lane checks is the
+declaration and the typing; the calls stay refused until a translator
+RUNS.
+
+**The checks** — the body is an ordinary function body: types, contracts,
+effects and costs are checked by the ordinary checker, and the transitive
+call hull holds no `extern`, `raw`, `prim` or `asm` (`N059`,
+`PLAN-ERWEITUNG.md` §0c). Five new refusals hold the five things only the
+linkage can fail:
+
+* **one translator** — every `library fn` with a payload type has exactly
+  one translator in its module: none is `N200` on the function, a second
+  one — and a translator naming no library function at all — is `N201` on
+  the translator;
+* **pure** — the translator's signature is `effects { pure }` (`N202` for
+  anything else, including a missing clause);
+* **total** — it carries a `decreases` clause (`N203` without one);
+* **fitting** — its result type names the served function's payload table
+  (`N204` for anything else, including a missing result).
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `translator build for kernel(region : RegionAst) -> KernelTab effects { pure } decreases e { … }` | a total, effect-free map from the region AST to the payload; checked like any function body; runs only at translation time (lane E5) | no new term — an ordinary pure function; the certificate (lane E5) checks its OUTPUT |
+
+*Lean:* nothing new. A translator is an ordinary Gabbro function with a
+`pure` contract and a termination witness; the translation certificate of
+lane E5 checks the produced payload, never the translator.
 
 ---
 
@@ -1027,6 +1216,10 @@ slotfeld   = ident ":" slottype [ "by" "ops" ] ;
 (* `by ops`: this field is written ONLY by the generated operations -- `refcount -= 1` by hand
    is not writable. CHANGED «SG-8»: as shape, the field's carrier is in the `writes` of the
    generated operations and of no other function. *)
+arena      = [ "pub" ] "arena" ident "capacity" constexpr ".." constexpr "of" typeexpr ";" ;
+(* «E4» (§9.1): a monotone region beside the table -- no body, no slots, no guards. Only
+   `..` joins the bounds: both count elements, so `..<` would be a second spelling of
+   `hi - 1`. *)
 slottype   = typeexpr | intty "wrapping" ;
 invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
              [ "by" inductlist ] ":" pred ";" ;
@@ -1050,6 +1243,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | declaration | reading | Lean |
 |---|---|---|
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
+| `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used` |
 | `owner m` | `marke m ∈ Λ` at every access — **parsed, and refused as `D026` until the producer stands**: who mints the FIRST mark is unwritten, and a guard nobody holds is a sentence, not a discipline (`kbedingung.rs::eigner`, poison `gift/694`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; no `allocs`, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
@@ -1074,6 +1268,54 @@ format Elf64 endian little {
 
 `offset_into Self` binds the offset to the buffer length; the `where` clause is the **only**
 additional statement and is a `pruefung` at the read.
+
+### 9.1 Arenas — a heap that is never unbounded («E4»)
+
+**Specified, the words lexed, the declaration checked.** `PLAN-ERWEITUNG.md` §3 fixes the
+owner's rule — *a heap is allowed but never unbounded: every region has an upper and a
+lower bound* — and the arena is the monotone form: release only as a whole (`reset`),
+no fragmentation, allocation fails only beyond the upper bound. The pool form (fixed
+element size, per-element release) exists already: every `table T count N` with generated
+`insert`/`remove`. The general bounded heap is not built until a concrete case forces it.
+
+**The surface** — one declaration, two statements, one read:
+
+```gabbro
+arena Log capacity 2 .. 8 of u32;
+
+impl fn nutzen() -> u32 effects { writes Log } costs <= 16 ops {
+    let a = alloc Log (10);
+    let b = alloc Log (20);
+    let c = alloc Log (a + b) else {
+        return 0;
+    };
+    reset Log;
+    let d = alloc Log (c);
+    return Log[d];
+}
+```
+
+* The declaration holds the reservation `lo` and the hard bound `hi` (`N210`
+  holds `0 <= lo <= hi` over constants) plus the element type. It emits a static
+  array of `hi` elements beside a `used` counter — no heap allocation in the C.
+* `let i = alloc A (v)` stores `v` in the next free slot and binds its index,
+  typed `index into A` of the current generation. The `else` runs when the arena
+  is full; it is owed exactly when the static allocation count since the last
+  reset may exceed the reservation (`N212`) — counted like `costs`, joined with
+  the maximum at branches, saturated across loops.
+* `A[i]` reads. A place over an arena is exactly `A[i]`, and `i` is an index of
+  `A` (`N214`); the slot is never written outside `alloc`.
+* `reset A;` consumes the generation and starts a fresh one: the counter goes
+  back to zero, and an index bound before is stale afterwards (`N211`).
+
+*Lean:* the generation is a type index (`Arena k g`, `ArenaIdx g n`, `Marke g`
+with a private constructor), so a stale index does not typecheck; `alloc`
+succeeds exactly below the bound (`alloc_erfolg`/`alloc_fehlschlag`), the first
+`lo` allocations after a reset never fail (`alloc_innerhalb_reserve`), and the
+indices are contiguous (`keine_fragmentierung`). The checker's generation
+counter and its static count are the shadow of those types over one body —
+counted per function, like `costs` (a reservation shared across functions is
+future work, not a silent promise).
 
 ---
 
@@ -1364,14 +1606,15 @@ footnote: *memory-safe under A1…An*.
 > parameter `O : Orakel D`, and `#print axioms` at the end of `Satz.lean` shows that nothing
 > else was assumed.
 
-### 12.1 `syscall` — the user side of a system call (refused as `P042` until S5-S7)
+### 12.1 `syscall` — the user side of a system call (checked since lane S5)
 
-**Specified, the words lexed, the item refused by name («SS-1», `P042`).** What
+**Specified since «SS-1», checked since lane S5.** What
 follows is the surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks
 and one example, so that the checker lane (S5), the emitter lane (S6) and the
-corpus lane (S7) have a text to build against. Until S5-S7 land, every `syscall`
-item falls at `P042` -- a controlled refusal, never silent acceptance; nothing
-below is checked by any pass. The example block is an excerpt (`…`), not a
+corpus lane (S7) have a text to build against. Every `syscall`
+item is held against its own shape -- register map, errno decoding, machine and
+counterpart -- and the emission is refused as `C001` until the lane-S6 stub
+lands. The example block is an excerpt (`…`), not a
 translation unit.
 
 **The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
@@ -1380,19 +1623,30 @@ they point at stands in §1 beside `entrydecl`.
 
 * **arch** — the `arch` after `abi` is held against a declared `arch`, as for
   `assume` (`A005`). A syscall for a machine no `arch` declares is refused.
-  **x86_64 only** — `aarch64` stays sealed.
+  **x86_64 only** — `aarch64` stays sealed (`A006`).
 * **register map** — `regs in` / `regs out` / `clobbers` carry the same checks
-  as `entry`: every binding names a register the ABI table knows (`G4`, same
-  `regbind` shape), `clobbers` may be empty (`G7`).
+  as `entry` (`G4`, `G7` at `entrydecl`): the in-registers are pairwise
+  distinct (`N063`), no out register is clobbered (`N064`), every parameter is
+  bound exactly once (`N065`), and every named register is one of the sixteen
+  x86_64 general registers (`N066`); `clobbers` may be empty.
 * **error map** — `errors` is a total map from the errnos the contract admits
   to the declared reasons (`or R`): every admitted errno has exactly one arm,
-  no arm names an errno outside the table. The decoding is generated; an errno
-  outside the table is `hardware (annahme a)` — the kernel answered outside
-  its contract.
+  every target is a case of the declared channel (`N067`). The decoding is
+  generated; an errno outside the table is `hardware (annahme a)` — the kernel
+  answered outside its contract.
 * **`assume … falsifier …` or `kernel <path>`** — with `kernel`, the call is
   paired with a Gabbro kernel's dispatch `entry` for the same `number` and no
-  assumption is named; with `assume`, the per-call assumption is named with
-  its falsifier, as for a device (`N004`/`N005` shape).
+  assumption is named (refused as `N068` until the pairing check lands); with
+  `assume`, the per-call assumption is named with its falsifier, as for a
+  device (`N004`/`N005` shape).
+
+**Two places where the written example fixes the production's letter** (measured
+at the build, lane S5): the §1 production line says `regbind` (`ident ":"
+ident`, entry order) for both maps, but every written example — `PLAN-SYSCALL.md`
+§1, the block below, the probes — writes `regs in { rdi = fd }` (register
+first, `=`) and `regs out { rax }` (bare registers). What parses is what the
+examples write, with `:` accepted beside `=` at `regs in`; a `regs out` pair
+has no reading (the out value has no Gabbro-side name) and falls at the parser.
 
 ```gabbro
 syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
@@ -1405,7 +1659,7 @@ syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
     requires Open(fd)
     ensures  result <= len
     effects  { reads buf, writes os.fds }
-    assume   linux_write_contract falsifier probe_write;
+    assume   linux_write_contract falsifier sonde_write;
 …
 ```
 
@@ -1414,6 +1668,89 @@ map, clobbers — consumed only by the emitter); the answer type is the sum
 `ok value | reason r`, filled by the generated errno decoding; `einpassen`
 holds the raw answer against it. Ghost OS state (`os.fds`, …) is tables the
 semantics treats like any carrier and the emitter omits.
+
+### 12.2 `profile` — the one hardware profile, and what libraries require (lane E6)
+
+**Specified and checked («E6», the checker half of `PLAN-ERWEITUNG.md`
+§0c).** The main program declares the profile: the one set of hardware
+assumptions the whole program runs under. A library does not assert
+assumptions; it requires profile entries, by reference to the declared
+assumption, never by a copy of its text. Linking refuses a library whose
+requirements are not in the profile — consistency is a subset check
+against one set, decidable and cheap.
+
+```ebnf
+profiledecl     = "profile" "{" { profileentry } "}" ";" ;
+requiresprofile = "requires" "profile" "{" { profileentry } "}" ";" ;
+profileentry    = ( "arch" | "rounding" | "fp_contract" | "memory_model"
+                  | "interrupt_routing" ) ident ";"
+                | "assume" ident ";" ;
+```
+
+```gabbro
+assume gpu_progress
+    "The GPU retires one work item per clock."
+    falsifier sonde_gpu_tick;
+
+module gpu::spirv {
+…
+requires profile {
+    arch x86_64;
+    fp_contract off;
+    assume gpu_progress;
+};
+…
+}
+
+profile {
+    arch x86_64;
+    rounding nearest;
+    fp_contract off;
+    memory_model c11;
+    assume gpu_progress;
+};
+```
+
+**The checks** — each names what the declaration carries, plus the five
+things only a profile can fail:
+
+* **one profile** — at most one `profile` block per unit; the second falls
+  (`N219`). Two profiles are two sets, and merging them silently would hide
+  exactly the conflict below.
+* **key agreement** — two keyed entries with one key and different values
+  are refused at the block itself (`N215`), in `profile` and in `requires
+  profile` alike. Duplicates with one value are silent: a set holds them
+  once.
+* **same name, same content** — an `assume <name>` entry references the
+  declared assumption; where two declarations under that name carry
+  different statements, the reference is ambiguous and falls (`N216`). A
+  reference naming no declared assumption falls beside it (`N219`).
+* **linking** — every requirement of every library stands in the program's
+  profile with identical content (`N217`): a keyed requirement needs the
+  key with the value, an `assume` requirement a profile reference to a
+  declaration with the same name and content.
+* **platform** — `fp_contract` other than `off` contradicts the float
+  prelude, which binds `-ffp-contract=off` for every compiler
+  (`PLAN-BITS.md` §5); an `arch` the unit never declares contradicts the
+  declared machines (`N218`). Without declared machines nothing is
+  refused — a unit with no machine named constrains no machine.
+
+**The manifest** lists every keyed profile entry (with the
+`-ffp-contract=off` flag where the profile says `fp_contract off`) and
+every requirement with its library and the calls relying on it
+(`gabbro annahmen`).
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `profile { … }` | the ONE assumption set of the program theorem | `Profil`, `Profil.gut`, `profil_modell` |
+| `requires profile { … }` | the library's requirements as name references | `Bibliothek`, `Profil.bindet`, `bindung_fuegt_nichts_hinzu` |
+| `arch x86_64;` etc. | a keyed mode assumption: key plus value | `AnnahmeEintrag.modus`, `istModus` |
+| `assume a;` | the declared assumption, referenced, never copied | `AnnahmeEintrag.frei`, `anforderungEintrag` |
+
+*Lean:* the program theorem takes one assumption set, the profile; a
+library's set is required to be a subset, so linking adds no premise. For
+keyed mode assumptions the profile induces its own model
+(`modusVonProfil`). All in `grammatik/Grammatik/Profil.lean`, witnessed.
 
 ---
 

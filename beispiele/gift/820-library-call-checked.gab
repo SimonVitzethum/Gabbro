@@ -1,0 +1,37 @@
+-- erwartet: N069
+-- Lane E2, completed by lane E3: declaration plus translator plus calls --
+-- refused ONLY by the translation diagnostic (N069), once per call, in
+-- statement and in binding position. Arguments, effects and costs are all
+-- clean: the callee resolves, so no N057, no M143, no E009, no H021, no
+-- K003 fires beside it -- and the translator is declared and typed, so no
+-- N200-N204 fires either. The N069 names the translator that WOULD run.
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @spirv#kernel(a) { dispatch 0 };
+    let code = @spirv#kernel(a) { dispatch 0 };
+    return a;
+}
+}

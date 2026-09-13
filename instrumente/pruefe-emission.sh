@@ -2238,6 +2238,144 @@ lauf "beispiel52" "$W/beispiele/52-baugatter.gab" "$TREIBER52" "42 0" \
      's/p->slots\[i\].fuellstand = v;/(void)v;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 9 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 20. Der Systemaufruf, und er geht an den Kern ---------------------------------------
+#
+# **Die erste Absenkung, deren Gegenueber kein C ist.** `beispiele/74` erklaert
+# `syscall write(fd, buf, len)` -- Nummer 1 in `rax`, Argumente in
+# `rdi`/`rsi`/`rdx` -- und der Erzeuger schreibt den Rumpf selbst (lane S6):
+# ein `syscall` als erweitertes `__asm__` mit den erklaerten Clobbern plus
+# `memory`, `rcx` und `r11`, dann die erzeugte Errnodekodierung ueber den
+# `or IoError`-Kanal. Was dahinter steht, ist eine ANNAHME
+# (`linux_write_contract` mit `sonde_write`), kein Koerper.
+#
+# Die zwei Zahlen unten sind die zwei Seiten derselben Schablone:
+#
+#      ok  -- der Kern hat die drei Bytes wirklich geschrieben (`write(1,
+#             "ok\n", 3)` geht an Dateideskriptor 1, nicht an einen Puffer des
+#             Treibers). *Ein Stub, der die Register falsch belegt, schreibt
+#             woandershin oder liest die Antwort aus dem falschen Register --
+#             und genau das faellt hier auf.*
+#      3   -- und die Antwort kam als WERT zurueck, nicht als Grund: `rax = 3`
+#             ist nichtnegativ und liegt in `u64`, also fuellt die Dekodierung
+#             `_wert` und meldet Erfolg.
+#
+# **Das Gift nimmt den Befehl weg, nicht die Dekodierung.** `nop` statt
+# `syscall` laesst `rax` auf der Nummer stehen -- die Antwort ist dann `1`,
+# ebenfalls nichtnegativ, und der Lauf meldet `1` statt `ok` + `3`. *Ein Gift,
+# das die Fehlerarme statt des Befehls tauschte, belegte die Arme, nicht den
+# Weg dorthin.*
+TREIBER74='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static const char msg[3] = {'"'"'o'"'"', '"'"'k'"'"', '"'"'\n'"'"'};
+    uint64_t n = schreibe(1, (uint64_t)msg, 3);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel74" "$W/beispiele/74-syscall-schreiben.gab" "$TREIBER74" "$(printf 'ok\n3')" \
+     's/"syscall\\n"/"nop\\n"/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 21. ... und der Kern sagt nein -------------------------------------------------------
+#
+# **Die andere Haelfte derselben Schablone.** `beispiele/90` ruft dasselbe
+# `write` auf einem Deskriptor auf, der nie offen ist (9999 -- ausserhalb der
+# Tabelle, wo sie kleiner ist, geschlossen, wo sie groesser ist). Der Kern
+# antwortet `EBADF`, die erzeugte Dekodierung liefert `BadFd` durch den Kanal,
+# und der Rufer benennt ihn: `777`. *Ein Stub, der das Vorzeichen falsch
+# herum laese, meldete Erfolg mit dem Zweierkomplement als Wert; einer, der
+# die Fallnummern aus den Namen statt aus den erklaerten Werten naehme,
+# liefe in den Hardwareausgang.*
+#
+# **Das Gift tauscht den Grund, nicht den Weg.** `Interrupted` statt `BadFd`
+# laesst denselben negativen Rohwert durch denselben `if` laufen -- und der
+# Rufer meldet `0` statt `777`. *Belegt ist damit, dass die Fallunterscheidung
+# den Unterschied macht, nicht dass irgendein Fehlerarm existiert.*
+TREIBER90='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static const char msg[3] = {'"'"'o'"'"', '"'"'k'"'"', '"'"'\n'"'"'};
+    uint64_t n = schreibe_ungueltig((uint64_t)msg, 3);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
+     's/_grund = IoError_BadFd;/_grund = IoError_Interrupted;/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 22. The reference fixture as a running program (lane 126) ---------------------------
+#
+# `beispiele/104-referenz.gab` is the Lean reference fixture
+# (`grammatik/Grammatik/ReferenzB.lean`: `refD`/`refP`) in surface syntax: one
+# table `Konto` of 2 slots with one `0 .. 100` field, one guarding lock `M`,
+# `einzahlen` (writes the slot to the cap 100, then calls `lies`) and `lies`
+# (reads the slot back). Both run under the held lock (`requires Held(M)`).
+#
+# Threads cannot be driven from a C driver -- the emitted unit has no thread
+# notion (a `concurrent` declaration would generate no C and, worse, the
+# certificate books it as UNCLASSIFIED, which fails stage 7) -- so the driver
+# runs the SEQUENTIAL COMPOSITION of both threads: `einzahlen` like thread 1
+# (with the witness argument 7 of `refRho7`), then `lies` like thread 0.
+#
+#    Expected:
+#      100  -- `lies` answers what `einzahlen` wrote (the `refB_schreibt` half:
+#              slot `0 -> 100`, the memory move the Lean witness names)
+#      100  -- the slot itself reads the cap
+#        0  -- and slot 1 is untouched: the write hits ONE slot
+#
+# The poison takes the cap off the write: both numbers fall to 99, so the
+# comparison measures that the observed value comes OUT OF THE WRITE and not
+# out of the initial memory (which reads 0 either way).
+TREIBER104='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static Konto k;
+    einzahlen(&k, 0, 7);
+    unsigned g = lies(&k, 0);
+    printf("%u %u %u\n", g, (unsigned)k.slots[0].stand, (unsigned)k.slots[1].stand);
+    return 0;
+}
+'
+lauf "beispiel104" "$W/beispiele/104-referenz.gab" "$TREIBER104" "100 100 0" \
+     's/k->slots\[i\]\.stand = 100;/k->slots[i].stand = 99;/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 22b. The buffered writer over the same call (lane S7) -------------------------------
+#
+# **The first program that keeps kernel bytes between two calls.**
+# `beispiele/96` holds four bytes in a table, `push`es six ("hello\n") through
+# it -- the fifth push flushes midway, so the full-buffer path runs live, not
+# only the final flush -- and answers the last flush's byte count:
+#
+#      hello -- four bytes out of the midway auto-flush, two out of the end
+#      2     -- and the answer came back as a VALUE: the final flush wrote 2
+#
+# The watchdog the `forever` names (`writer_hangs`, a `-> never` extern) is
+# provided by the driver the way a `sonde_*` falsifier is provided beside the
+# unit: it aborts, and a run that reaches it answers nothing expected.
+#
+# **The poison takes the instruction, not the decoding** -- the same gift as
+# `beispiel74` (`nop` for `syscall`): `rax` keeps the number 1, the decoding
+# reads a value 1 per pass, the loop "succeeds" without writing, and the run
+# answers `2` without `hello`. *A run that prints the count without the bytes
+# is exactly what a faked flush would look like.*
+TREIBER96='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+void writer_hangs(void) { fprintf(stderr, "writer_hangs: overrun\n"); abort(); }
+int main(void) {
+    uint64_t n = writer_demo(1);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf 'hello\n2')" \
+     's/"syscall\\n"/"nop\\n"/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 13 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2761,12 +2899,42 @@ fi
 # heaviest colliding words of the whole foreign measurement, as parameters, locals, a record's
 # field names, a named type, an assignment target and a loop label. Until 2026-09-05 not one
 # line of it was writable. *It emits and compiles.*
-# **70 -> 73 on 2026-09-12, and the object grew by three clean examples.**
-# `beispiele/71-frist-und-zaehlung.gab`, `72-fremdruf-unter-sperre.gab` (lane 75: the
-# foreign call under its guard, H007's working counterpart) and `73-sugar-widths.gab`
-# (lane 60: the uN/iN width sugar). All three emit and compile under `cc -Werror`
-# at -O0 and -O2. *The good case, and the reason stands here at the mark.*
-MARKE_EMIT=73
+# **70 -> 72 on 2026-09-12, and both files are the syscall stub (lane S6).**
+# `beispiele/74-syscall-schreiben.gab` refused at the emitter until today
+# (`C001`); with the stub it emits and compiles, and the differenztest runs
+# it (`write(1, "ok\n", 3)` returns 3). `beispiele/90-syscall-errno.gab` is
+# new and carries the error path (`EBADF` decodes to `BadFd`). *The object
+# grew by two units that lower, so the floor rises by two -- with the runs
+# beside it, not instead of them.*
+# **72 -> 75 the same day, and only two of the three are this lane's.** The
+# run measures 75 emitting files in `beispiele/`: 70 booked, three found
+# (`71-frist-und-zaehlung`, `72-fremdruf-unter-sperre`, `73-sugar-widths` --
+# other lanes, emitting since they landed, the mark never pulled up; already
+# measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
+# *A mark that absorbs foreign growth without naming it is a slack ratchet,
+# so the decomposition stands here and not in a merge note.*
+# **75 -> 78 on 2026-09-12, and only two of the three are this lane's («E4»).**
+# The run measures 78 emitting files in `beispiele/`: 75 booked, three found
+# (`80-bibliothek-erklaert` -- lane E2's declaration-only library, emitting
+# since it landed, the mark never pulled up -- plus `98-arena-erklaert` and
+# `99-arena-grenze`, this lane's positive direction with its static array and
+# counter, both compiling under `-Werror` at `-O0` and `-O2`). *Same rule as
+# above: the decomposition stands here, not in a merge note.*
+# **78 -> 83 on 2026-09-12 (merge resolution, lane 118 + S7/114 + const lanes
+# + lane 126 + E3/112).** `+1` is `beispiele/halde.gab`, moved from the
+# repository root; `+1` is `beispiele/80-bibliothek-erklaert.gab` (counted
+# above, booked here with its address); `+1` is `96-buffered-writer.gab`
+# (lane S7/114); `+2` are `92-const-squares`/`93-const-scalars` (const lanes);
+# `+1` is `104-referenz.gab` (lane 126); `+2` are `94-`/`95-uebersetzer-*`
+# (lane E3/112). Each verified file by file, not added up.
+# **83 -> 85 on 2026-09-12 (merge resolution, lane E4/116).** `+2` are
+# `98-arena-erklaert` and `99-arena-grenze` (this lane, counted above).
+# Provisional sum -- re-measured by the run below, not added up.
+# **85 -> 87 on 2026-09-12 (lane-89 merge resolution, measured file by file).**
+# `+2` are `100-hardwareprofil` and `101-hardwareprofil-schluessel` (lane 117:
+# examples following the merged language, translator per library function).
+# Both emit and compile; the other 85 stand as booked.
+MARKE_EMIT=87
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2968,14 +3136,12 @@ MARKE_EMIT=73
 # `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (owner, same day) and emits from
 # there, while the frozen fragment stays at 27 errors and emits nothing. *The object grew by
 # exactly one file and the reason stands here at the mark.*
-# **73 -> 132 on 2026-09-12, and the object grew by whole emission families.**
-# Measured against the mark commit: 75 `.gab` files added under `messung/` since, of
-# which 59 emit and compile -- the `emission-140` through `emission-155-c1` series
-# (M140/C001, float/int lowering, C23 attributes, ownership handover), the
-# `emission-15x-c23` series, 17 `absenkung` lowering probes, plus single probes
-# (`nebeneinander`, recursion-in-retry/loop, retry-for73). Stage 9 itself reports
-# 222 of 222 translating units compile under `cc -Werror` at -O0 and -O2 and under
-# `clang`, so every added file in the count earned its place. *The good case.*
+# **73 -> 132 on 2026-09-12 (merge resolution, measured).** The run below reads 132;
+# the 73 lagged the corpus since no later than lane S6 -- MUSE-REPORT-107 already
+# measured 132 at its base, lanes 118/120 re-measured the same pair (132/73) on
+# the merged tree. No per-file decomposition is offered here: 59 files of
+# multi-lane growth since 2026-09-03, and an invented split would be the slack
+# ratchet this mark exists against. What is booked is the measurement.
 MARKE_EMIT_M=132
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
@@ -2987,14 +3153,12 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # straight-line code and merged its state into the join. The arm was healed (`f1831fa`), and
 # the file has emitted since. *A mark that stood at zero because a false refusal held the
 # only witness.*
-MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten darueber
-# **1 -> 8 on 2026-09-12: seven files under the tracked scratch root `Claude outputs/`.**
-# `19-traversierung`, `46-verneinung`, `F06`, `probe-elems`, `probe-rekursion-in-schleife`,
-# `probe-suchschleife-passfach`, `udp-echo` emit and compile; with `halde.gab` that is 8.
-# The directory is versioned (agent-C work, incl. a `.tgz`), so the arbeitsprotokoll
-# exemption does not cover it. Booking the set as found; whether the root stays
-# versioned is a decision for an owning lane, not this booking.
-MARKE_EMIT_X=8      # `halde.gab` + the seven emitting files under `Claude outputs/`
+# **1 -> 0 on 2026-09-12 (lane 118, root cleanup).** The last root outside the five
+# booked roots stopped being one: `halde.gab` moved to `beispiele/halde.gab` (counted
+# at `MARKE_EMIT` now), and `Claude outputs/` -- 7 emitting scratch copies of committed
+# files, 15 tracked files, no live reference -- is deleted next. Nothing outside the
+# five roots emits anymore.
+MARKE_EMIT_X=0
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
 # erste Lauf dieser erweiterten Reichweite meldete `NEUE WURZEL EMITTIERT: 2` -- beide unter
@@ -3036,15 +3200,13 @@ MARKE_EMIT_X=8      # `halde.gab` + the seven emitting files under `Claude outpu
 #
 # That is the cap moving the way its own message says it should -- *a probe caught before it
 # emits* -- and it is now back where it stood before 2026-09-02.
-# **2 -> 8 on 2026-09-12: six new hint probes that legitimately reach the emitter.**
-# `689` (D023), `718` (H004), `719` (H008), `727` (E009), `758`/`777` (V003) all carry
-# `-- erwartet: Hinweis ...`, and a hint is not a refusal -- the file emits, and each
-# hint was verified to fall (`gabbro pruefe` shows D023/H004/H008/E009/V003 on the
-# respective file; `zaehle-gifttreffer.py` counts zero FEHLT). Precedent is `gift/286`,
-# the booked member that likewise translates under a hint. The stage message names
-# only the `-- erwartet: cc` case; the hint case is booked here instead, with the
-# same direction: a probe that stops emitting moves this number down.
-MARKE_EMIT_G=8      # `gift/286`, `gift/414`, + the six hint probes 689/718/719/727/758/777
+# **2 -> 8 on 2026-09-12 (merge resolution, measured).** The run below reads 8 emitting
+# gifts: 286 (compiles), 414 (`-- erwartet: cc`, bites), 689, 718, 719, 727, 758, 777
+# (all seven compile -- slipping through, the direction this cap calls a breach).
+# Same 8 lane 120 enumerated on the merged tree; MUSE-REPORT-107 already measured
+# 8 at its base. None is this resolution's: the merged lanes' new gifts (860-864,
+# 895-899) all fall at the checker and emit nothing.
+MARKE_EMIT_G=8      # 286, 414, 689, 718, 719, 727, 758, 777 -- measured, see above
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -3089,13 +3251,13 @@ MARKE_EMIT_G=8      # `gift/286`, `gift/414`, + the six hint probes 689/718/719/
 # `D22` repaired the defect: `let x = f() else (e)` binding a record no longer lowers to
 # `x->field`, so the probe stops biting and has lost its `-- erwartet: cc` header. *The debt
 # was not rebooked, it was paid* -- and by a different lane on the same day it was entered.
-# **4 -> 2 on 2026-09-12, and the direction is the good one twice.** Lane 73 taught the
-# checker to refuse a non-entry `main` by name (`N041`), so `probe-eintritt-privat` and
-# `probe-eintritt-zwei` now fall at the checker and never reach the `cc` branch; only
-# `gift/414` and `probe-eintritt-parameter` still bite. The two headers still read
-# `-- erwartet: cc` although the checker answers first -- a stale header, reported as a
-# finding by the consolidating lane, not repaired here. *Two debts paid at their source;*
-# the branch keeps two objects, so it keeps saying something.
+# **4 -> 2 on 2026-09-12 (merge resolution, measured).** Two of the three `B001` entry
+# probes never reach the branch anymore: `-privat` and `-zwei` fall at the CHECKER
+# (`N041`, `` `main` is a name C has already taken``), so no compiler is asked about
+# them. Caught sooner is the good direction -- but the branch keeps only `gift/414`
+# and `-parameter` as objects, and the count follows them down. Whether the two
+# re-headed probes still cover their shapes is the B001 lane's question, not this
+# mark's: a probe that cannot bite reads like one that never could, either way.
 MARKE_UMGEKEHRT=2
 ratsche() {
     local ist="$1" marke="$2" wo="$3"

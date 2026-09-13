@@ -1184,6 +1184,18 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 BinOp::BitXor => "bxor",
                 BinOp::SchiebLinks => "shl",
                 BinOp::SchiebRechts => "shr",
+                // PLAN-BITS section 4 (lane 88): the overflow operators have no
+                // term here. `Ueberlauf.lean` carries `Zahl.addW/subW/mulW/shlW`
+                // as proof-level functions, but `Syntax.lean`'s `Expr` has no
+                // wrapping or saturating constructor -- and the modulus `N`
+                // is nowhere in this channel, the same reason `~` is refused
+                // two arms above. Carrying them as plain `add`/`sub` would
+                // prove what `pruefe` refuses.
+                BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat => return Err(LeanReason::Expression),
             };
             Ok(LeanCarried::ExprBinary.term(format!(
                 "(.bin .{z} {} {})",
@@ -1265,8 +1277,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **«SG-24»** -- the model folds nothing (`LeanReason::Counted`); bodies
         // lower the count to C, contracts stating one are refused here, by name.
         ExprArt::Zaehle { .. } => Err(LeanReason::Counted),
-        // **Lane E1:** a library call names no declared routine -- refused
-        // like any call the unit does not declare.
+        // **Lane E2:** a library call lowers to no term -- the checker
+        // refuses every one (`N057`/`N069`), so the channel maps it to the
+        // existing `CallStatement` refusal like any undeclared call.
         ExprArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **Two built-ins have a meaning here, and the third has none.** `aligned(e, n)` is
         // `e % n == 0`; `lenof` of an array is its declared length, a constant of the
@@ -1333,6 +1346,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
             Ok(LeanCarried::ExprLiteral.term(format!("(.lit (.reason {}))", quoted(&fall.text))))
         }
         ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
+        // **Lane 111:** a table literal has no term in this channel either --
+        // the model has no array literal form.
+        ExprArt::ArrayLit(_) => Err(LeanReason::OtherValue),
     }
 }
 
@@ -1918,11 +1934,19 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
             | BinOp::Mal
             | BinOp::Geteilt
             | BinOp::Rest
-            | BinOp::BitUnd
+            |             BinOp::BitUnd
             | BinOp::BitOder
             | BinOp::BitXor
             | BinOp::SchiebLinks
             | BinOp::SchiebRechts => Some(Shape::Int),
+            // PLAN-BITS section 4 (lane 88): no shape, like `~` -- the value
+            // is an integer, but no term of this channel can name the
+            // operation, so no proof about it can be built here either.
+            BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
+            | BinOp::PlusSat => None,
             BinOp::Gleich
             | BinOp::Ungleich
             | BinOp::Kleiner
@@ -1963,7 +1987,10 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
         | ExprArt::Eingebaut(_)
         | ExprArt::FnWert(_)
         // **Lane E1:** a library call yields a value of no known shape.
+        // **Lane 111:** a table literal yields one the channel cannot name
+        // either -- the shape vocabulary has no array form.
         | ExprArt::LibraryCall(_)
+        | ExprArt::ArrayLit(_)
         | ExprArt::Grund { .. } => None,
     }
 }
@@ -2418,9 +2445,13 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
             let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
             Ok(LeanCarried::StmtCall.term(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})")))
         }
-        // **Lane E1:** a library call names no declared routine -- refused
-        // like any call the unit does not declare.
+        // **Lane E2:** a library call lowers to no term -- refused like
+        // any call the unit does not declare (checker: `N057`/`N069`).
         StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
+        // **«E4»:** the monotone arena has no term in this channel -- the
+        // generations live in `grammatik/Grammatik/Arena.lean`, not in the
+        // program-logic body model, so both statements lower to no term.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => Err(LeanReason::Expression),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
         // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)

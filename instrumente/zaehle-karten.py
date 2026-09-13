@@ -126,8 +126,17 @@ SRC = W / "crates" / "gabbro-check" / "src"
 #
 # *A read that cannot reach an ambiguous table is not a place where a check can go silent.*
 # The mark rises because the object grew by one read, and the reason stands here at the mark.
-MARKE_DIREKT = 46
-MARKE_UNQUALIFIZIERT = 41
+#
+# **46/41 -> 69/60 on 2026-09-12 (lane-89 merge resolution, waves 4-5, measured).**
+# The merged lanes add new maps and new readers: per-map reads now stand at
+# geraete 25, funktionen 22, arenen 6, gruende 4, kapazitaeten 2, typen 2,
+# tabellen 2, nutzlasten 2, uebergangskosten 1, konstanten 1, hinterlegungen 1,
+# annahmen 1 (23 maps, 19 public, 52 pass files read). New maps since the old
+# ceiling: arenen, nutzlasten, konstanten, hinterlegungen (library / arena /
+# const / profile lanes). Each read stays listed above per site; the ceiling
+# follows the object, the per-site watch is unchanged.
+MARKE_DIREKT = 69
+MARKE_UNQUALIFIZIERT = 60
 
 # **Modulbewusst von Hand**: der Blick steht in einer Kandidatenschleife. Das ist der eine
 # Fall, in dem ein direkter `.get(` richtig ist, ohne durch `suche` zu gehen.

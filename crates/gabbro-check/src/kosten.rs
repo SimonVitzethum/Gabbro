@@ -613,6 +613,15 @@ impl<'a> Rechner<'a> {
                 };
                 lokal.insert(l.name.text.clone(), t);
             }
+            // **«E4»:** the bound index carries `index into A` -- the
+            // annotation, or the arena's own index type.
+            StmtArt::Alloc(a) => {
+                let t = match &a.typ {
+                    Some(td) => self.u.typ_von_ausdruck_decl(self.modul, td),
+                    None => self.u.indextyp(self.modul, &a.tisch.text, false),
+                };
+                lokal.insert(a.name.text.clone(), t);
+            }
             StmtArt::AwaitLoad(a) => {
                 let t = self.u.typ_von_ort(self.modul, &a.quelle, lokal);
                 lokal.insert(a.name.text.clone(), t);
@@ -723,13 +732,19 @@ impl<'a> Rechner<'a> {
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),
-            // **Lane E1:** a library call has no callee and no `costs` promise
-            // until lane E2 checks it -- an unknown cost WITH A REASON, never
-            // zero, the same answer an indirect call without one gets.
+            // **Lane E2:** a resolved library call costs what its
+            // declaration promises, like any call; unresolved it keeps the
+            // unknown remainder with its reason.
             StmtArt::LibraryCall(r) => {
                 let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
                     a.plus(self.ausdruck(e, lokal))
                 });
+                if let Some(z) = self.u.bibliothek(self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(n) = self.deklariert.get(&z.name).copied() {
+                        return args.plus(Kosten::Zahl(n));
+                    }
+                }
                 args.plus(Kosten::Unbekannt(
                     format!(
                         "`@{}#{}` names no declared function, so the call declares no costs",
@@ -742,6 +757,16 @@ impl<'a> Rechner<'a> {
                 Kosten::Zahl(0),
                 self.block(&n.sonst, lokal),
             )),
+            // **«E4»:** storing is one primitive plus the value; the
+            // full-arena continuation counts like any `else`.
+            StmtArt::Alloc(a) => Kosten::Zahl(1).plus(self.ausdruck(&a.wert, lokal)).plus(
+                a.sonst
+                    .as_ref()
+                    .map(|b| self.block(b, lokal))
+                    .unwrap_or(Kosten::Zahl(0)),
+            ),
+            // **«E4»:** resetting the counter is one primitive.
+            StmtArt::ResetArena(_) => Kosten::Zahl(1),
 
             StmtArt::Schleife(sch) => self.schleife(sch, lokal),
         }
@@ -860,6 +885,13 @@ impl<'a> Rechner<'a> {
             ExprArt::Binaer(_, a, b) => {
                 Kosten::Zahl(1).plus(self.ausdruck(a, lokal)).plus(self.ausdruck(b, lokal))
             }
+            // **Lane 111:** a table literal evaluates one expression per
+            // element -- the elements are ordinary expressions and cost what
+            // they cost. (No `const` initializer ever runs -- the parser reads
+            // `[` only there -- but the sum is the honest answer regardless.)
+            ExprArt::ArrayLit(es) => es
+                .iter()
+                .fold(Kosten::Zahl(0), |k, e| k.plus(self.ausdruck(e, lokal))),
             // **`aligned(a, b)` evaluates TWO expressions, and both of them cost.**
             //
             // ```text
@@ -888,13 +920,19 @@ impl<'a> Rechner<'a> {
                 }
             },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
-            // **Lane E1:** a library call in binding position costs its
-            // arguments plus an unknown remainder -- no callee, no `costs`
-            // promise, the same answer the statement form gets.
+            // **Lane E2:** a resolved library call costs what its
+            // declaration promises, like any call; unresolved it keeps the
+            // unknown remainder with its reason.
             ExprArt::LibraryCall(r) => {
                 let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
                     a.plus(self.ausdruck(e, lokal))
                 });
+                if let Some(z) = self.u.bibliothek(self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(n) = self.deklariert.get(&z.name).copied() {
+                        return args.plus(Kosten::Zahl(n));
+                    }
+                }
                 args.plus(Kosten::Unbekannt(
                     format!(
                         "`@{}#{}` names no declared function, so the call declares no costs",
@@ -1015,6 +1053,20 @@ impl<'a> Rechner<'a> {
         if gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty())
             || crate::aufrufgraph::zucker_umschreiben(&name).is_some()
         {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
+        }
+        // **Bit intrinsics (PLAN-BITS §3): a language primitive, not a callee,
+        // and the cost is fixed the way a conversion's is.** There is no
+        // declaration to carry a `costs` clause, so without this branch every
+        // `clz(x)` fell into `K003` -- true and unhelpful, since no declaration
+        // will ever name it (`namen.rs` refuses one as `N058`). One primitive
+        // op, `SPRACHE.md` §7's unit -- the emitted form is a single
+        // `__builtin_*` expression or one `gabbro_rot*` helper call
+        // (`emit.rs::ruf`), plus the cost of the arguments themselves.
+        if crate::ist_bitintrinsik(&name) {
             return r
                 .argumente
                 .iter()
@@ -1151,6 +1203,12 @@ impl<'a> Rechner<'a> {
                     StmtArt::Bricht(x) => self.schleifenzusagen(&x.rumpf, &lokal, absagen),
                     StmtArt::Narrow(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
                     StmtArt::LetSonst(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
+                    // **«E4»:** the full-arena continuation may loop too.
+                    StmtArt::Alloc(x) => {
+                        if let Some(sonst) = &x.sonst {
+                            self.schleifenzusagen(sonst, &lokal, absagen);
+                        }
+                    }
                     StmtArt::Wenn(w) => {
                         for (_, r) in &w.zweige {
                             self.schleifenzusagen(r, &lokal, absagen);

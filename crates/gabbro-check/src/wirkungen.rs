@@ -47,8 +47,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         ItemArt::State(x) => weltnamen.push(x.name.text.clone()),
         _ => {}
     });
+    // **E220/E221 need the whole program before any function:** whether a carrier is
+    // read-only is a statement about every function, so the writer set is computed
+    // once here and handed to each function -- computed beside `konstanten`/
+    // `weltnamen` for the same reason (one register, read at one place).
+    let schreiber = schreiber_des_programms(baum, &weltnamen);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
-        ItemArt::Funktion(f) => funktion(f, modul, &g, &konstanten, &weltnamen, absagen),
+        ItemArt::Funktion(f) => funktion(f, modul, &g, &konstanten, &weltnamen, &schreiber, absagen),
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
         _ => {}
@@ -159,6 +164,10 @@ fn sammle_lets_im_block(b: &Block, aus: &mut std::collections::BTreeSet<String>)
             StmtArt::LetSonst(l) => {
                 aus.insert(l.name.text.clone());
             }
+            // **«E4»:** the bound index is made here, not observed.
+            StmtArt::Alloc(a) => {
+                aus.insert(a.name.text.clone());
+            }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
@@ -200,6 +209,8 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
         match &s.art {
             StmtArt::Let(l) => aus.push(l.name.text.clone()),
             StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+            // **«E4»:** an arena index lives on the stack like any `let`.
+            StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
             StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
             StmtArt::Exchange(e) => {
                 aus.push(e.name.text.clone());
@@ -369,6 +380,18 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 liest_expr(&p.wert, t);
             }
             StmtArt::Let(l) => liest_expr(&l.wert, t),
+            // **«E4»:** an allocation stores the value and takes a slot --
+            // the arena is written, and the value is read. A reset moves
+            // the used counter back to zero -- the arena is written, and
+            // nothing is read. Both need `writes A` in the effects, like
+            // any other store to a carrier.
+            StmtArt::Alloc(a) => {
+                t.schreibt.push((a.tisch.text.clone(), s.span));
+                liest_expr(&a.wert, t);
+            }
+            StmtArt::ResetArena(tisch) => {
+                t.schreibt.push((tisch.text.clone(), s.span));
+            }
             StmtArt::Return(Some(x)) => liest_expr(x, t),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
@@ -903,6 +926,7 @@ fn funktion(
     g: &crate::aufrufgraph::Graph,
     konstanten: &[String],
     weltnamen: &[String],
+    schreiber: &std::collections::BTreeSet<String>,
     absagen: &mut Absagen,
 ) {
     match &f.effects {
@@ -939,11 +963,15 @@ fn funktion(
         }
         Some(w) => {
             rein_allein(w, absagen);
+            vertrag_gegen_wirkungen(f, Some(w), konstanten, weltnamen, schreiber, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
                 aufrufwirkungen(f, modul, w, g, weltnamen, absagen);
             }
         }
+    }
+    if f.effects.is_none() {
+        vertrag_gegen_wirkungen(f, None, konstanten, weltnamen, schreiber, absagen);
     }
 
     if f.klasse == Some(FnKlasse::Divergent) {
@@ -1269,5 +1297,233 @@ fn domaene_liest(d: &Domaene, t: &mut Taten) {
         | Domaene::KetteIn { ort: o, .. } => t.liest.push((o.text(), o.span)),
         // `fields of <pfad>` nennt einen TYP, keinen Ort; `threads` nennt gar nichts.
         Domaene::FelderVon(_) | Domaene::Threads => {}
+    }
+}
+
+/// **E220/E221 -- the contract footprint: `requires`/`ensures` may read only what the
+/// function's effects cover, or what nobody writes.**
+///
+/// Lane 101 proved the Lean half (`vertragFussB`, `hReqTAll_aus_B` and its three
+/// siblings): every carrier a contract reads must lie in the function's write
+/// signature. It also proved the finding -- on the reference fixture itself the
+/// write-signature containment is unsatisfiable for a read-only function, so the
+/// checker rule repaired here asks for `reads` OR `writes` cover, and frees
+/// carriers that no function of the program writes at all (read-only).
+///
+/// The collection reuses the body reader (`liest_expr`) arm for arm, with exactly
+/// two deltas, each with its reason:
+/// * `old(p)` (`Alt`) is a read of `p` -- in a body it cannot occur, so the body
+///   reader never learned it; in `ensures` it is the most ordinary read there is.
+/// * a call to a predicate word (`Has`/`Held`) is pruned WITH its arguments --
+///   `requires Has(RDTSCP)` names a capability, not a read of a register, the same
+///   distinction `ist_praedikatswort` draws for the call graph.
+fn vertrag_liest(e: &Expr, t: &mut Taten) {
+    match &e.art {
+        ExprArt::Ruf(r) if crate::ist_praedikatswort(r) => {}
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                vertrag_liest(a, t);
+            }
+        }
+        ExprArt::Alt(o) => {
+            t.liest.push((o.text(), o.span));
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    vertrag_liest(ix, t);
+                }
+            }
+        }
+        _ => liest_expr(e, t),
+    }
+}
+
+/// Every place a contract predicate reads, plus the quantifier binders it binds.
+/// `Erreicht { von, nach }` names two places outside any expression, and a quantifier
+/// domain (`mappings of k`, `slots of c`) reads its carrier -- both are reads no
+/// expression walker reaches, so they stand here explicitly. `Held(L)` names a lock
+/// and reads nothing. Binders are popped after the quantifier body: a name bound
+/// inside `forall` is local only there, and a world carrier of the same name outside
+/// stays a read.
+fn vertrag_orte(p: &Pred, binder: &mut Vec<String>, t: &mut Taten) {
+    match &p.art {
+        PredArt::Vergleich(e) => vertrag_liest(e, t),
+        PredArt::Element(e, d) => {
+            vertrag_liest(e, t);
+            domaene_liest(d, t);
+        }
+        PredArt::Erreicht { von, nach, .. } => {
+            t.liest.push((von.text(), von.span));
+            ziel_indizes(von, t);
+            t.liest.push((nach.text(), nach.span));
+            ziel_indizes(nach, t);
+        }
+        PredArt::Quantor(q) => {
+            let marke = binder.len();
+            binder.push(q.variable.text.clone());
+            domaene_liest(&q.domaene, t);
+            vertrag_orte(&q.rumpf, binder, t);
+            binder.truncate(marke);
+        }
+        PredArt::Klammer(x) | PredArt::Nicht(x) => vertrag_orte(x, binder, t),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            vertrag_orte(a, binder, t);
+            vertrag_orte(b, binder, t);
+        }
+        PredArt::Held { .. } => {}
+    }
+}
+
+/// The carrier roots the whole program writes -- the read-only boundary of E220/E221.
+/// Declared `writes`/`consumes`/`publishes` targets of every function, the writes of
+/// every function body (a body that writes without declaring already falls at E005,
+/// but the carrier is written either way), and the `writes` of every device
+/// transition (they move registers the functions observe). Only known world roots
+/// count -- a parameter-rooted place (`writes p.slots`) belongs to the caller, the
+/// same cut `bau.rs` makes for `schreibt_fn`.
+fn schreiber_des_programms(
+    baum: &Programm,
+    weltnamen: &[String],
+) -> std::collections::BTreeSet<String> {
+    let mut aus: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Funktion(f) => {
+            if let Some(w) = &f.effects {
+                merke_schreiber(&mut aus, w, weltnamen);
+            }
+            if let FnRumpf::Block(b) = &f.rumpf {
+                let mut taten = Taten::default();
+                sammle_taten(b, &mut taten);
+                for (ort, _) in &taten.schreibt {
+                    let grund = ort.split(['.', '[']).next().unwrap_or(ort).to_string();
+                    if weltnamen.iter().any(|k| k == &grund) {
+                        aus.insert(grund);
+                    }
+                }
+            }
+        }
+        ItemArt::Device(d) => {
+            for u in &d.uebergaenge {
+                if let Some(w) = &u.effects {
+                    merke_schreiber(&mut aus, w, weltnamen);
+                }
+            }
+        }
+        _ => {}
+    });
+    aus
+}
+
+/// One declared effect list's contribution to the writer set: the roots of every
+/// `writes`/`consumes`/`publishes` target that names known world state. A free
+/// function (not a closure) so the whole-program walk above holds the only
+/// mutable borrow of the set.
+fn merke_schreiber(
+    aus: &mut std::collections::BTreeSet<String>,
+    w: &Wirkungen,
+    weltnamen: &[String],
+) {
+    for e in &w.liste {
+        match &e.art {
+            WirkungArt::Schreibt(o) | WirkungArt::Verbraucht(o) | WirkungArt::Veroeffentlicht(o) => {
+                let grund = o.text().split(['.', '[']).next().unwrap_or("").to_string();
+                if weltnamen.iter().any(|k| k == &grund) {
+                    aus.insert(grund);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The contract half of the frame promise: every KNOWN world carrier a `requires`
+/// (E220) or `ensures` (E221) clause reads must be covered by a declared `reads` or
+/// `writes` effect, unless no function of the program writes it at all. Same filters
+/// as the E010 read half -- parameters, quantifier binders, constants and unknown
+/// names are no world reads -- plus the read-only exception, which is the repair lane
+/// 101 proposed after measuring that write-signature containment alone rejects
+/// ordinary read contracts. One refusal per (function, carrier, clause kind).
+///
+/// NOT read: `syscall` and `axiom` contracts (same shape, other lanes), `maintains`
+/// (names a spec function, not a carrier), the `= pred ;` body of a `spec fn` (the
+/// specification itself, not a contract clause over it), and calls into spec
+/// functions (only their arguments count -- the callee's own reads are its own
+/// frame, stated, not shown).
+fn vertrag_gegen_wirkungen(
+    f: &FnDecl,
+    w: Option<&Wirkungen>,
+    konstanten: &[String],
+    weltnamen: &[String],
+    schreiber: &std::collections::BTreeSet<String>,
+    absagen: &mut Absagen,
+) {
+    let deckung: Vec<String> = w
+        .map(|w| {
+            w.liste
+                .iter()
+                .filter_map(|e| match &e.art {
+                    WirkungArt::Liest(o) | WirkungArt::Schreibt(o) => Some(o.text()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for (klauseln, code, wort) in [
+        (&f.requires, "E220", "requires"),
+        (&f.ensures, "E221", "ensures"),
+    ] {
+        let mut gemeldet: Vec<String> = Vec::new();
+        for p in klauseln {
+            let mut taten = Taten::default();
+            let mut binder = Vec::new();
+            vertrag_orte(p, &mut binder, &mut taten);
+            for (ort, span) in &taten.liest {
+                let grund = ort.split(['.', '[', '-']).next().unwrap_or(ort);
+                if f.parameter.iter().any(|x| x.name.text == grund) {
+                    continue;
+                }
+                if binder.iter().any(|x| x == grund) {
+                    continue;
+                }
+                if konstanten.iter().any(|k| k == grund) {
+                    continue;
+                }
+                if !weltnamen.iter().any(|k| k == grund) {
+                    continue;
+                }
+                if !schreiber.contains(grund) {
+                    continue;
+                }
+                if deckung.iter().any(|e| deckt(e, ort)) {
+                    continue;
+                }
+                if gemeldet.iter().any(|g| g == grund) {
+                    continue;
+                }
+                gemeldet.push(grund.to_string());
+                absagen.schiebe(
+                    Absage::fehler(
+                        code,
+                        *span,
+                        format!(
+                            "`{ort}` is read by the `{wort}` of `{}` but neither \
+                             `reads {grund}` nor `writes {grund}` stands in its effects",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a contract is part of the frame: whoever relies on what the \
+                         contract saw must find the carrier in the effect list",
+                    )
+                    .mit_notiz(format!(
+                        "declared are: {}; carriers no function writes need no cover",
+                        if deckung.is_empty() {
+                            "no read or write effect".to_string()
+                        } else {
+                            deckung.join(", ")
+                        }
+                    )),
+                );
+            }
+        }
     }
 }

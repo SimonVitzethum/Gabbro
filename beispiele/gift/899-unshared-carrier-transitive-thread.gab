@@ -1,0 +1,64 @@
+-- erwartet: H222
+-- **A thread that reaches the shared write through a callee still counts.**
+--
+-- `mitte` never writes `z` itself -- it calls `tief`, which does -- but the
+-- carrier footprint is transitive, so both entries still share `z` without
+-- saying so. H013 and W001 fire beside H222 as in `gift/897`, and the pair is
+-- declared `concurrent` without helping: concurrency is declared, the carrier
+-- is not. `ruhig` shows the other direction: the same entry shape over a
+-- carrier a lock protects draws neither rule.
+module gift::ungeteilt_transitiv {
+
+static mut z : u32 = 0;
+
+table T count 4 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (H222, with H013 beside it): `mitte` reaches `z` through `tief`.
+impl fn tief() effects { writes z } costs <= 8 ops { z = 1; }
+impl fn mitte() effects { writes z } costs <= 16 ops { tief(); }
+impl fn seite() effects { writes z } costs <= 8 ops { z = 2; }
+
+-- Must pass: `T` is declared shared, whatever the threads do with it.
+impl fn ruhig(j : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+    }
+}
+
+concurrent { mitte, seite };
+
+entry syscall_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::ungeteilt_transitiv::mitte;
+}
+entry syscall_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::ungeteilt_transitiv::seite;
+}
+entry syscall_c vector 0x82 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kc per cpu nested never
+    dispatch gift::ungeteilt_transitiv::ruhig;
+}
+
+}

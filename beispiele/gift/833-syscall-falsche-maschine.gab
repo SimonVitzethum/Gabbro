@@ -1,0 +1,31 @@
+-- erwartet: A005
+-- **Gift 805 -- a syscall for a machine this unit never declares.**
+--
+-- The unit says `arch aarch64` at its foreign body and `arch x86_64` at the
+-- syscall. The syscall can never be in force here -- so it falls at the same
+-- rule an `assume` for an undeclared machine falls at (`A005`). The sealed
+-- architecture itself is `A006` (gift 810); what falls here is the mismatch.
+
+module gift::syscall_falsche_maschine {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+extern fn fremd() effects { pure } arch aarch64;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

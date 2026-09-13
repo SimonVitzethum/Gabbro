@@ -56,7 +56,7 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **17 of 50** | this file — a ratchet UP |
+| **falsifiable, probe stands as a program** | **19 of 52** | this file — a ratchet UP |
 | **falsifiable, probe MISSING** | **33 of 39** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
@@ -94,7 +94,7 @@ Both halves come out of the same scan, and both are named here rather than left 
 
 ```bash
 ./instrumente/pruefe-sondendeckung.py
-# ==   17 of 50 falsifiable assumptions carry a probe that stands as a program
+# ==   18 of 51 falsifiable assumptions carry a probe that stands as a program
 ```
 
 **And the denominator is not free either.** Three ways exist to keep `A_p` from falling when
@@ -139,7 +139,7 @@ they are read from there rather than invented here:
 | **`P1`** | **ring 0** — a control register, a page table, an MSR, an `in`/`out` | 14 |
 | **`P2`** | **a device** — VT-d, virtio, a 16550, a timer, a counter | 16 |
 | **`P3`** | **a mechanism the generator does not emit** — a grace period, a reader that fetches, a source that ends | 4 |
-| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **17** |
+| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **19** |
 
 *The classification is an ESTIMATE per name and not a measurement; `sonden/README.md` says so
 about its own table, and that caveat travels with these rows.* What is not an estimate is the
@@ -305,9 +305,15 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 48 | **frist_takt_verteiler_eingehalten** | `sonde_takt_verteiler` | `P4` | **PROGRAM** |
 | 49 | **frist_bearbeite_eingehalten** | `sonde_bearbeite` | `P4` | **PROGRAM** |
 | 50 | **frist_ruf_verteiler_eingehalten** | `sonde_ruf_verteiler` | `P4` | **PROGRAM** |
+| 51 | **linux_write_contract** | `sonde_write` | `P4` | **PROGRAM** |
+| 52 | **plattform_takt_stabil** | `sonde_tick` | `P4` | **PROGRAM** |
 
-**50 rows, 17 of them with a PROGRAM, 17 of them `P4`** — and one probe name carries two rows
-(`sonde_vtd_srtp`, rows 8 and 29), which is why 50 assumptions stand under 49 names.
+**52 rows, 19 of them with a PROGRAM, 19 of them `P4`** — and one probe name carries two rows
+(`sonde_vtd_srtp`, rows 8 and 29), which is why 52 assumptions stand under 51 names. Row 52
+(`beispiele/100`, lane E6) arrives with its probe: the platform-clock assumption is what the
+tick probe observes -- a standstill or a step back refutes it, and both are the probe's
+controls. Same rule as every earned diff before it: the assumption and its probe land
+together, so the quota rises because the object grew.
 
 ---
 

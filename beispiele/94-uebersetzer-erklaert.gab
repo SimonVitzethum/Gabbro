@@ -1,0 +1,28 @@
+-- 94 -- **The translator declaration, clean.** A library function with
+-- its payload type and exactly one translator (`translator … for …`,
+-- SYNTAX.md §7.2, lane E3): `effects { pure }`, a `decreases` witness,
+-- the result naming the payload table, and a body the ordinary checker
+-- accepts -- here the identity, the region already in payload form. No
+-- call stands here (a call always carries `N069`), so nothing falls.
+module beispiel::uebersetzer {
+table Nutzlast count 4 {
+    slot {
+        words : u32,
+    }
+}
+library fn einsetzen(n : u32) -> u32 payload Nutzlast
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator baue for einsetzen(region : Nutzlast) -> Nutzlast
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}

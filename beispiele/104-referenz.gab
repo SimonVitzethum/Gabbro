@@ -1,0 +1,52 @@
+-- 104 -- The reference fixture as a real Gabbro program (lane 126).
+--
+-- This is `grammatik/Grammatik/ReferenzB.lean` (`refD`/`refP`) in surface
+-- syntax: one table `Konto` of 2 slots with one `0 .. 100` field, guarded by
+-- the single lock `M`; `einzahlen` (one `0 .. 10` parameter, no result,
+-- writes the table, ensures the slot did not decrease) and `lies` (no
+-- parameters, one `0 .. 100` result, reads, ensures the answer equals the
+-- slot). Both run under the held lock (`requires Held(M)`, the `beispiele/01`
+-- idiom: the caller's duty, so the bodies touch the guarded slot directly).
+-- `concurrent { einzahlen, lies }` is NOT in this file, and the absence is
+-- deliberate: the emitter generates no C for the declaration but the
+-- certificate (`gabbro zeugnis`) books it as UNCLASSIFIED, which fails stage
+-- 7 of `pruefe-emission.sh`. Threads cannot be driven from a C driver
+-- anyway, so the driver runs the sequential composition instead -- the
+-- observable half of the fixture (`refB_schreibt`: slot `0 -> 100`). The two
+-- threads are the two functions the driver calls, one after the other.
+
+module beispiel::referenz {
+
+const NKONTO : u32 = 2;
+
+type Betrag = u32 in 0 .. 10;
+type Stand = u32 in 0 .. 100;
+
+table Konto count NKONTO {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock M protects { stand } rank 0 held <= 50 ops;
+
+impl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)
+    requires Held(M)
+    ensures  old(k.slots[i].stand) <= k.slots[i].stand
+    effects  { reads k.slots, writes k.slots, locks M }
+    costs    <= 16 ops
+{
+    k.slots[i].stand = 100;
+    lies(k, i);
+}
+
+impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand
+    requires Held(M)
+    ensures  result == k.slots[i].stand
+    effects  { reads k.slots, locks M }
+    costs    <= 8 ops
+{
+    return k.slots[i].stand;
+}
+
+}
