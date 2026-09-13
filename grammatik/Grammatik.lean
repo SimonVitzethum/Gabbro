@@ -104,3 +104,4 @@ import Grammatik.AuditW5
 import Grammatik.RufAdaequatG
 import Grammatik.RufAdaequatRufG
 import Grammatik.KetteVoll
+import Grammatik.CSemantik
