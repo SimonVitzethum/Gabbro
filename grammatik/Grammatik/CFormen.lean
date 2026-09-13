@@ -1105,4 +1105,44 @@ def CallAt (XR : CCallR) (Pr : CProg) : Nat → CCallR
         ∃ st1, (o = .ret st1 rv ∨ (rv = none ∧ ∃ ρ1, o = .norm st1 ρ1)) ∧
           st' = leaveFrame st1 (n + 1)
 
+/-
+CUTS: what this file does not do, by name.
+- EVALUATION ORDER is fixed left to right. C leaves the order of operand
+  evaluation unspecified (6.5p3), which is observable only through two
+  observing subexpressions (volatile or atomic loads) in one full
+  expression; the model does not check that there is at most one.
+- NO DETERMINISM THEOREM for `Exec`: it is deterministic given `CR`, `XR`
+  and the device oracle (every rule's premises fix the outcome), but that
+  is not proved; the correspondence lemmas therefore say "the C statement
+  has a run that …", not "every run".
+- CALLS IN EXPRESSIONS are not a form: `CX` has no call node. The
+  emitter's pure helpers (`_gabbro_sat_*`, the byte readers `gabbro_le32`
+  …, the bank and format accessors) are proved as functions of their
+  arguments (their bodies run by `Exec`, or their return expression
+  inlined), not at the call site.
+- `goto` is modelled only in the two emitted shapes (a jump to the end of
+  the current loop body or to right after the loop), as a labelled
+  outcome that the loop of that label consumes. The `exchange update`
+  body's `goto _cnN_fertig` (a jump to the end of its own block) is not
+  modelled.
+- `~` on a negative signed operand, `>>` of a negative value and bitwise
+  operators on negative operands are stuck (representation-dependent in
+  C11); the checker's `M137` never produces them.
+- FRAMES are numbered by call depth (`CallAt`): the stack discipline, not
+  fresh block identities; a pointer into a dead frame revives when a call
+  at the same depth reuses the frame number (CSpeicher.lean's CUT).
+- Lane 128's `cBinApply` computes signed `/` and `%` with Euclidean
+  rounding, which is not C's (`tdiv_ne_ediv`); `CSemantik.lean` is left
+  as it is (its theorems are about unsigned `uint32_t`, where the two
+  agree), and this file does not use it.
+-/
+
+#print axioms uac_werte
+#print axioms conv_none_iff
+#print axioms opUB_stuck
+#print axioms opUB_of_stuck
+#print axioms cArith_none_iff
+#print axioms tdiv_ne_ediv
+#print axioms ev_same
+
 end Gabbro.Grammatik

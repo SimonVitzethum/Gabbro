@@ -46,8 +46,9 @@
     E18 `!(a)`                                nicht               ecorr_nicht
     E19 `(T)~(T)(x)`                          Expr.bnot (Zucker)  ecorr_bnot
     E20 `(T)(e)`  (verenge, a fitting cast)   (value unchanged)   ecorr_cast
-    E21 `(T)(((uint32_t)(a) + (uint32_t)(b)) & mask)`   Zahl.addW  wrapC_add
-    E22 `(T)(_gabbro_sat_u(…))`               Zahl.addS           satU_add
+    E21 `(T)(((uint32_t)(a) + (uint32_t)(b)) & mask)`, unmasked at full
+        width; `-%`, `*%` alike               Zahl.addW/subW/mulW wrapC_add/_sub/_mul
+    E22 `_gabbro_sat_u` (the helper's body)   Zahl.addS           satU_run / satU_zahl
     E23 `T_speicher.slots[i].f`               slot (named table)  ecorr_slotNamed
     E24 `g` (plain static)                    glob                ecorr_glob
     E25 `g` (bare `_Atomic` name: seq_cst)    glob (atomic)       ecorr_globAtomar
@@ -55,7 +56,8 @@
     S2  `x += e;` `x -= e;` `x &= e;` `x |= e;`  Zucker plusGleich … scorr_plusGleich …
     S3  `T_speicher.slots[i].f = e;`          assignSlot          scorr_assignSlotNamed
     S4  `g = e;`                              assignGlob          scorr_assignGlob
-    S5  `return e;` / `return;`               ret                 scorr_ret / ecorr_retEnd
+    S5  `return e;` / `return;` / falling off the end of a `void` body
+                                              ret                 scorr_ret / EndCorr.retEnd
     S6  `if (c) {…} else {…}` (`else if` is an `if` in the else arm)
                                               ite                 scorr_ite
     S7  `for (uint32_t v = 0; v < N; v += 1) { … m_weiter: ; } m_ende: ;`
@@ -64,6 +66,7 @@
 -/
 import Grammatik.CFormen
 import Grammatik.Zucker
+import Grammatik.Ueberlauf
 
 namespace Gabbro.Grammatik
 
@@ -1440,5 +1443,783 @@ theorem cCorr_end (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
       obtain ⟨st1, h1, hc1⟩ := pre_run he hc hr
       obtain ⟨o, h2, hO⟩ := ih σ st1 ρG ρC hc1 hr hnf
       exact ⟨o, Exec.seqN h1 h2, hO⟩
+
+/-! ## 6. S7: the counting loop against `traverse`
+
+The emitted header (10497) is `for (uint32_t v = 0; v < (uint32_t)(sizeof(
+k->slots) / sizeof(k->slots[0])); v += 1) { … m_weiter: ; } m_ende: ;`.
+The bound is any C expression that evaluates to the slot count without
+observations (the `sizeof` quotient is pass (ii)'s `szof_quot`); the body
+must not write the loop variable (`CS.writesV`, checked syntactically). -/
+
+/-- Does a statement write C local `x`? (A syntactic check on the
+    certificate's C.) -/
+def dstWrites (x : Nat) : Option (Nat × CTy) → Bool
+  | none => false
+  | some (y, _) => y == x
+
+mutual
+def CS.writesV (x : Nat) : CS → Bool
+  | .skip => false
+  | .seq a b => CS.writesV x a || CS.writesV x b
+  | .expr _ => false
+  | .set y _ _ => y == x
+  | .store _ _ _ => false
+  | .vstore _ _ _ => false
+  | .astore _ _ _ _ => false
+  | .acas ok _ _ _ _ _ _ => ok == x
+  | .ite _ a b => CS.writesV x a || CS.writesV x b
+  | .sw _ arms => CS.armsWritesV x arms
+  | .ret _ => false
+  | .brk => false
+  | .cont => false
+  | .goto _ => false
+  | .forC _ s b _ => CS.writesV x s || CS.writesV x b
+  | .call _ _ dst => dstWrites x dst
+  | .ext _ _ dst => dstWrites x dst
+def CS.armsWritesV (x : Nat) : List (Int × CS) → Bool
+  | [] => false
+  | (_, s) :: rest => CS.writesV x s || CS.armsWritesV x rest
+end
+
+theorem armsWritesV_lookup (x : Nat) : ∀ (arms : List (Int × CS)) (k : Int) (s : CS),
+    CS.armsWritesV x arms = false → arms.lookup k = some s → s.writesV x = false
+  | [], _, _, _, h => by simp at h
+  | (k', s') :: rest, k, s, hw, hl => by
+      simp only [CS.armsWritesV, Bool.or_eq_false_iff] at hw
+      rw [List.lookup_cons] at hl
+      cases hk : (k == k') with
+      | true => rw [hk] at hl; cases hl; exact hw.1
+      | false => rw [hk] at hl; exact armsWritesV_lookup x rest k s hw.2 hl
+
+/-- The locals an outcome carries. -/
+def COut.lok : COut → Option CLok
+  | .norm _ ρ => some ρ
+  | .ret _ _ => none
+  | .brk _ ρ => some ρ
+  | .cont _ ρ => some ρ
+  | .jump _ _ ρ => some ρ
+
+theorem putDst_keeps {x : Nat} {dst : Option (Nat × CTy)} {rv : Option CVal} {ρ ρ' : CLok}
+    (h : putDst dst rv ρ = some ρ') (hw : dstWrites x dst = false) : ρ' x = ρ x := by
+  cases dst with
+  | none => simp only [putDst, Option.some.injEq] at h; rw [← h]
+  | some p =>
+      obtain ⟨y, τ⟩ := p
+      cases rv with
+      | none => simp [putDst] at h
+      | some v =>
+          simp only [putDst] at h
+          simp only [dstWrites, beq_eq_false_iff_ne, ne_eq] at hw
+          split at h
+          · simp only [Option.some.injEq] at h; rw [← h]; simp only [lokUpd]; rw [if_neg (Ne.symm hw)]
+          · exact absurd h (by simp)
+
+/-- A statement that does not write `x` leaves it alone, on every outcome
+    that carries locals. -/
+theorem exec_keeps {L : CLayout} {orc : DevOrc} {fr : Nat} {CR XR : CCallR} (x : Nat)
+    {cs : CS} {st : CSt} {ρ : CLok} {o : COut} (h : Exec L orc fr CR XR cs st ρ o) :
+    cs.writesV x = false → ∀ ρ', o.lok = some ρ' → ρ' x = ρ x := by
+  induction h with
+  | skip => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | seqN _ _ ih1 ih2 =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      rw [ih2 hw.2 ρ' ho, ih1 hw.1 _ rfl]
+  | seqX _ _ ih1 =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      exact ih1 hw.1 ρ' ho
+  | expr _ => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | @set y τ e st ρ v st1 v' _ _ =>
+      intro hw ρ' h
+      simp only [COut.lok, Option.some.injEq] at h
+      simp only [CS.writesV, beq_eq_false_iff_ne, ne_eq] at hw
+      rw [← h]; simp only [lokUpd]; rw [if_neg (Ne.symm hw)]
+  | store => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | vstore => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | astore => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | @acas ok p τ ex des os of st ρ q st1 qx st2 v st3 d e0 b seen st4 st5 =>
+      intro hw ρ' h
+      simp only [COut.lok, Option.some.injEq] at h
+      simp only [CS.writesV, beq_eq_false_iff_ne, ne_eq] at hw
+      rw [← h]; simp only [lokUpd]; rw [if_neg (Ne.symm hw)]
+  | iteT _ _ _ ih =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      exact ih hw.1 ρ' ho
+  | iteF _ _ _ ih =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      exact ih hw.2 ρ' ho
+  | @swHit e arms st ρ k st1 s o _ hl _ ih =>
+      intro hw ρ' ho
+      have hs := armsWritesV_lookup x arms k s hw hl
+      cases o with
+      | brk st' ρ'' => exact ih hs ρ' ho
+      | norm st' ρ'' => exact ih hs ρ' ho
+      | ret st' v => exact ih hs ρ' ho
+      | cont st' ρ'' => exact ih hs ρ' ho
+      | jump l st' ρ'' => exact ih hs ρ' ho
+  | swMiss => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | retN => intro _ ρ' h; simp [COut.lok] at h
+  | retS => intro _ ρ' h; simp [COut.lok] at h
+  | brk => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | cont => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | goto => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | forDone => intro _ ρ' h; simp only [COut.lok, Option.some.injEq] at h; rw [h]
+  | @forStep c step body m st ρ v st1 o1 st2 ρ2 st3 ρ3 o _ _ _ hwe _ _ ihb ihs ihr =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      have hw' : (CS.forC c step body m).writesV x = false := by
+        simp only [CS.writesV, Bool.or_eq_false_iff]; exact hw
+      rw [ihr hw' ρ' ho, ihs hw.1 ρ3 rfl]
+      cases o1 with
+      | norm s r =>
+          simp only [COut.weiter, Option.some.injEq, Prod.mk.injEq] at hwe
+          obtain ⟨-, rfl⟩ := hwe
+          exact ihb hw.2 _ rfl
+      | cont s r =>
+          simp only [COut.weiter, Option.some.injEq, Prod.mk.injEq] at hwe
+          obtain ⟨-, rfl⟩ := hwe
+          exact ihb hw.2 _ rfl
+      | jump lb s r =>
+          cases lb with
+          | weiter m' =>
+              simp only [COut.weiter] at hwe
+              split at hwe
+              · simp only [Option.some.injEq, Prod.mk.injEq] at hwe
+                obtain ⟨-, rfl⟩ := hwe
+                exact ihb hw.2 _ rfl
+              · exact absurd hwe (by simp)
+          | ende m' => simp [COut.weiter] at hwe
+      | ret s v => simp [COut.weiter] at hwe
+      | brk s r => simp [COut.weiter] at hwe
+  | @forExit c step body m st ρ v st1 o1 o _ _ _ hx ihb =>
+      intro hw ρ' ho
+      simp only [CS.writesV, Bool.or_eq_false_iff] at hw
+      cases o1 with
+      | brk s r =>
+          simp only [COut.raus, Option.some.injEq] at hx
+          subst hx
+          simp only [COut.lok, Option.some.injEq] at ho
+          subst ho
+          exact ihb hw.2 _ rfl
+      | jump lb s r =>
+          cases lb with
+          | ende m' =>
+              simp only [COut.raus] at hx
+              split at hx
+              · simp only [Option.some.injEq] at hx
+                subst hx
+                simp only [COut.lok, Option.some.injEq] at ho
+                subst ho
+                exact ihb hw.2 _ rfl
+              · simp only [Option.some.injEq] at hx
+                subst hx
+                simp only [COut.lok, Option.some.injEq] at ho
+                subst ho
+                exact ihb hw.2 _ rfl
+          | weiter m' =>
+              simp only [COut.raus] at hx
+              split at hx
+              · exact absurd hx (by simp)
+              · simp only [Option.some.injEq] at hx
+                subst hx
+                simp only [COut.lok, Option.some.injEq] at ho
+                subst ho
+                exact ihb hw.2 _ rfl
+      | ret s v =>
+          simp only [COut.raus, Option.some.injEq] at hx
+          subst hx
+          simp [COut.lok] at ho
+      | norm s r => simp [COut.raus] at hx
+      | cont s r => simp [COut.raus] at hx
+  | call _ _ hd =>
+      intro hw ρ' ho
+      simp only [COut.lok, Option.some.injEq] at ho
+      subst ho
+      exact putDst_keeps hd hw
+  | ext _ _ hd =>
+      intro hw ρ' ho
+      simp only [COut.lok, Option.some.injEq] at ho
+      subst ho
+      exact putDst_keeps hd hw
+
+/-- The indices a `traverse` visits, as numbers: `0, 1, …, count - 1`. -/
+theorem alleIndizes_n (n : Int) :
+    (alleIndizes n).map Zahl.n = (List.range n.toNat).map (fun k : Nat => (k : Int)) := by
+  unfold alleIndizes
+  rw [List.map_filterMap]
+  have hgen : ∀ (l : List Nat), (∀ k ∈ l, k < n.toNat) →
+      l.filterMap (fun (k : Nat) =>
+        (if h : ((k : Nat) : Int) ≤ n - 1 then
+          some (⟨((k : Nat) : Int), by omega, h⟩ : Zahl 0 (n - 1)) else none).map Zahl.n) =
+      l.map (fun k : Nat => (k : Int)) := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons a l ih =>
+        intro hl
+        have ha := hl a (List.mem_cons_self ..)
+        rw [List.filterMap_cons, dif_pos (by omega)]
+        simp only [Option.map_some, List.map_cons]
+        rw [ih (fun k hk => hl k (List.mem_cons_of_mem _ hk))]
+  exact hgen _ (fun k hk => List.mem_range.mp hk)
+
+theorem alleIndizes_laenge (n : Int) : (alleIndizes n).length = n.toNat := by
+  have := congrArg List.length (alleIndizes_n n)
+  simpa using this
+
+theorem alleIndizes_get (n : Int) (j : Nat) (hj : j < (alleIndizes n).length) :
+    ((alleIndizes n)[j]).n = j := by
+  have h := alleIndizes_n n
+  have hj' : j < ((alleIndizes n).map Zahl.n).length := by simpa using hj
+  have e1 : ((alleIndizes n).map Zahl.n)[j] = ((alleIndizes n)[j]).n := List.getElem_map ..
+  rw [← e1]
+  have hj'' : j < ((List.range n.toNat).map (fun k : Nat => (k : Int))).length := by
+    rw [← h]; exact hj'
+  have e2 : ((alleIndizes n).map Zahl.n)[j] =
+      ((List.range n.toNat).map (fun k : Nat => (k : Int)))[j] := by
+    simp only [h]
+  rw [e2]
+  simp
+
+/-- The invariant check of a `traverse`, as `execStmt` computes it. -/
+def travInv {Γ : Ctx} {Λ : List (Res D)} (inv : Expr D Γ Λ .bool) :
+    World D → Env D Γ → World D × Bool :=
+  fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))
+
+theorem envRel_upd_fresh {EL : EmitLay D} {Γ : Ctx} {K : CEnvLay D Γ} (hK : K.okB = true)
+    {x : Nat} (hf : K.freshB x = true) {ρG : Env D Γ} {ρC : CLok} (h : EnvRel EL K ρG ρC)
+    (c : CVal) : EnvRel EL K ρG (lokUpd ρC x c) := by
+  obtain ⟨hx, hp, hk⟩ := freshB_spec hf
+  obtain ⟨hl, -, -⟩ := okB_spec hK
+  refine ⟨?_, ?_, ?_⟩
+  · intro τ y
+    have hne : K.loc y ≠ x := fun e => hx (e ▸ loc_mem hl y)
+    simp only [lokUpd]; rw [if_neg hne]; exact h.1 τ y
+  · intro q hq; simp only [lokUpd]; rw [if_neg (hp q hq)]; exact h.2.1 q hq
+  · intro q hq; simp only [lokUpd]; rw [if_neg (hk q hq)]; exact h.2.2 q hq
+
+theorem envRel_push_same {EL : EmitLay D} {Γ : Ctx} {K : CEnvLay D Γ} (hK : K.okB = true)
+    {x : Nat} (hf : K.freshB x = true) {ρG : Env D Γ} {ρC : CLok} (h : EnvRel EL K ρG ρC)
+    {τ : Ty} (v : Wert D τ) (hv : ValCorr EL τ v (ρC x)) :
+    EnvRel EL (K.push τ x) (.cons v ρG) ρC := by
+  have e : lokUpd ρC x (ρC x) = ρC := by
+    funext y; simp only [lokUpd]; split <;> simp_all
+  have := envRel_push hK hf h v (ρC x) hv
+  rwa [e] at this
+
+section Zaehlschleife
+
+variable (X : TVCtx D) (m m' : Nat) {Γ : Ctx} (K : CEnvLay D Γ) {V : Vertrag D} {l : Bool}
+  {Λ : List (Res D)}
+
+/-- The loop condition `v < hi` with `v = j`. -/
+theorem ev_cond (t : CIT) (hiC : CX) (N : Int) (hN : t.holds 0 N)
+    (hhi : ∀ st ρ, ev X.EL.lay X.orc X.fr hiC st ρ = some (.int N, st)) (x : Nat) (j : Nat)
+    (hj : (j : Int) ≤ N) (st : CSt) (ρ : CLok) (hx : ρ x = .int j) :
+    ev X.EL.lay X.orc X.fr (.cmp .lt t (.var x) hiC) st ρ =
+      some (.int (b2i (decide ((j : Int) < N))), st) := by
+  have c1 : conv t (j : Int) = some (j : Int) :=
+    conv_id ⟨by have := hN.1; have := CIT.lo_le_zero t; omega, by have := hN.2; omega⟩
+  have c2 : conv t N = some N := conv_id ⟨by have := hN.1; omega, hN.2⟩
+  simp only [ev, hx, hhi, c1, c2]
+  rfl
+
+/-- The increment `v += 1` with `v = j < N`. -/
+theorem exec_incr (t : CIT) (N : Int) (hN : t.holds 0 N) (x : Nat) (j : Nat)
+    (hj : (j : Int) < N) (st : CSt) (ρ : CLok) (hx : ρ x = .int j) :
+    Exec X.EL.lay X.orc X.fr X.CR X.XR (.set x t.ty (.bin .add t (.var x) (.lit 1))) st ρ
+      (.norm st (lokUpd ρ x (.int ((j : Int) + 1)))) := by
+  have hlo := CIT.lo_le_zero t
+  have c1 : conv t (j : Int) = some (j : Int) :=
+    conv_id ⟨by omega, by have := hN.2; omega⟩
+  have c2 : conv t 1 = some 1 := conv_id ⟨by omega, by have := hN.2; omega⟩
+  have c3 : conv t ((j : Int) + 1) = some ((j : Int) + 1) :=
+    conv_id ⟨by omega, by have := hN.2; omega⟩
+  refine Exec.set (v := .int ((j : Int) + 1)) ?_ ?_
+  · simp only [ev, hx, c1, c2, cArith, c3]
+  · show convV (.int t.sgn t.w) (.int ((j : Int) + 1)) = _
+    simp only [convV]
+    rw [show (⟨t.sgn, t.w⟩ : CIT) = t from rfl, c3]
+
+/-- THE LOOP, by induction on the indices still to visit. -/
+theorem trav_run (hK : K.okB = true) {x : Nat} (hf : K.freshB x = true) (tb : D.Tab)
+    (t : CIT) (hN0 : 0 ≤ D.count tb) (hN : t.holds 0 (D.count tb)) (hiC : CX)
+    (hhi : ∀ st ρ, ev X.EL.lay X.orc X.fr hiC st ρ = some (.int (D.count tb), st))
+    (inv : Expr D Γ Λ .bool) (body : Block D V true (.index (D.count tb) :: Γ) Λ Λ) (cbody : CS)
+    (hb : BlockSem X m' (K.push (.index (D.count tb)) x) body cbody)
+    (hw : cbody.writesV x = false) :
+    ∀ (ks : List (Wert D (.index (D.count tb)))) (j : Nat),
+      ks = (alleIndizes (D.count tb)).drop j → j ≤ (D.count tb).toNat →
+      ∀ (σ : World D) (st : CSt) (ρG : Env D Γ) (ρC : CLok), corrW X.EL σ st →
+        EnvRel X.EL K ρG ρC → ρC x = .int j →
+        (traverseLauf (V := V) (l := l) (fun σ ρ => execBlock X.O X.passes X.R body σ ρ)
+          (travInv inv) ks σ ρG).istFehler = false →
+        ∃ o, Exec X.EL.lay X.orc X.fr X.CR X.XR
+            (.forC (.cmp .lt t (.var x) hiC) (.set x t.ty (.bin .add t (.var x) (.lit 1)))
+              cbody m') st ρC o ∧
+          StOut X m K (traverseLauf (V := V) (l := l)
+            (fun σ ρ => execBlock X.O X.passes X.R body σ ρ) (travInv inv) ks σ ρG) o := by
+  intro ks
+  induction ks with
+  | nil =>
+      intro j hks hj σ st ρG ρC hc hr hx hnf
+      have hlen := alleIndizes_laenge (D.count tb)
+      have hjN : j = (D.count tb).toNat := by
+        cases Nat.lt_or_ge j (alleIndizes (D.count tb)).length with
+        | inl hlt =>
+            rw [List.drop_eq_getElem_cons hlt] at hks
+            cases hks
+        | inr hge => omega
+      have hcond := ev_cond X t hiC _ hN hhi x j (by omega) st ρC hx
+      have hex : traverseLauf (V := V) (l := l) (fun σ ρ => execBlock X.O X.passes X.R body σ ρ)
+          (travInv inv) [] σ ρG =
+          if (travInv inv σ ρG).2 = true then .ok (travInv inv σ ρG).1 ρG else .logik .schleife := rfl
+      rw [hex] at hnf ⊢
+      by_cases hi : (travInv inv σ ρG).2 = true
+      · rw [if_pos hi]
+        refine ⟨_, Exec.forDone hcond (by
+          show some (decide (b2i (decide ((j : Int) < D.count tb)) ≠ 0)) = some false
+          rw [show decide ((j : Int) < D.count tb) = false from by
+            apply decide_eq_false; have := hN.1; omega]
+          rfl), st, ρC, rfl, (corrW_lese _ _ _ _ _).mpr hc, hr⟩
+      · rw [if_neg hi] at hnf; exact Bool.noConfusion hnf
+  | cons k ks ih =>
+      intro j hks hj σ st ρG ρC hc hr hx hnf
+      have hlen := alleIndizes_laenge (D.count tb)
+      have hjl : j < (alleIndizes (D.count tb)).length := by
+        cases Nat.lt_or_ge j (alleIndizes (D.count tb)).length with
+        | inl hlt => exact hlt
+        | inr hge => rw [List.drop_of_length_le hge] at hks; cases hks
+      rw [List.drop_eq_getElem_cons hjl] at hks
+      obtain ⟨hk, hks'⟩ := List.cons.inj hks
+      have hkn : k.n = j := by rw [hk]; exact alleIndizes_get _ j hjl
+      have hjN : (j : Int) < D.count tb := by omega
+      have hcond := ev_cond X t hiC _ hN hhi x j (by omega) st ρC hx
+      have htrue : truth (.int (b2i (decide ((j : Int) < D.count tb)))) = some true := by
+        rw [show decide ((j : Int) < D.count tb) = true from decide_eq_true hjN]; rfl
+      simp only [traverseLauf] at hnf ⊢
+      by_cases hi : (travInv inv σ ρG).2 = false
+      · rw [if_pos hi] at hnf; exact Bool.noConfusion hnf
+      rw [if_neg hi] at hnf ⊢
+      -- the body, from the related entry state
+      have hc1 : corrW X.EL (travInv inv σ ρG).1 st := (corrW_lese _ _ _ _ _).mpr hc
+      have hvk : ValCorr X.EL (.index (D.count tb)) k (ρC x) := by
+        rw [hx]; show CVal.int (j : Int) = .int k.n; rw [hkn]
+      have hr1 := envRel_push_same hK hf hr k hvk
+      cases hbo : execBlock X.O X.passes X.R body (travInv inv σ ρG).1 (.cons k ρG) with
+      | ok σ' ρ' =>
+          rw [hbo] at hnf
+          obtain ⟨o1, h1, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
+          rw [hbo] at hO
+          obtain ⟨st1, ρC1, ho1, hc2, hr2⟩ := hO
+          subst ho1
+          have hx1 : ρC1 x = .int j := by rw [exec_keeps x h1 hw ρC1 rfl, hx]
+          have hinc := exec_incr X t _ hN x j hjN st1 ρC1 hx1
+          have hr3 := envRel_upd_fresh hK hf (envRel_pop hr2) (.int ((j : Int) + 1))
+          obtain ⟨o, h2, hO2⟩ := ih (j + 1) hks' (by omega) σ' st1 ρ'.tail _ hc2 hr3
+            (by simp only [lokUpd, if_pos]; rfl) hnf
+          exact ⟨o, Exec.forStep hcond htrue h1 rfl hinc h2, hO2⟩
+      | next hl' σ' ρ' =>
+          rw [hbo] at hnf
+          obtain ⟨o1, h1, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
+          rw [hbo] at hO
+          obtain ⟨st1, ρC1, ho1, hc2, hr2⟩ := hO
+          subst ho1
+          have hx1 : ρC1 x = .int j := by rw [exec_keeps x h1 hw ρC1 rfl, hx]
+          have hinc := exec_incr X t _ hN x j hjN st1 ρC1 hx1
+          have hr3 := envRel_upd_fresh hK hf (envRel_pop hr2) (.int ((j : Int) + 1))
+          obtain ⟨o, h2, hO2⟩ := ih (j + 1) hks' (by omega) σ' st1 ρ'.tail _ hc2 hr3
+            (by simp only [lokUpd, if_pos]; rfl) hnf
+          exact ⟨o, Exec.forStep hcond htrue h1 (by simp [COut.weiter]) hinc h2, hO2⟩
+      | leave hl' σ' ρ' =>
+          rw [hbo] at hnf
+          obtain ⟨o1, h1, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
+          rw [hbo] at hO
+          obtain ⟨st1, ρC1, ho1, hc2, hr2⟩ := hO
+          subst ho1
+          dsimp only at hnf ⊢
+          by_cases hi2 : (travInv inv σ' ρ'.tail).2 = true
+          · rw [if_pos hi2]
+            exact ⟨_, Exec.forExit hcond htrue h1 (by simp [COut.raus]), st1, ρC1, rfl,
+              (corrW_lese _ _ _ _ _).mpr hc2, envRel_pop hr2⟩
+          · rw [if_neg hi2] at hnf; exact Bool.noConfusion hnf
+      | zurueck σ' v =>
+          obtain ⟨o1, h1, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
+          rw [hbo] at hO
+          obtain ⟨st1, cv, ho1, hc2, hrc⟩ := hO
+          subst ho1
+          exact ⟨_, Exec.forExit hcond htrue h1 rfl, st1, cv, rfl, hc2, hrc⟩
+      | grund σ' r =>
+          obtain ⟨o1, -, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
+          rw [hbo] at hO
+          exact hO.elim
+      | logik e => rw [hbo] at hnf; exact Bool.noConfusion hnf
+      | hardware e => rw [hbo] at hnf; exact Bool.noConfusion hnf
+
+/-- S7. `traverse T { … }` against the emitted counting loop
+    `for (T v = 0; v < hi; v += 1) { body m_weiter: ; } m_ende: ;`
+    (`CS.forUp`): `next` continues, `leave` ends the loop, `return` leaves
+    it, the invariant is logic (not emitted). -/
+theorem scorr_traverse (hK : K.okB = true) {x : Nat} (hf : K.freshB x = true) (tb : D.Tab)
+    (t : CIT) (hN0 : 0 ≤ D.count tb) (hN : t.holds 0 (D.count tb)) (hiC : CX)
+    (hhi : ∀ st ρ, ev X.EL.lay X.orc X.fr hiC st ρ = some (.int (D.count tb), st))
+    (inv : Expr D Γ Λ .bool) (body : Block D V true (.index (D.count tb) :: Γ) Λ Λ) (cbody : CS)
+    (hb : BlockSem X m' (K.push (.index (D.count tb)) x) body cbody)
+    (hw : cbody.writesV x = false) :
+    StmtCorr X m K (Stmt.traverse (l := l) tb inv body) (CS.forUp x t (.lit 0) hiC cbody m') := by
+  intro σ st ρG ρC hc hr hnf
+  have hex : execStmt X.O X.passes X.R (Stmt.traverse (l := l) tb inv body) σ ρG =
+      traverseLauf (fun σ ρ => execBlock X.O X.passes X.R body σ ρ) (travInv inv)
+        (alleIndizes (D.count tb)) σ ρG := rfl
+  rw [hex] at hnf ⊢
+  have c0 : conv t 0 = some 0 := conv_id ⟨CIT.lo_le_zero t, CIT.hi_nonneg t⟩
+  have hset : Exec X.EL.lay X.orc X.fr X.CR X.XR (.set x t.ty (.lit 0)) st ρC
+      (.norm st (lokUpd ρC x (.int 0))) := by
+    refine Exec.set (v := .int 0) rfl ?_
+    show convV (.int t.sgn t.w) (.int 0) = _
+    simp only [convV]
+    rw [show (⟨t.sgn, t.w⟩ : CIT) = t from rfl, c0]
+  obtain ⟨o, h2, hO⟩ := trav_run X m m' K hK hf tb t hN0 hN hiC hhi inv body cbody hb hw
+    (alleIndizes (D.count tb)) 0 rfl (Nat.zero_le _) σ st ρG (lokUpd ρC x (.int 0)) hc
+    (envRel_upd_fresh hK hf hr _) (by simp only [lokUpd, if_pos]; rfl) hnf
+  exact ⟨o, Exec.seqN hset h2, hO⟩
+
+end Zaehlschleife
+
+/-! ## 7. E21/E22: the overflow lowerings
+
+The Lean grammar has no constructor for `+%`/`-%`/`*%` or `+|`: their
+model half is `Zahl.addW`/`subW`/`mulW` and `Zahl.addS` (Ueberlauf.lean).
+The correspondence is therefore stated at that level: from related states
+the emitted C computes the model function of the operands' Gabbro values. -/
+
+/-- Into an unsigned type, conversion is reduction modulo `2^bits`. -/
+theorem conv_u_mod {t : CIT} (hs : t.sgn = false) (v : Int) :
+    conv t v = some (v % 2 ^ t.bits) := by
+  have hp := two_pow_pos' t.bits
+  have hlo := CIT.lo_u hs
+  have hhi := CIT.hi_u hs
+  unfold conv
+  by_cases hr : t.lo ≤ v ∧ v ≤ t.hi
+  · rw [if_pos hr, Int.emod_eq_of_lt (by omega) (by omega)]
+  · rw [if_neg hr, if_neg (by rw [hs]; decide)]
+    show some (((v % 2 ^ t.bits) + 2 ^ t.bits) % 2 ^ t.bits) = _
+    have e : (v % 2 ^ t.bits + 2 ^ t.bits) = v % 2 ^ t.bits + 1 * 2 ^ t.bits := by omega
+    rw [e, Int.add_mul_emod_self_right, Int.emod_emod_of_dvd _ (Int.dvd_refl _)]
+
+theorem two_pow_dvd_two_pow {m n : Nat} (h : m ≤ n) : (2 : Int) ^ m ∣ (2 : Int) ^ n := by
+  refine ⟨2 ^ (n - m), ?_⟩
+  rw [← Int.pow_add, Nat.add_sub_cancel' h]
+
+/-- Evaluation rule of a local read. -/
+theorem ev_var {L : CLayout} {orc : DevOrc} {fr : Nat} {x : Nat} {st : CSt} {ρ : CLok} {v : Int}
+    (h : ρ x = .int v) : ev L orc fr (.var x) st ρ = some (.int v, st) := by
+  simp only [ev, h]
+
+/-- Evaluation rule of a binary operator. -/
+theorem ev_bin {L : CLayout} {orc : DevOrc} {fr : Nat} {op : CBinOp} {t : CIT} {l r : CX}
+    {st st1 st2 : CSt} {ρ : CLok} {a b a' b' c : Int}
+    (hl : ev L orc fr l st ρ = some (.int a, st1)) (hr : ev L orc fr r st1 ρ = some (.int b, st2))
+    (ha : conv t a = some a') (hb : conv t b = some b') (hc : cArith op t a' b' = some c) :
+    ev L orc fr (.bin op t l r) st ρ = some (.int c, st2) := by
+  simp only [ev, hl, hr, ha, hb, hc]
+
+/-- Evaluation rule of a comparison. -/
+theorem ev_cmp {L : CLayout} {orc : DevOrc} {fr : Nat} {op : CCmp} {t : CIT} {l r : CX}
+    {st st1 st2 : CSt} {ρ : CLok} {a b a' b' : Int}
+    (hl : ev L orc fr l st ρ = some (.int a, st1)) (hr : ev L orc fr r st1 ρ = some (.int b, st2))
+    (ha : conv t a = some a') (hb : conv t b = some b') :
+    ev L orc fr (.cmp op t l r) st ρ = some (.int (b2i (op.app a' b')), st2) := by
+  simp only [ev, hl, hr, ha, hb]
+
+/-- The wrapping core `(rt)(a) op (rt)(b)` in the unsigned 32- or 64-bit
+    computation word `rt`. -/
+def wrapCore (op : CBinOp) (rt : CIT) (ca cb : CX) : CX :=
+  .bin op rt (.cast rt ca) (.cast rt cb)
+
+/-- `wrap_c` (11612ff.): `(ct)(core)` at full storage width, and
+    `(ct)((core) & mask)` below it. -/
+def wrapC (op : CBinOp) (rt ct : CIT) (masked : Bool) (N : Nat) (ca cb : CX) : CX :=
+  if masked then .cast ct (.bin .band rt (wrapCore op rt ca cb) (.lit (2 ^ N - 1)))
+  else .cast ct (wrapCore op rt ca cb)
+
+/-- The integer operation behind each wrapping operator. -/
+def wrapOp : CBinOp → Int → Int → Int
+  | .add, a, b => a + b
+  | .sub, a, b => a - b
+  | .mul, a, b => a * b
+  | _, _, _ => 0
+
+section Ueberlauf
+
+variable (X : TVCtx D) {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ)
+
+/-- The scheme: both operands in `0 .. 2^N - 1`, `N` bits inside the
+    storage width `ct` inside the computation word `rt`; the emitted C
+    computes `(a op b) mod 2^N`, masked or not (unmasked exactly when
+    `N` is the storage width). -/
+theorem wrapC_val (op : CBinOp) (hop : op = .add ∨ op = .sub ∨ op = .mul) (N : Nat)
+    (rt ct : CIT) (hrt : rt.sgn = false) (hct : ct.sgn = false) (hN : N ≤ ct.bits)
+    (hS : ct.bits ≤ rt.bits) (masked : Bool) (hmask : masked = false → N = ct.bits)
+    {ca cb : CX} {a b : Expr D Γ Λ (.int 0 (2 ^ N - 1))}
+    (ha : ExprCorr X K ca a) (hb : ExprCorr X K cb b) (σ : World D) (st : CSt) (ρG : Env D Γ)
+    (ρC : CLok) (hc : corrW X.EL σ st) (hr : EnvRel X.EL K ρG ρC) :
+    ∃ st', ev X.EL.lay X.orc X.fr (wrapC op rt ct masked N ca cb) st ρC =
+      some (.int (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N), st') := by
+  obtain ⟨st1, h1, hc1⟩ := ha.runI X K hc hr
+  obtain ⟨st2, h2, -⟩ := hb.runI X K hc1 hr
+  have ra := (eval σ a σ ρG).lo_le
+  have ra' := (eval σ a σ ρG).le_hi
+  have rb := (eval σ b σ ρG).lo_le
+  have rb' := (eval σ b σ ρG).le_hi
+  have pN := two_pow_le_two_pow hN
+  have pS := two_pow_le_two_pow hS
+  have hlo := CIT.lo_u hrt
+  have hhi := CIT.hi_u hrt
+  have ca' : conv rt (eval σ a σ ρG).n = some (eval σ a σ ρG).n := conv_id ⟨by omega, by omega⟩
+  have cb' : conv rt (eval σ b σ ρG).n = some (eval σ b σ ρG).n := conv_id ⟨by omega, by omega⟩
+  have hcore : ev X.EL.lay X.orc X.fr (wrapCore op rt ca cb) st ρC =
+      some (.int (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits), st2) := by
+    have e1 := ev_cast rt h1 ca'
+    have e2 := ev_cast rt h2 cb'
+    have hv : cArith op rt (eval σ a σ ρG).n (eval σ b σ ρG).n =
+        some (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits) := by
+      rcases hop with e | e | e <;> subst e <;> exact conv_u_mod hrt _
+    exact ev_bin e1 e2 ca' cb' hv
+  have hdvN : (2 : Int) ^ N ∣ 2 ^ rt.bits := two_pow_dvd_two_pow (Nat.le_trans hN hS)
+  have hdvS : (2 : Int) ^ ct.bits ∣ 2 ^ rt.bits := two_pow_dvd_two_pow hS
+  have hpR := two_pow_pos' rt.bits
+  have hpN := two_pow_pos' N
+  cases masked with
+  | false =>
+      have e := hmask rfl
+      subst e
+      refine ⟨st2, ?_⟩
+      have c3 := conv_u_mod hct (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits)
+      rw [Int.emod_emod_of_dvd _ hdvS] at c3
+      exact ev_cast ct hcore c3
+  | true =>
+      refine ⟨st2, ?_⟩
+      set_option linter.unusedVariables false in
+      have hm0 : 0 ≤ wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits :=
+        Int.emod_nonneg _ (by omega)
+      have hm1 : wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits < 2 ^ rt.bits :=
+        Int.emod_lt_of_pos _ hpR
+      have cm : conv rt (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits) =
+          some (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits) :=
+        conv_id ⟨by omega, by omega⟩
+      have ck : conv rt (2 ^ N - 1) = some (2 ^ N - 1) := conv_id ⟨by omega, by omega⟩
+      -- the mask: `x & (2^N - 1) = x mod 2^N` on the naturals
+      have hand : (((wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits).toNat &&&
+          ((2 : Int) ^ N - 1).toNat : Nat) : Int) =
+          wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N := by
+        have eN : ((2 : Int) ^ N - 1).toNat = 2 ^ N - 1 := by
+          have : ((2 ^ N : Nat) : Int) = (2 : Int) ^ N := by simp
+          omega
+        rw [eN, Nat.and_two_pow_sub_one_eq_mod, Int.natCast_emod, Int.toNat_of_nonneg hm0,
+          Int.natCast_pow]
+        show _ % 2 ^ rt.bits % (2 : Int) ^ N = _
+        exact Int.emod_emod_of_dvd _ hdvN
+      have hb2 : cArith .band rt (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ rt.bits)
+          (2 ^ N - 1) = some (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N) := by
+        show (if 0 ≤ _ ∧ 0 ≤ (2 : Int) ^ N - 1 then some _ else none) = _
+        rw [if_pos ⟨hm0, by omega⟩, hand]
+      have hmv : ev X.EL.lay X.orc X.fr
+          (.bin .band rt (wrapCore op rt ca cb) (.lit (2 ^ N - 1))) st ρC =
+          some (.int (wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N), st2) :=
+        ev_bin hcore rfl cm ck hb2
+      have hlt : 0 ≤ wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N ∧
+          wrapOp op (eval σ a σ ρG).n (eval σ b σ ρG).n % 2 ^ N < 2 ^ N :=
+        ⟨Int.emod_nonneg _ (by omega), Int.emod_lt_of_pos _ hpN⟩
+      have hcl := CIT.lo_u hct
+      have hch := CIT.hi_u hct
+      have pN' := two_pow_le_two_pow hN
+      exact ev_cast ct hmv (conv_id ⟨by omega, by omega⟩)
+
+/-- E21. `+%` as emitted computes `Zahl.addW`. -/
+theorem wrapC_add (w : Nat) (rt ct : CIT) (hrt : rt.sgn = false) (hct : ct.sgn = false)
+    (hN : w + 1 ≤ ct.bits) (hS : ct.bits ≤ rt.bits) (masked : Bool)
+    (hmask : masked = false → w + 1 = ct.bits) {ca cb : CX}
+    {a b : Expr D Γ Λ (.int 0 (2 ^ (w + 1) - 1))} (ha : ExprCorr X K ca a)
+    (hb : ExprCorr X K cb b) (σ : World D) (st : CSt) (ρG : Env D Γ) (ρC : CLok)
+    (hc : corrW X.EL σ st) (hr : EnvRel X.EL K ρG ρC) :
+    ∃ st', ev X.EL.lay X.orc X.fr (wrapC .add rt ct masked (w + 1) ca cb) st ρC =
+      some (.int (Zahl.addW w (eval σ a σ ρG) (eval σ b σ ρG)).n, st') :=
+  wrapC_val X K .add (Or.inl rfl) (w + 1) rt ct hrt hct hN hS masked hmask ha hb σ st ρG ρC hc hr
+
+/-- E21. `-%` computes `Zahl.subW`. -/
+theorem wrapC_sub (w : Nat) (rt ct : CIT) (hrt : rt.sgn = false) (hct : ct.sgn = false)
+    (hN : w + 1 ≤ ct.bits) (hS : ct.bits ≤ rt.bits) (masked : Bool)
+    (hmask : masked = false → w + 1 = ct.bits) {ca cb : CX}
+    {a b : Expr D Γ Λ (.int 0 (2 ^ (w + 1) - 1))} (ha : ExprCorr X K ca a)
+    (hb : ExprCorr X K cb b) (σ : World D) (st : CSt) (ρG : Env D Γ) (ρC : CLok)
+    (hc : corrW X.EL σ st) (hr : EnvRel X.EL K ρG ρC) :
+    ∃ st', ev X.EL.lay X.orc X.fr (wrapC .sub rt ct masked (w + 1) ca cb) st ρC =
+      some (.int (Zahl.subW w (eval σ a σ ρG) (eval σ b σ ρG)).n, st') :=
+  wrapC_val X K .sub (Or.inr (Or.inl rfl)) (w + 1) rt ct hrt hct hN hS masked hmask ha hb
+    σ st ρG ρC hc hr
+
+/-- E21. `*%` computes `Zahl.mulW`. -/
+theorem wrapC_mul (w : Nat) (rt ct : CIT) (hrt : rt.sgn = false) (hct : ct.sgn = false)
+    (hN : w + 1 ≤ ct.bits) (hS : ct.bits ≤ rt.bits) (masked : Bool)
+    (hmask : masked = false → w + 1 = ct.bits) {ca cb : CX}
+    {a b : Expr D Γ Λ (.int 0 (2 ^ (w + 1) - 1))} (ha : ExprCorr X K ca a)
+    (hb : ExprCorr X K cb b) (σ : World D) (st : CSt) (ρG : Env D Γ) (ρC : CLok)
+    (hc : corrW X.EL σ st) (hr : EnvRel X.EL K ρG ρC) :
+    ∃ st', ev X.EL.lay X.orc X.fr (wrapC .mul rt ct masked (w + 1) ca cb) st ρC =
+      some (.int (Zahl.mulW w (eval σ a σ ρG) (eval σ b σ ρG)).n, st') :=
+  wrapC_val X K .mul (Or.inr (Or.inr rfl)) (w + 1) rt ct hrt hct hN hS masked hmask ha hb
+    σ st ρG ρC hc hr
+
+end Ueberlauf
+
+/-- The body of the emitted helper `_gabbro_sat_u` (SATURATION_PRELUDE,
+    emit.rs 11704ff.), statement for statement; its parameters `a`, `b`,
+    `lo`, `hi` are C locals 0 to 3:
+    `if (a > hi - b) { return hi; } if (a + b < lo) { return lo; }
+     return a + b;` -- all in `uint64_t`. -/
+def satUBody : CS :=
+  .seq (.ite (.cmp .gt CIT.u64 (.var 0) (.bin .sub CIT.u64 (.var 3) (.var 1)))
+      (.ret (some (CIT.u64.ty, .var 3))) .skip)
+    (.seq (.ite (.cmp .lt CIT.u64 (.bin .add CIT.u64 (.var 0) (.var 1)) (.var 2))
+        (.ret (some (CIT.u64.ty, .var 2))) .skip)
+      (.ret (some (CIT.u64.ty, .bin .add CIT.u64 (.var 0) (.var 1)))))
+
+/-- E22. The helper computes the clamp of Zahl.addS: for operands and
+    bounds in `0 .. 2^64 - 1` with the operands inside `lo .. hi`, its run
+    returns `max lo (min (a + b) hi)`, and no `uint64_t` operation in it
+    wraps (`hi - b` because `b ≤ hi`, `a + b` because the first test
+    failed). -/
+theorem satU_run (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR) (st : CSt)
+    (ρ : CLok) (a b lo hi : Int) (h0 : 0 ≤ lo) (hla : lo ≤ a) (hah : a ≤ hi) (hlb : lo ≤ b)
+    (hbh : b ≤ hi) (hhi : hi ≤ 2 ^ 64 - 1) (ha : ρ 0 = .int a) (hb : ρ 1 = .int b)
+    (hl : ρ 2 = .int lo) (hh : ρ 3 = .int hi) :
+    Exec L orc fr CR XR satUBody st ρ (.ret st (some (.int (max lo (min (a + b) hi))))) := by
+  have u64lo : CIT.u64.lo = 0 := rfl
+  have u64hi : CIT.u64.hi = 2 ^ 64 - 1 := by decide
+  have cv : ∀ v : Int, 0 ≤ v → v ≤ 2 ^ 64 - 1 → conv CIT.u64 v = some v :=
+    fun v h1 h2 => conv_id ⟨by omega, by omega⟩
+  have hsub : ev L orc fr (.bin .sub CIT.u64 (.var 3) (.var 1)) st ρ = some (.int (hi - b), st) :=
+    ev_bin (ev_var hh) (ev_var hb) (cv hi (by omega) hhi) (cv b (by omega) (by omega))
+      (cv (hi - b) (by omega) (by omega))
+  have hc1 : ev L orc fr (.cmp .gt CIT.u64 (.var 0) (.bin .sub CIT.u64 (.var 3) (.var 1))) st ρ =
+      some (.int (b2i (decide (hi - b < a))), st) :=
+    ev_cmp (ev_var ha) hsub (cv a (by omega) (by omega)) (cv (hi - b) (by omega) (by omega))
+  by_cases hgt : hi - b < a
+  · -- `return hi;`
+    have hv : max lo (min (a + b) hi) = hi := by omega
+    rw [hv]
+    have hr : Exec L orc fr CR XR (.ret (some (CIT.u64.ty, .var 3))) st ρ (.ret st (some (.int hi))) :=
+      Exec.retS (ev_var hh) (by
+        show convV (.int false .w64) (.int hi) = _
+        simp only [convV]
+        rw [show (⟨false, .w64⟩ : CIT) = CIT.u64 from rfl, cv hi (by omega) hhi])
+    exact Exec.seqX (Exec.iteT hc1 (by rw [decide_eq_true hgt]; rfl) hr) rfl
+  · have hadd : ev L orc fr (.bin .add CIT.u64 (.var 0) (.var 1)) st ρ = some (.int (a + b), st) :=
+      ev_bin (ev_var ha) (ev_var hb) (cv a (by omega) (by omega)) (cv b (by omega) (by omega))
+        (cv (a + b) (by omega) (by omega))
+    have hc2 : ev L orc fr (.cmp .lt CIT.u64 (.bin .add CIT.u64 (.var 0) (.var 1)) (.var 2)) st ρ =
+        some (.int (b2i (decide (a + b < lo))), st) :=
+      ev_cmp hadd (ev_var hl) (cv (a + b) (by omega) (by omega)) (cv lo (by omega) (by omega))
+    have hv : max lo (min (a + b) hi) = a + b := by omega
+    rw [hv]
+    have hlt : ¬ (a + b < lo) := by omega
+    have hr : Exec L orc fr CR XR (.ret (some (CIT.u64.ty, .bin .add CIT.u64 (.var 0) (.var 1))))
+        st ρ (.ret st (some (.int (a + b)))) :=
+      Exec.retS hadd (by
+        show convV (.int false .w64) (.int (a + b)) = _
+        simp only [convV]
+        rw [show (⟨false, .w64⟩ : CIT) = CIT.u64 from rfl, cv (a + b) (by omega) (by omega)])
+    exact Exec.seqN (Exec.iteF hc1 (by rw [decide_eq_false hgt]; rfl) Exec.skip)
+      (Exec.seqN (Exec.iteF hc2 (by rw [decide_eq_false hlt]; rfl) Exec.skip) hr)
+
+/-- E22, against the model: the helper's answer is `Zahl.addS`. -/
+theorem satU_zahl (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR) (st : CSt)
+    (ρ : CLok) {lo hi : Int} (h0 : 0 ≤ lo) (hle : lo ≤ hi) (hhi : hi ≤ 2 ^ 64 - 1)
+    (a b : Zahl lo hi) (ha : ρ 0 = .int a.n) (hb : ρ 1 = .int b.n) (hl : ρ 2 = .int lo)
+    (hh : ρ 3 = .int hi) :
+    Exec L orc fr CR XR satUBody st ρ (.ret st (some (.int (Zahl.addS a b).n))) := by
+  rw [Zahl.addS_n a b hle]
+  exact satU_run L orc fr CR XR st ρ a.n b.n lo hi h0 a.lo_le a.le_hi b.lo_le b.le_hi hhi ha hb hl hh
+
+/-
+CUTS: what this pass does not do, by name.
+- THE RANGE GUARANTEE IS A PREMISE. Every operator lemma takes the fact
+  that operands and result lie in the C computation type (`t.holds …`),
+  which is the checker's `M104` ("the result range must fit the width of
+  the operands", measured: `u32 - 1` with a negative range is refused) --
+  stated per node, not derived from the checker.
+- A REASON RETURN (`Ausgang.grund`, the `or R` channel: `*_grund = F;
+  return false;`) has no correspondence here (`StOut` is `False` on it),
+  so a statement that may return a reason cannot be certified by this
+  pass. Functions without an error channel (`gruende = 0`) never reach it.
+- `retry` IS NOT COVERED, and it cannot be as the two sides stand. The
+  emitted loop (9658/9668) is `for (; !(bis) && z < n; z += 1) body` and
+  then `if (z >= n && !(bis)) ausgang();` -- it evaluates `bis` once more
+  after the last pass. Gabbro's `retryLauf 0` runs the overflow block
+  without that check. When the n-th pass makes `bis` true, Gabbro runs
+  the overflow block and C does not: a FINDING about model and emitter
+  (one of them has to move), reported, not fixed.
+- `forever` (`for (;;)`) is not given its lemma: its Gabbro meaning after
+  `passes` rounds is the hardware assumption, so only its `leave` and
+  `return` exits carry obligations; the shape is `CS.loop`.
+- `~` is covered for unsigned `T` only (the only `M137` operand).
+- `+%`, `-%`, `*%`, `+|` have no constructor in the Lean grammar; they
+  correspond to `Zahl.addW`/`subW`/`mulW`/`addS` of `Ueberlauf.lean`. The
+  wrapping shift `<<%` and the signed helper `_gabbro_sat_i` are not
+  covered.
+- `traverse` is covered with a loop bound that evaluates to the slot
+  count without observations and a body that does not write the loop
+  variable (`CS.writesV`, a syntactic check); the other counting loops of
+  the emitter (`elems of`, `accumulates`, `walk`, the count helpers) have
+  the same C shape and no Gabbro constructor of their own.
+- Ghost carriers are excluded (`D.geist t = false`): the emitter omits
+  their statements, and a certificate lowers them to no C at all.
+-/
+
+#print axioms ecorr_add
+#print axioms ecorr_sub
+#print axioms ecorr_mul
+#print axioms ecorr_div
+#print axioms ecorr_rem
+#print axioms ecorr_sdiv
+#print axioms ecorr_srem
+#print axioms ecorr_band
+#print axioms ecorr_bor
+#print axioms ecorr_bxor
+#print axioms ecorr_shl
+#print axioms ecorr_shr
+#print axioms ecorr_lt
+#print axioms ecorr_le
+#print axioms ecorr_eq
+#print axioms ecorr_gt
+#print axioms ecorr_nicht
+#print axioms ecorr_bnot
+#print axioms ecorr_cast
+#print axioms ecorr_slotNamed
+#print axioms ecorr_glob
+#print axioms ecorr_globAtomar
+#print axioms scorr_assignVar
+#print axioms scorr_plusGleich
+#print axioms scorr_minusGleich
+#print axioms scorr_undGleich
+#print axioms scorr_oderGleich
+#print axioms scorr_assignSlotNamed
+#print axioms scorr_assignGlob
+#print axioms scorr_assignGlobAtomar
+#print axioms scorr_ret
+#print axioms scorr_ite
+#print axioms cCorr_block
+#print axioms cCorr_end
+#print axioms scorr_traverse
+#print axioms wrapC_add
+#print axioms wrapC_sub
+#print axioms wrapC_mul
+#print axioms satU_run
+#print axioms satU_zahl
 
 end Gabbro.Grammatik
