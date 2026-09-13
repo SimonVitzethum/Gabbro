@@ -150,3 +150,5 @@ import Grammatik.CFormenDet
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge
 import Grammatik.CFormenR
+import Grammatik.CFormenRZeuge
+import Grammatik.CFormenRZeuge2

@@ -2303,6 +2303,97 @@ theorem cCorr_rufK (EL : EmitLay D) (orc : DevOrc) (XR : CCallR) (P : Programm D
   | logik e => rw [hE] at hnf; exact Bool.noConfusion hnf
   | hardware e => rw [hE] at hnf; exact Bool.noConfusion hnf
 
+/-- K3', A PLAIN FUNCTION WITH GHOSTS: `rufAt` against `CallAt` for a
+    function without a channel whose body uses out-parameter cells (its
+    address-taken locals, alive in its frame). -/
+theorem cCorr_rufG (EL : EmitLay D) (orc : DevOrc) (XR : CCallR) (P : Programm D) (O : Orakel D)
+    (passes n : Nat) (Pr : CProg) (f : D.Fn) (fc : Nat) (F : CFun) (hPr : Pr fc = some F)
+    (Kf : CEnvLay D (D.params f)) (hKf : Kf.okB = true) (m : Nat) (gs : GList)
+    (hgs : ∀ g ∈ geister gs, g ∉ Kf.vm ∧ (∀ q ∈ Kf.pp, q.1 ≠ g) ∧ (∀ q ∈ Kf.ks, q.1 ≠ g))
+    (hloc : ∀ q ∈ gs, q.2.1 ∈ F.locals)
+    (hbody : EndSemG ⟨EL, orc, n + 1, CallAt EL.lay orc XR Pr n, XR, O, passes, rufAt P O passes n⟩
+      m true ⟨gs, none⟩ Kf (P.rumpf f) F.body) :
+    FnCorr EL (rufAt P O passes (n + 1)) (CallAt EL.lay orc XR Pr (n + 1)) f fc F.params Kf := by
+  intro σ st ρG vs ρ0 hc hb hr hnf
+  simp only [rufAt] at hnf ⊢
+  by_cases hq : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte)
+      (P.requires f) (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρG) = false
+  · rw [if_pos hq] at hnf; exact Bool.noConfusion hnf
+  rw [if_neg hq] at hnf ⊢
+  have hc1 : corrW EL (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte)
+      (enterFrame st (n + 1) F.locals) := corrW_enterFrame (n + 1) F.locals hc
+  have hrel : EnvRelG ⟨EL, orc, n + 1, CallAt EL.lay orc XR Pr n, XR, O, passes, rufAt P O passes n⟩
+      ⟨gs, none⟩ Kf ρG ρ0 (enterFrame st (n + 1) F.locals) := by
+    refine ⟨envRel_ghostify_frei hKf _ _ gs hgs hr _, trivial, ?_⟩
+    intro q hq
+    show (if n + 1 = n + 1 ∧ q.2.1 ∈ F.locals then true else _) = true
+    rw [if_pos ⟨rfl, hloc q hq⟩]
+  cases hE : execEnd (V := vertragVon D f) O passes (rufAt P O passes n) (P.rumpf f)
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρG with
+  | zurueck σ' v =>
+      rw [hE] at hnf
+      obtain ⟨o, hx, hO⟩ := hbody _ _ ρG ρ0 hc1 hrel (by rw [hE]; rfl)
+      rw [hE] at hO
+      have hret : ∃ st1, corrW EL σ' st1 ∧ ((∃ cv, o = .ret st1 cv ∧ RetCorr EL (D.erg f) v cv) ∨
+          ((vertragVon D f).erg = none ∧ ∃ ρ1, o = .norm st1 ρ1)) := by
+        rcases hO with ⟨st1, cv, ho, hc2, hrc⟩ | ⟨-, -, hV, st1, ρ1, ho, hc2⟩
+        · exact ⟨st1, hc2, Or.inl ⟨cv, ho, hrc⟩⟩
+        · exact ⟨st1, hc2, Or.inr ⟨hV, ρ1, ho⟩⟩
+      obtain ⟨st1, hc2, hret⟩ := hret
+      dsimp only at hnf ⊢
+      by_cases hens : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte)
+          (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
+          (ergEnv (D.erg f) v ρG)) = false
+      · rw [if_pos hens] at hnf; exact Bool.noConfusion hnf
+      rw [if_neg hens] at hnf ⊢
+      cases hfind : D.invs.find? (fun i => schuldet f i &&
+          !wahr? (eval ((D.invs.filter (schuldet f)).foldl
+            (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte)
+            (σ'.lese (vertragVon D f).ende (P.ensures f).orte)) (P.invariante i)
+            ((D.invs.filter (schuldet f)).foldl
+            (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte)
+            (σ'.lese (vertragVon D f).ende (P.ensures f).orte)) .nil)) with
+      | some i => rw [hfind] at hnf; exact Bool.noConfusion hnf
+      | none =>
+          have hc3 : corrW EL ((D.invs.filter (schuldet f)).foldl
+              (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte)
+              (σ'.lese (vertragVon D f).ende (P.ensures f).orte)) (leaveFrame st1 (n + 1)) :=
+            (corrW_foldl_lese _ _ _ _).mpr ((corrW_lese _ _ _ _ _).mpr (corrW_leaveFrame _ hc2))
+          rcases hret with ⟨cv, ho, hrc⟩ | ⟨hV, ρ1, ho⟩
+          · exact ⟨_, cv, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inl ho, rfl⟩, hc3, hrc⟩
+          · exact ⟨_, none, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inr ⟨rfl, ρ1, ho⟩, rfl⟩, hc3,
+              retCorr_none hV v⟩
+  | grund σ' r =>
+      obtain ⟨o, -, hO⟩ := hbody _ _ ρG ρ0 hc1 hrel (by rw [hE]; rfl)
+      rw [hE] at hO
+      exact hO.elim
+  | leave h _ _ => exact absurd h (by decide)
+  | next h _ _ => exact absurd h (by decide)
+  | logik e => rw [hE] at hnf; exact Bool.noConfusion hnf
+  | hardware e => rw [hE] at hnf; exact Bool.noConfusion hnf
+
+/-- A statement that never completes normally, followed by C that is
+    never reached (`__builtin_unreachable();` after a `switch` whose every
+    arm leaves, emit.rs D005). -/
+theorem gcorr_seqTot (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CEnvLay D Γ) {V : Vertrag D}
+    {l : Bool} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} {cs : CS} (ct : CS)
+    (hs : StmtCorrG X m G K s cs)
+    (hne : ∀ σ ρG, (execStmt X.O X.passes X.R s σ ρG).istOk = false) :
+    StmtCorrG X m G K s (.seq cs ct) := by
+  intro σ st ρG ρC hc hr hnf
+  obtain ⟨o, hx, hO⟩ := hs σ st ρG ρC hc hr hnf
+  refine ⟨o, Exec.seqX hx ?_, hO⟩
+  have hne' := hne σ ρG
+  revert hO hne'
+  cases execStmt X.O X.passes X.R s σ ρG with
+  | ok σ' ρ' => intro _ h; exact absurd h (by simp [Ausgang.istOk])
+  | zurueck σ' v => intro hO _; exact zurG_abrupt hO
+  | grund σ' r => intro hO _; exact gruG_abrupt hO
+  | leave hl σ' ρ' => intro hO _; obtain ⟨st', ρ'', ho, -⟩ := hO; subst ho; rfl
+  | next hl σ' ρ' => intro hO _; obtain ⟨st', ρ'', ho, -⟩ := hO; subst ho; rfl
+  | logik e => intro hO _; exact hO.elim
+  | hardware e => intro hO _; exact hO.elim
+
 /-- The emitted call site of `let x = f(a) else (e) { err }` (`T x;` and
     `R e;` are address-taken locals, stack cells of the frame):
     `if (!f(a, &x, &e)) { err } rest`, the call's answer in `tmp` (C's
@@ -2659,6 +2750,12 @@ theorem stOutG_nichtBrk {a : Ausgang V l Γ} {o : COut}
   | logik e => exact h.elim
   | hardware e => exact h.elim
 
+/-- A reason constant `R::F` is its index (the ordinal convention). -/
+theorem ecorr_grundLit {Λ : List (Res D)} (n : Nat) (r : Fin n) :
+    ExprCorr X K (.lit ((r : Nat) : Int)) (Expr.grund (Γ := Γ) (Λ := Λ) n r) := by
+  intro σ st ρG ρC _ _
+  exact ⟨.int ((r : Nat) : Int), st, rfl, rfl⟩
+
 /-- R1. `switch (e) { case 0: { … } break; case 1: … }` against `match` on a
     reason: every reason has its case, labelled with its index (the
     ordinal convention), whose arm corresponds as a block -- or no case,
@@ -2801,6 +2898,53 @@ theorem narrowCond_ge_le {Λ : List (Res D)} {lo hi : Int} (t : CIT) {ce : CX}
         · rw [decide_eq_true ⟨of_decide_eq_true hlo, hh⟩, decide_eq_true hh]
         · rw [decide_eq_false (fun h' => hh h'.2), decide_eq_false hh]
       rw [this]
+
+/-- The emitted check when the lower bound is `0` over a value that is
+    never negative (emit.rs: `x >= 0` "is always true" on an unsigned
+    word and is left out): `o <= hi`. -/
+theorem narrowCond_le0 {Λ : List (Res D)} {lo hi : Int} (t : CIT) {ce : CX}
+    {e : Expr D Γ Λ (.int lo hi)} (he : ExprCorr X K ce e) (hi' : Int) (hlo : 0 ≤ lo)
+    (ht : t.holds lo hi) (hhi' : t.holds hi' hi') :
+    NarrowCond X G K (.cmp .le t (ce.zs G.gs) (.lit hi')) e 0 hi' := by
+  intro σ st ρG ρC hc hrel
+  obtain ⟨st1, h1, -⟩ := he.runI X K hc hrel.1
+  have hs1 := ev_same X.EL.lay X.orc X.fr ce st _ _ st1 h1
+  have r1 := (eval σ e σ ρG).lo_le
+  have r2 := (eval σ e σ ρG).le_hi
+  have cv : conv t (eval σ e σ ρG).n = some (eval σ e σ ρG).n :=
+    conv_id ⟨by have := ht.1; omega, by have := ht.2; omega⟩
+  have e1 : ev X.EL.lay X.orc X.fr (ce.zs G.gs) st ρC = some (.int (eval σ e σ ρG).n, st1) := by
+    rw [ev_zs G.gs ce st st ρC (SameML.refl _)]; exact h1
+  refine ⟨st1, ?_, hs1⟩
+  rw [ev_cmp e1 rfl cv (conv_id hhi')]
+  congr 3
+  simp only [CCmp.app]
+  by_cases hh : (eval σ e σ ρG).n ≤ hi'
+  · rw [decide_eq_true hh, decide_eq_true ⟨by omega, hh⟩]
+  · rw [decide_eq_false hh, decide_eq_false (fun h' => hh h'.2)]
+
+/-- The exclusive bound `0 ..< n` over a value that is never negative:
+    `o < n`, the range `0 .. n - 1`. -/
+theorem narrowCond_lt0 {Λ : List (Res D)} {lo hi : Int} (t : CIT) {ce : CX}
+    {e : Expr D Γ Λ (.int lo hi)} (he : ExprCorr X K ce e) (n : Int) (hlo : 0 ≤ lo)
+    (ht : t.holds lo hi) (hn : t.holds n n) :
+    NarrowCond X G K (.cmp .lt t (ce.zs G.gs) (.lit n)) e 0 (n - 1) := by
+  intro σ st ρG ρC hc hrel
+  obtain ⟨st1, h1, -⟩ := he.runI X K hc hrel.1
+  have hs1 := ev_same X.EL.lay X.orc X.fr ce st _ _ st1 h1
+  have r1 := (eval σ e σ ρG).lo_le
+  have r2 := (eval σ e σ ρG).le_hi
+  have cv : conv t (eval σ e σ ρG).n = some (eval σ e σ ρG).n :=
+    conv_id ⟨by have := ht.1; omega, by have := ht.2; omega⟩
+  have e1 : ev X.EL.lay X.orc X.fr (ce.zs G.gs) st ρC = some (.int (eval σ e σ ρG).n, st1) := by
+    rw [ev_zs G.gs ce st st ρC (SameML.refl _)]; exact h1
+  refine ⟨st1, ?_, hs1⟩
+  rw [ev_cmp e1 rfl cv (conv_id hn)]
+  congr 3
+  simp only [CCmp.app]
+  by_cases hh : (eval σ e σ ρG).n < n
+  · rw [decide_eq_true hh, decide_eq_true ⟨by omega, by omega⟩]
+  · rw [decide_eq_false hh, decide_eq_false (fun h' => hh (by omega))]
 
 /-- R3. `narrow e to lo' .. hi' else { sonst } rest` against
     `if (!(cond)) { sonst } rest`: the emitter binds no new name, so the
@@ -3233,5 +3377,10 @@ CUTS: what this file does not do, by name.
 #print axioms gcorr_locks
 #print axioms exec_live_einfach
 #print axioms callAt_live
+#print axioms cCorr_rufG
+#print axioms gcorr_seqTot
+#print axioms narrowCond_le0
+#print axioms narrowCond_lt0
+#print axioms ecorr_grundLit
 
 end Gabbro.Grammatik
