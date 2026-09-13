@@ -1208,6 +1208,10 @@ inductive BlockCorr (X : TVCtx D) (m : Nat) {V : Vertrag D} {l : Bool} :
   | pre {Γ : Ctx} {Λ Λ' Λ0 : List (Res D)} {K : CEnvLay D Γ} {b : Block D V l Γ Λ Λ'}
       {τ0 : Ty} {e0 : Expr D Γ Λ0 τ0} {ce : CX} {cr : CS} (he : ExprCorr X K ce e0)
       (hr : BlockCorr X m K b cr) : BlockCorr X m K b (.seq (.expr ce) cr)
+  /-- A block head whose correspondence a later pass proves on its own
+      (`let x = f(…)`, `let x = A awaits`, `let x = R`, …). -/
+  | sem {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {b : Block D V l Γ Λ Λ'} {cb : CS}
+      (h : BlockSem X m K b cb) : BlockCorr X m K b cb
 
 /-- Running a C-only `(void)e;`: nothing related changes. -/
 theorem pre_run {X : TVCtx D} {Γ : Ctx} {Λ0 : List (Res D)} {K : CEnvLay D Γ} {τ0 : Ty}
@@ -1285,6 +1289,7 @@ theorem cCorr_block (X : TVCtx D) (m : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
       obtain ⟨st1, h1, hc1⟩ := pre_run he hc hr
       obtain ⟨o, h2, hO⟩ := ih σ st1 ρG ρC hc1 hr hnf
       exact ⟨o, Exec.seqN h1 h2, hO⟩
+  | sem h => exact h
 
 /-! ### Terminal blocks (`Endblock`): the function body -/
 
@@ -1341,6 +1346,9 @@ inductive EndCorr (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
   | pre {Γ : Ctx} {Λ Λ0 : List (Res D)} {K : CEnvLay D Γ} {b : Endblock D V l Γ Λ}
       {τ0 : Ty} {e0 : Expr D Γ Λ0 τ0} {ce : CX} {cr : CS} (he : ExprCorr X K ce e0)
       (hr : EndCorr X m top K b cr) : EndCorr X m top K b (.seq (.expr ce) cr)
+  /-- A terminal block whose correspondence is proved on its own. -/
+  | sem {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {b : Endblock D V l Γ Λ} {cb : CS}
+      (h : EndSem X m top K b cb) : EndCorr X m top K b cb
 
 theorem endIstFehler_schrumpf {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
     (a : EndAusgang V l (τ :: Γ)) : a.schrumpf.istFehler = a.istFehler := by
@@ -1443,6 +1451,7 @@ theorem cCorr_end (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
       obtain ⟨st1, h1, hc1⟩ := pre_run he hc hr
       obtain ⟨o, h2, hO⟩ := ih σ st1 ρG ρC hc1 hr hnf
       exact ⟨o, Exec.seqN h1 h2, hO⟩
+  | sem h => exact h
 
 /-! ## 6. S7: the counting loop against `traverse`
 

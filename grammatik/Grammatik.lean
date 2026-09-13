@@ -138,3 +138,4 @@ import Grammatik.ZielOrtAxZeuge
 import Grammatik.Referenz104
 import Grammatik.CFormen
 import Grammatik.CFormenI
+import Grammatik.CFormenM
