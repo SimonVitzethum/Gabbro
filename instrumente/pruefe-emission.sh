@@ -3012,12 +3012,11 @@ fi
 # and `111-rufzulassung` (this lane: the guarded footprint and the admitted
 # indirect call). Both emit and compile under `cc -Werror -fsyntax-only`;
 # the other 91 stand as booked.
-# **93 -> 95 on 2026-09-13 (lane 140, measured on the merged tree).** `+2` are
-# `112-register-traeger-bewacht` and `113-register-traeger-ungeschrieben`
-# (this lane: the `depends` clause over a guarded and an unwritten carrier).
-# Both emit and compile under `cc -Werror` at `-O0` and `-O2`; the other 93
-# stand as booked.
-MARKE_EMIT=95
+# **95 -> 96 on 2026-09-13 (lane 151b, measured on the working tree).** `+1`
+# is `115-owner-read-with-producer` (this lane: the owner read path under the
+# mark, with the single mint executed once). Emits and compiles under
+# `cc -Werror -fsyntax-only`; the other 95 stand as booked.
+MARKE_EMIT=96
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

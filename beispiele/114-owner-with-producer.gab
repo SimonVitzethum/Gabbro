@@ -1,0 +1,53 @@
+-- 114 -- **`owner` with a producer: the mark guards the table.**
+--
+-- The design question of `D026` was who mints the FIRST mark
+-- (`dokumente/SYNTAX.md` §9): a guard nobody holds is a sentence, not a
+-- discipline. The producer standing here is the smallest one that answers it:
+--
+-- * the mark is a linear value (`linear ghost type Marke`, held by `D265`);
+-- * exactly one foreign body returns it without taking it -- the minter
+--   (`erste`, a named assumption like every foreign body, held by `D266`);
+--   no signature (re)produces it, so no second mint exists;
+-- * the mark travels by linear handoff (`M2`: exactly once, never doubled) --
+--   `runde` creates it with one call and moves it into `schreibe`, which
+--   moves it on into `lege_ab`;
+-- * every write to the table holds the mark (`schreibe` takes `m : Marke`,
+--   held by `D267`); `runde` only declares the hull, which is no access.
+--
+-- No second owner can arise: one mint, no signature production, no
+-- duplication. What this file does NOT show is the read half (reads inside
+-- bodied functions are not covered yet) and borrowing the mark back across a
+-- call (`consumes` plus `allocs` is refused this lane: move-only).
+--
+-- Measured: 7 items, 0 errors, 0 hints; emits, and `cc` accepts the C.
+
+module beispiel::eigner_mit_erzeuger {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+extern fn lege_ab(m : Marke) effects { consumes m } costs <= 8 ops;
+
+impl fn schreibe(m : Marke, i : index into Plaetze)
+    effects { writes Plaetze.slots, consumes m }
+    costs   <= 32 ops
+{
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+}
+
+impl fn runde(i : index into Plaetze)
+    effects { writes Plaetze.slots }
+    costs   <= 64 ops
+{
+    let m = erste();
+    schreibe(m, i);
+}
+
+}

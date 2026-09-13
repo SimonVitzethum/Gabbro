@@ -1,0 +1,29 @@
+-- erwartet: D266
+-- **No signature (re)produces an owner mark: `allocs` of it is refused.**
+--
+-- The foreign minter's return is the single introduction of the mark (a named
+-- assumption, like every foreign body). An `allocs Marke` line would mint it
+-- again through the signature -- the shape `eigner_nie_erzeugt`
+-- (`Syntax.lean:149`) forbids -- so the mark travels by handoff, not by fresh
+-- `allocs`. Falls with `D266`, and `D026` stays silent beside it (one fault,
+-- one refusal). Measured: 5 items, 1 error.
+module gift::owner_allocs_of_mark {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+
+impl fn schmiede()
+    effects { allocs Marke }
+    costs   <= 8 ops
+{
+    return;
+}
+
+}

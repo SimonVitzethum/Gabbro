@@ -1,0 +1,25 @@
+-- erwartet: D266
+-- **A second minter is a second owner: refused.**
+--
+-- `gift/778` pins the single-minter neighbour (one `extern fn erste() ->
+-- Marke` beside the table, refused by name as `D026` because no guarded
+-- access exercises it). This is the other direction: TWO foreign bodies
+-- return the very mark, and each would mint the first one. One mark, one
+-- minter -- the second introduction falls with `D266`, and `D026` stays
+-- silent beside it (one fault, one refusal). Measured: 6 items, 1 error.
+module gift::owner_second_minter {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+static mut w : u32 = 0;
+
+extern fn erste() -> Marke effects { writes w } costs <= 8 ops;
+extern fn zweite() -> Marke effects { writes w } costs <= 8 ops;
+
+}

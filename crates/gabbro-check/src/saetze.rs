@@ -1314,17 +1314,119 @@ pub const D1D2: &[Satz] = &[
                   guard the table with `protects`.",
         vorbehalt: "This is deliberately NOT the M2 mark discipline deferred: there \
                     is nothing to defer, because no producer exists to defer it to. \
-                    The day a producer is named (which linear value becomes the first \
-                    mark, and at whose hands), this sentence is replaced by the rule \
-                    that holds it -- not extended. Until then an `owner` table has \
-                    zero sites, and the grammar table carries the word as refused, \
-                    not as lowered.",
+                    Since lane 151 the sentence has named successors: a mark with a \
+                    complete producer (`D265`-`D268` clean, one foreign minter \
+                    executed exactly once, a guarded access) lifts this refusal -- \
+                    the producer is the rule that holds it, not an extension of \
+                    this sentence. An incomplete producer (no minter, no mint \
+                    execution, or a minter no guarded access exercises) keeps this \
+                    refusal; a malformed one falls under its own code and stays \
+                    silent here.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/694: `table Plaetze count 8 owner Marke` -- \
                       3 items, 1 error, and it is `D026`. Zero corpus sites carry \
                       the clause.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
                      beispiele/gift/694",
+    },
+    Satz {
+        name: "d.ownermarkislinear",
+        kennungen: &["D265"],
+        aussage: "An `owner m` clause names a declared `linear` type. The guard is a \
+                  linear value, and nothing holds it unless the mark is one: without \
+                  the declaration the rest of the producer story has no subject.",
+        vorbehalt: "The rule checks the KIND, not the shape: a parameterised linear \
+                    type passes by name, and whether its arguments can be held is the \
+                    holders' rule (`D267`), not this one. Where the mark is no linear \
+                    type, `D026` stays silent -- one fault, one refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/934: `owner Marke` over `type Marke = u32` -- \
+                      3 items, 1 error, and it is `D265` alone.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
+                     beispiele/gift/934",
+    },
+    Satz {
+        name: "d.ownermintdiscipline",
+        kennungen: &["D266"],
+        aussage: "An `owner` mark has exactly one minter: a single body-less \
+                  (foreign) signature returning the mark without taking it -- a named \
+                  assumption, like every foreign body. No signature (re)produces the \
+                  mark: a second foreign mint, any `allocs` of the mark, and any \
+                  bodied function returning it without taking it are refused. This is \
+                  the checker half of `eigner_nie_erzeugt` (`Syntax.lean:149`).",
+        vorbehalt: "The rule counts INTRODUCTIONS, not forwards: a bodied function \
+                    taking the mark and returning it forwards what it was given and \
+                    stays silent, and so does a foreign signature doing the same. \
+                    Borrowing the mark back across a call (`consumes` plus `allocs`) \
+                    is refused with the `allocs` half -- move-only this lane; the \
+                    borrow needs a Lean amendment that is booked, not built. Where \
+                    this rule fires, `D026` stays silent -- one fault, one refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/932 (a second `extern fn … -> Marke`): 6 items, \
+                      1 error, and it is `D266` alone. beispiele/gift/935 (`allocs \
+                      Marke`): 5 items, 1 error, and it is `D266` alone. The bodied \
+                      return without the mark is pinned inline in \
+                      `crates/gabbro-check/tests/paesse.rs` \
+                      (`eigner_rumpf_gibt_nur_weiter_was_er_nimmt`).",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
+                     beispiele/gift/932, beispiele/gift/935",
+    },
+    Satz {
+        name: "d.owneraccessholdsmark",
+        kennungen: &["D267"],
+        aussage: "Every access to an `owner`-guarded carrier happens while the mark \
+                  is held: a bodied function whose assignment, `publish` or \
+                  `exchange` target -- or whose READ -- resolves to the carrier \
+                  (directly or through a pointer parameter into it) owes a linear \
+                  parameter of the mark, borrowed or consumed. Reads come through \
+                  the very walk `E010` reads (`wirkungen::lese_orte`), not a second \
+                  walk. A foreign signature (no checkable body) owes \
+                  the same parameter for every declared `reads`/`writes`/`consumes`/ \
+                  `publishes` touch. A bare `consumes m` of a linear parameter is a \
+                  value, not a carrier touch.",
+        vorbehalt: "An `effects` line alone is the call-graph hull, not an access -- a \
+                    caller declaring what its callee writes owes no mark for the line. \
+                    `spec fn` is exempt, like under `H007`. Where this rule fires, \
+                    `D026` stays silent -- one fault, one refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/933 (a bodied write with no mark beside a \
+                      standing minter): 5 items, 1 error, and it is `D267` alone. \
+                      The pointer-mediated touch, the hull exemption and the read \
+                      half are pinned inline in \
+                      `crates/gabbro-check/tests/paesse.rs` \
+                      (`eigner_zugriff_haelt_marke_d267`, \
+                      `eigner_lesen_haelt_marke_d267`); the held read stands as \
+                      `beispiele/115`.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
+                     beispiele/gift/933, beispiele/115",
+    },
+    Satz {
+        name: "d.ownermintisingle",
+        kennungen: &["D268"],
+        aussage: "The single minter executes once: exactly one static call site in \
+                  the unit, outside every loop form, in a root no call site \
+                  reaches (an entry), and that root started at most once (no two \
+                  thread starts name it). A second site, a site inside \
+                  `traverse`/`retry`/`forever`, a minting root with a caller, a \
+                  minting root named by two starts, and a taken minter address \
+                  are each refused -- each mints, or may mint, a second live \
+                  mark, hence a second owner. Contract calls count as sites: a \
+                  contract calling the minter executes it.",
+        vorbehalt: "The count is closed-world: a unit with no starts is a library, \
+                    and re-invocation of its root from outside is the importer's \
+                    duty, like every `pub fn` called twice. A boot step counts as \
+                    a site under a caller-free root (boot runs once). Where this \
+                    rule fires, `D026` stays silent -- one fault, one refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Pinned inline in `crates/gabbro-check/tests/paesse.rs` \
+                      (`eigner_zweiter_aufruf_d268`, `eigner_aufruf_in_schleife_d268`, \
+                      `eigner_gerufene_wurzel_d268`, `eigner_zweimal_gestartet_d268`, \
+                      `eigner_adresse_genommen_d268`): each falls with exactly \
+                      `D268`; the singly-started and singly-called shapes stay \
+                      silent beside `D026`. No gift numbers were left in this \
+                      lane, so the shapes stand inline.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
+                     crates/gabbro-check/tests/paesse.rs",
     },
     Satz {
         name: "d.sharedcarriernamesinvariant",

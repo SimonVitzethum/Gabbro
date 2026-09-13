@@ -1,0 +1,42 @@
+-- 115 -- **`owner` with a producer, read path: the mark guards reads too.**
+--
+-- The write path stands in `beispiele/114`. This is the read half: `lies`
+-- takes the mark and reads the table through it, `runde` mints exactly once
+-- and moves the mark on. The single mint executes once -- one static site,
+-- outside every loop, in a root nothing calls and no start names twice
+-- (`D268` silent) -- and every access, read or write, holds the mark
+-- (`D267` silent). Holding is by parameter: `lies` consumes the mark before
+-- the read -- the entry holdings, not the use order, are what the guard reads.
+--
+-- Measured: 7 items, 0 errors, 0 hints; emits, and `cc` accepts the C.
+
+module beispiel::eigner_lesen_mit_erzeuger {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+extern fn lege_ab(m : Marke) effects { consumes m } costs <= 8 ops;
+
+impl fn lies(m : Marke, i : index into Plaetze) -> bool
+    effects { reads Plaetze.slots, consumes m }
+    costs   <= 16 ops
+{
+    lege_ab(m);
+    return Plaetze.slots[i].benutzt;
+}
+
+impl fn runde(i : index into Plaetze) -> bool
+    effects { reads Plaetze.slots }
+    costs   <= 64 ops
+{
+    let m = erste();
+    return lies(m, i);
+}
+
+}
