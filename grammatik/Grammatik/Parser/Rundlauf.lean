@@ -626,6 +626,638 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
       simp [parseSuffixe, ne1, ne2, ne3]
     | ende => rfl
 
+-- A prefix operator tree is not a primary tree (the round trip
+-- handles `un` at the unary level, never at the primary level).
+def unFrei : SExpr → Bool
+  | .un _ _ => false
+  | _ => true
+
+-- Every tree has size at least one (empties the zero case of every
+-- size induction below).
+theorem groesse_pos : ∀ (e : SExpr), 1 ≤ groesse e := by
+  intro e
+  cases e <;> simp only [groesse] at ⊢ <;> omega
+
+-- Every printed tree is a non-empty token list (the argument-label
+-- strip of `parseArg` fires only on a `name :` prefix, and the
+-- empty-print case below would leave it facing the separator).
+theorem toksLang : ∀ (n : Nat) (e : SExpr),
+    groesse e ≤ n → 1 ≤ (druckToks e).length := by
+  intro n
+  induction n with
+  | zero =>
+    intro e hs
+    have hp := groesse_pos e
+    omega
+  | succ n ih =>
+    intro e hs
+    cases e with
+    | lit m => exact Nat.le_refl _
+    | gleit s => exact Nat.le_refl _
+    | wahr => exact Nat.le_refl _
+    | falsch => exact Nat.le_refl _
+    | «variable» s => exact Nat.le_refl _
+    | feld x f =>
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have hlen := ih x hx
+      simp only [druckToks, List.length_append, List.length] at ⊢
+      omega
+    | index x i =>
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have hlen := ih x hx
+      simp only [druckToks, List.length_append, List.length] at ⊢
+      omega
+    | pfeil x f =>
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have hlen := ih x hx
+      simp only [druckToks, List.length_append, List.length] at ⊢
+      omega
+    | un o x =>
+      simp only [druckToks] at ⊢
+      split
+      · simp only [List.length_append, List.length] at ⊢
+        have hx : groesse x ≤ n := by
+          simp only [groesse] at hs
+          omega
+        have hlen := ih x hx
+        omega
+      · simp only [List.length_append, List.length] at ⊢
+        omega
+    | bin o l r =>
+      have hl : groesse l ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have hlen := ih l hl
+      simp only [druckToks, List.length_append, List.length] at ⊢
+      omega
+    | ruf f xs =>
+      simp only [druckToks, List.length_append,
+        List.length] at ⊢
+      omega
+    | fnwert p =>
+      simp only [druckToks, List.length] at ⊢
+      omega
+    | eingebaut f xs =>
+      simp only [druckToks, List.length_append,
+        List.length] at ⊢
+      omega
+    | alt x =>
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      have hlen := ih x hx
+      simp only [druckToks, List.length_append, List.length] at ⊢
+      omega
+    | ergebnis => exact Nat.le_refl _
+    | grund g f =>
+      simp only [druckToks, List.length] at ⊢
+      omega
+
+-- An element is no bigger than its list.
+theorem groesse_mem_le : ∀ (xs : List SExpr) (x : SExpr),
+    x ∈ xs → groesse x ≤ groesseListe xs := by
+  intro xs
+  induction xs with
+  | nil =>
+    intro x hm
+    simp at hm
+  | cons y ys ih =>
+    intro x hm
+    simp only [List.mem_cons] at hm
+    obtain hxy | hm2 := hm
+    · subst hxy
+      simp only [groesseListe]
+      omega
+    · simp only [groesseListe]
+      have := ih x hm2
+      omega
+
+-- A `gut` element stays `gut` in its list.
+theorem gutListe_mem : ∀ (xs : List SExpr) (x : SExpr),
+    x ∈ xs → gutListe xs = true → gut x = true := by
+  intro xs
+  induction xs with
+  | nil =>
+    intro x hm _
+    simp at hm
+  | cons y ys ih =>
+    intro x hm hxs
+    simp only [List.mem_cons] at hm
+    simp only [gutListe, Bool.and_eq_true] at hxs
+    obtain hxy | hm2 := hm
+    · subst hxy
+      exact hxs.1
+    · exact ih x hm2 hxs.2
+
+-- A `gutPlatz` tree is `gut` (every place shape checks the same
+-- names; places only exclude more).
+theorem gut_of_gutPlatz : ∀ (x : SExpr),
+    gutPlatz x = true → gut x = true := by
+  intro x h
+  cases x with
+  | lit m => simp [gutPlatz] at h
+  | gleit s => simp [gutPlatz] at h
+  | wahr => simp [gutPlatz] at h
+  | falsch => simp [gutPlatz] at h
+  | «variable» s =>
+    simp only [gutPlatz] at h
+    simp only [gut] at ⊢
+    exact h
+  | feld x f =>
+    simp only [gutPlatz] at h
+    simp only [gut] at ⊢
+    exact h
+  | index x i =>
+    simp only [gutPlatz, Bool.and_eq_true] at h
+    simp only [gut, Bool.and_eq_true] at ⊢
+    exact h
+  | pfeil x f =>
+    simp only [gutPlatz] at h
+    simp only [gut] at ⊢
+    exact h
+  | un o x => simp [gutPlatz] at h
+  | bin o l r => simp [gutPlatz] at h
+  | ruf f xs => simp [gutPlatz] at h
+  | fnwert f => simp [gutPlatz] at h
+  | eingebaut f xs => simp [gutPlatz] at h
+  | alt x => simp [gutPlatz] at h
+  | ergebnis => simp [gutPlatz] at h
+  | grund g f => simp [gutPlatz] at h
+
+-- Head and tail of a `gut` list stay `gut`.
+theorem gutListe_Kopf : ∀ (x : SExpr) (xs : List SExpr),
+    gutListe (x :: xs) = true → gut x = true := by
+  intro x xs h
+  simp only [gutListe, Bool.and_eq_true] at h
+  exact h.1
+theorem gutListe_Schwanz : ∀ (x : SExpr) (xs : List SExpr),
+    gutListe (x :: xs) = true → gutListe xs = true := by
+  intro x xs h
+  simp only [gutListe, Bool.and_eq_true] at h
+  exact h.2
+
+-- Unfolding equations for printed argument lists, as plain
+-- rewrite rules (kernel-checked, no equation-lemma matching).
+theorem args_einzeln : ∀ (x : SExpr),
+    druckToksListe [x] = druckToks x := by
+  intro x
+  rfl
+theorem args_cons : ∀ (x y : SExpr) (ys : List SExpr),
+    druckToksListe (x :: y :: ys) =
+      druckToks x ++ [.zeichen ","] ++ druckToksListe (y :: ys) := by
+  intro x y ys
+  rfl
+
+-- No `:` in printed argument lists, from no-`:` in printed
+-- elements (plain list induction; the tree fact arrives as a
+-- premise, so nothing here recurses into trees).
+theorem keinDP_list : ∀ (n : Nat)
+    (eP : ∀ (e : SExpr), groesse e ≤ n → gut e = true →
+      ∀ (t : Token), t ∈ druckToks e → t ≠ .zeichen ":")
+    (xs : List SExpr), groesseListe xs ≤ n → gutListe xs = true →
+    ∀ (t : Token), t ∈ druckToksListe xs → t ≠ .zeichen ":" := by
+  intro n eP xs
+  induction xs with
+  | nil =>
+    intro hs hg t hm
+    simp [druckToksListe] at hm
+  | cons x zs ihzs =>
+    intro hs hg t hm
+    cases zs with
+    | nil =>
+      rw [args_einzeln] at hm
+      have hx : groesse x ≤ n := by
+        simp only [groesseListe] at hs
+        omega
+      exact eP x hx (gutListe_Kopf x [] hg) t hm
+    | cons y ys =>
+      rw [args_cons] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_append] at hmL
+        obtain hm1 | hm2 := hmL
+        · have hx : groesse x ≤ n := by
+            simp only [groesseListe] at hs
+            omega
+          exact eP x hx (gutListe_Kopf x (y :: ys) hg) t hm1
+        · rw [List.mem_singleton] at hm2
+          subst hm2
+          intro h
+          simp at h
+      · have hzs : groesseListe (y :: ys) ≤ n := by
+          simp only [groesseListe] at hs ⊢
+          omega
+        exact ihzs hzs (gutListe_Schwanz x (y :: ys) hg) t hmR
+
+-- Shape equations for `eingebaut` printability, as plain rewrite
+-- rules (kernel-checked; the `gut` match has literal and shape
+-- arms that `simp` equations do not select).
+theorem gut_sizeof_one : ∀ (x : SExpr),
+    gut (.eingebaut "sizeof" [x]) = gutPlatz x := by
+  intro x
+  rfl
+theorem gut_sizeof_multi : ∀ (x y : SExpr) (ys : List SExpr),
+    gut (.eingebaut "sizeof" (x :: y :: ys)) = false := by
+  intro x y ys
+  rfl
+theorem gut_lenof_one : ∀ (x : SExpr),
+    gut (.eingebaut "lenof" [x]) = gutPlatz x := by
+  intro x
+  rfl
+theorem gut_lenof_multi : ∀ (x y : SExpr) (ys : List SExpr),
+    gut (.eingebaut "lenof" (x :: y :: ys)) = false := by
+  intro x y ys
+  rfl
+theorem gut_aligned_one : ∀ (a : SExpr),
+    gut (.eingebaut "aligned" [a]) = false := by
+  intro a
+  rfl
+theorem gut_aligned_two : ∀ (a b : SExpr),
+    gut (.eingebaut "aligned" [a, b]) = (gut a && gut b) := by
+  intro a b
+  rfl
+theorem gut_aligned_multi : ∀ (a b c : SExpr) (xs : List SExpr),
+    gut (.eingebaut "aligned" (a :: b :: c :: xs)) = false := by
+  intro a b c xs
+  rfl
+
+-- No `:` in a printed `gut` tree (the printer emits none, so the
+-- argument-label strip of `parseArg` never fires on printed
+-- output). By size induction. The `ruf` arm descends into its
+-- argument list through `keinDP_list`; the `eingebaut` arm splits
+-- the `gut` match (the head word and argument shape substitute in
+-- every arm). Operator heads need `gut` (a `:` operator would
+-- print); every other head discriminates by constructor.
+-- Membership chases run tail-first: `++` associates left, so each
+-- `rw [List.mem_append]` peels the rightmost piece.
+theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
+    groesse e ≤ n → gut e = true →
+    ∀ (t : Token), t ∈ druckToks e → t ≠ .zeichen ":" := by
+  intro n
+  induction n with
+  | zero =>
+    intro e hs _ _ _
+    have hp := groesse_pos e
+    omega
+  | succ n ih =>
+    intro e hs hg t hm
+    cases e with
+    | lit m =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | gleit s =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | wahr =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | falsch =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | «variable» s =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | feld x f =>
+      simp only [gut] at hg
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · have hx : groesse x ≤ n := by
+          simp only [groesse] at hs
+          omega
+        exact ih x hx (gut_of_gutPlatz x hg) t hmL
+      · rw [List.mem_cons, List.mem_singleton] at hmR
+        obtain rfl | rfl := hmR
+        · intro h
+          simp at h
+        · intro h
+          simp at h
+    | index x i =>
+      simp only [gut, Bool.and_eq_true] at hg
+      obtain ⟨hpx, hi⟩ := hg
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_append] at hmL
+        obtain hmL | hmR := hmL
+        · rw [List.mem_append] at hmL
+          obtain hmL | hmR := hmL
+          · have hx : groesse x ≤ n := by
+              simp only [groesse] at hs
+              omega
+            exact ih x hx (gut_of_gutPlatz x hpx) t hmL
+          · rw [List.mem_singleton] at hmR
+            subst hmR
+            intro h
+            simp at h
+        · have hii : groesse i ≤ n := by
+            simp only [groesse] at hs
+            omega
+          exact ih i hii hi t hmR
+      · rw [List.mem_singleton] at hmR
+        subst hmR
+        intro h
+        simp at h
+    | pfeil x f =>
+      simp only [gut] at hg
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · have hx : groesse x ≤ n := by
+          simp only [groesse] at hs
+          omega
+        exact ih x hx (gut_of_gutPlatz x hg) t hmL
+      · rw [List.mem_cons, List.mem_singleton] at hmR
+        obtain rfl | rfl := hmR
+        · intro h
+          simp at h
+        · intro h
+          simp at h
+    | un o x =>
+      simp only [gut, Bool.and_eq_true] at hg
+      obtain ⟨hop, hx⟩ := hg
+      have hne : o ≠ ":" := by
+        intro he
+        subst he
+        exact absurd hop (by decide)
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_singleton] at hmL
+        subst hmL
+        intro h
+        injection h with ho
+        exact hne ho
+      · split at hmR
+        · have hxx : groesse x ≤ n := by
+            simp only [groesse] at hs
+            omega
+          exact ih x hxx hx t hmR
+        · rw [List.mem_append] at hmR
+          obtain hmL | hmR := hmR
+          · rw [List.mem_append] at hmL
+            obtain hmL | hmR := hmL
+            · rw [List.mem_singleton] at hmL
+              subst hmL
+              intro h
+              simp at h
+            · have hxx : groesse x ≤ n := by
+                simp only [groesse] at hs
+                omega
+              exact ih x hxx hx t hmR
+          · rw [List.mem_singleton] at hmR
+            subst hmR
+            intro h
+            simp at h
+    | bin o l r =>
+      simp only [gut, Bool.and_eq_true, and_assoc] at hg
+      obtain ⟨hop, hl, hr⟩ := hg
+      have hne : o ≠ ":" := by
+        intro he
+        subst he
+        exact absurd hop (by decide)
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_append] at hmL
+        obtain hmL | hmR := hmL
+        · rw [List.mem_append] at hmL
+          obtain hmL | hmR := hmL
+          · rw [List.mem_append] at hmL
+            obtain hmL | hmR := hmL
+            · rw [List.mem_singleton] at hmL
+              subst hmL
+              intro h
+              simp at h
+            · have hll : groesse l ≤ n := by
+                simp only [groesse] at hs
+                omega
+              exact ih l hll hl t hmR
+          · rw [List.mem_singleton] at hmR
+            subst hmR
+            intro h
+            injection h with ho
+            exact hne ho
+        · have hrr : groesse r ≤ n := by
+            simp only [groesse] at hs
+            omega
+          exact ih r hrr hr t hmR
+      · rw [List.mem_singleton] at hmR
+        subst hmR
+        intro h
+        simp at h
+    | ruf f xs =>
+      simp only [gut, Bool.and_eq_true] at hg
+      obtain ⟨hf, hxs⟩ := hg
+      have hgl : groesseListe xs ≤ n := by
+        simp only [groesse] at hs
+        omega
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_append] at hmL
+        obtain hmL | hmR := hmL
+        · rw [List.mem_cons, List.mem_singleton] at hmL
+          obtain rfl | rfl := hmL
+          · intro h
+            simp at h
+          · intro h
+            simp at h
+        · exact keinDP_list n ih xs hgl hxs t hmR
+      · rw [List.mem_singleton] at hmR
+        subst hmR
+        intro h
+        simp at h
+    | fnwert p =>
+      simp only [druckToks] at hm
+      rw [List.mem_cons, List.mem_singleton] at hm
+      obtain rfl | rfl := hm
+      · intro h
+        simp at h
+      · intro h
+        simp at h
+    | eingebaut f xs =>
+      cases he1 : decEq f "sizeof" with
+      | isTrue e1 =>
+        subst e1
+        cases xs with
+        | nil => exact absurd hg (by decide)
+        | cons x xs =>
+          cases xs with
+          | nil =>
+            rw [gut_sizeof_one] at hg
+            have hxg := gut_of_gutPlatz x hg
+            have hxx : groesse x ≤ n := by
+              simp only [groesse, groesseListe] at hs
+              omega
+            simp only [druckToks] at hm
+            rw [List.mem_append] at hm
+            obtain hmL | hmR := hm
+            · rw [List.mem_append] at hmL
+              obtain hmL | hmR := hmL
+              · rw [List.mem_cons, List.mem_singleton] at hmL
+                obtain rfl | rfl := hmL
+                · intro h
+                  simp at h
+                · intro h
+                  simp at h
+              · rw [args_einzeln] at hmR
+                exact ih x hxx hxg t hmR
+            · rw [List.mem_singleton] at hmR
+              subst hmR
+              intro h
+              simp at h
+          | cons y ys =>
+            rw [gut_sizeof_multi] at hg
+            exact absurd hg Bool.false_ne_true
+      | isFalse ne1 =>
+        cases he2 : decEq f "lenof" with
+        | isTrue e2 =>
+          subst e2
+          cases xs with
+          | nil => exact absurd hg (by decide)
+          | cons x xs =>
+            cases xs with
+            | nil =>
+              rw [gut_lenof_one] at hg
+              have hxg := gut_of_gutPlatz x hg
+              have hxx : groesse x ≤ n := by
+                simp only [groesse, groesseListe] at hs
+                omega
+              simp only [druckToks] at hm
+              rw [List.mem_append] at hm
+              obtain hmL | hmR := hm
+              · rw [List.mem_append] at hmL
+                obtain hmL | hmR := hmL
+                · rw [List.mem_cons, List.mem_singleton] at hmL
+                  obtain rfl | rfl := hmL
+                  · intro h
+                    simp at h
+                  · intro h
+                    simp at h
+                · rw [args_einzeln] at hmR
+                  exact ih x hxx hxg t hmR
+              · rw [List.mem_singleton] at hmR
+                subst hmR
+                intro h
+                simp at h
+            | cons y ys =>
+              rw [gut_lenof_multi] at hg
+              exact absurd hg Bool.false_ne_true
+        | isFalse ne2 =>
+          cases he3 : decEq f "aligned" with
+          | isTrue e3 =>
+            subst e3
+            cases xs with
+            | nil => exact absurd hg (by decide)
+            | cons a xs =>
+              cases xs with
+              | nil =>
+                rw [gut_aligned_one] at hg
+                exact absurd hg Bool.false_ne_true
+              | cons b xs =>
+                cases xs with
+                | nil =>
+                  rw [gut_aligned_two] at hg
+                  simp only [Bool.and_eq_true] at hg
+                  obtain ⟨ha, hb⟩ := hg
+                  have hag : groesse a ≤ n := by
+                    simp only [groesse, groesseListe] at hs
+                    omega
+                  have hbg : groesse b ≤ n := by
+                    simp only [groesse, groesseListe] at hs
+                    omega
+                  simp only [druckToks] at hm
+                  rw [List.mem_append] at hm
+                  obtain hmL | hmR := hm
+                  · rw [List.mem_append] at hmL
+                    obtain hmL | hmR := hmL
+                    · rw [List.mem_cons, List.mem_singleton] at hmL
+                      obtain rfl | rfl := hmL
+                      · intro h
+                        simp at h
+                      · intro h
+                        simp at h
+                    · rw [args_cons] at hmR
+                      rw [List.mem_append] at hmR
+                      obtain hmL | hmR := hmR
+                      · rw [List.mem_append] at hmL
+                        obtain hmL | hmR := hmL
+                        · exact ih a hag ha t hmL
+                        · rw [List.mem_singleton] at hmR
+                          subst hmR
+                          intro h
+                          simp at h
+                      · rw [args_einzeln] at hmR
+                        exact ih b hbg hb t hmR
+                  · rw [List.mem_singleton] at hmR
+                    subst hmR
+                    intro h
+                    simp at h
+                | cons c xs =>
+                  rw [gut_aligned_multi] at hg
+                  exact absurd hg Bool.false_ne_true
+          | isFalse ne3 => simp [gut, ne1, ne2, ne3] at hg
+    | alt x =>
+      simp only [gut] at hg
+      have hxg := gut_of_gutPlatz x hg
+      have hxx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      simp only [druckToks] at hm
+      rw [List.mem_append] at hm
+      obtain hmL | hmR := hm
+      · rw [List.mem_append] at hmL
+        obtain hmL | hmR := hmL
+        · rw [List.mem_cons, List.mem_singleton] at hmL
+          obtain rfl | rfl := hmL
+          · intro h
+            simp at h
+          · intro h
+            simp at h
+        · exact ih x hxx hxg t hmR
+      · rw [List.mem_singleton] at hmR
+        subst hmR
+        intro h
+        simp at h
+    | ergebnis =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
+    | grund g f =>
+      simp only [druckToks] at hm
+      rw [List.mem_cons, List.mem_cons, List.mem_singleton] at hm
+      obtain rfl | rfl | rfl := hm
+      · intro h
+        simp at h
+      · intro h
+        simp at h
+      · intro h
+        simp at h
+
 end Gabbro.Grammatik.Parser
 
 /-
