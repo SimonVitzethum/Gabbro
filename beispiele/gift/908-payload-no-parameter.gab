@@ -1,0 +1,35 @@
+-- erwartet: N233
+-- Lane E5: an integer region with nowhere to go. The library function
+-- carries no payload parameter -- the region fills the last parameter,
+-- a pointer at the payload table, and here it names none -- so the
+-- translation has no argument to become, and dropping it would be
+-- fail-open.
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator b for f(region : P) -> P
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+impl fn g(a : u32) -> u32
+    effects { pure }
+    costs <= 32 ops
+{
+    let x = @m#f(a) { 7 };
+    return x;
+}
+}

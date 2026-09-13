@@ -3596,19 +3596,12 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
 /// A translator is parsed into an ordinary `FnDecl` with `translator_fuer`
 /// set, so every pass checks its body like any function body; what only
 /// the name pass holds is the linkage to the served `library fn` and the
-/// signature the translation stage needs. Kept whole (effects, decreases,
-/// result) because the linkage checks read all three and the call side
-/// names the serving translator in `N069`.
-#[derive(Clone)]
-struct Uebersetzer {
-    qual: String,
-    modul: String,
-    ziel: String,
-    span: Span,
-    effects: Option<Wirkungen>,
-    decreases: Option<Expr>,
-    ergebnis: Option<TypExpr>,
-}
+/// signature the translation stage needs. The declaration record lives in
+/// `uebersetzung.rs` (`Diener`, collected once for the name pass and the
+/// emitter together); the linkage checks below read its E3 half
+/// (effects, decreases, result) and the call side its E5 half (region
+/// parameter, body).
+use crate::uebersetzung::Diener;
 
 /// The tables a path names, resolved from the using module outward --
 /// the read side of the raw payload paths (`Umgebung::nutzlasten`).
@@ -3631,7 +3624,7 @@ fn benannte_tabellen(
 /// names the served function's payload table. A payload that itself names
 /// no table (`N060` beside it) pins no `N204` -- one refusal per defect.
 fn pruefe_uebersetzer_signatur(
-    t: &Uebersetzer,
+    t: &Diener,
     bibliothek: &str,
     u: &crate::umgebung::Umgebung,
     absagen: &mut Absagen,
@@ -3796,25 +3789,12 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
     // clause (`N203`), and the result against the payload (`N204`). The
     // hull carries the same `N059` as a library body: a translator the
     // translation stage would run is safe Gabbro or it is nothing.
-    let mut uebersetzer: Vec<Uebersetzer> = Vec::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
-        let ItemArt::Funktion(f) = &i.art else { return };
-        let Some(fuer) = &f.translator_fuer else { return };
-        uebersetzer.push(Uebersetzer {
-            qual: crate::umgebung::qualifiziere(modul, &f.name.text),
-            modul: modul.to_string(),
-            ziel: fuer.text.clone(),
-            span: f.span,
-            effects: f.effects.clone(),
-            decreases: f.decreases.clone(),
-            ergebnis: f.ergebnis.clone(),
-        });
-    });
+    let mut uebersetzer: Vec<Diener> = crate::uebersetzung::diener_sammeln(baum);
     uebersetzer.sort_by(|a, b| a.qual.cmp(&b.qual).then(a.span.von.cmp(&b.span.von)));
     for qual in &bibs {
         let modul = crate::umgebung::modul_von(qual);
         let kurz = crate::umgebung::kurzname(qual);
-        let mut diener: Vec<&Uebersetzer> = uebersetzer
+        let mut diener: Vec<&Diener> = uebersetzer
             .iter()
             .filter(|t| t.modul == modul && t.ziel == kurz)
             .collect();
@@ -3905,22 +3885,27 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
             );
         }
     }
-    // Call side, with the caller's module for resolution.
+    // Call side, with the caller's module for resolution. The `done`
+    // set names the declaration defects (`N231`/`N233`/`N234`) an earlier
+    // call already reported, so ten calls to one broken translator report
+    // it once -- the same discipline the declaration side keeps above.
+    let mut done: HashSet<(String, String)> = HashSet::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let FnRumpf::Block(b) = &f.rumpf else { return };
-        im_block(b, modul, &u, &uebersetzer, absagen);
+        im_block(b, modul, &u, &uebersetzer, &mut done, absagen);
     });
     fn im_block(
         b: &Block,
         modul: &str,
         u: &crate::umgebung::Umgebung,
-        uebersetzer: &[Uebersetzer],
+        uebersetzer: &[Diener],
+        done: &mut HashSet<(String, String)>,
         absagen: &mut Absagen,
     ) {
         for s in &b.anweisungen {
             if let StmtArt::LibraryCall(r) = &s.art {
-                melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen);
+                melde_bibliothek_ruf(r, modul, u, uebersetzer, done, absagen);
             }
             if let StmtArt::Ruf(r) = &s.art {
                 melde_direkt_ruf(r, modul, u, absagen);
@@ -3934,7 +3919,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 for x in crate::alle_ausdruecke(e) {
                     match &x.art {
                         ExprArt::LibraryCall(r) => {
-                            melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen)
+                            melde_bibliothek_ruf(r, modul, u, uebersetzer, done, absagen)
                         }
                         ExprArt::Ruf(r) => melde_direkt_ruf(r, modul, u, absagen),
                         _ => {}
@@ -3955,7 +3940,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 }
             }
             for k in crate::unterbloecke(s) {
-                im_block(k, modul, u, uebersetzer, absagen);
+                im_block(k, modul, u, uebersetzer, done, absagen);
             }
         }
     }
@@ -3964,10 +3949,29 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
         r: &LibraryCall,
         modul: &str,
         u: &crate::umgebung::Umgebung,
-        uebersetzer: &[Uebersetzer],
+        uebersetzer: &[Diener],
+        done: &mut HashSet<(String, String)>,
         absagen: &mut Absagen,
     ) {
         if let Some(z) = u.bibliothek(modul, &r.library.text, &r.function.text) {
+            // **Lane E5:** the translation stage runs before the refusal
+            // below. An accepted call carries its payload and passes
+            // silently; a refused one carries its own code (`N230`-`N234`,
+            // the region span map routing it into the region); a call the
+            // first cut cannot read keeps `N069`. `Still` is a declaration
+            // defect an earlier call already named -- reported once.
+            let laeuft = uebersetzer.iter().find(|t| {
+                t.modul == z.modul && t.ziel == crate::umgebung::kurzname(&z.name)
+            });
+            match crate::uebersetzung::versuch(r, modul, u, laeuft, done) {
+                crate::uebersetzung::Ausgang::Angenommen(_) => return,
+                crate::uebersetzung::Ausgang::Abgelehnt(a) => {
+                    absagen.schiebe(a);
+                    return;
+                }
+                crate::uebersetzung::Ausgang::Still => return,
+                crate::uebersetzung::Ausgang::NichtZustaendig => {}
+            }
             // **Lane E3:** the refusal names the translator that WOULD run
             // the region -- declared since lane E3, running it is lane E5.
             let diener = uebersetzer.iter().find(|t| {

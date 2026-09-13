@@ -942,11 +942,13 @@ libregion  = ? brace-balanced token tree, captured without interpreting ? ;
 is the ordinary argument list. The region is a brace-balanced token tree the
 reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
 the closing `}`. What the region MEANS — compiled at translation time into a
-payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
-yet**: no translator runs. A call that resolves `lib` to a used module and
+payload the call carries (`PLAN-ERWEITUNG.md` §0b) — runs since lane E5 as a
+first cut (§7.3): an exact-length row of integer literals through the
+identity translator. A call that resolves `lib` to a used module and
 `function` to a declared `library fn` in it (§7.1) is checked like an
-ordinary call — arguments, effects, `or R`, costs — and then refused with
-`N069`, which names the translator that WOULD run it (§7.2). A call
+ordinary call — arguments, effects, `or R`, costs — and where the first cut
+cannot translate it refused with `N069`, which names the translator that
+WOULD run it (§7.2). A call
 that resolves nowhere is refused with `N057`; the refusal is controlled —
 never a crash and never a silent acceptance. In any other expression position
 the reader refuses the `@` with `P011`.
@@ -958,8 +960,8 @@ let code = @spirv#kernel(n) { dispatch 0 };
 
 | spelling | attribute | Lean |
 |---|---|---|
-| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls refused with `N069`, unresolved with `N057` | no term — refused by `N057`/`N069` |
-| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057`/`N069` |
+| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls outside the first cut refused with `N069`, unresolved with `N057` (§7.3 translates the rest) | no term — refused by `N057`/`N069` |
+| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; translated or refused like the statement form | no term — refused by `N057`/`N069` |
 
 ### 7.1 `library fn` — the declaration with a payload type (lane E2)
 
@@ -1109,6 +1111,73 @@ linkage can fail:
 *Lean:* nothing new. A translator is an ordinary Gabbro function with a
 `pure` contract and a termination witness; the translation certificate of
 lane E5 checks the produced payload, never the translator.
+
+### 7.3 The translation stage, first cut (lane E5)
+
+**Checked, translated, and lowered.** Where the region is an exact-length
+row of integer literals and the translator is the identity
+(`return <region>;`, the region already standing in payload form), the
+checker runs the translation at translation time: token `i` fills row `i`
+of the payload table's single integer field, every value held against the
+field range. The region fills the library function's LAST parameter, which
+is a pointer at the payload table -- so the call passes one argument
+short, the ordinary arguments held against the shortened signature like
+any call's. The emitter passes the accepted payload as a `static const`
+table argument (`&<fn>__nutzlast_*`, one table per call site, named by
+call span). Anything else is refused, each fault in its own code:
+
+| code | what falls | where it points |
+|---|---|---|
+| `N230` | the integer count misses the payload count (short or long) | the first homeless token, or the region where rows stay empty |
+| `N231` | the translator body is not `return <region>;` | the translator |
+| `N232` | a payload entry outside the field range | the offending region token |
+| `N233` | the declaration fits no first cut: a payload table with anything but one integer field and a constant count, a library function with no payload pointer to fill, a call passing that pointer explicitly | the payload clause, the function, the bypassed argument |
+| `N234` | the contract names the payload parameter -- no source value could ever discharge it | the contract predicate |
+
+A region with any non-integer token stays `N069`: the region is captured,
+not interpreted, exactly as before. The translator itself is never
+verified -- the certificate is the payload's TYPING, every entry in its
+field range as a `List.all` predicate (encoding N), closed by `decide`
+(`grammatik/Grammatik/Uebersetzung.lean`, printed by
+`uebersetzung::payload_certificate`).
+
+```gabbro
+module summe {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    return region;
+}
+impl fn hole_summe() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 64 ops
+{
+    let s = @summe#sum() { 10 20 30 40 };
+    return s;
+}
+}
+```
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `@lib#fn(args) { 10 20 30 40 }` with an identity translator | translated at compile time; the payload is a well-typed value of the payload table; the call lowers with `&<payload>` | the payload typing, certified; the translator has no term |
+
+*Lean:* the payload as a certificate, never the translator that filled
+it -- `Uebersetzung.nutzlastZert` and the closed `sumPayload_zert`.
 
 ---
 

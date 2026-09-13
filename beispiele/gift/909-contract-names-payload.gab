@@ -1,0 +1,35 @@
+-- erwartet: N234
+-- Lane E5: the contract names the payload parameter. No source value
+-- ever stands for the payload at the call, so a precondition over it
+-- is uncheckable -- the stage refuses it by name instead of checking
+-- around it. Everything else about this call is clean: the region
+-- fills the rows, the translator is the identity, the values fit.
+module m {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    requires t.slots[0].v <= 100
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    return region;
+}
+impl fn f() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 64 ops
+{
+    let s = @m#sum() { 10 20 30 40 };
+    return s;
+}
+}

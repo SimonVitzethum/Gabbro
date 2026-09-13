@@ -1,0 +1,36 @@
+-- 107 -- **Two translated calls, both positions, clean.** The same
+-- sum library as `beispiele/106`, called once in statement position and
+-- once in binding position with a different payload each: every call
+-- site gets its own `static const` table (`&sum__nutzlast_*` twice, named
+-- by call span, so the two never share). The emission check runs the
+-- binding call: `hole_zwanzig` answers 20. The statement call answers
+-- nothing -- it exercises the lowering arm, not the value.
+module summe2 {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    return region;
+}
+impl fn hole_zwanzig() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 128 ops
+{
+    @summe2#sum() { 1 2 3 4 };
+    let s = @summe2#sum() { 2 4 6 8 };
+    return s;
+}
+}

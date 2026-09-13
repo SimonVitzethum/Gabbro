@@ -9,12 +9,17 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       88        A1  4 · A4 84
   redundant        0
   tragend       1281
-111 von 1501 Stellen dürfen sinken
+111 von 1548 Stellen dürfen sinken
 
 > **Lane-126 merge resolution (2026-09-12, measured).** Master's `108 von
 > 1445` stood on the pre-merge tree; the run above reads `111 von 1501` on
 > the merged tree (which adds `beispiele/104-referenz.gab` among other
 > files). Booked as measured, not added up.
+>
+> **111 von 1548 on 2026-09-13 (lane E5/129, measured).** The lane's seven
+> files add 22 sites (`beispiele/106`/`107`, 11 each, none may-fall; the
+> five poison probes are refused before the count) and no may-fall; the
+> remaining +25 is drift since 2026-09-12, absorbed by re-deriving.
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.

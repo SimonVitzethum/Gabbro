@@ -131,6 +131,12 @@ pub mod schablonen;
 /// **The region span map (PLAN-ERWEITUNG.md §6, lane E7).** No pass of its
 /// own: `namen.rs` reads it and reports region diagnostics through it.
 pub mod regionkarte;
+/// **The translation stage, first cut (PLAN-ERWEITUNG.md §6, lane E5).**
+/// No pass of its own either: the verdicts fire through the name pass,
+/// where the call side already stands, and the emitter reads the accepted
+/// call sites. The translator runs here, at translation time; the Lean
+/// certificate checks the payload's typing, never the translator.
+pub mod uebersetzung;
 // **Das PASSREGISTER, seit 2026-08-21** (PLAN.md PL.1). Je Pass die Saetze, die er SCHULDET
 // -- die Aussage, die gelten muss, wenn er schweigt. Ohne sie ist „formal verifiziert" nicht
 // einmal formulierbar, denn niemand wuesste, was zu beweisen waere.

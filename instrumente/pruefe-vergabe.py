@@ -148,7 +148,15 @@ NICHT = {"saetze.rs"}
 # foreign index, store outside `alloc`), one rule like `N065`'s three, similarity
 # 0.25. Recomputed here rather than incremented, because incrementing a forgotten
 # figure carries the forgetting forward (2026-09-02 entry).
-MARKE = 25
+# **25 -> 29 on 2026-09-13 («E5», recomputed to actuals, not incremented).** The
+# run says 29 against a booked 25: three are wave drift (28 on the tree
+# without this lane's files), and one is mine -- `N233` with three faces
+# (untranslatable payload table, missing payload parameter, explicit
+# payload argument), one three-clause shape rule like `N065`'s three,
+# similarity 0.35. The five-code budget of the lane (230-234, all taken)
+# leaves no number for a split; whoever finds a sixth splits `N233` and
+# may lower both marks.
+MARKE = 29
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -248,7 +256,12 @@ MARKE = 25
 # says 81 against a booked 68: twelve are wave drift (80 on the unchanged tree),
 # and one is mine -- `beispiele/gift/889` on the three-faced `N214` above, which
 # falls green without proving WHICH face fell, exactly like `gift/242` on `E008`.
-MARKE_PROBEN = 81
+# **81 -> 84 on 2026-09-13 («E5», recomputed to actuals, not incremented).** The
+# run says 84 against a booked 81: two are wave drift (83 on the tree
+# without this lane's probes), and one is mine -- `beispiele/gift/908` on
+# the three-faced `N233` above, which falls green without proving WHICH
+# face fell, exactly like `gift/242` on `E008`.
+MARKE_PROBEN = 84
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

@@ -2376,6 +2376,55 @@ lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf '
      's/"syscall\\n"/"nop\\n"/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 13 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 23. The translated library call, running (lane E5/129) -------------------------------
+#
+# `beispiele/106` is the first cut of the translation stage
+# (`PLAN-ERWEITUNG.md` §6, lane E5): the region `{ 10 20 30 40 }` becomes
+# the four rows of `SumTab` through the identity translator, and the call
+# passes the payload as a `static const` table argument
+# (`&sum__nutzlast_*`). The driver runs the call and reads the sum:
+#
+#    Expected: 100 -- 10 + 20 + 30 + 40, summed at run time out of the
+#    translated payload, not out of the source text.
+#
+# The poison moves one payload entry (`{40u}` to `{41u}` in the EMITTED
+# C): the run then answers 101, so the comparison measures that the
+# observed value comes OUT OF THE PAYLOAD and not out of the region text
+# (which the run never sees).
+TREIBER106='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", hole_summe());
+    return 0;
+}
+'
+lauf "beispiel106" "$W/beispiele/106-summe-uebersetzt.gab" "$TREIBER106" "100" \
+     's/{40u}/{41u}/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 24. Two translated calls, both positions (lane E5/129) ------------------------------
+#
+# `beispiele/107` calls the same sum library twice -- once in statement
+# position, once in binding position, with a different payload each. Every
+# call site gets its own `static const` table (named by call span, so the
+# two never share); the driver runs the binding call:
+#
+#    Expected: 20 -- 2 + 4 + 6 + 8. The statement call answers nothing --
+#    it exercises the lowering arm, not the value.
+#
+# The poison moves one entry of the SECOND payload (`{8u}` to `{9u}`):
+# the run answers 21, so a shared or swapped table would show here.
+TREIBER107='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", hole_zwanzig());
+    return 0;
+}
+'
+lauf "beispiel107" "$W/beispiele/107-summe-zwei-rufe.gab" "$TREIBER107" "20" \
+     's/{8u}/{9u}/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2929,8 +2978,16 @@ fi
 # (lane E3/112). Each verified file by file, not added up.
 # **83 -> 85 on 2026-09-12 (merge resolution, lane E4/116).** `+2` are
 # `98-arena-erklaert` and `99-arena-grenze` (this lane, counted above).
-# Provisional sum -- re-measured by the run below, not added up.
-MARKE_EMIT=85
+# **85 -> 87 on 2026-09-13 (lane E5/129).** `+2` were meant to be
+# `106-summe-uebersetzt` and `107-summe-zwei-rufe` (this lane, counted
+# above: the first translated library calls, each with its own `lauf`).
+# **87 -> 89 the same day, re-derived, not added up.** The run reads 89
+# against 85: the base tree already emitted 87 without this lane's files
+# (the decomposition above never listed every emitting file -- `74`,
+# `90`, `100`, `101` among others emit with their own `lauf` lines but
+# stand in no `+N` here), so the 85 stood two short before this lane, and
+# this lane adds its two on top. What is booked is the measurement.
+MARKE_EMIT=89
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

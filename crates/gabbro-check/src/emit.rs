@@ -89,6 +89,13 @@ struct Namen {
     geraetezeiger: HashMap<String, String>,
     /// Name -> Tabelle, fuer Zeigerparameter. Konservativ wie `geraetezeiger`.
     tabellenzeiger: HashMap<String, String>,
+    /// **Lane E5: the accepted library calls of this unit, by call span.**
+    /// Each entry is `(function short name, payload table short name, payload
+    /// C name)`: the payload `static const` tables are emitted file-scope
+    /// beside the tables, and the two lowering arms read this map. Keyed by
+    /// the call's span, which is unique per call. Bare short names, last
+    /// wins -- the same module caveat as every other map on this struct.
+    nutzlast_einsaetze: HashMap<(u32, u32), (String, String, String)>,
     /// (Tabelle, Slotfeld) -> der erklaerte Typ des Slotfeldes. **Er ist die einzige
     /// Quelle, aus der ein `let obj = c.slots[s].objekt` seinen Typ bekommt** -- und der
     /// Erzeuger raet ihn nicht, er liest ihn ab.
@@ -920,11 +927,23 @@ pub fn emittiere_mit(
             }
         }
     });
+    // **Lane E5: the accepted library calls, collected before any body
+    // lowers.** The lowering arms read `nutzlast_einsaetze`, and bodies
+    // lower in the item gang far below -- filling the map beside the
+    // tables would be too late. The payload C name is a pure function of
+    // the call site (function name plus call span, unique per call), so
+    // the statics gang below recomputes the same names deterministically.
+    for e in crate::uebersetzung::einsaetze(baum) {
+        let pl = format!("{}__nutzlast_{}_{}", e.funktion, e.von, e.bis);
+        namen.nutzlast_einsaetze.insert(
+            (e.von, e.bis),
+            (e.funktion.clone(), e.tabelle.clone(), pl),
+        );
+    }
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
             namen.konstanten.insert(k.name.text.clone());
-        }
-        ItemArt::Format(f) => {
+        }        ItemArt::Format(f) => {
             namen.formate.insert(f.name.text.clone());
             // **The reader set, and it is built by the SAME condition `format_` lowers by.**
             // One rule, read twice: a field gets `{Format}_{field}` exactly when it is not
@@ -2655,6 +2674,48 @@ pub fn emittiere_mit(
         // would print every mode twice.
         ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => {}
     });
+    // **Lane E5: one `static const` table per accepted library call.**
+    //
+    // The translation stage ran at check time (`uebersetzung::einsaetze`,
+    // recomputed here over the same tree -- W6: the emitter trusts the
+    // checker and re-derives nothing beyond this list). Each payload stands
+    // file-scope beside the tables it is typed as, before the bodies that
+    // pass it: after the table storage above, before the counters and the
+    // bodies below, so source order stays free. The walk is the same
+    // deterministic tree order the collection above read, so two runs over
+    // one tree emit the same C byte for byte; the C names match the map
+    // entries by construction (same pure function of the call site). A call
+    // the checker refused is not in the list, and the lowering arms keep
+    // their refusal for it.
+    {
+        for e in crate::uebersetzung::einsaetze(baum) {
+            let pl = format!("{}__nutzlast_{}_{}", e.funktion, e.von, e.bis);
+            let mut glieder = String::new();
+            for (i, w) in e.werte.iter().enumerate() {
+                if i > 0 {
+                    glieder.push_str(", ");
+                }
+                // The literal rule of the const tables (`const_table`): a
+                // non-negative value in an unsigned word carries the `u` C
+                // needs, anything else stands bare.
+                let lit = if *w < 0 {
+                    format!("{w}")
+                } else {
+                    format!("{w}u")
+                };
+                glieder.push_str(&format!("{{{lit}}}"));
+            }
+            aus.push_str(&format!(
+                "\n/* Payload for `{}` (lane E5): the region, translated at compile time \
+                 into {} value(s) -- the call below passes `&{pl}`. */\n\
+                 static const {} {} = {{{{{glieder}}}}};\n",
+                e.funktion,
+                e.werte.len(),
+                e.tabelle,
+                pl
+            ));
+        }
+    }
     // **«SG-24»: every counter of the unit, defined.** Between the declarations and
     // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
     // above), before the bodies that call them (`rumpf` joins below). Per-item
@@ -8611,16 +8672,45 @@ fn anweisung(
             aus.push_str(&format!("{e}}}\n"));
         }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
-        // **Lane E2:** no lowering exists -- the checker refuses every
-        // library call (`N057` unresolved, `N069` resolved), and the emitter
-        // never guesses one.
-        StmtArt::LibraryCall(r) => {
-            weigere(
+        // **Lane E5:** an accepted library call lowers to an ordinary call
+        // with the payload passed as a `static const` table argument -- the
+        // `&{payload}` the stage beside the tables laid down. Anything else
+        // keeps the refusal: the region has no payload the first cut could
+        // translate.
+        //
+        // A discarded result is the normal statement form (`@lib#f` as a
+        // statement, lane E1) and needs its `(void)`: the callee is often
+        // `pure` (reads through a `const` pointer), and a bare pure call
+        // with a discarded result is `-Werror=unused-value` about the
+        // generator, not the user. A `void` callee -- none or a ghost
+        // result -- takes none, since `(void)f()` on a `void` function is
+        // itself ill-formed. A fallible callee has no statement form at
+        // all: the error channel needs the `let … else` the call cannot
+        // carry here.
+        StmtArt::LibraryCall(r) => match bibliothek_ruf(r, u, absagen) {
+            Some(text) => {
+                let sig = u.funktionen.get(&r.function.text);
+                if sig.is_some_and(|s| s.fehler.is_some()) {
+                    weigere(
+                        absagen,
+                        r.span,
+                        "`library call` with an error channel in statement position -- the \
+                         reason needs a `let … else` to leave through, and a statement \
+                         names none",
+                    );
+                } else if sig.is_some_and(|s| s.rueck.is_some() && !s.geist_rueck) {
+                    aus.push_str(&format!("{e}(void){text};\n"));
+                } else {
+                    aus.push_str(&format!("{e}{text};\n"));
+                }
+            }
+            None => weigere(
                 absagen,
                 r.span,
-                "no lowering: `library call` -- the region has no payload yet (lane E1)",
-            );
-        }
+                "`library call` -- the region has no payload yet (lane E5: only \
+                 exact-length integer regions translate)",
+            ),
+        },
         // **The third place the ghost erasure has to hold, and the one that is silent if it
         // does not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays.
         // Making it `void p1 = mmu_an();` does not compile; dropping the whole statement
@@ -12058,6 +12148,14 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             // Zeit da; gefragt hat ihn niemand.
             ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
         }
+        // **Lane E5:** a library call in binding position answers its
+        // declared result, like any call's -- the same declaration `ruf`
+        // reads above, through the same short-name rule. The payload the
+        // call carries changes the argument, not the answer.
+        ExprArt::LibraryCall(r) => {
+            let n = &r.function.text;
+            ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
+        }
         _ => None,
     }
 }
@@ -12260,6 +12358,37 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         | ExprArt::ArrayLit(_)
         | ExprArt::Binaer(_, _, _) => false,
     }
+}
+
+/// **Lane E5: a library call with its payload (the statement and the
+/// binding arm share this helper).**
+///
+/// An accepted call -- one the translation stage took into
+/// `nutzlast_einsaetze` -- lowers to an ordinary call naming the function
+/// by its last segment (the same rule `ruf` keeps) with the payload passed
+/// as `&{payload}`, the `static const` table beside the tables. Ghost
+/// arguments drop by position exactly as in `ruf`; an unknown callee keeps
+/// every argument there, while here there is no call at all -- `None`,
+/// and the arms refuse by name instead of guessing a lowering.
+fn bibliothek_ruf(
+    r: &LibraryCall,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<String> {
+    let (_, _, nutzlast) = u.nutzlast_einsaetze.get(&(r.span.von, r.span.bis))?;
+    let geist = u
+        .funktionen
+        .get(&r.function.text)
+        .map(|s| s.geist_param.clone());
+    let mut args: Vec<String> = r
+        .args
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !geist.as_ref().is_some_and(|g| *g.get(*i).unwrap_or(&false)))
+        .map(|(_, a)| ausdruck(a, u, absagen))
+        .collect();
+    args.push(format!("&{nutzlast}"));
+    Some(format!("{}({})", r.function.text, args.join(", ")))
 }
 
 /// **A call, with the ghost arguments dropped.** The positions come from the callee's
@@ -13657,15 +13786,21 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
-        // **Lane E1:** no lowering exists here either -- see the statement arm.
-        ExprArt::LibraryCall(r) => {
-            weigere(
-                absagen,
-                r.span,
-                "no lowering: `library call` -- the region has no payload yet (lane E1)",
-            );
-            String::new()
-        }
+        // **Lane E5:** same lowering as at the statement form, through the
+        // shared helper -- the payload static stands file-scope, so a call
+        // in binding position needs no statement around it.
+        ExprArt::LibraryCall(r) => match bibliothek_ruf(r, u, absagen) {
+            Some(text) => text,
+            None => {
+                weigere(
+                    absagen,
+                    r.span,
+                    "`library call` -- the region has no payload yet (lane E5: only \
+                     exact-length integer regions translate)",
+                );
+                String::new()
+            }
+        },
         // **«SG-24»** -- a `count` is a call to its generated counter. The counter
         // was defined from the same site (`zaehler_funktion`, spliced between the
         // declarations and the bodies), so the call always resolves; the captures

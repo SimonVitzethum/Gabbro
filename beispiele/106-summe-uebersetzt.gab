@@ -1,0 +1,37 @@
+-- 106 -- **The translated library call, clean.** A library whose
+-- translator turns a region of integer literals into a table of those
+-- integers (the payload) and whose function sums them at run time.
+-- The region `{ 10 20 30 40 }` fills the four rows of `SumTab` through
+-- the identity translator (lane E5, first cut: exact-length integer
+-- regions over one integer field); the call passes one argument short,
+-- the region filling the payload pointer, and the emitter hands the
+-- function a `static const` table (`&sum__nutzlast_*`). The emission
+-- check runs it: `hole_summe` answers 100.
+module summe {
+table SumTab count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+library fn sum(t : ptr<normal, r> SumTab) -> u32 in 0 .. 400 payload SumTab
+    ensures result <= 400
+    effects { reads t.slots }
+    costs <= 16 ops
+{
+    return t.slots[0].v + t.slots[1].v + t.slots[2].v + t.slots[3].v;
+}
+translator build for sum(region : SumTab) -> SumTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.v
+{
+    return region;
+}
+impl fn hole_summe() -> u32 in 0 .. 400
+    effects { reads SumTab.slots }
+    costs <= 64 ops
+{
+    let s = @summe#sum() { 10 20 30 40 };
+    return s;
+}
+}
