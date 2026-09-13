@@ -3907,6 +3907,27 @@ theorem rufG_treu_zeuge_bind_leave :
     by rw [H9H_log]; exact List.mem_cons_of_mem _ (List.mem_cons_self),
     H9H_moves⟩
 
+/-- **Witness for `rufG_nie_wartend`.** Its premises instantiated on the
+    bind/leave program `hP` from the start state: after `dannBindCall`
+    (`H4H`) the caller frame WAITS on the stack (`wartet`) below the
+    writer, and the head does not wait; after the writer's leaf moved
+    memory, the binding pop, the peel and the loop exit (`H9H`) the head
+    does not wait either -- the theorem at two reachable machines, one with
+    a waiting frame on the stack. -/
+theorem rufG_nie_wartend_zeuge :
+    RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H4H ∧
+    (∃ (c : RufRahmenG rufDF) (rst : List (RufRahmenG rufDF)),
+      (H4H.faeden 0).stapel = c :: rst ∧ c.wartend = true) ∧
+    (H4H.faeden 0).kopf.wartend = false ∧
+    RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H9H ∧
+    (H9H.faeden 0).kopf.wartend = false ∧
+    H9H.speicher.slots () 0 () ≠ spF.slots () 0 () := by
+  have h4 : RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H4H := by
+    rw [← M0H_start]
+    exact reach4H
+  exact ⟨h4, ⟨callerH, [], rfl, rfl⟩, rufG_nie_wartend hP rufOF 0 spF initF H4H h4 0,
+    reach9H_start, rufG_nie_wartend hP rufOF 0 spF initF H9H reach9H_start 0, H9H_moves⟩
+
 /-! ## CUTS:
   - Stepwise coverage. Every `Stmt`/`Block`/`Endblock` constructor either
     has a step rule or is listed below with its reason.
@@ -4007,5 +4028,8 @@ theorem rufG_treu_zeuge_bind_leave :
 #print axioms Gabbro.Grammatik.schritt8H
 #print axioms Gabbro.Grammatik.reach9H_start
 #print axioms Gabbro.Grammatik.H9H_moves
+#print axioms Gabbro.Grammatik.rufG_nie_wartend
+#print axioms Gabbro.Grammatik.rufG_nie_wartend_zeuge
+#print axioms Gabbro.Grammatik.rufSchrittG_sauber
 
 end Gabbro.Grammatik
