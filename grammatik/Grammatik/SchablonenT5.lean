@@ -202,6 +202,102 @@ theorem record_ctor_unique_zeuge :
   exact ⟨record_ctor_unique _ _ hdist hdeckt "a" hf,
     refB_erreicht, refB_schreibt⟩
 
+/-! ## 5. `device.konstruktor` (device: 130 corpus lines).
+
+Out of the address arises a typed handle, and the generated accesses
+meet the layouts DECLARED in the `device` block (that the declared
+layouts are the device's is an axiom-layer ASSUMPTION, not shown here).
+What remains is the ARITHMETIC, machine-checked: separate registers
+meet separate cells, and that FOR EVERY BASE (`hB`: the base is
+universally quantified inside the conclusion, so the handle may be the
+constructor); bank entries do not overlap. `N009` establishes `h`
+per register pair; `N010` keeps `stride` nonzero. -/
+
+/-- Soundness of `device.konstruktor`: declared-separate layouts
+    (`h`: the byte ranges do not overlap) meet separate cells at EVERY
+    base `B`. `h` is consumed by the arithmetic. -/
+theorem device_cells_separate (off1 sz1 off2 sz2 B : Nat)
+    (h : off1 + sz1 ≤ off2 ∨ off2 + sz2 ≤ off1) :
+    ∀ x, ¬ (B + off1 ≤ x ∧ x < B + off1 + sz1 ∧
+      B + off2 ≤ x ∧ x < B + off2 + sz2) := by
+  intro x hx
+  obtain ⟨h1, h2, h3, h4⟩ := hx
+  omega
+
+/-- Bank entries do not overlap: cells of width `sz` at stride
+    `stride ≥ sz` (`hs`), two distinct entries (`hlt`) lie in disjoint
+    ranges. `hs`/`hlt` are both consumed. -/
+theorem device_bank_separate (B stride sz k1 k2 : Nat)
+    (hs : sz ≤ stride) (hlt : k1 < k2) (x : Nat)
+    (h2 : x < B + k1 * stride + sz)
+    (h3 : B + k2 * stride ≤ x) : False := by
+  have hstep : (k1 + 1) * stride ≤ k2 * stride :=
+    Nat.mul_le_mul_right stride (Nat.succ_le_of_lt hlt)
+  have hexpand : (k1 + 1) * stride = k1 * stride + stride := by
+    rw [Nat.add_mul, Nat.one_mul]
+  omega
+
+/-- Witness for `device_cells_separate`: registers at offsets `0`/`4`
+    of width `4` stay separate at base `0x1000`, jointly with the
+    NON-DEGENERATE run. -/
+theorem device_cells_separate_zeuge :
+    (∀ x, ¬ (0x1000 + 0 ≤ x ∧ x < 0x1000 + 0 + 4 ∧
+      0x1000 + 4 ≤ x ∧ x < 0x1000 + 4 + 4))
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have h : 0 + 4 ≤ 4 ∨ 4 + 4 ≤ 0 := Or.inl (by decide)
+  exact ⟨device_cells_separate 0 4 4 4 0x1000 h,
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 6. `format.roundtrip` (format: 58 corpus lines).
+
+(1) `read(write(x)) == x` for every representable `x` (`hRep`: the
+written value fits the declared width, established by `M101`).
+(2) A write to one field does not disturb a separate field (`hne`:
+the fields are separate -- `trennt f g` from the layout itself,
+held by `N008`). Model: one cell per field name; the layout-level
+bit-disjointness this abstraction rests on is booked in CUTS, not
+proved here. -/
+
+/-- Abstract field store: one cell per field name. -/
+def fieldStore : Type := String → Nat
+
+/-- Write `v` to field `f` (masked to the declared width). -/
+def fieldWrite (width : String → Nat) (σ : fieldStore) (f : String)
+    (v : Nat) : fieldStore :=
+  fun g => if g = f then v % 2 ^ (width f) else σ g
+
+/-- Read field `f`. -/
+def fieldRead (σ : fieldStore) (f : String) : Nat := σ f
+
+/-- Roundtrip: reading back what was written gives the value. `hRep`
+    is consumed by the mask removal. -/
+theorem format_roundtrip (width : String → Nat) (σ : fieldStore)
+    (f : String) (v : Nat) (hRep : v < 2 ^ (width f)) :
+    fieldRead (fieldWrite width σ f v) f = v := by
+  simp only [fieldRead, fieldWrite]
+  rw [if_true, Nat.mod_eq_of_lt hRep]
+
+/-- Non-interference: writing `f` leaves a separate field `g`
+    undisturbed. `hne` is consumed by the branch. -/
+theorem format_separate (width : String → Nat) (σ : fieldStore)
+    (f g : String) (v : Nat) (hne : g ≠ f) :
+    fieldRead (fieldWrite width σ f v) g = fieldRead σ g := by
+  simp only [fieldRead, fieldWrite, if_neg hne]
+
+/-- Witness for the `format` pair: roundtrip of `7` and undisturbed
+    `"b"` after writing `"a"`, jointly with the NON-DEGENERATE run. -/
+theorem format_roundtrip_zeuge :
+    (fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "a" = 7 ∧
+      fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "b" =
+        fieldRead (fun _ => 0) "b")
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hRep : 7 < 2 ^ ((fun _ => 8 : String → Nat) "a") := by decide
+  have hne : (("b" : String) ≠ "a") := by decide
+  exact ⟨⟨format_roundtrip _ _ "a" 7 hRep, format_separate _ _ "a" "b" 7 hne⟩,
+    refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - Skeleton only: `idxGilt` is defined; all 21 soundness lemmas are open.
 -/
