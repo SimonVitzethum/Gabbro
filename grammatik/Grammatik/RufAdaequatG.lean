@@ -2946,6 +2946,31 @@ theorem rufG_adaequat_zeuge :
   rw [hsp]
   exact h5
 
+/-- **Witness for `rufG_adaequat_R`.** Every premise jointly, on the same
+    program, with the handler the PROGRAM semantics uses, `rufAt adP adO 0 1`
+    (the body is call-free, so its run does not consult it): the sequential
+    run returns `7` with slot 0 moved `0 -> 5`, and the machine pops the
+    frame (its caller does not wait: `hnw` by `rfl`) logging that value
+    and that world, its memory holding the moved slot. -/
+theorem rufG_adaequat_R_zeuge :
+    ∃ (σ' : World adD) (v : ErgVal adD (vertragVon adD adFn).erg),
+      execEnd adO 0 (rufAt adP adO 0 1) adRumpf (adM.weltVon 0) Env.nil = .zurueck σ' v ∧
+      (σ'.slots () 0 ()).n = 5 ∧ (show Zahl 0 100 from v).n = 7 ∧
+      ∃ M', RufLaufG adP adO 0 0 adM M' ∧
+        M'.faeden 0 = ⟨[], adCaller, σ'.spur,
+          [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) σ']⟩ ∧
+        (M'.speicher.slots () 0 ()).n = 5 := by
+  have hex : ∃ (σ' : World adD) (v : ErgVal adD (vertragVon adD adFn).erg),
+      execEnd adO 0 (rufAt adP adO 0 1) adRumpf (adM.weltVon 0) Env.nil = .zurueck σ' v ∧
+      (σ'.slots () 0 ()).n = 5 ∧ (show Zahl 0 100 from v).n = 7 := ⟨_, _, rfl, rfl, rfl⟩
+  obtain ⟨σ', v, hex, h5, h7⟩ := hex
+  obtain ⟨M', hl, hf, hsp, _⟩ := rufG_adaequat_R adP adO 0 (rufAt adP adO 0 1) adM 0 adFn Env.nil
+    (adSp0.welt []) adCaller [] [] [] Env.nil adRumpf (fun L : adD.Lock => L = ())
+    adRumpf_G rfl rfl adM_held adM_frei σ' v hex
+  refine ⟨σ', v, hex, h5, h7, M', hl, hf, ?_⟩
+  rw [hsp]
+  exact h5
+
 /-! ## 13. Toward TARGET B: forms that never consult the oracle
 
     The converse must survive the machine's bare `nimmt`/`gibt` steps (a
@@ -5119,6 +5144,7 @@ theorem ruf_fortsetzung :
 
 #print axioms Gabbro.Grammatik.rufG_adaequat
 #print axioms Gabbro.Grammatik.rufG_adaequat_R
+#print axioms Gabbro.Grammatik.rufG_adaequat_R_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr_zeuge
