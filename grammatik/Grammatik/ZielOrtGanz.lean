@@ -27,7 +27,16 @@
   checked and every transition finds its pre-state", nothing more. The
   replay then gives: the head's sequential prediction is never a `logik`
   outcome (`kopfR_keineLogik`), and at every `logik` check of G the check
-  passes at the machine world (`KeinLogikHaltG`).
+  passes at the machine world (`KeinLogikHaltG`) and the rule fires
+  (`schritt_an_pruefung`, given `HeldGenau` of the head).
+
+  Why the obligation and not the machine: making G continue past a false
+  invariant (as the emitted C does) would leave the replay without the
+  invariant the user's loop reasoning needs, and every adequacy file would
+  have to follow a G that no longer means what the sequential semantics
+  means. Keeping G's checks and asking the user to prove the invariants
+  they wrote turns each check into a theorem: on G's runs the check always
+  passes, so the C's not checking it is harmless there.
 -/
 import Grammatik.ZielOrtRahmen
 
@@ -931,6 +940,50 @@ theorem ziel_ort_ganz_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat)
   intro M hr
   exact (ziel_ort_ganz P O passes Q fs sp init e0 hO hRL hQ hlok hvoll hFrag hFuss hK hStart hex
     M hr).2.2
+
+/-! ## CUTS:
+
+  What is proved: `ziel_ort_ganz` -- over the repaired G, with callee
+  frames (`KoerperGutRQ` over `RespektiertRahmen`), registers and `awaits`
+  (`RegLokal`), declared axiom ensures `Q` (`AxVertragO Q O`, `AxEnsLokal Q`)
+  and the new clause `KeineLogik`, every reachable machine satisfies
+  `VertragAmOrtG`, `KeinLogikHaltG` (every `logik` test of G passes) and
+  progress at the checks (`AnPruefungG` + `HeldGenau` gives a step).
+  `ziel_ort_rahmen` and `ziel_ort_voll_ax` (register-local oracles) are
+  special cases of the contract half (`ziel_ort_rahmen_aus_ganz`,
+  `ziel_ort_voll_ax_lokal_aus_ganz`). A syntactic sufficient check for the
+  new clause (`programmLogikFrei_ok`). Witnesses, probe A:
+  `ZielOrtGanzZeuge.lean`.
+
+  What is NOT covered:
+
+  - Table and group invariants (`Logik.invariante`): they arise only in
+    `rufAt` at a callee's return; G does not test them, `VertragAmOrtG` does
+    not state them, and `KeineLogik` does not ask for them (its handlers
+    answer no `logik` outcome, so a callee's owed invariants are neither
+    assumed nor proved). NOT CARRIED.
+  - Full progress. Proved: no reachable machine is stuck at a `logik` check,
+    and at a check the rule fires given `HeldGenau`. Not proved: that every
+    unfinished thread steps or waits on a lock or an `awaits`. What else can
+    stop a thread (by rule): a lock held by another thread (`dannLocks`,
+    `RufFreiG`); an invisible publication (`dannAwaits`, A10); a hardware
+    outcome at the head (an axiom answer outside its declared type, a
+    register answer outside its type or against its promise, a float result
+    outside its range, a spent `forever` budget `ewig 0`); a `leave`/`next`
+    inside an `else` end block that replaced the residue (the loop
+    continuation is dropped by `dannNarrowElse`/`dannPruefFalsch`/
+    `dannGleitNarrowElse`/`dannRegLiesElseFalsch`/the reason pops -- a
+    modelling gap of G); the `HeldGenau` side condition, whose `⊇` half is
+    no proved invariant; the shape of the caller at a binding or reason pop,
+    no proved invariant either. A root frame at `ret`/`retGrund` is
+    finished, not stuck.
+  - Termination and `abstieg`: G has no depth bound; a recursion that does
+    not end runs on in G, and no theorem bounds it.
+  - Everything cut in `ZielOrtRahmen.lean` and `ZielOrtGeraet.lean`
+    (locks-block-only readers, contracts over shared state at a lock
+    boundary -- verdict probes B/C --, no-event declarations, reason answers
+    without a frame, whole-carrier frames).
+-/
 
 #print axioms Gabbro.Grammatik.kopfR_keineLogik
 #print axioms Gabbro.Grammatik.blatt_logik

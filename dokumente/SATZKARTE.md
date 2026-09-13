@@ -19,6 +19,7 @@ proposals for each (d) item, §9 the `#print axioms` record, §10 the
 distance to the goal.
 
 > §§7-10 are superseded by §11 (goal restated and proved over machine G, 2026-09-13); kept unchanged for history.
+> **The current goal theorem is `ziel_ort_ganz`, §13.**
 
 ## 7. Re-measured premise table (2026-09-12)
 
@@ -686,4 +687,198 @@ threads are excluded by the held signature locks, `fussOrtGB`,
 bounds normal answers only (not reason answers); the frame is a write SET
 (whole tables/globals), no per-slot frame. All §11.3 cuts carry over.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §§1-10 history above.)
+> Superseded as the flagship by §13 (`ziel_ort_ganz`): the stuck hole of
+> `ziel_ort_rahmen` (verdict probe A) is closed there, and `ziel_ort_voll_ax`
+> on register-local oracles is now derived.
+
+## 13. THE goal theorem: `ziel_ort_ganz` (2026-09-13)
+
+Separation items 1 and 3 of the independent Opus verdict
+(`messung/URTEIL-OPUS-2026-09-13.md` §6). Files: `ZielOrtRahmenBeweis.lean`
+(the replay made generic in a declared axiom ensures `Q`),
+`ZielOrtRahmen.lean` (`zielInvR_erreichbar`), `ZielOrtGanz.lean` (obligation,
+conclusion, theorem), `ZielOrtGanzZeuge.lean` (witnesses, probe A). **This is
+the one theorem the goal names**; §§11-12 are its history.
+
+### 13.1 What changed
+
+- **The stuck hole (item 1).** G tests a `logik` condition at five places:
+  a `traverse` boundary (`travNext`, `travDone`), a `forever` boundary
+  (`ewigWeiter`), a `leave` out of a `traverse` body (`dannLeaveTrav`), and a
+  `state` transition (a leaf, fired by `blatt`/`dannBlatt` only on an `ok`
+  outcome). Where the test fails G blocks. `KoerperGutR` asked nothing about
+  these outcomes, so a program whose every loop invariant is `false` met all
+  premises of `ziel_ort_rahmen`, G stopped before any return was logged, and
+  `VertragAmOrtG` held vacuously (probe A) -- while the emitted C, which does
+  not test invariants, runs on and returns with every `ensures` false.
+- **The repair is in the obligation, not in the machine.** The new clause
+  `KeineLogik P passes Q f`: from `requires f`, against every oracle with
+  `RahmenO`, `RegLokal`, `AxVertragO Q` and every handler with
+  `RespektiertRahmen` that answers no `logik` outcome (`OhneLogik`), the body
+  never ends in `logik e`. It is still a SEQUENTIAL per-function triple
+  against handlers -- the user's own logic. A body's own `logik` outcomes are
+  exactly `schleife` (loop invariant) and `vorzustand` (transition
+  pre-state); `nachbedingung`, `invariante`, `abstieg`, `vorbedingung` arise
+  only in a call (`rufAt`, `torRuf`), i.e. in the handler, which the clause
+  assumes answers none. So the clause asks: "the loop invariants you wrote
+  hold where they are tested, and every transition finds its pre-state."
+  *Why not change G instead:* a G that ran past a false invariant (like the
+  C) would leave the replay without the invariant the user's loop reasoning
+  needs, and every adequacy file would have to follow a G that no longer
+  means what the sequential semantics means. Keeping the tests and proving
+  them turns each test into a theorem: on G's runs it always passes, so the
+  C's not testing it is harmless there (to the extent G describes the C --
+  verdict items 4-8, not addressed here).
+- **The replay carries it.** The record handler with a hardware default
+  (`rufAusL`, answers no `logik` outcome) meets the clause's handler class;
+  from the replay of the head, its sequential prediction is never a `logik`
+  outcome (`kopfR_keineLogik`), and at each of the five places the test
+  passes at the machine world (`fadenR_prueft`, `blatt_logik`).
+- **Progress at the checks** (`schritt_an_pruefung`): where the test passes
+  and the head's static holdings are exactly the held locks (`HeldGenau`,
+  the side condition of every reading rule of G), the rule FIRES.
+- **Declared axiom ensures in the same theorem (item 3).** The frame replay
+  (`KopfR`/`WarteR`/`StapelR`/`FadenR`/`ZielInvR`) carries `VertragA Q HA`,
+  as the replay of `ziel_ort_voll_ax` did; the obligation quantifies over the
+  oracles that meet `Q` (`KoerperGutRQ`, weaker than `KoerperGutR` --
+  `koerperGutRQ_of_R` -- and than `KoerperGutA` -- `koerperGutRQ_of_A`).
+  `ziel_ort_rahmen` keeps its statement (instance at the trivial ensures
+  `axWahr`); `ziel_ort_rahmen_aus_ganz` and `ziel_ort_voll_ax_lokal_aus_ganz`
+  derive it and `ziel_ort_voll_ax` (register-local oracles) from
+  `ziel_ort_ganz_vertrag`, the contract half.
+- **A decidable sufficient check** for the new clause:
+  `programmLogikFrei P fs` (no `traverse`, `forever`, transition; `onTag`/
+  `onGrund` refused conservatively) gives `KeineLogik` for every `Q`
+  (`programmLogikFrei_ok`). For loop-free, transition-free programs the new
+  clause costs the user nothing.
+
+### 13.2 Exact statement (`ZielOrtGanz.lean`)
+
+```lean
+def KoerperGutZ (P : Programm D) (passes : Nat) (Q : AxEns D) (f : D.Fn) : Prop :=
+  KoerperGutRQ P passes Q f ∧ KeineLogik P passes Q f
+
+theorem ziel_ort_ganz (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hlok : AxEnsLokal Q) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutZ P passes Q f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M ∧ KeinLogikHaltG O passes M ∧
+      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+        AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M'
+```
+
+`KeinLogikHaltG O passes M := ∀ t, PrueftG O passes M t`: at a `traverse`
+head, a `forever` head with budget `n + 1`, and a `leave` out of a
+`traverse` body the invariant evaluates to `true` at the thread's machine
+read world; at a leaf at the head of an end block or a block, the leaf's
+outcome at the machine world is no `logik` outcome. `AnPruefungG M t`: the
+head stands at one of these places (a leaf here: a `state` transition).
+
+### 13.3 Premises, classified
+
+| Premise | Meaning | Class |
+|---|---|---|
+| `P`, `O`, `passes`, `fs`, `sp`, `init`, `Q` | program, oracle, `forever` budget, member list, start memory, boot assignment, declared axiom ensures | DATA |
+| `e0 : Ereignis D` | the declaration has a table, global or lock | (d) declaration-shape datum (§11.2) |
+| `hO : GutO O` | axiom answers inside declared frames; held locks and trace kept | (b) HARDWARE |
+| `hRL : RegLokal O` | register answers from the device carriers; `awaits` visibility from the awaited global | (b) HARDWARE |
+| `hQ : AxVertragO Q O` | every axiom answer that fits its type meets the declared ensures `Q` | (b) HARDWARE (per `extern`/`asm` declaration) |
+| `hlok : AxEnsLokal Q` | `Q` reads only the axiom's declared write carriers | (c) decidable per declaration |
+| `hvoll` | member list complete | (c) |
+| `hFrag : programmImFragmentG` | widened fragment | (c) DECIDABLE, no checker rule (verdict §1) |
+| `hFuss : fussOrtGB` | widened footprint guarded by signature locks or unwritten | (c) DECIDABLE, no checker rule |
+| `hK : ∀ f, KoerperGutZ P passes Q f` | per function: body triple + caller duty against frame-respecting handlers and `Q`-meeting local oracles (`KoerperGutRQ`), AND no `logik` outcome of the body (`KeineLogik`) | (a) USER -- sequential, per function; `KeineLogik` by `programmLogikFrei_ok` for loop-/transition-free bodies |
+| `hStart : StartGut` | start contracts at the start world | (a) USER |
+| `hex : StartExklusiv` | no two threads start under a common signature lock | (d)/(c): N240 for constant starts |
+
+### 13.4 Tests
+
+- **Probe A** (reconstructed, `ZielOrtGanzZeuge.lean` §3: `paP` on `zD`, every
+  function `ensures false`, every body `traverse konto invariant false {};
+  return`): `paP_rahmen_zertifiziert` -- `ziel_ort_rahmen` certifies it;
+  `paP_nicht_keineLogik`/`paP_nicht_ganz` -- the new obligation fails (for
+  every `Q`, every function); `paP_halt` -- the new conclusion fails on a
+  machine reachable in two steps (`endeEntf`, `dannTrav`): the stuck state is
+  now a refutation, not a certificate.
+- **Corpus 104** (`ziel_ort_ganz_ref104`): every premise jointly on the hand
+  translation of `beispiele/104-referenz.gab` (the new clause by
+  `programmLogikFrei`), the full conclusion on every reachable machine, and
+  on the reached run memory `0 -> 100` with the `ensures` of `einzahlen` at
+  its logged return. (`ziel_ort_rahmen_ref104` still builds unchanged.)
+- **Witnesses** (inhabitation): `ziel_ort_ganz_zeuge` (concurrent `zP`,
+  thread 0's `lies` returns the `100` thread 1 wrote, `ensures` at that
+  return); `ziel_ort_ganz_ax_zeuge` (`axP` with the declared ensures of
+  `inc`: `result == tab[0]`, a contract `KoerperGutV` cannot prove);
+  `ziel_ort_ganz_schleife` and `ziel_ort_ganz_fortschritt_zeuge` (a loop whose
+  invariant `konto[0] <= 100` reads the shared table, `KeineLogik` PROVED
+  against every handler and oracle; a reached machine at the `traverse`
+  boundary, the invariant there from the theorem, and a step from the
+  progress conjunct).
+
+### 13.5 What is not carried, and what still blocks
+
+- **Table and group invariants: NOT CARRIED.** `Logik.invariante` arises only
+  in `rufAt` at a callee's return. G does not test invariants,
+  `VertragAmOrtG` states `requires`/`ensures` only, and `KeineLogik` does not
+  ask for them (its handlers answer no `logik` outcome, so a callee's owed
+  invariants are neither assumed nor proved). A program whose functions
+  break a declared table invariant is certified.
+- **Termination / `abstieg`:** G has no depth bound; a recursion that does
+  not end keeps running in G, and no theorem bounds it (costs: `KostenG.lean`
+  bounds a frame's own steps only).
+- **Full progress is NOT proved.** Proved: no reachable machine is stuck at a
+  `logik` check (`KeinLogikHaltG`), and there the rule fires given
+  `HeldGenau`. What else can stop a thread, rule by rule:
+  1. `dannLocks`: another thread holds `L` (`RufFreiG` false) -- waiting;
+     no fairness or hold-time assumption is stated (verdict item 8).
+  2. `dannAwaits`: `O.sichtbar g` false -- the memory-model assumption A10.
+  3. A hardware outcome at the head: an axiom answer outside its declared
+     result type (`blatt` on `axiomCall`, `dannBindAxiom`), a register
+     answer outside its type or against its promise (`dannRegLies`), a float
+     result outside its range (`dannGleit`, `dannGleitLit`, `dannGleitVon`),
+     a spent `forever` budget (`ewig 0` has no rule; sequentially
+     `hardware (fortschritt a)`). Named hardware assumptions failing.
+  4. A `leave`/`next` inside an `else` end block that REPLACED the residue:
+     `dannNarrowElse`, `dannPruefFalsch`, `dannGleitNarrowElse`,
+     `dannRegLiesElseFalsch` and the reason pops (`err` of `let … else`)
+     drop the enclosing loop's continuation, so a `leave`/`next` there has no
+     rule, while the sequential semantics continues the loop. A modelling gap
+     of G, neither user logic nor hardware; the obligation does not touch it.
+  5. The `HeldGenau` side condition of every reading rule: its `⊆` half is
+     proved on every reachable machine (`rufG_haelt_statisch`), the `⊇` half
+     is not (it needs a no-duplicate fact about held locks and an exact
+     stack link); the progress conjunct takes it as a hypothesis.
+  6. The caller's shape at a pop: a binding pop needs the caller in
+     `wartet`/`wartetSonst` with the callee's result type, a reason pop a
+     `wartetSonst` caller with the callee's reason count; that suspended
+     frames are always so shaped is not a proved invariant
+     (`rufG_nie_wartend` covers heads only).
+  7. A root frame at `ret`/`retGrund` has no caller: the thread is finished,
+     not stuck.
+- **Not addressed here:** verdict item 2 (lock/resource invariants; probes B
+  and C stay outside `fussOrtGB`), items 4-8 (checker wiring, `.gab` to
+  `Programm D`, corpus sharing, model to C, time). All cuts of §§11.3/12.4
+  carry over except "`ziel_ort_voll_ax` not derived" (now derived on
+  register-local oracles).
+
+### 13.6 Axiom record (`lake build`, 105 jobs, 0 errors)
+
+```text
+'Gabbro.Grammatik.ziel_ort_ganz' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_fortschritt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_ref104' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_zeuge' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_ax_zeuge' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_schleife' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.paP_nicht_ganz' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.paP_halt' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+No `sorryAx`, no new `axiom`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §§1-10 history above.)
+

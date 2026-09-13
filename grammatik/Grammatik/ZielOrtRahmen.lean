@@ -1241,12 +1241,18 @@ theorem ziel_ort_lokal_aus_rahmen (P : Programm D) (O : Orakel D) (passes : Nat)
 
   What is NOT covered:
 
-  - `ziel_ort_voll` and `ziel_ort` for NON-local oracles, and
-    `ziel_ort_voll_ax` (declared axiom ensures `Q`), are not derived from
-    `ziel_ort_rahmen`: its obligation quantifies over every frame-respecting
-    register-local oracle, which `KoerperGutA` (fewer oracles) does not give;
-    the same frame extension of `ZielOrtAxBeweis.lean` was not built. They
-    stay as proved.
+  - `ziel_ort_voll` and `ziel_ort` for NON-local oracles are not derived
+    from `ziel_ort_rahmen` (its obligation quantifies over register-local
+    oracles only); they stay as proved. Since 2026-09-13 the replay here is
+    generic in a declared axiom ensures `Q` (`zielInvR_erreichbar`), so
+    `ziel_ort_voll_ax` on register-local oracles IS derived
+    (`ziel_ort_voll_ax_lokal_aus_ganz`, `ZielOrtGanz.lean`); for non-local
+    oracles it stays as proved.
+  - `ziel_ort_rahmen` is vacuous past a failing `logik` check (a false loop
+    invariant, a transition from the wrong pre-state): its obligation does
+    not ask for them, and G stops there before any return is logged (probe A,
+    `paP_rahmen_zertifiziert`, `ZielOrtGanzZeuge.lean`). The goal theorem
+    that closes this is `ziel_ort_ganz` (`ZielOrtGanz.lean`).
   - The handler class bounds NORMAL answers only; a reason answer
     (`grund`) carries no frame in the obligation (the machine keeps the
     frame for it too, and the replay records it with the frame-shaped

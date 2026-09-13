@@ -464,6 +464,28 @@ theorem ziel_ort_ganz_ax_zeuge :
     axP_start, axInit_exklusiv, inc_ensures_nicht_V, M, hr, rfl, hslot,
     ⟨rho, v, s0, s1, hv, hlog, (hV.1 0 _ hlog).2 axZaehle rho v s0 s1 rfl⟩, hV.1, hV.2.1⟩
 
+/-! ## CUTS:
+
+  What is proved: all premises of `ziel_ort_ganz` jointly on four programs
+  -- the corpus program 104 (`ziel_ort_ganz_ref104`: memory `0 -> 100`,
+  `ensures` of `einzahlen` at its logged return), the concurrent `zP`
+  (`ziel_ort_ganz_zeuge`: a cross-thread return of `100` with its
+  `ensures`), the axiom program `axP` with a declared axiom ensures
+  (`ziel_ort_ganz_ax_zeuge`), and a loop program `lP` whose invariant reads
+  the shared table (`ziel_ort_ganz_schleife`, `ziel_ort_ganz_fortschritt_zeuge`:
+  a reached machine at the `traverse` boundary, the invariant from the
+  theorem, and a step from the progress conjunct). Probe A of the verdict:
+  certified by `ziel_ort_rahmen` (`paP_rahmen_zertifiziert`), refuted by
+  the new obligation (`paP_nicht_ganz`) and by the new conclusion on a
+  reachable machine (`paP_halt`).
+
+  What is NOT covered: every contract of `lP` is `true` (the loop fixture
+  shows the check, the other three the contracts); no witness reaches a
+  `state` transition (`zD` declares no transition); the non-existence of a
+  step at probe A's stuck machine is shown through the conclusion
+  (`KeinLogikHaltG` fails there), not by inverting the step relation.
+-/
+
 #print axioms Gabbro.Grammatik.lP_koerperZ
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_schleife
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_fortschritt_zeuge
