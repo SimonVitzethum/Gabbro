@@ -568,4 +568,368 @@ theorem relyG_tab (hO : GutO O) (sp : Speicher D)
 
 end Sperren
 
+/-! ## 5. The finding: every candidate premise holds, the conclusion fails
+
+    The program `gegP` over the reference declaration `refD`: the reference
+    CONTRACTS (`einzahlen`: requires true, ensures `old(konto[0]) ≤
+    konto[0]`; `lies`: requires true, ensures `result = konto[0]`), both
+    functions holding the lock by signature; the bodies:
+    `einzahlen` = `lies(); konto[0] := 100; return`,
+    `lies` = `let x = konto[0]; return x`.
+    Both are correct sequentially (`gegP_koerperGut`). -/
+
+/-- `lies`: bind `konto[0]`, then return the bound value. -/
+def gegRumpfLies : Endblock refD (vertragVon refD refLies) false []
+    (Signatur.anfang refD (refD.signatur refLies)) :=
+  .bind (.slot () () refIdxBodyLies refDarfBodyLies)
+    (.ret (.wert (.var .hier)) (by rfl))
+
+/-- `einzahlen`: call `lies`, write the cap, return. -/
+def gegRumpfEin :
+    Endblock refD (vertragVon refD refEin) false [.int 0 10] [Res.held (D := refD) ()] :=
+  .cons (.call (V := vertragVon refD refEin) refLies refArgsLies refHpLiesAt rfl)
+    (.cons refWriteStAt (.ret .keine (by rfl)))
+
+/-- The counterexample program: reference contracts, the two bodies above. -/
+def gegP : Programm refD where
+  invariante := fun i => nomatch i
+  requires
+    | true => refReqEin
+    | false => refReqLies
+  ensures
+    | true => refEnsEin
+    | false => refEnsLies
+  rumpf
+    | true => refEin_start ▸ gegRumpfEin
+    | false => refLies_start ▸ gegRumpfLies
+
+/-- Every thread starts in `einzahlen 7`. -/
+def gegInit : Faden → Σ f : refD.Fn, Env refD (refD.params f) :=
+  fun _ => ⟨refEin, refRho7⟩
+
+/-- The member list of `refD`'s functions, complete. -/
+def refFs : List refD.Fn := [refEin, refLies]
+
+theorem refFs_voll : ∀ g : refD.Fn, g ∈ refFs := by
+  intro g
+  cases g
+  · exact List.mem_cons_of_mem _ List.mem_cons_self
+  · exact List.mem_cons_self
+
+theorem gegP_fragment : programmImFragment gegP refFs = true := by decide
+
+theorem gegP_fuss : fussOrtB gegP refFs = true := by decide
+
+theorem gegP_schreiber : schreiberHaeltB gegP refFs = true := by decide
+
+theorem gegP_start : StartGut gegP refSp0 gegInit := fun _ => rfl
+
+/-- `lies` is correct sequentially: the bound value IS `konto[0]` of the
+    entry world, and reading keeps the slots, so `result = konto[0]` holds
+    at the return world. It makes no call. -/
+theorem gegP_koerper_lies : KoerperGut gegP refO 0 refLies := by
+  intro R _ _ σ ρ _
+  have hr : gegP.rumpf refLies = gegRumpfLies := rfl
+  refine ⟨?_, ?_⟩
+  · intro σ' v hrun
+    rw [hr] at hrun
+    simp only [gegRumpfLies, execEnd, EndAusgang.schrumpf] at hrun
+    cases hrun
+    exact (decide_eq_true_eq).mpr rfl
+  · intro g hrun
+    rw [hr] at hrun
+    simp only [gegRumpfLies, execEnd, EndAusgang.schrumpf] at hrun
+    cases hrun
+
+/-- `einzahlen` is correct sequentially: whatever the contract-respecting
+    handler answers for `lies`, the body then writes the cap `100`, the top
+    of the field's range, so `old(konto[0]) ≤ konto[0]` holds at the return
+    world; its one call meets `requires lies` (which is `true`). -/
+theorem gegP_koerper_ein : KoerperGut gegP refO 0 refEin := by
+  intro R _ hOV σ ρ _
+  have hr : gegP.rumpf refEin = gegRumpfEin := rfl
+  have htor : ∀ (σ1 : World refD) (ρ1 : Env refD (refD.params refLies)),
+      torRuf gegP R refLies σ1 ρ1 = R refLies σ1 ρ1 := fun _ _ => if_pos rfl
+  refine ⟨?_, ?_⟩
+  · intro σ' v hrun
+    rw [hr] at hrun
+    simp only [gegRumpfEin, execEnd, execStmt] at hrun
+    split at hrun
+    · rename_i σa ρa heq
+      split at heq
+      · cases heq
+        simp only [refWriteStAt, refWriteSt, execStmt] at hrun
+        cases hrun
+        have hOld : (σ.slots () 0 ()).n ≤ 100 := (σ.slots () 0 ()).le_hi
+        show decide ((σ.slots () 0 ()).n ≤ 100) = true
+        exact decide_eq_true_eq.mpr hOld
+      · exact Fin.elim0 ‹_›
+      · cases heq
+      · cases heq
+    all_goals first
+      | (rename_i heq
+         (split at heq <;> first | cases heq | exact Fin.elim0 ‹_›)
+         done)
+      | cases hrun
+  · intro g hrun
+    rw [hr] at hrun
+    simp only [gegRumpfEin, execEnd, execStmt] at hrun
+    simp only [htor] at hrun
+    split at hrun
+    · rename_i σa ρa heq
+      split at heq
+      · cases heq
+        simp only [refWriteStAt, refWriteSt, execStmt] at hrun
+        cases hrun
+      · exact Fin.elim0 ‹_›
+      · cases heq
+      · cases heq
+    all_goals first
+      | (rename_i heq
+         (split at heq <;> first | cases heq | exact Fin.elim0 ‹_›)
+         done)
+      | cases hrun
+      | skip
+    rename_i heq
+    split at heq
+    · cases heq
+    · exact Fin.elim0 ‹_›
+    · rename_i e' hRv
+      cases heq
+      exact hOV _ _ _ _ hRv g rfl
+    · cases heq
+
+/-- The bare `nimmt` step over a thread state `z`. -/
+theorem w_nimmt {P : Programm D} {O : Orakel D} {passes : Nat} {M : RufMaschineG D}
+    {f : Faden} {z : RufFadenG D} (hz : M.faeden f = z) (L : D.Lock)
+    (hself : L ∉ offen z.spur) (hrang : ∀ K ∈ offen z.spur, D.rang K < D.rang L)
+    (hfrei : RufFreiG M f L) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      M'.faeden f = ⟨z.stapel, z.kopf, Ereignis.nimmt L (offen z.spur) :: z.spur, z.log⟩ ∧
+      M'.speicher = M.speicher := by
+  subst hz
+  exact ⟨_, RufSchrittG.nimmt M f L hself hrang hfrei, rufUpdateG_self _ _ _, rfl⟩
+
+/-- The bare `gibt` step over a thread state `z`: ANY held lock, at ANY
+    time -- the rule the finding turns on. -/
+theorem w_gibt {P : Programm D} {O : Orakel D} {passes : Nat} {M : RufMaschineG D}
+    {f : Faden} {z : RufFadenG D} (hz : M.faeden f = z) (L : D.Lock)
+    (hhaelt : L ∈ offen z.spur) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      M'.faeden f = ⟨z.stapel, z.kopf, Ereignis.gibt L :: z.spur, z.log⟩ ∧
+      M'.speicher = M.speicher := by
+  subst hz
+  exact ⟨_, RufSchrittG.gibt M f L hhaelt, rufUpdateG_self _ _ _, rfl⟩
+
+/-- `HeldGenau` at the one-lock holdings, from the held set. -/
+theorem heldGenau_ref {s : List (Ereignis refD)} (h : offen s = [()]) :
+    HeldGenau [Res.held (D := refD) ()] (offen s) := by
+  rw [h]
+  intro L
+  cases L
+  exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
+
+theorem nicht_in_nil (L : refD.Lock) : L ∉ ([] : List refD.Lock) := fun h => nomatch h
+
+/-- The start thread state of the counterexample (every thread). -/
+def gegZ0 : RufFadenG refD :=
+  ⟨[], ⟨refEin, refRho7, refSp0.welt [],
+    ⟨false, refD.params refEin, Signatur.anfang refD (refD.signatur refEin), refRho7,
+     .ende (gegP.rumpf refEin)⟩⟩, [], [RufEreignisF.eintritt refEin refRho7 (refSp0.welt [])]⟩
+
+theorem gegM0_faden (t : Faden) : (RufStartG gegP refSp0 gegInit).faeden t = gegZ0 := rfl
+
+/-- The rest of `einzahlen` after its call. -/
+def gegRestEin : Endblock refD (vertragVon refD refEin) false [.int 0 10]
+    (nach refD refLies [Res.held (D := refD) ()]) :=
+  .cons refWriteStAt (.ret .keine (by rfl))
+
+/-- Reachability composes. -/
+theorem rufErreichbarG_trans {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M0 M1 M2 : RufMaschineG D} (h1 : RufErreichbarG P O passes M0 M1)
+    (h2 : RufErreichbarG P O passes M1 M2) : RufErreichbarG P O passes M0 M2 := by
+  induction h2 with
+  | start => exact h1
+  | schritt M M' f _ hs ih => exact RufErreichbarG.schritt M M' f ih hs
+
+/-- `ensures lies` is `result = konto[0]`: false when the result is 0 and
+    the return world has `konto[0] = 100`. -/
+theorem ens_lies_falsch (s0 s1 : World refD) (rho : Env refD (refD.params refLies))
+    (v : ErgVal refD (refD.erg refLies)) (hv : (show Zahl 0 100 from v).n = 0)
+    (hs : (s1.slots () 0 ()).n = 100) : ¬ EnsAmRueck gegP refLies s0 s1 rho v := by
+  intro hE
+  have h : decide ((show Zahl 0 100 from v).n = (s1.slots () 0 ()).n) = true := hE
+  rw [hv, hs] at h
+  exact absurd h (by decide)
+
+/-- **The violating run.** Twelve steps of G from the start machine of
+    `gegP` (every thread in `einzahlen 7`, `konto` all zero):
+    thread 0: `nimmt`, call `lies` (entry logged, `konto[0] = 0`), bind
+    `x = konto[0]` (= 0), bare `gibt` -- the lock released while the frame
+    of `lies` still names it; thread 1: `nimmt`, call `lies`, bind, return,
+    write `konto[0] := 100`, `gibt`; thread 0: `nimmt`, return `x`.
+    The machine after thread 0's release (`M4`): head frame `lies`, the
+    lock in its static holdings, not held by the thread, the frame a called
+    one (a caller below it). The last machine: thread 0's log holds the
+    return of `lies` with result 0 in a world with `konto[0] = 100` --
+    `ensures lies` (`result = konto[0]`) is false there. -/
+theorem geg_lauf : ∃ M4 M12 : RufMaschineG refD,
+    RufErreichbarG gegP refO 0 (RufStartG gegP refSp0 gegInit) M4 ∧
+    RufErreichbarG gegP refO 0 M4 M12 ∧
+    (M4.faeden 0).kopf.f = refLies ∧
+    Res.held (D := refD) () ∈ (M4.faeden 0).kopf.rest.2.2.1 ∧
+    (() : refD.Lock) ∉ offen (M4.faeden 0).spur ∧
+    (M4.faeden 0).stapel ≠ [] ∧
+    ∃ (rho : Env refD (refD.params refLies)) (v : ErgVal refD (refD.erg refLies))
+      (s0 s1 : World refD),
+      RufEreignisF.rueck refLies rho v s0 s1 ∈ (M12.faeden 0).log ∧
+      ¬ EnsAmRueck gegP refLies s0 s1 rho v := by
+  -- thread 0: take the lock, call `lies`, bind `konto[0]`, release
+  have h0 := gegM0_faden (0 : Faden)
+  obtain ⟨M1, s1, h1f, h1sp⟩ := w_nimmt (P := gegP) (O := refO) (passes := 0) h0 ()
+    (nicht_in_nil _) (fun _ h => nomatch h)
+    (fun g _ => by rw [gegM0_faden]; exact nicht_in_nil _)
+  obtain ⟨M2, s2, hZ2⟩ := w_rufEnde (P := gegP) (O := refO) (passes := 0) h1f refLies
+    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref rfl)
+  obtain ⟨M3, s3, hZ3⟩ := w_endeBind (P := gegP) (O := refO) (passes := 0) hZ2.1 _ _ _ rfl
+  have hoff3 : offen (M3.faeden 0).spur = [()] := by
+    rw [hZ3.spur, (Erw.lese _ _ _).offen, hZ2.welt, (Erw.lese _ _ _).offen]
+    show offen (M1.faeden 0).spur = [()]
+    rw [h1f]
+    rfl
+  obtain ⟨M4, s4, h4f, h4sp⟩ := w_gibt (P := gegP) (O := refO) (passes := 0) hZ3.1 ()
+    (by rw [← hZ3.1, hoff3]; exact List.mem_cons_self)
+  have hoff4 : offen (M4.faeden 0).spur = [] := by
+    rw [h4f]
+    simp only [offen]
+    rw [← hZ3.spur, hoff3]
+    rfl
+  have hfremd4 : ∀ t : Faden, t ≠ 0 → M4.faeden t = gegZ0 := by
+    intro t ht
+    rw [rufSchrittG_fremd s4 t ht, rufSchrittG_fremd s3 t ht, rufSchrittG_fremd s2 t ht,
+      rufSchrittG_fremd s1 t ht, gegM0_faden]
+  have hr4 : RufErreichbarG gegP refO 0 (RufStartG gegP refSp0 gegInit) M4 :=
+    .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4
+  -- thread 1: take the lock, call `lies`, bind, return, write 100, release
+  have h14 : M4.faeden 1 = gegZ0 := hfremd4 1 (by decide)
+  obtain ⟨M5, s5, h5f, h5sp⟩ := w_nimmt (P := gegP) (O := refO) (passes := 0) h14 ()
+    (nicht_in_nil _) (fun _ h => nomatch h)
+    (fun g hg => by
+      by_cases hg0 : g = 0
+      · subst hg0; rw [hoff4]; exact nicht_in_nil _
+      · rw [hfremd4 g hg0]; exact nicht_in_nil _)
+  obtain ⟨M6, s6, hZ6⟩ := w_rufEnde (P := gegP) (O := refO) (passes := 0) h5f refLies
+    refArgsLies refHpLiesAt rfl gegRestEin refRho7 rfl (heldGenau_ref rfl)
+  obtain ⟨M7, s7, hZ7⟩ := w_endeBind (P := gegP) (O := refO) (passes := 0) hZ6.1 _ _ _ rfl
+  have hoff7 : offen (M7.faeden 1).spur = [()] := by
+    rw [hZ7.spur, (Erw.lese _ _ _).offen, hZ6.welt, (Erw.lese _ _ _).offen]
+    show offen (M5.faeden 1).spur = [()]
+    rw [h5f]
+    rfl
+  obtain ⟨M8, s8, hG8⟩ := w_rueckP (P := gegP) (O := refO) (passes := 0) hZ7.1 _ [] rfl
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by rw [hZ7.1] at hoff7; exact hoff7))
+  have hoff8 : offen (M8.faeden 1).spur = [()] := by
+    rw [hG8.1]
+    exact ((Erw.lese _ _ _).offen).trans hoff7
+  obtain ⟨M9, s9, hZ9⟩ := w_blatt (P := gegP) (O := refO) (passes := 0) hG8.1 refWriteStAt
+    (.ret .keine (by rfl)) refRho7 rfl rfl
+    (heldGenau_ref (by rw [hG8.1] at hoff8; exact hoff8)) _ _ rfl
+    ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+  have hoff9 : offen (M9.faeden 1).spur = [()] := by
+    rw [hZ9.spur]
+    exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff8
+  obtain ⟨M10, s10, h10f, h10sp⟩ := w_gibt (P := gegP) (O := refO) (passes := 0) hZ9.1 ()
+    (by rw [hZ9.1] at hoff9; rw [hoff9]; exact List.mem_cons_self)
+  have hoff10 : offen (M10.faeden 1).spur = [] := by
+    rw [h10f]
+    simp only [offen]
+    rw [← hZ9.spur, hoff9]
+    rfl
+  -- thread 0 again: re-take the lock, return the stale value
+  have hfremd10 : ∀ t : Faden, t ≠ 1 → M10.faeden t = M4.faeden t := by
+    intro t ht
+    rw [rufSchrittG_fremd s10 t ht, rufSchrittG_fremd s9 t ht, rufSchrittG_fremd s8 t ht,
+      rufSchrittG_fremd s7 t ht, rufSchrittG_fremd s6 t ht, rufSchrittG_fremd s5 t ht]
+  have h10_0 : M10.faeden 0 = _ := (hfremd10 0 (by decide)).trans h4f
+  obtain ⟨M11, s11, h11f, h11sp⟩ := w_nimmt (P := gegP) (O := refO) (passes := 0) h10_0 ()
+    (by rw [← h10_0, hfremd10 0 (by decide), hoff4]; exact nicht_in_nil _)
+    (by intro K hK; rw [← h10_0, hfremd10 0 (by decide), hoff4] at hK; exact nomatch hK)
+    (fun g hg => by
+      by_cases hg1 : g = 1
+      · subst hg1; rw [hoff10]; exact nicht_in_nil _
+      · rw [hfremd10 g hg1, hfremd4 g hg]; exact nicht_in_nil _)
+  have hoff11 : offen (M11.faeden 0).spur = [()] := by
+    rw [h11f]
+    simp only [offen]
+    rw [← hZ3.spur, hoff3]
+    rfl
+  obtain ⟨M12, s12, hG12⟩ := w_rueckP (P := gegP) (O := refO) (passes := 0) h11f _ [] rfl
+    (PopArt.wie rfl) _ _ _ rfl (heldGenau_ref (by rw [h11f] at hoff11; exact hoff11))
+  have hr12 : RufErreichbarG gegP refO 0 M4 M12 :=
+    .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
+      (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s5) s6) s7) s8) s9) s10) s11) s12
+  refine ⟨M4, M12, hr4, hr12, by rw [h4f], by rw [h4f]; exact List.mem_cons_self,
+    by rw [hoff4]; exact nicht_in_nil _, by rw [h4f]; exact List.cons_ne_nil _ _,
+    _, _, _, _, by rw [hG12.1]; exact List.mem_cons_self, ?_⟩
+  refine ens_lies_falsch _ _ _ _ ?_ ?_
+  · show (M2.speicher.slots () 0 ()).n = 0
+    rw [hZ2.2]
+    show (M1.speicher.slots () 0 ()).n = 0
+    rw [h1sp]
+    rfl
+  · show (M11.speicher.slots () 0 ()).n = 100
+    rw [h11sp, h10sp, hZ9.2]
+    rfl
+
+/-- The bodies of `gegP` are in the SEMANTIC fragment of the converse too:
+    `lies` at depth 1, `einzahlen` (calling `lies`) at depth 2, for every
+    lock predicate `A` (the bodies take no lock). -/
+theorem gegP_tief_lies (A : refD.Lock → Prop) : TiefK gegP A 1 refLies :=
+  ⟨show EndR A (TiefK gegP A 0) gegRumpfLies from EndR.bind _ _ (EndR.ret _ _), rfl⟩
+
+theorem gegP_tief_ein (A : refD.Lock → Prop) : TiefK gegP A 2 refEin :=
+  ⟨show EndR A (TiefK gegP A 1) gegRumpfEin from
+    EndR.cons _ _ (StmtR.call _ refLies rfl (gegP_tief_lies A))
+      (EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _)), rfl⟩
+
+/-- **THE FINDING: `ziel_ort` is false over G as it stands.** On the
+    reference declaration, with the reference contracts, EVERY candidate
+    premise of `ziel_ort` holds jointly --
+
+    * (b) hardware: `GutO refO`;
+    * (c) decidable program facts: the fragment (`programmImFragment`, and
+      the semantic coverage `TiefK` at depths 1 and 2), the footprint check
+      `fussOrtB` (every carrier `lies` and `einzahlen` read or name in a
+      contract is guarded by the lock both hold BY SIGNATURE), the writer
+      discipline `schreiberHaeltB`;
+    * (a) user: `KoerperGut` for every function (the bodies are correct
+      sequentially, every call meets its `requires`), and the entry
+      obligations at the start (`StartGut`) --
+
+    and yet a reachable machine of G violates `VertragAmOrtG`: thread 0's
+    log carries a return of `lies` whose `ensures` is false. The run
+    releases the lock with the bare `gibt` step while the frame of `lies`
+    names it (`geg_lauf`: the machine `M4`), so no premise about the
+    program can exclude it. -/
+theorem ziel_ort_gegenbeispiel :
+    GutO refO ∧
+    programmImFragment gegP refFs = true ∧
+    (∀ A, TiefK gegP A 1 refLies ∧ TiefK gegP A 2 refEin) ∧
+    fussOrtB gegP refFs = true ∧
+    schreiberHaeltB gegP refFs = true ∧
+    (∀ f, KoerperGut gegP refO 0 f) ∧
+    StartGut gegP refSp0 gegInit ∧
+    ∃ M : RufMaschineG refD,
+      RufErreichbarG gegP refO 0 (RufStartG gegP refSp0 gegInit) M ∧
+      ¬ VertragAmOrtG gegP M := by
+  refine ⟨refO_gut, gegP_fragment, fun A => ⟨gegP_tief_lies A, gegP_tief_ein A⟩, gegP_fuss,
+    gegP_schreiber, ?_, gegP_start, ?_⟩
+  · intro f
+    cases f
+    · exact gegP_koerper_lies
+    · exact gegP_koerper_ein
+  · obtain ⟨M4, M12, hr4, hr12, _, _, _, _, rho, v, s0, s1, hmem, hens⟩ := geg_lauf
+    exact ⟨M12, rufErreichbarG_trans hr4 hr12,
+      fun h => hens ((h 0 _ hmem).2 refLies rho v s0 s1 rfl)⟩
+
 end Gabbro.Grammatik
