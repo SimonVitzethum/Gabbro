@@ -566,3 +566,20 @@ theorem cExec_assign_progress : ∀ (t : Nat) (i : CExpr) (f : Nat) (sgn : Bool)
   exact ⟨(fun t' k' f' =>
     if t' = t ∧ k' = k.toNat ∧ f' = f then v else m t' k' f'),
     by simp [cExec, hk, hv, hc]⟩
+
+/-! ## Form D. `if` / `else` -/
+
+/-- Progress for the branch: a clean condition plus progress of both
+    arms reaches a successor state. The nonzero test is C's own
+    truth value (`BEWEIS.md` section 1a: no `?:`, no `&&`/`||` here). -/
+theorem cExec_cif_progress : ∀ (c : CExpr) (t e : CStmt) (m : CMem) (ρ : CEnv)
+    (g : CGeom) (fuel : Nat),
+    cOk c m ρ g = true →
+    cExec t m ρ g fuel ≠ none → cExec e m ρ g fuel ≠ none →
+    cExec (.cif c t e) m ρ g fuel ≠ none := by
+  intro c t e m ρ g fuel hc ht he
+  obtain ⟨v, hv⟩ := cOk_progress c m ρ g hc
+  simp only [cExec, hv]
+  by_cases hz : v = 0
+  · simp [hz, he]
+  · simp [hz, ht]
