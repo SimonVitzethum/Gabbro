@@ -1,6 +1,7 @@
 # MUSE-REPORT-151: the `owner` producer (D026)
 
-Lane 151 (D026 / owner producer). The `owner m` clause is refused as `D026`
+Lane 151 (D026 / owner producer), plus review round 151b (single-mint
+execution, read half). The `owner m` clause is refused as `D026`
 "until the producer stands: who mints the FIRST mark is unwritten"
 (`dokumente/SYNTAX.md` §9, `crates/gabbro-check/src/kbedingung.rs::eigner`,
 poison `gift/694`, `messung/OWNER-ANWENDUNG.md`). This lane names the producer
@@ -49,15 +50,49 @@ foreign body**.
   `consumes`-callee moves, passing to a borrower lends, `return m` forwards.
   Move-only this lane: borrowing back across a call (`consumes` plus `allocs`)
   stays refused (see §5).
-- **Why no second owner can arise:** one mint (D266 refuses the second), no
+- **Why no second owner can arise:** one mint declaration (D266 refuses the
+  second), one mint EXECUTION (D268: exactly one static site, outside every
+  loop, in a root nothing calls, started at most once -- see below), no
   signature (re)production (D266 refuses `allocs` of the mark and bodied
   returns without the mark -- the checker half of `eigner_nie_erzeugt`), no
   duplication (M2, untouched). One live value per mark, hence one owner.
-- **The guard:** every WRITE to an owner-guarded carrier holds the mark (D267):
-  bodied functions at their body sites (assignment/`publish`/`exchange`
-  targets, direct or through a pointer parameter), foreign signatures at their
-  declared touches. An `effects` line alone is the call-graph hull, not an
-  access. `spec fn` is exempt, like under `H007`.
+- **The guard:** every access to an owner-guarded carrier -- read or write --
+  holds the mark (D267): bodied functions at their body sites
+  (assignment/`publish`/`exchange` targets plus reads through the very walk
+  `E010` reads, `wirkungen::lese_orte`, direct or through a pointer
+  parameter), foreign signatures at their declared touches. An `effects` line
+  alone is the call-graph hull, not an access. `spec fn` is exempt, like under
+  `H007`.
+
+## 2b. Why the single mint executes once (D268, review round)
+
+The reviewer refused the first version: `D266` stops the second minter
+DECLARATION, but the ONE minter called twice (`let a = erste(); let b =
+erste();`, a call in a loop, in a twice-called function, in a twice-started
+root) mints two live marks. The fix holds the mint SITE, since the mint
+executes exactly when its site executes:
+
+- exactly ONE static call site of the minter in the unit -- a second site is
+  a second live mark (D268a);
+- the site stands outside every loop form (`traverse`/`retry`/`forever`,
+  including a `retry … until` predicate, which evaluates on every pass) --
+  a site inside repeats per pass (D268b);
+- the enclosing root is called from NO call site (it is an entry: the reverse
+  call-graph lookup over `aufrufgraph::erhebe_mit`, which includes contract
+  calls -- and contract-position calls TO the minter count as sites, since a
+  contract calling the minter executes it) (D268c);
+- the root is started at most once: no two thread starts (`concurrent`
+  members, `entry` dispatch roots via `kontexte::erhebe`, `boot` dispatch --
+  the same pool `startexklusiv.rs` reads) name it (D268d);
+- the minter's address is never taken (`&erste`): a mint behind a pointer may
+  execute any number of times (D268e).
+
+The count is closed-world. A unit with no starts at all is a library: zero
+starts is accepted, and re-invocation of its root from outside the unit is
+the importer's duty, like every `pub fn` called twice. A boot step counts as
+a site under a caller-free root (boot runs once). An interrupt entry accepted
+as a singly-started root may still re-fire at runtime -- the checker cannot
+count interrupts; booked as residual below.
 
 ## 3. What was built (names)
 
@@ -70,24 +105,33 @@ structs `EignerTabelle`, `Stelle`, helpers `nackter_name`, `haelt_marke`,
 - `D266` -- mint discipline: second foreign mint, any `allocs M`, any bodied
   function returning `M` without taking it. Forwarding (taking `M` and
   returning it, bodied or foreign) stays silent.
-- `D267` -- a toucher without the mark (bodied: write sites; foreign:
-  declared `reads`/`writes`/`consumes`/`publishes` touches).
+- `D267` -- a toucher without the mark (bodied: write sites AND read sites
+  through `wirkungen::lese_orte`, the E010 walk; foreign: declared
+  `reads`/`writes`/`consumes`/`publishes` touches).
+- `D268` -- a second mint execution: second static site, site in a loop,
+  minting root with a caller, minting root named by two starts, taken minter
+  address. The lift needs exactly one mint execution.
 - `D026` -- kept, with byte-identical text: fires while the story is
-  INCOMPLETE (no minter, or a minter no guarded access exercises); silent
-  where `D265`-`D267` fire (one fault, one refusal) and LIFTED where the
-  producer is complete (mark linear, exactly one minter, no other production,
-  at least one guarded touch, every touch holds). Two tables may share one
-  mark; the lift is per table.
+  INCOMPLETE (no minter, no mint execution, or a minter no guarded access
+  exercises); silent where `D265`-`D268` fire (one fault, one refusal) and
+  LIFTED where the producer is complete (mark linear, exactly one minter
+  executed exactly once, no other production, at least one guarded touch,
+  every touch holds). Two tables may share one mark; the lift is per table
+  (and a minter nobody calls lifts neither).
 
 Pass register (`crates/gabbro-check/src/saetze.rs`): `d.ownermarkislinear`
-(`D265`), `d.ownermintdiscipline` (`D266`), `d.owneraccessholdsmark` (`D267`);
-the `d.eignerbrauchtgeschicht` (`D026`) entry now names the lift.
+(`D265`), `d.ownermintdiscipline` (`D266`), `d.owneraccessholdsmark` (`D267`,
+reads included), `d.ownermintisingle` (`D268`); the `d.eignerbrauchtgeschicht`
+(`D026`) entry now names the lift.
 
-Corpus (reserved numbers used: diagnostic codes `D265`-`D267`, gifts
-`932`-`935`, example `114`; `D268`/`D269` and example `115` left unused):
+Corpus (reserved numbers used: diagnostic codes `D265`-`D268`, gifts
+`932`-`935`, examples `114`-`115`; `D269` left unused):
 
 - `beispiele/114-owner-with-producer.gab` -- 7 items, 0 errors, 0 hints;
   emits, `cc -std=c11 -Wall -Wextra -Werror -fsyntax-only` accepts.
+- `beispiele/115-owner-read-with-producer.gab` -- the read path under the
+  mark plus the single mint executed once (`D268` silent); 7 items, 0 errors,
+  0 hints; emits, `cc` accepts.
 - `beispiele/gift/932-second-minter.gab` -- 6 items, exactly `D266`.
 - `beispiele/gift/933-write-without-mark.gab` -- 5 items, exactly `D267`.
 - `beispiele/gift/934-owner-without-linear-mark.gab` -- 3 items, exactly
@@ -96,13 +140,17 @@ Corpus (reserved numbers used: diagnostic codes `D265`-`D267`, gifts
 - Controls unchanged: `gift/694` (3 items, exactly `D026`), `gift/778`
   (5 items, exactly `D026`), `gift/779` (7 items, exactly `D026`).
 
-Tests (`crates/gabbro-check/tests/paesse.rs`, 5 new):
-`eigner_braucht_lineare_marke_d265`, `eigner_erzeuger_disziplin_d266`
+Tests (`crates/gabbro-check/tests/paesse.rs`, 11 new): `eigner_braucht_lineare_marke_d265`, `eigner_erzeuger_disziplin_d266`
 (incl. the forwarding counter-direction), `eigner_zugriff_haelt_marke_d267`
 (incl. pointer-mediated touch, foreign touch, and the full-producer lift),
 `eigner_unvollstaendig_bleibt_d026` (the 694/778/779 shapes inline),
-`eigner_marke_teilt_sich_kein_besitz` (shared mark: touched table lifts,
-untouched table keeps `D026`).
+`eigner_marke_teilt_sich_kein_besitz` (a minter nobody calls lifts neither
+table), `eigner_zweiter_aufruf_d268`, `eigner_aufruf_in_schleife_d268`,
+`eigner_gerufene_wurzel_d268`, `eigner_zweimal_gestartet_d268` (incl. the
+singly-started counter-direction), `eigner_adresse_genommen_d268`,
+`eigner_lesen_haelt_marke_d267` (read falls without the mark; held read
+silent, file form pinned as `beispiele/115`). No gift numbers were left, so
+the D268 shapes stand inline per the review.
 
 Docs: `dokumente/SYNTAX.md` §9 comment, the `owner m` grammar-table row, and
 the §19 checklist item (producer stands; residuals named). `README.md` /
@@ -116,14 +164,13 @@ in §5.
 
 ## 4. Verification (measured, not asserted)
 
-- `./cargo-pruef`: `== exit 0; failing tests: 0` (767 passed summed over
+- `./cargo-pruef`: `== exit 0; failing tests: 0` (773 passed summed over
   suites, 0 failed).
 - `./lean-bau`: `== lake exit code: 0`, `== 0 error line(s) in the COMPLETE
   output`, `Build completed successfully`.
-- `./emission-pruef`: `EMISSION: ALL PASS -- 35 durchgestochen, 240 von 240
-  uebersetzen`.
-- `python3 instrumente/pruefe-saetze.py`: exit 0 (`55 ohne Satz`, mark met;
-  the 3 new codes are registered).
+- `./emission-pruef`: `EMISSION: ALL PASS` (re-run after 151b, see below).
+- `python3 instrumente/pruefe-saetze.py`: exit 0 (the 4 new codes are
+  registered; `55 ohne Satz` mark met).
 - `python3 instrumente/pruefe-kennungen.py`: `ALL PASS` (372 codes).
 - `python3 instrumente/pruefe-englisch.py`: my delta is zero (feeder count
   back at the booked 23 after rewording one Satz sentence that named the Lean
@@ -148,11 +195,7 @@ in §5.
 
 ## 5. What remains open (CUTS)
 
-1. **Reads inside bodied functions.** `D267` covers writes (plus foreign
-   reads). A bodied function READING an owner table without the mark is not
-   refused -- no read-site walk exists in this pass. The Satz vorbehalt books
-   it; the Lean `darf` covers the whole `braucht`.
-2. **Borrowing back across a call.** `consumes m` + `allocs m` of an owner
+1. **Borrowing back across a call.** `consumes m` + `allocs m` of an owner
    mark is refused (move-only). Admitting the balanced borrow needs a Lean
    amendment -- stated, not built (shared files untouched): weaken
    `eigner_nie_erzeugt` from "no production" to "no NET production",
@@ -160,14 +203,19 @@ in §5.
    (m, s) ∈ (sigNr n).konsumiert`. The checker half would then allow
    `allocs M` iff the same signature also consumes an `M` parameter; M2
    keeps exactly-one-live.
-3. **The `own`-pointer path.** `ptr<…, own>` table access (`zeiger_hat_waechter`
-   territory) is covered for WRITES through the pointer-parameter resolution
-   in `D267` (pinned by test); the full sugar story
-   (`consumes m … allocs m`, "the mark is borrowed for the call and comes
-   back") needs (2).
-4. **Short-name matching.** Marks, tables and signatures match by short name
-   across modules, like the legacy `D026`. Same-name marks in two modules of
-   one unit are a merge-time question, undecided here.
+2. **The `own`-pointer path.** `ptr<…, own>` table access is covered for
+   WRITES and READS through the pointer-parameter resolution in `D267`
+   (pinned by test); the full sugar story (`consumes m … allocs m`, "the mark
+   is borrowed for the call and comes back") needs (1).
+3. **Short-name matching.** Marks, tables and signatures match by short name
+   across modules for D265-D267, like the legacy `D026`; D268 resolves through
+   the call graph (qualified keys). Same-name minters in two modules of one
+   unit resolve per caller module -- two modules defining one mark name is a
+   merge-time question, undecided here.
+4. **Interrupt re-entry.** A singly-started `entry` root accepted by D268(d)
+   may still re-fire at runtime (two interrupts, two mints). The checker
+   cannot count interrupts; that half is a named-environment question, not a
+   second static site.
 5. **The `D026` message text** ("who mints the FIRST mark is unwritten") is
    now approximate for the minter-without-guarded-access shape (778/779): a
    minter IS named there; what is missing is the exercised guard. Kept
@@ -185,8 +233,16 @@ unnameable -- every holder needs a linear parameter and the declaration names
 no thread. The foreign-body minter answers the same question with the
 vocabulary that stands, and matches the project goal (named assumptions) and
 `PLAN-ERWEITUNG.md` §0c.4 ("the mark exists once"). Gift/example/code budgets
-all sufficed with room (`D268`/`D269`, example `115` unused). Design inputs
+all sufficed with room (`D269` unused; no gift numbers were left for the D268
+shapes, so they stand as inline tests per the review). Design inputs
 read: `SATZKARTE.md` (§§7/13), `OWNER-ANWENDUNG.md`, `PLAN-ERWEITUNG.md`
 (§0c.4, §3), `SYNTAX.md` §9/§19; `PLAN-SYSCALL.md`/`PLAN-BITS.md` carry no
 owner content. Of ~90 `messung/muse` reports only the owner one was read;
 the rest is cited, not claimed.
+
+Review round 151b accepted the design and refused the merge: the single
+minter called twice mints two live marks (condition (iii) unmet). Fixed with
+`D268` above -- the smallest countable rule: the mint executes exactly when
+its site executes, so one site, outside loops, in an uncalled root, started
+at most once. Closed CUTS item 1 in the same round (reads through the E010
+walk). `beispiele/115` is the positive for both.

@@ -714,6 +714,9 @@ struct EignerTabelle {
 struct Stelle {
     name: String,
     span: Span,
+    /// The graph key (`mod::name`): what call sites resolve to.
+    schluessel: String,
+    modul: String,
     fremd: bool,
     rueckgabe: Option<(String, Span)>,
     parameter: Vec<(String, TypExpr)>,
@@ -721,6 +724,9 @@ struct Stelle {
     /// The checkable body, if there is one (`Block` only: `asm` is a sealed
     /// hole and reads like a foreign body for touch purposes).
     koerper: Option<Block>,
+    /// `requires` plus `ensures`: contracts evaluate calls too (a contract
+    /// calling the minter executes it), so they are call sites like bodies.
+    vertraege: Vec<Pred>,
 }
 
 /// **D026 -- `owner m` without a producer is parsed and refused, by name** («SG-9»).
@@ -755,8 +761,10 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
     // **Every table with an `owner` clause.**
     let mut tabellen: Vec<EignerTabelle> = Vec::new();
     // **Every signature that can carry linear values (see `Stelle`).**
+    // With the module: call sites resolve to graph keys, and the single-mint
+    // rule (`D268`) counts them.
     let mut stellen: Vec<Stelle> = Vec::new();
-    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Tabelle(t) => {
             if let Some(m) = &t.eigner {
                 tabellen.push(EignerTabelle {
@@ -773,6 +781,8 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
             stellen.push(Stelle {
                 name: f.name.text.clone(),
                 span: f.name.span,
+                schluessel: crate::umgebung::qualifiziere(modul, &f.name.text),
+                modul: modul.to_string(),
                 fremd: matches!(f.rumpf, FnRumpf::Keiner),
                 rueckgabe: nackter_name(&f.ergebnis),
                 parameter: f.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
@@ -781,28 +791,35 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
                     FnRumpf::Block(b) => Some(b.clone()),
                     _ => None,
                 },
+                vertraege: f.requires.iter().chain(f.ensures.iter()).cloned().collect(),
             });
         }
         ItemArt::Axiom(a) => {
             stellen.push(Stelle {
                 name: a.name.text.clone(),
                 span: a.name.span,
+                schluessel: crate::umgebung::qualifiziere(modul, &a.name.text),
+                modul: modul.to_string(),
                 fremd: true,
                 rueckgabe: nackter_name(&a.rueckgabe),
                 parameter: a.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
                 wirkungen: a.effects.liste.clone(),
                 koerper: None,
+                vertraege: a.requires.clone(),
             });
         }
         ItemArt::Syscall(s) => {
             stellen.push(Stelle {
                 name: s.name.text.clone(),
                 span: s.name.span,
+                schluessel: crate::umgebung::qualifiziere(modul, &s.name.text),
+                modul: modul.to_string(),
                 fremd: true,
                 rueckgabe: nackter_name(&s.ergebnis),
                 parameter: s.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
                 wirkungen: s.effects.liste.clone(),
                 koerper: None,
+                vertraege: s.requires.iter().chain(s.ensures.iter()).cloned().collect(),
             });
         }
         _ => {}
@@ -854,12 +871,12 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
     // every foreign body); `allocs` of the mark or a bodied function returning
     // it without taking it would be a second mint through a signature -- the
     // shape `eigner_nie_erzeugt` (`Syntax.lean:149`) forbids.
-    let mut minter: BTreeMap<String, (String, Span)> = BTreeMap::new();
+    let mut minter: BTreeMap<String, (String, Span, String)> = BTreeMap::new();
     // Collected up front: the loops below refuse into `schlecht`, which the
     // lazy filter would otherwise borrow across the mutation.
     let gute: Vec<String> = marken.iter().filter(|m| !schlecht.contains(*m)).cloned().collect();
     for m in &gute {
-        let mut erste: Option<(String, Span)> = None;
+        let mut erste: Option<(String, Span, String)> = None;
         for s in &stellen {
             let Some((ret, _)) = &s.rueckgabe else { continue };
             if ret != m {
@@ -870,7 +887,7 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
             }
             if s.fremd {
                 if erste.is_none() {
-                    erste = Some((s.name.clone(), s.span));
+                    erste = Some((s.name.clone(), s.span, s.schluessel.clone()));
                     continue;
                 }
                 absagen.schiebe(
@@ -935,17 +952,18 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
         }
     }
     // **D267 -- every toucher holds the mark.** For a bodied function the
-    // touch is a body SITE: an assignment/`publish`/`exchange` target that
-    // resolves to an owner-guarded carrier (directly by carrier name, or
-    // through a pointer parameter into it) -- an `effects` line alone is the
-    // call-graph hull (`runde` declaring what `schreibe` writes) and no access
-    // of its own. For a foreign signature (no checkable body: `extern`,
-    // `axiom`, `syscall`, `asm`) the declared `reads`/`writes`/`consumes`/
+    // touch is a body SITE: an assignment/`publish`/`exchange` target or a
+    // read that resolves to an owner-guarded carrier (directly by carrier
+    // name, or through a pointer parameter into it) -- an `effects` line
+    // alone is the call-graph hull (`runde` declaring what `schreibe`
+    // writes) and no access of its own. Reads come through the very walk
+    // `E010` reads (`wirkungen::lese_orte`), not a second walk over the body.
+    // For a foreign signature (no checkable body: `extern`, `axiom`,
+    // `syscall`, `asm`) the declared `reads`/`writes`/`consumes`/
     // `publishes` effects are all there is, and each carrier touch owes a
     // linear parameter of the mark -- borrowed or consumed, both stand in the
     // entry holdings. A bare `consumes m` of a linear parameter is a value,
-    // not a carrier touch, and stays out. READS inside bodied functions are
-    // not covered yet (known gap, booked in the `Satz`): writes carry this rule.
+    // not a carrier touch, and stays out.
     let mut beruehrt: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
     let gute2: Vec<String> = marken.iter().filter(|m| !schlecht.contains(*m)).cloned().collect();
     for m in &gute2 {
@@ -957,6 +975,25 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
                     zeiger.insert(pname.clone(), t);
                 }
             }
+            // **A read in `E010` text form** (`Plaetze.slots[…]`): the base up
+            // to the first `.`/`[`/`-` is the resolution `loese` does on the
+            // `Ort` -- a bare name that is a parameter is a value, anything
+            // else resolves like a touch.
+            let loese_lese = |text: &str, braucht: &mut BTreeMap<String, Vec<String>>| {
+                let base = text.split(['.', '[', '-']).next().unwrap_or(text);
+                if text == base && s.parameter.iter().any(|(p, _)| p == base) {
+                    return;
+                }
+                let ziel = if traeger.contains(base) {
+                    Some(base.to_string())
+                } else {
+                    zeiger.get(base).cloned()
+                };
+                let Some(t) = ziel else { return };
+                if eigner_von.get(&t) == Some(m) {
+                    braucht.entry(m.clone()).or_default().push(t);
+                }
+            };
             let loese = |ort: &Ort, braucht: &mut BTreeMap<String, Vec<String>>| {
                 let name = ort.basis.text.clone();
                 if ort.suffixe.is_empty() && s.parameter.iter().any(|(p, _)| *p == name) {
@@ -979,6 +1016,9 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
                     sammle(b, &mut ziele, &mut brueche);
                     for (ort, _) in &ziele {
                         loese(ort, &mut braucht);
+                    }
+                    for (text, _) in crate::wirkungen::lese_orte(b) {
+                        loese_lese(&text, &mut braucht);
                     }
                     for w in &s.wirkungen {
                         match &w.art {
@@ -1033,9 +1073,240 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
+    // **D268 -- one mint, executed once.** `D266` refuses the second minter
+    // DECLARATION; this refuses the second mint EXECUTION. The single minter
+    // called twice (`let a = erste(); let b = erste();`) mints two live
+    // marks, hence two owners -- exactly what the owner discipline excludes.
+    // The mint executes exactly when its site executes, so the rule holds the
+    // site: exactly one in the unit, outside every loop form, in a root no
+    // call site reaches (an entry: nothing calls it), and that root started
+    // at most once (no two thread starts name it). A unit with no starts at
+    // all is a library: the closed-world count is zero, and re-invocation
+    // from outside is the importer's duty, like every `pub fn` called twice.
+    // Taking the minter's address (`&erste`) hides the execution from this
+    // count and is refused with it.
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    // Thread starts, one pool like `startexklusiv.rs`: `concurrent` members,
+    // `entry` dispatch roots, `boot` dispatch. Each names its function key.
+    let mut startet: Vec<(String, Span, String)> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Concurrent(c) = &item.art {
+            for pfad in &c.koerper {
+                let span = pfad.teile.last().map(|i| i.span).unwrap_or(item.span);
+                if let Some(k) = g.aufloesen(&u, modul, &pfad.text()) {
+                    startet.push((k, span, format!("concurrent member `{}`", pfad.text())));
+                }
+            }
+        }
+        if let ItemArt::Boot(b) = &item.art {
+            if let Some(k) = g.aufloesen(&u, modul, &b.dispatch.text()) {
+                startet.push((k, item.span, format!("boot `{}`", b.name.text)));
+            }
+        }
+    });
+    for k in crate::kontexte::erhebe(baum) {
+        if let Some(voll) = g.aufloesen(&u, &k.modul, &k.wurzel) {
+            startet.push((voll, k.span, format!("entry `{}`", k.name)));
+        }
+    }
+    let gute3: Vec<String> = marken
+        .iter()
+        .filter(|m| minter.contains_key(*m) && !schlecht.contains(*m))
+        .cloned()
+        .collect();
+    // Mint executions per mark, for the lift below: a minter nobody calls is
+    // an unexercised producer (`D026`), not a held one.
+    let mut mint_aufrufe: BTreeMap<String, usize> = BTreeMap::new();
+    for m in &gute3 {
+        let (_, _, mschluessel) = &minter[m.as_str()];
+        // Every static call of the minter: enclosing root key, site span,
+        // and whether a loop form may repeat it. Contract calls count: a
+        // contract calling the minter executes it.
+        struct Treffer {
+            wurzel: String,
+            name: String,
+            span: Span,
+            schleife: bool,
+        }
+        let mut treffer: Vec<Treffer> = Vec::new();
+        let mut adressen: Vec<Span> = Vec::new();
+        let nimm = |wurzel: &str, name: &str, modul: &str, fund: &RufFund,
+                        treffer: &mut Vec<Treffer>, adressen: &mut Vec<Span>| {
+            let Some(k) = g.aufloesen(&u, modul, &fund.pfad) else { return };
+            if k != *mschluessel {
+                return;
+            }
+            if fund.adresse {
+                adressen.push(fund.span);
+            } else {
+                treffer.push(Treffer {
+                    wurzel: wurzel.to_string(),
+                    name: name.to_string(),
+                    span: fund.span,
+                    schleife: fund.schleife,
+                });
+            }
+        };
+        for s in &stellen {
+            if let Some(b) = &s.koerper {
+                let mut funde = Vec::new();
+                rufe_in_block(b, false, &mut funde);
+                for f in &funde {
+                    nimm(&s.schluessel, &s.name, &s.modul, f, &mut treffer, &mut adressen);
+                }
+            }
+            for pr in &s.vertraege {
+                for e in crate::ausdruecke_im_praedikat(pr) {
+                    let mut funde = Vec::new();
+                    rufe_in_expr(e, false, &mut funde);
+                    for f in &funde {
+                        nimm(&s.schluessel, &s.name, &s.modul, f, &mut treffer, &mut adressen);
+                    }
+                }
+            }
+        }
+        // Boot steps execute once, at boot: they count as sites under a
+        // caller-free synthetic root (nothing calls a boot).
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            let ItemArt::Boot(b) = &item.art else { return };
+            let wurzel = crate::umgebung::qualifiziere(modul, &b.name.text);
+            for schritt in &b.schritte {
+                match schritt {
+                    BootSchritt::Ruf(r) => {
+                        let mut funde = Vec::new();
+                        ruf_fund(r, false, &mut funde);
+                        for a in &r.argumente {
+                            rufe_in_expr(a, false, &mut funde);
+                        }
+                        for f in &funde {
+                            nimm(&wurzel, &b.name.text, modul, f, &mut treffer, &mut adressen);
+                        }
+                    }
+                    BootSchritt::Setzt { wert, .. } => {
+                        let mut funde = Vec::new();
+                        rufe_in_expr(wert, false, &mut funde);
+                        for f in &funde {
+                            nimm(&wurzel, &b.name.text, modul, f, &mut treffer, &mut adressen);
+                        }
+                    }
+                }
+            }
+        });
+        mint_aufrufe.insert(m.clone(), treffer.len());
+        // (a) A second static site mints a second live mark.
+        if treffer.len() >= 2 {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D268",
+                    treffer[1].span,
+                    format!(
+                        "`{}` calls the minter `{m}` a second time -- one mark, one mint",
+                        treffer[1].name,
+                    ),
+                )
+                .mit_notiz(
+                    "the single minter called twice mints two live marks, hence two owners: \
+                     call it exactly once, outside every loop, from a root nothing calls",
+                ),
+            );
+            schlecht.insert(m.clone());
+        }
+        // (b) A site inside a loop form executes on every pass.
+        for t in treffer.iter().filter(|t| t.schleife) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D268",
+                    t.span,
+                    format!(
+                        "`{}` calls the minter `{m}` inside a loop -- the mint repeats",
+                        t.name,
+                    ),
+                )
+                .mit_notiz(
+                    "a mint inside `traverse`/`retry`/`forever` executes on every pass and \
+                     mints a live mark per pass: lift the call before the loop",
+                ),
+            );
+            schlecht.insert(m.clone());
+        }
+        // (c) A root that is itself called executes the mint on every call.
+        // (d) A root started twice executes the mint on every start.
+        let mut wurzeln: Vec<String> = treffer.iter().map(|t| t.wurzel.clone()).collect();
+        wurzeln.sort();
+        wurzeln.dedup();
+        for w in &wurzeln {
+            let rufer: Vec<String> = g
+                .knoten
+                .iter()
+                .filter(|(_, k)| k.ruft.contains(w))
+                .map(|(k, _)| k.clone())
+                .collect();
+            if let Some(rufer1) = rufer.first() {
+                let t = treffer.iter().find(|t| &t.wurzel == w).unwrap_or(&treffer[0]);
+                // Graph keys are qualified (`mod::f`); the message names the short form.
+                let kurz = rufer1.rsplit("::").next().unwrap_or(rufer1);
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D268",
+                        t.span,
+                        format!(
+                            "`{}` calls the minter `{m}`, but `{kurz}` calls `{}` -- the mint repeats",
+                            t.name, t.name,
+                        ),
+                    )
+                    .mit_notiz(
+                        "the mint executes exactly when its site executes: hold the single site \
+                         in a root no call site reaches (an entry), so it runs once",
+                    ),
+                );
+                schlecht.insert(m.clone());
+            }
+            let starts: Vec<(Span, String)> = startet
+                .iter()
+                .filter(|(k, _, _)| k == w)
+                .map(|(_, s, q)| (*s, q.clone()))
+                .collect();
+            if starts.len() >= 2 {
+                let t = treffer.iter().find(|t| &t.wurzel == w).unwrap_or(&treffer[0]);
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D268",
+                        starts[1].0,
+                        format!(
+                            "`{}` is started twice ({} and {}) and calls the minter `{m}` -- the mint repeats",
+                            t.name, starts[0].1, starts[1].1,
+                        ),
+                    )
+                    .mit_notiz(
+                        "one live mark means one execution: start the minting root at most once",
+                    ),
+                );
+                schlecht.insert(m.clone());
+            }
+        }
+        // (e) Taking the minter's address hides the execution from this count.
+        for span in &adressen {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D268",
+                    *span,
+                    format!(
+                        "the minter `{m}` is taken as a value here -- the mint could execute through the pointer",
+                    ),
+                )
+                .mit_notiz(
+                    "one mark, one statically counted mint: a minter behind a pointer may \
+                     execute any number of times, so its address must not be taken",
+                ),
+            );
+            schlecht.insert(m.clone());
+        }
+    }
     // **The lift.** A table is refused here only while its mark's story is
-    // incomplete: no minter, or a minter no guarded access exercises. A
-    // malformed story (`schlecht`) is refused above and stays silent here.
+    // incomplete: no minter, no guarded access exercising it, or no mint
+    // execution reaching it. A malformed story (`schlecht`) is refused above
+    // and stays silent here.
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Tabelle(t) = &item.art else { return };
         let Some(m) = &t.eigner else { return };
@@ -1043,6 +1314,7 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
             return;
         }
         let vollstaendig = minter.contains_key(&m.text)
+            && mint_aufrufe.get(&m.text).is_some_and(|&n| n == 1)
             && beruehrt.keys().any(|(tabelle, marke)| tabelle == &t.name.text && marke == &m.text);
         if vollstaendig {
             return;
@@ -1171,4 +1443,104 @@ fn baumkanten(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
+}
+
+/// One static execution of a call for the single-mint count (`D268`): the
+/// written path, where it stands, whether a loop form may repeat it, and
+/// whether it takes an address instead of calling (`&f` hides the execution
+/// from the count).
+struct RufFund {
+    pfad: String,
+    span: Span,
+    schleife: bool,
+    adresse: bool,
+}
+
+/// One `Ruf` node as a find: named callees only (an indirect call through a
+/// place names nothing statically, and a minter behind a pointer is (e) --
+/// the address refused where it is taken).
+fn ruf_fund(r: &Ruf, schleife: bool, aus: &mut Vec<RufFund>) {
+    if crate::ist_praedikatswort(r) {
+        return;
+    }
+    if let CallTarget::Path(p) = &r.ziel {
+        aus.push(RufFund {
+            pfad: p.text(),
+            span: r.span,
+            schleife,
+            adresse: false,
+        });
+    }
+}
+
+/// Every static call and address-taken inside one expression, through the
+/// same descent the hull and the graph read (`crate::alle_ausdruecke`).
+fn rufe_in_expr(e: &Expr, schleife: bool, aus: &mut Vec<RufFund>) {
+    for x in crate::alle_ausdruecke(e) {
+        match &x.art {
+            ExprArt::Ruf(r) => {
+                if crate::ist_praedikatswort(r) {
+                    continue;
+                }
+                if let CallTarget::Path(p) = &r.ziel {
+                    aus.push(RufFund {
+                        pfad: p.text(),
+                        span: r.span,
+                        schleife,
+                        adresse: false,
+                    });
+                }
+            }
+            ExprArt::FnWert(p) => {
+                aus.push(RufFund {
+                    pfad: p.text(),
+                    span: x.span,
+                    schleife,
+                    adresse: true,
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Every static call and address-taken in a body, carrying whether a loop
+/// form (`traverse`/`retry`/`forever`) may repeat the site. A `retry … until`
+/// predicate evaluates on every pass, so the statement's own expressions
+/// count as inside the loop exactly where the statement is one.
+fn rufe_in_block(b: &Block, schleife: bool, aus: &mut Vec<RufFund>) {
+    for s in &b.anweisungen {
+        let innen = schleife || matches!(&s.art, StmtArt::Schleife(_));
+        for e in crate::eigene_ausdruecke(s) {
+            rufe_in_expr(e, innen, aus);
+        }
+        for pr in crate::eigene_praedikate(s) {
+            for e in crate::ausdruecke_im_praedikat(pr) {
+                rufe_in_expr(e, innen, aus);
+            }
+        }
+        match &s.art {
+            // `eigene_ausdruecke` carries no `Ruf`-statement arguments (the
+            // call stands in the statement, not in an `Expr`), so they are
+            // read here.
+            StmtArt::Ruf(r) => {
+                ruf_fund(r, innen, aus);
+                for a in &r.argumente {
+                    rufe_in_expr(a, innen, aus);
+                }
+            }
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    ruf_fund(r, innen, aus);
+                    for a in &r.argumente {
+                        rufe_in_expr(a, innen, aus);
+                    }
+                }
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            rufe_in_block(k, innen, aus);
+        }
+    }
 }

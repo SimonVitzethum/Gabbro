@@ -367,6 +367,22 @@ fn ziel_indizes(o: &Ort, t: &mut Taten) {
     }
 }
 
+/// **Read sites of a body, through the E010 walk -- and nothing else.**
+///
+/// Lane 151 (`D267`, reads): the owner pass needs the same reads `E010` holds
+/// against the `effects`, not a second, parallel walk over the body -- two
+/// walks over one body drift apart (the `observes` lesson at
+/// `aufrufgraph::sammle_rufe`). So this runs the very `sammle_taten` above
+/// and returns its `liest` leg: every `(text, span)` the walk counts as a
+/// read, with the same coverage (indices, `await`, `narrow`, exchange,
+/// traverse domains) and the same blindness (whatever `liest_expr` does not
+/// see, neither reader sees).
+pub(crate) fn lese_orte(b: &Block) -> Vec<(String, Span)> {
+    let mut t = Taten::default();
+    sammle_taten(b, &mut t);
+    t.liest
+}
+
 fn sammle_taten(b: &Block, t: &mut Taten) {
     for s in &b.anweisungen {
         match &s.art {

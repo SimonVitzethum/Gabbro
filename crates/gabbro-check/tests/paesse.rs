@@ -3878,8 +3878,9 @@ impl fn runde() effects { writes w } costs <= 32 ops {
     );
 }
 
-/// **One mark may guard two carriers: the touched one lifts, the untouched
-/// one keeps D026.**
+/// **One mark may guard two carriers -- and a minter nobody calls lifts
+/// neither.** With zero mint executions no guarded access is exercised, so
+/// both tables keep `D026` (the lift needs exactly one execution).
 #[test]
 fn eigner_marke_teilt_sich_kein_besitz() {
     faellt_genau(
@@ -3893,6 +3894,164 @@ impl fn schreibe_a(m : Marke, i : index into A)
     A.slots[i].benutzt = true;
     lege_ab(m);
 }",
+        &["D026", "D026"],
+    );
+}
+
+// -- Lane 151b: one mint, executed once (D268); reads hold the mark --------
+
+const EIGNER_KOPF: &str = "table Plaetze count 8 owner Marke { slot { benutzt : bool, } }
+linear ghost type Marke;
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+extern fn lege_ab(m : Marke) effects { consumes m } costs <= 8 ops;
+";
+
+/// **D268(a) -- the minter called twice mints two live marks.**
+#[test]
+fn eigner_zweiter_aufruf_d268() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn schreibe(m : Marke, i : index into Plaetze)
+    effects {{ writes Plaetze.slots, consumes m }} costs <= 32 ops {{
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+}}
+impl fn runde(i : index into Plaetze)
+    effects {{ writes Plaetze.slots }} costs <= 64 ops {{
+    let a = erste();
+    let b = erste();
+    schreibe(a, i);
+    lege_ab(b);
+}}"),
+        &["D268"],
+    );
+    // One call stays silent here (the producer may still be incomplete).
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn runde()
+    effects {{ pure }} costs <= 32 ops {{
+    let m = erste();
+    lege_ab(m);
+}}"),
         &["D026"],
+    );
+}
+
+/// **D268(b) -- a mint site inside a loop form repeats on every pass.**
+#[test]
+fn eigner_aufruf_in_schleife_d268() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}extern fn gib_auf() -> never effects {{ diverges }} costs <= 1 ops;
+impl fn schreibe(m : Marke, i : index into Plaetze)
+    effects {{ writes Plaetze.slots, consumes m }} costs <= 32 ops {{
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+}}
+impl fn runde(i : index into Plaetze)
+    effects {{ writes Plaetze.slots }} costs <= 512 ops {{
+    let n : u32 = 0;
+    retry versuch until n == 3
+        bounded 256 ops
+        on_exceeded gib_auf
+        effects {{ pure }}
+    {{
+        let m = erste();
+        schreibe(m, i);
+    }}
+}}"),
+        &["D268"],
+    );
+}
+
+/// **D268(c) -- a minting root that is itself called mints on every call.**
+#[test]
+fn eigner_gerufene_wurzel_d268() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn wurzel(m2 : Marke, i : index into Plaetze)
+    effects {{ writes Plaetze.slots, consumes m2 }} costs <= 64 ops {{
+    let m = erste();
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+    lege_ab(m2);
+}}
+impl fn aussen(m2 : Marke, i : index into Plaetze)
+    effects {{ writes Plaetze.slots, consumes m2 }} costs <= 128 ops {{
+    wurzel(m2, i);
+}}"),
+        &["D268"],
+    );
+}
+
+/// **D268(d) -- a minting root started twice mints on every start.**
+#[test]
+fn eigner_zweimal_gestartet_d268() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn wurzel()
+    effects {{ pure }} costs <= 32 ops {{
+    let m = erste();
+    lege_ab(m);
+}}
+concurrent {{ wurzel }};
+concurrent {{ wurzel }};"),
+        &["D268"],
+    );
+    // Started once, the same root stays silent here.
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn wurzel()
+    effects {{ pure }} costs <= 32 ops {{
+    let m = erste();
+    lege_ab(m);
+}}
+concurrent {{ wurzel }};"),
+        &["D026"],
+    );
+}
+
+/// **D268(e) -- taking the minter's address hides the execution.**
+#[test]
+fn eigner_adresse_genommen_d268() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn wurzel()
+    effects {{ pure }} costs <= 32 ops {{
+    let m = erste();
+    let f = &erste;
+    lege_ab(m);
+}}"),
+        &["D268"],
+    );
+}
+
+/// **D267 reads -- a bodied read without the mark falls; with it, silent.**
+#[test]
+fn eigner_lesen_haelt_marke_d267() {
+    faellt_genau(
+        &format!("{EIGNER_KOPF}impl fn schreibe(m : Marke, i : index into Plaetze)
+    effects {{ writes Plaetze.slots, consumes m }} costs <= 32 ops {{
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+}}
+impl fn lies(i : index into Plaetze) -> bool
+    effects {{ reads Plaetze.slots }} costs <= 16 ops {{
+    return Plaetze.slots[i].benutzt;
+}}
+impl fn runde(i : index into Plaetze)
+    effects {{ writes Plaetze.slots, reads Plaetze.slots }} costs <= 96 ops {{
+    let m = erste();
+    schreibe(m, i);
+    let b = lies(i);
+    return;
+}}"),
+        &["D267"],
+    );
+    // The same read holding the mark: silent (`beispiele/115` pins the file form).
+    faellt_nicht(
+        &format!("{EIGNER_KOPF}impl fn lies(m : Marke, i : index into Plaetze) -> bool
+    effects {{ reads Plaetze.slots, consumes m }} costs <= 16 ops {{
+    lege_ab(m);
+    return Plaetze.slots[i].benutzt;
+}}
+impl fn runde(i : index into Plaetze) -> bool
+    effects {{ reads Plaetze.slots }} costs <= 64 ops {{
+    let m = erste();
+    return lies(m, i);
+}}"),
     );
 }
