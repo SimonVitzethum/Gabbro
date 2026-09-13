@@ -298,6 +298,165 @@ theorem format_roundtrip_zeuge :
   exact ⟨⟨format_roundtrip _ _ "a" 7 hRep, format_separate _ _ "a" "b" 7 hne⟩,
     refB_erreicht, refB_schreibt⟩
 
+/-! ## 7. `gruppe.sperrabdruck` (locks: 292 corpus lines).
+
+The group operation takes ALL locks of its carriers in ascending
+`rank` order and holds them across the whole move (`U003`/`U005`/`H006`
+establish the order; `U006` the absence of intermediate exits).
+Three parts: (a) the declared order is acyclic -- a strictly ascending
+take sequence never re-enters a lock, so the wait graph stays in
+`less_than`; (b) the connecting invariant holds at BEGIN and END, NOT
+in between -- the intermediate state is exactly why a group operation
+exists; (c) no intermediate exit strands the move mid-way. -/
+
+/-- Part (a): ascending rank order never re-enters a lock. `hAsc` is
+    consumed by the induction. -/
+theorem lock_order_no_reentry (ranks : List Nat)
+    (hAsc : ranks.Pairwise (· < ·)) : ranks.Nodup := by
+  induction ranks with
+  | nil => exact List.nodup_nil
+  | cons r rs ih =>
+    cases hAsc with
+    | cons hmem hrs =>
+      rw [List.nodup_cons]
+      exact ⟨fun hm => absurd (hmem _ hm) (Nat.lt_irrefl r), ih hrs⟩
+
+/-- Part (b): BEGIN and END do not constrain the MIDDLE. There are a
+    proposition, a start, a middle and an end with the proposition at
+    both ends and its negation in the middle -- so demanding the
+    invariant in between would be a strictly stronger, unkept promise.
+    (This is `beobachtbares_gilt` read backwards: the locale spans the
+    move, never its inside.) -/
+theorem group_move_middle_free :
+    ∃ (inv : Bool → Prop) (pre mid post : Bool),
+      inv pre ∧ inv post ∧ ¬ inv mid :=
+  ⟨(· = true), true, false, true, rfl, rfl, by decide⟩
+
+/-- A group-move script: plain steps plus a leaving exit. -/
+inductive GAct : Type
+  | step : Nat → GAct
+  | leave : GAct
+  deriving DecidableEq
+
+/-- Execution: `leave` aborts to `none`. -/
+def gexec : List GAct → Nat → Option Nat
+  | [], s => some s
+  | .step k :: rest, s => gexec rest (s + k)
+  | .leave :: _, _ => none
+
+/-- The total step fold, ignoring exits. -/
+def gfold : List GAct → Nat → Nat
+  | [], s => s
+  | .step k :: rest, s => gfold rest (s + k)
+  | .leave :: rest, s => gfold rest s
+
+/-- Part (c): with no intermediate exit in the script (`hNoExit`,
+    established by `U006`), execution never aborts -- it equals the
+    total fold. `hNoExit` is consumed in the `leave` case. -/
+theorem group_move_no_exit (script : List GAct)
+    (hNoExit : GAct.leave ∉ script) (s : Nat) :
+    gexec script s = some (gfold script s) := by
+  induction script generalizing s with
+  | nil => rfl
+  | cons a rest ih =>
+    cases a with
+    | step k =>
+      have hr : GAct.leave ∉ rest :=
+        fun hm => hNoExit (List.mem_cons_of_mem _ hm)
+      show gexec rest (s + k) = some (gfold rest (s + k))
+      exact ih hr _
+    | leave =>
+      have hc : False := hNoExit (List.mem_cons.mpr (Or.inl rfl))
+      exact hc.elim
+
+/-- Witness for `lock_order_no_reentry`: ranks `[0, 1]` ascend, jointly
+    with the NON-DEGENERATE run. -/
+theorem lock_order_no_reentry_zeuge :
+    ([0, 1] : List Nat).Nodup
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hAsc : ([0, 1] : List Nat).Pairwise (· < ·) := by decide
+  exact ⟨lock_order_no_reentry _ hAsc, refB_erreicht, refB_schreibt⟩
+
+/-! ## 8. `entry.abdruck` (entry 89 / clobbers 80 corpus lines).
+
+(1) The generated entry path preserves every register from
+`preserves` (`hPres`: no path write targets a preserved register).
+(2) It writes no register outside `clobbers` (`hClob`: every path
+write targets `clobbers`). (3) The stack switch is NOT an obligation
+but an undefined word -- documented, not stated. Model: an abstract
+register file; the hardware meaning of each register is booked in
+CUTS. -/
+
+/-- Abstract register file. -/
+def regFile : Type := String → Nat
+
+/-- Run an entry path over a register file. -/
+def regRun : List (String × Nat) → regFile → regFile
+  | [], σ => σ
+  | (r, v) :: rest, σ => regRun rest (fun q => if q = r then v else σ q)
+
+/-- Part (1): preserved registers survive the path. -/
+private theorem entry_keeps_aux (P : List String) (path : List (String × Nat))
+    (hPres : ∀ w ∈ path, w.1 ∉ P) (σ : regFile) (r : String)
+    (hr : r ∈ P) : regRun path σ r = σ r := by
+  induction path generalizing σ with
+  | nil => rfl
+  | cons w rest ih =>
+    obtain ⟨a, b⟩ := w
+    have hni : a ∉ P := hPres _ (List.mem_cons.mpr (Or.inl rfl))
+    have hrne : r ≠ a := fun he => hni (he ▸ hr)
+    have hrest : ∀ u ∈ rest, u.1 ∉ P :=
+      fun u hu => hPres u (List.mem_cons_of_mem _ hu)
+    exact (ih hrest _).trans (if_neg hrne)
+
+theorem entry_keeps (path : List (String × Nat)) (P : List String)
+    (hPres : ∀ w ∈ path, w.1 ∉ P) (σ : regFile) (r : String)
+    (hr : r ∈ P) : regRun path σ r = σ r :=
+  entry_keeps_aux P path hPres σ r hr
+
+/-- Part (2): a changed register is in `clobbers`. -/
+private theorem entry_same_aux (C : List String) (path : List (String × Nat))
+    (hClob : ∀ w ∈ path, w.1 ∈ C) (σ : regFile) (r : String)
+    (hrC : r ∉ C) : regRun path σ r = σ r := by
+  induction path generalizing σ with
+  | nil => rfl
+  | cons w rest ih =>
+    obtain ⟨a, b⟩ := w
+    have hmem : a ∈ C := hClob _ (List.mem_cons.mpr (Or.inl rfl))
+    have hrne : r ≠ a := fun he => hrC (he.symm ▸ hmem)
+    have hrest : ∀ u ∈ rest, u.1 ∈ C :=
+      fun u hu => hClob u (List.mem_cons_of_mem _ hu)
+    have step : (fun q => if q = a then b else σ q) r = σ r :=
+      if_neg hrne
+    exact (ih hrest _).trans step
+
+theorem entry_clobbers (path : List (String × Nat)) (C : List String)
+    (hClob : ∀ w ∈ path, w.1 ∈ C) (σ : regFile) (r : String)
+    (h : regRun path σ r ≠ σ r) : r ∈ C := by
+  by_cases hrC : r ∈ C
+  · exact hrC
+  · exact absurd (entry_same_aux C path hClob σ r hrC) h
+
+/-- Witness for the `entry` pair: path `[("t0", 1)]` keeps `"s0"` and
+    changes only `"t0"`, jointly with the NON-DEGENERATE run. -/
+theorem entry_keeps_zeuge :
+    (regRun [("t0", 1)] (fun _ => 0) "s0" = 0 ∧
+      "t0" ∈ (["t0"] : List String))
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hPres : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∉ (["s0"] : List String) := by
+    intro w hw
+    simp at hw
+    simp [hw]
+  have hClob : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∈ (["t0"] : List String) := by
+    intro w hw
+    simp at hw
+    simp [hw]
+  have hkeep := entry_keeps _ ["s0"] hPres (fun _ => 0) "s0" (by decide)
+  have hchange := entry_clobbers _ ["t0"] hClob (fun _ => 0) "t0" (by decide)
+  exact ⟨⟨hkeep, hchange⟩, refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - Skeleton only: `idxGilt` is defined; all 21 soundness lemmas are open.
 -/
