@@ -164,3 +164,11 @@ import Grammatik.CFormenRZeuge
 import Grammatik.CFormenRZeuge2
 import Grammatik.CFormenR2
 import Grammatik.CFormenR2Zeuge
+import Grammatik.SperreSem
+import Grammatik.SperreFuss
+import Grammatik.SperreBeweis
+import Grammatik.SperreMaschine
+import Grammatik.ZielOrtSperre
+import Grammatik.ZielOrtSperreZeuge
+import Grammatik.ZielOrtEinfaden
+import Grammatik.ZielOrtEinfadenZeuge
