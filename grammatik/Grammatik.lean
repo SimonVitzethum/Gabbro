@@ -156,6 +156,7 @@ import Grammatik.ReferenzAR
 import Grammatik.ZeugnisStmt3
 import Grammatik.Parser.Lexer
 import Grammatik.Parser.Ausdruck
+import Grammatik.Parser.Anweisung
 import Grammatik.Parser.AusdruckProben
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge
