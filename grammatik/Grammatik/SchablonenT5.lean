@@ -457,6 +457,129 @@ theorem entry_keeps_zeuge :
   have hchange := entry_clobbers _ ["t0"] hClob (fun _ => 0) "t0" (by decide)
   exact ⟨⟨hkeep, hchange⟩, refB_erreicht, refB_schreibt⟩
 
+/-! ## 9. `transition.transset` (transition: 34 corpus lines).
+
+Several places in ONE move: no intermediate state is observable FOR A
+NAMED OBSERVER (`Obs`: the observer's footprint; `hObs` names the two
+moved places as outside it -- on one core the control flow, on several
+every core that does not hold the move's lock). Without a named
+observer the promise is empty on a multicore. Model: slot states as
+place valuations; the joint move writes both places at once; the trace
+holds exactly the before/after worlds. -/
+
+/-- A joint move writes two places at once. -/
+def jointMove (σ : Nat → Nat) (p1 p2 v1 v2 : Nat) : Nat → Nat :=
+  fun p => if p = p1 then v1 else if p = p2 then v2 else σ p
+
+/-- The trace of the joint move: before and after, no middle. -/
+def jointTrace (σ : Nat → Nat) (p1 p2 v1 v2 : Nat) : List (Nat → Nat) :=
+  [σ, jointMove σ p1 p2 v1 v2]
+
+/-- Soundness of `transition.transset`: the named observer sees no
+    change anywhere in the trace. `hObs` names both moved places as
+    outside the footprint; `hw`/`hq` fix the world and the observed
+    place. All four are consumed. -/
+theorem joint_move_hidden (σ : Nat → Nat) (p1 p2 v1 v2 : Nat)
+    (Obs : List Nat) (hObs : p1 ∉ Obs ∧ p2 ∉ Obs)
+    (w : Nat → Nat) (hw : w ∈ jointTrace σ p1 p2 v1 v2)
+    (q : Nat) (hq : q ∈ Obs) : w q = σ q := by
+  have h1 : q ≠ p1 := fun he => hObs.1 (he ▸ hq)
+  have h2 : q ≠ p2 := fun he => hObs.2 (he ▸ hq)
+  simp only [jointTrace, List.mem_cons] at hw
+  simp at hw
+  rcases hw with rfl | rfl
+  · rfl
+  · simp only [jointMove, if_neg h1, if_neg h2]
+
+/-- Witness for `joint_move_hidden`: moving places `0`/`1`, observer of
+    place `2` sees nothing, jointly with the NON-DEGENERATE run. -/
+theorem joint_move_hidden_zeuge :
+    ((fun _ => 0) 2 = (fun _ => (0 : Nat)) 2)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hObs : (0 : Nat) ∉ ([2] : List Nat) ∧ 1 ∉ ([2] : List Nat) := by
+    decide
+  have hw : (fun _ => (0 : Nat)) ∈ jointTrace (fun _ => 0) 0 1 7 8 := by
+    simp [jointTrace]
+  have hq : (2 : Nat) ∈ ([2] : List Nat) := by decide
+  exact ⟨joint_move_hidden _ 0 1 7 8 [2] hObs _ hw 2 hq,
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 10. `exchange.rmw` (exchange: 31 corpus lines).
+
+The body of `update(v)` is pure (mechanically, Pass 8 -- in the model
+a body IS a function of the read value, so purity holds by
+construction). The atomicity of the read-modify-write sequence is NOT
+a template obligation but an assumption of the axiom layer. What Lean
+checks is the serial content: an RMW chain applies innermost first --
+the fold direction is fixed, no interleaving inside. -/
+
+/-- An RMW chain: each body sees the previous write. -/
+def runRmw : List (Nat → Nat) → Nat → Nat
+  | [], σ => σ
+  | f :: rest, σ => runRmw rest (f σ)
+
+/-- Soundness core of `exchange.rmw`: the chain equals the left fold --
+    bodies apply innermost first, deterministically. -/
+theorem rmw_chain_order (fs : List (Nat → Nat)) (σ : Nat) :
+    runRmw fs σ = fs.foldl (fun s f => f s) σ := by
+  induction fs generalizing σ with
+  | nil => rfl
+  | cons f rest ih =>
+    show runRmw rest (f σ) = rest.foldl (fun s g => g s) (f σ)
+    exact ih _
+
+/-- Witness for `rmw_chain_order`: `[+1, *2]` from `5` gives `12`,
+    jointly with the NON-DEGENERATE run. -/
+theorem rmw_chain_order_zeuge :
+    (runRmw [(· + 1), (· * 2)] 5 = 12)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hchain := rmw_chain_order [(· + 1), (· * 2)] 5
+  have hval : ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl (fun s f => f s) 5 = 12 := by
+    decide
+  exact ⟨hchain.trans hval, refB_erreicht, refB_schreibt⟩
+
+/-! ## 11. `accumulates.monoid` (accumulates: 23 corpus lines).
+
+The merge set is a commutative monoid (mechanically checkable: the
+closed `MergeOp` vocabulary over integral types). What Lean checks is
+the order-independence core (`faltung_ist_reihenfolgeunabhaengig`):
+under associativity (`hassoc`) and commutativity (`hcomm`) the fold
+does not see adjacent swaps -- hence no interleaving. The quiescent
+point (`am_ruhepunkt_gleich_dem_atomaren_rmw`) and the per-operator
+units (`min` starts at the type maximum) are booked in CUTS. -/
+
+/-- Soundness core of `accumulates.monoid`: adjacent swaps leave the
+    fold unchanged. `hassoc`/`hcomm` are both consumed. -/
+theorem merge_swap_invariant (op : Nat → Nat → Nat)
+    (hassoc : ∀ a b c, op (op a b) c = op a (op b c))
+    (hcomm : ∀ a b, op a b = op b a)
+    (xs ys : List Nat) (a b s : Nat) :
+    (xs ++ [a, b] ++ ys).foldl (fun t x => op t x) s =
+    (xs ++ [b, a] ++ ys).foldl (fun t x => op t x) s := by
+  have key : ∀ t, op (op t a) b = op (op t b) a := by
+    intro t
+    rw [hassoc, hcomm a b, ← hassoc]
+  simp only [List.foldl_append]
+  have h2 : ([a, b] : List Nat).foldl (fun t x => op t x)
+        (xs.foldl (fun t x => op t x) s) =
+      ([b, a] : List Nat).foldl (fun t x => op t x)
+        (xs.foldl (fun t x => op t x) s) :=
+    key _
+  rw [h2]
+
+/-- Witness for `merge_swap_invariant`: addition folds `[1, 2]` and
+    `[2, 1]` to the same value, jointly with the NON-DEGENERATE run. -/
+theorem merge_swap_invariant_zeuge :
+    (([1, 2] : List Nat).foldl (fun t x => t + x) 0 =
+      ([2, 1] : List Nat).foldl (fun t x => t + x) 0)
+    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have h := merge_swap_invariant (· + ·) Nat.add_assoc Nat.add_comm
+    ([] : List Nat) [] 1 2 0
+  exact ⟨h, refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - Skeleton only: `idxGilt` is defined; all 21 soundness lemmas are open.
 -/
