@@ -60,6 +60,41 @@ theorem varOf_varIdx {Γ : Ctx} {lo hi : Int} (x : Var Γ (.int lo hi)) :
     varOf Γ (varIdx x) = some ⟨lo, hi, x⟩ := by
   simp [varOf, varOfAll_varIdx x]
 
+/-- The rebuilt variable reads back through the range table: `varOfAll`
+    at int type IS the `ctxTyp` lookup. Every premise is used (`Γ` by
+    induction, `k`/`x` by casing, `h` by rewriting/injection). -/
+theorem varOfAll_ctxTyp {Γ : Ctx} {k : Nat} {lo hi : Int} {x : Var Γ (.int lo hi)}
+    (h : varOfAll Γ k = some ⟨.int lo hi, x⟩) : ctxTyp Γ k = some (lo, hi) := by
+  revert k x h
+  induction Γ with
+  | nil =>
+    intro k x h
+    cases k <;> simp [varOfAll] at h
+  | cons τ Γ ih =>
+    intro k x h
+    cases k with
+    | zero =>
+      simp only [varOfAll, Option.some.injEq, Sigma.mk.injEq] at h
+      obtain ⟨hτ, -⟩ := h
+      subst hτ
+      rfl
+    | succ k =>
+      simp only [varOfAll] at h
+      cases hsub : varOfAll Γ k with
+      | none => simp [hsub] at h
+      | some w =>
+        obtain ⟨τw, xw⟩ := w
+        simp only [hsub, Option.some.injEq, Sigma.mk.injEq] at h
+        obtain ⟨hτw, -⟩ := h
+        cases hτw
+        have hsub' : varOfAll Γ k = some ⟨.int lo hi, xw⟩ := hsub
+        have ihr := ih hsub'
+        simp only [ctxTyp]
+        exact ihr
+
+/- Term identity at int type is stated after `print_elab_all` below
+   (Lean processes top to bottom), as `print_elab`. -/
+
 /-- The Lean-side printer: from a CHECKED (typed) term to its certificate.
     Proof fields are forgotten (they are recomputed by `elabInt`); shapes
     with no `CertExpr` print (`durch`, `altGlob`, `altSlot`, `leseBytes`,
