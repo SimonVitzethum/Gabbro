@@ -638,5 +638,92 @@ theorem t30 : beqTopTief (parseTopTief tt30)
 -- The `invariant` member shape is beispiele/01-tabelle.gab (the
 -- header row); the `aussage` is synthetic and quantifier-free --
 -- quantified predicates ride no `SExpr` shape (see CUTS).
+def tt31 : List Token :=
+  [.wort "atomic", .ident "fertig", .zeichen ":", .wort "bool",
+   .wort "publishes", .zeichen "{", .ident "bericht",
+   .zeichen "}", .wort "release", .zeichen ";", .ende]
+theorem t31_lex :
+    lex "atomic fertig : bool publishes { bericht } release;" =
+      .ok tt31 := by
+  decide
+theorem t31 : beqTopTief (parseTopTief tt31)
+    (.ok [.atomarT "fertig" (.atom "bool")
+      (.some [.variable "bericht"]) (.some "release") .none]) = true := by
+  decide
+-- beispiele/11-grammatikbefunde.gab:13. Rust: `Atomic` with a
+-- payload and an ordering -- same shape.
+def tt32 : List Token :=
+  [.wort "atomic", .ident "AVAIL_IDX", .zeichen ":", .wort "u32",
+   .wort "release", .wort "observed", .wort "by",
+   .ident "karte_liest_nach_dem_index", .zeichen ";", .ende]
+theorem t32_lex :
+    lex "atomic AVAIL_IDX : u32 release observed by karte_liest_nach_dem_index;" =
+      .ok tt32 := by
+  decide
+theorem t32 : beqTopTief (parseTopTief tt32)
+    (.ok [.atomarT "AVAIL_IDX" (.atom "u32") .none (.some "release")
+      (.some "karte_liest_nach_dem_index")]) = true := by
+  decide
+-- beispiele/41-handschlag.gab:49. Rust: `Atomic` with an
+-- `observed by` assumption -- same shape.
+def tt33 : List Token :=
+  [.wort "rcu", .ident "BACCT", .wort "protects", .zeichen "{",
+   .ident "Konten", .zeichen "}", .wort "reclaims", .ident "frei",
+   .zeichen ";", .ende]
+theorem t33_lex :
+    lex "rcu BACCT protects { Konten } reclaims frei;" = .ok tt33 := by
+  decide
+theorem t33 : beqTopTief (parseTopTief tt33)
+    (.ok [.rcuT "BACCT" [.variable "Konten"]
+      (.some (.variable "frei"))]) = true := by
+  decide
+-- beispiele/31-rcu.gab:24. Rust: `Rcu` with a reclaim site --
+-- same shape.
+def tt34 : List Token :=
+  [.wort "group", .ident "Zustellung", .wort "over", .zeichen "{",
+   .ident "Endpunkte", .zeichen ",", .ident "Faeden",
+   .zeichen "}", .zeichen "{", .wort "invariant",
+   .ident "wartende_haben_grund", .wort "cost", .ident "O",
+   .zeichen "(", .ident "n", .zeichen ")", .wort "runs",
+   .wort "offline", .zeichen ":", .ident "Faeden",
+   .zeichen ".", .wort "slots", .zeichen "[",
+   .ident "wartende", .zeichen "]", .zeichen ".",
+   .ident "gruende", .zeichen ">", .zahl 0, .zeichen ";",
+   .zeichen "}", .ende]
+theorem t34_lex :
+    lex "group Zustellung over { Endpunkte, Faeden } { invariant wartende_haben_grund cost O(n) runs offline : Faeden.slots[wartende].gruende > 0; }" =
+      .ok tt34 := by
+  decide
+theorem t34 : beqTopTief (parseTopTief tt34)
+    (.ok [.gruppeT "Zustellung" ["Endpunkte", "Faeden"] [{ gname := "wartende_haben_grund", kosten := (.variable "n"), online := false, dabei := .none, aussage := (.bin ">" (.feld (.index (.feld (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
+  decide
+-- The `group` frame is beispiele/17-gruppe-ueber-zwei-sperren.gab:42-47;
+-- the `aussage` is simplified (the corpus body quantifies -- see CUTS).
+def tt35 : List Token :=
+  [.wort "concurrent", .zeichen "{", .ident "read_a",
+   .zeichen ",", .ident "read_c", .zeichen "}", .zeichen ";",
+   .ende]
+theorem t35_lex :
+    lex "concurrent { read_a, read_c };" = .ok tt35 := by
+  decide
+theorem t35 : beqTopTief (parseTopTief tt35)
+    (.ok [.nebenT [["read_a"], ["read_c"]]]) = true := by
+  decide
+-- beispiele/108-disjoint-start-locks.gab (the declared pair).
+-- Rust: `Concurrent` -- same shape.
+def tt36 : List Token :=
+  [.wort "accumulates", .ident "fehlerzahl", .zeichen ":",
+   .wort "u32", .wort "merge", .wort "add", .wort "per",
+   .wort "cpu", .ident "NKERNE", .zeichen ";", .ende]
+theorem t36_lex :
+    lex "accumulates fehlerzahl : u32 merge add per cpu NKERNE;" =
+      .ok tt36 := by
+  decide
+theorem t36 : beqTopTief (parseTopTief tt36)
+    (.ok [.akkumT "fehlerzahl" (.atom "u32") "add"
+      (.some (.variable "NKERNE"))]) = true := by
+  decide
+-- beispiele/23-akkumulatoren.gab:45. Rust: `Accumulates` with a
+-- cell count -- same shape.
 
 end Gabbro.Grammatik.Parser

@@ -1427,17 +1427,25 @@ def parseTraegerListe (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r => match r with
       | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match parseTraeger r with
+      | _ => match parseTraegerFolge f r with
         | .error e => .error e
-        | .ok (c, r1) => match r1 with
-          | .zeichen "," :: r2 => match r2 with
-            | .zeichen "}" :: r3 => .ok ([c], r3)
-            | _ => match parseTraegerListe f r2 with
-              | .error e => .error e
-              | .ok (cs, r') => .ok (c :: cs, r')
-          | _ => match fordereZeichen "}" r1 with
-            | .error e => .error e
-            | .ok r' => .ok ([c], r')
+        | .ok (cs, r') => .ok (cs, r')
+/-- Carriers after the opening `{`. -/
+def parseTraegerFolge (f : Nat) (toks : List Token) :
+    Except String (List (List String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseTraeger toks with
+    | .error e => .error e
+    | .ok (c, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
+        | .zeichen "}" :: r3 => .ok ([c], r3)
+        | _ => match parseTraegerFolge f r2 with
+          | .error e => .error e
+          | .ok (cs, r') => .ok (c :: cs, r')
+      | _ => match fordereZeichen "}" r1 with
+        | .error e => .error e
+        | .ok r' => .ok ([c], r')
 def parseTraeger : List Token → Except String (List String × List Token)
   | toks => match nimmName toks with
     | .error e => .error e
@@ -1675,12 +1683,20 @@ def parseRegBindListe (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r => match r with
       | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match parseRegBind r with
+      | _ => match parseRegBindFolge f r with
         | .error e => .error e
-        | .ok (b, r1) => match r1 with
-          | .zeichen "," :: r2 => match r2 with
+        | .ok (bs, r') => .ok (bs, r')
+/-- Register bindings after the opening `{`. -/
+def parseRegBindFolge (f : Nat) (toks : List Token) :
+    Except String (List SRegBind × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseRegBind toks with
+    | .error e => .error e
+    | .ok (b, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
             | .zeichen "}" :: r3 => .ok ([b], r3)
-            | _ => match parseRegBindListe f r2 with
+            | _ => match parseRegBindFolge f r2 with
               | .error e => .error e
               | .ok (bs, r') => .ok (b :: bs, r')
           | _ => match fordereZeichen "}" r1 with
@@ -1706,17 +1722,25 @@ def parsePfadListe (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r => match r with
       | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match nimmPfad r with
+      | _ => match parsePfadFolge f r with
         | .error e => .error e
-        | .ok (p, r1) => match r1 with
-          | .zeichen "," :: r2 => match r2 with
-            | .zeichen "}" :: r3 => .ok ([p], r3)
-            | _ => match parsePfadListe f r2 with
-              | .error e => .error e
-              | .ok (ps, r') => .ok (p :: ps, r')
-          | _ => match fordereZeichen "}" r1 with
-            | .error e => .error e
-            | .ok r' => .ok ([p], r')
+        | .ok (ps, r') => .ok (ps, r')
+/-- Paths after the opening `{`. -/
+def parsePfadFolge (f : Nat) (toks : List Token) :
+    Except String (List (List String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmPfad toks with
+    | .error e => .error e
+    | .ok (p, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
+        | .zeichen "}" :: r3 => .ok ([p], r3)
+        | _ => match parsePfadFolge f r2 with
+          | .error e => .error e
+          | .ok (ps, r') => .ok (p :: ps, r')
+      | _ => match fordereZeichen "}" r1 with
+        | .error e => .error e
+        | .ok r' => .ok ([p], r')
 /-- One boot step: `step f(args) ;` or `step n = e ;`. -/
 def parseBootSchritt (f : Nat) (toks : List Token) :
     Except String (SBootSchritt × List Token) :=
@@ -2774,10 +2798,8 @@ def parseWegTief (f : Nat) (toks : List Token) :
                                     | .error e => .error e
                                     | .ok r17 => match parseOr f r17 with
                                       | .error e => .error e
-                                      | .ok (lf, r18) =>
-                                        match fordereZeichen "," r18 with
-                                        | .error e => .error e
-                                        | .ok r19 =>
+                                      | .ok (lf, r18) => match r18 with
+                                        | .zeichen "," :: r19 =>
                                           match parseGruppenInvListe f r19 with
                                           | .error e => .error e
                                           | .ok (ivs, r20) =>
@@ -2789,6 +2811,15 @@ def parseWegTief (f : Nat) (toks : List Token) :
                                                  runterName := dn,
                                                  runterWann := dp, blatt := lf,
                                                  invarianten := ivs } : SWeg), r)
+                                        | _ =>
+                                          match fordereZeichen "}" r18 with
+                                          | .error e => .error e
+                                          | .ok r => .ok (.wegT
+                                            ({ wname := n, stufen := lv,
+                                               knoten := kn,
+                                               runterName := dn,
+                                               runterWann := dp, blatt := lf,
+                                               invarianten := [] } : SWeg), r)
 /-- `entry n [vector e] [via m] arch a { regs … dispatch … }`. -/
 def parseEingangTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
