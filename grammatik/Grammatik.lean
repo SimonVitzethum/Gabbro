@@ -172,3 +172,4 @@ import Grammatik.ZielOrtSperre
 import Grammatik.ZielOrtSperreZeuge
 import Grammatik.ZielOrtEinfaden
 import Grammatik.ZielOrtEinfadenZeuge
+import Grammatik.HelferZeuge

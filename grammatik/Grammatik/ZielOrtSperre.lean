@@ -1316,6 +1316,28 @@ theorem ziel_ort_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
     fun t => fadenS_prueft hO hRL hQ hS hSstart hK hFS t (hI.1.1 t)
   exact ⟨fun t ev hev => hI.1.2 t ev hev, hI.2, hP, fun t hH hA => schritt_an_pruefung t (hP t) hH hA⟩
 
+/-- **Progress at every check, UNCONDITIONALLY** (held-set relaxation,
+    2026-09-13): the rules of G now demand `HeldIn` of the head's holdings,
+    which holds on every reachable machine (`rufG_haelt_statisch`), so the
+    `HeldGenau` hypothesis of the progress conjunct of `ziel_ort_sperre` is
+    no longer needed: on every reachable machine a thread standing at a
+    `logik` check can step. -/
+theorem ziel_ort_sperre_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      ∀ t : Faden, AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
+  intro M hr t hA
+  have hZ := ziel_ort_sperre P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK
+    hStart hSstart hex M hr
+  exact schritt_an_pruefungI t (hZ.2.2.1 t)
+    (fun L hL => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL) hA
+
 /-- **A start without signature locks is exclusive**: when every thread's
     root takes its locks in `locks` blocks (holds none by signature),
     `StartExklusiv` holds for ANY assignment -- the same routine may run on
@@ -1382,11 +1404,13 @@ theorem ziel_ort_ganz_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) 
     frame already holds (no other thread can have changed it; the class is
     conservative, the user proves slightly more than needed for nested
     locks).
-  - The held-set EQUALITY of `RufPasst.hh` is unchanged: a callee's
-    signature locks are exactly the caller's held locks (verdict note T).
-    Relaxing it to an inclusion needs G's `HeldGenau` side condition (an
-    equality on every reading rule) and the rank discipline across calls
-    to change first; not done.
+  - Held-set relaxation (2026-09-13, verdict note T): `RufPasst.hh` is now
+    an inclusion (the callee's signature locks are among the caller's held
+    locks), with lock floors (`Signatur.boden`, `RufPasst.hx`/`hb`) for the
+    rank discipline across calls; G's side condition is `HeldIn`. The
+    theorem above needed no change; `ziel_ort_sperre_fortschritt` drops the
+    `HeldGenau` hypothesis of the progress conjunct. Witness: `helfer_zeuge`
+    (`HelferZeuge.lean`).
   - A carrier read from only ONE thread still needs a guard, a signature
     lock or no writer (`sicher`); a concurrency-aware exemption needs the
     call graph of each thread, which no invariant of G carries yet.
@@ -1401,6 +1425,7 @@ theorem ziel_ort_ganz_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) 
 #print axioms Gabbro.Grammatik.akteurS
 #print axioms Gabbro.Grammatik.zielInvS_erreichbar
 #print axioms Gabbro.Grammatik.ziel_ort_sperre
+#print axioms Gabbro.Grammatik.ziel_ort_sperre_fortschritt
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_aus_sperre
 
 end Gabbro.Grammatik

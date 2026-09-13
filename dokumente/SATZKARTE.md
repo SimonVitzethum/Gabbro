@@ -1123,7 +1123,7 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   routine may run on every thread -- the two-writer witness does exactly
   that. `audit_same_lock_start_excluded` stays true and now only says: two
   threads cannot both START inside a lock.
-- **Held-set equality `RufPasst.hh` (open, named).** Relaxing it to "the
+- **Held-set equality `RufPasst.hh` (CLOSED in §15.1).** Relaxing it to "the
   callee's signature locks are among the caller's held locks" (what the
   checker accepts, verdict note T) is NOT done: every reading rule of G
   demands `HeldGenau` (static holdings EQUAL held locks), so a callee whose
@@ -1203,5 +1203,75 @@ in the class is the identity, `havocOk_leer`, and the semantics is
 
 No `sorryAx`, no new `axiom`, no `native_decide`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §§1-10 history above.)
+## 15. The remaining model gaps (2026-09-13)
+
+`ziel_ort_sperre` stays THE goal theorem (statement of §14.2, unchanged).
+This section records the model repairs after §14: the held set (§15.1),
+`retry` (§15.2), `leave`/`next` in an `else` block (§15.3), table invariants
+(§15.4); §15.5 is the updated premise table, §15.6 what remains.
+
+### 15.1 Held set: `RufPasst.hh` is an inclusion (verdict note T)
+
+*The finding.* The model demanded that a callee's `requires Held` set EQUAL
+the caller's held set. The checker accepts a helper called both inside
+`locks L { … }` and from a lock-free function; that program had no
+`Programm D` term (`hilfe_alt_untypbar`, `HelferZeuge.lean`: no held set fits
+both call sites).
+
+*The repair.*
+
+- `RufPasst.hh` (`Syntax.lean`): every lock the callee requires is held by
+  the caller (`⊆`). The caller's EXTRA locks stay held for the whole callee
+  frame; the callee does not name them, and G never lets it release or
+  re-take them (release only through its own `frei` markers; `dannLocks`
+  demands the lock is not held, `hself`).
+- **Lock floors** keep the rank discipline across calls (the checker's
+  interprocedural `H006`/`H003` walk). `Signatur.boden : Option Int`
+  (default `none`, mirrored in `Vertrag.boden`): with `some c` the body takes
+  only locks of rank at least `c` (`StufenOk P`, via `Stmt.ueberBoden`;
+  decidable per program, trivial without floors: `stufenOk_ohne`).
+  `RufPasst.hx`: every extra lock ranks below the callee's floor;
+  `RufPasst.hb`: the caller's floor is at most the callee's. Without floors
+  the relaxation would make the Satz FALSE: a callee could re-take an extra
+  lock of its caller (a `nimmt` event that is not good). The floor is data
+  the translation computes from the call graph, not a user clause.
+- **The Satz** (`Satz.lean`): `HeldB b Λ h` (static holdings held, every
+  other held lock below the floor `b`; `HeldB none` is `HeldGenau`,
+  `heldB_none_iff`). `stmt_gutB`/`block_gutB`/`end_gutB` over `HeldB` and
+  the floor premise; `stmt_gut`/`block_gut`/`end_gut` keep their statements
+  (the exact held set); `GutR` is over `HeldB`; `rufAt_gut`, `exec_gut`,
+  `exec_rahmen`, `exec_spur` (and `ziel_rahmen`, `ziel_spur`,
+  `ziel_brav_aus_exec`, `rahmen_aus_exec`, `MaschinenFaden.spawn`) take
+  `StufenOk P`.
+- **Machine G** (`RufMaschineG.lean`): every side condition `HeldGenau Λ
+  (offen spur)` (about forty rules) became `HeldIn Λ (offen spur)` -- a
+  callee frame runs under its caller's extra locks. Leaves use
+  `Stmt.gut_blatt` (frame and trace of a leaf under `HeldIn`).
+- **The thread invariant** (`RufHaeltG.lean`): every frame's holdings are
+  held, and no release marker releases a lock a lower frame names
+  (`FreiLinks`); the old link `KetteLinks` (which was `RufPasst.hh` read
+  backwards) is gone. `rufG_haelt_statisch`, `rufG_haelt_signatur`
+  unchanged.
+- **Adequacy** (`RufAdaequatRufG.lean`): the simulation carries `HeldB` at
+  the frame's floor, `StmtR.locks` carries the floor condition,
+  `heldB_eintritt` at a call; `rufG_adaequat_ruf` keeps its statement.
+  `w_locksB` (`RufAdaequatG.lean`): `locks` under a floor. The call-free
+  adequacy (`RufAdaequatG.lean`), `RufUmkehrRufG`, the race-freedom chain
+  (`RennfreiG`, `RennfreiVoll`), `KostenG` and every witness carry over.
+- **Progress without the `HeldGenau` hypothesis**
+  (`ziel_ort_sperre_fortschritt`, `ZielOrtSperre.lean`): the rules demand
+  `HeldIn`, which holds on every reachable machine, so §13.5 item 5 is
+  closed: on every reachable machine a thread at a `logik` check can step.
+  Witness `ziel_ort_sperre_fortschritt_zeuge`.
+
+*The witness* (`HelferZeuge.lean`). `helfer(x) ensures result == x` (floor
+`1`), `frei() = helfer(3)`, `setze() = locks L { helfer(5) }` (`L` rank 0);
+thread 0 runs `setze`, the others `frei`. `ntP_zertifiziert`: every premise
+of `ziel_ort_sperre`. `helfer_zeuge`: on a reached seven-step run thread 0
+calls `helfer(5)` holding `L` (a frame with EMPTY static holdings while its
+thread holds `L`) and thread 1 calls `helfer(3)` holding nothing; both
+logged returns meet `result == x` (values `5` and `3`) BY THE THEOREM.
+`ntStufen`: the floors are respected.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
 

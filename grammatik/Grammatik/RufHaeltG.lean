@@ -14,13 +14,18 @@
   through a release marker the head names (`offen_schrittG`,
   `ZielOrt.lean`).
 
-  The inductive invariant (`HaeltInvG`) has three parts: the head's static
-  holdings are held; along every frame's residue chain each node names the
-  frame's signature locks and each release marker `frei L k` releases a lock
-  the holdings of `k` do not name (`GRest.kette`); a suspended frame names
-  no lock beyond the signature locks of the frame above it (`KetteLinks`,
-  from `RufPasst.hh` at the push). Only `GutO` is assumed (the oracle keeps
-  the held locks, for `axiomCall` leaves and `bindAxiom`).
+  The inductive invariant (`HaeltInvG`) has three parts: every frame's
+  static holdings are held; along every frame's residue chain each node
+  names the frame's signature locks and each release marker `frei L k`
+  releases a lock the holdings of `k` do not name (`GRest.kette`); no
+  release marker of a frame releases a lock a frame BELOW it names
+  (`FreiLinks` -- the lock was taken while that frame was suspended and its
+  holdings held, and `dannLocks` demands the lock is not held). Since the
+  held-set relaxation (2026-09-13) a suspended caller may hold locks its
+  callee does not name, so the old link (`KetteLinks`: a suspended frame
+  names nothing beyond the signature locks of the frame above it) is gone.
+  Only `GutO` is assumed (the oracle keeps the held locks, for `axiomCall`
+  leaves and `bindAxiom`).
 -/
 import Grammatik.RufMaschineG
 
@@ -943,9 +948,11 @@ theorem rufG_haelt_signatur {P : Programm D} {O : Orakel D} {passes : Nat} (hO :
 
   What is NOT proved here: exclusivity of held locks across threads needs
   a fact about the start assignment (`StartExklusiv`) and is in
-  `ZielOrt.lean` (`exklusivG`); exactness of the head's holdings
-  (`HeldGenau`, not only `⊆`) is a premise of the rules, not proved as an
-  invariant (it is not needed: every rule that uses it demands it).
+  `ZielOrt.lean` (`exklusivG`). The rules of G demand `HeldIn` of the
+  head's holdings -- exactly the first part of this invariant -- so the
+  side condition holds on every reachable machine; `HeldGenau` (equality)
+  is not an invariant any more: a callee runs under its caller's extra
+  locks.
 -/
 
 #print axioms Gabbro.Grammatik.rufSchrittG_haeltInv
