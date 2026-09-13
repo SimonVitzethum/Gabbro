@@ -147,5 +147,6 @@ import Grammatik.CFormenM
 import Grammatik.CFormenZeuge
 import Grammatik.CFormenH
 import Grammatik.CFormenDet
+import Grammatik.ErhaltungT4
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
