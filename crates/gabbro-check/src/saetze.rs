@@ -2734,7 +2734,7 @@ pub const WIRKUNGEN: &[Satz] = &[
                     Candidates behind a pointer are the address-taken functions, else \
                     every function of the unit.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/915-919 (one leg each, guarded twins pass); \
+        gemessen_an: "beispiele/gift/930, 916-919 (one leg each, guarded twins pass); \
                       beispiele/110-111 (guarded and admitted shapes, fully silent). \
                       15 of 89 older examples fire -- the strictness finding, not new \
                       noise: readers over written carriers with no lock in the unit.",

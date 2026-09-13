@@ -3289,12 +3289,12 @@ MARKE_EMIT_X=0
 # Same 8 lane 120 enumerated on the merged tree; MUSE-REPORT-107 already measured
 # 8 at its base. None is this resolution's: the merged lanes' new gifts (860-864,
 # 895-899) all fall at the checker and emit nothing.
-# **8 -> 12 on 2026-09-13 (lane 138, measured).** `+4` are 915, 916, 918, 919:
+# **8 -> 12 on 2026-09-13 (lane 138, measured).** `+4` are 930 (then 915), 916, 918, 919:
 # hint-level footprint poison (E245/E246/E248/E249) -- hints never blocked
 # emission, so emitting is by design and not a slip; all four compile under
 # `cc -Werror -fsyntax-only`. 917 falls at the checker (H007 beside E247) and
 # emits nothing, like the error-level gifts before it.
-MARKE_EMIT_G=12     # 286, 414, 689, 718, 719, 727, 758, 777 + 915, 916, 918, 919 -- measured, see above
+MARKE_EMIT_G=12     # 286, 414, 689, 718, 719, 727, 758, 777 + 916, 918, 919, 930 -- measured, see above
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei

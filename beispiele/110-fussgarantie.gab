@@ -1,7 +1,7 @@
 -- 110 -- **The guarded footprint: every written carrier a contract, a body or a
 -- callee contract reads is held by signature.**
 --
--- The positive shape beside `gift/915`…`918`: `zaehler` is written, read in a
+-- The positive shape beside `gift/930` and `916`…`918`: `zaehler` is written, read in a
 -- contract (`lies`), read in a body (`lies`, `lies_doppelt`) and inherited through a
 -- call (`lies_doppelt` over `lies`) -- and every one of those functions holds the
 -- guard `ZAEHLER` by signature, so E245 through E248 all stay silent. `erhoehe` takes

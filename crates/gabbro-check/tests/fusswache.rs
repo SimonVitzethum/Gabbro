@@ -1,6 +1,6 @@
 //! **The footprint guard (E245-E249) over snippets.**
 //!
-//! The hint-level twin of `vertragsfuss.rs`: `beispiele/gift/915-919` pin the fall
+//! The hint-level twin of `vertragsfuss.rs`: `beispiele/gift/930` and `916-919` pin the fall
 //! over files, what stands here pins it over snippets -- each leg fires with cover
 //! but without guard, and stays silent under `requires Held`. Hints, not errors:
 //! the strict premise refuses ordinary single-threaded programs, so the rule flags
