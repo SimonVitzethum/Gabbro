@@ -1360,6 +1360,9 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
             It says what it rests on --\n\x20  and every line of that is a place somebody \
             can look at.\n",
     );
+    // **Statement certificates from Rust (lane 153).** One `CertEnd2` term per
+    // block body where the fragment reaches, a named refusal where it does not.
+    aus.push_str(&crate::certstmt::zeige(baum));
     aus
 }
 
