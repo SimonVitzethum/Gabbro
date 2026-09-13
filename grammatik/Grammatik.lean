@@ -149,3 +149,4 @@ import Grammatik.CFormenH
 import Grammatik.CFormenDet
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge
+import Grammatik.CFormenR
