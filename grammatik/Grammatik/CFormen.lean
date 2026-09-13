@@ -1111,10 +1111,11 @@ CUTS: what this file does not do, by name.
   evaluation unspecified (6.5p3), which is observable only through two
   observing subexpressions (volatile or atomic loads) in one full
   expression; the model does not check that there is at most one.
-- NO DETERMINISM THEOREM for `Exec`: it is deterministic given `CR`, `XR`
-  and the device oracle (every rule's premises fix the outcome), but that
-  is not proved; the correspondence lemmas therefore say "the C statement
-  has a run that …", not "every run".
+- DETERMINISM of `Exec` is proved in `CFormenDet.lean` (`exec_det`, given
+  functional call meanings; `callAt_funktional` for the unit's own
+  calls), so the correspondence lemmas' "the C statement has a run that
+  …" is "every run" (`stmtCorr_jeder`); a foreign call's functionality
+  stays an assumption.
 - CALLS IN EXPRESSIONS are not a form: `CX` has no call node. The
   emitter's pure helpers (`_gabbro_sat_*`, the byte readers `gabbro_le32`
   …, the bank and format accessors) are proved as functions of their

@@ -22,7 +22,8 @@
   A C form CORRESPONDS to a Gabbro form when from related states the C
   form has a run that ends related to the Gabbro outcome (`ExprCorr`,
   `StmtCorr`). The C semantics is deterministic up to its oracles, so
-  "has a run" is "its run" (the CUTS name the missing determinism proof).
+  "has a run" is "its run" (`CFormenDet.lean`: `exec_det`,
+  `stmtCorr_jeder`).
 
   THE FORMS OF THIS PASS (emit.rs shapes, see `CFormen.lean`)
     E1  literal `100`                         Expr.lit            ecorr_lit

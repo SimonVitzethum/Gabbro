@@ -141,3 +141,4 @@ import Grammatik.CFormenI
 import Grammatik.CFormenM
 import Grammatik.CFormenZeuge
 import Grammatik.CFormenH
+import Grammatik.CFormenDet
