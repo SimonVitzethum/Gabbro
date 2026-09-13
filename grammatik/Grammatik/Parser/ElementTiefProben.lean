@@ -885,5 +885,67 @@ theorem t43 : beqTopTief (parseTopTief tt43)
   decide
 -- beispiele/10-geteilte-sperre.gab (the `KAPPEN` reader-writer
 -- lock). Rust: `Lock` with both held bounds -- same shape.
+def tt44 : List Token :=
+  [.wort "lock", .ident "KAPPEN", .wort "protects", .zeichen "{",
+   .ident "eintraege", .zeichen ",", .ident "baum", .zeichen "}",
+   .wort "rank", .zahl 0, .wort "held", .zeichen "<=",
+   .zahl 400, .wort "ops", .wort "masks", .ident "irqs",
+   .zeichen ";", .ende]
+theorem t44_lex :
+    lex "lock KAPPEN protects { eintraege, baum } rank 0 held <= 400 ops masks irqs;" =
+      .ok tt44 := by
+  decide
+theorem t44 : beqTopTief (parseTopTief tt44)
+    (.ok [.sperreT "KAPPEN" [.variable "eintraege", .variable "baum"]
+      (.lit 0) (.some (.lit 400)) .none (.some "irqs")]) = true := by
+  decide
+-- beispiele/01-tabelle.gab:31. Rust: `Lock` with a held bound
+-- and an irq mask -- same shape.
+def tt45 : List Token :=
+  [.wort "device", .ident "D", .wort "at", .wort "mmio",
+   .zeichen "{", .wort "bank", .ident "FRR", .wort "at",
+   .ident "CAP", .zeichen ".", .ident "FRO", .zeichen "*",
+   .zahl 16, .wort "stride", .zahl 16, .wort "count", .zahl 256,
+   .zeichen "{", .wort "reg", .ident "FR_LO", .zeichen ":",
+   .wort "u64", .zeichen "@", .zahl 0, .wort "class", .wort "rw",
+   .wort "reg", .ident "FR_HI", .zeichen ":", .wort "u64",
+   .zeichen "@", .zahl 8, .wort "class", .wort "rw",
+   .zeichen "}", .zeichen "}", .ende]
+theorem t45_lex :
+    lex "device D at mmio { bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR_LO : u64 @0x0 class rw reg FR_HI : u64 @0x8 class rw } }" =
+      .ok tt45 := by
+  decide
+theorem t45 : beqTopTief (parseTopTief tt45)
+    (.ok [.geraetT "D" [] "mmio"
+      [.bankRoh "bank FRR at (CAP.FRO * 16) stride 16 count 256 { reg FR_LO : u64 @ 0 class rw reg FR_HI : u64 @ 8 class rw } "]]) = true := by
+  decide
+-- beispiele/02-geraet.gab:22-25 (the `FRR` bank). Rust: `Device`
+-- with a `Bank` member -- the bank body rides raw (see CUTS).
+def tt46 : List Token :=
+  [.wort "device", .ident "Einheit", .zeichen "(", .ident "basis",
+   .zeichen ":", .ident "Pa", .zeichen ")", .wort "at",
+   .wort "mmio", .zeichen "{", .wort "mirrors", .ident "GCMD",
+   .wort "from", .ident "GSTS", .zeichen ";", .wort "reg",
+   .ident "GCMD", .zeichen ":", .wort "u32", .zeichen "@",
+   .zahl 24, .wort "class", .wort "w", .wort "fields",
+   .zeichen "{", .ident "SRTP", .zeichen "@", .zahl 30,
+   .zeichen ",", .ident "TE", .zeichen "@", .zahl 31,
+   .zeichen ",", .zeichen "}", .wort "transition",
+   .ident "setze_rtp", .zeichen "{", .ident "GCMD", .zeichen ".",
+   .ident "SRTP", .zeichen ":", .zahl 0, .zeichen "->",
+   .zahl 1, .zeichen "}", .wort "requires", .ident "GSTS",
+   .zeichen ".", .ident "TES", .zeichen "==", .zahl 0,
+   .wort "effects", .zeichen "{", .wort "writes", .ident "GCMD",
+   .zeichen "}", .zeichen "}", .ende]
+theorem t46_lex :
+    lex "device Einheit(basis : Pa) at mmio { mirrors GCMD from GSTS; reg GCMD : u32 @0x18 class w fields { SRTP @30, TE @31, } transition setze_rtp { GCMD.SRTP: 0 -> 1 } requires GSTS.TES == 0 effects { writes GCMD } }" =
+      .ok tt46 := by
+  decide
+theorem t46 : beqTopTief (parseTopTief tt46)
+    (.ok [.geraetT "Einheit" [("basis", (.atom "Pa"))] "mmio" [.spiegel (.variable "GCMD") (.variable "GSTS"), .regTief { rname := "GCMD", rtyp := (.atom "u32"), adresse := (.lit 24), klasse := "w", phasen := [], felder := [{ rfname := "SRTP", pos := "30", klasse := .none }, { rfname := "TE", pos := "31", klasse := .none }], voraus := .none, vorausSonst := .none, abhaengt := [] }, .uebergangTief { tname := "setze_rtp", schritte := [((.feld (.variable "GCMD") "SRTP"), (.lit 0), (.lit 1))], voraus := (.some ((.bin "==" ((.feld (.variable "GSTS") "TES")) (.lit 0)))), wirkung := [(.schreibt (.variable "GCMD"))] }]]) = true := by
+  decide
+-- beispiele/20-falle-vier.gab (the `Einheit` device). Rust:
+-- `Device` with `mirrors`, a bit-field register and a guarded
+-- transition -- same shape.
 
 end Gabbro.Grammatik.Parser
