@@ -5415,10 +5415,56 @@ pub struct Routine {
     pub body: Option<String>,
     pub refused: Option<LeanReason>,
     pub params: Vec<(String, Option<Shape>)>,
+    /// The declared ranges of the integer parameters (`RoutineInfo::ranges`) --
+    /// what the checker holds at every call site and what the `_pre` shape
+    /// conjuncts repeat, so the datum carries the exact ranges (lane 141, F4).
+    pub ranges: HashMap<String, (i128, i128)>,
+    /// The locks the signature claims: `locks` effects beside `requires Held`
+    /// witnesses (lane 141, F5 -- the `haelt` half of `refD`'s signatures).
+    pub held: Vec<String>,
     pub pre: Vec<String>,
     pub dropped: Vec<String>,
     pub post: Vec<String>,
     pub post_dropped: Vec<String>,
+}
+
+/// **The locks a signature claims, structurally.** `locks M` effects name the
+/// lock; `requires Held(M)` witnesses name it too. Both are declaration facts
+/// the checker already decided (H007/H011/H020); this only reads them out so
+/// the Lean view carries what `refD`'s `haelt` fields state.
+fn held_of(f: &FnDecl) -> Vec<String> {
+    fn lock_of_ort(o: &Ort) -> String {
+        o.basis.text.clone()
+    }
+    fn held_in_pred(p: &Pred, out: &mut BTreeSet<String>) {
+        match &p.art {
+            PredArt::Held { sperre, .. } => {
+                out.insert(sperre.text.clone());
+            }
+            PredArt::Klammer(q) | PredArt::Nicht(q) => held_in_pred(q, out),
+            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+                held_in_pred(a, out);
+                held_in_pred(b, out);
+            }
+            PredArt::Quantor(q) => held_in_pred(&q.rumpf, out),
+            _ => {}
+        }
+    }
+    let mut out = BTreeSet::new();
+    if let Some(w) = &f.effects {
+        for x in &w.liste {
+            match &x.art {
+                WirkungArt::Sperrt(o) | WirkungArt::SperrtGeteilt(o) => {
+                    out.insert(lock_of_ort(o));
+                }
+                _ => {}
+            }
+        }
+    }
+    for q in &f.requires {
+        held_in_pred(q, &mut out);
+    }
+    out.into_iter().collect()
 }
 
 /// Every routine of the program, in declaration order.
@@ -5442,6 +5488,12 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 body: None,
                 refused: Some(LeanReason::ForeignBody),
                 params,
+                ranges: unit
+                    .routines
+                    .get(&f.name.text)
+                    .map(|r| r.ranges.clone())
+                    .unwrap_or_default(),
+                held: held_of(f),
                 pre: Vec::new(),
                 dropped: Vec::new(),
                 post: Vec::new(),
@@ -5465,18 +5517,34 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
         }
         let mut post = Vec::new();
         let mut post_dropped = Vec::new();
+        // **The `ensures` are carried, with `old` and `result` bound** (lane 141,
+        // F4): the same `Bound` site the duty channel translates them at, with the
+        // locals reset to the parameters like there. A clause no site can say
+        // stays a named drop, not a silent one.
+        c.result_site = ResultSite::Bound;
+        c.locals = f.parameter.iter().map(|p| (p.name.text.clone(), None)).collect();
         for (i, q) in f.ensures.iter().enumerate() {
+            c.olds.clear();
+            c.uses_result = false;
             match pred_term(q, &mut c) {
-                Ok(t) => post.push(t.into_term()),
+                Ok(t) => post.push(clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r")),
                 Err(r) => post_dropped.push(format!("ensures #{} ({})", i + 1, r.tag())),
             }
         }
+        let ranges = unit
+            .routines
+            .get(&f.name.text)
+            .map(|r| r.ranges.clone())
+            .unwrap_or_default();
+        let held = held_of(f);
         match body {
             Ok(t) => out.push(Routine {
                 name: f.name.text.clone(),
                 body: Some(t.into_term()),
                 refused: None,
                 params,
+                ranges,
+                held,
                 pre,
                 dropped,
                 post,
@@ -5487,6 +5555,8 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 body: None,
                 refused: Some(r),
                 params,
+                ranges,
+                held,
                 pre,
                 dropped,
                 post,
@@ -5529,9 +5599,11 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("    and a second register over the same thing is the very class this folder\n");
     s.push_str("    is written against.\n\n");
     s.push_str("    THIS FILE CARRIES NO SPECIFICATION. It carries the PROGRAM: every body\n");
-    s.push_str("    this channel can express, every precondition it can say, and the shape of\n");
-    s.push_str("    every declared place. What is to hold about it is said in Lean, by a\n");
-    s.push_str("    person, in a file this emitter never sees.\n\n");
+    s.push_str("    this channel can express, every contract clause it can say (`requires`\n");
+    s.push_str("    over the entry state, `ensures` over entry, exit and result), the locks\n");
+    s.push_str("    and guards it declares, and the shape of every declared place. What is\n");
+    s.push_str("    to hold about it is said in Lean, by a person, in a file this emitter\n");
+    s.push_str("    never sees.\n\n");
     s.push_str("    The line that has to add up:\n\n");
     s.push_str(&format!(
         "        @program 1  units {}  routines {}  bodies {carried}  refused {refused}  places {}\n",
@@ -5596,6 +5668,132 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         s.push_str(&format!("  {}\n\n", parts.join("\n  ∧ ")));
     }
 
+    // **The exact ranges, beside the shape names** (lane 141, F4). `places`
+    // above says `isInt` where the declaration says `0 .. 100`; the duty
+    // channel keeps the range (`shapeOf` says `.intIn 0 100`), and so does
+    // this list -- `(carrier, field, lo, hi)` for every ranged slot field.
+    // The holding script reads only the first two columns of `places`, so
+    // this list stands beside it instead of replacing it.
+    let ranged: Vec<(String, String, i128, i128)> = dict
+        .iter()
+        .filter_map(|(t, f, sh)| sh.range().map(|(lo, hi)| (t.clone(), f.clone(), lo, hi)))
+        .collect();
+    s.push_str("/-- `(carrier, field, lo, hi)` for every slot field with a declared range. -/\n");
+    s.push_str("def placesRanged : List (String × String × Int × Int) :=\n");
+    if ranged.is_empty() {
+        s.push_str("  []\n\n");
+    } else {
+        s.push_str("  [ ");
+        let items: Vec<String> = ranged
+            .iter()
+            .map(|(t, f, lo, hi)| format!("({}, {}, {}, {})", quoted(t), quoted(f), int_lit(*lo), int_lit(*hi)))
+            .collect();
+        s.push_str(&items.join("\n  , "));
+        s.push_str("\n  ]\n\n");
+    }
+    s.push_str("/-- **The ranged well-formed state** -- that a ranged slot field carries a\n");
+    s.push_str("    value inside its declared bounds. Beside `wellFormed`, which only names\n");
+    s.push_str("    the shape; this one repeats the numbers the checker decided. -/\n");
+    s.push_str("def wellFormedRanged (s : State) : Prop :=\n");
+    if ranged.is_empty() {
+        s.push_str("  True\n\n");
+    } else {
+        let rparts: Vec<String> = ranged
+            .iter()
+            .map(|(t, f, lo, hi)| {
+                format!(
+                    "(∀ k, (s.world (.slot {} k {})).hasShape (.intIn {} {}) = true)",
+                    quoted(t),
+                    quoted(f),
+                    int_lit(*lo),
+                    int_lit(*hi)
+                )
+            })
+            .collect();
+        s.push_str(&format!("  {}\n\n", rparts.join("\n  ∧ ")));
+    }
+
+    // **Locks and guards** (lane 141, F5). The Lean fixture `refD` states them
+    // as declaration facts -- `braucht` (which lock guards the table) and the
+    // signatures' held locks (`haelt`) -- and neither Lean view named a lock
+    // until now. All three lists below are declaration facts the checker
+    // already decided; this only writes them out.
+    let mut lock_names: Vec<String> = Vec::new();
+    let mut lock_protects: Vec<(String, String)> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Lock(l) = &item.art {
+            lock_names.push(l.name.text.clone());
+            for o in &l.schuetzt {
+                lock_protects.push((l.name.text.clone(), o.text()));
+            }
+        }
+    });
+    lock_names.sort();
+    lock_names.dedup();
+    // The resolved guard facts: `(table, field, locks)`. A protected place
+    // resolves where exactly one declared table carries a field of that name
+    // (the same name matching the checker itself uses); anything ambiguous
+    // stays in `lockProtects` above and never vanishes silently.
+    let mut guards: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+    for (lock, text) in &lock_protects {
+        let field = text.rsplit('.').next().unwrap_or(text);
+        let tables: Vec<String> = unit
+            .tables
+            .iter()
+            .filter(|(_, info)| info.fields.iter().any(|(n, _)| n == field))
+            .map(|(t, _)| t.clone())
+            .collect();
+        if tables.len() == 1 {
+            guards
+                .entry((tables[0].clone(), field.to_string()))
+                .or_default()
+                .push(lock.clone());
+        }
+    }
+    s.push_str("/-! ## Locks and guards\n\n");
+    s.push_str("    Which locks the program declares, what each guards as written, and\n");
+    s.push_str("    what each guarded field resolves to -- the `D.braucht` facts of the\n");
+    s.push_str("    model, read off the declarations.\n-/\n\n");
+    s.push_str("/-- Every lock the program declares. -/\n");
+    s.push_str(&format!(
+        "def locks : List String := [{}]\n\n",
+        lock_names.iter().map(|l| quoted(l)).collect::<Vec<_>>().join(", ")
+    ));
+    s.push_str("/-- `(lock, place)` as each `protects` clause writes it. -/\n");
+    s.push_str("def lockProtects : List (String × String) :=\n");
+    if lock_protects.is_empty() {
+        s.push_str("  []\n\n");
+    } else {
+        s.push_str("  [ ");
+        let items: Vec<String> = lock_protects
+            .iter()
+            .map(|(l, p)| format!("({}, {})", quoted(l), quoted(p)))
+            .collect();
+        s.push_str(&items.join("\n  , "));
+        s.push_str("\n  ]\n\n");
+    }
+    s.push_str("/-- `(table, field, locks)` -- the resolved guard facts. Only uniquely\n");
+    s.push_str("    resolving places stand here; the rest stay in `lockProtects`. -/\n");
+    s.push_str("def tableGuards : List (String × String × List String) :=\n");
+    if guards.is_empty() {
+        s.push_str("  []\n\n");
+    } else {
+        s.push_str("  [ ");
+        let mut items: Vec<String> = Vec::new();
+        for ((t, f), mut ls) in guards {
+            ls.sort();
+            ls.dedup();
+            items.push(format!(
+                "({}, {}, [{}])",
+                quoted(&t),
+                quoted(&f),
+                ls.iter().map(|l| quoted(l)).collect::<Vec<_>>().join(", ")
+            ));
+        }
+        s.push_str(&items.join("\n  , "));
+        s.push_str("\n  ]\n\n");
+    }
+
     s.push_str("/-! ## The routines -/\n\n");
     for r in &rs {
         if let Some(reason) = r.refused {
@@ -5617,10 +5815,15 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
             r.name
         ));
         s.push_str(&format!("def {}_pre (s : State) : Prop :=\n", r.name));
+        // **The parameter shapes carry their declared ranges** (lane 141, F4):
+        // the same `hasShape` conjuncts the duty channel writes, so `b` is
+        // promised in `0 .. 10` and an index in `0 .. count`, not merely `isInt`.
         let mut parts: Vec<String> = r
             .params
             .iter()
-            .filter_map(|(n, sh)| sh.map(|sh| format!("{} (s.local' {})", sh.predicate(), quoted(n))))
+            .filter_map(|(n, sh)| {
+                sh.map(|sh| format!("eval s {} = some (.bool true)", shape_conjunct(n, sh, &r.ranges)))
+            })
             .collect();
         for t in &r.pre {
             parts.push(format!("eval s {t} = some (.bool true)"));
@@ -5631,7 +5834,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
             s.push_str(&format!("  {}\n\n", parts.join("\n  ∧ ")));
         }
         s.push_str(&format!(
-            "/-- `{}` -- what it PROMISES: the `ensures` this channel can say. A caller takes\n    a call over this and never over the body.",
+            "/-- `{}` -- what it PROMISES: the `ensures` over the entry state `s`, the\n    exit state `s'` and the result `r` (`old(e)` reads `s`, `result` reads `r`).\n    A caller takes a call over this and never over the body.",
             r.name
         ));
         if !r.post_dropped.is_empty() {
@@ -5641,17 +5844,21 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
             ));
         }
         s.push_str(" -/\n");
-        s.push_str(&format!("def {}_post (s : State) : Prop :=\n", r.name));
+        s.push_str(&format!("def {}_post (s s' : State) (r : Option Value) : Prop :=\n", r.name));
         if r.post.is_empty() {
             s.push_str("  True\n\n");
         } else {
-            let ps: Vec<String> = r
-                .post
-                .iter()
-                .map(|x| format!("eval s {x} = some (.bool true)"))
-                .collect();
-            s.push_str(&format!("  {}\n\n", ps.join("\n  ∧ ")));
+            s.push_str(&format!("  {}\n\n", r.post.join("\n  ∧ ")));
         }
+        s.push_str(&format!(
+            "/-- `{}` -- the locks its signature claims: `locks` effects beside\n    `requires Held` witnesses (the `haelt` half of the model's signatures). -/\n",
+            r.name
+        ));
+        s.push_str(&format!(
+            "def {}_held : List String := [{}]\n\n",
+            r.name,
+            r.held.iter().map(|h| quoted(h)).collect::<Vec<_>>().join(", ")
+        ));
     }
 
     s.push_str("/-! ## Proving something about this program\n\n");

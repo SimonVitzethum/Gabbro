@@ -212,6 +212,19 @@ pub const EINORDNUNG: &[Posten] = &[
                 statement over two carriers, and its lock footprint (`U001`-`U006`) is \
                 recomputed at compile time (W6)",
     },
+    // **Lane 141 (F1 of lane 126): a `concurrent` set declares which bodies may run
+    // together -- like a `group` a statement about the program, checked at translation
+    // time (`nebeneinander.rs`: W001/W002 over the declared pairs), and costs null at
+    // run time: the emitter writes NOTHING for it. Until this entry the census booked
+    // it as UNCLASSIFIED, which failed stage 7 of `pruefe-emission.sh` -- so no
+    // concurrent program could be driven by the emission check.
+    Posten {
+        konstrukt: "concurrent",
+        traegt: Traegt::Geloescht,
+        grund: "declares which bodies may run together -- like a `group` a statement \
+                about the program, checked at translation time (`nebeneinander.rs`), \
+                and costs null at run time: the emitter writes NOTHING for it",
+    },
     Posten {
         konstrukt: "assume / axiom",
         traegt: Traegt::Geloescht,
@@ -695,6 +708,10 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Gruppe(_) => zaehle(&mut e, "group"),
+        // **Lane 141 (F1 of lane 126): the declared thread set.** Like a
+        // `group` a compile-time statement the emitter writes nothing for --
+        // booked through the census above, never through the catch-all below.
+        ItemArt::Concurrent(_) => zaehle(&mut e, "concurrent"),
         // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
         //
         // Sie nennt den ganzen Vertrag, nicht bloss den Namen: *wer das Zeugnis liest, muss
