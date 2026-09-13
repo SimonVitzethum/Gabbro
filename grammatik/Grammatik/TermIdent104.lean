@@ -10,9 +10,9 @@
   checked Lean term `e` with `printInt e = some c` by `rfl`, where `c` is
   written EXACTLY as the Rust printer spells it (verified against the
   `print` arms and unit tests of `certemit.rs`). The first program that
-  works is `beispiele/104-referenz.gab` (`const NKONTO : u32 = 2`, the only
-  `CertExpr` the Rust side emits today: `konst_zertifikate` over
-  `CertExpr::Lit`): `termIdent104_lit`.
+  works is `beispiele/104-referenz.gab` (`const NKONTO : u32 = 2`, witness
+  1 below); the only `CertExpr` the Rust side emits for the corpus today
+  is `CertExpr::Lit` via `konst_zertifikate` (`emit.rs:2909`).
 
   CHECK
     ./lean-probe grammatik/Grammatik/TermIdent104.lean
@@ -25,7 +25,7 @@ namespace Gabbro.Grammatik
 /-- Differential witness 1 (first program that works):
     `beispiele/104-referenz.gab` declares `const NKONTO : u32 = 2`, and the
     only `CertExpr` the Rust side emits for the corpus today is
-    `konst_zertifikate` over `CertExpr::Lit` (`emit.rs:2909`), printing
+    `CertExpr::Lit` via `konst_zertifikate` (`emit.rs:2909`), printing
     `(.lit 2)`. The Lean side prints the checked literal identically. -/
 example : printInt (D := refD) (Γ := []) (Λ := []) (Expr.lit 2)
     = some (CertExpr.lit (D := refD) 2) := rfl
