@@ -11,9 +11,14 @@
   block or a loop cannot advance (see its CUTS). Here the frame residue is
   a `GRest`: an `Endblock` (`ende`), a `Block` followed by a rest (`dann`),
   an environment shrink (`schrumpf`), a lock release marker (`frei`), and
-  bounded-loop states (`trav`/`wieder`/`ewig` with their remaining bound).
-  New steps unfold compounds into that residue; none touches the call log,
-  so fidelity (`rufG_treu`) follows the F proof pattern.
+  bounded-loop states (`trav`/`wieder`/`ewig` with their remaining bound),
+  and the residues of a caller waiting for a bound value (`wartet`, and
+  `wartetSonst`, which keeps the else block of `let x = g(…) else { … }`).
+  New steps unfold compounds into that residue; only pushes and pops touch
+  the call log (`eintritt`, `rueck`, and `grund` for the error channel), so
+  fidelity (`rufG_treu`) follows the F proof pattern. A waiting caller is
+  resumed only by a binding pop: no reachable head waits
+  (`rufG_nie_wartend`).
 -/
 import Grammatik.Maschine
 import Grammatik.VertragOrtB
@@ -67,6 +72,21 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
   | wartet {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
       (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') :
       GRest D V l Γ Λ
+  /-- A caller waiting in `let x = g(…) else { err }`: a normal return binds
+      `x` and runs `rest` (as `wartet`); a reason `r : Fin n` runs `err`
+      with `r` bound. -/
+  | wartetSonst {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (n : Nat)
+      (err : Endblock D V l (.grund n :: Γ) Λ)
+      (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') :
+      GRest D V l Γ Λ
+
+/-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
+    only a BINDING pop may resume it. -/
+def GRest.wartend {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .wartet .. => true
+  | .wartetSonst .. => true
+  | _ => false
 
 /-- One frame: as in F, but the residue is a `GRest`. -/
 structure RufRahmenG (D : Deklaration) where
@@ -76,6 +96,9 @@ structure RufRahmenG (D : Deklaration) where
   rest :
     Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D),
       Env D Γ × GRest D (vertragVon D f) l Γ Λ
+
+/-- The frame waits for a callee's answer. -/
+def RufRahmenG.wartend (r : RufRahmenG D) : Bool := r.rest.2.2.2.2.wartend
 
 structure RufFadenG (D : Deklaration) where
   stapel : List (RufRahmenG D)
@@ -250,7 +273,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (v : ErgVal D (D.erg g))
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (neu : List (Ereignis D))
-      (hneu : s1.spur = neu ++ (M.faeden f).spur) :
+      (hneu : s1.spur = neu ++ (M.faeden f).spur)
+      (hnw : caller.wartend = false) :
       RufSchrittG P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
@@ -1055,7 +1079,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
         ⟨M.speicher,
          rufUpdateG M.faeden f
            ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-              ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩ ::
+              ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩ ::
               (M.faeden f).stapel,
             ⟨g, rho, s0,
              ⟨false, D.params g, Signatur.anfang D (D.signatur g),
@@ -1070,7 +1094,9 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ')
       (ρc : Env D Γ)
-      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
+        ∃ (n : Nat) (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ),
+          caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
       {lr : Bool} (Γc : Ctx) (Λc : List (Res D))
       (e : ErgExpr D Γc Λc (vertragVon D (M.faeden f).kopf.f).erg)
       (hperm : Λc.Perm (vertragVon D (M.faeden f).kopf.f).ende)
@@ -1105,20 +1131,21 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
         (.index (D.count t) :: Γ) Λ Λ)
       (is : List (Wert D (.index (D.count t))))
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
+      {Λx : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true
-        (.index (D.count t) :: Γ) Λ Λ)
+        (.index (D.count t) :: Γ) Λx Λ)
       (i : Wert D (.index (D.count t))) (ρ : Env D Γ)
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, .index (D.count t) :: Γ, Λ, .cons i ρ,
+        ⟨true, .index (D.count t) :: Γ, Λx, .cons i ρ,
          .dann (.cons ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true (.index (D.count t) :: Γ) Λ Λ) rest)
+            true (.index (D.count t) :: Γ) Λx Λx) rest)
            (.travRest t inv body is k)⟩)
       (σ' : World D) (ρ' : Env D (.index (D.count t) :: Γ))
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true (.index (D.count t) :: Γ) Λ Λ) (M.weltVon f)
+            true (.index (D.count t) :: Γ) Λx Λx) (M.weltVon f)
           (.cons i ρ)) =
         Ausgang.leave (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hleave σ' ρ')
@@ -1143,20 +1170,21 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
         (.index (D.count t) :: Γ) Λ Λ)
       (is : List (Wert D (.index (D.count t))))
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
+      {Λx : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true
-        (.index (D.count t) :: Γ) Λ Λ)
+        (.index (D.count t) :: Γ) Λx Λ)
       (i : Wert D (.index (D.count t))) (ρ : Env D Γ)
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, .index (D.count t) :: Γ, Λ, .cons i ρ,
+        ⟨true, .index (D.count t) :: Γ, Λx, .cons i ρ,
          .dann (.cons ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true (.index (D.count t) :: Γ) Λ Λ) rest)
+            true (.index (D.count t) :: Γ) Λx Λx) rest)
            (.travRest t inv body is k)⟩)
       (σ' : World D) (ρ' : Env D (.index (D.count t) :: Γ))
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true (.index (D.count t) :: Γ) Λ Λ) (M.weltVon f)
+            true (.index (D.count t) :: Γ) Λx Λx) (M.weltVon f)
           (.cons i ρ)) =
         Ausgang.next (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hnext σ' ρ')
@@ -1176,19 +1204,20 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (body : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
       (ueber : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ)
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
+      {Λx : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λx Λ)
       (ρ : Env D Γ)
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Λ, ρ,
+        ⟨true, Γ, Λx, ρ,
          .dann (.cons ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) rest)
+            true Γ Λx Λx) rest)
            (.wiederRest n bis body ueber k)⟩)
       (σ' : World D) (ρ' : Env D Γ)
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) (M.weltVon f) ρ) =
+            true Γ Λx Λx) (M.weltVon f) ρ) =
         Ausgang.leave (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hleave σ' ρ')
       (hneu : σ'.spur = neu ++ (M.faeden f).spur)
@@ -1207,19 +1236,20 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (body : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
       (ueber : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ)
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
+      {Λx : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λx Λ)
       (ρ : Env D Γ)
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Λ, ρ,
+        ⟨true, Γ, Λx, ρ,
          .dann (.cons ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) rest)
+            true Γ Λx Λx) rest)
            (.wiederRest n bis body ueber k)⟩)
       (σ' : World D) (ρ' : Env D Γ)
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) (M.weltVon f) ρ) =
+            true Γ Λx Λx) (M.weltVon f) ρ) =
         Ausgang.next (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hnext σ' ρ')
       (hneu : σ'.spur = neu ++ (M.faeden f).spur)
@@ -1237,19 +1267,20 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
       (body : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
+      {Λx : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λx Λ)
       (ρ : Env D Γ)
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Λ, ρ,
+        ⟨true, Γ, Λx, ρ,
          .dann (.cons ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) rest)
+            true Γ Λx Λx) rest)
            (.ewigRest a n inv body k)⟩)
       (σ' : World D) (ρ' : Env D Γ)
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) (M.weltVon f) ρ) =
+            true Γ Λx Λx) (M.weltVon f) ρ) =
         Ausgang.leave (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hleave σ' ρ')
       (hneu : σ'.spur = neu ++ (M.faeden f).spur)
@@ -1267,19 +1298,20 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
       (body : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
+      {Λx : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λx Λ)
       (ρ : Env D Γ)
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Λ, ρ,
+        ⟨true, Γ, Λx, ρ,
          .dann (.cons ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) rest)
+            true Γ Λx Λx) rest)
            (.ewigRest a n inv body k)⟩)
       (σ' : World D) (ρ' : Env D Γ)
       (neu : List (Ereignis D))
       (hstep : (execStmt O passes keinRuf
           ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ Λ Λ) (M.weltVon f) ρ) =
+            true Γ Λx Λx) (M.weltVon f) ρ) =
         Ausgang.next (D := D) (V := vertragVon D (M.faeden f).kopf.f)
           hnext σ' ρ')
       (hneu : σ'.spur = neu ++ (M.faeden f).spur)
@@ -1292,12 +1324,11 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ', .ewig a n inv body k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
-
   | peelDannLeave (M : RufMaschineG D) (f : Faden)
-      (l : Bool) (Γ : Ctx) (Λ : List (Res D))
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
-      (b : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) {Λ1 Λ2 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
+      (b : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ2)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ2)
       (ρ : Env D Γ)
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
@@ -1309,16 +1340,16 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ,
+             ⟨true, Γ, Λ2, ρ,
               .dann (.cons ((.leave hleave) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ2 Λ2) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
   | peelDannNext (M : RufMaschineG D) (f : Faden)
-      (l : Bool) (Γ : Ctx) (Λ : List (Res D))
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
-      (b : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ)
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) {Λ1 Λ2 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
+      (b : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ2)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ2)
       (ρ : Env D Γ)
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
@@ -1330,15 +1361,15 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ,
+             ⟨true, Γ, Λ2, ρ,
               .dann (.cons ((.next hnext) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ2 Λ2) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
   | peelSchrumpfLeave (M : RufMaschineG D) (f : Faden)
-      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ)
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) {Λ1 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ1)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1)
       (ρ : Env D (τ :: Γ))
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
@@ -1350,15 +1381,15 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ.tail,
+             ⟨true, Γ, Λ1, ρ.tail,
               .dann (.cons ((.leave hleave) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
   | peelSchrumpfNext (M : RufMaschineG D) (f : Faden)
-      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ)
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) {Λ1 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ1)
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1)
       (ρ : Env D (τ :: Γ))
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
@@ -1370,53 +1401,51 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ.tail,
+             ⟨true, Γ, Λ1, ρ.tail,
               .dann (.cons ((.next hnext) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
   | peelFreiLeave (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
-      (L : D.Lock)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ
-        (Res.held L :: Λ) (Res.held L :: Λ))
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (L : D.Lock) {Λ1 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ (Res.held L :: Λ1))
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1)
       (ρ : Env D Γ)
       (hleave : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Res.held L :: Λ, ρ,
+        ⟨true, Γ, Λ, ρ,
          .dann (.cons ((.leave hleave) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ (Res.held L :: Λ) (Res.held L :: Λ)) rest) (.frei L k)⟩) :
+            true Γ Λ Λ) rest) (.frei L k)⟩) :
       RufSchrittG P O passes M f
         ⟨M.speicher,
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ,
+             ⟨true, Γ, Λ1, ρ,
               .dann (.cons ((.leave hleave) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
   | peelFreiNext (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
-      (L : D.Lock)
-      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ
-        (Res.held L :: Λ) (Res.held L :: Λ))
-      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ)
+      (L : D.Lock) {Λ1 : List (Res D)}
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ (Res.held L :: Λ1))
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) true Γ Λ1)
       (ρ : Env D Γ)
       (hnext : true = true)
       (hhead : (M.faeden f).kopf.rest =
-        ⟨true, Γ, Res.held L :: Λ, ρ,
+        ⟨true, Γ, Λ, ρ,
          .dann (.cons ((.next hnext) : Stmt D (vertragVon D (M.faeden f).kopf.f)
-            true Γ (Res.held L :: Λ) (Res.held L :: Λ)) rest) (.frei L k)⟩) :
+            true Γ Λ Λ) rest) (.frei L k)⟩) :
       RufSchrittG P O passes M f
         ⟨M.speicher,
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨true, Γ, Λ, ρ,
+             ⟨true, Γ, Λ1, ρ,
               .dann (.cons ((.next hnext) : Stmt D
-                (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ) .nil) k⟩⟩,
+                (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
   | dannRet (M : RufMaschineG D) (f : Faden)
@@ -1439,7 +1468,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (v : ErgVal D (D.erg g))
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (neu : List (Ereignis D))
-      (hneu : s1.spur = neu ++ (M.faeden f).spur) :
+      (hneu : s1.spur = neu ++ (M.faeden f).spur)
+      (hnw : caller.wartend = false) :
       RufSchrittG P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
@@ -1466,7 +1496,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (v : ErgVal D (D.erg g))
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (neu : List (Ereignis D))
-      (hneu : s1.spur = neu ++ (M.faeden f).spur) :
+      (hneu : s1.spur = neu ++ (M.faeden f).spur)
+      (hnw : caller.wartend = false) :
       RufSchrittG P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
@@ -1490,7 +1521,9 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ')
       (ρc : Env D Γ)
-      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
+        ∃ (n : Nat) (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ),
+          caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
       (hΛ : HeldGenau Λk (offen (M.faeden f).spur))
       (s1 : World D)
       (hs1 : s1 = (M.weltVon f).lese Λk e.orte)
@@ -1527,7 +1560,9 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ')
       (ρc : Env D Γ)
-      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
+        ∃ (n : Nat) (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ),
+          caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
       (hΛ : HeldGenau Λk (offen (M.faeden f).spur))
       (s1 : World D)
       (hs1 : s1 = (M.weltVon f).lese Λk e.orte)
@@ -1550,6 +1585,105 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
          M.start⟩
+
+  /- The error channel of `let x = g(…) else { err }`: a callee that answers
+     a reason (`retGrund r`, from `ende`, an `ende` cons head, or a block)
+     pops into its caller waiting in `wartetSonst`, which runs `err` with
+     `r` bound -- exactly `execBlock`'s `.grund σ' r` arm. The pop reads
+     nothing (`execEnd`/`execStmt` of `retGrund` read nothing) and logs
+     `grund`. -/
+  | rueckGrund (M : RufMaschineG D) (f : Faden)
+      {lk : Bool} {Γk : Ctx} {Λk : List (Res D)}
+      (r : Fin (vertragVon D (M.faeden f).kopf.f).gruende)
+      (hperm : Λk.Perm (vertragVon D (M.faeden f).kopf.f).ende)
+      (ρ : Env D Γk)
+      (hhead : (M.faeden f).kopf.rest = ⟨lk, Γk, Λk, ρ, .ende (.retGrund r hperm)⟩)
+      (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+      (hpop : (M.faeden f).stapel = caller :: rst)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
+      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D caller.f) l Γ Λ')
+      (ρc : Env D Γ)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
+      (hΛ : HeldGenau Λk (offen (M.faeden f).spur))
+      (g : D.Fn) (hfg : (M.faeden f).kopf.f = g)
+      (rho : Env D (D.params g)) (hrho : (M.faeden f).kopf.rho = hfg ▸ rho)
+      (s0 : World D) (hs0 : (M.faeden f).kopf.s0 = s0)
+      (rg : Fin (D.gruende g)) (hrg : rg = hfg ▸ r)
+      (hn : D.gruende g = n) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨rst,
+            ⟨caller.f, caller.rho, caller.s0,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+            (M.faeden f).spur,
+            (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
+         M.lauf, M.start⟩
+  | rueckConsGrund (M : RufMaschineG D) (f : Faden)
+      {lk : Bool} {Γk : Ctx} {Λk : List (Res D)}
+      (r : Fin (vertragVon D (M.faeden f).kopf.f).gruende)
+      (hperm : Λk.Perm (vertragVon D (M.faeden f).kopf.f).ende)
+      (restk : Endblock D (vertragVon D (M.faeden f).kopf.f) lk Γk Λk)
+      (ρ : Env D Γk)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨lk, Γk, Λk, ρ, .ende (.cons (.retGrund r hperm) restk)⟩)
+      (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+      (hpop : (M.faeden f).stapel = caller :: rst)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
+      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D caller.f) l Γ Λ')
+      (ρc : Env D Γ)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
+      (hΛ : HeldGenau Λk (offen (M.faeden f).spur))
+      (g : D.Fn) (hfg : (M.faeden f).kopf.f = g)
+      (rho : Env D (D.params g)) (hrho : (M.faeden f).kopf.rho = hfg ▸ rho)
+      (s0 : World D) (hs0 : (M.faeden f).kopf.s0 = s0)
+      (rg : Fin (D.gruende g)) (hrg : rg = hfg ▸ r)
+      (hn : D.gruende g = n) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨rst,
+            ⟨caller.f, caller.rho, caller.s0,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+            (M.faeden f).spur,
+            (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
+         M.lauf, M.start⟩
+  | dannRetGrund (M : RufMaschineG D) (f : Faden)
+      {lk : Bool} {Γk : Ctx} {Λk Λk'' : List (Res D)}
+      (r : Fin (vertragVon D (M.faeden f).kopf.f).gruende)
+      (hperm : Λk.Perm (vertragVon D (M.faeden f).kopf.f).ende)
+      (restk : Block D (vertragVon D (M.faeden f).kopf.f) lk Γk Λk Λk'')
+      (kk : GRest D (vertragVon D (M.faeden f).kopf.f) lk Γk Λk'')
+      (ρ : Env D Γk)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨lk, Γk, Λk, ρ, .dann (.cons (.retGrund r hperm) restk) kk⟩)
+      (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+      (hpop : (M.faeden f).stapel = caller :: rst)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
+      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D caller.f) l Γ Λ')
+      (ρc : Env D Γ)
+      (hcaller : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩)
+      (hΛ : HeldGenau Λk (offen (M.faeden f).spur))
+      (g : D.Fn) (hfg : (M.faeden f).kopf.f = g)
+      (rho : Env D (D.params g)) (hrho : (M.faeden f).kopf.rho = hfg ▸ rho)
+      (s0 : World D) (hs0 : (M.faeden f).kopf.s0 = s0)
+      (rg : Fin (D.gruende g)) (hrg : rg = hfg ▸ r)
+      (hn : D.gruende g = n) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨rst,
+            ⟨caller.f, caller.rho, caller.s0,
+             ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩,
+            (M.faeden f).spur,
+            (RufEreignisF.grund g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
+         M.lauf, M.start⟩
 
   | dannRegLies (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
@@ -1851,6 +1985,13 @@ inductive RufLogPasstG :
       (h : RufLogPasstG (⟨f, rho, s0⟩ :: ks) log) :
       RufLogPasstG ks
         (RufEreignisF.rueck f rho v s0 s1 :: log)
+  | grund (ks : List (Σ f : D.Fn, Env D (D.params f) × World D))
+      (log : List (RufEreignisF D))
+      (f : D.Fn) (rho : Env D (D.params f)) (s0 : World D)
+      (r : Fin (D.gruende f)) (s1 : World D)
+      (h : RufLogPasstG (⟨f, rho, s0⟩ :: ks) log) :
+      RufLogPasstG ks
+        (RufEreignisF.grund f rho r s0 s1 :: log)
 
 /-- A thread state satisfies the invariant: its log matches its key stack. -/
 def RufFadenPasstG (z : RufFadenG D) : Prop :=
@@ -1881,6 +2022,9 @@ theorem rufLogPasstG_mem_eintritt
       · have htailmem := ih hmem
         exact List.mem_cons_of_mem _ htailmem
   | rueck s l f rho s0 vv ss1 htail ih =>
+      have htailmem := ih (List.mem_cons_of_mem _ hmem)
+      exact List.mem_cons_of_mem _ htailmem
+  | grund s l f rho s0 rr ss1 htail ih =>
       have htailmem := ih (List.mem_cons_of_mem _ hmem)
       exact List.mem_cons_of_mem _ htailmem
 
@@ -1922,6 +2066,14 @@ theorem rufLogPasstG_gedeckt
             ⟨f, rho, s0⟩ ks rfl
         rw [List.mem_cons]
         exact Or.inr hmem
+      · have hmem := ih g rho' w s0' s1' hm
+        rw [List.mem_cons]
+        exact Or.inr hmem
+  | grund ks log f rho s0 r s1 htail ih =>
+      intro g rho' w s0' s1' hm
+      rw [List.mem_cons] at hm
+      rcases hm with hm | hm
+      · simp at hm
       · have hmem := ih g rho' w s0' s1' hm
         rw [List.mem_cons]
         exact Or.inr hmem
@@ -2045,6 +2197,41 @@ theorem rufPopG_passt (z : RufFadenG D)
   rw [hk, hhead] at h
   rw [htail]
   exact RufLogPasstG.rueck _ _ g rho s0 v s1 h
+
+/-- Pop helper for the error channel: popping the head frame with a
+    `grund` event keeps a well-formed thread well-formed, exactly as
+    `rufPopG_passt` does for `rueck`. -/
+theorem rufPopGrundG_passt (z : RufFadenG D)
+    (caller : RufRahmenG D) (rest : List (RufRahmenG D))
+    (hpop : z.stapel = caller :: rest)
+    (neu : RufRahmenG D)
+    (hkeyNeu : RufSchluesselG neu = RufSchluesselG caller)
+    (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g))
+    (s0 s1 : World D)
+    (hhead : RufSchluesselG z.kopf =
+      (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D))
+    (spur : List (Ereignis D))
+    (h : RufFadenPasstG z) :
+    RufFadenPasstG
+      ⟨rest, neu, spur,
+       (RufEreignisF.grund g rho r s0 s1) :: z.log⟩ := by
+  have hk : RufFadenSchluesselG z =
+      RufSchluesselG z.kopf ::
+        ((caller :: rest).map RufSchluesselG) := by
+    have e : RufFadenSchluesselG z =
+        RufSchluesselG z.kopf ::
+          ((z.stapel.map RufSchluesselG)) := by
+      simp [RufFadenSchluesselG]
+    rw [e, hpop]
+  have htail : RufFadenSchluesselG
+      (⟨rest, neu, spur,
+        (RufEreignisF.grund g rho r s0 s1) :: z.log⟩ : RufFadenG D) =
+      (caller :: rest).map RufSchluesselG := by
+    simp only [RufFadenSchluesselG, List.map_cons, hkeyNeu]
+  unfold RufFadenPasstG at h ⊢
+  rw [hk, hhead] at h
+  rw [htail]
+  exact RufLogPasstG.grund _ _ g rho s0 r s1 h
 
 /-- One step preserves the invariant for the ACTING thread.
     `ruf` pushes the callee key with its entry event; `rueck` pops the
@@ -2261,7 +2448,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       hs0 rho hrho neu hneu =>
       have hkeys := rufPushG_passt (M.faeden f)
         ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-         ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩
+         ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩
         ⟨g, rho, s0,
          ⟨false, D.params g, Signatur.anfang D (D.signatur g),
           rho, .ende (P.rumpf g)⟩⟩
@@ -2269,7 +2456,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have heq : (⟨M.speicher,
           rufUpdateG M.faeden f
             ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-               ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩ ::
+               ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩ ::
                (M.faeden f).stapel,
              ⟨g, rho, s0,
               ⟨false, D.params g, Signatur.anfang D (D.signatur g),
@@ -2278,7 +2465,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           M.lauf ++ rufEigenG f neu,
           M.start⟩ : RufMaschineG D).faeden f =
           (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-              ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩ ::
+              ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩ ::
               (M.faeden f).stapel,
            ⟨g, rho, s0,
             ⟨false, D.params g, Signatur.anfang D (D.signatur g),
@@ -2389,6 +2576,39 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
         (by simp [RufSchluesselG]) g rho v s0 s1 hheadkey s1.spur h
       simp only [rufUpdateG_self]
       exact hkeys
+  | rueckGrund r hperm ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      have hheadkey : RufSchluesselG (M.faeden f).kopf =
+          (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
+        cases hfg
+        simp_all [RufSchluesselG]
+      have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
+        ⟨caller.f, caller.rho, caller.s0,
+         ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
+        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+      simp only [rufUpdateG_self]
+      exact hkeys
+  | rueckConsGrund r hperm restk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      have hheadkey : RufSchluesselG (M.faeden f).kopf =
+          (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
+        cases hfg
+        simp_all [RufSchluesselG]
+      have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
+        ⟨caller.f, caller.rho, caller.s0,
+         ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
+        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+      simp only [rufUpdateG_self]
+      exact hkeys
+  | dannRetGrund r hperm restk kk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      have hheadkey : RufSchluesselG (M.faeden f).kopf =
+          (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
+        cases hfg
+        simp_all [RufSchluesselG]
+      have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
+        ⟨caller.f, caller.rho, caller.s0,
+         ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
+        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+      simp only [rufUpdateG_self]
+      exact hkeys
   | _ =>
       simp only [rufUpdateG_self]
       exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
@@ -2446,6 +2666,168 @@ theorem rufG_treu (P : Programm D) (O : Orakel D) (passes : Nat) (sp : Speicher 
   unfold rufRueckGedecktG at hged
   intro g rho v s0 s1 hmem
   exact hged g rho v s0 s1 hmem
+
+/-! ## 6a. No head ever waits: the deadlock of the verbatim pops is gone
+
+    A waiting residue (`wartet`/`wartetSonst`) is created only in a PUSHED
+    caller frame, and only a binding pop resumes it; the verbatim pops
+    (`rueck`, `rueckCons`, `dannRet`) now demand a caller that does not
+    wait (`hnw`). So the invariant "the head residue contains no waiting
+    node, and every stacked residue is either clean or waits over a clean
+    continuation" holds at the start and is kept by every rule; in
+    particular no reachable head is a waiting residue (`rufG_nie_wartend`),
+    the state in which only the bare lock steps could fire. -/
+
+/-- A residue with no waiting node anywhere along its continuation. -/
+def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .ende _ => true
+  | .dann _ k => k.sauber
+  | .schrumpf k => k.sauber
+  | .frei _ k => k.sauber
+  | .trav _ _ _ _ k => k.sauber
+  | .travRest _ _ _ _ k => k.sauber
+  | .wieder _ _ _ _ k => k.sauber
+  | .wiederRest _ _ _ _ k => k.sauber
+  | .ewig _ _ _ _ k => k.sauber
+  | .ewigRest _ _ _ _ k => k.sauber
+  | .wartet _ _ => false
+  | .wartetSonst _ _ _ _ => false
+
+/-- A stacked residue: clean, or waiting over a clean continuation. -/
+def GRest.stapelSauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .wartet _ k => k.sauber
+  | .wartetSonst _ _ _ k => k.sauber
+  | r => r.sauber
+
+theorem GRest.sauber_wartend {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} (h : r.sauber = true) : r.wartend = false := by
+  cases r <;> simp_all [GRest.sauber, GRest.wartend]
+
+theorem GRest.stapelSauber_sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} (hw : r.wartend = false) (h : r.stapelSauber = true) :
+    r.sauber = true := by
+  cases r <;> simp_all [GRest.sauber, GRest.stapelSauber, GRest.wartend]
+
+/-- The thread invariant: a clean head, clean-or-waiting stacked frames. -/
+def RufFadenSauberG (z : RufFadenG D) : Prop :=
+  z.kopf.rest.2.2.2.2.sauber = true ∧ ∀ r ∈ z.stapel, r.rest.2.2.2.2.stapelSauber = true
+
+/-- The invariant implies a head that does not wait. -/
+theorem RufFadenSauberG.kopf_wartend {z : RufFadenG D} (h : RufFadenSauberG z) :
+    z.kopf.wartend = false :=
+  GRest.sauber_wartend h.1
+
+/-- Every rule keeps the invariant of the acting thread. The pops are the
+    point: a verbatim pop resumes a caller that does not wait (`hnw`), so
+    the resumed head is clean; a binding pop resumes the waiting caller's
+    continuation as a clean `dann` residue. -/
+theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (h : RufFadenSauberG (M.faeden f)) : RufFadenSauberG (M'.faeden f) := by
+  obtain ⟨hk, hst⟩ := h
+  have hpopS : ∀ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
+      (M.faeden f).stapel = caller :: rst →
+      caller.rest.2.2.2.2.stapelSauber = true ∧
+        ∀ r ∈ rst, r.rest.2.2.2.2.stapelSauber = true := by
+    intro caller rst hpop
+    rw [hpop] at hst
+    exact ⟨hst caller List.mem_cons_self, fun r hr => hst r (List.mem_cons_of_mem _ hr)⟩
+  cases hs with
+  | nimmt => simp only [rufUpdateG_self]; exact ⟨hk, hst⟩
+  | gibt => simp only [rufUpdateG_self]; exact ⟨hk, hst⟩
+  | rueck caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨GRest.stapelSauber_sauber hnw hc, hr⟩
+  | rueckCons caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨GRest.stapelSauber_sauber hnw hc, hr⟩
+  | dannRet _ _ _ _ _ _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨GRest.stapelSauber_sauber hnw hc, hr⟩
+  | rueckBind caller rst hpop _ _ _ _ _ restb k _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    refine ⟨?_, hr⟩
+    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc <;>
+      simpa [GRest.sauber, GRest.stapelSauber] using hc
+  | dannRetBind _ _ _ _ _ _ _ _ _ _ caller rst hpop _ _ _ _ _ restb k _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    refine ⟨?_, hr⟩
+    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc <;>
+      simpa [GRest.sauber, GRest.stapelSauber] using hc
+  | rueckConsBind _ _ _ _ _ _ _ _ caller rst hpop _ _ _ _ _ restb k _ hcaller =>
+    obtain ⟨hc, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    refine ⟨?_, hr⟩
+    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc <;>
+      simpa [GRest.sauber, GRest.stapelSauber] using hc
+  | rueckGrund _ _ _ _ caller rst hpop =>
+    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨rfl, hr⟩
+  | rueckConsGrund _ _ _ _ _ caller rst hpop =>
+    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨rfl, hr⟩
+  | dannRetGrund _ _ _ _ _ _ caller rst hpop =>
+    obtain ⟨_, hr⟩ := hpopS caller rst hpop
+    simp only [rufUpdateG_self]
+    exact ⟨rfl, hr⟩
+  | _ =>
+    simp only [rufUpdateG_self]
+    rw [‹(M.faeden f).kopf.rest = _›] at hk
+    simp only [GRest.sauber] at hk
+    refine ⟨?_, ?_⟩
+    · simp only [GRest.sauber]
+      try exact hk
+    · first
+      | exact hst
+      | (intro r hr
+         rcases List.mem_cons.1 hr with hr | hr
+         · subst hr
+           simp only [GRest.sauber, GRest.stapelSauber]
+           try exact hk
+         · exact hst r hr)
+
+/-- Every step keeps the invariant at every thread. -/
+theorem rufSchrittG_sauber {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (h : ∀ g, RufFadenSauberG (M.faeden g)) : ∀ g, RufFadenSauberG (M'.faeden g) := by
+  intro g
+  by_cases hg : g = f
+  · subst hg
+    exact rufSchrittG_sauber_acting hs (h g)
+  · rw [rufSchrittG_passt_anders P O passes M M' f g hg hs]
+    exact h g
+
+/-- The start machine satisfies the invariant: empty stacks, `ende` heads. -/
+theorem rufStartG_sauber (P : Programm D) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) :
+    ∀ g, RufFadenSauberG ((RufStartG P sp init).faeden g) := by
+  intro g
+  refine ⟨rfl, ?_⟩
+  intro r hr
+  exact absurd hr List.not_mem_nil
+
+/-- **No reachable head waits.** In every machine reachable from the start,
+    no thread's head residue is a waiting node -- the deadlock the verbatim
+    pops caused (a caller restored at `wartet …`, where no rule fires) can
+    no longer arise. -/
+theorem rufG_nie_wartend (P : Programm D) (O : Orakel D) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D)
+    (h : RufErreichbarG P O passes (RufStartG P sp init) M) (f : Faden) :
+    (M.faeden f).kopf.wartend = false := by
+  have hinv : ∀ g, RufFadenSauberG (M.faeden g) := by
+    induction h with
+    | start => exact rufStartG_sauber P sp init
+    | schritt M M' g _ hs ih => exact rufSchrittG_sauber hs ih
+  exact (hinv f).kopf_wartend
 
 /-! ## 7. Witness: an `if` whose taken branch writes a table
 
@@ -2849,7 +3231,7 @@ theorem schritt7G : RufSchrittG gP rufOF 0 M6G 0 M7G := by
   have hv : vF = hfg ▸ evalErg s1G eF s1G rufRhoF := rfl
   have hneu : s1G.spur = [] ++ (M6G.faeden 0).spur := rfl
   exact RufSchrittG.rueck M6G 0 callerFrameG [] hpop _ _ _ _ _
-    hhead _ hfg rufRhoF hrho _ hs0 hΛ _ hs1 _ hv _ hneu
+    hhead _ hfg rufRhoF hrho _ hs0 hΛ _ hs1 _ hv _ hneu rfl
 
 /-- Step 7 as reachability: seven steps FROM THE START STATE. -/
 theorem reach7G : RufErreichbarG gP rufOF 0 M0G M7G := by
@@ -3335,7 +3717,7 @@ theorem schritt6H : RufSchrittG hP rufOF 0 H5H 0 H6H := by
     (nach rufDF rufIncF (Signatur.anfang rufDF (rufDF.signatur rufCallerF)))
     (.int 0 6) restLeaveH
     (.wiederRest 0 bisH bodyH .nil (.dann .nil (.ende driverRet)))
-    rhoCallerF hcaller _ _ _ _ _ H5H_kopf _ hfg rufRhoF hrho _ hs0 hΛ _ hs1 _
+    rhoCallerF (Or.inl hcaller) _ _ _ _ _ H5H_kopf _ hfg rufRhoF hrho _ hs0 hΛ _ hs1 _
     hv (rufDF_erg rufIncF) _ hneu
 
 /-- Step 6 as reachability. -/
@@ -3529,6 +3911,27 @@ theorem rufG_treu_zeuge_bind_leave :
     by rw [H9H_log]; exact List.mem_cons_of_mem _ (List.mem_cons_self),
     H9H_moves⟩
 
+/-- **Witness for `rufG_nie_wartend`.** Its premises instantiated on the
+    bind/leave program `hP` from the start state: after `dannBindCall`
+    (`H4H`) the caller frame WAITS on the stack (`wartet`) below the
+    writer, and the head does not wait; after the writer's leaf moved
+    memory, the binding pop, the peel and the loop exit (`H9H`) the head
+    does not wait either -- the theorem at two reachable machines, one with
+    a waiting frame on the stack. -/
+theorem rufG_nie_wartend_zeuge :
+    RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H4H ∧
+    (∃ (c : RufRahmenG rufDF) (rst : List (RufRahmenG rufDF)),
+      (H4H.faeden 0).stapel = c :: rst ∧ c.wartend = true) ∧
+    (H4H.faeden 0).kopf.wartend = false ∧
+    RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H9H ∧
+    (H9H.faeden 0).kopf.wartend = false ∧
+    H9H.speicher.slots () 0 () ≠ spF.slots () 0 () := by
+  have h4 : RufErreichbarG hP rufOF 0 (RufStartG hP spF initF) H4H := by
+    rw [← M0H_start]
+    exact reach4H
+  exact ⟨h4, ⟨callerH, [], rfl, rfl⟩, rufG_nie_wartend hP rufOF 0 spF initF H4H h4 0,
+    reach9H_start, rufG_nie_wartend hP rufOF 0 spF initF H9H reach9H_start 0, H9H_moves⟩
+
 /-! ## CUTS:
   - Stepwise coverage. Every `Stmt`/`Block`/`Endblock` constructor either
     has a step rule or is listed below with its reason.
@@ -3562,18 +3965,24 @@ theorem rufG_treu_zeuge_bind_leave :
       (block position) resolve the pointer value and push the callee frame
       like `ruf`/`rufDann`, logging `eintritt` (`rufCallInd` repaired like
       `ruf`).
-    - Bind-calls push the callee with a `wartet` caller residue
-      (`dannBindCall`, `dannBindCallInd`, `dannBindCallElse`); a return
-      binds the value in the caller environment -- from `ende ret`
-      (`rueckBind`), from an early `ret` at an `ende` cons head
-      (`rueckConsBind`) or in a block (`dannRetBind`), each logging
-      `rueck`. The verbatim pops (`rueck`, `rueckCons`, `dannRet`) can ALSO
-      fire into a waiting caller; the restored head `wartet …` then has no
-      rule and the thread deadlocks (`befund_wartet`,
-      `RufAdaequatRufG.lean`) -- kept, since excluding it would change the
-      statement of `rufG_adaequat`. The `bindCallElse` grund path has NO
-      step: a callee grund-return cannot be logged (no event names a grund
-      value) and a silent pop breaks `RufLogPasstG`.
+    - Bind-calls push the callee with a waiting caller residue: `wartet`
+      (`dannBindCall`, `dannBindCallInd`) or `wartetSonst`, which keeps the
+      else block (`dannBindCallElse`); a return binds the value in the
+      caller environment -- from `ende ret` (`rueckBind`), from an early
+      `ret` at an `ende` cons head (`rueckConsBind`) or in a block
+      (`dannRetBind`), each logging `rueck`, into either waiting form. The
+      verbatim pops (`rueck`, `rueckCons`, `dannRet`) demand a caller that
+      does NOT wait (`hnw`, repaired 2026-09-13: before, they could restore
+      a waiting caller, whose head `wartet …` has no rule -- the thread
+      deadlocked); no reachable head waits (`rufG_nie_wartend`).
+    - The error channel (added 2026-09-13): a callee's `retGrund r` (from
+      `ende`, an `ende` cons head, or a block) pops into a caller waiting
+      in `wartetSonst` (`rueckGrund`, `rueckConsGrund`, `dannRetGrund`),
+      which runs its else block with `r` bound, logging the new event
+      `RufEreignisF.grund` (`RufLogPasstG.grund` keeps `rufG_treu`). A
+      `retGrund` into any other caller (only an entry frame could have one:
+      `call`/`bindCall` demand `gruende = 0`) or with an empty stack has no
+      step.
     - Register/atomic/float binders run one layer deep, mirroring their
       `execBlock` equation (value pushed, body stepwise under `schrumpf`):
       `dannRegLies`, `dannRegLiesElseWahr`/`Falsch`, `dannAwaits`,
@@ -3588,22 +3997,26 @@ theorem rufG_treu_zeuge_bind_leave :
       `leave`/`next` at a loop shim (`trav` leave checks the invariant
       like `traverseLauf`; `retry`/`forever` exits are direct like
       `retryLauf`/`foreverLauf`); `peelDann`/`peelSchrumpf`/`peelFrei` (x
-      `leave`/`next`) abandon holdings-uniform scaffolding (`frei`
-      emits `gibt`, like `locks`); early `ret` pops with a `rueck` event
+      `leave`/`next`) abandon the scaffolding the loop body built (`frei`
+      emits `gibt`, like `locks`) -- at ANY static holdings (generalised
+      2026-09-13: the peels and shims demanded the exit's holdings to equal
+      the scaffolding's, so an exit behind a holdings-changing statement,
+      e.g. a call that consumes or produces marks, had no step, while
+      `execBlock` propagates the exit; the holdings index is static
+      bookkeeping the step never reads); early `ret` pops with a `rueck` event
       (`dannRet` in blocks, `rueckCons` at `ende` cons heads). `rueck`,
       `rueckCons`, `rueckBind` accept a returning residue at ANY loop level,
       so a `ret` that ends an else branch (`sonst`) inside a loop body pops
       (it stalled before: the rules demanded level `false`).
-    - NOT covered: `retGrund`/`Endblock.retGrund` anywhere (no grund
-      machinery: popping without an event breaks `RufLogPasstG`, logging
-      a value that does not exist is dishonest); `leave`/`next` at `ende`
+    - NOT covered: `retGrund` outside the error channel (see above);
+      `leave`/`next` at `ende`
       position (else-branch exits via `dannNarrowElse`/`dannPruefFalsch`/
       `dannRegLiesElseFalsch`/`dannGleitNarrowElse` discard the loop shim
       with the continuation -- recovering it needs the shim threaded
       through else-branches, a redesign); peels through
-      holdings-changing scaffolding (`advances`/`retires` mid-block) or
-      through `wartet` (unreachable: it never stands as a live
-      continuation); `forever` with exhausted budget and false
+      `wartet`/`wartetSonst` (unreachable: a waiting residue never stands as
+      a live continuation, `GRest.sauber`); `forever` with exhausted budget
+      and false
       invariants (the reference machine reports `hardware .fortschritt`
       / `logik .schleife` there).
     - Top-level `ret` with an empty call stack has no step (as in F): both
@@ -3629,5 +4042,8 @@ theorem rufG_treu_zeuge_bind_leave :
 #print axioms Gabbro.Grammatik.schritt8H
 #print axioms Gabbro.Grammatik.reach9H_start
 #print axioms Gabbro.Grammatik.H9H_moves
+#print axioms Gabbro.Grammatik.rufG_nie_wartend
+#print axioms Gabbro.Grammatik.rufG_nie_wartend_zeuge
+#print axioms Gabbro.Grammatik.rufSchrittG_sauber
 
 end Gabbro.Grammatik
