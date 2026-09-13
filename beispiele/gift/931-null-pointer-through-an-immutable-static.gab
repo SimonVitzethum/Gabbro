@@ -1,0 +1,27 @@
+-- erwartet: N260
+-- **A null pointer through an immutable `static` falls.**
+--
+-- `tz` is bound without `mut` and starts at `0`. C11 6.3.2.3p3 makes that a
+-- null pointer constant, so the store below it is undefined behaviour
+-- (6.5.3.2p4) -- and without `mut` the binding can never name another
+-- address, so the null is permanent, not provisional. The write through the
+-- pointer is itself allowed (`M118` stays silent: the pointer stands fixed,
+-- its target does not), the effects cover it, and the costs hold: N260 ALONE.
+module gift::null_through_immutable_static {
+
+table Platz count 4 {
+    slot {
+        a : u32 in 0 .. 1000,
+    }
+}
+
+static tz : ptr<normal, rw> Platz = 0;
+
+impl fn setz(i : index into Platz)
+    effects { writes tz.slots }
+    costs   <= 3 ops
+{
+    tz.slots[i].a = 5;
+}
+
+}

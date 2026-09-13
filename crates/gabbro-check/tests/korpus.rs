@@ -63,6 +63,8 @@ const BENANNT: &[&str] = &[
     // below carrier granularity. Named here so the corpus run counts the
     // rules, not noise.
     "N255", "N256", "N257", "N258",
+    // Lane 145: `N260` an immutable pointer starting at `0`. Named here so
+    // the corpus run counts the rule, not noise.
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

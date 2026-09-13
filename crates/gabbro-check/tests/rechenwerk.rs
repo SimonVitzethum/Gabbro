@@ -3008,6 +3008,14 @@ fn ein_unveraenderlicher_static_und_die_ausnahme_des_zeigers() {
         gabbro_check::pruefe(&b, &mut a);
         a.zeige(q)
     };
+    // **Codes, not substrings.** Since lane 145 the `N260` note names `M118`
+    // in its text, so a rendered-text search for `M118` answers the note and
+    // not the rule. What each assertion below means is whether the RULE fired.
+    let regeln = |q: &str| -> Vec<String> {
+        let (b, mut a) = gabbro_syntax::lies("s.gab", q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    };
     let verbund = |mut_wort: &str, rumpf: &str| {
         format!(
             "module m {{\n\
@@ -3034,11 +3042,11 @@ fn ein_unveraenderlicher_static_und_die_ausnahme_des_zeigers() {
 
     // **Die Ausnahme:** durch einen unveraenderlichen Zeiger zu schreiben ist ERLAUBT.
     let durch = zeiger("", "tz.slots", "tz.slots[i].a = 5;");
-    assert!(!pruefe(&durch).contains("M118"), "durch den Zeiger geht es:\n{}", pruefe(&durch));
+    assert!(!regeln(&durch).contains(&"M118".to_string()), "durch den Zeiger geht es:\n{}", pruefe(&durch));
 
     // Ihn UMZUHAENGEN dagegen nicht -- das schreibt den `static` selbst.
     let umhaengen = zeiger("", "tz", "tz = 0;");
-    assert!(pruefe(&umhaengen).contains("M118"), "umhaengen faellt:\n{}", pruefe(&umhaengen));
+    assert!(regeln(&umhaengen).contains(&"M118".to_string()), "umhaengen faellt:\n{}", pruefe(&umhaengen));
 
     // Und das `const` steht am Zeiger, nicht am Ziel -- sonst weist `cc` die Einheit ab.
     let (b, mut a) = gabbro_syntax::lies("z.gab", &durch);

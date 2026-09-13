@@ -308,6 +308,15 @@ are not a form but a gap in `CEnv`; step 2 closes it.
    model cannot see it, because a `ptr` value is `Unit` there, a capability without an
    address. In this model the access is stuck: `0` is no object's address. This is reported
    here, not fixed; `crates/` was not touched.
+   **Status 2026-09-13 (lane 145): fixed at the checker, `crates/` touched.**
+   `(T *)(uintptr_t)0` is still a null pointer constant (C11 6.3.2.3p3), so no
+   emitter spelling can cure it -- UBSan fires on the unrepaired emission
+   (`member access within null pointer`). `N260` refuses an immutable pointer
+   starting at `0`; `beispiele/38` binds its pointer to declared storage
+   instead, and the corpus sweep (239 emitting units) holds zero
+   `(uintptr_t)0`. Remainder: a `static mut` pointer starting at `0` still
+   lowers to a null spelling (the kernel NULL-init idiom; flow, not a
+   declaration).
 2. **`BEWEIS.md` §2 row 5 is false as written.** It says no cast between pointer types is
    ever emitted. The emitter writes 153 casts from `volatile uint8_t *` to
    `volatile uintN_t *`. They are harmless for strict aliasing, because they target MMIO
