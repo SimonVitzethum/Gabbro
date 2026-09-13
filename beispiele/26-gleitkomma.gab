@@ -66,7 +66,9 @@ impl fn klemmen_ohne_narrow(x : f64) -> Anteil
 -- falsch.
 impl fn nur_endlich(x : f64) -> f64
     effects { pure }
-    costs   <= 3 ops
+    -- **4 seit dem 2026-09-13 (Lane 139, F5): `narrow` liest seinen Gegenstand.** Die
+    -- Bereichspruefung ist eine Operation, das gelesene `x` eine weitere.
+    costs   <= 4 ops
 {
     narrow x to finite else { return HALB; }
     return x;

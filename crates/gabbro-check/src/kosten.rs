@@ -261,6 +261,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     });
 
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    // **Lane 139 (F4): die Geraetetabelle steht einmal, die Griffe je Funktion.** Der Rechner
+    // braucht beide, um an einer `let … else`-Lesung das `requires` des Registers zu finden.
+    let geraete = crate::m3::geraetetabelle(baum);
     let mut z = Zaehlung::default();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
@@ -290,6 +293,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
             lokal,
+            geraete: &geraete,
+            griffe: crate::m3::griffe_von(f, &geraete),
         };
 
         // -- K002: jeder `locks`-Block gegen die `held`-Zusage seiner Sperre.
@@ -536,6 +541,12 @@ struct Rechner<'a> {
     /// Domaenenschranke ist unauffindbar -- der Pass haette dann jede Traversierung als
     /// unbekannt gemeldet und damit seine eigene Blindheit gezaehlt.
     lokal: HashMap<String, crate::typen::Typ>,
+    /// **Lane 139 (F4): die Geraetetabelle und die Griffe dieser Funktion.** Eine fehlbare
+    /// Registerlesung (`requires … else`) wertet das Versprechen des Registers aus -- um es
+    /// zu zaehlen, muss der Rechner vom Ort zum Register finden, und das geht nur ueber
+    /// Griff -> Geraet -> Register (`m3.rs`: ein zweites Register waere W7).
+    geraete: &'a std::collections::BTreeMap<String, std::collections::BTreeMap<String, crate::m3::RegInfo>>,
+    griffe: std::collections::BTreeMap<String, String>,
 }
 
 impl<'a> Rechner<'a> {
@@ -653,7 +664,22 @@ impl<'a> Rechner<'a> {
         match &s.art {
             // Eine Zuweisung ist eine Primitive, dazu was der Ausdruck kostet.
             StmtArt::Let(l) => Kosten::Zahl(1).plus(self.ausdruck(&l.wert, lokal)),
-            StmtArt::Zuweisung(z) => Kosten::Zahl(1).plus(self.ausdruck(&z.wert, lokal)),
+            // **Lane 139 (F1): das Ziel wird gelesen, nicht nur beschrieben.** `t.slots[teuer()].x
+            // = 5` wertet `teuer()` zur Laufzeit aus -- die Adresse faellt nicht vom Himmel.
+            // Was die Leseseite seit dem 2026-09-02 zaehlt (die Indizes des Orts), zaehlt die
+            // Schreibseite jetzt auch. Eine zusammengesetzte Zuweisung (`+=`, `-=`, `&=`, `|=`)
+            // laedt zusaetzlich und rechnet: ein Laden plus eine arithmetische Operation auf den
+            // gespeicherten Wert -- der Erzeuger senkt sie auf Lesen, Rechnen, Schreiben ab.
+            StmtArt::Zuweisung(z) => {
+                let ziel = crate::ausdruecke_im_ort(&z.ziel)
+                    .into_iter()
+                    .fold(Kosten::Zahl(0), |k, ix| k.plus(self.ausdruck(ix, lokal)));
+                let basis = Kosten::Zahl(1).plus(self.ausdruck(&z.wert, lokal)).plus(ziel);
+                match z.op {
+                    ZuwOp::Setzt => basis,
+                    _ => basis.plus(Kosten::Zahl(2)),
+                }
+            }
             StmtArt::Publish(p) => Kosten::Zahl(1).plus(self.ausdruck(&p.wert, lokal)),
             StmtArt::AwaitLoad(_) => Kosten::Zahl(1),
             // `narrow` senkt sich auf eine Bereichspruefung ab -- eine Rechenoperation.
@@ -674,10 +700,13 @@ impl<'a> Rechner<'a> {
             },
             StmtArt::LetSonst(l) => {
                 // **Ein `place` auszupacken kostet EINE Operation** -- die Ablesung. Ein
-                // Ruf kostet, was der Gerufene zusagt.
-                let quelle = match l.als_ruf() {
-                    Some(r) => self.ruf(r, lokal),
-                    None => Kosten::Zahl(1),
+                // Ruf kostet, was der Gerufene zusagt. Eine fehlbare Registerlesung wertet
+                // zusaetzlich das `requires` des Registers aus (F4, Lane 139): G prueft es
+                // bei jedem Lesen (`fehlbare_lesung` senkt es auf `if (!(…))` ab), also
+                // zaehlt es bei jedem Lesen mit.
+                let quelle = match &l.quelle {
+                    LetQuelle::Ruf(r) => self.ruf(r, lokal),
+                    LetQuelle::Ort(o) => self.registerlesung(o, lokal),
                 };
                 Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst, lokal))
             }
@@ -753,10 +782,19 @@ impl<'a> Rechner<'a> {
                     Some(r.span),
                 ))
             }
-            StmtArt::Narrow(n) => Kosten::Zahl(1).plus(groesser(
-                Kosten::Zahl(0),
-                self.block(&n.sonst, lokal),
-            )),
+            StmtArt::Narrow(n) => {
+                // **`narrow` liest seinen Gegenstand (F5, Lane 139).** Die Bereichspruefung ist
+                // eine Rechenoperation, und der gelesene Ort kostet, was jede Leseseite kostet:
+                // ein Laden plus seine Indizes -- was `kostenExpr` (KostenG.lean) ueber dem
+                // Gegenstand zaehlt.
+                let gegenstand = crate::ausdruecke_im_ort(&n.ort)
+                    .into_iter()
+                    .fold(Kosten::Zahl(1), |k, ix| k.plus(self.ausdruck(ix, lokal)));
+                Kosten::Zahl(1).plus(gegenstand).plus(groesser(
+                    Kosten::Zahl(0),
+                    self.block(&n.sonst, lokal),
+                ))
+            }
             // **«E4»:** storing is one primitive plus the value; the
             // full-arena continuation counts like any `else`.
             StmtArt::Alloc(a) => Kosten::Zahl(1).plus(self.ausdruck(&a.wert, lokal)).plus(
@@ -772,6 +810,22 @@ impl<'a> Rechner<'a> {
         }
     }
 
+    /// **Die Lesung eines `place` in `let … else` (F4, Lane 139).** Ohne Geraet ist es eine
+    /// Ablesung (eine Operation); nennt der Ort ein Register mit `requires`, laeuft dessen
+    /// Praedikat bei jedem Lesen mit -- G wertet es aus, also zaehlt es. Die Aufloesung
+    /// (Griff -> Geraet -> Register) ist die von `m3.rs`: ein zweites Register waere W7.
+    /// Das Praedikat kostet nie Unbekannt (`pred_kosten` kennt nur Zahlen), also kann diese
+    /// Stelle kein `K003` erzeugen, das vorher nicht da war.
+    fn registerlesung(&self, o: &Ort, lokal: &Bindungen) -> Kosten {
+        let mut kosten = Kosten::Zahl(1);
+        if let Some(t) = crate::m3::ort_register(o, self.geraete, &self.griffe) {
+            if let Some(p) = &t.info.versprechen {
+                kosten = kosten.plus(pred_kosten(self, p, lokal));
+            }
+        }
+        kosten
+    }
+
     /// **Die Schleifen -- und hier steckt die eigentliche Aussage des Modells.**
     fn schleife(&self, sch: &Schleife, lokal: &Bindungen) -> Kosten {
         match sch {
@@ -780,16 +834,27 @@ impl<'a> Rechner<'a> {
             // **The loop variable is BOUND in the body**, and it is no table -- it is a
             // place index. Where it shadows a parameter, `slots of i` must not inherit that
             // parameter's bound. *`m1.rs` binds it to `Unbekannt` at the same spot.*
-            Schleife::Traverse(t) => match (
-                self.block(&t.rumpf, &{
+            // **Die Invariante laeuft bei jedem Durchgang mit (F6, Lane 139).** G prueft sie
+            // an jeder Durchgangsgrenze, also traegt jeder Durchgang sie: Rumpf PLUS Invariante
+            // mal Schranke -- was `kostenStmt` ueber `traverse` zaehlt. (Am C aendert das
+            // nichts: die Invariante ist dort Geist und wird nicht ausgewertet. Gezaehlt wird
+            // sie trotzdem -- eine obere Schranke bleibt eine, wenn sie mehr zaehlt, und die
+            // Leanseite und der Pruefer sagen dann dieselbe Zahl.)
+            Schleife::Traverse(t) => {
+                let innen = {
                     let mut innen = lokal.clone();
                     innen.insert(t.variable.text.clone(), Typ::Unbekannt);
                     innen
-                }),
-                self.domaenenschranke(&t.domaene, lokal),
-            ) {
-                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),
-                (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
+                };
+                let gang = self.block(&t.rumpf, &innen).plus(
+                    t.invariante
+                        .as_ref()
+                        .map(|p| pred_kosten(self, p, &innen))
+                        .unwrap_or(Kosten::Zahl(0)),
+                );
+                match (gang, self.domaenenschranke(&t.domaene, lokal)) {
+                    (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),
+                    (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
                 // **The text names the DECLARATION it is missing, and it is one of three.**
                 //
                 // Until 2026-08-31 it asked *"is the table missing its `count`?"* for every
@@ -806,7 +871,8 @@ impl<'a> Rechner<'a> {
                     ),
                     Some(t.span),
                 ),
-            },
+                }
+            }
             // `retry … bounded N ops` -- die Schranke IST die Zusage.
             Schleife::Retry(r) => match self.u.konst_wert(self.modul, &r.schranke) {
                 Some(n) => Kosten::Zahl(n),
@@ -1157,11 +1223,43 @@ impl<'a> Rechner<'a> {
         let mut lokal = aussen.clone();
         for s in &b.anweisungen {
             if let StmtArt::Schleife(sch) = &s.art {
-                let (rumpf, zusage_expr, wort, code, span) = match sch.as_ref() {
-                    Schleife::Retry(r) => (&r.rumpf, &r.schranke, "bounded", "K006", r.span),
-                    Schleife::Forever(f) => {
-                        (&f.rumpf, &f.je_durchgang, "per_pass bounded", "K007", f.span)
-                    }
+                // **Lane 139 (F2): EIN Durchgang ist Rumpf PLUS Bedingung PLUS Invariante.**
+                // Die `until`-Bedingung wird bei jedem Durchgang ausgewertet (`FRAGMENTE.md` F4
+                // pollt mit leerem Rumpf), und die Invariante steht an jeder Durchgangsgrenze --
+                // was `durchgangskosten` (fuer den Erzeuger) seit jeher zaehlt, zaehlt diese
+                // Pruefung jetzt auch. *Vorher massen die zwei Stellen verschiedene Durchgaenge:*
+                // der Erzeuger teilte das Budget durch Rumpf+Bedingung, `K006` hielt nur den
+                // Rumpf dagegen -- ein teurer `until` passte in die Rechnung des einen und fiel
+                // bei der des anderen nie auf.
+                let (rumpf, zusage_expr, wort, code, span, gang) = match sch.as_ref() {
+                    Schleife::Retry(r) => (
+                        &r.rumpf,
+                        &r.schranke,
+                        "bounded",
+                        "K006",
+                        r.span,
+                        r.bis
+                            .as_ref()
+                            .map(|p| pred_kosten(self, p, &lokal))
+                            .unwrap_or(Kosten::Zahl(0))
+                            .plus(
+                                r.invariante
+                                    .as_ref()
+                                    .map(|p| pred_kosten(self, p, &lokal))
+                                    .unwrap_or(Kosten::Zahl(0)),
+                            ),
+                    ),
+                    Schleife::Forever(f) => (
+                        &f.rumpf,
+                        &f.je_durchgang,
+                        "per_pass bounded",
+                        "K007",
+                        f.span,
+                        f.invariante
+                            .as_ref()
+                            .map(|p| pred_kosten(self, p, &lokal))
+                            .unwrap_or(Kosten::Zahl(0)),
+                    ),
                     Schleife::Traverse(t) => {
                         self.schleifenzusagen(&t.rumpf, &lokal, absagen);
                         continue;
@@ -1177,7 +1275,9 @@ impl<'a> Rechner<'a> {
                 let zahl = self.u.konst_wert(self.modul, zusage_expr).or_else(|| {
                     symbolisch(self.u, self.modul, &lokal, zusage_expr).map(|t| t.fest)
                 });
-                if let (Some(zusage), Kosten::Zahl(n)) = (zahl, self.block(rumpf, &lokal)) {
+                if let (Some(zusage), Kosten::Zahl(n)) =
+                    (zahl, self.block(rumpf, &lokal).plus(gang))
+                {
                     if n > zusage {
                         absagen.schiebe(
                             Absage::fehler(
@@ -1342,6 +1442,8 @@ pub fn bericht(baum: &Programm) -> String {
     let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
     let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    // **Lane 139 (F4): wie im Pass -- die Geraetetabelle steht einmal.**
+    let geraete = crate::m3::geraetetabelle(baum);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Funktion(f) => {
             if let Some(c) = &f.costs {
@@ -1393,6 +1495,8 @@ pub fn bericht(baum: &Programm) -> String {
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
             lokal,
+            geraete: &geraete,
+            griffe: crate::m3::griffe_von(f, &geraete),
         };
         // **Der BERICHT zeigt weiter `--` fuer eine parametrische Zusage**, und das bleibt
         // richtig: es gibt dort keine einzelne Zahl zum Danebenstellen. *Entschieden wird sie
@@ -1469,6 +1573,7 @@ impl Rechner<'_> {
 pub fn durchgangskosten(
     baum: &Programm,
     modul: &str,
+    f: &FnDecl,
     r: &Retry,
     lokal: HashMap<String, crate::typen::Typ>,
 ) -> Option<i128> {
@@ -1488,6 +1593,10 @@ pub fn durchgangskosten(
         }
     });
     let leer: HashMap<String, i128> = HashMap::new();
+    // **Lane 139 (F4): die Geraetetabelle fuer die fehlbaren Lesungen im Rumpf.** Der
+    // Erzeuger teilt durch dieselbe Durchgangszahl wie `K006` -- mit einer anderen waere
+    // die eine Stelle grosszuegig, wo die andere streng ist.
+    let geraete = crate::m3::geraetetabelle(baum);
     let rechner = Rechner {
         u: &u,
         modul,
@@ -1496,16 +1605,24 @@ pub fn durchgangskosten(
         haltezeiten: &leer,
         geteilte_haltezeiten: &leer,
         lokal,
+        geraete: &geraete,
+        griffe: crate::m3::griffe_von(f, &geraete),
     };
-    // **Ein Durchgang ist Rumpf PLUS Bedingung.** Die `until`-Bedingung wird bei jedem
+    // **Ein Durchgang ist Rumpf PLUS Bedingung PLUS Invariante.** Die `until`-Bedingung wird bei jedem
     // Durchgang ausgewertet und kann teurer sein als der Rumpf -- `FRAGMENTE.md` F4 pollt
     // mit leerem Rumpf. *Nur den Rumpf zu zaehlen hiesse, den teuersten Teil zu uebersehen.*
+    // Die Invariante steht an jeder Durchgangsgrenze (F6-Familie, Lane 139): ein Durchgang, der
+    // sie nicht traegt, unterschaetzt jeden Lauf um sie.
     let rumpf = rechner.block(&r.rumpf, &rechner.lokal.clone());
     let bedingung = match &r.bis {
         Some(p) => pred_kosten(&rechner, p, &rechner.lokal.clone()),
         None => Kosten::Zahl(0),
     };
-    match rumpf.plus(bedingung) {
+    let invariante = match &r.invariante {
+        Some(p) => pred_kosten(&rechner, p, &rechner.lokal.clone()),
+        None => Kosten::Zahl(0),
+    };
+    match rumpf.plus(bedingung).plus(invariante) {
         Kosten::Zahl(n) if n > 0 => Some(n),
         _ => None,
     }

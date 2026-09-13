@@ -60,7 +60,9 @@ extern fn abbruch() -> never effects { diverges } costs <= 0 ops;
 -- Zeugen dabei: **auf beiden Wegen genau einmal.**
 impl fn freigeben_narrow(h : ptr<normal, rw> Halde, i : index into Halde, g : Griff)
     effects { reads hinterlegt, reads frei, writes frei, writes h.slots, consumes g }
-    costs   <= 8 ops
+    -- **10 seit dem 2026-09-13 (Lane 139, F1 + F5).** Die Schreibung zaehlt ihren Zielindex
+    -- (`+1`), und `narrow` liest seinen Gegenstand (`+1`).
+    costs   <= 10 ops
 {
     narrow i to 0 ..< hinterlegt else { griff_weg(g); return; }
     h.slots[i].naechst = frei;
@@ -73,14 +75,19 @@ impl fn freigeben_narrow(h : ptr<normal, rw> Halde, i : index into Halde, g : Gr
 --
 -- **Und eine Zeile darunter steht der zweite Unterschied, der keiner sein duerfte:** `9`
 -- gegen `8`. Beide Ruempfe senken auf denselben C-Rumpf ab -- `if (!(i < hinterlegt))`
--- gegen `if (i >= hinterlegt)` --, aber `kosten.rs` bucht fuer ein `narrow` eine PAUSCHALE
+-- gegen `if (i >= hinterlegt)` --, aber `kosten.rs` buchte fuer ein `narrow` eine PAUSCHALE
 -- und fuer das `if` den Ausdruck. Am kleinsten Paar gemessen: **`narrow` 1 op, `if` 3 ops**
 -- bei byteweise gleichem C bis auf den Vergleichstext. Die Zahl steht hier so, wie sie
 -- gemessen ist -- *eine Zusage ist eine Messung, keine Schaetzung*, und die Ungleichheit
 -- gehoert sichtbar in den Korpus statt geglaettet.
+--
+-- **Nachtrag 2026-09-13 (Lane 139, F1 + F5): 10 gegen 10.** Seit `narrow` seinen Gegenstand
+-- liest und jede Schreibung ihren Zielindex zaehlt, kostet die Form A zwei ops mehr und die
+-- Form B einen -- die alte Ungleichheit ist geglaettet, und zwar von der Messung her, nicht
+-- von der Hand. *Was bleibt: die Pauschale ist fort, der Gegenstand nicht umsonst.*
 impl fn freigeben_if(h : ptr<normal, rw> Halde, i : index into Halde, g : Griff)
     effects { reads hinterlegt, reads frei, writes frei, writes h.slots, consumes g }
-    costs   <= 9 ops
+    costs   <= 10 ops
 {
     if i >= hinterlegt { griff_weg(g); return; }
     h.slots[i].naechst = frei;

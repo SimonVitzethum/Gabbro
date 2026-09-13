@@ -130,7 +130,9 @@ impl fn alle_anhalten()
     -- Behauptung"* beschreibt. `D022` erzwingt ihn jetzt, statt ihn zu empfehlen.
     ensures  forall t in slots of Faden : Faden.slots[t].zustand != LAEUFT
     effects  { reads Faden, reads Faden.slots, writes Faden.slots, locks FAEDEN }
-    costs    <= 600 ops
+    -- **640 seit dem 2026-09-13 (Lane 139, F1): 128 Slots x (4 + 1) ops.** Der Zielindex
+    -- `t` der Schreibung kostet, was er kostet -- ein op je Durchgang mehr.
+    costs    <= 640 ops
 {
     -- **Die Laufform nennt ihre Menge, die Zusicherung nicht.** Hier steht `slots of Faden`,
     -- weil eine Traversierung eine Schranke braucht -- und `traverse … over threads` sagt

@@ -124,9 +124,11 @@ impl fn einsammeln(c : ptr<normal, rw> Kappenraum,
     effects   { consumes c.slots, writes o.slots, locks KAPPEN }
     -- **Diese Zahl kommt aus dem Kostenpass, nicht aus einer Schaetzung.** Eine
     -- Traversierung zaehlt Rumpfkosten x Domaenenschranke: NSLOTS Slots mal die 200 ops,
-    -- die `blatt_loeschen` zusagt, plus die drei Ladevorgaenge des Aufrufs. Wer sie kleiner
-    -- will, aendert den Rumpf -- nicht die Zusage.
-    costs     <= 831488 ops
+    -- die `blatt_loeschen` zusagt, plus die drei Ladevorgaenge des Aufrufs, plus die
+    -- Invariante `c.slots[s].benutzt` an jeder Durchgangsgrenze (Lane 139, F6).
+    -- **839680 seit dem 2026-09-13.** Wer sie kleiner will, aendert den Rumpf --
+    -- nicht die Zusage.
+    costs     <= 839680 ops
     by        induction over descendants of s
 {
     -- **Was ueber den Durchlaeufen gilt.** Das MASS traegt `by consuming` schon; dies ist

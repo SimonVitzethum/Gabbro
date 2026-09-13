@@ -59,7 +59,8 @@ traverse opfer over descendants of c.slots[s] by consuming
 Was **nicht** dasteht und nicht dastehen muss:
 
 * `cdt_step_limit()` — die Schranke fällt aus `count NSLOTS`
-* `ops`, `steps` — der Kostenpass zählt, und `costs <= 831488 ops` wird nachgerechnet
+* `ops`, `steps` — der Kostenpass zählt, und `costs <= 839680 ops` wird nachgerechnet
+  (831488 bis zum 2026-09-13; Lane 139 zählt die Schleifeninvariante je Durchgang)
 * `descend_to_leaf` — das ist die Laufform von `by consuming`
 * `note_overrun()` zweimal — die Wohlfundiertheit ist Invariante der Tabelle
 * `requires ist_blatt` von Hand herstellen — die Nachordnung liefert es

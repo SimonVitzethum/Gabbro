@@ -27,8 +27,9 @@ lock PLANER protects { bereit, laufend } rank 1 held <= 300 ops;
 impl fn faellige_wecken(q : ptr<normal, rw> Warteschlange, jetzt : Frist)
     requires Held(PLANER)
     effects  { writes q.slots, locks PLANER }
-    -- NFAEDEN Slots x 5 ops je Durchgang. Die Zahl faellt aus dem Rumpf.
-    costs    <= NFAEDEN * 5 ops
+    -- NFAEDEN Slots x 6 ops je Durchgang. Die Zahl faellt aus dem Rumpf.
+    -- **6 seit dem 2026-09-13 (Lane 139, F1): die Schreibung zaehlt ihren Zielindex.**
+    costs    <= NFAEDEN * 6 ops
 {
     traverse eintrag over slots of q by unvisited
         touches writes q.slots

@@ -1,0 +1,14 @@
+-- erwartet: K001
+-- **Lane 139 (F1): a compound assignment loads and computes.**
+--
+-- `m += 1` lowers to read, compute, write -- three Gabbro primitives (`SPRACHE.md` §7:
+-- an assignment, an arithmetic operation, a load), not one. `kosten::anweisung` counted
+-- every `ZuwOp` as a bare store:
+--
+--     m += 1;   ->  K001, the body costs 5 (let 1 + store 1 + load 1 + arith 1 + return 1)
+--
+-- Before lane 139 the body cost 3 and `costs <= 4 ops` went through with 0 errors. The
+-- other compound forms (`-=`, `&=`, `|=`) take the same branch.
+module gift::compound_assign_costs {
+impl fn f() -> u32 in 0 .. 101 effects { pure } costs <= 4 ops { let mut m : u32 in 0 .. 101 = 0; m += 1; return m; }
+}

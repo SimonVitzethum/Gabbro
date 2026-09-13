@@ -867,7 +867,9 @@ impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
     effects { writes q }
     -- Nachgezogen 2026-08-15: die Vorlage sagte `<= 4 ops` zu, der Rumpf kostet 9. Die Zahl
     -- ist mit `gabbro kosten` abgelesen, nicht geschaetzt (WERKZEUGKASTEN.md W2).
-    costs   <= 9 ops
+    -- **Nachgezogen 2026-09-13 (Lane 139, F1): der Rumpf kostet 10.** Die Schreibung zaehlt
+    -- ihren Zielindex `platz` (`+1`), und `+=` laedt und rechnet (`+2`).
+    costs   <= 10 ops
 {
     -- Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
     let platz = q.AVAIL_IDX % q.n;

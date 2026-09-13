@@ -1,0 +1,19 @@
+-- erwartet: K001
+-- **Lane 139 (F1): an index on the STORE side costs what it costs.**
+--
+-- `kosten::anweisung` counted `1 + ausdruck(wert)` for `StmtArt::Zuweisung` and never
+-- looked at `ziel`: `t.slots[teuer()].x = 5` paid nothing for `teuer()`, while the same
+-- place on the LOAD side paid it since the 2026-09-02 repair (`return t.slots[teuer()].x`
+-- falls at `costs <= 3`, `beispiele/gift/593`).
+--
+-- `teuer` declares `costs <= 100 ops`, and `f` promises three:
+--
+--     t.slots[teuer()].x = 5;   ->  K001, the body costs 101 (1 + 0 + 100)
+--
+-- Before lane 139 the body cost 1 and went through with 0 errors. *An UNDER-count, and
+-- the only kind that matters: `K001` is a bound.*
+module gift::store_index_costs {
+table T count 4 { slot { x : u32, } }
+impl fn teuer() -> u32 in 0 .. 3 effects { pure } costs <= 100 ops { return 1; }
+impl fn f(t : ptr<normal, rw> T) effects { writes t.slots } costs <= 3 ops { t.slots[teuer()].x = 5; }
+}

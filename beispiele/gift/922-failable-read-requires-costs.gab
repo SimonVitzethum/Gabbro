@@ -1,0 +1,29 @@
+-- erwartet: K001
+-- **Lane 139 (F4): a failable register read evaluates the register's `requires`.**
+--
+-- `reg TIEFE … requires TIEFE <= 8 else Geraetelug::ZuTief` («B26») makes the READ fallible:
+-- it must stand in a `let … else`, and G checks the predicate on every read -- the emitter
+-- lowers it to `if (!(t <= 8))` (`fehlbare_lesung`). `kosten::anweisung` counted the unpack
+-- (`1 + 1 + sonst`) and never the predicate:
+--
+--     let t = d.TIEFE else (e) { … }   ->  K001, the body costs 5 (1 + 1 + 2 + 1)
+--
+-- Before lane 139 the body cost 3 and `costs <= 4 ops` went through with 0 errors, although
+-- the delivered C evaluates `t <= 8` on every pass. The shape is `beispiele/44`'s
+-- `tiefe_lesen` with the promise drawn one below the honest number.
+module gift::failable_read_requires_costs {
+reason Geraetelug {
+    ZuTief = 1 "das Geraet meldet eine Tiefe ueber der Tabellenlaenge"
+    exhaustive
+}
+device Tiefengeraet(basis : u64) at mmio {
+    reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+}
+impl fn tiefe_lesen(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
+    effects { reads d }
+    costs   <= 4 ops
+{
+    let t = d.TIEFE else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+}
