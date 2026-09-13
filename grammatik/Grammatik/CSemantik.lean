@@ -202,3 +202,194 @@ theorem aBinUB_stuck : ∀ (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int),
       · rw [if_neg hc]
   | bitSigned _ _ _ _ hop =>
       rcases hop with _|_|_ <;> subst_vars <;> simp only [cBinApply]
+
+/-! ## Form B. array indexing with a checked index -/
+
+/-- Read one cell with its bound check: `none` is STUCK (out of bounds).
+    The emitter's index is `uint32_t`; the check is against the declared
+    slot count, the same number Gabbro's `.index` type carries. -/
+def cIdxRead (m : CMem) (g : CGeom) (t : Nat) (k : Int) (f : Nat) : Option Int :=
+  if 0 ≤ k ∧ k < (g t : Int) then some (m t k.toNat f) else none
+
+/-- Index UB: below zero or past the declared slot count. -/
+inductive IdxUB : CGeom → Nat → Int → Prop where
+  | outLo (g t k) (h : k < 0) : IdxUB g t k
+  | outHi (g t k) (h : (g t : Int) ≤ k) : IdxUB g t k
+
+/-- An out-of-bounds index gets the read stuck. -/
+theorem cIdxRead_stuck : ∀ (m : CMem) (g : CGeom) (t : Nat) (k : Int) (f : Nat),
+    IdxUB g t k → cIdxRead m g t k f = none := by
+  intro m g t k f h
+  cases h
+  case outLo => rename_i h'; simp only [cIdxRead]; exact if_neg (by omega)
+  case outHi => rename_i h'; simp only [cIdxRead]; exact if_neg (by omega)
+
+/-- An index that is not UB reads a value: bounds are progress. -/
+theorem cIdxRead_progress : ∀ (m : CMem) (g : CGeom) (t : Nat) (k : Int) (f : Nat),
+    ¬ IdxUB g t k → ∃ v, cIdxRead m g t k f = some v := by
+  intro m g t k f h
+  have h0 : 0 ≤ k := by
+    cases Classical.em (0 ≤ k) with
+    | inl hle => exact hle
+    | inr hnle => exact (h (.outLo g t k (by omega))).elim
+  have h1 : k < (g t : Int) := by
+    cases Classical.em (k < (g t : Int)) with
+    | inl hle => exact hle
+    | inr hnle => exact (h (.outHi g t k (by omega))).elim
+  exact ⟨m t k.toNat f, by simp only [cIdxRead]; rw [if_pos ⟨h0, h1⟩]⟩
+
+/-- Expression-level UB: subexpression UB propagates, operator UB fires
+    on evaluated operands, index UB fires on the evaluated index. -/
+inductive CExprUB : CExpr → CMem → CEnv → CGeom → Prop where
+  | binL (op sgn w l r m ρ g) (h : CExprUB l m ρ g) :
+      CExprUB (.bin op sgn w l r) m ρ g
+  | binR (op sgn w l r m ρ g a) (ha : aEval l m ρ g = some a)
+      (h : CExprUB r m ρ g) : CExprUB (.bin op sgn w l r) m ρ g
+  | binOp (op sgn w l r m ρ g a b) (ha : aEval l m ρ g = some a)
+      (hb : aEval r m ρ g = some b) (h : ABinUB op sgn w a b) :
+      CExprUB (.bin op sgn w l r) m ρ g
+  | idxSub (t i f m ρ g) (h : CExprUB i m ρ g) : CExprUB (.slot t i f) m ρ g
+  | idxOut (t i f m ρ g k) (hk : aEval i m ρ g = some k) (h : IdxUB g t k) :
+      CExprUB (.slot t i f) m ρ g
+
+/-- The "no UB" checker: true exactly when evaluation makes progress.
+    Stated with `Option.isSome` for the operators so the checker and the
+    semantics agree by construction. -/
+def cBinOk (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int) : Bool :=
+  (cBinApply op sgn w a b).isSome
+
+/-- The checker says yes exactly when the operator delivers a value. -/
+theorem cBinOk_some : ∀ (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int),
+    cBinOk op sgn w a b = true → ∃ v, cBinApply op sgn w a b = some v := by
+  intro op sgn w a b h
+  unfold cBinOk at h
+  cases hv : cBinApply op sgn w a b with
+  | some v => exact ⟨v, rfl⟩
+  | none => simp [hv] at h
+
+/-- The checker says no exactly when the operator gets stuck. -/
+theorem cBinOk_none : ∀ (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int),
+    cBinOk op sgn w a b = false → cBinApply op sgn w a b = none := by
+  intro op sgn w a b h
+  unfold cBinOk at h
+  cases hv : cBinApply op sgn w a b with
+  | some v => simp [hv] at h
+  | none => rfl
+
+/-- The expression checker: subexpressions clean and the firing
+    rule applies. -/
+def cOk : CExpr → CMem → CEnv → CGeom → Bool
+  | .lit _, _, _, _ => true
+  | .var _, _, _, _ => true
+  | .bin op sgn w l r, m, ρ, g =>
+      cOk l m ρ g && cOk r m ρ g &&
+        match aEval l m ρ g, aEval r m ρ g with
+        | some a, some b => cBinOk op sgn w a b
+        | _, _ => false
+  | .slot t i _, m, ρ, g =>
+      cOk i m ρ g &&
+        match aEval i m ρ g with
+        | some k => if 0 ≤ k ∧ k < (g t : Int) then true else false
+        | none => false
+
+/-- Progress: a clean check evaluates to a value. -/
+theorem cOk_progress : ∀ (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom),
+    cOk e m ρ g = true → ∃ v, aEval e m ρ g = some v := by
+  intro e
+  induction e with
+  | lit v => intro m ρ g _; exact ⟨v, rfl⟩
+  | var x => intro m ρ g _; exact ⟨ρ x, rfl⟩
+  | bin op sgn w l r ihl ihr =>
+      intro m ρ g h
+      simp only [cOk] at h
+      by_cases hl : cOk l m ρ g = true
+      · by_cases hr : cOk r m ρ g = true
+        · obtain ⟨a, ha⟩ := ihl m ρ g hl
+          obtain ⟨b, hb⟩ := ihr m ρ g hr
+          have hok' : cBinOk op sgn w a b = true := by
+            rw [hl, hr, ha, hb] at h
+            simpa using h
+          obtain ⟨v, hv⟩ := cBinOk_some op sgn w a b hok'
+          exact ⟨v, by simp only [aEval, ha, hb, hv]⟩
+        · simp [hr] at h
+      · simp [hl] at h
+  | slot t i f ihi =>
+      intro m ρ g h
+      simp only [cOk] at h
+      by_cases hi : cOk i m ρ g = true
+      · obtain ⟨k, hk⟩ := ihi m ρ g hi
+        have hb : 0 ≤ k ∧ k < (g t : Int) := by
+          rw [hi, hk] at h
+          cases Classical.em (0 ≤ k ∧ k < (g t : Int)) with
+          | inl hP => exact hP
+          | inr hnP => simp [hnP] at h
+        exact ⟨m t k.toNat f, by simp only [aEval, hk]; rw [if_pos hb]⟩
+      · simp [hi] at h
+
+/-- A failed check is stuck: the contrapositive of progress. -/
+theorem aEval_none_of_ok_false : ∀ (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom),
+    cOk e m ρ g = false → aEval e m ρ g = none := by
+  intro e
+  induction e with
+  | lit v => intro m ρ g h; simp [cOk] at h
+  | var x => intro m ρ g h; simp [cOk] at h
+  | bin op sgn w l r ihl ihr =>
+      intro m ρ g h
+      simp only [cOk] at h
+      by_cases hl : cOk l m ρ g = true
+      · by_cases hr : cOk r m ρ g = true
+        · obtain ⟨a, ha⟩ := cOk_progress l m ρ g hl
+          obtain ⟨b, hb⟩ := cOk_progress r m ρ g hr
+          have hok : cBinOk op sgn w a b = false := by
+            rw [hl, hr, ha, hb] at h
+            simpa using h
+          have hn := cBinOk_none op sgn w a b hok
+          simp only [aEval, ha, hb, hn]
+        · have hr' : cOk r m ρ g = false := by simpa using hr
+          have hbn := ihr m ρ g hr'
+          simp [aEval, hbn]
+      · have hl' : cOk l m ρ g = false := by simpa using hl
+        have han := ihl m ρ g hl'
+        simp [aEval, han]
+  | slot t i f ihi =>
+      intro m ρ g h
+      simp only [cOk] at h
+      by_cases hi : cOk i m ρ g = true
+      · obtain ⟨k, hk⟩ := cOk_progress i m ρ g hi
+        have hok : (if 0 ≤ k ∧ k < (g t : Int) then true else false) = false := by
+          rw [hi, hk] at h
+          simpa using h
+        have hb : ¬ (0 ≤ k ∧ k < (g t : Int)) := by
+          intro hP
+          simp [hP] at hok
+        simp only [aEval, hk]
+        rw [if_neg hb]
+      · have hi' : cOk i m ρ g = false := by simpa using hi
+        have hn := ihi m ρ g hi'
+        simp [aEval, hn]
+
+/-- Every inventoried expression UB fails the checker. -/
+theorem cExprUB_ok : ∀ (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom),
+    CExprUB e m ρ g → cOk e m ρ g = false := by
+  intro e m ρ g h
+  induction h
+  case binL => rename_i ih; simp [cOk, ih]
+  case binR => rename_i ih; simp [cOk, ih]
+  case binOp =>
+      rename_i ha hb h
+      simp only [cOk, ha, hb, cBinOk]
+      rw [aBinUB_stuck _ _ _ _ _ h]
+      simp
+  case idxSub => rename_i ih; simp [cOk, ih]
+  case idxOut =>
+      rename_i hk h
+      simp only [cOk, hk]
+      cases h
+      case outLo => rename_i h'; rw [if_neg (by omega)]; simp
+      case outHi => rename_i h'; rw [if_neg (by omega)]; simp
+
+/-- Every inventoried expression UB gets the evaluation stuck. -/
+theorem cExprUB_stuck : ∀ (e : CExpr) (m : CMem) (ρ : CEnv) (g : CGeom),
+    CExprUB e m ρ g → aEval e m ρ g = none := by
+  intro e m ρ g h
+  exact aEval_none_of_ok_false e m ρ g (cExprUB_ok e m ρ g h)
