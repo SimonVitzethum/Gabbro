@@ -1,0 +1,79 @@
+-- 109 -- Two entries over lock-free dispatch roots: the audit's usual shape.
+--
+-- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): for the usual constant
+-- thread assignment the premise collapses to "a thread ENTRY function holds
+-- no lock by signature" (`AuditZiel.lean`, probe B) -- nobody holds a lock
+-- for a thread before it starts. Both entries here dispatch to distributors
+-- that REQUIRE nothing and take their lock inside (`locks L { … }`, the
+-- taking discipline `audit_takes_lock_executes` runs on G); the signature
+-- holders `write_a`/`write_b` are callees, never starts. The two lock
+-- domains are disjoint on top of that. Every rule stays silent -- N240
+-- (empty held sets at both starts), H013/W002 beside the guarded writes
+-- (the `beispiele/59` shape).
+module beispiel::lockfree_entry_roots {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+table U count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+lock M protects { U } rank 1 held <= 100 ops;
+
+impl fn write_a(i : index into T)
+    requires Held(L)
+    effects { reads T.slots, writes T.slots, locks L }
+    costs <= 8 ops
+{
+    T.slots[i].v = 1;
+}
+
+impl fn distribute_a()
+    effects { reads T.slots, writes T.slots, locks L }
+    costs <= 40 ops
+{
+    locks L {
+        write_a(0);
+    }
+}
+
+impl fn write_b(i : index into U)
+    requires Held(M)
+    effects { reads U.slots, writes U.slots, locks M }
+    costs <= 8 ops
+{
+    U.slots[i].v = 2;
+}
+
+impl fn distribute_b()
+    effects { reads U.slots, writes U.slots, locks M }
+    costs <= 40 ops
+{
+    locks M {
+        write_b(0);
+    }
+}
+
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch beispiel::lockfree_entry_roots::distribute_a;
+}
+
+entry entry_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch beispiel::lockfree_entry_roots::distribute_b;
+}
+
+}

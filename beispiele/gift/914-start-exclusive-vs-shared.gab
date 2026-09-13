@@ -1,0 +1,58 @@
+-- erwartet: N240
+-- **Exclusive against shared on one lock falls -- exclusivity excludes everyone.**
+--
+-- `read_a` requires `Held(L)` exclusively while `read_b` requires
+-- `Held(L, shared)`: an exclusive holder excludes every other holder, so the
+-- pair cannot start together and N240 falls. Under the strict transfer even
+-- shared-shared falls (gift 913); this mixed pair falls a fortiori. Both
+-- bodies only READ, so the refusal set is exactly `[N240]`. The second set
+-- pairs two lock-free bodies -- the positive twin: lock-free starts stay
+-- silent. (It must use bodies of its own: naming `read_b` a second time
+-- would start it twice, and two starts in one lock-holding routine fall on
+-- their own -- gift 912 pins that shape.)
+module gift914 {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with `read_b`): exclusive `L` against shared `L`.
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+-- Must fall (N240, with `read_a`): exclusive `L` against shared `L`.
+impl fn read_b() -> u32
+    requires Held(L, shared)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+-- Must pass N240: starts holding nothing.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+impl fn idle_b() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 1;
+}
+
+concurrent { read_a, read_b };
+
+concurrent { idle, idle_b };
+
+}

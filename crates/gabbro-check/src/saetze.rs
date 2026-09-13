@@ -4170,6 +4170,34 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
                      messung/NEBENLAEUFIGKEIT-ENTWURF.md §2 (`unvollstaendig` is fail-closed)",
     },
+    // --- Lane 137: TRANSFER of `StartExklusiv` (goal premise over machine G) --------
+    Satz {
+        name: "nebeneinander.startexklusiv",
+        kennungen: &["N240"],
+        aussage: "The start functions of distinct threads have disjoint signature-held \
+                  lock sets: no lock stands in `requires Held(L)` of two thread starts \
+                  (`concurrent` members, `entry`/`boot` dispatch roots), at any strength.",
+        vorbehalt: "**No strength exemption, by review**: `StartExklusiv` bans ANY common \
+                    signature lock between distinct starts, and the model has no notion \
+                    under which two `Held(L, shared)` starts are compatible -- a checker \
+                    that accepts a program for which the goal premise is false is the \
+                    defect the transfer phase exists to remove. Should a future model \
+                    carry per-holder shared locks, this rule is where the relaxation \
+                    lands. Unresolvable starts are skipped, not cleared (`W003` refuses \
+                    the member, `N018` the dangling `dispatch`); `entrust` roots are \
+                    skipped (the guest is unknown). Lock identity is the short name, \
+                    like the pair check beside it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/910 (two entries, one lock), /911 (declared \
+                      pair, one lock) and /915 (boot root plus entry); /912 pins the \
+                      same-function shape the audit excludes; /913 the shared-shared \
+                      fall; /914 the exclusive-vs-shared fall. The clean side is \
+                      beispiele/108 (declared pair, disjoint locks) and /109 (two \
+                      entries over lock-free dispatch roots).",
+        fundstelle: "crates/gabbro-check/src/startexklusiv.rs; \
+                     grammatik/Grammatik/RufMaschineG.lean (`StartExklusiv`); \
+                     grammatik/Grammatik/AuditZiel.lean (probe B)",
+    },
 ];
 
 // ===================================================================================

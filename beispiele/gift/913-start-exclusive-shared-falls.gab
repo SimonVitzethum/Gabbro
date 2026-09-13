@@ -1,0 +1,58 @@
+-- erwartet: N240
+-- **Two shared-lock starts fall too -- the premise bans ANY common lock.**
+--
+-- `read_a` and `read_b` both require `Held(L, shared)`: a shared lock is
+-- co-holdable by design, but the model premise (`StartExklusiv`) has no
+-- notion under which two shared starts are compatible -- it bans ANY common
+-- signature lock between distinct starts. A checker that accepts a program
+-- for which the goal premise is false is the defect the transfer phase
+-- exists to remove, so N240 falls here too, once for the pair. Should a
+-- future model carry per-holder shared locks, this rule is where the
+-- relaxation lands. Both bodies only READ, so the refusal set is exactly
+-- `[N240]`. The second set pairs two lock-free bodies -- the positive twin:
+-- disjoint starts stay silent.
+module gift913 {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with each other): both start holding `L`, shared or not.
+impl fn read_a() -> u32
+    requires Held(L, shared)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_b() -> u32
+    requires Held(L, shared)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+-- Must pass N240: starts holding nothing.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+impl fn idle_b() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 1;
+}
+
+concurrent { read_a, read_b };
+
+concurrent { idle, idle_b };
+
+}
