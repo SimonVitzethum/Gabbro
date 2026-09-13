@@ -3333,7 +3333,12 @@ CUTS: what this file does not do, by name.
   Where the binding is unused, the check alone is `gsem_pruefung`.
 - A TAGGED UNION IN MEMORY has no memory relation (`tyFits (.sum _) _ =
   false`, no `EmitLay` for a table with a union field); `gcorr_onTag`
-  takes where the union lives as a premise (`SumCorr`).
+  takes where the union lives as a premise (`SumCorr`). IT IS NOT
+  INHABITED: `ValCorr (.sum _)` is `False`, so no related state has a
+  union-typed variable, and the grammar builds a union only from a
+  static constructor (`Expr.fall`) -- a FINDING about the value relation,
+  which would need a state to relate a union (it lives in a struct, not
+  in one cell).
 - A REASON COMPARED WITH `==` (`if (e == Buchfehler_Unbelegt)`,
   `beispiele/48` `nur_unbelegte_zaehlen`) has no Gabbro expression: the
   grammar compares only integers; the form has no lemma.

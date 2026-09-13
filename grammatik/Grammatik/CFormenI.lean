@@ -2167,6 +2167,9 @@ CUTS: what this pass does not do, by name.
   return false;`) has no correspondence here (`StOut` is `False` on it),
   so a statement that may return a reason cannot be certified by this
   pass. Functions without an error channel (`gruende = 0`) never reach it.
+  (Since 2026-09-13 the channel, its call site and the out-parameter
+  cells are CFormenR.lean: `StmtCorrG`, `kcorr_retGrund`,
+  `bsemG_bindCallElse`.)
 - `retry` IS NOT COVERED, and it cannot be as the two sides stand. The
   emitted loop (9658/9668) is `for (; !(bis) && z < n; z += 1) body` and
   then `if (z >= n && !(bis)) ausgang();` -- it evaluates `bis` once more
@@ -2177,14 +2180,15 @@ CUTS: what this pass does not do, by name.
   the model moves (`retryLaufC`, the one-line change to `retryLauf`'s
   `0` case); `scorr_retry` covers the emitted loop against the model as
   it stands, because the emitter admits only a `never` overflow.
-- `forever` (`for (;;)`) is not given its lemma: its Gabbro meaning after
-  `passes` rounds is the hardware assumption, so only its `leave` and
-  `return` exits carry obligations; the shape is `CS.loop`.
+- `forever` (`for (;;)`) is not given its lemma here: its Gabbro meaning
+  after `passes` rounds is the hardware assumption, so only its `leave`
+  and `return` exits carry obligations; the shape is `CS.loop`. (Given
+  since 2026-09-13: `scorr_forever`, CFormenR2.lean.)
 - `~` is covered for unsigned `T` only (the only `M137` operand).
 - `+%`, `-%`, `*%`, `+|` have no constructor in the Lean grammar; they
   correspond to `Zahl.addW`/`subW`/`mulW`/`addS` of `Ueberlauf.lean`. The
   wrapping shift `<<%` and the signed helper `_gabbro_sat_i` are not
-  covered.
+  covered here (since 2026-09-13: `wrapC_shl`, `satI_run`, CFormenR2.lean).
 - `traverse` is covered with a loop bound that evaluates to the slot
   count without observations and a body that does not write the loop
   variable (`CS.writesV`, a syntactic check); the other counting loops of

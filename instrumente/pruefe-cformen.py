@@ -103,7 +103,8 @@ FORMS = {
     "stmt:decl-union-payload": ([], "`T x = m.last.F;` (onTag payload)"),
     "stmt:reg-store":          ([], "H10 per-step only (regSchreib_step)"),
     "stmt:reg-load":           ([], "H9 per-step only (regLies_step)"),
-    "stmt:forever":            ([], "`for (;;) {` (forever, CAS loop)"),
+    "stmt:forever":            (["scorr_forever"], "F1: `for (;;) {` after the watchdog line"),
+    "stmt:for-ever-other":     ([], "`for (;;) {` of the CAS loop or the walk"),
     "stmt:for-chain":          ([], "`for (v = a; v != N; v = next)` (chain walk)"),
     "stmt:cas-loop":           ([], "the `exchange update` CAS loop"),
     "stmt:cas":                (["cas_success", "cas_failure"], "H4 (one step)"),
@@ -128,14 +129,14 @@ FORMS = {
     "expr:le32":               (["ecorr_le32"], "H6"),
     "expr:byte-guard":         (["ecorr_byteGuard"], "H7"),
     "expr:bnot":               (["ecorr_bnot"], "E19"),
-    "expr:shift":              (["ecorr_shl", "ecorr_shr"], "E15/E16"),
+    "expr:shift":              (["ecorr_shl", "ecorr_shr", "wrapC_shl"], "E15/E16, `<<%`"),
     "expr:cast":               (["ecorr_cast"], "E20"),
     "expr:land-lor":           (["ecorr_und", "ecorr_oder"], "M3"),
     "expr:lnot":               (["ecorr_nicht"], "E18"),
     "expr:atomic-load":        (["bsem_awaits"], "H3"),
     "expr:cell-read":          (["ev_zs"], "a read of an address-taken local"),
     "expr:reason-const":       (["ecorr_grundLit"], "a reason constant `R_F`"),
-    "expr:sat-i":              ([], "`_gabbro_sat_i` (signed saturation)"),
+    "expr:sat-i":              (["satI_run", "satI_zahl"], "S-I"),
     "expr:byte-reader-other":  ([], "byte readers other than `gabbro_le32`"),
     "expr:volatile":           ([], "device register read (per-step only)"),
     "expr:call":               ([], "a call inside an expression (CX has no call node)"),
@@ -154,7 +155,7 @@ KNOWN_UNCOVERED = {
     "stmt:reg-store": ("2026-09-13", "regSchreib_step is per-step; corrW says nothing "
                        "about device windows"),
     "stmt:reg-load": ("2026-09-13", "regLies_step is per-step"),
-    "stmt:forever": ("2026-09-13", "forever has no lemma of its own (T4 item 4)"),
+    "stmt:for-ever-other": ("2026-09-13", "the CAS loop and the walk (no lemma)"),
     "stmt:for-chain": ("2026-09-13", "the chain walk has no Gabbro constructor"),
     "stmt:cas-loop": ("2026-09-13", "only the CAS step is covered (cas_success/failure)"),
     "stmt:compound-other": ("2026-09-13", "compound assignment is covered on locals only"),
@@ -171,7 +172,6 @@ KNOWN_UNCOVERED = {
     "stmt:store-field": ("2026-09-13", "a struct behind a pointer has no memory relation"),
     "stmt:walk": ("2026-09-13", "the walk has no Gabbro constructor (CFormenI CUTS)"),
     "stmt:trap-guard": ("2026-09-13", "the byte writers' bound check (T4 item 4)"),
-    "expr:sat-i": ("2026-09-13", "the signed saturation helper (T4 item 4)"),
     "expr:byte-reader-other": ("2026-09-13", "only gabbro_le32 has a lemma"),
     "expr:volatile": ("2026-09-13", "device reads are per-step lemmas"),
     "expr:call": ("2026-09-13", "calls in expressions: bank/format accessors, port reads"),
@@ -259,8 +259,8 @@ def split_statements(line):
     return [s for s in out if s]
 
 
-def classify_stmt(s, unit, channel):
-    """The statement form of `s`, or None."""
+def classify_stmt(s, unit, channel, prev=None):
+    """The statement form of `s`, or None. `prev` is the form of the statement before."""
     if s in ("{", "}"):
         return "brace"
     if s.startswith("#"):
@@ -289,7 +289,7 @@ def classify_stmt(s, unit, channel):
     if re.match(r"^switch \(" + IDENT + r"\) \{$", s):
         return "stmt:switch-reason"
     if s == "for (;;) {":
-        return "stmt:forever"
+        return "stmt:forever" if prev == "stmt:watchdog" else "stmt:for-ever-other"
     if re.match(r"^for \(; !\(.*\) && _r\d+ < \d+u; _r\d+ \+= 1\) \{$", s):
         return "stmt:retry-header"
     if re.match(r"^for \(" + CTYPE + r" " + IDENT + r" = .*; " + IDENT + r" < .*; " + IDENT
@@ -539,9 +539,11 @@ def main():
         unit = Unit(src)
         for fname, channel, lines in unit.bodies:
             cells = set()
+            prev = None
             for ln in lines:
                 for s in split_statements(ln):
-                    form = classify_stmt(s, unit, channel)
+                    form = classify_stmt(s, unit, channel, prev)
+                    prev = form
                     if form is None:
                         unclassified[s] += 1
                         unclassified_ex.setdefault(s, f.name)

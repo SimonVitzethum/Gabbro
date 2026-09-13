@@ -152,3 +152,5 @@ import Grammatik.CFormenWZeuge
 import Grammatik.CFormenR
 import Grammatik.CFormenRZeuge
 import Grammatik.CFormenRZeuge2
+import Grammatik.CFormenR2
+import Grammatik.CFormenR2Zeuge
