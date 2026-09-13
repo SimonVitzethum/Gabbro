@@ -624,4 +624,66 @@ total, not gradual: no costs or time anywhere, no lock-free sharing
 guarantees, no stuck-state behaviour, no carrier-less declarations, no
 locks-block-only readers, no non-local-register programs.
 
-(End of file — §11 added 2026-09-13, lane 133; §§1-10 history above.)
+## 12. The goal against declared callee frames (2026-09-13)
+
+The finding `r4_einzahlen_nicht_V` (`Referenz104.lean`) showed that the user
+obligation of §11 fails on an ordinary corpus program: its handler class
+`RespektiertVertraege` bounds a callee only by its `ensures`, never by its
+declared writes. §12 repairs that. Files: `ZielOrtRahmenSem.lean`,
+`ZielOrtRahmenBeweis.lean`, `ZielOrtRahmen.lean`, `Referenz104Rahmen.lean`.
+
+### 12.1 Exact statement of `ziel_ort_rahmen` (`ZielOrtRahmen.lean`)
+
+```lean
+theorem ziel_ort_rahmen (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussOrtGB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutR P passes f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M
+```
+
+The premises are those of `ziel_ort_geraet` (§11.1) with `KoerperGutR` in
+place of `KoerperGutG`; the classification of §11.2 carries over row by row.
+
+### 12.2 The new user obligation, classified (a) USER
+
+`KoerperGutR P passes f` (`ZielOrtRahmenSem.lean`): the body triple and caller
+duty of `KoerperGutG`, for every oracle with `RahmenO` and `RegLokal`, and
+every call handler with `RespektiertRahmen P R` -- `RespektiertVertraege` AND
+every normal answer `R f σ ρ = ok σ' v` satisfies
+`Rahmen (D.schreibt f) (D.gschreibt f) σ σ'` and keeps the held locks
+(`offen σ'.spur = offen σ.spur`). Weaker than the old obligations:
+`koerperGutR_of_G`, `koerperGutR_of_V`; strictly weaker on the corpus:
+`r4_rahmen_echt_schwaecher`.
+
+The frame is NOT a premise: the machine delivers it. `rufG_rahmen`
+(`ZielOrtRahmenSem.lean`) proves on every reachable machine, for every
+suspended frame `F` waiting for a callee `g` entered at `s0`: `g`'s declared
+writes are inside `F`'s (`RufPasst.hw`/`hg` at the push), and live memory
+agrees with `s0` on every footprint carrier of `F` that `g` does not declare
+written (own steps write only permitted carriers, `schritt_traeger`; other
+threads are excluded by the held signature locks, `fussOrtGB`,
+`StartExklusiv`). Its premises are `GutO`, `hvoll`, `fussOrtGB`,
+`StartExklusiv` -- all already premises of the goal.
+
+### 12.3 Consequences and the corpus
+
+- `ziel_ort_geraet_aus_rahmen`: `ziel_ort_geraet` from `ziel_ort_rahmen`.
+- `ziel_ort_voll_lokal_aus_rahmen`, `ziel_ort_lokal_aus_rahmen`:
+  `ziel_ort_voll` and `ziel_ort` on register-local oracles.
+- `ziel_ort_rahmen_ref104` (`Referenz104Rahmen.lean`): every premise holds
+  jointly on the hand translation of `beispiele/104-referenz.gab`; the
+  conclusion holds on every reachable machine and on the reached run
+  (`ensures` of `einzahlen` at its logged return, from the theorem).
+
+### 12.4 Not covered
+
+`ziel_ort_voll`/`ziel_ort` for NON-local oracles and `ziel_ort_voll_ax`
+(declared axiom ensures) are not derived from `ziel_ort_rahmen`; the frame
+bounds normal answers only (not reason answers); the frame is a write SET
+(whole tables/globals), no per-slot frame. All §11.3 cuts carry over.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §§1-10 history above.)

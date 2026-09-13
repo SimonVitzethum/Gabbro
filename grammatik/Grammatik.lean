@@ -136,3 +136,7 @@ import Grammatik.ZielOrtAxBeweis
 import Grammatik.ZielOrtAx
 import Grammatik.ZielOrtAxZeuge
 import Grammatik.Referenz104
+import Grammatik.ZielOrtRahmenSem
+import Grammatik.ZielOrtRahmenBeweis
+import Grammatik.ZielOrtRahmen
+import Grammatik.Referenz104Rahmen
