@@ -172,3 +172,5 @@ import Grammatik.ZielOrtSperre
 import Grammatik.ZielOrtSperreZeuge
 import Grammatik.ZielOrtEinfaden
 import Grammatik.ZielOrtEinfadenZeuge
+import Grammatik.SchablonenT5
+import Grammatik.SchablonenT5Sem
