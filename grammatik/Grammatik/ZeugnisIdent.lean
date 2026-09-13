@@ -91,7 +91,34 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
     (printInt a).bind fun ca => (printInt b).bind fun cb => some (.shl w ca cb)
   | .shr w _ _ _ _ a b =>
     (printInt a).bind fun ca => (printInt b).bind fun cb => some (.shr w ca cb)
-  | _ => none
+  -- Every remaining shape has no `CertExpr` print (booked, not faked):
+  -- reads through pointers or post-entry values, byte reads, and every
+  -- non-`int` constructor. One arm each, so every arm owns an equation
+  -- lemma the roundtrip proof rewrites with.
+  | .wahr => none
+  | .falsch => none
+  | .durch _ _ _ _ _ _ => none
+  | .ptrOf _ _ _ _ => none
+  | .fnref _ _ _ => none
+  | .altGlob _ _ => none
+  | .altSlot _ _ _ _ => none
+  | .leseBytes _ _ _ _ _ _ _ _ => none
+  | .lt _ _ => none
+  | .le _ _ => none
+  | .eq _ _ => none
+  | .fllt _ _ => none
+  | .flle _ _ => none
+  | .und _ _ => none
+  | .oder _ _ => none
+  | .nicht _ => none
+  | .none _ => none
+  | .some _ => none
+  | .istSome _ => none
+  | .fall _ _ _ => none
+  | .grund _ _ => none
+  | .forallSlots _ _ _ => none
+  | .existsSlots _ _ _ => none
+  | .reaches _ _ _ _ _ _ => none
 
 /-- The computational elaborator: from a printed certificate back to a
     CHECKED term. Every side condition `certRange` recomputes is rechecked
@@ -187,13 +214,219 @@ def elabInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
     match (elabInt (D := D) (Γ := Γ) (Λ := Λ) i) with
     | some ⟨.int l h, ei⟩ =>
       if hc : l = 0 ∧ h = D.count t - 1 ∧ darf D t Λ then
-        (by obtain ⟨rfl, rfl, hL⟩ := hc; exact some ⟨_, .slot t f ei hL⟩)
+        have hty : (Ty.int l h) = (Ty.index (D.count t)) := by rw [hc.1, hc.2.1]
+        some ⟨_, .slot t f (Eq.mp (congrArg (Expr D Γ Λ) hty) ei) hc.2.2⟩
       else none
     | _ => none
 
+/-- Term identity, general form: printing a CHECKED term and
+    re-elaborating gives back the SAME term -- proved by induction over
+    every `Expr` constructor. The 17 `CertExpr` shapes round-trip (the
+    some-branch); the 23 shapes with no print state `True` (the none-branch:
+    `durch`, `altGlob`/`altSlot`, `leseBytes`, and every non-`int`
+    constructor). No premise is assumed about the term -- the statement
+    quantifies over the term itself, so there is nothing vacuous to
+    discharge (rules 4/13: the witness is `print_elab_all_zeuge`). -/
+theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
+    ∀ (e : Expr D Γ Λ τ),
+    match printInt e with
+    | some c => elabInt c = some ⟨τ, e⟩
+    | none => True
+  | .lit n => rfl
+  | .var x => by simp [printInt, elabInt, varOfAll_varIdx x]
+  | .glob g hL => by simp [printInt, elabInt, hL]
+  | .slot t f i hL => by
+    have ihi := print_elab_all i
+    cases hi : printInt i with
+    | none => simp [printInt, hi]
+    | some ci =>
+      have ihi' : elabInt ci = some ⟨_, i⟩ := by rw [hi] at ihi; exact ihi
+      simp [printInt, hi, elabInt, ihi', hL]
+  | .weiter h1 h2 e => by
+    have ihe := print_elab_all e
+    cases he : printInt e with
+    | none => simp [printInt, he]
+    | some ce =>
+      have ihe' : elabInt ce = some ⟨_, e⟩ := by rw [he] at ihe; exact ihe
+      simp [printInt, he, elabInt, ihe', h1, h2]
+  | .add a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb']
+  | .sub a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb']
+  | .neg a => by
+    have iha := print_elab_all a
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+      simp [printInt, ha, elabInt, iha']
+  | .mul a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb']
+  | .div h0 h1' a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h1']
+  | .rem h0 h1' a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h1']
+  | .sdiv hb a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb2 : printInt b with
+      | none => simp [printInt, ha, hb2]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb2] at ihb; exact ihb
+        simp [printInt, ha, hb2, elabInt, iha', ihb', hb]
+  | .srem hb a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb2 : printInt b with
+      | none => simp [printInt, ha, hb2]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb2] at ihb; exact ihb
+        simp [printInt, ha, hb2, elabInt, iha', ihb', hb]
+  | .band h0 h0' a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0']
+  | .bor w h0 h0' hw1 hw2 a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0', hw1, hw2]
+  | .bxor w h0 h0' hw1 hw2 a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0', hw1, hw2]
+  | .shl w hw1 hw2 h0 h0' a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', hw1, hw2, h0, h0']
+  | .shr w hw1 hw2 h0 h0' a b => by
+    have iha := print_elab_all a
+    have ihb := print_elab_all b
+    cases ha : printInt a with
+    | none => simp [printInt, ha]
+    | some ca =>
+      cases hb : printInt b with
+      | none => simp [printInt, ha, hb]
+      | some cb =>
+        have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
+        have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
+        simp [printInt, ha, hb, elabInt, iha', ihb', hw1, hw2, h0, h0']
+  | .wahr => by simp [printInt]
+  | .falsch => by simp [printInt]
+  | .durch _ _ _ _ _ _ => by simp [printInt]
+  | .ptrOf _ _ _ _ => by simp [printInt]
+  | .fnref _ _ _ => by simp [printInt]
+  | .altGlob _ _ => by simp [printInt]
+  | .altSlot _ _ _ _ => by simp [printInt]
+  | .leseBytes _ _ _ _ _ _ _ _ => by simp [printInt]
+  | .lt _ _ => by simp [printInt]
+  | .le _ _ => by simp [printInt]
+  | .eq _ _ => by simp [printInt]
+  | .fllt _ _ => by simp [printInt]
+  | .flle _ _ => by simp [printInt]
+  | .und _ _ => by simp [printInt]
+  | .oder _ _ => by simp [printInt]
+  | .nicht _ => by simp [printInt]
+  | .none _ => by simp [printInt]
+  | .some _ => by simp [printInt]
+  | .istSome _ => by simp [printInt]
+  | .fall _ _ _ => by simp [printInt]
+  | .grund _ _ => by simp [printInt]
+  | .forallSlots _ _ _ => by simp [printInt]
+  | .existsSlots _ _ _ => by simp [printInt]
+  | .reaches _ _ _ _ _ _ => by simp [printInt]
+
 /-
   CUTS:
-  - `print_elab`/`elab_valid` plus witnesses are being added piece by
-    piece (rule 10); `varIdx`/`varOfAll`/`varOf`/`printInt`/`elabInt`
-    stand so far.
+  - `print_elab` (int-typed target form), `elab_valid` plus witnesses are
+    still to come; `print_elab_all` stands.
 -/
