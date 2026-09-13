@@ -157,6 +157,7 @@ pub mod zeugnis;
 // CertExpr validity certificates, `corrcert` collects per-run
 // correspondence rows, `kostenledger` renders the ops/deadline ledger.
 pub mod certemit;
+pub mod certstmt;
 pub mod corrcert;
 pub mod kostenledger;
 pub mod zeremonie;

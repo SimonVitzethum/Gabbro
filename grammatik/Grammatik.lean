@@ -174,3 +174,4 @@ import Grammatik.ZielOrtEinfaden
 import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.SchablonenT5
 import Grammatik.SchablonenT5Sem
+import Grammatik.ZeugnisStmt104
