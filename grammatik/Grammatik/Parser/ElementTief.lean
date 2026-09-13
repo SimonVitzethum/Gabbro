@@ -1266,17 +1266,25 @@ def parseFeldListe (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r => match r with
       | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match parseFeld f r with
+      | _ => match parseFeldFolge f r with
         | .error e => .error e
-        | .ok (fd, r1) => match r1 with
-          | .zeichen "," :: r2 => match r2 with
-            | .zeichen "}" :: r3 => .ok ([fd], r3)
-            | _ => match parseFeldListe f r2 with
-              | .error e => .error e
-              | .ok (fds, r') => .ok (fd :: fds, r')
-          | _ => match fordereZeichen "}" r1 with
-            | .error e => .error e
-            | .ok r' => .ok ([fd], r')
+        | .ok (fds, r') => .ok (fds, r')
+/-- Fields after the opening `{` (the opener is consumed). -/
+def parseFeldFolge (f : Nat) (toks : List Token) :
+    Except String (List SFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseFeld f toks with
+    | .error e => .error e
+    | .ok (fd, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
+        | .zeichen "}" :: r3 => .ok ([fd], r3)
+        | _ => match parseFeldFolge f r2 with
+          | .error e => .error e
+          | .ok (fds, r') => .ok (fd :: fds, r')
+      | _ => match fordereZeichen "}" r1 with
+        | .error e => .error e
+        | .ok r' => .ok ([fd], r')
 /-- One register bit field: `name @bitpos [class c]`. -/
 def parseRegFeld (f : Nat) (toks : List Token) :
     Except String (SRegFeld × List Token) :=
@@ -1303,17 +1311,25 @@ def parseRegFeldListe (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r => match r with
       | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match parseRegFeld f r with
+      | _ => match parseRegFeldFolge f r with
         | .error e => .error e
-        | .ok (fd, r1) => match r1 with
-          | .zeichen "," :: r2 => match r2 with
-            | .zeichen "}" :: r3 => .ok ([fd], r3)
-            | _ => match parseRegFeldListe f r2 with
-              | .error e => .error e
-              | .ok (fds, r') => .ok (fd :: fds, r')
-          | _ => match fordereZeichen "}" r1 with
-            | .error e => .error e
-            | .ok r' => .ok ([fd], r')
+        | .ok (fds, r') => .ok (fds, r')
+/-- Register fields after the opening `{`. -/
+def parseRegFeldFolge (f : Nat) (toks : List Token) :
+    Except String (List SRegFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseRegFeld f toks with
+    | .error e => .error e
+    | .ok (fd, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
+        | .zeichen "}" :: r3 => .ok ([fd], r3)
+        | _ => match parseRegFeldFolge f r2 with
+          | .error e => .error e
+          | .ok (fds, r') => .ok (fd :: fds, r')
+      | _ => match fordereZeichen "}" r1 with
+        | .error e => .error e
+        | .ok r' => .ok ([fd], r')
 /- The `in`-stage tail behind a register class. -/
 def parsePhasen (f : Nat) : List Token →
     Except String (List String × List Token)
@@ -2078,7 +2094,8 @@ def parseArenaTief (f : Nat) (toks : List Token) :
                   | .ok (t, r8) => match fordereZeichen ";" r8 with
                     | .error e => .error e
                     | .ok r => .ok (.arenaT n lo hi t, r)
-/-- `reason n { c = num "text", … [exhaustive] }`. -/
+/-- `reason n { c = num "text" … [exhaustive] }` (cases are
+    whitespace-separated, commas allowed). -/
 def parseGrundTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -2101,23 +2118,40 @@ def parseGrundFaelle (f : Nat) (toks : List Token) :
       if strEq s "exhaustive" then match fordereZeichen "}" rest with
         | .error e => .error e
         | .ok r => .ok ((([], true)), r)
-      else match nimmName toks with
+      else match parseGrundFall f toks with
         | .error e => .error e
-        | .ok (c, r1) => match fordereZeichen "=" r1 with
-          | .error e => .error e
-          | .ok r2 => match parseOr f r2 with
+        | .ok ((c, num, t), r4) => match r4 with
+          | .zeichen "," :: r5 => match parseGrundFaelle f r5 with
             | .error e => .error e
-            | .ok (num, r3) => match nimmTextTok r3 with
-              | .error e => .error e
-              | .ok (t, r4) => match r4 with
-                | .zeichen "," :: r5 => match parseGrundFaelle f r5 with
-                  | .error e => .error e
-                  | .ok ((cs, ex), r) => .ok ((((c, num, t) :: cs, ex)), r)
-                | _ => match fordereZeichen "}" r4 with
-                  | .error e => .error e
-                  | .ok r => .ok ((([(c, num, t)], false)), r)
+            | .ok ((cs, ex), r) => .ok ((((c, num, t) :: cs, ex)), r)
+          | _ => match parseGrundFaelle f r4 with
+            | .error e => .error e
+            | .ok ((cs, ex), r) => .ok ((((c, num, t) :: cs, ex)), r)
+    | .ident _ :: _ => match parseGrundFall f toks with
+      | .error e => .error e
+      | .ok ((c, num, t), r4) => match r4 with
+        | .zeichen "," :: r5 => match parseGrundFaelle f r5 with
+          | .error e => .error e
+          | .ok ((cs, ex), r) => .ok ((((c, num, t) :: cs, ex)), r)
+        | _ => match parseGrundFaelle f r4 with
+          | .error e => .error e
+          | .ok ((cs, ex), r) => .ok ((((c, num, t) :: cs, ex)), r)
     | .zeichen "}" :: rest => .ok ((([], false)), rest)
     | _ => .error "reason expected"
+/-- One reason case: `name = num "text"`. -/
+def parseGrundFall (f : Nat) (toks : List Token) :
+    Except String ((String × SExpr × String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (c, r1) => match fordereZeichen "=" r1 with
+      | .error e => .error e
+      | .ok r2 => match parseOr f r2 with
+        | .error e => .error e
+        | .ok (num, r3) => match nimmTextTok r3 with
+          | .error e => .error e
+          | .ok (t, r) => .ok (((c, num, t)), r)
 /-- `state n { transitions }`. -/
 def parseZustandTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=

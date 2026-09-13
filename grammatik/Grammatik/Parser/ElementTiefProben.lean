@@ -303,5 +303,145 @@ theorem t16 : beqTopTief (parseTopTief tt16)
 -- beispiele/01-tabelle.gab (the `ist_blatt` predicate helper).
 -- Rust: `Funktion` with `= pred` -- same shape (a `ptr` and an
 -- `index into` parameter, a `pure` effect).
+def tt17 : List Token :=
+  [.wort "impl", .wort "fn", .ident "ausgeben", .zeichen "(",
+   .ident "tor", .zeichen ":", .wort "u16", .zeichen ",",
+   .ident "wert", .zeichen ":", .wort "u8", .zeichen ")",
+   .wort "effects", .zeichen "{", .wort "writes", .ident "GERAET",
+   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 1,
+   .wort "ops", .wort "arch", .ident "x86_64", .zeichen "=",
+   .wort "asm", .zeichen "{", .text "outb %[wert], %[tor]",
+   .wort "in", .zeichen "{", .ident "wert", .zeichen ":",
+   .text "a", .zeichen ",", .ident "tor", .zeichen ":",
+   .text "d", .zeichen "}", .wort "clobbers", .zeichen "{",
+   .ident "memory", .zeichen "}", .zeichen "}", .zeichen ";",
+   .ende]
+theorem t17_lex :
+    lex "impl fn ausgeben(tor : u16, wert : u8) effects { writes GERAET } costs <= 1 ops arch x86_64 = asm { \"outb %[wert], %[tor]\" in { wert : \"a\", tor : \"d\" } clobbers { memory } };" =
+      .ok tt17 := by
+  decide
+theorem t17 : beqTopTief (parseTopTief tt17)
+    (.ok [.asmT
+      { art := "impl", name := "ausgeben",
+        params := [("tor", .atom "u16"), ("wert", .atom "u8")],
+        ergebnis := .none, fehler := .none,
+        klauseln := [.wirkung [.schreibt (.variable "GERAET")],
+          .kosten (.lit 1), .rechenart "x86_64"] }
+      "asm { \"outb %[wert], %[tor]\" in { wert : \"a\" , tor : \"d\" } clobbers { memory } } "]) = true := by
+  decide
+-- beispiele/36-asm.gab:17-27. Rust: `Funktion` with `= asm` --
+-- the assembler body rides raw and balanced (see CUTS).
+def tt18 : List Token :=
+  [.wort "impl", .wort "fn", .ident "f", .zeichen "(", .zeichen ")",
+   .wort "deadline", .zeichen "<=", .zahl 10, .wort "ops",
+   .wort "arch", .ident "x86_64", .wort "falsifier", .ident "s",
+   .zeichen ";", .ende]
+theorem t18_lex :
+    lex "impl fn f() deadline <= 10 ops arch x86_64 falsifier s;" =
+      .ok tt18 := by
+  decide
+theorem t18 : beqTopTief (parseTopTief tt18)
+    (.ok [.protoT
+      { art := "impl", name := "f", params := [], ergebnis := .none,
+        fehler := .none,
+        klauseln := [.frist
+          "deadline <= 10 ops arch x86_64 falsifier s"] }]) = true := by
+  decide
+-- The `deadline` clause shape is beispiele/36-asm.gab:36 (on a
+-- bodied `asm` function there); the bare-proto carrier is
+-- synthetic. Rust: the clause rides the signature.
+def tt19 : List Token :=
+  [.wort "translator", .ident "build", .wort "for", .ident "sum",
+   .zeichen "(", .ident "region", .zeichen ":", .ident "SumTab",
+   .zeichen ")", .zeichen "->", .ident "SumTab", .wort "effects",
+   .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
+   .zeichen "<=", .zahl 8, .wort "ops", .wort "decreases",
+   .ident "region", .zeichen ".", .ident "v", .zeichen "{",
+   .wort "return", .ident "region", .zeichen ";", .zeichen "}",
+   .ende]
+theorem t19_lex :
+    lex "translator build for sum(region : SumTab) -> SumTab effects { pure } costs <= 8 ops decreases region.v { return region; }" =
+      .ok tt19 := by
+  decide
+theorem t19 : beqTopTief (parseTopTief tt19)
+    (.ok [.uebersetzerT "sum"
+      { art := "", name := "build",
+        params := [("region", .atom "SumTab")],
+        ergebnis := .some (.atom "SumTab"), fehler := .none,
+        klauseln := [.wirkung [.rein], .kosten (.lit 8),
+          .faellt (.feld (.variable "region") "v")] }
+      (.block [] (.some (.ret (.some (.variable "region")))))]) = true := by
+  decide
+-- beispiele/106-summe-uebersetzt.gab (the `build` translator).
+-- Rust: `Translator` -- same shape (a `pure` contract with a
+-- `decreases` witness).
+def tt20 : List Token :=
+  [.wort "arena", .ident "Log", .wort "capacity", .zahl 2,
+   .zeichen "..", .zahl 8, .wort "of", .wort "u32", .zeichen ";",
+   .ende]
+theorem t20_lex :
+    lex "arena Log capacity 2 .. 8 of u32;" = .ok tt20 := by
+  decide
+theorem t20 : beqTopTief (parseTopTief tt20)
+    (.ok [.arenaT "Log" (.lit 2) (.lit 8) (.atom "u32")]) = true := by
+  decide
+-- beispiele/98-arena-erklaert.gab. Rust: `Arena` -- same shape.
+def tt21 : List Token :=
+  [.wort "format", .ident "Elf64Kopf", .wort "endian",
+   .wort "little", .zeichen "{", .ident "e_typ", .zeichen ":",
+   .wort "u16", .wort "in", .zahl 1, .zeichen "..", .zahl 4,
+   .zeichen ",", .ident "e_maschine", .zeichen ":", .wort "u16",
+   .zeichen ",", .ident "e_shoff", .zeichen ":", .wort "u64",
+   .wort "offset_into", .wort "Self", .wort "where",
+   .ident "e_shoff", .zeichen "<=", .wort "lenof", .zeichen "(",
+   .wort "Self", .zeichen ")", .zeichen ",", .ident "e_flags",
+   .zeichen ":", .wort "u32", .wort "reserved", .zeichen ",",
+   .zeichen "}", .ende]
+theorem t21_lex :
+    lex "format Elf64Kopf endian little { e_typ : u16 in 1 .. 4, e_maschine : u16, e_shoff : u64 offset_into Self where e_shoff <= lenof(Self), e_flags : u32 reserved, }" =
+      .ok tt21 := by
+  decide
+theorem t21 : beqTopTief (parseTopTief tt21)
+    (.ok [.formatT "Elf64Kopf" .none (.some "little")
+      [{ fname := "e_typ",
+          ftyp := .bereich (.atom "u16") (.lit 1) (.lit 4) false,
+          pos := .none, bezug := .none, wo := .none,
+          reserviert := false, byOps := false },
+        { fname := "e_maschine", ftyp := .atom "u16",
+          pos := .none, bezug := .none, wo := .none,
+          reserviert := false, byOps := false },
+        { fname := "e_shoff", ftyp := .atom "u64",
+          pos := .none, bezug := (.some "Self"),
+          wo := (.some (.bin "<=" (.variable "e_shoff")
+            (.eingebaut "lenof" [.variable "Self"]))),
+          reserviert := false, byOps := false },
+        { fname := "e_flags", ftyp := .atom "u32",
+          pos := .none, bezug := .none, wo := .none,
+          reserviert := true, byOps := false }]]) = true := by
+  decide
+-- beispiele/03-format.gab:12-24 (fields from adjacent lines).
+-- Rust: `Format` with ranged, plain, `offset_into`/`where` and
+-- `reserved` fields -- same shape.
+def tt22 : List Token :=
+  [.wort "reason", .ident "KappenFehler", .zeichen "{",
+   .ident "KeinSlot", .zeichen "=", .zahl 1,
+   .text "kein freier Slot mehr", .ident "Ungueltig",
+   .zeichen "=", .zahl 2, .text "abgelaufenes Handle",
+   .ident "HatKinder", .zeichen "=", .zahl 3,
+   .text "erst die Nachfahren einsammeln", .wort "exhaustive",
+   .zeichen "}", .ende]
+theorem t22_lex :
+    lex "reason KappenFehler { KeinSlot = 1 \"kein freier Slot mehr\" Ungueltig = 2 \"abgelaufenes Handle\" HatKinder = 3 \"erst die Nachfahren einsammeln\" exhaustive }" =
+      .ok tt22 := by
+  decide
+theorem t22 : beqTopTief (parseTopTief tt22)
+    (.ok [.grundT "KappenFehler"
+      [("KeinSlot", .lit 1, "kein freier Slot mehr"),
+        ("Ungueltig", .lit 2, "abgelaufenes Handle"),
+        ("HatKinder", .lit 3, "erst die Nachfahren einsammeln")]
+      true]) = true := by
+  decide
+-- beispiele/01-tabelle.gab (the `KappenFehler` grounds). Rust:
+-- `Reason` with an `exhaustive` tail -- same shape.
 
 end Gabbro.Grammatik.Parser
