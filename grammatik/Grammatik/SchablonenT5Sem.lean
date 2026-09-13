@@ -70,6 +70,67 @@ theorem indexschranke_zeuge :
   refine ⟨h0, by rw [h0]; exact Int.le_refl _, by rw [h0, hC]; decide,
     refB_erreicht, refB_schreibt⟩
 
+/-! ## 2. `table.absenkung` -- every in-range index names a laid-out cell.
+
+The emitter lays table `t` out as `(trec t).count` cells
+(`EmitLay.trec_count : ((trec t).count : Int) = D.count t` -- the `m
+= N` agreement the certificate carries for a `C001`-checked layout).
+With the index bound (`indexschranke_eval`, §1) every index of a
+generated access names a cell: `kein_zugriff_laeuft_aus_dem_feld`.
+Modelled on `beweise/Table_Absenkung.thy`, including both failure
+directions (`zu_kurz_laesst_einen_index_ohne_speicher`,
+`zu_lang_laesst_speicher_ohne_index`). -/
+
+/-- Soundness of `table.absenkung`: layout/count agreement plus an
+    in-range index give a laid-out cell. `trec_count` and both index
+    bounds are consumed. -/
+theorem absenkung_index_im_feld (EL : EmitLay D) (t : D.Tab)
+    (i : Int) (h0 : 0 ≤ i) (hN : i < D.count t) :
+    i.toNat < (EL.trec t).count := by
+  have hc := EL.trec_count t
+  omega
+
+/-- Too short a layout leaves an index homeless. -/
+theorem absenkung_zu_kurz (EL : EmitLay D) (t : D.Tab)
+    (hm : ((EL.trec t).count : Int) < D.count t) :
+    ∃ i : Int, 0 ≤ i ∧ i < D.count t ∧ ¬ i.toNat < (EL.trec t).count := by
+  refine ⟨((EL.trec t).count : Int), Int.natCast_nonneg _, hm, ?_⟩
+  intro hcon
+  have e : (((EL.trec t).count : Int)).toNat = (EL.trec t).count :=
+    Int.toNat_natCast _
+  omega
+
+/-- Too long a layout leaves a cell indexless (for nonnegative counts). -/
+theorem absenkung_zu_lang (EL : EmitLay D) (t : D.Tab)
+    (hnn : 0 ≤ D.count t) (hm : D.count t < ((EL.trec t).count : Int)) :
+    ∃ j : Nat, j < (EL.trec t).count ∧
+      ¬ (0 ≤ (j : Int) ∧ (j : Int) < D.count t) := by
+  refine ⟨(D.count t).toNat, ?_, ?_⟩
+  · have e : (((D.count t).toNat : Nat) : Int) = D.count t :=
+      Int.toNat_of_nonneg hnn
+    omega
+  · intro hcon
+    have e : (((D.count t).toNat : Nat) : Int) = D.count t :=
+      Int.toNat_of_nonneg hnn
+    omega
+
+/-- Witness for `absenkung_index_im_feld`: `refP`'s index `refIdxEin`
+    (fired by the run at `refSchrittBF`) names a cell of the emitted
+    `konto` layout (`refEL.trec_count`, `m = N = 2` by `rfl`); the run
+    reaches `MB` with slot `0` moved. -/
+theorem absenkung_zeuge :
+    (eval semW0 refIdxEin semW0 refRho7).n.toNat < (refEL.trec ()).count ∧
+    (((refEL.trec ()).count : Int) = refD.count ()) ∧
+    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hb := indexschranke_eval (refD.count ()) refIdxEin semW0 semW0 refRho7
+  have hC : refD.count () = 2 := rfl
+  have hN : (eval semW0 refIdxEin semW0 refRho7).n < refD.count () := by
+    have := hb.2
+    omega
+  have hidx := absenkung_index_im_feld refEL () _ hb.1 hN
+  refine ⟨hidx, refEL.trec_count (), refB_erreicht, refB_schreibt⟩
+
 /-- A concrete start world over `refD`: both `konto` slots read `0`,
     empty trace. -/
 def semW0 : World refD where
