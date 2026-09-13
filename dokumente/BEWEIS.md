@@ -933,7 +933,7 @@ the generated C have"**:
 | 6 | **evaluation order / sequence points** | **E2**: assignment is not an expression, one effect per statement. **The whole class disappears** | none |
 | 7 | **implicit conversion / integer promotion** | **E3** in the source text; the emission places **explicit casts everywhere** | none, but **to be checked mechanically** |
 | 8 | **uninitialised read** | E3: nothing is implicit, every declaration has a value | none |
-| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` — **but a `ptr` initialised to a NUMBER is one in C**, and the emission now writes it through `(uintptr_t)` | **the `extern` boundary, and the fixed-address idiom below** |
+| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` -- and since 2026-09-13 an immutable `ptr` starting at `0` is refused (`N260`): without `mut` the binding can never name another address, so every use is a null dereference | **a `static mut` pointer starting at `0` (the NULL-initialised global idiom), and the `extern` boundary** |
 | 10 | **`union` reinterpretation** | `tagged` writes and reads **via the tag**; C11 explicitly permits reading another member | padding bytes stay unspecified — **never read** |
 | 11 | **`restrict` wrong** | generated from `effects`. **If `effects` is wrong, that is C UB** — a **proof export into C's rules** | **a real trust transfer, named** |
 | 12 | **`volatile` semantics** | weakly specified; MMIO practice. **seL4 excludes exactly this** | **axiom, named** (A12/A17) |
@@ -968,6 +968,45 @@ converting an *integer* to a pointer is implementation-defined (6.3.2.3p5) rathe
 undefined. Two spellings for one thing were `W7`; there is now one. Held by
 `crates/gabbro-check/tests/komplement.rs::ein_zeiger_aus_einer_zahl_traegt_den_uintptr_cast`,
 which falls in both directions.
+
+#### Row 9, second cut: the cast was spelling, not cure (2026-09-13, lane 145)
+
+The 2026-09-02 cure did not hold. `(Platz *)(uintptr_t)0` is still an integer
+constant expression with the value 0, hence still a null pointer constant
+(6.3.2.3p3) -- 6.3.2.3p5 (integer-to-pointer conversion) does not apply where
+p3 already fired. Measured, not argued: the unchanged emission of
+`beispiele/38` run under `-fsanitize=undefined` aborts with `member access
+within null pointer` at the store; `clang --analyze` stays silent on the same
+file, so the 2026-09-02 silence was the tool's, not the program's.
+
+The verdict is the checker's, because the emitter has no move: there is no
+non-null spelling of address 0 in C, so no lowering can keep the value and
+drop the undefined behaviour. `N260`
+(`crates/gabbro-check/src/namen.rs::immutable_null_pointer`) refuses an
+immutable pointer -- `static` without `mut`, `let` without `mut`, `const` --
+whose initializer folds to `0` (`Umgebung::konst_wert`, so a `const` name for
+zero is the same refusal). The sentence is `namen.immutable_null_pointer`;
+the poison probe is
+`beispiele/gift/931-null-pointer-through-an-immutable-static.gab`, refused
+with `N260` ALONE.
+
+`beispiele/38` is repaired, not deleted: the store is a `static mut` array
+and the function binds it with `let`. The repaired emission holds no
+`(uintptr_t)0` (pinned by
+`crates/gabbro-check/tests/komplement.rs::no_null_spelling_in_example_38_emission`),
+runs clean under UBSan and ASan, and agrees between `-O0` and `-O2`. Corpus
+sweep 2026-09-13: 239 emitting units (`beispiele/`, `beispiele/gift/`,
+`messung/`, `messungen/`), zero hold `(uintptr_t)0` after the repair, one
+before it.
+
+Two remainders, both booked. A `static mut` pointer starting at `0` still
+lowers to a null spelling -- the NULL-initialised global idiom of real kernel
+code (`messung/k3-fragmente/K01`, `K07`), where assignment may precede any
+use; refusing it is flow, not a declaration, and this rule does not read
+flow. And an immutable `static` pointer has no valid spelling left: a number
+is null (`N260`) or refused (`M140`), an array name checks (decay) but does
+not lower (`C001`). The checker accepts the decay; the emitter does not lower
+it yet.
 
 ---
 

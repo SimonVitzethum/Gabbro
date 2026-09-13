@@ -3917,10 +3917,38 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/926-reader-without-signature-guard.gab (no `Held` at \
                       all) and beispiele/gift/929-reader-holding-the-wrong-lock.gab (a \
-                      `Held` of a lock guarding elsewhere); both fall with N256 ALONE. The \
-                      silent direction is beispiele/112 (guarded reader, written carrier) \
-                      and beispiele/113 (unwritten carrier, no guard owed).",
+                       `Held` of a lock guarding elsewhere); both fall with N256 ALONE. The \
+                     silent direction is beispiele/112 (guarded reader, written carrier) \
+                     and beispiele/113 (unwritten carrier, no guard owed).",
         fundstelle: "crates/gabbro-check/src/namen.rs::geraetetraeger_pruefen",
+    },
+    Satz {
+        name: "namen.immutable_null_pointer",
+        kennungen: &["N260"],
+        aussage: "An immutable pointer starting at `0` is refused. C11 6.3.2.3p3 \
+                  makes the zero a null pointer constant -- the `(uintptr_t)` the \
+                  emitter writes around it changes the spelling, not the address \
+                  -- and 6.5.3.2p4 makes every dereference undefined behaviour. \
+                  Without `mut` the binding can never name another address, so \
+                  the null is permanent, not provisional: every use is a null \
+                  dereference, measured with UBSan over `beispiele/38` before \
+                  its repair.",
+        vorbehalt: "**Three boundaries, all booked.** A `static mut` pointer \
+                    starting at `0` stays silent -- the NULL-initialised global \
+                    idiom, where assignment may precede any use, and that is \
+                    flow, not a declaration. A nonzero number at a pointer slot \
+                    is `M140`'s. Array decay is not a number at all. **An \
+                    un-annotated `let` has no declared pointer type**; what its \
+                    inferred zero becomes is `M140`'s at the use site.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/931-null-pointer-through-an-immutable-static.gab \
+                      is refused with N260 ALONE. The silent direction is the \
+                      `static mut` twin and the decay twin in \
+                      `crates/gabbro-check/tests/null_pointer.rs`, \
+                      `beispiele/64` (decay at a call), and the repaired \
+                      `beispiele/38`, which binds its pointer to declared \
+                      storage and holds no null spelling in its C.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::immutable_null_pointer",
     },
     Satz {
         name: "namen.erzeugter_name_zweimal",

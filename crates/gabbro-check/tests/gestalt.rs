@@ -16,7 +16,9 @@
 //!   lowers to its carrier and is transparent by construction (`N030`, 2026-08-20);
 //! * an `opaque type` at its carrier INSIDE the module that declares it -- `D004` owns that
 //!   crossing and is silent at home;
-//! * the literal zero at a pointer (`beispiele/38`) and at an array (`beispiele/08`, `64`);
+//! * the literal zero at an array (`beispiele/08`, `64`) -- still silent;
+//!   the literal zero at a POINTER (`beispiele/38` before its repair) now
+//!   falls with `N260`, and the row below pins that handoff: never `M140`;
 //! * an array at a pointer to its element -- C's decay, and `beispiele/64` rests on it;
 //! * `bool` against a number, which is `M135`'s with its `0 .. 1` exception, and a reason
 //!   value, which is `M124`'s.
@@ -88,22 +90,30 @@ fn ein_richtiger_ruf_bleibt_still() {
     }
 }
 
-/// **The zero and the decay** -- three forms the clean corpus writes, and the first version
-/// of `M140` refused all three. They are not calls, so they get their own frame.
+/// **The zero and the decay** -- forms the clean corpus writes, and the first version
+/// of `M140` refused all of them. They are not calls, so they get their own frame.
+///
+/// The null-pointer row changed hands on 2026-09-13 (lane 145): an immutable
+/// pointer starting at `0` is refused with `N260`, never with `M140`. The row
+/// stays here so the handoff is pinned -- `M140` must not answer where `N260`
+/// owns the question.
 #[test]
 fn die_null_und_der_zerfall_bleiben_still() {
-    let faelle: &[(&str, &str)] = &[
+    let faelle: &[(&str, &str, &[&str])] = &[
         (
-            "the null pointer (beispiele/38)",
+            "the null pointer (beispiele/38 before its repair, gift/931)",
             "static tz : ptr<normal, rw> Text = 0;\n",
+            &["N260"],
         ),
         (
             "the zero-initialiser of an array (beispiele/08, 64)",
             "static mut feld : [u32; 4] = 0;\n",
+            &[],
         ),
         (
             "the zero-initialiser of a record",
             "static mut satz : Text = Text(bytes: 0, len: 0);\n",
+            &[],
         ),
         (
             "an array decaying to a pointer to its element (beispiele/64)",
@@ -111,11 +121,13 @@ fn die_null_und_der_zerfall_bleiben_still() {
              effects { reads p } costs <= 8 ops;\n\
              impl fn ruft() effects { reads PUFFER } costs <= 12 ops \
              { schreib(PUFFER, 4); }\n",
+            &[],
         ),
     ];
-    for (was, zusatz) in faelle {
+    for (was, zusatz, erwartet) in faelle {
         let g = codes(zusatz);
-        assert!(g.is_empty(), "{was} must stay silent -- fell with {g:?}");
+        let soll: Vec<String> = erwartet.iter().map(|s| s.to_string()).collect();
+        assert_eq!(g, soll, "{was} draws exactly {erwartet:?} -- fell with {g:?}");
     }
 }
 

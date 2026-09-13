@@ -1,24 +1,28 @@
--- **Ein `const` gehoert an den ZEIGER, nicht an sein Ziel** (2026-08-20).
+-- **A fixed pointer over storage the unit declares.**
 --
--- `static tz : ptr<normal, rw> T` -- ohne `mut` -- ergab
+-- History, and why the shape below is not the old one: this file once bound
+-- its pointer as `static tz : ptr<normal, rw> Platz = 0;`. That `0` is a null
+-- pointer constant (C11 6.3.2.3p3) -- the `(uintptr_t)` in the emitted
+-- `(Platz *)(uintptr_t)0` changes the spelling, not the address -- so the
+-- store was undefined behaviour (C11 6.5.3.2p4; UBSan reports `member access
+-- within null pointer`). An immutable binding starting at `0` can never name
+-- another address, hence the checker refuses that declaration with `N260`
+-- (`beispiele/gift/931-null-pointer-through-an-immutable-static.gab` keeps
+-- the refusal).
 --
---     static const T * tz;          -- ein Zeiger auf KONSTANTES T
+-- What stands here instead: the store is a `static mut` array, and the
+-- function binds it to an immutable pointer with `let`. The pointer stands
+-- fixed, its target does not: writing through it is allowed, rehanging it is
+-- refused (`M116` -- a binding without `mut` does not move). The old lesson
+-- about `static ... * const` placement went with the old declaration: a
+-- function-local binding lowers to a plain C pointer.
 --
--- und damit wies `gcc` ein Programm ab, das Gabbro **richtig** findet:
---
---     tz.slots[i].a = 5;
---     -> error: Zuweisung von Element »a« in schreibgeschuetztem Objekt
---
--- Gemeint war ein KONSTANTER Zeiger auf schreibbares `T`: `static T * const tz`.
---
--- > Das fehlende `mut` sagt etwas ueber den Zeiger -- dass er nicht umgehaengt wird -- und
--- > nichts ueber das, worauf er zeigt. Das steht in `ptr<…, rw>`, und es steht dort schon.
---
--- **Dieselbe Unterscheidung traegt `M118`**: durch einen unveraenderlichen Zeiger zu
--- schreiben ist erlaubt, ihn UMZUHAENGEN nicht. Beide Haelften an einer Stelle, damit
--- keine ohne die andere wandert.
+-- Open remainder, booked not denied: an immutable `static` pointer has no
+-- valid spelling left -- a number is null (`N260`) or refused (`M140`), and
+-- an array name checks but does not lower (`C001`). The checker accepts the
+-- decay, the emitter does not lower it yet.
 
-module beispiel::fester_zeiger {
+module beispiel::fixed_pointer {
 
 table Platz count 4 {
     slot {
@@ -26,13 +30,14 @@ table Platz count 4 {
     }
 }
 
--- Der Zeiger steht fest, sein Ziel nicht.
-static tz : ptr<normal, rw> Platz = 0;
+-- The backing store the pointer below names, and only it.
+static mut SPEICHER : [Platz; 4] = 0;
 
 impl fn setz(i : index into Platz)
-    effects { writes tz.slots }
-    costs   <= 3 ops
+    effects { reads SPEICHER, writes SPEICHER }
+    costs   <= 4 ops
 {
+    let tz : ptr<normal, rw> Platz = SPEICHER;
     tz.slots[i].a = 5;
 }
 

@@ -25,6 +25,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
+    immutable_null_pointer(baum, absagen);
     geister_haben_keinen_speicher(baum, absagen);
     pro_kern_und_gegenprobe(baum, absagen);
     dispatch_loest_auf(baum, absagen);
@@ -1961,6 +1962,130 @@ fn verweigerte_zahltypen(baum: &Programm, absagen: &mut Absagen) {
         }
         _ => {}
     });
+}
+
+/// **`N260` -- an immutable pointer starting at `0` is null forever.**
+///
+/// C11 6.3.2.3p3: an integer constant expression with the value 0 is a null
+/// pointer constant -- `(T *)(uintptr_t)0` is still one, and 6.5.3.2p4 makes
+/// every dereference undefined behaviour. The emitter has spelled the zero
+/// through `(uintptr_t)` since 2026-09-02; UBSan still fires on the result
+/// (`member access within null pointer`, measured 2026-09-13 over
+/// `beispiele/38`): the cast changes the spelling, not the address.
+///
+/// The binding can never name another address: without `mut` every
+/// reassignment is refused (`M116` for a `let`, `M118` for a `static`), so the
+/// null is permanent, not provisional. Three deliberate boundaries, all
+/// booked rather than denied: a `static mut` pointer starting at `0` is the
+/// NULL-initialised global idiom (`messung/k3-fragmente/K01`, `K07`) and may
+/// be assigned before any use -- flow decides, and this rule does not read
+/// flow; a nonzero number at a pointer slot is `M140`'s; and array decay
+/// (`beispiele/64`) is not a number at all.
+///
+/// Value-based, not spelling-based: `konst_wert` folds a `const` name (and
+/// arithmetic over constants) to its number, so `= NULL` through a constant
+/// is the same refusal. An un-annotated `let` has no declared pointer type;
+/// what its inferred zero becomes is `M140`'s at the use site, not this
+/// rule's.
+fn immutable_null_pointer(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        match &item.art {
+            ItemArt::Statisch(s) => {
+                if !s.veraenderlich
+                    && declares_pointer(&u, modul, &s.typ)
+                    && u.konst_wert(modul, &s.wert) == Some(0)
+                {
+                    refuse_null_pointer(absagen, s.wert.span, &s.name.text);
+                }
+            }
+            ItemArt::Konst(k) => {
+                if declares_pointer(&u, modul, &k.typ)
+                    && u.konst_wert(modul, &k.wert) == Some(0)
+                {
+                    refuse_null_pointer(absagen, k.wert.span, &k.name.text);
+                }
+            }
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    walk_block_for_null_lets(b, &u, modul, absagen);
+                }
+            }
+            _ => {}
+        }
+    });
+}
+
+/// A declared pointer type, through a scalar alias -- `durchgreifen` would
+/// strip the pointer itself, and here the pointer is the question.
+fn declares_pointer(u: &crate::umgebung::Umgebung, modul: &str, ty: &TypExpr) -> bool {
+    let mut t = u.typ_von_ausdruck_decl(modul, ty);
+    loop {
+        match t {
+            crate::typen::Typ::Benannt { unter, .. } => t = *unter,
+            crate::typen::Typ::Zeiger(_) => return true,
+            _ => return false,
+        }
+    }
+}
+
+fn refuse_null_pointer(absagen: &mut Absagen, span: Span, name: &str) {
+    absagen.schiebe(
+        Absage::fehler(
+            "N260",
+            span,
+            format!(
+                "`{name}` is an immutable pointer starting at `0` -- null, permanently"
+            ),
+        )
+        .mit_notiz(
+            "C11 6.3.2.3p3: an integer constant expression with the value 0 is a \
+             null pointer constant -- `(T *)(uintptr_t)0` is still one. C11 \
+             6.5.3.2p4 makes every dereference undefined behaviour; UBSan fires \
+             on the emitted shape (`member access within null pointer`)",
+        )
+        .mit_notiz(
+            "without `mut` the binding can never name another address -- every \
+             reassignment is refused (`M116` for a `let`, `M118` for a `static`). \
+             The null is permanent, not provisional",
+        )
+        .mit_notiz(
+            "a `static mut` pointer starting at `0` stays silent here -- assignment \
+             may precede any use, and that is flow, not a declaration. A nonzero \
+             number at a pointer slot is `M140`'s",
+        )
+        .mit_notiz(
+            "the declared effects are statements about the object behind the \
+             pointer -- `writes tz.slots` promises slots that exist. Behind a \
+             null, every one of them is a statement about something that is not \
+             there, and every pass behind the checker computes with it",
+        ),
+    );
+}
+
+/// Every `let` without `mut` in the block and all its sub-blocks -- over
+/// `crate::unterbloecke`, which is exhaustive over `StmtArt` without a
+/// catch-all arm, so a new statement form breaks the build instead of
+/// silently leaving this walk.
+fn walk_block_for_null_lets(
+    block: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    absagen: &mut Absagen,
+) {
+    for s in &block.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            if !l.veraenderlich
+                && l.typ.as_ref().is_some_and(|t| declares_pointer(u, modul, t))
+                && u.konst_wert(modul, &l.wert) == Some(0)
+            {
+                refuse_null_pointer(absagen, l.wert.span, &l.name.text);
+            }
+        }
+        for b in crate::unterbloecke(s) {
+            walk_block_for_null_lets(b, u, modul, absagen);
+        }
+    }
 }
 
 /// **`entrust` nennt eine Annahme, und sie muss es GEBEN.**
