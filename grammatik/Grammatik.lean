@@ -113,3 +113,8 @@ import Grammatik.ZielOrtBeweis
 import Grammatik.ZielOrtZeuge
 import Grammatik.AuditZiel
 import Grammatik.RennfreiG
+import Grammatik.ZielOrtVollSem
+import Grammatik.ZielOrtVollBeweis
+import Grammatik.ZielOrtVoll
+import Grammatik.ZielOrtVollZeuge
+import Grammatik.ZielOrtRegister
