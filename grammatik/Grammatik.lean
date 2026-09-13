@@ -106,4 +106,8 @@ import Grammatik.KetteVoll
 import Grammatik.Uebersetzung
 import Grammatik.CSemantik
 import Grammatik.RufUmkehrRufG
+import Grammatik.RufHaeltG
 import Grammatik.ZielOrt
+import Grammatik.ZielOrtSem
+import Grammatik.ZielOrtBeweis
+import Grammatik.ZielOrtZeuge

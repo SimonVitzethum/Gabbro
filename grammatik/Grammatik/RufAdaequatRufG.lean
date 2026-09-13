@@ -956,12 +956,13 @@ theorem w_travNext {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .trav t inv body (i :: is) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons i ρ)
         (.dann body (.travRest t inv body is k)) ((M.weltVon f).lese Λ inv.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.travNext M f l Γ Λ t inv body i is k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.travNext M f l Γ Λ t inv body i is k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_travFort {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -986,12 +987,13 @@ theorem w_travDone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .trav t inv body [] k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ k
         ((M.weltVon f).lese Λ inv.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.travDone M f l Γ Λ t inv body k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.travDone M f l Γ Λ t inv body k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_dannRetry {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1028,12 +1030,13 @@ theorem w_wiederWeiter {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .wieder (n + 1) bis body ueber k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ bis.orte) bis ((M.weltVon f).lese Λ bis.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ k
         ((M.weltVon f).lese Λ bis.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.wiederWeiter M f l Γ Λ n bis body ueber k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.wiederWeiter M f l Γ Λ n bis body ueber k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_wiederSchritt {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1043,12 +1046,13 @@ theorem w_wiederSchritt {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .wieder (n + 1) bis body ueber k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ bis.orte) bis ((M.weltVon f).lese Λ bis.orte) ρ)
-      = false) :
+      = false)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.dann body (.wiederRest n bis body ueber k)) ((M.weltVon f).lese Λ bis.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.wiederSchritt M f l Γ Λ n bis body ueber k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.wiederSchritt M f l Γ Λ n bis body ueber k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_wiederFort {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1083,12 +1087,13 @@ theorem w_ewigWeiter {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a (n + 1) inv body k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λ (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.dann body (.ewigRest a n inv body k)) ((M.weltVon f).lese Λ inv.orte) := by
   subst hz
-  exact ⟨_, RufSchrittG.ewigWeiter M f l Γ Λ a n inv body k ρ hhead _ rfl hw _ rfl,
+  exact ⟨_, RufSchrittG.ewigWeiter M f l Γ Λ a n inv body k ρ hhead _ rfl hw _ rfl hΛ,
     zustandG_neu rfl rfl⟩
 
 theorem w_ewigFort {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1118,6 +1123,12 @@ section Ausgaenge
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- Holdings exactly held carry backwards along a block: a block keeps the
+    held locks of its holdings (`Block.held_iff`). -/
+theorem heldGenau_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λx Λ : List (Res D)}
+    (r : Block D V l Γ Λx Λ) {h : List D.Lock} (hh : HeldGenau Λ h) : HeldGenau Λx h :=
+  fun L => (Block.held_iff r L).symm.trans (hh L)
+
 /-- `leave` at the `traverse` shim: the invariant is read, the loop is left. -/
 theorem w_leaveTrav {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λx : List (Res D)}
@@ -1130,13 +1141,14 @@ theorem w_leaveTrav {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hhead : z.kopf.rest = ⟨true, .index (D.count t) :: Γ, Λx, .cons i ρ,
       .dann (.cons (abbS rfl true) r) (.travRest t inv body is k)⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
-      = true) :
+      = true)
+    (hΛ : HeldGenau Λx (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ k
         ((M.weltVon f).lese Λ inv.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannLeaveTrav M f l Γ Λ t inv body is k r i ρ rfl hhead _ _ [] rfl rfl
-    (fun _ _ h => absurd h List.not_mem_nil) _ rfl hw _ rfl, zustandG_neu rfl rfl⟩
+    (fun _ _ h => absurd h List.not_mem_nil) _ rfl hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 /-- `next` at the `traverse` shim: the next index. -/
 theorem w_nextTrav {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1148,13 +1160,14 @@ theorem w_nextTrav {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (r : Block D (vertragVon D z.kopf.f) true (.index (D.count t) :: Γ) Λx Λ)
     (i : Wert D (.index (D.count t))) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨true, .index (D.count t) :: Γ, Λx, .cons i ρ,
-      .dann (.cons (abbS rfl false) r) (.travRest t inv body is k)⟩) :
+      .dann (.cons (abbS rfl false) r) (.travRest t inv body is k)⟩)
+    (hΛ : HeldGenau Λx (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (.trav t inv body is k) (M.weltVon f) := by
   subst hz
   exact ⟨_, RufSchrittG.dannNextTrav M f l Γ Λ t inv body is k r i ρ rfl hhead _ _ [] rfl rfl
-    (fun _ _ h => absurd h List.not_mem_nil), zustandG_neu rfl rfl⟩
+    (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
 
 /-- `leave`/`next` at the `retry` shim. -/
 theorem w_abbWieder {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1164,7 +1177,8 @@ theorem w_abbWieder {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ)
     (r : Block D (vertragVon D z.kopf.f) true Γ Λx Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨true, Γ, Λx, ρ,
-      .dann (.cons (abbS rfl w) r) (.wiederRest n bis body ueber k)⟩) :
+      .dann (.cons (abbS rfl w) r) (.wiederRest n bis body ueber k)⟩)
+    (hΛ : HeldGenau Λx (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (match w with | true => k | false => .wieder n bis body ueber k) (M.weltVon f) := by
@@ -1172,10 +1186,10 @@ theorem w_abbWieder {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   cases w with
   | true =>
     exact ⟨_, RufSchrittG.dannLeaveWieder M f l Γ Λ n bis body ueber k r ρ rfl hhead _ _ []
-      rfl rfl (fun _ _ h => absurd h List.not_mem_nil), zustandG_neu rfl rfl⟩
+      rfl rfl (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
   | false =>
     exact ⟨_, RufSchrittG.dannNextWieder M f l Γ Λ n bis body ueber k r ρ rfl hhead _ _ []
-      rfl rfl (fun _ _ h => absurd h List.not_mem_nil), zustandG_neu rfl rfl⟩
+      rfl rfl (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
 
 /-- `leave`/`next` at the `forever` shim. -/
 theorem w_abbEwig {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1185,7 +1199,8 @@ theorem w_abbEwig {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ)
     (r : Block D (vertragVon D z.kopf.f) true Γ Λx Λ) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨true, Γ, Λx, ρ,
-      .dann (.cons (abbS rfl w) r) (.ewigRest a n inv body k)⟩) :
+      .dann (.cons (abbS rfl w) r) (.ewigRest a n inv body k)⟩)
+    (hΛ : HeldGenau Λx (offen z.spur) := by assumption) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
         (match w with | true => k | false => .ewig a n inv body k) (M.weltVon f) := by
@@ -1193,10 +1208,10 @@ theorem w_abbEwig {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   cases w with
   | true =>
     exact ⟨_, RufSchrittG.dannLeaveEwig M f l Γ Λ a n inv body k r ρ rfl hhead _ _ []
-      rfl rfl (fun _ _ h => absurd h List.not_mem_nil), zustandG_neu rfl rfl⟩
+      rfl rfl (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
   | false =>
     exact ⟨_, RufSchrittG.dannNextEwig M f l Γ Λ a n inv body k r ρ rfl hhead _ _ []
-      rfl rfl (fun _ _ h => absurd h List.not_mem_nil), zustandG_neu rfl rfl⟩
+      rfl rfl (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
 
 /-- Peel a `dann` layer off an abrupt exit. -/
 theorem w_peelDann {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
@@ -1820,7 +1835,7 @@ theorem travOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Exp
           | cons i2 ρt =>
             have hW2 := hZ2.welt
             obtain ⟨M3, hs3, hZ3⟩ := w_nextTrav (P := P) (O := O) (passes := passes) hZ2.1
-              t inv body is k r i2 ρt rfl
+              t inv body is k r i2 ρt rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
             rw [hW2] at hZ3
             exact weiter M3 e2 σ2 ρt (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
               hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -1835,7 +1850,7 @@ theorem travOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Exp
             | cons i2 ρt =>
               have hW2 := hZ2.welt
               obtain ⟨M3, hs3, hZ3⟩ := w_leaveTrav (P := P) (O := O) (passes := passes) hZ2.1
-                t inv body is k r i2 ρt rfl (by rw [hW2]; simpa [Env.tail] using hw2)
+                t inv body is k r i2 ρt rfl (by rw [hW2]; simpa [Env.tail] using hw2) (heldGenau_block r (by rw [ho2]; exact hΛ1))
               rw [hW2] at hZ3
               exact ⟨M3, e2, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
                 by rw [(Erw.lese _ _ _).offen, ho2, (Erw.lese _ _ _).offen]⟩
@@ -1923,7 +1938,7 @@ theorem retryOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ .
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbWieder (P := P) (O := O) (passes := passes) hZ2.1
-            false n bis body ueber k r ρ2 rfl
+            false n bis body ueber k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -1935,7 +1950,7 @@ theorem retryOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ .
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbWieder (P := P) (O := O) (passes := passes) hZ2.1
-            true n bis body ueber k r ρ2 rfl
+            true n bis body ueber k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact ⟨M3, e2, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
             by rw [ho2, (Erw.lese _ _ _).offen]⟩
@@ -2006,7 +2021,7 @@ theorem foreverOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Annahme)
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbEwig (P := P) (O := O) (passes := passes) hZ2.1
-            false a n inv body k r ρ2 rfl
+            false a n inv body k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -2018,7 +2033,7 @@ theorem foreverOkR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Annahme)
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbEwig (P := P) (O := O) (passes := passes) hZ2.1
-            true a n inv body k r ρ2 rfl
+            true a n inv body k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact ⟨M3, e2, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
             by rw [ho2, (Erw.lese _ _ _).offen]⟩
@@ -2101,7 +2116,7 @@ theorem retryAbbR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (hl : l = true)
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbWieder (P := P) (O := O) (passes := passes) hZ2.1
-            false n bis body ueber k r ρ2 rfl
+            false n bis body ueber k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -3567,7 +3582,7 @@ theorem travRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Ex
           | cons i2 ρt =>
             have hW2 := hZ2.welt
             obtain ⟨M3, hs3, hZ3⟩ := w_nextTrav (P := P) (O := O) (passes := passes) hZ2.1
-              t inv body is k r i2 ρt rfl
+              t inv body is k r i2 ρt rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
             rw [hW2] at hZ3
             exact weiter M3 e2 σ2 ρt (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
               hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -3651,7 +3666,7 @@ theorem retryRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ 
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbWieder (P := P) (O := O) (passes := passes) hZ2.1
-            false n bis body ueber k r ρ2 rfl
+            false n bis body ueber k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -3727,7 +3742,7 @@ theorem foreverRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Annahme)
             (by rw [hb2]; rfl) M1 _ hZ1 hΛ1 hA1
           have hW2 := hZ2.welt
           obtain ⟨M3, hs3, hZ3⟩ := w_abbEwig (P := P) (O := O) (passes := passes) hZ2.1
-            false a n inv body k r ρ2 rfl
+            false a n inv body k r ρ2 rfl (heldGenau_block r (by rw [ho2]; exact hΛ1))
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
@@ -5046,7 +5061,8 @@ theorem rufG_adaequat_ruf_zeuge_sonst :
     no reachable head waits; `wartet_einig` checks it on the bind witness
     from its waiting state. -/
 
-/-- At a head `wartet rest k` every step of `f` is a bare lock step. -/
+/-- At a head `wartet rest k` no step of `f` changes frame, stack or log (the
+    bare lock steps that fired there were removed from G on 2026-09-13). -/
 theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
@@ -5057,8 +5073,6 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   subst hz
   cases hs with
   | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
-  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
@@ -5187,6 +5201,7 @@ theorem t4B_wartet :
   obtain ⟨M2, hs2, hZ2⟩ := w_iteWahr (P := t4P) (O := t4O) (passes := 0) hZ1.1
     .wahr t4BindBlock .nil .nil
     (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)) Env.nil rfl rfl
+    (fun L => nomatch L)
   obtain ⟨M3, hs3, hZ3⟩ := w_bindCall (P := t4P) (O := t4O) (passes := 0) hZ2.1
     t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
     (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil

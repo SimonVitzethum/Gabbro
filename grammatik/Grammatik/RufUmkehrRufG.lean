@@ -1183,7 +1183,8 @@ set_option linter.unusedSimpArgs false in
     covered residue either stays (same frame result), pops (logged value =
     frame result), or pushes an admitted callee above the frame it leaves
     waiting (`ErhaltK`). `hRSG`: the handler does not see the trace on the
-    admitted callees (the bare lock steps change only the trace). -/
+    admitted callees (the trace may differ; the bare lock steps that
+    changed only the trace were removed from G on 2026-09-13). -/
 theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {A : D.Lock → Prop}
     {C : D.Fn → Prop} (hRSG : RufSG R C)
@@ -1204,18 +1205,6 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     refine Or.inl ⟨_, _, _, _, .ende rest, _, rufUpdateG_self _ _ _, RestK.ende rest hr ho.2, ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_blatt O passes R s rest _ _ _ ρ' (by rw [istBlatt_R O passes R hleaf]; exact hstep))
-  | nimmt L _ _ _ =>
-    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.nimmt L (offen (M.faeden f).spur) ::
-      (M.faeden f).spur, ?_, hcov, ?_⟩
-    · rw [faeden_upd, ← hR]
-    · rw [weltVon_upd]
-      exact semK_SG O passes R A C hRSG r hcov _ _ ρ ⟨rfl, rfl⟩
-  | gibt L _ =>
-    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.gibt L ::
-      (M.faeden f).spur, ?_, hcov, ?_⟩
-    · rw [faeden_upd, ← hR]
-    · rw [weltVon_upd]
-      exact semK_SG O passes R A C hRSG r hcov _ _ ρ ⟨rfl, rfl⟩
   | ruf l2 Γ2 Λ2 g args hp hr rest ρ2 hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hR] at hhead
     cases hhead
@@ -1999,7 +1988,7 @@ theorem invK_lauf (P : Programm D) (O : Orakel D) (passes : Nat) (A : D.Lock →
     `.ende b` for an end block `b` covered at depth `n` by the fragment of
     the converse (calls and bind-calls, callees admitted by `TiefK P A n`:
     their bodies covered one level down, and so on). If ANY run of thread
-    `f` alone -- bare lock steps included -- leads from `M` to a machine
+    `f` alone leads from `M` to a machine
     whose stack of `f` is no longer than the caller's, every state before
     it keeping the frame on the stack (a run up to the FIRST pop of the
     frame, `RufLaufUeber`), then the log of that machine is the old log,
@@ -2137,6 +2126,7 @@ theorem t4B_wartet_ueber :
   obtain ⟨M2, hs2, hZ2⟩ := w_iteWahr (P := t4P) (O := t4O) (passes := 0) hZ1.1
     .wahr t4BindBlock .nil .nil
     (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)) Env.nil rfl rfl
+    (fun L => nomatch L)
   obtain ⟨M3, hs3, hZ3⟩ := w_bindCall (P := t4P) (O := t4O) (passes := 0) hZ2.1
     t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
     (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
@@ -2184,8 +2174,8 @@ theorem wartet_einig_voll :
 /-! ## CUTS:
   What is proved: the converse with calls (`rufG_adaequat_ruf_umkehr`) --
   for a frame whose body is covered at depth `n` by the fragment of the
-  converse, every run of its thread up to the first pop of the frame (bare
-  lock steps included) logs the value the sequential semantics with the
+  converse, every run of its thread up to the first pop of the frame
+  logs the value the sequential semantics with the
   body-running handler `rufRumpf n` returns, in a world with the logged
   memory. Proved through a pending call chain invariant (`InvK`: the top
   frame's result meets the demand `Anspruch` of the frames below it) that
@@ -2205,8 +2195,9 @@ theorem wartet_einig_voll :
     shims) in `semK` with `traverseLauf`/`retryLauf`/`foreverLauf` as their
     meaning, and the error channel a second demand (`grund`) in
     `Anspruch`. The oracle forms stay out for the reason of the G converse:
-    the oracle sees the whole world, trace included, and the machine's bare
-    lock steps change the trace.
+    the oracle sees the whole world, trace included (the bare lock steps
+    that changed the trace are gone since 2026-09-13, but a run from a
+    world with a different trace still meets a trace-reading oracle).
   - The run is cut at the FIRST pop of the frame (`RufLaufUeber`): after
     the pop the caller may call `fn` again, and a later `rueck fn …` belongs
     to another frame. `rufLaufG_erster` finds the first pop on any run.
