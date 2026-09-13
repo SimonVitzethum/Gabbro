@@ -1,0 +1,39 @@
+-- erwartet: N258
+-- **A `depends` entry below carrier granularity falls.**
+--
+-- `Zustand.bereit` names a slot, and the model has no slots: `GleichAuf`
+-- and the footprint are carrier-granular. The checker names the carrier it
+-- should have been instead of silently widening the entry -- a widening no
+-- theorem would read. The reader holds its guard, so nothing else speaks:
+-- N258 ALONE.
+module gift::depends_nennt_feld {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand.bereit }
+}
+
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Sperre)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}

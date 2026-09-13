@@ -1,0 +1,38 @@
+-- erwartet: N255
+-- **A `depends` entry naming nothing this unit declares falls.**
+--
+-- `ST` claims its answer rests on `gibt_es_nicht`, and no table, global,
+-- or import of this unit carries that name. A premise over a place that
+-- does not exist is a premise nothing can establish -- the N053 cut one
+-- clause up. The reader holds its guard, so nothing else speaks: N255 ALONE.
+module gift::depends_unbekannt {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { gibt_es_nicht }
+}
+
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Sperre)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}

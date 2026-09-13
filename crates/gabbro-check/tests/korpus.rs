@@ -58,6 +58,11 @@ const BENANNT: &[&str] = &[
     // field range, `N233` a declaration the cut cannot carry, `N234` a
     // contract over the payload parameter.
     "N230", "N231", "N232", "N233", "N234",
+    // Lane 140: `N255` an unknown `depends` carrier, `N256` a reader without
+    // a signature-held guard, `N257` a declared non-carrier, `N258` a place
+    // below carrier granularity. Named here so the corpus run counts the
+    // rules, not noise.
+    "N255", "N256", "N257", "N258",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

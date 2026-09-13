@@ -1,0 +1,32 @@
+-- 113 -- **Carriers nobody writes need no guard; a register may name several.**
+--
+-- `KENNUNG` rests on two carriers at once -- the table `Zustand` and the
+-- global `melder` -- and no function of this unit writes either of them, so
+-- `lesen` owes no `Held` (`N256` takes the unwritten disjunct of `fussOrtGB`).
+-- `FREI` names no carriers at all: its manifest line says so, because
+-- `RegLokal` over empty carriers still claims the answer moves with nothing,
+-- and an unwritten line would read as no claim.
+module beispiel113 {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+static mut melder : u32 = 0;
+
+device Geraet(basis : u64) at mmio {
+    reg KENNUNG : u32 @0x00 class r depends { Zustand, melder }
+    reg FREI : u32 @0x04 class r
+}
+
+impl fn lesen(d : Geraet) -> u32
+    effects { reads d }
+    costs <= 8 ops
+{
+    let kennung = d.KENNUNG;
+    let frei = d.FREI;
+    if frei == kennung { return frei; }
+    return kennung;
+}
+
+}

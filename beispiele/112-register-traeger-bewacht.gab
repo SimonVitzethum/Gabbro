@@ -1,0 +1,38 @@
+-- 112 -- **A register naming its device-state carriers, read under their guard.**
+--
+-- `ST` answers from `Zustand`, `Zustand` is written by `schreiben`, and both
+-- functions hold `Sperre` BY SIGNATURE (`requires Held(Sperre)`): the reader
+-- side of the widened footprint check (`fussOrtGB`, `N256`). The manifest
+-- carries the hardware half beside the named assumptions:
+-- `reglokal.Geraet.ST` over `Zustand` (`hardware (reglokal ST)`).
+module beispiel112 {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand }
+}
+
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Sperre)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}

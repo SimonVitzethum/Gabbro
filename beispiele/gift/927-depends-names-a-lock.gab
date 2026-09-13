@@ -1,0 +1,38 @@
+-- erwartet: N257
+-- **A `depends` entry naming a declared non-carrier falls.**
+--
+-- `Sperre` is declared -- a lock -- and no lock holds device state. Only
+-- tables and globals are carriers in the model (`Tab ⊕ Glob`); the guard
+-- relation runs the other way (the lock guards the carrier, never the
+-- reverse). The reader holds `Sperre`, so nothing else speaks: N257 ALONE.
+module gift::depends_nennt_sperre {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Sperre }
+}
+
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Sperre)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}
