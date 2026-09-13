@@ -37,6 +37,8 @@ import Grammatik.Parser.ElementTief
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
+set_option maxRecDepth 100000
+
 /-- An index into a table: a literal or an index parameter. -/
 inductive UIdx
   | lit : Int → UIdx
@@ -1602,3 +1604,76 @@ def lowerProg : UProg →
               .ok (uProgBaue e1 e2 b1 b2,
                 [G104_referenz.GFn.einzahlen, G104_referenz.GFn.lies])
   | _ => .error "Programmform ohne G-Form"
+
+/-! ## The 104 instance: tokens -/
+
+/-- The token list of `beispiele/104-referenz.gab` (comment-free;
+    `u104lex` checks it against the lexer). -/
+def tt104 : List Token :=
+  [.wort "module", .ident "beispiel", .zeichen "::", .ident "referenz",
+   .zeichen "{",
+   .wort "const", .ident "NKONTO", .zeichen ":", .wort "u32",
+   .zeichen "=", .zahl 2, .zeichen ";",
+   .wort "type", .ident "Betrag", .zeichen "=",
+   .wort "u32", .wort "in", .zahl 0, .zeichen "..", .zahl 10,
+   .zeichen ";",
+   .wort "type", .ident "Stand", .zeichen "=",
+   .wort "u32", .wort "in", .zahl 0, .zeichen "..", .zahl 100,
+   .zeichen ";",
+   .wort "table", .ident "Konto", .wort "count", .ident "NKONTO",
+   .zeichen "{", .wort "slot", .zeichen "{", .ident "stand",
+   .zeichen ":", .ident "Stand", .zeichen ",", .zeichen "}",
+   .zeichen "}",
+   .wort "lock", .ident "M", .wort "protects", .zeichen "{",
+   .ident "stand", .zeichen "}", .wort "rank", .zahl 0,
+   .wort "held", .zeichen "<=", .zahl 50, .wort "ops", .zeichen ";",
+   .wort "impl", .wort "fn", .ident "einzahlen", .zeichen "(",
+   .ident "k", .zeichen ":", .wort "ptr", .zeichen "<",
+   .wort "normal", .zeichen ",", .wort "rw", .zeichen ">",
+   .ident "Konto", .zeichen ",",
+   .ident "i", .zeichen ":", .wort "index", .wort "into",
+   .ident "Konto", .zeichen ",",
+   .ident "b", .zeichen ":", .ident "Betrag", .zeichen ")",
+   .wort "requires", .ident "Held", .zeichen "(", .ident "M",
+   .zeichen ")",
+   .wort "ensures", .wort "old", .zeichen "(", .ident "k",
+   .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
+   .zeichen "]", .zeichen ".", .ident "stand", .zeichen ")",
+   .zeichen "<=", .ident "k", .zeichen ".", .wort "slots",
+   .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
+   .ident "stand",
+   .wort "effects", .zeichen "{", .wort "reads", .ident "k",
+   .zeichen ".", .wort "slots", .zeichen ",", .wort "writes",
+   .ident "k", .zeichen ".", .wort "slots", .zeichen ",",
+   .wort "locks", .ident "M", .zeichen "}",
+   .wort "costs", .zeichen "<=", .zahl 16, .wort "ops",
+   .zeichen "{", .ident "k", .zeichen ".", .wort "slots",
+   .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
+   .ident "stand", .zeichen "=", .zahl 100, .zeichen ";",
+   .ident "lies", .zeichen "(", .ident "k", .zeichen ",",
+   .ident "i", .zeichen ")", .zeichen ";", .zeichen "}",
+   .wort "impl", .wort "fn", .ident "lies", .zeichen "(",
+   .ident "k", .zeichen ":", .wort "ptr", .zeichen "<",
+   .wort "normal", .zeichen ",", .wort "r", .zeichen ">",
+   .ident "Konto", .zeichen ",",
+   .ident "i", .zeichen ":", .wort "index", .wort "into",
+   .ident "Konto", .zeichen ")", .zeichen "->", .ident "Stand",
+   .wort "requires", .ident "Held", .zeichen "(", .ident "M",
+   .zeichen ")",
+   .wort "ensures", .wort "result", .zeichen "==", .ident "k",
+   .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
+   .zeichen "]", .zeichen ".", .ident "stand",
+   .wort "effects", .zeichen "{", .wort "reads", .ident "k",
+   .zeichen ".", .wort "slots", .zeichen ",", .wort "locks",
+   .ident "M", .zeichen "}",
+   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .zeichen "{", .wort "return", .ident "k", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
+   .zeichen ".", .ident "stand", .zeichen ";", .zeichen "}",
+   .zeichen "}", .ende]
+
+set_option maxHeartbeats 3200000 in
+theorem u104lex :
+    lex "module beispiel::referenz { const NKONTO : u32 = 2; type Betrag = u32 in 0 .. 10; type Stand = u32 in 0 .. 100; table Konto count NKONTO { slot { stand : Stand, } } lock M protects { stand } rank 0 held <= 50 ops; impl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag) requires Held(M) ensures old(k.slots[i].stand) <= k.slots[i].stand effects { reads k.slots, writes k.slots, locks M } costs <= 16 ops { k.slots[i].stand = 100; lies(k, i); } impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand requires Held(M) ensures result == k.slots[i].stand effects { reads k.slots, locks M } costs <= 8 ops { return k.slots[i].stand; } }" =
+      .ok tt104 := by
+  decide
