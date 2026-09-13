@@ -149,3 +149,4 @@ import Grammatik.CFormenH
 import Grammatik.CFormenDet
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
+import Grammatik.ZeugnisIdent
