@@ -11,9 +11,14 @@
   block or a loop cannot advance (see its CUTS). Here the frame residue is
   a `GRest`: an `Endblock` (`ende`), a `Block` followed by a rest (`dann`),
   an environment shrink (`schrumpf`), a lock release marker (`frei`), and
-  bounded-loop states (`trav`/`wieder`/`ewig` with their remaining bound).
-  New steps unfold compounds into that residue; none touches the call log,
-  so fidelity (`rufG_treu`) follows the F proof pattern.
+  bounded-loop states (`trav`/`wieder`/`ewig` with their remaining bound),
+  and the residues of a caller waiting for a bound value (`wartet`, and
+  `wartetSonst`, which keeps the else block of `let x = g(…) else { … }`).
+  New steps unfold compounds into that residue; only pushes and pops touch
+  the call log (`eintritt`, `rueck`, and `grund` for the error channel), so
+  fidelity (`rufG_treu`) follows the F proof pattern. A waiting caller is
+  resumed only by a binding pop: no reachable head waits
+  (`rufG_nie_wartend`).
 -/
 import Grammatik.Maschine
 import Grammatik.VertragOrtB
@@ -2714,7 +2719,6 @@ theorem RufFadenSauberG.kopf_wartend {z : RufFadenG D} (h : RufFadenSauberG z) :
     z.kopf.wartend = false :=
   GRest.sauber_wartend h.1
 
-set_option maxHeartbeats 1000000 in
 /-- Every rule keeps the invariant of the acting thread. The pops are the
     point: a verbatim pop resumes a caller that does not wait (`hnw`), so
     the resumed head is clean; a binding pop resumes the waiting caller's
@@ -3961,18 +3965,24 @@ theorem rufG_nie_wartend_zeuge :
       (block position) resolve the pointer value and push the callee frame
       like `ruf`/`rufDann`, logging `eintritt` (`rufCallInd` repaired like
       `ruf`).
-    - Bind-calls push the callee with a `wartet` caller residue
-      (`dannBindCall`, `dannBindCallInd`, `dannBindCallElse`); a return
-      binds the value in the caller environment -- from `ende ret`
-      (`rueckBind`), from an early `ret` at an `ende` cons head
-      (`rueckConsBind`) or in a block (`dannRetBind`), each logging
-      `rueck`. The verbatim pops (`rueck`, `rueckCons`, `dannRet`) can ALSO
-      fire into a waiting caller; the restored head `wartet …` then has no
-      rule and the thread deadlocks (`befund_wartet`,
-      `RufAdaequatRufG.lean`) -- kept, since excluding it would change the
-      statement of `rufG_adaequat`. The `bindCallElse` grund path has NO
-      step: a callee grund-return cannot be logged (no event names a grund
-      value) and a silent pop breaks `RufLogPasstG`.
+    - Bind-calls push the callee with a waiting caller residue: `wartet`
+      (`dannBindCall`, `dannBindCallInd`) or `wartetSonst`, which keeps the
+      else block (`dannBindCallElse`); a return binds the value in the
+      caller environment -- from `ende ret` (`rueckBind`), from an early
+      `ret` at an `ende` cons head (`rueckConsBind`) or in a block
+      (`dannRetBind`), each logging `rueck`, into either waiting form. The
+      verbatim pops (`rueck`, `rueckCons`, `dannRet`) demand a caller that
+      does NOT wait (`hnw`, repaired 2026-09-13: before, they could restore
+      a waiting caller, whose head `wartet …` has no rule -- the thread
+      deadlocked); no reachable head waits (`rufG_nie_wartend`).
+    - The error channel (added 2026-09-13): a callee's `retGrund r` (from
+      `ende`, an `ende` cons head, or a block) pops into a caller waiting
+      in `wartetSonst` (`rueckGrund`, `rueckConsGrund`, `dannRetGrund`),
+      which runs its else block with `r` bound, logging the new event
+      `RufEreignisF.grund` (`RufLogPasstG.grund` keeps `rufG_treu`). A
+      `retGrund` into any other caller (only an entry frame could have one:
+      `call`/`bindCall` demand `gruende = 0`) or with an empty stack has no
+      step.
     - Register/atomic/float binders run one layer deep, mirroring their
       `execBlock` equation (value pushed, body stepwise under `schrumpf`):
       `dannRegLies`, `dannRegLiesElseWahr`/`Falsch`, `dannAwaits`,
@@ -3987,22 +3997,26 @@ theorem rufG_nie_wartend_zeuge :
       `leave`/`next` at a loop shim (`trav` leave checks the invariant
       like `traverseLauf`; `retry`/`forever` exits are direct like
       `retryLauf`/`foreverLauf`); `peelDann`/`peelSchrumpf`/`peelFrei` (x
-      `leave`/`next`) abandon holdings-uniform scaffolding (`frei`
-      emits `gibt`, like `locks`); early `ret` pops with a `rueck` event
+      `leave`/`next`) abandon the scaffolding the loop body built (`frei`
+      emits `gibt`, like `locks`) -- at ANY static holdings (generalised
+      2026-09-13: the peels and shims demanded the exit's holdings to equal
+      the scaffolding's, so an exit behind a holdings-changing statement,
+      e.g. a call that consumes or produces marks, had no step, while
+      `execBlock` propagates the exit; the holdings index is static
+      bookkeeping the step never reads); early `ret` pops with a `rueck` event
       (`dannRet` in blocks, `rueckCons` at `ende` cons heads). `rueck`,
       `rueckCons`, `rueckBind` accept a returning residue at ANY loop level,
       so a `ret` that ends an else branch (`sonst`) inside a loop body pops
       (it stalled before: the rules demanded level `false`).
-    - NOT covered: `retGrund`/`Endblock.retGrund` anywhere (no grund
-      machinery: popping without an event breaks `RufLogPasstG`, logging
-      a value that does not exist is dishonest); `leave`/`next` at `ende`
+    - NOT covered: `retGrund` outside the error channel (see above);
+      `leave`/`next` at `ende`
       position (else-branch exits via `dannNarrowElse`/`dannPruefFalsch`/
       `dannRegLiesElseFalsch`/`dannGleitNarrowElse` discard the loop shim
       with the continuation -- recovering it needs the shim threaded
       through else-branches, a redesign); peels through
-      holdings-changing scaffolding (`advances`/`retires` mid-block) or
-      through `wartet` (unreachable: it never stands as a live
-      continuation); `forever` with exhausted budget and false
+      `wartet`/`wartetSonst` (unreachable: a waiting residue never stands as
+      a live continuation, `GRest.sauber`); `forever` with exhausted budget
+      and false
       invariants (the reference machine reports `hardware .fortschritt`
       / `logik .schleife` there).
     - Top-level `ret` with an empty call stack has no step (as in F): both

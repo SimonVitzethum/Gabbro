@@ -8,12 +8,15 @@
   Why: `RufAdaequatG.lean` proves adequacy for CALL-FREE bodies. A call is
   where the machine differs structurally from `execStmt` (a frame push, the
   callee's steps, a pop), and where G was wrong (`ruf` repeated the call
-  after `rueck`; repaired in `RufMaschineG.lean`). This file extends the
-  covered fragment by direct calls in block position (`call` in `dann`),
-  at `ende` position (`call` before the rest of an end block) and bind-calls
-  (`let x = g(…)`), and by the loops `traverse` and bounded `retry` (with
-  the repaired invariant reads of `traverse`), and proves: a body in the
-  extended fragment whose
+  after `rueck`; a verbatim pop could restore a WAITING caller and
+  deadlock; the error channel of `let x = g(…) else { … }` had no rule;
+  all repaired in `RufMaschineG.lean`). This file extends the covered
+  fragment by direct calls in block position (`call` in `dann`), at `ende`
+  position and bind-calls (`let x = g(…)`, with or without an else block,
+  both paths), by callees answering a reason (`retGrund`), by the loops
+  `traverse`, bounded `retry` and `forever` (with its budget), and by
+  `leave`/`next` (the machine peels the scaffolding the loop body built and
+  fires the loop shim), and proves: a body in the extended fragment whose
   callees' bodies are themselves in the fragment one level down
   (`Tief P A n`), started at the thread's world, returns in the machine
   exactly what `execEnd O passes (rufRumpf P O passes n)` returns
@@ -90,10 +93,12 @@ theorem rufRumpf_null {P : Programm D} {O : Orakel D} {passes : Nat} {g : D.Fn}
     rufRumpf P O passes 0 g σ ρ ≠ .ok σ' v := by
   simp [rufRumpf]
 
-/-! ## 2. The covered fragment, extended by calls
+/-! ## 2. The covered fragment, extended by calls, loops and exits
 
     As `StmtG`/`BlockG`/`EndG` (`RufAdaequatG.lean`), plus `call` (any
-    position) and `bindCall`, each admitted for callees `g` with `C g`. -/
+    position), `bindCall` and `bindCallElse`, each admitted for callees `g`
+    with `C g`, plus `traverse`, `retry`, `forever`, `leave`, `next` and
+    `retGrund`. -/
 
 /-- The callee of a direct `call` statement. -/
 def Stmt.rufZiel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -924,7 +929,7 @@ theorem gepoppt_zustand {M : RufMaschineG D} {f : Faden} {caller : RufRahmenG D}
 
 
 
-/-! ## 5. Loops: the steps, and why covered bodies never exit abruptly -/
+/-! ## 5. Loops and abrupt exits: the steps, the peels, the sequential outcomes -/
 
 section Schleifen
 
@@ -1584,11 +1589,14 @@ theorem foreverLauf_ende_none {V : Vertrag D} {l : Bool} {Γ : Ctx} (a : D.Annah
 
 
 
-/-! ## 6. Normal completion: the machine reaches the continuation
+/-! ## 6. Normal completion and abrupt exits: the machine reaches the continuation
 
     As `RufAdaequatG.lean` §7, for any handler `R` and fragment `C`, with a
-    log that may GROW (calls log `eintritt`/`rueck` events); a call is
-    discharged by the callee obligation `RufOk`. -/
+    log that may GROW (calls log `eintritt`/`rueck`/`grund` events); a call
+    is discharged by the callee obligation `RufOk`. Mutually with it, the
+    abrupt exits: a block that ends in `leave`/`next` runs to the exit
+    statement directly above its continuation (`SimAbbBR`), which the loop
+    simulations hand to the loop shim. -/
 
 section SimOk
 
@@ -2108,7 +2116,6 @@ include hRuf
 -- need it only through their recursive `blockOkR` calls, which the linter
 -- does not count as a use.
 set_option linter.unusedSectionVars false in
-set_option maxHeartbeats 4000000 in
 mutual
 
 theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -3739,7 +3746,6 @@ include hRuf
 -- `hRuf` is used at calls; the arm recursions reach it only through
 -- `blockRetR`, which the linter does not count as a use.
 set_option linter.unusedSectionVars false in
-set_option maxHeartbeats 4000000 in
 mutual
 
 theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -5253,45 +5259,48 @@ theorem befund_vertrag :
   What is proved: TARGET 4 (`rufG_adaequat_ruf`) -- for a body in the
   fragment `EndR`/`StmtR`/`BlockR` (the covered fragment of
   `RufAdaequatG.lean` plus direct `call` in block and `ende` position,
-  `let x = g(…)` in block position, `traverse` and bounded `retry` with
-  their overflow block), whose callees are admitted at nesting
-  depth `n` (`Tief`), the machine realises `execEnd` with the body-running
-  handler `rufRumpf n`, by induction on `n` (`rufOk_tief`); the call-free
-  fragment embeds at every depth (`endG_tief`). Joint witnesses on a
-  non-degenerate program (`rufG_adaequat_ruf_zeuge`: a call at `ende`
-  position followed by a write and a return; `rufG_adaequat_ruf_zeuge_bind`:
-  a bind-call whose value is written; `rufG_adaequat_ruf_zeuge_schleife`: a
-  `traverse` whose body calls the writing callee, then a `retry` that runs
-  its body and its overflow block). A FINDING (`befund_wartet`) and a NOTE
-  (`befund_vertrag`). What is NOT proved:
+  `let x = g(…)`, `let x = g(…) else { … }` with BOTH its paths,
+  `retGrund` (a callee answering a reason), `traverse`, bounded `retry`
+  with its overflow block, `forever` with its `passes` budget, and
+  `leave`/`next` inside loop bodies), whose callees are admitted at
+  nesting depth `n` (`Tief`), the machine realises `execEnd` with the
+  body-running handler `rufRumpf n`, by induction on `n` (`rufOk_tief`,
+  whose callee obligation `RufOk` now has an error-channel half); the
+  call-free fragment embeds at every depth (`endG_tief`). The premise
+  `hnw : caller.wartend = false` is new (the repaired verbatim pops demand
+  it). Joint witnesses on non-degenerate programs
+  (`rufG_adaequat_ruf_zeuge`, `…_bind`, `…_schleife`, and new:
+  `rufG_adaequat_ruf_zeuge_leave` -- a `forever` pass writes and leaves
+  through an `if`, `traverse` iterations take `next` through an `if`;
+  `rufG_adaequat_ruf_zeuge_sonst` -- both paths of `let … else`, the error
+  path through `rueckConsGrund`). The former deadlock finding is an
+  agreement (`wartet_einig`; with the value half, `wartet_einig_voll` in
+  `RufUmkehrRufG.lean`), and a NOTE (`befund_vertrag`). What is NOT proved:
 
   - Indirect calls (`callInd`, `bindCallInd`): the callee is the pointer's
-    VALUE, so the admission would be a premise over every function of the
-    signature; the machine rules (`rufCallInd`, `dannCallInd`,
-    `dannBindCallInd`) have the same shape as the direct ones and would go
-    through the same `RufOk`, not done.
-  - `bindCallElse`: its grund path has no machine rule (G's CUTS); its ok
-    path is like `bindCall`, not done.
-  - `leave`/`next` (and so `forever`, which ends normally only by
-    `leave`): the peel rules and the abrupt-exit shims
-    (`dannLeaveTrav`/`dannNextTrav`, `dannLeaveWieder`/…) are not simulated;
-    the fragment has no `leave`/`next`, and covered loop bodies never exit
-    abruptly (`blockAbbR`). A `traverse` or `retry` whose invariant/`until`
-    reads make `traverseLauf`/`retryLauf` fail is outside the normal and
-    return outcomes proved here (the machine is stuck there:
-    `trav_falsch_steht`).
-  - `retGrund` in a callee (no grund machinery in G), and every form
-    `RufAdaequatG.lean`'s CUTS excludes besides loops (axioms, `ret` under
-    `locks`, else branches not ending in `ret`).
+    VALUE, so the admission is a premise over every function of the
+    signature; `D.Fn` is an arbitrary type in the model (no finiteness),
+    so such a premise is not over finitely many functions -- not done.
+  - `axiomCall`/`bindAxiom` (the oracle's effect on the world), and
+    `ret`/`retGrund`/`let … else` under a `locks` body (`mr = false`: the
+    machine pops without the `gibt` that `execStmt`'s `locks` appends).
+    Else branches (`sonst`, `err`) stand at loop level `false` only: an
+    exit through an else branch inside a loop body jumps to `ende` and
+    discards the loop shim (G's CUTS).
+  - A `traverse`/`retry`/`forever` whose invariant/`until` read or budget
+    makes `traverseLauf`/`retryLauf`/`foreverLauf` end in `logik`/
+    `hardware` is outside the normal and return outcomes proved here (the
+    machine is stuck there: `trav_falsch_steht`; `ewig 0` and a false
+    `forever` invariant have no rule).
   - Contracts: `rufRumpf` checks no `requires`/`ensures`/invariant and the
     machine neither; `exec` (through `rufAt`) does, and reads their places.
     So the adequacy is against `rufRumpf`, not `rufAt` (`befund_vertrag`).
-  - Adequacy is existential (SOME f-only run realises the result): G also
-    has the deadlocking run of `befund_wartet`, so no statement about ALL
-    maximal runs holds for bind-calls.
+  - Adequacy is existential (SOME f-only run realises the result). The
+    converse (ALL runs up to the first pop) is `RufUmkehrRufG.lean`, for
+    the loop-free, error-channel-free part of the fragment.
   - The log is described only as `rueck … :: (ext ++ log)`: the calls'
     events `ext` are not characterised (they are balanced
-    `eintritt`/`rueck` pairs by `rufG_treu`'s invariant).
+    `eintritt`/`rueck`/`grund` pairs by `rufG_treu`'s invariant).
   - Depth: `Tief P A n` admits callees by depth; recursion deeper than `n`
     is `logik (abstieg f)` sequentially and no claim is made.
 -/
@@ -5302,8 +5311,13 @@ theorem befund_vertrag :
 #print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge_bind
 #print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge_schleife
+#print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge_leave
+#print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge_sonst
 #print axioms Gabbro.Grammatik.travOkR
 #print axioms Gabbro.Grammatik.travRetR
+#print axioms Gabbro.Grammatik.foreverOkR
+#print axioms Gabbro.Grammatik.foreverRetR
+#print axioms Gabbro.Grammatik.retryAbbR
 #print axioms Gabbro.Grammatik.blockAbbR
 #print axioms Gabbro.Grammatik.wartet_einig
 #print axioms Gabbro.Grammatik.befund_vertrag

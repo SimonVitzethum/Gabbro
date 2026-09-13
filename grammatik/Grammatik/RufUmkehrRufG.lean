@@ -1179,7 +1179,6 @@ macro "widerlegeK" h:ident : tactic => `(tactic| (
   | cases hcov))
 
 set_option linter.unusedSimpArgs false in
-set_option maxHeartbeats 1000000 in
 /-- **Each step keeps the frame semantics, with calls.** The top frame of a
     covered residue either stays (same frame result), pops (logged value =
     frame result), or pushes an admitted callee above the frame it leaves
@@ -1793,7 +1792,6 @@ def GepopptK (M : RufMaschineG D) : Prop :=
     (M.faeden f).log = RufEreignisF.rueck fn rho v s0 s1 :: (ext ++ log) ∧
     (REnde.zurueck (V := vertragVon D fn) s1 v).gleich S
 
-set_option maxHeartbeats 1000000 in
 /-- **One step keeps the pending call chain**, or it is the pop of the frame
     of `fn` itself -- with the value `S` demands. -/
 theorem invK_schritt {M M' : RufMaschineG D} (hs : RufSchrittG P O passes M f M')

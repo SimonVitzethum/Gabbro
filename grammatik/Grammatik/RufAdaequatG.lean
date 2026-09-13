@@ -2559,10 +2559,11 @@ end SimRet
 
 /-- **TARGET A -- adequacy of the call machine G for call-free bodies.**
     Thread `f` of `M` runs a frame of `fn` (actual parameters `rho`, entry
-    world `s0`) above a caller frame, with residue `.ende b` for a covered
-    (call-free, `EndG`) end block `b` at environment `ρ`; its static
-    holdings `Λ` name exactly the locks its trace holds; no other thread
-    holds a lock `b` may take (`A`). If the sequential semantics, started at
+    world `s0`) above a caller frame that does not wait for a bound value
+    (`hnw`: the verbatim pop demands it since 2026-09-13), with residue
+    `.ende b` for a covered (call-free, `EndG`) end block `b` at environment
+    `ρ`; its static holdings `Λ` name exactly the locks its trace holds; no
+    other thread holds a lock `b` may take (`A`). If the sequential semantics, started at
     the thread's current world `M.weltVon f`, returns `v` in world `σ'`,
     then steps of thread `f` alone reach a machine `M'` that has popped the
     frame, logged `rueck fn rho v s0 σ'` with THE SAME value `v`, and whose
@@ -5066,8 +5067,12 @@ theorem ruf_fortsetzung :
   fragment `EndG`/`StmtG`/`BlockG`/`ArmsG`/`GrundArmsG`, each with a joint
   witness on a `locks { if { write } }; return` body; the two former
   FINDINGS against G's step rules, now repaired, as agreement theorems
-  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). What is NOT
-  proved here:
+  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). TARGET A (and
+  `rufG_adaequat_R`) carry the premise `hnw : caller.wartend = false`
+  since the verbatim pops were repaired (2026-09-13): a premise about the
+  concrete caller frame (no waiting residue), true for every caller whose
+  frame the machine did not push with a bind-call; the witness's caller
+  satisfies it by `rfl`. What is NOT proved here:
 
   - Calls of every form (`call`, `callInd`, `bindCall`, `bindCallInd`,
     `bindCallElse`): direct calls and bind-calls are covered in
