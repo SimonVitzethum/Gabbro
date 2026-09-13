@@ -550,5 +550,93 @@ theorem t26 : beqTopTief (parseTopTief tt26)
 -- beispiele/06-annahmen.gab:127-146 (comments dropped, one
 -- string re-encoded without umlauts -- see CUTS). Rust: `Check`
 -- with `floor` and `counterprobe` -- same shape.
+def tt27 : List Token :=
+  [.wort "table", .ident "Verzeichnis", .wort "count",
+   .ident "N", .zeichen "{", .wort "slot", .zeichen "{",
+   .ident "benutzt", .zeichen ":", .wort "bool", .zeichen ",",
+   .ident "marke", .zeichen ":", .wort "u32", .zeichen ",",
+   .zeichen "}", .wort "ops", .wort "insert", .zeichen ",",
+   .wort "remove", .zeichen ";", .wort "occupied", .ident "benutzt",
+   .zeichen ";", .zeichen "}", .ende]
+theorem t27_lex :
+    lex "table Verzeichnis count N { slot { benutzt : bool, marke : u32, } ops insert, remove; occupied benutzt; }" =
+      .ok tt27 := by
+  decide
+theorem t27 : beqTopTief (parseTopTief tt27)
+    (.ok [.tabelleT "Verzeichnis" (.some (.variable "N")) .none .none
+      false
+      [.tPlatz [{ fname := "benutzt", ftyp := .atom "bool",
+                   pos := .none, bezug := .none, wo := .none,
+                   reserviert := false, byOps := false },
+                 { fname := "marke", ftyp := .atom "u32",
+                   pos := .none, bezug := .none, wo := .none,
+                   reserviert := false, byOps := false }],
+        .tOps ["insert", "remove"], .tBelegt "benutzt"]]) = true := by
+  decide
+-- beispiele/47-ops-wortmenge.gab:60-71 (comments dropped).
+-- Rust: `Tabelle` with generated `ops` and an `occupied` field
+-- -- same shape.
+def tt28 : List Token :=
+  [.wort "table", .ident "T", .wort "count", .zahl 4,
+   .zeichen "{", .wort "const", .ident "WURZEL", .zeichen ":",
+   .wort "u32", .zeichen "=", .zahl 0, .zeichen ";",
+   .wort "slot", .zeichen "{", .ident "b", .zeichen ":",
+   .wort "bool", .zeichen ",", .zeichen "}", .zeichen "}",
+   .ende]
+theorem t28_lex :
+    lex "table T count 4 { const WURZEL : u32 = 0; slot { b : bool, } }" =
+      .ok tt28 := by
+  decide
+theorem t28 : beqTopTief (parseTopTief tt28)
+    (.ok [.tabelleT "T" (.some (.lit 4)) .none .none false
+      [.tKonst "WURZEL" (.atom "u32") (.einzeln (.lit 0)),
+        .tPlatz [{ fname := "b", ftyp := .atom "bool",
+                   pos := .none, bezug := .none, wo := .none,
+                   reserviert := false, byOps := false }]]]) = true := by
+  decide
+-- beispiele/01-tabelle.gab (the `WURZEL` table constant beside a
+-- slot). Rust: `Tabelle` with a `const` member -- same shape.
+def tt29 : List Token :=
+  [.wort "table", .ident "K", .wort "count", .zahl 4,
+   .zeichen "{", .wort "tree", .zeichen "{", .wort "parent",
+   .ident "elter", .zeichen ",", .wort "child",
+   .ident "erstes_kind", .zeichen ",", .wort "sibling",
+   .ident "naechstes", .zeichen "}", .wort "slot", .zeichen "{",
+   .ident "b", .zeichen ":", .wort "bool", .zeichen ",",
+   .zeichen "}", .zeichen "}", .ende]
+theorem t29_lex :
+    lex "table K count 4 { tree { parent elter, child erstes_kind, sibling naechstes } slot { b : bool, } }" =
+      .ok tt29 := by
+  decide
+theorem t29 : beqTopTief (parseTopTief tt29)
+    (.ok [.tabelleT "K" (.some (.lit 4)) .none .none false
+      [.tBaum [("parent", "elter"), ("child", "erstes_kind"),
+        ("sibling", "naechstes")],
+        .tPlatz [{ fname := "b", ftyp := .atom "bool",
+                   pos := .none, bezug := .none, wo := .none,
+                   reserviert := false, byOps := false }]]]) = true := by
+  decide
+-- beispiele/01-tabelle.gab (the «B41b» edge beside a slot).
+-- Rust: `Tabelle` with a `tree` member -- same shape.
+def tt30 : List Token :=
+  [.wort "table", .ident "T", .wort "count", .zahl 4,
+   .zeichen "{", .wort "slot", .zeichen "{", .ident "b",
+   .zeichen ":", .wort "bool", .zeichen ",", .zeichen "}",
+   .wort "invariant", .ident "inv", .wort "cost", .ident "O",
+   .zeichen "(", .zahl 1, .zeichen ")", .wort "runs",
+   .wort "online", .zeichen ":", .ident "T", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
+   .zeichen ".", .ident "b", .zeichen ";", .zeichen "}",
+   .ende]
+theorem t30_lex :
+    lex "table T count 4 { slot { b : bool, } invariant inv cost O(1) runs online : T.slots[i].b; }" =
+      .ok tt30 := by
+  decide
+theorem t30 : beqTopTief (parseTopTief tt30)
+    (.ok [.tabelleT "T" (.some (.lit 4)) .none .none false [.tPlatz [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInvariante { gname := "inv", kosten := .lit 1, online := true, dabei := .none, aussage := (.feld (.index (.feld (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
+  decide
+-- The `invariant` member shape is beispiele/01-tabelle.gab (the
+-- header row); the `aussage` is synthetic and quantifier-free --
+-- quantified predicates ride no `SExpr` shape (see CUTS).
 
 end Gabbro.Grammatik.Parser

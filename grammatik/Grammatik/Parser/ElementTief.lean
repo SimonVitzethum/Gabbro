@@ -1579,6 +1579,13 @@ def parseEffektBlock (f : Nat) (toks : List Token) :
         | .ok (es, r2) => match fordereZeichen "}" r2 with
           | .error e => .error e
           | .ok r => .ok (es, r)
+/-- The `O` of `cost O(e)`: a name in both lexers (`kw.rs`
+    has no `O` keyword either), so either token shape reads. -/
+def nimmKostenO : List Token → Except String (List Token)
+  | t :: rest => match nameText t with
+    | some s => if strEq s "O" then .ok rest else .error "cost O expected"
+    | none => .error "cost O expected"
+  | [] => .error "cost O expected"
 /-- One invariant: `invariant n cost O(e) runs m [by …] : p ;`. -/
 def parseGruppenInv (f : Nat) (toks : List Token) :
     Except String (SGruppenInv × List Token) :=
@@ -1590,7 +1597,7 @@ def parseGruppenInv (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (n, r2) => match nimmWort "cost" r2 with
         | .error e => .error e
-        | .ok r3 => match nimmWort "O" r3 with
+        | .ok r3 => match nimmKostenO r3 with
           | .error e => .error e
           | .ok r4 => match fordereZeichen "(" r4 with
             | .error e => .error e
