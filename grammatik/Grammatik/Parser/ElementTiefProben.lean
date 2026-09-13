@@ -500,5 +500,55 @@ theorem t25 : beqTopTief (parseTopTief tt25)
   decide
 -- beispiele/06-annahmen.gab:80. Rust: `Axiom` with two writes --
 -- same shape.
+def tt26 : List Token :=
+  [.wort "check", .ident "stapel_wasserstand", .zeichen "{",
+   .wort "claim",
+   .text "Kein Kern hat je mehr als 3/4 seines Stapels benutzt.",
+   .wort "measures", .ident "tiefe_max", .zeichen ",",
+   .ident "tiefe_lebend", .zeichen ",", .ident "kerne_gemessen",
+   .wort "gates", .ident "abnahme", .zeichen ",",
+   .ident "freigabe", .wort "can_fail",
+   .zeichen "{", .wort "let", .ident "g", .zeichen "=",
+   .ident "groesse_gemessen", .zeichen "(", .zeichen ")",
+   .wort "else", .zeichen "(", .ident "e1", .zeichen ")",
+   .zeichen "{", .wort "return", .wort "false", .zeichen ";",
+   .zeichen "}", .wort "if", .ident "tiefe_max", .zeichen "*",
+   .zahl 4, .zeichen ">=", .ident "g", .zeichen "*", .zahl 3,
+   .zeichen "{", .wort "return", .wort "false", .zeichen ";",
+   .zeichen "}", .wort "return", .wort "true", .zeichen ";",
+   .zeichen "}", .wort "floor", .ident "kerne_gemessen",
+   .zeichen ">=", .zahl 2, .zeichen ",", .ident "tiefe_max",
+   .zeichen ">=", .zahl 1, .wort "counterprobe",
+   .text "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.",
+   .wort "expects", .ident "sonde_tiefer_stapel", .zeichen "}",
+   .ende]
+set_option maxHeartbeats 800000 in
+theorem t26_lex :
+    lex "check stapel_wasserstand { claim \"Kein Kern hat je mehr als 3/4 seines Stapels benutzt.\" measures tiefe_max, tiefe_lebend, kerne_gemessen gates abnahme, freigabe can_fail { let g = groesse_gemessen() else (e1) { return false; } if tiefe_max * 4 >= g * 3 { return false; } return true; } floor kerne_gemessen >= 2, tiefe_max >= 1 counterprobe \"Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.\" expects sonde_tiefer_stapel }" =
+      .ok tt26 := by
+  decide
+theorem t26 : beqTopTief (parseTopTief tt26)
+    (.ok [.pruefungT
+      { cname := "stapel_wasserstand",
+        behauptung := "Kein Kern hat je mehr als 3/4 seines Stapels benutzt.",
+        misst := [.variable "tiefe_max", .variable "tiefe_lebend",
+          .variable "kerne_gemessen"],
+        tore := ["abnahme", "freigabe"],
+        kannScheitern :=
+          (.block
+            [.lassElse "g" "groesse_gemessen()" "e1"
+              (.block [] (.some (.ret (.some .falsch)))),
+              .wenn (.bin ">=" (.bin "*" (.variable "tiefe_max") (.lit 4))
+                (.bin "*" (.variable "g") (.lit 3)))
+                (.block [] (.some (.ret (.some .falsch)))) [] .none]
+            (.some (.ret (.some .wahr)))),
+        boden := [.bin ">=" (.variable "kerne_gemessen") (.lit 2),
+          .bin ">=" (.variable "tiefe_max") (.lit 1)],
+        sonde := .some ("Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.",
+          "sonde_tiefer_stapel") }]) = true := by
+  decide
+-- beispiele/06-annahmen.gab:127-146 (comments dropped, one
+-- string re-encoded without umlauts -- see CUTS). Rust: `Check`
+-- with `floor` and `counterprobe` -- same shape.
 
 end Gabbro.Grammatik.Parser

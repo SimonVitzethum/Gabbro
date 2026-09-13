@@ -2429,11 +2429,11 @@ def parsePruefungTief (f : Nat) (toks : List Token) :
             | .error e => .error e
             | .ok (c, r5) => match nimmWort "measures" r5 with
               | .error e => .error e
-              | .ok r6 => match parsePlatzListe f r6 with
+              | .ok r6 => match parsePredListe f r6 with
                 | .error e => .error e
                 | .ok (ms, r7) => match nimmWort "gates" r7 with
                   | .error e => .error e
-                  | .ok r8 => match parseNamenEingeklammert f r8 with
+                  | .ok r8 => match parseNamenListe f r8 with
                     | .error e => .error e
                     | .ok (gs, r9) => match nimmWort "can_fail" r9 with
                       | .error e => .error e
