@@ -54,21 +54,62 @@ static arrays.
 
 ## 3. Order
 
-1. **Memory model**, design and Lean core. One lane with a fixed target; an Opus agent,
-   because it is the riskiest piece.
-2. **T4 in three passes:**
-   - (i) the 15 forms that neighbour the five already done, about 1,500 lines;
-   - (ii) the 20 medium forms, about 5,000 lines;
-   - (iii) the 24 hard forms on the new memory model, about 10,000 lines.
+*Revised 2026-09-13 (evening) after an external review. The first version raised five pillars
+in parallel to 20-60 % each; the review's point, accepted: coverage is MULTIPLICATIVE -- the
+closing theorem holds only for programs that pass every sieve -- so the state is measured by
+closed chains, not by per-pillar percentages. Done before the revision: memory model
+(CSpeicher), T4 passes (i)-(iii) and the reason channel (48 of 73 emitted forms), T1 for all
+Expr/Stmt/Block/Endblock constructors, term identity on the Lean side, T3 lexer/parser through
+items, source-to-G on 104.*
 
-   Every pass ends with the correspondence lemma per form, and with a guardian that fails when
-   the emitter emits a form that has no semantics.
-3. **T1 and T2 run in parallel with T4.** They do not depend on the C semantics except where
-   T2 rules the C forms.
-4. **T3, the parser in Lean**, runs in parallel and on its own.
-5. **Closing theorem:** for every accepted program, `certificate checks by decide/kernel` implies
-   `source parses to P` ∧ `P satisfies the model` ∧ `emitted C refines P`. It comes with a
-   witness on `beispiele/104-referenz.gab`, the reference program.
+**The one metric: chain count.** How many of the corpus programs (`beispiele/*.gab`, 101 emitting
+on 2026-09-13) pass the WHOLE chain: Lean parse of the source → elaboration to `P` → model
+certificate accepted → correspondence certificate of the emitted C accepted. It replaces the
+per-pillar numbers as the headline; the per-pillar numbers stay as diagnostics. **On 2026-09-13
+it is 0** (T2 does not exist yet). A guardian prints it; it only ever counts programs whose
+chain Lean actually checked.
+
+1. **Close ONE chain first: T2 minimal, for `beispiele/104`.** The correspondence certificate
+   (`corrcert.rs` print format) and its Lean rechecker, restricted to the forms 104's emitted C
+   actually uses -- nothing more. T2 is the only pillar that did not exist at all, and without it
+   no chain closes, not even for 104.
+2. **Closing theorem, stage (a): single-threaded, complete.** For a program with one active
+   thread (`ziel_ort_einfaden`'s class): `certificates check` ⟹ `source parses to P` ∧ `P
+   satisfies the model` ∧ `every run of the emitted C corresponds to a run of P` (the C semantics
+   is deterministic, `exec_det`, so "every" is available). Witness on 104. This is the first
+   point at which the chain count is 1.
+3. **Widen by forms, measured by the chain count.** Every further T1 certificate shape, T4
+   lemma, T5 template and T2 form is judged by how many corpus programs it moves over the line.
+4. **Closing theorem, stage (b): concurrent.** DRF-SC for the C11/hardware memory model, the
+   lock primitives' specification (acquire/release with happens-before) and thread creation by
+   the runtime enter as NAMED PREMISES of the theorem. The argument that makes the DRF-SC
+   premise applicable rather than merely plausible: `rennfrei_g_voll` proves the program data-race
+   free on G, which is exactly DRF-SC's hypothesis. The simulation G-run ↔ interleaved C-run is
+   research-sized (CompCertTSO, promising semantics); stage (a) does not wait for it. What is
+   realistic soon is the statement with the premises in the right place; the proof over it is a
+   separate, longer item.
+
+**Three states in the C-form guardian.** `instrumente/pruefe-cformen.py` classifies every
+emitted form as (i) **lemma** (a correspondence lemma exists), (ii) **named assumption** (the
+form has no C meaning by construction and enters the theorem as a premise: inline asm, device
+register access = the hardware profile, syscall stubs = the kernel), or (iii) **without
+semantics** (red unless on the dated known-uncovered list). Two states would force the
+assumption forms either to stay red forever or to have the guardian switched off -- and a
+silenced guardian is the failure class this tree has booked three times.
+
+**What still has to be read by a human.** Strategy A shrinks the trusted base from the Rust
+tree to the Lean DEFINITIONS the kernel cannot judge: whether they say the right thing. That is
+the external-review target, and nothing else is: the machine G (`RufMaschineG.lean`, and the
+sequential `Semantik.lean` / `Maschine.lean`), the good-run predicates (`Gesittet` in
+`Wettlauf.lean`, `GutO`, `RegLokal`, `SperrInvOk`), the obligation (`KoerperGutS`), the goal
+predicate (`VertragAmOrtG`, `SperrInvG`), and the C semantics (`CSemantik.lean`,
+`CSpeicher.lean`, `CFormen.lean` core). Measured 2026-09-13: `grammatik/` contains no `sorry`
+outside comments (a plain `grep -w sorry` counts the many "no `sorry`" remarks -- that count is
+not a finding).
+
+**Not a risk any more once T3 stands:** the Rust side of term identity (differentially tested,
+53 match / 0 mismatch, not proved). With the certificate anchored at the source text through
+the Lean parser, a Rust print of the wrong term fails the check -- a refusal, not an admission.
 
 ## 4. Effort (Muse Spark 1.3 Contributor, measured rates)
 
