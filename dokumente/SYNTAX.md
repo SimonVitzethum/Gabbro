@@ -1931,24 +1931,62 @@ cannot be written. `Satz.lean` §4 shows one (`x / x`: `.div` demands `1 ≤ 0`)
 
 ## 16. What the theorem says — and what it does NOT cover even with this syntax
 
-### 16.1 The theorem
+> **Restated 2026-09-13 over the repaired call machine G.** The goal is proved,
+> and the binding premise map is `dokumente/SATZKARTE.md` §11. What follows is
+> the same content in the language of this file: the theorems as they stand now,
+> in words and as the Lean names (§16.1); the premise classes, with the surface
+> construct or checker rule behind each decidable premise (§16.2); and what the
+> theorems do not cover (§16.3). §16.4 maps the twelve items of the 2026-09-09
+> list onto the new stand, so every older `§16 (n)` reference in §§1-15 keeps
+> its target.
 
-**`zwei_fehler`** (`Satz.lean` §1): every outcome of a body is control flow (`ok`, `zurueck`,
-`grund`, `leave`, `next`) or **`logik`** or **`hardware`**, and the type has no eighth
-constructor. **`bedeutung_total`**: every body has an outcome — the meaning is a function.
-**`exec_gut`** (§3): a body writes only what its contract names (**frame**), gives every lock
-back, and every access it makes carries the guards of its carrier and holds every lock its Λ
-names, taken in rank order and never twice (**trace**) — under the one premise that the
-hardware keeps its `effects` (H1). **`kein_wettlauf`**, **`kein_wettlauf_global`**,
-**`keine_ueberkreuzung`** (`Wettlauf.lean`): over **any interleaving** of such traces, two
-accesses of different threads to one carrier are happens-before ordered or on an `atomic`,
-and no two lock acquisitions cross in rank. `AllgemeinStabil` (`InterferenzAllgemein.lean`)
-proves what the joint model consumes — context, coverage, per-thread frame
-dependence and chain-head entry validity, every assertion at the last world.
-Frame-bound reader assertions survive disjoint steps
-(`requiresStabil_kette`, `ensuresStabil_kette`, `invarianteStabil_kette` in
-`LesenStabil.lean`): ordered writes stay writes, preserved reads stay reads.
-The inversion theorems (`slot_hat_waechter`,
+### 16.1 The theorems as they stand
+
+**`ziel_ort_geraet`** (`grammatik/Grammatik/ZielOrtGeraet.lean`). Over machine G —
+no bare lock steps, every memory step carrying `HeldGenau`, every live frame's
+static holdings held by its thread (`rufG_haelt_statisch`, `RufHaeltG.lean`) and
+two threads never holding one lock (`exklusivG`, `ZielOrt.lean`) — every machine
+reachable from the start machine satisfies `vertragAmOrtG`: at every `eintritt`
+event of every thread log the callee's `requires` holds with the logged actual
+parameters at the logged entry world (`ReqAmEintritt`, `VertragOrtB.lean`), and
+at every `rueck` event the `ensures` holds with the logged entry world as the
+`old` side, the logged return world, and the actual parameters and result
+(`EnsAmRueck`). Contracts hold at their place — entry and return, with the
+actual values — nothing is quantified away. The older theorems are legs of it:
+`ziel_ort` (the loop-free, oracle-free fragment) and `ziel_ort_voll` (loops,
+exits, reasons, axioms, indirect calls through `KandOk`, no register reads) —
+and `ziel_ort_voll` on a register-local oracle follows from the flagship
+(`ziel_ort_voll_lokal`). The joint witness is `ziel_ort_geraet_zeuge`
+(`ZielOrtGeraetZeuge.lean`): two threads, a device register read twice, every
+premise jointly. Axioms: `propext`, `Classical.choice`, `Quot.sound` only.
+
+**`rennfrei_g`** (`RennfreiG.lean`). On any reachable run, a step that changes a
+guarded carrier holds every guard of that carrier before the step, and after the
+step no other thread holds that guard — two threads writing one guarded carrier
+are always ordered through the lock. The adjacent form `rennfrei_g_nah` says two
+steps back to back by different threads never both change one guarded carrier.
+Witness: `rennfrei_g_zeuge`, a reached writing step that moves memory on the one
+table its function writes.
+
+**`frame_schritte_beschraenkt` and `kosten_passt_deklaration`** (`KostenG.lean`).
+On any run, a frame's own steps between its entry and its return are bounded by
+a syntax-directed cost of its body — each call counting the callee's cost one
+depth down (`rufTief`) or the callee's declared cost under the decidable check
+`kostenPasst` over a closed function list. The Lean bound meets the checker's
+number from above (`frame_schritte_pruefer`, per form, with the findings of the
+file's §11). Counted are the frame's own thread steps; other threads' steps and
+waiting time are not — see the scheduler assumption in §16.2.
+
+**The single-body legs underneath.** `zwei_fehler` (`Satz.lean`): every outcome
+of a body is control flow or `logik` or `hardware`, and the type has no further
+constructor. `exec_rahmen`: a body under contract writes only what its contract
+names, gives every lock back, and every access carries its guards in rank order.
+`AllgemeinStabil` (`InterferenzAllgemein.lean`) proves what the joint model
+consumes — context, coverage, per-thread frame dependence and chain-head entry
+validity, every assertion at the last world. Frame-bound reader assertions
+survive disjoint steps (`requiresStabil_kette`, `ensuresStabil_kette`,
+`invarianteStabil_kette` in `LesenStabil.lean`): ordered writes stay writes,
+preserved reads stay reads. The inversion theorems (`slot_hat_waechter`,
 `zeiger_hat_waechter`, `bytes_in_tabelle`, `zuweisung_hat_recht`, `sdivision_ohne_null`,
 `register_schreibbar`, `transition_hat_spiegel`, `uebergang_erklaert`, `publish_paart`,
 `stufe_steigt`, …) say for each site what its derivation had to carry. `Zucker.lean` defines
@@ -1979,43 +2017,58 @@ publication with the wrong payload, a phase step out of order, a shared carrier 
 guard, a data race on a guarded carrier, a crossing of the lock order — **none of these has
 an outcome, because none of these has a term or a run.**
 
-### 16.2 What is NOT covered — and what carries it instead
+### 16.2 The premise classes — and what establishes each decidable premise
 
-The list of the afternoon had nine items; six of them are now theorems or named outcomes,
-and this section says for each what carries it. Nothing below is an error class of a body.
+Classes: USER (the user's own logic), HARDWARE (a named assumption), DECIDABLE (a
+Bool the checker computes, with its soundness theorem), START (a fact about the start
+configuration), DATA (an object, not an obligation). Full map: `dokumente/SATZKARTE.md`
+§11.2.
 
-| item | status on the evening of 2026-09-09 | what carries it |
+| premise | class | established by |
 |---|---|---|
-| **1. interleavings** | **covered** — `kein_wettlauf` over any interleaving of traces the grammar leaves | three premises, each booked: (W3) the lock primitive excludes (a foreign body, `assume`), (W4) linearity keeps a mark in one thread (a property of the grammar: no constructor moves a mark across threads; owner marks are made by nobody), (W5) `shared` says which carriers two threads reach (`H013` as a declaration; `Geteilt.lean` computes it, `Extraktion.lean` wires the computation). Cuts G1–G7 (`InterferenzAllgemein.lean` header): shape not theorem; full contract frames; `disziplin` assumed; only lock-shared (`atomic`/pairing need own exemptions); `Gesittet` carried; per-thread entry worlds; world-only assertions |
-| **2. memory model** | **covered as a hardware outcome** — `awaits` yields `hardware (sichtbarkeit A10)` when the machine does not deliver; accesses to an `atomic` are the only unguarded shared accesses and are ordered by A10 | `assume c11_release_acquire_*` with its falsifier |
-| **3. devices** | **split — order proved, content assumed** — type (`register r`), promise (`geraet r`), mirror (`transition` reads it by construction), class (not derivable otherwise) | the ORDER across a window chain is proved (`Geraet.lean` `kette_ohne_wettlauf`: a CPU access ordered against the chain endpoints is ordered against every device write); the CONTENT the device observes stays the named assumption (`dma_inhalt`, per window; `dma_visibility_in_order` covers program-order visibility only) — no grammar sees a bus |
-| **4. bytes** | **covered** — `leseBytes`/`schreibBytes` with the run's bound as attribute; `format` fields, `offset_into`, `@bitpos`, `embeds`, `endian big` as sugar over them; two views read one world | — |
-| **5. signed arithmetic, float** | signed `/ %` **covered** (`sdiv`/`srem`, divisor range excludes zero, `\|q\| ≤ \|a\|`); float: every value finite and in range **by type**, every operation checked by the machine → `hardware ieee` — the range of a float operation is **not derived**, because IEEE rounding is the machine's, i.e. a hardware assumption by the letter of the task | `assume ieee754_round_to_nearest_even` with its falsifier |
-| **6. sugar** | **covered** — `Zucker.lean`: every `SUGAR` mark is a Lean definition over the core (`=>`, `!=`, `>`, `~`, `in`, `descendants`, `ancestors`, `chain`, `queue`, `+=` … `\|=`, `observes`, `on_exceeded f`, `accumulates … merge`, `maintains`, a record value, `bitfeld`, `embeds`, `endian big`, `walk` as nested `traverse`, `u32` without `in`) | — (a parser that emits these definitions has nothing to translate) |
-| **7. contexts, cost, emitter, C** | **split since «SG-22» (§18)** — *when* a handler runs (`entry … dispatch`, `via idt`) stays a scheduling fact (a handler is a thread in the run model; `masks irqs` is a declaration the run's well-formedness may use, `H102` stays a pass); *how many ops* (`costs`, `held <=`, `bounded`, `per_pass`) is a **budget in the logic** — statically computed, checked against the declaration; *by when in cycles* (`deadline … arch … falsifier …`) is a **hardware outcome** (`hardware (fortschritt a)`, the named assumption with its probe); *what the C does* is the emitter under the lowering contract of `Ziel.lean` | `PLAN-UMSETZUNG.md`; §18; `grammatik/Grammatik/Ziel.lean` |
-| **8. the parser** | **outside, mapped** — `Syntax.lean` is a tree, this file a token grammar; the map is the checker's new front end | `PLAN-UMSETZUNG.md` §2; production-to-constructor table 161/161 mapped-or-named in `messung/SYNTAX-PARSER-ENTWURF.md` (124 core, 12 SUGAR, 25 LESESTELLE gaps G-LEX/G-NAME/G-FILTER/G-LAYOUT/G-SPACE/G-SCHEME/G-HELD/G-COST/G-CONC/G-RELABEL, each named) |
-| **9. the three parameters** | `O`, `passes`, `fuel` — not gaps: the hardware and the logic | — |
-| **10. check-then-use** | **named class** — every instance has a check, a window, and a use relying on the fact still holding; the discipline is validation-copy: use after the window only through a held carrier, else revalidate or copy under the guard | narrow-then-use carried (M147, incl. indirect-call expiry and use-granularity precision); driver handoff carried (H018, checker half of `GeraetWache`); syscall/awaits/budget/deadline rows carried at the boundary, open inside foreign bodies and across threads — table below |
-| **11. preemption timing** | **excluded by decision** — no timing defs are introduced and no timing proofs are owed; preemption, bus and cache timing stay outside the model | logical placement stays modelled (preemption only between events: Korngrenze; no foreign handler step under a masking lock: MaskenOrdnung; one event covers at most one cell: EreignisAtomar); scheduling stays a fact; the sonde books counter-body-only scope openly |
-| **12. user-copy hazard** | **future work** — check-then-copy across the user/kernel boundary has shapes but no discharge | region check and world partition missing (Adressraum.lean C6); validated copy proved under the named snapshot premise |
+| `KoerperGutG` — one triple per function plus caller duty | USER | the `requires` / `ensures` / `invariant` / `decreases` clauses and the `state` pre-state (§§5–8); Lean legs `hoare_call` (`HoareRuf.lean`) and `rufG_treu` (`RufMaschineG.lean`). It quantifies over ALL frame-respecting register-local oracles, so the sequential proof must survive register answers that change between reads — locality may be assumed, stability may not. |
+| `StartGut` — every start function's `requires` at the start world | USER (boot) | the boot assignment `init` against the entry contracts (`ZielOrt.lean`). |
+| `GutO` — axiom answers inside declared frames, held locks and trace untouched | HARDWARE | the `effects` of every `axiom` / `raw` / `prim` / `extern` / `asm` body (§§1, 6, 14); the per-syscall instance from the kernel contract (`syscall_paarung`, `SyscallPaarung.lean`); the fixture instance `refO_gut` (`ReferenzB.lean`). |
+| `RegLokal` — register answers from the register's device carriers, `awaits` visibility from the awaited global only | HARDWARE, named | the `device` / `reg` declarations with `mirrors`, class, and `requires` promises (§10); transfer `regLies_gleich` / `sichtbar_gleich` (`ZielOrtGeraetSem.lean`). |
+| waiting — fair scheduling and a bounded hold time of every lock | HARDWARE assumption, named here and proved nowhere | the surface carries the hold bound (`lock L … held <= N ops`, §11; checker `K002`, `K004` for the shared form), but `Deklaration` has no hold field, so no waiting bound under fairness is stated (TARGET 4 open, `KostenG.lean` CUTS). |
+| `programmImFragmentG = true` — every body in the widened `gOk` fragment | DECIDABLE | all forms including loops, exits, reasons, axioms; indirect calls only where `KandOk` holds (every function of the pointer's signature keeps its contract carriers in the caller's footprint); register reads only with their device carriers in the footprint. Soundness: `programmImFragmentG_ok`. Lean-decidable, not yet a checker rule — wiring it per program is emitter work. |
+| `fussOrtGB = true` — every widened-footprint carrier guarded by a signature lock or written by none | DECIDABLE | the footprint covers direct callees' contract carriers and read registers' device carriers; surface: `effects { writes T }`, the `requires Held(L)` signature lock sets, `H007` guard-per-access, `W001` / `W002` concurrent-write refusal. Soundness: `fussOrtGB_ok`. The Bool itself is Lean-side. |
+| `StartExklusiv` — no two start threads share a signature lock | START | the `concurrent` member list against the entry functions' held sets (§11); decidable for constant assignments (`audit_startExklusiv_const`, `AuditZiel.lean`); no checker rule yet. |
+| `kostenPasst = true` — every body cost fits its `costs` declaration over a closed list | DECIDABLE | the `costs <= n ops`, `bounded`, `per_pass bounded` clauses (§§6, 8); checker `K001` (declared costs hold), `K006` / `K007` (loop bounds), `K008` / `K009` (recursion measure), `K005`; Lean `kosten_passt_deklaration` with correspondence `frame_schritte_pruefer`. |
+| `hvoll`, `e0` — the member list is complete; the declaration has a carrier | DATA | a finite enumeration check; a declaration-shape datum (carrier-less programs are out — §16.3). |
 
-### Check-then-use register
+### 16.3 What the three theorems do NOT cover
 
-| pattern | window | carrier, or gap with reason |
+Every item is a CUTS of the cited file; the map is `dokumente/SATZKARTE.md` §11.3.
+
+- **Fragment edge.** `ziel_ort` covers `kOk` bodies only; `ziel_ort_voll` adds loops, exits, reasons, axioms and indirect calls but no `regLies`, `regLiesElse` or `awaits`. The flagship admits those under `RegLokal` and `fussOrtGB`. Indirect calls stay restricted to `KandOk`. The unrepaired widening is provably false (`ziel_ort_register_falsch`); no analogous refutation is built for `awaits`.
+- **Carrier-less declarations.** With no table, global or lock every world has the empty trace and the replay would need an unproved determinism lemma — out of all three (`e0`).
+- **Locks-block-only readers.** Footprint carriers and device carriers need a guard held BY SIGNATURE, or no writer at all. A reader that takes the lock only in a `locks` block is not covered.
+- **Non-local oracles.** Without `RegLokal` the flagship does not apply (`ziel_ort_voll` stays as proved and covers no registers or awaits). `RegLokal`'s visibility half is minimal — the awaited global only; answers depending on `publishes` payload globals are outside it. G has no asynchronous device step (`GeraetSchreibt` is a shape beside the run): a register whose answer changes between reads with no write to its carriers violates `RegLokal`.
+- **Waiting, termination, time.** G steps are not checker ops and not cycles. TARGET 4 (a waiting bound under fairness from the `held` declarations) is not stated. Termination is not proved: a frame may stop stepping for good (an unfreed lock, an invisible payload, a spent `passes` budget, a failed leaf, `leave` / `next` in an `else` block) — then it takes fewer steps, never more. Stuck states are not violations: G does not step, and `VertragAmOrtG` covers only logged steps.
+- **Converse adequacy.** Forward adequacy is existential, against the contract-ignoring handler `rufRumpf` — never the checking `rufAt`. Calls need `Tief` depth admission; indirect calls are not done; axioms and `bindAxiom` are not simulated; `ret` under `locks` is excluded. The converse covers the loop-free, error-channel-free, axiom-free, oracle-free fragment only.
+- **Lock-free sharing.** Atomic globals (`AtomarAusgenommen`) and published payloads (`PaarungAusgenommen`) are allowed races by design and excluded from `SchreibRasse`. Unshared carriers are checker duty (`PCUnsharedSep`). No non-adjacent race with explicit release.
+- **Witness shape.** The `voll` witness moves one thread under `true` contracts; the `geraet` witness has no device-driven change and no `awaits`; no witness interleaves inside a critical section (the lock forbids it).
+- **User-copy hazard (§3).** The region check stands beside the run and the world has no user partition — check-then-copy across the user/kernel boundary has shapes but no discharge; the validated copy is proved under the named snapshot premise only.
+- **The parser.** `Syntax.lean` is a tree and this file a token grammar; the map between them is translation validation T3 — an open item below.
+- **Handler scheduling (§1).** When a handler runs stays a scheduling fact (a handler is a thread in the run model); `masks irqs` is a declaration the run's well-formedness may use.
+
+### 16.4 Where the twelve items of the 2026-09-09 list stand now
+
+| item | then | now |
 |---|---|---|
-| narrow-then-use | narrow point to use point, inside one body | carried: own-body writes kill facts per write, taints expire at carrier granularity (M147); direct calls kill per writes-hull with coarse kill-all-nonlocal on unreadable hulls; indirect calls expire every taint (gift 715–717); loops expire all taints at the boundary (gift 703, 709); use-granularity precision excuses disjoint-index use (gift 733). Open gap: concurrent siblings — no expiry crosses the member boundary; W001 narrows but does not close the read-and-use remainder |
-| syscall check-then-copy | Gabbro-side check to foreign copy | carried at the boundary and exported beyond it: both halves die at the extern call, so a checked value cannot be used afterwards without a re-read. By-construction gap: re-reads inside the foreign body are invisible |
-| awaits-then-act | load to act | carried for order (V006/V007 hold the payload order; V001/V002 refuse orphan halves; V004/V005 hold strength on the publish side). No revalidation rule: the load rebinds clean and nothing expires it on a concurrent publish — staleness stays a logic question |
-| budget-check-then-run | count time to run time, across the call boundary | carried by counting and refusing (K005 refuses unreadable promises; indirect calls cost their fn-type promise; E008 reconciles effects against hull; D025 refuses unbounded domains). Foreign costs are trusted certificate lines |
-| deadline-check-then-run | probe run to deployment on the named machine | carried structurally (K011/K012/N056; hardware fortschritt assumption with manifest entry and sample probe). By-construction gap: a sample is not a bound |
-
-> **So the answer to the question — *what is still not covered with this syntax?* — is now:
-> nothing that is an error of a body.** Every failure of a Gabbro body is one of the twelve
-> rows of 16.1: six are the writer's logic, six are a named hardware assumption. What stands
-> outside is (7) the scheduling of handlers and the cost model, (8) the parser that turns this
-> text into the tree, and (9) the three parameters of the meaning — which is exactly the
-> hardware and the logic. The premises of the run theorem (W3–W5) are not a fourth class: W3
-> is the lock primitive's `assume`, W4 and W5 are properties of the declaration.
+| 1. interleavings | covered over traces | covered over G (`rennfrei_g`, §16.1); lock-free sharing explicitly out (§16.3) |
+| 2. memory model | hardware outcome at `awaits` | unchanged, plus the visibility half of `RegLokal` (§16.2) |
+| 3. devices | order proved, content assumed | unchanged; async device step out (§16.3) |
+| 4. bytes | covered | unchanged (§§3, 9) |
+| 5. signed arithmetic, float | covered, float range as hardware assumption | unchanged (§4) |
+| 6. sugar | covered | unchanged |
+| 7. contexts, cost, emitter, C | split: scheduling fact, logic budgets, hardware deadline, lowering contract | budgets now proved to bound frames (§16.1); waiting bound open (TARGET 4, §16.2); C side in §21 |
+| 8. the parser | outside, mapped | open — translation validation T3, open item below |
+| 9. the three parameters | `O`, `passes`, `fuel` — the hardware and the logic | `passes` is now the `forever` budget of G; `fuel` is `Tief` depth admission (§16.3) |
+| 10. check-then-use | checker discipline plus named gaps | unchanged: narrow-then-use carried (`M147`), driver handoff carried (`H018`), payload order carried (`V006` / `V007`), boundary rows carried (`K005`, `K011` / `K012`, `N056`); awaits-then-act has no revalidation rule; concurrent siblings open |
+| 11. preemption timing | excluded by decision | unchanged |
+| 12. user-copy hazard | future work | unchanged (§16.3) |
 
 ---
 
@@ -2125,16 +2178,21 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 
 ---
 
-## Open items — as of 2026-09-09
+## Open items — as of 2026-09-13
 
-- [ ] **Run the guardians** on this file: `pruefe-syntax.sh` (closure, reachability, terminal
-      coverage — `owner`, `deadline`, `concurrent`, `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt` are the
-      new names, `shared` at `table`/`static` a new position of an old word), `zaehle-wortschatz.py`
-      (224), `pruefe-grammatiktafel.py`. Every number in "State — measured" is a hand count
-      until then.
-- [ ] **The parser from this grammar into `Syntax.lean`** — the item that turns 16.2 (8) into a
-      corpus measurement (`PLAN-GRAMMATIK.md` §4).
-- [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09.
+- [x] **The guardians on this file** — measured: EBNF closure 176 defined rules, 0 open
+      (`pruefe-syntax.sh` EBNF branch); vocabulary 239 terminals against 239 table words
+      plus 4 Sonderformen, both readings (`pruefe-wortschatz.py`); guardian round in lane
+      129 (E5), re-run in lane 142. The `cargo build --tests` tail of `pruefe-syntax.sh`
+      and `pruefe-grammatiktafel.py` need a Rust toolchain and abort without one — a
+      pre-existing environment limit, not a finding about the grammar.
+- [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
+      T3 (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`): the token-to-tree map with a
+      certificate, so Rust leaves the trusted base. Production-to-constructor table
+      161 mapped-or-named in `messung/SYNTAX-PARSER-ENTWURF.md`. This is what turns 16.4
+      (8) into a corpus measurement.
+- [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09; race freedom now
+      proved over machine G as `rennfrei_g` (lane 130).
 - [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
 - [x] **The implementation in checker and emitter** — `PLAN-UMSETZUNG.md`
   (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
@@ -2158,10 +2216,21 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 - [ ] The four marks of the second version stand: `narrow` count ≤ 24 sites; the 17 logic
       obligations against `by induction over`; cost truth per compiled module; the ten
       fragments on this syntax, guardians green.
+- [ ] **The user-memory region check** — `grammatik/Grammatik/Adressraum.lean` proves the
+      validated copy under the named snapshot premise, but the region check stands beside
+      the run: no range check inside the run, no user partition in the world (§16.3). Until
+      both stand, check-then-copy across the user/kernel boundary has shapes but no
+      discharge.
+- [ ] **The lock hold bound in the Lean model** — `held <= N ops` is surface (`lockdecl`,
+      §11) and checker (`K002`, `K004`), but `Deklaration` carries no hold field, so no
+      waiting bound under fairness is stated (`KostenG.lean` CUTS, TARGET 4 open). The
+      scheduler assumption — fair scheduling and a bounded hold time of every lock — is
+      named in §16.2 and proved nowhere.
 - [ ] **What is not covered even after the definition — named, not forgotten:** the seam CPU ↔
-      device has no mechanised model (16.2 (3)); the `iasm` entry path has no downstream prover
-      (16.2 (7)); liveness and progress fall under no mechanism except the named assumption
+      device has no mechanised model (16.4 (3)); the `iasm` entry path has no downstream prover
+      (16.4 (7)); liveness and progress fall under no mechanism except the named assumption
       (`hardware (fortschritt a)`); the ghost-theory templates belong in Isabelle once.
+      The full list is §16.3, with the premise map in `dokumente/SATZKARTE.md` §11.3.
 
 ---
 
