@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **176** measured (`pruefe-syntax.sh` EBNF branch: 176 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **177** measured (`pruefe-syntax.sh` EBNF branch: 177 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **239 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 239 EBNF terminals against 239 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2) |
+| vocabulary words | 221 | **240 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 240 EBNF terminals against 240 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -89,7 +89,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              exchange update returns insert remove relabel
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
-             class fields bank at stride count backed mirrors from owner
+             class fields bank at stride count backed mirrors from depends owner
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
@@ -1398,16 +1398,21 @@ bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" 
 regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
           "class" regklasse [ regphasen ]
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
-          [ "requires" pred [ "else" ident "::" ident ] ] ;
+          [ "requires" pred [ "else" ident "::" ident ] ]
+          [ "depends" "{" [ carrier { "," carrier } [ "," ] ] "}" ] ;
 (* «B26»: the `else` is the FALSIFIER; with it the READ is fallible and must stand in a
    `let … else` (`R011`). Why no fact is made of it: the register is volatile, and a hostile
    device may report anything. *)
+(* Lane 140: `depends` names the device-state carriers the register's answer may rest on
+   (§10, `D.rtraeger`). A bare carrier only (`N258` refuses `T.feld`); unknown names
+   (`N255`) and declared non-carriers (`N257`) fall beside it. *)
 regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
 regphasen = "in" ident { "," regklasse "in" ident } ;
 (* «B18»: a class per STAGE of a declared `order` (`R009`: every stage named exactly once).
    At the access the stage of the mark in Λ decides (`R005`/`R006`); where NO mark of this
    order is in scope, what EVERY stage allows holds. *)
 regfeld = ident "@" bitpos [ "class" regklasse ] ;
+carrier  = ident [ "." ident ] ;                    (* the head names the carrier; see §10 *)
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
 transset   = placeshift { "," placeshift } ;      (* SEVERAL places in ONE move *)
@@ -1449,6 +1454,63 @@ the write replaces; every other bit comes from the mirror.
 | `bank B at e stride s count n { reg … }` | `n` registers with an index of `index into B` — a table of registers | | `D.Reg` per index; the index is `Ty.index n` |
 | `mirrors W from R` | the source of the carried bits — a declaration fact read by the `transition` sugar | | none |
 | `requires p` at `reg` without `else` | **the device's promise, held at every read** — a value that breaks it is `hardware (geraet r)`: the assumption about the device, named at its register (turn 3 of 2026-09-09: "devices go through hardware assumptions") | `hardware (geraet r)` | `D.rzusage r`, `Block.regLies` |
+| `reg R : τ @off class K … depends { C1, C2 }` | the device-state carriers the answer of `R` may rest on — tables or globals of this unit, bare names (`N258` refuses `T.feld`: a slot is not a carrier in the model); a function reading `R` holds by signature a lock guarding each carrier some function writes, or the carrier is written by none (`N256`) | `hardware (reglokal R)`, one manifest line per register with its carriers | `D.rtraeger r` |
+
+**`depends` carries the device into the footprint (lane 140).** `ziel_ort_geraet` admits a
+register read only under two premises the checker establishes per program. The first is
+hardware: `RegLokal` — the answer of `R` depends on the carriers `D.rtraeger r` alone, so
+two reads agree wherever those carriers agree. The second is a decidable program fact:
+`fussOrtGB` — every such carrier is guarded by a lock the reading function holds BY
+SIGNATURE, or is written by no function at all. `depends { … }` is where the declaration
+names those carriers, and the manifest lists the assumption per register with them
+(`hardware (reglokal R)`), beside the named `assume` items — it is a hardware assumption,
+not a proof.
+
+Three refusals hold the clause itself: `N255` (a name nothing declares), `N257` (a declared
+item that is no carrier — a lock, a device, a register, a function), `N258` (a dotted
+place: carrier granularity is the model's, and `GleichAuf` cannot see a slot). What the
+clause does NOT buy: a reader that takes the guard only in a `locks` block is still
+refused (`N256` holds `requires Held(L)`, never a block — the repaired machine has no
+bare lock steps); writes to the carriers from another unit are outside the cut (the
+unwritten disjunct reads this unit's declared `writes`); and a device whose answer moves
+with no write to its carriers violates `RegLokal` itself, which no grammar establishes.
+
+```gabbro
+module abhaengigkeiten {
+
+table Zustand count 4 {
+    slot { bereit : u32, }
+}
+
+lock Sperre protects { Zustand } rank 0;
+
+device Geraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r depends { Zustand }
+}
+
+-- The reader holds the guard BY SIGNATURE: `Sperre` protects `Zustand`, and
+-- `Zustand` is written below, so the read of `ST` needs `requires Held(Sperre)`.
+-- A lock taken only in a `locks` block does not count (`N256`).
+impl fn lesen(d : Geraet) -> u32
+    requires Held(Sperre)
+    effects { reads d }
+    costs <= 8 ops
+{
+    let stand = d.ST;
+    return stand;
+}
+
+impl fn schreiben(i : index into Zustand, w : u32) -> u32
+    requires Held(Sperre)
+    effects { writes Zustand }
+    costs <= 8 ops
+{
+    Zustand.slots[i].bereit = w;
+    return 0;
+}
+
+}
+```
 
 > **Devices go through hardware assumptions — and every one is named.** A register is not in
 > `World D`: its value is whatever the oracle answers, and a write does not change the world.
