@@ -443,5 +443,62 @@ theorem t22 : beqTopTief (parseTopTief tt22)
   decide
 -- beispiele/01-tabelle.gab (the `KappenFehler` grounds). Rust:
 -- `Reason` with an `exhaustive` tail -- same shape.
+def tt23 : List Token :=
+  [.wort "state", .ident "Ampel", .zeichen "{", .wort "transition",
+   .ident "schalten", .zeichen "{", .ident "licht", .zeichen ":",
+   .ident "rot", .zeichen "->", .ident "gruen", .zeichen "}",
+   .wort "requires", .ident "bereit", .zeichen "==", .wort "true",
+   .wort "effects", .zeichen "{", .wort "writes", .ident "licht",
+   .zeichen "}", .zeichen "}", .ende]
+theorem t23_lex :
+    lex "state Ampel { transition schalten { licht : rot -> gruen } requires bereit == true effects { writes licht } }" =
+      .ok tt23 := by
+  decide
+theorem t23 : beqTopTief (parseTopTief tt23)
+    (.ok [.zustandT "Ampel"
+      [{ tname := "schalten",
+         schritte := [(.variable "licht", .variable "rot",
+           .variable "gruen")],
+         voraus := .some (.bin "==" (.variable "bereit") .wahr),
+         wirkung := [.schreibt (.variable "licht")] }]]) = true := by
+  decide
+-- Synthetic (no `state` item in the corpus, measured 2026-09-13;
+-- the transition arms follow beispiele/20-falle-vier.gab).
+-- Rust: `State` with one guarded transition.
+def tt24 : List Token :=
+  [.wort "assume", .ident "mmu_folgt_ihrem_modell",
+   .text "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt.",
+   .wort "falsifier", .ident "sonde_pf_bei_p0", .zeichen ";",
+   .ende]
+theorem t24_lex :
+    lex "assume mmu_folgt_ihrem_modell \"Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt.\" falsifier sonde_pf_bei_p0;" =
+      .ok tt24 := by
+  decide
+theorem t24 : beqTopTief (parseTopTief tt24)
+    (.ok [.annahmeT "mmu_folgt_ihrem_modell" .none
+      "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt."
+      (.widerlegbar "sonde_pf_bei_p0")]) = true := by
+  decide
+-- beispiele/06-annahmen.gab:15-17. Rust: `Assume` with a
+-- falsifier -- same shape.
+def tt25 : List Token :=
+  [.wort "axiom", .ident "write_cr3", .zeichen "(", .ident "p",
+   .zeichen ":", .ident "Pa", .zeichen ")", .wort "effects",
+   .zeichen "{", .wort "writes", .ident "tlb", .zeichen ",",
+   .wort "writes", .ident "aktive_tabelle", .zeichen "}",
+   .wort "falsifier",
+   .ident "sonde_cr3", .zeichen ";", .ende]
+theorem t25_lex :
+    lex "axiom write_cr3(p : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;" =
+      .ok tt25 := by
+  decide
+theorem t25 : beqTopTief (parseTopTief tt25)
+    (.ok [.axiomaT "write_cr3" [("p", .atom "Pa")] .none .none
+      [.schreibt (.variable "tlb"),
+        .schreibt (.variable "aktive_tabelle")]
+      (.widerlegbar "sonde_cr3")]) = true := by
+  decide
+-- beispiele/06-annahmen.gab:80. Rust: `Axiom` with two writes --
+-- same shape.
 
 end Gabbro.Grammatik.Parser

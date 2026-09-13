@@ -1471,21 +1471,85 @@ def parseSchritte (f : Nat) (toks : List Token) :
     Except String (List (SExpr × SExpr × SExpr) × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match parseOr f toks with
+  | f + 1 => match parseSchrittPlatz f toks with
     | .error e => .error e
     | .ok (p, r1) => match fordereZeichen ":" r1 with
       | .error e => .error e
-      | .ok r2 => match parseOr f r2 with
+      | .ok r2 => match nimmBisPfeil r2 0 0 0 with
         | .error e => .error e
-        | .ok (a, r3) => match fordereZeichen "->" r3 with
+        | .ok (ft, r3) => match parseOr f ft with
           | .error e => .error e
-          | .ok r4 => match parseOr f r4 with
+          | .ok (a, []) => match parseOr f r3 with
             | .error e => .error e
             | .ok (b, r5) => match r5 with
               | .zeichen "," :: r6 => match parseSchritte f r6 with
                 | .error e => .error e
                 | .ok (ss, r) => .ok ((p, a, b) :: ss, r)
               | _ => .ok ([(p, a, b)], r5)
+          | .ok (_, _ :: _) => .error "-> expected"
+/-- Tokens until the top-level `->` (parens, brackets and braces
+    tracked): the `from` side of a step rides before it. A bare
+    `parseOr` would eat `a -> b` as an arrow field. -/
+def nimmBisPfeil : List Token → Nat → Nat → Nat →
+    Except String (List Token × List Token)
+  | [], _, _, _ => .error "-> expected"
+  | (.zeichen s :: rest), pr, pk, pg =>
+    if strEq s "->" && pr == 0 && pk == 0 && pg == 0 then
+      .ok ([], rest)
+    else if strEq s "(" then match nimmBisPfeil rest (pr + 1) pk pg with
+      | .ok (h, r) => .ok (.zeichen s :: h, r)
+      | .error e => .error e
+    else if strEq s ")" then
+      if pr == 0 then .error "-> expected"
+      else match nimmBisPfeil rest (pr - 1) pk pg with
+        | .ok (h, r) => .ok (.zeichen s :: h, r)
+        | .error e => .error e
+    else if strEq s "[" then match nimmBisPfeil rest pr (pk + 1) pg with
+      | .ok (h, r) => .ok (.zeichen s :: h, r)
+      | .error e => .error e
+    else if strEq s "]" then
+      if pk == 0 then .error "-> expected"
+      else match nimmBisPfeil rest pr (pk - 1) pg with
+        | .ok (h, r) => .ok (.zeichen s :: h, r)
+        | .error e => .error e
+    else if strEq s "{" then match nimmBisPfeil rest pr pk (pg + 1) with
+      | .ok (h, r) => .ok (.zeichen s :: h, r)
+      | .error e => .error e
+    else if strEq s "}" then
+      if pg == 0 then .error "-> expected"
+      else match nimmBisPfeil rest pr pk (pg - 1) with
+        | .ok (h, r) => .ok (.zeichen s :: h, r)
+        | .error e => .error e
+    else match nimmBisPfeil rest pr pk pg with
+      | .ok (h, r) => .ok (.zeichen s :: h, r)
+      | .error e => .error e
+  | (t :: rest), pr, pk, pg => match nimmBisPfeil rest pr pk pg with
+    | .ok (h, r) => .ok (t :: h, r)
+    | .error e => .error e
+/-- A transition place: SYNTAX.md `shiftplace` (`ident` with `.`
+    and `[…]` suffixes) -- a general `parseOr` would eat the
+    `->` as an arrow field. -/
+def parseSchrittPlatz (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (n, r) => parseSchrittPlatzNach f (.variable n) r
+def parseSchrittPlatzNach (f : Nat) (e : SExpr)
+    (toks : List Token) : Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "." :: rest => match nimmName rest with
+      | .error e => .error e
+      | .ok (n, r) => parseSchrittPlatzNach f (.feld e n) r
+    | .zeichen "[" :: rest => match parseOr f rest with
+      | .error e => .error e
+      | .ok (i, r1) => match fordereZeichen "]" r1 with
+        | .error e => .error e
+        | .ok r => parseSchrittPlatzNach f (.index e i) r
+    | _ => .ok (e, toks)
 def parseTransRest (f : Nat) (tr : STrans) (toks : List Token) :
     Except String (STrans × List Token) :=
   match f with
