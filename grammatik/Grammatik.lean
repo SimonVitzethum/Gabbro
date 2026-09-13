@@ -112,3 +112,4 @@ import Grammatik.ZielOrtSem
 import Grammatik.ZielOrtBeweis
 import Grammatik.ZielOrtZeuge
 import Grammatik.AuditZiel
+import Grammatik.RennfreiG
