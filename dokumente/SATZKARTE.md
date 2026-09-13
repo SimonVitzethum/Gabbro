@@ -1036,10 +1036,15 @@ in the class is the identity, `havocOk_leer`, and the semantics is
 - **Stable carriers.** The replay keeps the sequential world equal to the
   machine world not on the whole footprint (other threads move protected
   carriers between critical sections) but on the STABLE carriers of the
-  frame at its current static holdings `Λ`: `stabilS P S fs f Λ` = the
-  footprint carriers guarded by a signature lock of `f` or written by no
-  function (`sicher`), plus `S.orte L` for every lock `L` that `Λ` names
-  held. Every read is inside: a read carries all guards of its carrier in
+  frame at its current static holdings `Λ`: `stabilS P S lok f Λ` = the
+  footprint carriers guarded by a signature lock of `f` or LOCAL
+  (`sicher P lok f`, `lok : D.Tab ⊕ D.Glob → Bool`), plus `S.orte L` for
+  every lock `L` that `Λ` names held. The generic replay
+  (`zielInvS_erreichbarL`) takes `lok` with the rely hypothesis
+  `LokOk P O passes lok sp init` (no step of ANOTHER thread moves a local
+  carrier of a frame); `ziel_ort_sperre` instantiates `lok := freiB fs`
+  ("written by no function", `LokOk` by `lokOk_frei`), `ziel_ort_einfaden`
+  instantiates `lok := fun _ => true` (§14.6). Every read is inside: a read carries all guards of its carrier in
   `Λ` (typing), a callee's contract carriers are guarded by the callee's
   signature locks = the caller's held locks (`RufPasst.hh`,
   `vertrag_stabil`), own `ensures` carriers at a return by
@@ -1059,7 +1064,8 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   `freigabe_schrittG`).
 - **Callee frames** (`rufG_rahmenS`): the frame fact of §12 over stable
   carriers; it needs no footprint check at all (stability is by held
-  locks), only `SperrInvOk`, `hvoll`, `GutO`, `StartExklusiv`.
+  locks and `LokOk`), only `SperrInvOk`, `hvoll`, `GutO`, `StartExklusiv`,
+  `LokOk`.
 - **Everything else** is the replay of §13 over `execStmtH`
   (`akteurS`, `andereS`, `zielInvS_erreichbar`, `fadenS_prueft`).
 
@@ -1096,6 +1102,16 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   `paP_nicht_sperre` -- the new obligation fails on `paP` for every
   well-formed family with a satisfiable invariant, `paP_nicht_sperre_leer`
   at the empty family.
+- **One active thread, no footprint check** (`ZielOrtEinfadenZeuge.lean`).
+  `ziel_ort_einfaden_ref104`: corpus 104 (every thread but 0 idle in
+  `ruhe`, `r4_ruhig` by `decide`) certified without `fussOrtGB`.
+  `eP`: an UNGUARDED table `konto` (no lock, not shared); `setze` writes
+  `konto[0] = 5` and ensures it, `pruefe` REQUIRES `konto[0] == 5`,
+  `haupt = setze(); pruefe(); return`. Both checks refuse it
+  (`eP_fussG_falsch`, `eP_fussS_falsch`); `eP_zertifiziert`: every premise
+  of `ziel_ort_einfaden`; `ziel_ort_einfaden_zeuge`: on a reached four-step
+  run (start memory `konto[0] = 0`) `pruefe`'s `requires` holds at its
+  logged entry, over `konto[0] = 5`, BY THE THEOREM.
 
 ### 14.6 The three consequences of verdict item 2
 
@@ -1118,15 +1134,33 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   about forty rules first. The replay of §14 itself would carry over (it
   uses `hh` only in the direction "callee's locks are held by the caller",
   `vertrag_stabil`).
-- **Single-thread footprint (open, named).** `fussSperreB` still asks a
-  guard, a signature lock or "written by no function" of a carrier that
-  only ONE thread ever touches (lane 138's hint on 15 of 89 corpus
-  programs). A sound exemption needs, per thread, the set of functions it
-  can run (the call graph from its root, indirect calls by signature) and
-  a machine invariant that every frame on that thread is in it -- a
-  residue-to-body relation for calls that G does not carry. What IS
-  exempt: carriers no function writes (`freiB`), and every carrier of a
-  lock-free body is covered by the old rule unchanged.
+- **Single-thread footprint (PROVED for one active thread; the general
+  thread-local case open, named).** `ZielOrtEinfaden.lean`:
+  `kein_schritt_ruhig` (a root frame at a bare `return` with an empty
+  stack has no rule of G, 72 cases), `ruhig P f` (body a `return`, empty
+  footprint, no signature lock; decidable), `ruhig_bleibt` (an idle
+  thread stays at its start on every reachable machine),
+  `lokOk_einfaden` (then EVERY carrier is local: only thread 0 steps),
+  `startExklusiv_einfaden`, and
+
+  ```lean
+  theorem ziel_ort_einfaden (P) (O) (passes) (Q) (S : SperrInv D) (fs) (sp) (init) (e0)
+      (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+      (hS : SperrInvOk S) (hvoll : ∀ g, g ∈ fs) (hFrag : programmImFragmentG P fs = true)
+      (hRuhe : ∀ u, u ≠ 0 → ruhig P (init u).1 = true)
+      (hK : ∀ f, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+      (hSstart : ∀ L, S.inv L sp = true) : <conclusion of ziel_ort_sperre>
+  ```
+
+  -- no `fussSperreB`, no `StartExklusiv`. This is the shape of every
+  sequential corpus program in the model (thread 0 the driver, the rest
+  idle, as `r4Init`). STILL OPEN: several ACTIVE threads with a carrier
+  only one of them touches. That needs, per thread, the set of functions
+  it can run (the call graph from its root, indirect calls by signature)
+  and a machine invariant that every frame on that thread is in it -- a
+  residue-to-body relation for calls that G does not carry. The generic
+  replay already takes any `lok` with `LokOk`; what is missing is a
+  decidable `lok` and the proof of `LokOk` for it.
 
 ### 14.7 What is not carried, and what still blocks
 
@@ -1142,7 +1176,7 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   termination, full progress, no link to the emitted C and its lock
   primitives, weak memory, hand translation only).
 
-### 14.8 Axiom record (`lake build`, 118 jobs, 0 errors)
+### 14.8 Axiom record (`lake build`, 120 jobs, 0 errors)
 
 ```text
 'Gabbro.Grammatik.ziel_ort_sperre' depends on axioms: [propext, Classical.choice, Quot.sound]
@@ -1159,6 +1193,12 @@ in the class is the identity, `havocOk_leer`, and the semantics is
 'Gabbro.Grammatik.ziel_ort_sperre_zeuge' depends on axioms: [propext, Classical.choice, Quot.sound]
 'Gabbro.Grammatik.ziel_ort_sperre_ref104' depends on axioms: [propext, Classical.choice, Quot.sound]
 'Gabbro.Grammatik.paP_nicht_sperre' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.kein_schritt_ruhig' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.lokOk_einfaden' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_einfaden' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_einfaden_ref104' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.eP_zertifiziert' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_einfaden_zeuge' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
 
 No `sorryAx`, no new `axiom`, no `native_decide`.
