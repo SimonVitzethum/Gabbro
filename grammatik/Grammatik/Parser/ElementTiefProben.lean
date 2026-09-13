@@ -247,5 +247,61 @@ theorem t14 : beqTopTief (parseTopTief tt14)
   decide
 -- Synthetic (no corpus occurrence, measured 2026-09-13): the
 -- `shared` tail of `staticdecl`. Rust: `Statisch`.
+def tt15 : List Token :=
+  [.wort "extern", .wort "fn", .ident "speicher_freigeben",
+   .zeichen "(", .ident "p", .zeichen ":", .ident "Pa",
+   .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
+   .ident "halde", .zeichen "}", .wort "costs", .zeichen "<=",
+   .zahl 64, .wort "ops", .zeichen ";", .ende]
+theorem t15_lex :
+    lex "extern fn speicher_freigeben(p : Pa) effects { writes halde } costs <= 64 ops;" =
+      .ok tt15 := by
+  decide
+theorem t15 : beqTopTief (parseTopTief tt15)
+    (.ok [.protoT
+      { art := "extern", name := "speicher_freigeben",
+        params := [("p", .atom "Pa")], ergebnis := .none,
+        fehler := .none,
+        klauseln := [.wirkung [.schreibt (.variable "halde")],
+          .kosten (.lit 64)] }]) = true := by
+  decide
+-- beispiele/01-tabelle.gab (the `speicher_freigeben` foreign
+-- body). Rust: `Funktion` without a body -- same shape.
+def tt16 : List Token :=
+  [.wort "spec", .wort "fn", .ident "ist_blatt", .zeichen "(",
+   .ident "c", .zeichen ":", .wort "ptr", .zeichen "<",
+   .wort "normal", .zeichen ",", .wort "r", .zeichen ">",
+   .ident "Kappenraum", .zeichen ",", .ident "s", .zeichen ":",
+   .wort "index", .wort "into", .ident "Kappenraum", .zeichen ")",
+   .zeichen "->", .wort "bool", .wort "effects", .zeichen "{",
+   .wort "pure", .zeichen "}",
+   .zeichen "=", .ident "c", .zeichen ".", .wort "slots",
+   .zeichen "[", .ident "s", .zeichen "]", .zeichen ".",
+   .ident "benutzt", .zeichen "&&", .ident "c", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "s", .zeichen "]",
+   .zeichen ".", .ident "erstes_kind", .zeichen "==",
+   .wort "None", .zeichen ";", .ende]
+theorem t16_lex :
+    lex "spec fn ist_blatt(c : ptr<normal, r> Kappenraum, s : index into Kappenraum) -> bool effects { pure } = c.slots[s].benutzt && c.slots[s].erstes_kind == None;" =
+      .ok tt16 := by
+  decide
+theorem t16 : beqTopTief (parseTopTief tt16)
+    (.ok [.specT
+      { art := "spec", name := "ist_blatt",
+        params := [("c", .ptr "normal" "r" (.atom "Kappenraum")),
+          ("s", .index false "Kappenraum")],
+        ergebnis := .some (.atom "bool"), fehler := .none,
+        klauseln := [.wirkung [.rein]] }
+      (.bin "&&"
+        (.feld (.index (.feld (.variable "c") "slots")
+          (.variable "s")) "benutzt")
+        (.bin "=="
+          (.feld (.index (.feld (.variable "c") "slots")
+            (.variable "s")) "erstes_kind")
+          (.ruf "None" [])))]) = true := by
+  decide
+-- beispiele/01-tabelle.gab (the `ist_blatt` predicate helper).
+-- Rust: `Funktion` with `= pred` -- same shape (a `ptr` and an
+-- `index into` parameter, a `pure` effect).
 
 end Gabbro.Grammatik.Parser
