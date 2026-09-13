@@ -1077,6 +1077,181 @@ def parseKlauseln (f : Nat) (toks : List Token) :
           | .ok (ks', r) => .ok (ks ++ ks', r)
       else .ok ([], toks)
     | _ => .ok ([], toks)
+/-- The parameter list `(` … `)` of `fndecl` (shared with
+    `device` and `axiom`). -/
+def parseParams (f : Nat) (toks : List Token) :
+    Except String (List (String × STyp) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "(" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen ")" :: r' => .ok ([], r')
+      | _ => match parseParamListe f r with
+        | .error e => .error e
+        | .ok (ps, r') => match fordereZeichen ")" r' with
+          | .error e => .error e
+          | .ok r'' => .ok (ps, r'')
+def parseParamListe (f : Nat) (toks : List Token) :
+    Except String (List (String × STyp) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (n, r1) => match fordereZeichen ":" r1 with
+      | .error e => .error e
+      | .ok r2 => match parseTyp f r2 with
+        | .error e => .error e
+        | .ok (t, r3) => match r3 with
+          | .zeichen "," :: r4 => match parseParamListe f r4 with
+            | .error e => .error e
+            | .ok (ps, r) => .ok ((n, t) :: ps, r)
+          | _ => .ok ([(n, t)], r3)
+/-- A function head: `fn name(params) [-> T] [or R] clauses`
+    (`art` rode in front). -/
+def parseFnSig (f : Nat) (art : String) (toks : List Token) :
+    Except String (FnSig × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "fn" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmName r1 with
+      | .error e => .error e
+      | .ok (name, r2) => match parseParams f r2 with
+        | .error e => .error e
+        | .ok (ps, r3) => match parseErgebnis f r3 with
+          | .error e => .error e
+          | .ok (erg, fehler, r4) => match parseKlauseln f r4 with
+            | .error e => .error e
+            | .ok (ks, r) =>
+              .ok ({ art, name, params := ps, ergebnis := erg,
+                     fehler, klauseln := ks }, r)
+/-- The optional `-> T` result and `or R` channel behind a
+    signature. -/
+def parseErgebnis (f : Nat) (toks : List Token) :
+    Except String (Option STyp × Option String × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "->" :: rest => match parseTyp f rest with
+      | .error e => .error e
+      | .ok (t, r) => match parseFehler r with
+        | .ok (o, r') => .ok (some t, o, r')
+        | .error e => .error e
+    | _ => match parseFehler toks with
+      | .ok (o, r) => .ok (none, o, r)
+      | .error e => .error e
+def parseFehler : List Token → Except String (Option String × List Token)
+  | .wort s :: rest =>
+    if strEq s "or" then match nimmName rest with
+      | .ok (n, r) => .ok (some n, r)
+      | .error e => .error e
+    else .ok (none, .wort s :: rest)
+  | toks => .ok (none, toks)
+/-- Behind the head: a block body (`funktionT`), `;`
+    (`protoT`), `= pred ;` (`specT`) or `= asm {…} ;` (`asmT`). -/
+def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
+    Except String (SItemTief × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "{" :: _ => match parseBlock f toks with
+      | .error e => .error e
+      | .ok (b, r) => .ok (.funktionT sig b, r)
+    | .zeichen ";" :: rest => .ok (.protoT sig, rest)
+    | .zeichen "=" :: rest => match rest with
+      | .wort s :: rest' =>
+        if strEq s "asm" then match fordereZeichen "{" rest' with
+          | .error e => .error e
+          | .ok r1 => match nimmBereichWorte r1 1 with
+            | .error e => .error e
+            | .ok (h, r2) => match fordereZeichen ";" r2 with
+              | .error e => .error e
+              | .ok r => .ok (.asmT sig ("asm { " ++ h), r)
+        else match parseOr f rest with
+          | .error e => .error e
+          | .ok (p, r1) => match fordereZeichen ";" r1 with
+            | .error e => .error e
+            | .ok r => .ok (.specT sig p, r)
+      | _ => match parseOr f rest with
+        | .error e => .error e
+        | .ok (p, r1) => match fordereZeichen ";" r1 with
+          | .error e => .error e
+          | .ok r => .ok (.specT sig p, r)
+    | _ => .error "fn without body"
+/-- One slot/format field: `name : type [@bitpos]
+    [offset_into t] [where p] [reserved] [by ops]`. -/
+def parseFeld (f : Nat) (toks : List Token) :
+    Except String (SFeld × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (n, r1) => match fordereZeichen ":" r1 with
+      | .error e => .error e
+      | .ok r2 => match parseTyp f r2 with
+        | .error e => .error e
+        | .ok (t, r3) => match parseFeldRest f r3 with
+          | .error e => .error e
+          | .ok ((pos, bezug, wo, res, byo), r) =>
+            .ok ({ fname := n, ftyp := t, pos, bezug := bezug, wo,
+                   reserviert := res, byOps := byo }, r)
+def parseFeldRest (f : Nat) : List Token → Except String
+    ((Option String × Option String × Option SExpr × Bool × Bool) × List Token)
+  | toks => match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "@" :: rest => match parseBitpos rest with
+      | .error e => .error e
+      | .ok (b, r) => match parseFeldRest f r with
+        | .error e => .error e
+        | .ok ((_, bezug, wo, res, byo), r') =>
+          .ok (((some b, bezug, wo, res, byo)), r')
+    | .wort s :: rest =>
+      if strEq s "offset_into" then match rest with
+        | t :: r =>
+          if strEq (zeigeTok t) "Self" then match parseFeldRest f r with
+            | .error e => .error e
+            | .ok ((pos, _, wo, res, byo), r') =>
+              .ok (((pos, some "Self", wo, res, byo)), r')
+          else match nameText t with
+            | some n => match parseFeldRest f r with
+              | .error e => .error e
+              | .ok ((pos, _, wo, res, byo), r') =>
+                .ok (((pos, some n, wo, res, byo)), r')
+            | none => .error "offset_into expected"
+        | _ => .error "offset_into expected"
+      else if strEq s "where" then match parseOr f rest with
+        | .ok (p, r) => match parseFeldRest f r with
+          | .error e => .error e
+          | .ok ((pos, bezug, _, res, byo), r') =>
+            .ok (((pos, bezug, some p, res, byo)), r')
+        | .error e => .error e
+      else if strEq s "reserved" then match parseFeldRest f rest with
+        | .error e => .error e
+        | .ok ((pos, bezug, wo, _, byo), r) =>
+          .ok (((pos, bezug, wo, true, byo)), r)
+      else if strEq s "by" then match rest with
+        | .wort t :: r =>
+          if strEq t "ops" then match parseFeldRest f r with
+            | .error e => .error e
+            | .ok ((pos, bezug, wo, res, _), r') =>
+              .ok (((pos, bezug, wo, res, true)), r')
+          else .error "by ops expected"
+        | _ => .error "by ops expected"
+      else .ok (((none, none, none, false, false)), toks)
+    | _ => .ok (((none, none, none, false, false)), toks)
+/-- A raw `@bitpos`: one number or a `[hi:lo]` group. -/
+def parseBitpos : List Token → Except String (String × List Token)
+  | .zeichen "[" :: rest => match sammleAusgewogen rest 0 1 0 with
+    | .error e => .error e
+    | .ok (h, r) => .ok ("[ " ++ h, r)
+  | t :: rest => match nameText t with
+    | some _ => .ok (zeigeTok t, rest)
+    | none => match t with
+      | .zahl _ => .ok (zeigeTok t, rest)
+      | _ => .error "bitpos expected"
+  | [] => .error "bitpos expected"
 end
 
 end Gabbro.Grammatik.Parser
