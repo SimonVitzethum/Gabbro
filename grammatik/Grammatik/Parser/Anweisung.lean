@@ -245,16 +245,16 @@ def nimmBisWort (stopp : String) : List Token → Nat → Except String (String 
     (braces tracked). Used for type ascriptions and loop headers. -/
 def nimmBisZeichen (stopp : String) : List Token → Nat → Except String (String × List Token)
   | [], _ => .error ("wanted " ++ stopp)
-  | (.zeichen "{" :: rest), tiefe => match nimmBisZeichen stopp rest (tiefe + 1) with
-    | .ok (h, r) => .ok ("{ " ++ h, r)
-    | .error e => .error e
-  | (.zeichen "}" :: rest), tiefe =>
-    if tiefe == 0 then .error ("wanted " ++ stopp)
-    else match nimmBisZeichen stopp rest (tiefe - 1) with
-      | .ok (h, r) => .ok ("} " ++ h, r)
-      | .error e => .error e
   | (.zeichen s :: rest), tiefe =>
-    if strEq s stopp && tiefe == 0 then .ok ("", .zeichen s :: rest)
+    if tiefe == 0 && strEq s stopp then .ok ("", .zeichen s :: rest)
+    else if strEq s "{" then match nimmBisZeichen stopp rest (tiefe + 1) with
+      | .ok (h, r) => .ok ("{ " ++ h, r)
+      | .error e => .error e
+    else if strEq s "}" then
+      if tiefe == 0 then .error ("wanted " ++ stopp)
+      else match nimmBisZeichen stopp rest (tiefe - 1) with
+        | .ok (h, r) => .ok ("} " ++ h, r)
+        | .error e => .error e
     else match nimmBisZeichen stopp rest tiefe with
       | .ok (h, r) => .ok (s ++ " " ++ h, r)
       | .error e => .error e
@@ -270,6 +270,40 @@ def nimmBereich : List Token → Nat → Except String (List Token)
   | (.zeichen "}" :: rest), 1 => .ok rest
   | (.zeichen "}" :: rest), tiefe + 2 => nimmBereich rest (tiefe + 1)
   | (_ :: rest), tiefe => nimmBereich rest tiefe
+
+/-- Raw words of a brace-balanced region (the caller consumed the
+    opening `{`; depth counts the pending closes). Structural on the
+    token list. -/
+def nimmBereichWorte : List Token → Nat → Except String (String × List Token)
+  | [], _ => .error "wanted }"
+  | (.zeichen "{" :: rest), tiefe => match nimmBereichWorte rest (tiefe + 1) with
+    | .ok (h, r) => .ok ("{ " ++ h, r)
+    | .error e => .error e
+  | (.zeichen "}" :: rest), 1 => .ok ("} ", rest)
+  | (.zeichen "}" :: rest), tiefe + 2 => match nimmBereichWorte rest (tiefe + 1) with
+    | .ok (h, r) => .ok ("} " ++ h, r)
+    | .error e => .error e
+  | (t :: rest), tiefe => match nimmBereichWorte rest tiefe with
+    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
+    | .error e => .error e
+
+/-- A loop header until the body `{`: the `effects {…}` clause of
+    `retry`/`forever` is stepped over balanced (every other header
+    clause is brace-free). Structural on the token list. -/
+def schleifenKopf : List Token → Nat → Except String (String × List Token)
+  | [], _ => .error "loop without body"
+  | _, 0 => .error "out of fuel"
+  | ((.wort s :: .zeichen "{" :: rest)), n + 1 =>
+    if strEq s "effects" then match nimmBereichWorte rest 1 with
+      | .ok (h, r) => match schleifenKopf r n with
+        | .ok (h2, r2) => .ok ("effects { " ++ h ++ h2, r2)
+        | .error e => .error e
+      | .error e => .error e
+    else .ok (s ++ " ", .zeichen "{" :: rest)
+  | (.zeichen "{" :: rest), _ => .ok ("", .zeichen "{" :: rest)
+  | (t :: rest), n + 1 => match schleifenKopf rest n with
+    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
+    | .error e => .error e
 
 /-- Split a trailing `return`/`leave`/`next` off a statement list:
     an `endblock` reads as `mk pre (some …)`, a plain `block` as
@@ -590,7 +624,7 @@ def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
     Except String (SStmt × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmBisZeichen "{" toks 0 with
+  | f + 1 => match schleifenKopf toks f with
     | .error e => .error e
     | .ok (h, rest) => match parseBlock f rest with
       | .error e => .error e
