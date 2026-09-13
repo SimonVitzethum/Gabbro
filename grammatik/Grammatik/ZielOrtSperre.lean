@@ -1299,6 +1299,19 @@ theorem ziel_ort_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
     fun t => fadenS_prueft hO hRL hQ hS hSstart hK hFS t (hI.1.1 t)
   exact ⟨fun t ev hev => hI.1.2 t ev hev, hI.2, hP, fun t hH hA => schritt_an_pruefung t (hP t) hH hA⟩
 
+/-- **A start without signature locks is exclusive**: when every thread's
+    root takes its locks in `locks` blocks (holds none by signature),
+    `StartExklusiv` holds for ANY assignment -- the same routine may run on
+    every thread. The premise of the goal theorem is exactly "no two
+    threads START holding the same lock"; with the acquire steps of G and
+    the lock invariants, a routine that takes its lock in a block needs no
+    more. -/
+theorem startExklusiv_ohne_haelt (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (h : ∀ t, D.haelt (init t).1 = []) : StartExklusiv init :=
+  fun t _ _ L hL _ => by
+    rw [h t] at hL
+    exact absurd hL List.not_mem_nil
+
 /-- **`ziel_ort_ganz` is the special case of the empty family** (no
     protected carriers, invariant `true`): its footprint check gives the new
     one (`fussSperreB_of_G`), its obligation gives the new one
@@ -1320,6 +1333,53 @@ theorem ziel_ort_ganz_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) 
     hlok sperrInvOk_leer hvoll hFrag (fussSperreB_of_G P _ fs hFuss)
     (fun f => koerperGutS_leer (hK f)) hStart (fun _ => rfl) hex M hr
   exact ⟨h1, h3, h4⟩
+
+/-! ## CUTS:
+
+  What is proved: `ziel_ort_sperre` -- over the repaired G, with a
+  well-formed family of lock invariants `S` (protected carriers per lock,
+  guarded by it; an invariant over them), the footprint check
+  `fussSperreB` (a footprint carrier may be protected by the invariant of
+  one of its guards instead of a signature lock), and the user obligation
+  `KoerperGutS` (the sequential triple, caller duty and no `logik`
+  outcome over the semantics in which every acquire may move the protected
+  carriers within the invariant and every release checks it), every
+  reachable machine satisfies `VertragAmOrtG`, `SperrInvG` (the invariant
+  of every free lock holds in live memory), `KeinLogikHaltG` and progress at
+  the checks. `ziel_ort_ganz` is its instance at the empty family
+  (`ziel_ort_ganz_aus_sperre`). Every premise is used: `SperrInvOk` (the
+  record moves are in the class, the rely on protected carriers, the
+  machine invariant), `hSstart` (the machine invariant at the start, the
+  default of the record moves), `fussSperreB` (reads inside stable
+  carriers), `KoerperGutS` (both clauses: returns, calls, releases), the
+  rest as in `ziel_ort_ganz`.
+
+  What is NOT covered:
+
+  - The invariant is a semantic family (`SperrInv.inv : Lock → Speicher →
+    Bool`, local to its listed carriers), not a surface clause: nothing
+    parses `lock L protects … invariant …`, and no checker rule computes
+    `fussSperreB` or the first half of `SperrInvOk` (both decidable).
+  - Precision of the environment's move: at an acquire of `L` the move may
+    change EVERY carrier `L` protects, also one guarded by a second lock the
+    frame already holds (no other thread can have changed it; the class is
+    conservative, the user proves slightly more than needed for nested
+    locks).
+  - The held-set EQUALITY of `RufPasst.hh` is unchanged: a callee's
+    signature locks are exactly the caller's held locks (verdict note T).
+    Relaxing it to an inclusion needs G's `HeldGenau` side condition (an
+    equality on every reading rule) and the rank discipline across calls
+    to change first; not done.
+  - A carrier read from only ONE thread still needs a guard, a signature
+    lock or no writer (`sicher`); a concurrency-aware exemption needs the
+    call graph of each thread, which no invariant of G carries yet.
+  - Device carriers (register reads) are read without a guard at the
+    access: they stay signature-guarded or unwritten.
+  - Waiting at `dannLocks` (another thread holds `L`) is the named scheduler
+    situation; no fairness or hold-time bound. Everything cut in
+    `ZielOrtGanz.lean` (table invariants, termination, full progress) and
+    `ZielOrtRahmen.lean` carries over.
+-/
 
 #print axioms Gabbro.Grammatik.akteurS
 #print axioms Gabbro.Grammatik.zielInvS_erreichbar

@@ -860,7 +860,7 @@ head stands at one of these places (a leaf here: a `state` transition).
   7. A root frame at `ret`/`retGrund` has no caller: the thread is finished,
      not stuck.
 - **Not addressed here:** verdict item 2 (lock/resource invariants; probes B
-  and C stay outside `fussOrtGB`), items 4-8 (checker wiring, `.gab` to
+  and C stay outside `fussOrtGB`; addressed in §14), items 4-8 (checker wiring, `.gab` to
   `Programm D`, corpus sharing, model to C, time). All cuts of §§11.3/12.4
   carry over except "`ziel_ort_voll_ax` not derived" (now derived on
   register-local oracles).
@@ -880,5 +880,288 @@ head stands at one of these places (a leaf here: a `state` transition).
 
 No `sorryAx`, no new `axiom`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §§1-10 history above.)
+> Superseded as the flagship by §14 (`ziel_ort_sperre`): contracts over
+> shared state across a lock boundary, readers inside `locks` blocks.
+> `ziel_ort_ganz` is its instance at the empty lock-invariant family
+> (`ziel_ort_ganz_aus_sperre`).
+
+## 14. THE goal theorem: `ziel_ort_sperre` -- lock invariants (2026-09-13)
+
+Separation item 2 of the independent Opus verdict
+(`messung/URTEIL-OPUS-2026-09-13.md` §6, probes B and C of §3). Files:
+`SperreSem.lean` (the family, the class of environment moves, the
+sequential semantics with acquire moves and release checks, its frame
+semantics and step lemmas), `SperreFuss.lean` (stable carriers, the
+footprint check, the obligation, the records of acquires),
+`SperreBeweis.lean` (the replay), `SperreMaschine.lean` (the machine side:
+rely, callee frames, release classification, machine lock invariant),
+`ZielOrtSperre.lean` (the rule-by-rule step, the theorem),
+`ZielOrtSperreZeuge.lean` (probes, witnesses). **This is the one theorem
+the goal names**; §§11-13 are its history.
+
+### 14.1 The finding, and why the repair is where it is
+
+`fussOrtGB` (the check of `ziel_ort_ganz`) asks every footprint carrier of a
+function to be guarded by a lock the function holds BY SIGNATURE for its
+whole frame, or written by no function. A thread root cannot hold a lock by
+signature (two threads would start holding it; N240), so every contract
+at a lock boundary had to be silent about the protected carriers (probe B:
+`wrap ensures konto[0] == 100` under `haupt = locks { wrap() }`), and a
+read of a protected carrier inside `locks L { … }` fell (probe C, corpus
+04/05/18/71). The model had no lock invariants. Two facts were NOT the
+problem: G already takes and releases locks as steps (`dannLocks`,
+`freiGib`, the `frei` peels of `leave`/`next`), and every access carries
+all guards of its carrier in its static holdings by typing
+(`Expr.orte_darf`) -- from the signature OR from an enclosing `locks`
+block. What was missing is the SEQUENTIAL side: between two critical
+sections other threads move the protected carriers, and the plain
+sequential semantics (`execStmt`, where `locks` is just "take, run, give")
+cannot say so; any proof over it that relates two critical sections is
+unsound on G.
+
+The repair is concurrent separation logic's resource invariants, kept as
+a per-function SEQUENTIAL obligation:
+
+- **A lock-invariant family** `S : SperrInv D` -- per lock `L` the carriers
+  it protects for its invariant (`S.orte L`) and the invariant
+  (`S.inv L : Speicher D → Bool`). Well-formed (`SperrInvOk S`): every
+  listed carrier is guarded by `L`; the invariant reads only the listed
+  carriers.
+- **The sequential semantics with lock invariants** (`execStmtH`, identical
+  to `execStmt` except at `locks`):
+  `locks L { body }` at `σ` runs `body` from `(U L σ).nimmt L`, where the
+  environment's move `U` is in the class `HavocOk S` -- `U L σ` differs from
+  `σ` only on `S.orte L`, keeps the trace, and satisfies `S.inv L`; when the
+  body ends normally, by `leave` or by `next`, the release checks
+  `S.inv L` and ends in `logik schleife` if it fails (`freiH`).
+- **The obligation** quantifies over the moves as it quantifies over
+  handlers and oracles. So "acquire gives `I_L`, release requires it" is
+  literally the obligation: the body may assume the invariant after every
+  acquire (whatever other threads did) and must re-establish it at every
+  release (a failed check is a `logik` outcome, which the no-`logik` clause
+  excludes).
+- **The machine** needs nothing new. Its side of the bargain is the machine
+  lock invariant `SperrInvG S M`: every lock no thread holds has its
+  invariant in live memory -- at the start by `hSstart`, kept by every step
+  (a write needs all guards of its carrier, so a free lock's protected
+  carriers do not move; a release re-establishes the invariant, which the
+  replay derives from the obligation).
+
+*Why not change the machine instead:* G is already a lock machine with
+acquire and release steps; what it lacked was a sequential reading of a
+frame that survives other threads' critical sections. Changing `execStmt`
+itself would move every adequacy file and every earlier theorem;
+`execStmtH` is a separate semantics that IS `execStmt` over the empty
+family (`Stmt.execH_leer`) and over any body without `locks`
+(`Endblock.execH_ohne`).
+
+### 14.2 Exact statement (`ZielOrtSperre.lean`, `SperreFuss.lean`, `SperreSem.lean`)
+
+```lean
+structure SperrInv (D : Deklaration) where
+  orte : D.Lock → List (D.Tab ⊕ D.Glob)
+  inv : D.Lock → Speicher D → Bool
+
+def SperrInvOk (S : SperrInv D) : Prop :=
+  (∀ L c, c ∈ S.orte L → Bewacht c L) ∧
+  (∀ L (s s' : Speicher D), (∀ c ∈ S.orte L, TraegerGleich s s' c) → S.inv L s = S.inv L s')
+
+def HavocOk (S : SperrInv D) (U : Umwelt D) : Prop :=      -- Umwelt D := D.Lock → World D → World D
+  ∀ L σ, (U L σ).spur = σ.spur ∧
+    (∀ c, c ∉ S.orte L → TraegerGleich (U L σ).speicher σ.speicher c) ∧
+    S.inv L (U L σ).speicher = true
+
+-- execStmtH S O U passes R: as execStmt, except
+--   | .locks L _ body, σ, ρ => freiH S L (execBlockH body ((U L σ).nimmt L) ρ)
+-- freiH S L: .ok/.leave/.next σ ρ ↦ (release σ.gibt L) if S.inv L σ.speicher else .logik .schleife
+
+def KoerperGutS (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (f : D.Fn) : Prop :=
+  (∀ O', RahmenO O' → RegLokal O' → AxVertragO Q O' → ∀ U, HavocOk S U →
+    ∀ R, RespektiertRahmen P R → OhneVorbedingung R →
+      ∀ σ ρ, ReqAmEintritt P f σ ρ →
+        (∀ σ' v, execEndH S O' U passes R (P.rumpf f) σ ρ = .zurueck σ' v → EnsAmRueck P f σ σ' ρ v) ∧
+        (∀ g, execEndH S O' U passes (torRuf P R) (P.rumpf f) σ ρ ≠ .logik (.vorbedingung g))) ∧
+  (∀ O', RahmenO O' → RegLokal O' → AxVertragO Q O' → ∀ U, HavocOk S U →
+    ∀ R, RespektiertRahmen P R → OhneLogik R →
+      ∀ σ ρ, ReqAmEintritt P f σ ρ → ∀ e, execEndH S O' U passes R (P.rumpf f) σ ρ ≠ .logik e)
+
+def fussSperreB (P : Programm D) (S : SperrInv D) (fs : List D.Fn) : Bool :=
+  fs.all fun f =>
+    (fussOrte P f).all (fun c =>
+      sigB f c || freiB fs c || (waechterVon c).any fun L => istIn (S.orte L) c) &&
+    ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || freiB fs c)
+
+def SperrInvG (S : SperrInv D) (M : RufMaschineG D) : Prop :=
+  ∀ L, (∀ t, L ∉ offen (M.faeden t).spur) → S.inv L M.speicher = true
+
+theorem ziel_ort_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+        AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M'
+```
+
+`ziel_ort_ganz_aus_sperre`: `ziel_ort_ganz` (same statement as §13.2) from
+`ziel_ort_sperre` at `SperrInv.leer` (no protected carriers, invariant
+`true`): `fussOrtGB` gives `fussSperreB` (`fussSperreB_of_G`, for every
+family), `KoerperGutZ` gives `KoerperGutS` (`koerperGutS_leer`: every move
+in the class is the identity, `havocOk_leer`, and the semantics is
+`execEnd`). A body without `locks` owes nothing new for ANY family
+(`koerperGutS_ohne`).
+
+### 14.3 Premises, classified
+
+| Premise | Meaning | Class |
+|---|---|---|
+| `P`, `O`, `passes`, `fs`, `sp`, `init`, `Q`, `S` | as §13.3; `S` the lock-invariant family | DATA |
+| `e0` | the declaration has an event | (d) as §11.2 |
+| `hO`, `hRL`, `hQ` | `GutO`, `RegLokal`, `AxVertragO Q` | (b) HARDWARE |
+| `hlok`, `hvoll`, `hFrag` | as §13.3 | (c) |
+| `hS : SperrInvOk S` | protected carriers guarded by their lock; invariant local to them | (c): first half decidable per declaration; second half by construction for an invariant written over the listed carriers |
+| `hFuss : fussSperreB` | every footprint carrier: signature-guarded, unwritten, or protected by the invariant of one of its guards; device carriers signature-guarded or unwritten | (c) DECIDABLE, no checker rule |
+| `hK : ∀ f, KoerperGutS P passes Q S f` | per function, SEQUENTIAL: triple + caller duty + no `logik` outcome, over `execEndH` for every move in `HavocOk S` | (a) USER |
+| `hStart : StartGut` | start contracts | (a) USER |
+| `hSstart : ∀ L, S.inv L sp` | every lock invariant at the start memory | (a) USER (boot duty) |
+| `hex : StartExklusiv` | no two threads START holding a common lock | (d)/(c); trivial when roots hold no lock by signature (`startExklusiv_ohne_haelt`) |
+
+### 14.4 How the proof goes
+
+- **Stable carriers.** The replay keeps the sequential world equal to the
+  machine world not on the whole footprint (other threads move protected
+  carriers between critical sections) but on the STABLE carriers of the
+  frame at its current static holdings `Λ`: `stabilS P S fs f Λ` = the
+  footprint carriers guarded by a signature lock of `f` or written by no
+  function (`sicher`), plus `S.orte L` for every lock `L` that `Λ` names
+  held. Every read is inside: a read carries all guards of its carrier in
+  `Λ` (typing), a callee's contract carriers are guarded by the callee's
+  signature locks = the caller's held locks (`RufPasst.hh`,
+  `vertrag_stabil`), own `ensures` carriers at a return by
+  `Λ.Perm ende` (`ens_stabil`), so `fussSperreB` puts them in the stable
+  set (`stabil_of_fuss`).
+- **Acquire** (`fadenS_locks`): at `dannLocks` the lock is free, so the
+  machine lock invariant holds at the machine memory; the move "protected
+  carriers of `L` from the machine" is recorded (third record `HU`, keyed at
+  the pre-acquire sequential world, fresh by trace length) and is in the
+  class; the stable set grows by `S.orte L`.
+- **Release** (`fadenS_frei`, `fadenS_peelFrei`, `kopfS_frei_inv`): the
+  head's prediction is no `logik` outcome (`kopfS_keineLogik`, the second
+  clause against the record handler, oracle and move), so the release
+  check passes at the sequential world, hence (the protected carriers are
+  stable while the frame holds `L`) at the machine memory -- which keeps
+  `SperrInvG` when the lock becomes free (`sperrInvG_schritt`,
+  `freigabe_schrittG`).
+- **Callee frames** (`rufG_rahmenS`): the frame fact of §12 over stable
+  carriers; it needs no footprint check at all (stability is by held
+  locks), only `SperrInvOk`, `hvoll`, `GutO`, `StartExklusiv`.
+- **Everything else** is the replay of §13 over `execStmtH`
+  (`akteurS`, `andereS`, `zielInvS_erreichbar`, `fadenS_prueft`).
+
+### 14.5 Tests (`ZielOrtSperreZeuge.lean`)
+
+- **Probe B, certified.** `zPB`: `zP` with `wrap ensures konto[0] == 100`
+  (and `einzahlen ensures konto[0] == 100`, so the triple of `wrap` is
+  provable from its callee's contract). `zPB_fussG_falsch`: `fussOrtGB` is
+  false (the finding). With `zS` (the lock protects `konto`, invariant
+  `true`): `zPB_fussS`, `zPB_koerper`, `zPB_zertifiziert` (every premise of
+  `ziel_ort_sperre`). `zPB_lauf`: on a reached ten-step run thread 1 takes
+  the lock, runs `wrap` (`lies`, `einzahlen` writes 100), and at `wrap`'s
+  logged return `konto[0] == 100` holds, BY THE THEOREM.
+- **Probe C, certified.** `zPC`: `haupt = locks { konto[0] = konto[0] }`.
+  `zPC_fussG_falsch`, `zPC_fussS`, `zPC_zertifiziert`.
+- **Two writers, one lock, a non-trivial invariant**
+  (`ziel_ort_sperre_zeuge`, `sP_zertifiziert`). Declaration `sD`
+  (table `konto`, two slots), every thread runs the SAME root
+  `haupt(x) = locks { setze(x) }` (thread 0 `x = 30`, all others `x = 70`;
+  exclusive start, `sInit_exklusiv`). Lock invariant
+  `konto[0] == konto[1]`. `setze(x)` requires `konto[0] == konto[1]` and
+  ensures `konto[0] == konto[1] && konto[0] == x`: `haupt`'s caller duty
+  is provable ONLY from the invariant at the acquire (`sReq_iff_inv`), and
+  the release check ONLY from `setze`'s `ensures` (`sInv_of_ens`,
+  `sP_koerper_haupt`). On a reached sixteen-step run: thread 0's critical
+  section writes `30, 30`; thread 1 enters `setze(70)` at a world holding
+  those values and its `requires` holds there BY THE THEOREM; `setze(70)`
+  returns with its `ensures` (`70`) BY THE THEOREM; at the end no thread
+  holds the lock and its invariant holds in memory (`SperrInvG`) BY THE
+  THEOREM. The old check refuses the program (`sP_fussG_falsch`).
+- **Corpus 104** through the new theorem: `ziel_ort_sperre_ref104` (empty
+  family). `ziel_ort_ganz_ref104` still builds unchanged.
+- **Probe A stays refuted**: `paP_nicht_ganz`, `paP_halt` unchanged;
+  `paP_nicht_sperre` -- the new obligation fails on `paP` for every
+  well-formed family with a satisfiable invariant, `paP_nicht_sperre_leer`
+  at the empty family.
+
+### 14.6 The three consequences of verdict item 2
+
+- **`StartExklusiv` (settled).** Its definition is already "no two threads
+  start in functions sharing a SIGNATURE lock", i.e. no two threads START
+  holding the same lock; nothing else in the theorem restricts sharing. A
+  root that takes its lock in a `locks` block holds nothing at the start,
+  so any assignment is exclusive (`startExklusiv_ohne_haelt`) and the same
+  routine may run on every thread -- the two-writer witness does exactly
+  that. `audit_same_lock_start_excluded` stays true and now only says: two
+  threads cannot both START inside a lock.
+- **Held-set equality `RufPasst.hh` (open, named).** Relaxing it to "the
+  callee's signature locks are among the caller's held locks" (what the
+  checker accepts, verdict note T) is NOT done: every reading rule of G
+  demands `HeldGenau` (static holdings EQUAL held locks), so a callee whose
+  holdings are a strict subset of the thread's held locks could not step
+  at all; `stmt_gut`, the race-freedom chain and the rank discipline across
+  calls (a callee's `locks M` is ranked against its own holdings only) all
+  rest on the equality. Moving it means changing G's side condition on
+  about forty rules first. The replay of §14 itself would carry over (it
+  uses `hh` only in the direction "callee's locks are held by the caller",
+  `vertrag_stabil`).
+- **Single-thread footprint (open, named).** `fussSperreB` still asks a
+  guard, a signature lock or "written by no function" of a carrier that
+  only ONE thread ever touches (lane 138's hint on 15 of 89 corpus
+  programs). A sound exemption needs, per thread, the set of functions it
+  can run (the call graph from its root, indirect calls by signature) and
+  a machine invariant that every frame on that thread is in it -- a
+  residue-to-body relation for calls that G does not carry. What IS
+  exempt: carriers no function writes (`freiB`), and every carrier of a
+  lock-free body is covered by the old rule unchanged.
+
+### 14.7 What is not carried, and what still blocks
+
+- The invariant is a semantic family, not a surface clause; no parser
+  produces `S`, no checker rule computes `fussSperreB`/`SperrInvOk`.
+- The environment's move at an acquire of `L` may change every carrier `L`
+  protects, also one guarded by a second held lock (conservative, sound).
+- Device carriers stay signature-guarded or unwritten (register reads carry
+  no guard at the access).
+- Waiting at `dannLocks` is the named scheduler situation; no fairness,
+  hold-time or deadlock-freedom theorem (§13.5 item 1).
+- All cuts of §§11.3, 12.4, 13.5 carry over (table invariants not carried,
+  termination, full progress, no link to the emitted C and its lock
+  primitives, weak memory, hand translation only).
+
+### 14.8 Axiom record (`lake build`, 118 jobs, 0 errors)
+
+```text
+'Gabbro.Grammatik.ziel_ort_sperre' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_ganz_aus_sperre' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.akteurS' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.zielInvS_erreichbar' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.rufG_rahmenS' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.sperrInvG_schritt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.koerperGutS_leer' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.zPB_zertifiziert' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.zPB_lauf' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.zPC_zertifiziert' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.sP_zertifiziert' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_sperre_zeuge' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.ziel_ort_sperre_ref104' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Gabbro.Grammatik.paP_nicht_sperre' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+No `sorryAx`, no new `axiom`, no `native_decide`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §§1-10 history above.)
 
