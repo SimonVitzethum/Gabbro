@@ -165,6 +165,7 @@ pub mod zeugnis;
 pub mod certemit;
 pub mod certstmt;
 pub mod corrcert;
+pub mod corrlean;
 pub mod kostenledger;
 pub mod zeremonie;
 

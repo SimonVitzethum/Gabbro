@@ -541,6 +541,40 @@ fn main() -> std::process::ExitCode {
                 std::process::ExitCode::SUCCESS
             }
         }
+        // **T2 minimal (lane 164): the correspondence certificate as a Lean term.**
+        // English-only command name (no German second spelling for new commands).
+        // The checker runs first, for the same reason as at `emit`: no certificate
+        // over a tree the passes refused. Refused forms print as `-- REFUSAL:` lines
+        // from `gabbro_check::corrlean`; the exit stays 0 (a refusal is an answer,
+        // not a crash) unless the file has checker errors.
+        "corr-lean" => {
+            if rest.is_empty() {
+                eprintln!("gabbro corr-lean: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro corr-lean: {datei} has errors -- no certificate");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{}", gabbro_check::corrlean::zeige(&baum, datei));
+            }
+            if schlecht {
+                std::process::ExitCode::from(1)
+            } else {
+                std::process::ExitCode::SUCCESS
+            }
+        }
         // **Stufe 2: das erste Instrument fuer Ziel 3 (2026-08-20).** Von den vier Zielen
         // hatte „moeglichst gut nutzbar" als einziges keine Zahl. Der Befehl zaehlt jede
         // Klausel und jede Annotation -- und traegt seine **Kalibrierung mit**: Achse 1 ist
@@ -679,6 +713,7 @@ const COMMAND_NAMES: &[&str] = &[
     "prove", "beweise",
     "blindspots", "blindstellen",
     "certificate", "zeugnis",
+    "corr-lean",
     "ceremony", "zeremonie",
     "gabbrov",
     "templates", "schablonen",
@@ -841,6 +876,9 @@ fn hilfe() {
   gabbro certificate|zeugnis <file.gab>…
                                     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
+  gabbro corr-lean   <file.gab>…    the correspondence certificate as a Lean term (T2
+                                    minimal, 104 forms only): rows, map, layout; every
+                                    other form is a `-- REFUSAL:` line, never a drop
   gabbro ceremony|zeremonie [--per-site | --table] <file.gab>…
                                     every clause and annotation, in three columns --
                                     derivable / redundant / load-bearing. The CALIBRATION

@@ -248,6 +248,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["prove", "beweise"],
     &["blindspots", "blindstellen"],
     &["certificate", "zeugnis"],
+    &["corr-lean"],
     &["ceremony", "zeremonie"],
     &["templates", "schablonen"],
     &["passes", "paesse"],
