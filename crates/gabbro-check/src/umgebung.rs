@@ -205,6 +205,15 @@ pub struct Umgebung {
     pub geraete: HashMap<String, Vec<(String, Typ)>>,
     /// `static`, `atomic`, `accumulates` -- alles, was ohne Deklaration im Rumpf sichtbar ist.
     pub globale: HashMap<String, Typ>,
+    /// **Every declared `atomic` by qualified name (lane 152).**
+    ///
+    /// The declaration's TYPE stands in `globale` beside every `static`, so a
+    /// reader that only asks for types cannot tell an atomic store from a
+    /// plain one -- and `SPRACHE.md` §11.3 says every store to an atomic is a
+    /// `publishstmt`. This set answers the other question -- is the NAME an
+    /// atomic -- module-aware through `nennt_atomic`, the same candidate
+    /// order every other qualified card uses.
+    pub atomare: HashSet<String>,
     pub funktionen: HashMap<String, Signatur>,
     /// **Die Namen, deren Signatur ein KONSTRUKTOR ist, kein Aufruf** («B7»).
     /// Wert ist die Felderliste in Deklarationsreihenfolge -- `fs` aus
@@ -492,6 +501,16 @@ impl Umgebung {
         self.kandidaten(von, name)
             .into_iter()
             .find(|k| self.arenen.contains_key(k))
+    }
+
+    /// **Does this bare name stand for an `atomic` (lane 152)**, resolved from the
+    /// using module? Beside `nennt_arena`, and for the same reason: the atomic
+    /// is a value in `globale`, so a reader that only asks the value maps finds
+    /// a type where the declaration stands -- and no atomicity.
+    pub fn nennt_atomic(&self, von: &str, name: &str) -> bool {
+        self.kandidaten(von, name)
+            .iter()
+            .any(|k| self.atomare.contains(k))
     }
 
     /// Does this bare name stand for a `walk`? -- `walknamen`, not `walkschranken`: whether
@@ -785,6 +804,7 @@ impl Umgebung {
                 ItemArt::Atomic(a) => {
                     let t = self.typ_von_ausdruck_decl(pfad, &a.typ);
                     self.globale.insert(q(&a.name.text), t);
+                    self.atomare.insert(q(&a.name.text));
                 }
                 ItemArt::Accumulates(a) => {
                     let t = self.typ_von_ausdruck_decl(pfad, &a.typ);

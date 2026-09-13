@@ -65,6 +65,11 @@ const BENANNT: &[&str] = &[
     "N255", "N256", "N257", "N258",
     // Lane 145: `N260` an immutable pointer starting at `0`. Named here so
     // the corpus run counts the rule, not noise.
+    // Lane 152: `N270` a bare store to an `atomic` outside `publishes` /
+    // `exchange`, `N271` a suffixed place over one. The corpus holds neither
+    // (measured: zero sites), so the entries are the names, not sites -- a doc
+    // snippet that ever fires one counts the rule, not noise.
+    "N270", "N271",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

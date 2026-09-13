@@ -1023,6 +1023,53 @@ impl<'a> Pruefer<'a> {
                 // U9: M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist
                 // die gefaehrlichere Richtung, und sie lief hier am Index vorbei.
                 self.index_pruefen(&z.ziel, lage);
+                // **`N270` (lane 152) -- a bare store to an `atomic` is not a
+                // `publishstmt`, and `SPRACHE.md` §11.3 says every store to an
+                // atomic IS one.**
+                //
+                // Measured: `AT = w;` on `atomic AT : u32 relaxed` checks clean
+                // and emits `AT = w;` over `_Atomic uint32_t AT` -- a plain
+                // access, which C treats as `seq_cst` while the declaration
+                // said `relaxed`, and which the C model (`C-SPEICHERMODELL.md`
+                // §1c) makes stuck. Lowering the bare store to an explicit
+                // `atomic_store_explicit` is no fix: the store is where the
+                // payload promise stands (`publishes { … }` / `publishes
+                // nothing`, held by V001-V004), and an explicit store without
+                // one would carry the pairing past the checker in silence.
+                //
+                // It reports and does not return (the M143 shape): the overlap
+                // still gets its range comparison, so a second fault there
+                // keeps its own refusal.
+                //
+                // Only the GLOBAL answers: a parameter or `let` of the same
+                // name shadows the atomic (`typ_von_ort` reads the local
+                // first), and the store is theirs. `publishes` and `exchange`
+                // are their own statements and never reach this arm.
+                if !lage.lokal.contains_key(&z.ziel.basis.text)
+                    && self.u.nennt_atomic(&self.modul, &z.ziel.basis.text)
+                {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N270",
+                            z.ziel.span,
+                            format!(
+                                "`{}` is an `atomic` -- every store to an atomic is a \
+                                 `publishstmt`, so a bare store has no form here",
+                                z.ziel.basis.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "the emitter would write a plain store to an `_Atomic` \
+                             object -- C's default (`seq_cst`) instead of the declared \
+                             order, and stuck in the C model (`C-SPEICHERMODELL.md` §1c)",
+                        )
+                        .mit_notiz(
+                            "write `A = <value> publishes { … }` (`publishes nothing` \
+                             where nothing is handed over), or `exchange` for \
+                             read-modify-write",
+                        ),
+                    );
+                }
                 let ziel = self.u.typ_von_ort(&self.modul, &z.ziel, &lage.lokal);
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&z.wert, lage);
@@ -1988,6 +2035,45 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 self.name_aufloesen(o, lage);
+                // **`N271` (lane 152) -- a suffixed place over an `atomic` names
+                // nothing: an atomic is a scalar.**
+                //
+                // Measured: `let x : u32 = AT[0];` on `atomic AT : u32 relaxed`
+                // checks clean (the indexed type falls out as untyped, and every
+                // downstream rule steps aside) and emits `uint32_t x = AT[0];`
+                // over `_Atomic uint32_t AT` -- an index into a scalar, which
+                // `cc` rejects, and a plain access to an atomic either way.
+                // The legal indexed atomics (`FP_OWNER[core]` at `publishes`,
+                // `awaits`, `exchange`) never reach this arm: all three read
+                // their source through `typ_von_ort` directly. What reaches it
+                // is the bare expression read, and there the atomic is its bare
+                // name (lowered to an explicit load) -- a suffix on it is no
+                // form. Like `M138` above it answers `Unbekannt`, so no second
+                // rule reports on the same fault.
+                if !o.suffixe.is_empty()
+                    && !lage.lokal.contains_key(&o.basis.text)
+                    && self.u.nennt_atomic(&self.modul, &o.basis.text)
+                {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N271",
+                            e.span,
+                            format!(
+                                "`{}` is an `atomic`, a scalar -- `{}` names no \
+                                 element or field",
+                                o.basis.text,
+                                o.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "reads go through the bare name (an explicit load in \
+                             the declared order) or through `awaits`; an indexed \
+                             atomic at `publishes`/`awaits`/`exchange` is its own \
+                             statement and never stands here",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
                 // **Die INDIZES sind Ausdruecke, und M1 zaehlte sie nicht.** `t.slots[j].x`
                 // mit unbekanntem `j` galt als *ein* Ausdruck mit 100 % Deckung.
                 // `index_pruefen` wertet sie fuer die Schranke aus; hier werden sie GEZAEHLT,

@@ -2104,6 +2104,52 @@ pub const M1: &[Satz] = &[
                      beispiele/gift/788-return-carries-a-value-without-a-result.gab",
     },
     Satz {
+        name: "m1.bare_atomic_place",
+        kennungen: &["N270", "N271"],
+        aussage: "A bare store to an `atomic` is refused (`N270`). `SPRACHE.md` §11.3 says \
+                  every store to an atomic IS a `publishstmt`, so `AT = w` has no form -- and \
+                  the bare store checked clean while emitting a plain store to an \
+                  `_Atomic` object, which C treats as `seq_cst` against the declared \
+                  order and which the C model (`C-SPEICHERMODELL.md` §1c) makes stuck. \
+                  Lowering the bare store to an explicit `atomic_store_explicit` is no \
+                  fix: the store is where the payload promise stands (`publishes { … }` \
+                  / `publishes nothing`, held by V001-V004), and an explicit store \
+                  without one would carry the pairing past the checker in silence. A \
+                  suffixed place over an atomic is refused too (`N271`): the atomic is a \
+                  scalar, so `AT[0]` names no element -- it checked clean (the indexed \
+                  type falls out as untyped) and emitted an index into a scalar. The \
+                  twin half is the emitter's: a bare READ lowers to \
+                  `atomic_load_explicit` in the declared load order (a `release` \
+                  declaration loads `acquire`), through the one place every runtime \
+                  read funnels through -- expressions, `retry … until` conditions, \
+                  narrow bounds, indices -- so the §1c census holds with no plain \
+                  access left. Refusing the read instead would make payload-free \
+                  atomics unreadable and the `retry`-spin inexpressible.",
+        vorbehalt: "A parameter or `let` shadowing the atomic stays silent -- the store \
+                    is theirs (`typ_von_ort` reads the local first), and the read lowers \
+                    as the plain C local. `publishes` and `exchange` are their own \
+                    statements and never reach the rule. The read lowering exempts the \
+                    same four function-scoped views (parameters, `let`s, record values, \
+                    traverse binders); a `match`/`awaits`/`alloc` binder shadowing an \
+                    atomic name is not exempt -- no corpus site binds one, and the shape \
+                    is booked, not closed.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/936-bare-store-to-atomic.gab falls with N270 ALONE \
+                      (and `cc` still accepts the emitted C, hence `allein`); \
+                      beispiele/gift/937-bare-store-despite-pairing.gab falls with N270 \
+                      ALONE beside a live `publishes`/`awaits` pairing; \
+                      beispiele/gift/939-index-into-atomic.gab falls with N271 ALONE. The silent \
+                      direction is `beispiele/116` (payload-free counter, bare read \
+                      lowering to a `relaxed` load) and `beispiele/117` (the \
+                      `publishes`/`awaits` pair); the spin direction is \
+                      `messung/proben/probe-transport-poll-used.gab`, whose `until` \
+                      now reads `atomic_load_explicit` in the declared `acquire` order.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (N270, assignment arm); \
+                     crates/gabbro-check/src/emit.rs (`ort`, bare atomic read); \
+                     crates/gabbro-check/src/umgebung.rs (`atomare`, `nennt_atomic`); \
+                     crates/gabbro-check/tests/bare_atomic.rs",
+    },
+    Satz {
         name: "consts.evaluable",
         kennungen: &["K190"],
         aussage: "A `const` initializer, or a const-table element, outside the total, \

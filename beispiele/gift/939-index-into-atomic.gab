@@ -1,0 +1,23 @@
+-- erwartet: N271
+-- **An `atomic` is a scalar -- `AT[0]` names no element.**
+--
+-- An indexed read over an atomic checked clean (the indexed type falls out as
+-- untyped, and every downstream rule steps aside) and emitted `AT[0]` over
+-- `_Atomic uint32_t AT` -- an index into a scalar, which `cc` rejects, and a
+-- plain access to an atomic either way. The legal indexed atomics
+-- (`FP_OWNER[core]` at `publishes`, `awaits`, `exchange`) are their own
+-- statements and never stand in an expression; here the atomic is its bare
+-- name (an explicit load) or nothing. N271 falls ALONE.
+module gift::index_into_atomic {
+
+atomic AT : u32 relaxed;
+
+impl fn lies() -> u32
+    effects { reads AT }
+    costs   <= 4 ops
+{
+    let x : u32 = AT[0];
+    return x;
+}
+
+}
