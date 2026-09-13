@@ -2978,15 +2978,15 @@ fi
 # (lane E3/112). Each verified file by file, not added up.
 # **83 -> 85 on 2026-09-12 (merge resolution, lane E4/116).** `+2` are
 # `98-arena-erklaert` and `99-arena-grenze` (this lane, counted above).
-# **85 -> 87 on 2026-09-13 (lane E5/129).** `+2` were meant to be
-# `106-summe-uebersetzt` and `107-summe-zwei-rufe` (this lane, counted
+# Provisional sum -- re-measured by the run below, not added up.
+# **85 -> 87 on 2026-09-12 (lane-89 merge resolution, measured file by file).**
+# `+2` are `100-hardwareprofil` and `101-hardwareprofil-schluessel` (lane 117:
+# examples following the merged language, translator per library function).
+# Both emit and compile; the other 85 stand as booked.
+# **87 -> 89 on 2026-09-13 (lane E5/129, measured on the merged tree).** `+2`
+# are `106-summe-uebersetzt` and `107-summe-zwei-rufe` (this lane, counted
 # above: the first translated library calls, each with its own `lauf`).
-# **87 -> 89 the same day, re-derived, not added up.** The run reads 89
-# against 85: the base tree already emitted 87 without this lane's files
-# (the decomposition above never listed every emitting file -- `74`,
-# `90`, `100`, `101` among others emit with their own `lauf` lines but
-# stand in no `+N` here), so the 85 stood two short before this lane, and
-# this lane adds its two on top. What is booked is the measurement.
+# Both emit, compile and run; the other 87 stand as booked.
 MARKE_EMIT=89
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene

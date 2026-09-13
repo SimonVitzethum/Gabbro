@@ -105,3 +105,5 @@ import Grammatik.RufAdaequatG
 import Grammatik.RufAdaequatRufG
 import Grammatik.KetteVoll
 import Grammatik.Uebersetzung
+import Grammatik.CSemantik
+import Grammatik.RufUmkehrRufG

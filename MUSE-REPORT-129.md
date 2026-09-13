@@ -111,6 +111,17 @@ from this lane), todo (6 TODO-prose lines). `pruefe-praemisse.py` needs ssh
 Emission-mark note: the 85 stood two short before this lane (undeclared
 emitting files); re-derived to 89.
 
+## Merge resolution (reviewer, master-neu with lanes 89/113/117/121/128 + machine-G)
+
+No code conflicts in lane files (`namen.rs`, `saetze.rs`, `paesse.rs` merged
+clean); 8 files resolved -- README/TODO/DONE/PASSREGISTER took ours,
+`Grammatik.lean` keeps every import of both sides (`Uebersetzung` +
+`CSemantik` + `RufUmkehrRufG`), marks re-measured on the merged tree and
+both deltas booked (vergabe 28+1=29 / 83+1=84, emission 87+2=89 with
+`100`/`101` identified as lane 89's pair, zeremonie 1526+22=1548).
+Merged-tree record: `./cargo-pruef` exit 0, `./lean-bau` 0 errors (69 jobs),
+`./emission-pruef` ALL PASS (230/230), kennungen ALL PASS, saetze ratchet 55.
+
 ## Task critique (rule 9)
 
 1. Item 2's "translator that walks a token table needs bounded loops, table
