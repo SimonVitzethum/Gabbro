@@ -173,3 +173,4 @@ import Grammatik.ZielOrtSperreZeuge
 import Grammatik.ZielOrtEinfaden
 import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.HelferZeuge
+import Grammatik.SonstLeaveZeuge

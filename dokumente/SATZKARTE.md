@@ -842,7 +842,7 @@ head stands at one of these places (a leaf here: a `state` transition).
      result outside its range (`dannGleit`, `dannGleitLit`, `dannGleitVon`),
      a spent `forever` budget (`ewig 0` has no rule; sequentially
      `hardware (fortschritt a)`). Named hardware assumptions failing.
-  4. A `leave`/`next` inside an `else` end block that REPLACED the residue:
+  4. (CLOSED in §15.3.) A `leave`/`next` inside an `else` end block that REPLACED the residue:
      `dannNarrowElse`, `dannPruefFalsch`, `dannGleitNarrowElse`,
      `dannRegLiesElseFalsch` and the reason pops (`err` of `let … else`)
      drop the enclosing loop's continuation, so a `leave`/`next` there has no
@@ -1302,6 +1302,70 @@ overflow block (no `never` premise); `scorr_retry` keeps its statement.
 Witnesses: `retry_unterschied_zeuge` (the old model writes `konto[1]`,
 the corrected model and the C do not), `wRetry_corr` (a writing overflow
 block, now covered).
+
+### 15.3 `leave`/`next` in an `else` block reach the loop (§13.5 item 4)
+
+*The finding.* `dannNarrowElse`, `dannPruefFalsch`, `dannGleitNarrowElse`,
+`dannRegLiesElseFalsch` and the three reason pops into the `else` block of
+`let … else` (`rueckGrund`, `rueckConsGrund`, `dannRetGrund`) REPLACED the
+whole residue by the end block. A `leave`/`next` in it then stood as
+`.ende (.leave _)` with the loop continuation gone; no rule fires there
+(`ende_leave_steht`), while the sequential semantics leaves (or continues)
+the loop and goes on.
+
+*The repair* (`RufMaschineG.lean`). `Endblock.alsBlock` reads an end block
+as a block (same statements, the final `ret`/`retGrund`/`leave`/`next` as a
+statement over the empty block; `Endblock.execBlock_alsBlock`: the block
+means the end block's outcome). A new residue layer `GRest.abbruch k`
+stands between it and the old continuation `k`: an `else` step now goes to
+`.dann sonst.alsBlock.2 (.abbruch k)` (a reason pop to
+`.dann err.alsBlock.2 (.abbruch (.schrumpf k))`). A normal end of that
+block is impossible (end blocks never end normally); a return pops as
+before; two new rules `peelAbbruchLeave`/`peelAbbruchNext` hand a
+`leave`/`next` to `k`, where the existing loop shims take it. The
+semantics of `abbruch k` in every replay: an `ok` outcome is `sonst`, every
+other outcome continues as `k` (`weiterH_abbruch_zu`, `weiterZ_abbruch_zu`).
+
+*Carried* (full `lake build` green, no `sorryAx`):
+
+- `RufHaeltG` (the held-lock chain through `abbruch`: `kette_abbruch`);
+  `RufAdaequatG`/`RufAdaequatRufG`/`RufUmkehrRufG` (`alsRet`/`alsRetR`: the
+  `else` block run as a block returns as the end block did;
+  `EndG.alsBlock`/`EndR.alsBlock`; `semR_alsBlock`/`semK_alsBlock`;
+  `w_peelAbbruch`), statements unchanged.
+- The replays of every goal theorem (`ZielOrt`, `ZielOrtVoll`, `…Geraet`,
+  `…Rahmen`, `…Ax`, `…Sperre` -- the flagship -- and `…Einfaden`): the step
+  lemmas `semV_/semH_/semZ_narrowElse`, `_pruefFalsch`, `_gleitNarrowElse`,
+  `_regLiesElseFalsch` now hold with the new residue BY AN EQUALITY
+  (`semV_alsBlock`, `semH_alsBlock`); before they only held as a weakening
+  to the end block's own result, which predicted nothing for a
+  `leave`/`next`. `FortV`/`FortS` (the continuation after a reason answer)
+  resume the reason block as a block (`semV_alsBlock_schrumpf`,
+  `semH_alsBlock_schrumpf`); the fragment predicates carry the new residue
+  (`okV_alsBlock`, `okG_alsBlock`, `okS_alsBlock`; the `abbruch` layer
+  records that its held set agrees with the block's, so the stable set of
+  the flagship replay transfers at `peelAbbruch`).
+- The cost model (`KostenG.lean`): an `else` branch is priced by
+  `kostenSonst` (the end block in block position: no unfold, a `let` pays
+  its `schrumpf` layer, the final statement its empty-block tail) plus one
+  step for the `abbruch` layer (two for a reason block: `schrumpf` too);
+  the checker correspondence carries a matching remainder `zusatzSonst`
+  (`spiegel_sonst`). The witness numbers of `KostenGZeuge` are unchanged.
+
+*The witness* (`SonstLeaveZeuge.lean`). `fn(): retry 1 until false { if
+!false { leave } }; return 7`. `sv_exec`: the sequential semantics returns
+`7`. `sonst_leave_zeuge`: thread 0 of G unfolds the loop, takes the `else`
+branch of the refusal -- the residue is `leave` over `abbruch` over the loop
+shim `wiederRest`, the loop continuation KEPT --, peels the layer, leaves
+the loop, and pops logging exactly that `7`. `ende_leave_steht_zeuge`: the
+state the old rule reached on this fixture has no step.
+
+*Not covered.* The adequacy fragments admit the `else` forms only at loop
+level `false` (`BlockR.narrow_inv … l = false`, likewise `BlockG`), where no
+`leave`/`next` can occur. For an `else` block INSIDE a loop the agreement of
+G with the sequential semantics is shown by the replays' equalities above
+(which is what the goal theorems use) and by the witness, not by a general
+adequacy theorem.
 
 (End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
 

@@ -1268,6 +1268,23 @@ theorem w_peelFrei {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   | false => exact ⟨_, RufSchrittG.peelFreiNext M f true Γ Λ L r k ρ rfl hhead,
       zustandG_neu rfl rfl⟩
 
+/-- Peel an `abbruch` layer off an abrupt exit: a `leave`/`next` in an
+    `else` branch reaches the continuation after the branching form. -/
+theorem w_peelAbbruch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) {Γ : Ctx} {Λ Λ1 Λk : List (Res D)} (w : Bool)
+    (r : Block D (vertragVon D z.kopf.f) true Γ Λ Λ1)
+    (k : GRest D (vertragVon D z.kopf.f) true Γ Λk) (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨true, Γ, Λ, ρ, .dann (.cons (abbS rfl w) r) (.abbruch k)⟩) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
+        (.dann (.cons (abbS rfl w) .nil) k) (M.weltVon f) := by
+  subst hz
+  cases w with
+  | true => exact ⟨_, RufSchrittG.peelAbbruchLeave M f Γ Λ Λ1 Λk r k ρ rfl hhead,
+      zustandG_neu rfl rfl⟩
+  | false => exact ⟨_, RufSchrittG.peelAbbruchNext M f Γ Λ Λ1 Λk r k ρ rfl hhead,
+      zustandG_neu rfl rfl⟩
+
 end Ausgaenge
 
 
