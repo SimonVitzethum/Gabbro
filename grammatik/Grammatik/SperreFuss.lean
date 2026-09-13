@@ -17,7 +17,7 @@
   sections other threads may change it; the sequential semantics
   (`SperreSem.lean`) lets the environment move it at the next acquire.
 
-  * `stabilS P S fs f Λ`: the carriers the replay keeps equal between the
+  * `stabilS P S lok f Λ`: the carriers the replay keeps equal between the
     sequential and the machine world while the frame's static holdings are
     `Λ` -- the footprint carriers guarded by a signature lock or written by
     no function (`sicher`), and the protected carriers of every lock held in
@@ -70,52 +70,55 @@ theorem freiB_ok {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) {c : D.Tab �
 
 /-- **The safe carriers of `f`**: footprint carriers that no other thread
     changes while a frame of `f` lives -- guarded by a signature lock of `f`,
-    or written by no function. -/
-def sicher (P : Programm D) (fs : List D.Fn) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
-  (fussOrteG P f).filter fun c => sigB f c || freiB fs c
+    or LOCAL (`lok c`: in `ziel_ort_sperre`, written by no function,
+    `freiB`; in `ziel_ort_einfaden`, every carrier -- only one thread
+    moves). -/
+def sicher (P : Programm D) (lok : D.Tab ⊕ D.Glob → Bool) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
+  (fussOrteG P f).filter fun c => sigB f c || lok c
 
 /-- **The stable carriers of a frame of `f` at static holdings `Λ`**: the
     safe carriers, and the protected carriers of every lock `Λ` names held
     (no other thread can take such a lock while the frame holds it). -/
-def stabilS (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (f : D.Fn) (Λ : List (Res D)) :
-    List (D.Tab ⊕ D.Glob) :=
-  sicher P fs f ++ (heldL Λ).flatMap S.orte
+def stabilS (P : Programm D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (f : D.Fn)
+    (Λ : List (Res D)) : List (D.Tab ⊕ D.Glob) :=
+  sicher P lok f ++ (heldL Λ).flatMap S.orte
 
-theorem sicher_mem {P : Programm D} {fs : List D.Fn} {f : D.Fn} {c : D.Tab ⊕ D.Glob} :
-    c ∈ sicher P fs f ↔ c ∈ fussOrteG P f ∧ (sigB f c || freiB fs c) = true := by
+theorem sicher_mem {P : Programm D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    {c : D.Tab ⊕ D.Glob} :
+    c ∈ sicher P lok f ↔ c ∈ fussOrteG P f ∧ (sigB f c || lok c) = true := by
   unfold sicher
   rw [List.mem_filter]
 
-theorem stabilS_mem {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
+theorem stabilS_mem {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
     {Λ : List (Res D)} {c : D.Tab ⊕ D.Glob} :
-    c ∈ stabilS P S fs f Λ ↔ c ∈ sicher P fs f ∨ ∃ L, Res.held L ∈ Λ ∧ c ∈ S.orte L := by
+    c ∈ stabilS P S lok f Λ ↔ c ∈ sicher P lok f ∨ ∃ L, Res.held L ∈ Λ ∧ c ∈ S.orte L := by
   unfold stabilS
   rw [List.mem_append, List.mem_flatMap]
   simp only [heldL_mem]
 
-theorem sicher_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (Λ : List (Res D)) : sicher P fs f ⊆ stabilS P S fs f Λ :=
+theorem sicher_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (Λ : List (Res D)) : sicher P lok f ⊆ stabilS P S lok f Λ :=
   fun _ h => stabilS_mem.mpr (Or.inl h)
 
 /-- The stable set depends only on the locks named held. -/
-theorem stabilS_mono {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
+theorem stabilS_mono {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
     {Λ Λ' : List (Res D)} (h : ∀ L, Res.held L ∈ Λ → Res.held L ∈ Λ') :
-    stabilS P S fs f Λ ⊆ stabilS P S fs f Λ' := by
+    stabilS P S lok f Λ ⊆ stabilS P S lok f Λ' := by
   intro c hc
   rcases stabilS_mem.mp hc with hc | ⟨L, hL, hc⟩
   · exact stabilS_mem.mpr (Or.inl hc)
   · exact stabilS_mem.mpr (Or.inr ⟨L, h L hL, hc⟩)
 
-theorem stabilS_iff {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
+theorem stabilS_iff {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
     {Λ Λ' : List (Res D)} (h : ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ) :
-    stabilS P S fs f Λ' ⊆ stabilS P S fs f Λ :=
+    stabilS P S lok f Λ' ⊆ stabilS P S lok f Λ :=
   stabilS_mono fun L hL => (h L).mp hL
 
 /-- Agreement on the stable set, carried to holdings that name the same held
     locks (a leaf, a call, `advances`, `retires`). -/
-theorem gleichAuf_stabil_iff {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
+theorem gleichAuf_stabil_iff {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
     {Λ Λ' : List (Res D)} (h : ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ) {σ W : World D}
-    (hg : GleichAuf (stabilS P S fs f Λ) σ W) : GleichAuf (stabilS P S fs f Λ') σ W :=
+    (hg : GleichAuf (stabilS P S lok f Λ) σ W) : GleichAuf (stabilS P S lok f Λ') σ W :=
   GleichAuf.mono (fun _ hc => stabilS_iff h hc) hg
 
 /-! ## 2. The footprint check -/
@@ -132,13 +135,19 @@ def fussSperreB (P : Programm D) (S : SperrInv D) (fs : List D.Fn) : Bool :=
       sigB f c || freiB fs c || (waechterVon c).any fun L => istIn (S.orte L) c) &&
     ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || freiB fs c)
 
-/-- The property `fussSperreB` decides, per function. -/
-def FussS (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (f : D.Fn) : Prop :=
-  (∀ c ∈ fussOrte P f, (sigB f c || freiB fs c) = true ∨ ∃ L, Bewacht c L ∧ c ∈ S.orte L) ∧
-  (∀ c ∈ (P.rumpf f).regs.flatMap D.rtraeger, (sigB f c || freiB fs c) = true)
+/-- The property `fussSperreB` decides, per function, for the local
+    carriers `lok`. -/
+def FussS (P : Programm D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (f : D.Fn) : Prop :=
+  (∀ c ∈ fussOrte P f, (sigB f c || lok c) = true ∨ ∃ L, Bewacht c L ∧ c ∈ S.orte L) ∧
+  (∀ c ∈ (P.rumpf f).regs.flatMap D.rtraeger, (sigB f c || lok c) = true)
+
+/-- With every carrier local the property holds for every function. -/
+theorem fussS_alle (P : Programm D) (S : SperrInv D) (f : D.Fn) : FussS P S (fun _ => true) f :=
+  ⟨fun _ _ => Or.inl (by simp), fun _ _ => by simp⟩
 
 theorem fussSperreB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (h : fussSperreB P S fs = true) (f : D.Fn) : FussS P S fs f := by
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (h : fussSperreB P S fs = true) (f : D.Fn) :
+    FussS P S (freiB fs) f := by
   have h1 := (List.all_eq_true.mp h) f (hvoll f)
   simp only [Bool.and_eq_true] at h1
   refine ⟨fun c hc => ?_, fun c hc => (List.all_eq_true.mp h1.2) c hc⟩
@@ -166,9 +175,9 @@ theorem fussSperreB_of_G (P : Programm D) (S : SperrInv D) (fs : List D.Fn)
 
 /-- **A footprint carrier whose guards are all held at the access is
     stable there.** -/
-theorem stabil_of_fuss {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {Λ : List (Res D)} {c : D.Tab ⊕ D.Glob} (hc : c ∈ fussOrteG P f)
-    (hw : ∀ L, Bewacht c L → Res.held L ∈ Λ) : c ∈ stabilS P S fs f Λ := by
+theorem stabil_of_fuss {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {Λ : List (Res D)} {c : D.Tab ⊕ D.Glob} (hc : c ∈ fussOrteG P f)
+    (hw : ∀ L, Bewacht c L → Res.held L ∈ Λ) : c ∈ stabilS P S lok f Λ := by
   rcases List.mem_append.mp hc with hc1 | hc2
   · rcases hF.1 c hc1 with h | ⟨L, hB, hL⟩
     · exact stabilS_mem.mpr (Or.inl (sicher_mem.mpr ⟨hc, h⟩))
@@ -184,24 +193,24 @@ theorem bewacht_held {Λ : List (Res D)} {c : D.Tab ⊕ D.Glob} (h : OrtDarf Λ 
   | inr g => exact h (Sum.inl L) hB
 
 /-- **The carriers an expression reads are stable at its holdings.** -/
-theorem orte_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {os : List (D.Tab ⊕ D.Glob)} {Λ : List (Res D)}
-    (hd : ∀ o ∈ os, OrtDarf Λ o) (h : os ⊆ fussOrteG P f) : os ⊆ stabilS P S fs f Λ :=
+theorem orte_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {os : List (D.Tab ⊕ D.Glob)} {Λ : List (Res D)}
+    (hd : ∀ o ∈ os, OrtDarf Λ o) (h : os ⊆ fussOrteG P f) : os ⊆ stabilS P S lok f Λ :=
   fun _ ho => stabil_of_fuss hF (h ho) fun _ hB => bewacht_held (hd _ ho) hB
 
-theorem expr_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
-    (h : e.orte ⊆ fussOrteG P f) : e.orte ⊆ stabilS P S fs f Λ :=
+theorem expr_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
+    (h : e.orte ⊆ fussOrteG P f) : e.orte ⊆ stabilS P S lok f Λ :=
   orte_stabil hF e.orte_darf h
 
-theorem args_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs)
-    (h : a.orte ⊆ fussOrteG P f) : a.orte ⊆ stabilS P S fs f Λ :=
+theorem args_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs)
+    (h : a.orte ⊆ fussOrteG P f) : a.orte ⊆ stabilS P S lok f Λ :=
   orte_stabil hF a.orte_darf h
 
-theorem erg_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {Γ : Ctx} {Λ : List (Res D)} {τ : Option Ty} (e : ErgExpr D Γ Λ τ)
-    (h : e.orte ⊆ fussOrteG P f) : e.orte ⊆ stabilS P S fs f Λ :=
+theorem erg_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {Γ : Ctx} {Λ : List (Res D)} {τ : Option Ty} (e : ErgExpr D Γ Λ τ)
+    (h : e.orte ⊆ fussOrteG P f) : e.orte ⊆ stabilS P S lok f Λ :=
   orte_stabil hF e.orte_darf h
 
 /-- The guards of a callee's contract carriers are its signature locks. -/
@@ -231,35 +240,35 @@ theorem vertrag_darf (P : Programm D) (g : D.Fn) :
 /-- **A callee's contract carriers are stable at the call**: their guards
     are the callee's signature locks, which the caller holds at the call
     (`RufPasst.hh`). -/
-theorem vertrag_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {V : Vertrag D} {Λ : List (Res D)} (g : D.Fn)
+theorem vertrag_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {V : Vertrag D} {Λ : List (Res D)} (g : D.Fn)
     (hp : RufPasst D V (D.signatur g) Λ)
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
-    (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S fs f Λ :=
+    (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ :=
   fun _ ho => stabil_of_fuss hF (h ho) fun L hB =>
     (hp.hh L).mpr (vertrag_darf P g _ ho L hB)
 
 /-- The same for a callee named through a pointer of signature `n`. -/
-theorem vertrag_stabil_ind {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn)
+theorem vertrag_stabil_ind {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn)
     (hg : D.sig g = n) (hp : RufPasst D V (D.sigNr n) Λ)
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
-    (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S fs f Λ := by
+    (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ := by
   subst hg
   exact vertrag_stabil hF g hp h
 
 /-- **The own `ensures` carriers are stable at a return**: at `ret` the
     holdings are a permutation of the signature's end holdings. -/
-theorem ens_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    (hF : FussS P S fs f) {Λ : List (Res D)} (hperm : Λ.Perm (vertragVon D f).ende) :
-    (P.ensures f).orte ⊆ stabilS P S fs f Λ :=
+theorem ens_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    (hF : FussS P S lok f) {Λ : List (Res D)} (hperm : Λ.Perm (vertragVon D f).ende) :
+    (P.ensures f).orte ⊆ stabilS P S lok f Λ :=
   fun _ ho => stabil_of_fuss hF (fuss_ensG P f ho) fun _ hB =>
     hperm.symm.mem_iff.mp (bewacht_held ((P.ensures f).orte_darf _ ho) hB)
 
 /-- The device carriers of a register read, in the safe set of the frame. -/
-theorem regP_stabil {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {f : D.Fn}
-    {Λ : List (Res D)} {r : D.Reg} (h : regP (sicher P fs f) r = true) :
-    ∀ o ∈ D.rtraeger r, o ∈ stabilS P S fs f Λ :=
+theorem regP_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
+    {Λ : List (Res D)} {r : D.Reg} (h : regP (sicher P lok f) r = true) :
+    ∀ o ∈ D.rtraeger r, o ∈ stabilS P S lok f Λ :=
   fun o ho => sicher_stabil Λ (regP_ok h o ho)
 
 /-! ## 3. The residues the replay follows -/
@@ -324,8 +333,8 @@ end OkS
     the safe carriers. -/
 theorem programmImFragmentS_ok (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (h : programmImFragmentG P fs = true)
-    (hF : ∀ f, FussS P S fs f) (f : D.Fn) :
-    (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P fs f)) = true :=
+    {lok : D.Tab ⊕ D.Glob → Bool} (hF : ∀ f, FussS P S lok f) (f : D.Fn) :
+    (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true :=
   Endblock.gOk_mono (kandB_kandP P hvoll _) _ ((List.all_eq_true.mp h) f (hvoll f))
     (fun r hr => regP_of fun o ho => sicher_mem.mpr ⟨fuss_regG P f r hr o ho,
       (hF f).2 o (List.mem_flatMap.mpr ⟨r, hr, ho⟩)⟩)
@@ -333,9 +342,9 @@ theorem programmImFragmentS_ok (P : Programm D) (S : SperrInv D) {fs : List D.Fn
 /-- A fresh frame's residue is followed. -/
 theorem okS_start (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (h : programmImFragmentG P fs = true)
-    (hF : ∀ f, FussS P S fs f) (f : D.Fn) :
+    {lok : D.Tab ⊕ D.Glob → Bool} (hF : ∀ f, FussS P S lok f) (f : D.Fn) :
     (GRest.ende (V := vertragVon D f) (l := false) (P.rumpf f)).okS P (fussOrteG P f)
-      (sicher P fs f) :=
+      (sicher P lok f) :=
   ⟨programmImFragmentS_ok P S hvoll h hF f, fuss_rumpfG P f⟩
 
 /-! ## 4. The user obligation -/

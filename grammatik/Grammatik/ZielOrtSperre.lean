@@ -25,13 +25,13 @@ variable {D : Deklaration}
 section Akteur
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {fs : List D.Fn}
+  {lok : D.Tab ⊕ D.Glob → Bool}
 
 /-- The residue of a frame, read off its rest. -/
 theorem rest_okS {F : RufRahmenG D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D F.f) l Γ Λ} (hF : F.rest = ⟨l, Γ, Λ, ρ, r⟩)
-    (h : F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P fs F.f)) :
-    r.okS P (fussOrteG P F.f) (sicher P fs F.f) := by
+    (h : F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f)) :
+    r.okS P (fussOrteG P F.f) (sicher P lok F.f) := by
   rw [hF] at h
   exact h
 
@@ -44,14 +44,14 @@ set_option maxHeartbeats 4000000 in
 theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutS P passes Q S f)
-    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P fs f)) = true)
-    (hFS : ∀ f, FussS P S fs f) (e0 : Ereignis D)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (e0 : Ereignis D)
     {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (hF : FadenS P O passes Q S fs (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
-    (hRS : RahmenStapelS P S fs M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel)
+    (hF : FadenS P O passes Q S lok (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
+    (hRS : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel)
     (hSG : SperrInvG S M) :
-    FadenS P O passes Q S fs (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
+    FadenS P O passes Q S lok (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -708,7 +708,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hks, hss, _⟩ := okS_dann_cons (kopfS_okS hF.1 hhead)
     simp only [stmtOrteP, List.append_subset] at hss
     have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks
-    have hev : ∀ σ : World D, GleichAuf (stabilS P S fs (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
+    have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
         eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hss.1 h') h)
@@ -745,7 +745,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hks, hss, _⟩ := okS_ende_cons (kopfS_okS hF.1 hhead)
     simp only [stmtOrteP, List.append_subset] at hss
     have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks
-    have hev : ∀ σ : World D, GleichAuf (stabilS P S fs (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
+    have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
         eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hss.1 h') h)
@@ -784,7 +784,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     simp only [Block.gOk, Bool.and_eq_true] at hks
     simp only [blockOrteP, List.append_subset] at hss
     have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks.1
-    have hev : ∀ σ : World D, GleichAuf (stabilS P S fs (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
+    have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
         eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hss.1.1 h') h)
@@ -1062,7 +1062,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hks, hss, hrest⟩ := hok
     simp only [Block.gOk] at hks
     simp only [blockOrteP, List.cons_subset] at hss
-    have hgS : Sum.inr g ∈ stabilS P S fs (M.faeden u).kopf.f Λ :=
+    have hgS : Sum.inr g ∈ stabilS P S lok (M.faeden u).kopf.f Λ :=
       stabil_of_fuss (hFS _) hss.1 fun L hB => bewacht_held (c := .inr g) hLg hB
     have hglob : (σ.lese Λ [.inr g]).globs g = σ₁.globs g := by
       rw [hs₁]
@@ -1082,29 +1082,30 @@ end Akteur
 section Ziel
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {fs : List D.Fn}
+  {lok : D.Tab ⊕ D.Glob → Bool}
 
 /-- **The rely for the replay**: a step of thread `u` leaves the stable
     carriers of the head frame of every other thread alone. -/
-theorem andereS (hO : GutO O) (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs) (sp : Speicher D)
+theorem andereS (hO : GutO O) (hS : SperrInvOk S) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
+    (hLok : LokOk P O passes lok sp init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (t : Faden) (htu : t ≠ u)
-    (hF : FadenS P O passes Q S fs (M.faeden t) (M.weltVon t)) :
-    FadenS P O passes Q S fs (M'.faeden t) (M'.weltVon t) := by
+    (hF : FadenS P O passes Q S lok (M.faeden t) (M.weltVon t)) :
+    FadenS P O passes Q S lok (M'.faeden t) (M'.weltVon t) := by
   have e : M'.faeden t = M.faeden t := rufSchrittG_fremd hs t htu
   have hW : M'.weltVon t = M'.speicher.welt (M.faeden t).spur := by
     unfold RufMaschineG.weltVon; rw [e]
   rw [hW, e]
   exact fadenS_speicher hF (fun c hc =>
-    stabilS_rely hO hS hvoll sp init hex hr hs t htu _ List.mem_cons_self c hc)
+    stabilS_rely hO hS sp init hex hLok hr hs t htu _ List.mem_cons_self c hc)
 
 /-- **The start machine is replayed.** -/
 theorem zielInvS_start
-    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P fs f)) = true)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hStart : StartGut P sp init) :
-    ZielInvS P O passes Q S fs (RufStartG P sp init) := by
+    ZielInvS P O passes Q S lok (RufStartG P sp init) := by
   have hz : ∀ t, (RufStartG P sp init).faeden t =
       ⟨[], ⟨(init t).1, (init t).2, sp.welt [], ⟨false, D.params (init t).1,
         Signatur.anfang D (D.signatur (init t).1), (init t).2, .ende (P.rumpf (init t).1)⟩⟩,
@@ -1133,21 +1134,22 @@ theorem zielInvS_start
     obligation proves (`kopfS_frei_inv`). -/
 theorem zielInvS_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hlok : AxEnsLokal Q) (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hK : ∀ f, KoerperGutS P passes Q S f)
-    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P fs f)) = true)
-    (hFS : ∀ f, FussS P S fs f) (e0 : Ereignis D)
+    (hK : ∀ f, KoerperGutS P passes Q S f)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (e0 : Ereignis D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
+    (hLok : LokOk P O passes lok sp init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
-    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvS P O passes Q S fs M)
+    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvS P O passes Q S lok M)
     (hSG : SperrInvG S M) :
-    ZielInvS P O passes Q S fs M' ∧ SperrInvG S M' := by
-  have hRS := rufG_rahmenS hO hS hvoll sp init hex hr
+    ZielInvS P O passes Q S lok M' ∧ SperrInvG S M' := by
+  have hRS := rufG_rahmenS hO hS sp init hex hLok hr
   have hA := akteurS hO hRL hQ hlok hS hsp hK hFragS hFS e0 hs (hI.1 u) (hI.2 u) (hRS u) hSG
   refine ⟨⟨fun t => ?_, fun t => ?_⟩, ?_⟩
   · by_cases htu : t = u
     · subst htu
       exact hA.1
-    · exact andereS hO hS hvoll sp init hex hr hs t htu (hI.1 t)
+    · exact andereS hO hS sp init hex hLok hr hs t htu (hI.1 t)
   · by_cases htu : t = u
     · subst htu
       exact hA.2
@@ -1176,7 +1178,26 @@ theorem zielInvS_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
         (fun O' U R σ hi => semH_peelFrei_falsch S O' U passes R L rest k σ ρ h x hi)
 
 /-- **The replay invariant and the machine lock invariant on every
-    reachable machine.** -/
+    reachable machine**, generic in the local carriers `lok`. -/
+theorem zielInvS_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (hLok : LokOk P O passes lok sp init)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      ZielInvS P O passes Q S lok M ∧ SperrInvG S M := by
+  intro M hr
+  induction hr with
+  | start => exact ⟨zielInvS_start hFragS sp init hStart, sperrInvG_start P S sp init hsp⟩
+  | schritt M M' u hr' hs ih =>
+      exact zielInvS_schritt hO hRL hQ hlok hS hsp hK hFragS hFS e0 init hex hLok hr' hs ih.1 ih.2
+
+/-- **The replay invariant and the machine lock invariant on every
+    reachable machine**, for the local carriers written by no function. -/
 theorem zielInvS_erreichbar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
@@ -1186,21 +1207,17 @@ theorem zielInvS_erreichbar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-      ZielInvS P O passes Q S fs M ∧ SperrInvG S M := by
-  have hFS : ∀ f, FussS P S fs f := fussSperreB_ok hvoll hFuss
-  have hFragS := programmImFragmentS_ok P S hvoll hFrag hFS
-  intro M hr
-  induction hr with
-  | start => exact ⟨zielInvS_start hFragS sp init hStart, sperrInvG_start P S sp init hsp⟩
-  | schritt M M' u hr' hs ih =>
-      exact zielInvS_schritt hO hRL hQ hlok hS hsp hvoll hK hFragS hFS e0 init hex hr' hs ih.1 ih.2
+      ZielInvS P O passes Q S (freiB fs) M ∧ SperrInvG S M := by
+  have hFS : ∀ f, FussS P S (freiB fs) f := fussSperreB_ok hvoll hFuss
+  exact zielInvS_erreichbarL P O passes Q S (freiB fs) sp init e0 hO hRL hQ hlok hS
+    (programmImFragmentS_ok P S hvoll hFrag hFS) hFS (lokOk_frei hO hvoll sp init) hK hStart hsp hex
 
 /-- **A replayed thread is stopped at no `logik` check** (as
     `fadenR_prueft`). -/
 theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
-    (hK : ∀ f, KoerperGutS P passes Q S f) (hFS : ∀ f, FussS P S fs f) {M : RufMaschineG D}
-    (t : Faden) (hF : FadenS P O passes Q S fs (M.faeden t) (M.weltVon t)) :
+    (hK : ∀ f, KoerperGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f) {M : RufMaschineG D}
+    (t : Faden) (hF : FadenS P O passes Q S lok (M.faeden t) (M.weltVon t)) :
     PrueftG O passes M t := by
   have hK' := hF.1
   refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
@@ -1292,7 +1309,7 @@ theorem ziel_ort_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
   intro M hr
-  have hFS : ∀ f, FussS P S fs f := fussSperreB_ok hvoll hFuss
+  have hFS : ∀ f, FussS P S (freiB fs) f := fussSperreB_ok hvoll hFuss
   have hI := zielInvS_erreichbar P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss
     hK hStart hSstart hex M hr
   have hP : KeinLogikHaltG O passes M :=

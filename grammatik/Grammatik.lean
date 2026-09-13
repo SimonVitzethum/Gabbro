@@ -155,3 +155,5 @@ import Grammatik.SperreBeweis
 import Grammatik.SperreMaschine
 import Grammatik.ZielOrtSperre
 import Grammatik.ZielOrtSperreZeuge
+import Grammatik.ZielOrtEinfaden
+import Grammatik.ZielOrtEinfadenZeuge

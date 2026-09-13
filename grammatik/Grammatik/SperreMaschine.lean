@@ -22,18 +22,38 @@ section Rely
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **The local carriers are left alone by other threads**: on every
+    reachable machine, a step of thread `u` does not move a local carrier
+    of the safe set of any frame of another thread. For `lok = freiB fs`
+    (written by no function) this holds on every run (`lokOk_frei`); for a
+    program with one active thread and every carrier local it holds because
+    only that thread moves and the others' frames have empty footprints
+    (`ZielOrtEinfaden.lean`). -/
+def LokOk (P : Programm D) (O : Orakel D) (passes : Nat) (lok : D.Tab ⊕ D.Glob → Bool)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) : Prop :=
+  ∀ {M M' : RufMaschineG D} {u : Faden}, RufErreichbarG P O passes (RufStartG P sp init) M →
+    RufSchrittG P O passes M u M' → ∀ t, t ≠ u →
+    ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, ∀ c ∈ sicher P lok F.f, lok c = true →
+      TraegerGleich M'.speicher M.speicher c
+
+/-- Carriers written by no function are left alone by every step. -/
+theorem lokOk_frei (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) : LokOk P O passes (freiB fs) sp init :=
+  fun _ hs _ _ _ _ c _ hc => schritt_traeger hO hs c (Or.inr (freiB_ok hvoll hc _))
+
 /-- **Another thread's step leaves the stable carriers of every frame of
     thread `t` alone**: a safe carrier is guarded by a signature lock the
-    frame's thread holds (`rufG_haelt_signatur`) or written by no function;
-    a protected carrier of a lock the frame names held is guarded by that
+    frame's thread holds (`rufG_haelt_signatur`) or local (`LokOk`); a
+    protected carrier of a lock the frame names held is guarded by that
     lock, which the thread holds (`rufG_haelt_statisch`). -/
-theorem stabilS_rely (hO : GutO O) {S : SperrInv D} (hS : SperrInvOk S) {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (sp : Speicher D)
+theorem stabilS_rely (hO : GutO O) {S : SperrInv D} (hS : SperrInvOk S)
+    {lok : D.Tab ⊕ D.Glob → Bool} (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
+    (hlok : LokOk P O passes lok sp init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (t : Faden) (htu : t ≠ u)
     (F : RufRahmenG D) (hF : F ∈ (M.faeden t).kopf :: (M.faeden t).stapel)
-    (c : D.Tab ⊕ D.Glob) (hc : c ∈ stabilS P S fs F.f F.rest.2.2.1) :
+    (c : D.Tab ⊕ D.Glob) (hc : c ∈ stabilS P S lok F.f F.rest.2.2.1) :
     TraegerGleich M'.speicher M.speicher c := by
   rcases stabilS_mem.mp hc with hc | ⟨L, hL, hcL⟩
   · have hsf := (sicher_mem.mp hc).2
@@ -42,7 +62,7 @@ theorem stabilS_rely (hO : GutO O) {S : SperrInv D} (hS : SperrInvOk S) {fs : Li
     · obtain ⟨L, hB, hLh⟩ := sigB_ok hsig
       have hLt := rufG_haelt_signatur hO sp init hr t F hF L hLh
       exact relyG hO sp init hex hr hs t (fun e => htu e.symm) c L hB hLt
-    · exact schritt_traeger hO hs c (Or.inr (freiB_ok hvoll hfrei _))
+    · exact hlok hr hs t htu F hF c hc hfrei
   · have hLt := rufG_haelt_statisch hO sp init hr t F hF L hL
     exact relyG hO sp init hex hr hs t (fun e => htu e.symm) c L (hS.1 L c hcL) hLt
 
@@ -52,7 +72,7 @@ end Rely
 
 section Stapel
 
-variable (P : Programm D) (S : SperrInv D) (fs : List D.Fn)
+variable (P : Programm D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool)
 
 /-- The frame invariant of a stack (as `RahmenStapel`), over the stable
     carriers of each suspended frame at its holdings. -/
@@ -61,32 +81,32 @@ def RahmenStapelS (Sp : Speicher D) :
   | _, [] => True
   | G, F :: rest =>
       (∀ c, TraegerSchreibt G.1 c = true → TraegerSchreibt F.f c = true) ∧
-      (∀ c ∈ stabilS P S fs F.f F.rest.2.2.1, TraegerSchreibt G.1 c = false →
+      (∀ c ∈ stabilS P S lok F.f F.rest.2.2.1, TraegerSchreibt G.1 c = false →
         TraegerGleich Sp G.2.2.speicher c) ∧
       RahmenStapelS Sp (RufSchluesselG F) rest
 
 def RahmenInvS (M : RufMaschineG D) : Prop :=
-  ∀ t, RahmenStapelS P S fs M.speicher (RufSchluesselG (M.faeden t).kopf) (M.faeden t).stapel
+  ∀ t, RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden t).kopf) (M.faeden t).stapel
 
 end Stapel
 
 section StapelL
 
-variable {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+variable {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool}
 
 theorem rahmenStapelS_cons {Sp : Speicher D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D} {F : RufRahmenG D} {rest : List (RufRahmenG D)} :
-    RahmenStapelS P S fs Sp G (F :: rest) ↔
+    RahmenStapelS P S lok Sp G (F :: rest) ↔
       ((∀ c, TraegerSchreibt G.1 c = true → TraegerSchreibt F.f c = true) ∧
-      (∀ c ∈ stabilS P S fs F.f F.rest.2.2.1, TraegerSchreibt G.1 c = false →
+      (∀ c ∈ stabilS P S lok F.f F.rest.2.2.1, TraegerSchreibt G.1 c = false →
         TraegerGleich Sp G.2.2.speicher c) ∧
-      RahmenStapelS P S fs Sp (RufSchluesselG F) rest) := Iff.rfl
+      RahmenStapelS P S lok Sp (RufSchluesselG F) rest) := Iff.rfl
 
 theorem rahmenStapelS_speicher {Sp Sp' : Speicher D} :
     ∀ {G : Σ f : D.Fn, Env D (D.params f) × World D} {st : List (RufRahmenG D)},
-      RahmenStapelS P S fs Sp G st →
+      RahmenStapelS P S lok Sp G st →
       (∀ c, TraegerSchreibt G.1 c = false → TraegerGleich Sp' Sp c) →
-        RahmenStapelS P S fs Sp' G st
+        RahmenStapelS P S lok Sp' G st
   | _, [], _, _ => trivial
   | G, F :: rest, h, hS => by
       obtain ⟨hk, hf, hr⟩ := rahmenStapelS_cons.mp h
@@ -99,9 +119,9 @@ theorem rahmenStapelS_speicher {Sp Sp' : Speicher D} :
 
 theorem rahmenStapelS_fremd {Sp Sp' : Speicher D} :
     ∀ {G : Σ f : D.Fn, Env D (D.params f) × World D} {st : List (RufRahmenG D)},
-      RahmenStapelS P S fs Sp G st →
-      (∀ F ∈ st, ∀ c ∈ stabilS P S fs F.f F.rest.2.2.1, TraegerGleich Sp' Sp c) →
-        RahmenStapelS P S fs Sp' G st
+      RahmenStapelS P S lok Sp G st →
+      (∀ F ∈ st, ∀ c ∈ stabilS P S lok F.f F.rest.2.2.1, TraegerGleich Sp' Sp c) →
+        RahmenStapelS P S lok Sp' G st
   | _, [], _, _ => trivial
   | G, F :: rest, h, hS => by
       obtain ⟨hk, hf, hr⟩ := rahmenStapelS_cons.mp h
@@ -110,20 +130,20 @@ theorem rahmenStapelS_fremd {Sp Sp' : Speicher D} :
         rahmenStapelS_fremd hr (fun F' hF' => hS F' (List.mem_cons_of_mem _ hF'))⟩
 
 theorem rahmenStapelS_push {Sp Sp' : Speicher D} {F : RufRahmenG D}
-    {st : List (RufRahmenG D)} (h : RahmenStapelS P S fs Sp (RufSchluesselG F) st)
+    {st : List (RufRahmenG D)} (h : RahmenStapelS P S lok Sp (RufSchluesselG F) st)
     (hmem : ∀ c, TraegerSchreibt F.f c = false → TraegerGleich Sp' Sp c)
     (G : Σ f : D.Fn, Env D (D.params f) × World D)
     (hk : ∀ c, TraegerSchreibt G.1 c = true → TraegerSchreibt F.f c = true)
     (hG : ∀ c, TraegerGleich Sp' G.2.2.speicher c)
     (r : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D (vertragVon D F.f) l Γ Λ) :
-    RahmenStapelS P S fs Sp' G (⟨F.f, F.rho, F.s0, r⟩ :: st) :=
+    RahmenStapelS P S lok Sp' G (⟨F.f, F.rho, F.s0, r⟩ :: st) :=
   rahmenStapelS_cons.mpr ⟨hk, fun c _ _ => hG c, rahmenStapelS_speicher h hmem⟩
 
 theorem rahmenStapelS_pop {Sp Sp' : Speicher D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D} {caller : RufRahmenG D}
-    {rst : List (RufRahmenG D)} (h : RahmenStapelS P S fs Sp G (caller :: rst))
+    {rst : List (RufRahmenG D)} (h : RahmenStapelS P S lok Sp G (caller :: rst))
     (hmem : ∀ c, TraegerSchreibt G.1 c = false → TraegerGleich Sp' Sp c) :
-    RahmenStapelS P S fs Sp' (RufSchluesselG caller) rst := by
+    RahmenStapelS P S lok Sp' (RufSchluesselG caller) rst := by
   obtain ⟨hk, _, hr⟩ := rahmenStapelS_cons.mp h
   refine rahmenStapelS_speicher hr (fun c hw => hmem c ?_)
   cases hG : TraegerSchreibt G.1 c with
@@ -134,9 +154,9 @@ theorem rahmenStapelS_pop {Sp Sp' : Speicher D}
     memory. -/
 theorem gleichOhne_of_stapelS {Sp : Speicher D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D} {F : RufRahmenG D}
-    {rest : List (RufRahmenG D)} (h : RahmenStapelS P S fs Sp G (F :: rest)) (s1 : World D)
+    {rest : List (RufRahmenG D)} (h : RahmenStapelS P S lok Sp G (F :: rest)) (s1 : World D)
     (hs1 : s1.slots = Sp.slots ∧ s1.globs = Sp.globs) :
-    GleichOhne G.1 (stabilS P S fs F.f F.rest.2.2.1) G.2.2 s1 := by
+    GleichOhne G.1 (stabilS P S lok F.f F.rest.2.2.1) G.2.2 s1 := by
   obtain ⟨_, hf, _⟩ := rahmenStapelS_cons.mp h
   refine ⟨fun t ht hw => ?_, fun x hx hw => ?_⟩
   · have e : Sp.slots t = G.2.2.slots t := hf (.inl t) ht hw
@@ -150,15 +170,15 @@ end StapelL
 
 section Maschine
 
-variable {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D} {fs : List D.Fn}
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool}
 
 set_option maxHeartbeats 1000000 in
 /-- **The acting thread keeps its frame invariant** (as
     `rahmenStapel_akteur`). -/
 theorem rahmenStapelS_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (h : RahmenStapelS P S fs M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel) :
-    RahmenStapelS P S fs M'.speicher (RufSchluesselG (M'.faeden u).kopf) (M'.faeden u).stapel := by
+    (h : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel) :
+    RahmenStapelS P S lok M'.speicher (RufSchluesselG (M'.faeden u).kopf) (M'.faeden u).stapel := by
   have hmem : ∀ c, TraegerSchreibt (M.faeden u).kopf.f c = false →
       TraegerGleich M'.speicher M.speicher c :=
     fun c hc => schritt_traeger hO hs c (Or.inr hc)
@@ -249,31 +269,34 @@ theorem rahmenStapelS_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
 
 /-- **Another thread's step keeps the frame invariant** (every stable
     carrier of every suspended frame is left alone, `stabilS_rely`). -/
-theorem rahmenStapelS_andere (hO : GutO O) (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+theorem rahmenStapelS_andere (hO : GutO O) (hS : SperrInvOk S)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
+    (hlok : LokOk P O passes lok sp init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (t : Faden) (htu : t ≠ u)
-    (h : RahmenStapelS P S fs M.speicher (RufSchluesselG (M.faeden t).kopf) (M.faeden t).stapel) :
-    RahmenStapelS P S fs M'.speicher (RufSchluesselG (M'.faeden t).kopf) (M'.faeden t).stapel := by
+    (h : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden t).kopf) (M.faeden t).stapel) :
+    RahmenStapelS P S lok M'.speicher (RufSchluesselG (M'.faeden t).kopf) (M'.faeden t).stapel := by
   rw [rufSchrittG_fremd hs t htu]
   exact rahmenStapelS_fremd h (fun F hF c hc =>
-    stabilS_rely hO hS hvoll sp init hex hr hs t htu F (List.mem_cons_of_mem _ hF) c hc)
+    stabilS_rely hO hS sp init hex hlok hr hs t htu F (List.mem_cons_of_mem _ hF) c hc)
 
 /-- **CALLEES RESPECT THEIR FRAMES ON G, over stable carriers
     (`rufG_rahmenS`).** On every reachable machine, for every suspended frame
     `F` waiting for a callee `g` entered at `s0`: live memory agrees with
     `s0` on every stable carrier of `F` (at its holdings) that `g` does not
     declare as written. Premises: `GutO`, a well-formed lock-invariant
-    family, a complete member list, the exclusive start. No footprint check
-    is needed: stability is by the held locks themselves. -/
-theorem rufG_rahmenS (hO : GutO O) (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    family, the local carriers left alone by other threads (`LokOk`), the
+    exclusive start. No footprint check is needed: stability is by the held
+    locks themselves. -/
+theorem rufG_rahmenS (hO : GutO O) (hS : SperrInvOk S)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
+    (hlok : LokOk P O passes lok sp init)
     {M : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M) :
-    RahmenInvS P S fs M := by
+    RahmenInvS P S lok M := by
   induction hr with
   | start =>
       intro t
-      show RahmenStapelS P S fs sp _ ((RufStartG P sp init).faeden t).stapel
+      show RahmenStapelS P S lok sp _ ((RufStartG P sp init).faeden t).stapel
       have e : ((RufStartG P sp init).faeden t).stapel = [] := by
         show (match init t with
           | ⟨g, rho⟩ => (⟨[], ⟨g, rho, sp.welt [], ⟨false, D.params g,
@@ -288,7 +311,7 @@ theorem rufG_rahmenS (hO : GutO O) (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g 
       by_cases htu : t = u
       · subst htu
         exact rahmenStapelS_akteur hO hs (ih t)
-      · exact rahmenStapelS_andere hO hS hvoll sp init hex hr' hs t htu (ih t)
+      · exact rahmenStapelS_andere hO hS sp init hex hlok hr' hs t htu (ih t)
 
 end Maschine
 
