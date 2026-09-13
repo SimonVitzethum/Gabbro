@@ -31,8 +31,10 @@ impl fn schreib_konstant(v : u8) -> u8
 }
 
 -- Dynamic index over a static carrier: checked block against `KAP`.
+-- **5 since 2026-09-13 (lane 139, F1): the store counts its target index.** (Re-measured
+-- by lane 139; the emission verdicts below are unchanged.)
 impl fn schreib_dynamisch(i : u32 in 0 ..< KAP, v : u8) -> u8
-    effects { reads PUFFER, writes PUFFER } costs <= 4 ops
+    effects { reads PUFFER, writes PUFFER } costs <= 5 ops
 {
     PUFFER[i] = v;
     return PUFFER[i];

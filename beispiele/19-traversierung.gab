@@ -45,14 +45,18 @@ impl fn aktive_loeschen(w : ptr<normal, rw> Werte)
 -- Dieselbe Domaene, lesend: die Schranke ist dieselbe, die Wirkung eine andere.
 impl fn aktive_zaehlen(w : ptr<normal, r> Werte) -> u32
     effects { reads w.slots }
-    -- **50, und die Zahl ist am 2026-08-19 GEFALLEN.** Sie stand auf 82, weil der
-    -- `narrow`-Zweig mitzaehlte; mit «H2.1» ist er fort, und `gabbro kosten` liest 50.
-    -- *Abgelesen, nicht geschaetzt (W2) -- eine `costs`-Zeile ist eine Messung.*
+    -- **130, und die Zahl ist am 2026-09-13 NEU GEFALLEN (Lane 139, F1 + F6).** Sie stand auf
+    -- 50, weil zwei Stellen nichts zaehlten: das `+=` lud und rechnete umsonst (`+2` je
+    -- Durchgang), und die Invariante `n <= passes` lief unbezahlt mit (`+3` je Durchgang).
+    -- 16 Slots x 8 ops je Durchgang, plus `let` und `return`. *Abgelesen, nicht geschaetzt
+    -- (W2) -- eine `costs`-Zeile ist eine Messung.* (Die Invariante ist am C Geist und wird
+    -- dort nicht ausgewertet; gezaehlt wird sie trotzdem -- was Lean zaehlt, zaehlt der
+    -- Pruefer, und eine obere Schranke bleibt eine.)
     --
     -- **Und das ist der zweite Ertrag der Regel, der im Plan nicht stand:** eine
     -- Klempnereizeile, die niemand braucht, kostet auch Laufzeit. Der Pass rechnet nach,
     -- und eine zu kleine Zusage faellt an `K001`.
-    costs   <= 50 ops
+    costs   <= 130 ops
 {
     let mut n : u32 in 0 .. NSLOTS = 0;
     traverse i over slots of w by unvisited

@@ -3102,19 +3102,19 @@ fn retry_schranken(baum: &Programm) -> HashMap<u32, i128> {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else { return };
         let FnRumpf::Block(b) = &f.rumpf else { return };
-        sammle_retry(baum, modul, b, &mut aus);
+        sammle_retry(baum, modul, f, b, &mut aus);
     });
     aus
 }
 
-fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, i128>) {
+fn sammle_retry(baum: &Programm, modul: &str, f: &FnDecl, b: &Block, aus: &mut HashMap<u32, i128>) {
     for s in &b.anweisungen {
         // **The one decision this collector makes: does this statement OPEN a `retry`?**
         if let StmtArt::Schleife(sch) = &s.art {
             if let Schleife::Retry(r) = sch.as_ref() {
                 let budget = crate::umgebung::Umgebung::sammle(baum)
                     .konst_wert(modul, &r.schranke);
-                let je_gang = crate::kosten::durchgangskosten(baum, modul, r, HashMap::new());
+                let je_gang = crate::kosten::durchgangskosten(baum, modul, f, r, HashMap::new());
                 if let (Some(n), Some(c)) = (budget, je_gang) {
                     if c > 0 && n / c > 0 {
                         aus.insert(r.span.von, n / c);
@@ -3132,7 +3132,7 @@ fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, 
         // names the wrong reason is the failure this file is built against, one step short
         // of a silent one.
         for k in crate::unterbloecke(s) {
-            sammle_retry(baum, modul, k, aus);
+            sammle_retry(baum, modul, f, k, aus);
         }
     }
 }

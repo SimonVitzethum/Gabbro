@@ -102,6 +102,9 @@ lock TOPO protects { Topologie } rank 1 held <= 40 ops;
 
 -- (a) `K002` aus `sperrbloecke`: 1536 ops gegen `held <= 40`, und die 1536 kommen aus
 --     `Riesen` (512), nicht aus `Topologie` (8).
+--     **2560 seit dem 2026-09-13 (Lane 139, F1): 512 x (2 + 3) statt 512 x (2 + 1).**
+--     Das innere `summe += 1` laedt und rechnet; die Absage steht -- der Block
+--     ueberschreitet `held` weiter um zwei Groessenordnungen.
 impl fn unter_der_sperre(g : index into Topologie, v : index into Riesen) -> u32
     effects { reads Topologie.slots, reads Riesen.slots, locks TOPO }
 {

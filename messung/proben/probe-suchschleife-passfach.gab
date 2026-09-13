@@ -43,6 +43,16 @@
 -- of a loop that may stop early is the loop that does not, and that is the promise already
 -- written. The rest of the record stands in `messung/BERICHT-SUCHE.md`.
 --
+-- **Re-measured 2026-09-13 (lane 139, F1 + F6): eight ops per element.** The `+=` loads and
+-- computes (`+2` per pass) and the invariant `summe <= passes` runs on every pass (`+3`
+-- per pass, ghost at the C but counted like Lean):
+--
+--     NSLOTS=16   costs <= 129 -> refused   costs <= 130 -> accepted
+--     NSLOTS=32   costs <= 257 -> refused   costs <= 258 -> accepted
+--
+-- The question the row answers is unchanged: the worst case of a loop that may stop early
+-- is the loop that does not.
+--
 -- 2. WHAT THE CORPUS DOES INSTEAD -- measured, not assumed
 -- ---------------------------------------------------------
 -- 57 loops in the 179 corpus files: 33 `traverse`, 13 `retry`, 11 `forever`.
@@ -126,7 +136,9 @@ impl fn letzter_treffer(a : ptr<normal, r> Tafel, schluessel : u32) -> u32
 --     written.
 impl fn kostenprobe(a : ptr<normal, r> Tafel) -> u32
     effects { reads a.slots }
-    costs   <= 64 ops
+    -- **130 since 2026-09-13 (lane 139): the smallest promise that still passes.** See the
+    -- re-measured table under (d) above.
+    costs   <= 130 ops
 {
     let mut summe : u32 in 0 .. 65535 = 0;
     traverse s over slots of a by unvisited

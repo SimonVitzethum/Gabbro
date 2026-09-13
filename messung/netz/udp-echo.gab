@@ -83,7 +83,9 @@ type Kopfworte = {
 impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
     ensures result <= 4294967295
     effects { reads k }
-    costs   <= 64 ops
+    -- **92 since 2026-09-13 (lane 139, F1 + F6): ten words x 9 ops.** The `+=` loads and
+    -- computes and the invariant `s <= 65535 * passes` runs on every pass.
+    costs   <= 92 ops
 {
     let mut s : u32 = 0;
     traverse i over elems of k.wort by unvisited
@@ -116,7 +118,10 @@ impl fn falte(s : u32) -> u16
 
 impl fn kopfsumme(k : ptr<normal, r> Kopfworte) -> u16
     effects { reads k }
-    costs   <= 88 ops
+    -- **109 since 2026-09-13 (lane 139): knock-on.** A call counts the callee's DECLARED
+    -- costs, and `summe_1071` was re-measured 64 -> 92 the same day: 16 (`falte`) + 92 +
+    -- 1 (`k`).
+    costs   <= 109 ops
 {
     return falte(summe_1071(k));
 }

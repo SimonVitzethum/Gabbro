@@ -509,6 +509,11 @@ pub(crate) struct RegInfo {
     /// **«B26»: the FALSIFIER of the `requires`** -- `(reason, case)`, present exactly where
     /// the declaration carries `requires … else R::C`. Then the READ is fallible (`R011`).
     pub(crate) fehlbar: Option<(String, String)>,
+    /// **Lane 139 (F4): the `requires` predicate itself.** G evaluates it on every read of
+    /// this register, so the cost pass counts it at every failable read. It stands beside
+    /// `fehlbar` (which names only the falsifier) because the cost reader needs the
+    /// PREDICATE, not its name -- and a second device walk for it would be W7.
+    pub(crate) versprechen: Option<Pred>,
 }
 
 /// **The register table per device** -- register name to class, fields and phase list.
@@ -538,6 +543,7 @@ pub(crate) fn geraetetabelle(baum: &Programm) -> BTreeMap<String, BTreeMap<Strin
                         .requires_grund
                         .as_ref()
                         .map(|(g, f)| (g.text.clone(), f.text.clone())),
+                    versprechen: r.requires.clone(),
                 },
             );
         };

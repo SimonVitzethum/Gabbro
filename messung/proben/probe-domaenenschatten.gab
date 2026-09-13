@@ -30,7 +30,9 @@
 -- ueber den echten:
 --
 --     if f { let t = g;  traverse i over slots of t … }  ->  6 items, 0 errors, 0 hints
---     if f {             traverse i over slots of g … }  ->  K001: the body costs 195
+--     if f {             traverse i over slots of g … }  ->  K001: the body costs 325
+--     (195 at the 2026-08-31 measurement; 325 since lane 139 counts `+=` as load+compute,
+--     +2 per pass over 64 passes)
 --
 -- **Dieselbe Schleife, zwei Zahlen.** `t` ist zur Laufzeit `g`; die 17 kommt aus
 -- `Winzig count 4`, die 195 aus `Riesig count 64`. Der Pass hat den Parameter gelesen und
@@ -81,7 +83,7 @@
 -- und die Sprache erlaubt die Form. Gebaut wird der **Blockgeltungsbereich in `kosten.rs`
 -- und `domaene.rs`**, nach dem Vorbild von `m1.rs::Lage`.
 --
--- NACH DEM BAU faellt diese Datei an `K001` mit `the body costs 195`.
+-- NACH DEM BAU faellt diese Datei an `K001` mit `the body costs 325` (195 am 2026-08-31).
 
 module probe::domaenenschatten {
 
@@ -97,7 +99,8 @@ table Riesig count GROSS {
 }
 
 -- **Der Parameter `t` zeigt auf die kleine Tabelle, das `let` im `if`-Rumpf auf die
--- grosse.** Vor dem Bau: 0 Fehler. Nach dem Bau: `K001 … the body costs 195`.
+-- grosse.** Vor dem Bau: 0 Fehler. Nach dem Bau: `K001 … the body costs 325` (195 am
+-- 2026-08-31, +2 je Durchgang seit Lane 139).
 impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig, f : bool) -> u32
     effects { reads t.slots, reads g.slots }
     costs   <= 17 ops

@@ -73,7 +73,7 @@ as a register of measured values.
 |---|---|---|---|---|---|
 | `1` | `abnahme` | `beispiele/06-annahmen.gab` | `4 ops` | `P0` | replicate the single global read; template as is |
 | `2` | `freigabe` | `beispiele/06-annahmen.gab` | `4 ops` | `P0` | replicate the single global read; template as is |
-| `3` | `byte_legen` | `beispiele/25-entrust.gab` | `2 ops` | `P0` | replicate the slot struct; fixed-seed refill; template as is |
+| `3` | `byte_legen` | `beispiele/25-entrust.gab` | `3 ops` | `P0` | replicate the slot struct; fixed-seed refill; template as is |
 | `4` | `barriere` | `beispiele/60-annahme-mit-maschine.gab` | `1 ops` | `P0` | fence executes in ring three; bracket and calibrate |
 | `5` | `schreib_schranke` | `beispiele/67-befehlsebene.gab` | `1 ops` | `P0` | fence executes in ring three; bracket and calibrate |
 | `6` | `speicher_schranke` | `beispiele/67-befehlsebene.gab` | `1 ops` | `P0` | fence executes in ring three; bracket and calibrate |
@@ -97,7 +97,7 @@ as a register of measured values.
 | `24` | `bearbeite` | `beispiele/59-eintritt-nimmt-maskierte-sperre.gab` | `8 ops` | `P3` | ring lock is prototypes only; same choice |
 | `25` | `ruf_verteiler` | `beispiele/59-eintritt-nimmt-maskierte-sperre.gab` | `40 ops` | `P3` | same lock as above; same choice |
 | `26` | `halt_verteiler` | `beispiele/57-faedenhalt.gab` | `900 ops` | `P3` | needs the thread lock plus live threads; no thread bench |
-| `27` | `alle_anhalten` | `beispiele/57-faedenhalt.gab` | `600 ops` | `P3` | halting threads needs threads; same bench as above |
+| `27` | `alle_anhalten` | `beispiele/57-faedenhalt.gab` | `640 ops` | `P3` | halting threads needs threads; same bench as above |
 
 `27` rows: `6` in `P0`, `5` in `P1`, `8` in `P2`, `8` in `P3`.
 No row may stand twice, and a new `deadline` in any of the twelve files

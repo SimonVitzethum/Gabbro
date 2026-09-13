@@ -2914,7 +2914,7 @@ device Ring(basis : u64) at mmio {
     reg IDX : u16 wrapping @0x102 class rw
 }
 impl fn quadriere(t : ptr<normal, rw> T, i : index into T)
-    effects { reads t.slots, writes t.slots } costs <= 6 ops
+    effects { reads t.slots, writes t.slots } costs <= 7 ops
 { t.slots[i].a = t.slots[i].a * t.slots[i].a; }
 impl fn ring(r : ptr<mmio, rw> Ring)
     effects { reads r.IDX, writes r.IDX } costs <= 6 ops
@@ -2955,7 +2955,7 @@ fn ein_static_ohne_mut_wird_nicht_beschrieben() {
             "module m {{\n\
              type Z = u32 in 0 .. 1000;\n\
              static {mut_wort}zaehler : Z = 0;\n\
-             impl fn tor() effects {{ reads zaehler, writes zaehler }} costs <= 3 ops \
+             impl fn tor() effects {{ reads zaehler, writes zaehler }} costs <= 5 ops \
              {{ if zaehler < 1000 {{ zaehler += 1; }} }}\n\
              }}\n"
         )
@@ -6341,12 +6341,16 @@ impl fn f(w : ptr<normal, r> W) -> bool
 /// `K001` text per site, never out of a tally:
 ///
 /// ```text
-///   table T count n        slots of w              n in {3, 7, 13}   ->  1 x n
-///   type S = [u32; n]      elems of s.worte        n in {2, 9, 31}   ->  1 x n
+///   table T count n        slots of w              n in {3, 7, 13}   ->  2 x n
+///   type S = [u32; n]      elems of s.worte        n in {2, 9, 31}   ->  2 x n
 ///   type Q = [u32; n]      queue q by consuming    n in {3, 5, 16}   ->  2 x n
-///   table T count n        descendants of g        n in {4, 6, 11}   ->  1 x n
+///   table T count n        descendants of g        n in {4, 6, 11}   ->  2 x n
 ///                          with g : index into T
 /// ```
+///
+/// **2 x n since 2026-09-13 (lane 139, F1)** -- every arm below stores through an index,
+/// and the store counts its target index. (The `queue` arm always cost 2 per pass; the
+/// other three moved from 1.)
 ///
 /// **The four are FOUR read paths and not one**, and that is why each gets its own dial:
 /// `slots of` resolves through `Typ::Tabelle`, `index into T` through the name prefix of
@@ -6395,8 +6399,9 @@ impl fn f(w : ptr<normal, rw> T)
         );
         assert_eq!(
             gedruckt(&q),
-            Some(n),
-            "`slots of` at `count {n}`: the bound is the table's `count`, 1 op per pass"
+            Some(2 * n),
+            "`slots of` at `count {n}`: the bound is the table's `count`, 2 ops per pass \
+             since lane 139 (the store counts its target index)"
         );
     }
 
@@ -6422,8 +6427,9 @@ impl fn f(s : ptr<normal, rw> S)
         );
         assert_eq!(
             gedruckt(&q),
-            Some(n),
-            "`elems of` at `[u32; {n}]`: the bound is the array length, 1 op per pass"
+            Some(2 * n),
+            "`elems of` at `[u32; {n}]`: the bound is the array length, 2 ops per pass \
+             since lane 139 (the store counts its target index)"
         );
     }
 
@@ -6490,9 +6496,9 @@ impl fn f(w : ptr<normal, rw> T, g : index into T)
         );
         assert_eq!(
             gedruckt(&q),
-            Some(n),
+            Some(2 * n),
             "`descendants of g` with `g : index into T` at `count {n}`: the bound is the \
-             table named by the TYPE"
+             table named by the TYPE (2 ops per pass since lane 139)"
         );
     }
 
@@ -8262,7 +8268,7 @@ impl fn f(x : u8) -> u8 effects { pure } costs <= 8 ops {
 /// **The exact number is the point, and it is what kills a too-wide fix.** A version that
 /// binds every `let` to `Unbekannt` also stops printing 17 -- it prints `OFFEN` and refuses
 /// at `K003`, which looks like a repair and is a second defect. Only the honest reading of
-/// the shadowing binding lands on 197.
+/// the shadowing binding lands on 325 (197 before lane 139 counted `+=` as a bare store).
 #[test]
 fn ein_let_im_inneren_block_verdeckt_den_parameter_und_die_schranke_folgt_ihm() {
     let q = "module p {
@@ -8289,10 +8295,11 @@ impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig, f : bool)
 }
 }
 ";
-    // 197 = the bound of `Riesig` (64), not the 17 of `Winzig` (4).
+    // **325 since lane 139 (197 before)** -- 64 passes over the bound of `Riesig`, not
+    // the 17 of `Winzig` (4); each pass costs (3 + 2) ops since `+=` loads and computes.
     assert_eq!(
         gerechnet(q, "schatten"),
-        197,
+        325,
         "the traversal runs over the INNER `t`, which is `g` -- 64 slots, not 4"
     );
     let (b, mut a) = gabbro_syntax::lies("p.gab", q);
@@ -8343,8 +8350,9 @@ impl fn ueber_ein_let(w : ptr<normal, r> Werte) -> u32
 ";
     assert_eq!(
         gerechnet(q, "ueber_ein_let"),
-        28,
-        "`tafel` IS `w` -- 8 slots, and the number stands in the declaration"
+        44,
+        "`tafel` IS `w` -- 8 slots, and the number stands in the declaration \
+         (28 before lane 139 counted `+=` as a bare store)"
     );
     let (b, mut a) = gabbro_syntax::lies("p.gab", q);
     let _ = gabbro_check::pruefe(&b, &mut a);

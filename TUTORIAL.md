@@ -350,7 +350,7 @@ const HALF : u32 = 2147483647;
 -- makes `lo + hi` fit, and `HALF + HALF` is 4 294 967 294, one under `u32::max`.
 pub fn midpoint(lo : u32, hi : u32) -> u32
     effects { pure }
-    costs   <= 6 ops
+    costs   <= 8 ops
 {
     narrow lo to 0 .. HALF else { return 0; }
     narrow hi to 0 .. HALF else { return 0; }

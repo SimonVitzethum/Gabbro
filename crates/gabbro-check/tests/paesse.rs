@@ -1181,6 +1181,86 @@ fn ein_ruf_im_index_kostet_was_er_kostet() {
     faellt_nicht(&quelle("1", "return t.slots[1].x;"));
 }
 
+/// **Lane 139 (F1/F4/F5/F6): the cost pass counts what the Lean bound counts.**
+///
+/// Four under-counts, one test each, always both directions: the tight promise falls, the
+/// re-measured number goes through. The file-level poison probes are
+/// `beispiele/gift/920`-`924`.
+#[test]
+fn kosten_zaehlt_was_die_lean_schranke_zaehlt() {
+    // F1: the target index of a store. Before lane 139 the body cost 1.
+    let store = |zusage: &str| {
+        format!(
+            "module p {{\ntable T count 4 {{ slot {{ x : u32, }} }}\n\
+             impl fn teuer() -> u32 in 0 .. 3 effects {{ pure }} costs <= 100 ops \
+             {{ return 1; }}\n\
+             impl fn f(t : ptr<normal, rw> T) effects {{ writes t.slots }} \
+             costs <= {zusage} ops {{ t.slots[teuer()].x = 5; }}\n}}"
+        )
+    };
+    faellt_mit(&store("3"), "K001");
+    faellt_nicht(&store("101"));
+    // F1, compound: `+=` loads and computes. Before lane 139 the body cost 3.
+    let plus = |zusage: &str| {
+        format!(
+            "module p {{\n\
+             impl fn f() -> u32 in 0 .. 101 effects {{ pure }} costs <= {zusage} ops \
+             {{ let mut m : u32 in 0 .. 101 = 0; m += 1; return m; }}\n}}"
+        )
+    };
+    faellt_mit(&plus("4"), "K001");
+    faellt_nicht(&plus("5"));
+    // F5: `narrow` reads its subject. Before lane 139 the body cost 2.
+    let narrow = |zusage: &str| {
+        format!(
+            "module p {{\n\
+             impl fn f(x : u32) -> u32 effects {{ pure }} costs <= {zusage} ops \
+             {{ narrow x to 0 .. 10 else {{ return 0; }} return x; }}\n}}"
+        )
+    };
+    faellt_mit(&narrow("2"), "K001");
+    faellt_nicht(&narrow("3"));
+    // F6: the traverse invariant runs on every pass. Before lane 139 the body cost 14.
+    let traversierung = |zusage: &str| {
+        format!(
+            "module p {{\nconst VIER : u32 = 4;\n\
+             table Werte count VIER {{ slot {{ aktiv : bool, }} }}\n\
+             impl fn zaehle(w : ptr<normal, r> Werte) -> u32 in 0 .. 4 \
+             effects {{ reads w.slots }} costs <= {zusage} ops {{\n\
+             let mut n : u32 in 0 .. 4 = 0;\n\
+             traverse i over slots of w by unvisited touches reads w.slots \
+             invariant n <= passes {{ if w.slots[i].aktiv {{ n += 1; }} }}\n\
+             return n;\n}}\n}}"
+        )
+    };
+    faellt_mit(&traversierung("20"), "K001");
+    faellt_nicht(&traversierung("34"));
+}
+
+/// **Lane 139 (F2): one pass is the body PLUS the `until`.**
+///
+/// The `until` predicate runs on every pass (`FRAGMENTE.md` F4 polls with an empty body),
+/// and the emitter divides the budget by body + condition (`durchgangskosten`) -- but
+/// `K006` held only the body against the promise. A costly `until` fit the emitter's
+/// arithmetic and never met the check.
+#[test]
+fn k006_haelt_den_until_dagegen() {
+    let quelle = |schranke: &str| {
+        format!(
+            "module t {{\n\
+             impl fn teuer() -> u32 effects {{ pure }} costs <= 100 ops {{ return 1; }}\n\
+             extern fn leer() -> never effects {{ diverges }} costs <= 0 ops;\n\
+             impl fn f() -> u32 effects {{ pure }} costs <= 4096 ops\n\
+             {{ retry warten until teuer() == 9 bounded {schranke} ops on_exceeded leer \
+             effects {{ pure }} {{ }} return 0; }}\n}}"
+        )
+    };
+    // One pass costs 101 (empty body + `teuer() == 9`): silent before lane 139, `K006`
+    // after it -- and exactly silent again at the honest number.
+    faellt_mit(&quelle("100"), "K006");
+    faellt_nicht(&quelle("101"));
+}
+
 /// **`match (a)` named no variants at all** (`beispiele/gift/595`).
 ///
 /// The subject was read with a bare `if let ExprArt::Ort(…)`, so one pair of brackets took

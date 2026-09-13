@@ -20,7 +20,10 @@ device Ring(basis : u64) at mmio {
 
 impl fn vorruecken(r : ptr<mmio, rw> Ring)
     effects { writes r.AVAIL_IDX }
-    costs   <= 2 ops
+    -- **3 seit dem 2026-09-13 (Lane 139, F1): `+=` laedt und rechnet.** `r.AVAIL_IDX += 1`
+    -- senkt auf Lesen, Rechnen, Schreiben ab -- ein Laden plus eine arithmetische Operation
+    -- auf die gespeicherte 2. *Abgelesen (`gabbro kosten`), nicht geschaetzt.*
+    costs   <= 3 ops
 {
     r.AVAIL_IDX += 1;
 }

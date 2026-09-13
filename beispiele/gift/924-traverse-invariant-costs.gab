@@ -1,0 +1,37 @@
+-- erwartet: K001
+-- **Lane 139 (F6): a `traverse` invariant runs on every pass.**
+--
+-- G checks the invariant at every pass boundary, so every pass carries it: body PLUS
+-- invariant times the domain bound -- what `kostenStmt` (KostenG.lean) counts. `kosten.rs`
+-- multiplied the body alone:
+--
+--     4 slots x (5 + 3) ops + let + return   ->  K001, the body costs 34
+--
+-- Before lane 139 the body cost 14 and `costs <= 20 ops` went through with 0 errors.
+-- (In the emitted C the invariant is ghost and runs nothing; counted it is anyway --
+-- an upper bound stays one by counting more, and Lean and the checker then say the
+-- same number. `beispiele/19`'s `aktive_zaehlen` is the corpus instance: 50 -> 130.)
+module gift::traverse_invariant_costs {
+const VIER : u32 = 4;
+table Werte count VIER {
+    slot {
+        aktiv : bool,
+        wert  : u32 in 0 .. 4,
+    }
+}
+impl fn zaehle(w : ptr<normal, r> Werte) -> u32 in 0 .. 4
+    effects { reads w.slots }
+    costs   <= 20 ops
+{
+    let mut n : u32 in 0 .. 4 = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+        invariant n <= passes
+    {
+        if w.slots[i].aktiv {
+            n += 1;
+        }
+    }
+    return n;
+}
+}
