@@ -147,3 +147,83 @@ todo keeps only the 3 `heute ?` collateral lines (F-TODO-1).
 
 No guardian file of this lane was touched by the merge (no conflicts there);
 all lane marks verified intact after it.
+
+## After master-neu3 merge, waves 4-5 (2026-09-12, commit fbeee4c3)
+
+Reviewer merged master-neu3 (lanes 64, 80-91, 100-107, 111-122, 126, 127,
+Opus adequacy work) into `muse/89`. Seven conflicted files (TODO, README,
+DONE, PASSREGISTER, ZEREMONIE, pruefe-emission.sh, pruefe-vergabe.py),
+all resolved by re-measuring on the merged tree with a fresh binary
+(`./cargo-pruef`: exit 0, 0 failing tests — run because the merge brought
+Rust changes). Guardian-owned merge notes (E1/E2/E4/E6/S6/S7/116/117/126)
+kept; lane-89 merge notes added beside them.
+
+| Figure | Lane 89 | Master | Merged (measured) |
+|---|---|---|---|
+| Sentences over passes | 120 | 135 | **143** (`SENTENCES: 143 over 12 -- 135 measured, 2 ARGUED, 6 CONJECTURED`) |
+| PASSREGISTER measured | 112 | 127 | **135** (`--je-satz` tags) |
+| Codes | 306 | 335 | **353** (`pruefe-kennungen.py`) |
+| Claimed by a sentence | 251 | 280 | **298** (353 − 55) |
+| Without sentence | 55 | 55 | **55** (Zahn 2 mark 55 — green) |
+| Gruende tragend / verdächtig / unklar | 140 / 7 / 107 | 143 / 8 / 117 | **159 / 8 / 133** |
+| EBNF rules / terminals | 167 / 226 | 170 / 233 | **176 / 239** |
+| Clean examples / gift probes | 73 / 560 | 76 / 587 | **87 / 613** |
+| Emission beispiele/ | 73 | 85 | **87** (+100/101 hardware-profile, lane 117) |
+| Vergabe candidates / affected | 22 / 77 | 25 / 81 | **28 / 83** (master's own tree already read 28/83; delta vs booking is exactly N218+N219+P006 and probes 893/894, lane E6/117) |
+| Gifttreffer verdeckt | 19 | 19 | **24** (+823/828 N200-cover, +891 N024-cover, +897/899 H013-cover; 5 §10 rows added) |
+| Zeremonie (sinkt / N) | 92 / 1404 | 111 / 1501 | **111 / 1526** (echter Code 14 von 110 holds) |
+| Widerruf files | 381 | 381 | **425** |
+| Karten direkt / unqualifiziert | 49 / 44 | 49 / 44 | **69 / 60** (tool marks re-booked 46/41 → 69/60; new maps arenen/nutzlasten/konstanten/hinterlegungen) |
+| Fremde Rümpfe | 120 | 122 | **127** |
+| Blindstellen blind / covered / no-cell | 79 / 169 / 13 | 79 / 169 / 13 | **78 / 170 / 12** (poison-only 24 and 285 pairs hold) |
+| Vorbedingungen (PLAN) | 21 | 21 | **22** |
+| Klebeprobe total / kleben | 4036 / 0 | 4036 / 0 | **4548 / 1** (F-LES-1 below) |
+| Ruecklaufwerte abort-capable / exits | 61 / 376 | 60 / 369 | **61 / 376** (abort profile follows the guardian set, which differs by branch; union measures mine) |
+| Guardians / instruments | 38 / 65 of 66 | 38 / 65 of 66 | hold (38 files, waechter 65 von 66) |
+| Englisch comments / instruments / sink | 7905 / 1085 / 1 | — | hold (totals 32716 / 7787 moved, counts hold; +1 emit.rs line is an `` `aus` ``-keyword trip, W10 class, offset by a −1 repayment) |
+| Tafel UNGEDECKT | abi, errors | abi, errors | hold (F-TAFEL-1; 239 terminals now) |
+
+Re-booked in guardians + docs with dated reasons in the same pass:
+diagnostics 306/330→353, EBNF 167/170→176 and terminals 226/233→239
+(×2: TODO rule + today-bracket; README grammar; second terminal site
+239), examples 73/76→87 (README head + corpus + DONE), gift 560/587→613
+(README + DONE), sentences 120/135→143 (TODO L55 + Zahn), codes 306/335→353
+(TODO Zahn + PASSREGISTER), claimed 251/280→298, tragend 140/143→159 +
+verdächtig 8 + unklar 107/117→133 (with lane notes kept), Blicke 49/44→69/60
+(+52 pass files, neun bewusst), Ruempfe 120/122→127, blind 79→78 +
+covered 169→170 + no-cell 13→12, Vorbedingungen 21→22, Klebeprobe 4036→4548,
+sonst-bucket closed per master (Claude outputs/ deleted, halde moved,
+X → 0 — my 1→8 booking moot and superseded).
+
+New findings this round:
+
+- **F-GIFT-1** (guardian blind spot, reported not fixed):
+  `zaehle-gifttreffer.py:186` runs `pruefe` for every code but `C001`, so the
+  five new emitter-rule probes 850–854 (C180–C184, lane S6) read as FEHLT
+  although `gabbro emit` falls each correctly and `cargo test` is green
+  (beispiele.rs treats C180–C184 as emitter rules). Fix for the owning lane:
+  select `emit` for C180–C184 exactly like C001. Not booked anywhere —
+  booking false alarms would be the defect.
+- **F-LES-1** (glued seam, reported not fixed): `saetze.rs:1963`
+  (lane 111, K190 sentence) joins `` `K008`/`K009`/ `` + `` `H022` `` over a
+  `\` seam (`1 von 4548 Naehten kleben`). Rendering benign (slashes need no
+  space), repair (rewording) belongs to lane 111. Number booked as measured
+  (4548/1/0); the seam stays printed evidence in the englisch run.
+- F-ZAHL-1/2/3 (dead `--anker`/klauseln paths) and F-ZAHL-4 (vacuous
+  perturb-check) stand — third clean-tree confirmation: with zero stale
+  figures the probe aborts on exactly those three entries. F-TODO-1 stands
+  (3 `heute ?` collateral lines). F-ENG-1, F-TAFEL-1, F-EMIT-1 stand.
+
+Incidents this round (own, repaired): two `~~old~~`-chain bookings broke
+chain-intolerant register patterns (blinde/besetzte — previous lanes booked
+bare there; reverted to bare); one Ruempfe re-booking closed the bold span
+too early (both patterns need `Korpus, 11` contiguous — restored the spanning
+shape); three leftover `<` characters from conflict-marker edits removed
+(mechanism: an oldString beginning with `<<<<<<< HEAD` leaves one `<`
+behind — anchor conflict edits on normal lines instead). A worktree for
+old-vs-new affected-set diffs lived outside the repo (`$HOME/scratch89`,
+removed after) after the `.tmp`-in-repo pollution lesson of the last round.
+
+`./lean-bau`: `Build completed successfully (66 jobs).`
+`./emission-pruef`: `== exit 0` (228 of 228 compile, both compilers).
+`./cargo-pruef`: `== exit 0; failing tests: 0`.
