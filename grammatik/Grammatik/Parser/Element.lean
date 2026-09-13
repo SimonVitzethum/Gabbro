@@ -145,8 +145,9 @@ def ueberspringe (f : Nat) (toks : List Token) :
       | .ok r => ueberspringe f r
       | .error e => .error e
     | .zeichen ";" :: rest => .ok rest
-    | .ende :: _ => .error "item without ;"
-    | [] => .error "item without ;"
+    | .zeichen "}" :: _ => .ok toks
+    | .ende :: _ => .ok toks
+    | [] => .ok []
     | _ :: rest => ueberspringe f rest
 /-- Past a function header to the body `{`, the `;` or the `=`
     (`spec fn … = pred;`, `= asm {…};`). The `effects {…}` braces
@@ -160,7 +161,7 @@ def fnStart (f : Nat) (toks : List Token) : Except String (List Token) :=
       if strEq s "effects" then match nimmBereich rest 1 with
         | .ok r => fnStart f r
         | .error e => .error e
-      else .ok toks
+      else .ok (.zeichen "{" :: rest)
     | .zeichen "{" :: _ => .ok toks
     | .zeichen ";" :: _ => .ok toks
     | .zeichen "=" :: _ => .ok toks
@@ -186,11 +187,13 @@ def parseItem (f : Nat) (toks : List Token) :
   | f + 1 => match toks with
     | .wort s :: rest =>
       if strEq s "when" then match rest with
-        | .wort t :: rest' =>
-          if strEq t "TESTBUILD" then match parseItem f rest' with
-            | .ok (it, r) => .ok (.torS it, r)
-            | .error e => .error e
-          else .error "when without TESTBUILD"
+        | t :: rest' => match nameText t with
+          | some u =>
+            if strEq u "TESTBUILD" then match parseItem f rest' with
+              | .ok (it, r) => .ok (.torS it, r)
+              | .error e => .error e
+            else .error "when without TESTBUILD"
+          | none => .error "when without TESTBUILD"
         | _ => .error "when without TESTBUILD"
       else if strEq s "pub" then parseItemKopf f rest
       else parseItemKopf f toks

@@ -676,7 +676,13 @@ def parseNarrow (f : Nat) (toks : List Token) :
                   | .error e => .error e
                 | .error e => .error e
               | .error e => .error e
-          | _ => .error "narrow without target"
+          | _ => match nimmBisWort "else" rest' 0 with
+            | .ok (t, rest3) => match nimmWort "else" rest3 with
+              | .ok rest4 => match parseBlock f rest4 with
+                | .ok (b, rest5) => .ok (.narrowS o t b, rest5)
+                | .error e => .error e
+              | .error e => .error e
+            | .error e => .error e
         else .error "narrow without to"
       | _ => .error "narrow without to"
 def parseSperrt (f : Nat) (toks : List Token) :
