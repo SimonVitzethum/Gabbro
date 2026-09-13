@@ -1329,10 +1329,13 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
     and visibility answers do not depend on memory outside the reader's
     footprint" -- is a statement about the ORACLE relative to a PROGRAM'S
     footprint: neither a user obligation, nor a program-independent
-    hardware assumption, nor a decidable program fact. Stopped there.
-    (Axiom calls do not have this problem: every axiom answer appends to
-    the sequential trace in the recorded oracle, so no two consultations
-    share a key.)
+    hardware assumption, nor a decidable program fact. Stopped there. The
+    counterexample is proved: `ziel_ort_register_falsch`
+    (`ZielOrtRegister.lean`) -- the statement of `ziel_ort_voll` with the
+    fragment widened by the register forms is false on a two-thread
+    program satisfying every other premise. (Axiom calls do not have this
+    problem: every recorded axiom answer appends to the sequential trace,
+    so no two consultations share a key.)
   - Indirect calls are covered only where every function of the
     pointer's signature has its contract carriers in the caller's footprint
     (`KandOk`, decided by `kandB` over the complete list `fs`); the

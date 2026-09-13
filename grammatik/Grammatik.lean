@@ -115,3 +115,4 @@ import Grammatik.ZielOrtVollSem
 import Grammatik.ZielOrtVollBeweis
 import Grammatik.ZielOrtVoll
 import Grammatik.ZielOrtVollZeuge
+import Grammatik.ZielOrtRegister
