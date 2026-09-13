@@ -1419,50 +1419,46 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
 
 -- The round-trip invariant at size bound `n`: every level parses
 -- every `gut` tree from its printed tokens with fuel linear in
--- the tree size. Levels take a benign follow (`ruhig` for the
--- loops, `ruhigSuff` for the suffixes); `parsePrimary` takes only
--- the suffix follow (it has no loops) plus `unFrei` (prefix trees
--- live at the unary level); `parseOrt` takes places. Fuel is
--- absolute in the tree's own size; `parsePrimary` and `parseOrt`
--- carry descent slack (`+7`/`+8`, discharged by `omega` from the
--- size equations wherever they are applied at reduced fuel).
+-- the tree size, plus one spare per node (the `+ groesse e`
+-- covers descent strips and short chains wherever a bound is
+-- reused at reduced fuel). Levels take a benign follow (`ruhig`
+-- for the loops, `ruhigSuff` for the suffixes); `parsePrimary`
+-- takes only the suffix follow (it has no loops) plus `unFrei`
+-- (prefix trees live at the unary level), with descent slack
+-- (`+7`) for application below a descent.
 def R (n : Nat) : Prop :=
   (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseOr F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseAnd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseCmp F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseBit F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseAdd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseMul F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F →
+    12 * (groesse e + 1) + groesse e ≤ F →
     parseUnary F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → unFrei e = true → ruhigSuff rest = true →
-    12 * (groesse e + 1) ≤ F + 7 →
+    12 * (groesse e + 1) + groesse e ≤ F + 7 →
     parsePrimary F (druckToks e ++ rest) = .ok (e, rest))
-  ∧ (∀ (p : SExpr) (rest : List Token) (F : Nat), groesse p ≤ n →
-    gutPlatz p = true → ruhigSuff rest = true →
-    12 * (groesse p + 1) ≤ F + 8 →
-    parseOrt F (druckToks p ++ rest) = .ok (p, rest))
 
 -- The binary-inner parse: a parenthesised operator's inside
 -- (`l op r` between the parens), by operator level. No follow
@@ -1471,7 +1467,7 @@ def B (n : Nat) : Prop :=
   ∀ (o : String) (l r : SExpr) (W : List Token) (F : Nat),
     groesse l + groesse r ≤ n → gutOpBin o = true →
     gut l = true → gut r = true →
-    12 * (groesse l + groesse r + 1) ≤ F →
+    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) ≤ F →
     parseOr F (druckToks l ++ [.zeichen o] ++ druckToks r ++
       [.zeichen ")"] ++ W) =
       .ok (.bin o l r, [.zeichen ")"] ++ W)
@@ -1508,7 +1504,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
     (x : SExpr) (sep : Token) (S : List Token) (F : Nat),
     groesse x ≤ n → gut x = true →
     (sep = .zeichen "," ∨ sep = .zeichen ")") →
-    12 * (groesse x + 1) + 1 ≤ F →
+    12 * (groesse x + 1) + groesse x + 1 ≤ F →
     parseArg F (druckToks x ++ [sep] ++ S) = .ok (x, [sep] ++ S) := by
   intro n Rn x sep S F hx hxg hsep hF
   have hF1 : 1 ≤ F := by omega
@@ -1553,7 +1549,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
     cases hsep with
     | inl h => subst h; rfl
     | inr h => subst h; rfl
-  have hFr : 12 * (groesse x + 1) ≤ F' := by omega
+  have hFr : 12 * (groesse x + 1) + groesse x ≤ F' := by omega
   obtain ⟨hOr, -⟩ := Rn
   simpa only [List.append_assoc] using hOr x ([sep] ++ S) F' hx hxg hr1 hr2 hFr
 
@@ -1564,7 +1560,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
 theorem args_rund : ∀ (n : Nat) (Rn : R n)
     (xs : List SExpr) (rest : List Token) (F : Nat),
     groesseListe xs ≤ n → gutListe xs = true →
-    12 * (groesseListe xs + 1) + 2 ≤ F →
+    12 * (groesseListe xs + 1) + groesseListe xs + 2 ≤ F →
     parseArgs F (druckToksListe xs ++ [.zeichen ")"] ++ rest) =
       .ok (xs, rest) := by
   intro n Rn xs
@@ -1822,7 +1818,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
     suffGroesse suff + groesse base ≤ n →
     suffGut suff = true →
     ruhigSuff rest = true →
-    12 * (suffGroesse suff + groesse base + 1) + suff.length ≤ F →
+    12 * (suffGroesse suff + groesse base + 1) + suffGroesse suff ≤ F →
     parseSuffixe F base (suffToks suff ++ rest) =
       .ok (applySuff base suff, rest) := by
   intro n Rn suff
@@ -1848,8 +1844,8 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
-          suff.length ≤ F' := by
-        simp only [suffGroesse, groesse, List.length] at hs hF ⊢
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
         omega
       exact ih (SExpr.feld base f) rest F' hs2 hg hr hF2
     | arrow f =>
@@ -1864,8 +1860,8 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
-          suff.length ≤ F' := by
-        simp only [suffGroesse, groesse, List.length] at hs hF ⊢
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
         omega
       exact ih (SExpr.pfeil base f) rest F' hs2 hg hr hF2
     | idx i =>
@@ -1884,7 +1880,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         rfl
       have hr2 : ruhigSuff ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
         rfl
-      have hFi : 12 * (groesse i + 1) ≤ F' := by
+      have hFi : 12 * (groesse i + 1) + groesse i ≤ F' := by
         simp only [suffGroesse] at hs hF ⊢
         omega
       obtain ⟨hOr, -⟩ := Rn
@@ -1897,8 +1893,8 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.index base i) + 1) +
-          suff.length ≤ F' := by
-        simp only [suffGroesse, groesse, List.length] at hs hF ⊢
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
         omega
       exact ih (SExpr.index base i) rest F' hs2 hgs hr hF2
 
