@@ -69,6 +69,51 @@ def wortschatz : List String :=
    "lenof", "aligned", "forall", "exists", "true", "false", "Self",
    "Some", "None"]
 
+/-- Keyword lookup by first character: buckets of character
+    lists, so both the scan (at most 28 candidates) and the
+    comparison (`Char ==` on numbers) stay kernel-cheap, unlike
+    `String ==` through byte arrays. `lex_keywords` checks the
+    table against this bucketing word by word, so a misfiled word
+    fails the build instead of lexing as an identifier. -/
+def schluesselTafelC : Char → List (List Char)
+  | 'N' => [['N','o','n','e']]
+  | 'S' => [['S','e','l','f'], ['S','o','m','e']]
+  | 'a' => [['a','r','c','h'], ['a','l','l','o','c','s'], ['a','r','e','n','a'], ['a','l','l','o','c'], ['a','t'], ['a','s','s','u','m','e'], ['a','x','i','o','m'], ['a','d','v','a','n','c','e','s'], ['a','t','o','m','i','c'], ['a','c','q','u','i','r','e'], ['a','c','c','u','m','u','l','a','t','e','s'], ['a','d','d'], ['a','n','d'], ['a','b','i'], ['a','s','m'], ['a','w','a','i','t','s'], ['a','n','c','e','s','t','o','r','s'], ['a','l','i','g','n','e','d']]
+  | 'b' => [['b','r','e','a','k','i','n','g'], ['b','y'], ['b','o','u','n','d','e','d'], ['b','o','o','t'], ['b','a','n','k'], ['b','a','c','k','e','d'], ['b','i','g'], ['b','o','o','l']]
+  | 'c' => [['c','o','n','s','t'], ['c','o','s','t','s'], ['c','o','n','s','u','m','e','s'], ['c','o','n','s','u','m','i','n','g'], ['c','o','d','e'], ['c','a','p','a','c','i','t','y'], ['c','l','a','s','s'], ['c','o','u','n','t'], ['c','o','n','c','u','r','r','e','n','t'], ['c','h','e','c','k'], ['c','l','a','i','m'], ['c','a','n','_','f','a','i','l'], ['c','o','u','n','t','e','r','p','r','o','b','e'], ['c','o','s','t'], ['c','h','a','i','n'], ['c','l','o','b','b','e','r','s'], ['c','p','u'], ['c','h','i','l','d']]
+  | 'd' => [['d','i','v','e','r','g','e','n','t'], ['d','e','a','d','l','i','n','e'], ['d','e','c','r','e','a','s','e','s'], ['d','i','v','e','r','g','e','s'], ['d','m','a'], ['d','e','v','i','c','e'], ['d','o','w','n'], ['d','i','s','p','a','t','c','h'], ['d','e','s','c','e','n','d','a','n','t','s']]
+  | 'e' => [['e','x','t','e','r','n'], ['e','n','s','u','r','e','s'], ['e','f','f','e','c','t','s'], ['e','x','h','a','u','s','t','i','v','e'], ['e','l','s','e'], ['e','x','c','h','a','n','g','e'], ['e','x','p','e','c','t','s'], ['e','n','d','i','a','n'], ['e','m','b','e','d','s'], ['e','n','t','r','y'], ['e','r','r','o','r','s'], ['e','n','t','r','u','s','t'], ['e','l','e','m','s'], ['e','x','i','s','t','s']]
+  | 'f' => [['f','n'], ['f','o','r','e','v','e','r'], ['f','p','_','c','o','n','t','r','a','c','t'], ['f','o','r'], ['f','o','r','m','a','t'], ['f','i','e','l','d','s'], ['f','r','o','m'], ['f','a','l','s','i','f','i','e','r'], ['f','l','o','o','r'], ['f','3','2'], ['f','6','4'], ['f','i','n','i','t','e'], ['f','o','r','a','l','l'], ['f','a','l','s','e']]
+  | 'g' => [['g','h','o','s','t'], ['g','r','o','u','p'], ['g','a','t','e','s']]
+  | 'h' => [['h','e','l','d']]
+  | 'i' => [['i','m','p','l'], ['i','n'], ['i','n','d','u','c','t','i','o','n'], ['i','f'], ['i','n','s','e','r','t'], ['i','n','t','e','r','r','u','p','t','_','r','o','u','t','i','n','g'], ['i','n','v','a','r','i','a','n','t'], ['i','n','d','e','x'], ['i','n','t','o'], ['i','s','t'], ['i','8'], ['i','1','6'], ['i','3','2'], ['i','6','4']]
+  | 'k' => [['k','e','r','n','e','l']]
+  | 'l' => [['l','i','n','e','a','r'], ['l','o','c','k','s'], ['l','e','t'], ['l','e','a','v','e'], ['l','e','a','v','e','s'], ['l','i','b','r','a','r','y'], ['l','o','c','k'], ['l','i','t','t','l','e'], ['l','e','v','e','l','s'], ['l','e','a','f'], ['l','e','n','o','f']]
+  | 'm' => [['m','o','d','u','l','e'], ['m','a','i','n','t','a','i','n','s'], ['m','a','s','k','s'], ['m','a','t','c','h'], ['m','u','t'], ['m','m','i','o'], ['m','e','m','o','r','y','_','m','o','d','e','l'], ['m','i','r','r','o','r','s'], ['m','e','a','s','u','r','e','s'], ['m','e','r','g','e'], ['m','a','x'], ['m','i','n'], ['m','a','p','p','i','n','g','s'], ['m','a','s','k','e','d']]
+  | 'n' => [['n','a','r','r','o','w'], ['n','e','x','t'], ['n','o','r','m','a','l'], ['n','o','t','h','i','n','g'], ['n','o','d','e'], ['n','u','m','b','e','r'], ['n','e','s','t','e','d'], ['n','e','v','e','r']]
+  | 'o' => [['o','p','a','q','u','e'], ['o','l','d'], ['o','v','e','r'], ['o','n','_','e','x','c','e','e','d','e','d'], ['o','p','s'], ['o','w','n'], ['o','w','n','e','r'], ['o','b','s','e','r','v','e','s'], ['o','r','d','e','r'], ['o','n','l','i','n','e'], ['o','f','f','l','i','n','e'], ['o','f','f','s','e','t','_','i','n','t','o'], ['o','p','t','i','o','n'], ['o','r'], ['o','u','t'], ['o','f'], ['o','b','s','e','r','v','e','d'], ['o','c','c','u','p','i','e','d']]
+  | 'p' => [['p','u','b'], ['p','r','i','m'], ['p','u','b','l','i','s','h','e','s'], ['p','u','r','e'], ['p','r','o','g','r','e','s','s'], ['p','e','r','_','p','a','s','s'], ['p','t','r'], ['p','a','y','l','o','a','d'], ['p','r','o','f','i','l','e'], ['p','r','o','t','e','c','t','s'], ['p','r','e','s','e','r','v','e','s'], ['p','e','r'], ['p','o','r','t'], ['p','a','r','e','n','t']]
+  | 'q' => [['q','u','e','u','e']]
+  | 'r' => [['r','a','w'], ['r','e','q','u','i','r','e','s'], ['r','e','f','i','n','e','s'], ['r','e','a','d','s'], ['r','e','t','r','y'], ['r','e','t','u','r','n'], ['r','e','m','o','v','e'], ['r','e','l','a','b','e','l'], ['r','e','s','u','l','t'], ['r','e','t','u','r','n','s'], ['r'], ['r','w'], ['r','o','u','n','d','i','n','g'], ['r','e','s','e','t'], ['r','e','a','s','o','n'], ['r','e','g'], ['r','c'], ['r','c','u'], ['r','e','c','l','a','i','m','s'], ['r','a','n','k'], ['r','e','t','i','r','e','s'], ['r','e','s','e','r','v','e','d'], ['r','u','n','s'], ['r','e','l','e','a','s','e'], ['r','e','l','a','x','e','d'], ['r','e','g','s'], ['r','e','a','c','h','e','s'], ['r','o','u','n','d','e','d']]
+  | 's' => [['s','t','a','t','i','c'], ['s','p','e','c'], ['s','e','c','t','i','o','n'], ['s','l','o','t'], ['s','t','a','t','e'], ['s','t','r','i','d','e'], ['s','e','q'], ['s','h','a','r','e','d'], ['s','c','a','l','e'], ['s','y','s','c','a','l','l'], ['s','t','a','c','k'], ['s','t','e','p'], ['s','l','o','t','s'], ['s','i','b','l','i','n','g'], ['s','i','z','e','o','f']]
+  | 't' => [['t','y','p','e'], ['t','a','g','g','e','d'], ['t','o'], ['t','r','a','v','e','r','s','e'], ['t','o','u','c','h','e','s'], ['t','r','a','n','s','l','a','t','o','r'], ['t','a','b','l','e'], ['t','r','a','n','s','i','t','i','o','n'], ['t','r','e','e'], ['t','h','r','e','a','d','s'], ['t','r','u','e']]
+  | 'u' => [['u','s','e'], ['u','n','t','i','l'], ['u','n','v','i','s','i','t','e','d'], ['u','p','d','a','t','e'], ['u','n','f','a','l','s','i','f','i','a','b','l','e'], ['u','8'], ['u','1','6'], ['u','3','2'], ['u','6','4']]
+  | 'v' => [['v','e','c','t','o','r'], ['v','i','a']]
+  | 'w' => [['w','h','e','n'], ['w','h','e','r','e'], ['w','r','i','t','e','s'], ['w'], ['w','1','c'], ['w','r','a','p','p','i','n','g'], ['w','a','l','k']]
+  | 'x' => [['x']]
+  | _ => []
+
+/-- Is this name a keyword (bucket lookup, see above)? -/
+def istSchluessel (s : String) : Bool :=
+  match s.toList with
+  | c :: t => (schluesselTafelC c).contains (c :: t)
+  | [] => false
+
+/-- String equality through character lists: kernel-cheap, unlike
+    `String ==` (see above). -/
+def strEq (a b : String) : Bool :=
+  a.toList == b.toList
+
 /-- Whitespace of the source (`lex.rs`: space, tab, CR, LF). -/
 def istLeer : Char → Bool
   | ' ' => true
@@ -301,7 +346,7 @@ def scan : List Char → Nat → Except LexFehler (List Token)
     else if istAnfang c then
       let (h, t) := nimmFolge cs
       let s := String.ofList (c :: h)
-      let tok := if wortschatz.contains s then Token.wort s else Token.ident s
+      let tok := if istSchluessel s then Token.wort s else Token.ident s
       Except.map (tok :: ·) (scan t n)
     else match nimmZeichen (c :: cs) with
       | some (s, rest) =>
@@ -410,6 +455,134 @@ theorem lex_text_offen :
     lex "\"offen" = .error .offeneZeichenkette := by
   decide
 
+-- Lexer half of the agreement probes with `crates/gabbro-syntax`
+-- (`parse.rs`): each `sondeNN_lex` pins the token list of one
+-- `beispiele/` source line (cited at the parse half in
+-- `Parser/Ausdruck.lean`, which checks the tree shape on these
+-- token lists). Token lists live here because they are lexer
+-- output; the parser file never re-lexes them.
+def tok01 : List Token :=
+  [.ident "e_phoff", .zeichen "+", .ident "e_phentsize",
+   .zeichen "*", .ident "e_phnum", .zeichen "<=", .wort "lenof",
+   .zeichen "(", .wort "Self", .zeichen ")", .ende]
+theorem sonde01_lex :
+    lex "e_phoff + e_phentsize * e_phnum <= lenof(Self)" =
+      .ok tok01 := by
+  decide
+def tok02 : List Token :=
+  [.ident "m", .zeichen ".", .ident "va", .zeichen "<",
+   .zahl 18446603336221196288, .zeichen "||", .zeichen "!",
+   .ident "m", .zeichen ".", .ident "nutzer", .ende]
+theorem sonde02_lex :
+    lex "m.va < 0xFFFF_8000_0000_0000 || !m.nutzer" = .ok tok02 := by
+  decide
+def tok03 : List Token :=
+  [.ident "c", .zeichen ".", .wort "slots", .zeichen "[",
+   .ident "s", .zeichen "]", .zeichen ".", .ident "benutzt",
+   .zeichen "&&", .ident "c", .zeichen ".", .wort "slots",
+   .zeichen "[", .ident "s", .zeichen "]", .zeichen ".",
+   .ident "erstes_kind", .zeichen "==", .wort "None", .ende]
+theorem sonde03_lex :
+    lex "c.slots[s].benutzt && c.slots[s].erstes_kind == None" =
+      .ok tok03 := by
+  decide
+def tok04 : List Token :=
+  [.wort "old", .zeichen "(", .ident "k", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
+   .zeichen ".", .ident "stand", .zeichen ")", .zeichen "<=",
+   .ident "k", .zeichen ".", .wort "slots", .zeichen "[",
+   .ident "i", .zeichen "]", .zeichen ".", .ident "stand", .ende]
+theorem sonde04_lex :
+    lex "old(k.slots[i].stand) <= k.slots[i].stand" = .ok tok04 := by
+  decide
+def tok05 : List Token :=
+  [.wort "result", .zeichen "==", .ident "k", .zeichen ".",
+   .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
+   .zeichen ".", .ident "stand", .ende]
+theorem sonde05_lex :
+    lex "result == k.slots[i].stand" = .ok tok05 := by
+  decide
+def tok06 : List Token :=
+  [.wort "u64", .zeichen "::", .wort "max", .ende]
+theorem sonde06_lex : lex "u64::max" = .ok tok06 := by decide
+def tok07 : List Token :=
+  [.ident "Geraetelug", .zeichen "::", .ident "ZuTief", .ende]
+theorem sonde07_lex :
+    lex "Geraetelug::ZuTief" = .ok tok07 := by
+  decide
+def tok08 : List Token :=
+  [.ident "Verzeichnis", .zeichen "::", .wort "insert",
+   .zeichen "(", .ident "v", .zeichen ",", .ident "i",
+   .zeichen ")", .ende]
+theorem sonde08_lex :
+    lex "Verzeichnis::insert(v, i)" = .ok tok08 := by
+  decide
+def tok09 : List Token :=
+  [.ident "lies", .zeichen "(", .ident "k", .zeichen ",",
+   .ident "i", .zeichen ")", .ende]
+theorem sonde09_lex : lex "lies(k, i)" = .ok tok09 := by decide
+def tok10 : List Token :=
+  [.wort "Some", .zeichen "(", .ident "i", .zeichen ")", .ende]
+theorem sonde10_lex : lex "Some(i)" = .ok tok10 := by decide
+def tok11 : List Token :=
+  [.wort "Self", .zeichen ".", .wort "slots", .zeichen "[",
+   .ident "s", .zeichen "]", .zeichen ".", .ident "elter",
+   .zeichen "==", .wort "None", .ende]
+theorem sonde11_lex :
+    lex "Self.slots[s].elter == None" = .ok tok11 := by
+  decide
+def tok12 : List Token :=
+  [.wort "x", .zeichen ">=", .gleit "0.0", .zeichen "&&",
+   .wort "x", .zeichen "<=", .gleit "1.0", .ende]
+theorem sonde12_lex :
+    lex "x >= 0.0 && x <= 1.0" = .ok tok12 := by
+  decide
+def tok13 : List Token :=
+  [.ident "d", .zeichen ".", .ident "TIEFE", .ende]
+theorem sonde13_lex : lex "d.TIEFE" = .ok tok13 := by decide
+def tok14 : List Token :=
+  [.ident "TIEFE", .zeichen "<=", .zahl 8, .ende]
+theorem sonde14_lex : lex "TIEFE <= 8" = .ok tok14 := by decide
+def tok15 : List Token :=
+  [.ident "m", .zeichen ".", .ident "rahmen", .zeichen ">=",
+   .ident "BOOT_RAHMEN_UNTEN", .zeichen "&&", .ident "m",
+   .zeichen ".", .ident "rahmen", .zeichen "<",
+   .ident "BOOT_RAHMEN_OBEN", .ende]
+theorem sonde15_lex :
+    lex "m.rahmen >= BOOT_RAHMEN_UNTEN && m.rahmen < BOOT_RAHMEN_OBEN" =
+      .ok tok15 := by
+  decide
+def tok16 : List Token :=
+  [.ident "it", .zeichen ".", .ident "praesent", .zeichen "&&",
+   .ident "it", .zeichen ".", .ident "gross", .ende]
+theorem sonde16_lex :
+    lex "it.praesent && it.gross" = .ok tok16 := by
+  decide
+def tok17 : List Token :=
+  [.zeichen "!", .zeichen "(", .ident "m", .zeichen ".",
+   .ident "schreibbar", .zeichen "&&", .zeichen "!", .ident "m",
+   .zeichen ".", .ident "nx", .zeichen ")", .ende]
+theorem sonde17_lex :
+    lex "!(m.schreibbar && !m.nx)" = .ok tok17 := by
+  decide
+def tok18 : List Token :=
+  [.ident "c", .zeichen ".", .ident "wert", .zeichen "+",
+   .zahl 1, .ende]
+theorem sonde18_lex : lex "c.wert + 1" = .ok tok18 := by decide
+def tok19 : List Token :=
+  [.ident "v", .zeichen "+", .zahl 1, .ende]
+theorem sonde19_lex : lex "v + 1" = .ok tok19 := by decide
+def tok20 : List Token :=
+  [.ident "z", .zeichen "+", .zahl 1, .ende]
+theorem sonde20_lex : lex "z + 1" = .ok tok20 := by decide
+def tok21 : List Token :=
+  [.ident "a", .zeichen "+%", .ident "b", .zeichen "*%",
+   .ident "c", .ende]
+theorem sonde21_lex : lex "a +% b *% c" = .ok tok21 := by decide
+def tok22 : List Token :=
+  [.wort "x", .zeichen "+|", .ident "y", .ende]
+theorem sonde22_lex : lex "x +| y" = .ok tok22 := by decide
+
 end Gabbro.Grammatik.Parser
 
 /-
@@ -431,8 +604,15 @@ end Gabbro.Grammatik.Parser
   * The keyword/identifier split is positional in the grammar
     (`WORTSTELLUNG.md`): at an `ident` position every table word is a
     name. `lex` emits `wort` unconditionally; the parser decides.
+  * `schluesselTafelC` stores the table as character lists in
+    first-character buckets, and `strEq` compares through
+    character lists: kernel evaluation of `String ==` runs through
+    byte arrays and dominates `decide` time, while `Char ==` runs
+    on numbers. `lex_keywords` re-checks the bucketing word by
+    word, so the optimisation cannot silently misfile a word.
 -/
 
 #print axioms Gabbro.Grammatik.Parser.lex_total
 #print axioms Gabbro.Grammatik.Parser.lex_keywords
 #print axioms Gabbro.Grammatik.Parser.lex_keywords_zeuge
+#print axioms Gabbro.Grammatik.Parser.sonde01_lex
