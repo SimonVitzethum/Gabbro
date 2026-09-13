@@ -1898,6 +1898,56 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         omega
       exact ih (SExpr.index base i) rest F' hs2 hgs hr hF2
 
+-- Printed places split into head variable plus fragments.
+theorem druckToks_applySuff : ∀ (base : SExpr) (suff : List SuffFrag),
+    druckToks (applySuff base suff) =
+      druckToks base ++ suffToks suff := by
+  intro base suff
+  induction suff generalizing base with
+  | nil => simp [applySuff, suffToks]
+  | cons frag suff ih =>
+    cases frag with
+    | dot f =>
+      simp only [applySuff, suffToks] at ⊢
+      rw [ih]
+      simp only [druckToks, List.append_assoc, List.cons_append,
+        List.nil_append]
+    | arrow f =>
+      simp only [applySuff, suffToks] at ⊢
+      rw [ih]
+      simp only [druckToks, List.append_assoc, List.cons_append,
+        List.nil_append]
+    | idx i =>
+      simp only [applySuff, suffToks] at ⊢
+      rw [ih]
+      simp only [druckToks, List.append_assoc, List.cons_append,
+        List.nil_append]
+
+-- Places through `parseOrt`: decompose, read the head, run the
+-- chain. The head gate uses `!istKeinPlatz`; the chain is
+-- `suff_rund`.
+theorem ort_platz_all : ∀ (n : Nat) (Rn : R n)
+    (p : SExpr) (rest : List Token) (F : Nat),
+    groesse p ≤ n → gutPlatz p = true → ruhigSuff rest = true →
+    12 * (groesse p + 1) + groesse p ≤ F →
+    parseOrt F (druckToks p ++ rest) = .ok (p, rest) := by
+  intro n Rn p rest F hs hg hr hF
+  obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := zerlege n p hs hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  rw [druckToks_applySuff] at ⊢
+  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
+  simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append] at ⊢
+  -- ⊢ : parseSuffixe F' (variable a) (suffToks suff ++ rest) = ...
+  have hs2 : suffGroesse suff + groesse (.variable a) ≤ n := by
+    simp only [groesse] at ⊢
+    omega
+  have hF2 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
+      suffGroesse suff ≤ F' := by
+    simp only [groesse, groesse_applySuff] at hs hF ⊢
+    omega
+  exact suff_rund n Rn suff (.variable a) rest F' hs2 hgs hr hF2
+
 end Gabbro.Grammatik.Parser
 
 /-
