@@ -154,3 +154,6 @@ import Grammatik.Export104
 import Grammatik.Export108
 import Grammatik.ReferenzAR
 import Grammatik.ZeugnisStmt3
+import Grammatik.Parser.Lexer
+import Grammatik.Parser.Ausdruck
+import Grammatik.Parser.AusdruckProben
