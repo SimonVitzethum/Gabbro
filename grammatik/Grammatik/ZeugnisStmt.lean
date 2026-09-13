@@ -212,7 +212,18 @@ inductive CertStmt (D : Deklaration) (V : Vertrag D) where
       (i e : CertExpr D)
   | call (f : D.Fn) (Λc : List (Res D)) (hp : RufPasst D V (D.signatur f) Λc)
   | ite (c : CertCond D) (t e : CertSeq D V)
+  | onOption (e : CertExpr D) (n : Int) (p a : CertSeq D V)
   | locks (L : D.Lock) (body : CertSeq D V)
+  | breaking (i : D.Inv) (body : CertSeq D V)
+  | uebergang (t : D.Tab) (f : D.Feld t) (lo hi von nach : Int)
+      (i : CertExpr D)
+  | publish (g : D.Glob) (e : CertExpr D) (payload : List D.Glob)
+  | regSchreib (r : D.Reg) (e : CertExpr D)
+  | advances (m : D.Marke) (a : Nat)
+  | retires (m : D.Marke) (s : Nat) (a : D.Annahme)
+  | traverse (t : D.Tab) (inv : CertCond D) (body : CertSeq D V)
+  | retry (n : Nat) (bis : CertCond D) (body ueber : CertSeq D V)
+  | forever (a : D.Annahme) (inv : CertCond D) (body : CertSeq D V)
   | ret
   | retWert (e : CertExpr D) (lo hi : Int)
   | retGrund (r : Nat)
@@ -225,6 +236,21 @@ inductive CertSeq (D : Deklaration) (V : Vertrag D) where
   | nil
   | cons (s : CertStmt D V) (Λm : List (Res D)) (rest : CertSeq D V)
   | bind (e : CertExpr D) (lo hi : Int) (rest : CertSeq D V)
+  | bindCall (f : D.Fn) (lo hi : Int) (Λc : List (Res D))
+      (hp : RufPasst D V (D.signatur f) Λc) (rest : CertSeq D V)
+  | bindCallElse (f : D.Fn) (lo hi : Int) (Λc : List (Res D))
+      (hp : RufPasst D V (D.signatur f) Λc) (err : CertEnd D V)
+      (rest : CertSeq D V)
+  | regLies (r : D.Reg) (lo hi : Int) (rest : CertSeq D V)
+  | regLiesElse (r : D.Reg) (zusage : CertCond D) (sonst : CertEnd D V)
+      (rest : CertSeq D V)
+  | awaits (g : D.Glob) (payload : List D.Glob) (lo hi : Int)
+      (rest : CertSeq D V)
+  | exchange (g : D.Glob) (lo hi : Int) (neu : CertExpr D)
+      (rest : CertSeq D V)
+  | narrow (e : CertExpr D) (lo hi lo' hi' : Int) (sonst : CertEnd D V)
+      (rest : CertSeq D V)
+  | pruefung (c : CertCond D) (sonst : CertEnd D V) (rest : CertSeq D V)
 
 /-- One non-falling block as plain data (the body a program carries). -/
 inductive CertEnd (D : Deklaration) (V : Vertrag D) where
@@ -286,13 +312,45 @@ def certStmtGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certRange D Γ Λ e = some (0, 256 ^ n - 1) ∧
       V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'
   | .call f Λc _ =>
-    Λc = Λ ∧ D.params f = [] ∧ D.gruende f = 0 ∧ nach D f Λ = Λ'
+    Λ = Λc ∧ D.params f = [] ∧ D.gruende f = 0 ∧ nach D f Λ = Λ'
   | .ite c t e =>
     certCondGueltig D Γ Λ c ∧ certSeqGueltig D V l Γ Λ Λ' t ∧
       certSeqGueltig D V l Γ Λ Λ' e ∧ Λ = Λ'
+  | .onOption e n p a =>
+    certRange D Γ Λ e = some (0, n - 1) ∧
+      certSeqGueltig D V l (.index n :: Γ) Λ Λ' p ∧
+      certSeqGueltig D V l Γ Λ Λ' a ∧ Λ = Λ'
   | .locks L body =>
     rankOk D L Λ = true ∧
       certSeqGueltig D V l Γ (Res.held L :: Λ) (Res.held L :: Λ) body ∧
+      Λ = Λ'
+  | .breaking i body => certSeqGueltig D V l Γ Λ Λ' body
+  | .uebergang t f lo hi von nach i =>
+    intVonTyp (D.typ t f) = some (lo, hi) ∧
+      certRange D Γ Λ i = some (0, D.count t - 1) ∧
+      lo ≤ nach ∧ nach ≤ hi ∧ D.erlaubt t f von nach = true ∧
+      V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'
+  | .publish g e payload =>
+    payload = D.nutzlast g ∧ certRange D Γ Λ e ≠ none ∧
+      certRange D Γ Λ e = intVonTyp (D.gtyp g) ∧
+      V.gschreibt g = true ∧ gdarf D g Λ ∧ Λ = Λ'
+  | .regSchreib r e =>
+    (D.rklasse r).schreibbar = true ∧ certRange D Γ Λ e ≠ none ∧
+      certRange D Γ Λ e = intVonTyp (D.rtyp r) ∧ Λ = Λ'
+  | .advances m a =>
+    Res.marke m a ∈ Λ ∧ a + 1 < D.stufen m ∧
+      (Λ.erase (Res.marke m a)) ++ [Res.marke m (a + 1)] = Λ'
+  | .retires m s a =>
+    Res.marke m s ∈ Λ ∧ Λ.erase (Res.marke m s) = Λ'
+  | .traverse t inv body =>
+    certCondGueltig D Γ Λ inv ∧
+      certSeqGueltig D V true (.index (D.count t) :: Γ) Λ Λ body ∧
+      Λ = Λ'
+  | .retry n bis body ueber =>
+    certCondGueltig D Γ Λ bis ∧ certSeqGueltig D V true Γ Λ Λ body ∧
+      certSeqGueltig D V l Γ Λ Λ ueber ∧ Λ = Λ'
+  | .forever a inv body =>
+    certCondGueltig D Γ Λ inv ∧ certSeqGueltig D V true Γ Λ Λ body ∧
       Λ = Λ'
   | .ret => V.erg = none ∧ Λ.Perm V.ende ∧ Λ = Λ'
   | .retWert e lo hi =>
@@ -312,6 +370,39 @@ def certSeqGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   | .bind e lo hi rest =>
     certRange D Γ Λ e = some (lo, hi) ∧
       certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+  | .bindCall f lo hi Λc _ rest =>
+    D.params f = [] ∧ D.gruende f = 0 ∧ D.erg f = some (.int lo hi) ∧
+      Λ = Λc ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest
+  | .bindCallElse f lo hi Λc _ err rest =>
+    D.params f = [] ∧ 0 < D.gruende f ∧ D.erg f = some (.int lo hi) ∧
+      Λ = Λc ∧
+      certEndGueltig D V l (.grund (D.gruende f) :: Γ) (nach D f Λ) err ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest
+  | .regLies r lo hi rest =>
+    (D.rklasse r).lesbar = true ∧ intVonTyp (D.rtyp r) = some (lo, hi) ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+  | .regLiesElse r zusage sonst rest =>
+    (D.rklasse r).lesbar = true ∧
+      certCondGueltig D (D.rtyp r :: Γ) Λ zusage ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l (D.rtyp r :: Γ) Λ Λ' rest
+  | .awaits g payload lo hi rest =>
+    payload = D.nutzlast g ∧ gdarf D g Λ ∧
+      intVonTyp (D.gtyp g) = some (lo, hi) ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+  | .exchange g lo hi neu rest =>
+    intVonTyp (D.gtyp g) = some (lo, hi) ∧
+      certRange D (.int lo hi :: Γ) Λ neu = some (lo, hi) ∧
+      V.gschreibt g = true ∧ gdarf D g Λ ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+  | .narrow e lo hi lo' hi' sonst rest =>
+    certRange D Γ Λ e = some (lo, hi) ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l (.int lo' hi' :: Γ) Λ Λ' rest
+  | .pruefung c sonst rest =>
+    certCondGueltig D Γ Λ c ∧ certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l Γ Λ Λ' rest
 
 /-- Non-falling-block validity: terminal closings plus the same
     threading as blocks (the middle, never an output: `Endblock` ends). -/
@@ -357,7 +448,7 @@ def decStmtGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certRange D Γ Λ e = some (0, 256 ^ n - 1) ∧
       V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'))
   | .call f Λc _ =>
-    inferInstanceAs (Decidable (Λc = Λ ∧ D.params f = [] ∧
+    inferInstanceAs (Decidable (Λ = Λc ∧ D.params f = [] ∧
       D.gruende f = 0 ∧ nach D f Λ = Λ'))
   | .ite c t e =>
     haveI := decCondGueltig D Γ Λ c
@@ -366,11 +457,59 @@ def decStmtGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     inferInstanceAs (Decidable (certCondGueltig D Γ Λ c ∧
       certSeqGueltig D V l Γ Λ Λ' t ∧ certSeqGueltig D V l Γ Λ Λ' e ∧
       Λ = Λ'))
+  | .onOption e n p a =>
+    haveI := decSeqGueltig D V l (.index n :: Γ) Λ Λ' p
+    haveI := decSeqGueltig D V l Γ Λ Λ' a
+    inferInstanceAs (Decidable (certRange D Γ Λ e = some (0, n - 1) ∧
+      certSeqGueltig D V l (.index n :: Γ) Λ Λ' p ∧
+      certSeqGueltig D V l Γ Λ Λ' a ∧ Λ = Λ'))
   | .locks L body =>
     haveI := decSeqGueltig D V l Γ (Res.held L :: Λ) (Res.held L :: Λ) body
     inferInstanceAs (Decidable (rankOk D L Λ = true ∧
       certSeqGueltig D V l Γ (Res.held L :: Λ) (Res.held L :: Λ) body ∧
       Λ = Λ'))
+  | .breaking i body =>
+    haveI := decSeqGueltig D V l Γ Λ Λ' body
+    inferInstanceAs
+      (Decidable (certSeqGueltig D V l Γ Λ Λ' body))
+  | .uebergang t f lo hi von nach i =>
+    inferInstanceAs (Decidable (intVonTyp (D.typ t f) = some (lo, hi) ∧
+      certRange D Γ Λ i = some (0, D.count t - 1) ∧
+      lo ≤ nach ∧ nach ≤ hi ∧ D.erlaubt t f von nach = true ∧
+      V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'))
+  | .publish g e payload =>
+    inferInstanceAs (Decidable (payload = D.nutzlast g ∧
+      certRange D Γ Λ e ≠ none ∧
+      certRange D Γ Λ e = intVonTyp (D.gtyp g) ∧
+      V.gschreibt g = true ∧ gdarf D g Λ ∧ Λ = Λ'))
+  | .regSchreib r e =>
+    inferInstanceAs (Decidable ((D.rklasse r).schreibbar = true ∧
+      certRange D Γ Λ e ≠ none ∧
+      certRange D Γ Λ e = intVonTyp (D.rtyp r) ∧ Λ = Λ'))
+  | .advances m a =>
+    inferInstanceAs (Decidable (Res.marke m a ∈ Λ ∧ a + 1 < D.stufen m ∧
+      (Λ.erase (Res.marke m a)) ++ [Res.marke m (a + 1)] = Λ'))
+  | .retires m s a =>
+    inferInstanceAs (Decidable (Res.marke m s ∈ Λ ∧
+      Λ.erase (Res.marke m s) = Λ'))
+  | .traverse t inv body =>
+    haveI := decCondGueltig D Γ Λ inv
+    haveI := decSeqGueltig D V true (.index (D.count t) :: Γ) Λ Λ body
+    inferInstanceAs (Decidable (certCondGueltig D Γ Λ inv ∧
+      certSeqGueltig D V true (.index (D.count t) :: Γ) Λ Λ body ∧
+      Λ = Λ'))
+  | .retry n bis body ueber =>
+    haveI := decCondGueltig D Γ Λ bis
+    haveI := decSeqGueltig D V true Γ Λ Λ body
+    haveI := decSeqGueltig D V l Γ Λ Λ ueber
+    inferInstanceAs (Decidable (certCondGueltig D Γ Λ bis ∧
+      certSeqGueltig D V true Γ Λ Λ body ∧
+      certSeqGueltig D V l Γ Λ Λ ueber ∧ Λ = Λ'))
+  | .forever a inv body =>
+    haveI := decCondGueltig D Γ Λ inv
+    haveI := decSeqGueltig D V true Γ Λ Λ body
+    inferInstanceAs (Decidable (certCondGueltig D Γ Λ inv ∧
+      certSeqGueltig D V true Γ Λ Λ body ∧ Λ = Λ'))
   | .ret =>
     inferInstanceAs (Decidable (V.erg = none ∧ Λ.Perm V.ende ∧ Λ = Λ'))
   | .retWert e lo hi =>
@@ -395,6 +534,55 @@ def decSeqGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     haveI := decSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
     inferInstanceAs (Decidable (certRange D Γ Λ e = some (lo, hi) ∧
       certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest))
+  | .bindCall f lo hi Λc _ rest =>
+    haveI := decSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest
+    inferInstanceAs (Decidable (D.params f = [] ∧ D.gruende f = 0 ∧
+      D.erg f = some (.int lo hi) ∧ Λ = Λc ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest))
+  | .bindCallElse f lo hi Λc _ err rest =>
+    haveI := decEndGueltig D V l (.grund (D.gruende f) :: Γ) (nach D f Λ) err
+    haveI := decSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest
+    inferInstanceAs (Decidable (D.params f = [] ∧ 0 < D.gruende f ∧
+      D.erg f = some (.int lo hi) ∧ Λ = Λc ∧
+      certEndGueltig D V l (.grund (D.gruende f) :: Γ) (nach D f Λ) err ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest))
+  | .regLies r lo hi rest =>
+    haveI := decSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable ((D.rklasse r).lesbar = true ∧
+      intVonTyp (D.rtyp r) = some (lo, hi) ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest))
+  | .regLiesElse r zusage sonst rest =>
+    haveI := decCondGueltig D (D.rtyp r :: Γ) Λ zusage
+    haveI := decEndGueltig D V l Γ Λ sonst
+    haveI := decSeqGueltig D V l (D.rtyp r :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable ((D.rklasse r).lesbar = true ∧
+      certCondGueltig D (D.rtyp r :: Γ) Λ zusage ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l (D.rtyp r :: Γ) Λ Λ' rest))
+  | .awaits g payload lo hi rest =>
+    haveI := decSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (payload = D.nutzlast g ∧ gdarf D g Λ ∧
+      intVonTyp (D.gtyp g) = some (lo, hi) ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest))
+  | .exchange g lo hi neu rest =>
+    haveI := decSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (intVonTyp (D.gtyp g) = some (lo, hi) ∧
+      certRange D (.int lo hi :: Γ) Λ neu = some (lo, hi) ∧
+      V.gschreibt g = true ∧ gdarf D g Λ ∧
+      certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest))
+  | .narrow e lo hi lo' hi' sonst rest =>
+    haveI := decEndGueltig D V l Γ Λ sonst
+    haveI := decSeqGueltig D V l (.int lo' hi' :: Γ) Λ Λ' rest
+    inferInstanceAs (Decidable (certRange D Γ Λ e = some (lo, hi) ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l (.int lo' hi' :: Γ) Λ Λ' rest))
+  | .pruefung c sonst rest =>
+    haveI := decCondGueltig D Γ Λ c
+    haveI := decEndGueltig D V l Γ Λ sonst
+    haveI := decSeqGueltig D V l Γ Λ Λ' rest
+    inferInstanceAs (Decidable (certCondGueltig D Γ Λ c ∧
+      certEndGueltig D V l Γ Λ sonst ∧
+      certSeqGueltig D V l Γ Λ Λ' rest))
 
 def decEndGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ : List (Res D)) (e : CertEnd D V) :
@@ -511,6 +699,15 @@ theorem stmt_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     obtain ⟨bt, _⟩ := seq_sound D V l Γ Λ Λ t ht
     obtain ⟨be, _⟩ := seq_sound D V l Γ Λ Λ e he
     exact ⟨Stmt.ite ec bt be, trivial⟩
+  | .onOption e n p a =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨he, hp, ha, hout⟩ := h
+    subst hout
+    obtain ⟨ee, _⟩ := zeugnis_sound e 0 (n - 1) he
+    obtain ⟨bp, _⟩ := seq_sound D V l (.index n :: Γ) Λ Λ p hp
+    obtain ⟨ba, _⟩ := seq_sound D V l Γ Λ Λ a ha
+    exact ⟨Stmt.onOption (Expr.some ee) bp ba, trivial⟩
   | .locks L body =>
     intro h
     simp only [certStmtGueltig] at h
@@ -520,6 +717,89 @@ theorem stmt_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     obtain ⟨bb, _⟩ :=
       seq_sound D V l Γ (Res.held L :: Λ) (Res.held L :: Λ) body hbody
     exact ⟨Stmt.locks L hr bb, trivial⟩
+  | .breaking i body =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨bb, _⟩ := seq_sound D V l Γ Λ Λ' body h
+    exact ⟨Stmt.breaking i bb, trivial⟩
+  | .uebergang t f lo hi von nach i =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hft, hii, hlo, hhi, he, hw, hL, hout⟩ := h
+    subst hout
+    have hτ : D.typ t f = .int lo hi := intVonTyp_eq hft
+    obtain ⟨ei, _⟩ := zeugnis_sound i 0 (D.count t - 1) hii
+    exact ⟨Stmt.uebergang t f hτ ei von nach ⟨hlo, hhi⟩ he hw hL, trivial⟩
+  | .publish g e payload =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hp, hne, htyp, hw, hL, hout⟩ := h
+    subst hout
+    cases he : certRange D Γ Λ e with
+    | none => exact absurd he hne
+    | some p =>
+      obtain ⟨lo, hi⟩ := p
+      have hgt : intVonTyp (D.gtyp g) = some (lo, hi) := by
+        rw [← he]
+        exact htyp.symm
+      have hτ : D.gtyp g = .int lo hi := intVonTyp_eq hgt
+      obtain ⟨ee, _⟩ := zeugnis_sound e lo hi he
+      have ee' : Expr D Γ Λ (D.gtyp g) := by rw [hτ]; exact ee
+      exact ⟨Stmt.publish g ee' payload hp hw hL, trivial⟩
+  | .regSchreib r e =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hk, hne, htyp, hout⟩ := h
+    subst hout
+    cases he : certRange D Γ Λ e with
+    | none => exact absurd he hne
+    | some p =>
+      obtain ⟨lo, hi⟩ := p
+      have hrt : intVonTyp (D.rtyp r) = some (lo, hi) := by
+        rw [← he]
+        exact htyp.symm
+      have hτ : D.rtyp r = .int lo hi := intVonTyp_eq hrt
+      obtain ⟨ee, _⟩ := zeugnis_sound e lo hi he
+      have ee' : Expr D Γ Λ (D.rtyp r) := by rw [hτ]; exact ee
+      exact ⟨Stmt.regSchreib r hk ee', trivial⟩
+  | .advances m a =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hmem, hs, hout⟩ := h
+    subst hout
+    exact ⟨Stmt.advances m a hmem hs, trivial⟩
+  | .retires m s a =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hmem, hout⟩ := h
+    subst hout
+    exact ⟨Stmt.retires m s hmem a, trivial⟩
+  | .traverse t inv body =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hinv, hbody, hout⟩ := h
+    subst hout
+    obtain ⟨einv, _⟩ := cond_sound inv hinv
+    obtain ⟨bb, _⟩ :=
+      seq_sound D V true (.index (D.count t) :: Γ) Λ Λ body hbody
+    exact ⟨Stmt.traverse t einv bb, trivial⟩
+  | .retry n bis body ueber =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hbis, hbody, hueber, hout⟩ := h
+    subst hout
+    obtain ⟨ebis, _⟩ := cond_sound bis hbis
+    obtain ⟨bb, _⟩ := seq_sound D V true Γ Λ Λ body hbody
+    obtain ⟨bu, _⟩ := seq_sound D V l Γ Λ Λ ueber hueber
+    exact ⟨Stmt.retry n ebis bb bu, trivial⟩
+  | .forever a inv body =>
+    intro h
+    simp only [certStmtGueltig] at h
+    obtain ⟨hinv, hbody, hout⟩ := h
+    subst hout
+    obtain ⟨einv, _⟩ := cond_sound inv hinv
+    obtain ⟨bb, _⟩ := seq_sound D V true Γ Λ Λ body hbody
+    exact ⟨Stmt.forever a einv bb, trivial⟩
   | .ret =>
     intro h
     simp only [certStmtGueltig] at h
@@ -579,6 +859,79 @@ theorem seq_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     obtain ⟨ee, _⟩ := zeugnis_sound e lo hi he
     obtain ⟨r', _⟩ := seq_sound D V l (.int lo hi :: Γ) Λ Λ' rest hrest
     exact ⟨Block.bind ee r', trivial⟩
+  | .bindCall f lo hi Λc hp rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hpar, hgr, he, hΛc, hrest⟩ := h
+    subst hΛc
+    obtain ⟨r', _⟩ :=
+      seq_sound D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest hrest
+    exact ⟨Block.bindCall f (by rw [hpar]; exact Args.nil) he hp hgr r',
+      trivial⟩
+  | .bindCallElse f lo hi Λc hp err rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hpar, hgr, he, hΛc, herr, hrest⟩ := h
+    subst hΛc
+    obtain ⟨es, _⟩ :=
+      end_sound D V l (.grund (D.gruende f) :: Γ) (nach D f Λ) err herr
+    obtain ⟨r', _⟩ :=
+      seq_sound D V l (.int lo hi :: Γ) (nach D f Λ) Λ' rest hrest
+    exact ⟨Block.bindCallElse f (by rw [hpar]; exact Args.nil) he hp hgr
+      es r', trivial⟩
+  | .regLies r lo hi rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hk, htyp, hrest⟩ := h
+    have hτ : D.rtyp r = .int lo hi := intVonTyp_eq htyp
+    obtain ⟨r', _⟩ := seq_sound D V l (.int lo hi :: Γ) Λ Λ' rest hrest
+    have r'' : Block D V l (D.rtyp r :: Γ) Λ Λ' := by rw [hτ]; exact r'
+    exact ⟨Block.regLies r hk r'', trivial⟩
+  | .regLiesElse r zusage sonst rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hk, hz, hsonst, hrest⟩ := h
+    obtain ⟨ez, _⟩ := cond_sound zusage hz
+    obtain ⟨es, _⟩ := end_sound D V l Γ Λ sonst hsonst
+    obtain ⟨r', _⟩ := seq_sound D V l (D.rtyp r :: Γ) Λ Λ' rest hrest
+    exact ⟨Block.regLiesElse r hk ez es r', trivial⟩
+  | .awaits g payload lo hi rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hp, hL, htyp, hrest⟩ := h
+    have hτ : D.gtyp g = .int lo hi := intVonTyp_eq htyp
+    obtain ⟨r', _⟩ := seq_sound D V l (.int lo hi :: Γ) Λ Λ' rest hrest
+    have r'' : Block D V l (D.gtyp g :: Γ) Λ Λ' := by rw [hτ]; exact r'
+    exact ⟨Block.awaits g payload hp hL r'', trivial⟩
+  | .exchange g lo hi neu rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨htyp, hneu, hw, hL, hrest⟩ := h
+    have hτ : D.gtyp g = .int lo hi := intVonTyp_eq htyp
+    obtain ⟨eneu, _⟩ := zeugnis_sound neu lo hi hneu
+    have eneu' : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g) := by
+      rw [hτ]
+      exact eneu
+    obtain ⟨r', _⟩ := seq_sound D V l (.int lo hi :: Γ) Λ Λ' rest hrest
+    have r'' : Block D V l (D.gtyp g :: Γ) Λ Λ' := by rw [hτ]; exact r'
+    exact ⟨Block.exchange g eneu' hw hL r'', trivial⟩
+  | .narrow e lo hi lo' hi' sonst rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨he, hsonst, hrest⟩ := h
+    obtain ⟨ee, _⟩ := zeugnis_sound e lo hi he
+    obtain ⟨es, _⟩ := end_sound D V l Γ Λ sonst hsonst
+    obtain ⟨r', _⟩ :=
+      seq_sound D V l (.int lo' hi' :: Γ) Λ Λ' rest hrest
+    exact ⟨Block.narrow ee lo' hi' es r', trivial⟩
+  | .pruefung c sonst rest =>
+    intro h
+    simp only [certSeqGueltig] at h
+    obtain ⟨hc, hsonst, hrest⟩ := h
+    obtain ⟨ec, _⟩ := cond_sound c hc
+    obtain ⟨es, _⟩ := end_sound D V l Γ Λ sonst hsonst
+    obtain ⟨r', _⟩ := seq_sound D V l Γ Λ Λ' rest hrest
+    exact ⟨Block.pruefung ec es r', trivial⟩
 
 /-- Non-falling-block soundness: the body a program carries. -/
 theorem end_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
@@ -722,5 +1075,71 @@ example : certStmtOk refD (vertragVon refD refEin) false [.int 0 10]
     [Res.held (D := refD) ()] [Res.held (D := refD) ()]
     (.assignSlot () () (.lit 3) (.wide 0 100 (.lit 100))) = false := by
   decide
+
+/-! ## CUTS: what is not proved, constructor by constructor
+
+    COVERED (38 of 49 `Stmt`/`Block`/`Endblock` constructors, each with a
+    validity arm, a `Decidable` arm, and a soundness case above):
+    - `Stmt`: assignSlot, assignVar, assignGlob, schreibBytes, uebergang,
+      ite, onOption (see R-1), call (see R-2), locks, breaking, traverse,
+      retry, forever, publish, regSchreib, advances, retires, ret,
+      retWert, retGrund, leave, next (21 of 26).
+    - `Block`: nil, cons, bind, bindCall (see R-2), bindCallElse,
+      regLies, regLiesElse, awaits, exchange, narrow, pruefung (11 of 17).
+    - `Endblock`: ret, retWert, retGrund, leave, next, cons, bind (6 of 6).
+    - `CertCond` (the bool scrutinees): wahr, falsch, var, lt, le, eq,
+      und, oder, nicht (9 of 9 over the int fragment).
+    R-1 `onOption` covers `some`-introducer scrutinees only (the index
+      certificate recomputes `0 .. n - 1` and elaborates via `Expr.some`).
+      Option scrutinees from variables, globals, or slots need the CUT-3
+      option rows wired to a pinned `.opt n` type (`cut3_sound` leaves the
+      type existential) -- booked.
+    R-2 `call`/`bindCall` cover NULLARY callees only (`params = []`,
+      `gruende = 0` recomputed). Calls with arguments need per-argument
+      certificates against the callee's parameter types (the `Block5Args`
+      precedent of `Zeugnis.lean`) -- booked.
+    R-3 `RufPasst` travels AS PROOF with the carried resource list `Λc`
+      (validity equates it with `Λ`). It quantifies over arbitrary carrier
+      types, so no table recomputes it -- the `CertBlock.call` precedent
+      of `Zeugnis.lean`, not a gap in the checking.
+    NOT COVERED, with the reason each stays out:
+    - `assignDurch`, `callInd`, `bindCallInd`: pointer/function-pointer
+      scrutinees carry no range, so the range table has nothing to
+      recompute. Needs the CUT-4 remainder rows (`CertCut4`) wired to
+      pinned `.ptr`/`.fnptr` types -- booked.
+    - `onTag`: sum scrutinees need the `fall` row plus one certificate
+      per case (`Arms` list elaboration with case-list correspondence).
+    - `onGrund`: reason scrutinees need the `grund` row plus `n`
+      certificates (`GrundArms` list elaboration with length `n`).
+    - `axiomCall`, `bindAxiom`: the foreign-write frame (`hw`/`hg`) and
+      guard frame (`hd`/`hgd`) quantify over arbitrary carrier types.
+      They travel as proofs only in an indexed certificate (the `RufPasst`
+      shape); in plain data they are booked, not faked.
+    - `transition`: needs `D.spiegel r = some m`, undecidable without
+      `DecidableEq D.Reg` (the declaration does not supply one).
+    - `gleit`, `gleitLit`, `gleitVon`, `gleitNarrow`: float payloads need
+      the CUT-3 float rows (`CertFl`) wired to block context extension.
+    - Expression shapes beyond the int fragment (`altGlob`/`altSlot`,
+      `durch`, `ptrOf`, `fnref`, quantifier bodies) stay booked exactly
+      where `Zeugnis.lean` books them; statements over them are uncovered
+      with them.
+    RUST SIDE (`crates/gabbro-check/src/certemit.rs`, `zeugnis.rs`): prints
+    EXPRESSION certificates only -- nothing for statements today. The
+    transfer-phase printer must emit, per statement/block: the `CertStmt`/
+    `CertSeq`/`CertEnd` term in `CertExpr` print syntax (one line per
+    node, children first, as `side_conditions` does), the claimed
+    resource flow (`Λ` before, `Λ`/`Λm`/output after, as names), and the
+    recomputed side lines (`darf`/`gdarf` holds, `V.schreibt` holds, rank
+    order holds, index shape exact, balance `Perm`). `RufPasst` and the
+    reason-count facts travel as checked references, not re-derivations.
+-/
+
+#print axioms cond_sound
+#print axioms stmt_sound
+#print axioms seq_sound
+#print axioms end_sound
+#print axioms rankOk_true
+#print axioms zeugnisStmt_sound
+#print axioms zeugnisStmt_sound_zeuge
 
 end Gabbro.Grammatik
