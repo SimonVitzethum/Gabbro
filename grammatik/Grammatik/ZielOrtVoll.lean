@@ -1336,6 +1336,11 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
     program satisfying every other premise. (Axiom calls do not have this
     problem: every recorded axiom answer appends to the sequential trace,
     so no two consultations share a key.)
+    Repaired in `ziel_ort_geraet` (`ZielOrtGeraet.lean`): the hardware
+    class `RegLokal` (a register answers from its device's carriers) plus
+    the widened footprint check `fussOrtGB` admit register reads and
+    `awaits`; on register-local oracles `ziel_ort_voll` is a special case
+    (`ziel_ort_voll_lokal`).
   - Indirect calls are covered only where every function of the
     pointer's signature has its contract carriers in the caller's footprint
     (`KandOk`, decided by `kandB` over the complete list `fs`); the

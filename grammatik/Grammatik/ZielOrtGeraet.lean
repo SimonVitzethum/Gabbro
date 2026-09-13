@@ -1122,8 +1122,71 @@ theorem ziel_ort_geraet (P : Programm D) (O : Orakel D) (passes : Nat) (fs : Lis
 
 end Ziel
 
+/-! ## 3. `ziel_ort_voll` on register-local oracles is a special case -/
+
+/-- **`ziel_ort_voll` follows from `ziel_ort_geraet` for every
+    register-local oracle**: with the premises of `ziel_ort_voll` and
+    `RegLokal O`, the old fragment is inside the widened one, the old
+    footprint check is the widened one there (no register is read), and the
+    old obligation gives the new one. (`ziel_ort_voll` itself, without
+    `RegLokal`, stays as it is.) -/
+theorem ziel_ort_voll_lokal (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List D.Fn)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentV P fs = true) (hFuss : fussOrtB P fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutV P passes f) (hStart : StartGut P sp init)
+    (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      VertragAmOrtG P M :=
+  ziel_ort_geraet P O passes fs sp init e0 hO hRL hvoll (programmImFragmentG_of_V P fs hFrag)
+    (fussOrtGB_of_V P fs hFrag hFuss) (fun f => koerperGutG_of_V (hK f)) hStart hex
+
+/-! ## CUTS:
+
+  What is proved: `ziel_ort_geraet` -- over the repaired G, for every
+  program in the widened fragment (every form of `ziel_ort_voll`'s fragment
+  plus `let x = R`, `let x = R else …` and `awaits`; register writes,
+  `transition` and `exchange` were already in), whose widened footprint
+  check passes, whose bodies satisfy `KoerperGutG`, whose start assignment
+  is exclusive and meets `StartGut`, with an oracle satisfying `GutO` and
+  `RegLokal`, every reachable machine satisfies `VertragAmOrtG`. Every
+  premise is used: `GutO` (rely, held locks, axiom frames), `RegLokal` (the
+  register and visibility steps of `akteurG`; the record oracle is local
+  for the user obligation in `popG_ens`/`pushG_req`), `hvoll` and
+  `programmImFragmentG` (every residue in the widened fragment, every
+  register read with its device carriers in the footprint), `fussOrtGB`
+  (`andereG`: the device carriers are protected like every footprint
+  carrier), `KoerperGutG`, `StartGut`, `StartExklusiv`, `e0`. On
+  register-local oracles `ziel_ort_voll` is a special case
+  (`ziel_ort_voll_lokal`). The counterexample of `ZielOrtRegister.lean` is
+  excluded by `RegLokal` (`ziel_ort_register_ausgeschlossen`,
+  `ZielOrtGeraetAus.lean`); the witness with all premises jointly is
+  `ziel_ort_geraet_zeuge` (`ZielOrtGeraetZeuge.lean`).
+
+  What is NOT covered:
+
+  - Device-driven change as a machine step of its own. A device that
+    changes its state by itself is modelled by a declared write to its
+    carriers (an axiom whose frame names them, recorded like every axiom
+    answer); G has no asynchronous device step (`GeraetSchreibt` in
+    `Semantik.lean` is a shape beside the run), so a register whose answer
+    changes between two reads with NO write to its carriers violates
+    `RegLokal` and is outside the theorem.
+  - The device carriers must be protected like every footprint carrier: a
+    lock the reader holds BY SIGNATURE, or no writer at all
+    (`fussOrtGB`). A reader that takes the device lock in a `locks` block
+    only is not covered (the same restriction as `fussOrtB`).
+  - `RegLokal`'s visibility half is minimal (the awaited global only); an
+    answer that depends on the payload globals of `publishes` is outside it.
+  - `ziel_ort_voll` for NON-local oracles is not derived from
+    `ziel_ort_geraet` (it stays as proved); the other cuts of
+    `ziel_ort_voll` (no-event declarations, stuck states, the converse
+    adequacy) carry over unchanged.
+-/
+
 #print axioms Gabbro.Grammatik.akteurG
 #print axioms Gabbro.Grammatik.andereG
 #print axioms Gabbro.Grammatik.ziel_ort_geraet
+#print axioms Gabbro.Grammatik.ziel_ort_voll_lokal
 
 end Gabbro.Grammatik

@@ -522,6 +522,14 @@ theorem rP_praemissen :
   What is NOT proved: a repair. The premise that would make register reads
   sound is a property of the oracle relative to a program's footprint (see
   the header); by the task's rule the extension stops there.
+  The repair that followed splits that property into a program-independent
+  hardware class and a decidable program fact: `RegLokal` (a register
+  answers from the carriers the declaration attributes to its device,
+  `Deklaration.rtraeger`) and the widened footprint check `fussOrtGB` (the
+  reader's footprint contains those carriers). `ziel_ort_geraet`
+  (`ZielOrtGeraet.lean`) proves the theorem with register reads under them;
+  `ziel_ort_register_ausgeschlossen` (`ZielOrtGeraetAus.lean`) shows that
+  THIS counterexample fails exactly `RegLokal`.
 -/
 
 #print axioms Gabbro.Grammatik.rP_koerper

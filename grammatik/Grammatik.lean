@@ -122,3 +122,4 @@ import Grammatik.ZielOrtGeraetSem
 import Grammatik.ZielOrtGeraetBeweis
 import Grammatik.ZielOrtGeraet
 import Grammatik.ZielOrtGeraetAus
+import Grammatik.ZielOrtGeraetZeuge
