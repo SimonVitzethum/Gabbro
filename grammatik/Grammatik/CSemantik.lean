@@ -87,8 +87,14 @@ def cWrap (w : CWidth) (v : Int) : Int :=
   ((v % m) + m) % m
 
 /-- Apply a binary operator: `none` is STUCK (undefined behaviour).
+    Signed `/` and `%` TRUNCATE toward zero (C11 6.5.5p6: `-7 / 2 == -3`,
+    `-7 % 2 == -1`), which is Lean's `Int.tdiv`/`Int.tmod`, not `Int./`
+    and `Int.%` (those round toward minus infinity; corrected 2026-09-13,
+    `cBinApply_c_rundung`). On unsigned operands the two roundings agree.
     Unsigned arithmetic wraps (C11 6.2.5p9: defined); signed overflow,
-    division by zero, `INT_MIN / -1`, shifts by a width or more, shifts
+    division by zero, `INT_MIN / -1` and `INT_MIN % -1` (6.5.5p6: the
+    quotient is not representable, so both are undefined), shifts by a
+    width or more, shifts
     of negative signed values, and signed bitwise operators are stuck
     (C11 6.5p5, 6.5.7p3-4, J.2: undefined or implementation-defined). -/
 def cBinApply : CBinOp → Bool → CWidth → Int → Int → Option Int
@@ -106,10 +112,13 @@ def cBinApply : CBinOp → Bool → CWidth → Int → Int → Option Int
   | .div, true, w, a, b =>
       if b = 0 then none
       else if a = cLo true w ∧ b = -1 then none
-      else if cLo true w ≤ a / b ∧ a / b ≤ cHi true w then some (a / b) else none
+      else if cLo true w ≤ a.tdiv b ∧ a.tdiv b ≤ cHi true w then some (a.tdiv b) else none
   | .mod, false, w, a, b =>
       if cWrap w b = 0 then none else some ((cWrap w a) % (cWrap w b))
-  | .mod, true, _, a, b => if b = 0 then none else some (a % b)
+  | .mod, true, w, a, b =>
+      if b = 0 then none
+      else if a = cLo true w ∧ b = -1 then none
+      else some (a.tmod b)
   | .band, false, w, a, b =>
       some (((cWrap w a).toNat.land (cWrap w b).toNat : Nat) : Int)
   | .band, true, _, _, _ => none
@@ -166,6 +175,8 @@ inductive ABinUB : CBinOp → Bool → CWidth → Int → Int → Prop where
   | modZeroS (w a b) (h : b = 0) : ABinUB .mod true w a b
   | minDiv (w a b) (ha : a = cLo true w) (hb : b = -1) :
       ABinUB .div true w a b
+  | minMod (w a b) (ha : a = cLo true w) (hb : b = -1) :
+      ABinUB .mod true w a b
   | ovAdd (w a b) (h : a + b < cLo true w ∨ cHi true w < a + b) :
       ABinUB .add true w a b
   | ovSub (w a b) (h : a - b < cLo true w ∨ cHi true w < a - b) :
@@ -190,6 +201,8 @@ theorem aBinUB_stuck : ∀ (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int),
   | modZeroS _ _ _ h => simp only [cBinApply]; rw [if_pos h]
   | minDiv _ _ _ ha hb =>
       simp only [cBinApply]; rw [if_neg (by omega), if_pos ⟨ha, hb⟩]
+  | minMod _ _ _ ha hb =>
+      simp only [cBinApply]; rw [if_neg (by omega), if_pos ⟨ha, hb⟩]
   | ovAdd _ _ _ h => simp only [cBinApply]; exact if_neg (by omega)
   | ovSub _ _ _ h => simp only [cBinApply]; exact if_neg (by omega)
   | ovMul _ _ _ h => simp only [cBinApply]; exact if_neg (by omega)
@@ -208,6 +221,18 @@ theorem aBinUB_stuck : ∀ (op : CBinOp) (sgn : Bool) (w : CWidth) (a b : Int),
       · rw [if_neg hc]
   | bitSigned _ _ _ _ hop =>
       rcases hop with _|_|_ <;> subst_vars <;> simp only [cBinApply]
+
+/-- C's rounding, computed: signed `/` and `%` truncate toward zero
+    (C11 6.5.5p6), where Lean's `Int./` and `Int.%` would give `-4` and
+    `1`; `INT_MIN % -1` is stuck like `INT_MIN / -1`. -/
+theorem cBinApply_c_rundung :
+    cBinApply .div true .w32 (-7) 2 = some (-3) ∧
+    cBinApply .mod true .w32 (-7) 2 = some (-1) ∧
+    cBinApply .div true .w32 7 (-2) = some (-3) ∧
+    cBinApply .mod true .w32 7 (-2) = some 1 ∧
+    cBinApply .mod true .w32 (-2147483648) (-1) = none ∧
+    (-7 : Int) / 2 = -4 ∧ (-7 : Int) % 2 = 1 := by
+  decide
 
 /-! ## Form B. array indexing with a checked index -/
 
@@ -786,3 +811,4 @@ CUTS: what is not proved in this file.
 #print axioms cExec_cfor_progress
 #print axioms aBinUB_stuck
 #print axioms cIdxRead_stuck
+#print axioms cBinApply_c_rundung
