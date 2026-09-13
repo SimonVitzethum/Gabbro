@@ -1,0 +1,41 @@
+-- erwartet: Hinweis E246
+-- **An `ensures` over a written carrier with effects cover but no signature guard falls.**
+--
+-- The `ensures` leg of the same footprint promise: `ungedeckt` reads `zaehler` next to
+-- `result` (which is no read) while `zaehler` is written below, covered in `effects`
+-- and guarded nowhere. `gedeckt` holds the guard by signature and stays silent. Same
+-- shape as `gift/896`, one level stricter: E221 stays silent on both functions here.
+module gift::fuss_wache_ensures {
+
+static mut zaehler : u32 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+-- Must fall: the `ensures` reads a written carrier with cover but without guard.
+impl fn ungedeckt() -> u32
+    ensures result == zaehler
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- Must pass: the same read guarded by signature.
+impl fn gedeckt() -> u32
+    requires Held(ZAEHLER)
+    ensures result == zaehler
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- The writer that makes `zaehler` non-read-only; takes the lock in the body.
+impl fn schreibt() effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = 1;
+    }
+}
+
+}

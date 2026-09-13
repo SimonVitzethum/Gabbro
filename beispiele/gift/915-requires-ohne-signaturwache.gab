@@ -1,0 +1,42 @@
+-- erwartet: Hinweis E245
+-- **A `requires` over a written carrier with effects cover but no signature guard falls.**
+--
+-- `fussOrtGB` asks a signature-held guard (`requires Held(L)` over a `lock L protects`
+-- line) for every written footprint carrier -- a `reads` entry in `effects` is not a
+-- guard. `ungedeckt` names the cover and still falls with E245 (and stays silent at
+-- E220, which is exactly the weaker rule this one sharpens). `gedeckt` holds the lock
+-- by signature and stays silent. `schreibt` takes the lock in a `locks` block -- taking
+-- is not holding, and the lock stands taken so no `H008` joins in.
+module gift::fuss_wache_requires {
+
+static mut zaehler : u32 = 0;
+
+lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
+
+-- Must fall: the `requires` reads a written carrier with cover but without guard.
+impl fn ungedeckt() -> u32
+    requires zaehler == 0
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- Must pass: the same read guarded by signature.
+impl fn gedeckt() -> u32
+    requires Held(ZAEHLER), zaehler == 0
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- The writer that makes `zaehler` non-read-only; takes the lock in the body.
+impl fn schreibt() effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+{
+    locks ZAEHLER {
+        zaehler = 1;
+    }
+}
+
+}
