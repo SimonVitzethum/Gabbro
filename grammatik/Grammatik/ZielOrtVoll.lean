@@ -1191,7 +1191,9 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
   event carries the returned reason; the caller continues in its `else`
   block with it bound). The old theorem is a special case
   (`ziel_ort_aus_voll`, via `koerperGutV_of_kOk`: a body of the old
-  fragment never consults the oracle).
+  fragment never consults the oracle). The witness with all premises
+  jointly and a reached run through the loop, the exit, the reason pop and
+  the axiom is `ziel_ort_voll_zeuge` (`ZielOrtVollZeuge.lean`).
 
   What is NOT covered:
 

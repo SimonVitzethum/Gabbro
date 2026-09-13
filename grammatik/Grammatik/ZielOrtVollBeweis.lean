@@ -30,7 +30,9 @@
   and `EnsAmRueck` are about normal returns). The statement for reasons is
   the machine's own: the logged `grund` event carries the reason the callee
   returned and the caller's `else` block runs with that reason bound
-  (`rufG_grund_treu`, below).
+  (`rufG_grund_treu`, `ZielOrtVoll.lean`). The theorem `ziel_ort_voll` is
+  in `ZielOrtVoll.lean`, its witness `ziel_ort_voll_zeuge` in
+  `ZielOrtVollZeuge.lean`.
 -/
 import Grammatik.ZielOrtVollSem
 import Grammatik.ZielOrtBeweis
