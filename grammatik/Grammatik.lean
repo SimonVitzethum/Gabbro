@@ -128,3 +128,11 @@ import Grammatik.KostenG
 import Grammatik.KostenGZeuge
 import Grammatik.AuditFinal
 import Grammatik.ZeugnisStmt
+import Grammatik.RennfreiVoll
+import Grammatik.TravAwaitsZeuge
+import Grammatik.TravAwaitsLauf
+import Grammatik.AxiomVertrag
+import Grammatik.ZielOrtAxBeweis
+import Grammatik.ZielOrtAx
+import Grammatik.ZielOrtAxZeuge
+import Grammatik.Referenz104
