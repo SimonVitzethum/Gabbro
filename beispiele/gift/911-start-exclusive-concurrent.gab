@@ -1,0 +1,58 @@
+-- erwartet: N240
+-- **A declared-concurrent pair sharing one signature lock falls.**
+--
+-- `concurrent { read_a, read_b }` says the two bodies may run together, and
+-- both require `Held(L)`. Declaring that two bodies MAY run together is not
+-- declaring the carrier shared, and it is not starting them lock-free either:
+-- N240 falls for the shared signature lock. Both bodies only READ, so the
+-- write-hull rules stay silent (`W001` lets shared reads overlap freely, and
+-- with no `entry` there is no `W002`/`H013`): the refusal set is exactly
+-- `[N240]`. The second set pairs two lock-free bodies -- the positive twin:
+-- a disjoint pair in the same unit stays silent. (It must use bodies of its
+-- own: naming `read_a` a second time would start it twice, and two starts in
+-- one lock-holding routine fall on their own -- gift 912 pins that shape.)
+module gift911 {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with each other): both start holding `L` by signature.
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_b() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+-- Must pass N240: starts holding nothing.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+impl fn idle_b() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 1;
+}
+
+concurrent { read_a, read_b };
+
+concurrent { idle, idle_b };
+
+}

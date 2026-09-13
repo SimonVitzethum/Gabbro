@@ -1,0 +1,63 @@
+-- erwartet: N240
+-- **Two entries in the same lock-holding routine fall -- the audit's excluded shape.**
+--
+-- Both entries dispatch to `read_a`, which requires `Held(L)`. The audit
+-- counter-lemma (`audit_same_lock_start_excluded`) says exactly this: the
+-- most ordinary multithreaded shape -- the same routine on two threads -- is
+-- outside `ziel_ort` unless the routine holds no lock. N240 falls once for
+-- the pair, naming the one function twice. The third entry dispatches to
+-- `idle`, which holds nothing -- the positive twin: the lock-free routine may
+-- back any number of entries, and N240 never names it.
+module gift912 {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with itself across the two entries): starts holding `L`.
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+-- Must pass N240: starts holding nothing, on however many entries.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift912::read_a;
+}
+
+entry entry_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift912::read_a;
+}
+
+entry entry_c vector 0x82 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kc per cpu nested never
+    dispatch gift912::idle;
+}
+
+}

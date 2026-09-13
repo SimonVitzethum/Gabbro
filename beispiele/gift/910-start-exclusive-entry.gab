@@ -1,0 +1,72 @@
+-- erwartet: N240
+-- **Two thread entries starting under one signature lock fall -- once.**
+--
+-- `entry_a` dispatches to `read_a` and `entry_b` to `read_b`; both
+-- functions require `Held(L)`. By `StartExklusiv` (`RufMaschineG.lean`) no two
+-- threads start holding one lock -- the audit's usual shape is a lock-free
+-- ENTRY, with the lock taken inside. Both functions only READ here, so no
+-- write-hull rule fires beside it (`W001`/`W002`/`H013` stay silent): what
+-- falls is the shared signature lock alone, once for the pair. The third
+-- entry dispatches to `idle`, which holds no lock -- the positive twin:
+-- disjoint starts stay silent, and N240 names only the `L` pair, never `idle`.
+module gift::start_exclusive_entry {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall (N240, with each other): both start holding `L` by signature.
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_b() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+-- Must pass N240: starts holding nothing.
+impl fn idle() -> u32
+    effects { pure }
+    costs <= 1 ops
+{
+    return 0;
+}
+
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::start_exclusive_entry::read_a;
+}
+
+entry entry_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::start_exclusive_entry::read_b;
+}
+
+entry entry_c vector 0x82 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kc per cpu nested never
+    dispatch gift::start_exclusive_entry::idle;
+}
+
+}

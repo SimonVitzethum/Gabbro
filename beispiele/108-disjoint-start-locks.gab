@@ -1,0 +1,41 @@
+-- 108 -- Declared-concurrent readers under disjoint signature locks.
+--
+-- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): the start functions of
+-- distinct threads hold no signature lock in common. Here `read_a` requires
+-- `Held(L)` and `read_c` requires `Held(M)` -- disjoint sets -- so the
+-- declared pair `concurrent { read_a, read_c }` starts exclusively and every
+-- rule stays silent: N240 (disjoint), W001 (reads overlap freely), W003
+-- (both hulls complete). The passing side of gifts 911/913 at corpus level.
+module beispiel::disjoint_start_locks {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+table U count 4 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+lock M protects { U } rank 1 held <= 100 ops;
+
+impl fn read_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_c() -> u32
+    requires Held(M)
+    effects { reads U.slots }
+    costs <= 4 ops
+{
+    return U.slots[0].v;
+}
+
+concurrent { read_a, read_c };
+
+}

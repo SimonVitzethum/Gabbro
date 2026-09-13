@@ -79,6 +79,10 @@ pub mod konstanten;
 /// **Lane C -- declared concurrency (`concurrent { f, g };`).** Pairwise
 /// non-interference from transitive hulls, closed world over context roots.
 pub mod nebeneinander;
+/// **Lane 137 -- start exclusivity (`StartExklusiv` as a checker rule).**
+/// The start functions of distinct thread starts (`concurrent` members,
+/// `entry`/`boot` dispatch roots) hold no signature lock in common.
+pub mod startexklusiv;
 pub mod kosten;
 mod m1;
 mod namen;
@@ -442,6 +446,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
+        z!("startexklusiv", startexklusiv::pass(baum, absagen));
         // H021 + H022, same wiring as below (timed variant).
         z!("ableitung", ableitung::pass(baum, absagen));
         let h022 = { let t = std::time::Instant::now(); let r = pflichten::zyklen_ohne_mass(baum); eprintln!("{:>10} {:?}", "h022", t.elapsed()); r };
@@ -491,6 +496,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // und dies ist eine Regel derselben Spalte, keine neue.*
     kontexte::pass(baum, absagen);
     nebeneinander::pass(baum, absagen);
+    // **Lane 137, beside the concurrency pass whose start pool it reads.**
+    // No pass number of its own: like `kontexte::pass` above it is a rule of
+    // the same column (thread starts), not a new one.
+    startexklusiv::pass(baum, absagen);
     // **H021 -- dropped derivation edges fall once per (caller, target).**
     // Wired 2026-09-11 (lane-131 built the refusal unwired); clean corpus
     // draws zero H021, measured before wiring.

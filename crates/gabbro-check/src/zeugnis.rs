@@ -212,6 +212,17 @@ pub const EINORDNUNG: &[Posten] = &[
                 statement over two carriers, and its lock footprint (`U001`-`U006`) is \
                 recomputed at compile time (W6)",
     },
+    // **Lane 137, additive: the declared-concurrent set generates NOTHING.**
+    // The emitter takes no line for it (`emit.rs` skips the item); what it
+    // means -- which bodies may run together -- is discharged at compile time
+    // (`W001`-`W003`, `N240`). Found because the first clean example carrying
+    // the declaration (`beispiele/108`) fell out as `UNZUGEORDNET` here.
+    Posten {
+        konstrukt: "concurrent",
+        traegt: Traegt::Geloescht,
+        grund: "the declared-concurrent bodies (SYNTAX.md 11): a checker-only \
+                declaration, no code is generated for the set itself",
+    },
     Posten {
         konstrukt: "assume / axiom",
         traegt: Traegt::Geloescht,
@@ -695,6 +706,11 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Gruppe(_) => zaehle(&mut e, "group"),
+        // **Lane 137: the declared-concurrent set is booked, not dropped.**
+        // The emitter generates nothing for it, so without this line the
+        // first clean example carrying the declaration read as UNZUGEORDNET
+        // (`beispiele/108`) -- a trust surface the emitter alone knew.
+        ItemArt::Concurrent(_) => zaehle(&mut e, "concurrent"),
         // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
         //
         // Sie nennt den ganzen Vertrag, nicht bloss den Namen: *wer das Zeugnis liest, muss
