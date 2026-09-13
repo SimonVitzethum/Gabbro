@@ -3,15 +3,18 @@
   Part of:   Gabbro -- the generator-template library (T5 of
              dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md).
 
-  What this file is: Lean soundness cores for the templates of
-  `crates/gabbro-check/src/schablonen.rs`. All ten machine-checked proofs
-  so far are Isabelle (`beweise/*.thy`); NONE of the 21 templates has a
-  Lean proof. Every lemma below is proved in Lean 4.33.1 over a small
-  abstract model of the template named in its doc comment, and every
-  lemma comes with a `NAME_zeuge` that instantiates ALL premises JOINTLY
-  on concrete values AND on the non-degenerate reference run
-  (`refB_erreicht` + `refB_schreibt`: table `konto` written by
-  `einzahlen`, slot `0 -> 100`).
+  What this file is: ABSTRACT cores for the templates of
+  `crates/gabbro-check/src/schablonen.rs` -- abstract cores, NOT tied
+  to the semantics. Every lemma below is proved in Lean 4.33.1 over a
+  small SELF-INVENTED model of the template named in its doc comment;
+  these models are not connected to Gabbro's semantics (`execStmt` /
+  `execEnd`, `World`, `EmitLay`), so they prove nothing about any
+  Gabbro program. The semantics-tied versions live in
+  `Grammatik/SchablonenT5Sem.lean`. Every lemma comes with a
+  `NAME_zeuge` that instantiates ALL premises JOINTLY on concrete
+  values only -- no witness here is tied to a program run (the former
+  `refB` conjuncts were removed as decoration on 2026-09-14 review:
+  conjoining an unrelated run fact is not inhabitation).
 
   Order: most-used corpus construct first (measured 2026-09-13 over
   `beispiele/`: table/count 370/354, locks 292, device 130, option 90,
@@ -47,14 +50,11 @@ theorem index_bound_holds (N : Nat) (occupied : Nat → Bool)
 
 /-- Witness for `index_bound_holds`: ALL premises instantiated JOINTLY
     on the reference table (`refD.count () = 2`, slot `0` occupied,
-    write sites `[0, 1]`), together with the NON-DEGENERATE run
-    (`refB_erreicht`: `einzahlen` writes table `konto`;
-    `refB_schreibt`: slot `0 -> 100`). -/
+    write sites `[0, 1]`). -/
 theorem index_bound_zeuge :
     (idxGilt ((refD.count ()).toNat) 0 ∧
       ∀ z ∈ ([0, 1] : List Nat), idxGilt ((refD.count ()).toNat) z)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h2 : (refD.count ()).toNat = 2 := rfl
   have hN : ∀ i, (decide (i = 0)) = true → i < (refD.count ()).toNat := by
     intro i hi
@@ -66,7 +66,7 @@ theorem index_bound_zeuge :
     rw [h2]
     simp at hz
     rcases hz with rfl | rfl <;> decide
-  exact ⟨index_bound_holds _ _ _ hN hZ 0 rfl, refB_erreicht, refB_schreibt⟩
+  exact index_bound_holds _ _ _ hN hZ 0 rfl
 
 /-! ## 2. `table.absenkung` (same family: the lowering lays out exactly
     `N` slots, so no access of the generated program runs out of the
@@ -81,16 +81,13 @@ theorem lowering_stays_in_array (N m i : Nat) (h : m = N)
   omega
 
 /-- Witness for `lowering_stays_in_array`: the reference table lays out
-    `m = 2 = count` slots and slot `0` is inside, jointly with the
-    NON-DEGENERATE run (`refB_erreicht`, `refB_schreibt`). -/
+    `m = 2 = count` slots and slot `0` is inside. -/
 theorem lowering_stays_in_array_zeuge :
     (∀ i, i < (refD.count ()).toNat → i < 2)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h2 : (refD.count ()).toNat = 2 := rfl
   have h : 2 = (refD.count ()).toNat := h2.symm
-  exact ⟨fun i hi => lowering_stays_in_array _ 2 i h hi,
-    refB_erreicht, refB_schreibt⟩
+  exact fun i hi => lowering_stays_in_array _ 2 i h hi
 
 /-! ## 3. `option.sonderwert` (option: 90 corpus lines).
 
@@ -145,12 +142,10 @@ theorem option_code_injective (N w : Nat) (hN : N < 2 ^ w)
       rw [h]
 
 /-- Witness for `option_code_injective`: ALL premises instantiated
-    JOINTLY at `N = count = 2`, `w = 32` on the NON-DEGENERATE run
-    (`refB_erreicht`, `refB_schreibt`). -/
+    JOINTLY at `N = count = 2`, `w = 32`. -/
 theorem option_code_injective_zeuge :
     (none = (none : Option Nat))
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h2 : (refD.count ()).toNat = 2 := rfl
   have hN : (refD.count ()).toNat < 2 ^ 32 := by rw [h2]; decide
   have h1 : ∀ i, (none : Option Nat) = some i → i < (refD.count ()).toNat := by
@@ -161,8 +156,7 @@ theorem option_code_injective_zeuge :
     contradiction
   have h : optWord (refD.count ()).toNat 32 none =
       optWord (refD.count ()).toNat 32 none := rfl
-  exact ⟨option_code_injective _ 32 hN none none h1 h2' h,
-    refB_erreicht, refB_schreibt⟩
+  exact option_code_injective _ 32 hN none none h1 h2' h
 
 /-! ## 4. `verbund.konstruktor` (record construction: the labelled call).
 
@@ -189,18 +183,16 @@ theorem record_ctor_unique (fs : List String) (zs : List (String × Nat))
   exact ⟨hone, hkeys⟩
 
 /-- Witness for `record_ctor_unique`: fields `["a", "b"]` built once
-    each, jointly with the NON-DEGENERATE run. -/
+    each. -/
 theorem record_ctor_unique_zeuge :
     (List.count "a" (List.map Prod.fst ([("a", 1), ("b", 2)] : List (String × Nat))) = 1 ∧
       (List.map Prod.fst ([("a", 1), ("b", 2)] : List (String × Nat))).Nodup)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hdist : (["a", "b"] : List String).Nodup := by decide
   have hdeckt : List.map Prod.fst ([("a", 1), ("b", 2)] : List (String × Nat)) =
       ["a", "b"] := rfl
   have hf : "a" ∈ (["a", "b"] : List String) := by decide
-  exact ⟨record_ctor_unique _ _ hdist hdeckt "a" hf,
-    refB_erreicht, refB_schreibt⟩
+  exact record_ctor_unique _ _ hdist hdeckt "a" hf
 
 /-! ## 5. `device.konstruktor` (device: 130 corpus lines).
 
@@ -238,16 +230,13 @@ theorem device_bank_separate (B stride sz k1 k2 : Nat)
   omega
 
 /-- Witness for `device_cells_separate`: registers at offsets `0`/`4`
-    of width `4` stay separate at base `0x1000`, jointly with the
-    NON-DEGENERATE run. -/
+    of width `4` stay separate at base `0x1000`. -/
 theorem device_cells_separate_zeuge :
     (∀ x, ¬ (0x1000 + 0 ≤ x ∧ x < 0x1000 + 0 + 4 ∧
       0x1000 + 4 ≤ x ∧ x < 0x1000 + 4 + 4))
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h : 0 + 4 ≤ 4 ∨ 4 + 4 ≤ 0 := Or.inl (by decide)
-  exact ⟨device_cells_separate 0 4 4 4 0x1000 h,
-    refB_erreicht, refB_schreibt⟩
+  exact device_cells_separate 0 4 4 4 0x1000 h
 
 /-! ## 6. `format.roundtrip` (format: 58 corpus lines).
 
@@ -286,17 +275,15 @@ theorem format_separate (width : String → Nat) (σ : fieldStore)
   simp only [fieldRead, fieldWrite, if_neg hne]
 
 /-- Witness for the `format` pair: roundtrip of `7` and undisturbed
-    `"b"` after writing `"a"`, jointly with the NON-DEGENERATE run. -/
+    `"b"` after writing `"a"`. -/
 theorem format_roundtrip_zeuge :
     (fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "a" = 7 ∧
       fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "b" =
         fieldRead (fun _ => 0) "b")
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hRep : 7 < 2 ^ ((fun _ => 8 : String → Nat) "a") := by decide
   have hne : (("b" : String) ≠ "a") := by decide
-  exact ⟨⟨format_roundtrip _ _ "a" 7 hRep, format_separate _ _ "a" "b" 7 hne⟩,
-    refB_erreicht, refB_schreibt⟩
+  exact ⟨format_roundtrip _ _ "a" 7 hRep, format_separate _ _ "a" "b" 7 hne⟩
 
 /-! ## 7. `gruppe.sperrabdruck` (locks: 292 corpus lines).
 
@@ -369,14 +356,12 @@ theorem group_move_no_exit (script : List GAct)
       have hc : False := hNoExit (List.mem_cons.mpr (Or.inl rfl))
       exact hc.elim
 
-/-- Witness for `lock_order_no_reentry`: ranks `[0, 1]` ascend, jointly
-    with the NON-DEGENERATE run. -/
+/-- Witness for `lock_order_no_reentry`: ranks `[0, 1]` ascend. -/
 theorem lock_order_no_reentry_zeuge :
     ([0, 1] : List Nat).Nodup
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hAsc : ([0, 1] : List Nat).Pairwise (· < ·) := by decide
-  exact ⟨lock_order_no_reentry _ hAsc, refB_erreicht, refB_schreibt⟩
+  exact lock_order_no_reentry _ hAsc
 
 /-! ## 8. `entry.abdruck` (entry 89 / clobbers 80 corpus lines).
 
@@ -439,12 +424,11 @@ theorem entry_clobbers (path : List (String × Nat)) (C : List String)
   · exact absurd (entry_same_aux C path hClob σ r hrC) h
 
 /-- Witness for the `entry` pair: path `[("t0", 1)]` keeps `"s0"` and
-    changes only `"t0"`, jointly with the NON-DEGENERATE run. -/
+    changes only `"t0"`. -/
 theorem entry_keeps_zeuge :
     (regRun [("t0", 1)] (fun _ => 0) "s0" = 0 ∧
       "t0" ∈ (["t0"] : List String))
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hPres : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∉ (["s0"] : List String) := by
     intro w hw
     simp at hw
@@ -455,7 +439,7 @@ theorem entry_keeps_zeuge :
     simp [hw]
   have hkeep := entry_keeps _ ["s0"] hPres (fun _ => 0) "s0" (by decide)
   have hchange := entry_clobbers _ ["t0"] hClob (fun _ => 0) "t0" (by decide)
-  exact ⟨⟨hkeep, hchange⟩, refB_erreicht, refB_schreibt⟩
+  exact ⟨hkeep, hchange⟩
 
 /-! ## 9. `transition.transset` (transition: 34 corpus lines).
 
@@ -492,18 +476,16 @@ theorem joint_move_hidden (σ : Nat → Nat) (p1 p2 v1 v2 : Nat)
   · simp only [jointMove, if_neg h1, if_neg h2]
 
 /-- Witness for `joint_move_hidden`: moving places `0`/`1`, observer of
-    place `2` sees nothing, jointly with the NON-DEGENERATE run. -/
+    place `2` sees nothing. -/
 theorem joint_move_hidden_zeuge :
     ((fun _ => 0) 2 = (fun _ => (0 : Nat)) 2)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hObs : (0 : Nat) ∉ ([2] : List Nat) ∧ 1 ∉ ([2] : List Nat) := by
     decide
   have hw : (fun _ => (0 : Nat)) ∈ jointTrace (fun _ => 0) 0 1 7 8 := by
     simp [jointTrace]
   have hq : (2 : Nat) ∈ ([2] : List Nat) := by decide
-  exact ⟨joint_move_hidden _ 0 1 7 8 [2] hObs _ hw 2 hq,
-    refB_erreicht, refB_schreibt⟩
+  exact joint_move_hidden _ 0 1 7 8 [2] hObs _ hw 2 hq
 
 /-! ## 10. `exchange.rmw` (exchange: 31 corpus lines).
 
@@ -529,16 +511,14 @@ theorem rmw_chain_order (fs : List (Nat → Nat)) (σ : Nat) :
     show runRmw rest (f σ) = rest.foldl (fun s g => g s) (f σ)
     exact ih _
 
-/-- Witness for `rmw_chain_order`: `[+1, *2]` from `5` gives `12`,
-    jointly with the NON-DEGENERATE run. -/
+/-- Witness for `rmw_chain_order`:     `[+1, *2]` from `5` gives `12`. -/
 theorem rmw_chain_order_zeuge :
     (runRmw [(· + 1), (· * 2)] 5 = 12)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hchain := rmw_chain_order [(· + 1), (· * 2)] 5
   have hval : ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl (fun s f => f s) 5 = 12 := by
     decide
-  exact ⟨hchain.trans hval, refB_erreicht, refB_schreibt⟩
+  exact hchain.trans hval
 
 /-! ## 11. `accumulates.monoid` (accumulates: 23 corpus lines).
 
@@ -570,15 +550,14 @@ theorem merge_swap_invariant (op : Nat → Nat → Nat)
   rw [h2]
 
 /-- Witness for `merge_swap_invariant`: addition folds `[1, 2]` and
-    `[2, 1]` to the same value, jointly with the NON-DEGENERATE run. -/
+    `[2, 1]` to the same value. -/
 theorem merge_swap_invariant_zeuge :
     (([1, 2] : List Nat).foldl (fun t x => t + x) 0 =
       ([2, 1] : List Nat).foldl (fun t x => t + x) 0)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h := merge_swap_invariant (· + ·) Nat.add_assoc Nat.add_comm
     ([] : List Nat) [] 1 2 0
-  exact ⟨h, refB_erreicht, refB_schreibt⟩
+  exact h
 
 /-! ## 12. `walk.mappings` (mappings: 23 corpus lines).
 
@@ -606,16 +585,14 @@ theorem walk_hits_mapping (entries : List ptEntry) (e : ptEntry)
     e ∈ mappingsOf entries :=
   List.mem_filter.mpr ⟨hmem, hcar⟩
 
-/-- Witness for `walk_hits_mapping`: entry `(7, 1, true)` is met,
-    jointly with the NON-DEGENERATE run. -/
+/-- Witness for `walk_hits_mapping`:     entry `(7, 1, true)` is met. -/
 theorem walk_hits_mapping_zeuge :
     ((7, 1, true) ∈ mappingsOf [(7, 1, true), (8, 2, false)])
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hmem : ((7, 1, true) : ptEntry) ∈ [(7, 1, true), (8, 2, false)] := by
     decide
   have hcar : carriesMapping (7, 1, true) = true := rfl
-  exact ⟨walk_hits_mapping _ _ hmem hcar, refB_erreicht, refB_schreibt⟩
+  exact walk_hits_mapping _ _ hmem hcar
 
 /-! ## 13. `consuming.ordnung` (consuming: 13 corpus lines).
 
@@ -644,15 +621,13 @@ theorem consume_shrinks (domain : List Nat) (a x : Nat)
     by rw [List.length_erase_of_mem ha]; omega⟩
 
 /-- Witness for `consume_shrinks`: consuming `1` out of `[0, 1]`
-    leaves `[0]` present and shorter, jointly with the NON-DEGENERATE
-    run. -/
+    leaves `[0]` present and shorter. -/
 theorem consume_shrinks_zeuge :
     ((0 : Nat) ∈ [0, 1] ∧ (([0, 1] : List Nat).erase 1).length < [0, 1].length)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hmem : (0 : Nat) ∈ ([0, 1] : List Nat).erase 1 := by decide
   have ha : (1 : Nat) ∈ ([0, 1] : List Nat) := by decide
-  exact ⟨consume_shrinks _ 1 0 hmem ha, refB_erreicht, refB_schreibt⟩
+  exact consume_shrinks _ 1 0 hmem ha
 
 /-! ## 14. `consuming.leermenge`.
 
@@ -673,16 +648,14 @@ theorem consume_empty_at (domain wit : List Nat)
   rw [hempty] at h
   exact absurd h List.not_mem_nil
 
-/-- Witness for `consume_empty_at`: empty witnesses over `[]`,
-    jointly with the NON-DEGENERATE run. -/
+/-- Witness for `consume_empty_at`:     empty witnesses over `[]`. -/
 theorem consume_empty_at_zeuge :
     (([] : List Nat) = [])
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hC : ∀ x ∈ ([] : List Nat), x ∈ ([] : List Nat) := by
     intro x hx
     contradiction
-  exact ⟨consume_empty_at [] [] hC rfl, refB_erreicht, refB_schreibt⟩
+  exact consume_empty_at [] [] hC rfl
 
 /-! ## 15. `consuming.umhaengen` (the refuted blanket version).
 
@@ -701,14 +674,10 @@ def rehang (edges : List (Nat × Nat)) (a b c : Nat) : List (Nat × Nat) :=
 theorem rehang_can_cycle : (0, 0) ∈ rehang [(0, 1)] 0 1 0 := by
   decide
 
-/-- Witness for `rehang_can_cycle`: the loop exhibit, jointly with the
-    NON-DEGENERATE run (the run shows the program side is real; the
-    loop shows the template side falls). -/
+/-- Witness for `rehang_can_cycle`: the loop exhibit. -/
 theorem rehang_can_cycle_zeuge :
-    ((0, 0) ∈ rehang [(0, 1)] 0 1 0)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨rehang_can_cycle, refB_erreicht, refB_schreibt⟩
+    ((0, 0) ∈ rehang [(0, 1)] 0 1 0) :=
+  rehang_can_cycle
 
 /-! ## 16. `gruppe.ops` (group: 10 corpus lines).
 
@@ -732,12 +701,10 @@ theorem group_ops_compose (A B : Type) (link : A → B → Prop)
   h2 _ (h1 _ hp)
 
 /-- Witness for `group_ops_compose`: the equality link over `Nat`
-    survives `(+1, +1)` then `(*2, *2)`, jointly with the
-    NON-DEGENERATE run. -/
+    survives `(+1, +1)` then `(*2, *2)`. -/
 theorem group_ops_compose_zeuge :
     ((12 : Nat) = 12)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h1 : ∀ p : Nat × Nat, p.1 = p.2 →
       ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).1 =
       ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).2 := by
@@ -750,10 +717,9 @@ theorem group_ops_compose_zeuge :
     intro p hp
     simp only []
     omega
-  exact ⟨group_ops_compose Nat Nat (fun a b => a = b)
+  exact group_ops_compose Nat Nat (fun a b => a = b)
     (fun q : Nat × Nat => (q.1 + 1, q.2 + 1))
-    (fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) h1 h2 (5, 5) rfl,
-    refB_erreicht, refB_schreibt⟩
+    (fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) h1 h2 (5, 5) rfl
 
 /-! ## 17. `state.reset` (reset: 9 corpus lines).
 
@@ -778,13 +744,10 @@ theorem reset_from_clean (s : Nat × Bool) (h : s.2 = false) :
 theorem reset_rejects_held (v : Nat) : treset (v, true) = none :=
   rfl
 
-/-- Witness for `reset_from_clean`: `(7, false)` goes home, jointly
-    with the NON-DEGENERATE run. -/
+/-- Witness for `reset_from_clean`: `(7, false)` goes home. -/
 theorem reset_from_clean_zeuge :
-    (treset (7, false) = some (0, false))
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨reset_from_clean _ rfl, refB_erreicht, refB_schreibt⟩
+    (treset (7, false) = some (0, false)) :=
+  reset_from_clean _ rfl
 
 /-! ## 18. `table.induktion` (induction: 3 corpus lines).
 
@@ -823,11 +786,10 @@ theorem induct_edge_in_type (N : Nat) (e1 e2 : Nat → Nat → Prop)
   hfin a b h
 
 /-- Witness for `table_induction`: successor edges below `2`, property
-    `True`, jointly with the NON-DEGENERATE run. -/
+    `True`. -/
 theorem table_induction_zeuge :
     (True)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hfin : ∀ a b : Nat,
       (a + 1 = b ∧ b < 2 ∨ False) → a < (refD.count ()).toNat := by
     intro a b h
@@ -852,8 +814,7 @@ theorem table_induction_zeuge :
     have h2 : (refD.count ()).toNat = 2 := rfl
     rw [h2]
     decide
-  exact ⟨table_induction _ _ _ hfin hwf _ hstep 0 hx,
-    refB_erreicht, refB_schreibt⟩
+  exact table_induction _ _ _ hfin hwf _ hstep 0 hx
 
 /-! ## 20. `table.ops.erhaltung` (by-ops: `16-by-ops-am-feld.gab` plus
     the `by ops`/`maintains` corpus sites).
@@ -888,12 +849,11 @@ theorem table_ops_keep (S : Type) (inv : S → Prop) (ops : List (S → S))
   table_ops_keep_aux S inv ops h run hr s hs
 
 /-- Witness for `table_ops_keep`: operations `[+1, *2]` keep
-    nonnegativity along the run, jointly with the NON-DEGENERATE run. -/
+    nonnegativity along the run. -/
 theorem table_ops_keep_zeuge :
     ((0 : Nat) ≤ ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl
       (fun acc op => op acc) 0)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have h : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
       ∀ s : Nat, 0 ≤ s → 0 ≤ op s := by
     intro op hop s hs
@@ -903,8 +863,7 @@ theorem table_ops_keep_zeuge :
       op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)) := by
     intro op hop
     exact hop
-  exact ⟨table_ops_keep Nat (fun s => 0 ≤ s) _ h _ hr 0 (Nat.zero_le 0),
-    refB_erreicht, refB_schreibt⟩
+  exact table_ops_keep Nat (fun s => 0 ≤ s) _ h _ hr 0 (Nat.zero_le 0)
 
 /-! ## 21. `ops.suche` (candidate from «B10»: no corpus use yet).
 
@@ -958,17 +917,15 @@ theorem op_search_first (pre : List Nat) (x : Nat) (post : List Nat)
     exact hys
 
 /-- Witness for the `ops.suche` pair: searching `[1, 3, 2, 4]` for an
-    even number returns `2` and keeps the list, jointly with the
-    NON-DEGENERATE run. -/
+    even number returns `2` and keeps the list. -/
 theorem op_search_zeuge :
     ((opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).1 = [1, 3, 2, 4] ∧
       (opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).2 = some 2)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hpre : ∀ y ∈ ([1, 3] : List Nat), (y == 2) = false := by decide
   have hpx : ((2 : Nat) == 2) = true := rfl
-  exact ⟨⟨op_search_keeps _ _ _ _,
-    op_search_first _ _ _ _ hpre hpx⟩, refB_erreicht, refB_schreibt⟩
+  exact ⟨op_search_keeps _ _ _ _,
+    op_search_first _ _ _ _ hpre hpx⟩
 
 /-! ## 19. `restrict.alleinzugriff` (restrict: 5 corpus lines).
 
@@ -989,18 +946,15 @@ theorem single_root (q : Nat) (reach : Nat → Nat → Prop) (p r1 r2 : Nat)
     (h2 : reach r2 q) : r1 = r2 := by
   rw [hOnly _ h1, hOnly _ h2]
 
-/-- Witness for `single_root`: both accesses run through root `7`,
-    jointly with the NON-DEGENERATE run. -/
+/-- Witness for `single_root`:     both accesses run through root `7`. -/
 theorem single_root_zeuge :
     ((7 : Nat) = 7)
-    ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
-    ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+:= by
   have hOnly : ∀ r, (r = 7 ∧ (0 : Nat) = 0) → r = 7 := by
     intro r hr
     exact hr.1
   have h1 : (7 : Nat) = 7 ∧ (0 : Nat) = 0 := ⟨rfl, rfl⟩
-  exact ⟨single_root 0 (fun r qq => r = 7 ∧ qq = 0) 7 7 7 hOnly h1 h1,
-    refB_erreicht, refB_schreibt⟩
+  exact single_root 0 (fun r qq => r = 7 ∧ qq = 0) 7 7 7 hOnly h1 h1
 
 /-! ## CUTS:
   - All 21 templates of `crates/gabbro-check/src/schablonen.rs` have a
@@ -1008,8 +962,9 @@ theorem single_root_zeuge :
     21 in Isabelle `beweise/*.thy`). Each core is proved over a small
     abstract model of the template, every premise is consumed by its
     proof, and every template has a `NAME_zeuge` instantiating ALL
-    premises JOINTLY on concrete values plus the NON-DEGENERATE
-    reference run (`refB_erreicht` + `refB_schreibt`).
+    premises JOINTLY on concrete values only (no run link: the
+    former `refB` conjuncts were removed as decoration on 2026-09-14
+    review).
   - What is NOT proved (per template, weaker than the Isabelle
     counterpart where noted):
     (1) `table.indexschranke`: the checker side (`M103` establishes
