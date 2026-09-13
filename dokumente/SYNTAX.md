@@ -1261,8 +1261,14 @@ table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ]
    the premise `Wettlauf.lean` takes for its race theorem. *)
 (* `owner m` names a `linear type m;` whose mark every access to the table must hold. A table
    without `owner` and without `protects` is accessible from anywhere -- which is what a
-   `static` is today. An owner mark is ALLOCATED BY NOBODY (`eigner_nie_erzeugt`): it appears
-   in no `allocs`, so a second owner of the same slots cannot come into being. *)
+   `static` is today. The FIRST mark is minted once, by a single foreign body returning the
+   mark without taking it (`extern fn erste() -> Marke`: a named assumption, like every
+   foreign body); no signature (re)produces it (`D266`, the checker half of
+   `eigner_nie_erzeugt`), it travels by linear handoff (`M2`: exactly once, never doubled),
+   and every write to the table holds it (`D267`). One mint, no second mint, no copy -- so a
+   second owner of the same slots cannot come into being. A mark with no minter, or a minter
+   no guarded access exercises, keeps the `D026` refusal; a malformed producer falls under
+   `D265`-`D267`. *)
 treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
 kante      = ( "parent" | "child" | "sibling" ) ident ;
 (* «B41b»: the edge on which `descendants of` and `ancestors of` run -- ONCE at the table
@@ -1313,7 +1319,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 |---|---|---|
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
 | `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used` |
-| `owner m` | `marke m ∈ Λ` at every access — **parsed, and refused as `D026` until the producer stands**: who mints the FIRST mark is unwritten, and a guard nobody holds is a sentence, not a discipline (`kbedingung.rs::eigner`, poison `gift/694`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; no `allocs`, no second owner |
+| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` until the producer stands**: a declared `linear` mark (`D265`), exactly one foreign minter (`D266`), every write holding it (`D267`); the first mark is minted once and travels by handoff (`kbedingung.rs::eigner`, poison `gift/694`, producer `beispiele/114`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
@@ -2262,11 +2268,16 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
   counter lowering in `emit.rs` — all green, `beispiele/71` lowers and `cc`
   accepts at `-O0`/`-O2`. `owner` parses and is refused as `D026`
-  (poison `gift/694`); the producer story is the open item, named at the
-  clause and in §9.
-- [ ] **The `owner` producer** — which linear value becomes the first mark, and
-  at whose hands. Until it stands, `D026` is the whole implementation, and the
-  Lean theorems about `eigner` are true but unapplied.
+  (poison `gift/694`); the producer story stands since lane 151 (`D265`-`D267`,
+  producer `beispiele/114`, poisons `gift/932`-`935`), named at the clause and
+  in §9.
+- [x] **The `owner` producer** — the first mark is minted once, by a single
+  foreign body returning the mark without taking it (a named assumption, like
+  every foreign body); it travels by linear handoff, and every write to the
+  table holds it. `D026` stays for the incomplete story (no minter, or a
+  minter no guarded access exercises). What stays open: reads inside bodied
+  functions (no site walk for reads yet) and borrowing the mark back across a
+  call (`consumes` plus `allocs` is refused: move-only this lane).
 - [x] **`pruefe-syntax.sh` prose branch flagged `logik uebergang` (×3) — renamed.**
   The word was the Lean outcome constructor (`Logik.uebergang`), not the
   abolished keyword, but the guardian cannot see the difference and it is right

@@ -1,0 +1,19 @@
+-- erwartet: D265
+-- **An `owner` mark that is no linear value: refused.**
+--
+-- The guard is a linear value, and nothing holds it unless the mark is one.
+-- Here `Marke` is a plain alias, so the producer story has no subject: there
+-- is nothing to mint, nothing to hand over, nothing to hold. Falls with
+-- `D265`, and `D026` stays silent beside it (one fault, one refusal).
+-- Measured: 3 items, 1 error.
+module gift::owner_without_linear_mark {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+type Marke = u32;
+
+}

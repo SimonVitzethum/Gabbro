@@ -1,0 +1,28 @@
+-- erwartet: D267
+-- **A write to an owner-guarded carrier without the mark: refused.**
+--
+-- The minter stands (`extern fn erste() -> Marke`), so the mark HAS a first
+-- holder to come from -- but `wild` writes `Plaetze.slots` with no `Marke`
+-- parameter, borrowed or consumed. Every access holds the mark; this one
+-- holds nothing. Falls with `D267`, and `D026` stays silent beside it (one
+-- fault, one refusal). Measured: 5 items, 1 error.
+module gift::owner_write_without_mark {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+
+impl fn wild(i : index into Plaetze)
+    effects { writes Plaetze.slots }
+    costs   <= 32 ops
+{
+    Plaetze.slots[i].benutzt = true;
+}
+
+}

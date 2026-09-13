@@ -25,7 +25,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Was über einen Träger festgestellt wurde.
 #[derive(Debug, Clone)]
@@ -700,7 +700,30 @@ fn belegtfeld(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **D026 -- `owner m` is parsed and refused, by name** («SG-9»).
+/// **Every table with an `owner` clause.**
+struct EignerTabelle {
+    tabelle: String,
+    marke: String,
+    span: Span,
+}
+
+/// **Every signature that can carry linear values: functions (except `spec
+/// fn`, which is proof-only and touches nothing at run time -- the same
+/// exemption `H007` carries), axioms and syscalls (both foreign by
+/// construction, like an `extern fn`).**
+struct Stelle {
+    name: String,
+    span: Span,
+    fremd: bool,
+    rueckgabe: Option<(String, Span)>,
+    parameter: Vec<(String, TypExpr)>,
+    wirkungen: Vec<Wirkung>,
+    /// The checkable body, if there is one (`Block` only: `asm` is a sealed
+    /// hole and reads like a foreign body for touch purposes).
+    koerper: Option<Block>,
+}
+
+/// **D026 -- `owner m` without a producer is parsed and refused, by name** («SG-9»).
 ///
 /// The grammar promises that every access to the table holds the mark `m`, and
 /// that nobody mints it (`eigner_nie_erzeugt`, `Syntax.lean`). What it does not
@@ -710,10 +733,320 @@ fn belegtfeld(baum: &Programm, absagen: &mut Absagen) {
 /// instead of claiming a memory safety no pass enforces. *Open item, named in
 /// SYNTAX.md §9 -- not a gap in the goal, which speaks about what the language
 /// carries, and an uncarried guard is not carried.*
+///
+/// Since lane 151 the refusal is no longer unconditional: a table whose mark
+/// has a complete producer (`D265` clean, `D266` clean, exactly one foreign
+/// minter, every toucher holds the mark, at least one toucher) is NOT refused
+/// here. An incomplete producer (no minter, or a minter nobody guards with)
+/// keeps this refusal; a malformed one is refused under its own code and stays
+/// silent here -- one fault, one refusal.
 fn eigner(baum: &Programm, absagen: &mut Absagen) {
+    // **The declared linear marks, by short name** -- the same resolution the
+    // legacy refusal below uses for tables. Two modules naming one mark is a
+    // merge-time question this pass does not decide.
+    let mut linear: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Typ(t) = &item.art {
+            if t.linear {
+                linear.insert(t.name.text.clone());
+            }
+        }
+    });
+    // **Every table with an `owner` clause.**
+    let mut tabellen: Vec<EignerTabelle> = Vec::new();
+    // **Every signature that can carry linear values (see `Stelle`).**
+    let mut stellen: Vec<Stelle> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Tabelle(t) => {
+            if let Some(m) = &t.eigner {
+                tabellen.push(EignerTabelle {
+                    tabelle: t.name.text.clone(),
+                    marke: m.text.clone(),
+                    span: m.span,
+                });
+            }
+        }
+        ItemArt::Funktion(f) => {
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            stellen.push(Stelle {
+                name: f.name.text.clone(),
+                span: f.name.span,
+                fremd: matches!(f.rumpf, FnRumpf::Keiner),
+                rueckgabe: nackter_name(&f.ergebnis),
+                parameter: f.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
+                wirkungen: f.effects.as_ref().map(|w| w.liste.clone()).unwrap_or_default(),
+                koerper: match &f.rumpf {
+                    FnRumpf::Block(b) => Some(b.clone()),
+                    _ => None,
+                },
+            });
+        }
+        ItemArt::Axiom(a) => {
+            stellen.push(Stelle {
+                name: a.name.text.clone(),
+                span: a.name.span,
+                fremd: true,
+                rueckgabe: nackter_name(&a.rueckgabe),
+                parameter: a.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
+                wirkungen: a.effects.liste.clone(),
+                koerper: None,
+            });
+        }
+        ItemArt::Syscall(s) => {
+            stellen.push(Stelle {
+                name: s.name.text.clone(),
+                span: s.name.span,
+                fremd: true,
+                rueckgabe: nackter_name(&s.ergebnis),
+                parameter: s.parameter.iter().map(|p| (p.name.text.clone(), p.typ.clone())).collect(),
+                wirkungen: s.effects.liste.clone(),
+                koerper: None,
+            });
+        }
+        _ => {}
+    });
+    // **D265 -- the mark must be a declared linear type.** Without a linear
+    // value there is nothing to hold, and the rest of the story has no subject.
+    // A mark refused here takes its tables with it: the specific refusal owns
+    // the fault, `D026` stays silent for them.
+    let mut schlecht: BTreeSet<String> = BTreeSet::new();
+    let mut marken: Vec<String> = tabellen.iter().map(|t| t.marke.clone()).collect();
+    marken.sort();
+    marken.dedup();
+    for m in &marken {
+        if linear.contains(m) {
+            continue;
+        }
+        schlecht.insert(m.clone());
+        for t in tabellen.iter().filter(|t| &t.marke == m) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D265",
+                    t.span,
+                    format!(
+                        "`table {}` names `owner {}`, and `{}` is no declared `linear` type",
+                        t.tabelle, m, m
+                    ),
+                )
+                .mit_notiz(
+                    "the guard is a linear value: nothing holds it unless the mark is one -- \
+                     declare `linear [ghost] type` under that name",
+                ),
+            );
+        }
+    }
+    // Carrier names for touch resolution: every table, owner-guarded or not.
+    let mut traeger: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            traeger.insert(t.name.text.clone());
+        }
+    });
+    // Owner of each carrier, where there is one.
+    let mut eigner_von: BTreeMap<String, String> = BTreeMap::new();
+    for t in &tabellen {
+        eigner_von.entry(t.tabelle.clone()).or_insert(t.marke.clone());
+    }
+    // **D266 -- one mint, and no signature production.** The foreign minter's
+    // return is the single introduction of the mark (a named assumption, like
+    // every foreign body); `allocs` of the mark or a bodied function returning
+    // it without taking it would be a second mint through a signature -- the
+    // shape `eigner_nie_erzeugt` (`Syntax.lean:149`) forbids.
+    let mut minter: BTreeMap<String, (String, Span)> = BTreeMap::new();
+    // Collected up front: the loops below refuse into `schlecht`, which the
+    // lazy filter would otherwise borrow across the mutation.
+    let gute: Vec<String> = marken.iter().filter(|m| !schlecht.contains(*m)).cloned().collect();
+    for m in &gute {
+        let mut erste: Option<(String, Span)> = None;
+        for s in &stellen {
+            let Some((ret, _)) = &s.rueckgabe else { continue };
+            if ret != m {
+                continue;
+            }
+            if haelt_marke(s, m) {
+                continue;
+            }
+            if s.fremd {
+                if erste.is_none() {
+                    erste = Some((s.name.clone(), s.span));
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D266",
+                        s.span,
+                        format!(
+                            "`{}` returns `owner` mark `{m}`, and `{}` already mints it",
+                            s.name,
+                            erste.as_ref().map(|e| e.0.as_str()).unwrap_or("?"),
+                        ),
+                    )
+                    .mit_notiz(
+                        "one mark, one minter: a second mint is a second owner of the same slots",
+                    ),
+                );
+                schlecht.insert(m.clone());
+            } else {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D266",
+                        s.span,
+                        format!(
+                            "`{}` returns `{m}` without taking it, and `{m}` is an `owner` mark",
+                            s.name
+                        ),
+                    )
+                    .mit_notiz(
+                        "only the single foreign minter introduces the mark -- a body forwards \
+                         what it is given, so take `{m}` as a parameter",
+                    ),
+                );
+                schlecht.insert(m.clone());
+            }
+        }
+        if let Some(e) = erste {
+            minter.insert(m.clone(), e);
+        }
+        for s in &stellen {
+            for w in &s.wirkungen {
+                if let WirkungArt::Belegt(i) = &w.art {
+                    if i.text == *m {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "D266",
+                                i.span,
+                                format!(
+                                    "`{}` names `allocs {m}`, and `{m}` is an `owner` mark",
+                                    s.name
+                                ),
+                            )
+                            .mit_notiz(
+                                "no signature (re)produces an owner mark (`eigner_nie_erzeugt`) -- \
+                                 the foreign minter's return is the single introduction, and the \
+                                 mark travels by handoff, not by fresh `allocs`",
+                            ),
+                        );
+                        schlecht.insert(m.clone());
+                    }
+                }
+            }
+        }
+    }
+    // **D267 -- every toucher holds the mark.** For a bodied function the
+    // touch is a body SITE: an assignment/`publish`/`exchange` target that
+    // resolves to an owner-guarded carrier (directly by carrier name, or
+    // through a pointer parameter into it) -- an `effects` line alone is the
+    // call-graph hull (`runde` declaring what `schreibe` writes) and no access
+    // of its own. For a foreign signature (no checkable body: `extern`,
+    // `axiom`, `syscall`, `asm`) the declared `reads`/`writes`/`consumes`/
+    // `publishes` effects are all there is, and each carrier touch owes a
+    // linear parameter of the mark -- borrowed or consumed, both stand in the
+    // entry holdings. A bare `consumes m` of a linear parameter is a value,
+    // not a carrier touch, and stays out. READS inside bodied functions are
+    // not covered yet (known gap, booked in the `Satz`): writes carry this rule.
+    let mut beruehrt: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+    let gute2: Vec<String> = marken.iter().filter(|m| !schlecht.contains(*m)).cloned().collect();
+    for m in &gute2 {
+        for s in &stellen {
+            let mut braucht: BTreeMap<String, Vec<String>> = BTreeMap::new();
+            let mut zeiger: BTreeMap<String, String> = BTreeMap::new();
+            for (pname, ptyp) in &s.parameter {
+                if let Some(t) = zeiger_ziel(ptyp) {
+                    zeiger.insert(pname.clone(), t);
+                }
+            }
+            let loese = |ort: &Ort, braucht: &mut BTreeMap<String, Vec<String>>| {
+                let name = ort.basis.text.clone();
+                if ort.suffixe.is_empty() && s.parameter.iter().any(|(p, _)| *p == name) {
+                    return;
+                }
+                let ziel = if traeger.contains(&name) {
+                    Some(name.clone())
+                } else {
+                    zeiger.get(&name).cloned()
+                };
+                let Some(t) = ziel else { return };
+                if eigner_von.get(&t) == Some(m) {
+                    braucht.entry(m.clone()).or_default().push(t);
+                }
+            };
+            match &s.koerper {
+                Some(b) => {
+                    let mut ziele = Vec::new();
+                    let mut brueche = Vec::new();
+                    sammle(b, &mut ziele, &mut brueche);
+                    for (ort, _) in &ziele {
+                        loese(ort, &mut braucht);
+                    }
+                    for w in &s.wirkungen {
+                        match &w.art {
+                            WirkungArt::Verbraucht(o) | WirkungArt::Veroeffentlicht(o) => {
+                                loese(o, &mut braucht);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                None => {
+                    for w in &s.wirkungen {
+                        match &w.art {
+                            WirkungArt::Liest(o)
+                            | WirkungArt::Schreibt(o)
+                            | WirkungArt::Verbraucht(o)
+                            | WirkungArt::Veroeffentlicht(o) => {
+                                loese(o, &mut braucht);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            for (marke, mut traegerliste) in braucht {
+                if haelt_marke(s, &marke) {
+                    for t in traegerliste.drain(..) {
+                        beruehrt.entry((t, marke.clone())).or_default().push(s.name.clone());
+                    }
+                    continue;
+                }
+                traegerliste.sort();
+                traegerliste.dedup();
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D267",
+                        s.span,
+                        format!(
+                            "`{}` touches `owner {marke}` table{} `{}` but holds no `{marke}`",
+                            s.name,
+                            if traegerliste.len() == 1 { "" } else { "s" },
+                            traegerliste.join("`, `"),
+                        ),
+                    )
+                    .mit_notiz(
+                        "every access holds the mark: take `{marke}` as a linear parameter, \
+                         borrowed or consumed -- a guard nobody holds at the access is a \
+                         sentence, not a discipline",
+                    ),
+                );
+                schlecht.insert(marke.clone());
+            }
+        }
+    }
+    // **The lift.** A table is refused here only while its mark's story is
+    // incomplete: no minter, or a minter no guarded access exercises. A
+    // malformed story (`schlecht`) is refused above and stays silent here.
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Tabelle(t) = &item.art else { return };
         let Some(m) = &t.eigner else { return };
+        if schlecht.contains(&m.text) {
+            return;
+        }
+        let vollstaendig = minter.contains_key(&m.text)
+            && beruehrt.keys().any(|(tabelle, marke)| tabelle == &t.name.text && marke == &m.text);
+        if vollstaendig {
+            return;
+        }
         absagen.schiebe(
             Absage::fehler(
                 "D026",
@@ -734,6 +1067,35 @@ fn eigner(baum: &Programm, absagen: &mut Absagen) {
             ),
         );
     });
+}
+
+/// The bare name of a return or parameter type (`-> Marke`), if it is one.
+fn nackter_name(typ: &Option<TypExpr>) -> Option<(String, Span)> {
+    match typ {
+        Some(t @ TypExpr::Pfad(pf)) => pf.teile.last().map(|i| (i.text.clone(), t.span())),
+        _ => None,
+    }
+}
+
+/// Whether the signature holds the mark: some parameter is of that bare type,
+/// borrowed or consumed -- both stand in the entry holdings.
+fn haelt_marke(s: &Stelle, marke: &str) -> bool {
+    s.parameter.iter().any(|(_, t)| match t {
+        TypExpr::Pfad(pf) => pf.teile.last().is_some_and(|i| i.text == marke),
+        _ => false,
+    })
+}
+
+/// The table a pointer type points at (`ptr<…, …> T`), if it names one by a
+/// bare path. Deeper targets (arrays, compounds) are not carriers.
+fn zeiger_ziel(typ: &TypExpr) -> Option<String> {
+    match typ {
+        TypExpr::Zeiger(z) => match &z.ziel {
+            TypExpr::Pfad(pf) => pf.teile.last().map(|i| i.text.clone()),
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 fn baumkanten(baum: &Programm, absagen: &mut Absagen) {
