@@ -181,12 +181,15 @@ fn erklaerung_gestalt_matches_refD() {
     assert!(w.iter().any(|x| x == "locks M"), "lies holds M: {w:?}");
 }
 
-/// The program datum (`gabbro lean`): print it and pin what it does NOT
-/// carry, so the gap stays visible. Contracts live in the duty register
-/// (test above), not here: `old` and `result` drop out of `post`, and the
-/// place list keeps `isInt` where the duty keeps `intIn 0 100`.
+/// The program datum (`gabbro lean`): print it and hold its Lean view against
+/// `refD` (lane 141 closes findings F4/F5 of lane 126). Contracts live in the
+/// duty register (test above) AND in this datum: each `_post` is stated over
+/// entry state, exit state and result, carrying `old` and `result`; the exact
+/// ranges stand in `_pre`, `placesRanged` and `wellFormedRanged`; the lock and
+/// the guard facts stand in `locks`, `lockProtects`, `tableGuards` and each
+/// `<fn>_held`.
 #[test]
-fn lean_program_view_gaps_stay_visible() {
+fn lean_program_view_carries_refD() {
     let b = baum();
     let prog =
         gabbro_check::lean::program(&b, &["beispiele/104-referenz.gab".to_string()]);
@@ -200,18 +203,88 @@ fn lean_program_view_gaps_stay_visible() {
         prog.contains("(.call \"lies\""),
         "einzahlen_body must call lies:\n{prog}"
     );
-    // ...but the ensures do not: both posts are True, by name.
+    // `refEnsEin` (old slot <= new slot): the program datum carries it over
+    // entry, exit and result -- F4 closed, no drop by name.
     assert!(
-        prog.contains("ensures #1 (old-state)"),
-        "program channel drops old-ensures by name:\n{prog}"
+        prog.contains("def einzahlen_post (s s' : State) (r : Option Value) : Prop"),
+        "einzahlen_post must be two-state:\n{prog}"
     );
     assert!(
-        prog.contains("ensures #1 (result-in-ensures)"),
-        "program channel drops result-ensures by name:\n{prog}"
+        prog.contains("\"old#1\"") && prog.contains(".bin .le"),
+        "einzahlen_post must carry old <= new:\n{prog}"
     );
-    // ...and the place shape drops the range the duty keeps.
+    // `refEnsLies` (result = slot): `result` is bound, not dropped.
+    assert!(
+        prog.contains("def lies_post (s s' : State) (r : Option Value) : Prop"),
+        "lies_post must be two-state:\n{prog}"
+    );
+    assert!(
+        prog.contains("\"result\"") && prog.contains(".bin .eq"),
+        "lies_post must carry result == slot:\n{prog}"
+    );
+    assert!(
+        !prog.contains("old-state") && !prog.contains("result-in-ensures"),
+        "no ensures may drop by name any more:\n{prog}"
+    );
+    // `refD.typ () () = .int 0 100`: the exact range beside the shape name.
     assert!(
         prog.contains("(\"Konto\", \"stand\", \"isInt\")"),
-        "program places keep isInt, not the range:\n{prog}"
+        "places keeps the shape name:\n{prog}"
+    );
+    assert!(
+        prog.contains("(\"Konto\", \"stand\", 0, 100)"),
+        "placesRanged must carry stand in 0..100:\n{prog}"
+    );
+    assert!(
+        prog.contains(".intIn 0 100"),
+        "wellFormedRanged must bound the slot:\n{prog}"
+    );
+    // `refSigEin.params = [.int 0 10]`: the parameter range in the precondition.
+    assert!(
+        prog.contains("(.hasShape \"b\" (.intIn 0 10))"),
+        "einzahlen_pre must bound b in 0..10:\n{prog}"
+    );
+    // F5 closed: the lock is named, the guard facts resolve, each signature
+    // names what it holds (`refD.braucht`, `refSigEin.haelt`, `refSigLies.haelt`).
+    assert!(
+        prog.contains("def locks : List String := [\"M\"]"),
+        "locks must name M:\n{prog}"
+    );
+    assert!(
+        prog.contains("(\"M\", \"stand\")"),
+        "lockProtects must carry M protects stand:\n{prog}"
+    );
+    assert!(
+        prog.contains("(\"Konto\", \"stand\", [\"M\"])"),
+        "tableGuards must resolve Konto.stand to M:\n{prog}"
+    );
+    assert!(
+        prog.contains("def einzahlen_held : List String := [\"M\"]"),
+        "einzahlen_held must hold M:\n{prog}"
+    );
+    assert!(
+        prog.contains("def lies_held : List String := [\"M\"]"),
+        "lies_held must hold M:\n{prog}"
+    );
+}
+
+/// Lane 141, F1 of lane 126: the `concurrent` set of `104-referenz.gab` is
+/// classified by the certificate census (erased: the emitter writes nothing
+/// for it), so no `UNCLASSIFIED` remains and stage 7 of the emission check
+/// passes over a concurrent program.
+#[test]
+fn concurrent_is_classified() {
+    let b = baum();
+    let e = gabbro_check::zeugnis::erhebe(&b);
+    assert!(
+        e.unzugeordnet.is_empty(),
+        "every construct of 104 must classify: {:?}",
+        e.unzugeordnet
+    );
+    assert_eq!(
+        e.posten.get("concurrent"),
+        Some(&1),
+        "the concurrent set must census as one posten: {:?}",
+        e.posten
     );
 }

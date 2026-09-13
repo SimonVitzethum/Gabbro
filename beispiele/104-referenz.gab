@@ -7,13 +7,14 @@
 -- parameters, one `0 .. 100` result, reads, ensures the answer equals the
 -- slot). Both run under the held lock (`requires Held(M)`, the `beispiele/01`
 -- idiom: the caller's duty, so the bodies touch the guarded slot directly).
--- `concurrent { einzahlen, lies }` is NOT in this file, and the absence is
--- deliberate: the emitter generates no C for the declaration but the
--- certificate (`gabbro zeugnis`) books it as UNCLASSIFIED, which fails stage
--- 7 of `pruefe-emission.sh`. Threads cannot be driven from a C driver
--- anyway, so the driver runs the sequential composition instead -- the
--- observable half of the fixture (`refB_schreibt`: slot `0 -> 100`). The two
--- threads are the two functions the driver calls, one after the other.
+-- `concurrent { einzahlen, lies }` declares the two threads of the fixture
+-- (lane 141: the certificate census classifies `concurrent` as erased -- the
+-- emitter writes nothing for it -- so the declaration passes stage 7 of
+-- `pruefe-emission.sh`). Threads cannot be driven from a C driver anyway, so
+-- the driver runs both threads one after the other -- the sequential
+-- composition the emitter produces: `einzahlen` like thread 1, then `lies`
+-- like thread 0. That is the observable half of the fixture
+-- (`refB_schreibt`: slot `0 -> 100`).
 
 module beispiel::referenz {
 
@@ -48,5 +49,7 @@ impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand
 {
     return k.slots[i].stand;
 }
+
+concurrent { einzahlen, lies };
 
 }

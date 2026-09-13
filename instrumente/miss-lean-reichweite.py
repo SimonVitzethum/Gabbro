@@ -149,7 +149,12 @@ def main() -> int:
         # What is CARRIED: `_pre`/`_post` conjuncts that come from a clause. A parameter
         # shape conjunct is not a clause, so it is not counted here -- it is a typing
         # hypothesis and it is read off the DECLARATION.
+        # **Two shapes since lane 141.** A `_pre` conjunct reads one state
+        # (`eval s …`); a carried `ensures` reads entry, exit and result
+        # (`eval { world := s'.world, … } …`, one per clause). Both are kept
+        # promises, so both count.
         vor_get = len(re.findall(r"eval s .* = some \(\.bool true\)", r.stdout))
+        vor_get += len(re.findall(r"eval \{ world := s'\.world", r.stdout))
         s_routinen += routinen
         s_koerper += koerper
         s_orte += orte

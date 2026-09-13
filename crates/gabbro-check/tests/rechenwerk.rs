@@ -5639,18 +5639,29 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
 }
 }";
 
-/// **The export datum drops an `ensures result`, and it is booked under the CLAUSE name.**
+/// **The export datum carries an `ensures result`, stated over entry, exit and
+/// result (lane 141, F4 of lane 126).**
 ///
-/// This is the other half of the split of 2026-08-30. The two refusals point opposite ways:
-/// this one is a promise the datum declines to repeat -- sayable, deliberately unsaid, and
-/// the conservative direction -- while `result-in-body` is a source saying something it
-/// cannot mean. *Under one name a reader could not tell which had happened.*
+/// Until lane 141 this was the other half of the split of 2026-08-30: a promise
+/// the datum declined to repeat -- sayable, deliberately unsaid. The reference
+/// program showed the price: anyone reading only the program view saw a
+/// contract-free program. The datum now states the clause the way the duty
+/// channel does, with `result` bound and `old` beside it; what stays refused
+/// is named under its own clause, never silently.
 #[test]
 fn lean_export_sagt_die_zusage_unter_dem_klauselnamen_ab() {
     let t = lean_programm(LEAN_ERGEBNIS);
     assert!(
-        t.contains("ensures #1 (result-in-ensures)"),
-        "the dropped promise names the clause it came from:\n{t}"
+        t.contains("def lies_post (s s' : State) (r : Option Value) : Prop"),
+        "the promise is stated over entry, exit and result:\n{t}"
+    );
+    assert!(
+        t.contains("\"result\"") && t.contains(".bin .eq"),
+        "and it carries result == slot:\n{t}"
+    );
+    assert!(
+        !t.contains("result-in-ensures"),
+        "and nothing drops under the clause name any more:\n{t}"
     );
     assert!(
         !t.contains("result-in-body"),

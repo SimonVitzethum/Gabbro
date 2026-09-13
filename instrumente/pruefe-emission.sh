@@ -2314,10 +2314,11 @@ lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
 # (reads the slot back). Both run under the held lock (`requires Held(M)`).
 #
 # Threads cannot be driven from a C driver -- the emitted unit has no thread
-# notion (a `concurrent` declaration would generate no C and, worse, the
-# certificate books it as UNCLASSIFIED, which fails stage 7) -- so the driver
-# runs the SEQUENTIAL COMPOSITION of both threads: `einzahlen` like thread 1
-# (with the witness argument 7 of `refRho7`), then `lies` like thread 0.
+# notion (a `concurrent` declaration generates no C; since lane 141 the
+# certificate books it as erased, which passes stage 7) -- so the driver
+# runs BOTH threads one after the other, the sequential composition the
+# emitter produces: `einzahlen` like thread 1 (with the witness argument 7
+# of `refRho7`), then `lies` like thread 0.
 #
 #    Expected:
 #      100  -- `lies` answers what `einzahlen` wrote (the `refB_schreibt` half:
