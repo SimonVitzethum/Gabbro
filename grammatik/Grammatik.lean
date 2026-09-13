@@ -111,3 +111,4 @@ import Grammatik.ZielOrt
 import Grammatik.ZielOrtSem
 import Grammatik.ZielOrtBeweis
 import Grammatik.ZielOrtZeuge
+import Grammatik.RennfreiG
