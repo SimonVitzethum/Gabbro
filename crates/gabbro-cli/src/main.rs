@@ -418,6 +418,48 @@ fn main() -> std::process::ExitCode {
             print!("{}", gabbro_check::lean::program(&baum, &quellen));
             std::process::ExitCode::SUCCESS
         }
+        // **`gabbro lean-g` -- the unit as a G program term (lane 144).** The
+        // mechanical path from a CHECKED `.gab` file to `Programm D`: the
+        // declaration, every body and every contract, plus the two decidable
+        // checks (`programmImFragmentG`, `fussOrtGB`) as `example ... := by
+        // decide`. Every surface form without a G counterpart is refused by
+        // NAME (`LG001`-`LG005`) -- never silently truncated. Like `lean`
+        // above, a unit with checker errors carries no export.
+        "lean-g" => {
+            if rest.is_empty() {
+                eprintln!("gabbro lean-g: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let datei = datei.as_str();
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro lean-g: {datei} has errors -- no export");
+                    schlecht = true;
+                    continue;
+                }
+                match gabbro_check::lean_g::export(datei, &baum) {
+                    Ok(text) => print!("{text}"),
+                    Err(w) => {
+                        eprintln!("gabbro lean-g: {datei}: {w}");
+                        schlecht = true;
+                    }
+                }
+            }
+            if schlecht {
+                std::process::ExitCode::from(1)
+            } else {
+                std::process::ExitCode::SUCCESS
+            }
+        }
         // **`gabbro beweise` -- the person's half, measured.** The Lean duties of every
         // unit named, compiled against the model; where `gabbro_auto` leaves a `sorry`,
         // the person's `Proofs/<Unit>.lean` is held against it. `--vorlage` prints the
@@ -633,6 +675,7 @@ const COMMAND_NAMES: &[&str] = &[
     "contexts", "kontexte",
     "obligations", "pflichten",
     "lean",
+    "lean-g",
     "prove", "beweise",
     "blindspots", "blindstellen",
     "certificate", "zeugnis",
@@ -785,9 +828,13 @@ fn hilfe() {
                                      E1 is wired in: the run aborts when a line
                                      goes missing
   gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
-                                    precondition, and the shape of every declared place --
-                                    and NO specification. What is to hold is said in Lean,
-                                    by a person. Several files become ONE program
+                                     precondition, and the shape of every declared place --
+                                     and NO specification. What is to hold is said in Lean,
+                                     by a person. Several files become ONE program
+  gabbro lean-g     <file.gab>…     the unit as a G PROGRAM TERM: the declaration, every
+                                     body and every contract as `Programm D`, plus the two
+                                     decidable checks as `example ... := by decide`.
+                                     Forms without a G counterpart are REFUSED by name
   gabbro blindspots|blindstellen <clean>… [-- <poison>…]
                                     FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE

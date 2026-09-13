@@ -122,6 +122,11 @@ pub mod pflichten;
 pub mod gabbrov;
 pub mod phasen;
 /// **P6** -- the same obligation register, in the form a prover reads. See `refinement.rs`.
+/// **Export `.gab` to a G program term (lane 144).** The mechanical path
+/// from a checked unit to `Programm D`: declaration, bodies, contracts and
+/// the two decidable checks, with a named refusal for every form without a
+/// counterpart.
+pub mod lean_g;
 pub mod lean;
 /// **Const certificate from the source (lane 121)** -- a `const fn` body in
 /// the single-expression fragment printed to a Lean `Nat` function, so the
