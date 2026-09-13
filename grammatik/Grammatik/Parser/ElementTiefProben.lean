@@ -725,5 +725,118 @@ theorem t36 : beqTopTief (parseTopTief tt36)
   decide
 -- beispiele/23-akkumulatoren.gab:45. Rust: `Accumulates` with a
 -- cell count -- same shape.
+def tt37 : List Token :=
+  [.wort "walk", .ident "Seitentabelle", .wort "levels", .zahl 4,
+   .zeichen "{", .wort "node", .zeichen ":", .zeichen "[",
+   .ident "Pte", .zeichen ";", .zahl 512, .zeichen "]",
+   .zeichen ",", .wort "down", .zeichen ":", .ident "rahmen",
+   .wort "when", .ident "it", .zeichen ".", .ident "praesent",
+   .zeichen "&&", .zeichen "!", .ident "it", .zeichen ".",
+   .ident "gross", .zeichen ",", .wort "leaf", .zeichen ":",
+   .ident "it", .zeichen ".", .ident "praesent", .zeichen "&&",
+   .zeichen "!", .ident "it", .zeichen ".", .ident "gross",
+   .zeichen ",", .zeichen "}", .ende]
+theorem t37_lex :
+    lex "walk Seitentabelle levels 4 { node : [Pte; 512], down : rahmen when it.praesent && !it.gross, leaf : it.praesent && !it.gross, }" =
+      .ok tt37 := by
+  decide
+theorem t37 : beqTopTief (parseTopTief tt37)
+    (.ok [.wegT { wname := "Seitentabelle", stufen := (.lit 4), knoten := (.reihe (.atom "Pte") (.lit 512)), runterName := "rahmen", runterWann := (.bin "&&" (.feld (.variable "it") "praesent") (.un "!" (.feld (.variable "it") "gross"))), blatt := (.bin "&&" (.feld (.variable "it") "praesent") (.un "!" (.feld (.variable "it") "gross"))), invarianten := [] }]) = true := by
+  decide
+-- beispiele/07-eintritt-und-boot.gab:26-29 (invariants dropped --
+-- they quantify, see CUTS). Rust: `Walk` with node, down and
+-- leaf -- same shape.
+def tt38 : List Token :=
+  [.wort "entry", .ident "entry_a", .wort "vector", .zahl 128,
+   .wort "arch", .ident "x86_64", .zeichen "{", .wort "regs",
+   .wort "in", .zeichen "{", .zeichen "}", .wort "regs",
+   .wort "out", .zeichen "{", .zeichen "}", .wort "preserves",
+   .zeichen "{", .ident "rbx", .zeichen "}", .wort "clobbers",
+   .zeichen "{", .ident "rcx", .zeichen "}", .wort "stack",
+   .ident "ka", .wort "per", .wort "cpu", .wort "nested",
+   .wort "never", .wort "dispatch", .ident "beispiel",
+   .zeichen "::", .ident "lockfree_entry_roots", .zeichen "::",
+   .ident "distribute_a", .zeichen ";", .zeichen "}", .ende]
+theorem t38_lex :
+    lex "entry entry_a vector 0x80 arch x86_64 { regs in { } regs out { } preserves { rbx } clobbers { rcx } stack ka per cpu nested never dispatch beispiel::lockfree_entry_roots::distribute_a; }" =
+      .ok tt38 := by
+  decide
+theorem t38 : beqTopTief (parseTopTief tt38)
+    (.ok [.eingangT { ename := "entry_a", vektor := (.some (.lit 128)), via := .none, arch := "x86_64", regRein := [], regRaus := [], erhaelt := ["rbx"], zerstoert := ["rcx"], stapel := "ka", proCPU := true, ist := .none, verschachtelt := (.some "never"), dispatch := ["beispiel", "lockfree_entry_roots", "distribute_a"] }]) = true := by
+  decide
+-- beispiele/109-lockfree-entry-roots.gab (the `entry_a` root).
+-- Rust: `Entry` with empty register maps -- same shape.
+def tt39 : List Token :=
+  [.wort "entrust", .ident "jitpuffer", .wort "at",
+   .ident "Gastbild", .wort "arch", .ident "x86_64",
+   .zeichen "{", .wort "regs", .wort "in", .zeichen "{",
+   .ident "eintritt", .zeichen ":", .ident "rdi", .zeichen ",",
+   .ident "kappe", .zeichen ":", .ident "rsi", .zeichen ",",
+   .zeichen "}", .wort "stack", .ident "gaststapel",
+   .wort "assume", .ident "gast_bleibt_in_seinem_raum",
+   .zeichen ";", .zeichen "}", .ende]
+theorem t39_lex :
+    lex "entrust jitpuffer at Gastbild arch x86_64 { regs in { eintritt : rdi, kappe : rsi, } stack gaststapel assume gast_bleibt_in_seinem_raum; }" =
+      .ok tt39 := by
+  decide
+theorem t39 : beqTopTief (parseTopTief tt39)
+    (.ok [.anvertrautT "jitpuffer" "Gastbild" "x86_64"
+      [.bindet "eintritt" "rdi", .bindet "kappe" "rsi"]
+      "gaststapel" "gast_bleibt_in_seinem_raum"]) = true := by
+  decide
+-- beispiele/25-entrust.gab:32-36. Rust: `Entrust` -- same shape.
+def tt40 : List Token :=
+  [.wort "boot", .ident "multiboot1", .wort "arch",
+   .ident "x86_64", .zeichen "{", .wort "step",
+   .ident "stapelzeiger", .zeichen "=", .ident "boot_stapel_oben",
+   .zeichen ";", .wort "step", .ident "bootinfo_retten",
+   .zeichen "(", .ident "ebx", .zeichen ")", .zeichen ";",
+   .wort "dispatch", .ident "beispiel", .zeichen "::",
+   .ident "eintritt", .zeichen "::", .ident "rust_eintritt",
+   .zeichen ";", .zeichen "}", .ende]
+theorem t40_lex :
+    lex "boot multiboot1 arch x86_64 { step stapelzeiger = boot_stapel_oben; step bootinfo_retten(ebx); dispatch beispiel::eintritt::rust_eintritt; }" =
+      .ok tt40 := by
+  decide
+theorem t40 : beqTopTief (parseTopTief tt40)
+    (.ok [.startT "multiboot1" "x86_64"
+      [.setztSchritt "stapelzeiger" (.variable "boot_stapel_oben"),
+        .rufSchritt ["bootinfo_retten"] [.variable "ebx"]]
+      ["beispiel", "eintritt", "rust_eintritt"]]) = true := by
+  decide
+-- beispiele/07-eintritt-und-boot.gab:86-97 (two steps stand for
+-- the ten). Rust: `Boot` with steps and a dispatch -- same shape.
+def tt41 : List Token :=
+  [.wort "syscall", .ident "write", .zeichen "(", .ident "fd",
+   .zeichen ":", .wort "u64", .zeichen ",", .ident "buf",
+   .zeichen ":", .wort "u64", .zeichen ",", .ident "len",
+   .zeichen ":", .wort "u64", .zeichen ")", .zeichen "->",
+   .wort "u64", .wort "or", .ident "IoError", .wort "abi",
+   .ident "linux", .wort "arch", .ident "x86_64", .wort "number",
+   .zahl 1, .wort "regs", .wort "in", .zeichen "{",
+   .ident "rdi", .zeichen "=", .ident "fd", .zeichen ",",
+   .ident "rsi", .zeichen "=", .ident "buf", .zeichen ",",
+   .ident "rdx", .zeichen "=", .ident "len", .zeichen "}",
+   .wort "regs", .wort "out", .zeichen "{", .ident "rax",
+   .zeichen "}", .wort "clobbers", .zeichen "{", .ident "rcx",
+   .zeichen ",", .ident "r11", .zeichen "}", .wort "errors",
+   .zeichen "{", .ident "EBADF", .zeichen "=>", .ident "BadFd",
+   .zeichen ",", .ident "EINTR", .zeichen "=>",
+   .ident "Interrupted", .zeichen ",", .ident "EAGAIN",
+   .zeichen "=>", .ident "WouldBlock", .zeichen "}",
+   .wort "requires", .ident "len", .zeichen "<=", .zahl 1024,
+   .wort "ensures", .wort "result", .zeichen "<=", .ident "len",
+   .wort "effects", .zeichen "{", .wort "pure", .zeichen "}",
+   .wort "assume", .ident "linux_write_contract", .wort "falsifier",
+   .ident "sonde_write", .zeichen ";", .ende]
+theorem t41_lex :
+    lex "syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError abi linux arch x86_64 number 1 regs in { rdi = fd, rsi = buf, rdx = len } regs out { rax } clobbers { rcx, r11 } errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock } requires len <= 1024 ensures result <= len effects { pure } assume linux_write_contract falsifier sonde_write;" =
+      .ok tt41 := by
+  decide
+theorem t41 : beqTopTief (parseTopTief tt41)
+    (.ok [.sysrufT { sname := "write", sparams := [("fd", (.atom "u64")), ("buf", (.atom "u64")), ("len", (.atom "u64"))], sergebnis := (.some (.atom "u64")), sfehler := (.some "IoError"), abi := "linux", sarch := "x86_64", nummer := (.lit 1), sregRein := [.bindet "rdi" "fd", .bindet "rsi" "buf", .bindet "rdx" "len"], sregRaus := [.register "rax"], szerstoert := ["rcx", "r11"], sfehlerAbb := [("EBADF", "BadFd"), ("EINTR", "Interrupted"), ("EAGAIN", "WouldBlock")], svoraus := [(.bin "<=" (.variable "len") (.lit 1024))], ssichert := [(.bin "<=" .ergebnis (.variable "len"))], swirkung := [.rein], sherkunft := (.annahmeHerkunft "linux_write_contract" (.widerlegbar "sonde_write")) }]) = true := by
+  decide
+-- beispiele/90-syscall-errno.gab:22-31. Rust: `Syscall` with an
+-- error channel, maps and contracts -- same shape.
 
 end Gabbro.Grammatik.Parser
