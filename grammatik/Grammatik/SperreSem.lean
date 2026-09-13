@@ -526,6 +526,230 @@ end
 
 end Leer
 
+/-! ### A body without `locks` means the same in both semantics -/
+
+section Ohne
+
+variable {V : Vertrag D}
+
+mutual
+
+/-- The statement contains no `locks` block. -/
+def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
+  | .ite _ t e => t.ohneLocks && e.ohneLocks
+  | .onOption _ p a => p.ohneLocks && a.ohneLocks
+  | .onTag _ arms => arms.ohneLocks
+  | .onGrund _ arms => arms.ohneLocks
+  | .locks .. => false
+  | .breaking _ body => body.ohneLocks
+  | .traverse _ _ body => body.ohneLocks
+  | .retry _ _ body ueber => body.ohneLocks && ueber.ohneLocks
+  | .forever _ _ body => body.ohneLocks
+  | _ => true
+
+def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
+  | .nil => true
+  | .cons s rest => s.ohneLocks && rest.ohneLocks
+  | .bind _ rest => rest.ohneLocks
+  | .bindCall _ _ _ _ _ rest => rest.ohneLocks
+  | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
+  | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
+  | .regLies _ _ rest => rest.ohneLocks
+  | .regLiesElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .awaits _ _ _ _ rest => rest.ohneLocks
+  | .exchange _ _ _ _ rest => rest.ohneLocks
+  | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .pruefung _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .gleit _ _ _ _ _ rest => rest.ohneLocks
+  | .gleitLit _ _ _ rest => rest.ohneLocks
+  | .gleitVon _ _ _ rest => rest.ohneLocks
+  | .gleitNarrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+
+def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
+  | .cons s rest => s.ohneLocks && rest.ohneLocks
+  | .bind _ rest => rest.ohneLocks
+  | _ => true
+
+def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+    Arms D V l Γ Λ Λ' cs → Bool
+  | .nil => true
+  | .cons b rest => b.ohneLocks && rest.ohneLocks
+
+def GrundArms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
+    GrundArms D V l Γ Λ Λ' n → Bool
+  | .nil => true
+  | .cons b rest => b.ohneLocks && rest.ohneLocks
+
+end
+
+variable (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
+  (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+
+mutual
+
+theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (s : Stmt D V l Γ Λ Λ') → s.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ
+  | .ite c t e, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne t h.1, Block.execH_ohne e h.2] <;> rfl
+  | .onOption o p a, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne p h.1, Block.execH_ohne a h.2] <;> rfl
+  | .onTag v arms, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      exact Arms.execH_ohne arms h _ _ _
+  | .onGrund r arms, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      exact GrundArms.execH_ohne arms h _ _ _
+  | .locks .., h, _, _ => by simp [Stmt.ohneLocks] at h
+  | .breaking i body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne body h]
+  | .traverse t inv body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
+  | .retry n bis body ueber, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+          (fun σ ρ => execBlock O passes R body σ ρ) from
+            funext fun σ => funext fun ρ => Block.execH_ohne body h.1 σ ρ,
+        show (fun σ ρ => execBlockH S O U passes R ueber σ ρ) =
+          (fun σ ρ => execBlock O passes R ueber σ ρ) from
+            funext fun σ => funext fun ρ => Block.execH_ohne ueber h.2 σ ρ]
+  | .forever a inv body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
+  | .assignSlot .., _, _, _ => rfl
+  | .assignDurch .., _, _, _ => rfl
+  | .assignGlob .., _, _, _ => rfl
+  | .schreibBytes .., _, _, _ => rfl
+  | .assignVar .., _, _, _ => rfl
+  | .uebergang .., _, _, _ => rfl
+  | .call .., _, _, _ => rfl
+  | .callInd .., _, _, _ => rfl
+  | .axiomCall .., _, _, _ => rfl
+  | .regSchreib .., _, _, _ => rfl
+  | .transition .., _, _, _ => rfl
+  | .publish .., _, _, _ => rfl
+  | .advances .., _, _, _ => rfl
+  | .retires .., _, _, _ => rfl
+  | .ret .., _, _, _ => rfl
+  | .retGrund .., _, _, _ => rfl
+  | .leave .., _, _, _ => rfl
+  | .next .., _, _, _ => rfl
+
+theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (b : Block D V l Γ Λ Λ') → b.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execBlockH S O U passes R b σ ρ = execBlock O passes R b σ ρ
+  | .nil, _, _, _ => rfl
+  | .cons s rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Stmt.execH_ohne s h.1, Block.execH_ohne rest h.2] <;> rfl
+  | .bind e rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h]
+  | .bindCall f args he hp hr rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindCallInd p args he hp hr rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .regLies r hk rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .regLiesElse r hk zusage sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .awaits g payload hp hL rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .exchange g neu hw hL rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h]
+  | .narrow e lo' hi' sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .pruefung c sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .gleit op a b lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .gleitLit q lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .gleitVon e lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .gleitNarrow e lo hi sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+
+theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    (b : Endblock D V l Γ Λ) → b.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execEndH S O U passes R b σ ρ = execEnd O passes R b σ ρ
+  | .ret .., _, _, _ => rfl
+  | .retGrund .., _, _, _ => rfl
+  | .leave .., _, _, _ => rfl
+  | .next .., _, _, _ => rfl
+  | .cons s rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Stmt.execH_ohne s h.1, Endblock.execH_ohne rest h.2] <;> rfl
+  | .bind e rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h]
+
+theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} :
+    (a : Arms D V l Γ Λ Λ' cs) → a.ohneLocks = true →
+      ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
+      execArmsH S O U passes R a v σ ρ = execArms O passes R a v σ ρ
+  | .nil, _, ⟨⟨k, hk⟩, _⟩, _, _ => (Nat.not_lt_zero k hk).elim
+  | .cons b _, h, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
+      simp only [Arms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execArmsH, execArms, Block.execH_ohne b h.1]
+  | .cons _ rest, h, ⟨⟨i + 1, hi⟩, nutz⟩, σ, ρ => by
+      simp only [Arms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execArmsH, execArms]
+      exact Arms.execH_ohne rest h.2 _ σ ρ
+
+theorem GrundArms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
+    (a : GrundArms D V l Γ Λ Λ' n) → a.ohneLocks = true → ∀ (r : Fin n) (σ : World D) (ρ : Env D Γ),
+      execGrundH S O U passes R a r σ ρ = execGrund O passes R a r σ ρ
+  | .nil, _, ⟨k, hk⟩, _, _ => (Nat.not_lt_zero k hk).elim
+  | .cons b _, h, ⟨0, _⟩, σ, ρ => by
+      simp only [GrundArms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execGrundH, execGrund, Block.execH_ohne b h.1]
+  | .cons _ rest, h, ⟨i + 1, hi⟩, σ, ρ => by
+      simp only [GrundArms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execGrundH, execGrund]
+      exact GrundArms.execH_ohne rest h.2 _ σ ρ
+
+end
+
+end Ohne
+
 /-- **A leaf means the same in both semantics** (a leaf contains no `locks`). -/
 theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}

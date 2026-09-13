@@ -385,6 +385,18 @@ theorem koerperGutS_leer {P : Programm D} {passes : Nat} {Q : AxEns D} {f : D.Fn
     rw [Endblock.execH_leer O' U passes R hid]
     exact h.2 O' hr hl hq R hR hOL σ ρ hreq e
 
+/-- **A body without `locks` owes nothing new**: for every family, its new
+    obligation is its old one (the semantics does not reach an acquire). -/
+theorem koerperGutS_ohne {P : Programm D} {passes : Nat} {Q : AxEns D} (S : SperrInv D)
+    {f : D.Fn} (hl : (P.rumpf f).ohneLocks = true) (h : KoerperGutZ P passes Q f) :
+    KoerperGutS P passes Q S f := by
+  refine ⟨fun O' hr hlk hq U _ R hR hOV σ ρ hreq => ?_,
+    fun O' hr hlk hq U _ R hR hOL σ ρ hreq e => ?_⟩
+  · rw [Endblock.execH_ohne S O' U passes R _ hl, Endblock.execH_ohne S O' U passes (torRuf P R) _ hl]
+    exact h.1 O' hr hlk hq R hR hOV σ ρ hreq
+  · rw [Endblock.execH_ohne S O' U passes R _ hl]
+    exact h.2 O' hr hlk hq R hR hOL σ ρ hreq e
+
 /-! ## 5. Records of the environment's moves -/
 
 /-- A recorded acquire: lock, key world, the memory the protected carriers

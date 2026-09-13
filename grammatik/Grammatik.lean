@@ -154,3 +154,4 @@ import Grammatik.SperreFuss
 import Grammatik.SperreBeweis
 import Grammatik.SperreMaschine
 import Grammatik.ZielOrtSperre
+import Grammatik.ZielOrtSperreZeuge
