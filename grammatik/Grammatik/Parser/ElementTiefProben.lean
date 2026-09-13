@@ -1086,7 +1086,7 @@ def tt54 : List Token :=
    .wort "descendants", .wort "of", .ident "s",
    .wort "section", .text ".text", .wort "arch", .ident "x86_64",
    .wort "advances", .ident "roh", .zeichen "->", .ident "mmu",
-   .wort "retires", .ident "t", .wort "from", .ident "boot",
+   .wort "retires", .ident "t", .wort "from", .wort "boot",
    .wort "falsifier", .ident "p", .zeichen ";", .ende]
 theorem t54_lex :
     lex "impl fn f() maintains invA, invB by induction over descendants of s section \".text\" arch x86_64 advances roh -> mmu retires t from boot falsifier p;" =
@@ -1117,5 +1117,82 @@ theorem t55 : beqTopTief (parseTopTief tt55)
 -- beispiele/28-reserve-und-hinterlegung.gab:19 (the header;
 -- memory kinds are values, not checked here). Rust: `Tabelle`
 -- with a `backed` bound -- same shape.
+
+def ttEnd : List Token :=
+  [.wort "module", .ident "beispiel112", .zeichen "{",
+  .wort "table", .ident "Zustand", .wort "count", .zahl 4,
+   .zeichen "{", .wort "slot", .zeichen "{", .ident "bereit",
+   .zeichen ":", .wort "u32", .zeichen ",", .zeichen "}",
+   .zeichen "}",
+  .wort "lock", .ident "Sperre", .wort "protects", .zeichen "{",
+   .ident "Zustand", .zeichen "}", .wort "rank", .zahl 0,
+   .zeichen ";",
+  .wort "device", .ident "Geraet", .zeichen "(", .ident "basis",
+   .zeichen ":", .wort "u64", .zeichen ")", .wort "at",
+   .wort "mmio", .zeichen "{", .wort "reg", .ident "ST",
+   .zeichen ":", .wort "u32", .zeichen "@", .zahl 0,
+   .wort "class", .wort "r", .wort "depends", .zeichen "{",
+   .ident "Zustand", .zeichen "}", .zeichen "}",
+  .wort "impl", .wort "fn", .ident "lesen", .zeichen "(",
+   .ident "d", .zeichen ":", .ident "Geraet", .zeichen ")",
+   .zeichen "->", .wort "u32", .wort "requires", .ident "Held",
+   .zeichen "(", .ident "Sperre", .zeichen ")", .wort "effects",
+   .zeichen "{", .wort "reads", .ident "d", .zeichen "}",
+   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .zeichen "{", .wort "let", .ident "stand", .zeichen "=",
+   .ident "d", .zeichen ".", .ident "ST", .zeichen ";",
+   .wort "return", .ident "stand", .zeichen ";", .zeichen "}",
+  .wort "impl", .wort "fn", .ident "schreiben", .zeichen "(",
+   .ident "i", .zeichen ":", .wort "index", .wort "into",
+   .ident "Zustand", .zeichen ",", .wort "w", .zeichen ":",
+   .wort "u32", .zeichen ")", .zeichen "->", .wort "u32",
+   .wort "requires", .ident "Held", .zeichen "(", .ident "Sperre",
+   .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
+   .ident "Zustand", .zeichen "}", .wort "costs", .zeichen "<=",
+   .zahl 8, .wort "ops", .zeichen "{", .ident "Zustand",
+   .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
+   .zeichen "]", .zeichen ".", .ident "bereit", .zeichen "=",
+   .wort "w", .zeichen ";", .wort "return", .zahl 0,
+   .zeichen ";", .zeichen "}",
+  .zeichen "}", .ende]
+set_option maxHeartbeats 1600000 in
+theorem tEnd_lex :
+    lex "module beispiel112 { table Zustand count 4 { slot { bereit : u32, } } lock Sperre protects { Zustand } rank 0; device Geraet(basis : u64) at mmio { reg ST : u32 @0x00 class r depends { Zustand } } impl fn lesen(d : Geraet) -> u32 requires Held(Sperre) effects { reads d } costs <= 8 ops { let stand = d.ST; return stand; } impl fn schreiben(i : index into Zustand, w : u32) -> u32 requires Held(Sperre) effects { writes Zustand } costs <= 8 ops { Zustand.slots[i].bereit = w; return 0; } }" =
+      .ok ttEnd := by
+  decide
+theorem tEnd : beqTopTief (parseTopTief ttEnd)
+    (.ok [.modulT "beispiel112" [
+.tabelleT "Zustand" (.some (.lit 4)) .none .none false
+      [.tPlatz [{ fname := "bereit", ftyp := .atom "u32",
+                  pos := .none, bezug := .none, wo := .none,
+                  reserviert := false, byOps := false }]],
+.sperreT "Sperre" [.variable "Zustand"] (.lit 0)
+      .none .none .none,
+.geraetT "Geraet" [("basis", .atom "u64")] "mmio"
+      [.regTief { rname := "ST", rtyp := .atom "u32",
+                   adresse := .lit 0, klasse := "r", phasen := [],
+                   felder := [], voraus := .none,
+                   vorausSonst := .none,
+                   abhaengt := [["Zustand"]] }],
+.funktionT
+      { art := "impl", name := "lesen", params := [("d", .atom "Geraet")],
+        ergebnis := .some (.atom "u32"), fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
+          .wirkung [.liest (.variable "d")], .kosten (.lit 8)] }
+      (.block [.lass false "stand" (.feld (.variable "d") "ST")]
+        (.some (.ret (.some (.variable "stand"))))),
+.funktionT
+      { art := "impl", name := "schreiben",
+        params := [("i", .index false "Zustand"), ("w", .atom "u32")],
+        ergebnis := .some (.atom "u32"), fehler := .none,
+        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
+          .wirkung [.schreibt (.variable "Zustand")], .kosten (.lit 8)] }
+      (.block [.zuweis
+        (.feld (.index (.feld (.variable "Zustand") "slots")
+          (.variable "i")) "bereit")
+        "=" (.variable "w")]
+        (.some (.ret (.some (.lit 0)))))]]) = true := by
+  decide
+-- beispiele/112-register-traeger-bewacht.gab, whole file (38 lines): the smallest whole corpus file with a table, a lock and contracted functions. Module, table, lock, device and both function bodies parse end to end with nothing skipped.
 
 end Gabbro.Grammatik.Parser
