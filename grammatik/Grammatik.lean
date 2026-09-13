@@ -150,3 +150,4 @@ import Grammatik.CFormenDet
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtGanzZeuge
 import Grammatik.SchablonenT5
+import Grammatik.SchablonenT5Sem
