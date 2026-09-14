@@ -24,6 +24,7 @@ namespace Gabbro.Grammatik
 inductive GRow where
   | void (x : Nat)
   | storeSlot (kp ip n ss off : Nat) (tc : CTy) (ce : CX)
+  | storeNamed (tn ip n ss off : Nat) (tc : CTy) (ce : CX)
   | storeGlob (g : Nat) (tc : CTy) (ce : CX)
   | setVar (x : Nat) (tc : CTy) (ce : CX)
   | setOp (x : Nat) (tc : CTy) (op : CBinOp) (t : CIT) (ce : CX)
@@ -39,6 +40,7 @@ mutual
 def growRow : GRow → CS
   | .void x => .expr (.var x)
   | .storeSlot kp ip n ss off tc ce => .store (.slotA (.var kp) (.var ip) n ss off) tc ce
+  | .storeNamed tn ip n ss off tc ce => .store (.slotA (.addr (.tab tn)) (.var ip) n ss off) tc ce
   | .storeGlob g tc ce => .store (.addr (.glob g)) tc ce
   | .setVar x tc ce => .set x tc ce
   | .setOp x tc op t ce => .set x tc (.bin op t (.var x) ce)
@@ -75,6 +77,7 @@ def exprOk : CX → Bool
 def rowCXs : GRow → List CX
   | .void _ => []
   | .storeSlot _ _ _ _ _ _ ce => [ce]
+  | .storeNamed _ _ _ _ _ _ ce => [ce]
   | .storeGlob _ _ ce => [ce]
   | .setVar _ _ ce => [ce]
   | .setOp _ _ _ _ ce => [ce]
@@ -93,6 +96,7 @@ mutual
     records, or a field outside its record is printer garbage. -/
 def rowLayOk : GRow → Bool
   | .storeSlot _ _ n ss off _ _ => decide (0 < n) && decide (0 < ss) && decide (off < ss)
+  | .storeNamed _ _ n ss off _ _ => decide (0 < n) && decide (0 < ss) && decide (off < ss)
   | .ite _ t e => rowLaysOk t && rowLaysOk e
   | .forTrav _ _ _ body _ => rowLaysOk body
   | _ => true
@@ -124,6 +128,7 @@ def rowsFresh (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) : List G
   | [] => true
   | .void _ :: rs => rowsFresh pp ks acc rs
   | .storeSlot _ _ _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
+  | .storeNamed _ _ _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
   | .storeGlob _ _ _ :: rs => rowsFresh pp ks acc rs
   | .setVar _ _ _ :: rs => rowsFresh pp ks acc rs
   | .setOp _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
@@ -143,6 +148,7 @@ def rowsTravOk : List GRow → Bool
   | [] => true
   | .void _ :: rs => rowsTravOk rs
   | .storeSlot _ _ _ _ _ _ _ :: rs => rowsTravOk rs
+  | .storeNamed _ _ _ _ _ _ _ :: rs => rowsTravOk rs
   | .storeGlob _ _ _ :: rs => rowsTravOk rs
   | .setVar _ _ _ :: rs => rowsTravOk rs
   | .setOp _ _ _ _ _ :: rs => rowsTravOk rs
@@ -202,11 +208,96 @@ inductive RBlock {D : Deklaration} (X : TVCtx D) {V : Vertrag D} :
     Block D V l Γ Λ Λ' → List GRow → CS → Prop where
   | nil {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} :
       RBlock X m l K (Block.nil (Λ := Λ)) [] .skip
-  | consStmt {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {K : CEnvLay D Γ}
-      {s : Stmt D V l Γ Λ Λ'} {rest : Block D V l Γ Λ' Λ''}
-      {r : GRow} {rs : List GRow} {cr : CS}
-      (hs : StmtCorr X m K s (growRow r)) (hr : RBlock X m l K rest rs cr) :
-      RBlock X m l K (.cons s rest) (r :: rs) (.seq (growRow r) cr)
+  | consSetVar {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {τ : Ty}
+      {x : Var Γ τ} {e : Expr D Γ Λ τ} {ce : CX} {τc : CTy}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (he : ExprCorr X K ce e) (hd : declOk τ τc = true)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.assignVar x e) rest)
+        ((.setVar (K.loc x) τc ce) :: rs) (.seq (.set (K.loc x) τc ce) cr)
+  | consSetOpAdd {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {lo hi lo' hi' : Int} {x : Var Γ (.int lo hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h1 : lo ≤ lo + lo') (h2 : hi + hi' ≤ hi)
+      (he : ExprCorr X K ce e) (hta : t.holds lo hi) (htb : t.holds lo' hi')
+      (htr : t.holds (lo + lo') (hi + hi')) (hd : declOk (.int lo hi) τc = true)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.plusGleich x e h1 h2) rest)
+        ((.setOp (K.loc x) τc .add t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .add t (.var (K.loc x)) ce)) cr)
+  | consSetOpSub {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {lo hi lo' hi' : Int} {x : Var Γ (.int lo hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h1 : lo ≤ lo - hi') (h2 : hi - lo' ≤ hi)
+      (he : ExprCorr X K ce e) (hta : t.holds lo hi) (htb : t.holds lo' hi')
+      (htr : t.holds (lo - hi') (hi - lo')) (hd : declOk (.int lo hi) τc = true)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.minusGleich x e h1 h2) rest)
+        ((.setOp (K.loc x) τc .sub t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .sub t (.var (K.loc x)) ce)) cr)
+  | consSetOpAnd {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {hi lo' hi' : Int} {x : Var Γ (.int 0 hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h0' : 0 ≤ lo')
+      (he : ExprCorr X K ce e) (hta : t.holds 0 hi) (htb : t.holds lo' hi')
+      (hd : declOk (.int 0 hi) τc = true)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.undGleich x e h0') rest)
+        ((.setOp (K.loc x) τc .band t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .band t (.var (K.loc x)) ce)) cr)
+  | consSetOpOr {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {w : Nat} {lo' hi' : Int} {x : Var Γ (.int 0 (2 ^ w - 1))}
+      {e : Expr D Γ Λ (.int lo' hi')} {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h0' : 0 ≤ lo') (hw' : hi' < 2 ^ w)
+      (he : ExprCorr X K ce e) (hta : t.holds 0 (2 ^ w - 1)) (htb : t.holds lo' hi')
+      (hd : declOk (.int 0 (2 ^ w - 1)) τc = true)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.oderGleich w x e h0' hw') rest)
+        ((.setOp (K.loc x) τc .bor t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .bor t (.var (K.loc x)) ce)) cr)
+  | consStoreSlotParam {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {kp : Nat} {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
+      {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
+      {ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {hw : V.schreibt t = true} {hL : darf D t Λ}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hk : (kp, t) ∈ K.pp)
+      (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
+      (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
+      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
+        ((.storeSlot kp ip n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.var kp) (.var ip) n ss off) τc ce) cr)
+  | consStoreSlotNamed {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
+      {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
+      {tn ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {hw : V.schreibt t = true} {hL : darf D t Λ}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (htn : tn = X.EL.tnr t)
+      (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
+      (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
+      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
+        ((.storeNamed tn ip n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.addr (.tab tn)) (.var ip) n ss off) τc ce) cr)
+  | consStoreGlob {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {g : D.Glob} {hgg : D.ggeist g = false} {hat : D.atomar g = false}
+      {e : Expr D Γ Λ (D.gtyp g)} {gn : Nat} {τc : CTy} {ce : CX}
+      {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+      {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
+      (hgn : gn = X.EL.gnr g) (hty : τc = X.EL.gty g)
+      (he : ExprCorr X K ce e)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.assignGlob (l := l) g e hw hL) rest)
+        ((.storeGlob gn τc ce) :: rs)
+        (.seq (.store (.addr (.glob gn)) τc ce) cr)
   | bindLet {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {τ : Ty}
       {e : Expr D Γ Λ τ} {rest : Block D V l (τ :: Γ) Λ Λ'}
       {x : Nat} {τc : CTy} {ce : CX} {rs : List GRow} {cr : CS}
@@ -261,5 +352,125 @@ inductive RBlock {D : Deklaration} (X : TVCtx D) {V : Vertrag D} :
       RBlock X m l K (.cons (Stmt.traverse (l := l) tb inv body) rest)
         ((.forTrav x t hiC bodyRows m') :: rs)
         (.seq (CS.forUp x t (.lit 0) hiC (growsCS bodyRows .skip) m') cr)
+
+/-- THE BLOCK THEOREM: a row derivation elaborates to a `BlockCorr`
+    -- hence (by `cCorr_block`) to `BlockSem`. Freshness comes from
+    -- `rowsFresh` (via `freshRaw_ok`), traverse hygiene from
+    -- `rowsTravOk`; every other premise is a T4 judgement. -/
+theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
+    {m : Nat} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ}
+    {b : Block D V l Γ Λ Λ'} {rs : List GRow} {cb : CS}
+    {pp : List Nat} {ks : List (Nat × Int)}
+    (hpp : K.pp.map Prod.fst = pp) (hks : K.ks = ks)
+    (hFresh : rowsFresh pp ks K.vm rs = true) (hTrav : rowsTravOk rs = true)
+    (hR : RBlock X m l K b rs cb) : BlockCorr X m K b cb := by
+  revert hpp hks hFresh hTrav
+  induction hR with
+  | @nil _ _ _ _ _ => intro hpp hks hFresh hTrav; exact BlockCorr.nil
+  | @consSetVar _ _ m _ _ K _ _ _ _ _ _ _ _ _ hK he hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_assignVar X _ K hK _ he hd)
+        (ih hpp hks hFresh hTrav)
+  | @consSetOpAdd _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_plusGleich X _ K hK _ _ h1 h2 he hta htb htr hd)
+        (ih hpp hks hFresh hTrav)
+  | @consSetOpSub _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_minusGleich X _ K hK _ _ h1 h2 he hta htb htr hd)
+        (ih hpp hks hFresh hTrav)
+  | @consSetOpAnd _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ hK h0' he hta htb hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_undGleich X _ K hK _ _ h0' he hta htb hd)
+        (ih hpp hks hFresh hTrav)
+  | @consSetOpOr _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ hK h0' hw' he hta htb hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_oderGleich X _ K hK _ _ _ h0' hw' he hta htb hd)
+        (ih hpp hks hFresh hTrav)
+  | @consStoreSlotParam _ _ m _ _ K _ _ _ hgt _ _ _ _ _ _ _ _ hw hL _ _ _ _ hk hn hss hoff hty hi he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [hn, hss, hoff, hty]
+      exact scorr_assignSlotParam X K _ hk _ hgt hw hL hi he
+  | @consStoreSlotNamed _ _ m _ _ K _ _ hgt _ _ _ _ _ _ _ _ _ hw hL _ _ _ _ htn hn hss hoff hty hi he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [htn, hn, hss, hoff, hty]
+      exact scorr_assignSlotNamed X _ K _ _ hgt hw hL hi he
+  | @consStoreGlob _ _ m _ _ K _ hgg hat _ _ _ _ hw hL _ _ _ _ hgn hty he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [hgn, hty]
+      exact scorr_assignGlob X _ K _ hgg hat hw hL he
+  | @bindLet _ m _ _ _ K τ _ _ x _ _ _ _ hK he hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk] at hTrav
+      obtain ⟨hfresh, hFresh'⟩ := hFresh
+      have hf := freshRaw_ok rfl hpp hks hfresh
+      have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
+      have hks' : (K.push τ x).ks = ks := by simp [CEnvLay.push, hks]
+      exact BlockCorr.bind hK hf he hd (ih hpp' hks' hFresh' hTrav)
+  | @preVoid _ m _ _ _ K _ _ _ _ _ _ he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.pre he (ih hpp hks hFresh hTrav)
+  | @consCall _ m _ _ _ K _ _ _ _ _ _ _ _ _ _ _ hF hA _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact BlockCorr.cons (scorr_call X K _ _ _ _ _ hF hA)
+        (ih hpp hks hFresh hTrav)
+  | @consBindCall _ m _ _ _ K _ τ _ _ _ _ _ _ _ x _ _ _ _ _ hF hA hK hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk] at hTrav
+      obtain ⟨hfresh, hFresh'⟩ := hFresh
+      have hf := freshRaw_ok rfl hpp hks hfresh
+      have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
+      have hks' : (K.push τ x).ks = ks := by simp [CEnvLay.push, hks]
+      exact BlockCorr.sem (bsem_bindCall X _ _ _ _ _ _ _ _ hF hA hK hf hd
+        (cCorr_block X _ (ih hpp' hks' hFresh' hTrav)))
+  | @consIte _ m _ _ _ _ K _ _ _ _ _ _ _ _ _ hc ht he hr ihHt ihHe ihRest =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      obtain ⟨⟨hFreshT, hFreshE⟩, hFreshR⟩ := hFresh
+      obtain ⟨⟨hTravT, hTravE⟩, hTravR⟩ := hTrav
+      have hT := cCorr_block X _ (ihHt hpp hks hFreshT hTravT)
+      have hE := cCorr_block X _ (ihHe hpp hks hFreshE hTravE)
+      exact BlockCorr.cons (scorr_ite X _ _ hc hT hE)
+        (ihRest hpp hks hFreshR hTravR)
+  | @consTrav _ m _ _ K tb t hN0 hN hiC hhi inv _ _ _ _ x _ _ hK hb hr ihHb ihRest =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      obtain ⟨⟨hfresh, hFreshB⟩, hFreshR⟩ := hFresh
+      obtain ⟨⟨hwb, hTravB⟩, hTravR⟩ := hTrav
+      have hf := freshRaw_ok rfl hpp hks hfresh
+      have hw : (growsCS _ .skip).writesV _ = false := of_decide_eq_true hwb
+      have hpp' : (K.push (.index (D.count tb)) x).pp.map Prod.fst = pp := by
+        simp [CEnvLay.push, hpp]
+      have hks' : (K.push (.index (D.count tb)) x).ks = ks := by simp [CEnvLay.push, hks]
+      have hB := cCorr_block X _ (ihHb hpp' hks' hFreshB hTravB)
+      exact BlockCorr.cons (scorr_traverse X _ _ _ hK hf tb t hN0 hN hiC hhi inv _ _ hB hw)
+        (ihRest hpp hks hFreshR hTravR)
 
 end Gabbro.Grammatik
