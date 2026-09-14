@@ -261,8 +261,12 @@ constwert  = constexpr | arraylit ;
    initializer of array type (`const T : [u32; N] = […]`); the general
    expression reader never reads `[`, so anywhere else it is `P011` by
    grammar shape. The checker holds it element-wise (`K190`-`K194`); the
-   emitter writes one `static const` array. *)
-arraylit   = "[" [ expr { "," expr } [ "," ] ] "]" ;
+   emitter writes one `static const` array.
+   CHANGED lane 170: rows may nest (`const T : [[u32; 2]; 2] = [[1, 2],
+   [3, 4]]`). An `expr` never reads `[`, so a leading `[` is unambiguously
+   a row; the checker holds each row against its dimension (`N285`/`N286`)
+   and the emitter writes one multi-dimensional `static const` array. *)
+arraylit   = "[" [ ( arraylit | expr ) { "," ( arraylit | expr ) } [ "," ] ] "]" ;
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
 ```
