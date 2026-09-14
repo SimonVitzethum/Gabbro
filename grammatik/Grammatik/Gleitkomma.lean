@@ -5,8 +5,9 @@
   The current model (`Typen.lean`: `Gleit`, `Semantik.lean`: `gleitRechne`)
   computes floats with Lean's built-in `Float`, which is OPAQUE to the kernel:
   nothing about float values can be proved and no witness computed without
-  `native_decide` (forbidden). This file is the replacement, built WITHOUT
-  switching the model yet (a later task does that).
+  `native_decide` (forbidden). This file is the replacement; since
+  2026-09-14 the semantics computes with it (`Typen.lean` `GFloat`,
+  `Semantik.lean` `gleitRechne`, dokumente/GLEITKOMMA.md section 7).
 
   Design: formats as data (`Format`: precision `p`, maximal exponent `emax`);
   values as bit triples (sign, biased exponent, significand as `Nat`) with
@@ -1147,10 +1148,11 @@ theorem zeuge_fleNullen : fle f64 (nullN f64) (nullP f64) = true
     propagated NaNs keep their input bits; no quiet-bit discipline.
   - `ofRat`/`divBruch` with denominator zero is NaN by definition.
   - No theorems about `flt`/`fle` (irreflexivity, totality on finite
-    values) and none about `wf` preservation.
+    values). `wf` preservation of every op is proved in
+    `GleitkommaBits.lean` (`add_wf` ... `rundeBruch_wf`).
   - binary32/binary64 only; no f16, no 80-bit, no decimal.
-  - No connection to the `Float`-based model (`Semantik.lean`
-    `gleitRechne`/`gleitPasst`) yet -- a later task switches the model.
+  - The semantics computes with this model since 2026-09-14 (Typen.lean,
+    Semantik.lean); the C side reads it through `CFormenF.lean`.
   - The `set_option` thresholds above are elaboration-only.
 -/
 
