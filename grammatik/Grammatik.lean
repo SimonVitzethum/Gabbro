@@ -228,8 +228,14 @@ import Grammatik.GenOblig104
 import Grammatik.Pflicht104
 import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund
+import Grammatik.RennfreiOrte
+import Grammatik.MitRuhe
+import Grammatik.MitRuheStatisch
+import Grammatik.MitRuheSemantik
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.AkzeptiertZeuge
+import Grammatik.Zielsatz.Ruhe
+import Grammatik.Zielsatz.RuheZeuge
 import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Parser.UebersetzeAllg2

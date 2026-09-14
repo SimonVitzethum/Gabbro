@@ -9,20 +9,25 @@
   * probe D (`fvP false`, `forever … invariant false { leave }`)   -> (b), at some budget;
   * a table-invariant breaker (`ivPschlecht`)                      -> (b);
   * an unguarded carrier one start reads and another writes        -> (a) `AkzeptiertSpec`
-    (stated for EVERY program, so for every sound `Pruefer` the Bool is `false`).
+    (stated for EVERY program, so for every sound `Pruefer` the Bool is `false`);
+  * NEW (race fix, 2026-09-14): an unguarded carrier, neither `atomic` nor a payload, that two
+    declared starts WRITE -- even if nothing reads it                -> (a) `AkzeptiertSpec`
+    (`zwei_schreiber_abgelehnt`, proved below; the decided instance with no read anywhere is
+    `ak3_zwei_schreiber_ohne_lesen`, AkzeptiertZeuge.lean, which the old Bool accepted).
   The refutations of (b) are stated for every lock-invariant family whose protected carriers
   are guarded and which SOME memory satisfies: a family no memory satisfies empties the class
   `HavocOk` and hence `NutzerPflicht` -- but then no start is admissible (`sperren`), so the
   whole statement is empty for it; that is review question 3, not a refutation.
 
-  Positives -- all premises jointly, with an admissible start:
+  Positives -- all premises jointly, with an admissible start OF `P.mitRuhe` (A4, the machine
+  `GabbroZiel` runs):
   * the two-thread program `mP` (two ACTIVE threads, private unguarded tables, a shared
-    table under a lock with invariant `konto[0] == konto[1]`, idle `mRuhe` elsewhere);
-  * probes B/C (`zPB`, `zPC`, family `zS`). EXPECTED FALSE ON `zD` AS IT STANDS: `zD` has
-    four functions and no idle one; `Faden = Nat` runs infinitely many threads, so some
-    function runs on two threads and must be `Ruhig` (`StartZulaessig.einmal`), and none of
-    `ein`/`lies`/`wrap`/`haupt` has an empty footprint. The Proben lane must give `zD` an
-    idle function (as `mD` has `mRuhe`) before B/C can be positives of THIS statement.
+    table under a lock with invariant `konto[0] == konto[1]`, the runtime's root elsewhere);
+  * probes B/C (`zPB`, `zPC`, family `zS`). Before the idle root they were EXPECTED FALSE:
+    `zD` has no idle function, and `Faden = Nat` runs infinitely many threads. With the
+    runtime's root the start component holds (`probeB_start`, `probeC_start`,
+    Zielsatz/RuheZeuge.lean, the root on every thread); the other components are the Proben
+    lane's.
 -/
 import Grammatik.Zielsatz.Spec
 import Grammatik.ProbeD
@@ -40,8 +45,9 @@ instance zD_fn_deq' : DecidableEq zD.Fn := inferInstanceAs (DecidableEq ZFn)
 def Erfuellbar {D : Deklaration} [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
     (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ws : List D.Fn) : Prop :=
   AkzeptiertSpec P S fs.1 ws ∧ NutzerPflicht P S Q ∧ (∃ O : Orakel D, HardwareAnnahmen O Q) ∧
-    ∃ (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)),
-      StartZulaessig P S fs.1 ws sp init
+    ∃ (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init
 
 /-- **Group (b) refutes `P`**: for every declared axiom ensures and every lock-invariant family
     with guarded carriers that some memory satisfies, the user obligation fails. -/
@@ -71,16 +77,32 @@ def ungeschuetzt_abgelehnt : Prop :=
     w₁ ∈ ws → w₂ ∈ ws → w₁ ≠ w₂ → c ∈ fussOrte P w₁ → TraegerSchreibt w₂ c = true →
     (∀ L, ¬ Bewacht c L) → ¬ AkzeptiertSpec P S fs ws
 
+/-- **Two declared starts writing one unguarded carrier fail (a)**, for every program --
+    whether or not anything reads the carrier (the race fix of 2026-09-14). -/
+def zwei_schreiber_abgelehnt : Prop :=
+  ∀ (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
+    (w₁ w₂ : D.Fn) (c : D.Tab ⊕ D.Glob),
+    w₁ ∈ ws → w₂ ∈ ws → w₁ ≠ w₂ → TraegerSchreibt w₁ c = true → TraegerSchreibt w₂ c = true →
+    (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ PaarungAusgenommen c →
+    ¬ AkzeptiertSpec P S fs ws
+
+theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
+  intro D _ P S fs ws w₁ w₂ c h₁ h₂ hne hw₁ hw₂ hB hA hP hS
+  have := (hS.renn c hB hA hP w₁ h₁ w₂ h₂ hne w₁ (reachB_wurzel P fs w₁) hw₁ w₂
+    (reachB_wurzel P fs w₂)).1
+  rw [hw₂] at this
+  cases this
+
 /-- **The two-thread program satisfies every premise group**, with its declared starts
     `hauptA`, `hauptB`, the family `mSI` and the trivial axiom ensures. -/
 def zweiFaeden_erfuellbar : Prop :=
   ∃ fs : Aufzaehlung mD.Fn, Erfuellbar mP mSI (axWahr mD) fs [mHauptA, mHauptB]
 
-/-- Probe B satisfies every premise group (EXPECTED FALSE on `zD`, see the header). -/
+/-- Probe B satisfies every premise group (the start: the runtime's root, see the header). -/
 def probeB_erfuellbar : Prop :=
   ∃ (fs : Aufzaehlung zD.Fn) (ws : List zD.Fn), Erfuellbar zPB zS (axWahr zD) fs ws
 
-/-- Probe C satisfies every premise group (EXPECTED FALSE on `zD`, see the header). -/
+/-- Probe C satisfies every premise group (the start: the runtime's root, see the header). -/
 def probeC_erfuellbar : Prop :=
   ∃ (fs : Aufzaehlung zD.Fn) (ws : List zD.Fn), Erfuellbar zPC zS (axWahr zD) fs ws
 
@@ -88,9 +110,11 @@ def probeC_erfuellbar : Prop :=
     admissible start of `mP` a reached machine has CHANGED memory, so the conclusion is not
     only about the start machine. -/
 def zweiFaeden_bewegt : Prop :=
-  ∃ (sp : Speicher mD) (init : Faden → Σ f : mD.Fn, Env mD (mD.params f))
-    (fs : Aufzaehlung mD.Fn) (passes : Nat) (M : RufMaschineG mD),
-    StartZulaessig mP mSI fs.1 [mHauptA, mHauptB] sp init ∧
-    RufErreichbarG mP mO passes (RufStartG mP sp init) M ∧ M.speicher ≠ sp
+  ∃ (sp : Speicher mD.mitRuhe)
+    (init : Faden → Σ f : mD.mitRuhe.Fn, Env mD.mitRuhe (mD.mitRuhe.params f))
+    (fs : Aufzaehlung mD.Fn) (passes : Nat) (M : RufMaschineG mD.mitRuhe),
+    StartZulaessig mP.mitRuhe mSI.mitRuhe (fsRuhe fs.1) (wsRuhe [mHauptA, mHauptB]) sp init ∧
+    RufErreichbarG mP.mitRuhe mO.mitRuhe passes (RufStartG mP.mitRuhe sp init) M ∧
+    M.speicher ≠ sp
 
 end Gabbro.Grammatik.Zielsatz
