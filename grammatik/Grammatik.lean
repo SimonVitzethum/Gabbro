@@ -195,3 +195,4 @@ import Grammatik.FadenMerkmal
 import Grammatik.ZielOrtMehrfaden
 import Grammatik.ZielOrtStart
 import Grammatik.Verklemmung
+import Grammatik.MehrfadenZeuge
