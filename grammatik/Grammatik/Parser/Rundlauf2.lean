@@ -327,6 +327,18 @@ def BKernOr (n : Nat) : Prop :=
     parseOr F (druckToks l ++ [.zeichen "||"] ++ druckToks r ++
       [.zeichen ")"] ++ W) =
       .ok (.bin "||" l r, [.zeichen ")"] ++ W)
+
+-- The binary-inner parse for `&&`: the inner operator
+-- consumes at the `parseAndL` loop level (one iteration, then
+-- the loop stops at `)`, and the outer `parseOrL` stops
+-- too). Same `+10` fuel.
+def BKernAnd (n : Nat) : Prop :=
+  ∀ (l r : SExpr) (W : List Token) (F : Nat),
+    groesse l + groesse r ≤ n → gutKern l = true → gutKern r = true →
+    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ F →
+    parseOr F (druckToks l ++ [.zeichen "&&"] ++ druckToks r ++
+      [.zeichen ")"] ++ W) =
+      .ok (.bin "&&" l r, [.zeichen ")"] ++ W)
 -- The binary-inner parse for `+`: a parenthesised `+`'s inside
 -- (`l + r` between the parens) with a general tail `W`. No follow
 -- premise: the tail behind `)` is never inspected. Fuel `+10`:
@@ -637,6 +649,63 @@ theorem tower_up_orbar : ∀ (l : SExpr) (S1 : List Token),
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     simp only [parseAnd, parseAndL, hC', hUnd] at ⊢
   exact ⟨hM, hA, hB, hC, hN⟩
+
+-- The `&&`-follow upper tower (`parseMul` up to `parseCmp`):
+-- mirror of `tower_up_orbar` one level down (the single
+-- comparison check misses the concrete `&&`).
+theorem tower_up_andbar : ∀ (l : SExpr) (S1 : List Token),
+    (∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 2 ≤ G →
+      parseUnary G (druckToks l ++ S1) = .ok (l, S1)) →
+    opMul S1 = none → opAdd S1 = none → opBit S1 = none →
+    opVgl S1 = none →
+    (∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 3 ≤ G →
+      parseMul G (druckToks l ++ S1) = .ok (l, S1))
+    ∧ (∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 4 ≤ G →
+      parseAdd G (druckToks l ++ S1) = .ok (l, S1))
+    ∧ (∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 5 ≤ G →
+      parseBit G (druckToks l ++ S1) = .ok (l, S1))
+    ∧ (∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 6 ≤ G →
+      parseCmp G (druckToks l ++ S1) = .ok (l, S1)) := by
+  intro l S1 hU hMul hAdd hBit hVgl
+  have hM : ∀ (G : Nat),
+      12 * (groesse l + 1) + groesse l + 3 ≤ G →
+      parseMul G (druckToks l ++ S1) = .ok (l, S1) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hU' := hU G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    simp only [parseMul, parseMulL, hU', hMul] at ⊢
+  have hA : ∀ (G : Nat),
+      12 * (groesse l + 1) + groesse l + 4 ≤ G →
+      parseAdd G (druckToks l ++ S1) = .ok (l, S1) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hM' := hM G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    simp only [parseAdd, parseAddL, hM', hAdd] at ⊢
+  have hB : ∀ (G : Nat),
+      12 * (groesse l + 1) + groesse l + 5 ≤ G →
+      parseBit G (druckToks l ++ S1) = .ok (l, S1) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hA' := hA G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    simp only [parseBit, parseBitL, hA', hBit] at ⊢
+  have hC : ∀ (G : Nat),
+      12 * (groesse l + 1) + groesse l + 6 ≤ G →
+      parseCmp G (druckToks l ++ S1) = .ok (l, S1) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hB' := hB G' (by omega)
+    simp only [parseCmp, hB', hVgl] at ⊢
+  exact ⟨hM, hA, hB, hC⟩
 
 -- A bare atom head is `primFrei` (only prefix trees and
 -- `fnwert` are not).
@@ -1250,6 +1319,36 @@ theorem hrg_orbar : ∀ (T : List Token),
     ruhigGleit ([.zeichen "||"] ++ T) = true := by
   intro T
   rfl
+-- Facts for the `&&` inner trace: every loop below `And`
+-- misses the concrete `&&`, and `parseAndL` consumes it.
+theorem opMul_andbar : ∀ (T : List Token),
+    opMul ([.zeichen "&&"] ++ T) = none := by
+  intro T
+  rfl
+theorem opAdd_andbar : ∀ (T : List Token),
+    opAdd ([.zeichen "&&"] ++ T) = none := by
+  intro T
+  rfl
+theorem opBit_andbar : ∀ (T : List Token),
+    opBit ([.zeichen "&&"] ++ T) = none := by
+  intro T
+  rfl
+theorem opVgl_andbar : ∀ (T : List Token),
+    opVgl ([.zeichen "&&"] ++ T) = none := by
+  intro T
+  rfl
+theorem opUnd_and_some : ∀ (T : List Token),
+    opUnd ([.zeichen "&&"] ++ T) = some T := by
+  intro T
+  rfl
+theorem hrs_andbar : ∀ (T : List Token),
+    ruhigSuff ([.zeichen "&&"] ++ T) = true := by
+  intro T
+  rfl
+theorem hrg_andbar : ∀ (T : List Token),
+    ruhigGleit ([.zeichen "&&"] ++ T) = true := by
+  intro T
+  rfl
 theorem hrs_plus : ∀ (T : List Token),
     ruhigSuff ([.zeichen "+"] ++ T) = true := by
   intro T
@@ -1533,6 +1632,64 @@ theorem kernB_step_or : ∀ (n : Nat), RKern n → BKernOr (n + 1) := by
     obtain ⟨G1y, rfl⟩ : ∃ G1y, G1x = G1y + 1 := ⟨G1x - 1, by omega⟩
     have hstop := opOder_paren W
     simp only [parseOr, parseOrL, hN', hop, hMr, hstop] at ⊢
+  exact hOr F hF
+
+-- The `&&` inner trace (`BKernAnd` from `RKern`): the left
+-- operand runs the `&&`-follow up-tower (every loop below
+-- `And` stops on the concrete `&&`, the single comparison
+-- misses it), then `parseAndL` consumes `&&` and `r`, stops
+-- at `)`, and the outer `parseOrL` stops too. Same `+10` fuel.
+theorem kernB_step_and : ∀ (n : Nat), RKern n → BKernAnd (n + 1) := by
+  intro n rkn l r W F hsum hgl hgr hF
+  obtain ⟨-, -, hCmp, -, -, -, hUn, -⟩ := rkn
+  have hpos_l := groesse_pos l
+  have hpos_r := groesse_pos r
+  have hln : groesse l ≤ n := by omega
+  have hrn : groesse r ≤ n := by omega
+  simp only [List.append_assoc] at ⊢
+  have hUleg : ∀ (G : Nat), 12 * (groesse l + 1) + groesse l + 2 ≤ G →
+      parseUnary G (druckToks l ++ ([.zeichen "&&"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (l, [.zeichen "&&"] ++
+          (druckToks r ++ ([.zeichen ")"] ++ W))) := by
+    intro G hG
+    exact hUn l ([.zeichen "&&"] ++
+      (druckToks r ++ ([.zeichen ")"] ++ W))) G hln hgl
+      (hrs_andbar _) (hrg_andbar _) hG
+  have hup := tower_up_andbar l ([.zeichen "&&"] ++
+    (druckToks r ++ ([.zeichen ")"] ++ W))) hUleg
+    (opMul_andbar _) (opAdd_andbar _) (opBit_andbar _) (opVgl_andbar _)
+  have hAnd : ∀ (G1 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 9 ≤ G1 →
+      parseAnd G1 (druckToks l ++ ([.zeichen "&&"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "&&" l r, [.zeichen ")"] ++ W) := by
+    intro G1 hG1
+    have h11 : 1 ≤ G1 := by omega
+    obtain ⟨G2, rfl⟩ : ∃ G2, G1 = G2 + 1 := ⟨G1 - 1, by omega⟩
+    have hC' := hup.2.2.2 G2 (by omega)
+    have h12 : 1 ≤ G2 := by omega
+    obtain ⟨G2x, rfl⟩ : ∃ G2x, G2 = G2x + 1 := ⟨G2 - 1, by omega⟩
+    have hop := opUnd_and_some (druckToks r ++ ([.zeichen ")"] ++ W))
+    have hMr := hCmp r ([.zeichen ")"] ++ W) G2x hrn hgr
+      (hr_paren W) (hrs_paren W) (hrg_paren W) (by omega)
+    have h13 : 1 ≤ G2x := by omega
+    obtain ⟨G2y, rfl⟩ : ∃ G2y, G2x = G2y + 1 := ⟨G2x - 1, by omega⟩
+    have hstop := opUnd_paren W
+    simp only [parseAnd, parseAndL, hC', hop, hMr, hstop] at ⊢
+  have hOr : ∀ (G0 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G0 →
+      parseOr G0 (druckToks l ++ ([.zeichen "&&"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "&&" l r, [.zeichen ")"] ++ W) := by
+    intro G0 hG0
+    have h01 : 1 ≤ G0 := by omega
+    obtain ⟨G1, rfl⟩ : ∃ G1, G0 = G1 + 1 := ⟨G0 - 1, by omega⟩
+    have hAnd' := hAnd G1 (by omega)
+    have h02 : 1 ≤ G1 := by omega
+    obtain ⟨G1x, rfl⟩ : ∃ G1x, G1 = G1x + 1 := ⟨G1 - 1, by omega⟩
+    have hstop := opOder_paren W
+    simp only [parseOr, parseOrL, hAnd', hstop] at ⊢
   exact hOr F hF
 
 -- The `un` legs from the induction hypothesis, generalised
