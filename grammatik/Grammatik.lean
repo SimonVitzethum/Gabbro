@@ -210,3 +210,4 @@ import Grammatik.Schlusssatz104
 import Grammatik.Korrespondenz
 import Grammatik.Gleitkomma
 import Grammatik.Parser.Rundlauf
+import Grammatik.Parser.UebersetzeAllg
