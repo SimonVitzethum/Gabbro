@@ -175,3 +175,4 @@ import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.HelferZeuge
 import Grammatik.SonstLeaveZeuge
 import Grammatik.ZielOrtInv
+import Grammatik.InvZeuge

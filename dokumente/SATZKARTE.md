@@ -821,7 +821,7 @@ head stands at one of these places (a leaf here: a `state` transition).
 
 ### 13.5 What is not carried, and what still blocks
 
-- **Table and group invariants: NOT CARRIED.** `Logik.invariante` arises only
+- **Table and group invariants: NOT CARRIED** (CARRIED since §15.4, `ziel_ort_sperre_inv`). `Logik.invariante` arises only
   in `rufAt` at a callee's return. G does not test invariants,
   `VertragAmOrtG` states `requires`/`ensures` only, and `KeineLogik` does not
   ask for them (its handlers answer no `logik` outcome, so a callee's owed
@@ -1366,6 +1366,96 @@ level `false` (`BlockR.narrow_inv … l = false`, likewise `BlockG`), where no
 G with the sequential semantics is shown by the replays' equalities above
 (which is what the goal theorems use) and by the witness, not by a general
 adequacy theorem.
+
+### 15.4 Table and group invariants are carried (§13.5 first item)
+
+*The finding.* `rufAt` checks, at every return of `f`, each declared
+invariant `f` OWES (`schuldet f i`: `f` writes one of its carriers) and
+answers `logik (invariante i)` where it is false. G tests no invariant and
+`ziel_ort_sperre` said nothing about them: a program whose functions break
+a declared invariant was certified (`ivPschlecht_alt`).
+
+*The repair: obligation + conclusion, as for lock invariants* (§14). The
+machine is unchanged (it tests invariants nowhere, like the emitted C);
+the obligation turns the test into a theorem.
+
+- **Footprint** (`ZielOrt.lean`): `fussOrte P f` also lists `invOrteP P f`,
+  the carriers of every invariant `f` owes (`fuss_inv`). The footprint
+  checks (`fussOrtGB`, `fussSperreB`) thereby cover them; every earlier
+  fixture declares no invariant, so nothing else moved.
+- **Obligation** `InvGutS P passes Q S f` (`ZielOrtInv.lean`, per function,
+  SEQUENTIAL, over the oracle/move/handler class of `KoerperGutS`): from
+  `requires f`, a normal return of the body makes every invariant `f` owes
+  true at the return world. Like `rufAt`, it assumes no invariant at entry;
+  an invariant needed there belongs in `requires`. Nothing new for a
+  function that owes none (`invGutS_ohne`, `invGutS_leer`).
+- **Conclusion** `InvAmOrtG P M`: at every logged return `rueck g rho v s0
+  s1` of a reachable machine, every invariant `g` owes holds at `s1`.
+- **The theorem** `ziel_ort_sperre_inv`: the premises of `ziel_ort_sperre`
+  plus `∀ f, InvGutS P passes Q S f` give the conclusion of
+  `ziel_ort_sperre` AND `InvAmOrtG`. Proof: induction over reachable
+  machines beside the flagship's replay invariant (`zielInvS_erreichbar`);
+  `invLog_schritt` classifies the six value pops; `popS_inv` (the twin of
+  `popS_ens`) carries the sequential return world's invariant to the
+  machine's, because the carriers of an owed invariant are stable at `ret`
+  (`inv_stabil`: in the footprint, and every guard of theirs is a signature
+  lock of `f` by the declaration's `invarianten_gehalten`, U003).
+  `ziel_ort_sperre` itself is unchanged.
+
+*The witnesses* (`InvZeuge.lean`): table `konto` (two slots) under lock
+`L`, invariant `konto[0] == konto[1]`; `haupt` (holds `L`) calls `setze`
+(holds `L`). Correct `setze` writes both slots `5`: `ivPgut_zertifiziert`
+(every premise of `ziel_ort_sperre_inv`, `InvGutS` proved per function)
+and `ivGut_zeuge` (a four-step run; the logged return of `setze` meets the
+invariant BY THE THEOREM, both slots `5`). Broken `setze` writes only
+slot `0`: `ziel_ort_sperre` certifies it (`ivPschlecht_alt`), but
+`ivPschlecht_nicht_invGutS` (the new obligation fails from the zero
+memory) and `ivPschlecht_verletzt` (on a machine reached in three steps
+the new conclusion fails) REFUTE it -- as probe A was refuted in §13.4.
+
+*Not covered.* A thread's start frame never pops, so an invariant owed by
+a start function is not checked at the thread's end (G logs returns only at
+pops); invariants are checked at returns only, not at entries or while a
+frame holds the locks (the program semantics checks nothing else either).
+
+### 15.5 Premise table (THE goal theorem is now `ziel_ort_sperre_inv`)
+
+| Premise | Meaning | Class | Changed in §15 |
+|---|---|---|---|
+| `P`, `O`, `passes`, `fs`, `sp`, `init`, `Q`, `S`, `e0` | data | as §14.3 | `Signatur.boden` (lock floors, default `none`) |
+| `hO`, `hRL`, `hQ` | hardware | (b) | -- |
+| `hlok`, `hvoll`, `hFrag` | as §13.3 | (c) | -- |
+| `hS : SperrInvOk S` | as §14.3 | (c) | -- |
+| `hFuss : fussSperreB` | footprint check | (c) DECIDABLE | footprint also lists owed invariant carriers (§15.4) |
+| `hK : KoerperGutS` | per function, sequential | (a) USER | -- |
+| `hI : InvGutS` | per function, sequential: owed invariants at a normal return | (a) USER | NEW (§15.4); trivial without owed invariants |
+| `hStart`, `hSstart`, `hex` | as §14.3 | (a)/(d) | -- |
+| (syntax) `RufPasst` | call-site typing | typing | held set `⊆`, `hx`/`hb` floors (§15.1) |
+| (syntax) `StufenOk P` | floors respected | (c) decidable | NEW premise of the Satz chain (§15.1), not of the goal theorem |
+
+Conclusion: `VertragAmOrtG ∧ SperrInvG ∧ KeinLogikHaltG ∧ progress` (as §14.2)
+`∧ InvAmOrtG` (§15.4). `ziel_ort_sperre_fortschritt` drops the `HeldGenau`
+hypothesis of the progress conjunct (§15.1).
+
+Axioms of every new theorem of §15 (`ziel_ort_sperre_inv`, `popS_inv`,
+`inv_stabil`, `invLog_schritt`, the `InvZeuge`, `SonstLeaveZeuge` and
+`HelferZeuge` witnesses): `propext`, `Classical.choice`, `Quot.sound`.
+Full `lake build`: 139 jobs, no `sorryAx`.
+
+### 15.6 What remains
+
+- The adequacy fragments (`BlockG`/`BlockR`, and the converse) admit the
+  `else` forms only at loop level `false`; for an `else` block INSIDE a loop
+  the agreement of G with the sequential semantics is shown by the replay
+  equalities and a witness (§15.3), not by a general adequacy theorem.
+- Invariants owed by a start function are not checked at the thread's end
+  (§15.4).
+- `StufenOk` and the floors are model data without a checker rule that
+  computes them; `InvGutS`, like `KoerperGutS`, is a user proof obligation
+  without a checker.
+- Everything §13.5 lists besides items 4 and 5 and the invariant item
+  (termination, full progress beyond the named stops, fairness, the link to
+  the emitted C, weak memory, hand translation only) is unchanged.
 
 (End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
 
