@@ -1,36 +1,41 @@
 /-
   File:      Grammatik/Schlusssatz104.lean
   Subject:   THE CLOSING THEOREM, STAGE (a), FOR `beispiele/104-referenz.gab`
-             (plan `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2,
-             §6): `schlusssatz_104`.
+             (plan `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2 and
+             §6): `schlusssatz_104`. Chain count 1.
 
-  One program, `G104_referenz.gP` over `G104_referenz.gD` -- the program
-  the LEAN PARSER produces from the source text (`Parser/Uebersetze.lean`).
-  Every other part of the chain is re-anchored at it here:
+  ONE program: `gP` over `gD` (`G104_referenz`), the program the LEAN PARSER
+  produces from the source text (`Parser/Uebersetze.lean`). Before this
+  file the chain talked about three programs -- `gP` (parser), `r4P` over
+  `r4D` (goal theorem, hand translation) and `refP` over `refD` (C
+  correspondence, the index-fixed one-parameter model) -- related by data
+  agreement only. Every part is re-anchored at `gP` here:
 
   * section 1, parse: the source text lexes, parses, elaborates and lowers
-    to `(G104_referenz.gP, G104_referenz.gFs)`, each stage a PROPOSITIONAL equation (not a `Bool` pin);
+    to `(gP, gFs)`; every stage a PROPOSITIONAL equation (the `Bool` pins
+    `u104parse`/`u104elab` become `rfl` equations), `uebersetze104_ok`;
   * section 2, C: the emitted C bodies of `einzahlen` and `lies` (quoted in
-    `CFormenZeuge.lean`, byte-identical to the emitter's output) correspond
-    to `G104_referenz.gP`'s bodies -- not to `refP`'s, the index-fixed one-parameter model
-    `Korrespondenz104.lean` used; the certificate checked here carries the
-    emitter's rows and layout verbatim (`certG104_rows`) and `G104_referenz.gP`'s locals map;
-  * section 3, model certificates: the Lean-side print of `G104_referenz.gP`'s bodies IS
-    the pasted printer output of `ZeugnisStmt104b.lean`, and both are
-    accepted;
-  * section 4, model judgement: every function of `G104_referenz.gP` meets the per-function
-    obligations of the goal theorem (`KoerperGutS`, `InvGutS`), the fragment
-    and footprint checks hold, and every call of `G104_referenz.gP` from any world ends
-    `ok` (no contract violated on the way);
+    `CFormenZeuge.lean`) correspond to `gP`'s bodies (`liesG_fn`,
+    `einG_fn`); the correspondence certificate carries the printer's rows
+    and layout verbatim and `gP`'s locals map (`certG104`, `certOkG`,
+    `corrCertG_sound`); from any related start the Gabbro call ends `ok`
+    and EVERY C run ends related to it (`c104_einzahlen`, `c104_lies`);
+  * section 3, model certificates: the Lean-side print of `gP`'s bodies IS
+    the pasted printer output of `ZeugnisStmt104b.lean` (`print104_*`),
+    and the Lean checker accepts it;
+  * section 4, model judgement: every function of `gP` meets the
+    per-function obligations of the goal theorem (`gP_koerperS`,
+    `gP_invGutS`);
   * section 5, the machine: G starts EVERY thread in some function, and
-    `G104_referenz.gD` has no lock-free idle function, so no G machine of `G104_referenz.gP` has one
-    active thread (`gP_kein_einfaden`, proved). The runtime supplies the
-    idle root: `gDB`/`gPB` = `G104_referenz.gD`/`G104_referenz.gP` plus exactly that root; `gPB`'s
-    source part is the parser's `G104_referenz.gP` under a structural renaming
-    (`renEnd`, `renE`: kernel-checked equations), and the goal theorem
-    `ziel_ort_einfaden` holds for `gPB` from EVERY start memory with thread
-    0 in EVERY source function and argument;
-  * section 6, the theorem and its CUTS.
+    every function of `gD` holds `M` by signature, so no G theorem applies
+    to a machine of `gP` alone (`gP_kein_ruhig`, `gP_kein_exklusiv`,
+    proved). The runtime supplies the idle root: `gDB`/`gPB` = `gD`/`gP`
+    plus exactly that root. `gPB`'s source part IS `gP` under a structural
+    renaming (`gPB_ist_gP_umbenannt`, kernel-checked) and BEHAVES as `gP`
+    through the same emitted C (`gPB_wie_gP_einzahlen`, `gPB_wie_gP_lies`);
+    the goal theorem holds on the machine of `gPB` from every start memory,
+    thread 0 in every source function on every argument (`gPB_ziel`);
+  * section 6, the theorem, its witnesses (rule 13) and its CUTS.
 -/
 import Grammatik.Parser.Uebersetze
 import Grammatik.ZeugnisStmt104b
@@ -50,7 +55,7 @@ open G104_referenz (GTab GLock GKontoFeld GFn g_einzahlen g_lies gCtx_einzahlen 
 
 set_option maxRecDepth 100000
 
-/-! ## 1. Parse: the source text to `(G104_referenz.gP, G104_referenz.gFs)` -/
+/-! ## 1. Parse: the source text to `(gP, gFs)` -/
 
 /-- The source text of `beispiele/104-referenz.gab`, comment-free (the text
     `u104lex` pins; comments lex away). -/
@@ -79,7 +84,7 @@ theorem s104_parse : parseTopTief tt104 = .ok items104 := rfl
 theorem s104_elab : elabU items104 = .ok uExp104 := rfl
 
 /-- **PARSE FIDELITY**: the source text translates, in Lean, to the program
-    `G104_referenz.gP` with member list `G104_referenz.gFs`. -/
+    `gP` with member list `gFs`. -/
 theorem uebersetze104_ok : uebersetze104 src104 = .ok (G104_referenz.gP, G104_referenz.gFs) := by
   unfold uebersetze104
   rw [s104_lex]
@@ -89,9 +94,9 @@ theorem uebersetze104_ok : uebersetze104 src104 = .ok (G104_referenz.gP, G104_re
   rw [s104_elab]
   exact u104lower
 
-/-! ## 2. C: the emitted bodies correspond to `G104_referenz.gP`'s bodies -/
+/-! ## 2. C: the emitted bodies correspond to `gP`'s bodies -/
 
-/-- The emitter's layout of `G104_referenz.gD`: `Konto` is table block 0, `stand` is
+/-- The emitter's layout of `gD`: `Konto` is table block 0, `stand` is
     field 0 of `Konto_slot` at `uint32_t`, no globals (the layout of
     `refEL`, over the parser's declaration). -/
 def gEL104 : EmitLay G104_referenz.gD where
@@ -112,7 +117,7 @@ def gEL104 : EmitLay G104_referenz.gD where
   lay_glob := fun g => nomatch g
   gty_fits := fun g => nomatch g
 
-/-- The oracle of `G104_referenz.gD`: no axiom, register or global exists. -/
+/-- The oracle of `gD`: no axiom, register or global exists. -/
 def gO104 : Orakel G104_referenz.gD where
   wirkt := fun a => nomatch a
   regLies := fun r => nomatch r
@@ -127,18 +132,18 @@ def xLiesG : TVCtx G104_referenz.gD :=
 def xEinG : TVCtx G104_referenz.gD :=
   ⟨gEL104, tvOrc, 2, CallAt gEL104.lay tvOrc tvXR refCProg 1, tvXR, gO104, 0, rufAt G104_referenz.gP gO104 0 1⟩
 
-/-! ### 2.1 The correspondence certificate over `G104_referenz.gP`
+/-! ### 2.1 The correspondence certificate over `gP`
 
 The rows (`(void)b;`, `k->slots[i].stand = 100;`, `lies(k, i);`,
 `return k->slots[i].stand;`) and the layout are the emitter's, verbatim
-from `printed104` (`certG104_rows`). The locals map is `G104_referenz.gP`'s: `G104_referenz.gP` HAS the
+from `printed104` (`certG104_rows`). The locals map is `gP`'s: `gP` HAS the
 parameters `k`, `i`, `b`, so C locals 0, 1, 2 are Gabbro variables 0, 1, 2
 (`vm`), and nothing is a pointer-only (`pp`) or model-fixed (`ks`) local.
 `printed104`'s map (`vm = [2]`, `pp`, `ks = [(1, 0)]`) is the map for the
 index-fixed model `refD`; its `ks` entry was the printer's `MODEL DATUM`. -/
 
 /-- The certificate `certOkG` accepts: rows and layout as printed, the map
-    of `G104_referenz.gP`. -/
+    of `gP`. -/
 def certG104 : Cert104 :=
   { einRows := [CertRow.voidB 2, CertRow.store100 0 1, CertRow.callLies 0 1],
     liesRows := [CertRow.retLoad 0 1],
@@ -151,8 +156,8 @@ theorem certG104_rows : certG104.einRows = printed104.einRows ∧
     certG104.liesRows = printed104.liesRows ∧ certG104.lay = printed104.lay :=
   ⟨rfl, rfl, rfl⟩
 
-/-- THE DECIDABLE CHECK of a certificate against `G104_referenz.gP`: the rows and layout
-    of the emitted C of 104, and `G104_referenz.gP`'s locals map. -/
+/-- THE DECIDABLE CHECK of a certificate against `gP`: the rows and layout
+    of the emitted C of 104, and `gP`'s locals map. -/
 def certOkG (c : Cert104) : Bool :=
   decide (c.einRows = [.voidB 2, .store100 0 1, .callLies 0 1]) &&
   decide (c.liesRows = [.retLoad 0 1]) &&
@@ -162,7 +167,7 @@ def certOkG (c : Cert104) : Bool :=
 
 theorem certG104_ok : certOkG certG104 = true := by decide
 
-/-- The locals layout of a certificate, over `G104_referenz.gD` (pointer entries name
+/-- The locals layout of a certificate, over `gD` (pointer entries name
     table `Konto`, the only table). -/
 def kOfG {Γ : Ctx} (vm : List Nat) (pp : List (Nat × Unit)) (ks : List (Nat × Int)) :
     CEnvLay G104_referenz.gD Γ :=
@@ -174,7 +179,7 @@ def kLiesG : CEnvLay G104_referenz.gD (G104_referenz.gD.params g_lies) := kOfG [
 
 /-! ### 2.2 `lies` -/
 
-/-- `return k->slots[i].stand;` corresponds to `G104_referenz.gP`'s `lies` body:
+/-- `return k->slots[i].stand;` corresponds to `gP`'s `lies` body:
     `k` is C local 0 (Gabbro variable 0), `i` C local 1 (variable 1). -/
 theorem liesG_end (m : Nat) : EndCorr xLiesG m true kLiesG (G104_referenz.gP.rumpf g_lies) cLiesBody := by
   have hi : ExprCorr xLiesG kLiesG (.var 1)
@@ -269,7 +274,7 @@ theorem einG_args : ArgsTo xEinG kEinG
             rfl
         | dort z => exact nomatch z
 
-/-- `lies(k, i);` against `G104_referenz.gP`'s call of `lies`. -/
+/-- `lies(k, i);` against `gP`'s call of `lies`. -/
 theorem einG_call (m : Nat) :
     StmtCorr xEinG m kEinG
       (Stmt.call (V := vertragVon G104_referenz.gD g_einzahlen) (l := false) (Γ := gCtx_einzahlen) g_lies
@@ -1075,15 +1080,20 @@ theorem gPB_ziel (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (some f
   exact nomatch i
 
 
-/-! ### 5.5 `gPB` behaves as `gP`: both against the same emitted C -/
+/-! ### 5.5 `gPB` behaves as `gP`: both against the same emitted C
+
+The renaming of 5.3 is syntactic. Its semantic content, for the two source
+functions: the C correspondence of `gPB`'s bodies against the SAME emitted
+unit (a copy of section 2 over `gDB`), and then, from worlds related to one
+C state, both Gabbro calls end `ok` and agree -- every C run relates to both
+(`gPB_wie_gP_einzahlen`, `gPB_wie_gP_lies`). -/
 
 def kEinB : CEnvLay gDB (gDB.params (some GFn.einzahlen)) := ⟨[0, 1, 2], [], []⟩
 
 def kLiesB : CEnvLay gDB (gDB.params (some GFn.lies)) := ⟨[0, 1], [], []⟩
 
-/-- The emitter's layout of `gDB`: `Konto` is table block 0, `stand` is
-    field 0 of `Konto_slot` at `uint32_t`, no globals (the layout of
-    `refEL`, over the parser's declaration). -/
+/-- The emitter's layout over `gDB` -- the same layout as `gEL104`
+    (the carriers are `gD`'s). -/
 def gEBL : EmitLay gDB where
   lay := refLay
   tnr := fun _ => 0
@@ -1110,7 +1120,7 @@ def xLiesB : TVCtx gDB :=
 def xEinB : TVCtx gDB :=
   ⟨gEBL, tvOrc, 2, CallAt gEBL.lay tvOrc tvXR refCProg 1, tvXR, gOB, 0, rufAt gPB gOB 0 1⟩
 
-/-! ### 2.2 `lies` -/
+/-! #### 5.5.1 `lies` of `gPB` against the emitted `lies` -/
 
 /-- `return k->slots[i].stand;` corresponds to `gPB`'s `lies` body:
     `k` is C local 0 (Gabbro variable 0), `i` C local 1 (variable 1). -/
@@ -1130,7 +1140,7 @@ theorem liesB_fn : FnCorr gEBL (rufAt gPB gOB 0 1) (CallAt gEBL.lay tvOrc tvXR r
   cCorr_ruf gEBL tvOrc tvXR gPB gOB 0 0 refCProg (some GFn.lies) 1 cLies rfl kLiesB 0
     (cCorr_end xLiesB 0 true (liesB_end 0))
 
-/-! ### 2.3 `einzahlen` -/
+/-! #### 5.5.2 `einzahlen` of `gPB` against the emitted `einzahlen` -/
 
 /-- `(void)b;` evaluates Gabbro's `b` (variable 2, C local 2). -/
 theorem einB_void :
@@ -1228,8 +1238,7 @@ theorem einB_fn : FnCorr gEBL (rufAt gPB gOB 0 2) (CallAt gEBL.lay tvOrc tvXR re
   cCorr_ruf gEBL tvOrc tvXR gPB gOB 0 1 refCProg (some GFn.einzahlen) 0 cEin rfl kEinB 0
     (cCorr_end xEinB 0 true (einB_end 0))
 
-
-/-- `lies` on `gP`, from ANY world and arguments, at any depth: the call
+/-- `lies` on `gPB`, from ANY world and arguments, at any depth: the call
     ends `ok` (requires, ensures and invariants all checked by `rufAt`),
     and the answer world has the caller's slots. -/
 theorem rufLiesB_ok (n : Nat) (σ : World gDB)
@@ -1281,7 +1290,7 @@ theorem einBodyB (n : Nat) (σ : World gDB)
   exact (congrArg (fun z : Zahl 0 100 => z.n)
     (storeSlot_hit (D := gDB) _ GTab.Konto _ GKontoFeld.stand _)).trans rfl
 
-/-- `einzahlen` on `gP`, from ANY world and arguments, at depth `n + 2`:
+/-- `einzahlen` on `gPB`, from ANY world and arguments, at depth `n + 2`:
     the call ends `ok` -- its `ensures old(stand) <= stand` and `lies`'s
     `ensures result == stand` both checked by `rufAt` on the way. -/
 theorem rufEinB_ok (n : Nat) (σ : World gDB)
@@ -1297,8 +1306,6 @@ theorem rufEinB_ok (n : Nat) (σ : World gDB)
   show _ ≤ (σ1.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n
   rw [h100]
   exact (Zahl.le_hi _)
-
-
 
 /-- A cell of `Konto` under both layouts: the same C cell holds the
     encoded slot of both related worlds, so the slots agree. -/
@@ -1472,5 +1479,247 @@ theorem schlusssatz_104_praemisse :
   ⟨certG104_ok, certG104_rows.1, certG104_rows.2.1, certG104_rows.2.2, progOf_ok _ certG104_ok⟩
 
 example := schlusssatz_104 certG104 certG104_ok
+
+
+/-! ### 6.1 Witnesses (rule 13): the premises are jointly satisfiable, on runs that move memory -/
+
+/-- The zero world of `gD`: both slots `0`, empty trace. -/
+def gWelt0 : World G104_referenz.gD :=
+  ⟨fun t _ f => (match t, f with | .Konto, .stand => ⟨0, by decide, by decide⟩),
+    (fun g => nomatch g), []⟩
+
+/-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
+def gRho7 : Env G104_referenz.gD (G104_referenz.gD.params g_einzahlen) :=
+  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
+
+theorem gW0_corr : corrW gEL104 gWelt0 refSt0 := by
+  refine ⟨?_, fun g => nomatch g⟩
+  intro t _
+  cases t
+  refine ⟨rfl, ?_⟩
+  intro k f hk0 hk
+  cases f
+  have hk2 : k < 2 := hk
+  have hk' : k = 0 ∨ k = 1 := by omega
+  rcases hk' with e | e <;> subst e <;> rfl
+
+theorem gRho7_env : EnvRel gEL104 (kOfG certG104.vmEin certG104.ppEin certG104.ksEin) gRho7
+    (lokUpd (lokUpd (lokUpd (fun _ => .undef) 2 (.int 7)) 1 (.int 0)) 0 (.ptr ⟨.tab 0, 0⟩)) := by
+  refine ⟨?_, fun q hq => absurd hq (by simp [certG104, kOfG]),
+    fun q hq => absurd hq (by simp [certG104, kOfG])⟩
+  intro τ x
+  cases x with
+  | hier => exact ⟨GTab.Konto, rfl, rfl⟩
+  | dort y =>
+      cases y with
+      | hier => rfl
+      | dort z =>
+          cases z with
+          | hier => rfl
+          | dort w => exact nomatch w
+
+/-- **WITNESS, part 4**: `einzahlen(k, 0, 7)` from the zero state -- the
+    premises of part 4 hold jointly; by the theorem the Gabbro call ends
+    `ok` and EVERY C run ends related to it; the slot moved `0 -> 100` in
+    the Gabbro world and in the C cell. -/
+theorem schlusssatz_104_zeuge :
+    ∃ σ' : World G104_referenz.gD,
+      rufAt G104_referenz.gP gO104 0 2 g_einzahlen gWelt0 gRho7 = .ok σ' () ∧
+      (gWelt0.slots GTab.Konto 0 GKontoFeld.stand).n = 0 ∧
+      (σ'.slots GTab.Konto 0 GKontoFeld.stand).n = 100 ∧
+      refSt0.mem (.tab 0) 0 = .int 0 ∧
+      (∃ st', CallAt gEL104.lay tvOrc tvXR (progOf certG104) 2 0 refSt0 einArgs st' none) ∧
+      ∀ st' rv, CallAt gEL104.lay tvOrc tvXR (progOf certG104) 2 0 refSt0 einArgs st' rv →
+        st'.mem (.tab 0) 0 = .int 100 ∧ rv = none := by
+  obtain ⟨σ', hR, hex, hall⟩ := (schlusssatz_104 certG104 certG104_ok).2.2.2.1.2.1 gWelt0 refSt0 gRho7
+    einArgs _ gW0_corr rfl gRho7_env
+  have hR' : rufAt G104_referenz.gP gO104 0 2 g_einzahlen gWelt0 gRho7 = .ok _ () := rfl
+  rw [hR'] at hR
+  cases hR
+  refine ⟨_, hR', rfl, rfl, rfl, hex, fun st' rv hC => ?_⟩
+  obtain ⟨hc, hrv⟩ := hall st' rv hC
+  exact ⟨(hc.1 GTab.Konto rfl).2 0 GKontoFeld.stand (by decide) (by decide), hrv⟩
+
+
+/-! ### 6.2 A reached machine of `gPB` -/
+
+/-- The zero start memory of `gDB`. -/
+def gbSp0 : Speicher gDB :=
+  ⟨fun t _ f => (match t, f with | .Konto, .stand => ⟨0, by decide, by decide⟩), (fun g => nomatch g)⟩
+
+/-- `einzahlen(k, 0, 7)` on the machine. -/
+def gbRho7 : Env gDB (gDB.params (some GFn.einzahlen)) :=
+  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
+
+theorem gbHoff {M : RufMaschineG gDB} {f : Faden} {z : RufFadenG gDB} {x : List GLock}
+    (e : M.faeden f = z) (ho : offen (M.faeden f).spur = x) : offen z.spur = x := by
+  rw [← e]; exact ho
+
+theorem gbHg {s : List (Ereignis gDB)} (h : offen s = [GLock.M]) : HeldGenau gbL (offen s) := by
+  rw [h]
+  intro L
+  cases L
+  exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
+
+/-- **WITNESS, part 5**: a reached machine of `gPB` (thread 0 runs
+    `einzahlen(k, 0, 7)`, three steps: the write, the call of `lies`, its
+    return): memory `0 -> 100`, the return of `lies` is logged, and its
+    `ensures result == k.slots[i].stand` holds there BY THE THEOREM. -/
+theorem schlusssatz_104_maschine_zeuge :
+    ∃ M : RufMaschineG gDB,
+      RufErreichbarG gPB gOB 0 (RufStartG gPB gbSp0 (bootInit GFn.einzahlen gbRho7)) M ∧
+      (gbSp0.slots GTab.Konto 0 GKontoFeld.stand).n = 0 ∧
+      (M.speicher.slots GTab.Konto 0 GKontoFeld.stand).n = 100 ∧
+      ∃ (rho : Env gDB (gDB.params (some GFn.lies))) (v : ErgVal gDB (gDB.erg (some GFn.lies)))
+        (s0 s1 : World gDB),
+        RufEreignisF.rueck (some GFn.lies) rho v s0 s1 ∈ (M.faeden 0).log ∧
+        EnsAmRueck gPB (some GFn.lies) s0 s1 rho v := by
+  have h00 : (RufStartG gPB gbSp0 (bootInit GFn.einzahlen gbRho7)).faeden 0 =
+      ⟨[], ⟨some GFn.einzahlen, gbRho7, gbSp0.welt [],
+        ⟨false, gDB.params (some GFn.einzahlen), gbL, gbRho7, .ende gbBody_einzahlen⟩⟩,
+        startSpur (some GFn.einzahlen),
+        [RufEreignisF.eintritt (some GFn.einzahlen) gbRho7 (gbSp0.welt [])]⟩ := rfl
+  have hoff0 : offen ((RufStartG gPB gbSp0 (bootInit GFn.einzahlen gbRho7)).faeden 0).spur =
+      [GLock.M] := rfl
+  -- 1: the write through the pointer
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := gPB) (O := gOB) (passes := 0) h00 _ _ _
+    rfl rfl (gbHg hoff0).heldIn _ _ rfl ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+  have hoff1 : offen (M1.faeden 0).spur = [GLock.M] := by
+    rw [hZ1.spur]
+    exact ((Erw.schreibSlot _ _ _ _ _ _).offen).trans (((Erw.lese _ _ _).offen).trans hoff0)
+  have e1 := hZ1.1
+  try dsimp only at e1
+  -- 2: call `lies`
+  obtain ⟨M2, s2, hZ2⟩ := w_rufEnde (P := gPB) (O := gOB) (passes := 0) e1 (some GFn.lies) _ gbHp rfl
+    _ _ rfl (gbHg (gbHoff e1 hoff1)).heldIn
+  have hoff2 : offen (M2.faeden 0).spur = [GLock.M] := by
+    rw [hZ2.spur, (Erw.lese _ _ _).offen]; exact hoff1
+  have e2 := hZ2.1
+  try dsimp only at e2
+  -- 3: `lies` returns
+  obtain ⟨M3, s3, hG3⟩ := w_rueckP (P := gPB) (O := gOB) (passes := 0) e2 _ _ rfl
+    (PopArt.wie rfl) _ _ _ rfl (gbHg (gbHoff e2 hoff2)).heldIn
+  have hr3 : RufErreichbarG gPB gOB 0 (RufStartG gPB gbSp0 (bootInit GFn.einzahlen gbRho7)) M3 :=
+    .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3
+  have hsp : (M3.speicher.slots GTab.Konto 0 GKontoFeld.stand).n = 100 := by
+    rw [hG3.2]
+    show (M2.speicher.slots GTab.Konto 0 GKontoFeld.stand).n = 100
+    rw [hZ2.2]
+    show (M1.speicher.slots GTab.Konto 0 GKontoFeld.stand).n = 100
+    rw [hZ1.2]
+    rfl
+  have hlog := congrArg RufFadenG.log hG3.1
+  have hex : ∃ (rho : Env gDB (gDB.params (some GFn.lies)))
+      (v : ErgVal gDB (gDB.erg (some GFn.lies))) (w0 w1 : World gDB),
+      RufEreignisF.rueck (D := gDB) (some GFn.lies) rho v w0 w1 ∈ (M3.faeden 0).log := by
+    rw [hlog]
+    exact ⟨_, _, _, _, List.mem_cons_self⟩
+  obtain ⟨rho, v, w0, w1, hm⟩ := hex
+  have hens := ((gPB_ziel gbSp0 GFn.einzahlen gbRho7 M3 hr3).1.1 0 _ hm).2 (some GFn.lies) rho v
+    w0 w1 rfl
+  exact ⟨M3, hr3, rfl, hsp, rho, v, w0, w1, hm, hens⟩
+
+
+/-! ## CUTS
+
+  THE PREMISE of `schlusssatz_104`: `certOkG c = true` -- the
+  correspondence certificate checks. Discharged for the printed rows by
+  `decide` (`schlusssatz_104_praemisse`). No other hypothesis: for 104
+  there is no hardware or oracle premise to carry, because `gD` declares no
+  axiom, register, device, global or `awaits` (`gO104`/`gOB` are forced by
+  empty types, `GutO`/`RegLokal` proved), and the emitted unit makes no
+  device access and no foreign call (`tvOrc`, `tvXR`; `tvXR_funktional`).
+
+  NAMED ASSUMPTIONS (outside Lean; the theorem is conditional on them by
+  construction, not by a hypothesis):
+
+  A1. The C compiler translates the emitted unit according to the C
+      semantics of `CSemantik.lean`/`CSpeicher.lean`/`CFormen*.lean`
+      (`Exec`, `CallAt`, the block memory). Part 4 is a statement about
+      that semantics: EVERY run in it, not a run of the binary.
+  A2. The emitted C TEXT is the `CS` data `refCProg`/`cEinBody`/
+      `cLiesBody`: a hand transcription of the quoted emitter output
+      (`CFormenZeuge.lean`, `Korrespondenz104.lean`; byte-identity of the
+      quote with `gabbro emit` measured 2026-09-13, not proved). There is no
+      C parser in Lean; the certificate rows elaborate to these terms
+      (`progOf_ok`, proved) and are the Rust printer's rows (`certG104_rows`).
+  A3. The layout of `Konto` (`kontoLay`: 2 records of 4 bytes, `stand` at
+      offset 0, `uint32_t`) is what the C compiler gives; the emitted
+      `_Static_assert` pins bound it (`CFormenM` M11), not proved here.
+  A4. The runtime starts the program as `bootInit` does: thread 0 runs one
+      source function on its arguments, every other thread idles. The idle
+      root is runtime data, not source text (5.1 proves no G theorem applies
+      without it); the C driver that makes the call is not emitted.
+  A5. The Lean kernel, and the DEFINITIONS a human must read (plan §3):
+      machine G, `rufAt`/`execEnd`, `KoerperGutS`, `VertragAmOrtG`, the C
+      semantics, `corrW`/`EnvRel`.
+
+  JOINTS -- what is closed and how:
+
+  J1. P identity. CLOSED for the parser's `gP`: parse (1), model
+      certificates (2), model judgement (3) and the C correspondence (4)
+      are all about `gP` itself; `r4P`/`refP` are no longer in the chain.
+      The machine (5) needs `gPB` = `gP` plus the idle root, related to `gP`
+      by a proved translation: syntactically (`gPB_ist_gP_umbenannt`, the
+      renaming `renEnd`/`renE` applied to `gP`'s bodies and contracts gives
+      `gPB`'s, by `rfl`) and semantically for both source functions
+      (`gPB_wie_gP_*`: same memory effect and answer, through the emitted C).
+  J2. Model certificates are FOR `gP`: `print104_*` (the Lean print of
+      `gP`'s bodies is the pasted printer output), accepted by `decide`.
+  J3. The C correspondence is about `gP`'s bodies (`liesG_end`, `einG_end`)
+      and the emitted text (A2); the certificate is load-bearing
+      (`progOf_ok`, `kOf_ok`, `corrCertG_sound`).
+  J4. Single-threaded completeness: `ziel_ort_einfaden` (no footprint or
+      exclusivity premise) for the machine; every C run by
+      `callAt_funktional` (`exec_det`).
+
+  NOT PROVED (named):
+
+  - The source text is the comment-free one-line form `u104lex` pins; the
+    real file with comments is lane 162's.
+  - The certificate's MAP (`vm`/`pp`/`ks`) is `gP`'s and is NOT what
+    `corrlean.rs` prints today: the printer prints `refD`'s map (`vm = [2]`,
+    the `MODEL DATUM` index `ks = [(1, 0)]`). Its rows and layout are the
+    printer's. Moving the printer to the exporter's map is Rust work (no
+    `cargo` in this lane).
+  - `renE`/`renEnd` are PARTIAL (the 104 fragment and some more; `none`
+    elsewhere) and their semantic preservation is not proved in general;
+    the semantic bridge is proved for 104's two functions only, and only
+    for starts related to one C state.
+  - Part 4 relates C runs to `rufAt` (the sequential semantics), part 5
+    states the goal theorem on machine G of `gPB`; that G with one active
+    thread agrees with `rufAt` is the adequacy chain (`rufG_adaequat_ruf`),
+    not re-instantiated here.
+  - The C statements are at the depth the call tree needs (`einzahlen` at 2,
+    `lies` at 1); deeper `CallAt` fuel is not stated (no monotonicity lemma).
+  - `corrW` relates memory, not traces: Gabbro's lock trace and C's
+    observation list are not related (CSpeicher CUTS).
+  - Stage (b): concurrency (DRF-SC, lock primitives, thread creation) is
+    not addressed; `gP_kein_exklusiv` shows a two-active-thread start of
+    this program is refused by the model anyway (every function holds `M`).
+  - Widening beyond 104: everything keyed to `gD`: the lowering
+    (`lowerProg`), `certOkG` (fixed rows), `printEnd104` (the 104 shapes),
+    the renaming target `gDB`, the per-program `rufAt` computations
+    (`rufEin_ok`) that stand in for a general "obligations imply `rufAt` ok"
+    theorem, and the copied C correspondence of 5.5.
+-/
+
+#print axioms Gabbro.Grammatik.uebersetze104_ok
+#print axioms Gabbro.Grammatik.corrCertG_sound
+#print axioms Gabbro.Grammatik.c104_einzahlen
+#print axioms Gabbro.Grammatik.c104_lies
+#print axioms Gabbro.Grammatik.print104_einzahlen
+#print axioms Gabbro.Grammatik.print104_lies
+#print axioms Gabbro.Grammatik.gP_koerperS
+#print axioms Gabbro.Grammatik.gP_kein_ruhig
+#print axioms Gabbro.Grammatik.gP_kein_exklusiv
+#print axioms Gabbro.Grammatik.gPB_ist_gP_umbenannt
+#print axioms Gabbro.Grammatik.gPB_ziel
+#print axioms Gabbro.Grammatik.gPB_wie_gP_einzahlen
+#print axioms Gabbro.Grammatik.gPB_wie_gP_lies
+#print axioms Gabbro.Grammatik.schlusssatz_104
+#print axioms Gabbro.Grammatik.schlusssatz_104_praemisse
+#print axioms Gabbro.Grammatik.schlusssatz_104_zeuge
+#print axioms Gabbro.Grammatik.schlusssatz_104_maschine_zeuge
 
 end Gabbro.Grammatik
