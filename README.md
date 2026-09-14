@@ -217,8 +217,10 @@ This section exists because the alternative is that a reader has to find it out.
     and it is open.
   - The third independent review ([`messung/URTEIL-OPUS-2026-09-15.md`](messung/URTEIL-OPUS-2026-09-15.md),
     [`messung/URTEIL-MUSE-2026-09-15.md`](messung/URTEIL-MUSE-2026-09-15.md)) found a named gap in
-    the STATEMENT: an unsatisfiable lock invariant empties the user obligation (P1). The repair
-    is in progress.
+    the STATEMENT: an unsatisfiable lock invariant emptied the user obligation (P1); the
+    program's starts, invariants and axiom ensures were free parameters (P2); payloads had no
+    race conjunct (P3). All three are repaired and `gabbro_ziel` is re-proved against the
+    repaired statement (SATZKARTE §22); a fourth review round against it is running.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
 - **The chain of section 4 is closed for one program.** `beispiele/104`, theorem
