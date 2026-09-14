@@ -61,10 +61,10 @@ inductive Klasse where
 
 /-- Classification from the bit triple. -/
 def klasse (F : Format) (g : GBits F) : Klasse :=
-  if g.bexp == F.bexpMax then
-    if g.frac == 0 then .unendlich else .nan
-  else if g.bexp == 0 then
-    if g.frac == 0 then .null else .subnormal
+  if g.bexp = F.bexpMax then
+    if g.frac = 0 then .unendlich else .nan
+  else if g.bexp = 0 then
+    if g.frac = 0 then .null else .subnormal
   else .normal
 
 /-- Well-formed bit triple: exponent in range, significand fits its field. -/
@@ -129,43 +129,61 @@ def rundeInt (quo rest den : Nat) : Nat :=
 
 /-- Unbiased binary exponent of `n / d` (`n > 0`, `d > 0`):
     `2 ^ E ≤ n / d < 2 ^ (E + 1)`, by exact integer comparisons around
-    `bitlen n - bitlen d` (structural recursion only, via `bitlen`). -/
-def findeExp (n d : Nat) : Int :=
-  let E0 : Int := (bitlen n : Int) - (bitlen d : Int)
+    `bitlen n - bitlen d` (structural recursion only, via `bitlen`).
+    Split into `findeExpBei` (the decision at a given `E0`) so proofs can
+    rewrite without unfolding a `let`. -/
+def findeExpBei (n d : Nat) (E0 : Int) : Int :=
   if 0 ≤ E0 then
     if d * 2 ^ E0.toNat ≤ n then E0 else E0 - 1
   else
     if d ≤ n * 2 ^ (-E0).toNat then E0 else E0 - 1
 
+def findeExp (n d : Nat) : Int :=
+  findeExpBei n d ((bitlen n : Int) - (bitlen d : Int))
+
+/-- Scaled integer quotient for the normal path: the value `n / d`
+    scaled by `2 ^ ((p - 1) - E)` as a numerator/denominator pair (one side
+    carries the shift, so both stay `Nat`). -/
+def normQD (p : Nat) (E : Int) (n d : Nat) : Nat × Nat :=
+  if 0 ≤ (p : Int) - 1 - E then (n * 2 ^ ((p : Int) - 1 - E).toNat, d)
+  else (n, d * 2 ^ (E - ((p : Int) - 1)).toNat)
+
+/-- Rounded significand on the normal path (the `rundeInt` decision over
+    the scaled quotient). -/
+def normQ (p : Nat) (E : Int) (n d : Nat) : Nat :=
+  rundeInt ((normQD p E n d).1 / (normQD p E n d).2)
+    ((normQD p E n d).1 % (normQD p E n d).2) (normQD p E n d).2
+
+/-- Rounded significand on the subnormal path (scaled by `2 ^ ((p - 1) - emin)`). -/
+def subQ (F : Format) (n d : Nat) : Nat :=
+  let k : Nat := ((F.p : Int) - 1 - F.emin).toNat
+  rundeInt ((n * 2 ^ k) / d) ((n * 2 ^ k) % d) d
+
 /-- Round-to-nearest-ties-to-even from an exact rational to format `F`:
     find the exponent, scale to an integer quotient with remainder, decide
     the significand with `rundeInt`, place the normal / subnormal / overflow
-    (`infinity`) / underflow (`zero`) cases. `nenner = 0` is NaN. -/
-def rundeBruch (F : Format) (b : Bruch) : GBits F :=
-  let s : Bool := b.zaehler < 0
-  let n : Nat := b.zaehler.natAbs
-  let d : Nat := b.nenner
-  if d == 0 then ⟨false, F.bexpMax, 1⟩
-  else if n == 0 then ⟨s, 0, 0⟩
+    (`infinity`) / underflow (`zero`) cases. `nenner = 0` is NaN.
+    Let-free (helpers take explicit arguments) so proofs can rewrite. -/
+def rundeBruchKern (F : Format) (s : Bool) (n d : Nat) (E : Int) : GBits F :=
+  if (F.emax : Int) < E then ⟨s, F.bexpMax, 0⟩
+  else if E < F.emin - (F.p : Int) then ⟨s, 0, 0⟩
+  else if F.emin ≤ E then
+    if normQ F.p E n d < 2 ^ F.p then
+      ⟨s, (E - F.emin + 1).toNat, normQ F.p E n d - 2 ^ (F.p - 1)⟩
+    else if E < (F.emax : Int) then ⟨s, (E - F.emin + 2).toNat, 0⟩
+    else ⟨s, F.bexpMax, 0⟩
   else
-    let E : Int := findeExp n d
-    if (F.emax : Int) < E then ⟨s, F.bexpMax, 0⟩
-    else if E < F.emin - (F.p : Int) then ⟨s, 0, 0⟩
-    else if F.emin ≤ E then
-      let k : Int := (F.p : Int) - 1 - E
-      let num : Nat := if 0 ≤ k then n * 2 ^ k.toNat else n
-      let denS : Nat := if 0 ≤ k then d else d * 2 ^ (-k).toNat
-      let q : Nat := rundeInt (num / denS) (num % denS) denS
-      if q < 2 ^ F.p then
-        ⟨s, (E - F.emin + 1).toNat, q - 2 ^ (F.p - 1)⟩
-      else if E < (F.emax : Int) then ⟨s, (E - F.emin + 2).toNat, 0⟩
-      else ⟨s, F.bexpMax, 0⟩
-    else
-      let k : Nat := ((F.p : Int) - 1 - F.emin).toNat
-      let num : Nat := n * 2 ^ k
-      let q : Nat := rundeInt (num / d) (num % d) d
-      if q < 2 ^ (F.p - 1) then ⟨s, 0, q⟩
-      else ⟨s, 1, 0⟩
+    if subQ F n d < 2 ^ (F.p - 1) then ⟨s, 0, subQ F n d⟩
+    else ⟨s, 1, 0⟩
+
+/-- Rounding with sign, numerator and denominator explicit. -/
+def rundeBruchBei (F : Format) (s : Bool) (n d : Nat) : GBits F :=
+  if d = 0 then ⟨false, F.bexpMax, 1⟩
+  else if n = 0 then ⟨s, 0, 0⟩
+  else rundeBruchKern F s n d (findeExp n d)
+
+def rundeBruch (F : Format) (b : Bruch) : GBits F :=
+  rundeBruchBei F (b.zaehler < 0) b.zaehler.natAbs b.nenner
 
 /-- Rounding from an exact dyadic value (the `add` / `sub` / `mul` path). -/
 def rundeExakt (F : Format) (v : Exakt) : GBits F :=
@@ -434,7 +452,114 @@ theorem rundeInt_monoton (quo₁ rest₁ quo₂ rest₂ den : Nat)
                     if_neg (by simpa using p2)]
               rw [r1, r2]; omega
 
-/-! `CUTS:` skeleton only -- classification, exact values, rounding, ops,
-  theorems and witnesses follow in later commits. -/
+/-! ## Theorems: bit lengths bound their numbers. -/
+
+theorem bitlenAux_null (n : Nat) : bitlenAux n 0 = 0 := rfl
+
+theorem bitlenAux_succ (n fuel : Nat) :
+    bitlenAux n (fuel + 1) = if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel := rfl
+
+theorem bitlenAux_null_all (fuel : Nat) : bitlenAux 0 fuel = 0 := by
+  induction fuel with
+  | zero => rfl
+  | succ fuel _ => simp [bitlenAux_succ]
+
+theorem zweiHoch_succ (k : Nat) : (2 : Nat) ^ (1 + k) = 2 * 2 ^ k := by
+  rw [Nat.pow_add]
+
+/-- Upper bound: `fuel` bits suffice whenever the number fits in `fuel` bits. -/
+theorem bitlenAux_obere (fuel n : Nat) (h : n < 2 ^ fuel) :
+    n < 2 ^ (bitlenAux n fuel) := by
+  induction fuel generalizing n with
+  | zero => rw [bitlenAux_null]; exact h
+  | succ fuel ih =>
+    rw [bitlenAux_succ]
+    by_cases hn : n = 0
+    · simp [hn]
+    · simp only [hn, if_false]
+      have hhalf : n / 2 < 2 ^ fuel := by
+        have e : (2 : Nat) ^ (fuel + 1) = 2 ^ fuel * 2 := Nat.pow_succ 2 fuel
+        have hmod := Nat.div_add_mod n 2
+        omega
+      have ih' := ih (n / 2) hhalf
+      have e2 := zweiHoch_succ (bitlenAux (n / 2) fuel)
+      have hmod := Nat.div_add_mod n 2
+      omega
+
+/-- Lower bound: the bit length is tight up to one bit (`2 ^ bitlen ≤ 2 * n`). -/
+theorem bitlenAux_untere (fuel n : Nat) (hn : n ≠ 0) :
+    2 ^ (bitlenAux n fuel) ≤ 2 * n := by
+  induction fuel generalizing n with
+  | zero =>
+    rw [bitlenAux_null]
+    have e0 : (2 : Nat) ^ 0 = 1 := rfl
+    omega
+  | succ fuel ih =>
+    rw [bitlenAux_succ]
+    by_cases hn0 : n = 0
+    · subst hn0; exact (hn rfl).elim
+    · simp only [hn0, if_false]
+      by_cases hh : n / 2 = 0
+      · have hn1 : n = 1 := by omega
+        subst hn1
+        have e0 : (1 : Nat) / 2 = 0 := by decide
+        rw [e0, bitlenAux_null_all]
+        decide
+      · have ih' := ih (n / 2) hh
+        have e2 := zweiHoch_succ (bitlenAux (n / 2) fuel)
+        have hmod := Nat.div_add_mod n 2
+        omega
+
+theorem bitlen_obere (n : Nat) : n < 2 ^ (bitlen n) :=
+  bitlenAux_obere n n Nat.lt_two_pow_self
+
+theorem bitlen_untere (n : Nat) (hn : n ≠ 0) : 2 ^ (bitlen n) ≤ 2 * n :=
+  bitlenAux_untere n n hn
+
+/-- Lower bound at non-negative exponents: with `E0 = bn - bd` over
+    bit-length bounds (`2^bn ≤ 2n`, `d < 2^bd`), the decided exponent
+    satisfies `d * 2^E ≤ n`. The `E0 - 1` arm (branch miss) is covered by
+    halving the bit-length upper bound. -/
+theorem findeExpBei_unten_nonneg (n d : Nat) (E0 : Int) (bn bd : Nat)
+    (hE0 : E0 = (bn : Int) - (bd : Int))
+    (hnB : 2 ^ bn ≤ 2 * n) (hdB : d < 2 ^ bd)
+    (hE : 0 ≤ findeExpBei n d E0) : d * 2 ^ (findeExpBei n d E0).toNat ≤ n := by
+  unfold findeExpBei at hE ⊢
+  by_cases h0 : (0 : Int) ≤ E0
+  · rw [if_pos h0] at hE ⊢
+    by_cases hc : d * 2 ^ E0.toNat ≤ n
+    · rw [if_pos hc]; exact hc
+    · rw [if_neg hc] at hE ⊢
+      have hE0n : E0.toNat = bn - bd := by omega
+      have hE1n : (E0 - 1).toNat = E0.toNat - 1 := by omega
+      have hE1' : E0.toNat = 1 + (E0.toNat - 1) := by omega
+      have hsplit2 : 2 ^ E0.toNat = 2 * 2 ^ (E0.toNat - 1) := by
+        have hcong := congrArg (2 ^ ·) hE1'
+        rw [zweiHoch_succ] at hcong
+        exact hcong
+      have hbn : bn = E0.toNat + bd := by omega
+      have hpow : 2 ^ bn = 2 ^ E0.toNat * 2 ^ bd := by
+        rw [hbn, Nat.pow_add]
+      have hcomm : 2 ^ bd * 2 ^ E0.toNat = 2 ^ E0.toNat * 2 ^ bd :=
+        Nat.mul_comm _ _
+      have hleY : d * 2 ^ E0.toNat ≤ 2 * n := by
+        have h1 := Nat.mul_le_mul (Nat.le_of_lt hdB) (Nat.le_refl (2 ^ E0.toNat))
+        omega
+      have hdm : d * 2 ^ E0.toNat = 2 * (d * 2 ^ (E0.toNat - 1)) := by
+        rw [hsplit2, Nat.mul_left_comm]
+      rw [hE1n]
+      omega
+  · rw [if_neg h0] at hE ⊢
+    by_cases hc : d ≤ n * 2 ^ (-E0).toNat
+    · rw [if_pos hc] at hE; omega
+    · rw [if_neg hc] at hE; omega
+
+/-- The decided exponent lower-bounds the quotient at non-negative values. -/
+theorem findeExp_unten (n d : Nat) (hn : 0 < n)
+    (hE : 0 ≤ findeExp n d) : d * 2 ^ (findeExp n d).toNat ≤ n := by
+  unfold findeExp at hE ⊢
+  exact findeExpBei_unten_nonneg n d ((bitlen n : Int) - (bitlen d : Int))
+    (bitlen n) (bitlen d) rfl
+    (bitlen_untere n (by omega)) (bitlen_obere d) hE
 
 end Gabbro.Grammatik.Gleitkomma
