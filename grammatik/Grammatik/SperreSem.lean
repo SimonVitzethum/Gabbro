@@ -758,6 +758,126 @@ theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes :
     execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ := by
   cases s <;> first | rfl | (simp [Stmt.istBlatt] at hb)
 
+/-! ## 2a. Frame results WITH the reason channel
+
+  `ZErg` (`ZielOrtSem.lean`) knows a return, a `logik` outcome and
+  "anything else": a REASON exit (`retGrund`) of the frame's own function
+  was `sonst`, so the replay said nothing about the world at a reason
+  return. `ZErgG` adds `grund σ r` (2026-09-14, for the invariants owed at
+  reason returns, `ZielOrtInvGrund.lean`); the lock-invariant replay
+  (`semH`, `KopfS`) predicts in `ZErgG`, the older replays keep `ZErg`. -/
+
+/-- What a frame's residue still produces: a return, a reason exit, a logic
+    failure, or anything else. -/
+inductive ZErgG (V : Vertrag D) where
+  | zurueck (σ : World D) (v : ErgVal D V.erg)
+  | grund (σ : World D) (r : Fin V.gruende)
+  | logik (e : Logik D)
+  | sonst
+
+namespace ZErgG
+
+variable {V : Vertrag D}
+
+/-- Frame results that agree up to the trace. -/
+def gleich : ZErgG V → ZErgG V → Prop
+  | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
+  | .grund σ r, .grund σ' r' => SG σ σ' ∧ r = r'
+  | .logik e, .logik e' => e = e'
+  | .sonst, .sonst => True
+  | _, _ => False
+
+theorem gleich_refl (r : ZErgG V) : r.gleich r := by
+  cases r <;> simp [gleich, SG]
+
+theorem gleich_symm {r r' : ZErgG V} (h : r.gleich r') : r'.gleich r := by
+  cases r <;> cases r' <;> simp_all [gleich, SG]
+
+theorem gleich_trans {r r' r'' : ZErgG V} (h1 : r.gleich r') (h2 : r'.gleich r'') :
+    r.gleich r'' := by
+  cases r <;> cases r' <;> cases r'' <;> simp_all [gleich, SG]
+
+theorem gleich_of_eq {r r' : ZErgG V} (h : r = r') : r.gleich r' := by
+  subst h; exact gleich_refl _
+
+/-- `a.folgt b`: the result `a` is predicted by `b` -- `b` predicts nothing
+    (`sonst`), or `a` agrees with `b` up to the trace. -/
+def folgt (a b : ZErgG V) : Prop := b = .sonst ∨ a.gleich b
+
+theorem folgt_refl (a : ZErgG V) : a.folgt a := Or.inr (gleich_refl a)
+
+theorem folgt_of_gleich {a b : ZErgG V} (h : a.gleich b) : a.folgt b := Or.inr h
+
+theorem folgt_of_eq {a b : ZErgG V} (h : a = b) : a.folgt b := by subst h; exact folgt_refl a
+
+theorem folgt_sonst (a : ZErgG V) : a.folgt .sonst := Or.inl rfl
+
+theorem gleich_sonst_links {b : ZErgG V} (h : gleich .sonst b) : b = .sonst := by
+  cases b <;> simp_all [gleich]
+
+theorem folgt_trans {a b c : ZErgG V} (h1 : a.folgt b) (h2 : b.folgt c) : a.folgt c := by
+  rcases h2 with h2 | h2
+  · exact Or.inl h2
+  · rcases h1 with h1 | h1
+    · subst h1
+      exact Or.inl (gleich_sonst_links h2)
+    · exact Or.inr (gleich_trans h1 h2)
+
+theorem folgt_zurueck {a : ZErgG V} {σ : World D} {v : ErgVal D V.erg}
+    (h : a.folgt (.zurueck σ v)) : a.gleich (.zurueck σ v) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+theorem folgt_grund {a : ZErgG V} {σ : World D} {r : Fin V.gruende}
+    (h : a.folgt (.grund σ r)) : a.gleich (.grund σ r) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+theorem folgt_logik {a : ZErgG V} {e : Logik D} (h : a.folgt (.logik e)) :
+    a.gleich (.logik e) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+end ZErgG
+
+/-- The frame result of an end outcome, reasons kept. -/
+def zErgG {V : Vertrag D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → ZErgG V
+  | .zurueck σ v => .zurueck σ v
+  | .grund σ r => .grund σ r
+  | .logik e => .logik e
+  | _ => .sonst
+
+theorem zErgG_schrumpf {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
+    (o : EndAusgang V l (τ :: Γ)) : zErgG o.schrumpf = zErgG o := by
+  cases o <;> rfl
+
+theorem zErgG_gleich_logik {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
+    {e : Logik D} (h : (zErgG o).gleich (.logik e)) : o = .logik e := by
+  cases o <;> simp_all [zErgG, ZErgG.gleich]
+
+theorem zErgG_gleich_zurueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
+    {σ : World D} {v : ErgVal D V.erg} (h : (zErgG o).gleich (.zurueck σ v)) :
+    ∃ σ', o = .zurueck σ' v ∧ SG σ' σ := by
+  cases o with
+  | zurueck σ' v' =>
+      obtain ⟨hs, hv⟩ := h
+      subst hv
+      exact ⟨σ', rfl, hs⟩
+  | _ => simp [zErgG, ZErgG.gleich] at h
+
+theorem zErgG_gleich_grund {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
+    {σ : World D} {r : Fin V.gruende} (h : (zErgG o).gleich (.grund σ r)) :
+    ∃ σ', o = .grund σ' r ∧ SG σ' σ := by
+  cases o with
+  | grund σ' r' =>
+      obtain ⟨hs, hr⟩ := h
+      subst hr
+      exact ⟨σ', rfl, hs⟩
+  | _ => simp [zErgG, ZErgG.gleich] at h
+
 /-! ## 3. The frame semantics of every residue, with lock invariants
 
   `weiterH`/`semH` are `weiterZ`/`semV` (`ZielOrtVollSem.lean`) over
@@ -771,11 +891,12 @@ variable (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
 
 /-- **How a residue continues from an outcome**, with lock invariants. -/
 def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ →
-    Ausgang V l Γ → ZErg V
+    Ausgang V l Γ → ZErgG V
   | _, _, _, .ende e, o =>
       match o with
-      | .ok σ ρ => zErg (execEndH S O U passes R e σ ρ)
+      | .ok σ ρ => zErgG (execEndH S O U passes R e σ ρ)
       | .zurueck σ v => .zurueck σ v
+      | .grund σ r => .grund σ r
       | .logik e => .logik e
       | _ => .sonst
   | _, _, _, .dann b k, o => weiterH k (laufA (fun σ ρ => execBlockH S O U passes R b σ ρ) o)
@@ -841,7 +962,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
 /-- The frame semantics of a residue with lock invariants: run it from `σ`,
     `ρ`. -/
 def semH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) (σ : World D)
-    (ρ : Env D Γ) : ZErg V :=
+    (ρ : Env D Γ) : ZErgG V :=
   weiterH S O U passes R r (.ok σ ρ)
 
 variable {l : Bool} {Γ : Ctx}
@@ -884,11 +1005,11 @@ theorem weiterH_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
 theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (v : ErgVal D V.erg),
     (weiterH S O U passes R k (.zurueck σ v)).gleich (.zurueck σ v)
-  | _, _, _, .ende _, _, _ => ZErg.gleich_refl _
+  | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
   | _, _, _, .dann _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .schrumpf k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .frei L k, σ, v =>
-      ZErg.gleich_trans (weiterH_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
+      ZErgG.gleich_trans (weiterH_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
   | _, _, _, .trav _ _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .travRest _ _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .wieder _ _ _ _ k, σ, v => weiterH_zurueck k σ v
@@ -899,13 +1020,34 @@ theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .abbruch k, σ, v => weiterH_zurueck k σ v
 
+/-- A reason exit passes every residue unchanged up to the trace (the twin
+    of `weiterH_zurueck`, 2026-09-14). -/
+theorem weiterH_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
+    (σ : World D) (r : Fin V.gruende),
+    (weiterH S O U passes R k (.grund σ r)).gleich (.grund σ r)
+  | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
+  | _, _, _, .dann _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .schrumpf k, σ, r => weiterH_grund k σ r
+  | _, _, _, .frei L k, σ, r =>
+      ZErgG.gleich_trans (weiterH_grund k (σ.gibt L) r) ⟨sg_gibt σ L, rfl⟩
+  | _, _, _, .trav _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .travRest _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .wieder _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .wiederRest _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .ewig _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .ewigRest _ _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .wartet _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .wartetSonst _ _ _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .abbruch k, σ, r => weiterH_grund k σ r
+
 /-- **An end block replacing a residue** (as `weiterZ_ende_folgt`). -/
 theorem weiterH_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : EndAusgang V l Γ) :
-    (weiterH S O U passes R k eo.zuAusgang).folgt (zErg eo) := by
+    (weiterH S O U passes R k eo.zuAusgang).folgt (zErgG eo) := by
   cases eo with
-  | zurueck σ v => exact ZErg.folgt_of_gleich (weiterH_zurueck S O U passes R k σ v)
-  | logik e => exact ZErg.folgt_of_eq (weiterH_logik S O U passes R k e)
-  | _ => exact ZErg.folgt_sonst _
+  | zurueck σ v => exact ZErgG.folgt_of_gleich (weiterH_zurueck S O U passes R k σ v)
+  | grund σ r => exact ZErgG.folgt_of_gleich (weiterH_grund S O U passes R k σ r)
+  | logik e => exact ZErgG.folgt_of_eq (weiterH_logik S O U passes R k e)
+  | _ => exact ZErgG.folgt_sonst _
 
 /-- `execBlockH` of an end block run as a block (`Endblock.alsBlock`) is
     the end block's own outcome (as `Endblock.execBlock_alsBlock`). -/
@@ -983,7 +1125,7 @@ theorem semH_ende_cons {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
     (rest : Endblock D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
     semH S O U passes R (.ende (.cons s rest)) σ ρ =
       weiterH S O U passes R (.ende rest) (execStmtH S O U passes R s σ ρ) := by
-  show zErg (execEndH S O U passes R (.cons s rest) σ ρ) = _
+  show zErgG (execEndH S O U passes R (.cons s rest) σ ρ) = _
   simp only [execEndH]
   cases execStmtH S O U passes R s σ ρ <;> rfl
 
@@ -1113,10 +1255,10 @@ theorem semH_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     semH S O U passes R (.ende (.bind e rest)) σ ρ =
       semH S O U passes R (.ende rest) (σ.lese Λ e.orte)
         (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := by
-  show zErg (execEndH S O U passes R (.bind e rest) σ ρ) =
-    zErg (execEndH S O U passes R rest _ _)
+  show zErgG (execEndH S O U passes R (.bind e rest) σ ρ) =
+    zErgG (execEndH S O U passes R rest _ _)
   simp only [execEndH]
-  rw [zErg_schrumpf]
+  rw [zErgG_schrumpf]
 
 theorem semH_dannBind {Λ Λ' : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
@@ -1147,7 +1289,7 @@ theorem semH_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ 
   rw [semH_dann]
   simp only [execBlockH, dif_neg h]
   rw [semH_alsBlock]
-  exact ZErg.folgt_refl _
+  exact ZErgG.folgt_refl _
 
 theorem semH_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
@@ -1168,7 +1310,7 @@ theorem semH_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
   rw [semH_dann]
   simp only [execBlockH, hw, Bool.false_eq_true, if_false]
   rw [semH_alsBlock]
-  exact ZErg.folgt_refl _
+  exact ZErgG.folgt_refl _
 
 theorem semH_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
     (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
@@ -1235,7 +1377,7 @@ theorem semH_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
   rw [semH_dann]
   simp only [execBlockH, hn]
   rw [semH_alsBlock]
-  exact ZErg.folgt_refl _
+  exact ZErgG.folgt_refl _
 
 /-! ### Loops -/
 
@@ -1501,14 +1643,14 @@ theorem semH_rueck {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.P
     (σ : World D) (ρ : Env D Γ) :
     (semH S O U passes R (.ende (.ret (l := l) e hperm)) σ ρ).gleich
       (.zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)) :=
-  ZErg.gleich_refl _
+  ZErgG.gleich_refl _
 
 theorem semH_rueckCons {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
     (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
     (semH S O U passes R (.ende (.cons (.ret e hperm) rest)) σ ρ).gleich
       (.zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)) := by
   rw [semH_ende_cons]
-  exact ZErg.gleich_refl _
+  exact ZErgG.gleich_refl _
 
 theorem semH_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
     (hperm : Λ.Perm V.ende) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
@@ -1517,6 +1659,27 @@ theorem semH_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
       (.zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)) := by
   rw [semH_dann_cons]
   exact weiterH_zurueck S O U passes R (.dann rest k) _ _
+
+/-! ### Reason returns (2026-09-14): the residue predicts the reason exit
+    at the current world -/
+
+theorem semH_rueckGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
+    (σ : World D) (ρ : Env D Γ) :
+    (semH S O U passes R (.ende (.retGrund (l := l) r hperm)) σ ρ).gleich (.grund σ r) :=
+  ZErgG.gleich_refl _
+
+theorem semH_rueckConsGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
+    (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
+    (semH S O U passes R (.ende (.cons (.retGrund r hperm) rest)) σ ρ).gleich (.grund σ r) := by
+  rw [semH_ende_cons]
+  exact ZErgG.gleich_refl _
+
+theorem semH_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
+    (hperm : Λ.Perm V.ende) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
+    (σ : World D) (ρ : Env D Γ) :
+    (semH S O U passes R (.dann (.cons (.retGrund r hperm) rest) k) σ ρ).gleich (.grund σ r) := by
+  rw [semH_dann_cons]
+  exact weiterH_grund S O U passes R (.dann rest k) _ _
 
 /-! ### The device forms -/
 
@@ -1552,7 +1715,7 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
   rw [semH_dann]
   simp only [execBlockH, hv, hw, Bool.false_eq_true, if_false]
   rw [semH_alsBlock]
-  exact ZErg.folgt_refl _
+  exact ZErgG.folgt_refl _
 
 theorem semH_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
