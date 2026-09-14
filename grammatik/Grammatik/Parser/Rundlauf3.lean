@@ -1774,4 +1774,649 @@ theorem zeuge_ruf_zwei_rech : (match parseOr
     | _ => false) = true := by
   decide
 
+-- LEVEL BUILTINS (`sizeof`/`lenof`/`aligned` -- lane 161's
+-- `prim_eingebaut` resisted there and was removed, not
+-- weakened).
+--
+-- Index payloads of a kernel suffix chain are kernel trees.
+theorem suffGutKern_idx : ∀ (suff : List SuffFrag) (i : SExpr),
+    suffGutKern suff = true → .idx i ∈ suff → gutKern i = true := by
+  intro suff
+  induction suff with
+  | nil =>
+    intro i _ hm
+    simp at hm
+  | cons f s ih =>
+    intro i hg hm
+    cases f with
+    | dot g =>
+      simp only [suffGutKern] at hg
+      simp only [List.mem_cons] at hm
+      obtain h | h := hm
+      · simp at h
+      · exact ih i hg h
+    | arrow g =>
+      simp only [suffGutKern] at hg
+      simp only [List.mem_cons] at hm
+      obtain h | h := hm
+      · simp at h
+      · exact ih i hg h
+    | idx j =>
+      simp only [suffGutKern, Bool.and_eq_true] at hg
+      obtain ⟨hj, hgs⟩ := hg
+      simp only [List.mem_cons] at hm
+      obtain h | h := hm
+      · injection h with hjj
+        subst hjj
+        exact hj
+      · exact ih i hgs h
+
+-- Suffix chains through `parseSuffixe` with index payloads
+-- parsed through kernel legs: lane 161's `suff_rund` (via
+-- `kern_suff_rund`) with the `RKern` Or-leg replaced by
+-- `legsKern`. No size bound threads through (payload legs
+-- come straight from the predicate), so none is taken.
+theorem suff_legs : ∀ (suff : List SuffFrag) (base : SExpr)
+    (rest : List Token) (F : Nat),
+    suffGutKern suff = true → ruhigSuff rest = true →
+    12 * (suffGroesse suff + groesse base + 1) + suffGroesse suff ≤ F →
+    parseSuffixe F base (suffToks suff ++ rest) =
+      .ok (applySuff base suff, rest) := by
+  intro suff
+  induction suff with
+  | nil =>
+    intro base rest F hg hr hF
+    have hF1 : 1 ≤ F := by omega
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [suffToks, List.nil_append] at ⊢
+    exact stopSuffix F' base rest hr
+  | cons frag suff ih =>
+    cases frag with
+    | dot f =>
+      intro base rest F hg hr hF
+      simp only [suffGutKern] at hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      simp only [applySuff] at ⊢
+      have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hF ⊢
+        omega
+      exact ih (SExpr.feld base f) rest F' hg hr hF2
+    | arrow f =>
+      intro base rest F hg hr hF
+      simp only [suffGutKern] at hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      simp only [applySuff] at ⊢
+      have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hF ⊢
+        omega
+      exact ih (SExpr.pfeil base f) rest F' hg hr hF2
+    | idx i =>
+      intro base rest F hg hr hF
+      simp only [suffGutKern, Bool.and_eq_true] at hg
+      obtain ⟨hi, hgs⟩ := hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      have hki : gutKern i = true := hi
+      have hLi := legsKern i hki
+      have hr1 : ruhig ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hr2 : ruhigSuff ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hr3 : ruhigGleit ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hFi : 12 * (groesse i + 1) + groesse i + 8 ≤ F' := by
+        simp only [suffGroesse] at hF ⊢
+        omega
+      have hOi := hLi.2.2.2.2.2.2.2
+        ([.zeichen "]"] ++ suffToks suff ++ rest) F' hr1 hr2 hr3 hFi
+      simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hOi
+      simp only [hOi, List.cons_append] at ⊢
+      simp only [applySuff] at ⊢
+      have hF2 : 12 * (suffGroesse suff + groesse (.index base i) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hF ⊢
+        omega
+      exact ih (SExpr.index base i) rest F' hgs hr hF2
+
+-- Kernel places through `parseOrt`: mirror of lane 161's
+-- `ort_platz_all` (decompose by `zerlege_kern`, read the head,
+-- run the chain by `suff_legs`).
+theorem ort_legs_kern : ∀ (p : SExpr) (rest : List Token) (F : Nat),
+    gutKernPlatz p = true → ruhigSuff rest = true →
+    12 * (groesse p + 1) + groesse p ≤ F →
+    parseOrt F (druckToks p ++ rest) = .ok (p, rest) := by
+  intro p rest F hg hr hF
+  obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ :=
+    zerlege_kern (groesse p) p (Nat.le_refl _) hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  rw [druckToks_applySuff] at ⊢
+  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
+  simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append] at ⊢
+  have hF2 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
+      suffGroesse suff ≤ F' := by
+    simp only [groesse, groesse_applySuff] at hF ⊢
+    omega
+  exact suff_legs suff (.variable a) rest F' hgs hr hF2
+
+-- `parseEingebaut` with one argument is the `parseOrt` arm (the
+-- `n == 1` test reduces definitionally); with two it is the
+-- pair arm. Plain rewrite rules so the primary legs stay
+-- mechanical.
+theorem parseEingebaut_ein : ∀ (F : Nat) (w : String) (toks : List Token),
+    parseEingebaut (F + 1) w 1 toks = match parseOrt F toks with
+      | .ok (a, .zeichen ")" :: rest') => match a with
+        | .variable s =>
+          if istTypWort s then .error (w ++ " over a type")
+          else .ok (.eingebaut w [a], rest')
+        | _ => .ok (.eingebaut w [a], rest')
+      | .ok (_, _) => .error (w ++ " without )")
+      | .error e => .error e := by
+  intro F w toks
+  simp only [parseEingebaut]
+  rfl
+theorem parseEingebaut_zwei : ∀ (F : Nat) (w : String) (toks : List Token),
+    parseEingebaut (F + 1) w 2 toks = match parseOr F toks with
+      | .ok (a, .zeichen "," :: rest) => match parseOr F rest with
+        | .ok (b, .zeichen ")" :: rest') =>
+          .ok (.eingebaut w [a, b], rest')
+        | .ok (_, _) => .error (w ++ " without )")
+        | .error e => .error e
+      | .ok (_, _) => .error (w ++ " without ,")
+      | .error e => .error e := by
+  intro F w toks
+  simp only [parseEingebaut]
+  rfl
+
+-- `sizeof`/`lenof` through `parsePrimary`: head word, place
+-- through `parseOrt`, `)` close, type-word gate by lane 161's
+-- `eingebaut_ein_ok`. One lemma for both spellings (the arms
+-- differ only in the word).
+theorem prim_emb1_legs : ∀ (w : String) (x : SExpr)
+    (rest : List Token) (F : Nat),
+    (w = "sizeof" ∨ w = "lenof") → gutKernPlatz x = true →
+    (!istTypWortVar x) = true → ruhigSuff rest = true →
+    12 * (groesse (.eingebaut w [x]) + 1) + groesse (.eingebaut w [x]) + 1 ≤ F →
+    parsePrimary F (druckToks (.eingebaut w [x]) ++ rest) =
+      .ok (.eingebaut w [x], rest) := by
+  intro w x rest F hw hp htw hrs hF
+  obtain rfl | rfl := hw
+  · have hF1 : 1 ≤ F := by omega
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+    have hF2 : 1 ≤ F' := by omega
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+    simp only [parseEingebaut_ein] at ⊢
+    have hpx : gutPlatz x = true := gutPlatz_of_gutKernPlatz x hp
+    have hFp : 12 * (groesse x + 1) + groesse x ≤ F'' := by
+      simp only [groesse, groesseListe] at hF ⊢
+      omega
+    have hO := ort_legs_kern x ([.zeichen ")"] ++ rest) F'' hp
+      (hrs_paren rest) hFp
+    simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
+    simp only [hO] at ⊢
+    exact eingebaut_ein_ok "sizeof" x rest hpx htw
+  · have hF1 : 1 ≤ F := by omega
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+    have hF2 : 1 ≤ F' := by omega
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+    simp only [parseEingebaut_ein] at ⊢
+    have hpx : gutPlatz x = true := gutPlatz_of_gutKernPlatz x hp
+    have hFp : 12 * (groesse x + 1) + groesse x ≤ F'' := by
+      simp only [groesse, groesseListe] at hF ⊢
+      omega
+    have hO := ort_legs_kern x ([.zeichen ")"] ++ rest) F'' hp
+      (hrs_paren rest) hFp
+    simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
+    simp only [hO] at ⊢
+    exact eingebaut_ein_ok "lenof" x rest hpx htw
+
+-- `aligned` through `parsePrimary`: head word, two whole
+-- expressions through `parseOr` with `,` and `)` separators
+-- (the pair arm of `parseEingebaut`).
+theorem prim_aligned_legs : ∀ (a b : SExpr)
+    (rest : List Token) (F : Nat),
+    Legs a → Legs b →
+    ruhigSuff rest = true →
+    12 * (groesse (.eingebaut "aligned" [a, b]) + 1) +
+      groesse (.eingebaut "aligned" [a, b]) + 1 ≤ F →
+    parsePrimary F (druckToks (.eingebaut "aligned" [a, b]) ++ rest) =
+      .ok (.eingebaut "aligned" [a, b], rest) := by
+  intro a b rest F hLa hLb hrs hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, args_cons, args_einzeln, List.cons_append,
+    parsePrimary] at ⊢
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  simp only [parseEingebaut_zwei] at ⊢
+  -- First argument at `parseOr` with the `,` follow (all
+  -- follows `rfl`); second with the `)` follow.
+  have hkomma : ruhig ([.zeichen ","] ++ druckToks b ++
+      ([.zeichen ")"] ++ rest)) = true := rfl
+  have hskomma : ruhigSuff ([.zeichen ","] ++ druckToks b ++
+      ([.zeichen ")"] ++ rest)) = true := rfl
+  have hgkomma : ruhigGleit ([.zeichen ","] ++ druckToks b ++
+      ([.zeichen ")"] ++ rest)) = true := rfl
+  have hpos_a := groesse_pos a
+  have hpos_b := groesse_pos b
+  have hFa : 12 * (groesse a + 1) + groesse a + 8 ≤ F'' := by
+    simp only [groesse, groesseListe] at hF ⊢
+    omega
+  have hOa := hLa.2.2.2.2.2.2.2 ([.zeichen ","] ++ druckToks b ++
+    ([.zeichen ")"] ++ rest)) F'' hkomma hskomma hgkomma hFa
+  have hFb : 12 * (groesse b + 1) + groesse b + 8 ≤ F'' := by
+    simp only [groesse, groesseListe] at hF ⊢
+    omega
+  have hOb := hLb.2.2.2.2.2.2.2 ([.zeichen ")"] ++ rest) F''
+    (hr_paren rest) (hrs_paren rest) (hrg_paren rest) hFb
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hOa hOb
+  simp only [hOa, hOb] at ⊢
+
+-- Builtin tower from a primary leg: the `parseUnary`
+-- fall-through on the `wort` head (no prefix arm fires), then
+-- `tower_up`. One builder for all three builtins (the head
+-- token is always `wort`, whatever the tail).
+theorem embTower : ∀ (w : String) (xs : List SExpr),
+    (∀ (rest' : List Token) (G : Nat), ruhigSuff rest' = true →
+      ruhigGleit rest' = true →
+      12 * (groesse (.eingebaut w xs) + 1) + groesse (.eingebaut w xs) + 1 ≤ G →
+      parsePrimary G (druckToks (.eingebaut w xs) ++ rest') =
+        .ok (.eingebaut w xs, rest')) →
+    Legs (.eingebaut w xs) := by
+  intro w xs hP
+  have hU : ∀ (rest' : List Token) (G : Nat),
+      ruhigSuff rest' = true → ruhigGleit rest' = true →
+      12 * (groesse (.eingebaut w xs) + 1) + groesse (.eingebaut w xs) + 2 ≤ G →
+      parseUnary G (druckToks (.eingebaut w xs) ++ rest') =
+        .ok (.eingebaut w xs, rest') := by
+    intro rest' G hrs hrg hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hP' := hP rest' G' hrs hrg (by omega)
+    have hd : druckToks (.eingebaut w xs) = [.wort w] ++
+        (([.zeichen "("] ++ druckToksListe xs) ++ [.zeichen ")"]) := by
+      simp [druckToks]
+    simp only [hd, List.append_assoc] at hP' ⊢
+    simp only [List.cons_append, List.nil_append] at hP' ⊢
+    simp only [parseUnary, hP'] at ⊢
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro rest' G hpf hrs hrg hG
+    exact hP rest' G hrs hrg hG
+  · intro rest' G hrs hrg hG
+    exact hU rest' G hrs hrg hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).1 G hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).2.1 G hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).2.2.1 G hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).2.2.2.1 G hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).2.2.2.2.1 G hG
+  · intro rest' G hr hrs hrg hG
+    exact (tower_up (.eingebaut w xs) rest' hr
+      (fun G hG => hU rest' G hrs hrg hG)).2.2.2.2.2 G hG
+
+-- Builtin legs: each spelling over its payload legs.
+theorem sizeofLegs : ∀ (x : SExpr),
+    gutKernPlatz x = true → (!istTypWortVar x) = true →
+    Legs (.eingebaut "sizeof" [x]) := by
+  intro x hp htw
+  apply embTower "sizeof" [x]
+  intro rest' G hrs hrg hG
+  exact prim_emb1_legs "sizeof" x rest' G (Or.inl rfl) hp htw hrs hG
+theorem lenofLegs : ∀ (x : SExpr),
+    gutKernPlatz x = true → (!istTypWortVar x) = true →
+    Legs (.eingebaut "lenof" [x]) := by
+  intro x hp htw
+  apply embTower "lenof" [x]
+  intro rest' G hrs hrg hG
+  exact prim_emb1_legs "lenof" x rest' G (Or.inr rfl) hp htw hrs hG
+theorem alignedLegs : ∀ (a b : SExpr),
+    Legs a → Legs b → Legs (.eingebaut "aligned" [a, b]) := by
+  intro a b hLa hLb
+  apply embTower "aligned" [a, b]
+  intro rest' G hrs hrg hG
+  exact prim_aligned_legs a b rest' G hLa hLb hrs hG
+
+-- Bridge for the calls predicate: calls are `gut` (via the
+-- argument-list bridge).
+theorem gut_of_gutRuf : ∀ (e : SExpr), gutRuf e = true → gut e = true := by
+  intro e hg
+  simp only [gutRuf, Bool.or_eq_true] at hg
+  obtain hold | hnew := hg
+  · exact gut_of_gutAM e hold
+  · cases e with
+    | lit m => simp [rufNeu] at hnew
+    | gleit s => simp [rufNeu] at hnew
+    | wahr => simp [rufNeu] at hnew
+    | falsch => simp [rufNeu] at hnew
+    | «variable» s => simp [rufNeu] at hnew
+    | un o x => simp [rufNeu] at hnew
+    | bin o l r => simp [rufNeu] at hnew
+    | feld x f => simp [rufNeu] at hnew
+    | index x i => simp [rufNeu] at hnew
+    | pfeil x f => simp [rufNeu] at hnew
+    | ruf f xs =>
+      simp only [rufNeu, Bool.and_eq_true] at hnew
+      obtain ⟨hf, hxs⟩ := hnew
+      have hgl := gutListe_of_gutListeAM xs hxs
+      simp only [gut, Bool.and_eq_true] at ⊢
+      exact ⟨hf, hgl⟩
+    | fnwert f => simp [rufNeu] at hnew
+    | eingebaut f xs => simp [rufNeu] at hnew
+    | alt x => simp [rufNeu] at hnew
+    | ergebnis => simp [rufNeu] at hnew
+    | grund g f => simp [rufNeu] at hnew
+
+-- The three new builtin layers: `sizeof`/`lenof` over kernel
+-- places (minus bare type words), `aligned` over level-4
+-- trees. Word lawfulness as `strEq` so both directions split
+-- mechanically. The list payloads live in their own defs:
+-- NESTED list patterns (`.eingebaut w [x]`) generate equation
+-- lemmas that `simp` never fires on (measured: 74 "made no
+-- progress"), while one-level patterns reduce like `gutKern`.
+def argsPlatz1 : List SExpr → Bool
+  | [x] => gutKernPlatz x && (!istTypWortVar x)
+  | _ => false
+def argsRuf2 : List SExpr → Bool
+  | [a, b] => gutRuf a && gutRuf b
+  | _ => false
+def sizeofNeu : SExpr → Bool
+  | .eingebaut w xs => strEq w "sizeof" && argsPlatz1 xs
+  | _ => false
+def lenofNeu : SExpr → Bool
+  | .eingebaut w xs => strEq w "lenof" && argsPlatz1 xs
+  | _ => false
+def alignedNeu : SExpr → Bool
+  | .eingebaut w xs => strEq w "aligned" && argsRuf2 xs
+  | _ => false
+
+-- Level-5 predicate: level 4 plus one builtin layer each.
+def gutEmb (e : SExpr) : Bool :=
+  gutRuf e || sizeofNeu e || lenofNeu e || alignedNeu e
+
+-- Every level-5 tree has legs.
+theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
+  intro e hg
+  simp only [gutEmb, Bool.or_eq_true] at hg
+  obtain hold | hnew := hg
+  · obtain hold3 | hsz := hold
+    · obtain hold2 | hlen := hold3
+      · exact legsRuf e hold2
+      · cases e with
+        | lit m => simp [sizeofNeu] at hlen
+        | gleit s => simp [sizeofNeu] at hlen
+        | wahr => simp [sizeofNeu] at hlen
+        | falsch => simp [sizeofNeu] at hlen
+        | «variable» s => simp [sizeofNeu] at hlen
+        | un o x => simp [sizeofNeu] at hlen
+        | bin o l r => simp [sizeofNeu] at hlen
+        | feld x f => simp [sizeofNeu] at hlen
+        | index x i => simp [sizeofNeu] at hlen
+        | pfeil x f => simp [sizeofNeu] at hlen
+        | ruf f xs => simp [sizeofNeu] at hlen
+        | fnwert f => simp [sizeofNeu] at hlen
+        | eingebaut f xs =>
+          simp only [sizeofNeu, Bool.and_eq_true] at hlen
+          obtain ⟨hw, hargs⟩ := hlen
+          cases xs with
+          | nil => simp [argsPlatz1] at hargs
+          | cons y ys =>
+            cases ys with
+            | nil =>
+              simp only [argsPlatz1, Bool.and_eq_true] at hargs
+              obtain ⟨hp, htw⟩ := hargs
+              have heq : f = "sizeof" := strKlingt f "sizeof" hw
+              subst heq
+              exact sizeofLegs y hp htw
+            | cons z zs => simp [argsPlatz1] at hargs
+        | alt x => simp [sizeofNeu] at hlen
+        | ergebnis => simp [sizeofNeu] at hlen
+        | grund g f => simp [sizeofNeu] at hlen
+    · cases e with
+      | lit m => simp [lenofNeu] at hsz
+      | gleit s => simp [lenofNeu] at hsz
+      | wahr => simp [lenofNeu] at hsz
+      | falsch => simp [lenofNeu] at hsz
+      | «variable» s => simp [lenofNeu] at hsz
+      | un o x => simp [lenofNeu] at hsz
+      | bin o l r => simp [lenofNeu] at hsz
+      | feld x f => simp [lenofNeu] at hsz
+      | index x i => simp [lenofNeu] at hsz
+      | pfeil x f => simp [lenofNeu] at hsz
+      | ruf f xs => simp [lenofNeu] at hsz
+      | fnwert f => simp [lenofNeu] at hsz
+      | eingebaut f xs =>
+        simp only [lenofNeu, Bool.and_eq_true] at hsz
+        obtain ⟨hw, hargs⟩ := hsz
+        cases xs with
+        | nil => simp [argsPlatz1] at hargs
+        | cons y ys =>
+          cases ys with
+          | nil =>
+            simp only [argsPlatz1, Bool.and_eq_true] at hargs
+            obtain ⟨hp, htw⟩ := hargs
+            have heq : f = "lenof" := strKlingt f "lenof" hw
+            subst heq
+            exact lenofLegs y hp htw
+          | cons z zs => simp [argsPlatz1] at hargs
+      | alt x => simp [lenofNeu] at hsz
+      | ergebnis => simp [lenofNeu] at hsz
+      | grund g f => simp [lenofNeu] at hsz
+  · cases e with
+    | lit m => simp [alignedNeu] at hnew
+    | gleit s => simp [alignedNeu] at hnew
+    | wahr => simp [alignedNeu] at hnew
+    | falsch => simp [alignedNeu] at hnew
+    | «variable» s => simp [alignedNeu] at hnew
+    | un o x => simp [alignedNeu] at hnew
+    | bin o l r => simp [alignedNeu] at hnew
+    | feld x f => simp [alignedNeu] at hnew
+    | index x i => simp [alignedNeu] at hnew
+    | pfeil x f => simp [alignedNeu] at hnew
+    | ruf f xs => simp [alignedNeu] at hnew
+    | fnwert f => simp [alignedNeu] at hnew
+    | eingebaut f xs =>
+      simp only [alignedNeu, Bool.and_eq_true] at hnew
+      obtain ⟨hw, hargs⟩ := hnew
+      cases xs with
+      | nil => simp [argsRuf2] at hargs
+      | cons y ys =>
+        cases ys with
+        | nil => simp [argsRuf2] at hargs
+        | cons z zs =>
+          cases zs with
+          | nil =>
+            simp only [argsRuf2, Bool.and_eq_true] at hargs
+            obtain ⟨ha, hb⟩ := hargs
+            have heq : f = "aligned" := strKlingt f "aligned" hw
+            subst heq
+            exact alignedLegs y z (legsRuf y ha) (legsRuf z hb)
+          | cons w2 ws => simp [argsRuf2] at hargs
+    | alt x => simp [alignedNeu] at hnew
+    | ergebnis => simp [alignedNeu] at hnew
+    | grund g f => simp [alignedNeu] at hnew
+
+-- Bridge for the builtins predicate (via lane 161's shape
+-- equations `gut_sizeof_one`, `gut_lenof_one`,
+-- `gut_aligned_two`).
+theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
+  intro e hg
+  simp only [gutEmb, Bool.or_eq_true] at hg
+  obtain hold | hnew := hg
+  · obtain hold3 | hsz := hold
+    · obtain hold2 | hlen := hold3
+      · exact gut_of_gutRuf e hold2
+      · cases e with
+        | lit m => simp [sizeofNeu] at hlen
+        | gleit s => simp [sizeofNeu] at hlen
+        | wahr => simp [sizeofNeu] at hlen
+        | falsch => simp [sizeofNeu] at hlen
+        | «variable» s => simp [sizeofNeu] at hlen
+        | un o x => simp [sizeofNeu] at hlen
+        | bin o l r => simp [sizeofNeu] at hlen
+        | feld x f => simp [sizeofNeu] at hlen
+        | index x i => simp [sizeofNeu] at hlen
+        | pfeil x f => simp [sizeofNeu] at hlen
+        | ruf f xs => simp [sizeofNeu] at hlen
+        | fnwert f => simp [sizeofNeu] at hlen
+        | eingebaut f xs =>
+          simp only [sizeofNeu, Bool.and_eq_true] at hlen
+          obtain ⟨hw, hargs⟩ := hlen
+          cases xs with
+          | nil => simp [argsPlatz1] at hargs
+          | cons y ys =>
+            cases ys with
+            | nil =>
+              simp only [argsPlatz1, Bool.and_eq_true] at hargs
+              obtain ⟨hp, htw⟩ := hargs
+              have heq : f = "sizeof" := strKlingt f "sizeof" hw
+              subst heq
+              rw [gut_sizeof_one]
+              simp only [Bool.and_eq_true]
+              exact ⟨gutPlatz_of_gutKernPlatz y hp, htw⟩
+            | cons z zs => simp [argsPlatz1] at hargs
+        | alt x => simp [sizeofNeu] at hlen
+        | ergebnis => simp [sizeofNeu] at hlen
+        | grund g f => simp [sizeofNeu] at hlen
+    · cases e with
+      | lit m => simp [lenofNeu] at hsz
+      | gleit s => simp [lenofNeu] at hsz
+      | wahr => simp [lenofNeu] at hsz
+      | falsch => simp [lenofNeu] at hsz
+      | «variable» s => simp [lenofNeu] at hsz
+      | un o x => simp [lenofNeu] at hsz
+      | bin o l r => simp [lenofNeu] at hsz
+      | feld x f => simp [lenofNeu] at hsz
+      | index x i => simp [lenofNeu] at hsz
+      | pfeil x f => simp [lenofNeu] at hsz
+      | ruf f xs => simp [lenofNeu] at hsz
+      | fnwert f => simp [lenofNeu] at hsz
+      | eingebaut f xs =>
+        simp only [lenofNeu, Bool.and_eq_true] at hsz
+        obtain ⟨hw, hargs⟩ := hsz
+        cases xs with
+        | nil => simp [argsPlatz1] at hargs
+        | cons y ys =>
+          cases ys with
+          | nil =>
+            simp only [argsPlatz1, Bool.and_eq_true] at hargs
+            obtain ⟨hp, htw⟩ := hargs
+            have heq : f = "lenof" := strKlingt f "lenof" hw
+            subst heq
+            rw [gut_lenof_one]
+            simp only [Bool.and_eq_true]
+            exact ⟨gutPlatz_of_gutKernPlatz y hp, htw⟩
+          | cons z zs => simp [argsPlatz1] at hargs
+      | alt x => simp [lenofNeu] at hsz
+      | ergebnis => simp [lenofNeu] at hsz
+      | grund g f => simp [lenofNeu] at hsz
+  · cases e with
+    | lit m => simp [alignedNeu] at hnew
+    | gleit s => simp [alignedNeu] at hnew
+    | wahr => simp [alignedNeu] at hnew
+    | falsch => simp [alignedNeu] at hnew
+    | «variable» s => simp [alignedNeu] at hnew
+    | un o x => simp [alignedNeu] at hnew
+    | bin o l r => simp [alignedNeu] at hnew
+    | feld x f => simp [alignedNeu] at hnew
+    | index x i => simp [alignedNeu] at hnew
+    | pfeil x f => simp [alignedNeu] at hnew
+    | ruf f xs => simp [alignedNeu] at hnew
+    | fnwert f => simp [alignedNeu] at hnew
+    | eingebaut f xs =>
+      simp only [alignedNeu, Bool.and_eq_true] at hnew
+      obtain ⟨hw, hargs⟩ := hnew
+      cases xs with
+      | nil => simp [argsRuf2] at hargs
+      | cons y ys =>
+        cases ys with
+        | nil => simp [argsRuf2] at hargs
+        | cons z zs =>
+          cases zs with
+          | nil =>
+            simp only [argsRuf2, Bool.and_eq_true] at hargs
+            obtain ⟨ha, hb⟩ := hargs
+            have heq : f = "aligned" := strKlingt f "aligned" hw
+            subst heq
+            rw [gut_aligned_two]
+            simp only [Bool.and_eq_true]
+            exact ⟨gut_of_gutRuf y ha, gut_of_gutRuf z hb⟩
+          | cons w2 ws => simp [argsRuf2] at hargs
+    | alt x => simp [alignedNeu] at hnew
+    | ergebnis => simp [alignedNeu] at hnew
+    | grund g f => simp [alignedNeu] at hnew
+
+-- Level-5 goal: every `gutEmb` tree parses back from its
+-- printed tokens with `brennstoff` fuel.
+theorem parse_druck_emb : ∀ (e : SExpr), gutEmb e = true →
+    parseOr (brennstoff e) (druckToks e ++ [.ende]) =
+      .ok (e, [.ende]) := by
+  intro e hg
+  have hL := legsEmb e hg
+  have hr : ruhig [.ende] = true := rfl
+  have hrs : ruhigSuff [.ende] = true := rfl
+  have hrg : ruhigGleit [.ende] = true := rfl
+  have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
+    simp [brennstoff]
+  exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
+
+-- Level-5 witnesses, corpus-flavoured (`02-geraet` and
+-- `04-schleifen` measure with `sizeof`/`lenof`; alignment
+-- pairs bound buffers): each as a `parse_druck_emb` instance
+-- and a kernel-computed `match` check.
+theorem zeuge_sizeof :
+    parseOr (brennstoff (.eingebaut "sizeof" [.variable "x"]))
+    (druckToks (.eingebaut "sizeof" [.variable "x"]) ++ [.ende]) =
+      .ok (.eingebaut "sizeof" [.variable "x"], [.ende]) :=
+  parse_druck_emb _ (by decide)
+theorem zeuge_sizeof_rech : (match parseOr
+    (brennstoff (.eingebaut "sizeof" [.variable "x"]))
+    (druckToks (.eingebaut "sizeof" [.variable "x"]) ++ [.ende]) with
+    | .ok (.eingebaut "sizeof" [.variable "x"], [.ende]) => true
+    | _ => false) = true := by
+  decide
+theorem zeuge_lenof :
+    parseOr (brennstoff (.eingebaut "lenof" [.feld (.variable "m") "slots"]))
+    (druckToks (.eingebaut "lenof" [.feld (.variable "m") "slots"]) ++ [.ende]) =
+      .ok (.eingebaut "lenof" [.feld (.variable "m") "slots"], [.ende]) :=
+  parse_druck_emb _ (by decide)
+theorem zeuge_lenof_rech : (match parseOr
+    (brennstoff (.eingebaut "lenof" [.feld (.variable "m") "slots"]))
+    (druckToks (.eingebaut "lenof" [.feld (.variable "m") "slots"]) ++ [.ende]) with
+    | .ok (.eingebaut "lenof" [.feld (.variable "m") "slots"], [.ende]) => true
+    | _ => false) = true := by
+  decide
+theorem zeuge_aligned :
+    parseOr (brennstoff (.eingebaut "aligned" [.variable "a", .lit 8]))
+    (druckToks (.eingebaut "aligned" [.variable "a", .lit 8]) ++ [.ende]) =
+      .ok (.eingebaut "aligned" [.variable "a", .lit 8], [.ende]) :=
+  parse_druck_emb _ (by decide)
+theorem zeuge_aligned_rech : (match parseOr
+    (brennstoff (.eingebaut "aligned" [.variable "a", .lit 8]))
+    (druckToks (.eingebaut "aligned" [.variable "a", .lit 8]) ++ [.ende]) with
+    | .ok (.eingebaut "aligned" [.variable "a", .lit 8], [.ende]) => true
+    | _ => false) = true := by
+  decide
+
 end Gabbro.Grammatik.Parser
+
