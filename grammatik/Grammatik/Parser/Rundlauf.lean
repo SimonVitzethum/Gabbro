@@ -334,13 +334,23 @@ def ruhig : List Token → Bool
   | .zeichen s :: _ => !istSchleifenOp s
   | _ :: _ => true
 
--- A benign suffix follow: `.`, `->`, `[` and `::` continue a
--- suffix or segment chain, everything else (including every loop
--- operator) stops `parseSuffixe` and `sammleSegmente`.
+-- A benign suffix follow: `.`, `->`, `[`, `::` and `(` continue
+-- a suffix, segment or call chain; everything else (including
+-- every loop operator) stops `parseSuffixe`, `sammleSegmente` and
+-- the `parseKopf` call arm.
 def ruhigSuff : List Token → Bool
   | [] => true
   | .zeichen s :: _ =>
-    !(strEq s "." || strEq s "->" || strEq s "[" || strEq s "::")
+    !(strEq s "." || strEq s "->" || strEq s "[" || strEq s "::" ||
+      strEq s "(")
+  | _ :: _ => true
+
+-- A benign float follow: `wort "rounded"` after a float literal is
+-- absorbed (`gleit "1.0 rounded"`); anything else leaves it alone.
+-- Loop operators, suffix marks and `ende` are all benign.
+def ruhigGleit : List Token → Bool
+  | [] => true
+  | .wort s :: _ => !strEq s "rounded"
   | _ :: _ => true
 
 -- From a false character-list comparison to the inequality (for
@@ -619,17 +629,19 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
       simp only [Bool.or_eq_false_iff, and_assoc] at hf
-      obtain ⟨c1, c2, c3, -⟩ := hf
+      obtain ⟨c1, c2, c3, -, -⟩ := hf
       have ne1 := strNe_of s "." c1
       have ne2 := strNe_of s "->" c2
       have ne3 := strNe_of s "[" c3
       simp [parseSuffixe, ne1, ne2, ne3]
     | ende => rfl
 
--- A prefix operator tree is not a primary tree (the round trip
--- handles `un` at the unary level, never at the primary level).
-def unFrei : SExpr → Bool
+-- Trees handled at the primary level (prefix `un` trees and
+-- `fnwert` live at the unary level: `parsePrimary` fails on their
+-- operator heads, so the round trip never asks it about them).
+def primFrei : SExpr → Bool
   | .un _ _ => false
+  | .fnwert _ => false
   | _ => true
 
 -- Every tree has size at least one (empties the zero case of every
@@ -1423,40 +1435,48 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
 -- covers descent strips and short chains wherever a bound is
 -- reused at reduced fuel). Levels take a benign follow (`ruhig`
 -- for the loops, `ruhigSuff` for the suffixes); `parsePrimary`
--- takes only the suffix follow (it has no loops) plus `unFrei`
+-- takes only the suffix follow (it has no loops) plus `primFrei`
 -- (prefix trees live at the unary level), with descent slack
 -- (`+7`) for application below a descent.
 def R (n : Nat) : Prop :=
   (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseOr F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseAnd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseCmp F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseBit F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseAdd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseMul F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F →
     parseUnary F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
-    gut e = true → unFrei e = true → ruhigSuff rest = true →
+    gut e = true → primFrei e = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
     12 * (groesse e + 1) + groesse e ≤ F + 7 →
     parsePrimary F (druckToks e ++ rest) = .ok (e, rest))
 
@@ -1491,10 +1511,35 @@ theorem sammleSeg_stop : ∀ (segs : List String) (t : List Token),
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
       simp only [Bool.or_eq_false_iff, and_assoc] at hf
-      obtain ⟨-, -, -, hDc⟩ := hf
+      obtain ⟨-, -, -, hDc, -⟩ := hf
       have ne := strNe_of s "::" hDc
       simp [sammleSegmente, ne]
     | ende => rfl
+
+-- A benign follow never starts with `(` (for the `parseKopf` call
+-- arm, which would otherwise read a call where a place stands).
+theorem ruhigSuff_nopar : ∀ (t : List Token), ruhigSuff t = true →
+    ∀ (R : List Token), t ≠ .zeichen "(" :: R := by
+  intro t h R hcon
+  cases t with
+  | nil => simp at hcon
+  | cons hd tl =>
+    cases hd with
+    | ident s => simp at hcon
+    | wort s => simp at hcon
+    | zahl n => simp at hcon
+    | gleit s => simp at hcon
+    | text s => simp at hcon
+    | zeichen s =>
+      simp only [ruhigSuff] at h
+      have hf := nichtWahr_falsch _ h
+      simp only [Bool.or_eq_false_iff, and_assoc] at hf
+      obtain ⟨-, -, -, -, hP⟩ := hf
+      have ne := strNe_of s "(" hP
+      injection hcon with hs _
+      injection hs with hs2
+      exact ne hs2
+    | ende => simp at hcon
 
 -- One argument through `parseArg`: the label strip misses (the
 -- second token is never `:`), then the expression parses. The
@@ -1549,9 +1594,13 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
     cases hsep with
     | inl h => subst h; rfl
     | inr h => subst h; rfl
+  have hr3 : ruhigGleit ([sep] ++ S) = true := by
+    cases hsep with
+    | inl h => subst h; rfl
+    | inr h => subst h; rfl
   have hFr : 12 * (groesse x + 1) + groesse x ≤ F' := by omega
   obtain ⟨hOr, -⟩ := Rn
-  simpa only [List.append_assoc] using hOr x ([sep] ++ S) F' hx hxg hr1 hr2 hFr
+  simpa only [List.append_assoc] using hOr x ([sep] ++ S) F' hx hxg hr1 hr2 hr3 hFr
 
 -- Whole argument lists through `parseArgs`: head by `toksKopf`
 -- (never `)`, so the recursive arm is taken), element by
@@ -1649,6 +1698,93 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
         (by simp only [groesseListe] at hF ⊢; omega)
       simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ harg htail
       simp only [harg, htail, List.cons_append, List.nil_append] at ⊢
+
+-- Atomic `parsePrimary` outcomes (no children, no loops, no
+-- follows inspected): unfold with successor fuel and let the
+-- concrete head select its arm. (`fnwert` is absent: it lives at
+-- the unary level.)
+theorem prim_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
+    12 * (groesse (.lit m) + 1) + groesse (.lit m) ≤ F + 7 →
+    parsePrimary F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest) := by
+  intro m rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
+    ruhigGleit rest = true →
+    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) ≤ F + 7 →
+    parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest) := by
+  intro s rest F hg hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+  -- ⊢ : gleit arm selected (concrete head); inner match on `rest`
+  -- (rounded or catch-all). Cases close it.
+  cases rest with
+  | nil => rfl
+  | cons hd tl =>
+    cases hd with
+    | wort w =>
+      simp only [ruhigGleit] at hg
+      have hf := nichtWahr_falsch _ hg
+      have ne := strNe_of w "rounded" hf
+      simp [ne]
+    | ident v => rfl
+    | zahl n => rfl
+    | gleit g => rfl
+    | text t => rfl
+    | zeichen z => rfl
+    | ende => rfl
+theorem prim_wahr : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .wahr + 1) + groesse .wahr ≤ F + 7 →
+    parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_falsch : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .falsch + 1) + groesse .falsch ≤ F + 7 →
+    parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_ergebnis : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .ergebnis + 1) + groesse .ergebnis ≤ F + 7 →
+    parsePrimary F (druckToks .ergebnis ++ rest) = .ok (.ergebnis, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
+    (!istKeinPlatz g) = true → (!istIntWort g) = true →
+    (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
+    ruhigSuff rest = true →
+    12 * (groesse (.grund g f) + 1) + groesse (.grund g f) ≤ F + 7 →
+    parsePrimary F (druckToks (.grund g f) ++ rest) =
+      .ok (.grund g f, rest) := by
+  intro g f rest F hkp hit hzuk hself hr hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+  -- ⊢ : name-text match, head gate, then `parseKopf`.
+  have hkaf : istKeinPlatz g = false := nichtWahr_falsch _ hkp
+  have hint : istIntWort g = false := nichtWahr_falsch _ hit
+  have hzukf : istZuckerBreite g = false := nichtWahr_falsch _ hzuk
+  have hselff : strEq g "Self" = false := nichtWahr_falsch _ hself
+  simp only [nameText, hkaf] at ⊢
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  simp only [parseKopf, List.cons_append] at ⊢
+  -- ⊢ : `sammleSegmente` on `["::", ident f]`, then the `[g, f]` arm.
+  -- The `::` step is concrete; the tail stops by `ruhigSuff`.
+  simp only [sammleSegmente, List.cons_append, nameText] at ⊢
+  simp only [List.nil_append] at ⊢
+  rw [sammleSeg_stop [g, f] rest hr] at ⊢
+  have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=
+    ruhigSuff_nopar rest hr
+  simp only [hmiss, hint, hzukf, hselff] at ⊢
+  rfl
 
 -- Suffix fragments: one `.f`, `->f` or `[i]` step of a place
 -- chain. Every `gutPlatz` tree is a head variable plus fragments
@@ -1815,7 +1951,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
 -- and every child is covered.
 theorem suff_rund : ∀ (n : Nat) (Rn : R n)
     (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F : Nat),
-    suffGroesse suff + groesse base ≤ n →
+    suffGroesse suff + groesse base ≤ n + 1 →
     suffGut suff = true →
     ruhigSuff rest = true →
     12 * (suffGroesse suff + groesse base + 1) + suffGroesse suff ≤ F →
@@ -1840,7 +1976,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       simp only [parseSuffixe] at ⊢
       -- ⊢ : parseSuffixe F' (feld base f) (suffToks suff ++ rest) = ...
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.feld base f) ≤ n := by
+      have hs2 : suffGroesse suff + groesse (.feld base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
@@ -1856,7 +1992,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       simp only [suffToks, List.cons_append] at ⊢
       simp only [parseSuffixe] at ⊢
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.pfeil base f) ≤ n := by
+      have hs2 : suffGroesse suff + groesse (.pfeil base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
@@ -1880,16 +2016,18 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         rfl
       have hr2 : ruhigSuff ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
         rfl
+      have hr3 : ruhigGleit ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
       have hFi : 12 * (groesse i + 1) + groesse i ≤ F' := by
         simp only [suffGroesse] at hs hF ⊢
         omega
       obtain ⟨hOr, -⟩ := Rn
       have hOi := hOr i ([.zeichen "]"] ++ suffToks suff ++ rest) F'
-        hii hi hr1 hr2 hFi
+        hii hi hr1 hr2 hr3 hFi
       simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hOi
       simp only [hOi, List.cons_append] at ⊢
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.index base i) ≤ n := by
+      have hs2 : suffGroesse suff + groesse (.index base i) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
       have hF2 : 12 * (suffGroesse suff + groesse (.index base i) + 1) +
@@ -1939,7 +2077,7 @@ theorem ort_platz_all : ∀ (n : Nat) (Rn : R n)
   have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
   simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append] at ⊢
   -- ⊢ : parseSuffixe F' (variable a) (suffToks suff ++ rest) = ...
-  have hs2 : suffGroesse suff + groesse (.variable a) ≤ n := by
+  have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
     simp only [groesse] at ⊢
     omega
   have hF2 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
