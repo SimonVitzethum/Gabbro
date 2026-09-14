@@ -3080,7 +3080,8 @@ fi
 # 167/170: examples 120-123).** Lanes do not book this mark; the merge re-measures it.
 # **-> 107 on 2026-09-14 (merge review, after lane 175: examples 124/125).**
 # **-> 109 on 2026-09-15 (merge review, after lane 177: examples 126/127).**
-MARKE_EMIT=109
+# **-> 111 on 2026-09-15 (merge review, after lane 191: examples 130/131).**
+MARKE_EMIT=111
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
