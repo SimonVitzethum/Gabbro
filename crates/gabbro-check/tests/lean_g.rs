@@ -61,17 +61,17 @@ fn export_104_succeeds() {
     }
 }
 
-/// **108 exports**: two tables, two locks, two readers, no calls.
+/// **108 exports**: one table, two lock-free readers over it, no calls.
 #[test]
 fn export_108_succeeds() {
     let text = export_file("108-disjoint-start-locks.gab");
     for teil in [
         "namespace G108_disjoint_start_locks",
         "| T",
-        "| U",
         "def gSig_read_a",
         "def gSig_read_c",
         ".int 0 4294967295",
+        "haelt := []",
         "example : programmImFragmentG gP gFs = true := by decide",
         "example : fussOrtGB gP gFs = true := by decide",
     ] {

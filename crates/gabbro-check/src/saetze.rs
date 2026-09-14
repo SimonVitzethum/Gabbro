@@ -3029,6 +3029,43 @@ pub const WIRKUNGEN: &[Satz] = &[
                       in the lane report.",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs",
     },
+    Satz {
+        name: "wirkungen.rennboden",
+        kennungen: &["N300", "N301", "N302", "N303", "N304"],
+        aussage: "The race component of the goal Bool (`rennB` with `wurzelnB` beside \
+                  it): a carrier one declared start's call graph may write is neither \
+                  written (`N300`) nor footprint-read (`N301`) by a DIFFERENT start's \
+                  graph unless a `lock … protects` line guards it or it is atomic / a \
+                  publish payload. Declared starts declare no reason channel (`N302`, \
+                  `or R` has no caller behind a thread start) and hold no lock by \
+                  signature (`N303`, the strong form of `N240`). One routine on two \
+                  threads is admitted only idle -- no lock, no reasons, no writes, no \
+                  footprint (`N304`, `StartZulaessig.einmal`). All five refuse as errors.",
+        vorbehalt: "Starts are the `concurrent` members plus the `entry`/`boot` roots \
+                    (the `startexklusiv.rs` pool); with fewer than two every carrier is \
+                    owned and `N300`/`N301`/`N304` stay silent, while `N302`/`N303` judge \
+                    every start. Graphs, may-write and footprints are the same maps the \
+                    `N290`-`N294` legs read (`reachB`, `TraegerSchreibt`, `fussOrte`); \
+                    guards are `lock … protects` resolved to carriers (`Bewacht`), held \
+                    or not. `rcu … protects`, `masks`/`ein_kern` and non-per-core \
+                    accumulators do NOT exempt; `accumulates … per cpu` does (one name, \
+                    N core cells -- no shared carrier). Same-function pairs go to \
+                    `N304`, never to `N300`/`N301` (`w₁ ≠ w₂`); a pair that writes on \
+                    both sides belongs to `N300` alone.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/964 (two writers, no reader, N300), 965 \
+                      (write-read, N301), 966 (a start with `or R`, N302), 967 (a start \
+                      holding a signature lock, N303); positives as snippet tests \
+                      (own tables, guarded carriers, single start, atomic, payload, \
+                      per-core, twice-started idle). beispiele/108 (declared pair under \
+                      disjoint signature locks) newly refuses with N303 -- the corpus \
+                      file predates the merged `wurzelnB` and contradicts it; the lane \
+                      report books the fallout.",
+        fundstelle: "crates/gabbro-check/src/fusswache2.rs (`renn`); \
+                     grammatik/Grammatik/Zielsatz/Akzeptiert.lean (`rennB`, \
+                     `SchreibGetrennt`, `wurzelnB`, `ruheB`); \
+                     grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`)",
+    },
 ];
 
 // ===================================================================================
@@ -4621,8 +4658,10 @@ pub const SPERREN: &[Satz] = &[
                       pair, one lock) and /915 (boot root plus entry); /912 pins the \
                       same-function shape the audit excludes; /913 the shared-shared \
                       fall; /914 the exclusive-vs-shared fall. The clean side is \
-                      beispiele/108 (declared pair, disjoint locks) and /109 (two \
-                      entries over lock-free dispatch roots).",
+                      beispiele/108 (declared pair of lock-free readers over an \
+                      unwritten table) and /109 (two entries over lock-free \
+                      dispatch roots). A start holding ANY signature lock, shared \
+                      or not, falls under `N303` (`wurzelnB`, gift/967).",
         fundstelle: "crates/gabbro-check/src/startexklusiv.rs; \
                      grammatik/Grammatik/RufMaschineG.lean (`StartExklusiv`); \
                      grammatik/Grammatik/AuditZiel.lean (probe B)",
