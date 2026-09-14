@@ -162,6 +162,7 @@ import Grammatik.Parser.AnweisungProben
 import Grammatik.Parser.AusdruckProben
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge
+import Grammatik.Korrespondenz104
 import Grammatik.CFormenR
 import Grammatik.CFormenRZeuge
 import Grammatik.CFormenRZeuge2
