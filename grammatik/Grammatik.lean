@@ -191,3 +191,5 @@ import Grammatik.HelferZeuge
 import Grammatik.SonstLeaveZeuge
 import Grammatik.ZielOrtInv
 import Grammatik.InvZeuge
+import Grammatik.FadenMerkmal
+import Grammatik.ZielOrtMehrfaden
