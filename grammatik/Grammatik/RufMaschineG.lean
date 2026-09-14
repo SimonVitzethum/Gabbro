@@ -1966,7 +1966,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
         ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (v : Wert D (.fl lo hi))
-      (hv : gleitPasst lo hi (Float.ofInt (eval σ₁ e σ₁ ρ).n) = some v)
+      (hv : gleitPasst lo hi (gleitAusInt (eval σ₁ e σ₁ ρ).n) = some v)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG P O passes M f

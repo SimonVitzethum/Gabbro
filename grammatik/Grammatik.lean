@@ -209,3 +209,4 @@ import Grammatik.Isabelle.RestrictAlleinzugriff
 import Grammatik.Schlusssatz104
 import Grammatik.Korrespondenz
 import Grammatik.Gleitkomma
+import Grammatik.GleitZeuge

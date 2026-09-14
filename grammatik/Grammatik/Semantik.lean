@@ -242,8 +242,8 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .lt a b, σ, ρ => decide ((eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n)
   | .le a b, σ, ρ => decide ((eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n)
   | .eq a b, σ, ρ => decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n)
-  | .fllt a b, σ, ρ => decide ((eval σ₀ a σ ρ).x < (eval σ₀ b σ ρ).x)
-  | .flle a b, σ, ρ => decide ((eval σ₀ a σ ρ).x ≤ (eval σ₀ b σ ρ).x)
+  | .fllt a b, σ, ρ => gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x
+  | .flle a b, σ, ρ => gleitLe (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x
   | .und a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) && wahr? (eval σ₀ b σ ρ) : Bool)
   | .oder a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) || wahr? (eval σ₀ b σ ρ) : Bool)
   | .nicht a, σ, ρ => (!wahr? (eval σ₀ a σ ρ) : Bool)
@@ -512,6 +512,19 @@ theorem ergSig {f : D.Fn} {n : Nat} {τ : Ty} (hf : D.sig f = n) (he : (D.sigNr 
     D.erg f = some τ := by
   unfold Deklaration.erg Deklaration.signatur; rw [hf]; exact he
 
+/-- A float as a raw integer for the machine (a register write): truncation toward zero,
+    saturated to the `Int64` range -- the meaning of the `Float` model's
+    `x.toInt64.toInt`, now computed on the exact value (NaN/infinity give `0`; they do not
+    occur, a `Val (.fl ..)` is finite). -/
+def gleitRoh (x : GFloat) : Int :=
+  match Gleitkomma.wertExakt Gleitkomma.f64 x with
+  | Option.none => 0
+  | Option.some v =>
+    let t : Int := if 0 ≤ v.zweierExp then v.zaehler * ((2 ^ v.zweierExp.toNat : Nat) : Int)
+      else v.zaehler.tdiv ((2 ^ (-v.zweierExp).toNat : Nat) : Int)
+    if t < -(2 ^ 63 : Int) then -(2 ^ 63 : Int)
+    else if (2 ^ 63 - 1 : Int) < t then 2 ^ 63 - 1 else t
+
 /-- Ein Wert als rohe Zahl, fuer die Maschine. -/
 def roh : {τ : Ty} → Wert D τ → Int
   | .int _ _, v => v.n
@@ -521,20 +534,24 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .sum _, ⟨i, _⟩ => i.val
   | .grund _, r => r.val
   | .never, v => v.elim
-  | .fl _ _, v => v.x.toInt64.toInt
+  | .fl _ _, v => gleitRoh v.x
   | .fnptr _, _ => 0
   | .ptr _ _, _ => 0
 
-/-- Die Gleitkommarechnung der Maschine. -/
-def gleitRechne : GleitOp → Float → Float → Float
-  | .add, a, b => a + b
-  | .sub, a, b => a - b
-  | .mul, a, b => a * b
-  | .div, a, b => a / b
+/-- Die Gleitkommarechnung der Maschine: IEEE-754 binary64, exact result rounded once to
+    nearest-even (`Gleitkomma.add/sub/mul/div`) -- kernel-computable since 2026-09-14. -/
+def gleitRechne : GleitOp → GFloat → GFloat → GFloat
+  | .add, a, b => Gleitkomma.add Gleitkomma.f64 a b
+  | .sub, a, b => Gleitkomma.sub Gleitkomma.f64 a b
+  | .mul, a, b => Gleitkomma.mul Gleitkomma.f64 a b
+  | .div, a, b => Gleitkomma.div Gleitkomma.f64 a b
 
-/-- Ein Maschinenergebnis gegen den erklaerten Bereich: endlich und drin, oder nichts. -/
-def gleitPasst (lo hi : Int × Int) (x : Float) : Option (Gleit lo hi) :=
-  if h : x.isFinite = true ∧ bruch lo ≤ x ∧ x ≤ bruch hi then some ⟨x, h.1, h.2.1, h.2.2⟩
+/-- Ein Maschinenergebnis gegen den erklaerten Bereich: endlich und drin, oder nichts.
+    NaN and the infinities fail `gleitEndlich` and fall into the `none` branch -- the
+    `hardware ieee` outcome (or a `narrow`'s `else`), as with the `Float` model. -/
+def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
+  if h : gleitEndlich x = true ∧ gleitLe (bruch lo) x = true ∧ gleitLe x (bruch hi) = true then
+    some ⟨x, h.1, h.2.1, h.2.2⟩
   else Option.none
 
 section Rumpf
@@ -720,7 +737,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | Option.none => .hardware .ieee
   | .gleitVon e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
-      match gleitPasst lo hi (Float.ofInt (eval σ e σ ρ).n) with
+      match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => .hardware .ieee
   | .gleitNarrow e lo hi sonst rest, σ, ρ =>

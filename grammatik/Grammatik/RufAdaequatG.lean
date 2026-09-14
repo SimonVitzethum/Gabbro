@@ -1166,7 +1166,7 @@ theorem w_gleitVon {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩)
     (v : Wert D (.fl lo hi))
-    (hv : gleitPasst lo hi (Float.ofInt (eval ((M.weltVon f).lese Λ e.orte) e
+    (hv : gleitPasst lo hi (gleitAusInt (eval ((M.weltVon f).lese Λ e.orte) e
       ((M.weltVon f).lese Λ e.orte) ρ).n) = some v)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
@@ -4103,7 +4103,7 @@ theorem sem_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
 theorem sem_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁))
     (lo hi : Int × Int) (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ) (v : Wert D (.fl lo hi))
-    (hv : gleitPasst lo hi (Float.ofInt (eval (σ.lese Λ e.orte) e
+    (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
       semR O passes (.dann (.gleitVon e lo hi rest) k) σ ρ := by
