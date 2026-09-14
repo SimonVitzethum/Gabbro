@@ -1442,42 +1442,42 @@ def R (n : Nat) : Prop :=
   (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseOr F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseAnd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseCmp F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseBit F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseAdd F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseMul F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → ruhig rest = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
     parseUnary F (druckToks e ++ rest) = .ok (e, rest))
   ∧ (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n →
     gut e = true → primFrei e = true → ruhigSuff rest = true →
     ruhigGleit rest = true →
-    12 * (groesse e + 1) + groesse e ≤ F + 7 →
+    12 * (groesse e + 1) + groesse e + 1 ≤ F →
     parsePrimary F (druckToks e ++ rest) = .ok (e, rest))
 
 -- The binary-inner parse: a parenthesised operator's inside
@@ -1487,7 +1487,7 @@ def B (n : Nat) : Prop :=
   ∀ (o : String) (l r : SExpr) (W : List Token) (F : Nat),
     groesse l + groesse r ≤ n → gutOpBin o = true →
     gut l = true → gut r = true →
-    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) ≤ F →
+    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 8 ≤ F →
     parseOr F (druckToks l ++ [.zeichen o] ++ druckToks r ++
       [.zeichen ")"] ++ W) =
       .ok (.bin o l r, [.zeichen ")"] ++ W)
@@ -1549,7 +1549,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
     (x : SExpr) (sep : Token) (S : List Token) (F : Nat),
     groesse x ≤ n → gut x = true →
     (sep = .zeichen "," ∨ sep = .zeichen ")") →
-    12 * (groesse x + 1) + groesse x + 1 ≤ F →
+    12 * (groesse x + 1) + groesse x + 9 ≤ F →
     parseArg F (druckToks x ++ [sep] ++ S) = .ok (x, [sep] ++ S) := by
   intro n Rn x sep S F hx hxg hsep hF
   have hF1 : 1 ≤ F := by omega
@@ -1598,7 +1598,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
     cases hsep with
     | inl h => subst h; rfl
     | inr h => subst h; rfl
-  have hFr : 12 * (groesse x + 1) + groesse x ≤ F' := by omega
+  have hFr : 12 * (groesse x + 1) + groesse x + 8 ≤ F' := by omega
   obtain ⟨hOr, -⟩ := Rn
   simpa only [List.append_assoc] using hOr x ([sep] ++ S) F' hx hxg hr1 hr2 hr3 hFr
 
@@ -1609,7 +1609,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
 theorem args_rund : ∀ (n : Nat) (Rn : R n)
     (xs : List SExpr) (rest : List Token) (F : Nat),
     groesseListe xs ≤ n → gutListe xs = true →
-    12 * (groesseListe xs + 1) + groesseListe xs + 2 ≤ F →
+    12 * (groesseListe xs + 1) + groesseListe xs + 10 ≤ F →
     parseArgs F (druckToksListe xs ++ [.zeichen ")"] ++ rest) =
       .ok (xs, rest) := by
   intro n Rn xs
@@ -2062,7 +2062,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
         rfl
       have hr3 : ruhigGleit ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
         rfl
-      have hFi : 12 * (groesse i + 1) + groesse i ≤ F' := by
+      have hFi : 12 * (groesse i + 1) + groesse i + 8 ≤ F' := by
         simp only [suffGroesse] at hs hF ⊢
         omega
       obtain ⟨hOr, -⟩ := Rn
