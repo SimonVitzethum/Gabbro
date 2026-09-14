@@ -23,8 +23,8 @@ namespace Gabbro.Grammatik
     of the row derivation (`RBlock`/`REnd`), not data. -/
 inductive GRow where
   | void (x : Nat)
-  | storeSlot (kp ip n ss off : Nat) (tc : CTy) (ce : CX)
-  | storeNamed (tn ip n ss off : Nat) (tc : CTy) (ce : CX)
+  | storeSlot (kp : Nat) (ci : CX) (n ss off : Nat) (tc : CTy) (ce : CX)
+  | storeNamed (tn : Nat) (ci : CX) (n ss off : Nat) (tc : CTy) (ce : CX)
   | storeGlob (g : Nat) (tc : CTy) (ce : CX)
   | setVar (x : Nat) (tc : CTy) (ce : CX)
   | setOp (x : Nat) (tc : CTy) (op : CBinOp) (t : CIT) (ce : CX)
@@ -39,8 +39,8 @@ mutual
 /-- Elaboration of one row to its C statement. -/
 def growRow : GRow → CS
   | .void x => .expr (.var x)
-  | .storeSlot kp ip n ss off tc ce => .store (.slotA (.var kp) (.var ip) n ss off) tc ce
-  | .storeNamed tn ip n ss off tc ce => .store (.slotA (.addr (.tab tn)) (.var ip) n ss off) tc ce
+  | .storeSlot kp ci n ss off tc ce => .store (.slotA (.var kp) ci n ss off) tc ce
+  | .storeNamed tn ci n ss off tc ce => .store (.slotA (.addr (.tab tn)) ci n ss off) tc ce
   | .storeGlob g tc ce => .store (.addr (.glob g)) tc ce
   | .setVar x tc ce => .set x tc ce
   | .setOp x tc op t ce => .set x tc (.bin op t (.var x) ce)
@@ -66,7 +66,7 @@ def exprOk : CX → Bool
     (decide (op = .add) || decide (op = .sub) || decide (op = .mul)) &&
       exprOk l && exprOk r
   | .cmp op _ l r =>
-    (decide (op = .lt) || decide (op = .le) || decide (op = .eq)) &&
+    (decide (op = .lt) || decide (op = .le) || decide (op = .eq) || decide (op = .gt)) &&
       exprOk l && exprOk r
   | .ld (.slotA (.var _) idx _ _ _) _ => exprOk idx
   | .ld (.slotA (.addr (.tab _)) idx _ _ _) _ => exprOk idx
@@ -77,8 +77,8 @@ mutual
 /-- Every expression a row carries. -/
 def rowCXs : GRow → List CX
   | .void _ => []
-  | .storeSlot _ _ _ _ _ _ ce => [ce]
-  | .storeNamed _ _ _ _ _ _ ce => [ce]
+  | .storeSlot _ ci _ _ _ _ ce => [ci, ce]
+  | .storeNamed _ ci _ _ _ _ ce => [ci, ce]
   | .storeGlob _ _ ce => [ce]
   | .setVar _ _ ce => [ce]
   | .setOp _ _ _ _ ce => [ce]
@@ -269,31 +269,31 @@ inductive RBlock {D : Deklaration} (X : TVCtx D) {V : Vertrag D} :
   | consStoreSlotParam {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {kp : Nat} {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
       {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
-      {ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {ci : CX} {n ss off : Nat} {τc : CTy} {ce : CX}
       {hw : V.schreibt t = true} {hL : darf D t Λ}
       {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
       (hk : (kp, t) ∈ K.pp)
       (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
       (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
-      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hi : ExprCorr X K ci i) (he : ExprCorr X K ce e)
       (hr : RBlock X m l K rest rs cr) :
       RBlock X m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
-        ((.storeSlot kp ip n ss off τc ce) :: rs)
-        (.seq (.store (.slotA (.var kp) (.var ip) n ss off) τc ce) cr)
+        ((.storeSlot kp ci n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.var kp) ci n ss off) τc ce) cr)
   | consStoreSlotNamed {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
       {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
-      {tn ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {tn : Nat} {ci : CX} {n ss off : Nat} {τc : CTy} {ce : CX}
       {hw : V.schreibt t = true} {hL : darf D t Λ}
       {rest : Block D V l Γ Λ Λ'} {Λ' : List (Res D)} {rs : List GRow} {cr : CS}
       (htn : tn = X.EL.tnr t)
       (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
       (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
-      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hi : ExprCorr X K ci i) (he : ExprCorr X K ce e)
       (hr : RBlock X m l K rest rs cr) :
       RBlock X m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
-        ((.storeNamed tn ip n ss off τc ce) :: rs)
-        (.seq (.store (.slotA (.addr (.tab tn)) (.var ip) n ss off) τc ce) cr)
+        ((.storeNamed tn ci n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.addr (.tab tn)) ci n ss off) τc ce) cr)
   | consStoreGlob {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {g : D.Glob} {hgg : D.ggeist g = false} {hat : D.atomar g = false}
       {e : Expr D Γ Λ (D.gtyp g)} {gn : Nat} {τc : CTy} {ce : CX}
@@ -549,31 +549,31 @@ inductive REnd {D : Deklaration} (X : TVCtx D) {V : Vertrag D} (top : Bool) :
   | eConsStoreSlotParam {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {kp : Nat} {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
       {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
-      {ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {ci : CX} {n ss off : Nat} {τc : CTy} {ce : CX}
       {hw : V.schreibt t = true} {hL : darf D t Λ}
       {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
       (hk : (kp, t) ∈ K.pp)
       (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
       (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
-      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hi : ExprCorr X K ci i) (he : ExprCorr X K ce e)
       (hr : REnd X top m l K rest rs cr) :
       REnd X top m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
-        ((.storeSlot kp ip n ss off τc ce) :: rs)
-        (.seq (.store (.slotA (.var kp) (.var ip) n ss off) τc ce) cr)
+        ((.storeSlot kp ci n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.var kp) ci n ss off) τc ce) cr)
   | eConsStoreSlotNamed {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
       {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
-      {tn ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {tn : Nat} {ci : CX} {n ss off : Nat} {τc : CTy} {ce : CX}
       {hw : V.schreibt t = true} {hL : darf D t Λ}
       {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
       (htn : tn = X.EL.tnr t)
       (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
       (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
-      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hi : ExprCorr X K ci i) (he : ExprCorr X K ce e)
       (hr : REnd X top m l K rest rs cr) :
       REnd X top m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
-        ((.storeNamed tn ip n ss off τc ce) :: rs)
-        (.seq (.store (.slotA (.addr (.tab tn)) (.var ip) n ss off) τc ce) cr)
+        ((.storeNamed tn ci n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.addr (.tab tn)) ci n ss off) τc ce) cr)
   | eConsStoreGlob {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
       {g : D.Glob} {hgg : D.ggeist g = false} {hat : D.atomar g = false}
       {e : Expr D Γ Λ (D.gtyp g)} {gn : Nat} {τc : CTy} {ce : CX}
@@ -766,7 +766,7 @@ general form families (`gcert_sound`). -/
 /-- `einzahlen`'s rows in the general syntax: `(void)b`, the slot
     store of the literal `100`, the call of `lies` on parameters. -/
 def einRowsG : List GRow :=
-  [.void 2, .storeSlot 0 1 2 4 0 cU32 (.lit 100), .call 1 [.var 0, .var 1] none]
+  [.void 2, .storeSlot 0 (.var 1) 2 4 0 cU32 (.lit 100), .call 1 [.var 0, .var 1] none]
 
 /-- `lies`' rows: the return of the slot load. -/
 def liesRowsG : List GRow :=
