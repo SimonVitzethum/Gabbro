@@ -246,6 +246,7 @@ import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.FortschrittZeuge
+import Grammatik.Lebendigkeit
 import Grammatik.ZielOrtInvGrundZeuge
 import Grammatik.Nichtinterferenz.Freigabe
 import Grammatik.Nichtinterferenz.Korpus
