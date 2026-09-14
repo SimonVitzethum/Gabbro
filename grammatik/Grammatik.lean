@@ -227,3 +227,5 @@ import Grammatik.GenOblig104
 import Grammatik.Pflicht104
 import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund
+import Grammatik.Zielsatz.Akzeptiert
+import Grammatik.Zielsatz.AkzeptiertZeuge
