@@ -1,266 +1,296 @@
 # Gabbro
 
-**A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
-assembly** — ~~89~~ ~~91~~ ~~95~~ ~~96~~ 97 clean examples, of which ~~89~~ ~~91~~ ~~95~~ ~~96~~ 97 emit C, and every emitted unit compiles** under `cc -std=c11 -Wall
--Wextra -Werror -O2`. Compiler in **safe Rust** (`forbid(unsafe_code)`).
+**A systems language that carries the proof plumbing, so that verifying an operating system
+costs a fraction of what it costs today.** One output: C11 plus inline assembly. The compiler
+is safe Rust (`forbid(unsafe_code)`) with zero external dependencies.
 
-> **Until 2026-08-20 that sentence carried no figure, and twelve of the 38 produced nothing.**
-> Every one of the twelve refusals was named and reasoned (`C001`) — that was the point of the
-> emitter and it stays the point. But *a claim without its number is a claim about a fragment*,
-> and [`TODO.md`](TODO.md) said so about itself before anyone else did.
-
-> **And the emitter is the trust base, with a failure record of two — both silent.**
-> Every safeguard in this tree is a pass, and a pass is code by the same author as the
-> translation. Twice now the translation has been wrong below every pass, where no Gabbro
-> program can defend itself: `breite_von` wrote a device access of the **wrong width** and
-> fired 146 times over 499 files (2026-08-31); the device name table, keyed by a bare name
-> with no module qualifier, gave two same-named `device`s in different modules **the same
-> wrong port offset**, with `0 errors` at the checker and a clean `cc -Werror`
-> (2026-09-03). Both are closed and both carry a poison probe. *A sovereignty claim that
-> names the emitter as its trust point owes the reader its failure record, not only its
-> architecture* — [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) carries both in full.
-
-The purpose is not to have another language. It is to **write a kernel in it and then verify
-that kernel cheaply** — Caprock in full, with a green acceptance run.
+The point is not to have another language. The point is to write an operating system in it —
+**Caprock** — and then verify that system cheaply.
 
 > **License: AGPL-3.0** ([LICENSE](LICENSE)) — **with an additional permission that answers the
-> important question up front:** *what you write in Gabbro is not a derived work.* Your
-> program, the generated C and the binaries are yours, under any license you like. **The
-> condition is one line:** generated C files and binaries carry a notice saying they came out
-> of Gabbro. Details and the legal reasoning in [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
+> important question up front:** what you write in Gabbro is not a derived work. Your program,
+> the generated C and the binaries are yours, under any license you like. The condition is one
+> line: generated C files and binaries carry a notice saying they came out of Gabbro. Details in
+> [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
 
-## The goal, in one sentence
+---
+
+## 1. The problem
+
+seL4 is the reference point, and it is an honest one: a verified microkernel, with roughly
+**20 lines of proof for every line of code**. That verified configuration is **single-core and
+has no DMA** — so those 239 458 proof lines describe a kernel without real concurrency.
+
+Most of what such a proof establishes is not the interesting part. It is **plumbing**: index
+bounds, overflow, aliasing, framing, lock order, data races, termination, phase, leafness,
+publication, refinement. Eleven classes, and the same eleven in every kernel ever written.
+
+Gabbro's claim is that plumbing belongs to the **language**, not to the proof:
 
 > **Gabbro proves everything except functional correctness — on a multicore kernel with DMA.**
 
-All **plumbing** — index, overflow, **alias**, frame, lock, race, termination, phase, leafness,
-publication, refinement — is carried by the language. **Nine of the eleven classes are carried
-today** *(corrected 2026-08-24: `phase` had stood among the hanging ones with the reason
-«B37» — and `PFLICHTEN.md` records «B37» as **closed on 2026-08-17**, twice and with a date.
-`gabbro paesse` reports the pass as `CARRIED`, its residue as a **decision**, not a gap:
-the softer reading with a stage SET, deliberately not built. The README carried the older
-sentence for a week)*; the two that hang no longer hang on a missing pass, but each on
-something different:
-*race* at **exactly three of its 28 forms** (re-measured 2026-08-24, `messung/RACE.md`: 22 rest
-on a RULE, 2 on the axiom layer, 1 on both, **3 on nothing** — and those three are the ALIAS.
-**`A1` closed on 2026-08-24 with `R007`**: it was the only one of the four decidable without an
-alias analysis, and `gabbro alias` had counted the site for three days before a pass refused it),
-*refinement* on the Isabelle semantics of a body, which P6 laid bare.
+**Nine of the eleven classes are carried today.** The two that are not no longer hang on a
+missing pass: *race* hangs on exactly three of its 28 forms, and those three are the alias;
+*refinement* hangs on the semantics of a function body, which is what section 4 is about.
 
-> **Multicore and DMA are set, not optional.** That is a statement against the most convenient
-> of all simplifications: **seL4's verified configuration is single-core**, and its 239 458
-> measured proof lines prove a kernel without real concurrency. So for Gabbro the **pairing**
-> (`publishes`/`awaits`) is not a "later", it is load-bearing, and the `dma` space carries real
-> statements instead of a classification.
+**Multicore and DMA are set, not optional.** That is deliberate, and it is a statement against
+the most convenient of all simplifications. The pairing (`publishes`/`awaits`) is load-bearing
+rather than a "later", and the `dma` space carries real statements instead of a classification.
 
-## The one number that defines success
+## 2. Why this is not a solver problem
 
-**Proof lines : code lines.** seL4 sits at **20 : 1**. The floor — what no language can take
-away — is about **0,5 : 1**, the abstract specification itself.
+The other way to get here is an SMT solver: write the program, write the annotations, let Z3
+discharge them. Verus and Dafny do that well. Gabbro does not, for two reasons.
 
-| | |
-|---|---|
-| **measured today** | **unknown, and above 0,5** |
-| **target** | **0,5 : 1** |
+**A refusal is better than a timeout.** Where a solver gets slow, a grammar says which
+construct it will not carry and why, by name. The compiler ships **378 diagnostics** and no
+search procedure.
 
-<!-- widerruf:aus -->
-**That is a withdrawal, dated 2026-08-19, and it replaces a number this folder quoted for four
-days.** What stood here was `≥ 1,90`, and it was wrong in a way no rounding fixes.
-<!-- widerruf:an -->
+**A template falls once, not per program.** Every construct the language carries turns into one
+generator obligation — proved a single time, over the semantics — instead of an obligation per
+program that uses it. That amortisation is the whole economic argument, and it is measurable
+rather than rhetorical.
 
-## Why the number was withdrawn
+Here is what a program looks like. A table whose writes are guarded by a linear token, with
+exactly one place in the world that can mint that token:
 
-`Ueberschlag = w · 5,0 + (1 − w) · 0,3` was substituted with **`w` measured on Verus proof
-bodies in Caprock**. That conflates two quantities the formula then multiplies together:
+```gabbro
+module beispiel::eigner_mit_erzeuger {
 
-| | prover-dependent? |
-|---|---|
-| **the obligation mix** — how many of a kernel's obligations are value statements | **no.** `revoke` is a value statement no matter who proves it |
-| **the line weight** — how many lines each one costs | **yes, entirely.** A Verus line is SMT-backed; the same theorem in Isar is a multiple, or a `by auto` |
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
 
-**Verus is a defensible proxy for the first and none at all for the second** — and Gabbro's
-proofs are Isabelle/HOL. *The number carried a proof economy that appears nowhere in this
-folder.*
+linear ghost type Marke;
 
-## Why no Isabelle-anchored number replaces it yet
+extern fn erste() -> Marke effects { pure } costs <= 1 ops;
+extern fn lege_ab(m : Marke) effects { consumes m } costs <= 8 ops;
 
-The 15 theories in [`beweise/`](beweise/) (3 512 Isar lines across all 15 theories) **entirely the (1 − w) side** — eight K,
-three A, one about the checker, one about the BRIDGE, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
-construction, and the formula would return **0,30** — *below the seL4 anchor, hence a triumph,
-and false.* That is the error class this folder already booked once, when `p_B3` was read as a
-kernel-side `w` and produced 0,345.
+impl fn schreibe(m : Marke, i : index into Plaetze)
+    effects { writes Plaetze.slots, consumes m }
+    costs   <= 32 ops
+{
+    Plaetze.slots[i].benutzt = true;
+    lege_ab(m);
+}
 
-~~**What is missing is not an Isabelle semantics of Gabbro** — the lowering to C is that, and
-`spec fn`/`impl fn` stand in one language, so a value statement is proved over the
-specification model like every existing theory. **What is missing is P6:** the *generated*
-refinement obligation.~~ — **revoked 2026-08-21 (`WK1`), by the build of P6 itself.**
+impl fn runde(i : index into Plaetze)
+    effects { writes Plaetze.slots }
+    costs   <= 64 ops
+{
+    let m = erste();
+    schreibe(m, i);
+}
 
-**P6 exists since 2026-08-21** ([`messung/P6.md`](messung/P6.md)): `gabbro pflichten
---isabelle` writes the generated refinement obligation, and Isabelle checks it green — for
-**one** of 47 obligations, and that one is a `K`, not a `W`. What the build laid bare is the
-item underneath it: **16 of the 23 genuinely open obligations hang on the Isabelle semantics of
-a Gabbro BODY**, 7 on the world model. *The lowering to C is a meaning for the COMPILER, not
-one for the PROVER* — and until a body has the second kind, P6 produces `K` obligations and no
-`W`. The metric stays withdrawn, and it is no longer P6 that holds it.
-
-## What IS anchored on Isabelle today, and it is the carried side
-
-```
-3 512 lines of Isar (3 512 across all 15 theories) · 21 generator templates, 10 machine-checked
-                        (`wc beweise/*.thy`, `gabbro templates`, 2026-09-03)
+}
 ```
 
-> **It ROSE on 2026-08-19, from 10,4** — `Table_Ops_Erhaltung.thy` (311 lines) and
-> `Gruppe_Erhaltung.thy` (217) came in, and `ops` has **zero** corpus sites while `group` has
-> **one**, so the numerator grew and the denominator barely moved. *That is
-> the honest behaviour of the figure and worth stating out loud: it falls when a proved
-> construct gets used, and rises when one gets proved ahead of use.* **Proving before building
-> is the folder's own rule (K11.3.2), and this is what it costs on the dashboard.**
+No annotation on that program says "no data race" or "no double free". The declarations say who
+writes what, what it costs, and that the token moves exactly once — and the rest follows from
+the grammar.
 
-**The only figure in this folder resting on the prover it actually uses.** It says nothing
-about functional correctness — it says the amortisation argument as a *measurement* rather than
-a claim: *a template falls once, not per program.*
+## 3. What it is for: Caprock
 
-## And why the replacement still says something
+**Caprock is the kernel this language exists for**, and the target is larger than the kernel:
+an operating system, and a distribution on top of it, that is **formally verified everywhere
+except the drivers**.
 
-**Above 0,5 is not a hedge, it is an argument.** `0,5 : 1` is the abstract specification, and
-Gabbro does not claim to prove functional correctness — so `W > 0`, so the metric is strictly
-above the floor. **What has no bound today is the upper one**, and quoting a number for it
-would be the fourth substitution in a row.
+**Linux drivers already run under Caprock.** That is what makes "except the drivers" a viable
+line instead of an excuse — the enormous, permanently moving, hardware-specific part of any OS
+is borrowed rather than rewritten, and it is the one part nobody has ever verified at scale.
+Everything above it is in scope.
 
-> *W7: a number without a source list does not belong in a document. It is not wrong — it is
-> uncheckable, and that is the more expensive state.*
+**The first commercial target is isolation.** A Vercel-style cloud platform that runs tenant
+workloads **under Caprock instead of under virtual machines**. The trade there is concrete: a
+hypervisor buys isolation with a second kernel, a second scheduler and a cold start measured in
+hundreds of milliseconds; a kernel whose isolation is a proved property rather than a
+configured one can buy the same separation at process cost. That is the use case Gabbro's
+verification budget is being spent for, and it is the reason the multicore and DMA requirements
+above are not negotiable — a platform that oversubscribes cores and hands devices to tenants
+has no use for a single-core proof.
 
-**What survives the withdrawal is the count, and it is the half that was never Verus's:**
+What that still requires is written down rather than assumed: the driver boundary has to be a
+*named* assumption with a stated interface, not a gap, and the isolation argument has to reach
+from the model down to the emitted C. Section 4 is the plan for the second half.
 
-> **38 of 73 obligations are value statements** (52 %) — the ceiling of step assurances covers
-> a **minority**. *Which obligations a kernel has is a property of the kernel; only what each
-> one costs in lines belongs to the prover.* **The head count stands, the line share went with
-> the number.**
+## 4. How the proof works: the checker is not trusted
 
-> ~~*"many, but small" — 52 % of the obligations, 34 % of the lines*~~ — **withdrawn
-> 2026-08-19 with the metric.** The "small" was measured in Verus lines, and Isar lines are
-> not those. *It may still be true; today nothing supports it.*
+The Rust checker and emitter — around 110 000 lines — will **not** be verified. Proving them
+would have cost an estimated 700 000 lines of proof, and it would have proved them against a
+*second copy* of the model rather than against the model itself.
 
-**Which is why the dashboard carries a second number**, and it predicts maintenance rather than
-writing: **W obligations per thousand lines, ≥ 0,63**. *Otherwise the folder optimises the
-denominator that shines instead of the one that costs.*
+Instead the compiler is treated as untrusted and made to show its work. **For every program it
+accepts, it emits a certificate, and Lean checks that certificate.** The closing theorem has
+this shape:
 
-> **And the withdrawal of 2026-08-19 left it standing** — `38 / 60 756` counts obligations
-> against kernel lines and never touches a proof line. *The second number was the
-> prover-independent one all along, and nobody noticed until the first one had to go.*
+> **Lean accepts the certificate ⟹**
+> **(1)** the source text parses to a program `P`, and
+> **(2)** `P` satisfies the model — types, safety, lock order, and
+> **(3)** the emitted C refines `P`.
 
-## What is built
+So every run of the C corresponds to a run of `P`.
+
+**The failure mode is one-way.** A broken checker can only reject good programs, whose
+certificates then fail to go through. It can never let a bad program past. This matters more
+than it sounds: the two real defects this project has shipped both sat *in the emitter*, below
+every pass, where no Gabbro program could defend itself — a device access emitted at the wrong
+width, and two same-named devices given the same port offset, both silent, both with a clean
+`cc -Werror`. Both are closed, both carry a poison probe, and both are written out in full in
+[`dokumente/BEWEIS.md`](dokumente/BEWEIS.md). Certificate checking is the structural answer to
+that class.
+
+**What is left in the trust base:** the Lean kernel, the C compiler, the hardware profile, and
+named assumptions about devices and the scheduler. Those assumptions stand as premises inside
+the theorem, not as prose beside it.
+
+### The five pieces
+
+| | what it establishes | status |
+|---|---|---|
+| **T3 — Parser in Lean** | source text → `P`, so the certificate starts from the source and not from a representation Rust produced | lexer, expressions, statements and items are in; the generic version and the print/parse round-trip are in flight |
+| **T1 — Model certificates** | `P` satisfies the typing and safety rules, by a decidable certificate per constructor | all 40 expression and all 50 statement constructors carried in Lean; Rust prints statement certificates for 47 of 253 bodies |
+| **T4 — Semantics of the emitted C** | what the generated C means: memory model, integer semantics, a full UB list, one correspondence lemma per form | 48 of 73 emitted forms have their lemma; a guardian goes red the moment the emitter produces a form without one |
+| **T2 — Correspondence re-checker** | *this* C program consists of exactly those correspondences | designed, not built — **the one piece that closes the chain** |
+| **T5 — Proof templates** | each recurring obligation gets a soundness theorem over the real semantics | 5 of 21 bound; the remaining 16 are still an abstract core |
+
+### Not started: the concurrent half
+
+The model is concurrent; the emitted C is not yet — it contains no thread creation, and the
+lock primitives are external prototypes. Closing that needs the lock specification with
+happens-before as a named assumption, thread creation by the runtime as a second, DRF-SC as a
+third (which *applies* here precisely because the race pass proves data-race freedom), and then
+the correspondence between a model run and a C run with interleaving. That last item is the
+largest single open piece in the project.
+
+### Order of work
+
+1. Finish the parser: generic, round-trip.
+2. Close the C gaps — tagged unions, error-reason numbering, and the most frequent of the 25
+   forms that have no semantics yet. Several of those will end as named assumptions rather than
+   lemmas: inline assembly and device reads have no C semantics by construction.
+3. Build T2 — the print format and the Lean re-checker.
+4. Bind the remaining templates to the semantics.
+5. The concurrent half.
+6. The closing theorem with a witness on a real program, then a second witness on a program
+   with real sharing.
+
+## 5. Status
+
+Everything below is produced by a command that stands beside it, and every one of them can be
+re-run.
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | ~~289~~ ~~293~~ ~~294~~ ~~295~~ ~~296~~ ~~304~~ ~~330~~ ~~358~~ ~~359~~ ~~369~~ ~~372~~ 373 diagnostics · `gabbro paesse` |
-| **Grammar** | ~~160~~ ~~161~~ ~~163~~ ~~167~~ ~~176~~ **177 EBNF rules**, closed and reachable | vocabulary covers every terminal, ~~220~~ ~~221~~ ~~226~~ ~~228~~ ~~239~~ 240 / 240 |
-| **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Pass register** | **~~94~~ 95 sentences over 12 passes — ~~87~~ 88 measured, 2 ARGUED, 5 CONJECTURED, 0 PROVED** (`gabbro paesse --je-satz`, 2026-09-03), claiming **~~227~~ 228 diagnostic codes**. The unmapped remainder is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
-| **Guardians** | 38, and ~~62 of 63~~ ~~63 of 64~~ ~~64 of 65~~ **65 of 66 instruments carry all five requirements** — four read statically (deadline · two-way speech test · red on abort · **pinned locale**), the fifth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py` *(run 2026-09-04)* | **387 of 387 anchors hold** *(run 2026-09-03, `mutiere-pruefer.py --anker`)* |
-| **Acceptance** | **one command over all of them**: `./instrumente/abnahme.py` reads the DIRECTORY, not a list, and says per guardian **green · RED · HALF-MEASURED · ABORTED · NOT RUNNABLE · skipped** — *a run that measured half must not look like one that measured all of it* (W26) with the **work quantity beside the verdict** — *a run that drives zero is red* (W17). Until 2026-08-30 there was no such run: §1.7 named eleven of 26, **seven stood in no list at all**, and two red ratchets rode along for two days and four merges. *A guardian nobody runs cannot be told apart from one that does not exist.* `--voll` adds the four expensive ones; the quick run **names** them instead of dropping them | `./instrumente/abnahme.py` *(first run 2026-08-30: 24 of 27 driven, 22 green, 2 RED — precisely the two booked ratchets)* |
-| **Corpus** | ~~74~~ ~~76~~ ~~89~~ ~~91~~ ~~95~~ ~~96~~ 97 clean examples, ~~471~~ ~~479~~ ~~488~~ ~~498~~ ~~500~~ ~~501~~ ~~550~~ ~~569~~ ~~585~~ ~~587~~ ~~618~~ ~~623~~ ~~624~~ ~~640~~ 644 poison files, ~~451~~ ~~688~~ ~~693~~ ~~767~~ 773 tests *(run 2026-09-10, `ki-pc-fisch-101` unreachable through the jump host — local lane, `free -g` beside every run)* — the newest are `beispiele/90-syscall-errno.gab` (lane S5: the checked syscall declaration with its errno decoding), `beispiele/80-bibliothek-erklaert.gab` (lane E2: a run-time library function with a payload type; calls live in the poison corpus until the translator exists), `beispiele/74-syscall-schreiben.gab` and `beispiele/71-frist-und-zaehlung.gab`, which writes the two clauses of the fourth syntax version: a `deadline` (by when, on which machine, on whose probe) and a `count` over table slots with a parameter capture (`schwelle` travels into the generated counter as an ordinary argument). The five poison probes beside it pin the four new refusals (`D025`/`D026`/`K011`/`K012`) plus the probe-shape rule for deadlines (`N056`). The newest since are `beispiele/114-owner-with-producer.gab` (lane 151: the first `owner` table with a standing producer) with poisons `gift/932`-`935` (`D265`-`D267`). The newest since is `beispiele/115-owner-read-with-producer.gab` (lane 151b: the read path under the mark, with the single mint executed once -- `D268` silent). `beispiele/70-kernel-namen.gab` writes the eight identifiers «K3» caught the Linux kernel using (`node`, `old`, `next`, `progress`, `release`, `stack`, `index`, `to`) plus the nine heaviest colliding words of the whole foreign measurement, as parameters, locals, field names, a type name, an assignment target and a loop label. **Until 2026-09-05 not one line of it was writable**: 212 of the 221 vocabulary words were an identifier nowhere, and 105 of them are somewhere a name a programmer chose in 585 files of Linux and Caprock. Seventeen are still not names, every one measured at zero foreign declarator sites (`messung/WORTSTELLUNG.md`) | `cargo test --no-fail-fast` || **Emission** | **~~128~~ ~~228~~ ~~230~~ 232 of 232 units emit and compile** (`pruefe-emission.sh` stage 9, 2026-09-03: every file that emits must translate) under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **~~28~~ 35 of them are also run and compared against a handwriting** (stage-by-stage piercing runs), and one of those is a LIBRARY CHAIN across three separately compiled units and a linker, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-09-03)* || **Usability** | **6.4 % of the teaching corpus and 12.7 % of REAL code may fall** — ~~1408~~ 1548 and 110 clause sites, split derivable / redundant / load-bearing (86 of 1369 and 14 of 110 derivable). The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` || **Blind spots** | ~~79~~ ~~169~~ ~~13~~ ~~78~~ **77 blind · 170 covered · 25 poison-only · 12 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |> **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds> them was extended on the day it found them. *The number was maintained, the source was
-> not* — the same class as the six closed `gap:` lines and the eight revoked sentences.
-> Everything countable without a compiler run is now held mechanically by `pruefe-todo.py`;
-> the two that need a run carry their measurement date.
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 378 diagnostics · `gabbro paesse` |
+| **Grammar** | **177 EBNF rules**, closed and reachable | vocabulary covers every terminal, 240 / 240 |
+| **Pass register** | **155 sentences over 12 passes — 147 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 327 diagnostic codes. *A written sentence is not a proved one; the last column is the whole rest* | `gabbro paesse --je-satz` |
+| **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, [`beweise/`](beweise/) |
+| **Corpus** | 101 clean examples, 652 poison files, 773 tests *(run 2026-09-10)* | `cargo test --no-fail-fast` |
+| **Emission** | **232 of 232 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 35 are also executed and compared against a handwritten version, one of them a library chain across three units and a linker, under `-fsanitize=undefined` *(run 2026-09-03)* | `./instrumente/pruefe-emission.sh` |
+| **Guardians** | 40, and **65 of 68 instruments carry all five requirements** — deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
+| **Mutation** | **383 of 409 anchors hold**, and a run catches 375 of 376 valid mutations | `./instrumente/mutiere-pruefer.py` |
+| **Blind spots** | **75 blind · 171 covered · 26 poison-only · 12 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and poison-only is a hint, not a proof | `gabbro blindstellen` |
+| **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — 1652 and 110 clause sites, split derivable / redundant / load-bearing | `gabbro zeremonie` |
 
-**The templates are the number to watch, not the passes.** They are the surface onto which
-every rescue is deferred — *a template falls once, not per program* — and until 2026-08-16 that
-sentence was a promise about ground nobody had walked on. **Four are walked now.**
+The 15 theories in [`beweise/`](beweise/) hold 3 512 lines of Isar (3 512 across all 15
+theories). They are the amortisation argument as a *measurement* rather than a claim — and the
+figure behaves honestly: it falls when a proved construct gets used, and rises when one gets
+proved ahead of use.
 
-## How to read this folder
+## 6. What is not true yet
 
-**Every number in these documents carries the search path that produced it.** A number without
-a source list does not belong in a document — that is rule W7, and it was paid for three times
-in one day. When you find a number here, you can re-run it.
+This section exists because the alternative is that a reader has to find it out.
 
-| File | Role |
-|---|---|
-| [`TODO.md`](TODO.md) | **open items only**, cut by role: decisions · measurements · build · bookkeeping |
-| [`DONE.md`](DONE.md) | **finished items only** — every entry carries its evidence |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | the language: four mechanisms, two declaration rules, ordering pairing, entry, boot, induction |
-| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | the grammar, and what deliberately does not exist |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | the proof architecture: criterion, machine and memory model, prover, the seL4 comparison |
-| [`dokumente/PLAN.md`](dokumente/PLAN.md) | the way there — phases with two-sided gates, and the coverage assessment |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **everything that was run** — and what is not in here was not measured |
-| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | Caprock areas written out in Gabbro, with origin and verdict |
-| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **what was already wrong about this design**, with the lesson |
-| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | working rules from our own mistakes — each with the damage it was paid for |
-| [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) | findings whose subject is Caprock — found here, belonging there |
-| [`beweise/`](beweise/) | the Isabelle theories — each names what it does **not** prove |
+- **No pass has been proved.** 155 written sentences, 147 of them *measured* — meaning a poison
+  probe falls or a mutation is caught. That measures the implementation on checked cases, never
+  the rule, and never all cases.
+- **The chain of section 4 is not closed for any program yet.** T2 does not exist, so no
+  program has a certificate that carries end to end. The first witness is the next milestone,
+  not a past one.
+- **The proof-to-code ratio has no measured value.** The floor is about 0,5 : 1 — the abstract
+  specification itself — and Gabbro does not claim to prove functional correctness, so the true
+  figure is strictly above it. The upper bound is unknown, and a number without a source list
+  does not belong in a document.
+- **Caprock is not written in Gabbro yet.** Fragments are, with origin and verdict in
+  [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md). The acceptance criterion is Caprock in
+  full with a green run, and it is not close.
 
-## Installing it
+## 7. Try it
 
-**Zero external dependencies** — the three crates depend on `std` and on each other, and on
-nothing else (`cargo tree`, 2026-09-01). So there is no lock file to trust and no registry to
-reach:
+Zero external dependencies: the three crates depend on `std` and on each other, and on nothing
+else. There is no lock file to trust and no registry to reach.
 
 ```
 git clone https://github.com/SimonVitzethum/Gabbro
 cd Gabbro
-cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin -- 11,8 s, 4,9 MiB
+cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin
 gabbro check beispiele/01-tabelle.gab
 ```
 
-**Rust 1.86 or newer**, and that is measured rather than guessed: `f64::next_up`/`next_down`
-became stable in 1.86.0, and on 1.75 or 1.80 the build ends at `E0658`. **`cc` is needed at
-RUN time, not at build time** — only `gabbro build` calls it, to compile and link the C this
-compiler emits. Everything else (`check`, `emit`, `abi`, `costs`, `effects`, `obligations`,
-`certificate`, `lean`) reads and writes files and needs no C compiler at all.
-
-## Versions
+**Rust 1.86 or newer**, measured rather than guessed: `f64::next_up`/`next_down` became stable
+there, and older toolchains end at `E0658`. **`cc` is needed at run time, not at build time** —
+only `gabbro build` calls it, to compile the C this compiler emits.
 
 ```
-0.0.1    now, the first tag
-0.1.0    „ist dann beta"
-1.0.0    „dann Alpha"
-```
-
-*Note that this names `1.0.0` "Alpha" after `0.1.0` "Beta", which is the reverse of the usual
-order; it is the intended scheme and not a typo.*
-
-## Running it
-
-```
-cargo run --bin gabbro -- check beispiele/*.gab      # check files
-cargo run --bin gabbro -- passes                     # what each pass does and does NOT do
-cargo run --bin gabbro -- templates                  # the proof-template register
+cargo run --bin gabbro -- check beispiele/*.gab        # check files
+cargo run --bin gabbro -- passes                       # what each pass does and does NOT do
+cargo run --bin gabbro -- templates                    # the proof-template register
 cargo run --bin gabbro -- obligations beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test --no-fail-fast                            # 402 tests (2026-09-03, ki-pc-fisch-101)
-./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 409 mutations, one anchor each (`--anker`)
-./instrumente/pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
-./instrumente/pruefe-klauseln.py                                 # declared, exported, never read
-./instrumente/pruefe-widerruf.py                                 # sentences the folder has revoked, still standing
-./instrumente/pruefe-konstrukte.py                               # constructs at which nothing has ever fallen
-./instrumente/pruefe-englisch.py                                 # the surface of Gabbro is English
-isabelle build -d beweise -c Gabbro                  # the machine-checked templates
+cargo test --no-fail-fast                              # the test corpus
+./instrumente/abnahme.py                               # every guardian, one command, per-guardian verdict
+./instrumente/mutiere-pruefer.py                       # damage one rule at a time: 409 mutations, one anchor each
+./instrumente/pruefe-emission.sh                       # every emitted unit must compile
+isabelle build -d beweise -c Gabbro                    # the machine-checked templates
 ```
 
-**`pruefe-widerruf.py` guards the class that cost this folder eight sites in three files on
-2026-08-19** — a sentence that was true when written and says *"this can never work"* long
-after it was built. *It prevents work rather than merely delaying it, and it does so
-quietly, because it reads like a result.*
+`gabbro passes` prints what each pass does **not** check. A tool that lets unchecked silence
+look like a green result is a false green.
 
-**`paesse` prints what each pass does *not* check.** A tool that lets unchecked silence look
-like a green result is a false green — the same class of error `pruefe-syntax.sh` paid for
-twice.
+## 8. How to read this folder
 
-## The three sentences this folder keeps coming back to
+**Every number in these documents carries the command that produced it.** A number without a
+source list does not belong here — it is not wrong, it is uncheckable, and that is the more
+expensive state. When you find a figure, you can re-run it.
+
+| File | Role |
+|---|---|
+| [`TODO.md`](TODO.md) | open items only, cut by the stages of the plan |
+| [`DONE.md`](DONE.md) | finished items only — every entry carries its evidence |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | the language: four mechanisms, two declaration rules, pairing, entry, boot, induction |
+| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | the grammar, and what deliberately does not exist |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | the proof architecture — and the failure record of the emitter, in full |
+| [`dokumente/PLAN.md`](dokumente/PLAN.md) | the way there: phases with two-sided gates |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | everything that was run — what is not in here was not measured |
+| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | Caprock areas written out in Gabbro, with origin and verdict |
+| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | what was already wrong about this design, with the lesson |
+| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | working rules from our own mistakes, each with the damage it was paid for |
+
+Three sentences this folder keeps coming back to:
 
 > **A number without a source list does not belong in a document.** It is not wrong — it is
 > uncheckable, and that is the more expensive state.
 
-> **A rule with no mutation against it is not covered, it is undamageable.** Zero mutations on
-> a surface is not coverage; it means nothing there can break visibly.
+> **A rule with no mutation against it is not covered, it is undamageable.** Zero mutations on a
+> surface is not coverage; it means nothing there can break visibly.
 
 > **Not refused is not confirmed.** Where an analysis is a lower bound it neither rejects nor
 > approves — the third state has to exist, or the tool lies in one direction.
 
-## A note on language
+## 9. Versions and language
 
-**This README is English. Most of the folder is still German**, and the translation is running
-rather than finished. The reason it cannot be one sweep: **six guardians and eight test files
-assert German strings** — the check chain that makes this folder worth trusting is coupled to
-the prose. Translating without moving them in lockstep would break exactly the thing that makes
-the numbers above worth reading.
+```
+0.0.1    now, the first tag
+0.1.0    beta
+1.0.0    alpha
+```
+
+*That names `1.0.0` "alpha" after `0.1.0` "beta", which is the reverse of the usual order. It is
+the intended scheme and not a typo.*
+
+The working language of this repository is **English** — sources, documents, commit messages and
+diagnostics. The translation is running rather than finished, and it cannot be one sweep:
+several guardians and test files assert German strings, so the prose and its checkers have to
+move in lockstep. Identifiers inside the example corpus are German and stay that way; they are
+data for the grammar, not prose.
