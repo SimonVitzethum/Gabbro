@@ -1863,6 +1863,50 @@ theorem suffGut_append : ∀ (s1 s2 : List SuffFrag),
     | arrow g => simp [suffGut, ih]
     | idx i => simp [suffGut, ih, Bool.and_assoc]
 
+-- `sammleSegmente` never consumes a suffix chain (fragments start
+-- with `.`, `->`, `[`, never `::`; the tail is benign).
+theorem sammleSeg_suffToks : ∀ (suff : List SuffFrag) (segs : List String)
+    (rest : List Token),
+    ruhigSuff rest = true →
+    sammleSegmente (suffToks suff ++ rest) segs =
+      (segs, suffToks suff ++ rest) := by
+  intro suff
+  induction suff with
+  | nil =>
+    intro segs rest hr
+    simp only [suffToks, List.nil_append] at ⊢
+    exact sammleSeg_stop segs rest hr
+  | cons frag suff ih =>
+    cases frag with
+    | dot f => intro segs rest hr; rfl
+    | arrow f => intro segs rest hr; rfl
+    | idx i => intro segs rest hr; rfl
+
+-- A suffix chain followed by a benign tail never starts with `(`.
+theorem suffToks_nopar : ∀ (suff : List SuffFrag) (rest R : List Token),
+    ruhigSuff rest = true →
+    suffToks suff ++ rest ≠ .zeichen "(" :: R := by
+  intro suff
+  induction suff with
+  | nil =>
+    intro rest R hr hcon
+    simp only [suffToks, List.nil_append] at hcon
+    exact ruhigSuff_nopar rest hr R hcon
+  | cons frag suff ih =>
+    cases frag with
+    | dot f =>
+      intro rest R hr hcon
+      simp only [suffToks, List.cons_append] at hcon
+      simp at hcon
+    | arrow f =>
+      intro rest R hr hcon
+      simp only [suffToks, List.cons_append] at hcon
+      simp at hcon
+    | idx i =>
+      intro rest R hr hcon
+      simp only [suffToks, List.cons_append] at hcon
+      simp at hcon
+
 -- Every `gutPlatz` tree is a head variable plus fragments, with a
 -- lawful head and lawful index payloads. By size induction.
 theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
