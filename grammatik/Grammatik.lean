@@ -215,6 +215,7 @@ import Grammatik.CFormenF
 import Grammatik.CFormenFZeuge
 import Grammatik.Verschachtelt
 import Grammatik.Parser.Rundlauf
+import Grammatik.Parser.Rundlauf2
 import Grammatik.Parser.UebersetzeAllg
 import Grammatik.FadenMerkmal
 import Grammatik.ZielOrtMehrfaden

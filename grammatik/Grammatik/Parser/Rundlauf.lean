@@ -9,7 +9,8 @@
   binary operator rides inside its own parens, so no level of the
   precedence chain can misread the shape); (3) `parse_druck`: every
   printable (`gut`) expression parses back from its printed tokens
-  with fuel `brennstoff e = 12 * (groesse e + 1)`, by induction
+  with fuel `brennstoff e` (lane 172: `12 * (groesse e + 1) +
+  groesse e + 8` -- measured, see its doc comment), by induction
   over `e`; (4) the analogous statement for statements.
 
   The round trip needs a printability premise (`gut`): the parser
@@ -193,14 +194,20 @@ def groesseListe : List SExpr → Nat
   | x :: xs => groesse x + groesseListe xs
 end
 
-/-- Fuel for the round trip: twelve per node plus one row. Each
-    parser level strips one fuel per descent (seven levels from
-    `parseOr` to `parsePrimary`, one more for the loop or the
-    argument reader, two spare); each AST depth level costs at most
-    twelve, and every subexpression is smaller -- so `omega` closes
-    every fuel side-goal from the size equations. -/
+/-- Fuel for the round trip: twelve per node, one spare per
+    node, eight over the top. Each parser level strips one fuel
+    per descent (seven levels from `parseOr` to `parsePrimary`,
+    one more for the loop or the argument reader); each AST depth
+    level costs at most twelve, and every subexpression is
+    smaller -- so `omega` closes every fuel side-goal from the
+    size equations. (Measured 2026-09-14, lane 172: the bare
+    `12 * (groesse e + 1)` never fits the `RKern` Or-bound --
+    thirteen fuel per size unit are needed, twelve given -- so
+    the `+ groesse e + 8` rides here and not in the theorem.
+    Nothing proved about the old value: `brennstoff` occurred in
+    no proof, only in comments.) -/
 def brennstoff (e : SExpr) : Nat :=
-  12 * (groesse e + 1)
+  12 * (groesse e + 1) + groesse e + 8
 
 -- The token-level printer: fully parenthesised -- every binary
 -- operator rides inside its own parens, so no precedence level can
