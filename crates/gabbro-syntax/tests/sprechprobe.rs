@@ -214,6 +214,61 @@ fn lexik() {
     faellt_mit("const A : u32 = 1 $ 2;", "L006");
 }
 
+// -- Lane 182: source trust (homoglyphs and bidi) --------------------------------------
+//
+// Gabbro's promise is that a HUMAN reads a body ("written by hand and read by a
+// person"); a program that reads differently to a human than to the parser breaks that
+// premise (Trojan Source, CVE-2021-42574). Four codes, one per class; the poison probes
+// `beispiele/gift/960`-`963` pin the same four over files. The `\u{...}` escapes keep
+// the poison OUT of this source file -- a literal U+202E here would trip the very
+// guardian (`pruefe-kennungen.py`) these tests pin down.
+
+#[test]
+fn quelle_bidi_faellt_ueberall() {
+    // In code, in a string, and in a comment: the reordering happens in the editor.
+    faellt_mit("const A : u32 = 1\u{202e};", "P060");
+    faellt_mit("assume a \"x\u{202e}y\";", "P060");
+    faellt_mit("-- ein Kommentar \u{202e}\nconst A : u32 = 1;", "P060");
+    faellt_mit("const A : u32 = 1\u{2066};", "P060");
+    faellt_mit("const A : u32 = 1\u{200f};", "P060");
+}
+
+#[test]
+fn quelle_fremde_schrift_und_gemischte_fallen() {
+    // One foreign script: outside the allowed set (`P061`).
+    faellt_mit("const \u{430} : u32 = 1;", "P061");
+    // Two scripts in one run: the homoglyph (`P062`).
+    faellt_mit("const p\u{430}ss : u32 = 1;", "P062");
+    faellt_mit("const \u{3c3}x : u32 = 1;", "P062");
+}
+
+#[test]
+fn quelle_unsichtbares_faellt_bom_am_anfang_nicht() {
+    faellt_mit("const\u{200b}A : u32 = 1;", "P063");
+    faellt_mit("const A : u32 = 1\u{200d};", "P063");
+    faellt_mit("const A : u32 = 1;\u{feff}", "P063");
+    faellt_nicht("\u{feff}const A : u32 = 1;");
+}
+
+#[test]
+fn quelle_umlaut_kommentar_und_zahlumgebung_bleiben_sauber() {
+    // The documented set (ASCII + ä ö ü ß Ä Ö Ü) still lexes; foreign letters in
+    // comments are prose, not names; a letter glued to a number belongs to `L003`/`L006`.
+    faellt_nicht("const Gr\u{f6}\u{df}e : u32 = 1;");
+    faellt_nicht("-- Gr\u{f6}\u{df}e \u{3c3} \u{2192}\nconst A : u32 = 1;");
+    let (_, absagen) = gabbro_syntax::lies("<probe>", "const A : u32 = 0\u{4000};");
+    let codes: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    assert!(
+        codes.contains(&"L006") && !codes.iter().any(|c| c.starts_with('P')),
+        "die Zahlumgebung gehoert L006 allein, gefallen ist {codes:?}"
+    );
+}
+
 #[test]
 fn zahl_passt_in_keinen_typ() {
     faellt_nicht("const A : u64 = 18_446_744_073_709_551_615;");

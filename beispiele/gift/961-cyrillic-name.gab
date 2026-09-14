@@ -1,0 +1,9 @@
+-- erwartet: P061
+-- A Cyrillic letter is no Gabbro letter: identifiers are ASCII letters, digits
+-- and `_`, plus the German umlauts. This whole name is one foreign script,
+-- so it falls as outside the set, not as mixed.
+module gift::fremd {
+
+const а : u32 = 1;
+
+}

@@ -1,0 +1,9 @@
+-- erwartet: P060
+-- A bidi override inside a comment reorders the line for the reader while the
+-- parser keeps reading bytes in order (Trojan Source, CVE-2021-42574). The
+-- character U+202E on the next line flips what a human sees of it: ‮ const A : u32 = 2;
+module gift::bidi {
+
+const A : u32 = 1;
+
+}

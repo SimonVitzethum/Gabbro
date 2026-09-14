@@ -3429,6 +3429,38 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probe 827 on `P044`.",
         fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
     },
+    // --- lane 182, 2026-09-14: source trust (homoglyphs and bidi) ----------------------
+    //
+    // Gabbro's promise is that a HUMAN reads a body ("written by hand and read by a
+    // person"); a program that reads differently to a human than to the parser breaks
+    // exactly that premise (Trojan Source, CVE-2021-42574). Four refusals hold the four
+    // classes: bidi control characters anywhere (`P060`, comments and strings included),
+    // identifier characters outside the allowed set (`P061`), two scripts in one
+    // identifier (`P062`), and invisible characters (`P063`, with the BOM-at-offset-0
+    // exception). `P064` is booked with the lane and stays unissued.
+    Satz {
+        name: "quelle.zeichenvertrauen",
+        kennungen: &["P060", "P061", "P062", "P063"],
+        aussage: "The source reads the same to a human as to the parser: no bidi \
+                  control character stands anywhere in the file (`P060`), every \
+                  identifier is ASCII letters, digits and `_` plus ä ö ü ß Ä Ö Ü \
+                  (`P061`), no identifier mixes two scripts (`P062`), and no \
+                  invisible character stands anywhere except a BOM at offset 0 \
+                  (`P063`). What cannot be seen is refused, never interpreted.",
+        vorbehalt: "A shape rule of the reader, and nothing else. The script table \
+                    is an approximation of UTS#39 (twelve families plus one \
+                    rest), not the table itself -- two exotic scripts sharing \
+                    one family would pass as one. And a homoglyph inside a \
+                    COMMENT or a STRING is prose, not a name: only the bidi and \
+                    invisible classes reach in there.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes 960 (`P060`), 961 (`P061`), 962 \
+                      (`P062`) and 963 (`P063`); measured clean over 988 `.gab` \
+                      files and every `gabbro` block of FRAGMENTE.md, SYNTAX.md, \
+                      SPRACHE.md, README.md, MEMO-GLEITKOMMA.md and TUTORIAL.md.",
+        fundstelle: "crates/gabbro-syntax/src/lex.rs::quelltext_pruefe; \
+                     instrumente/pruefe-kennungen.py::quellvertrauen",
+    },
     // --- lane E4, 2026-09-12: the monotone arena, checker half -------------------------
     //
     // **The structure lane of PLAN-ERWEITUNG.md §3.** A heap is allowed but never

@@ -1,0 +1,8 @@
+-- erwartet: P062
+-- Latin `p` + Cyrillic `a` (U+0430): reads as one name to a human, parses as
+-- pieces to the lexer. Mixed scripts in one identifier are refused, never read.
+module gift::gemischt {
+
+const pаss : u32 = 1;
+
+}
