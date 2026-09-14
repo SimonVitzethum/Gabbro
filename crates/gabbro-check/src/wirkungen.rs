@@ -1584,7 +1584,10 @@ fn vertrag_gegen_wirkungen(
 
 /// The root of a place: everything before the first `.`, `[` or `-`. Carriers are
 /// whole tables and globals in the model, so the footprint compares roots.
-fn carrier_root(ort: &str) -> &str {
+///
+/// `pub(crate)`: lane 175 (`fusswache2.rs`) reads the same roots for the decidable
+/// footprint premise `FussS` -- one reader, one root function (W7).
+pub(crate) fn carrier_root(ort: &str) -> &str {
     ort.split(['.', '[', '-']).next().unwrap_or(ort)
 }
 
@@ -1593,7 +1596,9 @@ fn carrier_root(ort: &str) -> &str {
 /// domains counted, `Held` naming no read) with the same filters (parameters, binders,
 /// constants, unknown names), plus one: device-rooted reads are no footprint carriers
 /// (see the section header).
-fn clause_roots(
+///
+/// `pub(crate)`: lane 175 (`fusswache2.rs`) builds the same footprint for `FussS`.
+pub(crate) fn clause_roots(
     klauseln: &[Pred],
     f: &FnDecl,
     konstanten: &[String],
@@ -1632,7 +1637,9 @@ fn clause_roots(
 /// halves use (`sammle_taten`), the same stack filter (`lokale`), the same world
 /// filters as the E010 read half (parameters, constants, unknown names), plus the
 /// device-root exception of the section header. First span wins per root.
-fn body_roots(
+///
+/// `pub(crate)`: lane 175 (`fusswache2.rs`) builds the same footprint for `FussS`.
+pub(crate) fn body_roots(
     f: &FnDecl,
     b: &Block,
     konstanten: &[String],
@@ -1673,7 +1680,9 @@ fn body_roots(
 /// expressions, over the same exhaustive walkers the graph uses. Predicate words
 /// (`Has`/`Held`) are no calls. Indirect calls (`t->f()`) have no name and stand
 /// apart -- the graph carries them, and E249 reads them there.
-fn calls_with_spans(b: &Block, aus: &mut Vec<(String, Span)>) {
+///
+/// `pub(crate)`: lane 175 (`fusswache2.rs`) resolves the same call sites for `N292`.
+pub(crate) fn calls_with_spans(b: &Block, aus: &mut Vec<(String, Span)>) {
     for s in &b.anweisungen {
         if let StmtArt::Ruf(r) = &s.art {
             if let Some(p) = r.path() {

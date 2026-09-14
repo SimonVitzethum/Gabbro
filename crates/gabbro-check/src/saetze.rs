@@ -3000,6 +3000,35 @@ pub const WIRKUNGEN: &[Satz] = &[
                       noise: readers over written carriers with no lock in the unit.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs (`footprint_against_guards`)",
     },
+    Satz {
+        name: "wirkungen.fusswache2",
+        kennungen: &["N290", "N291", "N292", "N293", "N294"],
+        aussage: "The flagship's decidable footprint premise (`FussS` with thread-local \
+                  carriers and lock floors): every footprint carrier -- contract carriers \
+                  (`N290`), body reads (`N291`), direct callee contracts at the call site \
+                  (`N292`) -- is unwritten, guarded by a signature lock, protected by a \
+                  lock invariant, or thread-local (no other started thread writes it). \
+                  An indirect call (`N293`) is admitted over the same disjunction. A lock \
+                  take or a callee take ranks strictly above every lock held by signature \
+                  (`N294`, the floor). All five refuse as errors: the corpus stays green \
+                  under the new rule, so every refusal is a real concurrent defect.",
+        vorbehalt: "Threads are the `concurrent` members plus the `entry`/`boot` roots; \
+                    with none the unit is single-threaded and every carrier is local. \
+                    Call graphs come from `aufrufgraph.rs` (indirect calls union the \
+                    address-taken pool). May-write is DECLARED permission, as in the \
+                    model; holding at the access is `H007`'s question, not this one's. \
+                    `N294` fires only against signature-held outers, where `H006`/`H012` \
+                    stay silent; same-lock pairs are exempt there as here. Device reads, \
+                    `syscall`/`axiom` contracts, `maintains` and `= pred ;` carry no \
+                    footprint.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/124 (two-thread witness, silent), beispiele/125 (shared \
+                      read under its lock, silent); beispiele/gift/952 (shared read, \
+                      N291), 953 (contract leg, N290), 954 (callee leg, N292), 955 (floor, \
+                      N294). 0 of 105 older examples refuse -- the analytic table stands \
+                      in the lane report.",
+        fundstelle: "crates/gabbro-check/src/fusswache2.rs",
+    },
 ];
 
 // ===================================================================================

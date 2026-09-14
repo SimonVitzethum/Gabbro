@@ -1,0 +1,32 @@
+-- erwartet: N291
+-- **Two threads share a carrier; one reads it bare.**
+--
+-- `schreiber` writes `G`, `leser` reads `G` bare. No signature guard, no lock
+-- invariant, and both threads touch `G` -- so `G` is not thread-local and the
+-- read falls with N291. Single-threaded the same shape stays silent (lane 175:
+-- one active thread owns every carrier); the old E247 hint fires beside it.
+module gift::fuss2_shared_read {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn leser() -> u32
+    effects { reads G.slots }
+    costs   <= 64 ops
+{
+    return G.slots[0].v;
+}
+
+impl fn schreiber()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+concurrent { leser, schreiber };
+
+}

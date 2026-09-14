@@ -1,0 +1,28 @@
+-- erwartet: N294
+-- **A take below a signature-held lock: the floor violation neither rank rule sees.**
+--
+-- `haltend` holds `HOCH` (rank 5) by signature and takes `TIEF` (rank 1) in
+-- its body. `H006` starts its chain empty -- a signature-held outer is
+-- invisible to it -- and with no enclosing block `H012` has nothing to compare
+-- either. Only the floor leg (`StufenM`, the residue form of `StufenOk`) refuses.
+module gift::fuss2_broken_floor {
+
+static mut z : u32 = 0;
+
+static mut w : u32 = 0;
+
+lock HOCH protects { z } rank 5 held <= 8 ops;
+
+lock TIEF protects { w } rank 1 held <= 8 ops;
+
+impl fn haltend()
+    requires Held(HOCH)
+    effects { writes w, locks TIEF }
+    costs   <= 64 ops
+{
+    locks TIEF {
+        w = 1;
+    }
+}
+
+}

@@ -1,0 +1,41 @@
+-- erwartet: N292
+-- **A call into a contract over a carrier a third thread writes.**
+--
+-- `aufrufer` calls `geber`, whose contract reads `G`; `schreiber` writes `G`
+-- on a third thread. The caller holds no guard, no invariant protects `G`,
+-- and `G` is not thread-local -- so the callee leg falls with N292 at the
+-- call site (the old E248 hint fires beside it).
+module gift::fuss2_shared_callee {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn aufrufer() -> u32
+    effects { reads G.slots }
+    costs   <= 128 ops
+{
+    let x = geber();
+    return x;
+}
+
+impl fn geber() -> u32
+    requires G.slots[0].v == 0
+    effects { reads G.slots }
+    costs   <= 64 ops
+{
+    return G.slots[0].v;
+}
+
+impl fn schreiber()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+concurrent { aufrufer, geber, schreiber };
+
+}

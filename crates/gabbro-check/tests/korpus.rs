@@ -130,6 +130,14 @@ const BENANNT: &[&str] = &[
     // a read outside the `protects` set, `N276` a non-pure predicate, `N277`
     // a name nothing declares. Gifts 940/941/942/943 pin each, each ALONE.
     "N275", "N276", "N277",
+    // 2026-09-14, the flagship footprint premise (`wirkungen.fusswache2`,
+    // lane 175): `N290` a contract carrier, `N291` a body read, `N292` a
+    // callee contract, `N293` an indirect candidate pool read -- each shared,
+    // unguarded, invariant-less and non-local -- and `N294` a lock floor
+    // against a signature-held lock. Named here so the corpus run counts the
+    // rules, not noise; the corpus holds no site (single-threaded units are
+    // silent by construction), so the entries are the names, not sites.
+    "N290", "N291", "N292", "N293", "N294",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine
