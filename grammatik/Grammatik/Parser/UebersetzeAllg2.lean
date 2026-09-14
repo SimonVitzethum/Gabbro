@@ -211,7 +211,7 @@ def lowAssignDurch (u : UProg) (caller : Fin u.fns.length)
           | .error e => .error e
           | .ok pv =>
             match lowIdx u (ctxOf u caller) (resOf u caller)
-                (fnAt u caller) ⟨num, h⟩ ix with
+                (fnAt u caller) 0 ⟨num, h⟩ ix with
             | .error e => .error e
             | .ok i =>
               match lowWertAt u (ctxOf u caller) (resOf u caller)
@@ -249,7 +249,7 @@ def lowAssignTab (u : UProg) (caller : Fin u.fns.length)
     | .error e => .error e
     | .ok fh =>
       match lowIdx u (ctxOf u caller) (resOf u caller)
-          (fnAt u caller) t ix with
+          (fnAt u caller) 0 t ix with
       | .error e => .error e
       | .ok i =>
         match lowWertAt u (ctxOf u caller) (resOf u caller)
@@ -353,7 +353,7 @@ def lowCallArgOne (u : UProg) (caller : Fin u.fns.length)
                 | .error e => .error e
                 | .ok ix =>
                   match lowIdx u (ctxOf u caller) (resOf u caller)
-                      (fnAt u caller) ⟨num, h⟩ ix with
+                      (fnAt u caller) 0 ⟨num, h⟩ ix with
                   | .error e => .error e
                   | .ok e =>
                     have eI : Expr (declOf u) (ctxOf u caller)
@@ -692,5 +692,62 @@ def lowerAllg (u : UProg) :
     .ok (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
       (fun f => (lowerAtPair u f (w f)).2),
       List.finRange u.fns.length)
+
+/-! ## 104 pins on the generically lowered program -/
+
+/-- The fragment check on the generically lowered 104 program. -/
+theorem lowerAllg104fragment :
+    (match lowerAllg uExp104 with
+      | .ok (P, fs) => programmImFragmentG P fs
+      | .error _ => false) = true := by
+  decide
+
+/-- The footprint check on the generically lowered 104 program. -/
+theorem lowerAllg104fuss :
+    (match lowerAllg uExp104 with
+      | .ok (P, fs) => fussOrtGB P fs
+      | .error _ => false) = true := by
+  decide
+
+/-- Declaration data agreement, construct by construct: the
+    generic declaration built from `uExp104` agrees with the
+    exporter universe `G104_referenz.gD` (counts, ranges, ranks,
+    guards, held sets, writes). -/
+theorem lowerAllg104data :
+    (declOf uExp104).count ⟨0, by decide⟩ = 2 ∧
+    G104_referenz.gD.count G104_referenz.GTab.Konto = 2 ∧
+    (declOf uExp104).typ ⟨0, by decide⟩ ⟨0, by decide⟩ =
+      .int 0 100 ∧
+    G104_referenz.gD.typ G104_referenz.GTab.Konto
+      G104_referenz.GKontoFeld.stand = .int 0 100 ∧
+    (declOf uExp104).rang ⟨0, by decide⟩ = 0 ∧
+    G104_referenz.gD.rang G104_referenz.GLock.M = 0 ∧
+    (declOf uExp104).braucht ⟨0, by decide⟩ =
+      ([.inl (⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+        List ((declOf uExp104).Lock ⊕
+          ((declOf uExp104).Marke × Nat))) ∧
+    G104_referenz.gD.braucht G104_referenz.GTab.Konto =
+      [.inl G104_referenz.GLock.M] ∧
+    ((declOf uExp104).signatur ⟨0, by decide⟩).haelt =
+      ([(⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+        List (declOf uExp104).Lock) ∧
+    G104_referenz.gD.haelt G104_referenz.g_einzahlen =
+      [G104_referenz.GLock.M] ∧
+    ((declOf uExp104).signatur ⟨1, by decide⟩).haelt =
+      ([(⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+        List (declOf uExp104).Lock) ∧
+    G104_referenz.gD.haelt G104_referenz.g_lies =
+      [G104_referenz.GLock.M] ∧
+    ((declOf uExp104).signatur ⟨0, by decide⟩).schreibt
+      ⟨0, by decide⟩ = true ∧
+    (G104_referenz.gD.signatur
+      G104_referenz.g_einzahlen).schreibt
+      G104_referenz.GTab.Konto = true ∧
+    ((declOf uExp104).signatur ⟨1, by decide⟩).schreibt
+      ⟨0, by decide⟩ = false ∧
+    (G104_referenz.gD.signatur
+      G104_referenz.g_lies).schreibt
+      G104_referenz.GTab.Konto = false := by
+  decide
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
