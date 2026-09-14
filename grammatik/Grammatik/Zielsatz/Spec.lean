@@ -108,10 +108,18 @@ def Getrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop 
 noncomputable def lokW (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
   @decide (Getrennt P fs ws c) (Classical.propDecidable _)
 
+/-- Carrier `c` is WRITE-separated among the declared starts `ws`: if one start's call graph
+    may write `c`, no DIFFERENT start's graph may write it or have it in a footprint. -/
+def SchreibGetrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ g, reachB P fs w₁ g = true → TraegerSchreibt g c = true →
+    ∀ h, reachB P fs w₂ h = true → TraegerSchreibt h c = false ∧ c ∉ fussOrteG P h
+
 /-- **What `Akzeptiert` must establish** (the Props of its components): fragment; closed call
     graphs; every footprint carrier signature-guarded, lock-protected or thread-local; lock
     floors; protected carriers guarded by their lock; declared starts hold no lock by
-    signature and have no reasons. -/
+    signature and have no reasons; every carrier without a guard lock that is neither
+    `atomic` nor a publish payload is write-separated among the declared starts (the
+    counterpart of the checker's `H013`). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -119,18 +127,22 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   stufen : StufenM P
   sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
   wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ PaarungAusgenommen c →
+    SchreibGetrennt P fs ws c
 
 end Pruefer
 
-/-- **The checker interface.** `akzeptiert P S fs ls ws` is the Bool the Rust checker computes
-    (signature of `Akzeptiert`); `korrekt` is its soundness, the one link between the Bool and
-    what the statement uses. -/
+/-- **The checker interface.** `akzeptiert P S fs ls cs ws` is the Bool the Rust checker
+    computes (signature of `Akzeptiert`: functions, locks, carriers, declared starts);
+    `korrekt` is its soundness, the one link between the Bool and what the statement uses. -/
 structure Pruefer where
   akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
-    Programm D → SperrInv D → List D.Fn → List D.Lock → List D.Fn → Bool
+    Programm D → SperrInv D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → List D.Fn →
+      Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (ws : List D.Fn),
-    akzeptiert P S fs.1 ls.1 ws = true → AkzeptiertSpec P S fs.1 ws
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (ws : List D.Fn),
+    akzeptiert P S fs.1 ls.1 cs.1 ws = true → AkzeptiertSpec P S fs.1 ws
 
 /-! ## (b) What the user proves -/
 
@@ -170,10 +182,10 @@ section Start
 variable [DecidableEq D.Fn]
 
 /-- An idle start: no signature lock, no reasons, every function it reaches has an empty
-    footprint and writes no footprint carrier. Any number of threads may run it. -/
+    footprint and writes nothing. Any number of threads may run it. -/
 def Ruhig (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
   D.haelt w = [] ∧ D.gruende w = 0 ∧ ∀ f, reachB P fs w f = true →
-    fussOrteG P f = [] ∧ ∀ h c, c ∈ fussOrteG P h → TraegerSchreibt f c = false
+    fussOrteG P f = [] ∧ ∀ c, TraegerSchreibt f c = false
 
 /-- **Admissible starts**: every thread runs a declared start (each on ONE thread) or an idle
     one; the start functions' `requires` and every lock invariant hold at the start memory. -/
@@ -282,8 +294,9 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
 /-- **GABBRO_ZIEL.** -/
 def GabbroZiel : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
-    (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (ws : List D.Fn),
-    C.akzeptiert P S fs.1 ls.1 ws = true →                    -- (a) the checker
+    (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
+    (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (ws : List D.Fn),
+    C.akzeptiert P S fs.1 ls.1 cs.1 ws = true →               -- (a) the checker
     NutzerPflicht P S Q →                                     -- (b) the user
     ∀ O : Orakel D, HardwareAnnahmen O Q →                    -- (c) the hardware
     ∀ (passes : Nat) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)),
