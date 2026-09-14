@@ -66,7 +66,8 @@ items, source-to-G on 104.*
 on 2026-09-13) pass the WHOLE chain: Lean parse of the source → elaboration to `P` → model
 certificate accepted → correspondence certificate of the emitted C accepted. It replaces the
 per-pillar numbers as the headline; the per-pillar numbers stay as diagnostics. **On 2026-09-13
-it is 0** (T2 does not exist yet). A guardian prints it; it only ever counts programs whose
+it is 0** (T2 does not exist yet). **On 2026-09-14 it is 1**: `beispiele/104`, theorem
+`schlusssatz_104` (§6). A guardian prints it; it only ever counts programs whose
 chain Lean actually checked.
 
 1. **Close ONE chain first: T2 minimal, for `beispiele/104`.** The correspondence certificate
@@ -134,3 +135,82 @@ The costs of the Opus agent for the memory model are on the Claude account and n
 - **The hardware profile.** `Profil.lean`, keyed entries.
 - **The GPU driver**, for SPIR-V payloads (PLAN-ERWEITUNG.md §0b), once the GPU library exists.
 - **The Lean kernel.**
+
+## 6. Chain count: 1 -- beispiele/104, theorem schlusssatz_104
+
+*Added 2026-09-14. File: `grammatik/Grammatik/Schlusssatz104.lean`. Stage (a) of §3 item 2,
+for one program. Axioms of every theorem named here: `propext`, `Classical.choice`,
+`Quot.sound`; no `sorry`, no `native_decide`, no new `axiom`.*
+
+**The statement.** `schlusssatz_104 (c : Cert104) (hc : certOkG c = true)` gives, about ONE
+program -- `gP` over `gD` (`G104_referenz`), the program the Lean parser produces:
+
+1. **Parse fidelity.** `uebersetze104 src104 = .ok (gP, gFs)`: lex, parse, elaborate, lower,
+   every stage a propositional equation (the `Bool` pins of `Parser/Uebersetze.lean` became
+   `rfl` equations).
+2. **Model certificates.** The Lean-side print of `gP`'s two bodies IS the pasted printer
+   output of `ZeugnisStmt104b.lean` (`printEnd104 (gP.rumpf f) = some cert104_f`, `rfl`), and
+   `certEnd104Ok` accepts both.
+3. **Model judgement.** `programmImFragmentG`, `fussOrtGB`, and for every function
+   `KoerperGutS` and `InvGutS` (the per-function obligations of `ziel_ort_sperre_inv`).
+4. **Every C run.** The certificate elaborates to the emitted unit (`progOf c = refCProg`); for
+   `einzahlen` (depth 2) and `lies` (depth 1), from a C state related to ANY Gabbro world and
+   C arguments related to ANY Gabbro arguments: the Gabbro call `rufAt gP` ends `ok` (every
+   `requires`/`ensures` on the way checked), the C call has a run, and EVERY run of it ends in
+   a state related to the Gabbro result (`callAt_funktional`).
+5. **The machine.** `gPB` = `gP` plus the runtime's idle root: its source part is `gP` under a
+   structural renaming (`gPB_ist_gP_umbenannt`, `rfl`) and behaves as `gP` through the same
+   emitted C (`gPB_wie_gP_einzahlen`/`_lies`: same memory effect and answer); on every
+   machine reachable from every start memory, thread 0 in every source function on every
+   argument, the conclusion of the goal theorem holds (`ziel_ort_einfaden` plus `InvAmOrtG`).
+
+The premise holds for the printed rows by `decide` (`schlusssatz_104_praemisse`); witnesses
+on runs that move memory: `schlusssatz_104_zeuge` (C and Gabbro, slot `0 -> 100`) and
+`schlusssatz_104_maschine_zeuge` (three machine steps, `lies`'s `ensures` at its logged
+return by the theorem).
+
+**The joints, and how they closed.**
+
+| Joint | Before | Now |
+|---|---|---|
+| P identity | three programs: `gP` (parser), `r4P`/`r4D` (goal theorem), `refP`/`refD` (C, index fixed to `0`, one parameter); data agreement only | parts 1-4 are about `gP` itself; the machine needs `gPB`, related by a kernel-checked renaming and a semantic bridge through the C |
+| Model certificate ↔ P | over `gD` already, soundness only `∃ Endblock` | the certificates are the print of `gP`'s bodies |
+| C correspondence ↔ P | `EndCorr` about `refP` | `EndCorr`/`FnCorr` about `gP`'s bodies; the certificate carries `gP`'s locals map |
+| Single thread | -- | `ziel_ort_einfaden`, every C run by determinism |
+
+**The finding.** No G theorem applies to a machine of `gP` alone: G starts EVERY thread in
+some function, and both functions of `gD` hold `M` by signature, so no start is exclusive
+(`gP_kein_exklusiv`) and no function is an idle root (`gP_kein_ruhig`). The idle root is
+runtime data; it enters as `gDB`/`gPB`, and assumption A4 below.
+
+**Premises and assumptions.** The one premise is `certOkG c = true`. There is no hardware or
+oracle premise for 104: the declaration has no axiom, register, device, global or `awaits`,
+and the emitted unit no device access or foreign call. Named assumptions (outside Lean):
+A1 the C compiler follows the C semantics of `CSemantik`/`CSpeicher`/`CFormen*`; A2 the
+emitted text is the `CS` data `refCProg` (hand transcription of the quoted output; no C
+parser in Lean); A3 the `Konto` layout (bounded by the `_Static_assert` pins); A4 the runtime
+starts thread 0 in one source function and idles the rest; A5 the Lean kernel and the
+definitions §3 lists for human review.
+
+**What stays open.**
+
+- The printer `corrlean.rs` still prints `refD`'s locals map (`vm = [2]`, `ks = [(1, 0)]`);
+  `certG104` carries the printer's rows and layout and `gP`'s map. Moving the printer to the
+  exporter's map is Rust work.
+- The source text is the comment-free form `u104lex` pins (the commented file: lane 162).
+- Part 4 speaks about `rufAt`, part 5 about machine G; their agreement for one active thread
+  is the adequacy chain, not re-instantiated in the theorem.
+- The renaming is partial and its semantic preservation is proved for 104's two functions
+  only (through the C), not in general.
+
+**For stage (b).** DRF-SC, the lock primitives and thread creation as named premises; the
+simulation G-run ↔ interleaved C-run. For 104 itself `gP_kein_exklusiv` already says two
+active threads are refused by the model (every function holds `M` by signature).
+
+**For widening beyond 104** (the chain count's next steps), every piece keyed to `gD`
+must become generic: the lowering (`lowerProg`, lane 162), the correspondence certificate
+(`certOkG` fixes 104's rows; a row-list checker over all printed forms is T2 proper), the
+body printer `printEnd104` (104's shapes), the idle root (either the exporter emits one, or
+`gDB` becomes a generic declaration extension with a generic renaming), and the per-program
+computations `rufEin_ok`/`rufLies_ok`, which stand in for a general theorem "the
+per-function obligations imply `rufAt` ends `ok`".

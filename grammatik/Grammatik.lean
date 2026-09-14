@@ -206,3 +206,4 @@ import Grammatik.Isabelle.Consuming
 import Grammatik.Isabelle.DeviceKonstruktor
 import Grammatik.Isabelle.VerbundKonstruktor
 import Grammatik.Isabelle.RestrictAlleinzugriff
+import Grammatik.Schlusssatz104
