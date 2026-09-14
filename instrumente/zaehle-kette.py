@@ -66,6 +66,12 @@ FRIST = 120
 # in its header; a program is pinned exactly when a pin file names it.
 PIN_DATEIEN = [GRAMMATIK / "Export104.lean", GRAMMATIK / "Parser" / "Uebersetze.lean"]
 
+# Column (e): Lean files holding a pasted correspondence certificate (`gabbro corr-lean`
+# output) and its decide-check. A program passes (e) only if ITS file name is named in
+# one of them, the printer refuses nothing for it, and (with --lean) the file re-checks
+# green. Added 2026-09-14 when lane 164's `corr-lean` and Korrespondenz104.lean landed.
+KORR_DATEIEN = sorted(GRAMMATIK.glob("Korrespondenz*.lean"))
+
 
 def umgebung():
     import os
@@ -196,6 +202,13 @@ def main():
                                capture_output=True, text=True, cwd=W,
                                timeout=900, env=umgebung())
             pin_gruen[pin] = ("== 0 error(s)" in r.stdout)
+    korr_gruen = {}
+    if args.lean:
+        for k in KORR_DATEIEN:
+            r = subprocess.run([str(W / "lean-probe"), str(k)],
+                               capture_output=True, text=True, cwd=W,
+                               timeout=900, env=umgebung())
+            korr_gruen[k] = ("== 0 error(s)" in r.stdout)
 
     zeilen = []
     for f in dateien:
@@ -267,13 +280,29 @@ def main():
                 d = ("pass", f"{len(formen)} forms lemma/assumption"
                               + (f" (assumption: {', '.join(n_asm)})" if n_asm else ""))
 
-        # (e) correspondence: 0 for every program until T2 exists.
-        e = ("pass", "certificate checked") if t2 else ("0", "T2 does not exist")
+        # (e) correspondence, per program: `corr-lean` prints with zero refusals AND a
+        # Korrespondenz*.lean file naming this program re-checks green (--lean).
+        ok_k, aus_k = rufe(binary, ["corr-lean", str(f)])
+        korr = [k for k in KORR_DATEIEN
+                if f.name in k.read_text(encoding="utf-8", errors="replace")]
+        if not ok_k or "-- REFUSAL:" in aus_k or not aus_k.strip():
+            n_ref = aus_k.count("-- REFUSAL:")
+            e = ("0", f"corr-lean refused ({n_ref} refusal line(s))" if ok_k
+                      else "corr-lean not available or failed")
+        elif not korr:
+            e = ("-", "certificate printed, no Lean file checks it")
+        elif not args.lean:
+            e = ("-", f"certificate printed, {', '.join(k.name for k in korr)} "
+                      "not re-run (needs --lean)")
+        elif all(korr_gruen.get(k, False) for k in korr):
+            e = ("pass", f"certificate checked by {', '.join(k.name for k in korr)}")
+        else:
+            e = ("FAIL", "Lean re-check of the correspondence file red")
 
         zeilen.append((f.name, a, b, c, d, e))
 
     print(f"zaehle-kette: {len(zeilen)} tracked programs in beispiele/*.gab, binary {binary}")
-    print("  sieve: (a) Lean parse [pin]  (b) lean-g  (c) certificate  (d) C forms  (e) corrcert")
+    print("  sieve: (a) Lean parse [pin]  (b) lean-g  (c) certificate  (d) C forms  (e) corr-lean checked")
     for name, a, b, c, d, e in zeilen:
         marken = []
         for col in (a, b, c, d, e):
@@ -287,10 +316,28 @@ def main():
     n_d = sum(1 for z in zeilen if z[4][0] == "pass")
     n_a = sum(1 for z in zeilen if z[1][0] == "pass")
     n_e = sum(1 for z in zeilen if z[5][0] == "pass")
-    kette = sum(1 for z in zeilen if all(col[0] == "pass" for col in z[1:]))
+    # The chain is CLOSED only where one theorem ties the sieves to one program: a
+    # Schlusssatz*.lean naming the program and re-checked green (--lean). Passing every
+    # sieve separately is necessary, not sufficient (the parsed program, the certified
+    # program and the program the C corresponds to must be proved to be the same one).
+    schluss = sorted(GRAMMATIK.glob("Schlusssatz*.lean"))
+    schluss_gruen = {}
+    if args.lean:
+        for sd in schluss:
+            r = subprocess.run([str(W / "lean-probe"), str(sd)],
+                               capture_output=True, text=True, cwd=W,
+                               timeout=900, env=umgebung())
+            schluss_gruen[sd] = ("== 0 error(s)" in r.stdout)
+    def geschlossen(name):
+        eig = [sd for sd in schluss if name in sd.read_text(encoding="utf-8", errors="replace")]
+        return bool(eig) and all(schluss_gruen.get(sd, False) for sd in eig)
+    alle_siebe = sum(1 for z in zeilen if all(col[0] == "pass" for col in z[1:]))
+    kette = sum(1 for z in zeilen
+                if all(col[0] == "pass" for col in z[1:]) and geschlossen(z[0]))
+    print(f"  every sieve passed separately: {alle_siebe}; closed by a Schlusssatz: {kette}")
     print(f"\n  sieve totals: (a) {n_a}  (b) {n_b}  (c) {n_c}  (d) {n_d}  (e) {n_e} "
           f"of {len(zeilen)}")
-    print(f"== CHAIN COUNT: {kette} of {len(zeilen)} programs pass every checked sieve "
+    print(f"== CHAIN COUNT: {kette} of {len(zeilen)} programs have a CLOSED chain (every sieve + a Schlusssatz) "
           f"(unmeasured counts as not passed) ==")
     return 0
 
