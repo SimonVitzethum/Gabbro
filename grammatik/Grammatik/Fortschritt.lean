@@ -908,6 +908,28 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     (ziel_ort_sperre P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
       hSstart hex M hr).2.2.1
 
+/-- **Progress up to named stops under the premises of `ziel_ort_mehrfaden`**
+    (several active threads with thread-local carriers, every budget), the
+    lock floors and a duplicate-free start trace. -/
+theorem fortschrittG_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hSt : StufenM P) (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      Zielsatz.FortschrittG P O passes M := fun passes M hr =>
+  fortschrittG_aus hO hSt sp init hND hr
+    (ziel_ort_mehrfaden P O Q S fs sp init e0 K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel hFuss hK
+      hStart hSstart hex hI passes M hr).1.2.2.1
+
 /-- Starts without signature locks (the declared starts of `AkzeptiertSpec`
     and every idle start, `Zielsatz.Ruhig`) have a duplicate-free start
     trace. -/
@@ -928,6 +950,7 @@ theorem startSpur_nodup_leer (init : Faden → Σ f : D.Fn, Env D (D.params f))
 #print axioms Gabbro.Grammatik.fortschritt_faden
 #print axioms Gabbro.Grammatik.fortschrittG_aus
 #print axioms Gabbro.Grammatik.fortschrittG_sperre
+#print axioms Gabbro.Grammatik.fortschrittG_mehrfaden
 #print axioms Gabbro.Grammatik.startSpur_nodup_leer
 
 end Gabbro.Grammatik

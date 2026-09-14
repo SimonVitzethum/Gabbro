@@ -193,6 +193,60 @@ theorem ziel_ort_sperre_invAlle (P : Programm D) (O : Orakel D) (passes : Nat) (
     ziel_ort_sperre_invGrund P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK
       hStart hSstart hex hIG M hr⟩
 
+/-- **Generic in the local carriers** (the replay of `zielInvS_erreichbarL`):
+    the reason twin under every flagship built on that replay. -/
+theorem invAmGrundG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (hLok : LokOk P O passes lok sp init)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hIG : ∀ f : D.Fn, Zielsatz.InvGutGrund P passes Q S f) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      Zielsatz.InvAmGrundG P M := by
+  have hZ := zielInvS_erreichbarL P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+    hLok hK hStart hSstart hex
+  intro M hr
+  induction hr with
+  | start =>
+      intro t ev hev g rho r s0 s1 h
+      subst h
+      simp [RufStartG] at hev
+  | schritt M M' u hr' hs ih =>
+      have hZ' := (hZ M hr').1
+      intro t ev hev
+      by_cases ht : t = u
+      · subst ht
+        rcases invGrundLog_schritt hO hRL hQ hS hSstart hIG hFS (hZ'.1 t).1 hs ev hev with h | h
+        · exact ih t ev h
+        · exact h
+      · rw [rufSchrittG_fremd hs t ht] at hev
+        exact ih t ev hev
+
+/-- **The reason twin under the premises of `ziel_ort_mehrfaden`** (several
+    active threads with thread-local carriers, obligations at every
+    `forever` budget) -- the premise set `GabbroZiel` builds on. -/
+theorem ziel_ort_mehrfaden_invGrund (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hIG : ∀ (passes : Nat) (f : D.Fn), Zielsatz.InvGutGrund P passes Q S f) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      Zielsatz.InvAmGrundG P M := fun passes =>
+  invAmGrundG_erreichbarL P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
+    (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
+    (lokOk_mehr hO hvoll sp init K hAbg hWurzel) (hK passes) hStart hSstart hex (hIG passes)
+
 /-- A function that owes no invariant owes nothing at a reason exit. -/
 theorem invGutGrund_ohne {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
     {f : D.Fn} (h : ∀ i ∈ D.invs, schuldet f i = false) : Zielsatz.InvGutGrund P passes Q S f := by
@@ -211,6 +265,8 @@ theorem invGutGrund_ohneGrund {P : Programm D} {passes : Nat} {Q : AxEns D} {S :
 #print axioms Gabbro.Grammatik.invGrundLog_schritt
 #print axioms Gabbro.Grammatik.ziel_ort_sperre_invGrund
 #print axioms Gabbro.Grammatik.ziel_ort_sperre_invAlle
+#print axioms Gabbro.Grammatik.invAmGrundG_erreichbarL
+#print axioms Gabbro.Grammatik.ziel_ort_mehrfaden_invGrund
 #print axioms Gabbro.Grammatik.invGutGrund_ohne
 #print axioms Gabbro.Grammatik.invGutGrund_ohneGrund
 
