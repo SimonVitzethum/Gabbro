@@ -330,13 +330,19 @@ theorem lese_laenge (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.G
   spur_laenge_erw (Erw.lese σ Λ os)
 
 theorem fuss_rumpf (P : Programm D) (f : D.Fn) : endblockOrteP P (P.rumpf f) ⊆ fussOrte P f :=
-  fun _ ho => List.mem_append_right _ ho
-
-theorem fuss_ens (P : Programm D) (f : D.Fn) : (P.ensures f).orte ⊆ fussOrte P f :=
   fun _ ho => List.mem_append_left _ (List.mem_append_right _ ho)
 
+theorem fuss_ens (P : Programm D) (f : D.Fn) : (P.ensures f).orte ⊆ fussOrte P f :=
+  fun _ ho => List.mem_append_left _ (List.mem_append_left _ (List.mem_append_right _ ho))
+
 theorem fuss_req (P : Programm D) (f : D.Fn) : (P.requires f).orte ⊆ fussOrte P f :=
-  fun _ ho => List.mem_append_left _ (List.mem_append_left _ ho)
+  fun _ ho => List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ho))
+
+/-- The carriers of an owed invariant are in the footprint. -/
+theorem fuss_inv (P : Programm D) (f : D.Fn) {i : D.Inv} (hi : i ∈ D.invs)
+    (hs : schuldet f i = true) : (P.invariante i).orte ⊆ fussOrte P f :=
+  fun _ ho => List.mem_append_right _
+    (List.mem_flatMap.mpr ⟨i, List.mem_filter.mpr ⟨hi, hs⟩, ho⟩)
 
 end Hilfen
 

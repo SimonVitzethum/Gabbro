@@ -228,12 +228,19 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
 
-/-- The footprint of `f`: its contract carriers, its body reads, and the
-    contract carriers of every function it calls directly. A foreign step
+/-- The carriers of the table and group invariants `f` owes at its return
+    (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly
+    these, SATZKARTE §15.4). -/
+def invOrteP (P : Programm D) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
+  (D.invs.filter (schuldet f)).flatMap fun i => (P.invariante i).orte
+
+/-- The footprint of `f`: its contract carriers, its body reads, the
+    contract carriers of every function it calls directly, and the carriers
+    of the invariants it owes (`invOrteP`, since 2026-09-13). A foreign step
     must leave exactly these carriers alone for `f`'s sequential reasoning
     to survive an interleaving. -/
 def fussOrte (P : Programm D) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
-  (P.requires f).orte ++ (P.ensures f).orte ++ endblockOrteP P (P.rumpf f)
+  (P.requires f).orte ++ (P.ensures f).orte ++ endblockOrteP P (P.rumpf f) ++ invOrteP P f
 
 /-- The guard locks of a carrier: the lock entries of its watch list. -/
 def waechter : List (D.Lock ⊕ (D.Marke × Nat)) → List D.Lock
