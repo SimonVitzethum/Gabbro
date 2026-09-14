@@ -276,8 +276,12 @@ def gutOpBin (o : String) : Bool :=
   gutOpOr o || gutOpAnd o || gutOpCmp o ||
     gutOpBit o || gutOpAdd o || gutOpMul o
 
--- Printability: the parser is fixed, and several `SExpr` shapes
--- have no token spelling that parses back (each booked in CUTS):
+-- A bare type-word variable (`sizeof(u32)` is refused: there is
+-- no `typeexpr` reader, so `parseEingebaut` rejects it where any
+-- other place passes). Only bare variables are checked.
+def istTypWortVar : SExpr → Bool
+  | .variable s => istTypWort s
+  | _ => false
 -- heads under `istKeinPlatz` are refused; unknown operator
 -- spellings match no level; `sizeof`/`lenof` take a place through
 -- `parseOrt`, `old` takes a place, `aligned` takes two whole
@@ -300,8 +304,8 @@ def gut : SExpr → Bool
   | .bin o l r => gutOpBin o && gut l && gut r
   | .ruf f xs => !istKeinPlatz f && gutListe xs
   | .fnwert _ => true
-  | .eingebaut "sizeof" [x] => gutPlatz x
-  | .eingebaut "lenof" [x] => gutPlatz x
+  | .eingebaut "sizeof" [x] => gutPlatz x && (!istTypWortVar x)
+  | .eingebaut "lenof" [x] => gutPlatz x && (!istTypWortVar x)
   | .eingebaut "aligned" [a, b] => gut a && gut b
   | .eingebaut _ _ => false
   | .alt x => gutPlatz x
@@ -871,7 +875,7 @@ theorem keinDP_list : ∀ (n : Nat)
 -- rules (kernel-checked; the `gut` match has literal and shape
 -- arms that `simp` equations do not select).
 theorem gut_sizeof_one : ∀ (x : SExpr),
-    gut (.eingebaut "sizeof" [x]) = gutPlatz x := by
+    gut (.eingebaut "sizeof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
   intro x
   rfl
 theorem gut_sizeof_multi : ∀ (x y : SExpr) (ys : List SExpr),
@@ -879,7 +883,7 @@ theorem gut_sizeof_multi : ∀ (x y : SExpr) (ys : List SExpr),
   intro x y ys
   rfl
 theorem gut_lenof_one : ∀ (x : SExpr),
-    gut (.eingebaut "lenof" [x]) = gutPlatz x := by
+    gut (.eingebaut "lenof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
   intro x
   rfl
 theorem gut_lenof_multi : ∀ (x y : SExpr) (ys : List SExpr),
@@ -1119,7 +1123,9 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
           cases xs with
           | nil =>
             rw [gut_sizeof_one] at hg
-            have hxg := gut_of_gutPlatz x hg
+            simp only [Bool.and_eq_true] at hg
+            obtain ⟨hpx, -⟩ := hg
+            have hxg := gut_of_gutPlatz x hpx
             have hxx : groesse x ≤ n := by
               simp only [groesse, groesseListe] at hs
               omega
@@ -1153,7 +1159,9 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
             cases xs with
             | nil =>
               rw [gut_lenof_one] at hg
-              have hxg := gut_of_gutPlatz x hg
+              simp only [Bool.and_eq_true] at hg
+              obtain ⟨hpx, -⟩ := hg
+              have hxg := gut_of_gutPlatz x hpx
               have hxx : groesse x ≤ n := by
                 simp only [groesse, groesseListe] at hs
                 omega
@@ -1200,6 +1208,8 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                   have hbg : groesse b ≤ n := by
                     simp only [groesse, groesseListe] at hs
                     omega
+                  have hpa := groesse_pos a
+                  have hpb := groesse_pos b
                   simp only [druckToks] at hm
                   rw [List.mem_append] at hm
                   obtain hmL | hmR := hm
@@ -2208,6 +2218,70 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
   simp only [hmiss, hint, hzukf, hselff] at ⊢
   rfl
 
+-- `old` through `parsePrimary`: head word, place, close paren.
+theorem prim_alt : ∀ (n : Nat) (Rn : R n)
+    (x : SExpr) (rest : List Token) (F : Nat),
+    groesse (.alt x) ≤ n + 1 → gut (.alt x) = true →
+    ruhigSuff rest = true →
+    12 * (groesse (.alt x) + 1) + groesse (.alt x) + 1 ≤ F →
+    parsePrimary F (druckToks (.alt x) ++ rest) = .ok (.alt x, rest) := by
+  intro n Rn x rest F hs hg hr hF
+  simp only [gut] at hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, parsePrimary] at ⊢
+  -- ⊢ : old arm → `parseOrt` → `)` close.
+  have hx : groesse x ≤ n := by
+    simp only [groesse] at hs
+    omega
+  have hxp : gutPlatz x = true := hg
+  have hrp : ruhigSuff ([.zeichen ")"] ++ rest) = true := rfl
+  have hFp : 12 * (groesse x + 1) + groesse x ≤ F' := by
+    simp only [groesse] at hs hF ⊢
+    omega
+  have hO := ort_platz_all n Rn x ([.zeichen ")"] ++ rest) F' hx hxp hrp hFp
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
+  simp only [hO, List.cons_append] at ⊢
+
+-- `eingebaut` through `parsePrimary`: head word, then place or
+-- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
+-- `aligned` takes two whole expressions.
+-- `sizeof`/`lenof` refuse bare type-word variables and accept
+-- everything else (`_`-arm). From `gutPlatz` plus the exclusion.
+theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
+    gutPlatz x = true → (!istTypWortVar x) = true →
+    (match x with
+      | .variable s =>
+        if istTypWort s = true then Except.error (w ++ " over a type")
+        else .ok (SExpr.eingebaut w [x], rest)
+      | _ => .ok (SExpr.eingebaut w [x], rest)) =
+      .ok (SExpr.eingebaut w [x], rest) := by
+  intro w x rest hpx htw
+  have htwf : istTypWortVar x = false := nichtWahr_falsch _ htw
+  cases x with
+  | lit m => rfl
+  | gleit s => rfl
+  | wahr => rfl
+  | falsch => rfl
+  | «variable» s =>
+    simp only [istTypWortVar] at htwf
+    simp [htwf]
+  | feld x f => rfl
+  | index x i => rfl
+  | pfeil x f => rfl
+  | un o x => rfl
+  | bin o l r => rfl
+  | ruf f xs => rfl
+  | fnwert f => rfl
+  | eingebaut f xs => rfl
+  | alt x => rfl
+  | ergebnis => rfl
+  | grund g f => rfl
+-- `eingebaut` through `parsePrimary`: head word, then place or
+-- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
+-- `aligned` takes two whole expressions. Singleton argument lists
+-- unfold to the element (`args_einzeln`) before the place/expression
+-- lemmas apply.
 
 end Gabbro.Grammatik.Parser
 
