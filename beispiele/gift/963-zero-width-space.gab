@@ -1,0 +1,8 @@
+-- erwartet: P063
+-- A zero-width space (U+200B) between `const` and the name: invisible to the
+-- human, a token boundary to the parser. What cannot be seen must not be read.
+module gift::unsichtbar {
+
+const​A : u32 = 1;
+
+}

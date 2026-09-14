@@ -181,6 +181,221 @@ fn ist_folgezeichen(c: char) -> bool {
     ist_buchstabe(c) || c.is_ascii_digit() || c == '_'
 }
 
+/// **Lane 182 (source trust: homoglyphs and bidi).** Gabbro's promise is that a HUMAN
+/// reads a body and proves its logic ("written by hand and read by a person"); a program
+/// that reads differently to a human than to the parser breaks exactly that premise: a
+/// Cyrillic `а` in an identifier, a bidi control character that reorders a line (Trojan
+/// Source, CVE-2021-42574). The tree had zero hits for homoglyph/bidi/confusable, and
+/// this gate keeps it that way.
+///
+/// The gate runs BEFORE the main loop and only ADDS refusals (`P060`-`P063`); it never
+/// removes one. Measured over the corpus on 2026-09-14: 988 `.gab` files (3796 distinct
+/// code identifiers, all ASCII) plus every `gabbro` block of `FRAGMENTE.md`, `SYNTAX.md`,
+/// `SPRACHE.md`, `README.md`, `MEMO-GLEITKOMMA.md` and `TUTORIAL.md` -- zero new
+/// refusals. The allowed identifier set stays what it was (ASCII letters, digits, `_`,
+/// plus `ä ö ü ß Ä Ö Ü`): the corpus uses no non-ASCII identifier in code position at
+/// all, so ASCII-only would also pass, but dropping the documented umlauts would narrow
+/// the grammar for no measured reason. `P064` stays unissued (spare of the lane).
+
+/// A Unicode bidi control/format character: it reorders the line for a human while the
+/// parser reads bytes in order. Refused ANYWHERE in the source -- comments and strings
+/// included, because the reordering happens in the editor, not in the token.
+fn ist_bidi(c: char) -> bool {
+    matches!(c as u32,
+        0x202A..=0x202E | 0x2066..=0x2069 | 0x200E | 0x200F | 0x061C)
+}
+
+/// An invisible character: zero-width space and joiners anywhere, and the byte-order
+/// mark anywhere except as the very first character of the file (a BOM at offset 0 is
+/// an editor's signature, not a hiding place).
+fn ist_unsichtbar(c: char) -> bool {
+    matches!(c as u32, 0x200B..=0x200D | 0xFEFF)
+}
+
+/// The script of a letter, for mixed-script detection. An approximation of UTS#39, not
+/// the table: what matters here is not the exact script name but whether ONE identifier
+/// draws letters from TWO of them. `13` is "any other letter": one family, so it still
+/// counts as "not mixed" (the Lean twin spells ASCII-neutral as `0`; the tables agree
+/// on 1..12, which is all the run rule reads).
+fn schrift(c: char) -> u8 {
+    let n = c as u32;
+    if c.is_ascii_alphabetic()
+        || (0x00C0..=0x00FF).contains(&n)
+        || (0x0100..=0x024F).contains(&n)
+        || (0x1E00..=0x1EFF).contains(&n)
+    {
+        1 // Latin (covers `ä ö ü ß Ä Ö Ü`)
+    } else if (0x0370..=0x03FF).contains(&n) || (0x1F00..=0x1FFF).contains(&n) {
+        2 // Greek
+    } else if (0x0400..=0x04FF).contains(&n)
+        || (0x0500..=0x052F).contains(&n)
+        || (0x2DE0..=0x2DFF).contains(&n)
+        || (0xA640..=0xA69F).contains(&n)
+    {
+        3 // Cyrillic
+    } else if (0x0530..=0x058F).contains(&n) {
+        4 // Armenian
+    } else if (0x0590..=0x05FF).contains(&n) {
+        5 // Hebrew
+    } else if (0x0600..=0x06FF).contains(&n) || (0x0750..=0x077F).contains(&n) {
+        6 // Arabic
+    } else if (0x0900..=0x097F).contains(&n) {
+        7 // Devanagari
+    } else if (0x0E00..=0x0E7F).contains(&n) {
+        8 // Thai
+    } else if (0x10A0..=0x10FF).contains(&n) {
+        9 // Georgian
+    } else if (0x1100..=0x11FF).contains(&n) || (0xAC00..=0xD7AF).contains(&n) {
+        10 // Hangul
+    } else if (0x3040..=0x309F).contains(&n) || (0x30A0..=0x30FF).contains(&n) {
+        11 // Hiragana / Katakana
+    } else if (0x3400..=0x4DBF).contains(&n) || (0x4E00..=0x9FFF).contains(&n) {
+        12 // Han
+    } else {
+        13 // Any other letter: one family, so it still counts as "not mixed"
+    }
+}
+
+/// A run character for the trust scan below: `_`, ASCII letters and digits, and
+/// the twelve script families (the umlauts fall in Latin). This is deliberately
+/// NARROWER than `is_alphanumeric`: an exotic number (`²`) or punctuation (`·`)
+/// BREAKS a run here exactly as it does in `LexerVertrauen.lean`, so both
+/// implementations cut the same runs -- and whatever they cut around still
+/// falls under `L006` in the main loop. What starts a run stays wider
+/// (`is_alphabetic`, see below): a run the main loop would cut anyway costs
+/// nothing to open.
+fn ist_laufzeichen(c: char) -> bool {
+    c == '_' || c.is_ascii_alphanumeric() || (1..=12).contains(&schrift(c))
+}
+
+/// The source-trust gate itself: (1) bidi and invisible characters over the RAW source,
+/// comments and strings included; (2) identifier-like runs over code only (strings and
+/// `--` comments skipped, exactly as the main loop skips them), refused as `P061`
+/// (outside the allowed set) or `P062` (two scripts in one run).
+///
+/// A run that directly adjoins a digit (`0䀀`, `123abc`) is left to the number rules
+/// (`L003`/`L006` own that neighbourhood); flagging it here too would double-report a
+/// site the lexer already refuses.
+fn quelltext_pruefe(quelle: &str, absagen: &mut Absagen) {
+    for (i, c) in quelle.char_indices() {
+        if ist_bidi(c) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "P060",
+                    Span::neu(i as u32, (i + c.len_utf8()) as u32),
+                    format!(
+                        "bidi control character U+{:04X} -- the line reads differently \
+                         to a human than to the parser",
+                        c as u32
+                    ),
+                )
+                .mit_notiz(
+                    "Trojan Source (CVE-2021-42574): reordering is done by the editor, \
+                     never by the source -- delete the character",
+                ),
+            );
+        } else if ist_unsichtbar(c) && !(c == '\u{FEFF}' && i == 0) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "P063",
+                    Span::neu(i as u32, (i + c.len_utf8()) as u32),
+                    format!(
+                        "invisible character U+{:04X} -- what the human cannot see the \
+                         parser must not read",
+                        c as u32
+                    ),
+                )
+                .mit_notiz(
+                    "U+FEFF is allowed once, as the first character of the file (BOM); \
+                     everywhere else it hides",
+                ),
+            );
+        }
+    }
+
+    let mut it = quelle.char_indices().peekable();
+    // The last code character seen (strings and comments skipped): a run that starts
+    // right behind a digit belongs to the number neighbourhood (see above).
+    let mut vorher_ziffer = false;
+    while let Some((von, c)) = it.next() {
+        if c == '"' {
+            while let Some((_, d)) = it.next() {
+                if d == '"' || d == '\n' {
+                    break;
+                }
+            }
+            vorher_ziffer = false;
+            continue;
+        }
+        if c == '-' && it.peek().is_some_and(|(_, d)| *d == '-') {
+            while let Some((_, d)) = it.next() {
+                if d == '\n' {
+                    break;
+                }
+            }
+            vorher_ziffer = false;
+            continue;
+        }
+        if c.is_alphabetic() || c == '_' {
+            let angehaengt = vorher_ziffer;
+            let mut bis = von + c.len_utf8();
+            while let Some((j, d)) = it.peek() {
+                if ist_laufzeichen(*d) {
+                    bis = *j + d.len_utf8();
+                    it.next();
+                } else {
+                    break;
+                }
+            }
+            let lauf = &quelle[von..bis];
+            let erlaubt = lauf.chars().all(ist_folgezeichen);
+            if !erlaubt && !angehaengt {
+                let mut arten = [false; 14];
+                for d in lauf.chars() {
+                    if d.is_alphabetic() {
+                        arten[schrift(d) as usize] = true;
+                    }
+                }
+                let gemischt = arten.iter().filter(|&&b| b).count() >= 2;
+                if gemischt {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "P062",
+                            Span::neu(von as u32, bis as u32),
+                            format!(
+                                "identifier `{lauf}` mixes two scripts -- a homoglyph \
+                                 reads as one name and parses as another"
+                            ),
+                        )
+                        .mit_notiz(
+                            "identifiers are ASCII letters, digits and `_`, plus \
+                             ä ö ü ß Ä Ö Ü -- all one (Latin) script",
+                        ),
+                    );
+                } else {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "P061",
+                            Span::neu(von as u32, bis as u32),
+                            format!(
+                                "identifier `{lauf}` holds a character outside the \
+                                 allowed set"
+                            ),
+                        )
+                        .mit_notiz(
+                            "identifiers are ASCII letters, digits and `_`, plus \
+                             ä ö ü ß Ä Ö Ü",
+                        ),
+                    );
+                }
+            }
+            vorher_ziffer = false;
+            continue;
+        }
+        vorher_ziffer = c.is_ascii_digit();
+    }
+}
+
 /// **Das Zeichen an der Byte-Stelle `i` — als ZEICHEN, nicht als Byte.**
 ///
 /// `quelle.as_bytes()[i] as char` deutet ein Byte als Latin-1-Codepunkt. Bei ASCII ist das
@@ -192,8 +407,15 @@ fn zeichen_bei(quelle: &str, i: usize) -> Option<char> {
 /// Splits the source. Refusals accumulate; the stream does not abort, so that one run shows
 /// more than a single finding.
 pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
+    // Lane 182 first: the source-trust gate (bidi, invisible, homoglyph identifiers).
+    // It only adds refusals; the stream below is unchanged.
+    quelltext_pruefe(quelle, absagen);
     let b = quelle.as_bytes();
-    let mut i = 0usize;
+    let mut i = if quelle.starts_with('\u{FEFF}') {
+        '\u{FEFF}'.len_utf8()
+    } else {
+        0
+    };
     let mut out = Vec::new();
 
     let schiebe = |out: &mut Vec<Token>, art: Art, von: usize, bis: usize| {
