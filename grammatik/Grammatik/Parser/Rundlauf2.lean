@@ -203,22 +203,30 @@ theorem kern_prim_var : ∀ (a : String) (rest : List Token) (F : Nat),
   obtain ⟨F''', rfl⟩ : ∃ F''', F'' = F''' + 1 := ⟨F'' - 1, by omega⟩
   exact stopSuffix F''' _ _ hrs
 
--- The full eight-level tower for one literal shape. Each level is
--- generalised over its own fuel (so upper levels reuse lower ones
--- at stripped fuel); the conjunction instantiates all at `F`.
--- Pattern for every atom shape in step A.
-theorem turm_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
+-- The full eight-level tower for one literal shape. Every
+-- leg is generalised over its own fuel (so upper levels reuse
+-- lower ones at stripped fuel, and every `RKern` level
+-- instantiates at its own staggered bound). Pattern for every
+-- atom shape in step A.
+theorem turm_lit : ∀ (m : Nat) (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    12 * (groesse (.lit m) + 1) + groesse (.lit m) + 8 ≤ F →
-    (parsePrimary F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseUnary F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseMul F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseAdd F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseBit F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseCmp F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseAnd F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
-    ∧ (parseOr F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest)) := by
-  intro m rest F hr hrs hrg hF
+    (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 1 ≤ G →
+      parsePrimary G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 2 ≤ G →
+      parseUnary G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 3 ≤ G →
+      parseMul G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 4 ≤ G →
+      parseAdd G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 5 ≤ G →
+      parseBit G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 6 ≤ G →
+      parseCmp G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 7 ≤ G →
+      parseAnd G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.lit m) + 1) + groesse (.lit m) + 8 ≤ G →
+      parseOr G (druckToks (.lit m) ++ rest) = .ok (.lit m, rest)) := by
+  intro m rest hr hrs hrg
   have hP : ∀ (G : Nat),
       12 * (groesse (.lit m) + 1) + groesse (.lit m) + 1 ≤ G →
       parsePrimary G (druckToks (.lit m) ++ rest) =
@@ -298,25 +306,31 @@ theorem turm_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     have hstop := stopOder rest hr
     simp only [parseOr, parseOrL, hN', hstop] at ⊢
-  exact ⟨hP F (by omega), hU F (by omega), hM F (by omega), hA F (by omega),
-    hB F (by omega), hC F (by omega), hN F (by omega), hO F hF⟩
+  exact ⟨hP, hU, hM, hA, hB, hC, hN, hO⟩
 
 -- The shape-independent upper tower (`parseMul` up to
 -- `parseOr`): every level runs its child and stops its loop on
 -- the benign follow. Callers supply the `parseUnary` leg (which
--- is the only head-dependent step) generalised over its fuel.
-theorem tower_up : ∀ (e : SExpr) (rest : List Token) (F : Nat),
+-- is the only head-dependent step) generalised over its fuel;
+-- every leg is returned generalised, so each `RKern` level
+-- instantiates at its own staggered bound.
+theorem tower_up : ∀ (e : SExpr) (rest : List Token),
     ruhig rest = true →
     (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 2 ≤ G →
       parseUnary G (druckToks e ++ rest) = .ok (e, rest)) →
-    12 * (groesse e + 1) + groesse e + 8 ≤ F →
-    (parseMul F (druckToks e ++ rest) = .ok (e, rest))
-    ∧ (parseAdd F (druckToks e ++ rest) = .ok (e, rest))
-    ∧ (parseBit F (druckToks e ++ rest) = .ok (e, rest))
-    ∧ (parseCmp F (druckToks e ++ rest) = .ok (e, rest))
-    ∧ (parseAnd F (druckToks e ++ rest) = .ok (e, rest))
-    ∧ (parseOr F (druckToks e ++ rest) = .ok (e, rest)) := by
-  intro e rest F hr hU hF
+    (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 3 ≤ G →
+      parseMul G (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 4 ≤ G →
+      parseAdd G (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 5 ≤ G →
+      parseBit G (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 6 ≤ G →
+      parseCmp G (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 7 ≤ G →
+      parseAnd G (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 8 ≤ G →
+      parseOr G (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro e rest hr hU
   have hM : ∀ (G : Nat),
       12 * (groesse e + 1) + groesse e + 3 ≤ G →
       parseMul G (druckToks e ++ rest) = .ok (e, rest) := by
@@ -381,24 +395,53 @@ theorem tower_up : ∀ (e : SExpr) (rest : List Token) (F : Nat),
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     have hstop := stopOder rest hr
     simp only [parseOr, parseOrL, hN', hstop] at ⊢
-  exact ⟨hM F (by omega), hA F (by omega), hB F (by omega),
-    hC F (by omega), hN F (by omega), hO F hF⟩
+  exact ⟨hM, hA, hB, hC, hN, hO⟩
+
+-- A bare atom head is `primFrei` (only prefix trees and
+-- `fnwert` are not).
+theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
+    gutKern x = true → primFrei x = true := by
+  intro x hat hgx
+  cases x with
+  | lit m => rfl
+  | gleit s => rfl
+  | wahr => rfl
+  | falsch => rfl
+  | «variable» s => rfl
+  | feld x f => simp [gutKern] at hgx
+  | index x i => simp [gutKern] at hgx
+  | pfeil x f => simp [gutKern] at hgx
+  | un o y => simp [istAtom] at hat
+  | bin o l r => simp [istAtom] at hat
+  | ruf f xs => simp [gutKern] at hgx
+  | fnwert f => simp [istAtom] at hat
+  | eingebaut f xs => simp [gutKern] at hgx
+  | alt x => simp [gutKern] at hgx
+  | ergebnis => simp [gutKern] at hgx
+  | grund g f => simp [gutKern] at hgx
 
 -- Atom towers, one per remaining leaf shape: the `parsePrimary`
 -- leg (concrete head) plus the `parseUnary` fall-through (head is
 -- no prefix operator), then `tower_up` for the six loop levels.
-theorem turm_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
+theorem turm_gleit : ∀ (s : String) (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 8 ≤ F →
-    (parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseUnary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseMul F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseAdd F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseBit F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseCmp F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseAnd F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (parseOr F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest)) := by
-  intro s rest F hr hrs hrg hF
+    (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
+      parsePrimary G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 2 ≤ G →
+      parseUnary G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 3 ≤ G →
+      parseMul G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 4 ≤ G →
+      parseAdd G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 5 ≤ G →
+      parseBit G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 6 ≤ G →
+      parseCmp G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 7 ≤ G →
+      parseAnd G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 8 ≤ G →
+      parseOr G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest)) := by
+  intro s rest hr hrs hrg
   have hP : ∀ (G : Nat),
       12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
       parsePrimary G (druckToks (.gleit s) ++ rest) =
@@ -415,22 +458,29 @@ theorem turm_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up (.gleit s) rest F hr hU hF
-  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+  have hup := tower_up (.gleit s) rest hr hU
+  exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
-theorem turm_wahr : ∀ (rest : List Token) (F : Nat),
+theorem turm_wahr : ∀ (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    12 * (groesse .wahr + 1) + groesse .wahr + 8 ≤ F →
-    (parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseUnary F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseMul F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseAdd F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseBit F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseCmp F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseAnd F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (parseOr F (druckToks .wahr ++ rest) = .ok (.wahr, rest)) := by
-  intro rest F hr hrs hrg hF
+    (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
+      parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 2 ≤ G →
+      parseUnary G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 3 ≤ G →
+      parseMul G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 4 ≤ G →
+      parseAdd G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 5 ≤ G →
+      parseBit G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 6 ≤ G →
+      parseCmp G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 7 ≤ G →
+      parseAnd G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 8 ≤ G →
+      parseOr G (druckToks .wahr ++ rest) = .ok (.wahr, rest)) := by
+  intro rest hr hrs hrg
   have hP : ∀ (G : Nat),
       12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
       parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
@@ -445,22 +495,29 @@ theorem turm_wahr : ∀ (rest : List Token) (F : Nat),
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up .wahr rest F hr hU hF
-  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+  have hup := tower_up .wahr rest hr hU
+  exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
-theorem turm_falsch : ∀ (rest : List Token) (F : Nat),
+theorem turm_falsch : ∀ (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    12 * (groesse .falsch + 1) + groesse .falsch + 8 ≤ F →
-    (parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseUnary F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseMul F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseAdd F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseBit F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseCmp F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseAnd F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (parseOr F (druckToks .falsch ++ rest) = .ok (.falsch, rest)) := by
-  intro rest F hr hrs hrg hF
+    (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
+      parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 2 ≤ G →
+      parseUnary G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 3 ≤ G →
+      parseMul G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 4 ≤ G →
+      parseAdd G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 5 ≤ G →
+      parseBit G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 6 ≤ G →
+      parseCmp G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 7 ≤ G →
+      parseAnd G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 8 ≤ G →
+      parseOr G (druckToks .falsch ++ rest) = .ok (.falsch, rest)) := by
+  intro rest hr hrs hrg
   have hP : ∀ (G : Nat),
       12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
       parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
@@ -475,31 +532,38 @@ theorem turm_falsch : ∀ (rest : List Token) (F : Nat),
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up .falsch rest F hr hU hF
-  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+  have hup := tower_up .falsch rest hr hU
+  exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
-theorem turm_var : ∀ (a : String) (rest : List Token) (F : Nat),
+theorem turm_var : ∀ (a : String) (rest : List Token),
     (!istKeinPlatz a) = true → ruhig rest = true →
     ruhigSuff rest = true → ruhigGleit rest = true →
-    12 * (groesse (.variable a) + 1) + groesse (.variable a) + 8 ≤ F →
-    (parsePrimary F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseUnary F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseMul F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseAdd F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseBit F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseCmp F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseAnd F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest))
-    ∧ (parseOr F (druckToks (.variable a) ++ rest) =
-      .ok (.variable a, rest)) := by
-  intro a rest F hka hr hrs hrg hF
+    (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ G →
+      parsePrimary G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 2 ≤ G →
+      parseUnary G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 3 ≤ G →
+      parseMul G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 4 ≤ G →
+      parseAdd G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 5 ≤ G →
+      parseBit G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 6 ≤ G →
+      parseCmp G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 7 ≤ G →
+      parseAnd G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 8 ≤ G →
+      parseOr G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest)) := by
+  intro a rest hka hr hrs hrg
   have hP : ∀ (G : Nat),
       12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ G →
       parsePrimary G (druckToks (.variable a) ++ rest) =
@@ -516,8 +580,8 @@ theorem turm_var : ∀ (a : String) (rest : List Token) (F : Nat),
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up (.variable a) rest F hr hU hF
-  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+  have hup := tower_up (.variable a) rest hr hU
+  exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 -- Standalone arm lemmas with WHOLE-SUBTERM middles (`M`)
@@ -557,28 +621,30 @@ theorem un_paren_fall : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
   simp only [List.cons_append, List.nil_append] at h ⊢
   simp [parseUnary, h, n1, n2, n3, n4] at ⊢
 
--- The `un "!"` tower from induction-hypothesis legs: the
--- `parsePrimary` leg for atom children (same follow), the
--- `parseOr` leg for parenthesised children (`)` follow), then
--- `tower_up`. No `parsePrimary` component (`primFrei` is false
--- for `un`).
-theorem kern_un_turm : ∀ (x : SExpr) (rest : List Token) (F : Nat),
-    gutKern x = true → ruhig rest = true → ruhigSuff rest = true →
-    ruhigGleit rest = true →
+-- The `un "!"` tower for ATOM children: the `parsePrimary`
+-- leg (same follow) through the `!` arm, then `tower_up`. Split
+-- from the joint tower because the primary leg is provable only
+-- for atoms (`parsePrimary` fails on operator heads). No
+-- `parsePrimary` component (`primFrei` is false for `un`).
+theorem kern_un_atom_turm : ∀ (x : SExpr) (rest : List Token),
+    istAtom x = true → ruhig rest = true →
     (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 1 ≤ G →
       parsePrimary G (druckToks x ++ rest) = .ok (x, rest)) →
-    (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
-      parseOr G (druckToks x ++ [.zeichen ")"] ++ rest) =
-        .ok (x, [.zeichen ")"] ++ rest)) →
-    12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ F →
-    (parseUnary F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseMul F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseAdd F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseBit F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseCmp F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseAnd F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (parseOr F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
-  intro x rest F hgx hr hrs hrg hPx hOx hF
+    (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
+      parseUnary G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 3 ≤ G →
+      parseMul G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 4 ≤ G →
+      parseAdd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 5 ≤ G →
+      parseBit G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 6 ≤ G →
+      parseCmp G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 7 ≤ G →
+      parseAnd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ G →
+      parseOr G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
+  intro x rest hat hr hPx
   have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
   have hU : ∀ (G : Nat),
       12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
@@ -587,34 +653,67 @@ theorem kern_un_turm : ∀ (x : SExpr) (rest : List Token) (F : Nat),
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
-    cases hat : istAtom x with
-    | true =>
-      have hd : druckToks (.un "!" x) =
-          [.zeichen "!"] ++ druckToks x := by
-        simp [druckToks, hat]
-      have hP' := hPx G' (by omega)
-      simp only [hd, List.append_assoc] at ⊢
-      exact bang_arm _ _ _ _ hP'
-    | false =>
-      have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
-          (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks, hat]
-      have hF2 : 1 ≤ G' := by omega
-      obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
-      have hO' := hOx G'' (by omega)
-      simp only [List.append_assoc] at hO'
-      have hPar := paren_arm _ _ _ _ hO'
-      have hBang := bang_arm _ _ _ _ hPar
-      simp only [hd, List.append_assoc] at ⊢
-      exact hBang
-  have hup := tower_up (.un "!" x) rest F hr hU (by omega)
-  exact ⟨hU F (by omega), hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
+    have hd : druckToks (.un "!" x) =
+        [.zeichen "!"] ++ druckToks x := by
+      simp [druckToks, hat]
+    have hP' := hPx G' (by omega)
+    simp only [hd, List.append_assoc] at ⊢
+    exact bang_arm _ _ _ _ hP'
+  have hup := tower_up (.un "!" x) rest hr hU
+  exact ⟨hU, hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
+    hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
+-- The `un "!"` tower for PARENTHESISED (non-atom) children: the
+-- `parseOr` leg (`)` follow) through the `!` arm into the `(`
+-- arm, then `tower_up`.
+theorem kern_un_paren_turm : ∀ (x : SExpr) (rest : List Token),
+    istAtom x = false → ruhig rest = true →
+    (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
+      parseOr G (druckToks x ++ [.zeichen ")"] ++ rest) =
+        .ok (x, [.zeichen ")"] ++ rest)) →
+    (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
+      parseUnary G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 3 ≤ G →
+      parseMul G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 4 ≤ G →
+      parseAdd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 5 ≤ G →
+      parseBit G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 6 ≤ G →
+      parseCmp G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 7 ≤ G →
+      parseAnd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ G →
+      parseOr G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
+  intro x rest hat hr hOx
+  have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+  have hU : ∀ (G : Nat),
+      12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
+      parseUnary G (druckToks (.un "!" x) ++ rest) =
+        .ok (.un "!" x, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
+        (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
+      simp [druckToks, hat]
+    have hF2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hO' := hOx G'' (by omega)
+    simp only [List.append_assoc] at hO'
+    have hPar := paren_arm _ _ _ _ hO'
+    have hBang := bang_arm _ _ _ _ hPar
+    simp only [hd, List.append_assoc] at ⊢
+    exact hBang
+  have hup := tower_up (.un "!" x) rest hr hU
+  exact ⟨hU, hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
     hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 -- The `bin "+"` tower from a binary-inner leg: the
 -- `parsePrimary` leg runs the `(` arm over the inner parse, the
--- `parseUnary` leg falls through on `(`, then `tower_up`.
-theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
+-- `parseUnary` leg falls through on `(`, then `tower_up`. Every
+-- leg generalised over its own fuel.
+theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token),
     gutKern l = true → gutKern r = true →
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
     (∀ (G : Nat),
@@ -622,24 +721,31 @@ theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
       parseOr G (druckToks l ++ [.zeichen "+"] ++ druckToks r ++
         [.zeichen ")"] ++ rest) =
         .ok (.bin "+" l r, [.zeichen ")"] ++ rest)) →
-    12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 8 ≤ F →
-    (parsePrimary F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseUnary F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseMul F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseAdd F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseBit F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseCmp F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseAnd F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest))
-    ∧ (parseOr F (druckToks (.bin "+" l r) ++ rest) =
-      .ok (.bin "+" l r, rest)) := by
-  intro l r rest F hgl hgr hr hrs hrg hB hF
+    (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 1 ≤ G →
+      parsePrimary G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 2 ≤ G →
+      parseUnary G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 3 ≤ G →
+      parseMul G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 4 ≤ G →
+      parseAdd G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 5 ≤ G →
+      parseBit G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 6 ≤ G →
+      parseCmp G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 7 ≤ G →
+      parseAnd G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 8 ≤ G →
+      parseOr G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest)) := by
+  intro l r rest hgl hgr hr hrs hrg hB
   have hsize : groesse (.bin "+" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "+" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "+"] ++ druckToks r ++ [.zeichen ")"] := by
@@ -672,8 +778,8 @@ theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
     -- infer the middle and tail (the lemma holds for any tail).
     simp only [hd, List.append_assoc] at hP' ⊢
     exact un_paren_fall _ _ _ _ hP'
-  have hup := tower_up (.bin "+" l r) rest F hr hU (by omega)
-  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+  have hup := tower_up (.bin "+" l r) rest hr hU
+  exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 -- Concrete op-table and benign-follow facts for the `+`
