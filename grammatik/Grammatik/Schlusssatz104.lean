@@ -746,4 +746,332 @@ theorem gPB_logikFrei : programmLogikFrei gPB gbFs = true := by decide
 
 theorem gPB_ruhig : ruhig gPB none = true := by decide
 
+
+/-! ### 5.3 `gPB`'s source part IS the parsed program, renamed
+
+`renE`/`renArgs`/`renErg`/`renS`/`renEnd` rename a term over `gD` to the same
+term over `gDB`: every constructor to the same-named constructor, every
+table, field, lock, index and literal to itself, a function `f` to `some f`;
+proofs are transported (`darf_rm`, `rufPasst_rm`, `perm_rm`), never
+re-invented. The renaming is PARTIAL: it covers the constructors of the
+104 fragment (and a few more) and answers `none` elsewhere, so an equation
+`ren x = some y` is a kernel-checked statement that `y` is `x` renamed. -/
+
+/-- A resource of `gD` as a resource of `gDB` (same lock, same mark). -/
+def rm : Res G104_referenz.gD → Res gDB
+  | .held L => .held L
+  | .marke m s => .marke m s
+
+theorem rm_von (w : GLock ⊕ (Empty × Nat)) : rm (Res.von G104_referenz.gD w) = Res.von gDB w := by
+  rcases w with L | ⟨m, s⟩
+  · rfl
+  · exact m.elim
+
+theorem darf_rm {t : GTab} {Λ : List (Res G104_referenz.gD)} (h : darf G104_referenz.gD t Λ) :
+    darf gDB t (Λ.map rm) := by
+  intro w hw
+  rw [← rm_von]
+  exact List.mem_map_of_mem (h w hw)
+
+/-- A contract of `gD` as a contract of `gDB` (field by field). -/
+def vm (V : Vertrag G104_referenz.gD) : Vertrag gDB :=
+  ⟨V.schreibt, V.gschreibt, V.erg, V.gruende, V.haelt, V.produziert, V.boden⟩
+
+theorem ende_rm (V : Vertrag G104_referenz.gD) : (vm V).ende = V.ende.map rm := by
+  have hp : V.produziert = [] := by
+    cases h : V.produziert with
+    | nil => rfl
+    | cons x _ => exact x.1.elim
+  simp [Vertrag.ende, vm, hp, rm]
+
+theorem perm_rm {V : Vertrag G104_referenz.gD} {Λ : List (Res G104_referenz.gD)}
+    (h : Λ.Perm V.ende) : (Λ.map rm).Perm (vm V).ende := by
+  rw [ende_rm]
+  exact h.map rm
+
+theorem konsumiert_leer (S : Signatur GTab Empty GLock Empty) : S.konsumiert = [] := by
+  cases h : S.konsumiert with
+  | nil => rfl
+  | cons x _ => exact x.1.elim
+
+theorem produziert_leer (S : Signatur GTab Empty GLock Empty) : S.produziert = [] := by
+  cases h : S.produziert with
+  | nil => rfl
+  | cons x _ => exact x.1.elim
+
+theorem held_rm_mem {L : GLock} {Λ : List (Res G104_referenz.gD)}
+    (h : Res.held (D := gDB) L ∈ Λ.map rm) : Res.held (D := G104_referenz.gD) L ∈ Λ := by
+  obtain ⟨x, hx, e⟩ := List.mem_map.mp h
+  cases x with
+  | held L' => cases e; exact hx
+  | marke m s => exact m.elim
+
+theorem rufPasst_rm {V : Vertrag G104_referenz.gD} {S : Signatur GTab Empty GLock Empty}
+    {Λ : List (Res G104_referenz.gD)} (h : RufPasst G104_referenz.gD V S Λ) :
+    RufPasst gDB (vm V) S (Λ.map rm) where
+  hw := h.hw
+  hg := h.hg
+  hk := ⟨[], by rw [konsumiert_leer]; exact List.Perm.refl [], List.nil_sublist _⟩
+  hh := fun L hL => List.mem_map_of_mem (f := rm) (h.hh L hL)
+  hx := fun L hL hn => h.hx L (held_rm_mem hL) hn
+  hb := h.hb
+
+theorem params_some (f : GFn) : gDB.params (some f) = G104_referenz.gD.params f := by
+  cases f <;> rfl
+
+theorem signatur_some (f : GFn) : gDB.signatur (some f) = G104_referenz.gD.signatur f := by
+  cases f <;> rfl
+
+theorem nach_rm (f : GFn) (Λ : List (Res G104_referenz.gD)) :
+    (nach G104_referenz.gD f Λ).map rm = nach gDB (some f) (Λ.map rm) := by
+  cases f <;> simp [nach, nachSig, Deklaration.signatur, gSig_einzahlen, gSig_lies]
+
+/-- Expressions. -/
+def renE : {Γ : Ctx} → {Λ : List (Res G104_referenz.gD)} → {τ : Ty} →
+    Expr G104_referenz.gD Γ Λ τ → Option (Expr gDB Γ (Λ.map rm) τ)
+  | _, _, _, .lit n => some (.lit n)
+  | _, _, _, .wahr => some .wahr
+  | _, _, _, .falsch => some .falsch
+  | _, _, _, .var x => some (.var x)
+  | _, _, _, .slot t f i hL => (renE i).map fun i' => Expr.slot (D := gDB) t f i' (darf_rm hL)
+  | _, _, _, .durch p t ht f i hL =>
+    (renE p).bind fun p' => (renE i).map fun i' => Expr.durch (D := gDB) p' t ht f i' (darf_rm hL)
+  | _, _, _, .ptrOf t n ht rw => some (Expr.ptrOf (D := gDB) t n ht rw)
+  | _, _, _, .altSlot t f i hL => (renE i).map fun i' => Expr.altSlot (D := gDB) t f i' (darf_rm hL)
+  | _, _, _, .weiter h1 h2 e => (renE e).map (.weiter h1 h2)
+  | _, _, _, .add a b => (renE a).bind fun a' => (renE b).map (.add a')
+  | _, _, _, .sub a b => (renE a).bind fun a' => (renE b).map (.sub a')
+  | _, _, _, .lt a b => (renE a).bind fun a' => (renE b).map (.lt a')
+  | _, _, _, .le a b => (renE a).bind fun a' => (renE b).map (.le a')
+  | _, _, _, .eq a b => (renE a).bind fun a' => (renE b).map (.eq a')
+  | _, _, _, .und a b => (renE a).bind fun a' => (renE b).map (.und a')
+  | _, _, _, .oder a b => (renE a).bind fun a' => (renE b).map (.oder a')
+  | _, _, _, .nicht a => (renE a).map .nicht
+  | _, _, _, _ => none
+
+/-- Argument lists. -/
+def renArgs : {Γ : Ctx} → {Λ : List (Res G104_referenz.gD)} → {τs : List Ty} →
+    Args G104_referenz.gD Γ Λ τs → Option (Args gDB Γ (Λ.map rm) τs)
+  | _, _, _, .nil => some .nil
+  | _, _, _, .cons e rest => (renE e).bind fun e' => (renArgs rest).map (.cons e')
+
+/-- Return values. -/
+def renErg {Γ : Ctx} {Λ : List (Res G104_referenz.gD)} : {e : Option Ty} →
+    ErgExpr G104_referenz.gD Γ Λ e → Option (ErgExpr gDB Γ (Λ.map rm) e)
+  | _, .keine => some .keine
+  | _, .wert e => (renE e).map .wert
+
+section Ren
+variable {V : Vertrag G104_referenz.gD} {l : Bool}
+
+/-- Statements: the table writes and the direct call (`f` to `some f`, the
+    argument list, the transported `RufPasst`; the resource index moves along
+    `nach_rm`). Every other statement: none. -/
+def renS {Γ : Ctx} {Λ Λ' : List (Res G104_referenz.gD)} :
+    Stmt G104_referenz.gD V l Γ Λ Λ' → Option (Stmt gDB (vm V) l Γ (Λ.map rm) (Λ'.map rm))
+  | .assignSlot t f i e hw hL =>
+    (renE i).bind fun i' => (renE e).map fun e' => Stmt.assignSlot (V := vm V) t f i' e' hw (darf_rm hL)
+  | .assignDurch p t ht f i e hw hL =>
+    (renE p).bind fun p' => (renE i).bind fun i' => (renE e).map fun e' =>
+      Stmt.assignDurch (V := vm V) p' t ht f i' e' hw (darf_rm hL)
+  | .call f args hp hr =>
+    (renArgs args).map fun a =>
+      (nach_rm f Λ) ▸ Stmt.call (V := vm V) (l := l) (some f) ((params_some f).symm ▸ a)
+        ((signatur_some f).symm ▸ rufPasst_rm hp) (by cases f <;> exact hr)
+  | _ => none
+
+/-- Terminal blocks. -/
+def renEnd {Γ : Ctx} : {Λ : List (Res G104_referenz.gD)} →
+    Endblock G104_referenz.gD V l Γ Λ → Option (Endblock gDB (vm V) l Γ (Λ.map rm))
+  | _, .ret e hΛ => (renErg e).map fun e' => .ret e' (perm_rm hΛ)
+  | _, .retGrund r hΛ => some (.retGrund r (perm_rm hΛ))
+  | _, .leave h => some (.leave h)
+  | _, .next h => some (.next h)
+  | _, .cons s rest => (renS s).bind fun s' => (renEnd rest).map (.cons s')
+  | _, .bind e rest => (renE e).bind fun e' => (renEnd rest).map (.bind e')
+
+end Ren
+
+theorem ren_rumpf_einzahlen :
+    renEnd (G104_referenz.gP.rumpf g_einzahlen) = some (gPB.rumpf (some GFn.einzahlen)) := rfl
+
+theorem ren_rumpf_lies :
+    renEnd (G104_referenz.gP.rumpf g_lies) = some (gPB.rumpf (some GFn.lies)) := rfl
+
+theorem ren_ensures_einzahlen :
+    renE (G104_referenz.gP.ensures g_einzahlen) = some (gPB.ensures (some GFn.einzahlen)) := rfl
+
+theorem ren_ensures_lies :
+    renE (G104_referenz.gP.ensures g_lies) = some (gPB.ensures (some GFn.lies)) := rfl
+
+theorem ren_requires_einzahlen :
+    renE (G104_referenz.gP.requires g_einzahlen) = some (gPB.requires (some GFn.einzahlen)) := rfl
+
+theorem ren_requires_lies :
+    renE (G104_referenz.gP.requires g_lies) = some (gPB.requires (some GFn.lies)) := rfl
+
+/-- **`gPB`'s source part IS the parsed program `gP`, renamed**: every
+    body, `ensures` and `requires` of `gPB` at `some f` is the renaming of
+    `gP`'s at `f` (kernel-checked, `rfl`); `gPB` adds exactly the idle root
+    `none`, which holds no lock, touches nothing and returns. -/
+theorem gPB_ist_gP_umbenannt :
+    renEnd (G104_referenz.gP.rumpf g_einzahlen) = some (gPB.rumpf (some GFn.einzahlen)) ∧
+    renEnd (G104_referenz.gP.rumpf g_lies) = some (gPB.rumpf (some GFn.lies)) ∧
+    renE (G104_referenz.gP.ensures g_einzahlen) = some (gPB.ensures (some GFn.einzahlen)) ∧
+    renE (G104_referenz.gP.ensures g_lies) = some (gPB.ensures (some GFn.lies)) ∧
+    renE (G104_referenz.gP.requires g_einzahlen) = some (gPB.requires (some GFn.einzahlen)) ∧
+    renE (G104_referenz.gP.requires g_lies) = some (gPB.requires (some GFn.lies)) ∧
+    ruhig gPB none = true :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, by decide⟩
+
+
+/-! ### 5.4 The goal theorem for the machine of `gPB` -/
+
+theorem gb_call_tor {V : Vertrag gDB} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res gDB)} (O : Orakel gDB) (passes : Nat)
+    (R : ∀ f : gDB.Fn, World gDB → Env gDB (gDB.params f) → RufAusgang f) (hOV : OhneVorbedingung R)
+    (g : gDB.Fn) (args : Args gDB Γ Λ (gDB.params g))
+    (hp : RufPasst gDB V (gDB.signatur g) Λ)
+    (hr : gDB.gruende g = 0) (σ : World gDB) (ρ : Env gDB Γ) (g' : gDB.Fn) :
+    execStmt O passes (torRuf gPB R) (Stmt.call (l := l) g args hp hr) σ ρ ≠
+      .logik (.vorbedingung g') := by
+  have ht : ∀ σ1 ρ1, torRuf gPB R g σ1 ρ1 = R g σ1 ρ1 :=
+    fun _ _ => if_pos (by rcases g with _ | g; rfl; cases g <;> rfl)
+  simp only [execStmt, ht]
+  cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  | ok σ' v => intro h; cases h
+  | grund σ' r => exact (Fin.cast hr r).elim0
+  | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
+  | hardware e => intro h; cases h
+
+theorem gPB_koerper_lies : KoerperGutV gPB 0 (some GFn.lies) := by
+  intro O' _ R _ _ σ ρ _
+  refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
+  · have hr : gPB.rumpf (some GFn.lies) = gbBody_lies := rfl
+    rw [hr] at hrun
+    simp only [gbBody_lies, execEnd] at hrun
+    cases hrun
+    exact decide_eq_true rfl
+  · have hr : gPB.rumpf (some GFn.lies) = gbBody_lies := rfl
+    rw [hr] at hrun
+    simp only [gbBody_lies, execEnd] at hrun
+    cases hrun
+
+theorem gPB_koerper_ruhe : KoerperGutV gPB 0 none := by
+  intro O' _ R _ _ σ ρ _
+  refine ⟨fun _ _ _ => rfl, fun g hrun => ?_⟩
+  have hr : gPB.rumpf none = gbBody_ruhe := rfl
+  rw [hr] at hrun
+  simp only [gbBody_ruhe, execEnd] at hrun
+  cases hrun
+
+theorem gPB_einzahlen_R : KoerperGutR gPB 0 (some GFn.einzahlen) := by
+  intro O' _ _ R hR hOV σ ρ _
+  refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
+  · have hr : gPB.rumpf (some GFn.einzahlen) = gbBody_einzahlen := rfl
+    rw [hr] at hrun
+    rcases execEnd_cons_zurueck _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, h1, hrun1⟩
+    · simp [execStmt] at h1
+    rcases execEnd_cons_zurueck _ _ _ _ _ hrun1 with h2 | ⟨σ2, ρ2, h2, hrun2⟩
+    · simp only [execStmt] at h2
+      split at h2
+      · cases h2
+      · rename_i r _
+        exact r.elim0
+      · cases h2
+      · cases h2
+    simp only [execEnd] at hrun2
+    simp only [execStmt] at h2
+    split at h2
+    · rename_i σ3 w hRv
+      cases h2
+      cases hrun2
+      have hfr := (hR.2 (some GFn.lies) _ _ σ2 w hRv).1.1 GTab.Konto rfl
+      simp only [execStmt] at h1
+      cases h1
+      show decide ((σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n ≤
+        (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n) = true
+      have e3 := (hfr (ρ.get (.dort .hier)).n GKontoFeld.stand).trans
+        (storeSlot_hit (D := gDB) _ GTab.Konto _ GKontoFeld.stand _)
+      have h100 : (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 :=
+        (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
+      apply decide_eq_true
+      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).le_hi
+        (Int.le_of_eq h100.symm)
+    · rename_i r _
+      exact r.elim0
+    · cases h2
+    · cases h2
+  · have hr : gPB.rumpf (some GFn.einzahlen) = gbBody_einzahlen := rfl
+    rw [hr] at hrun
+    rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
+    · simp [execStmt] at h1
+    · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
+      · exact gb_call_tor _ _ R hOV _ _ _ _ _ _ _ h2
+      · simp only [execEnd] at h2
+        cases h2
+
+theorem gPB_koerperS : ∀ f : gDB.Fn,
+    KoerperGutS gPB 0 (axWahr gDB) (SperrInv.leer gDB) f :=
+  fun f => koerperGutS_leer ⟨koerperGutRQ_of_R _ (match f with
+    | some .einzahlen => gPB_einzahlen_R
+    | some .lies => koerperGutR_of_V gPB_koerper_lies
+    | none => koerperGutR_of_V gPB_koerper_ruhe),
+    programmLogikFrei_ok gbFs_voll gPB_logikFrei 0 _ f⟩
+
+/-- The oracle of `gDB`: no axiom, register or global exists. -/
+def gOB : Orakel gDB where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun g => nomatch g
+
+theorem gOB_gut : GutO gOB := fun a => nomatch a
+
+theorem gOB_lokal : RegLokal gOB := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ => nomatch g)⟩
+
+/-- **The runtime's start**: thread 0 runs the source function `f` on the
+    arguments `ρ` (whatever the driver calls), every other thread idles. -/
+def bootInit (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
+    Faden → Σ g : gDB.Fn, Env gDB (gDB.params g) :=
+  fun t => if t = 0 then ⟨some f, ρ⟩ else ⟨none, .nil⟩
+
+theorem bootInit_ruhig (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
+    ∀ u, u ≠ 0 → ruhig gPB (bootInit f ρ u).1 = true := by
+  intro u hu
+  unfold bootInit
+  rw [if_neg hu]
+  exact gPB_ruhig
+
+theorem bootInit_start (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
+    StartGut gPB sp (bootInit f ρ) := by
+  intro t
+  unfold bootInit
+  by_cases h0 : t = 0
+  · rw [if_pos h0]; rfl
+  · rw [if_neg h0]; rfl
+
+/-- The declaration has a lock: a trace event exists. -/
+def gbE0 : Ereignis gDB := .nimmt GLock.M []
+
+/-- **THE GOAL THEOREM ON THE MACHINE OF `gPB`** -- from EVERY start memory,
+    with thread 0 in EVERY source function on EVERY argument and all other
+    threads idle: on every reachable machine the contracts hold at every
+    logged event, the (empty) lock invariants hold, no thread is stuck at a
+    `logik` check, the progress conjunct holds, and every owed invariant
+    holds at every logged return (`ziel_ort_einfaden` plus the invariant
+    conclusion of `ziel_ort_sperre_inv`, trivially: `gD` declares none). -/
+theorem gPB_ziel (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
+    ∀ M : RufMaschineG gDB, RufErreichbarG gPB gOB 0 (RufStartG gPB sp (bootInit f ρ)) M →
+      (VertragAmOrtG gPB M ∧ SperrInvG (SperrInv.leer gDB) M ∧ KeinLogikHaltG gOB 0 M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG gPB gOB 0 M t M') ∧
+      InvAmOrtG gPB M := by
+  intro M hr
+  refine ⟨ziel_ort_einfaden gPB gOB 0 (axWahr gDB) (SperrInv.leer gDB) gbFs sp (bootInit f ρ) gbE0
+    gOB_gut gOB_lokal (axVertragO_wahr gOB) axEnsLokal_wahr sperrInvOk_leer gbFs_voll gPB_fragment
+    (bootInit_ruhig f ρ) gPB_koerperS (bootInit_start sp f ρ) (fun _ => rfl) M hr, ?_⟩
+  intro t ev _ g rho v s0 s1 _ i hi
+  exact nomatch i
+
 end Gabbro.Grammatik
