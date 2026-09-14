@@ -517,4 +517,42 @@ theorem turm_var : ∀ (a : String) (rest : List Token) (F : Nat),
   exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
+-- Standalone arm lemmas with VARIABLE tails. Each
+-- canonicalises token lists first (append_assoc/cons/nil -- the
+-- same set callers use, so every use site aligns), then fires the
+-- concrete head arm and rewrites the child call. This isolates
+-- all match-reduction risk in three tiny probes.
+theorem bang_arm : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
+    parsePrimary G' (Tx ++ rest) = .ok (v, rest) →
+    parseUnary (G' + 1) (([.zeichen "!"] ++ Tx) ++ rest) =
+      .ok (.un "!" v, rest) := by
+  intro G' Tx rest v h
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+  simp only [parseUnary, h] at ⊢
+
+theorem paren_arm : ∀ (G'' : Nat) (Tx rest : List Token) (v : SExpr),
+    parseOr G'' (Tx ++ ([.zeichen ")"] ++ rest)) =
+      .ok (v, [.zeichen ")"] ++ rest) →
+    parsePrimary (G'' + 1) ((([.zeichen "("] ++ Tx) ++ [.zeichen ")"]) ++ rest) =
+      .ok (v, rest) := by
+  intro G'' Tx rest v h
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+  simp only [parsePrimary, h] at ⊢
+
+-- A parenthesised tree falls through `parseUnary` to
+-- `parsePrimary` (`(` is no prefix operator). The catch-all arm
+-- needs the four string inequalities spelled out (same pattern
+-- as lane 161's `stopSuffix`: `simp` prunes the match arms from
+-- the `≠` facts).
+theorem un_paren_fall : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
+    parsePrimary G' (([.zeichen "("] ++ Tx) ++ rest) = .ok (v, rest) →
+    parseUnary (G' + 1) (([.zeichen "("] ++ Tx) ++ rest) = .ok (v, rest) := by
+  intro G' Tx rest v h
+  have n1 : ("(" : String) ≠ "!" := by decide
+  have n2 : ("(" : String) ≠ "-" := by decide
+  have n3 : ("(" : String) ≠ "~" := by decide
+  have n4 : ("(" : String) ≠ "&" := by decide
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+  simp [parseUnary, h, n1, n2, n3, n4] at ⊢
+
 end Gabbro.Grammatik.Parser
