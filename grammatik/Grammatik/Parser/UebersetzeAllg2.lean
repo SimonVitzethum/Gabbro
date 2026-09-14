@@ -17,6 +17,7 @@
   theorem chaining all stages for 104.
 -/
 import Grammatik.Parser.UebersetzeAllg
+import Grammatik.Export108
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 
@@ -776,6 +777,361 @@ theorem kette104 : lex src104real = .ok tt104 ∧
   refine ⟨lex104real, u104parse, u104elab, ?_⟩
   decide
 
+/-! ## 108 preprocessing: `concurrent` stripping, bare-`u32` norms -/
+
+/-- Bare `u32` as its full range (what the exporter computes
+    with, per `Export108.lean` CUTS). -/
+def u32Voll : STyp :=
+  .bereich (.atom "u32") (.lit 0) (.lit 4294967295) false
+
+/-- A type with bare `u32` normalised (lane 160 has no
+    full-range rule by design; the normalisation lives here,
+    never by editing `Uebersetze.lean`). -/
+def normTypU32 : STyp → STyp
+  | .atom a => if a == "u32" then u32Voll else .atom a
+  | t => t
+
+/-- A slot field with bare `u32` normalised. -/
+def normFeldU32 (f : SFeld) : SFeld :=
+  { f with ftyp := normTypU32 f.ftyp }
+
+/-- A table part with bare `u32` normalised. -/
+def normTabTeilU32 : STabTeil → STabTeil
+  | .tPlatz fds => .tPlatz (fds.map normFeldU32)
+  | t => t
+
+/-- A function head with bare `u32` normalised (parameters and
+    result). -/
+def normSigU32 (s : FnSig) : FnSig :=
+  { s with params := s.params.map (fun p => (p.1, normTypU32 p.2)), ergebnis := s.ergebnis.map normTypU32 }
+
+/-- Drop `concurrent` items (`nebenT` has no G form). Top
+    level only, like `uMembers`: nested modules are refused by
+    `uRestFehler` afterwards, loudly. Single recursion, so the
+    kernel reduces it (nested-subterm recursion does not). -/
+def stripTopNeben : List SItemTief → List SItemTief
+  | [] => []
+  | .nebenT _ :: rest => stripTopNeben rest
+  | it :: rest => it :: stripTopNeben rest
+
+/-- One item with bare `u32` normalised (no module recursion:
+    `uMembers` unwraps the single module `elabU` supports). -/
+def normU32Item : SItemTief → SItemTief
+  | .tabelleT n c a b g parts =>
+    .tabelleT n c a b g (parts.map normTabTeilU32)
+  | .funktionT s k => .funktionT (normSigU32 s) k
+  | it => it
+
+/-- Bare `u32` normalised over a top-level list. -/
+def normTopU32 : List SItemTief → List SItemTief
+  | [] => []
+  | it :: rest => normU32Item it :: normTopU32 rest
+
+/-- The 108 preprocessing: unwrap like `elabU`, strip
+    `concurrent`, then normalise bare `u32`, before `elabU`. -/
+def pre108 (items : List SItemTief) : List SItemTief :=
+  normTopU32 (stripTopNeben (uMembers items))
+
+/-! ## 108 pins: strip, normalise, elaborate, lower -/
+
+/-- The real `beispiele/108-disjoint-start-locks.gab` text. -/
+def src108 : String := "-- 108 -- Declared-concurrent readers under disjoint signature locks.\n--\n-- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): the start functions of\n-- distinct threads hold no signature lock in common. Here `read_a` requires\n-- `Held(L)` and `read_c` requires `Held(M)` -- disjoint sets -- so the\n-- declared pair `concurrent { read_a, read_c }` starts exclusively and every\n-- rule stays silent: N240 (disjoint), W001 (reads overlap freely), W003\n-- (both hulls complete). The passing side of gifts 911/913 at corpus level.\nmodule beispiel::disjoint_start_locks {\n\ntable T count 4 {\n    slot { v : u32, }\n}\n\ntable U count 4 {\n    slot { v : u32, }\n}\n\nlock L protects { T } rank 0 held <= 100 ops;\n\nlock M protects { U } rank 1 held <= 100 ops;\n\nimpl fn read_a() -> u32\n    requires Held(L)\n    effects { reads T.slots }\n    costs <= 4 ops\n{\n    return T.slots[0].v;\n}\n\nimpl fn read_c() -> u32\n    requires Held(M)\n    effects { reads U.slots }\n    costs <= 4 ops\n{\n    return U.slots[0].v;\n}\n\nconcurrent { read_a, read_c };\n\n}\n"
+
+/-- The token list of the 108 source (`lex108` checks it). -/
+def toks108 : List Token := [.wort "module",
+ .ident "beispiel",
+ .zeichen "::",
+ .ident "disjoint_start_locks",
+ .zeichen "{",
+ .wort "table",
+ .ident "T",
+ .wort "count",
+ .zahl 4,
+ .zeichen "{",
+ .wort "slot",
+ .zeichen "{",
+ .ident "v",
+ .zeichen ":",
+ .wort "u32",
+ .zeichen ",",
+ .zeichen "}",
+ .zeichen "}",
+ .wort "table",
+ .ident "U",
+ .wort "count",
+ .zahl 4,
+ .zeichen "{",
+ .wort "slot",
+ .zeichen "{",
+ .ident "v",
+ .zeichen ":",
+ .wort "u32",
+ .zeichen ",",
+ .zeichen "}",
+ .zeichen "}",
+ .wort "lock",
+ .ident "L",
+ .wort "protects",
+ .zeichen "{",
+ .ident "T",
+ .zeichen "}",
+ .wort "rank",
+ .zahl 0,
+ .wort "held",
+ .zeichen "<=",
+ .zahl 100,
+ .wort "ops",
+ .zeichen ";",
+ .wort "lock",
+ .ident "M",
+ .wort "protects",
+ .zeichen "{",
+ .ident "U",
+ .zeichen "}",
+ .wort "rank",
+ .zahl 1,
+ .wort "held",
+ .zeichen "<=",
+ .zahl 100,
+ .wort "ops",
+ .zeichen ";",
+ .wort "impl",
+ .wort "fn",
+ .ident "read_a",
+ .zeichen "(",
+ .zeichen ")",
+ .zeichen "->",
+ .wort "u32",
+ .wort "requires",
+ .ident "Held",
+ .zeichen "(",
+ .ident "L",
+ .zeichen ")",
+ .wort "effects",
+ .zeichen "{",
+ .wort "reads",
+ .ident "T",
+ .zeichen ".",
+ .wort "slots",
+ .zeichen "}",
+ .wort "costs",
+ .zeichen "<=",
+ .zahl 4,
+ .wort "ops",
+ .zeichen "{",
+ .wort "return",
+ .ident "T",
+ .zeichen ".",
+ .wort "slots",
+ .zeichen "[",
+ .zahl 0,
+ .zeichen "]",
+ .zeichen ".",
+ .ident "v",
+ .zeichen ";",
+ .zeichen "}",
+ .wort "impl",
+ .wort "fn",
+ .ident "read_c",
+ .zeichen "(",
+ .zeichen ")",
+ .zeichen "->",
+ .wort "u32",
+ .wort "requires",
+ .ident "Held",
+ .zeichen "(",
+ .ident "M",
+ .zeichen ")",
+ .wort "effects",
+ .zeichen "{",
+ .wort "reads",
+ .ident "U",
+ .zeichen ".",
+ .wort "slots",
+ .zeichen "}",
+ .wort "costs",
+ .zeichen "<=",
+ .zahl 4,
+ .wort "ops",
+ .zeichen "{",
+ .wort "return",
+ .ident "U",
+ .zeichen ".",
+ .wort "slots",
+ .zeichen "[",
+ .zahl 0,
+ .zeichen "]",
+ .zeichen ".",
+ .ident "v",
+ .zeichen ";",
+ .zeichen "}",
+ .wort "concurrent",
+ .zeichen "{",
+ .ident "read_a",
+ .zeichen ",",
+ .ident "read_c",
+ .zeichen "}",
+ .zeichen ";",
+ .zeichen "}",
+ .ende]
+
+set_option maxHeartbeats 12000000 in
+theorem lex108 : lex src108 = .ok toks108 := by
+  decide
+
+/-- The parsed 108 surface tree (raw, `concurrent` inside;
+    `parse108` checks it against the reader). -/
+def items108 : List SItemTief := [.modulT
+   "beispiel::disjoint_start_locks"
+   [.tabelleT
+      "T"
+      (some (.lit 4))
+      none
+      none
+      false
+      [.tPlatz
+         [{ fname := "v",
+            ftyp := .atom "u32",
+            pos := none,
+            bezug := none,
+            wo := none,
+            reserviert := false,
+            byOps := false }]],
+    .tabelleT
+      "U"
+      (some (.lit 4))
+      none
+      none
+      false
+      [.tPlatz
+         [{ fname := "v",
+            ftyp := .atom "u32",
+            pos := none,
+            bezug := none,
+            wo := none,
+            reserviert := false,
+            byOps := false }]],
+    .sperreT
+      "L"
+      [.variable "T"]
+      (.lit 0)
+      (some (.lit 100))
+      none
+      none,
+    .sperreT
+      "M"
+      [.variable "U"]
+      (.lit 1)
+      (some (.lit 100))
+      none
+      none,
+    .funktionT
+      { art := "impl",
+        name := "read_a",
+        params := [],
+        ergebnis := some (.atom "u32"),
+        fehler := none,
+        klauseln := [.voraus
+                       (.ruf "Held" [.variable "L"]),
+                     .wirkung
+                       [.liest
+                          (.feld (.variable "T") "slots")],
+                     .kosten (.lit 4)] }
+      (.block
+        []
+        (some (.ret
+           (some (.feld
+              (.index
+                (.feld (.variable "T") "slots")
+                (.lit 0))
+              "v"))))),
+    .funktionT
+      { art := "impl",
+        name := "read_c",
+        params := [],
+        ergebnis := some (.atom "u32"),
+        fehler := none,
+        klauseln := [.voraus
+                       (.ruf "Held" [.variable "M"]),
+                     .wirkung
+                       [.liest
+                          (.feld (.variable "U") "slots")],
+                     .kosten (.lit 4)] }
+      (.block
+        []
+        (some (.ret
+           (some (.feld
+              (.index
+                (.feld (.variable "U") "slots")
+                (.lit 0))
+              "v"))))),
+    .nebenT [["read_a"], ["read_c"]]]]
+
+theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
+  decide
+
+/-- The elaborated 108 program (`elab108` checks it against
+    the elaborator run after `pre108`). -/
+def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }, { name := "U", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [{ name := "L", rank := 0, schutz := ["T"] }, { name := "M", rank := 1, schutz := ["U"] }], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := ["L"], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := ["M"], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "U" "v" (.lit 0)) }] }
+
+set_option maxHeartbeats 12000000 in
+theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
+  decide
+
+/-- The fragment check on the generically lowered 108 program. -/
+theorem lowerAllg108fragment :
+    (match lowerAllg uExp108 with
+      | .ok (P, fs) => programmImFragmentG P fs
+      | .error _ => false) = true := by
+  decide
+
+/-- The footprint check on the generically lowered 108 program. -/
+theorem lowerAllg108fuss :
+    (match lowerAllg uExp108 with
+      | .ok (P, fs) => fussOrtGB P fs
+      | .error _ => false) = true := by
+  decide
+
+/-- Declaration data agreement for 108: the generic
+    declaration built from `uExp108` agrees with the exporter
+    universe `G108_disjoint_start_locks.gD`. -/
+theorem lowerAllg108data :
+    (declOf uExp108).count ⟨0, by decide⟩ = 4 ∧
+    G108_disjoint_start_locks.gD.count G108_disjoint_start_locks.GTab.T = 4 ∧
+    (declOf uExp108).count ⟨1, by decide⟩ = 4 ∧
+    G108_disjoint_start_locks.gD.count G108_disjoint_start_locks.GTab.U = 4 ∧
+    (declOf uExp108).typ ⟨0, by decide⟩ ⟨0, by decide⟩ = .int 0 4294967295 ∧
+    G108_disjoint_start_locks.gD.typ G108_disjoint_start_locks.GTab.T G108_disjoint_start_locks.GTFeld.v = .int 0 4294967295 ∧
+    (declOf uExp108).typ ⟨1, by decide⟩ ⟨0, by decide⟩ = .int 0 4294967295 ∧
+    G108_disjoint_start_locks.gD.typ G108_disjoint_start_locks.GTab.U G108_disjoint_start_locks.GUFeld.v = .int 0 4294967295 ∧
+    (declOf uExp108).rang ⟨0, by decide⟩ = 0 ∧
+    G108_disjoint_start_locks.gD.rang G108_disjoint_start_locks.GLock.L = 0 ∧
+    (declOf uExp108).rang ⟨1, by decide⟩ = 1 ∧
+    G108_disjoint_start_locks.gD.rang G108_disjoint_start_locks.GLock.M = 1 ∧
+    (declOf uExp108).braucht ⟨0, by decide⟩ = ([.inl (⟨0, by decide⟩ : Fin uExp108.sperren.length)] : List ((declOf uExp108).Lock ⊕ ((declOf uExp108).Marke × Nat))) ∧
+    G108_disjoint_start_locks.gD.braucht G108_disjoint_start_locks.GTab.T = [.inl G108_disjoint_start_locks.GLock.L] ∧
+    (declOf uExp108).braucht ⟨1, by decide⟩ = ([.inl (⟨1, by decide⟩ : Fin uExp108.sperren.length)] : List ((declOf uExp108).Lock ⊕ ((declOf uExp108).Marke × Nat))) ∧
+    G108_disjoint_start_locks.gD.braucht G108_disjoint_start_locks.GTab.U = [.inl G108_disjoint_start_locks.GLock.M] ∧
+    ((declOf uExp108).signatur ⟨0, by decide⟩).haelt = ([(⟨0, by decide⟩ : Fin uExp108.sperren.length)] : List (declOf uExp108).Lock) ∧
+    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_a = [G108_disjoint_start_locks.GLock.L] ∧
+    ((declOf uExp108).signatur ⟨1, by decide⟩).haelt = ([(⟨1, by decide⟩ : Fin uExp108.sperren.length)] : List (declOf uExp108).Lock) ∧
+    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_c = [G108_disjoint_start_locks.GLock.M] ∧
+    ((declOf uExp108).signatur ⟨0, by decide⟩).schreibt ⟨0, by decide⟩ = false ∧
+    (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_a).schreibt G108_disjoint_start_locks.GTab.T = false ∧
+    ((declOf uExp108).signatur ⟨1, by decide⟩).schreibt ⟨1, by decide⟩ = false ∧
+    (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_c).schreibt G108_disjoint_start_locks.GTab.U = false := by
+  decide
+
+/-- One theorem chaining every stage for 108. -/
+theorem kette108 : lex src108 = .ok toks108 ∧
+    beqTopTief (parseTopTief toks108) (.ok items108) = true ∧
+    beqElabU (elabU (pre108 items108)) (.ok uExp108) = true ∧
+    (match lowerAllg uExp108 with
+      | .ok (P, fs) => programmImFragmentG P fs && fussOrtGB P fs
+      | .error _ => false) = true := by
+  refine ⟨lex108, parse108, elab108, ?_⟩
+  decide
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 /-
@@ -795,8 +1151,12 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
      `ensures` positions ride one past the result when one is
      present. Without it `lowerAllg` fails on every result-bearing
      function whose contract reads a slot (measured on `lies`).
-  4. 108 is open: it needs `concurrent` stripping and bare-`u32`
-     normalisation before `elabU` (see the lane task).
+  4. 108 is done the same way as 104: `pre108` strips
+     `concurrent` (`nebenT`) and normalises bare `u32` to its
+     full range before `elabU`; `toks108`/`items108`/`uExp108`
+     are probe-generated literals (`#eval` + `Repr`, then pinned
+     by `lex108`/`parse108`/`elab108`), with the fragment,
+     footprint, data and chaining pins on top.
   5. Membership across the `Fin`/carrier line does not synthesize:
      `L ∈ S.haelt` with `L : Fin _` has no `Decidable` instance,
      the unfolded `∀ w ∈ braucht` form and `D.Lock`-quantified
@@ -812,3 +1172,10 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg104data
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lex104real
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.kette104
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lex108
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.parse108
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.elab108
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg108fragment
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg108fuss
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg108data
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.kette108
