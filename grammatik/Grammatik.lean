@@ -223,5 +223,7 @@ import Grammatik.ZielOrtStart
 import Grammatik.Verklemmung
 import Grammatik.MehrfadenZeuge
 import Grammatik.MehrfadenLauf
+import Grammatik.GenOblig104
+import Grammatik.Pflicht104
 import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund

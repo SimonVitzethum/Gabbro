@@ -178,6 +178,14 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    Fahne {
+        // The G-obligation channel of `obligations|pflichten` (lane 176):
+        // the `lean-g` program with the flagship's duties stated. A channel
+        // of its own, so a flag of its own; English from the start, no pair.
+        erstname: "--g",
+        zweitname: "",
+        lebendig: &[],
+    },
     // --- GabbroV, 2026-09-10 ------------------------------------------------------------
     Fahne {
         erstname: "--manifest",
