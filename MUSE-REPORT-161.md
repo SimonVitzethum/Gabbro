@@ -6,7 +6,7 @@ induction in a new file `grammatik/Grammatik/Parser/Rundlauf.lean`:
 by induction with a fuel bound; (4) statements if (3) is done; witnesses
 on corpus expressions. No codes, gifts or examples reserved (none used).
 
-## Status: parts 1–2 and all induction infrastructure are proved and green
+## Status: infrastructure plus single-constructor primaries green; main induction open
 
 `./lean-bau` last lines:
 
@@ -56,26 +56,39 @@ induction; `eingebaut` by `decEq` cascade + `rfl` shape equations
 
 Induction invariant and place machinery: `R n` (8-component conjunction:
 `parseOr/And/Cmp/Bit/Add/Mul/Unary` exact on benign follows with fuel
-`12 * (groesse e + 1) + groesse e`, `parsePrimary` with descent slack
-`+7`), `B n` (binary-inner parse, no follow premise),
+`12 * (groesse e + 1) + groesse e + 8`, `parsePrimary` with `+1`),
+`B n` (binary-inner parse, no follow premise),
 `SuffFrag`/`suffToks`/`applySuff`/`suffGroesse`/`suffGut` (+
 `groesse_applySuff`, `applySuff_append`, `suffGroesse_append`,
 `suffGut_append`), `zerlege` (every `gutPlatz` tree is head variable +
 fragments, by size induction), `suff_rund` (chains through
 `parseSuffixe`, fuel with fragment-count slack), `druckToks_applySuff`,
-`ort_platz_all` (places through `parseOrt`), `sammleSeg_stop`,
+`ort_platz_all` (places through `parseOrt`), `sammleSeg_stop`/
+`sammleSeg_suffToks`/`suffToks_nopar`/`ruhigSuff_nopar`,
 `arg_einzeln` (one `parseArg`: label strip misses), `args_rund`
-(argument lists, paren consumed).
+(argument lists, paren consumed), and single-constructor outcomes
+`prim_lit/gleit/wahr/falsch/ergebnis/grund`, `prim_platz`,
+`prim_ruf` (via `kopf_ruf_head`), `prim_alt`, plus `ruhigGleit`
+(rounded-follow) and `istTypWortVar` (`sizeof`/`lenof` refuse bare
+type-word variables).
 
-## Open (not started — named here, not built)
+## Open (in priority order)
 
-`prim_X_all` (the 15 per-constructor `parsePrimary` outcomes),
-`un_X_all`, `B_one` (the six operator-level inner parses),
-`rundlauf_n` (`R n ∧ B n` assembly), `parse_druck` itself plus its
-`_zeuge` witness and corpus-expression witnesses, and task item (4)
-(statements `SAnw`). The `CUTS:` block in `Rundlauf.lean` is still a stub
-and `#print axioms` covers only `strKlingt`; both must be completed with
-the main theorems.
+`prim_eingebaut` (REMOVED as resisting — see finding 5),
+`prim_bin`, `un_X_all` (`fnwert` + `un` + delegation), `B_one` (six
+operator levels), `rundlauf_n` (`R n ∧ B n` assembly), `parse_druck`
+itself:
+
+```lean
+theorem parse_druck : ∀ (e : SExpr), gut e = true →
+    parseOr (brennstoff e) (druckToks e ++ [.ende]) = .ok (e, [.ende])
+```
+
+(`parseTop` takes no fuel argument, so the fuel-explicit `parseOr`
+form with `brennstoff e = 12 * (groesse e + 1)`; `.ok e` is
+`Except.ok`, hence the pair form.) Plus its `_zeuge` companion and two
+witnesses on corpus expressions (e.g. sonde shapes), task item (4)
+(statements `SAnw`), and completing `CUTS:`/`#print axioms`.
 
 ## Findings about the task (rule 12 notice)
 
@@ -99,6 +112,15 @@ the main theorems.
    `decide` only on closed goals).
 4. `!x = true` parses as `!(x = true)` (`!` binds looser than `=`;
    measured) — parenthesise Boolean negations in statements.
+5. `prim_eingebaut` resists and was removed (not weakened): beyond the
+   `decEq` head cascade and `rfl` shape equations (all green), its
+   `sizeof`/`lenof` singleton arms need a variable-check match
+   (`parseEingebaut` refuses bare type-word variables) whose
+   rewrite/split handling never stabilised across patch cycles, and
+   `aligned` needs two `R`-level rewrites whose associativity never
+   aligned. The `gut` typWort gate (`istTypWortVar`), the
+   `eingebaut_ein_ok` helper, and all `sizeof`/`lenof`/`aligned`
+   infrastructure stay green in the file for the next attempt.
 
-Commits on `muse/161` (parts 1–8); nothing outside `grammatik/` touched;
+Commits on `muse/161` (parts 1–14); nothing outside `grammatik/` touched;
 no network/`cargo`/`ssh` used.
