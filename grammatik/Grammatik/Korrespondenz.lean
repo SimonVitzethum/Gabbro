@@ -122,22 +122,36 @@ def freshRaw (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) (x : Nat)
     starting at `vm`); arm and loop bodies are their own scopes. -/
 def rowsFresh (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) : List GRow → Bool
   | [] => true
+  | .void _ :: rs => rowsFresh pp ks acc rs
+  | .storeSlot _ _ _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
+  | .storeGlob _ _ _ :: rs => rowsFresh pp ks acc rs
+  | .setVar _ _ _ :: rs => rowsFresh pp ks acc rs
+  | .setOp _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
   | .bindLet x _ _ :: rs => freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) rs
-  | .call _ _ (some (x, _)) :: rs => freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) rs
   | .ite _ t e :: rs => rowsFresh pp ks acc t && rowsFresh pp ks acc e && rowsFresh pp ks acc rs
+  | .call _ _ none :: rs => rowsFresh pp ks acc rs
+  | .call _ _ (some (x, _)) :: rs =>
+    freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) rs
+  | .ret _ :: rs => rowsFresh pp ks acc rs
   | .forTrav x _ _ body _ :: rs =>
     freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) body && rowsFresh pp ks acc rs
-  | _ :: rs => rowsFresh pp ks acc rs
 
 /-- Traverse hygiene of a row list: no loop body writes its loop
     variable (the `hw` premise of `scorr_traverse`, decided on the
     elaborated rows). -/
 def rowsTravOk : List GRow → Bool
   | [] => true
+  | .void _ :: rs => rowsTravOk rs
+  | .storeSlot _ _ _ _ _ _ _ :: rs => rowsTravOk rs
+  | .storeGlob _ _ _ :: rs => rowsTravOk rs
+  | .setVar _ _ _ :: rs => rowsTravOk rs
+  | .setOp _ _ _ _ _ :: rs => rowsTravOk rs
+  | .bindLet _ _ _ :: rs => rowsTravOk rs
+  | .ite _ t e :: rs => rowsTravOk t && rowsTravOk e && rowsTravOk rs
+  | .call _ _ _ :: rs => rowsTravOk rs
+  | .ret _ :: rs => rowsTravOk rs
   | .forTrav x _ _ body _ :: rs =>
     decide ((growsCS body .skip).writesV x = false) && rowsTravOk body && rowsTravOk rs
-  | .ite _ t e :: rs => rowsTravOk t && rowsTravOk e && rowsTravOk rs
-  | _ :: rs => rowsTravOk rs
 
 /-- The hygiene the soundness theorem consumes: bound-local freshness
     plus traverse hygiene. -/
@@ -173,5 +187,79 @@ theorem freshRaw_ok {D : Deklaration} {Γ : Ctx} {K : CEnvLay D Γ}
   · intro q hq
     have hmem' : q ∈ ks := by rw [← hks]; exact hq
     exact hks' q hmem'
+
+/-- THE ROW DERIVATION for a block: statement by statement, each row
+    a form family over a T4 judgement. `consStmt` is the escape hatch
+    for the plain families (local/slot/global store, compound
+    assignment) whose `StmtCorr` the per-family builders discharge;
+    `bindLet`/`preVoid` mirror `BlockCorr.bind`/`pre` (freshness comes
+    from `rowsFresh`, not from a premise); `consCall`/`consBindCall`
+    are `scorr_call`/`bsem_bindCall`; `consIte`/`consTrav` carry their
+    arm/body row derivations (`scorr_traverse`'s `hw` comes from
+    `rowsTravOk`, not from a premise). -/
+inductive RBlock {D : Deklaration} (X : TVCtx D) {V : Vertrag D} :
+    (m : Nat) → (l : Bool) → {Γ : Ctx} → {Λ Λ' : List (Res D)} → CEnvLay D Γ →
+    Block D V l Γ Λ Λ' → List GRow → CS → Prop where
+  | nil {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} :
+      RBlock X m l K (Block.nil (Λ := Λ)) [] .skip
+  | consStmt {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {K : CEnvLay D Γ}
+      {s : Stmt D V l Γ Λ Λ'} {rest : Block D V l Γ Λ' Λ''}
+      {r : GRow} {rs : List GRow} {cr : CS}
+      (hs : StmtCorr X m K s (growRow r)) (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons s rest) (r :: rs) (.seq (growRow r) cr)
+  | bindLet {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {τ : Ty}
+      {e : Expr D Γ Λ τ} {rest : Block D V l (τ :: Γ) Λ Λ'}
+      {x : Nat} {τc : CTy} {ce : CX} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (he : ExprCorr X K ce e) (hd : declOk τ τc = true)
+      (hr : RBlock X m l (K.push τ x) rest rs cr) :
+      RBlock X m l K (.bind e rest) ((.bindLet x τc ce) :: rs) (.seq (.set x τc ce) cr)
+  | preVoid {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ}
+      {b : Block D V l Γ Λ Λ'} {τ0 : Ty} {e0 : Expr D Γ Λ τ0} {x : Nat}
+      {rs : List GRow} {cr : CS}
+      (he : ExprCorr X K (.var x) e0) (hr : RBlock X m l K b rs cr) :
+      RBlock X m l K b ((.void x) :: rs) (.seq (.expr (.var x)) cr)
+  | consCall {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {f : D.Fn}
+      {args : Args D Γ Λ (D.params f)} {hp : RufPasst D V (D.signatur f) Λ}
+      {hrp : D.gruende f = 0} {rest : Block D V l Γ (nach D f Λ) Λ'}
+      {fc : Nat} {cargs : List CX} {ps : List (Nat × CTy)} {Kf : CEnvLay D (D.params f)}
+      {rs : List GRow} {cr : CS}
+      (hF : FnCorr X.EL X.R X.CR f fc ps Kf) (hA : ArgsTo X K args cargs ps Kf)
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.call (l := l) f args hp hrp) rest)
+        ((.call fc cargs none) :: rs) (.seq (.call fc cargs none) cr)
+  | consBindCall {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {f : D.Fn} {τ : Ty}
+      {args : Args D Γ Λ (D.params f)} {heq : D.erg f = some τ}
+      {hp : RufPasst D V (D.signatur f) Λ} {hrp : D.gruende f = 0}
+      {rest : Block D V l (τ :: Γ) (nach D f Λ) Λ'}
+      {fc : Nat} {cargs : List CX} {x : Nat} {τc : CTy}
+      {ps : List (Nat × CTy)} {Kf : CEnvLay D (D.params f)} {rs : List GRow} {cr : CS}
+      (hF : FnCorr X.EL X.R X.CR f fc ps Kf) (hA : ArgsTo X K args cargs ps Kf)
+      (hK : K.okB = true) (hd : declOk τ τc = true)
+      (hr : RBlock X m l (K.push τ x) rest rs cr) :
+      RBlock X m l K (Block.bindCall f args heq hp hrp rest)
+        ((.call fc cargs (some (x, τc))) :: rs) (.seq (.call fc cargs (some (x, τc))) cr)
+  | consIte {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {K : CEnvLay D Γ}
+      {c : Expr D Γ Λ .bool} {t e : Block D V l Γ Λ Λ'}
+      {rest : Block D V l Γ Λ' Λ''} {cc : CX} {tRows eRows : List GRow}
+      {rs : List GRow} {cr : CS}
+      (hc : ExprCorr X K cc c)
+      (ht : RBlock X m l K t tRows (growsCS tRows .skip))
+      (he : RBlock X m l K e eRows (growsCS eRows .skip))
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.ite c t e) rest)
+        ((.ite cc tRows eRows) :: rs) (.seq (growRow (.ite cc tRows eRows)) cr)
+  | consTrav {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {tb : D.Tab}
+      {t : CIT} {hN0 : 0 ≤ D.count tb} {hN : t.holds 0 (D.count tb)} {hiC : CX}
+      {hhi : ∀ st ρ, ev X.EL.lay X.orc X.fr hiC st ρ = some (.int (D.count tb), st)}
+      {inv : Expr D Γ Λ .bool} {body : Block D V true (.index (D.count tb) :: Γ) Λ Λ}
+      {bodyRows : List GRow} {rest : Block D V l Γ Λ Λ}
+      {m' : Nat} {x : Nat} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true)
+      (hb : RBlock X m' true (K.push (.index (D.count tb)) x) body bodyRows
+        (growsCS bodyRows .skip))
+      (hr : RBlock X m l K rest rs cr) :
+      RBlock X m l K (.cons (Stmt.traverse (l := l) tb inv body) rest)
+        ((.forTrav x t hiC bodyRows m') :: rs)
+        (.seq (CS.forUp x t (.lit 0) hiC (growsCS bodyRows .skip) m') cr)
 
 end Gabbro.Grammatik
