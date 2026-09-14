@@ -166,7 +166,9 @@ the product promise only if the checker supplies its premises.
 - the lock primitives (acquire/release, happens-before);
 - thread creation;
 - the idle root;
-- a FIFO or ticket lock for the waiting bound;
+- a FIFO or ticket lock for the waiting bound, with the scheduler's fairness window `F`
+  (`LaufzeitAnnahme`, Lebendigkeit.lean), and no hardware stop inside a critical section
+  (`HardwareImAbschnitt`);
 - the scheduler class for noninterference;
 - DRF-SC;
 - the IEEE float unit;
@@ -198,6 +200,21 @@ them all.
 - The bound is computed and booked on every example from the start. The theorem alone does not
   count as done: a green theorem over a number nobody can put in a data sheet is not a result.
   `beispiele/01`'s `costs <= 839680 ops` is the known precedent one level down.
+- **Done 2026-09-15** (`Lebendigkeit.lean`, SATZKARTE §21): `wartezeit_schranke` under
+  `LaufzeitAnnahme R F` (FIFO + fairness window `F`, one list entry) and
+  `HardwareImAbschnitt` (a hardware entry); hold time `Haltezeit` is a PREMISE, not derived
+  from `K002`. Bound `W(L) = (c-1)(h·F + k·Wn + F) + F`, recursive over ranks. Witness: the
+  two-thread fixture, `W = 32`, actual wait 10 (`wartezeit_zeuge`).
+- **Measured** (messung/WARTESCHRANKEN-2026-09-15.md, 28 programs with `held`, 19 with an
+  acquisition point, all by hand from the declarations). Flat locks: `(c-1)(held+1)+1` own
+  steps of the waiter -- a data-sheet number once `c` and the step unit are fixed (124: 102,
+  125: 66, 59 on 64 cores: 2,584). Nested (05, 17, depth 2): 823,096 and 165,376 own steps
+  at `c = F = 64`; a depth-4 chain: 1.6·10⁹. **Astronomical from three levels, and a
+  time-sliced `F` adds ~10⁷ to every row.** What shrinks it: dominance (an inner lock only
+  ever taken under the outer one has nobody ahead: nested wait ≤ `F`; 05 → 25,327, 17 →
+  2,647, depth 4 → 6,427), per-lock contenders from the call graphs, the computed block cost
+  instead of the declared `held`, and non-preemptible (`masks irqs`) sections as the class
+  where `F` is the core count.
 
 **Higher-order contracts: variance, and effects on the type.**
 - Refinement of a function against a pointer type's contract is contravariant in `requires`

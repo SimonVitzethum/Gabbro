@@ -2209,5 +2209,101 @@ new theorem -- `popS_grund`, `invGrundLog_schritt`,
 - `FortschrittG` classifies; it bounds nothing: no fairness, no waiting
   bound, no termination (PLAN §6, unchanged).
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §§1-10 history above.)
+## 21. Liveness: a waiting bound under a FIFO lock and fairness (2026-09-15, KostenG TARGET 4)
+
+PLAN-ZIELSATZ §8 (liveness): "waiting ≤ the sum of the `held` times of the threads ahead",
+with a FIFO/ticket lock as a NAMED runtime assumption, and the number measured from the first
+example. `FortschrittG` (§19.2) classified the stops; nothing bounded a wait.
+
+### 21.1 The runtime assumption (`Lebendigkeit.lean`, one entry of the ONE list)
+
+```lean
+structure PlanLauf (P) (O) (passes) where     -- infinite; a stutter only where no thread can step
+  M : Nat → RufMaschineG D;  akt : Nat → Option Faden
+  schritt : ∀ n u, akt n = some u → RufSchrittG P O passes (M n) u (M (n + 1))
+  stotter : ∀ n, akt n = none → M (n + 1) = M n ∧ ∀ u, ¬ Bereit P O passes (M n) u
+def FifoSperre R := ∀ t u L a n, t ≠ u → (∀ j ∈ [a, n], AnSperre (R.M j) t L) →
+    R.akt n = some u → AnSperre (R.M n) u L → ∀ j ∈ [a, n], AnSperre (R.M j) u L
+def FairF R F := ∀ t n, (∀ j ∈ [n, n + F), Bereit P O passes (R.M j) t) →
+    ∃ j ∈ [n, n + F), R.akt j = some t
+def LaufzeitAnnahme R F := FifoSperre R ∧ FairF R F
+```
+FIFO: nobody overtakes a thread standing at `locks L` (a ticket lock; ties at the start are
+free). Fairness: a thread runnable at `F` consecutive scheduler steps takes one (`F = 0` is
+unsatisfiable). Also named, a hardware assumption: `HardwareImAbschnitt` -- no
+`HaltBenannt` stop while a lock is held (an invisible `awaits`, a spent `forever` budget, a
+device answer out of range inside a critical section).
+
+### 21.2 The hold-time premise -- a premise, NOT derived
+
+`Haltezeit R h k`: on every stretch on which `u` holds `L`, `u` takes at most `h L` own steps,
+at most `k L` at a `locks` head. The checker's `held <= N ops` (`K002`) bounds OPERATIONS of
+the block with callees at their declared costs; two bridges are missing: operations to G
+steps (TARGET 3, F1-F9) and a potential bound for a `locks` body as a residue segment
+(`frame_schritte_beschraenkt` bounds a frame from entry to return, not a block).
+
+### 21.3 The theorem
+
+```lean
+wF 0 L = 0
+wF (n+1) L = (|Ts L| - 1) * (h L * F + k L * wMaxH L (wF n) ls + F) + F
+wartezeit ls Ts h k F L = wF ls.length L                  -- recursion over ranks
+
+theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp init)
+    (hLeer : ∀ t, D.haelt (init t).1 = []) (hls : ∀ L, L ∈ ls)
+    (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
+    (hL : ∀ n, KeinLogikHaltG O passes (R.M n))           -- Ziel.keinLogikHalt
+    (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : HardwareImAbschnitt R)
+    (hAnw : Anwaerter R Ts) (L t n0) (hA : AnSperre (R.M n0) t L) :
+    ∃ j, n0 ≤ j ∧ j < n0 + wartezeit ls Ts h k F L ∧ R.akt j = some t ∧
+      L ∈ offen ((R.M (j + 1)).faeden t).spur
+```
+Proof (`wartezeit_kern`): per rank level (`gueltig`, induction on the fuel with
+`hoeher_lt`); a holder's next own step comes within `F` or, at a nested `locks L'`
+(`rang L < rang L'` by `sperre_rang`), within `W(L')` (`luecke`); so it releases within
+`h·F + k·Wn` (`freigabe`); a free gap ends within `F` with the waiter's step or a new holder
+who, by FIFO, stood at `locks L` since `n0` (`frei_luecke`); every thread ahead leaves the
+set ahead for good (`warte_gehalten`, a strict count over `Ts L`). G facts: `sperre_schritt`
+(a step at a `locks L` head takes `L`, only if free), `schritt_sperre_art`,
+`nimmt_an_sperre`, `ende_ret_kein_schritt`, `abschnittAktiv_aus` (a holder can step or
+stands at `locks`, from `fortschrittG_aus` + `fertig_leer` + `HardwareImAbschnitt`).
+
+### 21.4 Witness and measurement
+
+`LebendigkeitZeuge.lean`: a concrete 23-step run of the §16 fixture `mP`, every premise of
+`wartezeit_schranke` discharged (`lZeuge`: FIFO, fairness `F = 4`, `h = 6`, `k = 0`, no
+hardware stop in a section, contenders `[0, 1]`, `KeinLogikHaltG` from `mP_zertifiziert`);
+`wartezeit = 32` (`lW_eq`, `decide`); thread 1 stands at `locks` from step 5 while thread 0
+holds the lock at steps 6-11 and takes it at step 15 -- the theorem says before 37
+(`wartezeit_zeuge`).
+
+Measured on the corpus (`messung/WARTESCHRANKEN-2026-09-15.md`, by hand from the
+declarations: `lean-g` carries no `held`): 28 programs declare `held`, 19 have an acquisition
+point. Flat locks give `W/F = (c-1)(held+1)+1` own steps of the waiting thread (124/125 with
+`concurrent` pairs: 102 and 66; 59 on 64 cores: 2,584). Two programs nest (05, 17): at
+`c = F = 64` the outer bound is 823,096 and 165,376 own steps; a synthetic chain of depth 4
+reaches 1.6·10⁹. Astronomical from three levels -- and a time-sliced `F` multiplies every row
+by ~10⁷. The proposed shrink that removes the depth: **dominance** (an inner lock taken only
+under the outer one has nobody ahead, nested wait ≤ `F`): 05 falls to 25,327, 17 to 2,647,
+the depth-4 chain to 6,427.
+
+### 21.5 Axiom record (full `lake build`, 223 jobs, green; `ki-pc-fisch-101`)
+
+`sperre_schritt`, `schritt_sperre_art`, `wartezeit_kern`, `wartezeit_schranke`, `lLauf`,
+`lZeuge`, `wartezeit_zeuge`: `propext`, `Classical.choice`, `Quot.sound`. No `sorry`, no new
+`axiom`, no `native_decide`. Machine G and `Spec.lean` unchanged.
+
+### 21.6 What remains
+
+- `Haltezeit` from `K002`: the ops-to-steps bridge and a residue-segment potential for a
+  `locks` body.
+- `Anwaerter` from `reachB` (the contenders are a run premise today).
+- Dominance as a theorem variant (contenders of `L'` among threads not holding `L`), and the
+  checker Bool that decides it.
+- Reader (`locks shared`) acquisition: G has no reader mode (10, 13 are outside).
+- Into `Spec.lean`: `LaufzeitAnnahme` and `HardwareImAbschnitt` belong in the header's ONE
+  assumption list, and a leg `wartezeit` in `Ziel` over `PlanLauf` -- a reviewed diff of
+  `Spec.lean`, not done here.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §21 added 2026-09-15 (waiting bound); §§1-10 history above.)
 
