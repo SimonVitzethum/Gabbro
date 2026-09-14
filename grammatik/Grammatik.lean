@@ -193,3 +193,5 @@ import Grammatik.ZielOrtInv
 import Grammatik.InvZeuge
 import Grammatik.FadenMerkmal
 import Grammatik.ZielOrtMehrfaden
+import Grammatik.ZielOrtStart
+import Grammatik.Verklemmung
