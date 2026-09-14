@@ -280,6 +280,160 @@ def flt (F : Format) (a b : GBits F) : Bool :=
 /-- Non-strict comparison (NaN still unordered). -/
 def fle (F : Format) (a b : GBits F) : Bool := !flt F b a
 
+/-! ## Theorems: the integer significand decision is correct. -/
+
+/-- Below half the quotient stands. -/
+theorem rundeInt_fall (quo rest den : Nat)
+    (h : 2 * rest < den) : rundeInt quo rest den = quo := by
+  unfold rundeInt
+  rw [if_neg (by omega : ¬ den < 2 * rest), if_pos h]
+
+/-- Past half the quotient moves up. -/
+theorem rundeInt_steig (quo rest den : Nat)
+    (h : den < 2 * rest) : rundeInt quo rest den = quo + 1 := by
+  unfold rundeInt
+  rw [if_pos h]
+
+/-- On an exact tie the even quotient wins. -/
+theorem rundeInt_tie (quo rest den : Nat)
+    (h : 2 * rest = den) : rundeInt quo rest den % 2 = 0 := by
+  have g1 : ¬ den < 2 * rest := by omega
+  have g2 : ¬ 2 * rest < den := by omega
+  unfold rundeInt
+  rw [if_neg g1, if_neg g2]
+  by_cases hodd : quo % 2 = 1
+  · rw [if_pos (by simpa using hodd)]
+    omega
+  · rw [if_neg (by simpa using hodd)]
+    have hlt : quo % 2 < 2 := Nat.mod_lt _ (by decide)
+    omega
+
+/-- Monotonicity of the significand decision: a larger value (same
+    denominator, quotient-remainder ordered, the upper remainder normalised)
+    never rounds down further. `hr₂` is load-bearing (`5,0` vs `3,25` at
+    `den = 10` breaks it); the lower remainder needs no bound. -/
+theorem rundeInt_monoton (quo₁ rest₁ quo₂ rest₂ den : Nat)
+    (hr₂ : rest₂ < den)
+    (h : quo₁ * den + rest₁ ≤ quo₂ * den + rest₂) :
+    rundeInt quo₁ rest₁ den ≤ rundeInt quo₂ rest₂ den := by
+  have hle : quo₁ ≤ quo₂ := by
+    by_cases hc : quo₁ ≤ quo₂
+    · exact hc
+    · have hlt : quo₂ < quo₁ := by omega
+      have hsplit : quo₁ = quo₂ + (quo₁ - quo₂) :=
+        (Nat.add_sub_cancel' (Nat.le_of_lt hlt)).symm
+      have hdecomp : quo₁ * den = quo₂ * den + (quo₁ - quo₂) * den := by
+        have hcong := congrArg (· * den) hsplit
+        rw [Nat.add_mul] at hcong
+        exact hcong
+      have hle2 : (quo₁ - quo₂) * den ≤ rest₂ := by omega
+      have hge : den ≤ (quo₁ - quo₂) * den := by
+        have h1 : (1 : Nat) ≤ quo₁ - quo₂ := by omega
+        have h2 := Nat.mul_le_mul h1 (Nat.le_refl den)
+        simpa using h2
+      omega
+  have hrest : quo₁ = quo₂ → rest₁ ≤ rest₂ := by
+    intro heq; subst heq; exact Nat.le_of_add_le_add_left h
+  rcases Nat.lt_or_ge den (2 * rest₁) with h1 | h1
+  · -- Side 1 rounds up.
+    have r1 := rundeInt_steig quo₁ rest₁ den h1
+    rcases Nat.lt_or_ge den (2 * rest₂) with h2 | h2
+    · rw [r1, rundeInt_steig quo₂ rest₂ den h2]; omega
+    · rcases Nat.lt_or_ge (2 * rest₂) den with k2 | k2
+      · rw [r1, rundeInt_fall quo₂ rest₂ den k2]
+        by_cases heq : quo₁ = quo₂
+        · subst heq; have hr := hrest rfl; omega
+        · have hlt : quo₁ < quo₂ := Nat.lt_of_le_of_ne hle heq; omega
+      · have htie2 : 2 * rest₂ = den := by omega
+        by_cases p2 : quo₂ % 2 = 1
+        · have r2 : rundeInt quo₂ rest₂ den = quo₂ + 1 := by
+            unfold rundeInt
+            rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                if_neg (by omega : ¬ 2 * rest₂ < den),
+                if_pos (by simpa using p2)]
+          rw [r1, r2]; omega
+        · have r2 : rundeInt quo₂ rest₂ den = quo₂ := by
+            unfold rundeInt
+            rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                if_neg (by omega : ¬ 2 * rest₂ < den),
+                if_neg (by simpa using p2)]
+          rw [r1, r2]
+          by_cases heq : quo₁ = quo₂
+          · subst heq; have hr := hrest rfl; omega
+          · have hlt : quo₁ < quo₂ := Nat.lt_of_le_of_ne hle heq; omega
+  · -- Side 1 stays down or ties.
+    rcases Nat.lt_or_ge (2 * rest₁) den with k1 | k1
+    · have r1 := rundeInt_fall quo₁ rest₁ den k1
+      rcases Nat.lt_or_ge den (2 * rest₂) with h2 | h2
+      · rw [r1, rundeInt_steig quo₂ rest₂ den h2]; omega
+      · rcases Nat.lt_or_ge (2 * rest₂) den with k2 | k2
+        · rw [r1, rundeInt_fall quo₂ rest₂ den k2]; omega
+        · by_cases p2 : quo₂ % 2 = 1
+          · have r2 : rundeInt quo₂ rest₂ den = quo₂ + 1 := by
+              unfold rundeInt
+              rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                  if_neg (by omega : ¬ 2 * rest₂ < den),
+                  if_pos (by simpa using p2)]
+            rw [r1, r2]; omega
+          · have r2 : rundeInt quo₂ rest₂ den = quo₂ := by
+              unfold rundeInt
+              rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                  if_neg (by omega : ¬ 2 * rest₂ < den),
+                  if_neg (by simpa using p2)]
+            rw [r1, r2]; omega
+    · -- Tie on side 1.
+      by_cases p1 : quo₁ % 2 = 1
+      · have r1 : rundeInt quo₁ rest₁ den = quo₁ + 1 := by
+          unfold rundeInt
+          rw [if_neg (by omega : ¬ den < 2 * rest₁),
+              if_neg (by omega : ¬ 2 * rest₁ < den),
+              if_pos (by simpa using p1)]
+        rcases Nat.lt_or_ge den (2 * rest₂) with h2 | h2
+        · rw [r1, rundeInt_steig quo₂ rest₂ den h2]; omega
+        · rcases Nat.lt_or_ge (2 * rest₂) den with k2 | k2
+          · rw [r1, rundeInt_fall quo₂ rest₂ den k2]
+            by_cases heq : quo₁ = quo₂
+            · subst heq; have hr := hrest rfl; omega
+            · have hlt : quo₁ < quo₂ := Nat.lt_of_le_of_ne hle heq; omega
+          · by_cases p2 : quo₂ % 2 = 1
+            · have r2 : rundeInt quo₂ rest₂ den = quo₂ + 1 := by
+                unfold rundeInt
+                rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                    if_neg (by omega : ¬ 2 * rest₂ < den),
+                    if_pos (by simpa using p2)]
+              rw [r1, r2]; omega
+            · have r2 : rundeInt quo₂ rest₂ den = quo₂ := by
+                unfold rundeInt
+                rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                    if_neg (by omega : ¬ 2 * rest₂ < den),
+                    if_neg (by simpa using p2)]
+              rw [r1, r2]
+              by_cases heq : quo₁ = quo₂
+              · subst heq; have hr := hrest rfl; omega
+              · have hlt : quo₁ < quo₂ := Nat.lt_of_le_of_ne hle heq; omega
+      · have r1 : rundeInt quo₁ rest₁ den = quo₁ := by
+          unfold rundeInt
+          rw [if_neg (by omega : ¬ den < 2 * rest₁),
+              if_neg (by omega : ¬ 2 * rest₁ < den),
+              if_neg (by simpa using p1)]
+        rcases Nat.lt_or_ge den (2 * rest₂) with h2 | h2
+        · rw [r1, rundeInt_steig quo₂ rest₂ den h2]; omega
+        · rcases Nat.lt_or_ge (2 * rest₂) den with k2 | k2
+          · rw [r1, rundeInt_fall quo₂ rest₂ den k2]; omega
+          · by_cases p2 : quo₂ % 2 = 1
+            · have r2 : rundeInt quo₂ rest₂ den = quo₂ + 1 := by
+                unfold rundeInt
+                rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                    if_neg (by omega : ¬ 2 * rest₂ < den),
+                    if_pos (by simpa using p2)]
+              rw [r1, r2]; omega
+            · have r2 : rundeInt quo₂ rest₂ den = quo₂ := by
+                unfold rundeInt
+                rw [if_neg (by omega : ¬ den < 2 * rest₂),
+                    if_neg (by omega : ¬ 2 * rest₂ < den),
+                    if_neg (by simpa using p2)]
+              rw [r1, r2]; omega
+
 /-! `CUTS:` skeleton only -- classification, exact values, rounding, ops,
   theorems and witnesses follow in later commits. -/
 
