@@ -208,8 +208,13 @@ end Rely
     that are closed (`AbgK`) and contain each thread's start function.
     Several threads may be ACTIVE; a driver thread may keep private tables
     unguarded while sharing locked state with the others. The conclusion
-    is that of `ziel_ort_sperre_inv`. -/
-theorem ziel_ort_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    is that of `ziel_ort_sperre_inv`.
+
+    AT ONE `forever` BUDGET `passes` (obligation and machine at the same
+    budget). Since 2026-09-14 this is a lemma, not a goal statement: the
+    goal theorem `ziel_ort_mehrfaden` below demands the obligation at EVERY
+    budget (probe D, `Durchgaenge.lean`). -/
+theorem ziel_ort_mehrfaden_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
     (K : Faden → D.Fn → Bool)
@@ -229,6 +234,33 @@ theorem ziel_ort_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : A
   ziel_ort_sperre_invL P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
     (lokOk_mehr hO hvoll sp init K hAbg hWurzel) hK hStart hSstart hex hI
+
+/-- **ZIEL AM ORT FUER MEHRERE FAEDEN, over every `forever` budget.** The
+    user obligations `KoerperGutS`/`InvGutS` are demanded at EVERY budget,
+    and the conclusion holds on the machines of every budget -- so no
+    choice of a budget can empty the obligation of a `forever` loop (probe
+    D of `messung/URTEIL-OPUS-2026-09-14.md`, `Durchgaenge.lean`). For a
+    program without `forever` the obligation at `0` gives every budget
+    (`koerperGutS_alle`, `invGutS_alle`). -/
+theorem ziel_ort_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      (VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M :=
+  fun passes => ziel_ort_mehrfaden_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll hFrag
+    hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes)
 
 /-! ## 5. The old check is a special case -/
 
@@ -321,6 +353,7 @@ theorem fussMehrB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
 
 #print axioms Gabbro.Grammatik.ziel_ort_sperre_invL
 #print axioms Gabbro.Grammatik.lokOk_mehr
+#print axioms Gabbro.Grammatik.ziel_ort_mehrfaden_bei
 #print axioms Gabbro.Grammatik.ziel_ort_mehrfaden
 #print axioms Gabbro.Grammatik.fussMehrB_ok
 

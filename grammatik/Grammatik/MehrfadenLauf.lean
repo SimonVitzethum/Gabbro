@@ -249,13 +249,13 @@ theorem ziel_ort_mehrfaden_zeuge : ∃ Mb Mc Md : RufMaschineG mD,
       RufEreignisF.eintritt mPruefeA rho w0 ∈ (Mc.faeden 0).log := by
     rw [hZc.1]
     exact ⟨_, _, List.mem_cons_self⟩
-  have hreq := ((mP_zertifiziert Mc hrc).1.1.1 0 _ hm).1 _ _ _ rfl
+  have hreq := ((mP_zertifiziert 0 Mc hrc).1.1.1 0 _ hm).1 _ _ _ rfl
   obtain ⟨Md, sd, hGd⟩ := w_rueckP (P := mP) (O := mO) (passes := 0) hZc.1 _ [] rfl
     (PopArt.wie rfl) .keine List.Perm.nil .nil rfl (mHeld0 _)
   have hrd : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Md := .schritt _ _ _ hrc sd
   have h1d : Md.faeden 1 = Mb.faeden 1 := by
     rw [rufSchrittG_fremd sd 1 (by decide), rufSchrittG_fremd sc 1 (by decide)]
-  have hSE := (mP_zertifiziert Md hrd).2 0
+  have hSE := (mP_zertifiziert 0 Md hrd).2.1 0
   rw [hGd.1] at hSE
   obtain ⟨hE, hI⟩ := hSE rfl false [] [] .nil (.ende (.ret .keine List.Perm.nil)) .keine rfl
     ⟨_, Or.inl rfl⟩
