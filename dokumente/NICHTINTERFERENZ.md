@@ -1,6 +1,6 @@
 # Noninterference -- isolation as a theorem over machine G
 
-*Written 2026-09-14. Lean: `grammatik/Grammatik/Nichtinterferenz/` (10 files, 3,861 lines).
+*Written 2026-09-14. Lean: `grammatik/Grammatik/Nichtinterferenz/` (11 files, about 4,000 lines).
 Axioms of every theorem named here: `propext`, `Classical.choice`, `Quot.sound`; no `sorry`,
 no `admit`, no `native_decide`, no new `axiom`. The full library builds.*
 
@@ -285,6 +285,12 @@ By hand, for the two that have no Lean form: 109 (`entry_a` writes `T`, `entry_b
 and 59 (timer writes `Takte`, syscall writes `Auftraege`) touch disjoint carriers and pass; 125
 (both roots write `z`) is refused. 07 (`syscall`, `nmi`) is kernel code of one domain.
 
+**One more labelling admits 124.** With a fourth domain `T` above both tenants (an auditor),
+`konto` labelled `T` is a write-only sink for the tenants -- both may write it, neither may read
+it -- and 124 passes (`ZeugeMehrfaden.lean`, `n124_fluss`; every premise of `nichtinterferenz`
+jointly on that fixture with a reached run, `n124_zeuge`). The same fixture shows the gap of
+§7.4: its lock `L` is taken by both tenants.
+
 **Reading.** Every refusal is a carrier WRITTEN by two roots (or written by one and read by the
 other). That is interference in the theorem's sense -- one root's activity is visible to the
 other -- even where no tenant DATA flows (124 writes constants). The plain rule cannot tell the
@@ -354,7 +360,10 @@ construction, here as the instance of the scheduler condition).
    runs under a fixed timetable from memories that differ in tenant A's table (`n1_zeuge`); a
    shared lock-free counter refused for every label (`n2_abgelehnt`); a leak refused for every
    root domain and violating NI on two concrete runs (`n3_verletzt`).
-8. `Korpus.lean`, `Freigabe.lean`: §9 and §8.
+8. `ZeugeMehrfaden.lean`: every premise of `nichtinterferenz` jointly on the project's
+   two-thread reference fixture (a lock, a shared account, two private tables, a reached run),
+   under the write-up labelling (`n124_zeuge`).
+9. `Korpus.lean`, `Freigabe.lean`: §9 and §8.
 
 ## 13. What is outside, precisely
 
