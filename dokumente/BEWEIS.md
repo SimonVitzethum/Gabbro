@@ -1187,6 +1187,16 @@ and it is the difference between
 scheduling, indirect flows via control flow and occupancy state. An over-approximation that does
 not carry this list is once again a promise instead of a condition.
 
+> **2026-09-14: the floor stands, and the theorem exists beside it.** Noninterference is now
+> proved as a relational METATHEOREM over machine G, not derived from M1–M4:
+> `nichtinterferenz` (`grammatik/Grammatik/Nichtinterferenz/Fluss.lean`) -- a program that
+> passes the decidable flow check `flussB` shows every observer domain the same observation on
+> two runs with the same schedule from starts equal on what it may see; the scheduler form
+> `nichtinterferenz_planer` covers every scheduler whose choice depends only on that
+> observation. Timing, enabledness, declassification and everything below machine G stay
+> outside. `dokumente/NICHTINTERFERENZ.md` carries the statement, the list, and the
+> customer-facing sentence in the form in which it is true.
+
 ---
 
 ### Item 6: the upkeep, and here lies Gabbro's strongest argument
