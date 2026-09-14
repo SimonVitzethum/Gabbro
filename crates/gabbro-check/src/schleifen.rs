@@ -200,6 +200,14 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         a = a.mit_notiz("no label is in scope here; `retry`/`forever` take one");
     } else {
         a = a.mit_notiz(format!("im Geltungsbereich: {}", marken.join(", ")));
+        // Lane 187: with exactly one label in scope the repair is a typo-class fix
+        // and unique. With several, no candidate is determined.
+        if marken.len() == 1 {
+            a = a.mit_fix(gabbro_syntax::diag::Fix::new(
+                ziel.span,
+                marken[0].clone(),
+            ));
+        }
     }
     absagen.schiebe(a);
 }

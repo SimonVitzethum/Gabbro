@@ -244,6 +244,9 @@ impl<'a> Parser<'a> {
                 t.span,
                 format!("`{}` expected, {} found", z.text(), gefunden),
             );
+            // Lane 187: the message names the expected token, so inserting it before
+            // the token found is the unique mechanical repair.
+            a = a.mit_fix(crate::diag::Fix::insert(t.span.von, z.text()));
             if let Some(n) = notiz {
                 a = a.mit_notiz(n);
             }
@@ -312,7 +315,10 @@ impl<'a> Parser<'a> {
                 "P001",
                 t.span,
                 format!("`{}` expected, {} found", k.text(), gefunden),
-            ));
+            )
+            // Lane 187: the message names the expected keyword -- same repair as at
+            // `erwarte_z_mit` above.
+            .mit_fix(crate::diag::Fix::insert(t.span.von, k.text())));
             Err(Abbruch)
         }
     }
@@ -2458,7 +2464,10 @@ impl<'a> Parser<'a> {
                         "P001",
                         t.span,
                         format!("`}}` expected, {gefunden} found"),
-                    ));
+                    )
+                    // Lane 187: the unclosed region -- closing it at the end of input
+                    // is the unique repair.
+                    .mit_fix(crate::diag::Fix::insert(t.span.von, "}")));
                     return Err(Abbruch);
                 }
                 _ => {
@@ -3475,7 +3484,10 @@ impl<'a> Parser<'a> {
                         "the forms with a block -- `if`, `match`, `traverse`, `retry`, \
                          `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
                          carry NO trailing semicolon",
-                    ),
+                    )
+                    // Lane 187: the offending token stands alone -- deleting it is the
+                    // unique repair, and it deletes no check, only the stray token.
+                    .mit_fix(crate::diag::Fix::delete(anfang)),
             );
             return Err(Abbruch);
         }

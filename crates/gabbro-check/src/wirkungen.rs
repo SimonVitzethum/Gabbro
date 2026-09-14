@@ -559,6 +559,11 @@ fn pruefe_touches(
             continue;
         }
         gemeldet.push(ort.clone());
+        // Lane 187: the loop names the missing entry -- `writes` where the body
+        // writes, `reads` where it only reads -- so the repair is unique. The
+        // `touches` line carries no braces, hence a plain append at its end.
+        let entry =
+            if schreibend { format!("writes {ort}") } else { format!("reads {ort}") };
         absagen.schiebe(
             Absage::fehler(
                 "E011",
@@ -570,7 +575,8 @@ fn pruefe_touches(
             .mit_notiz(
                 "`touches` is the NARROWER, local promise beside `effects` -- whoever \
                     reads it counts on less contact than the body has",
-            ),
+            )
+            .mit_fix(crate::fix::append_item(w.span.bis, entry)),
         );
     }
 }
@@ -779,7 +785,10 @@ fn rumpf_gegen_wirkungen(
                     *span,
                     format!("`{}` writes `{ort}` but declares `pure`", f.name.text),
                 )
-                .mit_notiz("`pure` means: touches nothing -- not even by reading"),
+                .mit_notiz("`pure` means: touches nothing -- not even by reading")
+                // Lane 187: the hull names the missing entry, so the repair is unique --
+                // a lone `pure` is contradicted by this write and gives way to it.
+                .mit_fix(crate::fix::append_effect(w, format!("writes {ort}"))),
             );
             continue;
         }
@@ -804,7 +813,9 @@ fn rumpf_gegen_wirkungen(
                     } else {
                         schreibrechte.join(", ")
                     }
-                )),
+                ))
+                // Lane 187: the hull names the missing entry, so the repair is unique.
+                .mit_fix(crate::fix::append_effect(w, format!("writes {ort}"))),
             );
         }
     }
@@ -858,7 +869,9 @@ fn rumpf_gegen_wirkungen(
                     *span,
                     format!("`{}` reads `{ort}` but declares `pure`", f.name.text),
                 )
-                .mit_notiz("`pure` means: touches nothing -- not even by reading"),
+                .mit_notiz("`pure` means: touches nothing -- not even by reading")
+                // Lane 187: the hull names the missing entry, so the repair is unique.
+                .mit_fix(crate::fix::append_effect(w, format!("reads {ort}"))),
             );
             continue;
         }
@@ -888,7 +901,9 @@ fn rumpf_gegen_wirkungen(
                     } else {
                         leserechte.join(", ")
                     }
-                )),
+                ))
+                // Lane 187: the hull names the missing entry, so the repair is unique.
+                .mit_fix(crate::fix::append_effect(w, format!("reads {ort}"))),
             );
         }
     }
@@ -904,22 +919,33 @@ fn rumpf_gegen_wirkungen(
         // nimmt exklusiv, die Wirkung sagt geteilt. Wer die Signatur liest, rechnet mit
         // Nebenlaeufigkeit, die es nicht gibt -- und baut seine Latenzrechnung darauf.
         if !*geteilt && geteilte.iter().any(|e| deckt(e, ort)) {
-            absagen.schiebe(
-                Absage::fehler(
-                    "E007",
-                    *span,
-                    format!(
-                        "`{}` takes `{ort}` EXCLUSIVELY but declares `locks shared {ort}`",
-                        f.name.text
-                    ),
-                )
-                .mit_notiz(
-                    "declaring shared and taking exclusively is the dangerous direction: \
-                        whoever reads the signature counts on concurrency that does not \
-                        exist",
-                )
-                .mit_notiz("the converse is allowed -- declaring exclusive covers the shared acquisition"),
-            );
+            // Lane 187: strengthening the declaration to what the body takes is the
+            // unique repair -- the converse (declaring exclusive) is expressly allowed,
+            // so no other declaration can hold this body.
+            let stronger = w.liste.iter().find_map(|e| match &e.art {
+                WirkungArt::SperrtGeteilt(o) if deckt(&o.text(), ort) => Some(
+                    gabbro_syntax::diag::Fix::new(e.span, format!("locks {}", o.text())),
+                ),
+                _ => None,
+            });
+            let mut a = Absage::fehler(
+                "E007",
+                *span,
+                format!(
+                    "`{}` takes `{ort}` EXCLUSIVELY but declares `locks shared {ort}`",
+                    f.name.text
+                ),
+            )
+            .mit_notiz(
+                "declaring shared and taking exclusively is the dangerous direction: \
+                    whoever reads the signature counts on concurrency that does not \
+                    exist",
+            )
+            .mit_notiz("the converse is allowed -- declaring exclusive covers the shared acquisition");
+            if let Some(fx) = stronger {
+                a = a.mit_fix(fx);
+            }
+            absagen.schiebe(a);
             continue;
         }
         absagen.schiebe(
@@ -932,7 +958,15 @@ fn rumpf_gegen_wirkungen(
                     f.name.text
                 ),
             )
-            .mit_notiz("the lock order follows from the declared locks, not from the body"),
+            .mit_notiz("the lock order follows from the declared locks, not from the body")
+            // Lane 187: the hull names the missing entry, so the repair is unique.
+            .mit_fix(crate::fix::append_effect(
+                w,
+                format!(
+                    "locks {}{ort}",
+                    if *geteilt { "shared " } else { "" }
+                ),
+            )),
         );
     }
 }
@@ -998,20 +1032,29 @@ fn funktion(
             .map(|w| w.liste.iter().any(|e| matches!(e.art, WirkungArt::Divergiert)))
             .unwrap_or(false);
         if !divergiert {
-            absagen.schiebe(
-                Absage::hinweis(
-                    "E003",
-                    f.name.span,
-                    format!(
-                        "`divergent fn {}` does not name `diverges` among its effects",
-                        f.name.text
-                    ),
-                )
-                .mit_notiz(
-                    "SYNTAX.md §14 writes `divergent fn idle() effects { diverges }` -- \
-                        the clause carries the divergence",
+            // Lane 187: the missing word is named exactly (`diverges`), so the repair
+            // is unique where the clause stands. Without a clause `E001` owns the line
+            // and this hint carries no fix.
+            let missing = f
+                .effects
+                .as_ref()
+                .map(|w| crate::fix::append_effect(w, "diverges".to_string()));
+            let mut a = Absage::hinweis(
+                "E003",
+                f.name.span,
+                format!(
+                    "`divergent fn {}` does not name `diverges` among its effects",
+                    f.name.text
                 ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §14 writes `divergent fn idle() effects { diverges }` -- \
+                    the clause carries the divergence",
             );
+            if let Some(fx) = missing {
+                a = a.mit_fix(fx);
+            }
+            absagen.schiebe(a);
         }
     }
 
@@ -1062,11 +1105,29 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
         );
     }
     if rein.len() > 1 {
-        absagen.schiebe(Absage::fehler(
+        // Lane 187: two identical entries, and removing one of them is the unique
+        // repair -- the comma goes with it, so no stray comma is left behind. (The
+        // arm above, `pure` beside other entries, gets no fix: the diagnostic itself
+        // offers two directions there, so none is uniquely determined.)
+        let spans = crate::fix::entry_spans(w);
+        let second = w
+            .liste
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| matches!(e.art, WirkungArt::Rein))
+            .map(|(i, _)| i)
+            .nth(1);
+        let mut a = Absage::fehler(
             "E002",
             rein[1].span,
             "`pure` appears twice in the same effect list",
-        ));
+        );
+        if let Some(j) = second {
+            if j < spans.len() {
+                a = a.mit_fix(crate::fix::delete_entry(&spans, j));
+            }
+        }
+        absagen.schiebe(a);
     }
 }
 

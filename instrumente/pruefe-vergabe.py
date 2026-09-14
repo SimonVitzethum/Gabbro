@@ -170,7 +170,18 @@ NICHT = {"saetze.rs"}
 # rule like `N214`'s three faces above. The five-code budget of the lane
 # (280-284, all taken) leaves no number for a split; whoever finds a fourth
 # reading splits `N280` and may lower both marks.
-MARKE = 32
+# **32 -> 35 on 2026-09-14 (lane 187, measured, no new sites).**
+# The run says 35 against a booked 32, and the delta is exactly three pairs the
+# instrument previously read as ONE stelle each: `E002` (0.43), `E005` (0.34),
+# `E010` (0.32), each with two issuance sites in `wirkungen.rs` under visibly
+# different messages (the `pure` arm against the missing-entry arm). The lane's
+# fix lines pushed each second site out of its first site's 600-character
+# window, so the greedy `VERGABE` match un-merges them. Constructor count is
+# invariant (458 refusal constructors on both trees) -- no rule was issued
+# twice, no identifier split. The three pairs were always two messages under
+# one code; the old number was too small, and too small is the bad direction
+# here (2026-08-28 entry). Whoever splits one of the three may lower both marks.
+MARKE = 35
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -291,7 +302,14 @@ MARKE = 32
 # ambiguous reading, 944 the unknown one, and the shared-name reading carries
 # the unit row `function_elsewhere_in_the_unit_blocks_the_construction` -- so a
 # broken face takes its own witness red, which the identifier alone cannot do.
-MARKE_PROBEN = 88
+# **88 -> 93 on 2026-09-14 (lane 187, measured, no new probes).**
+# The five probes on the three identifiers above (`13` on `E002`; `28`, `29` on
+# `E005`; `62`, `588` on `E010`) inherit the now-listed ambiguity -- each falls
+# green without proving WHICH arm fell. No probe was added and no rule was
+# issued twice; the instrument un-merged what it used to read as one stelle
+# (see the `MARKE` entry above), so the object is unchanged and the sharper
+# reading is the honest one.
+MARKE_PROBEN = 93
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

@@ -721,22 +721,37 @@ fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
                 if TRAGBARE_WIRKUNGEN.contains(&kopf) {
                     continue;
                 }
-                absagen.schiebe(
-                    Absage::fehler(
-                        "N036",
-                        e.span,
-                        format!("`{kopf}` cannot be promised at a function pointer type"),
-                    )
-                    .mit_notiz(
-                        "the pass that reads this effect resolves the callee by NAME, and an \
-                         indirect call has none -- `locks`, `masks`, `consumes` and \
-                         `publishes` therefore do not cross one",
-                    )
-                    .mit_notiz(
-                        "this is a refusal and not an omission: the alternative was to let \
-                         the promise through and check it nowhere",
-                    ),
+                // Lane 187: the word cannot stand here at all, so its removal is the
+                // unique repair. A lone entry gives way to `pure` (an empty brace list
+                // does not parse); among several, the entry goes with one adjacent
+                // comma. Nothing readable is lost: the note above says the promise
+                // was checked nowhere.
+                let removal = f.effects.as_ref().and_then(|w| {
+                    let i = w.liste.iter().position(|x| x.span == e.span)?;
+                    if w.liste.len() == 1 {
+                        Some(gabbro_syntax::diag::Fix::new(e.span, "pure"))
+                    } else {
+                        Some(crate::fix::delete_entry(&crate::fix::entry_spans(w), i))
+                    }
+                });
+                let mut a = Absage::fehler(
+                    "N036",
+                    e.span,
+                    format!("`{kopf}` cannot be promised at a function pointer type"),
+                )
+                .mit_notiz(
+                    "the pass that reads this effect resolves the callee by NAME, and an \
+                     indirect call has none -- `locks`, `masks`, `consumes` and \
+                     `publishes` therefore do not cross one",
+                )
+                .mit_notiz(
+                    "this is a refusal and not an omission: the alternative was to let \
+                     the promise through and check it nowhere",
                 );
+                if let Some(fx) = removal {
+                    a = a.mit_fix(fx);
+                }
+                absagen.schiebe(a);
             }
             // **`requires` and `ensures` are refused at a function pointer type -- and
             // `ensures` was ADDED to this refusal on 2026-08-21, one day after the type was
@@ -826,21 +841,39 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
                 if eigene.iter().any(|e| e == m) {
                     continue;
                 }
-                absagen.schiebe(
-                    Absage::fehler(
-                        "N016",
-                        span,
-                        format!("`{ziel}` requires `Has({m})`, and `{}` does not carry it", f.name.text),
-                    )
-                    .mit_notiz(
-                        "a machine feature is not established by calling -- whoever calls carries \
-                         the demand on, until somebody declares it",
-                    )
-                    .mit_notiz(
-                        "the same rule `requires Held(L)` runs through the call graph with (`H005`); \
-                         it is the second predicate of the same shape",
-                    ),
+                // Lane 187: the missing demand is named exactly (`Has(m)`), so the
+                // repair is unique -- appended to the caller's own `requires` line,
+                // or a fresh clause before `effects` where no line stands yet. With
+                // neither anchor there is nowhere mechanical to put it.
+                let addition = f
+                    .requires
+                    .last()
+                    .map(|p| crate::fix::append_item(p.span.bis, format!("Has({m})")))
+                    .or_else(|| {
+                        f.effects.as_ref().map(|w| {
+                            gabbro_syntax::diag::Fix::insert(
+                                w.span.von,
+                                format!("requires Has({m}) "),
+                            )
+                        })
+                    });
+                let mut a = Absage::fehler(
+                    "N016",
+                    span,
+                    format!("`{ziel}` requires `Has({m})`, and `{}` does not carry it", f.name.text),
+                )
+                .mit_notiz(
+                    "a machine feature is not established by calling -- whoever calls carries \
+                     the demand on, until somebody declares it",
+                )
+                .mit_notiz(
+                    "the same rule `requires Held(L)` runs through the call graph with (`H005`); \
+                     it is the second predicate of the same shape",
                 );
+                if let Some(fx) = addition {
+                    a = a.mit_fix(fx);
+                }
+                absagen.schiebe(a);
             }
         }
     });
@@ -4107,21 +4140,29 @@ fn pruefe_uebersetzer_signatur(
         w.liste.len() == 1 && matches!(w.liste[0].art, WirkungArt::Rein)
     });
     if !rein {
-        absagen.schiebe(
-            Absage::fehler(
-                "N202",
-                t.span,
-                format!(
-                    "`translator {}` for `{bibliothek}` must carry `effects {{ pure }}`",
-                    t.qual
-                ),
-            )
-            .mit_notiz(
-                "SYNTAX.md §7.2: a translator is a total, effect-free map from \
-                 the region AST to the payload -- anything but `pure` would \
-                 run effects at translation time",
+        // Lane 187: the diagnostic states the exact required text, so replacing a
+        // present-but-wrong clause is unique. With no clause at all there is no
+        // anchor for one, and no fix is attached.
+        let replacement = t.effects.as_ref().map(|w| {
+            gabbro_syntax::diag::Fix::new(w.span, "effects { pure }".to_string())
+        });
+        let mut a = Absage::fehler(
+            "N202",
+            t.span,
+            format!(
+                "`translator {}` for `{bibliothek}` must carry `effects {{ pure }}`",
+                t.qual
             ),
+        )
+        .mit_notiz(
+            "SYNTAX.md §7.2: a translator is a total, effect-free map from \
+             the region AST to the payload -- anything but `pure` would \
+             run effects at translation time",
         );
+        if let Some(fx) = replacement {
+            a = a.mit_fix(fx);
+        }
+        absagen.schiebe(a);
     }
     if t.decreases.is_none() {
         absagen.schiebe(
@@ -5216,27 +5257,41 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
         let mut genannt: Vec<&str> = bekannt.iter().map(|s| s.as_str()).collect();
         genannt.sort_unstable();
         genannt.dedup();
-        absagen.schiebe(
-            Absage::fehler(
-                "A005",
+        // Lane 187: with exactly one declared machine the repair is a typo-class
+        // fix and unique. With several, no candidate is determined; the note
+        // below names the human alternative (leaving `arch` off), which needs a
+        // judgement the checker cannot make.
+        let repair = if genannt.len() == 1 {
+            Some(gabbro_syntax::diag::Fix::new(
                 arch.span,
-                format!(
-                    "`{}` is assumed for `{}`, and this unit declares only `{}`",
-                    a.name.text,
-                    arch.text,
-                    genannt.join("`, `")
-                ),
-            )
-            .mit_notiz(
-                "an assumption that can never be in force here still travels in the \
-                 artefact under `proved under A1…An` -- and a reader takes a reach out of \
-                 it that does not exist",
-            )
-            .mit_notiz(
-                "leave `arch` off if the assumption holds on every machine this unit \
-                 targets -- that is the honest default, not a gap",
+                genannt[0].to_string(),
+            ))
+        } else {
+            None
+        };
+        let mut a = Absage::fehler(
+            "A005",
+            arch.span,
+            format!(
+                "`{}` is assumed for `{}`, and this unit declares only `{}`",
+                a.name.text,
+                arch.text,
+                genannt.join("`, `")
             ),
+        )
+        .mit_notiz(
+            "an assumption that can never be in force here still travels in the \
+             artefact under `proved under A1…An` -- and a reader takes a reach out of \
+             it that does not exist",
+        )
+        .mit_notiz(
+            "leave `arch` off if the assumption holds on every machine this unit \
+             targets -- that is the honest default, not a gap",
         );
+        if let Some(fx) = repair {
+            a = a.mit_fix(fx);
+        }
+        absagen.schiebe(a);
     });
     // **A `syscall` names its machine the same way (lane 86, PLAN-SYSCALL.md §1).**
     //

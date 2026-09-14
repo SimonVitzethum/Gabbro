@@ -349,23 +349,36 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             // cannot be held to one.
             let arches = crate::deklarierte_architekturen(baum);
             if !arches.is_empty() && !arches.contains(&d.arch.text) {
-                absagen.schiebe(
-                    Absage::fehler(
-                        "K012",
+                // Lane 187: with exactly one declared machine the repair is unique --
+                // a typo-class fix. With several, no candidate is determined, and the
+                // diagnostic carries no fix.
+                let repair = if arches.len() == 1 {
+                    Some(gabbro_syntax::diag::Fix::new(
                         d.arch.span,
-                        format!(
-                            "`{}` promises its deadline on `{}`, and this unit declares only `{}`",
-                            f.name.text,
-                            d.arch.text,
-                            arches.join("`, `")
-                        ),
-                    )
-                    .mit_notiz(
-                        "a date on a machine that is never in force still travels \
-                         in the artefact beside the assumption set -- and a reader \
-                         takes a reach out of it that does not exist",
+                        arches[0].clone(),
+                    ))
+                } else {
+                    None
+                };
+                let mut a = Absage::fehler(
+                    "K012",
+                    d.arch.span,
+                    format!(
+                        "`{}` promises its deadline on `{}`, and this unit declares only `{}`",
+                        f.name.text,
+                        d.arch.text,
+                        arches.join("`, `")
                     ),
+                )
+                .mit_notiz(
+                    "a date on a machine that is never in force still travels \
+                     in the artefact beside the assumption set -- and a reader \
+                     takes a reach out of it that does not exist",
                 );
+                if let Some(fx) = repair {
+                    a = a.mit_fix(fx);
+                }
+                absagen.schiebe(a);
             }
             // **No third code for the probe.** `falsifier p` names a PROBE, not an
             // assumption (`sonde_kann_fallen` in `namen.rs`: a probe is a program
@@ -441,7 +454,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                         .mit_notiz(
                             "the number is computed statically -- lowering it means \
                                 writing fewer operations, not promising more",
-                        ),
+                        )
+                        // Lane 187: the bound below the computed one -- the computed
+                        // number IS the unique repair the message already prints.
+                        .mit_fix(gabbro_syntax::diag::Fix::new(
+                            zusage_expr.span,
+                            n.to_string(),
+                        )),
                     );
                 }
             }

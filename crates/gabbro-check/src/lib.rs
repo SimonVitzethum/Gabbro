@@ -126,6 +126,11 @@ pub fn ist_bitintrinsik(name: &str) -> bool {
 pub mod fremdverengung;
 pub use m1::fremdverengungen;
 
+// **Lane 187 -- machine-applicable repairs.** Constructors for the recurring fix shapes
+// and the applier `gabbro pruefe --fix` drives. No pass reads a fix back, so the pass
+// register is untouched by construction.
+pub mod fix;
+
 pub mod korpus;
 pub mod manifest;
 // **P6, die Messsonde** -- was ein Mensch noch schuldet, gezaehlt statt eingeloest.

@@ -468,7 +468,10 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                     .mit_notiz(
                         "`char = any character except quote and newline` -- a string \
                          literal ends on its own line",
-                    ),
+                    )
+                    // Lane 187: the missing closing quote at the scan position is the
+                    // unique repair.
+                    .mit_fix(crate::diag::Fix::insert(i as u32, "\"")),
                 );
             }
             schiebe(&mut out, Art::Text, von, i);
@@ -494,7 +497,13 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                         Span::neu(von as u32, von as u32 + 2),
                         "capital letter in the number prefix",
                     )
-                    .mit_notiz("the lexer knows `0x` and `0b`, not `0X`/`0B`"),
+                    .mit_notiz("the lexer knows `0x` and `0b`, not `0X`/`0B`")
+                    // Lane 187: the lexer names both spellings it knows, so
+                    // lowercasing the prefix is the unique repair.
+                    .mit_fix(crate::diag::Fix::new(
+                        Span::neu(von as u32, von as u32 + 2),
+                        if b[von + 1] == b'X' { "0x" } else { "0b" },
+                    )),
                 );
             }
             let gueltig = |ch: u8, basis: u32| -> bool {
