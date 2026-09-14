@@ -1047,4 +1047,173 @@ theorem turm_bin : ∀ (n : Nat), BKern n →
     exact bkn l r rest G hsum hl hr2 hG
   exact kern_bin_turm l r rest hl hr2 hrr hrs hrg hB
 
+-- The main induction, one level per lemma: each step lifts
+-- one `RKern` component from `n` to `n + 1` by cases over the
+-- tree (atoms via the standalone towers, `un` via `turm_un`,
+-- `bin` via `turm_bin`, everything else contradicts `gutKern`).
+-- Projections: atom/bin 8-tuples end `.2.2.2.2.2.2.2` at `Or`.
+theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n →
+    (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
+      gutKern e = true → ruhig rest = true → ruhigSuff rest = true →
+      ruhigGleit rest = true →
+      12 * (groesse e + 1) + groesse e + 8 ≤ F →
+      parseOr F (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro n rkn bkn e rest F hs hg hr hrs hrg hF
+  cases e with
+  | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | «variable» a =>
+    have hka : (!istKeinPlatz a) = true := by
+      simp only [gutKern] at hg
+      exact hg
+    exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | un o x =>
+    rw [gutKern_un] at hg
+    simp only [Bool.and_eq_true] at hg
+    obtain ⟨hop, hgx⟩ := hg
+    have ho : o = "!" := strKlingt o "!" hop
+    subst ho
+    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.2.2 F (by omega)
+  | bin o l r =>
+    rw [gutKern_bin] at hg
+    simp only [Bool.and_eq_true, and_assoc] at hg
+    obtain ⟨hop, hl, hr2⟩ := hg
+    have ho : o = "+" := strKlingt o "+" hop
+    subst ho
+    exact (turm_bin n bkn l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | feld x f => simp [gutKern] at hg
+  | index x i => simp [gutKern] at hg
+  | pfeil x f => simp [gutKern] at hg
+  | ruf f xs => simp [gutKern] at hg
+  | fnwert f => simp [gutKern] at hg
+  | eingebaut f xs => simp [gutKern] at hg
+  | alt x => simp [gutKern] at hg
+  | ergebnis => simp [gutKern] at hg
+  | grund g f => simp [gutKern] at hg
+
+theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n →
+    (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
+      gutKern e = true → ruhig rest = true → ruhigSuff rest = true →
+      ruhigGleit rest = true →
+      12 * (groesse e + 1) + groesse e + 7 ≤ F →
+      parseAnd F (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro n rkn bkn e rest F hs hg hr hrs hrg hF
+  cases e with
+  | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | «variable» a =>
+    have hka : (!istKeinPlatz a) = true := by
+      simp only [gutKern] at hg
+      exact hg
+    exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | un o x =>
+    rw [gutKern_un] at hg
+    simp only [Bool.and_eq_true] at hg
+    obtain ⟨hop, hgx⟩ := hg
+    have ho : o = "!" := strKlingt o "!" hop
+    subst ho
+    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | bin o l r =>
+    rw [gutKern_bin] at hg
+    simp only [Bool.and_eq_true, and_assoc] at hg
+    obtain ⟨hop, hl, hr2⟩ := hg
+    have ho : o = "+" := strKlingt o "+" hop
+    subst ho
+    exact (turm_bin n bkn l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | feld x f => simp [gutKern] at hg
+  | index x i => simp [gutKern] at hg
+  | pfeil x f => simp [gutKern] at hg
+  | ruf f xs => simp [gutKern] at hg
+  | fnwert f => simp [gutKern] at hg
+  | eingebaut f xs => simp [gutKern] at hg
+  | alt x => simp [gutKern] at hg
+  | ergebnis => simp [gutKern] at hg
+  | grund g f => simp [gutKern] at hg
+
+theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n →
+    (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
+      gutKern e = true → ruhig rest = true → ruhigSuff rest = true →
+      ruhigGleit rest = true →
+      12 * (groesse e + 1) + groesse e + 6 ≤ F →
+      parseCmp F (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro n rkn bkn e rest F hs hg hr hrs hrg hF
+  cases e with
+  | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | «variable» a =>
+    have hka : (!istKeinPlatz a) = true := by
+      simp only [gutKern] at hg
+      exact hg
+    exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | un o x =>
+    rw [gutKern_un] at hg
+    simp only [Bool.and_eq_true] at hg
+    obtain ⟨hop, hgx⟩ := hg
+    have ho : o = "!" := strKlingt o "!" hop
+    subst ho
+    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.1 F (by omega)
+  | bin o l r =>
+    rw [gutKern_bin] at hg
+    simp only [Bool.and_eq_true, and_assoc] at hg
+    obtain ⟨hop, hl, hr2⟩ := hg
+    have ho : o = "+" := strKlingt o "+" hop
+    subst ho
+    exact (turm_bin n bkn l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | feld x f => simp [gutKern] at hg
+  | index x i => simp [gutKern] at hg
+  | pfeil x f => simp [gutKern] at hg
+  | ruf f xs => simp [gutKern] at hg
+  | fnwert f => simp [gutKern] at hg
+  | eingebaut f xs => simp [gutKern] at hg
+  | alt x => simp [gutKern] at hg
+  | ergebnis => simp [gutKern] at hg
+  | grund g f => simp [gutKern] at hg
+
+theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n →
+    (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
+      gutKern e = true → ruhig rest = true → ruhigSuff rest = true →
+      ruhigGleit rest = true →
+      12 * (groesse e + 1) + groesse e + 5 ≤ F →
+      parseBit F (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro n rkn bkn e rest F hs hg hr hrs hrg hF
+  cases e with
+  | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | «variable» a =>
+    have hka : (!istKeinPlatz a) = true := by
+      simp only [gutKern] at hg
+      exact hg
+    exact (turm_var a rest hka hr hrs hrg).2.2.2.2.1 F (by omega)
+  | un o x =>
+    rw [gutKern_un] at hg
+    simp only [Bool.and_eq_true] at hg
+    obtain ⟨hop, hgx⟩ := hg
+    have ho : o = "!" := strKlingt o "!" hop
+    subst ho
+    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.1 F (by omega)
+  | bin o l r =>
+    rw [gutKern_bin] at hg
+    simp only [Bool.and_eq_true, and_assoc] at hg
+    obtain ⟨hop, hl, hr2⟩ := hg
+    have ho : o = "+" := strKlingt o "+" hop
+    subst ho
+    exact (turm_bin n bkn l r rest hs hl hr2 hr hrs hrg).2.2.2.2.1 F (by omega)
+  | feld x f => simp [gutKern] at hg
+  | index x i => simp [gutKern] at hg
+  | pfeil x f => simp [gutKern] at hg
+  | ruf f xs => simp [gutKern] at hg
+  | fnwert f => simp [gutKern] at hg
+  | eingebaut f xs => simp [gutKern] at hg
+  | alt x => simp [gutKern] at hg
+  | ergebnis => simp [gutKern] at hg
+  | grund g f => simp [gutKern] at hg
+
 end Gabbro.Grammatik.Parser
