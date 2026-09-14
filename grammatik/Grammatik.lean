@@ -198,3 +198,11 @@ import Grammatik.Isabelle.Table_Zaehlung
 import Grammatik.Isabelle.Table_Ops_Erhaltung
 import Grammatik.Isabelle.Absenkung_Parametrisch
 import Grammatik.Isabelle.Intervall_Aussen
+import Grammatik.Isabelle.AccumulatesMonoid
+import Grammatik.Isabelle.GruppeErhaltung
+import Grammatik.Isabelle.FormatRoundtrip
+import Grammatik.Isabelle.OptionSonderwert
+import Grammatik.Isabelle.Consuming
+import Grammatik.Isabelle.DeviceKonstruktor
+import Grammatik.Isabelle.VerbundKonstruktor
+import Grammatik.Isabelle.RestrictAlleinzugriff
