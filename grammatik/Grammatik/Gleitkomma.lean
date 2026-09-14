@@ -97,16 +97,15 @@ structure Bruch where
 
 /-- The exact dyadic value of a finite bit triple (`none` for infinity/NaN):
     normal `(-1)^s * (2^(p-1) + frac) * 2^(E-(p-1))`, subnormal
-    `(-1)^s * frac * 2^(emin-(p-1))`, zero `0`. -/
+    `(-1)^s * frac * 2^(emin-(p-1))`, zero `0`. Let-free for rewriting. -/
 def wertExakt (F : Format) (g : GBits F) : Option Exakt :=
   match klasse F g with
   | .normal =>
-    let m : Int := (2 ^ (F.p - 1) : Nat) + (g.frac : Int)
-    let s : Int := if g.sign then -1 else 1
-    some ⟨s * m, (g.bexp : Int) - (F.bias : Int) - ((F.p : Int) - 1)⟩
+    some ⟨(if g.sign then (-1 : Int) else 1) * ((2 ^ (F.p - 1) : Nat) + (g.frac : Int)),
+      (g.bexp : Int) - (F.bias : Int) - ((F.p : Int) - 1)⟩
   | .subnormal =>
-    let s : Int := if g.sign then -1 else 1
-    some ⟨s * (g.frac : Int), F.emin - ((F.p : Int) - 1)⟩
+    some ⟨(if g.sign then (-1 : Int) else 1) * (g.frac : Int),
+      F.emin - ((F.p : Int) - 1)⟩
   | .null => some ⟨0, 0⟩
   | _ => none
 
@@ -185,12 +184,14 @@ def rundeBruchBei (F : Format) (s : Bool) (n d : Nat) : GBits F :=
 def rundeBruch (F : Format) (b : Bruch) : GBits F :=
   rundeBruchBei F (b.zaehler < 0) b.zaehler.natAbs b.nenner
 
+/-- An exact dyadic value as a general rational (the `rundeExakt` path). -/
+def exaktBruch (v : Exakt) : Bruch :=
+  if 0 ≤ v.zweierExp then ⟨v.zaehler * (2 ^ v.zweierExp.toNat : Nat), 1⟩
+  else ⟨v.zaehler, 2 ^ (-v.zweierExp).toNat⟩
+
 /-- Rounding from an exact dyadic value (the `add` / `sub` / `mul` path). -/
 def rundeExakt (F : Format) (v : Exakt) : GBits F :=
-  if 0 ≤ v.zweierExp then
-    rundeBruch F ⟨v.zaehler * (2 ^ v.zweierExp.toNat : Nat), 1⟩
-  else
-    rundeBruch F ⟨v.zaehler, 2 ^ (-v.zweierExp).toNat⟩
+  rundeBruch F (exaktBruch v)
 
 /-- Negation flips the sign bit (signed zeros and infinities included;
     NaN payloads are kept). -/
@@ -245,6 +246,14 @@ def mul (F : Format) (a b : GBits F) : GBits F :=
     | some u, some v => rundeExakt F (exaktMul u v)
     | _, _ => nanQ F
 
+/-- Exact quotient of two exact values as a general rational (signs
+    folded out so the denominator stays positive). -/
+def divBruch (u v : Exakt) : Bruch :=
+  let m := if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp
+  let na : Nat := u.zaehler.natAbs * 2 ^ (u.zweierExp - m).toNat
+  let da : Nat := v.zaehler.natAbs * 2 ^ (v.zweierExp - m).toNat
+  ⟨if (u.zaehler < 0) != (v.zaehler < 0) then -(na : Int) else na, da⟩
+
 /-- Division as "exact result, then round": the exact quotient of the two
     exact values (a general rational -- `1 / 3` is not dyadic), with the
     IEEE special cases (`x / x = NaN` for `inf`/`0`, `finite / 0 = inf`,
@@ -264,12 +273,7 @@ def div (F : Format) (a b : GBits F) : GBits F :=
   | .null, _ => ⟨a.sign != b.sign, 0, 0⟩
   | _, _ =>
     match wertExakt F a, wertExakt F b with
-    | some u, some v =>
-      let m := if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp
-      let na : Nat := u.zaehler.natAbs * 2 ^ (u.zweierExp - m).toNat
-      let da : Nat := v.zaehler.natAbs * 2 ^ (v.zweierExp - m).toNat
-      let num : Int := if (u.zaehler < 0) != (v.zaehler < 0) then -(na : Int) else na
-      rundeBruch F ⟨num, da⟩
+    | some u, some v => rundeBruch F (divBruch u v)
     | _, _ => nanQ F
 
 /-- Integer conversion: the exact integer, then round. -/
@@ -562,7 +566,7 @@ theorem findeExp_unten (n d : Nat) (hn : 0 < n)
     (bitlen n) (bitlen d) rfl
     (bitlen_untere n (by omega)) (bitlen_obere d) hE
 
-/-! ## Theorems: in-range rounding stays finite. -/
+/-! ## Theorems: conversions and ops on in-range exact values stay finite. -/
 
 /-- Zero bits classify as zero (needs a non-degenerate exponent field). -/
 theorem klasse_null_bits (F : Format) (s : Bool) (hmax : 0 < F.bexpMax) :
@@ -656,5 +660,250 @@ theorem rundeBruch_finite (F : Format) (b : Bruch) (hF : 1 ≤ F.emax)
           have hbmax : (1 : Nat) < F.bexpMax := by omega
           rw [klasse_normal_bits F _ 1 0 (by omega) hbmax]
           exact Or.inl rfl
+
+/-! ## Conversions through the finite rounding path. -/
+
+/-- Integers convert through the dyadic path with denominator one. -/
+theorem ofInt_bruch (F : Format) (z : Int) :
+    ofInt F z = rundeBruch F ⟨z, 1⟩ := by
+  have e1 : (⟨z, (0 : Int)⟩ : Exakt).zweierExp = 0 := rfl
+  have e2 : (⟨z, (0 : Int)⟩ : Exakt).zaehler = z := rfl
+  have t0 : (0 : Int).toNat = 0 := rfl
+  have p0 : (2 : Nat) ^ (0 : Nat) = 1 := rfl
+  unfold ofInt rundeExakt exaktBruch
+  rw [e1, e2, t0, p0, if_pos (by omega : (0 : Int) ≤ 0)]
+  have m1 : z * ((1 : Nat) : Int) = z := Int.mul_one z
+  rw [m1]
+
+/-- An integer strictly inside `2^emax` converts to a finite value. -/
+theorem ofInt_finite (F : Format) (hF : 1 ≤ F.emax) (z : Int)
+    (h : z.natAbs < 2 ^ F.emax) :
+    klasse F (ofInt F z) = .normal ∨ klasse F (ofInt F z) = .subnormal
+      ∨ klasse F (ofInt F z) = .null := by
+  rw [ofInt_bruch]
+  have ez : (⟨z, (1 : Nat)⟩ : Bruch).zaehler = z := rfl
+  have en : (⟨z, (1 : Nat)⟩ : Bruch).nenner = 1 := rfl
+  have hd1 : 0 < (⟨z, (1 : Nat)⟩ : Bruch).nenner := by omega
+  have hob1 : (⟨z, (1 : Nat)⟩ : Bruch).zaehler.natAbs
+      < (⟨z, (1 : Nat)⟩ : Bruch).nenner * 2 ^ F.emax := by
+    rw [ez, en]; omega
+  exact rundeBruch_finite F ⟨z, 1⟩ hF hd1 hob1
+
+/-- An exact rational strictly inside `2^emax` converts to a finite value. -/
+theorem ofRat_finite (F : Format) (hF : 1 ≤ F.emax) (z : Int) (n : Nat)
+    (hd : 0 < n) (hob : z.natAbs < n * 2 ^ F.emax) :
+    klasse F (ofRat F z n) = .normal ∨ klasse F (ofRat F z n) = .subnormal
+      ∨ klasse F (ofRat F z n) = .null :=
+  rundeBruch_finite F ⟨z, n⟩ hF hd hob
+
+/-- The dyadic path never has a zero denominator. -/
+theorem exaktBruch_nenner_pos (v : Exakt) : 0 < (exaktBruch v).nenner := by
+  unfold exaktBruch
+  by_cases h : 0 ≤ v.zweierExp
+  · rw [if_pos h]
+    have e : (⟨v.zaehler * ((2 ^ v.zweierExp.toNat : Nat) : Int), 1⟩ : Bruch).nenner
+        = 1 := rfl
+    rw [e]; decide
+  · rw [if_neg h]
+    have e : (⟨v.zaehler, 2 ^ (-v.zweierExp).toNat⟩ : Bruch).nenner
+        = 2 ^ (-v.zweierExp).toNat := rfl
+    rw [e]; exact Nat.pow_pos (show 0 < 2 by decide)
+
+/-- Addition of finite values with in-range exact sum stays finite
+    (and is, by construction, the rounded exact sum). -/
+theorem add_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
+    (u v : Exakt) (ha : wertExakt F a = some u) (hb : wertExakt F b = some v)
+    (hob : (exaktBruch (exaktAdd u v)).zaehler.natAbs
+      < (exaktBruch (exaktAdd u v)).nenner * 2 ^ F.emax) :
+    klasse F (add F a b) = .normal ∨ klasse F (add F a b) = .subnormal
+      ∨ klasse F (add F a b) = .null := by
+  have hfin : klasse F (rundeExakt F (exaktAdd u v)) = .normal
+      ∨ klasse F (rundeExakt F (exaktAdd u v)) = .subnormal
+      ∨ klasse F (rundeExakt F (exaktAdd u v)) = .null := by
+    unfold rundeExakt
+    exact rundeBruch_finite F _ hF (exaktBruch_nenner_pos _) hob
+  generalize hka : klasse F a = ka
+  generalize hkb : klasse F b = kb
+  cases ka <;> cases kb <;>
+    first
+      | (unfold add; rw [hka, hkb, ha, hb]; exact hfin)
+      | (have hnone : wertExakt F a = none := by unfold wertExakt; rw [hka]
+         rw [hnone] at ha; cases ha)
+      | (have hnone : wertExakt F b = none := by unfold wertExakt; rw [hkb]
+         rw [hnone] at hb; cases hb)
+
+/-- Multiplication of finite values with in-range exact product stays finite
+    (zero times finite is the signed zero, otherwise the rounded product). -/
+theorem mul_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
+    (u v : Exakt) (ha : wertExakt F a = some u) (hb : wertExakt F b = some v)
+    (hob : (exaktBruch (exaktMul u v)).zaehler.natAbs
+      < (exaktBruch (exaktMul u v)).nenner * 2 ^ F.emax) :
+    klasse F (mul F a b) = .normal ∨ klasse F (mul F a b) = .subnormal
+      ∨ klasse F (mul F a b) = .null := by
+  have hmax : 0 < F.bexpMax := by
+    have hmaxE : F.bexpMax = 2 * F.emax + 1 := rfl
+    omega
+  have hfin : klasse F (rundeExakt F (exaktMul u v)) = .normal
+      ∨ klasse F (rundeExakt F (exaktMul u v)) = .subnormal
+      ∨ klasse F (rundeExakt F (exaktMul u v)) = .null := by
+    unfold rundeExakt
+    exact rundeBruch_finite F _ hF (exaktBruch_nenner_pos _) hob
+  generalize hka : klasse F a = ka
+  generalize hkb : klasse F b = kb
+  cases ka <;> cases kb <;>
+    first
+      | (unfold mul; rw [hka, hkb, klasse_null_bits F _ hmax]
+         exact Or.inr (Or.inr rfl))
+      | (unfold mul; rw [hka, hkb, ha, hb]; exact hfin)
+      | (have hnone : wertExakt F a = none := by unfold wertExakt; rw [hka]
+         rw [hnone] at ha; cases ha)
+      | (have hnone : wertExakt F b = none := by unfold wertExakt; rw [hkb]
+         rw [hnone] at hb; cases hb)
+
+/-- Negation keeps the classification (only the sign bit flips). -/
+theorem klasse_neg (F : Format) (a : GBits F) :
+    klasse F (neg F a) = klasse F a := by
+  cases a with
+  | mk s bx fr => unfold neg klasse; rfl
+
+/-- Negation negates the exact value. -/
+theorem wertExakt_neg_some (F : Format) (b : GBits F) (v : Exakt)
+    (hb : wertExakt F b = some v) :
+    wertExakt F (neg F b) = some ⟨-v.zaehler, v.zweierExp⟩ := by
+  cases b with
+  | mk s bx fr =>
+    cases s
+    · -- Sign false: negation turns it true.
+      have eneg : neg F (⟨false, bx, fr⟩ : GBits F) = ⟨true, bx, fr⟩ := rfl
+      rw [eneg]
+      have hkn : klasse F (⟨true, bx, fr⟩ : GBits F)
+          = klasse F (⟨false, bx, fr⟩ : GBits F) := by
+        have h := klasse_neg F (⟨false, bx, fr⟩ : GBits F)
+        rwa [eneg] at h
+      unfold wertExakt at hb ⊢
+      generalize hka : klasse F (⟨false, bx, fr⟩ : GBits F) = ka
+      cases ka
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        cases v with
+        | mk z e =>
+          cases hb
+          decide
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        rw [if_neg (by decide : ¬ (false : Bool) = true)] at hb
+        rw [if_pos trivial] at ⊢
+        cases v with
+        | mk z e =>
+          cases hb
+          have h1 : (-1 : Int) * (fr : Int) = -((1 : Int) * fr) := by omega
+          rw [h1]
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        rw [if_neg (by decide : ¬ (false : Bool) = true)] at hb
+        rw [if_pos trivial] at ⊢
+        cases v with
+        | mk z e =>
+          cases hb
+          have h1 : (-1 : Int) * ((2 ^ (F.p - 1) : Nat) + (fr : Int))
+              = -(((1 : Int)) * ((2 ^ (F.p - 1) : Nat) + (fr : Int))) := by omega
+          rw [h1]
+      · simp only [hka] at hb; cases hb
+      · simp only [hka] at hb; cases hb
+    · -- Sign true: mirror image.
+      have eneg : neg F (⟨true, bx, fr⟩ : GBits F) = ⟨false, bx, fr⟩ := rfl
+      rw [eneg]
+      have hkn : klasse F (⟨false, bx, fr⟩ : GBits F)
+          = klasse F (⟨true, bx, fr⟩ : GBits F) := by
+        have h := klasse_neg F (⟨true, bx, fr⟩ : GBits F)
+        rwa [eneg] at h
+      unfold wertExakt at hb ⊢
+      generalize hka : klasse F (⟨true, bx, fr⟩ : GBits F) = ka
+      cases ka
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        cases v with
+        | mk z e =>
+          cases hb
+          decide
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        rw [if_pos trivial] at hb
+        rw [if_neg (by decide : ¬ (false : Bool) = true)] at ⊢
+        cases v with
+        | mk z e =>
+          cases hb
+          have h1 : (1 : Int) * (fr : Int) = -(((-1 : Int)) * fr) := by omega
+          rw [h1]
+      · simp only [hkn, hka] at ⊢; simp only [hka] at hb
+        rw [if_pos trivial] at hb
+        rw [if_neg (by decide : ¬ (false : Bool) = true)] at ⊢
+        cases v with
+        | mk z e =>
+          cases hb
+          have h1 : (1 : Int) * ((2 ^ (F.p - 1) : Nat) + (fr : Int))
+              = -(((-1 : Int)) * ((2 ^ (F.p - 1) : Nat) + (fr : Int))) := by omega
+          rw [h1]
+      · simp only [hka] at hb; cases hb
+      · simp only [hka] at hb; cases hb
+
+/-- Subtraction of finite values with in-range exact difference stays finite. -/
+theorem sub_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
+    (u v : Exakt) (ha : wertExakt F a = some u) (hb : wertExakt F b = some v)
+    (hob : (exaktBruch (exaktAdd u ⟨-v.zaehler, v.zweierExp⟩)).zaehler.natAbs
+      < (exaktBruch (exaktAdd u ⟨-v.zaehler, v.zweierExp⟩)).nenner * 2 ^ F.emax) :
+    klasse F (sub F a b) = .normal ∨ klasse F (sub F a b) = .subnormal
+      ∨ klasse F (sub F a b) = .null := by
+  unfold sub
+  exact add_finite F hF a (neg F b) u ⟨-v.zaehler, v.zweierExp⟩ ha
+    (wertExakt_neg_some F b v hb) hob
+
+/-- The exact quotient denominator, exposed (definitionally the `let` body). -/
+theorem divBruch_nenner (u v : Exakt) : (divBruch u v).nenner
+    = v.zaehler.natAbs
+      * 2 ^ (v.zweierExp
+        - (if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp)).toNat :=
+  rfl
+
+/-- Division of finite values by a nonzero finite divisor with in-range
+    exact quotient stays finite (and is the rounded exact quotient).
+    `0 / 0` is NaN, so the divisor must be nonzero (`hkb`, `hv`). -/
+theorem div_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
+    (u v : Exakt) (ha : wertExakt F a = some u) (hb : wertExakt F b = some v)
+    (hkb : klasse F b = .normal ∨ klasse F b = .subnormal)
+    (hv : v.zaehler ≠ 0)
+    (hob : (divBruch u v).zaehler.natAbs
+      < (divBruch u v).nenner * 2 ^ F.emax) :
+    klasse F (div F a b) = .normal ∨ klasse F (div F a b) = .subnormal
+      ∨ klasse F (div F a b) = .null := by
+  have hmax : 0 < F.bexpMax := by
+    have hmaxE : F.bexpMax = 2 * F.emax + 1 := rfl
+    omega
+  have hdD : 0 < (divBruch u v).nenner := by
+    rw [divBruch_nenner]
+    have h1 : 0 < v.zaehler.natAbs := by omega
+    have h2 : 0 < 2 ^ (v.zweierExp
+        - (if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp)).toNat :=
+      Nat.pow_pos (show 0 < 2 by decide)
+    exact Nat.mul_pos h1 h2
+  have hfin : klasse F (rundeBruch F (divBruch u v)) = .normal
+      ∨ klasse F (rundeBruch F (divBruch u v)) = .subnormal
+      ∨ klasse F (rundeBruch F (divBruch u v)) = .null :=
+    rundeBruch_finite F _ hF hdD hob
+  generalize hka : klasse F a = ka
+  cases hkb with
+  | inl hkb =>
+    cases ka <;>
+      first
+        | (unfold div; rw [hka, hkb, klasse_null_bits F _ hmax]
+           exact Or.inr (Or.inr rfl))
+        | (unfold div; rw [hka, hkb, ha, hb]; exact hfin)
+        | (have hnone : wertExakt F a = none := by
+             unfold wertExakt; simp only [hka]
+           rw [hnone] at ha; cases ha)
+  | inr hkb =>
+    cases ka <;>
+      first
+        | (unfold div; rw [hka, hkb, klasse_null_bits F _ hmax]
+           exact Or.inr (Or.inr rfl))
+        | (unfold div; rw [hka, hkb, ha, hb]; exact hfin)
+        | (have hnone : wertExakt F a = none := by
+             unfold wertExakt; simp only [hka]
+           rw [hnone] at ha; cases ha)
 
 end Gabbro.Grammatik.Gleitkomma
