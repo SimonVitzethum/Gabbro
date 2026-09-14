@@ -562,4 +562,99 @@ theorem findeExp_unten (n d : Nat) (hn : 0 < n)
     (bitlen n) (bitlen d) rfl
     (bitlen_untere n (by omega)) (bitlen_obere d) hE
 
+/-! ## Theorems: in-range rounding stays finite. -/
+
+/-- Zero bits classify as zero (needs a non-degenerate exponent field). -/
+theorem klasse_null_bits (F : Format) (s : Bool) (hmax : 0 < F.bexpMax) :
+    klasse F ⟨s, 0, 0⟩ = .null := by
+  have e : (⟨s, 0, 0⟩ : GBits F).bexp = 0 := rfl
+  have f : (⟨s, 0, 0⟩ : GBits F).frac = 0 := rfl
+  unfold klasse
+  rw [e, f, if_neg (by omega : ¬ (0 : Nat) = F.bexpMax), if_pos rfl, if_pos rfl]
+
+/-- Nonzero significand at biased exponent zero is subnormal. -/
+theorem klasse_subnormal_bits (F : Format) (s : Bool) (q : Nat)
+    (hmax : 0 < F.bexpMax) (hq : q ≠ 0) :
+    klasse F ⟨s, 0, q⟩ = .subnormal := by
+  have e : (⟨s, 0, q⟩ : GBits F).bexp = 0 := rfl
+  have f : (⟨s, 0, q⟩ : GBits F).frac = q := rfl
+  unfold klasse
+  rw [e, f, if_neg (by omega : ¬ (0 : Nat) = F.bexpMax), if_pos rfl, if_neg hq]
+
+/-- A biased exponent strictly between zero and all-ones is normal. -/
+theorem klasse_normal_bits (F : Format) (s : Bool) (bx fr : Nat)
+    (hb0 : bx ≠ 0) (hbmax : bx < F.bexpMax) :
+    klasse F ⟨s, bx, fr⟩ = .normal := by
+  have e : (⟨s, bx, fr⟩ : GBits F).bexp = bx := rfl
+  unfold klasse
+  rw [e, if_neg (by omega : ¬ bx = F.bexpMax), if_neg hb0]
+
+/-- Rounding a strictly in-range exact value stays finite: with `0 < den`
+    and `|num| < den * 2^emax` (and a non-degenerate format), the result is
+    normal, subnormal or zero -- never infinity or NaN. -/
+theorem rundeBruch_finite (F : Format) (b : Bruch) (hF : 1 ≤ F.emax)
+    (hd : 0 < b.nenner)
+    (hob : b.zaehler.natAbs < b.nenner * 2 ^ F.emax) :
+    klasse F (rundeBruch F b) = .normal
+      ∨ klasse F (rundeBruch F b) = .subnormal
+      ∨ klasse F (rundeBruch F b) = .null := by
+  have hemin : F.emin = 1 - (F.emax : Int) := rfl
+  have hmaxE : F.bexpMax = 2 * F.emax + 1 := rfl
+  have hmax : 0 < F.bexpMax := by omega
+  unfold rundeBruch rundeBruchBei
+  rw [if_neg (by omega : ¬ b.nenner = 0)]
+  by_cases hn0 : b.zaehler.natAbs = 0
+  · rw [if_pos hn0, klasse_null_bits F _ hmax]
+    exact Or.inr (Or.inr rfl)
+  · rw [if_neg hn0]
+    have hn : 0 < b.zaehler.natAbs := Nat.pos_of_ne_zero hn0
+    have hEle : findeExp b.zaehler.natAbs b.nenner ≤ (F.emax : Int) - 1 := by
+      by_cases hE0 : 0 ≤ findeExp b.zaehler.natAbs b.nenner
+      · by_cases hmaxl : (F.emax : Int) ≤ findeExp b.zaehler.natAbs b.nenner
+        · have hlow := findeExp_unten _ _ hn hE0
+          have hto : F.emax ≤ (findeExp b.zaehler.natAbs b.nenner).toNat := by omega
+          have hmono := Nat.pow_le_pow_right (show 0 < 2 by decide) hto
+          have hmul := Nat.mul_le_mul (Nat.le_refl b.nenner) hmono
+          omega
+        · omega
+      · omega
+    unfold rundeBruchKern
+    rw [if_neg (by omega : ¬ (F.emax : Int) < findeExp b.zaehler.natAbs b.nenner)]
+    by_cases hdeep : findeExp b.zaehler.natAbs b.nenner < F.emin - (F.p : Int)
+    · rw [if_pos hdeep, klasse_null_bits F _ hmax]
+      exact Or.inr (Or.inr rfl)
+    · rw [if_neg hdeep]
+      by_cases hEmin : F.emin ≤ findeExp b.zaehler.natAbs b.nenner
+      · rw [if_pos hEmin]
+        by_cases hq : normQ F.p (findeExp b.zaehler.natAbs b.nenner)
+            b.zaehler.natAbs b.nenner < 2 ^ F.p
+        · rw [if_pos hq]
+          have hb0 : (findeExp b.zaehler.natAbs b.nenner - F.emin + 1).toNat ≠ 0 := by omega
+          have hbmax : (findeExp b.zaehler.natAbs b.nenner - F.emin + 1).toNat
+              < F.bexpMax := by omega
+          rw [klasse_normal_bits F _ _ _ hb0 hbmax]
+          exact Or.inl rfl
+        · rw [if_neg hq]
+          by_cases hEmax : findeExp b.zaehler.natAbs b.nenner < (F.emax : Int)
+          · rw [if_pos hEmax]
+            have hb0 : (findeExp b.zaehler.natAbs b.nenner - F.emin + 2).toNat ≠ 0 := by omega
+            have hbmax : (findeExp b.zaehler.natAbs b.nenner - F.emin + 2).toNat
+                < F.bexpMax := by omega
+            rw [klasse_normal_bits F _ _ _ hb0 hbmax]
+            exact Or.inl rfl
+          · have hlt : findeExp b.zaehler.natAbs b.nenner < (F.emax : Int) := by omega
+            exact (hEmax hlt).elim
+      · rw [if_neg hEmin]
+        by_cases hsub : subQ F b.zaehler.natAbs b.nenner < 2 ^ (F.p - 1)
+        · rw [if_pos hsub]
+          by_cases hq0 : subQ F b.zaehler.natAbs b.nenner = 0
+          · rw [hq0, klasse_null_bits F _ hmax]
+            exact Or.inr (Or.inr rfl)
+          · rw [klasse_subnormal_bits F _ _ hmax hq0]
+            exact Or.inr (Or.inl rfl)
+        · rw [if_neg hsub]
+          have hbmax : (1 : Nat) < F.bexpMax := by omega
+          rw [klasse_normal_bits F _ 1 0 (by omega) hbmax]
+          exact Or.inl rfl
+
 end Gabbro.Grammatik.Gleitkomma
