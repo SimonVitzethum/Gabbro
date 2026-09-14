@@ -142,8 +142,14 @@ The costs of the Opus agent for the memory model are on the Claude account and n
 for one program. Axioms of every theorem named here: `propext`, `Classical.choice`,
 `Quot.sound`; no `sorry`, no `native_decide`, no new `axiom`.*
 
-**The statement.** `schlusssatz_104 (c : Cert104) (hc : certOkG c = true)` gives, about ONE
-program -- `gP` over `gD` (`G104_referenz`), the program the Lean parser produces:
+**The statement** (restated 2026-09-14, second round: the named assumptions that are Lean
+propositions are hypotheses, and the `forever` budget is quantified).
+`schlusssatz_104 (c : Cert104) (hc : certOkG c = true) binEin hA1ein binLies hA1lies init hA4`,
+where `hA1ein : ∀ st vs st' rv, binEin st vs st' rv → CallAt gEL104.lay tvOrc tvXR refCProg 2 0
+st vs st' rv` (likewise `hA1lies` at depth 1, function 1) is A1 with A2 and A3 as one hypothesis
+over the binary's behaviour `binEin`/`binLies` (parameters), and `hA4 : LaufzeitStart init`
+(every thread but `0` idles in the runtime's root) is A4. It gives, about ONE program -- `gP`
+over `gD` (`G104_referenz`), the program the Lean parser produces:
 
 1. **Parse fidelity.** `uebersetze104 src104 = .ok (gP, gFs)`: lex, parse, elaborate, lower,
    every stage a propositional equation (the `Bool` pins of `Parser/Uebersetze.lean` became
@@ -152,7 +158,9 @@ program -- `gP` over `gD` (`G104_referenz`), the program the Lean parser produce
    output of `ZeugnisStmt104b.lean` (`printEnd104 (gP.rumpf f) = some cert104_f`, `rfl`), and
    `certEnd104Ok` accepts both.
 3. **Model judgement.** `programmImFragmentG`, `fussOrtGB`, and for every function
-   `KoerperGutS` and `InvGutS` (the per-function obligations of `ziel_ort_sperre_inv`).
+   `KoerperGutS` and `InvGutS` AT EVERY `forever` BUDGET (`gP_koerperS_alle`), and the call
+   semantics does not depend on the budget (`gP_rufAt_passes`), so every `rufAt … 0 …` below
+   holds at every budget.
 4. **Every C run.** The certificate elaborates to the emitted unit (`progOf c = refCProg`); for
    `einzahlen` (depth 2) and `lies` (depth 1), from a C state related to ANY Gabbro world and
    C arguments related to ANY Gabbro arguments: the Gabbro call `rufAt gP` ends `ok` (every
@@ -161,13 +169,19 @@ program -- `gP` over `gD` (`G104_referenz`), the program the Lean parser produce
 5. **The machine.** `gPB` = `gP` plus the runtime's idle root: its source part is `gP` under a
    structural renaming (`gPB_ist_gP_umbenannt`, `rfl`) and behaves as `gP` through the same
    emitted C (`gPB_wie_gP_einzahlen`/`_lies`: same memory effect and answer); on every
-   machine reachable from every start memory, thread 0 in every source function on every
-   argument, the conclusion of the goal theorem holds (`ziel_ort_einfaden` plus `InvAmOrtG`).
+   machine reachable from every start memory, at every budget, from EVERY start `init` with
+   `LaufzeitStart init`, the conclusion of the goal theorem holds -- now with `StartEndeG` and
+   `KeinStartGrundG`, so the root function's `ensures` at its completion is part of the
+   machine statement (`ziel_ort_einfaden_ende`).
+6. **Every run of the binary** (under `hA1ein`/`hA1lies`): from a related start, every run of
+   `binEin`/`binLies` ends related to the Gabbro result, which is the same at every budget.
 
 The premise holds for the printed rows by `decide` (`schlusssatz_104_praemisse`); witnesses
 on runs that move memory: `schlusssatz_104_zeuge` (C and Gabbro, slot `0 -> 100`) and
 `schlusssatz_104_maschine_zeuge` (three machine steps, `lies`'s `ensures` at its logged
-return by the theorem).
+return by the theorem, and the root `einzahlen` finished with its `ensures` by `StartEndeG`);
+the premises jointly: `schlusssatz_104_praemissen` (the C semantics itself as the binary's
+behaviour, `bootInit` as the start).
 
 **The joints, and how they closed.**
 
@@ -183,14 +197,17 @@ some function, and both functions of `gD` hold `M` by signature, so no start is 
 (`gP_kein_exklusiv`) and no function is an idle root (`gP_kein_ruhig`). The idle root is
 runtime data; it enters as `gDB`/`gPB`, and assumption A4 below.
 
-**Premises and assumptions.** The one premise is `certOkG c = true`. There is no hardware or
-oracle premise for 104: the declaration has no axiom, register, device, global or `awaits`,
-and the emitted unit no device access or foreign call. Named assumptions (outside Lean):
-A1 the C compiler follows the C semantics of `CSemantik`/`CSpeicher`/`CFormen*`; A2 the
-emitted text is the `CS` data `refCProg` (hand transcription of the quoted output; no C
-parser in Lean); A3 the `Konto` layout (bounded by the `_Static_assert` pins); A4 the runtime
-starts thread 0 in one source function and idles the rest; A5 the Lean kernel and the
-definitions §3 lists for human review.
+**Premises and assumptions.** Premises: `certOkG c = true`; `hA1ein`/`hA1lies` (A1+A2+A3 as a
+refinement hypothesis on the binary's behaviour); `hA4` (A4). There is no hardware or oracle
+premise for 104: the declaration has no axiom, register, device, global or `awaits`, and the
+emitted unit no device access or foreign call. What stays OUTSIDE Lean (no Lean proposition):
+A1 that `binEin`/`binLies` ARE the compiled binary's behaviour (the compiler); A2 that the
+emitted TEXT means `refCProg` -- a Lean C parser for the emitter's subset with `parseC text =
+some refCProg` by `decide` would replace it by "the compiler's front end reads the subset as
+`parseC`", a part of A1; A3 reduces to A1 + A2 (the `_Static_assert` pins are checked by the
+compiler) plus one missing lemma (the C semantics reads a `RecLay` only through the pinned
+numbers); A4 that the real runtime starts in a `LaufzeitStart` shape (the driver is not
+emitted); A5 the Lean kernel and the definitions §3 lists for human review.
 
 **What stays open.**
 

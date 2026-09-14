@@ -165,22 +165,23 @@ example : ((gD.braucht GTab.Konto).elem (Sum.inl GLock.M) = true) := by decide
 --
 -- Per function, `KoerperGutS` (the sequential triple against handlers,
 -- the caller duty and no `logik` outcome, over `execEndH`) and `InvGutS`
--- (the owed table invariants at a normal return), over the lock-invariant
--- family `gS` above and the trivial axiom ensures -- the declaration has
--- no axiom. Each is a `def` with no proof: the proof is the user's job.
+-- (the owed table invariants at a normal return), at EVERY `forever`
+-- budget -- a duty at one budget says nothing about a `forever` body --
+-- over the lock-invariant family `gS` above and the trivial axiom
+-- ensures. Each is a `def` with no proof: the proof is the user's job.
 -- The definitions name `KoerperGutS`/`InvGutS` through their imports;
 -- their bodies are never copied here.
 def einzahlen_pflicht : Prop :=
-  KoerperGutS gP 0 (axWahr gD) gS g_einzahlen
+  ∀ passes, KoerperGutS gP passes (axWahr gD) gS g_einzahlen
 
 def einzahlen_invPflicht : Prop :=
-  InvGutS gP 0 (axWahr gD) gS g_einzahlen
+  ∀ passes, InvGutS gP passes (axWahr gD) gS g_einzahlen
 
 def lies_pflicht : Prop :=
-  KoerperGutS gP 0 (axWahr gD) gS g_lies
+  ∀ passes, KoerperGutS gP passes (axWahr gD) gS g_lies
 
 def lies_invPflicht : Prop :=
-  InvGutS gP 0 (axWahr gD) gS g_lies
+  ∀ passes, InvGutS gP passes (axWahr gD) gS g_lies
 
 -- The two duties as families, so the closing theorem takes them as one
 -- hypothesis each (`∀ f, ...`).
@@ -215,24 +216,25 @@ theorem gP_ziel (O : Orakel gD) (sp : Speicher gD)
     (hK : ∀ f, pflicht f) (hI : ∀ f, pflichtInv f)
     (hStart : StartGut gP sp init) (hSstart : startPflicht sp)
     (hex : StartExklusiv init) (hS : SperrInvOk gS)
-    (M : RufMaschineG gD)
-    (hr : RufErreichbarG gP O 0 (RufStartG gP sp init) M) :
-    ((VertragAmOrtG gP M ∧ SperrInvG gS M ∧ KeinLogikHaltG O 0 M ∧
+    (hGrund : StartOhneGrund init)
+    (passes : Nat) (M : RufMaschineG gD)
+    (hr : RufErreichbarG gP O passes (RufStartG gP sp init) M) :
+    ((VertragAmOrtG gP M ∧ SperrInvG gS M ∧ KeinLogikHaltG O passes M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-        AnPruefungG M t → ∃ M', RufSchrittG gP O 0 M t M') ∧
-    InvAmOrtG gP M) ∧ StartEndeG gP M := by
-  have hK' : ∀ f : gD.Fn, KoerperGutS gP 0 (axWahr gD) gS f := by
-    intro f
+        AnPruefungG M t → ∃ M', RufSchrittG gP O passes M t M') ∧
+    InvAmOrtG gP M) ∧ StartEndeG gP M ∧ KeinStartGrundG M := by
+  have hK' : ∀ (passes : Nat) (f : gD.Fn), KoerperGutS gP passes (axWahr gD) gS f := by
+    intro passes f
     cases f
-    · exact hK .einzahlen
-    · exact hK .lies
-  have hI' : ∀ f : gD.Fn, InvGutS gP 0 (axWahr gD) gS f := by
-    intro f
+    · exact hK .einzahlen passes
+    · exact hK .lies passes
+  have hI' : ∀ (passes : Nat) (f : gD.Fn), InvGutS gP passes (axWahr gD) gS f := by
+    intro passes f
     cases f
-    · exact hI .einzahlen
-    · exact hI .lies
-  exact ziel_ort_sperre_ende gP O 0 (axWahr gD) gS gFs sp init e0 hO hRL hQ
-    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' M hr
+    · exact hI .einzahlen passes
+    · exact hI .lies passes
+  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init e0 hO hRL hQ
+    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' hGrund passes M hr
 end G104_referenz_oblig
 
 end Gabbro.Grammatik

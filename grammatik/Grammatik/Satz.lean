@@ -71,7 +71,8 @@ theorem im_bereich (e : Expr D Γ Λ (.int lo hi)) (σ₀ σ : World D) (ρ : En
 
 /-- Ein Gleitkommawert ist ENDLICH und in seinem Bereich -- kein NaN, kein Unendlich («F»). -/
 theorem gleit_endlich (e : Expr D Γ Λ (.fl lo hi)) (σ₀ σ : World D) (ρ : Env D Γ) :
-    (eval σ₀ e σ ρ).x.isFinite = true ∧ bruch lo ≤ (eval σ₀ e σ ρ).x ∧ (eval σ₀ e σ ρ).x ≤ bruch hi :=
+    gleitEndlich (eval σ₀ e σ ρ).x = true ∧ gleitLe (bruch lo) (eval σ₀ e σ ρ).x = true
+      ∧ gleitLe (eval σ₀ e σ ρ).x (bruch hi) = true :=
   ⟨(eval σ₀ e σ ρ).endlich, (eval σ₀ e σ ρ).lo_le, (eval σ₀ e σ ρ).le_hi⟩
 
 /-- Ein Funktionszeiger zeigt auf eine Funktion GENAU seiner Signatur («B8»). -/

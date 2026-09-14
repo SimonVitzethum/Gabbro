@@ -20,6 +20,7 @@
   runtime supplies the idle root (`Schlusssatz104.lean` §5: `gPB_ziel`).
 -/
 import Grammatik.GenOblig104
+import Grammatik.Durchgaenge
 import Grammatik.ZielOrtGanz
 import Grammatik.ZielOrtRahmenBeweis
 import Grammatik.ZielOrtRahmenSem
@@ -131,42 +132,67 @@ theorem oblig_voll : ∀ g : G104_referenz_oblig.gD.Fn, g ∈ G104_referenz_obli
 theorem oblig_logikFrei :
     programmLogikFrei G104_referenz_oblig.gP G104_referenz_oblig.gFs = true := by decide
 
-/-! ## 2. The stated duties hold -/
+/-! ## 2. The stated duties hold, at every budget -/
 
 /-- Neither body holds a `locks` block, so neither owes the new semantics
-    anything beyond the old obligation. -/
+    anything beyond the old obligation (at budget `0`, lifted below). -/
 theorem oblig_ohne_einzahlen :
     (G104_referenz_oblig.gP.rumpf g_einzahlen).ohneLocks = true := by decide
 
 theorem oblig_ohne_lies :
     (G104_referenz_oblig.gP.rumpf g_lies).ohneLocks = true := by decide
 
-/-- **THE STATED `KoerperGutS` DUTIES HOLD**, per function. -/
-theorem oblig_koerper : ∀ f : G104_referenz_oblig.gD.Fn, pflicht f := by
+/-- The `KoerperGutS` duties at budget `0`, per function. -/
+theorem oblig_koerper_0 : ∀ f : G104_referenz_oblig.gD.Fn,
+    KoerperGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
+      G104_referenz_oblig.gS f := by
   intro f
   cases f
-  · show KoerperGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
-      G104_referenz_oblig.gS g_einzahlen
-    exact koerperGutS_ohne G104_referenz_oblig.gS oblig_ohne_einzahlen
+  · exact koerperGutS_ohne G104_referenz_oblig.gS oblig_ohne_einzahlen
       ⟨koerperGutRQ_of_R _ oblig_einzahlen_R,
         programmLogikFrei_ok oblig_voll oblig_logikFrei 0 _ _⟩
-  · show KoerperGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
-      G104_referenz_oblig.gS g_lies
-    exact koerperGutS_ohne G104_referenz_oblig.gS oblig_ohne_lies
+  · exact koerperGutS_ohne G104_referenz_oblig.gS oblig_ohne_lies
       ⟨koerperGutRQ_of_R _ (koerperGutR_of_V oblig_koerper_lies),
         programmLogikFrei_ok oblig_voll oblig_logikFrei 0 _ _⟩
 
-/-- **THE STATED `InvGutS` DUTIES HOLD**: the declaration owes no table
+/-- No body contains a `forever` loop, so the budget-`0` duty is the duty
+    at every budget (`Durchgaenge.lean`). -/
+theorem oblig_ohneEwig :
+    ohneEwigB G104_referenz_oblig.gP G104_referenz_oblig.gFs = true := by decide
+
+/-- **THE STATED `KoerperGutS` DUTIES HOLD**, per function, at every
+    budget. -/
+theorem oblig_koerper : ∀ f : G104_referenz_oblig.gD.Fn, pflicht f := by
+  intro f
+  cases f
+  · show ∀ passes, KoerperGutS G104_referenz_oblig.gP passes
+      (axWahr G104_referenz_oblig.gD) G104_referenz_oblig.gS g_einzahlen
+    exact fun passes =>
+      koerperGutS_alle oblig_voll oblig_ohneEwig oblig_koerper_0 passes g_einzahlen
+  · show ∀ passes, KoerperGutS G104_referenz_oblig.gP passes
+      (axWahr G104_referenz_oblig.gD) G104_referenz_oblig.gS g_lies
+    exact fun passes =>
+      koerperGutS_alle oblig_voll oblig_ohneEwig oblig_koerper_0 passes g_lies
+
+/-- The `InvGutS` duties at budget `0`: the declaration owes no table
     invariant. -/
+theorem oblig_inv_0 : ∀ f : G104_referenz_oblig.gD.Fn,
+    InvGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
+      G104_referenz_oblig.gS f :=
+  fun f => invGutS_leer (D := G104_referenz_oblig.gD) rfl f
+
+/-- **THE STATED `InvGutS` DUTIES HOLD**, per function, at every budget. -/
 theorem oblig_inv : ∀ f : G104_referenz_oblig.gD.Fn, pflichtInv f := by
   intro f
   cases f
-  · show InvGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
-      G104_referenz_oblig.gS g_einzahlen
-    exact invGutS_leer rfl _
-  · show InvGutS G104_referenz_oblig.gP 0 (axWahr G104_referenz_oblig.gD)
-      G104_referenz_oblig.gS g_lies
-    exact invGutS_leer rfl _
+  · show ∀ passes, InvGutS G104_referenz_oblig.gP passes
+      (axWahr G104_referenz_oblig.gD) G104_referenz_oblig.gS g_einzahlen
+    exact fun passes =>
+      invGutS_alle oblig_voll oblig_ohneEwig oblig_inv_0 passes g_einzahlen
+  · show ∀ passes, InvGutS G104_referenz_oblig.gP passes
+      (axWahr G104_referenz_oblig.gD) G104_referenz_oblig.gS g_lies
+    exact fun passes =>
+      invGutS_alle oblig_voll oblig_ohneEwig oblig_inv_0 passes g_lies
 
 /-- **THE STATED BOOT DUTY HOLDS** at every start memory: the exported
     family answers `true` everywhere. -/
@@ -215,24 +241,31 @@ theorem start0 : StartGut G104_referenz_oblig.gP sp0 init0 := by
   intro t
   rfl
 
+/-- No start function declares a reason (`einzahlen` has none). -/
+theorem oblig_ohneGrund : StartOhneGrund init0 := by
+  intro t
+  rfl
+
 /-- The declaration has a lock: a trace event exists. -/
 def e0104 : Ereignis G104_referenz_oblig.gD := .nimmt GLock.M []
 
 /-- **THE CHAIN, SHOWN ONCE**: with the stated duties proved above, the
-    flagship's conclusion follows for every reachable machine -- up to the
-    start-configuration fact no program of `gP` alone can supply (every
-    function holds `M` by signature; see `gP_kein_exklusiv` in
-    `Schlusssatz104.lean`). -/
-theorem oblig_chain (M : RufMaschineG G104_referenz_oblig.gD)
-    (hr : RufErreichbarG G104_referenz_oblig.gP oO 0 (RufStartG G104_referenz_oblig.gP sp0 init0) M)
+    flagship's conclusion follows at every budget for every reachable
+    machine -- up to the start-configuration fact no program of `gP` alone
+    can supply (every function holds `M` by signature; see
+    `gP_kein_exklusiv` in `Schlusssatz104.lean`). -/
+theorem oblig_chain (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD)
+    (hr : RufErreichbarG G104_referenz_oblig.gP oO passes
+      (RufStartG G104_referenz_oblig.gP sp0 init0) M)
     (hex : StartExklusiv init0) :
     ((VertragAmOrtG G104_referenz_oblig.gP M ∧ SperrInvG G104_referenz_oblig.gS M ∧
-      KeinLogikHaltG oO 0 M ∧
+      KeinLogikHaltG oO passes M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-        AnPruefungG M t → ∃ M', RufSchrittG G104_referenz_oblig.gP oO 0 M t M') ∧
-    InvAmOrtG G104_referenz_oblig.gP M) ∧ StartEndeG G104_referenz_oblig.gP M :=
+        AnPruefungG M t → ∃ M', RufSchrittG G104_referenz_oblig.gP oO passes M t M') ∧
+    InvAmOrtG G104_referenz_oblig.gP M) ∧ StartEndeG G104_referenz_oblig.gP M ∧
+    KeinStartGrundG M :=
   gP_ziel oO sp0 init0 e0104 oO_gut oO_lokal (axVertragO_wahr oO) oblig_koerper oblig_inv
-    start0 (oblig_start sp0) hex oblig_hS M hr
+    start0 (oblig_start sp0) hex oblig_hS oblig_ohneGrund passes M hr
 
 #print axioms Gabbro.Grammatik.oblig_koerper
 #print axioms Gabbro.Grammatik.oblig_inv

@@ -26,9 +26,10 @@ fn export_file(name: &str) -> String {
     export(name, &baum).expect("example must export")
 }
 
-/// **104 states both duties per function**: the `KoerperGutS` duty and the
-/// `InvGutS` duty, the two families, the boot duty, the decided premises
-/// and the closing theorem -- under `<base>_oblig`, sorry-free.
+/// **104 states both duties per function, at every budget**: the
+/// `KoerperGutS` duty and the `InvGutS` duty, the two families, the boot
+/// duty, the decided premises and the closing theorem -- under
+/// `<base>_oblig`, sorry-free.
 #[test]
 fn obligations_104_states_both_duties() {
     let text = export_file("104-referenz.gab");
@@ -37,13 +38,13 @@ fn obligations_104_states_both_duties() {
         "namespace G104_referenz_oblig",
         "import Grammatik.ZielOrtStart",
         "def einzahlen_pflicht : Prop :=",
-        "KoerperGutS gP 0 (axWahr gD) gS g_einzahlen",
+        "∀ passes, KoerperGutS gP passes (axWahr gD) gS g_einzahlen",
         "def lies_pflicht : Prop :=",
-        "KoerperGutS gP 0 (axWahr gD) gS g_lies",
+        "∀ passes, KoerperGutS gP passes (axWahr gD) gS g_lies",
         "def einzahlen_invPflicht : Prop :=",
-        "InvGutS gP 0 (axWahr gD) gS g_einzahlen",
+        "∀ passes, InvGutS gP passes (axWahr gD) gS g_einzahlen",
         "def lies_invPflicht : Prop :=",
-        "InvGutS gP 0 (axWahr gD) gS g_lies",
+        "∀ passes, InvGutS gP passes (axWahr gD) gS g_lies",
         "def pflicht : GFn",
         "| .einzahlen => einzahlen_pflicht",
         "def pflichtInv : GFn",
@@ -54,14 +55,20 @@ fn obligations_104_states_both_duties() {
         "theorem gP_fussS : fussSperreB gP gS gFs = true := by decide",
         "theorem gP_ziel",
         "ziel_ort_sperre_ende",
-        "· exact hK .einzahlen",
-        "· exact hI .lies",
+        "(hGrund : StartOhneGrund init)",
+        "KeinStartGrundG M",
+        "· exact hK .einzahlen passes",
+        "· exact hI .lies passes",
     ] {
         assert!(text.contains(teil), "104 obligations must contain {teil:?}");
     }
     assert!(
         !text.contains("sorry"),
         "the stated obligation carries no proof, not even a hole"
+    );
+    assert!(
+        !text.contains("KoerperGutS gP 0 "),
+        "no duty may be stated at a fixed budget (probe D)"
     );
 }
 
@@ -103,7 +110,7 @@ fn obligations_single_function() {
         "def pflicht : GFn",
         "| .f => f_pflicht",
         "theorem gP_ziel",
-        "· exact hK .f",
+        "· exact hK .f passes",
     ] {
         assert!(text.contains(teil), "single-function obligations must contain {teil:?}");
     }

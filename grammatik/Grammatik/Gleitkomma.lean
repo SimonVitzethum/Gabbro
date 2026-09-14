@@ -5,8 +5,9 @@
   The current model (`Typen.lean`: `Gleit`, `Semantik.lean`: `gleitRechne`)
   computes floats with Lean's built-in `Float`, which is OPAQUE to the kernel:
   nothing about float values can be proved and no witness computed without
-  `native_decide` (forbidden). This file is the replacement, built WITHOUT
-  switching the model yet (a later task does that).
+  `native_decide` (forbidden). This file is the replacement; since
+  2026-09-14 the semantics computes with it (`Typen.lean` `GFloat`,
+  `Semantik.lean` `gleitRechne`, dokumente/GLEITKOMMA.md section 7).
 
   Design: formats as data (`Format`: precision `p`, maximal exponent `emax`);
   values as bit triples (sign, biased exponent, significand as `Nat`) with
@@ -51,8 +52,21 @@ def Format.bexpMax (F : Format) : Nat := 2 * F.emax + 1
 /-- Stored significand bits (the hidden leading one excluded). -/
 def Format.fracBits (F : Format) : Nat := F.p - 1
 
-/-- Exponent field width: `8` for binary32, `11` for binary64. -/
-def Format.ebits (F : Format) : Nat := Nat.log2 (F.bexpMax + 1)
+/-- Bit length by fuel recursion (structural on `fuel`, so kernel-reducible):
+    `bitlenAux n fuel` is exact whenever `fuel ≥ bitlen n`. -/
+def bitlenAux : Nat → Nat → Nat
+  | _, 0 => 0
+  | n, fuel + 1 => if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel
+
+/-- Bit length of `n` (`0` for `n = 0`). -/
+def bitlen (n : Nat) : Nat := bitlenAux n n
+
+/-- Exponent field width: `8` for binary32, `11` for binary64 -- the bit
+    length of `bexpMax`. (Lane 166 wrote `Nat.log2 (bexpMax + 1)`; `Nat.log2`
+    is well-founded recursion, and the KERNEL, forced to evaluate it inside a
+    defeq check over a stuck float, recursed out of its stack -- measured
+    2026-09-14 in `CFormenF.lean`. `bitlen` is structural.) -/
+def Format.ebits (F : Format) : Nat := bitlen F.bexpMax
 
 /-- The five IEEE cases, as data. -/
 inductive Klasse where
@@ -108,15 +122,6 @@ def wertExakt (F : Format) (g : GBits F) : Option Exakt :=
       F.emin - ((F.p : Int) - 1)⟩
   | .null => some ⟨0, 0⟩
   | _ => none
-
-/-- Bit length by fuel recursion (structural on `fuel`, so kernel-reducible):
-    `bitlenAux n fuel` is exact whenever `fuel ≥ bitlen n`. -/
-def bitlenAux : Nat → Nat → Nat
-  | _, 0 => 0
-  | n, fuel + 1 => if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel
-
-/-- Bit length of `n` (`0` for `n = 0`). -/
-def bitlen (n : Nat) : Nat := bitlenAux n n
 
 /-- Round-half-to-even at the integer level: `quo` with remainder `rest/den`
     (`0 ≤ rest < den`, `0 < den`) rounds up iff past half, or on an exact tie
@@ -212,7 +217,12 @@ def exaktMul (u v : Exakt) : Exakt :=
 def nanQ (F : Format) : GBits F := ⟨false, F.bexpMax, 1⟩
 
 /-- Addition as "exact result, then round", with the IEEE special cases
-    (NaN propagation, `inf + -inf = NaN`, `inf + finite = inf`). -/
+    (NaN propagation, `inf + -inf = NaN`, `inf + finite = inf`) and the
+    signed-zero rule of IEEE 754-2019 §6.3: the sum of two zeros is `-0`
+    exactly when both are `-0` (`(-0) + (-0) = -0`, `(+0) + (-0) = +0`);
+    every other exact zero sum (`x + (-x)`, `x - x`) is `+0` under
+    round-to-nearest -- which `rundeExakt` gives, since an exact zero has
+    a non-negative numerator. -/
 def add (F : Format) (a b : GBits F) : GBits F :=
   match klasse F a, klasse F b with
   | .nan, _ => a
@@ -220,6 +230,7 @@ def add (F : Format) (a b : GBits F) : GBits F :=
   | .unendlich, .unendlich => if a.sign == b.sign then a else nanQ F
   | .unendlich, _ => a
   | _, .unendlich => b
+  | .null, .null => ⟨a.sign && b.sign, 0, 0⟩
   | _, _ =>
     match wertExakt F a, wertExakt F b with
     | some u, some v => rundeExakt F (exaktAdd u v)
@@ -299,8 +310,14 @@ def flt (F : Format) (a b : GBits F) : Bool :=
         < v.zaehler * (2 ^ (v.zweierExp - m).toNat : Nat)
     | _, _ => false
 
-/-- Non-strict comparison (NaN still unordered). -/
-def fle (F : Format) (a b : GBits F) : Bool := !flt F b a
+/-- Non-strict comparison: NaN is unordered (false, as C's `<=`), else
+    the negated reverse strict comparison. (Lane 166 had `!flt F b a`
+    outright, which answered `true` for a NaN operand.) -/
+def fle (F : Format) (a b : GBits F) : Bool :=
+  match klasse F a, klasse F b with
+  | .nan, _ => false
+  | _, .nan => false
+  | _, _ => !flt F b a
 
 /-! ## Theorems: the integer significand decision is correct. -/
 
@@ -717,6 +734,9 @@ theorem add_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
       < (exaktBruch (exaktAdd u v)).nenner * 2 ^ F.emax) :
     klasse F (add F a b) = .normal ∨ klasse F (add F a b) = .subnormal
       ∨ klasse F (add F a b) = .null := by
+  have hmax : 0 < F.bexpMax := by
+    have hmaxE : F.bexpMax = 2 * F.emax + 1 := rfl
+    omega
   have hfin : klasse F (rundeExakt F (exaktAdd u v)) = .normal
       ∨ klasse F (rundeExakt F (exaktAdd u v)) = .subnormal
       ∨ klasse F (rundeExakt F (exaktAdd u v)) = .null := by
@@ -726,6 +746,8 @@ theorem add_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
   generalize hkb : klasse F b = kb
   cases ka <;> cases kb <;>
     first
+      | (unfold add; rw [hka, hkb, klasse_null_bits F _ hmax]
+         exact Or.inr (Or.inr rfl))
       | (unfold add; rw [hka, hkb, ha, hb]; exact hfin)
       | (have hnone : wertExakt F a = none := by unfold wertExakt; rw [hka]
          rw [hnone] at ha; cases ha)
@@ -852,6 +874,58 @@ theorem sub_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
   unfold sub
   exact add_finite F hF a (neg F b) u ⟨-v.zaehler, v.zweierExp⟩ ha
     (wertExakt_neg_some F b v hb) hob
+
+/-! ## Theorems: the signed-zero rule (IEEE 754-2019 §6.3). -/
+
+/-- The sum of two zeros is `-0` exactly when both are `-0`. -/
+theorem add_null_null (F : Format) (a b : GBits F)
+    (ha : klasse F a = .null) (hb : klasse F b = .null) :
+    add F a b = ⟨a.sign && b.sign, 0, 0⟩ := by
+  unfold add; rw [ha, hb]
+
+/-- Exact cancellation of a dyadic value leaves numerator zero. -/
+theorem exaktAdd_neg_zaehler (u : Exakt) :
+    (exaktAdd u ⟨-u.zaehler, u.zweierExp⟩).zaehler = 0 := by
+  unfold exaktAdd
+  simp only [Int.le_refl, if_true, Int.sub_self]
+  rw [Int.neg_mul]; exact Int.add_right_neg _
+
+/-- An exact zero rounds to `+0` (its numerator is not negative). -/
+theorem rundeExakt_null (F : Format) (v : Exakt) (hv : v.zaehler = 0) :
+    rundeExakt F v = ⟨false, 0, 0⟩ := by
+  have hd := exaktBruch_nenner_pos v
+  have hz : (exaktBruch v).zaehler = 0 := by
+    unfold exaktBruch
+    by_cases h : 0 ≤ v.zweierExp
+    · rw [if_pos h]; show v.zaehler * _ = 0; rw [hv, Int.zero_mul]
+    · rw [if_neg h]; exact hv
+  unfold rundeExakt rundeBruch rundeBruchBei
+  rw [if_neg (by omega), hz]
+  rfl
+
+/-- `x - x = +0` for every finite `x` (zeros included: `(-0) - (-0) = +0`). -/
+theorem sub_selbst (F : Format) (a : GBits F)
+    (hk : klasse F a = .normal ∨ klasse F a = .subnormal ∨ klasse F a = .null) :
+    sub F a a = ⟨false, 0, 0⟩ := by
+  unfold sub
+  have hkn := klasse_neg F a
+  rcases hk with hk | hk | hk
+  · have hw : wertExakt F a = some ⟨(if a.sign then (-1 : Int) else 1)
+        * ((2 ^ (F.p - 1) : Nat) + (a.frac : Int)),
+        (a.bexp : Int) - (F.bias : Int) - ((F.p : Int) - 1)⟩ := by
+      unfold wertExakt; rw [hk]
+    have hwn := wertExakt_neg_some F a _ hw
+    unfold add; rw [hkn, hk, hw, hwn]
+    exact rundeExakt_null F _ (exaktAdd_neg_zaehler _)
+  · have hw : wertExakt F a = some ⟨(if a.sign then (-1 : Int) else 1) * (a.frac : Int),
+        F.emin - ((F.p : Int) - 1)⟩ := by
+      unfold wertExakt; rw [hk]
+    have hwn := wertExakt_neg_some F a _ hw
+    unfold add; rw [hkn, hk, hw, hwn]
+    exact rundeExakt_null F _ (exaktAdd_neg_zaehler _)
+  · rw [add_null_null F a (neg F a) hk (by rw [hkn]; exact hk)]
+    cases a with
+    | mk sg bx fr => cases sg <;> rfl
 
 /-- The exact quotient denominator, exposed (definitionally the `let` body). -/
 theorem divBruch_nenner (u v : Exakt) : (divBruch u v).nenner
@@ -992,6 +1066,65 @@ theorem zeuge_sub01 :
     zuBits f64 (sub f64 (ofRat f64 2 10) (ofRat f64 1 10))
       = 0x3FB999999999999A := by decide
 
+/-! ### Signed zeros (IEEE 754-2019 §6.3), both widths.
+
+  `nullN`/`nullP` are `-0`/`+0`. Sums of zeros keep `-0` only when both are
+  `-0`; exact cancellation is `+0`; products and quotients carry the xor of
+  the signs; an underflow to zero keeps the sign of the exact result. -/
+
+/-- `-0` as data. -/
+def nullN (F : Format) : GBits F := ⟨true, 0, 0⟩
+
+/-- `+0` as data. -/
+def nullP (F : Format) : GBits F := ⟨false, 0, 0⟩
+
+theorem zeuge_nullNplusNullN64 : add f64 (nullN f64) (nullN f64) = nullN f64 := by decide
+theorem zeuge_nullNplusNullN32 : add f32 (nullN f32) (nullN f32) = nullN f32 := by decide
+theorem zeuge_nullPplusNullN64 : add f64 (nullP f64) (nullN f64) = nullP f64 := by decide
+theorem zeuge_nullNplusNullP64 : add f64 (nullN f64) (nullP f64) = nullP f64 := by decide
+theorem zeuge_nullNminusNullP64 : sub f64 (nullN f64) (nullP f64) = nullN f64 := by decide
+theorem zeuge_nullNminusNullN64 : sub f64 (nullN f64) (nullN f64) = nullP f64 := by decide
+theorem zeuge_nullPminusNullP32 : sub f32 (nullP f32) (nullP f32) = nullP f32 := by decide
+
+/-- `x - x = +0` (exact cancellation), here `0.1 - 0.1`. -/
+theorem zeuge_xMinusX64 :
+    sub f64 (ofRat f64 1 10) (ofRat f64 1 10) = nullP f64 := by decide
+
+/-- `(-x) + x = +0`, here `-(1/3) + 1/3` in binary32. -/
+theorem zeuge_negXplusX32 :
+    add f32 (ofRat f32 (-1) 3) (ofRat f32 1 3) = nullP f32 := by decide
+
+/-- `-0 + x = x` for nonzero `x` (the zero does not decide the sign). -/
+theorem zeuge_nullNplusEins64 :
+    add f64 (nullN f64) (ofInt f64 1) = ofInt f64 1 := by decide
+
+theorem zeuge_mulNullNEins64 : mul f64 (nullN f64) (ofInt f64 1) = nullN f64 := by decide
+theorem zeuge_mulMinusEinsNullP64 :
+    mul f64 (ofInt f64 (-1)) (nullP f64) = nullN f64 := by decide
+theorem zeuge_mulNullNNullN32 : mul f32 (nullN f32) (nullN f32) = nullP f32 := by decide
+theorem zeuge_divNullNEins64 : div f64 (nullN f64) (ofInt f64 1) = nullN f64 := by decide
+theorem zeuge_divEinsMinusInf64 :
+    div f64 (ofInt f64 1) ⟨true, f64.bexpMax, 0⟩ = nullN f64 := by decide
+
+/-- Underflow keeps the sign: `-(2^-1074) * 0.5` is an exact tie between
+    `-0` and `-2^-1074`; the even significand (zero) wins and stays `-0`. -/
+theorem zeuge_unterlaufNeg64 :
+    mul f64 (ofRat f64 (-1) (2 ^ 1074)) (ofRat f64 1 2) = nullN f64 := by decide
+
+/-- `0.1 + 0.2` is unaffected (the zero rule touches only zero operands). -/
+theorem zeuge_add01_nachNullRegel :
+    add f64 (ofRat f64 1 10) (ofRat f64 2 10) = ofRat f64 3 10
+      ∨ zuBits f64 (add f64 (ofRat f64 1 10) (ofRat f64 2 10)) = 0x3FD3333333333334 :=
+  Or.inr (by decide)
+
+/-- Comparisons: NaN is unordered for `fle` as for `flt`; `-0 <= +0` and
+    `+0 <= -0` both hold (equal zeros), `-0 < +0` does not. -/
+theorem zeuge_fleNaN : fle f64 (nanQ f64) (nanQ f64) = false := by decide
+theorem zeuge_fleNaNrechts : fle f64 (ofInt f64 1) (nanQ f64) = false := by decide
+theorem zeuge_fleNullen : fle f64 (nullN f64) (nullP f64) = true
+    ∧ fle f64 (nullP f64) (nullN f64) = true ∧ flt f64 (nullN f64) (nullP f64) = false := by
+  decide
+
 /-! `CUTS:` what is not proved here.
 
   - No single "nearest float" theorem: rounding correctness is proved at
@@ -1005,17 +1138,21 @@ theorem zeuge_sub01 :
     and the deep-underflow shortcut (`E < emin - p` rounds to zero, the
     exact tie going to even) rest on the algorithm plus witnesses and the
     differential check, not on analytic theorems.
-  - Signed-zero inputs are not distinguished: an exact zero always rounds
-    to `+0` (IEEE gives `-0 + -0 = -0`); operand signs survive only
-    through `neg` and the xor-sign rules of `mul`/`div`.
+  - Signed zeros follow IEEE 754-2019 §6.3 (since the lane after 166):
+    `add` of two zeros is `-0` exactly for `(-0) + (-0)`, every other exact
+    zero sum is `+0` (round-to-nearest), `mul`/`div` carry the xor of the
+    signs, underflow keeps the sign of the exact result (witnesses
+    `zeuge_nullN*`, `zeuge_xMinusX64`, `zeuge_unterlaufNeg64`). Other
+    rounding modes (where `x - x = -0` under round-down) are not modelled.
   - NaN payloads are unspecified: computed NaNs are the canonical `nanQ`,
     propagated NaNs keep their input bits; no quiet-bit discipline.
   - `ofRat`/`divBruch` with denominator zero is NaN by definition.
   - No theorems about `flt`/`fle` (irreflexivity, totality on finite
-    values) and none about `wf` preservation.
+    values). `wf` preservation of every op is proved in
+    `GleitkommaBits.lean` (`add_wf` ... `rundeBruch_wf`).
   - binary32/binary64 only; no f16, no 80-bit, no decimal.
-  - No connection to the `Float`-based model (`Semantik.lean`
-    `gleitRechne`/`gleitPasst`) yet -- a later task switches the model.
+  - The semantics computes with this model since 2026-09-14 (Typen.lean,
+    Semantik.lean); the C side reads it through `CFormenF.lean`.
   - The `set_option` thresholds above are elaboration-only.
 -/
 
@@ -1031,5 +1168,8 @@ theorem zeuge_sub01 :
 #print axioms Gabbro.Grammatik.Gleitkomma.wertExakt_neg_some
 #print axioms Gabbro.Grammatik.Gleitkomma.findeExp_unten
 #print axioms Gabbro.Grammatik.Gleitkomma.zeuge_add01
+#print axioms Gabbro.Grammatik.Gleitkomma.sub_selbst
+#print axioms Gabbro.Grammatik.Gleitkomma.add_null_null
+#print axioms Gabbro.Grammatik.Gleitkomma.zeuge_nullNplusNullN64
 
 end Gabbro.Grammatik.Gleitkomma

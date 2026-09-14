@@ -8,23 +8,28 @@
 //! premise (`fussSperreB`) is decidable per program, with the conclusion of
 //! `ziel_ort_sperre_inv` (contracts and owed invariants at every logged
 //! return, the machine lock invariant, no `logik` halt, progress) plus the
-//! start functions' completion (`StartEndeG`).
+//! start functions' completion (`StartEndeG`) and no start at a reason
+//! return (`KeinStartGrundG`).
 //!
 //! Per function the file states, as a `def <fn>_pflicht : Prop` with no
-//! proof (the proof is the user's job):
+//! proof (the proof is the user's job), the obligation at EVERY `forever`
+//! budget -- a duty at one budget says nothing about a `forever` body
+//! (probe D), so a fixed budget must never be stated:
 //!
-//! * `KoerperGutS gP 0 (axWahr gD) gS g_<fn>` -- the sequential triple
-//!   against handlers, the caller duty and no `logik` outcome, over
-//!   `execEndH` for every environment move in `HavocOk gS`;
-//! * `InvGutS gP 0 (axWahr gD) gS g_<fn>` -- the owed table invariants at a
-//!   normal return;
+//! * `∀ passes, KoerperGutS gP passes (axWahr gD) gS g_<fn>` -- the
+//!   sequential triple against handlers, the caller duty and no `logik`
+//!   outcome, over `execEndH` for every environment move in `HavocOk gS`;
+//! * `∀ passes, InvGutS gP passes (axWahr gD) gS g_<fn>` -- the owed table
+//!   invariants at a normal return;
 //!
 //! and the lock invariants at the start memory as
 //! `def startPflicht (sp : Speicher gD) : Prop` (the boot duty). The
 //! decidable premises travel as named theorems proved `by decide`
 //! (`gP_voll`, `gP_fragment`, `gP_fussS`), so the closing theorem `gP_ziel`
-//! derives the flagship's conclusion from the user's obligations -- open
-//! hypotheses -- and nothing else.
+//! derives the flagship's conclusion -- at every budget -- from the user's
+//! obligations (open hypotheses) and nothing else. The start premises are
+//! `StartGut`, the lock establishment, `StartExklusiv` and `StartOhneGrund`
+//! (no start function declares a reason).
 //!
 //! The obligation is stated through the IMPORTED definitions `KoerperGutS`
 //! and `InvGutS`, never by copying their bodies: a change to what the
@@ -80,17 +85,18 @@ fn abschnitt(fns: &[String]) -> String {
     out.push_str("--\n");
     out.push_str("-- Per function, `KoerperGutS` (the sequential triple against handlers,\n");
     out.push_str("-- the caller duty and no `logik` outcome, over `execEndH`) and `InvGutS`\n");
-    out.push_str("-- (the owed table invariants at a normal return), over the lock-invariant\n");
-    out.push_str("-- family `gS` above and the trivial axiom ensures -- the declaration has\n");
-    out.push_str("-- no axiom. Each is a `def` with no proof: the proof is the user's job.\n");
+    out.push_str("-- (the owed table invariants at a normal return), at EVERY `forever`\n");
+    out.push_str("-- budget -- a duty at one budget says nothing about a `forever` body --\n");
+    out.push_str("-- over the lock-invariant family `gS` above and the trivial axiom\n");
+    out.push_str("-- ensures. Each is a `def` with no proof: the proof is the user's job.\n");
     out.push_str("-- The definitions name `KoerperGutS`/`InvGutS` through their imports;\n");
     out.push_str("-- their bodies are never copied here.\n");
     for f in fns {
         out.push_str(&format!(
-            "def {f}_pflicht : Prop :=\n  KoerperGutS gP 0 (axWahr gD) gS g_{f}\n\n"
+            "def {f}_pflicht : Prop :=\n  ∀ passes, KoerperGutS gP passes (axWahr gD) gS g_{f}\n\n"
         ));
         out.push_str(&format!(
-            "def {f}_invPflicht : Prop :=\n  InvGutS gP 0 (axWahr gD) gS g_{f}\n\n"
+            "def {f}_invPflicht : Prop :=\n  ∀ passes, InvGutS gP passes (axWahr gD) gS g_{f}\n\n"
         ));
     }
     out.push_str("-- The two duties as families, so the closing theorem takes them as one\n");
@@ -121,25 +127,26 @@ fn abschnitt(fns: &[String]) -> String {
     out.push_str("    (hK : ∀ f, pflicht f) (hI : ∀ f, pflichtInv f)\n");
     out.push_str("    (hStart : StartGut gP sp init) (hSstart : startPflicht sp)\n");
     out.push_str("    (hex : StartExklusiv init) (hS : SperrInvOk gS)\n");
-    out.push_str("    (M : RufMaschineG gD)\n");
-    out.push_str("    (hr : RufErreichbarG gP O 0 (RufStartG gP sp init) M) :\n");
-    out.push_str("    ((VertragAmOrtG gP M ∧ SperrInvG gS M ∧ KeinLogikHaltG O 0 M ∧\n");
+    out.push_str("    (hGrund : StartOhneGrund init)\n");
+    out.push_str("    (passes : Nat) (M : RufMaschineG gD)\n");
+    out.push_str("    (hr : RufErreichbarG gP O passes (RufStartG gP sp init) M) :\n");
+    out.push_str("    ((VertragAmOrtG gP M ∧ SperrInvG gS M ∧ KeinLogikHaltG O passes M ∧\n");
     out.push_str("      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →\n");
-    out.push_str("        AnPruefungG M t → ∃ M', RufSchrittG gP O 0 M t M') ∧\n");
-    out.push_str("    InvAmOrtG gP M) ∧ StartEndeG gP M := by\n");
-    out.push_str("  have hK' : ∀ f : gD.Fn, KoerperGutS gP 0 (axWahr gD) gS f := by\n");
-    out.push_str("    intro f\n");
+    out.push_str("        AnPruefungG M t → ∃ M', RufSchrittG gP O passes M t M') ∧\n");
+    out.push_str("    InvAmOrtG gP M) ∧ StartEndeG gP M ∧ KeinStartGrundG M := by\n");
+    out.push_str("  have hK' : ∀ (passes : Nat) (f : gD.Fn), KoerperGutS gP passes (axWahr gD) gS f := by\n");
+    out.push_str("    intro passes f\n");
     out.push_str("    cases f\n");
     for f in fns {
-        out.push_str(&format!("    · exact hK .{f}\n"));
+        out.push_str(&format!("    · exact hK .{f} passes\n"));
     }
-    out.push_str("  have hI' : ∀ f : gD.Fn, InvGutS gP 0 (axWahr gD) gS f := by\n");
-    out.push_str("    intro f\n");
+    out.push_str("  have hI' : ∀ (passes : Nat) (f : gD.Fn), InvGutS gP passes (axWahr gD) gS f := by\n");
+    out.push_str("    intro passes f\n");
     out.push_str("    cases f\n");
     for f in fns {
-        out.push_str(&format!("    · exact hI .{f}\n"));
+        out.push_str(&format!("    · exact hI .{f} passes\n"));
     }
-    out.push_str("  exact ziel_ort_sperre_ende gP O 0 (axWahr gD) gS gFs sp init e0 hO hRL hQ\n");
-    out.push_str("    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' M hr\n");
+    out.push_str("  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init e0 hO hRL hQ\n");
+    out.push_str("    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' hGrund passes M hr\n");
     out
 }

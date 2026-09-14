@@ -758,7 +758,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun e lo hi rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        cases hg : gleitPasst lo hi (Float.ofInt _) with
+        cases hg : gleitPasst lo hi (gleitAusInt _) with
         | none => simp only [hg]
         | some v => simp only [hg, hr']
 )
@@ -982,7 +982,7 @@ theorem blockOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun e lo hi rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        cases hg : gleitPasst lo hi (Float.ofInt _) with
+        cases hg : gleitPasst lo hi (gleitAusInt _) with
         | none => simp only [hg]
         | some v => simp only [hg, hr']
 )
@@ -1206,7 +1206,7 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (fun e lo hi rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        cases hg : gleitPasst lo hi (Float.ofInt _) with
+        cases hg : gleitPasst lo hi (gleitAusInt _) with
         | none => simp only [hg]
         | some v => simp only [hg, hr']
 )
@@ -1431,7 +1431,7 @@ theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun e lo hi rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        cases hg : gleitPasst lo hi (Float.ofInt _) with
+        cases hg : gleitPasst lo hi (gleitAusInt _) with
         | none => simp only [hg]
         | some v => simp only [hg, hr']
 )

@@ -34,8 +34,11 @@
     renaming (`gPB_ist_gP_umbenannt`, kernel-checked) and BEHAVES as `gP`
     through the same emitted C (`gPB_wie_gP_einzahlen`, `gPB_wie_gP_lies`);
     the goal theorem holds on the machine of `gPB` from every start memory,
-    thread 0 in every source function on every argument (`gPB_ziel`);
-  * section 6, the theorem, its witnesses (rule 13) and its CUTS.
+    at every `forever` budget, for every start of the runtime's shape
+    (`LaufzeitStart`, assumption A4 as a hypothesis), with the root
+    function's `ensures` at its completion (`gPB_ziel`);
+  * section 6, the theorem -- with A1 (+A2, A3) and A4 as HYPOTHESES
+    (2026-09-14) --, its witnesses (rule 13) and its CUTS.
 -/
 import Grammatik.Parser.Uebersetze
 import Grammatik.ZeugnisStmt104b
@@ -45,6 +48,7 @@ import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.ZielOrtInv
 import Grammatik.ZielOrtGanzZeuge
 import Grammatik.ZeugnisIdent
+import Grammatik.ZielOrtStart
 
 namespace Gabbro.Grammatik
 
@@ -633,6 +637,27 @@ theorem gP_invGutS : ∀ f : G104_referenz.gD.Fn,
     InvGutS G104_referenz.gP 0 (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f :=
   invGutS_leer rfl
 
+/-- No body of the parsed program contains a `forever` loop. -/
+theorem gP_ohneEwig : ohneEwigB G104_referenz.gP G104_referenz.gFs = true := by decide
+
+/-- **The model judgement at EVERY `forever` budget** (`Durchgaenge.lean`):
+    the goal statements demand the obligation at every budget. -/
+theorem gP_koerperS_alle : ∀ (passes : Nat) (f : G104_referenz.gD.Fn),
+    KoerperGutS G104_referenz.gP passes (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f :=
+  koerperGutS_alle gFs_voll gP_ohneEwig gP_koerperS
+
+theorem gP_invGutS_alle : ∀ (passes : Nat) (f : G104_referenz.gD.Fn),
+    InvGutS G104_referenz.gP passes (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f :=
+  fun _ => invGutS_leer rfl
+
+/-- **The call semantics of the parsed program does not depend on the
+    budget**: every statement of part 4 at budget `0` holds at every
+    budget. -/
+theorem gP_rufAt_passes : ∀ (passes k : Nat) (f : G104_referenz.gD.Fn) (σ : World G104_referenz.gD)
+    (ρ : Env G104_referenz.gD (G104_referenz.gD.params f)),
+    rufAt G104_referenz.gP gO104 passes k f σ ρ = rufAt G104_referenz.gP gO104 0 k f σ ρ :=
+  fun passes => rufAt_passes gO104 (ohneEwigB_ok gFs_voll gP_ohneEwig) passes 0
+
 
 /-! ## 5. The machine -/
 
@@ -1059,25 +1084,53 @@ theorem bootInit_start (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (
 /-- The declaration has a lock: a trace event exists. -/
 def gbE0 : Ereignis gDB := .nimmt GLock.M []
 
-/-- **THE GOAL THEOREM ON THE MACHINE OF `gPB`** -- from EVERY start memory,
-    with thread 0 in EVERY source function on EVERY argument and all other
-    threads idle: on every reachable machine the contracts hold at every
-    logged event, the (empty) lock invariants hold, no thread is stuck at a
-    `logik` check, the progress conjunct holds, and every owed invariant
-    holds at every logged return (`ziel_ort_einfaden` plus the invariant
-    conclusion of `ziel_ort_sperre_inv`, trivially: `gD` declares none). -/
-theorem gPB_ziel (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
-    ∀ M : RufMaschineG gDB, RufErreichbarG gPB gOB 0 (RufStartG gPB sp (bootInit f ρ)) M →
-      (VertragAmOrtG gPB M ∧ SperrInvG (SperrInv.leer gDB) M ∧ KeinLogikHaltG gOB 0 M ∧
+theorem gPB_ohneEwig : ohneEwigB gPB gbFs = true := by decide
+
+theorem gPB_koerperS_alle : ∀ (passes : Nat) (f : gDB.Fn),
+    KoerperGutS gPB passes (axWahr gDB) (SperrInv.leer gDB) f :=
+  koerperGutS_alle gbFs_voll gPB_ohneEwig gPB_koerperS
+
+theorem gPB_rufAt_passes : ∀ (passes k : Nat) (f : gDB.Fn) (σ : World gDB)
+    (ρ : Env gDB (gDB.params f)), rufAt gPB gOB passes k f σ ρ = rufAt gPB gOB 0 k f σ ρ :=
+  fun passes => rufAt_passes gOB (ohneEwigB_ok gbFs_voll gPB_ohneEwig) passes 0
+
+/-- No function of `gDB` declares a reason. -/
+theorem gDB_ohneGrund (g : gDB.Fn) : gDB.gruende g = 0 := by
+  rcases g with _ | f
+  · rfl
+  · cases f <;> rfl
+
+/-- **A4 AS A LEAN PROPOSITION: the runtime's start.** Every thread but `0`
+    idles in the runtime's root `none`; thread `0` runs whatever the driver
+    calls (a source function on its arguments -- or nothing). -/
+def LaufzeitStart (init : Faden → Σ g : gDB.Fn, Env gDB (gDB.params g)) : Prop :=
+  ∀ u, u ≠ 0 → init u = ⟨none, .nil⟩
+
+theorem bootInit_laufzeit (f : GFn) (ρ : Env gDB (gDB.params (some f))) :
+    LaufzeitStart (bootInit f ρ) := by
+  intro u hu
+  unfold bootInit
+  rw [if_neg hu]
+
+/-- **THE GOAL THEOREM ON THE MACHINE OF `gPB`** -- for EVERY start that
+    has the runtime's shape (A4, `LaufzeitStart`), from EVERY start memory,
+    at EVERY `forever` budget: on every reachable machine the contracts
+    hold at every logged event, the (empty) lock invariants hold, no thread
+    is stuck at a `logik` check, the progress conjunct holds, every owed
+    invariant holds at every logged return, and -- new -- at a finished
+    thread `0` the root function's `ensures` holds (`StartEndeG`), and it
+    finished at a value return (`KeinStartGrundG`). `ziel_ort_einfaden_ende`. -/
+theorem gPB_ziel (init : Faden → Σ g : gDB.Fn, Env gDB (gDB.params g)) (hA4 : LaufzeitStart init) :
+    ∀ (sp : Speicher gDB) (passes : Nat) (M : RufMaschineG gDB),
+      RufErreichbarG gPB gOB passes (RufStartG gPB sp init) M →
+      ((VertragAmOrtG gPB M ∧ SperrInvG (SperrInv.leer gDB) M ∧ KeinLogikHaltG gOB passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-          AnPruefungG M t → ∃ M', RufSchrittG gPB gOB 0 M t M') ∧
-      InvAmOrtG gPB M := by
-  intro M hr
-  refine ⟨ziel_ort_einfaden gPB gOB 0 (axWahr gDB) (SperrInv.leer gDB) gbFs sp (bootInit f ρ) gbE0
+          AnPruefungG M t → ∃ M', RufSchrittG gPB gOB passes M t M') ∧
+      InvAmOrtG gPB M) ∧ StartEndeG gPB M ∧ KeinStartGrundG M :=
+  fun sp => ziel_ort_einfaden_ende gPB gOB (axWahr gDB) (SperrInv.leer gDB) gbFs sp init gbE0
     gOB_gut gOB_lokal (axVertragO_wahr gOB) axEnsLokal_wahr sperrInvOk_leer gbFs_voll gPB_fragment
-    (bootInit_ruhig f ρ) gPB_koerperS (bootInit_start sp f ρ) (fun _ => rfl) M hr, ?_⟩
-  intro t ev _ g rho v s0 s1 _ i hi
-  exact nomatch i
+    (fun u hu => by rw [hA4 u hu]; exact gPB_ruhig) gPB_koerperS_alle (fun _ => rfl) (fun _ => rfl)
+    (fun _ => invGutS_leer rfl) (fun _ => gDB_ohneGrund _)
 
 
 /-! ### 5.5 `gPB` behaves as `gP`: both against the same emitted C
@@ -1374,15 +1427,26 @@ theorem gPB_wie_gP_lies (σ : World G104_referenz.gD) (σB : World gDB) (st : CS
 /-! ## 6. THE CLOSING THEOREM, stage (a) -/
 
 /-- **`schlusssatz_104` -- the closing theorem, stage (a), for
-    `beispiele/104-referenz.gab`.** From ONE premise -- the correspondence
-    certificate checks (`certOkG c = true`, by `decide` on the printed one) --
-    and about ONE program, the `gP` the Lean parser produces:
+    `beispiele/104-referenz.gab`.** About ONE program, the `gP` the Lean
+    parser produces. PREMISES: the correspondence certificate checks
+    (`certOkG c = true`, by `decide` on the printed one), and the named
+    assumptions that ARE Lean propositions (CUTS names the rest):
 
+    * `hA1ein`/`hA1lies` -- A1 with A2 and A3, as a hypothesis: every run of
+      the compiled `einzahlen`/`lies` (`binEin`/`binLies`, the behaviour of
+      the binary, a parameter) is a run of the C semantics of the emitted
+      unit `refCProg` at the emitter's layout `gEL104.lay`, at the depth the
+      call tree needs;
+    * `hA4` -- A4: the runtime's start (`LaufzeitStart init`: every thread
+      but `0` idles in the runtime's root).
+
+    CONCLUSIONS:
     1. PARSE FIDELITY: the source text translates to `(gP, gFs)`;
     2. MODEL CERTIFICATES: the printed statement certificates ARE the print
        of `gP`'s two bodies, and the Lean checker accepts them;
-    3. MODEL JUDGEMENT: `gP` passes the fragment and footprint checks, and
-       every function meets the per-function obligations of the goal theorem;
+    3. MODEL JUDGEMENT: `gP` passes the fragment and footprint checks, every
+       function meets the per-function obligations at EVERY `forever`
+       budget, and its call semantics does not depend on the budget;
     4. EVERY C RUN: the certificate elaborates to the emitted C unit; for
        each function, from a C state related to ANY Gabbro world and C
        arguments related to ANY Gabbro arguments, the Gabbro call ends `ok`
@@ -1390,9 +1454,20 @@ theorem gPB_wie_gP_lies (σ : World G104_referenz.gD) (σB : World gDB) (st : CS
        run of it ends related to the Gabbro result;
     5. THE MACHINE: the program the machine runs, `gPB`, is `gP` renamed
        plus the runtime's idle root, and on every reachable machine -- from
-       every start memory, thread 0 in every source function on every
-       argument -- the conclusion of the goal theorem holds. -/
-theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true) :
+       every start memory, at every budget, from the start `init` -- the
+       conclusion of the goal theorem holds, including the root function's
+       `ensures` at its completion (`StartEndeG`, `KeinStartGrundG`);
+    6. EVERY RUN OF THE BINARY (under `hA1ein`/`hA1lies`): from related
+       starts it ends related to the Gabbro result, which is the same at
+       every budget. -/
+theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true)
+    (binEin : CSt → List CVal → CSt → Option CVal → Prop)
+    (hA1ein : ∀ st vs st' rv, binEin st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 2 0 st vs st' rv)
+    (binLies : CSt → List CVal → CSt → Option CVal → Prop)
+    (hA1lies : ∀ st vs st' rv, binLies st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 1 1 st vs st' rv)
+    (init : Faden → Σ g : gDB.Fn, Env gDB (gDB.params g)) (hA4 : LaufzeitStart init) :
     -- 1. parse fidelity
     uebersetze104 src104 = .ok (G104_referenz.gP, G104_referenz.gFs) ∧
     -- 2. model certificates
@@ -1402,13 +1477,16 @@ theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true) :
       printEnd104 (G104_referenz.gP.rumpf g_lies) = some cert104_lies ∧
       certEnd104Ok G104_referenz.gD (vertragVon G104_referenz.gD g_lies) false
         gCtx_lies gL_lies cert104_lies = true) ∧
-    -- 3. model judgement
+    -- 3. model judgement, at every budget
     (programmImFragmentG G104_referenz.gP G104_referenz.gFs = true ∧
       fussOrtGB G104_referenz.gP G104_referenz.gFs = true ∧
-      (∀ f, KoerperGutS G104_referenz.gP 0 (axWahr G104_referenz.gD)
-        (SperrInv.leer G104_referenz.gD) f) ∧
-      (∀ f, InvGutS G104_referenz.gP 0 (axWahr G104_referenz.gD)
-        (SperrInv.leer G104_referenz.gD) f)) ∧
+      (∀ (passes : Nat) (f : G104_referenz.gD.Fn), KoerperGutS G104_referenz.gP passes
+        (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f) ∧
+      (∀ (passes : Nat) (f : G104_referenz.gD.Fn), InvGutS G104_referenz.gP passes
+        (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f) ∧
+      (∀ (passes k : Nat) (f : G104_referenz.gD.Fn) (σ : World G104_referenz.gD)
+        (ρ : Env G104_referenz.gD (G104_referenz.gD.params f)),
+        rufAt G104_referenz.gP gO104 passes k f σ ρ = rufAt G104_referenz.gP gO104 0 k f σ ρ)) ∧
     -- 4. every C run
     (progOf c = refCProg ∧
       (∀ (σ : World G104_referenz.gD) (st : CSt)
@@ -1455,19 +1533,43 @@ theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true) :
           (show Zahl 0 100 from v).n = (show Zahl 0 100 from vB).n ∧
           ∀ k : Int, 0 ≤ k → k < 2 → (σ'.slots GTab.Konto k GKontoFeld.stand).n =
             (σB'.slots GTab.Konto k GKontoFeld.stand).n) ∧
-      ∀ (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (some f))) (M : RufMaschineG gDB),
-        RufErreichbarG gPB gOB 0 (RufStartG gPB sp (bootInit f ρ)) M →
-          (VertragAmOrtG gPB M ∧ SperrInvG (SperrInv.leer gDB) M ∧ KeinLogikHaltG gOB 0 M ∧
+      (∀ (passes k : Nat) (f : gDB.Fn) (σ : World gDB) (ρ : Env gDB (gDB.params f)),
+        rufAt gPB gOB passes k f σ ρ = rufAt gPB gOB 0 k f σ ρ) ∧
+      ∀ (sp : Speicher gDB) (passes : Nat) (M : RufMaschineG gDB),
+        RufErreichbarG gPB gOB passes (RufStartG gPB sp init) M →
+          ((VertragAmOrtG gPB M ∧ SperrInvG (SperrInv.leer gDB) M ∧ KeinLogikHaltG gOB passes M ∧
             ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-              AnPruefungG M t → ∃ M', RufSchrittG gPB gOB 0 M t M') ∧
-          InvAmOrtG gPB M) :=
-  ⟨uebersetze104_ok,
+              AnPruefungG M t → ∃ M', RufSchrittG gPB gOB passes M t M') ∧
+          InvAmOrtG gPB M) ∧ StartEndeG gPB M ∧ KeinStartGrundG M) ∧
+    -- 6. every run of the binary
+    ((∀ (σ : World G104_referenz.gD) (st : CSt)
+        (ρG : Env G104_referenz.gD (G104_referenz.gD.params g_einzahlen)) (vs : List CVal)
+        (ρ0 : CLok), corrW gEL104 σ st → bindParams cEin.params vs = some ρ0 →
+        EnvRel gEL104 (kOfG c.vmEin c.ppEin c.ksEin) ρG ρ0 →
+        ∃ σ', (∀ passes : Nat, rufAt G104_referenz.gP gO104 passes 2 g_einzahlen σ ρG = .ok σ' ()) ∧
+          ∀ st' rv, binEin st vs st' rv → corrW gEL104 σ' st' ∧ rv = none) ∧
+      (∀ (σ : World G104_referenz.gD) (st : CSt)
+        (ρG : Env G104_referenz.gD (G104_referenz.gD.params g_lies)) (vs : List CVal)
+        (ρ0 : CLok), corrW gEL104 σ st → bindParams cLies.params vs = some ρ0 →
+        EnvRel gEL104 (kOfG c.vmLies c.ppLies c.ksLies) ρG ρ0 →
+        ∃ σ' v, (∀ passes : Nat, rufAt G104_referenz.gP gO104 passes 1 g_lies σ ρG = .ok σ' v) ∧
+          ∀ st' rv, binLies st vs st' rv →
+            corrW gEL104 σ' st' ∧ RetCorr gEL104 (G104_referenz.gD.erg g_lies) v rv)) := by
+  refine ⟨uebersetze104_ok,
     ⟨print104_einzahlen, cert104_einzahlen_ok, print104_lies, cert104_lies_ok⟩,
-    ⟨export104_fragment, export104_fuss, gP_koerperS, gP_invGutS⟩,
+    ⟨export104_fragment, export104_fuss, gP_koerperS_alle, gP_invGutS_alle, gP_rufAt_passes⟩,
     ⟨progOf_ok c hc, fun σ st ρG vs ρ0 hw hb hr => c104_einzahlen c hc σ st ρG vs ρ0 hw hb hr,
       fun σ st ρG vs ρ0 hw hb hr => c104_lies c hc σ st ρG vs ρ0 hw hb hr⟩,
-    gPB_ist_gP_umbenannt, gPB_wie_gP_einzahlen, gPB_wie_gP_lies,
-    fun sp f ρ M hr => gPB_ziel sp f ρ M hr⟩
+    ⟨gPB_ist_gP_umbenannt, gPB_wie_gP_einzahlen, gPB_wie_gP_lies, gPB_rufAt_passes,
+      gPB_ziel init hA4⟩, ?_, ?_⟩
+  · intro σ st ρG vs ρ0 hw hb hr
+    obtain ⟨σ', hR, _, hall⟩ := c104_einzahlen c hc σ st ρG vs ρ0 hw hb hr
+    refine ⟨σ', fun passes => (gP_rufAt_passes passes 2 _ σ ρG).trans hR, fun st' rv hbin => ?_⟩
+    exact hall st' rv (by rw [progOf_ok c hc]; exact hA1ein _ _ _ _ hbin)
+  · intro σ st ρG vs ρ0 hw hb hr
+    obtain ⟨σ', v, hR, _, hall⟩ := c104_lies c hc σ st ρG vs ρ0 hw hb hr
+    refine ⟨σ', v, fun passes => (gP_rufAt_passes passes 1 _ σ ρG).trans hR, fun st' rv hbin => ?_⟩
+    exact hall st' rv (by rw [progOf_ok c hc]; exact hA1lies _ _ _ _ hbin)
 
 /-- The premise holds for the certificate as printed (rows and layout from
     `printed104`, `certG104_rows`), by `decide`; it elaborates to the emitted
@@ -1477,8 +1579,6 @@ theorem schlusssatz_104_praemisse :
       certG104.liesRows = printed104.liesRows ∧ certG104.lay = printed104.lay ∧
       progOf certG104 = refCProg :=
   ⟨certG104_ok, certG104_rows.1, certG104_rows.2.1, certG104_rows.2.2, progOf_ok _ certG104_ok⟩
-
-example := schlusssatz_104 certG104 certG104_ok
 
 
 /-! ### 6.1 Witnesses (rule 13): the premises are jointly satisfiable, on runs that move memory -/
@@ -1531,7 +1631,8 @@ theorem schlusssatz_104_zeuge :
       (∃ st', CallAt gEL104.lay tvOrc tvXR (progOf certG104) 2 0 refSt0 einArgs st' none) ∧
       ∀ st' rv, CallAt gEL104.lay tvOrc tvXR (progOf certG104) 2 0 refSt0 einArgs st' rv →
         st'.mem (.tab 0) 0 = .int 100 ∧ rv = none := by
-  obtain ⟨σ', hR, hex, hall⟩ := (schlusssatz_104 certG104 certG104_ok).2.2.2.1.2.1 gWelt0 refSt0 gRho7
+  obtain ⟨σ', hR, hex, hall⟩ := (schlusssatz_104 certG104 certG104_ok _ (fun _ _ _ _ h => h) _ (fun _ _ _ _ h => h)
+    (fun _ => ⟨none, .nil⟩) (fun _ _ => rfl)).2.2.2.1.2.1 gWelt0 refSt0 gRho7
     einArgs _ gW0_corr rfl gRho7_env
   have hR' : rufAt G104_referenz.gP gO104 0 2 g_einzahlen gWelt0 gRho7 = .ok _ () := rfl
   rw [hR'] at hR
@@ -1573,7 +1674,11 @@ theorem schlusssatz_104_maschine_zeuge :
       ∃ (rho : Env gDB (gDB.params (some GFn.lies))) (v : ErgVal gDB (gDB.erg (some GFn.lies)))
         (s0 s1 : World gDB),
         RufEreignisF.rueck (some GFn.lies) rho v s0 s1 ∈ (M.faeden 0).log ∧
-        EnsAmRueck gPB (some GFn.lies) s0 s1 rho v := by
+        EnsAmRueck gPB (some GFn.lies) s0 s1 rho v ∧
+        -- the root `einzahlen` has finished (empty stack, head at its `return`):
+        -- its `ensures` holds at its completion, BY THE THEOREM (`StartEndeG`)
+        (M.faeden 0).stapel = [] ∧
+        ∃ w : World gDB, EnsAmRueck gPB (some GFn.einzahlen) (gbSp0.welt []) w gbRho7 () := by
   have h00 : (RufStartG gPB gbSp0 (bootInit GFn.einzahlen gbRho7)).faeden 0 =
       ⟨[], ⟨some GFn.einzahlen, gbRho7, gbSp0.welt [],
         ⟨false, gDB.params (some GFn.einzahlen), gbL, gbRho7, .ende gbBody_einzahlen⟩⟩,
@@ -1615,44 +1720,94 @@ theorem schlusssatz_104_maschine_zeuge :
     rw [hlog]
     exact ⟨_, _, _, _, List.mem_cons_self⟩
   obtain ⟨rho, v, w0, w1, hm⟩ := hex
-  have hens := ((gPB_ziel gbSp0 GFn.einzahlen gbRho7 M3 hr3).1.1 0 _ hm).2 (some GFn.lies) rho v
-    w0 w1 rfl
-  exact ⟨M3, hr3, rfl, hsp, rho, v, w0, w1, hm, hens⟩
+  have hens := ((gPB_ziel (bootInit GFn.einzahlen gbRho7) (bootInit_laufzeit _ _) gbSp0 0 M3
+    hr3).1.1.1 0 _ hm).2 (some GFn.lies) rho v w0 w1 rfl
+  have hSE := (gPB_ziel (bootInit GFn.einzahlen gbRho7) (bootInit_laufzeit _ _) gbSp0 0 M3 hr3).2.1 0
+  have h3 := hG3.1
+  rw [h3] at hSE
+  have hroot := (hSE rfl _ _ _ _ _ .keine rfl ⟨_, Or.inl rfl⟩).1
+  exact ⟨M3, hr3, rfl, hsp, rho, v, w0, w1, hm, hens, by rw [h3], _, hroot⟩
+
+/-- **The premises of `schlusssatz_104` are jointly satisfiable** (rule
+    13): the printed certificate, the C semantics itself as the binary's
+    behaviour (the hypotheses A1 hold with equality), and the runtime's
+    start `bootInit` (A4) -- the start of the reached machine above. -/
+theorem schlusssatz_104_praemissen :
+    certOkG certG104 = true ∧
+    (∀ st vs st' rv, CallAt gEL104.lay tvOrc tvXR refCProg 2 0 st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 2 0 st vs st' rv) ∧
+    (∀ st vs st' rv, CallAt gEL104.lay tvOrc tvXR refCProg 1 1 st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 1 1 st vs st' rv) ∧
+    LaufzeitStart (bootInit GFn.einzahlen gbRho7) :=
+  ⟨certG104_ok, fun _ _ _ _ h => h, fun _ _ _ _ h => h, bootInit_laufzeit _ _⟩
+
+example := schlusssatz_104 certG104 certG104_ok _ (fun _ _ _ _ h => h) _ (fun _ _ _ _ h => h)
+  (bootInit GFn.einzahlen gbRho7) (bootInit_laufzeit _ _)
 
 
 /-! ## CUTS
 
-  THE PREMISE of `schlusssatz_104`: `certOkG c = true` -- the
-  correspondence certificate checks. Discharged for the printed rows by
-  `decide` (`schlusssatz_104_praemisse`). No other hypothesis: for 104
-  there is no hardware or oracle premise to carry, because `gD` declares no
-  axiom, register, device, global or `awaits` (`gO104`/`gOB` are forced by
-  empty types, `GutO`/`RegLokal` proved), and the emitted unit makes no
-  device access and no foreign call (`tvOrc`, `tvXR`; `tvXR_funktional`).
+  THE PREMISES of `schlusssatz_104` (since 2026-09-14 the named
+  assumptions that ARE Lean propositions are hypotheses of the theorem):
 
-  NAMED ASSUMPTIONS (outside Lean; the theorem is conditional on them by
-  construction, not by a hypothesis):
+  * `hc : certOkG c = true` -- the correspondence certificate checks.
+    Discharged for the printed rows by `decide` (`schlusssatz_104_praemisse`).
+  * `hA1ein`/`hA1lies` -- A1 with A2 and A3 as ONE Lean hypothesis per
+    function: every run of the binary's `einzahlen`/`lies` (`binEin`,
+    `binLies`: the behaviour of the compiled code, parameters of the
+    theorem) is a run of `CallAt gEL104.lay tvOrc tvXR refCProg` -- the C
+    semantics of `CSemantik`/`CSpeicher`/`CFormen*`, applied to the emitted
+    unit as the CS term `refCProg`, at the emitter's layout, at the call
+    depth the call tree needs (2 for `einzahlen`, 1 for `lies`). Part 6
+    then states EVERY run of the binary; part 4 stays a statement about the
+    C semantics.
+  * `hA4 : LaufzeitStart init` -- A4, fully a Lean proposition: every
+    thread but `0` idles in the runtime's root `none`. Part 5 holds for
+    EVERY such start (`bootInit` is one: `bootInit_laufzeit`).
+  * No hardware or oracle premise: `gD` declares no axiom, register,
+    device, global or `awaits` (`gO104`/`gOB` are forced by empty types,
+    `GutO`/`RegLokal` proved), and the emitted unit makes no device access
+    and no foreign call (`tvOrc`, `tvXR`; `tvXR_funktional`).
+  * Jointly satisfiable: `schlusssatz_104_praemissen` (the C semantics
+    itself as the binary's behaviour, `bootInit`), and the `example`.
 
-  A1. The C compiler translates the emitted unit according to the C
-      semantics of `CSemantik.lean`/`CSpeicher.lean`/`CFormen*.lean`
-      (`Exec`, `CallAt`, the block memory). Part 4 is a statement about
-      that semantics: EVERY run in it, not a run of the binary.
-  A2. The emitted C TEXT is the `CS` data `refCProg`/`cEinBody`/
-      `cLiesBody`: a hand transcription of the quoted emitter output
-      (`CFormenZeuge.lean`, `Korrespondenz104.lean`; byte-identity of the
-      quote with `gabbro emit` measured 2026-09-13, not proved). There is no
-      C parser in Lean; the certificate rows elaborate to these terms
-      (`progOf_ok`, proved) and are the Rust printer's rows (`certG104_rows`).
-  A3. The layout of `Konto` (`kontoLay`: 2 records of 4 bytes, `stand` at
-      offset 0, `uint32_t`) is what the C compiler gives; the emitted
-      `_Static_assert` pins bound it (`CFormenM` M11), not proved here.
-  A4. The runtime starts the program as `bootInit` does: thread 0 runs one
-      source function on its arguments, every other thread idles. The idle
-      root is runtime data, not source text (5.1 proves no G theorem applies
-      without it); the C driver that makes the call is not emitted.
+  WHAT STAYS OUTSIDE LEAN -- the parts of A1-A5 that are no Lean
+  proposition, precisely:
+
+  A1. That `binEin`/`binLies` ARE the behaviour of the binary a C compiler
+      produced from the emitted file -- i.e. that the compiler implements
+      the C semantics of the model. A statement about a program outside
+      Lean (the compiler); the theorem is conditional on it through the
+      hypotheses, not by construction. Also outside: that the depth-2/1
+      runs are all runs (no monotonicity lemma for `CallAt` in its fuel).
+  A2. That the emitted TEXT means `refCProg`. `refCProg`/`cEinBody`/
+      `cLiesBody` are a hand transcription of the quoted emitter output
+      (`CFormenZeuge.lean`, `Korrespondenz104.lean`; byte identity of the
+      quote with `gabbro emit` measured 2026-09-13, not proved); the
+      certificate rows elaborate to them (`progOf_ok`) and are the Rust
+      printer's rows (`certG104_rows`). WHAT WOULD REPLACE IT: a C parser
+      in Lean for the emitter's subset, `parseC : String → Option CProg`,
+      the emitted text pinned as a `String`, and `parseC text = some
+      refCProg` by `decide`. A2 would then shrink to "the compiler's front
+      end reads the subset as `parseC` does" -- a part of A1.
+  A3. That the compiler lays out `Konto` as `kontoLay` (2 records of 4
+      bytes, `stand` at offset 0, `uint32_t`; `kontoLay_werte`). It is in
+      the A1 hypothesis (`gEL104.lay`); the emitted `_Static_assert` pins
+      (`CFormenM` M11) are checked BY THE COMPILER, so A3 reduces to A1 +
+      A2 plus one missing Lean lemma: the C semantics depends on a
+      `RecLay` only through the pinned numbers (fields `< nf`).
+  A4. That the real runtime starts the program in a `LaufzeitStart` shape
+      (the C driver that makes the call is not emitted). The shape itself
+      is the hypothesis `hA4`.
   A5. The Lean kernel, and the DEFINITIONS a human must read (plan §3):
       machine G, `rufAt`/`execEnd`, `KoerperGutS`, `VertragAmOrtG`, the C
-      semantics, `corrW`/`EnvRel`.
+      semantics, `corrW`/`EnvRel`. Not a proposition.
+
+  THE `forever` BUDGET: `gP` and `gPB` contain no `forever` loop; the
+  obligations (part 3) are stated at EVERY budget (`koerperGutS_alle`),
+  the call semantics is budget-independent (`gP_rufAt_passes`,
+  `gPB_rufAt_passes`: every `rufAt … 0 …` of parts 4-6 holds at every
+  budget), and part 5 holds on the machines of every budget.
 
   JOINTS -- what is closed and how:
 
@@ -1689,7 +1844,10 @@ theorem schlusssatz_104_maschine_zeuge :
   - Part 4 relates C runs to `rufAt` (the sequential semantics), part 5
     states the goal theorem on machine G of `gPB`; that G with one active
     thread agrees with `rufAt` is the adequacy chain (`rufG_adaequat_ruf`),
-    not re-instantiated here.
+    not re-instantiated here. (Part 5 now carries the root's `ensures` at
+    its completion -- `StartEndeG`, witnessed on a reached machine in
+    `schlusssatz_104_maschine_zeuge` -- so the root's contract is no longer
+    carried by part 4 alone.)
   - The C statements are at the depth the call tree needs (`einzahlen` at 2,
     `lies` at 1); deeper `CallAt` fuel is not stated (no monotonicity lemma).
   - `corrW` relates memory, not traces: Gabbro's lock trace and C's
@@ -1721,5 +1879,7 @@ theorem schlusssatz_104_maschine_zeuge :
 #print axioms Gabbro.Grammatik.schlusssatz_104_praemisse
 #print axioms Gabbro.Grammatik.schlusssatz_104_zeuge
 #print axioms Gabbro.Grammatik.schlusssatz_104_maschine_zeuge
+#print axioms Gabbro.Grammatik.schlusssatz_104_praemissen
+#print axioms Gabbro.Grammatik.gP_rufAt_passes
 
 end Gabbro.Grammatik

@@ -8,7 +8,7 @@ everything `lean-g` refuses; prove 104's obligations once in
 `grammatik/Grammatik/Pflicht104.lean`.
 
 Branch `muse/176`. Rust + Lean lane. Last `./lean-bau` result line:
-`Build completed successfully (182 jobs).` Last `./cargo-pruef`:
+`Build completed successfully (190 jobs).` Last `./cargo-pruef`:
 `== exit 0; failing tests: 0`. Last `./lean-probe` over both new files:
 `== 0 error(s)` each.
 
@@ -16,16 +16,17 @@ Branch `muse/176`. Rust + Lean lane. Last `./lean-bau` result line:
 
 **`crates/gabbro-check/src/obligations_g.rs` (new).** Runs the `lean-g`
 export and appends the obligation section: per function
-`def <fn>_pflicht : Prop := KoerperGutS gP 0 (axWahr gD) gS g_<fn>` and
-`def <fn>_invPflicht : Prop := InvGutS gP 0 (axWahr gD) gS g_<fn>` (defs,
-sorry-free, no proofs -- the user's job), the families `pflicht`/
-`pflichtInv`, `def startPflicht (sp : Speicher gD) : Prop` (the boot
-duty), the decidable premises as named `by decide` theorems (`gP_voll`,
+`def <fn>_pflicht : Prop := ∀ passes, KoerperGutS gP passes (axWahr gD)
+gS g_<fn>` and the `InvGutS` twin (defs, no proofs -- the user's job;
+never a fixed budget -- probe D), the families `pflicht`/`pflichtInv`,
+`def startPflicht (sp : Speicher gD) : Prop` (the boot duty), the
+decidable premises as named `by decide` theorems (`gP_voll`,
 `gP_fragment`, `gP_fussS`), and `theorem gP_ziel` deriving the flagship's
-conclusion from the obligations (open hypotheses) via
-`ziel_ort_sperre_ende`. No refusal of its own: every `LG001`-`LG005`
-travels untouched from `lean_g::export`. No new diagnostic code, no gift,
-no example.
+conclusion -- at every budget, with `StartEndeG` and `KeinStartGrundG` --
+from the obligations (open hypotheses) via the restated
+`ziel_ort_sperre_ende`. Start premises include `StartOhneGrund`. No
+refusal of its own: every `LG001`-`LG005` travels untouched from
+`lean_g::export`. No new diagnostic code, no gift, no example.
 
 **`crates/gabbro-check/src/lean_g.rs`.** `namespace_of` made public,
 `emit` takes the namespace as a parameter, new `export_ns` (export under
@@ -47,17 +48,20 @@ output for `beispiele/104-referenz.gab` (namespace `G104_referenz_oblig`),
 committed so the chain is checkable.
 
 **`grammatik/Grammatik/Pflicht104.lean` (new, by hand).** Proves the stated
-duties (`oblig_koerper` via `koerperGutS_ohne` over the `KoerperGutZ`
-proofs adapted from `Schlusssatz104.lean` §4; `oblig_inv` via
-`invGutS_leer`; `oblig_start` by cases; `oblig_hS` after `zS_ok`) and
-applies `gP_ziel` once (`oblig_chain`). `grammatik/Grammatik.lean`
-imports both files.
+duties at every budget (`oblig_koerper`/`oblig_inv` via `koerperGutS_alle`/
+`invGutS_alle` over the budget-`0` base: `koerperGutS_ohne` over the
+`KoerperGutZ` proofs adapted from `Schlusssatz104.lean` §4,
+`invGutS_leer`, `ohneEwigB` by `decide`; `oblig_start` by cases;
+`oblig_hS` after `zS_ok`; `oblig_ohneGrund` by `rfl`) and applies `gP_ziel`
+once (`oblig_chain`, now budget-quantified with `KeinStartGrundG`).
+`grammatik/Grammatik.lean` imports both files.
 
 **`crates/gabbro-check/tests/obligations_g.rs` (new).** Pins the 104
-output (both duties per function, families, boot duty, decided premises,
-closing theorem, derived namespace, sorry-freedom, the export underneath)
-plus one single-function snippet and the `LG001`/`LG004`/`LG005`
-passthrough.
+output (both duties per function at every budget -- plus a negative
+assertion that no `KoerperGutS gP 0` is stated anywhere -- families, boot
+duty, `StartOhneGrund`, decided premises, closing theorem, derived
+namespace, sorry-freedom, the export underneath) plus one
+single-function snippet and the `LG001`/`LG004`/`LG005` passthrough.
 
 ## Decisions, each with its reason
 
@@ -79,10 +83,10 @@ passthrough.
   hidden: upgrading the target is a lane of its own.
 - **Obligation stated through the imported names, never copied.** The
   `def`s name `KoerperGutS`/`InvGutS` via `import Grammatik.ZielOrtStart`;
-  no body text travels. The parallel `passes`-quantification rework can
-  move those bodies without aging a single stated duty (only the applied
-  arguments `gP 0 (axWahr gD) gS` could need a touch, loudly, at
-  elaboration).
+  no body text travels. When the `passes`-quantification rework landed
+  (see below), only the binders moved -- `∀ passes,` into the stated
+  `def`s, `passes` out of the flagship's premises -- loudly, at
+  elaboration, in exactly the two files that state them.
 - **`SperrInvOk gS` stays a hypothesis of `gP_ziel`.** Its second half
   quantifies over memories (functions) and is not decidable in general;
   discharging it in the file would be a proof, i.e. the user's job. For
@@ -105,13 +109,35 @@ passthrough.
 - `./lean-probe grammatik/Grammatik/Pflicht104.lean`:
   `== 0 error(s)`, exit 0; `oblig_koerper`, `oblig_inv`, `oblig_chain`
   depend on axioms `[propext, Classical.choice, Quot.sound]` only.
-- `./lean-bau`: `Build completed successfully (182 jobs)`, 0 error lines
+- `./lean-bau`: `Build completed successfully (190 jobs)`, 0 error lines
   (both new files joined the build through `Grammatik.lean`).
 - `./emission-pruef` not run: the C emitter (`emit.rs`) is untouched; the
   only emission-side change is the `lean-g` `RufPasst` proof shape below,
   which ships no C.
 
-Two probe findings on the way there, both fixed and re-measured:
+## Review rework: every budget (probe D), start reasons
+
+Master moved under the lane (`master-neu`: the flagship quantified over
+every `forever` budget, `StartOhneGrund`, `*_bei` lemmas;
+`SATZKARTE.md` §18). Merged, one conflict (`Grammatik.lean`, union of
+both sides' imports), then reworked:
+
+- Each `<fn>_pflicht` states `∀ passes, ...` -- never a fixed budget
+  again (that is exactly the hole); the tests pin it both ways (the
+  `∀ passes,` substrings present, no `KoerperGutS gP 0` anywhere).
+- `gP_ziel` uses the restated `ziel_ort_sperre_ende` (not a `_bei` lemma),
+  concludes at every budget with `StartEndeG` and `KeinStartGrundG`, and
+  takes `StartOhneGrund` among the start premises.
+- `Pflicht104.lean` lifts the budget-`0` base via `koerperGutS_alle`/
+  `invGutS_alle` (`ohneEwigB` by `decide`; `Durchgaenge.lean`), proves
+  `StartOhneGrund` by `rfl`, and its chain is budget-quantified.
+- One probe artifact on the way: after the merge the probes resolved
+  imports to stale pre-merge oleans (`StartOhneGrund` "unknown",
+  `ziel_ort_sperre_ende` still taking `passes` as data). `./lean-bau`
+  first, then the probes -- all green on fresh oleans. A red probe after
+  a model merge measures the build order, not the files.
+
+Two earlier probe findings, both fixed and re-measured:
 
 1. The `lean-g` `gHp` proof shape (`hh := fun L => ...`, no `hx`) does
    not check -- the paste in `Export104.lean` still carries the proven

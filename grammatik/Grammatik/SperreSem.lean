@@ -341,7 +341,7 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | Option.none => .hardware .ieee
   | .gleitVon e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
-      match gleitPasst lo hi (Float.ofInt (eval σ e σ ρ).n) with
+      match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
       | Option.none => .hardware .ieee
   | .gleitNarrow e lo hi sonst rest, σ, ρ =>
@@ -1206,7 +1206,7 @@ theorem semH_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
 theorem semH_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁))
     (lo hi : Int × Int) (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ) (v : Wert D (.fl lo hi))
-    (hv : gleitPasst lo hi (Float.ofInt (eval (σ.lese Λ e.orte) e
+    (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semH S O U passes R (.dann (.gleitVon e lo hi rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) := by

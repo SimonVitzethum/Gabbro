@@ -523,7 +523,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrest⟩ := hok
     simp only [blockOrteP, List.append_subset] at hss
-    have hv' : gleitPasst lo hi (Float.ofInt (eval (σ.lese Λ e.orte) e
+    have hv' : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
         (σ.lese Λ e.orte) ρ).n) = some v := by
       rw [eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => hss.1 h') h) (hg.lese Λ Λ e.orte e.orte) ρ, ← hs₁]; exact hv
     exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hks, hss.2, hrest⟩,
