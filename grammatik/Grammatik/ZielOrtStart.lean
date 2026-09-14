@@ -361,7 +361,35 @@ theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     ziel_ort_sperre_ende_bei P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
     hFuss (hK passes) hStart hSstart hex (hI passes) M hr
 
+/-- **One active thread, over every budget, with the start functions'
+    completion** (`ziel_ort_einfaden` with `StartEndeG` and
+    `KeinStartGrundG`): every thread but `0` idle, no footprint check, no
+    exclusivity premise. The shape of every sequential corpus program
+    (thread `0` the driver's call, the rest the runtime's idle roots). -/
+theorem ziel_ort_einfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hRuhe : ∀ u, u ≠ 0 → ruhig P (init u).1 = true)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hGrund : StartOhneGrund init) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
+  fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
+    ziel_ort_ende_bei P O passes Q S (fun _ => true) sp init e0 hO hRL hQ hlok hS
+      (programmImFragmentS_ok P S hvoll hFrag (fussS_alle P S)) (fussS_alle P S)
+      (lokOk_einfaden sp init hRuhe) (hK passes) hStart hSstart (startExklusiv_einfaden init hRuhe)
+      (hI passes) M hr
+
 #print axioms Gabbro.Grammatik.kopfS_ret
+#print axioms Gabbro.Grammatik.ziel_ort_einfaden_ende
 #print axioms Gabbro.Grammatik.wurzelFn_erreichbar
 #print axioms Gabbro.Grammatik.keinStartGrundG
 #print axioms Gabbro.Grammatik.ziel_ort_ende_bei
