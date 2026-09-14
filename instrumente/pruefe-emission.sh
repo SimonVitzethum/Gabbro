@@ -3371,7 +3371,15 @@ MARKE_EMIT_X=0
 # **12 -> 14 on 2026-09-15 (merge review, lane 177).** `+2` are 957 and 958: the refinement
 # of a function against a pointer type's contract is a USER obligation (hint N297, listed by
 # `gabbro obligations`), not a refusal -- they emit by design, like the hint-level 916/918/919/930.
-MARKE_EMIT_G=14     # 286, 414, 689, 718, 719, 727, 758, 777 + 916, 918, 919, 930 + 957, 958 -- measured, see above
+# **14 -> 18 on 2026-09-15 (lane 191, measured on the merged tree).** `+4` are 04, 580, 700, 701:
+# the four omissions the derivation settles. They check clean since this lane
+# (their frozen `-- erwartet: E001` headers name the verdict before it) and emit
+# valid C like any accepted program -- emitting is by design and not a slip,
+# the same class as the hint-level four of lane 138 above. All four compile
+# under `cc -Werror -fsyntax-only`; the twin rule in
+# `crates/gabbro-check/tests/beispiele.rs` (`ABGELEITET_STATT_E001`) pins the
+# silence, and `zaehle-gifttreffer.py` counts them as `abgeleitet`, not `FEHLT`.
+MARKE_EMIT_G=18     # 286, 414, 689, 718, 719, 727, 758, 777 + 916, 918, 919, 930 + 957, 958 + 04, 580, 700, 701 -- measured, see above
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei

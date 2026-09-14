@@ -218,6 +218,12 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **Lane 191: the derived contract (lever 1 of PLAN-EINFACHHEIT.md).**
+        // An omitted `effects`/`costs` is derived, not demanded — this prints
+        // every derived clause beside the written bounds. Like `effects`
+        // above it refuses a unit with errors: the derivation over a tree the
+        // passes rejected speaks about a program that does not compile.
+        "derived" | "abgeleitet" => befehl_abgeleitet(rest),
         // **K100.4, Weg (b): das Uebersetzungszeugnis.** Je Datei die Liste dessen, worauf
         // ihre Absenkung ruht -- Annahmen, Schablonen, direkte Formen. *Es beweist die
         // Uebersetzung nicht; es macht aus „der Erzeuger wird schon" eine Aufzaehlung mit
@@ -727,6 +733,7 @@ const COMMAND_NAMES: &[&str] = &[
     "k-condition", "k-bedingung",
     "effects", "wirkungen",
     "costs", "kosten",
+    "derived", "abgeleitet",
     "contexts", "kontexte",
     "obligations", "pflichten",
     "lean",
@@ -850,6 +857,11 @@ fn hilfe() {
   gabbro k-condition|k-bedingung <file.gab>…
                                     per carrier: are ALL write sites generated? (measurement 2)
   gabbro costs|kosten <file.gab>…   the cost report per routine
+  gabbro derived|abgeleitet <file.gab>…
+                                     the DERIVED contract per routine: every omitted
+                                     `effects`/`costs` as the checker derives it, beside
+                                     the written bounds (`(written)` / `(derived)` /
+                                     `(lower bound)` with the refusing code)
   gabbro build|bau [--testbuild] [--dry-run] [<manifest>]
                                     the build out of a manifest: it computes the unit graph
                                     from `module` and `use` -- never from a manifest line --
@@ -2431,6 +2443,43 @@ fn befehl_wirkungen(rest: &[String]) -> std::process::ExitCode {
     println!("  reads through parameters: {}",
              if weit { "counted in (an elaborator has to write them)" } else { "left out (`--eng`, as in `E010`)" });
     std::process::ExitCode::SUCCESS
+}
+
+/// **Lane 191 (`derived` | `abgeleitet`): the derived contract per file.**
+///
+/// Effects AND costs in one view: the clause an elaborator would write for
+/// every function, marked `(written)`, `(derived)` or `(lower bound)`. The
+/// checker runs first, for the same reason as at `effects`: a derivation
+/// over a rejected tree speaks about a program that does not compile — and
+/// an omission nothing settles is refused there (`N305` at `effects`), not here.
+/// An omitted `costs` is never refused, so its view names the shape, not a code.
+fn befehl_abgeleitet(rest: &[String]) -> std::process::ExitCode {
+    if rest.is_empty() {
+        eprintln!("gabbro abgeleitet: no file named");
+        return std::process::ExitCode::from(2);
+    }
+    let mut schlecht = false;
+    for datei in rest {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = true;
+            continue;
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            eprint!("{}", absagen.zeige(&quelle));
+            eprintln!("gabbro abgeleitet: {datei} has errors -- no derived contract");
+            schlecht = true;
+            continue;
+        }
+        print!("{}", gabbro_check::abgeleitet::zeige(&baum, datei));
+    }
+    if schlecht {
+        std::process::ExitCode::from(1)
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
 }
 
 /// The entry tally over the DERIVATION -- the same six columns as `abi --vergleich`, over a

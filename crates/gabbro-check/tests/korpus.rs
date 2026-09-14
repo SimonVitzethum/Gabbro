@@ -86,6 +86,10 @@ const BENANNT: &[&str] = &[
     // dem Korpus (FRAGMENTE.md, «F0»/FF4), nicht aus dem Entwurf.
     "F001", "F002", "F004", "F005", "F006",
     "K001", "K002", "K003", // Kosten
+    // Lane 191: `N305` the omitted `effects` nothing settles. Named here
+    // so the corpus run counts the rule, not noise. (An omitted `costs`
+    // is never refused, so it names no code.)
+    "N305",
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)
     "H001", "H002", "H003", "H004", "H005", "H006", // geteilter Halt, Rangordnung

@@ -754,8 +754,11 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
    between Λ and the `allocs` list: linear, not affine. *)
 ```
 
-**`effects` is NOT fail-open.** A function **without** `effects` is a compile error; whoever
-touches nothing writes `effects { pure }`.
+**`effects` is NOT fail-open.** A function **without** `effects` over a body
+derives it (lane 191: the derived hull is checked exactly like a written
+line); whoever touches nothing derives `effects { pure }`. Without a body —
+`extern`, `prim` — and where the derivation settles nothing, the omission is
+a compile error with the reason (`E001`, `N305`).
 
 **`decreases <expr>` — the descent measure of the RECURSION** («K5.4»): `costs` at a
 recursive function is the promise of **one** pass, and the depth stands in the measure.

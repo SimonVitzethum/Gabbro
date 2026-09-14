@@ -67,7 +67,7 @@ use crate::umgebung::Umgebung;
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// **The names visible at ONE point of a body** -- the parameters plus every `let` of the
 /// enclosing blocks. Until 2026-08-31 there were only the parameters, and a `let` in an
@@ -221,6 +221,208 @@ fn haltezeit_ist_keine_zahl(l: &LockDecl, wort: &str, span: Span) -> Absage {
     )
 }
 
+/// **Lane 191: the declared numbers in one place, silently read.**
+///
+/// `pass` keeps its own walk — a non-constant `held` fires `K010` there, with
+/// a span — and this one serves the readers: `bericht` and the cost
+/// derivation below. Same three maps, no refusals.
+fn kostenkarten(
+    baum: &Programm,
+    u: &Umgebung,
+) -> (HashMap<String, i128>, HashMap<String, i128>, HashMap<String, i128>) {
+    let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
+    let mut haltezeiten: HashMap<String, i128> = HashMap::new();
+    let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Funktion(f) => {
+            if let Some(c) = &f.costs {
+                if let Some(n) = u.konst_wert(modul, c) {
+                    deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
+                }
+            }
+        }
+        ItemArt::Lock(l) => {
+            if let Some(n) = l.haltezeit.as_ref().and_then(|h| u.konst_wert(modul, h)) {
+                haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
+            }
+            if let Some(n) =
+                l.geteilte_haltezeit.as_ref().and_then(|h| u.konst_wert(modul, h))
+            {
+                geteilte_haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
+            }
+        }
+        _ => {}
+    });
+    (deklariert, haltezeiten, geteilte_haltezeiten)
+}
+
+/// **Lane 191: every derivable omitted `costs`, bottom-up.**
+///
+/// Starts from the declared constant costs and repeatedly computes the bodies
+/// whose callees all carry a number by now. A recursive edge under
+/// `decreases` costs nothing (`mit_mass`, as in `pass`): the
+/// measure carries the depth, the promise a single pass. Without it the
+/// cycle never settles. What is still unknown after the rounds is not
+/// answered here — the two readers (`bericht`, `abgeleitet`) print the
+/// reason instead of a number. The pass itself never reads this map: an
+/// omitted `costs` stays silent there, as before.
+pub fn abgeleitete_kosten(baum: &Programm) -> BTreeMap<String, i128> {
+    let u = Umgebung::sammle(baum);
+    let (erklaert, haltezeiten, geteilte_haltezeiten) = kostenkarten(baum, &u);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    let geraete = crate::m3::geraetetabelle(baum);
+    let mut abgeleitet: BTreeMap<String, i128> = BTreeMap::new();
+    for _ in 0..crate::ableitung::RUNDEN_MAX {
+        let mut vereint = erklaert.clone();
+        for (k, n) in &abgeleitet {
+            vereint.insert(k.clone(), *n);
+        }
+        let mut neu = false;
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            let ItemArt::Funktion(f) = &item.art else {
+                return;
+            };
+            if f.costs.is_some() {
+                return;
+            }
+            // **No derivation for `spec fn`:** no runtime cost stands behind
+            // a proof body. The pass stays silent there, as before.
+            if f.klasse == Some(FnKlasse::Spec) {
+                return;
+            }
+            let FnRumpf::Block(b) = &f.rumpf else {
+                return;
+            };
+            let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+            if vereint.contains_key(&key) {
+                return;
+            }
+            let lokal: HashMap<String, Typ> = f
+                .parameter
+                .iter()
+                .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
+                .collect();
+            let r = Rechner {
+                u: &u,
+                modul,
+                mit_mass: f
+                    .decreases
+                    .as_ref()
+                    .map(|_| (&g, g.schluessel_von(modul, &f.name.text))),
+                deklariert: &vereint,
+                haltezeiten: &haltezeiten,
+                geteilte_haltezeiten: &geteilte_haltezeiten,
+                lokal,
+                geraete: &geraete,
+                griffe: crate::m3::griffe_von(f, &geraete),
+            };
+            if let Kosten::Zahl(n) = r.block(b, &r.lokal.clone()) {
+                abgeleitet.insert(key, n);
+                neu = true;
+            }
+        });
+        if !neu {
+            break;
+        }
+    }
+    abgeleitet
+}
+
+/// **Lane 191: bodies without a total.**
+///
+/// A `forever` loop has no total cost — its promise is `per_pass`, not
+/// `costs` (a written `costs` over one already meets `K003`). An omitted
+/// clause over such a body is correct by construction, so the pass stays
+/// silent there. Any `forever` anywhere in the body counts: what never ends
+/// anywhere never totals.
+pub fn ohne_summe(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        if let StmtArt::Schleife(sch) = &s.art {
+            if matches!(sch.as_ref(), Schleife::Forever(_)) {
+                return true;
+            }
+        }
+        crate::unterbloecke(s).iter().any(|u| ohne_summe(u))
+    })
+}
+
+/// **Lane 191: functions whose cost has no total — directly or by call.**
+///
+/// `ohne_summe` sees one body; a caller of such a body has no total either
+/// (its `forever` lives one hop down). The seeds are the Block bodies with a
+/// `forever` in them, the closure runs backwards over the call edges. What
+/// lands in the set promises `per_pass` at the loop, never `costs` at the
+/// function — an omitted clause over it stays silent in the pass, as at
+/// the loop itself, and the views name the shape instead of a number.
+pub fn ohne_total(
+    baum: &Programm,
+    g: &crate::aufrufgraph::Graph,
+) -> std::collections::BTreeSet<String> {
+    let mut menge: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        if ohne_summe(b) {
+            menge.insert(crate::umgebung::qualifiziere(modul, &f.name.text));
+        }
+    });
+    loop {
+        let mut neu = false;
+        for (rufer, knoten) in &g.knoten {
+            if menge.contains(rufer) {
+                continue;
+            }
+            if knoten.rufe.iter().any(|(z, _)| menge.contains(z)) {
+                menge.insert(rufer.clone());
+                neu = true;
+            }
+        }
+        if !neu {
+            break;
+        }
+    }
+    menge
+}
+
+/// **Lane 191: the declared syscalls of a unit, by qualified key.**
+///
+/// A `syscall` item carries no `costs` clause by grammar (lane S5) — so a
+/// call through one is cost-opaque, and no omission over such an edge can
+/// ever derive. The pass stays silent there, as over every omission; a
+/// written bound still meets `K003` over it, as before. The views name the
+/// edge instead of a number.
+pub fn syscall_namen(baum: &Programm) -> std::collections::BTreeSet<String> {
+    let mut aus = std::collections::BTreeSet::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Syscall(s) = &item.art {
+            aus.insert(crate::umgebung::qualifiziere(modul, &s.name.text));
+        }
+    });
+    aus
+}
+
+/// **Lane 191: does this function call a declared syscall?**
+///
+/// Direct edges only (`rufe` with arguments and `ruft` without); an indirect
+/// call prices through its pointer-type contract instead (`N035` names the
+/// missing line where none stands).
+pub fn ruft_syscall(
+    g: &crate::aufrufgraph::Graph,
+    key: &str,
+    syscalls: &std::collections::BTreeSet<String>,
+) -> bool {
+    let Some(k) = g.knoten.get(key) else {
+        return false;
+    };
+    k.rufe.iter().any(|(z, _)| syscalls.contains(z))
+        || k.ruft.iter().any(|z| syscalls.contains(z))
+}
+
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let u = Umgebung::sammle(baum);
     // **A generated operation declares its cost by COUNTING its own stores** (2026-08-28).
@@ -261,6 +463,12 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     });
 
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    // **Lane 191: the call edge reads the DECLARED costs, nothing else.** An
+    // omitted `costs` on the callee prices the call as unknown (`K003` where
+    // the caller promises a bound) — exactly as before. The derived numbers
+    // (`abgeleitete_kosten`, read by `bericht` and `abgeleitet`) never enter
+    // this map: a derivation that changed what a written bound is held
+    // against would refuse programs the declared pricing accepts.
     // **Lane 139 (F4): die Geraetetabelle steht einmal, die Griffe je Funktion.** Der Rechner
     // braucht beide, um an einer `let … else`-Lesung das `requires` des Registers zu finden.
     let geraete = crate::m3::geraetetabelle(baum);
@@ -270,6 +478,12 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             return;
         };
         let FnRumpf::Block(b) = &f.rumpf else {
+            // **Lane 191: an omitted `costs` without a body keeps its old
+            // meaning — no check.** The pass only ever held a WRITTEN bound
+            // against a body; without either there is nothing to hold.
+            // Whatever the declaration costs is unknown, and it matters
+            // exactly once: a caller that promises a bound over such a call
+            // meets `K003` there, as before.
             return;
         };
         let lokal: HashMap<String, Typ> = f
@@ -391,6 +605,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         }
 
         let Some(zusage_expr) = &f.costs else {
+            // **Lane 191: an omitted `costs` is not a promise, so there is
+            // nothing to hold.** The pass returns exactly as it always has —
+            // the derivation (`abgeleitete_kosten`, read by `bericht` and
+            // `abgeleitet`) counts the body, but it never refuses it. An
+            // omission that refused here would refuse programs the old rule
+            // accepts (a bodied caller over an `extern` edge, a recursion
+            // with its measure elsewhere); the only omission this lane
+            // refuses is the `effects` one nothing settles (`N305`).
             return;
         };
         // **Bis zum 2026-08-18 stand hier ein `return`** -- eine Zusage, die nicht konstant
@@ -1468,37 +1690,18 @@ fn groesser(a: Kosten, b: Kosten) -> Kosten {
 /// mit der Rechnung).
 pub fn bericht(baum: &Programm) -> String {
     let u = Umgebung::sammle(baum);
-    // **A generated operation declares its cost by COUNTING its own stores** (2026-08-28).
-    // Without this line a call to `T::insert` is `K003` -- *"a cost promise over an unknown
-    // quantity"* -- and `D001` would forbid the hand-written mutation while making the
-    // generated one uncostable. `messung/OPS-RUFFORM.md`.
-    let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
-    let mut haltezeiten: HashMap<String, i128> = HashMap::new();
-    let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    // **Lane 191: one reader for the declared numbers** (`kostenkarten` above).
+    // What it replaces stood here: the same three maps, built a second time.
+    let (mut deklariert, haltezeiten, geteilte_haltezeiten) = kostenkarten(baum, &u);
+    // **Lane 191: derived numbers stand where written ones would.** A call to
+    // a callee whose clause is omitted over a computable body counts the
+    // derived cost — the same map the pass decides with.
+    let abgeleitet = abgeleitete_kosten(baum);
+    for (k, n) in &abgeleitet {
+        deklariert.entry(k.clone()).or_insert(*n);
+    }
     // **Lane 139 (F4): wie im Pass -- die Geraetetabelle steht einmal.**
     let geraete = crate::m3::geraetetabelle(baum);
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
-        ItemArt::Funktion(f) => {
-            if let Some(c) = &f.costs {
-                if let Some(n) = u.konst_wert(modul, c) {
-                    deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
-                }
-            }
-        }
-        ItemArt::Lock(l) => {
-            if let Some(n) = l.haltezeit.as_ref().and_then(|h| u.konst_wert(modul, h)) {
-                haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
-            }
-            if let Some(n) = l
-                .geteilte_haltezeit
-                .as_ref()
-                .and_then(|h| u.konst_wert(modul, h))
-            {
-                geteilte_haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
-            }
-        }
-        _ => {}
-    });
 
     let mut out = String::from(
         "-- What the body COSTS, beside what the line PROMISES. Whoever writes a\n\
@@ -1535,15 +1738,27 @@ pub fn bericht(baum: &Programm) -> String {
         // richtig: es gibt dort keine einzelne Zahl zum Danebenstellen. *Entschieden wird sie
         // trotzdem* -- vom Tor oben, gegen die kleinste Belegung (`K001`/`K005`).
         let zugesagt = f.costs.as_ref().and_then(|c| u.konst_wert(modul, c));
+        // **Lane 191:** where the line is omitted, the derived number is the
+        // promise — whoever writes a `costs` line copies down what stands here.
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let (zugesagt, herkunft) = match (zugesagt, abgeleitet.get(&key)) {
+            (Some(z), _) => (Some(z), ""),
+            (None, Some(n)) => (Some(*n), " (derived)"),
+            (None, None) => (None, ""),
+        };
         match r.block(b, &r.lokal.clone()) {
             Kosten::Zahl(n) => {
                 mit += 1;
-                out.push_str(&format!("{}\t{n}\t{}\n", f.name.text, spalte(zugesagt, n)));
+                out.push_str(&format!(
+                    "{}\t{n}\t{}{herkunft}\n",
+                    f.name.text,
+                    spalte(zugesagt, n)
+                ));
             }
             Kosten::Unbekannt(warum, _) => {
                 ohne += 1;
                 out.push_str(&format!(
-                    "{}\tOFFEN\t{}\t-- {warum}\n",
+                    "{}\tOFFEN\t{}{herkunft}\t-- {warum}\n",
                     f.name.text,
                     zugesagt.map(|z| z.to_string()).unwrap_or("--".into())
                 ));
@@ -1552,7 +1767,8 @@ pub fn bericht(baum: &Programm) -> String {
         r.bloecke_zeigen(b, &r.lokal.clone(), &f.name.text, &mut out);
     });
     out.push_str(&format!(
-        "-- {mit} bodies computed, {ohne} open.\n"
+        "-- {mit} bodies computed, {ohne} open, {} derived.\n",
+        abgeleitet.len()
     ));
     out
 }

@@ -7,7 +7,7 @@
 //!
 //! | # | the attempt | what refused it | what the refusal did NOT say |
 //! |---|---|---|---|
-//! | 1 | no `effects` at all | `E001` | what the clause LOOKS like |
+//! | 1 | no `effects` at all | `E001` (bodiless; a derivable body is derived since lane 191) | what the clause LOOKS like |
 //! | 2 | `effects {}` | `P014` | that `pure` is the word for "none" |
 //! | 3 | `effects pure` | `P001` | that `effects` takes a BRACE LIST |
 //! | 4 | `u32 + u32 -> u64` | `M104` | that the width is the OPERANDS' |
@@ -43,8 +43,13 @@ const HINWEISE: &[(&str, &str)] = &[
 ];
 
 /// The poison file each hint was measured on, in the order of the eight attempts.
+///
+/// **Lane 191:** `580` derived its clause and went green — a derivable
+/// omission needs no hint at all. The `E001` shape note still fires where
+/// the omission stays an error (a declaration without a body), so the site
+/// moves to `740`, whose `extern` edge falls with `E001` by design.
 const STELLEN: &[(&str, &str)] = &[
-    ("E001", "580-wirkungsklausel-fehlt.gab"),
+    ("E001", "740-stumm-edge-pinned.gab"),
     ("P014", "581-wirkungsliste-leer.gab"),
     ("P001-brace", "582-wirkung-ohne-klammern.gab"),
     ("M104", "583-summe-verlaesst-die-breite.gab"),

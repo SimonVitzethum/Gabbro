@@ -291,9 +291,24 @@ fn erhebe_kantenbuch(baum: &Programm, g: &crate::aufrufgraph::Graph) -> Kantenbu
 /// elaborator that WRITES the line has to write those, because the caller wants to see what
 /// happens to his pointer.
 pub fn leite_ab(baum: &Programm, weit: bool) -> Ableitung {
-    let g = crate::aufrufgraph::erhebe(baum);
+    let g = crate::aufrufgraph::erhebe_roh(baum);
+    leite_ab_mit(baum, weit, &g)
+}
+
+/// **The same derivation over an already-built graph.**
+///
+/// `aufrufgraph::erhebe` fills omitted declarations from this very fixpoint
+/// (lane 191: an omitted clause is derived, not demanded), so it cannot call
+/// `leite_ab` — which builds its graph with `erhebe` — without recursing.
+/// The structure-only `erhebe_roh` breaks the circle: the graph carries the
+/// edges, this function the sets.
+pub fn leite_ab_mit(
+    baum: &Programm,
+    weit: bool,
+    g: &crate::aufrufgraph::Graph,
+) -> Ableitung {
     let (konstanten, weltnamen) = crate::wirkungen::welt_und_konstanten(baum);
-    let buch = erhebe_kantenbuch(baum, &g);
+    let buch = erhebe_kantenbuch(baum, g);
 
     // **What each body does by itself** — and for a function without one, what it declares.
     let mut eigen: BTreeMap<String, BTreeMap<String, Weg>> = Default::default();
@@ -482,6 +497,80 @@ pub fn leite_ab(baum: &Programm, weit: bool) -> Ableitung {
     }
 
     Ableitung { je, runden, verbreitert, abgebrochen }
+}
+
+/// **Lane 191: carry the derived sets back into the call graph.**
+///
+/// An omitted `effects` clause is derived from the body and treated exactly
+/// like a written one by every pass. Every pass reads the callee side through
+/// `Graph::eigen`/`hat_effects` (`huelle`, `huelle_der_gerufenen`), so the
+/// fill stands here, once, instead of in every reader (W7): for each
+/// Block-bodied function WITHOUT a written clause, `eigen` becomes the
+/// derived set and `hat_effects` its completeness. Written clauses,
+/// bodiless functions and graph-only nodes are untouched — a written line
+/// stays the enforced bound, and the edge of the checked world stays one.
+///
+/// Runs `leite_ab_mit` over the graph it fills — never `leite_ab`, which
+/// would build a fresh graph through `erhebe` and recurse.
+pub fn fuelle_abgeleitete_in(baum: &Programm, g: &mut crate::aufrufgraph::Graph) {
+    let ab = leite_ab_mit(baum, true, g);
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        if f.effects.is_some() {
+            return;
+        }
+        // **No fill for `spec fn`:** a spec carries no runtime effect, so its
+        // body — block or predicate — derives nothing. Its callers keep the
+        // honest third state (`E009`) exactly as before.
+        if f.klasse == Some(FnKlasse::Spec) {
+            return;
+        }
+        if !matches!(f.rumpf, FnRumpf::Block(_)) {
+            return;
+        }
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let Some(a) = ab.je.get(&key) else {
+            return;
+        };
+        let Some(k) = g.knoten.get_mut(&key) else {
+            return;
+        };
+        k.eigen = a.wirkungen.clone();
+        k.hat_effects = a.unvollstaendig.is_none();
+    });
+}
+
+/// **Lane 191: what the callees promise beyond the deeds.**
+///
+/// The fixpoint settles the deeds; the graph hull still carries what the
+/// callees DECLARE. A hull entry no derived entry covers is padding the
+/// derivation must not inherit — an over-declared callee bequeathing its
+/// width to a caller that never earned it. `None` where everything is
+/// covered, the uncovered promise otherwise. Read twice — by the refusal
+/// (`N305` in `wirkungen.rs`) and by the view (`abgeleitet.rs`) — written
+/// once, here.
+pub fn deckungsluecke(
+    abgeleitet: &std::collections::BTreeSet<String>,
+    h: &crate::aufrufgraph::Huelle,
+) -> Option<String> {
+    for wirkung in &h.wirkungen {
+        let (_, ort) = crate::wirkungen::trenne(wirkung.as_str());
+        if ort.is_empty() {
+            continue;
+        }
+        if !abgeleitet
+            .iter()
+            .any(|e| crate::wirkungen::deckt_wirkung(e.as_str(), wirkung.as_str()))
+        {
+            return Some(format!(
+                "a callee promises `{wirkung}`, and the derived set covers it nowhere — \
+                 write the clause wider than the deeds, or the callee narrower"
+            ));
+        }
+    }
+    None
 }
 
 // =======================================================================================

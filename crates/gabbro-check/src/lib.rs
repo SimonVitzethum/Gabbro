@@ -68,6 +68,10 @@ pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **Lane 191 -- the derived contract as a view** (lever 1 of
+/// `PLAN-EINFACHHEIT.md`). Owns no refusal, only the register of what the
+/// checker derives per function: `gabbro abgeleitet` reads it.
+pub mod abgeleitet;
 /// **The `syscall` declaration (PLAN-SYSCALL.md, lane S5).** The register map,
 /// the errno decoding and the machine/counterpart questions -- the call
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and

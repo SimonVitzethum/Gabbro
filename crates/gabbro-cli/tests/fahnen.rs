@@ -1,7 +1,7 @@
 //! **Every FLAG has an ENGLISH first name too -- and a guardian holds it for the flag
 //! nobody has written yet.**
 //!
-//! `erstnamen.rs` next door holds the twelve sub-command pairs that EXIST. It cannot hold the
+//! `erstnamen.rs` next door holds the fourteen sub-command pairs that EXIST. It cannot hold the
 //! thirteenth, and `messung/ERSTNAMEN.md` §5 said so about itself on the day it was written:
 //!
 //! > *"Kein Waechter prueft, dass ein NEUER Unterbefehl einen englischen Erstnamen bekommt --
@@ -238,7 +238,7 @@ const FAHNEN: &[Fahne] = &[
 
 /// **Every sub-command arm of the dispatch, English name first.**
 ///
-/// `erstnamen.rs` carries twelve pairs and drives them; this carries ALL arms, because the
+/// `erstnamen.rs` carries fourteen pairs and drives them; this carries ALL arms, because the
 /// question here is completeness against the source rather than behaviour.
 ///
 /// > **Two pairs were missing from the hand-written list next door, and reading the source
@@ -257,6 +257,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["k-condition", "k-bedingung"],
     &["effects", "wirkungen"],
     &["costs", "kosten"],
+    &["derived", "abgeleitet"],
     &["alias"],
     &["contexts", "kontexte"],
     &["obligations", "pflichten"],
@@ -289,6 +290,7 @@ const DEUTSCH: &[&str] = &[
     "paesse", "ursprung", "sperrrang", "einheit", "trocken", "hilfe",
     // the sub-command second names
     "pruefe", "pruefen", "bau", "bedingung", "wirkungen", "kosten", "kontexte", "pflichten",
+    "abgeleitet",
     "blindstellen", "zeugnis", "zeremonie", "schablonen", "annahmen", "fragmente",
     // what a next flag would plausibly reach for
     "alle", "jede", "jeder", "jedes", "ohne", "nur", "auch", "und", "oder", "nicht", "kein",
@@ -662,7 +664,7 @@ fn jeder_fahnen_erstname_tut_dasselbe_wie_sein_zweitname() {
 /// **The two pairs `PAARE` never drove.**
 ///
 /// `jeder_unterbefehl_der_quelle_steht_im_register` proves they EXIST; it does not prove the
-/// two spellings do the same thing. `erstnamen.rs` drives twelve pairs and these are not
+/// two spellings do the same thing. `erstnamen.rs` drives fourteen pairs and these are not
 /// among them -- `effects|wirkungen` stands in no table at all, and `build|bau` was filed
 /// under "English from the start". **So until today nothing measured that `gabbro wirkungen`
 /// and `gabbro effects` are one command.**

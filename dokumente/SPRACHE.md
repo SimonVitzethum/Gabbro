@@ -957,15 +957,23 @@ fndecl = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
          [ "requires"  predlist ]
          [ "ensures"   predlist ]
          [ "maintains" identlist ]
-         [ "effects"   "{" efflist "}" ]        (* PFLICHT ausser bei spec fn *)
-         [ "costs"     "<=" expr "ops" ]
+         [ "effects"   "{" efflist "}" ]        (* derived where a body settles it; demanded where none stands *)
+         [ "costs"     "<=" expr "ops" ]        (* never demanded; `gabbro kosten` counts the body *)
          [ "by"        inductlist ]
          [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
          ( block | "=" pred ";" | ";" ) ;
 ```
 
-**`effects` is obligatory and not fail-open**; whoever touches nothing writes `effects { pure }`,
-and that is checked.
+**`effects` is not fail-open.** Where the body settles the hull, an omitted
+clause is derived and checked exactly like a written one; whoever touches
+nothing derives `effects { pure }`. A written clause is the enforced bound:
+the body must stay inside it. Where nothing settles — no body (`extern`,
+`prim`), an unresolvable edge, a callee promising more than the deeds cover —
+the omission is refused with the reason (`N305`). An omitted `costs` is never
+refused: it is not a promise, so there is nothing to hold — what the body
+costs is shown by `gabbro kosten`, and a written bound stays the bound the
+body is held against (`K001`). Neither omission changes the meaning of a
+program that writes its clauses.
 
 **`costs` counts operations, and the unit is defined:** 1 op = one Gabbro primitive (assignment,
 arithmetic operation, load, store; a call counts the declared `costs` of the callee; a traversal

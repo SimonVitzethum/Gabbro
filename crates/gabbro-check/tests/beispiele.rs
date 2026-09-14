@@ -92,11 +92,45 @@ fn jedes_beispiel_geht_sauber_durch() {
     }
 }
 
+/// **Lane 191: four omissions the derivation settles — and the test pins the
+/// silence, not the old code.**
+///
+/// `04`, `580`, `700` and `701` carry `-- erwartet: E001` in their frozen first
+/// line: the verdict before this lane. Their bodies derive since lane 191, so
+/// the checker stays silent over them now (the omission that stays a refusal
+/// is pinned at `740` with `E001` and at `968` with `N305`). Asserting the
+/// stale code here would forbid the widening; asserting nothing would pay a
+/// silent checker with a green corpus. So these four assert the other side:
+/// no error at all. `MUSE-REPORT-191.md` books the flip.
+const ABGELEITET_STATT_E001: &[&str] = &[
+    "04-ohne-wirkungen.gab",
+    "580-wirkungsklausel-fehlt.gab",
+    "700-lesen-ohne-klausel.gab",
+    "701-rein-ohne-klausel.gab",
+];
+
 #[test]
 fn jedes_gift_faellt_mit_seinem_code() {
     for pfad in dateien(Some("gift")) {
         let quelle =
             std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+        let dateiname = pfad
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("?");
+        if ABGELEITET_STATT_E001.contains(&dateiname) {
+            let (codes, bericht, name) = absagen_von(&pfad);
+            let fehler: Vec<&str> = codes
+                .iter()
+                .filter(|(_, s)| *s == Stufe::Fehler)
+                .map(|(c, _)| *c)
+                .collect();
+            assert!(
+                fehler.is_empty(),
+                "{name} derives its omitted clause since lane 191 and must stay silent,                  fällt aber mit {fehler:?}:\n{bericht}"
+            );
+            continue;
+        }
         let erwartet = quelle
             .lines()
             .next()

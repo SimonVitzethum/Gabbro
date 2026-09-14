@@ -45,12 +45,30 @@ use std::collections::{HashMap, HashSet};
 
 use crate::umgebung::{Umgebung, qualifiziere};
 
-/// Purity of a declared function: exactly `effects { pure }`.
-fn is_pure(decl: &FnDecl) -> bool {
+/// Purity of a declared function: exactly `effects { pure }` — or, since
+/// lane 191, an omitted clause over a settled, empty derivation (`rein`).
+/// A derived set with any deed in it is not pure, and neither is a lower
+/// bound: purity is the strongest promise, and only a settled empty set
+/// carries it.
+fn is_pure(decl: &FnDecl, key: &str, rein: &HashSet<String>) -> bool {
     match &decl.effects {
         Some(w) => w.liste.len() == 1 && matches!(w.liste[0].art, WirkungArt::Rein),
-        None => false,
+        None => rein.contains(key),
     }
+}
+
+/// **Lane 191: the settled-empty derivations, by qualified key.**
+/// See `is_pure`: purity travels as a settled empty set, never as a bound.
+fn reine(baum: &Programm) -> HashSet<String> {
+    let ab = crate::ableitung::leite_ab(baum, true);
+    ab.je
+        .iter()
+        .filter(|(_, a)| {
+            a.unvollstaendig.is_none()
+                && a.wirkungen.iter().all(|w| w.as_str() == "pure")
+        })
+        .map(|(k, _)| k.clone())
+        .collect()
 }
 
 /// The single return expression of a `const fn`, if it has that shape.
@@ -160,6 +178,7 @@ fn hull_expr(
     visited: &mut HashSet<Node>,
     stack: &mut Vec<Node>,
     out: &mut Hull,
+    rein: &HashSet<String>,
 ) {
     for x in crate::alle_ausdruecke(e) {
         match &x.art {
@@ -168,7 +187,8 @@ fn hull_expr(
                 let Some((func_module, decl)) = index.function(env, from, &path.text()) else {
                     continue;
                 };
-                if !is_pure(decl) {
+                let schluessel = qualifiziere(func_module, &decl.name.text);
+                if !is_pure(decl, &schluessel, rein) {
                     out.impure.push(r.span);
                     continue;
                 }
@@ -176,7 +196,7 @@ fn hull_expr(
                     continue;
                 }
                 let key = qualifiziere(func_module, &decl.name.text);
-                hull_func(env, index, &key, visited, stack, out);
+                hull_func(env, index, &key, visited, stack, out, rein);
             }
             ExprArt::Ort(o) => {
                 if !o.suffixe.is_empty() || params.contains(&o.basis.text) {
@@ -186,7 +206,7 @@ fn hull_expr(
                     continue;
                 };
                 let key = qualifiziere(const_module, &o.basis.text);
-                hull_const(env, index, &key, visited, stack, out);
+                hull_const(env, index, &key, visited, stack, out, rein);
             }
             _ => {}
         }
@@ -200,6 +220,7 @@ fn hull_const(
     visited: &mut HashSet<Node>,
     stack: &mut Vec<Node>,
     out: &mut Hull,
+    rein: &HashSet<String>,
 ) {
     let node = Node::Const(name.to_string());
     if stack.contains(&node) {
@@ -212,7 +233,7 @@ fn hull_const(
     stack.push(node);
     if let Some((const_module, decl)) = index.consts.get(name) {
         let params = HashSet::new();
-        hull_expr(env, index, const_module, &decl.wert, &params, visited, stack, out);
+        hull_expr(env, index, const_module, &decl.wert, &params, visited, stack, out, rein);
     }
     stack.pop();
 }
@@ -224,6 +245,7 @@ fn hull_func(
     visited: &mut HashSet<Node>,
     stack: &mut Vec<Node>,
     out: &mut Hull,
+    rein: &HashSet<String>,
 ) {
     let node = Node::Func(name.to_string());
     if stack.contains(&node) {
@@ -245,7 +267,7 @@ fn hull_func(
                 .iter()
                 .map(|p| p.name.text.clone())
                 .collect();
-            hull_expr(env, index, func_module, body, &params, visited, stack, out);
+            hull_expr(env, index, func_module, body, &params, visited, stack, out, rein);
         }
     }
     stack.pop();
@@ -326,6 +348,7 @@ fn check_scalar(
     init: &Expr,
     target_span: Span,
     absagen: &mut Absagen,
+    rein: &HashSet<String>,
 ) {
     if has_float(init) || has_bitneg(init) {
         return;
@@ -334,7 +357,7 @@ fn check_scalar(
     let mut stack = Vec::new();
     let mut hull = Hull::default();
     let params = HashSet::new();
-    hull_expr(env, index, init_module, init, &params, &mut visited, &mut stack, &mut hull);
+    hull_expr(env, index, init_module, init, &params, &mut visited, &mut stack, &mut hull, rein);
     if !hull.cycle_through_const.is_empty() {
         for sp in hull.cycle_through_const {
             absagen.schiebe(
@@ -379,6 +402,7 @@ fn check_scalar(
 fn check_table(
     env: &Umgebung,
     index: &DeclIndex,
+    rein: &HashSet<String>,
     name: &str,
     init_module: &str,
     elements: &[Expr],
@@ -395,7 +419,7 @@ fn check_table(
         if has_float(e) || has_bitneg(e) {
             continue;
         }
-        hull_expr(env, index, init_module, e, &params, &mut visited, &mut stack, &mut hull);
+        hull_expr(env, index, init_module, e, &params, &mut visited, &mut stack, &mut hull, rein);
     }
     if !hull.cycle_through_const.is_empty() {
         for sp in hull.cycle_through_const {
@@ -570,13 +594,16 @@ fn check_eintrag(
 pub fn pass(tree: &Programm, absagen: &mut Absagen) {
     let env = Umgebung::sammle(tree);
     let index = DeclIndex::collect(tree);
+    // **Lane 191:** the settled-empty derivations — `is_pure` counts them
+    // like a written `effects { pure }` (see there).
+    let rein = reine(tree);
     crate::fuer_jedes_item_im_modul(tree, &mut |item, module| {
         if let ItemArt::Konst(k) = &item.art {
-            check_const(&env, &index, module, k, absagen);
+            check_const(&env, &index, &rein, module, k, absagen);
         }
         if let ItemArt::Tabelle(t) = &item.art {
             for k in &t.konstanten {
-                check_const(&env, &index, module, k, absagen);
+                check_const(&env, &index, &rein, module, k, absagen);
             }
         }
     });
@@ -586,6 +613,7 @@ pub fn pass(tree: &Programm, absagen: &mut Absagen) {
 fn check_const(
     env: &Umgebung,
     index: &DeclIndex,
+    rein: &HashSet<String>,
     module: &str,
     k: &KonstDecl,
     absagen: &mut Absagen,
@@ -602,6 +630,7 @@ fn check_const(
         check_table(
             env,
             index,
+            rein,
             &k.name.text,
             module,
             elements,
@@ -620,6 +649,7 @@ fn check_const(
         &k.wert,
         k.name.span,
         absagen,
+        rein,
     );
 }
 

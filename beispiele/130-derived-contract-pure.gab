@@ -1,0 +1,14 @@
+-- 130 -- **Lane 191: the omitted clause is derived, not demanded.**
+--
+-- `add` declares neither `effects` nor `costs`. The checker derives both
+-- from the body — `effects { pure }` and the price of one addition — and
+-- treats them exactly like written lines (`gabbro abgeleitet` prints them,
+-- `gabbro kosten` counts them). A written bound stays the enforced bound:
+-- promising less than the body costs still falls with `K001`.
+module beispiel130 {
+
+impl fn add(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000 {
+    return a + b;
+}
+
+}

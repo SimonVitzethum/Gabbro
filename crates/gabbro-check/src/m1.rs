@@ -191,6 +191,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         fehlerkanal: None,
         geraete: crate::m3::geraetetabelle(baum),
         griffe: std::collections::BTreeMap::new(),
+        abgeleitet: crate::ableitung::leite_ab(baum, true),
     };
     p.programm(baum);
     (p.zaehlung, p.fremd, p.zeigerverf)
@@ -328,6 +329,11 @@ struct Pruefer<'a> {
     /// Which local name carries which device, for the body this pass is inside -- again
     /// `m3::griffe_von` and not a second resolution.
     griffe: std::collections::BTreeMap<String, String>,
+    /// **Lane 191: the derived effects, read once for the whole pass.**
+    /// `ensures_pruefen` holds a postcondition against the places the
+    /// function writes *according to `effects`* — where the clause is
+    /// omitted over a settled derivation, the derived writes stand in.
+    abgeleitet: crate::ableitung::Ableitung,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -5877,11 +5883,13 @@ impl<'a> Pruefer<'a> {
     /// **eine Nachbedingung, die kein `result` nennt und keinen geschriebenen Ort, kann die
     /// Funktion nicht HERSTELLEN.** Sie ist dann ein `requires` oder ein `maintains` am
     /// falschen Platz.
-    fn ensures_pruefen(&mut self, f: &FnDecl) {
-        if f.ensures.is_empty() {
-            return;
-        }
-        let geschrieben: Vec<String> = f
+    ///
+    /// **Lane 191: the written places, or the derived ones.** `M111` and the
+    /// `M114` hint below read what the function writes *according to
+    /// `effects`* — where the clause is omitted over a settled derivation,
+    /// the derived writes stand in, exactly like a written line.
+    fn geschrieben_or_abgeleitet(&self, f: &FnDecl) -> Vec<String> {
+        let mut geschrieben: Vec<String> = f
             .effects
             .as_ref()
             .map(|w| {
@@ -5896,6 +5904,28 @@ impl<'a> Pruefer<'a> {
                     .collect()
             })
             .unwrap_or_default();
+        if f.effects.is_none() {
+            let key = crate::umgebung::qualifiziere(&self.modul, &f.name.text);
+            if let Some(a) = self.abgeleitet.je.get(&key) {
+                if a.unvollstaendig.is_none() {
+                    for w in &a.wirkungen {
+                        let (verb, ort) = crate::wirkungen::trenne(w.as_str());
+                        if (verb == "writes" || verb == "publishes") && !ort.is_empty() {
+                            geschrieben.push(
+                                ort.split(['.', '[', '-']).next().unwrap_or(ort).to_string(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        geschrieben
+    }
+    fn ensures_pruefen(&mut self, f: &FnDecl) {
+        if f.ensures.is_empty() {
+            return;
+        }
+        let geschrieben = self.geschrieben_or_abgeleitet(f);
         for p in &f.ensures {
             let mut namen = Vec::new();
             sammle_namen_pred(p, &mut namen);
@@ -6130,21 +6160,7 @@ impl<'a> Pruefer<'a> {
             );
             return;
         }
-        let geschrieben: Vec<String> = f
-            .effects
-            .as_ref()
-            .map(|w| {
-                w.liste
-                    .iter()
-                    .filter_map(|x| match &x.art {
-                        WirkungArt::Schreibt(o) | WirkungArt::Veroeffentlicht(o) => {
-                            Some(o.basis.text.clone())
-                        }
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        let geschrieben = self.geschrieben_or_abgeleitet(f);
         for i in &f.maintains {
             if !self.spezifikationen.contains_key(&i.text) {
                 self.absagen.schiebe(

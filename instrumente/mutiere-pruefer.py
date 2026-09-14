@@ -775,13 +775,14 @@ MUTATIONEN = [
     Mutation(
         "effects-fail-open",
         "wirkungen.rs",
-        "            if f.klasse != Some(FnKlasse::Spec) {\n"
-        "                absagen.schiebe(\n                    Absage::fehler(\n"
-        "                        \"E001\",",
-        "            if false && f.klasse != Some(FnKlasse::Spec) {\n"
-        "                absagen.schiebe(\n                    Absage::fehler(\n"
-        "                        \"E001\",",
-        "SPRACHE.md 7 -- `effects` ist wieder fail-open",
+        "                } else {\n"
+        "                    absagen.schiebe(\n                        Absage::fehler(\n"
+        "                            \"E001\",",
+        "                } else if false {\n"
+        "                    absagen.schiebe(\n                        Absage::fehler(\n"
+        "                            \"E001\",",
+        "SPRACHE.md 7 -- `effects` ist wieder fail-open (lane 191: am Rand ohne Rumpf; "
+        "die Rumpfhaelfte der Auslassung traegt `N305`)",
     ),
     Mutation(
         "kapazitaet-egal",
