@@ -616,3 +616,34 @@ def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | _ => .ok (Expr.und x y)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
+
+/-
+  CUTS: what is not proved here.
+
+  1. This file builds the generic declaration `declOf` (Fin carriers)
+     and lowers sides and `ensures` (`lowIdx` through `lowEnsList`).
+     NOT yet built: statement lowering (`assign`/`call`), `RufPasst`
+     assembly, bodies, `lowerAllg`, the 104/108 fragment and footprint
+     pins, the data agreement, the real-text lexer pin and the chaining
+     theorem. Those remain open work.
+  2. `beq`-style soundness is proved for nothing here; there are no
+     `beq` lemmas in this file.
+  3. Elaboration lessons (for the lane that continues): pin `D`
+     explicitly on every constructor over the Fin carriers
+     (`Expr.slot (D := declOf u)` etc.), since `D` never unifies out
+     of a stuck `(declOf u).Tab` projection; keep struct literals on
+     one line (a trailing comma at end of line misparses); a term
+     continuation line must not start with `(` (it parses as a tactic).
+-/
+
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.notEmpty_ne_nil
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.sigAt_get
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.params_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.erg_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.haelt_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.ende_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.rangeO_some
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.typAt_of
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.tabNr_some
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos_lt
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos_get

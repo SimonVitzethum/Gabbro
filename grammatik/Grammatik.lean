@@ -185,3 +185,4 @@ import Grammatik.ExportSperre
 import Grammatik.Parser.ElementTief
 import Grammatik.Parser.ElementTiefProben
 import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.UebersetzeAllg
