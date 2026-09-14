@@ -219,3 +219,4 @@ import Grammatik.Verklemmung
 import Grammatik.MehrfadenZeuge
 import Grammatik.MehrfadenLauf
 import Grammatik.ProbeD
+import Grammatik.ZielOrtGrund

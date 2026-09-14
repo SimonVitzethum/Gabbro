@@ -38,6 +38,7 @@
 -/
 import Grammatik.ZielOrtMehrfaden
 import Grammatik.Durchgaenge
+import Grammatik.ZielOrtEinfaden
 
 namespace Gabbro.Grammatik
 
@@ -106,6 +107,102 @@ theorem kopfS_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
         (fun O' R U σ => semH_dannRet S O' U passes R e hperm rest k σ ρ)⟩
 
 end Ende
+
+/-! ## 2a. A start function may not end in a reason
+
+A reason return (`retGrund`) hands a failure to the CALLER, which the
+typing forces to handle it (`bindCallElse` with its `else` block; a call
+that ignores reasons needs `gruende = 0`). A thread's start frame has no
+caller: a reason there is a failure nobody handles, no `ensures` is
+claimed for it (`rufAt` checks neither `ensures` nor invariants at a
+reason return), and `StartEndeG` said nothing (verdict
+`URTEIL-MUSE-2026-09-14.md` §5: a start function with `ensures false`
+whose body fails with a reason met every premise).
+
+**The decision: start functions declare no reasons** (`StartOhneGrund`,
+decidable per start). Then no start frame can stand at a reason return --
+`retGrund` needs an element of `Fin (gruende f)` and the bottom frame of a
+thread always runs its start function (`wurzelFn_erreichbar`) -- so every
+completion of a start function is a VALUE return, where `StartEndeG`
+checks `ensures` and the owed invariants (`keinStartGrundG`; with
+`FertigG`: `fertig_wert`, `Verklemmung.lean`). The alternative -- let a
+reason return of a start function check its owed invariants -- would
+demand at a thread's root what `rufAt` does not demand of any other reason
+return, and still leave its `ensures` unchecked. -/
+
+/-- **The start functions declare no reasons.** -/
+def StartOhneGrund (init : Faden → Σ f : D.Fn, Env D (D.params f)) : Prop :=
+  ∀ t, D.gruende (init t).1 = 0
+
+/-- The function of a thread's bottom frame. -/
+def wurzelFn (z : RufFadenG D) : D.Fn := (z.stapel.getLast?.getD z.kopf).f
+
+/-- No rule of G changes the function of the bottom frame. -/
+theorem wurzelFn_schritt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschineG D}
+    {u : Faden} (hs : RufSchrittG P O pa M u M') : wurzelFn (M'.faeden u) = wurzelFn (M.faeden u) := by
+  rcases schrittMerk hs with ⟨hst, hf, _⟩ | ⟨g, c', rho, s0, hst, hcf, _, _⟩ |
+      ⟨caller, rst, hpop, hst, hf, _⟩
+  · unfold wurzelFn; rw [hst]
+    cases (M.faeden u).stapel.getLast? with
+    | none => exact hf
+    | some F => rfl
+  · unfold wurzelFn; rw [hst, List.getLast?_cons]
+    cases (M.faeden u).stapel.getLast? with
+    | none => exact hcf
+    | some F => rfl
+  · unfold wurzelFn; rw [hst, hpop, List.getLast?_cons]
+    cases rst.getLast? with
+    | none => exact hf
+    | some F => rfl
+
+/-- **The bottom frame of every thread runs its start function**, on every
+    reachable machine. -/
+theorem wurzelFn_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Speicher D}
+    {init : Faden → Σ f : D.Fn, Env D (D.params f)} {M : RufMaschineG D}
+    (hr : RufErreichbarG P O pa (RufStartG P sp init) M) : ∀ t, wurzelFn (M.faeden t) = (init t).1 := by
+  induction hr with
+  | start => intro t; rw [start_faden]; rfl
+  | schritt M M' u _ hs ih =>
+      intro t
+      by_cases htu : t = u
+      · subst htu
+        rw [wurzelFn_schritt hs]
+        exact ih t
+      · rw [rufSchrittG_fremd hs t htu]
+        exact ih t
+
+/-- The residue stands at a reason return (`retGrund`) a pop would fire on:
+    as the end block, before the rest of an end block, or before the rest
+    of a block. -/
+def GrundKopf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) : Prop :=
+  ∃ (g : Fin V.gruende) (hperm : Λ.Perm V.ende),
+    r = .ende (.retGrund g hperm) ∨ (∃ rest, r = .ende (.cons (.retGrund g hperm) rest)) ∨
+    (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
+      r = .dann (.cons (.retGrund g hperm) rest) k)
+
+/-- **No start frame stands at a reason return.** -/
+def KeinStartGrundG (M : RufMaschineG D) : Prop :=
+  ∀ (t : Faden), (M.faeden t).stapel = [] →
+    ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
+      (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+      (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ → ¬ GrundKopf r
+
+/-- **Start functions without reasons never end in one**, on every
+    reachable machine. -/
+theorem keinStartGrundG {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Speicher D}
+    {init : Faden → Σ f : D.Fn, Env D (D.params f)} (hG : StartOhneGrund init) {M : RufMaschineG D}
+    (hr : RufErreichbarG P O pa (RufStartG P sp init) M) : KeinStartGrundG M := by
+  intro t hst l Γ Λ ρ r _ ⟨g, _, _⟩
+  have hw := wurzelFn_erreichbar hr t
+  unfold wurzelFn at hw
+  rw [hst] at hw
+  have h0 : (vertragVon D (M.faeden t).kopf.f).gruende = 0 := by
+    show D.gruende (M.faeden t).kopf.f = 0
+    have e : (M.faeden t).kopf.f = (init t).1 := hw
+    rw [e]
+    exact hG t
+  have hg : g.val < (vertragVon D (M.faeden t).kopf.f).gruende := g.2
+  omega
 
 /-! ## 3. The theorems at one budget (lemmas) -/
 
@@ -202,21 +299,25 @@ theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (hFS : ∀ f, FussS P S lok f) (hLok : ∀ passes : Nat, LokOk P O passes lok sp init)
     (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hGrund : StartOhneGrund init) :
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
-      InvAmOrtG P M) ∧ StartEndeG P M :=
-  fun passes => ziel_ort_ende_bei P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
-    (hLok passes) (hK passes) hStart hSstart hex (hI passes)
+      InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
+  fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
+    ziel_ort_ende_bei P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+    (hLok passes) (hK passes) hStart hSstart hex (hI passes) M hr
 
 /-- **THE FLAGSHIP (2026-09-14, budget-quantified): several active threads
     with thread-local carriers, lock invariants, table invariants, and the
     start functions' completion, over EVERY `forever` budget.** The
-    premises of `ziel_ort_mehrfaden` (obligations at every budget); the
-    conclusion of `ziel_ort_mehrfaden` AND `StartEndeG`, on the machines of
-    every budget. -/
+    premises of `ziel_ort_mehrfaden` (obligations at every budget) and
+    start functions without reasons (`StartOhneGrund`); the conclusion of
+    `ziel_ort_mehrfaden` AND `StartEndeG` AND `KeinStartGrundG` (every
+    completion of a start function is a value return, where `StartEndeG`
+    checks it), on the machines of every budget. -/
 theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
@@ -228,14 +329,16 @@ theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (hFuss : ∀ f, FussS P S (lokK P K) f)
     (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hGrund : StartOhneGrund init) :
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
-      InvAmOrtG P M) ∧ StartEndeG P M :=
-  fun passes => ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll
-    hFrag hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes)
+      InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
+  fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
+    ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll
+    hFrag hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes) M hr
 
 /-- **`ziel_ort_sperre_ende`, over every budget** (footprint check
     `fussSperreB`). -/
@@ -247,16 +350,20 @@ theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
     (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hGrund : StartOhneGrund init) :
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
-      InvAmOrtG P M) ∧ StartEndeG P M :=
-  fun passes => ziel_ort_sperre_ende_bei P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
-    hFuss (hK passes) hStart hSstart hex (hI passes)
+      InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
+  fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
+    ziel_ort_sperre_ende_bei P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
+    hFuss (hK passes) hStart hSstart hex (hI passes) M hr
 
 #print axioms Gabbro.Grammatik.kopfS_ret
+#print axioms Gabbro.Grammatik.wurzelFn_erreichbar
+#print axioms Gabbro.Grammatik.keinStartGrundG
 #print axioms Gabbro.Grammatik.ziel_ort_ende_bei
 #print axioms Gabbro.Grammatik.ziel_ort_ende
 #print axioms Gabbro.Grammatik.ziel_ort_mehrfaden_ende

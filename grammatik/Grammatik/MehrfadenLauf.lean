@@ -255,7 +255,7 @@ theorem ziel_ort_mehrfaden_zeuge : ∃ Mb Mc Md : RufMaschineG mD,
   have hrd : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Md := .schritt _ _ _ hrc sd
   have h1d : Md.faeden 1 = Mb.faeden 1 := by
     rw [rufSchrittG_fremd sd 1 (by decide), rufSchrittG_fremd sc 1 (by decide)]
-  have hSE := (mP_zertifiziert 0 Md hrd).2 0
+  have hSE := (mP_zertifiziert 0 Md hrd).2.1 0
   rw [hGd.1] at hSE
   obtain ⟨hE, hI⟩ := hSE rfl false [] [] .nil (.ende (.ret .keine List.Perm.nil)) .keine rfl
     ⟨_, Or.inl rfl⟩

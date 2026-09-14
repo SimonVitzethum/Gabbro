@@ -329,10 +329,11 @@ theorem ewP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG zD),
       ((VertragAmOrtG ewP M ∧ SperrInvG (SperrInv.leer zD) M ∧ KeinLogikHaltG zO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG ewP zO passes M t M') ∧
-      InvAmOrtG ewP M) ∧ StartEndeG ewP M :=
+      InvAmOrtG ewP M) ∧ StartEndeG ewP M ∧ KeinStartGrundG M :=
   ziel_ort_sperre_ende ewP zO (axWahr zD) (SperrInv.leer zD) zFs zSp lInit zE0 zO_gut zO_lokal
     (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll ewP_fragmentG ewP_fussS
     (ewP_koerper _) ewP_start (fun _ => rfl) lInit_exklusiv (fun _ => invGutS_leer rfl)
+    (fun t => by by_cases ht : t = 0 <;> simp [lInit, ht] <;> rfl)
 
 /-- **WITNESS: the loop check is reached at budget `1`, and it passes BY
     THE THEOREM.** Two steps of thread 0 (`endeEntf`, `dannForever`) reach

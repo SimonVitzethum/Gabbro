@@ -651,6 +651,17 @@ theorem mInit_leer : ∀ t, mD.haelt (mInit t).1 = [] := by
 
 theorem mInit_exklusiv : StartExklusiv (D := mD) mInit := startExklusiv_ohne_haelt mInit mInit_leer
 
+/-- No start function declares a reason. -/
+theorem mInit_ohneGrund : StartOhneGrund (D := mD) mInit := by
+  intro t
+  unfold mInit
+  by_cases h0 : t = 0
+  · rw [if_pos h0]; rfl
+  · rw [if_neg h0]
+    by_cases h1 : t = 1
+    · rw [if_pos h1]; rfl
+    · rw [if_neg h1]; rfl
+
 theorem mSI_start : ∀ L, mSI.inv L mSp = true := fun _ => rfl
 
 def mE0 : Ereignis mD := .gibt ()
@@ -678,10 +689,10 @@ theorem mP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG mD),
       ((VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG mP mO passes M t M') ∧
-      InvAmOrtG mP M) ∧ StartEndeG mP M :=
+      InvAmOrtG mP M) ∧ StartEndeG mP M ∧ KeinStartGrundG M :=
   ziel_ort_mehrfaden_ende mP mO (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
     (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
-    mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle
+    mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle mInit_ohneGrund
 
 /-- **`mP_verklemmungsfrei` -- every premise of the deadlock theorem holds
     on the witness**: on every reachable machine, if every unfinished thread
@@ -719,11 +730,11 @@ theorem sP_ende_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG sD),
       ((VertragAmOrtG sP M ∧ SperrInvG sS M ∧ KeinLogikHaltG sO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG sP sO passes M t M') ∧ InvAmOrtG sP M) ∧
-      StartEndeG sP M :=
+      StartEndeG sP M ∧ KeinStartGrundG M :=
   ziel_ort_sperre_ende sP sO (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal
     (axVertragO_wahr sO) axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS
     (koerperGutS_alle sFs_voll sP_ohneEwig sP_koerper) sP_start
-    sS_start sInit_exklusiv (fun _ => invGutS_leer rfl)
+    sS_start sInit_exklusiv (fun _ => invGutS_leer rfl) (fun _ => rfl)
 
 #print axioms Gabbro.Grammatik.mP_mehrfaden
 #print axioms Gabbro.Grammatik.sP_ende_zertifiziert
