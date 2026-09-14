@@ -177,6 +177,26 @@ def RKern (n : Nat) : Prop :=
     12 * (groesse e + 1) + groesse e + 1 ≤ F →
     parsePrimary F (druckToks e ++ rest) = .ok (e, rest))
 
+-- A lawful `+`/`*` spelling names itself: the two cases of
+-- the widened `gutKern` bin-arm.
+theorem bin_is_pm : ∀ (o : String),
+    (strEq o "+" || strEq o "*") = true → o = "+" ∨ o = "*" := by
+  intro o h
+  simp only [Bool.or_eq_true] at h
+  obtain h | h := h
+  · exact Or.inl (strKlingt o "+" h)
+  · exact Or.inr (strKlingt o "*" h)
+
+-- The binary-inner parse for `*`: like `BKern`, but the inner
+-- operator consumes at the `parseMul` level. Same `+10` fuel
+-- (same twelve-strip count).
+def BKernStar (n : Nat) : Prop :=
+  ∀ (l r : SExpr) (W : List Token) (F : Nat),
+    groesse l + groesse r ≤ n → gutKern l = true → gutKern r = true →
+    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ F →
+    parseOr F (druckToks l ++ [.zeichen "*"] ++ druckToks r ++
+      [.zeichen ")"] ++ W) =
+      .ok (.bin "*" l r, [.zeichen ")"] ++ W)
 -- The binary-inner parse for `+`: a parenthesised `+`'s inside
 -- (`l + r` between the parens) with a general tail `W`. No follow
 -- premise: the tail behind `)` is never inspected. Fuel `+10`:
@@ -844,6 +864,22 @@ theorem opOder_paren : ∀ (T : List Token),
   rfl
 theorem opMul_paren : ∀ (T : List Token),
     opMul ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+-- Facts for the `*` inner trace: `parseMulL` consumes the
+-- concrete `*`, and a `*` follow is benign for the suffix and
+-- float tails (loop levels never see it -- it is consumed
+-- inside `parseMul`).
+theorem opMul_star_some : ∀ (T : List Token),
+    opMul ([.zeichen "*"] ++ T) = some ("*", T) := by
+  intro T
+  rfl
+theorem hrs_star : ∀ (T : List Token),
+    ruhigSuff ([.zeichen "*"] ++ T) = true := by
+  intro T
+  rfl
+theorem hrg_star : ∀ (T : List Token),
+    ruhigGleit ([.zeichen "*"] ++ T) = true := by
   intro T
   rfl
 theorem hrs_plus : ∀ (T : List Token),
@@ -1627,5 +1663,101 @@ theorem zeuge_kern_neg_rech : (match parseOr (brennstoff (.un "-" (.lit 3)))
     | .ok (.un "-" (.lit 3), [.ende]) => true
     | _ => false) = true := by
   decide
+
+-- The `*` inner trace (`BKernStar` from `RKern`): like
+-- `kernB_step`, but the inner operator consumes at the
+-- `parseMul` level -- `parseMul` runs `parseUnary` on `l`,
+-- `parseMulL` consumes `*` and `r`, stops at `)`, and every
+-- level above stops at `)`. Same `+10` fuel (same strip
+-- count); only the `parseUnary` leg of `RKern` is used.
+theorem kernB_step_star : ∀ (n : Nat), RKern n → BKernStar (n + 1) := by
+  intro n rkn l r W F hsum hgl hgr hF
+  obtain ⟨-, -, -, -, -, -, hUn, -⟩ := rkn
+  have hpos_l := groesse_pos l
+  have hpos_r := groesse_pos r
+  have hln : groesse l ≤ n := by omega
+  have hrn : groesse r ≤ n := by omega
+  simp only [List.append_assoc] at ⊢
+  -- The `parseAdd` core with `*` consumed inside `parseMul`.
+  have hAdd : ∀ (G4 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 6 ≤ G4 →
+      parseAdd G4 (druckToks l ++ ([.zeichen "*"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "*" l r, [.zeichen ")"] ++ W) := by
+    intro G4 hG4
+    have h41 : 1 ≤ G4 := by omega
+    obtain ⟨G5, rfl⟩ : ∃ G5, G4 = G5 + 1 := ⟨G4 - 1, by omega⟩
+    have h42 : 1 ≤ G5 := by omega
+    obtain ⟨G6, rfl⟩ : ∃ G6, G5 = G6 + 1 := ⟨G5 - 1, by omega⟩
+    have hUl := hUn l ([.zeichen "*"] ++
+      (druckToks r ++ ([.zeichen ")"] ++ W))) G6 hln hgl
+      (hrs_star _) (hrg_star _) (by omega)
+    have h43 : 1 ≤ G6 := by omega
+    obtain ⟨G6x, rfl⟩ : ∃ G6x, G6 = G6x + 1 := ⟨G6 - 1, by omega⟩
+    have hop := opMul_star_some (druckToks r ++ ([.zeichen ")"] ++ W))
+    have hUr := hUn r ([.zeichen ")"] ++ W) G6x hrn hgr
+      (hrs_paren W) (hrg_paren W) (by omega)
+    have h44 : 1 ≤ G6x := by omega
+    obtain ⟨G6y, rfl⟩ : ∃ G6y, G6x = G6y + 1 := ⟨G6x - 1, by omega⟩
+    have hstopM := opMul_paren W
+    have hstopA := stopAdd ([.zeichen ")"] ++ W) (hr_paren W)
+    simp only [parseAdd, parseMul, parseMulL, hUl, hop, hUr, hstopM] at ⊢
+    -- Four strips numeral-fold the loop fuel to `+ 3`, which no
+    -- equation fires on: unfold once more by explicit rewrite.
+    have h45 : G6y + 3 = (G6y + 2) + 1 := by omega
+    rw [h45] at ⊢
+    simp only [parseAddL, hstopA] at ⊢
+  -- Up the pass-through levels, each stopping at `)`.
+  have hBit : ∀ (G3 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 7 ≤ G3 →
+      parseBit G3 (druckToks l ++ ([.zeichen "*"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "*" l r, [.zeichen ")"] ++ W) := by
+    intro G3 hG3
+    have h31 : 1 ≤ G3 := by omega
+    obtain ⟨G4, rfl⟩ : ∃ G4, G3 = G4 + 1 := ⟨G3 - 1, by omega⟩
+    have hAdd' := hAdd G4 (by omega)
+    have h32 : 1 ≤ G4 := by omega
+    obtain ⟨G4x, rfl⟩ : ∃ G4x, G4 = G4x + 1 := ⟨G4 - 1, by omega⟩
+    have hstop := stopBit ([.zeichen ")"] ++ W) (hr_paren W)
+    simp only [parseBit, parseBitL, hAdd', hstop] at ⊢
+  have hCmp : ∀ (G2 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 8 ≤ G2 →
+      parseCmp G2 (druckToks l ++ ([.zeichen "*"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "*" l r, [.zeichen ")"] ++ W) := by
+    intro G2 hG2
+    have h21 : 1 ≤ G2 := by omega
+    obtain ⟨G3, rfl⟩ : ∃ G3, G2 = G3 + 1 := ⟨G2 - 1, by omega⟩
+    have hBit' := hBit G3 (by omega)
+    have hstop := opVgl_paren W
+    simp only [parseCmp, hBit', hstop] at ⊢
+  have hAnd : ∀ (G1 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 9 ≤ G1 →
+      parseAnd G1 (druckToks l ++ ([.zeichen "*"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "*" l r, [.zeichen ")"] ++ W) := by
+    intro G1 hG1
+    have h11 : 1 ≤ G1 := by omega
+    obtain ⟨G2, rfl⟩ : ∃ G2, G1 = G2 + 1 := ⟨G1 - 1, by omega⟩
+    have hCmp' := hCmp G2 (by omega)
+    have h12 : 1 ≤ G2 := by omega
+    obtain ⟨G2x, rfl⟩ : ∃ G2x, G2 = G2x + 1 := ⟨G2 - 1, by omega⟩
+    have hstop := opUnd_paren W
+    simp only [parseAnd, parseAndL, hCmp', hstop] at ⊢
+  have hOr : ∀ (G0 : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G0 →
+      parseOr G0 (druckToks l ++ ([.zeichen "*"] ++
+        (druckToks r ++ ([.zeichen ")"] ++ W)))) =
+        .ok (.bin "*" l r, [.zeichen ")"] ++ W) := by
+    intro G0 hG0
+    have h01 : 1 ≤ G0 := by omega
+    obtain ⟨G1, rfl⟩ : ∃ G1, G0 = G1 + 1 := ⟨G0 - 1, by omega⟩
+    have hAnd' := hAnd G1 (by omega)
+    have h02 : 1 ≤ G1 := by omega
+    obtain ⟨G1x, rfl⟩ : ∃ G1x, G1 = G1x + 1 := ⟨G1 - 1, by omega⟩
+    have hstop := opOder_paren W
+    simp only [parseOr, parseOrL, hAnd', hstop] at ⊢
+  exact hOr F hF
 
 end Gabbro.Grammatik.Parser
