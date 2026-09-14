@@ -423,7 +423,7 @@ fn main() -> std::process::ExitCode {
         // declaration, every body and every contract, plus the two decidable
         // checks (`programmImFragmentG`, `fussOrtGB`) as `example ... := by
         // decide`. Every surface form without a G counterpart is refused by
-        // NAME (`LG001`-`LG005`) -- never silently truncated. Like `lean`
+        // NAME (`LG001`-`LG007`) -- never silently truncated. Like `lean`
         // above, a unit with checker errors carries no export.
         "lean-g" => {
             if rest.is_empty() {
