@@ -49,7 +49,8 @@
                                                ist `Stmt.retires` (Marke weg, Annahme genannt)
     «F» f32/f64/rounded/finite                -> `Ty.fl`, `Block.gleit*` -- jede Rechnung
                                                gegen ihren Bereich, von der MASCHINE (IEEE ist
-                                               Annahme: `Hardware.ieee`)
+                                               Annahme `gleitkomma_ieee`, C-Seite; ein
+                                               Ergebnis ausserhalb ist `Logik.bereich`)
     «B37» order/advances                       -> `Res.marke m stufe`, `Stmt.advances`
     state/transition ueber Felder              -> `Stmt.uebergang` (die Vorstufe ist Logik)
     seit dem Abend des 2026-09-09 («SG-3»², «SG-16»², «SG-15»², «SG-13»², «SG-20», «SG-21»):
@@ -567,7 +568,8 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       Block l Γ Λ Λ'
   /-- Gleitkomma («F»): `let y = a op b;` mit erklaertem Bereich `lo .. hi` -- die Maschine
       rechnet (IEEE), das Ergebnis wird gegen den Bereich gehalten, und ein Ergebnis
-      ausserhalb (oder NaN, Unendlich) ist `Hardware.ieee`. -/
+      ausserhalb (oder NaN, Unendlich) ist `Logik.bereich` (since 2026-09-15, verdict F1:
+      the kernel IEEE model decides it from the program's values; was `Hardware.ieee`). -/
   | gleit (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- Ein Gleitkommaliteral `1.5 rounded` in seinem Bereich. -/

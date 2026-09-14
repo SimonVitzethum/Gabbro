@@ -2536,5 +2536,120 @@ and `register_ohne_traeger_konstant`: `propext`. No `sorry`, no new `axiom`, no
 - The liveness entries of §21 (`LaufzeitAnnahme`, `HardwareImAbschnitt`) are not yet in the
   ONE list or in `Ziel`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §§1-10 history above.)
+## 23. `GabbroZiel`, fourth round: floats are the user's logic, no wait cycle, the stops by kind (2026-09-15)
+
+The fourth independent Opus verdict (`URTEIL-OPUS-2026-09-15b.md`) found `GabbroZiel` to be
+the goal with named gaps, one of them NOT named: F1. This section is a reviewed diff of
+`Spec.lean` (and, for F1, of the sequential semantics), re-proved. Machine G's rules are
+unchanged.
+
+### 23.1 F1 (decisive): an out-of-range float is `logik bereich`, not `hardware ieee`
+
+A float result outside its declared range ended a body in `Hardware.ieee` for EVERY oracle:
+the kernel IEEE model (`gleitRechne`) decides it from the program's values. `KoerperGutS`
+constrains only returns and `logik` outcomes, so probe A behind the literal `2.0` declared in
+`0 .. 1` met (b), passed the concrete checker with `haupt` declared and running, and
+`gabbro_ziel` certified it.
+
+**Repair, in the model.** `Logik` gains `bereich`; `execBlock` (Semantik.lean) and
+`execBlockH` (SperreSem.lean) answer `.logik .bereich` where `gleit`, `gleitLit`, `gleitVon`
+fail `gleitPasst` (6 lines; `gleitNarrow` keeps its `else`). `Hardware.ieee` stays as a
+constructor and is no longer produced. **Why this and not a clause `≠ hardware ieee` in
+(b):** the range is the program's logic as a `state` pre-state is (`logik vorzustand`), so
+the existing clause "no `logik` outcome" of `KoerperGutS` covers it without a new
+obligation shape; and the replay already carries `logik` outcomes to the machine, so the
+CONCLUSION gains it as well. A new clause over `hardware ieee` would have left the
+conclusion's stop list untouched: `ZErgG` reads every hardware outcome as `sonst`, so the
+replay could not have carried it.
+
+* `BereichG M t` (Fortschritt.lean): at a head `gleit`/`gleitLit`/`gleitVon` the result is
+  in range at the thread's world. `fadenS_bereich`: from the replay (`kopfS_keineLogik'`) --
+  a failing check would make the head predict `logik bereich` at the replay's world (the
+  operands read stable carriers). `bereichG_erreichbarL`/`bereichG_mehrfaden`: on every
+  reachable machine. `fortschrittG_aus` takes it as a hypothesis; `FortschrittG` lists no
+  float stop any more.
+* Carried: `logikFrei` (a float literal is logic-free iff it is in range, `gleit`/`gleitVon`
+  are not), `logikR` (`bereich ↦ bereich`), `GleitZeuge` (the two range witnesses now show
+  `logik bereich`), `CFormenF`/`CFormenFZeuge` (the Gabbro side of `gsem_gleit*`,
+  `klemmen_corr`: the equation's `none` branch). No C-side statement changed: a failure
+  outcome carries no correspondence duty, before and after.
+* Refuted: `probeF1_widerlegt_gilt` (Proben.lean) -- every program with the code `f1P`
+  (`SpecProben.lean`: probe A's contracts, the crash `if true { let x = 2.0 in 0 .. 1; }` in
+  front of every body) fails (b); `f1_lauf`: every body ends in `logik bereich` for every
+  oracle, handler and budget; `f1_akzeptiert`: the checker's Bool ACCEPTS `f1P`, so the
+  refusal is (b)'s.
+
+### 23.2 F2: no wait cycle
+
+`keineVerklemmung` said only that not EVERY unfinished thread waits. New leg of `Ziel`:
+
+```lean
+def WartetAuf M t u L := AnSperre M t L ∧ L ∈ offen (M.faeden u).spur
+def KeinWarteZyklus M := ∀ n (ts : Nat → Faden) (Ls : Nat → D.Lock),
+  (∀ i, i ≤ n → WartetAuf M (ts i) (ts (i + 1)) (Ls i)) → ts (n + 1) ≠ ts 0
+structure Ziel … where … keinZyklus : KeinWarteZyklus M …
+```
+
+`kein_warteZyklusG` (Beweis.lean): along a chain the ranks rise strictly (`sperre_rang`),
+and the closing link gives `rang L₀ ≤ rang Lₙ < rang L₀`.
+
+### 23.3 F3: the stops by kind, each in the ONE list
+
+```lean
+inductive HaltArt | hardware | flagge | budget
+def KopfHalt O passes σ ρ : HaltArt → Block … → Prop   -- leaf / axiom / register; awaits
+def RestHalt O passes σ ρ : HaltArt → GRest … → Prop   -- + `.ewig _ 0` (budget)
+def HaltBenannt O passes M (k : HaltArt) t : Prop
+def FortschrittG P O passes M := ∀ t, FertigG M t ∨ WartetG M t ∨
+  HaltBenannt O passes M .flagge t ∨ HaltBenannt O passes M .budget t ∨
+  HaltBenannt O passes M .hardware t ∨ ∃ M', RufSchrittG P O passes M t M'
+```
+
+Before: one `HaltBenannt` over `KopfHardware`/`RestHardware` covering axiom and register
+answers, `awaits`, `gleit*` and the budget, all called "hardware". In the ONE list of the
+Spec header, each class with its reason: `hardware` = axiom answer outside its type
+(foreign code), register outside its type or against its declared promise (the device);
+`flagge` = an `awaits` whose flag is not visible -- a WAIT (not yet published / A10 / never
+published), and why the never-published case is NOT made an obligation: (d) covers runs with
+any subset of the declared starts, and G has no "later", so it is liveness, not claimed;
+`budget` = a model artefact (every `passes` is quantified). And next to progress: a thread at
+any stop while holding `L` leaves every thread needing `L` waiting forever, with every leg of
+`Ziel` true.
+
+### 23.4 Header corrections
+
+`speicherSicher` needs only `GutO` (no checker, no user proof); "`Q := false` empties (c)"
+holds for axioms WITHOUT a result -- with a result, (c) keeps oracles whose answers never fit
+the type, and every call stops at `hardware`.
+
+### 23.5 Carried outside `Zielsatz/`
+
+`Fortschritt.lean` (`FortFaden` six-way, `fort_hw`/`fort_flagge`/`fort_budget`, the three
+float cases closed by `BereichG`), `FortschrittZeuge.lean` (`restHalt_kann`, per kind),
+`Lebendigkeit.lean` (`HardwareImAbschnitt` over every kind; `abschnittAktiv_aus` and
+`wartezeit_schranke` take `BereichG` along the run), `LebendigkeitZeuge.lean` (per kind, and
+`BereichG` from `bereichG_mehrfaden`).
+
+### 23.6 Axiom record
+
+Full `lake build` from the changed `Syntax.lean` up, 226 jobs, green, 19 min 44 s on
+`ki-pc-fisch-101` (`~/gabbro-muse/opus-f123/`); no `sorryAx` anywhere in the log.
+`gabbro_ziel`, `ziel_aus`, `kein_warteZyklusG`, `probeF1_widerlegt_gilt`, `f1_lauf`,
+`fadenS_bereich`, `bereichG_erreichbarL`, `bereichG_mehrfaden`, `fortschrittG_aus`,
+`fortschrittG_sperre`, `fortschrittG_mehrfaden`, `restHalt_kann`, `fortschritt_zeuge`,
+`wartezeit_schranke`, `wartezeit_zeuge`, `lZeuge`, `gabbro_ziel_zeuge`, `klemmen_corr`,
+`gsem_gleit`, `lauf01_ueber03`, `laufDurchNull`, `logikFrei_keineLogik`: `propext`,
+`Classical.choice`, `Quot.sound`. `f1_akzeptiert`, `f1_lit_ausser`, `p1_akzeptiert`:
+`propext`. No `sorry`, no new `axiom`, no `native_decide`.
+
+### 23.7 What remains
+
+- The `flagge` wait's end, and the never-published flag, are not covered (liveness).
+- A stop inside a critical section leaves the lock's waiters waiting forever (named).
+- `SYNTAX.md` (the outcome table and the float row) and `GLEITKOMMA.md` name `logik bereich`
+  now; `PLAN-GRAMMATIK.md` and `PLAN-UMSETZUNG.md` still say `hardware ieee` (the C runtime
+  check `gabbro_hardware(IEEE)` is unchanged and is now a check the user proved passes).
+- Everything named in §22.6.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §§1-10 history above.)
 
