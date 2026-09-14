@@ -369,7 +369,7 @@ example : ∃ _ : Endblock G108_disjoint_start_locks.gD (vertragVon G108_disjoin
 
 /-- Verbatim printer output for `read_c` (`beispiele/108-disjoint-start-locks.gab`), constructors
     for the printed names. -/
-def c108_read_c : CertEnd2 G108_disjoint_start_locks.gD (vertragVon G108_disjoint_start_locks.gD G108_disjoint_start_locks.g_read_c) := (.liftE (.retWert (.slot G108_disjoint_start_locks.GTab.U G108_disjoint_start_locks.GUFeld.v (.wide 0 3 (.lit 0))) 0 4294967295))
+def c108_read_c : CertEnd2 G108_disjoint_start_locks.gD (vertragVon G108_disjoint_start_locks.gD G108_disjoint_start_locks.g_read_c) := (.liftE (.retWert (.slot G108_disjoint_start_locks.GTab.T G108_disjoint_start_locks.GTFeld.v (.wide 0 3 (.lit 1))) 0 4294967295))
 
 example : certEnd2Ok G108_disjoint_start_locks.gD (vertragVon G108_disjoint_start_locks.gD G108_disjoint_start_locks.g_read_c) false G108_disjoint_start_locks.gCtx_read_c G108_disjoint_start_locks.gL_read_c c108_read_c = true := by
   decide
