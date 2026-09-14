@@ -1,9 +1,12 @@
 # GLEITKOMMA: a kernel-computable IEEE-754 model and its assumption
 
 Lane 166, 2026-09-14. The model lives in
-`grammatik/Grammatik/Gleitkomma.lean` (no semantics switch yet -- a later
-task does that); the differential check is
-`instrumente/pruefe-gleitkomma.py`. English throughout.
+`grammatik/Grammatik/Gleitkomma.lean`; the differential check is
+`instrumente/pruefe-gleitkomma.py`. English throughout. **Since the lane
+after 166 (same day) the semantics computes with this model (section 7),
+the emitted C float forms have a semantics and correspondence lemmas
+under the assumption of section 4 (section 8), and nested arrays have a
+model (section 9).**
 
 ## 1. Why a new model
 
@@ -54,9 +57,12 @@ replacement models -- as data.
 * Differential check: 12200 vectors (4 ops x 2 widths x ~1500
   random/edge pairs, plus int conversions), model via
   `lake env lean --run` against C compiled with the manifest flags:
-  11848 exact, 352 both-NaN, 0 mismatches. One constructed vector
+  11848 exact, 352 both-NaN, 0 mismatches. ~~One constructed vector
   confirms the documented signed-zero cut (`-0 + -0`: model `+0`,
-  hardware `-0`).
+  hardware `-0`).~~ **The cut is closed** (section 7.1): the population
+  now carries every signed-zero pairing and the comparisons `<`/`<=`;
+  21128 vectors, 20736 exact, 392 both-NaN, 0 mismatches, and the
+  tolerated "known signed zero" class no longer exists.
 
 ## 3. Measured surface (inputs to this design)
 
@@ -105,8 +111,9 @@ Explicitly OUT of the assumption (open by standard or by construction):
 
 * NaN payloads and quiet bits (IEEE leaves them open; the model
   propagates input bits, the hardware need not).
-* Signed-zero input combinations beyond what the model computes (the
-  documented cut; the closing proof must carry it or exclude it).
+* ~~Signed-zero input combinations beyond what the model computes (the
+  documented cut; the closing proof must carry it or exclude it).~~
+  Closed: the model follows IEEE 754-2019 section 6.3 (section 7.1).
 * `libm`: the language has no transcendentals (`sin`, `exp`, `pow`
   would each need a correctly-rounded implementation or their own
   named assumption -- PLAN-BITS.md section 5, item 5).
@@ -135,3 +142,119 @@ replaces `Float` in `Semantik.lean`) therefore needs no change to the
 model -- it needs the seven assumptions above as the bridge, each
 either probed (1-4) or newly pinned (5-7), plus the two documented
 model cuts (signed-zero inputs, NaN payloads) carried alongside.
+
+## 7. The switch: the semantics computes with this model
+
+### 7.1 Signed zeros first
+
+`add` of two zeros is `-0` exactly for `(-0) + (-0)`; every other exact
+zero sum is `+0` (round-to-nearest; `rundeExakt` of an exact zero), so
+`x - x = +0` for every finite `x` (`sub_selbst`); `mul`/`div` carry the
+xor of the signs; an underflow keeps the sign of the exact result.
+Theorems `add_null_null`, `rundeExakt_null`, `sub_selbst`; 17 witnesses
+(`zeuge_nullN*`, `zeuge_xMinusX64`, `zeuge_unterlaufNeg64`, ...). `fle` is
+false on a NaN operand (lane 166 answered `true`). The mutant without the
+zero rule fails six witnesses at build.
+
+### 7.2 What the semantics now reads
+
+| before (`Float`) | now | file |
+|---|---|---|
+| `Gleit.x : Float`, `x.isFinite`, `bruch lo ≤ x` | `x : GFloat` (`GBits f64`), `gleitEndlich x`, `gleitLe (bruch lo) x` | Typen.lean |
+| `bruch q = ofInt q.1 / ofInt q.2` (two roundings) | `rundeBruch f64 ⟨q.1, q.2⟩` (one rounding, the C literal) | Typen.lean |
+| `Float.ofInt` | `gleitAusInt = ofInt f64` | Typen.lean |
+| `gleitRechne : Float` ops | `add/sub/mul/div f64` | Semantik.lean |
+| `fllt/flle` by `decide (<)` | `gleitLt/gleitLe` (`flt/fle f64`) | Semantik.lean |
+| `roh` of a float `x.toInt64.toInt` | `gleitRoh`: truncation toward zero, saturated to `Int64` | Semantik.lean |
+
+`Ty.fl` carries no width, and `Float` was binary64, so the model computes
+every `Ty.fl` in binary64 (an `f32` program's model value is its binary64
+value -- the one named width cut). `gleitPasst` keeps its shape: finite
+and inside the rounded bounds, or `none` -- NaN and the infinities take
+the `hardware ieee` outcome (or a `narrow`'s `else`), exactly as before.
+Every theorem carried: the switch was the one-token rename
+`Float.ofInt -> gleitAusInt` in 13 files, and `Satz.gleit_endlich`
+restated; no proof changed.
+
+`Format.ebits` is now `bitlen bexpMax` instead of `Nat.log2 (bexpMax+1)`:
+`Nat.log2` is well-founded recursion, and the KERNEL, when a proof made it
+compare two different `match`es over a stuck float, evaluated it and
+recursed out of its stack (15 GB, measured on ki-pc-fisch-101).
+
+### 7.3 Witnesses that were impossible before (GleitZeuge.lean)
+
+* `lauf01_gespeichert`: `let a = 0.1 rounded; let b = 0.2 rounded;
+  let c = a + b in 0 .. 1; G := c;` runs through `execBlock` and stores
+  exactly `0x3FD3333333333334` in `G` -- by `decide`.
+* `lauf01_ueber03`: the same sum declared in `0 .. 3/10` takes
+  `hardware ieee` (`0x3FD3333333333334 > (double)0.3`).
+* `lauf01_vergleich(Expr)`: `0.1 + 0.2 < 0.3` is false as an expression
+  of the language; `laufVon_rundet`: `(double)(2^53 + 1) = 2^53`;
+  `laufDurchNull`: `1 / 0` is not finite, `hardware ieee`; `roh_trunc`.
+
+## 8. The C side: float forms and the assumption as a premise
+
+The C semantics (`CFormen.lean`) holds a float as its bit pattern
+(`fEin`/`fAus`, inverse on well-formed triples: `ausBits_zuBits`,
+`GleitkommaBits.lean`, and every op result is well-formed:
+`add_wf` ... `rundeBruch_wf`). Four forms: `CX.fbin` (`a op b` in
+`double`/`float`), `CX.fcmp` (the six comparisons, NaN unordered),
+`CX.fvon` (integer to float), `CX.fin` (`isfinite`), computing Annex F by
+this model. A float local is a `uint64_t` bit container for the model's
+conversion at `=`.
+
+**The assumption as a premise.** `gleitkomma_ieee (u : FloatUnit)`
+(`CFormenF.lean`) says: on binary32 and binary64 the float unit of the
+built binary computes exactly `cFloatBin`, `cFloatCmp`, `cFloatVonInt`,
+`cFloatEndlich` -- what section 4's items 1-7 jointly promise. It is
+satisfiable (`gleitkomma_ieee_annexF`), and `maschine_fbin/fcmp_*/fvon/
+fin` turn it into "the machine's result on the bits of two Gabbro values
+is the bits of Gabbro's result". The C semantics itself is Annex F by
+definition; the assumption is exactly the gap between Annex F and the
+machine, and it now has one Lean name.
+
+Correspondence lemmas (the `BlockSemG`/`ExprCorr` judgements of
+CFormenR/I), one per emitted form:
+
+| emitted C | Gabbro | lemma |
+|---|---|---|
+| `double c = a op b;` | `Block.gleit` | `gsem_gleit` |
+| `double c = LIT;` | `Block.gleitLit` | `gsem_gleitLit` |
+| `double c = n;` | `Block.gleitVon` | `gsem_gleitVon` |
+| `a < b`, `<=`, `>`, `>=` | `Expr.fllt/flle` | `ecorr_fllt/flle/flgt/flge` |
+| `if (!(x >= LO && x <= HI)) {…}` | `Block.gleitNarrow` | `gsem_gleitNarrow` + `narrowCondF_ge_le` |
+| `if (!isfinite(x)) {…}` | `Block.gleitNarrow` (own range) | `gsem_gleitNarrow` + `narrowCondF_endlich` |
+| `return x;`, a float local | (existing) | `scorr_ret`, `ecorr_var` (ValCorr's float case) |
+
+Witness on the emitted C of a corpus program (the smallest with `f64`,
+`beispiele/26-gleitkomma.gab`, `klemmen`): `klemmen_corr` (CFormenFZeuge
+.lean) -- both branches, every context, every parameter range;
+`klemmen_lauf` computes the C condition on `2.0` and `0.25`;
+`klemmen_maschine` applies `gleitkomma_ieee`.
+
+`instrumente/pruefe-cformen.py` classifies floats by `double` names and
+float literals (before, `if (!(x >= 0.0 && x <= 1.0))` counted as an
+INTEGER `if`): lemma rows `stmt:float-decl-arith/-lit/-conv`,
+`stmt:float-narrow-range/-finite`, `expr:float-cmp`; dated uncovered rows
+`expr:float-lit-inline` (the model binds a constant, C inlines it --
+covered per program) and `stmt:float` (binary32, floats in memory).
+
+**What the assumption now covers, and what it does not.** Covered: every
+float operator, comparison, integer conversion and class test the
+emitter writes in `double`, as a premise of the correspondence. Not
+covered: binary32 correspondence (width cut), floats stored in tables
+or globals, NaN payloads (never produced by a finite Gabbro value), and
+the decimal literal conversion beyond "correctly rounded" (the literal's
+bits are pinned per witness: `kHalb_bits`).
+
+## 9. Nested arrays (lane 170's surface)
+
+`[[T; N]; M]` is a table with `count M*N`, `M[i][j]` its cell `i*N + j`
+(`Verschachtelt.lean`) -- a stated flattening, not a product index (that
+would need a new index type in `Ty`). `flach_bereich` (the two `M103`
+bounds), `flach_injektiv` (no aliasing), `flach_zerlegung` (every cell is
+one element), `nestIdx`/`eval_nestIdx` (the flat index as a Gabbro
+expression), `ev_idx_nested` (C's row-major `a[i][j]` is the flat access);
+witnesses `nv_lauf`, `nv_bijektiv`, `nv_c_adresse`. The memory relation of
+a static C array is the pre-existing uncovered `expr:array-read`.
+

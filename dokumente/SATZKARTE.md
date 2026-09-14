@@ -1693,5 +1693,53 @@ Axioms of every new theorem (`schrittMerk`, `merkInvG_erreichbar`,
 - Everything else of §15.6 (adequacy of `else` inside loops, the link to
   the emitted C, weak memory, hand translation only) is unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §§1-10 history above.)
+## 17. Floats in the model, in C, and nested arrays (2026-09-14)
+
+Design record: `dokumente/GLEITKOMMA.md` §§7-9. What changed for the
+goal theorems: nothing in their statements -- every theorem carried.
+
+### 17.1 The model computes with data, not with `Float`
+
+`Val (.fl lo hi)` holds `GFloat = Gleitkomma.GBits f64` (Typen.lean);
+`gleitRechne`, `gleitPasst`, `bruch` (the literal, rounded ONCE),
+`gleitAusInt`, `Expr.fllt/flle` are the kernel-computable IEEE-754 model
+(round-to-nearest-even, signed zeros per IEEE 754-2019 §6.3). A `gleit`
+step is still range-checked; NaN/inf fail `gleitEndlich` and take the
+`hardware ieee` / `else` outcome, as with `Float`. The switch was a
+one-token rename (`Float.ofInt` -> `gleitAusInt`) in 13 files; no proof
+changed. New witnesses (GleitZeuge.lean): `lauf01_gespeichert` (0.1 + 0.2
+runs through `execBlock` and stores exactly `0x3FD3333333333334`),
+`lauf01_ueber03` (the same sum declared in `0 .. 3/10` takes `hardware
+ieee` -- the check bites on the last ulp), `laufDurchNull`, `roh_trunc`.
+
+### 17.2 The emitted C float forms
+
+CFormen.lean has four float forms (`CX.fbin/fcmp/fvon/fin`) computing
+C11 Annex F by the same model; CFormenF.lean relates them to Gabbro:
+`gsem_gleit`, `gsem_gleitLit`, `gsem_gleitVon`, `ecorr_fllt/flle/flgt/
+flge`, `gsem_gleitNarrow` with `narrowCondF_ge_le` (`if (!(x >= LO && x <=
+HI))`) and `narrowCondF_endlich` (`if (!isfinite(x))`). The NAMED
+ASSUMPTION is `gleitkomma_ieee u` over the machine's `FloatUnit` (inhabited
+by `annexF`); `maschine_*` bridge it per operation. Witness on a corpus
+program: `klemmen_corr` (`beispiele/26-gleitkomma.gab`, both branches,
+every context); `klemmen_maschine` uses the assumption.
+
+Cuts: `float` (binary32) has C forms but no correspondence (`Ty.fl` has
+no width); floats in memory (table fields, globals) have none (`encW`
+has no float case); an inline float literal is covered per program, not
+by a general lemma (the model binds it, C inlines it).
+
+### 17.3 Nested arrays
+
+`[[T; N]; M]` is a table with `count M*N` and `M[i][j]` its cell `i*N +
+j` (Verschachtelt.lean): `flach_bereich`, `flach_injektiv`,
+`flach_zerlegung`, `nestIdx`/`eval_nestIdx`; C's row-major `a[i][j]` is
+the flat access (`ev_idx_nested`); witness `nv_lauf`, `nv_c_adresse`.
+The memory relation of a static C array stays the pre-existing uncovered
+`expr:array-read`.
+
+Axioms of every new theorem: `propext`, `Classical.choice`, `Quot.sound`
+(subsets). Full build on ki-pc-fisch-101: 185 jobs, no `sorryAx`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14; §§1-10 history above.)
 

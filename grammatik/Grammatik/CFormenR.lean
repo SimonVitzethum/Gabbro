@@ -74,6 +74,10 @@ def CX.liest (y : Nat) : CX → Bool
   | .ald p _ _ => p.liest y
   | .devH _ _ => false
   | .trap => false
+  | .fbin _ _ l r => l.liest y || r.liest y
+  | .fcmp _ _ l r => l.liest y || r.liest y
+  | .fvon _ _ e => e.liest y
+  | .fin _ e => e.liest y
 
 def CX.liestL (y : Nat) : List CX → Bool
   | [] => false
@@ -245,6 +249,32 @@ theorem ev_agree (S : List Nat) : ∀ (c : CX) (st : CSt) (ρ1 ρ2 : CLok),
       simp only [ev, h]
   | devH d a => intro _ _ _ _ _; rfl
   | trap => intro _ _ _ _ _; rfl
+  | fbin op F l r ihl ihr =>
+      intro st ρ1 ρ2 hn ha
+      have hl : ∀ st, ev L orc fr l st ρ1 = ev L orc fr l st ρ2 := fun st =>
+        ihl st ρ1 ρ2 (fun y hy => by
+          have := hn y hy; simp only [CX.liest, Bool.or_eq_false_iff] at this; exact this.1) ha
+      have hr : ∀ st, ev L orc fr r st ρ1 = ev L orc fr r st ρ2 := fun st =>
+        ihr st ρ1 ρ2 (fun y hy => by
+          have := hn y hy; simp only [CX.liest, Bool.or_eq_false_iff] at this; exact this.2) ha
+      simp only [ev, hl, hr]
+  | fcmp op F l r ihl ihr =>
+      intro st ρ1 ρ2 hn ha
+      have hl : ∀ st, ev L orc fr l st ρ1 = ev L orc fr l st ρ2 := fun st =>
+        ihl st ρ1 ρ2 (fun y hy => by
+          have := hn y hy; simp only [CX.liest, Bool.or_eq_false_iff] at this; exact this.1) ha
+      have hr : ∀ st, ev L orc fr r st ρ1 = ev L orc fr r st ρ2 := fun st =>
+        ihr st ρ1 ρ2 (fun y hy => by
+          have := hn y hy; simp only [CX.liest, Bool.or_eq_false_iff] at this; exact this.2) ha
+      simp only [ev, hl, hr]
+  | fvon F t e ih =>
+      intro st ρ1 ρ2 hn ha
+      have h := ih st ρ1 ρ2 (fun y hy => by have := hn y hy; simpa [CX.liest] using this) ha
+      simp only [ev, h]
+  | fin F e ih =>
+      intro st ρ1 ρ2 hn ha
+      have h := ih st ρ1 ρ2 (fun y hy => by have := hn y hy; simpa [CX.liest] using this) ha
+      simp only [ev, h]
 
 theorem evArgs_agree (S : List Nat) : ∀ (args : List CX) (st : CSt) (ρ1 ρ2 : CLok),
     NichtIn S (fun y => CX.liestL y args) → Agree S ρ1 ρ2 →
@@ -637,6 +667,10 @@ def CX.zs (gs : GList) : CX → CX
   | .ald p τ o => .ald (p.zs gs) τ o
   | .devH d a => .devH d a
   | .trap => .trap
+  | .fbin op F l r => .fbin op F (l.zs gs) (r.zs gs)
+  | .fcmp op F l r => .fcmp op F (l.zs gs) (r.zs gs)
+  | .fvon F t e => .fvon F t (e.zs gs)
+  | .fin F e => .fin F (e.zs gs)
 
 /-- READING THE CELL IS READING THE GHOST: from any state with the memory
     and lifetimes of `st0`, the expression with cell reads evaluates as
@@ -784,6 +818,34 @@ theorem ev_zs (gs : GList) : ∀ (c : CX) (st0 st : CSt) (ρ : CLok), SameML st0
       rw [ih st0 st ρ h]
   | devH d a => intro _ _ _ _; rfl
   | trap => intro _ _ _ _; rfl
+  | fbin op F l r ihl ihr =>
+      intro st0 st ρ h
+      simp only [CX.zs, ev]
+      rw [ihl st0 st ρ h]
+      cases h1 : ev L orc fr l st (ghostify L fr gs ρ st0) with
+      | none => rfl
+      | some p =>
+          obtain ⟨v, st1⟩ := p
+          have h' := h.trans (ev_same L orc fr l st _ v st1 h1)
+          cases v <;> simp only [] <;> rw [ihr st0 st1 ρ h']
+  | fcmp op F l r ihl ihr =>
+      intro st0 st ρ h
+      simp only [CX.zs, ev]
+      rw [ihl st0 st ρ h]
+      cases h1 : ev L orc fr l st (ghostify L fr gs ρ st0) with
+      | none => rfl
+      | some p =>
+          obtain ⟨v, st1⟩ := p
+          have h' := h.trans (ev_same L orc fr l st _ v st1 h1)
+          cases v <;> simp only [] <;> rw [ihr st0 st1 ρ h']
+  | fvon F t e ih =>
+      intro st0 st ρ h
+      simp only [CX.zs, ev]
+      rw [ih st0 st ρ h]
+  | fin F e ih =>
+      intro st0 st ρ h
+      simp only [CX.zs, ev]
+      rw [ih st0 st ρ h]
 
 /-! ## 3. The judgements with ghosts and an error channel -/
 

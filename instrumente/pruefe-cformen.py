@@ -144,7 +144,21 @@ FORMS = {
     "stmt:bind-call-foreign":  ([], "`T x = ext();` (bindAxiom)"),
     "stmt:watchdog":           ([], "`static void (*const w)(void) = f;` (no run-time effect)"),
     "stmt:break":              ([], "`break;` outside a switch arm (CAS loop)"),
-    "stmt:float":              ([], "floating point"),
+    "stmt:float":              ([], "floating point outside the rows below (`float`/binary32, "
+                                "float memory, mixed forms)"),
+    # floating point in `double` (binary64, the model's width): CFormenF.lean, under the
+    # named assumption `gleitkomma_ieee` (C float ops are the IEEE ops of the model)
+    "stmt:float-decl-arith":   (["gsem_gleit", "gleitkomma_ieee"], "F1: `double c = a op b;`"),
+    "stmt:float-decl-lit":     (["gsem_gleitLit"], "F2: `double c = LIT;`"),
+    "stmt:float-decl-conv":    (["gsem_gleitVon"], "F3: `double c = n;` (int to float)"),
+    "stmt:float-narrow-range": (["gsem_gleitNarrow", "narrowCondF_ge_le"],
+                                "F5: `if (!(x >= LO && x <= HI)) {`"),
+    "stmt:float-narrow-finite": (["gsem_gleitNarrow", "narrowCondF_endlich"],
+                                 "F6: `if (!isfinite(x)) {`"),
+    "expr:float-cmp":          (["ecorr_fllt", "ecorr_flle", "ecorr_flgt", "ecorr_flge"],
+                                "F4: `<`, `<=`, `>`, `>=` on doubles"),
+    "expr:float-lit-inline":   ([], "a float literal or float `#define` inline in an "
+                                "expression or `return` (per-program: klemmen_corr)"),
     "stmt:store-deref":        ([], "`*p = e;` other than the channel"),
     "stmt:decl-ptr":           ([], "`T *p = e;` (pointer local, no memory relation)"),
     "stmt:store-field":        ([], "`p->f = e;` on a struct that is not a table slot"),
@@ -191,7 +205,11 @@ KNOWN_UNCOVERED = {
     "stmt:bind-call-foreign": ("2026-09-13", "bindAxiom has no lemma"),
     "stmt:watchdog": ("2026-09-13", "no run-time effect; the model has no form for it"),
     "stmt:break": ("2026-09-13", "the CAS loop's break"),
-    "stmt:float": ("2026-09-13", "floating point is outside T4"),
+    "stmt:float": ("2026-09-14", "`float` (binary32) forms and floats in memory: Ty.fl "
+                   "carries no width, the model computes binary64 (CFormenF.lean CUTS)"),
+    "expr:float-lit-inline": ("2026-09-14", "the model binds a float constant "
+                              "(Block.gleitLit), C inlines it; covered per program "
+                              "(CFormenFZeuge.lean klemmen_corr), not by a general lemma"),
     "stmt:store-deref": ("2026-09-13", "a store through a pointer parameter other than "
                          "the channel"),
     "stmt:decl-ptr": ("2026-09-14", "a pointer local (`Platz * tz = SPEICHER;`, "
@@ -262,6 +280,42 @@ def form_state(form):
 
 CTYPE = r"(?:const\s+)?(?:uint8_t|uint16_t|uint32_t|uint64_t|int8_t|int16_t|int32_t|int64_t|bool|uintptr_t)"
 IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
+# A C floating literal as the emitter prints it (`gleitkommatext`: a `.` or an exponent,
+# an `f` suffix in `float` computations).
+FLIT = r"-?\d+\.\d*(?:e[-+]?\d+)?f?|-?\d+e[-+]?\d+f?"
+
+
+def float_atoms(text, unit):
+    """Float literals, float macros and `double` names in `text`."""
+    lits = re.findall(r"(?<![\w.])(?:" + FLIT + r")(?![\w.])", text)
+    names = [w for w in re.findall(r"\b(" + IDENT + r")\b", text)
+             if w in unit.floats or w in unit.fmacros]
+    return lits, names
+
+
+def classify_float(s, unit):
+    """The float form of `s`, or None if `s` is not a float statement."""
+    if re.match(r"^if \(!isfinite\(" + IDENT + r"\)\) \{$", s):
+        return "stmt:float-narrow-finite"
+    m = re.match(r"^if \(!\((" + IDENT + r") >= (\S+) && (" + IDENT + r") <= (\S+)\)\) \{$", s)
+    if m and m.group(1) == m.group(3) and m.group(1) in unit.floats \
+            and re.fullmatch(FLIT, m.group(2)) and re.fullmatch(FLIT, m.group(4)):
+        return "stmt:float-narrow-range"
+    m = re.match(r"^double (" + IDENT + r") = (.*);$", s)
+    if m:
+        rhs = m.group(2)
+        if re.fullmatch(FLIT, rhs) or rhs in unit.fmacros:
+            return "stmt:float-decl-lit"
+        mb = re.fullmatch(r"(" + IDENT + r") ([-+*/]) (" + IDENT + r")", rhs)
+        if mb and mb.group(1) in unit.floats and mb.group(3) in unit.floats:
+            return "stmt:float-decl-arith"
+        mc = re.fullmatch(r"(?:\(double\)\()?(" + IDENT + r")\)?", rhs)
+        if mc and mc.group(1) not in unit.floats and mc.group(1) not in unit.fmacros:
+            return "stmt:float-decl-conv"
+        return "stmt:float"
+    if re.search(r"\b(double|float|isfinite)\b", s) or re.search(r"(?<![\w.])\d+\.\d*f\b", s):
+        return "stmt:float"
+    return None
 
 
 def strip_comments(src):
@@ -277,11 +331,17 @@ class Unit:
         self.defined = set()      # functions with a body
         self.declared = set()     # every prototype
         self.globals = set()      # file-scope objects
+        self.floats = set()       # names of `double` parameters and locals (any function)
+        self.fmacros = set()      # `#define NAME <float literal>`
         self.enums = set()        # enum constants
         self.bodies = []          # (function name, has channel, [statements])
         self._scan()
 
     def _scan(self):
+        for m in re.finditer(r"^#define (" + IDENT + r") (" + FLIT + r")\s*$", self.src, re.M):
+            self.fmacros.add(m.group(1))
+        for m in re.finditer(r"\bdouble (" + IDENT + r")\s*[=;]", self.src):
+            self.floats.add(m.group(1))
         for m in re.finditer(r"^\s*(" + IDENT + r")\s*(?:=\s*-?\d+)?\s*,\s*$", self.src, re.M):
             self.enums.add(m.group(1))
         for m in re.finditer(r"^(?:static\s+|extern\s+|_Noreturn\s+)*[A-Za-z_][A-Za-z0-9_ \*]*?\b("
@@ -305,6 +365,10 @@ class Unit:
                              + r")\s*\((.*)\)\s*(?:__attribute__\S*\s*)*\{$", s)
                 if m and not s.startswith("typedef"):
                     cur = (m.group(1), "_grund" in m.group(2), [])
+                    for par in m.group(2).split(","):
+                        pm = re.match(r"^\s*(?:const\s+)?double\s+(" + IDENT + r")\s*$", par)
+                        if pm:
+                            self.floats.add(pm.group(1))
                     self.defined.add(m.group(1))
                     self.bodies.append(cur)
                     depth = 1
@@ -350,8 +414,9 @@ def classify_stmt(s, unit, channel, prev=None):
     if re.search(r"\b_(?:k|h|w)\d+(?:_hoch)?\b", s) or re.match(r"^const " + CTYPE + r" _r\d+ = ", s) \
             or s == "continue;":
         return "stmt:walk"
-    if re.search(r"\b(double|float|isfinite)\b", s):
-        return "stmt:float"
+    ff = classify_float(s, unit)
+    if ff is not None:
+        return ff
     if s == "__builtin_unreachable();":
         return "stmt:unreachable"
     if s == "} else {" or re.match(r"^\} else if \(", s):
@@ -511,7 +576,7 @@ EXPR_RULES = [
 HELPERS = {"sizeof", "_gabbro_sat_u", "_gabbro_sat_i", "gabbro_le32", "atomic_load_explicit",
            "atomic_store_explicit", "atomic_compare_exchange_strong_explicit",
            "atomic_compare_exchange_weak_explicit", "__builtin_trap", "if", "for", "switch",
-           "return", "while"}
+           "return", "while", "isfinite"}
 
 
 def expression_part(s, form):
@@ -560,6 +625,19 @@ def classify_exprs(text, unit, cells, form):
         if m.group(1) in unit.enums:
             found.append("expr:reason-const")
             break
+    # floats: a comparison with a float operand, and a float literal / float macro that
+    # stands inline (the narrow check and `double c = LIT;` carry theirs in their own row)
+    lits, fnames = float_atoms(text, unit)
+    if lits or fnames:
+        atom = r"(?:" + IDENT + r"|" + FLIT + r")"
+        for m in re.finditer(r"(" + atom + r") (<=|>=|<|>) (" + atom + r")", text):
+            if any(re.fullmatch(FLIT, g) or g in unit.floats or g in unit.fmacros
+                   for g in (m.group(1), m.group(3))):
+                found.append("expr:float-cmp")
+                break
+        if form not in ("stmt:float-narrow-range", "stmt:float-decl-lit", "stmt:float") and \
+                (lits or any(n in unit.fmacros for n in fnames)):
+            found.append("expr:float-lit-inline")
     t2 = re.sub(r"(?:->|\.)slots\[[^\]]*\]", "", text)
     if re.search(r"\b" + IDENT + r"\[", t2) and "expr:byte-guard" not in found:
         found.append("expr:array-read")

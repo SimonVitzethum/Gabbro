@@ -1,3 +1,5 @@
+import Grammatik.Gleitkomma
+
 /-
   Datei:      Grammatik/Typen.lean
   Gegenstand: Die TYPEN der Grammatik, und die Werte, die sie tragen. **Jede Zahl traegt
@@ -72,15 +74,44 @@ def Nutzlast : Option (Int × Int) → Type
   | none => Unit
   | some (lo, hi) => Zahl lo hi
 
-/-- Ein Bruch als Gleitkommazahl. -/
-def bruch (q : Int × Int) : Float := Float.ofInt q.1 / Float.ofInt q.2
+/-- **The model's float: an IEEE-754 binary64 value as DATA** (`Gleitkomma.lean`, the
+    kernel-computable model; until the switch of 2026-09-14 this was Lean's opaque
+    `Float`). `Ty.fl` carries no width, and the old `Float` was binary64 too, so the
+    model computes every `Ty.fl` in binary64 -- an `f32` program's model value is its
+    binary64 value (a named cut, `dokumente/GLEITKOMMA.md` section 7). -/
+abbrev GFloat : Type := Gleitkomma.GBits Gleitkomma.f64
 
-/-- Eine endliche Gleitkommazahl im Bereich -- kein NaN, keine Unendlichkeit (`finite`). -/
+/-- A rational `num / den` (the literal and the range bounds) as a float: the exact
+    rational rounded ONCE to nearest-even (`Gleitkomma.rundeBruch`) -- what a correctly
+    rounded C literal is. The sign of the denominator is folded into the numerator;
+    `den = 0` is NaN. (The `Float` model divided two rounded integers.) -/
+def bruch (q : Int × Int) : GFloat :=
+  Gleitkomma.rundeBruch Gleitkomma.f64 ⟨if q.2 < 0 then -q.1 else q.1, q.2.natAbs⟩
+
+/-- An integer as a float: the exact integer, rounded once (C's `(double)n`). -/
+def gleitAusInt (z : Int) : GFloat := Gleitkomma.ofInt Gleitkomma.f64 z
+
+/-- Finite: zero, subnormal or normal -- not infinity, not NaN (`finite`, C's `isfinite`). -/
+def gleitEndlich (x : GFloat) : Bool :=
+  match Gleitkomma.klasse Gleitkomma.f64 x with
+  | .unendlich => false
+  | .nan => false
+  | _ => true
+
+/-- The model's `<=` on floats (IEEE: NaN unordered, signed zeros equal). -/
+def gleitLe (a b : GFloat) : Bool := Gleitkomma.fle Gleitkomma.f64 a b
+
+/-- The model's `<` on floats. -/
+def gleitLt (a b : GFloat) : Bool := Gleitkomma.flt Gleitkomma.f64 a b
+
+/-- Eine endliche Gleitkommazahl im Bereich -- kein NaN, keine Unendlichkeit (`finite`).
+    The bounds are compared as floats (`bruch lo <= x <= bruch hi`), like the emitted
+    `x >= lo && x <= hi` of a `narrow`. -/
 structure Gleit (lo hi : Int × Int) where
-  x : Float
-  endlich : x.isFinite = true
-  lo_le : bruch lo ≤ x
-  le_hi : x ≤ bruch hi
+  x : GFloat
+  endlich : gleitEndlich x = true
+  lo_le : gleitLe (bruch lo) x = true
+  le_hi : gleitLe x (bruch hi) = true
 
 /-- Der Wert eines Typs. **Ein Wert ausserhalb seines Typs existiert nicht.**
     `F` sind die Funktionen des Programms, `sig` ihre Signaturnummer -- ein Funktionszeiger

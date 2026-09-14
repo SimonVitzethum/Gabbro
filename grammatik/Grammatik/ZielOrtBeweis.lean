@@ -833,7 +833,7 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrest⟩ := hok
     simp only [blockOrteP, List.append_subset] at hss
-    have hv' : gleitPasst lo hi (Float.ofInt (eval (σ.lese Λ e.orte) e
+    have hv' : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
         (σ.lese Λ e.orte) ρ).n) = some v := by
       rw [eval_gleichAuf e (fun _ h => hss.1 h) (hg.lese Λ Λ e.orte e.orte) ρ, ← hs₁]; exact hv
     exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hks, hss.2, hrest⟩,
