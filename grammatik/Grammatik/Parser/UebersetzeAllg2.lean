@@ -23,6 +23,8 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
+set_option maxRecDepth 100000
+
 /-! ## Lowering context of one function -/
 
 /-- The body context of a function: its parameter types. -/
@@ -748,6 +750,16 @@ theorem lowerAllg104data :
     (G104_referenz.gD.signatur
       G104_referenz.g_lies).schreibt
       G104_referenz.GTab.Konto = false := by
+  decide
+
+/-! ## The real-text lexer pin for 104 -/
+
+/-- The real `beispiele/104-referenz.gab` text (with `--` comments;
+    lane 162 measured `lex` away at `maxHeartbeats 12000000`). -/
+def src104real : String := "-- 104 -- The reference fixture as a real Gabbro program (lane 126).\n--\n-- This is `grammatik/Grammatik/ReferenzB.lean` (`refD`/`refP`) in surface\n-- syntax: one table `Konto` of 2 slots with one `0 .. 100` field, guarded by\n-- the single lock `M`; `einzahlen` (one `0 .. 10` parameter, no result,\n-- writes the table, ensures the slot did not decrease) and `lies` (no\n-- parameters, one `0 .. 100` result, reads, ensures the answer equals the\n-- slot). Both run under the held lock (`requires Held(M)`, the `beispiele/01`\n-- idiom: the caller's duty, so the bodies touch the guarded slot directly).\n-- Not declared `concurrent`: both functions hold `M` by signature, and the\n-- start rule N240 (the goal theorem's `StartExklusiv`) forbids two threads\n-- starting in functions that share a signature lock. The earlier note: the declaration\n-- (lane 141: the certificate census classifies `concurrent` as erased -- the\n-- emitter writes nothing for it -- so the declaration passes stage 7 of\n-- `pruefe-emission.sh`). Threads cannot be driven from a C driver anyway, so\n-- the driver runs both threads one after the other -- the sequential\n-- composition the emitter produces: `einzahlen` like thread 1, then `lies`\n-- like thread 0. That is the observable half of the fixture\n-- (`refB_schreibt`: slot `0 -> 100`).\n\nmodule beispiel::referenz {\n\nconst NKONTO : u32 = 2;\n\ntype Betrag = u32 in 0 .. 10;\ntype Stand = u32 in 0 .. 100;\n\ntable Konto count NKONTO {\n    slot {\n        stand : Stand,\n    }\n}\n\nlock M protects { stand } rank 0 held <= 50 ops;\n\nimpl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)\n    requires Held(M)\n    ensures  old(k.slots[i].stand) <= k.slots[i].stand\n    effects  { reads k.slots, writes k.slots, locks M }\n    costs    <= 16 ops\n{\n    k.slots[i].stand = 100;\n    lies(k, i);\n}\n\nimpl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand\n    requires Held(M)\n    ensures  result == k.slots[i].stand\n    effects  { reads k.slots, locks M }\n    costs    <= 8 ops\n{\n    return k.slots[i].stand;\n}\n\n\n}\n"
+
+set_option maxHeartbeats 12000000 in
+theorem lex104real : lex src104real = .ok tt104 := by
   decide
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
