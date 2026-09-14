@@ -762,4 +762,53 @@ set_option maxHeartbeats 12000000 in
 theorem lex104real : lex src104real = .ok tt104 := by
   decide
 
+/-! ## The 104 chain, end to end -/
+
+/-- One theorem chaining every stage for 104: real-text lexing,
+    deep parsing, elaboration, generic lowering, and the fragment
+    and footprint checks on the lowered program. -/
+theorem kette104 : lex src104real = .ok tt104 ∧
+    beqTopTief (parseTopTief tt104) (.ok items104) = true ∧
+    beqElabU (elabU items104) (.ok uExp104) = true ∧
+    (match lowerAllg uExp104 with
+      | .ok (P, fs) => programmImFragmentG P fs && fussOrtGB P fs
+      | .error _ => false) = true := by
+  refine ⟨lex104real, u104parse, u104elab, ?_⟩
+  decide
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+/-
+  CUTS: what is not proved here.
+
+  1. `RufPasst` harvest is exactness in disguise: `hh` asks the
+     callee held set inside the caller resources, `hx` (with every
+     floor `none`) asks the reverse, so a call lowers only at an
+     exact held set -- the same refusal `uAnw` states over names.
+     A floor-bearing declaration would need the rank checks
+     computed, not harvested; `mkSig` never sets `boden`.
+  2. `beq`-style soundness is proved for nothing new here; the
+     `beqElabU`/`beqTopTief` pins are reused from `Uebersetze.lean`
+     (same cut as there).
+  3. The shift fix in `UebersetzeAllg.lean` (`sh` on `lowIdx`,
+     `lowParamSide`, `lowDurch`, `lowTabRead`, `lowAltRead`):
+     `ensures` positions ride one past the result when one is
+     present. Without it `lowerAllg` fails on every result-bearing
+     function whose contract reads a slot (measured on `lies`).
+  4. 108 is open: it needs `concurrent` stripping and bare-`u32`
+     normalisation before `elabU` (see the lane task).
+  5. Membership across the `Fin`/carrier line does not synthesize:
+     `L ∈ S.haelt` with `L : Fin _` has no `Decidable` instance,
+     the unfolded `∀ w ∈ braucht` form and `D.Lock`-quantified
+     harvests do. List literals compared against carrier lists
+     need an explicit `List (declOf u).Lock` ascription.
+-/
+
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.sigSchreibt_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.nach_eq
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerEach_all_ok
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg104fragment
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg104fuss
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg104data
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.lex104real
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg2.kette104
