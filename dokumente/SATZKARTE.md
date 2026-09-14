@@ -1629,6 +1629,12 @@ classes).
 | deadlock theorem: `StufenM P` | floors on bodies (from `StufenOk`) | (c) decidable | NEW (for `keine_verklemmungG`) |
 | deadlock theorem: `hLeer`, `ls` | start functions hold no signature lock; locks finite | (c) | NEW |
 
+> Restated in §17.4 (2026-09-14, second round): the obligations `hK`/`hI`
+> are demanded at EVERY `forever` budget and the conclusion holds on the
+> machines of every budget (probe D); new premise `StartOhneGrund`, new
+> conjunct `KeinStartGrundG`. The statement above is now the lemma
+> `ziel_ort_mehrfaden_ende_bei`.
+
 ### 16.5 Witnesses (`MehrfadenZeuge.lean`, `MehrfadenLauf.lean`)
 
 Declaration `mD`: shared `konto` under lock `()` with lock invariant
@@ -1693,5 +1699,286 @@ Axioms of every new theorem (`schrittMerk`, `merkInvG_erreichbar`,
 - Everything else of §15.6 (adequacy of `else` inside loops, the link to
   the emitted C, weak memory, hand translation only) is unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §§1-10 history above.)
+## 17. The `forever` budget, start reasons, the closing theorem's assumptions (2026-09-14, second round)
+
+The model items of the two independent verdicts of 2026-09-14
+(`messung/URTEIL-OPUS-2026-09-14.md` §5 probe D and §6 items 1, 7;
+`messung/URTEIL-MUSE-2026-09-14.md` §5). Files: `Durchgaenge.lean` (new),
+`ProbeD.lean` (new), `ZielOrtGrund.lean` (new), `ZielOrtStart.lean`,
+`ZielOrtMehrfaden.lean`, `Schlusssatz104.lean`, `MehrfadenZeuge.lean`,
+`MehrfadenLauf.lean`. **G, `rufAt`, `execStmt`/`execStmtH` are unchanged.**
+The goal theorem keeps its name `ziel_ort_mehrfaden_ende`; its statement
+changed (§17.4).
+
+### 17.1 The `forever` budget is quantified, not chosen (probe D)
+
+*The finding.* Every semantics takes `passes`, the number of passes the
+environment gives a `forever` loop; at `0` the sequential run is
+`hardware (fortschritt a)` before the first pass and G has no rule at
+`ewig 0`. The goal theorems took `passes` as DATA and every witness fixed
+`0`. At `0` the obligation says nothing about a `forever` body: probe D
+(`ensures false`, body `forever () invariant false { leave }; return`) met
+every premise, while the emitted C does not test the invariant and runs the
+loop once. `passes` was a prover-chosen assumption classified as data.
+
+*The decision: every budget.* The goal statements demand `KoerperGutS` and
+`InvGutS` at EVERY `passes` and conclude on the machines of EVERY `passes`.
+G re-arms the budget at every loop entry (`dannForever` pushes
+`ewig a passes`), so a run in which each loop entry makes at most `n`
+passes is a run at every budget `≥ n`: the conclusion covers every finite
+run. A floor "every budget `≥ B`" would cover the same runs and cost the
+user nothing less (the sequential proof of a `forever` body must handle an
+arbitrary finite number of passes either way); with no budget chosen, none
+can empty the obligation. The per-budget statements stay as lemmas with the
+suffix `_bei` (`ziel_ort_ende_bei`, `ziel_ort_mehrfaden_ende_bei`,
+`ziel_ort_sperre_ende_bei`, `ziel_ort_mehrfaden_bei`); they are not goal
+statements (the conclusion at one budget describes only the runs whose
+loops end within it).
+
+*Budget independence* (`Durchgaenge.lean`). `ohneEwig` (no `forever` in a
+body, decidable; `ohneEwigB P fs`). A `forever`-free body means the same at
+every budget: `Endblock.execH_passes` (lock-invariant semantics),
+`Endblock.exec_passes` (plain), `rufAt_passes` (the call semantics, every
+depth, when no body of the program has `forever`). Hence
+`koerperGutS_passes`/`invGutS_passes` and, per program,
+
+```lean
+theorem koerperGutS_alle (hvoll : ∀ g, g ∈ fs) (hE : ohneEwigB P fs = true)
+    (h : ∀ f, KoerperGutS P 0 Q S f) : ∀ passes f, KoerperGutS P passes Q S f
+```
+
+(`invGutS_alle` alike). Every earlier witness is `forever`-free, so NO
+witness held only at `passes = 0`: `mP_zertifiziert`, `mP_mehrfaden`,
+`sP_ende_zertifiziert` (two writers), `schlusssatz_104` (§17.3) are
+restated over every budget at the cost of one `decide` each.
+
+*Probe D, rebuilt and refuted* (`ProbeD.lean`, on `zD`; `fvP false` is the
+verdict's `fvP`, `fvP true` its `fwP` -- invariant `true`, the shape of
+`manifest_pruefen` in `beispiele/04-schleifen.gab`):
+
+- `fvP_koerper0`, `probeD_bei0_zertifiziert`: the per-budget lemma at `0`
+  certifies both variants (the defect, kept as a theorem).
+- `probeD_nicht` (every `Q`, every well-formed family with a satisfiable
+  invariant), `probeD_nicht_leer`, `fwP_nicht`:
+  `¬ ∀ passes f, KoerperGutS (fvP _) passes Q S f` -- at budget `1` the
+  body ends in `logik schleife`, resp. returns under `ensures false`.
+- `probeD_halt`: a machine of budget `1` reached in two steps stands at the
+  `forever` head with a pass left and invariant `false`: `¬ KeinLogikHaltG`.
+- `fwP_ende_verletzt`: a machine of budget `1` reached in five steps
+  (`endeEntf`, `dannForever`, `ewigWeiter`, the `leave`, `dannLeer`) has
+  thread 0 finished at `return` under `ensures false`: `¬ StartEndeG`.
+
+*Inhabitation with a real loop* (`ewP`: `lP` of §13.4 with
+`forever () invariant konto[0] <= 100 { leave }`): `ewP_koerper` (the
+obligation PROVED at every budget -- budget `0` stops, every `n + 1`
+passes the invariant and returns), `ewP_zertifiziert` (the budget-quantified
+`ziel_ort_sperre_ende`), `ziel_ort_ewig_zeuge` (a machine of budget `1`
+reached in two steps stands at the `forever` head; the invariant holds
+there BY THE THEOREM and G takes the pass, `ewigWeiter`).
+
+### 17.2 A start function may not end in a reason (Muse §5)
+
+*The finding.* `StartEndeG` checks value returns (`RetKopf`). A start
+function ending in `retGrund` owed nothing: probe `grP` on `vD` (every
+thread starts in `ferr`: one reason, `ensures false`, body `return R`) met
+every premise of the flagship as it stood (`grP_alt_zertifiziert`), and
+every thread is finished at the START machine at a reason return with
+nothing checked (`grP_fertig`).
+
+*The decision: start functions declare no reasons* (`StartOhneGrund init :=
+∀ t, D.gruende (init t).1 = 0`, class (c), decidable per start). A reason
+hands a failure to the CALLER, which the typing forces to handle it
+(`bindCallElse`); a thread root has no caller, and `rufAt` checks neither
+`ensures` nor invariants at a reason return, so the alternative "a reason
+return of a start function checks its owed invariants" would demand at a
+root what no other reason return owes and still leave its `ensures`
+unchecked.
+
+*What is proved.* `wurzelFn_erreichbar`: the bottom frame of every thread
+runs its start function on every reachable machine (every rule, via
+`schrittMerk`). `keinStartGrundG`: with `StartOhneGrund`, no start frame
+stands at a reason return (`KeinStartGrundG M`; `retGrund` needs an element
+of `Fin 0`). `fertig_wert`: with `KeinStartGrundG`, every finished thread
+(`FertigG`) stands at a VALUE return -- so `StartEndeG` checks EVERY
+completion of a start function. The probe fails the premise (`grP_nicht`)
+and the new conjunct is false on its start machine (`grP_verletzt`): no
+premises whatever let the flagship certify it.
+
+### 17.3 `schlusssatz_104`: A1 (+A2, A3) and A4 as hypotheses
+
+```lean
+theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true)
+    (binEin : CSt → List CVal → CSt → Option CVal → Prop)
+    (hA1ein : ∀ st vs st' rv, binEin st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 2 0 st vs st' rv)
+    (binLies : CSt → List CVal → CSt → Option CVal → Prop)
+    (hA1lies : ∀ st vs st' rv, binLies st vs st' rv →
+      CallAt gEL104.lay tvOrc tvXR refCProg 1 1 st vs st' rv)
+    (init : Faden → Σ g : gDB.Fn, Env gDB (gDB.params g)) (hA4 : LaufzeitStart init) :
+    <1 parse> ∧ <2 certificates> ∧
+    <3 fragment, footprint, KoerperGutS/InvGutS at EVERY passes, rufAt budget-independent> ∧
+    <4 every C run, as before> ∧
+    <5 renaming, gPB behaves as gP, rufAt of gPB budget-independent,
+       ∀ sp passes M, reachable from RufStartG gPB sp init →
+         goal conclusion ∧ InvAmOrtG ∧ StartEndeG ∧ KeinStartGrundG> ∧
+    <6 every run of binEin/binLies from related starts ends related to the
+       Gabbro result, which is the same at every passes>
+```
+
+- **A4 is a Lean proposition and a hypothesis**: `LaufzeitStart init := ∀ u,
+  u ≠ 0 → init u = ⟨none, .nil⟩`. Part 5 holds for every such start
+  (`gPB_ziel`, via the new `ziel_ort_einfaden_ende`: one active thread,
+  every budget, `StartEndeG`, `KeinStartGrundG`). Outside Lean stays only
+  that the real runtime starts in this shape (the driver is not emitted).
+- **A1 with A2 and A3 is one hypothesis per function**: every run of the
+  binary's function (`binEin`, a parameter: the behaviour of the compiled
+  code) is a run of the model's C semantics on `refCProg` at the emitter's
+  layout, at the depth the call tree needs. Part 6 states EVERY run of the
+  binary. Outside Lean: A1 that `binEin` IS the compiled binary (the
+  compiler); A2 that the text means `refCProg` -- replaced by a Lean C parser
+  for the emitter's subset, the text pinned as a `String`, and
+  `parseC text = some refCProg` by `decide` (A2 then shrinks into A1: the
+  compiler's front end reads the subset as `parseC`); A3 reduces to A1 + A2
+  (the `_Static_assert` pins are checked by the compiler) plus one missing
+  Lean lemma (the C semantics reads a `RecLay` only through the pinned
+  numbers, fields `< nf`). A5 (kernel, definitions) is no proposition.
+- **Every budget**: parts 3, 5, 6 as stated; `gP_rufAt_passes`,
+  `gPB_rufAt_passes` lift every `rufAt … 0 …` of parts 4-5.
+- **The root's `ensures` is now in the machine part**:
+  `schlusssatz_104_maschine_zeuge` additionally shows the root `einzahlen`
+  finished (empty stack) and its `ensures` at its completion BY THE THEOREM.
+- Jointly satisfiable: `schlusssatz_104_praemissen` (the C semantics itself
+  as the binary's behaviour, `bootInit`), and the `example` applying the
+  theorem to them.
+
+Chain count unchanged: **1** (`beispiele/104`); PLAN §6 restated.
+
+### 17.4 THE goal theorem: `ziel_ort_mehrfaden_ende` (restated)
+
+```lean
+theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g, g ∈ fs) (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f)
+    (hStart : StartGut P sp init) (hSstart : ∀ L, S.inv L sp = true)
+    (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
+    (hGrund : StartOhneGrund init) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M
+```
+
+Also restated the same way: `ziel_ort_ende` (generic `lok`),
+`ziel_ort_sperre_ende` (`fussSperreB`), new `ziel_ort_einfaden_ende` (one
+active thread); `ziel_ort_mehrfaden` over every budget (no completion, no
+`hGrund`).
+
+| Premise | Class | Changed in §17 |
+|---|---|---|
+| `P`, `O`, `fs`, `sp`, `init`, `Q`, `S`, `e0`, `K` | DATA | `passes` is NO LONGER a premise: it is quantified in the conclusion |
+| `hO`, `hRL`, `hQ` | (b) HARDWARE | -- |
+| `hlok`, `hS`, `hvoll`, `hFrag`, `hAbg`, `hWurzel`, `hFuss` | (c) | -- |
+| `hK : ∀ passes f, KoerperGutS …` | (a) USER, at every budget | quantified (§17.1); free for `forever`-free programs (`koerperGutS_alle`) |
+| `hI : ∀ passes f, InvGutS …` | (a) USER, at every budget | quantified (§17.1) |
+| `hStart`, `hSstart` | (a) boot duty | -- |
+| `hex` | (c)/(d) | -- |
+| `hGrund : StartOhneGrund init` | (c) decidable per start | NEW (§17.2); no Rust rule |
+
+### 17.5 Invariants at entry, while locks are held, at releases (item 4: named, not implemented)
+
+*What the conclusion says today.* `InvAmOrtG`: at every logged VALUE
+return (`rueck`) of every reachable machine, every invariant the returning
+function owes (`schuldet f i`: its `effects` write a carrier of `i`) holds
+at the logged world; `StartEndeG`: the same at a finished start frame.
+Nothing at entries, nothing while a lock is held, nothing at a release,
+nothing at a REASON return (`grund` is logged, but `InvAmOrtG` reads
+`rueck` events only). This matches the model's own semantics: `rufAt`
+checks owed invariants at value returns only, and assumes none at entry
+(an invariant needed there belongs in `requires`).
+
+*At entry: must NOT be demanded.* A caller that owes `i` may break it and
+call a helper that owes `i` too (both hold every guard by signature,
+`invarianten_gehalten`, U003); `breaking I { … }` is exactly such a region.
+Invariants at entry are no consequence and should not be one.
+
+*At every release of a guard: the right statement, and why it is not
+cheap.* By U003 a frame that owes `i` holds every guard of every carrier of
+`i` by signature, for its whole frame, and its caller holds them too
+(`RufPasst.hh`). So a guard `L` of `i`'s carriers is released only by a
+frame that took it in a `locks L` block and does NOT owe `i` (it could not
+take a lock it holds); at that moment no owing frame is on the thread's
+stack, nothing but owing frames writes `i`'s carriers, and no other thread
+can (it would need `L`). The statement that follows is the table-invariant
+twin of `SperrInvG`:
+
+```lean
+-- NAMED TARGET, not in Lean:
+def InvRuheG (P) (M) : Prop :=
+  ∀ i ∈ D.invs, (∀ c ∈ D.traeger i, D.braucht c ≠ []) →        -- guarded invariants only
+    (∀ t L, (∃ c ∈ D.traeger i, .inl L ∈ D.braucht c) → L ∉ offen (M.faeden t).spur) →
+    InvHaelt P i (M.speicher.welt [])                            -- at rest, it holds
+```
+
+It needs three things the theorem does not have: (1) a start premise
+`∀ i, InvHaelt P i (sp.welt [])`; (2) the invariant at every REASON exit of
+an owing frame -- see the finding below; (3) a machine invariant carried
+by every rule ("for each thread holding a guard of `i` with no owing frame
+on its stack, `i` holds in memory"), whose step classification has the size
+of `sperrInvG_schritt` plus the reason pops. Estimated: several hundred
+lines; not done in this round.
+
+*Finding (reason returns).* `dokumente/SYNTAX.md` (lines 673-676, 1337,
+1598 U006) says a function "owes `I` at every `return`". The model checks
+owed invariants at VALUE returns only (`rufAt`: `.grund σ' r => .grund σ' r`;
+`InvGutS` quantifies `EndAusgang.zurueck` only). So a function that owes
+`i` may break it and leave by a reason; its caller (holding the guards)
+handles the reason, a non-owing frame below releases the lock, and another
+thread acquires it and sees `i` false -- with every premise of the flagship
+met. Either the documented rule is wrong (reason returns owe nothing) or
+the model is (they owe `i` too); the repair in the model is obligation +
+conclusion as in §15.4 (`InvGutS` also over `EndAusgang.grund`, a reason
+twin of `popS_inv`, `InvAmOrtG` also over `grund` events), without changing
+`rufAt`. Not done here; no Lean probe of it yet.
+
+### 17.6 Axiom record (full `lake build`, 183 jobs, green; `ki-pc-fisch-101`)
+
+Every theorem named in §17 -- `Endblock.execH_passes`,
+`Endblock.exec_passes`, `koerperGutS_alle`, `invGutS_alle`,
+`rufAt_passes`, `wurzelFn_erreichbar`, `keinStartGrundG`,
+`ziel_ort_ende_bei`, `ziel_ort_ende`, `ziel_ort_mehrfaden_ende`,
+`ziel_ort_sperre_ende`, `ziel_ort_einfaden_ende`, `ziel_ort_mehrfaden`,
+`fvP_koerper0`, `probeD_bei0_zertifiziert`, `probeD_nicht`,
+`probeD_nicht_leer`, `fwP_nicht`, `probeD_halt`, `fwP_ende_verletzt`,
+`ewP_koerper`, `ewP_zertifiziert`, `ziel_ort_ewig_zeuge`, `fertig_wert`,
+`grP_koerper`, `grP_alt_zertifiziert`, `grP_fertig`, `grP_nicht`,
+`grP_verletzt`, `mP_zertifiziert`, `mP_mehrfaden`, `sP_ende_zertifiziert`,
+`gPB_ziel`, `gP_rufAt_passes`, `schlusssatz_104`,
+`schlusssatz_104_zeuge`, `schlusssatz_104_maschine_zeuge`,
+`schlusssatz_104_praemissen` -- depends on `propext`, `Classical.choice`,
+`Quot.sound` (`schlusssatz_104_praemisse`: `propext`, `Quot.sound`). No
+`sorry`, no new `axiom`, no `native_decide`.
+
+### 17.7 What remains
+
+- §17.5: invariants at releases (`InvRuheG`) and at reason returns.
+- `StartOhneGrund`, `ohneEwigB` are decidable model facts without a Rust
+  rule (as `fussMehrB`, `StufenM`, §16.6).
+- Budget monotonicity (obligation at `n + 1` implies at `n`) is not proved;
+  it is not needed (no budget is chosen), and "every budget `≥ B`" would be
+  equivalent only with it.
+- `schlusssatz_104`: the C side still at fixed call depths (no `CallAt`
+  fuel monotonicity); A1/A2 outside Lean as named in §17.3; everything of
+  PLAN §6 "What stays open".
+- Time (waiting bound, termination, ops->cycles) and every implementation
+  item of the verdicts: unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (second round); §§1-10 history above.)
 
