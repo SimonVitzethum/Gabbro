@@ -494,6 +494,13 @@ fn main() -> std::process::ExitCode {
         // SETUP does (no Lean, no model) -- 3 and not the instruments' 2, because at this
         // command line 2 is the unknown-command exit and a known command never says it.
         "prove" | "beweise" => befehl_beweise(rest),
+        // **`gabbro counterexample` -- the model-search half for handed-over
+        // obligations (PLAN-ZIELSATZ.md §9).** Searches inputs that satisfy
+        // `requires` but violate `ensures` (exhaustive while small, sampled
+        // otherwise) and prints a Lean file running every candidate through
+        // the exported program's semantics with a kernel-checked
+        // confirmation per hit. See `gabbro_check::gegenbeispiel`.
+        "counterexample" | "gegenbeispiel" => befehl_gegenbeispiel(rest),
         // **Blindstellen: eine Form, die der Korpus nicht ausloest.** Siehe
         // `gabbro_check::blindstellen` -- die Bauart von `mutiere-pruefer.py`, eine Ebene
         // hoeher. *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.*
@@ -738,6 +745,7 @@ const COMMAND_NAMES: &[&str] = &[
     "obligations", "pflichten",
     "lean",
     "lean-g",
+    "counterexample", "gegenbeispiel",
     "prove", "beweise",
     "blindspots", "blindstellen",
     "certificate", "zeugnis",
@@ -909,6 +917,14 @@ fn hilfe() {
                                      body and every contract as `Programm D`, plus the two
                                      decidable checks as `example ... := by decide`.
                                      Forms without a G counterpart are REFUSED by name
+  gabbro counterexample|gegenbeispiel [--seed N] [--samples N] [--exhaustive N]
+                                     [--fuel N] [--hits N] <file.gab> [fn]
+                                     the model search for handed-over obligations: inputs
+                                     satisfying `requires` but violating `ensures`,
+                                     exhaustive while small, sampled otherwise. Prints
+                                     a Lean file running every candidate through the
+                                     exported semantics (`#eval`) with a kernel-checked
+                                     confirmation per hit; NONE FOUND is never proved
   gabbro blindspots|blindstellen <clean>… [-- <poison>…]
                                     FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE
@@ -1079,6 +1095,115 @@ fn beweise_verlangen(getippt: &str, dateien: &[String], modell: Option<&str>) ->
         return Some(std::process::ExitCode::from(schlecht));
     }
     None
+}
+
+/// `gabbro counterexample|gegenbeispiel [--seed N] [--samples N] [--exhaustive N]
+/// [--fuel N] [--hits N] <file.gab> [fn]` -- the model-search half for handed-over
+/// obligations: inputs satisfying `requires` but violating `ensures`, exhaustive
+/// while the input space is small, deterministically sampled otherwise. Prints the
+/// `lean-g` export plus the search section (every candidate through `rufAt`/`execEnd`
+/// via `#eval`, every hit kernel-confirmed). Exit codes like `lean-g`: 0 the file,
+/// 1 the tree has to change (checker errors or an `LG` refusal), 2 a wrong call.
+fn befehl_gegenbeispiel(rest: &[String]) -> std::process::ExitCode {
+    fn fahnen_wert(rest: &[String], name: &str) -> Option<String> {
+        rest.iter().position(|a| a == name).and_then(|i| rest.get(i + 1).cloned())
+    }
+    let mut suche = gabbro_check::gegenbeispiel::Suche::default();
+    if let Some(v) = fahnen_wert(rest, "--seed") {
+        match v.parse::<u64>() {
+            Ok(n) => suche.saat = n,
+            Err(_) => {
+                eprintln!("gabbro counterexample: `--seed {v}` is not a number");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
+    if let Some(v) = fahnen_wert(rest, "--samples") {
+        match v.parse::<usize>() {
+            Ok(n) => suche.max_zufaellig = n,
+            Err(_) => {
+                eprintln!("gabbro counterexample: `--samples {v}` is not a number");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
+    if let Some(v) = fahnen_wert(rest, "--exhaustive") {
+        match v.parse::<u128>() {
+            Ok(n) => suche.erschoepfend_grenze = n,
+            Err(_) => {
+                eprintln!("gabbro counterexample: `--exhaustive {v}` is not a number");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
+    if let Some(v) = fahnen_wert(rest, "--fuel") {
+        match v.parse::<u64>() {
+            // One constant on both sides: the searcher interprets at this
+            // depth and the file runs `rufAt` at it (see
+            // `gabbro_check::gegenbeispiel`).
+            Ok(n) => {
+                suche.treibstoff = n;
+                suche.lean_treibstoff = n;
+            }
+            Err(_) => {
+                eprintln!("gabbro counterexample: `--fuel {v}` is not a number");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
+    if let Some(v) = fahnen_wert(rest, "--hits") {
+        match v.parse::<usize>() {
+            Ok(n) => suche.treffer_grenze = n,
+            Err(_) => {
+                eprintln!("gabbro counterexample: `--hits {v}` is not a number");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
+    let positionen: Vec<String> = {
+        let mut out = Vec::new();
+        let mut skip = false;
+        for a in rest {
+            if skip {
+                skip = false;
+                continue;
+            }
+            match a.as_str() {
+                "--seed" | "--samples" | "--exhaustive" | "--fuel" | "--hits" => skip = true,
+                _ => out.push(a.clone()),
+            }
+        }
+        out
+    };
+    if positionen.is_empty() {
+        eprintln!("gabbro counterexample: no file named");
+        return std::process::ExitCode::from(2);
+    }
+    if positionen.len() > 2 {
+        eprintln!("gabbro counterexample: one file and one optional function -- got {}", positionen.join(" "));
+        return std::process::ExitCode::from(2);
+    }
+    let datei = positionen[0].as_str();
+    let nur = positionen.get(1).map(|s| s.as_str());
+    let Ok(quelle) = std::fs::read_to_string(datei) else {
+        eprintln!("gabbro: {datei} not readable");
+        return std::process::ExitCode::from(1);
+    };
+    let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    if absagen.fehler_zahl() > 0 {
+        eprint!("{}", absagen.zeige(&quelle));
+        eprintln!("gabbro counterexample: {datei} has errors -- no search");
+        return std::process::ExitCode::from(1);
+    }
+    match gabbro_check::gegenbeispiel::export(datei, &baum, nur, &suche) {
+        Ok(text) => print!("{text}"),
+        Err(w) => {
+            eprintln!("gabbro counterexample: {datei}: {w}");
+            return std::process::ExitCode::from(1);
+        }
+    }
+    std::process::ExitCode::SUCCESS
 }
 
 /// `gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…`

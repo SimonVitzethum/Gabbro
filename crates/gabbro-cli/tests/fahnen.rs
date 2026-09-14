@@ -234,6 +234,34 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    // --- the counterexample search, lane 180 -------------------------------------------
+    Fahne {
+        // The search budget of `counterexample|gegenbeispiel`: English from
+        // the start, no pairs (a number is not a word in either language).
+        erstname: "--seed",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--samples",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--exhaustive",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--fuel",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--hits",
+        zweitname: "",
+        lebendig: &[],
+    },
 ];
 
 /// **Every sub-command arm of the dispatch, English name first.**
@@ -263,6 +291,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["obligations", "pflichten"],
     &["lean"],
     &["lean-g"],
+    &["counterexample", "gegenbeispiel"],
     &["prove", "beweise"],
     &["blindspots", "blindstellen"],
     &["certificate", "zeugnis"],
