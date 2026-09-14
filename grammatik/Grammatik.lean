@@ -191,3 +191,11 @@ import Grammatik.HelferZeuge
 import Grammatik.SonstLeaveZeuge
 import Grammatik.ZielOrtInv
 import Grammatik.InvZeuge
+import Grammatik.Isabelle.AccumulatesMonoid
+import Grammatik.Isabelle.GruppeErhaltung
+import Grammatik.Isabelle.FormatRoundtrip
+import Grammatik.Isabelle.OptionSonderwert
+import Grammatik.Isabelle.Consuming
+import Grammatik.Isabelle.DeviceKonstruktor
+import Grammatik.Isabelle.VerbundKonstruktor
+import Grammatik.Isabelle.RestrictAlleinzugriff
