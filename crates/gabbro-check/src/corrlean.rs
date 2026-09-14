@@ -208,13 +208,15 @@ impl<'a> Umgebung<'a> {
         }
     }
 
-    /// Byte size of a slot field type: integers by word, aliases by resolution.
+    /// Byte size of a slot field type: integers by word, `bool` by
+    /// storage, aliases by resolution.
     fn feld_bytes(&self, t: &TypExpr, tiefe: u32) -> Option<u32> {
         if tiefe > 8 {
             return None;
         }
         match t {
             TypExpr::Int(i) => wort_bytes(&i.wort),
+            TypExpr::Bool(_) => Some(1),
             TypExpr::Pfad(p) => {
                 let name = p.einfach()?.text.clone();
                 for td in &self.typen {
@@ -243,7 +245,7 @@ impl<'a> Umgebung<'a> {
                 SlotTyp::Wrapping(i) => wort_bytes(&i.wort)?,
             };
             if f.name.text == feld {
-                let mut ss = off;
+                let mut ss = 0;
                 for g in &slot.felder {
                     ss += match &g.typ {
                         SlotTyp::Typ(te) => self.feld_bytes(te, 0)?,
@@ -252,6 +254,7 @@ impl<'a> Umgebung<'a> {
                 }
                 let field_ty = match &f.typ {
                     SlotTyp::Typ(TypExpr::Int(i)) => format!("{i:?}"),
+                    SlotTyp::Typ(TypExpr::Bool(_)) => "bool".to_string(),
                     SlotTyp::Typ(TypExpr::Pfad(p)) => p.text(),
                     SlotTyp::Typ(_) => "compound".to_string(),
                     SlotTyp::Wrapping(i) => format!("wrapping {i:?}"),

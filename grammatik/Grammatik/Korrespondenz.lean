@@ -872,6 +872,58 @@ theorem einzahlen_zeuge_general :
   refine ⟨_, st', rfl, hC, hc, rfl, rfl, rfl, ?_⟩
   exact (hc.1 () rfl).2 0 () (by decide) (by decide)
 
+/-! ## Corpus pins: printed certificates accepted by `decide`.
+
+Each body below is pasted from `gabbro corr-lean` (general section)
+and checked by `gbodyOk`. There is no Lean model of these programs, so
+these pins check shape and hygiene -- the printer holds the
+printer-to-emission agreement, tested in `corrlean.rs`. -/
+
+/-- `beispiele/16`, `stand`: return of the slot load. -/
+def printed16_stand : GBody :=
+  { rows := [GRow.ret (some ((.int false .w32), (.ld (.slotA (.var 0) (.var 1) 8 5 1) (.int false .w32))))],
+    vm := [], pp := [0], ks := [(1, 0)] }
+
+theorem printed16_stand_ok : gbodyOk printed16_stand = true := by decide
+
+/-- `beispiele/16`, `belegen`: slot store of `true`. -/
+def printed16_belegen : GBody :=
+  { rows := [GRow.storeSlot 0 (.var 1) 8 5 0 (.int false .w8) (.lit 1)],
+    vm := [], pp := [0], ks := [(1, 0)] }
+
+theorem printed16_belegen_ok : gbodyOk printed16_belegen = true := by decide
+
+/-- `beispiele/118`, `gib`: two slot stores at literal index `0`. -/
+def printed118_gib : GBody :=
+  { rows := [GRow.storeSlot 0 (.lit 0) 2 4 0 (.int false .w32) (.lit 30),
+      GRow.storeSlot 1 (.lit 0) 2 4 0 (.int false .w32) (.lit 70)],
+    vm := [], pp := [0, 1], ks := [] }
+
+theorem printed118_gib_ok : gbodyOk printed118_gib = true := by decide
+
+/-- `beispiele/118`, `nimm`. -/
+def printed118_nimm : GBody :=
+  { rows := [GRow.storeSlot 0 (.lit 0) 2 4 0 (.int false .w32) (.lit 10),
+      GRow.storeSlot 1 (.lit 0) 2 4 0 (.int false .w32) (.lit 90)],
+    vm := [], pp := [0, 1], ks := [] }
+
+theorem printed118_nimm_ok : gbodyOk printed118_nimm = true := by decide
+
+/-- `beispiele/15`, `uebernehmen`: store `true`, return the slot. -/
+def printed15 : GBody :=
+  { rows := [GRow.storeSlot 0 (.var 1) 8 1 0 (.int false .w8) (.lit 1),
+      GRow.ret (some ((.int false .w8), (.ld (.slotA (.var 0) (.var 1) 8 1 0) (.int false .w8))))],
+    vm := [], pp := [0], ks := [(1, 0)] }
+
+theorem printed15_ok : gbodyOk printed15 = true := by decide
+
+/-- `beispiele/25`, `byte_legen`: store of a parameter at a parameter index. -/
+def printed25 : GBody :=
+  { rows := [GRow.storeSlot 0 (.var 1) 4096 1 0 (.int false .w8) (.var 2)],
+    vm := [1, 2], pp := [0], ks := [] }
+
+theorem printed25_ok : gbodyOk printed25 = true := by decide
+
 /-
 CUTS: what is not proved here, by name.
 - The row-to-statement link is proof-level: a `GRow` pins the C side
@@ -912,5 +964,11 @@ CUTS: what is not proved here, by name.
 #print axioms ein_fn_general
 #print axioms lies_fn_general
 #print axioms einzahlen_zeuge_general
+#print axioms printed16_stand_ok
+#print axioms printed16_belegen_ok
+#print axioms printed118_gib_ok
+#print axioms printed118_nimm_ok
+#print axioms printed15_ok
+#print axioms printed25_ok
 
 end Gabbro.Grammatik
