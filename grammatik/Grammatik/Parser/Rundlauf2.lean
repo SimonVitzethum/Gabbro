@@ -517,26 +517,25 @@ theorem turm_var : ∀ (a : String) (rest : List Token) (F : Nat),
   exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
--- Standalone arm lemmas with VARIABLE tails. Each
--- canonicalises token lists first (append_assoc/cons/nil -- the
--- same set callers use, so every use site aligns), then fires the
--- concrete head arm and rewrites the child call. This isolates
--- all match-reduction risk in three tiny probes.
-theorem bang_arm : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
-    parsePrimary G' (Tx ++ rest) = .ok (v, rest) →
-    parseUnary (G' + 1) (([.zeichen "!"] ++ Tx) ++ rest) =
-      .ok (.un "!" v, rest) := by
-  intro G' Tx rest v h
-  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+-- Standalone arm lemmas with WHOLE-SUBTERM middles (`M`)
+-- and tails (`R`): callers align by canonicalising with
+-- `append_assoc` (confluent), unification assigns whole
+-- subterms, so association never enters unification. This
+-- isolates all match-reduction risk in three tiny probes.
+theorem bang_arm : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
+    parsePrimary G' M = .ok (v, R) →
+    parseUnary (G' + 1) ([.zeichen "!"] ++ M) =
+      .ok (.un "!" v, R) := by
+  intro G' M R v h
+  simp only [List.cons_append, List.nil_append] at h ⊢
   simp only [parseUnary, h] at ⊢
 
-theorem paren_arm : ∀ (G'' : Nat) (Tx rest : List Token) (v : SExpr),
-    parseOr G'' (Tx ++ [.zeichen ")"] ++ rest) =
-      .ok (v, [.zeichen ")"] ++ rest) →
-    parsePrimary (G'' + 1) ((([.zeichen "("] ++ Tx) ++ [.zeichen ")"]) ++ rest) =
-      .ok (v, rest) := by
-  intro G'' Tx rest v h
-  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+theorem paren_arm : ∀ (G'' : Nat) (M R : List Token) (v : SExpr),
+    parseOr G'' M = .ok (v, [.zeichen ")"] ++ R) →
+    parsePrimary (G'' + 1) ([.zeichen "("] ++ M) =
+      .ok (v, R) := by
+  intro G'' M R v h
+  simp only [List.cons_append, List.nil_append] at h ⊢
   simp only [parsePrimary, h] at ⊢
 
 -- A parenthesised tree falls through `parseUnary` to
@@ -544,15 +543,15 @@ theorem paren_arm : ∀ (G'' : Nat) (Tx rest : List Token) (v : SExpr),
 -- needs the four string inequalities spelled out (same pattern
 -- as lane 161's `stopSuffix`: `simp` prunes the match arms from
 -- the `≠` facts).
-theorem un_paren_fall : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
-    parsePrimary G' (([.zeichen "("] ++ Tx) ++ rest) = .ok (v, rest) →
-    parseUnary (G' + 1) (([.zeichen "("] ++ Tx) ++ rest) = .ok (v, rest) := by
-  intro G' Tx rest v h
+theorem un_paren_fall : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
+    parsePrimary G' ([.zeichen "("] ++ M) = .ok (v, R) →
+    parseUnary (G' + 1) ([.zeichen "("] ++ M) = .ok (v, R) := by
+  intro G' M R v h
   have n1 : ("(" : String) ≠ "!" := by decide
   have n2 : ("(" : String) ≠ "-" := by decide
   have n3 : ("(" : String) ≠ "~" := by decide
   have n4 : ("(" : String) ≠ "&" := by decide
-  simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
+  simp only [List.cons_append, List.nil_append] at h ⊢
   simp [parseUnary, h, n1, n2, n3, n4] at ⊢
 
 -- The `un "!"` tower from induction-hypothesis legs: the
@@ -591,8 +590,8 @@ theorem kern_un_turm : ∀ (x : SExpr) (rest : List Token) (F : Nat),
           [.zeichen "!"] ++ druckToks x := by
         simp [druckToks, hat]
       have hP' := hPx G' (by omega)
-      simp only [hd] at ⊢
-      exact bang_arm G' (druckToks x) rest x hP'
+      simp only [hd, List.append_assoc] at ⊢
+      exact bang_arm _ _ _ _ hP'
     | false =>
       have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
@@ -600,13 +599,78 @@ theorem kern_un_turm : ∀ (x : SExpr) (rest : List Token) (F : Nat),
       have hF2 : 1 ≤ G' := by omega
       obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
       have hO' := hOx G'' (by omega)
-      have hPar := paren_arm G'' (druckToks x) rest x hO'
-      have hBang := bang_arm (G'' + 1)
-        ((([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"])) rest x hPar
-      simp only [hd] at ⊢
+      simp only [List.append_assoc] at hO'
+      have hPar := paren_arm _ _ _ _ hO'
+      have hBang := bang_arm _ _ _ _ hPar
+      simp only [hd, List.append_assoc] at ⊢
       exact hBang
   have hup := tower_up (.un "!" x) rest F hr hU (by omega)
   exact ⟨hU F (by omega), hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
     hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
+-- The `bin "+"` tower from a binary-inner leg: the
+-- `parsePrimary` leg runs the `(` arm over the inner parse, the
+-- `parseUnary` leg falls through on `(`, then `tower_up`.
+theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
+    gutKern l = true → gutKern r = true →
+    ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
+    (∀ (G : Nat),
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 8 ≤ G →
+      parseOr G (druckToks l ++ [.zeichen "+"] ++ druckToks r ++
+        [.zeichen ")"] ++ rest) =
+        .ok (.bin "+" l r, [.zeichen ")"] ++ rest)) →
+    12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 8 ≤ F →
+    (parsePrimary F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseUnary F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseMul F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseAdd F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseBit F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseCmp F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseAnd F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest))
+    ∧ (parseOr F (druckToks (.bin "+" l r) ++ rest) =
+      .ok (.bin "+" l r, rest)) := by
+  intro l r rest F hgl hgr hr hrs hrg hB hF
+  have hsize : groesse (.bin "+" l r) = groesse l + groesse r + 1 := rfl
+  have hd : druckToks (.bin "+" l r) = [.zeichen "("] ++ druckToks l ++
+      [.zeichen "+"] ++ druckToks r ++ [.zeichen ")"] := by
+    simp [druckToks]
+  have hP : ∀ (G : Nat),
+      12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 1 ≤ G →
+      parsePrimary G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    -- Inner token shape for `paren_arm`: `(` head, `l + r`
+    -- body, `)` tail, all left-nested exactly as printed.
+    have hB' := hB G' (by omega)
+    have hPar := paren_arm _ _ _ _ hB'
+    -- `hPar` and the goal differ by association only:
+    -- canonicalise both, then they coincide.
+    simp only [hd, List.append_assoc] at ⊢
+    simp only [List.append_assoc] at hPar
+    exact hPar
+  have hU : ∀ (G : Nat),
+      12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 2 ≤ G →
+      parseUnary G (druckToks (.bin "+" l r) ++ rest) =
+        .ok (.bin "+" l r, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hP' := hP G' (by omega)
+    -- Canonicalise both sides; the underscores let unification
+    -- infer the middle and tail (the lemma holds for any tail).
+    simp only [hd, List.append_assoc] at hP' ⊢
+    exact un_paren_fall _ _ _ _ hP'
+  have hup := tower_up (.bin "+" l r) rest F hr hU (by omega)
+  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+    hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 end Gabbro.Grammatik.Parser
