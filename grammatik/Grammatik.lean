@@ -232,3 +232,4 @@ import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.ZielOrtInvGrund
+import Grammatik.Fortschritt
