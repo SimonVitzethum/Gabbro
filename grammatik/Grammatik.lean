@@ -225,3 +225,5 @@ import Grammatik.MehrfadenZeuge
 import Grammatik.MehrfadenLauf
 import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund
+import Grammatik.Zielsatz.Spec
+import Grammatik.Zielsatz.SpecProben
