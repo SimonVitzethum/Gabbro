@@ -1510,4 +1510,93 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n →
   | ergebnis => simp [gutKern] at hg
   | grund g f => simp [gutKern] at hg
 
+-- The joint invariant by size induction: base cases are
+-- vacuous (every tree has size at least one, every pair at
+-- least two), steps assemble the eight level lemmas plus the
+-- inner trace.
+theorem kernRB : ∀ (n : Nat), RKern n ∧ BKern n := by
+  intro n
+  induction n with
+  | zero =>
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _
+        have hp := groesse_pos e
+        omega
+      · intro e rest F hs _ _ _ _ _
+        have hp := groesse_pos e
+        omega
+    · intro l r W F hsum _ _ _
+      have hpl := groesse_pos l
+      have hpr := groesse_pos r
+      omega
+  | succ n ih =>
+    obtain ⟨rkn, bkn⟩ := ih
+    exact ⟨⟨kernOr_step n rkn bkn, kernAnd_step n rkn bkn,
+      kernCmp_step n rkn bkn, kernBit_step n rkn bkn,
+      kernAdd_step n rkn bkn, kernMul_step n rkn bkn,
+      kernUnary_step n rkn bkn, kernPrimary_step n rkn bkn⟩,
+      kernB_step n rkn⟩
+
+-- Step A goal: every `gutKern` tree parses back from its
+-- printed tokens with `brennstoff` fuel. The `Or` leg of the
+-- invariant at `groesse e`, with `ende` follows (all `rfl`) and
+-- fuel exactly `brennstoff` (which was grown to the `RKern`
+-- bound -- measured, see its doc comment).
+theorem parse_druck_kern : ∀ (e : SExpr), gutKern e = true →
+    parseOr (brennstoff e) (druckToks e ++ [.ende]) =
+      .ok (e, [.ende]) := by
+  intro e hg
+  have hRB := kernRB (groesse e)
+  obtain ⟨⟨rOr, -, -, -, -, -, -, -⟩, -⟩ := hRB
+  have hr : ruhig [.ende] = true := rfl
+  have hrs : ruhigSuff [.ende] = true := rfl
+  have hrg : ruhigGleit [.ende] = true := rfl
+  have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
+    simp [brennstoff]
+  exact rOr e [.ende] (brennstoff e) (Nat.le_refl _) hg hr hrs hrg hF
+
+-- Witnesses on small expressions, each in two forms: the
+-- `parse_druck_kern` instance (the round trip at work), and a
+-- kernel-computed shape check. (`decide` on `Except`-equality
+-- fails: no `DecidableEq SExpr` -- the `match` form needs only
+-- discrimination, so the kernel evaluates both sides.)
+theorem zeuge_kern_lit : parseOr (brennstoff (.lit 5))
+    (druckToks (.lit 5) ++ [.ende]) = .ok (.lit 5, [.ende]) :=
+  parse_druck_kern _ (by decide)
+theorem zeuge_kern_lit_rech : (match parseOr (brennstoff (.lit 5))
+    (druckToks (.lit 5) ++ [.ende]) with
+    | .ok (.lit 5, [.ende]) => true
+    | _ => false) = true := by
+  decide
+theorem zeuge_kern_plus :
+    parseOr (brennstoff (.bin "+" (.lit 1) (.lit 2)))
+    (druckToks (.bin "+" (.lit 1) (.lit 2)) ++ [.ende]) =
+      .ok (.bin "+" (.lit 1) (.lit 2), [.ende]) :=
+  parse_druck_kern _ (by decide)
+theorem zeuge_kern_plus_rech : (match parseOr
+    (brennstoff (.bin "+" (.lit 1) (.lit 2)))
+    (druckToks (.bin "+" (.lit 1) (.lit 2)) ++ [.ende]) with
+    | .ok (.bin "+" (.lit 1) (.lit 2), [.ende]) => true
+    | _ => false) = true := by
+  decide
+
 end Gabbro.Grammatik.Parser
