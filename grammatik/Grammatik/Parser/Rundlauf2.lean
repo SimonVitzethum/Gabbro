@@ -30,17 +30,19 @@ import Grammatik.Parser.Rundlauf
 
 namespace Gabbro.Grammatik.Parser
 
--- Step A predicate: literals (all four leaf shapes), variables,
--- unary `!`, parenthesised `+`. Everything else is `false`
+-- Step A predicate, widened in step B1 to the full unary
+-- level: literals (all four leaf shapes), variables, unary
+-- `!`/`-`/`~`, parenthesised `+`. Everything else is `false`
 -- (calls, places/suffixes, the other five operator levels,
--- `sizeof`/`old`/`Grund` come in step B).
+-- `sizeof`/`old`/`Grund` come later in step B).
 def gutKern : SExpr → Bool
   | .lit _ => true
   | .gleit _ => true
   | .wahr => true
   | .falsch => true
   | .variable s => !istKeinPlatz s
-  | .un o x => strEq o "!" && gutKern x
+  | .un o x =>
+    (strEq o "!" || strEq o "-" || strEq o "~") && gutKern x
   | .bin o l r => strEq o "+" && gutKern l && gutKern r
   | _ => false
 
@@ -49,13 +51,26 @@ def gutKern : SExpr → Bool
 -- `simp` equations do not select -- same reason as lane 161's
 -- `gut_sizeof_one` family).
 theorem gutKern_un : ∀ (o : String) (x : SExpr),
-    gutKern (.un o x) = (strEq o "!" && gutKern x) := by
+    gutKern (.un o x) =
+      ((strEq o "!" || strEq o "-" || strEq o "~") && gutKern x) := by
   intro o x
   rfl
 theorem gutKern_bin : ∀ (o : String) (l r : SExpr),
     gutKern (.bin o l r) = (strEq o "+" && gutKern l && gutKern r) := by
   intro o l r
   rfl
+
+-- A lawful prefix spelling names itself: the three cases
+-- of the widened `gutKern` un-arm.
+theorem un_is_pre : ∀ (o : String),
+    (strEq o "!" || strEq o "-" || strEq o "~") = true →
+    o = "!" ∨ o = "-" ∨ o = "~" := by
+  intro o h
+  simp only [Bool.or_eq_true] at h
+  obtain ⟨h | h⟩ | h := h
+  · exact Or.inl (strKlingt o "!" h)
+  · exact Or.inr (Or.inl (strKlingt o "-" h))
+  · exact Or.inr (Or.inr (strKlingt o "~" h))
 
 -- A `gutKern` tree is printable (`gut`): the bridge step B needs
 -- when it reuses lane 161's lemmas. By cases (places only exclude
@@ -79,11 +94,16 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     rw [gutKern_un] at h
     simp only [Bool.and_eq_true] at h
     obtain ⟨hop, hx⟩ := h
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    simp only [gut, Bool.and_eq_true] at ⊢
-    refine ⟨?_, gut_of_gutKern x hx⟩
-    decide
+    obtain rfl | rfl | rfl := un_is_pre o hop
+    · simp only [gut, Bool.and_eq_true] at ⊢
+      refine ⟨?_, gut_of_gutKern x hx⟩
+      decide
+    · simp only [gut, Bool.and_eq_true] at ⊢
+      refine ⟨?_, gut_of_gutKern x hx⟩
+      decide
+    · simp only [gut, Bool.and_eq_true] at ⊢
+      refine ⟨?_, gut_of_gutKern x hx⟩
+      decide
   | bin o l r =>
     rw [gutKern_bin] at h
     simp only [Bool.and_eq_true, and_assoc] at h
@@ -589,13 +609,20 @@ theorem turm_var : ∀ (a : String) (rest : List Token),
 -- `append_assoc` (confluent), unification assigns whole
 -- subterms, so association never enters unification. This
 -- isolates all match-reduction risk in three tiny probes.
-theorem bang_arm : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
+-- The prefix-operator arm generalised over the spelling:
+-- `!`, `-` and `~` all run `parsePrimary` identically.
+theorem bang_arm_gen : ∀ (G' : Nat) (M R : List Token) (o : String) (v : SExpr),
+    (strEq o "!" || strEq o "-" || strEq o "~") = true →
     parsePrimary G' M = .ok (v, R) →
-    parseUnary (G' + 1) ([.zeichen "!"] ++ M) =
-      .ok (.un "!" v, R) := by
-  intro G' M R v h
-  simp only [List.cons_append, List.nil_append] at h ⊢
-  simp only [parseUnary, h] at ⊢
+    parseUnary (G' + 1) ([.zeichen o] ++ M) = .ok (.un o v, R) := by
+  intro G' M R o v hop h
+  obtain rfl | rfl | rfl := un_is_pre o hop
+  · simp only [List.cons_append, List.nil_append] at h ⊢
+    simp only [parseUnary, h] at ⊢
+  · simp only [List.cons_append, List.nil_append] at h ⊢
+    simp only [parseUnary, h] at ⊢
+  · simp only [List.cons_append, List.nil_append] at h ⊢
+    simp only [parseUnary, h] at ⊢
 
 theorem paren_arm : ∀ (G'' : Nat) (M R : List Token) (v : SExpr),
     parseOr G'' M = .ok (v, [.zeichen ")"] ++ R) →
@@ -621,90 +648,93 @@ theorem un_paren_fall : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
   simp only [List.cons_append, List.nil_append] at h ⊢
   simp [parseUnary, h, n1, n2, n3, n4] at ⊢
 
--- The `un "!"` tower for ATOM children: the `parsePrimary`
--- leg (same follow) through the `!` arm, then `tower_up`. Split
--- from the joint tower because the primary leg is provable only
--- for atoms (`parsePrimary` fails on operator heads). No
+-- The `un` tower for ATOM children, generalised over the
+-- prefix spelling: the `parsePrimary` leg (same follow)
+-- through the prefix arm, then `tower_up`. Split from the
+-- joint tower because the primary leg is provable only for
+-- atoms (`parsePrimary` fails on operator heads). No
 -- `parsePrimary` component (`primFrei` is false for `un`).
-theorem kern_un_atom_turm : ∀ (x : SExpr) (rest : List Token),
+theorem kern_un_atom_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
+    (strEq o "!" || strEq o "-" || strEq o "~") = true →
     istAtom x = true → ruhig rest = true →
     (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 1 ≤ G →
       parsePrimary G (druckToks x ++ rest) = .ok (x, rest)) →
-    (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
-      parseUnary G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 3 ≤ G →
-      parseMul G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 4 ≤ G →
-      parseAdd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 5 ≤ G →
-      parseBit G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 6 ≤ G →
-      parseCmp G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 7 ≤ G →
-      parseAnd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ G →
-      parseOr G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
-  intro x rest hat hr hPx
-  have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+    (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 2 ≤ G →
+      parseUnary G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 3 ≤ G →
+      parseMul G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 4 ≤ G →
+      parseAdd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 5 ≤ G →
+      parseBit G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 6 ≤ G →
+      parseCmp G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 7 ≤ G →
+      parseAnd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 8 ≤ G →
+      parseOr G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest)) := by
+  intro o x rest hop hat hr hPx
+  have hsize : groesse (.un o x) = groesse x + 1 := rfl
   have hU : ∀ (G : Nat),
-      12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
-      parseUnary G (druckToks (.un "!" x) ++ rest) =
-        .ok (.un "!" x, rest) := by
+      12 * (groesse (.un o x) + 1) + groesse (.un o x) + 2 ≤ G →
+      parseUnary G (druckToks (.un o x) ++ rest) =
+        .ok (.un o x, rest) := by
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
-    have hd : druckToks (.un "!" x) =
-        [.zeichen "!"] ++ druckToks x := by
+    have hd : druckToks (.un o x) =
+        [.zeichen o] ++ druckToks x := by
       simp [druckToks, hat]
     have hP' := hPx G' (by omega)
     simp only [hd, List.append_assoc] at ⊢
-    exact bang_arm _ _ _ _ hP'
-  have hup := tower_up (.un "!" x) rest hr hU
+    exact bang_arm_gen _ _ _ _ _ hop hP'
+  have hup := tower_up (.un o x) rest hr hU
   exact ⟨hU, hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
     hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
--- The `un "!"` tower for PARENTHESISED (non-atom) children: the
--- `parseOr` leg (`)` follow) through the `!` arm into the `(`
--- arm, then `tower_up`.
-theorem kern_un_paren_turm : ∀ (x : SExpr) (rest : List Token),
+-- The `un` tower for PARENTHESISED (non-atom) children: the
+-- `parseOr` leg (`)` follow) through the prefix arm into the
+-- `(` arm, then `tower_up`.
+theorem kern_un_paren_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
+    (strEq o "!" || strEq o "-" || strEq o "~") = true →
     istAtom x = false → ruhig rest = true →
     (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
       parseOr G (druckToks x ++ ([.zeichen ")"] ++ rest)) =
         .ok (x, [.zeichen ")"] ++ rest)) →
-    (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
-      parseUnary G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 3 ≤ G →
-      parseMul G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 4 ≤ G →
-      parseAdd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 5 ≤ G →
-      parseBit G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 6 ≤ G →
-      parseCmp G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 7 ≤ G →
-      parseAnd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ G →
-      parseOr G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
-  intro x rest hat hr hOx
-  have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+    (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 2 ≤ G →
+      parseUnary G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 3 ≤ G →
+      parseMul G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 4 ≤ G →
+      parseAdd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 5 ≤ G →
+      parseBit G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 6 ≤ G →
+      parseCmp G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 7 ≤ G →
+      parseAnd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 8 ≤ G →
+      parseOr G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest)) := by
+  intro o x rest hop hat hr hOx
+  have hsize : groesse (.un o x) = groesse x + 1 := rfl
   have hU : ∀ (G : Nat),
-      12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
-      parseUnary G (druckToks (.un "!" x) ++ rest) =
-        .ok (.un "!" x, rest) := by
+      12 * (groesse (.un o x) + 1) + groesse (.un o x) + 2 ≤ G →
+      parseUnary G (druckToks (.un o x) ++ rest) =
+        .ok (.un o x, rest) := by
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
-    have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
+    have hd : druckToks (.un o x) = [.zeichen o] ++
         (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
       simp [druckToks, hat]
     have hF2 : 1 ≤ G' := by omega
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     have hO' := hOx G'' (by omega)
     have hPar := paren_arm _ _ _ _ hO'
-    have hBang := bang_arm _ _ _ _ hPar
+    have hBang := bang_arm_gen _ _ _ _ _ hop hPar
     simp only [hd, List.append_assoc] at ⊢
     exact hBang
-  have hup := tower_up (.un "!" x) rest hr hU
+  have hup := tower_up (.un o x) rest hr hU
   exact ⟨hU, hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
     hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
@@ -960,31 +990,33 @@ theorem kernB_step : ∀ (n : Nat), RKern n → BKern (n + 1) := by
     simp only [parseOr, parseOrL, hAnd', hstop] at ⊢
   exact hOr F hF
 
--- The `un "!"` legs from the induction hypothesis: atoms
--- take the primary leg (via `primFrei_of_atom`), parenthesised
--- children the `parseOr` leg with `)` follow. Returns the seven
--- generalised legs (no primary: `primFrei` is false for `un`).
+-- The `un` legs from the induction hypothesis, generalised
+-- over the prefix spelling: atoms take the primary leg (via
+-- `primFrei_of_atom`), parenthesised children the `parseOr` leg
+-- with `)` follow. Returns the seven generalised legs (no
+-- primary: `primFrei` is false for `un`).
 theorem turm_un : ∀ (n : Nat), RKern n →
-    ∀ (x : SExpr) (rest : List Token),
-    groesse (.un "!" x) ≤ n + 1 → gutKern x = true →
+    ∀ (o : String) (x : SExpr) (rest : List Token),
+    (strEq o "!" || strEq o "-" || strEq o "~") = true →
+    groesse (.un o x) ≤ n + 1 → gutKern x = true →
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
-      parseUnary G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 3 ≤ G →
-      parseMul G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 4 ≤ G →
-      parseAdd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 5 ≤ G →
-      parseBit G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 6 ≤ G →
-      parseCmp G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 7 ≤ G →
-      parseAnd G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ G →
-      parseOr G (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
-  intro n rkn x rest hs hgx hr hrs hrg
+    (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 2 ≤ G →
+      parseUnary G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 3 ≤ G →
+      parseMul G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 4 ≤ G →
+      parseAdd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 5 ≤ G →
+      parseBit G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 6 ≤ G →
+      parseCmp G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 7 ≤ G →
+      parseAnd G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.un o x) + 1) + groesse (.un o x) + 8 ≤ G →
+      parseOr G (druckToks (.un o x) ++ rest) = .ok (.un o x, rest)) := by
+  intro n rkn o x rest hop hs hgx hr hrs hrg
   obtain ⟨rOr, -, -, -, -, -, -, rPr⟩ := rkn
-  have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+  have hsize : groesse (.un o x) = groesse x + 1 := rfl
   have hxn : groesse x ≤ n := by omega
   cases hat : istAtom x with
   | true =>
@@ -993,7 +1025,7 @@ theorem turm_un : ∀ (n : Nat), RKern n →
         parsePrimary G (druckToks x ++ rest) = .ok (x, rest) := by
       intro G hG
       exact rPr x rest G hxn hgx hpf hrs hrg hG
-    exact kern_un_atom_turm x rest hat hr hPx
+    exact kern_un_atom_turm o x rest hop hat hr hPx
   | false =>
     have hOx : ∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
         parseOr G (druckToks x ++ ([.zeichen ")"] ++ rest)) =
@@ -1001,7 +1033,7 @@ theorem turm_un : ∀ (n : Nat), RKern n →
       intro G hG
       exact rOr x ([.zeichen ")"] ++ rest) G hxn hgx
         (hr_paren rest) (hrs_paren rest) (hrg_paren rest) hG
-    exact kern_un_paren_turm x rest hat hr hOx
+    exact kern_un_paren_turm o x rest hop hat hr hOx
 
 -- The `bin "+"` legs from the binary-inner invariant: a thin
 -- wrapper adapting `BKern n` to the leg shape `kern_bin_turm`
@@ -1073,9 +1105,7 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.2.2 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.2.2.2.2.2 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1114,9 +1144,7 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.2.1 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.2.2.2.2.1 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1155,9 +1183,7 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.2.1 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.2.2.2.1 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1196,9 +1222,7 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.2.1 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.2.2.1 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1263,9 +1287,7 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.2.1 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.2.1 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1304,9 +1326,7 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    exact (turm_un n rkn x rest hs hgx hr hrs hrg).2.1 F (by omega)
+    exact (turm_un n rkn o x rest hop hs hgx hr hrs hrg).2.1 F (by omega)
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -1395,9 +1415,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n →
     rw [gutKern_un] at hg
     simp only [Bool.and_eq_true] at hg
     obtain ⟨hop, hgx⟩ := hg
-    have ho : o = "!" := strKlingt o "!" hop
-    subst ho
-    have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+    have hsize : groesse (.un o x) = groesse x + 1 := rfl
     have hxn : groesse x ≤ n := by omega
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -1408,12 +1426,12 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n →
           parsePrimary G (druckToks x ++ rest) = .ok (x, rest) := by
         intro G hG
         exact rPr x rest G hxn hgx hpf hrs hrg hG
-      have hd : druckToks (.un "!" x) =
-          [.zeichen "!"] ++ druckToks x := by
+      have hd : druckToks (.un o x) =
+          [.zeichen o] ++ druckToks x := by
         simp [druckToks, hat]
       have hP' := hPx F' (by omega)
       simp only [hd, List.append_assoc] at ⊢
-      exact bang_arm _ _ _ _ hP'
+      exact bang_arm_gen _ _ _ _ _ hop hP'
     | false =>
       have hOx : ∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
           parseOr G (druckToks x ++ ([.zeichen ")"] ++ rest)) =
@@ -1421,14 +1439,14 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n →
         intro G hG
         exact rOr x ([.zeichen ")"] ++ rest) G hxn hgx
           (hr_paren rest) (hrs_paren rest) (hrg_paren rest) hG
-      have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
+      have hd : druckToks (.un o x) = [.zeichen o] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
         simp [druckToks, hat]
       have hF2 : 1 ≤ F' := by omega
       obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
       have hO' := hOx F'' (by omega)
       have hPar := paren_arm _ _ _ _ hO'
-      have hBang := bang_arm _ _ _ _ hPar
+      have hBang := bang_arm_gen _ _ _ _ _ hop hPar
       simp only [hd, List.append_assoc] at ⊢
       exact hBang
   | bin o l r =>
@@ -1596,6 +1614,17 @@ theorem zeuge_kern_plus_rech : (match parseOr
     (brennstoff (.bin "+" (.lit 1) (.lit 2)))
     (druckToks (.bin "+" (.lit 1) (.lit 2)) ++ [.ende]) with
     | .ok (.bin "+" (.lit 1) (.lit 2), [.ende]) => true
+    | _ => false) = true := by
+  decide
+-- Step B1 witnesses: the widened predicate at work (negation
+-- of a literal, bitwise-not of a variable).
+theorem zeuge_kern_neg : parseOr (brennstoff (.un "-" (.lit 3)))
+    (druckToks (.un "-" (.lit 3)) ++ [.ende]) =
+      .ok (.un "-" (.lit 3), [.ende]) :=
+  parse_druck_kern _ (by decide)
+theorem zeuge_kern_neg_rech : (match parseOr (brennstoff (.un "-" (.lit 3)))
+    (druckToks (.un "-" (.lit 3)) ++ [.ende]) with
+    | .ok (.un "-" (.lit 3), [.ende]) => true
     | _ => false) = true := by
   decide
 
