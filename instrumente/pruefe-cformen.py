@@ -8,19 +8,35 @@ WHAT IT DOES
 It emits every tracked `beispiele/*.gab` with the built binary (`gabbro emit`), cuts the
 function bodies of the emitted C into statements, and CLASSIFIES every statement and every
 expression form in it against the table `FORMS` below. Each row of the table is one emitted
-shape; a row that has a correspondence lemma NAMES it (the Lean theorem in `grammatik/`
-that states the shape's correspondence to Gabbro), and the guard checks by grep that every
-named lemma exists. A row without a lemma is an UNCOVERED form.
+shape; a row is in one of THREE states:
+
+  (i)   **lemma** -- the row names the correspondence lemma (the Lean theorem in
+        `grammatik/` stating the shape's correspondence to Gabbro), and the guard
+        checks by grep that every named lemma exists;
+  (ii)  **named assumption** -- the form has no C meaning BY CONSTRUCTION and enters
+        the closing theorem (PLAN-UEBERSETZUNGSVALIDIERUNG.md section 3) as a premise:
+        inline asm (the syscall/port stub bodies), device register access (the hardware
+        profile), syscall stubs (the kernel). Each such row names the Lean
+        premise/assumption it maps to (`NAMED_ASSUMPTIONS` below), grep-checked like
+        the lemma rows;
+  (iii) **without semantics** -- a row with neither lemma nor named assumption.
 
 It prints, per form, how often the corpus emits it and in how many programs; then the
-uncovered forms with their counts; then every statement it could not classify at all.
+assumption forms with their counts; then the uncovered forms with their counts; then
+every statement it could not classify at all.
 
 It FAILS (exit 1) when
   * a named lemma does not exist in `grammatik/Grammatik/*.lean`;
-  * an uncovered form occurs that is not in `KNOWN_UNCOVERED` (a dated list, each entry
-    with its reason) -- the emitter has started to emit a form nobody gave a meaning;
+  * a named assumption does not exist there (a `def`/`theorem` at line start, or a
+    premise binder `name :` -- the assumption rows name binders like `hdev`, which no
+    `theorem` line would match);
+  * an uncovered (state iii) form occurs that is not in `KNOWN_UNCOVERED` (a dated list,
+    each entry with its reason) -- the emitter has started to emit a form nobody gave
+    a meaning;
   * a statement matches no row at all -- a new shape, which is the same finding one step
     earlier: the classifier does not know it, so nothing can have proved it.
+Only state (iii) forms outside the dated list turn the guard red: assumption forms are
+measured, not excused -- their counts print every run.
 It ABORTS (exit 2) when the binary is older than a source file under `crates/` (it would
 measure a different emitter than the tree's), unless `--allow-stale` is given; then every
 number carries that caveat in the output.
@@ -32,12 +48,17 @@ WHAT THE NUMBERS DO NOT SAY
   line, its brace style); it does not check that the lemma's premises hold at the site
   (range guarantees, frame conditions, the ordinal convention of reasons -- see the
   lemmas). A covered form means: this SHAPE has a correspondence lemma.
-* **Some lemmas are per-step or uninhabited** (the `note` column): the device register
-  forms (`regLies_step`, `regSchreib_step`) are per-step lemmas with the device window's
-  liveness as a premise; `gcorr_onTag` is proved but its premise cannot hold (ValCorr has
-  no case for a tagged union). Those rows are listed as KNOWN_UNCOVERED, not as covered.
+* **Some lemmas are per-step or uninhabited** (the `note` column): `gcorr_onTag` is
+  proved but its premise cannot hold (ValCorr has no case for a tagged union). That row
+  is listed as KNOWN_UNCOVERED, not as covered. The device register forms (`regLies_step`,
+  `regSchreib_step`) are per-step lemmas with the device window's liveness as a premise;
+  the emitted register shapes are state (ii) -- named assumptions, not lemmas.
 * **The count is of emitted occurrences in the corpus**, not of distinct programs; the
   program count is printed beside it.
+* **An assumption row is a claim that the closing theorem carries the premise, not that
+  the premise holds.** `AxCorr` holds per foreign function (the kernel behind the stub);
+  `hdev`/`RegLokal` hold per device (the hardware profile). A program whose stub or
+  device misbehaves is outside the theorem, not inside a proof.
 """
 import argparse
 import collections
@@ -48,6 +69,10 @@ import sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
 GRAMMATIK = W / "grammatik" / "Grammatik"
+
+# A hang looks like "still running", not like a finding: every `emit` runs under FRIST,
+# and a run that misses it counts as refused (no emission to classify).
+FRIST = 300
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import korpus  # noqa: E402
@@ -98,11 +123,15 @@ FORMS = {
     "stmt:awaits":             (["bsem_awaits"], "H3"),
     "stmt:unreachable":        (["gcorr_seqTot"], "`__builtin_unreachable();`"),
     "stmt:preproc":            (["gcorr_seqTot"], "`#if defined(__GNUC__)` around it"),
-    # uncovered or per-step statement forms (see KNOWN_UNCOVERED)
+    # statement forms without a lemma: state (ii) assumptions and state (iii) uncovered
     "stmt:switch-tag":         ([], "R5 proved (gcorr_onTag), not inhabitable"),
     "stmt:decl-union-payload": ([], "`T x = m.last.F;` (onTag payload)"),
-    "stmt:reg-store":          ([], "H10 per-step only (regSchreib_step)"),
-    "stmt:reg-load":           ([], "H9 per-step only (regLies_step)"),
+    # state (ii): named assumptions (see NAMED_ASSUMPTIONS) -- no C meaning by
+    # construction, entering the closing theorem as a premise
+    "stmt:reg-store":          ([], "H10 device write: assumption, not lemma (NAMED_ASSUMPTIONS)"),
+    "stmt:reg-load":           ([], "H9 device read: assumption, not lemma (NAMED_ASSUMPTIONS)"),
+    "stmt:asm":                ([], "inline asm (syscall/port stubs): assumption (NAMED_ASSUMPTIONS)"),
+    # state (iii): without semantics (see KNOWN_UNCOVERED)
     "stmt:forever":            (["scorr_forever"], "F1: `for (;;) {` after the watchdog line"),
     "stmt:for-ever-other":     ([], "`for (;;) {` of the CAS loop or the walk"),
     "stmt:for-chain":          ([], "`for (v = a; v != N; v = next)` (chain walk)"),
@@ -113,11 +142,11 @@ FORMS = {
     "stmt:struct-init":        ([], "`T x = (T){ .f = v };` (M10 has no Gabbro form)"),
     "stmt:call-indirect":      ([], "`t->f(a);` (callInd)"),
     "stmt:bind-call-foreign":  ([], "`T x = ext();` (bindAxiom)"),
-    "stmt:asm":                ([], "inline asm (syscall/port stubs)"),
     "stmt:watchdog":           ([], "`static void (*const w)(void) = f;` (no run-time effect)"),
     "stmt:break":              ([], "`break;` outside a switch arm (CAS loop)"),
     "stmt:float":              ([], "floating point"),
     "stmt:store-deref":        ([], "`*p = e;` other than the channel"),
+    "stmt:decl-ptr":           ([], "`T *p = e;` (pointer local, no memory relation)"),
     "stmt:store-field":        ([], "`p->f = e;` on a struct that is not a table slot"),
     "stmt:walk":               ([], "the `descendants of` walk (`_k`, `_h`, `_w` locals)"),
     "stmt:trap-guard":         ([], "`if (!(i < N)) __builtin_trap();` (byte writer guard)"),
@@ -138,7 +167,7 @@ FORMS = {
     "expr:reason-const":       (["ecorr_grundLit"], "a reason constant `R_F`"),
     "expr:sat-i":              (["satI_run", "satI_zahl"], "S-I"),
     "expr:byte-reader-other":  ([], "byte readers other than `gabbro_le32`"),
-    "expr:volatile":           ([], "device register read (per-step only)"),
+    "expr:volatile":           ([], "device register read: assumption, not lemma (NAMED_ASSUMPTIONS)"),
     "expr:call":               ([], "a call inside an expression (CX has no call node)"),
     "expr:union-payload":      ([], "`m.last.F` (union payload)"),
     "expr:neg":                ([], "unary minus"),
@@ -152,9 +181,6 @@ KNOWN_UNCOVERED = {
     "stmt:switch-tag": ("2026-09-13", "gcorr_onTag is proved, but ValCorr has no case for "
                         "a tagged union, so no related state has a union variable"),
     "stmt:decl-union-payload": ("2026-09-13", "the payload read of an onTag arm"),
-    "stmt:reg-store": ("2026-09-13", "regSchreib_step is per-step; corrW says nothing "
-                       "about device windows"),
-    "stmt:reg-load": ("2026-09-13", "regLies_step is per-step"),
     "stmt:for-ever-other": ("2026-09-13", "the CAS loop and the walk (no lemma)"),
     "stmt:for-chain": ("2026-09-13", "the chain walk has no Gabbro constructor"),
     "stmt:cas-loop": ("2026-09-13", "only the CAS step is covered (cas_success/failure)"),
@@ -163,17 +189,18 @@ KNOWN_UNCOVERED = {
     "stmt:struct-init": ("2026-09-13", "structLocal_rw has no Gabbro counterpart"),
     "stmt:call-indirect": ("2026-09-13", "callInd has no lemma"),
     "stmt:bind-call-foreign": ("2026-09-13", "bindAxiom has no lemma"),
-    "stmt:asm": ("2026-09-13", "the stub body is a foreign step, outside the subset"),
     "stmt:watchdog": ("2026-09-13", "no run-time effect; the model has no form for it"),
     "stmt:break": ("2026-09-13", "the CAS loop's break"),
     "stmt:float": ("2026-09-13", "floating point is outside T4"),
     "stmt:store-deref": ("2026-09-13", "a store through a pointer parameter other than "
                          "the channel"),
+    "stmt:decl-ptr": ("2026-09-14", "a pointer local (`Platz * tz = SPEICHER;`, "
+                      "38-unveraenderlicher-zeiger.gab): corrW relates slots, not C "
+                      "pointers; unclassified until today"),
     "stmt:store-field": ("2026-09-13", "a struct behind a pointer has no memory relation"),
     "stmt:walk": ("2026-09-13", "the walk has no Gabbro constructor (CFormenI CUTS)"),
     "stmt:trap-guard": ("2026-09-13", "the byte writers' bound check (T4 item 4)"),
     "expr:byte-reader-other": ("2026-09-13", "only gabbro_le32 has a lemma"),
-    "expr:volatile": ("2026-09-13", "device reads are per-step lemmas"),
     "expr:call": ("2026-09-13", "calls in expressions: bank/format accessors, port reads"),
     "expr:union-payload": ("2026-09-13", "see stmt:switch-tag"),
     "expr:neg": ("2026-09-13", "Expr.neg has no correspondence lemma"),
@@ -181,6 +208,57 @@ KNOWN_UNCOVERED = {
     "expr:field": ("2026-09-13", "device handles and views are per-step"),
     "expr:address-of": ("2026-09-13", "address-of outside the out-parameter call"),
 }
+
+# Forms with no C meaning BY CONSTRUCTION (state ii). Each row names the Lean
+# premise/assumption it maps to in the closing theorem
+# (PLAN-UEBERSETZUNGSVALIDIERUNG.md section 3, stage b); the guard grep-checks
+# every named assumption like the lemma rows. A name matches when it stands as a
+# `theorem`/`def`/`lemma`/`abbrev` at line start (e.g. `AxCorr`, `RegLokal`) or as
+# a premise binder `name :` (e.g. `hdev`, the assumption at the register in
+# `regLies_step`, which no `theorem` line would match).
+#
+# What stays OUT, and why:
+#   * `stmt:bind-call-foreign` (`T x = ext();`): a foreign call WITH an answer. Its
+#     assumption shape would be the `bindAxiom` analogue of `AxCorr`, which does not
+#     exist (CFormenH CUTS). Mapping it to `AxCorr` would claim a premise the closing
+#     theorem cannot carry -- so it stays state (iii).
+#   * `expr:call` (port reads among others): the bucket is too broad for one premise
+#     (bank/format accessors beside port I/O); it stays state (iii).
+NAMED_ASSUMPTIONS = {
+    # The syscall/port stub bodies are inline asm by construction (the stub the
+    # emitter prints for a foreign declaration); the stub's EFFECT enters the closing
+    # theorem as the `AxCorr` premise of `scorr_axiomCall` (CFormenH.lean) and of
+    # `bridge_syscallStub` (ErhaltungT4.lean: "the kernel behind the stub is the named
+    # assumption"). `SysAbi.gut` (Syscall.lean) is the neighbouring well-formedness
+    # premise for syscall declarations; the row maps to the effect assumption.
+    "stmt:asm": (["AxCorr"],
+                 "stub bodies are `__asm__`; the effect is the `AxCorr` premise"),
+    # `T x = (*(volatile T *)(BASE + K));` -- the C device oracle's answer is linked to
+    # Gabbro's register oracle by the `hdev` premise of `regLies_step` (CFormenH.lean:
+    # "the assumption at the register"); `RegLokal` (ZielOrtGeraetSem.lean) is the
+    # hardware class the closing theorem carries: the answer may depend only on the
+    # device carriers `D.rtraeger r`.
+    "stmt:reg-load": (["hdev", "RegLokal"],
+                      "H9 device read: `hdev` links the oracles, `RegLokal` bounds them"),
+    # `(*(volatile T *)(BASE + K)) = e;` -- a device write has no Gabbro trace
+    # (`Orakel.regSchreib` returns `Unit`; `regSchreib_step` concludes the `.vwr`
+    # observation without an `hdev` analogue). It enters the closing theorem under the
+    # same hardware class; the store side is the documented gap beside `RegLokal`.
+    "stmt:reg-store": (["RegLokal"],
+                       "H10 device write: no Gabbro trace; hardware class `RegLokal`"),
+    # `*(volatile ...)` read inside an expression: the same device read as reg-load.
+    "expr:volatile": (["hdev", "RegLokal"],
+                      "device read in an expression: same oracles as reg-load"),
+}
+
+
+def form_state(form):
+    """The guardian state of a form: `lemma`, `assumption` or `uncovered`."""
+    if FORMS.get(form, ([], ""))[0]:
+        return "lemma"
+    if form in NAMED_ASSUMPTIONS:
+        return "assumption"
+    return "uncovered"
 
 CTYPE = r"(?:const\s+)?(?:uint8_t|uint16_t|uint32_t|uint64_t|int8_t|int16_t|int32_t|int64_t|bool|uintptr_t)"
 IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
@@ -355,6 +433,9 @@ def classify_stmt(s, unit, channel, prev=None):
         if re.search(r"_(nimm|gib)$", f) or re.search(r"_(lese|schreib)_(start|ende)$", f):
             return "stmt:call-lock"
         return "stmt:call-unit" if f in unit.defined else "stmt:call-foreign"
+    m = re.match(r"^(?:const\s+)?" + IDENT + r" \* " + IDENT + r" = .*;$", s)
+    if m:
+        return "stmt:decl-ptr"
     m = re.match(r"^(" + CTYPE + r"|" + IDENT + r") (" + IDENT + r")( = (.*))?;$", s)
     if m:
         init = m.group(4)
@@ -497,6 +578,20 @@ def lemma_exists(name, sources):
     return re.search(r"^(?:theorem|def|lemma|abbrev)\s+" + re.escape(name) + r"\b", sources, re.M) is not None
 
 
+def assumption_exists(name, sources):
+    """Does the named assumption occur in the Lean sources -- as a `theorem`/`def`/
+    `lemma`/`abbrev` at line start, or as a premise binder `name :`?
+
+    The binder half is what the assumption rows need: `hdev` is a premise of
+    `regLies_step`, not a declaration of its own. Requiring only the declaration form
+    would make every binder row permanently red -- a guard that cries wolf about its own
+    table instead of about the tree.
+    """
+    if lemma_exists(name, sources):
+        return True
+    return re.search(r"[(|{]\s*" + re.escape(name) + r"\s*:", sources) is not None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--binary", default=str(W / "target" / "debug" / "gabbro"))
@@ -530,7 +625,12 @@ def main():
     unclassified_ex = {}
     emitted = refused = 0
     for f in files:
-        r = subprocess.run([str(binary), "emit", str(f)], capture_output=True, text=True, cwd=W)
+        try:
+            r = subprocess.run([str(binary), "emit", str(f)], capture_output=True,
+                               text=True, cwd=W, timeout=FRIST)
+        except (OSError, subprocess.TimeoutExpired):
+            refused += 1
+            continue
         if r.returncode != 0 or not r.stdout.strip():
             refused += 1
             continue
@@ -569,20 +669,34 @@ def main():
         for lm in lemmas:
             if not lemma_exists(lm, sources):
                 missing.append((form, lm))
+    missing_assumptions = []
+    for form, (names, _) in NAMED_ASSUMPTIONS.items():
+        for nm in names:
+            if not assumption_exists(nm, sources):
+                missing_assumptions.append((form, nm))
 
     print(f"pruefe-cformen: {emitted} programs emitted, {refused} refused by the emitter, "
           f"binary {binary}")
-    covered = [(f, n) for f, n in counts.items() if FORMS.get(f, ([], ""))[0]]
-    uncovered = [(f, n) for f, n in counts.items() if not FORMS.get(f, ([], ""))[0]]
-    tot_cov = sum(n for _, n in covered)
+    lemmas = [(f, n) for f, n in counts.items() if form_state(f) == "lemma"]
+    assumed = [(f, n) for f, n in counts.items() if form_state(f) == "assumption"]
+    uncovered = [(f, n) for f, n in counts.items() if form_state(f) == "uncovered"]
+    tot_lem = sum(n for _, n in lemmas)
+    tot_asm = sum(n for _, n in assumed)
     tot_unc = sum(n for _, n in uncovered)
-    print(f"  forms seen: {len(counts)} ({len(covered)} covered, {len(uncovered)} uncovered); "
-          f"occurrences: {tot_cov} covered, {tot_unc} uncovered, "
+    print(f"  forms seen: {len(counts)} ({len(lemmas)} lemma, {len(assumed)} named assumption, "
+          f"{len(uncovered)} without semantics); occurrences: {tot_lem} lemma, {tot_asm} "
+          f"named assumption, {tot_unc} without semantics, "
           f"{sum(unclassified.values())} unclassified statements")
     if args.forms:
-        print("\n  COVERED FORMS (occurrences / programs / lemma)")
-        for f, n in sorted(covered, key=lambda x: -x[1]):
+        print("\n  LEMMA FORMS (occurrences / programs / lemma)")
+        for f, n in sorted(lemmas, key=lambda x: -x[1]):
             print(f"    {n:6d} {len(programs[f]):4d}  {f:28s} {', '.join(FORMS[f][0])}")
+    print("\n  NAMED-ASSUMPTION FORMS (occurrences / programs / Lean premise)")
+    for f, n in sorted(assumed, key=lambda x: -x[1]):
+        names, _note = NAMED_ASSUMPTIONS[f]
+        print(f"    {n:6d} {len(programs[f]):4d}  {f:28s} {', '.join(names)}")
+        for e in examples[f][:args.examples]:
+            print(f"                 e.g. {e}")
     print("\n  UNCOVERED FORMS (occurrences / programs / known since)")
     new_uncovered = []
     for f, n in sorted(uncovered, key=lambda x: -x[1]):
@@ -602,14 +716,19 @@ def main():
         print("\n  NAMED LEMMAS THAT DO NOT EXIST in grammatik/Grammatik/*.lean:")
         for form, lm in missing:
             print(f"    {form}: {lm}")
+    if missing_assumptions:
+        print("\n  NAMED ASSUMPTIONS THAT DO NOT EXIST in grammatik/Grammatik/*.lean:")
+        for form, nm in missing_assumptions:
+            print(f"    {form}: {nm}")
     stale = [f for f in KNOWN_UNCOVERED if counts.get(f, 0) == 0]
     if stale:
         print("\n  KNOWN_UNCOVERED entries not seen in this run (may be removed): "
               + ", ".join(stale))
-    bad = bool(missing or new_uncovered or unclassified)
+    bad = bool(missing or missing_assumptions or new_uncovered or unclassified)
     print("\n" + ("RED" if bad else "GREEN") + f": {len(new_uncovered)} new uncovered form(s), "
           f"{sum(unclassified.values())} unclassified statement(s), {len(missing)} missing "
-          f"lemma(s)." + (" " + stale_note.strip() if stale_note else ""))
+          f"lemma(s), {len(missing_assumptions)} missing assumption(s)."
+          + (" " + stale_note.strip() if stale_note else ""))
     return 1 if bad else 0
 
 
