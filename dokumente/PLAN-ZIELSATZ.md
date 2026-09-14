@@ -209,3 +209,13 @@ them all.
   effects, cost sums, lock order) joins over all admissible candidates (`KandOk`). The
   summaries get coarser, and the ceremony and cost numbers are expected to jump. They are
   booked when the extension lands.
+
+## 9. Five further gaps (external review, 2026-09-14): where they go
+
+| Gap | Verdict | Route |
+|---|---|---|
+| Nonlinear and bitwise arithmetic (QF_BV: `x & (x-1)`, CRC, alignment, page-table indices) | Solvers are ahead today; the architecture can take it | Oracle plus certificate: Lean's `bv_decide` (SAT, LRAT certificate). Caveat: the LRAT check runs through `Lean.ofReduceBool`, compiled code in the trusted base, the same class as `native_decide`. Either name it in the ONE assumption list or check LRAT in the kernel (slow). Measure first: how many of the QF-shaped obligations `bv_decide` closes, and how fast. |
+| Counterexamples for handed-over obligations | Missing; a tool gap, not a logic gap | The semantics is executable (`execEnd`, `rufAt`). Search inputs for a failing `ensures`: exhaustively for small ranges, randomly, or with an untrusted SMT model search. Confirm every hit by running it through the Lean semantics with `decide`. Outside the trusted base. |
+| Tool maturity (LSP, localisation, profiling) | Missing; matters once others write Gabbro | After the goal theorem. |
+| Linearizability of lock-free structures (143 `atomic`, 44 `rcu`, 31 `cas` in the corpus; zero mentions in the docs) | A real gap: race freedom and pairing are not linearizability | The language names linearization points at the atomic step. The checker enforces the discipline: one point per operation on every path, and correct pairing. The user proves the abstract state meets the sequential contract at the point. The Lean metatheorem is proved once over G. First the simple structures (Treiber stack, SPSC ring, sequence counter), then RCU with grace periods; helping last. Opus-sized, more than a week. |
+| Real time (WCET, microseconds) | Outside the Lean model, with a clear interface | Gabbro supplies the flow facts an external WCET tool needs (loop bounds, paths, call graph, `deadline` claims) as a certificate. The processor timing model is a named assumption. For in-order cores with locked caches, `deadline ≥ costs × worst-case cycles per op` goes directly into the theorem. For DO-178C / ISO 26262 the number comes from a qualified WCET tool. |
