@@ -134,6 +134,11 @@ pub mod phasen;
 /// counterpart.
 pub mod lean_g;
 pub mod lean;
+/// **The user's obligation over a G program term (lane 176).** The flagship's
+/// per-function duties (`KoerperGutS`, `InvGutS` over the lock-invariant
+/// family), stated over the `lean_g` export with the closing theorem from
+/// them -- proved by the user, never here.
+pub mod obligations_g;
 /// **Const certificate from the source (lane 121)** -- a `const fn` body in
 /// the single-expression fragment printed to a Lean `Nat` function, so the
 /// `List.all` certificate checks values against the translated source.

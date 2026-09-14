@@ -310,12 +310,21 @@ fn main() -> std::process::ExitCode {
             // the list `pflichten::sammle` counts, in the same order, and the two channels
             // can therefore be held against each other obligation by obligation.
             let lean = rest.iter().any(|a| a == "--lean");
+            // **`--g` is the G program with the flagship's duties stated.**
+            // `lean-g` writes the program; this writes the program AND what a
+            // human still owes over it (`KoerperGutS` + `InvGutS` per function,
+            // the lock invariants at the start memory), with the closing
+            // theorem from them. A channel of its own, so it gets a flag of
+            // its own -- and it refuses by name everything `lean-g` refuses.
+            let g = rest.iter().any(|a| a == "--g");
             let rest: Vec<&String> = rest
                 .iter()
-                .filter(|a| a.as_str() != "--isabelle" && a.as_str() != "--lean")
+                .filter(|a| {
+                    a.as_str() != "--isabelle" && a.as_str() != "--lean" && a.as_str() != "--g"
+                })
                 .collect();
-            if isabelle && lean {
-                eprintln!("gabbro pflichten: `--isabelle` and `--lean` name two provers -- pick one");
+            if (isabelle && lean) || (g && (isabelle || lean)) {
+                eprintln!("gabbro {befehl}: `--isabelle`, `--lean` and `--g` name three channels -- pick one");
                 return std::process::ExitCode::from(2);
             }
             if rest.is_empty() {
@@ -334,11 +343,23 @@ fn main() -> std::process::ExitCode {
                 gabbro_check::pruefe(&baum, &mut absagen);
                 if absagen.fehler_zahl() > 0 {
                     eprint!("{}", absagen.zeige(&quelle));
-                    eprintln!("gabbro pflichten: {datei} has errors -- no register");
+                    if g {
+                        eprintln!("gabbro {befehl}: {datei} has errors -- no export");
+                    } else {
+                        eprintln!("gabbro pflichten: {datei} has errors -- no register");
+                    }
                     schlecht = true;
                     continue;
                 }
-                if isabelle {
+                if g {
+                    match gabbro_check::obligations_g::export(datei, &baum) {
+                        Ok(text) => print!("{text}"),
+                        Err(w) => {
+                            eprintln!("gabbro {befehl}: {datei}: {w}");
+                            schlecht = true;
+                        }
+                    }
+                } else if isabelle {
                     print!("{}", gabbro_check::refinement::theory(&baum, datei));
                 } else if lean {
                     print!("{}", gabbro_check::lean::module(&baum, datei));
@@ -832,12 +853,15 @@ fn hilfe() {
                                     and is incremental by CONTENT, not by timestamp. It
                                     prints what it built AND what it did not look at.
                                     The reckoning: `dokumente/BAUSYSTEM.md`
-  gabbro obligations|pflichten [--isabelle | --lean] <file.gab>…
+  gabbro obligations|pflichten [--isabelle | --lean | --g] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
                                     `--isabelle` writes the SAME register as an Isabelle
                                     theory: every obligation appears, as a goal or as a
                                     NAMED refusal, and the header carries `goals + refused
-                                    = total`
+                                    = total`. `--g` writes the G program (`lean-g`) with
+                                    the flagship's per-function duties stated
+                                    (`KoerperGutS` + `InvGutS` over the lock-invariant
+                                    family) and the closing theorem from them
   gabbro contexts|kontexte <file.gab>…
                                     execution contexts per place -- and the COUNT beside it
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus

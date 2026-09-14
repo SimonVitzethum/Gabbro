@@ -469,6 +469,13 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
 
 /// Export the checked unit as a Lean file, or refuse it by name.
 pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
+    export_ns(source_name, tree, &namespace_of(source_name))
+}
+
+/// Export under an explicit namespace (lane 176: the obligation export states
+/// duties over the same program under `<base>_oblig`, so the two exports of
+/// one file never declare the same names even when both are imported).
+pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<String, Refusal> {
     let model = collect(source_name, tree)?;
     let scope = rescope(tree)?;
     let mut checked = Vec::new();
@@ -480,7 +487,16 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
         check_body(c, &model)?;
     }
     check_locks(&model, &scope)?;
-    Ok(emit(source_name, &model, &checked, &scope)?)
+    Ok(emit(source_name, namespace, &model, &checked, &scope)?)
+}
+
+/// The function names of the export, in declaration order (the `g_<fn>`
+/// constants an obligation export states duties over). Runs the same
+/// collection as `export`, so it succeeds exactly where the export succeeds
+/// and names exactly the functions the export defines.
+pub fn function_names(source_name: &str, tree: &Programm) -> Result<Vec<String>, Refusal> {
+    let model = collect(source_name, tree)?;
+    Ok(model.fns.iter().map(|f| f.name.clone()).collect())
 }
 
 /// Rebuild the constant/alias scope (pass one of `collect`, rerun for the
@@ -1129,7 +1145,8 @@ fn tr_contract(cf: &CheckedFn, model: &Model) -> Result<Option<String>, Refusal>
 
 /// The namespace segment for a source file: sanitized stem (`104-referenz`
 /// becomes `G104_referenz`), so two exports never declare the same names.
-fn namespace_of(source_name: &str) -> String {
+/// Public for the obligation export, which derives its own namespace from it.
+pub fn namespace_of(source_name: &str) -> String {
     let stem = source_name.rsplit('/').next().unwrap_or(source_name);
     let stem = stem.rsplit('.').nth(1).unwrap_or(stem);
     let mut s: String = stem.chars().map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' }).collect();
@@ -1140,7 +1157,7 @@ fn namespace_of(source_name: &str) -> String {
 }
 
 /// The printed Lean file.
-fn emit(source_name: &str, model: &Model, fns: &[CheckedFn], scope: &Scope) -> Result<String, Refusal> {
+fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &Scope) -> Result<String, Refusal> {
     let nt = model.tables.len();
     let nl = model.locks.len();
     let mut out = String::new();
@@ -1180,8 +1197,7 @@ fn emit(source_name: &str, model: &Model, fns: &[CheckedFn], scope: &Scope) -> R
         out.push_str(")\n");
     }
     out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
-    let ns = namespace_of(source_name);
-    out.push_str(&ns);
+    out.push_str(ns);
     out.push_str("\n\n");
     // The carrier inductives: one constructor per table, lock and field.
     out.push_str("inductive GTab where\n");
@@ -1371,10 +1387,16 @@ fn emit(source_name: &str, model: &Model, fns: &[CheckedFn], scope: &Scope) -> R
         // `grammatik/` does not have. (`decide` proves the closed `↔`
         // directly; splitting it first with `Iff.intro` leaves the two
         // halves to metavariables the synthesis cannot see.)
+        //
+        // The exporter only emits calls whose held sets match exactly
+        // (`RufPasst.hh`, refused otherwise), so the `↔` both `hh_von` and
+        // `hx_von` take holds by `decide` -- and `hx` travels explicitly
+        // rather than by the structure default, which does not see it.
         out.push_str("  hw := fun t => by cases t <;> decide\n");
         out.push_str("  hg := fun g => nomatch g\n");
         out.push_str("  hk := ⟨[], List.Perm.refl [], by simp⟩\n");
-        out.push_str("  hh := fun L => by cases L <;> decide\n\n");
+        out.push_str("  hh := RufPasst.hh_von (fun L => by cases L <;> decide)\n");
+        out.push_str("  hx := RufPasst.hx_von (fun L => by cases L <;> decide)\n\n");
     }
     // Contracts and bodies.
     for f in fns {
