@@ -3,8 +3,8 @@
   Subject:   THE USER'S LOGIC AND THE HARDWARE ASSUMPTIONS TRANSFER TO
              P.mitRuhe (the runtime's idle root, MitRuhe.lean).
 
-  * `nutzerPflicht_mitRuhe`: `NutzerPflicht P S Q` gives
-    `NutzerPflicht P.mitRuhe S.mitRuhe (axEnsRuhe Q)`. At `some f` the
+  * `logikPflicht_mitRuhe`: `LogikPflicht P S Q` (the body half of `NutzerPflicht`) gives
+    `LogikPflicht P.mitRuhe S.mitRuhe (axEnsRuhe Q)`. At `some f` the
     obligation of `D.mitRuhe` quantifies over oracles, moves and handlers of
     `D.mitRuhe`; each is answered by one of `D` (`Orakel.zurueck`,
     `umweltZ`, `rufZuD`) in the same class, and the translated body runs as
@@ -420,8 +420,8 @@ theorem axEnsLokal_mitRuhe {Q : AxEns D} (h : AxEnsLokal Q) : AxEnsLokal (axEnsR
     rw [hg g hga]
 
 /-- **The user's logic on `P` is the user's logic on `P.mitRuhe`.** -/
-theorem nutzerPflicht_mitRuhe {P : Programm D} {S : SperrInv D} {Q : AxEns D}
-    (h : NutzerPflicht P S Q) : NutzerPflicht P.mitRuhe S.mitRuhe (axEnsRuhe Q) :=
+theorem logikPflicht_mitRuhe {P : Programm D} {S : SperrInv D} {Q : AxEns D}
+    (h : LogikPflicht P S Q) : LogikPflicht P.mitRuhe S.mitRuhe (axEnsRuhe Q) :=
   ⟨fun passes f => match f with
     | none => ⟨koerperGutS_ruhe P passes _ _, invGutS_ruhe P passes _ _, invGutGrund_ruhe P passes _ _⟩
     | some f => ⟨koerperGutS_mitRuhe (h.1 passes f).1, invGutS_mitRuhe (h.1 passes f).2.1,
@@ -489,7 +489,7 @@ theorem hardware_mitRuhe {O : Orakel D} {Q : AxEns D} (h : HardwareAnnahmen O Q)
 #print axioms Gabbro.Grammatik.koerperGutS_mitRuhe
 #print axioms Gabbro.Grammatik.invGutS_mitRuhe
 #print axioms Gabbro.Grammatik.invGutGrund_mitRuhe
-#print axioms Gabbro.Grammatik.nutzerPflicht_mitRuhe
+#print axioms Gabbro.Grammatik.logikPflicht_mitRuhe
 #print axioms Gabbro.Grammatik.hardware_mitRuhe
 
 end Gabbro.Grammatik

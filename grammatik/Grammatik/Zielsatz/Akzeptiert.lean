@@ -4,9 +4,10 @@
              (`Akzeptiert`), proved to be a `Pruefer` of `Spec.lean`
              (`akzeptiert_pruefer`): the Bool decides EXACTLY
              `AkzeptiertSpec` (`akzeptiert_iff`), given complete member
-             lists. The start the goal speaks about is Spec's
-             `StartZulaessig`, with a Bool for finite start tables
-             (`startB`).
+             lists. The start the PROOF works with is Spec's
+             `StartZulaessig` (derived from the runtime's start `Laufzeit`
+             and the user's `StartPflicht`, `startZulaessig_aus`), with a
+             Bool for finite start tables (`startB`).
 
   `Akzeptiert P S fs ls cs ws` is the conjunction of every premise of the
   flagship theorems that is a decidable fact about the PROGRAM:
@@ -19,7 +20,8 @@
   | `stufen`       | `stufenB`              | `StufenM P`                                            | `hSt` of `keine_verklemmungG` |
   | `sperrOrte`    | `sperrOrteB`           | `∀ L c, c ∈ S.orte L → Bewacht c L`                    | first half of `hS : SperrInvOk S` |
   | `wurzeln`      | `wurzelnB`             | `∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0`           | `hLeer` / `hex`; no reasons at a start (`StartOhneGrund`) |
-  | `renn`         | `rennB`                | every unguarded, non-atomic, non-payload carrier is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
+  | `einzeln`      | `einzelnB`             | `ws.Nodup`                                             | the runtime's exact start is covered (`laufzeit_voll`) |
+  | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no
@@ -31,9 +33,22 @@
 
   `ws : List D.Fn` -- the program's DECLARED THREAD STARTS (the checker's
   `concurrent { … }` members and `entry`/`boot` dispatch roots,
-  `crates/gabbro-check/src/startexklusiv.rs`). `Programm D` has no field for
-  the starts, so the list is an argument; the call graphs are COMPUTED from
-  it (`reachB`), never supplied.
+  `crates/gabbro-check/src/startexklusiv.rs`). Since 2026-09-15 they are a
+  field of the program (`Einheit.starts`, Spec.lean) and the checker of
+  `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
+  list as an argument. The call graphs are COMPUTED from it (`reachB`),
+  never supplied.
+
+  **Changes of 2026-09-15 (third Opus verdict):**
+  * `renn` no longer exempts publish payloads (P3): two starts writing one
+    unguarded payload is a C11 race on a non-atomic object; `H013` has no
+    payload exemption either. A payload read by one start and written by
+    another was already refused by `fuss` (thread-locality over footprints),
+    so only the write-write case changes.
+  * `einzeln` is NEW: the declared starts are pairwise distinct. The runtime
+    runs each on its own thread; two threads running one busy start would
+    escape `renn` (which separates DIFFERENT starts) and would not be
+    covered by Spec's `Laufzeit`.
 
   **Changes of 2026-09-14 (review findings):**
   * `renn` is NEW: a write-write race on an unguarded carrier that no
@@ -57,9 +72,9 @@
     `inductive`s are finite, and the proof is `cases` per declaration.
   * `SperrInvLokal S` and `AxEnsLokal Q`: `S.inv L` and `Q a` are
     Bool-valued FUNCTIONS on memory, not syntax. User well-formedness.
-  * `StartGut`, `∀ L, S.inv L sp`, the start assignment: they RESTRICT the
-    quantified start (`StartZulaessig`); decidable for a finite start table
-    (`startB`).
+  * `StartGut`, `∀ L, S.inv L sp`: since 2026-09-15 the USER's start
+    obligation (`StartPflicht`, over the declared initial memory and
+    arguments); decidable for a finite start table (`startB`).
   * NOT in `Akzeptiert`, although decidable per instance:
     `kostenPasst P passes decl fs` (the DECLARED costs; `decl` is not part
     of `Programm D`, and the check depends on `passes`).
@@ -196,38 +211,27 @@ def atomarB : D.Tab ⊕ D.Glob → Bool
   | .inl _ => false
   | .inr g => D.atomar g
 
-/-- A publish payload (`PaarungAusgenommen`), decided over the carrier list. -/
-def paarungB (cs : List (D.Tab ⊕ D.Glob)) : D.Tab ⊕ D.Glob → Bool
-  | .inl _ => false
-  | .inr p => cs.any fun a => match a with
-    | .inl _ => false
-    | .inr a => decide (p ∈ D.nutzlast a) && D.atomar a
-
 /-- The carrier needs no write separation: it has a guard lock, or it is
-    `atomic`, or a publish payload. -/
-def ausgenommenB (cs : List (D.Tab ⊕ D.Glob)) (c : D.Tab ⊕ D.Glob) : Bool :=
-  !(waechterVon c).isEmpty || atomarB c || paarungB cs c
+    `atomic`. A publish payload is NOT exempt (since 2026-09-15, verdict P3:
+    two starts writing one unguarded payload is a C11 race on a non-atomic
+    object; `H013` has no payload exemption either). -/
+def ausgenommenB (c : D.Tab ⊕ D.Glob) : Bool :=
+  !(waechterVon c).isEmpty || atomarB c
 
-theorem ausgenommenB_false {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    {c : D.Tab ⊕ D.Glob} :
-    ausgenommenB cs c = false ↔
-      (∀ L, ¬ Bewacht c L) ∧ ¬ AtomarAusgenommen c ∧ ¬ PaarungAusgenommen c := by
+theorem ausgenommenB_false {c : D.Tab ⊕ D.Glob} :
+    ausgenommenB c = false ↔ (∀ L, ¬ Bewacht c L) ∧ ¬ AtomarAusgenommen c := by
   unfold ausgenommenB
   simp only [Bool.or_eq_false_iff, Bool.not_eq_false', List.isEmpty_iff]
   constructor
-  · rintro ⟨⟨hw, ha⟩, hp⟩
-    refine ⟨fun L hL => ?_, ?_, ?_⟩
+  · rintro ⟨hw, ha⟩
+    refine ⟨fun L hL => ?_, ?_⟩
     · have := waechterVon_mem.mpr hL
       rw [hw] at this
       exact absurd this List.not_mem_nil
     · rintro ⟨g, rfl, hg⟩
       simp [atomarB, hg] at ha
-    · rintro ⟨a, p, rfl, hp', ha'⟩
-      simp only [paarungB, List.any_eq_false] at hp
-      have := hp (.inr a) (hcs _)
-      simp [hp', ha'] at this
-  · rintro ⟨hB, hA, hP⟩
-    refine ⟨⟨?_, ?_⟩, ?_⟩
+  · rintro ⟨hB, hA⟩
+    refine ⟨?_, ?_⟩
     · cases hw : waechterVon c with
       | nil => rfl
       | cons L _ => exact absurd (waechterVon_mem.mp (by rw [hw]; exact List.mem_cons_self)) (hB L)
@@ -237,41 +241,28 @@ theorem ausgenommenB_false {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab �
           cases hg : D.atomar g
           · simp [atomarB, hg]
           · exact absurd ⟨g, rfl, hg⟩ hA
-    · cases c with
-      | inl t => rfl
-      | inr p =>
-          simp only [paarungB, List.any_eq_false]
-          intro a _
-          cases a with
-          | inl _ => simp
-          | inr a =>
-              cases hpa : decide (p ∈ D.nutzlast a)
-              · simp [hpa]
-              · cases ha : D.atomar a
-                · simp [ha]
-                · exact absurd ⟨a, p, rfl, of_decide_eq_true hpa, ha⟩ hP
 
 /-- **The race component**: every carrier that needs it is write-separated
     among the declared starts. -/
 def rennB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) :
     Bool :=
-  cs.all fun c => ausgenommenB cs c || schreibGetrenntW P fs ws c
+  cs.all fun c => ausgenommenB c || schreibGetrenntW P fs ws c
 
 theorem rennB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
     rennB P fs cs ws = true ↔ ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c →
-      ¬ PaarungAusgenommen c → SchreibGetrennt P fs ws c := by
+      SchreibGetrennt P fs ws c := by
   constructor
-  · intro h c hB hA hP
+  · intro h c hB hA
     have h1 := (List.all_eq_true.mp h) c (hcs c)
-    rw [(ausgenommenB_false hcs).mpr ⟨hB, hA, hP⟩, Bool.false_or] at h1
+    rw [ausgenommenB_false.mpr ⟨hB, hA⟩, Bool.false_or] at h1
     exact (schreibGetrenntW_iff hvoll).mp h1
   · intro h
     refine List.all_eq_true.mpr fun c _ => ?_
-    cases ha : ausgenommenB cs c
-    · obtain ⟨hB, hA, hP⟩ := (ausgenommenB_false hcs).mp ha
+    cases ha : ausgenommenB c
+    · obtain ⟨hB, hA⟩ := ausgenommenB_false.mp ha
       rw [Bool.false_or]
-      exact (schreibGetrenntW_iff hvoll).mpr (h c hB hA hP)
+      exact (schreibGetrenntW_iff hvoll).mpr (h c hB hA)
     · rfl
 
 /-! ## 3. The components -/
@@ -304,11 +295,17 @@ def sperrOrteB (S : SperrInv D) (ls : List D.Lock) : Bool :=
 def wurzelnB (ws : List D.Fn) : Bool :=
   ws.all fun w => (D.haelt w).isEmpty && decide (D.gruende w = 0)
 
+/-- The declared starts are pairwise distinct (2026-09-15): the runtime runs
+    each declared start on its own thread, and two threads running one busy
+    start would escape the race component (it separates DIFFERENT starts). -/
+def einzelnB (ws : List D.Fn) : Bool :=
+  decide ws.Nodup
+
 /-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
-    sperrOrteB S ls && wurzelnB ws && rennB P fs cs ws
+    sperrOrteB S ls && wurzelnB ws && einzelnB ws && rennB P fs cs ws
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 
@@ -386,13 +383,14 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩
     exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
-      (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (rennB_iff hvoll hcs).mp h7⟩
+      (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, of_decide_eq_true h7,
+      (rennB_iff hvoll hcs).mp h8⟩
   · intro h
-    exact ⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    exact ⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
-      wurzelnB_iff.mpr h.wurzeln⟩, (rennB_iff hvoll hcs).mpr h.renn⟩
+      wurzelnB_iff.mpr h.wurzeln⟩, decide_eq_true h.einzeln⟩, (rennB_iff hvoll hcs).mpr h.renn⟩
 
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
@@ -406,8 +404,8 @@ end Akzeptiert
 /-- **The concrete checker is a `Pruefer`**: its Bool is `Akzeptiert`, and
     its soundness obligation against `AkzeptiertSpec` is `akzeptiert_iff`. -/
 def akzeptiert_pruefer : Pruefer where
-  akzeptiert := fun P S fs ls cs ws => Akzeptiert P S fs ls cs ws
-  korrekt := fun _ _ fs ls cs _ h => akzeptiertSpec_of fs.2 ls.2 cs.2 h
+  akzeptiert := fun E fs ls cs => Akzeptiert E.P E.S fs ls cs E.ws
+  korrekt := fun _ fs ls cs h => akzeptiertSpec_of fs.2 ls.2 cs.2 h
 
 section Start
 
@@ -505,28 +503,32 @@ theorem Akzeptiert_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S 
     (∀ L c, c ∈ S.orte L → Bewacht c L) ∧
     StartGut P sp init ∧ (∀ L, S.inv L sp = true) ∧ StartExklusiv init ∧
     StufenM P ∧ (∀ t, D.haelt (init t).1 = []) ∧
-    (∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ PaarungAusgenommen c →
+    (∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c →
       SchreibGetrenntK P (kVon P fs init) c) := by
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => (wurzel_of hA hZ t).1
   refine ⟨hA.frag, fun t => hA.abg _, fun t => reachB_wurzel P fs _, fun f => ?_, hA.sperrOrte,
     hZ.req, hZ.sperren, startExklusiv_ohne_haelt init hLeer, hA.stufen, hLeer,
-    fun c hB hAt hP => schreibGetrenntK_of hZ (hA.renn c hB hAt hP)⟩
+    fun c hB hAt => schreibGetrenntK_of hZ (hA.renn c hB hAt)⟩
   refine fussS_mono (fun c _ hc => lokK_of (getrenntK_of hZ ?_)) (hA.fuss f)
   unfold lokW at hc
   exact @of_decide_eq_true _ (Classical.propDecidable _) hc
 
 /-- **Race freedom for EVERY carrier (Spec's `RennfreiBis`) from the
     checker's facts and an admissible start.** Guarded carriers:
-    `rennfrei_g_voll`; unguarded carriers that are neither atomic nor a
-    publish payload: write separation (`renn`) over the computed call
-    graphs, `rennfrei_ungeschuetzt`. -/
+    `rennfrei_g_voll`; unguarded carriers that are not atomic -- publish
+    payloads included (2026-09-15) -- write separation (`renn`) over the
+    computed call graphs, `rennfrei_ungeschuetzt`. -/
 theorem rennfreiBis_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws)
     (hZ : StartZulaessig P S fs ws sp init) {O : Orakel D} (hO : GutO O) (passes : Nat)
     (M : RufMaschineG D) : RennfreiBis P O passes (RufStartG P sp init) M := by
   obtain ⟨-, hAbg, hW, -, -, -, -, hex, -, -, hsep⟩ := Akzeptiert_ok hvoll hA hZ
-  intro ms ts n hl _ i j c hij hjn hfg hzi hzj hw hAt hP
-  exact rennfrei_alle hO hvoll sp init hex (kVon P fs init) hAbg hW hsep ms ts n hl i j c hij hjn
-    hfg hzi hzj hw hAt hP
+  intro ms ts n hl _ i j c hij hjn hfg hzi hzj hw hAt
+  by_cases hB : ∃ L, Bewacht c L
+  · obtain ⟨L, hL⟩ := hB
+    exact ⟨L, hL, rennfrei_g_voll P O passes sp init hO hex ms ts n hl i j hij hjn hfg c L hL
+      hzi hzj⟩
+  · exact (rennfrei_ungeschuetzt hO hvoll sp init (kVon P fs init) hAbg hW ms ts n hl i j hij hjn
+      hfg c (hsep c (fun L hL => hB ⟨L, hL⟩) hAt) hzi hzj hw).elim
 
 end Start
 

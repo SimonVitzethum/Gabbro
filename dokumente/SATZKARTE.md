@@ -2382,5 +2382,159 @@ the depth-4 chain to 6,427.
   assumption list, and a leg `wartezeit` in `Ziel` over `PlanLauf` -- a reviewed diff of
   `Spec.lean`, not done here.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §§1-10 history above.)
+## 22. `GabbroZiel` repaired: one program, an owned start, payloads in the race leg (2026-09-15)
+
+The third independent Opus verdict (`URTEIL-OPUS-2026-09-15.md`) found that the STATEMENT was
+not the goal yet, and the Muse verdict (gap 7) found the same class. This section is a reviewed
+diff of `Spec.lean`, re-proved. Machine G's rules are unchanged.
+
+### 22.1 The statement, old and new
+
+```lean
+-- OLD (master 4fc0f538)
+def GabbroZiel : Prop :=
+  ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
+    (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
+    (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (ws : List D.Fn),
+    C.akzeptiert P S fs.1 ls.1 cs.1 ws = true →
+    NutzerPflicht P S Q →
+    ∀ O : Orakel D, HardwareAnnahmen O Q →
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe) (init : …),
+      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init →
+      ∀ M, RufErreichbarG P.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M →
+        Ziel P.mitRuhe S.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M
+
+-- NEW
+def GabbroZiel : Prop :=
+  ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflicht E →                                           -- (b) the user, on E
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe) (init : …),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ M, RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M →
+        Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M
+```
+
+New definitions (`Spec.lean`):
+```lean
+structure Einheit D where P : Programm D; S : SperrInv D; Q : AxEns D
+  starts : List (Σ w : D.Fn, Env D (D.params w)); sp0 : Speicher D
+def Einheit.ws E := E.starts.map (·.1)
+def LogikPflicht P S Q := (∀ passes f, KoerperGutS … ∧ InvGutS … ∧ InvGutGrund …) ∧
+  SperrInvLokal S ∧ AxEnsLokal Q                    -- the old `NutzerPflicht P S Q`
+structure StartPflicht E where
+  sperren : ∀ L, E.S.inv L E.sp0 = true
+  req : ∀ a ∈ E.starts, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
+structure NutzerPflicht E where logik : LogikPflicht E.P E.S E.Q; start : StartPflicht E
+structure Laufzeit E sp init where
+  lader : sp = speicherR E.sp0
+  start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩
+  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none
+```
+Changed: `Pruefer.akzeptiert : Einheit D → List D.Fn → List D.Lock → List carriers → Bool`
+(soundness into `AkzeptiertSpec E.P E.S fs.1 E.ws`); `AkzeptiertSpec` gains `einzeln :
+ws.Nodup` and `renn` loses `¬ PaarungAusgenommen c`; `RennfreiBis` loses
+`¬ PaarungAusgenommen c`. `StartZulaessig` stays as the proof's notion and is no longer a
+premise.
+
+### 22.2 The three repairs
+
+**P1 (decisive): the start conditions have an owner.** `invariant false` on any lock emptied
+every body obligation (`∀ U, HavocOk S U → …`, no member) and every start (`sperren`), so probe
+A (`ensures false` everywhere) went through the concrete checker. `StartZulaessig.req` and
+`.sperren` belonged to no premise group. Now `StartPflicht` is part of (b), over the memory
+and arguments the program DECLARES, and the loader that establishes that memory is (d)
+`Laufzeit.lader`.
+* `probeA_falsch_inv_nicht` -- probe A with `sFalsch` (`invariant false`) refutes (b), for
+  every `Q`, `starts`, `sp0`; `p1_akzeptiert` -- the checker's Bool ACCEPTS that program, so
+  the refusal is (b)'s.
+* `unerfuellbar_widerlegt` -- any program whose lock family no memory satisfies refutes (b).
+* `havocOk_bewohnt` -- under (b) the move class is inhabited (`havocOk_misch_lokal`,
+  SperreSem.lean: only the locality half of `SperrInvOk` is needed).
+* `start_req_widerlegt` -- a declared start whose `requires` fails at `E.sp0` refutes (b).
+* `NutzerWiderlegt P := ∀ E, E.P = P → ¬ NutzerPflicht E` -- the probe refutations
+  (`probeA_`, `probeD_`, `probeD_wahr_`, `tabelle_widerlegt_gilt`) hold with NO side condition
+  on the lock family any more (before: guarded carriers and "some memory satisfies it").
+  `paP_nicht_sperre`, `probeD_nicht`, `fwP_nicht` now take only the locality half.
+
+**P2: `ws`, `S`, `Q` are the program's.** They are fields of `E`; the checker computes on
+`E.ws`, the hardware assumption names `E.Q`, and (d) lets a thread run only a declared start
+with its declared arguments, or the root.
+* `laufzeit_nur_erklaert` -- a user function runs on a thread only if it is in `E.ws`.
+* `akD_kein_zweiter_schreiber` -- in ANY program over `akD` the checker accepts, no runtime
+  start runs both writers `a` and `b` (they would both be declared, and are then refused).
+* `akP3_ohne_starts` -- the same code DECLARING no start is accepted, and the statement then
+  speaks about the root on every thread and nothing else (`laufzeit_ohne_starts`).
+* `laufzeit_initRuhe`/`laufzeit_voll` -- the runtime's exact start (`initRuhe E.starts`: the
+  declared starts on threads `0..k-1`, the root elsewhere) meets (d) whenever the starts are
+  distinct, which the checker now demands (`einzeln`, Bool `einzelnB`). Without it
+  `concurrent { f, f }` would run `f` on two threads, escape `renn` (it separates DIFFERENT
+  starts), and not be covered.
+* `laufzeit_ruhe` -- the root on every thread from `E.sp0` meets (d): the run class is never
+  empty.
+
+**P3: payloads are in the race leg.** The exemption is dropped from `RennfreiBis` and from
+`renn` (`ausgenommenB` = guarded or `atomic`; `paarungB` removed). Why no separate pairing
+conjunct: a payload one start reads (footprint) and another writes is already refused by
+`fuss` (`ungeschuetzt_abgelehnt_gilt`); a guarded payload is lock-ordered by
+`rennfrei_g_voll`; so the only case the exemption hid was two starts WRITING one unguarded
+payload -- a C11 race on a non-atomic object, which `H013` refuses too. That case is now
+refused (`zwei_schreiber_abgelehnt` without the payload clause), and `rennfreiBis_of` proves
+the leg for every non-atomic carrier directly (`rennfrei_g_voll` / `rennfrei_ungeschuetzt`).
+NAMED price: the publish/await hand-off of an UNGUARDED payload across threads is refused by
+the checker, not covered.
+
+### 22.3 The proof
+
+`startZulaessig_aus` (Beweis.lean) derives `StartZulaessig E.P.mitRuhe E.S.mitRuhe (fsRuhe fs)
+(wsRuhe E.ws) sp init` from `StartPflicht E` and `Laufzeit E sp init` (root: `ruhig_mitRuhe`,
+`requires true`; declared start: `req_mitRuhe_iff`; invariants: `speicherZ_speicherR`).
+`gabbro_ziel` then runs the old chain: `akzeptiertSpec_mitRuhe` (now also `einzeln`),
+`logikPflicht_mitRuhe` (renamed), `hardware_mitRuhe`, `ziel_aus` (hypothesis `LogikPflicht`).
+
+### 22.4 Header additions (external review, PLAN-ZIELSATZ §5)
+
+`Spec.lean`'s header now has (1) WHAT `Ziel` ADDS OVER `NutzerPflicht`, leg by leg:
+`speicherSicher`, `rennfrei`, `sperrInv` (in shared memory), `keineVerklemmung`,
+`fortschritt` are not in (b); `vertrag`, `invRueck`, `invGrund`, `keinLogikHalt`,
+`startEnde`, `keinStartGrund` are (b)'s sequential clauses carried to interleaved G (for a
+single-threaded lock-free program nearly a restatement); `zeit` holds for every program of G
+with no premise and is weak. (2) THE ONE ASSUMPTION LIST with one sentence per entry on why
+it is hardware/runtime: `GutO` (foreign bodies), `RegLokal` (the device), `AxVertragO E.Q`
+(foreign/device contracts, false = a false named assumption), `Laufzeit.lader` (loader),
+`Laufzeit.start`/`.einmal` (thread creation). `RegLokal` is NAMED as stronger than
+hardware: `register_ohne_traeger_konstant` (Proben.lean) proves a register without declared
+carriers is constant in every world; a device-driven value must come through an axiom.
+Not repaired: the replay (`regLies_gleich`) needs the answer to be a function of shared
+carriers. Also named now: stack depth, one thread per busy start, and that the exporter fills
+neither `starts` nor `sp0` nor the source `requires` today.
+
+### 22.5 Axiom record (full `lake build`, 225 jobs, green; `ki-pc-fisch-101`)
+
+`gabbro_ziel`, `ziel_aus`, `startZulaessig_aus`, `laufzeit_initRuhe`, `laufzeit_voll`,
+`laufzeit_nur_erklaert`, `laufzeit_ohne_starts`, `laufzeit_ruhe`, every theorem of
+`Proben.lean` (`gabbro_ziel_zeuge`, `probeA_widerlegt_gilt`, `probeA_falsch_inv_nicht`,
+`unerfuellbar_widerlegt`, `havocOk_bewohnt`, `start_req_widerlegt`, `probeD_widerlegt_gilt`,
+`probeD_wahr_widerlegt_gilt`, `tabelle_widerlegt_gilt`, `ungeschuetzt_abgelehnt_gilt`,
+`zwei_schreiber_abgelehnt_gilt`, `akD_kein_zweiter_schreiber`, `akP3_ohne_starts`,
+`zweiFaeden_erfuellbar_gilt`, `zweiFaeden_bewegt_gilt`, `probeB/C_erfuellbar_gilt`,
+`probeB/C_erfuellbar_haupt`): `propext`, `Classical.choice`, `Quot.sound`. `p1_akzeptiert`
+and `register_ohne_traeger_konstant`: `propext`. No `sorry`, no new `axiom`, no
+`native_decide`.
+
+### 22.6 What remains
+
+- The exporter (`lean_g.rs`) must produce an `Einheit`: `concurrent` as `starts` (with
+  arguments), the initializers as `sp0`, the source `requires` (today `.wahr`). Until then the
+  covered programs are hand-written terms.
+- The Rust checker computes neither `einzeln` nor the payload-inclusive `renn` as one Bool
+  (`H013` is stricter per entry; whether `concurrent { f, f }` is refused was not checked).
+- `RegLokal` for volatile registers (a per-read oracle answer would need a change to the
+  replay, not to G's rules).
+- The liveness entries of §21 (`LaufzeitAnnahme`, `HardwareImAbschnitt`) are not yet in the
+  ONE list or in `Ziel`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §§1-10 history above.)
 

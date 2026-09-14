@@ -120,6 +120,16 @@ theorem havocOk_misch {S : SperrInv D} (hS : SperrInvOk S) (quelle : D.Lock → 
     HavocOk S (fun L σ => mischU S L σ (quelle L σ)) :=
   fun L σ => ⟨rfl, mischU_aussen S L σ _, (mischU_inv hS L σ _).trans (hq L σ)⟩
 
+/-- The same with only the locality half of `SperrInvOk` (the guard half is
+    not used): a satisfiable, local family has a move in the class. -/
+theorem havocOk_misch_lokal {S : SperrInv D}
+    (hS : ∀ L (s s' : Speicher D), (∀ c ∈ S.orte L, TraegerGleich s s' c) →
+      S.inv L s = S.inv L s')
+    (quelle : D.Lock → World D → Speicher D) (hq : ∀ L σ, S.inv L (quelle L σ) = true) :
+    HavocOk S (fun L σ => mischU S L σ (quelle L σ)) :=
+  fun L σ => ⟨rfl, mischU_aussen S L σ _,
+    (hS L _ _ fun c hc => mischU_innen S L σ _ c hc).trans (hq L σ)⟩
+
 /-- Two worlds that agree on every carrier and on the trace are equal. -/
 theorem world_ext {σ σ' : World D} (h : ∀ c, TraegerGleich σ.speicher σ'.speicher c)
     (hs : σ.spur = σ'.spur) : σ = σ' := by

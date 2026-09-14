@@ -996,12 +996,14 @@ theorem ziel_ort_sperre_ref104 :
     whose invariants are satisfiable: the bodies of `paP` contain no
     `locks`, so the semantics with lock invariants runs them as `execEnd`
     does -- into `logik schleife`. -/
-theorem paP_nicht_sperre (Q : AxEns zD) (S : SperrInv zD) (hS : SperrInvOk S) (s : Speicher zD)
+theorem paP_nicht_sperre (Q : AxEns zD) (S : SperrInv zD)
+    (hS : ∀ L (s s' : Speicher zD), (∀ c ∈ S.orte L, TraegerGleich s s' c) →
+      S.inv L s = S.inv L s') (s : Speicher zD)
     (hs : ∀ L, S.inv L s = true) (f : zD.Fn) : ¬ KoerperGutS paP 0 Q S f := by
   intro h
   have hl : (paP.rumpf f).ohneLocks = true := by cases f <;> rfl
   refine h.2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
-    (havocOk_misch hS (fun _ _ => s) (fun L _ => hs L)) hwRuf (hwRuf_rahmen paP) hwRuf_ohneLogik
+    (havocOk_misch_lokal hS (fun _ _ => s) (fun L _ => hs L)) hwRuf (hwRuf_rahmen paP) hwRuf_ohneLogik
     (zSp.welt []) (by cases f <;> exact .nil) rfl .schleife ?_
   rw [Endblock.execH_ohne S zO _ 0 hwRuf _ hl]
   exact paP_lauf zO hwRuf f _ _
@@ -1010,7 +1012,7 @@ theorem paP_nicht_sperre (Q : AxEns zD) (S : SperrInv zD) (hS : SperrInvOk S) (s
     empty family, and for `zS`). -/
 theorem paP_nicht_sperre_leer (Q : AxEns zD) :
     ¬ ∀ f : zD.Fn, KoerperGutS paP 0 Q (SperrInv.leer zD) f :=
-  fun h => paP_nicht_sperre Q _ sperrInvOk_leer zSp (fun _ => rfl) zHaupt (h zHaupt)
+  fun h => paP_nicht_sperre Q _ sperrInvOk_leer.2 zSp (fun _ => rfl) zHaupt (h zHaupt)
 
 #print axioms Gabbro.Grammatik.zPB_zertifiziert
 #print axioms Gabbro.Grammatik.zPB_lauf
