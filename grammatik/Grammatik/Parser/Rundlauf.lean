@@ -1699,6 +1699,51 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
       simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ harg htail
       simp only [harg, htail, List.cons_append, List.nil_append] at ⊢
 
+-- Calls through `parsePrimary`: head word, then arguments.
+theorem sammleSeg_paren : ∀ (f : String) (R : List Token),
+    sammleSegmente (Token.zeichen "(" :: R) [f] =
+      ([f], Token.zeichen "(" :: R) := by
+  intro f R
+  rfl
+theorem kopf_ruf_head : ∀ (F : Nat) (f : String) (R : List Token),
+    parseKopf (F + 1) (Token.ident f :: Token.zeichen "(" :: R) =
+      match parseArgs F R with
+      | .ok (args, rest'') => .ok (.ruf f args, rest'')
+      | .error e => .error e := by
+  intro F f R
+  unfold parseKopf
+  rfl
+theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
+    (f : String) (xs : List SExpr) (rest : List Token) (F : Nat),
+    groesse (.ruf f xs) ≤ n + 1 → gut (.ruf f xs) = true →
+    ruhigSuff rest = true →
+    12 * (groesse (.ruf f xs) + 1) + groesse (.ruf f xs) + 1 ≤ F →
+    parsePrimary F (druckToks (.ruf f xs) ++ rest) =
+      .ok (.ruf f xs, rest) := by
+  intro n Rn f xs rest F hs hg hr hF
+  simp only [gut, Bool.and_eq_true] at hg
+  obtain ⟨hf, hxs⟩ := hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, parsePrimary] at ⊢
+  have hkaf : istKeinPlatz f = false := nichtWahr_falsch _ hf
+  simp only [nameText, hkaf] at ⊢
+  have hne : ¬(false = true) := by decide
+  simp only [if_neg hne] at ⊢
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  simp only [List.cons_append, kopf_ruf_head] at ⊢
+  -- ⊢ : ruf arm → `parseArgs`. Arguments close it.
+  have hgl : groesseListe xs ≤ n := by
+    simp only [groesse] at hs
+    omega
+  have hFa : 12 * (groesseListe xs + 1) + groesseListe xs + 10 ≤ F'' := by
+    simp only [groesse] at hs hF ⊢
+    omega
+  have hA := args_rund n Rn xs rest F'' hgl hxs hFa
+  simp only [List.cons_append, List.nil_append] at hA ⊢
+  simp only [hA] at ⊢
+
 -- Suffix fragments: one `.f`, `->f` or `[i]` step of a place
 -- chain. Every `gutPlatz` tree is a head variable plus fragments
 -- (`zerlege` below); the printer lays them end to end.
