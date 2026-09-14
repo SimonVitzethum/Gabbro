@@ -232,6 +232,7 @@ import Grammatik.RennfreiOrte
 import Grammatik.MitRuhe
 import Grammatik.MitRuheStatisch
 import Grammatik.MitRuheSemantik
+import Grammatik.MitRuheSperre
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.Zielsatz.Ruhe
