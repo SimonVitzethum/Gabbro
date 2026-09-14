@@ -73,6 +73,7 @@ def exprOk : CX → Bool
   | .ld (.addr (.glob _)) _ => true
   | _ => false
 
+mutual
 /-- Every expression a row carries. -/
 def rowCXs : GRow → List CX
   | .void _ => []
@@ -82,14 +83,18 @@ def rowCXs : GRow → List CX
   | .setVar _ _ ce => [ce]
   | .setOp _ _ _ _ ce => [ce]
   | .bindLet _ _ ce => [ce]
-  | .ite cc t e => cc :: (t.flatMap rowCXs ++ e.flatMap rowCXs)
+  | .ite cc t e => cc :: (rowsCXs t ++ rowsCXs e)
   | .call _ args _ => args
   | .ret none => []
   | .ret (some (_, ce)) => [ce]
-  | .forTrav _ _ hi body _ => hi :: body.flatMap rowCXs
+  | .forTrav _ _ hi body _ => hi :: rowsCXs body
+def rowsCXs : List GRow → List CX
+  | [] => []
+  | r :: rs => rowCXs r ++ rowsCXs rs
+end
 
 /-- All carried expressions are in the supported families. -/
-def rowsExprOk (rs : List GRow) : Bool := (rs.flatMap rowCXs).all exprOk
+def rowsExprOk (rs : List GRow) : Bool := (rowsCXs rs).all exprOk
 
 mutual
 /-- Slot-layout sanity of one row: a table with no records, zero-size
@@ -122,42 +127,44 @@ structure GBody where
 def freshRaw (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) (x : Nat) : Bool :=
   !(acc.contains x) && pp.all (· != x) && ks.all (fun q => q.1 != x)
 
-/-- Freshness of every bound local, threading the bound locals (`acc`,
-    starting at `vm`); arm and loop bodies are their own scopes. -/
-def rowsFresh (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) : List GRow → Bool
-  | [] => true
-  | .void _ :: rs => rowsFresh pp ks acc rs
-  | .storeSlot _ _ _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
-  | .storeNamed _ _ _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
-  | .storeGlob _ _ _ :: rs => rowsFresh pp ks acc rs
-  | .setVar _ _ _ :: rs => rowsFresh pp ks acc rs
-  | .setOp _ _ _ _ _ :: rs => rowsFresh pp ks acc rs
-  | .bindLet x _ _ :: rs => freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) rs
-  | .ite _ t e :: rs => rowsFresh pp ks acc t && rowsFresh pp ks acc e && rowsFresh pp ks acc rs
-  | .call _ _ none :: rs => rowsFresh pp ks acc rs
-  | .call _ _ (some (x, _)) :: rs =>
-    freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) rs
-  | .ret _ :: rs => rowsFresh pp ks acc rs
-  | .forTrav x _ _ body _ :: rs =>
-    freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) body && rowsFresh pp ks acc rs
+/-- The bound locals one row introduces (arm and loop bodies are
+    their own scopes, so only the spine binders thread). -/
+def rowFreshAcc : List Nat → GRow → List Nat
+  | acc, .bindLet x _ _ => x :: acc
+  | acc, .call _ _ (some (x, _)) => x :: acc
+  | acc, _ => acc
 
-/-- Traverse hygiene of a row list: no loop body writes its loop
-    variable (the `hw` premise of `scorr_traverse`, decided on the
-    elaborated rows). -/
+mutual
+/-- Freshness of the binder one row carries, if any. Mirrors
+    `CEnvLay.freshB` through `freshRaw_ok`. -/
+def rowFreshOk (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) : GRow → Bool
+  | .bindLet x _ _ => freshRaw pp ks acc x
+  | .call _ _ (some (x, _)) => freshRaw pp ks acc x
+  | .call _ _ none => true
+  | .forTrav x _ _ body _ =>
+    freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) body
+  | .ite _ t e => rowsFresh pp ks acc t && rowsFresh pp ks acc e
+  | _ => true
+/-- Freshness of every bound local, threading the spine binders
+    (`acc`, starting at `vm`). -/
+def rowsFresh : List Nat → List (Nat × Int) → List Nat → List GRow → Bool
+  | _, _, _, [] => true
+  | pp, ks, acc, r :: rs => rowFreshOk pp ks acc r && rowsFresh pp ks (rowFreshAcc acc r) rs
+end
+
+mutual
+/-- Traverse hygiene of one row: a loop body that writes its loop
+    variable is refused (the `hw` premise of `scorr_traverse`, decided
+    on the elaborated rows). -/
+def rowTravOk : GRow → Bool
+  | .forTrav x _ _ body _ => decide ((growsCS body .skip).writesV x = false) && rowsTravOk body
+  | .ite _ t e => rowsTravOk t && rowsTravOk e
+  | _ => true
+/-- Traverse hygiene of a row list. -/
 def rowsTravOk : List GRow → Bool
   | [] => true
-  | .void _ :: rs => rowsTravOk rs
-  | .storeSlot _ _ _ _ _ _ _ :: rs => rowsTravOk rs
-  | .storeNamed _ _ _ _ _ _ _ :: rs => rowsTravOk rs
-  | .storeGlob _ _ _ :: rs => rowsTravOk rs
-  | .setVar _ _ _ :: rs => rowsTravOk rs
-  | .setOp _ _ _ _ _ :: rs => rowsTravOk rs
-  | .bindLet _ _ _ :: rs => rowsTravOk rs
-  | .ite _ t e :: rs => rowsTravOk t && rowsTravOk e && rowsTravOk rs
-  | .call _ _ _ :: rs => rowsTravOk rs
-  | .ret _ :: rs => rowsTravOk rs
-  | .forTrav x _ _ body _ :: rs =>
-    decide ((growsCS body .skip).writesV x = false) && rowsTravOk body && rowsTravOk rs
+  | r :: rs => rowTravOk r && rowsTravOk rs
+end
 
 /-- The hygiene the soundness theorem consumes: bound-local freshness
     plus traverse hygiene. -/
@@ -369,59 +376,59 @@ theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
   | @nil _ _ _ _ _ => intro hpp hks hFresh hTrav; exact BlockCorr.nil
   | @consSetVar _ _ m _ _ K _ _ _ _ _ _ _ _ _ hK he hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_assignVar X _ K hK _ he hd)
         (ih hpp hks hFresh hTrav)
   | @consSetOpAdd _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_plusGleich X _ K hK _ _ h1 h2 he hta htb htr hd)
         (ih hpp hks hFresh hTrav)
   | @consSetOpSub _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_minusGleich X _ K hK _ _ h1 h2 he hta htb htr hd)
         (ih hpp hks hFresh hTrav)
   | @consSetOpAnd _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ hK h0' he hta htb hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_undGleich X _ K hK _ _ h0' he hta htb hd)
         (ih hpp hks hFresh hTrav)
   | @consSetOpOr _ _ m _ _ K _ _ _ _ _ _ _ _ _ _ _ _ hK h0' hw' he hta htb hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_oderGleich X _ K hK _ _ _ h0' hw' he hta htb hd)
         (ih hpp hks hFresh hTrav)
   | @consStoreSlotParam _ _ m _ _ K _ _ _ hgt _ _ _ _ _ _ _ _ hw hL _ _ _ _ hk hn hss hoff hty hi he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [hn, hss, hoff, hty]
       exact scorr_assignSlotParam X K _ hk _ hgt hw hL hi he
   | @consStoreSlotNamed _ _ m _ _ K _ _ hgt _ _ _ _ _ _ _ _ _ hw hL _ _ _ _ htn hn hss hoff hty hi he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [htn, hn, hss, hoff, hty]
       exact scorr_assignSlotNamed X _ K _ _ hgt hw hL hi he
   | @consStoreGlob _ _ m _ _ K _ hgg hat _ _ _ _ hw hL _ _ _ _ hgn hty he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine BlockCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [hgn, hty]
       exact scorr_assignGlob X _ K _ hgg hat hw hL he
   | @bindLet _ m _ _ _ K τ _ _ x _ _ _ _ hK he hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       obtain ⟨hfresh, hFresh'⟩ := hFresh
       have hf := freshRaw_ok rfl hpp hks hfresh
       have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
@@ -429,19 +436,19 @@ theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
       exact BlockCorr.bind hK hf he hd (ih hpp' hks' hFresh' hTrav)
   | @preVoid _ m _ _ _ K _ _ _ _ _ _ he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.pre he (ih hpp hks hFresh hTrav)
   | @consCall _ m _ _ _ K _ _ _ _ _ _ _ _ _ _ _ hF hA _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact BlockCorr.cons (scorr_call X K _ _ _ _ _ hF hA)
         (ih hpp hks hFresh hTrav)
   | @consBindCall _ m _ _ _ K _ τ _ _ _ _ _ _ _ x _ _ _ _ _ hF hA hK hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       obtain ⟨hfresh, hFresh'⟩ := hFresh
       have hf := freshRaw_ok rfl hpp hks hfresh
       have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
@@ -450,8 +457,8 @@ theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
         (cCorr_block X _ (ih hpp' hks' hFresh' hTrav)))
   | @consIte _ m _ _ _ _ K _ _ _ _ _ _ _ _ _ hc ht he hr ihHt ihHe ihRest =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk, Bool.and_eq_true] at hTrav
       obtain ⟨⟨hFreshT, hFreshE⟩, hFreshR⟩ := hFresh
       obtain ⟨⟨hTravT, hTravE⟩, hTravR⟩ := hTrav
       have hT := cCorr_block X _ (ihHt hpp hks hFreshT hTravT)
@@ -460,8 +467,8 @@ theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
         (ihRest hpp hks hFreshR hTravR)
   | @consTrav _ m _ _ K tb t hN0 hN hiC hhi inv _ _ _ _ x _ _ hK hb hr ihHb ihRest =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk, Bool.and_eq_true] at hTrav
       obtain ⟨⟨hfresh, hFreshB⟩, hFreshR⟩ := hFresh
       obtain ⟨⟨hwb, hTravB⟩, hTravR⟩ := hTrav
       have hf := freshRaw_ok rfl hpp hks hfresh
@@ -642,59 +649,59 @@ theorem rend_corr {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
       exact EndCorr.ret hΛ h
   | @eConsSetVar _ _ _ _ _ _ _ _ _ _ _ _ _ hK he hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_assignVar X _ _ hK _ he hd)
         (ih hpp hks hFresh hTrav)
   | @eConsSetOpAdd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_plusGleich X _ _ hK _ _ h1 h2 he hta htb htr hd)
         (ih hpp hks hFresh hTrav)
   | @eConsSetOpSub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_minusGleich X _ _ hK _ _ h1 h2 he hta htb htr hd)
         (ih hpp hks hFresh hTrav)
   | @eConsSetOpAnd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h0' he hta htb hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_undGleich X _ _ hK _ _ h0' he hta htb hd)
         (ih hpp hks hFresh hTrav)
   | @eConsSetOpOr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h0' hw' he hta htb hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_oderGleich X _ _ hK _ _ _ h0' hw' he hta htb hd)
         (ih hpp hks hFresh hTrav)
   | @eConsStoreSlotParam _ _ _ _ _ _ _ _ hgt _ _ _ _ _ _ _ _ hw hL _ _ _ hk hn hss hoff hty hi he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [hn, hss, hoff, hty]
       exact scorr_assignSlotParam X _ _ hk _ hgt hw hL hi he
   | @eConsStoreSlotNamed _ _ _ _ _ _ _ hgt _ _ _ _ _ _ _ _ _ hw hL _ _ _ htn hn hss hoff hty hi he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [htn, hn, hss, hoff, hty]
       exact scorr_assignSlotNamed X _ _ _ _ hgt hw hL hi he
   | @eConsStoreGlob _ _ _ _ _ _ hgg hat _ _ _ _ hw hL _ _ _ hgn hty he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
       rw [hgn, hty]
       exact scorr_assignGlob X _ _ _ hgg hat hw hL he
   | @eBindLet _ _ _ _ K τ _ _ x _ _ _ _ hK he hd _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       obtain ⟨hfresh, hFresh'⟩ := hFresh
       have hf := freshRaw_ok rfl hpp hks hfresh
       have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
@@ -702,19 +709,19 @@ theorem rend_corr {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
       exact EndCorr.bind hK hf he hd (ih hpp' hks' hFresh' hTrav)
   | @ePreVoid _ _ _ _ _ _ _ _ _ _ _ he _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.pre he (ih hpp hks hFresh hTrav)
   | @eConsCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hF hA _ ih =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh] at hFresh
-      simp only [rowsTravOk] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc] at hFresh
+      simp only [rowsTravOk, rowTravOk] at hTrav
       exact EndCorr.cons (scorr_call X _ _ _ _ _ _ hF hA)
         (ih hpp hks hFresh hTrav)
   | @eConsIte _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc ht he hr ihRest =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk, Bool.and_eq_true] at hTrav
       obtain ⟨⟨hFreshT, hFreshE⟩, hFreshR⟩ := hFresh
       obtain ⟨⟨hTravT, hTravE⟩, hTravR⟩ := hTrav
       have hT := cCorr_block X _ (rblock_sound X hpp hks hFreshT hTravT ht)
@@ -723,8 +730,8 @@ theorem rend_corr {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
         (ihRest hpp hks hFreshR hTravR)
   | @eConsTrav _ _ _ _ K tb t hN0 hN hiC hhi inv _ _ _ _ x _ _ hK hb hr ihRest =>
       intro hpp hks hFresh hTrav
-      simp only [rowsFresh, Bool.and_eq_true] at hFresh
-      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      simp only [rowsFresh, rowFreshOk, rowFreshAcc, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, rowTravOk, Bool.and_eq_true] at hTrav
       obtain ⟨⟨hfresh, hFreshB⟩, hFreshR⟩ := hFresh
       obtain ⟨⟨hwb, hTravB⟩, hTravR⟩ := hTrav
       have hf := freshRaw_ok rfl hpp hks hfresh
@@ -802,5 +809,108 @@ theorem lies_rend :
   show REnd xLies true 0 _ kLies (refP.rumpf refLies)
     [.ret (some (cU32, .ld cStand cU32))] cLiesBody
   exact REnd.ret (by rfl) ⟨cU32, _, rfl, he, rfl⟩
+
+/-- `einzahlen`'s general body: rows, map, all decided. -/
+def einBodyG : GBody := ⟨einRowsG, [2], [0], [(1, 0)]⟩
+
+/-- `lies`' general body. -/
+def liesBodyG : GBody := ⟨liesRowsG, [], [0], [(1, 0)]⟩
+
+theorem einBodyG_ok : gbodyOk einBodyG = true := by decide
+
+theorem liesBodyG_ok : gbodyOk liesBodyG = true := by decide
+
+/-- `einzahlen`'s body correspondence, through the general certificate. -/
+theorem ein_end_general :
+    EndSem xEin 0 true kEin (refP.rumpf refEin) cEinBody := by
+  have hFresh : rowsFresh [0] [(1, 0)] kEin.vm einRowsG = true := by decide
+  have hTrav : rowsTravOk einRowsG = true := by decide
+  have hpp : kEin.pp.map Prod.fst = [0] := rfl
+  have hks : kEin.ks = [(1, 0)] := rfl
+  have h := gcert_sound xEin hpp hks hFresh hTrav ein_rend
+  exact h
+
+/-- `lies`' body correspondence, through the general certificate. -/
+theorem lies_end_general :
+    EndSem xLies 0 true kLies (refP.rumpf refLies) cLiesBody :=
+  gcert_sound xLies rfl rfl (by decide) (by decide) lies_rend
+
+/-- THE CALLEE RELATION of `einzahlen`, through the general certificate
+    (same shape as `ein_fn`, whose `ein_end 0` is replaced by
+    `ein_end_general`). -/
+theorem ein_fn_general : FnCorr refEL (rufAt refP refO 0 2) (CallAt refEL.lay tvOrc tvXR refCProg 2)
+    refEin 0 cEin.params kEin :=
+  cCorr_ruf refEL tvOrc tvXR refP refO 0 1 refCProg refEin 0 cEin rfl kEin 0
+    ein_end_general
+
+/-- THE CALLEE RELATION of `lies`, through the general certificate. -/
+theorem lies_fn_general : FnCorr refEL (rufAt refP refO 0 1) (CallAt refEL.lay tvOrc tvXR refCProg 1)
+    refLies 1 cLies.params kLies :=
+  cCorr_ruf refEL tvOrc tvXR refP refO 0 0 refCProg refLies 1 cLies rfl kLies 0
+    lies_end_general
+
+/-- WITNESS, `einzahlen` END TO END through the general certificate:
+    the same proposition `einzahlen_zeuge` (and `einzahlen_zeuge_cert`)
+    proves -- the Gabbro call `einzahlen(7)` from `refSp0` and the
+    emitted C `einzahlen(k, 0, 7)` from the zero state both finish; the
+    C call returns nothing; the final states are related; the slot moved
+    from `0` to `100` on both sides. -/
+theorem einzahlen_zeuge_general :
+    ∃ (σ' : World refD) (st' : CSt),
+      rufAt refP refO 0 2 refEin refW0 refRho7 = .ok σ' () ∧
+      CallAt refEL.lay tvOrc tvXR refCProg 2 0 refSt0 einArgs st' none ∧
+      corrW refEL σ' st' ∧
+      (refW0.slots () 0 ()).n = 0 ∧ (σ'.slots () 0 ()).n = 100 ∧
+      refSt0.mem (.tab 0) 0 = .int 0 ∧ st'.mem (.tab 0) 0 = .int 100 := by
+  have hR : rufAt refP refO 0 2 refEin refW0 refRho7 = .ok _ () := rfl
+  obtain ⟨st', rv, hC, hO⟩ := ein_fn_general refW0 refSt0 refRho7 einArgs _ refW0_corr ein_bind
+    ein_envRel (by rw [hR]; rfl)
+  rw [hR] at hO
+  obtain ⟨hc, hret⟩ := hO
+  have hrv : rv = none := hret
+  subst hrv
+  refine ⟨_, st', rfl, hC, hc, rfl, rfl, rfl, ?_⟩
+  exact (hc.1 () rfl).2 0 () (by decide) (by decide)
+
+/-
+CUTS: what is not proved here, by name.
+- The row-to-statement link is proof-level: a `GRow` pins the C side
+  (checked by `gbodyOk`); which Gabbro statement it maps to is carried
+  by the `RBlock`/`REnd` derivation's T4 premises, not by data. A
+  machine-checked elaboration of Gabbro surface syntax to rows (the
+  printer-to-emitter agreement) is future work; the printer
+  (`corrlean.rs`) holds that side, tested there.
+- `exprOk`/`rowLaysOk` are pins, not consumed premises: the soundness
+  theorems consume freshness (`rowsFresh`, via `freshRaw_ok`) and
+  traverse hygiene (`rowsTravOk`, as `scorr_traverse`'s `hw`).
+  Enforcement of the expression/layout families in a derivation is by
+  provability (the T4 `ExprCorr` premises exist only for those shapes).
+- `ks` values stay model data (as in lane 164): the printer proves the
+  position and the kind, Lean decides the quoted value.
+- No `Endblock.bindCall` exists, so a trailing call-with-result has no
+  row derivation (named refusal at the printer); mid-body `bindCall`
+  goes through `RBlock.consBindCall`/`bsem_bindCall`.
+- The named-table store row (`storeNamed`) and the compound/global rows
+  have full derivations but no corpus instantiation yet; the traverse
+  row family exists in Lean (`scorr_traverse` wrapper) while the
+  printer still refuses `traverse` by name.
+-/
+
+#print axioms freshRaw_ok
+#print axioms gbodyOk_hygiene
+#print axioms rblock_sound
+#print axioms rend_corr
+#print axioms gcert_sound
+#print axioms einRowsG_elab
+#print axioms liesRow_elab
+#print axioms einBodyG_ok
+#print axioms liesBodyG_ok
+#print axioms ein_rend
+#print axioms lies_rend
+#print axioms ein_end_general
+#print axioms lies_end_general
+#print axioms ein_fn_general
+#print axioms lies_fn_general
+#print axioms einzahlen_zeuge_general
 
 end Gabbro.Grammatik
