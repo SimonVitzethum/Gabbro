@@ -1,0 +1,61 @@
+-- 122 -- a matrix: nested arrays lower to C multi-dimensional arrays.
+--
+-- `static mut M : [[u32; 4]; 3]` is a 3-by-4 matrix of `u32`. The grammar
+-- always allowed the nesting (`array = "[" typeexpr ";" constexpr "]"`,
+-- `SYNTAX.md` §2), and the checker always typed `M[i][j]` through it
+-- (`M103` per dimension, each index held against its own bound) -- but the
+-- emitter refused with `C001` over the nested element type, so no C ever
+-- came out. Since lane 170 the declaration lowers to `uint32_t M[3][4]`,
+-- initialised to `{0}`, with element reads and writes at any depth going
+-- through the ordinary place lowering (`M[i][j] = v;`).
+--
+-- `leeren` walks the matrix with two nested `traverse … over elems of`
+-- loops: the outer one over the 3 rows, the inner one over the 4 cells of
+-- `M[i]`. The domain bound comes out of the declaration in both (`3` and
+-- `4`), and the emitted headers read `sizeof(M) / sizeof(M[0])` and
+-- `sizeof(M[i]) / sizeof(M[i][0])` -- the outer dimension and the inner one.
+--
+-- The two `E247` hints below are honest: `lies` and `leeren` read `M` while
+-- `schreibe` writes it, and no lock guards the carrier. A `lock K protects
+-- { M }` with `locks K` blocks would silence them, at the price of
+-- `K_nimm`/`K_gib` stubs in every driver -- the same trade `beispiele/64`
+-- makes with its two hints.
+module beispiel::matrix {
+
+static mut M : [[u32; 4]; 3] = 0;
+
+impl fn schreibe(i : u32 in 0 ..< 3, j : u32 in 0 ..< 4, v : u32)
+    effects { writes M }
+    -- two index loads and the store, read off `K001`.
+    costs <= 4 ops
+{
+    M[i][j] = v;
+}
+
+impl fn lies(i : u32 in 0 ..< 3, j : u32 in 0 ..< 4) -> u32
+    effects { reads M }
+    -- two index loads and the element load, read off `K001`.
+    costs <= 3 ops
+{
+    return M[i][j];
+}
+
+impl fn leeren()
+    effects { reads M, writes M }
+    -- 3 rows x 12 ops per row (4 cells x 3 ops: two index loads and the
+    -- store), read off `K001`. The domain itself reads the carrier, so the
+    -- loop owes `reads M` beside `writes M` (`E010` where it does not).
+    costs <= 36 ops
+{
+    traverse i over elems of M by unvisited
+        touches writes M
+    {
+        traverse j over elems of M[i] by unvisited
+            touches writes M
+        {
+            M[i][j] = 0;
+        }
+    }
+}
+
+}
