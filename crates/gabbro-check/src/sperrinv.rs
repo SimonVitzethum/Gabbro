@@ -191,6 +191,42 @@ fn unrein(g: &mut Gang<'_>, span: Span, was: &str) {
     );
 }
 
+/// The lock data lane 175 (`fusswache2.rs`) reuses: per lock (by short name) the
+/// protected carriers -- a carrier name to itself, a field name to its table,
+/// exactly the resolution the `N275` leg reads -- and whether the lock declares
+/// an `invariant` clause (the surface form of `S.orte L` with `S.inv L`).
+pub(crate) struct Sperrdaten {
+    pub schutz: BTreeMap<String, BTreeSet<String>>,
+    pub invariante: BTreeSet<String>,
+}
+
+pub(crate) fn sperrdaten(baum: &Programm) -> Sperrdaten {
+    let b = bestand(baum);
+    let mut aus = Sperrdaten {
+        schutz: BTreeMap::new(),
+        invariante: BTreeSet::new(),
+    };
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Lock(l) = &item.art {
+            let mut s = BTreeSet::new();
+            for o in &l.schuetzt {
+                let n = o.basis.text.clone();
+                if b.traeger.contains(&n) {
+                    s.insert(n);
+                } else if let Some(t) = b.feld_von.get(&n) {
+                    s.insert(t.clone());
+                }
+            }
+            let n = l.name.text.rsplit("::").next().unwrap_or(&l.name.text).to_string();
+            aus.schutz.insert(n.clone(), s);
+            if l.invariante.is_some() {
+                aus.invariante.insert(n);
+            }
+        }
+    });
+    aus
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let b = bestand(baum);
     let mut sperren: Vec<LockDecl> = Vec::new();

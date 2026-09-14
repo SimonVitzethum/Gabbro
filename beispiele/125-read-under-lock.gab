@@ -1,0 +1,38 @@
+-- 125 -- **A shared read under its lock, without a signature (lane 175).**
+--
+-- The probe-C shape of the 2026-09-13 verdict as a passing example: two threads
+-- share `z`, and `lese_schreibe` reads it INSIDE `locks WACHE` -- guarded at the
+-- access, so N291 stays silent although no signature is held. The old E247 hint
+-- still fires on the same read: the strict premise wants the guard by signature,
+-- the flagship is content with the guard at the access (`H007` holds the hold
+-- itself, as an error). `setze_null` writes from the second thread, which is
+-- what makes `z` shared rather than thread-local.
+module beispiel::read_under_lock {
+
+static mut z : u32 = 0;
+
+lock WACHE protects { z } rank 0 held <= 64 ops;
+
+impl fn lese_schreibe() -> u32
+    effects { reads z, writes z, locks WACHE }
+    costs   <= 64 ops
+{
+    locks WACHE {
+        let v = z;
+        z = v;
+        return z;
+    }
+}
+
+impl fn setze_null()
+    effects { writes z, locks WACHE }
+    costs   <= 64 ops
+{
+    locks WACHE {
+        z = 0;
+    }
+}
+
+concurrent { lese_schreibe, setze_null };
+
+}

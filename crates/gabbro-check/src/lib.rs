@@ -54,6 +54,12 @@ pub mod geteilt;
 /// (`pflichten::Art::Sperrinvariante`). No pass number of its own: like
 /// `kontexte` below it is a rule of the lock column, not a new one.
 pub mod sperrinv;
+/// **Lane 175 -- the flagship's footprint premise (`FussS` + `lokK` + floors).**
+/// The decidable condition of `ziel_ort_mehrfaden` (per-thread call graphs,
+/// thread-local carriers, guards at the access or lock invariants, lock floors
+/// against signature-held locks: `N290`-`N294`). No pass number of its own:
+/// a rule of the footprint/lock columns beside `sperrinv`, not a new one.
+pub mod fusswache2;
 // **Emission-side enforcement, unwired pending hooks (central assembly).**
 // `absenkung` refuses over-budget primitives (bound 18); `tearing` refuses
 // shared-carrier sequences. Both are pure check modules until hooked.
@@ -458,6 +464,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("sperrinv", sperrinv::pass(baum, absagen));
+        z!("fusswache2", fusswache2::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
         z!("startexklusiv", startexklusiv::pass(baum, absagen));
@@ -506,6 +513,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // **Lane 156, beside the lock pass whose `protects` set it reads.**
     // No pass number of its own (see the module head).
     sperrinv::pass(baum, absagen);
+    // **Lane 175, beside the lock-invariant data it reuses.**
+    // Same column (footprint premise of the flagship), not a new pass.
+    fusswache2::pass(baum, absagen);
     // **«B38» -- die Kopplung zwischen benanntem Traeger und Eintrittszustand.**
     //
     // Direkt hinter `geteilt`, weil sie zur Kontextmatrix («K5.3») gehoert und dieselbe

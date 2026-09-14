@@ -1,0 +1,33 @@
+-- erwartet: N290
+-- **A contract over a carrier another thread writes, guarded by nothing.**
+--
+-- `geber` requires `G.slots[0].v == 0` while `schreiber` writes `G` on the
+-- second thread. No `requires Held`, no lock invariant over `G`, and `G` is
+-- not thread-local -- so the contract leg falls with N290 (the old E245 hint
+-- fires beside it).
+module gift::fuss2_shared_contract {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn geber() -> u32
+    requires G.slots[0].v == 0
+    effects { reads G.slots }
+    costs   <= 64 ops
+{
+    return 0;
+}
+
+impl fn schreiber()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+concurrent { geber, schreiber };
+
+}
