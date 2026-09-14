@@ -563,7 +563,8 @@ fn zeige_body(b: &BodyCert) -> String {
 }
 
 /// Render the whole certificate: per-body fragments, then -- with zero refusals --
-/// the assembled `Cert104` literal for `Korrespondenz104.lean`.
+/// the assembled `Cert104` literal for `Korrespondenz104.lean`, then the
+/// general `GRow` section for `Korrespondenz.lean`.
 pub fn zeige(baum: &Programm, datei: &str) -> String {
     let cert = zertifiziere(baum);
     let mut aus = format!("-- corr-lean certificate for `{datei}`: T2 minimal, 104 forms only.\n");
@@ -624,6 +625,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             _ => aus.push_str("-- REFUSAL: unit: the assembled Cert104 needs `einzahlen` and `lies`\n"),
         }
     }
+    aus.push_str(&gzeige(baum, datei));
     aus
 }
 
@@ -727,4 +729,928 @@ impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Betrag
         let cert = zertifiziere(&parse(&src));
         assert!(cert.refusals.iter().any(|r| r.was.contains("layout")), "unknown count must fail the layout: {:?}", cert.refusals);
     }
+
+    #[test]
+    fn general_104_rows() {
+        let cert = gzertifiziere(&parse(MINI));
+        assert!(cert.refusals.is_empty(), "unexpected general refusals: {:?}", cert.refusals);
+        let ein = cert.bodies.iter().find(|b| b.name == "einzahlen").expect("einzahlen");
+        assert_eq!(
+            ein.rows,
+            vec![
+                "GRow.void 2",
+                "GRow.storeSlot 0 (.var 1) 2 4 0 (.int false .w32) (.lit 100)",
+                "GRow.call 1 [.var 0, .var 1] none",
+            ]
+        );
+        assert_eq!(ein.vm, vec!["2"]);
+        assert_eq!(ein.pp, vec!["0"]);
+        assert_eq!(ein.ks, vec!["(1, 0)"]);
+        let lies = cert.bodies.iter().find(|b| b.name == "lies").expect("lies");
+        assert_eq!(
+            lies.rows,
+            vec!["GRow.ret (some ((.int false .w32), (.ld (.slotA (.var 0) (.var 1) 2 4 0) (.int false .w32))))"]
+        );
+        assert!(lies.vm.is_empty());
+        // The pasted Lean rows of Korrespondenz.lean match this output.
+        let text = gzeige(&parse(MINI), "probe.gab");
+        assert!(text.contains("GRow.storeSlot 0 (.var 1) 2 4 0 (.int false .w32) (.lit 100)"));
+        assert!(text.contains("vm := [2], pp := [0], ks := [(1, 0)]"));
+    }
+
+    #[test]
+    fn general_refuses_global_by_name() {
+        let src = MINI.replace(
+            "    k.slots[i].stand = 100;",
+            "    k.slots[i].stand = 100;\n    g = 1;",
+        );
+        let cert = gzertifiziere(&parse(&src));
+        assert!(
+            cert.refusals.iter().any(|r| r.was.contains("`g`") || r.was.contains("globals")),
+            "global store must be refused by name: {:?}",
+            cert.refusals
+        );
+        assert!(cert.bodies.iter().all(|b| b.name != "einzahlen"), "refused body gets no rows");
+        assert!(cert.bodies.iter().any(|b| b.name == "lies"), "clean body keeps its rows");
+    }
+
+    #[test]
+    fn general_refuses_traverse_by_name() {
+        let src = MINI.replace(
+            "    lies(k, i);",
+            "    traverse j over slots of k by unvisited\n        touches writes k.slots\n    {\n        lies(k, j);\n    }\n    lies(k, i);",
+        );
+        let parsed = parse(&src);
+        let cert = gzertifiziere(&parsed);
+        assert!(
+            cert.refusals.iter().any(|r| r.was.contains("traverse") || r.was.contains("loop")),
+            "traverse must be refused by name: {:?}",
+            cert.refusals
+        );
+    }
+
+    const IFMINI: &str = r#"
+module probe::ifmini {
+const N : u32 = 2;
+type Betrag = u32 in 0 .. 10;
+table Konto count N {
+    slot {
+        stand : Betrag,
+    }
+}
+impl fn setzt(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)
+{
+    if b == 1 { k.slots[i].stand = 5; } else { k.slots[i].stand = 6; }
+}
+}
+"#;
+
+    #[test]
+    fn general_if_else_rows() {
+        let cert = gzertifiziere(&parse(IFMINI));
+        assert!(cert.refusals.is_empty(), "unexpected general refusals: {:?}", cert.refusals);
+        let body = cert.bodies.iter().find(|b| b.name == "setzt").expect("setzt");
+        assert_eq!(body.rows.len(), 1);
+        assert!(
+            body.rows[0].starts_with("GRow.ite (.cmp .eq"),
+            "if/else must render one ite row: {:?}",
+            body.rows
+        );
+        assert!(body.rows[0].contains("GRow.storeSlot 0 (.var 1) 2 4 0 (.int false .w32) (.lit 5)"));
+        assert!(body.rows[0].contains("GRow.storeSlot 0 (.var 1) 2 4 0 (.int false .w32) (.lit 6)"));
+    }
+
+    const LITIDX: &str = r#"
+module probe::litidx {
+const N : u32 = 2;
+type Betrag = u32 in 0 .. 10;
+table Konto count N {
+    slot {
+        stand : Betrag,
+    }
+}
+impl fn f(k : ptr<normal, rw> Konto)
+{
+    k.slots[0].stand = 30;
+}
+}
+"#;
+
+    #[test]
+    fn general_literal_index_store() {
+        let cert = gzertifiziere(&parse(LITIDX));
+        assert!(cert.refusals.is_empty(), "unexpected general refusals: {:?}", cert.refusals);
+        let body = cert.bodies.iter().find(|b| b.name == "f").expect("f");
+        assert_eq!(
+            body.rows,
+            vec!["GRow.storeSlot 0 (.lit 0) 2 4 0 (.int false .w32) (.lit 30)"]
+        );
+    }
+
+    const LETOP: &str = r#"
+module probe::letop {
+const N : u32 = 2;
+type Betrag = u32 in 0 .. 10;
+table Konto count N {
+    slot {
+        stand : Betrag,
+    }
+}
+impl fn f(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)
+{
+    let v : Betrag = b + 1;
+    v += 2;
+    k.slots[i].stand = v;
+}
+}
+"#;
+
+    #[test]
+    fn general_let_and_setop_rows() {
+        let cert = gzertifiziere(&parse(LETOP));
+        assert!(cert.refusals.is_empty(), "unexpected general refusals: {:?}", cert.refusals);
+        let body = cert.bodies.iter().find(|b| b.name == "f").expect("f");
+        assert_eq!(body.rows.len(), 3);
+        assert!(body.rows[0].starts_with("GRow.bindLet 3 ("), "let binds C local 3: {:?}", body.rows);
+        assert!(body.rows[0].contains(".bin .add CIT.u32 (.var 2) (.lit 1)"), "add in u32: {:?}", body.rows);
+        assert!(body.rows[1].starts_with("GRow.setOp 3 ("), "+= on the let local: {:?}", body.rows);
+        assert!(body.rows[2].starts_with("GRow.storeSlot 0 (.var 1) 2 4 0"), "store of the local: {:?}", body.rows);
+    }
+}
+
+/// Render an `if/else if/else` chain as a general `ite` row: the arms
+/// are row lists of their own (arm `let`s do not escape, but the C
+/// local counter threads on, monotonically).
+fn gite(
+    sc: &mut GScope,
+    um: &Umgebung,
+    impls: &[String],
+    f: &FnDecl,
+    w: &WennStmt,
+    wo: &str,
+    cert: &mut GUnitCert,
+    lay: &mut Option<LayFacts>,
+    benutzt: &mut [bool],
+) -> Option<String> {
+    fn arme(
+        sc: &mut GScope,
+        um: &Umgebung,
+        impls: &[String],
+        f: &FnDecl,
+        zweige: &[(Expr, Block)],
+        sonst: &Option<Block>,
+        wo: &str,
+        cert: &mut GUnitCert,
+        lay: &mut Option<LayFacts>,
+        benutzt: &mut [bool],
+    ) -> Option<String> {
+        let Some(((cond, then), rest)) = zweige.split_first() else {
+            return None;
+        };
+        let cc = match gcx(sc, um, cond, &mut *benutzt) {
+            Ok(c) => c,
+            Err(was) => {
+                cert.refuse(wo, format!("`if` condition of {was}"));
+                return None;
+            }
+        };
+        let mut arm = sc.clone();
+        let mut then_rows = Vec::new();
+        let mut ende = false;
+        if !gblock(&mut arm, um, impls, f, then, wo, cert, &mut then_rows, lay, &mut ende, &mut *benutzt) {
+            return None;
+        }
+        sc.next = sc.next.max(arm.next);
+        let else_rows = if rest.is_empty() {
+            match sonst {
+                Some(b) => {
+                    let mut arm = sc.clone();
+                    let mut rows = Vec::new();
+                    let mut ende = false;
+                    if !gblock(&mut arm, um, impls, f, b, wo, cert, &mut rows, lay, &mut ende, &mut *benutzt) {
+                        return None;
+                    }
+                    sc.next = sc.next.max(arm.next);
+                    rows
+                }
+                None => Vec::new(),
+            }
+        } else {
+            let mut arm = sc.clone();
+            let nested = arme(&mut arm, um, impls, f, rest, sonst, wo, cert, lay, &mut *benutzt)?;
+            sc.next = sc.next.max(arm.next);
+            vec![nested]
+        };
+        Some(format!("GRow.ite ({cc}) [{}] [{}]", then_rows.join(", "), else_rows.join(", ")))
+    }
+    arme(sc, um, impls, f, &w.zweige, &w.sonst, wo, cert, lay, &mut *benutzt)
+}
+
+/// Certify one `impl fn` body in general syntax.
+fn gfunktion(um: &Umgebung, impls: &[String], f: &FnDecl, cert: &mut GUnitCert) {
+    let name = f.name.text.clone();
+    if !matches!(f.klasse, Some(FnKlasse::Impl)) {
+        cert.refuse(
+            &format!("function `{name}`"),
+            match &f.klasse {
+                None => "no class: only `impl fn` bodies have rows".to_string(),
+                Some(k) => format!("`{}`: only `impl fn` bodies have rows", k.text()),
+            },
+        );
+        return;
+    }
+    let block = match &f.rumpf {
+        FnRumpf::Block(b) => b,
+        _ => {
+            cert.refuse(
+                &format!("function `{name}`"),
+                "body is not a block: only block bodies have rows".to_string(),
+            );
+            return;
+        }
+    };
+    let wo = format!("function `{name}`");
+    let params: Vec<String> = f.parameter.iter().map(|p| p.name.text.clone()).collect();
+    let mut sc = GScope {
+        params: params.clone(),
+        widths: Vec::new(),
+        ptrs: Vec::new(),
+        locals: Vec::new(),
+        next: params.len() as u32,
+    };
+    let mut kinds: Vec<ParamKind> = Vec::new();
+    for p in &f.parameter {
+        kinds.push(match &p.typ {
+            TypExpr::Zeiger(z) => match &z.ziel {
+                TypExpr::Pfad(q) => {
+                    sc.ptrs.push((p.name.text.clone(), q.text()));
+                    ParamKind::PtrTable(q.text())
+                }
+                _ => ParamKind::Value,
+            },
+            TypExpr::Index { tabelle, .. } => ParamKind::IndexTable(tabelle.text.clone()),
+            t => {
+                if let Some(w) = width_of_typ(um, t) {
+                    sc.widths.push((p.name.text.clone(), w));
+                }
+                ParamKind::Value
+            }
+        });
+    }
+    let mut benutzt = vec![false; params.len()];
+    let mut rows: Vec<String> = Vec::new();
+    let mut lay: Option<LayFacts> = None;
+    let mut ende_ok = f.ergebnis.is_none();
+    if !gblock(&mut sc, um, impls, f, block, &wo, cert, &mut rows, &mut lay, &mut ende_ok, &mut benutzt) {
+        return;
+    }
+    if !ende_ok {
+        cert.refuse(&wo, "body ends without a row: only `return <expr>` ends a valued body".to_string());
+        return;
+    }
+    // The emitter writes `(void)x;` for every unused parameter, first.
+    let mut alle: Vec<String> = Vec::new();
+    for (i, used) in benutzt.iter().enumerate() {
+        if !used {
+            alle.push(format!("GRow.void {i}"));
+        }
+    }
+    alle.append(&mut rows);
+    let vm: Vec<String> = kinds
+        .iter()
+        .enumerate()
+        .filter(|(_, k)| **k == ParamKind::Value)
+        .map(|(i, _)| format!("{i}"))
+        .collect();
+    let pp: Vec<String> = kinds
+        .iter()
+        .enumerate()
+        .filter_map(|(i, k)| match k {
+            ParamKind::PtrTable(_) => Some(format!("{i}")),
+            _ => None,
+        })
+        .collect();
+    let ks: Vec<String> = kinds
+        .iter()
+        .enumerate()
+        .filter_map(|(i, k)| match k {
+            ParamKind::IndexTable(_) => Some(format!("({i}, 0)")),
+            _ => None,
+        })
+        .collect();
+    cert.bodies.push(GBodyCert {
+        name,
+        rows: alle,
+        vm,
+        pp,
+        ks,
+        lay,
+    });
+}
+
+/// Certify a whole unit in general syntax: every `impl fn` body.
+pub fn gzertifiziere(baum: &Programm) -> GUnitCert {
+    let mut um = Umgebung {
+        tabellen: Vec::new(),
+        konstanten: Vec::new(),
+        typen: Vec::new(),
+    };
+    Umgebung::sammle(baum, &mut um);
+    let mut impls: Vec<String> = Vec::new();
+    fn sammle_impl(items: &[Item], impls: &mut Vec<String>) {
+        for item in items {
+            match &item.art {
+                ItemArt::Modul(m) => sammle_impl(&m.items, impls),
+                ItemArt::Funktion(f) => {
+                    if matches!(f.klasse, Some(FnKlasse::Impl)) {
+                        impls.push(f.name.text.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    sammle_impl(&baum.items, &mut impls);
+    let mut cert = GUnitCert::default();
+    fn gehe<'a>(um: &Umgebung<'a>, impls: &[String], items: &'a [Item], cert: &mut GUnitCert) {
+        for item in items {
+            match &item.art {
+                ItemArt::Modul(m) => gehe(um, impls, &m.items, cert),
+                ItemArt::Funktion(f) => gfunktion(um, impls, f, cert),
+                _ => {}
+            }
+        }
+    }
+    gehe(&um, &impls, &baum.items, &mut cert);
+    cert
+}
+
+// ==================== general rows (T2 general) ====================
+//
+// Renders every `impl fn` body as general `GRow` data
+// (`grammatik/Grammatik/Korrespondenz.lean`): `void`, `storeSlot`,
+// `setVar`, `setOp`, `bindLet`, `ite`, `call`, `ret`. The expression
+// renderer covers exactly the Lean `exprOk` families (literals,
+// locals, `+`/`-`/`*`, `==`/`<`/`<=`/`>`, slot loads); everything else
+// is a named `GREFUSAL`, never a silent drop. Bodies with a refusal
+// get no literal. What the printer cannot know from the source it
+// refuses: globals and named-table bases (no block numbers), `let`
+// calls (no callee signature for the result type), `traverse` (no
+// bound rendering yet -- the Lean row family exists).
+
+/// An integer width for CIT/CTy rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct IntW {
+    sgn: bool,
+    w: &'static str,
+}
+
+impl IntW {
+    fn bits(&self) -> u32 {
+        match self.w {
+            "w8" => 8,
+            "w16" => 16,
+            "w32" => 32,
+            _ => 64,
+        }
+    }
+
+    fn cit(&self) -> String {
+        let name = match (self.sgn, self.w) {
+            (false, "w8") => "u8",
+            (false, "w16") => "u16",
+            (false, "w32") => "u32",
+            (false, _) => "u64",
+            (true, "w8") => "i8",
+            (true, "w16") => "i16",
+            (true, "w32") => "i32",
+            (true, _) => "i64",
+        };
+        format!("CIT.{name}")
+    }
+
+    fn cty(&self) -> String {
+        format!(".int {} .{}", self.sgn, self.w)
+    }
+
+    /// C11 6.3.1.1p2: narrower than `int` becomes `int`.
+    fn promote(&self) -> IntW {
+        if self.bits() < 32 {
+            IntW { sgn: true, w: "w32" }
+        } else {
+            *self
+        }
+    }
+
+    /// The usual arithmetic conversions (C11 6.3.1.8) on two widths.
+    fn uac(a: IntW, b: IntW) -> IntW {
+        let (pa, pb) = (a.promote(), b.promote());
+        if pa.sgn == pb.sgn {
+            if pa.bits() <= pb.bits() { pb } else { pa }
+        } else {
+            let (u, s) = if pa.sgn { (pb, pa) } else { (pa, pb) };
+            if s.bits() <= u.bits() { u } else { s }
+        }
+    }
+}
+
+/// The local scope: parameters in C-local order, known integer widths,
+/// table-pointer parameters, `let` locals with their C locals, and the
+/// next free C local.
+#[derive(Debug, Clone)]
+struct GScope {
+    params: Vec<String>,
+    widths: Vec<(String, IntW)>,
+    ptrs: Vec<(String, String)>,
+    locals: Vec<(String, u32)>,
+    next: u32,
+}
+
+impl GScope {
+    fn local(&self, name: &str) -> Option<u32> {
+        for (n, l) in self.locals.iter().rev() {
+            if n == name {
+                return Some(*l);
+            }
+        }
+        self.params.iter().position(|p| p == name).map(|i| i as u32)
+    }
+
+    fn width(&self, name: &str) -> Option<IntW> {
+        for (n, w) in self.widths.iter().rev() {
+            if n == name {
+                return Some(*w);
+            }
+        }
+        None
+    }
+
+    fn ptable(&self, name: &str) -> Option<&str> {
+        self.ptrs.iter().find(|(n, _)| n == name).map(|(_, t)| t.as_str())
+    }
+}
+
+/// The storage word of an integer type expression, if it is one.
+fn intw_of_wort(wort: &gabbro_syntax::kw::Kw) -> Option<IntW> {
+    use gabbro_syntax::kw::Kw;
+    let w = match wort {
+        Kw::U8 | Kw::I8 => "w8",
+        Kw::U16 | Kw::I16 => "w16",
+        Kw::U32 | Kw::I32 => "w32",
+        Kw::U64 | Kw::I64 => "w64",
+        _ => return None,
+    };
+    let sgn = matches!(wort, Kw::I8 | Kw::I16 | Kw::I32 | Kw::I64);
+    Some(IntW { sgn, w })
+}
+
+/// The integer width of a type expression: integers by word, `bool` by
+/// storage, aliases by resolution. Anything else has no width here.
+fn width_of_typ(um: &Umgebung, t: &TypExpr) -> Option<IntW> {
+    match t {
+        TypExpr::Int(i) => intw_of_wort(&i.wort),
+        TypExpr::Bool(_) => Some(IntW { sgn: false, w: "w8" }),
+        TypExpr::Pfad(p) => {
+            let name = p.einfach()?.text.clone();
+            for td in um.typen.iter() {
+                if td.name.text == name {
+                    return width_of_typ(um, td.rumpf.as_ref()?);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+/// The integer width of a slot field type.
+fn field_intw(um: &Umgebung, tabelle: &str, feld: &str) -> Option<IntW> {
+    let t = um.tabellen.iter().find(|t| t.name.text == tabelle)?;
+    let slot = t.slot.as_ref()?;
+    let f = slot.felder.iter().find(|f| f.name.text == feld)?;
+    match &f.typ {
+        SlotTyp::Typ(te) => width_of_typ(um, te),
+        SlotTyp::Wrapping(_) => None,
+    }
+}
+
+/// The integer width of an expression, if it is one. Literals adapt to
+/// their context (`None`); a bare local comes from the scope.
+fn width_of_expr(sc: &GScope, um: &Umgebung, e: &Expr) -> Option<IntW> {
+    match &e.art {
+        ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } => None,
+        ExprArt::Wahr | ExprArt::Falsch => Some(IntW { sgn: false, w: "w8" }),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => sc.width(&o.basis.text),
+        ExprArt::Ort(o) => match gslot(o, sc) {
+            Some((_, tab, _, feld)) => field_intw(um, &tab, &feld),
+            None => None,
+        },
+        ExprArt::Binaer(op, a, b) => {
+            use BinOp::*;
+            match op {
+                Plus | Minus | Mal => match (width_of_expr(sc, um, a), width_of_expr(sc, um, b)) {
+                    (Some(x), Some(y)) => Some(IntW::uac(x, y)),
+                    (Some(x), None) | (None, Some(x)) => Some(IntW::uac(x, x.promote())),
+                    (None, None) => None,
+                },
+                Gleich | Ungleich | Kleiner | KleinerGleich | Groesser | GroesserGleich => {
+                    Some(IntW { sgn: false, w: "w8" })
+                }
+                _ => None,
+            }
+        }
+        ExprArt::Unaer(UnOp::Nicht, _) => Some(IntW { sgn: false, w: "w8" }),
+        ExprArt::Klammer(e) => width_of_expr(sc, um, e),
+        _ => None,
+    }
+}
+
+/// The computation type of two operand widths: both known (usual
+/// conversions), one known (a literal adapts), else a refusal.
+fn cit_of_w(a: Option<IntW>, b: Option<IntW>) -> Result<String, String> {
+    match (a, b) {
+        (Some(x), Some(y)) => Ok(IntW::uac(x, y).cit()),
+        (Some(x), None) | (None, Some(x)) => Ok(IntW::uac(x, x.promote()).cit()),
+        (None, None) => Err("untyped operands: no computation type".to_string()),
+    }
+}
+
+/// The computation type of `a op b`.
+fn cit_of(sc: &GScope, um: &Umgebung, a: &Expr, b: &Expr) -> Result<String, String> {
+    cit_of_w(width_of_expr(sc, um, a), width_of_expr(sc, um, b))
+}
+
+/// `k.slots[i].f` with `k` a table-pointer parameter: base local,
+/// table, index expression, field name.
+fn gslot<'o>(ort: &'o Ort, sc: &GScope) -> Option<(u32, String, &'o Expr, String)> {
+    let kp = sc.params.iter().position(|p| p == &ort.basis.text)? as u32;
+    let tab = sc.ptable(&ort.basis.text)?.to_string();
+    if let [OrtSuffix::Feld(_), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] = &ort.suffixe[..] {
+        return Some((kp, tab, idx, feld.text.clone()));
+    }
+    None
+}
+
+/// Mark a C local as used (for the emitter's `(void)` rows).
+fn merke(benutzt: &mut [bool], l: u32) {
+    if let Some(b) = benutzt.get_mut(l as usize) {
+        *b = true;
+    }
+}
+
+/// Render an expression as `CX`, in exactly the Lean `exprOk` families.
+/// Returns the `CX` term or the refusal naming the form.
+fn gcx(sc: &GScope, um: &Umgebung, e: &Expr, benutzt: &mut [bool]) -> Result<String, String> {
+    match &e.art {
+        ExprArt::Zahl(v) => Ok(format!(".lit {v}")),
+        ExprArt::Wahr => Ok(".lit 1".to_string()),
+        ExprArt::Falsch => Ok(".lit 0".to_string()),
+        ExprArt::Klammer(inner) => gcx(sc, um, inner, &mut *benutzt),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => match sc.local(&o.basis.text) {
+            Some(n) => {
+                merke(&mut *benutzt, n);
+                Ok(format!(".var {n}"))
+            }
+            None => Err(format!(
+                "place `{}` is no parameter or local: globals and named tables have no block number",
+                o.text()
+            )),
+        },
+        ExprArt::Ort(o) => match gslot(o, sc) {
+            Some((kp, tab, idx, feld)) => {
+                let index = gcx(sc, um, idx, &mut *benutzt)?;
+                match um.layout(&tab, &feld) {
+                    Some(l) => match field_intw(um, &tab, &feld) {
+                        Some(w) => {
+                            merke(benutzt, kp);
+                            Ok(format!(
+                                ".ld (.slotA (.var {kp}) ({index}) {} {} {}) ({})",
+                                l.n,
+                                l.ss,
+                                l.off,
+                                w.cty()
+                            ))
+                        }
+                        None => Err(format!("slot load `{}`: field `{tab}.{feld}` has no integer width", o.text())),
+                    },
+                    None => Err(format!("slot load `{}`: layout has no byte size", o.text())),
+                }
+            }
+            None => Err(format!(
+                "place `{}`: only bare locals and `param.slots[i].field` loads have rows",
+                o.text()
+            )),
+        },
+        ExprArt::Binaer(op, a, b) => {
+            use BinOp::*;
+            let (cop, cmp) = match op {
+                Plus => (".add", false),
+                Minus => (".sub", false),
+                Mal => (".mul", false),
+                Gleich => (".eq", true),
+                Kleiner => (".lt", true),
+                KleinerGleich => (".le", true),
+                Groesser => (".gt", true),
+                _ => {
+                    return Err(format!(
+                        "binary {op:?}: only +, -, * and ==, <, <=, > have rows"
+                    ))
+                }
+            };
+            let t = cit_of(sc, um, a, b)?;
+            let (ca, cb) = (gcx(sc, um, a, &mut *benutzt)?, gcx(sc, um, b, &mut *benutzt)?);
+            if cmp {
+                Ok(format!(".cmp {cop} {t} ({ca}) ({cb})"))
+            } else {
+                Ok(format!(".bin {cop} {t} ({ca}) ({cb})"))
+            }
+        }
+        _ => Err(format!("{}: no expression row (the Lean family is lit/var/+,-,*/cmp/slot)", expr_name(e))),
+    }
+}
+
+/// One certified body in general syntax: rows plus map for `GBody`.
+#[derive(Debug, Clone)]
+pub struct GBodyCert {
+    /// The Gabbro function name.
+    pub name: String,
+    /// The `GRow` terms in emission order (`(void)` rows first).
+    pub rows: Vec<String>,
+    /// Value-param C locals (`vm`).
+    pub vm: Vec<String>,
+    /// Pointer-param C locals (`pp`, raw numbers).
+    pub pp: Vec<String>,
+    /// Fixed index params (`ks`, values are model data).
+    pub ks: Vec<String>,
+    /// Layout facts used by a slot row, if any.
+    pub lay: Option<LayFacts>,
+}
+
+/// The whole unit in general syntax: certified bodies plus refusals.
+#[derive(Debug, Clone, Default)]
+pub struct GUnitCert {
+    pub bodies: Vec<GBodyCert>,
+    pub refusals: Vec<Refusal>,
+}
+
+impl GUnitCert {
+    fn refuse(&mut self, wo: &str, was: String) {
+        self.refusals.push(Refusal {
+            wo: wo.to_string(),
+            was,
+        });
+    }
+}
+
+/// Render one block as general rows, or the first refusal. `out_unused`
+/// collects `(void)` rows for unused parameters at the top level only.
+fn gblock(
+    sc: &mut GScope,
+    um: &Umgebung,
+    impls: &[String],
+    f: &FnDecl,
+    block: &Block,
+    wo: &str,
+    cert: &mut GUnitCert,
+    rows: &mut Vec<String>,
+    lay: &mut Option<LayFacts>,
+    ende_ok: &mut bool,
+    benutzt: &mut [bool],
+) -> bool {
+    for st in &block.anweisungen {
+        match &st.art {
+            StmtArt::Let(s) => {
+                if matches!(s.wert.art, ExprArt::Ruf(_)) {
+                    cert.refuse(wo, format!("`let {} =` call: result type needs the callee signature", s.name.text));
+                    return false;
+                }
+                let ce = match gcx(sc, um, &s.wert, &mut *benutzt) {
+                    Ok(c) => c,
+                    Err(was) => {
+                        cert.refuse(wo, format!("`let {}` of {was}", s.name.text));
+                        return false;
+                    }
+                };
+                let tc = match s.typ.as_ref().and_then(|t| width_of_typ(um, t)) {
+                    Some(w) => w.cty(),
+                    None => {
+                        cert.refuse(wo, format!("`let {}` without a type annotation: no C type", s.name.text));
+                        return false;
+                    }
+                };
+                let x = sc.next;
+                sc.next += 1;
+                sc.locals.push((s.name.text.clone(), x));
+                if let Some(t) = s.typ.as_ref().and_then(|t| width_of_typ(um, t)) {
+                    sc.widths.push((s.name.text.clone(), t));
+                }
+                rows.push(format!("GRow.bindLet {x} ({tc}) ({ce})"));
+            }
+            StmtArt::Zuweisung(z) => {
+                if z.op != ZuwOp::Setzt {
+                    let target = z.ziel.text();
+                    if !z.ziel.suffixe.is_empty() {
+                        cert.refuse(wo, format!("`{target} {op:?}=`: no compound row outside locals (no T4 lemma for slot op)", op = z.op));
+                        return false;
+                    }
+                    let Some(x) = sc.local(&z.ziel.basis.text) else {
+                        cert.refuse(wo, format!("`{target} {op:?}=`: no compound row outside locals (no T4 lemma for slot op)", op = z.op));
+                        return false;
+                    };
+                    let ce = match gcx(sc, um, &z.wert, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("`{target} {op:?}=` of {was}", op = z.op));
+                            return false;
+                        }
+                    };
+                    let wx = match sc.width(&z.ziel.basis.text) {
+                        Some(w) => w,
+                        None => {
+                            cert.refuse(wo, format!("`{target} {op:?}=`: no integer width", op = z.op));
+                            return false;
+                        }
+                    };
+                    let wt = match cit_of_w(Some(wx), width_of_expr(sc, um, &z.wert)) {
+                        Ok(t) => t,
+                        Err(was) => {
+                            cert.refuse(wo, format!("`{target} {op:?}=`: {was}", op = z.op));
+                            return false;
+                        }
+                    };
+                    let cop = match z.op {
+                        ZuwOp::Plus => ".add",
+                        ZuwOp::Minus => ".sub",
+                        ZuwOp::Und => ".band",
+                        ZuwOp::Oder => ".bor",
+                        ZuwOp::Setzt => ".add",
+                    };
+                    merke(&mut *benutzt, x);
+                    rows.push(format!("GRow.setOp {x} ({}) {cop} {wt} ({ce})", wx.cty()));
+                    continue;
+                }
+                let target = z.ziel.text();
+                if let Some((kp, tab, idx, feld)) = gslot(&z.ziel, sc) {
+                    let index = match gcx(sc, um, idx, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("slot store to `{target}`: index {was}"));
+                            return false;
+                        }
+                    };
+                    let val = match gcx(sc, um, &z.wert, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("slot store to `{target}` of {was}"));
+                            return false;
+                        }
+                    };
+                    match um.layout(&tab, &feld) {
+                        Some(l) => {
+                            let tc = match field_intw(um, &tab, &feld) {
+                                Some(w) => w.cty(),
+                                None => {
+                                    cert.refuse(wo, format!("slot store to `{tab}.{feld}`: no integer width"));
+                                    return false;
+                                }
+                            };
+                            merke(&mut *benutzt, kp);
+                            rows.push(format!(
+                                "GRow.storeSlot {kp} ({index}) {} {} {} ({tc}) ({val})",
+                                l.n, l.ss, l.off
+                            ));
+                            *lay = Some(l);
+                        }
+                        None => {
+                            cert.refuse(wo, format!("slot store to `{tab}.{feld}`: layout has no byte size"));
+                            return false;
+                        }
+                    }
+                } else if z.ziel.suffixe.is_empty() {
+                    match sc.local(&z.ziel.basis.text) {
+                        Some(x) => {
+                            let ce = match gcx(sc, um, &z.wert, &mut *benutzt) {
+                                Ok(c) => c,
+                                Err(was) => {
+                                    cert.refuse(wo, format!("assignment to `{target}` of {was}"));
+                                    return false;
+                                }
+                            };
+                            let tc = match sc.width(&z.ziel.basis.text) {
+                                Some(w) => w.cty(),
+                                None => {
+                                    cert.refuse(wo, format!("assignment to `{target}`: no integer width"));
+                                    return false;
+                                }
+                            };
+                            merke(&mut *benutzt, x);
+                            rows.push(format!("GRow.setVar {x} ({tc}) ({ce})"));
+                        }
+                        None => {
+                            cert.refuse(wo, format!("assignment to `{target}`: globals and named tables have no block number"));
+                            return false;
+                        }
+                    }
+                } else {
+                    cert.refuse(wo, format!("assignment to `{target}`: globals and named tables have no block number"));
+                    return false;
+                }
+            }
+            StmtArt::Wenn(w) => {
+                match gite(sc, um, impls, f, w, wo, cert, lay, &mut *benutzt) {
+                    Some(row) => rows.push(row),
+                    None => return false,
+                }
+            }
+            StmtArt::Ruf(r) => {
+                let ziel = r.ziel.text();
+                let Some(fc) = impls.iter().position(|n| *n == ziel) else {
+                    cert.refuse(wo, format!("call to `{ziel}`: only unit functions have a callee relation"));
+                    return false;
+                };
+                let mut args = Vec::new();
+                for a in &r.argumente {
+                    match gcx(sc, um, a, &mut *benutzt) {
+                        Ok(c) => args.push(c),
+                        Err(was) => {
+                            cert.refuse(wo, format!("call to `{ziel}`: argument {was}"));
+                            return false;
+                        }
+                    }
+                }
+                rows.push(format!("GRow.call {fc} [{}] none", args.join(", ")));
+            }
+            StmtArt::Return(opt) => match opt {
+                None => {
+                    if f.ergebnis.is_some() {
+                        cert.refuse(wo, "`return;` with a declared result: no row".to_string());
+                        return false;
+                    }
+                    *ende_ok = true;
+                }
+                Some(e) => {
+                    let ce = match gcx(sc, um, e, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("return of {was}"));
+                            return false;
+                        }
+                    };
+                    let tc = match f.ergebnis.as_ref().and_then(|t| width_of_typ(um, t)) {
+                        Some(w) => w.cty(),
+                        None => {
+                            cert.refuse(wo, "return of an untyped result: no C type".to_string());
+                            return false;
+                        }
+                    };
+                    rows.push(format!("GRow.ret (some (({tc}), ({ce})))"));
+                    *ende_ok = true;
+                }
+            },
+            _ => {
+                cert.refuse(
+                    wo,
+                    format!("statement `{}`: no general row (void/store/set/let/if/call/return only)", stmt_name(&st.art)),
+                );
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Render the whole general certificate: per-body fragments, then -- for
+/// bodies without a refusal -- the pasteable `GBody` literal for
+/// `Korrespondenz.lean`.
+pub fn gzeige(baum: &Programm, datei: &str) -> String {
+    let cert = gzertifiziere(baum);
+    let mut aus = format!("-- general corr-lean certificate for `{datei}`: GRow form families.\n");
+    for b in &cert.bodies {
+        aus.push_str(&format!("-- function `{}`:\n", b.name));
+        aus.push_str(&format!("--   rows := [{}]\n", b.rows.join(", ")));
+        aus.push_str(&format!("--   vm := [{}]\n", b.vm.join(", ")));
+        aus.push_str(&format!("--   pp := [{}]\n", b.pp.join(", ")));
+        aus.push_str(&format!("--   ks := [{}] -- ks values: MODEL DATUM, fixed by the model\n", b.ks.join(", ")));
+        match &b.lay {
+            Some(l) => aus.push_str(&format!(
+                "--   slot layout: table `{}` count {} field `{}` {} at offset {}, record {} bytes\n",
+                l.table, l.count_src, l.field, l.field_ty, l.off, l.ss
+            )),
+            None => aus.push_str("--   slot layout: none (no slot access)\n"),
+        }
+        let hat_absage = cert.refusals.iter().any(|r| r.wo == format!("function `{}`", b.name));
+        if !hat_absage {
+            aus.push_str(&format!(
+                "-- pasteable as GBody:\n{{ rows := [{}],\n  vm := [{}], pp := [{}], ks := [{}] }}\n",
+                b.rows.join(", "),
+                b.vm.join(", "),
+                b.pp.join(", "),
+                b.ks.join(", ")
+            ));
+        }
+    }
+    for r in &cert.refusals {
+        aus.push_str(&format!("-- GREFUSAL: {}: {}\n", r.wo, r.was));
+    }
+    aus
 }
