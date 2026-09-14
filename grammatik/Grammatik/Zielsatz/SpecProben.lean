@@ -20,14 +20,14 @@
   whole statement is empty for it; that is review question 3, not a refutation.
 
   Positives -- all premises jointly, with an admissible start OF `P.mitRuhe` (A4, the machine
-  `GabbroZiel` runs):
+  `GabbroZiel` runs) on which every declared start runs on some thread:
   * the two-thread program `mP` (two ACTIVE threads, private unguarded tables, a shared
     table under a lock with invariant `konto[0] == konto[1]`, the runtime's root elsewhere);
   * probes B/C (`zPB`, `zPC`, family `zS`). Before the idle root they were EXPECTED FALSE:
     `zD` has no idle function, and `Faden = Nat` runs infinitely many threads. With the
-    runtime's root the start component holds (`probeB_start`, `probeC_start`,
-    Zielsatz/RuheZeuge.lean, the root on every thread); the other components are the Proben
-    lane's.
+    runtime's root the start component holds; the statements fix `haupt` as the DECLARED
+    start (`ws = [haupt]`, running on some thread), so the admissible start is not the root on
+    every thread, where the probe bodies would never run.
 -/
 import Grammatik.Zielsatz.Spec
 import Grammatik.ProbeD
@@ -41,13 +41,16 @@ open Gabbro.Grammatik
 instance zD_fn_deq' : DecidableEq zD.Fn := inferInstanceAs (DecidableEq ZFn)
 
 /-- **All premise groups at once**: the checker's facts, the user's logic, SOME oracle meeting
-    the hardware assumptions, and SOME admissible start. -/
+    the hardware assumptions, and SOME admissible start on which EVERY declared start of `ws`
+    runs on some thread (without that clause the runtime's root on every thread would be
+    admissible for any `ws`, and the declared bodies would never run). -/
 def Erfuellbar {D : Deklaration} [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
     (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ws : List D.Fn) : Prop :=
   AkzeptiertSpec P S fs.1 ws ∧ NutzerPflicht P S Q ∧ (∃ O : Orakel D, HardwareAnnahmen O Q) ∧
     ∃ (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
-      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init
+      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init ∧
+        ∀ w ∈ wsRuhe ws, ∃ t : Faden, (init t).1 = w
 
 /-- **Group (b) refutes `P`**: for every declared axiom ensures and every lock-invariant family
     with guarded carriers that some memory satisfies, the user obligation fails. -/
@@ -98,13 +101,15 @@ theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
 def zweiFaeden_erfuellbar : Prop :=
   ∃ fs : Aufzaehlung mD.Fn, Erfuellbar mP mSI (axWahr mD) fs [mHauptA, mHauptB]
 
-/-- Probe B satisfies every premise group (the start: the runtime's root, see the header). -/
+/-- Probe B satisfies every premise group with `haupt` as its DECLARED start, running on some
+    thread (the runtime's root on the others). -/
 def probeB_erfuellbar : Prop :=
-  ∃ (fs : Aufzaehlung zD.Fn) (ws : List zD.Fn), Erfuellbar zPB zS (axWahr zD) fs ws
+  ∃ fs : Aufzaehlung zD.Fn, Erfuellbar zPB zS (axWahr zD) fs [zHaupt]
 
-/-- Probe C satisfies every premise group (the start: the runtime's root, see the header). -/
+/-- Probe C satisfies every premise group with `haupt` as its DECLARED start, running on some
+    thread (the runtime's root on the others). -/
 def probeC_erfuellbar : Prop :=
-  ∃ (fs : Aufzaehlung zD.Fn) (ws : List zD.Fn), Erfuellbar zPC zS (axWahr zD) fs ws
+  ∃ fs : Aufzaehlung zD.Fn, Erfuellbar zPC zS (axWahr zD) fs [zHaupt]
 
 /-- **Non-degeneracy of the positive witness** (PLAN §4 `gabbro_ziel_zeuge`, stated): on some
     admissible start of `mP` a reached machine has CHANGED memory, so the conclusion is not

@@ -34,7 +34,7 @@ theorem ziel_ort_einfaden_ref104 :
       VertragAmOrtG r4P M ∧ SperrInvG (SperrInv.leer r4D) M ∧ KeinLogikHaltG r4O 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG r4P r4O 0 M t M' :=
-  ziel_ort_einfaden r4P r4O 0 (axWahr r4D) (SperrInv.leer r4D) r4Fs r4Sp r4Init r4E0 r4O_gut
+  ziel_ort_einfaden r4P r4O 0 (axWahr r4D) (SperrInv.leer r4D) r4Fs r4Sp r4Init r4O_gut
     r4O_lokal (axVertragO_wahr r4O) axEnsLokal_wahr sperrInvOk_leer r4Fs_voll r4P_fragmentG r4_ruhig
     (fun f => koerperGutS_leer (r4P_koerperZ f)) r4P_start (fun _ => rfl)
 
@@ -325,8 +325,6 @@ theorem eP_koerper : ∀ f : eD.Fn, KoerperGutS eP 0 (axWahr eD) (SperrInv.leer 
   · exact eP_koerper_haupt
   · exact eP_koerper_ruhe
 
-def eE0 : Ereignis eD := .gibt ()
-
 /-- **Every premise of `ziel_ort_einfaden` holds on `eP`**, a program both
     footprint checks refuse. -/
 theorem eP_zertifiziert : ∀ M : RufMaschineG eD,
@@ -334,7 +332,7 @@ theorem eP_zertifiziert : ∀ M : RufMaschineG eD,
       VertragAmOrtG eP M ∧ SperrInvG (SperrInv.leer eD) M ∧ KeinLogikHaltG eO 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG eP eO 0 M t M' :=
-  ziel_ort_einfaden eP eO 0 (axWahr eD) (SperrInv.leer eD) eFs eSp eInit eE0 eO_gut eO_lokal
+  ziel_ort_einfaden eP eO 0 (axWahr eD) (SperrInv.leer eD) eFs eSp eInit eO_gut eO_lokal
     (axVertragO_wahr eO) axEnsLokal_wahr sperrInvOk_leer eFs_voll eP_fragmentG e_ruhig eP_koerper
     eP_start (fun _ => rfl)
 

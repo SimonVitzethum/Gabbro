@@ -1081,9 +1081,6 @@ theorem bootInit_start (sp : Speicher gDB) (f : GFn) (ρ : Env gDB (gDB.params (
   · rw [if_pos h0]; rfl
   · rw [if_neg h0]; rfl
 
-/-- The declaration has a lock: a trace event exists. -/
-def gbE0 : Ereignis gDB := .nimmt GLock.M []
-
 theorem gPB_ohneEwig : ohneEwigB gPB gbFs = true := by decide
 
 theorem gPB_koerperS_alle : ∀ (passes : Nat) (f : gDB.Fn),
@@ -1127,7 +1124,7 @@ theorem gPB_ziel (init : Faden → Σ g : gDB.Fn, Env gDB (gDB.params g)) (hA4 :
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG gPB gOB passes M t M') ∧
       InvAmOrtG gPB M) ∧ StartEndeG gPB M ∧ KeinStartGrundG M :=
-  fun sp => ziel_ort_einfaden_ende gPB gOB (axWahr gDB) (SperrInv.leer gDB) gbFs sp init gbE0
+  fun sp => ziel_ort_einfaden_ende gPB gOB (axWahr gDB) (SperrInv.leer gDB) gbFs sp init
     gOB_gut gOB_lokal (axVertragO_wahr gOB) axEnsLokal_wahr sperrInvOk_leer gbFs_voll gPB_fragment
     (fun u hu => by rw [hA4 u hu]; exact gPB_ruhig) gPB_koerperS_alle (fun _ => rfl) (fun _ => rfl)
     (fun _ => invGutS_leer rfl) (fun _ => gDB_ohneGrund _)

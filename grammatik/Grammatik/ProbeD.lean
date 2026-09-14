@@ -126,7 +126,7 @@ theorem probeD_bei0_zertifiziert (w : Bool) : ∀ M : RufMaschineG zD,
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG (fvP w) zO 0 M t M') ∧
       InvAmOrtG (fvP w) M) ∧ StartEndeG (fvP w) M :=
-  ziel_ort_sperre_ende_bei (fvP w) zO 0 (axWahr zD) (SperrInv.leer zD) zFs zSp zInit zE0 zO_gut
+  ziel_ort_sperre_ende_bei (fvP w) zO 0 (axWahr zD) (SperrInv.leer zD) zFs zSp zInit zO_gut
     zO_lokal (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll (fvP_fragmentG w)
     (fvP_fussS w) (fvP_koerper0 w _ _) (fvP_start w) (fun _ => rfl) zInit_exklusiv
     (invGutS_leer rfl)
@@ -330,7 +330,7 @@ theorem ewP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG zD),
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG ewP zO passes M t M') ∧
       InvAmOrtG ewP M) ∧ StartEndeG ewP M ∧ KeinStartGrundG M :=
-  ziel_ort_sperre_ende ewP zO (axWahr zD) (SperrInv.leer zD) zFs zSp lInit zE0 zO_gut zO_lokal
+  ziel_ort_sperre_ende ewP zO (axWahr zD) (SperrInv.leer zD) zFs zSp lInit zO_gut zO_lokal
     (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll ewP_fragmentG ewP_fussS
     (ewP_koerper _) ewP_start (fun _ => rfl) lInit_exklusiv (fun _ => invGutS_leer rfl)
     (fun t => by by_cases ht : t = 0 <;> simp [lInit, ht] <;> rfl)

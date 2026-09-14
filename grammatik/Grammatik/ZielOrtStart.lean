@@ -221,7 +221,7 @@ theorem keinStartGrundG {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Speiche
     over every budget. -/
 theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -235,9 +235,9 @@ theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M := by
   intro M hr
-  refine ⟨ziel_ort_sperre_invL P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS hLok hK
+  refine ⟨ziel_ort_sperre_invL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS hLok hK
     hStart hSstart hex hI M hr, ?_⟩
-  have hZ := (zielInvS_erreichbarL P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+  have hZ := (zielInvS_erreichbarL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
     hLok hK hStart hSstart hex M hr).1
   intro t _ l Γ Λ ρ r e hr' hk
   exact kopfS_ret hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hr' e hk
@@ -246,7 +246,7 @@ theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
     statement). -/
 theorem ziel_ort_mehrfaden_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -261,7 +261,7 @@ theorem ziel_ort_mehrfaden_ende_bei (P : Programm D) (O : Orakel D) (passes : Na
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M :=
-  ziel_ort_ende_bei P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
+  ziel_ort_ende_bei P O passes Q S (lokK P K) sp init hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
     (lokOk_mehr hO hvoll sp init K hAbg hWurzel) hK hStart hSstart hex hI
 
@@ -269,7 +269,7 @@ theorem ziel_ort_mehrfaden_ende_bei (P : Programm D) (O : Orakel D) (passes : Na
     `fussSperreB`; a lemma). -/
 theorem ziel_ort_sperre_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -282,7 +282,7 @@ theorem ziel_ort_sperre_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) 
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M :=
   have hFS : ∀ f, FussS P S (freiB fs) f := fussSperreB_ok hvoll hFuss
-  ziel_ort_ende_bei P O passes Q S (freiB fs) sp init e0 hO hRL hQ hlok hS
+  ziel_ort_ende_bei P O passes Q S (freiB fs) sp init hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFS) hFS (lokOk_frei hO hvoll sp init) hK hStart
     hSstart hex hI
 
@@ -299,7 +299,7 @@ empty the obligation of a `forever` loop (probe D, `Durchgaenge.lean`,
     local carriers, over every budget.** -/
 theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -314,7 +314,7 @@ theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
   fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
-    ziel_ort_ende_bei P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+    ziel_ort_ende_bei P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
     (hLok passes) (hK passes) hStart hSstart hex (hI passes) M hr
 
 /-- **THE FLAGSHIP (2026-09-14, budget-quantified): several active threads
@@ -327,7 +327,7 @@ theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     checks it), on the machines of every budget. -/
 theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -344,14 +344,14 @@ theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
   fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
-    ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll
+    ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init K hO hRL hQ hlok hS hvoll
     hFrag hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes) M hr
 
 /-- **`ziel_ort_sperre_ende`, over every budget** (footprint check
     `fussSperreB`). -/
 theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -365,7 +365,7 @@ theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
   fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
-    ziel_ort_sperre_ende_bei P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
+    ziel_ort_sperre_ende_bei P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag
     hFuss (hK passes) hStart hSstart hex (hI passes) M hr
 
 /-- **One active thread, over every budget, with the start functions'
@@ -375,7 +375,7 @@ theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (thread `0` the driver's call, the rest the runtime's idle roots). -/
 theorem ziel_ort_einfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true)
@@ -390,7 +390,7 @@ theorem ziel_ort_einfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M ∧ KeinStartGrundG M :=
   fun passes M hr => (fun h => ⟨h.1, h.2, keinStartGrundG hGrund hr⟩) <|
-    ziel_ort_ende_bei P O passes Q S (fun _ => true) sp init e0 hO hRL hQ hlok hS
+    ziel_ort_ende_bei P O passes Q S (fun _ => true) sp init hO hRL hQ hlok hS
       (programmImFragmentS_ok P S hvoll hFrag (fussS_alle P S)) (fussS_alle P S)
       (lokOk_einfaden sp init hRuhe) (hK passes) hStart hSstart (startExklusiv_einfaden init hRuhe)
       (hI passes) M hr

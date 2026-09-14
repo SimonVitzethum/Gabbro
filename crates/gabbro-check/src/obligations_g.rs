@@ -122,7 +122,7 @@ fn abschnitt(fns: &[String]) -> String {
     out.push_str("-- the user's obligations. The obligations stay open as hypotheses -- that\n");
     out.push_str("-- is the point. Apply it once the `..._pflicht` duties above are proved.\n");
     out.push_str("theorem gP_ziel (O : Orakel gD) (sp : Speicher gD)\n");
-    out.push_str("    (init : Faden → Σ f : gD.Fn, Env gD (gD.params f)) (e0 : Ereignis gD)\n");
+    out.push_str("    (init : Faden → Σ f : gD.Fn, Env gD (gD.params f))\n");
     out.push_str("    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO (axWahr gD) O)\n");
     out.push_str("    (hK : ∀ f, pflicht f) (hI : ∀ f, pflichtInv f)\n");
     out.push_str("    (hStart : StartGut gP sp init) (hSstart : startPflicht sp)\n");
@@ -146,7 +146,7 @@ fn abschnitt(fns: &[String]) -> String {
     for f in fns {
         out.push_str(&format!("    · exact hI .{f} passes\n"));
     }
-    out.push_str("  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init e0 hO hRL hQ\n");
+    out.push_str("  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init hO hRL hQ\n");
     out.push_str("    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' hGrund passes M hr\n");
     out
 }

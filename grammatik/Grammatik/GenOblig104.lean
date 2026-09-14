@@ -211,7 +211,7 @@ theorem gP_fussS : fussSperreB gP gS gFs = true := by decide
 -- the user's obligations. The obligations stay open as hypotheses -- that
 -- is the point. Apply it once the `..._pflicht` duties above are proved.
 theorem gP_ziel (O : Orakel gD) (sp : Speicher gD)
-    (init : Faden → Σ f : gD.Fn, Env gD (gD.params f)) (e0 : Ereignis gD)
+    (init : Faden → Σ f : gD.Fn, Env gD (gD.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO (axWahr gD) O)
     (hK : ∀ f, pflicht f) (hI : ∀ f, pflichtInv f)
     (hStart : StartGut gP sp init) (hSstart : startPflicht sp)
@@ -233,7 +233,7 @@ theorem gP_ziel (O : Orakel gD) (sp : Speicher gD)
     cases f
     · exact hI .einzahlen passes
     · exact hI .lies passes
-  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init e0 hO hRL hQ
+  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init hO hRL hQ
     axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' hGrund passes M hr
 end G104_referenz_oblig
 
