@@ -126,15 +126,49 @@ production and a name, and each is decided by the grammar and not by a list:
 2. **`old` and `result`** — words inside a contract clause, names everywhere else;
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-**Seventeen of the 224 are still not names**, on two measured grounds, and every one of them
-has **zero** declarator sites in 585 foreign files:
+**Seventeen of the 243 are still not names** (recounted 2026-09-14, lane 188:
+`instrumente/zaehle-wortschatz.py` reads 243 words, 17 reserved, 226 contextual;
+`instrumente/pruefe-wortschatz.py` reads 240 EBNF terminals against 240 table words --
+the three over are `r` `w` `x`, single letters both sides drop by construction).
+Every one of the seventeen has **zero** declarator sites in 585 foreign files, and every
+one names below the position that forces it -- a use-site occurrence always parses as
+the keyword form, so a variable of that name could be bound and never read back:
 
 ```
-  Ausdruck   sizeof lenof aligned forall exists true false Self Some None
-  C-Name     const static extern if else return bool
+  word       forcing position (keyword arm above the name path, parse.rs)
+  sizeof     primary `sizeof(place)`                                          :2087
+  lenof      primary `lenof(place)`                                           :2087
+  aligned    primary `aligned(place, n)`                                      :2103
+  forall     quantifier `forall(x in ...)`                                    :2712
+  exists     quantifier `exists(x in ...)`                                    :2712
+  true       boolean literal                                                  :2052
+  false      boolean literal                                                  :2059
+  Self       Self-path primary, `Self.slots[s]` place                        :1126 :2125
+  Some       option constructor primary and pattern                          :1958 :3929
+  None       option nil primary and pattern                                  :1958 :3929
+  const      item head `const N : T = ...`, one word before `const fn`       :710 :713
+  static     item head `static ...`                                           :714
+  extern     function-class head `extern fn`                                 :2919
+  if         statement head and if-expression                                :3532
+  else       else-branch after `}`                                            :3663
+  return     statement head `return expr ;`                                   :3594
+  bool       type keyword arm above the named-type arm                       :1102
 ```
 
-`owner` and `deadline` join the 207 that are names — neither heads an expression and neither breaks emitted C.
+Ten head an expression or a predicate unconditionally; seven break the emitted C as an
+ordinary local (`uint32_t <word> = 1; return <word>;` through
+`cc -std=c11 -Wall -Wextra -Werror` -- `const` `static` `extern` `if` `else` `return`
+`bool`, measured 2026-09-05). The Lean side pins the same seventeen in
+`grammatik/Grammatik/Parser/WortStellung.lean` (`reserviertTafel`, with a theorem per
+row above: the twelve place-refusals, the five expression heads, the seven C names).
+
+Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`
+`errors` `kernel`, `arena` `capacity` `alloc` `reset`, `profile` `rounding` `fp_contract`
+`memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
+`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 243 as a parameter
+and as a local, requiring clean exactly for the 226. No word freed since stands
+unread: freeing one of the seventeen buys zero foreign sites and breaks either a read
+or the C, so the residue is irreducible by measurement, not by taste.
 
 ---
 

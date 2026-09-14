@@ -22,6 +22,7 @@
 -/
 import Grammatik.Parser.Ausdruck
 import Grammatik.Parser.Anweisung
+import Grammatik.Parser.WortStellung
 
 namespace Gabbro.Grammatik.Parser
 
