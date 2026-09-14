@@ -28,10 +28,15 @@
     runs on thread 0 (`initRuhe [haupt]`), the runtime's root on every other thread. (The
     propositions ask only `∃ ws`; `ws = []` would satisfy them with the root on every
     thread, where the bodies never run -- the witness here avoids that.)
+
+  Applied (`gabbro_ziel_zeuge`): the assembled `gabbro_ziel_ereignis` (Zielsatz/Beweis.lean)
+  on `mP`, with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine
+  of `mP.mitRuhe` with changed memory.
 -/
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Zielsatz.RuheZeuge
 import Grammatik.ZielOrtInvGrund
+import Grammatik.Zielsatz.Beweis
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -167,6 +172,32 @@ theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, _, probeB_erfuellbar
 
 theorem probeC_erfuellbar_gilt : probeC_erfuellbar := ⟨_, _, probeC_erfuellbar_haupt⟩
 
+/-! ## 5. The assembled goal, applied -/
+
+/-- **`gabbro_ziel_ereignis` applied to the two-thread program** (it declares tables, so it
+    has an event): on the admissible start with both declared starts, at a machine reached in
+    one step with CHANGED memory, every leg of `Ziel` holds -- by the theorem, not by hand. -/
+theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
+    (init : Faden → Σ f : mD.mitRuhe.Fn, Env mD.mitRuhe (mD.mitRuhe.params f))
+    (M : RufMaschineG mD.mitRuhe),
+    RufErreichbarG mP.mitRuhe mO.mitRuhe 0 (RufStartG mP.mitRuhe sp init) M ∧ M.speicher ≠ sp ∧
+    Ziel mP.mitRuhe mSI.mitRuhe mO.mitRuhe 0 (RufStartG mP.mitRuhe sp init) M := by
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+    (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
+    (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+  refine ⟨speicherR mSp, _, M1, .schritt _ _ _ .start s1, ?_, ?_⟩
+  · intro h
+    have e := congrArg (fun s : Speicher mD.mitRuhe => (s.slots MTab.privA 0 () : Zahl 0 100).n) h
+    rw [hZ1.2] at e
+    revert e
+    decide
+  · exact gabbro_ziel_ereignis akzeptiert_pruefer mD mP mSI (axWahr mD) ⟨mFs, mFs_voll⟩
+      ⟨[()], mLocks_voll⟩ ⟨mCs, mCs_voll⟩ [mHauptA, mHauptB] (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert) ⟨.gibt ()⟩
+      mP_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ mP_mitRuhe_start M1
+      (.schritt _ _ _ .start s1)
+
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_wahr_widerlegt_gilt

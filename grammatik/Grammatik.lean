@@ -241,6 +241,7 @@ import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Zielsatz.RuheNutzer
 import Grammatik.Zielsatz.Beweis
+import Grammatik.Zielsatz.Proben
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
