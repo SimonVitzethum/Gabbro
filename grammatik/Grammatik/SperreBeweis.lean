@@ -78,7 +78,7 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D) (S : Sperr
 
 /-- How a suspended frame continues once its pending call is answered (as
     `FortV`), over the semantics with lock invariants. -/
-def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErg (vertragVon D F.f))
+def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D) (U : Umwelt D) :
     RufAusgang g → Prop
   | .ok σa v =>
@@ -114,7 +114,7 @@ def KopfS (F : RufRahmenG D) (W : World D) : Prop :=
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
       (U : Umwelt D),
       PasstV R H → PasstA O' HA → PasstU S U HU → GleichRS O O' →
-      (zErg (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)).folgt
+      (zErgG (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)).folgt
         (semH S O' U passes R F.rest.2.2.2.2 σ F.rest.2.2.2.1)
 
 /-- **The replay of a suspended frame** `F` waiting for the callee with key
@@ -135,7 +135,7 @@ def WarteS (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) :
       (U : Umwelt D),
       PasstV R H → PasstA O' HA → PasstU S U HU → GleichRS O O' →
       FortS passes S F G.1
-        (zErg (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)) R O' U
+        (zErgG (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)) R O' U
         (R G.1 κ G.2.1)
 
 def StapelS : (Σ f : D.Fn, Env D (D.params f) × World D) → List (RufRahmenG D) → Prop
@@ -152,14 +152,14 @@ end Inv
 
 /-- `FortS` is monotone in the predicted result. -/
 theorem fortS_mono {passes : Nat} {S : SperrInv D} {F : RufRahmenG D} {g : D.Fn}
-    {X Y : ZErg (vertragVon D F.f)}
+    {X Y : ZErgG (vertragVon D F.f)}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {O' : Orakel D} {U : Umwelt D}
     (hXY : X.folgt Y) :
     ∀ {a : RufAusgang g}, FortS passes S F g Y R O' U a → FortS passes S F g X R O' U a
-  | .ok _ _, h => ⟨fun hw => ZErg.folgt_trans hXY (h.1 hw),
-      fun l Γ Λ Λ' τ restb k ρc hc he => ZErg.folgt_trans hXY (h.2 l Γ Λ Λ' τ restb k ρc hc he)⟩
+  | .ok _ _, h => ⟨fun hw => ZErgG.folgt_trans hXY (h.1 hw),
+      fun l Γ Λ Λ' τ restb k ρc hc he => ZErgG.folgt_trans hXY (h.2 l Γ Λ Λ' τ restb k ρc hc he)⟩
   | .grund _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
-      ZErg.folgt_trans hXY (h l Γ Λ Λ' τ n err restb k ρc hc hn)
+      ZErgG.folgt_trans hXY (h l Γ Λ Λ' τ n err restb k ρc hc hn)
   | .logik _, _ => trivial
   | .hardware _, _ => trivial
 
@@ -202,7 +202,7 @@ theorem fadenS_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes
     hiu, kurzU_mono hku hl, hg', hok'', fun R O' U hR hA hU hQ => ?_⟩, hS⟩
   have h1 := heq R O' U hR hA hU hQ
   rw [hr] at h1
-  exact ZErg.folgt_trans h1 (hsem R O' U hQ)
+  exact ZErgG.folgt_trans h1 (hsem R O' U hQ)
 
 /-- `fadenS_lokalQ` for a step whose frame semantics holds for every
     sequential oracle. -/
@@ -253,8 +253,8 @@ theorem popS_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : Sp
     (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
   rw [hr] at h1 hg
   simp only at h1 hg
-  have h2 := ZErg.folgt_zurueck (ZErg.folgt_trans h1 (ZErg.folgt_of_gleich (hsem _ _ _ σ)))
-  obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h2
+  have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
+  obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := ((hK G.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
     (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ'' _ hex
@@ -275,7 +275,7 @@ theorem pushS_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
     (r : GRest D (vertragVon D F.f) l Γ Λ)
     (heq : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
       (U : Umwelt D), PasstV R H → PasstA O' HA → PasstU S U HU → GleichRS O O' →
-      (zErg (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)).folgt
+      (zErgG (execEndH (V := vertragVon D F.f) S O' U passes R (P.rumpf F.f) F.s0 F.rho)).folgt
         (semH S O' U passes R r σ ρ))
     (g : D.Fn) (κ : World D) (ρk : Env D (D.params g))
     (hlogik : ∀ (O' : Orakel D) (U : Umwelt D) R (e : Logik D), R g κ ρk = .logik e →
@@ -291,7 +291,7 @@ theorem pushS_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
       have h1 := heq _ (orakelAus O HA) (umweltAus S sp HU) (torRuf_passtV (rufAusV_passt hf) hv.1)
         (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
       rw [hlogik _ _ _ _ htor] at h1
-      have hex := zErg_gleich_logik (ZErg.folgt_logik h1)
+      have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
         (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
         (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).2 g hex
@@ -310,7 +310,7 @@ theorem popS_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     (hok' : F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) →
       r'.okS P (fussOrteG P F.f) (sicher P lok F.f))
     (hwahl : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
-      (U : Umwelt D) (σa : World D) (X : ZErg (vertragVon D F.f)),
+      (U : Umwelt D) (σa : World D) (X : ZErgG (vertragVon D F.f)),
       FortS passes S F G.1 X R O' U (mk σa) → X.folgt (semH S O' U passes R r' σa ρ'))
     (W' : World D) (hW' : W'.slots = s1.slots ∧ W'.globs = s1.globs) :
     KopfS P O passes Q S lok ⟨F.f, F.rho, F.s0, ⟨l, Γ, Λ, ρ', r'⟩⟩ W' := by
@@ -412,7 +412,7 @@ theorem pushS_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   have heq' : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
       (U : Umwelt D), PasstV R H → PasstA O' HA → PasstU S U HU → GleichRS O O' →
-      (zErg (execEndH (V := vertragVon D z.kopf.f) S O' U passes R (P.rumpf z.kopf.f) z.kopf.s0
+      (zErgG (execEndH (V := vertragVon D z.kopf.f) S O' U passes R (P.rumpf z.kopf.f) z.kopf.s0
         z.kopf.rho)).folgt (semH S O' U passes R r σ ρ) := by
     intro R O' U hR hA hU hQ
     have := heq R O' U hR hA hU hQ
@@ -433,7 +433,7 @@ theorem pushS_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
     fun _ h => stabilS_iff (fun L => (hΛc L).symm) (hctr h)
   refine ⟨⟨⟨[], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, kurzV_nil _,
     funkA_nil, rahmenA_nil, vertragA_nil Q, kurzA_nil _, funkU_nil, invU_nil S, kurzU_nil _,
-    GleichAuf.refl _ _, ⟨hFragS g, fuss_rumpfG P g⟩, fun R O' U _ _ _ _ => ZErg.folgt_refl _⟩,
+    GleichAuf.refl _ _, ⟨hFragS g, fuss_rumpfG P g⟩, fun R O' U _ _ _ _ => ZErgG.folgt_refl _⟩,
     ⟨H, HA, HU, σ.lese Λ os, hreq, hf, hv, kurzV_mono hk (lese_laenge _ _ _), hfa, hra, hqa,
       kurzA_mono hka (lese_laenge _ _ _), hfu, hiu, kurzU_mono hku (lese_laenge _ _ _), hrc hok',
       hreqκ, ⟨hctrκ, hsubc, gleichAuf_stabil_iff hΛc hgκ⟩, ?_⟩, hSt'⟩, hreq0⟩
@@ -510,7 +510,7 @@ theorem fadenS_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D}
   · intro R O' U hR hA hU hQ
     have h1 := heq R O' U hR (passtA_append hA) hU hQ
     rw [hr] at h1
-    exact ZErg.folgt_trans h1
+    exact ZErgG.folgt_trans h1
       (hsem O' R U σ (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
 
 /-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
@@ -541,7 +541,7 @@ theorem fadenS_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
       refine ⟨σs, hls, gleichAuf_stabil_iff hΛ' ⟨fun t ht => hgs.1 t ht, fun g hg' => hgs.2 g hg'⟩,
         hK, fun R O' U => ?_⟩
       rw [hsem, execStmtH_blatt S O' U passes R s hleaf, hes]
-      exact ZErg.folgt_refl _
+      exact ZErgG.folgt_refl _
   | true =>
       cases s with
       | axiomCall a args h hw hg hd hgd =>
@@ -559,7 +559,7 @@ theorem fadenS_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
               exact hQ a _ _ v hv) ?_
           intro O' R U σ hw
           rw [hsem]
-          apply ZErg.folgt_of_eq
+          apply ZErgG.folgt_of_eq
           simp only [execStmtH, axiomAntwort, hw]
           simp only [hu]
           rfl
@@ -623,7 +623,7 @@ theorem fadenS_locks {z : RufFadenG D} {W : World D} (hF : FadenS P O passes Q S
     have h1 := heq R O' U hR hA (passtU_append hU) hQ
     rw [hr] at h1
     simp only at h1
-    refine ZErg.folgt_trans h1 (ZErg.folgt_of_eq ?_)
+    refine ZErgG.folgt_trans h1 (ZErgG.folgt_of_eq ?_)
     rw [semH_locks S O' U passes R L hrL body rest k σ ρ,
       hU L σ W.speicher (List.mem_append_right _ List.mem_cons_self)]
 
@@ -657,7 +657,7 @@ theorem kopfS_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   exact (hK F.f).2 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
     (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusL H)
     (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq e
-    (zErg_gleich_logik (ZErg.folgt_logik h1))
+    (zErgG_gleich_logik (ZErgG.folgt_logik h1))
 
 /-- The same, for a residue named by its shape. -/
 theorem kopfS_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
@@ -733,7 +733,7 @@ theorem fadenS_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   refine fadenS_lokal hF hr ρ k spur' (fun σ hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
   exact ⟨σ.gibt L, Nat.le_succ _, gleichAuf_frei hg spur', hok,
-    fun R O' U => ZErg.folgt_of_eq (semH_frei S O' U passes R L k σ ρ hiσ)⟩
+    fun R O' U => ZErgG.folgt_of_eq (semH_frei S O' U passes R L k σ ρ hiσ)⟩
 
 /-- **A `leave`/`next` out of a `locks` body keeps the replay**
     (`peelFreiLeave`, `peelFreiNext`). -/
@@ -761,7 +761,7 @@ theorem fadenS_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   refine ⟨σ.gibt L, Nat.le_succ _,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
     ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp [blockOrteP, stmtOrteP] at hc, hk⟩,
-    fun R O' U => ZErg.folgt_of_eq (semH_peelFrei S O' U passes R L rest k σ ρ h x hiσ)⟩
+    fun R O' U => ZErgG.folgt_of_eq (semH_peelFrei S O' U passes R L rest k σ ρ h x hiσ)⟩
 
 end Frei
 

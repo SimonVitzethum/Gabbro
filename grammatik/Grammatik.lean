@@ -233,3 +233,7 @@ import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Parser.UebersetzeAllg2
+import Grammatik.ZielOrtInvGrund
+import Grammatik.Fortschritt
+import Grammatik.FortschrittZeuge
+import Grammatik.ZielOrtInvGrundZeuge

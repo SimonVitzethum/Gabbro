@@ -114,8 +114,8 @@ theorem popS_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : Sp
     (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
   rw [hr] at h1 hg
   simp only at h1 hg
-  have h2 := ZErg.folgt_zurueck (ZErg.folgt_trans h1 (ZErg.folgt_of_gleich (hsem _ _ _ σ)))
-  obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h2
+  have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
+  obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
     (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ'' _ hex
