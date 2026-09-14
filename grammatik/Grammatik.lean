@@ -229,6 +229,7 @@ import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund
 import Grammatik.RennfreiOrte
 import Grammatik.MitRuhe
+import Grammatik.MitRuheStatisch
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.Zielsatz.Spec

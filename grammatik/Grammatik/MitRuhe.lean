@@ -199,6 +199,9 @@ def Deklaration.mitRuhe (D : Deklaration) : Deklaration where
   geist := D.geist
   ggeist := D.ggeist
 
+instance instDecEqFnMitRuhe [DecidableEq D.Fn] : DecidableEq D.mitRuhe.Fn :=
+  inferInstanceAs (DecidableEq (Option D.Fn))
+
 /-- The idle root of `D.mitRuhe`. -/
 def ruheFn (D : Deklaration) : D.mitRuhe.Fn := none
 
