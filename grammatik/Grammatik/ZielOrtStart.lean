@@ -35,6 +35,13 @@
   `ziel_ort_ende` (generic in the local carriers) and
   `ziel_ort_mehrfaden_ende` (thread-local carriers): the flagship's
   conclusion AND `StartEndeG`.
+
+  Since 2026-09-14 (second round, SATZKARTE §17): the goal statements of
+  §4 demand the obligations at EVERY `forever` budget and conclude on the
+  machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
+  the per-budget statements are the lemmas `*_bei` of §3), and start
+  functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
+  so `StartEndeG` covers every completion of a start function.
 -/
 import Grammatik.ZielOrtMehrfaden
 import Grammatik.Durchgaenge
