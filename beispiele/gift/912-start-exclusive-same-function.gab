@@ -5,7 +5,9 @@
 -- counter-lemma (`audit_same_lock_start_excluded`) says exactly this: the
 -- most ordinary multithreaded shape -- the same routine on two threads -- is
 -- outside `ziel_ort` unless the routine holds no lock. N240 falls once for
--- the pair, naming the one function twice. The third entry dispatches to
+-- the pair, naming the one function twice; `N303` falls beside it (the routine
+-- holds `L` at a start) and `N304` too (twice-started and not idle -- lane
+-- 183). The third entry dispatches to
 -- `idle`, which holds nothing -- the positive twin: the lock-free routine may
 -- back any number of entries, and N240 never names it.
 module gift912 {

@@ -5,7 +5,8 @@
 -- `Held(L, shared)`: an exclusive holder excludes every other holder, so the
 -- pair cannot start together and N240 falls. Under the strict transfer even
 -- shared-shared falls (gift 913); this mixed pair falls a fortiori. Both
--- bodies only READ, so the refusal set is exactly `[N240]`. The second set
+-- bodies only READ, so the write-hull rules stay silent; `N303` falls beside
+-- `N240`, once per lock-holding start (lane 183). The second set
 -- pairs two lock-free bodies -- the positive twin: lock-free starts stay
 -- silent. (It must use bodies of its own: naming `read_b` a second time
 -- would start it twice, and two starts in one lock-holding routine fall on

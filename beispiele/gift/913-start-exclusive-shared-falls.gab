@@ -8,8 +8,9 @@
 -- for which the goal premise is false is the defect the transfer phase
 -- exists to remove, so N240 falls here too, once for the pair. Should a
 -- future model carry per-holder shared locks, this rule is where the
--- relaxation lands. Both bodies only READ, so the refusal set is exactly
--- `[N240]`. The second set pairs two lock-free bodies -- the positive twin:
+-- relaxation lands. Both bodies only READ, so the write-hull rules stay
+-- silent; `N303` falls beside `N240`, once per lock-holding start (lane 183).
+-- The second set pairs two lock-free bodies -- the positive twin:
 -- disjoint starts stay silent.
 module gift913 {
 

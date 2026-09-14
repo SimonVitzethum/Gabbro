@@ -17,7 +17,8 @@
 -- There is no must-pass twin with a covering lock in this file on purpose: the
 -- covered shape (both writes under `L`) is what the exemption is FOR, and it is
 -- pinned across the corpus already. The twin here is negative space: `f`/`g`
--- must fall with nothing, `h`/`k` with `W001`, and nothing else may ever speak.
+-- fall with `N300` (both write the unguarded `X` -- lane 183: the race half
+-- of the overlap), `h`/`k` with `W001`, and nothing else may ever speak.
 module gift::w001_pair_level_lock_exempts_uncovered_write {
 
 static mut X : u32 = 0;

@@ -5,7 +5,8 @@
 -- carrier footprint is transitive, so both entries still share `z` without
 -- saying so. H013 and W001 fire beside H222 as in `gift/897`, and the pair is
 -- declared `concurrent` without helping: concurrency is declared, the carrier
--- is not. `ruhig` shows the other direction: the same entry shape over a
+-- is not. Lane 183 adds `N300` (both graphs write `z`) and `N304` (each
+-- routine starts twice and neither is idle) to the same set. `ruhig` shows the other direction: the same entry shape over a
 -- carrier a lock protects draws neither rule.
 module gift::ungeteilt_transitiv {
 
