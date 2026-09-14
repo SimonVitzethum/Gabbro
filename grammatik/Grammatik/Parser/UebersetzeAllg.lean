@@ -371,9 +371,11 @@ def paramPos : List (String × Ty) → String → Except String Nat
 /-! ## Generic lowering: indices, sides, contracts -/
 
 /-- An index into a table: a literal inside `count`, or an index
-    parameter for the same table. -/
+    parameter for the same table (`sh` shifts parameter positions:
+    `0` in a body, `1` in an `ensures` context with a result, where
+    the result rides first). -/
 def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (t : Fin u.tabellen.length) : UIdx →
+    (fn : UFn) (sh : Nat) (t : Fin u.tabellen.length) : UIdx →
     Except String (Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
   | .lit n =>
     if h1 : 0 ≤ n then
@@ -388,7 +390,7 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       match fn.parten[j]? with
       | some (.index m) =>
         if m == t.val then
-          match lowVar Γ j (.index ((declOf u).count t)) with
+          match lowVar Γ (sh + j) (.index ((declOf u).count t)) with
           | .error e => .error e
           | .ok v => .ok (Expr.var v)
         else .error "index of foreign table"
@@ -415,9 +417,11 @@ def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
     | .ok t => .ok t
     | .error e => .error e
 
-/-- A numeric parameter as a side. -/
+/-- A numeric parameter as a side (positions shift by `sh`,
+    see `lowIdx`). -/
 def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (p : String) : Except String (LowSide u Γ Λ) :=
+    (fn : UFn) (sh : Nat) (p : String) :
+    Except String (LowSide u Γ Λ) :=
   match paramPos fn.params p with
   | .error e => .error e
   | .ok j =>
@@ -426,7 +430,7 @@ def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | some _ =>
       match fn.params[j]? with
       | some (_, .int a b) =>
-        match lowVar Γ j (.int a b) with
+        match lowVar Γ (sh + j) (.int a b) with
         | .error e => .error e
         | .ok v => .ok { weit := (a, b), term := Expr.var v }
       | _ => .error "parameter without G form"
@@ -463,9 +467,10 @@ def altTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   rw [← typAt_of u t fh.idx fh.weit fh.hit]
   exact Expr.altSlot (D := declOf u) t fh.idx i hL
 
-/-- A slot read through a pointer parameter. -/
+/-- A slot read through a pointer parameter (positions shift
+    by `sh`, see `lowIdx`). -/
 def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (b fname : String) (ix : UIdx) :
+    (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
     Except String (LowSide u Γ Λ) :=
   match paramPos fn.params b with
   | .error e => .error e
@@ -476,10 +481,10 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar Γ j (.ptr num w) with
+          match lowVar Γ (sh + j) (.ptr num w) with
           | .error e => .error e
           | .ok v =>
-            match lowIdx u Γ Λ fn ⟨num, h⟩ ix with
+            match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
             | .error e => .error e
             | .ok i =>
               if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
@@ -489,9 +494,9 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
-/-- A slot read at a table. -/
+/-- A slot read at a table (positions shift by `sh`). -/
 def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (b fname : String) (ix : UIdx) :
+    (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
     Except String (LowSide u Γ Λ) :=
   match tabIdx u.tabellen b with
   | .error e => .error e
@@ -499,7 +504,7 @@ def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match fieldHit u t fname with
     | .error e => .error e
     | .ok fh =>
-      match lowIdx u Γ Λ fn t ix with
+      match lowIdx u Γ Λ fn sh t ix with
       | .error e => .error e
       | .ok i =>
         if hL : (∀ wdd ∈ (declOf u).braucht t,
@@ -507,9 +512,10 @@ def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           .ok { weit := fh.weit, term := slotTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
-/-- An entry read (`old`) at a resolved table. -/
+/-- An entry read (`old`) at a resolved table (positions
+    shift by `sh`). -/
 def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (b fname : String) (ix : UIdx) :
+    (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
     Except String (LowSide u Γ Λ) :=
   match lowBasisTab u fn b with
   | .error e => .error e
@@ -517,7 +523,7 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match fieldHit u t fname with
     | .error e => .error e
     | .ok fh =>
-      match lowIdx u Γ Λ fn t ix with
+      match lowIdx u Γ Λ fn sh t ix with
       | .error e => .error e
       | .ok i =>
         if hL : (∀ wdd ∈ (declOf u).braucht t,
@@ -530,9 +536,9 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) : USide → Except String (LowSide u Γ Λ)
   | .lit n => .ok { weit := (n, n), term := Expr.lit n }
-  | .param p => lowParamSide u Γ Λ fn p
-  | .slot b f ix => lowDurch u Γ Λ fn b f ix
-  | .tab b f ix => lowTabRead u Γ Λ fn b f ix
+  | .param p => lowParamSide u Γ Λ fn 0 p
+  | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
+  | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
   | _ => .error "side in body without G form"
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
@@ -541,10 +547,14 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option (Int × Int)) :
     USide → Except String (LowSide u Γ Λ)
   | .lit n => .ok { weit := (n, n), term := Expr.lit n }
-  | .param p => lowParamSide u Γ Λ fn p
-  | .slot b f ix => lowDurch u Γ Λ fn b f ix
-  | .tab b f ix => lowTabRead u Γ Λ fn b f ix
-  | .alt b f ix => lowAltRead u Γ Λ fn b f ix
+  | .param p =>
+    lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p
+  | .slot b f ix =>
+    lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .tab b f ix =>
+    lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .alt b f ix =>
+    lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .erg =>
     match er with
     | some (a, b) =>
