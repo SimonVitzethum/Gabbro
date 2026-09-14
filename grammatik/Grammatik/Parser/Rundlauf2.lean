@@ -1939,4 +1939,160 @@ theorem zeuge_kern_mul_rech : (match parseOr
     | _ => false) = true := by
   decide
 
+-- Step B3 (places, time-boxed): the kernel place predicate
+-- -- variables and suffix chains over kernel trees. Index
+-- payloads are `gutKern` (not full `gut`): the suffix runner
+-- below parses them through `RKern`, so the decomposition must
+-- conclude kernel-lawfulness, and lane 161's `zerlege`
+-- (full-`gut` conclusion) cannot serve.
+def gutKernPlatz : SExpr → Bool
+  | .variable s => !istKeinPlatz s
+  | .feld x _ => gutKernPlatz x
+  | .index x i => gutKernPlatz x && gutKern i
+  | .pfeil x _ => gutKernPlatz x
+  | _ => false
+
+-- A kernel place is a lane-161 place (index payloads bridge by
+-- `gut_of_gutKern`), so `zerlege`'s shape applies -- but its
+-- `suffGut` conclusion does not (full `gut`), hence the mirror
+-- below.
+theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
+    gutKernPlatz p = true → gutPlatz p = true := by
+  intro p h
+  cases p with
+  | lit m => simp [gutKernPlatz] at h
+  | gleit s => simp [gutKernPlatz] at h
+  | wahr => simp [gutKernPlatz] at h
+  | falsch => simp [gutKernPlatz] at h
+  | «variable» s =>
+    simp only [gutKernPlatz] at h
+    simp only [gutPlatz] at ⊢
+    exact h
+  | feld x f =>
+    simp only [gutKernPlatz] at h
+    simp only [gutPlatz] at ⊢
+    exact gutPlatz_of_gutKernPlatz x h
+  | index x i =>
+    simp only [gutKernPlatz, Bool.and_eq_true] at h
+    obtain ⟨hpx, hi⟩ := h
+    simp only [gutPlatz, Bool.and_eq_true] at ⊢
+    exact ⟨gutPlatz_of_gutKernPlatz x hpx, gut_of_gutKern i hi⟩
+  | pfeil x f =>
+    simp only [gutKernPlatz] at h
+    simp only [gutPlatz] at ⊢
+    exact gutPlatz_of_gutKernPlatz x h
+  | un o x => simp [gutKernPlatz] at h
+  | bin o l r => simp [gutKernPlatz] at h
+  | ruf f xs => simp [gutKernPlatz] at h
+  | fnwert f => simp [gutKernPlatz] at h
+  | eingebaut f xs => simp [gutKernPlatz] at h
+  | alt x => simp [gutKernPlatz] at h
+  | ergebnis => simp [gutKernPlatz] at h
+  | grund g f => simp [gutKernPlatz] at h
+
+-- Which suffix fragments are kernel-printable (index payloads
+-- are `gutKern`).
+def suffGutKern : List SuffFrag → Bool
+  | [] => true
+  | .dot _ :: s => suffGutKern s
+  | .arrow _ :: s => suffGutKern s
+  | .idx i :: s => gutKern i && suffGutKern s
+
+-- `suffGutKern` splits over appends (mirror of lane 161's
+-- `suffGut_append`).
+theorem suffGutKern_append : ∀ (s1 s2 : List SuffFrag),
+    suffGutKern (s1 ++ s2) = (suffGutKern s1 && suffGutKern s2) := by
+  intro s1
+  induction s1 with
+  | nil => simp [suffGutKern]
+  | cons f s ih =>
+    cases f with
+    | dot g => simp [suffGutKern, ih]
+    | arrow g => simp [suffGutKern, ih]
+    | idx i => simp [suffGutKern, ih, Bool.and_assoc]
+
+-- Every `gutKernPlatz` tree is a head variable plus
+-- kernel-lawful fragments: lane 161's `zerlege` with the
+-- conclusion strengthened to `suffGutKern`.
+theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
+    gutKernPlatz p = true →
+    ∃ (a : String) (suff : List SuffFrag),
+      p = applySuff (.variable a) suff ∧
+      (!istKeinPlatz a) = true ∧
+      suffGutKern suff = true ∧
+      suffGroesse suff + 1 ≤ n := by
+  intro n
+  induction n with
+  | zero =>
+    intro p hs _
+    have hp := groesse_pos p
+    omega
+  | succ n ih =>
+    intro p hs hg
+    cases p with
+    | lit m => simp [gutKernPlatz] at hg
+    | gleit s => simp [gutKernPlatz] at hg
+    | wahr => simp [gutKernPlatz] at hg
+    | falsch => simp [gutKernPlatz] at hg
+    | «variable» a =>
+      simp only [gutKernPlatz] at hg
+      exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
+    | feld x f =>
+      simp only [gutKernPlatz] at hg
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := ih x hx hg
+      refine ⟨a, suff ++ [.dot f], ?_, hka, ?_, ?_⟩
+      · rw [applySuff_append]
+        rfl
+      · have hsg : suffGutKern (suff ++ [.dot f]) = suffGutKern suff := by
+          simp [suffGutKern_append, suffGutKern]
+        rw [hsg]
+        exact hgs
+      · simp only [suffGroesse_append, suffGroesse] at ⊢
+        omega
+    | index x i =>
+      simp only [gutKernPlatz, Bool.and_eq_true] at hg
+      obtain ⟨hpx, hi⟩ := hg
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := ih x hx hpx
+      refine ⟨a, suff ++ [.idx i], ?_, hka, ?_, ?_⟩
+      · rw [applySuff_append]
+        rfl
+      · have hgi : gutKern i = true := hi
+        have hsg : suffGutKern (suff ++ [.idx i]) =
+            (suffGutKern suff && gutKern i) := by
+          simp [suffGutKern_append, suffGutKern, Bool.and_assoc]
+        rw [hsg]
+        simp [hgs, hgi]
+      · simp only [suffGroesse_append, suffGroesse] at ⊢
+        simp only [groesse, groesse_applySuff] at hs
+        omega
+    | pfeil x f =>
+      simp only [gutKernPlatz] at hg
+      have hx : groesse x ≤ n := by
+        simp only [groesse] at hs
+        omega
+      obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := ih x hx hg
+      refine ⟨a, suff ++ [.arrow f], ?_, hka, ?_, ?_⟩
+      · rw [applySuff_append]
+        rfl
+      · have hsg : suffGutKern (suff ++ [.arrow f]) = suffGutKern suff := by
+          simp [suffGutKern_append, suffGutKern]
+        rw [hsg]
+        exact hgs
+      · simp only [suffGroesse_append, suffGroesse] at ⊢
+        omega
+    | un o x => simp [gutKernPlatz] at hg
+    | bin o l r => simp [gutKernPlatz] at hg
+    | ruf f xs => simp [gutKernPlatz] at hg
+    | fnwert f => simp [gutKernPlatz] at hg
+    | eingebaut f xs => simp [gutKernPlatz] at hg
+    | alt x => simp [gutKernPlatz] at hg
+    | ergebnis => simp [gutKernPlatz] at hg
+    | grund g f => simp [gutKernPlatz] at hg
+
 end Gabbro.Grammatik.Parser
