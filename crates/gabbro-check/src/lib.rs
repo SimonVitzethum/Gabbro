@@ -139,6 +139,12 @@ pub mod phasen;
 /// the two decidable checks, with a named refusal for every form without a
 /// counterpart.
 pub mod lean_g;
+/// **Counterexamples for handed-over obligations (lane 180).** The
+/// model-search half: inputs satisfying `requires` but violating `ensures`
+/// (exhaustive while small, sampled otherwise), printed as a Lean file that
+/// runs every candidate through the exported semantics with a
+/// kernel-checked confirmation per hit -- outside the trusted base.
+pub mod gegenbeispiel;
 pub mod lean;
 /// **The user's obligation over a G program term (lane 176).** The flagship's
 /// per-function duties (`KoerperGutS`, `InvGutS` over the lock-invariant

@@ -129,7 +129,7 @@ fn int_ty_str(lo: i128, hi: i128) -> String {
 /// where the spelling names one), `bool`, a pointer, an index, or a reason
 /// (`Fin n`, only ever bound by `let … else`, never computed with).
 #[derive(Debug, Clone)]
-enum VTy {
+pub(crate) enum VTy {
     Int { lo: i128, hi: i128, bits: Option<u32> },
     Bool,
     Ptr { table: usize, write: bool },
@@ -141,7 +141,7 @@ impl VTy {
     /// The `Ty` term. An index travels through the declaration's `count`,
     /// exactly as the model's `traverse` binds it (`Ty.index` unfolds to
     /// `.int 0 (n-1)`).
-    fn term(&self, model: &Model) -> String {
+    pub(crate) fn term(&self, model: &Model) -> String {
         match self {
             VTy::Int { lo, hi, .. } => int_ty_str(*lo, *hi),
             VTy::Bool => ".bool".to_string(),
@@ -154,7 +154,7 @@ impl VTy {
     }
 
     /// The numeric range where there is one (an index spans its table).
-    fn range(&self, model: &Model) -> Option<(i128, i128)> {
+    pub(crate) fn range(&self, model: &Model) -> Option<(i128, i128)> {
         match self {
             VTy::Int { lo, hi, .. } => Some((*lo, *hi)),
             VTy::Index { table } => Some((0, model.tables[*table].count - 1)),
@@ -172,10 +172,10 @@ impl VTy {
 
 /// The exportable fragment of a unit: tables, locks, functions, threads,
 /// and the reason declarations behind the `or R` channels.
-struct Model {
-    tables: Vec<TableModel>,
-    locks: Vec<LockModel>,
-    fns: Vec<FnModel>,
+pub(crate) struct Model {
+    pub(crate) tables: Vec<TableModel>,
+    pub(crate) locks: Vec<LockModel>,
+    pub(crate) fns: Vec<FnModel>,
     #[allow(dead_code)]
     concurrent: Vec<String>,
     reasons: std::collections::HashMap<String, usize>,
@@ -184,27 +184,27 @@ struct Model {
 /// One slot field: its G type and, for integers, the storage width the
 /// spelling names (for the `~` complement, which M1 reads over the storage
 /// width -- `beispiele/61`, `hohes_nibble` is `u8 in 240 .. 255`).
-struct FieldModel {
-    name: String,
-    ty: VTy,
+pub(crate) struct FieldModel {
+    pub(crate) name: String,
+    pub(crate) ty: VTy,
 }
 
-struct TableModel {
-    name: String,
-    count: i128,
-    fields: Vec<FieldModel>,
+pub(crate) struct TableModel {
+    pub(crate) name: String,
+    pub(crate) count: i128,
+    pub(crate) fields: Vec<FieldModel>,
 }
 
-struct LockModel {
-    name: String,
-    rank: i128,
-    guards: Vec<usize>,
+pub(crate) struct LockModel {
+    pub(crate) name: String,
+    pub(crate) rank: i128,
+    pub(crate) guards: Vec<usize>,
     /// `invariant <pred>` -- `None` where the lock carries none (its `inv`
     /// arm is `fun _ => true`, the empty-family shape over its carriers).
-    invariant: Option<Pred>,
+    pub(crate) invariant: Option<Pred>,
 }
 
-struct FnModel {
+pub(crate) struct FnModel {
     name: String,
     decl: FnDecl,
 }
@@ -213,9 +213,16 @@ struct FnModel {
 /// (resolved, with the storage width where the spelling names one). Both
 /// are NO FORM in G -- the value travels, the name does not.
 #[derive(Default)]
-struct Scope {
-    consts: std::collections::HashMap<String, i128>,
+pub(crate) struct Scope {
+    pub(crate) consts: std::collections::HashMap<String, i128>,
     aliases: std::collections::HashMap<String, (i128, i128, Option<u32>)>,
+}
+
+impl Scope {
+    /// A named integer range (for the counterexample search's conversions).
+    pub(crate) fn aliases_get(&self, word: &str) -> Option<(i128, i128, Option<u32>)> {
+        self.aliases.get(word).copied()
+    }
 }
 
 /// A numeral where a declaration needs one: a literal (signed or not),
@@ -373,16 +380,17 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
 
 /// A function with everything G needs resolved: parameter types, held locks,
 /// written tables, contracts, the reason count, the lock floor and the body.
-struct CheckedFn {
-    name: String,
-    params: Vec<(String, ParamTy)>,
-    result: Option<VTy>,
+#[derive(Clone)]
+pub(crate) struct CheckedFn {
+    pub(crate) name: String,
+    pub(crate) params: Vec<(String, ParamTy)>,
+    pub(crate) result: Option<VTy>,
     held: Vec<usize>,
     writes: Vec<usize>,
-    ensures: Vec<Pred>,
-    body: Block,
+    pub(crate) ensures: Vec<Pred>,
+    pub(crate) body: Block,
     /// `-> T or R`: the case count of the named `reason`, 0 without one.
-    gruende: usize,
+    pub(crate) gruende: usize,
     /// The lock floor: the minimum rank the body takes, or `none`
     /// (`Signatur.boden`, `StufenOk`).
     boden: Option<i128>,
@@ -394,7 +402,8 @@ struct CheckedFn {
 /// integer range, or a `bool`. Named address spaces other than `normal`
 /// have no G form. An `own` pointer travels as read-write: ownership
 /// carries both rights (`beispiele/15`).
-enum ParamTy {
+#[derive(Debug, Clone)]
+pub(crate) enum ParamTy {
     Ptr { table: usize, write: bool },
     Index { table: usize },
     Int { lo: i128, hi: i128, bits: Option<u32> },
@@ -402,7 +411,7 @@ enum ParamTy {
 }
 
 impl ParamTy {
-    fn vty(&self, _model: &Model) -> VTy {
+    pub(crate) fn vty(&self, _model: &Model) -> VTy {
         match self {
             ParamTy::Ptr { table, write } => VTy::Ptr { table: *table, write: *write },
             ParamTy::Index { table } => VTy::Index { table: *table },
@@ -831,6 +840,71 @@ pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<
 pub fn function_names(source_name: &str, tree: &Programm) -> Result<Vec<String>, Refusal> {
     let model = collect(source_name, tree)?;
     Ok(model.fns.iter().map(|f| f.name.clone()).collect())
+}
+
+/// The checked unit behind an export: the model, every function checked,
+/// and the constant/alias scope. Runs exactly the collection and checks
+/// `export` runs, so it succeeds exactly where the export succeeds -- the
+/// counterexample search never sees a program `lean-g` refuses.
+pub(crate) struct Analyse {
+    pub(crate) model: Model,
+    pub(crate) fns: Vec<CheckedFn>,
+    pub(crate) scope: Scope,
+}
+
+pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, Refusal> {
+    let model = collect(source_name, tree)?;
+    let scope = rescope(tree)?;
+    let mut checked = Vec::new();
+    for f in &model.fns {
+        checked.push(check_fn(f, &model, &scope)?);
+    }
+    let mut out = Out::default();
+    for c in &checked {
+        check_contracts(c, &model, &scope, &mut out)?;
+        check_body(c, &model)?;
+    }
+    check_locks(&model, &scope)?;
+    Ok(Analyse { model, fns: checked, scope })
+}
+
+/// One `ensures` clause as a flat list of conjunct leaves: `Und` chains
+/// (across and inside clauses) split apart, everything else travels as one
+/// leaf through `tr_ensures`. The caller ascribes each leaf with the
+/// `ensures` expression type, exactly as `tr_contract` does for the whole
+/// conjunction -- so per-conjunct `#eval` reads the same term the program's
+/// `gEns_` conjoins.
+pub(crate) fn ensures_konjunkte(
+    cf: &CheckedFn,
+    model: &Model,
+    scope: &Scope,
+) -> Result<Vec<String>, Refusal> {
+    fn flach(
+        p: &Pred,
+        ctx: &Ctx,
+        model: &Model,
+        scope: &Scope,
+        fname: &str,
+        out: &mut Out,
+        acc: &mut Vec<String>,
+    ) -> Result<(), Refusal> {
+        match &p.art {
+            PredArt::Und(a, b) => {
+                flach(a, ctx, model, scope, fname, out, acc)?;
+                flach(b, ctx, model, scope, fname, out, acc)?;
+            }
+            PredArt::Klammer(q) => flach(q, ctx, model, scope, fname, out, acc)?,
+            _ => acc.push(tr_ensures(p, ctx, model, scope, fname, out)?),
+        }
+        Ok(())
+    }
+    let ctx = ensures_ctx(cf, model);
+    let mut out = Out::default();
+    let mut acc = Vec::new();
+    for p in &cf.ensures {
+        flach(p, &ctx, model, scope, &cf.name, &mut out, &mut acc)?;
+    }
+    Ok(acc)
 }
 
 /// Rebuild the constant/alias scope (pass one of `collect`, rerun for the
