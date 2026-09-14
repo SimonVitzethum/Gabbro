@@ -243,3 +243,6 @@ import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.FortschrittZeuge
 import Grammatik.ZielOrtInvGrundZeuge
+import Grammatik.Nichtinterferenz.Freigabe
+import Grammatik.Nichtinterferenz.Korpus
+import Grammatik.Nichtinterferenz.ZeugeMehrfaden

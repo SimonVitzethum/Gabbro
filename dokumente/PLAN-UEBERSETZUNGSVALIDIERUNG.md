@@ -135,6 +135,11 @@ The costs of the Opus agent for the memory model are on the Claude account and n
 - **The hardware profile.** `Profil.lean`, keyed entries.
 - **The GPU driver**, for SPIR-V payloads (PLAN-ERWEITUNG.md §0b), once the GPU library exists.
 - **The Lean kernel.**
+- **The runtime, for noninterference** (`dokumente/NICHTINTERFERENZ.md` §10) -- the SAME list as
+  the lock primitives and thread creation of §3 item 4, not a second one: threads start only at
+  declared (labelled) roots; the scheduler chooses by a fixed timetable, or by a rule that reads
+  only the observer's view (`nichtinterferenz_planer`); a slot whose thread cannot step is left
+  idle, not given away; the lock primitive (a ticket lock) reveals nothing but held or free.
 
 ## 6. Chain count: 1 -- beispiele/104, theorem schlusssatz_104
 
