@@ -37,6 +37,7 @@
   conclusion AND `StartEndeG`.
 -/
 import Grammatik.ZielOrtMehrfaden
+import Grammatik.Durchgaenge
 
 namespace Gabbro.Grammatik
 
@@ -106,13 +107,15 @@ theorem kopfS_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
 
 end Ende
 
-/-! ## 3. The theorems -/
+/-! ## 3. The theorems at one budget (lemmas) -/
 
 /-- **The flagship with the start functions' completion, generic in the
-    local carriers.** The conclusion of `ziel_ort_sperre_invL` AND
-    `StartEndeG`: at every finished thread (empty stack, head at a
-    `return`) the start function's `ensures` and owed invariants hold. -/
-theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    local carriers, AT ONE `forever` BUDGET.** The conclusion of
+    `ziel_ort_sperre_invL` AND `StartEndeG`: at every finished thread (empty
+    stack, head at a `return`) the start function's `ensures` and owed
+    invariants hold. A lemma: the goal statement is `ziel_ort_ende` (§4),
+    over every budget. -/
+theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
@@ -135,11 +138,9 @@ theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns 
   intro t _ l Γ Λ ρ r e hr' hk
   exact kopfS_ret hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hr' e hk
 
-/-- **THE FLAGSHIP (2026-09-14): several active threads with thread-local
-    carriers, lock invariants, table invariants, and the start functions'
-    completion.** The premises of `ziel_ort_mehrfaden`; the conclusion of
-    `ziel_ort_mehrfaden` AND `StartEndeG`. -/
-theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+/-- `ziel_ort_mehrfaden_ende` at ONE budget (a lemma; §4 has the goal
+    statement). -/
+theorem ziel_ort_mehrfaden_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
     (K : Faden → D.Fn → Bool)
@@ -156,13 +157,13 @@ theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (passes : Nat) (
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M :=
-  ziel_ort_ende P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
+  ziel_ort_ende_bei P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
     (lokOk_mehr hO hvoll sp init K hAbg hWurzel) hK hStart hSstart hex hI
 
-/-- **`ziel_ort_sperre_inv` with the start functions' completion** (the
-    footprint check of the flagship, `fussSperreB`). -/
-theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+/-- `ziel_ort_sperre_ende` at ONE budget (the footprint check
+    `fussSperreB`; a lemma). -/
+theorem ziel_ort_sperre_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
@@ -177,11 +178,86 @@ theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M :=
   have hFS : ∀ f, FussS P S (freiB fs) f := fussSperreB_ok hvoll hFuss
-  ziel_ort_ende P O passes Q S (freiB fs) sp init e0 hO hRL hQ hlok hS
+  ziel_ort_ende_bei P O passes Q S (freiB fs) sp init e0 hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFS) hFS (lokOk_frei hO hvoll sp init) hK hStart
     hSstart hex hI
 
+/-! ## 4. THE GOAL STATEMENTS: over EVERY `forever` budget
+
+The obligation (`KoerperGutS`, `InvGutS`) is demanded at every budget, the
+conclusion holds on the machines of every budget. G re-arms the budget at
+every loop entry, so every finite run is a run at some budget: the
+conclusion covers every finite run, and no budget is chosen that could
+empty the obligation of a `forever` loop (probe D, `Durchgaenge.lean`,
+`ProbeD.lean`). -/
+
+/-- **The flagship with the start functions' completion, generic in the
+    local carriers, over every budget.** -/
+theorem ziel_ort_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (hLok : ∀ passes : Nat, LokOk P O passes lok sp init)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M) ∧ StartEndeG P M :=
+  fun passes => ziel_ort_ende_bei P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+    (hLok passes) (hK passes) hStart hSstart hex (hI passes)
+
+/-- **THE FLAGSHIP (2026-09-14, budget-quantified): several active threads
+    with thread-local carriers, lock invariants, table invariants, and the
+    start functions' completion, over EVERY `forever` budget.** The
+    premises of `ziel_ort_mehrfaden` (obligations at every budget); the
+    conclusion of `ziel_ort_mehrfaden` AND `StartEndeG`, on the machines of
+    every budget. -/
+theorem ziel_ort_mehrfaden_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M) ∧ StartEndeG P M :=
+  fun passes => ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll
+    hFrag hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes)
+
+/-- **`ziel_ort_sperre_ende`, over every budget** (footprint check
+    `fussSperreB`). -/
+theorem ziel_ort_sperre_ende (P : Programm D) (O : Orakel D) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
+    (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f) :
+    ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
+      ((VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M) ∧ StartEndeG P M :=
+  fun passes => ziel_ort_sperre_ende_bei P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
+    hFuss (hK passes) hStart hSstart hex (hI passes)
+
 #print axioms Gabbro.Grammatik.kopfS_ret
+#print axioms Gabbro.Grammatik.ziel_ort_ende_bei
 #print axioms Gabbro.Grammatik.ziel_ort_ende
 #print axioms Gabbro.Grammatik.ziel_ort_mehrfaden_ende
 #print axioms Gabbro.Grammatik.ziel_ort_sperre_ende

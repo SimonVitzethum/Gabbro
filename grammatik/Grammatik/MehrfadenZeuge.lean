@@ -655,22 +655,33 @@ theorem mSI_start : ∀ L, mSI.inv L mSp = true := fun _ => rfl
 
 def mE0 : Ereignis mD := .gibt ()
 
-/-- **`mP_zertifiziert` -- every premise of the new flagship
+/-- No body of the witness contains a `forever` loop: its obligation at
+    budget `0` is its obligation at every budget (`koerperGutS_alle`). -/
+theorem mP_ohneEwig : ohneEwigB mP mFs = true := by decide
+
+theorem mP_koerper_alle : ∀ (passes : Nat) (f : mD.Fn), KoerperGutS mP passes (axWahr mD) mSI f :=
+  koerperGutS_alle mFs_voll mP_ohneEwig mP_koerper
+
+theorem mP_inv_alle : ∀ (passes : Nat) (f : mD.Fn), InvGutS mP passes (axWahr mD) mSI f :=
+  invGutS_alle mFs_voll mP_ohneEwig mP_inv
+
+/-- **`mP_zertifiziert` -- every premise of the flagship
     `ziel_ort_mehrfaden_ende` holds on the two-writer program with private
-    tables**, hence its conclusion on every reachable machine: contracts at
+    tables** (the obligations at EVERY `forever` budget), hence its
+    conclusion on every reachable machine of every budget: contracts at
     every logged entry and return, the lock invariant of every free lock,
     no stop at a `logik` check, owed invariants at every logged return,
     and at every finished thread the start function's `ensures` and owed
     invariants. -/
-theorem mP_zertifiziert : ∀ M : RufMaschineG mD,
-    RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
-      ((VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO 0 M ∧
+theorem mP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG mD),
+    RufErreichbarG mP mO passes (RufStartG mP mSp mInit) M →
+      ((VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-          AnPruefungG M t → ∃ M', RufSchrittG mP mO 0 M t M') ∧
+          AnPruefungG M t → ∃ M', RufSchrittG mP mO passes M t M') ∧
       InvAmOrtG mP M) ∧ StartEndeG mP M :=
-  ziel_ort_mehrfaden_ende mP mO 0 (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
+  ziel_ort_mehrfaden_ende mP mO (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
     (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
-    mP_koerper mP_start mSI_start mInit_exklusiv mP_inv
+    mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle
 
 /-- **`mP_verklemmungsfrei` -- every premise of the deadlock theorem holds
     on the witness**: on every reachable machine, if every unfinished thread
@@ -687,27 +698,32 @@ theorem mP_rang : ∀ M : RufMaschineG mD,
   fun _ hr => rangInvG_erreichbar mO_gut mP_stufen mSp mInit
     (fun t => by rw [startSpur, mInit_leer t]; exact List.nodup_nil) hr
 
-/-- `ziel_ort_mehrfaden` (without the completion conjunct) on the witness. -/
-theorem mP_mehrfaden : ∀ M : RufMaschineG mD,
-    RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
-      (VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO 0 M ∧
+/-- `ziel_ort_mehrfaden` (without the completion conjunct) on the witness,
+    over every budget. -/
+theorem mP_mehrfaden : ∀ (passes : Nat) (M : RufMaschineG mD),
+    RufErreichbarG mP mO passes (RufStartG mP mSp mInit) M →
+      (VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-          AnPruefungG M t → ∃ M', RufSchrittG mP mO 0 M t M') ∧ InvAmOrtG mP M :=
-  ziel_ort_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
+          AnPruefungG M t → ∃ M', RufSchrittG mP mO passes M t M') ∧ InvAmOrtG mP M :=
+  ziel_ort_mehrfaden mP mO (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
     (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
-    mP_koerper mP_start mSI_start mInit_exklusiv mP_inv
+    mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle
+
+theorem sP_ohneEwig : ohneEwigB sP sFs = true := by decide
 
 /-- `ziel_ort_sperre_ende` (the old footprint check, with the completion
-    conjunct) on the earlier two-writer program `sP`. -/
-theorem sP_ende_zertifiziert : ∀ M : RufMaschineG sD,
-    RufErreichbarG sP sO 0 (RufStartG sP sSp sInit) M →
-      ((VertragAmOrtG sP M ∧ SperrInvG sS M ∧ KeinLogikHaltG sO 0 M ∧
+    conjunct) on the earlier two-writer program `sP`, over every budget:
+    the two-writer witness of §14.5 carries over. -/
+theorem sP_ende_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG sD),
+    RufErreichbarG sP sO passes (RufStartG sP sSp sInit) M →
+      ((VertragAmOrtG sP M ∧ SperrInvG sS M ∧ KeinLogikHaltG sO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-          AnPruefungG M t → ∃ M', RufSchrittG sP sO 0 M t M') ∧ InvAmOrtG sP M) ∧
+          AnPruefungG M t → ∃ M', RufSchrittG sP sO passes M t M') ∧ InvAmOrtG sP M) ∧
       StartEndeG sP M :=
-  ziel_ort_sperre_ende sP sO 0 (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal
-    (axVertragO_wahr sO) axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS sP_koerper sP_start
-    sS_start sInit_exklusiv (invGutS_leer rfl)
+  ziel_ort_sperre_ende sP sO (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal
+    (axVertragO_wahr sO) axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS
+    (koerperGutS_alle sFs_voll sP_ohneEwig sP_koerper) sP_start
+    sS_start sInit_exklusiv (fun _ => invGutS_leer rfl)
 
 #print axioms Gabbro.Grammatik.mP_mehrfaden
 #print axioms Gabbro.Grammatik.sP_ende_zertifiziert
