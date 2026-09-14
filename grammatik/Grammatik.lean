@@ -234,3 +234,4 @@ import Grammatik.Zielsatz.SpecProben
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.FortschrittZeuge
+import Grammatik.ZielOrtInvGrundZeuge
