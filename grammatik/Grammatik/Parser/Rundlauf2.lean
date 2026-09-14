@@ -159,11 +159,14 @@ def RKern (n : Nat) : Prop :=
 
 -- The binary-inner parse for `+`: a parenthesised `+`'s inside
 -- (`l + r` between the parens) with a general tail `W`. No follow
--- premise: the tail behind `)` is never inspected.
+-- premise: the tail behind `)` is never inspected. Fuel `+10`:
+-- twelve same-tree strips along the inner trace (six descents,
+-- six loop closes), counted 2026-09-14 -- lane 161's `+8` never
+-- reached this lemma (`B_one` stayed open).
 def BKern (n : Nat) : Prop :=
   ∀ (l r : SExpr) (W : List Token) (F : Nat),
     groesse l + groesse r ≤ n → gutKern l = true → gutKern r = true →
-    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 8 ≤ F →
+    12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ F →
     parseOr F (druckToks l ++ [.zeichen "+"] ++ druckToks r ++
       [.zeichen ")"] ++ W) =
       .ok (.bin "+" l r, [.zeichen ")"] ++ W)
@@ -615,7 +618,7 @@ theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
     gutKern l = true → gutKern r = true →
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
     (∀ (G : Nat),
-      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 8 ≤ G →
+      12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G →
       parseOr G (druckToks l ++ [.zeichen "+"] ++ druckToks r ++
         [.zeichen ")"] ++ rest) =
         .ok (.bin "+" l r, [.zeichen ")"] ++ rest)) →
