@@ -278,19 +278,19 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                         if crate::ist_praedikatswort(r) {
                             continue;
                         }
-                        nimm(r, &mut k.ruft);
+                        nimm(r, &mut k.ruft, u, modul);
                         // **A contract may not call through a place** (2026-08-21). The
                         // resolver here says "no contract" for every place, so an indirect
                         // call inside a `requires`/`ensures` makes the hull a lower bound and
                         // the caller gets `E009`. *A predicate is checked, not executed; a
                         // callee that is only known at run time cannot be part of one.*
-                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None);
+                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None, u, modul);
                     }
                 }
             }
         }
         if let FnRumpf::Block(b) = &f.rumpf {
-            sammle_rufe(b, &mut k.ruft);
+            sammle_rufe(b, &mut k.ruft, u, modul);
             // **Lane E2: library calls are edges too** -- resolved to the
             // callee's key, unresolved to their own spelling (which matches
             // no key, so the hull turns incomplete instead of silently
@@ -320,7 +320,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 crate::typen::Typ::FnPtr(v) => Some(*v),
                 _ => None,
             };
-            sammle_kanten(b, &mut k.rufe, &mut k.indirect, &vertrag);
+            sammle_kanten(b, &mut k.rufe, &mut k.indirect, &vertrag, u, modul);
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
@@ -363,8 +363,8 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                         if crate::ist_praedikatswort(r) {
                             continue;
                         }
-                        nimm(r, &mut k.ruft);
-                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None);
+                        nimm(r, &mut k.ruft, u, modul);
+                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None, u, modul);
                     }
                 }
             }
@@ -871,8 +871,10 @@ pub fn kanten_von(
     aus: &mut Vec<(String, Vec<Option<String>>)>,
     indirect: &mut Vec<IndirectCall>,
     vertrag: ContractAt<'_>,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
 ) {
-    sammle_kanten(b, aus, indirect, vertrag)
+    sammle_kanten(b, aus, indirect, vertrag, u, modul)
 }
 
 /// **Der Ort unter beliebig vielen Klammern.**
@@ -902,6 +904,8 @@ fn nimm_ruf(
     aus: &mut Vec<(String, Vec<Option<String>>)>,
     indirect: &mut Vec<IndirectCall>,
     vertrag: ContractAt<'_>,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
 ) {
     let args: Vec<Option<String>> = r
         .argumente
@@ -912,10 +916,19 @@ fn nimm_ruf(
         CallTarget::Path(p) => {
             if let Some(n) = p.teile.last() {
                 if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-                    // PLAN-BITS §1: same rewrite as `nimm` above -- the sugar
-                    // spelling resolves to the storage word's callee node.
-                    let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
-                    aus.push((name, args));
+                    // **Lane 167: a `tagged` case construction calls nothing.** Like
+                    // `Some`/`None` beside it -- and this is the load-bearing skip:
+                    // an edge onto a case name matches no node, so without it every
+                    // construction makes its caller's hull a lower bound (`E009`)
+                    // and draws `H021` over a correct program.
+                    if u.ist_variantenkonstruktor(modul, r) {
+                        // The arguments may still carry calls of their own.
+                    } else {
+                        // PLAN-BITS §1: same rewrite as `nimm` above -- the sugar
+                        // spelling resolves to the storage word's callee node.
+                        let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
+                        aus.push((name, args));
+                    }
                 }
             }
         }
@@ -946,7 +959,7 @@ fn nimm_ruf(
     }
     for a in &r.argumente {
         if let ExprArt::Ruf(x) = &a.art {
-            nimm_ruf(x, aus, indirect, vertrag);
+            nimm_ruf(x, aus, indirect, vertrag, u, modul);
         }
     }
 }
@@ -957,6 +970,8 @@ fn sammle_kanten(
     aus: &mut Vec<(String, Vec<Option<String>>)>,
     indirect: &mut Vec<IndirectCall>,
     vertrag: ContractAt<'_>,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
 ) {
     // **Ueber `alle_ausdruecke`, nicht von Hand** (2026-08-20). Der Handlaeufer hatte
     // `_ => {}` und sah damit weder einen Ruf in `t.slots[schreibt()]` noch einen in
@@ -967,6 +982,8 @@ fn sammle_kanten(
         aus: &mut Vec<(String, Vec<Option<String>>)>,
         indirect: &mut Vec<IndirectCall>,
         vertrag: ContractAt<'_>,
+        u: &crate::umgebung::Umgebung,
+        modul: &str,
     ) {
         for x in crate::alle_ausdruecke(e) {
             if let ExprArt::Ruf(r) = &x.art {
@@ -975,30 +992,30 @@ fn sammle_kanten(
                 if crate::ist_praedikatswort(r) {
                     continue;
                 }
-                nimm_ruf(r, aus, indirect, vertrag);
+                nimm_ruf(r, aus, indirect, vertrag, u, modul);
             }
         }
     }
     for s in &b.anweisungen {
         for e in crate::eigene_ausdruecke(s) {
-            aus_expr(e, aus, indirect, vertrag);
+            aus_expr(e, aus, indirect, vertrag, u, modul);
         }
         for pr in crate::eigene_praedikate(s) {
             for e in crate::ausdruecke_im_praedikat(pr) {
-                aus_expr(e, aus, indirect, vertrag);
+                aus_expr(e, aus, indirect, vertrag, u, modul);
             }
         }
         match &s.art {
-            StmtArt::Ruf(r) => nimm_ruf(r, aus, indirect, vertrag),
+            StmtArt::Ruf(r) => nimm_ruf(r, aus, indirect, vertrag, u, modul),
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
-                    nimm_ruf(r, aus, indirect, vertrag);
+                    nimm_ruf(r, aus, indirect, vertrag, u, modul);
                 }
             }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
-            sammle_kanten(k, aus, indirect, vertrag);
+            sammle_kanten(k, aus, indirect, vertrag, u, modul);
         }
     }
 }
@@ -1114,56 +1131,57 @@ fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
 /// `observes` fehlte, und damit war **jeder Ruf in einem RCU-Leseblock für den Rahmenpass
 /// unsichtbar**: gemessen verschwanden zwei `E008` (`masks IRQ`, `writes G`), sobald man
 /// denselben Ruf eine Zeile tiefer schrieb.
-fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
+fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>, u: &crate::umgebung::Umgebung, modul: &str) {
     for s in &b.anweisungen {
         // Was die Anweisung selbst auswertet -- Ausdruecke UND Praedikate. **Das `until`
         // einer `retry`-Schleife fehlte bis 2026-08-19**, und damit war `E008` dort
         // fail-open: `retry warten until tu() == 9` mit schreibendem `tu` kam unter
         // `effects { pure }` mit 0 Fehlern durch.
         for e in crate::eigene_ausdruecke(s) {
-            aus_expr(e, aus);
+            aus_expr(e, aus, u, modul);
         }
         for pr in crate::eigene_praedikate(s) {
             for e in crate::ausdruecke_im_praedikat(pr) {
-                aus_expr(e, aus);
+                aus_expr(e, aus, u, modul);
             }
         }
         // Die zwei Rufe, die in keinem `Expr` stehen.
         match &s.art {
-            StmtArt::Ruf(r) => nimm(r, aus),
+            StmtArt::Ruf(r) => nimm(r, aus, u, modul),
             // «B14b»: eine Quelle, die ein `place` ist, ruft nichts.
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
-                    nimm(r, aus);
+                    nimm(r, aus, u, modul);
                 }
             }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
-            sammle_rufe(k, aus);
+            sammle_rufe(k, aus, u, modul);
         }
     }
 }
 
-fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
+fn nimm(r: &Ruf, aus: &mut BTreeSet<String>, u: &crate::umgebung::Umgebung, modul: &str) {
     // **`Has(F)` and `Held(L)` are predicate words and not calls** -- `lib.rs::
     // ist_praedikatswort` says why they nevertheless arrive here as an `ExprArt::Ruf`. An
     // entry here would be an edge onto a name with no function behind it, which is exactly
     // the case the paragraph below describes: `E009` over a CORRECT program.
     if crate::ist_praedikatswort(r) {
         return;
-    }    // **Ein Konstruktor ruft nichts.** Dieselbe Aussage wie bei «B14b» und dieselbe wie
-    // bei `Some`/`None` -- und sie ist hier die wichtigste von allen: eine Kante auf einen
-    // Namen, hinter dem keine Funktion steht, macht den Gerufenen UNBEKANNT, und ueber
-    // einem unbekannten Gerufenen ist jede Huelle nur noch eine untere Schranke (`E009`).
+    }
+    // **A constructor calls nothing.** The same statement as «B14b» and the same as
+    // for `Some`/`None` -- and here it is the most important one of all: an edge onto a
+    // name with no function behind it makes the callee UNKNOWN, and over an unknown
+    // callee every hull is only a lower bound (`E009`).
     //
-    // > *Der Pass haette dann nicht falsch gerechnet, sondern aufgehoert zu rechnen -- und
-    // > das Aufhoeren steht als Hinweis da, nicht als Fehler.*
+    // > *The pass would then not have computed wrongly but stopped computing -- and
+    // > stopping stands as a hint, not as an error.*
     //
-    // Der Unterscheider ist SYNTAKTISCH (`ist_verbundwert`, die Marken) und bleibt es: er
-    // trennt Konstruktor von Aufruf, bevor irgendein Name aufgeloest wird. Die AUFLOESUNG
-    // dagegen braucht die Umgebung und hat sie seit 2026-08-19 -- vorher gewann der zuletzt
-    // eingetragene gleichnamige Knoten, still.
+    // The distinguisher is SYNTACTIC (`ist_verbundwert`, the labels) and stays it: it
+    // separates constructor from call before any name is resolved. RESOLUTION, on the
+    // other hand, needs the environment and has it since 2026-08-19 -- before, the most
+    // recently entered same-named node won, silently.
     // **An indirect call enters NOTHING here** (2026-08-21). `ruft` is the set of NAMES, and
     // a call through a place has none. *It does not vanish because of that* -- it stands in
     // `Knoten::indirect` and is folded in by `gehe`, with its contract.
@@ -1174,28 +1192,36 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
         if let Some(n) = p.teile.last() {
             // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).
             if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-                // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und
-                // `b::hilf()` waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter,
-                // in `erhebe_mit`.
-                //
-                // PLAN-BITS §1: a sugared conversion (`u13(a)`) enters under its
-                // storage word (`u16`), the name the callee nodes carry.
-                let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
-                aus.insert(name);
+                // **Lane 167: a `tagged` case construction calls nothing either.**
+                // Same sentence as the record constructor beside it: an edge onto
+                // a case name matches no node, and the hull would turn into a
+                // lower bound (`E009`) over a correct program. The decision is
+                // the checker's (`ist_variantenkonstruktor`), read here and not
+                // re-derived -- one predicate, every pass.
+                if !u.ist_variantenkonstruktor(modul, r) {
+                    // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und
+                    // `b::hilf()` waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter,
+                    // in `erhebe_mit`.
+                    //
+                    // PLAN-BITS §1: a sugared conversion (`u13(a)`) enters under its
+                    // storage word (`u16`), the name the callee nodes carry.
+                    let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
+                    aus.insert(name);
+                }
             }
         }
     }
     for a in &r.argumente {
-        aus_expr(a, aus);
+        aus_expr(a, aus, u, modul);
     }
 }
 
 /// Jeder Ruf in diesem Ausdruck -- ueber den erschoepfenden Laeufer, damit ein Ruf in
 /// Indexposition nicht unsichtbar bleibt.
-fn aus_expr(e: &Expr, aus: &mut BTreeSet<String>) {
+fn aus_expr(e: &Expr, aus: &mut BTreeSet<String>, u: &crate::umgebung::Umgebung, modul: &str) {
     for x in crate::alle_ausdruecke(e) {
         if let ExprArt::Ruf(r) = &x.art {
-            nimm(r, aus);
+            nimm(r, aus, u, modul);
         }
     }
 }

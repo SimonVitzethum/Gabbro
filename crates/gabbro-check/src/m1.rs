@@ -2066,6 +2066,131 @@ impl<'a> Pruefer<'a> {
                         }
                     }
                 }
+                // **Lane 167: a bare nullary case -- `Leer` where the type is the sum.**
+                //
+                // A case without a payload needs no call to carry it, so it stands as a
+                // bare name -- the model's `fall` with an empty payload, the same value
+                // `Leer()` builds. It stands BEFORE `name_aufloesen`: a case is declared
+                // nowhere as a VALUE, so `M119` would refuse exactly the form this rule
+                // gives a type. Anything the value namespace already binds (a local, a
+                // global, a function, a table, an arena) wins -- the mirror of the
+                // function-wins rule at the call form, and for the same reason: no
+                // behaviour change where a name already means something. Integer words
+                // and their sugar never name a case here either: `return u13;` stays
+                // `M119`'s, even where a perverse declaration spells a case `u13`.
+                if o.suffixe.is_empty() && !o.text().contains("::") {
+                    let n = o.basis.text.clone();
+                    let ist_wort = gabbro_syntax::kw::Kw::suche(&n).is_some_and(|k| k.ist_intty())
+                        || gabbro_syntax::zucker_speicher(&n).is_some();
+                    // **The function question is asked module-aware, not bare-keyed.**
+                    // `name_aufloesen` below reads `funktionen` by its bare name and sees
+                    // only root functions; a same-module function of the case's name must
+                    // still win here, or the bare form and the call form of one name would
+                    // answer different declarations.
+                    let pfad = gabbro_syntax::ast::Pfad {
+                        teile: vec![o.basis.clone()],
+                        span: o.basis.span,
+                    };
+                    let bekannt = ist_wort
+                        || lage.lokal.contains_key(&n)
+                        || self.u.suche_global(&self.modul, &n).is_some()
+                        || self.u.funktion(&self.modul, &pfad).is_some()
+                        || self.u.tabellen.keys().any(|k| k == &n || k.rsplit("::").next() == Some(n.as_str()))
+                        || self.u.arenen.keys().any(|k| k == &n || k.rsplit("::").next() == Some(n.as_str()));
+                    if !bekannt {
+                        // **A function of this name stands elsewhere in the unit.**
+                        // Same reading as at the call form: the emitter lowers a call
+                        // of this name as the function, so a construction here would
+                        // miscompile. Refused instead of miscompiled.
+                        if self.u.funktionsname_belegt(&n) {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "N280",
+                                    e.span,
+                                    format!(
+                                        "`{n}` shares its name with a declared function -- \
+                                         a construction names its case, and a use of this \
+                                         name lowers as the function"
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "the emitter reads callees by their bare name across the \
+                                     whole unit; which of the two readings the C carries cannot \
+                                     be told apart there",
+                                ),
+                            );
+                        } else {
+                        match self.u.variante(&self.modul, &n) {
+                            crate::umgebung::VariantenFund::Eine(t) => {
+                                if t.nutzlast.is_some() {
+                                    let kurz = crate::umgebung::kurzname(&t.summe);
+                                    self.absagen.schiebe(
+                                        Absage::fehler(
+                                            "N283",
+                                            e.span,
+                                            format!(
+                                                "`{n}` is a case of `{kurz}` with a payload -- \
+                                                 a bare name carries none"
+                                            ),
+                                        )
+                                        .mit_notiz(
+                                            "a case with a payload constructs as \
+                                             `Case(payload)`; the bare name is the nullary \
+                                             form, and it stands only where there is nothing \
+                                             to carry",
+                                        ),
+                                    );
+                                    return Typ::Unbekannt;
+                                }
+                                self.buche(&t.summe_typ);
+                                return t.summe_typ.clone();
+                            }
+                            crate::umgebung::VariantenFund::Mehrere(summen) => {
+                                let liste = summen
+                                    .iter()
+                                    .map(|s| format!("`{}`", crate::umgebung::kurzname(s)))
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
+                                self.absagen.schiebe(
+                                    Absage::fehler(
+                                        "N280",
+                                        e.span,
+                                        format!(
+                                            "`{n}` names a case of several `tagged` types \
+                                             ({liste}) -- and a construction names its case, \
+                                             not its type"
+                                        ),
+                                    )
+                                    .mit_notiz(
+                                        "the case index the model carries (`Expr.fall cs i \
+                                         nutz`) is read off ONE case list; with two lists \
+                                         there is no index",
+                                    ),
+                                );
+                                return Typ::Unbekannt;
+                            }
+                            crate::umgebung::VariantenFund::Keine => {
+                                if self.u.hat_markierte() {
+                                    self.absagen.schiebe(
+                                        Absage::fehler(
+                                            "N280",
+                                            e.span,
+                                            format!(
+                                                "`{n}` names no value and no case of the \
+                                                 `tagged` types declared here"
+                                            ),
+                                        )
+                                        .mit_notiz(
+                                            "a nullary case stands as its bare name -- this \
+                                             name is neither a bound value nor such a case",
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                        }
+                    }
+                }
                 self.name_aufloesen(o, lage);
                 // **`N271` (lane 152) -- a suffixed place over an `atomic` names
                 // nothing: an atomic is a scalar.**
@@ -2823,6 +2948,121 @@ impl<'a> Pruefer<'a> {
         for a in &r.argumente {
             argtypen.push((self.ausdruck(a, lage), a.span));
         }
+        // **Lane 167: `Variant(payload)` -- a `tagged` case construction, not a call.**
+        //
+        // The shape parses as a `Ruf` because the parser knows no declarations; the
+        // resolution stands here, before `marken_pruefen` (labels belong to record
+        // constructors, `M107`, never to a case) and before the function lookup
+        // below. What it answers is the model's `Expr.fall cs i nutz`: the case
+        // index `i` is the declaration order, `cs` the whole case list carried by
+        // the answered sum type, and the payload is held against the case's type
+        // with the ordinary range rule (`M101`) -- a payload out of range is a
+        // range refusal, not a constructor refusal. A function of the same name
+        // wins: the decision lives in `Umgebung::variante`/`ist_variantenkonstruktor`,
+        // the one predicate every pass asks, so no pass reads a constructor where
+        // another reads a call.
+        if let Some(pfad) = r.path() {
+            if pfad.teile.len() == 1 {
+                let name = pfad.teile[0].text.clone();
+                let ist_builtin = name == "Some" || name == "None" || name == "old" || name == "result"
+                    || gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty())
+                    || gabbro_syntax::zucker_speicher(&name).is_some()
+                    || crate::ist_bitintrinsik(&name);
+                if !ist_builtin
+                    && self.u.funktion(&self.modul, pfad).is_none()
+                    && !self.u.ist_uebergang(&self.modul, pfad)
+                    && !self.u.nennt_kopf(&self.modul, &name)
+                {
+                    // **A KNOWN case is a constructor attempt, labelled or not.**
+                    // Labels never stand at a case (`N284` owns them, inside
+                    // `variantenkonstruktor`), so the known case is resolved
+                    // before the `ist_verbundwert` gate below could hand it to
+                    // `marken_pruefen` as a record. An unknown or ambiguous name
+                    // WITH labels stays `M107`'s: a label claims a record, and
+                    // only a known case rebuts that reading.
+                    if let crate::umgebung::VariantenFund::Eine(t) =
+                        self.u.variante(&self.modul, &name)
+                    {
+                        if !self.u.funktionsname_belegt(&name) {
+                            return self.variantenkonstruktor(r, &name, &t, &argtypen);
+                        }
+                    }
+                    if !r.ist_verbundwert() {
+                    // **A function of this name stands elsewhere in the unit.**
+                    // The visible resolution is not the function (checked above),
+                    // but the emitter reads callees unit-wide, so it would lower
+                    // the call while this arm typed a construction. Refused instead
+                    // of miscompiled; there is no qualified case syntax that could
+                    // name the case past the function.
+                    if self.u.funktionsname_belegt(&name) {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "N280",
+                                r.span,
+                                format!(
+                                    "`{name}` shares its name with a declared function -- \
+                                     a construction names its case, and a call of this \
+                                     name lowers as the function"
+                                ),
+                            )
+                            .mit_notiz(
+                                "the emitter reads callees by their bare name across the \
+                                 whole unit; which of the two readings the C carries cannot \
+                                 be told apart there",
+                            ),
+                        );
+                    } else {
+                    match self.u.variante(&self.modul, &name) {
+                        crate::umgebung::VariantenFund::Eine(t) => {
+                            return self.variantenkonstruktor(r, &name, &t, &argtypen);
+                        }
+                        crate::umgebung::VariantenFund::Mehrere(summen) => {
+                            let liste = summen
+                                .iter()
+                                .map(|s| format!("`{}`", crate::umgebung::kurzname(s)))
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "N280",
+                                    r.span,
+                                    format!(
+                                        "`{name}` names a case of several `tagged` types ({liste}) -- \
+                                         and a construction names its case, not its type"
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "the case index the model carries (`Expr.fall cs i nutz`) \
+                                     is read off ONE case list; with two lists there is no index",
+                                ),
+                            );
+                            return Typ::Unbekannt;
+                        }
+                        crate::umgebung::VariantenFund::Keine => {
+                            if self.u.hat_markierte() {
+                                self.absagen.schiebe(
+                                    Absage::fehler(
+                                        "N280",
+                                        r.span,
+                                        format!(
+                                            "`{name}` names no function and no case of the `tagged` \
+                                             types declared here"
+                                        ),
+                                    )
+                                    .mit_notiz(
+                                        "a `tagged` case constructs as `Case(payload)` for a case \
+                                         with payload and as `Case` or `Case()` without one -- \
+                                         this spelling is neither a call nor a construction",
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                    }
+                    }
+                }
+            }
+        }
         self.marken_pruefen(r);
         // **`Some(i)` TRAEGT den Typ seines Arguments -- und ohne diese Zeile hatte der
         // Sonderwert keinen Waechter.**
@@ -3364,6 +3604,85 @@ impl<'a> Pruefer<'a> {
                 );
             }
         }
+    }
+
+    /// **`Variant(payload)` / `Variant()` -- the `tagged` case construction (lane 167).**
+    ///
+    /// Answers the owning sum type: the model's `Expr.fall cs i nutz` with `i` the
+    /// declaration order and `nutz` the payload held against the case's type. The
+    /// arity is the constructor's own (`N281`/`N282`); the payload RANGE is `M101`'s
+    /// and its SHAPE `M140`'s, through the ordinary `passt` -- the same split the
+    /// record constructor draws (`M106` for the shape, the range rules for the
+    /// values). Labels never stand here (`N284`): a case takes its payload
+    /// positionally, like `Some(x)` -- the one name a label could carry is the
+    /// case itself, and it already stands in front.
+    fn variantenkonstruktor(
+        &mut self,
+        r: &Ruf,
+        name: &str,
+        t: &crate::umgebung::VariantenTreffer,
+        argtypen: &[(Typ, Span)],
+    ) -> Typ {
+        let kurz = crate::umgebung::kurzname(&t.summe);
+        if !r.marken.is_empty() {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "N284",
+                    r.span,
+                    format!(
+                        "`{name}` is a case of the `tagged` type `{kurz}`, not a struct; \
+                         its payload is positional"
+                    ),
+                )
+                .mit_notiz(
+                    "labels exist only at a record constructor (`M106`/`M107`) -- a case \
+                     carries at most one payload, and the case name already says which",
+                ),
+            );
+            self.buche(&t.summe_typ);
+            return t.summe_typ.clone();
+        }
+        match (&t.nutzlast, argtypen.len()) {
+            (None, 0) => {}
+            (None, n) => {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "N282",
+                        r.span,
+                        format!(
+                            "`{name}` is a case of `{kurz}` without a payload, but this \
+                             construction passes {n} argument(s)"
+                        ),
+                    )
+                    .mit_notiz(
+                        "a nullary case constructs as `Case` or `Case()` -- an argument \
+                         has no case type to stand against",
+                    ),
+                );
+            }
+            (Some(erwartet), 1) => {
+                let (gegeben, span) = &argtypen[0];
+                self.passt(gegeben, erwartet, *span, &format!("payload of variant `{name}`"));
+            }
+            (Some(_), n) => {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "N281",
+                        r.span,
+                        format!(
+                            "`{name}` is a case of `{kurz}` with a payload, but this \
+                             construction passes {n} argument(s)"
+                        ),
+                    )
+                    .mit_notiz(
+                        "a case carries exactly one payload -- `Case(payload)`; nothing \
+                         stands beside it",
+                    ),
+                );
+            }
+        }
+        self.buche(&t.summe_typ);
+        t.summe_typ.clone()
     }
 
     /// **`M106` IST `deckt` aus `beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
@@ -4181,7 +4500,20 @@ impl<'a> Pruefer<'a> {
         let mut veraltet = false;
         match &e.art {
             ExprArt::Ruf(r) => {
-                aus.extend(self.rueckgabe_traeger(r, lage));
+                // **Lane 167: a construction carries its payload's taint.** A case
+                // is no callee, so `rueckgabe_traeger` below answers nothing for
+                // one -- but `let m = Kurz(stale)` binds the stale value itself,
+                // and a copy holds the same snapshot (see the `veraltet` arm
+                // below). Descending into the arguments keeps V4 precise; before
+                // this lane no valid construction existed, so no clean program
+                // changes its taint by it.
+                if self.u.ist_variantenkonstruktor(&self.modul, r) {
+                    for k in crate::unterausdruecke(e) {
+                        veraltet |= self.traeger_im_ausdruck(k, lage, aus);
+                    }
+                } else {
+                    aus.extend(self.rueckgabe_traeger(r, lage));
+                }
             }
             ExprArt::Ort(o) | ExprArt::Alt(o) => {
                 if let Some(c) = self.traeger_von_ort(o, lage) {

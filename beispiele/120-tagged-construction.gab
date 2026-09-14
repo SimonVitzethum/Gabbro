@@ -1,0 +1,34 @@
+-- 120 -- **Constructing a `tagged` value in one function, matching it in another.**
+--
+-- `baue` builds a `Nachricht` with the call form (`Kurz(x)`) and the bare form
+-- (`Leer`); `nimm` matches it exhaustively -- every arm answers, so the closed
+-- distinction carries both directions. The emitted C is the compound literal
+-- `(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = x }` beside the
+-- `switch (m.marke)` the match already lowered to; `cc` and `clang` accept both.
+module beispiel120 {
+
+tagged type Nachricht = { Leer, Kurz(u32 in 0 .. 100), Lang(u64) };
+
+impl fn baue(kurz : bool, x : u32 in 0 .. 100) -> Nachricht
+    effects { pure }
+    costs   <= 8 ops
+{
+    if kurz {
+        return Kurz(x);
+    }
+    return Leer;
+}
+
+impl fn nimm(m : Nachricht) -> u32 in 0 .. 100
+    effects { pure }
+    costs   <= 16 ops
+{
+    match m {
+        Leer => { return 0; }
+        Kurz(k) => { return k; }
+        Lang(l) => { return 0; }
+    }
+    return 0;
+}
+
+}

@@ -1,0 +1,20 @@
+-- erwartet: N281
+-- **A case with a payload, constructed without one -- `Kurz()` carries nothing.**
+--
+-- A case carries exactly one payload: `Kurz()` names the case and leaves the
+-- union member unwritten, which the C would read uninitialized behind the
+-- checker's back. The refusal is the constructor's own. The bare-name twin of
+-- this shape (`let m : Nachricht = Kurz;`) falls at `N283`, pinned by a unit
+-- row instead of a gift file.
+module gift::missing_variant_payload {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+
+impl fn baue() -> Nachricht
+    effects { pure }
+    costs   <= 8 ops
+{
+    return Kurz();
+}
+
+}

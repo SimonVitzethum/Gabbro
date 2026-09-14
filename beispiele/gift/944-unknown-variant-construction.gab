@@ -1,0 +1,20 @@
+-- erwartet: N280
+-- **A construction naming no case -- `Falsch(x)` is neither a call nor a case.**
+--
+-- The unit declares `tagged` types, so an unresolvable single-segment call may
+-- be a misspelled case, and the refusal says both namespaces: no function and
+-- no case of the declared sums. The call graph keeps its own refusal (`H021`)
+-- beside it, and the cost pass its `K003` where costs are promised -- this probe
+-- pins the constructor's half, not the whole fall.
+module gift::unknown_variant_construction {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+
+impl fn baue(x : u32) -> Nachricht
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Falsch(x);
+}
+
+}

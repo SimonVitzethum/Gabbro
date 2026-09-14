@@ -324,7 +324,22 @@ does not reach the position where the two axes actually sit.
 
 ---
 
-## O8 — A `tagged type` value has no constructor
+## O8 — ~~A `tagged type` value has no constructor~~ — **closed 2026-09-14, lane 167**
+
+> **Closed by building the producer, the same move `reasonval` was for `reason`.**
+> A `tagged` case constructs in a body as `Case(payload)`, `Case()` or the bare
+> `Case` -- no new keyword, no new production (the shape parses as an ordinary
+> `Ruf`/`Ort`; the resolution stands in the checker, `Umgebung::variante`). The
+> payload is held against the case's type, the construction answers the owning
+> sum (the model's `Expr.fall cs i nutz`), and the lowering writes the SAME
+> `marke`+`union` representation the `match` reads. Refusals `N280`-`N284`
+> (unknown/ambiguous case, arity, labels) with gift probes `944`-`947` (plus the
+> rewritten `938` for the ambiguous shape) and clean examples `120`/`121`. What
+> stays unbuilt, deliberately: the qualified spelling `Aufsatz::Keine` (`M126`
+> -- cases carry no type name) and a case that shares its name with a function
+> (`N280` -- the emitter reads callees unit-wide). The four O8 spellings read
+> today: bare `Keine` builds, `Aufsatz::Keine` still falls at `M126`, `Keine()`
+> builds, `let x : Aufsatz = Keine` builds.
 
 *Measured 2026-09-03, same run.*
 

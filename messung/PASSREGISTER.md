@@ -25,6 +25,18 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 | Codes in the checker | **~~335~~ 381** | `./pruefe-kennungen.py` |
 | of those claimed by a sentence | **~~280~~ 326** | `./instrumente/pruefe-saetze.py` |
 
+> **2026-09-14, lane 167: +1 sentence with five codes, mine, figures NOT recomputed.**
+> `m1.sum_constructor` (`N280`, an unknown or ambiguous variant construction;
+> `N281`, a missing payload; `N282`, a payload on a nullary case; `N283`, a bare
+> name over a payload case; `N284`, labels at a case) arrives with its sentence,
+> its four gift probes (944-947; 938 rewritten to the ambiguous shape) and its
+> unit rows in the same commit. This lane ran without a Rust toolchain (no
+> `cargo`, no `rustc` on the machine -- measurement by reading, not by running),
+> so the four figures above stand as the last measured run left them and the
+> recomputation is owed to the next lane with a build: sentences +1, codes +5
+> against whatever the run then says. The `ohne Satz` ratchet below stands
+> unmoved at 55 by construction -- every new code arrived with its sentence.
+
 > **2026-09-12, lane E6: +5 sentences with their codes, all mine.**
 > `namen.profil_schluessel` (`N215`, two keyed entries with one key and
 > different values), `namen.profil_namensgleichheit` (`N216`, a same-named

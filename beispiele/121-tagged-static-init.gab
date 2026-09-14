@@ -1,0 +1,26 @@
+-- 121 -- **A `tagged` value at file scope: the brace form of the same construction.**
+--
+-- `static` initializers are constant expressions, so the case lowers in braces
+-- (`{ .marke = Nachricht_Kurz, .last.Kurz = 5 }`) instead of the compound literal
+-- bodies use. Both spellings -- the call `Kurz(5)` and the bare `Leer` -- stand
+-- here; a non-constant payload keeps the `C001`. `lies` matches the stored value,
+-- so the file-scope construction meets the same `switch` as the body one.
+module beispiel121 {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+
+static ANFANG : Nachricht = Kurz(5);
+static LEERE : Nachricht = Leer;
+
+impl fn lies() -> u32
+    effects { reads ANFANG }
+    costs   <= 16 ops
+{
+    match ANFANG {
+        Leer => { return 0; }
+        Kurz(k) => { return k; }
+    }
+    return 0;
+}
+
+}

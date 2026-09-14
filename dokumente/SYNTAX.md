@@ -527,7 +527,12 @@ arglist    = arg { "," arg } ;
 arg        = [ ident ":" ] expr ;
 (* «B7»: a labelled call is the record constructor -- `P(a: 1, b: true)`. There is NO braced
    record literal (`P037`): at 76 corpus sites a `{` follows an expression directly. G9: a
-   `call` whose `path` names a type IS the conversion. *)
+   `call` whose `path` names a type IS the conversion.
+   Lane 167: a `call` whose single-segment `path` names a case of a `tagged` type IS the
+   case construction -- `Variant(payload)`, `Variant()` -- and a bare `place` naming a
+   nullary case IS the nullary construction (`Variant`). No new keyword and no new
+   production: the parser cannot tell a case from a function, so the resolution stands
+   in the checker (`Umgebung::variante`), where a function of the same name wins. *)
 builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")"
            | "aligned" "(" expr "," constexpr ")" ;
 oldexpr    = "old" "(" place ")" ;                 (* EXPRESSION, not predicate; only in ensures *)
@@ -566,6 +571,8 @@ placelist  = place { "," place } ;
 | `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
 | `x.is_some()` / match on `option` | | `bool` | `Expr.istSome` |
 | `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.fall cs i nutz` |
+| `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.fall cs i` with the empty payload |
+| `Variant(e)` refused (lane 167) | an unknown or ambiguous case (`N280`); a missing payload (`N281`); a payload on a nullary case (`N282`); a bare name over a payload case (`N283`); labels at a case (`N284`) — the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
 | `R::F` | | `reason R` | `Expr.grund n r` |
 | `&f` | `f` has exactly the signature of the `fnptr` at the place | `fn(…)` | `Expr.fnref f n (h : D.sig f = n)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
