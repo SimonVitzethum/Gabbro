@@ -461,6 +461,34 @@ counterexample that damages everything else in this document.
   assumption list as such.
 - **A verified libc** is not on the critical path. The isolation the platform sells comes from the
   kernel boundary, and a libc sits nowhere on it.
+- **Generated and self-modifying code in user programs.** A JIT, a trampoline, a patched
+  instruction sequence: none of it is analysed, and none of it needs to be. **The isolation
+  guarantee is enforced, not analysed** — it rests on the kernel and the hardware, not on anyone
+  having inspected a program's code. Code that a program writes for itself runs in the same domain
+  with the same authority, and is therefore exactly as harmless as any other code that program
+  runs. This is not a concession; it is the property that makes the whole line possible. *A system
+  whose guarantees depended on analysing user programs could not draw the boundary at "verified
+  except the user's programs" at all.*
+
+**Where that line reaches, and where it stops.** Two places sit just inside it and are easy to
+lose sight of precisely because the rule above is so clean:
+
+- **The grant of execute permission.** Somewhere a page becomes executable, and that operation
+  belongs to the kernel, so it is in scope. The obligation there is not about the generated code
+  but about the grant being domain-faithful: a page made executable for one domain is never
+  reachable from another. That is an ordinary footprint and label obligation inside the existing
+  frame — a new instance, not a new class, and one that is easy to forget for exactly that reason.
+- **The Modifier is not covered by this.** It generates code that runs with *driver* authority
+  inside the verified perimeter, not inside a user domain. "Generated code is the user's logic"
+  covers every JIT and covers exactly one code generator not at all: our own (§6).
+
+**[OPEN]** Who ships the runtime that tenant workloads run on, and with whose authority it runs.
+If a tenant brings it and it executes in that tenant's domain, the rule above settles the matter.
+If the platform ships it and several tenants share one instance, its sandbox becomes a platform
+guarantee — and that is the hardest component on any list, because it is the class at which
+multi-tenant platforms actually break. This is a product decision, not a technical fact, and it
+decides whether the verification perimeter ends at the kernel boundary or begins again one level
+up.
 
 ## 13. The open decisions, gathered
 
@@ -472,3 +500,4 @@ counterexample that damages everything else in this document.
 | The abstract specification per component | §11.1 | the whole hot-reload argument rests on it |
 | Combined-work question for a shipped image | §9 | a legal answer needed before anyone else operates the system |
 | Whether the header audit finds Linux-derived code in AGPL parts | §6 | quiet until it is loud |
+| Who ships the tenant runtime, and with whose authority it runs | §12 | decides where the verification perimeter ends |
