@@ -70,7 +70,7 @@ variable [DecidableEq D.Fn]
     declaration; no event needed). -/
 theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlung D.Fn)
     (ls : Aufzaehlung D.Lock) (ws : List D.Fn)
-    (hA : AkzeptiertSpec P S fs.1 ws) (hN : NutzerPflicht P S Q) (O : Orakel D)
+    (hA : AkzeptiertSpec P S fs.1 ws) (hN : LogikPflicht P S Q) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs.1 ws sp init)
     (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) :
@@ -103,19 +103,59 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
 
 end Aus
 
-/-! ## 2. The goal -/
+/-! ## 2. The start, from (b) and (d) -/
+
+section Start
+
+variable [DecidableEq D.Fn]
+
+/-- **The start the proof works with, derived** (2026-09-15): the runtime's
+    start (d) and the user's start obligation (b) give an admissible start
+    of `P.mitRuhe`. Before, `StartZulaessig` was itself the premise, and its
+    `req`/`sperren` belonged to no premise group (verdict P1). -/
+theorem startZulaessig_aus (E : Einheit D) (fs : List D.Fn) (hN : StartPflicht E)
+    {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hL : Laufzeit E sp init) :
+    StartZulaessig E.P.mitRuhe E.S.mitRuhe (fsRuhe fs) (wsRuhe E.ws) sp init where
+  wurzel t := by
+    rcases hL.start t with h | ⟨a, ha, h⟩
+    · rw [h]
+      exact Or.inr (ruhig_mitRuhe E.P)
+    · rw [h]
+      exact Or.inl (List.mem_map_of_mem (List.mem_map_of_mem ha))
+  einmal t u htu he := by
+    rw [hL.einmal t u htu he]
+    exact ruhig_mitRuhe E.P
+  req t := by
+    show ReqAmEintritt E.P.mitRuhe (init t).1 (sp.welt []) (init t).2
+    rcases hL.start t with h | ⟨a, ha, h⟩
+    · rw [h]
+      rfl
+    · rw [h, hL.lader]
+      exact (req_mitRuhe_iff E.P a.1 (E.sp0.welt []) a.2).mpr (hN.req a ha)
+  sperren L := by
+    show E.S.inv L (speicherZ sp) = true
+    rw [hL.lader, speicherZ_speicherR]
+    exact hN.sperren L
+
+end Start
+
+/-! ## 3. The goal -/
 
 /-- **GABBRO_ZIEL, PROVED.** For every checker `C`, every declaration and
-    program accepted by it, the user's logic, the named hardware
-    assumptions and every admissible start of `P` with the runtime's idle
-    root: every leg of `Ziel` on every reachable machine. -/
+    program `E` accepted by it, the user's logic (bodies AND start), the
+    named hardware assumptions and the runtime's start of `E` (A4, with the
+    idle root): every leg of `Ziel` on every reachable machine. -/
 theorem gabbro_ziel : GabbroZiel := by
-  intro C D _ P S Q fs ls cs ws hC hN O hH passes sp init hZ M hr
-  have hA := akzeptiertSpec_mitRuhe P fs.2 (C.korrekt P S fs ls cs ws hC)
-  exact ziel_aus P.mitRuhe S.mitRuhe (axEnsRuhe Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls (wsRuhe ws)
-    hA (nutzerPflicht_mitRuhe hN) O.mitRuhe (hardware_mitRuhe hH) passes sp init hZ M hr
+  intro C D _ E fs ls cs hC hN O hH passes sp init hL M hr
+  have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hC)
+  exact ziel_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
+    (wsRuhe E.ws) hA (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp
+    init (startZulaessig_aus E fs.1 hN.start hL) M hr
 
 #print axioms Gabbro.Grammatik.Zielsatz.ziel_aus
+#print axioms Gabbro.Grammatik.Zielsatz.startZulaessig_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 
 end Gabbro.Grammatik.Zielsatz

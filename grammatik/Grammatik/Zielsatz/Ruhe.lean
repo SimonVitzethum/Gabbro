@@ -214,8 +214,9 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
   wurzeln := fun w' hw' => by
     obtain ⟨w, hw, rfl⟩ := mem_wsRuhe.mp hw'
     exact hA.wurzeln w hw
-  renn := fun c hB hAt hP => schreibGetrennt_mitRuhe P hvoll hA.abg
-    (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt hP)
+  einzeln := List.Pairwise.map some (fun _ _ h e => h (Option.some.inj e)) hA.einzeln
+  renn := fun c hB hAt => schreibGetrennt_mitRuhe P hvoll hA.abg
+    (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt)
 
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
     (the member lists of locks and carriers are the same). -/
@@ -302,6 +303,74 @@ theorem startZulaessig_ruhe (sp : Speicher D.mitRuhe) (hS : ∀ L, S.inv L (spei
 
 end Start
 
+/-! ## The runtime's start (Spec's `Laufzeit`, A4) -/
+
+section Laufzeit
+
+/-- **The runtime's exact start meets A4**: the declared starts on threads
+    `0 .. k-1` with their declared arguments, the root elsewhere, from the
+    declared initial memory -- whenever the declared starts are distinct. -/
+theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup) :
+    Laufzeit E (speicherR E.sp0) (initRuhe E.starts) where
+  lader := rfl
+  start t := by
+    unfold initRuhe
+    rcases h : E.starts[t]? with _ | ⟨w, ρ⟩
+    · exact Or.inl rfl
+    · exact Or.inr ⟨⟨w, ρ⟩, List.mem_of_getElem? h, rfl⟩
+  einmal t u htu he := by
+    revert he
+    unfold initRuhe
+    cases ht : E.starts[t]? with
+    | none => intro _; rfl
+    | some a =>
+        cases hu : E.starts[u]? with
+        | none => intro he; cases he
+        | some b =>
+            intro he
+            exfalso
+            have hab : a.1 = b.1 := Option.some.inj he
+            have ht' : (E.starts.map (·.1))[t]? = some a.1 := by rw [List.getElem?_map, ht]; rfl
+            have hu' : (E.starts.map (·.1))[u]? = some b.1 := by rw [List.getElem?_map, hu]; rfl
+            rw [hab] at ht'
+            have hlt : t < (E.starts.map (·.1)).length := (List.getElem?_eq_some_iff.mp ht').1
+            have hnd' : (E.starts.map (·.1)).Nodup := hnd
+            exact htu ((List.getElem?_inj hlt hnd').mp (ht'.trans hu'.symm))
+
+/-- The checker's acceptance gives distinct declared starts, so the
+    runtime's exact start is always in the class A4 describes. -/
+theorem laufzeit_voll [DecidableEq D.Fn] (E : Einheit D) {fs : List D.Fn}
+    (hA : AkzeptiertSpec E.P E.S fs E.ws) :
+    Laufzeit E (speicherR E.sp0) (initRuhe E.starts) :=
+  laufzeit_initRuhe E hA.einzeln
+
+/-- **Under A4 a thread runs only what the program declares** (verdict P2):
+    a user function runs on a thread only if it is a declared start. -/
+theorem laufzeit_nur_erklaert {E : Einheit D} {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hL : Laufzeit E sp init) (t : Faden) (f : D.Fn) (hf : (init t).1 = some f) : f ∈ E.ws := by
+  rcases hL.start t with h | ⟨a, ha, h⟩
+  · rw [h] at hf
+    cases hf
+  · rw [h] at hf
+    cases hf
+    exact List.mem_map_of_mem ha
+
+/-- A program that declares no start runs the root on every thread. -/
+theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hL : Laufzeit E sp init) (t : Faden) : (init t).1 = none := by
+  rcases hL.start t with h | ⟨a, ha, _⟩
+  · rw [h]
+  · rw [h0] at ha
+    exact absurd ha List.not_mem_nil
+
+end Laufzeit
+
+#print axioms Gabbro.Grammatik.laufzeit_initRuhe
+#print axioms Gabbro.Grammatik.laufzeit_voll
+#print axioms Gabbro.Grammatik.laufzeit_nur_erklaert
+#print axioms Gabbro.Grammatik.laufzeit_ohne_starts
 #print axioms Gabbro.Grammatik.akzeptiertSpec_mitRuhe
 #print axioms Gabbro.Grammatik.akzeptiert_mitRuhe
 #print axioms Gabbro.Grammatik.ruhig_mitRuhe

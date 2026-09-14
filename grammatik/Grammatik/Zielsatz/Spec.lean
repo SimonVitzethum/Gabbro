@@ -115,6 +115,28 @@ variable {D : Deklaration}
 /-- A complete enumeration: every element is in the list. -/
 def Aufzaehlung (α : Type) : Type := {l : List α // ∀ a, a ∈ l}
 
+/-! ## The program the user wrote -/
+
+/-- **The program as ONE declaration** (2026-09-15, verdict P2): the code with its contracts
+    (`P`: bodies, `requires`, `ensures`, table invariants) AND what the source declares about
+    its run, which before were free parameters of the statement:
+    * `S` -- the lock invariants (`lock L protects { … } invariant I`);
+    * `Q` -- the axioms' declared `ensures` (the content of the hardware assumption);
+    * `starts` -- the declared thread starts with their arguments (`concurrent { … }`,
+      `entry`/`boot` dispatch roots);
+    * `sp0` -- the declared initial memory (every table and global initializer).
+    The exporter's output is exactly one such value; a different `starts` (say `[]`) is a
+    DIFFERENT program, whose run the statement then describes (`laufzeit_nur_erklaert`). -/
+structure Einheit (D : Deklaration) where
+  P : Programm D
+  S : SperrInv D
+  Q : AxEns D
+  starts : List (Σ w : D.Fn, Env D (D.params w))
+  sp0 : Speicher D
+
+/-- The declared start functions. -/
+def Einheit.ws (E : Einheit D) : List D.Fn := E.starts.map (·.1)
+
 /-! ## (a) What the checker decides -/
 
 section Pruefer
@@ -139,9 +161,9 @@ def SchreibGetrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) 
 /-- **What `Akzeptiert` must establish** (the Props of its components): fragment; closed call
     graphs; every footprint carrier signature-guarded, lock-protected or thread-local; lock
     floors; protected carriers guarded by their lock; declared starts hold no lock by
-    signature and have no reasons; every carrier without a guard lock that is neither
-    `atomic` nor a publish payload is write-separated among the declared starts (the
-    counterpart of the checker's `H013`). -/
+    signature, have no reasons, and are pairwise distinct; every carrier without a guard
+    lock that is not `atomic` is write-separated among the declared starts (the counterpart
+    of the checker's `H013`; publish payloads INCLUDED since 2026-09-15, verdict P3). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -149,22 +171,20 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   stufen : StufenM P
   sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
   wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
-  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ PaarungAusgenommen c →
-    SchreibGetrennt P fs ws c
+  einzeln : ws.Nodup
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
 
 end Pruefer
 
-/-- **The checker interface.** `akzeptiert P S fs ls cs ws` is the Bool the Rust checker
-    computes (signature of `Akzeptiert`: functions, locks, carriers, declared starts);
-    `korrekt` is its soundness, the one link between the Bool and what the statement uses. -/
+/-- **The checker interface.** `akzeptiert E fs ls cs` is the Bool the Rust checker computes
+    on the program `E` (member lists of functions, locks, carriers); `korrekt` is its
+    soundness, the one link between the Bool and what the statement uses. -/
 structure Pruefer where
   akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
-    Programm D → SperrInv D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → List D.Fn →
-      Bool
-  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
-    (ws : List D.Fn),
-    akzeptiert P S fs.1 ls.1 cs.1 ws = true → AkzeptiertSpec P S fs.1 ws
+    Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
+  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 E.ws
 
 /-! ## (b) What the user proves -/
 
@@ -184,20 +204,56 @@ def InvGutGrund (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (
 def SperrInvLokal (S : SperrInv D) : Prop :=
   ∀ L (s s' : Speicher D), (∀ c ∈ S.orte L, TraegerGleich s s' c) → S.inv L s = S.inv L s'
 
-/-- **The user's own logic**: per function and at EVERY `forever` budget the body triple with
-    caller duty and no `logik` outcome, owed invariants at value AND reason exits; the lock
-    invariants and declared axiom ensures the user wrote read only their carriers. -/
-def NutzerPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
+/-- **The logic of the bodies**: per function and at EVERY `forever` budget the body triple
+    with caller duty and no `logik` outcome, owed invariants at value AND reason exits; the
+    lock invariants and declared axiom ensures the user wrote read only their carriers.
+    (Until 2026-09-14 this was all of `NutzerPflicht`.) -/
+def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
   (∀ (passes : Nat) (f : D.Fn),
     KoerperGutS P passes Q S f ∧ InvGutS P passes Q S f ∧ InvGutGrund P passes Q S f) ∧
   SperrInvLokal S ∧ AxEnsLokal Q
+
+/-- **The start obligation** (NEW 2026-09-15, verdict P1): at the program's DECLARED initial
+    memory every lock invariant holds, and every declared start's `requires` holds with its
+    declared arguments. Before, these two were conditions on the quantified start
+    (`StartZulaessig.sperren`/`.req`) that belonged to no premise group: an unsatisfiable
+    family (`invariant false`) emptied both the body obligations (`HavocOk` had no member) and
+    the conclusion (no start was admissible). Now such a family refutes (b)
+    (`probeA_falsch_inv_nicht`, Zielsatz/Proben.lean). -/
+structure StartPflicht (E : Einheit D) : Prop where
+  sperren : ∀ L, E.S.inv L E.sp0 = true
+  req : ∀ a ∈ E.starts, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
+
+/-- **The user's own logic**: the bodies' logic and the start obligation, both over the
+    program `E` -- nothing the prover picks. -/
+structure NutzerPflicht (E : Einheit D) : Prop where
+  logik : LogikPflicht E.P E.S E.Q
+  start : StartPflicht E
 
 /-! ## (c) What the hardware is assumed to do -/
 
 def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
   GutO O ∧ RegLokal O ∧ AxVertragO Q O
 
-/-! ## (d) The starts the statement speaks about -/
+/-! ## (d) What the runtime is assumed to do (A4) -/
+
+/-- **Assumption A4, the loader and the runtime's thread creation.** The machine runs
+    `E.P.mitRuhe` (the program with the runtime's idle root `none`, MitRuhe.lean) from
+    * `lader` -- the loader establishes the program's DECLARED initial memory `E.sp0`;
+    * `start` -- every thread runs the idle root or ONE declared start with its DECLARED
+      arguments;
+    * `einmal` -- no declared start runs on two threads.
+    The runtime starts EXACTLY the declared starts, each on its own thread, the root on every
+    other thread (`initRuhe E.starts`); that start meets this predicate whenever the checker
+    accepts (`laufzeit_initRuhe`, Zielsatz/Proben.lean), and so does every assignment running
+    only some of the declared starts. -/
+structure Laufzeit (E : Einheit D) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) : Prop where
+  lader : sp = speicherR E.sp0
+  start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩
+  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none
+
+/-! ## The start the proof works with (derived from (b) and (d), not a premise) -/
 
 section Start
 
@@ -209,8 +265,10 @@ def Ruhig (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
   D.haelt w = [] ∧ D.gruende w = 0 ∧ ∀ f, reachB P fs w f = true →
     fussOrteG P f = [] ∧ ∀ c, TraegerSchreibt f c = false
 
-/-- **Admissible starts**: every thread runs a declared start (each on ONE thread) or an idle
-    one; the start functions' `requires` and every lock invariant hold at the start memory. -/
+/-- **Admissible starts** (the proof's notion; NOT a premise of `GabbroZiel` since
+    2026-09-15): every thread runs a declared start (each on ONE thread) or an idle one; the
+    start functions' `requires` and every lock invariant hold at the start memory.
+    `startZulaessig_aus` (Zielsatz/Beweis.lean) derives it from (b) and (d). -/
 structure StartZulaessig (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) : Prop where
   wurzel : ∀ t, (init t).1 ∈ ws ∨ Ruhig P fs (init t).1
@@ -223,16 +281,16 @@ end Start
 /-! ## The legs of the goal -/
 
 /-- **Data-race freedom on every run from `M0` to `M`**: two accesses by different threads to
-    ONE carrier, one a write, the carrier neither `atomic` nor a publish payload, are ordered
-    through a guard lock (release by the first, acquire by the second). Unguarded carriers
-    included: there such a pair must not exist. -/
+    ONE carrier, one a write, the carrier not `atomic`, are ordered through a guard lock
+    (release by the first, acquire by the second). Unguarded carriers included: there such a
+    pair must not exist. Publish payloads included (2026-09-15, verdict P3). -/
 def RennfreiBis (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
   ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
     LaufG P O passes M0 ms fs n → ms n = M →
     ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
       ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
       (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
-      ¬ AtomarAusgenommen c → ¬ PaarungAusgenommen c →
+      ¬ AtomarAusgenommen c →
       ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
 
 /-- At every logged REASON return, every invariant the function owes holds. -/
@@ -315,18 +373,16 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
 
 /-- **GABBRO_ZIEL.** -/
 def GabbroZiel : Prop :=
-  ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
-    (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
-    (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (ws : List D.Fn),
-    C.akzeptiert P S fs.1 ls.1 cs.1 ws = true →               -- (a) the checker, on P
-    NutzerPflicht P S Q →                                     -- (b) the user, on P
-    ∀ O : Orakel D, HardwareAnnahmen O Q →                    -- (c) the hardware
-    -- A4: the runtime runs `P` with its idle root
+  ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflicht E →                                           -- (b) the user, on E
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
     ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
-      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init →
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
       ∀ M : RufMaschineG D.mitRuhe,
-        RufErreichbarG P.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M →
-          Ziel P.mitRuhe S.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M
+        RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M →
+          Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M
 
 end Gabbro.Grammatik.Zielsatz
