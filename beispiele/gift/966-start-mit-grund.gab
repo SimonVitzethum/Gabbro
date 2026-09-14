@@ -1,0 +1,57 @@
+-- erwartet: N302
+-- **A declared start whose function declares a reason channel.**
+--
+-- `geber` runs as a `concurrent` member and returns `u32 or E` -- a start's
+-- reason has no caller to take it (`wurzelnB`: `D.gruende w = 0`). Only
+-- `let x = f() else (e)` takes a reason, and no caller stands behind a
+-- thread start -- not even here, where the second start `nehmer` does call
+-- `geber` and handles the reason: calling the start routine elsewhere does
+-- not unstart it. Each start writes its own table (`G` is only read, never
+-- written, so the race legs stay silent beside the reason refusal); `E008`
+-- fires beside `N302` (`nehmer` calls `geber`, which reads `G`, without
+-- naming `reads` -- the transitive-effects rule, unrelated to this lane).
+module gift::wurzel_mit_grund {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+table P count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+reason E {
+    Leer = 1 "the slot held nothing to take"
+    exhaustive
+}
+
+impl fn geber() -> u32 or E
+    effects { reads G.slots }
+    costs   <= 64 ops
+{
+    if G.slots[0].v == 0 {
+        return E::Leer;
+    }
+    return G.slots[0].v;
+}
+
+impl fn nehmer() -> u32
+    effects { writes P.slots }
+    costs   <= 500 ops
+{
+    let n = geber() else (e) {
+        match e {
+            Leer => { P.slots[0].v = 0; return 0; }
+        }
+    }
+    P.slots[0].v = n;
+    return n;
+}
+
+concurrent { geber, nehmer };
+
+}

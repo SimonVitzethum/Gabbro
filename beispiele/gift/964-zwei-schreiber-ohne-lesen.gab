@@ -1,0 +1,35 @@
+-- erwartet: N300
+-- **Two starts writing one unguarded table with no reader anywhere.**
+--
+-- `schreiber_a` writes `G` on the first thread, `schreiber_b` on the second,
+-- and NO footprint anywhere reads `G` -- so the flagship footprint legs
+-- (`N290`-`N294`) stay silent: footprints list reads, and there is no read.
+-- The race component (`rennB`) sees it anyway: a carrier one start's call
+-- graph writes is written by a different start's graph, unguarded, neither
+-- atomic nor a publish payload. `W001` fires beside it (same-table writes
+-- across a declared pair); `N300` is the race half, `W001` the pair half.
+module gift::renn_zwei_schreiber_ohne_lesen {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn schreiber_a()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+impl fn schreiber_b()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[1].v = 2;
+}
+
+concurrent { schreiber_a, schreiber_b };
+
+}
