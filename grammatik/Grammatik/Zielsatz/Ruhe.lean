@@ -14,6 +14,13 @@
     the starts' `requires` and the lock invariants at the start memory;
     `startZulaessig_ruhe`: the idle root on EVERY thread is admissible as
     soon as some memory meets the lock invariants.
+  * The runtime's start of Spec (`Laufzeit`, A4; 2026-09-15):
+    `laufzeit_initRuhe`/`laufzeit_voll` (the runtime's exact start,
+    `initRuhe E.starts`, meets it when the declared starts are distinct,
+    which the checker demands); `laufzeit_ruhe` (the root everywhere: the
+    run class is never empty); `laufzeit_nur_erklaert` (a user function runs
+    only if declared); `laufzeit_ohne_starts` (no declared start: the root
+    on every thread).
 -/
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.MitRuheStatisch
@@ -365,12 +372,20 @@ theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) {sp : Speicher
   · rw [h0] at ha
     exact absurd ha List.not_mem_nil
 
+/-- The runtime's root on every thread from the declared memory is always a
+    start A4 admits: the conclusion's run class is never empty. -/
+theorem laufzeit_ruhe (E : Einheit D) : Laufzeit E (speicherR E.sp0) (ruheInit D) where
+  lader := rfl
+  start _ := Or.inl rfl
+  einmal _ _ _ _ := rfl
+
 end Laufzeit
 
 #print axioms Gabbro.Grammatik.laufzeit_initRuhe
 #print axioms Gabbro.Grammatik.laufzeit_voll
 #print axioms Gabbro.Grammatik.laufzeit_nur_erklaert
 #print axioms Gabbro.Grammatik.laufzeit_ohne_starts
+#print axioms Gabbro.Grammatik.laufzeit_ruhe
 #print axioms Gabbro.Grammatik.akzeptiertSpec_mitRuhe
 #print axioms Gabbro.Grammatik.akzeptiert_mitRuhe
 #print axioms Gabbro.Grammatik.ruhig_mitRuhe

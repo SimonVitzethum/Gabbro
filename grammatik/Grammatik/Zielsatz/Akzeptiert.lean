@@ -4,9 +4,10 @@
              (`Akzeptiert`), proved to be a `Pruefer` of `Spec.lean`
              (`akzeptiert_pruefer`): the Bool decides EXACTLY
              `AkzeptiertSpec` (`akzeptiert_iff`), given complete member
-             lists. The start the goal speaks about is Spec's
-             `StartZulaessig`, with a Bool for finite start tables
-             (`startB`).
+             lists. The start the PROOF works with is Spec's
+             `StartZulaessig` (derived from the runtime's start `Laufzeit`
+             and the user's `StartPflicht`, `startZulaessig_aus`), with a
+             Bool for finite start tables (`startB`).
 
   `Akzeptiert P S fs ls cs ws` is the conjunction of every premise of the
   flagship theorems that is a decidable fact about the PROGRAM:
@@ -19,7 +20,8 @@
   | `stufen`       | `stufenB`              | `StufenM P`                                            | `hSt` of `keine_verklemmungG` |
   | `sperrOrte`    | `sperrOrteB`           | `∀ L c, c ∈ S.orte L → Bewacht c L`                    | first half of `hS : SperrInvOk S` |
   | `wurzeln`      | `wurzelnB`             | `∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0`           | `hLeer` / `hex`; no reasons at a start (`StartOhneGrund`) |
-  | `renn`         | `rennB`                | every unguarded, non-atomic, non-payload carrier is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
+  | `einzeln`      | `einzelnB`             | `ws.Nodup`                                             | the runtime's exact start is covered (`laufzeit_voll`) |
+  | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no
@@ -31,9 +33,22 @@
 
   `ws : List D.Fn` -- the program's DECLARED THREAD STARTS (the checker's
   `concurrent { … }` members and `entry`/`boot` dispatch roots,
-  `crates/gabbro-check/src/startexklusiv.rs`). `Programm D` has no field for
-  the starts, so the list is an argument; the call graphs are COMPUTED from
-  it (`reachB`), never supplied.
+  `crates/gabbro-check/src/startexklusiv.rs`). Since 2026-09-15 they are a
+  field of the program (`Einheit.starts`, Spec.lean) and the checker of
+  `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
+  list as an argument. The call graphs are COMPUTED from it (`reachB`),
+  never supplied.
+
+  **Changes of 2026-09-15 (third Opus verdict):**
+  * `renn` no longer exempts publish payloads (P3): two starts writing one
+    unguarded payload is a C11 race on a non-atomic object; `H013` has no
+    payload exemption either. A payload read by one start and written by
+    another was already refused by `fuss` (thread-locality over footprints),
+    so only the write-write case changes.
+  * `einzeln` is NEW: the declared starts are pairwise distinct. The runtime
+    runs each on its own thread; two threads running one busy start would
+    escape `renn` (which separates DIFFERENT starts) and would not be
+    covered by Spec's `Laufzeit`.
 
   **Changes of 2026-09-14 (review findings):**
   * `renn` is NEW: a write-write race on an unguarded carrier that no
@@ -57,9 +72,9 @@
     `inductive`s are finite, and the proof is `cases` per declaration.
   * `SperrInvLokal S` and `AxEnsLokal Q`: `S.inv L` and `Q a` are
     Bool-valued FUNCTIONS on memory, not syntax. User well-formedness.
-  * `StartGut`, `∀ L, S.inv L sp`, the start assignment: they RESTRICT the
-    quantified start (`StartZulaessig`); decidable for a finite start table
-    (`startB`).
+  * `StartGut`, `∀ L, S.inv L sp`: since 2026-09-15 the USER's start
+    obligation (`StartPflicht`, over the declared initial memory and
+    arguments); decidable for a finite start table (`startB`).
   * NOT in `Akzeptiert`, although decidable per instance:
     `kostenPasst P passes decl fs` (the DECLARED costs; `decl` is not part
     of `Programm D`, and the check depends on `passes`).

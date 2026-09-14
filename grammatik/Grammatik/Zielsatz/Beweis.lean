@@ -2,16 +2,20 @@
   File:      Grammatik/Zielsatz/Beweis.lean -- PLAN-ZIELSATZ.md step 4:
              `GabbroZiel` (Spec.lean) PROVED: `gabbro_ziel`.
 
-  THE CHAIN. From the premises of `GabbroZiel` on `P`:
-  * (a) `C.akzeptiert … = true` -- `C.korrekt` -> `AkzeptiertSpec P S fs ws`
-    -> `akzeptiertSpec_mitRuhe` -> `AkzeptiertSpec P.mitRuhe S.mitRuhe
-    (fsRuhe fs) (wsRuhe ws)` (Zielsatz/Ruhe.lean);
-  * (b) `NutzerPflicht P S Q` -> `nutzerPflicht_mitRuhe` -> the obligation on
-    `P.mitRuhe` with `S.mitRuhe` and `axEnsRuhe Q` (Zielsatz/RuheNutzer.lean);
-  * (c) `HardwareAnnahmen O Q` -> `hardware_mitRuhe` -> on `O.mitRuhe`;
-  * (d) `StartZulaessig P.mitRuhe …` as given.
+  THE CHAIN. From the premises of `GabbroZiel` on the program `E` (code
+  `E.P`, lock invariants `E.S`, axiom ensures `E.Q`, declared starts
+  `E.starts`, initial memory `E.sp0`; since 2026-09-15):
+  * (a) `C.akzeptiert E … = true` -- `C.korrekt` -> `AkzeptiertSpec E.P E.S
+    fs E.ws` -> `akzeptiertSpec_mitRuhe` -> `AkzeptiertSpec P.mitRuhe
+    S.mitRuhe (fsRuhe fs) (wsRuhe ws)` (Zielsatz/Ruhe.lean);
+  * (b) `NutzerPflicht E` = `LogikPflicht E.P E.S E.Q` (-> `logikPflicht_mitRuhe`
+    -> the obligation on `P.mitRuhe` with `S.mitRuhe` and `axEnsRuhe Q`,
+    Zielsatz/RuheNutzer.lean) and `StartPflicht E`;
+  * (c) `HardwareAnnahmen O E.Q` -> `hardware_mitRuhe` -> on `O.mitRuhe`;
+  * (d) `Laufzeit E sp init`, with `StartPflicht E` -> `startZulaessig_aus`
+    -> `StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) sp init`.
   `ziel_aus` then derives every leg of `Ziel` on ANY program meeting
-  `AkzeptiertSpec`, `NutzerPflicht`, `HardwareAnnahmen`, `StartZulaessig`
+  `AkzeptiertSpec`, `LogikPflicht`, `HardwareAnnahmen`, `StartZulaessig`
   (generic in the declaration), and is instantiated with `P.mitRuhe`.
 
   PER LEG (`ziel_aus`):

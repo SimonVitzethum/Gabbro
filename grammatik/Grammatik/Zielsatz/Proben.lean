@@ -2,35 +2,38 @@
   File:    Grammatik/Zielsatz/Proben.lean -- PLAN-ZIELSATZ.md step 5: the anti-vacuity
            obligations stated in `Zielsatz/SpecProben.lean`, PROVED.
 
-  Refutations (each fails a premise group of `GabbroZiel`):
-  * `probeA_widerlegt_gilt`      -- probe A (`paP`) fails (b) `NutzerPflicht`
-                                    (`paP_nicht_sperre`: `logik schleife` at budget 0);
-  * `probeD_widerlegt_gilt`      -- probe D (`fvP false`) fails (b) at budget 1 (`probeD_nicht`);
-  * `probeD_wahr_widerlegt_gilt` -- the `forever` variant with invariant `true` fails (b) at
-                                    budget 1 (`fwP_nicht`: returns under `ensures false`);
-  * `tabelle_widerlegt_gilt`     -- the table-invariant breaker `ivPschlecht` fails (b): its
-                                    `setze` returns with `konto[0] = 5`, `konto[1] = 0`;
-  * `ungeschuetzt_abgelehnt_gilt`-- an unguarded carrier one declared start reads (footprint)
-                                    and another writes fails (a) `AkzeptiertSpec`, for every
-                                    program.
-  The refutations of (b) hold for EVERY family of lock invariants with guarded carriers
-  that some memory satisfies (the form `NutzerWiderlegt` of SpecProben): `NutzerPflicht`
-  itself carries `SperrInvLokal`, so the family is well-formed (`SperrInvOk`).
+  Refutations of (b) `NutzerPflicht` -- for EVERY program `E` with the given code, with NO
+  side condition on its lock invariants (since 2026-09-15: `NutzerPflicht` carries a memory
+  meeting them, `E.sp0`, so `havocOk_misch_lokal` inhabits `HavocOk`):
+  * `probeA_widerlegt_gilt`      -- probe A (`paP`; `paP_nicht_sperre`: `logik schleife` at 0);
+  * `probeA_falsch_inv_nicht`    -- verdict P1: probe A with `invariant false` (`sFalsch`),
+                                    refuted by `StartPflicht.sperren`; the checker ACCEPTS
+                                    that program (`p1_akzeptiert`), so the refusal is (b)'s;
+  * `unerfuellbar_widerlegt`     -- P1 for the whole class: an unsatisfiable family refutes (b);
+  * `start_req_widerlegt`        -- a declared start whose `requires` fails at `E.sp0`;
+  * `probeD_widerlegt_gilt`      -- probe D (`fvP false`) at budget 1 (`probeD_nicht`);
+  * `probeD_wahr_widerlegt_gilt` -- the `forever` variant with invariant `true` (`fwP_nicht`);
+  * `tabelle_widerlegt_gilt`     -- the table-invariant breaker `ivPschlecht`.
+  Refutations of (a) `AkzeptiertSpec`, for every program:
+  * `ungeschuetzt_abgelehnt_gilt` -- one start reads (footprint), another writes;
+  * `zwei_schreiber_abgelehnt_gilt` (SpecProben) -- two starts write, payloads included (P3).
+  Verdict P2 (the starts are the program's):
+  * `akD_kein_zweiter_schreiber` -- no accepted program over `akD` has a runtime start running
+    both writers `a` and `b` (they would both be declared, and are then refused);
+  * `akP3_ohne_starts`           -- the same code declaring NO start is accepted, and the
+    statement then speaks about the runtime's root on every thread only.
+  Named restriction of (c): `register_ohne_traeger_konstant` -- `RegLokal` makes a register
+  without declared carriers constant.
 
-  Positives (all premise groups jointly, with an admissible start of `P.mitRuhe`):
-  * `zweiFaeden_erfuellbar_gilt` -- the two-thread program `mP` with its declared starts
-                                    `hauptA`, `hauptB`;
-  * `zweiFaeden_bewegt_gilt`     -- on that admissible start a machine of `mP.mitRuhe`
-                                    reached in ONE step of thread 0 (`privA[0] = 7`) has
-                                    changed memory;
-  * `probeB_erfuellbar_gilt`, `probeC_erfuellbar_gilt` -- probes B/C with `haupt` as the
-    DECLARED start (the statements fix `ws = [haupt]`, and `Erfuellbar` asks that every
-    declared start runs on some thread): `haupt` runs on thread 0 (`initRuhe [haupt]`), the
-    runtime's root on every other thread.
+  Positives (all premise groups jointly, with a runtime start (d) running every declared
+  start): `zweiFaeden_erfuellbar_gilt` (`mE`, threads 0 and 1), `zweiFaeden_bewegt_gilt`
+  (one step of thread 0 changes memory), `probeB_erfuellbar_gilt`, `probeC_erfuellbar_gilt`
+  (`zEB`, `zEC`, `haupt` on thread 0). The runtime's exact start is `initRuhe E.starts`
+  (`laufzeit_initRuhe`, Zielsatz/Ruhe.lean).
 
-  Applied (`gabbro_ziel_zeuge`): the proved `gabbro_ziel` (Zielsatz/Beweis.lean)
-  on `mP`, with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine
-  of `mP.mitRuhe` with changed memory.
+  Applied (`gabbro_ziel_zeuge`): the proved `gabbro_ziel` (Zielsatz/Beweis.lean) on `mE`,
+  with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine of
+  `mP.mitRuhe` with changed memory.
 -/
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Zielsatz.RuheZeuge
@@ -62,6 +65,20 @@ theorem p1_akzeptiert : Akzeptiert paP sFalsch zFs [()] [.inl ()] [zHaupt] = tru
 theorem unerfuellbar_widerlegt {D : Deklaration} (E : Einheit D)
     (hS : ¬ ∃ s : Speicher D, ∀ L, E.S.inv L s = true) : ¬ NutzerPflicht E :=
   fun h => hS ⟨E.sp0, h.start.sperren⟩
+
+/-- **The mechanism of the P1 repair**: under (b) the class of environment moves every body
+    obligation quantifies over is inhabited, so no lock family can empty those obligations. -/
+theorem havocOk_bewohnt {D : Deklaration} {E : Einheit D} (h : NutzerPflicht E) :
+    ∃ U : Umwelt D, HavocOk E.S U :=
+  ⟨_, havocOk_misch_lokal h.logik.2.1 (fun _ _ => E.sp0) (fun L _ => h.start.sperren L)⟩
+
+/-- A declared start whose `requires` fails at the declared initial memory with its declared
+    arguments refutes (b) (before 2026-09-15 it only made that start inadmissible, and its
+    body's obligation empty). -/
+theorem start_req_widerlegt {D : Deklaration} (E : Einheit D)
+    (a : Σ w : D.Fn, Env D (D.params w)) (ha : a ∈ E.starts)
+    (hf : ¬ ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2) : ¬ NutzerPflicht E :=
+  fun h => hf (h.start.req a ha)
 
 theorem probeD_widerlegt_gilt : probeD_widerlegt := by
   rintro ⟨P, S, Q, st, s⟩ hP h
@@ -105,6 +122,20 @@ theorem ungeschuetzt_abgelehnt_gilt : ungeschuetzt_abgelehnt := by
       rw [hw] at this
       cases this
   · exact hB L hL
+
+/-! ## 2b. A named restriction of the hardware class -/
+
+/-- **`RegLokal` makes a register without declared carriers a constant** (third verdict,
+    probe P3 there): with `D.rtraeger r = []` (no `depends`, the default) every world gets the
+    same answer, so a user proof may use that two reads of such a register agree -- which a
+    real volatile device register breaks. NAMED in Spec's assumption list, not repaired: G's
+    oracle answers a register read from the world alone, and the replay that links the
+    user's sequential proof to G (`regLies_gleich`) needs the answer to be a function of the
+    carriers the two worlds share. -/
+theorem register_ohne_traeger_konstant {D : Deklaration} {O : Orakel D} (h : RegLokal O)
+    (r : D.Reg) (hr : D.rtraeger r = []) (σ σ' : World D) : O.regLies r σ = O.regLies r σ' :=
+  h.1 r σ σ' ⟨fun _ ht => by rw [hr] at ht; exact absurd ht List.not_mem_nil,
+    fun _ hg => by rw [hr] at hg; exact absurd hg List.not_mem_nil⟩
 
 /-! ## 3. Verdict P2: the starts are the program's -/
 
@@ -258,6 +289,9 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_falsch_inv_nicht
 #print axioms Gabbro.Grammatik.Zielsatz.p1_akzeptiert
 #print axioms Gabbro.Grammatik.Zielsatz.unerfuellbar_widerlegt
+#print axioms Gabbro.Grammatik.Zielsatz.havocOk_bewohnt
+#print axioms Gabbro.Grammatik.Zielsatz.start_req_widerlegt
+#print axioms Gabbro.Grammatik.Zielsatz.register_ohne_traeger_konstant
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_wahr_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.tabelle_widerlegt_gilt
