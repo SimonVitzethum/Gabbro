@@ -187,3 +187,7 @@ import Grammatik.Parser.ElementTief
 import Grammatik.Parser.ElementTiefProben
 import Grammatik.Parser.Uebersetze
 import Grammatik.ZeugnisKorpus
+import Grammatik.HelferZeuge
+import Grammatik.SonstLeaveZeuge
+import Grammatik.ZielOrtInv
+import Grammatik.InvZeuge

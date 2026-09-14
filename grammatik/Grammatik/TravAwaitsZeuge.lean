@@ -216,11 +216,16 @@ theorem taHpFuelle : RufPasst taD (vertragVon taD taHaupt0) (taD.signatur taFuel
   hw := fun _ _ => rfl
   hg := fun _ h => by cases h
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
     · exact ⟨fun h => absurd (List.mem_singleton.mp h) taHeld_ne,
-        fun h => absurd (List.mem_singleton.mp h) taLock_ne⟩
+        fun h => absurd (List.mem_singleton.mp h) taLock_ne⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
+    · exact ⟨fun h => absurd (List.mem_singleton.mp h) taHeld_ne,
+        fun h => absurd (List.mem_singleton.mp h) taLock_ne⟩)
 
 def taRufFuelle : Stmt taD (vertragVon taD taHaupt0) false [] taLL (nach taD taFuelle taLL) :=
   .call taFuelle .nil taHpFuelle rfl
@@ -255,11 +260,16 @@ theorem taHpWarte : RufPasst taD (vertragVon taD taHaupt1) (taD.signatur taWarte
   hw := fun _ h => h
   hg := fun _ h => h
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun h => absurd (List.mem_singleton.mp h) (Ne.symm taHeld_ne),
         fun h => absurd (List.mem_singleton.mp h) (Ne.symm taLock_ne)⟩
-    · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
+    · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    · exact ⟨fun h => absurd (List.mem_singleton.mp h) (Ne.symm taHeld_ne),
+        fun h => absurd (List.mem_singleton.mp h) (Ne.symm taLock_ne)⟩
+    · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩)
 
 def taRufWarte : Stmt taD (vertragVon taD taHaupt1) false [] taKL (nach taD taWarte taKL) :=
   .call taWarte .nil taHpWarte rfl

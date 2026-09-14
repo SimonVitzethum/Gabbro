@@ -78,43 +78,43 @@ theorem zP_laeufe : ∃ (M3 M10 M12 M17 : RufMaschineG zD) (rho : Env zD (zD.par
     rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := zP) (O := zO) (passes := 0) hZ2.1 zWrap .nil zHpWrap
     rfl _ _ .nil rfl
-    (hgL (hoff_z hZ2 hoff2))
+    (hgL (hoff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
     rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
-    (hgL (hoff_z hZ3 hoff3))
+    (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ4.1
     (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
-    (hgL (hoff_z hZ4 hoff4))
+    (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hZ5.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 1).spur = [()] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
     (.ret .keine (by rfl)) .nil rfl
-    (hgL (hoff_g hG6 hoff6))
+    (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6
   obtain ⟨M8, s8, hZ8⟩ := w_blatt (P := zP) (O := zO) (passes := 0) hZ7.1
     _ _ _ rfl rfl
-    (hgL (hoff_z hZ7 hoff7)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    (hgL (hoff_z hZ7 hoff7)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff8 : offen (M8.faeden 1).spur = [()] := by
     rw [hZ8.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff7
   obtain ⟨M9, s9, hG9⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hZ8.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_z hZ8 hoff8)).heldIn
   have hoff9 : offen (M9.faeden 1).spur = [()] := by
     rw [hG9.1]
     exact ((Erw.lese _ _ _).offen).trans hoff8
   obtain ⟨M10, s10, hG10⟩ := w_rueckP (P := zP) (O := zO) (passes := 0) hG9.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9))
+    (PopArt.wie rfl) _ _ _ rfl (hgL (hoff_g hG9 hoff9)).heldIn
   obtain ⟨M11, s11, hZ11⟩ := w_dannLeer (P := zP) (O := zO) (passes := 0) hG10.1 _ .nil rfl
   obtain ⟨M12, s12, hZ12⟩ := w_freiGib (P := zP) (O := zO) (passes := 0) hZ11.1 () _ .nil rfl
   have hoff10 : offen (M10.faeden 1).spur = [()] := by
@@ -153,17 +153,17 @@ theorem zP_laeufe : ∃ (M3 M10 M12 M17 : RufMaschineG zD) (rho : Env zD (zD.par
     rfl
   obtain ⟨M15, s15, hZ15⟩ := w_rufDann (P := zP) (O := zO) (passes := 0) hZ14.1 zWrap .nil zHpWrap
     rfl _ _ .nil rfl
-    (hgL (hoff_z hZ14 hoff14))
+    (hgL (hoff_z hZ14 hoff14)).heldIn
   have hoff15 : offen (M15.faeden 0).spur = [()] := by
     rw [hZ15.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff14
   obtain ⟨M16, s16, hZ16⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ15.1 zLies .nil zHpLies
     rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
-    (hgL (hoff_z hZ15 hoff15))
+    (hgL (hoff_z hZ15 hoff15)).heldIn
   have hoff16 : offen (M16.faeden 0).spur = [()] := by
     rw [hZ16.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff15
   obtain ⟨M17, s17, hZ17⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ16.1
     (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
-    (hgL (hoff_z hZ16 hoff16))
+    (hgL (hoff_z hZ16 hoff16)).heldIn
   have h17_1 : M17.faeden 1 = M12.faeden 1 := by
     rw [rufSchrittG_fremd s17 1 (by decide), rufSchrittG_fremd s16 1 (by decide),
       rufSchrittG_fremd s15 1 (by decide), rufSchrittG_fremd s14 1 (by decide),
@@ -244,13 +244,14 @@ instance rufDF_fn_deq : DecidableEq rufDF.Fn := inferInstanceAs (DecidableEq Boo
 
 theorem hP_start_fn : (initF 0).1 = rufCallerF := rfl
 theorem hP_tief : rufTief hP 2 (initF 0).1 = true := by decide
-theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 18 := by decide
+theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 20 := by decide
 
 /-- **`frame_schritte_beschraenkt_zeuge_schleife`.** The start frame of
     `hP` (thread 0, the driver `false`) runs `retry 1 { let x = true(…);
-    leave; }` and then its return: the bound by call depth is 18 (the
+    leave; }` and then its return: the bound by call depth is 20 (the
     loop's one try is counted once: body plus `until` plus the loop
-    bookkeeping, the callee's 5 inside it), and the witness run of
+    bookkeeping, the callee's 5 inside it, and 2 more for the check of
+    `until` after the last try since the `retry` correction), and the witness run of
     RufMaschineG §10 takes 9 own steps (`endeEntf`, `dannRetry`,
     `wiederSchritt` with `until` false, the `dannBindCall` push, the
     callee's leaf, `rueckBind` into the waiting binder, `peelSchrumpfLeave`,
@@ -258,7 +259,7 @@ theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 18 := by decide
     included, since they are steps of thread 0 while the driver's frame is
     below them. -/
 theorem frame_schritte_beschraenkt_zeuge_schleife :
-    rufTief hP 2 (initF 0).1 = true ∧ kostenTief hP 0 2 (initF 0).1 = 18 ∧
+    rufTief hP 2 (initF 0).1 = true ∧ kostenTief hP 0 2 (initF 0).1 = 20 ∧
     ∃ lauf : SegLauf hP rufOF 0 M0H H9H,
       aktivVor 0 0 lauf ∧ segZaehle lauf 0 = 9 ∧
       segZaehle lauf 0 ≤ kostenTief hP 0 2 (initF 0).1 := by

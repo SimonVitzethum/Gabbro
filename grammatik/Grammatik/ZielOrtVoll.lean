@@ -187,15 +187,16 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     exact ZErg.folgt_of_eq h1
   | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenV_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenV_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have he' : eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ = eval σ₁ e σ₁ ρ := by
       rw [hs₁]; exact eval_gleichAuf e (fun _ h => hes h) (hg.lese Λ Λ e.orte e.orte) ρ
     have h' : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
         (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') := by rw [he']; exact h
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, okV_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' => semV_narrowElse O' passes R e lo' hi' sonst rest k σ ρ h'⟩
   | dannPruefWahr l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -209,13 +210,14 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       fun R O' => ZErg.folgt_of_eq (semV_pruefWahr O' passes R c sonst rest k σ ρ hw')⟩
   | dannPruefFalsch l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenV_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenV_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hc, hsS, _⟩ := teile2 hss
     have hw' : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false := by
       rw [eval_gleichAuf c (fun _ h => hc h) (hg.lese Λ Λ c.orte c.orte) ρ, ← hs₁]; exact hw
-    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg, okV_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' => semV_pruefFalsch O' passes R c sonst rest k σ ρ hw'⟩
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -285,9 +287,13 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       fun R O' => ZErg.folgt_of_eq (semV_dannRetry O' passes R n bis body ueber rest k σ ρ)⟩
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenV_lokal hF hhead ρ (.dann ueber k) (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨_, _, _, hu, huS, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨hu, huS, hk⟩,
+    refine ⟨fadenV_lokal hF hhead ρ (.dann (.cons (.ite bis .nil ueber) .nil) k) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hbS, _, _, hu, huS, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨by simp_all [Block.vOk, Stmt.vOk],
+      fun x hx => by
+        simp only [blockOrteP, stmtOrteP, List.append_nil, List.mem_append] at hx
+        rcases hx with h | h <;> first | exact hbS h | exact huS h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_wiederUeber O' passes R bis body ueber k σ ρ)⟩
   | wiederWeiter l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -441,6 +447,18 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     exact ⟨σ.gibt L, Nat.le_succ _, hg,
       ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelFrei O' passes R L rest k σ ρ hnext false)⟩
+  | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenV_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
+    obtain ⟨_, _, _, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      fun R O' => ZErg.folgt_of_eq (semV_peelAbbruch O' passes R rest k σ ρ hleave true)⟩
+  | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenV_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
+    obtain ⟨_, _, _, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      fun R O' => ZErg.folgt_of_eq (semV_peelAbbruch O' passes R rest k σ ρ hnext false)⟩
   | dannExchange l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenV_lokal hF hhead (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₂.spur
@@ -513,13 +531,14 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       fun R O' => ZErg.folgt_of_eq (semV_gleitNarrowOk O' passes R e lo hi sonst rest k σ ρ v hv')⟩
   | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenV_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenV_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have hn' : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none := by
       rw [eval_gleichAuf e (fun _ h => hes h) (hg.lese Λ Λ e.orte e.orte) ρ, ← hs₁]; exact hn
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, okV_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' => semV_gleitNarrowElse O' passes R e lo hi sonst rest k σ ρ hn'⟩
   -- the axiom bind
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
@@ -662,10 +681,8 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | grund σa r =>
             intro _ _ _ _ _ _ _ _ _ _ hc hn
             cases hc
-            have h1 := weiterZ_ende_folgt O' passes R k
-              (execEnd O' passes R err σa (.cons r ρ)).schrumpf
-            rw [zErg_schrumpf] at h1
-            exact h1
+            rw [semV_alsBlock_schrumpf]
+            exact ZErg.folgt_refl _
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -898,8 +915,10 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
     refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
-      (fun hokc => ⟨(rest_okV hcaller hokc).1, (rest_okV hcaller hokc).2.1⟩)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
+      (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
+        (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
       (fun R O' σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -911,8 +930,10 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
     refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
-      (fun hokc => ⟨(rest_okV hcaller hokc).1, (rest_okV hcaller hokc).2.1⟩)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
+      (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
+        (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
       (fun R O' σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -924,8 +945,10 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
     refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
-      (fun hokc => ⟨(rest_okV hcaller hokc).1, (rest_okV hcaller hokc).2.1⟩)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
+      (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
+        (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
       (fun R O' σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   -- every other rule: the head residue is outside the fragment
@@ -1084,7 +1107,8 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
       (M'.faeden u).stapel = rst ∧
       (M'.faeden u).kopf =
         ⟨caller.f, caller.rho, caller.s0,
-          ⟨l, .grund n :: Γ, Λ, Env.cons (τ := .grund n) (Fin.cast hn r) ρc, .ende err⟩⟩ := by
+          ⟨l, .grund n :: Γ, Λ, Env.cons (τ := .grund n) (Fin.cast hn r) ρc,
+            .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩ := by
   cases hs with
   | rueckGrund r0 hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g' hfg rho'
       hrho s0' hs0 rg hrg hn =>

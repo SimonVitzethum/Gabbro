@@ -57,7 +57,8 @@
     Bytes und `format` als Sicht               -> `Expr.leseBytes`, `Stmt.schreibBytes`
     `transition` mit Spiegel, Registerzusage   -> `Stmt.transition`, `D.spiegel`, `D.rzusage`
     `awaits` und das Speichermodell            -> `Orakel.sichtbar`, `Hardware.sichtbarkeit`
-    `requires Held(L)` GENAU                   -> `RufPasst.hh` (↔), `Signatur.haelt`
+    `requires Held(L)`                         -> `RufPasst.hh` (⊆ since 2026-09-13; `hx`/`hb`
+                                               with the lock floor `Signatur.boden`), `Signatur.haelt`
     `shared`, U003 als Erklaerung              -> `D.geteilt`, `D.invarianten_gehalten`
     Faeden                                     -> `Wettlauf.lean` (Lauf, Gesittet, HB)
 
@@ -86,6 +87,14 @@ structure Signatur (Tab Glob Lock Marke : Type) where
   /-- `effects { consumes m }` / `allocs m` -- die Marken mit ihrer STUFE (`order`). -/
   konsumiert : List (Marke × Nat)
   produziert : List (Marke × Nat)
+  /-- The lock FLOOR (2026-09-13, held-set relaxation): `some c` -- the body
+      takes only locks of rank at least `c` (`Stmt.ueberBoden`, a program
+      fact, `StufenOk`), so a caller may hold, beyond `haelt`, any lock of
+      rank below `c` while this function runs (`RufPasst.hx`); `none` -- no
+      lock beyond `haelt` may be held at entry (the old exact held set). The
+      checker's counterpart is its interprocedural `H006`/`H003` walk; the
+      value is computed from the call graph, not written by the user. -/
+  boden : Option Int := none
 
 /-- Die Klasse eines Geraeteregisters (`class r | w | rw | w1c | rc`). -/
 inductive Regklasse where
@@ -249,9 +258,11 @@ structure Vertrag where
   gruende : Nat
   haelt : List D.Lock
   produziert : List (D.Marke × Nat)
+  /-- The lock floor of the function (`Signatur.boden`). -/
+  boden : Option Int := none
 
 def Vertrag.vonSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Vertrag D :=
-  ⟨S.schreibt, S.gschreibt, S.erg, S.gruende, S.haelt, S.produziert⟩
+  ⟨S.schreibt, S.gschreibt, S.erg, S.gruende, S.haelt, S.produziert, S.boden⟩
 
 /-- Was ein Rumpf am Ende in der Hand haben muss: seine Zeugnisse und die erzeugten Marken. -/
 def Vertrag.ende (V : Vertrag D) : List (Res D) :=
@@ -267,10 +278,40 @@ structure RufPasst (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (�
   hw : ∀ t, S.schreibt t = true → V.schreibt t = true
   hg : ∀ g, S.gschreibt g = true → V.gschreibt g = true
   hk : Untermulti (S.konsumiert.map (Res.vonMarke D)) Λ
-  /-- `requires Held(L)` des Gerufenen nennt GENAU die Zeugnisse, die der Rufer haelt: die
-      Sperrmenge ist Teil des Vertrags. Nur so kann der Rang eines `locks` im Gerufenen gegen
-      ALLES Gehaltene stehen (`H006` ueber Rufgrenzen hinweg). -/
-  hh : ∀ L, Res.held L ∈ Λ ↔ L ∈ S.haelt
+  /-- Every lock the callee requires (`requires Held(L)`) is held by the caller:
+      the callee's held set is a SUBSET of the caller's (relaxed 2026-09-13 from
+      the exact held set, verdict note T -- what the checker accepts). The
+      caller's extra locks stay held for the whole callee frame; the callee
+      neither names, releases nor re-takes them. -/
+  hh : ∀ L, L ∈ S.haelt → Res.held L ∈ Λ
+  /-- An extra lock (held by the caller, not required by the callee) ranks
+      below the callee's floor: so every `locks M` of the callee (rank at least
+      the floor, `StufenOk`) still ranks above EVERYTHING held (`H006` across
+      the call boundary) and never re-takes a held lock (`H003`). Vacuous
+      for an exact held set. -/
+  hx : ∀ L, Res.held L ∈ Λ → L ∉ S.haelt → ∃ c, S.boden = some c ∧ D.rang L < c := by
+    intro L hL; first
+      | exact absurd hL (by simp)
+      | exact nomatch L
+      | (intro hn; exact absurd hL (by simp_all))
+  /-- The caller's own floor is at most the callee's: locks the caller runs
+      under without naming them (its own extras) stay below the callee's floor. -/
+  hb : ∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c' := by
+    intro c hc; first
+      | cases hc
+      | (simp at hc)
+      | exact ⟨c, hc, Int.le_refl c⟩
+
+/-- The exact held set (the form before 2026-09-13) gives the relaxed `hh`. -/
+theorem RufPasst.hh_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}
+    (h : ∀ L, Res.held L ∈ Λ ↔ L ∈ S.haelt) : ∀ L, L ∈ S.haelt → Res.held L ∈ Λ :=
+  fun L hL => (h L).mpr hL
+
+/-- ... and makes `hx` vacuous: there is no extra lock. -/
+theorem RufPasst.hx_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}
+    (h : ∀ L, Res.held L ∈ Λ ↔ L ∈ S.haelt) :
+    ∀ L, Res.held L ∈ Λ → L ∉ S.haelt → ∃ c, S.boden = some c ∧ D.rang L < c :=
+  fun L hL hn => absurd ((h L).mp hL) hn
 
 /-! ## 2. Sichtbereich und Variablen -/
 

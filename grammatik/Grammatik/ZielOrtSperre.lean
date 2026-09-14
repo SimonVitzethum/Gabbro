@@ -198,15 +198,16 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     exact ZErg.folgt_of_eq h1
   | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenS_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenS_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have he' : eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ = eval σ₁ e σ₁ ρ := by
       rw [hs₁]; exact eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => hes h') h) (hg.lese Λ Λ e.orte e.orte) ρ
     have h' : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
         (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') := by rw [he']; exact h
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, okS_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' U => semH_narrowElse S O' U passes R e lo' hi' sonst rest k σ ρ h'⟩
   | dannPruefWahr l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -220,13 +221,14 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       fun R O' U => ZErg.folgt_of_eq (semH_pruefWahr S O' U passes R c sonst rest k σ ρ hw')⟩
   | dannPruefFalsch l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenS_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenS_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hc, hsS, _⟩ := teile2 hss
     have hw' : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false := by
       rw [eval_gleichAuf c (fun _ h => expr_stabil (hFS _) c (fun _ h' => hc h') h) (hg.lese Λ Λ c.orte c.orte) ρ, ← hs₁]; exact hw
-    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ c.orte, lese_laenge _ _ _, hg, okS_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' U => semH_pruefFalsch S O' U passes R c sonst rest k σ ρ hw'⟩
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -297,9 +299,13 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       fun R O' U => ZErg.folgt_of_eq (semH_dannRetry S O' U passes R n bis body ueber rest k σ ρ)⟩
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenS_lokal hF hhead ρ (.dann ueber k) (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨_, _, _, hu, huS, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨hu, huS, hk⟩,
+    refine ⟨fadenS_lokal hF hhead ρ (.dann (.cons (.ite bis .nil ueber) .nil) k) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hbS, _, _, hu, huS, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨by simp_all [Block.gOk, Stmt.gOk],
+      fun x hx => by
+        simp only [blockOrteP, stmtOrteP, List.append_nil, List.mem_append] at hx
+        rcases hx with h | h <;> first | exact hbS h | exact huS h, hk⟩,
       fun R O' U => ZErg.folgt_of_eq (semH_wiederUeber S O' U passes R bis body ueber k σ ρ)⟩
   | wiederWeiter l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -447,6 +453,22 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
   | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     exact ⟨fadenS_peelFrei hO hRL hQ hS hsp hK hF L rest k ρ hnext false hhead _, hL⟩
+  | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenS_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
+    obtain ⟨_, _, hiff, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _,
+      gleichAuf_stabil_iff (fun L => (hiff L).trans (Block.held_iff rest L)) hg,
+      ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      fun R O' U => ZErg.folgt_of_eq (semH_peelAbbruch S O' U passes R rest k σ ρ hleave true)⟩
+  | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenS_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
+    obtain ⟨_, _, hiff, hk⟩ := hok
+    exact ⟨σ, Nat.le_refl _,
+      gleichAuf_stabil_iff (fun L => (hiff L).trans (Block.held_iff rest L)) hg,
+      ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      fun R O' U => ZErg.folgt_of_eq (semH_peelAbbruch S O' U passes R rest k σ ρ hnext false)⟩
   | dannExchange l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenS_lokal hF hhead (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₂.spur
@@ -519,13 +541,14 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       fun R O' U => ZErg.folgt_of_eq (semH_gleitNarrowOk S O' U passes R e lo hi sonst rest k σ ρ v hv')⟩
   | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenS_lokal hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenS_lokal hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     obtain ⟨hkS, _⟩ := and_teile hks
     obtain ⟨hes, hsS, _⟩ := teile2 hss
     have hn' : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none := by
       rw [eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => hes h') h) (hg.lese Λ Λ e.orte e.orte) ρ, ← hs₁]; exact hn
-    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, ⟨hkS, hsS⟩,
+    exact ⟨σ.lese Λ e.orte, lese_laenge _ _ _, hg, okS_alsBlock sonst k rest.held_iff hkS hsS hrk,
       fun R O' U => semH_gleitNarrowElse S O' U passes R e lo hi sonst rest k σ ρ hn'⟩
   -- the axiom bind
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
@@ -694,10 +717,8 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
         | grund σa r =>
             intro _ _ _ _ _ _ _ _ _ _ hc hn
             cases hc
-            have h1 := weiterH_ende_folgt S O' U passes R k
-              (execEndH S O' U passes R err σa (.cons r ρ)).schrumpf
-            rw [zErg_schrumpf] at h1
-            exact h1
+            rw [semH_alsBlock_schrumpf]
+            exact ZErg.folgt_refl _
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -966,9 +987,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     rw [hpop] at hRS'
     refine ⟨⟨popS_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
-      (fun hokc => ⟨(rest_okS hcaller hokc).1, (rest_okS hcaller hokc).2.1⟩)
+      (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1
+        (rest_okS hcaller hokc).2.1 (rest_okS hcaller hokc).2.2.2.2)
       (fun R O' U σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -983,9 +1006,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     rw [hpop] at hRS'
     refine ⟨⟨popS_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
-      (fun hokc => ⟨(rest_okS hcaller hokc).1, (rest_okS hcaller hokc).2.1⟩)
+      (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1
+        (rest_okS hcaller hokc).2.1 (rest_okS hcaller hokc).2.2.2.2)
       (fun R O' U σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -1000,9 +1025,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     rw [hpop] at hRS'
     refine ⟨⟨popS_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc) (.ende err)
+      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
-      (fun hokc => ⟨(rest_okS hcaller hokc).1, (rest_okS hcaller hokc).2.1⟩)
+      (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1
+        (rest_okS hcaller hokc).2.1 (rest_okS hcaller hokc).2.2.2.2)
       (fun R O' U σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
       logOk_grund hL⟩
   -- register reads and `awaits`: the sequential oracle answers what the machine read
@@ -1040,8 +1067,9 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
   | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu
       hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    refine ⟨fadenS_lokalQ hF hhead ρ (.ende sonst) σ₁.spur (fun σ hg hok => ?_), hL⟩
-    obtain ⟨hks, hss, _⟩ := hok
+    refine ⟨fadenS_lokalQ hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hks, hss, hrk⟩ := hok
     simp only [Block.gOk, Bool.and_eq_true] at hks
     simp only [blockOrteP, List.append_subset] at hss
     obtain ⟨⟨hzS, hsS⟩, _⟩ := hss
@@ -1050,7 +1078,8 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       rw [eval_gleichAuf zusage (fun _ h => expr_stabil (hFS _) zusage (fun _ h' => hzS h') h)
         (hg.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
       exact hw
-    refine ⟨σ.lese Λ zusage.orte, lese_laenge _ _ _, hg, ⟨hks.2.1, hsS⟩, fun R O' U hQ => ?_⟩
+    refine ⟨σ.lese Λ zusage.orte, lese_laenge _ _ _, hg,
+      okS_alsBlock sonst k rest.held_iff hks.2.1 hsS hrk, fun R O' U hQ => ?_⟩
     have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
       regLies_gleich hRL hQ r (regP_stabil (Λ := Λ) hks.1) hg
     exact semH_regLiesElseFalsch S O' U passes R r hk zusage sonst rest k σ ρ v
@@ -1316,6 +1345,28 @@ theorem ziel_ort_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
     fun t => fadenS_prueft hO hRL hQ hS hSstart hK hFS t (hI.1.1 t)
   exact ⟨fun t ev hev => hI.1.2 t ev hev, hI.2, hP, fun t hH hA => schritt_an_pruefung t (hP t) hH hA⟩
 
+/-- **Progress at every check, UNCONDITIONALLY** (held-set relaxation,
+    2026-09-13): the rules of G now demand `HeldIn` of the head's holdings,
+    which holds on every reachable machine (`rufG_haelt_statisch`), so the
+    `HeldGenau` hypothesis of the progress conjunct of `ziel_ort_sperre` is
+    no longer needed: on every reachable machine a thread standing at a
+    `logik` check can step. -/
+theorem ziel_ort_sperre_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
+    ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
+      ∀ t : Faden, AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
+  intro M hr t hA
+  have hZ := ziel_ort_sperre P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK
+    hStart hSstart hex M hr
+  exact schritt_an_pruefungI t (hZ.2.2.1 t)
+    (fun L hL => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL) hA
+
 /-- **A start without signature locks is exclusive**: when every thread's
     root takes its locks in `locks` blocks (holds none by signature),
     `StartExklusiv` holds for ANY assignment -- the same routine may run on
@@ -1382,11 +1433,13 @@ theorem ziel_ort_ganz_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) 
     frame already holds (no other thread can have changed it; the class is
     conservative, the user proves slightly more than needed for nested
     locks).
-  - The held-set EQUALITY of `RufPasst.hh` is unchanged: a callee's
-    signature locks are exactly the caller's held locks (verdict note T).
-    Relaxing it to an inclusion needs G's `HeldGenau` side condition (an
-    equality on every reading rule) and the rank discipline across calls
-    to change first; not done.
+  - Held-set relaxation (2026-09-13, verdict note T): `RufPasst.hh` is now
+    an inclusion (the callee's signature locks are among the caller's held
+    locks), with lock floors (`Signatur.boden`, `RufPasst.hx`/`hb`) for the
+    rank discipline across calls; G's side condition is `HeldIn`. The
+    theorem above needed no change; `ziel_ort_sperre_fortschritt` drops the
+    `HeldGenau` hypothesis of the progress conjunct. Witness: `helfer_zeuge`
+    (`HelferZeuge.lean`).
   - A carrier read from only ONE thread still needs a guard, a signature
     lock or no writer (`sicher`); a concurrency-aware exemption needs the
     call graph of each thread, which no invariant of G carries yet.
@@ -1401,6 +1454,7 @@ theorem ziel_ort_ganz_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) 
 #print axioms Gabbro.Grammatik.akteurS
 #print axioms Gabbro.Grammatik.zielInvS_erreichbar
 #print axioms Gabbro.Grammatik.ziel_ort_sperre
+#print axioms Gabbro.Grammatik.ziel_ort_sperre_fortschritt
 #print axioms Gabbro.Grammatik.ziel_ort_ganz_aus_sperre
 
 end Gabbro.Grammatik

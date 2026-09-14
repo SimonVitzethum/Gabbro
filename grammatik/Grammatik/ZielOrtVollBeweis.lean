@@ -339,7 +339,8 @@ def FortV (F : RufRahmenG D) (g : D.Fn) (X : ZErg (vertragVon D F.f))
         (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ →
         ∀ hn : D.gruende g = n,
-          X.folgt (semV O' passes R (.ende err) σa (.cons (Fin.cast hn r) ρc))
+          X.folgt (semV O' passes R (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σa
+            (.cons (Fin.cast hn r) ρc))
   | _ => True
 
 /-- **The replay of a suspended frame** `F` waiting for the callee with key

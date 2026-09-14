@@ -345,12 +345,12 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       offen (M'.faeden u).spur = (offen (M.faeden u).spur).erase L) := by
   have hgross : ∀ {a b : List D.Lock}, a = b → ∀ L, L ∈ b → L ∈ a := fun e L h => e ▸ h
   cases hs with
-  | blatt l Γ Λ Λ' s rest ρ _ _ hΛ σ' ρ' _ hstep =>
+  | blatt l Γ Λ Λ' s rest ρ hleaf _ hΛ σ' ρ' _ hstep =>
       simp only [rufUpdateG_self]
-      exact Or.inl (hgross (blatt_offen hO s _ ρ hΛ σ' ρ' hstep))
-  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ _ _ hΛ σ' ρ' _ hstep =>
+      exact Or.inl (hgross (blatt_offen hO s hleaf _ ρ hΛ σ' ρ' hstep))
+  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf _ hΛ σ' ρ' _ hstep =>
       simp only [rufUpdateG_self]
-      exact Or.inl (hgross (blatt_offen hO s _ ρ hΛ σ' ρ' hstep))
+      exact Or.inl (hgross (blatt_offen hO s hleaf _ ρ hΛ σ' ρ' hstep))
   | dannLocks l Γ Λ Λ'' L _ _ _ _ _ _ _ _ hfrei =>
       simp only [rufUpdateG_self]
       exact Or.inl fun K hK => List.mem_cons_of_mem _ hK

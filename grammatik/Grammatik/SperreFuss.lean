@@ -246,7 +246,7 @@ theorem vertrag_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
     (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ :=
   fun _ ho => stabil_of_fuss hF (h ho) fun L hB =>
-    (hp.hh L).mpr (vertrag_darf P g _ ho L hB)
+    hp.hh L (vertrag_darf P g _ ho L hB)
 
 /-- The same for a callee named through a pointer of signature `n`. -/
 theorem vertrag_stabil_ind {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
@@ -303,6 +303,8 @@ def GRest.okS (P : Programm D) (S S' : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} 
   | _, _, _, .wartetSonst _ err b k =>
       err.gOk (kandP P S) (regP S') = true ∧ endblockOrteP P err ⊆ S ∧
         b.gOk (kandP P S) (regP S') = true ∧ blockOrteP P b ⊆ S ∧ k.okS P S S'
+  | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
+      (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okS P S S'
 
 section OkS
 
@@ -324,6 +326,15 @@ theorem okS_ende_cons {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
   simp only [Endblock.gOk, Bool.and_eq_true] at hk
   simp only [endblockOrteP] at hs
   exact ⟨hk.1, (teil_append hs).1, hk.2, (teil_append hs).2⟩
+
+/-- **The residue of an `else` branch is in the fragment** (as
+    `okV_alsBlock`). -/
+theorem okS_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GRest D V l Γ Λk)
+    (hΛ : ∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) (he : e.gOk (kandP P S) (regP S') = true)
+    (heS : endblockOrteP P e ⊆ S) (hk : k.okS P S S') :
+    (GRest.dann e.alsBlock.2 (.abbruch k)).okS P S S' :=
+  ⟨by rw [Endblock.gOk_alsBlock]; exact he, by rw [blockOrteP_alsBlock]; exact heS,
+    fun L => (hΛ L).trans (e.alsBlock.2.held_iff L).symm, hk⟩
 
 end OkS
 

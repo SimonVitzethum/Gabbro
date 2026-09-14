@@ -326,6 +326,7 @@ def semZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .ewigRest .., _, _ => .sonst
   | _, _, _, .wartet .., _, _ => .sonst
   | _, _, _, .wartetSonst .., _, _ => .sonst
+  | _, _, _, .abbruch .., _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachZ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
@@ -529,6 +530,14 @@ theorem semZ_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.
   rw [semZ_dann O passes R (.narrow e lo' hi' sonst rest), execBlock_narrowK]
   unfold narrowWeiterK
   rw [dif_pos h, nachZ_schrumpf, semZ_dann]
+
+/-- An end block run as a block in front of any continuation means the end
+    block (it never ends normally). -/
+theorem semZ_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ)
+    (k : GRest D V l Γ Λk) (σ : World D) (ρ : Env D Γ) :
+    semZ O passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ = semZ O passes R (.ende e) σ ρ := by
+  rw [semZ_dann, Endblock.execBlock_alsBlock, nachZ_zuAusgang]
+  rfl
 
 theorem semZ_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
@@ -741,6 +750,7 @@ def GRest.okZ (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
   | _, _, _, .ewig .. => False
   | _, _, _, .ewigRest .. => False
   | _, _, _, .wartetSonst .. => False
+  | _, _, _, .abbruch k => k.okZ P S
 
 theorem teil_append {α : Type} {a b S : List α} (h : a ++ b ⊆ S) : a ⊆ S ∧ b ⊆ S :=
   ⟨fun _ hx => h (List.mem_append_left _ hx), fun _ hx => h (List.mem_append_right _ hx)⟩

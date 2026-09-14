@@ -161,6 +161,17 @@ def GrundArms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 end
 
+theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg : D.Reg → Bool) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.gOk K Rg = e.gOk K Rg
+  | _, _, .ret _ _ => rfl
+  | _, _, .retGrund _ _ => rfl
+  | _, _, .leave _ => rfl
+  | _, _, .next _ => rfl
+  | _, _, .cons s rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bind _ rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+
 /-! ### The registers a body reads -/
 
 mutual
@@ -531,6 +542,8 @@ def GRest.okG (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
   | _, _, _, .wartetSonst _ err b k =>
       err.gOk (kandP P S) (regP S) = true ∧ endblockOrteP P err ⊆ S ∧
         b.gOk (kandP P S) (regP S) = true ∧ blockOrteP P b ⊆ S ∧ k.okG P S
+  | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
+      (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okG P S
 
 section OkG
 
@@ -552,6 +565,15 @@ theorem okG_ende_cons {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
   simp only [Endblock.gOk, Bool.and_eq_true] at hk
   simp only [endblockOrteP] at hs
   exact ⟨hk.1, (teil_append hs).1, hk.2, (teil_append hs).2⟩
+
+/-- **The residue of an `else` branch is in the fragment** (as
+    `okV_alsBlock`). -/
+theorem okG_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GRest D V l Γ Λk)
+    (hΛ : ∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) (he : e.gOk (kandP P S) (regP S) = true)
+    (heS : endblockOrteP P e ⊆ S) (hk : k.okG P S) :
+    (GRest.dann e.alsBlock.2 (.abbruch k)).okG P S :=
+  ⟨by rw [Endblock.gOk_alsBlock]; exact he, by rw [blockOrteP_alsBlock]; exact heS,
+    fun L => (hΛ L).trans (e.alsBlock.2.held_iff L).symm, hk⟩
 
 end OkG
 
@@ -590,10 +612,11 @@ theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rkla
     (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semV O passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
-      (semV O passes R (.ende sonst) (σ.lese Λ zusage.orte) ρ) := by
+      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hw, Bool.false_eq_true, if_false]
-  exact weiterZ_ende_folgt O passes R k _
+  rw [semV_alsBlock]
+  exact ZErg.folgt_refl _
 
 theorem semV_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')

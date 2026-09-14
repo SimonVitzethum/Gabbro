@@ -142,18 +142,20 @@ theorem ziel_deterministisch (P : Programm D) (O : Orakel D) (passes fuel : Nat)
 
 /-- Der Rahmen: ein Rumpf schreibt nur, was sein Vertrag nennt. -/
 theorem ziel_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
+    (hP : StufenOk P)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
     ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' →
       Rahmen V.schreibt V.gschreibt σ σ' :=
-  exec_rahmen P O passes fuel hO b σ ρ hh
+  exec_rahmen P O passes fuel hO hP b σ ρ hh
 
 /-- Die Spur: jeder Zugriff traegt die Waechter seines Traegers. -/
 theorem ziel_spur (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
+    (hP : StufenOk P)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
     ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' →
       σ'.haelt = σ.haelt ∧ (∀ e ∈ σ'.spur, e ∈ σ.spur ∨ e.gut) ∧
       (Konsistent σ.spur → Konsistent σ'.spur) :=
-  exec_spur P O passes fuel hO b σ ρ hh
+  exec_spur P O passes fuel hO hP b σ ρ hh
 
 /-- Kein Datenwettlauf auf einem Traeger -- ueber jeder Verschraenkung. -/
 theorem ziel_wettlauf (l : Lauf D) (hg : Gesittet l) (i j : Nat) (hij : i < j)
@@ -205,10 +207,11 @@ theorem ziel_ordnung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
     event is good, and a consistent trace stays consistent. This is `exec_spur`
     read as `Brav` -- one provenance witness per body. -/
 theorem ziel_brav_aus_exec (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
+    (hP : StufenOk P)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
     Brav σ σ' :=
-  exec_spur P O passes fuel hO b σ ρ hh σ' h
+  exec_spur P O passes fuel hO hP b σ ρ hh σ' h
 
 /-- The narrowed trace class: per-thread `exec` provenance (`Brav` from empty
     traces, closed per body by `ziel_brav_aus_exec`), the interleaving shape,

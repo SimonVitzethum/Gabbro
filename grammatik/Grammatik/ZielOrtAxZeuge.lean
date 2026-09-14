@@ -154,7 +154,7 @@ theorem w_bindAxiom {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : 
         (.dann rest (.schrumpf k)) σ₂ := by
   subst hz
   exact ⟨_, RufSchrittG.dannBindAxiom M f l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead _ rfl
-    σ₂ v hax neu hneu hΛ, zustandG_neu rfl rfl⟩
+    σ₂ v hax neu hneu hΛ.heldIn, zustandG_neu rfl rfl⟩
 
 theorem axHgL {s : List (Ereignis axD)} (h : offen s = [()]) : HeldGenau axL (offen s) := by
   rw [h]
@@ -183,7 +183,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
       [RufEreignisF.eintritt axHaupt .nil (axSp.welt [])]⟩ := rfl
   have hoff0 : offen ((RufStartG axP axSp axInit).faeden 0).spur = [()] := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := axP) (O := axO) (passes := 0) h00 axZaehle .nil
-    axHpZaehle rfl axRetH .nil rfl (axHgL hoff0)
+    axHpZaehle rfl axRetH .nil rfl (axHgL hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [()] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
   have e1 := hZ1.1
@@ -194,7 +194,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
   have e2 := hZ2.1
   try dsimp only at e2
   obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := axP) (O := axO) (passes := 0) e2 .wahr axIncBlock .nil
-    .nil (.ende axRetNull) .nil rfl rfl (axHgL (axHoff e2 hoff2))
+    .nil (.ende axRetNull) .nil rfl rfl (axHgL (axHoff e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
   have e3 := hZ3.1
@@ -223,7 +223,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
   have e4 := hZ4.1
   try dsimp only at e4
   obtain ⟨M5, s5, hG5⟩ := w_dannRetP (P := axP) (O := axO) (passes := 0) e4 _ _ rfl
-    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (axHgL (axHoff e4 hoff4))
+    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (axHgL (axHoff e4 hoff4)).heldIn
   have hr5 : RufErreichbarG axP axO 0 (RufStartG axP axSp axInit) M5 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1)
       s2) s3) s4) s5

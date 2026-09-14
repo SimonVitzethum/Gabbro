@@ -38,10 +38,11 @@
         | 0, σ, ρ => if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ
                      else ueberlauf (bis σ ρ).1 ρ
 
-    That is `retryLaufC` below (`retryLaufC_eq`: it IS `retryLauf` with
-    the overflow block guarded by one more check, `ueberC`). Semantik.lean
-    is the sequential semantics other lanes are editing; this file does
-    not touch it. `retryLauf_C_gleich` / `retryLauf_C_erschoepft` say
+    That is `retryLaufC` below. DONE 2026-09-13: `Semantik.lean` carries
+    the edit, so `retryLaufC` IS `retryLauf` (`retryLaufC_eq`); the old
+    definition is kept as `retryLaufAlt`, and `retryLauf_eq_alt` says the
+    corrected run is the old one with the overflow block guarded by one
+    more check (`ueberC`). `retryLauf_C_gleich` / `retryLauf_C_erschoepft` say
     exactly where the two differ: only at the state where the budget is
     spent, and there only if `bis` holds (a success in C, the overflow
     block in the model) -- or, if `bis` does not hold, by the read of
@@ -88,8 +89,10 @@ section Lauf
 
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
-/-- THE CORRECTED `retry` RUN: `retryLauf` with the check of `bis` after
-    the last pass (the emitted C's `if (z >= N && !(bis))`). -/
+/-- THE CORRECTED `retry` RUN, as this file first stated it: `retryLauf`
+    with the check of `bis` after the last pass (the emitted C's
+    `if (z >= N && !(bis))`). Since the correction of `Semantik.lean`
+    (2026-09-13) it IS `retryLauf` (`retryLaufC_eq`). -/
 def retryLaufC (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ) :
     Nat → World D → Env D Γ → Ausgang V l Γ
@@ -105,17 +108,11 @@ def retryLaufC (schritt : World D → Env D Γ → Ausgang V true Γ)
       | .logik e => .logik e
       | .hardware e => .hardware e
 
-/-- The overflow block guarded by one more check of `bis`. -/
-def ueberC (bis : World D → Env D Γ → World D × Bool)
-    (ueberlauf : World D → Env D Γ → Ausgang V l Γ) : World D → Env D Γ → Ausgang V l Γ :=
-  fun σ ρ => if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ else ueberlauf (bis σ ρ).1 ρ
-
-/-- THE CHANGE, AS ONE EQUATION: the corrected run is the model's run with
-    the overflow block replaced by `ueberC` -- nothing else differs. -/
+/-- **THE CORRECTION IS DONE: the corrected run IS the model's run.** -/
 theorem retryLaufC_eq (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueb : World D → Env D Γ → Ausgang V l Γ) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
-      retryLaufC schritt bis ueb n σ ρ = retryLauf schritt bis (ueberC bis ueb) n σ ρ
+      retryLaufC schritt bis ueb n σ ρ = retryLauf schritt bis ueb n σ ρ
   | 0, _, _ => rfl
   | n + 1, σ, ρ => by
       simp only [retryLaufC, retryLauf]
@@ -124,6 +121,48 @@ theorem retryLaufC_eq (schritt : World D → Env D Γ → Ausgang V true Γ)
       · cases schritt (bis σ ρ).1 ρ with
         | ok σ' ρ' => exact retryLaufC_eq schritt bis ueb n σ' ρ'
         | next h σ' ρ' => exact retryLaufC_eq schritt bis ueb n σ' ρ'
+        | leave h σ' ρ' => rfl
+        | zurueck σ' v => rfl
+        | grund σ' r => rfl
+        | logik e => rfl
+        | hardware e => rfl
+
+/-- THE OLD MODEL RUN, for the record: the `0` case ran the overflow block
+    without checking `bis` (`Semantik.lean` until 2026-09-13). -/
+def retryLaufAlt (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ) :
+    Nat → World D → Env D Γ → Ausgang V l Γ
+  | 0, σ, ρ => ueberlauf σ ρ
+  | n + 1, σ, ρ =>
+      if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ else
+      match schritt (bis σ ρ).1 ρ with
+      | .ok σ' ρ' => retryLaufAlt schritt bis ueberlauf n σ' ρ'
+      | .next _ σ' ρ' => retryLaufAlt schritt bis ueberlauf n σ' ρ'
+      | .leave _ σ' ρ' => .ok σ' ρ'
+      | .zurueck σ' v => .zurueck σ' v
+      | .grund σ' r => .grund σ' r
+      | .logik e => .logik e
+      | .hardware e => .hardware e
+
+/-- The overflow block guarded by one more check of `bis`. -/
+def ueberC (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ) : World D → Env D Γ → Ausgang V l Γ :=
+  fun σ ρ => if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ else ueberlauf (bis σ ρ).1 ρ
+
+/-- THE CHANGE, AS ONE EQUATION: the model's run is the old run with the
+    overflow block replaced by `ueberC` -- nothing else differs. -/
+theorem retryLauf_eq_alt (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool) (ueb : World D → Env D Γ → Ausgang V l Γ) :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
+      retryLauf schritt bis ueb n σ ρ = retryLaufAlt schritt bis (ueberC bis ueb) n σ ρ
+  | 0, _, _ => rfl
+  | n + 1, σ, ρ => by
+      simp only [retryLaufAlt, retryLauf]
+      split
+      · rfl
+      · cases schritt (bis σ ρ).1 ρ with
+        | ok σ' ρ' => exact retryLauf_eq_alt schritt bis ueb n σ' ρ'
+        | next h σ' ρ' => exact retryLauf_eq_alt schritt bis ueb n σ' ρ'
         | leave h σ' ρ' => rfl
         | zurueck σ' v => rfl
         | grund σ' r => rfl
@@ -143,16 +182,16 @@ def retryErschoepft (schritt : World D → Env D Γ → Ausgang V true Γ)
       | .next _ σ' ρ' => retryErschoepft schritt bis n σ' ρ'
       | _ => none
 
-/-- WHERE THEY AGREE: every run that does not spend the budget is the same
-    run in both definitions. -/
+/-- WHERE THE OLD AND THE CORRECTED MODEL AGREE: every run that does not
+    spend the budget is the same run. -/
 theorem retryLauf_C_gleich (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueb : World D → Env D Γ → Ausgang V l Γ) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ), retryErschoepft schritt bis n σ ρ = none →
-      retryLaufC schritt bis ueb n σ ρ = retryLauf schritt bis ueb n σ ρ
+      retryLauf schritt bis ueb n σ ρ = retryLaufAlt schritt bis ueb n σ ρ
   | 0, _, _, h => by simp [retryErschoepft] at h
   | n + 1, σ, ρ, h => by
       simp only [retryErschoepft] at h
-      simp only [retryLaufC, retryLauf]
+      simp only [retryLaufAlt, retryLauf]
       split
       · rfl
       · rename_i hb
@@ -170,21 +209,21 @@ theorem retryLauf_C_gleich (schritt : World D → Env D Γ → Ausgang V true Γ
         | logik e => rfl
         | hardware e => rfl
 
-/-- WHERE THEY DIFFER: at the state where the budget is spent, the model
-    runs the overflow block, the corrected run checks `bis` first. -/
+/-- WHERE THEY DIFFER: at the state where the budget is spent, the old
+    model ran the overflow block, the corrected one checks `bis` first. -/
 theorem retryLauf_C_erschoepft (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueb : World D → Env D Γ → Ausgang V l Γ) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (σ0 : World D) (ρ0 : Env D Γ),
       retryErschoepft schritt bis n σ ρ = some (σ0, ρ0) →
-      retryLauf schritt bis ueb n σ ρ = ueb σ0 ρ0 ∧
-        retryLaufC schritt bis ueb n σ ρ = ueberC bis ueb σ0 ρ0
+      retryLaufAlt schritt bis ueb n σ ρ = ueb σ0 ρ0 ∧
+        retryLauf schritt bis ueb n σ ρ = ueberC bis ueb σ0 ρ0
   | 0, σ, ρ, σ0, ρ0, h => by
       simp only [retryErschoepft, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨rfl, rfl⟩
   | n + 1, σ, ρ, σ0, ρ0, h => by
       simp only [retryErschoepft] at h
-      simp only [retryLaufC, retryLauf]
+      simp only [retryLaufAlt, retryLauf]
       split at h
       · exact absurd h (by simp)
       · rename_i hb
@@ -202,14 +241,14 @@ theorem retryLauf_C_erschoepft (schritt : World D → Env D Γ → Ausgang V tru
         | logik e => rw [hs] at h; exact absurd h (by simp)
         | hardware e => rw [hs] at h; exact absurd h (by simp)
 
-/-- A spent budget with `bis` true at the end: the model ran the overflow
-    block, the corrected run (and the C) succeeded. -/
+/-- A spent budget with `bis` true at the end: the old model ran the
+    overflow block, the corrected model (and the C) succeeds. -/
 theorem retryLauf_C_verschieden (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueb : World D → Env D Γ → Ausgang V l Γ)
     (n : Nat) (σ : World D) (ρ : Env D Γ) (σ0 : World D) (ρ0 : Env D Γ)
     (h : retryErschoepft schritt bis n σ ρ = some (σ0, ρ0)) (hb : (bis σ0 ρ0).2 = true) :
-    retryLauf schritt bis ueb n σ ρ = ueb σ0 ρ0 ∧
-      retryLaufC schritt bis ueb n σ ρ = .ok (bis σ0 ρ0).1 ρ0 := by
+    retryLaufAlt schritt bis ueb n σ ρ = ueb σ0 ρ0 ∧
+      retryLauf schritt bis ueb n σ ρ = .ok (bis σ0 ρ0).1 ρ0 := by
   obtain ⟨h1, h2⟩ := retryLauf_C_erschoepft schritt bis ueb n σ ρ σ0 ρ0 h
   refine ⟨h1, ?_⟩
   rw [h2]
@@ -253,12 +292,11 @@ section Korrespondenz
 variable (X : TVCtx D) (m m' : Nat) {Γ : Ctx} (K : CEnvLay D Γ) {V : Vertrag D} {l : Bool}
   {Λ : List (Res D)}
 
-/-- The corrected meaning of `retry n bis body ueberlauf` in the context
-    of `X` -- `execStmt`'s own arguments to `retryLauf`, given to
-    `retryLaufC`. -/
+/-- The meaning of `retry n bis body ueberlauf` in the context of `X` --
+    `execStmt`'s own `retryLauf` (the corrected one, `execStmt_retry`). -/
 def retrySemC (n : Nat) (bis : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (ueb : Block D V l Γ Λ Λ) : World D → Env D Γ → Ausgang V l Γ :=
-  retryLaufC (fun σ ρ => execBlock X.O X.passes X.R body σ ρ) (travInv bis)
+  retryLauf (fun σ ρ => execBlock X.O X.passes X.R body σ ρ) (travInv bis)
     (fun σ ρ => execBlock X.O X.passes X.R ueb σ ρ) n
 
 /-- The model's meaning is `retryLauf` with the same arguments. -/
@@ -400,7 +438,7 @@ theorem retryC_run (hK : K.okB = true) {z : Nat} (hf : K.freshB z = true) (N : N
       have hlt : decide ((j : Int) < N) = true := decide_eq_true hjN
       rw [hlt, Bool.and_true] at h1
       simp only [retrySemC] at hnf ⊢
-      rw [retryLaufC.eq_2] at hnf ⊢
+      rw [retryLauf.eq_2] at hnf ⊢
       cases hbv : (travInv bis σ ρG).2 with
       | true =>
           -- the condition holds before the pass: the loop ends, the check is `z >= N`, false
@@ -489,46 +527,41 @@ theorem scorrC_retry (hK : K.okB = true) {z : Nat} (hf : K.freshB z = true) (N :
     (by simp only [lokUpd, if_pos]; rfl) hnf
   exact ⟨o, Exec.seqN hset h2, hO⟩
 
-/-- `retry` AGAINST THE MODEL AS IT STANDS: when the overflow block always
-    ends in an error (the emitter admits only a `never` exit, whose Gabbro
-    meaning is the hardware assumption of the foreign call), the emitted
-    loop corresponds to `execStmt`'s own `retryLauf`. Where the two
-    definitions differ, the model's outcome is that error, which carries
-    no obligation. -/
+/-- **`retry` AGAINST THE MODEL** (since the correction of `retryLauf`,
+    2026-09-13): the emitted loop corresponds to `execStmt`'s own meaning,
+    for EVERY overflow block -- no premise on the overflow any more. -/
+theorem scorr_retry_voll (hK : K.okB = true) {z : Nat} (hf : K.freshB z = true) (N : Nat)
+    (hN : (N : Int) ≤ CIT.u32.hi) {cb : CX} {bis : Expr D Γ Λ .bool} (hb : ExprCorr X K cb bis)
+    (body : Block D V true Γ Λ Λ) (cbody : CS) (hbody : BlockSem X m' K body cbody)
+    (hw : cbody.writesV z = false) (ueb : Block D V l Γ Λ Λ) (cexc : CS)
+    (hu : BlockSem X m K ueb cexc) :
+    StmtCorr X m K (Stmt.retry N bis body ueb) (retryCS z N cb cbody m' cexc) := by
+  intro σ st ρG ρC hc hr hnf
+  rw [execStmt_retry] at hnf ⊢
+  exact scorrC_retry X m m' K hK hf N hN hb body cbody hbody hw ueb cexc hu σ st ρG ρC hc hr hnf
+
+/-- The form with the premise the old model needed (an overflow block that
+    always ends in an error); the premise is no longer used. -/
 theorem scorr_retry (hK : K.okB = true) {z : Nat} (hf : K.freshB z = true) (N : Nat)
     (hN : (N : Int) ≤ CIT.u32.hi) {cb : CX} {bis : Expr D Γ Λ .bool} (hb : ExprCorr X K cb bis)
     (body : Block D V true Γ Λ Λ) (cbody : CS) (hbody : BlockSem X m' K body cbody)
     (hw : cbody.writesV z = false) (ueb : Block D V l Γ Λ Λ) (cexc : CS)
     (hu : BlockSem X m K ueb cexc)
-    (hnie : ∀ σ ρ, (execBlock X.O X.passes X.R ueb σ ρ).istFehler = true) :
-    StmtCorr X m K (Stmt.retry N bis body ueb) (retryCS z N cb cbody m' cexc) := by
-  intro σ st ρG ρC hc hr hnf
-  rw [execStmt_retry] at hnf ⊢
-  cases he : retryErschoepft (fun σ ρ => execBlock X.O X.passes X.R body σ ρ) (travInv bis)
-      N σ ρG with
-  | none =>
-      have hg := retryLauf_C_gleich (fun σ ρ => execBlock X.O X.passes X.R body σ ρ)
-        (travInv bis) (fun σ ρ => execBlock X.O X.passes X.R ueb σ ρ) N σ ρG he
-      rw [← hg] at hnf ⊢
-      exact scorrC_retry X m m' K hK hf N hN hb body cbody hbody hw ueb cexc hu σ st ρG ρC hc hr hnf
-  | some p =>
-      obtain ⟨σ0, ρ0⟩ := p
-      obtain ⟨h1, -⟩ := retryLauf_C_erschoepft (fun σ ρ => execBlock X.O X.passes X.R body σ ρ)
-        (travInv bis) (fun σ ρ => execBlock X.O X.passes X.R ueb σ ρ) N σ ρG σ0 ρ0 he
-      rw [h1] at hnf
-      rw [hnie σ0 ρ0] at hnf
-      exact Bool.noConfusion hnf
+    (_hnie : ∀ σ ρ, (execBlock X.O X.passes X.R ueb σ ρ).istFehler = true) :
+    StmtCorr X m K (Stmt.retry N bis body ueb) (retryCS z N cb cbody m' cexc) :=
+  scorr_retry_voll X m m' K hK hf N hN hb body cbody hbody hw ueb cexc hu
 
 end Korrespondenz
 
 /-
 CUTS: what this file does not do, by name.
-- `Semantik.lean` is not edited: `retryLauf` keeps its `0` case, and the
-  model therefore reports the overflow block where the C succeeds
-  (`retryLauf_C_verschieden`). The edit is stated in the header, one
-  line; every theorem about `retryLauf` would have to be re-checked with
-  it (`retryLauf_gut`, `retryLauf_ohneAbbruch`, … in Satz.lean,
-  RufAdaequatRufG.lean, HoareRegeln.lean).
+- DONE 2026-09-13: `Semantik.lean`'s `retryLauf` now checks `bis` in its
+  `0` case (the header's one-line edit); machine G's `wiederUeber` unfolds
+  the spent loop into `if bis {} else { overflow }`. `retryLaufC` equals
+  `retryLauf` (`retryLaufC_eq`); the old run is kept as `retryLaufAlt`
+  for the record (`retryLauf_C_verschieden`: where the old model ran the
+  overflow block and the corrected model succeeds). `scorr_retry_voll`
+  needs no premise on the overflow block.
 - The loop condition must have an `ExprCorr` (no observation that changes
   its value): a `retry` polling a device register -- most `retry`s of the
   corpus -- is not covered, as H9 (the register read) is a per-step lemma
@@ -541,11 +574,13 @@ CUTS: what this file does not do, by name.
 -/
 
 #print axioms retryLaufC_eq
+#print axioms retryLauf_eq_alt
 #print axioms retryLauf_C_gleich
 #print axioms retryLauf_C_erschoepft
 #print axioms retryLauf_C_verschieden
 #print axioms retryC_run
 #print axioms scorrC_retry
 #print axioms scorr_retry
+#print axioms scorr_retry_voll
 
 end Gabbro.Grammatik

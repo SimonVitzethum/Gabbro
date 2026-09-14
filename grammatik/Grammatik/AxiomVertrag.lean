@@ -228,9 +228,12 @@ theorem axHpZaehle : RufPasst axD (vertragVon axD axHaupt) (axD.signatur axZaehl
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 def axRufZaehle : Stmt axD (vertragVon axD axHaupt) false [] axL (nach axD axZaehle axL) :=
   .call axZaehle .nil axHpZaehle rfl

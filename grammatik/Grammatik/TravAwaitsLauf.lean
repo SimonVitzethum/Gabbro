@@ -116,7 +116,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   have hoff0 : offen (taM0.faeden 0).spur = [TaLock.l] := rfl
   -- 1: `haupt0` calls `fuelle`
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := taP) (O := taO) (passes := 0) h00 taFuelle .nil
-    taHpFuelle rfl taRestH0 .nil rfl (taHgL hoff0)
+    taHpFuelle rfl taRestH0 .nil rfl (taHgL hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [TaLock.l] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
   have e1 := hZ1.1
@@ -135,7 +135,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e3
   -- 4: `travNext`, index 0
   obtain ⟨M4, s4, hZ4⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e3 () .wahr taTravBody
-    taI0 [taI1] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e3 hoff3))
+    taI0 [taI1] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 0).spur = [TaLock.l] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen]; exact hoff3
   have e4 := hZ4.1
@@ -143,7 +143,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   -- 5: `tab[0] := 1`
   obtain ⟨M5, s5, hZ5⟩ := w_dannBlatt (P := taP) (O := taO) (passes := 0) e4 taSchreibI .nil
     (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF))) (.cons taI0 .nil) rfl rfl
-    (taHgL (taHoff e4 hoff4)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    (taHgL (taHoff e4 hoff4)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff5 : offen (M5.faeden 0).spur = [TaLock.l] := by
     rw [hZ5.spur]
@@ -164,7 +164,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e7
   -- 8: `travNext`, index 1
   obtain ⟨M8, s8, hZ8⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e7 () .wahr taTravBody
-    taI1 [] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e7 hoff7))
+    taI1 [] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e7 hoff7)).heldIn
   have hoff8 : offen (M8.faeden 0).spur = [TaLock.l] := by
     rw [hZ8.spur, (Erw.lese _ _ _).offen]; exact hoff7
   have e8 := hZ8.1
@@ -172,7 +172,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   -- 9: `tab[1] := 1`
   obtain ⟨M9, s9, hZ9⟩ := w_dannBlatt (P := taP) (O := taO) (passes := 0) e8 taSchreibI .nil
     (.travRest () .wahr taTravBody [] (.dann .nil (.ende taRetF))) (.cons taI1 .nil) rfl rfl
-    (taHgL (taHoff e8 hoff8)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    (taHgL (taHoff e8 hoff8)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff9 : offen (M9.faeden 0).spur = [TaLock.l] := by
     rw [hZ9.spur]
@@ -193,7 +193,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e11
   -- 12: `travDone`
   obtain ⟨M12, s12, hZ12⟩ := w_travDone (P := taP) (O := taO) (passes := 0) e11 () .wahr
-    taTravBody (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e11 hoff11))
+    taTravBody (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e11 hoff11)).heldIn
   have hoff12 : offen (M12.faeden 0).spur = [TaLock.l] := by
     rw [hZ12.spur, (Erw.lese _ _ _).offen]; exact hoff11
   have e12 := hZ12.1
@@ -206,7 +206,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e13
   -- 14: `fuelle` returns into `haupt0`
   obtain ⟨M14, s14, hG14⟩ := w_rueckP (P := taP) (O := taO) (passes := 0) e13 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgL (taHoff e13 hoff13))
+    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgL (taHoff e13 hoff13)).heldIn
   have hoff14 : offen (M14.faeden 0).spur = [TaLock.l] := by
     rw [hG14.1]; exact ((Erw.lese _ _ _).offen).trans hoff13
   have e14 := hG14.1
@@ -240,7 +240,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e16
   -- 17: publish `flag := 1`
   obtain ⟨M17, s17, hZ17⟩ := w_dannBlatt (P := taP) (O := taO) (passes := 0) e16 taPub .nil
-    taKFrei .nil rfl rfl (taHgKL (taHoff e16 hoff16))
+    taKFrei .nil rfl rfl (taHgKL (taHoff e16 hoff16)).heldIn
     _ _ rfl ((Erw.lese _ _ _).trans (Erw.schreibGlob _ _ _ _))
   have hoff17 : offen (M17.faeden 0).spur = [TaLock.k, TaLock.l] := by
     rw [hZ17.spur]
@@ -389,7 +389,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   try dsimp only at e2
   -- 3: call `warte`
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := taP) (O := taO) (passes := 0) e2 taWarte .nil
-    taHpWarte rfl .nil taKFrei1 .nil rfl (taHgK (taHoff e2 hoff2))
+    taHpWarte rfl .nil taKFrei1 .nil rfl (taHgK (taHoff e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [TaLock.k] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
   have e3 := hZ3.1
@@ -402,7 +402,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   try dsimp only at e4
   -- 5: its `true` branch
   obtain ⟨M5, s5, hZ5⟩ := w_iteWahr (P := taP) (O := taO) (passes := 0) e4 .wahr taAwaitsBlock
-    .nil .nil (.ende taRetW) .nil rfl rfl (taHgK (taHoff e4 hoff4))
+    .nil .nil (.ende taRetW) .nil rfl rfl (taHgK (taHoff e4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [TaLock.k] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen]; exact hoff4
   have e5 := hZ5.1
@@ -414,7 +414,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
     .nil (.dann .nil (.ende taRetW)) .nil rfl
     (by show decide ((M5.speicher.globs ()).n = 1) = true
         rw [hsp5, hflag]; rfl)
-    (taHgK (taHoff e5 hoff5))
+    (taHgK (taHoff e5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 1).spur = [TaLock.k] := by
     rw [hZ6.spur, (Erw.lese _ _ _).offen]; exact hoff5
   have e6 := hZ6.1
@@ -436,7 +436,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   try dsimp only at e9
   -- 10: `warte` returns into `haupt1`
   obtain ⟨M10, s10, hG10⟩ := w_rueckP (P := taP) (O := taO) (passes := 0) e9 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgK (taHoff e9 hoff9))
+    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgK (taHoff e9 hoff9)).heldIn
   refine ⟨[M, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10], rfl, ?_, ⟨_, _, _, _, _, e5⟩,
     ⟨_, _, _, _, _, _, ?_, e6⟩, ?_, ?_⟩
   · intro k hk

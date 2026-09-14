@@ -195,9 +195,12 @@ theorem r4HpLies : RufPasst r4D (vertragVon r4D r4Ein) (r4D.signatur r4Lies) r4M
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 /-- `lies(k, i);` -- `k` (rw) passed as `r`: the pointer to the same table. -/
 def r4RufLies : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M (nach r4D r4Lies r4M) :=
@@ -234,17 +237,23 @@ theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) 
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 theorem r4HpLiesT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Lies) r4M where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
-    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 def r4Idx0 {Γ : Ctx} : Expr r4D Γ r4M (.index 2) := .weiter (by decide) (by decide) (.lit 0)
 def r4Sieben {Γ : Ctx} : Expr r4D Γ r4M (.int 0 10) := .weiter (by decide) (by decide) (.lit 7)
@@ -481,14 +490,14 @@ theorem r4Lauf : ∃ M : RufMaschineG r4D,
   have hoff0 : offen ((RufStartG r4P r4Sp r4Init).faeden 0).spur = [()] := rfl
   -- 1: call `einzahlen`
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := r4P) (O := r4O) (passes := 0) h00 r4Ein _ r4HpEinT rfl
-    r4RestT .nil rfl (r4HgM hoff0)
+    r4RestT .nil rfl (r4HgM hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [()] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
   have e1 := hZ1.1
   try dsimp only at e1
   -- 2: the write through the pointer
   obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := r4P) (O := r4O) (passes := 0) e1 r4Schreib r4RestEin _
-    rfl rfl (r4HgM (r4Hoff e1 hoff1)) _ _ rfl ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+    rfl rfl (r4HgM (r4Hoff e1 hoff1)).heldIn _ _ rfl ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff2 : offen (M2.faeden 0).spur = [()] := by
     rw [hZ2.spur]
     exact ((Erw.schreibSlot _ _ _ _ _ _).offen).trans (((Erw.lese _ _ _).offen).trans hoff1)
@@ -496,35 +505,35 @@ theorem r4Lauf : ∃ M : RufMaschineG r4D,
   try dsimp only at e2
   -- 3: call `lies`
   obtain ⟨M3, s3, hZ3⟩ := w_rufEnde (P := r4P) (O := r4O) (passes := 0) e2 r4Lies _ r4HpLies rfl
-    r4RetEin _ rfl (r4HgM (r4Hoff e2 hoff2))
+    r4RetEin _ rfl (r4HgM (r4Hoff e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
   have e3 := hZ3.1
   try dsimp only at e3
   -- 4: `lies` returns
   obtain ⟨M4, s4, hG4⟩ := w_rueckP (P := r4P) (O := r4O) (passes := 0) e3 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e3 hoff3))
+    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 0).spur = [()] := by
     rw [hG4.1]; exact ((Erw.lese _ _ _).offen).trans hoff3
   have e4 := hG4.1
   try dsimp only at e4
   -- 5: `einzahlen` returns
   obtain ⟨M5, s5, hG5⟩ := w_rueckP (P := r4P) (O := r4O) (passes := 0) e4 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e4 hoff4))
+    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 0).spur = [()] := by
     rw [hG5.1]; exact ((Erw.lese _ _ _).offen).trans hoff4
   have e5 := hG5.1
   try dsimp only at e5
   -- 6: the driver calls `lies`
   obtain ⟨M6, s6, hZ6⟩ := w_rufEnde (P := r4P) (O := r4O) (passes := 0) e5 r4Lies _ r4HpLiesT rfl
-    r4RetT .nil rfl (r4HgM (r4Hoff e5 hoff5))
+    r4RetT .nil rfl (r4HgM (r4Hoff e5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 0).spur = [()] := by
     rw [hZ6.spur, (Erw.lese _ _ _).offen]; exact hoff5
   have e6 := hZ6.1
   try dsimp only at e6
   -- 7: `lies` returns
   obtain ⟨M7, s7, hG7⟩ := w_rueckP (P := r4P) (O := r4O) (passes := 0) e6 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e6 hoff6))
+    (PopArt.wie rfl) _ _ _ rfl (r4HgM (r4Hoff e6 hoff6)).heldIn
   have hr7 : RufErreichbarG r4P r4O 0 (RufStartG r4P r4Sp r4Init) M7 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
       (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4) s5) s6) s7

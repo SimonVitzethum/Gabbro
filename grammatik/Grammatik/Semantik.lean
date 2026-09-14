@@ -442,11 +442,15 @@ def traverseLauf (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ 
       | .logik e => .logik e
       | .hardware e => .hardware e
 
-/-- `retry until p bounded n … on_exceeded { … }`: hoechstens `n` Durchgaenge. -/
+/-- `retry until p bounded n … on_exceeded { … }`: hoechstens `n` Durchgaenge. After the
+    last pass `p` is checked once more (the emitted C's `if (z >= N && !(p))`): a pass
+    that makes `p` true is a success, and only otherwise the overflow block runs, from
+    the world that recorded the read (corrected 2026-09-13, `CFormenW.lean`; before,
+    the `0` case ran the overflow block without the check). -/
 def retryLauf (schritt : World D → Env D Γ → Ausgang V true Γ) (bis : World D → Env D Γ → World D × Bool)
     (ueberlauf : World D → Env D Γ → Ausgang V l Γ) :
     Nat → World D → Env D Γ → Ausgang V l Γ
-  | 0, σ, ρ => ueberlauf σ ρ
+  | 0, σ, ρ => if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ else ueberlauf (bis σ ρ).1 ρ
   | n + 1, σ, ρ =>
       if (bis σ ρ).2 = true then .ok (bis σ ρ).1 ρ else
       match schritt (bis σ ρ).1 ρ with

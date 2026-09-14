@@ -141,11 +141,16 @@ theorem eHp (caller callee : eD.Fn) (hw : ∀ t, (eD.signatur callee).schreibt t
     RufPasst eD (vertragVon eD caller) (eD.signatur callee) [] where
   hw := hw
   hg := fun g => nomatch g
+  hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
   hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
-  hh := by
+  hh := RufPasst.hh_von (by
     intro L
     rw [hh]
-    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
+  hx := RufPasst.hx_von (by
+    intro L
+    rw [hh]
+    exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
 
 theorem eHpSetze : RufPasst eD (vertragVon eD eHaupt) (eD.signatur eSetze) [] :=
   eHp eHaupt eSetze (fun _ _ => rfl) rfl rfl
@@ -367,22 +372,22 @@ theorem ziel_ort_einfaden_zeuge : ∃ M : RufMaschineG eD,
       [RufEreignisF.eintritt eHaupt .nil (eSp.welt [])]⟩ := rfl
   have hoff0 : offen ((RufStartG eP eSp eInit).faeden 0).spur = [] := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) h00 eSetze .nil eHpSetze rfl
-    (.cons (.call ePruefe .nil eHpPruefe rfl) (.ret .keine List.Perm.nil)) .nil rfl (ehg0 hoff0)
+    (.cons (.call ePruefe .nil eHpPruefe rfl) (.ret .keine List.Perm.nil)) .nil rfl (ehg0 hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
   obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := eP) (O := eO) (passes := 0) hZ1.1
-    _ _ _ rfl rfl (ehg0 (eoff_z hZ1 hoff1)) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    _ _ _ rfl rfl (ehg0 (eoff_z hZ1 hoff1)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff2 : offen (M2.faeden 0).spur = [] := by
     rw [hZ2.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff1
   obtain ⟨M3, s3, hG3⟩ := w_rueckP (P := eP) (O := eO) (passes := 0) hZ2.1 _ _ rfl
-    (PopArt.wie rfl) _ _ _ rfl (ehg0 (eoff_z hZ2 hoff2))
+    (PopArt.wie rfl) _ _ _ rfl (ehg0 (eoff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [] := by
     rw [hG3.1]
     exact ((Erw.lese _ _ _).offen).trans hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) hG3.1 ePruefe .nil eHpPruefe
-    rfl (.ret .keine List.Perm.nil) .nil rfl (ehg0 (eoff_g hG3 hoff3))
+    rfl (.ret .keine List.Perm.nil) .nil rfl (ehg0 (eoff_g hG3 hoff3)).heldIn
   have hr4 : RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M4 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4
   obtain ⟨rho, w0, hm⟩ : ∃ (rho : Env eD (eD.params ePruefe)) (w0 : World eD),

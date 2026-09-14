@@ -821,7 +821,7 @@ head stands at one of these places (a leaf here: a `state` transition).
 
 ### 13.5 What is not carried, and what still blocks
 
-- **Table and group invariants: NOT CARRIED.** `Logik.invariante` arises only
+- **Table and group invariants: NOT CARRIED** (CARRIED since §15.4, `ziel_ort_sperre_inv`). `Logik.invariante` arises only
   in `rufAt` at a callee's return. G does not test invariants,
   `VertragAmOrtG` states `requires`/`ensures` only, and `KeineLogik` does not
   ask for them (its handlers answer no `logik` outcome, so a callee's owed
@@ -842,7 +842,7 @@ head stands at one of these places (a leaf here: a `state` transition).
      result outside its range (`dannGleit`, `dannGleitLit`, `dannGleitVon`),
      a spent `forever` budget (`ewig 0` has no rule; sequentially
      `hardware (fortschritt a)`). Named hardware assumptions failing.
-  4. A `leave`/`next` inside an `else` end block that REPLACED the residue:
+  4. (CLOSED in §15.3.) A `leave`/`next` inside an `else` end block that REPLACED the residue:
      `dannNarrowElse`, `dannPruefFalsch`, `dannGleitNarrowElse`,
      `dannRegLiesElseFalsch` and the reason pops (`err` of `let … else`)
      drop the enclosing loop's continuation, so a `leave`/`next` there has no
@@ -1123,7 +1123,7 @@ in the class is the identity, `havocOk_leer`, and the semantics is
   routine may run on every thread -- the two-writer witness does exactly
   that. `audit_same_lock_start_excluded` stays true and now only says: two
   threads cannot both START inside a lock.
-- **Held-set equality `RufPasst.hh` (open, named).** Relaxing it to "the
+- **Held-set equality `RufPasst.hh` (CLOSED in §15.1).** Relaxing it to "the
   callee's signature locks are among the caller's held locks" (what the
   checker accepts, verdict note T) is NOT done: every reading rule of G
   demands `HeldGenau` (static holdings EQUAL held locks), so a callee whose
@@ -1203,5 +1203,259 @@ in the class is the identity, `havocOk_leer`, and the semantics is
 
 No `sorryAx`, no new `axiom`, no `native_decide`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §§1-10 history above.)
+## 15. The remaining model gaps (2026-09-13)
+
+`ziel_ort_sperre` stays THE goal theorem (statement of §14.2, unchanged).
+This section records the model repairs after §14: the held set (§15.1),
+`retry` (§15.2), `leave`/`next` in an `else` block (§15.3), table invariants
+(§15.4); §15.5 is the updated premise table, §15.6 what remains.
+
+### 15.1 Held set: `RufPasst.hh` is an inclusion (verdict note T)
+
+*The finding.* The model demanded that a callee's `requires Held` set EQUAL
+the caller's held set. The checker accepts a helper called both inside
+`locks L { … }` and from a lock-free function; that program had no
+`Programm D` term (`hilfe_alt_untypbar`, `HelferZeuge.lean`: no held set fits
+both call sites).
+
+*The repair.*
+
+- `RufPasst.hh` (`Syntax.lean`): every lock the callee requires is held by
+  the caller (`⊆`). The caller's EXTRA locks stay held for the whole callee
+  frame; the callee does not name them, and G never lets it release or
+  re-take them (release only through its own `frei` markers; `dannLocks`
+  demands the lock is not held, `hself`).
+- **Lock floors** keep the rank discipline across calls (the checker's
+  interprocedural `H006`/`H003` walk). `Signatur.boden : Option Int`
+  (default `none`, mirrored in `Vertrag.boden`): with `some c` the body takes
+  only locks of rank at least `c` (`StufenOk P`, via `Stmt.ueberBoden`;
+  decidable per program, trivial without floors: `stufenOk_ohne`).
+  `RufPasst.hx`: every extra lock ranks below the callee's floor;
+  `RufPasst.hb`: the caller's floor is at most the callee's. Without floors
+  the relaxation would make the Satz FALSE: a callee could re-take an extra
+  lock of its caller (a `nimmt` event that is not good). The floor is data
+  the translation computes from the call graph, not a user clause.
+- **The Satz** (`Satz.lean`): `HeldB b Λ h` (static holdings held, every
+  other held lock below the floor `b`; `HeldB none` is `HeldGenau`,
+  `heldB_none_iff`). `stmt_gutB`/`block_gutB`/`end_gutB` over `HeldB` and
+  the floor premise; `stmt_gut`/`block_gut`/`end_gut` keep their statements
+  (the exact held set); `GutR` is over `HeldB`; `rufAt_gut`, `exec_gut`,
+  `exec_rahmen`, `exec_spur` (and `ziel_rahmen`, `ziel_spur`,
+  `ziel_brav_aus_exec`, `rahmen_aus_exec`, `MaschinenFaden.spawn`) take
+  `StufenOk P`.
+- **Machine G** (`RufMaschineG.lean`): every side condition `HeldGenau Λ
+  (offen spur)` (about forty rules) became `HeldIn Λ (offen spur)` -- a
+  callee frame runs under its caller's extra locks. Leaves use
+  `Stmt.gut_blatt` (frame and trace of a leaf under `HeldIn`).
+- **The thread invariant** (`RufHaeltG.lean`): every frame's holdings are
+  held, and no release marker releases a lock a lower frame names
+  (`FreiLinks`); the old link `KetteLinks` (which was `RufPasst.hh` read
+  backwards) is gone. `rufG_haelt_statisch`, `rufG_haelt_signatur`
+  unchanged.
+- **Adequacy** (`RufAdaequatRufG.lean`): the simulation carries `HeldB` at
+  the frame's floor, `StmtR.locks` carries the floor condition,
+  `heldB_eintritt` at a call; `rufG_adaequat_ruf` keeps its statement.
+  `w_locksB` (`RufAdaequatG.lean`): `locks` under a floor. The call-free
+  adequacy (`RufAdaequatG.lean`), `RufUmkehrRufG`, the race-freedom chain
+  (`RennfreiG`, `RennfreiVoll`), `KostenG` and every witness carry over.
+- **Progress without the `HeldGenau` hypothesis**
+  (`ziel_ort_sperre_fortschritt`, `ZielOrtSperre.lean`): the rules demand
+  `HeldIn`, which holds on every reachable machine, so §13.5 item 5 is
+  closed: on every reachable machine a thread at a `logik` check can step.
+  Witness `ziel_ort_sperre_fortschritt_zeuge`.
+
+*The witness* (`HelferZeuge.lean`). `helfer(x) ensures result == x` (floor
+`1`), `frei() = helfer(3)`, `setze() = locks L { helfer(5) }` (`L` rank 0);
+thread 0 runs `setze`, the others `frei`. `ntP_zertifiziert`: every premise
+of `ziel_ort_sperre`. `helfer_zeuge`: on a reached seven-step run thread 0
+calls `helfer(5)` holding `L` (a frame with EMPTY static holdings while its
+thread holds `L`) and thread 1 calls `helfer(3)` holding nothing; both
+logged returns meet `result == x` (values `5` and `3`) BY THE THEOREM.
+`ntStufen`: the floors are respected.
+
+### 15.2 `retry`: the bound is checked after the last pass
+
+*The finding* (T4 continuation, `CFormenW.lean` header): the sequential
+`retryLauf` ran the overflow block as soon as the budget was spent,
+without looking at `bis`; the emitted C checks `bis` once more after the
+last pass (`if (z >= N && !(bis))`), so a pass that makes the condition
+true is a success there. The emitter is right (it is what `retry until p
+bounded N` promises).
+
+*The repair.* `retryLauf`'s `0` case (`Semantik.lean`) is now `if bis
+then ok else overflow` (from the world that recorded the read). Machine
+G's `wiederUeber` unfolds a spent loop into `if bis {} else { overflow }`
+(the existing `ite` rules do the read), so G and the sequential semantics
+agree again. Carried: `retryLauf_gut` (Satz), `retryLauf_ohneLogik`
+(`ZielOrtGanz`), `retryLauf_ohneAbbruch`/`_nicht_zurueck`/`_ende_none` and
+the three `retry` simulations (`retryOkR`, `retryAbbR`, `retryRetR`,
+`RufAdaequatRufG`), `semV_wiederUeber`/`semH_wiederUeber` (the frame
+semantics of the replays of every goal theorem, flagship included), the
+cost model (`KostenG`: a `retry` and its loop states pay `2 + cost(bis)`
+for the last check; the loop witness's bound is now 20, not 18).
+`CFormenW.lean`: `retryLaufC_eq` is now the equality `retryLaufC =
+retryLauf`; `retrySemC` is defined by `retryLauf`; the old run is kept as
+`retryLaufAlt` (`retryLauf_eq_alt`, `retryLauf_C_verschieden`: where the
+old model ran the overflow block and the corrected one succeeds).
+`scorr_retry_voll`: the emitted loop corresponds to `execStmt` for EVERY
+overflow block (no `never` premise); `scorr_retry` keeps its statement.
+Witnesses: `retry_unterschied_zeuge` (the old model writes `konto[1]`,
+the corrected model and the C do not), `wRetry_corr` (a writing overflow
+block, now covered).
+
+### 15.3 `leave`/`next` in an `else` block reach the loop (§13.5 item 4)
+
+*The finding.* `dannNarrowElse`, `dannPruefFalsch`, `dannGleitNarrowElse`,
+`dannRegLiesElseFalsch` and the three reason pops into the `else` block of
+`let … else` (`rueckGrund`, `rueckConsGrund`, `dannRetGrund`) REPLACED the
+whole residue by the end block. A `leave`/`next` in it then stood as
+`.ende (.leave _)` with the loop continuation gone; no rule fires there
+(`ende_leave_steht`), while the sequential semantics leaves (or continues)
+the loop and goes on.
+
+*The repair* (`RufMaschineG.lean`). `Endblock.alsBlock` reads an end block
+as a block (same statements, the final `ret`/`retGrund`/`leave`/`next` as a
+statement over the empty block; `Endblock.execBlock_alsBlock`: the block
+means the end block's outcome). A new residue layer `GRest.abbruch k`
+stands between it and the old continuation `k`: an `else` step now goes to
+`.dann sonst.alsBlock.2 (.abbruch k)` (a reason pop to
+`.dann err.alsBlock.2 (.abbruch (.schrumpf k))`). A normal end of that
+block is impossible (end blocks never end normally); a return pops as
+before; two new rules `peelAbbruchLeave`/`peelAbbruchNext` hand a
+`leave`/`next` to `k`, where the existing loop shims take it. The
+semantics of `abbruch k` in every replay: an `ok` outcome is `sonst`, every
+other outcome continues as `k` (`weiterH_abbruch_zu`, `weiterZ_abbruch_zu`).
+
+*Carried* (full `lake build` green, no `sorryAx`):
+
+- `RufHaeltG` (the held-lock chain through `abbruch`: `kette_abbruch`);
+  `RufAdaequatG`/`RufAdaequatRufG`/`RufUmkehrRufG` (`alsRet`/`alsRetR`: the
+  `else` block run as a block returns as the end block did;
+  `EndG.alsBlock`/`EndR.alsBlock`; `semR_alsBlock`/`semK_alsBlock`;
+  `w_peelAbbruch`), statements unchanged.
+- The replays of every goal theorem (`ZielOrt`, `ZielOrtVoll`, `…Geraet`,
+  `…Rahmen`, `…Ax`, `…Sperre` -- the flagship -- and `…Einfaden`): the step
+  lemmas `semV_/semH_/semZ_narrowElse`, `_pruefFalsch`, `_gleitNarrowElse`,
+  `_regLiesElseFalsch` now hold with the new residue BY AN EQUALITY
+  (`semV_alsBlock`, `semH_alsBlock`); before they only held as a weakening
+  to the end block's own result, which predicted nothing for a
+  `leave`/`next`. `FortV`/`FortS` (the continuation after a reason answer)
+  resume the reason block as a block (`semV_alsBlock_schrumpf`,
+  `semH_alsBlock_schrumpf`); the fragment predicates carry the new residue
+  (`okV_alsBlock`, `okG_alsBlock`, `okS_alsBlock`; the `abbruch` layer
+  records that its held set agrees with the block's, so the stable set of
+  the flagship replay transfers at `peelAbbruch`).
+- The cost model (`KostenG.lean`): an `else` branch is priced by
+  `kostenSonst` (the end block in block position: no unfold, a `let` pays
+  its `schrumpf` layer, the final statement its empty-block tail) plus one
+  step for the `abbruch` layer (two for a reason block: `schrumpf` too);
+  the checker correspondence carries a matching remainder `zusatzSonst`
+  (`spiegel_sonst`). The witness numbers of `KostenGZeuge` are unchanged.
+
+*The witness* (`SonstLeaveZeuge.lean`). `fn(): retry 1 until false { if
+!false { leave } }; return 7`. `sv_exec`: the sequential semantics returns
+`7`. `sonst_leave_zeuge`: thread 0 of G unfolds the loop, takes the `else`
+branch of the refusal -- the residue is `leave` over `abbruch` over the loop
+shim `wiederRest`, the loop continuation KEPT --, peels the layer, leaves
+the loop, and pops logging exactly that `7`. `ende_leave_steht_zeuge`: the
+state the old rule reached on this fixture has no step.
+
+*Not covered.* The adequacy fragments admit the `else` forms only at loop
+level `false` (`BlockR.narrow_inv … l = false`, likewise `BlockG`), where no
+`leave`/`next` can occur. For an `else` block INSIDE a loop the agreement of
+G with the sequential semantics is shown by the replays' equalities above
+(which is what the goal theorems use) and by the witness, not by a general
+adequacy theorem.
+
+### 15.4 Table and group invariants are carried (§13.5 first item)
+
+*The finding.* `rufAt` checks, at every return of `f`, each declared
+invariant `f` OWES (`schuldet f i`: `f` writes one of its carriers) and
+answers `logik (invariante i)` where it is false. G tests no invariant and
+`ziel_ort_sperre` said nothing about them: a program whose functions break
+a declared invariant was certified (`ivPschlecht_alt`).
+
+*The repair: obligation + conclusion, as for lock invariants* (§14). The
+machine is unchanged (it tests invariants nowhere, like the emitted C);
+the obligation turns the test into a theorem.
+
+- **Footprint** (`ZielOrt.lean`): `fussOrte P f` also lists `invOrteP P f`,
+  the carriers of every invariant `f` owes (`fuss_inv`). The footprint
+  checks (`fussOrtGB`, `fussSperreB`) thereby cover them; every earlier
+  fixture declares no invariant, so nothing else moved.
+- **Obligation** `InvGutS P passes Q S f` (`ZielOrtInv.lean`, per function,
+  SEQUENTIAL, over the oracle/move/handler class of `KoerperGutS`): from
+  `requires f`, a normal return of the body makes every invariant `f` owes
+  true at the return world. Like `rufAt`, it assumes no invariant at entry;
+  an invariant needed there belongs in `requires`. Nothing new for a
+  function that owes none (`invGutS_ohne`, `invGutS_leer`).
+- **Conclusion** `InvAmOrtG P M`: at every logged return `rueck g rho v s0
+  s1` of a reachable machine, every invariant `g` owes holds at `s1`.
+- **The theorem** `ziel_ort_sperre_inv`: the premises of `ziel_ort_sperre`
+  plus `∀ f, InvGutS P passes Q S f` give the conclusion of
+  `ziel_ort_sperre` AND `InvAmOrtG`. Proof: induction over reachable
+  machines beside the flagship's replay invariant (`zielInvS_erreichbar`);
+  `invLog_schritt` classifies the six value pops; `popS_inv` (the twin of
+  `popS_ens`) carries the sequential return world's invariant to the
+  machine's, because the carriers of an owed invariant are stable at `ret`
+  (`inv_stabil`: in the footprint, and every guard of theirs is a signature
+  lock of `f` by the declaration's `invarianten_gehalten`, U003).
+  `ziel_ort_sperre` itself is unchanged.
+
+*The witnesses* (`InvZeuge.lean`): table `konto` (two slots) under lock
+`L`, invariant `konto[0] == konto[1]`; `haupt` (holds `L`) calls `setze`
+(holds `L`). Correct `setze` writes both slots `5`: `ivPgut_zertifiziert`
+(every premise of `ziel_ort_sperre_inv`, `InvGutS` proved per function)
+and `ivGut_zeuge` (a four-step run; the logged return of `setze` meets the
+invariant BY THE THEOREM, both slots `5`). Broken `setze` writes only
+slot `0`: `ziel_ort_sperre` certifies it (`ivPschlecht_alt`), but
+`ivPschlecht_nicht_invGutS` (the new obligation fails from the zero
+memory) and `ivPschlecht_verletzt` (on a machine reached in three steps
+the new conclusion fails) REFUTE it -- as probe A was refuted in §13.4.
+
+*Not covered.* A thread's start frame never pops, so an invariant owed by
+a start function is not checked at the thread's end (G logs returns only at
+pops); invariants are checked at returns only, not at entries or while a
+frame holds the locks (the program semantics checks nothing else either).
+
+### 15.5 Premise table (THE goal theorem is now `ziel_ort_sperre_inv`)
+
+| Premise | Meaning | Class | Changed in §15 |
+|---|---|---|---|
+| `P`, `O`, `passes`, `fs`, `sp`, `init`, `Q`, `S`, `e0` | data | as §14.3 | `Signatur.boden` (lock floors, default `none`) |
+| `hO`, `hRL`, `hQ` | hardware | (b) | -- |
+| `hlok`, `hvoll`, `hFrag` | as §13.3 | (c) | -- |
+| `hS : SperrInvOk S` | as §14.3 | (c) | -- |
+| `hFuss : fussSperreB` | footprint check | (c) DECIDABLE | footprint also lists owed invariant carriers (§15.4) |
+| `hK : KoerperGutS` | per function, sequential | (a) USER | -- |
+| `hI : InvGutS` | per function, sequential: owed invariants at a normal return | (a) USER | NEW (§15.4); trivial without owed invariants |
+| `hStart`, `hSstart`, `hex` | as §14.3 | (a)/(d) | -- |
+| (syntax) `RufPasst` | call-site typing | typing | held set `⊆`, `hx`/`hb` floors (§15.1) |
+| (syntax) `StufenOk P` | floors respected | (c) decidable | NEW premise of the Satz chain (§15.1), not of the goal theorem |
+
+Conclusion: `VertragAmOrtG ∧ SperrInvG ∧ KeinLogikHaltG ∧ progress` (as §14.2)
+`∧ InvAmOrtG` (§15.4). `ziel_ort_sperre_fortschritt` drops the `HeldGenau`
+hypothesis of the progress conjunct (§15.1).
+
+Axioms of every new theorem of §15 (`ziel_ort_sperre_inv`, `popS_inv`,
+`inv_stabil`, `invLog_schritt`, the `InvZeuge`, `SonstLeaveZeuge` and
+`HelferZeuge` witnesses): `propext`, `Classical.choice`, `Quot.sound`.
+Full `lake build`: 139 jobs, no `sorryAx`.
+
+### 15.6 What remains
+
+- The adequacy fragments (`BlockG`/`BlockR`, and the converse) admit the
+  `else` forms only at loop level `false`; for an `else` block INSIDE a loop
+  the agreement of G with the sequential semantics is shown by the replay
+  equalities and a witness (§15.3), not by a general adequacy theorem.
+- Invariants owed by a start function are not checked at the thread's end
+  (§15.4).
+- `StufenOk` and the floors are model data without a checker rule that
+  computes them; `InvGutS`, like `KoerperGutS`, is a user proof obligation
+  without a checker.
+- Everything §13.5 lists besides items 4 and 5 and the invariant item
+  (termination, full progress beyond the named stops, fairness, the link to
+  the emitted C, weak memory, hand translation only) is unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
 

@@ -52,17 +52,17 @@ def csElimBool : Empty → Bool := fun e => nomatch e
 /-- Signatures: the parameter and result ranges the probes claim. -/
 def csSig : CSFn → Signatur CSTab Empty Empty Empty
   | .fRet => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
   | .fBind => ⟨[], some (.int 3 3), 0, [], fun _ => false,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
   | .fVar => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
   | .fWenn => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
   | .fSlot => ⟨[], none, 0, [], fun _ => true,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
   | .fDoppelt => ⟨[.int 0 1000], some (.int 0 2000), 0, [], fun _ => false,
-    csElimBool, [], []⟩
+    csElimBool, [], [], none⟩
 
 /-- The demo declaration. -/
 def csD : Deklaration where
@@ -123,12 +123,12 @@ def csD : Deklaration where
 
 /-- Contracts at the demo: writes only for the slot body, ends empty. -/
 def csV : CSFn → Vertrag csD
-  | .fRet => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], []⟩
-  | .fBind => ⟨fun _ => false, csElimBool, some (.int 3 3), 0, [], []⟩
-  | .fVar => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], []⟩
-  | .fWenn => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], []⟩
-  | .fSlot => ⟨fun _ => true, csElimBool, none, 0, [], []⟩
-  | .fDoppelt => ⟨fun _ => false, csElimBool, some (.int 0 2000), 0, [], []⟩
+  | .fRet => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
+  | .fBind => ⟨fun _ => false, csElimBool, some (.int 3 3), 0, [], [], none⟩
+  | .fVar => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
+  | .fWenn => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
+  | .fSlot => ⟨fun _ => true, csElimBool, none, 0, [], [], none⟩
+  | .fDoppelt => ⟨fun _ => false, csElimBool, some (.int 0 2000), 0, [], [], none⟩
 
 /-! ## 2. Generated certificates: the fitting probe bodies
 

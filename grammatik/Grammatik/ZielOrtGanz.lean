@@ -337,7 +337,12 @@ theorem retryLauf_ohneLogik {l : Bool} {Γ : Ctx} (schritt : World D → Env D �
     (hs : ∀ σ ρ e, schritt σ ρ ≠ .logik e) (hu : ∀ σ ρ e, ueber σ ρ ≠ .logik e) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (e : Logik D),
       retryLauf schritt bis ueber n σ ρ ≠ .logik e
-  | 0, σ, ρ, e => hu σ ρ e
+  | 0, σ, ρ, e => by
+      intro h
+      simp only [retryLauf] at h
+      split at h
+      · cases h
+      · exact hu _ ρ e h
   | n + 1, σ, ρ, e => by
       intro h
       simp only [retryLauf] at h
@@ -784,8 +789,8 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
     conclusion of the goal theorem) and `HeldGenau` of the head's static
     holdings: `travNext`/`travDone`, `ewigWeiter`, `dannLeaveTrav`, and
     `blatt`/`dannBlatt` on a `state` transition. -/
-theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O passes M t)
-    (hH : HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
+theorem schritt_an_pruefungI {M : RufMaschineG D} (t : Faden) (hP : PrueftG O passes M t)
+    (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
     (hA : AnPruefungG M t) : ∃ M', RufSchrittG P O passes M t M' := by
   rcases hA with ⟨l, Γ, Λ, ρ, tb, inv, body, ks, k, hr⟩ | ⟨l, Γ, Λ, ρ, a, n, inv, body, k, hr⟩ |
       ⟨l, Γ, Λ, Λx, ρ, tb, inv, body, is, k, rest, hl, i, hr⟩ |
@@ -824,6 +829,13 @@ theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O pas
     obtain ⟨M', hs, _⟩ := w_dannBlatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
       _ rst k ρ rfl hr hH σ' ρ' hst herw
     exact ⟨M', hs⟩
+
+/-- The form with the exact held set (before the held-set relaxation the
+    rules demanded it; now `HeldIn` suffices, `schritt_an_pruefungI`). -/
+theorem schritt_an_pruefung {M : RufMaschineG D} (t : Faden) (hP : PrueftG O passes M t)
+    (hH : HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
+    (hA : AnPruefungG M t) : ∃ M', RufSchrittG P O passes M t M' :=
+  schritt_an_pruefungI t hP hH.heldIn hA
 
 end Schritt
 

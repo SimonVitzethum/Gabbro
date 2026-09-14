@@ -179,11 +179,16 @@ theorem geHpLeser : RufPasst geD (vertragVon geD geHaupt) (geD.signatur geLeser)
   hw := fun t h => by cases t <;> first | rfl | exact nomatch h
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp⟩
-  hh := fun L => by
+  hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
     · exact ⟨fun h => absurd (List.mem_singleton.mp h) geHeld_ne,
-        fun h => absurd (List.mem_singleton.mp h) geLock_ne⟩
+        fun h => absurd (List.mem_singleton.mp h) geLock_ne⟩)
+  hx := RufPasst.hx_von (fun L => by
+    cases L
+    · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
+    · exact ⟨fun h => absurd (List.mem_singleton.mp h) geHeld_ne,
+        fun h => absurd (List.mem_singleton.mp h) geLock_ne⟩)
 
 def geIdx {Γ : Ctx} {Λ : List (Res geD)} (t : GeTab) : Expr geD Γ Λ (.index (geD.count t)) :=
   .weiter (by show (0 : Int) ≤ 0; decide) (by show (0 : Int) ≤ 1 - 1; decide) (.lit 0)
@@ -497,7 +502,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   have hoff0 : offen ((RufStartG geP geSp geInit).faeden 0).spur = [GeLock.lg] := rfl
   -- `haupt` calls `leser`
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := geP) (O := geO) (passes := 0) h0 geLeser .nil geHpLeser
-    rfl (.ret .keine (List.Perm.refl _)) .nil rfl (geHgLg hoff0)
+    rfl (.ret .keine (List.Perm.refl _)) .nil rfl (geHgLg hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [GeLock.lg] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen, geOffen_weltVon]; exact hoff0
   have e1 := hZ1.1
@@ -511,7 +516,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   try dsimp only at e2
   obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := geP) (O := geO) (passes := 0) e2 .wahr geLesBlock .nil
     .nil (.ende (.ret (.wert .wahr) (List.Perm.refl _))) .nil rfl rfl
-    (geHgLg (geHoff_e e2 hoff2))
+    (geHgLg (geHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [GeLock.lg] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, geOffen_weltVon]; exact hoff2
   have e3 := hZ3.1
@@ -528,14 +533,14 @@ theorem geLauf : ∃ M : RufMaschineG geD,
     geNull
     (by show einpassen (.int 0 1) ((M3.speicher.slots GeTab.geraet 0 ()).n) = some geNull
         rw [hsp3]; rfl)
-    rfl (geHgLg (geHoff_e e3 hoff3))
+    rfl (geHgLg (geHoff_e e3 hoff3)).heldIn
   have e4 := hZ4.1
   try dsimp only at e4
   have hoff4 : offen (M4.faeden 0).spur = [GeLock.lg] := by
     rw [hZ4.spur, geOffen_weltVon]; exact hoff3
   -- the reader writes `notiz`
   obtain ⟨M5, s5, hZ5⟩ := w_dannBlatt (P := geP) (O := geO) (passes := 0) e4 geNotiz _ _ _
-    rfl rfl (geHgLg (geHoff_e e4 hoff4)) _ _
+    rfl rfl (geHgLg (geHoff_e e4 hoff4)).heldIn _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have e5 := hZ5.1
@@ -551,7 +556,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
       rufSchrittG_fremd s1 1 (by decide), geM0_faden1]
   obtain ⟨M6, s6, hZ6⟩ := w_blatt (P := geP) (O := geO) (passes := 0) h51
     (.assignSlot GeTab.tafel () (geIdx GeTab.tafel) geEins rfl geDarfTafel)
-    (.ret .keine (List.Perm.refl _)) .nil rfl rfl (geHgLt rfl) _ _
+    (.ret .keine (List.Perm.refl _)) .nil rfl rfl (geHgLt rfl).heldIn _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have h60 : M6.faeden 0 = M5.faeden 0 := rufSchrittG_fremd s6 0 (by decide)
@@ -569,14 +574,14 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   obtain ⟨M7, s7, hZ7⟩ := w_regLies (P := geP) (O := geO) (passes := 0) e5' () rfl _ _ _ rfl geNull
     (by show einpassen (.int 0 1) ((M6.speicher.slots GeTab.geraet 0 ()).n) = some geNull
         rw [hsp6g]; rfl)
-    rfl (geHgLg (geHoff_e e5' (by rw [h60]; exact hoff5)))
+    rfl (geHgLg (geHoff_e e5' (by rw [h60]; exact hoff5))).heldIn
   have e7 := hZ7.1
   try dsimp only at e7
   have hoff7 : offen (M7.faeden 0).spur = [GeLock.lg] := by
     rw [hZ7.spur, geOffen_weltVon, h60]; exact hoff5
   -- return `x == y`, which is `true`
   obtain ⟨M8, s8, hG8⟩ := w_dannRetP (P := geP) (O := geO) (passes := 0) e7 _ _ rfl
-    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (geHgLg (geHoff_e e7 hoff7))
+    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (geHgLg (geHoff_e e7 hoff7)).heldIn
   have hr8 : RufErreichbarG geP geO 0 (RufStartG geP geSp geInit) M8 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
       (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4) s5) s6) s7) s8

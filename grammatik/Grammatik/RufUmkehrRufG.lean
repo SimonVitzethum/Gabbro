@@ -170,6 +170,8 @@ inductive RestK {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
       (hk : RestK A C k) : RestK A C (.schrumpf (τ := τ) k)
   | frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ)
       (hk : RestK A C k) : RestK A C (.frei L k)
+  | abbruch {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk)
+      (hk : RestK A C k) : RestK A C (.abbruch (Λ := Λ) k)
 
 section RestKInv
 
@@ -248,6 +250,7 @@ def semK : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .ewigRest .., _, _ => .sonst
   | _, _, _, .wartet .., _, _ => .sonst
   | _, _, _, .wartetSonst .., _, _ => .sonst
+  | _, _, _, .abbruch .., _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachK {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
@@ -491,7 +494,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .callInd .., _, ho => by simp [Stmt.kOk] at ho
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
-      obtain ⟨_, hb⟩ := hs.locks_inv
+      obtain ⟨_, hb, _⟩ := hs.locks_inv
       simp only [Stmt.kOk] at ho
       simp only [execStmt]
       exact AusSG.gibt (blockSGK body hb ho _ _ _ (h.nimmt L)) L
@@ -738,6 +741,7 @@ theorem semK_SG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l
   | _, _, _, .ewigRest .., hr => by cases hr
   | _, _, _, .wartet .., hr => by cases hr
   | _, _, _, .wartetSonst .., hr => by cases hr
+  | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 end SpurK
 
@@ -919,13 +923,44 @@ theorem semK_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.
   unfold narrowWeiterK
   rw [dif_pos h, nachK_schrumpf, semK_dann]
 
+theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.kOk = e.kOk
+  | _, _, .ret _ _ => rfl
+  | _, _, .retGrund _ _ => rfl
+  | _, _, .leave _ => rfl
+  | _, _, .next _ => rfl
+  | _, _, .cons s rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .bind _ rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+
+/-- A covered end block run as a block is a covered block. -/
+theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :
+    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ},
+      EndR A C e → BlockR A C true e.alsBlock.2
+  | _, _, _, _, .ret e hΛ => .cons _ _ (.ret e hΛ) .nil
+  | _, _, _, _, .retGrund r hΛ => by
+      simp only [Endblock.alsBlock]
+      exact .cons _ _ (@StmtR.retGrund _ _ A C _ false [] _ r hΛ) .nil
+  | _, _, _, _, .cons s _ hs hr => .cons s _ hs (EndR.alsBlock hr)
+  | _, _, _, _, .bind e _ hr => .bind e _ (EndR.alsBlock hr)
+
+/-- An end block run as a block in front of any continuation means the end
+    block (it never ends normally). -/
+theorem semK_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ)
+    (k : GRest D V l Γ Λk) (σ : World D) (ρ : Env D Γ) :
+    semK O passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ = semK O passes R (.ende e) σ ρ := by
+  rw [semK_dann, Endblock.execBlock_alsBlock, nachK_zuAusgang]
+  rfl
+
 theorem semK_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
-    semK O passes R (.ende sonst) (σ.lese Λ e.orte) ρ =
+    semK O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
       semK O passes R (.dann (.narrow e lo' hi' sonst rest) k) σ ρ := by
+  rw [semK_alsBlock]
   rw [semK_dann O passes R (.narrow e lo' hi' sonst rest), execBlock_narrowK]
   unfold narrowWeiterK
   rw [dif_neg h, nachK_zuAusgang]
@@ -944,8 +979,9 @@ theorem semK_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
-    semK O passes R (.ende sonst) (σ.lese Λ c.orte) ρ =
+    semK O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ =
       semK O passes R (.dann (.pruefung c sonst rest) k) σ ρ := by
+  rw [semK_alsBlock]
   rw [semK_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
   rw [nachK_zuAusgang]
@@ -1014,8 +1050,9 @@ theorem semK_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
-    semK O passes R (.ende sonst) (σ.lese Λ e.orte) ρ =
+    semK O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
       semK O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+  rw [semK_alsBlock]
   rw [semK_dann]
   simp only [execBlock, hn]
   rw [nachK_zuAusgang]
@@ -1367,7 +1404,9 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.narrow_inv
     simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestK.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestK.dann _ _ (EndR.alsBlock hs) (by rw [Endblock.kOk_alsBlock]; exact ho.1)
+        (RestK.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_narrowElse O passes R e lo' hi' sonst rest k _ _ h)
   | dannPruefWahr l2 Γ2 Λ2 Λ2' Λ2'' c sonst rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
@@ -1387,7 +1426,9 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
     simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestK.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestK.dann _ _ (EndR.alsBlock hs) (by rw [Endblock.kOk_alsBlock]; exact ho.1)
+        (RestK.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_pruefFalsch O passes R c sonst rest k _ _ hw)
   | dannBreaking l2 Γ2 Λ2 Λ2' Λ2'' i body rest k ρ2 hhead =>
@@ -1405,7 +1446,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hhead
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨hst, hr⟩ := hb.cons_inv
-    obtain ⟨_, hbd⟩ := hst.locks_inv
+    obtain ⟨_, hbd, _⟩ := hst.locks_inv
     simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho
     refine Or.inl ⟨_, _, _, _, .dann body (.frei L (.dann rest k)), _, rufUpdateG_self _ _ _, RestK.dann _ _ hbd ho.1 (RestK.frei _ _ (RestK.dann _ _ hr ho.2 hk)), ?_⟩
     rw [weltVon_upd]
@@ -1488,6 +1529,8 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
   | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | peelFreiLeave _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | peelFreiNext _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | dannRet l2 Γ2 Λ2 Λ2'' e hperm rest k ρ2 hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu
       hnw =>
     rw [hR] at hhead
@@ -1591,7 +1634,9 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
     obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
     simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestK.ende sonst hs ho.1, ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann sonst.alsBlock.2 (.abbruch k), _, rufUpdateG_self _ _ _,
+      RestK.dann _ _ (EndR.alsBlock hs) (by rw [Endblock.kOk_alsBlock]; exact ho.1)
+        (RestK.abbruch _ hk), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_gleitNarrowElse O passes R e lo hi sonst rest k _ _ hn)
   | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
