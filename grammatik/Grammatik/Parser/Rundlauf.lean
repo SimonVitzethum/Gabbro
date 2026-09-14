@@ -1699,93 +1699,6 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
       simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ harg htail
       simp only [harg, htail, List.cons_append, List.nil_append] at ⊢
 
--- Atomic `parsePrimary` outcomes (no children, no loops, no
--- follows inspected): unfold with successor fuel and let the
--- concrete head select its arm. (`fnwert` is absent: it lives at
--- the unary level.)
-theorem prim_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
-    12 * (groesse (.lit m) + 1) + groesse (.lit m) ≤ F + 7 →
-    parsePrimary F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest) := by
-  intro m rest F hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
-    ruhigGleit rest = true →
-    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) ≤ F + 7 →
-    parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest) := by
-  intro s rest F hg hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-  -- ⊢ : gleit arm selected (concrete head); inner match on `rest`
-  -- (rounded or catch-all). Cases close it.
-  cases rest with
-  | nil => rfl
-  | cons hd tl =>
-    cases hd with
-    | wort w =>
-      simp only [ruhigGleit] at hg
-      have hf := nichtWahr_falsch _ hg
-      have ne := strNe_of w "rounded" hf
-      simp [ne]
-    | ident v => rfl
-    | zahl n => rfl
-    | gleit g => rfl
-    | text t => rfl
-    | zeichen z => rfl
-    | ende => rfl
-theorem prim_wahr : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .wahr + 1) + groesse .wahr ≤ F + 7 →
-    parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
-  intro rest F hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-theorem prim_falsch : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .falsch + 1) + groesse .falsch ≤ F + 7 →
-    parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
-  intro rest F hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-theorem prim_ergebnis : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .ergebnis + 1) + groesse .ergebnis ≤ F + 7 →
-    parsePrimary F (druckToks .ergebnis ++ rest) = .ok (.ergebnis, rest) := by
-  intro rest F hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
-    (!istKeinPlatz g) = true → (!istIntWort g) = true →
-    (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
-    ruhigSuff rest = true →
-    12 * (groesse (.grund g f) + 1) + groesse (.grund g f) ≤ F + 7 →
-    parsePrimary F (druckToks (.grund g f) ++ rest) =
-      .ok (.grund g f, rest) := by
-  intro g f rest F hkp hit hzuk hself hr hF
-  have hF1 : 1 ≤ F := by omega
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-  -- ⊢ : name-text match, head gate, then `parseKopf`.
-  have hkaf : istKeinPlatz g = false := nichtWahr_falsch _ hkp
-  have hint : istIntWort g = false := nichtWahr_falsch _ hit
-  have hzukf : istZuckerBreite g = false := nichtWahr_falsch _ hzuk
-  have hselff : strEq g "Self" = false := nichtWahr_falsch _ hself
-  simp only [nameText, hkaf] at ⊢
-  have hF2 : 1 ≤ F' := by omega
-  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
-  simp only [parseKopf, List.cons_append] at ⊢
-  -- ⊢ : `sammleSegmente` on `["::", ident f]`, then the `[g, f]` arm.
-  -- The `::` step is concrete; the tail stops by `ruhigSuff`.
-  simp only [sammleSegmente, List.cons_append, nameText] at ⊢
-  simp only [List.nil_append] at ⊢
-  rw [sammleSeg_stop [g, f] rest hr] at ⊢
-  have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=
-    ruhigSuff_nopar rest hr
-  simp only [hmiss, hint, hzukf, hselff] at ⊢
-  rfl
-
 -- Suffix fragments: one `.f`, `->f` or `[i]` step of a place
 -- chain. Every `gutPlatz` tree is a head variable plus fragments
 -- (`zerlege` below); the printer lays them end to end.
@@ -2129,6 +2042,127 @@ theorem ort_platz_all : ∀ (n : Nat) (Rn : R n)
     simp only [groesse, groesse_applySuff] at hs hF ⊢
     omega
   exact suff_rund n Rn suff (.variable a) rest F' hs2 hgs hr hF2
+-- Places through `parsePrimary`: decompose, read the head,
+-- run the chain. The `(` call arm misses by `suffToks_nopar`;
+-- the `([a], …)` arm runs `suff_rund`.
+theorem prim_platz : ∀ (n : Nat) (Rn : R n)
+    (p : SExpr) (rest : List Token) (F : Nat),
+    groesse p ≤ n + 1 → gutPlatz p = true → ruhigSuff rest = true →
+    12 * (groesse p + 1) + groesse p + 1 ≤ F →
+    parsePrimary F (druckToks p ++ rest) = .ok (p, rest) := by
+  intro n Rn p rest F hs hg hr hF
+  obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := zerlege (n + 1) p hs hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  rw [druckToks_applySuff] at ⊢
+  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
+  simp only [parsePrimary, druckToks, nameText, hkaf, List.cons_append,
+    parseKopf] at ⊢
+  simp only [List.nil_append] at ⊢
+  simp only [sammleSeg_suffToks, hr] at ⊢
+  have hmiss : ∀ (R : List Token),
+      suffToks suff ++ rest ≠ .zeichen "(" :: R := by
+    intro R hcon
+    exact suffToks_nopar suff rest R hr hcon
+  simp only [hmiss] at ⊢
+  have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
+    simp only [groesse] at ⊢
+    omega
+  have hF3 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
+      suffGroesse suff ≤ F'' := by
+    simp only [groesse, groesse_applySuff] at hs hF ⊢
+    omega
+  exact suff_rund n Rn suff (.variable a) rest F'' hs2 hgs hr hF3
+
+-- Atomic `parsePrimary` outcomes (no children, no loops, no
+-- follows inspected): unfold with successor fuel and let the
+-- concrete head select its arm. (`fnwert` is absent: it lives at
+-- the unary level.)
+theorem prim_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
+    12 * (groesse (.lit m) + 1) + groesse (.lit m) ≤ F + 7 →
+    parsePrimary F (druckToks (.lit m) ++ rest) = .ok (.lit m, rest) := by
+  intro m rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
+    ruhigGleit rest = true →
+    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) ≤ F + 7 →
+    parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest) := by
+  intro s rest F hg hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+  -- ⊢ : gleit arm selected (concrete head); inner match on `rest`
+  -- (rounded or catch-all). Cases close it.
+  cases rest with
+  | nil => rfl
+  | cons hd tl =>
+    cases hd with
+    | wort w =>
+      simp only [ruhigGleit] at hg
+      have hf := nichtWahr_falsch _ hg
+      have ne := strNe_of w "rounded" hf
+      simp [ne]
+    | ident v => rfl
+    | zahl n => rfl
+    | gleit g => rfl
+    | text t => rfl
+    | zeichen z => rfl
+    | ende => rfl
+theorem prim_wahr : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .wahr + 1) + groesse .wahr ≤ F + 7 →
+    parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_falsch : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .falsch + 1) + groesse .falsch ≤ F + 7 →
+    parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_ergebnis : ∀ (rest : List Token) (F : Nat),
+    12 * (groesse .ergebnis + 1) + groesse .ergebnis ≤ F + 7 →
+    parsePrimary F (druckToks .ergebnis ++ rest) = .ok (.ergebnis, rest) := by
+  intro rest F hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
+    (!istKeinPlatz g) = true → (!istIntWort g) = true →
+    (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
+    ruhigSuff rest = true →
+    12 * (groesse (.grund g f) + 1) + groesse (.grund g f) ≤ F + 7 →
+    parsePrimary F (druckToks (.grund g f) ++ rest) =
+      .ok (.grund g f, rest) := by
+  intro g f rest F hkp hit hzuk hself hr hF
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
+  -- ⊢ : name-text match, head gate, then `parseKopf`.
+  have hkaf : istKeinPlatz g = false := nichtWahr_falsch _ hkp
+  have hint : istIntWort g = false := nichtWahr_falsch _ hit
+  have hzukf : istZuckerBreite g = false := nichtWahr_falsch _ hzuk
+  have hselff : strEq g "Self" = false := nichtWahr_falsch _ hself
+  simp only [nameText, hkaf] at ⊢
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  simp only [parseKopf, List.cons_append] at ⊢
+  -- ⊢ : `sammleSegmente` on `["::", ident f]`, then the `[g, f]` arm.
+  -- The `::` step is concrete; the tail stops by `ruhigSuff`.
+  simp only [sammleSegmente, List.cons_append, nameText] at ⊢
+  simp only [List.nil_append] at ⊢
+  rw [sammleSeg_stop [g, f] rest hr] at ⊢
+  have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=
+    ruhigSuff_nopar rest hr
+  simp only [hmiss, hint, hzukf, hselff] at ⊢
+  rfl
+
 
 end Gabbro.Grammatik.Parser
 
