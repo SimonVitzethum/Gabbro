@@ -120,6 +120,12 @@ The division of labour it makes visible:
 > Gabbro proves everything except logic. The programmer proves the logic. GabbroV writes down
 > exactly what that is.
 
+*State on 2026-09-15:* the goal is stated as one Lean theorem and proved over the model
+(`gabbro_ziel`, README §6, with its limits): the checker in the statement is the Lean checker,
+the bridge to the Rust checker and the binary (translation validation T1–T5) is open, and the
+third review found a named gap in the statement that is being repaired. "Proves everything
+except logic" is the design; for the implementation it is not yet a theorem.
+
 **[DECIDED]** What the generator pays for: composition over every call, the frame, the rule of
 every loop, the precondition at every call site, and the wiring from the obligations to the
 contracts. What a person owes: the statement of each obligation, with every hypothesis the proof

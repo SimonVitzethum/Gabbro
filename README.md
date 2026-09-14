@@ -203,12 +203,29 @@ proved ahead of use.
 
 This section exists because the alternative is that a reader has to find it out.
 
-- **No pass has been proved.** 155 written sentences, 147 of them *measured* — meaning a poison
-  probe falls or a mutation is caught. That measures the implementation on checked cases, never
-  the rule, and never all cases.
-- **The chain of section 4 is not closed for any program yet.** T2 does not exist, so no
-  program has a certificate that carries end to end. The first witness is the next milestone,
-  not a past one.
+- **No pass has been proved individually.** 155 written sentences, 147 of them *measured* —
+  meaning a poison probe falls or a mutation is caught. That measures the implementation on
+  checked cases, never the rule, and never all cases.
+- **What IS proved is the goal theorem over the MODEL** — and only there. `theorem gabbro_ziel :
+  GabbroZiel` (statement [`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean),
+  proof `Zielsatz/Beweis.lean`, tag `milestone-2026-09-15-gabbro-ziel`), with a witness on a
+  non-degenerate two-thread program. `#print axioms gabbro_ziel`: `propext`, `Classical.choice`,
+  `Quot.sound` — which says the PROOF is valid, not that the statement is the right one. Three
+  limits, all load-bearing:
+  - The checker in the statement (`C.akzeptiert`) is the **Lean** checker. The tool people run is
+    the **Rust** checker; the bridge to it and to the binary is translation validation (T1–T5),
+    and it is open.
+  - The third independent review ([`messung/URTEIL-OPUS-2026-09-15.md`](messung/URTEIL-OPUS-2026-09-15.md),
+    [`messung/URTEIL-MUSE-2026-09-15.md`](messung/URTEIL-MUSE-2026-09-15.md)) found a named gap in
+    the STATEMENT: an unsatisfiable lock invariant empties the user obligation (P1). The repair
+    is in progress.
+  - What may be said: *the goal theorem is proved over the model, with a witness and
+    non-degeneracy.* Not: *Gabbro is verified.*
+- **The chain of section 4 is closed for one program.** `beispiele/104`, theorem
+  `schlusssatz_104` (single-threaded; the runtime start and the binary-run correspondence as
+  hypotheses, the C compiler and the hand transcription of the emitted text named). Every other
+  program: open — chain count 1 of 101 (`instrumente/zaehle-kette.py`). Concurrent translation
+  validation (stage b) is not started.
 - **The proof-to-code ratio has no measured value.** The floor is about 0,5 : 1 — the abstract
   specification itself — and Gabbro does not claim to prove functional correctness, so the true
   figure is strictly above it. The upper bound is unknown, and a number without a source list

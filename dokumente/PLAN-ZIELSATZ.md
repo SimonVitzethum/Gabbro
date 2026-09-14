@@ -116,6 +116,22 @@ mean if it were wrong. The package also carries the four review questions:
    obligation becomes empty? (Probes A/D are the known instances.)
 4. Does machine G run what the language means?
 
+*Sharpened 2026-09-15 (external review): the axiom list proves the proof is valid, it says nothing
+about whether the statement is the right one.* The reading questions, in the form that decides:
+- **What does `Ziel` give that `NutzerPflicht` does not already claim?** That difference is the
+  number that makes the theorem strong or weak. A conclusion that restates what the user already
+  proved (per function, sequentially) is worth little; what counts is what the theorem adds on
+  top -- concurrency, races, invariants across threads, progress, time. The header must list it,
+  leg by leg.
+- **Are the `HardwareAnnahmen` enumerable, and is each one really hardware** -- no software
+  obligation smuggled in under that name? A4 is the model; `GutO`, `RegLokal`, `AxVertragO`
+  must be read the same way (the third Opus verdict: `RegLokal` makes a register without
+  `depends` constant in every world -- a real volatile register breaks it).
+- And the question that is not a reading question: `C.akzeptiert` is the LEAN checker; the tool
+  people run is the Rust checker. The theorem holds over the model; the bridge to the binary is
+  T1-T5, open. The sentence that may be said is "the goal theorem is proved over the model, with
+  a witness and non-degeneracy" -- not "Gabbro is verified".
+
 The last question is where translation validation (PLAN-UEBERSETZUNGSVALIDIERUNG.md) takes over
 for the C.
 
