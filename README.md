@@ -43,7 +43,7 @@ The other way to get here is an SMT solver: write the program, write the annotat
 discharge them. Verus and Dafny do that well. Gabbro does not, for two reasons.
 
 **A refusal is better than a timeout.** Where a solver gets slow, a grammar says which
-construct it will not carry and why, by name. The compiler ships **381 diagnostics** and no
+construct it will not carry and why, by name. The compiler ships **386 diagnostics** and no
 search procedure.
 
 **A template falls once, not per program.** Every construct the language carries turns into one
@@ -183,20 +183,20 @@ re-run.
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 381 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 386 diagnostics · `gabbro paesse` |
 | **Grammar** | **177 EBNF rules**, closed and reachable | vocabulary covers every terminal, 240 / 240 |
 | **Pass register** | **157 sentences over 12 passes — 149 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 330 diagnostic codes. *A written sentence is not a proved one; the last column is the whole rest* | `gabbro paesse --je-satz` |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, [`beweise/`](beweise/) |
-| **Corpus** | 103 clean examples, 656 poison files, 883 tests *(run 2026-09-14)* | `cargo test --no-fail-fast` |
+| **Corpus** | 105 clean examples, 661 poison files, 883 tests *(run 2026-09-14)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed and compared against a handwritten version, one of them a library chain across three units and a linker, under `-fsanitize=undefined` *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 40, and **65 of 68 instruments carry all five requirements** — deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
+| **Guardians** | 41, and **65 of 68 instruments carry all five requirements** — deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
 | **Mutation** | **383 of 409 anchors hold**, and a run catches 375 of 376 valid mutations | `./instrumente/mutiere-pruefer.py` |
-| **Blind spots** | **75 blind · 172 covered · 25 poison-only · 12 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and poison-only is a hint, not a proof | `gabbro blindstellen` |
+| **Blind spots** | **74 blind · 174 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and poison-only is a hint, not a proof | `gabbro blindstellen` |
 | **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — 1669 and 110 clause sites, split derivable / redundant / load-bearing | `gabbro zeremonie` |
 
-The 15 theories in [`beweise/`](beweise/) hold 3 512 lines of Isar (3 512 across all 15
-theories). They are the amortisation argument as a *measurement* rather than a claim — and the
-figure behaves honestly: it falls when a proved construct gets used, and rises when one gets
+The 15 theories in [`beweise/`](beweise/) hold 3 512 lines of Isar
+(3 512 across all 15 theories). They are the amortisation argument as a *measurement* rather
+than a claim — and the figure behaves honestly: it falls when a proved construct gets used, and rises when one gets
 proved ahead of use.
 
 ## 6. What is not true yet
