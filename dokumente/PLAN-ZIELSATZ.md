@@ -148,3 +148,64 @@ Adding any of them later extends `Ziel`, and each extension is reviewed as a dif
 
 **Effort:** (2) half a day, (3) one day, (4) one to two days, (5) half a day, (6) half a day.
 About 3–4 days of work, with (1) and the float switch as the only dependencies.
+
+## 8. Extensions of the goal (noninterference, liveness, higher-order contracts): the rules
+
+*Added 2026-09-14 after an external review of the three proposed extensions.*
+
+**The criterion is counted per OBLIGATION, not per feature.** "Stays in the carried fragment"
+means every premise belongs to the checker, the user's logic, or a named hardware/runtime
+assumption. The measure of whether an extension keeps that promise is `gabbro obligations`:
+how many of the obligations the extension generates the checker discharges, and how many it
+hands to the user. The number is booked BEFORE and AFTER each extension, on its examples and on
+the corpus. An extension that stays in the fragment nominally but moves most of its obligations
+into user logic has left it in practice. For noninterference this is the deciding number: it is
+the product promise only if the checker supplies its premises.
+
+**One assumption list.** Every runtime or hardware assumption goes into the SAME named list:
+- the lock primitives (acquire/release, happens-before);
+- thread creation;
+- the idle root;
+- a FIFO or ticket lock for the waiting bound;
+- the scheduler class for noninterference;
+- DRF-SC;
+- the IEEE float unit;
+- the device answers;
+- the C compiler.
+
+Today they sit in A1–A5 (`schlusssatz_104`), PLAN-UEBERSETZUNGSVALIDIERUNG §3(b), GLEITKOMMA.md
+and the goal theorem's `HardwareAnnahmen`. `Spec.lean`'s header is the one place that lists
+them all.
+
+**Noninterference: two statements, and the customer sentence written down first.**
+- The first theorem is schedule-parametric: the same scheduler choices and the same inputs of
+  domain B give the same B-observation. It is the right first theorem, and it is weaker than
+  the product promise, because the scheduler is a channel.
+- The customer-facing sentence needs a scheduler class whose decisions do not depend on other
+  domains' state, for example a fixed-timetable partition scheduler (seL4's configuration).
+- The sentence is written in NICHTINTERFERENZ.md in the exact form in which it is TRUE, next to
+  the form that is false: "tenant A learns nothing about tenant B on a dynamically
+  load-balanced machine" does not hold under a load-based scheduler. It is written before
+  anyone else writes it.
+- Declassification (controlled release) decides whether the flow rule is usable at all. It
+  weakens the statement to delimited release, and that is where this extension costs work.
+
+**Liveness: measure the number from the first example.**
+- "Waiting ≤ the sum of the `held` times of the threads ahead", with a FIFO/ticket lock as a
+  named runtime assumption.
+- Composed over nested locks, the bounds recurse. Ranks make the recursion terminate, but they
+  do not keep it small: it grows multiplicatively over rank levels.
+- The bound is computed and booked on every example from the start. The theorem alone does not
+  count as done: a green theorem over a number nobody can put in a data sheet is not a result.
+  `beispiele/01`'s `costs <= 839680 ops` is the known precedent one level down.
+
+**Higher-order contracts: variance, and effects on the type.**
+- Refinement of a function against a pointer type's contract is contravariant in `requires`
+  and covariant in `ensures`. The wrong direction is unsound, so a poison probe must catch it.
+- A driver or scheduler callback speaks about world state, so the pointer type carries
+  `effects` and `costs`. The function's effects must be a subset of the type's and its costs at
+  most the type's. The checker decides both; the pre/post implication is user logic.
+- Through pointers the call graph is no longer static. Every pass that closes over it (frames,
+  effects, cost sums, lock order) joins over all admissible candidates (`KandOk`). The
+  summaries get coarser, and the ceremony and cost numbers are expected to jump. They are
+  booked when the extension lands.
