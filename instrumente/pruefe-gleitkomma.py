@@ -127,6 +127,12 @@ int main(int argc, char **argv) {
 
 WIDTHS = {32: (8, 23), 64: (11, 52)}
 
+# Declared deadline for every executed step (the static half of FRIST).
+FRIST = 900
+
+# Pinned locale for every foreign tool call (GEBIETSSCHEMA).
+GEBIET = {"LC_ALL": "C"}
+
 
 def pat(fmt, s, bexp, frac):
     ebits, fbits = WIDTHS[fmt]
@@ -228,19 +234,82 @@ def find_lake():
     cand = os.path.expanduser("~/.elan/bin/lake")
     if os.path.exists(cand):
         return cand
-    raise SystemExit("lake not found (PATH or ~/.elan/bin/lake)")
+    print("ABBRUCH: lake not found (PATH or ~/.elan/bin/lake)")
+    sys.exit(2)
+
+
+def vergleiche(vecs, lout, cout):
+    """Compare bit patterns. Returns (exact, both_nan, known, bad, broken).
+
+    `bad` are findings (the tree has to change); `broken` are unparsable
+    driver lines (the setup has to change -- exit 2, never a finding).
+    """
+    nok = nnan = nknown = 0
+    bad, broken = [], []
+    for i, (op, fmt, a, b) in enumerate(vecs):
+        try:
+            m, c = int(lout[i]), int(cout[i])
+        except (ValueError, IndexError):
+            broken.append((i, op, fmt, a, b,
+                           lout[i] if i < len(lout) else "?",
+                           cout[i] if i < len(cout) else "?"))
+            continue
+        if m == c:
+            nok += 1
+        elif is_nan(m, fmt) and is_nan(c, fmt):
+            nnan += 1
+        elif is_zero(m, fmt) and is_zero(c, fmt):
+            nknown += 1
+        else:
+            bad.append((i, op, fmt, a, b, m, c))
+    return nok, nnan, nknown, bad, broken
+
+
+def selbsttest():
+    """Speech test in both directions: good data passes, corrupted data
+    falls. Exits 0 only if both hold (a blind comparator would fail the
+    second leg)."""
+    vecs = [("add", 64, 4607182418800017408, 4607182418800017408),
+            ("mul", 32, 1065353216, 1073741824),
+            ("div", 64, 4607182418800017408, 4607182418800017408),
+            ("cvt", 64, -7, 0)]
+    good_lean = ["4607182418800017409", "1084227584", "4607182418800017408",
+                 "13835058055282163712"]
+    good_c = list(good_lean)
+    nok, _, _, bad, broken = vergleiche(vecs, good_lean, good_c)
+    if bad or broken or nok != len(vecs):
+        print("Selbsttest GESCHEITERT: gute Daten fallen")
+        return 1
+    corrupt = list(good_lean)
+    corrupt[0] = str(int(corrupt[0]) ^ 1)
+    _, _, _, bad2, _ = vergleiche(vecs, corrupt, good_c)
+    if len(bad2) != 1:
+        print("Selbsttest GESCHEITERT: kaputte Daten fallen nicht")
+        return 1
+    print("Selbsttest ok (gut faellt nicht, kaputt faellt)")
+    return 0
+
+
+def umgebung():
+    env = dict(os.environ)
+    env.update(GEBIET)
+    return env
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=1500)
     ap.add_argument("--seed", type=int, default=166)
+    ap.add_argument("--selbsttest", action="store_true")
     args = ap.parse_args()
+    if args.selbsttest:
+        sys.exit(selbsttest())
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     olean = os.path.join(root, "grammatik", ".lake", "build", "lib",
                          "lean", "Grammatik", "Gleitkomma.olean")
     if not os.path.exists(olean):
-        raise SystemExit("Gleitkomma.olean missing -- run ./lean-bau first")
+        print("ABBRUCH: Gleitkomma.olean missing -- run ./lean-bau first")
+        sys.exit(2)
     vecs = build_vectors(args.n, args.seed)
     tmp = tempfile.mkdtemp(prefix="gleitkomma-")
     vpath = os.path.join(tmp, "vektoren.txt")
@@ -251,44 +320,54 @@ def main():
     with open(cpath, "w") as f:
         f.write(C_SRC)
     cbin = os.path.join(tmp, "dif")
-    r = subprocess.run(["cc", "-std=c11", "-ffp-contract=off", "-O2",
-                        "-Wall", "-Wextra", "-o", cbin, cpath],
-                       capture_output=True, text=True)
+    try:
+        r = subprocess.run(["cc", "-std=c11", "-ffp-contract=off", "-O2",
+                            "-Wall", "-Wextra", "-o", cbin, cpath],
+                           capture_output=True, text=True, timeout=FRIST,
+                           env=umgebung())
+    except subprocess.TimeoutExpired:
+        print("ABBRUCH: cc reached the deadline")
+        sys.exit(2)
     if r.returncode != 0:
-        raise SystemExit("cc failed:\n" + r.stderr)
+        print("ABBRUCH: cc failed:\n" + r.stderr)
+        sys.exit(2)
     dpath = os.path.join(tmp, "treiber.lean")
     with open(dpath, "w") as f:
         f.write(DRIVER_SRC)
     lake = find_lake()
-    r = subprocess.run([cbin, vpath], capture_output=True, text=True)
+    try:
+        r = subprocess.run([cbin, vpath], capture_output=True, text=True,
+                           timeout=FRIST, env=umgebung())
+    except subprocess.TimeoutExpired:
+        print("ABBRUCH: C driver reached the deadline")
+        sys.exit(2)
     if r.returncode != 0:
-        raise SystemExit("C driver failed:\n" + r.stderr)
+        print("ABBRUCH: C driver failed:\n" + r.stderr)
+        sys.exit(2)
     cout = r.stdout.split()
-    r = subprocess.run([lake, "env", "lean", "--run", dpath, vpath],
-                       capture_output=True, text=True,
-                       cwd=os.path.join(root, "grammatik"))
+    try:
+        r = subprocess.run([lake, "env", "lean", "--run", dpath, vpath],
+                           capture_output=True, text=True, timeout=FRIST,
+                           env=umgebung(),
+                           cwd=os.path.join(root, "grammatik"))
+    except subprocess.TimeoutExpired:
+        print("ABBRUCH: Lean driver reached the deadline")
+        sys.exit(2)
     if r.returncode != 0:
-        raise SystemExit("Lean driver failed:\n" + r.stderr[-3000:])
+        print("ABBRUCH: Lean driver failed:\n" + r.stderr[-3000:])
+        sys.exit(2)
     lout = r.stdout.split()
     if len(cout) != len(vecs) or len(lout) != len(vecs):
-        raise SystemExit("line count mismatch: %d vectors, %d C, %d Lean"
-                         % (len(vecs), len(cout), len(lout)))
-    nok = nnan = nknown = 0
-    bad = []
-    for i, (op, fmt, a, b) in enumerate(vecs):
-        try:
-            m, c = int(lout[i]), int(cout[i])
-        except ValueError:
-            bad.append((i, op, fmt, a, b, lout[i], cout[i]))
-            continue
-        if m == c:
-            nok += 1
-        elif is_nan(m, fmt) and is_nan(c, fmt):
-            nnan += 1
-        elif is_zero(m, fmt) and is_zero(c, fmt):
-            nknown += 1
-        else:
-            bad.append((i, op, fmt, a, b, m, c))
+        print("ABBRUCH: line count mismatch (truncated population): "
+              "%d vectors, %d C, %d Lean" % (len(vecs), len(cout), len(lout)))
+        print("evidence kept in " + tmp)
+        sys.exit(2)
+    nok, nnan, nknown, bad, broken = vergleiche(vecs, lout, cout)
+    if broken:
+        print("ABBRUCH: %d unparsable driver lines, first: %s"
+              % (len(broken), broken[0]))
+        print("evidence kept in " + tmp)
+        sys.exit(2)
     print("vectors: %d  exact: %d  both-NaN: %d  known-signed-zero: %d  "
           "MISMATCH: %d" % (len(vecs), nok, nnan, nknown, len(bad)))
     for (i, op, fmt, a, b, m, c) in bad[:20]:
