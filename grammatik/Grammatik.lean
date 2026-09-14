@@ -211,3 +211,9 @@ import Grammatik.Korrespondenz
 import Grammatik.Gleitkomma
 import Grammatik.Parser.Rundlauf
 import Grammatik.Parser.UebersetzeAllg
+import Grammatik.FadenMerkmal
+import Grammatik.ZielOrtMehrfaden
+import Grammatik.ZielOrtStart
+import Grammatik.Verklemmung
+import Grammatik.MehrfadenZeuge
+import Grammatik.MehrfadenLauf
