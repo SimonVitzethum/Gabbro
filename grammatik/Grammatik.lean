@@ -232,5 +232,6 @@ import Grammatik.MitRuhe
 import Grammatik.MitRuheStatisch
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.AkzeptiertZeuge
+import Grammatik.Zielsatz.Ruhe
 import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
