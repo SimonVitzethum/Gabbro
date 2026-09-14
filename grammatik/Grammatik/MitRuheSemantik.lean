@@ -259,6 +259,7 @@ def logikR : Logik D → Logik D.mitRuhe
   | .schleife => .schleife
   | .abstieg f => .abstieg (some f)
   | .vorzustand => .vorzustand
+  | .bereich => .bereich
 
 /-- A hardware outcome, translated. -/
 def hwR : Hardware D → Hardware D.mitRuhe

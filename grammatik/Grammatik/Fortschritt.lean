@@ -4,12 +4,14 @@
   **Progress up to named stops** (`Zielsatz.FortschrittG`, SATZKARTE §19.2).
 
   On every reachable machine of G, every thread is finished, waits for a
-  lock another thread holds, stands at a named hardware stop
-  (`Zielsatz.HaltBenannt`), or can step. The proof is a case analysis over
+  lock another thread holds, stands at a named stop of one of three kinds
+  (`Zielsatz.HaltBenannt`: `flagge`, a wait for a publication; `budget`, a
+  spent `forever` budget; `hardware`, an axiom or register answer outside
+  its declaration -- since 2026-09-15, verdict F3), or can step. The proof is a case analysis over
   every head shape of a frame residue against the rules of G
   (`RufMaschineG.lean`): at each shape either some rule fires (the `w_*`
   step builders of `RufAdaequatG.lean`/`RufAdaequatRufG.lean`) or one of
-  the three stops applies.
+  the stops (finished, waiting, a named stop) applies.
 
   Three shapes had no rule and no stop, and are excluded by an invariant of
   every run (`FortInvG`, carried through every rule like `schrittMerk`):
@@ -40,7 +42,12 @@
   static holdings held), `StufenM` and a duplicate-free start trace (the
   `locks` rule's rank side conditions, `sperre_rang`), and
   `KeinLogikHaltG` at the machine -- the conjunct of the flagship that says
-  no `logik` check fails (loop invariants, `state` transitions).
+  no `logik` check fails (loop invariants, `state` transitions) -- and
+  `BereichG` (since 2026-09-15, verdict F1): no float range check fails. An
+  out-of-range float is `logik bereich` in the sequential semantics, which
+  the body obligation excludes; `fadenS_bereich` carries that to every
+  thread of every reachable machine, as `fadenS_prueft` does for the
+  `logik` checks.
 -/
 import Grammatik.Zielsatz.Spec
 import Grammatik.RufAdaequatRufG
@@ -498,6 +505,34 @@ theorem anSperre_kopf {M : RufMaschineG D} {t : Faden} {L : D.Lock} (h : AnSperr
   rw [hh]
   rfl
 
+/-- **The float range checks of G pass for thread `t` of `M`** (2026-09-15, verdict F1): at a
+    head `gleit`, float literal or `gleitVon`, the result lies in its declared range at the
+    thread's world. Where it does not, G has no rule, and the sequential semantics answers
+    `logik bereich` -- which the user's obligation excludes (`fadenS_bereich`). -/
+def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
+  (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (op : GleitOp)
+      (l1 h1 l2 h2 lo hi : Int × Int) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleit op a b lo hi rest) k⟩ →
+    gleitPasst lo hi (gleitRechne op
+      (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) a
+        ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
+      (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) b
+        ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x) ≠ none) ∧
+  (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (q lo hi : Int × Int)
+      (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitLit q lo hi rest) k⟩ →
+    gleitPasst lo hi (bruch q) ≠ none) ∧
+  (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (l1 h1 : Int)
+      (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩ →
+    gleitPasst lo hi (gleitAusInt
+      (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) ≠ none)
+
 section Fort
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -505,17 +540,30 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
 /-- What progress says about one thread. -/
 def FortFaden (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (t : Faden) :
     Prop :=
-  FertigG M t ∨ WartetG M t ∨ Zielsatz.HaltBenannt O passes M t ∨
+  FertigG M t ∨ WartetG M t ∨ Zielsatz.HaltBenannt O passes M .flagge t ∨
+    Zielsatz.HaltBenannt O passes M .budget t ∨ Zielsatz.HaltBenannt O passes M .hardware t ∨
     ∃ M', RufSchrittG P O passes M t M'
+
+theorem fort_hw {M : RufMaschineG D} {t : Faden}
+    (h : Zielsatz.HaltBenannt O passes M .hardware t) : FortFaden P O passes M t :=
+  Or.inr (Or.inr (Or.inr (Or.inr (Or.inl h))))
+
+theorem fort_flagge {M : RufMaschineG D} {t : Faden}
+    (h : Zielsatz.HaltBenannt O passes M .flagge t) : FortFaden P O passes M t :=
+  Or.inr (Or.inr (Or.inl h))
+
+theorem fort_budget {M : RufMaschineG D} {t : Faden}
+    (h : Zielsatz.HaltBenannt O passes M .budget t) : FortFaden P O passes M t :=
+  Or.inr (Or.inr (Or.inr (Or.inl h)))
 
 theorem fort_schritt {M : RufMaschineG D} {t : Faden} {X : RufMaschineG D → Prop}
     (h : ∃ M', RufSchrittG P O passes M t M' ∧ X M') : FortFaden P O passes M t := by
   obtain ⟨M', hs, _⟩ := h
-  exact Or.inr (Or.inr (Or.inr ⟨M', hs⟩))
+  exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨M', hs⟩))))
 
 theorem fort_schritt' {M : RufMaschineG D} {t : Faden}
     (h : ∃ M', RufSchrittG P O passes M t M') : FortFaden P O passes M t :=
-  Or.inr (Or.inr (Or.inr h))
+  Or.inr (Or.inr (Or.inr (Or.inr (Or.inr h))))
 
 /-- **The caller receives a value** (`FormG`, the invariant of the pop). -/
 theorem popArt_von {M : RufMaschineG D} {t : Faden} {caller : RufRahmenG D}
@@ -622,7 +670,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       · rcases blatt_fall hO passes s hbl.1 hbl.2 (M.weltVon t) ρ hΛ with
           ⟨σ', ρ', hst, herw⟩ | ⟨h, hh⟩ | ⟨e, he⟩
         · exact fort_schritt (w_blatt rfl s rest ρ hbl.1 hx hΛ σ' ρ' hst herw)
-        · exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩))
+        · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩
         · exact absurd he (hP.2.2.2.1 l Γ Λ _ ρ s rest hbl.1 hx e)
       · cases s with
         | call g args hp hr => exact fort_schritt (w_rufEnde rfl g args hp hr rest ρ hx hΛ)
@@ -655,6 +703,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
     (`fOk`). -/
 theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t)
+    (hB : BereichG M t)
     (hR : RangInvG w0 (M.faeden t))
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (b : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ')
@@ -676,7 +725,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v⟩
-      · refine Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, ?_⟩))
+      · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
         show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
             = none
@@ -702,13 +751,13 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           D.rzusage r v = true
       · obtain ⟨v, hv, hz⟩ := hex
         exact fort_schritt (w_regLies rfl r hk rest k ρ hx v hv hz hΛ)
-      · refine Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, fun v hv => ?_⟩))
+      · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, fun v hv => ?_⟩
         cases hz : D.rzusage r v
         · rfl
         · exact absurd ⟨v, hv, hz⟩ hex
   | regLiesElse r hk zusage sonst rest =>
       cases hv : einpassen (D := D) (D.rtyp r) (O.regLies r (M.weltVon t)) with
-      | none => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hv⟩))
+      | none => exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hv⟩
       | some v =>
           cases hw : wahr? (eval ((M.weltVon t).lese Λ zusage.orte) zusage
               ((M.weltVon t).lese Λ zusage.orte) (.cons v ρ)) with
@@ -717,7 +766,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
               exact fort_schritt (w_regLiesElseFalsch rfl r hk zusage sonst rest k ρ hx v hv hw hΛ)
   | awaits g payload hp hL rest =>
       cases hvis : O.sichtbar g (M.weltVon t) with
-      | false => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hvis⟩))
+      | false => exact fort_flagge ⟨l, Γ, Λ, ρ, _, hx, hvis⟩
       | true => exact fort_schritt (w_awaits rfl g payload hp hL rest k ρ hx hvis hΛ)
   | exchange g neuE hw hL rest => exact fort_schritt (w_exchange rfl g neuE hw hL rest k ρ hx hΛ)
   | narrow e lo' hi' sonst rest =>
@@ -735,16 +784,16 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
           (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) b
             ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x) with
-      | none => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hv⟩))
+      | none => exact absurd hv (hB.1 l Γ Λ _ ρ op _ _ _ _ lo hi a b rest k hx)
       | some v => exact fort_schritt (w_gleit rfl op a b lo hi rest k ρ hx v hv hΛ)
   | gleitLit q lo hi rest =>
       cases hv : gleitPasst lo hi (bruch q) with
-      | none => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hv⟩))
+      | none => exact absurd hv (hB.2.1 l Γ Λ _ ρ q lo hi rest k hx)
       | some v => exact fort_schritt (w_gleitLit rfl q lo hi rest k ρ hx v hv)
   | gleitVon e lo hi rest =>
       cases hv : gleitPasst lo hi (gleitAusInt
           (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) with
-      | none => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hv⟩))
+      | none => exact absurd hv (hB.2.2 l Γ Λ _ ρ _ _ e lo hi rest k hx)
       | some v => exact fort_schritt (w_gleitVon rfl e lo hi rest k ρ hx v hv hΛ)
   | gleitNarrow e lo hi sonst rest =>
       cases hv : gleitPasst lo hi
@@ -756,7 +805,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       · rcases blatt_fall hO passes s hbl.1 hbl.2 (M.weltVon t) ρ hΛ with
           ⟨σ', ρ', hst, herw⟩ | ⟨h, hh⟩ | ⟨e, he⟩
         · exact fort_schritt (w_dannBlatt rfl s rest k ρ hbl.1 hx hΛ σ' ρ' hst herw)
-        · exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩))
+        · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩
         · exact absurd he (hP.2.2.2.2 l Γ Λ _ _ ρ s rest k hbl.1 hx e)
       · cases s with
         | ite c tb eb =>
@@ -822,7 +871,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
 theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hI : FortInvG (M.faeden t)) (hnw : (M.faeden t).kopf.wartend = false)
     (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
-    (hP : PrueftG O passes M t) (hR : RangInvG w0 (M.faeden t)) : FortFaden P O passes M t := by
+    (hP : PrueftG O passes M t) (hB : BereichG M t) (hR : RangInvG w0 (M.faeden t)) :
+    FortFaden P O passes M t := by
   obtain ⟨hk, hb, _, hkt⟩ := hI
   have hnw' : (M.faeden t).kopf.rest.2.2.2.2.wartend = false := hnw
   generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw'
@@ -838,7 +888,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
         simp only [GRest.fOk, Bool.and_eq_true]
         intro hk
         exact hk.1.2
-      exact fort_dann hO hkt hP hR ρ b k hx hn hΛ
+      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ
   | schrumpf k =>
       cases ρ with
       | cons v ρ₀ => exact fort_schritt (w_schrumpf rfl k v ρ₀ hx)
@@ -862,7 +912,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   | wiederRest n bis body ueber k => exact fort_schritt (w_wiederFort rfl n bis body ueber k ρ hx)
   | ewig a n inv body k =>
       cases n with
-      | zero => exact Or.inr (Or.inr (Or.inl ⟨l, Γ, Λ, ρ, _, hx, trivial⟩))
+      | zero => exact fort_budget ⟨l, Γ, Λ, ρ, _, hx, trivial⟩
       | succ n =>
           exact fort_schritt (w_ewigWeiter rfl a n inv body k ρ hx
             (hP.2.1 l Γ Λ ρ a n inv body k hx) hΛ)
@@ -873,7 +923,95 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
 
 end Fort
 
-/-! ## 6. The theorem -/
+/-! ## 6. The float range checks pass (verdict F1) -/
+
+section Bereich
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
+  {lok : D.Tab ⊕ D.Glob → Bool}
+
+/-- **A replayed thread passes every float range check at its head** (as `fadenS_prueft` for
+    the `logik` checks): a failing check makes the head predict `logik bereich` at the
+    replay's sequential world (the operands read stable carriers, so the check reads the same
+    there), which `KoerperGutS` excludes. -/
+theorem fadenS_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f) {M : RufMaschineG D}
+    (t : Faden) (hF : FadenS P O passes Q S lok (M.faeden t) (M.weltVon t)) :
+    BereichG M t := by
+  refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
+    fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,
+    fun l Γ Λ Λ' ρ l1 h1 e lo hi rest k hr hv => ?_⟩
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+    have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+      fun _ h => hok.2.1 (List.mem_append_left _ h)
+    have hgl := hg.lese Λ Λ (a.orte ++ b.orte) (a.orte ++ b.orte)
+    have ea := eval_gleichAuf a (fun _ h => expr_stabil (hFS _) a
+      (fun _ h' => hab (List.mem_append_left _ h')) h) hgl ρ
+    have eb := eval_gleichAuf b (fun _ h => expr_stabil (hFS _) b
+      (fun _ h' => hab (List.mem_append_right _ h')) h) hgl ρ
+    have hv' : gleitPasst lo hi (gleitRechne op
+        (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+        (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none := by
+      rw [ea, eb]; exact hv
+    refine hno .bereich ?_
+    rw [semH_dann]
+    simp only [execBlockH, hv']
+    exact weiterH_logik _ _ _ _ _ _ _
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+    refine hno .bereich ?_
+    rw [semH_dann]
+    simp only [execBlockH, hv]
+    exact weiterH_logik _ _ _ _ _ _ _
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+    have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+      fun _ h => hok.2.1 (List.mem_append_left _ h)
+    have ee := eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => he h') h)
+      (hg.lese Λ Λ e.orte e.orte) ρ
+    have hv' : gleitPasst lo hi (gleitAusInt
+        (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none := by
+      rw [ee]; exact hv
+    refine hno .bereich ?_
+    rw [semH_dann]
+    simp only [execBlockH, hv']
+    exact weiterH_logik _ _ _ _ _ _ _
+
+/-- **On every reachable machine every thread passes its float range checks**, for any set
+    of local carriers with the rely `LokOk` (the premises of `zielInvS_erreichbarL`). -/
+theorem bereichG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussS P S lok f) (hLok : LokOk P O passes lok sp init)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) (M : RufMaschineG D)
+    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) : ∀ t, BereichG M t := fun t =>
+  fadenS_bereich hO hRL hQ hS hsp hK hFS t
+    ((zielInvS_erreichbarL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS hLok hK
+      hStart hsp hex M hr).1.1 t)
+
+/-- The same for thread-local carriers of the call graphs `K` (the premises of
+    `ziel_ort_mehrfaden_bei`). -/
+theorem bereichG_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) (M : RufMaschineG D)
+    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) : ∀ t, BereichG M t :=
+  bereichG_erreichbarL P O passes Q S (lokK P K) sp init hO hRL hQ hlok hS
+    (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
+    (lokOk_mehr hO hvoll sp init K hAbg hWurzel) hK hStart hSstart hex M hr
+
+end Bereich
+
+/-! ## 7. The theorem -/
 
 /-- **`FortschrittG` on every reachable machine at which no `logik` check
     fails.** From `GutO`, the lock floors (`StufenM`) and a duplicate-free
@@ -883,11 +1021,12 @@ end Fort
 theorem fortschrittG_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
     (hSt : StufenM P) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) {M : RufMaschineG D}
-    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) (hL : KeinLogikHaltG O passes M) :
+    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) (hL : KeinLogikHaltG O passes M)
+    (hB : ∀ t, BereichG M t) :
     Zielsatz.FortschrittG P O passes M := fun t =>
   fortschritt_faden hO (fortInvG_erreichbar sp init hr t)
     (rufG_nie_wartend P O passes sp init M hr t)
-    (fun L hL' => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL') (hL t)
+    (fun L hL' => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL') (hL t) (hB t)
     (rangInvG_erreichbar hO hSt sp init hND hr t)
 
 /-- **Progress up to named stops under the premises of the flagship**
@@ -907,6 +1046,9 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
   fortschrittG_aus hO hSt sp init hND hr
     (ziel_ort_sperre P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
       hSstart hex M hr).2.2.1
+    (bereichG_erreichbarL P O passes Q S (freiB fs) sp init hO hRL hQ hlok hS
+      (programmImFragmentS_ok P S hvoll hFrag (fussSperreB_ok hvoll hFuss))
+      (fussSperreB_ok hvoll hFuss) (lokOk_frei hO hvoll sp init) hK hStart hSstart hex M hr)
 
 /-- **Progress up to named stops under the premises of `ziel_ort_mehrfaden`**
     (several active threads with thread-local carriers, every budget), the
@@ -929,6 +1071,8 @@ theorem fortschrittG_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
   fortschrittG_aus hO hSt sp init hND hr
     (ziel_ort_mehrfaden P O Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel hFuss hK
       hStart hSstart hex hI passes M hr).1.2.2.1
+    (bereichG_mehrfaden P O passes Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel
+      hFuss (hK passes) hStart hSstart hex M hr)
 
 /-- Starts without signature locks (the declared starts of `AkzeptiertSpec`
     and every idle start, `Zielsatz.Ruhig`) have a duplicate-free start

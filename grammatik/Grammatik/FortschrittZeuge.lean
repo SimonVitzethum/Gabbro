@@ -24,7 +24,8 @@ variable {D : Deklaration}
 
 /-! ## 1. Where a named stop can stand -/
 
-/-- The block forms whose first layer can answer hardware. -/
+/-- The block forms whose first layer can be a named stop (a hardware answer, or an
+    invisible `awaits`). Float forms are no stop since 2026-09-15 (verdict F1). -/
 def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Block D V l Γ Λ Λ' → Bool
   | .cons s _ => s.istBlatt
@@ -32,12 +33,9 @@ def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .regLies .. => true
   | .regLiesElse .. => true
   | .awaits .. => true
-  | .gleit .. => true
-  | .gleitLit .. => true
-  | .gleitVon .. => true
   | _ => false
 
-/-- The residues at which a named hardware stop can stand. -/
+/-- The residues at which a named stop can stand. -/
 def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     GRest D V l Γ Λ → Bool
   | .ewig _ n _ _ _ => n == 0
@@ -48,40 +46,43 @@ def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .dann b _ => b.kannHalten
   | _ => false
 
-/-- A named hardware stop stands only where `kannHalten` says. -/
-theorem restHardware_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ} (r : GRest D V l Γ Λ)
-    (h : Zielsatz.RestHardware O passes σ ρ r) : r.kannHalten = true := by
+/-- A named stop, of any kind, stands only where `kannHalten` says. -/
+theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ} (k : Zielsatz.HaltArt) (r : GRest D V l Γ Λ)
+    (h : Zielsatz.RestHalt O passes σ ρ k r) : r.kannHalten = true := by
   cases r with
-  | ewig a n inv body k =>
+  | ewig a n inv body k' =>
       cases n with
       | zero => rfl
-      | succ n => exact absurd h (by simp [Zielsatz.RestHardware])
+      | succ n => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
   | ende e =>
       cases e with
-      | cons s rest => exact h.1
-      | _ => exact absurd h (by simp [Zielsatz.RestHardware])
-  | dann b k =>
+      | cons s rest =>
+          cases k
+          · exact h.1
+          all_goals exact absurd h (by simp [Zielsatz.RestHalt])
+      | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
+  | dann b k' =>
       cases b with
-      | cons s rest => exact h.1
+      | cons s rest =>
+          cases k
+          · exact h.1
+          all_goals exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
       | bindAxiom => rfl
       | regLies => rfl
       | regLiesElse => rfl
       | awaits => rfl
-      | gleit => rfl
-      | gleitLit => rfl
-      | gleitVon => rfl
-      | _ => exact absurd h (by simp [Zielsatz.RestHardware, Zielsatz.KopfHardware])
-  | _ => exact absurd h (by simp [Zielsatz.RestHardware])
+      | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
+  | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
 
 /-- A thread whose head residue cannot hold a named stop stands at none. -/
 theorem nicht_haltBenannt {O : Orakel D} {passes : Nat} {M : RufMaschineG D} {t : Faden}
-    (h : (M.faeden t).kopf.rest.2.2.2.2.kannHalten = false) :
-    ¬ Zielsatz.HaltBenannt O passes M t := by
+    (h : (M.faeden t).kopf.rest.2.2.2.2.kannHalten = false) (k : Zielsatz.HaltArt) :
+    ¬ Zielsatz.HaltBenannt O passes M k t := by
   rintro ⟨l, Γ, Λ, ρ, r, hr, hh⟩
   have e := congrArg (fun x => x.2.2.2.2.kannHalten) hr
   simp only at e
-  rw [h, restHardware_kann r hh] at e
+  rw [h, restHalt_kann k r hh] at e
   exact Bool.false_ne_true e
 
 /-! ## 2. The reached machine -/
@@ -95,7 +96,7 @@ theorem nicht_haltBenannt {O : Orakel D} {passes : Nat} {M : RufMaschineG D} {t 
 theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
     RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M ∧
     Zielsatz.FortschrittG mP mO 0 M ∧
-    (¬ FertigG M 0 ∧ ¬ WartetG M 0 ∧ ¬ Zielsatz.HaltBenannt mO 0 M 0 ∧
+    (¬ FertigG M 0 ∧ ¬ WartetG M 0 ∧ (∀ k, ¬ Zielsatz.HaltBenannt mO 0 M k 0) ∧
       ∃ M', RufSchrittG mP mO 0 M 0 M') ∧
     (WartetG M 1 ∧ ¬ FertigG M 1) ∧
     ∀ t : Nat, 2 ≤ t → FertigG M t := by
@@ -116,6 +117,9 @@ theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
   have hF : Zielsatz.FortschrittG mP mO 0 Ms :=
     fortschrittG_aus mO_gut mP_stufen mSp mInit (startSpur_nodup_leer mInit mInit_leer) hrs
       (mP_zertifiziert 0 Ms hrs).1.1.2.2.1
+      (bereichG_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal
+        (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
+        (mP_koerper_alle 0) mP_start mSI_start mInit_exklusiv Ms hrs)
   -- thread 1 waits
   have hW : WartetG Ms 1 :=
     ⟨⟨(), anSperre_von (hs1.trans hz1.1)⟩, fun L _ => ⟨0, by decide, by
@@ -135,13 +139,15 @@ theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
     simp only [GRest.istLocks] at this
     rw [hZs.1] at this
     exact Bool.false_ne_true this
-  have hH0 : ¬ Zielsatz.HaltBenannt mO 0 Ms 0 := nicht_haltBenannt (by rw [hZs.1]; rfl)
+  have hH0 : ∀ k, ¬ Zielsatz.HaltBenannt mO 0 Ms k 0 := nicht_haltBenannt (by rw [hZs.1]; rfl)
   -- so the theorem gives thread 0 a step
   have hS0 : ∃ M', RufSchrittG mP mO 0 Ms 0 M' := by
-    rcases hF 0 with h | h | h | h
+    rcases hF 0 with h | h | h | h | h | h
     · exact absurd h hF0
     · exact absurd h hW0
-    · exact absurd h hH0
+    · exact absurd h (hH0 _)
+    · exact absurd h (hH0 _)
+    · exact absurd h (hH0 _)
     · exact h
   -- the idle threads are finished
   have hRuhe : ∀ t : Nat, 2 ≤ t → FertigG Ms t := by
@@ -159,7 +165,7 @@ theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
     rfl
   exact ⟨Ms, hrs, hF, ⟨hF0, hW0, hH0, hS0⟩, ⟨hW, hF1⟩, hRuhe⟩
 
-#print axioms Gabbro.Grammatik.restHardware_kann
+#print axioms Gabbro.Grammatik.restHalt_kann
 #print axioms Gabbro.Grammatik.nicht_haltBenannt
 #print axioms Gabbro.Grammatik.fortschritt_zeuge
 

@@ -26,7 +26,8 @@
     `Logik.vorzustand`    -- ein `state`-Uebergang `von -> nach`, aber das Feld stand nicht auf `von`
     `Hardware.annahme a`    -- ein `axiom` (jeder fremde Rumpf) antwortet ausserhalb seines Typs
     `Hardware.fortschritt a`-- ein `forever … progress a` wird von der Umgebung nicht beendet
-    `Hardware.ieee`         -- eine Gleitkommarechnung verliess ihren erklaerten Bereich
+    `Logik.bereich`         -- a float result left its declared range (was `Hardware.ieee`
+                               until 2026-09-15: the kernel IEEE model decides it, no oracle)
     `Hardware.register r`   -- ein Register antwortete ausserhalb seines erklaerten Typs
     `Hardware.geraet r`     -- ein Register antwortete gegen seine erklaerte Zusage (`requires`)
     `Hardware.sichtbarkeit` -- ein `awaits` sah die Veroeffentlichung nicht: das Speichermodell
@@ -282,13 +283,22 @@ inductive Logik (D : Deklaration) where
       `Vorzustand`, nicht `Uebergang`: das alte Schlüsselwort ist abgelegt, und der
       Ausgang heisst nach dem, was nicht stimmte (PFLICHTEN.md «B26»). -/
   | vorzustand
+  /-- A float result (`gleit`, a float literal, `gleitVon`) outside its declared range, or NaN
+      or infinite, where the form has no `else`. The kernel IEEE model (`gleitRechne`, Annex F)
+      decides it from the program's own values, for EVERY oracle: it is the program's logic,
+      as a `state` pre-state is (verdict F1, URTEIL-OPUS-2026-09-15b; until 2026-09-15 it was
+      `Hardware.ieee`). That the FPU computes the kernel model is `gleitkomma_ieee`, on the C
+      side. -/
+  | bereich
 
 /-- Die Hardware: eine Annahme ueber die Maschine gilt nicht. -/
 inductive Hardware (D : Deklaration) where
   | annahme (a : D.Ax)
   | fortschritt (a : D.Annahme)
   /-- Eine Gleitkommarechnung verliess ihren erklaerten Bereich, oder wurde NaN/unendlich:
-      IEEE 754 ist die Maschine, und ihr Rundungsverhalten ist die Annahme («F»). -/
+      IEEE 754 ist die Maschine, und ihr Rundungsverhalten ist die Annahme («F»).
+      NO LONGER PRODUCED by the semantics since 2026-09-15 (verdict F1): an out-of-range float
+      result is `Logik.bereich`. The constructor stays for the C-side vocabulary. -/
   | ieee
   /-- Ein Register antwortete ausserhalb seines erklaerten Typs. -/
   | register (r : D.Reg)
@@ -548,7 +558,7 @@ def gleitRechne : GleitOp → GFloat → GFloat → GFloat
 
 /-- Ein Maschinenergebnis gegen den erklaerten Bereich: endlich und drin, oder nichts.
     NaN and the infinities fail `gleitEndlich` and fall into the `none` branch -- the
-    `hardware ieee` outcome (or a `narrow`'s `else`), as with the `Float` model. -/
+    `logik bereich` outcome (or a `narrow`'s `else`), as with the `Float` model. -/
 def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
   if h : gleitEndlich x = true ∧ gleitLe (bruch lo) x = true ∧ gleitLe x (bruch hi) = true then
     some ⟨x, h.1, h.2.1, h.2.2⟩
@@ -730,16 +740,16 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       let σ := σ.lese Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitLit q lo hi rest, σ, ρ =>
       match gleitPasst lo hi (bruch q) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitVon e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitNarrow e lo hi sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (eval σ e σ ρ).x with

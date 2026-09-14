@@ -15,6 +15,10 @@
                                                                    -> (b), by the start
     obligation `StartPflicht.sperren` (the checker's Bool ACCEPTS it, `p1_akzeptiert`);
   * probe D (`fvP false`, `forever … invariant false { leave }`)   -> (b), at some budget;
+  * probe F1 (`f1P`: probe A's contracts, a float literal outside its range in front of every
+    body; verdict F1 of URTEIL-OPUS-2026-09-15b)                   -> (b), since the
+    out-of-range float is `logik bereich` (it was `hardware ieee`; the checker ACCEPTS the
+    program, `f1_akzeptiert`, so the refusal is (b)'s);
   * a table-invariant breaker (`ivPschlecht`)                      -> (b);
   * an unguarded carrier one start reads and another writes        -> (a) `AkzeptiertSpec`
     (stated for EVERY program, so for every sound `Pruefer` the Bool is `false`);
@@ -72,6 +76,26 @@ def sFalsch : SperrInv zD := ⟨fun _ => [], fun _ _ => false⟩
 def probeA_falsch_inv : Prop :=
   ∀ (Q : AxEns zD) (starts : List (Σ w : zD.Fn, Env zD (zD.params w))) (sp0 : Speicher zD),
     ¬ NutzerPflicht ⟨paP, sFalsch, Q, starts, sp0⟩
+
+/-- Verdict F1's crash (URTEIL-OPUS-2026-09-15b): `if true { let x = 2.0 in 0 .. 1; }` -- a
+    float literal outside its declared range. The kernel IEEE model decides it, for every
+    oracle. -/
+def f1Crash {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false Γ Λ Λ :=
+  .ite .wahr (.gleitLit (2, 1) (0, 1) (1, 1) .nil) .nil
+
+/-- **Probe F1**: probe A's contracts (`ensures false` everywhere) with the crash in front of
+    every body. Until 2026-09-15 the crash ended the body in `hardware ieee` -- a "hardware"
+    stop no clause of (b) constrained -- so this program met (b), passed the checker with
+    `haupt` declared and running, and `gabbro_ziel` certified it. -/
+def f1P : Programm zD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .falsch
+  rumpf f := .cons f1Crash (paP.rumpf f)
+
+/-- **Probe F1 fails (b)** (verdict F1, 2026-09-15): an out-of-range float is `logik bereich`,
+    which the body obligation excludes -- for every program with this code. -/
+def probeF1_widerlegt : Prop := NutzerWiderlegt f1P
 
 /-- Probe D fails (b): at budget `1` the body ends in `logik schleife` (at budget `0` alone it
     would not -- the reason `NutzerPflicht` quantifies every budget). -/

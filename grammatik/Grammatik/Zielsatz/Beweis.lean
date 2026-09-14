@@ -29,8 +29,13 @@
   * `invGrund` (`InvAmGrundG`)         -- `ziel_ort_mehrfaden_invGrund`;
   * `keineVerklemmung`                 -- `keine_verklemmungG` (`StufenM`, starts without
                                           signature locks, `ls` complete);
+  * `keinZyklus` (`KeinWarteZyklus`)   -- `kein_warteZyklusG` (the same rank invariant;
+                                          2026-09-15, verdict F2);
   * `fortschritt` (`FortschrittG`)     -- `fortschrittG_aus` (the `keinLogikHalt` leg,
-                                          a lock-free hence duplicate-free start trace);
+                                          a lock-free hence duplicate-free start trace,
+                                          and `bereichG_mehrfaden`: every float range
+                                          check passes, since the body obligation excludes
+                                          `logik bereich` -- verdict F1);
   * `zeit` (`ZeitAb`)                  -- `frame_schritte_beschraenkt`, per frame: `ZeitAb`
                                           carries its own `rufTief` admission, so no
                                           program-wide premise is needed.
@@ -63,6 +68,42 @@ namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 
 variable {D : Deklaration}
+
+/-! ## 0. No wait cycle (verdict F2) -/
+
+section Zyklus
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat}
+
+/-- **NO WAIT CYCLE FROM LOCK RANKS.** On every reachable machine there are no threads
+    `t₀, …, tₙ₊₁ = t₀` with each `tᵢ` at `locks Lᵢ` while `tᵢ₊₁` holds `Lᵢ` -- whatever the
+    other threads do. Along such a chain the ranks rise strictly (`sperre_rang`: every lock a
+    thread holds ranks below the lock it stands at), and the last link closes it:
+    `rang L₀ ≤ rang Lₙ < rang L₀`. -/
+theorem kein_warteZyklusG (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
+    {M : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M) :
+    KeinWarteZyklus M := by
+  have hI := fun t => rangInvG_erreichbar hO hSt sp init (startSpur_nodup_leer init hLeer) hr t
+  intro n ts Ls hW he
+  have hlt : ∀ i, i < n → D.rang (Ls i) < D.rang (Ls (i + 1)) := fun i hi =>
+    (sperre_rang (hI (ts (i + 1))) (hW (i + 1) hi).1).2 (Ls i) (hW i (Nat.le_of_lt hi)).2
+  have hle : ∀ i, i ≤ n → D.rang (Ls 0) ≤ D.rang (Ls i) := by
+    intro i
+    induction i with
+    | zero => intro _; exact Int.le_refl _
+    | succ i ih =>
+        intro hi
+        have h1 := hlt i hi
+        have h2 := ih (Nat.le_of_succ_le hi)
+        omega
+  have h1 := (hW n (Nat.le_refl n)).2
+  rw [he] at h1
+  have hlast := (sperre_rang (hI (ts 0)) (hW 0 (Nat.zero_le n)).1).2 (Ls n) h1
+  have := hle n (Nat.le_refl n)
+  omega
+
+end Zyklus
 
 /-! ## 1. Every leg, for any program meeting the four premise groups -/
 
@@ -100,8 +141,11 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     keinStartGrund := main.2.2
     keinLogikHalt := main.1.1.2.2.1
     keineVerklemmung := fun hWt => keine_verklemmungG hH.1 hSt sp init hLeer ls.1 ls.2 hr hWt
+    keinZyklus := kein_warteZyklusG hH.1 hSt sp init hLeer hr
     fortschritt := fortschrittG_aus hH.1 hSt sp init (startSpur_nodup_leer init hLeer) hr
       main.1.1.2.2.1
+      (bereichG_mehrfaden P O passes Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1 hH.2.2
+        hN.2.2 hS fs.2 hFrag hAbg hW hFuss (fun f => (hN.1 passes f).1) hStart hSstart hex M hr)
     zeit := fun f g n _ _ _ hadm hE _ run hA' =>
       frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
 
@@ -158,6 +202,7 @@ theorem gabbro_ziel : GabbroZiel := by
     (wsRuhe E.ws) hA (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp
     init (startZulaessig_aus E fs.1 hN.start hL) M hr
 
+#print axioms Gabbro.Grammatik.Zielsatz.kein_warteZyklusG
 #print axioms Gabbro.Grammatik.Zielsatz.ziel_aus
 #print axioms Gabbro.Grammatik.Zielsatz.startZulaessig_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel

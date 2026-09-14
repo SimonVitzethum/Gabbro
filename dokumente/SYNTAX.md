@@ -931,7 +931,7 @@ enclosing `locks` blocks and the statements before the position:
 | `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | the model function `Arena.alloc` (`grammatik/Grammatik/Arena.lean`); no `Stmt` constructor — the generation is checker state, the bound is the model |
 | `reset A;` | `A` is a declared arena; `writes A` | — | the model function `Arena.reset`: the generation moves, every older index is stale by typing |
 | `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
-| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`hardware ieee`** if the result is outside or not finite | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
+| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `messung/URTEIL-OPUS-2026-09-15b.md` F1) | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
 | `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
 | `axiom(…);` | | `hardware (annahme a)` | `Stmt.axiomCall` |
 | `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regSchreib`; theorem `register_schreibbar` |
@@ -2126,7 +2126,7 @@ every sugar as a term of the core, so it has no meaning of its own to get wrong.
 | a `state` field is not on the pre-state of its transition | `logik vorzustand` | logic |
 | an `axiom` or foreign body answers outside its declared type | `hardware (annahme a)` | hardware |
 | a `forever … progress a` is not ended by the environment | `hardware (fortschritt a)` | hardware |
-| a float result leaves its declared range or is not finite (IEEE rounding) | `hardware ieee` | hardware |
+| a float result leaves its declared range or is not finite (the kernel IEEE model decides it; `hardware ieee` until 2026-09-15) | `logik bereich` | logic |
 | a register answers outside its declared type | `hardware (register r)` | hardware |
 | a register answers against its declared promise (`requires` at the `reg`) | `hardware (geraet r)` | hardware |
 | an `awaits` does not see the publication it pairs with (the memory model) | `hardware (sichtbarkeit A10)` | hardware |

@@ -353,8 +353,9 @@ theorem ExprCorr.runFG' {Λ : List (Res D)} {lo hi : Int × Int} {c : CX} {e : E
 
 /-- F1. `double c = a op b; rest` against `Block.gleit op a b lo hi rest`:
     C computes the bits of Gabbro's result (Annex F is the model); where
-    Gabbro's range check fails the outcome is `hardware ieee`, which
-    carries no obligation. -/
+    Gabbro's range check fails the outcome is `logik bereich` (was
+    `hardware ieee` until 2026-09-15, verdict F1): the user's obligation
+    excludes it, and a failure outcome carries no correspondence duty. -/
 theorem gsem_gleit {Λ Λ' : List (Res D)} (op : GleitOp) {l1 h1 l2 h2 lo hi : Int × Int}
     {a : Expr D Γ Λ (.fl l1 h1)} {b : Expr D Γ Λ (.fl l2 h2)}
     {rest : Block D V l (.fl lo hi :: Γ) Λ Λ'} {ca cb : CX} {x : Nat} {cr : CS}
@@ -380,7 +381,7 @@ theorem gsem_gleit {Λ Λ' : List (Res D)} (op : GleitOp) {l1 h1 l2 h2 lo hi : I
           (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρG).x
           (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρG).x) with
       | some v => (execBlock X.O X.passes X.R rest (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρG)).schrumpf
-      | none => .hardware .ieee := rfl
+      | none => .logik .bereich := rfl
   rw [hex] at hnf ⊢
   cases hgp : gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρG).x
@@ -413,7 +414,7 @@ theorem gsem_gleitLit {Λ Λ' : List (Res D)} (q : Int × Int) {lo hi : Int × I
   have hex : execBlock X.O X.passes X.R (Block.gleitLit q lo hi rest) σ ρG =
       match gleitPasst lo hi (bruch q) with
       | some v => (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf
-      | none => .hardware .ieee := rfl
+      | none => .logik .bereich := rfl
   rw [hex] at hnf ⊢
   cases hgp : gleitPasst lo hi (bruch q) with
   | none => rw [hgp] at hnf; exact Bool.noConfusion hnf
@@ -455,7 +456,7 @@ theorem gsem_gleitVon {Λ Λ' : List (Res D)} (t : CIT) {l1 h1 : Int} {lo hi : I
   have hex : execBlock X.O X.passes X.R (Block.gleitVon e lo hi rest) σ ρG =
       match gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).n) with
       | some v => (execBlock X.O X.passes X.R rest (σ.lese Λ e.orte) (.cons v ρG)).schrumpf
-      | none => .hardware .ieee := rfl
+      | none => .logik .bereich := rfl
   rw [hex] at hnf ⊢
   cases hgp : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).n) with
   | none => rw [hgp] at hnf; exact Bool.noConfusion hnf

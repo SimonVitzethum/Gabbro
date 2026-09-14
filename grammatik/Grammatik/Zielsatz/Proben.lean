@@ -12,6 +12,9 @@
   * `unerfuellbar_widerlegt`     -- P1 for the whole class: an unsatisfiable family refutes (b);
   * `start_req_widerlegt`        -- a declared start whose `requires` fails at `E.sp0`;
   * `probeD_widerlegt_gilt`      -- probe D (`fvP false`) at budget 1 (`probeD_nicht`);
+  * `probeF1_widerlegt_gilt`     -- verdict F1: a float literal outside its range in front of
+                                    every body (`f1P`) ends in `logik bereich` for every
+                                    oracle (`f1_lauf`); the checker ACCEPTS it (`f1_akzeptiert`);
   * `probeD_wahr_widerlegt_gilt` -- the `forever` variant with invariant `true` (`fwP_nicht`);
   * `tabelle_widerlegt_gilt`     -- the table-invariant breaker `ivPschlecht`.
   Refutations of (a) `AkzeptiertSpec`, for every program:
@@ -79,6 +82,32 @@ theorem start_req_widerlegt {D : Deklaration} (E : Einheit D)
     (a : Σ w : D.Fn, Env D (D.params w)) (ha : a ∈ E.starts)
     (hf : ¬ ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2) : ¬ NutzerPflicht E :=
   fun h => hf (h.start.req a ha)
+
+/-- The float literal of probe F1 is outside its range, by computation. -/
+theorem f1_lit_ausser : gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := rfl
+
+/-- Every body of probe F1 ends in `logik bereich`, whatever the oracle and the handler: the
+    kernel IEEE model decides it (the stop verdict F1 found labelled "hardware"). -/
+theorem f1_lauf (O' : Orakel zD) (passes : Nat)
+    (R : ∀ f : zD.Fn, World zD → Env zD (zD.params f) → RufAusgang f)
+    (f : zD.Fn) (σ : World zD) (ρ : Env zD (zD.params f)) :
+    execEnd (V := vertragVon zD f) O' passes R (f1P.rumpf f) σ ρ = .logik .bereich := by
+  cases f <;> rfl
+
+/-- **Verdict F1, closed: probe F1 fails (b)**, for every program with its code -- whatever
+    its lock invariants, axiom ensures, starts and initial memory. -/
+theorem probeF1_widerlegt_gilt : probeF1_widerlegt := by
+  rintro ⟨P, S, Q, st, s⟩ hP h
+  obtain rfl : P = f1P := hP
+  have hl : (f1P.rumpf zHaupt).ohneLocks = true := rfl
+  refine (h.logik.1 0 zHaupt).1.2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
+    (havocOk_misch_lokal h.logik.2.1 (fun _ _ => s) (fun L _ => h.start.sperren L)) hwRuf
+    (hwRuf_rahmen f1P) hwRuf_ohneLogik (zSp.welt []) .nil rfl .bereich ?_
+  exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans (f1_lauf zO 0 hwRuf zHaupt _ _)
+
+/-- The F1 program passes the checker (with `haupt` declared): the refutation above is by
+    (b), not by (a). -/
+theorem f1_akzeptiert : Akzeptiert f1P zS zFs [()] [.inl ()] [zHaupt] = true := by decide
 
 theorem probeD_widerlegt_gilt : probeD_widerlegt := by
   rintro ⟨P, S, Q, st, s⟩ hP h
@@ -288,6 +317,8 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_falsch_inv_nicht
 #print axioms Gabbro.Grammatik.Zielsatz.p1_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.probeF1_widerlegt_gilt
+#print axioms Gabbro.Grammatik.Zielsatz.f1_akzeptiert
 #print axioms Gabbro.Grammatik.Zielsatz.unerfuellbar_widerlegt
 #print axioms Gabbro.Grammatik.Zielsatz.havocOk_bewohnt
 #print axioms Gabbro.Grammatik.Zielsatz.start_req_widerlegt
