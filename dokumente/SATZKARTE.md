@@ -830,7 +830,7 @@ head stands at one of these places (a leaf here: a `state` transition).
 - **Termination / `abstieg`:** G has no depth bound; a recursion that does
   not end keeps running in G, and no theorem bounds it (costs: `KostenG.lean`
   bounds a frame's own steps only).
-- **Full progress is NOT proved.** Proved: no reachable machine is stuck at a
+- **Full progress is NOT proved** (PROVED since §19.2, `fortschrittG_aus`: every thread finished, waiting, at a named stop, or stepping). Proved: no reachable machine is stuck at a
   `logik` check (`KeinLogikHaltG`), and there the rule fires given
   `HeldGenau`. What else can stop a thread, rule by rule:
   1. `dannLocks`: another thread holds `L` (`RufFreiG` false) -- waiting;
@@ -852,7 +852,7 @@ head stands at one of these places (a leaf here: a `state` transition).
      proved on every reachable machine (`rufG_haelt_statisch`), the `⊇` half
      is not (it needs a no-duplicate fact about held locks and an exact
      stack link); the progress conjunct takes it as a hypothesis.
-  6. The caller's shape at a pop: a binding pop needs the caller in
+  6. (CLOSED in §19.2, `FormKette`.) The caller's shape at a pop: a binding pop needs the caller in
      `wartet`/`wartetSonst` with the callee's result type, a reason pop a
      `wartetSonst` caller with the callee's reason count; that suspended
      frames are always so shaped is not a proved invariant
@@ -1983,7 +1983,7 @@ on its stack, `i` holds in memory"), whose step classification has the size
 of `sperrInvG_schritt` plus the reason pops. Estimated: several hundred
 lines; not done in this round.
 
-*Finding (reason returns).* `dokumente/SYNTAX.md` (lines 673-676, 1337,
+*Finding (reason returns; REPAIRED in §19.1, `ziel_ort_sperre_invGrund`).* `dokumente/SYNTAX.md` (lines 673-676, 1337,
 1598 U006) says a function "owes `I` at every `return`". The model checks
 owed invariants at VALUE returns only (`rufAt`: `.grund σ' r => .grund σ' r`;
 `InvGutS` quantifies `EndAusgang.zurueck` only). So a function that owes
@@ -2016,7 +2016,7 @@ Every theorem named in §18 -- `Endblock.execH_passes`,
 
 ### 18.7 What remains
 
-- §18.5: invariants at releases (`InvRuheG`) and at reason returns.
+- §18.5: invariants at releases (`InvRuheG`) and at reason returns (the latter done in §19.1).
 - `StartOhneGrund`, `ohneEwigB` are decidable model facts without a Rust
   rule (as `fussMehrB`, `StufenM`, §16.6).
 - Budget monotonicity (obligation at `n + 1` implies at `n`) is not proved;
@@ -2028,5 +2028,186 @@ Every theorem named in §18 -- `Endblock.execH_passes`,
 - Time (waiting bound, termination, ops->cycles) and every implementation
   item of the verdicts: unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §§1-10 history above.)
+## 19. Invariants at reason returns; progress up to named stops (2026-09-14, two legs of `Ziel`)
+
+`Zielsatz/Spec.lean` states the goal `GabbroZiel` as one statement; two of
+its legs had no theorem in the model: `invGrund : InvAmGrundG P M` and
+`fortschritt : FortschrittG P O passes M`. Both are proved here, against the
+definitions of `Spec.lean` as they stand (no change to `Spec.lean`, none
+needed). The proof of `GabbroZiel` itself is not attempted.
+
+### 19.1 `InvAmGrundG` -- invariants at REASON returns (`ZielOrtInvGrund.lean`)
+
+*The gap (§18.5, "Finding").* `InvGutS`/`InvAmOrtG` covered VALUE returns
+only; a function owing `i` could break it, leave by a reason, and after the
+release another thread saw `i` false with every premise met. Now closed as
+obligation + conclusion, like §15.4:
+
+```lean
+-- Zielsatz/Spec.lean (unchanged):
+def InvGutGrund (P) (passes) (Q) (S) (f) : Prop :=        -- per function, SEQUENTIAL
+  ∀ O', RahmenO O' → RegLokal O' → AxVertragO Q O' → ∀ U, HavocOk S U →
+    ∀ R, RespektiertRahmen P R → OhneVorbedingung R →
+      ∀ σ ρ, ReqAmEintritt P f σ ρ →
+        ∀ σ' (r : Fin (D.gruende f)),
+          execEndH (V := vertragVon D f) S O' U passes R (P.rumpf f) σ ρ = .grund σ' r →
+            InvAmRueck P f σ'
+def InvAmGrundG (P) (M) : Prop :=
+  ∀ t ev, ev ∈ (M.faeden t).log → ∀ g rho r s0 s1, ev = .grund g rho r s0 s1 → InvAmRueck P g s1
+
+-- ZielOrtInvGrund.lean:
+theorem ziel_ort_sperre_invGrund … (premises of ziel_ort_sperre)
+    (hIG : ∀ f, Zielsatz.InvGutGrund P passes Q S f) :
+    ∀ M, RufErreichbarG P O passes (RufStartG P sp init) M → Zielsatz.InvAmGrundG P M
+theorem invAmGrundG_erreichbarL …   -- generic in the local carriers `lok`
+theorem ziel_ort_mehrfaden_invGrund … (premises of ziel_ort_mehrfaden)
+    (hIG : ∀ passes f, Zielsatz.InvGutGrund P passes Q S f) :
+    ∀ passes M, RufErreichbarG … M → Zielsatz.InvAmGrundG P M
+theorem ziel_ort_sperre_invAlle …   -- InvAmOrtG ∧ InvAmGrundG (value AND reason returns)
+```
+
+*The replay had to learn the reason channel first.* The frame results of
+the replay (`ZErg`, `ZielOrtSem.lean`) knew a return, a `logik` outcome and
+"anything else"; a reason exit of the frame's own function was "anything
+else", so `KopfS` related no reason return of G to a sequential one. New in
+`SperreSem.lean` §2a: `ZErgG` (= `ZErg` plus `grund σ r`) with `gleich`,
+`folgt` and their lemmas (`folgt_grund` new), `zErgG` (keeps `grund`),
+`zErgG_gleich_grund`. The lock-invariant replay (`weiterH`, `semH`, `KopfS`,
+`WarteS`, `FortS`, `pushS_*`, `popS_*`, `akteurS`, …; files `SperreSem`,
+`SperreBeweis`, `ZielOrtSperre`, `ZielOrtInv`) now predicts in `ZErgG`;
+`weiterH` carries a reason through an `ende` node (it was `sonst`); new
+`weiterH_grund`, `semH_rueckGrund`, `semH_rueckConsGrund`,
+`semH_dannRetGrund`. Every theorem of the chain kept its statement (they
+do not mention the result type); the older replays (`semZ`, `semV`, …) keep
+`ZErg` untouched. Machine G is unchanged.
+
+*Proof.* `popS_grund` (twin of `popS_inv`): the head's replay equation at a
+reason head predicts `grund σ rg` (`semH_*Grund`), so the body's sequential
+run under the recorded handlers ends in `grund σ'' rg` with `SG σ'' σ`;
+`InvGutGrund` gives the owed invariants at `σ''`; their carriers are stable
+at the return (`inv_stabil`: guards are signature locks, U003), where the
+replay world agrees with the machine world, which is the world the pop logs
+(`M.weltVon f`). `invGrundLog_schritt` classifies the three reason pops
+(`rueckGrund`, `rueckConsGrund`, `dannRetGrund`); every other rule logs no
+`grund` event. Induction over reachability as `ziel_ort_sperre_inv`.
+
+*Witnesses (`ZielOrtInvGrundZeuge.lean`).* Declaration `igD` (as `ivD`,
+§15.4): `setze() -> bool` declares one reason and leaves only by it; `haupt`
+calls it through `let x = setze() else { r => … }` inside `breaking`.
+* `igPschlecht` (`setze`: `konto[0] := 5; return R`) meets every premise of
+  `ziel_ort_sperre_inv` (`igPschlecht_alt`: `setze` never returns a value,
+  `InvGutS` holds vacuously), and on a machine reached in five steps the
+  logged reason return of `setze` breaks `konto[0] == konto[1]`
+  (`igPschlecht_verletzt`). The new obligation refutes it
+  (`igPschlecht_nicht_invGutGrund`, from the zero memory: `5 ≠ 0`).
+* `igPgut` (`setze`: both slots `5`, then the reason) meets every premise of
+  `ziel_ort_sperre_invAlle` (`igPgut_zertifiziert`; the obligations proved
+  per function, `igHaupt_fall` classifies the callee's answer), and on a
+  machine reached in six steps the logged reason return meets the invariant
+  BY THE THEOREM, at a world whose two slots hold `5` (`igGut_zeuge`).
+
+### 19.2 `FortschrittG` -- progress up to named stops (`Fortschritt.lean`)
+
+```lean
+-- Zielsatz/Spec.lean (unchanged):
+def FortschrittG (P) (O) (passes) (M) : Prop :=
+  ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M t ∨ ∃ M', RufSchrittG P O passes M t M'
+
+-- Fortschritt.lean:
+theorem fortschrittG_aus (hO : GutO O) (hSt : StufenM P) (sp init)
+    (hND : ∀ t, (offen (startSpur (init t).1)).Nodup)
+    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) (hL : KeinLogikHaltG O passes M) :
+    Zielsatz.FortschrittG P O passes M
+theorem fortschrittG_sperre …     -- premises of ziel_ort_sperre + StufenM + hND
+theorem fortschrittG_mehrfaden …  -- premises of ziel_ort_mehrfaden + StufenM + hND, every budget
+theorem startSpur_nodup_leer …    -- hND from lock-free starts (AkzeptiertSpec.wurzeln, Ruhig)
+```
+
+No fragment restriction: `fortschrittG_aus` holds for EVERY program; the
+flagship premises enter only through `KeinLogikHaltG` (a conjunct of `Ziel`
+itself, proved by the flagships). `StufenM` and a duplicate-free start
+trace give the rank side conditions of `locks` (`sperre_rang`); both follow
+from `AkzeptiertSpec` + `StartZulaessig`.
+
+*The case analysis* (`fortschritt_faden`, `fort_ende`, `fort_dann`,
+`fort_abb`): for every head shape of a residue, either a rule of G fires
+(the `w_*` builders of `RufAdaequatG`/`RufAdaequatRufG`; direct constructor
+applications for `rufCallInd`, `dannCallInd`, `dannBindCallInd`,
+`dannBindAxiom`) or a stop applies:
+* finished: empty stack at `ret`/`retGrund` (`FertigG`, §13.5 item 7);
+* waiting: `locks L` with `L` held by another thread (`WartetG`; the lock at
+  the head is unique, `anSperre_kopf`); if no other thread holds it,
+  `schritt_an_sperre` fires;
+* named hardware stop (`HaltBenannt`): a leaf answering hardware (the only
+  leaf outcomes are `ok`/`logik`/hardware, `blatt_fall`; axiom leaves extend
+  the trace by accesses under `GutO`, `axiom_erw`), `bindAxiom` answer
+  outside its type, register answer outside type/promise, invisible
+  `awaits`, float out of range, `ewig a 0`;
+* a `logik` stop is excluded by `KeinLogikHaltG` (loop invariants at
+  `travNext`/`travDone`/`ewigWeiter`/`dannLeaveTrav`, `state` transitions).
+
+*The three shapes with no rule and no stop, and the invariant that excludes
+them* (`FortInvG`, carried through every rule by `fortInvG_schritt`, like
+`schrittMerk`; `fortInvG_erreichbar`):
+1. **The caller's shape at a pop (§13.5 item 6)** -- `FormKette`: every
+   suspended frame `c` right below a frame of `g` satisfies `FormG c g`:
+   `c` does not wait and `gruende g = 0` (pushed by `call`/`callInd`); or
+   `c.rest = wartet restb k` with `erg g = some τ` and `gruende g = 0`
+   (`bindCall`/`bindCallInd`); or `c.rest = wartetSonst n err restb k` with
+   `erg g = some τ` and `gruende g = n` (`bindCallElse`). Pushes create
+   exactly these, pops remove the top pair, head-local rules keep the
+   function and the stack. At a value return this gives `PopArt`
+   (`popArt_von`), at a reason return `PopGrund` (`popGrund_von`: a reason
+   `r : Fin (gruende g)` excludes the first two shapes).
+2. **An abrupt exit without a loop** -- `GRest.fOk`: an `ende` node never has
+   the loop flag (`leave`/`next` there are ill-typed then); every
+   loop-flagged continuation reaches a loop shim through `dann`/`schrumpf`/
+   `frei`/`abbruch` layers (`GRest.absorb`, `nimmtAb`), so `leave`/`next`
+   always meet `dannLeave*`/`dannNext*` or a peel rule.
+3. **An `else` continuation that falls through** -- `abbruch k` has no rule:
+   the block in front of an `abbruch` chain never ends normally
+   (`Block.terminal`, `Endblock.alsBlock_terminal`), and no loop node,
+   release marker or head is such a chain (`GRest.blockiert`).
+The head is never waiting (`rufG_nie_wartend`), its holdings are held
+(`rufG_haelt_statisch`).
+
+*Witness (`FortschrittZeuge.lean`, `fortschritt_zeuge`).* On the two-writer
+fixture of §16 (`mP`), at the machine where thread 0 holds the lock and
+stands at the call of `setze` inside it and thread 1 stands at its `locks`:
+`fortschrittG_aus` holds from the fixture's premises; thread 1 WAITS for the
+lock thread 0 holds; thread 0 is neither finished nor waiting nor at a named
+stop (`nicht_haltBenannt`: a call is no leaf), so the theorem gives it a
+step; every idle thread is finished.
+
+### 19.3 Axiom record (full `lake build`, 198 jobs, green; `ki-pc-fisch-101`)
+
+`Endblock.alsBlock_terminal`, `startSpur_nodup_leer`, `igPgut_frag`,
+`igPgut_fuss`: `propext`. `axiom_erw`: `propext`, `Quot.sound`. Every other
+new theorem -- `popS_grund`, `invGrundLog_schritt`,
+`ziel_ort_sperre_invGrund`, `invAmGrundG_erreichbarL`,
+`ziel_ort_mehrfaden_invGrund`, `ziel_ort_sperre_invAlle`,
+`invGutGrund_ohne`, `invGutGrund_ohneGrund`, `fortInvG_schritt`,
+`fortInvG_erreichbar`, `blatt_fall`, `fort_abb`, `fort_ende`, `fort_dann`,
+`fortschritt_faden`, `fortschrittG_aus`, `fortschrittG_sperre`,
+`fortschrittG_mehrfaden`, `restHardware_kann`, `nicht_haltBenannt`,
+`fortschritt_zeuge`, `igHaupt_fall`, `igPgut_koerper`, `igPschlecht_koerper`,
+`igPgut_inv`, `igPschlecht_inv`, `igPgut_invGrund`, `igPgut_zertifiziert`,
+`igPschlecht_alt`, `igPschlecht_nicht_invGutGrund`, `igVorlauf`,
+`igPschlecht_verletzt`, `igGut_zeuge` -- `propext`, `Classical.choice`,
+`Quot.sound`. No `sorry`, no new `axiom`, no `native_decide`.
+
+### 19.4 What remains
+
+- `GabbroZiel` itself: the legs `invGrund` and `fortschritt` now have
+  theorems under the flagship premises; assembling `Ziel` from
+  `AkzeptiertSpec` + `NutzerPflicht` + `HardwareAnnahmen` + `StartZulaessig`
+  (the idle starts `Ruhig` against `StartExklusiv`/`fussMehrB`'s thread
+  map, `e0 : Ereignis D` for the replay, `RennfreiBis` for unguarded
+  carriers) is the next step and not done here.
+- `InvRuheG` (§18.5: invariants at releases, at rest) is still only named;
+  its second prerequisite (reason exits) is now available.
+- `FortschrittG` classifies; it bounds nothing: no fairness, no waiting
+  bound, no termination (PLAN §6, unchanged).
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §§1-10 history above.)
 
