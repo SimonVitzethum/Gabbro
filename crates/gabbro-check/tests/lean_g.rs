@@ -168,13 +168,26 @@ fn refuses_wenn() {
     assert_eq!(w.code, "LG004", "{w}");
 }
 
-/// **LG004**: `let` has no `Stmt` form here (the return names nothing
-/// outside the parameters, so the binding itself fires).
+/// **Lane 174 -- `let` binds through `bind`**: a pure value binds anywhere,
+/// including at the top level of an `Endblock`.
 #[test]
-fn refuses_let() {
-    let w = refuse_of(&einheit(
+fn accepts_let() {
+    let text = export("lean_g", &tree(&einheit(
         "impl fn f() -> u32 effects { pure } costs <= 4 ops\n\
-        {\n    let z = 1; return 1;\n}\n",
+        {\n    let z = 1; return z;\n}\n",
+    )))
+    .expect("let must export");
+    assert!(text.contains("(.bind"), "let travels as bind:\n{text}");
+}
+
+/// **LG004**: a call-valued `let` binds through `bindCall`, which only
+/// blocks have -- at the top level of an `Endblock` it is refused by name.
+#[test]
+fn refuses_top_level_let_call() {
+    let w = refuse_of(&einheit(
+        "impl fn g() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+          impl fn f() -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    let z = g(); return z;\n}\n",
     ));
     assert_eq!(w.code, "LG004", "{w}");
 }
@@ -297,6 +310,162 @@ fn refuses_old_in_invariant() {
     assert_eq!(w.code, "LG003", "{w}");
 }
 
+/// **Lane 174 -- the subset (`RufPasst.hh`) with a floor**: the caller
+/// holds `A`, the callee requires nothing and floors above it. The call
+/// travels with explicit `hx`/`hb` proofs.
+#[test]
+fn accepts_subset_call_with_floor() {
+    let q = "module test::leang_subset {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 4 { slot { w : u32, } }\n\
+        lock A protects { T } rank 0 held <= 100 ops;\n\
+        lock C protects { U } rank 10 held <= 100 ops;\n\
+        impl fn h(u : ptr<normal, rw> U)\n\
+        effects { writes u.slots, locks C } costs <= 4 ops\n\
+        {\n    locks C {\n        u.slots[0].w = 1;\n}\n}\n\
+        impl fn caller(t : ptr<normal, rw> T, u : ptr<normal, rw> U)\n\
+        requires Held(A)\n\
+        effects { writes t.slots, writes u.slots, locks A, locks C } costs <= 16 ops\n\
+        {\n    h(u);\n    locks C {\n        t.slots[0].v = 2;\n}\n}\n\
+        }\n";
+    let text = export("leang_subset", &tree(q)).expect("subset call must export");
+    for teil in [
+        "boden := some 10",
+        "gHp_caller",
+        "hx := fun L hL hn => by cases L",
+        "hb := fun c h => by have hV",
+    ] {
+        assert!(text.contains(teil), "subset export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **LG004 (`RufPasst.hx`)**: an extra lock at or above the callee's floor
+/// has no proof -- the checker accepts the call, the model cannot type it.
+#[test]
+fn refuses_extra_above_floor() {
+    let q = "module test::leang_hx {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 4 { slot { w : u32, } }\n\
+        lock A protects { T } rank 0 held <= 100 ops;\n\
+        lock C protects { U } rank 10 held <= 100 ops;\n\
+        impl fn h(u : ptr<normal, rw> U)\n\
+        effects { writes u.slots, locks C } costs <= 4 ops\n\
+        {\n    locks C {\n        u.slots[0].w = 1;\n}\n}\n\
+        impl fn caller(t : ptr<normal, rw> T, u : ptr<normal, rw> U)\n\
+        requires Held(A), Held(C)\n\
+        effects { writes t.slots, writes u.slots, locks A, locks C } costs <= 16 ops\n\
+        {\n    h(u);\n}\n\
+        }\n";
+    let w = export("leang_hx", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("hx"), "{w}");
+}
+
+/// **LG004 (`RufPasst.hh`)**: a callee requiring a lock its caller does not
+/// hold still has no term -- the subset relaxes one direction only.
+#[test]
+fn refuses_callee_needing_more() {
+    let w = refuse_of(&einheit(
+        "impl fn h() requires Held(L) effects { reads T.slots, locks L } costs <= 4 ops\n\
+        {\n    return T.slots[0].v;\n}\n\
+          impl fn ohne() -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    return h();\n}\n",
+    ));
+    assert_eq!(w.code, "LG004", "{w}");
+}
+
+/// **Lane 174 -- `locks L { … }`**: the 119 shape (taking without holding
+/// by signature) travels as `Stmt.locks`, with the floor on the signature.
+/// The old signature-held footprint does not apply, so no `fussOrtGB`
+/// check travels -- and none is guessed.
+#[test]
+fn accepts_locks_block() {
+    let q = "module test::leang_locks {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        effects { writes t.slots, locks L } costs <= 16 ops\n\
+        {\n    locks L {\n        t.slots[0].v = 3;\n}\n}\n\
+        }\n";
+    let text = export("leang_locks", &tree(q)).expect("locks must export");
+    for teil in [
+        "(.locks",
+        "boden := some 0",
+        "example : programmImFragmentG gP gFs = true := by decide",
+    ] {
+        assert!(text.contains(teil), "locks export must contain {teil:?}:\n{text}");
+    }
+    assert!(
+        !text.contains("fussOrtGB gP gFs = true"),
+        "locks export prints no guessed footprint check:\n{text}"
+    );
+}
+
+/// **Lane 174 -- `beispiele/119` exports**: the lock-invariant program that
+/// takes instead of holding.
+#[test]
+fn export_119_succeeds() {
+    let text = export_file("119-sperrinvariante-bloecke.gab");
+    for teil in [
+        "namespace G119_sperrinvariante_bloecke",
+        "(.locks",
+        "example : programmImFragmentG gP gFs = true := by decide",
+    ] {
+        assert!(text.contains(teil), "119 export must contain {teil:?}");
+    }
+}
+
+/// **LG004**: shared taking has no `Stmt` form.
+#[test]
+fn refuses_shared_locks() {
+    let q = "module test::leang_shared {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        requires Held(L)\n\
+        effects { writes t.slots, locks L } costs <= 16 ops\n\
+        {\n    locks shared L {\n        t.slots[0].v = 3;\n}\n}\n\
+        }\n";
+    let w = export("leang_shared", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
+}
+
+/// **LG004**: taking a lock of no higher rank than everything held (`H006`,
+/// decided here).
+#[test]
+fn refuses_locks_rank_violation() {
+    let q = "module test::leang_rang {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock A protects { T } rank 1 held <= 100 ops;\n\
+        lock B protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        requires Held(A)\n\
+        effects { writes t.slots, locks A, locks B } costs <= 16 ops\n\
+        {\n    locks B {\n        t.slots[0].v = 3;\n}\n}\n\
+        }\n";
+    let w = export("leang_rang", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
+}
+
+/// **Lane 174 -- `if`/`else` travels as `Stmt.ite`**: a tail `if` with
+/// return-free branches, and a mid-body `if` whose branch returns through
+/// `Stmt.ret` (the continuation is real, so nothing is invented).
+#[test]
+fn accepts_wenn() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f(x : u32) effects { pure } costs <= 8 ops\n\
+        {\n    let z = x;\n    if z == 1 {\n        let w = z;\n    } else {\n        let w = 2;\n    }\n}\n",
+    )))
+    .expect("if must export");
+    assert!(text.contains("(.ite"), "if travels as ite:\n{text}");
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn g(x : u32) -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    if x == 1 {\n        return 1;\n    }\n    let z = 2;\n    return z;\n}\n",
+    )))
+    .expect("if with a returning branch must export");
+    assert!(text.contains("(.ite"), "branch return travels:\n{text}");
+}
+
 /// **LG003**: a non-literal index in a lock invariant has no snapshot form.
 #[test]
 fn refuses_param_index_in_invariant() {
@@ -307,4 +476,223 @@ fn refuses_param_index_in_invariant() {
         }\n";
     let w = export("leang_idx", &tree(q)).expect_err("must refuse");
     assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **Lane 174 -- `traverse i over slots of T` travels as `Stmt.traverse`**,
+/// the binder as the model's loop index.
+#[test]
+fn accepts_traverse_slots() {
+    let q = "module test::leang_trav {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        requires Held(L)\n\
+        effects { writes t.slots, locks L } costs <= 64 ops\n\
+        {\n    traverse i over slots of T by unvisited\n\
+        {\n        t.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let text = export("leang_trav", &tree(q)).expect("traverse must export");
+    assert!(text.contains("(.traverse"), "traverse travels:\n{text}");
+}
+
+/// **LG006**: a `traverse` over a pointer has no `Stmt` form (the model
+/// traverses a table, `Stmt.traverse (t : D.Tab)`).
+#[test]
+fn refuses_traverse_pointer() {
+    let q = "module test::leang_travp {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        requires Held(L)\n\
+        effects { writes t.slots, locks L } costs <= 64 ops\n\
+        {\n    traverse i over slots of t by unvisited\n\
+        {\n        t.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let w = export("leang_travp", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG006", "{w}");
+}
+
+/// **LG006**: `retry` and `forever` have no form in this fragment (the
+/// spelling is the corpus shape of `beispiele/66`).
+#[test]
+fn refuses_retry_forever() {
+    let w = refuse_of(&einheit(
+        "impl fn oops() effects { pure } costs <= 1 ops { }\n\
+          impl fn f(b : bool) effects { pure } costs <= 70 ops\n\
+        {\n    retry warten until b\n\
+        bounded 64 ops\n\
+        on_exceeded oops\n\
+        effects { pure }\n\
+        {\n    }\n}\n",
+    ));
+    assert_eq!(w.code, "LG006", "{w}");
+}
+
+/// **Lane 174 -- `-> T or R` pins the case count**: `gruende` is the
+/// declaration's cases, and a valueless body still travels.
+#[test]
+fn accepts_reason_channel() {
+    let q = "module test::leang_else {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        reason E {\n    Leer = 1 \"leer\"\n    Voll = 2 \"voll\"\n    exhaustive\n}\n\
+        impl fn g() -> u32 or E effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn f() -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    return 0;\n}\n\
+        }\n";
+    // The shape pins the reason count on the signature; the call itself
+    // lives in a block below.
+    let text = export("leang_else", &tree(q)).expect("reason fn must export");
+    assert!(text.contains("gruende := 2"), "reason count travels:\n{text}");
+}
+
+/// **Lane 174 -- `let … else` over a call inside a branch**: the value
+/// binds through `bindCallElse`, the `else` ends in a `return`.
+#[test]
+fn accepts_let_else_call() {
+    let q = "module test::leang_else2 {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        reason E {\n    Leer = 1 \"leer\"\n    Voll = 2 \"voll\"\n    exhaustive\n}\n\
+        impl fn g() -> u32 or E effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn f(x : u32) -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    if x == 0 {\n        let y = g() else (e) { return 2; }\n        return y;\n    }\n    let z = 0;\n    return z;\n}\n\
+        }\n";
+    let text = export("leang_else2", &tree(q)).expect("let-else must export");
+    assert!(text.contains("(.bindCallElse"), "let-else travels:\n{text}");
+}
+
+/// **LG007**: `let … else` over a place has no form here.
+#[test]
+fn refuses_let_else_place() {
+    let q = "module test::leang_elsep {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        reason E {\n    Leer = 1 \"leer\"\n    Voll = 2 \"voll\"\n    exhaustive\n}\n\
+        impl fn g() -> u32 or E effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn f(x : u32) -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    if x == 0 {\n        let y = T.slots[0].v else (e) { return 2; }\n        return y;\n    }\n    let z = 0;\n    return z;\n}\n\
+        }\n";
+    let w = export("leang_elsep", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG007", "{w}");
+}
+
+/// **Lane 174 -- `return` of an arithmetic expression**: the computed
+/// range widens to the result.
+#[test]
+fn accepts_return_arith() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    return a + b;\n}\n",
+    )))
+    .expect("arithmetic return must export");
+    assert!(text.contains("(.add"), "addition travels:\n{text}");
+}
+
+/// **LG003**: a call in `return` position has no `Expr` form (`Endblock`
+/// binds no calls).
+#[test]
+fn refuses_return_call() {
+    let w = refuse_of(&einheit(
+        "impl fn g() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+          impl fn f() -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    return g();\n}\n",
+    ));
+    assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **Lane 174 -- `bool` travels**: a `bool` field reads in conditions and
+/// returns, and `true`/`false` assign.
+#[test]
+fn accepts_bool_field() {
+    let q = "module test::leang_bool {\n\
+        table T count 4 { slot { v : u32, b : bool, } }\n\
+        impl fn f(t : ptr<normal, rw> T, i : index into T) -> bool\n\
+        effects { reads t.slots, writes t.slots } costs <= 8 ops\n\
+        {\n    if t.slots[i].b {\n        return t.slots[i].b;\n    }\n    t.slots[i].b = true;\n    return t.slots[i].b;\n}\n\
+        }\n";
+    let text = export("leang_bool", &tree(q)).expect("bool must export");
+    for teil in ["| .T, .b => (.bool)", "(.ite", ".wahr"] {
+        assert!(text.contains(teil), "bool export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **Lane 174 -- `beispiele/15` and `16` export**: the `own`-pointer reader
+/// and the `bool`-field reader/writer with no other blocker.
+#[test]
+fn export_15_16_succeed() {
+    for name in ["15-own-traegt-beide-rechte.gab", "16-by-ops-am-feld.gab"] {
+        let text = export_file(name);
+        assert!(
+            text.contains("example : programmImFragmentG gP gFs = true := by decide"),
+            "{name} exports its fragment check"
+        );
+    }
+}
+
+/// **Lane 174 -- bit operations travel with the width off the operand**:
+/// `~` is the complement over the storage width, `^` the xor beside it.
+#[test]
+fn accepts_bitops() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f(m : u8) -> u8 effects { pure } costs <= 4 ops\n\
+        {\n    return ~m;\n}\n",
+    )))
+    .expect("complement must export");
+    assert!(text.contains("(.bxor 8"), "complement travels:\n{text}");
+}
+
+/// **Lane 174 -- conversions and limit words travel**: `u64(x)` is the
+/// widening, `u32::max` its number.
+#[test]
+fn accepts_conversion_grenzwort() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f(a : u32, b : u32) -> u64 effects { pure } costs <= 5 ops\n\
+        {\n    return u64(a);\n}\n",
+    )))
+    .expect("conversion must export");
+    assert!(text.contains(".int 0 18446744073709551615"), "u64 travels:\n{text}");
+}
+
+/// **Lane 174 -- `beispiele/62`, `69` and `73` export**: xor/mask/compare,
+/// the conversion-or-combination over bare words, and the sugar widths --
+/// all three tableless (pure computation over parameters, `Tab := Empty`).
+#[test]
+fn export_62_69_73_succeed() {
+    for name in [
+        "62-grenzwort-im-ausdruck.gab",
+        "69-integer-conversion.gab",
+        "73-sugar-widths.gab",
+    ] {
+        let text = export_file(name);
+        assert!(
+            text.contains("example : programmImFragmentG gP gFs = true := by decide"),
+            "{name} exports its fragment check"
+        );
+    }
+}
+
+/// **Lane 174 -- a tableless unit travels with `Tab := Empty`**, never a
+/// fresh empty inductive.
+#[test]
+fn accepts_tableless_unit() {
+    let text = export("lean_g", &tree(
+        "module test::leer_tab {\n\
+        impl fn f(a : u32) -> u32 effects { pure } costs <= 2 ops { return a; }\n\
+        }\n",
+    ))
+    .expect("tableless unit must export");
+    assert!(text.contains("abbrev GTab := Empty"), "empty Tab travels:\n{text}");
+}
+
+/// **LG004**: a bare call of a reason-carrying function has no form (its
+/// `hr` needs `gruende = 0`) -- `let … else` has it.
+#[test]
+fn refuses_bare_call_of_reason_fn() {
+    let q = "module test::leang_rruf {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        reason E {\n    Leer = 1 \"leer\"\n    Voll = 2 \"voll\"\n    exhaustive\n}\n\
+        impl fn g() -> u32 or E effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn f() -> u32 effects { pure } costs <= 8 ops\n\
+        {\n    g();\n    return 0;\n}\n\
+        }\n";
+    let w = export("leang_rruf", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
 }
