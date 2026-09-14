@@ -222,3 +222,5 @@ import Grammatik.ZielOrtStart
 import Grammatik.Verklemmung
 import Grammatik.MehrfadenZeuge
 import Grammatik.MehrfadenLauf
+import Grammatik.Zielsatz.Akzeptiert
+import Grammatik.Zielsatz.AkzeptiertZeuge
