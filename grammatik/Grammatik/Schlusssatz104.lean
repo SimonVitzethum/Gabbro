@@ -39,13 +39,14 @@ import Grammatik.CFormenDet
 import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.ZielOrtInv
 import Grammatik.ZielOrtGanzZeuge
+import Grammatik.ZeugnisIdent
 
 namespace Gabbro.Grammatik
 
 open Parser Parser.Uebersetze
 open G104_referenz (GTab GLock GKontoFeld GFn g_einzahlen g_lies gCtx_einzahlen gCtx_lies
   gL_einzahlen gL_lies gDarf_einzahlen_Konto gDarf_lies_Konto gHp_einzahlen_lies gBody_einzahlen
-  gBody_lies)
+  gBody_lies gSig_einzahlen gSig_lies)
 
 set_option maxRecDepth 100000
 
@@ -465,5 +466,284 @@ theorem c104_lies (c : Cert104) (hc : certOkG c = true) (σ : World G104_referen
   subst e1
   subst e2
   exact hO1
+
+
+/-! ## 3. Model certificates: they are the print of `gP`'s bodies -/
+
+section Druck
+variable {D : Deklaration} {V : Vertrag D} {l : Bool}
+
+/-- Print of a statement of the 104 shapes, in front of the print of the
+    rest: the pointer write (`cons2 assignDurch`, pointer and proofs
+    forgotten, index and value printed) and the call (`consCall`, the
+    argument count and the `RufPasst` carried). Every other statement: none. -/
+def printStmt104 {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → CertEnd104 D V → Option (CertEnd104 D V)
+  | .assignDurch (n := n) _ t _ f i e _ _, r =>
+    (printInt i).bind fun ci => (printInt e).bind fun ce =>
+      some (.cons2 (.assignDurch t f n true ci ce) Λ' r)
+  | .call f _ hp _, r => some (.consCall f (D.params f).length Λ hp r)
+  | _, _ => none
+
+/-- Print of a return value: none (`ret`) or a read through a pointer
+    (`retDurch`, the pointer forgotten, the table number and index
+    printed). Every other value: none. -/
+def printRet104 {Γ : Ctx} {Λ : List (Res D)} : {e : Option Ty} → ErgExpr D Γ Λ e →
+    Option (CertEnd104 D V)
+  | _, .keine => some (.lift2 (.liftE .ret))
+  | _, .wert (.durch (n := n) _ t _ f i _) => (printInt i).map (CertEnd104.retDurch t f n)
+  | _, .wert _ => none
+
+/-- THE LEAN-SIDE PRINT of a body, in the `CertEnd104` layer. -/
+def printEnd104 {Γ : Ctx} : {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (CertEnd104 D V)
+  | _, .cons s rest => (printEnd104 rest).bind (printStmt104 s)
+  | _, .ret e _ => printRet104 e
+  | _, _ => none
+
+end Druck
+
+/-- **The pasted statement certificate of `einzahlen` IS the print of the
+    parsed program's body** (term identity on the Lean side, for this body). -/
+theorem print104_einzahlen :
+    printEnd104 (G104_referenz.gP.rumpf g_einzahlen) = some cert104_einzahlen := rfl
+
+theorem print104_lies :
+    printEnd104 (G104_referenz.gP.rumpf g_lies) = some cert104_lies := rfl
+
+theorem cert104_einzahlen_ok : certEnd104Ok G104_referenz.gD
+    (vertragVon G104_referenz.gD g_einzahlen) false gCtx_einzahlen gL_einzahlen
+    cert104_einzahlen = true := by decide
+
+theorem cert104_lies_ok : certEnd104Ok G104_referenz.gD
+    (vertragVon G104_referenz.gD g_lies) false gCtx_lies gL_lies cert104_lies = true := by decide
+
+
+/-! ## 4. The model judgement on `gP` -/
+
+/-- A call of a `requires true` function through the gate never fails the
+    gate when the handler blames nobody (over `gD`). -/
+theorem g_call_tor {V : Vertrag G104_referenz.gD} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res G104_referenz.gD)} (O : Orakel G104_referenz.gD) (passes : Nat)
+    (R : ∀ f : G104_referenz.gD.Fn, World G104_referenz.gD → Env G104_referenz.gD
+      (G104_referenz.gD.params f) → RufAusgang f) (hOV : OhneVorbedingung R)
+    (g : G104_referenz.gD.Fn) (args : Args G104_referenz.gD Γ Λ (G104_referenz.gD.params g))
+    (hp : RufPasst G104_referenz.gD V (G104_referenz.gD.signatur g) Λ)
+    (hr : G104_referenz.gD.gruende g = 0) (σ : World G104_referenz.gD)
+    (ρ : Env G104_referenz.gD Γ) (g' : G104_referenz.gD.Fn) :
+    execStmt O passes (torRuf G104_referenz.gP R) (Stmt.call (l := l) g args hp hr) σ ρ ≠
+      .logik (.vorbedingung g') := by
+  have ht : ∀ σ1 ρ1, torRuf G104_referenz.gP R g σ1 ρ1 = R g σ1 ρ1 :=
+    fun _ _ => if_pos (by cases g <;> rfl)
+  simp only [execStmt, ht]
+  cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  | ok σ' v => intro h; cases h
+  | grund σ' r => exact (Fin.cast hr r).elim0
+  | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
+  | hardware e => intro h; cases h
+
+/-- `lies` meets its obligation: the returned value is the slot. -/
+theorem gP_koerper_lies : KoerperGutV G104_referenz.gP 0 g_lies := by
+  intro O' _ R _ _ σ ρ _
+  refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
+  · have hr : G104_referenz.gP.rumpf g_lies = gBody_lies := rfl
+    rw [hr] at hrun
+    simp only [gBody_lies, execEnd] at hrun
+    cases hrun
+    exact decide_eq_true rfl
+  · have hr : G104_referenz.gP.rumpf g_lies = gBody_lies := rfl
+    rw [hr] at hrun
+    simp only [gBody_lies, execEnd] at hrun
+    cases hrun
+
+/-- **`einzahlen` of the parsed program meets the obligation against
+    declared frames**: the write sets the slot to `100`, `lies` declares no
+    write (every frame-respecting answer keeps the slots), so
+    `old(stand) <= stand` is `old(stand) <= 100`, true by the range. -/
+theorem gP_einzahlen_R : KoerperGutR G104_referenz.gP 0 g_einzahlen := by
+  intro O' _ _ R hR hOV σ ρ _
+  refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
+  · have hr : G104_referenz.gP.rumpf g_einzahlen = gBody_einzahlen := rfl
+    rw [hr] at hrun
+    rcases execEnd_cons_zurueck _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, h1, hrun1⟩
+    · simp [execStmt] at h1
+    rcases execEnd_cons_zurueck _ _ _ _ _ hrun1 with h2 | ⟨σ2, ρ2, h2, hrun2⟩
+    · simp only [execStmt] at h2
+      split at h2
+      · cases h2
+      · rename_i r _
+        exact r.elim0
+      · cases h2
+      · cases h2
+    simp only [execEnd] at hrun2
+    simp only [execStmt] at h2
+    split at h2
+    · rename_i σ3 w hRv
+      cases h2
+      cases hrun2
+      have hfr := (hR.2 g_lies _ _ σ2 w hRv).1.1 GTab.Konto rfl
+      simp only [execStmt] at h1
+      cases h1
+      show decide ((σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n ≤
+        (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n) = true
+      have e3 := (hfr (ρ.get (.dort .hier)).n GKontoFeld.stand).trans
+        (storeSlot_hit (D := G104_referenz.gD) _ GTab.Konto _ GKontoFeld.stand _)
+      have h100 : (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 :=
+        (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
+      apply decide_eq_true
+      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).le_hi
+        (Int.le_of_eq h100.symm)
+    · rename_i r _
+      exact r.elim0
+    · cases h2
+    · cases h2
+  · have hr : G104_referenz.gP.rumpf g_einzahlen = gBody_einzahlen := rfl
+    rw [hr] at hrun
+    rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
+    · simp [execStmt] at h1
+    · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
+      · exact g_call_tor _ _ R hOV _ _ _ _ _ _ _ h2
+      · simp only [execEnd] at h2
+        cases h2
+
+theorem gFs_voll : ∀ g : G104_referenz.gD.Fn, g ∈ G104_referenz.gFs := by
+  intro g
+  cases g
+  · exact List.mem_cons_self
+  · exact List.mem_cons_of_mem _ List.mem_cons_self
+
+theorem gP_logikFrei : programmLogikFrei G104_referenz.gP G104_referenz.gFs = true := by decide
+
+/-- **THE MODEL JUDGEMENT on the parsed program**: every function meets the
+    per-function obligation of the goal theorem (`KoerperGutS`, over the
+    empty lock-invariant family and the trivial axiom ensures -- the
+    declaration has no axiom). -/
+theorem gP_koerperS : ∀ f : G104_referenz.gD.Fn,
+    KoerperGutS G104_referenz.gP 0 (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f :=
+  fun f => koerperGutS_leer ⟨koerperGutRQ_of_R _ (match f with
+    | .einzahlen => gP_einzahlen_R
+    | .lies => koerperGutR_of_V gP_koerper_lies),
+    programmLogikFrei_ok gFs_voll gP_logikFrei 0 _ f⟩
+
+theorem gP_invGutS : ∀ f : G104_referenz.gD.Fn,
+    InvGutS G104_referenz.gP 0 (axWahr G104_referenz.gD) (SperrInv.leer G104_referenz.gD) f :=
+  invGutS_leer rfl
+
+
+/-! ## 5. The machine -/
+
+/-! ### 5.1 The finding: no G machine of `gP` alone has one active thread -/
+
+/-- No function of the parsed program is an idle root (`ruhig`): both hold
+    `M` by signature and touch `Konto`. -/
+theorem gP_kein_ruhig : ∀ f : G104_referenz.gD.Fn, ruhig G104_referenz.gP f = false := by
+  intro f; cases f <;> decide
+
+/-- **No start assignment of `gP` is exclusive**: G starts EVERY thread in
+    some function, and every function of `gD` holds `M` by signature, so
+    threads 0 and 1 both start holding `M`. Neither `ziel_ort_einfaden`
+    (idle roots) nor `ziel_ort_sperre`/`_inv` (`StartExklusiv`) applies to
+    a machine of `gP` alone: the start of the other threads is runtime
+    data, not source text. -/
+theorem gP_kein_exklusiv (init : Faden → Σ f : G104_referenz.gD.Fn,
+    Env G104_referenz.gD (G104_referenz.gD.params f)) : ¬ StartExklusiv init := by
+  intro h
+  have hM : ∀ f : G104_referenz.gD.Fn, GLock.M ∈ G104_referenz.gD.haelt f := by
+    intro f; cases f <;> exact List.mem_singleton.mpr rfl
+  exact h 0 1 (by decide) GLock.M (hM _) (hM _)
+
+/-! ### 5.2 The runtime's idle root: `gDB`, `gPB` -/
+
+/-- The idle root's signature: no parameter, no result, no lock, no write. -/
+def sigRuhe : Signatur GTab Empty GLock Empty where
+  params := []
+  erg := none
+  gruende := 0
+  haelt := []
+  schreibt := fun _ => false
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+/-- **`gD` plus the idle root**: every carrier, lock, table, field, global,
+    axiom and register IS `gD`'s (the fields are `gD`'s own); the functions
+    are `some f` for `gD`'s `f` (same signature number) and `none`, the
+    idle root (signature number 2, unused by `gD`: `gD` has no function
+    pointer). -/
+abbrev gDB : Deklaration :=
+  { G104_referenz.gD with
+    Fn := Option GFn
+    sig := fun | some f => G104_referenz.gD.sig f | none => 2
+    sigNr := fun | 2 => sigRuhe | n => G104_referenz.gD.sigNr n
+    eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+    rzusage := fun r => nomatch r
+    invarianten_gehalten := fun _ i => nomatch i }
+
+abbrev gbL : List (Res gDB) := [Res.held (D := gDB) GLock.M]
+
+theorem gbDarf : darf gDB GTab.Konto gbL := by unfold darf; decide
+
+theorem gbHp : RufPasst gDB (vertragVon gDB (some GFn.einzahlen)) (gDB.signatur (some GFn.lies))
+    gbL where
+  hw := fun t => by cases t <;> decide
+  hg := fun g => nomatch g
+  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hh := RufPasst.hh_von (fun L => by cases L <;> decide)
+  hx := RufPasst.hx_von (fun L => by cases L <;> decide)
+
+def gbEns_einzahlen : Expr gDB (ErgCtx (gDB.params (some GFn.einzahlen)) (gDB.erg (some GFn.einzahlen)))
+    (vertragVon gDB (some GFn.einzahlen)).ende .bool :=
+  (.le (Expr.altSlot (D := gDB) GTab.Konto GKontoFeld.stand ((.var (.dort .hier))) gbDarf)
+    (Expr.durch (D := gDB) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gbDarf))
+
+def gbEns_lies : Expr gDB (ErgCtx (gDB.params (some GFn.lies)) (gDB.erg (some GFn.lies)))
+    (vertragVon gDB (some GFn.lies)).ende .bool :=
+  (.eq (.var .hier) (Expr.durch (D := gDB) (.var (.dort .hier)) GTab.Konto rfl GKontoFeld.stand
+    ((.var (.dort (.dort .hier)))) gbDarf))
+
+def gbBody_einzahlen : Endblock gDB (vertragVon gDB (some GFn.einzahlen)) false
+    (gDB.params (some GFn.einzahlen)) gbL :=
+  (.cons (.assignDurch (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier)))
+    (.weiter (by decide) (by decide) (.lit 100)) (by decide) gbDarf)
+    (.cons (.call (some GFn.lies) (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.dort .hier)) .nil))
+      gbHp rfl) (.ret .keine (List.Perm.refl _))))
+
+def gbBody_lies : Endblock gDB (vertragVon gDB (some GFn.lies)) false
+    (gDB.params (some GFn.lies)) gbL :=
+  (.ret (.wert (Expr.durch (D := gDB) (.var .hier) GTab.Konto rfl GKontoFeld.stand
+    ((.var (.dort .hier))) gbDarf)) (List.Perm.refl _))
+
+def gbBody_ruhe : Endblock gDB (vertragVon gDB none) false (gDB.params none) [] :=
+  .ret .keine List.Perm.nil
+
+/-- **The program the machine runs**: `gP`'s contracts and bodies on
+    `some f` (section 5.3 proves them the renamings of the parser's), the
+    idle root on `none`. -/
+def gPB : Programm gDB where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures
+    | some .einzahlen => gbEns_einzahlen
+    | some .lies => gbEns_lies
+    | none => .wahr
+  rumpf
+    | some .einzahlen => gbBody_einzahlen
+    | some .lies => gbBody_lies
+    | none => gbBody_ruhe
+
+def gbFs : List gDB.Fn := [some GFn.einzahlen, some GFn.lies, none]
+
+theorem gbFs_voll : ∀ g : gDB.Fn, g ∈ gbFs := by
+  intro g
+  rcases g with _ | g
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+  · cases g
+    · exact List.mem_cons_self
+    · exact List.mem_cons_of_mem _ List.mem_cons_self
+
+theorem gPB_fragment : programmImFragmentG gPB gbFs = true := by decide
+
+theorem gPB_logikFrei : programmLogikFrei gPB gbFs = true := by decide
+
+theorem gPB_ruhig : ruhig gPB none = true := by decide
 
 end Gabbro.Grammatik
