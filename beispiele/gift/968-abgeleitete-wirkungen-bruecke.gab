@@ -1,0 +1,24 @@
+-- erwartet: N305
+-- **Lane 191 (`N305`): the factory pointer the derivation cannot lift.**
+--
+-- `senke` declares no `effects`. Its callee writes through its parameter,
+-- but the call hands a freshly built pointer — a call result, not a place —
+-- so `ersetze` cannot carry the effect across and the set stays a lower
+-- bound. The omission is refused with that reason; writing the clause, or
+-- handing a place, settles it. The twin is 04, which holds the same rule
+-- over a table slot.
+module gift968 {
+
+table T count 32 { slot { wert : u32 in 0 .. 50, } }
+
+extern fn frisch() -> ptr<normal, rw> T effects { pure } costs <= 100 ops;
+
+impl fn senke(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 100 ops {
+    p.slots[0].wert = 1;
+}
+
+impl fn f() costs <= 1000 ops {
+    senke(frisch());
+}
+
+}

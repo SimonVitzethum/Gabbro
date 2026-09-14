@@ -17,12 +17,15 @@ gingen auf vier Regeln zurueck, die es beim Schreiben der Probe noch nicht gab**
 Genau diese Drift bewacht dieses Werkzeug. Sie faellt nicht auf, solange nur `contains`
 gefragt wird.
 
-DIE VIER KLASSEN, MECHANISCH ENTSCHIEDEN
+DIE FUENF KLASSEN, MECHANISCH ENTSCHIEDEN
 -----------------------------------------
     sauber      ausser dem erwarteten faellt NICHTS
     begleitet   der erwartete ist der erste SEINER STUFE; was sonst faellt, kommt danach
     verdeckt    vor dem erwarteten faellt ein Code DERSELBEN STUFE
     FEHLT       der erwartete faellt gar nicht -- dann ist auch `cargo test` rot
+    abgeleitet  die Zusage nennt `E001`, die Auslassung leitet seit Lane 191 ab --
+                kein Treffer ueberhaupt. Eine stumme Probe, die wieder spricht,
+                faellt zurueck nach FEHLT.
 
 **Die Stufe trennt zwei Toepfe, und der Testrahmen tut das auch.** Ein `Hinweis E009` vor
 einem `Fehler K008` verdeckt nichts: die Zusicherung filtert erst nach Stufe und sucht dann.
@@ -129,10 +132,38 @@ MARKE_SAUBER = 271
 # are NOT booked here: they fall at the EMITTER, which this counter never
 # runs (it reads `pruefe` for every code but C001) -- reported as F-GIFT-1,
 # not absorbed into the ceiling.
+# **29 -> 24 on 2026-09-14 (lane 191): lane 184 never merged, and its mark
+# goes back with its corpus edits.** Measured both sides with this lane:
+# 25 verdeckt on the unmodified tree (24 booked) and the SAME 25 with it --
+# file-identical sets, so no pair of them is this lane's. The four
+# `E001`-headers this lane silences (`04`, `580`, `700`, `701`) are not
+# verdeckt: nothing falls before the expected code, nothing falls at all.
+# They form the fifth class (`abgeleitet`, below) instead. The 25-vs-24
+# drift stays visible, as before; lifting past it would delete the report
+# the tool warned about at `411`.
 MARKE_VERDECKT = 24
 # The population is a floor of its own: a corpus that SHRINKS says the checker lost a probe,
 # and neither of the two marks above would notice.
-MARKE_PROBEN = 333
+#
+# **672 -> 669 on 2026-09-14 (lane 191), and it is a file count, not a verdict.**
+# Lane 184 booked 672 (668 + its four: `968`-`971`); three of the four go back
+# with the refused codes they pinned (`969`-`971` for the dropped `N306`-`N309`),
+# one stays (`968` for `N305`). Counted with `ls beispiele/gift/*.gab`.
+MARKE_PROBEN = 669
+
+# **The four silences of lane 191, by file name.** Their frozen headers still
+# name `E001` -- the verdict before this lane -- and the checker derives the
+# omitted clause since it, so no hit at all is the CORRECT outcome. The twin
+# rule lives in `crates/gabbro-check/tests/beispiele.rs`
+# (`ABGELEITET_STATT_E001`): the same four assert silence there. A probe from
+# this list that falls with anything goes back to `FEHLT`; the class below
+# counts exactly four, neither more nor fewer.
+ABGELEITET = frozenset([
+    "04-ohne-wirkungen.gab",
+    "580-wirkungsklausel-fehlt.gab",
+    "700-lesen-ohne-klausel.gab",
+    "701-rein-ohne-klausel.gab",
+])
 
 
 def binaer():
@@ -271,7 +302,8 @@ def main():
         print("ABBRUCH: kein brauchbares Binaerprogramm -- NICHTS gemessen.")
         return 2
 
-    klassen = {"sauber": [], "begleitet": [], "verdeckt": [], "FEHLT": [], "cc": []}
+    klassen = {"sauber": [], "begleitet": [], "verdeckt": [], "FEHLT": [], "cc": [],
+               "abgeleitet": []}
     ohne_zusage = []
     ketten = {}
     for p in dateien:
@@ -290,7 +322,13 @@ def main():
             print(f"ABBRUCH: `{p.name}` hat die Frist von {FRIST} s ueberschritten "
                   "-- NICHTS gemessen.")
             return 2
-        klassen[einordnen(stufe, code, treffer)].append(p.name)
+        if p.name in ABGELEITET:
+            # **Lane 191: the derived silence.** The header still names `E001`,
+            # the checker derives since this lane -- an empty hit list is the
+            # contract, and any hit at all falls back to `FEHLT`.
+            klassen["abgeleitet" if not treffer else "FEHLT"].append(p.name)
+        else:
+            klassen[einordnen(stufe, code, treffer)].append(p.name)
         ketten[p.name] = (code, [(t["code"], t["stufe"], t["zeile"]) for t in treffer])
 
     if ohne_zusage:
@@ -307,12 +345,12 @@ def main():
         return 0
 
     print(f"== Giftproben gegen ihre Zusage: {gesamt} angesehen ==")
-    for k in ("sauber", "begleitet", "verdeckt", "FEHLT", "cc"):
+    for k in ("sauber", "begleitet", "verdeckt", "FEHLT", "cc", "abgeleitet"):
         print(f"  {z[k]:5d}  {k}")
 
     if lang:
         print("\n== jede nicht-saubere Probe, in Passreihenfolge ==")
-        for k in ("verdeckt", "begleitet", "FEHLT"):
+        for k in ("verdeckt", "begleitet", "FEHLT", "abgeleitet"):
             for name in klassen[k]:
                 code, kette = ketten[name]
                 gedruckt = " · ".join(
@@ -323,6 +361,9 @@ def main():
     befunde = []
     if z["FEHLT"]:
         befunde.append("der erwartete Code faellt NICHT in: " + ", ".join(klassen["FEHLT"]))
+    if z["abgeleitet"] != len(ABGELEITET):
+        befunde.append(f"abgeleitet-Klasse: {z['abgeleitet']} statt {len(ABGELEITET)} -- "
+                       "eine stumme Probe spricht wieder, oder eine fehlt")
     if gesamt < MARKE_PROBEN:
         befunde.append(f"der Korpus ist GESCHRUMPFT: {gesamt} statt {MARKE_PROBEN} "
                        "-- eine Probe ist fort, und keine Klasse sagt welche")

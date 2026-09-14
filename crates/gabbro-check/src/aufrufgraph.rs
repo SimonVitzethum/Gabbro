@@ -135,6 +135,19 @@ pub fn erhebe(baum: &Programm) -> Graph {
     erhebe_mit(baum, &u)
 }
 
+/// **The structure without the derived fill (lane 191).**
+///
+/// `erhebe` carries every omitted `effects` clause back into `eigen` from
+/// the body fixpoint (`ableitung::fuelle_abgeleitete_in`), so that every
+/// hull reader treats a derived clause exactly like a written one. That
+/// fixpoint needs the graph's EDGES, which is what stands here — the same
+/// construction, minus the fill. `ableitung::leite_ab_mit` builds on this;
+/// calling `erhebe` there would recurse.
+pub fn erhebe_roh(baum: &Programm) -> Graph {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    erhebe_mit_roh(baum, &u)
+}
+
 /// **Modulbewusst seit 2026-08-19.** Bis dahin war der Schlüssel der KURZE Name, und zwei
 /// gleichnamige Funktionen in zwei Modulen überschrieben einander -- die zweite gewann, und
 /// welche das war, entschied die Reihenfolge im Quelltext. Gemessen: dieselbe Datei, nur die
@@ -144,6 +157,13 @@ pub fn erhebe(baum: &Programm) -> Graph {
 /// `lib.rs::fuer_jedes_item_im_modul` beschreibt genau diesen Fehler seit dem 2026-08-14 --
 /// M1 wurde damals nachgezogen, die sechs anderen Pässe nicht.
 pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
+    let mut g = erhebe_mit_roh(baum, u);
+    crate::ableitung::fuelle_abgeleitete_in(baum, &mut g);
+    g
+}
+
+/// **The structure without the derived fill — see `erhebe_roh`.**
+pub fn erhebe_mit_roh(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     let mut g = Graph::default();
     // **Uebergaenge sind Gerufene mit erklaerten Wirkungen.** Ohne sie meldete der Graph
     // `uebersetzung_an ist unbekannt` und die Aufrufwirkungen von `scharfschalten` galten

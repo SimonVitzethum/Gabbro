@@ -52,8 +52,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // once here and handed to each function -- computed beside `konstanten`/
     // `weltnamen` for the same reason (one register, read at one place).
     let schreiber = schreiber_des_programms(baum, &weltnamen);
+    // **Lane 191: the derivation every omitted clause draws on.** An omitted
+    // `effects` is no longer an error where the body fixpoint settles — it is
+    // the derived clause, checked exactly like a written one. Where the
+    // fixpoint stays a lower bound, the omission stays a refusal (`N305`).
+    let ab = crate::ableitung::leite_ab(baum, true);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
-        ItemArt::Funktion(f) => funktion(f, modul, &g, &konstanten, &weltnamen, &schreiber, absagen),
+        ItemArt::Funktion(f) => {
+            funktion(f, modul, &g, &konstanten, &weltnamen, &schreiber, &ab, absagen)
+        }
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
         _ => {}
@@ -714,7 +721,9 @@ pub fn deckt_wirkung(erklaert: &str, getan: &str) -> bool {
 
 /// `writes a.b` -> (`writes`, `a.b`). `locks shared X` -> (`locks shared`, `X`).
 /// `pure`/`diverges` have no place.
-fn trenne(w: &str) -> (&str, &str) {
+/// `pub(crate)`: lane 191 reads the same split in `ableitung.rs`
+/// (`deckungsluecke`) — one splitter for the derived line, not two (W7).
+pub(crate) fn trenne(w: &str) -> (&str, &str) {
     for v in ["locks shared ", "reads ", "writes ", "locks ", "masks ", "allocs ",
               "consumes ", "publishes "] {
         if let Some(r) = w.strip_prefix(v) {
@@ -978,43 +987,55 @@ fn funktion(
     konstanten: &[String],
     weltnamen: &[String],
     schreiber: &std::collections::BTreeSet<String>,
+    ab: &crate::ableitung::Ableitung,
     absagen: &mut Absagen,
 ) {
     match &f.effects {
         None => {
-            // `spec fn` hat keine Laufzeitwirkung; fuer sie ist die Klausel freigestellt.
+            // **Lane 191: a body derives its clause.** Where the fixpoint
+            // settles, the omitted clause IS the derived set — no refusal.
+            // Where it stays a lower bound (`unvollstaendig`), or where the
+            // callees promise more than the deeds cover, the omission stays
+            // a refusal (`N305`) with the reason. A function WITHOUT a body
+            // (`extern`, `prim`) has nothing to derive from — `E001` stays,
+            // and so does the `spec fn` exemption: a spec carries no runtime
+            // effect, so there is no deed to derive.
             if f.klasse != Some(FnKlasse::Spec) {
-                absagen.schiebe(
-                    Absage::fehler(
-                        "E001",
-                        f.name.span,
-                        format!("`{}` has no `effects` clause", f.name.text),
-                    )
-                    .mit_notiz(
-                        "SPRACHE.md §7: `effects` is obligatory and not fail-open",
-                    )
-                    .mit_notiz(
-                        "the omission was at once the strongest promise and the cheapest \
-                            one to write",
-                    )
-                    // **«B3» hint 1, and it is the one that shortens the whole session.**
-                    //
-                    // Measured: after this refusal the next two attempts were `effects {}`
-                    // and `effects pure`. Both are correct refusals of their own, and both
-                    // are attempts that were spent GUESSING THE SHAPE of a clause this
-                    // message named without showing. *Naming what is missing and not what
-                    // to write costs one attempt per reader, every time.*
-                    .mit_notiz(
-                        "the clause is a BRACE LIST and it is never empty: `effects { pure }` \
-                            for a function that touches nothing, otherwise \
-                            `effects { reads p, writes q }`",
-                    ),
-                );
+                if matches!(f.rumpf, FnRumpf::Block(_)) {
+                    omissionspruefung(f, modul, g, ab, absagen);
+                } else {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "E001",
+                            f.name.span,
+                            format!("`{}` has no `effects` clause", f.name.text),
+                        )
+                        .mit_notiz(
+                            "SPRACHE.md §7: `effects` is obligatory and not fail-open",
+                        )
+                        .mit_notiz(
+                            "the omission was at once the strongest promise and the cheapest \
+                                one to write",
+                        )
+                        // **«B3» hint 1, and it is the one that shortens the whole session.**
+                        //
+                        // Measured: after this refusal the next two attempts were `effects {}`
+                        // and `effects pure`. Both are correct refusals of their own, and both
+                        // are attempts that were spent GUESSING THE SHAPE of a clause this
+                        // message named without showing. *Naming what is missing and not what
+                        // to write costs one attempt per reader, every time.*
+                        .mit_notiz(
+                            "the clause is a BRACE LIST and it is never empty: `effects { pure }` \
+                                for a function that touches nothing, otherwise \
+                                `effects { reads p, writes q }`",
+                        ),
+                    );
+                }
             }
         }
         Some(w) => {
             rein_allein(w, absagen);
-            vertrag_gegen_wirkungen(f, Some(w), konstanten, weltnamen, schreiber, absagen);
+            vertrag_gegen_wirkungen(f, Some(w), konstanten, weltnamen, schreiber, &[], absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
                 aufrufwirkungen(f, modul, w, g, weltnamen, absagen);
@@ -1022,7 +1043,14 @@ fn funktion(
         }
     }
     if f.effects.is_none() {
-        vertrag_gegen_wirkungen(f, None, konstanten, weltnamen, schreiber, absagen);
+        // **Lane 191:** over a non-`spec` body the derived clause covers the
+        // contract; without one nothing does, as before.
+        let erbt = if f.klasse != Some(FnKlasse::Spec) && matches!(f.rumpf, FnRumpf::Block(_)) {
+            ererbte_deckung(ab, modul, f)
+        } else {
+            Vec::new()
+        };
+        vertrag_gegen_wirkungen(f, None, konstanten, weltnamen, schreiber, &erbt, absagen);
     }
 
     if f.klasse == Some(FnKlasse::Divergent) {
@@ -1071,6 +1099,92 @@ fn funktion(
             );
         }
     }
+}
+
+/// **Lane 191 (`N305`): the omission that stays a refusal.**
+///
+/// An omitted `effects` over a body is derived — unless the derivation is a
+/// lower bound or the callees promise more than the deeds cover. The first
+/// shape is `unvollstaendig`: an unknown callee, a silent edge, a
+/// contract-less indirect call, an unbuildable bridge. The second is an
+/// over-declared callee, whose padding the derived set does not carry (the
+/// fixpoint runs over BODIES precisely so padding never passes silently —
+/// `ableitung.rs`). Both name their reason: the fix is to WRITE the clause,
+/// and the note shows its shape. That shape note is «B3» hint 1, moved here
+/// with the rule — a refusal that names what is missing without showing what
+/// to write costs one attempt per reader, every time.
+fn omissionspruefung(
+    f: &FnDecl,
+    modul: &str,
+    g: &crate::aufrufgraph::Graph,
+    ab: &crate::ableitung::Ableitung,
+    absagen: &mut Absagen,
+) {
+    let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+    let mut grund: Option<String> = None;
+    let mut abgeleitet: std::collections::BTreeSet<String> = Default::default();
+    if let Some(a) = ab.je.get(&key) {
+        abgeleitet = a.wirkungen.clone();
+        grund = a.unvollstaendig.clone();
+    }
+    if grund.is_none() {
+        // The fixpoint settled: the callees may still promise more than the
+        // deeds cover — one check, shared with the view (`ableitung.rs`).
+        grund = crate::ableitung::deckungsluecke(&abgeleitet, &g.huelle(&key));
+    }
+    let Some(grund) = grund else {
+        return;
+    };
+    absagen.schiebe(
+        Absage::fehler(
+            "N305",
+            f.name.span,
+            format!(
+                "`{}` declares no `effects`, and the clause cannot be derived: {grund}",
+                f.name.text
+            ),
+        )
+        .mit_notiz(
+            "an omitted clause means \"whatever it is\" — but only where the \
+             derivation settles: a lower bound is not an answer (R16)",
+        )
+        .mit_notiz(
+            "the caller covers what its callees promise — a derived set that \
+             leaves a promise uncovered is not a contract the caller can hold",
+        )
+        .mit_notiz(
+            "the clause is a BRACE LIST and it is never empty: `effects { pure }` \
+                for a function that touches nothing, otherwise \
+                `effects { reads p, writes q }`",
+        ),
+    );
+}
+
+/// **Lane 191: what the derived clause covers of the contract.**
+///
+/// `vertrag_gegen_wirkungen` holds `requires`/`ensures` reads against the
+/// effect list. For an omitted clause over a settled derivation, the derived
+/// places stand where the written ones would — exactly like a written line.
+/// Under an unsettled derivation nothing is covered (as before: the deckung
+/// of an omission was always empty), so `E220`/`E221` keep speaking there.
+fn ererbte_deckung(ab: &crate::ableitung::Ableitung, modul: &str, f: &FnDecl) -> Vec<String> {
+    let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+    let Some(a) = ab.je.get(&key) else {
+        return Vec::new();
+    };
+    if a.unvollstaendig.is_some() {
+        return Vec::new();
+    }
+    a.wirkungen
+        .iter()
+        .filter_map(|w| {
+            let (verb, ort) = trenne(w);
+            match verb {
+                "reads" | "writes" if !ort.is_empty() => Some(ort.to_string()),
+                _ => None,
+            }
+        })
+        .collect()
 }
 
 /// `pure` heisst „fasst nichts an". Eine zweite Wirkung daneben ist ein Widerspruch, kein
@@ -1569,9 +1683,10 @@ fn vertrag_gegen_wirkungen(
     konstanten: &[String],
     weltnamen: &[String],
     schreiber: &std::collections::BTreeSet<String>,
+    erbt: &[String],
     absagen: &mut Absagen,
 ) {
-    let deckung: Vec<String> = w
+    let mut deckung: Vec<String> = w
         .map(|w| {
             w.liste
                 .iter()
@@ -1582,6 +1697,9 @@ fn vertrag_gegen_wirkungen(
                 .collect()
         })
         .unwrap_or_default();
+    // **Lane 191:** the derived places cover the contract where the clause is
+    // omitted over a settled derivation — see `ererbte_deckung`.
+    deckung.extend(erbt.iter().cloned());
     for (klauseln, code, wort) in [
         (&f.requires, "E220", "requires"),
         (&f.ensures, "E221", "ensures"),

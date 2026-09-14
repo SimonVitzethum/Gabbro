@@ -990,6 +990,35 @@ pub fn zeige(baum: &Programm, quelle: &str, datei: &str, ausfuehrlich: bool) -> 
         "   `derivable` means: the same fact stands mechanically readable a second time in\n\
          \x20  this unit, and the register names where. It does NOT mean \"drop it\".\n",
     );
+    // **Lane 191: the derived clauses, beside the counted ones.** An omitted
+    // `effects`/`costs` is derived from the body and checked like a written
+    // line — so the register prints what the checker would write. Lines here
+    // start with `derived:` and carry no rule tag: the counter above does not
+    // read them, and `zaehle-zeremonie.py` counts them nowhere.
+    s.push_str("\n-- Derived clauses (lane 191: omitted means derived, not demanded):\n");
+    for v in crate::abgeleitet::ertraege(baum) {
+        let eintraege: Vec<String> =
+            v.effects.iter().filter(|w| w.as_str() != "pure").cloned().collect();
+        let e = if eintraege.is_empty() {
+            "effects { pure }".to_string()
+        } else {
+            format!("effects {{ {} }}", eintraege.join(", "))
+        };
+        let c = match (v.geschrieben_kosten, v.costs) {
+            (Some(Some(z)), _) => format!("costs <= {z} ops"),
+            (Some(None), _) => "costs <= <symbolic> ops".to_string(),
+            (None, Some(n)) => format!("costs <= {n} ops"),
+            (None, None) => "no cost follows".to_string(),
+        };
+        let stand = if v.geschrieben_effects && v.geschrieben_kosten.is_some() {
+            "written"
+        } else if v.effects_offen.is_none() && v.costs.is_some() {
+            "derived"
+        } else {
+            "incomplete"
+        };
+        s.push_str(&format!("   derived: {} :: {e} + {c} [{stand}]\n", v.schluessel));
+    }
     s
 }
 

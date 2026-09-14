@@ -29,7 +29,7 @@ fn lauf(argumente: &[&str]) -> (String, String, i32) {
     )
 }
 
-/// The twelve pairs. **`abi`, `emit`, `lean` and `build` are not here** -- they were English
+/// The fourteen pairs. **`abi`, `emit`, `lean` and `build` are not here** -- they were English
 /// from the start, and a pair of one word is not a pair.
 const PAARE: &[(&str, &str)] = &[
     ("check", "pruefe"),
@@ -37,6 +37,7 @@ const PAARE: &[(&str, &str)] = &[
     ("assumptions", "annahmen"),
     ("k-condition", "k-bedingung"),
     ("costs", "kosten"),
+    ("derived", "abgeleitet"),
     ("contexts", "kontexte"),
     ("obligations", "pflichten"),
     ("prove", "beweise"),

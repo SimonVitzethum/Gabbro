@@ -1,0 +1,18 @@
+-- 131 -- **Lane 191: the derived clause crosses the call edge.**
+--
+-- Neither function declares a clause. The callee derives `pure` and its
+-- price; the caller derives both through the call — the same numbers a
+-- written line would carry, held the same way at every pass. Over-declaring
+-- the callee would surface here instead: the hull exceeding the derived set
+-- refuses the omission (`N305`, probe 968).
+module beispiel131 {
+
+impl fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 {
+    return n + n;
+}
+
+impl fn vierfach(n : u32 in 0 .. 500) -> u32 in 0 .. 4000 {
+    return doppelt(n) + doppelt(n);
+}
+
+}

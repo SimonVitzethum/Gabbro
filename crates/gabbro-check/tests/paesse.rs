@@ -256,11 +256,34 @@ fn next_zielt_auf_die_umgebende_marke() {
 
 #[test]
 fn fehlende_wirkungen_fallen() {
-    // Der Kern der Regel: die Pflicht faellt an der ABWESENHEIT.
-    faellt_mit("impl fn f() { }", "E001");
+    // **Lane 191: the obligation falls at the absence NOTHING settles.**
+    // A body whose derivation is complete derives its clause -- no refusal.
+    faellt_nicht("impl fn f() { }");
     faellt_nicht("impl fn f() effects { pure } { }");
     // `spec fn` hat keine Laufzeitwirkung -- fuer sie ist die Klausel freigestellt.
     faellt_nicht("type T = { x : bool, }; spec fn p(c : T) -> bool = c.x;");
+    // A function WITHOUT a body has nothing to derive from -- `E001` stays.
+    faellt_mit("extern fn f() costs <= 2 ops;", "E001");
+}
+
+/// **Lane 191 (`N305`): the omission the derivation cannot settle.**
+///
+/// The callee promises more than it does; the caller's deeds do not cover
+/// the hull, so the omitted clause is refused with the reason. The twin
+/// writes the clause and stays silent.
+#[test]
+fn unableitbare_auslassung_faellt_n305() {
+    faellt_mit(
+        "static mut W : u32 = 0;\n\
+         impl fn geber() effects { writes W } costs <= 100 ops { }\n\
+         impl fn rufer() costs <= 1000 ops { geber(); }",
+        "N305",
+    );
+    faellt_nicht(
+        "static mut W : u32 = 0;\n\
+         impl fn geber() effects { writes W } costs <= 100 ops { W = 1; }\n\
+         impl fn rufer() effects { writes W } costs <= 1000 ops { geber(); }",
+    );
 }
 
 #[test]
@@ -2421,6 +2444,8 @@ fn eine_nie_antwortende_routine_die_zurueckkehrt() {
     )));
     // (b) an `extern` declaration has no body to read: the sentence `E008` writes about
     //     extern effect lists applies word for word;
+    //     **Lane 191:** the declaration owes no price — an omitted `costs`
+    //     without a body keeps its old meaning (no promise, no check).
     faellt_nicht(&m("extern fn q() -> never effects { diverges };"));
     // (c) and a routine that ANSWERS may return, which is the whole point of the result
     //     clause.
@@ -3415,9 +3440,12 @@ fn translator_effects_n202() {
 
 #[test]
 fn translator_no_effects_n202() {
-    // A missing clause is not a silent `pure`: without the line nobody
-    // promised anything. The ordinary missing-`effects` refusal (`E001`)
-    // fires beside it -- two rules, two diagnostics.
+    // **Lane 191: the translator still owes its line IN WRITING.** A missing
+    // clause over a derivable body is derived everywhere else -- but a
+    // translator runs at translation time, so `N202` demands the written
+    // `effects { pure }` regardless of what the body derives. The ordinary
+    // missing-`effects` refusal (`E001`) no longer fires beside it: the body
+    // derives `pure` and is silent.
     faellt_genau(
         &translator_modul_src(
             "translator build for kernel(region : KernelTab) -> KernelTab
@@ -3427,7 +3455,42 @@ fn translator_no_effects_n202() {
     return region;
 }",
         ),
-        &["N202", "E001"],
+        &["N202"],
+    );
+}
+
+/// **Lane 191: an omitted `costs` is not a promise, so nothing is held.**
+///
+/// The omission keeps exactly its old meaning — no check, on a body or
+/// without one. What the derivation settles is shown by the views
+/// (`gabbro kosten`, `gabbro abgeleitet`), never by a refusal: the only
+/// omission this lane refuses is the `effects` one nothing settles
+/// (`N305`, above). Each arm below pins the silence beside the refusal
+/// that still speaks there.
+#[test]
+fn ausgelassene_kosten_bleiben_stumm() {
+    // A readable but symbolic promise behind the edge: the caller omits its
+    // own bound, so there is nothing to hold — silent, as before.
+    faellt_nicht(
+        "table K count 64 { slot { wert : u32 in 0 .. 100, } }\n\
+         impl fn f(m : ptr<normal, r> K) -> u32 in 0 .. 100 effects { reads m.slots } \
+             costs <= 4 + 12 * lenof(m) ops { return m.slots[0].wert; }\n\
+         impl fn rufer(q : ptr<normal, r> K) -> u32 in 0 .. 100 effects { reads q.slots } \
+             { return f(q); }",
+    );
+    // A recursion without a measure or a bound: `K008` still demands the
+    // measure — the omitted bound itself stays silent beside it.
+    faellt_mit("impl fn endlos(n : u32) { endlos(n); }", "K008");
+    faellt_mit("impl fn endlos(n : u32) effects { pure } { endlos(n); }", "K008");
+    // No body behind the promise: neither declared nor derived, and still
+    // silent — the edge of the checked world, as before.
+    faellt_nicht("extern fn fremd() effects { pure };");
+    // An indirect call without a pointer-type cost: `N035` still names the
+    // missing line at the type — the omitted bound beside it stays silent.
+    faellt_mit(
+        "module t {\ntype T = { f : fn(u8), };\n\
+         impl fn rufe(t : ptr<normal, r> T) effects { pure } { t->f(1); }\n}",
+        "N035",
     );
 }
 
@@ -3939,7 +4002,7 @@ impl fn runde(i : index into Plaetze)
 #[test]
 fn eigner_aufruf_in_schleife_d268() {
     faellt_genau(
-        &format!("{EIGNER_KOPF}extern fn gib_auf() -> never effects {{ diverges }} costs <= 1 ops;
+        &format!("{EIGNER_KOPF}extern fn gib_auf() -> never effects {{ diverges }};
 impl fn schreibe(m : Marke, i : index into Plaetze)
     effects {{ writes Plaetze.slots, consumes m }} costs <= 32 ops {{
     Plaetze.slots[i].benutzt = true;

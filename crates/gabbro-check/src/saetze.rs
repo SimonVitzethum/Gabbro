@@ -2847,7 +2847,7 @@ pub const PAARUNG: &[Satz] = &[
 pub const WIRKUNGEN: &[Satz] = &[
     Satz {
         name: "wirkungen.pflicht",
-        kennungen: &["E001", "E002", "E003", "E004"],
+        kennungen: &["E001", "E002", "E003", "E004", "N305"],
         aussage: "`effects` is NOT fail-open: a function without an `effects` clause is a \
                   translation error, and whoever touches nothing writes `effects { pure }`. \
                   `pure` stands alone or not at all. The obligation falls at the ABSENCE, \
@@ -2856,10 +2856,13 @@ pub const WIRKUNGEN: &[Satz] = &[
         vorbehalt: "Only `fn` and `axiom` are looked at. A `device` transition (whose \
                     `effects` is optional), a `check`, a probe: no `E001`, no body \
                     comparison. `E003` is a HINT, so a `divergent fn` that does not name \
-                    `diverges` passes.",
+                    `diverges` passes. Since lane 191 an omitted clause over a body is \
+                    DERIVED where the fixpoint settles — `E001` stays for functions \
+                    without a body, and `N305` refuses the omission where nothing \
+                    settles, with the reason.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes on `E001` and `E002`. `E003` is a hint; `E004` \
-                      has no probe.",
+        gemessen_an: "beispiele/gift: probes on `E001` and `E002`, probe `968` on `N305`. \
+                      `E003` is a hint; `E004` has no probe.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs; SPRACHE.md §7",
     },
     Satz {
@@ -3120,8 +3123,9 @@ pub const KOSTEN: &[Satz] = &[
                       the exception and is caught TWICE -- by this probe and by the corpus \
                       run, since `beispiele/39` carries the site; the wrong-number half of \
                       that path is covered by `count-schranke-um-eins-daneben`, which it \
-                      shares. What is measured is the IMPLEMENTATION against tested cases, \
-                      not the rule. See `messung/K001-DOMAENENSCHRANKE.md`.",
+                      shares. What is measured is the \
+                      IMPLEMENTATION against tested cases, not the rule. See \
+                      `messung/K001-DOMAENENSCHRANKE.md`.",
         fundstelle: "crates/gabbro-check/src/domaene.rs (line 82), umgebung.rs \
                      (`walkschranken`); MESSUNGEN.md:6307; SPRACHE.md:906",
     },

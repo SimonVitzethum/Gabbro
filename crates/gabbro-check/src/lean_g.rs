@@ -522,7 +522,71 @@ fn scan_block(b: &Block, acc: &mut Scan) {
     }
 }
 
-fn check_fn(f: &FnModel, model: &Model, scope: &Scope) -> Result<CheckedFn, Refusal> {
+/// **Lane 191: the derived clause, read back through the real parser.**
+///
+/// An omitted `effects` is derived from the body, and the export treats it
+/// exactly like a written one. The derived set travels as STRINGS
+/// (`writes c.slots`) while the checks below match on `WirkungArt` — so the
+/// line is rebuilt on a synthetic function and read back. `None` where an
+/// entry has no written form; every entry the derivation produces
+/// round-trips through the clause grammar.
+fn synth_effects(gesetzt: &std::collections::BTreeSet<String>) -> Option<Wirkungen> {
+    let mut eintraege: Vec<String> =
+        gesetzt.iter().filter(|w| w.as_str() != "pure").cloned().collect();
+    if eintraege.is_empty() {
+        eintraege.push("pure".to_string());
+    }
+    let quelle = format!("impl fn f() effects {{ {} }} {{ }}", eintraege.join(", "));
+    let (baum, absagen) = gabbro_syntax::lies("synth.gab", &quelle);
+    if absagen.fehler_zahl() > 0 {
+        return None;
+    }
+    for item in &baum.items {
+        if let ItemArt::Funktion(f) = &item.art {
+            if f.name.text == "f" {
+                return f.effects.clone();
+            }
+        }
+    }
+    None
+}
+
+/// **Lane 191: derived sets by short name, unambiguous only.**
+///
+/// The model keys functions by short name; the derivation by qualified key.
+/// Where two modules declare one short name, guessing would wed the export
+/// to the wrong body — both stay refused (`LG001`, as before). Incomplete
+/// derivations (a lower bound, R16) never stand in for a line either.
+fn abgeleitete_nach_kurz(
+    ab: &crate::ableitung::Ableitung,
+) -> std::collections::BTreeMap<String, std::collections::BTreeSet<String>> {
+    let mut anzahl: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    for key in ab.je.keys() {
+        let kurz = key.rsplit("::").next().unwrap_or(key).to_string();
+        *anzahl.entry(kurz).or_insert(0) += 1;
+    }
+    let mut aus: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+        std::collections::BTreeMap::new();
+    for (key, a) in &ab.je {
+        if a.unvollstaendig.is_some() {
+            continue;
+        }
+        let kurz = key.rsplit("::").next().unwrap_or(key).to_string();
+        if anzahl.get(&kurz).copied().unwrap_or(0) != 1 {
+            continue;
+        }
+        aus.insert(kurz, a.wirkungen.clone());
+    }
+    aus
+}
+
+fn check_fn(
+    f: &FnModel,
+    model: &Model,
+    scope: &Scope,
+    abgeleitet: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
+) -> Result<CheckedFn, Refusal> {
     let d = &f.decl;
     if d.klasse != Some(FnKlasse::Impl) {
         return Err(refuse("LG001", format!("function {} is not `impl`", f.name)));
@@ -570,9 +634,20 @@ fn check_fn(f: &FnModel, model: &Model, scope: &Scope) -> Result<CheckedFn, Refu
     }
     // Effects: `locks L` must say what `requires Held(L)` says; `writes`
     // names the written tables; `reads` and `costs` are NO FORM (ignored).
-    let effects = d.effects.as_ref().ok_or_else(|| {
-        refuse("LG001", format!("function {} has no `effects`", f.name))
-    })?;
+    // **Lane 191:** an omitted clause is derived, and the export reads it
+    // like a written one (`synth_effects` above). What stays refused is the
+    // omission nothing settles — an ambiguous name, a lower bound, or an
+    // entry with no written form.
+    let synth: Option<Wirkungen>;
+    let effects = match &d.effects {
+        Some(w) => w,
+        None => {
+            synth = abgeleitet.get(&f.name).and_then(synth_effects);
+            synth.as_ref().ok_or_else(|| {
+                refuse("LG001", format!("function {} has no `effects`", f.name))
+            })?
+        }
+    };
     let mut effect_locks = Vec::new();
     let mut writes = Vec::new();
     for w in &effects.liste {
@@ -811,9 +886,12 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
 pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<String, Refusal> {
     let model = collect(source_name, tree)?;
     let scope = rescope(tree)?;
+    // **Lane 191:** one derivation for the whole unit; every omitted clause
+    // with a settled set reads like a written one in `check_fn`.
+    let abgeleitet = abgeleitete_nach_kurz(&crate::ableitung::leite_ab(tree, true));
     let mut checked = Vec::new();
     for f in &model.fns {
-        checked.push(check_fn(f, &model, &scope)?);
+        checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
     let mut out = Out::default();
     for c in &checked {
