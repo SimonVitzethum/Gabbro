@@ -1,0 +1,39 @@
+-- erwartet: Hinweis N297
+-- **Poison 958 -- a slot whose `ensures` is STRONGER than its producer's.**
+--
+-- The slot promises `result == true`; `hart_bereit` promises nothing. The counted
+-- implication is `ensures_f => ensures_slot`, i.e. `true => result == true` --
+-- covariant, and NOT provable in general: nothing stops the producer from answering
+-- `false`, which its own contract allows and the slot forbids. The checker decides
+-- nothing here; it records the `C` obligation (`gabbro obligations`) and hints at the
+-- flow (`N297`).
+--
+-- **The direction is the probe.** An implementation with the implication backwards
+-- (`ensures_slot => ensures_f`, i.e. `result == true => true`) sees a trivial truth,
+-- records nothing, hints at nothing -- and this file goes red. The twin in the other
+-- direction is `gift/957`.
+
+module gift::slot_ensures_stronger_than_producer {
+
+type Treiber = {
+    bereit : fn() -> bool
+        ensures result == true
+        effects { pure }
+        costs   <= 2 ops,
+};
+
+impl fn hart_bereit() -> bool
+    effects { pure }
+    costs   <= 1 ops
+{
+    return true;
+}
+
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(bereit: &hart_bereit);
+}
+
+}

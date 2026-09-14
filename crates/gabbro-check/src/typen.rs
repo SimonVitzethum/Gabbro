@@ -463,7 +463,7 @@ pub enum Typ {
 ///
 /// > *Without this structure every indirect call would be an edge into the unknown, and
 /// > `E008` would again end at the first call boundary -- the way it did before 2026-08-15.*
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FnPtrContract {
     /// **The name is `None` where the pointer type did not give one** (`fn(u8)`), which is
     /// the ordinary form -- see `ast::FnZeigerParam`. From a real function (`&f`) it is
@@ -479,6 +479,37 @@ pub struct FnPtrContract {
     /// The cost bound, evaluated. `None` means: not constant-evaluable.
     pub costs: Option<i128>,
     pub has_costs: bool,
+    /// **The `requires` at the pointer type (lane 177).** Empty where the type carries
+    /// none. Checked at an indirect call the way a callee's `requires` is checked at a
+    /// direct one (`N295`, the weak `M115` reading); the other half of the refinement a
+    /// producer `&f` owes the slot.
+    pub requires: Vec<gabbro_syntax::ast::Pred>,
+    /// **The `ensures` at the pointer type (lane 177).** The result of an indirect call is
+    /// narrowed by it as by a direct callee's `ensures`; the other half of the refinement.
+    pub ensures: Vec<gabbro_syntax::ast::Pred>,
+    /// **Which function this value is, when it is known.** `Some(f)` for a value made by
+    /// `&f`; `None` for a declared type, a parameter, or any place whose content the
+    /// checker cannot name. The refinement obligation (`C`) is recorded only where the
+    /// producer is known -- an unknown producer behind a slot is the slot-subtyping
+    /// question, which this lane does not decide.
+    pub producer: Option<String>,
+}
+
+/// **Equality is the SHAPE, not the promise.** Two pointer contracts compare equal where
+/// parameters, result, effects and costs agree; the `requires`/`ensures` clauses and the
+/// producer do not take part. The precedent is `M142`: the signature comparison compares
+/// the signature only, and says so. A `Pred` carries no `PartialEq`, and comparing logic
+/// by text would make two spellings of one clause unequal -- so the comparison says what
+/// it is instead of pretending to be whole.
+impl PartialEq for FnPtrContract {
+    fn eq(&self, other: &Self) -> bool {
+        self.parameters == other.parameters
+            && self.result == other.result
+            && self.effects == other.effects
+            && self.has_effects == other.has_effects
+            && self.costs == other.costs
+            && self.has_costs == other.has_costs
+    }
 }
 
 impl FnPtrContract {

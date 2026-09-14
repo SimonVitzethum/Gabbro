@@ -385,6 +385,13 @@ variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "
 fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
 (* «B8»: a function pointer type CARRIES ITS CONTRACT, because at an indirect call there is no
    name to resolve -- what is known about the callee is the promise at the type. *)
+(* Lane 177 -- REFINEMENT DIRECTION, and it is the content, not a convention: a function `f`
+   assigned to or passed as this type owes `requires_type ⇒ requires_f` (CONTRAVARIANT --
+   `f` accepts at least what the type promises callers may pass) and `ensures_f ⇒
+   ensures_type` (COVARIANT -- `f` delivers at least what the type promises). The wrong
+   direction is unsound and easy to build by accident: `beispiele/gift/957`-`958` fail if
+   it swaps. Effects (`⊆`), costs (`<=`), arity and signature are decided by the checker
+   (`M128`/`M142`); the two implications are the user's logic (kind `C`). *)
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 typelist   = typeexpr { "," typeexpr } ;

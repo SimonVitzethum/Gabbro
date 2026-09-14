@@ -1,12 +1,11 @@
--- erwartet: N037
--- **Poison 247 -- a function pointer type carries a `requires`.**
+-- erwartet: N295
+-- **Poison 247 -- an indirect call that breaks the pointer type's `requires`.**
 --
--- A precondition is checked at the CALL SITE against the caller's state, and the passes that
--- do that resolve the callee by name. Written here it would be a promise checked nowhere.
---
--- *The same class as `N036`, at the other clause*: `effects` can be carried across an
--- indirect call because the hull carries sets of places; `requires` cannot, because it is a
--- statement about one particular caller's state at one particular line.
+-- Until lane 177 this file fell at `N037`: a `requires` at the pointer type was refused
+-- outright, on the ground that no pass read it. The reader is built now -- the slot's
+-- `requires` is checked at the indirect call the way a callee's is checked at a direct
+-- one (`M115`'s weak reading) -- so the file falls at the USE, not at the clause. The
+-- literal `0` lies outside `b > 0` the way no range reasoning is needed to see.
 
 module gift::fnzeiger_mit_requires {
 
@@ -19,11 +18,11 @@ type Treiber = {
         costs   <= 4 ops,
 };
 
-impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+impl fn nutze(t : ptr<normal, r> Treiber)
     effects { reads t, writes ZUSTAND }
     costs   <= 8 ops
 {
-    t->senden(b);
+    t->senden(0);
 }
 
 }

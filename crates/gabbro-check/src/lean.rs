@@ -4078,6 +4078,15 @@ fn verdicts_over(
                     // does not touch).
                     LeanVerdict::Refused(LeanReason::Invariant)
                 }
+                Art::Vertragsimplikation => {
+                    // **A higher-order refinement is refused by kind in this channel**
+                    // (lane 177): a function pointer has no term here -- the
+                    // `FnWert` arm is `OtherValue` already, and the implication
+                    // over two contracts needs a constructor in
+                    // `programmlogik/Gabbro/Coverage.lean`, which this lane
+                    // does not touch (the model side is a later lane's).
+                    LeanVerdict::Refused(LeanReason::OtherValue)
+                }
             };
             // **A refusal whose reason is an assumption IS an assumption** -- a promise
             // over a device register is the device's, whatever duty it stands in.

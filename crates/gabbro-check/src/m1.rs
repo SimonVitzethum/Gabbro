@@ -108,6 +108,36 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     lauf(baum, absagen).0
 }
 
+/// **One higher-order refinement debt, harvested where `&f` meets its slot.**
+///
+/// The record `zeigerverfeinerung_ernten` leaves behind: who owes it (`rufer`, the
+/// function whose body hands `&f` to the slot), whose refinement it is (`erzeuger`),
+/// which half (`requires` or `ensures`), both contracts in full, and the site. Two
+/// records at most per site -- one per non-trivial half.
+#[derive(Debug, Clone)]
+pub(crate) struct ZeigerVerfeinerung {
+    pub rufer: String,
+    pub erzeuger: String,
+    pub haelfte: String,
+    pub slot_gestalt: String,
+    pub f_requires: Vec<Pred>,
+    pub slot_requires: Vec<Pred>,
+    pub f_ensures: Vec<Pred>,
+    pub slot_ensures: Vec<Pred>,
+    pub f_rumpf_da: bool,
+    pub span: Span,
+}
+
+/// **The harvested refinement debts of a unit (lane 177).**
+///
+/// Same run and same reader as the refusals: `lauf` with throwaway findings, the
+/// third element. `gabbro obligations` counts them as kind `C`; the live run hints
+/// at each (`N297`).
+pub(crate) fn zeigerverfeinerungen(baum: &Programm) -> Vec<ZeigerVerfeinerung> {
+    let mut fort = Absagen::neu("pflichten");
+    lauf(baum, &mut fort).2
+}
+
 /// **Die Stellen, an denen der Vertrag eines FREMDEN Rumpfes im Rufer gewirkt hat.**
 ///
 /// Fuer das Zeugnis. *Es ist derselbe Lauf und derselbe Leser* -- die Frage „verengt diese
@@ -125,7 +155,7 @@ pub fn fremdverengungen(baum: &Programm) -> Vec<Stelle> {
     lauf(baum, &mut fort).1
 }
 
-fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
+fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<ZeigerVerfeinerung>) {
     let umgebung = Umgebung::sammle(baum);
     // **The PLACE of a quantifier domain**, and all five rules live in `domaene.rs`: its
     // name (`D017`), its type (`D018`) and the two edges of a chain (`D014`-`D016`). The
@@ -152,6 +182,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
         modul: String::new(),
         rufer: String::new(),
         fremd: Vec::new(),
+        zeigerverf: Vec::new(),
         spezifikationen,
         spec_fns,
         unveraenderlich: std::collections::HashSet::new(),
@@ -162,7 +193,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
         griffe: std::collections::BTreeMap::new(),
     };
     p.programm(baum);
-    (p.zaehlung, p.fremd)
+    (p.zaehlung, p.fremd, p.zeigerverf)
 }
 
 /// **Alles, was `maintains` nennen darf** -- und das sind ZWEI Arten, nicht eine.
@@ -275,6 +306,10 @@ struct Pruefer<'a> {
     /// Wer eine dritte hinzufuegt und hier nichts eintraegt, macht die Flaeche unsichtbar,
     /// nicht kleiner.
     fremd: Vec<Stelle>,
+    /// **The harvested higher-order refinements (lane 177).** One record per
+    /// non-trivial implication half where `&f` meets its slot; read out by
+    /// `zeigerverfeinerungen` for the obligation register.
+    zeigerverf: Vec<ZeigerVerfeinerung>,
     /// **Der Fehlerkanal des laufenden Rumpfes** (Stufe 7, 2026-08-21) -- der `reason` aus
     /// `-> T or R`, voll qualifiziert.
     ///
@@ -1806,6 +1841,15 @@ impl<'a> Pruefer<'a> {
                     has_effects: !sig.effect_list.is_empty(),
                     costs: sig.cost_bound,
                     has_costs: sig.cost_bound.is_some(),
+                    // **Lane 177: the producer's LOGIC rides along.** The `requires` and
+                    // `ensures` of `f` itself travel in the value's type, so that the
+                    // assignment to a `fn(…)` slot can be held against the slot's
+                    // contract -- contravariant in `requires`, covariant in `ensures`.
+                    // The `producer` names `f`: without it the slot comparison sees two
+                    // contracts and cannot say whose refinement it is.
+                    requires: sig.requires.clone(),
+                    ensures: sig.ensures.clone(),
+                    producer: Some(p.text()),
                 }))
             }
             // **`M139` -- a literal so wide that the TYPE falls away, and with it every rule
@@ -2938,13 +2982,69 @@ impl<'a> Pruefer<'a> {
                 };
                 self.passt(t, pt, *span, &was);
             }
+            // **`N296` -- the arity of an INDIRECT call (lane 177).** The loop above is a
+            // truncating `zip`: a missing argument is a parameter nobody compares and a
+            // surplus one a value nobody reads -- the same shape `M143` closed for direct
+            // calls on 2026-09-03, one file per direction. **It reports and does not
+            // return**, like `M143`: the overlap still gets its per-position comparison.
+            if argtypen.len() != v.parameters.len() {
+                let (n, m) = (v.parameters.len(), argtypen.len());
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "N296",
+                        r.span,
+                        format!(
+                            "`{}` declares {n} parameter(s), this call passes {m}",
+                            o.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "nothing converts at an indirect call: the caller pushes what the \
+                         SLOT's type says, so a missing argument is a parameter nobody \
+                         checks and a surplus one a value nobody reads",
+                    )
+                    .mit_notiz(
+                        "the comparison above runs on the OVERLAP and stops at the shorter \
+                         list, so without this line the count is held by neither side",
+                    ),
+                );
+            }
+            // **Lane 177: the TYPE's contract is checked like a callee's.** The slot's
+            // parameter names stand where a declaration's would (`None` becomes the
+            // empty name, which no clause can address -- the same reticence as at a
+            // direct call). `N295` is the weak `M115` reading at an indirect site: it
+            // refuses where the argument's RANGE excludes the condition, and the
+            // `V`-less silence otherwise is the user's, counted nowhere here.
+            let slot = crate::umgebung::Signatur {
+                parameter: v
+                    .parameters
+                    .iter()
+                    .map(|(n, t)| (n.clone().unwrap_or_default(), t.clone()))
+                    .collect(),
+                ergebnis: v.result.clone().map(|b| *b),
+                ensures: v.ensures.clone(),
+                requires: v.requires.clone(),
+                rumpf_da: true,
+                effect_list: v.effects.clone(),
+                cost_bound: v.costs,
+                span: r.span,
+            };
+            self.requires_pruefen(&o.text(), "N295", &slot, &argtypen);
+            // **The result is known to satisfy `ensures` afterwards -- as for a direct
+            // call.** The narrowing is the same function (`bereich_aus_ensures`); what
+            // differs is whose promise it is: the slot's, which every producer refines
+            // (the `C` obligation). It is NOT booked as a foreign narrowing: the
+            // candidates behind the pointer include bodies Gabbro sees, and the
+            // refinement is counted, not assumed.
+            let roh = v.result.clone().map(|x| *x).unwrap_or(Typ::Unbekannt);
+            let eng = crate::fremdverengung::bereich_aus_ensures(&roh, &v.ensures);
             // **A call with no result stays untyped -- exactly as a direct one does.**
             // The line below is `sig.ergebnis.clone().unwrap_or(Typ::Unbekannt)` with the
             // contract in place of the signature, and it is deliberately the same: Gabbro has
             // no unit type, and inventing one here would make the indirect call differ from
             // the direct call in a way no rule asked for. *The coverage number counts it, in
             // both paths, and that is a property of `void`, not of this construct.*
-            return v.result.map(|x| *x).unwrap_or(Typ::Unbekannt);
+            return eng.typ;
         }
         // **Aufgeloest wird im Modul des Aufrufs**, nicht ueber den blanken Namen.
         let signatur = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned();
@@ -3177,7 +3277,7 @@ impl<'a> Pruefer<'a> {
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
             self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
-        self.requires_pruefen(ziel, &sig, &argtypen);
+        self.requires_pruefen(ziel, "M115", &sig, &argtypen);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -3560,6 +3660,7 @@ impl<'a> Pruefer<'a> {
     fn requires_pruefen(
         &mut self,
         ziel: &str,
+        code: &'static str,
         sig: &crate::umgebung::Signatur,
         argtypen: &[(Typ, Span)],
     ) {
@@ -3590,7 +3691,7 @@ impl<'a> Pruefer<'a> {
             if unmoeglich {
                 self.absagen.schiebe(
                     Absage::fehler(
-                        "M115",
+                        code,
                         *span,
                         format!(
                             "`{}` requires `{name} {} {zahl}`, and the argument lies in \
@@ -5056,6 +5157,105 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **The higher-order refinement, harvested (lane 177).**
+    ///
+    /// Where a named function `&f` flows into a `fn(…)` slot, the LOGIC half of the
+    /// refinement is nobody's decision procedure: `requires_slot ⇒ requires_f`
+    /// (contravariant -- `f` accepts at least what the slot promises callers may pass)
+    /// and `ensures_f ⇒ ensures_slot` (covariant -- `f` delivers at least what the
+    /// slot promises). **The direction is the content**: swapping the two hands a
+    /// caller a promise the producer never made, and that is exactly what
+    /// `beispiele/gift/957`-`958` pin.
+    ///
+    /// This function HARVESTS (one record per non-trivial half) and HINTS (`N297` at
+    /// the site). The record travels to `gabbro obligations` (kind `C`) through
+    /// `zeigerverfeinerungen`, harvested in the same run -- *the same run and the same
+    /// reader*, the shape `fremdverengungen` above stands for.
+    ///
+    /// A half is recorded only where it can fail: the `requires` half where `f`
+    /// carries any (`true ⇒ R_f` is otherwise trivially true), the `ensures` half
+    /// where the SLOT carries any (`E_f ⇒ true` is otherwise trivially true). Where
+    /// both sides carry nothing there is no obligation, and where the producer is
+    /// unknown (a slot behind a slot) there is no one to owe it.
+    fn zeigerverfeinerung_ernten(
+        &mut self,
+        q: &crate::typen::FnPtrContract,
+        z: &crate::typen::FnPtrContract,
+        span: Span,
+    ) {
+        let Some(erzeuger) = q.producer.clone() else { return };
+        let mut haelften: Vec<(&str, String)> = Vec::new();
+        if !q.requires.is_empty() {
+            haelften.push((
+                "requires",
+                format!(
+                    "`&{erzeuger}` accepts what `{}` promises: requires of the slot holds \
+                     only what requires of `&{erzeuger}` allows",
+                    z.shape()
+                ),
+            ));
+        }
+        if !z.ensures.is_empty() {
+            haelften.push((
+                "ensures",
+                format!(
+                    "`&{erzeuger}` delivers what `{}` promises: ensures of `&{erzeuger}` \
+                     holds only what ensures of the slot allows",
+                    z.shape()
+                ),
+            ));
+        }
+        if haelften.is_empty() {
+            return;
+        }
+        // **Whose body it is.** The lookup re-spells the producer's path; the text it
+        // was written with joins with `::`, so the split round-trips (`Pfad::text`).
+        let pfad = gabbro_syntax::ast::Pfad {
+            teile: erzeuger
+                .split("::")
+                .map(|t| gabbro_syntax::ast::Ident {
+                    text: t.to_string(),
+                    span,
+                })
+                .collect(),
+            span,
+        };
+        let rumpf_da = self
+            .u
+            .funktion(&self.modul, &pfad)
+            .is_some_and(|s| s.rumpf_da);
+        for (haelfte, satz) in haelften {
+            self.absagen.schiebe(
+                Absage::hinweis(
+                    "N297",
+                    span,
+                    format!("higher-order refinement ({haelfte}): {satz}"),
+                )
+                .mit_notiz(
+                    "the implication is the USER's logic: it stands as kind `C` in \
+                     `gabbro obligations` and is decided by no pass -- contravariant \
+                     in `requires`, covariant in `ensures`",
+                )
+                .mit_notiz(
+                    "effects, costs, arity and signature are decided, not hinted \
+                     (`M128`/`M142` beside this line)",
+                ),
+            );
+            self.zeigerverf.push(ZeigerVerfeinerung {
+                rufer: self.rufer.clone(),
+                erzeuger: erzeuger.clone(),
+                haelfte: haelfte.to_string(),
+                slot_gestalt: z.shape(),
+                f_requires: q.requires.clone(),
+                slot_requires: z.requires.clone(),
+                f_ensures: q.ensures.clone(),
+                slot_ensures: z.ensures.clone(),
+                f_rumpf_da: rumpf_da,
+                span,
+            });
+        }
+    }
+
     /// **`M135` -- `bool` is not a number, and the comparison below cannot say so.**
     ///
     /// `passt` ends in a comparison of RANGES, and `Typ::Wahrheit` has none
@@ -5268,6 +5468,15 @@ impl<'a> Pruefer<'a> {
             // **`M141` runs BESIDE `M128` and not instead of it** -- the contract and the
             // signature are two independent ways to be wrong, and a pointer can be both.
             self.fnptr_signatur_passt(&q, &z, span);
+            // **Lane 177: the LOGIC refinement is counted, never decided.** Where a NAMED
+            // function `&f` flows into the slot, the implication `requires_slot ⇒
+            // requires_f` and `ensures_f ⇒ ensures_slot` is the user's logic: it stands
+            // in `gabbro obligations` (kind `C`) and as a hint here. Effects, costs,
+            // arity and signature are DECIDED above (`M128`/`M142`) -- this arm decides
+            // nothing about logic. Where the producer is unknown (a slot behind a
+            // slot) there is no one to owe it, and the question is the slot-subtyping
+            // one this lane leaves open.
+            self.zeigerverfeinerung_ernten(&q, &z, span);
             return;
         }
         self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);

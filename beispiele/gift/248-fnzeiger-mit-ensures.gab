@@ -1,13 +1,12 @@
--- erwartet: N037
--- **Poison 248 -- a function pointer type carries an `ensures`.**
+-- erwartet: N296
+-- **Poison 248 -- an indirect call with the wrong arity.**
 --
--- Until 2026-08-21 this went through in silence: the clause parsed, it stood in the grammar,
--- and no pass read it. The sibling `requires` was refused from the first day; the
--- postcondition was not, and that asymmetry was an oversight rather than a decision.
---
--- The alternative -- building a reader -- was refused with a number: the four indirect call
--- sites in `caprock-messbasis` do not even take a lock, so the measured need for a
--- postcondition at the pointer type is ZERO.
+-- Until lane 177 this file fell at `N037`: an `ensures` at the pointer type was refused
+-- outright. The clause is carried now -- it narrows the answer the way a direct callee's
+-- does -- so the file keeps its `ensures` and falls at the COUNT instead: two arguments
+-- where the slot declares one. The comparison runs on the overlap (the one argument still
+-- gets its shape check); the count is held by neither side without this line, the same
+-- shape `M143` closed for direct calls.
 
 module gift::fnzeiger_mit_ensures {
 
@@ -24,7 +23,7 @@ impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
     effects { reads t, writes ZUSTAND }
     costs   <= 8 ops
 {
-    let ok = t->senden(b);
+    let ok = t->senden(b, b);
 }
 
 }
