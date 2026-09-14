@@ -253,8 +253,6 @@ theorem ivInit_exklusiv : StartExklusiv (D := ivD) ivInit := by
   · rw [ivInit_sonst ht] at hL
     exact absurd hL List.not_mem_nil
 
-def ivE0 : Ereignis ivD := .gibt ()
-
 theorem ivPgut_frag : programmImFragmentG ivPgut ivFs = true := by decide
 theorem ivPschlecht_frag : programmImFragmentG ivPschlecht ivFs = true := by decide
 theorem ivPgut_fuss : fussSperreB ivPgut (SperrInv.leer ivD) ivFs = true := by decide
@@ -384,7 +382,7 @@ theorem ivPgut_zertifiziert : ∀ M : RufMaschineG ivD,
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG ivPgut ivO 0 M t M') ∧
       InvAmOrtG ivPgut M :=
-  ziel_ort_sperre_inv ivPgut ivO 0 (axWahr ivD) (SperrInv.leer ivD) ivFs ivSp ivInit ivE0 ivO_gut
+  ziel_ort_sperre_inv ivPgut ivO 0 (axWahr ivD) (SperrInv.leer ivD) ivFs ivSp ivInit ivO_gut
     ivO_lokal (axVertragO_wahr ivO) axEnsLokal_wahr sperrInvOk_leer ivFs_voll ivPgut_frag
     ivPgut_fuss ivPgut_koerper (ivStart _) (fun _ => rfl) ivInit_exklusiv ivPgut_inv
 
@@ -395,7 +393,7 @@ theorem ivPschlecht_alt : ∀ M : RufMaschineG ivD,
       VertragAmOrtG ivPschlecht M ∧ SperrInvG (SperrInv.leer ivD) M ∧ KeinLogikHaltG ivO 0 M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG ivPschlecht ivO 0 M t M' :=
-  ziel_ort_sperre ivPschlecht ivO 0 (axWahr ivD) (SperrInv.leer ivD) ivFs ivSp ivInit ivE0 ivO_gut
+  ziel_ort_sperre ivPschlecht ivO 0 (axWahr ivD) (SperrInv.leer ivD) ivFs ivSp ivInit ivO_gut
     ivO_lokal (axVertragO_wahr ivO) axEnsLokal_wahr sperrInvOk_leer ivFs_voll ivPschlecht_frag
     ivPschlecht_fuss ivPschlecht_koerper (ivStart _) (fun _ => rfl) ivInit_exklusiv
 

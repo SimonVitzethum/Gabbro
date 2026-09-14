@@ -255,8 +255,6 @@ theorem igInit_exklusiv : StartExklusiv (D := igD) igInit := by
   · rw [igInit_sonst ht] at hL
     exact absurd hL List.not_mem_nil
 
-def igE0 : Ereignis igD := .gibt ()
-
 theorem igPgut_frag : programmImFragmentG igPgut igFs = true := by decide
 theorem igPschlecht_frag : programmImFragmentG igPschlecht igFs = true := by decide
 theorem igPgut_fuss : fussSperreB igPgut (SperrInv.leer igD) igFs = true := by decide
@@ -451,7 +449,7 @@ theorem igPgut_invGrund :
 theorem igPgut_zertifiziert : ∀ M : RufMaschineG igD,
     RufErreichbarG igPgut igO 0 (RufStartG igPgut igSp igInit) M →
       InvAmOrtG igPgut M ∧ Zielsatz.InvAmGrundG igPgut M :=
-  ziel_ort_sperre_invAlle igPgut igO 0 (axWahr igD) (SperrInv.leer igD) igFs igSp igInit igE0
+  ziel_ort_sperre_invAlle igPgut igO 0 (axWahr igD) (SperrInv.leer igD) igFs igSp igInit
     igO_gut igO_lokal (axVertragO_wahr igO) axEnsLokal_wahr sperrInvOk_leer igFs_voll igPgut_frag
     igPgut_fuss igPgut_koerper (igStart _) (fun _ => rfl) igInit_exklusiv igPgut_inv
     igPgut_invGrund
@@ -465,7 +463,7 @@ theorem igPschlecht_alt : ∀ M : RufMaschineG igD,
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG igPschlecht igO 0 M t M') ∧
       InvAmOrtG igPschlecht M :=
-  ziel_ort_sperre_inv igPschlecht igO 0 (axWahr igD) (SperrInv.leer igD) igFs igSp igInit igE0
+  ziel_ort_sperre_inv igPschlecht igO 0 (axWahr igD) (SperrInv.leer igD) igFs igSp igInit
     igO_gut igO_lokal (axVertragO_wahr igO) axEnsLokal_wahr sperrInvOk_leer igFs_voll
     igPschlecht_frag igPschlecht_fuss igPschlecht_koerper (igStart _) (fun _ => rfl)
     igInit_exklusiv igPschlecht_inv

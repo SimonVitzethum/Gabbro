@@ -149,6 +149,18 @@ Adding any of them later extends `Ziel`, and each extension is reviewed as a dif
 **Effort:** (2) half a day, (3) one day, (4) one to two days, (5) half a day, (6) half a day.
 About 3–4 days of work, with (1) and the float switch as the only dependencies.
 
+**Status (2026-09-14).** (2) `Spec.lean` stands. (3) `Akzeptiert`/`akzeptiert_pruefer` stand.
+(4) **DONE: `theorem gabbro_ziel : GabbroZiel`** (`Zielsatz/Beweis.lean`), `#print axioms`
+= `propext`, `Classical.choice`, `Quot.sound`; no premise added, `Spec.lean` and machine G
+unchanged. The last gap was the event `e0` the replay used for fresh record keys, which a
+declaration without table, global and lock does not have; it is closed by justified records
+(`Begruendet`, `begruendet_eindeutig`, `SperreBeweis.lean` §0b: the determinism of G's calls
+there, obtained from the replay itself), and `e0` is gone from every theorem of the chain
+(SATZKARTE §20). (5) `Proben.lean` proves the probes; `probeB_erfuellbar`/`probeC_erfuellbar`
+now fix `haupt` as the declared start and `Erfuellbar` asks every declared start to run on
+some thread (the empty start list with the root on every thread no longer satisfies them).
+Open: (6) and (7).
+
 ## 8. Extensions of the goal (noninterference, liveness, higher-order contracts): the rules
 
 *Added 2026-09-14 after an external review of the three proposed extensions.*

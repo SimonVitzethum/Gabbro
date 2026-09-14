@@ -118,7 +118,7 @@ theorem grP_alt_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG vD),
           AnPruefungG M t → ∃ M', RufSchrittG grP vO passes M t M') ∧
       InvAmOrtG grP M) ∧ StartEndeG grP M :=
   fun passes => ziel_ort_sperre_ende_bei grP vO passes (axWahr vD) (SperrInv.leer vD) vFs vSp grInit
-    (.gibt ()) vO_gut vO_lokal (axVertragO_wahr vO) axEnsLokal_wahr sperrInvOk_leer vFs_voll
+    vO_gut vO_lokal (axVertragO_wahr vO) axEnsLokal_wahr sperrInvOk_leer vFs_voll
     grP_fragmentG grP_fussS (grP_koerper _ passes) (fun _ => rfl) (fun _ => rfl) grInit_exklusiv
     (invGutS_leer rfl)
 

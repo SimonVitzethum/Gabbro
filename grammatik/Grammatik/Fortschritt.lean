@@ -895,7 +895,7 @@ theorem fortschrittG_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Gu
     lock floors, and a duplicate-free start trace. -/
 theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -905,7 +905,7 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.FortschrittG P O passes M := fun M hr =>
   fortschrittG_aus hO hSt sp init hND hr
-    (ziel_ort_sperre P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
+    (ziel_ort_sperre P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
       hSstart hex M hr).2.2.1
 
 /-- **Progress up to named stops under the premises of `ziel_ort_mehrfaden`**
@@ -913,7 +913,7 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     lock floors and a duplicate-free start trace. -/
 theorem fortschrittG_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -927,7 +927,7 @@ theorem fortschrittG_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.FortschrittG P O passes M := fun passes M hr =>
   fortschrittG_aus hO hSt sp init hND hr
-    (ziel_ort_mehrfaden P O Q S fs sp init e0 K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel hFuss hK
+    (ziel_ort_mehrfaden P O Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel hFuss hK
       hStart hSstart hex hI passes M hr).1.2.2.1
 
 /-- Starts without signature locks (the declared starts of `AkzeptiertSpec`

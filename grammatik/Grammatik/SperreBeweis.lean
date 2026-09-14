@@ -69,6 +69,305 @@ theorem Stmt.blatt_darf (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {
   | next => simp [stmtOrteP] at ho
   | _ => simp [Stmt.istBlatt] at hb
 
+/-! ## 0b. Fresh keys, with or without an event
+
+  The replay keeps every record functional (`FunkV`, `FunkA`, `FunkU`) by
+  keying each new entry at a trace position no earlier entry has: the
+  recorded answer world is one trace piece longer than the key world. That
+  piece is an EVENT, and a declaration without a table, a global and a lock
+  has none (`Ereignis D` is empty): there every world is one and the same
+  point (`welt_eq`), and a key is only (callee, parameters).
+
+  For such a declaration the records are kept functional by JUSTIFICATION
+  instead of by freshness (`Begruendet`): a recorded call answer is what the
+  callee's body ends in against every handler repeating the callee's own
+  (justified, functional) record, with the machine's oracle. Two justified
+  answers with one key are equal (`begruendet_eindeutig`): the union of
+  their records is functional by induction, and one handler repeating it
+  makes both bodies end in the same outcome -- the determinism of machine G
+  that such a declaration needs, obtained from the replay itself rather than
+  from its 70 rules. Axiom answers are the machine oracle's own answers
+  there (`PasstA O`), and no acquire is ever recorded (there is no lock). -/
+
+/-- The trace piece that makes a recorded key fresh: `neutral e` for a
+    chosen event, nothing when the declaration has no event. -/
+noncomputable def frischSpur (D : Deklaration) : List (Ereignis D) :=
+  haveI := Classical.propDecidable (Nonempty (Ereignis D))
+  if h : Nonempty (Ereignis D) then neutral (Classical.choice h) else []
+
+theorem offen_frischSpur (s : List (Ereignis D)) : offen (frischSpur D ++ s) = offen s := by
+  unfold frischSpur
+  split
+  · exact offen_neutral _ s
+  · rfl
+
+theorem frischSpur_laenge (h : Nonempty (Ereignis D)) (s : List (Ereignis D)) :
+    s.length < (frischSpur D ++ s).length := by
+  unfold frischSpur
+  rw [dif_pos h]
+  exact neutral_laenge _ s
+
+/-- **Without an event every world is the same point**: no table, no
+    global, and an always-empty trace. -/
+theorem welt_eq (hE : ¬ Nonempty (Ereignis D)) (σ σ' : World D) : σ = σ' := by
+  obtain ⟨s, g, sp⟩ := σ
+  obtain ⟨s', g', sp'⟩ := σ'
+  have h1 : s = s' := funext fun t => absurd ⟨.zugriff t false [] []⟩ hE
+  have h2 : g = g' := funext fun x => absurd ⟨.gzugriff x false [] []⟩ hE
+  have h3 : ∀ l : List (Ereignis D), l = [] := fun l => by
+    cases l with
+    | nil => rfl
+    | cons e _ => exact absurd ⟨e⟩ hE
+  rw [h1, h2, h3 sp, h3 sp']
+
+/-- The recorded answer world of a call to `g` (as `rahmenWelt`), with the
+    fresh trace piece `frischSpur`. -/
+noncomputable def rahmenWeltF (g : D.Fn) (κ s1 : World D) : World D :=
+  ⟨fun t => if D.schreibt g t = true then s1.slots t else κ.slots t,
+   fun x => if D.gschreibt g x = true then s1.globs x else κ.globs x, frischSpur D ++ κ.spur⟩
+
+theorem rahmenWeltF_rahmen (g : D.Fn) (κ s1 : World D) :
+    Rahmen (D.schreibt g) (D.gschreibt g) κ (rahmenWeltF g κ s1) := by
+  refine ⟨fun t ht k f => ?_, fun x hx => ?_⟩
+  · show (if D.schreibt g t = true then s1.slots t else κ.slots t) k f = κ.slots t k f
+    rw [if_neg (by simp [ht])]
+  · show (if D.gschreibt g x = true then s1.globs x else κ.globs x) = κ.globs x
+    rw [if_neg (by simp [hx])]
+
+theorem rahmenWeltF_offen (g : D.Fn) (κ s1 : World D) :
+    offen (rahmenWeltF g κ s1).spur = offen κ.spur :=
+  offen_frischSpur κ.spur
+
+theorem rahmenWeltF_laenge (g : D.Fn) (κ s1 : World D) :
+    κ.spur.length ≤ (rahmenWeltF g κ s1).spur.length := by
+  show κ.spur.length ≤ (frischSpur D ++ κ.spur).length
+  rw [List.length_append]
+  exact Nat.le_add_left _ _
+
+theorem rahmenWeltF_gleichAuf {S : List (D.Tab ⊕ D.Glob)} (g : D.Fn)
+    {κ A s1 : World D} (hκ : GleichAuf S κ A) (hA : GleichOhne g S A s1) :
+    GleichAuf S (rahmenWeltF g κ s1) s1 := by
+  refine ⟨fun t ht => ?_, fun x hx => ?_⟩
+  · show (if D.schreibt g t = true then s1.slots t else κ.slots t) = s1.slots t
+    split
+    · rfl
+    · rename_i hw
+      exact (hκ.1 t ht).trans (hA.1 t ht (by simpa using hw))
+  · show (if D.gschreibt g x = true then s1.globs x else κ.globs x) = s1.globs x
+    split
+    · rfl
+    · rename_i hw
+      exact (hκ.2 x hx).trans (hA.2 x hx (by simpa using hw))
+
+/-- The recorded answer world of an axiom call (as `axWelt`), with the fresh
+    trace piece `frischSpur`. -/
+noncomputable def axWeltF (a : D.Ax) (κ σ₂ : World D) : World D :=
+  ⟨fun t => if D.aschreibt a t = true then σ₂.slots t else κ.slots t,
+   fun g => if D.agschreibt a g = true then σ₂.globs g else κ.globs g, frischSpur D ++ κ.spur⟩
+
+theorem axWeltF_rahmen (a : D.Ax) (κ σ₂ : World D) :
+    Rahmen (D.aschreibt a) (D.agschreibt a) κ (axWeltF a κ σ₂) := by
+  refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
+  · show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) k f = κ.slots t k f
+    rw [if_neg (by simp [ht])]
+  · show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = κ.globs g
+    rw [if_neg (by simp [hg])]
+
+theorem axWeltF_laenge (a : D.Ax) (κ σ₂ : World D) :
+    κ.spur.length ≤ (axWeltF a κ σ₂).spur.length := by
+  show κ.spur.length ≤ (frischSpur D ++ κ.spur).length
+  rw [List.length_append]
+  exact Nat.le_add_left _ _
+
+theorem axWeltF_gleichAuf {S : List (D.Tab ⊕ D.Glob)} (a : D.Ax)
+    {κ σ₁ σ₂ : World D} (hg : GleichAuf S κ σ₁)
+    (hr : Rahmen (D.aschreibt a) (D.agschreibt a) σ₁ σ₂) :
+    GleichAuf S (axWeltF a κ σ₂) σ₂ := by
+  refine ⟨fun t ht => ?_, fun g hg' => ?_⟩
+  · show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) = σ₂.slots t
+    split
+    · rfl
+    · rename_i hw
+      rw [hg.1 t ht]
+      funext k f
+      exact (hr.1 t (by simpa using hw) k f).symm
+  · show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = σ₂.globs g
+    split
+    · rfl
+    · rename_i hw
+      rw [hg.2 g hg']
+      exact (hr.2 g (by simpa using hw)).symm
+
+theorem axWeltF_vertrag {Q : AxEns D} (hlok : AxEnsLokal Q) (a : D.Ax)
+    (κ σ₂ : World D) (v : ErgVal D (D.aerg a)) (h : Q a σ₂ v = true) :
+    Q a (axWeltF a κ σ₂) v = true := by
+  rw [hlok a (axWeltF a κ σ₂) σ₂ v (fun t ht => by
+      show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) = σ₂.slots t
+      rw [if_pos ht])
+    (fun g hg => by
+      show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = σ₂.globs g
+      rw [if_pos hg])]
+  exact h
+
+/-- What a call answer says about an end outcome of the callee's body: the
+    same value, or the same reason, at some world. -/
+def Antwortet {g : D.Fn} {l : Bool} {Γ : Ctx} (x : EndAusgang (vertragVon D g) l Γ) :
+    RufAusgang g → Prop
+  | .ok _ v => ∃ σ, x = .zurueck σ v
+  | .grund _ r => ∃ σ, x = .grund σ r
+  | _ => False
+
+theorem antwortet_eindeutig (hE : ¬ Nonempty (Ereignis D)) {g : D.Fn} {l : Bool} {Γ : Ctx}
+    {x : EndAusgang (vertragVon D g) l Γ} {a a' : RufAusgang g} (h1 : Antwortet x a)
+    (h2 : Antwortet x a') : a = a' := by
+  cases a with
+  | ok σ v =>
+    cases a' with
+    | ok σ' v' =>
+      obtain ⟨s1, rfl⟩ := h1
+      obtain ⟨s2, h⟩ := h2
+      cases h
+      rw [welt_eq hE σ σ']
+    | grund σ' r' =>
+      obtain ⟨s1, rfl⟩ := h1
+      obtain ⟨s2, h⟩ := h2
+      cases h
+    | logik e => exact h2.elim
+    | hardware e => exact h2.elim
+  | grund σ r =>
+    cases a' with
+    | ok σ' v' =>
+      obtain ⟨s1, rfl⟩ := h1
+      obtain ⟨s2, h⟩ := h2
+      cases h
+    | grund σ' r' =>
+      obtain ⟨s1, rfl⟩ := h1
+      obtain ⟨s2, h⟩ := h2
+      cases h
+      rw [welt_eq hE σ σ']
+    | logik e => exact h2.elim
+    | hardware e => exact h2.elim
+  | logik e => exact h1.elim
+  | hardware e => exact h1.elim
+
+/-- **A justified call answer.** The answer `a` to `g` at `κ` with the
+    parameters `ρ` is what `g`'s body ends in against every handler that
+    repeats a functional record `H` of justified answers, with the machine's
+    oracle and any environment move. -/
+inductive Begruendet (P : Programm D) (O : Orakel D) (passes : Nat) (S : SperrInv D) :
+    EintragV D → Prop
+  | mk (g : D.Fn) (κ : World D) (ρ : Env D (D.params g)) (a : RufAusgang g)
+      (H : List (EintragV D)) :
+      FunkV H → (∀ e ∈ H, Begruendet P O passes S e) →
+      (∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (U : Umwelt D),
+        PasstV R H →
+          Antwortet (execEndH (V := vertragVon D g) S O U passes R (P.rumpf g) κ ρ) a) →
+      Begruendet P O passes S ⟨g, κ, ρ, a⟩
+
+section Begruendet
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
+
+/-- **Two justified answers with one key are equal** (no event): the
+    determinism of the calls of machine G in such a declaration. -/
+theorem begruendet_eindeutig (hE : ¬ Nonempty (Ereignis D)) {e : EintragV D}
+    (h : Begruendet P O passes S e) :
+    ∀ a', Begruendet P O passes S ⟨e.1, e.2.1, e.2.2.1, a'⟩ → e.2.2.2 = a' := by
+  induction h with
+  | mk g κ ρ a H hf _ hpred ih =>
+    intro a' h2
+    cases h2 with
+    | mk _ _ _ _ H2 hf2 hB2 hpred2 =>
+      have hfun : FunkV (H ++ H2) := by
+        intro g' σ ρ' b b' m1 m2
+        rcases List.mem_append.mp m1 with m1 | m1 <;> rcases List.mem_append.mp m2 with m2 | m2
+        · exact hf _ _ _ _ _ m1 m2
+        · exact ih _ m1 b' (hB2 _ m2)
+        · exact (ih _ m2 b (hB2 _ m1)).symm
+        · exact hf2 _ _ _ _ _ m1 m2
+      have hp := rufAusV_passt hfun
+      exact antwortet_eindeutig hE
+        (hpred (rufAusV (H ++ H2)) (fun _ σ => σ)
+          (fun g σ ρ a hm => hp g σ ρ a (List.mem_append_left _ hm)))
+        (hpred2 (rufAusV (H ++ H2)) (fun _ σ => σ)
+          (fun g σ ρ a hm => hp g σ ρ a (List.mem_append_right _ hm)))
+
+end Begruendet
+
+/-- Without an event there is no lock: every acquire record fits every move. -/
+theorem passtU_leer (hE : ¬ Nonempty (Ereignis D)) (S : SperrInv D) (U : Umwelt D)
+    (HU : List (UEintrag D)) : PasstU S U HU :=
+  fun L _ _ _ => absurd ⟨.gibt L⟩ hE
+
+theorem funkA_of_passtA {O : Orakel D} {HA : List (AxEintrag D)} (h : PasstA O HA) : FunkA HA :=
+  fun a σ ρ x x' h1 h2 => (h a σ ρ x h1).symm.trans (h a σ ρ x' h2)
+
+/-- The freshness side of a call record: every key below `N` when the
+    declaration has an event; every answer justified when it has none. -/
+def KurzVB (P : Programm D) (O : Orakel D) (passes : Nat) (S : SperrInv D) (N : Nat)
+    (H : List (EintragV D)) : Prop :=
+  (Nonempty (Ereignis D) → KurzV N H) ∧
+    (¬ Nonempty (Ereignis D) → ∀ e ∈ H, Begruendet P O passes S e)
+
+/-- The freshness side of an axiom record: every key below `N` with an
+    event; the machine oracle's own answers without one. -/
+def KurzAB (O : Orakel D) (N : Nat) (HA : List (AxEintrag D)) : Prop :=
+  (Nonempty (Ereignis D) → KurzA N HA) ∧ (¬ Nonempty (Ereignis D) → PasstA O HA)
+
+/-- The freshness side of an acquire record (without an event there is no
+    lock and no acquire). -/
+def KurzUB (N : Nat) (HU : List (UEintrag D)) : Prop :=
+  Nonempty (Ereignis D) → KurzU N HU
+
+section Kurz
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
+
+theorem kurzVB_nil (N : Nat) : KurzVB P O passes S N ([] : List (EintragV D)) :=
+  ⟨fun _ => kurzV_nil N, fun _ _ h => absurd h List.not_mem_nil⟩
+
+theorem kurzAB_nil (N : Nat) : KurzAB O N ([] : List (AxEintrag D)) :=
+  ⟨fun _ => kurzA_nil N, fun _ _ _ _ _ h => absurd h List.not_mem_nil⟩
+
+theorem kurzUB_nil (N : Nat) : KurzUB N ([] : List (UEintrag D)) := fun _ => kurzU_nil N
+
+theorem kurzVB_mono {N N' : Nat} {H : List (EintragV D)} (h : KurzVB P O passes S N H)
+    (hN : N ≤ N') : KurzVB P O passes S N' H :=
+  ⟨fun hE => kurzV_mono (h.1 hE) hN, h.2⟩
+
+theorem kurzAB_mono {N N' : Nat} {HA : List (AxEintrag D)} (h : KurzAB O N HA) (hN : N ≤ N') :
+    KurzAB O N' HA :=
+  ⟨fun hE => kurzA_mono (h.1 hE) hN, h.2⟩
+
+theorem kurzUB_mono {N N' : Nat} {HU : List (UEintrag D)} (h : KurzUB N HU) (hN : N ≤ N') :
+    KurzUB N' HU :=
+  fun hE => kurzU_mono (h hE) hN
+
+/-- **A new call answer keeps the record functional**: fresh when the
+    declaration has an event, justified when it has none. -/
+theorem funkV_appendB {N : Nat} {H : List (EintragV D)} (hf : FunkV H)
+    (hk : KurzVB P O passes S N H) (e : EintragV D)
+    (he : Nonempty (Ereignis D) → N ≤ e.2.1.spur.length)
+    (hb : ¬ Nonempty (Ereignis D) → Begruendet P O passes S e) : FunkV (H ++ [e]) := by
+  by_cases hN : Nonempty (Ereignis D)
+  · exact funkV_append hf (hk.1 hN) e (he hN)
+  · intro g σ ρ a a' k1 k2
+    rcases List.mem_append.mp k1 with h1 | h1 <;> rcases List.mem_append.mp k2 with h2 | h2
+    · exact hf g σ ρ a a' h1 h2
+    · rw [List.mem_singleton] at h2
+      subst h2
+      exact begruendet_eindeutig hN (e := ⟨g, σ, ρ, a⟩) (hk.2 hN _ h1) a' (hb hN)
+    · rw [List.mem_singleton] at h1
+      subst h1
+      exact (begruendet_eindeutig hN (e := ⟨g, σ, ρ, a'⟩) (hk.2 hN _ h2) a (hb hN)).symm
+    · rw [List.mem_singleton] at h1 h2
+      rw [← h1] at h2
+      have e2 := eq_of_heq (Sigma.mk.inj h2).2
+      simp only [Prod.mk.injEq] at e2
+      exact e2.2.2.symm
+
+end Kurz
+
 /-! ## 1. The replay invariants -/
 
 section Inv
@@ -106,9 +405,10 @@ def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
     invariants. -/
 def KopfS (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D)) (σ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzA σ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzU σ.spur.length HU ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
+    KurzVB P O passes S σ.spur.length H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzAB O σ.spur.length HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB σ.spur.length HU ∧
     GleichAuf (stabilS P S lok F.f F.rest.2.2.1) σ W ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
@@ -123,9 +423,10 @@ def KopfS (F : RufRahmenG D) (W : World D) : Prop :=
     contract carriers. -/
 def WarteS (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D)) (κ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzA κ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzU κ.spur.length HU ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
+    KurzVB P O passes S κ.spur.length H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzAB O κ.spur.length HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB κ.spur.length HU ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     (GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧
@@ -198,8 +499,8 @@ theorem fadenS_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes
   have hok' : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) := by rw [hr] at hok; exact hok
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   obtain ⟨σ', hl, hg', hok'', hsem⟩ := hstep σ hg0 hok'
-  refine ⟨⟨H, HA, HU, σ', hreq, hf, hv, kurzV_mono hk hl, hfa, hra, hqa, kurzA_mono hka hl, hfu,
-    hiu, kurzU_mono hku hl, hg', hok'', fun R O' U hR hA hU hQ => ?_⟩, hS⟩
+  refine ⟨⟨H, HA, HU, σ', hreq, hf, hv, kurzVB_mono hk hl, hfa, hra, hqa, kurzAB_mono hka hl, hfu,
+    hiu, kurzUB_mono hku hl, hg', hok'', fun R O' U hR hA hU hQ => ?_⟩, hS⟩
   have h1 := heq R O' U hR hA hU hQ
   rw [hr] at h1
   exact ZErgG.folgt_trans h1 (hsem R O' U hQ)
@@ -296,14 +597,57 @@ theorem pushS_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
         (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
         (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).2 g hex
 
+/-- **A returning head justifies its answer** (no event): the head's
+    record is justified, the machine oracle repeats its axiom record, and
+    against every handler repeating its call record its body ends in the
+    value the machine returns. -/
+theorem popS_begr_ok (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : World D}
+    (hG : KopfS P O passes Q S lok G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ} (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
+    (e : ErgExpr D Γ Λ (vertragVon D G.f).erg)
+    (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+      (U : Umwelt D) (σ : World D), (semH S O' U passes R r σ ρ).gleich
+        (.zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ))) :
+    Begruendet P O passes S
+      ⟨G.f, G.s0, G.rho, .ok G.s0 (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ)⟩ := by
+  obtain ⟨H, HA, HU, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, heq⟩ := hG
+  obtain rfl : σ = W := welt_eq hE σ W
+  refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U hR => ?_)
+  have h1 := heq R O U hR (hka.2 hE) (passtU_leer hE S U HU) ⟨rfl, rfl⟩
+  rw [hr] at h1
+  simp only at h1
+  have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
+  obtain ⟨σ'', hex, _⟩ := zErgG_gleich_zurueck h2
+  exact ⟨σ'', hex⟩
+
+/-- The same for a head at a REASON return. -/
+theorem popS_begr_grund (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : World D}
+    (hG : KopfS P O passes Q S lok G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ} (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
+    (rg : Fin (vertragVon D G.f).gruende)
+    (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+      (U : Umwelt D) (σ : World D), (semH S O' U passes R r σ ρ).gleich (.grund σ rg)) :
+    Begruendet P O passes S ⟨G.f, G.s0, G.rho, .grund G.s0 rg⟩ := by
+  obtain ⟨H, HA, HU, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, heq⟩ := hG
+  refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U hR => ?_)
+  have h1 := heq R O U hR (hka.2 hE) (passtU_leer hE S U HU) ⟨rfl, rfl⟩
+  rw [hr] at h1
+  simp only at h1
+  have h2 := ZErgG.folgt_grund (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
+  obtain ⟨σ'', hex, _⟩ := zErgG_gleich_grund h2
+  exact ⟨σ'', hex⟩
+
 /-- **The caller resumes** after its pending call to `G` (as `popR_kopf`):
-    the answer is recorded with the answer world `rahmenWelt`, and the frame
-    becomes a replayed head whose residue has the same held locks. -/
-theorem popS_kopf (e0 : Ereignis D) {F : RufRahmenG D}
+    the answer is recorded with the answer world `rahmenWeltF`, and the frame
+    becomes a replayed head whose residue has the same held locks. Without
+    an event the new entry is fresh no more; it is justified instead
+    (`hb`, from the returning head: `popS_begr_ok`, `popS_begr_grund`). -/
+theorem popS_kopf {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
     (hW : WarteS P O passes Q S lok F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
       (∃ r, ∀ σa, mk σa = .grund σa r))
+    (hb : ¬ Nonempty (Ereignis D) → Begruendet P O passes S ⟨G.1, G.2.2, G.2.1, mk G.2.2⟩)
     (hRah : GleichOhne G.1 (stabilS P S lok F.f F.rest.2.2.1) G.2.2 s1)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ' : Env D Γ) (r' : GRest D (vertragVon D F.f) l Γ Λ)
     (hΛ : ∀ L, Res.held L ∈ Λ → Res.held L ∈ F.rest.2.2.1)
@@ -316,15 +660,22 @@ theorem popS_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     KopfS P O passes Q S lok ⟨F.f, F.rho, F.s0, ⟨l, Γ, Λ, ρ', r'⟩⟩ W' := by
   obtain ⟨H, HA, HU, κ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, hok, hreqκ,
     ⟨hglκ, hsub, hfussκ⟩, hcont⟩ := hW
-  have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWelt e0 G.1 κ s1) s1 :=
-    rahmenWelt_gleichAuf e0 G.1 hfussκ hRah
-  have hlen := rahmenWelt_laenge e0 G.1 κ s1
-  have hmem : (⟨G.1, κ, G.2.1, mk (rahmenWelt e0 G.1 κ s1)⟩ : EintragV D) ∈
-      H ++ [⟨G.1, κ, G.2.1, mk (rahmenWelt e0 G.1 κ s1)⟩] :=
+  have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWeltF G.1 κ s1) s1 :=
+    rahmenWeltF_gleichAuf G.1 hfussκ hRah
+  have hlen := rahmenWeltF_laenge G.1 κ s1
+  have hlt : Nonempty (Ereignis D) → κ.spur.length < (rahmenWeltF G.1 κ s1).spur.length :=
+    fun hN => frischSpur_laenge hN κ.spur
+  have hbe : ¬ Nonempty (Ereignis D) →
+      Begruendet P O passes S ⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩ := by
+    intro hN
+    rw [welt_eq hN (rahmenWeltF G.1 κ s1) G.2.2, welt_eq hN κ G.2.2]
+    exact hb hN
+  have hmem : (⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩ : EintragV D) ∈
+      H ++ [⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩] :=
     List.mem_append_right _ List.mem_cons_self
-  refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (rahmenWelt e0 G.1 κ s1)⟩], HA, HU, rahmenWelt e0 G.1 κ s1,
-    hreq, funkV_append hf hk _ (Nat.le_refl _), ⟨?_, ?_⟩, ?_, hfa, hra, hqa,
-    kurzA_mono hka (Nat.le_of_lt hlen), hfu, hiu, kurzU_mono hku (Nat.le_of_lt hlen), ?_,
+  refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩], HA, HU, rahmenWeltF G.1 κ s1,
+    hreq, funkV_appendB hf hk _ (fun _ => Nat.le_refl _) hbe, ⟨?_, ?_⟩, ?_, hfa, hra, hqa,
+    kurzAB_mono hka hlen, hfu, hiu, kurzUB_mono hku hlen, ?_,
     hok' hok, ?_⟩
   · intro g σ ρ a hm
     rcases List.mem_append.mp hm with hm | hm
@@ -350,18 +701,23 @@ theorem popS_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     · exact hv.2 g σ ρ a hm σ' w hw
     · rw [List.mem_singleton] at hm
       cases hm
-      have e : σ' = rahmenWelt e0 G.1 κ s1 := by
+      have e : σ' = rahmenWeltF G.1 κ s1 := by
         rcases hmk with ⟨v, hv', _⟩ | ⟨rr, hr'⟩
         · rw [hv'] at hw; cases hw; rfl
         · rw [hr'] at hw; cases hw
       subst e
-      exact ⟨rahmenWelt_rahmen e0 G.1 κ s1, rahmenWelt_offen e0 G.1 κ s1⟩
-  · intro e hm
-    rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_trans (hk e hm) hlen
-    · rw [List.mem_singleton] at hm
-      subst hm
-      exact hlen
+      exact ⟨rahmenWeltF_rahmen G.1 κ s1, rahmenWeltF_offen G.1 κ s1⟩
+  · refine ⟨fun hN e hm => ?_, fun hN e hm => ?_⟩
+    · rcases List.mem_append.mp hm with hm | hm
+      · exact Nat.lt_trans (hk.1 hN e hm) (hlt hN)
+      · rw [List.mem_singleton] at hm
+        subst hm
+        exact hlt hN
+    · rcases List.mem_append.mp hm with hm | hm
+      · exact hk.2 hN e hm
+      · rw [List.mem_singleton] at hm
+        subst hm
+        exact hbe hN
   · refine GleichAuf.mono (fun _ h => stabilS_mono hΛ h) ?_
     exact ⟨fun t ht => (hσa.1 t ht).trans (congrFun hW'.1.symm t),
       fun g hg => (hσa.2 g hg).trans (congrFun hW'.2.symm g)⟩
@@ -431,11 +787,11 @@ theorem pushS_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
     (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hctrκ)
   have hsubc : (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok z.kopf.f Λc :=
     fun _ h => stabilS_iff (fun L => (hΛc L).symm) (hctr h)
-  refine ⟨⟨⟨[], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, kurzV_nil _,
-    funkA_nil, rahmenA_nil, vertragA_nil Q, kurzA_nil _, funkU_nil, invU_nil S, kurzU_nil _,
+  refine ⟨⟨⟨[], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, kurzVB_nil _,
+    funkA_nil, rahmenA_nil, vertragA_nil Q, kurzAB_nil _, funkU_nil, invU_nil S, kurzUB_nil _,
     GleichAuf.refl _ _, ⟨hFragS g, fuss_rumpfG P g⟩, fun R O' U _ _ _ _ => ZErgG.folgt_refl _⟩,
-    ⟨H, HA, HU, σ.lese Λ os, hreq, hf, hv, kurzV_mono hk (lese_laenge _ _ _), hfa, hra, hqa,
-      kurzA_mono hka (lese_laenge _ _ _), hfu, hiu, kurzU_mono hku (lese_laenge _ _ _), hrc hok',
+    ⟨H, HA, HU, σ.lese Λ os, hreq, hf, hv, kurzVB_mono hk (lese_laenge _ _ _), hfa, hra, hqa,
+      kurzAB_mono hka (lese_laenge _ _ _), hfu, hiu, kurzUB_mono hku (lese_laenge _ _ _), hrc hok',
       hreqκ, ⟨hctrκ, hsubc, gleichAuf_stabil_iff hΛc hgκ⟩, ?_⟩, hSt'⟩, hreq0⟩
   intro R O' U hR hA hU hQ
   have hw := hweiter O' U R σ hg0
@@ -452,8 +808,9 @@ section Schritte2
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
   {lok : D.Tab ⊕ D.Glob → Bool}
 
-/-- **An axiom step keeps the replay** (as `fadenR_ax`). -/
-theorem fadenS_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D}
+/-- **An axiom step keeps the replay** (as `fadenR_ax`). Without an event
+    the recorded answer is the machine oracle's own (`hxO`). -/
+theorem fadenS_ax {z : RufFadenG D} {W : World D}
     (hF : FadenS P O passes Q S lok z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
@@ -464,14 +821,17 @@ theorem fadenS_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D}
     (hok : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f))
     (xm : World D × Int) (hxm : Rahmen (D.aschreibt a) (D.agschreibt a) (W.lese Λ args.orte) xm.1)
+    (hxO : ¬ Nonempty (Ereignis D) →
+      xm.2 = (O.wirkt a (W.lese Λ args.orte) (evalArgs (W.lese Λ args.orte) args
+        (W.lese Λ args.orte) ρ)).2)
     (hlok : AxEnsLokal Q)
     (hxq : ∀ v : ErgVal D (D.aerg a), einpassenErg (D.aerg a) xm.2 = some v → Q a xm.1 v = true)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (U : Umwelt D) (σ : World D),
       O'.wirkt a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
-        (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2) →
+        (axWeltF a (σ.lese Λ args.orte) xm.1, xm.2) →
       (semH S O' U passes R r σ ρ).folgt
-        (semH S O' U passes R r' (axWelt e0 a (σ.lese Λ args.orte) xm.1) ρ')) :
+        (semH S O' U passes R r' (axWeltF a (σ.lese Λ args.orte) xm.1) ρ')) :
     FadenS P O passes Q S lok
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩
       (xm.1.speicher.welt spur') := by
@@ -481,31 +841,49 @@ theorem fadenS_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D}
     rw [hr] at hok0; exact hok0
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   have hlen : σ.spur.length ≤ (σ.lese Λ args.orte).spur.length := lese_laenge _ _ _
+  have hlen2 : σ.spur.length ≤ (axWeltF a (σ.lese Λ args.orte) xm.1).spur.length :=
+    Nat.le_trans hlen (axWeltF_laenge _ _ _)
+  have hlt : Nonempty (Ereignis D) →
+      (σ.lese Λ args.orte).spur.length < (axWeltF a (σ.lese Λ args.orte) xm.1).spur.length :=
+    fun hN => frischSpur_laenge hN _
+  have hpa : ¬ Nonempty (Ereignis D) → PasstA O (HA ++ [⟨a, σ.lese Λ args.orte,
+      evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ,
+      (axWeltF a (σ.lese Λ args.orte) xm.1, xm.2)⟩]) := by
+    intro hN a' σk ρk x hm
+    rcases List.mem_append.mp hm with hm | hm
+    · exact hka.2 hN a' σk ρk x hm
+    · rw [List.mem_singleton] at hm
+      cases hm
+      rw [hxO hN, welt_eq hN (σ.lese Λ args.orte) (W.lese Λ args.orte)]
+      exact Prod.ext (welt_eq hN _ _) rfl
   refine ⟨⟨H, HA ++ [⟨a, σ.lese Λ args.orte,
       evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ,
-      (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2)⟩], HU,
-    axWelt e0 a (σ.lese Λ args.orte) xm.1, hreq, hf, hv,
-    kurzV_mono hk (Nat.le_trans hlen (Nat.le_succ _)), funkA_append hfa hka _ hlen, ?_, ?_, ?_,
-    hfu, hiu, kurzU_mono hku (Nat.le_trans hlen (Nat.le_succ _)), ?_, hok hok', ?_⟩, hS⟩
+      (axWeltF a (σ.lese Λ args.orte) xm.1, xm.2)⟩], HU,
+    axWeltF a (σ.lese Λ args.orte) xm.1, hreq, hf, hv,
+    kurzVB_mono hk hlen2, ?_, ?_, ?_, ?_,
+    hfu, hiu, kurzUB_mono hku hlen2, ?_, hok hok', ?_⟩, hS⟩
+  · by_cases hN : Nonempty (Ereignis D)
+    · exact funkA_append hfa (hka.1 hN) _ hlen
+    · exact funkA_of_passtA (hpa hN)
   · intro a' σk ρk x hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hra a' σk ρk x hm
     · rw [List.mem_singleton] at hm
       cases hm
-      exact axWelt_rahmen e0 a _ _
+      exact axWeltF_rahmen a _ _
   · intro a' σk ρk x hm v hv
     rcases List.mem_append.mp hm with hm | hm
     · exact hqa a' σk ρk x hm v hv
     · rw [List.mem_singleton] at hm
       cases hm
-      exact axWelt_vertrag hlok e0 a _ _ v (hxq v hv)
-  · intro e hm
+      exact axWeltF_vertrag hlok a _ _ v (hxq v hv)
+  · refine ⟨fun hN e hm => ?_, hpa⟩
     rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_of_lt_of_le (hka e hm) (Nat.le_trans hlen (Nat.le_succ _))
+    · exact Nat.lt_of_lt_of_le (hka.1 hN e hm) hlen2
     · rw [List.mem_singleton] at hm
       subst hm
-      exact Nat.lt_succ_self _
-  · have h1 := axWelt_gleichAuf e0 a (hg0.lese Λ Λ args.orte args.orte) hxm
+      exact hlt hN
+  · have h1 := axWeltF_gleichAuf a (hg0.lese Λ Λ args.orte args.orte) hxm
     exact gleichAuf_stabil_iff hΛ' ⟨fun t ht => h1.1 t ht, fun g hg' => h1.2 g hg'⟩
   · intro R O' U hR hA hU hQ
     have h1 := heq R O' U hR (passtA_append hA) hU hQ
@@ -515,7 +893,7 @@ theorem fadenS_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D}
 
 /-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
     axiom call by recording its answer. -/
-theorem fadenS_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
+theorem fadenS_blatt (hO : GutO O) (hQ : AxVertragO Q O)
     (hlok : AxEnsLokal Q) (hFS : ∀ f, FussS P S lok f) {z : RufFadenG D} {W : World D}
     (hF : FadenS P O passes Q S lok z W) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
@@ -551,9 +929,10 @@ theorem fadenS_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
           have hfr := (hO a (W.lese Λ args.orte)
             (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).1
           rw [← e1] at hfr
-          refine fadenS_ax e0 hF hr ρ' K σ'.spur hΛ' a args (fun h' => (hok h').2)
+          refine fadenS_ax hF hr ρ' K σ'.spur hΛ' a args (fun h' => (hok h').2)
             (σ', (O.wirkt a (W.lese Λ args.orte)
-              (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).2) hfr hlok
+              (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).2) hfr (fun _ => rfl)
+            hlok
             (fun v hv => by
               rw [e1]
               exact hQ a _ _ v hv) ?_
@@ -592,12 +971,12 @@ theorem fadenS_locks {z : RufFadenG D} {W : World D} (hF : FadenS P O passes Q S
     show σ.spur.length < (Ereignis.nimmt L _ :: σ.spur).length
     exact Nat.lt_succ_self _
   refine ⟨⟨H, HA, HU ++ [(L, σ, W.speicher)], (mischU S L σ W.speicher).nimmt L, hreq, hf, hv,
-    kurzV_mono hk (Nat.le_of_lt hlen), hfa, hra, hqa, kurzA_mono hka (Nat.le_of_lt hlen),
-    funkU_append hfu hku _ (Nat.le_refl _), invU_append hiu L σ W.speicher hinv, ?_, ?_,
+    kurzVB_mono hk (Nat.le_of_lt hlen), hfa, hra, hqa, kurzAB_mono hka (Nat.le_of_lt hlen),
+    funkU_append hfu (hku ⟨.gibt L⟩) _ (Nat.le_refl _), invU_append hiu L σ W.speicher hinv, ?_, ?_,
     ⟨hks, hss, hrest⟩, ?_⟩, hS⟩
-  · intro e he
+  · intro hN e he
     rcases List.mem_append.mp he with he | he
-    · exact Nat.lt_trans (hku e he) hlen
+    · exact Nat.lt_trans (hku hN e he) hlen
     · rw [List.mem_singleton] at he
       subst he
       exact hlen
@@ -764,5 +1143,11 @@ theorem fadenS_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     fun R O' U => ZErgG.folgt_of_eq (semH_peelFrei S O' U passes R L rest k σ ρ h x hiσ)⟩
 
 end Frei
+
+#print axioms Gabbro.Grammatik.welt_eq
+#print axioms Gabbro.Grammatik.begruendet_eindeutig
+#print axioms Gabbro.Grammatik.funkV_appendB
+#print axioms Gabbro.Grammatik.popS_kopf
+#print axioms Gabbro.Grammatik.fadenS_ax
 
 end Gabbro.Grammatik

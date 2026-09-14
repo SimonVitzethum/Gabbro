@@ -374,7 +374,7 @@ end Ruhe
     `ziel_ort_sperre`. -/
 theorem ziel_ort_einfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true)
@@ -387,7 +387,7 @@ theorem ziel_ort_einfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
         AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M' := by
   intro M hr
   have hFS : ∀ f, FussS P S (fun _ => true) f := fussS_alle P S
-  have hI := zielInvS_erreichbarL P O passes Q S (fun _ => true) sp init e0 hO hRL hQ hlok hS
+  have hI := zielInvS_erreichbarL P O passes Q S (fun _ => true) sp init hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFS) hFS (lokOk_einfaden sp init hRuhe) hK hStart
     hSstart (startExklusiv_einfaden init hRuhe) M hr
   have hP : KeinLogikHaltG O passes M :=

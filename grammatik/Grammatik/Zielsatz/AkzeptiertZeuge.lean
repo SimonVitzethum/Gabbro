@@ -42,7 +42,7 @@ variable {D : Deklaration} [DecidableEq D.Fn]
 theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (hA : Akzeptiert P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init)
     (hSL : SperrInvLokal S) (hlok : AxEnsLokal Q)
@@ -55,7 +55,7 @@ theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
       InvAmOrtG P M) ∧ StartEndeG P M := by
   obtain ⟨hFrag, hAbg, hW, hFuss, hSO, hStart, hSs, hex, -, -, -⟩ :=
     Akzeptiert_ok hvoll (akzeptiertSpec_of hvoll hls hcs hA) hZ
-  exact ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init e0 (kVon P fs init) hO hRL hQ hlok
+  exact ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init (kVon P fs init) hO hRL hQ hlok
     ((sperrInvOk_iff S).mpr ⟨hSO, hSL⟩) hvoll hFrag hAbg hW hFuss hK hStart hSs hex hI
 
 /-- **`keine_verklemmungG` from `Akzeptiert`.** -/
@@ -138,7 +138,7 @@ theorem mP_ziel_aus_akzeptiert : ∀ M : RufMaschineG mD,
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG mP mO 0 M t M') ∧
       InvAmOrtG mP M) ∧ StartEndeG mP M :=
-  akzeptiert_mehrfaden mP mO 0 (axWahr mD) mSI mFs [()] mCs [mHauptA, mHauptB] mSp mInit mE0
+  akzeptiert_mehrfaden mP mO 0 (axWahr mD) mSI mFs [()] mCs [mHauptA, mHauptB] mSp mInit
     mFs_voll mLocks_voll mCs_voll mP_akzeptiert mP_startZulaessig mSI_ok.2 axEnsLokal_wahr
     mP_koerper mP_inv mO_gut mO_lokal (axVertragO_wahr mO)
 

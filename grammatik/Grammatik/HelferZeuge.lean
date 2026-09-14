@@ -336,8 +336,6 @@ theorem ntP_koerper : ∀ f : ntD.Fn, KoerperGutS ntP 0 (axWahr ntD) ntS f := by
   · exact ntP_koerper_frei
   · exact ntP_koerper_setze
 
-def ntE0 : Ereignis ntD := .gibt ()
-
 /-- **The note-T program is certified by the goal theorem**: every premise
     of `ziel_ort_sperre` holds on `ntP`, a program whose one helper is called
     under a lock and without one. -/
@@ -346,7 +344,8 @@ theorem ntP_zertifiziert : ∀ M : RufMaschineG ntD,
       VertragAmOrtG ntP M ∧ SperrInvG ntS M ∧ KeinLogikHaltG ntO 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG ntP ntO 0 M t M' :=
-  ziel_ort_sperre ntP ntO 0 (axWahr ntD) ntS ntFs ntSp ntInit ntE0 ntO_gut ntO_lokal (axVertragO_wahr ntO)
+  ziel_ort_sperre ntP ntO 0 (axWahr ntD) ntS ntFs ntSp ntInit ntO_gut ntO_lokal
+    (axVertragO_wahr ntO)
     axEnsLokal_wahr ntS_ok ntFs_voll ntP_fragmentG ntP_fussS ntP_koerper ntP_start (fun _ => rfl)
     ntInit_exklusiv
 
@@ -464,7 +463,7 @@ theorem ziel_ort_sperre_fortschritt_zeuge :
       AnPruefungG M2 0 ∧ ∃ M3 : RufMaschineG zD, RufSchrittG lP zO 0 M2 0 M3 := by
   obtain ⟨M2, hr2, hA, _, _⟩ := ziel_ort_ganz_fortschritt_zeuge
   exact ⟨M2, hr2, hA, ziel_ort_sperre_fortschritt lP zO 0 (axWahr zD) (SperrInv.leer zD) zFs zSp
-    lInit zE0 zO_gut zO_lokal (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll
+    lInit zO_gut zO_lokal (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll
     lP_fragmentG (fussSperreB_of_G _ _ _ lP_fussG) (fun f => koerperGutS_leer (lP_koerperZ f))
     lP_start (fun _ => rfl) lInit_exklusiv M2 hr2 0 hA⟩
 

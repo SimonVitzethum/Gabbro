@@ -246,9 +246,6 @@ theorem oblig_ohneGrund : StartOhneGrund init0 := by
   intro t
   rfl
 
-/-- The declaration has a lock: a trace event exists. -/
-def e0104 : Ereignis G104_referenz_oblig.gD := .nimmt GLock.M []
-
 /-- **THE CHAIN, SHOWN ONCE**: with the stated duties proved above, the
     flagship's conclusion follows at every budget for every reachable
     machine -- up to the start-configuration fact no program of `gP` alone
@@ -264,7 +261,7 @@ theorem oblig_chain (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD)
         AnPruefungG M t → ∃ M', RufSchrittG G104_referenz_oblig.gP oO passes M t M') ∧
     InvAmOrtG G104_referenz_oblig.gP M) ∧ StartEndeG G104_referenz_oblig.gP M ∧
     KeinStartGrundG M :=
-  gP_ziel oO sp0 init0 e0104 oO_gut oO_lokal (axVertragO_wahr oO) oblig_koerper oblig_inv
+  gP_ziel oO sp0 init0 oO_gut oO_lokal (axVertragO_wahr oO) oblig_koerper oblig_inv
     start0 (oblig_start sp0) hex oblig_hS oblig_ohneGrund passes M hr
 
 #print axioms Gabbro.Grammatik.oblig_koerper

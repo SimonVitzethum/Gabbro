@@ -236,7 +236,7 @@ end Schritte
     function owes (`InvAmOrtG`). -/
 theorem ziel_ort_sperre_inv (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -249,7 +249,7 @@ theorem ziel_ort_sperre_inv (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M := by
   intro M hr
-  refine ⟨ziel_ort_sperre P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK
+  refine ⟨ziel_ort_sperre P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag hFuss hK
     hStart hSstart hex M hr, ?_⟩
   have hFS : ∀ f, FussS P S (freiB fs) f := fussSperreB_ok hvoll hFuss
   induction hr with
@@ -258,7 +258,7 @@ theorem ziel_ort_sperre_inv (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
       subst h
       simp [RufStartG] at hev
   | schritt M M' u hr' hs ih =>
-      have hZ := (zielInvS_erreichbar P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
+      have hZ := (zielInvS_erreichbar P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag
         hFuss hK hStart hSstart hex M hr').1
       intro t ev hev
       by_cases ht : t = u

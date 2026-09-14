@@ -146,7 +146,7 @@ end Schritte
     the logged world. -/
 theorem ziel_ort_sperre_invGrund (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -163,7 +163,7 @@ theorem ziel_ort_sperre_invGrund (P : Programm D) (O : Orakel D) (passes : Nat) 
       subst h
       simp [RufStartG] at hev
   | schritt M M' u hr' hs ih =>
-      have hZ := (zielInvS_erreichbar P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag
+      have hZ := (zielInvS_erreichbar P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag
         hFuss hK hStart hSstart hex M hr').1
       intro t ev hev
       by_cases ht : t = u
@@ -178,7 +178,7 @@ theorem ziel_ort_sperre_invGrund (P : Programm D) (O : Orakel D) (passes : Nat) 
     twin -- the invariants owed at EVERY return of `SYNTAX.md`. -/
 theorem ziel_ort_sperre_invAlle (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
@@ -188,16 +188,16 @@ theorem ziel_ort_sperre_invAlle (P : Programm D) (O : Orakel D) (passes : Nat) (
     (hIG : ∀ f : D.Fn, Zielsatz.InvGutGrund P passes Q S f) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       InvAmOrtG P M ∧ Zielsatz.InvAmGrundG P M := fun M hr =>
-  ⟨(ziel_ort_sperre_inv P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
+  ⟨(ziel_ort_sperre_inv P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag hFuss hK hStart
       hSstart hex hI M hr).2,
-    ziel_ort_sperre_invGrund P O passes Q S fs sp init e0 hO hRL hQ hlok hS hvoll hFrag hFuss hK
+    ziel_ort_sperre_invGrund P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag hFuss hK
       hStart hSstart hex hIG M hr⟩
 
 /-- **Generic in the local carriers** (the replay of `zielInvS_erreichbarL`):
     the reason twin under every flagship built on that replay. -/
 theorem invAmGrundG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -207,7 +207,7 @@ theorem invAmGrundG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (
     (hIG : ∀ f : D.Fn, Zielsatz.InvGutGrund P passes Q S f) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.InvAmGrundG P M := by
-  have hZ := zielInvS_erreichbarL P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+  have hZ := zielInvS_erreichbarL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
     hLok hK hStart hSstart hex
   intro M hr
   induction hr with
@@ -231,7 +231,7 @@ theorem invAmGrundG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (
     `forever` budget) -- the premise set `GabbroZiel` builds on. -/
 theorem ziel_ort_mehrfaden_invGrund (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -243,7 +243,7 @@ theorem ziel_ort_mehrfaden_invGrund (P : Programm D) (O : Orakel D) (Q : AxEns D
     (hIG : ∀ (passes : Nat) (f : D.Fn), Zielsatz.InvGutGrund P passes Q S f) :
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.InvAmGrundG P M := fun passes =>
-  invAmGrundG_erreichbarL P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
+  invAmGrundG_erreichbarL P O passes Q S (lokK P K) sp init hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
     (lokOk_mehr hO hvoll sp init K hAbg hWurzel) (hK passes) hStart hSstart hex (hIG passes)
 

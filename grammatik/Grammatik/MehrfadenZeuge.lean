@@ -664,8 +664,6 @@ theorem mInit_ohneGrund : StartOhneGrund (D := mD) mInit := by
 
 theorem mSI_start : ∀ L, mSI.inv L mSp = true := fun _ => rfl
 
-def mE0 : Ereignis mD := .gibt ()
-
 /-- No body of the witness contains a `forever` loop: its obligation at
     budget `0` is its obligation at every budget (`koerperGutS_alle`). -/
 theorem mP_ohneEwig : ohneEwigB mP mFs = true := by decide
@@ -690,7 +688,7 @@ theorem mP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG mD),
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG mP mO passes M t M') ∧
       InvAmOrtG mP M) ∧ StartEndeG mP M ∧ KeinStartGrundG M :=
-  ziel_ort_mehrfaden_ende mP mO (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
+  ziel_ort_mehrfaden_ende mP mO (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal
     (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
     mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle mInit_ohneGrund
 
@@ -716,7 +714,7 @@ theorem mP_mehrfaden : ∀ (passes : Nat) (M : RufMaschineG mD),
       (VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO passes M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG mP mO passes M t M') ∧ InvAmOrtG mP M :=
-  ziel_ort_mehrfaden mP mO (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
+  ziel_ort_mehrfaden mP mO (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal
     (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
     mP_koerper_alle mP_start mSI_start mInit_exklusiv mP_inv_alle
 
@@ -731,7 +729,7 @@ theorem sP_ende_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG sD),
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG sP sO passes M t M') ∧ InvAmOrtG sP M) ∧
       StartEndeG sP M ∧ KeinStartGrundG M :=
-  ziel_ort_sperre_ende sP sO (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal
+  ziel_ort_sperre_ende sP sO (axWahr sD) sS sFs sSp sInit sO_gut sO_lokal
     (axVertragO_wahr sO) axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS
     (koerperGutS_alle sFs_voll sP_ohneEwig sP_koerper) sP_start
     sS_start sInit_exklusiv (fun _ => invGutS_leer rfl) (fun _ => rfl)

@@ -2209,5 +2209,82 @@ new theorem -- `popS_grund`, `invGrundLog_schritt`,
 - `FortschrittG` classifies; it bounds nothing: no fairness, no waiting
   bound, no termination (PLAN §6, unchanged).
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §§1-10 history above.)
+## 20. `gabbro_ziel : GabbroZiel` -- proved; the event `e0` removed (2026-09-14)
+
+```lean
+-- Zielsatz/Beweis.lean
+theorem gabbro_ziel : GabbroZiel      -- propext, Classical.choice, Quot.sound
+```
+
+`Spec.lean` (the statement) and machine G are unchanged; no premise was
+added. `ziel_aus` derives every leg of `Ziel` from the four premise groups
+for any declaration, `gabbro_ziel` instantiates it with `P.mitRuhe` (as
+§19.4 laid out). The former `gabbro_ziel_ereignis` (the goal under
+`Nonempty (Ereignis D)`), `gabbro_ziel_teil`, `gabbro_ziel_leer` and
+`ereignis_iff` are superseded and removed.
+
+*The gap.* The lock-invariant replay (`KopfS`/`WarteS`) keyed every recorded
+call answer (and axiom answer) one EVENT past its key world, so the record
+stayed a function (`FunkV` via `KurzV`). A declaration with no table, no
+global and no lock has no event; every world is one point (`welt_eq`), a key
+is only (callee, parameters), and two calls of `g` with equal parameters
+must be answered alike -- a determinism fact about G.
+
+*The route (b/c): justified records instead of fresh keys.* In
+`SperreBeweis.lean` §0b:
+* `frischSpur D` -- the fresh trace piece: an event's `neutral` piece when
+  one exists (classical choice), `[]` otherwise; `rahmenWeltF`, `axWeltF`
+  replace `rahmenWelt e0`, `axWelt e0` in this replay (the older replays keep
+  theirs).
+* `Begruendet P O passes S` (inductive): the answer `a` to `g` at `κ, ρ` is
+  what `g`'s body (`execEndH`, machine oracle, any move) ends in against
+  every handler repeating a functional record of justified answers.
+* `begruendet_eindeutig` (no event): two justified answers with one key are
+  equal -- induction on the first justification; the union of both records
+  is functional by the induction hypothesis, one handler (`rufAusV`) repeats
+  it, both bodies end in the same outcome, worlds are one point. This IS
+  the determinism, obtained from the replay rather than from the 70 rules.
+* The three freshness fields of `KopfS`/`WarteS` became `KurzVB` (keys below
+  the trace with an event; justified answers without one), `KurzAB` (the
+  machine oracle's own answers without one: `PasstA O`), `KurzUB` (without
+  an event there is no lock). Field count and order unchanged, so every
+  destructuring pattern downstream stands.
+* Steps: `popS_kopf` takes `hb : ¬ Nonempty (Ereignis D) → Begruendet …`,
+  supplied at the nine pops of `akteurS` by `popS_begr_ok` (value) and
+  `popS_begr_grund` (reason) from the returning head's replay; `fadenS_ax`
+  takes `hxO` (the recorded answer is `O`'s), `rfl` at both callers;
+  `funkV_appendB` joins the two cases.
+
+`e0` is gone from `akteurS`, `zielInvS_schritt`, `zielInvS_erreichbar(L)`,
+`ziel_ort_sperre(_fortschritt)`, `ziel_ort_ganz_aus_sperre`,
+`ziel_ort_sperre_inv`, `…_invGrund`, `…_invAlle`,
+`invAmGrundG_erreichbarL`, `ziel_ort_mehrfaden_invGrund`,
+`ziel_ort_sperre_invL`, `ziel_ort_mehrfaden(_bei)`, `ziel_ort_*_ende(_bei)`,
+`ziel_ort_einfaden`, `fortschrittG_sperre`, `fortschrittG_mehrfaden`,
+`akzeptiert_mehrfaden`, and the witnesses' calls; the generator
+`obligations_g.rs` and its output `GenOblig104.lean` drop it too (string
+change only; the Rust test checks substrings that stay). The older replays
+(`ziel_ort`, `ziel_ort_voll`, `ziel_ort_geraet`, `ziel_ort_rahmen`,
+`ziel_ort_ganz`, `AuditZiel` F) keep `e0`; the rows "`e0` … load-bearing"
+in §§11-18 describe those.
+
+*Probes (`SpecProben.lean`, `Proben.lean`).* `Erfuellbar` now also asks that
+every declared start runs on some thread (`∀ w ∈ wsRuhe ws, ∃ t, (init
+t).1 = w`), and `probeB_erfuellbar`/`probeC_erfuellbar` fix `ws = [haupt]`:
+the empty start list, or any list with the root on every thread, no longer
+satisfies them. Re-proved (`zHaupt_laeuft`: thread 0 of `initRuhe [haupt]`);
+`zweiFaeden_erfuellbar_gilt` re-proved with threads 0 and 1;
+`gabbro_ziel_zeuge` now applies `gabbro_ziel`.
+
+*Axioms (full `lake build`, 221 jobs, green, `ki-pc-fisch-101`).*
+`gabbro_ziel`, `ziel_aus`, `begruendet_eindeutig`, `funkV_appendB`,
+`popS_kopf`, `fadenS_ax`, `akteurS`, `ziel_ort_sperre`, every probe of
+`Proben.lean`: `propext`, `Classical.choice`, `Quot.sound`. No `sorry`, no
+new `axiom`, no `native_decide`.
+
+*What remains.* Review rounds (6) and (7) of PLAN §7 against `Spec.lean`;
+the NOT-CLAIMED list of `Spec.lean` (termination, fairness, the C side,
+weak memory beyond DRF-SC) is unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §§1-10 history above.)
 

@@ -23,13 +23,12 @@
   * `zweiFaeden_bewegt_gilt`     -- on that admissible start a machine of `mP.mitRuhe`
                                     reached in ONE step of thread 0 (`privA[0] = 7`) has
                                     changed memory;
-  * `probeB_erfuellbar_gilt`, `probeC_erfuellbar_gilt` -- probes B/C, through the stronger
-    `probeB_erfuellbar_haupt`/`probeC_erfuellbar_haupt`: `haupt` is a DECLARED start and
-    runs on thread 0 (`initRuhe [haupt]`), the runtime's root on every other thread. (The
-    propositions ask only `∃ ws`; `ws = []` would satisfy them with the root on every
-    thread, where the bodies never run -- the witness here avoids that.)
+  * `probeB_erfuellbar_gilt`, `probeC_erfuellbar_gilt` -- probes B/C with `haupt` as the
+    DECLARED start (the statements fix `ws = [haupt]`, and `Erfuellbar` asks that every
+    declared start runs on some thread): `haupt` runs on thread 0 (`initRuhe [haupt]`), the
+    runtime's root on every other thread.
 
-  Applied (`gabbro_ziel_zeuge`): the assembled `gabbro_ziel_ereignis` (Zielsatz/Beweis.lean)
+  Applied (`gabbro_ziel_zeuge`): the proved `gabbro_ziel` (Zielsatz/Beweis.lean)
   on `mP`, with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine
   of `mP.mitRuhe` with changed memory.
 -/
@@ -102,7 +101,11 @@ theorem mP_nutzerPflicht : NutzerPflicht mP mSI (axWahr mD) :=
 theorem zweiFaeden_erfuellbar_gilt : zweiFaeden_erfuellbar :=
   ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll mP_akzeptiert,
     mP_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO⟩,
-    speicherR mSp, _, mP_mitRuhe_start⟩
+    speicherR mSp, _, mP_mitRuhe_start, fun w hw => by
+      rcases List.mem_cons.mp (hw : w ∈ [some mHauptA, some mHauptB]) with rfl | hw
+      · exact ⟨0, rfl⟩
+      · rw [List.mem_singleton.mp hw]
+        exact ⟨1, rfl⟩⟩
 
 /-- **The admissible start of `mP.mitRuhe` moves memory**: one step of thread 0 (`hauptA`'s
     first statement `privA[0] = 7`) changes the shared memory. -/
@@ -152,6 +155,13 @@ theorem zHauptStartZ (P : Programm zD) (hreq : ReqAmEintritt P zHaupt (zSp.welt 
     (by decide) (fun a ha => by rw [List.mem_singleton.mp ha]; exact hreq)
     (fun _ => rfl)
 
+/-- `haupt` runs on thread 0 of `initRuhe [haupt]`. -/
+theorem zHaupt_laeuft : ∀ w ∈ wsRuhe [zHaupt], ∃ t : Faden,
+    (initRuhe (D := zD) [⟨zHaupt, .nil⟩] t).1 = w := by
+  intro w hw
+  rw [List.mem_singleton.mp (hw : w ∈ [some zHaupt])]
+  exact ⟨0, rfl⟩
+
 /-- **Probe B satisfies every premise group with `haupt` as a DECLARED start** (it runs on
     thread 0; the root on every other thread). -/
 theorem probeB_erfuellbar_haupt :
@@ -159,24 +169,24 @@ theorem probeB_erfuellbar_haupt :
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPB_akzeptiert,
     ⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, zHauptStartZ zPB rfl⟩
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, zHauptStartZ zPB rfl, zHaupt_laeuft⟩
 
 theorem probeC_erfuellbar_haupt :
     Erfuellbar zPC zS (axWahr zD) ⟨zFs, zFs_voll⟩ [zHaupt] :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPC_akzeptiert,
     ⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, zHauptStartZ zPC rfl⟩
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, zHauptStartZ zPC rfl, zHaupt_laeuft⟩
 
-theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, _, probeB_erfuellbar_haupt⟩
+theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, probeB_erfuellbar_haupt⟩
 
-theorem probeC_erfuellbar_gilt : probeC_erfuellbar := ⟨_, _, probeC_erfuellbar_haupt⟩
+theorem probeC_erfuellbar_gilt : probeC_erfuellbar := ⟨_, probeC_erfuellbar_haupt⟩
 
 /-! ## 5. The assembled goal, applied -/
 
-/-- **`gabbro_ziel_ereignis` applied to the two-thread program** (it declares tables, so it
-    has an event): on the admissible start with both declared starts, at a machine reached in
-    one step with CHANGED memory, every leg of `Ziel` holds -- by the theorem, not by hand. -/
+/-- **`gabbro_ziel` applied to the two-thread program**: on the admissible start with both
+    declared starts, at a machine reached in one step with CHANGED memory, every leg of
+    `Ziel` holds -- by the theorem, not by hand. -/
 theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
     (init : Faden → Σ f : mD.mitRuhe.Fn, Env mD.mitRuhe (mD.mitRuhe.params f))
     (M : RufMaschineG mD.mitRuhe),
@@ -192,8 +202,9 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
     rw [hZ1.2] at e
     revert e
     decide
-  · exact gabbro_ziel_ereignis akzeptiert_pruefer mD mP mSI (axWahr mD) ⟨mFs, mFs_voll⟩
-      ⟨[()], mLocks_voll⟩ ⟨mCs, mCs_voll⟩ [mHauptA, mHauptB] (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert) ⟨.gibt ()⟩
+  · exact gabbro_ziel akzeptiert_pruefer mD mP mSI (axWahr mD) ⟨mFs, mFs_voll⟩
+      ⟨[()], mLocks_voll⟩ ⟨mCs, mCs_voll⟩ [mHauptA, mHauptB]
+      (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert)
       mP_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ mP_mitRuhe_start M1
       (.schritt _ _ _ .start s1)
 

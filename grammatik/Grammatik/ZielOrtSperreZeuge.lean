@@ -273,7 +273,7 @@ theorem zPB_zertifiziert : ∀ M : RufMaschineG zD,
       VertragAmOrtG zPB M ∧ SperrInvG zS M ∧ KeinLogikHaltG zO 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG zPB zO 0 M t M' :=
-  ziel_ort_sperre zPB zO 0 (axWahr zD) zS zFs zSp zInit zE0 zO_gut zO_lokal (axVertragO_wahr zO)
+  ziel_ort_sperre zPB zO 0 (axWahr zD) zS zFs zSp zInit zO_gut zO_lokal (axVertragO_wahr zO)
     axEnsLokal_wahr zS_ok zFs_voll zPB_fragmentG zPB_fussS zPB_koerper zPB_start (fun _ => rfl)
     zInit_exklusiv
 
@@ -408,7 +408,7 @@ theorem zPC_zertifiziert : ∀ M : RufMaschineG zD,
       VertragAmOrtG zPC M ∧ SperrInvG zS M ∧ KeinLogikHaltG zO 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG zPC zO 0 M t M' :=
-  ziel_ort_sperre zPC zO 0 (axWahr zD) zS zFs zSp zInit zE0 zO_gut zO_lokal (axVertragO_wahr zO)
+  ziel_ort_sperre zPC zO 0 (axWahr zD) zS zFs zSp zInit zO_gut zO_lokal (axVertragO_wahr zO)
     axEnsLokal_wahr zS_ok zFs_voll zPC_fragmentG zPC_fussS zPC_koerper zPC_start (fun _ => rfl)
     zInit_exklusiv
 
@@ -719,9 +719,6 @@ theorem sP_koerper : ∀ f : sD.Fn, KoerperGutS sP 0 (axWahr sD) sS f := by
   · exact sP_koerper_setze
   · exact sP_koerper_haupt
 
-/-- An event of the declaration. -/
-def sE0 : Ereignis sD := .gibt ()
-
 /-- **All premises of `ziel_ort_sperre` hold jointly on the two-writer
     program**, hence its conclusion on every reachable machine. -/
 theorem sP_zertifiziert : ∀ M : RufMaschineG sD,
@@ -729,7 +726,7 @@ theorem sP_zertifiziert : ∀ M : RufMaschineG sD,
       VertragAmOrtG sP M ∧ SperrInvG sS M ∧ KeinLogikHaltG sO 0 M ∧
       ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
         AnPruefungG M t → ∃ M', RufSchrittG sP sO 0 M t M' :=
-  ziel_ort_sperre sP sO 0 (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal (axVertragO_wahr sO)
+  ziel_ort_sperre sP sO 0 (axWahr sD) sS sFs sSp sInit sO_gut sO_lokal (axVertragO_wahr sO)
     axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS sP_koerper sP_start sS_start sInit_exklusiv
 
 /-! ### The run: two critical sections on one table -/
@@ -989,7 +986,7 @@ theorem ziel_ort_sperre_ref104 :
   have hF := fussSperreB_of_G r4P (SperrInv.leer r4D) r4Fs r4P_fussG
   have hK : ∀ f : r4D.Fn, KoerperGutS r4P 0 (axWahr r4D) (SperrInv.leer r4D) f :=
     fun f => koerperGutS_leer (r4P_koerperZ f)
-  have hZ := ziel_ort_sperre r4P r4O 0 (axWahr r4D) (SperrInv.leer r4D) r4Fs r4Sp r4Init r4E0
+  have hZ := ziel_ort_sperre r4P r4O 0 (axWahr r4D) (SperrInv.leer r4D) r4Fs r4Sp r4Init
     r4O_gut r4O_lokal (axVertragO_wahr r4O) axEnsLokal_wahr sperrInvOk_leer r4Fs_voll
     r4P_fragmentG hF hK r4P_start (fun _ => rfl) r4Init_exklusiv
   obtain ⟨M, hr, hsp, ⟨rho, s0, s1, hlog⟩, _⟩ := r4Lauf

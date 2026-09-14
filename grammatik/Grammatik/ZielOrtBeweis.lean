@@ -1150,7 +1150,10 @@ end Ziel
     world has no memory and a single trace, the record's keys collapse to
     (callee, parameters), and a replay needs that two returns of a callee
     with equal parameters return equal values -- a determinism lemma for
-    G that is not proved here.
+    G that is not proved here. (Closed for the lock-invariant replay that
+    the goal uses, 2026-09-14: `Begruendet`, `begruendet_eindeutig`,
+    SperreBeweis.lean §0b -- the determinism obtained from the replay
+    itself; this older replay keeps `e0`.)
   - Bodies outside the fragment `kOk` (loops, `leave`/`next`, the error
     channel, indirect calls, axioms, the oracle forms).
   - `schreiberHaeltB` (the static writer discipline of `ZielOrt.lean`) is

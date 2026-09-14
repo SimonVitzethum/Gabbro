@@ -49,7 +49,7 @@ variable {D : Deklaration}
     carriers. -/
 theorem ziel_ort_sperre_invL (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -62,7 +62,7 @@ theorem ziel_ort_sperre_invL (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M := by
-  have hZ := zielInvS_erreichbarL P O passes Q S lok sp init e0 hO hRL hQ hlok hS hFragS hFS
+  have hZ := zielInvS_erreichbarL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
     hLok hK hStart hSstart hex
   intro M hr
   refine ⟨?_, ?_⟩
@@ -216,7 +216,7 @@ end Rely
     budget (probe D, `Durchgaenge.lean`). -/
 theorem ziel_ort_mehrfaden_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -231,7 +231,7 @@ theorem ziel_ort_mehrfaden_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M :=
-  ziel_ort_sperre_invL P O passes Q S (lokK P K) sp init e0 hO hRL hQ hlok hS
+  ziel_ort_sperre_invL P O passes Q S (lokK P K) sp init hO hRL hQ hlok hS
     (programmImFragmentS_ok P S hvoll hFrag hFuss) hFuss
     (lokOk_mehr hO hvoll sp init K hAbg hWurzel) hK hStart hSstart hex hI
 
@@ -244,7 +244,7 @@ theorem ziel_ort_mehrfaden_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q
     (`koerperGutS_alle`, `invGutS_alle`). -/
 theorem ziel_ort_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (e0 : Ereignis D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (K : Faden → D.Fn → Bool)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -259,7 +259,7 @@ theorem ziel_ort_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M :=
-  fun passes => ziel_ort_mehrfaden_bei P O passes Q S fs sp init e0 K hO hRL hQ hlok hS hvoll hFrag
+  fun passes => ziel_ort_mehrfaden_bei P O passes Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag
     hAbg hWurzel hFuss (hK passes) hStart hSstart hex (hI passes)
 
 /-! ## 5. The old check is a special case -/
