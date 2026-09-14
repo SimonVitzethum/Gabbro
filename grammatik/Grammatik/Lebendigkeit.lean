@@ -118,6 +118,20 @@ theorem zaehl_pos (p : Nat → Prop) (a : Nat) :
       · have := zaehl_pos p a n i (by omega) hp
         omega
 
+theorem zaehl_le (p : Nat → Prop) (a : Nat) : ∀ n, zaehl p a n ≤ n
+  | 0 => Nat.le_refl 0
+  | n + 1 => by
+      have := zaehl_le p a n
+      show zaehl p a n + _ ≤ n + 1
+      split <;> omega
+
+theorem zaehl_null (p : Nat → Prop) (a : Nat) :
+    ∀ n, (∀ i, i < n → ¬ p (a + i)) → zaehl p a n = 0
+  | 0, _ => rfl
+  | n + 1, h => by
+      show zaehl p a n + _ = 0
+      rw [zaehl_null p a n (fun i hi => h i (by omega)), if_neg (h n (by omega))]
+
 open Classical in
 /-- The number of list elements with `p`. -/
 noncomputable def anz {α : Type} (p : α → Prop) : List α → Nat
@@ -366,6 +380,61 @@ theorem nimmt_an_sperre (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} {L : D
     · exact absurd h1 h0
   · rw [e] at h1; exact absurd h1 h0
   · rw [e] at h1; exact absurd (List.mem_of_mem_erase h1) h0
+
+/-- A `locks L` head read off the residue is a `locks L` head. -/
+theorem anSperre_of_kopf {M : RufMaschineG D} {t : Faden} {L : D.Lock}
+    (h : (M.faeden t).kopf.rest.2.2.2.2.kopfSperre = some L) : AnSperre M t L := by
+  unfold AnSperre
+  generalize (M.faeden t).kopf.rest = x at h ⊢
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := x
+  cases r with
+  | dann b k =>
+      cases b with
+      | cons s rest =>
+          cases s with
+          | locks L' hr body =>
+              simp only [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon,
+                Option.some.injEq] at h
+              subst h
+              exact ⟨l, Γ, Λ, _, ρ, hr, body, rest, k, rfl⟩
+          | _ => simp [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon] at h
+      | _ => simp [GRest.kopfSperre, Block.sperreVon] at h
+  | _ => simp [GRest.kopfSperre] at h
+
+/-- A thread at `locks L` while another thread holds `L` cannot step. -/
+theorem nicht_bereit_an_sperre {M : RufMaschineG D} {t u : Faden} {L : D.Lock}
+    (hA : AnSperre M t L) (hu : u ≠ t) (hL : L ∈ offen (M.faeden u).spur) :
+    ¬ ∃ M', RufSchrittG P O passes M t M' :=
+  fun ⟨_, hs⟩ => (sperre_schritt hA hs).1 u hu hL
+
+/-- The residue is a plain `return` end block. -/
+def GRest.istEndeRet {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .ende (.ret ..) => true
+  | _ => false
+
+set_option maxHeartbeats 4000000 in
+/-- **A finished thread cannot step**: an empty stack under a `return` head
+    -- every pop needs a caller, and no other rule has that head. -/
+theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
+    (hst : (M.faeden t).stapel = [])
+    (hk : (M.faeden t).kopf.rest.2.2.2.2.istEndeRet = true)
+    (hs : RufSchrittG P O passes M t M') : False := by
+  cases hs with
+  | rueck caller rest hpop => rw [hst] at hpop; cases hpop
+  | rueckBind caller rest hpop => rw [hst] at hpop; cases hpop
+  | _ =>
+      rw [‹(M.faeden t).kopf.rest = _›] at hk
+      simp [GRest.istEndeRet] at hk
+
+/-- A named hardware stop, read off the head residue. -/
+theorem halt_kopf {M : RufMaschineG D} {t : Faden}
+    (h : Zielsatz.HaltBenannt O passes M t) :
+    Zielsatz.RestHardware O passes (M.weltVon t) (M.faeden t).kopf.rest.2.2.2.1
+      (M.faeden t).kopf.rest.2.2.2.2 := by
+  obtain ⟨l, Γ, Λ, ρ, r, he, hr⟩ := h
+  rw [he]
+  exact hr
 
 end MaschineG
 

@@ -247,6 +247,7 @@ import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.FortschrittZeuge
 import Grammatik.Lebendigkeit
+import Grammatik.LebendigkeitZeuge
 import Grammatik.ZielOrtInvGrundZeuge
 import Grammatik.Nichtinterferenz.Freigabe
 import Grammatik.Nichtinterferenz.Korpus
