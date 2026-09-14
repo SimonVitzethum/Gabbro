@@ -623,4 +623,131 @@ inductive REnd {D : Deklaration} (X : TVCtx D) {V : Vertrag D} (top : Bool) :
         ((.forTrav x t hiC bodyRows m') :: rs)
         (.seq (CS.forUp x t (.lit 0) hiC (growsCS bodyRows .skip) m') cr)
 
+/-- THE TERMINAL THEOREM: a terminal row derivation elaborates to an
+    `EndCorr`. Arm/body derivations go through `rblock_sound`. -/
+theorem rend_corr {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
+    {m : Nat} {top : Bool} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+    {b : Endblock D V l Γ Λ} {rs : List GRow} {cb : CS}
+    {pp : List Nat} {ks : List (Nat × Int)}
+    (hpp : K.pp.map Prod.fst = pp) (hks : K.ks = ks)
+    (hFresh : rowsFresh pp ks K.vm rs = true) (hTrav : rowsTravOk rs = true)
+    (hR : REnd X top m l K b rs cb) : EndCorr X m top K b cb := by
+  revert hpp hks hFresh hTrav
+  induction hR with
+  | @retEnd _ _ _ _ _ _ _ htop hV =>
+      intro hpp hks hFresh hTrav
+      exact EndCorr.retEnd _ htop hV
+  | @ret _ _ _ _ _ _ _ hΛ h =>
+      intro hpp hks hFresh hTrav
+      exact EndCorr.ret hΛ h
+  | @eConsSetVar _ _ _ _ _ _ _ _ _ _ _ _ _ hK he hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_assignVar X _ _ hK _ he hd)
+        (ih hpp hks hFresh hTrav)
+  | @eConsSetOpAdd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_plusGleich X _ _ hK _ _ h1 h2 he hta htb htr hd)
+        (ih hpp hks hFresh hTrav)
+  | @eConsSetOpSub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h1 h2 he hta htb htr hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_minusGleich X _ _ hK _ _ h1 h2 he hta htb htr hd)
+        (ih hpp hks hFresh hTrav)
+  | @eConsSetOpAnd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h0' he hta htb hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_undGleich X _ _ hK _ _ h0' he hta htb hd)
+        (ih hpp hks hFresh hTrav)
+  | @eConsSetOpOr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hK h0' hw' he hta htb hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_oderGleich X _ _ hK _ _ _ h0' hw' he hta htb hd)
+        (ih hpp hks hFresh hTrav)
+  | @eConsStoreSlotParam _ _ _ _ _ _ _ _ hgt _ _ _ _ _ _ _ _ hw hL _ _ _ hk hn hss hoff hty hi he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [hn, hss, hoff, hty]
+      exact scorr_assignSlotParam X _ _ hk _ hgt hw hL hi he
+  | @eConsStoreSlotNamed _ _ _ _ _ _ _ hgt _ _ _ _ _ _ _ _ _ hw hL _ _ _ htn hn hss hoff hty hi he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [htn, hn, hss, hoff, hty]
+      exact scorr_assignSlotNamed X _ _ _ _ hgt hw hL hi he
+  | @eConsStoreGlob _ _ _ _ _ _ hgg hat _ _ _ _ hw hL _ _ _ hgn hty he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      refine EndCorr.cons ?_ (ih hpp hks hFresh hTrav)
+      rw [hgn, hty]
+      exact scorr_assignGlob X _ _ _ hgg hat hw hL he
+  | @eBindLet _ _ _ _ K τ _ _ x _ _ _ _ hK he hd _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk] at hTrav
+      obtain ⟨hfresh, hFresh'⟩ := hFresh
+      have hf := freshRaw_ok rfl hpp hks hfresh
+      have hpp' : (K.push τ x).pp.map Prod.fst = pp := by simp [CEnvLay.push, hpp]
+      have hks' : (K.push τ x).ks = ks := by simp [CEnvLay.push, hks]
+      exact EndCorr.bind hK hf he hd (ih hpp' hks' hFresh' hTrav)
+  | @ePreVoid _ _ _ _ _ _ _ _ _ _ _ he _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.pre he (ih hpp hks hFresh hTrav)
+  | @eConsCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hF hA _ ih =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh] at hFresh
+      simp only [rowsTravOk] at hTrav
+      exact EndCorr.cons (scorr_call X _ _ _ _ _ _ hF hA)
+        (ih hpp hks hFresh hTrav)
+  | @eConsIte _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc ht he hr ihRest =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      obtain ⟨⟨hFreshT, hFreshE⟩, hFreshR⟩ := hFresh
+      obtain ⟨⟨hTravT, hTravE⟩, hTravR⟩ := hTrav
+      have hT := cCorr_block X _ (rblock_sound X hpp hks hFreshT hTravT ht)
+      have hE := cCorr_block X _ (rblock_sound X hpp hks hFreshE hTravE he)
+      exact EndCorr.cons (scorr_ite X _ _ hc hT hE)
+        (ihRest hpp hks hFreshR hTravR)
+  | @eConsTrav _ _ _ _ K tb t hN0 hN hiC hhi inv _ _ _ _ x _ _ hK hb hr ihRest =>
+      intro hpp hks hFresh hTrav
+      simp only [rowsFresh, Bool.and_eq_true] at hFresh
+      simp only [rowsTravOk, Bool.and_eq_true] at hTrav
+      obtain ⟨⟨hfresh, hFreshB⟩, hFreshR⟩ := hFresh
+      obtain ⟨⟨hwb, hTravB⟩, hTravR⟩ := hTrav
+      have hf := freshRaw_ok rfl hpp hks hfresh
+      have hw : (growsCS _ .skip).writesV _ = false := of_decide_eq_true hwb
+      have hpp' : (K.push (.index (D.count tb)) x).pp.map Prod.fst = pp := by
+        simp [CEnvLay.push, hpp]
+      have hks' : (K.push (.index (D.count tb)) x).ks = ks := by simp [CEnvLay.push, hks]
+      have hB := cCorr_block X _ (rblock_sound X hpp' hks' hFreshB hTravB hb)
+      exact EndCorr.cons (scorr_traverse X _ _ _ hK hf tb t hN0 hN hiC hhi inv _ _ hB hw)
+        (ihRest hpp hks hFreshR hTravR)
+
+/-- THE SOUNDNESS THEOREM: from a valid row derivation (freshness
+    and traverse hygiene decided by `gbodyHygiene`), the emitted body
+    has a run related to the Gabbro body's outcome -- through
+    `cCorr_end`/`cCorr_block`'s judgements, built from the existing T4
+    lemmas and nothing re-proved. -/
+theorem gcert_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
+    {m : Nat} {top : Bool} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+    {b : Endblock D V l Γ Λ} {rs : List GRow} {cb : CS}
+    {pp : List Nat} {ks : List (Nat × Int)}
+    (hpp : K.pp.map Prod.fst = pp) (hks : K.ks = ks)
+    (hFresh : rowsFresh pp ks K.vm rs = true) (hTrav : rowsTravOk rs = true)
+    (hR : REnd X top m l K b rs cb) : EndSem X m top K b cb :=
+  cCorr_end X m top (rend_corr X hpp hks hFresh hTrav hR)
+
 end Gabbro.Grammatik
