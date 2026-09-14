@@ -3368,7 +3368,10 @@ MARKE_EMIT_X=0
 # emission, so emitting is by design and not a slip; all four compile under
 # `cc -Werror -fsyntax-only`. 917 falls at the checker (H007 beside E247) and
 # emits nothing, like the error-level gifts before it.
-MARKE_EMIT_G=12     # 286, 414, 689, 718, 719, 727, 758, 777 + 916, 918, 919, 930 -- measured, see above
+# **12 -> 14 on 2026-09-15 (merge review, lane 177).** `+2` are 957 and 958: the refinement
+# of a function against a pointer type's contract is a USER obligation (hint N297, listed by
+# `gabbro obligations`), not a refusal -- they emit by design, like the hint-level 916/918/919/930.
+MARKE_EMIT_G=14     # 286, 414, 689, 718, 719, 727, 758, 777 + 916, 918, 919, 930 + 957, 958 -- measured, see above
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
