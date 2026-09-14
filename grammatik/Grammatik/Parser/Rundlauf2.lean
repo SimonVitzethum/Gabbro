@@ -298,4 +298,223 @@ theorem turm_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
   exact ⟨hP F (by omega), hU F (by omega), hM F (by omega), hA F (by omega),
     hB F (by omega), hC F (by omega), hN F (by omega), hO F hF⟩
 
+-- The shape-independent upper tower (`parseMul` up to
+-- `parseOr`): every level runs its child and stops its loop on
+-- the benign follow. Callers supply the `parseUnary` leg (which
+-- is the only head-dependent step) generalised over its fuel.
+theorem tower_up : ∀ (e : SExpr) (rest : List Token) (F : Nat),
+    ruhig rest = true →
+    (∀ (G : Nat), 12 * (groesse e + 1) + groesse e + 2 ≤ G →
+      parseUnary G (druckToks e ++ rest) = .ok (e, rest)) →
+    12 * (groesse e + 1) + groesse e + 8 ≤ F →
+    (parseMul F (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (parseAdd F (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (parseBit F (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (parseCmp F (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (parseAnd F (druckToks e ++ rest) = .ok (e, rest))
+    ∧ (parseOr F (druckToks e ++ rest) = .ok (e, rest)) := by
+  intro e rest F hr hU hF
+  have hM : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 3 ≤ G →
+      parseMul G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hU' := hU G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hstop := stopMul rest hr
+    simp only [parseMul, parseMulL, hU', hstop] at ⊢
+  have hA : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 4 ≤ G →
+      parseAdd G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hM' := hM G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hstop := stopAdd rest hr
+    simp only [parseAdd, parseAddL, hM', hstop] at ⊢
+  have hB : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 5 ≤ G →
+      parseBit G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hA' := hA G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hstop := stopBit rest hr
+    simp only [parseBit, parseBitL, hA', hstop] at ⊢
+  have hC : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 6 ≤ G →
+      parseCmp G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hB' := hB G' (by omega)
+    have hstop := stopVgl rest hr
+    simp only [parseCmp, hB', hstop] at ⊢
+  have hN : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 7 ≤ G →
+      parseAnd G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hC' := hC G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hstop := stopUnd rest hr
+    simp only [parseAnd, parseAndL, hC', hstop] at ⊢
+  have hO : ∀ (G : Nat),
+      12 * (groesse e + 1) + groesse e + 8 ≤ G →
+      parseOr G (druckToks e ++ rest) = .ok (e, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    have hN' := hN G' (by omega)
+    have hG2 : 1 ≤ G' := by omega
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hstop := stopOder rest hr
+    simp only [parseOr, parseOrL, hN', hstop] at ⊢
+  exact ⟨hM F (by omega), hA F (by omega), hB F (by omega),
+    hC F (by omega), hN F (by omega), hO F hF⟩
+
+-- Atom towers, one per remaining leaf shape: the `parsePrimary`
+-- leg (concrete head) plus the `parseUnary` fall-through (head is
+-- no prefix operator), then `tower_up` for the six loop levels.
+theorem turm_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
+    ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
+    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 8 ≤ F →
+    (parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseUnary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseMul F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseAdd F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseBit F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseCmp F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseAnd F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
+    ∧ (parseOr F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest)) := by
+  intro s rest F hr hrs hrg hF
+  have hP : ∀ (G : Nat),
+      12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
+      parsePrimary G (druckToks (.gleit s) ++ rest) =
+        .ok (.gleit s, rest) := by
+    intro G hG
+    exact prim_gleit s rest G hrg (by omega)
+  have hU : ∀ (G : Nat),
+      12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 2 ≤ G →
+      parseUnary G (druckToks (.gleit s) ++ rest) =
+        .ok (.gleit s, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    simp only [druckToks, List.cons_append, List.nil_append] at ⊢
+    simp only [parseUnary] at ⊢
+    exact hP G' (by omega)
+  have hup := tower_up (.gleit s) rest F hr hU hF
+  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+    hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
+theorem turm_wahr : ∀ (rest : List Token) (F : Nat),
+    ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
+    12 * (groesse .wahr + 1) + groesse .wahr + 8 ≤ F →
+    (parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseUnary F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseMul F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseAdd F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseBit F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseCmp F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseAnd F (druckToks .wahr ++ rest) = .ok (.wahr, rest))
+    ∧ (parseOr F (druckToks .wahr ++ rest) = .ok (.wahr, rest)) := by
+  intro rest F hr hrs hrg hF
+  have hP : ∀ (G : Nat),
+      12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
+      parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+    intro G hG
+    exact prim_wahr rest G (by omega)
+  have hU : ∀ (G : Nat),
+      12 * (groesse .wahr + 1) + groesse .wahr + 2 ≤ G →
+      parseUnary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    simp only [druckToks, List.cons_append, List.nil_append] at ⊢
+    simp only [parseUnary] at ⊢
+    exact hP G' (by omega)
+  have hup := tower_up .wahr rest F hr hU hF
+  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+    hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
+theorem turm_falsch : ∀ (rest : List Token) (F : Nat),
+    ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
+    12 * (groesse .falsch + 1) + groesse .falsch + 8 ≤ F →
+    (parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseUnary F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseMul F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseAdd F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseBit F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseCmp F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseAnd F (druckToks .falsch ++ rest) = .ok (.falsch, rest))
+    ∧ (parseOr F (druckToks .falsch ++ rest) = .ok (.falsch, rest)) := by
+  intro rest F hr hrs hrg hF
+  have hP : ∀ (G : Nat),
+      12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
+      parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+    intro G hG
+    exact prim_falsch rest G (by omega)
+  have hU : ∀ (G : Nat),
+      12 * (groesse .falsch + 1) + groesse .falsch + 2 ≤ G →
+      parseUnary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    simp only [druckToks, List.cons_append, List.nil_append] at ⊢
+    simp only [parseUnary] at ⊢
+    exact hP G' (by omega)
+  have hup := tower_up .falsch rest F hr hU hF
+  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+    hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
+theorem turm_var : ∀ (a : String) (rest : List Token) (F : Nat),
+    (!istKeinPlatz a) = true → ruhig rest = true →
+    ruhigSuff rest = true → ruhigGleit rest = true →
+    12 * (groesse (.variable a) + 1) + groesse (.variable a) + 8 ≤ F →
+    (parsePrimary F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseUnary F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseMul F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseAdd F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseBit F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseCmp F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseAnd F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest))
+    ∧ (parseOr F (druckToks (.variable a) ++ rest) =
+      .ok (.variable a, rest)) := by
+  intro a rest F hka hr hrs hrg hF
+  have hP : ∀ (G : Nat),
+      12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ G →
+      parsePrimary G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest) := by
+    intro G hG
+    exact kern_prim_var a rest G hka hrs (by omega)
+  have hU : ∀ (G : Nat),
+      12 * (groesse (.variable a) + 1) + groesse (.variable a) + 2 ≤ G →
+      parseUnary G (druckToks (.variable a) ++ rest) =
+        .ok (.variable a, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    simp only [druckToks, List.cons_append, List.nil_append] at ⊢
+    simp only [parseUnary] at ⊢
+    exact hP G' (by omega)
+  have hup := tower_up (.variable a) rest F hr hU hF
+  exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
+    hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
+
 end Gabbro.Grammatik.Parser
