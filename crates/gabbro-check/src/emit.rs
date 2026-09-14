@@ -2088,8 +2088,10 @@ pub fn emittiere_mit(
             // setzen kann, gibt es dafuer nicht -- `ctyp` liefert genau so eine Zeichenkette,
             // und darum kann die Feldform dort gar nicht sitzen. *Die C-Deklaratorsyntax ist
             // keine Eigenheit, die man wegabstrahiert; sie ist der Grund fuer die Fallform.*
-            if let TypExpr::Feld(a) = &st.typ {
-                feldstatisch(st, a, &mut aus, &namen, absagen);
+            // Lane 170 spells the whole spine there: `[[u32; 4]; 3]` becomes
+            // `uint32_t M[3][4]` out of `feld_deklarator`, one `[n]` per dimension.
+            if matches!(&st.typ, TypExpr::Feld(_)) {
+                feldstatisch(st, &mut aus, &namen, absagen);
                 return;
             }
             // **Ein `tagged` oder ein Verbund faengt nicht mit einer ZAHL an** (2026-08-20).
@@ -3264,38 +3266,82 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// on a checked tree it equals the declared count (`K191` holds that), and
 /// on an unchecked one the literal is the honest number. `None` anywhere is
 /// `C001` at the caller, never a guess.
+///
+/// **Lane 170:** a nested table lowers to one multi-dimensional `static
+/// const` array (`[[1, 2], [3, 4]]` over `[[u32; 2]; 2]` becomes
+/// `static const uint32_t T[2][2] = {{1u, 2u}, {3u, 4u}};`). The word is
+/// read at the INNERMOST element (primitives only, the same rule the flat
+/// table follows); every dimension's bound is the literal's own count down
+/// the first column -- on a checked tree every row holds the declared count
+/// (`N286` holds that), and on an unchecked one the literal is the honest
+/// number, the same rule the flat table follows. A row where the spine
+/// still declares an array, or a value where it does not, is `None`
+/// (`N285` holds that on a checked tree).
 fn const_table(
     k: &KonstDecl,
     elements: &[Expr],
     module: &str,
     tree: &Programm,
 ) -> Option<String> {
-    let TypExpr::Feld(field) = &k.typ else {
+    let TypExpr::Feld(_) = &k.typ else {
         return None;
     };
-    let word = ctyp_primitiv(&field.element)?;
+    // The spine, outermost first: each `Feld` peels one dimension.
+    let mut tiefen: Vec<&ArrayTy> = Vec::new();
+    let mut rest = &k.typ;
+    while let TypExpr::Feld(a) = rest {
+        tiefen.push(a.as_ref());
+        rest = &a.element;
+    }
+    let word = ctyp_primitiv(rest)?;
     let env = crate::umgebung::Umgebung::sammle(tree);
-    let mut values = Vec::with_capacity(elements.len());
-    for e in elements {
-        values.push(env.konst_wert(module, e)?);
-    }
     let unsigned = word.starts_with('u');
-    let mut literals = String::new();
-    for (i, w) in values.iter().enumerate() {
-        if i > 0 {
-            literals.push_str(", ");
+    // The declaration's dimensions down the first column.
+    let mut dekl = String::new();
+    let mut erste: &[Expr] = elements;
+    for _ in &tiefen {
+        dekl.push_str(&format!("[{}]", erste.len()));
+        let Some(vorderste) = erste.first() else { break };
+        let ExprArt::ArrayLit(zeile) = &vorderste.art else { break };
+        erste = zeile;
+    }
+    let literal = const_wert_zeile(elements, 0, &tiefen, &env, module, unsigned)?;
+    Some(format!(
+        "\nstatic const {word} {}{dekl} __attribute__((unused)) = {literal};\n",
+        k.name.text,
+    ))
+}
+
+/// One row of a (possibly nested) const-table literal as C: `{1u, 2u}`, rows
+/// nested inside rows. Every scalar comes from the checker's own folder;
+/// `None` anywhere is `C001` at the caller, never a guess.
+fn const_wert_zeile(
+    eintraege: &[Expr],
+    tiefe: usize,
+    tiefen: &[&ArrayTy],
+    env: &crate::umgebung::Umgebung,
+    modul: &str,
+    vorzeichenlos: bool,
+) -> Option<String> {
+    let mut teile = Vec::with_capacity(eintraege.len());
+    if tiefe + 1 == tiefen.len() {
+        for e in eintraege {
+            let w = env.konst_wert(modul, e)?;
+            if w < 0 || !vorzeichenlos {
+                teile.push(w.to_string());
+            } else {
+                teile.push(format!("{w}u"));
+            }
         }
-        if *w < 0 || !unsigned {
-            literals.push_str(&w.to_string());
-        } else {
-            literals.push_str(&format!("{w}u"));
+    } else {
+        for e in eintraege {
+            let ExprArt::ArrayLit(zeile) = &e.art else {
+                return None;
+            };
+            teile.push(const_wert_zeile(zeile, tiefe + 1, tiefen, env, modul, vorzeichenlos)?);
         }
     }
-    Some(format!(
-        "\nstatic const {word} {}[{}] __attribute__((unused)) = {{{literals}}};\n",
-        k.name.text,
-        elements.len()
-    ))
+    Some(format!("{{{}}}", teile.join(", ")))
 }
 
 /// **A literal as C writes it -- with the `u` where C needs one, and `None` where C has no
@@ -3458,12 +3504,15 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         // hinter dem Namen und nicht beim Typ, also gibt es dafuer keinen `ctyp`.
         // *Die Laenge kommt aus der Deklaration, wie bei `count N` -- geraten wird sie
         // nicht.*
-        if let TypExpr::Feld(a) = &f.typ.typ {
-            let (Some(el), Some(n)) = (ctyp(&a.element, u), feldlaenge(&a.laenge, u)) else {
+        // Lane 170 spells the whole spine the same way: `m : [[u32; 4]; 3]`
+        // becomes `uint32_t m[3][4]` out of `feld_deklarator` -- at one dimension
+        // the line below is byte-identical to the one it replaces.
+        if matches!(&f.typ.typ, TypExpr::Feld(_)) {
+            let Some((el, suffix)) = feld_deklarator(&f.typ.typ, u) else {
                 weigere(absagen, f.name.span, "array field type -- element or length");
                 continue;
             };
-            aus.push_str(&format!("    {el} {}[{n}];\n", f.name.text));
+            aus.push_str(&format!("    {el} {}{};\n", f.name.text, suffix));
             continue;
         }
         // **A function pointer field, like an array, puts its name INSIDE the type**
@@ -9701,8 +9750,63 @@ fn retry(
     }
 }
 
+/// **Lane 170 -- the declarator of a (possibly nested) array type, as SPELLED.**
+///
+/// A struct field keeps the declaration's spelling (`bytes : [u8; KAP]`
+/// becomes `uint8_t bytes[KAP];`, the length the writer named). C spells the
+/// lengths BEHIND the name (`uint32_t m[3][4]`), so no type-before-name word
+/// (`ctyp`) can carry them -- the same reason every array site already
+/// special-cases `TypExpr::Feld`. This is the one home of the nested
+/// spelling: the innermost element's C word plus the `[n]` of every
+/// dimension, outermost first. `None` where any dimension's length is not a
+/// length this unit can spell (`feldlaenge`), or the innermost element has
+/// no C word -- and the caller turns the `None` into `C001` by name, never
+/// into a guess.
+///
+/// A `static` does NOT read here: it spells its lengths as VALUES (the
+/// number `konst_oder_name` folds, not the `const` name), the way `count N`
+/// and every other emitter length does -- `feldstatisch` builds that suffix
+/// beside its bounds, out of the same numbers. Two conventions, and each
+/// site keeps the one it always read: spelling here, value there.
+fn feld_deklarator(t: &TypExpr, u: &Namen) -> Option<(String, String)> {
+    let mut tiefen = Vec::new();
+    let mut rest = t;
+    while let TypExpr::Feld(a) = rest {
+        tiefen.push(feldlaenge(&a.laenge, u)?);
+        rest = &a.element;
+    }
+    if tiefen.is_empty() {
+        return None;
+    }
+    let wort = ctyp(rest, u)?;
+    let mut suffix = String::new();
+    for n in tiefen {
+        suffix.push_str(&format!("[{n}]"));
+    }
+    Some((wort, suffix))
+}
+
+/// One scalar fill over nested dimensions: `{{7, 7}, {7, 7}}`. The caller
+/// holds the byte budget, so every depth here terminates inside it.
+fn fülle(tiefe: usize, laengen: &[usize], text: &str, aus: &mut String) {
+    aus.push('{');
+    for i in 0..laengen[tiefe] {
+        if i > 0 {
+            aus.push_str(", ");
+        }
+        if tiefe + 1 == laengen.len() {
+            aus.push_str(text);
+        } else {
+            fülle(tiefe + 1, laengen, text, aus);
+        }
+    }
+    aus.push('}');
+}
+
 /// **Ein `static` ueber einem Feld: `static mut kernlast : [Zaehler; 64] = 0;`**
-/// (2026-08-20).
+/// (2026-08-20). Lane 170 carries the nested spine with it: `[[u32; 4]; 3]`
+/// lowers through `feld_deklarator` to `uint32_t M[3][4]`, one dimension per
+/// `[n]`, outermost first.
 ///
 /// Bis heute sagte der Erzeuger dazu *„`static` of an unresolvable type"* -- und das war eine
 /// Weigerung, die den falschen Grund nannte. `[Zaehler; 64]` ist bestens aufloesbar: das
@@ -9720,24 +9824,56 @@ fn retry(
 /// > und er rechnet etwas anderes.
 fn feldstatisch(
     st: &StatischDecl,
-    a: &ArrayTy,
     aus: &mut String,
     u: &Namen,
     absagen: &mut Absagen,
 ) {
-    let Some(elem) = ctyp(&a.element, u) else {
+    // The dimensions as VALUES, outermost first -- and FIRST, because the
+    // refusal below names the length and the one after it the element: a
+    // length no unit can read (`[u32; 2 + 2]`) is "not constant", not
+    // "unresolvable", the same order the one-dimensional form always read.
+    // The spellings beside them may name a `const`, and the bounds below
+    // compute. Like `count`: a number OR a `const` name, with the value
+    // standing in `konstwert`.
+    let mut laengen: Vec<i128> = Vec::new();
+    let innerste: &TypExpr;
+    {
+        let mut rest = &st.typ;
+        while let TypExpr::Feld(x) = rest {
+            let Some(n) = konst_oder_name(&x.laenge, u) else {
+                weigere(absagen, st.name.span, "`static` array whose length is not constant");
+                return;
+            };
+            if n <= 0 {
+                weigere(
+                    absagen,
+                    st.name.span,
+                    "`static` array of length zero -- C has no such object",
+                );
+                return;
+            }
+            laengen.push(n);
+            rest = &x.element;
+        }
+        innerste = rest;
+    }
+    let Some(elem) = ctyp(innerste, u) else {
         weigere(absagen, st.name.span, "`static` array over an unresolvable element type");
         return;
     };
-    // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
-    let Some(n) = konst_oder_name(&a.laenge, u) else {
-        weigere(absagen, st.name.span, "`static` array whose length is not constant");
-        return;
-    };
-    if n <= 0 {
-        weigere(absagen, st.name.span, "`static` array of length zero -- C has no such object");
-        return;
+    // The declarator suffix out of the same numbers: `[[u32; 4]; 3]` becomes
+    // `M[3][4]`, and at one dimension `[64]` -- the value, not the `const`
+    // name that may have spelled it, exactly what this form always wrote.
+    let mut suffix = String::new();
+    for n in &laengen {
+        suffix.push_str(&format!("[{n}]"));
     }
+    // The element count of the whole object: every bound below reads it, at
+    // one dimension it IS the length above. Saturating: past the object fence
+    // the exact count no longer matters, only that it is past it.
+    let gesamt = laengen
+        .iter()
+        .fold(1u128, |a, n| a.saturating_mul(*n as u128));
     // **`D5`: a length C can read exactly, in a declaration C cannot hold** (2026-09-03).
     //
     // `[u64; 2^63 - 1]` is accepted by every pass -- the length is a `u64` and fits -- and
@@ -9755,13 +9891,17 @@ fn feldstatisch(
     // An unknown element width counts as ONE byte -- the smallest any C object has -- so the
     // rule under-refuses rather than over-refuses where it cannot see the size. *That is the
     // safe direction here: what it lets through, `cc` still catches.*
+    //
+    // Lane 170: the bound is on the WHOLE object, so a `[3]` of `[u32; 4]` counts
+    // twelve elements, not three -- at one dimension `gesamt` is the length above
+    // and the line below reads exactly what it always read.
     let elembreite = cbreite(&elem).unwrap_or(1);
-    if (n as u128).saturating_mul(elembreite) > C_OBJEKT_MAX {
+    if gesamt.saturating_mul(elembreite) > C_OBJEKT_MAX {
         weigere(
             absagen,
             st.name.span,
             &format!(
-                "`static` array of {n} x {elembreite} bytes -- C's largest object spans \
+                "`static` array of {gesamt} x {elembreite} bytes -- C's largest object spans \
                  `PTRDIFF_MAX` = {C_OBJEKT_MAX} bytes, because the difference of two pointers \
                  into one object has to be representable. There is no C declaration for this"
             ),
@@ -9828,17 +9968,23 @@ fn feldstatisch(
         // A megabyte of initialiser text costs about 30 ms at the rate measured above.
         // *A limit a real program hits is worse than the defect; this one is not within
         // three decimal orders of any program in this tree.*
+        //
+        // Lane 170: a nested fill nests its braces (`{{7, 7}, {7, 7}}`), and the
+        // budget counts every element of every dimension -- at one dimension the
+        // shape below is byte-identical to the `{7, …}` it replaces.
         let text = w.to_string();
         // `+ 2` for the `, ` between two elements. The last element carries none, so this
         // over-counts by exactly two bytes -- the refusal fires two bytes early rather than
         // two bytes late, which is the direction with the second reader still behind it.
-        let bytes = (n as u128).saturating_mul(text.len() as u128 + 2);
+        // (Nested braces add two bytes per row on top; the two-byte headroom above
+        // covers them wherever more than one row stands.)
+        let bytes = gesamt.saturating_mul(text.len() as u128 + 2);
         if bytes > C_INITIALISIERER_MAX {
             weigere(
                 absagen,
                 st.name.span,
                 &format!(
-                    "`static` array of {n} elements initialised to {w} -- C has no repeat \
+                    "`static` array of {gesamt} elements initialised to {w} -- C has no repeat \
                      form for an initialiser that ISO C also has, so this emitter writes \
                      one element per element and that text would be {bytes} bytes. This \
                      emitter's budget for one initialiser is {C_INITIALISIERER_MAX}. \
@@ -9847,15 +9993,31 @@ fn feldstatisch(
             );
             return;
         }
-        format!(
-            "{{{}}}",
-            std::iter::repeat(text).take(n as usize).collect::<Vec<_>>().join(", ")
-        )
+        // **`try_from` and not `as`** -- the budget above bounds every dimension by
+        // about a million, so the conversion cannot fail on a tree that reached
+        // this line; a number that did not fit would be a truncation, and this
+        // file does not truncate numbers (`konst_zahl`, `D3`/`D4`).
+        let mut tiefen: Vec<usize> = Vec::with_capacity(laengen.len());
+        for n in &laengen {
+            let Ok(n) = usize::try_from(*n) else {
+                weigere(
+                    absagen,
+                    st.name.span,
+                    "`static` array dimension past the addressable count -- the \
+                     initialiser budget above already fenced it",
+                );
+                return;
+            };
+            tiefen.push(n);
+        }
+        let mut gefuellt = String::new();
+        fülle(0, &tiefen, &text, &mut gefuellt);
+        gefuellt
     };
     let konst = if st.veraenderlich { "" } else { "const " };
     let abschnitt = abschnitt_attribut(st, absagen);
     aus.push_str(&format!(
-        "\nstatic {konst}{elem} {}[{n}]{abschnitt} __attribute__((unused)) = {anfang};\n",
+        "\nstatic {konst}{elem} {}{suffix}{abschnitt} __attribute__((unused)) = {anfang};\n",
         st.name.text
     ));
 }

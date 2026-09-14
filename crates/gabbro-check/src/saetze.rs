@@ -2150,6 +2150,34 @@ pub const M1: &[Satz] = &[
                      crates/gabbro-check/tests/bare_atomic.rs",
     },
     Satz {
+        name: "m1.whole_array_store",
+        kennungen: &["N287"],
+        aussage: "A whole array is never a store target (`N287`): C has no assignment \
+                  of one array to another, so `M[i] = M[j]` over a nested array -- and \
+                  `B = A` over a flat one -- is refused, while `M[i][j] = v` stays \
+                  silent. Both sides of the refused form carry the same array shape, \
+                  so neither the shape comparison (`M140`) nor any range rule speaks; \
+                  the emitter would write the assignment straight into the C, where \
+                  `cc` answers *assignment to expression with array type*.",
+        vorbehalt: "It holds the TARGET, not the source: a row into a scalar, or a \
+                    scalar into a row, is `M140`'s shape mismatch where it stands. A \
+                    row read into a `let` stays checker-silent and falls at the \
+                    emitter (`C001`, no resolvable `let` type) -- a named refusal \
+                    either way, and no corpus site binds one. `Publish` over an \
+                    array-typed atomic is unmeasured and stays so: no corpus site \
+                    declares one.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured against the UNCHANGED checker: `M[i] = M[j]` and `B = A` \
+                      both checked clean and both named an array assignment `cc` \
+                      rejects. Poison is beispiele/gift/951-nested-whole-row-store.gab \
+                      (falls with N287 alone); the flat twin is pinned inline \
+                      (`n287_flat_whole_array_store` in \
+                      crates/gabbro-check/tests/nested_arrays.rs). The clean side is \
+                      beispiele/122-matrix.gab (element stores at depth two).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (N287, assignment arm); \
+                     crates/gabbro-check/tests/nested_arrays.rs",
+    },
+    Satz {
         name: "consts.evaluable",
         kennungen: &["K190"],
         aussage: "A `const` initializer, or a const-table element, outside the total, \
@@ -2191,6 +2219,33 @@ pub const M1: &[Satz] = &[
                       side is beispiele/92-const-squares.gab (64 folded entries, \
                       emitted and compiled).",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_tabelle`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.nested_rows",
+        kennungen: &["N285", "N286"],
+        aussage: "A nested const-table literal nests the way its type nests, row for \
+                  row. A value where the type declares an array, or a row where it \
+                  declares a single value, falls (`N285`); a row holding anything but \
+                  the declared inner count falls (`N286`) -- a ragged row has no C \
+                  shape, and nothing is padded or filled in. The outer count stays \
+                  `K191`'s, and every leaf folds and ranges like a flat table's \
+                  element (`K190`/`K194`), at whatever depth the nesting ends.",
+        vorbehalt: "It checks the SHAPE, not the meaning -- like `consts.table` beside \
+                    it. A scalar `0` where a nested table stands is NOT its shape: \
+                    the flat `= 0` hole (`const T : [u32; 4] = 0;` emitting \
+                    `#define T 0u`) stands unrepaired beside it, booked in lane 170, \
+                    and this rule does not widen to close it. The call hull \
+                    (`K192`/`K193`) descends through rows without a rule of its own: \
+                    `alle_ausdruecke` carries every nested call and name to it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/949 (`[[1, 2], [3]]` falls as `N286` alone); the \
+                      `N285` directions are pinned inline (`n285_scalar_where_row_stands`, \
+                      `n285_row_where_scalar_stands` in \
+                      crates/gabbro-check/tests/konstanten.rs). The clean side is \
+                      beispiele/123-const-matrix.gab (`[[1, 2], [3, 4]]` over \
+                      `[[u32; 2]; 2]`, emitted and compiled).",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`check_eintrag`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
     },
     Satz {

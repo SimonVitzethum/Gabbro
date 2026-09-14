@@ -1,0 +1,12 @@
+-- erwartet: K194
+-- **Gift 950 -- a nested-table element outside the element range.**
+--
+-- `300` evaluates (so this is not `K190`) but does not fit `u8`: each leaf
+-- of a nested literal is held against the innermost element type, the same
+-- rule that holds a flat table's elements (`K194`), at whatever depth the
+-- nesting ends.
+module gift::nested_element_out_of_range {
+
+const T : [[u8; 2]; 2] = [[1, 2], [3, 300]];
+
+}

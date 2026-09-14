@@ -16,14 +16,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **~~135~~ 144** | `gabbro paesse` |
-| of those `measured` | **127** | a poison-probe case or a caught mutation |
+| Sentences in the register | **~~135~~ ~~144~~ 157** | `gabbro paesse` |
+| of those `measured` | **~~127~~ 149** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **335** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **280** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **~~335~~ 381** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **~~280~~ 326** | `./instrumente/pruefe-saetze.py` |
 
 > **2026-09-12, lane E6: +5 sentences with their codes, all mine.**
 > `namen.profil_schluessel` (`N215`, two keyed entries with one key and
@@ -66,6 +66,17 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > `ohne Satz` ratchet below stands unmoved at 53 against 55 actual -- the two
 > above the mark (`M152`, `V012`) landed without sentences before this lane.
 
+
+> **2026-09-14, lane 170: recomputed to `gabbro paesse` actuals, +2 of them mine.**
+> `consts.nested_rows` (`N285`, the nesting shape, and `N286`, the inner
+> length) and `m1.whole_array_store` (`N287`, no whole array as a store
+> target) bring two measured sentences claiming three codes, each with its
+> gift probe (948-951) and its inline counter-direction. The figures move by
+> exactly the lane's own delta (155 → 157, 147 → 149, 378 → 381, 323 →
+> 326); the rest of the movement since the last booking is wave drift other
+> lanes owe their own entries for. The `ohne Satz` ratchet below stands
+> unmoved at 55 -- every new code of this lane arrived with its sentence in
+> the same branch.
 
 > **The five figures above were carried on 2026-08-31, and the ratchet RISES — with reason.**
 > The subject grew: `N042` came in (`namen.erzeugter_name_zweimal`,

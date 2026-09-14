@@ -2441,6 +2441,61 @@ lauf "beispiel107" "$W/beispiele/107-summe-zwei-rufe.gab" "$TREIBER107" "20" \
      's/{8u}/{9u}/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 25. The nested matrix, written and read back (lane 170) --------------------------
+#
+# `beispiele/122` declares `static mut M : [[u32; 4]; 3]` -- three rows of four
+# `u32` -- and lowers it to `uint32_t M[3][4]`: the first nested array this
+# back end ever carried past `C001`. `schreibe`/`lies` move single cells at
+# depth two, `leeren` walks the whole matrix with two nested `traverse …
+# over elems of` loops (outer over the rows, inner over the cells of `M[i]`).
+#
+#    Expected:
+#      11 42 7 0  -- three cells written, the fourth untouched
+#      0 0 0      -- and `leeren` zeroes the three back
+#
+# The poison moves every written value by one (`v` to `(v + 1)` in the
+# EMITTED C): the run then answers `12 43 8 0`, so the comparison measures
+# that the observed values come OUT OF THE STORES and not out of the
+# zero-initialised memory (which reads `0 0 0` either way).
+TREIBER122='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    schreibe(0, 0, 11); schreibe(2, 3, 42); schreibe(1, 2, 7);
+    printf("%u %u %u %u\n", lies(0, 0), lies(2, 3), lies(1, 2), lies(0, 3));
+    leeren();
+    printf("%u %u %u\n", lies(0, 0), lies(2, 3), lies(1, 2));
+    return 0;
+}
+'
+lauf "beispiel122" "$W/beispiele/122-matrix.gab" "$TREIBER122" "$(printf '11 42 7 0\n0 0 0')" \
+     's/M\[i\]\[j\] = v;/M[i][j] = (v + 1);/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 26. The nested const table, read by index (lane 170) -----------------------------
+#
+# `beispiele/123` fixes `const T : [[u32; 2]; 2] = [[1, 2], [3, 4]]` at
+# translation time: rows nest in the literal the way dimensions nest in the
+# type, and the emitter writes one `static const uint32_t T[2][2]` with the
+# nested initialiser `{{1u, 2u}, {3u, 4u}}`. The driver reads all four cells
+# back by index.
+#
+#    Expected: 1 2 3 4 -- the folded values, in row order.
+#
+# The poison moves the last payload entry (`{4u}` to `{5u}` in the EMITTED
+# C): the run then answers `1 2 3 5`, so the comparison measures that the
+# observed values come OUT OF THE INITIALISER and not out of the source
+# text (which the run never sees).
+TREIBER123='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u %u %u %u\n", lies(0, 0), lies(0, 1), lies(1, 0), lies(1, 1));
+    return 0;
+}
+'
+lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
+     's/{3u, 4u}/{3u, 5u}/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht

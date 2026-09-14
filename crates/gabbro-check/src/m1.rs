@@ -1072,6 +1072,38 @@ impl<'a> Pruefer<'a> {
                 }
                 let ziel = self.u.typ_von_ort(&self.modul, &z.ziel, &lage.lokal);
                 self.buche(&ziel);
+                // **`N287` (lane 170) -- a whole array is not a store target.**
+                //
+                // Measured: `M[i] = M[j]` over `static mut M : [[u32; 4]; 3]`
+                // checks clean -- both sides are `[u32; 4]`, and `passt` compares
+                // shapes, which agree -- while the emitter writes `M[i] = M[j];`
+                // into the C, and `cc` answers *assignment to expression with
+                // array type*. The one-dimensional twin (`B = A` over two
+                // `[u32; 4]`) is the same silence, one lane older: C has no
+                // assignment of one array to another at any depth, so the rule
+                // holds the dimension it can see instead of the depth.
+                //
+                // It reports and does not return (the `N270` shape): the overlap
+                // still gets its range comparison, so a second fault there
+                // keeps its own refusal.
+                if matches!(ziel.durchgreifen(), Typ::Feld { .. }) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N287",
+                            z.ziel.span,
+                            format!(
+                                "`{}` names a whole array -- C has no assignment of one \
+                                 array to another, so a whole array is never a store \
+                                 target; write it element by element",
+                                z.ziel.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a row of a nested array is an array too: `M[i]` is \
+                             `[u32; 4]`, and only `M[i][j]` is a value",
+                        ),
+                    );
+                }
                 let quelle = self.ausdruck(&z.wert, lage);
                 self.rufe_im_ausdruck(&z.wert, lage);
                 let ergebnis_typ = match z.op {

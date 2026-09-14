@@ -1,0 +1,19 @@
+-- erwartet: M103
+-- **Gift 948 -- an index past the INNER dimension of a nested array.**
+--
+-- `M[i][9]` over `static mut M : [[u32; 4]; 3]`: the outer index is proved
+-- against `3`, the inner one is not proved against `4`. Each dimension is
+-- held against its own bound (`M103` per dimension), so the refusal names
+-- the inner count, not the outer one.
+module gift::nested_inner_index_out_of_range {
+
+static mut M : [[u32; 4]; 3] = 0;
+
+impl fn lies(i : u32 in 0 ..< 3) -> u32
+    effects { reads M }
+    costs <= 8 ops
+{
+    return M[i][9];
+}
+
+}

@@ -2677,10 +2677,18 @@ MUTATIONEN = [
         "zurueck (W7)",
         "code",
     ),
+    # **Repointed 2026-09-14 (lane 170) -- a pure repoint, the same sabotage.**
+    # The anchor read
+    #
+    #     ~~`            aus.push_str(&format!("    {el} {}[{n}];\\n", f.name.text));`~~
+    #
+    # until the struct-field arm learned the nested spine (`feld_deklarator`): the
+    # length moved behind the name into `suffix` (`[n]`, or `[3][4]`). `1` for the
+    # whole suffix still guesses the length instead of reading it.
     Mutation(
         "feldlaenge-wird-geraten",
         "emit.rs",
-        '            aus.push_str(&format!("    {el} {}[{n}];\\n", f.name.text));',
+        '            aus.push_str(&format!("    {el} {}{};\\n", f.name.text, suffix));',
         '            aus.push_str(&format!("    {el} {}[1];\\n", f.name.text));',
         "C-Absenkung -- die Laenge eines Feldtyps wird geraten statt abgelesen",
         "code",
