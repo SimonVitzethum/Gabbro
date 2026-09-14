@@ -208,3 +208,4 @@ import Grammatik.Isabelle.VerbundKonstruktor
 import Grammatik.Isabelle.RestrictAlleinzugriff
 import Grammatik.Schlusssatz104
 import Grammatik.Korrespondenz
+import Grammatik.Gleitkomma
