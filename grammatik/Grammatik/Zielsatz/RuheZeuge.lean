@@ -17,6 +17,7 @@
 import Grammatik.Zielsatz.Ruhe
 import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.ZielOrtSperreZeuge
+import Grammatik.MitRuheSemantik
 
 namespace Gabbro.Grammatik
 
@@ -36,6 +37,21 @@ theorem req_mitRuhe_wahr (P : Programm D) (f : D.Fn) (hf : P.requires f = .wahr)
   have e : ruE (P.requires f) = ruE (Expr.wahr (D := D)) := by rw [hf]
   rw [e]
   rfl
+
+/-- **The runtime's start, stated on `P`**: declared starts (each once) on
+    threads `0 .. k-1` with their `requires` holding in `P` at the start
+    memory, the idle root on every other thread, the lock invariants of `P`
+    at the start memory -- an admissible start of `P.mitRuhe` from the
+    translated memory. -/
+theorem startZulaessig_mitRuhe_P [DecidableEq D.Fn] (P : Programm D) {S : SperrInv D}
+    {fs ws : List D.Fn} (aktiv : List (Σ w : D.Fn, Env D (D.params w))) (sp : Speicher D)
+    (hws : ∀ a ∈ aktiv, a.1 ∈ ws) (hnd : (aktiv.map (·.1)).Nodup)
+    (hreq : ∀ a ∈ aktiv, ReqAmEintritt P a.1 (sp.welt []) a.2)
+    (hS : ∀ L, S.inv L sp = true) :
+    StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (speicherR sp) (initRuhe aktiv) :=
+  startZulaessig_mitRuhe P aktiv (speicherR sp) hws hnd
+    (fun a ha => (req_mitRuhe_iff P a.1 (sp.welt []) a.2).mpr (hreq a ha))
+    (fun L => by rw [speicherZ_speicherR]; exact hS L)
 
 /-! ## 1. The export of `beispiele/104` -/
 
@@ -100,6 +116,7 @@ theorem mP_mitRuhe_start :
     cases L
     decide
 
+#print axioms Gabbro.Grammatik.startZulaessig_mitRuhe_P
 #print axioms Gabbro.Grammatik.gP_mitRuhe_akzeptiert
 #print axioms Gabbro.Grammatik.gP_mitRuhe_start
 #print axioms Gabbro.Grammatik.probeB_start
