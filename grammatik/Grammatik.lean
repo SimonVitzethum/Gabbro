@@ -232,12 +232,16 @@ import Grammatik.RennfreiOrte
 import Grammatik.MitRuhe
 import Grammatik.MitRuheStatisch
 import Grammatik.MitRuheSemantik
+import Grammatik.MitRuheSperre
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.AkzeptiertZeuge
 import Grammatik.Zielsatz.Ruhe
 import Grammatik.Zielsatz.RuheZeuge
 import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
+import Grammatik.Zielsatz.RuheNutzer
+import Grammatik.Zielsatz.Beweis
+import Grammatik.Zielsatz.Proben
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
