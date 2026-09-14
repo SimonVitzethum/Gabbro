@@ -750,4 +750,57 @@ theorem gcert_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
     (hR : REnd X top m l K b rs cb) : EndSem X m top K b cb :=
   cCorr_end X m top (rend_corr X hpp hks hFresh hTrav hR)
 
+/-! ## The general certificate at work: `beispiele/104` re-derived.
+
+`einzahlen_zeuge_cert` (Korrespondenz104.lean) goes through the
+104-cut rows; here the same end-to-end proposition goes through the
+general form families (`gcert_sound`). -/
+
+/-- `einzahlen`'s rows in the general syntax: `(void)b`, the slot
+    store of the literal `100`, the call of `lies` on parameters. -/
+def einRowsG : List GRow :=
+  [.void 2, .storeSlot 0 1 2 4 0 cU32 (.lit 100), .call 1 [.var 0, .var 1] none]
+
+/-- `lies`' rows: the return of the slot load. -/
+def liesRowsG : List GRow :=
+  [.ret (some (cU32, .ld cStand cU32))]
+
+theorem einRowsG_elab : growsCS einRowsG .skip = cEinBody := rfl
+
+/-- The `lies` row elaborates to the emitted body (a terminal row is
+    not sequenced: `growRow`, not `growsCS`). -/
+theorem liesRow_elab : growRow (.ret (some (cU32, .ld cStand cU32))) = cLiesBody := rfl
+
+/-- The layout numbers the rows carry are the emitter's (`kontoLay`). -/
+theorem einLay_n : (2 : Nat) = (xEin.EL.trec ()).count := rfl
+
+theorem einLay_ss : (4 : Nat) = (xEin.EL.trec ()).ssize := rfl
+
+theorem einLay_off : (0 : Nat) = (xEin.EL.trec ()).off (xEin.EL.fnr () ()) := rfl
+
+theorem einLay_ty : cU32 = xEin.EL.slotTy () () := rfl
+
+/-- `einzahlen`'s body as a general row derivation: the T4 premises
+    are exactly `ein_void`/`ein_write`/`ein_call`'s, through the form
+    families. -/
+theorem ein_rend :
+    REnd xEin true 0 false kEin (refP.rumpf refEin) einRowsG cEinBody := by
+  have hi : ExprCorr xEin kEin (.var 1) refIdxEin :=
+    ecorr_fest xEin kEin kEin_ks refIdxEin (fun _ _ => rfl)
+  have he : ExprCorr xEin kEin (.lit 100) refHundert :=
+    ecorr_weiter xEin kEin _ _ (ecorr_lit xEin kEin 100)
+  exact REnd.ePreVoid ein_void (REnd.eConsStoreSlotParam (hgt := rfl) kEin_pp einLay_n
+    einLay_ss einLay_off einLay_ty hi he
+    (REnd.eConsCall lies_fn ein_args (REnd.retEnd rfl rfl)))
+
+/-- `lies`' body as a general row derivation. -/
+theorem lies_rend :
+    REnd xLies true 0 false kLies (refP.rumpf refLies) liesRowsG cLiesBody := by
+  have hi : ExprCorr xLies kLies (.var 1) refIdxBodyLies :=
+    ecorr_fest xLies kLies kLies_ks refIdxBodyLies (fun _ _ => rfl)
+  have he := ecorr_slotParam xLies kLies kLies_pp () rfl refDarfBodyLies hi
+  show REnd xLies true 0 _ kLies (refP.rumpf refLies)
+    [.ret (some (cU32, .ld cStand cU32))] cLiesBody
+  exact REnd.ret (by rfl) ⟨cU32, _, rfl, he, rfl⟩
+
 end Gabbro.Grammatik
