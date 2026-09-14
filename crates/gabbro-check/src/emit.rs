@@ -8835,7 +8835,26 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
-        StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
+        StmtArt::Ruf(r) => {
+            // **A call statement whose callee returns a value DISCARDS it.** C accepts that
+            // for an ordinary function, but a `pure`/`const` callee (`wirkungsattribut`)
+            // turns the discard into `-Wunused-value` ("statement with no effect") under
+            // `-Werror` -- found 2026-09-14 on beispiele/124 (`pruefeA();`, a reading
+            // callee called for its `requires`). The cast says the discard is intended.
+            // Not for ghost results (the C function returns nothing) and not for the
+            // `or R` channel (a call statement over it cannot stand; it is `let … else`).
+            let verwirft = r
+                .path()
+                .and_then(|p| p.teile.last())
+                .and_then(|n| u.funktionen.get(&n.text))
+                .is_some_and(|s| {
+                    s.rueck.as_ref().is_some_and(|t| !matches!(t, TypExpr::Never(_)))
+                        && !s.geist_rueck
+                        && s.fehler.is_none()
+                });
+            let v = if verwirft { "(void)" } else { "" };
+            aus.push_str(&format!("{e}{v}{};\n", ruf(r, u, absagen)))
+        }
         // **Lane E5:** an accepted library call lowers to an ordinary call
         // with the payload passed as a `static const` table argument -- the
         // `&{payload}` the stage beside the tables laid down. Anything else

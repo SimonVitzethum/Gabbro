@@ -3293,7 +3293,12 @@ MARKE_EMIT=107
 # lane and checks clean since -- the lane's whole point, a bare nullary case
 # now being a construction. `gabbro emit` writes 40 lines with `(Aufsatz){
 # .marke = Aufsatz_Keine }`, and `cc -Werror` takes it.
-MARKE_EMIT_M=133
+# **133 -> 132 on 2026-09-14 (merge review, lane 175).** `messung/proben/probe-nebeneinander-
+# getrennt.gab` LEFT the emission, and rightly: it claimed that a shared READ beside a
+# concurrent WRITE is clean (`g_a` writes `T`, `g_b` reads `T`, no lock). That is a
+# read-write data race; the old rule compared write sets only. The flagship's footprint
+# rule `N291` (lane 175) refuses it. The probe's own header predicted this day.
+MARKE_EMIT_M=132
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

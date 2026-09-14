@@ -5,6 +5,12 @@
 -- clean -- a shared read is not a shared write, and the checker says nothing.
 -- Stays clean on purpose: the day it falls, the disjointness claim is gone.
 --
+-- **FELL on 2026-09-14, and the fall is the finding.** The pair is not clean: `g_b`
+-- READS `T` while `g_a` WRITES it on another thread, with no lock -- a read-write data
+-- race. The write-set comparison above never looked at reads. The flagship's footprint
+-- rule refuses it: `N291` (`T` read without a guard, not thread-local). Kept as the
+-- record of the gap; it no longer emits (pruefe-emission.sh MARKE_EMIT_M 133 -> 132).
+--
 -- GEMESSEN am 2026-09-10
 -- ----------------------
 --
