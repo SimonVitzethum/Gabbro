@@ -12,10 +12,15 @@ Mismatch classes, decided per vector from the bit patterns:
 * both sides NaN -- match (payloads and quiet bits are
   implementation-defined, IEEE 754 leaves them open);
 * exact bit equality -- match;
-* both sides zero with different signs -- KNOWN model cut (an exact
-  zero always rounds to `+0`; IEEE gives `-0 + -0 = -0`), reported but
-  tolerated;
-* anything else -- a finding, exit 1.
+* anything else -- a finding, exit 1. Signed zeros are compared bit for
+  bit: the model follows IEEE 754-2019 section 6.3 (`-0 + -0 = -0`,
+  `x - x = +0`, xor signs for `*` and `/`). Until the lane after 166 a
+  zero-sign difference was a tolerated "known cut" class; that class is
+  gone, and the population carries every signed-zero pairing explicitly
+  (`zero_pairs`), so a regression falls instead of hiding.
+
+Comparisons (`lt`, `le`: C `<`, `<=`, model `flt`/`fle`) run on the same
+pairs and are compared as 0/1 (NaN unordered on both sides).
 
 Usage: python3 instrumente/pruefe-gleitkomma.py [--n N] [--seed S]
 Requires built oleans (run ./lean-bau first) and `lake`/`cc`.
@@ -51,6 +56,9 @@ def runLine (w : List String) : String :=
     else
       let a := ausBits F sa.toNat!
       let b := ausBits F sb.toNat!
+      if op == "lt" then (if flt F a b then "1" else "0")
+      else if op == "le" then (if fle F a b then "1" else "0")
+      else
       let r := if op == "add" then add F a b
         else if op == "sub" then sub F a b
         else if op == "mul" then mul F a b
@@ -92,6 +100,8 @@ int main(int argc, char **argv) {
         volatile double a, b;
         memcpy(&a, &ua, 8); memcpy(&b, &ub, 8);
         volatile double r = 0;
+        if (!strcmp(op, "lt")) { printf("%d\n", a < b); continue; }
+        if (!strcmp(op, "le")) { printf("%d\n", a <= b); continue; }
         if (!strcmp(op, "add")) r = a + b;
         else if (!strcmp(op, "sub")) r = a - b;
         else if (!strcmp(op, "mul")) r = a * b;
@@ -111,6 +121,8 @@ int main(int argc, char **argv) {
         volatile float a, b;
         memcpy(&a, &ua, 4); memcpy(&b, &ub, 4);
         volatile float r = 0;
+        if (!strcmp(op, "lt")) { printf("%d\n", a < b); continue; }
+        if (!strcmp(op, "le")) { printf("%d\n", a <= b); continue; }
         if (!strcmp(op, "add")) r = a + b;
         else if (!strcmp(op, "sub")) r = a - b;
         else if (!strcmp(op, "mul")) r = a * b;
@@ -185,6 +197,24 @@ def rand_normal(rng, fmt):
     return pat(fmt, s, bexp, frac)
 
 
+def zero_pairs(fmt):
+    """Every pairing of the signed zeros with themselves and with a small
+    set of signed partners (min subnormal, one, max finite, infinity, and
+    the operand's own negation), so the section-6.3 rule is measured on
+    every op, not left to the random draw."""
+    ebits, fbits = WIDTHS[fmt]
+    E = (1 << ebits) - 1
+    FMAX = (1 << fbits) - 1
+    one = pat(fmt, 0, (1 << (ebits - 1)) - 1, 0)
+    base = [pat(fmt, 0, 0, 0), pat(fmt, 0, 0, 1), one,
+            pat(fmt, 0, E - 1, FMAX), pat(fmt, 0, E, 0),
+            pat(fmt, 0, 0x3F if fmt == 32 else 0x3FB, 0x1234)]
+    sign = 1 << (ebits + fbits)
+    vals = base + [v | sign for v in base]
+    out = [(a, b) for a in vals for b in vals]
+    return out
+
+
 def build_vectors(n, seed):
     vecs = []
     for fmt in (32, 64):
@@ -203,8 +233,14 @@ def build_vectors(n, seed):
                 pairs.append((rand_normal(rng, fmt), ed[i % len(ed)]))
             else:
                 pairs.append((ed[i % len(ed)], ed[(i * 7 + 1) % len(ed)]))
+        pairs.extend(zero_pairs(fmt))
+        ebits, fbits = WIDTHS[fmt]
+        for _ in range(50):
+            x = rand_normal(rng, fmt)
+            pairs.append((x, x))
+            pairs.append((x, x ^ (1 << (ebits + fbits))))
         for (a, b) in pairs:
-            for op in ("add", "sub", "mul", "div"):
+            for op in ("add", "sub", "mul", "div", "lt", "le"):
                 vecs.append((op, fmt, a, b))
         ints = [0, 1, -1, 2, -2, 2**24 - 1, 2**24, 2**24 + 1,
                 -(2**24 - 1), 2**53 - 1, 2**53, 2**53 + 1, 2**53 + 2,
@@ -222,11 +258,6 @@ def is_nan(bits, fmt):
         and (bits & ((1 << fbits) - 1)) != 0
 
 
-def is_zero(bits, fmt):
-    ebits, fbits = WIDTHS[fmt]
-    return (bits & ((1 << (ebits + fbits)) - 1)) == 0
-
-
 def find_lake():
     p = shutil.which("lake")
     if p:
@@ -239,12 +270,12 @@ def find_lake():
 
 
 def vergleiche(vecs, lout, cout):
-    """Compare bit patterns. Returns (exact, both_nan, known, bad, broken).
+    """Compare bit patterns. Returns (exact, both_nan, bad, broken).
 
     `bad` are findings (the tree has to change); `broken` are unparsable
     driver lines (the setup has to change -- exit 2, never a finding).
     """
-    nok = nnan = nknown = 0
+    nok = nnan = 0
     bad, broken = [], []
     for i, (op, fmt, a, b) in enumerate(vecs):
         try:
@@ -256,13 +287,11 @@ def vergleiche(vecs, lout, cout):
             continue
         if m == c:
             nok += 1
-        elif is_nan(m, fmt) and is_nan(c, fmt):
+        elif op not in ("lt", "le") and is_nan(m, fmt) and is_nan(c, fmt):
             nnan += 1
-        elif is_zero(m, fmt) and is_zero(c, fmt):
-            nknown += 1
         else:
             bad.append((i, op, fmt, a, b, m, c))
-    return nok, nnan, nknown, bad, broken
+    return nok, nnan, bad, broken
 
 
 def selbsttest():
@@ -276,15 +305,22 @@ def selbsttest():
     good_lean = ["4607182418800017409", "1084227584", "4607182418800017408",
                  "13835058055282163712"]
     good_c = list(good_lean)
-    nok, _, _, bad, broken = vergleiche(vecs, good_lean, good_c)
+    nok, _, bad, broken = vergleiche(vecs, good_lean, good_c)
     if bad or broken or nok != len(vecs):
         print("Selbsttest GESCHEITERT: gute Daten fallen")
         return 1
     corrupt = list(good_lean)
     corrupt[0] = str(int(corrupt[0]) ^ 1)
-    _, _, _, bad2, _ = vergleiche(vecs, corrupt, good_c)
+    _, _, bad2, _ = vergleiche(vecs, corrupt, good_c)
     if len(bad2) != 1:
         print("Selbsttest GESCHEITERT: kaputte Daten fallen nicht")
+        return 1
+    # The retired signed-zero class must not come back: `-0` against `+0`
+    # is a finding now.
+    zvecs = [("add", 64, 1 << 63, 1 << 63)]
+    _, _, bad3, _ = vergleiche(zvecs, [str(0)], [str(1 << 63)])
+    if len(bad3) != 1:
+        print("Selbsttest GESCHEITERT: Nullvorzeichen faellt nicht")
         return 1
     print("Selbsttest ok (gut faellt nicht, kaputt faellt)")
     return 0
@@ -362,14 +398,14 @@ def main():
               "%d vectors, %d C, %d Lean" % (len(vecs), len(cout), len(lout)))
         print("evidence kept in " + tmp)
         sys.exit(2)
-    nok, nnan, nknown, bad, broken = vergleiche(vecs, lout, cout)
+    nok, nnan, bad, broken = vergleiche(vecs, lout, cout)
     if broken:
         print("ABBRUCH: %d unparsable driver lines, first: %s"
               % (len(broken), broken[0]))
         print("evidence kept in " + tmp)
         sys.exit(2)
-    print("vectors: %d  exact: %d  both-NaN: %d  known-signed-zero: %d  "
-          "MISMATCH: %d" % (len(vecs), nok, nnan, nknown, len(bad)))
+    print("vectors: %d  exact: %d  both-NaN: %d  MISMATCH: %d"
+          % (len(vecs), nok, nnan, len(bad)))
     for (i, op, fmt, a, b, m, c) in bad[:20]:
         print("  MISMATCH #%d: %s f%d a=%d b=%d lean=%d c=%d"
               % (i, op, fmt, a, b, m, c))
@@ -377,7 +413,7 @@ def main():
         print("evidence kept in " + tmp)
         sys.exit(1)
     shutil.rmtree(tmp, ignore_errors=True)
-    print("ok -- no finding outside the documented signed-zero cut")
+    print("ok -- no finding (signed zeros compared bit for bit)")
 
 
 if __name__ == "__main__":
