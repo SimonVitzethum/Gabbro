@@ -48,7 +48,7 @@ namespace Gabbro.Grammatik
 /-! ## 1. Types, signatures, the declaration -/
 
 /-- Types of `D.mitRuhe`: function-pointer numbers shift by one. -/
-def tyR : Ty → Ty
+@[reducible] def tyR : Ty → Ty
   | .int lo hi => .int lo hi
   | .bool => .bool
   | .opt n => .opt n
@@ -90,7 +90,7 @@ def sigNrM (D : Deklaration) : Nat → Signatur D.Tab D.Glob D.Lock D.Marke
   | n + 1 => sigR (D.sigNr n)
 
 /-- A value of `τ` as a value of the shifted `τ`. -/
-def valR : (τ : Ty) → Val D.Fn D.sig τ → Val (Option D.Fn) (sigM D) (tyR τ)
+@[reducible] def valR : (τ : Ty) → Val D.Fn D.sig τ → Val (Option D.Fn) (sigM D) (tyR τ)
   | .int _ _, v => v
   | .bool, v => v
   | .opt _, v => v
@@ -458,7 +458,7 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .sdiv hb a b => .sdiv hb (ruE a) (ruE b)
   | _, _, _, .srem hb a b => .srem hb (ruE a) (ruE b)
   | _, _, _, .leseBytes t f hf n i hlo hhi hL =>
-      .leseBytes (D := D.mitRuhe) t f (by show tyR (D.typ t f) = _; rw [hf]; rfl) n (ruE i) hlo
+      .leseBytes (D := D.mitRuhe) t f (congrArg tyR hf) n (ruE i) hlo
         hhi (darfR hL)
   | _, _, _, .band h0 h0' a b => .band h0 h0' (ruE a) (ruE b)
   | _, _, _, .bor w h0 h0' hw1 hw2 a b => .bor w h0 h0' hw1 hw2 (ruE a) (ruE b)
@@ -481,7 +481,7 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .forallSlots t body hL => Expr.forallSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .existsSlots t body hL => Expr.existsSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .reaches t f hf a b hL =>
-      .reaches (D := D.mitRuhe) t f (by show tyR (D.typ t f) = _; rw [hf]; rfl) (ruE a) (ruE b)
+      .reaches (D := D.mitRuhe) t f (congrArg tyR hf) (ruE a) (ruE b)
         (darfR hL)
 
 /-- A payload expression, translated. -/
@@ -516,11 +516,11 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       .assignDurch (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignGlob g e hw hL => .assignGlob g (ruE e) hw (gdarfR hL)
   | _, _, _, _, .schreibBytes t f hf n i hlo hhi e hw hL =>
-      .schreibBytes (V := vertragR V) t f (by show tyR (D.typ t f) = _; rw [hf]; rfl) n (ruE i) hlo hhi
+      .schreibBytes (V := vertragR V) t f (congrArg tyR hf) n (ruE i) hlo hhi
         (ruE e) hw (darfR hL)
   | _, _, _, _, .assignVar x e => .assignVar (varR x) (ruE e)
   | _, _, _, _, .uebergang t f hτ i von nach hn he hw hL =>
-      .uebergang (V := vertragR V) t f (by show tyR (D.typ t f) = _; rw [hτ]; rfl) (ruE i) von nach hn
+      .uebergang (V := vertragR V) t f (congrArg tyR hτ) (ruE i) von nach hn
         he hw (darfR hL)
   | _, _, _, _, .ite c t e => .ite (ruE c) (ruB t) (ruB e)
   | _, _, _, _, .onOption o p a => .onOption (ruE o) (ruB p) (ruB a)
