@@ -2095,4 +2095,127 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | ergebnis => simp [gutKernPlatz] at hg
     | grund g f => simp [gutKernPlatz] at hg
 
+-- Suffix chains through `parseSuffixe` over kernel trees:
+-- lane 161's `suff_rund` with index payloads parsed through
+-- `RKern` (they are `gutKern` by `suffGutKern`).
+theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
+    (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F : Nat),
+    suffGroesse suff + groesse base ≤ n + 1 →
+    suffGutKern suff = true →
+    ruhigSuff rest = true →
+    12 * (suffGroesse suff + groesse base + 1) + suffGroesse suff ≤ F →
+    parseSuffixe F base (suffToks suff ++ rest) =
+      .ok (applySuff base suff, rest) := by
+  intro n rkn suff
+  obtain ⟨rOr, -, -, -, -, -, -, -⟩ := rkn
+  induction suff with
+  | nil =>
+    intro base rest F hs hg hr hF
+    have hF1 : 1 ≤ F := by omega
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [suffToks, List.nil_append] at ⊢
+    exact stopSuffix F' base rest hr
+  | cons frag suff ih =>
+    cases frag with
+    | dot f =>
+      intro base rest F hs hg hr hF
+      simp only [suffGutKern] at hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      simp only [applySuff] at ⊢
+      have hs2 : suffGroesse suff + groesse (.feld base f) ≤ n + 1 := by
+        simp only [suffGroesse, groesse] at hs ⊢
+        omega
+      have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
+        omega
+      exact ih (SExpr.feld base f) rest F' hs2 hg hr hF2
+    | arrow f =>
+      intro base rest F hs hg hr hF
+      simp only [suffGutKern] at hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      simp only [applySuff] at ⊢
+      have hs2 : suffGroesse suff + groesse (.pfeil base f) ≤ n + 1 := by
+        simp only [suffGroesse, groesse] at hs ⊢
+        omega
+      have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
+        omega
+      exact ih (SExpr.pfeil base f) rest F' hs2 hg hr hF2
+    | idx i =>
+      intro base rest F hs hg hr hF
+      simp only [suffGutKern, Bool.and_eq_true] at hg
+      obtain ⟨hi, hgs⟩ := hg
+      have hF1 : 1 ≤ F := by omega
+      obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+      simp only [suffToks, List.cons_append] at ⊢
+      simp only [parseSuffixe] at ⊢
+      have hii : groesse i ≤ n := by
+        simp only [suffGroesse] at hs
+        omega
+      have hr1 : ruhig ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hr2 : ruhigSuff ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hr3 : ruhigGleit ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
+        rfl
+      have hFi : 12 * (groesse i + 1) + groesse i + 8 ≤ F' := by
+        simp only [suffGroesse] at hs hF ⊢
+        omega
+      have hOi := rOr i ([.zeichen "]"] ++ suffToks suff ++ rest) F'
+        hii hi hr1 hr2 hr3 hFi
+      simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hOi
+      simp only [hOi, List.cons_append] at ⊢
+      simp only [applySuff] at ⊢
+      have hs2 : suffGroesse suff + groesse (.index base i) ≤ n + 1 := by
+        simp only [suffGroesse, groesse] at hs ⊢
+        omega
+      have hF2 : 12 * (suffGroesse suff + groesse (.index base i) + 1) +
+          suffGroesse suff ≤ F' := by
+        simp only [suffGroesse, groesse] at hs hF ⊢
+        omega
+      exact ih (SExpr.index base i) rest F' hs2 hgs hr hF2
+
+-- Kernel places through `parsePrimary`: decompose by
+-- `zerlege_kern`, read the head, run the chain by
+-- `kern_suff_rund`. The `parseKopf` steps reuse lane 161's
+-- spelling-blind lemmas.
+theorem kern_prim_platz : ∀ (n : Nat) (rkn : RKern n)
+    (p : SExpr) (rest : List Token) (F : Nat),
+    groesse p ≤ n + 1 → gutKernPlatz p = true → ruhigSuff rest = true →
+    12 * (groesse p + 1) + groesse p + 1 ≤ F →
+    parsePrimary F (druckToks p ++ rest) = .ok (p, rest) := by
+  intro n rkn p rest F hs hg hr hF
+  obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := zerlege_kern (n + 1) p hs hg
+  have hF1 : 1 ≤ F := by omega
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hF2 : 1 ≤ F' := by omega
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  rw [druckToks_applySuff] at ⊢
+  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
+  simp only [parsePrimary, druckToks, nameText, hkaf, List.cons_append,
+    parseKopf] at ⊢
+  simp only [List.nil_append] at ⊢
+  simp only [sammleSeg_suffToks, hr] at ⊢
+  have hmiss : ∀ (R : List Token),
+      suffToks suff ++ rest ≠ .zeichen "(" :: R := by
+    intro R hcon
+    exact suffToks_nopar suff rest R hr hcon
+  simp only [hmiss] at ⊢
+  have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
+    simp only [groesse] at ⊢
+    omega
+  have hF3 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
+      suffGroesse suff ≤ F'' := by
+    simp only [groesse, groesse_applySuff] at hs hF ⊢
+    omega
+  exact kern_suff_rund n rkn suff (.variable a) rest F'' hs2 hgs hr hF3
+
 end Gabbro.Grammatik.Parser
