@@ -41,6 +41,7 @@
   memory inventory of `CSpeicher.lean`).
 -/
 import Grammatik.CSpeicher
+import Grammatik.GleitkommaBits
 
 namespace Gabbro.Grammatik
 
@@ -366,6 +367,55 @@ def CCmp.app : CCmp → Int → Int → Bool
 /-- A truth value as a C `int`. -/
 def b2i (b : Bool) : Int := if b then 1 else 0
 
+/-! ### Floating point (C11 Annex F: IEEE 754 binary32/binary64, round to nearest even)
+
+  A C `double`/`float` is held as its BIT PATTERN (`Gleitkomma.zuBits`), an
+  integer in `0 .. 2^64-1` / `0 .. 2^32-1` (a float local is a bit container
+  of type `uint64_t`/`uint32_t` for the model's conversions at `=`). The
+  operators compute what Annex F prescribes -- the exact result rounded
+  once, ties to even -- by the kernel-computable model of
+  `Gleitkomma.lean`. That the BUILT BINARY computes the same is the named
+  assumption `gleitkomma_ieee` (`CFormenF.lean`, `dokumente/GLEITKOMMA.md`). -/
+
+/-- The float of a bit pattern (a negative integer has no pattern: its
+    `toNat` is `0`, never produced). -/
+def fAus (F : Gleitkomma.Format) (a : Int) : Gleitkomma.GBits F := Gleitkomma.ausBits F a.toNat
+
+/-- A float as its bit pattern. -/
+def fEin (F : Gleitkomma.Format) (x : Gleitkomma.GBits F) : Int := (Gleitkomma.zuBits F x : Int)
+
+/-- The four float operators on values. -/
+def cGleitOp (op : GleitOp) (F : Gleitkomma.Format) (x y : Gleitkomma.GBits F) :
+    Gleitkomma.GBits F :=
+  match op with
+  | .add => Gleitkomma.add F x y
+  | .sub => Gleitkomma.sub F x y
+  | .mul => Gleitkomma.mul F x y
+  | .div => Gleitkomma.div F x y
+
+/-- `a op b` on bit patterns (C11 6.5.5/6.5.6 under Annex F). -/
+def cFloatBin (op : GleitOp) (F : Gleitkomma.Format) (a b : Int) : Int :=
+  fEin F (cGleitOp op F (fAus F a) (fAus F b))
+
+/-- `a < b` etc. on bit patterns (6.5.8/6.5.9 under Annex F: NaN is
+    unordered -- every comparison false but `!=`; signed zeros equal). -/
+def cFloatCmp (op : CCmp) (F : Gleitkomma.Format) (a b : Int) : Bool :=
+  match op with
+  | .lt => Gleitkomma.flt F (fAus F a) (fAus F b)
+  | .le => Gleitkomma.fle F (fAus F a) (fAus F b)
+  | .gt => Gleitkomma.flt F (fAus F b) (fAus F a)
+  | .ge => Gleitkomma.fle F (fAus F b) (fAus F a)
+  | .eq => Gleitkomma.feq F (fAus F a) (fAus F b)
+  | .ne => !Gleitkomma.feq F (fAus F a) (fAus F b)
+
+/-- `(double)n`: an integer converted to a float (6.3.1.4p2, rounded to
+    nearest even under Annex F). -/
+def cFloatVonInt (F : Gleitkomma.Format) (z : Int) : Int := fEin F (Gleitkomma.ofInt F z)
+
+/-- `isfinite(x)` (7.12.3.2): not an infinity, not a NaN. -/
+def cFloatEndlich (F : Gleitkomma.Format) (a : Int) : Bool :=
+  Gleitkomma.endlichK (Gleitkomma.klasse F (fAus F a))
+
 /-! ## 4. The expressions of the emitted subset -/
 
 /-- The C local environment: parameters and locals whose address is never
@@ -439,6 +489,18 @@ inductive CX where
   /-- `__builtin_trap()`: a defined abort, no successor (the byte helpers'
       bound check; unreachable under the checker's bound). -/
   | trap
+  /-- `l op r` in `double` (`F = f64`) or `float` (`F = f32`), both operands
+      of that type (the emitter refuses mixed `float`/`double`, `CForm
+      doubleTyp`); Annex F: the exact result rounded once. -/
+  | fbin (op : GleitOp) (F : Gleitkomma.Format) (l r : CX)
+  /-- `l < r`, `l <= r`, `l > r`, `l >= r`, `l == r`, `l != r` on floats of
+      format `F`; an `int` `0`/`1`. -/
+  | fcmp (op : CCmp) (F : Gleitkomma.Format) (l r : CX)
+  /-- `(double)(e)` / the implicit conversion of an integer of type `t` to a
+      float of format `F`. -/
+  | fvon (F : Gleitkomma.Format) (t : CIT) (e : CX)
+  /-- `isfinite(e)` (`<math.h>`, the lowering of `narrow x to finite`). -/
+  | fin (F : Gleitkomma.Format) (e : CX)
   deriving Repr
 
 variable (L : CLayout) (orc : DevOrc) (fr : Nat)
@@ -618,6 +680,31 @@ def ev : CX → CSt → CLok → Option (CVal × CSt)
       | some q => some (.ptr q, st)
       | none => none
   | .trap, _, _ => none
+  | .fbin op F l r, st, ρ =>
+      match ev l st ρ with
+      | some (.int a, st1) =>
+          match ev r st1 ρ with
+          | some (.int b, st2) => some (.int (cFloatBin op F a b), st2)
+          | _ => none
+      | _ => none
+  | .fcmp op F l r, st, ρ =>
+      match ev l st ρ with
+      | some (.int a, st1) =>
+          match ev r st1 ρ with
+          | some (.int b, st2) => some (.int (b2i (cFloatCmp op F a b)), st2)
+          | _ => none
+      | _ => none
+  | .fvon F t e, st, ρ =>
+      match ev e st ρ with
+      | some (.int a, st1) =>
+          match conv t a with
+          | some a' => some (.int (cFloatVonInt F a'), st1)
+          | none => none
+      | _ => none
+  | .fin F e, st, ρ =>
+      match ev e st ρ with
+      | some (.int a, st1) => some (.int (b2i (cFloatEndlich F a)), st1)
+      | _ => none
 
 /-- Memory and liveness of two states agree: what every correspondence
     reads. Expressions change neither. -/
@@ -879,6 +966,44 @@ theorem ev_same : ∀ (c : CX) (st : CSt) (ρ : CLok) (v : CVal) (st' : CSt),
       · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact SameML.refl _
       · exact absurd h (by simp)
   | trap => intro st ρ v st' h; simp [ev] at h
+  | fbin op F l r ihl ihr =>
+      intro st ρ v st' h
+      simp only [ev] at h
+      split at h
+      · rename_i a st1 hl
+        split at h
+        · rename_i b st2 hr
+          simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
+          exact (ihl _ _ _ _ hl).trans (ihr _ _ _ _ hr)
+        · exact absurd h (by simp)
+      · exact absurd h (by simp)
+  | fcmp op F l r ihl ihr =>
+      intro st ρ v st' h
+      simp only [ev] at h
+      split at h
+      · rename_i a st1 hl
+        split at h
+        · rename_i b st2 hr
+          simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
+          exact (ihl _ _ _ _ hl).trans (ihr _ _ _ _ hr)
+        · exact absurd h (by simp)
+      · exact absurd h (by simp)
+  | fvon F t e ih =>
+      intro st ρ v st' h
+      simp only [ev] at h
+      split at h
+      · rename_i a st1 he
+        split at h
+        · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact ih _ _ _ _ he
+        · exact absurd h (by simp)
+      · exact absurd h (by simp)
+  | fin F e ih =>
+      intro st ρ v st' h
+      simp only [ev] at h
+      split at h
+      · rename_i a st1 he
+        simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact ih _ _ _ _ he
+      · exact absurd h (by simp)
 
 /-! ## 5. The statements of the emitted subset -/
 

@@ -51,8 +51,21 @@ def Format.bexpMax (F : Format) : Nat := 2 * F.emax + 1
 /-- Stored significand bits (the hidden leading one excluded). -/
 def Format.fracBits (F : Format) : Nat := F.p - 1
 
-/-- Exponent field width: `8` for binary32, `11` for binary64. -/
-def Format.ebits (F : Format) : Nat := Nat.log2 (F.bexpMax + 1)
+/-- Bit length by fuel recursion (structural on `fuel`, so kernel-reducible):
+    `bitlenAux n fuel` is exact whenever `fuel ≥ bitlen n`. -/
+def bitlenAux : Nat → Nat → Nat
+  | _, 0 => 0
+  | n, fuel + 1 => if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel
+
+/-- Bit length of `n` (`0` for `n = 0`). -/
+def bitlen (n : Nat) : Nat := bitlenAux n n
+
+/-- Exponent field width: `8` for binary32, `11` for binary64 -- the bit
+    length of `bexpMax`. (Lane 166 wrote `Nat.log2 (bexpMax + 1)`; `Nat.log2`
+    is well-founded recursion, and the KERNEL, forced to evaluate it inside a
+    defeq check over a stuck float, recursed out of its stack -- measured
+    2026-09-14 in `CFormenF.lean`. `bitlen` is structural.) -/
+def Format.ebits (F : Format) : Nat := bitlen F.bexpMax
 
 /-- The five IEEE cases, as data. -/
 inductive Klasse where
@@ -108,15 +121,6 @@ def wertExakt (F : Format) (g : GBits F) : Option Exakt :=
       F.emin - ((F.p : Int) - 1)⟩
   | .null => some ⟨0, 0⟩
   | _ => none
-
-/-- Bit length by fuel recursion (structural on `fuel`, so kernel-reducible):
-    `bitlenAux n fuel` is exact whenever `fuel ≥ bitlen n`. -/
-def bitlenAux : Nat → Nat → Nat
-  | _, 0 => 0
-  | n, fuel + 1 => if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel
-
-/-- Bit length of `n` (`0` for `n = 0`). -/
-def bitlen (n : Nat) : Nat := bitlenAux n n
 
 /-- Round-half-to-even at the integer level: `quo` with remainder `rest/den`
     (`0 ≤ rest < den`, `0 < den`) rounds up iff past half, or on an exact tie

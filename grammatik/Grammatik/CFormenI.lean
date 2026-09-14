@@ -86,7 +86,9 @@ def ValCorr (EL : EmitLay D) : (τ : Ty) → Wert D τ → CVal → Prop
   | .ptr n _, _, c => ∃ t, D.tabNr n = some t ∧ c = .ptr ⟨.tab (EL.tnr t), 0⟩
   | .sum _, _, _ => False
   | .never, _, _ => False
-  | .fl _ _, _, _ => False
+  | .fl _ _, v, c =>
+      c = .int (fEin Gleitkomma.f64 (show Gleit _ _ from v).x)
+        ∧ Gleitkomma.wf Gleitkomma.f64 (show Gleit _ _ from v).x
   | .fnptr _, _, _ => False
 
 theorem ValCorr.ne_undef {EL : EmitLay D} {τ : Ty} {v : Wert D τ}
@@ -963,7 +965,7 @@ theorem convV_of_valCorr {EL : EmitLay D} {τ : Ty} {v : Wert D τ} {c : CVal} {
       exact convV_of_valFits _ _ (encW_fits _ _ v hd)
   | sum cs => exact h.elim
   | never => exact h.elim
-  | fl lo hi => exact h.elim
+  | fl lo hi => exact absurd hd (by cases τc <;> simp [declOk, tyFits])
   | fnptr s => exact h.elim
 
 section Anweisung
