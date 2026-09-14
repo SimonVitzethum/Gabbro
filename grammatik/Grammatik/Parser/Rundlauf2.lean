@@ -673,4 +673,56 @@ theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token) (F : Nat),
   exact ⟨hP F (by omega), hU F (by omega), hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
+-- Concrete op-table and benign-follow facts for the `+`
+-- inner trace (probe piece: each must close by kernel
+-- evaluation on the concrete head; tails stay variable).
+theorem opMul_plus : ∀ (T : List Token),
+    opMul ([.zeichen "+"] ++ T) = none := by
+  intro T
+  rfl
+theorem opAdd_plus : ∀ (T : List Token),
+    opAdd ([.zeichen "+"] ++ T) = some ("+", T) := by
+  intro T
+  rfl
+theorem opAdd_paren : ∀ (T : List Token),
+    opAdd ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+theorem opBit_paren : ∀ (T : List Token),
+    opBit ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+theorem opVgl_paren : ∀ (T : List Token),
+    opVgl ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+theorem opUnd_paren : ∀ (T : List Token),
+    opUnd ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+theorem opOder_paren : ∀ (T : List Token),
+    opOder ([.zeichen ")"] ++ T) = none := by
+  intro T
+  rfl
+theorem hrs_plus : ∀ (T : List Token),
+    ruhigSuff ([.zeichen "+"] ++ T) = true := by
+  intro T
+  rfl
+theorem hrg_plus : ∀ (T : List Token),
+    ruhigGleit ([.zeichen "+"] ++ T) = true := by
+  intro T
+  rfl
+theorem hr_paren : ∀ (T : List Token),
+    ruhig ([.zeichen ")"] ++ T) = true := by
+  intro T
+  rfl
+theorem hrs_paren : ∀ (T : List Token),
+    ruhigSuff ([.zeichen ")"] ++ T) = true := by
+  intro T
+  rfl
+theorem hrg_paren : ∀ (T : List Token),
+    ruhigGleit ([.zeichen ")"] ++ T) = true := by
+  intro T
+  rfl
+
 end Gabbro.Grammatik.Parser
