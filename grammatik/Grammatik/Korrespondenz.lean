@@ -473,4 +473,154 @@ theorem rblock_sound {D : Deklaration} {V : Vertrag D} (X : TVCtx D)
       exact BlockCorr.cons (scorr_traverse X _ _ _ hK hf tb t hN0 hN hiC hhi inv _ _ hB hw)
         (ihRest hpp hks hFreshR hTravR)
 
+/-- THE ROW DERIVATION for a terminal block (`Endblock`, a function
+    body): the same form families as `RBlock`, ending in `ret`/`retEnd`.
+    There is no `bindCall` row: `Endblock` has no `bindCall`, so a
+    trailing call-with-result is a named refusal (see CUTS). -/
+inductive REnd {D : Deklaration} (X : TVCtx D) {V : Vertrag D} (top : Bool) :
+    (m : Nat) → (l : Bool) → {Γ : Ctx} → {Λ : List (Res D)} → CEnvLay D Γ →
+    Endblock D V l Γ Λ → List GRow → CS → Prop where
+  | retEnd {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {r : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
+      (htop : top = true) (hV : V.erg = none) :
+      REnd X top m l K (.ret r hΛ) [] .skip
+  | ret {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {r : ErgExpr D Γ Λ V.erg} {cr : Option (CTy × CX)}
+      (hΛ : Λ.Perm V.ende) (h : ErgCorr X K r cr) :
+      REnd X top m l K (.ret r hΛ) [.ret cr] (.ret cr)
+  | eConsSetVar {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {τ : Ty}
+      {x : Var Γ τ} {e : Expr D Γ Λ τ} {ce : CX} {τc : CTy}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (he : ExprCorr X K ce e) (hd : declOk τ τc = true)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.assignVar x e) rest)
+        ((.setVar (K.loc x) τc ce) :: rs) (.seq (.set (K.loc x) τc ce) cr)
+  | eConsSetOpAdd {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {lo hi lo' hi' : Int} {x : Var Γ (.int lo hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h1 : lo ≤ lo + lo') (h2 : hi + hi' ≤ hi)
+      (he : ExprCorr X K ce e) (hta : t.holds lo hi) (htb : t.holds lo' hi')
+      (htr : t.holds (lo + lo') (hi + hi')) (hd : declOk (.int lo hi) τc = true)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.plusGleich x e h1 h2) rest)
+        ((.setOp (K.loc x) τc .add t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .add t (.var (K.loc x)) ce)) cr)
+  | eConsSetOpSub {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {lo hi lo' hi' : Int} {x : Var Γ (.int lo hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h1 : lo ≤ lo - hi') (h2 : hi - lo' ≤ hi)
+      (he : ExprCorr X K ce e) (hta : t.holds lo hi) (htb : t.holds lo' hi')
+      (htr : t.holds (lo - hi') (hi - lo')) (hd : declOk (.int lo hi) τc = true)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.minusGleich x e h1 h2) rest)
+        ((.setOp (K.loc x) τc .sub t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .sub t (.var (K.loc x)) ce)) cr)
+  | eConsSetOpAnd {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {hi lo' hi' : Int} {x : Var Γ (.int 0 hi)} {e : Expr D Γ Λ (.int lo' hi')}
+      {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h0' : 0 ≤ lo')
+      (he : ExprCorr X K ce e) (hta : t.holds 0 hi) (htb : t.holds lo' hi')
+      (hd : declOk (.int 0 hi) τc = true)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.undGleich x e h0') rest)
+        ((.setOp (K.loc x) τc .band t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .band t (.var (K.loc x)) ce)) cr)
+  | eConsSetOpOr {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {w : Nat} {lo' hi' : Int} {x : Var Γ (.int 0 (2 ^ w - 1))}
+      {e : Expr D Γ Λ (.int lo' hi')} {ce : CX} {t : CIT} {τc : CTy}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (h0' : 0 ≤ lo') (hw' : hi' < 2 ^ w)
+      (he : ExprCorr X K ce e) (hta : t.holds 0 (2 ^ w - 1)) (htb : t.holds lo' hi')
+      (hd : declOk (.int 0 (2 ^ w - 1)) τc = true)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.oderGleich w x e h0' hw') rest)
+        ((.setOp (K.loc x) τc .bor t ce) :: rs)
+        (.seq (.set (K.loc x) τc (.bin .bor t (.var (K.loc x)) ce)) cr)
+  | eConsStoreSlotParam {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {kp : Nat} {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
+      {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
+      {ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {hw : V.schreibt t = true} {hL : darf D t Λ}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hk : (kp, t) ∈ K.pp)
+      (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
+      (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
+      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
+        ((.storeSlot kp ip n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.var kp) (.var ip) n ss off) τc ce) cr)
+  | eConsStoreSlotNamed {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {t : D.Tab} {f : D.Feld t} {hgt : D.geist t = false}
+      {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
+      {tn ip n ss off : Nat} {τc : CTy} {ce : CX}
+      {hw : V.schreibt t = true} {hL : darf D t Λ}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (htn : tn = X.EL.tnr t)
+      (hn : n = (X.EL.trec t).count) (hss : ss = (X.EL.trec t).ssize)
+      (hoff : off = (X.EL.trec t).off (X.EL.fnr t f)) (hty : τc = X.EL.slotTy t f)
+      (hi : ExprCorr X K (.var ip) i) (he : ExprCorr X K ce e)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.assignSlot (l := l) t f i e hw hL) rest)
+        ((.storeNamed tn ip n ss off τc ce) :: rs)
+        (.seq (.store (.slotA (.addr (.tab tn)) (.var ip) n ss off) τc ce) cr)
+  | eConsStoreGlob {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {g : D.Glob} {hgg : D.ggeist g = false} {hat : D.atomar g = false}
+      {e : Expr D Γ Λ (D.gtyp g)} {gn : Nat} {τc : CTy} {ce : CX}
+      {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+      {rest : Endblock D V l Γ Λ} {rs : List GRow} {cr : CS}
+      (hgn : gn = X.EL.gnr g) (hty : τc = X.EL.gty g)
+      (he : ExprCorr X K ce e)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.assignGlob (l := l) g e hw hL) rest)
+        ((.storeGlob gn τc ce) :: rs)
+        (.seq (.store (.addr (.glob gn)) τc ce) cr)
+  | eBindLet {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {τ : Ty}
+      {e : Expr D Γ Λ τ} {rest : Endblock D V l (τ :: Γ) Λ}
+      {x : Nat} {τc : CTy} {ce : CX} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true) (he : ExprCorr X K ce e) (hd : declOk τ τc = true)
+      (hr : REnd X top m l (K.push τ x) rest rs cr) :
+      REnd X top m l K (.bind e rest) ((.bindLet x τc ce) :: rs)
+        (.seq (.set x τc ce) cr)
+  | ePreVoid {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ}
+      {b : Endblock D V l Γ Λ} {τ0 : Ty} {e0 : Expr D Γ Λ τ0} {x : Nat}
+      {rs : List GRow} {cr : CS}
+      (he : ExprCorr X K (.var x) e0) (hr : REnd X top m l K b rs cr) :
+      REnd X top m l K b ((.void x) :: rs) (.seq (.expr (.var x)) cr)
+  | eConsCall {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {f : D.Fn}
+      {args : Args D Γ Λ (D.params f)} {hp : RufPasst D V (D.signatur f) Λ}
+      {hrp : D.gruende f = 0} {rest : Endblock D V l Γ (nach D f Λ)}
+      {fc : Nat} {cargs : List CX} {ps : List (Nat × CTy)} {Kf : CEnvLay D (D.params f)}
+      {rs : List GRow} {cr : CS}
+      (hF : FnCorr X.EL X.R X.CR f fc ps Kf) (hA : ArgsTo X K args cargs ps Kf)
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.call (l := l) f args hp hrp) rest)
+        ((.call fc cargs none) :: rs) (.seq (.call fc cargs none) cr)
+  | eConsIte {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ}
+      {c : Expr D Γ Λ .bool} {t e : Block D V l Γ Λ Λ'}
+      {rest : Endblock D V l Γ Λ'} {cc : CX}
+      {tRows eRows : List GRow} {rs : List GRow} {cr : CS}
+      (hc : ExprCorr X K cc c)
+      (ht : RBlock X m l K t tRows (growsCS tRows .skip))
+      (he : RBlock X m l K e eRows (growsCS eRows .skip))
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.ite c t e) rest)
+        ((.ite cc tRows eRows) :: rs) (.seq (growRow (.ite cc tRows eRows)) cr)
+  | eConsTrav {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} {tb : D.Tab}
+      {t : CIT} {hN0 : 0 ≤ D.count tb} {hN : t.holds 0 (D.count tb)} {hiC : CX}
+      {hhi : ∀ st ρ, ev X.EL.lay X.orc X.fr hiC st ρ = some (.int (D.count tb), st)}
+      {inv : Expr D Γ Λ .bool} {body : Block D V true (.index (D.count tb) :: Γ) Λ Λ}
+      {bodyRows : List GRow} {rest : Endblock D V l Γ Λ}
+      {m' x : Nat} {rs : List GRow} {cr : CS}
+      (hK : K.okB = true)
+      (hb : RBlock X m' true (K.push (.index (D.count tb)) x) body bodyRows
+        (growsCS bodyRows .skip))
+      (hr : REnd X top m l K rest rs cr) :
+      REnd X top m l K (.cons (Stmt.traverse (l := l) tb inv body) rest)
+        ((.forTrav x t hiC bodyRows m') :: rs)
+        (.seq (CS.forUp x t (.lit 0) hiC (growsCS bodyRows .skip) m') cr)
+
 end Gabbro.Grammatik
