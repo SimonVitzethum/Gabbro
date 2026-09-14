@@ -207,6 +207,20 @@ struct Namen {
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
+    /// **Every name this function binds as a VALUE (lane 167): parameters, `let`s,
+    /// `let … else` names and error names, `match` binders, `traverse` variables,
+    /// `alloc` indices, `awaits` and `exchange` bindings.**
+    ///
+    /// A bare `tagged` case (`Leer`) lowers to a compound literal -- unless the name
+    /// means something else here. The unit-wide maps cannot answer that: a `let`
+    /// shadows only inside its own function, and a `match` binder only inside its
+    /// own arm. So the shadowing question is asked against this per-function set,
+    /// filled in `eigene_sicht`, and not against the unit. The residual -- a name
+    /// bound in one arm and read bare as a case in another -- stays loud: the
+    /// checker types it as the case, this set withholds the literal, and `cc`
+    /// names the undeclared identifier. It is booked, not closed (same class as
+    /// the lane-152 `match`-binder atomic note).
+    schatten: BTreeSet<String>,
     /// **The names an enclosing `traverse` bound** -- see `laufsicht` (2026-08-31).
     ///
     /// Every lowered loop variable is an index word: `uint32_t i` or `uint64_t i`. It names
@@ -2127,6 +2141,23 @@ pub fn emittiere_mit(
             if let TypExpr::Pfad(p) = &st.typ {
                 if let Some(n) = p.teile.last() {
                     if namen.markierte.contains_key(&n.text) || namen.verbunde.contains(&n.text) {
+                        // **Lane 167: `static N : Nachricht = Kurz(5);` -- the brace form.**
+                        //
+                        // A compound literal is no constant expression, so the file-scope
+                        // initializer spells the same designators `ruf` writes in braces.
+                        // The payload must be translation-time constant -- the same gate
+                        // the number path below holds; anything else falls through to the
+                        // `C001` beside it, which then names the constantness, not the case.
+                        if namen.markierte.contains_key(&n.text) {
+                            if let Some(init) = varianten_statisch(&st.wert, &n.text, &namen, absagen) {
+                                let (konst, abschnitt) = statischer_kopf(st, absagen);
+                                aus.push_str(&format!(
+                                    "\nstatic {konst}{} {}{abschnitt} __attribute__((unused)) = {init};\n",
+                                    n.text, st.name.text
+                                ));
+                                return;
+                            }
+                        }
                         // **A brace initialiser, not a compound literal.** `ruf` writes
                         // `(P){ .a = 1 }` -- an lvalue with static storage duration, which C11
                         // 6.7.9p4 does not admit as an initialiser for a static object. At file
@@ -6596,6 +6627,13 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
         im_block(b, u, &mut gefunden, &eigene);
         lokal = gefunden;
         lokale_lets(b, &mut lokal);
+        // **Lane 167: every value this function binds, for the bare-case question.**
+        // Parameters first -- a parameter shadows any unit-wide reading of its name,
+        // the same rule the loop above follows for the device maps.
+        for p in &f.parameter {
+            lokal.schatten.insert(p.name.text.clone());
+        }
+        gebundene_namen(b, &mut lokal.schatten);
     }
     lokal
 }
@@ -6650,6 +6688,54 @@ fn sammle_lets<'a>(
         }
         for k in crate::unterbloecke(s) {
             sammle_lets(k, aus, allocs, wieoft);
+        }
+    }
+}
+
+/// **Every name a block binds as a value (lane 167)** -- `let`, `let … else` (plus
+/// the error name), `match` binders, `traverse` variables, `alloc` indices, `awaits`
+/// and `exchange` bindings. Read through `unterbloecke`, so a binding in a nested
+/// block counts: the set has no scopes, and a name bound anywhere withholds the
+/// bare-case literal everywhere in the function. Where the checker still types the
+/// bare name as the case (bound in one arm, read in another), the product names an
+/// undeclared identifier and `cc` says so -- loud, and booked in the sentence.
+/// Loop labels (`retry`/`forever` marks) bind no value and stay out: they lower to
+/// `marke_weiter`-style C labels, which share nothing with a case literal.
+fn gebundene_namen(b: &Block, aus: &mut BTreeSet<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => {
+                aus.insert(l.name.text.clone());
+            }
+            StmtArt::LetSonst(l) => {
+                aus.insert(l.name.text.clone());
+                aus.insert(l.fehlername.text.clone());
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    if let Some(binder) = &z.binder {
+                        aus.insert(binder.text.clone());
+                    }
+                }
+            }
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(x) = sch.as_ref() {
+                    aus.insert(x.variable.text.clone());
+                }
+            }
+            StmtArt::Alloc(a) => {
+                aus.insert(a.name.text.clone());
+            }
+            StmtArt::AwaitLoad(a) => {
+                aus.insert(a.name.text.clone());
+            }
+            StmtArt::Exchange(e) => {
+                aus.insert(e.name.text.clone());
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            gebundene_namen(k, aus);
         }
     }
 }
@@ -12115,8 +12201,24 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
         // declaration and from no other.*
         ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
             Some(t) => ctyp(t, u),
+            // **Lane 167: a bare nullary case answers its sum for an unannotated
+            // `let`.** `let m = Leer;` carries no annotation, so the C type comes
+            // from the value -- through the same guard `ort` reads, and only for
+            // the nullary form (a bare name over a payload case is the checker's
+            // `N283`, and this arm never runs on an accepted tree for one).
             None => ort_typ(o, u)
                 .and_then(|t| ctyp(&t, u))
+                .or_else(|| {
+                    if fall_belegt(&o.basis.text, u) {
+                        return None;
+                    }
+                    match varianten_traeger(&o.basis.text, u) {
+                        VariantenDeutung::Eine(summe, v) if v.nutzlast.is_none() => {
+                            Some(summe.to_string())
+                        }
+                        _ => None,
+                    }
+                })
                 .or_else(|| u.lokaltyp.get(&o.basis.text).cloned()),
         },
         ExprArt::Ort(o) => ort_typ(o, u)
@@ -12175,6 +12277,23 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             }
             // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
             // Zeit da; gefragt hat ihn niemand.
+            //
+            // **Lane 167: a `tagged` case answers its owning sum.** `let m = Kurz(x)`
+            // without an annotation needs a C type from the value, and the case is
+            // not a callee -- `u.funktionen` below knows nothing of it. The guard is
+            // the checker's function-wins rule without the module half (same reason
+            // as in `ruf` above); several owners answer nothing, like any
+            // unresolvable `let` value.
+            if r.path().is_some_and(|p| p.teile.len() == 1)
+                && !r.ist_verbundwert()
+                && !u.funktionen.contains_key(n)
+                && !u.uebergaenge.contains_key(n)
+                && !u.geraete.contains_key(n)
+            {
+                if let VariantenDeutung::Eine(summe, _) = varianten_traeger(n, u) {
+                    return Some(summe.to_string());
+                }
+            }
             ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
         }
         // **Lane E5:** a library call in binding position answers its
@@ -12420,6 +12539,145 @@ fn bibliothek_ruf(
     Some(format!("{}({})", r.function.text, args.join(", ")))
 }
 
+/// **Which `tagged` type owns this bare variant name (lane 167), if exactly one does.**
+///
+/// The emitter's maps are bare-keyed and unit-wide, while the checker's resolution
+/// is module-aware: where the checker accepts, exactly one declaration owns the
+/// name visibly -- but the unit may hold a second, invisible one. Guessing between
+/// them would lower a different case list than the checker typed, so several owners
+/// refuse (`C001`) instead. `None` is not a refusal: the name is no case here, and
+/// the ordinary call lowering answers it (which is where `H021` shapes land -- the
+/// checker has already spoken over them, and this arm never runs on an accepted tree
+/// for one).
+enum VariantenDeutung<'a> {
+    Keine,
+    Eine(&'a str, &'a Variante),
+    Mehrere,
+}
+
+fn varianten_traeger<'a>(name: &str, u: &'a Namen) -> VariantenDeutung<'a> {
+    let mut treffer = Vec::new();
+    for (summe, varianten) in &u.markierte {
+        if varianten.iter().any(|v| v.name.text == name) {
+            treffer.push((summe.as_str(), varianten));
+        }
+    }
+    match treffer.len() {
+        0 => VariantenDeutung::Keine,
+        1 => {
+            let (summe, varianten) = treffer.pop().unwrap();
+            match varianten.iter().find(|v| v.name.text == name) {
+                Some(v) => VariantenDeutung::Eine(summe, v),
+                None => VariantenDeutung::Keine,
+            }
+        }
+        _ => VariantenDeutung::Mehrere,
+    }
+}
+
+/// **Whether a bare name already means something in this view (lane 167).**
+///
+/// The checker's value-namespace rule (`m1.rs`, bare-case arm), read against the
+/// emitter's maps: function-scoped bindings (`schatten`); the declared values
+/// (`statiken`, folded constants, atomics, accumulators, tables, arenas);
+/// declared functions; integer words and their sugar (which never name a case --
+/// `return u13;` stays `M119`'s on both sides). Devices, formats and reasons are
+/// NOT excluded: the checker knows none of them as a value either, so a bare
+/// name over one draws `M119` there and the case here, on a refused tree in both
+/// cases. Anything bound wins, and the case is unreachable behind it -- one
+/// predicate, read by `ort` and by `wert_ctyp`, so a bare case never lowers in
+/// one and stays a name in the other.
+fn fall_belegt(name: &str, u: &Namen) -> bool {
+    u.schatten.contains(name)
+        || u.funktionen.contains_key(name)
+        || u.statiken.contains_key(name)
+        || u.konstwert.contains_key(name)
+        || u.konstanten.contains(name)
+        || u.atomics.contains_key(name)
+        || u.akkus.contains(name)
+        || u.arenen.contains_key(name)
+        || u.tabellen.iter().any(|t| t == name)
+        || gabbro_syntax::kw::Kw::suche(name).is_some_and(|k| k.ist_intty())
+        || gabbro_syntax::zucker_speicher(name).is_some()
+}
+
+/// **A `tagged` case as a file-scope initializer (lane 167).**
+///
+/// `{ .marke = Nachricht_Kurz, .last.Kurz = 5 }` -- the brace spelling of what `ruf`
+/// writes as a compound literal in bodies. Only constant payloads lower: a number
+/// through `czahl_oder_absage` (the same suffix rule as the number path), a bare
+/// `const` name through its folded value. Anything else answers `None`, and the
+/// caller keeps its `C001` -- a static initializer is a constant expression, and a
+/// runtime value there is not one the emitter invents.
+fn varianten_statisch(wert: &Expr, summe: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    match &wert.art {
+        ExprArt::Klammer(x) => varianten_statisch(x, summe, u, absagen),
+        ExprArt::Ruf(r) => {
+            let pf = r.path()?;
+            if pf.teile.len() != 1 || r.ist_verbundwert() {
+                return None;
+            }
+            let name = pf.teile[0].text.clone();
+            if u.funktionen.contains_key(&name)
+                || u.uebergaenge.contains_key(&name)
+                || u.geraete.contains_key(&name)
+            {
+                return None;
+            }
+            let VariantenDeutung::Eine(eigen, v) = varianten_traeger(&name, u) else {
+                return None;
+            };
+            if eigen != summe {
+                return None;
+            }
+            match (&v.nutzlast, r.argumente.len()) {
+                (None, 0) => Some(format!("{{ .marke = {summe}_{name} }}")),
+                (Some(_), 1) => {
+                    let c = statische_nutzlast(&r.argumente[0], u, absagen)?;
+                    Some(format!("{{ .marke = {summe}_{name}, .last.{name} = {c} }}"))
+                }
+                _ => None,
+            }
+        }
+        ExprArt::Ort(o) => {
+            if !o.suffixe.is_empty() {
+                return None;
+            }
+            let name = o.basis.text.clone();
+            // The checker's value-namespace rule through the one predicate both
+            // expression arms read (`fall_belegt`): at file scope `schatten` is
+            // empty, so this is the unit's value maps alone.
+            if fall_belegt(&name, u) {
+                return None;
+            }
+            let VariantenDeutung::Eine(eigen, v) = varianten_traeger(&name, u) else {
+                return None;
+            };
+            if eigen != summe || v.nutzlast.is_some() {
+                return None;
+            }
+            Some(format!("{{ .marke = {summe}_{name} }}"))
+        }
+        _ => None,
+    }
+}
+
+/// **A translation-time constant payload for a file-scope case initializer.**
+fn statische_nutzlast(a: &Expr, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    match &a.art {
+        ExprArt::Zahl(n) => Some(czahl_oder_absage(*n, a.span, absagen)),
+        ExprArt::Klammer(x) => statische_nutzlast(x, u, absagen),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            let w = u.konstwert.get(&o.basis.text).copied()?;
+            Some(match u128::try_from(w) {
+                Ok(n) => czahl_oder_absage(n, a.span, absagen),
+                Err(_) => w.to_string(),
+            })
+        }
+        _ => None,
+    }
+}
+
 /// **A call, with the ghost arguments dropped.** The positions come from the callee's
 /// signature; an unknown callee keeps every argument, which cannot compile silently — it
 /// fails at `cc`, and that is the direction to fail in.
@@ -12492,6 +12750,67 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         && r.path().is_some_and(|p| p.teile.len() == 1)
     {
         return intrinsik_c(&name, r, u, absagen);
+    }
+    // **Lane 167: `Variant(payload)` lowers to the compound literal the `match`
+    // reads.** `(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = (x) }` -- the
+    // same designators `match_markiert` reads back (`.marke`, `.last.{case}`), so
+    // construction and matching agree field for field. A nullary case takes no
+    // payload arm: there is no union member for it, and an empty initializer
+    // list is not writable -- the mark alone says which case it is.
+    //
+    // The order is the checker's (`Umgebung::ist_variantenkonstruktor` without the
+    // module half, which this unit-wide map cannot ask): conversions and
+    // intrinsics above cannot be cases (no keyword spelling declares one, and the
+    // sugar spelling converts); a declared function, transition, device handle or
+    // format head wins over a case of the same name, exactly as in `m1.rs`. What the checker
+    // refused (`N281`/`N282`/`N284`, several owners) refuses here too, by name --
+    // the emitter runs on the parsed tree and never consults the passes, so the
+    // backstop is load-bearing for the `-- erwartet: … allein` counterfactual.
+    if let Some(pf) = r.path() {
+        if pf.teile.len() == 1 && !r.ist_verbundwert() {
+            let name = pf.teile[0].text.clone();
+            if !u.funktionen.contains_key(&name)
+                && !u.uebergaenge.contains_key(&name)
+                && !u.geraete.contains_key(&name)
+                && !u.formate.contains(&name)
+            {
+                match varianten_traeger(&name, u) {
+                    VariantenDeutung::Eine(summe, v) => {
+                        let marke = format!("{summe}_{name}");
+                        match (&v.nutzlast, r.argumente.len()) {
+                            (None, 0) => {
+                                return format!("({summe}){{ .marke = {marke} }}");
+                            }
+                            (Some(_), 1) => {
+                                return format!(
+                                    "({summe}){{ .marke = {marke}, .last.{name} = {} }}",
+                                    ausdruck(&r.argumente[0], u, absagen)
+                                );
+                            }
+                            _ => {
+                                weigere(
+                                    absagen,
+                                    r.span,
+                                    "`tagged` case construction with the wrong number of \
+                                     arguments -- a case carries exactly its declared payload",
+                                );
+                                return String::new();
+                            }
+                        }
+                    }
+                    VariantenDeutung::Mehrere => {
+                        weigere(
+                            absagen,
+                            r.span,
+                            "`tagged` case construction naming a case of several `tagged` \
+                             types -- the case index is read off one case list",
+                        );
+                        return String::new();
+                    }
+                    VariantenDeutung::Keine => {}
+                }
+            }
+        }
     }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
@@ -12887,6 +13206,43 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
              sentinel is `count` itself (beweise/Option_Sonderwert.thy), so it needs the table",
         );
         return String::new();
+    }
+    // **Lane 167: a bare nullary case lowers to the compound literal with the mark
+    // alone.** `Leer` is `(Nachricht){ .marke = Nachricht_Leer }` -- the same value
+    // `Leer()` builds one arm up in `ruf`. The shadowing question is asked against
+    // the per-function set (`schatten`: parameters, `let`s, `match` binders and
+    // the rest) and the unit's value maps, mirroring the checker's value-namespace
+    // rule: anything already bound wins, and the case is unreachable behind it. A
+    // bare name over a case WITH payload is the checker's `N283`; here it is the
+    // backstop `C001`, for the same counterfactual reason as in `ruf` above.
+    if o.suffixe.is_empty() {
+        let name = o.basis.text.clone();
+        if !fall_belegt(&name, u) {
+            match varianten_traeger(&name, u) {
+                VariantenDeutung::Eine(summe, v) if v.nutzlast.is_none() => {
+                    return format!("({summe}){{ .marke = {summe}_{name} }}");
+                }
+                VariantenDeutung::Eine(_, _) => {
+                    weigere(
+                        absagen,
+                        o.span,
+                        "`tagged` case with a payload standing as a bare name -- a bare \
+                         name carries no payload",
+                    );
+                    return String::new();
+                }
+                VariantenDeutung::Mehrere => {
+                    weigere(
+                        absagen,
+                        o.span,
+                        "`tagged` case naming a case of several `tagged` types -- the case \
+                         index is read off one case list",
+                    );
+                    return String::new();
+                }
+                VariantenDeutung::Keine => {}
+            }
+        }
     }
     // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
     // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an

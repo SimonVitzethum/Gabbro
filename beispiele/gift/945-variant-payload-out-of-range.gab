@@ -1,0 +1,20 @@
+-- erwartet: M101
+-- **The construction is well-formed, the payload is not -- `x` leaves the case range.**
+--
+-- The arity is the constructor's own (exactly one payload, and one stands here),
+-- so no constructor rule fires. What fires is the ordinary range rule: the case
+-- carries `u32 in 0 .. 100`, the argument carries the full `u32`, and `passt`
+-- holds the one against the other exactly as at any other binding. A payload out
+-- of range is a range refusal, not a constructor refusal.
+module gift::variant_payload_out_of_range {
+
+tagged type Nachricht = { Leer, Kurz(u32 in 0 .. 100) };
+
+impl fn baue(x : u32) -> Nachricht
+    effects { pure }
+    costs   <= 8 ops
+{
+    return Kurz(x);
+}
+
+}

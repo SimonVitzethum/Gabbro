@@ -1,0 +1,23 @@
+-- erwartet: N280
+-- **A case two sums share -- `Kurz(x)` names its case, not its type.**
+--
+-- Until lane 167 this file pinned the refusal of the construction itself
+-- (`H021` over `Kurz(x)` -- M1 left the callee untyped, the graph found no
+-- edge). The construction is legal now, so the file moved one step over: two
+-- `tagged` types declare `Kurz`, and the case index the model carries
+-- (`Expr.fall cs i nutz`) is read off ONE case list -- with two lists there is
+-- no index. The refusal names both owners; resolving by order or by the
+-- expected type would be a second truth beside the declaration.
+module gift::ambiguous_variant_construction {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+tagged type Antwort = { Nein, Kurz(u32) };
+
+impl fn baue(x : u32) -> Nachricht
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Kurz(x);
+}
+
+}

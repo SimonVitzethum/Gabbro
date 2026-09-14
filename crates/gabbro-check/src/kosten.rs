@@ -1091,6 +1091,20 @@ impl<'a> Rechner<'a> {
             .map(|i| i.text.clone())
             .unwrap_or_default();
         let pfad_text = r.path().map(|p| p.text()).unwrap_or_default();
+        // **Lane 167: a `tagged` case construction costs one op, like `Some`.**
+        //
+        // There is no declaration to carry a `costs` clause -- a case is not a
+        // function -- so without this arm every construction falls into `K003`
+        // beside the checker's own refusal, the way the record constructor did
+        // before «B7» priced it. One op for the mark-and-payload store, plus the
+        // arguments themselves. The decision is the checker's
+        // (`ist_variantenkonstruktor`), read here and not re-derived.
+        if self.u.ist_variantenkonstruktor(self.modul, r) {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
+        }
         // **«B35»: `Some(x)` und `None` sind KONSTRUKTOREN, keine Aufrufe.** Im Baum sind
         // sie ein `Ruf` (ein Konstruktor ist genau das), aber sie tragen keinen Vertrag und
         // koennen keinen nennen -- `costs` an `None` waere sinnlos. Die Ausnahme steht

@@ -162,7 +162,15 @@ NICHT = {"saetze.rs"}
 # `N065`'s three, similarity 0.35. The five-code budget of the lane
 # (230-234, all taken) leaves no number for a split; whoever finds a sixth
 # splits `N233` and may lower both marks.
-MARKE = 29
+# **29 -> 32 on 2026-09-14 (lane 167, recomputed to actuals, not incremented).**
+# The run says 32 against a booked 29: two are wave drift (31 on the unchanged
+# tree), and one is mine -- `N280` with six issuance sites in `m1.rs` over three
+# readings (a case shared with a function, a case shared by two sums, an
+# unknown case; each in call and bare form), similarity 0.25, one resolution
+# rule like `N214`'s three faces above. The five-code budget of the lane
+# (280-284, all taken) leaves no number for a split; whoever finds a fourth
+# reading splits `N280` and may lower both marks.
+MARKE = 32
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -271,7 +279,19 @@ MARKE = 29
 # The merged run says 84: the delta against 83 is exactly one probe --
 # `beispiele/gift/908` on the three-faced `N233` above, which falls green
 # without proving WHICH face fell, exactly like `gift/242` on `E008`.
-MARKE_PROBEN = 84
+# **84 -> 88 on 2026-09-14 (lane 167, recomputed to actuals, not incremented).**
+# The run says 88 against a booked 84: two are wave drift (86 on the unchanged
+# tree), and two are mine -- `beispiele/gift/938` (ambiguous case, two sums
+# sharing `Kurz`) and `beispiele/gift/944` (unknown case `Falsch`) on the
+# six-faced `N280` (shared-name / ambiguous / unknown x call / bare form),
+# each falling green without proving WHICH face fell, exactly like `gift/242`
+# on `E008`. One rule with three readings, like `R009`'s four above: unknown,
+# ambiguous and shared-name are three ways of failing one resolution, not three
+# rules. *And the sharp guard for each face is its own probe* -- 938 names the
+# ambiguous reading, 944 the unknown one, and the shared-name reading carries
+# the unit row `function_elsewhere_in_the_unit_blocks_the_construction` -- so a
+# broken face takes its own witness red, which the identifier alone cannot do.
+MARKE_PROBEN = 88
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

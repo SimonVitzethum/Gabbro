@@ -3229,7 +3229,13 @@ MARKE_EMIT=101
 # the merged tree. No per-file decomposition is offered here: 59 files of
 # multi-lane growth since 2026-09-03, and an invented split would be the slack
 # ratchet this mark exists against. What is booked is the measurement.
-MARKE_EMIT_M=132
+# **132 -> 133 on 2026-09-14 (lane 167, measured).** The one new emitting file is
+# named: `messung/proben/probe-tagged-wird-gebaut.gab` (`return Keine;` over
+# `tagged type Aufsatz = { Keine, Da(Nutzlast) }`) checked `M119` before this
+# lane and checks clean since -- the lane's whole point, a bare nullary case
+# now being a construction. `gabbro emit` writes 40 lines with `(Aufsatz){
+# .marke = Aufsatz_Keine }`, and `cc -Werror` takes it.
+MARKE_EMIT_M=133
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
