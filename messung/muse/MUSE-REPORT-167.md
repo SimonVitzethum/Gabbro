@@ -7,8 +7,10 @@ construction, in the smallest form consistent with the model's `fall`.
 toolchain (no `cargo` on the machine, server unreachable), so the design and
 the code below were verified by reading, with the emitted C reconstructed by
 hand and compiled under `cc`/`clang -Werror`. The toolchain came back for the
-second half, and every gate below ran green on this tree: `./cargo-pruef`
-(exit 0, 0 failing), `./emission-pruef` (ALL PASS, 247/247), `./lean-bau`
+second half, and every gate below ran on this tree: `./cargo-pruef`
+(exit 0, 0 failing), `./emission-pruef` (249/249 compile; the single FUND is
+the merge-owned `beispiele/` count, left standing on purpose -- see §4),
+`./lean-bau`
 (exit 0, 0 errors, 154 jobs), `pruefe-kennungen.py` (ALL PASS),
 `pruefe-saetze.py` (ohne-Satz 55, unmoved), `pruefe-englisch.py` (exit 0),
 `pruefe-vergabe.py` (marks rebooked, see §4). What stays red is red at base
@@ -158,13 +160,17 @@ expression), with the payload gated to translation-time constants. Unannotated
   rebuts that reading). And `Kurz(true)` falls at `M135`, not `M140`:
   `gestalt_grund` punts bool/number crossings to `M135` explicitly, so the
   shape half of a payload is `M135`-or-`M140`, never the constructor's.
-- `./emission-pruef`: ALL PASS -- 35 durchgestochen, 247 von 247 uebersetzen
-  (up from 240: the two examples join the denominator), clang accepts all 247,
-  ASan clean. The single FUND on the way was the lane's own shadow:
-  `messung/*/` emitting files went 132 -> 133, and the +1 is exactly
-  `probe-tagged-wird-gebaut.gab`, which checked `M119` before this lane and
-  checks clean since (`gabbro emit` writes 40 lines with `(Aufsatz){ .marke =
-  Aufsatz_Keine }`, `cc -Werror` takes it). Mark rebooked with the file named.
+- `./emission-pruef`: 249 von 249 uebersetzen (up from 240: the two examples
+  join the denominator), clang accepts all 249, 35 durchgestochen, ASan clean
+  -- and exactly ONE finding, by design: `FUND: 103 statt 101 emittierende
+  Dateien in beispiele/` (the two new examples). `MARKE_EMIT` is merge-owned
+  since 2026-09-13 ("From here on lanes do NOT book this mark; the merge
+  re-measures it"), so the lane leaves the FUND standing for the merge instead
+  of booking it. The `messung/*/` side went 132 -> 133 on the way there, and
+  the +1 is exactly `probe-tagged-wird-gebaut.gab`, which checked `M119`
+  before this lane and checks clean since (`gabbro emit` writes 40 lines with
+  `(Aufsatz){ .marke = Aufsatz_Keine }`, `cc -Werror` takes it) -- that mark
+  carries lane entries by precedent and is rebooked with the file named.
 - `./lean-bau`: exit 0, 0 errors, 154 jobs (no `.lean` touched). The changed
   Rust exporter exercised directly: `gabbro lean` on `120` emits
   `(.tagOf "Kurz" (some …))` for the call form and `(.tagOf "Leer" none)` for
