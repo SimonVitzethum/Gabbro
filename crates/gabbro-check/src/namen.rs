@@ -668,9 +668,9 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
 /// > 2026-08-21). *The construct that would need it does not exist in the measured code.*
 const TRAGBARE_WIRKUNGEN: [&str; 5] = ["reads", "writes", "allocs", "pure", "diverges"];
 
-/// **`N035`/`N036`/`N037` -- a function pointer type carries its contract, or it is refused.**
+/// **`N035`/`N036` -- a function pointer type carries its contract, or it is refused.**
 ///
-/// Three rules, and the first is the one the whole item turns on:
+/// Two rules, and the first is the one the whole item turns on:
 ///
 /// * **`N035` -- no `effects`, or no `costs`.** Without `effects` the effect hull ends at
 ///   every indirect call; without `costs` an indirect call costs nothing and `K001` computes
@@ -678,10 +678,14 @@ const TRAGBARE_WIRKUNGEN: [&str; 5] = ["reads", "writes", "allocs", "pure", "div
 ///   typechecked as `u32`, as `bool` and as a pointer in one file, 0 errors* (`probe/p8.gab`).
 /// * **`N036` -- an effect no pass can carry across an indirect call.** See
 ///   `TRAGBARE_WIRKUNGEN` for the table and the reason per word.
-/// * **`N037` -- a `requires` at the pointer type.** A precondition has to be checked at the
-///   call site against the caller's state; the passes that do that (`geteilt` for
-///   `Held(…)`, `m1` for the rest) are keyed by the callee's name. *Promising it here and
-///   checking it nowhere is exactly the shape this item stands against.*
+///
+/// **Lane 177 retired the third rule, `N037`.** It refused `requires`/`ensures` at the
+/// pointer type on the ground that no pass read them -- *a clause without a reader*.
+/// The reader is built now: the type's `requires` is checked at an indirect call
+/// (`N295`, m1), its `ensures` narrows the answer, and a producer `&f` owes the slot
+/// the refinement implication (kind `C` in `gabbro obligations`, hinted `N297`). What
+/// `N037` refused is carried, not dropped: `beispiele/gift/247`-`248` pin the new
+/// readings instead of the old refusal.
 fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         crate::jeder_typausdruck_im_item(item, &mut |t| {
@@ -738,35 +742,12 @@ fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 );
             }
-            // **`requires` and `ensures` are refused at a function pointer type -- and
-            // `ensures` was ADDED to this refusal on 2026-08-21, one day after the type was
-            // built.** It parsed, it stood in the grammar, and no pass read it. *A clause
-            // without a reader is the shape this folder found four times in three days*
-            // (`@version`, `nested masked`, `lock … masks irqs`, and this one).
-            //
-            // > **The alternative would have been to build a reader, and that was refused
-            // > with a number**: the four indirect call sites in `caprock-messbasis` do not
-            // > even take a lock, so the measured need for a postcondition at the pointer
-            // > type is ZERO. *Rescuing a clause for a need nobody measured is the movement
-            // > that killed `locks ordered`.*
-            for (wort, span) in [
-                ("requires", f.requires.first().map(|p| p.span)),
-                ("ensures", f.ensures.first().map(|p| p.span)),
-            ] {
-                let Some(s) = span else { continue };
-                absagen.schiebe(
-                    Absage::fehler(
-                        "N037",
-                        s,
-                        format!("a function pointer type carries no `{wort}`"),
-                    )
-                    .mit_notiz(
-                        "a precondition is checked at the CALL SITE and a postcondition \
-                         AFTER the call, and the passes that do either are keyed by the \
-                         callee's name -- written here, both are promises checked nowhere",
-                    ),
-                );
-            }
+            // **Lane 177 carries `requires`/`ensures` at the pointer type instead of
+            // refusing them** (the retired `N037`): the clauses ride into
+            // `typen::FnPtrContract` (`umgebung.rs`) and are read at the indirect call
+            // (`N295`, narrowing) and at the producer (`C`/`N297`, m1). See the head of
+            // this function for why the refusal stood, and the report of lane 177 for
+            // why it falls.
         });
     });
 }

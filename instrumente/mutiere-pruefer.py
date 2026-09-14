@@ -3417,6 +3417,47 @@ MUTATIONEN = [
         "K001 -- die Kostenschranke am Zeigertyp wird nicht mehr addiert; ein Rumpf voller "
         "indirekter Rufe kommt unter jeder Zusage durch",
     ),
+    # --- lane 177: the LOGIC half of the pointer contract ---
+    #
+    # Four mutations, one per new reading -- and the last two are the ones that matter:
+    # they swap the refinement direction, the exact accident the lane stands against.
+    # *A swapped direction that no probe catches is a soundness hole with a green suite.*
+    Mutation(
+        "indirekter-ruf-prueft-requires-nicht",
+        "gabbro-check/src/m1.rs",
+        "                requires: v.requires.clone(),",
+        "                requires: Vec::new(),",
+        "N295 -- die `requires` des Zeigertyps erreichen die Rufpruefung nie; ein Ruf, der "
+        "die Vorbedingung nachweislich bricht, kommt durch (`gift/247`, `gift/956`)",
+    ),
+    Mutation(
+        "indirekter-ruf-zaehlt-stelligkeit-nicht",
+        "gabbro-check/src/m1.rs",
+        "            if argtypen.len() != v.parameters.len() {",
+        "            if argtypen.len() < v.parameters.len() {",
+        "N296 -- ein Ruf mit zu VIELEN Argumenten zaehlt nicht mehr; die ueberzaehligen "
+        "Werte liest niemand (`gift/248`, `gift/959`)",
+    ),
+    Mutation(
+        "verfeinerung-requires-zeigt-falschherum",
+        "gabbro-check/src/m1.rs",
+        "        if !q.requires.is_empty() {",
+        "        if !z.requires.is_empty() {",
+        "C/`N297` -- die `requires`-Haelfte zeigt in die falsche Richtung "
+        "(`requires_f => requires_slot` statt `requires_slot => requires_f`): ein "
+        "Erzeuger mit STAERKERER Vorbedingung als sein Slot erzeugt keine Pflicht mehr, "
+        "und der Rufer uebergibt, was der Erzeuger ablehnt (`gift/957`)",
+    ),
+    Mutation(
+        "verfeinerung-ensures-zeigt-falschherum",
+        "gabbro-check/src/m1.rs",
+        "        if !z.ensures.is_empty() {",
+        "        if !q.ensures.is_empty() {",
+        "C/`N297` -- die `ensures`-Haelfte zeigt in die falsche Richtung "
+        "(`ensures_slot => ensures_f` statt `ensures_f => ensures_slot`): ein Slot mit "
+        "STAERKERER Nachbedingung als sein Erzeuger erzeugt keine Pflicht mehr, und der "
+        "Rufer rechnet mit einer Zusage, die niemand gibt (`gift/958`)",
+    ),
     # --- PL.1, finding 1 of 9: the K condition is enforced ---
     #
     # **If this mutation survives, the pass is back where it was on 2026-08-21**: the

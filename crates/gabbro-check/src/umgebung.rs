@@ -399,6 +399,24 @@ impl Umgebung {
         }
         let mut namen: Vec<String> = u.roh_typen.keys().cloned().collect();
         namen.sort();
+        // **Lane 177: table names and counts BEFORE the type loop.**
+        //
+        // `typen` resolves every named type -- including `ptr<…> T` and `index into
+        // T` behind a type alias -- but `tabellen`/`kapazitaeten` were filled only by
+        // the carrier walk AFTER it. An alias-held pointer at a table therefore
+        // resolved to `Unbekannt` (and an alias-held index to the full word): the
+        // p8-hole class, one map further out. It stayed invisible because nothing
+        // printed the shape -- until an `N297` hint spelled `ptr<…> ?`, and because
+        // `M142` compares through `Unbekannt` in silence, the hole was also in the
+        // decidable check, not only in the text.
+        //
+        // The pre-pass registers NAMES and COUNTS only (no field resolution -- that
+        // still belongs to the carrier walk, which overwrites both maps with the
+        // resolved values). In the window between, the maps answer keys and counts
+        // and empty fields; no reader of the window asks for more (`typexpr` takes
+        // the table name off `contains_key`, `indextyp` the count off
+        // `kapazitaeten`). Sorted, by the house convention for map-filling loops.
+        u.tabellennamen(&baum.items, "");
         for n in namen {
             let mut unterwegs = HashSet::new();
             let t = u.typ_aufloesen(modul_von(&n), kurzname(&n), &mut unterwegs);
@@ -422,9 +440,74 @@ impl Umgebung {
         u
     }
 
+    /// **Table names and counts, and nothing else -- the lane-177 pre-pass.**
+    ///
+    /// Called in `sammle` after the constants and before the type loop, so that a
+    /// `ptr<…> T` or `index into T` behind a type alias resolves against the table
+    /// instead of against nothing. Fields stay empty here: the carrier walk
+    /// overwrites both maps with the resolved values (`insert`, not
+    /// `entry().or_insert()`, on both sides -- so this pass can neither stick nor
+    /// shadow). The count evaluation is the same expression the two later writers
+    /// use (`konst_wert`, `>= 0` kept, `count 0` kept as zero).
+    fn tabellennamen(&mut self, items: &[Item], pfad: &str) {
+        fn namen(items: &[Item], pfad: &str, aus: &mut Vec<String>) {
+            for i in items {
+                match &i.art {
+                    ItemArt::Modul(m) => {
+                        namen(&m.items, &qualifiziere(pfad, &m.pfad.text()), aus)
+                    }
+                    ItemArt::Tabelle(t) => aus.push(qualifiziere(pfad, &t.name.text)),
+                    _ => {}
+                }
+            }
+        }
+        let mut tabellen = Vec::new();
+        namen(items, pfad, &mut tabellen);
+        // **Sorted, by the house convention** (`messung/DETERMINISMUS.md`): map-filling
+        // loops resolve in name order, never in hash order.
+        tabellen.sort();
+        for q in tabellen {
+            self.tabellen.entry(q).or_insert_with(Vec::new);
+        }
+        // The counts ride the same pass: `indextyp` reads them off `kapazitaeten`,
+        // and an alias-held `index into T` resolved in the type loop needs them now,
+        // not in the carrier walk.
+        fn zaehle(
+            umgebung: &mut Umgebung,
+            items: &[Item],
+            pfad: &str,
+            aus: &mut Vec<(String, u128)>,
+        ) {
+            for i in items {
+                match &i.art {
+                    ItemArt::Modul(m) => {
+                        let innen = qualifiziere(pfad, &m.pfad.text());
+                        zaehle(umgebung, &m.items, &innen, aus);
+                    }
+                    ItemArt::Tabelle(t) => {
+                        if let Some(n) = t
+                            .kapazitaet
+                            .as_ref()
+                            .and_then(|e| umgebung.konst_wert(pfad, e))
+                            .filter(|n| *n >= 0)
+                        {
+                            aus.push((qualifiziere(pfad, &t.name.text), n as u128));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let mut counts = Vec::new();
+        zaehle(&mut *self, items, pfad, &mut counts);
+        counts.sort();
+        for (q, n) in counts {
+            self.kapazitaeten.entry(q).or_insert(n);
+        }
+    }
+
     /// Nur die Kapazitaeten, und zwar zuerst -- siehe `sammle`.
-    fn sammle_kapazitaeten(&mut self, items: &[Item], pfad: &str) {
-        for i in items {
+    fn sammle_kapazitaeten(&mut self, items: &[Item], pfad: &str) {        for i in items {
             match &i.art {
                 ItemArt::Modul(m) => {
                     let innen = qualifiziere(pfad, &m.pfad.text());
@@ -1764,6 +1847,12 @@ impl Umgebung {
             // everything -- so the form did not merely lack a reader, it had a hole for a
             // reader. *A field of type `fn() -> bool` passed as `u32`, as `bool` and as a
             // `ptr`, in one file, without a refusal* (`probe/p8.gab`).
+            //
+            // **Lane 177 carries the LOGIC clauses too.** `requires`/`ensures` at the
+            // pointer type stood in the grammar since the type was built and were refused
+            // by `N037`; now they ride into the type beside `effects` and `costs`. A
+            // declared type has no producer (`None`): who stands behind it is decided
+            // where a value flows in, not where the slot is declared.
             TypExpr::FnZeiger(f) => Typ::FnPtr(Box::new(crate::typen::FnPtrContract {
                 parameters: f
                     .parameter
@@ -1787,6 +1876,9 @@ impl Umgebung {
                 has_effects: f.effects.is_some(),
                 costs: f.costs.as_ref().and_then(|e| self.konst_wert(von, e)),
                 has_costs: f.costs.is_some(),
+                requires: f.requires.clone(),
+                ensures: f.ensures.clone(),
+                producer: None,
             })),
             // **A3.** `index into T` erbt die Schranke aus `T`s `count`. Ohne `count` bleibt
             // sie offen -- und das ist dann eine Aussage der Deklaration, keine Konvention.

@@ -1,0 +1,72 @@
+-- 127 -- **A driver callback through a pointer contract with world effects.**
+--
+-- The comparator of `beispiele/126` talks only about its arguments; a driver callback
+-- talks about the WORLD. So the slot carries `effects { writes Puffer.slots }` and
+-- `costs <= 8 ops` beside `requires k < 64` -- and the refinement runs over all of it:
+-- the function's effects `⊆` the slot's and its costs `<=` the slot's are DECIDED
+-- (`M128` refuses otherwise), while the logic implication is COUNTED (kind `C`,
+-- hinted `N297` at `registriere`). The caller's hull and footprint read the SLOT's
+-- effects: delete `writes Puffer.slots` from `bediene` and `E008` falls.
+--
+-- The callback names the table the way `beispiele/09` does -- directly, not through a
+-- pointer parameter -- so the record holding the pointer compiles as written: the
+-- slot's contract mentions no carrier type, only the carrier's name in its effects.
+--
+-- **The open half, stated.** `schreibe` demands `Held(PUFFER)`; the slot repeats only
+-- `k < 64`. A `locks` effect cannot cross an indirect call (`N036`), and no pass holds
+-- a `Held` requirement at one either -- so the counted implication `k < 64 =>
+-- Held(PUFFER) /\ k < 64` is exactly what the holder must discharge by calling under
+-- the lock, as `bediene` does. *The register names the gap instead of hiding it.*
+module beispiel::treiberrueckruf {
+
+table Puffer count 64 {
+    slot {
+        wert : u32,
+    }
+}
+
+lock PUFFER protects { Puffer } rank 0 held <= 64 ops;
+
+-- The driver contract, at the TYPE: a parameter bound, a world effect, a cost bound.
+type Rueckruf = {
+    cb : fn(k : u32)
+        requires k < 64
+        effects { writes Puffer.slots }
+        costs   <= 8 ops,
+};
+
+-- The producer behind the pointer: the same bound and effect, plus the lock duty its
+-- own declaration carries for direct callers (`geteilt` holds that one by name).
+impl fn schreibe(k : u32)
+    requires Held(PUFFER), k < 64
+    effects { writes Puffer.slots }
+    costs   <= 8 ops
+{
+    narrow k to 0 ..< 64 else { return; }
+    Puffer.slots[k].wert = k;
+}
+
+-- The producer form: `&schreibe` into the slot records the `C` obligation (the
+-- `requires` half: the slot asks `k < 64`, the producer asks `Held(PUFFER)` on top)
+-- and hints `N297` beside it.
+impl fn registriere() -> Rueckruf
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Rueckruf(cb: &schreibe);
+}
+
+-- The admitted call: under the lock the callback's carriers are the caller's
+-- footprint (`E249`/`N293` stay silent), the hull carries `writes Puffer.slots`
+-- through the pointer, and the costs read the slot's `8`.
+impl fn bediene(t : ptr<normal, r> Rueckruf, k : u32)
+    requires Held(PUFFER), k < 64
+    effects { reads t, writes Puffer.slots, locks PUFFER }
+    costs   <= 24 ops
+{
+    locks PUFFER {
+        t->cb(k);
+    }
+}
+
+}

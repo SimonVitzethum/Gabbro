@@ -689,13 +689,15 @@ pub const NAMEN: &[Satz] = &[
     },
     Satz {
         name: "namen.fnzeigervertrag",
-        kennungen: &["N035", "N036", "N037"],
+        kennungen: &["N035", "N036"],
         aussage: "Every function pointer type in the tree carries an `effects` clause and a \
-                  `costs` bound, its effect list uses only words that can be carried across a \
+                  `costs` bound, and its effect list uses only words that can be carried across a \
                   call whose callee is not statically known (`reads`, `writes`, `allocs`, \
-                  `pure`, `diverges`), and it carries no `requires`. A program that passes \
-                  this rule therefore has, at every indirect call site, a static promise from \
-                  which the effect hull and the cost sum can be computed.",
+                  `pure`, `diverges`). The `requires`/`ensures` clauses of the type are \
+                  CARRIED, not refused: they ride into the type (`umgebung.rs`) and are read \
+                  at the indirect call and at the producer (`m1.fnzeigervertrag`). A program \
+                  that passes this rule therefore has, at every indirect call site, a static \
+                  promise from which the effect hull and the cost sum can be computed.",
         vorbehalt: "**The rule buys the hull by REFUSING the rest, and the refusal is the \
                     gap.** `locks`, `locks shared`, `masks`, `consumes` and `publishes` are \
                     rejected at the type because the passes that read them (`geteilt`, \
@@ -704,10 +706,14 @@ pub const NAMEN: &[Satz] = &[
                     cross an indirect call -- a program needing that does not pass, rather \
                     than passing unchecked. *Measured beside it: Caprock's four indirect call \
                     sites take no lock.* And the `let` scan that supplies the local type \
-                    picture is FLAT: two bindings of one name in two branches collapse.",
+                    picture is FLAT: two bindings of one name in two branches collapse. \
+                    **Lane 177 retired `N037`** (the refusal of `requires`/`ensures` at the \
+                    type): what it refused is read now, by the sentence beside this one.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: one probe each on `N035` (240), `N036` (243) and \
-                      `N037` (247); the positive side is beispiele/49.",
+        gemessen_an: "beispiele/gift: one probe each on `N035` (240) and `N036` (243); the \
+                      positive side is beispiele/49. `N037` stood here until lane 177 and \
+                      is issued nowhere since: `gift/247`-`248` pin the readings that \
+                      replaced the refusal (`N295`/`N296`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md fnptr",
     },
     Satz {
@@ -1976,9 +1982,10 @@ pub const M1: &[Satz] = &[
                     all*, and it is a CONTRAVARIANCE rule with its own direction, so it is \
                     booked in TODO.md rather than folded in here. Nor are parameter NAMES \
                     compared, and deliberately: a name at a pointer type binds nothing unless \
-                    an effect line reads it (`ast::FnZeigerParam`). *`ensures` at the \
-                    function is not carried into the pointer type at all* -- a caller through \
-                    the pointer learns nothing from it.",
+                    an effect line reads it (`ast::FnZeigerParam`). *The LOGIC refinement \
+                    between the function's contract and the slot's is the sentence beside \
+                    this one (`m1.fnzeigervertrag`): this sentence decides effects, costs, \
+                    arity and signature, and nothing about logic.*",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe each on `M127` (244), `M128` (241) and \
                       `M129` (245); the positive side is beispiele/49. **`M141` reproduced \
@@ -1997,6 +2004,45 @@ pub const M1: &[Satz] = &[
                       files verdict-identical before and after.**",
         fundstelle: "crates/gabbro-check/src/m1.rs (fnptr_passt, fnptr_signatur_passt, \
                     darstellung_grund); SYNTAX.md fnptr",
+    },
+    Satz {
+        name: "m1.fnzeigervertrag",
+        kennungen: &["N295", "N296", "N297"],
+        aussage: "A call through a function pointer is checked against the TYPE's contract \
+                  as a direct call is checked against its callee's: the arguments are held \
+                  against the slot's `requires` (`N295`, the weak `M115` reading -- refused \
+                  where the argument's range excludes the condition), the arity is the \
+                  slot's (`N296`, the `M143` reading -- the comparison runs on the overlap \
+                  and reports beside it), and the answer is narrowed by the slot's \
+                  `ensures` as by a direct callee's. Assigning or passing a NAMED function \
+                  `&f` to the slot records the refinement implication as a `C` obligation \
+                  in `gabbro obligations` (`N297` hints at the site): `requires_slot ⇒ \
+                  requires_f` (contravariant) and `ensures_f ⇒ ensures_slot` (covariant). \
+                  The implication is the user's logic and is decided by no pass.",
+        vorbehalt: "**Two halves the checker does not take.** (1) Where the producer is \
+                    unknown -- a slot behind a slot, a parameter of pointer type -- there \
+                    is no one to owe the implication, and the question is the \
+                    slot-subtyping one this lane leaves open; the decidable sides \
+                    (`M128`/`M142`) still hold on every flow. (2) A `let` with a type \
+                    ascription stores the DECLARED type, so an aliased `&f` behind an \
+                    ascription loses its producer there (the flow that wrote it was \
+                    already harvested); without an ascription the producer travels with \
+                    the value. *Both are booked, not denied.* Nor is the `C` balance a \
+                    proof: a counted implication is not a proved one, and the `V`-less \
+                    silence at an indirect site that `N295` does not exclude is the \
+                    user's, exactly as at a direct call under `M115`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `956` and the rewritten `247` falsify the slot's \
+                      `requires` at an indirect call (`N295`, literal and ranged \
+                      spelling); `959` and the rewritten `248` miscount the arity \
+                      (`N296`); `957` (a stronger `requires` at `&f` than at the slot) \
+                      and `958` (a stronger `ensures` at the slot than at `&f`) record \
+                      the `C` obligation and hint (`N297`) -- both fail if the two \
+                      directions swap. The positive sides are beispiele/126 (a \
+                      comparator with its contract, sorted through the slot) and \
+                      beispiele/127 (a driver callback over the slot's effects).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (zeigerverfeinerung_ernten, indirect \
+                    call arm); SYNTAX.md fnptr",
     },
     Satz {
         name: "m1.endlichkeit",

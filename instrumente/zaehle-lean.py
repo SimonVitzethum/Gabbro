@@ -166,6 +166,12 @@ ARTEN = [
     # never in `nach_art`. (A reason of its own would need a constructor in
     # `programmlogik/Gabbro/Coverage.lean`, which lane 156 does not touch.)
     ("L", "a lock invariant -- re-established at every release"),
+    # **Lane 177 -- `Art` has TEN letters now.** The `C` obligation (the
+    # higher-order refinement where `&f` meets its slot) is refused by kind in
+    # this channel under the `other-value` reason -- a function pointer has no
+    # term here (`lean.rs`: the `FnWert` arm is `OtherValue` already). Counted
+    # in its own row, never in `nach_art`.
+    ("C", "a higher-order contract refinement -- `&f` refines its slot"),
 ]
 
 KOPF = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")

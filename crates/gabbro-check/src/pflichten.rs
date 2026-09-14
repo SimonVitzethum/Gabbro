@@ -95,6 +95,31 @@ pub enum Material {
     /// `V`: everything the CALL SITE offers -- callee contract, actual arguments, and what
     /// the caller may assume about its own parameters.
     Call(Box<CallSite>),
+    /// `C`: everything the VALUE FLOW offers -- the producer's contract and the slot's,
+    /// per non-trivial half. The implication itself is the user's logic; what travels
+    /// here is both sides of it, so a prover (or a reader) sees the whole statement.
+    PointerContract(Box<Zeigervertrag>),
+}
+
+/// **One half of a higher-order refinement: both contracts, unshortened.**
+///
+/// Harvested by `m1::zeigerverfeinerungen` where `&f` meets its slot. `haelfte` is
+/// `requires` (the counted implication is `slot_requires ⇒ f_requires`) or `ensures`
+/// (`f_ensures ⇒ slot_ensures`).
+#[derive(Clone)]
+pub struct Zeigervertrag {
+    /// The producer, as written at `&f`.
+    pub erzeuger: String,
+    /// The slot, as the type spells it (`fn(u8) -> bool`). Named `slot_gestalt` and not
+    /// `slot`: the AST carries a clause field of that name (`TabelleDecl::slot`), and a
+    /// same-named internal field widens the blur `pruefe-klauseln.py` counts.
+    pub slot_gestalt: String,
+    /// Which half this entry counts.
+    pub haelfte: String,
+    pub f_requires: Vec<Pred>,
+    pub slot_requires: Vec<Pred>,
+    pub f_ensures: Vec<Pred>,
+    pub slot_ensures: Vec<Pred>,
 }
 
 /// The call site of a `V` obligation, with everything a goal needs and nothing more.
@@ -269,6 +294,27 @@ pub enum Art {
     /// decided by nothing: that an entry with `!PS` really points at a next level of that
     /// node type is a statement about the hardware table, owed by no function.
     Walkinvariante,
+    /// **`C` -- the higher-order contract refinement (lane 177).**
+    ///
+    /// `&f` flowing into a `fn(…)` slot says: *what `f` accepts and delivers is what the
+    /// slot promises its callers.* That is TWO implications, and they point in opposite
+    /// directions: `requires_slot ⇒ requires_f` (contravariant -- `f` accepts at least
+    /// what the slot promises callers may pass) and `ensures_f ⇒ ensures_slot`
+    /// (covariant -- `f` delivers at least what the slot promises). **The direction is
+    /// the content**: the wrong one is unsound and easy to build by accident, so one
+    /// line in `SYNTAX.md` states it and `beispiele/gift/957`-`958` fail if it swaps.
+    ///
+    /// *It stands beside `R` and not inside it:* an `R` names a whole specification at a
+    /// body, a `C` names the implication between two contracts at a value flow. Both
+    /// need the user's logic -- they are not the same duty, and a register that merged
+    /// them could not separate the metric.
+    ///
+    /// The checker DECIDES the decidable sides (effects `⊆`, costs `<=`, arity,
+    /// signature: `M128`/`M142`) and COUNTS this one: one entry per non-trivial half
+    /// (`gegenstand` says which). Harvested in the M1 run that types the flow
+    /// (`m1::zeigerverfeinerungen`) -- the same run and the same reader, not a second
+    /// walk over one question.
+    Vertragsimplikation,
     /// **`L` -- the invariant of a lock (lane 156).**
     ///
     /// `lock L protects { A, B } invariant I` says: *I holds whenever `L` is
@@ -294,6 +340,7 @@ impl Art {
             Art::Vorbedingung => "V",
             Art::Verfeinerung => "R",
             Art::Geraetezusage => "D",
+            Art::Vertragsimplikation => "C",
             Art::Schleifeninvariante => "S",
             Art::Walkinvariante => "W",
             Art::Sperrinvariante => "L",
@@ -306,6 +353,11 @@ impl Art {
             Art::Fremdpflicht => "Foreign duty",
             Art::Vorbedingung => "Precondition at the call site (undercounts: see `vorbedingungen`)",
             Art::Verfeinerung => "Refinement of a specification",
+            // **The heading states the DIRECTION, because the direction is the rule**
+            // (lane 177): `C` is owed where `&f` meets its slot, contravariant in
+            // `requires` and covariant in `ensures`.
+            Art::Vertragsimplikation => "Refinement of a function-pointer contract \
+                                         (slot requires => f requires; f ensures => slot ensures)",
             // **The heading named the wrong construct, and the register itself said so**
             // (2026-09-02). `pflichten.rs` has booked BOTH device clauses since 2026-08-26
             // -- `reg … requires` and `transition … requires` -- and printed all of them
@@ -346,6 +398,7 @@ pub fn sammle(baum: &Programm) -> Vec<Pflicht> {
     let mut aus = Vec::new();
     lauf(&baum.items, &spez, &gehalten, &mut aus);
     vorbedingungen(baum, &mut aus);
+    zeigervertraege(baum, &mut aus);
     aus
 }
 
@@ -479,6 +532,64 @@ fn vorbedingungen(baum: &Programm, aus: &mut Vec<Pflicht>) {
     });
 }
 
+/// **The higher-order refinement debts of a unit -- counted, not decided.**
+///
+/// Harvested where a named function `&f` flows into a `fn(…)` slot, in the M1 run
+/// that types the flow (`m1::zeigerverfeinerungen` -- the same run and the same
+/// reader as the refusals beside it). One entry per non-trivial half: the
+/// `requires` half where `f` carries any (`slot_requires ⇒ f_requires`), the
+/// `ensures` half where the slot carries any (`f_ensures ⇒ slot_ensures`).
+///
+/// **The anchor is the VALUE FLOW, the wording the CONSEQUENT.** Like `V`, this is
+/// the kind where the two part company: the obligation arises where `&f` meets its
+/// slot, and what it SAYS is the implication both contracts span. The `textspan`
+/// points at the consequent side (what must follow); the full pair travels in the
+/// material.
+fn zeigervertraege(baum: &Programm, aus: &mut Vec<Pflicht>) {
+    for z in crate::m1::zeigerverfeinerungen(baum) {
+        let (gegenstand, textspan) = if z.haelfte == "requires" {
+            (
+                format!(
+                    "requires of {} => requires of &{}",
+                    z.slot_gestalt, z.erzeuger
+                ),
+                z.f_requires.first().map(|p| p.span),
+            )
+        } else {
+            (
+                format!(
+                    "ensures of &{} => ensures of {}",
+                    z.erzeuger, z.slot_gestalt
+                ),
+                z.slot_ensures.first().map(|p| p.span),
+            )
+        };
+        // **The harvest records a half only where it can fail** (`f_requires` is
+        // non-empty on the `requires` half, `slot_ensures` on the `ensures` half),
+        // so the consequent side always has a first clause to point at. A `None`
+        // here would be a harvest that broke its own contract -- and an obligation
+        // without wording is a guess waiting to be made.
+        let Some(textspan) = textspan else { continue };
+        aus.push(Pflicht {
+            art: Art::Vertragsimplikation,
+            funktion: z.rufer.clone(),
+            gegenstand,
+            rumpf_da: z.f_rumpf_da,
+            material: Material::PointerContract(Box::new(Zeigervertrag {
+                erzeuger: z.erzeuger.clone(),
+                slot_gestalt: z.slot_gestalt.clone(),
+                haelfte: z.haelfte.clone(),
+                f_requires: z.f_requires.clone(),
+                slot_requires: z.slot_requires.clone(),
+                f_ensures: z.f_ensures.clone(),
+                slot_ensures: z.slot_ensures.clone(),
+            })),
+            span: z.span,
+            textspan: Some(textspan),
+            kein_text: None,
+        });
+    }
+}
 /// **What the CALLER may assume about its own parameters at the call site.**
 ///
 /// Two facts per parameter, and both are needed before a single hypothesis may be written
@@ -1166,7 +1277,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     let mut gruende: Vec<&'static str> = Vec::new();
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
                Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante,
-               Art::Walkinvariante, Art::Sperrinvariante] {
+               Art::Walkinvariante, Art::Sperrinvariante, Art::Vertragsimplikation] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -1213,6 +1324,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     let si = p.iter().filter(|x| x.art == Art::Schleifeninvariante).count();
     let wi = p.iter().filter(|x| x.art == Art::Walkinvariante).count();
     let li = p.iter().filter(|x| x.art == Art::Sperrinvariante).count();
+    let zi = p.iter().filter(|x| x.art == Art::Vertragsimplikation).count();
     // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
     // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
     // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
@@ -1227,8 +1339,12 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     //
     // **A FOURTH time on 2026-09-13, when `L` came** (lane 156) -- caught here, in the same
     // line, before the first report was read.
+    //
+    // **A FIFTH time on 2026-09-14, when `C` came** (lane 177) -- caught here, in the same
+    // line, before the first report was read. *Five for five: the line has now caught
+    // every kind that was added after it.*
     debug_assert_eq!(
-        r + e + n + f + v + dz + si + wi + li,
+        r + e + n + f + v + dz + si + wi + li + zi,
         p.len(),
         "the obligation balance does not add up"
     );
@@ -1242,7 +1358,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
          {f} foreign, {v} precondition, {dz} device, {si} loop invariant, \
-         {wi} unowned invariant, {li} lock invariant ==\n",
+         {wi} unowned invariant, {li} lock invariant, {zi} contract refinement ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");

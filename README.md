@@ -187,10 +187,10 @@ re-run.
 | **Grammar** | **177 EBNF rules**, closed and reachable | vocabulary covers every terminal, 240 / 240 |
 | **Pass register** | **158 sentences over 12 passes — 150 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 335 diagnostic codes. *A written sentence is not a proved one; the last column is the whole rest* | `gabbro paesse --je-satz` |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, [`beweise/`](beweise/) |
-| **Corpus** | 107 clean examples, 665 poison files, 891 tests *(counted 2026-09-14, lane 175; not re-run -- no toolchain in this lane)* | `cargo test --no-fail-fast` |
+| **Corpus** | 109 clean examples, 668 poison files, 942 tests *(counted 2026-09-14, lane 177; the row stood at 891 without a re-run since lane 175)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed and compared against a handwritten version, one of them a library chain across three units and a linker, under `-fsanitize=undefined` *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
 | **Guardians** | 41, and **65 of 68 instruments carry all five requirements** — deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
-| **Mutation** | **383 of 409 anchors hold**, and a run catches 375 of 376 valid mutations | `./instrumente/mutiere-pruefer.py` |
+| **Mutation** | **386 of 413 anchors hold**, and a run catches 375 of 376 valid mutations | `./instrumente/mutiere-pruefer.py` |
 | **Blind spots** | **74 blind · 174 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and poison-only is a hint, not a proof | `gabbro blindstellen` |
 | **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — 1669 and 110 clause sites, split derivable / redundant / load-bearing | `gabbro zeremonie` |
 
@@ -240,7 +240,7 @@ cargo run --bin gabbro -- templates                    # the proof-template regi
 cargo run --bin gabbro -- obligations beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test --no-fail-fast                              # the test corpus
 ./instrumente/abnahme.py                               # every guardian, one command, per-guardian verdict
-./instrumente/mutiere-pruefer.py                       # damage one rule at a time: 409 mutations, one anchor each
+./instrumente/mutiere-pruefer.py                       # damage one rule at a time: 413 mutations, one anchor each
 ./instrumente/pruefe-emission.sh                       # every emitted unit must compile
 isabelle build -d beweise -c Gabbro                    # the machine-checked templates
 ```

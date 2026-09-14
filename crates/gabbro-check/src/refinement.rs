@@ -44,7 +44,7 @@ use crate::pflichten::{CallerParam, Material, Pflicht};
 use gabbro_syntax::ast::*;
 
 /// **Why an obligation carries no goal.** Exhaustive, and every arm names a different thing
-/// that is missing -- a single "not supported" would hide that the six reasons have six
+/// that is missing -- a single "not supported" would hide that the seven reasons have seven
 /// different prices.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Reason {
@@ -82,6 +82,12 @@ pub enum Reason {
     /// The actual argument is neither a literal nor a parameter the body leaves alone.
     /// **The gate that keeps `requires k < 64` from being used after the body wrote `k`.**
     ArgumentNotStable,
+    /// **The implication over a function-pointer contract (lane 177).** `requires_slot
+    /// ⇒ requires_f` and `ensures_f ⇒ ensures_slot` speak about two contracts at a
+    /// value flow -- higher-order logic this emitter has no goal shape for. **Counted
+    /// here, never weakened into one**: the duty stands with its reason, and the user
+    /// proves the implication, not a projection of it.
+    HigherOrder,
 }
 
 impl Reason {
@@ -93,6 +99,7 @@ impl Reason {
             Reason::BodyEffect => "body-effect",
             Reason::NoTerm => "no-term",
             Reason::ArgumentNotStable => "argument-not-stable",
+            Reason::HigherOrder => "higher-order",
         }
     }
     pub fn sentence(self) -> &'static str {
@@ -116,16 +123,21 @@ impl Reason {
             Reason::ArgumentNotStable => {
                 "the actual argument is neither a literal nor a parameter the body leaves alone"
             }
+            Reason::HigherOrder => {
+                "an implication over a function-pointer contract: the user's logic, \
+                 stated but decided by no pass"
+            }
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [Reason; 6] = [
+    pub const ALL: [Reason; 7] = [
         Reason::LockWitness,
         Reason::ForeignBody,
         Reason::DevicePromise,
         Reason::BodyEffect,
         Reason::NoTerm,
         Reason::ArgumentNotStable,
+        Reason::HigherOrder,
     ];
 }
 
@@ -174,6 +186,12 @@ fn verdict(p: &Pflicht, number: usize) -> Verdict {
         // `maintains I` needs `I` before and after, `ensures P` needs `P` after.
         Material::Body => Verdict::Refused(Reason::BodyEffect),
         Material::Foreign => Verdict::Refused(Reason::ForeignBody),
+        // **`C` -- refused by NAME, never weakened into a goal (lane 177).** The
+        // implication over two contracts has no goal shape in this theory, and
+        // projecting it onto one half would let a proof conclude from half the
+        // duty. *The same ground the module head stands on: a duty that vanishes
+        // is noticed, one that gets weaker is not.*
+        Material::PointerContract(_) => Verdict::Refused(Reason::HigherOrder),
         Material::Call(c) => {
             // **The predicate is translated FIRST, and an argument is resolved only where
             // the predicate asks for one.**

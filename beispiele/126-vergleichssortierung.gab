@@ -1,0 +1,80 @@
+-- 126 -- **A sort-like routine through a comparator contract.**
+--
+-- The pointer type carries the whole comparator promise: `ensures result == (a <= b)`
+-- says the value decides `<=`, so "for every comparator that is a total order, the
+-- result is sorted" is statable in the carried fragment. `sortiere` knows nothing about
+-- `kleiner` but its type: the hull, the costs and the narrowing at `v->cmp(...)` all
+-- read the slot, and the refinement `&kleiner` owes the slot stands as kind `C` in
+-- `gabbro obligations` (hinted `N297` at `nimm`). Here producer and slot agree word
+-- for word, so the counted implication is dischargeable on sight -- the twin of
+-- `gift/957`-`958`, where it is not.
+module beispiel::vergleichssortierung {
+
+table Zahlen count 4 {
+    slot {
+        wert : u32,
+    }
+}
+
+lock ZAHLEN protects { Zahlen } rank 0 held <= 64 ops;
+
+-- The total-order contract, at the TYPE: no carrier, only the two arguments.
+type Vergleich = {
+    cmp : fn(a : u32, b : u32) -> bool
+        ensures result == (a <= b)
+        effects { pure }
+        costs   <= 3 ops,
+};
+
+-- The producer behind the pointer: the same promise, kept by one comparison.
+impl fn kleiner(a : u32, b : u32) -> bool
+    ensures result == (a <= b)
+    effects { pure }
+    costs   <= 3 ops
+{
+    return a <= b;
+}
+
+-- The producer form: `&kleiner` is the one shape in which a function becomes a value.
+-- This flow records the `C` obligation (the `ensures` half: the slot promises, so the
+-- producer must deliver) and hints `N297` beside it.
+impl fn nimm() -> Vergleich
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Vergleich(cmp: &kleiner);
+}
+
+-- One compare-and-swap through the slot. The `if` reads the slot's `ensures` the way
+-- a direct caller reads its callee's; the hull reads `pure` and the costs read `3`.
+impl fn ordne(v : ptr<normal, r> Vergleich, i : index into Zahlen, j : index into Zahlen)
+    requires Held(ZAHLEN)
+    effects { reads v, reads Zahlen.slots, writes Zahlen.slots }
+    costs   <= 18 ops
+{
+    if !v->cmp(Zahlen.slots[i].wert, Zahlen.slots[j].wert) {
+        let t = Zahlen.slots[i].wert;
+        Zahlen.slots[i].wert = Zahlen.slots[j].wert;
+        Zahlen.slots[j].wert = t;
+    }
+}
+
+-- A sorting network for four elements: five compare-swaps, each through the slot.
+-- Sortedness below is the USER's (`ensures` is counted as `N`, not proved); what the
+-- checker carries is that every swap went through the comparator's contract.
+impl fn sortiere(v : ptr<normal, r> Vergleich)
+    requires Held(ZAHLEN)
+    ensures Zahlen.slots[0].wert <= Zahlen.slots[1].wert,
+            Zahlen.slots[1].wert <= Zahlen.slots[2].wert,
+            Zahlen.slots[2].wert <= Zahlen.slots[3].wert
+    effects { reads v, reads Zahlen.slots, writes Zahlen.slots }
+    costs   <= 96 ops
+{
+    ordne(v, 0, 1);
+    ordne(v, 2, 3);
+    ordne(v, 0, 2);
+    ordne(v, 1, 3);
+    ordne(v, 1, 2);
+}
+
+}

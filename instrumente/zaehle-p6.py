@@ -51,6 +51,11 @@ REASONS = [
     ("body-effect", "speaks about the world AFTER a body ran -- there is no body semantics"),
     ("no-term", "a form the emitter has no Isabelle term for"),
     ("argument-not-stable", "the argument is neither a literal nor an untouched parameter"),
+    # **Lane 177 -- the higher-order refinement.** The implication over a
+    # function-pointer contract (`requires_slot => requires_f`, `ensures_f =>
+    # ensures_slot`) has no goal shape in the Isabelle theory; it is counted
+    # with its reason, never weakened into half a goal.
+    ("higher-order", "an implication over a function-pointer contract -- the user's logic"),
 ]
 
 HEAD = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")

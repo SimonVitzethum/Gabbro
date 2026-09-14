@@ -1,0 +1,26 @@
+-- erwartet: N295
+-- **Poison 956 -- an indirect call whose argument RANGE excludes the slot's `requires`.**
+--
+-- The twin of `gift/247` in the other spelling: there a literal carries the exclusion on
+-- its face (`0` against `b > 0`); here a ranged parameter does (`v : u32 in 100 .. 200`
+-- against `k < 64`). Both halves of `N295`'s range reading are pinned, and neither fires
+-- on the value -- only on the proof that NO value of the range meets the clause, the
+-- weak `M115` reading at an indirect site.
+
+module gift::indirect_requires_ranged {
+
+type Frage = {
+    frage : fn(k : u32)
+        requires k < 64
+        effects { pure }
+        costs   <= 2 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Frage, v : u32 in 100 .. 200)
+    effects { reads t }
+    costs   <= 8 ops
+{
+    t->frage(v);
+}
+
+}

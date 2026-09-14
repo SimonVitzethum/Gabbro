@@ -1,0 +1,40 @@
+-- erwartet: Hinweis N297
+-- **Poison 957 -- a producer whose `requires` is STRONGER than its slot's.**
+--
+-- `hart_senden` demands `b > 0`; the slot demands nothing. The counted implication is
+-- `requires_slot => requires_f`, i.e. `true => b > 0` -- contravariant, and NOT provable
+-- in general: a caller through the slot may pass `0`, which the slot allows and the
+-- producer refuses. The checker decides nothing here; it records the `C` obligation
+-- (`gabbro obligations`) and hints at the flow (`N297`).
+--
+-- **The direction is the probe.** An implementation with the implication backwards
+-- (`requires_f => requires_slot`, i.e. `b > 0 => true`) sees a trivial truth, records
+-- nothing, hints at nothing -- and this file goes red. The twin in the other direction
+-- is `gift/958`.
+
+module gift::producer_requires_stronger_than_slot {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn hart_senden(b : u8)
+    requires b > 0
+    effects { writes ZUSTAND }
+    costs   <= 3 ops
+{
+    ZUSTAND = b;
+}
+
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(senden: &hart_senden);
+}
+
+}
