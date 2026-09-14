@@ -196,3 +196,4 @@ import Grammatik.ZielOrtMehrfaden
 import Grammatik.ZielOrtStart
 import Grammatik.Verklemmung
 import Grammatik.MehrfadenZeuge
+import Grammatik.MehrfadenLauf

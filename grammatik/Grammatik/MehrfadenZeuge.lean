@@ -687,6 +687,30 @@ theorem mP_rang : ∀ M : RufMaschineG mD,
   fun _ hr => rangInvG_erreichbar mO_gut mP_stufen mSp mInit
     (fun t => by rw [startSpur, mInit_leer t]; exact List.nodup_nil) hr
 
+/-- `ziel_ort_mehrfaden` (without the completion conjunct) on the witness. -/
+theorem mP_mehrfaden : ∀ M : RufMaschineG mD,
+    RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
+      (VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO 0 M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG mP mO 0 M t M') ∧ InvAmOrtG mP M :=
+  ziel_ort_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mE0 mK mO_gut mO_lokal
+    (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
+    mP_koerper mP_start mSI_start mInit_exklusiv mP_inv
+
+/-- `ziel_ort_sperre_ende` (the old footprint check, with the completion
+    conjunct) on the earlier two-writer program `sP`. -/
+theorem sP_ende_zertifiziert : ∀ M : RufMaschineG sD,
+    RufErreichbarG sP sO 0 (RufStartG sP sSp sInit) M →
+      ((VertragAmOrtG sP M ∧ SperrInvG sS M ∧ KeinLogikHaltG sO 0 M ∧
+        ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG sP sO 0 M t M') ∧ InvAmOrtG sP M) ∧
+      StartEndeG sP M :=
+  ziel_ort_sperre_ende sP sO 0 (axWahr sD) sS sFs sSp sInit sE0 sO_gut sO_lokal
+    (axVertragO_wahr sO) axEnsLokal_wahr sS_ok sFs_voll sP_fragmentG sP_fussS sP_koerper sP_start
+    sS_start sInit_exklusiv (invGutS_leer rfl)
+
+#print axioms Gabbro.Grammatik.mP_mehrfaden
+#print axioms Gabbro.Grammatik.sP_ende_zertifiziert
 #print axioms Gabbro.Grammatik.mP_zertifiziert
 #print axioms Gabbro.Grammatik.mP_verklemmungsfrei
 #print axioms Gabbro.Grammatik.mP_fussMehr
