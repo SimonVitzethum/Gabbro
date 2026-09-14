@@ -2150,6 +2150,91 @@ pub const M1: &[Satz] = &[
                      crates/gabbro-check/tests/bare_atomic.rs",
     },
     Satz {
+        name: "m1.whole_array_store",
+        kennungen: &["N287"],
+        aussage: "A whole array is never a store target (`N287`): C has no assignment \
+                  of one array to another, so `M[i] = M[j]` over a nested array -- and \
+                  `B = A` over a flat one -- is refused, while `M[i][j] = v` stays \
+                  silent. Both sides of the refused form carry the same array shape, \
+                  so neither the shape comparison (`M140`) nor any range rule speaks; \
+                  the emitter would write the assignment straight into the C, where \
+                  `cc` answers *assignment to expression with array type*.",
+        vorbehalt: "It holds the TARGET, not the source: a row into a scalar, or a \
+                    scalar into a row, is `M140`'s shape mismatch where it stands. A \
+                    row read into a `let` stays checker-silent and falls at the \
+                    emitter (`C001`, no resolvable `let` type) -- a named refusal \
+                    either way, and no corpus site binds one. `Publish` over an \
+                    array-typed atomic is unmeasured and stays so: no corpus site \
+                    declares one.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured against the UNCHANGED checker: `M[i] = M[j]` and `B = A` \
+                      both checked clean and both named an array assignment `cc` \
+                      rejects. Poison is beispiele/gift/951-nested-whole-row-store.gab \
+                      (falls with N287 alone); the flat twin is pinned inline \
+                      (`n287_flat_whole_array_store` in \
+                      crates/gabbro-check/tests/nested_arrays.rs). The clean side is \
+                      beispiele/122-matrix.gab (element stores at depth two).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (N287, assignment arm); \
+                     crates/gabbro-check/tests/nested_arrays.rs",
+    },
+    Satz {
+        name: "m1.sum_constructor",
+        kennungen: &["N280", "N281", "N282", "N283", "N284"],
+        aussage: "A `tagged` case constructs in a body as `Case(payload)`, `Case()` or \
+                  the bare `Case` -- the surface of the model's `Expr.fall cs i nutz`: \
+                  the case index is the declaration order, the payload is held against \
+                  the case's type, and the construction answers the owning sum. A name \
+                  that is neither a function nor a visible case falls (`N280`), as does \
+                  a case two sums share (the index is read off ONE case list). The \
+                  arity is the constructor's own: a missing payload (`N281`), a payload \
+                  on a nullary case (`N282`), a bare name over a payload case (`N283`), \
+                  labels at a case (`N284` -- a case carries its payload positionally, \
+                  like `Some(x)`). The payload RANGE stays `M101`'s and its SHAPE \
+                  stays out of the constructor rules -- a truth value against a \
+                  number is `M135`'s crossing, anything else misshapen is `M140`'s \
+                  -- all through the ordinary `passt`, and a wrong sum at the binding \
+                  stays `M140`'s nominal rule. The lowering writes the SAME representation \
+                  the `match` reads -- the compound literal `(T){ .marke = T_V, \
+                  .last.V = … }` in bodies, the brace form at file scope -- and the \
+                  call graph, the cost pass (one op, like `Some`) and the Lean export \
+                  read the construction as a value, never as a call edge -- the graph \
+                  carries no edge, costs prices the mark store, and `lean.rs` already \
+                  carried the call form (`tagOf`) with the bare nullary form joining it.",
+        vorbehalt: "A function of the same name wins, and anything the value namespace \
+                    already binds wins at the bare form -- no behaviour change where a \
+                    name already means something. A function of the name ANYWHERE in the \
+                    unit blocks the construction (`N280`): the emitter reads callees \
+                    unit-wide, so an invisible same-named function would take the call \
+                    lowering while the checker typed a case. Integer words and their sugar \
+                    never name a case (`return u13;` stays `M119`'s). A bare case bound in one \
+                    `match` arm and read bare in another is typed as the case by the \
+                    checker while the emitter withholds the literal -- loud through \
+                    `cc`, booked and not closed. A `match` over a constructed (non-place) \
+                    scrutinee stays the emitter's `C001`; the Lean bare-case term covers \
+                    the nullary form only.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/944-unknown-variant-construction.gab falls with N280 \
+                      (beside `H021`/`K003`, which own the call halves); \
+                      beispiele/gift/945-variant-payload-out-of-range.gab falls with M101 \
+                      (the range half, no constructor rule); \
+                      beispiele/gift/946-payload-on-nullary-variant.gab falls with N282; \
+                      beispiele/gift/947-missing-variant-payload.gab falls with N281; \
+                      beispiele/gift/938-ambiguous-variant-construction.gab falls with N280 \
+                      over two sums sharing `Kurz`. The silent direction is \
+                      `beispiele/120` (call form and bare form constructed, matched \
+                      exhaustively) and `beispiele/121` (both spellings at file scope, \
+                      matched over the stored value); `N283`/`N284` are pinned by unit \
+                      rows in `crates/gabbro-check/tests/variant_konstruktor.rs`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`ruf_roh` variant arm, bare-case arm, \
+                     `variantenkonstruktor`); crates/gabbro-check/src/umgebung.rs \
+                     (`variante`, `ist_variantenkonstruktor`, `hat_markierte`); \
+                     crates/gabbro-check/src/emit.rs (`ruf`, `ort`, `wert_ctyp`, static \
+                     brace form); crates/gabbro-check/src/aufrufgraph.rs (no edge); \
+                     crates/gabbro-check/src/kosten.rs (one op); \
+                     crates/gabbro-check/src/lean.rs (bare nullary term); \
+                     crates/gabbro-check/tests/variant_konstruktor.rs",
+    },
+    Satz {
         name: "consts.evaluable",
         kennungen: &["K190"],
         aussage: "A `const` initializer, or a const-table element, outside the total, \
@@ -2191,6 +2276,33 @@ pub const M1: &[Satz] = &[
                       side is beispiele/92-const-squares.gab (64 folded entries, \
                       emitted and compiled).",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_tabelle`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.nested_rows",
+        kennungen: &["N285", "N286"],
+        aussage: "A nested const-table literal nests the way its type nests, row for \
+                  row. A value where the type declares an array, or a row where it \
+                  declares a single value, falls (`N285`); a row holding anything but \
+                  the declared inner count falls (`N286`) -- a ragged row has no C \
+                  shape, and nothing is padded or filled in. The outer count stays \
+                  `K191`'s, and every leaf folds and ranges like a flat table's \
+                  element (`K190`/`K194`), at whatever depth the nesting ends.",
+        vorbehalt: "It checks the SHAPE, not the meaning -- like `consts.table` beside \
+                    it. A scalar `0` where a nested table stands is NOT its shape: \
+                    the flat `= 0` hole (`const T : [u32; 4] = 0;` emitting \
+                    `#define T 0u`) stands unrepaired beside it, booked in lane 170, \
+                    and this rule does not widen to close it. The call hull \
+                    (`K192`/`K193`) descends through rows without a rule of its own: \
+                    `alle_ausdruecke` carries every nested call and name to it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/949 (`[[1, 2], [3]]` falls as `N286` alone); the \
+                      `N285` directions are pinned inline (`n285_scalar_where_row_stands`, \
+                      `n285_row_where_scalar_stands` in \
+                      crates/gabbro-check/tests/konstanten.rs). The clean side is \
+                      beispiele/123-const-matrix.gab (`[[1, 2], [3, 4]]` over \
+                      `[[u32; 2]; 2]`, emitted and compiled).",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`check_eintrag`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
     },
     Satz {

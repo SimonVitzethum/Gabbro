@@ -207,6 +207,20 @@ struct Namen {
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
+    /// **Every name this function binds as a VALUE (lane 167): parameters, `let`s,
+    /// `let … else` names and error names, `match` binders, `traverse` variables,
+    /// `alloc` indices, `awaits` and `exchange` bindings.**
+    ///
+    /// A bare `tagged` case (`Leer`) lowers to a compound literal -- unless the name
+    /// means something else here. The unit-wide maps cannot answer that: a `let`
+    /// shadows only inside its own function, and a `match` binder only inside its
+    /// own arm. So the shadowing question is asked against this per-function set,
+    /// filled in `eigene_sicht`, and not against the unit. The residual -- a name
+    /// bound in one arm and read bare as a case in another -- stays loud: the
+    /// checker types it as the case, this set withholds the literal, and `cc`
+    /// names the undeclared identifier. It is booked, not closed (same class as
+    /// the lane-152 `match`-binder atomic note).
+    schatten: BTreeSet<String>,
     /// **The names an enclosing `traverse` bound** -- see `laufsicht` (2026-08-31).
     ///
     /// Every lowered loop variable is an index word: `uint32_t i` or `uint64_t i`. It names
@@ -2088,8 +2102,10 @@ pub fn emittiere_mit(
             // setzen kann, gibt es dafuer nicht -- `ctyp` liefert genau so eine Zeichenkette,
             // und darum kann die Feldform dort gar nicht sitzen. *Die C-Deklaratorsyntax ist
             // keine Eigenheit, die man wegabstrahiert; sie ist der Grund fuer die Fallform.*
-            if let TypExpr::Feld(a) = &st.typ {
-                feldstatisch(st, a, &mut aus, &namen, absagen);
+            // Lane 170 spells the whole spine there: `[[u32; 4]; 3]` becomes
+            // `uint32_t M[3][4]` out of `feld_deklarator`, one `[n]` per dimension.
+            if matches!(&st.typ, TypExpr::Feld(_)) {
+                feldstatisch(st, &mut aus, &namen, absagen);
                 return;
             }
             // **Ein `tagged` oder ein Verbund faengt nicht mit einer ZAHL an** (2026-08-20).
@@ -2127,6 +2143,23 @@ pub fn emittiere_mit(
             if let TypExpr::Pfad(p) = &st.typ {
                 if let Some(n) = p.teile.last() {
                     if namen.markierte.contains_key(&n.text) || namen.verbunde.contains(&n.text) {
+                        // **Lane 167: `static N : Nachricht = Kurz(5);` -- the brace form.**
+                        //
+                        // A compound literal is no constant expression, so the file-scope
+                        // initializer spells the same designators `ruf` writes in braces.
+                        // The payload must be translation-time constant -- the same gate
+                        // the number path below holds; anything else falls through to the
+                        // `C001` beside it, which then names the constantness, not the case.
+                        if namen.markierte.contains_key(&n.text) {
+                            if let Some(init) = varianten_statisch(&st.wert, &n.text, &namen, absagen) {
+                                let (konst, abschnitt) = statischer_kopf(st, absagen);
+                                aus.push_str(&format!(
+                                    "\nstatic {konst}{} {}{abschnitt} __attribute__((unused)) = {init};\n",
+                                    n.text, st.name.text
+                                ));
+                                return;
+                            }
+                        }
                         // **A brace initialiser, not a compound literal.** `ruf` writes
                         // `(P){ .a = 1 }` -- an lvalue with static storage duration, which C11
                         // 6.7.9p4 does not admit as an initialiser for a static object. At file
@@ -3264,38 +3297,82 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// on a checked tree it equals the declared count (`K191` holds that), and
 /// on an unchecked one the literal is the honest number. `None` anywhere is
 /// `C001` at the caller, never a guess.
+///
+/// **Lane 170:** a nested table lowers to one multi-dimensional `static
+/// const` array (`[[1, 2], [3, 4]]` over `[[u32; 2]; 2]` becomes
+/// `static const uint32_t T[2][2] = {{1u, 2u}, {3u, 4u}};`). The word is
+/// read at the INNERMOST element (primitives only, the same rule the flat
+/// table follows); every dimension's bound is the literal's own count down
+/// the first column -- on a checked tree every row holds the declared count
+/// (`N286` holds that), and on an unchecked one the literal is the honest
+/// number, the same rule the flat table follows. A row where the spine
+/// still declares an array, or a value where it does not, is `None`
+/// (`N285` holds that on a checked tree).
 fn const_table(
     k: &KonstDecl,
     elements: &[Expr],
     module: &str,
     tree: &Programm,
 ) -> Option<String> {
-    let TypExpr::Feld(field) = &k.typ else {
+    let TypExpr::Feld(_) = &k.typ else {
         return None;
     };
-    let word = ctyp_primitiv(&field.element)?;
+    // The spine, outermost first: each `Feld` peels one dimension.
+    let mut tiefen: Vec<&ArrayTy> = Vec::new();
+    let mut rest = &k.typ;
+    while let TypExpr::Feld(a) = rest {
+        tiefen.push(a.as_ref());
+        rest = &a.element;
+    }
+    let word = ctyp_primitiv(rest)?;
     let env = crate::umgebung::Umgebung::sammle(tree);
-    let mut values = Vec::with_capacity(elements.len());
-    for e in elements {
-        values.push(env.konst_wert(module, e)?);
-    }
     let unsigned = word.starts_with('u');
-    let mut literals = String::new();
-    for (i, w) in values.iter().enumerate() {
-        if i > 0 {
-            literals.push_str(", ");
+    // The declaration's dimensions down the first column.
+    let mut dekl = String::new();
+    let mut erste: &[Expr] = elements;
+    for _ in &tiefen {
+        dekl.push_str(&format!("[{}]", erste.len()));
+        let Some(vorderste) = erste.first() else { break };
+        let ExprArt::ArrayLit(zeile) = &vorderste.art else { break };
+        erste = zeile;
+    }
+    let literal = const_wert_zeile(elements, 0, &tiefen, &env, module, unsigned)?;
+    Some(format!(
+        "\nstatic const {word} {}{dekl} __attribute__((unused)) = {literal};\n",
+        k.name.text,
+    ))
+}
+
+/// One row of a (possibly nested) const-table literal as C: `{1u, 2u}`, rows
+/// nested inside rows. Every scalar comes from the checker's own folder;
+/// `None` anywhere is `C001` at the caller, never a guess.
+fn const_wert_zeile(
+    eintraege: &[Expr],
+    tiefe: usize,
+    tiefen: &[&ArrayTy],
+    env: &crate::umgebung::Umgebung,
+    modul: &str,
+    vorzeichenlos: bool,
+) -> Option<String> {
+    let mut teile = Vec::with_capacity(eintraege.len());
+    if tiefe + 1 == tiefen.len() {
+        for e in eintraege {
+            let w = env.konst_wert(modul, e)?;
+            if w < 0 || !vorzeichenlos {
+                teile.push(w.to_string());
+            } else {
+                teile.push(format!("{w}u"));
+            }
         }
-        if *w < 0 || !unsigned {
-            literals.push_str(&w.to_string());
-        } else {
-            literals.push_str(&format!("{w}u"));
+    } else {
+        for e in eintraege {
+            let ExprArt::ArrayLit(zeile) = &e.art else {
+                return None;
+            };
+            teile.push(const_wert_zeile(zeile, tiefe + 1, tiefen, env, modul, vorzeichenlos)?);
         }
     }
-    Some(format!(
-        "\nstatic const {word} {}[{}] __attribute__((unused)) = {{{literals}}};\n",
-        k.name.text,
-        elements.len()
-    ))
+    Some(format!("{{{}}}", teile.join(", ")))
 }
 
 /// **A literal as C writes it -- with the `u` where C needs one, and `None` where C has no
@@ -3458,12 +3535,15 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         // hinter dem Namen und nicht beim Typ, also gibt es dafuer keinen `ctyp`.
         // *Die Laenge kommt aus der Deklaration, wie bei `count N` -- geraten wird sie
         // nicht.*
-        if let TypExpr::Feld(a) = &f.typ.typ {
-            let (Some(el), Some(n)) = (ctyp(&a.element, u), feldlaenge(&a.laenge, u)) else {
+        // Lane 170 spells the whole spine the same way: `m : [[u32; 4]; 3]`
+        // becomes `uint32_t m[3][4]` out of `feld_deklarator` -- at one dimension
+        // the line below is byte-identical to the one it replaces.
+        if matches!(&f.typ.typ, TypExpr::Feld(_)) {
+            let Some((el, suffix)) = feld_deklarator(&f.typ.typ, u) else {
                 weigere(absagen, f.name.span, "array field type -- element or length");
                 continue;
             };
-            aus.push_str(&format!("    {el} {}[{n}];\n", f.name.text));
+            aus.push_str(&format!("    {el} {}{};\n", f.name.text, suffix));
             continue;
         }
         // **A function pointer field, like an array, puts its name INSIDE the type**
@@ -6596,6 +6676,13 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
         im_block(b, u, &mut gefunden, &eigene);
         lokal = gefunden;
         lokale_lets(b, &mut lokal);
+        // **Lane 167: every value this function binds, for the bare-case question.**
+        // Parameters first -- a parameter shadows any unit-wide reading of its name,
+        // the same rule the loop above follows for the device maps.
+        for p in &f.parameter {
+            lokal.schatten.insert(p.name.text.clone());
+        }
+        gebundene_namen(b, &mut lokal.schatten);
     }
     lokal
 }
@@ -6650,6 +6737,54 @@ fn sammle_lets<'a>(
         }
         for k in crate::unterbloecke(s) {
             sammle_lets(k, aus, allocs, wieoft);
+        }
+    }
+}
+
+/// **Every name a block binds as a value (lane 167)** -- `let`, `let … else` (plus
+/// the error name), `match` binders, `traverse` variables, `alloc` indices, `awaits`
+/// and `exchange` bindings. Read through `unterbloecke`, so a binding in a nested
+/// block counts: the set has no scopes, and a name bound anywhere withholds the
+/// bare-case literal everywhere in the function. Where the checker still types the
+/// bare name as the case (bound in one arm, read in another), the product names an
+/// undeclared identifier and `cc` says so -- loud, and booked in the sentence.
+/// Loop labels (`retry`/`forever` marks) bind no value and stay out: they lower to
+/// `marke_weiter`-style C labels, which share nothing with a case literal.
+fn gebundene_namen(b: &Block, aus: &mut BTreeSet<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => {
+                aus.insert(l.name.text.clone());
+            }
+            StmtArt::LetSonst(l) => {
+                aus.insert(l.name.text.clone());
+                aus.insert(l.fehlername.text.clone());
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    if let Some(binder) = &z.binder {
+                        aus.insert(binder.text.clone());
+                    }
+                }
+            }
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(x) = sch.as_ref() {
+                    aus.insert(x.variable.text.clone());
+                }
+            }
+            StmtArt::Alloc(a) => {
+                aus.insert(a.name.text.clone());
+            }
+            StmtArt::AwaitLoad(a) => {
+                aus.insert(a.name.text.clone());
+            }
+            StmtArt::Exchange(e) => {
+                aus.insert(e.name.text.clone());
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            gebundene_namen(k, aus);
         }
     }
 }
@@ -9701,8 +9836,63 @@ fn retry(
     }
 }
 
+/// **Lane 170 -- the declarator of a (possibly nested) array type, as SPELLED.**
+///
+/// A struct field keeps the declaration's spelling (`bytes : [u8; KAP]`
+/// becomes `uint8_t bytes[KAP];`, the length the writer named). C spells the
+/// lengths BEHIND the name (`uint32_t m[3][4]`), so no type-before-name word
+/// (`ctyp`) can carry them -- the same reason every array site already
+/// special-cases `TypExpr::Feld`. This is the one home of the nested
+/// spelling: the innermost element's C word plus the `[n]` of every
+/// dimension, outermost first. `None` where any dimension's length is not a
+/// length this unit can spell (`feldlaenge`), or the innermost element has
+/// no C word -- and the caller turns the `None` into `C001` by name, never
+/// into a guess.
+///
+/// A `static` does NOT read here: it spells its lengths as VALUES (the
+/// number `konst_oder_name` folds, not the `const` name), the way `count N`
+/// and every other emitter length does -- `feldstatisch` builds that suffix
+/// beside its bounds, out of the same numbers. Two conventions, and each
+/// site keeps the one it always read: spelling here, value there.
+fn feld_deklarator(t: &TypExpr, u: &Namen) -> Option<(String, String)> {
+    let mut tiefen = Vec::new();
+    let mut rest = t;
+    while let TypExpr::Feld(a) = rest {
+        tiefen.push(feldlaenge(&a.laenge, u)?);
+        rest = &a.element;
+    }
+    if tiefen.is_empty() {
+        return None;
+    }
+    let wort = ctyp(rest, u)?;
+    let mut suffix = String::new();
+    for n in tiefen {
+        suffix.push_str(&format!("[{n}]"));
+    }
+    Some((wort, suffix))
+}
+
+/// One scalar fill over nested dimensions: `{{7, 7}, {7, 7}}`. The caller
+/// holds the byte budget, so every depth here terminates inside it.
+fn fülle(tiefe: usize, laengen: &[usize], text: &str, aus: &mut String) {
+    aus.push('{');
+    for i in 0..laengen[tiefe] {
+        if i > 0 {
+            aus.push_str(", ");
+        }
+        if tiefe + 1 == laengen.len() {
+            aus.push_str(text);
+        } else {
+            fülle(tiefe + 1, laengen, text, aus);
+        }
+    }
+    aus.push('}');
+}
+
 /// **Ein `static` ueber einem Feld: `static mut kernlast : [Zaehler; 64] = 0;`**
-/// (2026-08-20).
+/// (2026-08-20). Lane 170 carries the nested spine with it: `[[u32; 4]; 3]`
+/// lowers through `feld_deklarator` to `uint32_t M[3][4]`, one dimension per
+/// `[n]`, outermost first.
 ///
 /// Bis heute sagte der Erzeuger dazu *„`static` of an unresolvable type"* -- und das war eine
 /// Weigerung, die den falschen Grund nannte. `[Zaehler; 64]` ist bestens aufloesbar: das
@@ -9720,24 +9910,56 @@ fn retry(
 /// > und er rechnet etwas anderes.
 fn feldstatisch(
     st: &StatischDecl,
-    a: &ArrayTy,
     aus: &mut String,
     u: &Namen,
     absagen: &mut Absagen,
 ) {
-    let Some(elem) = ctyp(&a.element, u) else {
+    // The dimensions as VALUES, outermost first -- and FIRST, because the
+    // refusal below names the length and the one after it the element: a
+    // length no unit can read (`[u32; 2 + 2]`) is "not constant", not
+    // "unresolvable", the same order the one-dimensional form always read.
+    // The spellings beside them may name a `const`, and the bounds below
+    // compute. Like `count`: a number OR a `const` name, with the value
+    // standing in `konstwert`.
+    let mut laengen: Vec<i128> = Vec::new();
+    let innerste: &TypExpr;
+    {
+        let mut rest = &st.typ;
+        while let TypExpr::Feld(x) = rest {
+            let Some(n) = konst_oder_name(&x.laenge, u) else {
+                weigere(absagen, st.name.span, "`static` array whose length is not constant");
+                return;
+            };
+            if n <= 0 {
+                weigere(
+                    absagen,
+                    st.name.span,
+                    "`static` array of length zero -- C has no such object",
+                );
+                return;
+            }
+            laengen.push(n);
+            rest = &x.element;
+        }
+        innerste = rest;
+    }
+    let Some(elem) = ctyp(innerste, u) else {
         weigere(absagen, st.name.span, "`static` array over an unresolvable element type");
         return;
     };
-    // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
-    let Some(n) = konst_oder_name(&a.laenge, u) else {
-        weigere(absagen, st.name.span, "`static` array whose length is not constant");
-        return;
-    };
-    if n <= 0 {
-        weigere(absagen, st.name.span, "`static` array of length zero -- C has no such object");
-        return;
+    // The declarator suffix out of the same numbers: `[[u32; 4]; 3]` becomes
+    // `M[3][4]`, and at one dimension `[64]` -- the value, not the `const`
+    // name that may have spelled it, exactly what this form always wrote.
+    let mut suffix = String::new();
+    for n in &laengen {
+        suffix.push_str(&format!("[{n}]"));
     }
+    // The element count of the whole object: every bound below reads it, at
+    // one dimension it IS the length above. Saturating: past the object fence
+    // the exact count no longer matters, only that it is past it.
+    let gesamt = laengen
+        .iter()
+        .fold(1u128, |a, n| a.saturating_mul(*n as u128));
     // **`D5`: a length C can read exactly, in a declaration C cannot hold** (2026-09-03).
     //
     // `[u64; 2^63 - 1]` is accepted by every pass -- the length is a `u64` and fits -- and
@@ -9755,13 +9977,17 @@ fn feldstatisch(
     // An unknown element width counts as ONE byte -- the smallest any C object has -- so the
     // rule under-refuses rather than over-refuses where it cannot see the size. *That is the
     // safe direction here: what it lets through, `cc` still catches.*
+    //
+    // Lane 170: the bound is on the WHOLE object, so a `[3]` of `[u32; 4]` counts
+    // twelve elements, not three -- at one dimension `gesamt` is the length above
+    // and the line below reads exactly what it always read.
     let elembreite = cbreite(&elem).unwrap_or(1);
-    if (n as u128).saturating_mul(elembreite) > C_OBJEKT_MAX {
+    if gesamt.saturating_mul(elembreite) > C_OBJEKT_MAX {
         weigere(
             absagen,
             st.name.span,
             &format!(
-                "`static` array of {n} x {elembreite} bytes -- C's largest object spans \
+                "`static` array of {gesamt} x {elembreite} bytes -- C's largest object spans \
                  `PTRDIFF_MAX` = {C_OBJEKT_MAX} bytes, because the difference of two pointers \
                  into one object has to be representable. There is no C declaration for this"
             ),
@@ -9828,17 +10054,23 @@ fn feldstatisch(
         // A megabyte of initialiser text costs about 30 ms at the rate measured above.
         // *A limit a real program hits is worse than the defect; this one is not within
         // three decimal orders of any program in this tree.*
+        //
+        // Lane 170: a nested fill nests its braces (`{{7, 7}, {7, 7}}`), and the
+        // budget counts every element of every dimension -- at one dimension the
+        // shape below is byte-identical to the `{7, …}` it replaces.
         let text = w.to_string();
         // `+ 2` for the `, ` between two elements. The last element carries none, so this
         // over-counts by exactly two bytes -- the refusal fires two bytes early rather than
         // two bytes late, which is the direction with the second reader still behind it.
-        let bytes = (n as u128).saturating_mul(text.len() as u128 + 2);
+        // (Nested braces add two bytes per row on top; the two-byte headroom above
+        // covers them wherever more than one row stands.)
+        let bytes = gesamt.saturating_mul(text.len() as u128 + 2);
         if bytes > C_INITIALISIERER_MAX {
             weigere(
                 absagen,
                 st.name.span,
                 &format!(
-                    "`static` array of {n} elements initialised to {w} -- C has no repeat \
+                    "`static` array of {gesamt} elements initialised to {w} -- C has no repeat \
                      form for an initialiser that ISO C also has, so this emitter writes \
                      one element per element and that text would be {bytes} bytes. This \
                      emitter's budget for one initialiser is {C_INITIALISIERER_MAX}. \
@@ -9847,15 +10079,31 @@ fn feldstatisch(
             );
             return;
         }
-        format!(
-            "{{{}}}",
-            std::iter::repeat(text).take(n as usize).collect::<Vec<_>>().join(", ")
-        )
+        // **`try_from` and not `as`** -- the budget above bounds every dimension by
+        // about a million, so the conversion cannot fail on a tree that reached
+        // this line; a number that did not fit would be a truncation, and this
+        // file does not truncate numbers (`konst_zahl`, `D3`/`D4`).
+        let mut tiefen: Vec<usize> = Vec::with_capacity(laengen.len());
+        for n in &laengen {
+            let Ok(n) = usize::try_from(*n) else {
+                weigere(
+                    absagen,
+                    st.name.span,
+                    "`static` array dimension past the addressable count -- the \
+                     initialiser budget above already fenced it",
+                );
+                return;
+            };
+            tiefen.push(n);
+        }
+        let mut gefuellt = String::new();
+        fülle(0, &tiefen, &text, &mut gefuellt);
+        gefuellt
     };
     let konst = if st.veraenderlich { "" } else { "const " };
     let abschnitt = abschnitt_attribut(st, absagen);
     aus.push_str(&format!(
-        "\nstatic {konst}{elem} {}[{n}]{abschnitt} __attribute__((unused)) = {anfang};\n",
+        "\nstatic {konst}{elem} {}{suffix}{abschnitt} __attribute__((unused)) = {anfang};\n",
         st.name.text
     ));
 }
@@ -12115,8 +12363,24 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
         // declaration and from no other.*
         ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
             Some(t) => ctyp(t, u),
+            // **Lane 167: a bare nullary case answers its sum for an unannotated
+            // `let`.** `let m = Leer;` carries no annotation, so the C type comes
+            // from the value -- through the same guard `ort` reads, and only for
+            // the nullary form (a bare name over a payload case is the checker's
+            // `N283`, and this arm never runs on an accepted tree for one).
             None => ort_typ(o, u)
                 .and_then(|t| ctyp(&t, u))
+                .or_else(|| {
+                    if fall_belegt(&o.basis.text, u) {
+                        return None;
+                    }
+                    match varianten_traeger(&o.basis.text, u) {
+                        VariantenDeutung::Eine(summe, v) if v.nutzlast.is_none() => {
+                            Some(summe.to_string())
+                        }
+                        _ => None,
+                    }
+                })
                 .or_else(|| u.lokaltyp.get(&o.basis.text).cloned()),
         },
         ExprArt::Ort(o) => ort_typ(o, u)
@@ -12175,6 +12439,23 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             }
             // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
             // Zeit da; gefragt hat ihn niemand.
+            //
+            // **Lane 167: a `tagged` case answers its owning sum.** `let m = Kurz(x)`
+            // without an annotation needs a C type from the value, and the case is
+            // not a callee -- `u.funktionen` below knows nothing of it. The guard is
+            // the checker's function-wins rule without the module half (same reason
+            // as in `ruf` above); several owners answer nothing, like any
+            // unresolvable `let` value.
+            if r.path().is_some_and(|p| p.teile.len() == 1)
+                && !r.ist_verbundwert()
+                && !u.funktionen.contains_key(n)
+                && !u.uebergaenge.contains_key(n)
+                && !u.geraete.contains_key(n)
+            {
+                if let VariantenDeutung::Eine(summe, _) = varianten_traeger(n, u) {
+                    return Some(summe.to_string());
+                }
+            }
             ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
         }
         // **Lane E5:** a library call in binding position answers its
@@ -12420,6 +12701,145 @@ fn bibliothek_ruf(
     Some(format!("{}({})", r.function.text, args.join(", ")))
 }
 
+/// **Which `tagged` type owns this bare variant name (lane 167), if exactly one does.**
+///
+/// The emitter's maps are bare-keyed and unit-wide, while the checker's resolution
+/// is module-aware: where the checker accepts, exactly one declaration owns the
+/// name visibly -- but the unit may hold a second, invisible one. Guessing between
+/// them would lower a different case list than the checker typed, so several owners
+/// refuse (`C001`) instead. `None` is not a refusal: the name is no case here, and
+/// the ordinary call lowering answers it (which is where `H021` shapes land -- the
+/// checker has already spoken over them, and this arm never runs on an accepted tree
+/// for one).
+enum VariantenDeutung<'a> {
+    Keine,
+    Eine(&'a str, &'a Variante),
+    Mehrere,
+}
+
+fn varianten_traeger<'a>(name: &str, u: &'a Namen) -> VariantenDeutung<'a> {
+    let mut treffer = Vec::new();
+    for (summe, varianten) in &u.markierte {
+        if varianten.iter().any(|v| v.name.text == name) {
+            treffer.push((summe.as_str(), varianten));
+        }
+    }
+    match treffer.len() {
+        0 => VariantenDeutung::Keine,
+        1 => {
+            let (summe, varianten) = treffer.pop().unwrap();
+            match varianten.iter().find(|v| v.name.text == name) {
+                Some(v) => VariantenDeutung::Eine(summe, v),
+                None => VariantenDeutung::Keine,
+            }
+        }
+        _ => VariantenDeutung::Mehrere,
+    }
+}
+
+/// **Whether a bare name already means something in this view (lane 167).**
+///
+/// The checker's value-namespace rule (`m1.rs`, bare-case arm), read against the
+/// emitter's maps: function-scoped bindings (`schatten`); the declared values
+/// (`statiken`, folded constants, atomics, accumulators, tables, arenas);
+/// declared functions; integer words and their sugar (which never name a case --
+/// `return u13;` stays `M119`'s on both sides). Devices, formats and reasons are
+/// NOT excluded: the checker knows none of them as a value either, so a bare
+/// name over one draws `M119` there and the case here, on a refused tree in both
+/// cases. Anything bound wins, and the case is unreachable behind it -- one
+/// predicate, read by `ort` and by `wert_ctyp`, so a bare case never lowers in
+/// one and stays a name in the other.
+fn fall_belegt(name: &str, u: &Namen) -> bool {
+    u.schatten.contains(name)
+        || u.funktionen.contains_key(name)
+        || u.statiken.contains_key(name)
+        || u.konstwert.contains_key(name)
+        || u.konstanten.contains(name)
+        || u.atomics.contains_key(name)
+        || u.akkus.contains(name)
+        || u.arenen.contains_key(name)
+        || u.tabellen.iter().any(|t| t == name)
+        || gabbro_syntax::kw::Kw::suche(name).is_some_and(|k| k.ist_intty())
+        || gabbro_syntax::zucker_speicher(name).is_some()
+}
+
+/// **A `tagged` case as a file-scope initializer (lane 167).**
+///
+/// `{ .marke = Nachricht_Kurz, .last.Kurz = 5 }` -- the brace spelling of what `ruf`
+/// writes as a compound literal in bodies. Only constant payloads lower: a number
+/// through `czahl_oder_absage` (the same suffix rule as the number path), a bare
+/// `const` name through its folded value. Anything else answers `None`, and the
+/// caller keeps its `C001` -- a static initializer is a constant expression, and a
+/// runtime value there is not one the emitter invents.
+fn varianten_statisch(wert: &Expr, summe: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    match &wert.art {
+        ExprArt::Klammer(x) => varianten_statisch(x, summe, u, absagen),
+        ExprArt::Ruf(r) => {
+            let pf = r.path()?;
+            if pf.teile.len() != 1 || r.ist_verbundwert() {
+                return None;
+            }
+            let name = pf.teile[0].text.clone();
+            if u.funktionen.contains_key(&name)
+                || u.uebergaenge.contains_key(&name)
+                || u.geraete.contains_key(&name)
+            {
+                return None;
+            }
+            let VariantenDeutung::Eine(eigen, v) = varianten_traeger(&name, u) else {
+                return None;
+            };
+            if eigen != summe {
+                return None;
+            }
+            match (&v.nutzlast, r.argumente.len()) {
+                (None, 0) => Some(format!("{{ .marke = {summe}_{name} }}")),
+                (Some(_), 1) => {
+                    let c = statische_nutzlast(&r.argumente[0], u, absagen)?;
+                    Some(format!("{{ .marke = {summe}_{name}, .last.{name} = {c} }}"))
+                }
+                _ => None,
+            }
+        }
+        ExprArt::Ort(o) => {
+            if !o.suffixe.is_empty() {
+                return None;
+            }
+            let name = o.basis.text.clone();
+            // The checker's value-namespace rule through the one predicate both
+            // expression arms read (`fall_belegt`): at file scope `schatten` is
+            // empty, so this is the unit's value maps alone.
+            if fall_belegt(&name, u) {
+                return None;
+            }
+            let VariantenDeutung::Eine(eigen, v) = varianten_traeger(&name, u) else {
+                return None;
+            };
+            if eigen != summe || v.nutzlast.is_some() {
+                return None;
+            }
+            Some(format!("{{ .marke = {summe}_{name} }}"))
+        }
+        _ => None,
+    }
+}
+
+/// **A translation-time constant payload for a file-scope case initializer.**
+fn statische_nutzlast(a: &Expr, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    match &a.art {
+        ExprArt::Zahl(n) => Some(czahl_oder_absage(*n, a.span, absagen)),
+        ExprArt::Klammer(x) => statische_nutzlast(x, u, absagen),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            let w = u.konstwert.get(&o.basis.text).copied()?;
+            Some(match u128::try_from(w) {
+                Ok(n) => czahl_oder_absage(n, a.span, absagen),
+                Err(_) => w.to_string(),
+            })
+        }
+        _ => None,
+    }
+}
+
 /// **A call, with the ghost arguments dropped.** The positions come from the callee's
 /// signature; an unknown callee keeps every argument, which cannot compile silently — it
 /// fails at `cc`, and that is the direction to fail in.
@@ -12492,6 +12912,67 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         && r.path().is_some_and(|p| p.teile.len() == 1)
     {
         return intrinsik_c(&name, r, u, absagen);
+    }
+    // **Lane 167: `Variant(payload)` lowers to the compound literal the `match`
+    // reads.** `(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = (x) }` -- the
+    // same designators `match_markiert` reads back (`.marke`, `.last.{case}`), so
+    // construction and matching agree field for field. A nullary case takes no
+    // payload arm: there is no union member for it, and an empty initializer
+    // list is not writable -- the mark alone says which case it is.
+    //
+    // The order is the checker's (`Umgebung::ist_variantenkonstruktor` without the
+    // module half, which this unit-wide map cannot ask): conversions and
+    // intrinsics above cannot be cases (no keyword spelling declares one, and the
+    // sugar spelling converts); a declared function, transition, device handle or
+    // format head wins over a case of the same name, exactly as in `m1.rs`. What the checker
+    // refused (`N281`/`N282`/`N284`, several owners) refuses here too, by name --
+    // the emitter runs on the parsed tree and never consults the passes, so the
+    // backstop is load-bearing for the `-- erwartet: … allein` counterfactual.
+    if let Some(pf) = r.path() {
+        if pf.teile.len() == 1 && !r.ist_verbundwert() {
+            let name = pf.teile[0].text.clone();
+            if !u.funktionen.contains_key(&name)
+                && !u.uebergaenge.contains_key(&name)
+                && !u.geraete.contains_key(&name)
+                && !u.formate.contains(&name)
+            {
+                match varianten_traeger(&name, u) {
+                    VariantenDeutung::Eine(summe, v) => {
+                        let marke = format!("{summe}_{name}");
+                        match (&v.nutzlast, r.argumente.len()) {
+                            (None, 0) => {
+                                return format!("({summe}){{ .marke = {marke} }}");
+                            }
+                            (Some(_), 1) => {
+                                return format!(
+                                    "({summe}){{ .marke = {marke}, .last.{name} = {} }}",
+                                    ausdruck(&r.argumente[0], u, absagen)
+                                );
+                            }
+                            _ => {
+                                weigere(
+                                    absagen,
+                                    r.span,
+                                    "`tagged` case construction with the wrong number of \
+                                     arguments -- a case carries exactly its declared payload",
+                                );
+                                return String::new();
+                            }
+                        }
+                    }
+                    VariantenDeutung::Mehrere => {
+                        weigere(
+                            absagen,
+                            r.span,
+                            "`tagged` case construction naming a case of several `tagged` \
+                             types -- the case index is read off one case list",
+                        );
+                        return String::new();
+                    }
+                    VariantenDeutung::Keine => {}
+                }
+            }
+        }
     }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
@@ -12887,6 +13368,43 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
              sentinel is `count` itself (beweise/Option_Sonderwert.thy), so it needs the table",
         );
         return String::new();
+    }
+    // **Lane 167: a bare nullary case lowers to the compound literal with the mark
+    // alone.** `Leer` is `(Nachricht){ .marke = Nachricht_Leer }` -- the same value
+    // `Leer()` builds one arm up in `ruf`. The shadowing question is asked against
+    // the per-function set (`schatten`: parameters, `let`s, `match` binders and
+    // the rest) and the unit's value maps, mirroring the checker's value-namespace
+    // rule: anything already bound wins, and the case is unreachable behind it. A
+    // bare name over a case WITH payload is the checker's `N283`; here it is the
+    // backstop `C001`, for the same counterfactual reason as in `ruf` above.
+    if o.suffixe.is_empty() {
+        let name = o.basis.text.clone();
+        if !fall_belegt(&name, u) {
+            match varianten_traeger(&name, u) {
+                VariantenDeutung::Eine(summe, v) if v.nutzlast.is_none() => {
+                    return format!("({summe}){{ .marke = {summe}_{name} }}");
+                }
+                VariantenDeutung::Eine(_, _) => {
+                    weigere(
+                        absagen,
+                        o.span,
+                        "`tagged` case with a payload standing as a bare name -- a bare \
+                         name carries no payload",
+                    );
+                    return String::new();
+                }
+                VariantenDeutung::Mehrere => {
+                    weigere(
+                        absagen,
+                        o.span,
+                        "`tagged` case naming a case of several `tagged` types -- the case \
+                         index is read off one case list",
+                    );
+                    return String::new();
+                }
+                VariantenDeutung::Keine => {}
+            }
+        }
     }
     // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
     // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an

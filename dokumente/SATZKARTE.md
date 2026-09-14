@@ -1457,5 +1457,241 @@ Full `lake build`: 139 jobs, no `sorryAx`.
   (termination, full progress beyond the named stops, fairness, the link to
   the emitted C, weak memory, hand translation only) is unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §§1-10 history above.)
+## 16. Concurrency: active threads, start functions, deadlock (2026-09-14)
+
+The three concurrency gaps that kept the goal theorem from covering
+ordinary concurrent programs (§14.6 "several ACTIVE threads", §15.6 "start
+function invariants", §13.5 progress item 1 "a lock held by another
+thread"). Files: `FadenMerkmal.lean` (a residue invariant over every rule
+of G), `ZielOrtMehrfaden.lean` (item 1), `ZielOrtStart.lean` (item 2),
+`Verklemmung.lean` (item 3), `MehrfadenZeuge.lean` / `MehrfadenLauf.lean`
+(witnesses). **G is unchanged**, and every earlier theorem keeps its
+statement (`ziel_ort_sperre`, `ziel_ort_sperre_inv`, `ziel_ort_einfaden`,
+`ziel_ort_sperre_ref104`, the two-writer witness, probes A/B/C). The goal
+theorem is now `ziel_ort_mehrfaden_ende` (§16.4).
+
+### 16.1 Several ACTIVE threads with thread-local carriers
+
+*The gap.* The generic replay (`zielInvS_erreichbarL`) took any set of
+local carriers `lok` with the rely `LokOk`; the flagship instantiated it
+only with "written by no function" (`freiB`), `ziel_ort_einfaden` with
+"everything" (all other threads idle). What was missing: which functions
+can run on which thread -- a residue-to-body relation for calls that G did
+not carry.
+
+*The repair.*
+
+- **A residue invariant carried by every rule** (`FadenMerkmal.lean`). A
+  feature set `Merkmal` (admitted direct callees, admitted signatures of
+  indirect calls, admitted locks of `locks` blocks) and its hereditary
+  residue predicate `GRest.mR` (also: every `abbruch` layer names the held
+  set of the block it stands behind). `schrittMerk` classifies all rules
+  of G: head-local (stack and function kept, predicate carried), push
+  (callee admitted, suspended caller carries it), pop (caller resumes with
+  it). `merkInvG_erreichbar`: for per-thread function sets `Z t` closed
+  under the admitted calls (`MerkAbg`) and containing the start function,
+  on every reachable machine every frame of thread `t` runs a function of
+  `Z t`.
+- **The call graph of a thread.** `K : Faden → D.Fn → Bool` with `AbgK P fs
+  (K t)` (every body in `K t` calls only into `K t`; an indirect call
+  through signature `n` admits every function of signature `n`), decided by
+  `abgB`; `reachB P fs w` computes the reachable set from a start function.
+- **Thread-local carriers.** `GetrenntK P K c`: no thread reaches `c` in a
+  footprint while a DIFFERENT thread can write it (declared write
+  permissions). `lokK P K` is this predicate; `lokOk_mehr` proves the rely:
+  a step writes only what its head function may write, that function is in
+  the acting thread's graph, a frame of another thread runs a function of
+  that thread's graph.
+- **The footprint condition** `∀ f, FussS P S (lokK P K) f`: every
+  footprint carrier is signature-guarded, protected by the lock invariant
+  of one of its guards, or thread-local. Decided by `fussMehrB P S fs K N`
+  when every thread from `N` on is idle (`StummK`: its call graph has empty
+  footprints and no writes) -- `fussMehrB_ok`. The old check is the special
+  case (`fussS_frei_mehr`: a carrier written by no function is thread-local
+  for every `K`).
+
+```lean
+theorem ziel_ort_mehrfaden (P) (O) (passes) (Q) (S) (fs) (sp) (init) (e0)
+    (K : Faden → D.Fn → Bool)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hS : SperrInvOk S) (hvoll : ∀ g, g ∈ fs) (hFrag : programmImFragmentG P fs = true)
+    (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
+    (hFuss : ∀ f, FussS P S (lokK P K) f)
+    (hK : ∀ f, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
+    (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
+    (hI : ∀ f, InvGutS P passes Q S f) :
+    ∀ M, RufErreichbarG P O passes (RufStartG P sp init) M →
+      (VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧
+        ∀ t, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
+          AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
+      InvAmOrtG P M
+```
+
+Also: `ziel_ort_sperre_invL` (the flagship generic in `lok` + `LokOk`).
+
+### 16.2 Invariants and `ensures` owed by start functions
+
+*The gap.* G logs a return only at a pop; a start frame has no caller and
+never pops, so neither `InvAmOrtG` nor the `ensures` half of
+`VertragAmOrtG` said anything about a start function.
+
+*The decision.* The completion of a start function IS a machine state: the
+stack is empty and the head stands at a `return` (`ret`, `ret` before the
+rest of an end block, or of a block -- `RetKopf`). No rule applies there;
+the thread is finished and stays so. The statement is a property of every
+reachable machine, so G needs no new rule and no `never`/`diverges`
+annotation is needed (a start function that never returns owes nothing
+here):
+
+```lean
+def StartEndeG (P) (M) : Prop :=
+  ∀ t, (M.faeden t).stapel = [] → ∀ l Γ Λ ρ r e, (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ →
+    RetKopf e r →
+    EnsAmRueck P kopf.f kopf.s0 ((M.weltVon t).lese Λ e.orte) kopf.rho (evalErg … e …) ∧
+      InvAmRueck P kopf.f ((M.weltVon t).lese Λ e.orte)
+```
+
+Because it holds on EVERY reachable machine, it holds at the moment the
+thread finishes and at every later one: the carriers read are stable for
+the finished frame (signature-guarded -- the finished thread keeps those
+locks --, protected by a lock the frame names, or local), and the replay
+keeps them. The obligation is the existing one (`KoerperGutS`, `InvGutS` of
+the start function). Proof: `kopfS_ret` (the replayed head at a return,
+the twin of `popS_ens`/`popS_inv` without a pop). Theorems: `ziel_ort_ende`
+(generic `lok`), `ziel_ort_sperre_ende` (old footprint check),
+`ziel_ort_mehrfaden_ende` (§16.4).
+
+### 16.3 Deadlock freedom from lock ranks
+
+*The gap.* `dannLocks` fires only if the lock is not held by the thread
+(`hself`), ranks above EVERY lock the thread holds (`hrang`, a check on the
+machine's held set), and no other thread holds it (`RufFreiG`). Nothing
+proved that `hself`/`hrang` ever hold on a reachable machine, so a thread
+at a `locks` head could be stuck for a reason no scheduler resolves; and no
+statement excluded a wait cycle.
+
+*The repair* (`Verklemmung.lean`).
+
+- `schrittRang`: every rule classified by its effect on the head's
+  holdings and the held locks (keep both / take a free, unheld lock the
+  residue admits / release one lock / push with the call site's `RufPasst`
+  / pop at the end holdings).
+- **The rank invariant** `RangInvG w z`: held locks duplicate-free; the
+  rank chain `RangKette` down the stack -- every held lock is NAMED by a
+  frame, or ranks below that frame's floor (an extra lock of its callers),
+  or ranks at least the floor of the frame directly above (taken by a
+  callee), the bottom frame has no "below floor" case; every frame's
+  signature locks are named by its caller; floors rise towards the head;
+  every `locks` still ahead of a frame ranks at least its floor
+  (`GRest.mR (bodenM f)`, the residue form of `StufenOk`); the bottom frame
+  runs the start function `w`. `rangInvG_erreichbar` (from `StufenM`, which
+  `StufenOk` gives: `stufenM_of_ok`, and duplicate-free start locks).
+- `sperre_rang`: at a `locks L` head every held lock ranks below `L` and
+  `L` is not held -- `hself` and `hrang` hold. `schritt_an_sperre`: the step
+  fires unless another thread holds `L`.
+- **No wait cycle:**
+
+```lean
+theorem keine_verklemmungG (hO : GutO O) (hSt : StufenM P) (sp) (init)
+    (hLeer : ∀ t, D.haelt (init t).1 = []) (ls : List D.Lock) (hls : ∀ L, L ∈ ls)
+    {M} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
+    (hW : ∀ t, ¬ FertigG M t → WartetG M t) : ∀ t, FertigG M t
+```
+
+`FertigG`: empty stack, head at a return. `WartetG`: the head stands at
+`locks L` and every such `L` is held by another thread. Proof: the waiting
+thread whose lock ranks highest waits for a lock held by an unfinished
+thread (a finished thread holds only its start function's signature locks,
+none by `hLeer`), which waits for a lock of strictly higher rank
+(`sperre_rang`) -- contradiction on finitely many locks.
+`keine_verklemmungG'`: the same as `¬ (∃ unfinished ∧ ∀ unfinished wait)`.
+
+### 16.4 THE goal theorem: `ziel_ort_mehrfaden_ende`
+
+Premises of `ziel_ort_mehrfaden` (§16.1); conclusion: that of
+`ziel_ort_sperre_inv` AND `StartEndeG`. Deadlock freedom is the separate
+theorem `keine_verklemmungG` (its premises are program facts of the same
+classes).
+
+| Premise | Meaning | Class | Changed in §16 |
+|---|---|---|---|
+| `P`, `O`, `passes`, `fs`, `sp`, `init`, `Q`, `S`, `e0` | data | as §14.3 | -- |
+| `K` | per-thread call graphs | DATA (`reachB` computes them) | NEW |
+| `hO`, `hRL`, `hQ` | hardware | (b) | -- |
+| `hlok`, `hvoll`, `hFrag` | as §13.3 | (c) | -- |
+| `hS : SperrInvOk S` | as §14.3 | (c) | -- |
+| `hAbg : ∀ t, AbgK P fs (K t)` | call graphs closed | (c) DECIDABLE (`abgB`) | NEW |
+| `hWurzel` | each start function in its thread's graph | (c) decidable per thread | NEW |
+| `hFuss : ∀ f, FussS P S (lokK P K) f` | every footprint carrier signature-guarded, lock-protected, or thread-local | (c) DECIDABLE for finitely many active threads (`fussMehrB`) | REPLACES `fussSperreB` (weaker) |
+| `hK : KoerperGutS` | per function, sequential | (a) USER | -- |
+| `hI : InvGutS` | per function, sequential; now also covers start functions | (a) USER | conclusion extended |
+| `hStart`, `hSstart`, `hex` | as §14.3 | (a)/(d) | -- |
+| deadlock theorem: `StufenM P` | floors on bodies (from `StufenOk`) | (c) decidable | NEW (for `keine_verklemmungG`) |
+| deadlock theorem: `hLeer`, `ls` | start functions hold no signature lock; locks finite | (c) | NEW |
+
+### 16.5 Witnesses (`MehrfadenZeuge.lean`, `MehrfadenLauf.lean`)
+
+Declaration `mD`: shared `konto` under lock `()` with lock invariant
+`konto[0] == konto[1]`; UNGUARDED private tables `privA`, `privB`; table
+invariant `privA[0] == privA[1]`. Thread 0: `hauptA = privA[0] = 7;
+privA[1] = 7; locks { setze(30) }; pruefeA(); return` (ensures
+`privA[0] == 7`, owes the invariant); `pruefeA` REQUIRES `privA[0] == 7`;
+thread 1: `hauptB = privB[0] = 5; locks { setze(70) }; return`; others
+idle. `setze(x)` as in §14.5.
+
+- `mP_fussS_falsch`, `mP_fussG_falsch`: both earlier checks refuse it;
+  `mP_fussMehr` (by `decide`): the new check passes; `mKA_reach`,
+  `mKB_reach`: the call graphs are the computed ones.
+- `mP_zertifiziert`: every premise of `ziel_ort_mehrfaden_ende` jointly
+  (`KoerperGutS`, `InvGutS` proved per function; `hauptA`'s caller duty for
+  `pruefeA` uses the frames of the lock's move and of `setze`);
+  `mP_mehrfaden`; `mP_verklemmungsfrei`, `mP_rang`; `sP_ende_zertifiziert`
+  (`ziel_ort_sperre_ende` on §14.5's `sP`).
+- `ziel_ort_mehrfaden_zeuge` (items 1, 2): on a reached run both ACTIVE
+  threads write their private tables, thread 0 runs its critical section,
+  thread 1 runs its critical section (its `setze` return logged), then
+  thread 0 enters `pruefeA` and `privA[0] == 7` holds at the logged entry
+  BY THE THEOREM; thread 0 finishes, and at its final state `hauptA`'s
+  `ensures` and its owed invariant hold (both `privA` slots `7`) BY THE
+  THEOREM; both threads are `FertigG`.
+- `keine_verklemmungG_zeuge` (item 3): at a reached machine where both
+  threads stand at `locks`, thread 1's step exists by `schritt_an_sperre`;
+  one step later thread 0 holds the lock, thread 1 `WartetG` and is
+  unfinished, thread 0 neither waits nor is finished, and the theorem
+  refutes "all unfinished threads wait".
+
+Axioms of every new theorem (`schrittMerk`, `merkInvG_erreichbar`,
+`ziel_ort_sperre_invL`, `lokOk_mehr`, `ziel_ort_mehrfaden`,
+`fussMehrB_ok`, `kopfS_ret`, `ziel_ort_ende`, `ziel_ort_mehrfaden_ende`,
+`ziel_ort_sperre_ende`, `schrittRang`, `stufenM_of_ok`,
+`rangInvG_erreichbar`, `sperre_rang`, `schritt_an_sperre`,
+`keine_verklemmungG`, `keine_verklemmungG'`, all witnesses): `propext`,
+`Classical.choice`, `Quot.sound`. No `sorry`, no new `axiom`, no
+`native_decide`. Full `lake build`: 160 jobs, green.
+
+### 16.6 What remains
+
+- **Checker link.** `K`, `AbgK`, `fussMehrB`, `StufenM` are decidable model
+  facts; no Rust rule computes them (as for `fussSperreB`, `SperrInvOk`).
+  Thread-locality is judged on DECLARED write permissions, not on the
+  writes a body actually performs.
+- **Infinitely many active threads.** `GetrenntK` quantifies over all
+  thread pairs; the decision procedure needs every thread from some `N` on
+  idle (as G starts all threads of `Faden = Nat` at once). A carrier touched
+  by a routine that runs on two threads is never thread-local.
+- **Start functions:** `StartEndeG` covers value returns (`ret`); a start
+  function ending in a reason (`retGrund`) owes nothing (as `InvGutS`
+  covers normal returns only). Invariants are still checked at returns only.
+- **Progress beyond locks.** Deadlock freedom is not starvation freedom:
+  no fairness, no bound on hold times; a thread that never releases (a
+  `forever` inside `locks`) is unfinished but not waiting, so the theorem
+  says nothing about the threads waiting for it. Still open from §13.5:
+  `awaits` visibility (A10), hardware outcomes, spent `forever` budget, and
+  the caller's shape at a pop (item 6). `keine_verklemmungG` needs start
+  functions without signature locks (a finished thread keeps its start
+  locks).
+- Everything else of §15.6 (adequacy of `else` inside loops, the link to
+  the emitted C, weak memory, hand translation only) is unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §§1-10 history above.)
 

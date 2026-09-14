@@ -1,0 +1,24 @@
+-- 123 -- a const matrix: nested array literals lower to nested initialisers.
+--
+-- `const T : [[u32; 2]; 2] = [[1, 2], [3, 4]]` is a 2-by-2 table fixed at
+-- translation time. Rows nest in the literal the way dimensions nest in the
+-- type (`arraylit`, `SYNTAX.md` §1, lane 170); the checker holds each row
+-- against its dimension -- a value where a row stands, or a row where a
+-- value stands, falls as `N285`, a row of the wrong length as `N286` -- and
+-- every leaf folds and ranges like a flat table's element (`K190`/`K194`).
+-- The emitter writes one `static const uint32_t T[2][2]` with the nested
+-- initialiser `{{1u, 2u}, {3u, 4u}}`, and reads go through the ordinary
+-- place lowering (`T[i][j]`).
+module beispiel::const_matrix {
+
+const T : [[u32; 2]; 2] = [[1, 2], [3, 4]];
+
+impl fn lies(i : u32 in 0 ..< 2, j : u32 in 0 ..< 2) -> u32
+    effects { pure }
+    -- two index loads and the element load, read off `K001`.
+    costs <= 3 ops
+{
+    return T[i][j];
+}
+
+}

@@ -15,6 +15,10 @@ $ ./instrumente/zaehle-zeremonie.py
 > The delta against lane E5/129's 1548 is exactly this lane's 11 sites
 > (`beispiele/112`/`113` and gift `925`-`929`). Booked as measured, not
 > added up.
+> **124 von 1669 on 2026-09-14 (lane 170, measured on the lane tree).**
+> The run without this lane's six files reads `124 von 1652`; the delta is
+> exactly this lane's 17 sites (`beispiele/122`/`123` and gift `948`-`951`,
+> none of them may-fall). Booked as measured, not added up.
 > **120 von 1621 on 2026-09-13 (lane 152, measured on the lane tree).**
 > The run without this lane's six files reads `119 von 1610`; the delta is
 > exactly this lane's 11 sites (`beispiele/116`/`117` and gift `936`-`939`,

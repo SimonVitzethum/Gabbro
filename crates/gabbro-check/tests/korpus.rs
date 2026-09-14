@@ -70,6 +70,12 @@ const BENANNT: &[&str] = &[
     // (measured: zero sites), so the entries are the names, not sites -- a doc
     // snippet that ever fires one counts the rule, not noise.
     "N270", "N271",
+    // Lane 167: `N280` an unknown or ambiguous variant construction, `N281` a
+    // missing payload, `N282` a payload on a nullary case, `N283` a bare name
+    // over a payload case, `N284` labels at a case. Named here so the corpus
+    // run counts the rules, not noise -- doc snippets construct variants in
+    // prose positions the checker may read.
+    "N280", "N281", "N282", "N283", "N284",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

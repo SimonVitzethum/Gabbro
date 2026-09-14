@@ -195,6 +195,48 @@ fn k194_element_out_of_range() {
     );
 }
 
+// -- lane 170: nested rows are held against their dimension -------------------
+
+#[test]
+fn n285_scalar_where_row_stands() {
+    falls_only_with(
+        "module t {\nconst T : [[u32; 2]; 2] = [[1, 2], 3];\n}",
+        &["N285"],
+    );
+}
+
+#[test]
+fn n285_row_where_scalar_stands() {
+    // The outer count matches, so the rows reach the leaf rule: each is
+    // `N285`, one per row. Where the outer count misses too (`[u32; 4]`
+    // above), `K191` owns the fault alone and the rows are never reached.
+    falls_only_with(
+        "module t {\nconst T : [u32; 2] = [[1, 2], [3, 4]];\n}",
+        &["N285", "N285"],
+    );
+}
+
+#[test]
+fn n286_ragged_row() {
+    falls_only_with(
+        "module t {\nconst T : [[u32; 2]; 2] = [[1, 2], [3]];\n}",
+        &["N286"],
+    );
+}
+
+#[test]
+fn nested_leaf_out_of_range_stays_k194() {
+    falls_only_with(
+        "module t {\nconst T : [[u8; 2]; 2] = [[1, 2], [3, 300]];\n}",
+        &["K194"],
+    );
+}
+
+#[test]
+fn nested_clean_table_checks() {
+    falls_clean("module t {\nconst T : [[u32; 2]; 2] = [[1, 2], [3, 4]];\n}");
+}
+
 // -- the emitter writes the folded values -------------------------------------
 
 #[test]

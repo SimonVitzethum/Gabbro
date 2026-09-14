@@ -1,0 +1,19 @@
+-- erwartet: N282
+-- **An argument where the case carries nothing -- `Leer(x)` has no case type.**
+--
+-- A nullary case constructs as `Leer` or `Leer()`; an argument beside it has no
+-- declared type to stand against, so the refusal is the constructor's own, not
+-- the range rule's. It reports and continues: the construction still answers the
+-- owning sum, and the `return` against it stays silent.
+module gift::payload_on_nullary_variant {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+
+impl fn baue(x : u32) -> Nachricht
+    effects { pure }
+    costs   <= 8 ops
+{
+    return Leer(x);
+}
+
+}

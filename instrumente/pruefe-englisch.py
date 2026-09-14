@@ -528,8 +528,11 @@ MARKE_KOMMENTARE = 7949   # 7730 earned + 180 booked as debt (2026-08-21), 10 re
 # wrap) added six German lines, and the note explaining THAT added five more. Both rewritten
 # in English. *A guardian that counts its own commentary is measuring, not nagging -- and an
 # attribution written before the measurement is prose.*
-MARKE_PY = 1085           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+MARKE_PY = 1086           # 1072 -> 1070 on 2026-08-31: two German comment lines in
                            # `pruefe-kennungen.py` went into an English docstring
+# **1085 -> 1086 on 2026-09-14 (lane 170).** The struct-field-length anchor
+# in `mutiere-pruefer.py` is repointed at the nested declarator; the struck
+# old anchor line carries a code quote and counts. Debt booked, not repaid.
 # **1069 -> 1085 on 2026-09-12, measured per file against the booking commit.**
 # `pruefe-gestalt.py` +13 (new guardian, landed with German comments),
 # `pruefe-abstieg.py` +1, `pruefe-grammatiktafel.py` +1, `nachpruefer.py` +1.

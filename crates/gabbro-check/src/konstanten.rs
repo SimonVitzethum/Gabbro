@@ -12,6 +12,8 @@
 //! | `K192` | a `const` calling, directly or through `const fn`, a function that is not `pure` |
 //! | `K193` | unbounded recursion in const evaluation: a reference cycle through a `const` |
 //! | `K194` | a table element evaluating outside the declared element range |
+//! | `N285` | a nested literal whose nesting does not match the type's: a row where a value stands, or a value where a row stands |
+//! | `N286` | a nested row holding anything but the declared inner count |
 //!
 //! ## What this pass does NOT do (booked, not forgotten)
 //!
@@ -445,30 +447,120 @@ fn check_table(
     }
     let range = element_type.bereich();
     for e in elements {
-        if has_float(e) || has_bitneg(e) {
-            continue;
-        }
-        let Some(value) = env.konst_wert(init_module, e) else {
-            if is_foreign(e) && !has_zero_divisor(env, init_module, e) {
-                absagen.schiebe(k190(e.span, name));
-            }
-            continue;
+        check_eintrag(env, name, init_module, e, element_type, &range, absagen);
+    }
+}
+
+/// The array dimension a type declares, through named types and no further:
+/// `[[u32; 2]; 2]` declares rows of two `u32`. A pointer TO an array is no
+/// dimension -- stripping it would read the pointee's shape as the row's.
+fn arraydimension(t: &crate::typen::Typ) -> Option<(&crate::typen::Typ, Option<u128>)> {
+    match t {
+        crate::typen::Typ::Feld { element, laenge } => Some((element, *laenge)),
+        crate::typen::Typ::Benannt { unter, .. } => arraydimension(unter),
+        _ => None,
+    }
+}
+
+/// Lane 170 -- hold one ENTRY of a (possibly nested) const-table literal
+/// against the element type one dimension declares.
+///
+/// A dimension whose element type is itself an array takes ROWS: the entry
+/// must be an array literal (`N285` where a value stands, and where a row
+/// stands at a scalar dimension), holding exactly the declared inner count
+/// (`N286` -- ragged, short or long), each entry held recursively at
+/// whatever depth the type ends. A scalar dimension takes VALUES, held
+/// exactly the way the flat literal always was: outside the fragment
+/// (`K190`), outside the range (`K194`). One fault keeps one refusal --
+/// the shape rules own the nesting, the value rules own the leaves.
+fn check_eintrag(
+    env: &Umgebung,
+    name: &str,
+    init_module: &str,
+    e: &Expr,
+    element_type: &crate::typen::Typ,
+    range: &Option<crate::typen::IntBereich>,
+    absagen: &mut Absagen,
+) {
+    if let Some((inner, laenge)) = arraydimension(element_type) {
+        let ExprArt::ArrayLit(zeile) = &e.art else {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N285",
+                    e.span,
+                    format!(
+                        "const-table `{name}` declares an array at this dimension, but this \
+                         entry is no row -- a nested literal holds one row per entry, \
+                         nothing is filled in"
+                    ),
+                )
+                .mit_notiz("the literal nests the way the type nests, row for row"),
+            );
+            return;
         };
-        if let Some(b) = &range {
-            if value < b.min || value > b.max {
+        if let Some(n) = laenge {
+            if zeile.len() as u128 != n {
                 absagen.schiebe(
                     Absage::fehler(
-                        "K194",
+                        "N286",
                         e.span,
                         format!(
-                            "const-table element {value} lies outside the declared element \
-                             range `{} .. {}`",
-                            b.min, b.max
+                            "const-table `{name}` declares [{n}] at this dimension but this \
+                             row holds {} entries -- every row holds the declared count, \
+                             nothing is filled in",
+                            zeile.len()
                         ),
                     )
-                    .mit_notiz("each element is held against the element type, not the table"),
+                    .mit_notiz(
+                        "a ragged row has no C shape: `uint32_t t[2][2]` is rectangular",
+                    ),
                 );
+                return;
             }
+        }
+        let innen = inner.bereich();
+        for z in zeile {
+            check_eintrag(env, name, init_module, z, inner, &innen, absagen);
+        }
+        return;
+    }
+    if matches!(&e.art, ExprArt::ArrayLit(_)) {
+        absagen.schiebe(
+            Absage::fehler(
+                "N285",
+                e.span,
+                format!(
+                    "const-table `{name}` declares a single value at this dimension, but \
+                     this entry is a row -- the literal nests deeper than the type"
+                ),
+            )
+            .mit_notiz("the literal nests the way the type nests, row for row"),
+        );
+        return;
+    }
+    if has_float(e) || has_bitneg(e) {
+        return;
+    }
+    let Some(value) = env.konst_wert(init_module, e) else {
+        if is_foreign(e) && !has_zero_divisor(env, init_module, e) {
+            absagen.schiebe(k190(e.span, name));
+        }
+        return;
+    };
+    if let Some(b) = &range {
+        if value < b.min || value > b.max {
+            absagen.schiebe(
+                Absage::fehler(
+                    "K194",
+                    e.span,
+                    format!(
+                        "const-table element {value} lies outside the declared element \
+                         range `{} .. {}`",
+                        b.min, b.max
+                    ),
+                )
+                .mit_notiz("each element is held against the element type, not the table"),
+            );
         }
     }
 }

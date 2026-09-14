@@ -920,17 +920,24 @@ impl<'a> Parser<'a> {
     /// `[e0, e1, ...]` -- elements are ordinary expressions, each held
     /// element-wise by the checker. A trailing comma is admitted, as in
     /// call argument lists.
+    ///
+    /// **Lane 170: rows may nest (`[[1, 2], [3, 4]]`).** An `expr` never
+    /// reads `[`, so a leading `[` is unambiguously a nested `arraylit` and
+    /// anything else is an ordinary element -- `arrayelem` below reads that
+    /// choice, and the EBNF beside it (`SYNTAX.md`, `arraylit`) reads the
+    /// same recursion. The checker holds each row against its dimension
+    /// (`N285`/`N286` in `konstanten.rs`).
     fn arraylit(&mut self) -> Erg<Expr> {
         let anfang = self.blick().span;
         self.erwarte_z(Z::EckAuf)?;
         let mut elemente = Vec::new();
         if !self.ist_z(Z::EckZu) {
-            elemente.push(self.expr()?);
+            elemente.push(self.arrayelem()?);
             while self.friss_z(Z::Komma) {
                 if self.ist_z(Z::EckZu) {
                     break;
                 }
-                elemente.push(self.expr()?);
+                elemente.push(self.arrayelem()?);
             }
         }
         let ende = self.erwarte_z(Z::EckZu)?;
@@ -939,6 +946,17 @@ impl<'a> Parser<'a> {
             art: ExprArt::ArrayLit(elemente),
             span,
         })
+    }
+
+    /// One element of an `arraylit`: a nested row where `[` opens, an
+    /// ordinary expression anywhere else. Kept beside `arraylit` (and not
+    /// inlined) so the recursion reads as the EBNF's `arraylit | expr`.
+    fn arrayelem(&mut self) -> Erg<Expr> {
+        if self.ist_z(Z::EckAuf) {
+            self.arraylit()
+        } else {
+            self.expr()
+        }
     }
 
     fn staticdecl(&mut self, oeffentlich: bool) -> Erg<StatischDecl> {

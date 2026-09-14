@@ -347,6 +347,31 @@ pub fn qualifiziere(pfad: &str, name: &str) -> String {
     }
 }
 
+/// **One resolved `tagged` variant (lane 167): its owning sum and its case.**
+///
+/// The case index is the position in declaration order -- the same order the
+/// emitter's `enum` and the model's `cs` list read, so all three agree without
+/// a second table.
+#[derive(Debug, Clone)]
+pub struct VariantenTreffer {
+    /// The owning sum, fully qualified (`gift::Nachricht`).
+    pub summe: String,
+    /// The case index in declaration order (`Fin cs.length` in the model).
+    pub index: usize,
+    /// The declared payload type, `None` for a nullary case.
+    pub nutzlast: Option<Typ>,
+    /// The whole sum, resolved -- what the construction answers.
+    pub summe_typ: Typ,
+}
+
+/// **How many visible `tagged` declarations own this variant name (lane 167).**
+#[derive(Debug, Clone)]
+pub enum VariantenFund {
+    Keine,
+    Eine(VariantenTreffer),
+    Mehrere(Vec<String>),
+}
+
 impl Umgebung {
     pub fn sammle(baum: &Programm) -> Umgebung {
         let mut u = Umgebung::default();
@@ -692,6 +717,149 @@ impl Umgebung {
 
     pub fn verbundfelder(&self, von: &str, pfad: &Pfad) -> Option<&Vec<String>> {
         self.suche(&self.verbundtypen, von, &pfad.text())
+    }
+
+    /// **A `tagged` variant by its bare name (lane 167).**
+    ///
+    /// `Variant(payload)` / `Variant` parse as an ordinary `Ruf` / `Ort` -- the parser
+    /// cannot decide whether `Kurz` is a function or a case, because it knows no
+    /// declarations. This is the one place that resolves the CASE half: the visible
+    /// `tagged` declarations are searched for the bare name. It does NOT apply the
+    /// function-wins rule -- a function of the same name wins, but that decision
+    /// stands with the callers (`ruf_roh` in `m1.rs`, `ist_variantenkonstruktor`
+    /// below), because only they know whether the shape at hand is even a call.
+    /// `Some`/`None`, the integer words and their sugar, the bit intrinsics,
+    /// transitions and device handles never reach here as variants: the parser reads
+    /// variant names with `erwarte_ident`, so no keyword spelling can declare one,
+    /// and the remaining exclusions are the callee shapes `m1.rs` types before the
+    /// variant arm.
+    ///
+    /// The answer is threefold on purpose: zero, one, or several visible owners.
+    /// Several is not resolved by order -- *the last entry winning would be the
+    /// module bug of 2026-08-19 again, one level down.*
+    pub fn variante(&self, von: &str, name: &str) -> VariantenFund {
+        let mut treffer = Vec::new();
+        for (q, t) in &self.roh_typen {
+            if !t.tagged {
+                continue;
+            }
+            let Some(TypExpr::Varianten(varianten, _)) = &t.rumpf else {
+                continue;
+            };
+            if !varianten.iter().any(|v| v.name.text == name) {
+                continue;
+            }
+            // Visible from the use site: the qualified declaration must be one of
+            // the candidates -- own module, enclosing modules, root, `use` lines.
+            // The same rule every other name lookup on this struct follows.
+            if !self.kandidaten(von, kurzname(q)).contains(q) {
+                continue;
+            }
+            treffer.push(q.clone());
+        }
+        match treffer.len() {
+            0 => VariantenFund::Keine,
+            1 => {
+                let summe = treffer.pop().unwrap();
+                let mut unterwegs = HashSet::new();
+                let aufgeloest =
+                    self.typ_aufloesen(modul_von(&summe), kurzname(&summe), &mut unterwegs);
+                match aufgeloest {
+                    Typ::Summe {
+                        name: summen_name,
+                        varianten,
+                    } => match varianten.iter().position(|(n, _)| n == name) {
+                        Some(index) => {
+                            let nutzlast = varianten[index].1.clone();
+                            VariantenFund::Eine(VariantenTreffer {
+                                summe,
+                                index,
+                                nutzlast,
+                                summe_typ: Typ::Summe {
+                                    name: summen_name,
+                                    varianten,
+                                },
+                            })
+                        }
+                        None => VariantenFund::Keine,
+                    },
+                    _ => VariantenFund::Keine,
+                }
+            }
+            _ => VariantenFund::Mehrere(treffer),
+        }
+    }
+
+    /// **Does any declared function answer to this bare name (lane 167)?**
+    ///
+    /// Unit-wide, visibility-blind: the emitter reads callees by their bare name
+    /// across the whole unit (`Namen::funktionen`, last wins), so a function of
+    /// the case's name ANYWHERE -- visible from the call site or not -- would
+    /// take the emitter's call lowering while the checker typed a construction.
+    /// Where the visible resolution is the function itself that is the function
+    /// path on both sides; where it is not, the construction is refused (`N280`)
+    /// instead of miscompiled. A case that shares its name with a function has
+    /// no writable construction -- there is no qualified case syntax, and
+    /// guessing between the two readings would be a second truth.
+    pub fn funktionsname_belegt(&self, name: &str) -> bool {
+        self.funktionen
+            .keys()
+            .any(|k| kurzname(k) == name)
+    }
+
+    /// **Does this unit declare any `tagged` type at all (lane 167)?**
+    ///
+    /// The gate for `N280`: an unresolvable single-segment call in a unit without
+    /// `tagged` types is no constructor attempt -- it stays `H021`'s alone, and no
+    /// new code fires beside it. Where `tagged` types stand, the same call may be
+    /// a misspelled case, and the refusal says both namespaces.
+    pub fn hat_markierte(&self) -> bool {
+        self.roh_typen.values().any(|t| {
+            t.tagged && matches!(t.rumpf, Some(TypExpr::Varianten(..)))
+        })
+    }
+
+    /// **Is this `Ruf` a `tagged` variant construction (lane 167)?**
+    ///
+    /// The one predicate every pass asks instead of re-resolving by hand -- the
+    /// checker, the call graph, the cost pass and the emitter all read the same
+    /// answer, so a constructor is never a call edge in one pass and a callee in
+    /// another. A function of the same name wins; `Some`/`None`, integer
+    /// conversions, bit intrinsics, transitions, device handles, labelled calls
+    /// and indirect calls are never constructors here (the checker types each of
+    /// those before the variant arm, and this predicate mirrors that order).
+    /// A function of the name ANYWHERE in the unit (visible or not,
+    /// `funktionsname_belegt`) also answers false: the emitter reads callees
+    /// unit-wide, so an invisible same-named function would take the call
+    /// lowering while the checker typed a construction.
+    pub fn ist_variantenkonstruktor(&self, von: &str, r: &Ruf) -> bool {
+        if r.is_indirect() || r.ist_verbundwert() {
+            return false;
+        }
+        let Some(pfad) = r.path() else {
+            return false;
+        };
+        if pfad.teile.len() != 1 {
+            return false;
+        }
+        let name = &pfad.teile[0].text;
+        if name == "Some" || name == "None" {
+            return false;
+        }
+        if Kw::suche(name).is_some_and(|k| k.ist_intty())
+            || gabbro_syntax::zucker_speicher(name).is_some()
+            || crate::ist_bitintrinsik(name)
+        {
+            return false;
+        }
+        if self.funktion(von, pfad).is_some()
+            || self.ist_uebergang(von, pfad)
+            || self.nennt_kopf(von, name)
+            || self.funktionsname_belegt(name)
+        {
+            return false;
+        }
+        matches!(self.variante(von, name), VariantenFund::Eine(_))
     }
 
     fn sammle_roh(&mut self, items: &[Item], pfad: &str) {

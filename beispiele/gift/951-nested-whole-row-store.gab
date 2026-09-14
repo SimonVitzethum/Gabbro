@@ -1,0 +1,21 @@
+-- erwartet: N287
+-- **Gift 951 -- storing a whole row of a nested array.**
+--
+-- `M[i] = M[j]` over `static mut M : [[u32; 4]; 3]`: both sides are
+-- `[u32; 4]`, so the shape comparison agrees and no range rule speaks --
+-- while the emitter would write `M[i] = M[j];` into the C, and `cc`
+-- answers *assignment to expression with array type*. C has no assignment
+-- of one array to another at any depth, so a whole row is never a store
+-- target; only `M[i][j]` is a value.
+module gift::nested_whole_row_store {
+
+static mut M : [[u32; 4]; 3] = 0;
+
+impl fn tausche(i : u32 in 0 ..< 3, j : u32 in 0 ..< 3)
+    effects { reads M, writes M }
+    costs <= 8 ops
+{
+    M[i] = M[j];
+}
+
+}

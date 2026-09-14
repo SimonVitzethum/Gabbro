@@ -1028,6 +1028,34 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<Carried, LeanReason> {
         if let Some(v) = const_value(n, c) {
             return Ok(LeanCarried::PlaceConstant.term(format!("(.lit (.int {}))", int_lit(v))));
         }
+        // **Lane 167: a bare nullary `tagged` case is a VALUE, not a place.** `Leer`
+        // is `(.tagOf "Leer" none)` -- the same term the `Leer()` call form carries
+        // in `expr_term` above. It stands after the local and constant readings for
+        // the same reason the checker asks the value namespace first: anything
+        // already bound wins, and the case is unreachable behind it. The guard
+        // mirrors the checker's (`m1.rs`, bare-case arm) through this channel's
+        // maps: routines, foreign bodies, specs, transitions, devices, ops and
+        // statics all bind the name first. A bare name over a case WITH payload
+        // is the checker's `N283`; here it stays a place and the model has no
+        // value for it -- refused downstream as before.
+        if let Some(&Some(false)) = c.unit.variants.get(n.as_str()) {
+            let belegt = c.unit.routines.contains_key(n.as_str())
+                || c.unit.foreign.contains_key(n.as_str())
+                || c.unit.specs.contains_key(n.as_str())
+                || c.unit.transitions.contains_key(n.as_str())
+                || c.unit.devices.contains(n.as_str())
+                || c.unit.ops.contains_key(n.as_str())
+                || c.unit.statics_tables.contains_key(n.as_str())
+                || c.unit.statics_records.contains_key(n.as_str())
+                || c.unit.statics_scalars.iter().any(|(s, _)| s == n)
+                || c.unit.tables.contains_key(n.as_str())
+                || gabbro_syntax::kw::Kw::suche(n)
+                    .is_some_and(|k| k.ist_intty())
+                || gabbro_syntax::zucker_speicher(n).is_some();
+            if !belegt {
+                return Ok(LeanCarried::ExprTagged.term(format!("(.tagOf {} none)", quoted(n))));
+            }
+        }
         return Ok(LeanCarried::PlaceGlobal.term(format!("(.global {})", quoted(n))));
     }
     if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {

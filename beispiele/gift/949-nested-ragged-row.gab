@@ -1,0 +1,12 @@
+-- erwartet: N286
+-- **Gift 949 -- a ragged nested literal: `[[1, 2], [3]]`.**
+--
+-- The second row holds one entry where the declared inner dimension holds
+-- two. A ragged row has no C shape (`uint32_t t[2][2]` is rectangular), so
+-- the checker refuses the row's length instead of padding it or trusting
+-- the first row.
+module gift::nested_ragged_row {
+
+const T : [[u32; 2]; 2] = [[1, 2], [3]];
+
+}

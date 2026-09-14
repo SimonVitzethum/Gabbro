@@ -42,10 +42,14 @@
 //!   expresses, and the one `C-SPEICHERMODELL.md` §1c counts;
 //! * the legal stores stay silent: `publishes { … }`, `publishes nothing`,
 //!   and the `awaits` load;
-//! * a variant constructor in a body falls with `H021` (the call graph owns
-//!   the refusal -- M1 leaves the callee untyped, costs has no declaration);
-//!   the same shape in a `static` initialiser, which no body pass visits, is
-//!   refused by the emitter with `C001`.
+//! * a variant constructor in a body fell with `H021` (the call graph owned
+//!   the refusal -- M1 left the callee untyped, costs had no declaration);
+//!   since lane 167 the construction is legal and lowers to the compound
+//!   literal the `match` reads, so the two rows below pin the new behaviour
+//!   and the old `H021` pin moved to `beispiele/gift/938`'s successor shape;
+//!   the same shape in a `static` initialiser, which no body pass visits, was
+//!   refused by the emitter with `C001` -- since lane 167 it lowers in braces,
+//!   and the row pins that instead.
 
 use gabbro_syntax::diag::Stufe;
 
@@ -265,37 +269,51 @@ fn n271_index_into_an_atomic_falls_alone() {
 }
 
 #[test]
-fn variant_constructor_in_a_body_falls_at_the_graph() {
-
+fn variant_constructor_in_a_body_builds_and_lowers() {
+    // **Lane 167: `Kurz(x)` is a construction, not a call.** It checks clean
+    // (no `H021`, no `K003` -- the graph carries no edge, the cost pass prices
+    // one op) and lowers to the compound literal the `match` reads back.
     let src = "module test::variante {\n\
          tagged type Nachricht = { Leer, Kurz(u32), Lang(u64) };\n\
          impl fn baue(x : u32) -> Nachricht effects { pure } costs <= 4 ops \
          { return Kurz(x); }\n\
          }\n";
-    let gefallen = errors(src);
+    assert_eq!(
+        errors(src),
+        Vec::<String>::new(),
+        "a variant construction checks clean -- fell with {:?}",
+        errors(src)
+    );
+    let (c, nachher) = emitted(src);
     assert!(
-        gefallen.contains(&"H021".to_string()),
-        "a variant called like a function is unknown to the graph -- fell with {gefallen:?}"
+        nachher.is_empty(),
+        "the construction emits without refusal -- fell with {nachher:?}"
+    );
+    assert!(
+        c.contains("(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = x }"),
+        "the construction lowers to the compound literal the `match` reads:\n{c}"
     );
 }
 
 #[test]
-fn variant_constructor_in_a_static_init_is_refused_by_the_emitter() {
+fn variant_constructor_in_a_static_init_lowers_in_braces() {
     let quelle = "module test::variante {\n\
          tagged type Nachricht = { Leer, Kurz(u32), Lang(u64) };\n\
          static N : Nachricht = Kurz(5);\n\
          impl fn lies() -> u32 effects { pure } costs <= 4 ops { return 0; }\n\
          }\n";
-    // No body pass visits the initialiser, so the checker stays silent and
-    // the emitter owns the refusal (`C001`) -- pinned here, not in the gift
-    // corpus (which only runs the emitter for `C001`-expected files).
+    // The checker visits the initialiser against the declared sum type, and the
+    // emitter writes the brace form -- a compound literal is no constant
+    // expression, so the file-scope spelling carries the same designators in
+    // braces.
     assert_eq!(
         errors(quelle),
         Vec::<String>::new(),
-        "the checker does not visit a `static` initialiser for calls"
+        "the checker holds the static initialiser against the sum type"
     );
     let (baum, mut absagen) = gabbro_syntax::lies("variante_statisch", quelle);
-    let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
     let gefallen: Vec<String> = absagen
         .absagen
         .iter()
@@ -303,7 +321,11 @@ fn variant_constructor_in_a_static_init_is_refused_by_the_emitter() {
         .map(|a| a.code.to_string())
         .collect();
     assert!(
-        gefallen.contains(&"C001".to_string()),
-        "the emitter refuses the variant initialiser -- fell with {gefallen:?}"
+        gefallen.is_empty(),
+        "the emitter lowers the variant initialiser -- fell with {gefallen:?}"
+    );
+    assert!(
+        c.contains("{ .marke = Nachricht_Kurz, .last.Kurz = 5 }"),
+        "the static initialiser lowers in braces:\n{c}"
     );
 }
