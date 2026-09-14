@@ -191,3 +191,10 @@ import Grammatik.HelferZeuge
 import Grammatik.SonstLeaveZeuge
 import Grammatik.ZielOrtInv
 import Grammatik.InvZeuge
+import Grammatik.Isabelle.Table_Induktion
+import Grammatik.Isabelle.Table_Indexschranke
+import Grammatik.Isabelle.Table_Absenkung
+import Grammatik.Isabelle.Table_Zaehlung
+import Grammatik.Isabelle.Table_Ops_Erhaltung
+import Grammatik.Isabelle.Absenkung_Parametrisch
+import Grammatik.Isabelle.Intervall_Aussen
