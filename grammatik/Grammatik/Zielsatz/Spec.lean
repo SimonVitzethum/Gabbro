@@ -6,13 +6,26 @@
   safety, data-race freedom, contracts where claimed in concurrent runs, and time are carried
   by the language.
 
-  SHAPE. Premises in three groups: (a) `C.akzeptiert … = true` -- ONE Bool of the checker
-  (`Pruefer`: the Bool and its soundness against `AkzeptiertSpec`; the concrete checker is
-  `Zielsatz/Akzeptiert.lean`, its signature `Akzeptiert P S fs ls ws` is the field's);
-  (b) `NutzerPflicht` -- the user's logic, at EVERY `forever` budget; (c) `HardwareAnnahmen`.
+  SHAPE. Premises in three groups, all about the program `P` the user wrote: (a)
+  `C.akzeptiert … = true` -- ONE Bool of the checker (`Pruefer`: the Bool and its soundness
+  against `AkzeptiertSpec`; the concrete checker is `Zielsatz/Akzeptiert.lean`,
+  `akzeptiert_pruefer`, its signature `Akzeptiert P S fs ls cs ws` is the field's); (b)
+  `NutzerPflicht` -- the user's logic, at EVERY `forever` budget; (c) `HardwareAnnahmen`.
   Then for every budget, start memory, start assignment meeting `StartZulaessig`, and every
-  reached machine: `Ziel`. `fs`/`ls` are `Aufzaehlung`s (complete by their type: finite
-  declarations only), not premises.
+  reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s
+  (complete by their type: finite declarations only), not premises.
+
+  ASSUMPTION A4, THE RUNTIME (2026-09-14). The machine runs `P.mitRuhe` (MitRuhe.lean): `P`
+  plus the runtime's idle root `none` (body `return`, empty signature, no lock, no reason,
+  writes nothing); the oracle is `O.mitRuhe`, the lock invariants `S.mitRuhe`, the functions
+  `fsRuhe fs`, the declared starts `wsRuhe ws`. Machine G starts EVERY thread of
+  `Faden = Nat`; without the root a program with no idle function (the export of
+  `beispiele/104`, probes B/C) has no admissible start and the statement would say nothing
+  about it. With the root, "declared starts on their threads, the root on every other
+  thread" is admissible (`startZulaessig_mitRuhe`, `startZulaessig_ruhe`,
+  Zielsatz/Ruhe.lean). That `P.mitRuhe` at `some f` IS `P` at `f`: every checker fact
+  transfers (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`, MitRuheStatisch.lean,
+  Zielsatz/Ruhe.lean) and every function behaves as in `P` (MitRuheSemantik.lean).
 
   REVIEW PACKAGE -- every model definition used, file:line, what it says / if it were wrong.
   Machine G and the sequential semantics (review question 4):
@@ -29,6 +42,10 @@
     if it differs from `execStmt` outside `locks`, the user proves the wrong body.
   * `World` Semantik:77 (slots total over `Int`; in-range is the TYPE of `.index` values),
     `Speicher` Maschine:359, `Orakel` Semantik:355, `Faden` Wettlauf:46 (= Nat, all started).
+  * `Deklaration.mitRuhe`, `Programm.mitRuhe`, `Orakel.mitRuhe`, `SperrInv.mitRuhe`, `fsRuhe`,
+    `wsRuhe` MitRuhe.lean -- the idle root added, signature numbers and function-pointer types
+    shifted by one, every body translated constructor by constructor / a translation that
+    changed a body would make every leg speak about another program.
   Premise definitions:
   * `GutO` Satz:965 -- axioms stay in their declared write frames, keep held locks and trace.
   * `RegLokal` ZielOrtGeraetSem:48 -- register/visibility answers depend only on declared carriers.
@@ -57,12 +74,16 @@
   * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
   NEW here: `InvGutGrund`, `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the
   named stops), `RennfreiBis` (DRF for every carrier, not only guarded ones), `Getrennt`,
-  `Ruhig`, `AkzeptiertSpec`, `StartZulaessig`, `Ziel`, `GabbroZiel`.
+  `SchreibGetrennt` (write separation of unguarded carriers, the counterpart of `H013`;
+  with it `rennfreiBis_of`, Akzeptiert.lean, proves `RennfreiBis`), `Ruhig` (an idle start
+  writes NOTHING), `AkzeptiertSpec`, `StartZulaessig`, `Ziel`, `GabbroZiel`.
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker? 2. Is every premise in
   exactly one group? 3. Can a user-controlled choice empty an obligation? Known instances:
   probes A/D (closed by `NutzerPflicht` at every budget); an unsatisfiable lock invariant or
-  root `requires` empties `StartZulaessig` (only the positive probes exclude it). 4. Does G run
+  root `requires` empties `StartZulaessig` (only the positive probes exclude it). A program
+  without an idle function no longer empties it: the runtime's root is admissible on every
+  thread (A4, `startZulaessig_ruhe`). 4. Does G run
   what the language means (translation validation takes over for the C)?
 
   NOT CLAIMED (PLAN §6): termination and a waiting bound under fairness (`zeit` bounds only
@@ -83,6 +104,7 @@
 import Grammatik.Verklemmung
 import Grammatik.RennfreiVoll
 import Grammatik.KostenG
+import Grammatik.MitRuhe
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -296,12 +318,15 @@ def GabbroZiel : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D)
     (Q : AxEns D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
     (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (ws : List D.Fn),
-    C.akzeptiert P S fs.1 ls.1 cs.1 ws = true →               -- (a) the checker
-    NutzerPflicht P S Q →                                     -- (b) the user
+    C.akzeptiert P S fs.1 ls.1 cs.1 ws = true →               -- (a) the checker, on P
+    NutzerPflicht P S Q →                                     -- (b) the user, on P
     ∀ O : Orakel D, HardwareAnnahmen O Q →                    -- (c) the hardware
-    ∀ (passes : Nat) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)),
-      StartZulaessig P S fs.1 ws sp init →
-      ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
-        Ziel P S O passes (RufStartG P sp init) M
+    -- A4: the runtime runs `P` with its idle root
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs.1) (wsRuhe ws) sp init →
+      ∀ M : RufMaschineG D.mitRuhe,
+        RufErreichbarG P.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M →
+          Ziel P.mitRuhe S.mitRuhe O.mitRuhe passes (RufStartG P.mitRuhe sp init) M
 
 end Gabbro.Grammatik.Zielsatz
