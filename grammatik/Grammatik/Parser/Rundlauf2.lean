@@ -531,7 +531,7 @@ theorem bang_arm : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
   simp only [parseUnary, h] at ⊢
 
 theorem paren_arm : ∀ (G'' : Nat) (Tx rest : List Token) (v : SExpr),
-    parseOr G'' (Tx ++ ([.zeichen ")"] ++ rest)) =
+    parseOr G'' (Tx ++ [.zeichen ")"] ++ rest) =
       .ok (v, [.zeichen ")"] ++ rest) →
     parsePrimary (G'' + 1) ((([.zeichen "("] ++ Tx) ++ [.zeichen ")"]) ++ rest) =
       .ok (v, rest) := by
@@ -554,5 +554,59 @@ theorem un_paren_fall : ∀ (G' : Nat) (Tx rest : List Token) (v : SExpr),
   have n4 : ("(" : String) ≠ "&" := by decide
   simp only [List.append_assoc, List.cons_append, List.nil_append] at h ⊢
   simp [parseUnary, h, n1, n2, n3, n4] at ⊢
+
+-- The `un "!"` tower from induction-hypothesis legs: the
+-- `parsePrimary` leg for atom children (same follow), the
+-- `parseOr` leg for parenthesised children (`)` follow), then
+-- `tower_up`. No `parsePrimary` component (`primFrei` is false
+-- for `un`).
+theorem kern_un_turm : ∀ (x : SExpr) (rest : List Token) (F : Nat),
+    gutKern x = true → ruhig rest = true → ruhigSuff rest = true →
+    ruhigGleit rest = true →
+    (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 1 ≤ G →
+      parsePrimary G (druckToks x ++ rest) = .ok (x, rest)) →
+    (∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
+      parseOr G (druckToks x ++ [.zeichen ")"] ++ rest) =
+        .ok (x, [.zeichen ")"] ++ rest)) →
+    12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 8 ≤ F →
+    (parseUnary F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseMul F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseAdd F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseBit F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseCmp F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseAnd F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest))
+    ∧ (parseOr F (druckToks (.un "!" x) ++ rest) = .ok (.un "!" x, rest)) := by
+  intro x rest F hgx hr hrs hrg hPx hOx hF
+  have hsize : groesse (.un "!" x) = groesse x + 1 := rfl
+  have hU : ∀ (G : Nat),
+      12 * (groesse (.un "!" x) + 1) + groesse (.un "!" x) + 2 ≤ G →
+      parseUnary G (druckToks (.un "!" x) ++ rest) =
+        .ok (.un "!" x, rest) := by
+    intro G hG
+    have hG1 : 1 ≤ G := by omega
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    cases hat : istAtom x with
+    | true =>
+      have hd : druckToks (.un "!" x) =
+          [.zeichen "!"] ++ druckToks x := by
+        simp [druckToks, hat]
+      have hP' := hPx G' (by omega)
+      simp only [hd] at ⊢
+      exact bang_arm G' (druckToks x) rest x hP'
+    | false =>
+      have hd : druckToks (.un "!" x) = [.zeichen "!"] ++
+          (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
+        simp [druckToks, hat]
+      have hF2 : 1 ≤ G' := by omega
+      obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+      have hO' := hOx G'' (by omega)
+      have hPar := paren_arm G'' (druckToks x) rest x hO'
+      have hBang := bang_arm (G'' + 1)
+        ((([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"])) rest x hPar
+      simp only [hd] at ⊢
+      exact hBang
+  have hup := tower_up (.un "!" x) rest F hr hU (by omega)
+  exact ⟨hU F (by omega), hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
+    hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 end Gabbro.Grammatik.Parser
