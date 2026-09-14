@@ -933,9 +933,12 @@ pub(crate) struct Analyse {
 pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, Refusal> {
     let model = collect(source_name, tree)?;
     let scope = rescope(tree)?;
+    // The same derived `effects` the export uses (lane 191), so the analysis and the
+    // export check every function against one and the same contract.
+    let abgeleitet = abgeleitete_nach_kurz(&crate::ableitung::leite_ab(tree, true));
     let mut checked = Vec::new();
     for f in &model.fns {
-        checked.push(check_fn(f, &model, &scope)?);
+        checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
     let mut out = Out::default();
     for c in &checked {
