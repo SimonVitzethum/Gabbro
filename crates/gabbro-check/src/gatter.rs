@@ -155,20 +155,32 @@ fn bedingung_und_name(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |item| {
         for w in bedingungen(item) {
             if !ist_testbuild(w) {
-                absagen.schiebe(
-                    Absage::fehler(
-                        "G002",
-                        w.span,
-                        format!("a `when` condition other than `{TESTBUILD}`"),
-                    )
-                    .mit_notiz(
-                        "`when` gates an item on the BUILD, and this compiler knows exactly \
-                         one build to gate on. Every other condition was parsed and then \
-                         ignored by the generator until 2026-08-28 -- the item reached the \
-                         C either way. A refusal is the honest width of the promise."
-                            .to_string(),
-                    ),
+                // Lane 187: the compiler knows exactly one build to gate on, so a bare
+                // unknown name in this position has exactly one repair. Anything but
+                // a bare name carries structure no single word can replace, and the
+                // diagnostic stays without a fix.
+                let word = match &w.art {
+                    gabbro_syntax::ast::ExprArt::Ort(o) if o.suffixe.is_empty() => {
+                        Some(gabbro_syntax::diag::Fix::new(w.span, TESTBUILD))
+                    }
+                    _ => None,
+                };
+                let mut a = Absage::fehler(
+                    "G002",
+                    w.span,
+                    format!("a `when` condition other than `{TESTBUILD}`"),
+                )
+                .mit_notiz(
+                    "`when` gates an item on the BUILD, and this compiler knows exactly \
+                     one build to gate on. Every other condition was parsed and then \
+                     ignored by the generator until 2026-08-28 -- the item reached the \
+                     C either way. A refusal is the honest width of the promise."
+                        .to_string(),
                 );
+                if let Some(fx) = word {
+                    a = a.mit_fix(fx);
+                }
+                absagen.schiebe(a);
             }
         }
         // **`ItemArt::name()` and not a second table of my own** (W7). The name pass reads

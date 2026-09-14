@@ -225,6 +225,15 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    Fahne {
+        // Lane 187: the machine-applicable repairs (`fix: …` lines) of `check`.
+        // English from the start, no pair. No liveness argv on purpose: the flag
+        // REWRITES its input file, and no committed file may be rewritten by a test
+        // run -- the single spelling needs no equality claim either.
+        erstname: "--fix",
+        zweitname: "",
+        lebendig: &[],
+    },
 ];
 
 /// **Every sub-command arm of the dispatch, English name first.**

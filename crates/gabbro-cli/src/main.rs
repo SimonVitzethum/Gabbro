@@ -817,13 +817,16 @@ fn hilfe() {
                                     the irreducible file measured out of `beispiele/63`, and
                                     every clause in it carries the reason it stands there.
                                     Start here; `TUTORIAL.md` is the long form
-  gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] <file.gab>…
-                                    read, parse and run the built passes. The \"not checked
-                                    in this run\" register is SUMMARISED (count per state and
-                                    a fingerprint); `--passes` prints it in full. *It is a
-                                    property of the binary, not of the file* -- printing
-                                    1 122 words of it beside 20 words of finding, at every
-                                    run, is a disclosure nobody reads
+  gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] [--fix] <file.gab>…
+                                     read, parse and run the built passes. The \"not checked
+                                     in this run\" register is SUMMARISED (count per state and
+                                     a fingerprint); `--passes` prints it in full. *It is a
+                                     property of the binary, not of the file* -- printing
+                                     1 122 words of it beside 20 words of finding, at every
+                                     run, is a disclosure nobody reads. `--fix` applies the
+                                     machine-applicable repairs the refusals carry
+                                     (`fix: …` lines, lane 187) and re-checks, then
+                                     reports like a plain run
   gabbro abi [--unit] <file.gab>…   write the library interface: `pub` declarations,
                                     no bodies -- valid Gabbro, no second format. `--unit`
                                     writes ONE interface for a unit of several files; a
@@ -1645,16 +1648,28 @@ fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode 
     // aliasing, and one word for two things is how a register starts to drift). Without it every file is its own unit -- see the loop below, and see
     // `pruefe_als_einheit` for what changes and what the flag costs.
     let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
+    // **Lane 187: `--fix` applies the machine-applicable repairs the diagnostics carry**
+    // (`fix: …` lines, lever 4 of `dokumente/PLAN-EINFACHHEIT.md`) and re-checks, up to
+    // ten rounds. English-only flag, like `--with` and `--testbuild`: a new spelling
+    // ships no German second name («B3»).
+    let fix = argumente.iter().any(|a| a == "--fix");
     let argumente: Vec<String> = argumente
         .iter()
         .filter(|a| {
             !matches!(
                 a.as_str(),
-                "--passes" | "--paesse" | "--unit" | "--einheit"
+                "--passes" | "--paesse" | "--unit" | "--einheit" | "--fix"
             )
         })
         .cloned()
         .collect();
+    // A `--fix` span names bytes of ONE file; a joined unit (`--unit`) moves spans
+    // out of the file they are applied to. Refusing the pair is honest, shifting
+    // silently is not -- and it stands before the preamble is read, needing no unit.
+    if fix && einheit {
+        eprintln!("gabbro {getippt}: `--fix` and `--unit` are not built together");
+        return std::process::ExitCode::from(2);
+    }
     // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
     //
     // Die Datei ist Gabbro-Quelltext; sie wird vor die zu pruefende Einheit gestellt, und
@@ -1668,6 +1683,48 @@ fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode 
         Ok(v) => v,
         Err(c) => return c,
     };
+    if einheit {
+        return pruefe_als_einheit(getippt, &dateien, &vorspann, voll);
+    }
+    // The `--with` half of the same refusal. It stands after the early unit return
+    // so the `read_preamble` error block above keeps the shape the mutation
+    // catalogue (`mutiere-pruefer.py`) anchors on -- a refusal inserted between
+    // them would orphan that anchor.
+    if fix && !vorspann.is_empty() {
+        eprintln!("gabbro {getippt}: `--fix` and `--with` are not built together");
+        return std::process::ExitCode::from(2);
+    }
+    if fix {
+        for datei in &dateien {
+            let Ok(original) = std::fs::read_to_string(datei) else {
+                continue;
+            };
+            let mut current = original.clone();
+            for _ in 0..10 {
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &current);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                let (next, applied) = gabbro_check::fix::apply_fixes(&current, &absagen);
+                if applied.is_empty() {
+                    break;
+                }
+                for f in &applied {
+                    println!(
+                        "{}: fix [{}] {}..{} -> {}",
+                        datei, f.code, f.von, f.bis, f.replacement
+                    );
+                }
+                if next == current {
+                    break;
+                }
+                current = next;
+            }
+            if current != original {
+                if let Err(e) = std::fs::write(datei, &current) {
+                    eprintln!("gabbro {getippt}: {datei}: {e}");
+                }
+            }
+        }
+    }
     if einheit {
         return pruefe_als_einheit(getippt, &dateien, &vorspann, voll);
     }

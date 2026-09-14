@@ -1912,7 +1912,11 @@ impl<'a> Pruefer<'a> {
                         .mit_notiz(
                             "write `rounded` after it if the rounding is meant -- what is \
                                 forbidden is not the inexact but the SILENTLY inexact",
-                        ),
+                        )
+                        // Lane 187: the diagnostic names the exact word, and it is the
+                        // unique repair that keeps the value -- any other literal is a
+                        // different number.
+                        .mit_fix(gabbro_syntax::diag::Fix::insert(e.span.bis, " rounded")),
                     );
                 }
                 let mut b = crate::typen::FBereich::punkt(f64::from_bits(*bits));
