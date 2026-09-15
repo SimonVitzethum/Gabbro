@@ -30,6 +30,23 @@
 //!   `Wert`, not a row, and that is refused by name (LG002), as are a
 //!   pointer, a record and a float static, and a `section` at a `static`
 //!   (a PLACEMENT, LG001).
+//! * `arena A capacity lo .. hi of T` -- **O14**, closed 2026-09-15: the
+//!   PAIR `Grammatik/ArenaZucker.lean` names, synthesised here. A table `A`
+//!   of `count = hi` with one field `wert : T`, a global `A_used : int 0 hi`
+//!   starting at zero, and `def gArena_A : ArenaForm gD` beside them.
+//!   `reset A;` is `Stmt.arenaReset`, `let i = alloc A (v) else { … };` is
+//!   `Block.arenaAlloc`, and `A[i]` is the slot read of the one field.
+//!   **The reservation `lo` does NOT travel** -- it is the checker's static
+//!   count (`N212`), whose model-side consequence is already proved
+//!   (`arenaAlloc_unter_schranke`).
+//!   **An `alloc` WITHOUT `else` is refused by name** (LG004), and that is a
+//!   decision: `Block.arenaAlloc` always carries a full-arena branch, the
+//!   emitted C carries none, and what makes the branch dead is `N212`, which
+//!   does not travel into the term. Inventing a `return` the user did not
+//!   write would put a guard into the exported term that neither the source
+//!   nor the C has. An `alloc` at the TOP LEVEL of a body is refused for the
+//!   reason every `narrow`/`bindCall` is: a body is an `Endblock`, and those
+//!   are `Block` formers.
 //! * `lock L protects { ... } rank N` -- `Lock`/`rang`/`braucht` (the `held`
 //!   budget, the pointer address spaces and the `reads` effects
 //!   have NO FORM and are ignored, each named in the printed header)
@@ -235,6 +252,12 @@ pub(crate) struct Model {
     /// the declaration. An ARRAY static has no single `Wert` and is refused
     /// by name (a `Glob` is one value, not a row).
     pub(crate) globs: Vec<GlobModel>,
+    /// `arena A capacity lo .. hi of T` -- **O14**: the specification carries
+    /// `alloc`/`reset` as SUGAR over a table of `count = hi` slots beside a
+    /// `used` global (`Grammatik/ArenaZucker.lean`), and this is the pair the
+    /// exporter synthesises. The reservation `lo` does NOT travel: it is the
+    /// checker's static count (`N212`).
+    pub(crate) arenas: Vec<ArenaModel>,
     pub(crate) locks: Vec<LockModel>,
     pub(crate) fns: Vec<FnModel>,
     #[allow(dead_code)]
@@ -273,6 +296,14 @@ pub(crate) struct GlobModel {
     pub(crate) name: String,
     pub(crate) ty: VTy,
     pub(crate) init: GInit,
+}
+
+/// The `ArenaForm` of one `arena` declaration: which synthesised table holds
+/// the slots and which synthesised global holds the `used` counter.
+pub(crate) struct ArenaModel {
+    pub(crate) name: String,
+    pub(crate) table: usize,
+    pub(crate) glob: usize,
 }
 
 pub(crate) struct LockModel {
@@ -381,7 +412,7 @@ fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], globs: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
+    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
     let mut scope = Scope::default();
     // Pass one: constants and type aliases, so `count` and field types resolve.
     fn pass_one(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
@@ -459,27 +490,21 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                         model.concurrent.push(last.text.clone());
                     }
                 }
-                // **The arena is refused BY NAME, not by the catch-all below.**
-                // Since 2026-09-15 the specification HAS a form for `alloc` and
-                // `reset` (`grammatik/Grammatik/ArenaZucker.lean`): an arena is a
-                // table of `count = hi` slots beside a global `used` counter, and
-                // the two statements are `Block.narrow` + `Stmt.assignSlot` +
-                // `Stmt.assignGlob` over that pair. What is missing is HERE: this
-                // exporter does not synthesise the pair, so an arena program still
-                // gets no G term. *A catch-all that happens to fire is not a
-                // refusal anybody can act on -- and the day an arm is added above,
-                // it would stop firing without a word.* `dokumente/OFFEN.md` O14.
+                // **The arena travels as its PAIR** (O14, closed here
+                // 2026-09-15): `Grammatik/ArenaZucker.lean` carries `alloc`
+                // and `reset` as sugar over a table of `count = hi` slots
+                // beside a global `used` counter, and `read_arena` builds
+                // exactly that pair. The reservation `lo` does not travel --
+                // it is the checker's static count (`N212`).
                 ItemArt::Arena(a) => {
-                    return Err(refuse(
-                        "LG001",
-                        format!(
-                            "arena {} has no G form YET: the specification carries `alloc`/`reset` \
-                             as sugar over a table plus a `used` global (Grammatik/ArenaZucker.lean, \
-                             `Block.arenaAlloc`/`Stmt.arenaReset`), and this exporter does not build \
-                             that pair -- see OFFEN.md O14",
-                            a.name.text
-                        ),
-                    ));
+                    let (t, g) = read_arena(a, scope, model)?;
+                    model.tables.push(t);
+                    model.globs.push(g);
+                    model.arenas.push(ArenaModel {
+                        name: a.name.text.clone(),
+                        table: model.tables.len() - 1,
+                        glob: model.globs.len() - 1,
+                    });
                 }
                 // An `entry`/`boot` item is hardware around one dispatch
                 // (lane 198): the vector, the registers, the steps have no
@@ -675,6 +700,12 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                 scan_block(&sp.rumpf, acc);
             }
             StmtArt::Bricht(b) => scan_block(&b.rumpf, acc),
+            StmtArt::Alloc(al) => {
+                scan_expr(&al.wert, acc);
+                if let Some(b) = &al.sonst {
+                    scan_block(b, acc);
+                }
+            }
             StmtArt::Narrow(_) => {}
             _ => {}
         }
@@ -834,6 +865,15 @@ fn check_fn(
             // `writes G` at a bare global name is the `gschreibt` half; a
             // suffixed place (`T.slots`) is the table half, as before.
             if o.suffixe.is_empty() {
+                // `writes A` at an ARENA is a write to BOTH halves of its
+                // pair: the slots and the `used` counter.
+                if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
+                    writes.push(a.table);
+                    if !gwrites.contains(&a.glob) {
+                        gwrites.push(a.glob);
+                    }
+                    continue;
+                }
                 if let Some(gi) = model.globs.iter().position(|g| g.name == o.basis.text) {
                     if !gwrites.contains(&gi) {
                         gwrites.push(gi);
@@ -1043,6 +1083,73 @@ fn read_table(t: &Tabelle, scope: &Scope) -> Result<TableModel, Refusal> {
         return Err(refuse("LG001", format!("table {} has no fields", t.name.text)));
     }
     Ok(TableModel { name: t.name.text.clone(), count, fields })
+}
+
+/// The field name the synthesised arena table carries, and the suffix of its
+/// `used` counter. Both are spelled once, here, so no site invents them.
+const ARENA_FELD: &str = "wert";
+const ARENA_ZAEHL: &str = "_used";
+
+/// **`arena A capacity lo .. hi of T` as the pair `ArenaZucker.lean` names**
+/// (`dokumente/OFFEN.md` O14): a table `A` of `count = hi` with one field
+/// `wert : T`, and a global `A_used : int 0 hi` starting at zero -- literally
+/// what the emitter writes (`A_arena_speicher.buf[hi]` beside a `used`
+/// counter).
+///
+/// `ArenaForm` demands `gtyp zaehl = .int 0 (count tab)` (the counter must be
+/// able to name a FULL arena) and `0 < count tab`. Both are decided here, in
+/// Rust, and refused by name -- a `by decide` that fails is a Lean error and
+/// not a refusal.
+///
+/// **The reservation `lo` does NOT travel.** It is the checker's static count
+/// (`N212`), and its model-side consequence is already proved
+/// (`arenaAlloc_unter_schranke`: below the hard bound the `else` cannot run).
+fn read_arena(a: &ArenaDecl, scope: &Scope, model: &Model) -> Result<(TableModel, GlobModel), Refusal> {
+    let Some(hi) = numeral(&a.hi, scope) else {
+        return Err(refuse("LG005", format!("arena {} has no numeric hard bound", a.name.text)));
+    };
+    if hi <= 0 {
+        return Err(refuse(
+            "LG001",
+            format!(
+                "arena {} has hard bound {hi}: `ArenaForm.hpos` needs at least one slot, and an \
+                 arena of none has no `alloc` that can succeed",
+                a.name.text
+            ),
+        ));
+    }
+    let Some(elem) = int_ty(&a.element, scope) else {
+        return Err(refuse(
+            "LG002",
+            format!(
+                "arena {} holds elements with no `Ty` form: only an integer range or `bool` travels",
+                a.name.text
+            ),
+        ));
+    };
+    let zaehl = format!("{}{ARENA_ZAEHL}", a.name.text);
+    // The two synthesised names must not collide with a declared carrier.
+    if model.tables.iter().any(|t| t.name == a.name.text) {
+        return Err(refuse("LG005", format!("arena {} shares its name with a table", a.name.text)));
+    }
+    if model.globs.iter().any(|g| g.name == zaehl) {
+        return Err(refuse(
+            "LG005",
+            format!("arena {} needs the counter name `{zaehl}`, which a `static` already holds", a.name.text),
+        ));
+    }
+    Ok((
+        TableModel {
+            name: a.name.text.clone(),
+            count: hi,
+            fields: vec![FieldModel { name: ARENA_FELD.to_string(), ty: elem }],
+        },
+        GlobModel {
+            name: zaehl,
+            ty: VTy::Int { lo: 0, hi, bits: None },
+            init: GInit::Int(0),
+        },
+    ))
 }
 
 /// One `static` as a `Glob`: its type and its declared initial value.
@@ -1716,6 +1823,19 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
 /// field type. Guards are read against the enclosing held set (a `locks`
 /// body holds one more), and the guard proof is the theorem of that context.
 fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize, usize, String, Option<usize>, VTy), Refusal> {
+    // **`A[i]` at an arena** (O14): the synthesised table has exactly one
+    // field, so the arena read is the slot read of that field.
+    if let [OrtSuffix::Index(idx)] = o.suffixe.as_slice() {
+        if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
+            let t = a.table;
+            if !holds_guards(&ctx.held, model, t) {
+                return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+            }
+            let index = tr_index(idx, t, ctx, model, fname)?;
+            let ty = model.tables[t].fields[0].ty.clone();
+            return Ok((t, 0, index, None, ty));
+        }
+    }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(f)] = o.suffixe.as_slice() else {
         return Err(refuse("LG003", format!("place {} in {fname} has no G form", o.text())));
     };
@@ -2805,11 +2925,26 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         StmtArt::AwaitLoad(_) => Err(refuse("LG004", format!("`awaits` in {fname} has no G form in this fragment"))),
         StmtArt::Exchange(_) => Err(refuse("LG004", format!("`exchange` in {fname} has no G form in this fragment"))),
         StmtArt::LibraryCall(_) => Err(refuse("LG004", format!("library call in {fname} has no G form in this fragment"))),
-        // These two are unreachable while an arena DECLARATION is `LG001` above;
-        // they stay, and name the same reason, so the day the declaration is
-        // lowered the statement half is not a silent hole.
-        StmtArt::Alloc(_) => Err(refuse("LG004", format!("`alloc` in {fname} has no G form in this fragment -- the form is `Block.arenaAlloc` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
-        StmtArt::ResetArena(_) => Err(refuse("LG004", format!("`reset` in {fname} has no G form in this fragment -- the form is `Stmt.arenaReset` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
+        // **`reset A;` is `Stmt.arenaReset`** (O14): one store of zero into
+        // the counter, which is what the emitter writes.
+        StmtArt::ResetArena(name) => {
+            let Some(ai) = model.arenas.iter().position(|a| &a.name == &name.text) else {
+                return Err(refuse("LG005", format!("`reset` in {fname} names unknown arena {}", name.text)));
+            };
+            let gi = model.arenas[ai].glob;
+            if !ctx.cf.gwrites.contains(&gi) {
+                return Err(refuse("LG004", format!(
+                    "`reset {}` in {fname} without an `effects {{ writes {} }}` -- \
+                     the write right `Signatur.gschreibt` has nothing to stand on",
+                    name.text, name.text)));
+            }
+            let proof = gdarf_at(ctx, model, fname, gi, out);
+            let base = format!("(Stmt.arenaReset (D := gD) gArena_{} (by decide) {proof})",
+                model.arenas[ai].name);
+            Ok(format!("(.cons {base} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
+        }
+        // **`let i = alloc A (v) else B;` is `Block.arenaAlloc`** (O14).
+        StmtArt::Alloc(al) => tr_alloc(al, ctx, model, scope, fns, fname, out, rest, cont, endblock),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
@@ -2871,6 +3006,76 @@ fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope
     *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
     Ok(format!("(.bindCall g_{} {args} rfl {hp} (by decide) {})",
         lean_fn(&callee.name), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
+}
+
+/// **`let i = alloc A (v) else { … };` as `Block.arenaAlloc`** (O14).
+///
+/// Three existing forms in a row: `Block.narrow` on the counter into
+/// `0 ..< hi` with the `else` branch, `Stmt.assignSlot` at the index it
+/// names, `Stmt.assignGlob` of `i + 1`. `narrow` IS the emitted guard.
+///
+/// **An `alloc` WITHOUT `else` is refused by name, and that is a decision,
+/// not an omission.** `Block.arenaAlloc` always carries a full-arena branch;
+/// the surface form without `else` carries none, and the C the emitter writes
+/// for it carries none either (`buf[used++] = v;`, no bound check). Inventing
+/// a branch -- a `return` the user did not write -- would put a guard into the
+/// exported term that neither the source nor the emitted C has, and the
+/// translation-validation chain would then compare two different programs.
+/// *The checker's `N212` is what makes the branch dead, and `N212` is not in
+/// the exported term.*
+#[allow(clippy::too_many_arguments)]
+fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
+    let Some(ai) = model.arenas.iter().position(|a| a.name == al.tisch.text) else {
+        return Err(refuse("LG005", format!("`alloc` in {fname} names unknown arena {}", al.tisch.text)));
+    };
+    let (aname, ti, gi) = (model.arenas[ai].name.clone(), model.arenas[ai].table, model.arenas[ai].glob);
+    if endblock {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} has no G form at the top level of a body -- \
+             `Block.arenaAlloc` is a `Block` former (its first half is `Block.narrow`), \
+             and a body is an `Endblock`")));
+    }
+    let Some(sonst) = al.sonst.as_ref() else {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} carries no `else`, and this exporter will not invent one: \
+             `Block.arenaAlloc` always carries a full-arena branch, the emitted C carries none, \
+             and what makes the branch dead is the checker's static count `N212`, which does not \
+             travel into the term -- see OFFEN.md O14")));
+    };
+    if !ctx.cf.writes.contains(&ti) || !ctx.cf.gwrites.contains(&gi) {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} without an `effects {{ writes {aname} }}` -- \
+             the write rights `Signatur.schreibt`/`gschreibt` have nothing to stand on")));
+    }
+    if !holds_guards(&ctx.held, model, ti) || !holds_gguards(&ctx.held, model, gi) {
+        return Err(refuse("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
+    }
+    // The value, at the element type of the synthesised table.
+    let ety = model.tables[ti].fields[0].ty.clone();
+    let v = match &ety {
+        VTy::Bool => tr_bool(&al.wert, ctx, model, scope, fname, out)?,
+        VTy::Int { lo, hi, .. } => tr_value(&al.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
+        _ => return Err(refuse("LG004", format!("`alloc {aname}` in {fname} stores a value with no G form"))),
+    };
+    // The full-arena branch is an `Endblock`: it must end in a `return`, or
+    // it would fall through past the `alloc`, for which there is no form.
+    let Some((letzt, _)) = sonst.anweisungen.split_last() else {
+        return Err(refuse("LG004", format!("empty `else` of `alloc {aname}` in {fname} has no G form")));
+    };
+    let StmtArt::Return(_) = &letzt.art else {
+        return Err(refuse("LG004", format!("falling-off `else` of `alloc {aname}` in {fname} has no G form")));
+    };
+    let mut voll_ctx = ctx.clone();
+    let voll = tr_rest(&sonst.anweisungen, &mut voll_ctx, model, scope, fns, fname, out, String::new(), true)?;
+    let hlt = darf_at(ctx, model, fname, ti, out);
+    let hlg = gdarf_at(ctx, model, fname, gi, out);
+    if let Some(ann) = &al.typ {
+        let aty = annot_ty(ann, model, scope, fname)?;
+        check_annotation(&VTy::Index { table: ti }, &aty, model, fname, &al.name.text)?;
+    }
+    *ctx = ctx.push(al.name.text.clone(), VTy::Index { table: ti }, NameKind::Let);
+    Ok(format!("(Block.arenaAlloc (D := gD) gArena_{aname} ({v}) (by decide) {hlt} (by decide) {hlg} {voll} {})",
+        tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
 }
 
 /// A `let x = f() else (e) { … }`: `Block.bindCallElse`. The `else` branch
@@ -3002,6 +3207,15 @@ fn foot_carrier(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<
     None
 }
 
+/// The carrier number of an arena read `A[i]` -- the arena's synthesised
+/// slot table -- or `None`.
+fn foot_arena(o: &Ort, model: &Model) -> Option<usize> {
+    if !matches!(o.suffixe.as_slice(), [OrtSuffix::Index(_)]) {
+        return None;
+    }
+    model.arenas.iter().find(|a| a.name == o.basis.text).map(|a| a.table)
+}
+
 /// The carrier number of a bare global name (`nt + gi`), or `None`.
 fn foot_glob(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<usize> {
     if !o.suffixe.is_empty() {
@@ -3029,6 +3243,9 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                     if let Some(ti) = foot_carrier(o, model, params) {
                         foot_push(acc, ti);
                     }
+                }
+                if let Some(ci) = foot_arena(o, model) {
+                    foot_push(acc, ci);
                 }
                 if let Some(ci) = foot_glob(o, model, params) {
                     foot_push(acc, ci);
@@ -3080,10 +3297,30 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                         foot_push(acc, ti);
                     }
                 }
+                if let Some(ci) = foot_arena(&z.ziel, model) {
+                    foot_push(acc, ci);
+                }
                 if let Some(ci) = foot_glob(&z.ziel, model, params) {
                     foot_push(acc, ci);
                 }
                 foot_expr(&z.wert, model, params, acc);
+            }
+            // An `alloc` touches BOTH halves of the arena's pair; a `reset`
+            // the counter alone.
+            StmtArt::Alloc(al) => {
+                if let Some(a) = model.arenas.iter().find(|a| a.name == al.tisch.text) {
+                    foot_push(acc, a.table);
+                    foot_push(acc, model.tables.len() + a.glob);
+                }
+                foot_expr(&al.wert, model, params, acc);
+                if let Some(b) = &al.sonst {
+                    foot_block(b, model, params, acc);
+                }
+            }
+            StmtArt::ResetArena(name) => {
+                if let Some(a) = model.arenas.iter().find(|a| &a.name == &name.text) {
+                    foot_push(acc, model.tables.len() + a.glob);
+                }
             }
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
@@ -3158,6 +3395,9 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
                     if let Some(ti) = foot_carrier(o, model, params) {
                         foot_push(acc, ti);
                     }
+                }
+                if let Some(ci) = foot_arena(o, model) {
+                    foot_push(acc, ci);
                 }
                 if let Some(ci) = foot_glob(o, model, params) {
                     foot_push(acc, ci);
@@ -3277,6 +3517,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }
         out.push('\n');
     }
+    for a in &model.arenas {
+        out.push_str(&format!(
+            "-- arena {}: table {} (count {}) + counter {} -- the reservation does NOT travel\n",
+            a.name, model.tables[a.table].name, model.tables[a.table].count, model.globs[a.glob].name));
+    }
     for (gi, g) in model.globs.iter().enumerate() {
         let ty = match &g.ty {
             VTy::Int { lo, hi, .. } => format!("{lo}..{hi}"),
@@ -3316,7 +3561,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     for (n, i) in startet.iter().enumerate() {
         out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
     }
-    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
+    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n");
+    if !model.arenas.is_empty() {
+        out.push_str("import Grammatik.ArenaZucker\n");
+    }
+    out.push_str("\nnamespace Gabbro.Grammatik\n\nnamespace ");
     out.push_str(ns);
     out.push_str("\n\n");
     // The carrier inductives: one constructor per table, lock and field.
@@ -3561,6 +3810,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str("  ggeteilt_bewacht := fun e => nomatch e\n\n");
     } else {
         out.push_str("  ggeteilt_bewacht := fun g => by cases g <;> decide\n\n");
+    }
+    // The `ArenaForm` of each arena (O14): the pair the sugar speaks about.
+    // `hz` and `hpos` were decided in Rust (`read_arena`), so both close.
+    for a in &model.arenas {
+        out.push_str(&format!(
+            "def gArena_{} : ArenaForm gD where\n  tab := {}\n  feld := {}\n  zaehl := {}\n  hz := by decide\n  hpos := by decide\n\n",
+            a.name, tab_ctor(model, a.table), feld_ctor(model, a.table, 0), glob_ctor(model, a.glob)));
     }
     // Translate contracts and bodies first (registering every guard fact
     // and call site), then print the abbreviations and theorems they need.

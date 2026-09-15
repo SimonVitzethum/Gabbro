@@ -117,6 +117,82 @@ fn sp0_halves_are_parenthesised() {
     );
 }
 
+/// **O14, the exporter half**: an `arena` travels as the PAIR
+/// `ArenaZucker.lean` names -- a table of `count = hi` with one field beside
+/// a `used` global -- with `Stmt.arenaReset`, `Block.arenaAlloc` and the
+/// arena read `A[i]`.
+#[test]
+fn exports_arena_as_its_pair() {
+    let text = export("arena.gab", &tree(
+        "module test::arena {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f(k : bool) -> u32\n\
+             effects { writes Log, reads Log }\n\
+             costs   <= 64 ops\n\
+         {\n\
+             if k {\n\
+                 let a = alloc Log (10) else {\n            return 0;\n        };\n\
+                 return Log[a];\n\
+             } else {\n        reset Log;\n    }\n\
+             return 1;\n\
+         }\n\
+         }\n",
+    ))
+    .expect("an arena must export");
+    for teil in [
+        "import Grammatik.ArenaZucker",
+        "inductive GTab where",
+        "| Log",
+        "| wert",
+        "| Log_used",
+        "count := fun | .Log => 8",
+        "gtyp := fun | .Log_used => (.int 0 8)",
+        "def gArena_Log : ArenaForm gD where",
+        "tab := GTab.Log",
+        "zaehl := GGlob.Log_used",
+        "Block.arenaAlloc (D := gD) gArena_Log",
+        "Stmt.arenaReset (D := gD) gArena_Log",
+        // the counter starts at zero, and the reservation `2` travels nowhere
+        "| .Log_used => ⟨0, by decide, by decide⟩",
+    ] {
+        assert!(text.contains(teil), "arena export must contain {teil:?}\n{text}");
+    }
+    assert!(!text.contains("capacity"), "the reservation must not travel");
+}
+
+/// **LG004**: an `alloc` WITHOUT `else` is refused by name. `Block.arenaAlloc`
+/// always carries a full-arena branch and the emitted C carries none; what
+/// makes the branch dead is `N212`, which does not travel into the term.
+#[test]
+fn refuses_alloc_without_else() {
+    let w = refuse_of(
+        "module test::arena2 {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f(k : bool) effects { writes Log } costs <= 64 ops\n\
+         {\n    if k {\n        let a = alloc Log (10);\n    }\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("no `else`"), "must name the cause: {w}");
+    assert!(w.message.contains("N212"), "must name what makes it dead: {w}");
+}
+
+/// **LG004**: an `alloc` at the top level of a body has no form --
+/// `Block.arenaAlloc` is a `Block` former and a body is an `Endblock`. This
+/// is what still stops `beispiele/98` and `99`, and it is named as such.
+#[test]
+fn refuses_top_level_alloc() {
+    let w = refuse_of(
+        "module test::arena3 {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f() effects { writes Log } costs <= 64 ops\n\
+         {\n    let a = alloc Log (10) else {\n        return;\n    };\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("top level"), "{w}");
+}
+
 /// The namespace is derived from the file name, so two exports never
 /// declare the same names.
 #[test]
