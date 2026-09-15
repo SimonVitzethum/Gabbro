@@ -33,10 +33,12 @@ lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence na
 toolchain (Lean 4.33.1) pins itself from `grammatik/lean-toolchain`. **There is no mathlib and no
 other dependency.**
 
-> **The whole library costs more, and here is exactly how much.** `lake build` (248 modules,
+> **The whole library costs more, and here is exactly how much.** `lake build` (249 modules,
 > `Nachpruefung.lean` checks all of it, including the translation validation of §4) takes
-> **5 min 20 s on 16 cores from an empty build directory and peaks at 6,86 GB** — measured
-> 2026-09-15 on an idle machine. It fits on an ordinary laptop.
+> **5 min 06 s on 16 cores from an empty build directory and peaks at 6,51 GB** — measured
+> 2026-09-15 on an idle machine, on the merged tree, by the merger and not taken from a
+> report (the lane that did the repair measured 5 min 20 s / 6,86 GB on its own branch). It
+> fits on an ordinary laptop.
 >
 > *It did not until that day.* Until then the same build needed **about 25 minutes and 72 GB**
 > and was killed by the OOM killer on a 16 GB machine with `error: Lean exited with code 137`,
@@ -57,7 +59,7 @@ What the second command prints, and what each line is worth:
 | `Zielsatz.gabbro_ziel depends on axioms: [propext, Classical.choice, Quot.sound]` | the goal theorem's proof uses **only Lean's standard three** — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved**, which is exactly why the command is printed rather than described |
 | `…gabbro_ziel_zeuge…` | a two-thread program that actually moves memory satisfies it, so the sentence is not empty for want of an accepted program |
 | `…probeA_widerlegt_gilt…`, `…probeD_…`, `…w1_abgelehnt…` | programs the checker **refuses**. A checker that accepts everything would make the theorem worthless; these say it does not |
-| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | translation validation: source text → model → emitted C, for two programs single-threaded and one concurrent. **These four come from `Nachpruefung.lean`, not from the cheap check** — they need the full build (5 min 20 s, 6,86 GB since 2026-09-15; it was 25 min and 72 GB before, see O13) |
+| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | translation validation: source text → model → emitted C, for two programs single-threaded and one concurrent. **These four come from `Nachpruefung.lean`, not from the cheap check** — they need the full build (5 min 06 s, 6,51 GB since 2026-09-15; it was 25 min and 72 GB before, see O13) |
 
 **And here is what those lines do NOT say.** An axiom list proves that a *proof* is valid. It
 says nothing about whether the *statement* is the right one — that is a reading job, and the
