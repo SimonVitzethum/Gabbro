@@ -186,7 +186,7 @@ re-run.
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 391 diagnostics · `gabbro paesse` |
 | **Grammar** | **177 EBNF rules**, closed and reachable | vocabulary covers every terminal, 240 / 240 |
 | **Pass register** | **158 sentences over 12 passes — 150 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 335 diagnostic codes. *A written sentence is not a proved one; the last column is the whole rest* | `gabbro paesse --je-satz` |
-| **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, [`beweise/`](beweise/) |
+| **Proof templates** | **21, of which 10 are machine-checked**; all **15** Isabelle theories now also exist in Lean (`grammatik/Grammatik/Isabelle/`, 15 files, imported by `Grammatik.lean`, so every build checks them), and new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) · lanes 168/169 |
 | **Corpus** | 109 clean examples, 668 poison files, 942 tests *(counted 2026-09-14, lane 177; the row stood at 891 without a re-run since lane 175)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed and compared against a handwritten version, one of them a library chain across three units and a linker, under `-fsanitize=undefined` *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
 | **Guardians** | 41, and **65 of 68 instruments carry all five requirements** — deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
