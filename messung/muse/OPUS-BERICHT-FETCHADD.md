@@ -357,6 +357,17 @@ cargo test --no-fail-fast         -> exit 0.  61 suites, 1081 passed, 0 FAILED, 
 is `red before, ALL PASS after`, and the difference is one booked root plus one booked
 corpus file, each with its date and reason.
 
+**One caveat on the population, stated because it is the measuring apparatus.** The
+server tree is synced without `.git`, so `git ls-files` fails and stage 9 falls back to
+its directory blacklist — it says so out loud (*"falling back to the directory
+blacklist alone, untracked .gab files included"*). The first run of this lane therefore
+counted `probe/p3.gab` and `probe/p4.gab` as new emitting roots; they were moved out of
+the tree (`~/fadd-proben/`) and every number quoted above and in §4a is from a tree
+with no scratch `.gab` in it. On a real checkout, where `git ls-files` works, the
+tracked population and this fallback population are the same set. *A guardian that
+names its own fallback is the good case; the bad one would have counted two scratch
+files into a mark.*
+
 **`cargo test` needed the Lean caches seeded, and that is worth writing down.**
 `AGENTS.md` §6 names `cp -a ~/gabbro-muse/stage/lake3 …/grammatik/.lake`, and
 `grammatik/` is not the directory `gabbro prove` builds — **`programmlogik/` is**, and
