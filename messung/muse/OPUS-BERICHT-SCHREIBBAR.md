@@ -26,7 +26,7 @@ with the price written in the file). One links and runs.
 | **1** | **Start a thread on a declared root.** `concurrent { hauptA, hauptB };` declares that two bodies run at once; nothing starts them, and the emitted unit has no caller for either. This is `pthread_create` in `laufzeit/start.c`:158-167. | **A** | `S01-faden-start.gab` | 6 shapes. `concurrent {…};` in a body → `[P017] assignment or call expected, `{` found` + `[P033]`; `spawn f;`, `start f;`, `concurrent f;` → `[P017]`; `threads {…};` → `[P017]`+`[P033]`; `let t = spawn(f);` → `[M119] `spawn` is declared nowhere` + `[H021]`. The seventh shape, `hauptA();`, parses — and is a sequential call, not a thread. |
 | **2** | **An entry point and an exit code.** `main` in C. `entry`/`boot` exist and emit a prototype plus a `#define`, never a body (see #12). An `impl fn` lowers to `static`, so nothing in an emitted unit can be C's `main`. | **D** | `S05-treiber-in-gabbro.gab` | Accepted (0 errors). The exit code travels as an ordinary return value nobody reads; the driver that reads it is C. |
 | **3** | **A message.** No string type, no string in an expression, no varargs. `printf("konto=%u…", …)` in `start.c`:195. | **A** | `S05-treiber-in-gabbro.gab` | `melde_text("INVARIANT BROKEN");` → `[P011] expression expected, string found`. `melde_stand(a, b)` on a 1-parameter callee → `[M143] declares 1 parameter(s), this call passes 2`. Strings exist only as the text of `assume`/`claim`. |
-| **4** | **A boolean flag at module scope.** `static mut bereit : bool = false;` — a stop flag, a ready bit, an initialised latch. | **C** | `S16-bool-statik.gab` | `gabbro pruefe`: **0 errors, 0 hints.** `gabbro emit`: `error: [C001] …:12: no lowering: `static` with a non-constant initialiser`. 4 shapes: `= false`, `= true`, without `mut` — all three `C001`; the same line at `u32` emits. `emit.rs`:2258 evaluates the initialiser to an integer and refuses when it gets none. **No corpus program carries a `bool` static**, so no guardian sees it. |
+| **4** | **A boolean flag at module scope.** `static mut bereit : bool = false;` — a stop flag, a ready bit, an initialised latch. | **C** | `S16-bool-statik.gab` | `gabbro pruefe`: **0 errors, 0 hints.** `gabbro emit`: `error: [C001] …:12: no lowering: `static` with a non-constant initialiser`. 4 shapes: `= false`, `= true`, without `mut` — all three `C001`; the same line at `u32` emits. `emit.rs`:2258 evaluates the initialiser to an integer and refuses when it gets none. **Of the 51 `static` declarations in `beispiele/`, not one is a `bool`.** The tree's only `bool` static is `beispiele/gift/229`, a poison probe expecting `M109` — and no guardian emits it. So nothing sees this. |
 | **5** | **`atomic_fetch_add`.** `SPRACHE.md` promises a primitive `exchange update` body lowers to `atomic_fetch_*`; `CTicket.lean`'s `zieht` is one wait-free step. | **C** | `S06-fetch-add.gab` | Accepted, 0 errors, C written — and the C is a bounded `atomic_compare_exchange_weak_explicit` loop with a writer-chosen bound and a `_Noreturn` exit at overrun. **Measured over the whole corpus: 0 of 113 emitted units contain an `atomic_fetch_*`; the string occurs once in `emit.rs`, inside a comment (line 9263).** `accumulates … merge max/add` also lowers to load/store on per-cpu cells, not to a fetch op. |
 | **6** | **Wrapping arithmetic over a local.** `n +% 1` where `n` is a `let` local or an `exchange` binder. | **C** | `S07-wrap-ueber-lokaler.gab` | `gabbro pruefe`: 0 errors. `gabbro emit`: `error: [C001] …:12: no lowering: wrapping `+%` over operands whose exact ranges cannot be read off their declarations -- both sides need an exact unsigned range `0 .. 2^N - 1` on one storage width`. The same line over a **parameter** and over a **static** emits. Lane 201 routed around it with a helper whose parameter is readable. |
 | **7** | **The idle root.** `for (;;) pause();` / `wfi` — what every thread that is not a declared start runs (`start.c`:128-146, `E.P.mitRuhe`'s `none`). | **D** | `S04-ruhewurzel.gab` | Accepted, and the C is `for (;;) { warten(); }`. **The price:** `forever` demands `progress <ident>` (compulsory, «SG-11») and `[S003] `progress …` names no declared assumption` refuses a bare name — *"otherwise it is a hope with a keyword in front"*. An idle root is a loop **nobody** ends, and that is the one thing the clause cannot say; the file declares an assumption that states the opposite of what is meant, with a falsifier that can never fire. Also: `[K003] `ruhe` promises costs, but a `forever` loop has no total cost` — an idle root cannot carry the unit's cost register at all. |
@@ -54,7 +54,7 @@ with the price written in the file). One links and runs.
 
 | # | Finding | Proof |
 |---|---|---|
-| **P1** | **The runtime's lock primitive can be written in Gabbro, linked and RUN.** `laufzeit/start.c` says *"a lock is a runtime object (futex, ticket lock, interrupt mask), **never program text**"* and defines `L_nimm`/`L_gib` as a POSIX mutex. Measured otherwise: `pub impl fn L_nimm()` in a unit of its own emits **`void L_nimm(void) { … }`** — non-static, the exact symbol `beispiele/124`'s emitted C declares. | `S03-sperre-eigene-einheit.gab` (0 errors, emit rc=0) + `S03-treiber.c` (= `start.c` with the mutex half cut out). `cc -std=c11 -O0 -Wall -Wextra -Werror -pthread` clean; **10 runs, all exit 0**, `konto=30 konto=30` once and `konto=70 konto=70` nine times — both schedules, the lock invariant holds in every run, no lost private write. **The ticket lock of `laufzeit/sperre.gab`, in Gabbro, serving a real two-thread program.** |
+| **P1** | **The runtime's lock primitive can be written in Gabbro, linked and RUN.** `laufzeit/start.c` says *"a lock is a runtime object (futex, ticket lock, interrupt mask), **never program text**"* and defines `L_nimm`/`L_gib` as a POSIX mutex. Measured otherwise: `pub impl fn L_nimm()` in a unit of its own emits **`void L_nimm(void) { … }`** — non-static, the exact symbol `beispiele/124`'s emitted C declares. | `S03-sperre-eigene-einheit.gab` (0 errors, emit rc=0) + `S03-treiber.c` (= `start.c` with the mutex half cut out). `cc -std=c11 -Wall -Wextra -Werror -pthread` clean at **-O0 and -O2**; **15 runs, all exit 0** (10 at -O0, 5 at -O2): `konto=30 konto=30` once and `konto=70 konto=70` fourteen times — both schedules, the lock invariant holds in every run, no lost private write. **The ticket lock of `laufzeit/sperre.gab`, in Gabbro, serving a real two-thread program.** |
 | | **What P1 gives up, and it is named:** the lock is a **second translation unit**, because row 8 forbids it in the first. `Spec.lean`'s NOT CLAIMED list (line 380) reads *"linking of separately compiled units (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit supplies is not in `D.Fn`)"*. So the lock stops being a C body and becomes a Gabbro body **outside** the goal theorem's `Einheit` rather than inside it. That is a real move — the `cc` link is checked, the symbol is not a hope — and it is not the same as discharging assumption (d). Closing row 8 (one renaming rule in the emitter) would put both in one unit. | |
 | **P2** | **«B17» first half is closed:** a `transition` takes SEVERAL places in one move (`transset = placeshift { "," placeshift }`), and the two-place `state` block of `S08` checks. F3's *"`caller` and `reply_owner` never half set"* is declarable — it is only unusable, for the different reason in row 9. | `S08` (7 items, the ONLY error is the statement) |
 | **P3** | **«B23» is closed:** a register FIELD carries its own class (`regfeld = ident "@" bitpos [ "class" regklasse ]`), so VT-d's `FSTS` writes `PPF @1 class w1c` beside `FRI @[15:8] class r`. F2's last standing finding. | `S17` (the only error is the 128-bit line) |
@@ -127,15 +127,26 @@ corpus). *That comparison is the instrument, and it is eight lines of shell.*
 - **No proof, no Lean.** Nothing in `grammatik/` was touched or read for a theorem. Row 17's
   `LG002` is the exporter's refusal, not a statement about the model.
 - **The `pthread_join` absence** (§2) was inferred from row 1, not probed on its own.
-- **Only `x86_64`, gcc 13.3.0, `-O0`.** The P1 run is 10 executions on one machine under no
-  contention; the ticket lock's bounds (64 CAS passes, 1431655765 spin passes) were never
-  reached and are therefore untested, exactly as lane 201 recorded.
-- **Of the 38 «Bnn» findings in `FRAGMENTE.md`, this lane re-measured 15 and read the rest.**
-  The unmeasured ones are named so nobody reads a silence as a verdict: «B1» «B3» «B4» «B5»
-  «B16» «B18» «B19» «B20» «B22»-adjacent `claim` positions, «B25» «B26» «B28» «B30» «B32»-«B40».
-- **`cargo test --no-fail-fast`** was started on `fisch` in `gabbro-opus-schr` after the probes
-  were in place. The diff adds no Rust and no corpus file; `beispiele.rs`/`korpus.rs` walk
-  `beispiele/` and `dokumente/FRAGMENTE.md` only, neither of which this lane touches.
+- **Only `x86_64`, gcc 13.3.0.** The P1 run is 15 executions of a TWO-thread program on one
+  machine (10 at `-O0`, 5 at `-O2`) — real contention on the lock, but the lightest kind. The
+  ticket lock's bounds (64 CAS passes, 1431655765 spin passes) were never reached and are
+  therefore untested, exactly as lane 201 recorded. No other arch, no many-thread run.
+- **Of the 38 «Bnn» findings in `FRAGMENTE.md`, this lane ran its own probe against 16** —
+  «B2» «B7» «B9» «B10» «B11» «B12» «B13» «B14» «B15» «B17» «B22» «B23» «B24» «B27» «B29»
+  «B31» — and **confirmed 3 more from corpus files it did not write** («B6», «B8», «B21»).
+  **The remaining 19 were read and not run**, and they are named so nobody reads a silence as
+  a verdict: «B1» «B3» «B4» «B5» «B16» «B18» «B19» «B20» «B25» «B26» «B28» «B30»
+  «B32»–«B40». *Several of the unrun ones are in `SYNTAX.md` itself and may well have moved
+  the same way «B17» and «B23» did.*
+- **Guardians, run with the diff and again with the diff moved aside, so the numbers are a
+  baseline and not a hope:** `pruefe-kennungen.py` **ALL PASS** (857 files; every code belongs
+  to one file, and the probes only quote codes in comments) · `pruefe-englisch.py` red with
+  **identical numbers** both ways (7958/7949 German comment lines in the checker, 30/26
+  feeders, 5/2 sinks — pre-existing, and about `crates/`, which this lane does not touch) ·
+  `pruefe-todo.py` **14 findings both ways** (stale EBNF counts in `TODO.md`/`README.md`).
+- **`cargo test --no-fail-fast`** on `fisch` in `gabbro-opus-schr`. The diff adds no Rust and no
+  corpus file; `beispiele.rs`/`korpus.rs` walk `beispiele/` and `dokumente/FRAGMENTE.md` only,
+  neither of which this lane touches.
 
 ## 5. Files
 
