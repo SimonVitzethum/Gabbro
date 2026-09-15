@@ -755,13 +755,119 @@ theorem lowerAllg104data :
 
 /-! ## The real-text lexer pin for 104 -/
 
-/-- The real `beispiele/104-referenz.gab` text (with `--` comments;
-    lane 162 measured `lex` away at `maxHeartbeats 12000000`). -/
-def src104real : String := "-- 104 -- The reference fixture as a real Gabbro program (lane 126).\n--\n-- This is `grammatik/Grammatik/ReferenzB.lean` (`refD`/`refP`) in surface\n-- syntax: one table `Konto` of 2 slots with one `0 .. 100` field, guarded by\n-- the single lock `M`; `einzahlen` (one `0 .. 10` parameter, no result,\n-- writes the table, ensures the slot did not decrease) and `lies` (no\n-- parameters, one `0 .. 100` result, reads, ensures the answer equals the\n-- slot). Both run under the held lock (`requires Held(M)`, the `beispiele/01`\n-- idiom: the caller's duty, so the bodies touch the guarded slot directly).\n-- Not declared `concurrent`: both functions hold `M` by signature, and the\n-- start rule N240 (the goal theorem's `StartExklusiv`) forbids two threads\n-- starting in functions that share a signature lock. The earlier note: the declaration\n-- (lane 141: the certificate census classifies `concurrent` as erased -- the\n-- emitter writes nothing for it -- so the declaration passes stage 7 of\n-- `pruefe-emission.sh`). Threads cannot be driven from a C driver anyway, so\n-- the driver runs both threads one after the other -- the sequential\n-- composition the emitter produces: `einzahlen` like thread 1, then `lies`\n-- like thread 0. That is the observable half of the fixture\n-- (`refB_schreibt`: slot `0 -> 100`).\n\nmodule beispiel::referenz {\n\nconst NKONTO : u32 = 2;\n\ntype Betrag = u32 in 0 .. 10;\ntype Stand = u32 in 0 .. 100;\n\ntable Konto count NKONTO {\n    slot {\n        stand : Stand,\n    }\n}\n\nlock M protects { stand } rank 0 held <= 50 ops;\n\nimpl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)\n    requires Held(M)\n    ensures  old(k.slots[i].stand) <= k.slots[i].stand\n    effects  { reads k.slots, writes k.slots, locks M }\n    costs    <= 16 ops\n{\n    k.slots[i].stand = 100;\n    lies(k, i);\n}\n\nimpl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand\n    requires Held(M)\n    ensures  result == k.slots[i].stand\n    effects  { reads k.slots, locks M }\n    costs    <= 8 ops\n{\n    return k.slots[i].stand;\n}\n\n\n}\n"
+-- SRC-BEGIN src104real
+/-- The real `beispiele/104-referenz.gab` text, one entry per source line (a long
+    line cut again after a space). `zaehle-kette.py` compares the
+    pieces against the file, byte for byte. WHY PIECES and not one
+    literal: `Parser/Lexer.lean`'s `lex_ofList` -- one 2064-byte
+    literal costs the kernel tens of gigabytes (O13). -/
+def srcZeilen104 : List (List Char) :=
+  ["-- 104 -- The reference fixture as a ".toList,
+   "real Gabbro program (lane 126).\n".toList,
+   "--\n".toList,
+   "-- This is ".toList,
+   "`grammatik/Grammatik/ReferenzB.lean` ".toList,
+   "(`refD`/`refP`) in surface\n".toList,
+   "-- syntax: one table `Konto` of 2 slots ".toList,
+   "with one `0 .. 100` field, guarded by\n".toList,
+   "-- the single lock `M`; `einzahlen` (one ".toList,
+   "`0 .. 10` parameter, no result,\n".toList,
+   "-- writes the table, ensures the slot ".toList,
+   "did not decrease) and `lies` (no\n".toList,
+   "-- parameters, one `0 .. 100` result, ".toList,
+   "reads, ensures the answer equals the\n".toList,
+   "-- slot). Both run under the held lock ".toList,
+   "(`requires Held(M)`, the `beispiele/01`\n".toList,
+   "-- idiom: the caller's duty, so the ".toList,
+   "bodies touch the guarded slot ".toList,
+   "directly).\n".toList,
+   "-- Not declared `concurrent`: both ".toList,
+   "functions hold `M` by signature, and ".toList,
+   "the\n".toList,
+   "-- start rule N240 (the goal theorem's ".toList,
+   "`StartExklusiv`) forbids two threads\n".toList,
+   "-- starting in functions that share a ".toList,
+   "signature lock. The earlier note: the ".toList,
+   "declaration\n".toList,
+   "-- (lane 141: the certificate census ".toList,
+   "classifies `concurrent` as erased -- ".toList,
+   "the\n".toList,
+   "-- emitter writes nothing for it -- so ".toList,
+   "the declaration passes stage 7 of\n".toList,
+   "-- `pruefe-emission.sh`). Threads cannot ".toList,
+   "be driven from a C driver anyway, so\n".toList,
+   "-- the driver runs both threads one ".toList,
+   "after the other -- the sequential\n".toList,
+   "-- composition the emitter produces: ".toList,
+   "`einzahlen` like thread 1, then `lies`\n".toList,
+   "-- like thread 0. That is the observable ".toList,
+   "half of the fixture\n".toList,
+   "-- (`refB_schreibt`: slot `0 -> 100`).\n".toList,
+   "\n".toList,
+   "module beispiel::referenz {\n".toList,
+   "\n".toList,
+   "const NKONTO : u32 = 2;\n".toList,
+   "\n".toList,
+   "type Betrag = u32 in 0 .. 10;\n".toList,
+   "type Stand = u32 in 0 .. 100;\n".toList,
+   "\n".toList,
+   "table Konto count NKONTO {\n".toList,
+   "    slot {\n".toList,
+   "        stand : Stand,\n".toList,
+   "    }\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "lock M protects { stand } rank 0 held <= ".toList,
+   "50 ops;\n".toList,
+   "\n".toList,
+   "impl fn einzahlen(k : ptr<normal, rw> ".toList,
+   "Konto, i : index into Konto, b : ".toList,
+   "Betrag)\n".toList,
+   "    requires Held(M)\n".toList,
+   "    ensures  old(k.slots[i].stand) <= ".toList,
+   "k.slots[i].stand\n".toList,
+   "    effects  { reads k.slots, writes ".toList,
+   "k.slots, locks M }\n".toList,
+   "    costs    <= 16 ops\n".toList,
+   "{\n".toList,
+   "    k.slots[i].stand = 100;\n".toList,
+   "    lies(k, i);\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "impl fn lies(k : ptr<normal, r> Konto, i ".toList,
+   ": index into Konto) -> Stand\n".toList,
+   "    requires Held(M)\n".toList,
+   "    ensures  result == k.slots[i].stand\n".toList,
+   "    effects  { reads k.slots, locks M }\n".toList,
+   "    costs    <= 8 ops\n".toList,
+   "{\n".toList,
+   "    return k.slots[i].stand;\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "\n".toList,
+   "}\n".toList]
+-- SRC-END src104real
 
-set_option maxHeartbeats 12000000 in
-theorem lex104real : lex src104real = .ok tt104 := by
+/-- The pinned text as characters. -/
+def srcQuelle104 : List Char := srcZeilen104.flatten
+
+/-- The pinned text as the `String` the chain is indexed by. -/
+def src104real : String := String.ofList srcQuelle104
+
+set_option maxHeartbeats 4000000 in
+/-- **THE REAL 104 TEXT LEXES TO `tt104`** -- over the CHARACTERS, which is
+    the only form the kernel ever sees (O13): the pieces are short literals,
+    and the whole scan costs a fraction of one long literal's decode. -/
+theorem lexL104real : lexL srcQuelle104 = .ok tt104 := by
   decide
+
+/-- The same, as a statement about the `String` the chain is indexed by.
+    `lex_ofList` carries the pin across WITHOUT running the UTF-8 decoder,
+    so this theorem is a rewrite and not a reduction. -/
+theorem lex104real : lex src104real = .ok tt104 := by
+  show lex (String.ofList srcQuelle104) = _
+  rw [lex_ofList]
+  exact lexL104real
 
 /-! ## The 104 chain, end to end -/
 
@@ -834,70 +940,105 @@ def pre108 (items : List SItemTief) : List SItemTief :=
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
-/-- The real `beispiele/108-disjoint-start-locks.gab` text. -/
-def src108 : String := "-- 108 -- Two lock-free readers over one shared, never-written table.
---
--- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): the start functions of
--- distinct threads hold no signature lock in common -- and since lane 183
--- (`wurzelnB`) they hold NO signature lock at all: nobody holds a lock for a
--- thread before it starts. This file used to show the disjoint shape
--- (`read_a` under `Held(L)`, `read_c` under `Held(M)`); that shape is now
--- refused at both starts (`N303`), and the take-inside remedy has no G form
--- for value readers (`LG004`: no `return` under `locks`). What remains is
--- the silent side both rules share: two readers over one table nobody
--- writes -- every rule stays silent (`N240`/`N303`: nothing held; `N290`/
--- `N291`/`N300`/`N301`: unwritten carriers; `W001`: reads overlap freely).
--- The refused root shape lives in `beispiele/gift/967`, the pair side in
--- gifts 910-915. The G export of this file is pinned in
--- `grammatik/Grammatik/Export108.lean`.
---
--- Evidence: the pre-183 program this file replaces, kept verbatim as a
--- comment. It is refused since lane 183 at both starts by `N303`
--- (`wurzelnB`: `D.haelt w = []` -- nobody holds a lock for a thread before
--- it starts), although `N240` stays silent on it (disjoint held sets):
---   table U count 4 {
---       slot { v : u32, }
---   }
---   lock L protects { T } rank 0 held <= 100 ops;
---   lock M protects { U } rank 1 held <= 100 ops;
---   impl fn read_a() -> u32
---       requires Held(L)
---       effects { reads T.slots }
---       costs <= 4 ops
---   {
---       return T.slots[0].v;
---   }
---   impl fn read_c() -> u32
---       requires Held(M)
---       effects { reads U.slots }
---       costs <= 4 ops
---   {
---       return U.slots[0].v;
---   }
-module beispiel::disjoint_start_locks {
+-- SRC-BEGIN src108
+/-- The real `beispiele/108-disjoint-start-locks.gab` text, one entry per source line (a long
+    line cut again after a space). `zaehle-kette.py` compares the
+    pieces against the file, byte for byte. WHY PIECES and not one
+    literal: `Parser/Lexer.lean`'s `lex_ofList` -- one 2082-byte
+    literal costs the kernel tens of gigabytes (O13). -/
+def srcZeilen108 : List (List Char) :=
+  ["-- 108 -- Two lock-free readers over one ".toList,
+   "shared, never-written table.\n".toList,
+   "--\n".toList,
+   "-- TRANSFER of `StartExklusiv` ".toList,
+   "(`RufMaschineG.lean`): the start ".toList,
+   "functions of\n".toList,
+   "-- distinct threads hold no signature ".toList,
+   "lock in common -- and since lane 183\n".toList,
+   "-- (`wurzelnB`) they hold NO signature ".toList,
+   "lock at all: nobody holds a lock for a\n".toList,
+   "-- thread before it starts. This file ".toList,
+   "used to show the disjoint shape\n".toList,
+   "-- (`read_a` under `Held(L)`, `read_c` ".toList,
+   "under `Held(M)`); that shape is now\n".toList,
+   "-- refused at both starts (`N303`), and ".toList,
+   "the take-inside remedy has no G form\n".toList,
+   "-- for value readers (`LG004`: no ".toList,
+   "`return` under `locks`). What remains ".toList,
+   "is\n".toList,
+   "-- the silent side both rules share: two ".toList,
+   "readers over one table nobody\n".toList,
+   "-- writes -- every rule stays silent ".toList,
+   "(`N240`/`N303`: nothing held; `N290`/\n".toList,
+   "-- `N291`/`N300`/`N301`: unwritten ".toList,
+   "carriers; `W001`: reads overlap ".toList,
+   "freely).\n".toList,
+   "-- The refused root shape lives in ".toList,
+   "`beispiele/gift/967`, the pair side in\n".toList,
+   "-- gifts 910-915. The G export of this ".toList,
+   "file is pinned in\n".toList,
+   "-- ".toList,
+   "`grammatik/Grammatik/Export108.lean`.\n".toList,
+   "--\n".toList,
+   "-- Evidence: the pre-183 program this ".toList,
+   "file replaces, kept verbatim as a\n".toList,
+   "-- comment. It is refused since lane 183 ".toList,
+   "at both starts by `N303`\n".toList,
+   "-- (`wurzelnB`: `D.haelt w = []` -- ".toList,
+   "nobody holds a lock for a thread before\n".toList,
+   "-- it starts), although `N240` stays ".toList,
+   "silent on it (disjoint held sets):\n".toList,
+   "--   table U count 4 {\n".toList,
+   "--       slot { v : u32, }\n".toList,
+   "--   }\n".toList,
+   "--   lock L protects { T } rank 0 held ".toList,
+   "<= 100 ops;\n".toList,
+   "--   lock M protects { U } rank 1 held ".toList,
+   "<= 100 ops;\n".toList,
+   "--   impl fn read_a() -> u32\n".toList,
+   "--       requires Held(L)\n".toList,
+   "--       effects { reads T.slots }\n".toList,
+   "--       costs <= 4 ops\n".toList,
+   "--   {\n".toList,
+   "--       return T.slots[0].v;\n".toList,
+   "--   }\n".toList,
+   "--   impl fn read_c() -> u32\n".toList,
+   "--       requires Held(M)\n".toList,
+   "--       effects { reads U.slots }\n".toList,
+   "--       costs <= 4 ops\n".toList,
+   "--   {\n".toList,
+   "--       return U.slots[0].v;\n".toList,
+   "--   }\n".toList,
+   "module beispiel::disjoint_start_locks {\n".toList,
+   "\n".toList,
+   "table T count 4 {\n".toList,
+   "    slot { v : u32, }\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "impl fn read_a() -> u32\n".toList,
+   "    effects { reads T.slots }\n".toList,
+   "    costs <= 4 ops\n".toList,
+   "{\n".toList,
+   "    return T.slots[0].v;\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "impl fn read_c() -> u32\n".toList,
+   "    effects { reads T.slots }\n".toList,
+   "    costs <= 4 ops\n".toList,
+   "{\n".toList,
+   "    return T.slots[1].v;\n".toList,
+   "}\n".toList,
+   "\n".toList,
+   "concurrent { read_a, read_c };\n".toList,
+   "\n".toList,
+   "}\n".toList]
+-- SRC-END src108
 
-table T count 4 {
-    slot { v : u32, }
-}
+/-- The pinned text as characters. -/
+def srcQuelle108 : List Char := srcZeilen108.flatten
 
-impl fn read_a() -> u32
-    effects { reads T.slots }
-    costs <= 4 ops
-{
-    return T.slots[0].v;
-}
-
-impl fn read_c() -> u32
-    effects { reads T.slots }
-    costs <= 4 ops
-{
-    return T.slots[1].v;
-}
-
-concurrent { read_a, read_c };
-
-}
-"
+/-- The pinned text as the `String` the chain is indexed by. -/
+def src108 : String := String.ofList srcQuelle108
 
 /-- The token list of the 108 source (`lex108` checks it). -/
 def toks108 : List Token := [.wort "module",
@@ -989,10 +1130,17 @@ def toks108 : List Token := [.wort "module",
  .ende]
 
 
-set_option maxHeartbeats 12000000 in
-
-theorem lex108 : lex src108 = .ok toks108 := by
+set_option maxHeartbeats 4000000 in
+/-- **THE REAL 108 TEXT LEXES TO `toks108`**, over the characters (O13). -/
+theorem lexL108 : lexL srcQuelle108 = .ok toks108 := by
   decide
+
+/-- The same, as a statement about the `String` -- through `lex_ofList`
+    and never through the UTF-8 decoder (O13). -/
+theorem lex108 : lex src108 = .ok toks108 := by
+  show lex (String.ofList srcQuelle108) = _
+  rw [lex_ofList]
+  exact lexL108
 
 /-- The parsed 108 surface tree (raw, `concurrent` inside;
     `parse108` checks it against the reader). -/

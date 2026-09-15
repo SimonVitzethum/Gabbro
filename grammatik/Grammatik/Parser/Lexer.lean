@@ -365,6 +365,38 @@ def scan : List Char → Nat → Except LexFehler (List Token)
 def lex (s : String) : Except LexFehler (List Token) :=
   scan s.toList (s.length + 1)
 
+/-- **The same lexer, over the CHARACTERS**: `scan` is what `lex` runs;
+    the only difference is who converts. It exists for the kernel, not
+    for the reader -- see `lex_ofList` and the cost note in the CUTS. -/
+def lexL (cs : List Char) : Except LexFehler (List Token) :=
+  scan cs (cs.length + 1)
+
+/-- **`lex` OF A SOURCE PINNED AS CHARACTERS IS `lexL` OF THEM** -- the
+    one step that keeps the chain files inside ordinary memory (O13).
+
+    In Lean 4.33 a `String` is a UTF-8 byte array, `String.toList` is
+    `(s.toByteArray.utf8Decode?.get _).toList`, and `String.length` is
+    a second pass over the same bytes. `.get` forces the WHOLE decode,
+    so asking the kernel for the FIRST character of a long literal
+    costs what the whole text costs: measured 2026-09-15 on
+    `ki-pc-fisch-101`, Lean 4.33.1, a 1419-byte ASCII literal needs
+    **17,8 GB and 95 s** for `(s.toList).isEmpty = false` alone, and
+    the growth is about `n^1.9` -- the 2064-byte chain source is past
+    30 GB before the lexer has seen a token.
+
+    The same text as a `List Char` of short `"…".toList` pieces costs
+    **1,5 GB and 8,5 s** FULLY forced. So a chain pins its source as
+    pieces and defines the `String` as `String.ofList` of them; this
+    theorem carries the pin across, and it is a REWRITE, not a kernel
+    reduction: `String.toList_ofList` and `String.length_ofList` are
+    core lemmas, so the decoder is never run at all. Nothing is
+    weakened -- `src` still IS the text, character for character, and
+    a guardian (`zaehle-kette.py`) still compares the pieces against
+    the file byte for byte. -/
+theorem lex_ofList (l : List Char) : lex (String.ofList l) = lexL l := by
+  unfold lex lexL
+  rw [String.toList_ofList, String.length_ofList]
+
 /-- Decidable equality on lexing outcomes (core Lean 4.33 has none for
     `Except`): both sides agree constructor-wise and inside. -/
 instance : DecidableEq (Except LexFehler (List Token)) :=
@@ -607,6 +639,12 @@ end Gabbro.Grammatik.Parser
   * The keyword/identifier split is positional in the grammar
     (`WORTSTELLUNG.md`): at an `ident` position every table word is a
     name. `lex` emits `wort` unconditionally; the parser decides.
+  * `lexL` is not a second lexer and proves nothing new: it is `scan`
+    with the fuel `lex` would have passed, and `lex_ofList` is the
+    only bridge to it. A source text pinned as characters therefore
+    means exactly what a `String` literal meant -- the saving is in
+    WHO converts, not in WHAT is claimed (O13, and the measured table
+    in `messung/muse/OPUS-BERICHT-O13.md`).
   * `schluesselTafelC` stores the table as character lists in
     first-character buckets, and `strEq` compares through
     character lists: kernel evaluation of `String ==` runs through
@@ -616,6 +654,7 @@ end Gabbro.Grammatik.Parser
 -/
 
 #print axioms Gabbro.Grammatik.Parser.lex_total
+#print axioms Gabbro.Grammatik.Parser.lex_ofList
 #print axioms Gabbro.Grammatik.Parser.lex_keywords
 #print axioms Gabbro.Grammatik.Parser.lex_keywords_zeuge
 #print axioms Gabbro.Grammatik.Parser.sonde01_lex

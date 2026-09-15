@@ -50,18 +50,14 @@ theorem elab4 : elabU (pre108 items104) = .ok uExp104 := rfl
 
 theorem low4 : lowerAllg uExp104 = .ok (P4, fs4) := except_ok_get low_some
 
-set_option maxHeartbeats 40000000 in
-/-- **PARSE FIDELITY** of the real text (comments included). The kernel
-    re-lexes the text (lane 162 measured `lex` at `maxHeartbeats 12000000`). -/
-theorem uebersetzt4 : uebersetzeAllg src104real = .ok ⟨uExp104, P4, fs4⟩ := by
-  unfold uebersetzeAllg
-  rw [lex104real]
-  dsimp only
-  rw [parse4]
-  dsimp only
-  rw [elab4]
-  dsimp only
-  rw [low4]
+/-- **PARSE FIDELITY** of the real text (comments included), through the
+    generic stage lemma. Unfolding `uebersetzeAllg` HERE, at the concrete
+    source, is what cost 70 GB (O13): `simp` looks at the discriminant
+    `lex src104real` and the kernel runs the UTF-8 decoder over 2064
+    bytes. `uebersetzeAllg_von_zeichen` does the unfolding once, at a
+    VARIABLE character list, so nothing is decoded. -/
+theorem uebersetzt4 : uebersetzeAllg src104real = .ok ⟨uExp104, P4, fs4⟩ :=
+  uebersetzeAllg_von_zeichen lexL104real parse4 elab4 low4
 
 /-! ## 2. The declaration's members, and the bodies as terms -/
 

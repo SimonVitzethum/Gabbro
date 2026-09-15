@@ -34,7 +34,9 @@ instance of the GENERIC closing theorem `schlusssatz` exists for it:
   * a file under `grammatik/Grammatik/` carries the marker `CHAIN-INSTANCE <program>
     <name>` and some file defines `def <name> : Kette <src>`;
   * the Lean string `<src>` IS the program's file, byte for byte (the parse fidelity of
-    the chain is about that string -- a stale paste is a different program);
+    the chain is about that string -- a stale paste is a different program). The pin is
+    read in EITHER form: one `String` literal, or the `SRC-BEGIN`/`SRC-END` block of
+    `"…".toList` pieces the chain files use since O13 (`block_text`);
   * the instance's certificate IS the printer's (column (e));
   * some Lean file applies `schlusssatz <name>` (the theorem instantiated, a witness);
   * with `--lean`: `lake build` of every module involved is green, AND column (a)
@@ -150,14 +152,56 @@ def lean_texte():
     return texte
 
 
+STUECK = re.compile(r'"((?:[^"\\]|\\.)*)"\.toList')
+
+
+def block_text(quelle, name):
+    """The text of a PIECEWISE source pin, or None.
+
+    A chain source may be pinned in two forms, and this reader knows both because
+    the second one is a MEASURED necessity and not a style (O13):
+
+        def <name> : String := "…"                      -- one literal
+
+        -- SRC-BEGIN <name>
+        def <name>Z : List (List Char) := ["…".toList, …]
+        -- SRC-END <name>
+        def <name> : String := String.ofList …
+
+    In Lean 4.33 a `String` is a UTF-8 byte array and `String.toList` decodes the
+    WHOLE text before it yields its first character; a 2064-byte literal costs the
+    kernel tens of gigabytes, the same text as short `"…".toList` pieces about a
+    gigabyte. The text is the concatenation of the literals in the block, in order --
+    **this reader does not care how the text is cut, only what the bytes are**, so a
+    re-cut pin is neither a finding nor a silent pass (the same contract as
+    `pruefe-ctext.py` on the emitted-C side).
+    """
+    m = re.search(r"-- SRC-BEGIN " + re.escape(name) + r"\n(.*?)-- SRC-END "
+                  + re.escape(name), quelle, re.S)
+    if not m:
+        return None
+    stuecke = []
+    for lit in STUECK.findall(m.group(1)):
+        s = lean_unescape(lit)
+        if s is None:
+            return None
+        stuecke.append(s)
+    return "".join(stuecke) if stuecke else None
+
+
 def string_def(texte, name):
-    """The value of `def <name> : String := "..."` somewhere in the tree, or None."""
+    """The pinned source text of `name`: one `String` literal, or a `SRC-BEGIN` block
+    of `"…".toList` pieces (see `block_text`). None when neither is readable."""
     muster = re.compile(r"def\s+" + re.escape(name) + r"\s*:\s*String\s*:=\s*\"((?:[^\"\\]|\\.)*)\"",
                         re.S)
     for t in texte.values():
         m = muster.search(t)
         if m:
             return lean_unescape(m.group(1))
+    for t in texte.values():
+        s = block_text(t, name)
+        if s is not None:
+            return s
     return None
 
 
@@ -379,6 +423,25 @@ def selbsttest():
     ok = ok and ok_esc and ok_unbek
     print(f"  a Lean string literal decodes: {'yes' if ok_esc else 'NO'}")
     print(f"  an unknown escape is refused, not guessed: {'yes' if ok_unbek else 'NO'}")
+    # The piecewise source pin (O13): both directions, on a planted block, so the
+    # reader that replaced the single literal is itself measured and not trusted.
+    gut = ('-- SRC-BEGIN srcX\ndef srcXZ : List (List Char) :=\n'
+           '  ["module a {\\n".toList,\n   "  fn f() {}\\n".toList,\n'
+           '   "}\\n".toList]\n-- SRC-END srcX\n'
+           'def srcX : String := String.ofList srcXZ.flatten\n')
+    echt = "module a {\n  fn f() {}\n}\n"
+    ok_pin = block_text(gut, "srcX") == echt
+    ok_pin_byte = block_text(gut.replace("fn f()", "fn g()"), "srcX") != echt
+    ok_pin_weg = block_text(gut, "srcY") is None
+    ok_pin_schnitt = block_text(
+        gut.replace('"module a {\\n".toList', '"module ".toList,\n   "a {\\n".toList'),
+        "srcX") == echt
+    ok = ok and ok_pin and ok_pin_byte and ok_pin_weg and ok_pin_schnitt
+    print(f"  a piecewise source pin is read as its bytes: {'yes' if ok_pin else 'NO'}")
+    print(f"  one byte changed is a DIFFERENT text: {'yes' if ok_pin_byte else 'NO'}")
+    print(f"  a missing block is no text: {'yes' if ok_pin_weg else 'NO'}")
+    print(f"  the same text cut differently is the same text: "
+          f"{'yes' if ok_pin_schnitt else 'NO'}")
     a = normiere("[{ rows := [GRow.void 2],\n  vm := [0] }]")
     b = normiere("[{ rows := [GRow.void 2], vm := [0] }]")
     c = normiere("[{ rows := [GRow.void 3], vm := [0] }]")
