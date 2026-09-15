@@ -1096,3 +1096,147 @@ fn entry_root_travels_to_starts() {
         "entry root travels:\n{text}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// `tagged type` -- `Ty.sum` (2026-09-15)
+//
+// The type declaration used to be `LG001 type X has no G form`, and that
+// stopped TEN corpus programs before the exporter had looked at a single
+// statement. `Ty.sum`, `Expr.fall`, `Stmt.onTag` and `Arms` are all in
+// `Syntax.lean`/`Typen.lean`; what is NOT there -- a payload that is not one
+// integer range, a case list that is empty -- is refused BY NAME below.
+// ---------------------------------------------------------------------------
+
+/// **A `tagged` parameter, its construction and its `match`** (positive
+/// probe): the type is `Ty.sum`, the constructor `Expr.fall` and the match
+/// `Stmt.onTag` with one arm per case in DECLARATION order.
+#[test]
+fn tagged_type_travels_as_sum() {
+    let q = "module test::leang_tag {\n\
+        tagged type N = { Leer, Kurz(u32 in 0 .. 100) };\n\
+        impl fn baue(k : bool, x : u32 in 0 .. 100) -> N effects { pure } costs <= 8 ops {\n\
+        if k { return Kurz(x); }\n\
+        return Leer;\n}\n\
+        impl fn nimm(m : N) -> u32 in 0 .. 100 effects { pure } costs <= 8 ops {\n\
+        match m { Leer => { return 0; } Kurz(v) => { return v; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let text = export("leang_tag", &tree(q)).expect("tagged unit must export");
+    for teil in [
+        "params := [(.sum [none, some (0, 100)])]",
+        "erg := some ((.sum [none, some (0, 100)]))",
+        ".fall [none, some (0, 100)] ⟨1, by decide⟩ (.zahl",
+        ".fall [none, some (0, 100)] ⟨0, by decide⟩ .keine",
+        ".onTag",
+    ] {
+        assert!(text.contains(teil), "tagged export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **A `tagged` slot field and a `tagged` static** (positive probe): the
+/// field type is `Ty.sum`, and `gSp0` starts the slot at case 0 and the
+/// global at the case its `static` names.
+#[test]
+fn tagged_slot_and_static_travel() {
+    let q = "module test::leang_tagm {\n\
+        tagged type N = { Leer, Kurz(u32) };\n\
+        table T count 2 { slot { was : N, } }\n\
+        static ANFANG : N = Kurz(5);\n\
+        impl fn lies(t : ptr<normal, r> T, i : index into T) -> u32\n\
+        effects { reads t.slots } costs <= 8 ops {\n\
+        match t.slots[i].was { Leer => { return 0; } Kurz(v) => { return v; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let text = export("leang_tagm", &tree(q)).expect("tagged carrier unit must export");
+    for teil in [
+        "| .T, .was => ((.sum [none, some (0, 4294967295)]))",
+        "| .T, .was => ⟨⟨0, by decide⟩, ()⟩",
+        "| .ANFANG => ⟨⟨1, by decide⟩, ⟨5, by decide, by decide⟩⟩",
+        ".onTag (Expr.durch",
+    ] {
+        assert!(text.contains(teil), "tagged carrier export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **LG002 -- a payload that is no integer range has no `Nutzlast`** (poison
+/// probe): `Nutzlast` is `Option (Int × Int)`, so a `bool` payload has none.
+#[test]
+fn refuses_tagged_payload_without_range() {
+    let q = "module test::leang_tagb {\n\
+        tagged type N = { Leer, Flag(bool) };\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let w = export("leang_tagb", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG002", "{w}");
+    assert!(w.message.contains("Flag") && w.message.contains("Nutzlast"), "{w}");
+}
+
+/// **A `tagged` type with no case never reaches the exporter** -- the READER
+/// refuses `{ }` with `P035` ("neither a record nor a sum type"), and the
+/// item is dropped before `collect` sees it. The exporter's own LG002 guard
+/// for the empty case list is therefore a SECOND reader of the same rule, and
+/// it is what makes `cases[0]` (the `sp0` value of a `tagged` slot) total.
+/// *Measured, not assumed: this test exists because the guard's poison probe
+/// exported cleanly and the reason was upstream.*
+#[test]
+fn empty_tagged_type_is_refused_by_the_reader() {
+    let q = "module test::leang_tage {\n\
+        tagged type N = { };\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let (_, absagen) = gabbro_syntax::lies("leang_tage", q);
+    assert!(
+        format!("{absagen:?}").contains("P035"),
+        "the reader refuses an empty sum before the exporter sees it: {absagen:?}"
+    );
+}
+
+/// **LG001 -- `linear` and `ghost` still refuse** (poison probe): the
+/// `tagged` arm must not have opened a door for the resource marks, which
+/// are `D.Marke`/`Res.marke` and not a `Ty`.
+#[test]
+fn linear_type_still_refuses_after_tagged() {
+    for q in [
+        "module test::leang_lin { linear ghost type M;\n\
+         impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n",
+        "module test::leang_ord { linear ghost type M order { a, b };\n\
+         impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n",
+    ] {
+        let w = export("leang_lin", &tree(q)).expect_err("must refuse");
+        assert_eq!(w.code, "LG001", "{w}");
+    }
+}
+
+/// **A `match` over an `option` is not a `match` over a tagged value**
+/// (poison probe): `Stmt.onOption` is its form and is not built here, and
+/// the refusal must name a form rather than fall through the tagged arm.
+#[test]
+fn refuses_option_match_by_name() {
+    let q = "module test::leang_opt {\n\
+        table T count 4 { slot { n : option index into T, } }\n\
+        impl fn f(t : ptr<normal, r> T, i : index into T) -> u32\n\
+        effects { reads t.slots } costs <= 8 ops {\n\
+        match t.slots[i].n { None => { return 0; } Some(j) => { return 1; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let w = export("leang_opt", &tree(q)).expect_err("must refuse");
+    assert!(
+        w.message.contains("onOption") || w.code == "LG002",
+        "an option match names its own form: {w}"
+    );
+}
+
+/// **The three corpus programs the `tagged` work moved into sieve (b)**
+/// (positive probe, on the files): a construction unit, a file-scope
+/// initialiser and the carrier/parameter unit.
+#[test]
+fn tagged_corpus_programs_export() {
+    for name in [
+        "120-tagged-construction.gab",
+        "121-tagged-static-init.gab",
+        "34-markierter-wert.gab",
+    ] {
+        let text = export_file(name);
+        assert!(text.contains(".sum ["), "{name} must carry a `Ty.sum`:\n{text}");
+    }
+}

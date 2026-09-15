@@ -16,9 +16,31 @@
 //!
 //! * `table T count N { slot { f : <int range>, ... } }` -- `Tab`/`Feld`/`typ`/`count`
 //!   (a bare word travels as its full range, the numbers the checker uses).
-//!   A `bool` field travels as `Ty.bool`; `option`, record, `tagged`,
-//!   float and wrapping fields have no form (LG002). A unit without tables
-//!   travels with `Tab := Empty` (pure computation over parameters).
+//!   A `bool` field travels as `Ty.bool` and a `tagged` field as `Ty.sum`
+//!   (see below); `option`, record, float and wrapping fields have no form
+//!   (LG002). A unit without tables travels with `Tab := Empty` (pure
+//!   computation over parameters).
+//! * `tagged type N = { Leer, Kurz(u32 in 0 .. 100) };` -- **`Ty.sum`**,
+//!   closed 2026-09-15. The cases are the `List (Option (Int × Int))` the
+//!   type is indexed by, in DECLARATION order, and a case is its POSITION:
+//!   `Kurz(x)` is `Expr.fall cs ⟨i, _⟩ (.zahl x)`, the payload-free `Leer` is
+//!   `.keine`, and `match m { … }` is `Stmt.onTag` with an `Arms` list of ONE
+//!   block per case, in that same order (`ArmCtx` pushes the payload of a
+//!   case that has one). A tagged value travels as a parameter, a result, a
+//!   slot field, a global and a `static` initialiser (`gSp0` at the case the
+//!   `static` names; a slot starts at case 0, payload zero, for the same
+//!   reason every integer slot starts at zero).
+//!   **Refused BY NAME:** a case payload that is not ONE integer range
+//!   (`Nutzlast` is `Option (Int × Int)`, so a `bool`, a pointer, a record, a
+//!   float or a nested tagged payload has none -- LG002); a tagged type with
+//!   NO case (`Val (.sum [])` is `Σ i : Fin 0, …` and holds no value at all,
+//!   so nothing of that type can exist -- LG002); a case name two tagged
+//!   types share (the exporter translates bottom-up and has no expected type
+//!   to pick the `Ty.sum` with -- LG005); a `match` over an `option` or a
+//!   reason, whose forms are `Stmt.onOption` and `Stmt.onGrund` and are not
+//!   built here (LG004). A `tagged` type is NEVER also `linear`/`ghost`:
+//!   a `Ty.sum` is a VALUE and a `D.Marke` is a RESOURCE, and no
+//!   `Deklaration` field carries both.
 //! * `static mut X : <int range|bool> = <literal>;` -- `Glob`/`gtyp`, with
 //!   the declared initialiser as the `gSp0` entry (`Syntax.lean` §1: "ein
 //!   `static` ein `Glob`"). A read is `Expr.glob`, an `old(X)` is
@@ -95,7 +117,9 @@
 //!   `static` LEFT this list on 2026-09-15, see above); since lane 198 also a declared start with parameters
 //!   (no `Env` argument form) -- `entry`/`boot` items themselves travel
 //!   only as their dispatch root (see below)
-//! * `LG002` type with no `Ty` form (floats, records, pointers outside `normal`, ...)
+//! * `LG002` type with no `Ty` form (floats, records, pointers outside
+//!   `normal`, ...; a `tagged` type LEFT this list on 2026-09-15, see above,
+//!   but its payload and case-count rules joined it)
 //! * `LG003` contract or value expression with no `Expr` form -- since lane
 //!   198 also a `requires` value clause with none, and an integer field
 //!   whose range holds no zero (no `sp0` value)
@@ -118,9 +142,9 @@
 //! (`Zielsatz/Spec.lean`) quantifies over: the lock-invariant family `gS`
 //! (lane 156), the member lists `gFs`/`gLs`/`gCs` (`gCs` carries the
 //! globals as `.inr` since 2026-09-15), the declared initial
-//! memory `gSp0` (every slot at zero, `false` for `bool` -- no surface form
-//! names a slot initialiser; every global at the initialiser its `static`
-//! DOES name)
+//! memory `gSp0` (every slot at zero, `false` for `bool`, the FIRST case with
+//! payload zero for a `tagged` field -- no surface form names a slot
+//! initialiser; every global at the initialiser its `static` DOES name)
 //! and the declared starts `gE.starts` (the `concurrent` members, then the
 //! `entry`/`boot` dispatch roots; every start is parameterless, its
 //! argument list `.nil`), as `def gE : Einheit gD` (no axiom exists, so
@@ -209,6 +233,27 @@ pub(crate) enum VTy {
     Ptr { table: usize, write: bool },
     Index { table: usize },
     Grund { n: usize },
+    /// `tagged type T = { A, B(u32 in lo..hi), … }` -- `Ty.sum`, whose cases
+    /// are `List (Option (Int × Int))`: a case carries NO payload or ONE
+    /// integer range (`Nutzlast`, `Typen.lean`). **The case NAMES do not
+    /// travel** -- a case is its POSITION in the list, and `Expr.fall` names
+    /// it as a `Fin`. They are carried here so a refusal can spell them, and
+    /// so two tagged types with the same shape stay two types.
+    Sum { name: String, cases: Vec<(String, Option<(i128, i128)>)> },
+}
+
+/// The `List (Option (Int × Int))` a `Ty.sum` is indexed by, as Lean spells
+/// it. Written once, here: the constructor (`Expr.fall`) repeats it, and two
+/// spellings of one list would be two types.
+fn sum_list(cases: &[(String, Option<(i128, i128)>)]) -> String {
+    let cs: Vec<String> = cases
+        .iter()
+        .map(|(_, p)| match p {
+            None => "none".to_string(),
+            Some((lo, hi)) => format!("some ({}, {})", int_num(*lo), int_num(*hi)),
+        })
+        .collect();
+    format!("[{}]", cs.join(", "))
 }
 
 impl VTy {
@@ -224,6 +269,7 @@ impl VTy {
                 format!("(.index (gD.count {}))", tab_ctor(model, *table))
             }
             VTy::Grund { n } => format!("(.grund {n})"),
+            VTy::Sum { cases, .. } => format!("(.sum {})", sum_list(cases)),
         }
     }
 
@@ -290,6 +336,9 @@ pub(crate) struct TableModel {
 pub(crate) enum GInit {
     Int(i128),
     Bool(bool),
+    /// `static X : T = Kurz(5);` at a `tagged` type -- the case POSITION and
+    /// its payload, which is what `Val (.sum cs)` is: `⟨i, nutzlast⟩`.
+    Sum { case: usize, payload: Option<i128> },
 }
 
 pub(crate) struct GlobModel {
@@ -329,6 +378,10 @@ pub(crate) struct FnModel {
 pub(crate) struct Scope {
     pub(crate) consts: std::collections::HashMap<String, i128>,
     aliases: std::collections::HashMap<String, (i128, i128, Option<u32>)>,
+    /// `tagged type T = { … }` -- the cases of a `Ty.sum`, in DECLARATION
+    /// order (the order is the type: `Expr.fall` names a case by its `Fin`,
+    /// and `Arms` lists one block per case in this order).
+    tagged: std::collections::HashMap<String, Vec<(String, Option<(i128, i128)>)>>,
 }
 
 impl Scope {
@@ -409,49 +462,157 @@ fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
     }
 }
 
+/// A `Ty` where G needs one: an integer range or `bool` (`int_ty`), or a
+/// declared `tagged type` as its `Ty.sum`. Every other spelling -- a record,
+/// a float, an array, a function pointer -- has no `Ty` and is refused BY
+/// NAME at the site that asked.
+fn g_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
+    if let Some(v) = int_ty(t, scope) {
+        return Some(v);
+    }
+    let TypExpr::Pfad(p) = t else {
+        return None;
+    };
+    let name = p.einfach()?;
+    let cases = scope.tagged.get(&name.text)?;
+    Some(VTy::Sum { name: name.text.clone(), cases: cases.clone() })
+}
+
+/// **`tagged type T = { A, B(u32 in lo..hi), … }` is `Ty.sum`** (`Typen.lean`
+/// §1, `SYNTAX.md:441`): the cases in declaration order, each carrying no
+/// payload or ONE integer range.
+///
+/// What has no `Ty.sum` is refused BY NAME here, because `Nutzlast` is
+/// exactly `Option (Int × Int)`: a `bool`, a pointer, a record, a float or a
+/// nested tagged payload has no form, and a tagged type with NO case has no
+/// value at all (`Val (.sum []) = Σ i : Fin 0, …` is empty, so no slot,
+/// global or parameter of it can exist -- the same argument `W1` makes about
+/// answers at empty types).
+fn read_tagged(t: &TypDecl, scope: &Scope) -> Result<Vec<(String, Option<(i128, i128)>)>, Refusal> {
+    if t.linear || t.ghost || t.ordnung.is_some() || t.parameter.is_some() {
+        return Err(refuse(
+            "LG001",
+            format!(
+                "tagged type {} is also `linear`/`ghost`/`order`: a `Ty.sum` is a VALUE and a \
+                 `D.Marke` is a RESOURCE (`Res.marke m stufe`, held in `Λ`), and no `Deklaration` \
+                 field carries both at once",
+                t.name.text
+            ),
+        ));
+    }
+    let Some(TypExpr::Varianten(vs, _)) = t.rumpf.as_ref() else {
+        return Err(refuse(
+            "LG001",
+            format!(
+                "tagged type {} names no variant list, so it names no `Ty.sum` cases",
+                t.name.text
+            ),
+        ));
+    };
+    // **A SECOND reader of `P035`.** The reader already refuses `{ }` ("neither
+    // a record nor a sum type"), so no surface spelling reaches here; what this
+    // guard buys is that `cases[0]` -- the `sp0` value of a `tagged` slot -- is
+    // total, and that a future reader relaxation cannot make it partial in
+    // silence. *Measured 2026-09-15: the poison probe for this arm exported
+    // cleanly, because the item never survived the parse.*
+    if vs.is_empty() {
+        return Err(refuse(
+            "LG002",
+            format!(
+                "tagged type {} has no case: `Val (.sum [])` is `Σ i : Fin 0, …` and holds no \
+                 value at all, so no slot, global or parameter of it can exist",
+                t.name.text
+            ),
+        ));
+    }
+    let mut cases = Vec::new();
+    for v in vs {
+        let payload = match &v.nutzlast {
+            None => None,
+            Some(ty) => match int_ty(ty, scope) {
+                Some(VTy::Int { lo, hi, .. }) => Some((lo, hi)),
+                _ => {
+                    return Err(refuse(
+                        "LG002",
+                        format!(
+                            "case {} of tagged type {} carries a payload with no `Ty.sum` form: a \
+                             case payload is `Option (Int × Int)` (`Nutzlast`, Typen.lean), so ONE \
+                             integer range and nothing else -- a `bool`, a pointer, a record, a \
+                             float or a nested tagged payload has none",
+                            v.name.text, t.name.text
+                        ),
+                    ));
+                }
+            },
+        };
+        if cases.iter().any(|(n, _): &(String, _)| n == &v.name.text) {
+            return Err(refuse(
+                "LG002",
+                format!(
+                    "tagged type {} names the case {} twice, and a `Ty.sum` case is its POSITION -- \
+                     the exporter cannot tell which of the two a constructor or a `match` arm means",
+                    t.name.text, v.name.text
+                ),
+            ));
+        }
+        cases.push((v.name.text.clone(), payload));
+    }
+    Ok(cases)
+}
+
+/// Constants, integer aliases and `tagged` types, so `count`, field types
+/// and constructors resolve. ONE walk, used by `collect` and by `rescope`:
+/// two readers of the same declarations would be two scopes.
+fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
+    for item in items {
+        match &item.art {
+            ItemArt::Modul(m) => build_scope(scope, &m.items)?,
+            ItemArt::Konst(k) => {
+                let Some(v) = numeral(&k.wert, scope) else {
+                    return Err(refuse("LG005", format!("const {} is not a numeral", k.name.text)));
+                };
+                scope.consts.insert(k.name.text.clone(), v);
+            }
+            ItemArt::Typ(t) => {
+                // **A `tagged type` travels as `Ty.sum`** (2026-09-15): its
+                // cases are the `List (Option (Int × Int))` index, and what
+                // has no such case list is refused by name in `read_tagged`.
+                if t.tagged {
+                    let cases = read_tagged(t, scope)?;
+                    scope.tagged.insert(t.name.text.clone(), cases);
+                    continue;
+                }
+                // **`opaque` is a rule about a UNIT BOUNDARY**, exactly
+                // like `pub`: outside the module the definition is not
+                // visible, so no arithmetic reaches the range. Inside the
+                // unit -- and `Deklaration` has no boundary at all -- the
+                // alias IS its range, and that range travels. The drop is
+                // named in the printed NO-FORM ledger, which is what this
+                // ledger exists for.
+                if t.linear || t.ghost || t.ordnung.is_some() || t.parameter.is_some() {
+                    return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
+                }
+                let Some(r) = t.rumpf.as_ref() else {
+                    return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
+                };
+                let Some(VTy::Int { lo, hi, bits }) = int_ty(r, scope) else {
+                    return Err(refuse("LG002", format!("type {} is not an integer range", t.name.text)));
+                };
+                scope.aliases.insert(t.name.text.clone(), (lo, hi, bits));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
     let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
     let mut scope = Scope::default();
-    // Pass one: constants and type aliases, so `count` and field types resolve.
-    fn pass_one(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
-        for item in items {
-            match &item.art {
-                ItemArt::Modul(m) => pass_one(scope, &m.items)?,
-                ItemArt::Konst(k) => {
-                    let Some(v) = numeral(&k.wert, scope) else {
-                        return Err(refuse("LG005", format!("const {} is not a numeral", k.name.text)));
-                    };
-                    scope.consts.insert(k.name.text.clone(), v);
-                }
-                ItemArt::Typ(t) => {
-                    // **`opaque` is a rule about a UNIT BOUNDARY**, exactly
-                    // like `pub`: outside the module the definition is not
-                    // visible, so no arithmetic reaches the range. Inside the
-                    // unit -- and `Deklaration` has no boundary at all -- the
-                    // alias IS its range, and that range travels. The drop is
-                    // named in the printed NO-FORM ledger, which is what this
-                    // ledger exists for.
-                    if t.linear || t.ghost || t.tagged || t.ordnung.is_some()
-                        || t.parameter.is_some()
-                    {
-                        return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
-                    }
-                    let Some(r) = t.rumpf.as_ref() else {
-                        return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
-                    };
-                    let Some(VTy::Int { lo, hi, bits }) = int_ty(r, scope) else {
-                        return Err(refuse("LG002", format!("type {} is not an integer range", t.name.text)));
-                    };
-                    scope.aliases.insert(t.name.text.clone(), (lo, hi, bits));
-                }
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-    pass_one(&mut scope, &tree.items)?;
+    // Pass one: constants, type aliases and `tagged` types.
+    build_scope(&mut scope, &tree.items)?;
     // Pass two: carriers, locks, functions, concurrency.
     //
     // **The locks are read AFTER the walk, not during it.** A lock's
@@ -627,6 +788,9 @@ pub(crate) enum ParamTy {
     Index { table: usize },
     Int { lo: i128, hi: i128, bits: Option<u32> },
     Bool,
+    /// A `tagged` value passed BY VALUE (`Ty.sum`) -- what `beispiele/34`
+    /// calls "als PARAMETER: der markierte Wert wird uebergeben".
+    Sum { name: String, cases: Vec<(String, Option<(i128, i128)>)> },
 }
 
 impl ParamTy {
@@ -636,6 +800,7 @@ impl ParamTy {
             ParamTy::Index { table } => VTy::Index { table: *table },
             ParamTy::Int { lo, hi, bits } => VTy::Int { lo: *lo, hi: *hi, bits: *bits },
             ParamTy::Bool => VTy::Bool,
+            ParamTy::Sum { name, cases } => VTy::Sum { name: name.clone(), cases: cases.clone() },
         }
     }
 }
@@ -844,8 +1009,8 @@ fn check_fn(
     }
     let result = match &d.ergebnis {
         None => None,
-        Some(t) => Some(int_ty(t, scope).ok_or_else(|| {
-            refuse("LG002", format!("result of {} has no integer-range or bool form", f.name))
+        Some(t) => Some(g_ty(t, scope).ok_or_else(|| {
+            refuse("LG002", format!("result of {} has no integer-range, bool or tagged form", f.name))
         })?),
     };
     // `requires` in two channels (lane 198): a `Held`-only clause names
@@ -1057,17 +1222,19 @@ fn param_ty(t: &TypExpr, model: &Model, scope: &Scope, fname: &str) -> Result<Pa
             };
             Ok(ParamTy::Index { table: ti })
         }
-        t => match int_ty(t, scope) {
+        t => match g_ty(t, scope) {
             Some(VTy::Int { lo, hi, bits }) => Ok(ParamTy::Int { lo, hi, bits }),
             Some(VTy::Bool) => Ok(ParamTy::Bool),
+            Some(VTy::Sum { name, cases }) => Ok(ParamTy::Sum { name, cases }),
             _ => Err(refuse("LG002", format!("parameter type in {fname} has no G form"))),
         },
     }
 }
 
-/// A `let` annotation as a G type: an integer range, `bool`, or an index.
+/// A `let` annotation as a G type: an integer range, `bool`, a `tagged`
+/// type, or an index.
 fn annot_ty(t: &TypExpr, model: &Model, scope: &Scope, fname: &str) -> Result<VTy, Refusal> {
-    if let Some(ty) = int_ty(t, scope) {
+    if let Some(ty) = g_ty(t, scope) {
         return Ok(ty);
     }
     if let TypExpr::Index { tabelle, optional, .. } = t {
@@ -1113,8 +1280,8 @@ fn read_table(t: &Tabelle, scope: &Scope) -> Result<TableModel, Refusal> {
         // translates the accesses as written, so it is NO FORM here.
         match &f.typ {
             SlotTyp::Typ(ty) => {
-                let Some(ty) = int_ty(ty, scope) else {
-                    return Err(refuse("LG002", format!("field {} has no integer-range or bool form", f.name.text)));
+                let Some(ty) = g_ty(ty, scope) else {
+                    return Err(refuse("LG002", format!("field {} has no integer-range, bool or tagged form", f.name.text)));
                 };
                 fields.push(FieldModel { name: f.name.text.clone(), ty });
             }
@@ -1214,12 +1381,13 @@ fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
             format!("static {} carries a `section`, which is a PLACEMENT and has no `Glob` form", s.name.text),
         ));
     }
-    let Some(ty) = int_ty(&s.typ, scope) else {
+    let Some(ty) = g_ty(&s.typ, scope) else {
         return Err(refuse(
             "LG002",
             format!(
                 "static {} has no `Glob` form: a `Glob` carries ONE value, so only an integer \
-                 range or `bool` travels -- an array, a pointer, a record or a float static has none",
+                 range, `bool` or a `tagged` type travels -- an array, a pointer, a record or a \
+                 float static has none",
                 s.name.text
             ),
         ));
@@ -1250,6 +1418,71 @@ fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
                 ));
             }
             GInit::Int(n)
+        }
+        // **A `tagged` initialiser at file scope** (`beispiele/121`): the two
+        // spellings the surface has, the bare case (`Leer`) and the call form
+        // (`Kurz(5)`). A payload must be a NUMERAL -- `sp0` is a value the
+        // loader establishes, not a computation -- and it must lie in the
+        // case's declared range, which is decided here, in Rust.
+        (VTy::Sum { name: tn, cases }, art) => {
+            let (case_name, arg): (&str, Option<&Expr>) = match art {
+                ExprArt::Ort(o) if o.suffixe.is_empty() => (o.basis.text.as_str(), None),
+                ExprArt::Ruf(r) => {
+                    let Some(path) = r.path() else {
+                        return Err(refuse("LG003", format!(
+                            "initialiser of static {} is not a case of {tn} and has no `sp0` form",
+                            s.name.text)));
+                    };
+                    let [seg] = path.teile.as_slice() else {
+                        return Err(refuse("LG003", format!(
+                            "initialiser of static {} is not a case of {tn} and has no `sp0` form",
+                            s.name.text)));
+                    };
+                    if r.argumente.len() != 1 {
+                        return Err(refuse("LG003", format!(
+                            "initialiser of static {} names {} with {} arguments; a `Ty.sum` case \
+                             carries exactly one payload or none",
+                            s.name.text, seg.text, r.argumente.len())));
+                    }
+                    (seg.text.as_str(), Some(&r.argumente[0]))
+                }
+                _ => {
+                    return Err(refuse("LG003", format!(
+                        "initialiser of static {} is not a case of {tn} and has no `sp0` form",
+                        s.name.text)));
+                }
+            };
+            let Some(ci) = cases.iter().position(|(n, _)| n == case_name) else {
+                return Err(refuse("LG005", format!(
+                    "initialiser of static {} names {case_name}, which is no case of {tn}",
+                    s.name.text)));
+            };
+            match (cases[ci].1, arg) {
+                (None, None) => GInit::Sum { case: ci, payload: None },
+                (None, Some(_)) => {
+                    return Err(refuse("LG003", format!(
+                        "case {case_name} of {tn} carries no payload, and the initialiser of \
+                         static {} passes one", s.name.text)));
+                }
+                (Some(_), None) => {
+                    return Err(refuse("LG003", format!(
+                        "case {case_name} of {tn} carries a payload, and the initialiser of \
+                         static {} passes none", s.name.text)));
+                }
+                (Some((lo, hi)), Some(e)) => {
+                    let Some(n) = numeral(e, scope) else {
+                        return Err(refuse("LG003", format!(
+                            "payload of the initialiser of static {} is not a numeral and has no \
+                             `sp0` form", s.name.text)));
+                    };
+                    if n < lo || n > hi {
+                        return Err(refuse("LG003", format!(
+                            "payload {n} of the initialiser of static {} lies outside the {lo}..{hi} \
+                             of case {case_name} and has no `sp0` value", s.name.text)));
+                    }
+                    GInit::Sum { case: ci, payload: Some(n) }
+                }
+            }
         }
         _ => {
             return Err(refuse(
@@ -1481,29 +1714,7 @@ pub(crate) fn ensures_konjunkte(
 /// checked phase so `export` stays a straight line).
 fn rescope(tree: &Programm) -> Result<Scope, Refusal> {
     let mut scope = Scope::default();
-    fn go(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
-        for item in items {
-            match &item.art {
-                ItemArt::Modul(m) => go(scope, &m.items)?,
-                ItemArt::Konst(k) => {
-                    let Some(v) = numeral(&k.wert, scope) else {
-                        return Err(refuse("LG005", format!("const {} is not a numeral", k.name.text)));
-                    };
-                    scope.consts.insert(k.name.text.clone(), v);
-                }
-                ItemArt::Typ(t) => {
-                    let r = t.rumpf.as_ref().expect("checked in collect");
-                    // Checked in `collect`: an alias is an integer range.
-                    if let Some(VTy::Int { lo, hi, bits }) = int_ty(r, scope) {
-                        scope.aliases.insert(t.name.text.clone(), (lo, hi, bits));
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-    go(&mut scope, &tree.items)?;
+    build_scope(&mut scope, &tree.items)?;
     Ok(scope)
 }
 
@@ -1807,6 +2018,7 @@ fn ty_of(pty: &ParamTy, model: &Model) -> String {
         ParamTy::Index { table } => format!(".index {}", model.tables[*table].count),
         ParamTy::Int { lo, hi, .. } => int_ty_str(*lo, *hi),
         ParamTy::Bool => ".bool".to_string(),
+        ParamTy::Sum { cases, .. } => format!("(.sum {})", sum_list(cases)),
     }
 }
 
@@ -1818,6 +2030,20 @@ fn ty_of(pty: &ParamTy, model: &Model) -> String {
 fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fname: &str) -> Result<String, Refusal> {
     match (actual, expected) {
         (VTy::Bool, VTy::Bool) => Ok(base),
+        // **A `Ty.sum` has no widening.** `Expr.weiter` is the one conversion
+        // the grammar allows, and it is over integer ranges; two sums are the
+        // same type or they are two types. Comparing the NAME and not just the
+        // shape keeps two tagged types with identical payloads apart, exactly
+        // as the surface keeps them apart.
+        (VTy::Sum { name: a, cases: ca }, VTy::Sum { name: b, cases: cb }) => {
+            if a == b && ca == cb {
+                Ok(base)
+            } else {
+                Err(refuse("LG004", format!(
+                    "a value of the tagged type {a} in {fname} is no value of {b}, and `Ty.sum` \
+                     has no widening (`Expr.weiter` is over integer ranges)")))
+            }
+        }
         _ => {
             let Some((alo, ahi)) = actual.range(model) else {
                 return Err(refuse("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
@@ -1913,6 +2139,81 @@ fn darf_at(ctx: &Ctx, model: &Model, fname: &str, t: usize, out: &mut Out) -> St
     darf_name(fname, &ctx.tag, model, t)
 }
 
+/// The tagged type a bare case name belongs to, and the case's POSITION.
+///
+/// A name that two tagged types share has no unambiguous `Expr.fall` here:
+/// the exporter translates bottom-up and has no expected type to pick with,
+/// and guessing would build a value of the WRONG `Ty.sum`. Refused by name.
+fn tagged_case(scope: &Scope, name: &str, fname: &str) -> Result<Option<(String, usize)>, Refusal> {
+    let mut hits: Vec<(String, usize)> = scope
+        .tagged
+        .iter()
+        .filter_map(|(tn, cs)| cs.iter().position(|(n, _)| n == name).map(|i| (tn.clone(), i)))
+        .collect();
+    hits.sort();
+    match hits.len() {
+        0 => Ok(None),
+        1 => Ok(Some(hits.remove(0))),
+        _ => Err(refuse(
+            "LG005",
+            format!(
+                "the case name {name} in {fname} belongs to more than one tagged type ({}), and \
+                 `Expr.fall` names exactly ONE `Ty.sum`: this exporter has no expected type here \
+                 to choose with",
+                hits.iter().map(|(t, _)| t.as_str()).collect::<Vec<_>>().join(", ")
+            ),
+        )),
+    }
+}
+
+/// **A tagged constructor is `Expr.fall cs i nutz`** (`Syntax.lean` §3): the
+/// case list, the case POSITION as a `Fin`, and the payload -- `.keine` where
+/// the case carries none, `.zahl e` where it carries an integer range, with
+/// `e` fitted to exactly that range (a `NutzlastExpr` carries the range in
+/// its type, so a mismatch would be a Lean error and not a named refusal).
+fn tr_fall(
+    tyname: &str,
+    ci: usize,
+    arg: Option<&Expr>,
+    ctx: &Ctx,
+    model: &Model,
+    scope: &Scope,
+    fname: &str,
+    out: &mut Out,
+) -> Result<(String, VTy), Refusal> {
+    let cases = scope.tagged[tyname].clone();
+    let vty = VTy::Sum { name: tyname.to_string(), cases: cases.clone() };
+    let case_name = cases[ci].0.clone();
+    let nutz = match (cases[ci].1, arg) {
+        (None, None) => ".keine".to_string(),
+        (None, Some(_)) => {
+            return Err(refuse("LG003", format!(
+                "case {case_name} of {tyname} carries no payload, and {fname} passes one")));
+        }
+        (Some(_), None) => {
+            return Err(refuse("LG003", format!(
+                "case {case_name} of {tyname} carries a payload, and {fname} passes none")));
+        }
+        (Some((lo, hi)), Some(e)) => {
+            let v = tr_value(e, &VTy::Int { lo, hi, bits: None }, ctx, model, scope, fname, out)?;
+            format!("(.zahl {v})")
+        }
+    };
+    // Fully ascribed: `Expr.fall` leaves `Γ`/`Λ`/`D` implicit, and an
+    // implicit-only position (a `match` subject, a `return` value) would
+    // leave them metavariables while the `Fin` proof elaborates.
+    Ok((
+        format!(
+            "((.fall {} ⟨{ci}, by decide⟩ {nutz}) : Expr gD {} {} {})",
+            sum_list(&cases),
+            ctx.gamma,
+            ctx.lambda,
+            vty.term(model)
+        ),
+        vty,
+    ))
+}
+
 /// A value expression with its G type: literals, places, parameters and
 /// `let` bindings, arithmetic (`+`/`-`/`*`/negation), bit operations with a
 /// named width, integer conversions, limit words, comparisons and boolean
@@ -1941,6 +2242,12 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             }
             if let Some(r) = glob_read(o, false, ctx, model, fname, out) {
                 return r;
+            }
+            // A payload-free case of a `tagged type` (`Leer`): `Expr.fall`
+            // with `.keine`. Asked LAST, so a local, a parameter and a global
+            // all still shadow it, exactly as they do in the surface.
+            if let Some((tn, ci)) = tagged_case(scope, &o.basis.text, fname)? {
+                return tr_fall(&tn, ci, None, ctx, model, scope, fname, out);
             }
             Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)))
         }
@@ -1977,7 +2284,27 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
         ExprArt::Klammer(x) => tr_typed(x, ctx, model, scope, fname, out),
         ExprArt::Binaer(op, a, b) => tr_binaer(*op, a, b, ctx, model, scope, fname, out),
         ExprArt::Unaer(op, x) => tr_unaer(*op, x, ctx, model, scope, fname, out),
-        ExprArt::Ruf(r) => tr_conversion(r, ctx, model, scope, fname, out),
+        ExprArt::Ruf(r) => {
+            // A tagged constructor with a payload (`Kurz(x)`) is `Expr.fall`,
+            // not a call: it names a CASE, and the checker has already held
+            // the arity against the declaration.
+            if r.marken.is_empty() {
+                if let Some(path) = r.path() {
+                    if let [seg] = path.teile.as_slice() {
+                        if let Some((tn, ci)) = tagged_case(scope, &seg.text, fname)? {
+                            if r.argumente.len() != 1 {
+                                return Err(refuse("LG003", format!(
+                                    "case {} of {tn} in {fname} is applied to {} arguments; a \
+                                     `Ty.sum` case carries exactly one payload or none",
+                                    seg.text, r.argumente.len())));
+                            }
+                            return tr_fall(&tn, ci, Some(&r.argumente[0]), ctx, model, scope, fname, out);
+                        }
+                    }
+                }
+            }
+            tr_conversion(r, ctx, model, scope, fname, out)
+        }
         _ => Err(refuse("LG003", format!("expression in {fname} has no G form"))),
     }
 }
@@ -2511,16 +2838,39 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
 fn check_sp0(model: &Model) -> Result<(), Refusal> {
     for t in &model.tables {
         for f in &t.fields {
-            if let VTy::Int { lo, hi, .. } = &f.ty {
-                if *lo > 0 || 0 > *hi {
-                    return Err(refuse(
-                        "LG003",
-                        format!(
-                            "zero-initialised memory of {}.{} lies outside {lo}..{hi} and has no `sp0` form",
-                            t.name, f.name
-                        ),
-                    ));
+            match &f.ty {
+                VTy::Int { lo, hi, .. } => {
+                    if *lo > 0 || 0 > *hi {
+                        return Err(refuse(
+                            "LG003",
+                            format!(
+                                "zero-initialised memory of {}.{} lies outside {lo}..{hi} and has no `sp0` form",
+                                t.name, f.name
+                            ),
+                        ));
+                    }
                 }
+                // **A `tagged` slot starts at its FIRST case** -- the same
+                // rule "no surface form names a slot initialiser" gives the
+                // integers zero. Where that case carries a payload, the
+                // payload starts at zero too, and a payload range holding no
+                // zero has no `sp0` value: refused BY NAME, never silently
+                // moved to the range's low end.
+                VTy::Sum { name, cases } => {
+                    if let Some((lo, hi)) = cases[0].1 {
+                        if lo > 0 || 0 > hi {
+                            return Err(refuse(
+                                "LG003",
+                                format!(
+                                    "zero-initialised memory of {}.{} is case {} of {name}, whose \
+                                     payload range {lo}..{hi} holds no zero and has no `sp0` value",
+                                    t.name, f.name, cases[0].0
+                                ),
+                            ));
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -2569,7 +2919,8 @@ fn tr_arg(a: &Expr, pty: &ParamTy, ctx: &Ctx, model: &Model, scope: &Scope, fnam
             let idx = tr_index(a, *table, ctx, model, fname)?;
             Ok(idx)
         }
-        (ParamTy::Int { .. }, _) | (ParamTy::Bool, _) => tr_value(a, &expected, ctx, model, scope, fname, out),
+        (ParamTy::Int { .. }, _) | (ParamTy::Bool, _) | (ParamTy::Sum { .. }, _) =>
+            tr_value(a, &expected, ctx, model, scope, fname, out),
         (ParamTy::Ptr { .. }, _) => Err(refuse("LG004", format!("pointer argument in {fname} has no G form"))),
     }
 }
@@ -2736,6 +3087,74 @@ fn tr_ite(w: &WennStmt, rest_empty_tail: bool, ctx: &Ctx, model: &Model, scope: 
     Ok(acc)
 }
 
+/// **`match m { … }` over a `tagged` value is `Stmt.onTag`** (`Syntax.lean`
+/// §7): the subject is an `Expr … (.sum cs)` and the arms are an `Arms`, ONE
+/// block per case **in declaration order** -- a case is its position, so the
+/// source order of the arms does not travel, only their assignment to cases.
+///
+/// `ArmCtx Γ c` pushes the payload of a case that has one, so an arm over
+/// `Kurz(k)` translates with `k` at the head of `Γ`; an arm over a
+/// payload-free case translates in the outer context. `D005` (exhaustive, no
+/// catch-all) is the checker's; what is checked HERE is the thing the term
+/// needs: exactly one arm per case, because `Arms` has exactly that shape.
+///
+/// A `match` over an `option` or a reason has its own forms (`Stmt.onOption`,
+/// `Stmt.onGrund`) and neither is built here -- refused by NAME, never by the
+/// tagged arm silently declining.
+#[allow(clippy::too_many_arguments)]
+fn tr_on_tag(m: &MatchStmt, rest_empty_tail: bool, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out) -> Result<String, Refusal> {
+    let (subj, sty) = tr_typed(&m.gegenstand, ctx, model, scope, fname, out)?;
+    let VTy::Sum { name: tyname, cases } = sty else {
+        return Err(refuse("LG004", format!(
+            "`match` in {fname} is not over a `tagged` value: the specification carries an \
+             `option` match as `Stmt.onOption` (with `Ty.opt`/`Expr.some`/`Expr.istSome`) and a \
+             reason match as `Stmt.onGrund`; this exporter builds neither")));
+    };
+    for z in &m.zweige {
+        if !cases.iter().any(|(n, _)| n == &z.variante.text) {
+            return Err(refuse("LG005", format!(
+                "`match` arm {} in {fname} names no case of {tyname}", z.variante.text)));
+        }
+    }
+    let mut arme = Vec::new();
+    for (ci, (cname, payload)) in cases.iter().enumerate() {
+        let treffer: Vec<&MatchZweig> = m.zweige.iter().filter(|z| &z.variante.text == cname).collect();
+        let [z] = treffer.as_slice() else {
+            return Err(refuse("LG004", format!(
+                "`match` in {fname} names case {cname} of {tyname} {} times; `Arms` carries \
+                 exactly ONE block per case", treffer.len())));
+        };
+        if rest_empty_tail && contains_return(&z.rumpf) {
+            return Err(refuse("LG004", format!(
+                "`return` inside the `match` arm {cname} in {fname} has no G form")));
+        }
+        let inner = match payload {
+            None => {
+                if z.binder.is_some() {
+                    return Err(refuse("LG004", format!(
+                        "`match` arm {cname} in {fname} binds a payload, and case {cname} of \
+                         {tyname} carries none")));
+                }
+                ctx.clone()
+            }
+            // A payload case pushes its range whether or not the surface
+            // names a binder -- `ArmCtx` does, and `Γ` is the term. An
+            // unnamed one gets a name no expression can spell.
+            Some((lo, hi)) => {
+                let bname = z.binder.as_ref().map(|b| b.text.clone())
+                    .unwrap_or_else(|| format!(" arm{ci}"));
+                ctx.push(bname, VTy::Int { lo: *lo, hi: *hi, bits: None }, NameKind::Let)
+            }
+        };
+        arme.push(tr_block(&z.rumpf.anweisungen, &inner, model, scope, fns, fname, out)?);
+    }
+    let mut acc = ".nil".to_string();
+    for a in arme.iter().rev() {
+        acc = format!("(.cons {a} {acc})");
+    }
+    Ok(format!("(.onTag {subj} {acc})"))
+}
+
 /// A `locks L { … }` block: the rank must exceed everything held (`H006`,
 /// decided here), and the body runs with one more witness in hand.
 fn tr_locks(sp: &SperrtStmt, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out) -> Result<String, Refusal> {
@@ -2857,6 +3276,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                     let val = match &gty {
                         VTy::Int { lo, hi, .. } => tr_value(&z.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
                         VTy::Bool => tr_bool(&z.wert, ctx, model, scope, fname, out)?,
+                        VTy::Sum { .. } => tr_value(&z.wert, &gty, ctx, model, scope, fname, out)?,
                         _ => return Err(refuse("LG004", format!("assignment to the global {} in {fname} has no G form", z.ziel.basis.text))),
                     };
                     let proof = gdarf_at(ctx, model, fname, gi, out);
@@ -2869,6 +3289,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             let val = match &ty {
                 VTy::Int { lo, hi, .. } => tr_value(&z.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
                 VTy::Bool => tr_bool(&z.wert, ctx, model, scope, fname, out)?,
+                VTy::Sum { .. } => tr_value(&z.wert, &ty, ctx, model, scope, fname, out)?,
                 _ => return Err(refuse("LG004", format!("assignment to {} in {fname} has no G form", z.ziel.text()))),
             };
             let proof = darf_at(ctx, model, fname, t, out);
@@ -2964,7 +3385,11 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                 Ok(format!("(.cons {ret} {cont})"))
             }
         }
-        StmtArt::Match(_) => Err(refuse("LG004", format!("`match` in {fname} has no G form in this fragment"))),
+        StmtArt::Match(m) => {
+            let tail = rest.is_empty() && endblock;
+            let on_tag = tr_on_tag(m, tail, ctx, model, scope, fns, fname, out)?;
+            Ok(format!("(.cons {on_tag} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
+        }
         StmtArt::Publish(_) => Err(refuse("LG004", format!("`publishes` in {fname} has no G form in this fragment"))),
         StmtArt::AwaitLoad(_) => Err(refuse("LG004", format!("`awaits` in {fname} has no G form in this fragment"))),
         StmtArt::Exchange(_) => Err(refuse("LG004", format!("`exchange` in {fname} has no G form in this fragment"))),
@@ -3570,11 +3995,16 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         let ty = match &g.ty {
             VTy::Int { lo, hi, .. } => format!("{lo}..{hi}"),
             VTy::Bool => "bool".to_string(),
+            VTy::Sum { name, .. } => format!("tagged {name}"),
             _ => "?".to_string(),
         };
         let init = match g.init {
             GInit::Int(n) => n.to_string(),
             GInit::Bool(b) => b.to_string(),
+            GInit::Sum { case, payload } => match payload {
+                None => format!("case {case}"),
+                Some(n) => format!("case {case}({n})"),
+            },
         };
         out.push_str(&format!("-- static {gi}: {} : {ty} = {init}\n", g.name));
     }
@@ -4134,6 +4564,12 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             for f in &t.fields {
                 let wert = match &f.ty {
                     VTy::Bool => "false".to_string(),
+                    // A `tagged` slot starts at case 0, payload zero
+                    // (`check_sp0` refused a first case whose range misses it).
+                    VTy::Sum { cases, .. } => match cases[0].1 {
+                        None => "⟨⟨0, by decide⟩, ()⟩".to_string(),
+                        Some(_) => "⟨⟨0, by decide⟩, ⟨0, by decide, by decide⟩⟩".to_string(),
+                    },
                     _ => "⟨0, by decide, by decide⟩".to_string(),
                 };
                 arme.push(format!("| .{}, .{} => {wert}", t.name, f.name));
@@ -4148,6 +4584,10 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             let wert = match g.init {
                 GInit::Bool(b) => b.to_string(),
                 GInit::Int(n) => format!("⟨{}, by decide, by decide⟩", int_num(n)),
+                GInit::Sum { case, payload } => match payload {
+                    None => format!("⟨⟨{case}, by decide⟩, ()⟩"),
+                    Some(n) => format!("⟨⟨{case}, by decide⟩, ⟨{}, by decide, by decide⟩⟩", int_num(n)),
+                },
             };
             format!("| .{} => {wert}", g.name)
         }).collect();
