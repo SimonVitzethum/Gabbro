@@ -62,9 +62,10 @@ set_option maxRecDepth 100000
 /-! ## 1. Parse: the source text to `(gP, gFs)` -/
 
 /-- The source text of `beispiele/104-referenz.gab`, comment-free (the text
-    `u104lex` pins; comments lex away). -/
-def src104 : String :=
-  "module beispiel::referenz { const NKONTO : u32 = 2; type Betrag = u32 in 0 .. 10; type Stand = u32 in 0 .. 100; table Konto count NKONTO { slot { stand : Stand, } } lock M protects { stand } rank 0 held <= 50 ops; impl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag) requires Held(M) ensures old(k.slots[i].stand) <= k.slots[i].stand effects { reads k.slots, writes k.slots, locks M } costs <= 16 ops { k.slots[i].stand = 100; lies(k, i); } impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand requires Held(M) ensures result == k.slots[i].stand effects { reads k.slots, locks M } costs <= 8 ops { return k.slots[i].stand; } }"
+    `u104lex` pins; comments lex away) -- the pieces are in `Uebersetze.lean`
+    (`srcZeilen104K`), and the text is *built from* them, so it is the same
+    669 bytes it always was. Why pieces: O13, `Parser/Lexer.lean`. -/
+def src104 : String := String.ofList srcQuelle104K
 
 /-- THE LEAN TRANSLATION PIPELINE of the 104 fragment: lex, parse,
     elaborate, lower. Every stage is a Lean function; nothing Rust. -/
@@ -81,6 +82,26 @@ def uebersetze104 (s : String) : Except String (Programm G104_referenz.gD × Lis
 
 theorem s104_lex : lex src104 = .ok tt104 := u104lex
 
+/-- The 104 pipeline from a source pinned as CHARACTERS, stage by stage --
+    the local form of `uebersetzeAllg_von_zeichen` (Schlusssatz.lean), and
+    for the same measured reason: unfolding `uebersetze104` at a CONCRETE
+    source makes simplification whnf the discriminant `lex src104`, which
+    runs Lean 4.33's UTF-8 decoder in the kernel (8,9 GB for this file,
+    measured 2026-09-15). Here `l` is a variable, so there is nothing to
+    decode. The conclusion is the same proposition either way. -/
+theorem uebersetze104_von_zeichen {l : List Char} {toks : List Token}
+    {items : List SItemTief} {u : UProg}
+    (hl : lexL l = .ok toks)
+    (hp : parseTopTief toks = .ok items)
+    (he : elabU items = .ok u) :
+    uebersetze104 (String.ofList l) = lowerProg u := by
+  unfold uebersetze104
+  rw [lex_ofList, hl]
+  dsimp only
+  rw [hp]
+  dsimp only
+  rw [he]
+
 /-- Parsing, as an equation (the `Bool` pin `u104parse` made propositional). -/
 theorem s104_parse : parseTopTief tt104 = .ok items104 := rfl
 
@@ -90,12 +111,8 @@ theorem s104_elab : elabU items104 = .ok uExp104 := rfl
 /-- **PARSE FIDELITY**: the source text translates, in Lean, to the program
     `gP` with member list `gFs`. -/
 theorem uebersetze104_ok : uebersetze104 src104 = .ok (G104_referenz.gP, G104_referenz.gFs) := by
-  unfold uebersetze104
-  rw [s104_lex]
-  dsimp only
-  rw [s104_parse]
-  dsimp only
-  rw [s104_elab]
+  show uebersetze104 (String.ofList srcQuelle104K) = _
+  rw [uebersetze104_von_zeichen u104lexL s104_parse s104_elab]
   exact u104lower
 
 /-! ## 2. C: the emitted bodies correspond to `gP`'s bodies -/
