@@ -3309,5 +3309,53 @@ in every file touched. No `sorry`, no `native_decide`, no new `axiom`.
 32,5 s / 8,91 GB → 2,4 s / 0,93 GB; the whole library about 25 min / 72 GB → **5 min 20 s /
 6,86 GB**.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §§1-10 history above.)
+## 32. `alloc` and `reset` get a form in the specification -- as sugar, not as constructors
+
+*Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/ArenaZucker.lean` (new), imported by
+`Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
+Report: `messung/muse/OPUS-BERICHT-ALLOC.md`. Ledger: `dokumente/OFFEN.md` O14.*
+
+**The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` §2.2/§5.3): `let i = alloc A (v)
+[else …];` and `reset A;` are accepted with zero diagnostics, emit C, that C compiles -- and
+`Syntax.lean` had no `Stmt` constructor for either, so no program using them could ever close a
+correspondence chain.
+
+**The answer is a DERIVED form, and the reason is a measurement.** `Stmt` has 26 constructors;
+30 Lean files carry 252 occurrences of the single leaf `retGrund` and 79 files name
+`assignSlot`. Two new constructors would move every exhaustive match in the semantics, the
+machine, race freedom, deadlock, progress, cost, the invariant families and non-interference --
+and an arena would be a NEW CARRIER, so `World` would grow a field and every frame lemma with
+it. **Sugar costs none of that**: an arena program is an ordinary `Block` term, so
+`theorem gabbro_ziel` covers it with no new case. The shape is the emitter's own: a table of
+`count = hi` slots beside a global `used` counter.
+
+| Definition / theorem | What it says |
+|---|---|
+| `ArenaForm D` | what a declaration must carry: `tab` (the slots, `count tab` = the hard bound), `feld`, `zaehl` (the `used` global at `int 0 (count tab)`), `hpos : 0 < count tab`. The reservation `lo` is deliberately NOT here -- it is the checker's static count (`N212`) |
+| `ArenaForm.stand A σ` | the used count, read out of a world |
+| `Stmt.arenaReset` | `reset A;` = `Stmt.assignGlob zaehl 0` |
+| `Block.arenaAlloc` | `let i = alloc A (v) else B;` = `Block.narrow` on the counter into `0 ..< hi` (else `B`), then `Stmt.assignSlot` at `i`, then `Stmt.assignGlob` of `i + 1` |
+| `arenaReset_stand` | after `reset` the counter is `0` |
+| `arenaBump_stand` | the bump raises the counter by exactly one |
+| `arenaAlloc_unter_schranke` | **below the hard bound the `else` is NOT taken**, and the index bound is the old counter -- *the syntactic half of `Arena.alloc_innerhalb_reserve`, and the reason the surface form may omit the branch* |
+| `arenaAlloc_an_schranke` | at the hard bound the `else` IS taken |
+| `arenaAlloc_gdw_modell` | the syntax succeeds exactly when `Arena.alloc` returns `some` -- the bridge to `Arena.lean` |
+| `arenaAlloc_bump_modell` | a successful step bumps the same number by one on both sides |
+| `eval_umTyp`, `orte_umTyp`, `Wert.umTyp_hin_her` | the three transport lemmas, each by `subst` -- the casts are confined to two definitions |
+
+**ZEUGE** (`namespace ArenaZeuge`, non-degenerate: four slots, a byte element type, BOTH
+branches exercised): `ZD` is a concrete declaration, `Log : ArenaForm ZD`,
+`welt c` a world whose counter stands at `c`. `zeuge_leer_unter` (counter 0 < 4),
+`zeuge_voll_an` (counter 4 = 4), `zeuge_reset`, `zeuge_alloc_leer` (the body runs, index 0),
+`zeuge_alloc_voll` (the `else` runs).
+
+**Axioms: the standard three** for every theorem in the file, and
+`#print axioms gabbro_ziel` is unchanged (`propext`, `Classical.choice`, `Quot.sound`). The
+whole library builds: 250 jobs, exit 0. No `sorry`, no `native_decide`, no new `axiom`.
+
+**What is NOT claimed, and is booked as O14:** `gabbro lean-g` still refuses an arena
+declaration -- now BY NAME, naming this file and the repair, instead of through a catch-all --
+so no arena program closes a chain yet. The form exists; the export does not.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (`alloc`/`reset` as sugar over `narrow`+`assignSlot`+`assignGlob`, with the bridge to `Arena.lean`); §§1-10 history above.)
 

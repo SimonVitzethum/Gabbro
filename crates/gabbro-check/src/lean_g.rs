@@ -364,6 +364,28 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                         model.concurrent.push(last.text.clone());
                     }
                 }
+                // **The arena is refused BY NAME, not by the catch-all below.**
+                // Since 2026-09-15 the specification HAS a form for `alloc` and
+                // `reset` (`grammatik/Grammatik/ArenaZucker.lean`): an arena is a
+                // table of `count = hi` slots beside a global `used` counter, and
+                // the two statements are `Block.narrow` + `Stmt.assignSlot` +
+                // `Stmt.assignGlob` over that pair. What is missing is HERE: this
+                // exporter does not synthesise the pair, so an arena program still
+                // gets no G term. *A catch-all that happens to fire is not a
+                // refusal anybody can act on -- and the day an arm is added above,
+                // it would stop firing without a word.* `dokumente/OFFEN.md` O14.
+                ItemArt::Arena(a) => {
+                    return Err(refuse(
+                        "LG001",
+                        format!(
+                            "arena {} has no G form YET: the specification carries `alloc`/`reset` \
+                             as sugar over a table plus a `used` global (Grammatik/ArenaZucker.lean, \
+                             `Block.arenaAlloc`/`Stmt.arenaReset`), and this exporter does not build \
+                             that pair -- see OFFEN.md O14",
+                            a.name.text
+                        ),
+                    ));
+                }
                 other => {
                     return Err(refuse("LG001", format!("{} has no G form", other.benennung())));
                 }
@@ -2255,8 +2277,11 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         StmtArt::AwaitLoad(_) => Err(refuse("LG004", format!("`awaits` in {fname} has no G form in this fragment"))),
         StmtArt::Exchange(_) => Err(refuse("LG004", format!("`exchange` in {fname} has no G form in this fragment"))),
         StmtArt::LibraryCall(_) => Err(refuse("LG004", format!("library call in {fname} has no G form in this fragment"))),
-        StmtArt::Alloc(_) => Err(refuse("LG004", format!("`alloc` in {fname} has no G form in this fragment"))),
-        StmtArt::ResetArena(_) => Err(refuse("LG004", format!("`reset` in {fname} has no G form in this fragment"))),
+        // These two are unreachable while an arena DECLARATION is `LG001` above;
+        // they stay, and name the same reason, so the day the declaration is
+        // lowered the statement half is not a silent hole.
+        StmtArt::Alloc(_) => Err(refuse("LG004", format!("`alloc` in {fname} has no G form in this fragment -- the form is `Block.arenaAlloc` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
+        StmtArt::ResetArena(_) => Err(refuse("LG004", format!("`reset` in {fname} has no G form in this fragment -- the form is `Stmt.arenaReset` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),

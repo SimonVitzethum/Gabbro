@@ -700,3 +700,25 @@ CPU) instead of aborting -- a bound that hangs the run looks exactly like a run 
 A watchdog on RESIDENT memory is the honest bar. And it must count only its OWN directory's
 processes: the first one read `ps -C lean` for the whole machine, saw ANOTHER lane at 72 GB
 and killed this run -- the `W16` family again, a measuring device that counts the neighbour.*
+
+---
+
+## O14 — An arena program cannot close a chain: the specification has the form since today, the EXPORTER does not
+
+*Found 2026-09-15 by the emitter-side grammar lane (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md`
+§2.2 and §5.3), taken up the same day by the `alloc` lane
+(`messung/muse/OPUS-BERICHT-ALLOC.md`, `dokumente/SATZKARTE.md` §32).*
+
+`let i = alloc A (v) [else …];` and `reset A;` are **accepted with zero diagnostics**
+(`beispiele/98`, `beispiele/99`: `0 errors, 0 hints`), `emit.rs` writes C for them
+(`A_arena_speicher.buf[A_arena_speicher.used++] = (v);`, `…used = 0;`) and that C compiles.
+`Syntax.lean` had **no `Stmt` constructor for either**, and `Arena.lean` carried the
+arithmetic of the monotone region with no tie to the syntax at all.
+
+| | |
+|---|---|
+| **what is NOT open since 2026-09-15** | **the specification has a form.** `Grammatik/ArenaZucker.lean` gives `reset` and `alloc` as SUGAR over the existing constructors — an arena is a table of `count = hi` slots beside a global `used` counter, `reset` is `Stmt.assignGlob`, `alloc` is `Block.narrow` + `Stmt.assignSlot` + `Stmt.assignGlob`. Because it is sugar, an arena program is an ordinary `Block` term, so `theorem gabbro_ziel` covers it with **no new case and no re-proof** (`#print axioms gabbro_ziel` unchanged, whole library green). The `else` semantics are proved on both sides of the bound, and the bridge to `Arena.lean` is proved |
+| **what IS open** | **the exporter.** `gabbro lean-g` refuses an arena DECLARATION (`LG001`) instead of synthesising the table-plus-global pair, so `gabbro lean-g`, `gabbro obligations --g`, `gabbro certificate` (`CS001`) and `gabbro corr-lean` (`GREFUSAL`) all refuse, and **no program using `alloc`/`reset` closes a translation-validation chain** |
+| **what is NOT the gap, measured** | *"nothing says so at the site"* was the original wording, and it is **false for the chain tools**: all four refuse BY NAME, in every statement context probed (top level, inside an `if`, inside a `traverse`, `reset` alone). What was missing is this ledger entry and a refusal that names a reason a reader can act on — the arena arm of `lean_g.rs` was a CATCH-ALL (`"{} has no G form"`), and a catch-all that happens to fire stops firing, without a word, the day an arm is added above it. It is by name since 2026-09-15 |
+| **what would close it** | `lean_g.rs`: read an `ArenaDecl` into a `TableModel` of `count = hi` with one field plus a `GlobModel` of type `int 0 hi`, and lower `StmtArt::Alloc`/`ResetArena` to `Block.arenaAlloc`/`Stmt.arenaReset`. Then re-measure the chain count (`instrumente/zaehle-kette.py`) and check that `beispiele/98` and `99` move columns (b), (c) and (e). **The reservation `lo` does not travel** — it is the checker's static count (`N212`), and its model-side consequence is already proved (`arenaAlloc_unter_schranke`: below the hard bound the `else` cannot run) |
+| **why the other route was refused** | refusing `alloc`/`reset` by name in the Rust checker would have made the hole loud at the cost of **deleting a feature that has a proved Lean model (12 theorems in `Arena.lean`), four checker rules with five poison probes (`N210`–`N214`, gift 885–889), 756 lines of `arena.rs`, its own EBNF in `SYNTAX.md` §9.1 and two clean corpus programs**. Two clean files would have fallen and five poison probes would have changed code. *That is a retreat, and the gap it would have closed was already named at all four chain gates* |

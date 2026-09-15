@@ -21,6 +21,7 @@
   | `Satz.lean`         | der Satz: Rahmen UND Spur in einer Induktion, die Inversionen, `#print axioms` |
   | `Wettlauf.lean`     | Faeden verschraenkt: kein Wettlauf, keine Ueberkreuzung der Sperrordnung |
   | `Zucker.lean`       | jede Schreibweise ohne eigenen Konstruktor, als Definition ueber dem Kern |
+  | `ArenaZucker.lean`  | `alloc`/`reset` als Zucker ueber `narrow`+`assignSlot`+`assignGlob`, mit Bruecke zu `Arena.lean` |
 | `Ziel.lean`         | DAS ZIEL als Satz ueber der Grammatik -- unabhaengig vom `.rs`-Code       |
   | `Interferenz.lean`  | das Verbundmodell deklarierter Paare: gueltige Vertraege ueberleben Verschraenkung |
   | `Koernung.lean`     | die Ereigniskoernung als benannte Praemisse: keine Zerreissung darunter, Bytes als n Ereignisse |
@@ -86,6 +87,7 @@ import Grammatik.FremdSperre
 import Grammatik.Bits
 import Grammatik.CSLInvarianteC
 import Grammatik.Arena
+import Grammatik.ArenaZucker
 import Grammatik.HoareRuf
 import Grammatik.EigenZustand
 import Grammatik.SyscallPaarung

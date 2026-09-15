@@ -408,6 +408,14 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   only `+ - *` and `== < <= >`, so `/ % & | ^ << >>`, `&& || !`, `true`/`false`, plain globals
   and `storeGlob` have no printer path. That is Rust work; until it is done those arms are
   exercised only by the probes.
+- **The arena stops at the EXPORTER, no longer at the specification** (2026-09-15,
+  `OFFEN.md` O14, `SATZKARTE.md` §32). `alloc`/`reset` had no `Stmt` constructor at all; since
+  `Grammatik/ArenaZucker.lean` they are sugar over `Block.narrow` + `Stmt.assignSlot` +
+  `Stmt.assignGlob` over a table of `count = hi` slots and a `used` global -- the pair the
+  emitter itself writes. **What is missing is `lean_g.rs`**, which refuses an arena declaration
+  BY NAME instead of synthesising that pair, so `beispiele/98` and `99` stop at sieve (b) and
+  are counted as such. *Because the form is sugar, `gabbro_ziel` already covers an arena
+  program: no new `Stmt` case and no re-proof.*
 - **The unit's data.** `Kette.E`'s lock invariants, axiom ensures, declared starts and initial
   memory are written next to the source by the chain's author (the exporter fills none of
   them); a wrong `starts` is a different program, visible in the chain file.
