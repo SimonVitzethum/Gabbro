@@ -219,8 +219,10 @@ This section exists because the alternative is that a reader has to find it out.
     [`messung/URTEIL-MUSE-2026-09-15.md`](messung/URTEIL-MUSE-2026-09-15.md)) found a named gap in
     the STATEMENT: an unsatisfiable lock invariant emptied the user obligation (P1); the
     program's starts, invariants and axiom ensures were free parameters (P2); payloads had no
-    race conjunct (P3). All three are repaired and `gabbro_ziel` is re-proved against the
-    repaired statement (SATZKARTE §22); a fourth review round against it is running.
+    race conjunct (P3). All three are repaired (SATZKARTE §22). The fourth round found one more
+    unnamed gap -- an out-of-range float literal emptied the obligation through a "hardware"
+    stop (F1) -- plus a global-only deadlock leg (F2) and unlisted stop classes (F3); all
+    repaired, `gabbro_ziel` re-proved (SATZKARTE §23). A confirmation round is running.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
 - **The chain of section 4 is closed for one program.** `beispiele/104`, theorem
