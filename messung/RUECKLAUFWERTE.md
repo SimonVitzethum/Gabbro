@@ -229,9 +229,9 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
-  ~~52 von 55~~ ~~53 von 58~~ ~~54 von 56~~ ~~54 von 59~~ ~~55 von 60~~ ~~56 von 61~~   ~~58 von 61~~ ~~59 von 64~~ ~~61 von 66~~ ~~65 von 71~~ **66 von 72** Wächtern können mitten im Lauf
+  ~~52 von 55~~ ~~53 von 58~~ ~~54 von 56~~ ~~54 von 59~~ ~~55 von 60~~ ~~56 von 61~~   ~~58 von 61~~ ~~59 von 64~~ ~~61 von 66~~ ~~65 von 71~~ ~~66 von 72~~ **67 von 73** Wächtern können mitten im Lauf
   abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ ~~320~~ ~~325~~ ~~333~~ ~~339~~ ~~342~~ ~~346~~ ~~352~~   ~~357~~ ~~365~~ ~~369~~ ~~376~~ ~~409~~ **414 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ ~~320~~ ~~325~~ ~~333~~ ~~339~~ ~~342~~ ~~346~~ ~~352~~   ~~357~~ ~~365~~ ~~369~~ ~~376~~ ~~409~~ ~~414~~ **427 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
 
   *`61 von 66`/`376` → `65 von 71`/`409` am 2026-09-15, nachgemessen in beiden Bäumen:* der
@@ -245,6 +245,24 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   neue Wächter ist `pruefe-genlean.py` (die erzeugten Lean-Dateien gegen ihren Erzeuger,
   byteweise). Nachgemessen mit `pruefe-zahlen.py` gegen einen Wegwerf-Baum auf dem Stand
   davor — 24 Befunde dort, 26 hier, und genau diese zwei Zeilen waren der Unterschied.
+
+  *`66 von 72`/`414` → `67 von 73`/`427` am 2026-09-15, derselbe Tag, die nächste Bahn:* der
+  neue Wächter ist `pruefe-exportlean.py` — er fährt **Lean** über jeden Export, den der
+  Exporter annimmt, statt seinen Text zu vergleichen. Nachgemessen in BEIDEN Bäumen
+  (`git archive HEAD` in einen Wegwerf-Baum, derselbe Wächter dort): `66 von 72`/`414` dort,
+  `67 von 73`/`427` hier. **Die dreizehn neuen Ausgangsstellen sind seine eigenen** — jede
+  Vorbedingung (kein Binärprogramm, ein altes Binärprogramm, kein Lean, ein Modell, das
+  nicht baut, eine leere Grundgesamtheit, kein einziger angenommener Export) verlässt den
+  Lauf mit `2`, und das ist genau die Fläche, die dieses Register zählt.
+
+  > **Und sie stehen dort ABSICHTLICH ausgeschrieben.** Die Absage druckt der neue Wächter
+  > durch `absage()` — auf stdout *und* auf stderr, weil `abnahme.py` den Grund von stderr
+  > liest und sonst die letzte stdout-Zeile zitiert (in einem Sammellauf desselben Tages war
+  > das die Schnittansage, und der wirkliche Grund stand vier Zeilen darüber). Das `return 2`
+  > danach in `absage()` zu falten hätte sich besser gelesen und **jede Absage dieses
+  > Wächters vor dem Sieb hier unsichtbar gemacht**, das nach einem wörtlichen `return 2`
+  > sucht. *Ein Werkzeug, das seine Ausgänge vor dem Werkzeug verbirgt, das sie zählt, misst
+  > sich kleiner.*
 
   > **Hier standen am 2026-09-03 ZWEI Zeilen über derselben Sache, und beide waren richtig
   > gemessen** — `54 von 56 … 325` und `54 von 59 … 320`, aus zwei Zweigen, die je ihren
