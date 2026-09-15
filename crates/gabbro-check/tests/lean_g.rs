@@ -94,6 +94,45 @@ fn namespace_comes_from_filename() {
     assert!(text.contains("namespace b_c"), "stem b-c becomes b_c");
 }
 
+/// **An `opaque` alias travels as its range** (2026-09-15): `opaque` is a
+/// rule about a UNIT BOUNDARY, like `pub`, and `Deklaration` has no boundary.
+#[test]
+fn opaque_alias_travels_as_its_range() {
+    let text = export("undurchsichtig.gab", &tree(&einheit(
+        "opaque type Pa = u32 in 0 .. 7;\n\
+         impl fn f(x : Pa) -> Pa effects { pure } costs <= 1 ops { return x; }\n",
+    )))
+    .expect("an opaque integer alias must export");
+    assert!(text.contains("params := [(.int 0 7)]"), "{text}");
+    assert!(text.contains("`opaque`"), "the NO-FORM ledger must name the drop");
+}
+
+/// **An exclusive bound travels as `lo .. hi-1`** -- the same numbers the
+/// checker computes with, spelled with the half-open form.
+#[test]
+fn exclusive_range_travels_closed() {
+    let text = export("exkl.gab", &tree(&einheit(
+        "type Idx = u32 in 0 ..< 4;\n\
+         impl fn f(x : Idx) -> Idx effects { pure } costs <= 1 ops { return x; }\n",
+    )))
+    .expect("an exclusive range must export");
+    assert!(text.contains("params := [(.int 0 3)]"), "{text}");
+}
+
+/// **LG001**: a `linear`, `ghost` or `tagged` type still has no G form --
+/// widening `opaque` did not widen those.
+#[test]
+fn refuses_tagged_and_linear_types() {
+    for zeile in [
+        "tagged type M = { Leer, Kurz(u32) };\n",
+        "linear ghost type M;\n",
+        "ghost type M = u32;\n",
+    ] {
+        let w = refuse_of(&einheit(zeile));
+        assert_eq!(w.code, "LG001", "{zeile}: {w}");
+    }
+}
+
 /// **LG001**: an `extern fn` has no G form (no body to translate).
 #[test]
 fn refuses_extern_fn() {

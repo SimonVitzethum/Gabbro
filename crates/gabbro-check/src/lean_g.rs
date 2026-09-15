@@ -53,7 +53,10 @@
 //!   form (its `hr` needs `gruende = 0`); only `let x = f() else (e) { … }`
 //!   travels (`Block.bindCallElse`).
 //! * `const NAME = N` (inlined at every use) and `type NAME = u32 in lo..hi`
-//!   (resolved at every use); the module wrapper is transparent
+//!   / `lo..<hi` (resolved at every use, the exclusive bound as `lo..hi-1`);
+//!   an `opaque` alias travels as its range -- `opaque` is a rule about a
+//!   UNIT BOUNDARY, like `pub`, and `Deklaration` has no boundary; the module
+//!   wrapper is transparent
 //!
 //! ## The lock floor (`boden`, lane 174)
 //!
@@ -113,8 +116,10 @@
 //! the `by unvisited`/`by consuming` run form, the `decreases` witness and
 //! the `touches` clause of a `traverse` (static annotations, like `costs`);
 //! `by ops` on a field (a writer discipline the checker holds);
-//! `mut` on a `let` (reassignments still refuse by name); **`pub`** (visibility
-//! is a rule about a UNIT BOUNDARY, and `Deklaration` has no boundary); the
+//! `mut` on a `let` (reassignments still refuse by name); **`pub`** and
+//! **`opaque`** (both are rules about a UNIT BOUNDARY, and `Deklaration` has
+//! no boundary -- `opaque` joined on 2026-09-15, when its alias started to
+//! travel as its range); the
 //! `entry`/`boot` hardware around a dispatch (the vector, the registers, the
 //! steps -- only the dispatch root travels, as a declared start where
 //! exportable).
@@ -337,19 +342,25 @@ fn zucker_grenzwort(o: &Ort) -> Option<i128> {
     }
 }
 
-/// An integer range where G needs a `Ty`: `u32 in lo..hi`, or an alias for
-/// one. A bare word (`u32`) travels as its full range -- the same numbers
-/// the checker computes with (`breite_von`/`grenzen`), spelled by the word.
-/// An exclusive bound (`..<`) has no form here (LG002).
+/// An integer range where G needs a `Ty`: `u32 in lo..hi`, `u32 in lo..<hi`,
+/// or an alias for one. A bare word (`u32`) travels as its full range -- the
+/// same numbers the checker computes with (`breite_von`/`grenzen`), spelled
+/// by the word; an exclusive bound travels as `lo .. hi-1`, likewise the
+/// same numbers.
 fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
     match t {
         TypExpr::Int(i) => {
             if let Some(b) = &i.bereich {
-                if b.exklusiv {
-                    return None;
-                }
                 let lo = numeral(&b.von, scope)?;
                 let hi = numeral(&b.bis, scope)?;
+                // `lo ..< hi` is `lo .. hi-1` -- the SAME numbers the checker
+                // computes with (`grenzen`), spelled with the half-open form.
+                // An empty exclusive range (`n ..< n`) names no value and has
+                // no `Ty`; it is left to the caller's refusal.
+                let hi = if b.exklusiv { hi.checked_sub(1)? } else { hi };
+                if hi < lo {
+                    return None;
+                }
                 Some(VTy::Int { lo, hi, bits: word_bits(i.wort) })
             } else {
                 let (breite, vz) = crate::umgebung::breite_von(i.wort)?;
@@ -384,7 +395,14 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                     scope.consts.insert(k.name.text.clone(), v);
                 }
                 ItemArt::Typ(t) => {
-                    if t.opaque || t.linear || t.ghost || t.tagged || t.ordnung.is_some()
+                    // **`opaque` is a rule about a UNIT BOUNDARY**, exactly
+                    // like `pub`: outside the module the definition is not
+                    // visible, so no arithmetic reaches the range. Inside the
+                    // unit -- and `Deklaration` has no boundary at all -- the
+                    // alias IS its range, and that range travels. The drop is
+                    // named in the printed NO-FORM ledger, which is what this
+                    // ledger exists for.
+                    if t.linear || t.ghost || t.tagged || t.ordnung.is_some()
                         || t.parameter.is_some()
                     {
                         return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
@@ -3165,10 +3183,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");
     out.push_str("-- `traverse` (static annotations, like `costs`); `by ops` on a field\n");
     out.push_str("-- (a writer discipline the checker holds); `mut` on a `let`;\n");
-    out.push_str("-- `pub` (visibility is a unit-boundary rule, and `Deklaration`\n");
-    out.push_str("-- has no boundary -- added 2026-09-15: it was dropped here before\n");
-    out.push_str("-- and named nowhere, which is the one thing this ledger exists\n");
-    out.push_str("-- to prevent);\n");
+    out.push_str("-- `pub` and `opaque` (both are unit-boundary rules, and\n");
+    out.push_str("-- `Deklaration` has no boundary -- `pub` added 2026-09-15 after\n");
+    out.push_str("-- being dropped here and named nowhere, which is the one thing\n");
+    out.push_str("-- this ledger exists to prevent; `opaque` the same day, when its\n");
+    out.push_str("-- alias started to travel as its range);\n");
     out.push_str("-- `concurrent` (its members travel as the declared starts\n");
     out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
