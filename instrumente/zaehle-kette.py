@@ -80,8 +80,19 @@ MARKE = re.compile(r"CHAIN-INSTANCE\s+(\S+\.gab)\s+(\w+)")
 
 
 def umgebung():
+    """`LC_ALL=C`, and the toolchains on PATH.
+
+    **`lake` lives in `~/.elan/bin` and is usually NOT on a non-interactive PATH.** Without
+    this, `--lean` fell over its own launch (`OSError`) and the run printed no column at
+    all -- the abort read like a finding. Measured 2026-09-15 by an Opus lane. The same
+    holds for `cargo` in `~/.cargo/bin`."""
     env = dict(os.environ)
     env["LC_ALL"] = "C"
+    zusatz = [str(pathlib.Path.home() / ".elan" / "bin"),
+              str(pathlib.Path.home() / ".cargo" / "bin")]
+    pfad = env.get("PATH", "")
+    env["PATH"] = os.pathsep.join([p for p in zusatz if pathlib.Path(p).is_dir()] +
+                                  ([pfad] if pfad else []))
     return env
 
 
@@ -261,9 +272,14 @@ def stufeK (s : String) : String :=
 """
 
 
+lean_grund = ""   # why column (a) has no answer; printed instead of a bare abort
+
+
 def lean_stufen(dateien):
     """Column (a): evaluate the generic pipeline in Lean over every file. Returns a dict
-    file name -> stage, or None when Lean did not answer for every file."""
+    file name -> stage, or None when Lean did not answer for every file. The REASON of a
+    `None` is left in `lean_grund`, so the caller can print it instead of a bare abort."""
+    global lean_grund
     arbeit = W / "grammatik" / ".lake" / "zaehle-kette"
     arbeit.mkdir(parents=True, exist_ok=True)
     liste = ", ".join('"' + str(f.resolve()).replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -273,14 +289,28 @@ def lean_stufen(dateien):
     try:
         r = subprocess.run(["lake", "env", "lean", str(skript)], capture_output=True, text=True,
                            cwd=W / "grammatik", timeout=LEAN_FRIST, env=umgebung())
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError as e:
+        lean_grund = f"lake could not be launched: {e} (PATH={umgebung()['PATH'][:120]})"
+        return None
+    except subprocess.TimeoutExpired:
+        lean_grund = f"lake did not answer within {LEAN_FRIST} s"
         return None
     stufen = {}
     for z in r.stdout.splitlines():
         teile = z.split("\t")
         if len(teile) == 3 and teile[0] == "STUFE":
             stufen[pathlib.Path(teile[1]).name] = teile[2]
-    if any(f.name not in stufen for f in dateien):
+    fehlend = [f.name for f in dateien if f.name not in stufen]
+    if fehlend:
+        # **The last line is rarely the one that matters** -- `lake` ends on chatter
+        # ("toolchain not updated") while the cause stands further up. Take the first line
+        # that says `error`, and fall back to the last line only when none does.
+        zeilen = [z for z in (r.stderr + "\n" + r.stdout).splitlines() if z.strip()]
+        fehler = [z for z in zeilen if "error" in z.lower()]
+        lean_grund = (f"{len(fehlend)} of {len(dateien)} programs got no STUFE line "
+                      f"(first: {fehlend[0]}); lake said: "
+                      + ((fehler[0] if fehler else zeilen[-1])[:200] if zeilen
+                         else "(nothing on stdout or stderr)"))
         return None
     return stufen
 
@@ -406,19 +436,24 @@ def main():
     inst = instanzen(texte)
 
     stufen = None
+    lean_fehlt = False
     if args.lean:
         stufen = lean_stufen(dateien)
         if stufen is None:
-            print("ABBRUCH: the Lean measurement of column (a) did not answer for every "
-                  "program -- this run measures nothing about (a)")
-            return 2
+            # **An abort that prints nothing reads like a finding.** Column (a) is missing and
+            # the run stays RED for it -- but every other column and the totals are printed, so
+            # the failure is visible AS a failure and not as an empty page.
+            print(f"BEFUND: column (a) was NOT measured -- {lean_grund}")
+            print("        every column below is measured; (a) reads '-' and the run exits red")
+            lean_fehlt = True
 
     zeilen = []
     geschlossen_kandidaten = {}
     for f in dateien:
         # (a) Lean parse: the generic pipeline, evaluated.
         if stufen is None:
-            a = ("-", "not measured (needs --lean)")
+            a = ("-", "NOT measured -- see the BEFUND above" if lean_fehlt
+                      else "not measured (needs --lean)")
         elif stufen[f.name] == "OK":
             a = ("pass", "uebersetzeAllg evaluates to .ok")
         else:
@@ -550,6 +585,9 @@ def main():
           ", ".join(f"{k}: {v}" for k, v in sorted(stopps.items())))
     print(f"== CHAIN COUNT: {kette} of {len(zeilen)} programs have a CLOSED chain (a Lean-checked "
           f"instance of the generic `schlusssatz`) (unmeasured counts as not passed) ==")
+    if lean_fehlt:
+        print("== EXIT RED: `--lean` was asked for and column (a) did not answer ==")
+        return 2
     return 0
 
 
