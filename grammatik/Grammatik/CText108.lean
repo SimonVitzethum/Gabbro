@@ -155,7 +155,7 @@ theorem kette_108_binaer_text
         corrW EL8 σ st → bindParams k.params vs = some ρ0 → EnvRel EL8 k.lay ρG ρ0 →
         (rufAt P8 O8 passes (tief f) f σ ρG).istFehler = false →
         ∀ st' rv, bin f st vs st' rv → RufOut EL8 (rufAt P8 O8 passes (tief f) f σ ρG) st' rv :=
-  (schlusssatz_text kette_108 a2_108 O8 hw8 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2
+  (schlusssatz_text kette_108 a2_108 O8 hw8 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2.2.2.2
 
 /-- **WITNESS**: `kette_108_zeuge` again, with the C side READ FROM THE
     TEXT -- `read_a()` on a memory holding `42` returns `42` in Gabbro,

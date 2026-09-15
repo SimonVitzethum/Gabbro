@@ -3518,5 +3518,65 @@ so there is no second register beside the tree. Measured: 2 of 2 files byte-iden
 bytes; and red on a single changed byte, green again after restoring.
 
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §§1-10 history above.)
+## 35. Part 4's condition, halved: a certified program cannot end a call in a HARDWARE outcome
+
+*Added 2026-09-15 (Opus lane `staerker`). Files: `Grammatik/RufOhneHardware.lean` (new),
+`Grammatik/RufOhneHardwareZeuge.lean` (new), `Grammatik/KorrOkAdaequat.lean` (new),
+`Grammatik/KorrespondenzAllg.lean` §5, `Grammatik/Schlusssatz.lean`,
+`Grammatik/Kette104Satz.lean`; index sites in `Grammatik/CParser/Bruecke.lean`,
+`Grammatik/Kette108.lean`, `Grammatik/CText108.lean`. Plan:
+`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.8. Report: `messung/muse/OPUS-BERICHT-STAERKER.md`.*
+
+**The statement that changed.** `schlusssatz` (the generic closing theorem, §27) kept every
+hypothesis it had -- `Kette src`, `hH`, `hXR`, `hA1`, `hA4` -- and gained three conclusions
+between part 4 and part 5. Nothing was weakened; `schlusssatz_104` and `schlusssatz_124` are
+untouched, and the chain count is unchanged at **2 of 113** (`zaehle-kette.py --lean`:
+(a) 2, (b) 15, (c) 15, (d) 60, (e) 2).
+
+| clause | text | proved by |
+|---|---|---|
+| 4b | `∀ passes n f σ ρ e, rufAt K.E.P O passes n f σ ρ ≠ .hardware e` | `korrOk_rufAt_ohneHardware` |
+| 4c | an error outcome of `rufAt` is a `logik` outcome | 4b by case analysis |
+| 4d | `(rufAt … (n+1) f σ ρ).istFehler = false → ReqAmEintritt K.E.P f σ ρ` | `rufAt_vorbedingung` |
+
+**The chain of 4b.** `Hardware` has five sources and every one is a syntactic form:
+`axiomCall`/`bindAxiom`, `regLies`, `regLiesElse`, `awaits`, `forever` (`Hardware.ieee` is
+no longer produced, verdict F1). `Stmt/Block/Endblock/Arms/GrundArms.hardwareFrei` refuses
+exactly those; `Endblock.hardwareFrei_ok` is its soundness against any handler in
+`OhneHardware` (the twin of `Endblock.logikFrei_ok`, `ZielOrtGanz.lean`); `rufAt`'s own error
+branches are all `logik`, so `rufAt_ohneHardware` carries the handler premise by induction on
+the DEPTH, with no premise about the oracle or the user; and `korrOk_hardwareFrei` reads the
+check off the certificate check on the measure `stOkBl_sound` uses.
+
+**The finding, with a witness program** (`befund_hardware_bleibt`). The goal theorem's
+premise (c) does NOT rule the hardware error out: `AxVertragO` constrains the oracle only
+where the raw answer fits the declared result type. On `axP` (`AxiomVertrag.lean`) -- in the
+checker's fragment, footprint checked, `KoerperGutA` proved for every function against every
+oracle of the class -- the oracle `axOBoese` meets `GutO`, `RegLokal` and `AxVertragO`
+(vacuously) and the call still ends `.hardware (.annahme inc)` at every depth and budget.
+`ohneHardware_zeuge` shows the check is PER BODY: `haupt`'s body is clean and its run still
+stops, through the call of `zaehle`.
+
+**What is left, and the one lemma that would close it.** The `logik` class stays:
+`vorbedingung`, `nachbedingung`, `invariante`, `abstieg`, plus the body-own `schleife`,
+`vorzustand`, `bereich`. The user's obligation `KoerperGutS` covers every body-own `logik`
+outcome and the caller duty -- but only for handlers in `RespektiertRahmen ∧
+OhneVorbedingung` / `∧ OhneLogik`, and `rufAt` is in NEITHER class (it answers
+`vorbedingung` wherever `requires` fails, `abstieg` at depth `0`, and `rufAt_gut` gives its
+frame only at worlds meeting `HeldB`). The missing piece is ONE congruence lemma of
+`execEnd` in its handler.
+
+**And for the OTHER open item of §6.5** (part 4 `rufAt` against part 5 machine G): the
+covered FRAGMENT is not the obstacle -- `korrOk_endR` (`KorrOkAdaequat.lean`) proves every
+certified body is in the adequacy fragment `EndR`/`BlockR`/`StmtR`, for every lock class.
+The three that remain: the chain realises `rufRumpf` and not `rufAt` (contracts checked AND
+their carriers read, so the two differ on the TRACE -- `befund_vertrag`), `Tief` carries the
+same depth residue, and the adequacy is existential about a machine of a given frame shape.
+The cost is not the build: `RufAdaequatRufG` is already in `Schlusssatz`'s import closure.
+
+**Axioms: the standard three** for every theorem named here (the purely computational ones
+`propext`, `Quot.sound`), `#print axioms gabbro_ziel` unchanged, whole library 257 jobs
+green, no `sorry`, no `native_decide`, no new `axiom`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §§1-10 history above.)
 

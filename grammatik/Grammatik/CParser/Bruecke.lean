@@ -99,6 +99,17 @@ theorem schlusssatz_text {src : String} (K : Kette src) {s : List Char} (hA2 : A
         (∃ st' rv, CallAt K.EL.lay orc XR (kProg K.zert) n (fnNr f) st vs st' rv) ∧
         ∀ st' rv, CallAt K.EL.lay orc XR (kProg K.zert) n (fnNr f) st vs st' rv →
           RufOut K.EL (rufAt K.E.P O passes n f σ ρG) st' rv) ∧
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Hardware (declOf K.u)),
+      rufAt K.E.P O passes n f σ ρG ≠ .hardware e) ∧
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes n f σ ρG).istFehler = true →
+        ∃ e : Logik (declOf K.u), rufAt K.E.P O passes n f σ ρG = .logik e) ∧
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes (n + 1) f σ ρG).istFehler = false →
+        ReqAmEintritt K.E.P f σ ρG) ∧
     ((∀ passes n : Nat, RufRu (rufAt K.E.P O passes n) (rufAt K.E.P.mitRuhe O.mitRuhe passes n)) ∧
       (∀ (passes : Nat) (M : RufMaschineG (declOf K.u).mitRuhe),
         RufErreichbarG K.E.P.mitRuhe O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp init) M →

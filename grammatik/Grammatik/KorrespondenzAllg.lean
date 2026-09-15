@@ -74,6 +74,7 @@
 -/
 import Grammatik.Korrespondenz
 import Grammatik.CFormenDet
+import Grammatik.RufOhneHardware
 
 namespace Gabbro.Grammatik
 
@@ -1441,6 +1442,175 @@ theorem korrOk_jeder_lauf {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {
 
 end Tiefe
 
+/-! ## 5. What the check ALSO decides: no oracle form in any certified body
+
+    The check was written to decide the C correspondence, and it decides a
+    second thing on the way, which the closing theorem needs: a certified
+    body carries NONE of the five forms whose outcome is `hardware`
+    (`RufOhneHardware.lean`). That is not a new argument -- every one of
+    them is outside the covered set, so `stOk0`/`blOk` answer `false` --
+    but it has to be read off the check, and the reading is the induction
+    below, on the same measure `stOkBl_sound` runs on. -/
+
+section OhneOrakel
+
+variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D)
+
+/-- The flat statement check admits no axiom call and no `forever`. -/
+theorem stOk0_hardwareFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (K : CEnvLay D Γ) (s : Stmt D V l Γ Λ Λ') (r : GRow)
+    (h : stOk0 EL fnum c K s r = true) : s.hardwareFrei = true := by
+  cases s <;> first | rfl | (exact absurd h (by simp [stOk0]))
+
+/-- **The two staged checks refuse every source of a `hardware` outcome**,
+    in one induction on the nesting weight of the rows. -/
+theorem stOkBl_hardwareFrei : ∀ (n : Nat),
+    (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+        (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →
+        stOk EL fnum c K₀ s r = true → s.hardwareFrei = true) ∧
+    (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+        (K₀ : CEnvLay D Γ₀) (b : Block D V l Γ₀ Λ₀ Λ₁) (rs : List GRow), rowsSize rs ≤ n →
+        blOk EL fnum c K₀ b rs = true → b.hardwareFrei = true) := by
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨?_, ?_⟩
+      · intro V l Γ₀ Λ₀ Λ₁ K₀ s r hn _
+        have := rowSize_pos r
+        omega
+      · intro V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
+        have hrs : rs = [] := rowsSize_nil rs (by omega)
+        subst hrs
+        cases b with
+        | nil => rfl
+        | _ => exact absurd h (by simp [blOk])
+  | succ n ih =>
+      have h1 : ∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+          (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n + 1 →
+          stOk EL fnum c K₀ s r = true → s.hardwareFrei = true := by
+        intro V l Γ₀ Λ₀ Λ₁ K₀ s r hn h
+        cases r with
+        | ite cc tRows eRows =>
+            cases s with
+            | ite cnd t e =>
+                simp only [stOk, Bool.and_eq_true] at h
+                obtain ⟨⟨_, hT⟩, hE⟩ := h
+                simp only [rowSize] at hn
+                simp only [Stmt.hardwareFrei, Bool.and_eq_true]
+                exact ⟨ih.2 K₀ t tRows (by omega) hT, ih.2 K₀ e eRows (by omega) hE⟩
+            | _ => exact absurd h (by simp [stOk])
+        | forTrav x ti hiC bodyRows m' =>
+            cases s with
+            | traverse tb inv body =>
+                cases hiC with
+                | lit v =>
+                    simp only [stOk, Bool.and_eq_true] at h
+                    obtain ⟨-, hb⟩ := h
+                    simp only [rowSize] at hn
+                    exact ih.2 _ body bodyRows (by omega) hb
+                | _ => exact absurd h (by simp [stOk])
+            | _ => exact absurd h (by simp [stOk])
+        | _ => exact stOk0_hardwareFrei EL fnum c K₀ s _ h
+      refine ⟨h1, ?_⟩
+      intro V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
+      cases rs with
+      | nil =>
+          cases b with
+          | nil => rfl
+          | _ => exact absurd h (by simp [blOk])
+      | cons r rs' =>
+          simp only [rowsSize] at hn
+          have hpos := rowSize_pos r
+          have hrs : rowsSize rs' ≤ n := by omega
+          cases r with
+          | void x =>
+              simp only [blOk, Bool.and_eq_true] at h
+              exact ih.2 K₀ b rs' hrs h.2
+          | bindLet y τc ce =>
+              cases b with
+              | bind e rest =>
+                  simp only [blOk, Bool.and_eq_true] at h
+                  exact ih.2 _ rest rs' hrs h.2
+              | _ => exact absurd h (by simp [blOk])
+          | call fc cargs dst =>
+              cases dst with
+              | none =>
+                  cases b with
+                  | cons s rest =>
+                      simp only [blOk, Bool.and_eq_true] at h
+                      simp only [Block.hardwareFrei, Bool.and_eq_true]
+                      exact ⟨h1 K₀ s _ (by omega) h.1, ih.2 K₀ rest rs' hrs h.2⟩
+                  | _ => exact absurd h (by simp [blOk])
+              | some p =>
+                  cases b with
+                  | bindCall g args heq hp hrp rest =>
+                      simp only [blOk, Bool.and_eq_true] at h
+                      exact ih.2 _ rest rs' hrs h.2
+                  | _ => exact absurd h (by simp [blOk])
+          | _ =>
+              cases b with
+              | cons s rest =>
+                  simp only [blOk, Bool.and_eq_true] at h
+                  simp only [Block.hardwareFrei, Bool.and_eq_true]
+                  exact ⟨h1 K₀ s _ (by omega) h.1, ih.2 K₀ rest rs' hrs h.2⟩
+              | _ => exact absurd h (by simp [blOk])
+
+/-- **A certified body carries no oracle form.** -/
+theorem enOk_hardwareFrei (top : Bool) {V : Vertrag D} {l : Bool} :
+    ∀ (rs : List GRow) {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (b : Endblock D V l Γ Λ),
+      enOk EL fnum c top rs K b = true → b.hardwareFrei = true := by
+  intro rs
+  induction rs with
+  | nil =>
+      intro Γ Λ K b h
+      cases b with
+      | ret r hΛ => rfl
+      | _ => exact absurd h (by simp [enOk])
+  | cons r rs ih =>
+      intro Γ Λ K b h
+      cases r with
+      | void x =>
+          simp only [enOk, Bool.and_eq_true] at h
+          exact ih K b h.2
+      | ret cr =>
+          simp only [enOk, Bool.and_eq_true, List.isEmpty_iff] at h
+          obtain ⟨-, hb⟩ := h
+          cases b with
+          | ret e hΛ => rfl
+          | _ => exact absurd hb (by simp)
+      | bindLet x τc ce =>
+          cases b with
+          | bind e rest =>
+              simp only [enOk, Bool.and_eq_true] at h
+              exact ih _ rest h.2
+          | _ => exact absurd h (by simp [enOk])
+      | _ =>
+          cases b with
+          | cons s rest =>
+              simp only [enOk, Bool.and_eq_true] at h
+              simp only [Endblock.hardwareFrei, Bool.and_eq_true]
+              exact ⟨(stOkBl_hardwareFrei EL fnum c (rowSize _)).1 K s _ (Nat.le_refl _) h.1,
+                ih K rest h.2⟩
+          | _ => exact absurd h (by simp [enOk])
+
+/-- **THE READING FOR THE CLOSING THEOREM**: a program with a correspondence
+    certificate that checks carries no source of a `hardware` outcome in any
+    of its bodies -- so its calls never end in one, at any depth, against any
+    oracle (`rufAt_ohneHardware`). -/
+theorem korrOk_hardwareFrei {P : Programm D} {fs : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true) (g : D.Fn) :
+    (P.rumpf g).hardwareFrei = true := by
+  obtain ⟨k, hk, hok⟩ := korrOk_fn hvoll hc g
+  exact enOk_hardwareFrei EL fnum c true k.rows k.lay (P.rumpf g) hok
+
+/-- **NO CALL OF A CERTIFIED PROGRAM ENDS IN A HARDWARE OUTCOME.** -/
+theorem korrOk_rufAt_ohneHardware {P : Programm D} {fs : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true) (O : Orakel D)
+    (passes n : Nat) : OhneHardware (rufAt P O passes n) :=
+  rufAt_ohneHardware P O passes (korrOk_hardwareFrei EL fnum c hvoll hc) n
+
+end OhneOrakel
+
 /-
 CUTS -- what this file does not do, by name.
 - WHERE THE BLOCK FORMS STAND, so that the list below is read right:
@@ -1503,5 +1673,9 @@ CUTS -- what this file does not do, by name.
 #print axioms Gabbro.Grammatik.enOk_sound
 #print axioms Gabbro.Grammatik.korrOk_fnCorr
 #print axioms Gabbro.Grammatik.korrOk_jeder_lauf
+#print axioms Gabbro.Grammatik.stOkBl_hardwareFrei
+#print axioms Gabbro.Grammatik.enOk_hardwareFrei
+#print axioms Gabbro.Grammatik.korrOk_hardwareFrei
+#print axioms Gabbro.Grammatik.korrOk_rufAt_ohneHardware
 
 end Gabbro.Grammatik

@@ -267,7 +267,10 @@ import Grammatik.Korpus124
 import Grammatik.Schlusssatz124
 import Grammatik.CTicket
 import Grammatik.Schlusssatz124Ticket
+import Grammatik.RufOhneHardware
+import Grammatik.RufOhneHardwareZeuge
 import Grammatik.KorrespondenzAllg
+import Grammatik.KorrOkAdaequat
 import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.KorrespondenzBlockZeuge
 import Grammatik.Schlusssatz

@@ -453,14 +453,39 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   of `gP_einzahlen_R` again, over the parser's declaration; 108: two returns). That is the
   goal's intent -- "the user proves only their own logic" -- not a gap; but the chain count
   moves only with such proofs.
-- **Part 4 is conditional** on the Gabbro call ending in no model error (a failed contract,
-  the call-depth bound `abstieg`, a hardware answer); the model judgement does not yet say
-  that `rufAt` at the call tree's depth ends `ok` -- the two witnesses compute it.
+- **Part 4's condition, HALVED on 2026-09-15** (Opus lane `staerker`, §6.8, report
+  `messung/muse/OPUS-BERICHT-STAERKER.md`). The condition was "the Gabbro call ends in no
+  model error"; the model has exactly two error classes.
+  * **The HARDWARE class is gone, and provably**: the five forms whose outcome is `hardware`
+    (axiom call, axiom bind, register read in either shape, `awaits`, `forever`) are all
+    outside `korrOk`'s covered set, so no certified body carries one, so `rufAt` never ends
+    in one -- at every depth, every budget, every world, every argument list, against every
+    oracle (`korrOk_rufAt_ohneHardware`). The theorem carries it as a new CONCLUSION 4b.
+  * **The WRITER'S LOGIC class stays**, and so does the depth bound `abstieg`. The reason is
+    named and is a finding: the user's obligation `KoerperGutS` is quantified over handlers
+    in the classes `RespektiertRahmen ∧ OhneVorbedingung` / `RespektiertRahmen ∧ OhneLogik`,
+    and `rufAt` is in NEITHER (it answers `vorbedingung` at any key whose `requires` fails,
+    `abstieg` at depth `0`, and `rufAt_gut` gives its frame only at worlds meeting `HeldB`,
+    where `RespektiertRahmen` promises it at every world). What is missing is ONE lemma: a
+    congruence of `execEnd` in its handler.
+  * **And premise (c) does NOT do the hardware work** -- `HardwareAnnahmen` constrains the
+    oracle only where the raw answer fits the declared type. Witness with every premise met
+    and the call still stopping: `befund_hardware_bleibt` (`RufOhneHardwareZeuge.lean`).
 - **A2 is DISCHARGED for both chains** (§6.6, 2026-09-15): the emitted TEXT is pinned and
   parsed in Lean, and `cProgC ctext = kProg zert` is a theorem. The rest of A1/A3/A4 stays
   outside Lean exactly as in §6.4.
 - **The adequacy chain** (one active thread of G against `rufAt`) is not re-instantiated; the
   concurrent conclusion of part 5 is the MODEL's (`gabbro_ziel`), not the C's -- stage (b).
+  **Measured 2026-09-15** (§6.8): FOUR things stand between part 4 and part 5, and the
+  covered FRAGMENT is not one of them -- every certified body is in the adequacy fragment
+  (`korrOk_endR`, `KorrOkAdaequat.lean`). The other three: `rufG_adaequat_ruf` realises
+  `rufRumpf`, not `rufAt` (which also checks the contracts AND READS their carriers, so the
+  two differ on the TRACE, and the trace is what `SpurInv` is about -- booked as
+  `befund_vertrag` in `RufAdaequatRufG.lean` §13); `Tief P A n` carries the same depth
+  residue as part 4's condition; and the adequacy is EXISTENTIAL, about a machine whose
+  thread already stands on the body with a non-waiting caller frame. **The cost is not the
+  build**: `RufAdaequatRufG` is already in `Schlusssatz`'s transitive import closure, and
+  the bridge file above costs 5,9 s and 0,89 GB.
 
 ### 6.6 A2 discharged: the emitted TEXT is parsed in Lean (2026-09-15)
 
@@ -553,6 +578,62 @@ and `korrOk_jeder_lauf` keep their statements word for word, and every new arm h
 probe AND a planted defect.
 
 **The chain count did not move, and could not**: sieve (a) still binds (§6.3, §6.5).
+
+### 6.8 Part 4's condition, halved: no hardware error, and the residue named (2026-09-15)
+
+*Opus lane `staerker`. Files: `grammatik/Grammatik/RufOhneHardware.lean` (new),
+`RufOhneHardwareZeuge.lean` (new), `KorrOkAdaequat.lean` (new), `KorrespondenzAllg.lean` §5,
+`Schlusssatz.lean`, `Kette104Satz.lean`, `CParser/Bruecke.lean`, `Kette108.lean`,
+`CText108.lean`. Theorem map: SATZKARTE §35. Report:
+`messung/muse/OPUS-BERICHT-STAERKER.md`. Axioms of every theorem named here: `propext`,
+`Classical.choice`, `Quot.sound` (the purely computational ones: `propext`, `Quot.sound`);
+no `sorry`, no `native_decide`, no new `axiom`. Chain count re-measured with
+`zaehle-kette.py --lean` over 113 programs: **(a) 2, (b) 15, (c) 15, (d) 60, (e) 2, CHAIN
+COUNT 2 -- unchanged.*
+
+**The theorem got THREE new conclusions and lost no hypothesis.** `schlusssatz`'s premise
+list is character-for-character the one of §6.1; the conclusion gained 4b, 4c and 4d
+between parts 4 and 5. `schlusssatz_104` and `schlusssatz_124` are untouched.
+
+| new clause | says |
+|---|---|
+| 4b | `∀ passes n f σ ρ e, rufAt K.E.P O passes n f σ ρ ≠ .hardware e` |
+| 4c | an error outcome of `rufAt` is a `logik` outcome -- the writer's logic, alone |
+| 4d | `(rufAt … (n+1) f σ ρ).istFehler = false → ReqAmEintritt K.E.P f σ ρ` |
+
+**Why 4b is a theorem and not an assumption.** The `Hardware` outcome has five sources and
+every one is a syntactic form (`RufOhneHardware.lean`): `axiomCall`/`bindAxiom`
+(`annahme`), `regLies` (`register`, `geraet`), `regLiesElse` (`register`), `awaits`
+(`sichtbarkeit`), `forever` (`fortschritt`). `Hardware.ieee` is no longer produced at all
+(verdict F1). The check `hardwareFrei` refuses exactly those five; its soundness
+(`Endblock.hardwareFrei_ok`) is the twin of `Endblock.logikFrei_ok`; and since `rufAt`'s
+OWN error branches are all `logik`, the handler premise `OhneHardware` carries itself by
+induction on the DEPTH (`rufAt_ohneHardware`) -- no premise about the oracle or the user.
+`korrOk` refuses all five (they have no `GRow` at all), read off the check by the same
+induction `stOkBl_sound` runs on (`korrOk_hardwareFrei`).
+
+**The finding that goes with it, with a witness program** (`befund_hardware_bleibt`): the
+goal theorem's premise (c) `HardwareAnnahmen` does NOT rule the hardware error out. Its
+axiom leg `AxVertragO` constrains the oracle only WHERE the raw answer fits the declared
+result type. On `axP` (`AxiomVertrag.lean`) -- in the checker's fragment, footprint checked,
+`KoerperGutA` proved for every function against every oracle of the class -- the oracle
+`axOBoese` (same answer world as `axO`, raw answer `99` outside `int 0 3`) meets `GutO`,
+`RegLokal` and `AxVertragO` (the last VACUOUSLY), and `rufAt axP axOBoese passes (n+1)
+zaehle σ .nil = .hardware (.annahme inc)` at every depth and budget.
+
+**What is left of the condition, and the one lemma that would close it.** `logik`:
+`vorbedingung`, `nachbedingung`, `invariante`, `abstieg`, and the body-own `schleife`,
+`vorzustand`, `bereich`. The user's obligation covers every body-own `logik` outcome
+(`KoerperGutS` clause 2) and the caller duty (clause 1), but NOT for the handler `rufAt`:
+`OhneVorbedingung` fails at any key whose `requires` is false, `OhneLogik` fails at depth
+`0` (`abstieg`), and `RespektiertRahmen` promises the callee frame at EVERY world while
+`rufAt_gut` gives it only at worlds meeting `HeldB`. **The missing piece is one congruence
+lemma** over `execStmt`/`execBlock`/`execEnd` in the handler: two handlers whose answers
+are equal or both errors give body outcomes that are equal or both errors, with the error
+TAG carried. It would also give `rufAt`'s depth monotonicity (an outcome that is not an
+`abstieg` is the outcome at every larger depth) and is the first half of a `rufAt` ↔
+`rufRumpf` bridge -- three open items on one lemma, estimated 400-500 Lean lines over
+~50 constructors plus the three loop combinators.
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 

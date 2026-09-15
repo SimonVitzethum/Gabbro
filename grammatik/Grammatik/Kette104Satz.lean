@@ -246,6 +246,29 @@ theorem kette_104_zeuge :
   obtain ⟨hc, hrv⟩ := hO
   exact ⟨(hc.1 t4 rfl).2 0 f4 (by decide) (by decide), hrv⟩
 
+/-- **WITNESS of the new clauses 4b and 4d on 104**, non-degenerate: the
+    chain's program can never end a call in a HARDWARE outcome (clause 4b,
+    at every depth, every budget, every world and every argument list),
+    part 4's condition implies the caller's duty (clause 4d), and both are
+    exercised on the call that actually moves memory -- `einzahlen(k, 0, 7)`
+    from the zero state, whose duty holds and whose slot goes `0 -> 100`.
+    What is left of part 4's condition on this program is therefore the
+    writer's logic alone (clause 4c). -/
+theorem kette_104_ohne_hardware :
+    (∀ (passes n : Nat) (f : D4.Fn) (σ : World D4) (ρ : Env D4 (D4.params f))
+      (e : Hardware D4), rufAt P4 O4 passes n f σ ρ ≠ .hardware e) ∧
+    (∀ (passes n : Nat) (f : D4.Fn) (σ : World D4) (ρ : Env D4 (D4.params f)),
+      (rufAt P4 O4 passes (n + 1) f σ ρ).istFehler = false → ReqAmEintritt P4 f σ ρ) ∧
+    ReqAmEintritt P4 ein4 (sp4.welt []) rho7 ∧
+    ∃ σ' : World D4, rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 = .ok σ' () ∧
+      ((sp4.welt []).slots t4 0 f4).n = 0 ∧ (σ'.slots t4 0 f4).n = 100 := by
+  have h := schlusssatz kette_104 O4 hw4 tvOrc tvXR tvXR_funktional
+    (fun f => CallAt EL4.lay tvOrc tvXR (kProg zert104) 2 (fnNr f)) (fun _ => 2)
+    (fun _ _ _ _ _ h => h) (speicherR E4.sp0) init4 start4
+  have hR : rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 = .ok _ () := rfl
+  refine ⟨h.2.2.2.2.1, h.2.2.2.2.2.2.1, ?_, _, hR, rfl, rfl⟩
+  exact h.2.2.2.2.2.2.1 0 1 ein4 (sp4.welt []) rho7 rfl
+
 /-! ## 8. A2 discharged: the C side READ FROM THE EMITTED TEXT
 
     Until 2026-09-15 the C side of this chain was the certificate's
@@ -273,7 +296,7 @@ theorem kette_104_binaer_text
         corrW EL4 σ st → bindParams k.params vs = some ρ0 → EnvRel EL4 k.lay ρG ρ0 →
         (rufAt P4 O4 passes (tief f) f σ ρG).istFehler = false →
         ∀ st' rv, bin f st vs st' rv → RufOut EL4 (rufAt P4 O4 passes (tief f) f σ ρG) st' rv :=
-  (schlusssatz_text kette_104 a2_104 O4 hw4 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2
+  (schlusssatz_text kette_104 a2_104 O4 hw4 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2.2.2.2
 
 /-- **WITNESS**: `kette_104_zeuge` again, with the C side read from the
     emitted TEXT -- `einzahlen(k, 0, 7)` from the zero state moves the
@@ -292,6 +315,7 @@ theorem kette_104_zeuge_text :
 #print axioms Gabbro.Grammatik.Kette104.nutzer4
 #print axioms Gabbro.Grammatik.Kette104.kette_104
 #print axioms Gabbro.Grammatik.Kette104.kette_104_zeuge
+#print axioms Gabbro.Grammatik.Kette104.kette_104_ohne_hardware
 #print axioms Gabbro.Grammatik.Kette104.kette_104_binaer_text
 #print axioms Gabbro.Grammatik.Kette104.kette_104_zeuge_text
 
