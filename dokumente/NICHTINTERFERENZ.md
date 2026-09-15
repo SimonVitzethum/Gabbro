@@ -324,6 +324,28 @@ translation-validation plan -- DRF-SC, the lock primitives (a ticket lock must r
 "held or not"), thread creation, the scheduler -- with the same named assumptions, not a second
 list.
 
+**The list in Lean** (2026-09-15, `CNebenlaeufig.lean`; PLAN-UEBERSETZUNGSVALIDIERUNG §7.4). The
+runtime entries of the table above are one structure, `LaufzeitC`, a hypothesis of the stage (b)
+closing theorem (`schlusssatz_124`):
+* thread creation -- `FadenStartC`: threads start only at declared roots, each root on at most
+  one thread, from the declared initial memory, with no lock held (the C counterpart of `hW`'s
+  runtime half and of `Laufzeit` (d) of the goal theorem, which it yields: `laufzeit_w`);
+* the lock primitive -- every behaviour of the runtime's `L_nimm`/`L_gib` is one of
+  `sperrAbstrakt`: acquire only a free lock, release only one's own, program memory untouched;
+  and it reveals nothing but held or free: whether a call proceeds depends on that lock's holder
+  entry alone (`sperrAbstrakt_nur_eigen`), and it changes no other entry
+  (`sperrAbstrakt_rahmen`).
+The two scheduler entries (the scheduler class, blocked slots idle) are premises of
+`nichtinterferenz_planer` only: the stage (b) safety statement is quantified over EVERY schedule
+(every interleaving is an SC run), so it needs neither. DRF-SC itself is the separate named
+premise `DRFSC`, whose hypothesis (race freedom of the C) stage (b) proves from machine G.
+What stage (b) does NOT yet give is noninterference for the C: it carries single-run facts
+(every C configuration is related to a G machine where the goal holds). Carrying a PAIR of runs
+needs two more facts, neither proved: that two C runs under one schedule lift to two G runs
+under one schedule (the lifting `sim_lauf` chooses G segments per C step, and their lengths may
+differ between the two runs), and that the relation determines the observed C state from the
+observed G state.
+
 ## 11. Comparison: seL4's confidentiality proof
 
 seL4's information-flow proof (Murray et al., 2013) states intransitive noninterference over

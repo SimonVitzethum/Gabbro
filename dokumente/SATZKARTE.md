@@ -2879,5 +2879,86 @@ used `decide` on `Akzeptiert` (G1 float register included) still computes `true`
 `axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
 green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §§1-10 history above.)
+## 26. Stage (b): the concurrent closing theorem for `beispiele/124` (2026-09-15)
+
+Translation validation, stage (b) of PLAN-UEBERSETZUNGSVALIDIERUNG §3 item 4, closed for ONE
+program; the plan's §7 is the long form. Files: `CNebenlaeufig.lean` (generic),
+`Korpus124.lean`, `Schlusssatz124.lean`.
+
+### 26.1 The statement
+
+`schlusssatz_124 passes LP K0 hLZ Echt hDRF : ∃ w, K0 = startC c124 w st0 ∧ Laufzeit kE … ∧
+RennfreiC c124 LP K0 ∧ (∀ K, ErreichbarC c124 LP K0 K → ∃ M, RufErreichbarG PR OR passes (M0 w)
+M ∧ R124 w K M ∧ Ziel PR kE.S.mitRuhe OR passes (M0 w) M) ∧ ∀ b, Echt b → ∃ K M, … beobC K = b
+…`. One sentence per conjunct:
+* **start**: the C start is the runtime's start for some root assignment `w`, and the
+  corresponding G start meets (d) of the goal theorem;
+* **race freedom**: the emitted C is data-race free under the real lock primitive -- PROVED;
+* **every SC run**: every SC configuration of the emitted C is related (memory `corrW`, locks,
+  every thread) to a reachable machine of G where `Ziel` holds;
+* **every real run**: every real observation is that of such a configuration.
+Read in the C memory (`schlusssatz_124_c`): a free lock means `konto[0] == konto[1]`, a
+returned `hauptA` thread means `privA[0] == 7`.
+
+### 26.2 Premise map
+
+| premise | class | discharged by / named as |
+|---|---|---|
+| `hDRF : DRFSC c124 LP K0 Echt` | (b) HARDWARE + compiler: the C11 DRF-SC theorem with its region corollary, and the compiler's mapping to the hardware profile | named premise, ONE proposition; its hypothesis `RennfreiC` is PROVED (`rennfreiC_aus_sim`) |
+| `hLZ.faeden : FadenStartC c124 [2,3] st0 K0` | runtime (A4): thread creation | named premise; yields (d) `Laufzeit` (`laufzeit_w`) |
+| `hLZ.sperre : ∀ …, LP … → sperrAbstrakt …` | runtime: the ticket lock | named premise; `sperrAbstrakt_nur_eigen`: reveals nothing but held or free |
+| (a) checker | (c) DISCHARGED | `kP_akzeptiert` (`decide`) |
+| (b) user's logic | (c) DISCHARGED | `kE_nutzerPflicht` |
+| (c) hardware | (c) DISCHARGED, empty | `kO_hw` (no axiom, register or device) |
+| `Echt` | parameter, not a premise | the observations of the compiled program (like `binEin` of stage (a)) |
+
+`LaufzeitC` is the runtime list of PLAN §5 and NICHTINTERFERENZ §10, one list; its scheduler
+entries are premises of noninterference only.
+
+### 26.3 How it is proved
+
+A simulation certificate (`SimC`, generic): every SC step of the C from a reachable related
+pair is matched by a segment of G steps of the SAME thread that ends related, covers the C
+footprint by G accesses and places G releases/acquires only at C lock calls. `sim_lauf` lifts
+every C run; `rennfreiC_aus_sim` transfers G's `RennfreiBis`; `schluss_b` assembles. For 124,
+`sim124` covers every SC run from every admitted start; the segments are `gBlatt` (store),
+`gNimm` (`L_nimm`), `gSetze` (`setze(n)`), `gGib` (`L_gib`), `gPruefe` (`(void)pruefeA()`), and
+none for splits and returns; the C blocks run from every related state (`cStore_lauf`,
+`cSetze_lauf`, `cPruefe_lauf`), and by `exec_det` every run of a block is that one.
+
+### 26.4 Witness and measurement
+
+`schlusssatz_124_zeuge`: every premise jointly, race freedom by the theorem, and a 20-step SC
+run in which thread 1 stands at `L_nimm();` and CANNOT step while thread 0 holds the lock, the
+lock then passes from thread 0 to thread 1, both return, and the final C memory shows the
+invariant and `privA[0] == 7` by the theorem (0 at the start). `rennfreiC_zeuge_124`: the
+same run indexed (`laufC_snoc`); its two critical sections (steps 10 and 15) conflict on
+`konto`, and the proved race freedom orders them (release at 12, acquire at 13). Measured: of the six
+multi-thread corpus programs only 108 exports (`lean-g`) and it takes no lock; 124's G program
+is written from the source (`Korpus124.lean`), because the hand model `mP` lacks `pruefeA`'s
+read of `privA`. Finding: the source's `setze` contract is too weak for premise (b) (the
+release check fails); `kP` keeps `mP`'s stronger `ensures`.
+
+### 26.5 Axiom record
+
+`schlusssatz_124`, `schlusssatz_124_bei`, `schlusssatz_124_c`, `schlusssatz_124_zeuge`,
+`rennfreiC_zeuge_124`,
+`sim124`, `schrittA`, `schrittB`, `r124_start`, `gSetze`, `k124_ziel`, `kE_nutzerPflicht`,
+`sim_lauf`, `rennfreiC_aus_sim`, `schluss_b`, `ev_zform_blk`: `propext`, `Classical.choice`,
+`Quot.sound`; `kP_akzeptiert`: `propext`, `Quot.sound`; `c124_direkt`: `propext`;
+`sperrAbstrakt_rahmen`, `sperrAbstrakt_nur_eigen`: none. No `sorry`, no new `axiom`, no
+`native_decide`. Built on `ki-pc-fisch-101` (`~/gabbro-opus-nb/`): full `lake build`, 233
+jobs, green, no `sorryAx` in the log.
+
+### 26.6 What remains
+
+Region serialisability (inside `DRFSC`; needs a fine-grained C semantics); footprint
+soundness in general (`FussTreu`, needs an access-instrumented `Exec`; key lemma
+`ev_zform_blk` proved); the ticket lock refining `sperrAbstrakt`; a checker for concurrent
+correspondence certificates (T2 for stage (b)); the exporter for 124 and parse fidelity; the
+emitted text as data (no C parser); lock calls inside loops, branches or callees, volatile and
+foreign calls in blocks, and atomics as a source of ordering (an atomic access counts like a
+plain one in `RennfreiC`, and no A10 ordering yet). The chain count stays 1 (PLAN §7.6).
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §§1-10 history above.)
 

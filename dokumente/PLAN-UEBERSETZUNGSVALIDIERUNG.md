@@ -88,7 +88,9 @@ chain Lean actually checked.
    free on G, which is exactly DRF-SC's hypothesis. The simulation G-run ↔ interleaved C-run is
    research-sized (CompCertTSO, promising semantics); stage (a) does not wait for it. What is
    realistic soon is the statement with the premises in the right place; the proof over it is a
-   separate, longer item.
+   separate, longer item. **Closed for ONE program on 2026-09-15** (§7: `schlusssatz_124`, the
+   simulation by blocks between synchronisation points, over every SC run of the emitted C of
+   `beispiele/124`); the generic part (semantics, premises, race transfer) is program-independent.
 
 **Three states in the C-form guardian.** `instrumente/pruefe-cformen.py` classifies every
 emitted form as (i) **lemma** (a correspondence lemma exists), (ii) **named assumption** (the
@@ -140,6 +142,12 @@ The costs of the Opus agent for the memory model are on the Claude account and n
   declared (labelled) roots; the scheduler chooses by a fixed timetable, or by a rule that reads
   only the observer's view (`nichtinterferenz_planer`); a slot whose thread cannot step is left
   idle, not given away; the lock primitive (a ticket lock) reveals nothing but held or free.
+  In Lean (since 2026-09-15, §7.4): `LaufzeitC` = `FadenStartC` (thread creation) and the lock
+  specification `sperrAbstrakt` (`sperrAbstrakt_nur_eigen`: nothing but held or free); the two
+  scheduler entries are premises of noninterference only.
+- **DRF-SC** (§7.4): `DRFSC`, ONE proposition, a hypothesis of `schlusssatz_124`: for a race-free C
+  program every real execution has the observation of an SC interleaving of synchronisation-free
+  blocks. Its hypothesis, race freedom, is PROVED from machine G (`rennfreiC_aus_sim`).
 
 ## 6. Chain count: 1 -- beispiele/104, theorem schlusssatz_104
 
@@ -226,7 +234,7 @@ emitted); A5 the Lean kernel and the definitions §3 lists for human review.
   only (through the C), not in general.
 
 **For stage (b).** DRF-SC, the lock primitives and thread creation as named premises; the
-simulation G-run ↔ interleaved C-run. For 104 itself `gP_kein_exklusiv` already says two
+simulation G-run ↔ interleaved C-run. (Done for `beispiele/124` on 2026-09-15, §7.) For 104 itself `gP_kein_exklusiv` already says two
 active threads are refused by the model (every function holds `M` by signature).
 
 **For widening beyond 104** (the chain count's next steps), every piece keyed to `gD`
@@ -236,3 +244,175 @@ body printer `printEnd104` (104's shapes), the idle root (either the exporter em
 `gDB` becomes a generic declaration extension with a generic renaming), and the per-program
 computations `rufEin_ok`/`rufLies_ok`, which stand in for a general theorem "the
 per-function obligations imply `rufAt` ends `ok`".
+
+## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
+
+*Added 2026-09-15. Files: `grammatik/Grammatik/CNebenlaeufig.lean` (generic: semantics,
+premises, transfer theorems), `Korpus124.lean` (the G program of 124 and the goal theorem on
+it), `Schlusssatz124.lean` (the emitted C, the simulation, the theorem, the witness). Axioms of
+every theorem named here: `propext`, `Classical.choice`, `Quot.sound` (`c124_direkt`:
+`propext`; `sperrAbstrakt_rahmen`, `sperrAbstrakt_nur_eigen`: none); no `sorry`, no
+`native_decide`, no new `axiom`.*
+
+### 7.1 Which program, measured
+
+Six corpus programs start more than one thread (07, 59, 108, 109, 124, 125). Measured on
+2026-09-15 with a binary built from this tree: the exporter `gabbro lean-g` covers only 108
+(07: `LG001` type `Pa`; 59: `LG001` a lock form; 109: `LG001` `entry`; 124: `LG003` the
+`requires` of `setze`; 125: `LG001` `static`), and the correspondence printer
+`gabbro corr-lean` covers none (104 forms only). 108 takes no lock, so no interleaving of it
+contends. **124** is the smallest program with two threads and a lock that has a G form -- the
+hand model `mP` of `MehrfadenZeuge.lean`. That model's `pruefeA` returns nothing and reads
+nothing, while the source's (and the emitted C's) returns `privA.slots[0].stand`; the C's read
+of `privA` would then have no G access to cover it. `Korpus124.lean` therefore writes the G
+program from the source's BODIES (`kP`, functions `setze`, `pruefeA`, `hauptA`, `hauptB`), and
+proves every premise group of the goal theorem on it: `kP_akzeptiert` (`decide`),
+`kE_nutzerPflicht`, `kO_hw`, and `k124_ziel` (`gabbro_ziel` with the concrete checker).
+
+**Finding (contracts).** The source's `setze` promises only `konto.slots[0].stand == x`. With
+that `ensures`, the release check of `hauptA`'s `locks L { setze(30); }` fails for a callee
+answer the contract admits (`konto[1]` free), so premise (b) of the goal theorem does not hold
+for 124 as written. `kP` keeps `mP`'s `ensures konto[0] == konto[1] && konto[0] == x` (what the
+body meets). Contracts do not change the C; the corpus file is unchanged here.
+
+### 7.2 The semantics (`CNebenlaeufig.lean`)
+
+A configuration (`KonfC`) is the shared C state of `CSpeicher.lean`, one thread state per
+`Faden`, and the holder of every lock of the runtime. A running thread (`CFaden.an k ρ`) is
+its root function's continuation and locals; a thread never created or returned is `aus`. A
+step (`SchrittC E LP K t ℓ K'`) is taken by ONE freely chosen thread -- every schedule is a run,
+so the semantics is sequentially consistent: split a sequence (`teile`); leave the root body
+(`ende`); call the runtime's lock primitive (`sperre`, meaning `LP`); or run ONE
+synchronisation-free statement as a block with the existing sequential semantics (`block`,
+`rueck`: `Exec` with `CallAt`, determinism `exec_det`).
+
+**Why blocks between synchronisation points, not one step per access.** The sequential C
+semantics is big-step, and the block rule reuses it unchanged with every T4 lemma. The C11
+model gives meaning only to race-free programs, and for those every execution is SC and
+serialisable at the granularity of synchronisation-free regions (DRF-SC and its region
+corollary: Adve and Hill 1990, Boehm and Adve 2008; Batty et al. 2011 for C11); the premise
+`DRFSC` is stated at exactly this granularity, with race freedom at the same granularity as
+its hypothesis. And a C block is a contiguous segment of G steps of ONE thread -- a G
+interleaving among others -- so the simulation is a forward simulation into G's
+interleavings, never a reordering argument.
+
+**Footprints** (`fussR`, `fussW`): the objects a block's syntax names, to its call depth, and
+the ones named in store targets. On the direct fragment (`CS.direkt`, `CEinheit.direkt`:
+pointers formed only from named objects, integer locals, no stack objects, no volatile,
+atomic or foreign access but the lock primitive) the pointer every load and store uses lies in
+an object its expression names (`ev_zform_blk`). `c124_direkt` (`decide`).
+
+**Race freedom** (`RennfreiC E LP K0`): on every SC run, two steps of different threads whose
+footprints share an object that one of them writes are ordered through a lock (`GeordnetC`:
+release by the first thread, later acquire by the second, in between).
+
+### 7.3 The statement
+
+```
+schlusssatz_124 (passes : Nat) (LP : SperrSem) (K0 : KonfC)
+    (hLZ : LaufzeitC c124 [2, 3] st0 K0 LP)          -- the runtime list
+    (Echt : BeobC → Prop) (hDRF : DRFSC c124 LP K0 Echt) :   -- DRF-SC
+  ∃ w, K0 = startC c124 w st0 ∧ Laufzeit kE (speicherR kSp) (kInit w) ∧
+    RennfreiC c124 LP K0 ∧
+    (∀ K, ErreichbarC c124 LP K0 K → ∃ M, RufErreichbarG PR OR passes (M0 w) M ∧
+       R124 w K M ∧ Ziel PR kE.S.mitRuhe OR passes (M0 w) M) ∧
+    ∀ b, Echt b → ∃ K M, ErreichbarC c124 LP K0 K ∧ beobC K = b ∧
+       RufErreichbarG PR OR passes (M0 w) M ∧ R124 w K M ∧ Ziel … M
+```
+
+`c124` is the emitted C as data (functions `setze`, `pruefeA`, `hauptA`, `hauptB`; `L_nimm`/
+`L_gib` as the lock primitive of lock 0; the text is quoted in the file header), `PR`/`OR` are
+`kP.mitRuhe`/`kO.mitRuhe`, `R124 w K M` relates memory (`corrW` under the emitter's layout
+`kEL`), locks (the C holder of lock 0 is the G thread holding `L`) and every thread (C
+position ↔ G residue). Read in the C memory (`schlusssatz_124_c`): on every reachable
+configuration, a free lock means `konto[0] == konto[1]` (the leg `sperrInv`), and a returned
+`hauptA` thread means `privA[0] == 7` (the leg `startEnde`).
+
+### 7.4 The premises, by name
+
+| premise | Lean | content | who supplies it |
+|---|---|---|---|
+| DRF-SC | `DRFSC E LP K0 Echt` (ONE proposition, a hypothesis) | if the C is race free, every observation of a real execution (`Echt`: the compiled program under the C11 model and the hardware profile) is the observation of an SC block interleaving | the C11 DRF-SC theorem with its region corollary, and the compiler's mapping of C11 synchronisation to the hardware profile; named, not proved |
+| thread creation | `LaufzeitC.faeden` = `FadenStartC` | threads only at declared roots, each root at most once, from the declared initial memory, no lock held | the runtime (the boot/driver code, not emitted); the same entry as `Laufzeit` (d) and NICHTINTERFERENZ §10 |
+| lock primitive | `LaufzeitC.sperre` (every `LP` step is a `sperrAbstrakt` step) | `L_nimm` only on a free lock, making the caller its holder; `L_gib` only by the holder; program memory untouched; reveals nothing but held or free (`sperrAbstrakt_rahmen`, `sperrAbstrakt_nur_eigen`) | the runtime's ticket lock; the same entry as NICHTINTERFERENZ §10 |
+| (a)-(d) of the goal theorem | `kP_akzeptiert`, `kE_nutzerPflicht`, `kO_hw`, `laufzeit_w` | the checker, the user's logic, the hardware, the G start | discharged inside: 124 has no axiom, register or device, so (c) is empty (`kO`), and (d) follows from `FadenStartC` (`laufzeit_w`) |
+
+**The list is ONE list.** `LaufzeitC` bundles the runtime entries of PLAN §5 and
+NICHTINTERFERENZ §10. That list's two scheduler entries (a fixed timetable or an
+observer-only rule; a blocked slot left idle) are premises of noninterference only: every
+schedule is an SC run here, and the statement holds for all of them.
+
+### 7.5 What is proved, and why DRF-SC applies
+
+* **Generic** (`CNebenlaeufig.lean`, for every unit and every G program): a simulation
+  certificate `SimC` -- a relation, holding at the starts, such that every SC step from a
+  reachable related pair is matched by a segment of G steps of the same thread that ends
+  related and fits the step (`SegPasst`: every footprint object is a carrier some G step of
+  the segment accesses, every written one a carrier some step writes; a G release or acquire
+  lies only in the segment of the corresponding C lock call) -- lifts every C run to a G run
+  (`sim_lauf`, `sim_erreichbar`); with G's `RennfreiBis` it gives `RennfreiC`
+  (`rennfreiC_aus_sim`: a C conflict lifts to a G conflict inside the segments, G orders it
+  through a guard lock, and the G release/acquire map back to C lock calls in the right
+  order); `schluss_b` is the closing schema.
+* **For 124** (`Schlusssatz124.lean`): `sim124` covers EVERY SC run from every start the
+  runtime premise admits (any assignment of the two roots to threads). The G segments per C
+  block: a store is one leaf (`gBlatt`); `L_nimm()` is the unfold and the take of `locks`
+  (`gNimm`); `setze(n)` is call, two leaves, return and the empty rest (`gSetze`); `L_gib()`
+  is the release and the empty rest (`gGib`); `(void)pruefeA()` is call and return, the return
+  reading `privA` (`gPruefe`); splits and the end of a root are no G step. The C side of each
+  block runs from any related state (`cStore_lauf`, `cSetze_lauf`, `cPruefe_lauf`) and, by
+  `exec_det`, every run of it is that one.
+* **Why DRF-SC is applicable, not merely plausible**: its hypothesis `RennfreiC` is the second
+  conclusion, proved from G's race freedom (`Ziel.rennfrei`, from `rennfrei_g_voll`) through
+  the footprint coverage of the certificate.
+
+**Witness** (`schlusssatz_124_zeuge`): every premise jointly (the specified lock primitive,
+thread creation at the two roots, DRF-SC with the SC observations as the real ones), the C
+race free by the theorem, and a concrete 20-step SC run: thread 0 takes the lock; thread 1
+reaches `L_nimm();` and CANNOT step while thread 0 holds it; thread 0 releases, thread 1 takes
+the lock; both return; at the end the lock is free and the C memory shows `konto[0] ==
+konto[1]` and `privA[0] == 7` -- by the theorem, read through the relation -- where `privA[0]`
+was 0 at the start. **Witness of the race transfer** (`rennfreiC_zeuge_124`): the same run as an
+indexed SC run of 20 steps; its two critical sections (step 10, thread 0's `setze(30);`, and
+step 15, thread 1's `setze(70);`) conflict on `konto_speicher`, and the race freedom proved from
+G orders them through a lock (thread 0's `L_gib();` at step 12, thread 1's `L_nimm();` at 13).
+
+### 7.6 What is open, each step named
+
+1. **Region serialisability (inside `DRFSC`).** Stated in the premise, not proved: for a
+   race-free program, every interleaving at the granularity of single memory accesses has the
+   observation of a block interleaving (`SchrittC`). Proving it needs a fine-grained C
+   semantics (one step per load/store) and the commutation argument; the premise would then
+   shrink to the C11 DRF-SC theorem proper.
+2. **Footprint soundness in general (`FussTreu`).** For a unit `E` direct on its functions:
+   every derivation `E.laeuft s st ρ o` performs its loads only at objects of
+   `fussR E.Pr E.tiefe s` and its stores only at objects of `fussW E.Pr E.tiefe s`. Stating
+   it needs an access-instrumented `Exec`; its key lemma, that the pointer a direct pointer
+   expression computes lies in an object it names, is proved (`ev_zform_blk`). This is what
+   makes `RennfreiC` (syntactic footprints) at least C11 race freedom.
+3. **The ticket lock refines `sperrAbstrakt`.** `LaufzeitC.sperre` is a premise; a proof
+   would give the runtime's `L_nimm`/`L_gib` as C with atomics and show that their
+   fine-grained runs project to `sperrAbstrakt` steps.
+4. **A checker for concurrent correspondence certificates** (T2 for stage (b)): `sim124` is
+   constructed for 124; a checker that produces a `SimC` for every accepted program from a
+   printed certificate does not exist.
+5. **The G program from the source.** The exporter refuses 124 (`LG003`); `kP` is written by
+   hand, so stage (a)'s parse fidelity (part 1 of `schlusssatz_104`) has no counterpart for
+   124; and the source's `setze` contract is too weak for (b) (§7.1).
+6. **The emitted text as data.** `c124` transcribes the printed C by hand (the joint A2 of
+   stage (a); a Lean C parser would replace it).
+7. **Semantics extensions.** A lock call is a step only at the top of a root's continuation,
+   not inside a loop, a branch or a callee; foreign calls other than the lock primitive and
+   volatile accesses are outside the direct fragment; a root whose block never ends (a
+   `forever` loop) has no step, so the statement says nothing about it. **Atomics**: a
+   top-level atomic statement is its own SC step (a block of one `Exec` rule), but an atomic
+   access is neither exempt from `RennfreiC` (it counts like a plain access: conservative) nor
+   a source of ordering (`GeordnetC` orders through locks only), and `SegPasst` cannot cover
+   an `atomic` carrier -- the release/acquire ordering of `publish`/`awaits` (A10) is the next
+   extension, and until then a program whose threads meet only through atomics is outside
+   what stage (b) certifies.
+
+**The chain count stays 1.** 124 closes stage (b), but it does not pass columns (a) (Lean
+parse), (b) (`lean-g`) and (e) (a printed, Lean-checked correspondence certificate) of
+`instrumente/zaehle-kette.py`; the count is about closed chains, and this one is closed by
+hand-written model and C data at those two ends.
