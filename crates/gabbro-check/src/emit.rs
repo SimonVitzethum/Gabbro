@@ -286,6 +286,12 @@ struct Namen {
     /// schwaecheren Auswerter (`konst_zahl`) und weigerte sich. *Zwei Register ueber
     /// derselben Sache, und das schwaechere hat entschieden* (W7).
     konstwert: HashMap<String, i128>,
+    /// **Lane 197: what the checked world names.** `welt_und_konstanten` beside
+    /// the emitter, so `wirkungsattribut` reads an omitted clause from the
+    /// deeds — the same two lists the checker passes beside the same walker.
+    /// Read once per unit in `emittiere_mit`; `eigene_sicht` clones them along.
+    welt_konstanten: Vec<String>,
+    welt_namen: Vec<String>,
     /// Name -> erklaerter Parametertyp, konservativ ueber alle Funktionen. **Nur damit
     /// bekommt ein `let d = a - b;` seinen Typ**, ohne dass ihn jemand raet.
     ///
@@ -896,6 +902,12 @@ pub fn emittiere_mit(
     };
     let mut namen = Namen::default();
     namen.opsgerufen = crate::opsruf::gerufene(baum);
+    // **Lane 197, beside the emitter:** the two lists the deeds walker reads
+    // (`welt_und_konstanten`, the same call the checker makes), so an omitted
+    // `effects` over a call-free body earns the attribute its deeds earn.
+    let (welt_konstanten, welt_namen) = crate::wirkungen::welt_und_konstanten(baum);
+    namen.welt_konstanten = welt_konstanten;
+    namen.welt_namen = welt_namen;
     // **The syscall stub tables (lane S6).** Two tree-only maps the stub
     // lowering reads: which module each `syscall` stands in (for folding
     // `number` and result bounds through `Umgebung::konst_wert`), and the
@@ -6334,7 +6346,7 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
         return "";
     }
     let Some(w) = &f.effects else {
-        return "";
+        return wirkungsattribut_abgeleitet(f, b, u);
     };
     // Eine Funktion ohne Ergebnis hat nichts, was sich zusammenfassen liesse.
     //
@@ -6376,7 +6388,7 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
             //
             // *Dieselbe Klasse wie der `extern`-Fall im Kopf dieser Funktion, und derselbe
             // Ausgang: das Attribut ist eine ANWEISUNG an den Uebersetzer, keine Buchung.*
-            WirkungArt::Liest(o) if liest_geraet(o, u, f) => return "",
+            WirkungArt::Liest(o) if liest_geraet(&o.basis.text, u, f) => return "",
             WirkungArt::Liest(_) => ganz_rein = false,
             // Alles andere -- Schreiben, Sperren, Verbrauchen, Veröffentlichen, Divergieren,
             // Maskieren, Belegen -- ist eine Wirkung, und dann gilt keins der zwei Wörter.
@@ -6401,6 +6413,14 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
             }
         }
     }
+    attr_ende(f, nur_lesend, ganz_rein)
+}
+
+/// The shared tail of both attribute arms: nothing but reads (and no pointer
+/// parameter) is `const`, reads only is `pure`. One tail, read twice — the
+/// condition is the promise to the C compiler, and two spellings of it would
+/// be two promises.
+fn attr_ende(f: &FnDecl, nur_lesend: bool, ganz_rein: bool) -> &'static str {
     if !nur_lesend {
         return "";
     }
@@ -6415,9 +6435,51 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
     }
 }
 
+/// **Lane 197: the attribute over an OMITTED clause.**
+///
+/// Lane 191 derives an omitted `effects` from the body and checks it like a
+/// written one; the emitter kept reading the written word, so `fmt
+/// --explicit`/`--elide` moved the C on every pure leaf. For a body that
+/// calls nothing the derived set IS the deeds — no edges, no inheritance, no
+/// lower bound — said by the same walker the fixpoint runs
+/// (`rumpfwirkungen_mit_ort`, wide, like the checker). Anything the loop
+/// below does not recognise keeps no attribute, as before; a body with a
+/// call anywhere never reaches here (the caller returns earlier).
+fn wirkungsattribut_abgeleitet(f: &FnDecl, b: &Block, u: &Namen) -> &'static str {
+    let taten: Vec<String> = crate::wirkungen::rumpfwirkungen_mit_ort(
+        f,
+        b,
+        &u.welt_konstanten,
+        &u.welt_namen,
+        true,
+    )
+    .into_keys()
+    .collect();
+    let mut nur_lesend = true;
+    let mut ganz_rein = true;
+    for s in &taten {
+        let (verb, ort) = crate::wirkungen::trenne(s.as_str());
+        match verb {
+            "pure" => {}
+            "reads" => {
+                let basis = ort.split(['.', '[', '-']).next().unwrap_or(ort);
+                if liest_geraet(basis, u, f) {
+                    return "";
+                }
+                ganz_rein = false;
+            }
+            _ => {
+                nur_lesend = false;
+                ganz_rein = false;
+            }
+        }
+    }
+    attr_ende(f, nur_lesend, ganz_rein)
+}
+
 /// Nennt diese `reads`-Wirkung ein Geraet -- als Typname, als Parameter oder als Griff?
-fn liest_geraet(o: &Ort, u: &Namen, f: &FnDecl) -> bool {
-    let n = &o.basis.text;
+fn liest_geraet(basis: &str, u: &Namen, f: &FnDecl) -> bool {
+    let n = basis;
     if u.geraete.contains_key(n) || u.geraetezeiger.contains_key(n) || u.geraetewerte.contains_key(n)
     {
         return true;

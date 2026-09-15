@@ -134,6 +134,12 @@ pub use m1::fremdverengungen;
 // and the applier `gabbro pruefe --fix` drives. No pass reads a fix back, so the pass
 // register is untouched by construction.
 pub mod fix;
+// **Lane 197 -- explicitness as a view** (lever 3 of
+// `PLAN-EINFACHHEIT.md`). `gabbro fmt --explicit` writes every settled
+// derived clause out, `gabbro fmt --elide` removes every clause equal to what
+// would be derived. Both read the checker's own derivation and own no refusal,
+// so the pass register is untouched by construction.
+pub mod fmt;
 
 pub mod korpus;
 pub mod manifest;

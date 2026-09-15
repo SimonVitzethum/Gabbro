@@ -262,6 +262,24 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    // --- explicitness as a view, lane 197 --------------------------------------------
+    Fahne {
+        // The two views of `fmt`: `--explicit` writes every settled
+        // derived clause out, `--elide` removes every derivable one.
+        // English from the start, no pairs (B3: new spellings ship no
+        // German second name). No liveness argv on purpose: the views
+        // PRINT the rewritten program, and a liveness call over a
+        // committed file would print it into the test log, not change
+        // the run -- the single spellings need no equality claim either.
+        erstname: "--explicit",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--elide",
+        zweitname: "",
+        lebendig: &[],
+    },
 ];
 
 /// **Every sub-command arm of the dispatch, English name first.**
@@ -286,6 +304,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["effects", "wirkungen"],
     &["costs", "kosten"],
     &["derived", "abgeleitet"],
+    &["fmt"],
     &["alias"],
     &["contexts", "kontexte"],
     &["obligations", "pflichten"],
