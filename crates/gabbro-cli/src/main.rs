@@ -224,6 +224,12 @@ fn main() -> std::process::ExitCode {
         // above it refuses a unit with errors: the derivation over a tree the
         // passes rejected speaks about a program that does not compile.
         "derived" | "abgeleitet" => befehl_abgeleitet(rest),
+        // **Lane 197: explicitness as a VIEW (lever 3 of PLAN-EINFACHHEIT.md).**
+        // `--explicit` writes every settled derived clause out, `--elide`
+        // removes every clause equal to what would be derived. English-only
+        // flags, like `--fix` and `--with`: new spellings ship no German
+        // second name («B3»). Refuses a unit with errors, like `derived`.
+        "fmt" => befehl_fmt(rest),
         // **K100.4, Weg (b): das Uebersetzungszeugnis.** Je Datei die Liste dessen, worauf
         // ihre Absenkung ruht -- Annahmen, Schablonen, direkte Formen. *Es beweist die
         // Uebersetzung nicht; es macht aus „der Erzeuger wird schon" eine Aufzaehlung mit
@@ -741,6 +747,7 @@ const COMMAND_NAMES: &[&str] = &[
     "effects", "wirkungen",
     "costs", "kosten",
     "derived", "abgeleitet",
+    "fmt",
     "contexts", "kontexte",
     "obligations", "pflichten",
     "lean",
@@ -866,10 +873,16 @@ fn hilfe() {
                                     per carrier: are ALL write sites generated? (measurement 2)
   gabbro costs|kosten <file.gab>…   the cost report per routine
   gabbro derived|abgeleitet <file.gab>…
-                                     the DERIVED contract per routine: every omitted
-                                     `effects`/`costs` as the checker derives it, beside
-                                     the written bounds (`(written)` / `(derived)` /
-                                     `(lower bound)` with the refusing code)
+                                      the DERIVED contract per routine: every omitted
+                                      `effects`/`costs` as the checker derives it, beside
+                                      the written bounds (`(written)` / `(derived)` /
+                                      `(lower bound)` with the refusing code)
+  gabbro fmt --explicit|--elide <file.gab>…
+                                      explicitness as a VIEW (lever 3): `--explicit`
+                                      writes every settled derived clause out,
+                                      `--elide` removes every clause equal to what
+                                      would be derived. Same diagnostics, same
+                                      register, same C -- or no view at all
   gabbro build|bau [--testbuild] [--dry-run] [<manifest>]
                                     the build out of a manifest: it computes the unit graph
                                     from `module` and `use` -- never from a manifest line --
@@ -2599,6 +2612,69 @@ fn befehl_abgeleitet(rest: &[String]) -> std::process::ExitCode {
             continue;
         }
         print!("{}", gabbro_check::abgeleitet::zeige(&baum, datei));
+    }
+    if schlecht {
+        std::process::ExitCode::from(1)
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
+}
+
+/// **Lane 197 (`fmt`): explicitness as a VIEW (lever 3 of PLAN-EINFACHHEIT.md).**
+///
+/// `--explicit` writes every settled derived clause out, `--elide` removes
+/// every clause equal to what would be derived. Both are pure views over the
+/// checker's own derivation (`gabbro_check::fmt`): same diagnostics, same
+/// register entries, same C. The checker runs first, for the same reason as
+/// at `derived`: edits over a rejected tree speak about a program that does
+/// not compile.
+fn befehl_fmt(rest: &[String]) -> std::process::ExitCode {
+    let explizit = rest.iter().any(|a| a == "--explicit");
+    let tilge = rest.iter().any(|a| a == "--elide");
+    if explizit == tilge {
+        eprintln!("gabbro fmt: exactly one of `--explicit` and `--elide`");
+        return std::process::ExitCode::from(2);
+    }
+    let mut unbekannt = false;
+    let dateien: Vec<&String> = rest
+        .iter()
+        .filter(|a| {
+            if a.starts_with("--") && a.as_str() != "--explicit" && a.as_str() != "--elide" {
+                eprintln!("gabbro fmt: unknown flag `{a}`");
+                unbekannt = true;
+                false
+            } else {
+                !a.starts_with("--")
+            }
+        })
+        .collect();
+    if unbekannt {
+        return std::process::ExitCode::from(2);
+    }
+    if dateien.is_empty() {
+        eprintln!("gabbro fmt: no file named");
+        return std::process::ExitCode::from(2);
+    }
+    let mut schlecht = false;
+    for datei in dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = true;
+            continue;
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            eprint!("{}", absagen.zeige(&quelle));
+            eprintln!("gabbro fmt: {datei} has errors -- no view");
+            schlecht = true;
+            continue;
+        }
+        if explizit {
+            print!("{}", gabbro_check::fmt::explicit(&baum, &quelle));
+        } else {
+            print!("{}", gabbro_check::fmt::elide(&baum, &quelle));
+        }
     }
     if schlecht {
         std::process::ExitCode::from(1)
