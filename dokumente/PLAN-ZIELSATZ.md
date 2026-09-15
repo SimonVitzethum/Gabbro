@@ -190,6 +190,21 @@ the corpus. An extension that stays in the fragment nominally but moves most of 
 into user logic has left it in practice. For noninterference this is the deciding number: it is
 the product promise only if the checker supplies its premises.
 
+**The first extension the rule REFUSED, and the number that refused it (2026-09-15).** A
+product/record former in `Ty` — so that `impl fn f(…) -> Completion` can travel — was priced
+by this rule and did not pass it. The measure §8 demands is the obligation count booked before
+and after *on its examples and on the corpus*; the measure that decided it came one step
+earlier, because **the extension generates no obligations at all until some program reaches
+it**. Measured by applying a probe that skips every product-shaped refusal and re-running the
+whole 113-program sweep: **sieve (b) stays 15 of 113 — zero programs gained** (and zero under
+a generous variant that also skips the array and function-pointer record fields a product
+would not close). The booked BEFORE number stands for whoever takes it up later:
+`gabbro obligations` reads **1** obligation on `beispiele/21-verbundwert` (1 precondition,
+open) and **126** over the corpus; nothing was built, so AFTER is the same. Named absence,
+`OFFEN.md` `O15`; the report is `messung/muse/OPUS-BERICHT-PRODUKT.md`. *An extension that
+stays in the fragment and pays for nothing has still left the fragment poorer, because the
+re-proof of every leg of `Ziel` is its price.*
+
 **One assumption list.** Every runtime or hardware assumption goes into the SAME named list:
 - the lock primitives (acquire/release, happens-before);
 - thread creation;
