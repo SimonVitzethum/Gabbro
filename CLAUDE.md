@@ -1,5 +1,22 @@
 # Gabbro — Arbeitsanweisungen
 
+## Der Arbeitsrechner ist seit dem 2026-09-15 der Server, nicht der Laptop
+
+**Die Sitzung läuft auf `ubuntu@simon.jocraft.cc`** (Hostname `GaussBerechnungen`), Baum
+`/home/ubuntu/Gabbro`, in der tmux-Sitzung `Claude-Gabbro`. *Gemessen am 2026-09-15:*
+`free -g` meldet **15 GB gesamt, 9 GB verfügbar** (4 GB davon hält der Minecraft-Server),
+`df -h /` **39 GB frei**.
+
+**Damit gilt die Regel darunter STRENGER als vorher, nicht schwächer:** neun Gigabyte sind
+kein Rechner für einen Beweislauf, und **Isabelle liegt auf diesem Rechner gar nicht**. Jeder
+Lean-Bau, jeder `cargo`-Lauf und jeder Isabelle-Lauf geht über SSH auf `ki-pc-fisch-101` —
+von hier aus **direkt erreichbar** (eigener Schlüssel `~/.ssh/id_ed25519_fisch`), ohne
+Sprunghost. `git push` geht über `~/.ssh/id_ed25519_github`.
+
+*Wer `./instrumente/abnahme.py --voll` hier fährt, misst `pruefe-beweise.sh` ohne Isabelle* —
+und das ist **`OHNE NACHWEIS`, kein Befund**. Die volle Abnahme gehört auf `fisch`, mit beiden
+Übertragungen (`crates`-Baum und `beweise/`), wie im nächsten Abschnitt.
+
 ## Rechenlast gehört auf `ki-pc-fisch-101`
 
 **Alles, was rechnet, läuft über SSH auf `ki-pc-fisch-101`** — dort stehen **128 GB RAM**
@@ -220,8 +237,15 @@ Commit-Historie wird NICHT umgeschrieben -- sie ist ein Protokoll, kein Dokument
 * **Caprock liegt schreibgeschützt** in `../caprock-messbasis` (Zweig `arch/x86_64`) —
   **nie hineincommitten.** Korrekturvorschläge stehen im Protokoll, nicht im fremden Baum.
 * **`aarch64` bleibt versiegelt** („blockiert — Abstammung"), kein dritter Anlauf.
-* Isabelle2025-2 liegt lokal unter `/home/simon/Isabelle2025-2` **und seit dem 2026-08-19
-  auch unter `~/Isabelle2025-2` auf `ki-pc-fisch-101`**; **kein AFP**.
+* **Der Isabelle-Teil ist nach Lean übertragen, und die `.thy`-Menge ist damit eingefroren.**
+  *Gemessen am 2026-09-15:* `beweise/*.thy` zählt **15** Theorien, `grammatik/Grammatik/Isabelle/`
+  zählt **15** Lean-Dateien, und `grammatik/Grammatik.lean` importiert alle fünfzehn — der
+  Lean-Bau prüft sie also bei jedem Lauf mit (Bahnen 168 und 169, `messung/muse/MUSE-REPORT-168.md`
+  und `-169.md`, mit Treue-Tabelle je Satz). **Ein neuer Beweis gehört nach Lean, nicht nach
+  `beweise/`.** Der Ordner bleibt stehen als Protokoll und als Gegenprobe; `pruefe-beweise.sh`
+  fährt ihn weiter — *auf `fisch`, denn nur dort liegt Isabelle.*
+* Isabelle2025-2 liegt auf dem Laptop unter `/home/simon/Isabelle2025-2` **und seit dem 2026-08-19
+  auch unter `~/Isabelle2025-2` auf `ki-pc-fisch-101`**; **auf `ubuntu` nicht**; **kein AFP**.
   *Ohne `sudo` installiert* — Isabelle bringt sein eigenes JDK mit, `java` gibt es auf dem
   Rechner gar nicht. **Ein Passwort war dafür nicht nötig und wurde nicht benutzt.**
   Übertragen mit `rsync -a --delete ~/Isabelle2025-2/ ki-pc-fisch-101:Isabelle2025-2/` —
