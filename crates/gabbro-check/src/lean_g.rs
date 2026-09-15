@@ -363,10 +363,10 @@ pub(crate) struct TableModel {
     pub(crate) count: i128,
     pub(crate) fields: Vec<FieldModel>,
     /// **This table is a RECORD** (`type Zelle = { wert : u32 };`), lowered
-    /// as `Syntax.lean` §1/§9 says: *"ein `format` und ein Verbund sind
-    /// Tabellen mit `count 1`"*. It differs from a declared `table` only in
-    /// how it is SPELLED at a use: `p->f` instead of `T.slots[i].f`, and a
-    /// bare `writes p` instead of `writes T.slots`.
+    /// as the sentence of `Syntax.lean` §1/§9 quoted in the module header
+    /// says. It differs from a declared `table` only in how it is SPELLED at
+    /// a use: `p->f` instead of `T.slots[i].f`, and a bare `writes p`
+    /// instead of `writes T.slots`.
     pub(crate) record: bool,
 }
 
@@ -714,8 +714,9 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
                         ),
                     ));
                 };
-                // **A RECORD is a carrier, not a value** (`Syntax.lean` §1/§9:
-                // "ein `format` und ein Verbund sind Tabellen mit `count 1`").
+                // **A RECORD is a carrier, not a value** -- a `Tab` with
+                // `count 1`, per the sentence of `Syntax.lean` §1/§9 quoted
+                // in the module header.
                 // It is built in the walk below, where the model is; here it
                 // only has to stop being read as an integer alias.
                 if matches!(r, TypExpr::Verbund(..)) {
@@ -925,8 +926,9 @@ pub(crate) enum ParamTy {
     Index { table: usize },
     Int { lo: i128, hi: i128, bits: Option<u32> },
     Bool,
-    /// A `tagged` value passed BY VALUE (`Ty.sum`) -- what `beispiele/34`
-    /// calls "als PARAMETER: der markierte Wert wird uebergeben".
+    /// A `tagged` value passed BY VALUE (`Ty.sum`) -- the shape
+    /// `beispiele/34` names as "as a PARAMETER": the marked value is handed
+    /// over, not reached through a pointer.
     Sum { name: String, cases: Vec<(String, Option<(i128, i128)>)> },
 }
 
@@ -1458,7 +1460,7 @@ fn read_table(t: &Tabelle, scope: &Scope) -> Result<TableModel, Refusal> {
 }
 
 /// **A RECORD is a `Tab` with `count 1`** -- `Syntax.lean` §1/§9 in as many
-/// words: *"ein `format` und ein Verbund sind Tabellen mit `count 1`"*.
+/// words; the sentence is quoted once, in the module header.
 ///
 /// The record NAME becomes the table name, each record field a slot field,
 /// and the one slot is index `0`. That is the whole lowering: a read `p->f`
@@ -2374,11 +2376,15 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
             return Err(refuse("LG003", format!("place {} in {fname} has no G form", o.text())));
         };
         let t = *table;
+        // The G form is `Expr.durch`, which carries a slot INDEX. A record has
+        // exactly one slot and the index is `0`; a table has `count` of them,
+        // and no index is written here -- so the message names the surface
+        // spelling that supplies one, which is what a user can act on.
         if !model.tables[t].record {
             return Err(refuse("LG003", format!(
-                "`{}` in {fname} reaches THROUGH a pointer to the table {}, which is no record: \
-                 a table access names its slot (`{}.slots[i].{}`), and `Expr.durch` needs that \
-                 index", o.text(), model.tables[t].name, o.basis.text, f.text)));
+                "`{}` in {fname} reaches past a pointer to the table {}, which is no record: a \
+                 table has `count` slots and the access must name one, so write \
+                 `{}.slots[i].{}`", o.text(), model.tables[t].name, o.basis.text, f.text)));
         }
         let Some(fi) = model.tables[t].fields.iter().position(|fd| fd.name == f.text) else {
             return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));

@@ -1339,6 +1339,7 @@ fn refuses_arrow_through_a_table_pointer() {
     let w = export("leang_recT", &tree(q)).expect_err("must refuse");
     assert_eq!(w.code, "LG003", "{w}");
     assert!(w.message.contains("no record"), "{w}");
+    assert!(w.message.contains(".slots[i]."), "the refusal names the spelling that works: {w}");
 }
 
 /// **LG001 -- the linear family is refused BY NAME, with its fields**
