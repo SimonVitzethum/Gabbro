@@ -25,9 +25,13 @@ premise stated about the C unit of the TEXT. **A2 is no longer an assumption of 
 chains.** What remains is *"the C compiler's front end reads this subset as `parseC` does"*,
 which is part of A1.
 
-Standards: no `sorry`, no `native_decide`, no new `axiom`; every new theorem prints the
-standard three axioms (two print fewer); every theorem with a ∀-over-syntax premise has a
-witness; `lake build` of the whole library: **247 jobs, green, peak 2,9 GB**.
+Standards: no `sorry`, no `native_decide`, no new `axiom`; **every one of the 44 new
+theorems has a `#print axioms` line**, and every one prints the standard three or fewer
+(`lexC_total` and `lcEq_eq`: `propext` only; `kProg_kFuns`, `a2_104_gegenprobe_korr`:
+`propext`, `Quot.sound`); every theorem with a ∀-over-syntax premise has non-degenerate
+witnesses, named at the theorem (`lexC_total` → the 14 lexer probes; `parseC_total` → the
+seven refusals and the two pins on the real texts; `schlusssatz_text` → the two
+`kette_*_zeuge_text`); `lake build` of the whole library: **247 jobs, green, peak 2,9 GB**.
 
 ---
 
@@ -232,8 +236,15 @@ one line**, and that line is a number my change moved:
 | `pruefe-zahlen.py` | 27 findings | **23** | four stale figures re-measured and booked: README `65 of 68 → 68 of 71`, RUECKLAUFWERTE `61 von 66 → 65 von 71` and `376 → 409`. **Three of those four instruments came from lanes BEFORE this one** and stood unbooked — the note says so; a figure that books only its own share stays wrong and looks booked |
 | every other guardian | — | identical, including the pre-existing reds | — |
 
-`zaehle-kette.py` without `--lean` reports 0 (unmeasured counts as not passed) in both trees;
-the chain count of record stays 2 (§1.3).
+`zaehle-kette.py` without `--lean` reports 0 in both trees (unmeasured counts as not passed),
+and WITH `--lean` it aborts in both trees alike — *"the Lean measurement of column (a) did not
+answer for every program"*. That is an artefact of measuring in an rsynced copy (no
+repository, so `korpus.py` falls back to the directory blacklist and counts 113 files
+including untracked ones), not of this branch: **base and branch abort identically**. The
+chain count of record therefore stands at 2 from the merge that measured it, and nothing here
+touches the counter's five sieves — the `schlusssatz kette_104` / `kette_108` applications it
+greps for are still in place (the new theorems are named `schlusssatz_text`, which its
+pattern `\bschlusssatz\s+` deliberately does not match).
 
 ---
 

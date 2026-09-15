@@ -70,4 +70,12 @@ theorem parseC_kein_volatile :
 theorem parseC_loch :
     parseC (vorspann ++ "static void f(void) __attribute__((unused));\n".toList) = none := rfl
 
+#print axioms Gabbro.Grammatik.CParser.parseC_leer
+#print axioms Gabbro.Grammatik.CParser.parseC_ohnePin
+#print axioms Gabbro.Grammatik.CParser.parseC_kein_if
+#print axioms Gabbro.Grammatik.CParser.parseC_keine_rechnung
+#print axioms Gabbro.Grammatik.CParser.parseC_kein_let
+#print axioms Gabbro.Grammatik.CParser.parseC_kein_volatile
+#print axioms Gabbro.Grammatik.CParser.parseC_loch
+
 end Gabbro.Grammatik.CParser

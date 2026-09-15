@@ -173,6 +173,7 @@ theorem kette_108_zeuge_text :
 #print axioms Gabbro.Grammatik.CText108.a2_108
 #print axioms Gabbro.Grammatik.CText108.cprog_108
 #print axioms Gabbro.Grammatik.CText108.a2_108_gegenprobe
+#print axioms Gabbro.Grammatik.CText108.a2_108_gegenprobe_korr
 #print axioms Gabbro.Grammatik.CText108.kette_108_binaer_text
 #print axioms Gabbro.Grammatik.CText108.kette_108_zeuge_text
 

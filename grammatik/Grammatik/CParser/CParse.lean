@@ -608,4 +608,12 @@ theorem cProgC_eq {cs : List Char} {fs : List CFun} (h : parseC cs = some fs) :
     cProgC cs = fun n => fs[n]? := by
   unfold cProgC; rw [h]; rfl
 
+-- **THE WITNESS OBLIGATION of `parseC_total`** (rule 13): the ∀ is over syntax --
+-- every character list -- and the witnesses are `CParser/CProben.lean` (seven
+-- refusals and the smallest accepted unit) and the two pins `a2_104`/`a2_108` on
+-- the REAL emitted texts. Neither is degenerate: the pins move memory
+-- (`kette_104_zeuge_text`), the refusals name forms the emitter really writes.
+#print axioms Gabbro.Grammatik.CParser.parseC_total
+#print axioms Gabbro.Grammatik.CParser.cProgC_eq
+
 end Gabbro.Grammatik.CParser
