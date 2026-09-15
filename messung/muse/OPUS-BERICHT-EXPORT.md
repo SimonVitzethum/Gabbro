@@ -94,6 +94,8 @@ reason:
 2. **`opaque` (9) + exclusive range (7)** — two one-line causes, 16 first-refusals between them.
 3. **the arena (2)** — `O14`, named in the assignment.
 4. **`RufPasst.hb` (2)** — decide defect or rule, with the measurement.
+4b. **the catch-all arm** — every remaining item kind refused BY NAME, with the form the
+   specification would carry it as (§2.6).
 5. **records (11)** — class (i), NOT done here: a record type changes the shape of every
    `x.f` access, the `Tab count 1` lowering, `count`, the footprint and the guard proofs. It is
    a lane of its own and is booked as such, not as an oversight.
@@ -246,6 +248,31 @@ inside an `if`, `reset`, `A[i]`, the declaration): exported and **compiled** und
 `lake env lean`. `Grammatik.ArenaZucker` had to be built first — *no export had ever imported
 it.*
 
+### 2.6 No item kind leaves through a catch-all
+
+`collect`'s last arm was `other => "{} has no G form"`. It named the KIND and nothing else:
+not the item, not what the specification would carry it as, not what is missing. **Twenty-two
+of the 101 remaining refusals came out of it.**
+
+Each kind now has its own arm, naming the item (where the kind has a name) and the
+`Deklaration`/`Syntax.lean` form it would travel as — `device` → `D.Reg` +
+`Block.regLies`/`Stmt.regSchreib`; `assume` → `D.Annahme`, consumed only at `forever` and
+`retires`; `format` → a `Tab` with `count 1` and `where` as `Block.pruefung`; `atomic` → a
+`Glob` with `atomar`/`nutzlast` plus publish/awaits/exchange; `group` → a `D.Inv` over more
+than one carrier; `accumulates` → a `Glob` plus a generated assignment; `state` → `D.erlaubt`
++ `Stmt.uebergang`; `axiom`/`entrust`/`syscall` → `D.Ax` + `axiomCall`/`bindAxiom`; `check` →
+a `Duty` mark consumed by `gates`; `rcu` → a `D.Lock` whose `observes` is `Stmt.locks`;
+`walk` → one `Stmt.traverse` per level; `profile` → named assumptions, which `Deklaration`
+carries only as `D.Annahme`; `use` → another UNIT, and `Deklaration` has no unit boundary.
+
+Measured on `beispiele/112`:
+
+> `[LG001] device Geraet has no G form: a device is `D.Reg` with
+> `rtyp`/`rklasse`/`spiegel`/`rzusage`, and its accesses are
+> `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg``
+
+**Measured: sieve (b) 12 → 12** — *a message is not a form.*
+
 ---
 
 ## 3. What now stops the 101 refusals
@@ -335,7 +362,7 @@ claimed.*
 
 ---
 
-## 6. The five commits
+## 6. The seven commits
 
 1. `MEASURE:` the 113-program sweep grouped by cause — the table of §1, no code.
 2. `EXPORT:` a scalar `static` is a `Glob` (§2.1).
@@ -343,5 +370,8 @@ claimed.*
 4. `EXPORT:` the lock floor is a CHOICE, and the exporter made the worst one — sieve (b)
    10 → 12, plus the four exports that never typechecked (§2.3, §2.4).
 5. `EXPORT:` O14 — the arena travels as its PAIR (§2.5).
+6. `REPORT:` this file, plus the re-measured sieve totals in
+   `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.5.
+7. `EXPORT:` no item kind leaves through a catch-all (§2.6).
 
 Nothing was merged and nothing was pushed.
