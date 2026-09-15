@@ -107,9 +107,169 @@ theorem probe_blOk_let :
       [.bindLet 2 bU32c (.var 1), .setVar 0 bU32c (.var 2)] = false := by
   decide
 
+/-! ## 3. `let y = g(a);` -- the call whose ANSWER is bound
+
+    `wD` has no functions at all (`Fn := Empty`), so the row that binds a
+    call's answer needs its own fixture: `cD` is `wD` with ONE function
+    `g(a : u32) -> u32` (signature `1`; signature `0` is the caller's).
+    The certificate gives `g` C function number `0`, one parameter in C
+    local `0`, and the exporter's map. -/
+
+def cD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 4
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => wU32
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Bool
+  decGlob := inferInstance
+  gtyp := fun _ => wU32
+  nutzlast := fun _ => []
+  atomar := fun g => g
+  geteilt := fun _ => false
+  ggeteilt := fun _ => false
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun _ => []
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 1
+  sigNr := fun n =>
+    match n with
+    | 0 =>
+      { params := [wU32, wU32], erg := none, gruende := 0, haelt := [],
+        schreibt := fun _ => true, gschreibt := fun _ => true, konsumiert := [],
+        produziert := [] }
+    | _ =>
+      { params := [wU32], erg := some wU32, gruende := 0, haelt := [],
+        schreibt := fun _ => true, gschreibt := fun _ => true, konsumiert := [],
+        produziert := [] }
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g h => by simp at h
+
+def cEL : EmitLay cD where
+  lay := wLay
+  tnr := fun _ => 0
+  tnr_inj := fun t t' _ => by cases t; cases t'; rfl
+  trec := fun _ => wRec
+  lay_tab := fun _ => rfl
+  trec_wf := fun _ => by decide
+  trec_count := fun _ => rfl
+  fnr := fun _ _ => 0
+  fnr_lt := fun _ _ => by decide
+  fnr_inj := fun _ f f' _ => by cases f; cases f'; rfl
+  fnr_fits := fun _ _ => rfl
+  gnr := fun g => cond g 1 0
+  gnr_inj := fun g g' h => by
+    cases g
+    · cases g'
+      · rfl
+      · exact absurd h (by decide)
+    · cases g'
+      · exact absurd h (by decide)
+      · rfl
+  gty := fun _ => .int false .w32
+  lay_glob := fun g => by cases g <;> rfl
+  gty_fits := fun _ => rfl
+
+def cK : CEnvLay cD wCtx := ⟨[0, 1], [], []⟩
+
+/-- The CALLER's contract (signature `0`). -/
+abbrev cV : Vertrag cD := Vertrag.vonSig cD (cD.sigNr 0)
+
+/-- `g` is C function number `0`. -/
+def cFnum : cD.Fn → Nat := fun _ => 0
+
+/-- The certificate: one function, one `u32` parameter in C local `0`, the
+    exporter's map (`callMapOk`). Its own rows are not read by the call
+    row's arm, so they are empty here. -/
+def cZert : KCert cD :=
+  [{ params := [(0, bU32c)], locals := [], rows := [], vm := [0], pp := [], ks := [] }]
+
+def cx0 : Expr cD wCtx [] wU32 := .var .hier
+
+theorem cHp : RufPasst cD cV (cD.signatur ()) [] where
+  hw := fun _ _ => rfl
+  hg := fun _ _ => rfl
+  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hh := fun L => nomatch L
+
+/-- `let y = g(a); a = y;` -- the answer is bound to a fresh local AND the
+    row after it reads exactly that local. -/
+def cLetCall : Block cD cV false wCtx [] [] :=
+  .bindCall () (.cons cx0 .nil) rfl cHp rfl
+    (.cons (Stmt.assignVar (.dort .hier) (Expr.var .hier)) .nil)
+
+/-- The call-with-answer row, accepted and refused. PLANTED DEFECTS, in
+    order: the answer bound to a local the FOLLOWING ROW does not read
+    (the wrong local -- the check sees it because the rows after the
+    binder are read under the PUSHED map); the answer bound to a
+    parameter (not fresh); the wrong C function number; the wrong
+    argument; the wrong declared C type; and the answer DISCARDED, which
+    is a different C statement and a different Gabbro form. -/
+theorem probe_bindCall :
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 0] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = true ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 0] (some (3, bU32c)), .setVar 0 bU32c (.var 2)] = false ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 0] (some (1, bU32c)), .setVar 0 bU32c (.var 1)] = false ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 1 [.var 0] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = false ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 1] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = false ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 0] (some (2, .int false .w16)), .setVar 0 bU32c (.var 2)] = false ∧
+    blOk cEL cFnum cZert cK cLetCall
+      [.call 0 [.var 0] none, .setVar 0 bU32c (.var 2)] = false := by
+  decide
+
+/-- The callee's map must be its C PARAMETER LIST (`callMapOk`): a
+    certificate whose callee carries a map that is not the parameter list
+    is refused at the call site, and so is a missing callee. -/
+def cZertKrumm : KCert cD :=
+  [{ params := [(0, bU32c)], locals := [], rows := [], vm := [1], pp := [], ks := [] }]
+
+def cZertLeer : KCert cD := []
+
+theorem probe_bindCall_karte :
+    blOk cEL cFnum cZertKrumm cK cLetCall
+      [.call 0 [.var 0] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = false ∧
+    blOk cEL cFnum cZertLeer cK cLetCall
+      [.call 0 [.var 0] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = false := by
+  decide
+
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_ite
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_ite_fremd
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_blOk_void
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_blOk_let
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_bindCall
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_bindCall_karte
 
 end Gabbro.Grammatik.BlockZeuge

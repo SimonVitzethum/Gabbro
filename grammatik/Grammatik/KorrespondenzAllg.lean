@@ -43,7 +43,9 @@
 
   BLOCK STRUCTURE 2026-09-15 (`OPUS-BERICHT-BLOCK.md`). The check walks
   BLOCKS as well as terminal blocks: `if (c) { … } else { … }`
-  (`GRow.ite` against `Stmt.ite`) is decided arm by arm. A row that
+  (`GRow.ite` against `Stmt.ite`) is decided arm by arm, and inside a
+  block `T y = g(a);` (`GRow.call` with a destination against
+  `Block.bindCall`) binds the callee's answer to a fresh C local. A row that
   carries rows needs a recursion, and the recursion is STAGED, not
   mutual: `stOk0` (flat, no recursion) -> `blOk` (self-recursive over the
   rows, structurally) -> `stOk` (`stOk0` plus the block arms) -> `enOk`
@@ -347,6 +349,16 @@ def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
       | .bindLet y τc ce => (match b with
           | .bind (τ := τ) e rest =>
               K.okB && K.freshB y && declOk τ τc && exOk EL K e ce &&
+                blOk (K.push τ y) rest rs
+          | _ => false)
+      -- `T y = g(a, b);` -- the call whose ANSWER is bound. `Endblock` has
+      -- no such constructor, so this row can only ever stand in a block.
+      | .call fc cargs (some (y, τc)) => (match b with
+          | .bindCall (τ := τ) g args _ _ _ rest =>
+              decide (fc = fnum g) && K.okB && K.freshB y && declOk τ τc &&
+                (match c[fnum g]? with
+                  | some k => callMapOk k && argsOk EL K args cargs k.params
+                  | none => false) &&
                 blOk (K.push τ y) rest rs
           | _ => false)
       | r => (match b with
@@ -1228,6 +1240,40 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
                   exact BlockCorr.bind hK hf (exOk_sound X K₀ e ce he) hd
                     (ih.2 mm _ rest rs' hrs hrest)
               | _ => exact absurd h (by simp [blOk])
+          | call fc cargs dst =>
+              cases dst with
+              | none =>
+                  cases b with
+                  | cons s rest =>
+                      simp only [blOk, Bool.and_eq_true] at h
+                      exact BlockCorr.cons (h1 mm K₀ s _ (by omega) h.1)
+                        (ih.2 mm K₀ rest rs' hrs h.2)
+                  | _ => exact absurd h (by simp [blOk])
+              | some q =>
+                  obtain ⟨y, τc⟩ := q
+                  cases b with
+                  | bindCall g args heq hp hrp rest =>
+                      simp only [blOk, Bool.and_eq_true] at h
+                      obtain ⟨⟨⟨⟨⟨hfc, hK⟩, hf⟩, hd⟩, hk⟩, hrest⟩ := h
+                      have hfc' : fc = fnum g := of_decide_eq_true hfc
+                      subst hfc'
+                      cases hc : c[fnum g]? with
+                      | none => rw [hc] at hk; exact absurd hk (by simp)
+                      | some k =>
+                          rw [hc] at hk
+                          simp only [Bool.and_eq_true] at hk
+                          obtain ⟨hmap, ha⟩ := hk
+                          simp only [callMapOk, Bool.and_eq_true, List.isEmpty_iff] at hmap
+                          obtain ⟨⟨⟨hvm, hpp⟩, hks⟩, hnd⟩ := hmap
+                          have hlay : (k.lay : CEnvLay D (D.params g)) =
+                              ⟨k.params.map Prod.fst, [], []⟩ := by
+                            simp only [KFun.lay, of_decide_eq_true hvm, hpp, hks]
+                          have hFk := hF g k hc
+                          rw [hlay] at hFk
+                          exact BlockCorr.sem (bsem_bindCall X K₀ mm g args heq hp hrp rest hFk
+                            (argsTo_of X K₀ args cargs k.params ha (of_decide_eq_true hnd))
+                            hK hf hd (cCorr_block X mm (ih.2 mm _ rest rs' hrs hrest)))
+                  | _ => exact absurd h (by simp [blOk])
           | _ =>
               cases b with
               | cons s rest =>
@@ -1369,9 +1415,11 @@ CUTS -- what this file does not do, by name.
     yet; `scorr_traverse` is proved, and its side conditions (the loop
     bound, the loop variable fresh and not written by the body) are all
     decidable.
-  * `let x = f(…)` (`bindCall`) is a `Block` constructor and not an
-    `Endblock` one. `blOk` now walks blocks, so the arm is reachable --
-    but it is not written yet. `bsem_bindCall` is proved.
+  * `let x = f(…)` (`bindCall`) is a `Block` constructor and NOT an
+    `Endblock` one, so it is checked in `blOk` and nowhere else: a body
+    whose TOP level binds a call's answer is not expressible in the model
+    at all, and inside an `if` arm or a loop body it is. The arm ends in
+    `bsem_bindCall`.
   * `!=` (`.cmp .ne`): Gabbro's `Zucker.ne a b` is `nicht (eq a b)`, so the
     arm would have to look THROUGH the negation at its operands, and the
     soundness proof would need the induction hypotheses of those operands
