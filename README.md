@@ -222,7 +222,12 @@ This section exists because the alternative is that a reader has to find it out.
     race conjunct (P3). All three are repaired (SATZKARTE §22). The fourth round found one more
     unnamed gap -- an out-of-range float literal emptied the obligation through a "hardware"
     stop (F1) -- plus a global-only deadlock leg (F2) and unlisted stop classes (F3); all
-    repaired, `gabbro_ziel` re-proved (SATZKARTE §23). A confirmation round is running.
+    repaired, `gabbro_ziel` re-proved (SATZKARTE §23). The fifth round found that decoding
+    (einpassen) did not cover sums, floats and function pointers (G1, repaired, SATZKARTE §24).
+    The sixth round -- both reviewers independently, a systematic sweep -- reads *the goal with
+    named gaps, no unnamed gap found*; its one remark, answers at empty types (W1), is closed in
+    the Lean checker Bool (component `antwortenB`, SATZKARTE §25) and in the Rust checker
+    (`N310`–`N314`). Tag `milestone-2026-09-15-zielsatz-bestaetigt`.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
 - **The chain of section 4 is closed for one program.** `beispiele/104`, theorem
