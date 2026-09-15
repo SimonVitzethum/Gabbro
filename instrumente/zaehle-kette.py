@@ -401,6 +401,39 @@ def selbsttest():
     ok_mu = muell is None
     ok = ok and ok_mu
     print(f"  planted garbage stays unclassified: {'yes' if ok_mu else 'NO'}")
+    # **The aggregate rows, in BOTH directions** (planted 2026-09-15): the same statement
+    # TEXT must land in a different row depending on the C TYPE around it, and a scalar
+    # must NOT be swept into the aggregate rows. A guard that only proves the new rows can
+    # fire proves nothing about the old ones.
+    agg_src = ("typedef struct {\n    uint32_t id;\n} P;\n"
+               "typedef enum {\n    E_A,\n} E;\n"
+               "static P baue(uint32_t k) {\n"
+               "    return (P){ .id = k };\n"
+               "}\n"
+               "static uint32_t lies(P p, E e) {\n"
+               "    P q = baue(1);\n"
+               "    nimm(q);\n"
+               "    return p.id;\n"
+               "}\n")
+    agg_unit = _PC.Unit(agg_src)
+    agg_bodies = {b.name: b for b in agg_unit.bodies}
+    agg_faelle = [
+        ("baue", "return (P){ .id = k };", "stmt:return-aggregate", "uncovered"),
+        ("lies", "P q = baue(1);", "stmt:bind-aggregate", "uncovered"),
+        ("lies", "nimm(q);", "stmt:call-aggregate-arg", "uncovered"),
+        # the counter-direction: the SCALAR return of the very same unit stays where it was
+        ("lies", "return p.id;", "stmt:return-expr", "lemma"),
+    ]
+    ok_agg = agg_unit.aggregates == {"P"}      # a `typedef enum` is a scalar, not an aggregate
+    print(f"  the unit's aggregate types are exactly {{P}} (the enum is not one): "
+          f"{'yes' if ok_agg else 'NO'}")
+    for fn, text, form, zustand in agg_faelle:
+        b = agg_bodies.get(fn)
+        gefunden = _PC.classify_stmt(text, agg_unit, False, None, b)
+        gut = gefunden == form and _PC.form_state(gefunden) == zustand
+        ok_agg = ok_agg and gut
+        print(f"  {text[:50]:52s} -> {gefunden} / {zustand}: {'yes' if gut else 'NO'}")
+    ok = ok and ok_agg
     # `(void)f(a);` is ONE call statement, not a call inside an expression (found
     # 2026-09-15 on 104's `(void)lies(k, i);`), while a call inside a condition stays one.
     void_ruf = "(void)lies(k, i);"
@@ -545,12 +578,15 @@ def main():
             unit = _PC.Unit(src)
             formen = set()
             unklass = 0
-            for _fname, kanal, zeilen_c in unit.bodies:
+            for koerper in unit.bodies:
                 zellen = set()
                 prev = None
-                for ln in zeilen_c:
+                for ln in koerper.lines:
                     for s in _PC.split_statements(ln):
-                        form = _PC.classify_stmt(s, unit, kanal, prev)
+                        # the body is what carries the C TYPES (return type, aggregate-typed
+                        # names); without it the classifier falls back to text alone and
+                        # books an aggregate under a scalar lemma (repaired 2026-09-15)
+                        form = _PC.classify_stmt(s, unit, koerper.channel, prev, koerper)
                         prev = form
                         if form is None:
                             unklass += 1

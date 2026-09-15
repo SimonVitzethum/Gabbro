@@ -3531,7 +3531,12 @@ bytes; and red on a single changed byte, green again after restoring.
 hypothesis it had -- `Kette src`, `hH`, `hXR`, `hA1`, `hA4` -- and gained three conclusions
 between part 4 and part 5. Nothing was weakened; `schlusssatz_104` and `schlusssatz_124` are
 untouched, and the chain count is unchanged at **2 of 113** (`zaehle-kette.py --lean`:
-(a) 2, (b) 15, (c) 15, (d) 60, (e) 2).
+(a) 2, (b) 15, (c) 15, (d) ~~60~~ **55**, (e) 2).
+
+> *The 60 was measured with a guardian that classified a C statement by its TEXT and booked an
+> aggregate value under a scalar lemma; it reads 55 since the repair of 2026-09-15
+> (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10, `OFFEN.md` `O16`). **The chain count is
+> unchanged** -- the two closed chains carry no aggregate.*
 
 | clause | text | proved by |
 |---|---|---|
