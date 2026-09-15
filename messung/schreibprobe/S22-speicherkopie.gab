@@ -1,0 +1,74 @@
+-- S22 -- THE STANDARD LIBRARY'S FIRST FUNCTION: A MEMORY COPY.
+--
+-- `TODO.md` §0 defers the standard library and names what is missing: *"no
+-- memory copy, no ring buffer, no queue, no strings"*. A memory copy is the
+-- one every other entry needs, so it is the honest first probe.
+--
+-- MEASURED. Both functions below are accepted with **0 errors** and both emit.
+--
+-- (1) `kopiere` -- the whole table, slot by slot. The emitted C is
+--
+--       for (uint32_t i = 0; i < (uint32_t)(sizeof(Quelle_speicher.slots)
+--                                    / sizeof(Quelle_speicher.slots[0])); i += 1) {
+--           Ziel_speicher.slots[i].w = Quelle_speicher.slots[i].w;
+--       }
+--
+--     -- a real copy, with the index range carried by the domain and no
+--     bound check in sight, because there is nothing to check.
+--
+-- (2) `kopiere_n` -- `n` slots where `n` is an ARGUMENT. Also accepted, and
+--     the price is in the artefact: the loop still runs the full `count`, with
+--     `if (i < n)` inside it. A `memcpy(dst, src, 1)` over a 64-slot table
+--     costs 64 passes. The `traverse` bound comes from the table's static
+--     `count` (that is what makes it terminate without a counter), so a
+--     domain the caller sizes does not exist; the alternative is a `retry`
+--     with the index hand-threaded and its range re-proved at every use.
+--
+-- WHAT IS NOT WRITABLE is neither of those two -- it is the THIRD thing a
+-- library needs: **one copy for every table.** `Queue(T)` is not a type
+-- parameter (report row 13: `type Quelle(T)` is accepted, its C is
+-- byte-identical to the unparameterised one, and using `T` in a field is
+-- `[C001] no lowering: field type`). So the standard library's memory copy is
+-- writable, and it is writable ONCE PER (source, target) PAIR.
+--
+-- That is the shape of the deferral in `TODO.md` §0: the mechanism is there
+-- (`library fn` with `payload`), and the content would be a table of copies
+-- as long as the list of table shapes.
+
+module schreibprobe::speicherkopie {
+
+const N : u32 = 64;
+
+type Wort   = u32 in 0 .. 4294967295;
+type Laenge = u32 in 0 .. 64;
+
+table Quelle count N { slot { w : Wort, } }
+table Ziel   count N { slot { w : Wort, } }
+
+-- (1) The whole table.
+impl fn kopiere()
+    effects { reads Quelle, reads Quelle.slots, writes Ziel.slots }
+    costs   <= 512 ops
+{
+    traverse i over slots of Quelle by unvisited
+        touches reads Quelle.slots, writes Ziel.slots
+    {
+        Ziel.slots[i].w = Quelle.slots[i].w;
+    }
+}
+
+-- (2) `n` slots, `n` an argument -- and 64 passes either way.
+impl fn kopiere_n(n : Laenge)
+    effects { reads Quelle, reads Quelle.slots, writes Ziel.slots }
+    costs   <= 1024 ops
+{
+    traverse i over slots of Quelle by unvisited
+        touches reads Quelle.slots, writes Ziel.slots
+    {
+        if i < n {
+            Ziel.slots[i].w = Quelle.slots[i].w;
+        }
+    }
+}
+
+}

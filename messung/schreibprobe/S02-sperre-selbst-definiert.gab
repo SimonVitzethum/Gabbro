@@ -1,0 +1,86 @@
+-- S02 -- DEFINE THE LOCK PRIMITIVE THAT THE EMITTER DECLARES.
+--
+-- `laufzeit/sperre.gab` writes the ticket lock in Gabbro and it is accepted.
+-- `laufzeit/start.c` still has to define `L_nimm`/`L_gib` in C, because that is
+-- the name the emitter puts into every unit that uses `lock L`:
+--
+--     void L_nimm(void);          -- beispiele/124 emitted C, line 54
+--     void L_gib(void);           -- line 55
+--
+-- So the question is not "can the lock be written" (it can) but "can what was
+-- written be the thing the emitter calls". This probe declares the lock AND
+-- writes bodies under exactly those two names in the same unit.
+--
+-- Every `impl fn` lowers to `static void <name>(void)`. A `static` definition
+-- and a non-static prototype of the same name is a C conflict, and `pub` does
+-- not move it (`pub impl fn L_nimm()` tried as shape 2).
+
+module schreibprobe::sperre_selbst {
+
+const NSLOTS : u32 = 2;
+type Stand = u32 in 0 .. 100;
+
+table konto count NSLOTS { slot { stand : Stand, } }
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+atomic NEXT : u32 relaxed;
+atomic NOW  : u32 acquire;
+
+impl fn folge(x : u32) -> u32
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x +% 1;
+}
+
+extern fn warte_aufgegeben() -> never effects { diverges };
+
+-- The two names the emitter writes into the unit. Same bodies as
+-- `laufzeit/sperre.gab`, only renamed.
+impl fn L_nimm()
+    effects { reads NEXT, writes NEXT, reads NOW }
+    costs   <= 4294967299 ops
+{
+    let my : u32 = NEXT exchange update(t)
+        bounded 64 ops
+        on_exceeded warte_aufgegeben
+    { return folge(t); } publishes nothing;
+    retry spin until NOW == my
+        bounded 4294967295 ops
+        on_exceeded warte_aufgegeben
+        effects { reads NOW }
+    {
+    }
+}
+
+impl fn L_gib()
+    effects { reads NOW, writes NOW }
+    costs   <= 64 ops
+{
+    let n : u32 = NOW;
+    NOW = folge(n) publishes nothing;
+}
+
+-- A user of the lock, so the emitter emits the `L_nimm`/`L_gib` prototypes.
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn haupt()
+    effects { reads konto.slots, writes konto.slots, locks L }
+    costs   <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+}

@@ -1,0 +1,61 @@
+-- S04 -- THE IDLE ROOT, WITH A BODY.
+--
+-- `laufzeit/start.c` lines 128-146:
+--
+--     static void *ruhe(void *u) { (void)u; for (;;) { pause(); } return NULL; }
+--
+-- and the comment beside it says the bare-metal spelling is `wfi`. This is
+-- `E.P.mitRuhe`'s `none` root -- what every thread that is not a declared start
+-- runs. The goal theorem's assumption (d) `Laufzeit` books it.
+--
+-- Gabbro HAS the shape as a signature: `divergent fn leerlauf() effects
+-- { diverges };` stands in `beispiele/07`, without a body. This probe writes
+-- the BODY -- and the body is where the price shows.
+--
+-- WHAT HAD TO BE GIVEN UP. `forever` demands `progress <ident>`, compulsory
+-- since «SG-11», and `S003` refuses a name that is not a declared assumption:
+-- *"`progress` names WHO ends the loop, and that must be a declared
+-- assumption -- otherwise it is a hope with a keyword in front"*. An idle root
+-- is by definition a loop that NOBODY ends; that is the one thing the clause
+-- cannot say. What stands below is an assumption that says the opposite of
+-- what is meant, with a falsifier that can never fire, so that the clause has
+-- something to point at. That is a lie with a keyword in front -- exactly what
+-- `S003` was built to prevent, and the grammar leaves no other shape.
+
+module schreibprobe::ruhewurzel {
+
+-- The one machine instruction the idle root executes. On hosted POSIX it is
+-- `pause()`, on bare metal `wfi`; either way it is foreign.
+extern fn warten() effects { reads maschinenzustand } costs <= 1 ops;
+
+-- The overrun exit `forever` demands. A pass of the idle root costs 1 op and
+-- never exceeds 4, so this is dead -- the clause is not optional all the same.
+extern fn nie_erreicht() -> never effects { diverges };
+
+-- The falsifier the `assume` demands. It answers `false` forever, because the
+-- idle root is never left; so the probe can never refute the assumption, and
+-- an assumption no probe can refute is what `UNFALSIFIZIERBAR.md` is about.
+extern fn sonde_ruhe_wird_beendet() -> bool effects { pure } costs <= 1 ops;
+
+-- The idle root itself. NOTE: no `costs` line -- `K003` refuses one over a
+-- `forever` ("a `forever` loop has no total cost -- its promise is
+-- `per_pass`"), which is right and which means an idle root cannot carry the
+-- unit's cost register at all.
+impl fn ruhe() -> never
+    effects { reads maschinenzustand, diverges }
+{
+    forever ruhelauf
+        per_pass bounded 4 ops
+        on_exceeded nie_erreicht
+        effects  { reads maschinenzustand }
+        progress ruhe_wird_beendet
+    {
+        warten();
+    }
+}
+
+assume ruhe_wird_beendet
+    "The idle root is left. IT IS NOT -- an idle core stays parked, and a thread that fell out of this loop would run whatever bytes follow. The clause is written because `forever` has no way to name NOBODY."
+    falsifier sonde_ruhe_wird_beendet;
+
+}

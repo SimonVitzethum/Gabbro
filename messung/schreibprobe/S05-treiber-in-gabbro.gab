@@ -1,0 +1,51 @@
+-- S05 -- THE DRIVER'S OWN `main`: AN EXIT CODE AND A PRINTED LINE.
+--
+-- `laufzeit/start.c` lines 150-211 are a `main` that returns 0, 1 or 2 and
+-- prints what the run observed:
+--
+--     printf("konto=%u konto=%u privA=%u privA=%u privB=%u\n", ...);
+--     fprintf(stderr, "INVARIANT BROKEN: konto[0]=%u konto[1]=%u\n", k0, k1);
+--     return 1;
+--
+-- Three separate questions, and they fall apart differently:
+--
+--   (1) is there an entry point, i.e. can a Gabbro body BE `main`?
+--   (2) can a string literal stand in an expression, so a message can be
+--       passed to a foreign printer?
+--   (3) can a call take a variable number of arguments?
+--
+-- This file is the version that PASSES, and it passes by giving all three up:
+-- the exit code travels as a return value that nobody reads, each observed
+-- number gets its own fixed-arity foreign call, and the message is gone --
+-- it survives only as the NAME of the function called.
+
+module schreibprobe::treiber {
+
+const NSLOTS : u32 = 2;
+type Stand = u32 in 0 .. 100;
+
+table konto count NSLOTS { slot { stand : Stand, } }
+
+-- (2) and (3): the printer takes ONE u32 and no text. A `printf` with a format
+-- string and five arguments has no shape -- see the report for the four tried.
+extern fn melde_stand(x : u32) effects { writes ausgabe } costs <= 4 ops;
+extern fn melde_invariante_gebrochen() effects { writes ausgabe } costs <= 4 ops;
+
+-- (1): the nearest thing to an entry point that carries a body. `entry` exists
+-- (`beispiele/07`) and emits a PROTOTYPE plus a `#define` for the vector, never
+-- a body; `boot` the same. An `impl fn` named `main` collides with nothing and
+-- lowers to `static int32_t main(void)`, which is not C's `main`.
+impl fn pruefe_lauf() -> i32
+    effects { reads konto.slots, writes ausgabe }
+    costs   <= 64 ops
+{
+    melde_stand(konto.slots[0].stand);
+    melde_stand(konto.slots[1].stand);
+    if konto.slots[0].stand != konto.slots[1].stand {
+        melde_invariante_gebrochen();
+        return 1;
+    }
+    return 0;
+}
+
+}

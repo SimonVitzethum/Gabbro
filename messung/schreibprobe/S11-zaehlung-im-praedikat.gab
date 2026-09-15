@@ -1,0 +1,61 @@
+-- S11 -- «B13»: THE COUNT THAT SAYS WHY THE REFCOUNT IS RIGHT.
+--
+-- `FRAGMENTE.md` «B13»: *"No aggregation (`count`) and no cross-table domain in
+-- `pred`. `refcount_matches` -- the bookkeeping of the capability system -- is
+-- not formulable."* F1's verdict hangs on it, and `beispiele/19`:67 and
+-- `beispiele/46`:51 both carry the sentence as a comment beside a hand-counted
+-- loop variable.
+--
+-- HALF OF IT IS CLOSED AND THE OTHER HALF IS NOT, AND THE SEAM IS NOT WHERE
+-- THE FINDING PUT IT. `count k in slots of T : p` is a real expression
+-- («SG-24», `countexpr`, `SYNTAX.md`:554). Measured, four positions:
+--
+--   let n = count k in slots of T : p;          0 errors   (beispiele/71:33)
+--   ensures result == count k in ... : p        0 errors
+--   invariant ... : x == count k in ... : p     D021       `k` ... is not declared here
+--   spec fn f() -> bool = ... count k ...       D021       `k` ... is not declared here
+--
+-- So the aggregation exists AS A COMPUTATION and does not exist AS A
+-- PREDICATE. An `invariant` is exactly where F1 wanted it: an invariant is a
+-- statement the table carries at every moment, a `let` is a number one
+-- function computed once. The `spec fn` below is the line F1 wanted; the
+-- `invariant` above it is the same refusal one construct over.
+--
+-- The CROSS-TABLE half is refused by design and says so: `SYNTAX.md`:554
+-- *"over ONE table only ... A cross-table count is a `group` invariant
+-- («SG-10»), not a wider domain"*. That part of «B13» is a decision, not a gap.
+
+module schreibprobe::zaehlung {
+
+const NOBJ : u32 = 16;
+
+type Refs = u32 in 0 .. 64;
+
+static mut belegt_zahl : u32 = 0;
+
+table Objekte count NOBJ {
+    slot {
+        refs : Refs,
+    }
+
+    -- REFUSED: `D021`, `k` in an `invariant` is not declared here.
+    invariant zaehlung_stimmt cost O(n) runs online :
+        belegt_zahl == count k in slots of Objekte : Objekte.slots[k].refs > 0;
+}
+
+-- The same line one construct over, also `D021`.
+spec fn belegte() -> bool
+    = belegt_zahl == count k in slots of Objekte : Objekte.slots[k].refs > 0;
+
+-- And the shape that WORKS, so the difference is visible in one file: the same
+-- count as a computation, with the `ensures` that names it.
+impl fn zaehle() -> u32
+    ensures  result == count k in slots of Objekte : Objekte.slots[k].refs > 0
+    effects  { reads Objekte, reads Objekte.slots }
+    costs    <= 4096 ops
+{
+    let n = count k in slots of Objekte : Objekte.slots[k].refs > 0;
+    return n;
+}
+
+}

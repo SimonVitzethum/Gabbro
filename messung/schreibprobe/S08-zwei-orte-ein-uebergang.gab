@@ -1,0 +1,73 @@
+-- S08 -- F3'S LETHAL FINDING «B17», RE-MEASURED -- AND THE STATEMENT IS GONE.
+--
+-- `dokumente/FRAGMENTE.md` F3 (IPC fastpath) is one of the two fragments that
+-- "does NOT fit", and «B17» is why:
+--
+--   > A `transition` writes EXACTLY ONE `place`; `state` does not name the type
+--   > it stands over. "`caller` and `reply_owner` never half set" is thereby a
+--   > comment again.
+--
+-- That was 2026-08-14. Half of it has moved and half of it has moved the other
+-- way, and both halves are in this file.
+--
+-- HALF ONE -- THE DECLARATION TAKES TWO PLACES TODAY.
+--   transset = placeshift { "," placeshift } ;   (* SEVERAL places in ONE move *)
+-- The `state Antwortpflicht` block below carries two places per transition and
+-- the checker takes it. «B17»'s first sentence is closed.
+--
+-- HALF TWO -- AND NOW NO BODY CAN USE IT. `SYNTAX.md`:866 defines
+--   stateassign = "transition" shiftplace ":" ident "->" ident ";"   (* «SG-19» *)
+-- and §8's statement table gives it `Stmt.uebergang` with the theorem
+-- `uebergang_erklaert` and the outcome `logik vorzustand`. The Rust statement
+-- parser (`crates/gabbro-syntax/src/parse.rs:3467`) has no `Kw::Transition`
+-- arm; the line falls through to `zuweisung_oder_ruf` and comes back as
+-- `P017`. A `state` declaration is therefore unusable: the only statement that
+-- could make a field move along it does not parse.
+--
+-- (The same hole one row further: `advstmt = "advances" ident "->" ident ";"`
+-- («SG-14») -- see `S09-advances-anweisung.gab`.)
+
+module schreibprobe::zwei_orte {
+
+const NEPS : u32 = 8;
+
+type FadenId  = u32 in 0 .. 1023;
+type Belegt   = u32 in 0 .. 1;
+
+table Endpunkte count NEPS {
+    slot {
+        rufer   : FadenId,
+        offen   : Belegt,
+        pflicht : Belegt,
+    }
+
+    -- The obligation of F3, as an invariant rather than as a comment: an open
+    -- endpoint owes a reply, a closed one does not. Half set is refused.
+    -- (`slots of` binds an INDEX -- `D022` says so by name if one writes
+    -- `e.offen`; the second half of «B12» is decided.)
+    invariant paarig cost O(1) runs online :
+        forall e in slots of Endpunkte :
+            Endpunkte.slots[e].offen == Endpunkte.slots[e].pflicht;
+}
+
+-- ONE transition, TWO places. This is the line «B17» says is not writable, and
+-- it IS writable.
+state Antwortpflicht {
+    transition oeffnen { Endpunkte.slots[0].offen : 0 -> 1,
+                         Endpunkte.slots[0].pflicht : 0 -> 1 }
+    transition schliessen { Endpunkte.slots[0].offen : 1 -> 0,
+                            Endpunkte.slots[0].pflicht : 1 -> 0 }
+}
+
+impl fn oeffne(t : FadenId)
+    requires Endpunkte.slots[0].offen == 0, Endpunkte.slots[0].pflicht == 0
+    maintains paarig
+    effects { reads Endpunkte.slots, writes Endpunkte.slots }
+    costs   <= 64 ops
+{
+    Endpunkte.slots[0].rufer = t;
+    -- THE LINE THAT DOES NOT PARSE. Written as `SYNTAX.md`:866 spells it.
+    transition Endpunkte.slots[0].offen : oeffnen;
+}
+
+}

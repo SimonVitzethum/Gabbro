@@ -1,0 +1,46 @@
+-- S07 -- WRAPPING ARITHMETIC OVER A LOCAL.
+--
+-- The checker accepts `n +% 1` for any `n : u32`. The EMITTER reads the exact
+-- range off the declaration of the operand, and it resolves a bare name only
+-- through statics and parameters -- never a `let` local and never an
+-- `exchange` binder. Lane 201 hit this twice in `laufzeit/sperre.gab` and
+-- routed around it with a helper `folge(x : u32)` whose PARAMETER is readable.
+--
+-- Three functions below, all three checker-clean, differing only in where the
+-- operand comes from:
+--
+--   ueber_parameter  -- `x +% 1`, `x` a parameter        -> C written
+--   ueber_lokale     -- `let n = ...; n +% 1`            -> refused at emit
+--   ueber_statischer -- `S +% 1`, `S` a static           -> C written
+--
+-- The file as committed carries the REFUSED shape; comment out `ueber_lokale`
+-- and the other two emit. `gabbro pruefe` says 0 errors either way -- the
+-- refusal lives only in `gabbro emit`.
+
+module schreibprobe::wrap_lokal {
+
+static mut S : u32 = 0;
+
+impl fn ueber_parameter(x : u32) -> u32
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x +% 1;
+}
+
+impl fn ueber_statischer() -> u32
+    effects { reads S }
+    costs   <= 4 ops
+{
+    return S +% 1;
+}
+
+impl fn ueber_lokale(x : u32) -> u32
+    effects { pure }
+    costs   <= 8 ops
+{
+    let n : u32 = x;
+    return n +% 1;
+}
+
+}

@@ -1,0 +1,46 @@
+-- S17 -- F2 (VT-d): THE MIXED REGISTER «B23» AND THE 128-BIT RECORD «B24».
+--
+-- «B23»: *"One class per register cannot express a mixed register. VT-d `FSTS`
+-- is w1c in 7:0 and r in 15:8 -- `class w1c` makes `FRI` unreadable."*
+-- **CLOSED.** `regfeld = ident "@" bitpos [ "class" regklasse ]`
+-- (`SYNTAX.md`:1478) -- a field carries its OWN class, and `FSTS` below writes
+-- `PPF @0 class w1c` beside `FRI @[15:8] class r` and is accepted.
+--
+-- «B24»: *"`bitpos` says nothing about bit positions beyond 64 and nothing
+-- about the interplay with `endian`. The VT-d fault record consists of two
+-- 64-bit words"* -- the F bit is bit 63 of the UPPER word, the reason in 39:32
+-- of the same. **STILL OPEN**, and the file carries the refused shape: the
+-- 128-bit context entry with `@[66:64]`.
+--
+-- `format` is the construct for a multi-word record (`beispiele/03`,
+-- `beispiele/07`'s `Pte`), and a `format` is a byte string with its own
+-- endianness -- so the record CAN be described. What cannot be described is
+-- one REGISTER wider than its integer type: `intty` tops out at `u64`, and a
+-- `reg` is an `intty`.
+
+module schreibprobe::vtd {
+
+opaque type Pa = u64;
+
+device Vtd(base : Pa) at mmio {
+    -- «B23» CLOSED: two classes in one register, by field.
+    reg FSTS : u32 @0x34 class rw fields {
+        PPF @1 class w1c,
+        PFO @0 class w1c,
+        FRI @[15:8] class r,
+    }
+
+    reg GCMD : u32 @0x18 class w  fields { TE @31 }
+    reg GSTS : u32 @0x1c class r  fields { TES @31 }
+
+    mirrors GCMD from GSTS;
+
+    -- «B24» OPEN: the context entry is 128 bits. `u128` is not an `intty`
+    -- (`SYNTAX.md`:139 stops at `u64`), and a bit index above 63 has no
+    -- meaning in a `u64` register. The line below is the refused shape.
+    reg CTXHI : u64 @0x40 class rw fields {
+        DID @[66:64] class rw,
+    }
+}
+
+}

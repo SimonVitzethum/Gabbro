@@ -1,0 +1,89 @@
+-- S14 -- «B27»: THE SYSCALL ENTRY, AND THE 168 `asm!` SITES.
+--
+-- `FRAGMENTE.md` «B27» (F5, userspace/service loop): *"`prim fn` has no `abi`
+-- block: `arch` exists, the register assignment does not. The place at which
+-- 168 `asm!` sites were meant to converge has no content."*
+--
+-- **CLOSED, and twice over.** Two constructs carry a register map today:
+--
+--   `syscalldecl` («SS-1», §12.1) -- the USER side, `abi <os> arch <arch>
+--       number <n>`, `regs in`/`regs out`/`clobbers`/`errors`;
+--   `entrydecl` (§14, `beispiele/07`) -- the KERNEL side, `entry syscall
+--       vector 0x80 arch x86_64` with `regs in`/`regs out`/`preserves`/
+--       `clobbers`/`stack`/`dispatch`.
+--
+-- This file writes the user side and it is accepted with 0 errors -- AND THE
+-- EMITTER WRITES THE INSTRUCTION. `gabbro emit` over this file produces:
+--
+--   register uint64_t _sys_rdi __asm__("rdi") = (uint64_t)fd;
+--   register uint64_t _sys_rsi __asm__("rsi") = (uint64_t)buf;
+--   register uint64_t _sys_rdx __asm__("rdx") = (uint64_t)len;
+--   register int64_t  _sys_rax __asm__("rax") = (int64_t)1u;
+--   __asm__ __volatile__("syscall\n" : "+a"(_sys_rax)
+--                        : "r"(_sys_rdi), "r"(_sys_rsi), "r"(_sys_rdx)
+--                        : "rcx", "r11", "memory");
+--
+-- That is the 168 `asm!` sites, generated from one declaration. «B27» is
+-- closed on the user side, artefact and all.
+--
+-- WHAT IS NOT WRITABLE IS THE KERNEL-SIDE STUB, AND THAT IS SAID OUT LOUD.
+-- `gabbro emit` over `beispiele/07` produces, for `entry syscall`:
+--
+--   #define gabbro_eintritt_syscall_VEKTOR 128u
+--   void gabbro_eintritt_syscall(void);
+--   static uint64_t (*const gabbro_eintritt_syscall_verteiler)(…) = syscall_verteiler;
+--
+-- and a comment that reads: *"THE STUB IS NOT A C FUNCTION. It is entered by
+-- hardware, it keeps the register footprint above and it leaves with `iretq`
+-- -- none of which C can write. What stands here is the PROMISE (a prototype
+-- and the vector)."* The register map travels as a COMMENT. So the 168 `asm!`
+-- sites converge on ONE DECLARATION -- which was the point -- and the body of
+-- that declaration is still assembly nobody has written, in a file Gabbro does
+-- not produce. Class (D): the interface is Gabbro, the instruction is not.
+--
+-- The `prim fn` half stands as it did: `prim fn` takes `effects` and `-> never`
+-- and no register clause, and the emitter writes no body for it either.
+
+module schreibprobe::syscall_abi {
+
+const MAXLEN : u64 = 65536;
+
+opaque type Fd = u32;
+
+table Bytes count 4096 {
+    slot {
+        b : u8,
+    }
+}
+
+reason IoError {
+    BadFd       = 1 "bad file descriptor"
+    Interrupted = 2 "interrupted"
+    WouldBlock  = 3 "would block"
+    exhaustive
+}
+
+extern fn sonde_write() -> bool effects { pure } costs <= 1 ops;
+
+syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
+    -> u64 in 0 .. MAXLEN or IoError
+    abi linux arch x86_64 number 1
+    regs in  { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors   { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    ensures  result <= len
+    effects  { reads buf }
+    assume   linux_write_contract falsifier sonde_write;
+
+-- The stack switch of F5, the one thing no structured language expresses.
+-- `prim fn` carries the CONTRACT and no register clause, and the emitter
+-- writes no body -- the same split as `entry`.
+prim fn wechseln(von : ptr<normal, rw> Bytes, nach : ptr<normal, r> Bytes) -> never
+    effects { writes maschinenzustand, diverges };
+
+assume linux_write_contract
+    "The kernel's write(2) writes at most `len` bytes of `buf` to `fd` and answers the count, or one of the three errnos mapped above."
+    falsifier sonde_write;
+
+}

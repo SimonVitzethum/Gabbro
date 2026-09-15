@@ -1,0 +1,69 @@
+-- S12 -- «B14»: `option` AS A TYPE, NOT ONLY AS A SLOT FIELD.
+--
+-- `FRAGMENTE.md` «B14»: *"`option` exists only as a `slottype`, not as a
+-- `typeexpr`; and `let … else` demands a `call` on the right, so it does not
+-- unpack a `place`."* It is cited in F1, F5 and F6, and `OFFEN.md` O5 asks
+-- whether it is a FOURTH demand on the specification fragment, because
+-- `L01` -- "a root has no predecessor" -- is refuted without the sibling chain
+-- `L02`, and `L02` needs a `pred` that resolves an `option index into`.
+--
+-- F5's line is `let mut capacity : option Sectors = none;` and F6's is
+-- `frei_min : option Bytes`.
+--
+-- MEASURED, four positions for `option index into T` -- ALL FOUR PASS:
+--
+--   slot field      naechst : option index into T,                 0 errors (beispiele/04)
+--   static          static mut frei : option index into T = None;  0 errors (beispiele/31)
+--   parameter       fn f(k : option index into T)                  0 errors  <- «B14» says no
+--   local           let k2 : option index into T = None;           0 errors  <- «B14» says no
+--
+-- **«B14»'s first half is CLOSED, and that is the finding.** What is NOT
+-- closed is one word narrower than the finding says: `option` takes ONLY a
+-- table index. `option u32` is refused at the parser:
+--
+--   error: [P001] ...: `index` expected, `u32` found
+--
+-- F5's line is `let mut capacity : option Sectors = none;` and F6's is
+-- `frei_min : option Bytes` -- both `option` of an ORDINARY type, and both
+-- still unwritable. The second half of «B14» (`let … else` unpacking a place)
+-- is booked closed in the EBNF itself («B14b», `letstmt`, `SYNTAX.md`:862),
+-- and `match` over an `option` place is the working form.
+--
+-- The file below carries the refused shape in the last function.
+
+module schreibprobe::option_typ {
+
+const NSLOTS : u32 = 16;
+
+table Warteschlange count NSLOTS {
+    slot {
+        belegt  : bool,
+        naechst : option index into Warteschlange,
+    }
+}
+
+-- Works: as a slot field (above) and as a static.
+static mut frei : option index into Warteschlange = None;
+
+-- ACCEPTED: `option index into T` as a parameter and as a local -- the two
+-- positions «B14» says do not exist.
+impl fn setze_frei(k : option index into Warteschlange)
+    effects { writes frei }
+    costs   <= 8 ops
+{
+    let k2 : option index into Warteschlange = k;
+    frei = k2;
+}
+
+type Sektoren = u32 in 0 .. 65535;
+
+-- REFUSED: `option` of an ORDINARY type -- F5's `option Sectors`.
+--   error: [P001] ...:`index` expected, identifier `Sektoren` found
+impl fn kapazitaet() -> option Sektoren
+    effects { pure }
+    costs   <= 4 ops
+{
+    return None;
+}
+
+}

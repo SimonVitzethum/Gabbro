@@ -1,0 +1,51 @@
+-- S16 -- A BOOLEAN FLAG AT MODULE SCOPE.
+--
+-- NOT from the finding lists -- found while writing `S15`, which is why it is
+-- here. A stop flag, a "ready" bit, a "device initialised" latch: the
+-- commonest single carrier in systems code.
+--
+--   static mut anhalten : bool = false;
+--
+-- `gabbro pruefe`: **0 errors, 0 hints.**
+-- `gabbro emit`:
+--
+--   error: [C001] ...:12: no lowering: `static` with a non-constant initialiser
+--          = the emitter refuses by name instead of emitting something
+--            plausible -- a generator that guesses undoes every pass in front of it
+--
+-- FOUR SHAPES, ALL FOUR REFUSED AT THE EMITTER, ALL FOUR CLEAN AT THE CHECKER:
+--
+--   static mut f : bool = false;     C001
+--   static mut f : bool = true;      C001
+--   static     f : bool = false;     C001
+--   static mut f : u32  = 0;         emit rc=0      <- the type is the difference
+--
+-- WHY. `emit.rs`:2258 evaluates the initialiser to an integer and refuses when
+-- it gets none; `true`/`false` are not integers to that evaluator. The refusal
+-- is honest -- it names itself and guesses nothing -- but the form it refuses
+-- is not an exotic one, and NO corpus program carries a `bool` static, so no
+-- guardian sees it. `bool` as a SLOT field and as a local is fine
+-- (`beispiele/19` has `aktiv : bool`), so this is the one position.
+--
+-- A Gabbro author meets this the moment they write a flag: it checks, and the
+-- C never comes.
+
+module schreibprobe::bool_statik {
+
+static mut bereit : bool = false;
+
+impl fn melde_bereit()
+    effects { writes bereit }
+    costs   <= 4 ops
+{
+    bereit = true;
+}
+
+impl fn ist_bereit() -> bool
+    effects { reads bereit }
+    costs   <= 4 ops
+{
+    return bereit;
+}
+
+}

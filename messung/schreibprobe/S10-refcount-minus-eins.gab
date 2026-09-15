@@ -1,0 +1,55 @@
+-- S10 -- F1'S `refcount -= 1` -- «B29», AND «B31» BESIDE IT.
+--
+-- «B31» said: *"`old(place)` hangs under `atompred`, not under `primary` -- it
+-- can stand as a predicate on its own, but cannot occur in any expression. NO
+-- DIFFERENCE STATEMENT ("after against before") IS WRITABLE."* -- **CLOSED.**
+-- The `ensures` below writes `Objekte.slots[o].refs == old(Objekte.slots[o].refs)
+-- - 1`, i.e. `old` inside an arithmetic expression, and it is accepted.
+-- (`beispiele/104`:38 carries the same shape.)
+--
+-- «B29» is the one that stands: *"Relational precondition: `refcount -= 1`
+-- falls only via an invariant that after B13 is not writable at all. The
+-- contested case of the dividing line, on a real case."*
+--
+-- MEASURED. The body below is `Objekte.slots[o].refs -= 1;` under
+-- `requires Objekte.slots[o].refs >= 1`, and the file is REFUSED:
+--
+--   error: [M104] ... `Objekte.slots[…].refs` -= leaves the range:
+--                 `u32 in 0 .. 64` against `u8 in 1 .. 1`
+--   error: [M101] ... the assignment requires `u32 in 0 .. 64`,
+--                 the value has `u32 in -1 .. 63`
+--
+-- The `requires` is not read by the range pass. Two shapes DO pass, and both
+-- cost the same thing:
+--
+--   if Objekte.slots[o].refs >= 1 { Objekte.slots[o].refs -= 1; }     0 errors
+--   narrow Objekte.slots[o].refs to 1 .. 64 else { return; }          0 errors
+--
+-- i.e. the precondition is written twice, once as a promise the caller owes
+-- and once as a branch the callee runs. `M104`'s own note says so:
+-- *"a check before it narrows the range (V1), a relation between two places
+-- carries too (V2)"* -- a RELATION between two PLACES carries; a relation
+-- between a place and a CONSTANT, in the `requires`, does not.
+
+module schreibprobe::refcount {
+
+const NOBJ : u32 = 16;
+
+type Refs = u32 in 0 .. 64;
+
+table Objekte count NOBJ {
+    slot {
+        refs : Refs,
+    }
+}
+
+impl fn freigeben(o : index into Objekte)
+    requires Objekte.slots[o].refs >= 1
+    ensures  Objekte.slots[o].refs == old(Objekte.slots[o].refs) - 1
+    effects  { reads Objekte.slots, writes Objekte.slots }
+    costs    <= 64 ops
+{
+    Objekte.slots[o].refs -= 1;
+}
+
+}
