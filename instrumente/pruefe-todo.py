@@ -819,7 +819,15 @@ def main():
         print("  Kennzahlentafel deckt sich mit dem Gegenstand.")
 
     text = (WURZEL / "TODO.md").read_text()
-    befunde = pruefe(text, zahlen, vollstaendig=True)
+    # **The guarded figures moved out of the work list on 2026-09-15** (`TODO.md` was rewritten
+    # from scratch; `messung/KENNZAHLEN.md` carries the old lines verbatim). The rules run over
+    # both texts together, so a figure that moved is still held -- and a missing ledger is a
+    # finding, not an empty text.
+    ledger = WURZEL / "messung" / "KENNZAHLEN.md"
+    if not ledger.is_file():
+        print("ABBRUCH: messung/KENNZAHLEN.md fehlt -- es wurde NICHTS gemessen.", file=sys.stderr)
+        return 2
+    befunde = pruefe(text + "\n" + ledger.read_text(), zahlen, vollstaendig=True)
     print("\n== TODO.md ==")
     if not befunde and not r_befunde:
         offen = len(re.findall(r"^- \[ \]", text, re.M))

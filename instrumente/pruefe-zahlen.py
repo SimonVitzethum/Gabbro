@@ -156,7 +156,7 @@ EINTRAEGE = [
         "vervollstaendigte Fragmente, die absenken",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:Marke|Mark) (\d+) — (?:eine Ratsche, keine Zielzahl · 0 ohne Adresse|a ratchet, not a target number · 0 without an address)",
         ["./instrumente/pruefe-schablonen.py"],
         r"^   Marke (\d+) -- eine Ratsche",
@@ -179,7 +179,7 @@ EINTRAEGE = [
     # **A half-translated source is worse than either pure form** -- that is literally the
     # finding this guardian was built from. So the remainder is measured, not estimated.
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:von \d+ Kommentarzeilen|of \d+ comment lines)\*\* (?:im Pruefer sind deutsch|in the checker are German)",
         ["./instrumente/pruefe-englisch.py"],
         r"^== Quellsprache: (\d+) von \d+ Kommentarzeilen",
@@ -190,7 +190,7 @@ EINTRAEGE = [
     # **Die zweite Zahl ist die teurere.** Sie sagt, wie viele Giftproben ihre
     # Deckungsaussage heute nicht halten koennen, weil ihre Kennung mehrdeutig ist.
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) (?:Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen|probes point at an identifier with dissimilar assignment sites)",
         ["./instrumente/pruefe-vergabe.py"],
         r"^== Was das RUECKWIRKEND kostet: (\d+) von \d+ Giftproben ==",
@@ -251,21 +251,21 @@ EINTRAEGE = [
     # Hand genommen. Die NULL ist die tragende: sie ist der gemessene Bedarf, gegen den
     # `locks ordered` gestorben ist.
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) `@version`-Textstellen in Korpus \+ FRAGMENTE",
         ["./instrumente/zaehle-formate.py"],
         r"^  (\d+) @version-Textstellen in Korpus \+ FRAGMENTE",
         "`@version`-Textstellen -- die Menge, auf die sich Entscheidung 12 beruft",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) (?:Formate mit einer zweiten Fassung|formats with a second version)",
         ["./instrumente/zaehle-formate.py"],
         r"^  (\d+) Formate mit einer zweiten Fassung",
         "gemessene Formatentwicklungen -- die NULL, die die Absage traegt",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) VERSCHIEDENE Deklarationen",
         ["./instrumente/zaehle-formate.py"],
         r"^  (\d+) verschiedene @version-Deklarationen",
@@ -274,14 +274,14 @@ EINTRAEGE = [
     # **Entscheidung 10 -- die Zaehlung, die vor dem Bau steht.** Sie ist NULL, und eine Null
     # ohne Befehl ist die leichteste Zahl, die man spaeter stillschweigend anders liest.
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) (?:Traversierungsruempfe stehen heute im Korpus|traversal stumps stand in the corpus today)",
         ["./instrumente/zaehle-traversierungen.py"],
         r"^  (\d+) Traversierungsruempfe stehen heute im Korpus",
         "Traversierungsruempfe im Korpus -- das N zur Duplikatzahl (W11)",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) duplizierte Ruempfe",
         ["./instrumente/zaehle-traversierungen.py"],
         r"^  (\d+) duplizierte Ruempfe -- das ist der gemessene Bedarf",
@@ -458,7 +458,7 @@ EINTRAEGE = [
         "Instrumente insgesamt",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         # **Carried over 2026-08-23**: the sentence "heute N Codes, null Saetze" became false
         # with PL.1 and was replaced. *The pattern moved with it* -- a pattern that loses its
         # subject reports nothing and looks exactly like a pass.
@@ -468,7 +468,7 @@ EINTRAEGE = [
         "Absagekennungen",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:fremde Rümpfe im Korpus|foreign bodies in the corpus), \d+ (?:sprechen ihre Pflicht aus|state their duty)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
@@ -481,7 +481,7 @@ EINTRAEGE = [
     # *Dieselbe Klasse wie W16: ein Waechter, dessen Muster die Antwort schon enthaelt,
     # prueft seine eigene Erwartung.*
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:fremde Rümpfe im Korpus|foreign bodies in the corpus), (\d+) (?:sprechen ihre Pflicht aus|state their duty)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
@@ -506,7 +506,7 @@ EINTRAEGE = [
         "fremde Ruempfe, die ihre Pflicht aussprechen",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"Kombinationen\*\*: (\d+) blinde Zellen",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
@@ -514,7 +514,7 @@ EINTRAEGE = [
         "blinde Zellen (Form x Stellung)",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:blinde Zellen von|blind cells of) (\d+)\.",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
@@ -562,35 +562,35 @@ EINTRAEGE = [
         "Praemissen ohne Pass, in der «NL»-Tafel",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(\d+) (?:sind tragend|are carrying), \d+ (?:verdächtig|suspect)",
         ["./instrumente/pruefe-gruende.py"],
         r"\d+ verdaechtig · (\d+) tragend",
         "Absagen, deren Text den tragenden Grund nennt",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\d+ (?:sind tragend|are carrying), (\d+) (?:verdächtig|suspect)",
         ["./instrumente/pruefe-gruende.py"],
         r"^\s+(\d+) verdaechtig ·",
         "Absagen, die sich ueber die DARSTELLUNG begruenden",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:Absagetexte sagen ihren Grund in KEINER der beiden Sprachen|rejection texts state their reason in NEITHER language)\*\*",
         ["./instrumente/pruefe-gruende.py"],
         r"· (\d+) unklar",
         "Absagen ohne erkennbaren Grund",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r'\*\*(\d+) (?:von \d+ Item-Arten|of \d+ item kinds)\*\* (?:sind „gelesen"|are "read")',
         ["./instrumente/pruefe-konstrukte.py"],
         r"^\s+gelesen\s+(\d+)\s*$",
         "Item-Arten, die ein Pass anfasst",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:Mutationskatalog|Mutation catalogue): \*\*(\d+) (?:von \d+ Ankern|of \d+ anchors)\*\*",
         ["./instrumente/mutiere-pruefer.py", "--anker"],
         r"== (\d+) von \d+ Ankern greifen",
@@ -612,49 +612,49 @@ EINTRAEGE = [
         "Mutationen im Katalog -- die Zahl auf der Vorderseite",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:Zeilenfortsetzungen|continuation lines)\*\* (?:in den Quellen|in the sources)",
         ["./instrumente/pruefe-englisch.py"],
         r"== Lesbarkeit: (\d+) Zeilenfortsetzungen",
         "Zeilenfortsetzungen -- die Flaeche der Klebeprobe",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:Zeilenfortsetzungen|continuation lines)\*\* (?:in den Quellen|in the sources), \*\*(\d+) (?:kleben|stick)\*\*",
         ["./instrumente/pruefe-englisch.py"],
         r"^\s+(\d+) von \d+ Naehten kleben",
         "klebende Nahtstellen",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"Schablonenregister führt \*\*(\d+) Einträge\*\*",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
         r"^-- (\d+) templates,",
         "Schablonen im Register",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"Einträge\*\*, \*\*(\d+) davon unbewiesen\*\*",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
         r"^-- \d+ templates, (\d+) of them unproved",
         "Schablonen, die unbewiesen dastehen",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) Widerrufe\*\* über \d+ Dateien",
         ["./instrumente/pruefe-widerruf.py"],
         r"== Widerrufene Saetze: (\d+) Eintraege",
         "gebuchte Widerrufe",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*\d+ Widerrufe\*\* über (\d+) Dateien",
         ["./instrumente/pruefe-widerruf.py"],
         r"== Widerrufene Saetze: \d+ Eintraege, (\d+) Dateien",
         "Dateien, die der Widerrufwaechter liest",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:besetzte Zellen|covered cells)\*\* (?:stehen daneben|stand beside)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
@@ -662,7 +662,7 @@ EINTRAEGE = [
         "besetzte Zellen der Tafel -- die Zahl, die „gedeckt\" heissen soll",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:besetzte Zellen|covered cells)\*\* (?:stehen daneben|stand beside), \*\*(\d+) (?:nur im Gift|poison-only)\*\*",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
@@ -674,21 +674,21 @@ EINTRAEGE = [
     # Zahl im Text stand und kein Weg zu ihr fuehrte. *Das ist der andere Fall: nicht eine
     # Zahl, die veraltet ist, sondern eine, die nie ableitbar war.*
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:direkte Blicke|direct looks)\*\* (?:auf die Karten|at the maps)",
         ["./instrumente/zaehle-karten.py"],
         r"direkte Blicke\s+(\d+)",
         "direkte Blicke auf die Karten der `Umgebung`",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:direkte Blicke|direct looks)\*\* (?:auf die Karten|at the maps)[^\n]*\n[^\n]*\*\*(\d+) (?:davon unqualifiziert|of them unqualified)\*\*",
         ["./instrumente/zaehle-karten.py"],
         r"davon UNQUALIFIZIERT\s+(\d+)",
         "Blicke ohne Modulkandidaten -- jeder ein moegliches `M103`-Loch",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         # **The theory count stood here as a WORD, and was therefore itself a stale
         # number** (found 2026-08-28, when the fourteenth theory arrived): the locator no
         # longer matched its sentence, and the entry went SILENT instead of red.
@@ -699,14 +699,14 @@ EINTRAEGE = [
         "Zeilen der eigenen Isabelle-Theorien",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) (?:Zeilen Modell und Beweis|lines of model and proof)\*\*",
         ["./instrumente/zaehle-theorien.py"],
         r"Modell \+ Beweis = (\d+) Zeilen",
         "die Haelfte, die einer Verus-Zeilenzahl gegenuebersteht",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"\*\*(\d+) eingefrorene Suchergebnisse\*\*",
         ["./instrumente/zaehle-theorien.py"],
         r"== Suche: \d+ Suchbefehle, (\d+) eingefrorene",
@@ -859,14 +859,14 @@ EINTRAEGE = [
     # measure of it**, and that is the same W10 sentence the tool prints about its own
     # classifier.
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:stehen|stand) ~~\d+~~ (\d+) (?:Sätze über \d+ von \d+ Pässen|sentences over \d+ of \d+ passes)",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
         r"SENTENCES: (\d+) over \d+ passes",
         "Saetze ueber den Paessen -- Ausloeser 1 fuer Ziel 9",
     ),
     (
-        "TODO.md",
+        "messung/KENNZAHLEN.md",
         r"(?:Sätze über|Sentences over) (\d+) (?:von \d+ Pässen|of \d+ passes)",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
         r"SENTENCES: \d+ over (\d+) passes",
@@ -1009,20 +1009,9 @@ UNBEWACHBAR = [
      "die Berichtigungstafel `stand | ist`; die LEBENDE Null steht in `PLAN.md`:3402 MIT "
      "`pruefe-klauseln.py` daneben und ist dort bewacht"),
 
-    # ---- TODO.md: ordinals, not metrics -------------------------------------------------
-    ("TODO.md", r"\| \*\*\d+\*\* \| keine Klempnerei beim Endnutzer", "KEINE KENNZAHL",
-     "Ziel Nummer vier aus der Zieltafel"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| der Maßstab \|", "KEINE KENNZAHL", "Ziel Nummer eins"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| die offenen Lesarten entscheiden", "KEINE KENNZAHL",
-     "Ziel Nummer drei"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| die Beweise tragend machen", "KEINE KENNZAHL",
-     "Ziel Nummer fuenf"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| der Prüfer als Mathematik, in Lean 4", "KEINE KENNZAHL",
+    # ---- the old TODO.md goal table: ordinals, not metrics (moved 2026-09-15) -----------
+    ("messung/KENNZAHLEN.md", r"\| \*\*\d+\*\* \| der Prüfer als Mathematik, in Lean 4", "KEINE KENNZAHL",
      "Ziel Nummer neun"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| Übersetzer einer Gabbro-Teilmenge", "KEINE KENNZAHL",
-     "Stufe eins einer Baureihenfolge"),
-    ("TODO.md", r"\| \*\*\d+\*\* \| \*\*Two ordering rules stood there", "KEINE KENNZAHL",
-     "Befund Nummer drei einer nummerierten Liste"),
 
     # ---- PLAN.md ------------------------------------------------------------------------
     ("dokumente/PLAN.md", r"\| \*\*together, hard\*\* \| \*\*3 081\*\*", "KEIN INSTRUMENT",
@@ -1072,7 +1061,7 @@ BEWACHTE_DATEIEN = [
     "dokumente/PLAN.md",
     "dokumente/MESSUNGEN.md",
     "dokumente/SYNTAX.md",
-    "TODO.md",
+    "messung/KENNZAHLEN.md",
 ]
 KENNZAHL = re.compile(r"\|\s*\*\*([0-9][0-9  .,]*)\*\*\s*(?:\||$)")
 
@@ -1340,7 +1329,7 @@ def main():
     # **Auch der Fixpunktriegel muss beissen koennen.** Ein Riegel, der nie zuschlaegt, ist
     # von einem fehlenden nicht zu unterscheiden -- genau das war die Zeitgrenze in
     # `pruefe-beweise.sh` bis heute frueh.
-    EINTRAEGE.append(("TODO.md", r"(\d+)", ["./" + pathlib.Path(__file__).name], r"(\d+)", "Probe"))
+    EINTRAEGE.append(("messung/KENNZAHLEN.md", r"(\d+)", ["./" + pathlib.Path(__file__).name], r"(\d+)", "Probe"))
     biss = bool(kein_selbstbezug())
     EINTRAEGE.pop()
     print("  Fixpunktriegel: " + ("ok (ein selbstbezueglicher Eintrag faellt)" if biss
@@ -1363,7 +1352,7 @@ def main():
     # exactly like a written number: the row it explains gets reworded, the reason keeps
     # lowering the count and explains nothing. *That is worse than no reason at all -- it makes
     # a shorter work list out of a stale pattern.* Both directions, as R14 demands.
-    UNBEWACHBAR.append(("TODO.md", r"diese Zeile steht nirgends 998", "PROBE", "Sprechprobe"))
+    UNBEWACHBAR.append(("messung/KENNZAHLEN.md", r"diese Zeile steht nirgends 998", "PROBE", "Sprechprobe"))
     tot_biss = any("Sprechprobe" in x for x in unbewachbar_tot())
     UNBEWACHBAR.pop()
     tot_still = not unbewachbar_tot()

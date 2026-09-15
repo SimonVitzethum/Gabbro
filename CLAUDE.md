@@ -1,5 +1,11 @@
 # Gabbro — Arbeitsanweisungen
 
+**Betriebshandbuch: [`AGENTS.md`](AGENTS.md)** — Stand, Ziel, Abläufe (Bahnen, Merge, Push),
+Maschinen, Nummernkreise und die teuren Fallen, festgehalten beim Umzug auf den Server am
+2026-09-15. Die Arbeitsliste ist `TODO.md`. Das Handbuch wird hier mitgeladen:
+
+@AGENTS.md
+
 ## Der Arbeitsrechner ist seit dem 2026-09-15 der Server, nicht der Laptop
 
 **Die Sitzung läuft auf `ubuntu@simon.jocraft.cc`** (Hostname `GaussBerechnungen`), Baum
