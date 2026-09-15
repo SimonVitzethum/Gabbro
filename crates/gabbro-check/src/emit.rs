@@ -7200,6 +7200,52 @@ fn funktion(
                     );
                     return;
                 }
+                // **`own@m` -- the owner MARK, and nothing in this tree reads it**
+                // (2026-09-15).
+                //
+                // `parse::right` builds `Recht::Eigen(Some(marke))`, and that is the last
+                // line in the whole repository that looks inside the `Some`. Measured:
+                // `grep -rn "Eigen(Some" crates/` names the parser and nobody else; every
+                // other reader -- `m3.rs` twice, `alias.rs`, `lean_g.rs` twice, this file --
+                // matches `Recht::Eigen(_)` and drops the mark. `ptr<normal, own@m> u32` and
+                // `ptr<normal, own> u32` emit the same C to the byte, book the same
+                // obligations, and draw the same refusals: none.
+                //
+                // **`Ty.ptr` in `grammatik/Grammatik/Syntax.lean` carries `(t : Nat)` and
+                // `(rw : Bool)` and nothing else**, so the mark has no constructor in the
+                // specification either. It is a form the grammar admits and no side of the
+                // compiler answers for -- a promise nobody keeps, which looks kept.
+                //
+                // **The refusal and not the lowering, and Rule A says why:** the mark would
+                // mean *"the target is owned, and the owning mark is `m`"*, which is a
+                // statement about linearity that the checker would have to hold at every
+                // call. The corpus asks for it ZERO times (`grep -rn "own@" --include=*.gab`
+                // is empty). Building the pass would be a construct without a measured need;
+                // saying so by name costs nothing and stops the silence.
+                //
+                // **At the SIGNATURE, like the `port` refusal above, and for the same
+                // reason** (`W10`): a body that takes the pointer and never touches it is
+                // refused too. That is coarser than the defect and coarse in the safe
+                // direction -- the exact rule would need the mark at every access site,
+                // which the expression lowering does not carry.
+                if let Some(marke) = z.rechte.iter().find_map(|r| match r {
+                    Recht::Eigen(Some(m)) => Some(m),
+                    _ => None,
+                }) {
+                    weigere(
+                        absagen,
+                        p.name.span,
+                        &format!(
+                            "`own@{}` -- the owner mark is parsed and READ BY NOTHING: every \
+                             pass matches `own` and drops the mark, `ptr<…, own@{}>` emits \
+                             the same C as `ptr<…, own>` to the byte, and `Ty.ptr` of the \
+                             grammar carries no mark at all. Write `own` and name the owner \
+                             where the language does hold it -- `effects {{ consumes {} }}`",
+                            marke.text, marke.text, marke.text
+                        ),
+                    );
+                    return;
+                }
             }
         }
     }
@@ -13740,7 +13786,9 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // `typedef struct { uint8_t *bytes; uint32_t len; } F;`. *`cc` says `'F' has no member
     // named 'a'`, `gabbro emit` returned 0, and `C001` said nothing* -- a silently wrong
     // lowering, which this file holds to be worse than a refusal because a refusal stands in
-    // the certificate.
+    // the certificate. The German paragraph directly above says the same thing about the DOT
+    // spelling and closed only that one; this is the same finding, found again, one spelling
+    // later.
     //
     // The two spellings cannot differ here: `formatwerte` is filled from a `TypExpr::Pfad`
     // AND from a `TypExpr::Zeiger` at a format (`eigene_sicht`), the generated reader takes
