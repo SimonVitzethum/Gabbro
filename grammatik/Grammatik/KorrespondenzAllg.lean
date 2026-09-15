@@ -17,12 +17,29 @@
   `P` together with its printed rows and asks, statement by statement,
   whether the row is the emitted form of that statement: the slot store
   through a pointer or at a named table (`assignDurch`, `assignSlot`), the
-  store to a local (`assignVar`), the direct call with its arguments
-  (`call`), `let` (`bind`), the `(void)x;` of an unused parameter, and the
-  return of an expression or nothing (`ret`, falling off a `void` body).
-  Expressions: literals, locals, widenings, slot loads through a pointer or
-  at a named table (`slot`, `durch`), table pointers (`ptrOf`). Every other
-  form makes the Bool `false` -- a refusal, never an admission.
+  store to a local (`assignVar`), the compound assignment `x op= e`
+  (`setOp`, the same C statement), the store to a plain file-scope scalar
+  (`assignGlob`), the direct call with its arguments (`call`), `let`
+  (`bind`), the `(void)x;` of an unused parameter, and the return of an
+  expression or nothing (`ret`, falling off a `void` body).
+  Expressions: literals, `true`/`false`, locals, widenings, slot loads
+  through a pointer or at a named table (`slot`, `durch`), table pointers
+  (`ptrOf`), plain globals, the arithmetic `+ - * / %` (signed and
+  unsigned), the bitwise `& | ^ << >>`, the comparisons `< <= == > >=` and
+  the boolean `&& || !`. Every other form makes the Bool `false` -- a
+  refusal, never an admission.
+
+  WIDENED 2026-09-15 (`OPUS-BERICHT-KORROK.md`). The check was NARROWER
+  THAN ITS OWN STOCK OF PROVED LEMMAS: `ecorr_add` … `ecorr_shr`,
+  `ecorr_lt` … `ecorr_eq`, `ecorr_nicht`, `ecorr_und`, `ecorr_oder`,
+  `ecorr_glob`, `scorr_assignGlob` and the four `Zucker` compound
+  assignments were all proved in `CFormenI.lean`/`CFormenM.lean` and all
+  fell through `_ => false`. Nineteen arms moved inside the certificate
+  with no new model reasoning; the ONE new lemma is `ecorr_geSwap` (the C
+  operator `>=` for Gabbro's `le b a`), and it is `ecorr_cmp` with its
+  operator fact. Every arm has a positive probe and a PLANTED DEFECT in
+  `KorrespondenzWeitZeuge.lean` -- an arm that accepts a wrong row is worse
+  than a missing arm.
 
   THE SOUNDNESS (`korrOk_fnCorr`): a certificate that checks gives, for
   EVERY function and at EVERY call depth `n` and `forever` budget, the
@@ -91,6 +108,13 @@ def istZeigerAuf (t : D.Tab) : Ty → Bool
   | .ptr n _ => decide (D.tabNr n = some t)
   | _ => false
 
+/-- The computation type of a binary or comparison node holds BOTH operand
+    ranges -- the two `t.holds` facts `ecorr_binop`/`ecorr_cmp` need, and the
+    reason C's conversions keep the Gabbro numbers (the signed/unsigned
+    pitfall `-1 < 1u` is excluded by exactly this). -/
+def randOk (t : CIT) (l1 h1 l2 h2 : Int) : Bool :=
+  decide (t.holds l1 h1) && decide (t.holds l2 h2)
+
 section Pruefung
 
 variable (EL : EmitLay D) {Γ : Ctx} (K : CEnvLay D Γ)
@@ -127,6 +151,84 @@ def exOk {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (c : CX) : Bool :=
     | .ld (.slotA b ci n ss off) τc => slotOk EL K b n ss off τc t f && exOk i ci
     | _ => false
   | .ptrOf t _ _ _, c => ptrOk EL K c t
+  | .wahr, c => match c with
+    | .lit m => decide (m = 1)
+    | _ => false
+  | .falsch, c => match c with
+    | .lit m => decide (m = 0)
+    | _ => false
+  | .glob g _, c => match c with
+    | .ld (.addr (.glob gn)) τc =>
+        decide (gn = EL.gnr g) && decide (τc = EL.gty g) && !(D.ggeist g) && !(D.atomar g)
+    | _ => false
+  | .add (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .bin .add t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (t.holds (l1 + l2) (h1 + h2)) && exOk a ca && exOk b cb
+    | _ => false
+  | .sub (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .bin .sub t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (t.holds (l1 - h2) (h1 - l2)) && exOk a ca && exOk b cb
+    | _ => false
+  | .mul (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .bin .mul t ca cb =>
+        randOk t l1 h1 l2 h2 &&
+          decide (t.holds (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+            (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) && exOk a ca && exOk b cb
+    | _ => false
+  | .div (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, c => match c with
+    | .bin .div t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .rem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, c => match c with
+    | .bin .mod t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ a b, c => match c with
+    | .bin .div t ca cb =>
+        randOk t l1 h1 l2 h2 && (decide (t.sgn = false) || decide (t.lo < l1)) &&
+          exOk a ca && exOk b cb
+    | _ => false
+  | .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ a b, c => match c with
+    | .bin .mod t ca cb =>
+        randOk t l1 h1 l2 h2 && (decide (t.sgn = false) || decide (t.lo < l1)) &&
+          exOk a ca && exOk b cb
+    | _ => false
+  | .band (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, c => match c with
+    | .bin .band t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .bor (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, c => match c with
+    | .bin .bor t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .bxor (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, c => match c with
+    | .bin .bxor t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .shl (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, c => match c with
+    | .bin .shl t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (h2 < (t.bits : Int)) &&
+          decide (t.holds 0 (h1 * 2 ^ h2.toNat)) && exOk a ca && exOk b cb
+    | _ => false
+  | .shr (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, c => match c with
+    | .bin .shr t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (h2 < (t.bits : Int)) && exOk a ca && exOk b cb
+    | _ => false
+  | .lt (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .cmp .lt t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | .cmp .gt t ca cb => randOk t l2 h2 l1 h1 && exOk b ca && exOk a cb
+    | _ => false
+  | .le (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .cmp .le t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | .cmp .ge t ca cb => randOk t l2 h2 l1 h1 && exOk b ca && exOk a cb
+    | _ => false
+  | .eq (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
+    | .cmp .eq t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
+    | _ => false
+  | .und a b, c => match c with
+    | .land ca cb => exOk a ca && exOk b cb
+    | _ => false
+  | .oder a b, c => match c with
+    | .lor ca cb => exOk a ca && exOk b cb
+    | _ => false
+  | .nicht a, c => match c with
+    | .lnot ca => exOk a ca
+    | _ => false
   | _, _ => false
 termination_by structural e
 
@@ -176,6 +278,17 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
     | _ => false
   | .assignVar (τ := τ) x e, r => match r with
     | .setVar k τc ce => K.okB && decide (k = K.loc x) && declOk τ τc && exOk EL K e ce
+    -- `x op= e;` -- `Zucker`'s four compound assignments ARE `assignVar` of a
+    -- binary expression whose left operand is `x` itself; the row spells the
+    -- same C statement (`growRow`: `.set x τc (.bin op t (.var x) ce)`), so
+    -- the arm is the `setVar` one at the assembled expression.
+    | .setOp k τc op t ce =>
+        K.okB && decide (k = K.loc x) && declOk τ τc && exOk EL K e (.bin op t (.var k) ce)
+    | _ => false
+  | .assignGlob g e _ _, r => match r with
+    | .storeGlob gn τc ce =>
+        decide (gn = EL.gnr g) && decide (τc = EL.gty g) && !(D.ggeist g) && !(D.atomar g) &&
+          exOk EL K e ce
     | _ => false
   | .call g args _ _, r => match r with
     | .call fc cargs none => decide (fc = fnum g) &&
@@ -254,6 +367,18 @@ theorem ecorr_ptrOf {cp : CX} {t : D.Tab} {n : Nat} {ht : D.tabNr n = some t} {r
   intro σ st ρG ρC _ hr
   exact ⟨_, st, hp st ρG ρC hr, t, ht, rfl⟩
 
+/-- `a >= b`: `Zucker.ge a b` is `le b a`, and C writes `>=`. The one
+    comparison operator the lemma stock did not name; `ecorr_cmp` (the
+    scheme that excludes the signed/unsigned pitfall `-1 < 1u`) with its
+    operator fact, nothing new assumed. `Zucker.gt` is `lt b a` and already
+    has `ecorr_gt`. -/
+theorem ecorr_geSwap (t : CIT) {l1 h1 l2 h2 : Int} {ca cb : CX}
+    {a : Expr D Γ Λ (.int l1 h1)} {b : Expr D Γ Λ (.int l2 h2)}
+    (ha : ExprCorr X K ca a) (hb : ExprCorr X K cb b) (hta : t.holds l1 h1)
+    (htb : t.holds l2 h2) :
+    ExprCorr X K (.cmp .ge t ca cb) (.le b a) :=
+  ecorr_cmp X K .ge t ha hb hta htb (fun _ _ => rfl)
+
 /-- **Soundness of the expression check.** -/
 theorem exOk_lit {n : Int} {c : CX} (h : exOk X.EL K (Expr.lit (Γ := Γ) (Λ := Λ) n) c = true) :
     ExprCorr X K c (Expr.lit (Γ := Γ) (Λ := Λ) n) := by
@@ -293,6 +418,366 @@ theorem exOk_ld {t : D.Tab} {f : D.Feld t} {e : Expr D Γ Λ (D.typ t f)}
       | _ => exact absurd h (by simp)
   | _ => exact absurd h (by simp)
 
+/-! ### The arms added on 2026-09-15: every one is an existing T4 lemma
+
+    `exOk` was narrower than its own stock of proved lemmas -- the arithmetic,
+    bitwise, comparison and boolean families all fell through `_ => false`
+    although `ecorr_add` … `ecorr_shr`, `ecorr_lt` … `ecorr_eq`, `ecorr_nicht`,
+    `ecorr_und`, `ecorr_oder` and `ecorr_glob` were proved. Each helper below
+    takes the arm's own match as its hypothesis (so the check's text and the
+    proof's text cannot drift apart) and the soundness of the operands, and
+    ends in the lemma. NOTHING new is assumed. -/
+
+theorem exOk_wahr {c : CX} (h : (match c with | .lit m => decide (m = 1) | _ => false) = true) :
+    ExprCorr X K c (Expr.wahr (D := D) (Γ := Γ) (Λ := Λ)) := by
+  cases c with
+  | lit m =>
+      have hm : m = 1 := of_decide_eq_true h
+      subst hm
+      exact ecorr_wahr X K
+  | _ => exact absurd h (by simp)
+
+theorem exOk_falsch {c : CX} (h : (match c with | .lit m => decide (m = 0) | _ => false) = true) :
+    ExprCorr X K c (Expr.falsch (D := D) (Γ := Γ) (Λ := Λ)) := by
+  cases c with
+  | lit m =>
+      have hm : m = 0 := of_decide_eq_true h
+      subst hm
+      exact ecorr_falsch X K
+  | _ => exact absurd h (by simp)
+
+theorem exOk_glob {g : D.Glob} {hL : gdarf D g Λ} {c : CX}
+    (h : (match c with
+      | .ld (.addr (.glob gn)) τc =>
+          decide (gn = X.EL.gnr g) && decide (τc = X.EL.gty g) && !(D.ggeist g) && !(D.atomar g)
+      | _ => false) = true) :
+    ExprCorr X K c (Expr.glob (Γ := Γ) g hL) := by
+  cases c with
+  | ld p τc =>
+      cases p with
+      | addr b =>
+          cases b with
+          | glob gn =>
+              simp only [Bool.and_eq_true, Bool.not_eq_true'] at h
+              obtain ⟨⟨⟨hn, hτ⟩, hgg⟩, hat⟩ := h
+              have hn' : gn = X.EL.gnr g := of_decide_eq_true hn
+              have hτ' : τc = X.EL.gty g := of_decide_eq_true hτ
+              subst hn'
+              subst hτ'
+              exact ecorr_glob X K g hgg hat hL
+          | _ => exact absurd h (by simp)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+/-- The three range facts of a `.bin` arm come out of `randOk` and the
+    result decide. -/
+theorem randOk_sound {t : CIT} {l1 h1 l2 h2 : Int} (h : randOk t l1 h1 l2 h2 = true) :
+    t.holds l1 h1 ∧ t.holds l2 h2 := by
+  simp only [randOk, Bool.and_eq_true] at h
+  exact ⟨of_decide_eq_true h.1, of_decide_eq_true h.2⟩
+
+/-- The signed division and remainder need `INT_MIN / -1` excluded: the
+    computation type is unsigned, or the dividend's range starts above its
+    minimum. -/
+theorem sgnMin_sound {t : CIT} {l1 : Int}
+    (h : (decide (t.sgn = false) || decide (t.lo < l1)) = true) : t.sgn = true → t.lo < l1 := by
+  simp only [Bool.or_eq_true] at h
+  intro hs
+  rcases h with h | h
+  · exact absurd (hs.symm.trans (of_decide_eq_true h)) (by simp)
+  · exact of_decide_eq_true h
+
+section BinArme
+
+variable {l1 h1 l2 h2 : Int} {a : Expr D Γ Λ (.int l1 h1)} {b : Expr D Γ Λ (.int l2 h2)}
+  (iha : ∀ ca, exOk X.EL K a ca = true → ExprCorr X K ca a)
+  (ihb : ∀ cb, exOk X.EL K b cb = true → ExprCorr X K cb b)
+
+include iha ihb
+
+theorem exOk_add {c : CX} (h : (match c with
+    | .bin .add t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (t.holds (l1 + l2) (h1 + h2)) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.add a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | add =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, htr⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_add X K t (iha ca hA) (ihb cb hB) hta htb (of_decide_eq_true htr)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_sub {c : CX} (h : (match c with
+    | .bin .sub t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (t.holds (l1 - h2) (h1 - l2)) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.sub a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | sub =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, htr⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_sub X K t (iha ca hA) (ihb cb hB) hta htb (of_decide_eq_true htr)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_mul {c : CX} (h : (match c with
+    | .bin .mul t ca cb =>
+        randOk t l1 h1 l2 h2 &&
+          decide (t.holds (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+            (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.mul a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | mul =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, htr⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_mul X K t (iha ca hA) (ihb cb hB) hta htb (of_decide_eq_true htr)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_div {c : CX} (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (h : (match c with
+    | .bin .div t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.div h0 h1' a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | div =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_div X K t h0 h1' (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_rem {c : CX} (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (h : (match c with
+    | .bin .mod t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.rem h0 h1' a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | mod =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_rem X K t h0 h1' (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_sdiv {c : CX} (hb0 : 1 ≤ l2 ∨ h2 ≤ -1) (h : (match c with
+    | .bin .div t ca cb =>
+        randOk t l1 h1 l2 h2 && (decide (t.sgn = false) || decide (t.lo < l1)) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.sdiv hb0 a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | div =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, hm⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_sdiv X K t hb0 (iha ca hA) (ihb cb hB) hta htb (sgnMin_sound hm)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_srem {c : CX} (hb0 : 1 ≤ l2 ∨ h2 ≤ -1) (h : (match c with
+    | .bin .mod t ca cb =>
+        randOk t l1 h1 l2 h2 && (decide (t.sgn = false) || decide (t.lo < l1)) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.srem hb0 a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | mod =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, hm⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_srem X K t hb0 (iha ca hA) (ihb cb hB) hta htb (sgnMin_sound hm)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_band {c : CX} (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (h : (match c with
+    | .bin .band t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.band h0 h0' a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | band =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_band X K t h0 h0' (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_bor {c : CX} {w : Nat} (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w)
+    (hw2 : h2 < 2 ^ w) (h : (match c with
+    | .bin .bor t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.bor w h0 h0' hw1 hw2 a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | bor =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_bor X K t w h0 h0' hw1 hw2 (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_bxor {c : CX} {w : Nat} (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w)
+    (hw2 : h2 < 2 ^ w) (h : (match c with
+    | .bin .bxor t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.bxor w h0 h0' hw1 hw2 a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | bxor =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_bxor X K t w h0 h0' hw1 hw2 (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_shl {c : CX} {w : Nat} (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1)
+    (h0' : 0 ≤ l2) (h : (match c with
+    | .bin .shl t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (h2 < (t.bits : Int)) &&
+          decide (t.holds 0 (h1 * 2 ^ h2.toNat)) && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.shl w hw1 hw2 h0 h0' a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | shl =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨⟨hr, hsh⟩, htr⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_shl X K t w hw1 hw2 h0 h0' (iha ca hA) (ihb cb hB) hta htb
+            (of_decide_eq_true hsh) (of_decide_eq_true htr)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_shr {c : CX} {w : Nat} (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1)
+    (h0' : 0 ≤ l2) (h : (match c with
+    | .bin .shr t ca cb =>
+        randOk t l1 h1 l2 h2 && decide (h2 < (t.bits : Int)) &&
+          exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.shr w hw1 hw2 h0 h0' a b) := by
+  cases c with
+  | bin op t ca cb =>
+      cases op with
+      | shr =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hr, hsh⟩, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_shr X K t w hw1 hw2 h0 h0' (iha ca hA) (ihb cb hB) hta htb
+            (of_decide_eq_true hsh)
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_lt {c : CX} (h : (match c with
+    | .cmp .lt t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | .cmp .gt t ca cb => randOk t l2 h2 l1 h1 && exOk X.EL K b ca && exOk X.EL K a cb
+    | _ => false) = true) : ExprCorr X K c (.lt a b) := by
+  cases c with
+  | cmp op t ca cb =>
+      cases op with
+      | lt =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_lt X K t (iha ca hA) (ihb cb hB) hta htb
+      | gt =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨htb, hta⟩ := randOk_sound hr
+          exact ecorr_gt X K t (ihb ca hA) (iha cb hB) htb hta
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_le {c : CX} (h : (match c with
+    | .cmp .le t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | .cmp .ge t ca cb => randOk t l2 h2 l1 h1 && exOk X.EL K b ca && exOk X.EL K a cb
+    | _ => false) = true) : ExprCorr X K c (.le a b) := by
+  cases c with
+  | cmp op t ca cb =>
+      cases op with
+      | le =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_le X K t (iha ca hA) (ihb cb hB) hta htb
+      | ge =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨htb, hta⟩ := randOk_sound hr
+          exact ecorr_geSwap X K t (ihb ca hA) (iha cb hB) htb hta
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_eqE {c : CX} (h : (match c with
+    | .cmp .eq t ca cb => randOk t l1 h1 l2 h2 && exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.eq a b) := by
+  cases c with
+  | cmp op t ca cb =>
+      cases op with
+      | eq =>
+          simp only [Bool.and_eq_true] at h
+          obtain ⟨⟨hr, hA⟩, hB⟩ := h
+          obtain ⟨hta, htb⟩ := randOk_sound hr
+          exact ecorr_eq X K t (iha ca hA) (ihb cb hB) hta htb
+      | _ => exact absurd h (by simp)
+  | _ => exact absurd h (by simp)
+
+end BinArme
+
+section BoolArme
+
+variable {a b : Expr D Γ Λ .bool}
+  (iha : ∀ ca, exOk X.EL K a ca = true → ExprCorr X K ca a)
+  (ihb : ∀ cb, exOk X.EL K b cb = true → ExprCorr X K cb b)
+
+include iha ihb
+
+theorem exOk_und {c : CX} (h : (match c with
+    | .land ca cb => exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.und a b) := by
+  cases c with
+  | land ca cb =>
+      simp only [Bool.and_eq_true] at h
+      exact ecorr_und X K (iha ca h.1) (ihb cb h.2)
+  | _ => exact absurd h (by simp)
+
+theorem exOk_oder {c : CX} (h : (match c with
+    | .lor ca cb => exOk X.EL K a ca && exOk X.EL K b cb
+    | _ => false) = true) : ExprCorr X K c (.oder a b) := by
+  cases c with
+  | lor ca cb =>
+      simp only [Bool.and_eq_true] at h
+      exact ecorr_oder X K (iha ca h.1) (ihb cb h.2)
+  | _ => exact absurd h (by simp)
+
+end BoolArme
+
+/-- `!(e)`. -/
+theorem exOk_nicht {a : Expr D Γ Λ .bool} {c : CX}
+    (iha : ∀ ca, exOk X.EL K a ca = true → ExprCorr X K ca a)
+    (h : (match c with | .lnot ca => exOk X.EL K a ca | _ => false) = true) :
+    ExprCorr X K c (.nicht a) := by
+  cases c with
+  | lnot ca => exact ecorr_nicht X K (iha ca h)
+  | _ => exact absurd h (by simp)
+
 theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e c = true →
     ExprCorr X K c e
   | _, .lit _, _, h => exOk_lit X K h
@@ -301,34 +786,55 @@ theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e
   | _, .slot _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
   | _, .durch _ _ _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
   | _, .ptrOf _ _ _ _, _, h => ecorr_ptrOf X K (ptrOk_sound X K h)
-  | _, .wahr, _, h => absurd h (by simp [exOk])
-  | _, .falsch, _, h => absurd h (by simp [exOk])
-  | _, .glob .., _, h => absurd h (by simp [exOk])
+  | _, .wahr, _, h => exOk_wahr X K h
+  | _, .falsch, _, h => exOk_falsch X K h
+  | _, .glob .., _, h => exOk_glob X K h
+  | _, .add a b, _, h =>
+      exOk_add X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .sub a b, _, h =>
+      exOk_sub X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .mul a b, _, h =>
+      exOk_mul X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .div h0 h1' a b, _, h =>
+      exOk_div X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h0 h1' h
+  | _, .rem h0 h1' a b, _, h =>
+      exOk_rem X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h0 h1' h
+  | _, .sdiv hb0 a b, _, h =>
+      exOk_sdiv X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) hb0 h
+  | _, .srem hb0 a b, _, h =>
+      exOk_srem X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) hb0 h
+  | _, .band h0 h0' a b, _, h =>
+      exOk_band X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h0 h0' h
+  | _, .bor _ h0 h0' hw1 hw2 a b, _, h =>
+      exOk_bor X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc)
+        h0 h0' hw1 hw2 h
+  | _, .bxor _ h0 h0' hw1 hw2 a b, _, h =>
+      exOk_bxor X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc)
+        h0 h0' hw1 hw2 h
+  | _, .shl _ hw1 hw2 h0 h0' a b, _, h =>
+      exOk_shl X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc)
+        hw1 hw2 h0 h0' h
+  | _, .shr _ hw1 hw2 h0 h0' a b, _, h =>
+      exOk_shr X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc)
+        hw1 hw2 h0 h0' h
+  | _, .lt a b, _, h =>
+      exOk_lt X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .le a b, _, h =>
+      exOk_le X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .eq a b, _, h =>
+      exOk_eqE X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .und a b, _, h =>
+      exOk_und X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .oder a b, _, h =>
+      exOk_oder X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
+  | _, .nicht a, _, h => exOk_nicht X K (fun ca hc => exOk_sound a ca hc) h
   | _, .fnref .., _, h => absurd h (by simp [exOk])
   | _, .altGlob .., _, h => absurd h (by simp [exOk])
   | _, .altSlot .., _, h => absurd h (by simp [exOk])
-  | _, .add .., _, h => absurd h (by simp [exOk])
-  | _, .sub .., _, h => absurd h (by simp [exOk])
   | _, .neg .., _, h => absurd h (by simp [exOk])
-  | _, .mul .., _, h => absurd h (by simp [exOk])
-  | _, .div .., _, h => absurd h (by simp [exOk])
-  | _, .rem .., _, h => absurd h (by simp [exOk])
-  | _, .sdiv .., _, h => absurd h (by simp [exOk])
-  | _, .srem .., _, h => absurd h (by simp [exOk])
   | _, .leseBytes .., _, h => absurd h (by simp [exOk])
-  | _, .band .., _, h => absurd h (by simp [exOk])
-  | _, .bor .., _, h => absurd h (by simp [exOk])
-  | _, .bxor .., _, h => absurd h (by simp [exOk])
-  | _, .shl .., _, h => absurd h (by simp [exOk])
-  | _, .shr .., _, h => absurd h (by simp [exOk])
-  | _, .lt .., _, h => absurd h (by simp [exOk])
-  | _, .le .., _, h => absurd h (by simp [exOk])
-  | _, .eq .., _, h => absurd h (by simp [exOk])
   | _, .fllt .., _, h => absurd h (by simp [exOk])
   | _, .flle .., _, h => absurd h (by simp [exOk])
-  | _, .und .., _, h => absurd h (by simp [exOk])
-  | _, .oder .., _, h => absurd h (by simp [exOk])
-  | _, .nicht .., _, h => absurd h (by simp [exOk])
   | _, .none .., _, h => absurd h (by simp [exOk])
   | _, .some .., _, h => absurd h (by simp [exOk])
   | _, .istSome .., _, h => absurd h (by simp [exOk])
@@ -508,6 +1014,23 @@ theorem stOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : Li
           have hk' : k = K.loc x := of_decide_eq_true hk
           subst hk'
           exact scorr_assignVar X m K hK x (exOk_sound X K e ce he) hd
+      | setOp k τc op t ce =>
+          simp only [stOk, Bool.and_eq_true] at h
+          obtain ⟨⟨⟨hK, hk⟩, hd⟩, he⟩ := h
+          have hk' : k = K.loc x := of_decide_eq_true hk
+          subst hk'
+          exact scorr_assignVar X m K hK x (exOk_sound X K e _ he) hd
+      | _ => exact absurd h (by simp [stOk])
+  | assignGlob g e hw hL =>
+      cases r with
+      | storeGlob gn τc ce =>
+          simp only [stOk, Bool.and_eq_true, Bool.not_eq_true'] at h
+          obtain ⟨⟨⟨⟨hn, hτ⟩, hgg⟩, hat⟩, he⟩ := h
+          have hn' : gn = X.EL.gnr g := of_decide_eq_true hn
+          have hτ' : τc = X.EL.gty g := of_decide_eq_true hτ
+          subst hn'
+          subst hτ'
+          exact scorr_assignGlob X m K g hgg hat hw hL (exOk_sound X K e ce he)
       | _ => exact absurd h (by simp [stOk])
   | call g args hp hr =>
       cases r with
@@ -650,14 +1173,40 @@ end Tiefe
 /-
 CUTS -- what this file does not do, by name.
 - COVERED FORMS: the statement and expression families listed in the header.
-  Not covered (the Bool is `false`, a refusal): `if`/`else`, `traverse`,
-  compound assignments (`+=` …), stores to globals, `let` of a call
-  (`bindCall`), arithmetic and comparison expressions, `locks`, `forever`,
-  device and foreign forms. Each has a T4 lemma already (`scorr_ite`,
-  `scorr_traverse`, `scorr_plusGleich`, `scorr_assignGlob`, `bsem_bindCall`,
-  `ecorr_add`, …); adding it here is one arm of `stOk`/`exOk` and one arm of
-  its soundness proof. They were left out because no program the Lean parser
-  admits today (sieve (a) of the chain count) contains them.
+  Not covered (the Bool is `false`, a refusal), with the reason for each:
+  * `if`/`else` (`GRow.ite`) and `traverse` (`GRow.forTrav`) carry a
+    ROW LIST, so their arm needs a check over `Block` beside the one over
+    `Endblock`, and `stOk` and that check want to be MUTUALLY recursive
+    (`stOk` descends into the row's sub-list, the sub-list's rows back into
+    `stOk`). `scorr_ite` and `scorr_traverse` are proved; what is missing is
+    the recursion, and it must stay STRUCTURAL -- `korrOk` is settled by
+    `decide`, and a well-founded definition does not reduce in the kernel.
+    The mutual can be AVOIDED by staging: a `stOk0` with today's flat arms
+    (no recursion), then a self-recursive `blOk` over `List GRow` that
+    handles `ite`/`forTrav` itself and delegates every other row to
+    `stOk0`, then `stOk = stOk0` plus the two arms through `blOk`, then
+    `enOk` unchanged. Two functions over `List GRow` in ONE mutual is what
+    Lean's structural recursion will not take; two in sequence is fine.
+  * `let x = f(…)` (`bindCall`) is a `Block` constructor and not an
+    `Endblock` one, so it cannot occur in a body this file walks at all
+    until that same `Block` check exists. `bsem_bindCall` is proved.
+  * `!=` (`.cmp .ne`): Gabbro's `Zucker.ne a b` is `nicht (eq a b)`, so the
+    arm would have to look THROUGH the negation at its operands, and the
+    soundness proof would need the induction hypotheses of those operands
+    in an arm whose pattern is only `nicht a`. `>` and `>=` need no such
+    step (`Zucker.gt`/`ge` are `lt`/`le` with the operands swapped, and the
+    swapped C operator is the arm's second row shape). The printer refuses
+    `!=` today, so no certificate can carry the row either.
+  * `(T)(e)` (`CX.cast`) as a wrapper around an accepted expression: the
+    recursion would shrink the C side while the Gabbro side stands still,
+    which is neither argument's structural descent. `ecorr_cast` is proved.
+  * An `_Atomic` global, read (`CX.ald`) or stored (`CS.astore`): both are
+    observations, and `GRow` has no atomic row. `ecorr_globAtomar` and
+    `scorr_assignGlobAtomar` are proved.
+  * `neg`, `leseBytes`, floats, sums, options, reasons, quantifiers,
+    `locks`, `forever`, `retry`, device and foreign forms: no arm, and for
+    the floats no `ecorr_*` at all (`CX` has no float operand a `GRow`
+    could carry).
 - A call's callee map must be its C parameter list (`callMapOk`): the
   exporter's map. The index-fixed `refD` maps (`ks`) of lanes 164/165 are
   not accepted at call sites; they still check as top-level maps.
@@ -669,6 +1218,7 @@ CUTS -- what this file does not do, by name.
 -/
 
 #print axioms Gabbro.Grammatik.ptrOk_sound
+#print axioms Gabbro.Grammatik.ecorr_geSwap
 #print axioms Gabbro.Grammatik.exOk_sound
 #print axioms Gabbro.Grammatik.argsTo_of
 #print axioms Gabbro.Grammatik.stOk_sound
