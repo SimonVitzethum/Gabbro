@@ -2906,7 +2906,7 @@ returned `hauptA` thread means `privA[0] == 7`.
 |---|---|---|
 | `hDRF : DRFSC c124 LP K0 Echt` | (b) HARDWARE + compiler: the C11 DRF-SC theorem with its region corollary, and the compiler's mapping to the hardware profile | named premise, ONE proposition; its hypothesis `RennfreiC` is PROVED (`rennfreiC_aus_sim`) |
 | `hLZ.faeden : FadenStartC c124 [2,3] st0 K0` | runtime (A4): thread creation | named premise; yields (d) `Laufzeit` (`laufzeit_w`) |
-| `hLZ.sperre : ∀ …, LP … → sperrAbstrakt …` | runtime: the ticket lock | named premise; `sperrAbstrakt_nur_eigen`: reveals nothing but held or free |
+| `hLZ.sperre : ∀ …, LP … → sperrAbstrakt …` | runtime: the ticket lock | named premise here; **PROVED for the ticket lock in §32** (`ticketLP_sperrAbstrakt`), so `schlusssatz_124_ticket` carries it no longer. `sperrAbstrakt_nur_eigen` ("reveals nothing but held or free") is a theorem about the SPECIFICATION and is false of the implementation (§32.3) |
 | (a) checker | (c) DISCHARGED | `kP_akzeptiert` (`decide`) |
 | (b) user's logic | (c) DISCHARGED | `kE_nutzerPflicht` |
 | (c) hardware | (c) DISCHARGED, empty | `kO_hw` (no axiom, register or device) |
@@ -2954,7 +2954,7 @@ jobs, green, no `sorryAx` in the log.
 
 Region serialisability (inside `DRFSC`; needs a fine-grained C semantics); footprint
 soundness in general (`FussTreu`, needs an access-instrumented `Exec`; key lemma
-`ev_zform_blk` proved); the ticket lock refining `sperrAbstrakt`; a checker for concurrent
+`ev_zform_blk` proved); ~~the ticket lock refining `sperrAbstrakt`~~ (done, §32); a checker for concurrent
 correspondence certificates (T2 for stage (b)); the exporter for 124 and parse fidelity; the
 emitted text as data (no C parser); lock calls inside loops, branches or callees, volatile and
 foreign calls in blocks, and atomics as a source of ordering (an atomic access counts like a
@@ -3309,5 +3309,110 @@ in every file touched. No `sorry`, no `native_decide`, no new `axiom`.
 32,5 s / 8,91 GB → 2,4 s / 0,93 GB; the whole library about 25 min / 72 GB → **5 min 20 s /
 6,86 GB**.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §§1-10 history above.)
+## 32. The runtime's ticket lock: a named premise becomes a theorem (2026-09-15)
+
+PLAN-UEBERSETZUNGSVALIDIERUNG §7.7 is the long form; §7.6 item 3 is the item it closes. Files:
+`grammatik/Grammatik/CTicket.lean` (the lock, generic over the unit),
+`grammatik/Grammatik/Schlusssatz124Ticket.lean` (`beispiele/124` with the lock inlined, and
+the contended witness).
+
+### 32.1 What was assumed, and what is proved
+
+The stage (b) closing theorem carries `LaufzeitC`, whose second field reads
+
+    sperre : ∀ t op h h', LP t op h h' → sperrAbstrakt t op h h'
+
+-- "the runtime's `L_nimm`/`L_gib` behave as `sperrAbstrakt`". The lock the runtime supplies
+is a ticket lock: two `_Atomic unsigned` per lock, `my = fetch_add(&next,1)` and a spin on
+`load(&now) != my` for the acquire, `store(&now, now+1)` for the release. It is written here
+as its four instructions, one step each (`TSchritt`: `zieht`, `dreht`, `tritt`, `gibt`), and
+
+| theorem | says |
+|---|---|
+| `tinv_schritt`, `zStart_inv` | the invariant `TInv` holds at the start and survives every instruction: `now ≤ next`; drawn tickets distinct and in `[now, next)`; while somebody is inside `L`, every drawn ticket is strictly above `now` |
+| `ticket_ausschluss`, `erreichbarT_exklusiv` | **mutual exclusion** -- two threads never stand inside one lock, on every reachable state |
+| `ticket_nicht_wiedereintritt` | the lock is not re-entrant, and does not pretend to be |
+| `ticket_fifo` | **nobody overtakes**: while an earlier ticket is outstanding, a later one cannot be served (the local form of `FifoSperre` of `Lebendigkeit.lean`, there an assumption) |
+| `ticketLP_sperrAbstrakt` | **THE REFINEMENT**: every abstract step the lock induces is a `sperrAbstrakt` step -- the premise, now a theorem |
+| `ticket_frame` | a lock call leaves program memory alone and touches no other lock's words |
+| `spinnt_nur` | a thread whose ticket is not served can only spin: every step it takes leaves its C configuration where it was |
+| `schrittT_proj`, `erreichbarT_erreichbarC` | the emitted C WITH the lock inlined (`SchrittT`) reaches no configuration the abstract semantics does not reach: a spin is a stutter, everything else is a step of `SchrittC E sperrAbstrakt` |
+| `schlusssatz_124_ticket` | for 124: mutual exclusion, `konto[0] == konto[1]` while nobody is inside, `privA[0] == 7` after `hauptA` returns -- **with no premise about the lock** |
+
+**Which step was the smaller one, measured.** Bridging to the ticket lock already in the tree
+(`FifoSperre`, `Lebendigkeit.lean`) is NOT smaller: that predicate lives over infinite
+scheduled runs of machine G (`PlanLauf`, `AnSperre`, `offen …spur`), shares no definition with
+stage (b)'s vocabulary (`Halter`, `SperrOp`, `SperrSem`, `KonfC`), constrains the ORDER of
+acquisitions rather than their safety, and never names the two counters -- it is an
+assumption, not an implementation. Writing the lock where the premise stands costs four rules,
+and gives the FIFO property back as a theorem.
+
+### 32.2 The theorem got stronger, and exactly how
+
+`schlusssatz_124` is UNCHANGED: it still quantifies over every `LP` and still carries
+`LaufzeitC`. Nothing was removed from it, and no `sperrAbstrakt` was weakened.
+`schlusssatz_124_ticket` is its instance at the lock the runtime has; the premise text that is
+gone there is, word for word, `sperre : ∀ t op h h', LP t op h h' → sperrAbstrakt t op h h'`.
+What REMAINS a premise: `FadenStartC` (thread creation only at the declared roots, each root
+once, from the declared initial memory, no lock held), the `forever` budget, and -- for a
+statement about the real machine rather than the SC semantics -- `DRFSC`.
+
+### 32.3 Two findings, witnessed, not patched away
+
+1. **The ticket lock reveals MORE than held or free** (`ticket_mehr_als_frei`). Two concrete
+   states with the SAME abstract holder table -- the lock free in both -- and one thread whose
+   acquire completes in the one and cannot complete in the other, because another thread drew
+   the earlier ticket. `sperrAbstrakt_nur_eigen` is a theorem about the SPECIFICATION and does
+   not transfer to the implementation. The safety statement is untouched (the refinement runs
+   implementation-to-specification: fewer runs), but the NI-facing half of the
+   `NICHTINTERFERENZ.md` §10 entry may not be read as a statement about the ticket lock: a
+   waiting thread can measure its position in the queue, which is the arrival order of the
+   other threads.
+2. **The release performs no check** (`gib_ohne_wache`). `L_gib` increments `now` for whoever
+   calls it. The guard of the rule `gibt` is the CALLER's position between its `L_nimm` and its
+   `L_gib` -- a guarantee of the checker's lock discipline, not of the runtime. One unheld
+   release while a holder is inside lets the next ticket in: two holders, and `TInv` is gone
+   (the witness exhibits all three states). So the `.gib` half of the refinement is discharged
+   only for well-nested callers. What the runtime would have to do to carry it alone: keep the
+   holder's identity in the lock and compare on release -- one more word and one more branch
+   per release, which is exactly the check W6 declines to emit because the checker decided it.
+
+### 32.4 The witness
+
+`ticket_zeuge_124` (non-degenerate, contending): a 23-step run of the emitted C of
+`beispiele/124` with the lock inlined, thread 0 running `hauptA`, thread 1 `hauptB`.
+* Thread 1 draws ticket 0, thread 0 ticket 1. At that configuration the lock is FREE
+  (`halter 0 = none`, nobody inside) and **thread 0 still cannot take it**: every step it can
+  make leaves its C configuration where it was (`spinnt_nur`) -- while `sperrAbstrakt` would
+  admit its acquire, which the same statement exhibits. That is finding 1 inside the program.
+* Thread 1 enters (step 11), thread 0 spins on, thread 1 runs `setze(70)` and releases, and
+  only then does thread 0 enter (step 15): the acquisitions are in TICKET order, not in
+  arrival-at-the-spin order.
+* Both return; at the end nobody is inside the lock, `konto[0] == konto[1]` and
+  `privA[0] == 7` -- both BY THE THEOREM, read in the C through the relation, where
+  `privA[0]` was 0 at the start.
+
+### 32.5 Axiom record and cost
+
+`tinv_schritt`, `ticket_fifo`, `spinnt_nur`, `tritt_frei`, `ticketLP_sperrAbstrakt`,
+`ticket_frame`, `ticket_mehr_als_frei`, `gib_ohne_wache`, `schrittT_proj`,
+`erreichbarT_erreichbarC`, `erreichbarT_exklusiv`: `propext`, `Quot.sound`;
+`abs_eindeutig`: `Quot.sound`; `ticket_ausschluss`, `ticket_nicht_wiedereintritt`: none;
+`schlusssatz_124_ticket`, `ticket_zeuge_124`: `propext`, `Classical.choice`, `Quot.sound`.
+`gabbro_ziel` unchanged (`propext`, `Classical.choice`, `Quot.sound`). No `sorry`, no
+`native_decide`, no new `axiom`. Built on `ki-pc-fisch-101` (`gabbro-opus-tick`): full
+`lake build`, 251 jobs, green; the two new files together take under a second (0,39 s and
+0,28 s), so the library's build cost is unchanged.
+
+### 32.6 What remains
+
+The run-level race-freedom conclusion (`RennfreiC`) is carried at the granularity of
+`SchrittC`, not of the four instructions: transferring it to a `LaufT` needs the stutter-free
+compression of a ticket run into an SC run, which is index arithmetic and is not written.
+Reachability and the two C-memory legs ARE carried. Wraparound of the two counters at 2^32 is
+not modelled (`Nat` here, `unsigned` there). The C11 orderings on the spin load and the
+release store are what make the two instructions synchronisation points; that every
+interleaving of them is SC remains the named premise `DRFSC`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §§1-10 history above.)
 

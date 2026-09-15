@@ -320,9 +320,11 @@ The extension is the product promise only if the checker supplies its premises. 
 verified to be isolated, only labelled and checked.
 
 For the binary, the transfer from machine G to the emitted C is stage (b) of the
-translation-validation plan -- DRF-SC, the lock primitives (a ticket lock must reveal nothing but
-"held or not"), thread creation, the scheduler -- with the same named assumptions, not a second
-list.
+translation-validation plan -- DRF-SC, the lock primitives, thread creation, the scheduler --
+with the same named assumptions, not a second list. *The clause "a ticket lock must reveal
+nothing but held or not" stood here until 2026-09-15 and is now measured: the ticket lock
+does NOT meet it (see the list below), so a noninterference claim about the C cannot lean on
+it.*
 
 **The list in Lean** (2026-09-15, `CNebenlaeufig.lean`; PLAN-UEBERSETZUNGSVALIDIERUNG §7.4). The
 runtime entries of the table above are one structure, `LaufzeitC`, a hypothesis of the stage (b)
@@ -332,9 +334,28 @@ closing theorem (`schlusssatz_124`):
   runtime half and of `Laufzeit` (d) of the goal theorem, which it yields: `laufzeit_w`);
 * the lock primitive -- every behaviour of the runtime's `L_nimm`/`L_gib` is one of
   `sperrAbstrakt`: acquire only a free lock, release only one's own, program memory untouched;
-  and it reveals nothing but held or free: whether a call proceeds depends on that lock's holder
-  entry alone (`sperrAbstrakt_nur_eigen`), and it changes no other entry
-  (`sperrAbstrakt_rahmen`).
+  and it changes no entry but its own lock's (`sperrAbstrakt_rahmen`).
+  **Since 2026-09-15 this entry is no longer an assumption but a theorem about the lock the
+  runtime has** (`CTicket.lean`, PLAN-UEBERSETZUNGSVALIDIERUNG §7.7): the ticket lock is
+  written as its four instructions over the two counters, and `ticketLP_sperrAbstrakt` proves
+  the line above; mutual exclusion (`ticket_ausschluss`) and FIFO (`ticket_fifo`, the local
+  form of `FifoSperre` that the waiting bound of `Lebendigkeit.lean` assumes) come with it.
+  **Two halves of the old entry do NOT survive contact with the implementation, and they stay
+  in this list as what they are:**
+  * *"it reveals nothing but held or free"* (`sperrAbstrakt_nur_eigen`) is a theorem about the
+    SPECIFICATION and is FALSE of the ticket lock (`ticket_mehr_als_frei`): whether an acquire
+    can proceed depends on the caller's ticket against `now`, so a waiting thread can measure
+    its position in the queue -- the arrival order of the other threads. The safety statement
+    of stage (b) does not use it (the refinement runs implementation-to-specification, and the
+    implementation has fewer runs); a noninterference claim about the C would, and may not have
+    it at this granularity. A lock that reveals only held-or-free would have to serve waiters
+    in an order that does not depend on their arrival.
+  * *"release only one's own"* is guaranteed by the CHECKER, not by the runtime
+    (`gib_ohne_wache`): `L_gib` is an unguarded `now++`, and one call from a non-holder puts
+    two threads inside the lock. The obligation "every `L_gib()` call is made by the holder" is
+    therefore a property of the EMITTED PROGRAM (the emitter writes `L_gib()` only where the
+    holder stands, W6), and it belongs to this list as a checker guarantee, not a runtime
+    assumption.
 The two scheduler entries (the scheduler class, blocked slots idle) are premises of
 `nichtinterferenz_planer` only: the stage (b) safety statement is quantified over EVERY schedule
 (every interleaving is an SC run), so it needs neither. DRF-SC itself is the separate named
