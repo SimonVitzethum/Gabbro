@@ -462,8 +462,15 @@ C parser buys no chain today.
 the parser was not the reason: in Lean 4.33 `String.toList` goes through the array
 representation, and forcing the FIRST character of a 1419-byte string LITERAL costs 33,7 GB.
 The same text as a `List Char` of 45 short pieces costs 3,3 GB. `dokumente/OFFEN.md` O13
-carries the measurement, because the Gabbro-side pins that cost 72 GB lex a `String` the same
-way.
+carries the rest of the measurement, because the Gabbro-side pins lex a `String` the same way.
+
+**O13 is CLOSED since 2026-09-15**, and the Gabbro side's 72 GB turned out to be only partly
+this: the chain sources are pinned as characters now (`SRC-BEGIN` blocks, `String.ofList`,
+the bridge `lex_ofList`), but the dominant cost was ONE theorem -- `uebersetzt4`/`uebersetzt8`
+unfolding `uebersetzeAllg` at a CONCRETE source, which made simplification whnf `lex src…`
+and run the decoder in the kernel. `uebersetzeAllg_von_zeichen` (Schlusssatz.lean) does that
+unfolding once, at a variable. The whole library now builds from an empty build directory in
+**5 min 20 s at a peak of 6,86 GB**; `Kette104` costs 0,92 GB, `Kette108` 0,87 GB.
 
 ### 6.7 The certificate's BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
 

@@ -145,15 +145,27 @@ def wortC (w : List Char) : Toks → Option Toks
 
 /-! ## 4. Expressions
 
-    NO RECURSION, and that is a cost decision as much as a scope one. A
+    NO RECURSION, and that is a scope decision that also happened to be
+    cheap. The expressions of this subset nest at most one level -- a slot
+    read whose index is a literal or a local -- so they are parsed by
+    three functions that call each other WITHOUT recursion, and a deeper
+    expression is refused.
+
+    THE COST NOTE THAT USED TO STAND HERE IS WITHDRAWN. It said: "a
     mutual recursion through a fuel argument compiles to a mutual
     `Nat.brecOn`, and reducing THAT in the kernel is EXPONENTIAL in the
-    fuel: with the fuel taken from the token count, one probe
-    (`return x + 1;`, seven tokens) grew to 112 GB before it was killed
-    (2026-09-15; the report has the table). The expressions of this
-    subset nest at most one level -- a slot read whose index is a literal
-    or a local -- so they are parsed by three functions that call each
-    other WITHOUT recursion, and a deeper expression is refused. -/
+    fuel", from one probe that grew to 112 GB. **That general claim was
+    measured again on 2026-09-15 (O13 lane, Lean 4.33.1) and does not
+    hold**: two-way and three-way mutual recursions whose first argument
+    is fuel, fuel really traversed, stay at the bare `lean` baseline
+    (0,477 GB) from fuel 10 to fuel 320, flat. The tree's own
+    counter-evidence is stronger still -- `Parser/Anweisung.lean`,
+    `Parser/Element.lean` and `Parser/ElementTief.lean` are exactly that
+    shape, and `parseTopTief` runs them at fuel 2032 for `tt104` inside
+    a gigabyte. So the 112 GB had another cause; it was not identified,
+    and the sentence must not travel as a law. The design above stands
+    on its scope reason alone. See `messung/muse/OPUS-BERICHT-O13.md`
+    section 1d for the table. -/
 
 /-- A slot index: a literal or a local. An index that is an expression
     (arithmetic, a nested slot read) is refused, not guessed. -/

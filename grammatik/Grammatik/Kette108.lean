@@ -48,17 +48,12 @@ theorem elab8 : elabU (pre108 items108) = .ok uExp108 := rfl
 
 theorem low8 : lowerAllg uExp108 = .ok (P8, fs8) := except_ok_get low_some
 
-set_option maxHeartbeats 40000000 in
-/-- **PARSE FIDELITY** of the real text. -/
-theorem uebersetzt8 : uebersetzeAllg src108 = .ok ⟨uExp108, P8, fs8⟩ := by
-  unfold uebersetzeAllg
-  rw [lex108]
-  dsimp only
-  rw [parse8]
-  dsimp only
-  rw [elab8]
-  dsimp only
-  rw [low8]
+/-- **PARSE FIDELITY** of the real text, through the generic stage lemma
+    (`uebersetzeAllg_von_zeichen`) -- see the note at `uebersetzt4`: the
+    unfolding happens at a variable character list, so the kernel never
+    decodes the source `String` (O13). -/
+theorem uebersetzt8 : uebersetzeAllg src108 = .ok ⟨uExp108, P8, fs8⟩ :=
+  uebersetzeAllg_von_zeichen lexL108 parse8 elab8 low8
 
 /-! ## 2. Members and bodies -/
 

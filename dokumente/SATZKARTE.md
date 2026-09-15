@@ -3192,12 +3192,23 @@ parser: in Lean 4.33 `String.toList` goes through the array representation, and 
 FIRST character of one 1419-byte string literal costs **33,7 GB / 217 s**. Splitting the
 literal into 45 short ones joined by `++` does not help (`String.append` goes through the
 array too); the SAME text as a `List Char` built from 45 short `"…".toList` pieces costs
-**3,3 GB**. A second pathology: a MUTUAL recursion through a fuel argument compiles to a
-mutual `Nat.brecOn`, and reducing that is exponential in the fuel -- one seven-token probe
-grew to 112 GB before it was killed. Both are avoided by construction now (the pins are
-lists of lines; the expression parser has no recursion), and `dokumente/OFFEN.md` O13 has
-the measurement, because the same `String.toList` stands in the Gabbro-side pins that cost
-72 GB.
+**3,3 GB**. The pins are lists of lines for that reason, and `dokumente/OFFEN.md` O13 has
+the rest of the measurement -- the same `String.toList` stood in the Gabbro-side pins.
+
+**A second pathology was reported here and is WITHDRAWN** (O13 lane, 2026-09-15): "a MUTUAL
+recursion through a fuel argument compiles to a mutual `Nat.brecOn`, and reducing that is
+exponential in the fuel" was measured again and **does not hold** -- two-way and three-way
+mutual fuel recursions stay at the bare `lean` baseline from fuel 10 to fuel 320, and the
+Gabbro parser is that very shape at fuel 2032. The 112 GB the probe reached had another
+cause, which was not identified. The expression parser's lack of recursion is a SCOPE
+decision and stands on that alone (`CParser/CParse.lean` §4).
+
+**And O13 itself is closed** (§31): the 72 GB was not the lexer pin either. It was ONE
+theorem -- `uebersetzt4`/`uebersetzt8` unfolding `uebersetzeAllg` at a CONCRETE source, so
+that simplification whnf'd `lex src…` and ran the UTF-8 decoder in the kernel. The chain
+sources are pinned as characters now and the unfolding happens at a variable
+(`uebersetzeAllg_von_zeichen`); the whole library builds from empty in **5 min 20 s at a
+peak of 6,86 GB**, and `Kette104`/`Kette108` cost **0,92 GB** and **0,87 GB**.
 
 ## 30. `korrOk` gets its BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
 
@@ -3267,5 +3278,36 @@ whose map is not its parameter list, and a callee missing from the certificate.
 that stop there never reach a certificate. *Arms added and chain count are two numbers and
 are reported separately.*
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §§1-10 history above.)
+## 31. O13 closed -- the chain source pinned as characters, the pipeline unfolded at a variable
+
+*Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lexer.lean` (`lexL`,
+`lex_ofList`), `Grammatik/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
+`Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Kette104.lean`,
+`Grammatik/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
+`Grammatik/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), `instrumente/zaehle-kette.py`.
+Report: `messung/muse/OPUS-BERICHT-O13.md`.*
+
+| Theorem | What it says |
+|---|---|
+| `Parser.lex_ofList (l : List Char) : lex (String.ofList l) = lexL l` | **the bridge.** A source pinned as characters lexes exactly as the `String` does -- proved by rewriting with the core lemmas `String.toList_ofList` and `String.length_ofList`, so Lean 4.33's UTF-8 decoder never runs in the kernel |
+| `uebersetzeAllg_von_zeichen` | **parse fidelity from the four stages**, at a VARIABLE character list: `lexL l = .ok toks`, `parseTopTief toks = .ok items`, `elabU (pre108 items) = .ok u`, `lowerAllg u = .ok (P, fs)` give `uebersetzeAllg (String.ofList l) = .ok ⟨u, P, fs⟩` |
+| `uebersetze104_von_zeichen` | the same for the by-hand 104 pipeline (`Schlusssatz104.lean`) |
+| `lexL104real`, `lexL108`, `u104lexL` | the three lexer pins, over the characters |
+
+**No statement changed.** `uebersetzt4`, `uebersetzt8`, `lex104real`, `lex108`, `kette104`,
+`kette108`, `kette_104 : Kette src104real`, `kette_108 : Kette src108` are character for
+character what they were; `Kette` is still indexed by a `String`, `uebersetzeAllg` still
+takes one, and `src104real` IS its text by definition (`String.ofList` of the pinned
+pieces). `zaehle-kette.py` still compares the pin against `beispiele/*.gab` byte for byte
+(it reads the `SRC-BEGIN` block now) -- measured after the repair: **chain count 2 of 2
+CLOSED**, all five sieves green with `--lean`. Axioms: the standard three for every theorem
+in every file touched. No `sorry`, no `native_decide`, no new `axiom`.
+
+**The cost, before and after** (`ki-pc-fisch-101`, idle, empty build directory):
+`Kette104` 4 min 40 s / 72 GB → 1,6 s / 0,92 GB; `Kette108` 6 min 50 s / 72 GB →
+1,1 s / 0,87 GB; `Parser/Uebersetze` 47,6 s / 9,17 GB → 10,5 s / 1,99 GB; `Schlusssatz104`
+32,5 s / 8,91 GB → 2,4 s / 0,93 GB; the whole library about 25 min / 72 GB → **5 min 20 s /
+6,86 GB**.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §§1-10 history above.)
 

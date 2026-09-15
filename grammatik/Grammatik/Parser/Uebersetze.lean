@@ -1705,11 +1705,43 @@ def tt104 : List Token :=
    .zeichen ".", .ident "stand", .zeichen ";", .zeichen "}",
    .zeichen "}", .ende]
 
+/-- The comment-free 104 source text, pinned as CHARACTERS in short
+    pieces. One 669-byte `String` literal costs the kernel 8,96 GB and
+    55 s here (measured 2026-09-15); the pieces cost a fraction of it, and
+    `lex_ofList` carries the pin to the `String` without running Lean 4.33's
+    UTF-8 decoder at all. See O13 and `Parser/Lexer.lean`. -/
+def srcZeilen104K : List (List Char) :=
+  ["module beispiel::referenz { const NKONTO ".toList,
+   ": u32 = 2; type Betrag = u32 in 0 .. 10; ".toList,
+   "type Stand = u32 in 0 .. 100; table ".toList,
+   "Konto count NKONTO { slot { stand : ".toList,
+   "Stand, } } lock M protects { stand } ".toList,
+   "rank 0 held <= 50 ops; impl fn ".toList,
+   "einzahlen(k : ptr<normal, rw> Konto, i : ".toList,
+   "index into Konto, b : Betrag) requires ".toList,
+   "Held(M) ensures old(k.slots[i].stand) <= ".toList,
+   "k.slots[i].stand effects { reads ".toList,
+   "k.slots, writes k.slots, locks M } costs ".toList,
+   "<= 16 ops { k.slots[i].stand = 100; ".toList,
+   "lies(k, i); } impl fn lies(k : ".toList,
+   "ptr<normal, r> Konto, i : index into ".toList,
+   "Konto) -> Stand requires Held(M) ensures ".toList,
+   "result == k.slots[i].stand effects { ".toList,
+   "reads k.slots, locks M } costs <= 8 ops ".toList,
+   "{ return k.slots[i].stand; } }".toList]
+
+/-- The same text as characters. -/
+def srcQuelle104K : List Char := srcZeilen104K.flatten
+
 set_option maxHeartbeats 3200000 in
-theorem u104lex :
-    lex "module beispiel::referenz { const NKONTO : u32 = 2; type Betrag = u32 in 0 .. 10; type Stand = u32 in 0 .. 100; table Konto count NKONTO { slot { stand : Stand, } } lock M protects { stand } rank 0 held <= 50 ops; impl fn einzahlen(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag) requires Held(M) ensures old(k.slots[i].stand) <= k.slots[i].stand effects { reads k.slots, writes k.slots, locks M } costs <= 16 ops { k.slots[i].stand = 100; lies(k, i); } impl fn lies(k : ptr<normal, r> Konto, i : index into Konto) -> Stand requires Held(M) ensures result == k.slots[i].stand effects { reads k.slots, locks M } costs <= 8 ops { return k.slots[i].stand; } }" =
-      .ok tt104 := by
+/-- The comment-free 104 text lexes to `tt104`, over the characters. -/
+theorem u104lexL : lexL srcQuelle104K = .ok tt104 := by
   decide
+
+/-- The same, about the `String` -- a rewrite, not a reduction (O13). -/
+theorem u104lex : lex (String.ofList srcQuelle104K) = .ok tt104 := by
+  rw [lex_ofList]
+  exact u104lexL
 
 /-! ## The 104 instance: parse tree -/
 
