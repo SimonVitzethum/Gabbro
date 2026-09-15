@@ -7137,12 +7137,21 @@ fn funktion(
     // **`ptr<port, …>` in a body: refused, because there is no lowering and there cannot be
     // one** (2026-08-31, `messung/ADRESSRAEUME.md`).
     //
-    // `ctyp` reads `z.raum` for NO space -- measured: six functions differing in nothing but
-    // the space word emit six byte-identical lines. For five of the six that is right:
-    // `normal` is ordinary memory, `boot` is ordinary memory in a link-time section
-    // (`SYNTAX.md`:1607), `code` is never dereferenced (an incomplete type behind an
-    // `extern fn`), and `mmio`/`dma` are carried by the CHECKER (`R001`, `R008`, and the W9
-    // clause in `m3.rs`:22).
+    // `ctyp` read `z.raum` for NO space -- measured 2026-08-31: six functions differing in
+    // nothing but the space word emit six byte-identical lines. For five of the six that was
+    // held to be right: `normal` is ordinary memory, `boot` is ordinary memory in a link-time
+    // section (`SYNTAX.md`:1607), `code` is never dereferenced (an incomplete type behind an
+    // `extern fn`), and `mmio`/`dma` were said to be carried by the CHECKER (`R001`, `R008`,
+    // and the W9 clause in `m3.rs`:22).
+    //
+    // > **TWO OF THE FIVE FELL ON 2026-09-15, and they fell on `R008`'s own sentence.** That
+    // > refusal says of itself *"`mmio` is volatile and device-mapped, `normal` is not, and
+    // > the emitter lowers them differently"* -- a claim the six byte-identical files above
+    // > contradict. `ctyp` now reads the space through `raumqualifizierer`: `mmio` and `dma`
+    // > earn `volatile`, the other four earn nothing, and each of the six carries its reason
+    // > there. *The paragraph stays because the `port` half of it is untouched -- and because
+    // > a measurement that later stopped holding is worth more standing next to what replaced
+    // > it than deleted.*
     //
     // **`port` is the sixth, and it is wrong under a written promise.** `SPRACHE.md`:2188:
     // *"`at port` lowers accesses to `in`/`out` instead of to volatile loads/stores"*. What

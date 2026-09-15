@@ -1,0 +1,53 @@
+-- erwartet: C001
+-- 1000 -- **a slot field reached straight off the table handle, and the C named a
+-- member that does not exist.**
+--
+-- A `table T count 4 { slot { wert : u32, } }` lowers to exactly one struct with
+-- exactly one member:
+--
+--     typedef struct { uint32_t wert; } T_slot;
+--     typedef struct { T_slot slots[4]; } T;
+--
+-- `q->wert` on a `q : ptr<normal, r> T` passed `gabbro pruefe` with ZERO errors
+-- and came out as `return q->wert;`. `cc -std=c11 -Wall -Wextra -Werror` at both
+-- -O0 and -O2:
+--
+--     error: 'T' has no member named 'wert'
+--
+-- **It is the pattern this folder has paid for twice already**: a form the
+-- checker admits, an emitter that writes something plausible for it, and a
+-- refusal that says nothing. `gabbro emit` returned 0. *A silently wrong
+-- lowering is worse than a refusal, because a refusal stands in the
+-- certificate.*
+--
+-- WHY THE REFUSAL AND NOT A LOWERING
+-- ----------------------------------
+-- There is no lowering being withheld. `q->wert` does not name a place: a table
+-- has `count` slots and a field belongs to ONE of them, so the spelling that
+-- means something is `q.slots[i].wert` -- and it says which slot. The refusal
+-- prints that repair.
+--
+-- COARSE IN THE SAFE DIRECTION («W9»)
+-- -----------------------------------
+-- The emitter asks only whether the FIRST suffix is `slots`, the one member
+-- there is. It does not ask whether the name behind it is a declared slot field
+-- -- that is a question about the declaration, and it belongs to the checker.
+-- **That the checker gives no answer to `q->wert` is a second finding and is
+-- named as one**; this file measures the emitter half.
+--
+-- Found on 2026-09-15 by walking the constructors of
+-- `grammatik/Grammatik/Syntax.lean` and compiling what came out.
+module gift::tabellenfeldampfeil {
+
+table T count 4 {
+    slot { wert : u32, }
+}
+
+impl fn lies(q : ptr<normal, r> T, i : index into T) -> u32
+    effects { reads q }
+    costs   <= 2 ops
+{
+    return q->wert;
+}
+
+}
