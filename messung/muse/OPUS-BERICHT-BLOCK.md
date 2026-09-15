@@ -157,13 +157,12 @@ freshly built, on `ki-pc-fisch-101`). "Before" is the branch's base `edaca064`, 
 As `lake` jobs the same two files read 278 s → 282 s and 16 s → 16 s; a THIRD `Kette108` build,
 after a comment-only edit, took 306 s on a busier machine. *The `lake` job time is the noisier
 instrument of the two — it is the direct `lean` runs above that carry the comparison.*
-`Kette104` (the other
-chain that settles a `korrOk` by `decide`) builds green in **275 s** on this branch; *no
-before-value was taken for it in this directory, so it is deliberately not in the comparison —
-a number without its pair is not a comparison.*
+`Kette104` (the other chain that settles a `korrOk` by `decide`) builds green in **275 s** on
+this branch; *no before-value was taken for it in this directory, so it is deliberately not in
+the comparison — a number without its pair is not a comparison.*
 
 **Reading of the numbers.** The only file that got measurably dearer is the one that gained the
-proofs; its 295 MB are the new soundness theorem, not the check. **The two files that SETTLE
+proofs; its extra ~290 MB are the new soundness theorem, not the check. **The two files that SETTLE
 `korrOk` BY `decide` did not move**: +0,05 % and +0,6 % peak RSS, and both slightly faster on the
 clock — inside the run-to-run noise of a 70 GB elaboration. *That is the point of keeping the
 recursion structural*: the kernel work of `decide` on a certificate with no `ite`/`forTrav` rows
@@ -173,6 +172,13 @@ is the same work it was, because the extra arms are matches that do not fire.
 of `Kette108.lean` came back `exit=137` at 57 GB — the kernel killed it, because another lane on
 the same machine held 63 GB at the same moment. *A build that dies of memory is not a finding*
 (CLAUDE.md); the number in the table is the re-run, taken when the machine was free.
+
+**And `OPUS-BERICHT-KORROK.md` §6 held again, unchanged:** a plain `lake build` put `Kette104`
+and `Kette108` side by side (both at 17 GB and climbing after 44 s), and two files that need
+~72 GB EACH do not fit in 110 GB. It was stopped by PID before the kernel did it, and the cure
+from that report — `Kette104` and `Kette108` as separate targets, in order, then the full build —
+was used for the final green run. *A note written this morning had already earned its keep by
+the evening.*
 
 ## 4. The chain count — measured, and unchanged
 
