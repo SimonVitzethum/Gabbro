@@ -83,6 +83,116 @@ fn export_108_succeeds() {
     );
 }
 
+/// **124 exports**: a floored caller (`hauptA` takes `L`) calling a lock-free
+/// callee (`setze`, `pruefeA`). Before 2026-09-15 the exporter gave a
+/// lock-free body the floor `none` -- the one value that promises callers
+/// nothing -- and refused the call at `RufPasst.hb`. The floor is now the
+/// minimum rank taken in the reachable call graph, `HOCH` where there is none.
+#[test]
+fn export_124_succeeds() {
+    let text = export_file("124-two-threads-private.gab");
+    assert!(text.contains("def gSig_setze"), "{text}");
+    // `L` has rank 0, so `HOCH` is 1: the lock-free callees carry it, and
+    // `hauptA`, which takes `L`, carries 0.
+    assert!(text.contains("boden := some 1"), "a lock-free body gets HOCH: {text}");
+    assert!(text.contains("boden := some 0"), "a body taking rank 0 gets 0: {text}");
+    assert!(text.contains("theorem gHp_hauptA_in_L_setze"), "{text}");
+}
+
+/// **`gSp0` parenthesises both halves.** `⟨fun t => nomatch t, (fun g => …)⟩`
+/// does NOT parse as two fields -- `nomatch` takes a comma-separated list of
+/// discriminants and swallows the second half. Every table-less export
+/// carried that since `gSp0` was introduced.
+#[test]
+fn sp0_halves_are_parenthesised() {
+    let text = export("ohnetab.gab", &tree(
+        "module test::ohnetab {\n\
+         impl fn f(x : u32) -> u32 effects { pure } costs <= 1 ops { return x; }\n\
+         }\n",
+    ))
+    .expect("a table-less unit must export");
+    assert!(
+        text.contains("⟨(fun t => nomatch t), (fun g => nomatch g)⟩"),
+        "both halves must stand parenthesised: {text}"
+    );
+}
+
+/// **O14, the exporter half**: an `arena` travels as the PAIR
+/// `ArenaZucker.lean` names -- a table of `count = hi` with one field beside
+/// a `used` global -- with `Stmt.arenaReset`, `Block.arenaAlloc` and the
+/// arena read `A[i]`.
+#[test]
+fn exports_arena_as_its_pair() {
+    let text = export("arena.gab", &tree(
+        "module test::arena {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f(k : bool) -> u32\n\
+             effects { writes Log, reads Log }\n\
+             costs   <= 64 ops\n\
+         {\n\
+             if k {\n\
+                 let a = alloc Log (10) else {\n            return 0;\n        };\n\
+                 return Log[a];\n\
+             } else {\n        reset Log;\n    }\n\
+             return 1;\n\
+         }\n\
+         }\n",
+    ))
+    .expect("an arena must export");
+    for teil in [
+        "import Grammatik.ArenaZucker",
+        "inductive GTab where",
+        "| Log",
+        "| wert",
+        "| Log_used",
+        "count := fun | .Log => 8",
+        "gtyp := fun | .Log_used => (.int 0 8)",
+        "def gArena_Log : ArenaForm gD where",
+        "tab := GTab.Log",
+        "zaehl := GGlob.Log_used",
+        "Block.arenaAlloc (D := gD) gArena_Log",
+        "Stmt.arenaReset (D := gD) gArena_Log",
+        // the counter starts at zero, and the reservation `2` travels nowhere
+        "| .Log_used => ⟨0, by decide, by decide⟩",
+    ] {
+        assert!(text.contains(teil), "arena export must contain {teil:?}\n{text}");
+    }
+    assert!(!text.contains("capacity"), "the reservation must not travel");
+}
+
+/// **LG004**: an `alloc` WITHOUT `else` is refused by name. `Block.arenaAlloc`
+/// always carries a full-arena branch and the emitted C carries none; what
+/// makes the branch dead is `N212`, which does not travel into the term.
+#[test]
+fn refuses_alloc_without_else() {
+    let w = refuse_of(
+        "module test::arena2 {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f(k : bool) effects { writes Log } costs <= 64 ops\n\
+         {\n    if k {\n        let a = alloc Log (10);\n    }\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("no `else`"), "must name the cause: {w}");
+    assert!(w.message.contains("N212"), "must name what makes it dead: {w}");
+}
+
+/// **LG004**: an `alloc` at the top level of a body has no form --
+/// `Block.arenaAlloc` is a `Block` former and a body is an `Endblock`. This
+/// is what still stops `beispiele/98` and `99`, and it is named as such.
+#[test]
+fn refuses_top_level_alloc() {
+    let w = refuse_of(
+        "module test::arena3 {\n\
+         arena Log capacity 2 .. 8 of u32;\n\
+         impl fn f() effects { writes Log } costs <= 64 ops\n\
+         {\n    let a = alloc Log (10) else {\n        return;\n    };\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("top level"), "{w}");
+}
+
 /// The namespace is derived from the file name, so two exports never
 /// declare the same names.
 #[test]
@@ -94,6 +204,67 @@ fn namespace_comes_from_filename() {
     assert!(text.contains("namespace b_c"), "stem b-c becomes b_c");
 }
 
+/// **An `opaque` alias travels as its range** (2026-09-15): `opaque` is a
+/// rule about a UNIT BOUNDARY, like `pub`, and `Deklaration` has no boundary.
+#[test]
+fn opaque_alias_travels_as_its_range() {
+    let text = export("undurchsichtig.gab", &tree(&einheit(
+        "opaque type Pa = u32 in 0 .. 7;\n\
+         impl fn f(x : Pa) -> Pa effects { pure } costs <= 1 ops { return x; }\n",
+    )))
+    .expect("an opaque integer alias must export");
+    assert!(text.contains("params := [(.int 0 7)]"), "{text}");
+    assert!(text.contains("`opaque`"), "the NO-FORM ledger must name the drop");
+}
+
+/// **An exclusive bound travels as `lo .. hi-1`** -- the same numbers the
+/// checker computes with, spelled with the half-open form.
+#[test]
+fn exclusive_range_travels_closed() {
+    let text = export("exkl.gab", &tree(&einheit(
+        "type Idx = u32 in 0 ..< 4;\n\
+         impl fn f(x : Idx) -> Idx effects { pure } costs <= 1 ops { return x; }\n",
+    )))
+    .expect("an exclusive range must export");
+    assert!(text.contains("params := [(.int 0 3)]"), "{text}");
+}
+
+/// **LG001**: a `linear`, `ghost` or `tagged` type still has no G form --
+/// widening `opaque` did not widen those.
+#[test]
+fn refuses_tagged_and_linear_types() {
+    for zeile in [
+        "tagged type M = { Leer, Kurz(u32) };\n",
+        "linear ghost type M;\n",
+        "ghost type M = u32;\n",
+    ] {
+        let w = refuse_of(&einheit(zeile));
+        assert_eq!(w.code, "LG001", "{zeile}: {w}");
+    }
+}
+
+/// **No item kind leaves through a catch-all.** Every refusal names the item
+/// (where the kind has a name) and says what the specification would carry it
+/// as -- the defect `N320` and `OFFEN.md` O14 were written for.
+#[test]
+fn every_item_kind_refuses_with_a_reason() {
+    for (zeile, wort, grund) in [
+        ("device D(basis : u64) at mmio {\n    reg R : u32 @0x00 class r\n}\n", "device D", "D.Reg"),
+        ("assume a \"the device answers\" falsifier probe_a;\n", "assume a", "D.Annahme"),
+        ("atomic A : u32 release;\n", "atomic A", "atomar"),
+        ("group G over { T, T } {\n    invariant nichtnull cost O(n) runs offline :\n        \
+          forall k in slots of T : T.slots[k].v == 0;\n}\n", "group G", "D.Inv"),
+        ("use andere::stelle::Pa;\n", "use", "unit boundary"),
+    ] {
+        let quelle = einheit(&format!(
+            "{zeile}impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n"));
+        let w = refuse_of(&quelle);
+        assert_eq!(w.code, "LG001", "{zeile}: {w}");
+        assert!(w.message.contains(wort), "must name the item: {w}");
+        assert!(w.message.contains(grund), "must name the form it would have: {w}");
+    }
+}
+
 /// **LG001**: an `extern fn` has no G form (no body to translate).
 #[test]
 fn refuses_extern_fn() {
@@ -103,11 +274,77 @@ fn refuses_extern_fn() {
     assert_eq!(w.code, "LG001", "{w}");
 }
 
-/// **LG001**: a `static` has no G form.
+/// **A scalar `static` IS a `Glob`** (2026-09-15): the declaration carries
+/// `GGlob`/`gtyp`, the initialiser is the `gSp0` entry, a read is
+/// `Expr.glob`, a write is `Stmt.assignGlob` under the write right off
+/// `effects { writes s }`, and `lock L protects { s }` puts `L` in
+/// `gbraucht s`.
 #[test]
-fn refuses_static() {
-    let w = refuse_of(&einheit("static s : u32 = 1;\n"));
+fn exports_scalar_static() {
+    let text = export("statik.gab", &tree(
+        "module test::statik {\n\
+         table T count 4 { slot { v : u32, } }\n\
+         static mut s : u32 in 0 .. 100 = 7;\n\
+         lock L protects { s } rank 0 held <= 100 ops;\n\
+         impl fn f(x : u32 in 0 .. 100)\n\
+             requires Held(L)\n\
+             ensures  s == x\n\
+             effects  { reads s, writes s }\n\
+             costs    <= 4 ops\n\
+         {\n    s = x;\n}\n\
+         }\n",
+    ))
+    .expect("a scalar static must export");
+    for teil in [
+        "inductive GGlob where",
+        "| s",
+        "gtyp := fun | .s => (.int 0 100)",
+        "gbraucht := fun | .s => [.inl GLock.L]",
+        "ggeteilt := fun | .s => true",
+        "theorem gGDarf_f_s : gdarf gD GGlob.s gL_f",
+        ".assignGlob GGlob.s",
+        "Expr.glob (D := gD) GGlob.s",
+        "(.inr GGlob.s)",
+        // the declared initialiser, not zero
+        "| .s => ⟨7, by decide, by decide⟩",
+    ] {
+        assert!(text.contains(teil), "static export must contain {teil:?}\n{text}");
+    }
+}
+
+/// **LG002**: an ARRAY `static` has no `Glob` form -- a `Glob` carries ONE
+/// `Wert`, not a row -- and it is refused BY NAME, never by a catch-all.
+#[test]
+fn refuses_array_static() {
+    let w = refuse_of(&einheit("static mut s : [u8; 4] = 0;\n"));
+    assert_eq!(w.code, "LG002", "{w}");
+    assert!(w.message.contains("static s"), "must name the static: {w}");
+    assert!(w.message.contains("ONE value"), "must say why: {w}");
+}
+
+/// **LG001**: a `section` at a `static` is a PLACEMENT, and a `Glob` has
+/// none. Before the `Glob` arm this hid behind the blanket `static` refusal.
+#[test]
+fn refuses_static_with_section() {
+    let w = refuse_of(&einheit("static mut s : u32 = 1 section \".data\";\n"));
     assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("section"), "must name the cause: {w}");
+}
+
+/// **LG004**: a write to a global the `effects` do not name has no write
+/// right; it is refused here rather than left to a failing `by decide`.
+#[test]
+fn refuses_unowned_global_write() {
+    let w = refuse_of(
+        "module test::statik2 {\n\
+         table T count 4 { slot { v : u32, } }\n\
+         static mut s : u32 in 0 .. 100 = 0;\n\
+         impl fn f() effects { reads s } costs <= 4 ops\n\
+         {\n    s = 1;\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("global s"), "must name the global: {w}");
 }
 
 /// **LG001**: `locks L` in the effects without `requires Held(L)` would need

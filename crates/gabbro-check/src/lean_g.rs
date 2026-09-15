@@ -19,6 +19,34 @@
 //!   A `bool` field travels as `Ty.bool`; `option`, record, `tagged`,
 //!   float and wrapping fields have no form (LG002). A unit without tables
 //!   travels with `Tab := Empty` (pure computation over parameters).
+//! * `static mut X : <int range|bool> = <literal>;` -- `Glob`/`gtyp`, with
+//!   the declared initialiser as the `gSp0` entry (`Syntax.lean` §1: "ein
+//!   `static` ein `Glob`"). A read is `Expr.glob`, an `old(X)` is
+//!   `Expr.altGlob`, a write is `Stmt.assignGlob` and the write right is
+//!   `Signatur.gschreibt` off `effects { writes X }`. A `lock L protects
+//!   { X }` puts `L` in `gbraucht X`, and a global is `ggeteilt` exactly
+//!   where a lock guards it -- the same rule the tables travel under.
+//!   **An ARRAY static has NO form** (`[u8; K]`): a `Glob` carries ONE
+//!   `Wert`, not a row, and that is refused by name (LG002), as are a
+//!   pointer, a record and a float static, and a `section` at a `static`
+//!   (a PLACEMENT, LG001).
+//! * `arena A capacity lo .. hi of T` -- **O14**, closed 2026-09-15: the
+//!   PAIR `Grammatik/ArenaZucker.lean` names, synthesised here. A table `A`
+//!   of `count = hi` with one field `wert : T`, a global `A_used : int 0 hi`
+//!   starting at zero, and `def gArena_A : ArenaForm gD` beside them.
+//!   `reset A;` is `Stmt.arenaReset`, `let i = alloc A (v) else { … };` is
+//!   `Block.arenaAlloc`, and `A[i]` is the slot read of the one field.
+//!   **The reservation `lo` does NOT travel** -- it is the checker's static
+//!   count (`N212`), whose model-side consequence is already proved
+//!   (`arenaAlloc_unter_schranke`).
+//!   **An `alloc` WITHOUT `else` is refused by name** (LG004), and that is a
+//!   decision: `Block.arenaAlloc` always carries a full-arena branch, the
+//!   emitted C carries none, and what makes the branch dead is `N212`, which
+//!   does not travel into the term. Inventing a `return` the user did not
+//!   write would put a guard into the exported term that neither the source
+//!   nor the C has. An `alloc` at the TOP LEVEL of a body is refused for the
+//!   reason every `narrow`/`bindCall` is: a body is an `Endblock`, and those
+//!   are `Block` formers.
 //! * `lock L protects { ... } rank N` -- `Lock`/`rang`/`braucht` (the `held`
 //!   budget, the pointer address spaces and the `reads` effects
 //!   have NO FORM and are ignored, each named in the printed header)
@@ -42,7 +70,10 @@
 //!   form (its `hr` needs `gruende = 0`); only `let x = f() else (e) { … }`
 //!   travels (`Block.bindCallElse`).
 //! * `const NAME = N` (inlined at every use) and `type NAME = u32 in lo..hi`
-//!   (resolved at every use); the module wrapper is transparent
+//!   / `lo..<hi` (resolved at every use, the exclusive bound as `lo..hi-1`);
+//!   an `opaque` alias travels as its range -- `opaque` is a rule about a
+//!   UNIT BOUNDARY, like `pub`, and `Deklaration` has no boundary; the module
+//!   wrapper is transparent
 //!
 //! ## The lock floor (`boden`, lane 174)
 //!
@@ -60,8 +91,8 @@
 //!
 //! ## Refusal codes (`LG`)
 //!
-//! * `LG001` item with no G form (globals, devices, axioms, statics,
-//!   `entrust`, ...); since lane 198 also a declared start with parameters
+//! * `LG001` item with no G form (devices, axioms, `entrust`, ...; a
+//!   `static` LEFT this list on 2026-09-15, see above); since lane 198 also a declared start with parameters
 //!   (no `Env` argument form) -- `entry`/`boot` items themselves travel
 //!   only as their dispatch root (see below)
 //! * `LG002` type with no `Ty` form (floats, records, pointers outside `normal`, ...)
@@ -85,9 +116,11 @@
 //!
 //! Beside the program `gP` the export assembles what `GabbroZiel`
 //! (`Zielsatz/Spec.lean`) quantifies over: the lock-invariant family `gS`
-//! (lane 156), the member lists `gFs`/`gLs`/`gCs`, the declared initial
-//! memory `gSp0` (the zero memory -- every slot at zero, `false` for
-//! `bool`; a `static` has no G form, so no initializer travels beside it)
+//! (lane 156), the member lists `gFs`/`gLs`/`gCs` (`gCs` carries the
+//! globals as `.inr` since 2026-09-15), the declared initial
+//! memory `gSp0` (every slot at zero, `false` for `bool` -- no surface form
+//! names a slot initialiser; every global at the initialiser its `static`
+//! DOES name)
 //! and the declared starts `gE.starts` (the `concurrent` members, then the
 //! `entry`/`boot` dispatch roots; every start is parameterless, its
 //! argument list `.nil`), as `def gE : Einheit gD` (no axiom exists, so
@@ -100,8 +133,10 @@
 //! the `by unvisited`/`by consuming` run form, the `decreases` witness and
 //! the `touches` clause of a `traverse` (static annotations, like `costs`);
 //! `by ops` on a field (a writer discipline the checker holds);
-//! `mut` on a `let` (reassignments still refuse by name); **`pub`** (visibility
-//! is a rule about a UNIT BOUNDARY, and `Deklaration` has no boundary); the
+//! `mut` on a `let` (reassignments still refuse by name); **`pub`** and
+//! **`opaque`** (both are rules about a UNIT BOUNDARY, and `Deklaration` has
+//! no boundary -- `opaque` joined on 2026-09-15, when its alias started to
+//! travel as its range); the
 //! `entry`/`boot` hardware around a dispatch (the vector, the registers, the
 //! steps -- only the dispatch root travels, as a declared start where
 //! exportable).
@@ -209,10 +244,20 @@ impl VTy {
     }
 }
 
-/// The exportable fragment of a unit: tables, locks, functions, threads,
-/// and the reason declarations behind the `or R` channels.
+/// The exportable fragment of a unit: tables, globals, locks, functions,
+/// threads, and the reason declarations behind the `or R` channels.
 pub(crate) struct Model {
     pub(crate) tables: Vec<TableModel>,
+    /// `static mut X : <int range|bool> = <literal>;` -- the `Glob` half of
+    /// the declaration. An ARRAY static has no single `Wert` and is refused
+    /// by name (a `Glob` is one value, not a row).
+    pub(crate) globs: Vec<GlobModel>,
+    /// `arena A capacity lo .. hi of T` -- **O14**: the specification carries
+    /// `alloc`/`reset` as SUGAR over a table of `count = hi` slots beside a
+    /// `used` global (`Grammatik/ArenaZucker.lean`), and this is the pair the
+    /// exporter synthesises. The reservation `lo` does NOT travel: it is the
+    /// checker's static count (`N212`).
+    pub(crate) arenas: Vec<ArenaModel>,
     pub(crate) locks: Vec<LockModel>,
     pub(crate) fns: Vec<FnModel>,
     #[allow(dead_code)]
@@ -238,10 +283,35 @@ pub(crate) struct TableModel {
     pub(crate) fields: Vec<FieldModel>,
 }
 
+/// The declared initial value of a global: the `sp0` entry the loader
+/// establishes (`Laufzeit.lader`). A slot starts at zero because no surface
+/// form names a slot initialiser; a `static` names one, and it travels.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum GInit {
+    Int(i128),
+    Bool(bool),
+}
+
+pub(crate) struct GlobModel {
+    pub(crate) name: String,
+    pub(crate) ty: VTy,
+    pub(crate) init: GInit,
+}
+
+/// The `ArenaForm` of one `arena` declaration: which synthesised table holds
+/// the slots and which synthesised global holds the `used` counter.
+pub(crate) struct ArenaModel {
+    pub(crate) name: String,
+    pub(crate) table: usize,
+    pub(crate) glob: usize,
+}
+
 pub(crate) struct LockModel {
     pub(crate) name: String,
     pub(crate) rank: i128,
     pub(crate) guards: Vec<usize>,
+    /// The GLOBALS this lock `protects` (`gbraucht`), beside the tables.
+    pub(crate) gguards: Vec<usize>,
     /// `invariant <pred>` -- `None` where the lock carries none (its `inv`
     /// arm is `fun _ => true`, the empty-family shape over its carriers).
     pub(crate) invariant: Option<Pred>,
@@ -303,19 +373,25 @@ fn zucker_grenzwort(o: &Ort) -> Option<i128> {
     }
 }
 
-/// An integer range where G needs a `Ty`: `u32 in lo..hi`, or an alias for
-/// one. A bare word (`u32`) travels as its full range -- the same numbers
-/// the checker computes with (`breite_von`/`grenzen`), spelled by the word.
-/// An exclusive bound (`..<`) has no form here (LG002).
+/// An integer range where G needs a `Ty`: `u32 in lo..hi`, `u32 in lo..<hi`,
+/// or an alias for one. A bare word (`u32`) travels as its full range -- the
+/// same numbers the checker computes with (`breite_von`/`grenzen`), spelled
+/// by the word; an exclusive bound travels as `lo .. hi-1`, likewise the
+/// same numbers.
 fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
     match t {
         TypExpr::Int(i) => {
             if let Some(b) = &i.bereich {
-                if b.exklusiv {
-                    return None;
-                }
                 let lo = numeral(&b.von, scope)?;
                 let hi = numeral(&b.bis, scope)?;
+                // `lo ..< hi` is `lo .. hi-1` -- the SAME numbers the checker
+                // computes with (`grenzen`), spelled with the half-open form.
+                // An empty exclusive range (`n ..< n`) names no value and has
+                // no `Ty`; it is left to the caller's refusal.
+                let hi = if b.exklusiv { hi.checked_sub(1)? } else { hi };
+                if hi < lo {
+                    return None;
+                }
                 Some(VTy::Int { lo, hi, bits: word_bits(i.wort) })
             } else {
                 let (breite, vz) = crate::umgebung::breite_von(i.wort)?;
@@ -336,7 +412,7 @@ fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
+    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
     let mut scope = Scope::default();
     // Pass one: constants and type aliases, so `count` and field types resolve.
     fn pass_one(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
@@ -350,7 +426,14 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                     scope.consts.insert(k.name.text.clone(), v);
                 }
                 ItemArt::Typ(t) => {
-                    if t.opaque || t.linear || t.ghost || t.tagged || t.ordnung.is_some()
+                    // **`opaque` is a rule about a UNIT BOUNDARY**, exactly
+                    // like `pub`: outside the module the definition is not
+                    // visible, so no arithmetic reaches the range. Inside the
+                    // unit -- and `Deklaration` has no boundary at all -- the
+                    // alias IS its range, and that range travels. The drop is
+                    // named in the printed NO-FORM ledger, which is what this
+                    // ledger exists for.
+                    if t.linear || t.ghost || t.tagged || t.ordnung.is_some()
                         || t.parameter.is_some()
                     {
                         return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
@@ -369,17 +452,28 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
         Ok(())
     }
     pass_one(&mut scope, &tree.items)?;
-    // Pass two: tables, locks, functions, concurrency.
-    fn walk(model: &mut Model, scope: &Scope, items: &[Item]) -> Result<(), Refusal> {
+    // Pass two: carriers, locks, functions, concurrency.
+    //
+    // **The locks are read AFTER the walk, not during it.** A lock's
+    // `protects` names a carrier, and a carrier declared BELOW the lock is
+    // not in the model yet while the walk is at the lock -- with tables that
+    // was a latent ordering hazard, with globals it fires (`110`, `125` both
+    // happen to declare the `static` first, others need not). The lock
+    // declarations are collected here and resolved once every carrier is in.
+    fn walk<'a>(model: &mut Model, scope: &Scope, items: &'a [Item], sperren: &mut Vec<&'a LockDecl>) -> Result<(), Refusal> {
         for item in items {
             if item.when.is_some() {
                 return Err(refuse("LG001", "`when` on an item has no G form".to_string()));
             }
             match &item.art {
-                ItemArt::Modul(m) => walk(model, scope, &m.items)?,
+                ItemArt::Modul(m) => walk(model, scope, &m.items, sperren)?,
                 ItemArt::Typ(_) | ItemArt::Konst(_) => {}
                 ItemArt::Tabelle(t) => model.tables.push(read_table(t, scope)?),
-                ItemArt::Lock(l) => model.locks.push(read_lock(l, model)?),
+                // A `static` is a `Glob` (`Syntax.lean` §1: "ein `static` ein
+                // `Glob`"). What has no single `Wert` -- an array, a pointer,
+                // a record, a float -- is refused BY NAME in `read_static`.
+                ItemArt::Statisch(s) => model.globs.push(read_static(s, scope)?),
+                ItemArt::Lock(l) => sperren.push(l),
                 // A `reason` declaration is pure declaration data: its case
                 // count is the `gruende` of every `-> T or R` naming it.
                 ItemArt::Reason(r) => {
@@ -396,27 +490,21 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                         model.concurrent.push(last.text.clone());
                     }
                 }
-                // **The arena is refused BY NAME, not by the catch-all below.**
-                // Since 2026-09-15 the specification HAS a form for `alloc` and
-                // `reset` (`grammatik/Grammatik/ArenaZucker.lean`): an arena is a
-                // table of `count = hi` slots beside a global `used` counter, and
-                // the two statements are `Block.narrow` + `Stmt.assignSlot` +
-                // `Stmt.assignGlob` over that pair. What is missing is HERE: this
-                // exporter does not synthesise the pair, so an arena program still
-                // gets no G term. *A catch-all that happens to fire is not a
-                // refusal anybody can act on -- and the day an arm is added above,
-                // it would stop firing without a word.* `dokumente/OFFEN.md` O14.
+                // **The arena travels as its PAIR** (O14, closed here
+                // 2026-09-15): `Grammatik/ArenaZucker.lean` carries `alloc`
+                // and `reset` as sugar over a table of `count = hi` slots
+                // beside a global `used` counter, and `read_arena` builds
+                // exactly that pair. The reservation `lo` does not travel --
+                // it is the checker's static count (`N212`).
                 ItemArt::Arena(a) => {
-                    return Err(refuse(
-                        "LG001",
-                        format!(
-                            "arena {} has no G form YET: the specification carries `alloc`/`reset` \
-                             as sugar over a table plus a `used` global (Grammatik/ArenaZucker.lean, \
-                             `Block.arenaAlloc`/`Stmt.arenaReset`), and this exporter does not build \
-                             that pair -- see OFFEN.md O14",
-                            a.name.text
-                        ),
-                    ));
+                    let (t, g) = read_arena(a, scope, model)?;
+                    model.tables.push(t);
+                    model.globs.push(g);
+                    model.arenas.push(ArenaModel {
+                        name: a.name.text.clone(),
+                        table: model.tables.len() - 1,
+                        glob: model.globs.len() - 1,
+                    });
                 }
                 // An `entry`/`boot` item is hardware around one dispatch
                 // (lane 198): the vector, the registers, the steps have no
@@ -425,18 +513,67 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // refused where the starts resolve, by name.
                 ItemArt::Entry(e) => model.wurzeln.push(e.dispatch.clone()),
                 ItemArt::Boot(b) => model.wurzeln.push(b.dispatch.clone()),
+                // **Every remaining item kind has its OWN arm**, and each
+                // says what the specification would carry it as and what is
+                // missing. *A catch-all that happens to fire is not a refusal
+                // anybody can act on -- and the day an arm is added above,
+                // it stops firing without a word* (the defect `N320` and O14
+                // were written for). The name of the item is in the message
+                // wherever the kind has one, so a reader can find the line.
                 other => {
-                    return Err(refuse("LG001", format!("{} has no G form", other.benennung())));
+                    let wo = other.name().map(|n| format!(" {}", n.text)).unwrap_or_default();
+                    let grund: &str = match other {
+                        ItemArt::Device(_) => "a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, \
+                            and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`",
+                        ItemArt::Assume(_) => "a named assumption is `D.Annahme`, which the specification \
+                            consumes only at `Stmt.forever` and `Stmt.retires`; this exporter builds no `Annahme` \
+                            and exports neither statement",
+                        ItemArt::Format(_) => "a `format` is a `Tab` with `count 1` whose `where` clauses are \
+                            `Block.pruefung` (Syntax.lean §9); this exporter builds no such table",
+                        ItemArt::Atomic(_) => "an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, \
+                            and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter \
+                            writes `atomar := fun _ => false` and exports none of the three",
+                        ItemArt::Gruppe(_) => "a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); \
+                            this exporter writes `Inv := Empty`",
+                        ItemArt::Accumulates(_) => "an `accumulates` is a `Glob` plus a generated assignment \
+                            (Syntax.lean §11); this exporter generates none",
+                        ItemArt::State(_) => "a `state` declaration fills `D.erlaubt`, and its assignments are \
+                            `Stmt.uebergang`; this exporter writes `erlaubt := fun _ _ _ _ => false`",
+                        ItemArt::Axiom(_) | ItemArt::Entrust(_) | ItemArt::Syscall(_) =>
+                            "a foreign body is `D.Ax` with `aparams`/`aerg`/`aschreibt`, called through \
+                            `Stmt.axiomCall`/`Block.bindAxiom`; this exporter writes `Ax := Empty`",
+                        ItemArt::Check(_) => "a `check` produces a `Duty` mark consumed by `gates` (Syntax.lean §13); \
+                            this exporter writes `Marke := Empty`",
+                        ItemArt::Rcu(_) => "an RCU domain is a `D.Lock` whose `observes` is `Stmt.locks`; \
+                            this exporter reads only `lock` declarations",
+                        ItemArt::Walk(_) => "a `walk` is one `Stmt.traverse` per level with `levels` constant \
+                            (Syntax.lean §9); this exporter generates none",
+                        ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) =>
+                            "a hardware profile is a set of NAMED ASSUMPTIONS about the machine, and `Deklaration` \
+                            carries assumptions only as `D.Annahme` at the two statements that consume them",
+                        ItemArt::Use(_) => "a `use` names another UNIT, and `Deklaration` has no unit boundary \
+                            -- what it imports is not in this term at all",
+                        _ => "no `Deklaration` field carries it",
+                    };
+                    return Err(refuse(
+                        "LG001",
+                        format!("{}{wo} has no G form: {grund}", other.benennung()),
+                    ));
                 }
             }
         }
         Ok(())
     }
-    walk(&mut model, &scope, &tree.items)?;
+    let mut sperren: Vec<&LockDecl> = Vec::new();
+    walk(&mut model, &scope, &tree.items, &mut sperren)?;
+    for l in sperren {
+        let lm = read_lock(l, &model)?;
+        model.locks.push(lm);
+    }
     // A unit without tables travels with `Tab := Empty` (pure computation
     // over parameters); a unit without functions has no program at all.
     if model.fns.is_empty() {
-        if model.tables.is_empty() {
+        if model.tables.is_empty() && model.globs.is_empty() {
             return Err(refuse("LG001", "a G declaration needs at least one table".to_string()));
         }
         return Err(refuse("LG001", "a G program needs at least one function".to_string()));
@@ -459,6 +596,8 @@ pub(crate) struct CheckedFn {
     pub(crate) result: Option<VTy>,
     held: Vec<usize>,
     writes: Vec<usize>,
+    /// `effects { writes G }` at a GLOBAL -- the `Signatur.gschreibt` half.
+    gwrites: Vec<usize>,
     pub(crate) ensures: Vec<Pred>,
     /// `requires` past the signature-held locks: every non-`Held` clause
     /// travels as an `Expr` (lane 198), conjoined under `.und` (`.wahr`
@@ -468,9 +607,12 @@ pub(crate) struct CheckedFn {
     pub(crate) body: Block,
     /// `-> T or R`: the case count of the named `reason`, 0 without one.
     pub(crate) gruende: usize,
-    /// The lock floor: the minimum rank the body takes, or `none`
-    /// (`Signatur.boden`, `StufenOk`).
+    /// The lock floor (`Signatur.boden`, `StufenOk`) -- the value the
+    /// signature carries, computed over the CALL GRAPH by `resolve_floors`.
     boden: Option<i128>,
+    /// The minimum rank this body takes DIRECTLY, or `none` where it takes
+    /// no lock at all. `boden` is derived from this and from the callees'.
+    direct_floor: Option<i128>,
     /// The functions the body may call (for the footprint mirror).
     calls: Vec<String>,
 }
@@ -602,6 +744,12 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                 scan_block(&sp.rumpf, acc);
             }
             StmtArt::Bricht(b) => scan_block(&b.rumpf, acc),
+            StmtArt::Alloc(al) => {
+                scan_expr(&al.wert, acc);
+                if let Some(b) = &al.sonst {
+                    scan_block(b, acc);
+                }
+            }
             StmtArt::Narrow(_) => {}
             _ => {}
         }
@@ -755,8 +903,28 @@ fn check_fn(
             _ => return Err(refuse("LG001", format!("effect in {} has no G form", f.name))),
         }
     }
+    let mut gwrites: Vec<usize> = Vec::new();
     for w in &effects.liste {
         if let WirkungArt::Schreibt(o) = &w.art {
+            // `writes G` at a bare global name is the `gschreibt` half; a
+            // suffixed place (`T.slots`) is the table half, as before.
+            if o.suffixe.is_empty() {
+                // `writes A` at an ARENA is a write to BOTH halves of its
+                // pair: the slots and the `used` counter.
+                if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
+                    writes.push(a.table);
+                    if !gwrites.contains(&a.glob) {
+                        gwrites.push(a.glob);
+                    }
+                    continue;
+                }
+                if let Some(gi) = model.globs.iter().position(|g| g.name == o.basis.text) {
+                    if !gwrites.contains(&gi) {
+                        gwrites.push(gi);
+                    }
+                    continue;
+                }
+            }
             writes.push(write_table(o, &params, model, &f.name)?);
         }
     }
@@ -796,9 +964,10 @@ fn check_fn(
             ));
         }
     }
-    // The lock floor: the minimum rank the body takes, or `none`.
-    let boden = taken.iter().map(|li| model.locks[*li].rank).min();
-    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, ensures: d.ensures.clone(), requires, body: body.clone(), gruende, boden, calls: scan.calls })
+    // The minimum rank the body takes DIRECTLY. The signature's floor is
+    // computed from this over the whole call graph (`resolve_floors`).
+    let direct_floor = taken.iter().map(|li| model.locks[*li].rank).min();
+    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, gwrites, ensures: d.ensures.clone(), requires, body: body.clone(), gruende, boden: direct_floor, direct_floor, calls: scan.calls })
 }
 
 /// A `requires` clause as signature-held locks: `Some` where the whole
@@ -960,8 +1129,140 @@ fn read_table(t: &Tabelle, scope: &Scope) -> Result<TableModel, Refusal> {
     Ok(TableModel { name: t.name.text.clone(), count, fields })
 }
 
-/// One lock: its rank and the tables its `protects` names (by table or by
-/// field). Masking and the shared branch have no G form.
+/// The field name the synthesised arena table carries, and the suffix of its
+/// `used` counter. Both are spelled once, here, so no site invents them.
+const ARENA_FELD: &str = "wert";
+const ARENA_ZAEHL: &str = "_used";
+
+/// **`arena A capacity lo .. hi of T` as the pair `ArenaZucker.lean` names**
+/// (`dokumente/OFFEN.md` O14): a table `A` of `count = hi` with one field
+/// `wert : T`, and a global `A_used : int 0 hi` starting at zero -- literally
+/// what the emitter writes (`A_arena_speicher.buf[hi]` beside a `used`
+/// counter).
+///
+/// `ArenaForm` demands `gtyp zaehl = .int 0 (count tab)` (the counter must be
+/// able to name a FULL arena) and `0 < count tab`. Both are decided here, in
+/// Rust, and refused by name -- a `by decide` that fails is a Lean error and
+/// not a refusal.
+///
+/// **The reservation `lo` does NOT travel.** It is the checker's static count
+/// (`N212`), and its model-side consequence is already proved
+/// (`arenaAlloc_unter_schranke`: below the hard bound the `else` cannot run).
+fn read_arena(a: &ArenaDecl, scope: &Scope, model: &Model) -> Result<(TableModel, GlobModel), Refusal> {
+    let Some(hi) = numeral(&a.hi, scope) else {
+        return Err(refuse("LG005", format!("arena {} has no numeric hard bound", a.name.text)));
+    };
+    if hi <= 0 {
+        return Err(refuse(
+            "LG001",
+            format!(
+                "arena {} has hard bound {hi}: `ArenaForm.hpos` needs at least one slot, and an \
+                 arena of none has no `alloc` that can succeed",
+                a.name.text
+            ),
+        ));
+    }
+    let Some(elem) = int_ty(&a.element, scope) else {
+        return Err(refuse(
+            "LG002",
+            format!(
+                "arena {} holds elements with no `Ty` form: only an integer range or `bool` travels",
+                a.name.text
+            ),
+        ));
+    };
+    let zaehl = format!("{}{ARENA_ZAEHL}", a.name.text);
+    // The two synthesised names must not collide with a declared carrier.
+    if model.tables.iter().any(|t| t.name == a.name.text) {
+        return Err(refuse("LG005", format!("arena {} shares its name with a table", a.name.text)));
+    }
+    if model.globs.iter().any(|g| g.name == zaehl) {
+        return Err(refuse(
+            "LG005",
+            format!("arena {} needs the counter name `{zaehl}`, which a `static` already holds", a.name.text),
+        ));
+    }
+    Ok((
+        TableModel {
+            name: a.name.text.clone(),
+            count: hi,
+            fields: vec![FieldModel { name: ARENA_FELD.to_string(), ty: elem }],
+        },
+        GlobModel {
+            name: zaehl,
+            ty: VTy::Int { lo: 0, hi, bits: None },
+            init: GInit::Int(0),
+        },
+    ))
+}
+
+/// One `static` as a `Glob`: its type and its declared initial value.
+///
+/// `Syntax.lean` §1 reads *"ein `static` ein `Glob`"*, and a `Glob` carries
+/// ONE `Wert (D.gtyp g)` -- so an array static (`[u8; K]`), a pointer static
+/// and a record static have no form here and are refused by name, each
+/// naming what it is. The initialiser travels: it is the `sp0` entry the
+/// loader establishes, and unlike a slot (which has no surface initialiser
+/// and starts at zero) a `static` says what it starts at.
+fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
+    // `section "…"` is a PLACEMENT, and a `Glob` has no placement. `N320`
+    // refuses a `section` at a function for the same reason; at a `static`
+    // it used to be invisible behind the blanket `LG001`.
+    if s.section.is_some() {
+        return Err(refuse(
+            "LG001",
+            format!("static {} carries a `section`, which is a PLACEMENT and has no `Glob` form", s.name.text),
+        ));
+    }
+    let Some(ty) = int_ty(&s.typ, scope) else {
+        return Err(refuse(
+            "LG002",
+            format!(
+                "static {} has no `Glob` form: a `Glob` carries ONE value, so only an integer \
+                 range or `bool` travels -- an array, a pointer, a record or a float static has none",
+                s.name.text
+            ),
+        ));
+    };
+    let init = match (&ty, &s.wert.art) {
+        (VTy::Bool, ExprArt::Wahr) => GInit::Bool(true),
+        (VTy::Bool, ExprArt::Falsch) => GInit::Bool(false),
+        (VTy::Bool, _) => {
+            return Err(refuse(
+                "LG003",
+                format!("initialiser of static {} is not `true`/`false` and has no `sp0` form", s.name.text),
+            ));
+        }
+        (VTy::Int { lo, hi, .. }, _) => {
+            let Some(n) = numeral(&s.wert, scope) else {
+                return Err(refuse(
+                    "LG003",
+                    format!("initialiser of static {} is not a numeral and has no `sp0` form", s.name.text),
+                ));
+            };
+            if n < *lo || n > *hi {
+                return Err(refuse(
+                    "LG003",
+                    format!(
+                        "initialiser {n} of static {} lies outside {lo}..{hi} and has no `sp0` value",
+                        s.name.text
+                    ),
+                ));
+            }
+            GInit::Int(n)
+        }
+        _ => {
+            return Err(refuse(
+                "LG002",
+                format!("static {} has no `Glob` form", s.name.text),
+            ));
+        }
+    };
+    Ok(GlobModel { name: s.name.text.clone(), ty, init })
+}
+
+/// One lock: its rank and the carriers its `protects` names (a table, a
+/// table field, or a global). Masking and the shared branch have no G form.
 fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
     if l.maskiert.is_some() || l.geteilte_haltezeit.is_some() {
         return Err(refuse("LG001", format!("lock {} carries a form with no G counterpart", l.name.text)));
@@ -971,9 +1272,16 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
     };
     let rank = i128::try_from(*rank).map_err(|_| refuse("LG005", format!("lock {} rank too large", l.name.text)))?;
     let mut guards = Vec::new();
+    let mut gguards = Vec::new();
     for o in &l.schuetzt {
         if !o.suffixe.is_empty() {
             return Err(refuse("LG005", format!("lock {} protects {}", l.name.text, o.text())));
+        }
+        if let Some(gi) = model.globs.iter().position(|g| g.name == o.basis.text) {
+            if !gguards.contains(&gi) {
+                gguards.push(gi);
+            }
+            continue;
         }
         let mut found = None;
         for (ti, t) in model.tables.iter().enumerate() {
@@ -989,7 +1297,74 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
             guards.push(ti);
         }
     }
-    Ok(LockModel { name: l.name.text.clone(), rank, guards, invariant: l.invariante.clone() })
+    Ok(LockModel { name: l.name.text.clone(), rank, guards, gguards, invariant: l.invariante.clone() })
+}
+
+/// **The lock floor is a CHOICE, and the exporter used to make the worst one.**
+///
+/// `Signatur.boden` is not a measurement of the body; it is a promise to
+/// callers: *"you may hold, beyond my `requires Held`, any lock of rank below
+/// this"* (`RufPasst.hx`), and the duty it carries is `StufenOk` --
+/// `(P.rumpf f).ueberBoden c = true`, i.e. every `locks L` in the body takes
+/// a lock of rank at least `c`. **A body that takes no lock at all satisfies
+/// `ueberBoden c` for EVERY `c`** (`Satz.lean`: only the `.locks` arm
+/// constrains), so its floor is free -- and the exporter wrote `none`, the
+/// one value that promises callers NOTHING.
+///
+/// That is what refused `beispiele/124` and `beispiele/109`: a caller that
+/// takes a lock (floor `some 0`) calling a lock-free callee (floor `none`)
+/// fails `RufPasst.hb` (`∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c'`),
+/// although nothing inside the callee can undercut anything. **`hb` is a real
+/// rule** -- the caller's own untracked extras (rank below its floor) are held
+/// while the callee runs, and the callee must tolerate them -- and the defect
+/// was the exporter's choice of `none`.
+///
+/// The floor chosen here is the **minimum rank taken anywhere in the function's
+/// reachable call graph**, and `HOCH` (one above every declared rank) where
+/// that set is empty. It is sound and it is the most permissive choice that is:
+///
+/// * `StufenOk`: the floor is at most every rank the body takes directly.
+/// * `hb`: `reach g ⊆ reach f` for every callee `g` of `f`, so
+///   `floor f ≤ floor g` -- never refused for a call inside the unit again.
+/// * `hx`: an extra lock must rank below the floor, i.e. below every rank the
+///   callee (or anything it calls) takes -- which is exactly `H006` carried
+///   across the call boundary.
+///
+/// A unit with no locks keeps `none` throughout: there is no rank to be above,
+/// and `hb`/`hx` are vacuous there.
+fn resolve_floors(checked: &mut [CheckedFn], model: &Model) {
+    if model.locks.is_empty() {
+        return;
+    }
+    let hoch = model.locks.iter().map(|l| l.rank).max().expect("nonempty") + 1;
+    let idx: std::collections::HashMap<&str, usize> =
+        checked.iter().enumerate().map(|(i, f)| (f.name.as_str(), i)).collect();
+    let mut floors = Vec::with_capacity(checked.len());
+    for i in 0..checked.len() {
+        // The reachable set, by worklist: recursion and cycles are a SET
+        // question, not a recursive descent, so they terminate here.
+        let mut seen = vec![false; checked.len()];
+        let mut stack = vec![i];
+        seen[i] = true;
+        let mut floor: Option<i128> = None;
+        while let Some(j) = stack.pop() {
+            if let Some(c) = checked[j].direct_floor {
+                floor = Some(floor.map_or(c, |m: i128| m.min(c)));
+            }
+            for name in &checked[j].calls {
+                if let Some(&k) = idx.get(name.as_str()) {
+                    if !seen[k] {
+                        seen[k] = true;
+                        stack.push(k);
+                    }
+                }
+            }
+        }
+        floors.push(Some(floor.unwrap_or(hoch)));
+    }
+    for (f, c) in checked.iter_mut().zip(floors) {
+        f.boden = c;
+    }
 }
 
 /// Export the checked unit as a Lean file, or refuse it by name.
@@ -1010,6 +1385,7 @@ pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<
     for f in &model.fns {
         checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
+    resolve_floors(&mut checked, &model);
     let mut out = Out::default();
     for c in &checked {
         check_contracts(c, &model, &scope, &mut out)?;
@@ -1050,6 +1426,7 @@ pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, 
     for f in &model.fns {
         checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
+    resolve_floors(&mut checked, &model);
     let mut out = Out::default();
     for c in &checked {
         check_contracts(c, &model, &scope, &mut out)?;
@@ -1137,6 +1514,8 @@ fn rescope(tree: &Programm) -> Result<Scope, Refusal> {
 struct Out {
     hps: Vec<HpNeeded>,
     darf: Vec<(String, String, usize)>,
+    /// The same, for GLOBALS (`gdarf`): (function, tag, global).
+    gdarf: Vec<(String, String, usize)>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -1161,6 +1540,13 @@ impl Out {
         let key = (fname.to_string(), tag.to_string(), t);
         if !self.darf.contains(&key) {
             self.darf.push(key);
+        }
+    }
+
+    fn gbraucht(&mut self, fname: &str, tag: &str, g: usize) {
+        let key = (fname.to_string(), tag.to_string(), g);
+        if !self.gdarf.contains(&key) {
+            self.gdarf.push(key);
         }
     }
 }
@@ -1324,6 +1710,58 @@ fn darf_name(fname: &str, tag: &str, model: &Model, t: usize) -> String {
     format!("gDarf_{}{}_{}", lean_fn(fname), tag, model.tables[t].name)
 }
 
+/// The same for a GLOBAL (`gdarf`): the guards of `g` are among the held set.
+fn gdarf_name(fname: &str, tag: &str, model: &Model, g: usize) -> String {
+    format!("gGDarf_{}{}_{}", lean_fn(fname), tag, model.globs[g].name)
+}
+
+/// Every global `g`'s guards must be among `held` (the `gdarf` half).
+fn holds_gguards(held: &[usize], model: &Model, g: usize) -> bool {
+    model.locks.iter().enumerate()
+        .filter(|(_, l)| l.gguards.contains(&g))
+        .map(|(li, _)| li)
+        .all(|li| held.contains(&li))
+}
+
+/// Some guard of the global `g` is signature-held (the footprint half).
+fn gguard_held(held: &[usize], model: &Model, g: usize) -> bool {
+    model.locks.iter().enumerate()
+        .filter(|(_, l)| l.gguards.contains(&g))
+        .map(|(li, _)| li)
+        .any(|li| held.contains(&li))
+}
+
+fn glob_ctor(model: &Model, g: usize) -> String {
+    format!("GGlob.{}", model.globs[g].name)
+}
+
+/// The guard proof a global access names: the theorem of its held context.
+fn gdarf_at(ctx: &Ctx, model: &Model, fname: &str, g: usize, out: &mut Out) -> String {
+    out.gbraucht(fname, &ctx.tag, g);
+    gdarf_name(fname, &ctx.tag, model, g)
+}
+
+/// A bare name that is a declared global, as an `Expr.glob`/`Expr.altGlob`
+/// under its guards. `None` where the name is no global -- the caller then
+/// refuses as before, so an unknown name never becomes a silent global.
+fn glob_read(
+    o: &Ort, alt: bool, ctx: &Ctx, model: &Model, fname: &str, out: &mut Out,
+) -> Option<Result<(String, VTy), Refusal>> {
+    let gi = model.globs.iter().position(|g| g.name == o.basis.text)?;
+    if !holds_gguards(&ctx.held, model, gi) {
+        return Some(Err(refuse(
+            "LG004",
+            format!("read of the global {} in {fname} holds no guard (no proof)", o.basis.text),
+        )));
+    }
+    let proof = gdarf_at(ctx, model, fname, gi, out);
+    let ctor = if alt { "Expr.altGlob" } else { "Expr.glob" };
+    Some(Ok((
+        format!("({ctor} (D := gD) {} {proof})", glob_ctor(model, gi)),
+        model.globs[gi].ty.clone(),
+    )))
+}
+
 /// Every table `t`'s guards must be among `held`: the generation-time half
 /// of the guard proof (the Lean half is the `gDarf` theorem the use site names).
 fn holds_guards(held: &[usize], model: &Model, t: usize) -> bool {
@@ -1429,6 +1867,19 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
 /// field type. Guards are read against the enclosing held set (a `locks`
 /// body holds one more), and the guard proof is the theorem of that context.
 fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize, usize, String, Option<usize>, VTy), Refusal> {
+    // **`A[i]` at an arena** (O14): the synthesised table has exactly one
+    // field, so the arena read is the slot read of that field.
+    if let [OrtSuffix::Index(idx)] = o.suffixe.as_slice() {
+        if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
+            let t = a.table;
+            if !holds_guards(&ctx.held, model, t) {
+                return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+            }
+            let index = tr_index(idx, t, ctx, model, fname)?;
+            let ty = model.tables[t].fields[0].ty.clone();
+            return Ok((t, 0, index, None, ty));
+        }
+    }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(f)] = o.suffixe.as_slice() else {
         return Err(refuse("LG003", format!("place {} in {fname} has no G form", o.text())));
     };
@@ -1484,10 +1935,14 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             if let Some((_, _, wert)) = crate::umgebung::grenzwort(o) {
                 return Ok((lit_term(wert, ctx), VTy::Int { lo: wert, hi: wert, bits: None }));
             }
-            let Some((j, ty, _)) = ctx.lookup(&o.basis.text) else {
-                return Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)));
-            };
-            Ok((ctx.var(j), ty))
+            // A local name shadows a global, so the context is asked first.
+            if let Some((j, ty, _)) = ctx.lookup(&o.basis.text) {
+                return Ok((ctx.var(j), ty));
+            }
+            if let Some(r) = glob_read(o, false, ctx, model, fname, out) {
+                return r;
+            }
+            Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)))
         }
         ExprArt::Ort(o) => {
             // A limit word (`u32::max`) or sugared one (`u13::max`) travels
@@ -1748,6 +2203,16 @@ fn tr_conversion(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, 
 /// translation reads it the same way). Integer slots only: the snapshot
 /// arithmetic is conserved sums.
 fn tr_old(o: &Ort, ctx: &Ctx, model: &Model, fname: &str, out: &mut Out) -> Result<(String, VTy), Refusal> {
+    // `old(G)` at a global is `Expr.altGlob`.
+    if o.suffixe.is_empty() && ctx.lookup(&o.basis.text).is_none() {
+        if let Some(r) = glob_read(o, true, ctx, model, fname, out) {
+            let (term, ty) = r?;
+            if !matches!(ty, VTy::Int { .. }) {
+                return Err(refuse("LG003", format!("`old` of {} in {fname} has no G form", o.text())));
+            }
+            return Ok((term, ty));
+        }
+    }
     let (t, fi, index, _, ty) = slot_access(o, ctx, model, fname)?;
     if !matches!(ty, VTy::Int { .. }) {
         return Err(refuse("LG003", format!("`old` of {} in {fname} has no G form", o.text())));
@@ -1767,10 +2232,13 @@ fn tr_side(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: 
             if let Some((_, _, wert)) = crate::umgebung::grenzwort(o) {
                 return Ok((lit_term(wert, ctx), VTy::Int { lo: wert, hi: wert, bits: None }));
             }
-            let Some((j, ty, _)) = ctx.lookup(&o.basis.text) else {
-                return Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)));
-            };
-            Ok((ctx.var(j), ty))
+            if let Some((j, ty, _)) = ctx.lookup(&o.basis.text) {
+                return Ok((ctx.var(j), ty));
+            }
+            if let Some(r) = glob_read(o, false, ctx, model, fname, out) {
+                return r;
+            }
+            Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)))
         }
         ExprArt::Ort(o) => {
             let (t, fi, index, through, ty) = slot_access(o, ctx, model, fname)?;
@@ -2033,12 +2501,13 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
     Ok(aus)
 }
 
-/// The declared initial memory is the zero memory (lane 198): every slot
-/// starts at zero (`false` for `bool`), as the loader establishes it
-/// (`Laufzeit.lader` of the goal theorem). A `static` item has no G form
-/// (LG001, as before), so no initializer travels beside it; an integer
-/// field whose range holds no zero has no `sp0` value and is refused here,
-/// by name.
+/// The declared initial memory (lane 198): every SLOT starts at zero
+/// (`false` for `bool`) -- no surface form names a slot initialiser -- as
+/// the loader establishes it (`Laufzeit.lader` of the goal theorem). An
+/// integer field whose range holds no zero has no `sp0` value and is
+/// refused here, by name. A GLOBAL is different: its `static` names an
+/// initialiser, and that value travels (checked against the declared range
+/// in `read_static`, so nothing is checked twice here).
 fn check_sp0(model: &Model) -> Result<(), Refusal> {
     for t in &model.tables {
         for f in &t.fields {
@@ -2126,6 +2595,12 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
     for t in &callee.writes {
         if !ctx.cf.writes.contains(t) {
             return Err(refuse("LG004", format!("call of {} in {fname} writes beyond its caller (`RufPasst.hw`)", callee.name)));
+        }
+    }
+    // `RufPasst.hg`: the same for GLOBALS.
+    for g in &callee.gwrites {
+        if !ctx.cf.gwrites.contains(g) {
+            return Err(refuse("LG004", format!("call of {} in {fname} writes the global {} beyond its caller (`RufPasst.hg`)", callee.name, model.globs[*g].name)));
         }
     }
     // `RufPasst.hh`: the callee's held set is a SUBSET of the caller's.
@@ -2362,6 +2837,33 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             if z.op != ZuwOp::Setzt {
                 return Err(refuse("LG004", format!("compound assignment in {fname} has no G form")));
             }
+            // `G = e;` at a declared global is `Stmt.assignGlob`. The write
+            // right (`hw : V.gschreibt g = true`) is decided HERE, in Rust:
+            // a `by decide` that fails is a Lean error, not a named refusal.
+            if z.ziel.suffixe.is_empty() && ctx.lookup(&z.ziel.basis.text).is_none() {
+                if let Some(gi) = model.globs.iter().position(|g| g.name == z.ziel.basis.text) {
+                    if !ctx.cf.gwrites.contains(&gi) {
+                        return Err(refuse("LG004", format!(
+                            "{fname} writes the global {} without an `effects {{ writes {} }}` -- \
+                             the write right `Signatur.gschreibt` has nothing to stand on",
+                            z.ziel.basis.text, z.ziel.basis.text)));
+                    }
+                    if !holds_gguards(&ctx.held, model, gi) {
+                        return Err(refuse("LG004", format!(
+                            "write of the global {} in {fname} holds no guard (no proof)",
+                            z.ziel.basis.text)));
+                    }
+                    let gty = model.globs[gi].ty.clone();
+                    let val = match &gty {
+                        VTy::Int { lo, hi, .. } => tr_value(&z.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
+                        VTy::Bool => tr_bool(&z.wert, ctx, model, scope, fname, out)?,
+                        _ => return Err(refuse("LG004", format!("assignment to the global {} in {fname} has no G form", z.ziel.basis.text))),
+                    };
+                    let proof = gdarf_at(ctx, model, fname, gi, out);
+                    let base = format!("(.assignGlob {} {val} (by decide) {proof})", glob_ctor(model, gi));
+                    return Ok(format!("(.cons {base} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?));
+                }
+            }
             let (t, fi, index, through, ty) = slot_access(&z.ziel, ctx, model, fname)?;
             // The value fits the field: an integer range, or `bool`.
             let val = match &ty {
@@ -2467,11 +2969,26 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         StmtArt::AwaitLoad(_) => Err(refuse("LG004", format!("`awaits` in {fname} has no G form in this fragment"))),
         StmtArt::Exchange(_) => Err(refuse("LG004", format!("`exchange` in {fname} has no G form in this fragment"))),
         StmtArt::LibraryCall(_) => Err(refuse("LG004", format!("library call in {fname} has no G form in this fragment"))),
-        // These two are unreachable while an arena DECLARATION is `LG001` above;
-        // they stay, and name the same reason, so the day the declaration is
-        // lowered the statement half is not a silent hole.
-        StmtArt::Alloc(_) => Err(refuse("LG004", format!("`alloc` in {fname} has no G form in this fragment -- the form is `Block.arenaAlloc` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
-        StmtArt::ResetArena(_) => Err(refuse("LG004", format!("`reset` in {fname} has no G form in this fragment -- the form is `Stmt.arenaReset` (Grammatik/ArenaZucker.lean); this exporter does not build it (OFFEN.md O14)"))),
+        // **`reset A;` is `Stmt.arenaReset`** (O14): one store of zero into
+        // the counter, which is what the emitter writes.
+        StmtArt::ResetArena(name) => {
+            let Some(ai) = model.arenas.iter().position(|a| &a.name == &name.text) else {
+                return Err(refuse("LG005", format!("`reset` in {fname} names unknown arena {}", name.text)));
+            };
+            let gi = model.arenas[ai].glob;
+            if !ctx.cf.gwrites.contains(&gi) {
+                return Err(refuse("LG004", format!(
+                    "`reset {}` in {fname} without an `effects {{ writes {} }}` -- \
+                     the write right `Signatur.gschreibt` has nothing to stand on",
+                    name.text, name.text)));
+            }
+            let proof = gdarf_at(ctx, model, fname, gi, out);
+            let base = format!("(Stmt.arenaReset (D := gD) gArena_{} (by decide) {proof})",
+                model.arenas[ai].name);
+            Ok(format!("(.cons {base} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
+        }
+        // **`let i = alloc A (v) else B;` is `Block.arenaAlloc`** (O14).
+        StmtArt::Alloc(al) => tr_alloc(al, ctx, model, scope, fns, fname, out, rest, cont, endblock),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
@@ -2533,6 +3050,76 @@ fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope
     *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
     Ok(format!("(.bindCall g_{} {args} rfl {hp} (by decide) {})",
         lean_fn(&callee.name), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
+}
+
+/// **`let i = alloc A (v) else { … };` as `Block.arenaAlloc`** (O14).
+///
+/// Three existing forms in a row: `Block.narrow` on the counter into
+/// `0 ..< hi` with the `else` branch, `Stmt.assignSlot` at the index it
+/// names, `Stmt.assignGlob` of `i + 1`. `narrow` IS the emitted guard.
+///
+/// **An `alloc` WITHOUT `else` is refused by name, and that is a decision,
+/// not an omission.** `Block.arenaAlloc` always carries a full-arena branch;
+/// the surface form without `else` carries none, and the C the emitter writes
+/// for it carries none either (`buf[used++] = v;`, no bound check). Inventing
+/// a branch -- a `return` the user did not write -- would put a guard into the
+/// exported term that neither the source nor the emitted C has, and the
+/// translation-validation chain would then compare two different programs.
+/// *The checker's `N212` is what makes the branch dead, and `N212` is not in
+/// the exported term.*
+#[allow(clippy::too_many_arguments)]
+fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
+    let Some(ai) = model.arenas.iter().position(|a| a.name == al.tisch.text) else {
+        return Err(refuse("LG005", format!("`alloc` in {fname} names unknown arena {}", al.tisch.text)));
+    };
+    let (aname, ti, gi) = (model.arenas[ai].name.clone(), model.arenas[ai].table, model.arenas[ai].glob);
+    if endblock {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} has no G form at the top level of a body -- \
+             `Block.arenaAlloc` is a `Block` former (its first half is `Block.narrow`), \
+             and a body is an `Endblock`")));
+    }
+    let Some(sonst) = al.sonst.as_ref() else {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} carries no `else`, and this exporter will not invent one: \
+             `Block.arenaAlloc` always carries a full-arena branch, the emitted C carries none, \
+             and what makes the branch dead is the checker's static count `N212`, which does not \
+             travel into the term -- see OFFEN.md O14")));
+    };
+    if !ctx.cf.writes.contains(&ti) || !ctx.cf.gwrites.contains(&gi) {
+        return Err(refuse("LG004", format!(
+            "`alloc {aname}` in {fname} without an `effects {{ writes {aname} }}` -- \
+             the write rights `Signatur.schreibt`/`gschreibt` have nothing to stand on")));
+    }
+    if !holds_guards(&ctx.held, model, ti) || !holds_gguards(&ctx.held, model, gi) {
+        return Err(refuse("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
+    }
+    // The value, at the element type of the synthesised table.
+    let ety = model.tables[ti].fields[0].ty.clone();
+    let v = match &ety {
+        VTy::Bool => tr_bool(&al.wert, ctx, model, scope, fname, out)?,
+        VTy::Int { lo, hi, .. } => tr_value(&al.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
+        _ => return Err(refuse("LG004", format!("`alloc {aname}` in {fname} stores a value with no G form"))),
+    };
+    // The full-arena branch is an `Endblock`: it must end in a `return`, or
+    // it would fall through past the `alloc`, for which there is no form.
+    let Some((letzt, _)) = sonst.anweisungen.split_last() else {
+        return Err(refuse("LG004", format!("empty `else` of `alloc {aname}` in {fname} has no G form")));
+    };
+    let StmtArt::Return(_) = &letzt.art else {
+        return Err(refuse("LG004", format!("falling-off `else` of `alloc {aname}` in {fname} has no G form")));
+    };
+    let mut voll_ctx = ctx.clone();
+    let voll = tr_rest(&sonst.anweisungen, &mut voll_ctx, model, scope, fns, fname, out, String::new(), true)?;
+    let hlt = darf_at(ctx, model, fname, ti, out);
+    let hlg = gdarf_at(ctx, model, fname, gi, out);
+    if let Some(ann) = &al.typ {
+        let aty = annot_ty(ann, model, scope, fname)?;
+        check_annotation(&VTy::Index { table: ti }, &aty, model, fname, &al.name.text)?;
+    }
+    *ctx = ctx.push(al.name.text.clone(), VTy::Index { table: ti }, NameKind::Let);
+    Ok(format!("(Block.arenaAlloc (D := gD) gArena_{aname} ({v}) (by decide) {hlt} (by decide) {hlg} {voll} {})",
+        tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
 }
 
 /// A `let x = f() else (e) { … }`: `Block.bindCallElse`. The `else` branch
@@ -2647,6 +3234,9 @@ fn tr_contract_requires(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut 
 
 /// The carrier a place names: a table name, or a pointer parameter (which
 /// names its table). Lenient -- translation refuses strictly.
+/// Carriers are numbered tables first, then globals (`nt + gi`), so ONE
+/// accumulator carries both halves of `fussOrteG` -- which is what
+/// `gCs : List (gD.Tab ⊕ gD.Glob)` enumerates Lean-side.
 fn foot_carrier(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<usize> {
     if let Some(ti) = model.tables.iter().position(|t| t.name == o.basis.text) {
         return Some(ti);
@@ -2659,6 +3249,26 @@ fn foot_carrier(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<
         }
     }
     None
+}
+
+/// The carrier number of an arena read `A[i]` -- the arena's synthesised
+/// slot table -- or `None`.
+fn foot_arena(o: &Ort, model: &Model) -> Option<usize> {
+    if !matches!(o.suffixe.as_slice(), [OrtSuffix::Index(_)]) {
+        return None;
+    }
+    model.arenas.iter().find(|a| a.name == o.basis.text).map(|a| a.table)
+}
+
+/// The carrier number of a bare global name (`nt + gi`), or `None`.
+fn foot_glob(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<usize> {
+    if !o.suffixe.is_empty() {
+        return None;
+    }
+    if params.iter().any(|(n, _)| n == &o.basis.text) {
+        return None;
+    }
+    model.globs.iter().position(|g| g.name == o.basis.text).map(|gi| model.tables.len() + gi)
 }
 
 fn foot_push(acc: &mut Vec<usize>, ti: usize) {
@@ -2678,6 +3288,12 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                         foot_push(acc, ti);
                     }
                 }
+                if let Some(ci) = foot_arena(o, model) {
+                    foot_push(acc, ci);
+                }
+                if let Some(ci) = foot_glob(o, model, params) {
+                    foot_push(acc, ci);
+                }
                 for s in &o.suffixe {
                     if let OrtSuffix::Index(x) = s {
                         foot_expr(x, model, params, acc);
@@ -2687,6 +3303,9 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
             ExprArt::Alt(o) => {
                 if let Some(ti) = foot_carrier(o, model, params) {
                     foot_push(acc, ti);
+                }
+                if let Some(ci) = foot_glob(o, model, params) {
+                    foot_push(acc, ci);
                 }
             }
             ExprArt::Binaer(_, a, b) => {
@@ -2722,7 +3341,30 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                         foot_push(acc, ti);
                     }
                 }
+                if let Some(ci) = foot_arena(&z.ziel, model) {
+                    foot_push(acc, ci);
+                }
+                if let Some(ci) = foot_glob(&z.ziel, model, params) {
+                    foot_push(acc, ci);
+                }
                 foot_expr(&z.wert, model, params, acc);
+            }
+            // An `alloc` touches BOTH halves of the arena's pair; a `reset`
+            // the counter alone.
+            StmtArt::Alloc(al) => {
+                if let Some(a) = model.arenas.iter().find(|a| a.name == al.tisch.text) {
+                    foot_push(acc, a.table);
+                    foot_push(acc, model.tables.len() + a.glob);
+                }
+                foot_expr(&al.wert, model, params, acc);
+                if let Some(b) = &al.sonst {
+                    foot_block(b, model, params, acc);
+                }
+            }
+            StmtArt::ResetArena(name) => {
+                if let Some(a) = model.arenas.iter().find(|a| &a.name == &name.text) {
+                    foot_push(acc, model.tables.len() + a.glob);
+                }
             }
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
@@ -2798,10 +3440,19 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
                         foot_push(acc, ti);
                     }
                 }
+                if let Some(ci) = foot_arena(o, model) {
+                    foot_push(acc, ci);
+                }
+                if let Some(ci) = foot_glob(o, model, params) {
+                    foot_push(acc, ci);
+                }
             }
             ExprArt::Alt(o) => {
                 if let Some(ti) = foot_carrier(o, model, params) {
                     foot_push(acc, ti);
+                }
+                if let Some(ci) = foot_glob(o, model, params) {
+                    foot_push(acc, ci);
                 }
             }
             ExprArt::Binaer(_, a, b) => {
@@ -2835,13 +3486,24 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
 /// (`fussOrtGB`, decided Lean-side; this mirrors it for the print decision
 /// and never guesses).
 fn fuss_holds(model: &Model, fns: &[CheckedFn]) -> bool {
+    let nt = model.tables.len();
     for f in fns {
-        for t in foot_fn(f, model, fns) {
-            if guard_held(&f.held, model, t) {
-                continue;
-            }
-            if fns.iter().all(|g| !g.writes.contains(&t)) {
-                continue;
+        for c in foot_fn(f, model, fns) {
+            if c < nt {
+                if guard_held(&f.held, model, c) {
+                    continue;
+                }
+                if fns.iter().all(|g| !g.writes.contains(&c)) {
+                    continue;
+                }
+            } else {
+                let gi = c - nt;
+                if gguard_held(&f.held, model, gi) {
+                    continue;
+                }
+                if fns.iter().all(|g| !g.gwrites.contains(&gi)) {
+                    continue;
+                }
             }
             return false;
         }
@@ -2878,10 +3540,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");
     out.push_str("-- `traverse` (static annotations, like `costs`); `by ops` on a field\n");
     out.push_str("-- (a writer discipline the checker holds); `mut` on a `let`;\n");
-    out.push_str("-- `pub` (visibility is a unit-boundary rule, and `Deklaration`\n");
-    out.push_str("-- has no boundary -- added 2026-09-15: it was dropped here before\n");
-    out.push_str("-- and named nowhere, which is the one thing this ledger exists\n");
-    out.push_str("-- to prevent);\n");
+    out.push_str("-- `pub` and `opaque` (both are unit-boundary rules, and\n");
+    out.push_str("-- `Deklaration` has no boundary -- `pub` added 2026-09-15 after\n");
+    out.push_str("-- being dropped here and named nowhere, which is the one thing\n");
+    out.push_str("-- this ledger exists to prevent; `opaque` the same day, when its\n");
+    out.push_str("-- alias started to travel as its range);\n");
     out.push_str("-- `concurrent` (its members travel as the declared starts\n");
     out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
@@ -2898,10 +3561,30 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }
         out.push('\n');
     }
+    for a in &model.arenas {
+        out.push_str(&format!(
+            "-- arena {}: table {} (count {}) + counter {} -- the reservation does NOT travel\n",
+            a.name, model.tables[a.table].name, model.tables[a.table].count, model.globs[a.glob].name));
+    }
+    for (gi, g) in model.globs.iter().enumerate() {
+        let ty = match &g.ty {
+            VTy::Int { lo, hi, .. } => format!("{lo}..{hi}"),
+            VTy::Bool => "bool".to_string(),
+            _ => "?".to_string(),
+        };
+        let init = match g.init {
+            GInit::Int(n) => n.to_string(),
+            GInit::Bool(b) => b.to_string(),
+        };
+        out.push_str(&format!("-- static {gi}: {} : {ty} = {init}\n", g.name));
+    }
     for (li, l) in model.locks.iter().enumerate() {
         out.push_str(&format!("-- lock {li}: {} (rank {}) guards", l.name, l.rank));
         for g in &l.guards {
             out.push_str(&format!(" {}", model.tables[*g].name));
+        }
+        for g in &l.gguards {
+            out.push_str(&format!(" {}", model.globs[*g].name));
         }
         out.push('\n');
     }
@@ -2914,12 +3597,19 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         for w in &f.writes {
             out.push_str(&format!(" {}", model.tables[*w].name));
         }
+        for w in &f.gwrites {
+            out.push_str(&format!(" {}", model.globs[*w].name));
+        }
         out.push_str(")\n");
     }
     for (n, i) in startet.iter().enumerate() {
         out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
     }
-    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
+    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n");
+    if !model.arenas.is_empty() {
+        out.push_str("import Grammatik.ArenaZucker\n");
+    }
+    out.push_str("\nnamespace Gabbro.Grammatik\n\nnamespace ");
     out.push_str(ns);
     out.push_str("\n\n");
     // The carrier inductives: one constructor per table, lock and field.
@@ -2947,6 +3637,14 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str(&format!("inductive {} where\n", feld_type(model, ti)));
         for f in &t.fields {
             out.push_str(&format!("  | {}\n", f.name));
+        }
+        out.push_str("  deriving DecidableEq\n\n");
+    }
+    // The globals (`static`): one constructor each, like the tables.
+    if !model.globs.is_empty() {
+        out.push_str("inductive GGlob where\n");
+        for g in &model.globs {
+            out.push_str(&format!("  | {}\n", g.name));
         }
         out.push_str("  deriving DecidableEq\n\n");
     }
@@ -2986,14 +3684,27 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             sarms.push("| _ => false".to_string());
             format!("fun {}", sarms.join(" "))
         };
-        out.push_str(&format!("def gSig_{} : Signatur GTab Empty GLock Empty where\n", lean_fn(&f.name)));
+        let gschreibt = if model.globs.is_empty() {
+            "fun e => nomatch e".to_string()
+        } else if f.gwrites.is_empty() {
+            "fun _ => false".to_string()
+        } else if f.gwrites.len() == model.globs.len() {
+            "fun _ => true".to_string()
+        } else {
+            let mut garms: Vec<String> = f.gwrites.iter()
+                .map(|w| format!("| .{} => true", model.globs[*w].name)).collect();
+            garms.push("| _ => false".to_string());
+            format!("fun {}", garms.join(" "))
+        };
+        let gtyp = if model.globs.is_empty() { "Empty".to_string() } else { "GGlob".to_string() };
+        out.push_str(&format!("def gSig_{} : Signatur GTab {gtyp} GLock Empty where\n", lean_fn(&f.name)));
         out.push_str(&format!("  params := [{}]\n", params.join(", ")));
         out.push_str(&format!("  erg := {erg}\n"));
         out.push_str(&format!("  gruende := {}\n", f.gruende));
         out.push_str(&format!("  haelt := [{held}]\n"));
         out.push_str(&format!("  boden := {boden}\n"));
         out.push_str(&format!("  schreibt := {schreibt}\n"));
-        out.push_str("  gschreibt := fun e => nomatch e\n");
+        out.push_str(&format!("  gschreibt := {gschreibt}\n"));
         out.push_str("  konsumiert := []\n");
         out.push_str("  produziert := []\n\n");
     }
@@ -3035,11 +3746,23 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             .map(|(ti, t)| format!("| {ti} => some GTab.{}", t.name)).collect();
         out.push_str(&format!("  tabNr := fun {} | _ => none\n", narms.join(" ")));
     }
-    out.push_str("  Glob := Empty\n");
-    out.push_str("  decGlob := inferInstance\n");
-    out.push_str("  gtyp := fun e => nomatch e\n");
-    out.push_str("  nutzlast := fun e => nomatch e\n");
-    out.push_str("  atomar := fun e => nomatch e\n");
+    if model.globs.is_empty() {
+        out.push_str("  Glob := Empty\n");
+        out.push_str("  decGlob := inferInstance\n");
+        out.push_str("  gtyp := fun e => nomatch e\n");
+        out.push_str("  nutzlast := fun e => nomatch e\n");
+        out.push_str("  atomar := fun e => nomatch e\n");
+    } else {
+        out.push_str("  Glob := GGlob\n");
+        out.push_str("  decGlob := inferInstance\n");
+        let garms: Vec<String> = model.globs.iter()
+            .map(|g| format!("| .{} => {}", g.name, g.ty.term(model))).collect();
+        out.push_str(&format!("  gtyp := fun {}\n", garms.join(" ")));
+        // No `atomic` item exports (LG001), so no publication payload
+        // travels and no global is ordered by the machine.
+        out.push_str("  nutzlast := fun _ => []\n");
+        out.push_str("  atomar := fun _ => false\n");
+    }
     if model.tables.is_empty() {
         out.push_str("  geteilt := fun t => nomatch t\n");
     } else {
@@ -3049,7 +3772,19 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }).collect();
         out.push_str(&format!("  geteilt := fun {}\n", garms.join(" ")));
     }
-    out.push_str("  ggeteilt := fun e => nomatch e\n");
+    if model.globs.is_empty() {
+        out.push_str("  ggeteilt := fun e => nomatch e\n");
+    } else {
+        // A global is SHARED exactly where a lock guards it -- the same rule
+        // the tables travel under, and it is what discharges
+        // `ggeteilt_bewacht` by `decide` (a guarded global has a `gbraucht`
+        // entry; an unguarded one is not shared).
+        let garms: Vec<String> = model.globs.iter().enumerate().map(|(gi, g)| {
+            let guarded = model.locks.iter().any(|l| l.gguards.contains(&gi));
+            format!("| .{} => {guarded}", g.name)
+        }).collect();
+        out.push_str(&format!("  ggeteilt := fun {}\n", garms.join(" ")));
+    }
     out.push_str("  Lock := GLock\n");
     out.push_str("  decLock := inferInstance\n");
     if model.locks.is_empty() {
@@ -3075,7 +3810,19 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }).collect();
         out.push_str(&format!("  braucht := fun {}\n", barms.join(" ")));
     }
-    out.push_str("  gbraucht := fun e => nomatch e\n");
+    if model.globs.is_empty() {
+        out.push_str("  gbraucht := fun e => nomatch e\n");
+    } else {
+        let garms: Vec<String> = model.globs.iter().enumerate().map(|(gi, g)| {
+            let mut guards = String::new();
+            for li in model.locks.iter().enumerate().filter(|(_, l)| l.gguards.contains(&gi)).map(|(li, _)| li) {
+                guards.push_str(&format!("{}.inl GLock.{}",
+                    if guards.is_empty() { "" } else { ", " }, model.locks[li].name));
+            }
+            format!("| .{} => [{guards}]", g.name)
+        }).collect();
+        out.push_str(&format!("  gbraucht := fun {}\n", garms.join(" ")));
+    }
     out.push_str("  eigner := fun _ => []\n");
     out.push_str("  Fn := GFn\n");
     let sarms: Vec<String> = fns.iter().enumerate()
@@ -3103,7 +3850,18 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("  a10 := ()\n");
     out.push_str("  geteilt_bewacht := fun t => by cases t <;> decide\n");
     out.push_str("  invarianten_gehalten := fun _ i => nomatch i\n");
-    out.push_str("  ggeteilt_bewacht := fun e => nomatch e\n\n");
+    if model.globs.is_empty() {
+        out.push_str("  ggeteilt_bewacht := fun e => nomatch e\n\n");
+    } else {
+        out.push_str("  ggeteilt_bewacht := fun g => by cases g <;> decide\n\n");
+    }
+    // The `ArenaForm` of each arena (O14): the pair the sugar speaks about.
+    // `hz` and `hpos` were decided in Rust (`read_arena`), so both close.
+    for a in &model.arenas {
+        out.push_str(&format!(
+            "def gArena_{} : ArenaForm gD where\n  tab := {}\n  feld := {}\n  zaehl := {}\n  hz := by decide\n  hpos := by decide\n\n",
+            a.name, tab_ctor(model, a.table), feld_ctor(model, a.table, 0), glob_ctor(model, a.glob)));
+    }
     // Translate contracts and bodies first (registering every guard fact
     // and call site), then print the abbreviations and theorems they need.
     let mut contracts = Vec::new();
@@ -3169,6 +3927,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str(&format!("theorem {} : darf gD {} gL_{}{} := by unfold darf; decide\n",
             darf_name(fname, tag, model, *ti), tab_ctor(model, *ti), lean_fn(fname), tag));
     }
+    let mut gdarfs = collected.gdarf.clone();
+    gdarfs.sort();
+    gdarfs.dedup();
+    for (fname, tag, gi) in &gdarfs {
+        out.push_str(&format!("theorem {} : gdarf gD {} gL_{}{} := by unfold gdarf; decide\n",
+            gdarf_name(fname, tag, model, *gi), glob_ctor(model, *gi), lean_fn(fname), tag));
+    }
     out.push('\n');
     for hp in collected.hps.clone() {
         out.push_str(&format!("theorem gHp_{}{}_{} : RufPasst gD (vertragVon gD g_{}) (gD.signatur g_{}) gL_{}{} where\n",
@@ -3178,7 +3943,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         // carrier inductives; `fin_cases` would need mathlib, which
         // `grammatik/` does not have.
         out.push_str("  hw := fun t => by cases t <;> decide\n");
-        out.push_str("  hg := fun g => nomatch g\n");
+        if model.globs.is_empty() {
+            out.push_str("  hg := fun g => nomatch g\n");
+        } else {
+            out.push_str("  hg := fun g => by cases g <;> decide\n");
+        }
         out.push_str("  hk := ⟨[], List.Perm.refl [], by simp⟩\n");
         out.push_str("  hh := fun L => by cases L <;> decide\n");
         // `hx` after the hand witness `HelferZeuge.lean`: one branch per
@@ -3245,8 +4014,10 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     // obligation export states their completeness beside them).
     out.push_str(&format!("def gLs : List gD.Lock := [{}]\n\n",
         (0..model.locks.len()).map(|li| lock_ctor(model, li)).collect::<Vec<_>>().join(", ")));
-    out.push_str(&format!("def gCs : List (gD.Tab ⊕ gD.Glob) := [{}]\n\n",
-        (0..model.tables.len()).map(|ti| format!("(.inl {})", tab_ctor(model, ti))).collect::<Vec<_>>().join(", ")));
+    let mut cs: Vec<String> = (0..model.tables.len())
+        .map(|ti| format!("(.inl {})", tab_ctor(model, ti))).collect();
+    cs.extend((0..model.globs.len()).map(|gi| format!("(.inr {})", glob_ctor(model, gi))));
+    out.push_str(&format!("def gCs : List (gD.Tab ⊕ gD.Glob) := [{}]\n\n", cs.join(", ")));
     // The fragment check holds structurally (no registers, no indirect
     // calls); the footprint check holds exactly where every accessed
     // carrier is signature-guarded or written by none -- never guessed.
@@ -3285,6 +4056,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
                 tab_ctor(model, *g)
             ));
         }
+        for g in &l.gguards {
+            cs.push_str(&format!(
+                "{}.inr {}",
+                if cs.is_empty() { "" } else { ", " },
+                glob_ctor(model, *g)
+            ));
+        }
         orte_arms.push(format!("| .{} => [{}]", l.name, cs));
         let body = match &l.invariant {
             None => "fun _ => true".to_string(),
@@ -3319,15 +4097,37 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
                 lock_ctor(model, li)
             ));
         }
+        for g in &l.gguards {
+            let li = model.locks.iter().position(|x| x.name == l.name).expect("lock present");
+            out.push_str(&format!(
+                "example : ((gS.orte {}).elem (.inr {}) = true) := by decide\n",
+                lock_ctor(model, li),
+                glob_ctor(model, *g)
+            ));
+            out.push_str(&format!(
+                "example : ((gD.gbraucht {}).elem (Sum.inl {}) = true) := by decide\n",
+                glob_ctor(model, *g),
+                lock_ctor(model, li)
+            ));
+        }
     }
     out.push('\n');
     // The declared initial memory `gSp0` (lane 198): the zero memory --
     // every slot at zero (`false` for `bool`), no globals -- as the loader
     // establishes it (`Laufzeit.lader`). `check_sp0` refused every integer
     // field whose range holds no zero, so each `by decide` below closes.
-    out.push_str("-- The declared initial memory (`Speicher gD`): the zero memory.\n");
-    if model.tables.is_empty() {
-        out.push_str("def gSp0 : Speicher gD :=\n  ⟨fun t => nomatch t, (fun g => nomatch g)⟩\n\n");
+    out.push_str("-- The declared initial memory (`Speicher gD`): every slot at zero,\n");
+    out.push_str("-- every global at its DECLARED initialiser (a `static` names one).\n");
+    // **Both halves stand PARENTHESIZED, and that is a measured necessity.**
+    // `⟨fun t => nomatch t, (fun g => nomatch g)⟩` does not parse as two
+    // fields: `nomatch` takes a COMMA-SEPARATED list of discriminants, so the
+    // second half is swallowed and Lean reports "only 1 was provided". Every
+    // table-less export carried that since `gSp0` was introduced (lane 198),
+    // and no run had compiled one -- found 2026-09-15 by compiling every
+    // export with `lake env lean`. *An export that does not typecheck is a
+    // refusal the exporter failed to make.*
+    let slots = if model.tables.is_empty() {
+        "fun t => nomatch t".to_string()
     } else {
         let mut arme = Vec::new();
         for t in model.tables.iter() {
@@ -3339,10 +4139,21 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
                 arme.push(format!("| .{}, .{} => {wert}", t.name, f.name));
             }
         }
-        out.push_str("def gSp0 : Speicher gD :=\n  ⟨fun t _ f => match t, f with ");
-        out.push_str(&arme.join(" "));
-        out.push_str(", (fun g => nomatch g)⟩\n\n");
-    }
+        format!("fun t _ f => match t, f with {}", arme.join(" "))
+    };
+    let globs = if model.globs.is_empty() {
+        "fun g => nomatch g".to_string()
+    } else {
+        let arme: Vec<String> = model.globs.iter().map(|g| {
+            let wert = match g.init {
+                GInit::Bool(b) => b.to_string(),
+                GInit::Int(n) => format!("⟨{}, by decide, by decide⟩", int_num(n)),
+            };
+            format!("| .{} => {wert}", g.name)
+        }).collect();
+        format!("fun {}", arme.join(" "))
+    };
+    out.push_str(&format!("def gSp0 : Speicher gD :=\n  ⟨({slots}), ({globs})⟩\n\n"));
     // The program as ONE declaration (lane 198): the code with its
     // contracts (`gP`), the lock invariants (`gS`), the axioms' declared
     // ensures (no axiom exists: `fun _ _ _ => true`, the `axWahr` shape),
