@@ -269,8 +269,13 @@ import Grammatik.CTicket
 import Grammatik.Schlusssatz124Ticket
 import Grammatik.RufOhneHardware
 import Grammatik.RufOhneHardwareZeuge
+import Grammatik.HandlerKongruenz
+import Grammatik.RufTiefe
+import Grammatik.RufLogik
 import Grammatik.KorrespondenzAllg
 import Grammatik.KorrOkAdaequat
+import Grammatik.KorrOkOhneLocks
+import Grammatik.RufLogikZeuge
 import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.KorrespondenzBlockZeuge
 import Grammatik.Schlusssatz

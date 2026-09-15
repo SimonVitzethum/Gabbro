@@ -110,6 +110,15 @@ theorem schlusssatz_text {src : String} (K : Kette src) {s : List Char} (hA2 : A
         (ρG : Env (declOf K.u) ((declOf K.u).params f)),
       (rufAt K.E.P O passes (n + 1) f σ ρG).istFehler = false →
         ReqAmEintritt K.E.P f σ ρG) ∧
+    ((∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (∀ g : (declOf K.u).Fn, rufAt K.E.P O passes n f σ ρG ≠ .logik (.abstieg g)) →
+        ∀ k : Nat, rufAt K.E.P O passes (n + k) f σ ρG = rufAt K.E.P O passes n f σ ρG) ∧
+      ((∀ passes n : Nat, RufRahmenTreu K.E.P (rufAt K.E.P O passes n)) →
+        ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+          (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Logik (declOf K.u)),
+          ReqAmEintritt K.E.P f σ ρG → rufAt K.E.P O passes n f σ ρG = .logik e →
+            ∃ h : (declOf K.u).Fn, e = .abstieg h)) ∧
     ((∀ passes n : Nat, RufRu (rufAt K.E.P O passes n) (rufAt K.E.P.mitRuhe O.mitRuhe passes n)) ∧
       (∀ (passes : Nat) (M : RufMaschineG (declOf K.u).mitRuhe),
         RufErreichbarG K.E.P.mitRuhe O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp init) M →

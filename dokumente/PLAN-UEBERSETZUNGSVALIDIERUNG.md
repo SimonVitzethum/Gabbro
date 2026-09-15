@@ -461,13 +461,18 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
     outside `korrOk`'s covered set, so no certified body carries one, so `rufAt` never ends
     in one -- at every depth, every budget, every world, every argument list, against every
     oracle (`korrOk_rufAt_ohneHardware`). The theorem carries it as a new CONCLUSION 4b.
-  * **The WRITER'S LOGIC class stays**, and so does the depth bound `abstieg`. The reason is
-    named and is a finding: the user's obligation `KoerperGutS` is quantified over handlers
-    in the classes `RespektiertRahmen ∧ OhneVorbedingung` / `RespektiertRahmen ∧ OhneLogik`,
-    and `rufAt` is in NEITHER (it answers `vorbedingung` at any key whose `requires` fails,
-    `abstieg` at depth `0`, and `rufAt_gut` gives its frame only at worlds meeting `HeldB`,
-    where `RespektiertRahmen` promises it at every world). What is missing is ONE lemma: a
-    congruence of `execEnd` in its handler.
+  * ~~**The WRITER'S LOGIC class stays**~~ -- **REDUCED TO ONE FRAME FACT on 2026-09-15**
+    (Opus lane `kongruenz`, §6.9, report `messung/muse/OPUS-BERICHT-KONGRUENZ.md`). The
+    congruence lemma named here was built (`HandlerKongruenz.lean`). With it, at an entry
+    meeting the callee's `requires`, the ONLY `logik` outcome `rufAt` has left is the
+    `abstieg` -- `vorbedingung`, `nachbedingung`, `invariante` and the body-own
+    `schleife`/`vorzustand`/`bereich` all fall to `KoerperGutS` and `InvGutS`
+    (`rufAt_nurAbstieg`). Carried as a NAMED hypothesis: `RufRahmenTreu`, the FRAME half of
+    `RespektiertRahmen` for `rufAt` at every world. The CONTRACT half is PROVED
+    (`rufAt_vertraege`), so the gap is one fact and not two, and it is about LOCKS alone
+    (`rufRahmenTreu_ohneSperren`: for a declaration with no lock it is free -- witness on
+    chain 108, `nurAbstieg_zeuge_108`). The `abstieg` residue is now a computation at ONE
+    depth (`rufAt_stabil_ab`). Theorem `schlusssatz` gained clause 4e.
   * **And premise (c) does NOT do the hardware work** -- `HardwareAnnahmen` constrains the
     oracle only where the raw answer fits the declared type. Witness with every premise met
     and the call still stopping: `befund_hardware_bleibt` (`RufOhneHardwareZeuge.lean`).
@@ -485,7 +490,10 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   residue as part 4's condition; and the adequacy is EXISTENTIAL, about a machine whose
   thread already stands on the body with a non-waiting caller frame. **The cost is not the
   build**: `RufAdaequatRufG` is already in `Schlusssatz`'s transitive import closure, and
-  the bridge file above costs 5,9 s and 0,89 GB.
+  the bridge file above costs 5,9 s and 0,89 GB. **The congruence lemma the first item
+  needed exists since 2026-09-15** (§6.9); it does NOT close this item, and the report says
+  why: it relates two runs of the SAME body text, and `rufAt` vs `rufRumpf` differ in the
+  body's WORLD (the contract reads), not only in the handler's answers.
 
 ### 6.6 A2 discharged: the emitted TEXT is parsed in Lean (2026-09-15)
 
@@ -634,6 +642,61 @@ TAG carried. It would also give `rufAt`'s depth monotonicity (an outcome that is
 `abstieg` is the outcome at every larger depth) and is the first half of a `rufAt` ↔
 `rufRumpf` bridge -- three open items on one lemma, estimated 400-500 Lean lines over
 ~50 constructors plus the three loop combinators.
+
+### 6.9 The handler congruence, and part 4's `logik` condition (2026-09-15)
+
+*Files: `grammatik/Grammatik/HandlerKongruenz.lean`, `RufTiefe.lean`, `RufLogik.lean`,
+`KorrOkOhneLocks.lean`, `RufLogikZeuge.lean` (all new), `Schlusssatz.lean`,
+`CParser/Bruecke.lean`. Theorem map: SATZKARTE §36. Report:
+`messung/muse/OPUS-BERICHT-KONGRUENZ.md`.*
+
+**The lemma, stated before it was proved.** For an error-mark set `Er`, if two handlers
+`R₁`, `R₂` answer at every key either the same outcome or -- on `R₁`'s side -- an ERROR
+whose mark lies in `Er`, then for every statement, block and terminal block the run under
+`R₁` is the run under `R₂`, or it is an error whose mark lies in `Er`. One-sided on
+purpose: a symmetric form has no premise for depth monotonicity, where `rufAt n` answers
+`abstieg` and `rufAt (n+1)` answers `ok`.
+
+**What each side condition serves.** The lemma has no side condition at all beyond the
+handler premise. The side conditions live in the CONSUMERS:
+
+| condition | which open item it serves |
+|---|---|
+| none | depth monotonicity `rufAt_stabil_ab` -- clause 4e(i) |
+| `RahmenO`/`RegLokal`/`AxVertragO` on the oracle | the classes `KoerperGutS`/`InvGutS` quantify over -- 4e(ii) |
+| `HavocOk S U`, inhabited under (b) | `execEndH`'s environment move -- 4e(ii) |
+| `(P.rumpf f).ohneLocks`, from `korrOk_ohneLocks` | `execEndH = execEnd` -- 4e(ii) |
+| `RufRahmenTreu P (rufAt …)` | **the residue**; not proved, named -- 4e(ii) |
+
+**Clause by clause: what disappeared from part 4's condition.**
+
+| kind | before | after |
+|---|---|---|
+| `hardware` (five forms) | discharged 2026-09-15 (§6.8, 4b) | discharged |
+| `vorbedingung` of a CALLEE | open | discharged (`KoerperGutS` clause 1, caller duty) |
+| `nachbedingung` | open | discharged (`KoerperGutS` clause 1, body triple) |
+| `invariante` | open | discharged (`InvGutS`) |
+| `schleife`, `vorzustand`, `bereich` | open | discharged (`KoerperGutS` clause 2) |
+| `vorbedingung` of the CALL ITSELF | open | it IS the hypothesis `ReqAmEintritt` (clause 4d says the condition implies it) |
+| `abstieg` | open | **stays**, and is now stable upwards: 4e(i) makes it a computation at ONE depth |
+
+**What resists, exactly.** `RespektiertRahmen` is a conjunction; its CONTRACT half is proved
+for `rufAt` (`rufAt_vertraege`) and its FRAME half is not. `rufAt_gut` (`Satz.lean`) proves
+the frame at worlds meeting `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f))
+σ.haelt`; part 4 quantifies over ANY world, including worlds holding locks out of the
+function's floor. Removing the premise means a second long induction over the semantics (a
+`HeldB`-free `Rahmen` theorem, or "every call site of a body run inherits `HeldB` from the
+entry" made explicit out of `end_gutB`'s proof). `rufRahmenTreu_ohneSperren` shows the whole
+gap is about locks: a declaration with no `D.Lock` gets the hypothesis free, and chain 108
+is such a declaration -- there clause 4e(ii) lands unconditionally
+(`Kette108.nurAbstieg_zeuge_108`).
+
+**The other consumer, checked against the lemma BEFORE it was built.** The congruence does
+NOT close the `rufAt` ↔ machine-G item of §6.5. It relates two runs of the same body text
+from the same world; `rufAt` and `rufRumpf` differ in the WORLD the body runs from and
+returns to (the contract reads), not in a handler's answers, so the premise
+`HandlerUnter Er` cannot be formed for that pair. What the lemma does give that item is the
+depth half of the `Tief` residue (4e(i)).
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 

@@ -40,6 +40,7 @@
   assumptions of the goal theorem (c) on the oracle.
 -/
 import Grammatik.KorrespondenzAllg
+import Grammatik.KorrOkOhneLocks
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.Zielsatz.Beweis
 
@@ -333,6 +334,20 @@ structure Kette (src : String) where
        callee with a non-trivial `requires` fails at most of them. That is
        the condition being stated on the COMPUTATION where the contract
        would do;
+    4e. THE TWO RESIDUES OF THAT CONDITION, and what each is made of.
+       (i) DEPTH: an outcome that is not an `abstieg` is the outcome at EVERY
+       larger depth, so the condition of parts 4 and 6, once met at one depth
+       by such an outcome, is met at every larger depth BY THE SAME OUTCOME
+       (`rufAt_stabil_ab`, RufTiefe.lean, over the handler congruence). A
+       chain author computes at one depth and is done.
+       (ii) THE WRITER'S LOGIC: under ONE named frame fact about `rufAt` --
+       that an `ok` answer keeps the callee's declared frame at EVERY world,
+       which `rufAt_gut` (Satz.lean) gives only at worlds meeting `HeldB` --
+       the ONLY `logik` outcome left at an entry meeting the callee's
+       `requires` is the `abstieg` of (i). `vorbedingung`, `nachbedingung`,
+       `invariante` and the body-own kinds `schleife`/`vorzustand`/`bereich`
+       ALL fall to the user's own obligation (`rufAt_nurAbstieg`,
+       RufLogik.lean, over `KoerperGutS` and `InvGutS`);
     5. THE MACHINE: `K.E.P.mitRuhe` behaves as `K.E.P` at every depth; on
        every machine reachable from the single-threaded start, at every
        budget, memory safety and the goal theorem's contract legs hold,
@@ -386,6 +401,18 @@ theorem schlusssatz {src : String} (K : Kette src)
         (ρG : Env (declOf K.u) ((declOf K.u).params f)),
       (rufAt K.E.P O passes (n + 1) f σ ρG).istFehler = false →
         ReqAmEintritt K.E.P f σ ρG) ∧
+    -- 4e. the two residues: the depth one is stable upwards, and the
+    --     writer's-logic one is EXACTLY the depth one, under the named frame
+    --     fact `RufRahmenTreu` (RufLogik.lean)
+    ((∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (∀ g : (declOf K.u).Fn, rufAt K.E.P O passes n f σ ρG ≠ .logik (.abstieg g)) →
+        ∀ k : Nat, rufAt K.E.P O passes (n + k) f σ ρG = rufAt K.E.P O passes n f σ ρG) ∧
+      ((∀ passes n : Nat, RufRahmenTreu K.E.P (rufAt K.E.P O passes n)) →
+        ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+          (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Logik (declOf K.u)),
+          ReqAmEintritt K.E.P f σ ρG → rufAt K.E.P O passes n f σ ρG = .logik e →
+            ∃ h : (declOf K.u).Fn, e = .abstieg h)) ∧
     -- 5. the machine
     ((∀ passes n : Nat, RufRu (rufAt K.E.P O passes n) (rufAt K.E.P.mitRuhe O.mitRuhe passes n)) ∧
       (∀ (passes : Nat) (M : RufMaschineG (declOf K.u).mitRuhe),
@@ -436,7 +463,26 @@ theorem schlusssatz {src : String} (K : Kette src)
     · exact hq
     · rw [rufAt_vorbedingung K.E.P O passes n f σ ρG hq] at hf
       exact absurd hf (by simp [RufAusgang.istFehler])
+  have htief : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+      (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (∀ g : (declOf K.u).Fn, rufAt K.E.P O passes n f σ ρG ≠ .logik (.abstieg g)) →
+        ∀ k : Nat, rufAt K.E.P O passes (n + k) f σ ρG = rufAt K.E.P O passes n f σ ρG :=
+    fun passes n f σ ρG h => rufAt_stabil_ab K.E.P O passes n f σ ρG h
+  have hnur : (∀ passes n : Nat, RufRahmenTreu K.E.P (rufAt K.E.P O passes n)) →
+      ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Logik (declOf K.u)),
+        ReqAmEintritt K.E.P f σ ρG → rufAt K.E.P O passes n f σ ρG = .logik e →
+          ∃ h : (declOf K.u).Fn, e = .abstieg h := by
+    intro hRT passes n f σ ρG e hq hl
+    obtain ⟨U, hU⟩ : ∃ U : Umwelt (declOf K.u), HavocOk K.E.S U :=
+      ⟨_, havocOk_misch_lokal K.nutzer.logik.2.1 (fun _ _ => K.E.sp0)
+        (fun L _ => K.nutzer.start.sperren L)⟩
+    exact rufAt_nurAbstieg K.E.P O passes K.E.Q K.E.S U (gutO_rahmenO hH.1) hH.2.1 hH.2.2 hU
+      (korrOk_ohneLocks K.EL fnNr K.zert K.fs.2 K.zertOk) (fun m => hRT passes m)
+      (fun g => (K.nutzer.logik.1 passes g).1) (fun g => (K.nutzer.logik.1 passes g).2.1)
+      n f σ ρG e hq hl
   refine ⟨K.uebersetzt, ⟨K.akzeptiert, hA, K.zertOk⟩, K.nutzer, hlauf, hhw, hlog, hreq,
+    ⟨htief, hnur⟩,
     ⟨fun passes => rufAt_mitRuhe K.E.P O passes,
       einfaden_ziel K.E K.fs hA K.nutzer O hH sp init hA4,
       fun passes sp' init' hL M hr => gabbro_ziel akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
@@ -465,10 +511,16 @@ list for the whole chain):
   `logik (abstieg g)` at depth `0`, and its frame theorem `rufAt_gut`
   (Satz.lean) is CONDITIONAL on `HeldB` of the entry world where
   `RespektiertRahmen` promises the frame at EVERY world. Applying the
-  obligation to `rufAt` needs a congruence lemma over `execEnd` in its
-  handler (two handlers that differ only where both answer an error give
-  outcomes that differ only where both are errors), which the tree does not
-  have. Booked in `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.5.
+  obligation to `rufAt` needed a congruence lemma over `execEnd` in its
+  handler; it exists since 2026-09-15 (`HandlerKongruenz.lean`) and clause 4e
+  is what it buys. What is NOT discharged after it: (a) the `abstieg`
+  residue, which is a depth and not a program property -- 4e(i) makes it a
+  computation at ONE depth; (b) the frame half of `RespektiertRahmen` for
+  `rufAt` (`RufRahmenTreu`), which 4e(ii) carries as a hypothesis, because
+  `rufAt_gut` (Satz.lean) gives the frame only at worlds meeting `HeldB` and
+  part 4 quantifies over ANY world. The CONTRACT half is proved
+  (`rufAt_vertraege`, RufLogik.lean), so the gap is one fact, not two.
+  Booked in `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.5.
 - Part 5 states the machine. That the one active thread of G agrees with
   `rufAt` is the adequacy chain (`rufG_adaequat_ruf`), not re-instantiated
   here -- the same cut as `schlusssatz_104`'s. Of the four things in the way,
