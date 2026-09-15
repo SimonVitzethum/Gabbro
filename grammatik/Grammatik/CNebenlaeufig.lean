@@ -248,6 +248,34 @@ theorem schrittC_fremd {E : CEinheit} {LP : SperrSem} {K K' : KonfC} {t : Faden}
     (h : SchrittC E LP K t ℓ K') (u : Faden) (hu : u ≠ t) : K'.faeden u = K.faeden u := by
   cases h <;> exact fadenSetze_ne _ _ _ _ hu
 
+/-- **Inversion of a step**, by the head of the thread's continuation. -/
+theorem schrittC_inv {E : CEinheit} {LP : SperrSem} {K K' : KonfC} {t : Faden} {ℓ : Etikett}
+    (h : SchrittC E LP K t ℓ K') :
+    (∃ a b k ρ, K.faeden t = .an (.seq a b :: k) ρ ∧ ℓ = .still ∧
+      K' = ⟨K.st, fadenSetze K.faeden t (.an (a :: b :: k) ρ), K.halter⟩) ∨
+    (∃ ρ, K.faeden t = .an [] ρ ∧ ℓ = .still ∧ K' = ⟨K.st, fadenSetze K.faeden t .aus, K.halter⟩) ∨
+    (∃ s k ρ st' ρ', K.faeden t = .an (s :: k) ρ ∧ s.istSeq = false ∧
+      E.laeuft s K.st ρ (.norm st' ρ') ∧ ℓ = .block s ∧
+      K' = ⟨st', fadenSetze K.faeden t (.an k ρ'), K.halter⟩) ∨
+    (∃ s k ρ st' v, K.faeden t = .an (s :: k) ρ ∧ s.istSeq = false ∧
+      E.laeuft s K.st ρ (.ret st' v) ∧ ℓ = .block s ∧
+      K' = ⟨st', fadenSetze K.faeden t .aus, K.halter⟩) ∨
+    (∃ n k ρ op h', K.faeden t = .an (.ext n [] none :: k) ρ ∧ E.sperre n = some op ∧
+      LP t op K.halter h' ∧ ℓ = .sperre op ∧ K' = ⟨K.st, fadenSetze K.faeden t (.an k ρ), h'⟩) := by
+  cases h with
+  | teile a b k ρ h => exact Or.inl ⟨a, b, k, ρ, h, rfl, rfl⟩
+  | ende ρ h => exact Or.inr (Or.inl ⟨ρ, h, rfl, rfl⟩)
+  | block s k ρ st' ρ' h hs hx => exact Or.inr (Or.inr (Or.inl ⟨s, k, ρ, st', ρ', h, hs, hx, rfl, rfl⟩))
+  | rueck s k ρ st' v h hs hx =>
+      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨s, k, ρ, st', v, h, hs, hx, rfl, rfl⟩)))
+  | sperre n k ρ op h' h ho hl =>
+      exact Or.inr (Or.inr (Or.inr (Or.inr ⟨n, k, ρ, op, h', h, ho, hl, rfl, rfl⟩)))
+
+/-- A thread that does not run takes no step. -/
+theorem schrittC_aus {E : CEinheit} {LP : SperrSem} {K K' : KonfC} {t : Faden} {ℓ : Etikett}
+    (h : SchrittC E LP K t ℓ K') (ha : K.faeden t = .aus) : False := by
+  cases h <;> simp_all
+
 /-- A smaller lock meaning gives fewer steps. -/
 theorem schrittC_mono {E : CEinheit} {LP LP' : SperrSem}
     (hLP : ∀ t op h h', LP t op h h' → LP' t op h h') {K K' : KonfC} {t : Faden} {ℓ : Etikett}

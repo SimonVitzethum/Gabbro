@@ -259,3 +259,5 @@ import Grammatik.Nichtinterferenz.Korpus
 import Grammatik.Nichtinterferenz.ZeugeMehrfaden
 
 import Grammatik.CNebenlaeufig
+import Grammatik.Korpus124
+import Grammatik.Schlusssatz124
