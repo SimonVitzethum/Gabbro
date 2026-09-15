@@ -501,7 +501,7 @@ inductive CX where
   | fvon (F : Gleitkomma.Format) (t : CIT) (e : CX)
   /-- `isfinite(e)` (`<math.h>`, the lowering of `narrow x to finite`). -/
   | fin (F : Gleitkomma.Format) (e : CX)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 variable (L : CLayout) (orc : DevOrc) (fr : Nat)
 

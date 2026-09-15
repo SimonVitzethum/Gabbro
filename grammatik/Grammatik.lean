@@ -278,6 +278,7 @@ import Grammatik.KorrOkOhneLocks
 import Grammatik.RufLogikZeuge
 import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.KorrespondenzBlockZeuge
+import Grammatik.KorrespondenzGeraetZeuge
 import Grammatik.Schlusssatz
 import Grammatik.Kette104
 import Grammatik.Kette104Satz

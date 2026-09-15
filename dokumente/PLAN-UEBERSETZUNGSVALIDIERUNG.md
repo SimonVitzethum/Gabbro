@@ -139,7 +139,20 @@ The costs of the Opus agent for the memory model are on the Claude account and n
   for the two closed chains the emitted TEXT is pinned in Lean and PARSED there (§6.6, A2
   discharged), so what remains is "the compiler's front end reads this subset as `parseC`
   does" -- a part of this entry, no longer an entry of its own.
-- **The hardware profile.** `Profil.lean`, keyed entries.
+- **The hardware profile.** `Profil.lean`, keyed entries. **Since 2026-09-16 a SECOND
+  hardware profile stands beside it, for a certified unit that touches a DEVICE**
+  (`GerAnnahme`, KorrespondenzAllg.lean §1c): the register's window is declared `mmio` at the
+  emitter's offset and width (`fenster`); the address expression the certificate carries
+  evaluates to that cell (`adr` -- a THEOREM for the direct-base spelling `(volatile uint8_t
+  *)(uintptr_t)BASE + K`, an ASSUMPTION for the emitter's own `d->basis + K`, which says the
+  handle local carries the window's base); the declared Gabbro type fits the cell (`passt`);
+  **the C device oracle and Gabbro's `Orakel.regLies` answer the same machine** (`einig` --
+  this is `regLies_step`'s `hdev` and `pruefe-cformen.py`'s `stmt:reg-load` row, lifted from
+  one program point to the unit); and a raw word that DOES fit the declared type encodes back
+  to itself (`rund` -- a theorem for an integer register). Beside them, one clause of the
+  state relation: **the device windows the unit declares are MAPPED** (`EmitLay.devs`,
+  `corrW`'s third clause). *What a device chain claims is in §6.9, and what it does not claim
+  is in the same place.*
 - **The GPU driver**, for SPIR-V payloads (PLAN-ERWEITUNG.md §0b), once the GPU library exists.
 - **The Lean kernel.**
 - **The runtime, for noninterference** (`dokumente/NICHTINTERFERENZ.md` §10) -- the SAME list as
@@ -697,6 +710,90 @@ from the same world; `rufAt` and `rufRumpf` differ in the WORLD the body runs fr
 returns to (the contract reads), not in a handler's answers, so the premise
 `HandlerUnter Er` cannot be formed for that pair. What the lemma does give that item is the
 depth half of the `Tief` residue (4e(i)).
+
+### 6.10 A chain for a program that touches a DEVICE (2026-09-16)
+
+*Opus lane `geraet`. Files: `grammatik/Grammatik/KorrespondenzGeraetZeuge.lean` (new),
+`Korrespondenz.lean` (three rows), `KorrespondenzAllg.lean` (`GerTafel`, `regAdrOk`,
+`GerAnnahme`, the three device judgements, the arms, §5 guarded), `CSpeicher.lean`
+(`EmitLay.devs`, `corrW`'s third clause), `CFormen.lean` (`DecidableEq CX`),
+`Schlusssatz.lean`, `KorrOkAdaequat.lean`. Theorem map: SATZKARTE §37. Report:
+`messung/muse/OPUS-BERICHT-GERAET.md`. Axioms of every theorem named here: `propext`,
+`Classical.choice`, `Quot.sound`; `#print axioms gabbro_ziel` unchanged; no `sorry`, no
+`native_decide`, no new `axiom`.*
+
+**THE SENTENCE THE CHAIN CLAIMS.** *If the profile holds and the register answers inside its
+declared type, every run of the emitted C corresponds.* Nothing about the device is claimed:
+not that it answers, not that it answers the truth, not that it keeps the promise its own
+declaration states.
+
+**What `korrOk` carries now.** Three of the five hardware forms:
+
+| Gabbro form | row | C | judgement |
+|---|---|---|---|
+| `Stmt.regSchreib` (`R = e;`) | `GRow.storeReg` | `(*(volatile uintN_t *)(cp)) = e;` | `gerSchreib_step` (a `StmtCorr`) |
+| `Block.regLies` (`let x = R;`) | `GRow.loadReg` | `T x = (*(volatile uintN_t *)(cp));` | `bsem_regLies` (a `BlockSem`) |
+| `Block.regLiesElse` (`let x = R else (c) { return e; }`) | `GRow.loadRegElse` | the read, then `if (!(c)) { return e; }` | `bsem_regLiesElse` |
+
+The `requires … else` channel is the interesting one: **a broken device promise becomes a
+BRANCH in the program rather than a stop.** `Hardware.geraet` cannot arise from it at all, and
+the `else` arm must correspond like any other row. What is left of the residue is the one
+outcome no program can catch -- an answer outside the declared TYPE (`Hardware.register`),
+where there is no value to branch on.
+
+**The premise list, and where each premise sits.** `korrOk` gained a LAST parameter
+`GT : GerTafel D` -- the emitter's device numbers as plain data, with a default of the EMPTY
+table (`ein := false`) under which every device row is refused. So the two closed chains call
+`korrOk EL fnum c P fs` unchanged, character for character, and `gerAnn_leer` proves the empty
+table meets the profile vacuously: **the generic theorem lost no hypothesis it had.**
+`korrOk_fnCorr` and `korrOk_jeder_lauf` gained ONE: `GerAnnahme EL orc O GT` (§5).
+
+**What it COST, and the premise that was refused.** `korrOk_rufAt_ohneHardware` (§6.8, clause
+4b of `schlusssatz`) now carries `GT.ein = false`. It has to: a certificate with a register
+READ row carries `Block.regLies`/`.regLiesElse`, and those are two of the five sources of a
+hardware outcome. *The device chain and clause 4b are the two sides of one coin, and the coin
+is now visible in the premise list instead of being spent silently.* `korrOk_endR`
+(`KorrOkAdaequat.lean`, the adequacy-fragment bridge) carries the same premise, for a
+different reason: `BlockR` HAS both device constructors, but `BlockR.regLiesElse` is stated at
+`l = false` while that induction runs at every `l`. **Both are OPEN by name.**
+
+**The one line that is not in the certificate.** A device window is not memory, and `corrW`
+says nothing about one (`CFormenH.lean`'s own CUT). The premise *"in every related state the
+window is mapped"* cannot be an assumption of the profile -- **as an assumption it is FALSE**
+whenever the declaration has a register, since any related state can have the window unmapped
+and stay related. So the mapping went where it belongs: `EmitLay` declares the unit's device
+windows (`devs : Nat → Bool := fun _ => false`) and `corrW` carries
+`∀ d, EL.devs d = true → st.live (.dev d) = true`. Cost, measured: `corrW` has **300**
+occurrences in `grammatik/`, and **17** had to move.
+
+**The witness** (`KorrespondenzGeraetZeuge.lean`): one `mmio` device, two registers
+(`ST @0x00 class r requires ST <= 8`, `CTRL @0x04 class rw`), one function carrying **all
+three** device forms; `gZert_ok` decides the certificate true; `gZert_sieb` refuses **seven**
+planted defects (the device table switched off, the wrong register, the wrong cell width, the
+promise read as its opposite, the `else` branch dropped, the `else` answer changed, and a
+plain local read where the volatile one stands); `gZert_ohneTafel` shows the DEFAULT
+certificate call refuses the same program; `gerZeuge_nichtHardwareFrei` shows the body is not
+`hardwareFrei`, i.e. the `korrOk` of before could not have certified it; `gerAnn` is a TERM,
+so the profile is inhabited and the chain is not vacuous; `gerZeuge_kette` and
+`gerZeuge_lauf` are the chain for that program at every depth and budget.
+
+**The semantic merge break with §6.9, and the repair.** `korrOk_ohneLocks` walks the same rows
+and ended in a catch-all that assumed every remaining row meets `Block.cons`; the device rows do
+not, and the merged tree read `h.1` off a `false`. Repaired with three explicit branches and NO
+guard: all three rows carry no `locks` -- `Stmt.regSchreib` is a leaf, `Block.regLies` hands the
+question to `rest`, and `Block.regLiesElse`'s `sonst` half is free because the check admits only
+`Endblock.ret` there. The four `ohneLocks` theorems gained `GT` and hold for EVERY device table,
+so they are stronger than before; `korrOk_ohneLocks`'s `GT` is implicit and §6.9's clause 4e
+needed no edit. *The one line that would make it false is named at the site: a widened `else`
+channel could hold a `locks`.*
+
+**The corpus, measured (§1 of the report).** 25 of 113 programs carry one of the five forms;
+13 declare a `device`; the corpus holds **22 plain register reads, 1 read with `else`
+(`beispiele/44-register-einmal-lesen.gab:103`, the only one), 14 stores, 11 `awaits`,
+11 `forever` and ZERO axiom calls** -- a driver call over the ABI is not in the corpus at all.
+**No register-bearing program reaches sieve (b):** all 25 stop at sieve (a), the Lean parser
+and elaborator. **CHAIN COUNT 2 of 113, unchanged, and it could not change** -- this lane
+touched sieve (e) only, while sieve (a) binds.
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 

@@ -462,7 +462,7 @@ section C
 /-- `corrW` reads only the slots (there are no globals). -/
 theorem corrW_von {σ₁ σ₂ : World DR} {st : CSt} (h : corrW kEL σ₁ st)
     (hs : σ₁.slots = σ₂.slots) : corrW kEL σ₂ st :=
-  ⟨fun t ht => by rw [← hs]; exact h.1 t ht, fun g => nomatch g⟩
+  ⟨fun t ht => by rw [← hs]; exact h.1 t ht, And.intro (fun g => nomatch g) h.2.2⟩
 
 /-- Entering and leaving a frame without stack objects keeps the relation
     (they touch only stack objects). -/
@@ -1330,7 +1330,7 @@ theorem start_offen (w : Faden → Option Nat) (u : Faden) :
 /-- **The relation holds at the two starts.** -/
 theorem r124_start (w : Faden → Option Nat) (hw : Wurzeln w) :
     R124 w (startC c124 w st0) (M0 w) := by
-  refine ⟨⟨fun tb _ => ⟨rfl, fun k f _ _ => rfl⟩, fun g => nomatch g⟩, ?_, fun t => ?_⟩
+  refine ⟨⟨fun tb _ => ⟨rfl, fun k f _ _ => rfl⟩, And.intro (fun g => nomatch g) (fun _ _ => rfl)⟩, ?_, fun t => ?_⟩
   · intro L u
     show (none : Option Faden) = some u ↔ _
     constructor
@@ -1538,7 +1538,7 @@ theorem wAB_wurzeln : Wurzeln wAB := by
 def KAB : KonfC := startC c124 wAB st0
 
 theorem corrW_st0 : corrW kEL ((speicherR kSp).welt []) st0 :=
-  ⟨fun _ _ => ⟨rfl, fun _ _ _ _ => rfl⟩, fun g => nomatch g⟩
+  ⟨fun _ _ => ⟨rfl, fun _ _ _ _ => rfl⟩, And.intro (fun g => nomatch g) (fun _ _ => rfl)⟩
 
 /-- **WITNESS of `schlusssatz_124`, with a CONTENDED lock** (rule 13). Every
     premise holds jointly (the specified lock primitive; thread creation at

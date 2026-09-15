@@ -334,7 +334,7 @@ def w66W : World w66D := { slots := fun t => (nomatch t), globs := fun g => (nom
 
 def w66St : CSt := { mem := fun _ _ => .undef, live := fun _ => true, obs := [] }
 
-theorem w66_corr : corrW w66EL w66W w66St := ⟨fun t => (nomatch t), fun g => (nomatch g)⟩
+theorem w66_corr : corrW w66EL w66W w66St := ⟨fun t => (nomatch t), And.intro (fun g => (nomatch g)) (fun _ h => Bool.noConfusion h)⟩
 
 /-- `bereit = true` on both sides. -/
 def w66Rho : Env w66D (w66D.params w66F) := .cons (show Bool from true) .nil

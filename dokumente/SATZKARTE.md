@@ -3664,5 +3664,80 @@ lock, so `RufRahmenTreu` is free there and clause 4e(ii) lands UNCONDITIONALLY: 
 `korrOk_ohneLocks`: the two purely computational ones), `#print axioms gabbro_ziel`
 unchanged, whole library **262 jobs** green, no `sorry`, no `native_decide`, no new `axiom`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §§1-10 history above.)
+## 37. A chain for a program that touches a DEVICE: `korrOk` carries the register
+
+*Added 2026-09-16 (Opus lane `geraet`). Files: `Grammatik/KorrespondenzGeraetZeuge.lean`
+(new), `Grammatik/Korrespondenz.lean` (three `GRow` rows), `Grammatik/KorrespondenzAllg.lean`
+(`GerTafel`, `regAdrOk`, `GerAnnahme`, `gerLies_step`, `gerSchreib_step`, `bsem_regLies`,
+`bsem_regLiesElse`, the arms and §5's guard), `Grammatik/CSpeicher.lean` (`EmitLay.devs` and
+`corrW`'s third clause), `Grammatik/CFormen.lean` (`DecidableEq CX`),
+`Grammatik/Schlusssatz.lean`, `Grammatik/KorrOkAdaequat.lean`. Plan:
+`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §5 and §6.10. Report:
+`messung/muse/OPUS-BERICHT-GERAET.md`.*
+
+**THE SENTENCE.** *If the profile holds and the register answers inside its declared type,
+every run of the emitted C corresponds.* Nothing about the device is claimed.
+
+| new | says | proved by |
+|---|---|---|
+| `gerSchreib_step` | `R = e;` corresponds to `(*(volatile uintN_t *)(cp)) = e;` at any address the check accepts | `vStore`, the profile, `ExprCorr` |
+| `bsem_regLies` | `let x = R;` corresponds to `T x = (*(volatile uintN_t *)(cp));` | `gerLies_step` + the tail |
+| `bsem_regLiesElse` | `let x = R else (c) { return e; }` corresponds to the read plus `if (!(c)) { return e; }` | `gerLies_step`, `ergCorr_run`, `Exec.iteT/iteF` |
+| `gerAnn_leer` | the EMPTY device table meets the profile, vacuously | `regAdrOk_ein` |
+| `gerAdr_devH` | the direct-base address is a THEOREM, not an assumption | `ev_devReg` |
+| `gerRund_int` | an INTEGER register's answer reads back | `einpassen` at `.int` |
+
+**Two of the model's five hardware outcomes stay, and are named.** `Hardware.register` (an
+answer outside the declared type) and `Hardware.geraet` (an answer against the declared
+promise) end the Gabbro block in an ERROR, where `BlockSem` claims nothing. The `requires …
+else` form removes the SECOND of them by turning it into a branch of the program; the first
+cannot be removed by any program, because there is no value to branch on.
+
+**What it cost, and the premise that was refused.** `korrOk_rufAt_ohneHardware` (§35, clause
+4b of `schlusssatz`) carries `GT.ein = false`, and so does `korrOk_endR` -- both OPEN by name,
+both discharged by `rfl` at every existing call site. `korrOk` itself gained a LAST parameter
+with a default of the empty table, so every existing call is unchanged character for
+character and the two closed chains decide exactly what they decided before.
+
+**The one line that is not in the certificate.** A device window is not memory, and `corrW`
+says nothing about one. The premise *"in every related state the window is mapped"* is FALSE
+as an assumption (any related state can have the window unmapped and stay related), so it went
+into the state relation: `EmitLay.devs` declares the unit's windows and `corrW` carries
+`∀ d, EL.devs d = true → st.live (.dev d) = true`. `corrW` has 300 occurrences in
+`grammatik/`; 17 had to move.
+
+**The witness** (`KorrespondenzGeraetZeuge.lean`, non-degenerate): one `mmio` device with two
+registers, one function carrying a register STORE, a plain register READ and a CHECKED read;
+`gZert_ok` (decided), `gZert_sieb` (SEVEN planted defects refused), `gZert_ohneTafel` (the
+default, device-free certificate call refuses the same program),
+`gerZeuge_nichtHardwareFrei` (the body is not `hardwareFrei`, so the old `korrOk` could not
+have certified it), `gerAnn` (the profile is INHABITED -- a term, so the chain is not
+vacuous), `gerZeuge_kette` and `gerZeuge_lauf`.
+
+**Refused by name:** `awaits` (no atomic row in `GRow`), the axiom call and `bindAxiom` (no
+foreign-call row; and the corpus has ZERO axiom calls), `forever` (no loop row that may be
+left only by `goto`), an `else` branch that is not a `return`, a `bool` register (it cannot
+meet `rund`), and `transition`, the bank accessors and port I/O (`inb`/`outb`), which have no
+T4 lemma at all.
+
+**The semantic merge break with §36, and the repair.** `korrOk_ohneLocks`
+(`KorrOkOhneLocks.lean`) reads a certified body's freedom from `locks` off the same check by the
+same row induction, and its block half ended in a catch-all that assumed every remaining row
+meets `Block.cons`. The device rows do not (`loadReg` meets `Block.regLies`, `loadRegElse` meets
+`Block.regLiesElse`), so the merged tree read `h.1` off a `false = true`. **The repair is three
+explicit branches and NO guard**, because all three rows genuinely carry no `locks`:
+`Stmt.regSchreib` is a leaf that carries no block; `Block.ohneLocks (.regLies …)` is
+`rest.ohneLocks`, the binder's question handed on; and `Block.regLiesElse` owes
+`sonst.ohneLocks && rest.ohneLocks`, whose `sonst` half is free because the check admits only
+`Endblock.ret` there (`sonstOk`). The four `ohneLocks` theorems therefore gained `GT` and are
+STRONGER than before, not narrower — they hold for EVERY device table. *If the `else` channel is
+ever widened past a `return`, that branch has to be re-read: a widened `sonst` could hold a
+`locks`, and then it is false and not merely unproved.* `korrOk_ohneLocks`'s `GT` is implicit, so
+§36's clause 4e needed no edit.
+
+**Axioms: the standard three** for every theorem named here; `#print axioms gabbro_ziel`
+unchanged; whole library green (**263 jobs** merged with §36); no `sorry`, no `native_decide`,
+no new `axiom`.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §§1-10 history above.)
 

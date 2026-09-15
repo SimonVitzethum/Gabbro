@@ -183,7 +183,7 @@ theorem ein_fn : FnCorr refEL (rufAt refP refO 0 2) (CallAt refEL.lay tvOrc tvXR
 def refW0 : World refD := refSp0.welt []
 
 theorem refW0_corr : corrW refEL refW0 refSt0 := by
-  refine ⟨?_, fun g => nomatch g⟩
+  refine ⟨?_, And.intro (fun g => nomatch g) (fun _ _ => rfl)⟩
   intro t _
   refine ⟨rfl, ?_⟩
   intro k f hk0 hk
@@ -365,7 +365,7 @@ def bvSt : CSt where
   obs := []
 
 theorem bv_corr : corrW bvEL bvW bvSt := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, fun _ _ => rfl⟩
   · intro t _
     refine ⟨rfl, ?_⟩
     intro k f hk0 hk
@@ -420,7 +420,7 @@ theorem atomar_zeuge :
           (.acas ⟨.glob 0, 0⟩ .acqRel .acquire 42 42 false :: st1.obs)) := by
   obtain ⟨st1, h1, hc1, ho1⟩ := cas_success bvEL bvW bvSt bv_corr () rfl rfl []
     ⟨42, by decide, by decide⟩ .acqRel .acquire rfl
-  have hm : st1.mem (.glob 0) 0 = .int 42 := (hc1.2 () rfl).2
+  have hm : st1.mem (.glob 0) 0 = .int 42 := (hc1.2.1 () rfl).2
   obtain ⟨h2, -⟩ := cas_failure bvEL (bvW.schreibGlob () [] ⟨42, by decide, by decide⟩) st1 hc1 ()
     rfl rfl 0 ⟨42, by decide, by decide⟩ .acqRel .acquire rfl (by decide)
   exact ⟨st1, h1, hc1, ho1, hm, h2⟩
