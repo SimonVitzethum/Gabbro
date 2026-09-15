@@ -1,7 +1,7 @@
 # What cannot be written in Gabbro today
 
 *Opus lane `schreibbar`, 2026-09-15, on master `f470f344`. Method: lane 201's — **write it,
-run the tool, record what happens.** Twenty-one probe files under `messung/schreibprobe/`, run
+run the tool, record what happens.** Twenty-two probe files under `messung/schreibprobe/`, run
 with `gabbro pruefe`, `gabbro emit`, `gabbro lean-g`, `cc -std=c11 -Wall -Wextra -Werror` and,
 where it links, the program itself. **No checker, emitter, grammar or rule was changed.**
 Nothing was added to `beispiele/`; `MARKE_EMIT` untouched.*
@@ -14,6 +14,11 @@ Nothing was added to `beispiele/`; `MARKE_EMIT` untouched.*
 tried · **(C)** the checker accepts, the emitter has no arm · **(D)** writable, but only by
 giving something up.
 
+**The run, in numbers.** 22 probe files, about 70 source shapes. **10** are refused by the
+checker, **3** pass the checker and are refused by the emitter, **1** passes both and is
+refused by the exporter, **8** pass everything (four of them as row-P findings, four as (D)
+with the price written in the file). One links and runs.
+
 ### 1.1 The runtime — the owner's top priority
 
 | # | What a writer cannot write | Class | Probe | What the tool said, verbatim |
@@ -25,7 +30,7 @@ giving something up.
 | **5** | **`atomic_fetch_add`.** `SPRACHE.md` promises a primitive `exchange update` body lowers to `atomic_fetch_*`; `CTicket.lean`'s `zieht` is one wait-free step. | **C** | `S06-fetch-add.gab` | Accepted, 0 errors, C written — and the C is a bounded `atomic_compare_exchange_weak_explicit` loop with a writer-chosen bound and a `_Noreturn` exit at overrun. **Measured over the whole corpus: 0 of 113 emitted units contain an `atomic_fetch_*`; the string occurs once in `emit.rs`, inside a comment (line 9263).** `accumulates … merge max/add` also lowers to load/store on per-cpu cells, not to a fetch op. |
 | **6** | **Wrapping arithmetic over a local.** `n +% 1` where `n` is a `let` local or an `exchange` binder. | **C** | `S07-wrap-ueber-lokaler.gab` | `gabbro pruefe`: 0 errors. `gabbro emit`: `error: [C001] …:12: no lowering: wrapping `+%` over operands whose exact ranges cannot be read off their declarations -- both sides need an exact unsigned range `0 .. 2^N - 1` on one storage width`. The same line over a **parameter** and over a **static** emits. Lane 201 routed around it with a helper whose parameter is readable. |
 | **7** | **The idle root.** `for (;;) pause();` / `wfi` — what every thread that is not a declared start runs (`start.c`:128-146, `E.P.mitRuhe`'s `none`). | **D** | `S04-ruhewurzel.gab` | Accepted, and the C is `for (;;) { warten(); }`. **The price:** `forever` demands `progress <ident>` (compulsory, «SG-11») and `[S003] `progress …` names no declared assumption` refuses a bare name — *"otherwise it is a hope with a keyword in front"*. An idle root is a loop **nobody** ends, and that is the one thing the clause cannot say; the file declares an assumption that states the opposite of what is meant, with a falsifier that can never fire. Also: `[K003] `ruhe` promises costs, but a `forever` loop has no total cost` — an idle root cannot carry the unit's cost register at all. |
-| **8** | **Define the lock primitive the emitter calls, in the same unit as the lock.** | **B** | `S02-sperre-selbst-definiert.gab` | 2 shapes. `impl fn L_nimm()` beside `lock L` → `[N042] `L_nimm` is the C name of two different declarations` … *"the generator forms `L_nimm` here as `{fn}` … and it forms the same name as `{Lock}_nimm` -- the acquire primitive … rename one of the two"*. `pub impl fn L_nimm()` adds `[N038]` (exported and names non-exported atomics). |
+| **8** | **Define the lock primitive the emitter calls, in the same unit as the lock.** | **B** | `S02-sperre-selbst-definiert.gab` | 3 shapes. `impl fn L_nimm()` beside `lock L` → `[N042] `L_nimm` is the C name of two different declarations` … *"the generator forms `L_nimm` here as `{fn}` … and it forms the same name as `{Lock}_nimm` -- the acquire primitive … rename one of the two"*. `pub impl fn L_nimm()` adds `[N038]` (exported and names non-exported atomics). `impl fn L_nimm() section ".text"` → `[P001]`. **The lock and its implementation must live in two units** — which is what row P1 does. |
 
 ### 1.2 The Caprock areas
 
@@ -43,12 +48,14 @@ giving something up.
 | **18** | **A multi-line assumption text.** All three `claim` texts and two `assume` texts of F2/F6 are multi-line. | **A** | `S21-mehrzeilige-zusicherung.gab` | `[L001] string literal with no closing quote` (×2) and `[P029] `falsifier` or `unfalsifiable` expected`. No concatenation, no newline escape. What is written instead is one 300-character line — this probe's own `assume` is one. |
 | **19** | **The kernel-side entry stub.** `entry syscall vector 0x80 … regs in { nr : rax, … }` parses and checks; the emitted C is a `#define` for the vector, a prototype and a comment. | **D**, and it says so | `S14-syscall-und-asm.gab`, `beispiele/07` | `gabbro emit beispiele/07`: `#define gabbro_eintritt_syscall_VEKTOR 128u` / `void gabbro_eintritt_syscall(void);` / a dispatch pointer — plus *"THE STUB IS NOT A C FUNCTION. It is entered by hardware, it keeps the register footprint above and it leaves with `iretq` -- none of which C can write. What stands here is the PROMISE."* The register map travels as a comment. `boot` the same, nine steps as nine comment lines. |
 | **20** | **A register wider than `u64`** — VT-d's 128-bit context entry, «B24». | a **decision**, not a gap | `S17-vtd-gemischtes-register.gab` | `DID @[66:64]` → `[N007] bit 66 of `DID` lies outside its own word (u64 has bits 0..63)` … *"«B24», decided 2026-08-18: a position lies inside the field's OWN word … A 128-bit entry is TWO words, and saying so is cheaper than a rule about crossing"*. Listed so it is not counted twice: the refusal names its own decision. |
+| **21** | **One memory copy for every table.** `TODO.md` §0 defers the standard library for want of *content*: *"no memory copy, no ring buffer, no queue, no strings"*. | **D**, and the price is row 13 | `S22-speicherkopie.gab` | Both halves are **accepted, 0 errors, C written**. The whole table: `for (uint32_t i = 0; i < sizeof(Quelle_speicher.slots)/sizeof(…[0]); i += 1) Ziel_speicher.slots[i].w = Quelle_speicher.slots[i].w;` — a real copy, no bound check because there is nothing to check. `n` slots with `n` an argument: also accepted, and the loop still runs the full `count` with `if (i < n)` inside, because a `traverse` bound comes from the table's static `count`. **What is not writable is the generic one:** the copy exists once per (source, target) pair. The standard library's first function is a table of copies as long as the list of table shapes. |
 
 ### 1.3 Writable, and this tree says it is not — four findings the other way
 
 | # | Finding | Proof |
 |---|---|---|
 | **P1** | **The runtime's lock primitive can be written in Gabbro, linked and RUN.** `laufzeit/start.c` says *"a lock is a runtime object (futex, ticket lock, interrupt mask), **never program text**"* and defines `L_nimm`/`L_gib` as a POSIX mutex. Measured otherwise: `pub impl fn L_nimm()` in a unit of its own emits **`void L_nimm(void) { … }`** — non-static, the exact symbol `beispiele/124`'s emitted C declares. | `S03-sperre-eigene-einheit.gab` (0 errors, emit rc=0) + `S03-treiber.c` (= `start.c` with the mutex half cut out). `cc -std=c11 -O0 -Wall -Wextra -Werror -pthread` clean; **10 runs, all exit 0**, `konto=30 konto=30` once and `konto=70 konto=70` nine times — both schedules, the lock invariant holds in every run, no lost private write. **The ticket lock of `laufzeit/sperre.gab`, in Gabbro, serving a real two-thread program.** |
+| | **What P1 gives up, and it is named:** the lock is a **second translation unit**, because row 8 forbids it in the first. `Spec.lean`'s NOT CLAIMED list (line 380) reads *"linking of separately compiled units (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit supplies is not in `D.Fn`)"*. So the lock stops being a C body and becomes a Gabbro body **outside** the goal theorem's `Einheit` rather than inside it. That is a real move — the `cc` link is checked, the symbol is not a hope — and it is not the same as discharging assumption (d). Closing row 8 (one renaming rule in the emitter) would put both in one unit. | |
 | **P2** | **«B17» first half is closed:** a `transition` takes SEVERAL places in one move (`transset = placeshift { "," placeshift }`), and the two-place `state` block of `S08` checks. F3's *"`caller` and `reply_owner` never half set"* is declarable — it is only unusable, for the different reason in row 9. | `S08` (7 items, the ONLY error is the statement) |
 | **P3** | **«B23» is closed:** a register FIELD carries its own class (`regfeld = ident "@" bitpos [ "class" regklasse ]`), so VT-d's `FSTS` writes `PPF @1 class w1c` beside `FRI @[15:8] class r`. F2's last standing finding. | `S17` (the only error is the 128-bit line) |
 | **P4** | **«B27» is closed on the user side, artefact and all.** *"The place at which 168 `asm!` sites were meant to converge has no content"* — `syscalldecl` («SS-1») emits real inline assembly: `register uint64_t _sys_rdi __asm__("rdi") = (uint64_t)fd; … __asm__ __volatile__("syscall\n" : "+a"(_sys_rax) : "r"(_sys_rdi), … : "rcx", "r11", "memory");` generated from one declaration. | `S14` (0 errors, emit rc=0) |
@@ -63,7 +70,7 @@ giving something up.
 
 | what `start.c` does | can it be Gabbro today |
 |---|---|
-| defines `L_nimm`/`L_gib` (POSIX mutex) | **YES — measured, linked, run.** Row P1. The lock stops being a runtime assumption and becomes a program. |
+| defines `L_nimm`/`L_gib` (POSIX mutex) | **YES — measured, linked, run.** Row P1. The lock stops being a C body and becomes a Gabbro body — in a second unit, which is outside the goal theorem's one `Einheit` until row 8 moves. |
 | starts one thread per declared root (`pthread_create`) | **No form at all.** Row 1. |
 | joins them (`pthread_join`) | **No form at all.** Not separately probed — the same absence as row 1. |
 | parks every other thread in the idle root | **Yes, at a price.** Row 7: the body and the C are right; `progress` forces an assumption that says the opposite of what is meant. |
@@ -96,8 +103,20 @@ for exactly this class and its population is the *derived* grammar (the decision
 `parse.rs`), so a form the parser never reaches is not in its denominator either. **A form in
 the document with no arm in the parser is measured by nothing today.**
 
-*The cheap instrument, if one is wanted: every `Kw::` in the statement and item EBNF held
-against the `match` arms of `parse.rs`. That is a text comparison, not a build.*
+**And the size of the hole is small and countable.** Every head word of `SYNTAX.md`'s `stmt`
+rule, held against the `match` arms of `parse.rs::stmt` (lines 3467-3632) — pure text, no
+build:
+
+```
+arm   let  reset  if  match  traverse  retry  forever  breaking
+      narrow  locks  observes  leave  next  return             14 of 16
+NONE  transition                                               stateassign  «SG-19»
+NONE  advances                                                 advstmt      «SG-14»
+```
+
+**2 of 16.** The same comparison at the item level finds an arm for every head word (`type`
+and `library` go through a prefix chain rather than a single arm, and both are used in the
+corpus). *That comparison is the instrument, and it is eight lines of shell.*
 
 ## 4. What was NOT measured, and is therefore not claimed
 
@@ -143,6 +162,7 @@ messung/schreibprobe/S18-verbund-als-wert.gab           a record as a value     
 messung/schreibprobe/S19-zeiger-der-sperrt.gab          a fn pointer that locks             N036/M128
 messung/schreibprobe/S20-typanwendung.gab               Queue(T)                            C001
 messung/schreibprobe/S21-mehrzeilige-zusicherung.gab    a multi-line assumption text        L001
+messung/schreibprobe/S22-speicherkopie.gab              the standard library's memcpy      ACCEPTED (D)
 ```
 
 **Reproducing P1** (the one measurement with a running program):
