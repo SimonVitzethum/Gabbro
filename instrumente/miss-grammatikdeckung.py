@@ -1452,6 +1452,39 @@ for _k, _e in (("parent", "parent"), ("child", "child"), ("sibling", "sibling"))
           "    table T count 4 { slot { wert : u32, elter : option index into T, }\n"
           f"        tree {{ {_e} elter }} }}")
 
+# ============ round four (2026-09-15): the specification half ==========================
+# **Four forms of the contract/predicate half had no host, and three of them had none for
+# the SAME reason: the form is MANDATORY.** A differential whose base leaves out a clause
+# the grammar demands measures the omission, not the clause -- it comes back `BASE-RED`
+# and says nothing about the form. The base therefore carries the form in ANOTHER shape,
+# exactly as `atomicdecl.seq` does (`seq` against `acquire`). *A pair that cannot leave
+# the form out compares two of it.*
+
+# -- `reaches` and `Self`, in the shape `beispiele/47-ops-wortmenge.gab` writes them ----
+# A table invariant is the only place that can name its own carrier, and `Self` is the
+# only name it has. The pair therefore differs in the PREDICATE, not in the host.
+_TREE = ("    table T count 4 {{ slot {{ wert : u32, elter : option index into T, }}\n"
+         "        tree {{ parent elter }}\n"
+         "        invariant i cost O(1) runs offline : {X}; }}\n")
+HOST["baum"] = "module p {{\n" + _TREE + "}}\n"
+probe("atompred.reaches", "baum",
+      "forall s in slots of Self : Self.slots[s].wert == Self.slots[s].wert",
+      "forall s in slots of Self : Self.slots[s] reaches Self.slots[0] via elter")
+probe("place.Self", "baum", "true", "Self.slots[0].wert == Self.slots[0].wert")
+
+# -- the function-POINTER contract, in the shape `beispiele/49-dispatch-tabelle.gab` -----
+# `N035` demands both clauses at the type, so neither can be left out; the pair changes
+# WHICH effect and WHICH bound is promised.
+_FNPTR = ("module p {{\n"
+          "    static mut Z : u32 = 0;\n"
+          "    type D = {{ b : fn() -> bool {X}, }};\n"
+          "    fn f(d : D) effects {{ pure }} costs <= 1 ops {{ return; }}\n}}\n")
+HOST["fnptr2"] = _FNPTR
+probe("fnptr.effects", "fnptr2", "effects { pure } costs <= 4 ops",
+      "effects { reads Z } costs <= 4 ops")
+probe("fnptr.costs", "fnptr2", "effects { pure } costs <= 4 ops",
+      "effects { pure } costs <= 8 ops")
+
 
 # =======================================================================================
 # THE SPEECH TEST -- five directions, and each one is a way this instrument could go quiet
