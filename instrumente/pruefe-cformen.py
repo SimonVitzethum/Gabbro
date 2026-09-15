@@ -607,7 +607,11 @@ def classify_exprs(text, unit, cells, form):
     body = text
     if form in ("stmt:call-unit", "stmt:call-foreign", "stmt:call-lock", "stmt:bind-call-unit",
                 "stmt:bind-call-foreign", "stmt:call-indirect", "stmt:publish", "stmt:cas"):
-        m = re.search(r"\((.*)\)", text)
+        # `(void)f(a);` is the same call with its answer discarded (C11 6.3.2.2): the cast
+        # is not the argument list. Found 2026-09-15: without this the `(void)` parenthesis
+        # was read as the arguments and `f(` itself as a call INSIDE an expression, which
+        # put `beispiele/104`'s `(void)lies(k, i);` into state (iii) (`expr:call`).
+        m = re.search(r"\((.*)\)", re.sub(r"^\(void\)", "", text))
         body = m.group(1) if m else ""
     for m in re.finditer(r"\b(" + IDENT + r")\(", body):
         f = m.group(1)
