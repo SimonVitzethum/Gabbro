@@ -52,6 +52,23 @@
 //!   `Wert`, not a row, and that is refused by name (LG002), as are a
 //!   pointer, a record and a float static, and a `section` at a `static`
 //!   (a PLACEMENT, LG001).
+//! * `type Zelle = { wert : u32, fertig : bool };` -- **a record is a `Tab`
+//!   with `count 1`**, closed 2026-09-15, and `Syntax.lean` §1/§9 says it in
+//!   as many words ("ein `format` und ein Verbund sind Tabellen mit
+//!   `count 1`"). The record name is the table name, each record field a slot
+//!   field, and the one slot is index `0`: `p->f` is `Expr.durch` there,
+//!   `p->f = e` is `Stmt.assignDurch`, and a bare `writes p` is the table's
+//!   write right (a TABLE pointer still has to name `p.slots` -- a table has
+//!   more than one slot).
+//!   **A record as a VALUE is CLASS (ii) and stays refused by name.**
+//!   `Typen.lean` §1 lists every `Ty` there is -- `int`, `bool`, `opt`,
+//!   `sum`, `grund`, `never`, `fl`, `fnptr`, `ptr` -- and **there is no
+//!   product**. So `-> Completion`, `let c = fertig(k, 7);` and
+//!   `Completion(id: k, len: n)` name no type the specification can carry,
+//!   and no exporter work makes them one: closing it is a `Ty` constructor,
+//!   a change to the specification reviewed as a diff of `Spec.lean`.
+//!   A record field that is no `Ty` (an array, a nested record, a float, a
+//!   function pointer) is refused naming the FIELD and its record (LG002).
 //! * `arena A capacity lo .. hi of T` -- **O14**, closed 2026-09-15: the
 //!   PAIR `Grammatik/ArenaZucker.lean` names, synthesised here. A table `A`
 //!   of `count = hi` with one field `wert : T`, a global `A_used : int 0 hi`
@@ -110,6 +127,24 @@
 //! callee -- is refused by name (LG004 `RufPasst.hx`/`hb`), never weakened.
 //! The `hx` proof has the shape of the hand witness `HelferZeuge.lean`
 //! (`cases L`, one branch per lock: the floor, or absurdity from `hn`/`hL`).
+//!
+//! ## The linear family -- class (i) in the specification, built nowhere
+//!
+//! `linear type M;`, `linear ghost type M order { … };` and `type Duty(check)`
+//! are **not** `Ty`s: a mark is a RESOURCE, held in `Λ` as `Res.marke m s`.
+//! `D.Marke`, `D.stufen`, `Signatur.konsumiert`/`produziert`, `D.eigner`,
+//! `braucht … .inr (m, s)`, `Stmt.advances` and `Stmt.retires` are all in the
+//! specification, so the family is class (i) -- and none of it is built here:
+//! the export writes `Marke := Empty` and `konsumiert := []`. Every shape is
+//! refused BY NAME with the field it would travel in (`refuse_linear`).
+//!
+//! > **Measured 2026-09-15, and it is why the family is written down rather
+//! > than built:** all TEN corpus programs whose FIRST refusal is a linear
+//! > type stop at a SECOND wall from a different group -- a `walk`, a
+//! > `backed` table, a device, a foreign body (`extern fn`), an
+//! > `option index into Self` field, an `assume`. *Closing the whole family
+//! > would move sieve (b) by ZERO.* A first-refusal count is not a count of
+//! > programs a lane would gain, and the export census must be read that way.
 //!
 //! ## Refusal codes (`LG`)
 //!
@@ -327,6 +362,12 @@ pub(crate) struct TableModel {
     pub(crate) name: String,
     pub(crate) count: i128,
     pub(crate) fields: Vec<FieldModel>,
+    /// **This table is a RECORD** (`type Zelle = { wert : u32 };`), lowered
+    /// as `Syntax.lean` §1/§9 says: *"ein `format` und ein Verbund sind
+    /// Tabellen mit `count 1`"*. It differs from a declared `table` only in
+    /// how it is SPELLED at a use: `p->f` instead of `T.slots[i].f`, and a
+    /// bare `writes p` instead of `writes T.slots`.
+    pub(crate) record: bool,
 }
 
 /// The declared initial value of a global: the `sp0` entry the loader
@@ -560,6 +601,73 @@ fn read_tagged(t: &TypDecl, scope: &Scope) -> Result<Vec<(String, Option<(i128, 
     Ok(cases)
 }
 
+/// **The linear family, refused BY NAME** -- the last catch-all arm of the
+/// type walk, and the twin of the item catch-all closed on 2026-09-15.
+///
+/// `linear`/`ghost type M;` is class (i) IN THE SPECIFICATION: `D.Marke`,
+/// `stufen`, `Res.marke m stufe`, `Signatur.konsumiert`/`produziert`,
+/// `D.eigner`/`braucht`, `Stmt.advances` and `Stmt.retires` are all there.
+/// What it is NOT is a `Ty` -- a mark is a RESOURCE held in `Λ`, never a
+/// value -- so the surface `fn f(m : Marke)` has no parameter to travel as,
+/// only a `konsumiert` entry. **Measured 2026-09-15:** all ten corpus
+/// programs whose first refusal is this one stop at a SECOND wall from
+/// another group (a `walk`, a `backed` table, a device, a foreign body, an
+/// `option` field, an `assume`), so the family is written down here and
+/// built nowhere yet.
+fn refuse_linear(t: &TypDecl) -> Refusal {
+    let was = if t.parameter.is_some() {
+        "a witness type with a parameter list (`type Duty(check)`) is a `D.Marke` whose \
+         producer is the `check` and whose consumer is the `gates`"
+    } else if t.ordnung.is_some() {
+        "an `order { … }` names the STUFEN of a mark: `D.stufen m` is the number of them, a \
+         mark stands at `Res.marke m s`, and `Stmt.advances` moves it from `s` to `s + 1`"
+    } else if t.ghost && t.linear {
+        "a `linear ghost` mark is `D.Marke` with `stufen m = 1`: it is held in `Λ` as \
+         `Res.marke m 0`, consumed through `Signatur.konsumiert` and retired by \
+         `Stmt.retires`; `ghost` itself is the carrier flag `D.geist`"
+    } else {
+        "a `linear` mark is `D.Marke`, held in `Λ` as `Res.marke m s` and moved by \
+         `Signatur.konsumiert`/`produziert`, `Stmt.advances` and `Stmt.retires`"
+    };
+    refuse(
+        "LG001",
+        format!(
+            "type {} has no `Ty` form, because a mark is a RESOURCE and not a value: {was}. This \
+             exporter writes `Marke := Empty`, builds no `konsumiert`/`produziert` and exports \
+             neither `advances` nor `retires`, so a mark that travelled would travel as nothing",
+            t.name.text
+        ),
+    )
+}
+
+/// A type alias that is no `Ty`, refused BY NAME with the reason -- the arm
+/// that used to say only "is not an integer range" over five different
+/// shapes. A `Ty` is `int`, `bool`, `opt`, `sum`, `grund`, `never`, `fl`,
+/// `fnptr` or `ptr` (`Typen.lean` §1), and nothing else is one.
+fn refuse_kein_ty(t: &TypDecl, r: &TypExpr) -> Refusal {
+    let grund: &str = match r {
+        TypExpr::Float(_) => "a float alias is `Ty.fl lo hi` with its bounds as FRACTIONS, and \
+            this exporter builds no `Ty.fl` and none of the `Block.gleit*` statements",
+        TypExpr::Feld(_) => "an array alias has no `Ty` at all: a row of values is a `Tab` with \
+            that many slots (`Syntax.lean` §9), not one `Wert`",
+        TypExpr::FnZeiger(_) => "a function-pointer alias is `Ty.fnptr n`, where `n` is the \
+            SIGNATURE NUMBER `D.sig`/`D.sigNr` gives it; this exporter numbers only the \
+            functions it exports, and a declared signature with no body has no number",
+        TypExpr::Zeiger(_) => "a pointer alias is `Ty.ptr t rw`, and `t` is the NUMBER of a \
+            declared table (`D.tabNr`); an alias for a pointer to something that is no table \
+            has none",
+        TypExpr::Never(_) => "`never` is `Ty.never`, the type with no value: it is the answer \
+            of a `divergent`/`prim` function, and this exporter exports no such function",
+        TypExpr::Varianten(..) => "a variant list without the `tagged` word names no type this \
+            exporter reads; write `tagged type`",
+        TypExpr::Index { .. } => "an `index into T` alias is the GENERATED index type of `T` \
+            (`Ty.index (D.count t)`), and it resolves only where `T` is an exported table",
+        _ => "a `Ty` is an integer range, `bool`, `option`, a `tagged` sum, a reason, `never`, \
+            a float, a function pointer or a pointer (`Typen.lean` §1), and this is none",
+    };
+    refuse("LG002", format!("type {} is not an integer range: {grund}", t.name.text))
+}
+
 /// Constants, integer aliases and `tagged` types, so `count`, field types
 /// and constructors resolve. ONE walk, used by `collect` and by `rescope`:
 /// two readers of the same declarations would be two scopes.
@@ -589,14 +697,32 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
                 // alias IS its range, and that range travels. The drop is
                 // named in the printed NO-FORM ledger, which is what this
                 // ledger exists for.
+                // **The linear family** -- `linear`, `ghost`, `order`, and the
+                // witness parameter list of a `Duty` -- is NOT a `Ty` at all:
+                // a mark is `D.Marke` with `stufen`, held in `Λ` as
+                // `Res.marke m stufe`. Refused by name, with the fields it
+                // would travel in; see `refuse_linear`.
                 if t.linear || t.ghost || t.ordnung.is_some() || t.parameter.is_some() {
-                    return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
+                    return Err(refuse_linear(t));
                 }
                 let Some(r) = t.rumpf.as_ref() else {
-                    return Err(refuse("LG001", format!("type {} has no G form", t.name.text)));
+                    return Err(refuse(
+                        "LG001",
+                        format!(
+                            "type {} has no body, so it names neither a `Ty` nor a carrier",
+                            t.name.text
+                        ),
+                    ));
                 };
+                // **A RECORD is a carrier, not a value** (`Syntax.lean` §1/§9:
+                // "ein `format` und ein Verbund sind Tabellen mit `count 1`").
+                // It is built in the walk below, where the model is; here it
+                // only has to stop being read as an integer alias.
+                if matches!(r, TypExpr::Verbund(..)) {
+                    continue;
+                }
                 let Some(VTy::Int { lo, hi, bits }) = int_ty(r, scope) else {
-                    return Err(refuse("LG002", format!("type {} is not an integer range", t.name.text)));
+                    return Err(refuse_kein_ty(t, r));
                 };
                 scope.aliases.insert(t.name.text.clone(), (lo, hi, bits));
             }
@@ -628,7 +754,18 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
             }
             match &item.art {
                 ItemArt::Modul(m) => walk(model, scope, &m.items, sperren)?,
-                ItemArt::Typ(_) | ItemArt::Konst(_) => {}
+                // **A record is a `Tab` with `count 1`** (`Syntax.lean`
+                // §1/§9). Built HERE and not in `build_scope`, because a
+                // table lives in the model and a scope holds only values;
+                // every other alias travels through the scope and is done.
+                ItemArt::Typ(t) => {
+                    if let Some(TypExpr::Verbund(felder, _)) = t.rumpf.as_ref() {
+                        if !t.tagged {
+                            model.tables.push(read_record(t, felder, scope)?);
+                        }
+                    }
+                }
+                ItemArt::Konst(_) => {}
                 ItemArt::Tabelle(t) => model.tables.push(read_table(t, scope)?),
                 // A `static` is a `Glob` (`Syntax.lean` §1: "ein `static` ein
                 // `Glob`"). What has no single `Wert` -- an array, a pointer,
@@ -1009,9 +1146,16 @@ fn check_fn(
     }
     let result = match &d.ergebnis {
         None => None,
-        Some(t) => Some(g_ty(t, scope).ok_or_else(|| {
-            refuse("LG002", format!("result of {} has no integer-range, bool or tagged form", f.name))
-        })?),
+        Some(t) => Some(match g_ty(t, scope) {
+            Some(ty) => ty,
+            None => {
+                if let Some(rec) = record_named(t, model) {
+                    return Err(refuse_record_value(&format!("the result of {}", f.name), &rec));
+                }
+                return Err(refuse("LG002", format!(
+                    "result of {} has no integer-range, bool or tagged form", f.name)));
+            }
+        }),
     };
     // `requires` in two channels (lane 198): a `Held`-only clause names
     // the signature-held set; every other clause travels as an `Expr`
@@ -1169,6 +1313,17 @@ fn held_aus_klausel(p: &Pred, model: &Model, fname: &str) -> Result<Option<Vec<u
 /// The table a `writes` place names: `writes k.slots` through a pointer
 /// parameter, or `writes T.slots` at a table.
 fn write_table(o: &Ort, params: &[(String, ParamTy)], model: &Model, fname: &str) -> Result<usize, Refusal> {
+    // **`writes p` at a pointer to a RECORD** names the whole record, and
+    // the record IS one slot: the write right is the table's. A table
+    // pointer still has to name `p.slots` -- a table has more than one slot,
+    // and naming the pointer would say less than the surface does.
+    if o.suffixe.is_empty() {
+        if let Some((_, ParamTy::Ptr { table, .. })) = params.iter().find(|(n, _)| n == &o.basis.text) {
+            if model.tables[*table].record {
+                return Ok(*table);
+            }
+        }
+    }
     let [OrtSuffix::Feld(slots)] = o.suffixe.as_slice() else {
         return Err(refuse("LG001", format!("writes-clause in {fname} names {}", o.text())));
     };
@@ -1226,7 +1381,10 @@ fn param_ty(t: &TypExpr, model: &Model, scope: &Scope, fname: &str) -> Result<Pa
             Some(VTy::Int { lo, hi, bits }) => Ok(ParamTy::Int { lo, hi, bits }),
             Some(VTy::Bool) => Ok(ParamTy::Bool),
             Some(VTy::Sum { name, cases }) => Ok(ParamTy::Sum { name, cases }),
-            _ => Err(refuse("LG002", format!("parameter type in {fname} has no G form"))),
+            _ => match record_named(t, model) {
+                Some(rec) => Err(refuse_record_value(&format!("a parameter of {fname}"), &rec)),
+                None => Err(refuse("LG002", format!("parameter type in {fname} has no G form"))),
+            },
         },
     }
 }
@@ -1243,6 +1401,9 @@ fn annot_ty(t: &TypExpr, model: &Model, scope: &Scope, fname: &str) -> Result<VT
                 return Ok(VTy::Index { table: ti });
             }
         }
+    }
+    if let Some(rec) = record_named(t, model) {
+        return Err(refuse_record_value(&format!("a `let` annotation in {fname}"), &rec));
     }
     Err(refuse("LG002", format!("`let` annotation in {fname} has no G form")))
 }
@@ -1293,7 +1454,101 @@ fn read_table(t: &Tabelle, scope: &Scope) -> Result<TableModel, Refusal> {
     if fields.is_empty() {
         return Err(refuse("LG001", format!("table {} has no fields", t.name.text)));
     }
-    Ok(TableModel { name: t.name.text.clone(), count, fields })
+    Ok(TableModel { name: t.name.text.clone(), count, fields, record: false })
+}
+
+/// **A RECORD is a `Tab` with `count 1`** -- `Syntax.lean` §1/§9 in as many
+/// words: *"ein `format` und ein Verbund sind Tabellen mit `count 1`"*.
+///
+/// The record NAME becomes the table name, each record field a slot field,
+/// and the one slot is index `0`. That is the whole lowering: a read `p->f`
+/// is `Expr.durch p T rfl f (.lit 0)`, a write is `Stmt.assignDurch`, and
+/// the guards are the table's guards. A record declared without a pointer to
+/// it costs nothing: it is an unreferenced carrier.
+///
+/// **What has no form, refused BY NAME:** an array field, a nested record
+/// field, a float field and a pointer field -- the same list `read_table`
+/// refuses, for the same reason (`D.typ t f` is ONE `Ty`, and `Typen.lean`
+/// has no product and no row). A record with NO field has no `Feld` type
+/// and no slot to read.
+///
+/// **A record as a VALUE stays refused, and that is CLASS (ii)**: `Ty` has
+/// no product former at all, so `-> Completion`, `let c = fertig(k, 7);` and
+/// `Completion(id: k, len: n)` name no type the specification can carry.
+/// The lowering above is a CARRIER lowering; it does not make a record a
+/// value, and pretending otherwise would put a table read where the source
+/// has a local.
+fn read_record(t: &TypDecl, felder: &[FeldDecl], scope: &Scope) -> Result<TableModel, Refusal> {
+    if felder.is_empty() {
+        return Err(refuse(
+            "LG002",
+            format!(
+                "record {} has no field: a `Tab` needs a `Feld` type with at least one \
+                 constructor, and a slot of no fields can be neither read nor written",
+                t.name.text
+            ),
+        ));
+    }
+    let mut fields = Vec::new();
+    for f in felder {
+        if f.bitpos.is_some() || f.offset_into.is_some() || f.bedingung.is_some() || f.reserviert {
+            return Err(refuse(
+                "LG002",
+                format!(
+                    "field {} of record {} carries a `format` clause (`@bitpos`, \
+                     `offset_into`, `where`, `reserved`); a `where` is `Block.pruefung` and \
+                     the byte views are `Expr.leseBytes`, and this exporter builds neither",
+                    f.name.text, t.name.text
+                ),
+            ));
+        }
+        let Some(ty) = g_ty(&f.typ.typ, scope) else {
+            return Err(refuse(
+                "LG002",
+                format!(
+                    "field {} of record {} has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), \
+                     so an integer range, `bool` or a `tagged` sum travels and an array, a \
+                     nested record, a float or a pointer field does not",
+                    f.name.text, t.name.text
+                ),
+            ));
+        };
+        fields.push(FieldModel { name: f.name.text.clone(), ty });
+    }
+    Ok(TableModel { name: t.name.text.clone(), count: 1, fields, record: true })
+}
+
+/// The record a type spelling names, where it names one.
+fn record_named(t: &TypExpr, model: &Model) -> Option<String> {
+    let TypExpr::Pfad(p) = t else {
+        return None;
+    };
+    let name = p.einfach()?;
+    model.tables.iter().find(|tb| tb.record && tb.name == name.text).map(|tb| tb.name.clone())
+}
+
+/// **A record in a VALUE position is CLASS (ii)** -- and this refusal is the
+/// place that says so, because "has no integer-range or bool form" does not.
+///
+/// `Typen.lean` §1 lists every `Ty` there is: `int`, `bool`, `opt`, `sum`,
+/// `grund`, `never`, `fl`, `fnptr`, `ptr`. **There is no product.** A record
+/// travels as a CARRIER (`Syntax.lean` §1/§9: a `Tab` with `count 1`,
+/// reached through a pointer), and that is built; it does not travel as a
+/// value, and no amount of exporter work makes it one. Closing this needs a
+/// `Ty` constructor, which is a change to the specification and a review of
+/// `Spec.lean` -- not a lane of the exporter.
+fn refuse_record_value(wo: &str, rec: &str) -> Refusal {
+    refuse(
+        "LG002",
+        format!(
+            "{wo} is the record {rec}, and a record has NO `Ty`: `Typen.lean` §1 is `int`, \
+             `bool`, `opt`, `sum`, `grund`, `never`, `fl`, `fnptr`, `ptr` -- there is no \
+             product. A record travels as a CARRIER (a `Tab` with `count 1`, reached through a \
+             pointer, `Syntax.lean` §1/§9), and that is built; it does NOT travel as a value, so \
+             a result, a parameter or a `let` of record type has no form at all. Passing a \
+             `ptr<normal, r> {rec}` has one"
+        ),
+    )
 }
 
 /// The field name the synthesised arena table carries, and the suffix of its
@@ -1354,6 +1609,7 @@ fn read_arena(a: &ArenaDecl, scope: &Scope, model: &Model) -> Result<(TableModel
             name: a.name.text.clone(),
             count: hi,
             fields: vec![FieldModel { name: ARENA_FELD.to_string(), ty: elem }],
+            record: false,
         },
         GlobModel {
             name: zaehl,
@@ -2105,6 +2361,34 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
             let ty = model.tables[t].fields[0].ty.clone();
             return Ok((t, 0, index, None, ty));
         }
+    }
+    // **`p->f` at a pointer to a RECORD**: the record is a `Tab` with
+    // `count 1` (`Syntax.lean` §1/§9), so the access is the slot read of
+    // index `0` -- `Expr.durch` with the same guards as any other table.
+    // The index type is `.index 1 = .int 0 0`, which `.lit 0` fits exactly.
+    if let [OrtSuffix::Ueber(f)] = o.suffixe.as_slice() {
+        let Some((j, ty, _)) = ctx.lookup(&o.basis.text) else {
+            return Err(refuse("LG005", format!("unknown name {} in {fname}", o.basis.text)));
+        };
+        let VTy::Ptr { table, .. } = &ty else {
+            return Err(refuse("LG003", format!("place {} in {fname} has no G form", o.text())));
+        };
+        let t = *table;
+        if !model.tables[t].record {
+            return Err(refuse("LG003", format!(
+                "`{}` in {fname} reaches THROUGH a pointer to the table {}, which is no record: \
+                 a table access names its slot (`{}.slots[i].{}`), and `Expr.durch` needs that \
+                 index", o.text(), model.tables[t].name, o.basis.text, f.text)));
+        }
+        let Some(fi) = model.tables[t].fields.iter().position(|fd| fd.name == f.text) else {
+            return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));
+        };
+        if !holds_guards(&ctx.held, model, t) {
+            return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+        }
+        let index = format!("((.weiter (by decide) (by decide) (.lit 0) : {}))", ctx.index_ty(model, t));
+        let ty = model.tables[t].fields[fi].ty.clone();
+        return Ok((t, fi, index, Some(j), ty));
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(idx), OrtSuffix::Feld(f)] = o.suffixe.as_slice() else {
         return Err(refuse("LG003", format!("place {} in {fname} has no G form", o.text())));
@@ -3696,6 +3980,18 @@ fn foot_glob(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<usi
     model.globs.iter().position(|g| g.name == o.basis.text).map(|gi| model.tables.len() + gi)
 }
 
+/// **Is this place a CARRIER access?** `T.slots[i].f` (three suffixes) and,
+/// since records travel as `Tab count 1`, `p->f` (one `->` suffix).
+///
+/// *Found by LEAN, and by nothing else* (2026-09-15): with `p->f` missing
+/// here the mirror saw no carrier, `fuss_holds` said the old footprint check
+/// passes, and the export printed `example : fussOrtGB gP gFs = true := by
+/// decide` -- which Lean then DISPROVED. A mirror that undercounts does not
+/// refuse anything; it prints a false claim. The two must be spelled once.
+fn ist_traegerzugriff(o: &Ort) -> bool {
+    o.suffixe.len() == 3 || matches!(o.suffixe.as_slice(), [OrtSuffix::Ueber(_)])
+}
+
 fn foot_push(acc: &mut Vec<usize>, ti: usize) {
     if !acc.contains(&ti) {
         acc.push(ti);
@@ -3708,7 +4004,7 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
     fn foot_expr(e: &Expr, model: &Model, params: &[(String, ParamTy)], acc: &mut Vec<usize>) {
         match &e.art {
             ExprArt::Ort(o) => {
-                if o.suffixe.len() == 3 {
+                if ist_traegerzugriff(o) {
                     if let Some(ti) = foot_carrier(o, model, params) {
                         foot_push(acc, ti);
                     }
@@ -3761,7 +4057,7 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Zuweisung(z) => {
-                if z.ziel.suffixe.len() == 3 {
+                if ist_traegerzugriff(&z.ziel) {
                     if let Some(ti) = foot_carrier(&z.ziel, model, params) {
                         foot_push(acc, ti);
                     }
@@ -3860,7 +4156,7 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
     fn foot_expr(e: &Expr, model: &Model, params: &[(String, ParamTy)], acc: &mut Vec<usize>) {
         match &e.art {
             ExprArt::Ort(o) => {
-                if o.suffixe.len() == 3 {
+                if ist_traegerzugriff(o) {
                     if let Some(ti) = foot_carrier(o, model, params) {
                         foot_push(acc, ti);
                     }
