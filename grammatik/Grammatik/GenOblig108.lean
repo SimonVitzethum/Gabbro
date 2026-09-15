@@ -10,10 +10,11 @@
 -- run form, the `decreases` witness and the `touches` clause of a
 -- `traverse` (static annotations, like `costs`); `by ops` on a field
 -- (a writer discipline the checker holds); `mut` on a `let`;
--- `pub` (visibility is a unit-boundary rule, and `Deklaration`
--- has no boundary -- added 2026-09-15: it was dropped here before
--- and named nowhere, which is the one thing this ledger exists
--- to prevent);
+-- `pub` and `opaque` (both are unit-boundary rules, and
+-- `Deklaration` has no boundary -- `pub` added 2026-09-15 after
+-- being dropped here and named nowhere, which is the one thing
+-- this ledger exists to prevent; `opaque` the same day, when its
+-- alias started to travel as its range);
 -- `concurrent` (its members travel as the declared starts
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
@@ -166,9 +167,10 @@ def gS : SperrInv gD where
   inv := fun _ _ => true
 
 
--- The declared initial memory (`Speicher gD`): the zero memory.
+-- The declared initial memory (`Speicher gD`): every slot at zero,
+-- every global at its DECLARED initialiser (a `static` names one).
 def gSp0 : Speicher gD :=
-  ⟨fun t _ f => match t, f with | .T, .v => ⟨0, by decide, by decide⟩, (fun g => nomatch g)⟩
+  ⟨(fun t _ f => match t, f with | .T, .v => ⟨0, by decide, by decide⟩), (fun g => nomatch g)⟩
 
 def gE : Zielsatz.Einheit gD where
   P := gP

@@ -5,19 +5,37 @@
              over one shared, never-written table) and its two decidable
              checks.
 
-  The `namespace G108_disjoint_start_locks` block below is pasted verbatim
-  from the output of `gabbro lean-g beispiele/108-disjoint-start-locks.gab`
-  (only its `import` lines are left out; this file imports instead). There is
-  no hand translation of 108 to hold it against; what is proved here is
-  that the export's fragment and footprint checks hold, and the declaration
-  data they rest on (counts, empty held sets -- no lock survives the
-  take-inside shape; since lane 183 starts hold nothing by signature).
+  The `namespace G108_disjoint_start_locks` block below is pasted VERBATIM
+  from the output of `gabbro lean-g beispiele/108-disjoint-start-locks.gab`;
+  only its `import` lines are left out, because this file imports instead.
+  There is no hand translation of 108 to hold it against; what is proved
+  here is that the export's fragment and footprint checks hold, and the
+  declaration data they rest on (counts, empty held sets -- no lock
+  survives the take-inside shape; since lane 183 starts hold nothing by
+  signature).
+
+  **Three other files build on this namespace** -- `ZeugnisKorpus.lean`
+  (the certificate witnesses), `Nichtinterferenz/Korpus.lean` (the flow
+  labels) and `Parser/UebersetzeAllg2.lean` (the T3 chain holds its parsed
+  declaration against this one). That is why the file is not simply
+  replaced by `GenOblig108.lean`, which is the same program exported whole
+  and byte-guarded: the NAME is load-bearing in three places.
+
+  **Why it needs a marker of its own** (2026-09-15): a PARTIAL paste is not
+  byte-comparable to a whole generated file, so `pruefe-genlean.py`
+  deliberately does not see it -- and until today nothing else did either.
+  The paste had drifted: `requires` had changed shape and `gLs`, `gCs`,
+  `gSp0` and `gE` had appeared in the generator and not here. The line
+  below says which block of which generator's output this is, and
+  `pruefe-exportlean.py` holds the block against it.
 -/
 import Grammatik.ZielOrtGeraetSem
 import Grammatik.SperreSem
+import Grammatik.Zielsatz.Spec
 
 namespace Gabbro.Grammatik
 
+-- PASTED from `gabbro lean-g beispiele/108-disjoint-start-locks.gab` block `G108_disjoint_start_locks`
 namespace G108_disjoint_start_locks
 
 inductive GTab where
@@ -125,7 +143,9 @@ def gBody_read_c : Endblock gD (vertragVon gD g_read_c) false gCtx_read_c gL_rea
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires
+    | .read_a => .wahr
+    | .read_c => .wahr
   ensures
     | .read_a => .wahr
     | .read_c => .wahr
@@ -134,6 +154,10 @@ def gP : Programm gD where
     | .read_c => gBody_read_c
 
 def gFs : List gD.Fn := [g_read_a, g_read_c]
+
+def gLs : List gD.Lock := []
+
+def gCs : List (gD.Tab ⊕ gD.Glob) := [(.inl GTab.T)]
 
 example : programmImFragmentG gP gFs = true := by decide
 
@@ -144,6 +168,18 @@ def gS : SperrInv gD where
   orte := fun _ => []
   inv := fun _ _ => true
 
+
+-- The declared initial memory (`Speicher gD`): every slot at zero,
+-- every global at its DECLARED initialiser (a `static` names one).
+def gSp0 : Speicher gD :=
+  ⟨(fun t _ f => match t, f with | .T, .v => ⟨0, by decide, by decide⟩), (fun g => nomatch g)⟩
+
+def gE : Zielsatz.Einheit gD where
+  P := gP
+  S := gS
+  Q := fun _ _ _ => true
+  starts := [⟨g_read_a, .nil⟩, ⟨g_read_c, .nil⟩]
+  sp0 := gSp0
 
 end G108_disjoint_start_locks
 

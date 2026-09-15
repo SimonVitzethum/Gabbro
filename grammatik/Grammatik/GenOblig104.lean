@@ -10,10 +10,11 @@
 -- run form, the `decreases` witness and the `touches` clause of a
 -- `traverse` (static annotations, like `costs`); `by ops` on a field
 -- (a writer discipline the checker holds); `mut` on a `let`;
--- `pub` (visibility is a unit-boundary rule, and `Deklaration`
--- has no boundary -- added 2026-09-15: it was dropped here before
--- and named nowhere, which is the one thing this ledger exists
--- to prevent);
+-- `pub` and `opaque` (both are unit-boundary rules, and
+-- `Deklaration` has no boundary -- `pub` added 2026-09-15 after
+-- being dropped here and named nowhere, which is the one thing
+-- this ledger exists to prevent; `opaque` the same day, when its
+-- alias started to travel as its range);
 -- `concurrent` (its members travel as the declared starts
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
@@ -56,7 +57,7 @@ def gSig_einzahlen : Signatur GTab Empty GLock Empty where
   erg := none
   gruende := 0
   haelt := [GLock.M]
-  boden := none
+  boden := some 1
   schreibt := fun _ => true
   gschreibt := fun e => nomatch e
   konsumiert := []
@@ -67,7 +68,7 @@ def gSig_lies : Signatur GTab Empty GLock Empty where
   erg := some ((.int 0 100))
   gruende := 0
   haelt := [GLock.M]
-  boden := none
+  boden := some 1
   schreibt := fun _ => false
   gschreibt := fun e => nomatch e
   konsumiert := []
@@ -139,7 +140,7 @@ theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatu
   hk := ⟨[], List.Perm.refl [], by simp⟩
   hh := fun L => by cases L <;> decide
   hx := fun L hL hn => by cases L <;> (first | exact absurd (by decide) hn | exact absurd hL (by decide))
-  hb := fun c h => by have hV : (vertragVon gD g_einzahlen).boden = none := rfl; rw [hV] at h; cases h
+  hb := fun c h => by have hV : (vertragVon gD g_einzahlen).boden = some 1 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gEns_einzahlen : Expr gD (ErgCtx (gD.params g_einzahlen) (gD.erg g_einzahlen)) (vertragVon gD g_einzahlen).ende .bool :=
   (.le (Expr.altSlot (D := gD) GTab.Konto GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto) (Expr.durch (D := gD) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto))
@@ -184,9 +185,10 @@ def gS : SperrInv gD where
 example : ((gS.orte GLock.M).elem (.inl GTab.Konto) = true) := by decide
 example : ((gD.braucht GTab.Konto).elem (Sum.inl GLock.M) = true) := by decide
 
--- The declared initial memory (`Speicher gD`): the zero memory.
+-- The declared initial memory (`Speicher gD`): every slot at zero,
+-- every global at its DECLARED initialiser (a `static` names one).
 def gSp0 : Speicher gD :=
-  ⟨fun t _ f => match t, f with | .Konto, .stand => ⟨0, by decide, by decide⟩, (fun g => nomatch g)⟩
+  ⟨(fun t _ f => match t, f with | .Konto, .stand => ⟨0, by decide, by decide⟩), (fun g => nomatch g)⟩
 
 def gE : Zielsatz.Einheit gD where
   P := gP
