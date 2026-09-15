@@ -377,7 +377,8 @@ theorem fall_marke_lt (cs : List (Option (Int × Int))) (n : Int) (hk : 0 < cs.l
     pair, PACKED MIXED-RADIX with the case number in the low digit:
     `roh = marke + |cases| * last` -- so `marke = roh % |cases|` and `last = roh / |cases|`
     (Euclidean). The packing is a bijection between `Int` and the pairs
-    `(marke < |cases|, last : Int)`, so every C value of the struct has exactly one raw word
+    `(marke < |cases|, last : Int)`, so every value of the `tagged` type has exactly one raw
+    word -- a bare case with `last = 0`, whatever the C union holds there
     (`einpassen_voll`, EinpassenVoll.lean); `nutzPasst` then holds the payload against its
     range. A syscall's `ok value | reason r` is such a sum; its generated errno decoding
     (`dekodiere`, Syscall.lean) is the emitted C that forms the pair. -/

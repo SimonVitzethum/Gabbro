@@ -255,21 +255,21 @@
     success outcomes / a rule G has and C lacks (or vice versa) makes every leg about another program.
   * `RufStartG` :2093, `RufErreichbarG` :2110 -- every thread in its start frame holding its
     signature locks; reachable = finitely many steps / a start C does not make is irrelevant.
-  * `execStmt` Semantik:574, `keinRuf` Maschine:383, `Stmt.istBlatt` Maschine:392 -- one
+  * `execStmt` Semantik:669, `keinRuf` Maschine:383, `Stmt.istBlatt` Maschine:392 -- one
     statement sequentially; leaves are what G runs in one step / wrong leaves = wrong steps.
   * `Logik`/`Hardware` Semantik:277/296 -- the failure outcomes; `Logik.bereich` (a float
     result outside its range, since 2026-09-15) / a user-decided failure filed as
     `Hardware` would pass (b) unconstrained (verdict F1).
-  * `einpassen` Semantik:424 (`summePasst`, `gleitWortPasst`, `zeigerPasst` above it),
-    `AntwortLeer` :446, `Orakel.zeiger` :450 -- a raw answer held against the declared type,
+  * `einpassen` Semantik:425 (`summePasst`, `gleitWortPasst`, `zeigerPasst` above it),
+    `AntwortLeer` :447, `Orakel.zeiger` :451 -- a raw answer held against the declared type,
     and the loaded image / a type the decoding refused for every word would be a stop the
     model decides and files as hardware (finding G1); `einpassen_voll`, `antwortLeer_iff`
     (EinpassenVoll.lean) say it refuses exactly the values the type lacks.
   * `execEndH` SperreSem:363, `HavocOk` :71, `SperrInv` :45 -- the sequential body semantics the
     user proves against: `locks L` runs from any move keeping `S.inv L`, a release checks it /
     if it differs from `execStmt` outside `locks`, the user proves the wrong body.
-  * `World` Semantik:77 (slots total over `Int`; in-range is the TYPE of `.index` values),
-    `Speicher` Maschine:359, `Orakel` Semantik:355, `Faden` Wettlauf:46 (= Nat, all started).
+  * `World` Semantik:79 (slots total over `Int`; in-range is the TYPE of `.index` values),
+    `Speicher` Maschine:359, `Orakel` Semantik:451, `Faden` Wettlauf:46 (= Nat, all started).
   * `Deklaration.mitRuhe`, `Programm.mitRuhe`, `Orakel.mitRuhe`, `SperrInv.mitRuhe`, `fsRuhe`,
     `wsRuhe`, `speicherR` :268, `envR` :280 MitRuhe.lean -- the idle root added, signature
     numbers and function-pointer types shifted by one, every body translated constructor by
