@@ -306,7 +306,7 @@ theorem kette_108_nebenlaeufig :
   have hL := laufzeit_initRuhe E8 (by decide)
   exact ⟨hL, (schlusssatz kette_108 O8 hw8 tvOrc tvXR tvXR_funktional
     (fun f => CallAt EL8.lay tvOrc tvXR (kProg zert108) 1 (fnNr f)) (fun _ => 1)
-    (fun _ _ _ _ _ h => h) (speicherR E8.sp0) init8 start8).2.2.2.2.2.2.2.1.2.2 0 _ _ hL _ .start⟩
+    (fun _ _ _ _ _ h => h) (speicherR E8.sp0) init8 start8).2.2.2.2.2.2.2.2.1.2.2 0 _ _ hL _ .start⟩
 
 #print axioms Gabbro.Grammatik.Kette108.kette_108
 #print axioms Gabbro.Grammatik.Kette108.kette_108_zeuge

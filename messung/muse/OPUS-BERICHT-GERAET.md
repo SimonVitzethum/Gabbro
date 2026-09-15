@@ -331,12 +331,51 @@ declaration with a register. It was found by trying to build the witness, and th
 
 ---
 
+## 5b. The semantic merge break, and what it says about the catch-all
+
+The congruence lane (`OPUS-BERICHT-KONGRUENZ.md`, master `dc25e948`) landed while this one ran,
+and the merged tree did NOT build. One file, one place:
+
+```
+Grammatik/KorrOkOhneLocks.lean:126:72: Invalid projection ...
+Grammatik/KorrOkOhneLocks.lean:126:39: omega could not prove the goal
+```
+
+`korrOk_ohneLocks` reads a certified body's freedom from `locks` off the same check, by the same
+row induction, and its BLOCK half ended in a catch-all `| _ =>` that assumed every remaining row
+meets `Block.cons`. The three device rows do not: `loadReg` meets `Block.regLies` and
+`loadRegElse` meets `Block.regLiesElse`, so the check's Bool is `false` there and the proof read
+`h.1` off a `false = true`. **The catch-all had to answer for forms it could not see, and when
+they arrived it answered wrong.**
+
+**The repair is not a guard, and that is the point.** All three rows genuinely carry no `locks`
+block, each for its own reason, so the reading holds for every device table `GT` — the theorems
+now take `GT` and are STRONGER than before, not narrower:
+
+| row | Gabbro form | why no `locks` |
+|---|---|---|
+| `storeReg` | `Stmt.regSchreib` | a LEAF statement — it carries no block at all (`Stmt.ohneLocks`'s catch-all) |
+| `loadReg` | `Block.regLies` | a BINDER that continues: `Block.ohneLocks (.regLies …) = rest.ohneLocks`, so the question is handed to the rows after it |
+| `loadRegElse` | `Block.regLiesElse` | owes `sonst.ohneLocks && rest.ohneLocks`; `rest` is the binder's again, and `sonst` is free because the check admits only `Endblock.ret` there (`sonstOk`) |
+
+**And the one line that would make it false is named at the site:** *if the `else` channel is
+ever widened past a `return`, this branch has to be re-read* — a widened `sonst` could hold a
+`locks`, and then the branch is false rather than merely unproved.
+
+`korrOk_ohneLocks`'s `GT` is IMPLICIT (it comes out of `hc : korrOk … GT = true`), so its one
+consumer — `Schlusssatz.lean`'s conjunct 4e — needed no edit at all.
+
+---
+
 ## 6. Numbers
 
 | what | measured |
 |---|---|
-| `lake build` over `grammatik/` | **0 errors**, **258 jobs**, whole library, on `ki-pc-fisch-101` (`gabbro-opus-ger`) |
-| `#print axioms gabbro_ziel` | `propext`, `Classical.choice`, `Quot.sound` — **unchanged** |
+| `lake build` over `grammatik/` (lane alone, before the congruence merge) | **0 errors**, **258 jobs** |
+| `lake build` over `grammatik/` (MERGED with master `dc25e948`, after the repair of §5b) | **0 errors**, **263 jobs**, on `ki-pc-fisch-101` (`gabbro-opus-ger`) |
+| `#print axioms gabbro_ziel` | `propext`, `Classical.choice`, `Quot.sound` — **unchanged**, in the merged tree too |
+| `#print axioms` of the four repaired `ohneLocks` theorems | `propext`, `Quot.sound` — the two purely computational ones, as the congruence lane recorded them |
+| `#print axioms schlusssatz` (merged, with conjunct 4e) | the standard three |
 | `#print axioms` of every new theorem | the standard three or fewer (`gZert_ok`, `gZert_sieb`, `gerAnn`: `propext`, `Quot.sound`; `gerZeuge_kette`, `gerZeuge_lauf`: the three) |
 | `sorry` / `native_decide` / new `axiom` | **none** |
 | `cargo test --no-fail-fast` | **25 collections, 0 failed** (the corpus collection alone 342 s) |

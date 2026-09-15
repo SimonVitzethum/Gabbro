@@ -24,7 +24,7 @@
   one is not.
 
   WHAT THE CHAIN CLAIMS, and what it does not: see `gerZeuge_lauf` below and
-  `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.9.
+  `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10.
 -/
 import Grammatik.KorrespondenzAllg
 
