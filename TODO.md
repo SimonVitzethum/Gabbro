@@ -73,6 +73,12 @@ Each item names its owner (lane or agent) where one is running.
   closing theorem. Today it is the adequacy chain, outside it.
 - [ ] **Take the `Einheit` of a chain from the exporter** (depends on lane 198) instead of the
   chain author writing it.
+- [ ] **Export the arena** (`OFFEN.md` O14, `SATZKARTE.md` §32). The specification carries
+  `alloc`/`reset` since 2026-09-15 (`Grammatik/ArenaZucker.lean`: a table of `count = hi` slots
+  beside a `used` global); `lean_g.rs` refuses the DECLARATION by name instead of building that
+  pair, so `beispiele/98` and `99` stop at sieve (b). Read an `ArenaDecl` into a `TableModel` +
+  `GlobModel` and lower the two statements. *The reservation `lo` does not travel — it is the
+  checker's static count (`N212`), and the model-side consequence is already proved.*
 - [ ] **T3 round trip for statements** (`SAnw`), and for full `gutPlatz` index payloads. Lane 195
   closed the expressions through level 6 (`Parser/Rundlauf4.lean`).
 - [ ] **A2: a Lean C parser for the emitter's subset** (`parseC text = some prog` by `decide`).
@@ -192,4 +198,4 @@ and contextual keywords (lane 188, the residue is irreducible).
   one place the oracle-plus-certificate pattern does not reach.
 - **The bootstrap chain** (Gabbro written in Gabbro) is deferred, with the measured reason in the
   old TODO (commit `1434efba`, "DIE BOOTSTRAP-KETTE").
-- **Known absences** O1–O12 are recorded, with what would close each, in `dokumente/OFFEN.md`.
+- **Known absences** O1–O14 are recorded, with what would close each, in `dokumente/OFFEN.md`.

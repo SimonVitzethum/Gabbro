@@ -264,7 +264,7 @@ opus/…:opus/…` first.
 | Translation validation | `Schlusssatz104.lean` (first chain), `Schlusssatz.lean` + `KorrespondenzAllg.lean` (stage (a) generic, `korrOk`), `Kette104*.lean`, `Kette108.lean`, `CNebenlaeufig.lean` + `Schlusssatz124.lean` + `Korpus124.lean` (stage (b)), `CFormen*.lean`, `CSpeicher.lean`, `CSemantik.lean`, `Parser/` (T3) |
 | Plans | `dokumente/PLAN-ZIELSATZ.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (chain count, §6 stage (a), §7 stage (b)), `PLAN-EINFACHHEIT.md`, `NICHTINTERFERENZ.md`, `GLEITKOMMA.md` |
 | Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
-| Known absences | `dokumente/OFFEN.md` (O1–O12) |
+| Known absences | `dokumente/OFFEN.md` (O1–O14) |
 | Guardian-booked figures | `messung/KENNZAHLEN.md` (moved out of the old TODO.md; `pruefe-zahlen.py` reads it) |
 | Verdicts | `messung/URTEIL-*-2026-09-1*.md`; lane reports `messung/muse/MUSE-REPORT-NN.md` |
 | Instruments | `instrumente/zaehle-kette.py` (the chain count, the one headline metric of translation validation), `pruefe-cformen.py` (three states: lemma / assumption / uncovered), `pruefe-emission.sh`, `abnahme.py` (all guardians), `mutiere-pruefer.py` |

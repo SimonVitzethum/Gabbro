@@ -46,6 +46,10 @@ GEGENSTAND = W / "grammatik" / "Grammatik"
 # keine (Rattenfaenger 2026-08-28: MARKE_EINGEFROREN blieb bei 31).
 ERWARTET = {
     "Adressraum.lean": (11, 0, 36),
+    # 2026-09-15, Opus lane `alloc`: NEW file -- `alloc`/`reset` as sugar over
+    # `narrow`+`assignSlot`+`assignGlob`, with the bridge to `Arena.lean` and a
+    # non-degenerate witness (SATZKARTE.md section 32, OFFEN.md O14).
+    "ArenaZucker.lean": (19, 0, 16),
     "Budget.lean": (19, 0, 18),
     "Erhaltung.lean": (23, 15, 48),
     "Extraktion.lean": (51, 6, 68),
