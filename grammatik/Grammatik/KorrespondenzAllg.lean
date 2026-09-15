@@ -41,6 +41,17 @@
   `KorrespondenzWeitZeuge.lean` -- an arm that accepts a wrong row is worse
   than a missing arm.
 
+  BLOCK STRUCTURE 2026-09-15 (`OPUS-BERICHT-BLOCK.md`). The check walks
+  BLOCKS as well as terminal blocks: `if (c) { … } else { … }`
+  (`GRow.ite` against `Stmt.ite`) is decided arm by arm. A row that
+  carries rows needs a recursion, and the recursion is STAGED, not
+  mutual: `stOk0` (flat, no recursion) -> `blOk` (self-recursive over the
+  rows, structurally) -> `stOk` (`stOk0` plus the block arms) -> `enOk`
+  (unchanged). *It has to stay structural*: `korrOk` is settled by
+  `decide` in every chain instance, and a well-founded definition does
+  not reduce in the kernel. The soundness runs on a plain measure
+  (`rowSize`), which a proof may do because a proof never reduces.
+
   THE SOUNDNESS (`korrOk_fnCorr`): a certificate that checks gives, for
   EVERY function and at EVERY call depth `n` and `forever` budget, the
   callee relation `FnCorr` between Gabbro's `rufAt P O passes n` and the
@@ -261,8 +272,14 @@ section Rumpf
 
 variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D)
 
-/-- STATEMENTS: the row is the emitted form of the statement. -/
-def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ) :
+/-- STATEMENTS WITHOUT A SUB-BLOCK: the row is the emitted form of the
+    statement. This is the FLAT stage of the staged recursion
+    `stOk0` -> `blOk` -> `stOk` -> `enOk`; it does not recurse at all, so
+    the only recursion in the check is `blOk`'s, and that one is
+    STRUCTURAL on the rows. *The staging is not decoration*: `korrOk` is
+    settled by `decide` in every chain instance, and a well-founded
+    definition does not reduce in the kernel. -/
+def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ) :
     Stmt D V l Γ Λ Λ' → GRow → Bool
   | .assignDurch _ t _ f i e _ _, r => match r with
     | .storeSlot kp ci n ss off τc ce =>
@@ -298,6 +315,46 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
     | _ => false
   | _, _ => false
 
+mutual
+
+/-- **STATEMENTS**: `stOk0` plus the statements that carry a BLOCK.
+    `if (c) { … } else { … }` is the row `GRow.ite`, which carries a row
+    list per branch and elaborates to exactly the C `if`/`else` the
+    emitter writes (`growRow`); the Gabbro side is `Stmt.ite` with a
+    `Block` per branch, and both branches are walked by `blOk`. The
+    descent is STRUCTURAL on the ROW -- `tRows` and `eRows` are
+    components of the row -- so no fuel and no well-founded recursion
+    enter the check. -/
+def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
+    (s : Stmt D V l Γ Λ Λ') : GRow → Bool
+  | .ite cc tRows eRows => (match s with
+      | .ite cnd t e => exOk EL K cnd cc && blOk K t tRows && blOk K e eRows
+      | _ => false)
+  | r => stOk0 EL fnum c K s r
+
+/-- **BLOCKS** (`Block`: an `if` arm, later a loop body): row by row, the
+    same reading `enOk` gives a terminal block -- `(void)x;`, `let`, and
+    every other row against the block's head statement. A block does not
+    end in a `return`, so there is no `ret` row here; the list ends with
+    the block (`Block.nil`). -/
+def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
+    (b : Block D V l Γ Λ Λ') : List GRow → Bool
+  | [] => (match b with
+      | .nil => true
+      | _ => false)
+  | r :: rs => match r with
+      | .void x => voidOk K x && blOk K b rs
+      | .bindLet y τc ce => (match b with
+          | .bind (τ := τ) e rest =>
+              K.okB && K.freshB y && declOk τ τc && exOk EL K e ce &&
+                blOk (K.push τ y) rest rs
+          | _ => false)
+      | r => (match b with
+          | .cons s rest => stOk K s r && blOk K rest rs
+          | _ => false)
+
+end
+
 /-- TERMINAL BLOCKS (a function body): row by row. `top` says the block is
     the whole body (a `void` body may fall off its end). -/
 def enOk (top : Bool) {V : Vertrag D} {l : Bool} :
@@ -326,6 +383,44 @@ def korrOk (P : Programm D) (fs : List D.Fn) : Bool :=
     | none => false
 
 end Rumpf
+
+/-! ### The measure the SOUNDNESS runs on
+
+    The CHECK must be structural, because `korrOk` is settled by `decide`
+    and the kernel has to reduce it. The PROOF is under no such duty -- a
+    proof never reduces -- so the induction below runs on a plain measure
+    over the rows, which spares the soundness theorem the shape of the
+    mutual definition. -/
+
+mutual
+/-- The nesting weight of one row. -/
+def rowSize : GRow → Nat
+  | .void _ => 1
+  | .storeSlot .. => 1
+  | .storeNamed .. => 1
+  | .storeGlob .. => 1
+  | .setVar .. => 1
+  | .setOp .. => 1
+  | .bindLet .. => 1
+  | .ite _ t e => rowsSize t + rowsSize e + 1
+  | .call .. => 1
+  | .ret .. => 1
+  | .forTrav _ _ _ body _ => rowsSize body + 1
+/-- The nesting weight of a row list. -/
+def rowsSize : List GRow → Nat
+  | [] => 0
+  | r :: rs => rowSize r + rowsSize rs
+end
+
+theorem rowSize_pos (r : GRow) : 1 ≤ rowSize r := by
+  cases r <;> simp only [rowSize] <;> omega
+
+theorem rowsSize_nil : ∀ (rs : List GRow), rowsSize rs = 0 → rs = []
+  | [], _ => rfl
+  | r :: rs, h => by
+      simp only [rowsSize] at h
+      have := rowSize_pos r
+      omega
 
 /-! ## 2. Soundness, expression by expression -/
 
@@ -966,79 +1061,82 @@ def AlleRufe (X : TVCtx D) (fnum : D.Fn → Nat) (c : KCert D) : Prop :=
   ∀ (g : D.Fn) (k : KFun D), c[fnum g]? = some k →
     FnCorr X.EL X.R X.CR g (fnum g) k.params k.lay
 
-/-- **Soundness of the statement check.** -/
-theorem stOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
-    ∀ (s : Stmt D V l Γ Λ Λ') (r : GRow), stOk X.EL fnum c K s r = true →
-      StmtCorr X m K s (growRow r) := by
-  intro s r h
+/-- **Soundness of the FLAT statement check.** Stated over every context,
+    every locals map and every loop label, because `blOk` reaches it at
+    the contexts of the arms and bodies it descends into. -/
+theorem stOk0_sound (hF : AlleRufe X fnum c) :
+    ∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+      (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow),
+      stOk0 X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r) := by
+  intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r h
   cases s with
   | assignDurch p t ht f i e hw hL =>
       cases r with
       | storeSlot kp ci n ss off τc ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨hs, hi⟩, he⟩ := h
-          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K hs
+          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K₀ hs
           subst hn hss hoff hτ
-          exact scorr_assignDurch X K m ht hp f hg hw hL (exOk_sound X K i ci hi)
-            (exOk_sound X K e ce he)
+          exact scorr_assignDurch X K₀ mm ht hp f hg hw hL (exOk_sound X K₀ i ci hi)
+            (exOk_sound X K₀ e ce he)
       | storeNamed tn ci n ss off τc ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨hs, hi⟩, he⟩ := h
-          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K hs
+          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K₀ hs
           subst hn hss hoff hτ
-          exact scorr_assignDurch X K m ht hp f hg hw hL (exOk_sound X K i ci hi)
-            (exOk_sound X K e ce he)
-      | _ => exact absurd h (by simp [stOk])
+          exact scorr_assignDurch X K₀ mm ht hp f hg hw hL (exOk_sound X K₀ i ci hi)
+            (exOk_sound X K₀ e ce he)
+      | _ => exact absurd h (by simp [stOk0])
   | assignSlot t f i e hw hL =>
       cases r with
       | storeSlot kp ci n ss off τc ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨hs, hi⟩, he⟩ := h
-          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K hs
+          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K₀ hs
           subst hn hss hoff hτ
-          exact scorr_assignSlotVia X m K hp f hg hw hL (exOk_sound X K i ci hi)
-            (exOk_sound X K e ce he)
+          exact scorr_assignSlotVia X mm K₀ hp f hg hw hL (exOk_sound X K₀ i ci hi)
+            (exOk_sound X K₀ e ce he)
       | storeNamed tn ci n ss off τc ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨hs, hi⟩, he⟩ := h
-          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K hs
+          obtain ⟨hp, hn, hss, hoff, hτ, hg⟩ := slotOk_sound X K₀ hs
           subst hn hss hoff hτ
-          exact scorr_assignSlotVia X m K hp f hg hw hL (exOk_sound X K i ci hi)
-            (exOk_sound X K e ce he)
-      | _ => exact absurd h (by simp [stOk])
+          exact scorr_assignSlotVia X mm K₀ hp f hg hw hL (exOk_sound X K₀ i ci hi)
+            (exOk_sound X K₀ e ce he)
+      | _ => exact absurd h (by simp [stOk0])
   | assignVar x e =>
       cases r with
       | setVar k τc ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨⟨hK, hk⟩, hd⟩, he⟩ := h
-          have hk' : k = K.loc x := of_decide_eq_true hk
+          have hk' : k = K₀.loc x := of_decide_eq_true hk
           subst hk'
-          exact scorr_assignVar X m K hK x (exOk_sound X K e ce he) hd
+          exact scorr_assignVar X mm K₀ hK x (exOk_sound X K₀ e ce he) hd
       | setOp k τc op t ce =>
-          simp only [stOk, Bool.and_eq_true] at h
+          simp only [stOk0, Bool.and_eq_true] at h
           obtain ⟨⟨⟨hK, hk⟩, hd⟩, he⟩ := h
-          have hk' : k = K.loc x := of_decide_eq_true hk
+          have hk' : k = K₀.loc x := of_decide_eq_true hk
           subst hk'
-          exact scorr_assignVar X m K hK x (exOk_sound X K e _ he) hd
-      | _ => exact absurd h (by simp [stOk])
+          exact scorr_assignVar X mm K₀ hK x (exOk_sound X K₀ e _ he) hd
+      | _ => exact absurd h (by simp [stOk0])
   | assignGlob g e hw hL =>
       cases r with
       | storeGlob gn τc ce =>
-          simp only [stOk, Bool.and_eq_true, Bool.not_eq_true'] at h
+          simp only [stOk0, Bool.and_eq_true, Bool.not_eq_true'] at h
           obtain ⟨⟨⟨⟨hn, hτ⟩, hgg⟩, hat⟩, he⟩ := h
           have hn' : gn = X.EL.gnr g := of_decide_eq_true hn
           have hτ' : τc = X.EL.gty g := of_decide_eq_true hτ
           subst hn'
           subst hτ'
-          exact scorr_assignGlob X m K g hgg hat hw hL (exOk_sound X K e ce he)
-      | _ => exact absurd h (by simp [stOk])
+          exact scorr_assignGlob X mm K₀ g hgg hat hw hL (exOk_sound X K₀ e ce he)
+      | _ => exact absurd h (by simp [stOk0])
   | call g args hp hr =>
       cases r with
       | call fc cargs dst =>
           cases dst with
-          | some _ => exact absurd h (by simp [stOk])
+          | some _ => exact absurd h (by simp [stOk0])
           | none =>
-              simp only [stOk, Bool.and_eq_true] at h
+              simp only [stOk0, Bool.and_eq_true] at h
               obtain ⟨hfc, hk⟩ := h
               have hfc' : fc = fnum g := of_decide_eq_true hfc
               subst hfc'
@@ -1054,10 +1152,102 @@ theorem stOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : Li
                     simp only [KFun.lay, of_decide_eq_true hvm, hpp, hks]
                   have hFk := hF g k hc
                   rw [hlay] at hFk
-                  exact scorr_call X K m g args hp hr hFk
-                    (argsTo_of X K args cargs k.params ha (of_decide_eq_true hnd))
-      | _ => exact absurd h (by simp [stOk])
-  | _ => exact absurd h (by simp [stOk])
+                  exact scorr_call X K₀ mm g args hp hr hFk
+                    (argsTo_of X K₀ args cargs k.params ha (of_decide_eq_true hnd))
+      | _ => exact absurd h (by simp [stOk0])
+  | _ => exact absurd h (by simp [stOk0])
+
+/-- **Soundness of the two staged checks, in one induction.** The two
+    halves are proved at the SAME fuel, but not symmetrically: the
+    statement half at `n + 1` uses only the block half at `n` (an `if`
+    row is strictly heavier than its arms), and the block half at `n + 1`
+    then uses the statement half at `n + 1` for its head row and itself
+    at `n` for the tail. Nothing new is assumed: an `if` row ends in
+    `scorr_ite`, every other row in `stOk0_sound`. -/
+theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
+    (∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+        (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →
+        stOk X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r)) ∧
+    (∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+        (K₀ : CEnvLay D Γ₀) (b : Block D V l Γ₀ Λ₀ Λ₁) (rs : List GRow), rowsSize rs ≤ n →
+        blOk X.EL fnum c K₀ b rs = true → BlockCorr X mm K₀ b (growsCS rs .skip)) := by
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨?_, ?_⟩
+      · intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r hn _
+        have := rowSize_pos r
+        omega
+      · intro mm V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
+        have hrs : rs = [] := rowsSize_nil rs (by omega)
+        subst hrs
+        cases b with
+        | nil => exact BlockCorr.nil
+        | _ => exact absurd h (by simp [blOk])
+  | succ n ih =>
+      have h1 : ∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
+          (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n + 1 →
+          stOk X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r) := by
+        intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r hn h
+        cases r with
+        | ite cc tRows eRows =>
+            cases s with
+            | ite cnd t e =>
+                simp only [stOk, Bool.and_eq_true] at h
+                obtain ⟨⟨hc, hT⟩, hE⟩ := h
+                simp only [rowSize] at hn
+                exact scorr_ite X mm K₀ (exOk_sound X K₀ cnd cc hc)
+                  (cCorr_block X mm (ih.2 mm K₀ t tRows (by omega) hT))
+                  (cCorr_block X mm (ih.2 mm K₀ e eRows (by omega) hE))
+            | _ => exact absurd h (by simp [stOk])
+        | _ => exact stOk0_sound X fnum c hF mm K₀ s _ h
+      refine ⟨h1, ?_⟩
+      intro mm V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
+      cases rs with
+      | nil =>
+          cases b with
+          | nil => exact BlockCorr.nil
+          | _ => exact absurd h (by simp [blOk])
+      | cons r rs' =>
+          simp only [rowsSize] at hn
+          have hpos := rowSize_pos r
+          have hrs : rowsSize rs' ≤ n := by omega
+          cases r with
+          | void x =>
+              simp only [blOk, Bool.and_eq_true] at h
+              obtain ⟨hv, hrest⟩ := h
+              obtain ⟨⟨τ, v⟩, -, hl⟩ := List.any_eq_true.mp hv
+              have hl' : K₀.loc v = x := of_decide_eq_true hl
+              subst hl'
+              exact BlockCorr.pre (ecorr_var X K₀ (Λ := Λ₀) v) (ih.2 mm K₀ b rs' hrs hrest)
+          | bindLet y τc ce =>
+              cases b with
+              | bind e rest =>
+                  simp only [blOk, Bool.and_eq_true] at h
+                  obtain ⟨⟨⟨⟨hK, hf⟩, hd⟩, he⟩, hrest⟩ := h
+                  exact BlockCorr.bind hK hf (exOk_sound X K₀ e ce he) hd
+                    (ih.2 mm _ rest rs' hrs hrest)
+              | _ => exact absurd h (by simp [blOk])
+          | _ =>
+              cases b with
+              | cons s rest =>
+                  simp only [blOk, Bool.and_eq_true] at h
+                  exact BlockCorr.cons (h1 mm K₀ s _ (by omega) h.1)
+                    (ih.2 mm K₀ rest rs' hrs h.2)
+              | _ => exact absurd h (by simp [blOk])
+
+/-- **Soundness of the statement check** -- the statement it had before the
+    block rows entered, unchanged. -/
+theorem stOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
+    ∀ (s : Stmt D V l Γ Λ Λ') (r : GRow), stOk X.EL fnum c K s r = true →
+      StmtCorr X m K s (growRow r) :=
+  fun s r h => (stOkBl_sound X fnum c hF (rowSize r)).1 m K s r (Nat.le_refl _) h
+
+/-- **Soundness of the block check.** -/
+theorem blOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
+    ∀ (b : Block D V l Γ Λ Λ') (rs : List GRow), blOk X.EL fnum c K b rs = true →
+      BlockCorr X m K b (growsCS rs .skip) :=
+  fun b rs h => (stOkBl_sound X fnum c hF (rowsSize rs)).2 m K b rs (Nat.le_refl _) h
 
 /-- **Soundness of the body check**: the rows elaborate to C that the Gabbro
     body corresponds to (`EndCorr`). -/
@@ -1174,22 +1364,14 @@ end Tiefe
 CUTS -- what this file does not do, by name.
 - COVERED FORMS: the statement and expression families listed in the header.
   Not covered (the Bool is `false`, a refusal), with the reason for each:
-  * `if`/`else` (`GRow.ite`) and `traverse` (`GRow.forTrav`) carry a
-    ROW LIST, so their arm needs a check over `Block` beside the one over
-    `Endblock`, and `stOk` and that check want to be MUTUALLY recursive
-    (`stOk` descends into the row's sub-list, the sub-list's rows back into
-    `stOk`). `scorr_ite` and `scorr_traverse` are proved; what is missing is
-    the recursion, and it must stay STRUCTURAL -- `korrOk` is settled by
-    `decide`, and a well-founded definition does not reduce in the kernel.
-    The mutual can be AVOIDED by staging: a `stOk0` with today's flat arms
-    (no recursion), then a self-recursive `blOk` over `List GRow` that
-    handles `ite`/`forTrav` itself and delegates every other row to
-    `stOk0`, then `stOk = stOk0` plus the two arms through `blOk`, then
-    `enOk` unchanged. Two functions over `List GRow` in ONE mutual is what
-    Lean's structural recursion will not take; two in sequence is fine.
+  * `traverse` (`GRow.forTrav`) carries a ROW LIST like `GRow.ite`, and
+    its arm is the same shape -- `blOk` on the loop body. It is not in
+    yet; `scorr_traverse` is proved, and its side conditions (the loop
+    bound, the loop variable fresh and not written by the body) are all
+    decidable.
   * `let x = f(…)` (`bindCall`) is a `Block` constructor and not an
-    `Endblock` one, so it cannot occur in a body this file walks at all
-    until that same `Block` check exists. `bsem_bindCall` is proved.
+    `Endblock` one. `blOk` now walks blocks, so the arm is reachable --
+    but it is not written yet. `bsem_bindCall` is proved.
   * `!=` (`.cmp .ne`): Gabbro's `Zucker.ne a b` is `nicht (eq a b)`, so the
     arm would have to look THROUGH the negation at its operands, and the
     soundness proof would need the induction hypotheses of those operands
@@ -1221,7 +1403,10 @@ CUTS -- what this file does not do, by name.
 #print axioms Gabbro.Grammatik.ecorr_geSwap
 #print axioms Gabbro.Grammatik.exOk_sound
 #print axioms Gabbro.Grammatik.argsTo_of
+#print axioms Gabbro.Grammatik.stOk0_sound
+#print axioms Gabbro.Grammatik.stOkBl_sound
 #print axioms Gabbro.Grammatik.stOk_sound
+#print axioms Gabbro.Grammatik.blOk_sound
 #print axioms Gabbro.Grammatik.enOk_sound
 #print axioms Gabbro.Grammatik.korrOk_fnCorr
 #print axioms Gabbro.Grammatik.korrOk_jeder_lauf

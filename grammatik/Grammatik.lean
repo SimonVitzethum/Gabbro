@@ -263,6 +263,7 @@ import Grammatik.Korpus124
 import Grammatik.Schlusssatz124
 import Grammatik.KorrespondenzAllg
 import Grammatik.KorrespondenzWeitZeuge
+import Grammatik.KorrespondenzBlockZeuge
 import Grammatik.Schlusssatz
 import Grammatik.Kette104
 import Grammatik.Kette104Satz
