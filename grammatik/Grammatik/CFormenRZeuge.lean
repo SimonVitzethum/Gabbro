@@ -255,7 +255,7 @@ def el74 : EmitLay d74 where
 
 /-- Without a carrier every state is related to every world. -/
 theorem corr74 (σ : World d74) (st : CSt) : corrW el74 σ st :=
-  ⟨fun t => (nomatch t), fun g => (nomatch g)⟩
+  ⟨fun t => (nomatch t), And.intro (fun g => (nomatch g)) (fun _ h => Bool.noConfusion h)⟩
 
 /-- No device. -/
 def orc74 : DevOrc := fun _ _ _ => 0

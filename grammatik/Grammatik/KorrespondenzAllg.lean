@@ -57,6 +57,28 @@
   not reduce in the kernel. The soundness runs on a plain measure
   (`rowSize`), which a proof may do because a proof never reduces.
 
+  THE DEVICE 2026-09-16 (`OPUS-BERICHT-GERAET.md`). Gabbro exists for an
+  operating system, and until this day the certificate refused every form
+  that can end a call in the model's `Hardware` class -- which is why no
+  driver-shaped program could be certified. THREE of the five are carried
+  now: the register STORE (`GRow.storeReg`, `R = e;`), the register READ
+  (`GRow.loadReg`, `let x = R;`) and the CHECKED read (`GRow.loadRegElse`,
+  `let x = R else (c) { return e; }`), whose `requires … else` channel is the
+  interesting one: **a broken device promise becomes a BRANCH in the program
+  rather than a stop**, and that branch has to correspond like any other row.
+  What no certificate can decide stands in ONE named premise, `GerAnnahme`
+  (§1c), and what a device chain then claims is exactly this: *if the profile
+  holds and the register answers inside its declared type, every run of the
+  emitted C corresponds.* NOTHING about the device is claimed.
+
+  The device rows need to know WHICH register an address belongs to, and that
+  is the emitter's layout and not the program text, so `korrOk` carries a LAST
+  parameter `GT : GerTafel D` -- plain data, no proof field, with a default of
+  the EMPTY table under which every device row is refused. Every call written
+  before this day is unchanged, character for character, and decides what it
+  decided before. `awaits`, the axiom call and `forever` stay REFUSED, by name
+  (CUTS).
+
   THE SOUNDNESS (`korrOk_fnCorr`): a certificate that checks gives, for
   EVERY function and at EVERY call depth `n` and `forever` budget, the
   callee relation `FnCorr` between Gabbro's `rufAt P O passes n` and the
@@ -79,6 +101,76 @@ import Grammatik.RufOhneHardware
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
+
+/-! ## 0a. The device table -- what the emitter put where at a register
+
+    The three device rows (`GRow.storeReg`, `.loadReg`, `.loadRegElse`) are
+    the ONLY rows whose meaning the check cannot read off the row alone: a
+    volatile access needs to know WHICH register it is, and that is the
+    emitter's layout, not the program text. The table below is that layout as
+    PLAIN DATA -- no proof field, nothing the check has to trust. What must be
+    TRUE of it is the hardware profile `GerAnnahme` (§6), a PREMISE of the
+    soundness theorem and never part of the Bool.
+
+    **The empty table is the default**, and it has `ein := false`: every device
+    row is refused under it. A certificate that names no device is therefore
+    checked by exactly the `korrOk` of before, character for character, and the
+    two closed chains pass `GT` at all. -/
+structure GerTafel (D : Deklaration) where
+  /-- Are device rows admitted at all? `false` in the empty table. -/
+  ein : Bool := false
+  /-- The C block number of the device window the register lives in. -/
+  dnr : D.Reg → Nat := fun _ => 0
+  /-- The window's declared base address -- the `(volatile uint8_t
+      *)(uintptr_t)BASE` spelling of the handle. -/
+  basis : D.Reg → Int := fun _ => 0
+  /-- The register's byte offset inside the window (`@0x102`). -/
+  off : D.Reg → Nat := fun _ => 0
+  /-- The width of the register cell (`uint16_t` …). -/
+  wid : D.Reg → CWidth := fun _ => .w8
+  /-- The C local holding the device HANDLE, for the emitter's own spelling
+      `d->basis + K` (`geraetelesung`, emit.rs). -/
+  hdl : D.Reg → Nat := fun _ => 0
+  /-- The byte offset of the handle's `basis` member. -/
+  hoff : D.Reg → Nat := fun _ => 0
+  /-- Is the HANDLE spelling `d->basis + K` admitted? It is the one the
+      emitter writes (`geraetelesung`, emit.rs), and it costs a premise the
+      direct-base spelling does not: that the handle local carries the
+      window's base (`GerAnnahme.adr`, whose direct-base half is the theorem
+      `gerAdr_devH`). Default: no. -/
+  griff : Bool := false
+
+/-- **THE REGISTER'S ADDRESS, decided.** Two spellings are admitted, and they
+    are the two the emitter writes:
+
+    * `(volatile uint8_t *)(uintptr_t)BASE + K` -- the window's declared base
+      (`CX.devH`), whose evaluation is a THEOREM (`ev_devReg`, CFormenH.lean);
+    * `d->basis + K` -- the handle the emitter actually prints at a `device`
+      access (`geraetelesung`), whose evaluation is the NAMED assumption
+      `GerAnnahme.adr`: that the handle local holds the window's base.
+
+    Every other C expression is a refusal. -/
+def regAdrOk (GT : GerTafel D) (cp : CX) (r : D.Reg) : Bool :=
+  GT.ein &&
+    (decide (cp = .padd (.devH (GT.dnr r) (GT.basis r)) (.lit (GT.off r))) ||
+      (GT.griff &&
+        decide (cp = .padd (.ld (.fld (.var (GT.hdl r)) (GT.hoff r)) .ptr) (.lit (GT.off r)))))
+
+/-- An accepted address means the device table is SWITCHED ON. -/
+theorem regAdrOk_ein {GT : GerTafel D} {cp : CX} {r : D.Reg}
+    (h : regAdrOk GT cp r = true) : GT.ein = true := by
+  simp only [regAdrOk, Bool.and_eq_true] at h
+  exact h.1
+
+/-- **WITHOUT THE HANDLE SPELLING, THE ADDRESS IS FIXED.** `GerAnnahme.adr`
+    is then a THEOREM (`gerAdr_devH`) and not an assumption: the accepted
+    address is the direct-base one, and `ev_devReg` settles it. -/
+theorem regAdrOk_devH {GT : GerTafel D} (hg : GT.griff = false) {cp : CX} {r : D.Reg}
+    (h : regAdrOk GT cp r = true) :
+    cp = .padd (.devH (GT.dnr r) (GT.basis r)) (.lit (GT.off r)) := by
+  simp only [regAdrOk, hg, Bool.false_and, Bool.or_false, Bool.and_eq_true,
+    decide_eq_true_eq] at h
+  exact h.2
 
 /-! ## 0. The certificate -/
 
@@ -272,6 +364,18 @@ def ergOk {Λ : List (Res D)} : {e : Option Ty} → ErgExpr D Γ Λ e → Option
   | some τ, .wert e, some (τc, ce) => declOk τ τc && exOk EL K e ce
   | _, _, _ => false
 
+/-- **THE `else` OF A CHECKED REGISTER READ**: a `return`, and nothing else.
+    `Block.regLiesElse`'s `sonst` is a whole `Endblock`, and a row that
+    carried one would need the terminal-block check inside the block check --
+    a second recursion through a second type. The narrowing is NAMED: the
+    admitted `else` is the driver's `return Geraetelug::ZuTief;`, the shape
+    the one corpus instance writes (`beispiele/44-register-einmal-lesen.gab`).
+    Any other `else` is a refusal. -/
+def sonstOk {V : Vertrag D} {l : Bool} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → Option (CTy × CX) → Bool
+  | .ret e _, cr => ergOk EL K e cr
+  | _, _ => false
+
 end Pruefung
 
 section Rumpf
@@ -285,8 +389,9 @@ variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D)
     STRUCTURAL on the rows. *The staging is not decoration*: `korrOk` is
     settled by `decide` in every chain instance, and a well-founded
     definition does not reduce in the kernel. -/
-def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ) :
-    Stmt D V l Γ Λ Λ' → GRow → Bool
+def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
+    (s0 : Stmt D V l Γ Λ Λ') (r0 : GRow) (GT : GerTafel D := {}) : Bool :=
+  match s0, r0 with
   | .assignDurch _ t _ f i e _ _, r => match r with
     | .storeSlot kp ci n ss off τc ce =>
         slotOk EL K (.var kp) n ss off τc t f && exOk EL K i ci && exOk EL K e ce
@@ -319,6 +424,15 @@ def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEn
           | some k => callMapOk k && argsOk EL K args cargs k.params
           | none => false)
     | _ => false
+  -- `R = e;` -- THE DEVICE STORE (H10). The row's address must be the
+  -- emitter's for THIS register and the cell width the declared one; the
+  -- value is any covered expression. `Stmt.regSchreib` is `hardwareFrei`
+  -- already (a write has no answer that can fail), so this arm costs the
+  -- `hardwareFrei` reading of the check NOTHING.
+  | .regSchreib rg _ e, r => match r with
+    | .storeReg cp w ce =>
+        regAdrOk GT cp rg && decide (w = GT.wid rg) && exOk EL K e ce
+    | _ => false
   | _, _ => false
 
 mutual
@@ -333,9 +447,10 @@ mutual
     are components of the row -- so no fuel and no well-founded recursion
     enter the check. -/
 def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
-    (s : Stmt D V l Γ Λ Λ') : GRow → Bool
+    (s : Stmt D V l Γ Λ Λ') (r0 : GRow) (GT : GerTafel D := {}) : Bool :=
+  match r0 with
   | .ite cc tRows eRows => (match s with
-      | .ite cnd t e => exOk EL K cnd cc && blOk K t tRows && blOk K e eRows
+      | .ite cnd t e => exOk EL K cnd cc && blOk K t tRows GT && blOk K e eRows GT
       | _ => false)
   -- `for (T v = 0; v < N; v += 1) { … }` -- the `traverse` header. The
   -- upper bound must be the LITERAL count of the table (`scorr_traverse`
@@ -348,9 +463,9 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
           K.okB && K.freshB x && decide (v = D.count tb) && decide (0 ≤ D.count tb) &&
             decide (ti.holds 0 (D.count tb)) &&
             decide ((growsCS bodyRows .skip).writesV x = false) &&
-            blOk (K.push (.index (D.count tb)) x) body bodyRows
+            blOk (K.push (.index (D.count tb)) x) body bodyRows GT
       | _, _ => false)
-  | r => stOk0 EL fnum c K s r
+  | r => stOk0 EL fnum c K s r GT
 
 /-- **BLOCKS** (`Block`: an `if` arm or a loop body): row by row, the same
     reading `enOk` gives a terminal block -- `(void)x;`, `let`, `let` of a
@@ -358,16 +473,37 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
     does not end in a `return`, so there is no `ret` row here; the list
     ends with the block (`Block.nil`). -/
 def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
-    (b : Block D V l Γ Λ Λ') : List GRow → Bool
+    (b : Block D V l Γ Λ Λ') (rs0 : List GRow) (GT : GerTafel D := {}) : Bool :=
+  match rs0 with
   | [] => (match b with
       | .nil => true
       | _ => false)
   | r :: rs => match r with
-      | .void x => voidOk K x && blOk K b rs
+      | .void x => voidOk K x && blOk K b rs GT
       | .bindLet y τc ce => (match b with
           | .bind (τ := τ) e rest =>
               K.okB && K.freshB y && declOk τ τc && exOk EL K e ce &&
-                blOk (K.push τ y) rest rs
+                blOk (K.push τ y) rest rs GT
+          | _ => false)
+      -- `T x = (*(volatile T *)(cp));` -- THE DEVICE READ (H9). The answer
+      -- is bound to a fresh C local of a type the register's fits.
+      | .loadReg y τc cp w => (match b with
+          | .regLies (r := rg) _ rest =>
+              GT.ein && K.okB && K.freshB y && tyFits (D.rtyp rg) τc &&
+                regAdrOk GT cp rg && decide (w = GT.wid rg) &&
+                blOk (K.push (D.rtyp rg) y) rest rs GT
+          | _ => false)
+      -- `T x = (*(volatile T *)(cp)); if (!(c)) { return e; }` -- THE
+      -- CHECKED device read. The declared promise is a CONDITION of the
+      -- program, and its failure a BRANCH: `sonstOk` decides that branch
+      -- against the emitted `return`.
+      | .loadRegElse y τc cp w cc cr => (match b with
+          | .regLiesElse (r := rg) _ zusage sonst rest =>
+              GT.ein && K.okB && K.freshB y && tyFits (D.rtyp rg) τc &&
+                regAdrOk GT cp rg && decide (w = GT.wid rg) &&
+                exOk EL (K.push (D.rtyp rg) y) zusage cc &&
+                sonstOk EL K sonst cr &&
+                blOk (K.push (D.rtyp rg) y) rest rs GT
           | _ => false)
       -- `T y = g(a, b);` -- the call whose ANSWER is bound. `Endblock` has
       -- no such constructor, so this row can only ever stand in a block.
@@ -377,39 +513,44 @@ def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
                 (match c[fnum g]? with
                   | some k => callMapOk k && argsOk EL K args cargs k.params
                   | none => false) &&
-                blOk (K.push τ y) rest rs
+                blOk (K.push τ y) rest rs GT
           | _ => false)
       | r => (match b with
-          | .cons s rest => stOk K s r && blOk K rest rs
+          | .cons s rest => stOk K s r GT && blOk K rest rs GT
           | _ => false)
 
 end
 
 /-- TERMINAL BLOCKS (a function body): row by row. `top` says the block is
     the whole body (a `void` body may fall off its end). -/
-def enOk (top : Bool) {V : Vertrag D} {l : Bool} :
-    List GRow → {Γ : Ctx} → {Λ : List (Res D)} → CEnvLay D Γ → Endblock D V l Γ Λ → Bool
-  | [], _, _, _, b => match b with
+def enOk (top : Bool) {V : Vertrag D} {l : Bool} (rs0 : List GRow) {Γ : Ctx}
+    {Λ : List (Res D)} (K : CEnvLay D Γ) (b : Endblock D V l Γ Λ)
+    (GT : GerTafel D := {}) : Bool :=
+  match rs0, b with
+  | [], b => match b with
     | .ret _ _ => top && decide (V.erg = none)
     | _ => false
-  | r :: rs, _, _, K, b => match r with
-    | .void x => voidOk K x && enOk top rs K b
+  | r :: rs, b => match r with
+    | .void x => voidOk K x && enOk top rs K b GT
     | .ret cr => rs.isEmpty && (match b with
         | .ret e _ => ergOk EL K e cr
         | _ => false)
     | .bindLet x τc ce => (match b with
         | .bind (τ := τ) e rest =>
-            K.okB && K.freshB x && declOk τ τc && exOk EL K e ce && enOk top rs (K.push τ x) rest
+            K.okB && K.freshB x && declOk τ τc && exOk EL K e ce &&
+              enOk top rs (K.push τ x) rest GT
         | _ => false)
     | r => (match b with
-        | .cons s rest => stOk EL fnum c K s r && enOk top rs K rest
+        | .cons s rest => stOk EL fnum c K s r GT && enOk top rs K rest GT
         | _ => false)
 
 /-- **THE CHECK**: every function of `fs` has a certified C function (number
-    `fnum f`), whose rows are the emitted form of its body under its map. -/
-def korrOk (P : Programm D) (fs : List D.Fn) : Bool :=
+    `fnum f`), whose rows are the emitted form of its body under its map.
+    `GT` is the certificate's DEVICE TABLE; the default is the empty one, and
+    under it no device row is admitted -- the check of before 2026-09-16. -/
+def korrOk (P : Programm D) (fs : List D.Fn) (GT : GerTafel D := {}) : Bool :=
   fs.all fun f => match c[fnum f]? with
-    | some k => enOk EL fnum c true k.rows k.lay (P.rumpf f)
+    | some k => enOk EL fnum c true k.rows k.lay (P.rumpf f) GT
     | none => false
 
 end Rumpf
@@ -436,6 +577,9 @@ def rowSize : GRow → Nat
   | .call .. => 1
   | .ret .. => 1
   | .forTrav _ _ _ body _ => rowsSize body + 1
+  | .storeReg .. => 1
+  | .loadReg .. => 1
+  | .loadRegElse .. => 1
 /-- The nesting weight of a row list. -/
 def rowsSize : List GRow → Nat
   | [] => 0
@@ -451,6 +595,319 @@ theorem rowsSize_nil : ∀ (rs : List GRow), rowsSize rs = 0 → rs = []
       simp only [rowsSize] at h
       have := rowSize_pos r
       omega
+
+/-! ### The DEVICE: one named premise, and the three step judgements
+
+    A volatile access is not memory. `corrW` -- the relation every judgement of
+    pass (i) carries -- relates the C memory to the Gabbro world, and a device
+    window is neither (CFormenH.lean, CUTS: *"device windows are not in the
+    relation"*). Everything a device row needs beyond the row itself is
+    therefore collected in ONE named premise, `GerAnnahme`, and that premise
+    travels with the theorem: it is not decided, not derived and not hidden.
+
+    **WHAT A DEVICE CHAIN CLAIMS, in one sentence:** *if the profile holds and
+    the register answers inside its declared type, every run of the emitted C
+    corresponds to the model's register step.* It claims NOTHING about what the
+    device does -- neither that it answers, nor that it answers the truth, nor
+    that it keeps the promise its declaration states. Where the answer does not
+    fit the declared type (`Hardware.register`) or breaks the declared promise
+    (`Hardware.geraet`), the Gabbro side ends in an ERROR and the
+    correspondence says nothing at all: that is the residue, and it stands
+    where the reader can see it. -/
+
+section Geraet
+
+/-- **THE HARDWARE PROFILE** of a certificate's device table -- the six facts
+    the check cannot decide, as ONE premise. Two of them (`fenster`, `passt`)
+    are about the emitted layout, two (`lebt`, `adr`) about the platform, one
+    (`einig`) is the `hdev` premise of `regLies_step` lifted from one program
+    point to the whole unit, and one (`rund`) is a property of the register's
+    declared TYPE. -/
+structure GerAnnahme (EL : EmitLay D) (orc : DevOrc) (O : Orakel D) (GT : GerTafel D) : Prop where
+  /-- (G1) THE WINDOW. Every register sits at its offset in a block the layout
+      declares `mmio`, in a cell of exactly the declared width, and that block
+      is one the emitted unit DECLARES as a device window (`EmitLay.devs`) --
+      which is what makes it mapped in every related state (`corrW`'s third
+      clause). *That clause is the one line of this work that is not in the
+      certificate*: a device window is not memory, and that it is there at all
+      is the platform's word, carried in the relation next to the liveness of
+      every table and global. -/
+  fenster : GT.ein = true → ∀ r : D.Reg, ∃ B : BlkLay, EL.lay (.dev (GT.dnr r)) = some B ∧
+      B.kind = .mmio ∧ B.lay.cell (GT.off r) = some (.int false (GT.wid r)) ∧
+      EL.devs (GT.dnr r) = true
+  /-- (G3) THE ADDRESS. Every address expression the check ACCEPTS for `r`
+      evaluates to `r`'s cell, in every state and frame, touching neither
+      memory nor the trace. For the `(volatile uint8_t *)(uintptr_t)BASE + K`
+      spelling this is a THEOREM (`ev_devReg`, discharged by
+      `gerAdr_devH`); for the emitter's own `d->basis + K` it is the
+      assumption that the handle local carries the window's base. -/
+  adr : ∀ (r : D.Reg) (cp : CX), regAdrOk GT cp r = true →
+      ∀ (fr : Nat) (st : CSt) (ρC : CLok),
+        ev EL.lay orc fr cp st ρC = some (.ptr ⟨.dev (GT.dnr r), (GT.off r : Int)⟩, st)
+  /-- (G4) THE DECLARED TYPE FITS THE CELL. -/
+  passt : GT.ein = true → ∀ r : D.Reg, tyFits (D.rtyp r) (.int false (GT.wid r)) = true
+  /-- (G5) ONE DEVICE, TWO ORACLES. The C device oracle and Gabbro's
+      `Orakel.regLies` answer the same machine. This is `regLies_step`'s
+      `hdev`, lifted from one program point to the profile. -/
+  einig : GT.ein = true → ∀ (r : D.Reg) (σ : World D) (st : CSt),
+      cWrap (GT.wid r) (orc st.obs ⟨.dev (GT.dnr r), (GT.off r : Int)⟩
+        (.int false (GT.wid r))) = O.regLies r σ
+  /-- (G6) THE ANSWER READS BACK. WHERE the raw word fits the declared type,
+      its decoding encodes back to it. A property of the register's TYPE and
+      not of the device: for an integer register it is `rfl`
+      (`gerRund_int`); a `bool` register cannot meet it, and that is a
+      refusal by name, not a silent admission. -/
+  rund : GT.ein = true → ∀ (r : D.Reg) (σ : World D) (v : Wert D (D.rtyp r)),
+      einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v →
+      encW (D.rtyp r) v = O.regLies r σ
+
+/-- **THE EMPTY DEVICE TABLE MEETS THE PROFILE**, and meets it with nothing:
+    no device row is admitted under it, so every one of the five facts is
+    vacuous. This is what the two closed chains pass, and it is why the
+    generic theorem lost NO hypothesis it had before 2026-09-16. -/
+theorem gerAnn_leer (EL : EmitLay D) (orc : DevOrc) (O : Orakel D) {GT : GerTafel D}
+    (h : GT.ein = false) : GerAnnahme EL orc O GT where
+  fenster := by intro he; rw [h] at he; exact absurd he (by simp)
+  adr := by
+    intro r cp hadr
+    have he := regAdrOk_ein hadr
+    rw [h] at he
+    exact absurd he (by simp)
+  passt := by intro he; rw [h] at he; exact absurd he (by simp)
+  einig := by intro he; rw [h] at he; exact absurd he (by simp)
+  rund := by intro he; rw [h] at he; exact absurd he (by simp)
+
+variable {EL : EmitLay D} {orc : DevOrc} {O : Orakel D} {GT : GerTafel D}
+
+/-- (G3) IS A THEOREM FOR THE DIRECT-BASE SPELLING. `ev_devReg` (CFormenH.lean)
+    settles `(volatile uint8_t *)(uintptr_t)BASE + K` outright, provided the
+    table's base is the window's and the offset inside it. Only the emitter's
+    handle spelling `d->basis + K` needs the assumption. -/
+theorem gerAdr_devH (hF : ∀ r : D.Reg, ∃ B : BlkLay, EL.lay (.dev (GT.dnr r)) = some B ∧
+      B.kind = .mmio ∧ B.base = GT.basis r ∧ GT.off r ≤ B.lay.size)
+    (r : D.Reg) (fr : Nat) (st : CSt) (ρC : CLok) :
+    ev EL.lay orc fr (.padd (.devH (GT.dnr r) (GT.basis r)) (.lit (GT.off r))) st ρC =
+      some (.ptr ⟨.dev (GT.dnr r), (GT.off r : Int)⟩, st) := by
+  obtain ⟨B, hL, hk, hb, hs⟩ := hF r
+  have := ev_devReg EL.lay orc fr (GT.dnr r) B hL hk (GT.off r) hs st ρC
+  rwa [hb] at this
+
+/-- (G6) IS A THEOREM FOR AN INTEGER REGISTER: `einpassen` at `.int lo hi`
+    hands back the word it was given, and `encW` is the identity on it. -/
+theorem gerRund_int {r : D.Reg} {lo hi : Int} (hty : D.rtyp r = .int lo hi)
+    (σ : World D) (v : Wert D (D.rtyp r))
+    (h : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v) :
+    encW (D.rtyp r) v = O.regLies r σ := by
+  revert v
+  rw [hty]
+  intro v h
+  show Zahl.n v = O.regLies r σ
+  have he : einpassen O.zeiger (Ty.int lo hi) (O.regLies r σ) =
+      if hh : lo ≤ O.regLies r σ ∧ O.regLies r σ ≤ hi then
+        some ⟨O.regLies r σ, hh.1, hh.2⟩ else Option.none := rfl
+  rw [he] at h
+  split at h
+  · injection h with h'
+    subst h'
+    rfl
+  · exact absurd h (by simp)
+
+/-- The access check at a register's cell, out of the profile. -/
+theorem gerAcc (hP : GerAnnahme EL orc O GT) (hein : GT.ein = true) (r : D.Reg)
+    {σ : World D} {st : CSt} (hc : corrW EL σ st) :
+    accOk EL.lay st ⟨.dev (GT.dnr r), ((GT.off r : Nat) : Int)⟩ (.int false (GT.wid r)) .vol
+      = true := by
+  obtain ⟨B, hL, hk, hcell, hdv⟩ := hP.fenster hein r
+  unfold accOk
+  rw [show (⟨.dev (GT.dnr r), ((GT.off r : Nat) : Int)⟩ : CPtr).blk = CBlk.dev (GT.dnr r) from rfl,
+    hL]
+  dsimp only
+  rw [hc.2.2 (GT.dnr r) hdv, hk,
+    show ((GT.off r : Nat) : Int).toNat = GT.off r from Int.toNat_natCast _, hcell]
+  simp [BKind.permits]
+
+/-- **H9 WITH THE ADDRESS AS A PREMISE.** `T x = (*(volatile T *)(cp));` for
+    any address the check accepts. The proof is `regLies_step`'s, with
+    `ev_devReg` replaced by the profile's `adr`: nothing new is assumed about
+    the device, only the spelling of its address is widened to the one the
+    emitter writes. -/
+theorem gerLies_step (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) {Γ : Ctx}
+    (K : CEnvLay D Γ) (rg : D.Reg) {cp : CX} (hadr : regAdrOk GT cp rg = true)
+    {x : Nat} {τc : CTy} (hfit : tyFits (D.rtyp rg) τc = true)
+    (hK : K.okB = true) (hf : K.freshB x = true)
+    (σ : World D) (st : CSt) (hc : corrW X.EL σ st) (ρG : Env D Γ) (ρC : CLok)
+    (hr : EnvRel X.EL K ρG ρC) (v : Wert D (D.rtyp rg))
+    (hv : einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) = some v) :
+    ∃ st', Exec X.EL.lay X.orc X.fr X.CR X.XR
+        (.set x τc (.vld cp (.int false (GT.wid rg)))) st ρC
+        (.norm st' (lokUpd ρC x (.int (X.O.regLies rg σ)))) ∧
+      corrW X.EL σ st' ∧
+      EnvRel X.EL (K.push (D.rtyp rg) x) (.cons v ρG)
+        (lokUpd ρC x (.int (X.O.regLies rg σ))) := by
+  have hein := regAdrOk_ein hadr
+  have hacc := gerAcc hP hein rg hc
+  have hvl : vLoad X.EL.lay X.orc st ⟨.dev (GT.dnr rg), ((GT.off rg : Nat) : Int)⟩
+      (.int false (GT.wid rg)) =
+      some (X.O.regLies rg σ, CSt.mk st.mem st.live
+        (.vrd ⟨.dev (GT.dnr rg), ((GT.off rg : Nat) : Int)⟩ (.int false (GT.wid rg))
+          (X.O.regLies rg σ) :: st.obs)) := by
+    unfold vLoad
+    rw [if_pos hacc, ← hP.einig hein rg σ st]
+  have hev := ev_vld (hP.adr rg cp hadr X.fr st ρC) hvl
+  have henc := hP.rund hein rg σ v hv
+  have hvc : ValCorr X.EL (D.rtyp rg) v (.int (X.O.regLies rg σ)) := by
+    rw [← henc]
+    exact valCorr_encW _ τc v hfit
+  have hconv : convV τc (.int (X.O.regLies rg σ)) = some (.int (X.O.regLies rg σ)) := by
+    rw [← henc]
+    exact convV_of_valFits _ _ (encW_fits _ _ v hfit)
+  exact ⟨_, Exec.set hev hconv, hc, envRel_push hK hf hr v _ hvc⟩
+
+/-- **H10 WITH THE ADDRESS AS A PREMISE**, and as a `StmtCorr`: `R = e;` is
+    `(*(volatile T *)(cp)) = e;`. A device write has no Gabbro trace
+    (`Orakel.regSchreib` answers `Unit`), so what is proved is that the C
+    statement RUNS, changes no memory, and leaves the relation standing -- the
+    observation it appends is the emitted C's, with no model half to compare
+    it to. That absence is the store side of the named assumption. -/
+theorem gerSchreib_step (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ)
+    (rg : D.Reg) (hkl : (D.rklasse rg).schreibbar = true)
+    {e : Expr D Γ Λ (D.rtyp rg)} {cp ce : CX} (hadr : regAdrOk GT cp rg = true)
+    (he : ExprCorr X K ce e) :
+    StmtCorr X m K (Stmt.regSchreib (V := V) (l := l) rg hkl e)
+      (.vstore cp (.int false (GT.wid rg)) ce) := by
+  intro σ st ρG ρC hc hr _
+  have hein := regAdrOk_ein hadr
+  have hfit := hP.passt hein rg
+  have hc' : corrW X.EL (σ.lese Λ e.orte) st := (corrW_lese _ _ _ _ _).mpr hc
+  obtain ⟨v, st1, h1, hv, hc1⟩ := he.run X K hc' hr
+  have hve := valCorr_int_of_fits _ _ _ _ hfit hv
+  subst hve
+  have hacc := gerAcc hP hein rg hc1
+  have hvf := encW_fits _ _ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG) hfit
+  have hvs : vStore X.EL.lay st1 ⟨.dev (GT.dnr rg), ((GT.off rg : Nat) : Int)⟩
+      (.int false (GT.wid rg))
+      (encW (D.rtyp rg) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG)) =
+      some (CSt.mk st1.mem st1.live
+        (.vwr ⟨.dev (GT.dnr rg), ((GT.off rg : Nat) : Int)⟩ (.int false (GT.wid rg))
+          (encW (D.rtyp rg) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG)) :: st1.obs)) := by
+    unfold vStore
+    rw [hacc, hvf]
+    rfl
+  exact ⟨_, Exec.vstore (hP.adr rg cp hadr X.fr st ρC) h1 (convV_of_valFits _ _ hvf) hvs,
+    _, ρC, rfl, hc1, hr⟩
+
+/-- **THE DEVICE READ AS A BLOCK STEP** (`Block.regLies`). Two of the model's
+    five hardware outcomes live here, and NEITHER is discharged: an answer
+    outside the declared type is `Hardware.register`, an answer against the
+    declared promise is `Hardware.geraet`, and in both the Gabbro block ends in
+    an error, where `BlockSem` claims nothing. -/
+theorem bsem_regLies (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
+    (rg : D.Reg) (hkl : (D.rklasse rg).lesbar = true)
+    (rest : Block D V l (D.rtyp rg :: Γ) Λ Λ') {x : Nat} {τc : CTy} {cp : CX} {cr : CS}
+    (hadr : regAdrOk GT cp rg = true) (hfit : tyFits (D.rtyp rg) τc = true)
+    (hK : K.okB = true) (hf : K.freshB x = true)
+    (hrest : BlockSem X m (K.push (D.rtyp rg) x) rest cr) :
+    BlockSem X m K (Block.regLies rg hkl rest)
+      (.seq (.set x τc (.vld cp (.int false (GT.wid rg)))) cr) := by
+  intro σ st ρG ρC hc hr hnf
+  have hex : execBlock X.O X.passes X.R (Block.regLies rg hkl rest) σ ρG =
+      (match einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
+       | Option.some v =>
+           if D.rzusage rg v then (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf
+           else .hardware (.geraet rg)
+       | Option.none => .hardware (.register rg)) := rfl
+  rw [hex] at hnf ⊢
+  cases hv : einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
+  | none => rw [hv] at hnf; exact absurd hnf (by simp [Ausgang.istFehler])
+  | some v =>
+      rw [hv] at hnf
+      dsimp only at hnf ⊢
+      by_cases hz : D.rzusage rg v = true
+      · simp only [hz, if_true] at hnf ⊢
+        rw [istFehler_schrumpf] at hnf
+        obtain ⟨st1, hE, hc1, hr1⟩ :=
+          gerLies_step X hP K rg hadr hfit hK hf σ st hc ρG ρC hr v hv
+        obtain ⟨o, h2, hO⟩ := hrest σ st1 (.cons v ρG) _ hc1 hr1 hnf
+        exact ⟨o, Exec.seqN hE h2, stOut_schrumpf X m _ o hO⟩
+      · have hz' : D.rzusage rg v = false := by
+          cases h' : D.rzusage rg v
+          · rfl
+          · exact absurd h' hz
+        simp only [hz', if_false] at hnf
+        exact absurd hnf (by simp [Ausgang.istFehler])
+
+/-- **THE CHECKED DEVICE READ AS A BLOCK STEP** (`Block.regLiesElse`) -- the
+    interesting one. A device promise that does NOT hold is a BRANCH of the
+    program, not a stop: `Hardware.geraet` is gone, and the `else` arm must
+    correspond like any other. What is left of the hardware residue is the ONE
+    outcome no program can catch: an answer outside the declared TYPE
+    (`Hardware.register`), where there is no value to branch on. -/
+theorem bsem_regLiesElse (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
+    (rg : D.Reg) (hkl : (D.rklasse rg).lesbar = true)
+    (zusage : Expr D (D.rtyp rg :: Γ) Λ .bool) (e0 : ErgExpr D Γ Λ V.erg)
+    (hΛ : Λ.Perm V.ende) (rest : Block D V l (D.rtyp rg :: Γ) Λ Λ')
+    {x : Nat} {τc : CTy} {cp cc : CX} {crr : Option (CTy × CX)} {cr : CS}
+    (hadr : regAdrOk GT cp rg = true) (hfit : tyFits (D.rtyp rg) τc = true)
+    (hK : K.okB = true) (hf : K.freshB x = true)
+    (hzus : ExprCorr X (K.push (D.rtyp rg) x) cc zusage)
+    (herg : ErgCorr X K e0 crr)
+    (hrest : BlockSem X m (K.push (D.rtyp rg) x) rest cr) :
+    BlockSem X m K (Block.regLiesElse rg hkl zusage (Endblock.ret e0 hΛ) rest)
+      (.seq (.seq (.set x τc (.vld cp (.int false (GT.wid rg))))
+        (.ite (.lnot cc) (.ret crr) .skip)) cr) := by
+  intro σ st ρG ρC hc hr hnf
+  have hex : execBlock X.O X.passes X.R
+      (Block.regLiesElse rg hkl zusage (Endblock.ret e0 hΛ) rest) σ ρG =
+      (match einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
+       | Option.some v =>
+           if wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρG)) then
+             (execBlock X.O X.passes X.R rest (σ.lese Λ zusage.orte) (.cons v ρG)).schrumpf
+           else (execEnd X.O X.passes X.R (Endblock.ret e0 hΛ) (σ.lese Λ zusage.orte)
+             ρG).zuAusgang
+       | Option.none => .hardware (.register rg)) := rfl
+  rw [hex] at hnf ⊢
+  cases hv : einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
+  | none => rw [hv] at hnf; exact absurd hnf (by simp [Ausgang.istFehler])
+  | some v =>
+      rw [hv] at hnf
+      dsimp only at hnf ⊢
+      obtain ⟨st1, hE, hc1, hr1⟩ :=
+        gerLies_step X hP K rg hadr hfit hK hf σ st hc ρG ρC hr v hv
+      have hcl : corrW X.EL (σ.lese Λ zusage.orte) st1 := (corrW_lese _ _ _ _ _).mpr hc1
+      obtain ⟨st2, h2, hc2⟩ := hzus.runB X (K.push (D.rtyp rg) x) hcl hr1
+      have hcc : ev X.EL.lay X.orc X.fr (CX.lnot cc) st1
+          (lokUpd ρC x (.int (X.O.regLies rg σ))) =
+          some (.int (b2i (!(wahr? (eval (σ.lese Λ zusage.orte) zusage
+            (σ.lese Λ zusage.orte) (Env.cons v ρG))))), st2) := by
+        simp only [ev, h2, truth_b2i]
+      by_cases hb : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte)
+          (.cons v ρG)) = true
+      · rw [if_pos hb] at hnf ⊢
+        rw [istFehler_schrumpf] at hnf
+        rw [hb] at hcc
+        obtain ⟨o, h3, hO⟩ := hrest _ st2 (.cons v ρG) _ hc2 hr1 hnf
+        exact ⟨o, Exec.seqN (Exec.seqN hE (Exec.iteF hcc (truth_b2i false) Exec.skip)) h3,
+          stOut_schrumpf X m _ o hO⟩
+      · have hb' : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte)
+            (.cons v ρG)) = false := by
+          cases h' : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte)
+            (.cons v ρG))
+          · rfl
+          · exact absurd h' hb
+        rw [if_neg hb] at hnf ⊢
+        rw [hb'] at hcc
+        have hcl2 : corrW X.EL (σ.lese Λ zusage.orte) st2 := hc2
+        have hc3 : corrW X.EL ((σ.lese Λ zusage.orte).lese Λ e0.orte) st2 :=
+          (corrW_lese _ _ _ _ _).mpr hcl2
+        obtain ⟨st3, cv, hR, hc4, hrc⟩ := ergCorr_run X K herg hc3 (envRel_pop hr1)
+        exact ⟨_, Exec.seqX (Exec.seqN hE
+          (Exec.iteT hcc (truth_b2i true) hR)) rfl,
+          st3, cv, rfl, hc4, hrc⟩
+
+end Geraet
 
 /-! ## 2. Soundness, expression by expression -/
 
@@ -1094,10 +1551,11 @@ def AlleRufe (X : TVCtx D) (fnum : D.Fn → Nat) (c : KCert D) : Prop :=
 /-- **Soundness of the FLAT statement check.** Stated over every context,
     every locals map and every loop label, because `blOk` reaches it at
     the contexts of the arms and bodies it descends into. -/
-theorem stOk0_sound (hF : AlleRufe X fnum c) :
+theorem stOk0_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
+    (hP : GerAnnahme X.EL X.orc X.O GT) :
     ∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
       (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow),
-      stOk0 X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r) := by
+      stOk0 X.EL fnum c K₀ s r GT = true → StmtCorr X mm K₀ s (growRow r) := by
   intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r h
   cases s with
   | assignDurch p t ht f i e hw hL =>
@@ -1185,6 +1643,15 @@ theorem stOk0_sound (hF : AlleRufe X fnum c) :
                   exact scorr_call X K₀ mm g args hp hr hFk
                     (argsTo_of X K₀ args cargs k.params ha (of_decide_eq_true hnd))
       | _ => exact absurd h (by simp [stOk0])
+  | regSchreib rg hkl e =>
+      cases r with
+      | storeReg cp w ce =>
+          simp only [stOk0, Bool.and_eq_true] at h
+          obtain ⟨⟨hadr, hw⟩, he⟩ := h
+          have hw' : w = GT.wid rg := of_decide_eq_true hw
+          subst hw'
+          exact gerSchreib_step X hP mm K₀ rg hkl hadr (exOk_sound X K₀ e ce he)
+      | _ => exact absurd h (by simp [stOk0])
   | _ => exact absurd h (by simp [stOk0])
 
 /-- **Soundness of the two staged checks, in one induction.** The two
@@ -1195,13 +1662,14 @@ theorem stOk0_sound (hF : AlleRufe X fnum c) :
     at `n` for the tail. Nothing new is assumed: an `if` row ends in
     `scorr_ite`, a loop header in `scorr_traverse`, a call with a
     destination in `bsem_bindCall`, every other row in `stOk0_sound`. -/
-theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
+theorem stOkBl_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
+    (hP : GerAnnahme X.EL X.orc X.O GT) : ∀ (n : Nat),
     (∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →
-        stOk X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r)) ∧
+        stOk X.EL fnum c K₀ s r GT = true → StmtCorr X mm K₀ s (growRow r)) ∧
     (∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (b : Block D V l Γ₀ Λ₀ Λ₁) (rs : List GRow), rowsSize rs ≤ n →
-        blOk X.EL fnum c K₀ b rs = true → BlockCorr X mm K₀ b (growsCS rs .skip)) := by
+        blOk X.EL fnum c K₀ b rs GT = true → BlockCorr X mm K₀ b (growsCS rs .skip)) := by
   intro n
   induction n with
   | zero =>
@@ -1218,7 +1686,7 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
   | succ n ih =>
       have h1 : ∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
           (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n + 1 →
-          stOk X.EL fnum c K₀ s r = true → StmtCorr X mm K₀ s (growRow r) := by
+          stOk X.EL fnum c K₀ s r GT = true → StmtCorr X mm K₀ s (growRow r) := by
         intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r hn h
         cases r with
         | ite cc tRows eRows =>
@@ -1248,7 +1716,7 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
                       (of_decide_eq_true hwb)
                 | _ => exact absurd h (by simp [stOk])
             | _ => exact absurd h (by simp [stOk])
-        | _ => exact stOk0_sound X fnum c hF mm K₀ s _ h
+        | _ => exact stOk0_sound X fnum c hF GT hP mm K₀ s _ h
       refine ⟨h1, ?_⟩
       intro mm V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
       cases rs with
@@ -1275,6 +1743,31 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
                   obtain ⟨⟨⟨⟨hK, hf⟩, hd⟩, he⟩, hrest⟩ := h
                   exact BlockCorr.bind hK hf (exOk_sound X K₀ e ce he) hd
                     (ih.2 mm _ rest rs' hrs hrest)
+              | _ => exact absurd h (by simp [blOk])
+          | loadReg y τc cp w =>
+              cases b with
+              | regLies rg hkl rest =>
+                  simp only [blOk, Bool.and_eq_true] at h
+                  obtain ⟨⟨⟨⟨⟨⟨-, hK⟩, hfr⟩, hfit⟩, hadr⟩, hw⟩, hrest⟩ := h
+                  have hw' : w = GT.wid rg := of_decide_eq_true hw
+                  subst hw'
+                  exact BlockCorr.sem (bsem_regLies X hP mm K₀ rg hkl rest hadr hfit hK hfr
+                    (cCorr_block X mm (ih.2 mm _ rest rs' hrs hrest)))
+              | _ => exact absurd h (by simp [blOk])
+          | loadRegElse y τc cp w cc crr =>
+              cases b with
+              | regLiesElse rg hkl zusage sonst rest =>
+                  cases sonst with
+                  | ret e0 hΛ =>
+                      simp only [blOk, sonstOk, Bool.and_eq_true] at h
+                      obtain ⟨⟨⟨⟨⟨⟨⟨⟨-, hK⟩, hfr⟩, hfit⟩, hadr⟩, hw⟩, hzus⟩, herg⟩, hrest⟩ := h
+                      have hw' : w = GT.wid rg := of_decide_eq_true hw
+                      subst hw'
+                      exact BlockCorr.sem (bsem_regLiesElse X hP mm K₀ rg hkl zusage e0 hΛ rest
+                        hadr hfit hK hfr (exOk_sound X _ zusage cc hzus)
+                        (ergOk_sound X K₀ e0 crr herg)
+                        (cCorr_block X mm (ih.2 mm _ rest rs' hrs hrest)))
+                  | _ => exact absurd h (by simp [blOk, sonstOk])
               | _ => exact absurd h (by simp [blOk])
           | call fc cargs dst =>
               cases dst with
@@ -1320,22 +1813,25 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
 
 /-- **Soundness of the statement check** -- the statement it had before the
     block rows entered, unchanged. -/
-theorem stOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
-    ∀ (s : Stmt D V l Γ Λ Λ') (r : GRow), stOk X.EL fnum c K s r = true →
+theorem stOk_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
+    (hP : GerAnnahme X.EL X.orc X.O GT) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
+    ∀ (s : Stmt D V l Γ Λ Λ') (r : GRow), stOk X.EL fnum c K s r GT = true →
       StmtCorr X m K s (growRow r) :=
-  fun s r h => (stOkBl_sound X fnum c hF (rowSize r)).1 m K s r (Nat.le_refl _) h
+  fun s r h => (stOkBl_sound X fnum c hF GT hP (rowSize r)).1 m K s r (Nat.le_refl _) h
 
 /-- **Soundness of the block check.** -/
-theorem blOk_sound (hF : AlleRufe X fnum c) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
-    ∀ (b : Block D V l Γ Λ Λ') (rs : List GRow), blOk X.EL fnum c K b rs = true →
+theorem blOk_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
+    (hP : GerAnnahme X.EL X.orc X.O GT) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} :
+    ∀ (b : Block D V l Γ Λ Λ') (rs : List GRow), blOk X.EL fnum c K b rs GT = true →
       BlockCorr X m K b (growsCS rs .skip) :=
-  fun b rs h => (stOkBl_sound X fnum c hF (rowsSize rs)).2 m K b rs (Nat.le_refl _) h
+  fun b rs h => (stOkBl_sound X fnum c hF GT hP (rowsSize rs)).2 m K b rs (Nat.le_refl _) h
 
 /-- **Soundness of the body check**: the rows elaborate to C that the Gabbro
     body corresponds to (`EndCorr`). -/
-theorem enOk_sound (hF : AlleRufe X fnum c) (top : Bool) {V : Vertrag D} {l : Bool} :
+theorem enOk_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
+    (hP : GerAnnahme X.EL X.orc X.O GT) (top : Bool) {V : Vertrag D} {l : Bool} :
     ∀ (rs : List GRow) {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (b : Endblock D V l Γ Λ),
-      enOk X.EL fnum c top rs K b = true → EndCorr X m top K b (endCS rs) := by
+      enOk X.EL fnum c top rs K b GT = true → EndCorr X m top K b (endCS rs) := by
   intro rs
   induction rs with
   | nil =>
@@ -1373,7 +1869,7 @@ theorem enOk_sound (hF : AlleRufe X fnum c) (top : Bool) {V : Vertrag D} {l : Bo
           cases b with
           | cons s rest =>
               simp only [enOk, Bool.and_eq_true] at h
-              exact EndCorr.cons (stOk_sound X m K fnum c hF s _ h.1) (ih K rest h.2)
+              exact EndCorr.cons (stOk_sound X m K fnum c hF GT hP s _ h.1) (ih K rest h.2)
           | _ => exact absurd h (by simp [enOk])
 
 end SoundS
@@ -1383,8 +1879,9 @@ end SoundS
 section Tiefe
 
 theorem korrOk_fn {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : Programm D}
-    {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true)
-    (g : D.Fn) : ∃ k, c[fnum g]? = some k ∧ enOk EL fnum c true k.rows k.lay (P.rumpf g) = true := by
+    {fs : List D.Fn} {GT : GerTafel D} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hc : korrOk EL fnum c P fs GT = true) (g : D.Fn) :
+    ∃ k, c[fnum g]? = some k ∧ enOk EL fnum c true k.rows k.lay (P.rumpf g) GT = true := by
   have h := List.all_eq_true.mp hc g (hvoll g)
   cases hk : c[fnum g]? with
   | none => rw [hk] at h; exact absurd h (by simp)
@@ -1396,8 +1893,10 @@ theorem korrOk_fn {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : Prog
     C call `CallAt … (kProg c) n` of the unit it elaborates to -- whatever
     the device oracle `orc` and the foreign-call meaning `XR`. -/
 theorem korrOk_fnCorr {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : Programm D}
-    {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true)
-    (orc : DevOrc) (XR : CCallR) (O : Orakel D) (passes : Nat) :
+    {fs : List D.Fn} {GT : GerTafel D} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hc : korrOk EL fnum c P fs GT = true)
+    (orc : DevOrc) (XR : CCallR) (O : Orakel D) (passes : Nat)
+    (hP : GerAnnahme EL orc O GT) :
     ∀ (n : Nat) (g : D.Fn) (k : KFun D), c[fnum g]? = some k →
       FnCorr EL (rufAt P O passes n) (CallAt EL.lay orc XR (kProg c) n) g (fnum g) k.params k.lay := by
   intro n
@@ -1416,7 +1915,7 @@ theorem korrOk_fnCorr {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : 
       have hPr : kProg c (fnum g) = some { params := k.params, locals := k.locals, body := endCS k.rows } := by
         simp only [kProg, hk, Option.map_some]
       exact cCorr_ruf EL orc XR P O passes n (kProg c) g (fnum g) _ hPr k.lay 0
-        (cCorr_end X 0 true (enOk_sound X 0 fnum c hF true k.rows k.lay (P.rumpf g) hok))
+        (cCorr_end X 0 true (enOk_sound X 0 fnum c hF GT hP true k.rows k.lay (P.rumpf g) hok))
 
 /-- **EVERY RUN**: under a checking certificate, from a C state related to
     the Gabbro world and C arguments related to the Gabbro arguments, when the
@@ -1424,8 +1923,10 @@ theorem korrOk_fnCorr {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : 
     -- the C semantics being deterministic -- EVERY run of it ends related to
     the Gabbro outcome. -/
 theorem korrOk_jeder_lauf {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {P : Programm D}
-    {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true)
+    {fs : List D.Fn} {GT : GerTafel D} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hc : korrOk EL fnum c P fs GT = true)
     (orc : DevOrc) (XR : CCallR) (hXR : XR.Funktional) (O : Orakel D) (passes n : Nat)
+    (hP : GerAnnahme EL orc O GT)
     (g : D.Fn) (k : KFun D) (hk : c[fnum g]? = some k) (σ : World D) (st : CSt)
     (ρG : Env D (D.params g)) (vs : List CVal) (ρ0 : CLok) (hw : corrW EL σ st)
     (hb : bindParams k.params vs = some ρ0) (hr : EnvRel EL k.lay ρG ρ0)
@@ -1433,7 +1934,7 @@ theorem korrOk_jeder_lauf {EL : EmitLay D} {fnum : D.Fn → Nat} {c : KCert D} {
     (∃ st' rv, CallAt EL.lay orc XR (kProg c) n (fnum g) st vs st' rv) ∧
       ∀ st' rv, CallAt EL.lay orc XR (kProg c) n (fnum g) st vs st' rv →
         RufOut EL (rufAt P O passes n g σ ρG) st' rv := by
-  obtain ⟨st1, rv1, hC1, hO1⟩ := korrOk_fnCorr hvoll hc orc XR O passes n g k hk σ st ρG vs ρ0 hw hb hr hnf
+  obtain ⟨st1, rv1, hC1, hO1⟩ := korrOk_fnCorr hvoll hc orc XR O passes hP n g k hk σ st ρG vs ρ0 hw hb hr hnf
   refine ⟨⟨st1, rv1, hC1⟩, fun st' rv hC => ?_⟩
   obtain ⟨e1, e2⟩ := callAt_funktional EL.lay orc XR hXR (kProg c) n (fnum g) st vs st1 rv1 st' rv hC1 hC
   subst e1
@@ -1457,20 +1958,20 @@ section OhneOrakel
 variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D)
 
 /-- The flat statement check admits no axiom call and no `forever`. -/
-theorem stOk0_hardwareFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    (K : CEnvLay D Γ) (s : Stmt D V l Γ Λ Λ') (r : GRow)
-    (h : stOk0 EL fnum c K s r = true) : s.hardwareFrei = true := by
+theorem stOk0_hardwareFrei (GT : GerTafel D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (K : CEnvLay D Γ) (s : Stmt D V l Γ Λ Λ') (r : GRow)
+    (h : stOk0 EL fnum c K s r GT = true) : s.hardwareFrei = true := by
   cases s <;> first | rfl | (exact absurd h (by simp [stOk0]))
 
 /-- **The two staged checks refuse every source of a `hardware` outcome**,
     in one induction on the nesting weight of the rows. -/
-theorem stOkBl_hardwareFrei : ∀ (n : Nat),
+theorem stOkBl_hardwareFrei (GT : GerTafel D) (hein : GT.ein = false) : ∀ (n : Nat),
     (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →
-        stOk EL fnum c K₀ s r = true → s.hardwareFrei = true) ∧
+        stOk EL fnum c K₀ s r GT = true → s.hardwareFrei = true) ∧
     (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (b : Block D V l Γ₀ Λ₀ Λ₁) (rs : List GRow), rowsSize rs ≤ n →
-        blOk EL fnum c K₀ b rs = true → b.hardwareFrei = true) := by
+        blOk EL fnum c K₀ b rs GT = true → b.hardwareFrei = true) := by
   intro n
   induction n with
   | zero =>
@@ -1487,7 +1988,7 @@ theorem stOkBl_hardwareFrei : ∀ (n : Nat),
   | succ n ih =>
       have h1 : ∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
           (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n + 1 →
-          stOk EL fnum c K₀ s r = true → s.hardwareFrei = true := by
+          stOk EL fnum c K₀ s r GT = true → s.hardwareFrei = true := by
         intro V l Γ₀ Λ₀ Λ₁ K₀ s r hn h
         cases r with
         | ite cc tRows eRows =>
@@ -1510,7 +2011,7 @@ theorem stOkBl_hardwareFrei : ∀ (n : Nat),
                     exact ih.2 _ body bodyRows (by omega) hb
                 | _ => exact absurd h (by simp [stOk])
             | _ => exact absurd h (by simp [stOk])
-        | _ => exact stOk0_hardwareFrei EL fnum c K₀ s _ h
+        | _ => exact stOk0_hardwareFrei EL fnum c GT K₀ s _ h
       refine ⟨h1, ?_⟩
       intro V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
       cases rs with
@@ -1531,6 +2032,17 @@ theorem stOkBl_hardwareFrei : ∀ (n : Nat),
               | bind e rest =>
                   simp only [blOk, Bool.and_eq_true] at h
                   exact ih.2 _ rest rs' hrs h.2
+              | _ => exact absurd h (by simp [blOk])
+          -- THE DEVICE READS. Under the EMPTY device table (`ein = false`)
+          -- the check refuses both rows outright, and the reading of before
+          -- stands untouched -- which is what the two closed chains need.
+          | loadReg y τc cp w =>
+              cases b with
+              | regLies rg hkl rest => exact absurd h (by simp [blOk, hein])
+              | _ => exact absurd h (by simp [blOk])
+          | loadRegElse y τc cp w cc crr =>
+              cases b with
+              | regLiesElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | call fc cargs dst =>
               cases dst with
@@ -1556,9 +2068,10 @@ theorem stOkBl_hardwareFrei : ∀ (n : Nat),
               | _ => exact absurd h (by simp [blOk])
 
 /-- **A certified body carries no oracle form.** -/
-theorem enOk_hardwareFrei (top : Bool) {V : Vertrag D} {l : Bool} :
+theorem enOk_hardwareFrei (GT : GerTafel D) (hein : GT.ein = false) (top : Bool)
+    {V : Vertrag D} {l : Bool} :
     ∀ (rs : List GRow) {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (b : Endblock D V l Γ Λ),
-      enOk EL fnum c top rs K b = true → b.hardwareFrei = true := by
+      enOk EL fnum c top rs K b GT = true → b.hardwareFrei = true := by
   intro rs
   induction rs with
   | nil =>
@@ -1589,7 +2102,8 @@ theorem enOk_hardwareFrei (top : Bool) {V : Vertrag D} {l : Bool} :
           | cons s rest =>
               simp only [enOk, Bool.and_eq_true] at h
               simp only [Endblock.hardwareFrei, Bool.and_eq_true]
-              exact ⟨(stOkBl_hardwareFrei EL fnum c (rowSize _)).1 K s _ (Nat.le_refl _) h.1,
+              exact ⟨(stOkBl_hardwareFrei EL fnum c GT hein (rowSize _)).1 K s _
+                  (Nat.le_refl _) h.1,
                 ih K rest h.2⟩
           | _ => exact absurd h (by simp [enOk])
 
@@ -1597,17 +2111,24 @@ theorem enOk_hardwareFrei (top : Bool) {V : Vertrag D} {l : Bool} :
     certificate that checks carries no source of a `hardware` outcome in any
     of its bodies -- so its calls never end in one, at any depth, against any
     oracle (`rufAt_ohneHardware`). -/
-theorem korrOk_hardwareFrei {P : Programm D} {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true) (g : D.Fn) :
+theorem korrOk_hardwareFrei {P : Programm D} {fs : List D.Fn} {GT : GerTafel D}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs GT = true)
+    (hein : GT.ein = false) (g : D.Fn) :
     (P.rumpf g).hardwareFrei = true := by
   obtain ⟨k, hk, hok⟩ := korrOk_fn hvoll hc g
-  exact enOk_hardwareFrei EL fnum c true k.rows k.lay (P.rumpf g) hok
+  exact enOk_hardwareFrei EL fnum c GT hein true k.rows k.lay (P.rumpf g) hok
 
-/-- **NO CALL OF A CERTIFIED PROGRAM ENDS IN A HARDWARE OUTCOME.** -/
-theorem korrOk_rufAt_ohneHardware {P : Programm D} {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true) (O : Orakel D)
+/-- **NO CALL OF A CERTIFIED PROGRAM ENDS IN A HARDWARE OUTCOME** -- for a
+    certificate that names NO DEVICE (`GT.ein = false`, the default table).
+    The premise is not decoration: a certificate that carries a register READ
+    row carries `Block.regLies`/`.regLiesElse`, and those are two of the five
+    sources of a hardware outcome. What the device chain buys is paid for
+    HERE, and the price stands in the premise list. -/
+theorem korrOk_rufAt_ohneHardware {P : Programm D} {fs : List D.Fn} {GT : GerTafel D}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs GT = true)
+    (hein : GT.ein = false) (O : Orakel D)
     (passes n : Nat) : OhneHardware (rufAt P O passes n) :=
-  rufAt_ohneHardware P O passes (korrOk_hardwareFrei EL fnum c hvoll hc) n
+  rufAt_ohneHardware P O passes (korrOk_hardwareFrei EL fnum c hvoll hc hein) n
 
 end OhneOrakel
 
@@ -1652,6 +2173,33 @@ CUTS -- what this file does not do, by name.
   * `neg`, `leseBytes`, floats, sums, options, reasons, quantifiers,
     device and foreign forms: no arm, and for the floats no `ecorr_*` at
     all (`CX` has no float operand a `GRow` could carry).
+- THE DEVICE FORMS THAT ARE NOT CARRIED, each with what it would take:
+  * `Block.awaits` (`Hardware.sichtbarkeit`, A10) -- `GRow` has no ATOMIC row
+    at all, neither for `CX.ald` nor for `CS.astore`; `bsem_awaits` and
+    `scorr_publish` are proved (H2/H3) and the rows are what is missing.
+  * `Stmt.axiomCall`/`Block.bindAxiom` (`Hardware.annahme`) -- a foreign-call
+    row plus the per-axiom `AxCorr` premise (CFormenH.lean H5), an assumption
+    boundary no certificate can decide. *And the corpus has ZERO axiom calls*,
+    so nothing would be gained today.
+  * `Stmt.forever` (`Hardware.fortschritt`, H2) -- a loop row whose body may
+    be left only through `goto m_ende`, with the watchdog line before it.
+  * An `else` branch that is not a `return`: `Block.regLiesElse`'s `sonst` is
+    a whole `Endblock`, and a row carrying one needs the TERMINAL-block check
+    inside the BLOCK check -- a second recursion through a second type, while
+    this one has to stay structural for `decide`.
+  * `transition`, the bank accessors and port I/O (`inb`/`outb`): no T4 lemma.
+  * A `bool` register cannot meet `GerAnnahme.rund` (`einpassen .bool` maps
+    every non-zero word to `true` and `encW .bool` gives back `1`), so its
+    profile is unmeetable -- a refusal by name, not a silent admission.
+- THE TWO PREMISES THIS WIDENING COST, both `GT.ein = false` and both
+  discharged by `rfl` at every existing call site:
+  `korrOk_rufAt_ohneHardware` (§5 -- a register READ is two of the five
+  sources of a hardware outcome, so the reading CANNOT hold for a device
+  certificate) and `korrOk_endR` (KorrOkAdaequat.lean -- `BlockR` has both
+  device constructors, but `BlockR.regLiesElse` is stated at `l = false`
+  while that induction runs at every `l`). `hardwareFrei` itself is
+  UNTOUCHED, and `rufAt_ohneHardware` holds exactly as before for every
+  program that avoids the five forms.
 - A call's callee map must be its C parameter list (`callMapOk`): the
   exporter's map. The index-fixed `refD` maps (`ks`) of lanes 164/165 are
   not accepted at call sites; they still check as top-level maps.
@@ -1677,5 +2225,14 @@ CUTS -- what this file does not do, by name.
 #print axioms Gabbro.Grammatik.enOk_hardwareFrei
 #print axioms Gabbro.Grammatik.korrOk_hardwareFrei
 #print axioms Gabbro.Grammatik.korrOk_rufAt_ohneHardware
+#print axioms Gabbro.Grammatik.regAdrOk_devH
+#print axioms Gabbro.Grammatik.gerAnn_leer
+#print axioms Gabbro.Grammatik.gerAdr_devH
+#print axioms Gabbro.Grammatik.gerRund_int
+#print axioms Gabbro.Grammatik.gerAcc
+#print axioms Gabbro.Grammatik.gerLies_step
+#print axioms Gabbro.Grammatik.gerSchreib_step
+#print axioms Gabbro.Grammatik.bsem_regLies
+#print axioms Gabbro.Grammatik.bsem_regLiesElse
 
 end Gabbro.Grammatik

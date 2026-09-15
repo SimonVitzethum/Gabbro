@@ -195,7 +195,7 @@ theorem start4 : EinFadenStart E4 (speicherR E4.sp0) init4 where
 def rho0 : CLok := lokUpd (lokUpd (lokUpd (fun _ => .undef) 2 (.int 7)) 1 (.int 0)) 0 (.ptr ⟨.tab 0, 0⟩)
 
 theorem corr4 : corrW EL4 (sp4.welt []) refSt0 := by
-  refine ⟨?_, fun g => nomatch g⟩
+  refine ⟨?_, And.intro (fun g => nomatch g) (fun _ h => Bool.noConfusion h)⟩
   intro t _
   have e := tab_eins t
   subst e

@@ -133,7 +133,7 @@ theorem cas_success (EL : EmitLay D) (σ : World D) (st : CSt) (h : corrW EL σ 
       corrW EL (σ.schreibGlob g Λ v) st' ∧
       st'.obs = .acas (EL.globPtr g) os ofl (encW (D.gtyp g) (σ.globs g)) (encW (D.gtyp g) v) true
         :: st.obs := by
-  obtain ⟨hl, hc⟩ := h.2 g hgg
+  obtain ⟨hl, hc⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .atom (by rw [hat]; rfl)
   have hfit := encW_fits (D.gtyp g) (EL.gty g) v (EL.gty_fits g)
   obtain ⟨st2, hs, hc2, -⟩ := corr_schreibGlob_atomar EL σ st h g hgg hat Λ v .seqCst rfl
@@ -168,7 +168,7 @@ theorem cas_failure (EL : EmitLay D) (σ : World D) (st : CSt) (h : corrW EL σ 
           (encW (D.gtyp g) v) false :: st.obs)) ∧
     corrW EL σ (CSt.mk st.mem st.live (.acas (EL.globPtr g) os ofl (encW (D.gtyp g) (σ.globs g))
           (encW (D.gtyp g) v) false :: st.obs)) := by
-  obtain ⟨hl, hc⟩ := h.2 g hgg
+  obtain ⟨hl, hc⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .atom (by rw [hat]; rfl)
   have hfit := encW_fits (D.gtyp g) (EL.gty g) v (EL.gty_fits g)
   refine ⟨?_, h⟩

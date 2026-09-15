@@ -1567,13 +1567,13 @@ theorem envRelG_same {X : TVCtx D} {G : GCtx} {Γ : Ctx} {K : CEnvLay D Γ} {ρG
 theorem corrW_memUpd_stk {EL : EmitLay D} {σ : World D} {st : CSt} (h : corrW EL σ st)
     {f x : Nat} (o : Nat) (v : CVal) :
     corrW EL σ { st with mem := memUpd st.mem (.stk f x) o v } := by
-  refine ⟨fun t ht => ?_, fun g hg => ?_⟩
+  refine ⟨fun t ht => ?_, fun g hg => ?_, h.2.2⟩
   · obtain ⟨hl, hc⟩ := h.1 t ht
     refine ⟨hl, fun k fl hk0 hk => ?_⟩
     dsimp only
     rw [memUpd_other _ _ _ _ _ _ (by intro e; cases e.1)]
     exact hc k fl hk0 hk
-  · obtain ⟨hl, hc⟩ := h.2 g hg
+  · obtain ⟨hl, hc⟩ := h.2.1 g hg
     refine ⟨hl, ?_⟩
     dsimp only
     rw [memUpd_other _ _ _ _ _ _ (by intro e; cases e.1)]

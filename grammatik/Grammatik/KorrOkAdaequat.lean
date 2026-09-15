@@ -51,9 +51,9 @@ section Bruecke
 variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D) (A : D.Lock → Prop)
 
 /-- The flat statement check admits only leaves and direct calls. -/
-theorem stOk0_stmtR {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    (K : CEnvLay D Γ) (s : Stmt D V l Γ Λ Λ') (r : GRow)
-    (h : stOk0 EL fnum c K s r = true) : StmtR A (fun _ => True) true s := by
+theorem stOk0_stmtR (GT : GerTafel D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (K : CEnvLay D Γ) (s : Stmt D V l Γ Λ Λ') (r : GRow)
+    (h : stOk0 EL fnum c K s r GT = true) : StmtR A (fun _ => True) true s := by
   cases s <;> first
     | exact StmtR.blatt _ (by constructor)
     | exact StmtR.call _ _ rfl trivial
@@ -61,13 +61,13 @@ theorem stOk0_stmtR {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
 
 /-- **The two staged checks land in the adequacy fragment**, in one
     induction on the nesting weight of the rows. -/
-theorem stOkBl_stmtR : ∀ (n : Nat),
+theorem stOkBl_stmtR (GT : GerTafel D) (hein : GT.ein = false) : ∀ (n : Nat),
     (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →
-        stOk EL fnum c K₀ s r = true → StmtR A (fun _ => True) true s) ∧
+        stOk EL fnum c K₀ s r GT = true → StmtR A (fun _ => True) true s) ∧
     (∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (b : Block D V l Γ₀ Λ₀ Λ₁) (rs : List GRow), rowsSize rs ≤ n →
-        blOk EL fnum c K₀ b rs = true → BlockR A (fun _ => True) true b) := by
+        blOk EL fnum c K₀ b rs GT = true → BlockR A (fun _ => True) true b) := by
   intro n
   induction n with
   | zero =>
@@ -84,7 +84,7 @@ theorem stOkBl_stmtR : ∀ (n : Nat),
   | succ n ih =>
       have h1 : ∀ {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
           (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n + 1 →
-          stOk EL fnum c K₀ s r = true → StmtR A (fun _ => True) true s := by
+          stOk EL fnum c K₀ s r GT = true → StmtR A (fun _ => True) true s := by
         intro V l Γ₀ Λ₀ Λ₁ K₀ s r hn h
         cases r with
         | ite cc tRows eRows =>
@@ -107,7 +107,7 @@ theorem stOkBl_stmtR : ∀ (n : Nat),
                     exact StmtR.traverse tb inv body (ih.2 _ body bodyRows (by omega) hb)
                 | _ => exact absurd h (by simp [stOk])
             | _ => exact absurd h (by simp [stOk])
-        | _ => exact stOk0_stmtR EL fnum c A K₀ s _ h
+        | _ => exact stOk0_stmtR EL fnum c A GT K₀ s _ h
       refine ⟨h1, ?_⟩
       intro V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
       cases rs with
@@ -128,6 +128,19 @@ theorem stOkBl_stmtR : ∀ (n : Nat),
               | bind e rest =>
                   simp only [blOk, Bool.and_eq_true] at h
                   exact BlockR.bind e rest (ih.2 _ rest rs' hrs h.2)
+              | _ => exact absurd h (by simp [blOk])
+          -- THE DEVICE READS are outside THIS bridge: `BlockR` HAS both
+          -- (`BlockR.regLies`, `.regLiesElse`), but `regLiesElse` is stated
+          -- at `l = false` only, and this induction runs at every `l`. So
+          -- the adequacy bridge is claimed for a certificate that names NO
+          -- device (`GT.ein = false`), and the device case is OPEN by name.
+          | loadReg y τc cp w =>
+              cases b with
+              | regLies rg hkl rest => exact absurd h (by simp [blOk, hein])
+              | _ => exact absurd h (by simp [blOk])
+          | loadRegElse y τc cp w cc crr =>
+              cases b with
+              | regLiesElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | call fc cargs dst =>
               cases dst with
@@ -154,10 +167,10 @@ theorem stOkBl_stmtR : ∀ (n : Nat),
               | _ => exact absurd h (by simp [blOk])
 
 /-- **A certified body is in the adequacy fragment.** -/
-theorem enOk_endR (top : Bool) {V : Vertrag D} :
+theorem enOk_endR (GT : GerTafel D) (hein : GT.ein = false) (top : Bool) {V : Vertrag D} :
     ∀ (rs : List GRow) {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ)
       (b : Endblock D V false Γ Λ),
-      enOk EL fnum c top rs K b = true → EndR A (fun _ => True) b := by
+      enOk EL fnum c top rs K b GT = true → EndR A (fun _ => True) b := by
   intro rs
   induction rs with
   | nil =>
@@ -188,7 +201,7 @@ theorem enOk_endR (top : Bool) {V : Vertrag D} :
           | cons s rest =>
               simp only [enOk, Bool.and_eq_true] at h
               exact EndR.cons s rest
-                ((stOkBl_stmtR EL fnum c A (rowSize _)).1 K s _ (Nat.le_refl _) h.1)
+                ((stOkBl_stmtR EL fnum c A GT hein (rowSize _)).1 K s _ (Nat.le_refl _) h.1)
                 (ih K rest h.2)
           | _ => exact absurd h (by simp [enOk])
 
@@ -197,11 +210,12 @@ theorem enOk_endR (top : Bool) {V : Vertrag D} :
     lock class and with the callee predicate taken as `True`. What the
     adequacy chain still needs beyond this is the DEPTH (`Tief`), and what
     it realises is `rufRumpf`, not `rufAt` (file header, 1 and 2). -/
-theorem korrOk_endR {P : Programm D} {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs = true) (g : D.Fn) :
+theorem korrOk_endR {P : Programm D} {fs : List D.Fn} {GT : GerTafel D}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hc : korrOk EL fnum c P fs GT = true)
+    (hein : GT.ein = false) (g : D.Fn) :
     EndR A (fun _ => True) (P.rumpf g) := by
   obtain ⟨k, hk, hok⟩ := korrOk_fn hvoll hc g
-  exact enOk_endR EL fnum c A true k.rows k.lay (P.rumpf g) hok
+  exact enOk_endR EL fnum c A GT hein true k.rows k.lay (P.rumpf g) hok
 
 end Bruecke
 

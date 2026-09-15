@@ -389,7 +389,7 @@ def wW : World wD where
 def wSt : CSt := { mem := fun _ _ => .int 0, live := fun _ => true, obs := [] }
 
 theorem wCorr : corrW wEL wW wSt :=
-  ⟨fun _ _ => ⟨rfl, fun _ _ _ _ => rfl⟩, fun _ _ => ⟨rfl, rfl⟩⟩
+  ⟨fun _ _ => ⟨rfl, fun _ _ _ _ => rfl⟩, And.intro (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => rfl)⟩
 
 def wX : TVCtx wD := ⟨wEL, tvOrc, 1, tvXR, tvXR, wO, 0, fun f => nomatch f⟩
 

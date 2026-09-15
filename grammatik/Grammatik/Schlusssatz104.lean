@@ -1607,7 +1607,7 @@ def gRho7 : Env G104_referenz.gD (G104_referenz.gD.params g_einzahlen) :=
   .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
 
 theorem gW0_corr : corrW gEL104 gWelt0 refSt0 := by
-  refine ⟨?_, fun g => nomatch g⟩
+  refine ⟨?_, And.intro (fun g => nomatch g) (fun _ h => Bool.noConfusion h)⟩
   intro t _
   cases t
   refine ⟨rfl, ?_⟩

@@ -1464,6 +1464,14 @@ structure EmitLay (D : Deklaration) where
   lay_glob : ∀ g, lay (.glob (gnr g)) =
     some { lay := scalarRec (gty g), kind := if D.atomar g then .atomic else .plain, base := 0 }
   gty_fits : ∀ g, tyFits (D.gtyp g) (gty g) = true
+  /-- **THE DEVICE WINDOWS the emitted unit declares** (`device … at mmio`):
+      the C block numbers that must be MAPPED for the whole life of the unit.
+      A device window is NOT memory -- `corrW`'s two clauses say nothing about
+      it -- but it must be there for a register access to be defined at all,
+      and *where* that fact belongs is the state relation, next to the
+      liveness of every table and global. Default: no device, and then the
+      relation is the one of before, character for character. -/
+  devs : Nat → Bool := fun _ => false
 
 namespace EmitLay
 
@@ -1531,7 +1539,8 @@ def corrW {D : Deklaration} (EL : EmitLay D) (σ : World D) (st : CSt) : Prop :=
       st.mem (.tab (EL.tnr t)) (k.toNat * (EL.trec t).ssize + (EL.trec t).off (EL.fnr t f)) =
         .int (encW (D.typ t f) (σ.slots t k f))) ∧
   (∀ g, D.ggeist g = false → st.live (.glob (EL.gnr g)) = true ∧
-    st.mem (.glob (EL.gnr g)) 0 = .int (encW (D.gtyp g) (σ.globs g)))
+    st.mem (.glob (EL.gnr g)) 0 = .int (encW (D.gtyp g) (σ.globs g))) ∧
+  (∀ d, EL.devs d = true → st.live (.dev d) = true)
 
 /-- Gabbro reads only extend the trace: the relation is unchanged. -/
 theorem corrW_lese {D : Deklaration} (EL : EmitLay D) (σ : World D) (st : CSt)
@@ -1568,7 +1577,7 @@ theorem corr_schreibSlot {D : Deklaration} (EL : EmitLay D) (σ : World D) (st :
   have hfit := encW_fits (D.typ t f) (EL.slotTy t f) v (EL.fnr_fits t f)
   refine ⟨_, bStore_progress _ _ _ _ _ ha hfit, ?_, rfl⟩
   rw [EmitLay.slotPtr_toNat]
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, h.2.2⟩
   · intro t' hgt'
     obtain ⟨hl', hc'⟩ := h.1 t' hgt'
     refine ⟨hl', ?_⟩
@@ -1601,7 +1610,7 @@ theorem corr_schreibSlot {D : Deklaration} (EL : EmitLay D) (σ : World D) (st :
         injection hb with hb'
         exact ht (EL.tnr_inj _ _ hb')
   · intro g hgg
-    obtain ⟨hl', hc'⟩ := h.2 g hgg
+    obtain ⟨hl', hc'⟩ := h.2.1 g hgg
     refine ⟨hl', ?_⟩
     show memUpd st.mem (.tab (EL.tnr t)) (k.toNat * (EL.trec t).ssize + (EL.trec t).off (EL.fnr t f)) (.int (encW (D.typ t f) v)) (.glob (EL.gnr g)) 0 = _
     exact (memUpd_other _ _ _ _ _ _ (by intro hc; cases hc.1)).trans hc'
@@ -1629,13 +1638,13 @@ theorem corr_schreibGlob {D : Deklaration} (EL : EmitLay D) (σ : World D) (st :
     (Λ : List (Res D)) (v : Wert D (D.gtyp g)) :
     ∃ st', bStore EL.lay st (EL.globPtr g) (EL.gty g) (.int (encW (D.gtyp g) v)) = some st' ∧
       corrW EL (σ.schreibGlob g Λ v) st' ∧ st'.obs = st.obs := by
-  obtain ⟨hl, -⟩ := h.2 g hgg
+  obtain ⟨hl, -⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .wr (by rw [hat]; rfl)
   have hfit := encW_fits (D.gtyp g) (EL.gty g) v (EL.gty_fits g)
-  refine ⟨_, bStore_progress _ _ _ _ _ ha hfit, ⟨?_, ?_⟩, rfl⟩
+  refine ⟨_, bStore_progress _ _ _ _ _ ha hfit, ⟨?_, ?_, h.2.2⟩, rfl⟩
   · exact corrW_tabs_of_glob EL σ st h g 0 (.int (encW (D.gtyp g) v)) (σ.schreibGlob g Λ v) rfl _ (fun _ => rfl)
   · intro g' hgg'
-    obtain ⟨hl', hc'⟩ := h.2 g' hgg'
+    obtain ⟨hl', hc'⟩ := h.2.1 g' hgg'
     refine ⟨hl', ?_⟩
     show memUpd st.mem (.glob (EL.gnr g)) 0 (.int (encW (D.gtyp g) v)) (.glob (EL.gnr g')) 0 =
       .int (encW (D.gtyp g') ((σ.storeGlob g v).globs g'))
@@ -1658,7 +1667,7 @@ theorem corr_schreibGlob_atomar {D : Deklaration} (EL : EmitLay D) (σ : World D
     ∃ st', aStore EL.lay st (EL.globPtr g) (EL.gty g) o (encW (D.gtyp g) v) = some st' ∧
       corrW EL (σ.schreibGlob g Λ v) st' ∧
       st'.obs = .awr (EL.globPtr g) o (encW (D.gtyp g) v) :: st.obs := by
-  obtain ⟨hl, -⟩ := h.2 g hgg
+  obtain ⟨hl, -⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .atom (by rw [hat]; rfl)
   have hfit := encW_fits (D.gtyp g) (EL.gty g) v (EL.gty_fits g)
   have hs : aStore EL.lay st (EL.globPtr g) (EL.gty g) o (encW (D.gtyp g) v) =
@@ -1667,10 +1676,10 @@ theorem corr_schreibGlob_atomar {D : Deklaration} (EL : EmitLay D) (σ : World D
     unfold aStore
     rw [ha, ho, hfit]
     rfl
-  refine ⟨_, hs, ⟨?_, ?_⟩, rfl⟩
+  refine ⟨_, hs, ⟨?_, ?_, h.2.2⟩, rfl⟩
   · exact corrW_tabs_of_glob EL σ st h g 0 (.int (encW (D.gtyp g) v)) (σ.schreibGlob g Λ v) rfl _ (fun _ => rfl)
   · intro g' hgg'
-    obtain ⟨hl', hc'⟩ := h.2 g' hgg'
+    obtain ⟨hl', hc'⟩ := h.2.1 g' hgg'
     refine ⟨hl', ?_⟩
     show memUpd st.mem (.glob (EL.gnr g)) 0 (.int (encW (D.gtyp g) v)) (.glob (EL.gnr g')) 0 =
       .int (encW (D.gtyp g') ((σ.storeGlob g v).globs g'))
@@ -1692,7 +1701,7 @@ theorem corr_leseGlob_atomar {D : Deklaration} (EL : EmitLay D) (σ : World D) (
     aLoad EL.lay st (EL.globPtr g) (EL.gty g) o =
       some (encW (D.gtyp g) (σ.globs g),
         { st with obs := .ard (EL.globPtr g) o (encW (D.gtyp g) (σ.globs g)) :: st.obs }) := by
-  obtain ⟨hl, hc⟩ := h.2 g hgg
+  obtain ⟨hl, hc⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .atom (by rw [hat]; rfl)
   unfold aLoad
   rw [ha, ho]
@@ -1705,7 +1714,7 @@ theorem corr_leseGlob_atomar {D : Deklaration} (EL : EmitLay D) (σ : World D) (
 theorem corr_leseGlob {D : Deklaration} (EL : EmitLay D) (σ : World D) (st : CSt)
     (h : corrW EL σ st) (g : D.Glob) (hgg : D.ggeist g = false) (hat : D.atomar g = false) :
     bLoad EL.lay st (EL.globPtr g) (EL.gty g) = some (.int (encW (D.gtyp g) (σ.globs g))) := by
-  obtain ⟨hl, hc⟩ := h.2 g hgg
+  obtain ⟨hl, hc⟩ := h.2.1 g hgg
   have ha := EL.accOk_glob st g hl .rd (by rw [hat]; rfl)
   have hne : st.mem (EL.globPtr g).blk (EL.globPtr g).off.toNat ≠ .undef := by
     show st.mem (.glob (EL.gnr g)) 0 ≠ _; rw [hc]; simp
@@ -1749,15 +1758,20 @@ def refSt0 : CSt := { mem := fun _ _ => .int 0, live := fun _ => true, obs := []
 /-- The pre-write world of the reached run and the zero C state are
     related. -/
 theorem refSt0_corr : corrW refEL (refM1B.weltVon 1) refSt0 := by
-  refine ⟨?_, fun g => nomatch g⟩
-  intro t _
-  refine ⟨rfl, ?_⟩
-  intro k f hk0 hk
-  have hk2 : k < 2 := hk
-  cases t
-  cases f
-  have hk' : k = 0 ∨ k = 1 := by omega
-  rcases hk' with e | e <;> subst e <;> rfl
+  constructor
+  · intro t _
+    refine ⟨rfl, ?_⟩
+    intro k f hk0 hk
+    have hk2 : k < 2 := hk
+    cases t
+    cases f
+    have hk' : k = 0 ∨ k = 1 := by omega
+    rcases hk' with e | e <;> subst e <;> rfl
+  · constructor
+    · intro g
+      exact nomatch g
+    · intro _ _
+      rfl
 
 /-- The emitted addresses: `k->slots[0].stand` is offset 0 of the block,
     `k->slots[1].stand` offset 4. -/

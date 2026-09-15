@@ -249,7 +249,7 @@ def st42 : CSt :=
     live := fun _ => true, obs := [] }
 
 theorem corr42 : corrW EL8 w42 st42 := by
-  refine ⟨?_, fun g => nomatch g⟩
+  refine ⟨?_, And.intro (fun g => nomatch g) (fun _ h => Bool.noConfusion h)⟩
   intro t _
   have e := tab_eins t
   subst e

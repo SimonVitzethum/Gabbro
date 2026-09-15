@@ -33,6 +33,20 @@ inductive GRow where
   | call (fc : Nat) (cargs : List CX) (dst : Option (Nat × CTy))
   | ret (cr : Option (CTy × CX))
   | forTrav (x : Nat) (t : CIT) (hi : CX) (body : List GRow) (m : Nat)
+  /-- `(*(volatile uintN_t *)(cp)) = e;` -- a store to a DEVICE REGISTER
+      (H10, `CFormenH.lean`). `cp` is the register's address expression;
+      which register it is, is decided against the certificate's device
+      table (`GerTafel`, KorrespondenzAllg.lean), never guessed. -/
+  | storeReg (cp : CX) (w : CWidth) (ce : CX)
+  /-- `T x = (*(volatile uintN_t *)(cp));` -- a DEVICE REGISTER READ (H9),
+      binding the machine's answer to a fresh C local. -/
+  | loadReg (x : Nat) (tc : CTy) (cp : CX) (w : CWidth)
+  /-- `T x = (*(volatile uintN_t *)(cp)); if (!(c)) { return e; }` -- a
+      register read whose declared promise is CHECKED in the program
+      (`let x = R else (e) { … }`). A broken device promise is a BRANCH
+      here, not a stop. -/
+  | loadRegElse (x : Nat) (tc : CTy) (cp : CX) (w : CWidth) (cc : CX)
+      (cr : Option (CTy × CX))
   deriving Repr
 
 mutual
@@ -49,6 +63,10 @@ def growRow : GRow → CS
   | .call fc cargs dst => .call fc cargs dst
   | .ret cr => .ret cr
   | .forTrav x t hi body m => CS.forUp x t (.lit 0) hi (growsCS body .skip) m
+  | .storeReg cp w ce => .vstore cp (.int false w) ce
+  | .loadReg x tc cp w => .set x tc (.vld cp (.int false w))
+  | .loadRegElse x tc cp w cc cr =>
+      .seq (.set x tc (.vld cp (.int false w))) (.ite (.lnot cc) (.ret cr) .skip)
 /-- Elaboration of a row list: sequencing, ending in `tl`. -/
 def growsCS : List GRow → CS → CS
   | [], tl => tl
@@ -88,6 +106,10 @@ def rowCXs : GRow → List CX
   | .ret none => []
   | .ret (some (_, ce)) => [ce]
   | .forTrav _ _ hi body _ => hi :: rowsCXs body
+  | .storeReg cp _ ce => [cp, ce]
+  | .loadReg _ _ cp _ => [cp]
+  | .loadRegElse _ _ cp _ cc none => [cp, cc]
+  | .loadRegElse _ _ cp _ cc (some (_, ce)) => [cp, cc, ce]
 def rowsCXs : List GRow → List CX
   | [] => []
   | r :: rs => rowCXs r ++ rowsCXs rs
@@ -132,6 +154,8 @@ def freshRaw (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) (x : Nat)
 def rowFreshAcc : List Nat → GRow → List Nat
   | acc, .bindLet x _ _ => x :: acc
   | acc, .call _ _ (some (x, _)) => x :: acc
+  | acc, .loadReg x _ _ _ => x :: acc
+  | acc, .loadRegElse x _ _ _ _ _ => x :: acc
   | acc, _ => acc
 
 mutual
@@ -141,6 +165,8 @@ def rowFreshOk (pp : List Nat) (ks : List (Nat × Int)) (acc : List Nat) : GRow 
   | .bindLet x _ _ => freshRaw pp ks acc x
   | .call _ _ (some (x, _)) => freshRaw pp ks acc x
   | .call _ _ none => true
+  | .loadReg x _ _ _ => freshRaw pp ks acc x
+  | .loadRegElse x _ _ _ _ _ => freshRaw pp ks acc x
   | .forTrav x _ _ body _ =>
     freshRaw pp ks acc x && rowsFresh pp ks (x :: acc) body
   | .ite _ t e => rowsFresh pp ks acc t && rowsFresh pp ks acc e

@@ -273,6 +273,7 @@ import Grammatik.KorrespondenzAllg
 import Grammatik.KorrOkAdaequat
 import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.KorrespondenzBlockZeuge
+import Grammatik.KorrespondenzGeraetZeuge
 import Grammatik.Schlusssatz
 import Grammatik.Kette104
 import Grammatik.Kette104Satz

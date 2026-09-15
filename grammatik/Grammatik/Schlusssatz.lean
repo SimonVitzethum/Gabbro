@@ -412,11 +412,12 @@ theorem schlusssatz {src : String} (K : Kette src)
   have hA : AkzeptiertSpec K.E.P K.E.S K.fs.1 K.E.ws :=
     akzeptiert_pruefer.korrekt K.E K.fs K.ls K.cs K.akzeptiert
   have hlauf := fun passes n f k hk σ st ρG vs ρ0 hw hb hr hnf =>
-    korrOk_jeder_lauf K.fs.2 K.zertOk orc XR hXR O passes n f k hk σ st ρG vs ρ0 hw hb hr hnf
+    korrOk_jeder_lauf K.fs.2 K.zertOk orc XR hXR O passes n (gerAnn_leer K.EL orc O rfl)
+      f k hk σ st ρG vs ρ0 hw hb hr hnf
   have hhw : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
       (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Hardware (declOf K.u)),
       rufAt K.E.P O passes n f σ ρG ≠ .hardware e :=
-    fun passes n => korrOk_rufAt_ohneHardware K.EL fnNr K.zert K.fs.2 K.zertOk O passes n
+    fun passes n => korrOk_rufAt_ohneHardware K.EL fnNr K.zert K.fs.2 K.zertOk rfl O passes n
   have hlog : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
       (ρG : Env (declOf K.u) ((declOf K.u).params f)),
       (rufAt K.E.P O passes n f σ ρG).istFehler = true →
