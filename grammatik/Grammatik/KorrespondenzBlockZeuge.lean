@@ -50,10 +50,10 @@ def bRowT : GRow := .setVar 0 bU32c (.lit 1)
 def bRowE : GRow := .setVar 0 bU32c (.lit 2)
 def bCond : CX := .cmp .lt CIT.u32 (.var 0) (.var 1)
 
-/-- The `if` row, accepted and refused. The PLANTED DEFECTS are the four
-    ways a block check can be wrong where a flat one cannot: the two
-    branches swapped, a statement DROPPED from one branch (in both
-    branches, separately), a statement ADDED to one branch -- and, for
+/-- The `if` row, accepted and refused. The PLANTED DEFECTS are the ways a
+    block check can be wrong where a flat one cannot: the two branches
+    SWAPPED, a statement DROPPED from one branch (from each branch,
+    separately), a statement ADDED to one branch -- and, for
     completeness, the condition read as the opposite comparison. -/
 theorem probe_ite :
     stOk wEL wFnum wZert wK bIte (.ite bCond [bRowT] [bRowE]) = true ∧
@@ -65,8 +65,8 @@ theorem probe_ite :
       (.ite (.cmp .ge CIT.u32 (.var 0) (.var 1)) [bRowT] [bRowE]) = false := by
   decide
 
-/-- An `if` row against a statement that is NOT an `if` is refused, and a
-    non-`if` row against the `if` statement is refused: the arm reads the
+/-- A non-`if` row against the `if` statement is refused, and an `if` row
+    against a statement that is NOT an `if` is refused: the arm reads the
     Gabbro side, not only the C side. -/
 theorem probe_ite_fremd :
     stOk wEL wFnum wZert wK bIte bRowT = false ∧
@@ -78,9 +78,9 @@ theorem probe_ite_fremd :
 
 /-! ## 2. The block check itself
 
-    `blOk` walks a `Block` (an arm, later a loop body) against its rows.
-    It is the same reading `enOk` gives a terminal block, minus the
-    `return` -- a block ENDS, it does not answer. -/
+    `blOk` walks a `Block` -- an `if` arm or a loop body -- against its
+    rows. It is the same reading `enOk` gives a terminal block, minus the
+    `return`: a block ENDS, it does not answer. -/
 
 /-- `(void)a; a = 1;` -- the unused-parameter row and a statement. -/
 theorem probe_blOk_void :

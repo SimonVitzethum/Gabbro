@@ -1443,24 +1443,29 @@ end Tiefe
 
 /-
 CUTS -- what this file does not do, by name.
-- COVERED FORMS: the statement and expression families listed in the header.
-  Not covered (the Bool is `false`, a refusal), with the reason for each:
-  * `traverse` (`GRow.forTrav`) is in, but only with a CONSTANT bound:
+- WHERE THE BLOCK FORMS STAND, so that the list below is read right:
+  * `traverse` (`GRow.forTrav`) is IN, but only with a CONSTANT bound:
     `scorr_traverse` wants `ev hiC = D.count tb` at EVERY C state, and
     the only C expression this file can decide that of is a literal.
     A header that computes its bound is a refusal, not an admission.
     The loop's own budget `m'` is data of the row and not checked: it is
     the `forC` step count of the C semantics, and the correspondence
     holds at whatever it is.
-  * `retry`, `forever` and the other block statements (`locks`,
-    `breaking`, `onOption`, `onTag`, `onGrund`) have rows in neither
-    `GRow` nor the printer, so `blOk` never meets them; `stOk0` refuses
-    their statements.
-  * `let x = f(…)` (`bindCall`) is a `Block` constructor and NOT an
-    `Endblock` one, so it is checked in `blOk` and nowhere else: a body
-    whose TOP level binds a call's answer is not expressible in the model
-    at all, and inside an `if` arm or a loop body it is. The arm ends in
+  * `let x = f(…)` (`bindCall`) is IN, and in `blOk` ONLY: it is a
+    `Block` constructor and not an `Endblock` one, so a body whose TOP
+    level binds a call's answer is not expressible in the model at all,
+    and inside an `if` arm or a loop body it is. The arm ends in
     `bsem_bindCall`.
+- COVERED FORMS: the statement and expression families listed in the header.
+  Not covered (the Bool is `false`, a refusal), with the reason for each:
+  * The remaining block statements -- `retry`, `forever`, `locks`,
+    `breaking`, `onOption`, `onTag`, `onGrund` -- have rows in neither
+    `GRow` nor the printer, so `blOk` never meets them; `stOk0` refuses
+    their statements. Same for the other thirteen `Block` constructors
+    (`bindCallInd`, `bindCallElse`, `bindAxiom`, `regLies`,
+    `regLiesElse`, `awaits`, `exchange`, `narrow`, `pruefung` and the
+    four float binders): each needs its own row shape, and none is one
+    line.
   * `!=` (`.cmp .ne`): Gabbro's `Zucker.ne a b` is `nicht (eq a b)`, so the
     arm would have to look THROUGH the negation at its operands, and the
     soundness proof would need the induction hypotheses of those operands
@@ -1475,9 +1480,8 @@ CUTS -- what this file does not do, by name.
     observations, and `GRow` has no atomic row. `ecorr_globAtomar` and
     `scorr_assignGlobAtomar` are proved.
   * `neg`, `leseBytes`, floats, sums, options, reasons, quantifiers,
-    `locks`, `forever`, `retry`, device and foreign forms: no arm, and for
-    the floats no `ecorr_*` at all (`CX` has no float operand a `GRow`
-    could carry).
+    device and foreign forms: no arm, and for the floats no `ecorr_*` at
+    all (`CX` has no float operand a `GRow` could carry).
 - A call's callee map must be its C parameter list (`callMapOk`): the
   exporter's map. The index-fixed `refD` maps (`ks`) of lanes 164/165 are
   not accepted at call sites; they still check as top-level maps.

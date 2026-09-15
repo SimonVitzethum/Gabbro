@@ -201,6 +201,12 @@ were closed before, `beispiele/104-referenz.gab` (`kette_104`) and
 written out explicitly — the 113 flat `beispiele/*.gab` — because `korpus.py` cannot ask `git`
 on an rsynced worktree and would otherwise fail open.)
 
+*The chain-count run was made on the tree at `f87de32e`; the commits after it change comments
+and documents only, and the library was rebuilt green on the final source (`Kette104` and
+`Kette108` as separate targets first, then the full build). **Said here rather than left to be
+assumed**, because a number measured on a different tree than the one it is reported for is the
+same class of mistake as a stale paste.*
+
 **Why it could not have moved, stated so it can be checked.** A chain is closed only for a
 program with a Lean-checked instance of `schlusssatz`, whose FIRST field is parse fidelity
 through `uebersetzeAllg`. 111 of 113 corpus programs never produce a `UProg` at all — they stop
@@ -227,7 +233,7 @@ branch's. **Eleven of twelve outputs are BYTE-IDENTICAL**, exit codes included
 `zaehle-absagen.py` 0/0, `pruefe-waechter.py` 1/1). The red ones were red on `master` for
 reasons this branch does not touch.
 
-The twelfth moved, and for the same reason it moved for §28:
+The twelfth moved, and for the same reason it moved for the lane before this one:
 
 * **`pruefe-gestalt.py`: 188 → 189 Lean files, 185 → 186 findings.** The new file
   `KorrespondenzBlockZeuge.lean` has no line in that instrument's ratchet — whose `ERWARTET`
@@ -275,7 +281,7 @@ Each is written at the site as well (`KorrespondenzAllg.lean`, CUTS).
    the probes. **That is Rust work and out of this lane's scope** (the prompt: do not touch
    `emit.rs`; `corrlean.rs` was left alone to keep the diff one-sided). *Until it is done, these
    arms are proved and probed but not exercised by a printed certificate — which is exactly what
-   §5 of the previous report said about the expression arms, one layer up.*
+   `OPUS-BERICHT-KORROK.md` §4 item 8 said about the expression arms, one layer up.*
 
 ## 7. Commits
 
@@ -284,6 +290,8 @@ Each is written at the site as well (`KorrespondenzAllg.lean`, CUTS).
 | 1 | `ed598fee` | `if`/`else`: the staging (`stOk0`, `blOk`, `stOk`), `stOkBl_sound`, `rowSize`, and the probes over `wD` |
 | 2 | `eda2cf31` | `let y = g(a);`: the `bindCall` arm, its soundness through `bsem_bindCall`, the fixture `cD` and eight planted defects |
 | 3 | `f87de32e` | `traverse`: the `forTrav` arm with bound, freshness and body hygiene decided, its soundness through `scorr_traverse`, the probes and the nested probe |
-| 4 | this one | PLAN §6.5/§6.7, SATZKARTE §30, this report |
+| 4 | `d586fec4` | PLAN §6.5/§6.7, SATZKARTE §30, this report |
+| 5 | `6a09dcf4` | two measurement notes taken after the report was written |
+| 6 | this one | the CUTS list reordered (comment only), and the tree the chain count was measured on, said |
 
 Branch `opus/korrok-block`. **Not merged, not pushed.**
