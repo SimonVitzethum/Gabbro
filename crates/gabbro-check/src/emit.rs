@@ -7540,6 +7540,34 @@ fn funktion(
             }
         }
     }
+    // **And an `exchange` binding is the third name that binds outside
+    // `sammle_lets`** (2026-09-15, the fetch-op lane).
+    //
+    // The same hole, found the same way: `let alt = X exchange update(t) { … }`
+    // whose result no line reads back lowers to a local that `cc -Wextra`
+    // refuses -- `unused-but-set-variable` out of the CAS loop,
+    // `unused-variable` out of the new single-instruction arm. Measured
+    // 2026-09-15 on `probe/p3.gab`: **both** families fell, so this is not a
+    // cost of the new arm, it is a gap the new arm made visible.
+    //
+    // **Collected RECURSIVELY, unlike the `awaits` list above** -- every
+    // `exchange` in the corpus stands inside a nested block
+    // (`beispiele/41-handschlag.gab` inside an `if`), so a top-level-only walk
+    // would answer "nothing to silence" for exactly the shapes that occur.
+    fn stille_exchanges_von(b: &Block, gelesen: &BTreeSet<String>, aus: &mut Vec<String>) {
+        for s in &b.anweisungen {
+            if let StmtArt::Exchange(x) = &s.art {
+                if !gelesen.contains(&x.name.text) {
+                    aus.push(x.name.text.clone());
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                stille_exchanges_von(k, gelesen, aus);
+            }
+        }
+    }
+    let mut stille_exchanges: Vec<String> = Vec::new();
+    stille_exchanges_von(b, &gelesen, &mut stille_exchanges);
     // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
     //
     // **Der Grund hat seit Stufe 7 einen Erzeuger** (2026-08-21). Bis dahin stand hier
@@ -7590,6 +7618,7 @@ fn funktion(
         schleifen: Vec::new(),
         fehlerkanal: f.fehler.is_some(),
         stille_awaits,
+        stille_exchanges,
     };
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
@@ -8514,6 +8543,13 @@ struct Austritt {
     /// cannot carry it; the arm that lowers it reads this list instead and emits
     /// the `(void)name;` silencer where the name is already declared (lane 73).
     stille_awaits: Vec<String>,
+    /// **Unread `exchange` bindings of this body, collected in `funktion`.**
+    ///
+    /// The third name that binds outside `sammle_lets`, beside `awaits` and
+    /// `alloc`. All THREE `exchange` lowerings read it -- the bounded CAS loop,
+    /// the single fetch instruction and the compare-exchange -- because each
+    /// declares a local that `cc -Wextra` refuses when nothing reads it back.
+    stille_exchanges: Vec<String>,
 }
 
 fn einzug(n: usize) -> String {
@@ -9406,6 +9442,60 @@ fn anweisung(
                         );
                         return;
                     }
+                    // **«C4c»: the primitive body lowers to ONE instruction** (2026-09-15).
+                    //
+                    // `SPRACHE.md` Part III §1 has promised `atomic_fetch_*` for a primitive
+                    // body since it was written, and until today the emitter had only the
+                    // loop. `holform` is the closed table and its head carries the boundary,
+                    // measured before it was built; `holordnung` derives the one ordering an
+                    // RMW can carry from the declaration's two halves.
+                    //
+                    // **Nothing is lifted to get here.** The `bounded … ops on_exceeded …`
+                    // clauses are still demanded above, and the fall-through check still runs
+                    // -- a refusal is not a price this arm pays. What the clauses lose is
+                    // their CONSEQUENCE, and only because no bound can be exceeded by an
+                    // instruction that never loses a race. The C says so where it stands.
+                    if let (Some(hol), Some(ordnung)) = (
+                        holform(rumpf, &binder.text, u, &typ),
+                        holordnung(speichern, laden),
+                    ) {
+                        aus.push_str(&format!(
+                            "{e}/* {ziel} exchange update({b}) -- ONE C11 read-modify-write and no\n\
+                             {e} * loop: SPRACHE.md's RMW lowering, the primitive half. `{ausgang}`\n\
+                             {e} * is unreachable -- there is no pass to count, so the declared\n\
+                             {e} * bound of {gaenge} passes cannot be exceeded. (What the MACHINE\n\
+                             {e} * makes of it is the target's business: `lock xadd` on some,\n\
+                             {e} * a cmpxchg loop on others. The C has no bound either way.)\n\
+                             {e} * {ordnung} is the JOIN of the declaration's two halves\n\
+                             {e} * (store {speichern}, load {laden}): one operation, one order. */\n",
+                            b = binder.text,
+                            ausgang = ausgang.text,
+                            gaenge = ausdruck(n, u, absagen),
+                        ));
+                        if let Some(last) = &traege_nutzlast {
+                            aus.push_str(&format!(
+                                "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                            ));
+                        }
+                        if let Some(last) = &traege_erwartung {
+                            aus.push_str(&format!(
+                                "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                            ));
+                        }
+                        aus.push_str(&format!(
+                            "{e}{typ} {n} = {ruf}(&{ziel}, ({typ})({arg}), {ordnung});\n",
+                            n = x.name.text,
+                            ruf = hol.ruf,
+                            arg = ausdruck(hol.operand, u, absagen),
+                        ));
+                        // **`(void)alt;` for a draw whose result this body never reads** --
+                        // the same answer the `awaits` arm gives through
+                        // `Austritt::stille_awaits`, and for the same `-Werror` reason.
+                        if austritt.stille_exchanges.iter().any(|n| *n == x.name.text) {
+                            aus.push_str(&format!("{e}(void){};\n", x.name.text));
+                        }
+                        return;
+                    }
                     // **Die Schranke geht als AUSDRUCK hinaus, nicht als Zahl.** `NKERNE * 4`
                     // steht im Erzeugnis mit `NKERNE` als `#define` daneben -- *wer die
                     // Kernzahl aendert, aendert die Schranke mit*, und niemand muss eine
@@ -9462,6 +9552,14 @@ fn anweisung(
                         x.name.text,
                         ausgang = ausgang.text,
                     ));
+                    // **And the loop needs the silencer just as much** -- `uint32_t alt;`
+                    // assigned at the end of the block and never read is
+                    // `-Werror=unused-but-set-variable`. Measured on `probe/p3.gab`
+                    // 2026-09-15, BEFORE the fetch arm above existed. Byte-identical over
+                    // the corpus: every `exchange` in `beispiele/` reads its result.
+                    if austritt.stille_exchanges.iter().any(|n| *n == x.name.text) {
+                        aus.push_str(&format!("{e}(void){};\n", x.name.text));
+                    }
                     return;
                 }
             }
@@ -9567,6 +9665,12 @@ fn anweisung(
                 x.name.text,
                 ausdruck(wert, u, absagen)
             ));
+            // **The third `exchange` lowering, the same silencer** -- see
+            // `Austritt::stille_exchanges`. Byte-identical over the corpus: a
+            // compare-exchange whose `won` nobody reads is not written anywhere here.
+            if austritt.stille_exchanges.iter().any(|n| *n == x.name.text) {
+                aus.push_str(&format!("{e}(void){};\n", x.name.text));
+            }
         }
         StmtArt::Sperrt(x) => {
             let name = x.sperre.text();
@@ -10546,6 +10650,175 @@ fn rumpf_als_wert(
             ),
         }
     }
+}
+
+/// **One arm of the fetch table: the C name, and the operand that rides in it.**
+///
+/// `ruf` is the FULL C function name and is never assembled from parts -- an
+/// emitter that builds `atomic_fetch_` + a word can build a word nobody wrote.
+struct Holform<'a> {
+    ruf: &'static str,
+    operand: &'a Expr,
+}
+
+/// **`SPRACHE.md` Part III §1 promised `atomic_fetch_*` and the emitter had only
+/// the loop -- this is the table that decides which is which** (2026-09-15).
+///
+/// The promise, word for word: *"`atomic_fetch_*` where the `update` body
+/// corresponds to a primitive (matched against a closed pattern table: `t+1`,
+/// `t-1`, `t|m`, `t&m`, `max` via `accumulates`), otherwise the **bounded** CAS
+/// loop"*. Lane 201 measured what stood here instead: **every** body lowered to
+/// the loop, the runtime's own ticket lock included, where `CTicket.lean`'s first
+/// instruction is ONE wait-free fetch-add. This function is the missing half.
+///
+/// **What the table contains, and why exactly this much** (each row measured on
+/// `probe/p1..p3.gab`, 2026-09-15, before a line of this was written):
+///
+/// * **`t | m`, `t & m`, `t ^ m` are IN.** They check clean today (`u32 | u8`
+///   leaves no range), they are commutative, so which side carries the binder
+///   changes nothing, and C11 7.17.7.5 defines `atomic_fetch_or/and/xor` as
+///   exactly `*obj = *obj | arg` with the OLD value returned -- which is what
+///   `let alt = X exchange update(t) { return t | m; }` binds.
+/// * **`t + 1` and `t - 1` are OUT, and not because this table is shy.** They are
+///   *unreachable*: an `update` body without a side condition must answer in the
+///   atomic's own type for EVERY value the atomic can hold, and checked `±1`
+///   shifts the interval by one, so `[lo+1, hi+1] ⊆ [lo, hi]` is false for every
+///   non-empty interval. Measured: `atomic NEXT : u32` with `{ return t + 1; }`
+///   falls at `M104` + `M101`; a ranged `u32 in 0 .. 1000` falls at `M101` the
+///   same way. Nothing this emitter does can change that -- the refusal is M1's
+///   and it is right.
+/// * **The wrapping forms `t +% 1`, `t -% 1` are OUT too**, and this is the row
+///   that costs something. They are the shapes that MATCH C11's fetch-add (which
+///   wraps silently by definition), and they are what `laufzeit/sperre.gab` wants.
+///   They fall today at `C001` -- `wrap_side`/`ort_typ` resolve a bare name only
+///   through statics and parameters, never through an `exchange` binder, so the
+///   exact range cannot be read. **Lifting that refusal is a separate decision and
+///   not this table's**: the range it cannot read is the one that decides whether
+///   `+%` wraps at the storage word (`u32`, where fetch-add is exact) or at a
+///   narrower exact range (`u32 in 0 .. 65535`, where fetch-add would wrap at the
+///   WRONG modulus and be a different operation). *A fetch-add bought by guessing
+///   a modulus is not an improvement.* `messung/muse/OPUS-BERICHT-FETCHADD.md` §2
+///   carries the measurement and what would have to move.
+/// * **A body with a side condition stays a loop** -- the whole corpus shape
+///   (`if v < GRENZE { return v + 1; } return v;`). It is not one operation and
+///   no single instruction computes it.
+/// * **The operand must be a translation-time constant and must not be the
+///   binder.** In the loop the body is re-run per pass; as a fetch operand it is
+///   evaluated once. For a constant those are the same value by construction, and
+///   for anything else they are only the same if the emitter reasons about purity
+///   -- which it would then be doing silently. `t | t` therefore stays a loop, and
+///   so does `t | (1 << i)`: the second is a real shape and a later lane's, not a
+///   guess this one makes.
+///
+/// **A word on "wait-free", because the C comment used to say it.** C11 makes
+/// `atomic_fetch_*` ONE read-modify-write operation on the abstract machine, and
+/// the emitted C therefore has no loop and no bound. What the TARGET makes of it is
+/// the target's business: on x86_64 `add` is `lock xadd`, while `or`/`and`/`xor`
+/// with a USED old value have no single instruction and become a `cmpxchg` loop in
+/// the code generator. *Removing the bound from the C is the claim this arm makes;
+/// wait-freedom at the machine is not, and was not measured (`objdump` is a lane of
+/// its own).*
+///
+/// `typ` is the atomic's C type. Only the eight integer words qualify: C11 defines
+/// `atomic_fetch_*` for integer atomics, and `bool`, `float` and `double` have no
+/// such instruction. The word list is the one `ganzzahlwort` writes.
+fn holform<'a>(rumpf: &'a Block, binder: &str, u: &Namen, typ: &str) -> Option<Holform<'a>> {
+    match typ {
+        "uint8_t" | "uint16_t" | "uint32_t" | "uint64_t" | "int8_t" | "int16_t" | "int32_t"
+        | "int64_t" => {}
+        _ => return None,
+    }
+    // The body is EXACTLY one `return <expr>;`. A second statement, or an `if`,
+    // is a body no single instruction computes -- and `rumpf_als_wert` already
+    // holds those.
+    let [einzige] = &rumpf.anweisungen[..] else {
+        return None;
+    };
+    let StmtArt::Return(Some(e)) = &einzige.art else {
+        return None;
+    };
+    let ExprArt::Binaer(op, a, b) = &ohne_klammern(e).art else {
+        return None;
+    };
+    // **Spelled out, every one.** A `_ =>` here would silently answer for an
+    // operator that does not exist yet, and the one thing this arm must never do
+    // is give a body a DIFFERENT operation than the one written.
+    let ruf = match op {
+        BinOp::BitOder => "atomic_fetch_or_explicit",
+        BinOp::BitUnd => "atomic_fetch_and_explicit",
+        BinOp::BitXor => "atomic_fetch_xor_explicit",
+        // `+`/`-`: unreachable through M1, see the head of this function.
+        // `+%`/`-%`: the modulus cannot be read off an `exchange` binder, see
+        // the head of this function. The rest is not a fetch form in any C.
+        BinOp::Plus
+        | BinOp::Minus
+        | BinOp::PlusWrap
+        | BinOp::MinusWrap
+        | BinOp::PlusSat
+        | BinOp::Mal
+        | BinOp::MalWrap
+        | BinOp::Geteilt
+        | BinOp::Rest
+        | BinOp::SchiebLinks
+        | BinOp::SchiebLinksWrap
+        | BinOp::SchiebRechts
+        | BinOp::Oder
+        | BinOp::Und
+        | BinOp::Gleich
+        | BinOp::Ungleich
+        | BinOp::Kleiner
+        | BinOp::KleinerGleich
+        | BinOp::Groesser
+        | BinOp::GroesserGleich => return None,
+    };
+    // Exactly ONE side is the bare binder; the other is a translation-time
+    // constant that is not the binder. All three operators are commutative, so
+    // no row of this table depends on which side that is.
+    let ist_binder = |x: &Expr| {
+        matches!(&ohne_klammern(x).art, ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == binder)
+    };
+    let operand = if ist_binder(a) && !ist_binder(b) && constexpr_value(b, u).is_some() {
+        b.as_ref()
+    } else if ist_binder(b) && !ist_binder(a) && constexpr_value(a, u).is_some() {
+        a.as_ref()
+    } else {
+        return None;
+    };
+    Some(Holform { ruf, operand })
+}
+
+/// The expression under any number of parentheses. **A shape test that stops at a
+/// `(` reads the source's punctuation as its meaning.**
+fn ohne_klammern(e: &Expr) -> &Expr {
+    match &e.art {
+        ExprArt::Klammer(x) => ohne_klammern(x),
+        _ => e,
+    }
+}
+
+/// **The ordering ONE read-modify-write instruction carries, derived from the
+/// declaration's two halves and from nothing else.**
+///
+/// `Namen::atomics` holds the pair the declaration names: the STORE side, and the
+/// load side derived from it (`acquire`/`release` both give release/acquire;
+/// `seq` gives seq_cst/seq_cst; `relaxed` and a missing word give
+/// relaxed/relaxed). A CAS loop can spend those two separately -- it has a load
+/// and a store. A fetch instruction has ONE argument and must therefore carry
+/// their JOIN, which is `acq_rel` exactly where the declaration asked for a
+/// release store and an acquire load.
+///
+/// **`None` is a CAS loop, not a guess.** A pair this table does not name is a
+/// declaration this function has never seen, and the catch-all that would answer
+/// for it would be choosing a memory model -- the one defect that does not show up
+/// in a test run (see the `Atomic` arm of `sammle_namen`, which was repaired for
+/// exactly this).
+fn holordnung(speichern: &str, laden: &str) -> Option<&'static str> {
+    Some(match (speichern, laden) {
+        ("memory_order_relaxed", "memory_order_relaxed") => "memory_order_relaxed",
+        ("memory_order_release", "memory_order_acquire") => "memory_order_acq_rel",
+        ("memory_order_seq_cst", "memory_order_seq_cst") => "memory_order_seq_cst",
+        _ => return None,
+    })
 }
 
 /// Ein Praedikat als C-Bedingung. **Nur die Formen, die ein `until` heute braucht** -- jede

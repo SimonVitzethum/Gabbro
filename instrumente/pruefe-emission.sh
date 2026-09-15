@@ -2783,7 +2783,7 @@ n_clang_ok=0; n_umg_nur_cc=0; umg_nur_cc=""
 # `set -e` reads an `a && b` whose `a` fails as a failed command, so this is an `if`.
 HAT_CLANG=0
 if command -v clang > /dev/null; then HAT_CLANG=1; fi
-n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_x=0; rest_x=""
+n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_l=0; n_emit_x=0; rest_x=""
 # **Der `find` bildet die Reichweite der Tafel NACH, und zwar ueber Namen statt ueber Pfade.**
 # `-name` sieht nur den letzten Bestandteil; ein Muster auf den ganzen Pfad haette denselben
 # Fehler gemacht wie der erste Auszaehler der Tafel, deren Wurzel selbst
@@ -2836,6 +2836,15 @@ while IFS= read -r q; do
     messung/*)        n_emit_m=$((n_emit_m + 1)) ;;
     messungen/*)      n_emit_n=$((n_emit_n + 1)) ;;
     programmlogik/*)  n_emit_p=$((n_emit_p + 1)) ;;
+    # **`laufzeit/` -- die SECHSTE gebuchte Wurzel, seit dem 2026-09-15.** Sie kam mit
+    # Bahn 201 (`laufzeit/sperre.gab`, die Ticketsperre in Gabbro) und stand bis heute im
+    # Auffangzweig darunter: `MARKE_EMIT_X` meldete „NEUE WURZEL EMITTIERT: 1", also war
+    # dieser Waechter ueber `f470f344` ROT und die Stufe 10 lief nie. **Gemessen am
+    # 2026-09-15 mit gestashtem Diff, damit die Basis eine Messung und keine Annahme ist.**
+    # *Und der Auffangzweig hat genau das getan, wofuer er da ist* -- er nennt die Wurzel
+    # beim Namen. Die Heilung ist deshalb keine hochgesetzte Marke, sondern eine
+    # RATSCHE: eine gebuchte Wurzel merkt auch, wenn eine Datei die Emission VERLAESST.
+    laufzeit/*)       n_emit_l=$((n_emit_l + 1)) ;;
     *)                n_emit_x=$((n_emit_x + 1)); rest_x="$rest_x $d" ;;
     esac
     umgekehrt=0
@@ -2896,7 +2905,8 @@ n_nenner=$((n_emit - n_umg))
 echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen,"
 echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
 echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
-echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECHS Marken)"
+echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_l laufzeit/,"
+echo "   $n_emit_x sonst -- SIEBEN Marken)"
 
 # **Mark: reverse probes that bite under `cc` ALONE.** They are DEBT, not an achievement --
 # pulled onto the measured stand, and the number may only fall.
@@ -3092,7 +3102,16 @@ fi
 # skip it and the guardian would be green over the very regression it exists for.
 # The third form of the lane is a REFUSAL and adds nothing here:
 # `beispiele/gift/1000` does not emit, so `MARKE_EMIT_G` stays at 18.
-MARKE_EMIT=113
+# **-> 114 on 2026-09-15 (lane "fetch-op", example 134).** Booked by the LANE for the
+# same reason as 113 above: `134-holende-bitzuege.gab` exists to PIN a lowering this
+# lane added -- `t | m`, `t & m` and `t ^ m` in an `exchange update` body become ONE
+# `atomic_fetch_or/and/xor_explicit` instead of a bounded CAS loop, and the saturating
+# body beside them in the same unit keeps its loop. Before this lane the tree emitted
+# **no `atomic_fetch_*` at all** (measured 2026-09-15: 1018 `.gab` files emitted with
+# the old and the new emitter, 0 occurrences before, and exactly ONE file whose C
+# differs after -- this one). A pin whose file the mark does not count is not a pin.
+# `MARKE_EMIT_G` is untouched: this lane adds no refusal and no poison file.
+MARKE_EMIT=114
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -3316,6 +3335,16 @@ MARKE_EMIT_M=132
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
 MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab
+# **Und eine vierte, am 2026-09-15: `laufzeit/`.** Gebucht bei 1 -- `laufzeit/sperre.gab`,
+# die Ticketsperre, die Bahn 201 in Gabbro geschrieben hat. `laufzeit/start.c` ist C und
+# keine `.gab`, also zaehlt es hier nicht. **Vorher lief die Datei im Auffangzweig
+# (`MARKE_EMIT_X`) mit, und damit war dieser Waechter ueber `f470f344` rot**: `NEUE WURZEL
+# EMITTIERT: 1 ... laufzeit/sperre.gab, gebucht sind 0`, Ruecklaufwert 1, **Stufe 10 nie
+# gelaufen**. Gemessen am 2026-09-15 aus dem Baum dieser Bahn mit gestashtem Diff, damit
+# die Basis eine Messung ist und keine Annahme (`messung/muse/OPUS-BERICHT-FETCHADD.md` §4).
+# *Eine Wurzel als Marke zu buchen ist mehr als eine hochgesetzte Zahl: sie bekommt eine
+# Ratsche, und eine Datei, die die Emission verlaesst, ist dann auch ein Befund.*
+MARKE_EMIT_L=1      # `laufzeit/` -- sperre.gab; `start.c` ist C und keine `.gab`
 # **0 -> 1 on 2026-09-01, and this one is not bookkeeping.** `halde.gab` -- the only file
 # in the tree at the target scale -- did NOT emit until tonight: it fell at an `L104` false
 # alarm, `g is consumed a second time`, because `m2` ran a `narrow … else` arm as
@@ -3327,6 +3356,11 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # at `MARKE_EMIT` now), and `Claude outputs/` -- 7 emitting scratch copies of committed
 # files, 15 tracked files, no live reference -- is deleted next. Nothing outside the
 # five roots emits anymore.
+# **And it stays at 0 on 2026-09-15, because the sixth root got its own mark instead.**
+# `laufzeit/sperre.gab` (lane 201) had been sitting in this catch-all since it arrived,
+# which is why this line read `1` against a booked `0` and the guardian left with `1`
+# before stage 10 ran. It is `MARKE_EMIT_L` now. *The catch-all is an alarm, not a home:
+# a root that lives here has no ratchet, so a file LEAVING the emission would go unseen.*
 MARKE_EMIT_X=0
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
@@ -3478,9 +3512,10 @@ ratsche "$n_emit_b" "$MARKE_EMIT"   "beispiele/"
 ratsche "$n_emit_m" "$MARKE_EMIT_M" "messung/*/"
 ratsche "$n_emit_n" "$MARKE_EMIT_N" "messungen/"
 ratsche "$n_emit_p" "$MARKE_EMIT_P" "programmlogik/"
+ratsche "$n_emit_l" "$MARKE_EMIT_L" "laufzeit/"
 decke   "$n_emit_g" "$MARKE_EMIT_G" "beispiele/gift/"
 if [ "$n_emit_x" -ne "$MARKE_EMIT_X" ]; then
-    echo "  NEUE WURZEL EMITTIERT: $n_emit_x Dateien ausserhalb der fuenf gebuchten Wurzeln"
+    echo "  NEUE WURZEL EMITTIERT: $n_emit_x Dateien ausserhalb der sechs gebuchten Wurzeln"
     echo "                         emittieren, gebucht sind $MARKE_EMIT_X. Das ist die Stelle,"
     echo "                         an der die Reichweite frueher lautlos zurueckblieb:$rest_x"
     schlecht=1
