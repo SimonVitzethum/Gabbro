@@ -3996,7 +3996,7 @@ impl<'a> Pruefer<'a> {
                             argtypen[0].1,
                             format!(
                                 "`{name}` rotates a whole word and needs the exact \
-                                 full range `u{w} in 0 .. {}, and `{}` is not it",
+                                 full range `u{w} in 0 .. {}`, and `{}` is not it",
                                 (1i128 << w) - 1,
                                 b.text()
                             ),
