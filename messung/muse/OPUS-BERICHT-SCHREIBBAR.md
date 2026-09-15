@@ -168,9 +168,25 @@ corpus). *That comparison is the instrument, and it is eight lines of shell.*
   **identical numbers** both ways (7958/7949 German comment lines in the checker, 30/26
   feeders, 5/2 sinks — pre-existing, and about `crates/`, which this lane does not touch) ·
   `pruefe-todo.py` **14 findings both ways** (stale EBNF counts in `TODO.md`/`README.md`).
-- **`cargo test --no-fail-fast`** on `fisch` in `gabbro-opus-schr`. The diff adds no Rust and no
-  corpus file; `beispiele.rs`/`korpus.rs` walk `beispiele/` and `dokumente/FRAGMENTE.md` only,
-  neither of which this lane touches.
+- **`cargo test --no-fail-fast`** on `fisch` in `gabbro-opus-schr`: **60 collections, 1053
+  tests passed, 0 failed, 1 ignored, rc=0.** The diff adds no Rust and no corpus file;
+  `beispiele.rs`/`korpus.rs` walk `beispiele/` and `dokumente/FRAGMENTE.md` only, neither of
+  which this lane touches.
+
+  > **The first attempt at that run hung for twenty minutes, and the cause was the measuring
+  > apparatus.** The prescribed sync excludes `.lake/`, so `programmlogik/.lake/packages`
+  > did not exist in the lane's server directory, and the first test that calls
+  > `gabbro prove` sent `lake` off to `git fetch` **mathlib4** over the network — with two
+  > other lanes' `lake` doing the same at the same time. Measured, not guessed:
+  > `lake build Gabbro.Body` at **19:49 elapsed and 00:00:00 CPU**, its only child
+  > `git fetch --tags --force origin` in `pipe_read`. Killed by PID, `packages/` copied from
+  > a warm tree (`cp -a`), re-run: green in under a minute, and the test that had hung
+  > (`jeder_erstname_tut_dasselbe_wie_sein_zweitname`) reports `ok`.
+  >
+  > *`AGENTS.md` §6 already says to seed the Lean cache — it names `grammatik/.lake`. The
+  > one that bites a `cargo test` is `programmlogik/.lake`, because `gabbro prove` builds
+  > that one.* An Opus lane prompt that says "seed `grammatik/.lake`" and nothing about
+  > `programmlogik/.lake` buys a twenty-minute silence that reads like a slow test.
 
 ## 5. Files
 
