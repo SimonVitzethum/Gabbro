@@ -135,7 +135,10 @@ The costs of the Opus agent for the memory model are on the Claude account and n
 
 - **The C compiler.** It translates the emitted subset faithfully under the manifest's flags.
   The FMA probe, the `_Static_assert` pins and the C-form census bound this assumption; they do
-  not discharge it.
+  not discharge it. **Since 2026-09-15 its FRONT END is what is assumed, not a transcription:**
+  for the two closed chains the emitted TEXT is pinned in Lean and PARSED there (§6.6, A2
+  discharged), so what remains is "the compiler's front end reads this subset as `parseC`
+  does" -- a part of this entry, no longer an entry of its own.
 - **The hardware profile.** `Profil.lean`, keyed entries.
 - **The GPU driver**, for SPIR-V payloads (PLAN-ERWEITUNG.md §0b), once the GPU library exists.
 - **The Lean kernel.**
@@ -326,9 +329,10 @@ refinement hypothesis on the binary's behaviour); `hA4` (A4). There is no hardwa
 premise for 104: the declaration has no axiom, register, device, global or `awaits`, and the
 emitted unit no device access or foreign call. What stays OUTSIDE Lean (no Lean proposition):
 A1 that `binEin`/`binLies` ARE the compiled binary's behaviour (the compiler); A2 that the
-emitted TEXT means `refCProg` -- a Lean C parser for the emitter's subset with `parseC text =
-some refCProg` by `decide` would replace it by "the compiler's front end reads the subset as
-`parseC`", a part of A1; A3 reduces to A1 + A2 (the `_Static_assert` pins are checked by the
+emitted TEXT means `refCProg` -- **done for the GENERIC chain on 2026-09-15** (§6.6:
+`parseC ctext104 = some (kFuns zert104)` by kernel reduction), which leaves "the compiler's
+front end reads the subset as `parseC`", a part of A1; the by-hand theorem of this section
+still speaks about `refCProg` and is the one place where the transcription stands; A3 reduces to A1 + A2 (the `_Static_assert` pins are checked by the
 compiler) plus one missing lemma (the C semantics reads a `RecLay` only through the pinned
 numbers); A4 that the real runtime starts in a `LaufzeitStart` shape (the driver is not
 emitted); A5 the Lean kernel and the definitions §3 lists for human review.
@@ -380,10 +384,52 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
 - **Part 4 is conditional** on the Gabbro call ending in no model error (a failed contract,
   the call-depth bound `abstieg`, a hardware answer); the model judgement does not yet say
   that `rufAt` at the call tree's depth ends `ok` -- the two witnesses compute it.
-- **A2 and the rest of A1/A3/A4** stay outside Lean exactly as in §6.4; the emitted TEXT is not
-  parsed in Lean (`kProg` is the certificate's elaboration, not the file's).
+- **A2 is DISCHARGED for both chains** (§6.6, 2026-09-15): the emitted TEXT is pinned and
+  parsed in Lean, and `cProgC ctext = kProg zert` is a theorem. The rest of A1/A3/A4 stays
+  outside Lean exactly as in §6.4.
 - **The adequacy chain** (one active thread of G against `rufAt`) is not re-instantiated; the
   concurrent conclusion of part 5 is the MODEL's (`gabbro_ziel`), not the C's -- stage (b).
+
+### 6.6 A2 discharged: the emitted TEXT is parsed in Lean (2026-09-15)
+
+*Files: `grammatik/Grammatik/CParser/` (`CLexer.lean`, `CParse.lean`, `CProben.lean`,
+`Bruecke.lean`), `CText104.lean`, `CText104Zeuge.lean`, `CText108.lean`, two theorems at the
+end of `Kette104Satz.lean`. Guardian: `instrumente/pruefe-ctext.py`. Theorem map:
+SATZKARTE §28. Report: `messung/muse/OPUS-BERICHT-CPARSER.md`.*
+
+**What it replaces.** The C side of the closing theorem is `kProg K.zert`, the unit the
+CORRESPONDENCE CERTIFICATE elaborates to. That the emitted TEXT means the same thing was
+assumption A2 -- a hand transcription, and §6.3 records it going stale in spelling once
+already. Now `parseC : List Char → Option (List CFun)` reads the emitted subset in Lean, and
+
+    a2_104 : parseC ctext104 = some (kFuns zert104)
+    a2_108 : parseC ctext108 = some (kFuns zert108)
+
+hold by kernel reduction (`rfl`), with `ctext104`/`ctext108` pinned line by line and
+byte-identical to `gabbro emit` (the guardian re-emits and compares, 2733 bytes). From them,
+`cProgC ctext = kProg zert` and `schlusssatz_text` -- `schlusssatz` with its A1 premise
+stated about the TEXT. A2 is not an assumption of the two chains any more; what remains is
+part of A1 (§5).
+
+**The subset, and why it is small.** `parseC` reads exactly the forms the two chains' emitted
+C uses -- the prelude with its two `_Static_assert` pins (both REQUIRED), integer `#define`s,
+the two table `typedef struct`s, `static T T_speicher;`, a foreign `void f(void);`, `static`
+declarations and definitions, and the statements `(void)x;`, a slot store through a pointer
+or at a named table, a direct call with or without `(void)`, `return;`/`return e;` over
+literals, locals and slot reads. Everything else is `none`. Measured over the emitted C of
+the whole corpus: **4 of 113 programs are inside the subset** (104, 108, 118, 52); the census
+`instrumente/pruefe-cformen.py` names what the other 109 use. Widening it means type
+inference for arithmetic (`CX.bin` carries a computation type C only implies), a pinned
+numbering for locals that are not parameters, and one arm each for `if`, loops and the
+register forms -- but sieve (a) stays the binding one for the chain count (§6.5), so a wider
+C parser buys no chain today.
+
+**The cost, and what it says about O13.** Kernel-reducing the parse first cost 44,6 GB, and
+the parser was not the reason: in Lean 4.33 `String.toList` goes through the array
+representation, and forcing the FIRST character of a 1419-byte string LITERAL costs 33,7 GB.
+The same text as a `List Char` of 45 short pieces costs 3,3 GB. `dokumente/OFFEN.md` O13
+carries the measurement, because the Gabbro-side pins that cost 72 GB lex a `String` the same
+way.
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 
@@ -540,7 +586,11 @@ G orders them through a lock (thread 0's `L_gib();` at step 12, thread 1's `L_ni
    hand, so stage (a)'s parse fidelity (part 1 of `schlusssatz_104`) has no counterpart for
    124; and the source's `setze` contract is too weak for (b) (§7.1).
 6. **The emitted text as data.** `c124` transcribes the printed C by hand (the joint A2 of
-   stage (a); a Lean C parser would replace it).
+   stage (a)). The Lean C parser of §6.6 exists since 2026-09-15 and discharges A2 for the two
+   stage-(a) chains; **124 is NOT among them** -- its emitted C uses the lock primitive, a
+   local binding and an `if`, all outside `parseC`'s subset, and `c124` is a `CEinheit` of the
+   concurrent semantics rather than a `KCert`. Closing this item means widening `parseC` by
+   those forms AND a `parseC`-to-`CEinheit` bridge.
 7. **Semantics extensions.** A lock call is a step only at the top of a root's continuation,
    not inside a loop, a branch or a callee; foreign calls other than the lock primitive and
    volatile accesses are outside the direct fragment; a root whose block never ends (a
