@@ -1,0 +1,47 @@
+-- S01 -- START A THREAD ON A DECLARED ROOT.
+--
+-- What `laufzeit/start.c` does in C, lines 158-174:
+--
+--     pthread_create(&faden[0], NULL, faden_hauptA, NULL);
+--     pthread_create(&faden[1], NULL, faden_hauptB, NULL);
+--     for (i ...) pthread_join(faden[i], NULL);
+--
+-- `concurrent { hauptA, hauptB };` DECLARES that the two bodies run at the same
+-- time -- it does not START them, and the emitted C has no caller for either.
+-- This probe asks whether the act of starting has any form.
+
+module schreibprobe::faden_start {
+
+const NSLOTS : u32 = 2;
+type Stand = u32 in 0 .. 100;
+
+table privA count NSLOTS { slot { stand : Stand, } }
+table privB count NSLOTS { slot { stand : Stand, } }
+
+impl fn hauptA()
+    effects { writes privA.slots }
+    costs   <= 64 ops
+{
+    privA.slots[0].stand = 7;
+}
+
+impl fn hauptB()
+    effects { writes privB.slots }
+    costs   <= 64 ops
+{
+    privB.slots[0].stand = 5;
+}
+
+concurrent { hauptA, hauptB };
+
+-- THE LINE THAT CANNOT BE WRITTEN. Below is the last of the shapes tried; the
+-- others are listed in the report. `concurrent` is an ITEM (`concurrentdecl`,
+-- SYNTAX.md:1610), so it cannot stand in a body, and no statement starts a body.
+impl fn starte()
+    effects { pure }
+    costs   <= 64 ops
+{
+    concurrent { hauptA, hauptB };
+}
+
+}

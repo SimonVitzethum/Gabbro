@@ -1,0 +1,71 @@
+-- S13 -- «B10»: THE SEARCH FOR THE FIRST LIVE RECEIVER.
+--
+-- `FRAGMENTE.md` «B10»: *"`traverse` yields no value, there is no `break`. The
+-- search for the FIRST hit becomes the emptying of the whole set; an operation
+-- counter cannot be raised."* Cited at F1 (`peak_revoke_ops`) and F3 (the IPC
+-- fastpath, whose whole point is to stop at the first live receiver).
+--
+-- `leave` EXISTS, and `SYNTAX.md` §18 «SG-25» prescribes exactly the shape
+-- this file writes: *"NO value on `leave`: the first match leaves through a
+-- variable bound before the loop -- `assignVar` plus `leave`, read after the
+-- loop. The bound still comes from the domain; no cursor or bitmap is
+-- hand-threaded."*
+--
+-- **AND IT CANNOT BE WRITTEN OVER A `traverse`, BECAUSE A `traverse` HAS NO
+-- LABEL.** `SYNTAX.md`:1247:
+--
+--   traverse = "traverse" ident [ "of" expr ] "over" domain "by" ( … ) …
+--   retry    = "retry"    [ ident ] [ "until" pred ] …
+--   forever  = "forever"  [ ident ] "per_pass" …
+--
+-- The `ident` after `traverse` is the BINDER, not a label; the optional label
+-- stands at `retry` and at `forever` only. So:
+--
+--   leave i;             S001  `leave i` targets no enclosing loop label
+--   traverse runde i …   P001  `over` expected, identifier `i` found
+--
+-- and `S001`'s own note says why the target must be named: *"there is no
+-- unnamed `break`/`continue` -- with nested loops the target would be
+-- convention"*. The rule is right and the one loop form that walks a table is
+-- the one that cannot be named.
+--
+-- WHAT IS LEFT. The fastpath walks the WHOLE table and guards every later pass
+-- with `if !gefunden` -- 64 passes where the C does 1 -- or it is written as a
+-- `retry` (which takes a label) with the index hand-threaded and its range
+-- re-proved at every use. «B10»'s sentence *"the search for the FIRST hit
+-- becomes the emptying of the whole set"* still holds, one construct further
+-- in than where it was written.
+
+module schreibprobe::erster_treffer {
+
+const NEPS : u32 = 64;
+
+table Empfaenger count NEPS {
+    slot {
+        lebt    : bool,
+        wartend : bool,
+    }
+}
+
+impl fn erster_lebender() -> u32
+    effects { reads Empfaenger, reads Empfaenger.slots }
+    costs   <= 4096 ops
+{
+    let mut gefunden : bool = false;
+    let mut treffer  : u32  = 0;
+    traverse i over slots of Empfaenger by unvisited
+        touches reads Empfaenger.slots
+    {
+        if Empfaenger.slots[i].lebt && Empfaenger.slots[i].wartend {
+            gefunden = true;
+            treffer  = i;
+            leave i;
+        }
+    }
+    if gefunden {
+        return treffer;
+    }
+    return NEPS;
+}
+
+}

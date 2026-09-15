@@ -1,0 +1,54 @@
+-- S18 -- «B7»: A FUNCTION THAT RETURNS A RECORD -- WRITABLE, AND IT DOES NOT
+--        REACH THE PROOF.
+--
+-- `FRAGMENTE.md` «B7»: *"No struct and no array literal in `expr`. A function
+-- therefore cannot produce a `structty`; tuple return and `reply(EP, [ … ])`
+-- fall with it."* Cited at F4, F5 and F6.
+--
+-- **THE CHECKER AND THE EMITTER BOTH TAKE IT.** The braced spelling the
+-- fragment wrote is refused, and the refusal names the working one:
+--
+--   return Completion { id: k, len: n };
+--     [P037] Gabbro has no braced record literal
+--            = instead of `P { a: 1, b: 2 }` one writes `P(a: 1, b: 2)`
+--            = the field list of a declaration IS its constructor
+--
+--   return Completion(id: k, len: n);     0 errors, 0 hints
+--   gabbro emit                           rc=0, and the C is
+--                                         `return (Completion){ .id = k, .len = n };`
+--   return Completion(k, n);              [M107] its constructor names its fields
+--
+-- WHERE IT STOPS IS THE THIRD TOOL, AND THAT IS THE ROW:
+--
+--   gabbro lean-g messung/schreibprobe/S18-verbund-als-wert.gab
+--   [LG002] the result of fertig is the record Completion, and a record has NO
+--   `Ty`: `Typen.lean` §1 is `int`, `bool`, `opt`, `sum`, `grund`, `never`,
+--   `fl`, `fnptr`, `ptr` -- there is no product. A record travels as a CARRIER
+--   (a `Tab` with `count 1`, reached through a pointer, `Syntax.lean` §1/§9),
+--   and that is built; it does NOT travel as a value, so a result, a parameter
+--   or a `let` of record type has no form at all. Passing a
+--   `ptr<normal, r> Completion` has one
+--
+-- So the program is writable, compiles, and is OUTSIDE the goal theorem. That
+-- is a different thing from "cannot be written", and it is the thing
+-- `OFFEN.md` O15 and O16 priced on 2026-09-15 and REFUSED: the `Ty`
+-- constructor gains ZERO of 113 corpus programs, and the C side of an
+-- aggregate value (O16) is owed by a form the specification already HAS
+-- (`tagged type` constructors, `beispiele/120`).
+--
+-- «B7»'s other two halves: an array literal exists as a `const` initialiser
+-- (`constwert = constexpr | arraylit`, lane 111, `beispiele/123`), and a
+-- `tagged type` value has a constructor since lane 167 (O8, `beispiele/120`).
+
+module schreibprobe::verbund_wert {
+
+type Completion = { id : u32, len : u32, };
+
+impl fn fertig(k : u32, n : u32) -> Completion
+    effects { pure }
+    costs   <= 8 ops
+{
+    return Completion(id: k, len: n);
+}
+
+}

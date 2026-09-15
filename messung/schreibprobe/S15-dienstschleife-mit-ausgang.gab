@@ -1,0 +1,61 @@
+-- S15 -- F5'S LETHAL FINDING «B11», RE-MEASURED: THE SERVICE LOOP WITH AN EXIT.
+--
+-- `FRAGMENTE.md` F5 (userspace service loop) is the second of the two
+-- fragments that "does NOT fit", and «B11» is the whole reason:
+--
+--   > `forever` has no exit; `leave`/`break`/`continue` do not exist. The D0
+--   > lesson ("a nameless exit from the server loop cost ten days") is not
+--   > expressible in today's grammar, because there is no exit at all.
+--
+-- **CLOSED.** `forever` takes an optional LABEL and `leave <label>;` ends it;
+-- `next <label>;` ends the pass. Both are in the vocabulary and both parse.
+-- This file is F5's shape: a service loop that runs forever, answers requests,
+-- and leaves BY NAME when the stop flag is set -- 0 errors, C written, and the
+-- emitted C carries `goto` labels for the named exit.
+--
+-- The D0 lesson is expressible: the exit has a name (`dienst`), it is the only
+-- one, and `S001` refuses any `leave` that does not name a loop in scope --
+-- *"there is no unnamed `break`/`continue` -- with nested loops the target
+-- would be convention"*.
+--
+-- WHAT «B11» COST ELSEWHERE IS `S001` ONE CONSTRUCT OVER: a `traverse` takes
+-- NO label, so the same exit cannot be written over a table walk. See
+-- `S13-erster-treffer.gab`.
+--
+-- AND THE STOP FLAG IS A `u32` AND NOT A `bool`, WHICH IS NOT A CHOICE.
+-- `static mut anhalten : bool = false;` passes `gabbro pruefe` with 0 errors
+-- and `gabbro emit` refuses it: `[C001] no lowering: `static` with a
+-- non-constant initialiser`. See `S16-bool-statik.gab`.
+
+module schreibprobe::dienstschleife {
+
+static mut anhalten : u32 = 0;
+static mut bedient  : u32  = 0;
+
+extern fn wachhund_schlug_an() -> never effects { diverges };
+extern fn sonde_anhalten_wird_gesetzt() -> bool effects { pure } costs <= 1 ops;
+extern fn eine_anfrage_bedienen() effects { writes bedient } costs <= 64 ops;
+
+impl fn dienen()
+    effects { reads anhalten, writes bedient }
+{
+    forever dienst
+        per_pass bounded 4096 ops
+        on_exceeded wachhund_schlug_an
+        effects  { reads anhalten, writes bedient }
+        progress anhalten_wird_gesetzt
+    {
+        if anhalten == 1 {
+            -- The named exit. F5's `leave Stopped;` -- one word away from what
+            -- the fragment wrote, and it is a word of the language.
+            leave dienst;
+        }
+        eine_anfrage_bedienen();
+    }
+}
+
+assume anhalten_wird_gesetzt
+    "Something outside this loop eventually sets `anhalten`; without it the loop runs until the watchdog."
+    falsifier sonde_anhalten_wird_gesetzt;
+
+}

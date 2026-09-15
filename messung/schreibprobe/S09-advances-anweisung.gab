@@ -1,0 +1,39 @@
+-- S09 -- `advances a -> b;` AS A STATEMENT («SG-14»).
+--
+-- `SYNTAX.md`:847:
+--
+--   advstmt = "advances" ident "->" ident ";" ;                   (* NEW «SG-14» *)
+--   (* The step on a phase mark, as a statement in the body that `advances` at
+--      the head promises. `O004`/`O006` (the body composes to its promise, every
+--      branch reaches the same stage) become the shape: Λ after the statement
+--      carries the mark at the next stage, and `return` compares Λ with the head. *)
+--
+-- and §8's attribute table gives the position its resource rule:
+--
+--   Λ after `advances a -> b;` = Λ − marke(m, a) + marke(m, b)
+--
+-- The SIGNATURE clause `advances roh -> mmu` parses (`parse.rs:3011`). The
+-- STATEMENT does not: the dispatch at `parse.rs:3467` has no `Kw::Advances`
+-- arm, so the line falls through to `zuweisung_oder_ruf` and comes back as
+-- `P017`. A phase mark can be PROMISED to move and cannot be MOVED.
+--
+-- Caprock area: F7 (loader/bringup), whose whole point is that `BootPhase` is
+-- a value that advances through the mode ladder; and F4's `QueueSetup`.
+
+module schreibprobe::advances_stmt {
+
+linear ghost type Bootphase order { roh, mmu, bereit };
+
+extern fn mmu_einschalten() effects { writes cr0 } costs <= 4 ops;
+
+impl fn stufe_eins(m : Bootphase)
+    advances roh -> mmu
+    effects { writes cr0 }
+    costs   <= 64 ops
+{
+    mmu_einschalten();
+    -- THE LINE THAT DOES NOT PARSE.
+    advances roh -> mmu;
+}
+
+}

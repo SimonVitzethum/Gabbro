@@ -1,0 +1,53 @@
+-- S20 -- «B15»: A QUEUE THAT IS WRITTEN ONCE.
+--
+-- `FRAGMENTE.md` «B15»: *"No type application: `Outcome(T,E)`, `Queue(T,N)`
+-- unwritable; `variants` takes exactly one `typeexpr` per variant, multi-field
+-- payloads need helper structs."* Cited at F1 and F3. F3 wrote its ring buffer
+-- MONOMORPHISED for that reason.
+--
+-- This is the one that decides whether a standard library can exist: `TODO.md`
+-- §0 defers the library on the grounds that *"the language mechanism exists
+-- (`library fn` with `payload`, `@lib#fn(...)` calls) -- what does not exist is
+-- content: no memory copy, no ring buffer, no queue, no strings"*. A ring
+-- buffer without type application is one ring buffer per element type.
+--
+-- MEASURED, AND THE RESULT IS WORSE THAN «B15» SAYS.
+--
+-- (1) `type Queue(T) = { kopf : u32, ende : u32, };`  **0 errors, emit rc=0.**
+--     The parenthesised list PARSES: `typedecl = … "type" ident
+--     [ "(" typelist ")" ] …` (`SYNTAX.md`:333). It is there for
+--     `linear ghost type Held(Lock)` -- a TYPE LIST on a ghost mark, not a
+--     type PARAMETER -- and on an ordinary `type` nothing reads it.
+--     Differential, `gabbro emit` of `type Queue(T) = …` against
+--     `type Queue = …`: **C BYTE-IDENTICAL, obligation register unchanged.**
+--     A clause that moves neither the artefact nor the register is the
+--     `UNCOVERED` cell of `instrumente/miss-grammatikdeckung.py`, and this one
+--     looks exactly like the feature it is not.
+--
+-- (2) Using the parameter is where it stops, and the refusal is at the
+--     EMITTER, not at the checker:
+--
+--       type Queue(T) = { kopf : u32, w : T, };
+--       gabbro pruefe : 0 errors, 0 hints
+--       gabbro emit   : [C001] ...:31: no lowering: field type
+--
+-- (3) The other two spellings do not parse at all:
+--
+--       type  Queue<T> = { … };        P001  `;` expected, `<` found
+--       table Queue(T) count NQ { … }  P001  `{` expected, `(` found
+--
+-- So: a writer can declare `Queue(T)`, be told nothing, and find out at the
+-- emitter that the parameter was never a parameter.
+--
+-- The `variants` half of «B15» moved: a `tagged type` has a constructor since
+-- lane 167 (`OFFEN.md` O8), and `beispiele/120` builds one.
+--
+-- The file below carries shape (2).
+
+module schreibprobe::typanwendung {
+
+const NQ : u32 = 16;
+
+type Queue(T) = { kopf : u32, ende : u32, w : T, };
+
+}

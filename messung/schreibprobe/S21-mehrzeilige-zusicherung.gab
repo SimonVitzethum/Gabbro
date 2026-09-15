@@ -1,0 +1,35 @@
+-- S21 -- «B22»: THE TEXT OF AN ASSUMPTION IS ONE LINE LONG.
+--
+-- `FRAGMENTE.md` «B22»: *"Strings are single-line (`char` excludes `newline`).
+-- All three `claim` texts and two `assume` texts are multi-line."* Cited at F2
+-- and F6.
+--
+-- STILL OPEN, measured:
+--
+--   assume a "erste Zeile
+--   zweite Zeile" falsifier p;
+--     [L001] string literal with no closing quote
+--
+-- and there is no concatenation and no escape for a newline in the grammar
+-- (`string`/`char`, `SYNTAX.md`:95). What a writer does instead is what this
+-- file does and what `S04` did: put the whole sentence on one very long line.
+-- The 60-odd assumption texts in the tree are all one line, some of them over
+-- 200 characters, and `pruefe-englisch.py`/`-zeilen` read them as one.
+--
+-- WHY IT IS NOT COSMETIC. An assumption's text is the ONE place a reader
+-- learns what is being trusted; `UNFALSIFIZIERBAR.md` is a whole document
+-- about those sentences. A carrier that forces them onto one line makes the
+-- long ones unreadable in a diff and invites the short ones.
+--
+-- The file below is accepted -- the refused shape is in the comment above,
+-- because a file that does not lex says nothing else either.
+
+module schreibprobe::zusicherungstext {
+
+extern fn sonde_dma_kohaerent() -> bool effects { pure } costs <= 1 ops;
+
+assume dma_ist_kohaerent
+    "The device's DMA writes are coherent with the CPU's caches on this platform, so a descriptor the device wrote is visible to a plain load after the completion interrupt; where it is not, an explicit invalidate stands between them, and this program does not contain one -- that is the assumption, and the probe beside it reads the descriptor twice and compares."
+    falsifier sonde_dma_kohaerent;
+
+}

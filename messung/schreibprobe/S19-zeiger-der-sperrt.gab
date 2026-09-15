@@ -1,0 +1,51 @@
+-- S19 -- F3'S `&mut dyn SchedOps`: A FUNCTION POINTER THAT TAKES A LOCK.
+--
+-- `FRAGMENTE.md` «B8»/«B9»: *"No call through a `place`"* and *"`fnptr`
+-- carries no contract -- the substitute for `&mut dyn SchedOps` loses exactly
+-- what it was there for"*. **Both CLOSED on 2026-08-21**, and `beispiele/49`
+-- is the four-part proof: the producer `&f`, the call `t->senden(b)`, the
+-- lowering `bool (*bereit)(void);`, and the contract at the `fn(…)` type.
+--
+-- THE RESIDUE IS THE ONE F3 NEEDS. `beispiele/49`'s own header says it:
+--
+--   > A `fn(…)` contract may name `reads`, `writes`, `allocs`, `pure` and
+--   > `diverges` -- and NOT `locks`, `masks`, `consumes` or `publishes`
+--   > (`N036`).
+--
+-- A scheduler operation vector is exactly a table of routines that TAKE THE
+-- SCHEDULER LOCK. `SCHEDS` is a lock in every Caprock fragment and in
+-- `beispiele/05`. So the indirection exists and the thing to be indirected
+-- does not fit through it: a `Treiber` whose `senden` takes a lock has no
+-- type.
+--
+-- The file below writes it. Four shapes tried, all four refused -- see the
+-- report; the one that stands here is the plain `locks L` at the type.
+--
+-- WHAT IS LEFT: the lock is taken OUTSIDE the indirect call, by the caller,
+-- and the callee's `requires Held(L)` says so -- which is writable and which
+-- moves the discipline from the vector to every one of its call sites.
+
+module schreibprobe::zeiger_sperrt {
+
+const NSLOTS : u32 = 4;
+type Stand = u32 in 0 .. 100;
+
+table lauf count NSLOTS { slot { stand : Stand, } }
+
+lock SCHEDS protects { lauf } rank 0 held <= 200 ops;
+
+type SchedOps = {
+    waehle : fn() -> u32 effects { reads lauf.slots, locks SCHEDS } costs <= 200 ops,
+};
+
+impl fn waehle_hart() -> u32
+    requires Held(SCHEDS)
+    effects  { reads lauf.slots, locks SCHEDS }
+    costs    <= 200 ops
+{
+    return lauf.slots[0].stand;
+}
+
+static OPS : SchedOps = SchedOps(waehle: &waehle_hart);
+
+}

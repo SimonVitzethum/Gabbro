@@ -1,0 +1,54 @@
+-- S03 -- THE SAME LOCK BODIES, IN A UNIT OF THEIR OWN, UNDER THE EXPORTED NAME.
+--
+-- S02 shows that `impl fn L_nimm()` cannot stand in a unit that also declares
+-- `lock L` (`N042`: the emitter forms `L_nimm` twice). This probe asks the
+-- follow-up: put the bodies in their OWN unit, so the lock declaration is not
+-- beside them, and make the definitions non-static with `pub` so a second
+-- translation unit can link against them.
+--
+-- The C that `laufzeit/start.c` hand-writes is exactly
+--
+--     void L_nimm(void) { pthread_mutex_lock(&sperre_L); }
+--     void L_gib (void) { pthread_mutex_unlock(&sperre_L); }
+--
+-- and this file is the Gabbro whose emitted C has the same two symbols.
+
+module schreibprobe::sperre_einheit {
+
+pub atomic NEXT : u32 relaxed;
+pub atomic NOW  : u32 acquire;
+
+pub impl fn folge(x : u32) -> u32
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x +% 1;
+}
+
+extern fn warte_aufgegeben() -> never effects { diverges };
+
+pub impl fn L_nimm()
+    effects { reads NEXT, writes NEXT, reads NOW }
+    costs   <= 4294967299 ops
+{
+    let my : u32 = NEXT exchange update(t)
+        bounded 64 ops
+        on_exceeded warte_aufgegeben
+    { return folge(t); } publishes nothing;
+    retry spin until NOW == my
+        bounded 4294967295 ops
+        on_exceeded warte_aufgegeben
+        effects { reads NOW }
+    {
+    }
+}
+
+pub impl fn L_gib()
+    effects { reads NOW, writes NOW }
+    costs   <= 64 ops
+{
+    let n : u32 = NOW;
+    NOW = folge(n) publishes nothing;
+}
+
+}
