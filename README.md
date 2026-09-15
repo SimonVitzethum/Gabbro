@@ -13,6 +13,21 @@ The point is not to have another language. The point is to write an operating sy
 > line: generated C files and binaries carry a notice saying they came out of Gabbro. Details in
 > [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
 
+> **How this repository is written — AI agents, and where the human stands.**
+> **Implementation, checking and coordination are done by AI agents**: one orchestrating
+> Claude Opus 5 session, Opus subagents for the hard single pieces, and parallel contributor
+> lanes on a build server. **The idea, the rough planning, the priorities and the oversight rest
+> with one human** — the repository owner decides what the goal is, what counts as reached, what
+> is refused, and what gets merged. Every commit names its model and links its session
+> (`Co-Authored-By`), so that division is readable per change and not only in this paragraph.
+>
+> **What keeps this honest is a working rule, not a promise: nothing counts as done because an
+> agent said so.** Every number a lane reports is re-measured by the session that merges it;
+> guardians are run in both directions (they must go red on a planted defect and green again when
+> it is removed); a claim bigger than its proof gets the work sent back. Several entries in
+> [`dokumente/OFFEN.md`](dokumente/OFFEN.md) exist because a measurement refused an extension that
+> looked good — and §0 below is that same check, in your hands rather than ours.
+
 ---
 
 ## 0. Check the central claim yourself — two commands, five minutes
