@@ -202,6 +202,18 @@ def sonde(ns, exp, starts):
     return ("\n".join(zeilen) + "\n").format(**env)
 
 
+def umgebung():
+    """`lake` lives in `~/.elan/bin` and is not on a non-interactive PATH --
+    the same repair `zaehle-kette.py` carries since 2026-09-15."""
+    env = dict(os.environ)
+    env["LC_ALL"] = "C"
+    zusatz = [os.path.expanduser("~/.elan/bin"), os.path.expanduser("~/.cargo/bin")]
+    pfad = env.get("PATH", "")
+    env["PATH"] = os.pathsep.join([d for d in zusatz if os.path.isdir(d)] +
+                                  ([pfad] if pfad else []))
+    return env
+
+
 def lean_lauf(sondentext, exporttext, frist):
     """Run one probe through `./lean-probe`; return (ok, failing_comps, raw).
 
@@ -220,16 +232,36 @@ def lean_lauf(sondentext, exporttext, frist):
         datei = os.path.join(tmp, "sonde.lean")
         with open(datei, "w") as f:
             f.write(text)
+        # **`./lean-probe` exists only inside a LANE CLONE** (`neu-agent3` writes
+        # it). In master it is absent, and the old code then found neither an
+        # error line nor the success line and returned "Lean refuses, component
+        # unknown" for EVERY program -- 16 findings with an empty component on
+        # 2026-09-15, including `beispiele/104`, whose checker Bool is decided
+        # `true` in `GenOblig104.lean`. *A measurement that cannot tell "refused"
+        # from "never ran" is the failure class this tree books again and again.*
+        # So: use the wrapper where it exists, `lake env lean` otherwise, and if
+        # NEITHER can produce a verdict, say NOT MEASURED instead of refusing.
         probe = os.path.join(W, "lean-probe")
+        if os.path.exists(probe):
+            ruf, cwd = ["bash", probe, datei], W
+        else:
+            ruf, cwd = ["lake", "env", "lean", datei], os.path.join(W, "grammatik")
         try:
-            p = subprocess.run(["bash", probe, datei],
-                               capture_output=True, text=True, timeout=frist,
-                               cwd=W)
+            p = subprocess.run(ruf, capture_output=True, text=True, timeout=frist,
+                               cwd=cwd, env=umgebung())
         except subprocess.TimeoutExpired:
-            return None, [], "FRIST: lean-probe exceeded %ss" % frist
+            return None, [], "FRIST: the Lean run exceeded %ss" % frist
+        except OSError as e:
+            return None, [], "NICHT GEMESSEN: %s could not be launched (%s)" % (ruf[0], e)
         fehler = [l for l in (p.stdout + p.stderr).splitlines()
                   if re.search(r"\.lean:\d+:\d+: error", l)]
-        if not fehler and "== lean exit code: 0" in p.stdout:
+        # A verdict needs EVIDENCE: either the wrapper's exit line, or a real
+        # process exit code from `lake env lean`. Anything else is not a verdict.
+        wrapper = "== lean exit code: 0" in p.stdout
+        direkt = (os.path.basename(ruf[0]) == "lake")
+        if not fehler and not wrapper and not direkt:
+            return None, [], "NICHT GEMESSEN: no verdict line\n" + p.stdout + p.stderr
+        if not fehler and (wrapper or (direkt and p.returncode == 0)):
             return True, [], p.stdout
         # Map each error line back to its COMP marker.
         comp_zeilen = {}
@@ -260,6 +292,7 @@ def main():
 
     dateien = korpus_dateien()
     zeilen, befunde, partial, skip = [], [], [], []
+    nicht_gemessen = []
     for datei in dateien:
         rel = os.path.relpath(datei, W)
         quelle = open(datei, encoding="utf-8").read()
@@ -284,8 +317,11 @@ def main():
         ok, gefallen, raw = lean_lauf(sonde(parsed["ns"], parsed, starts),
                                      export, args.frist)
         if ok is None:
-            print("ABBRUCH: %s: %s" % (rel, raw))
-            return 2
+            # **An abort on the first unmeasurable file hides the rest.** Book it,
+            # keep going, and let the run end RED with every number it does have
+            # (the `zaehle-kette.py` repair of 2026-09-15, same class).
+            nicht_gemessen.append((rel, raw.splitlines()[0] if raw else "(no reason)"))
+            continue
         if is_partial:
             partial.append(rel)
             status = "PARTIAL"
@@ -303,8 +339,8 @@ def main():
     print("|---|---|---|---|")
     for rel, r, l, s in zeilen:
         print("| %s | %s | %s | %s |" % (rel, r, l, s))
-    print("compared=%d skip=%d partial=%d findings=%d"
-          % (len(zeilen), len(skip), len(partial), len(befunde)))
+    print("compared=%d skip=%d partial=%d findings=%d not-measured=%d"
+          % (len(zeilen), len(skip), len(partial), len(befunde), len(nicht_gemessen)))
     for rel, grund in skip:
         print("skip: %s (%s)" % (rel, grund))
     for rel in partial:
@@ -312,6 +348,12 @@ def main():
     for rel, rust_ok, gefallen in befunde:
         print("FINDING: %s rust=%s lean-refuses@%s -- report it, never paper it over"
               % (rel, "accept" if rust_ok else "refuse", ",".join(gefallen)))
+    for rel, grund in nicht_gemessen:
+        print("BEFUND: %s was NOT measured -- %s" % (rel, grund))
+    if nicht_gemessen:
+        print("== RED: %d program(s) could not be measured -- a run that cannot tell "
+              "'refused' from 'never ran' measures nothing about them ==" % len(nicht_gemessen))
+        return 2
     return 1 if befunde else 0
 
 
