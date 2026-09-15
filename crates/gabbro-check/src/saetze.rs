@@ -2314,6 +2314,32 @@ pub const M1: &[Satz] = &[
                      messung/URTEIL-MUSE-2026-09-15d.md §2 Table B",
     },
     Satz {
+        name: "m1.signaturgenaue_antwort",
+        kennungen: &["N316"],
+        aussage: "An axiom call or binding whose declared `fn(...)` answer no runtime \
+                  function of the unit has EXACTLY is refused where it stands (`N316`): \
+                  the same machine words in different ranges are a different signature, \
+                  and a `fnptr` value IS a function of exactly its signature. The \
+                  coarser C-prototype reading (`N312`, `M142`'s for slot storage) stays \
+                  silent there -- the two codes are exclusive by construction.",
+        vorbehalt: "Exactness is params and result through names (`N030`) WITH ranges; \
+                    effects are ghost and never compared (the same C function either \
+                    way). `Unbekannt` on either side matches by fiat (W10) -- unknown \
+                    stays inhabited. The orphan (no representation at all) stays \
+                    `N312`'s alone. Calls in contracts and `spec` bodies are not typed \
+                    by this pass, as for `N310`-`N314`. Float answers are never refused \
+                    anywhere here (no code is reserved for them).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/977 (same words, narrower ranges, N316); the \
+                      range-exact twin and the orphan (still N312 alone) are pinned \
+                      inline (`w1_proben` in crates/gabbro-check/src/m1.rs). \
+                      Old-vs-new sweep over the corpus: no new refusal outside the \
+                      gift (the lane report's fallout table).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`fn_gestalt_genau`, \
+                     `enthaelt_unbekannt`, `pruefe_axiom_ruf`); \
+                     grammatik/Grammatik/EinpassenVoll.lean (`antwortB`, `antwortB_iff`)",
+    },
+    Satz {
         name: "consts.evaluable",
         kennungen: &["K190"],
         aussage: "A `const` initializer, or a const-table element, outside the total, \
@@ -3113,39 +3139,46 @@ pub const WIRKUNGEN: &[Satz] = &[
     },
     Satz {
         name: "wirkungen.rennboden",
-        kennungen: &["N300", "N301", "N302", "N303", "N304"],
+        kennungen: &["N300", "N301", "N302", "N303", "N304", "N315"],
         aussage: "The race component of the goal Bool (`rennB` with `wurzelnB` beside \
                   it): a carrier one declared start's call graph may write is neither \
                   written (`N300`) nor footprint-read (`N301`) by a DIFFERENT start's \
-                  graph unless a `lock … protects` line guards it or it is atomic / a \
-                  publish payload. Declared starts declare no reason channel (`N302`, \
+                  graph unless a `lock … protects` line guards it or it is atomic -- \
+                  a publish payload is shared like any carrier (lane 196, verdict \
+                  P3). Declared starts declare no reason channel (`N302`, \
                   `or R` has no caller behind a thread start) and hold no lock by \
                   signature (`N303`, the strong form of `N240`). One routine on two \
                   threads is admitted only idle -- no lock, no reasons, no writes, no \
-                  footprint (`N304`, `StartZulaessig.einmal`). All five refuse as errors.",
+                  footprint (`N304`, `StartZulaessig.einmal`) -- and never twice \
+                  under one name, idle or not (`N315`, `einzelnB`: `ws.Nodup`). All \
+                  six refuse as errors.",
         vorbehalt: "Starts are the `concurrent` members plus the `entry`/`boot` roots \
                     (the `startexklusiv.rs` pool); with fewer than two every carrier is \
-                    owned and `N300`/`N301`/`N304` stay silent, while `N302`/`N303` judge \
+                    owned and `N300`/`N301`/`N304`/`N315` stay silent, while `N302`/`N303` judge \
                     every start. Graphs, may-write and footprints are the same maps the \
                     `N290`-`N294` legs read (`reachB`, `TraegerSchreibt`, `fussOrte`); \
                     guards are `lock … protects` resolved to carriers (`Bewacht`), held \
                     or not. `rcu … protects`, `masks`/`ein_kern` and non-per-core \
                     accumulators do NOT exempt; `accumulates … per cpu` does (one name, \
-                    N core cells -- no shared carrier). Same-function pairs go to \
-                    `N304`, never to `N300`/`N301` (`w₁ ≠ w₂`); a pair that writes on \
-                    both sides belongs to `N300` alone.",
+                    N core cells -- no shared carrier; the model has no notion the \
+                    Bool could decide instead). Same-function pairs go to \
+                    `N304` (busy) or `N315` (idle), never to `N300`/`N301` (`w₁ ≠ w₂`); \
+                    a pair that writes on both sides belongs to `N300` alone.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/964 (two writers, no reader, N300), 965 \
                       (write-read, N301), 966 (a start with `or R`, N302), 967 (a start \
-                      holding a signature lock, N303); positives as snippet tests \
-                      (own tables, guarded carriers, single start, atomic, payload, \
-                      per-core, twice-started idle). beispiele/108 (declared pair under \
-                      disjoint signature locks) newly refuses with N303 -- the corpus \
-                      file predates the merged `wurzelnB` and contradicts it; the lane \
-                      report books the fallout.",
+                      holding a signature lock, N303), 976 (an idle routine named \
+                      twice, N315); positives as snippet tests \
+                      (own tables, guarded carriers, single start, atomic, \
+                      per-core, twice-started busy). beispiele/108 (reworked lock-free \
+                      by lane 183) is accepted by both sides -- it stands in the \
+                      lane report's agreement table (12/12, zero findings); the \
+                      N303 refusal it once drew is gone with the locks. Lane 196 drops `payload` from the \
+                      positives (verdict P3 -- the exemption is gone, `N300` fires \
+                      beside `W001`); the fallout table stands in the lane report.",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs (`renn`); \
                      grammatik/Grammatik/Zielsatz/Akzeptiert.lean (`rennB`, \
-                     `SchreibGetrennt`, `wurzelnB`, `ruheB`); \
+                     `SchreibGetrennt`, `wurzelnB`, `ruheB`, `einzelnB`); \
                      grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`)",
     },
 ];

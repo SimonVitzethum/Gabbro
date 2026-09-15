@@ -37,10 +37,12 @@
 //! Five more codes, one per leg of the race component (lane 183):
 //!
 //! * `N300` -- a WRITE-WRITE race across two DIFFERENT starts: one start's call graph
-//!   may write an unguarded, non-atomic, non-payload carrier another start's graph
-//!   writes too. This is the gap the footprint legs above cannot see: footprints list
-//!   reads, so two writers with no reader anywhere pass `N290`-`N294` silently.
-//!   Decides the write-write half of `SchreibGetrennt` (`rennB`).
+//!   may write an unguarded, non-atomic carrier another start's graph writes too
+//!   (publish payloads included since lane 196, verdict P3 -- two releases to one
+//!   payload are a C11 race on a non-atomic object). This is the gap the footprint
+//!   legs above cannot see: footprints list reads, so two writers with no reader
+//!   anywhere pass `N290`-`N294` silently. Decides the write-write half of
+//!   `SchreibGetrennt` (`rennB`).
 //! * `N301` -- a WRITE-READ race across two DIFFERENT starts: one start's graph may
 //!   write a carrier the other start's graph carries in a footprint. Fires only where
 //!   `N300` does not (the other graph writes nothing there): the write-write shape
@@ -55,6 +57,10 @@
 //!   starts resolve to one function whose call graph writes a carrier or carries a
 //!   footprint. `StartZulaessig.einmal` admits a twice-started routine only as `Ruhig`
 //!   (no lock, no reasons, empty footprints, no writes -- idle starts write nothing).
+//! * `N315` (lane 196) -- the same routine named twice while idle: `N304` stays
+//!   silent there, but `Akzeptiert` demands `einzelnB` (`ws.Nodup`) with no idle
+//!   exemption -- two entries are two threads, and the race component separates
+//!   DIFFERENT starts only.
 //!
 //! Surface mapping, each with its Lean ground:
 //!
@@ -1084,9 +1090,11 @@ fn payloads(baum: &Programm, atomic: &BTreeSet<String>) -> BTreeSet<String> {
 /// **The race component -- `rennB` with `wurzelnB` beside it (lane 183).**
 ///
 /// `N300`/`N301` decide `SchreibGetrennt` over the declared starts: for every carrier
-/// with no guard lock, neither atomic nor a publish payload, that one start's call
-/// graph may write, no DIFFERENT start's graph may write it (`N300`) or carry it in
-/// a footprint (`N301`). `N302`/`N303` decide `wurzelnB` per start (no reasons, no
+/// with no guard lock that is not atomic, that one start's call graph may write,
+/// no DIFFERENT start's graph may write it (`N300`) or carry it in a footprint
+/// (`N301`). A publish payload is NOT exempt (lane 196, Lean verdict P3: two starts
+/// writing one unguarded payload is a C11 race on a non-atomic object; `H013` has
+/// no payload exemption either). `N302`/`N303` decide `wurzelnB` per start (no reasons, no
 /// signature-held lock); `N304` decides the `einmal` half of `StartZulaessig` for
 /// twice-started routines (idle starts write nothing).
 ///
@@ -1266,11 +1274,48 @@ fn race(
                         absagen,
                     );
                 }
+                // **Lane 196 (`N315`): the declared starts are not distinct.**
+                // `N304` owns the busy shape above; the idle shape stayed
+                // silent -- but `Akzeptiert` demands `einzelnB` (`ws.Nodup`)
+                // with no idle exemption: the runtime runs each declared
+                // start on its own thread, and two entries behind one routine
+                // are two threads, idle or not. One refusal per routine, at
+                // the second entry (like `N304`).
+                if idle && race_filed.insert(("N315", starts[i].funktion.clone())) {
+                    let short = starts[i]
+                        .funktion
+                        .rsplit("::")
+                        .next()
+                        .unwrap_or(&starts[i].funktion);
+                    melde(
+                        "N315",
+                        starts[j].span,
+                        format!(
+                            "thread starts {} and {} run one routine `{short}` -- \
+                             the declared starts are not distinct, and `Akzeptiert` \
+                             admits no duplicate, idle or not",
+                            starts[i].quelle, starts[j].quelle
+                        ),
+                        &[
+                            "the declared starts are pairwise distinct (`einzelnB`: \
+                             `ws.Nodup` -- two threads running one routine escape \
+                             the race component, which separates DIFFERENT starts)",
+                            "name the routine once; an idle routine needs no \
+                             second entry to stay idle",
+                        ],
+                        absagen,
+                    );
+                }
                 continue;
             }
             for c in &world {
-                if guarded(c) || atomic.contains(c) || payload.contains(c) || core.contains(c)
-                {
+                // **Lane 196 (P3): publish payloads are NOT exempt.** Two starts
+                // writing one unguarded payload is a C11 race on a non-atomic
+                // object (`ausgenommenB` has no payload arm since 2026-09-15;
+                // `H013` never had one). Per-core cells stay exempt: one cell
+                // per core is nothing shared, and the model has no notion the
+                // Bool could decide instead.
+                if guarded(c) || atomic.contains(c) || core.contains(c) {
                     continue;
                 }
                 let wi = graph_writes[i].contains(c);
@@ -1280,6 +1325,32 @@ fn race(
                     // writers, no reader anywhere. One refusal per carrier; the
                     // first pair in start order names the witness.
                     if race_filed.insert(("N300", c.clone())) {
+                        // A payload carrier is refused like any other (P3);
+                        // the note names it so the pairing reader is not left
+                        // guessing why the exemption they remember is gone.
+                        let hinweise: &[&str] = if payload.contains(c) {
+                            &[
+                                "a carrier one start's call graph writes is neither \
+                                 written nor read by a different start's graph \
+                                 unless a lock guards it or it is atomic \
+                                 (`SchreibGetrennt`, the `rennB` component)",
+                                "a publish payload is shared like any carrier: two \
+                                 releases to one payload are a C11 race on a \
+                                 non-atomic object (verdict P3 -- the exemption \
+                                 is gone)",
+                                "guard it (`lock … protects`), or give each start its \
+                                 own carrier",
+                            ]
+                        } else {
+                            &[
+                                "a carrier one start's call graph writes is neither \
+                                 written nor read by a different start's graph \
+                                 unless a lock guards it or it is atomic \
+                                 (`SchreibGetrennt`, the `rennB` component)",
+                                "guard it (`lock … protects`), or give each start its \
+                                 own carrier",
+                            ]
+                        };
                         melde(
                             "N300",
                             starts[j].span,
@@ -1289,14 +1360,7 @@ fn race(
                                  footprint rule cannot see this race",
                                 starts[i].quelle, starts[j].quelle
                             ),
-                            &[
-                                "a carrier one start's call graph writes is neither \
-                                 written nor read by a different start's graph \
-                                 unless a lock guards it or it is atomic / a publish \
-                                 payload (`SchreibGetrennt`, the `rennB` component)",
-                                "guard it (`lock … protects`), or give each start its \
-                                 own carrier",
-                            ],
+                            hinweise,
                             absagen,
                         );
                     }
@@ -1319,8 +1383,9 @@ fn race(
                             &[
                                 "a carrier one start's call graph writes is neither \
                                  written nor read by a different start's graph \
-                                 unless a lock guards it or it is atomic / a publish \
-                                 payload (`SchreibGetrennt`, the `rennB` component)",
+                                 unless a lock guards it or it is atomic \
+                                 (`SchreibGetrennt`, the `rennB` component -- a \
+                                 publish payload is shared like any carrier, P3)",
                                 "guard it (`lock … protects`), or keep it out of the \
                                  other start's footprint",
                             ],

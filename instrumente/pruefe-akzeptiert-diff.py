@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+# `pruefe-akzeptiert-diff.py` -- DIFFERENTIAL TEST: the Rust checker computes
+# the whole Lean checker Bool (`Akzeptiert`, `grammatik/Grammatik/Zielsatz/
+# Akzeptiert.lean`, decided exactly by `akzeptiert_iff`).
+#
+# For every corpus program `gabbro lean-g` exports, the script compares:
+# * the Rust verdict -- ACCEPT iff none of the Akzeptiert-rules fires
+#   (`N290`-`N294` footprint, `N300`-`N304` race+starts, `N310`-`N314` answers,
+#   `N315`-`N319` the transfer-2 additions), read from `gabbro pruefe`; and
+# * the Lean Bool -- `Akzeptiert gP gS gFs gLs gCs gWs` on the EXPORTED
+#   program, decided (`by decide`) component by component in a generated
+#   Lean file run through `./lean-probe`.
+#
+# Every disagreement is a FINDING: the script reports it and exits 1 -- it
+# never papers it over. Agreement table at the end.
+#
+# What the comparison covers, and what it does not:
+# * Only exported programs are compared. A file the checker refuses (any
+#   error) or the export refuses (`LG001`-`LG007`) never reaches the Lean
+#   side -- it stands in the SKIP column with its reason, counted, not
+#   hidden. The comparison therefore measures ONE direction: Rust accepts
+#   ==> Lean accepts. The other direction (Rust refuses ==> Lean refuses)
+#   is pinned by the gift probes of each code, not by this script.
+# * Starts (`gWs`) are the `concurrent` members of the unit. `entry`/`boot`
+#   roots count as starts on the Rust side (`startexklusiv.rs`); a file
+#   using them is marked PARTIAL and excluded from the agreement count --
+#   the export drops them ("not a G notion"), so the Lean side cannot see
+#   them. Today no exportable file uses them.
+#
+# Exit codes: 0 every compared program agrees; 1 at least one disagreement
+# (a finding); 2 infrastructure abort (red, never silent).
+#
+# Usage:
+#   ./instrumente/pruefe-akzeptiert-diff.py [--binaer PATH] [--frist SEC]
+#   ./instrumente/pruefe-akzeptiert-diff.py --selbsttest   # two-way speech test
+#
+# Measured cost: ~12 exported programs, one `lean-probe` run each (seconds
+# per file, imports from olean cache).
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+W = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(0, os.path.join(W, "instrumente"))
+
+# The nine components of `Akzeptiert` (Akzeptiert.lean §3), each with the
+# Rust rule that decides it. `None` = decided by construction / vacuous on
+# the export fragment (named in the report, never silently dropped).
+KOMPONENTEN = [
+    # (short, lean-bool-template, rust-codes)
+    ("frag", "programmImFragmentG {P} {fs}",
+     ["LG004"]),  # export refuses untranslatable bodies; N293 the indirect leg
+    ("abg", "abgAlleB {P} {fs}", None),  # closed by construction, both sides
+    ("fuss", "fussWB {P} {S} {fs} {ws}",
+     ["N290", "N291", "N292", "N293", "N294"]),
+    ("stufen", "stufenB {P} {fs}", ["N294"]),
+    ("sperrOrte", "sperrOrteB {S} {ls}", None),  # S.orte/braucht one source
+    ("wurzeln", "wurzelnB {ws}", ["N302", "N303"]),
+    ("einzeln", "einzelnB {ws}", ["N304", "N315"]),
+    ("renn", "rennB {P} {fs} {cs} {ws}", ["N300", "N301"]),
+    ("antworten", "antwortenB {P} {fs}",
+     ["N310", "N311", "N312", "N313", "N314", "N316"]),
+]
+
+# The Rust verdict: ACCEPT iff none of these fires (all are ERROR severity).
+AKZEPTIERT_CODES = frozenset([
+    "N290", "N291", "N292", "N293", "N294",
+    "N300", "N301", "N302", "N303", "N304",
+    "N310", "N311", "N312", "N313", "N314",
+    "N315", "N316", "N317", "N318", "N319",
+])
+
+# Corpus roots walked for exportable programs (the clean half of the
+# 870-file corpus of lane 194; gift files carry expected errors and never
+# export, so they are not walked).
+WURZELN = [
+    ("beispiele", "*.gab", False),
+    ("messung/proben", "*.gab", False),
+    ("messung/fragmente", "*.gab", False),
+    ("messung/tor-proben", "*.gab", False),
+]
+
+
+def binaer(pfad=None):
+    # One register (zaehle-absagen.py): the binary with the staleness latch.
+    # Returns argv (a list); callers append the subcommand.
+    if pfad:
+        return [pfad]
+    import importlib
+    befehl = importlib.import_module("zaehle-absagen").binaer()
+    if befehl is None:
+        print("ABBRUCH: no current gabbro binary (staleness latch)")
+        sys.exit(2)
+    return befehl
+
+
+def korpus_dateien():
+    import glob
+    out = []
+    for rel, muster, rekursiv in WURZELN:
+        d = os.path.join(W, rel)
+        if not os.path.isdir(d):
+            continue
+        out.extend(sorted(glob.glob(os.path.join(d, muster))))
+    return out
+
+
+def kommentarlos(quelle):
+    # Strip `--` line comments so the start regex never reads prose.
+    return "\n".join(
+        l.split("--")[0] if "--" in l else l for l in quelle.splitlines())
+
+
+def startet_aus(quelle):
+    """Declared starts from the source: `concurrent` members (short names).
+
+    Returns (starts, partial): partial is True where the file uses `entry`
+    or `boot` roots, which the export cannot carry.
+    """
+    text = kommentarlos(quelle)
+    starts = []
+    for m in re.finditer(r"concurrent\s*\{([^}]*)\}", text):
+        for teil in m.group(1).split(","):
+            teil = teil.strip()
+            if not teil:
+                continue
+            starts.append(teil.split("::")[-1])
+    partial = bool(re.search(r"(?m)^\s*(entry|boot)\b", text))
+    return starts, partial
+
+
+def exportiere(gabbro, datei):
+    p = subprocess.run(gabbro + ["lean-g", datei],
+                       capture_output=True, text=True, timeout=120)
+    return p.returncode, p.stdout, p.stderr
+
+
+def pruefe_codes(gabbro, datei):
+    p = subprocess.run(gabbro + ["pruefe", datei],
+                       capture_output=True, text=True, timeout=120)
+    codes = set(re.findall(r"(?m)^(error|hint): \[([A-Z0-9]+)\]", p.stdout))
+    fehler = {c for (stufe, c) in codes if stufe == "error"}
+    return fehler, p.stdout + p.stderr
+
+
+def parse_export(text):
+    """Tables, locks, functions and the namespace out of an export."""
+    ns = None
+    for m in re.finditer(r"(?m)^namespace (\w+)\s*$", text):
+        if m.group(1) != "Gabbro":
+            ns = m.group(1)
+    def ctors(variant):
+        m = re.search(
+            r"inductive %s where\n((?:  \| \w+\n)+)" % variant, text)
+        if m:
+            return re.findall(r"\| (\w+)", m.group(1))
+        if re.search(r"abbrev %s := Empty" % variant, text):
+            return []
+        return None
+    tabellen = ctors("GTab")
+    sperren = ctors("GLock")
+    funktionen = ctors("GFn")
+    if ns is None or tabellen is None or sperren is None or funktionen is None:
+        return None
+    return {"ns": ns, "tabellen": tabellen, "sperren": sperren,
+            "funktionen": funktionen}
+
+
+def sonde(ns, exp, starts):
+    """The probe: the export plus one `decide` per component and the whole."""
+    q = "Gabbro.Grammatik.%s" % ns
+    P, S, fs = "%s.gP" % q, "%s.gS" % q, "%s.gFs" % q
+    # Parenthesised throughout: `f [...] : T [...]` would parse the
+    # ascription loose and apply the next argument to the ascribed term.
+    if exp["sperren"]:
+        ls = "([" + ", ".join("%s.GLock.%s" % (q, l) for l in exp["sperren"]) + "])"
+    else:
+        ls = "([] : List %s.gD.Lock)" % q
+    if exp["tabellen"]:
+        cs = ("(([" + ", ".join(".inl %s.GTab.%s" % (q, t)
+                                for t in exp["tabellen"]) + "])"
+              " : List (%s.gD.Tab ⊕ %s.gD.Glob))" % (q, q))
+    else:
+        cs = "([] : List (%s.gD.Tab ⊕ %s.gD.Glob))" % (q, q)
+    if starts:
+        ws = "([" + ", ".join("%s.g_%s" % (q, s) for s in starts) + "])"
+    else:
+        ws = "([] : List %s.gD.Fn)" % q
+    env = {"P": P, "S": S, "fs": fs, "ls": ls, "cs": cs, "ws": ws,
+           "G": "Gabbro.Grammatik"}
+    zeilen = []
+    for kurz, schablone, _ in KOMPONENTEN:
+        zeilen.append("example : ({G}.%s) = true := by decide -- COMP:%s"
+                      % (schablone.format(**env), kurz))
+    zeilen.append(
+        "example : ({G}.Akzeptiert %s %s %s %s %s %s) = true := by decide -- COMP:gesamt"
+        % (P, S, fs, ls, cs, ws))
+    return ("\n".join(zeilen) + "\n").format(**env)
+
+
+def lean_lauf(sondentext, exporttext, frist):
+    """Run one probe through `./lean-probe`; return (ok, failing_comps, raw).
+
+    ok=True means Lean evaluated every check to `true` (exit 0, no errors).
+    """
+    import shutil
+    tmp = tempfile.mkdtemp(prefix="akz-diff-")
+    try:
+        # The export carries its own imports; the Akzeptiert import joins them.
+        imp = [l for l in exporttext.splitlines() if l.startswith("import ")]
+        if not any("Zielsatz/Akzeptiert" in l for l in imp):
+            imp.append("import Grammatik.Zielsatz.Akzeptiert")
+        rest = [l for l in exporttext.splitlines()
+                if not l.startswith("import ")]
+        text = "\n".join(imp) + "\n" + "\n".join(rest) + "\n" + sondentext
+        datei = os.path.join(tmp, "sonde.lean")
+        with open(datei, "w") as f:
+            f.write(text)
+        probe = os.path.join(W, "lean-probe")
+        try:
+            p = subprocess.run(["bash", probe, datei],
+                               capture_output=True, text=True, timeout=frist,
+                               cwd=W)
+        except subprocess.TimeoutExpired:
+            return None, [], "FRIST: lean-probe exceeded %ss" % frist
+        fehler = [l for l in (p.stdout + p.stderr).splitlines()
+                  if re.search(r"\.lean:\d+:\d+: error", l)]
+        if not fehler and "== lean exit code: 0" in p.stdout:
+            return True, [], p.stdout
+        # Map each error line back to its COMP marker.
+        comp_zeilen = {}
+        for i, l in enumerate(text.splitlines(), start=1):
+            m = re.search(r"-- COMP:(\w+)", l)
+            if m:
+                comp_zeilen[i] = m.group(1)
+        gefallen = set()
+        for l in fehler:
+            m = re.search(r"sonde\.lean:(\d+):", l)
+            if m and int(m.group(1)) in comp_zeilen:
+                gefallen.add(comp_zeilen[int(m.group(1))])
+        return False, sorted(gefallen), p.stdout + p.stderr
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--binaer", default=None)
+    ap.add_argument("--frist", type=int, default=600)
+    ap.add_argument("--selbsttest", action="store_true")
+    args = ap.parse_args()
+    gabbro = binaer(args.binaer)
+
+    if args.selbsttest:
+        return selbsttest(gabbro, args.frist)
+
+    dateien = korpus_dateien()
+    zeilen, befunde, partial, skip = [], [], [], []
+    for datei in dateien:
+        rel = os.path.relpath(datei, W)
+        quelle = open(datei, encoding="utf-8").read()
+        rc, export, err = exportiere(gabbro, datei)
+        if rc != 0:
+            grund = "LG" if "[LG" in err else "checker-error"
+            skip.append((rel, grund))
+            continue
+        parsed = parse_export(export)
+        if parsed is None:
+            print("ABBRUCH: export of %s parses not" % rel)
+            return 2
+        starts, is_partial = startet_aus(quelle)
+        # Starts must name exported functions; else the comparison is blind.
+        unbekannt = [s for s in starts
+                     if s not in parsed["funktionen"]]
+        if unbekannt:
+            print("ABBRUCH: %s starts %s not in export" % (rel, unbekannt))
+            return 2
+        fehler, _ = pruefe_codes(gabbro, datei)
+        rust_ok = not (fehler & AKZEPTIERT_CODES)
+        ok, gefallen, raw = lean_lauf(sonde(parsed["ns"], parsed, starts),
+                                     export, args.frist)
+        if ok is None:
+            print("ABBRUCH: %s: %s" % (rel, raw))
+            return 2
+        if is_partial:
+            partial.append(rel)
+            status = "PARTIAL"
+        elif rust_ok == ok:
+            status = "agree"
+        else:
+            status = "FINDING"
+            befunde.append((rel, rust_ok, gefallen))
+        zeilen.append((rel, "rust=%s" % ("accept" if rust_ok else "refuse"),
+                       "lean=%s" % ("accept" if ok else
+                                    ("refuse@" + ",".join(gefallen)
+                                     if gefallen else "refuse")),
+                       status))
+    print("| file | Rust | Lean | verdict |")
+    print("|---|---|---|---|")
+    for rel, r, l, s in zeilen:
+        print("| %s | %s | %s | %s |" % (rel, r, l, s))
+    print("compared=%d skip=%d partial=%d findings=%d"
+          % (len(zeilen), len(skip), len(partial), len(befunde)))
+    for rel, grund in skip:
+        print("skip: %s (%s)" % (rel, grund))
+    for rel in partial:
+        print("partial (entry/boot roots): %s" % rel)
+    for rel, rust_ok, gefallen in befunde:
+        print("FINDING: %s rust=%s lean-refuses@%s -- report it, never paper it over"
+              % (rel, "accept" if rust_ok else "refuse", ",".join(gefallen)))
+    return 1 if befunde else 0
+
+
+def selbsttest(gabbro, frist):
+    """Two-way speech test: 104 must agree (positive); a doubled start must
+    refuse at `einzeln` (negative) -- the error-to-component map is read."""
+    datei = os.path.join(W, "beispiele/104-referenz.gab")
+    rc, export, err = exportiere(gabbro, datei)
+    assert rc == 0, "104 must export: %s" % err
+    parsed = parse_export(export)
+    assert parsed, "104 export parses"
+    ok, gefallen, raw = lean_lauf(sonde(parsed["ns"], parsed, []),
+                                 export, frist)
+    assert ok, "104 must agree: %s" % raw[-2000:]
+    print("selbsttest positiv: 104 agree")
+    # Negative: every function as its own double -- `einzelnB` must fall.
+    fns = parsed["funktionen"]
+    starts = [fns[0], fns[0]] if fns else []
+    ok2, gefallen2, raw2 = lean_lauf(sonde(parsed["ns"], parsed, starts),
+                                    export, frist)
+    assert not ok2 and "einzeln" in gefallen2, \
+        "doubled start must refuse at einzeln: %s / %s" % (gefallen2,
+                                                           raw2[-2000:])
+    print("selbsttest negativ: doubled start refuses at einzeln")
+    print("SELBSTTEST: ok (both directions)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
