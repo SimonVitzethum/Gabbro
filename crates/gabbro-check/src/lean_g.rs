@@ -538,9 +538,12 @@ pub(crate) struct CheckedFn {
     pub(crate) body: Block,
     /// `-> T or R`: the case count of the named `reason`, 0 without one.
     pub(crate) gruende: usize,
-    /// The lock floor: the minimum rank the body takes, or `none`
-    /// (`Signatur.boden`, `StufenOk`).
+    /// The lock floor (`Signatur.boden`, `StufenOk`) -- the value the
+    /// signature carries, computed over the CALL GRAPH by `resolve_floors`.
     boden: Option<i128>,
+    /// The minimum rank this body takes DIRECTLY, or `none` where it takes
+    /// no lock at all. `boden` is derived from this and from the callees'.
+    direct_floor: Option<i128>,
     /// The functions the body may call (for the footprint mirror).
     calls: Vec<String>,
 }
@@ -877,9 +880,10 @@ fn check_fn(
             ));
         }
     }
-    // The lock floor: the minimum rank the body takes, or `none`.
-    let boden = taken.iter().map(|li| model.locks[*li].rank).min();
-    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, gwrites, ensures: d.ensures.clone(), requires, body: body.clone(), gruende, boden, calls: scan.calls })
+    // The minimum rank the body takes DIRECTLY. The signature's floor is
+    // computed from this over the whole call graph (`resolve_floors`).
+    let direct_floor = taken.iter().map(|li| model.locks[*li].rank).min();
+    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, gwrites, ensures: d.ensures.clone(), requires, body: body.clone(), gruende, boden: direct_floor, direct_floor, calls: scan.calls })
 }
 
 /// A `requires` clause as signature-held locks: `Some` where the whole
@@ -1145,6 +1149,73 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
     Ok(LockModel { name: l.name.text.clone(), rank, guards, gguards, invariant: l.invariante.clone() })
 }
 
+/// **The lock floor is a CHOICE, and the exporter used to make the worst one.**
+///
+/// `Signatur.boden` is not a measurement of the body; it is a promise to
+/// callers: *"you may hold, beyond my `requires Held`, any lock of rank below
+/// this"* (`RufPasst.hx`), and the duty it carries is `StufenOk` --
+/// `(P.rumpf f).ueberBoden c = true`, i.e. every `locks L` in the body takes
+/// a lock of rank at least `c`. **A body that takes no lock at all satisfies
+/// `ueberBoden c` for EVERY `c`** (`Satz.lean`: only the `.locks` arm
+/// constrains), so its floor is free -- and the exporter wrote `none`, the
+/// one value that promises callers NOTHING.
+///
+/// That is what refused `beispiele/124` and `beispiele/109`: a caller that
+/// takes a lock (floor `some 0`) calling a lock-free callee (floor `none`)
+/// fails `RufPasst.hb` (`∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c'`),
+/// although nothing inside the callee can undercut anything. **`hb` is a real
+/// rule** -- the caller's own untracked extras (rank below its floor) are held
+/// while the callee runs, and the callee must tolerate them -- and the defect
+/// was the exporter's choice of `none`.
+///
+/// The floor chosen here is the **minimum rank taken anywhere in the function's
+/// reachable call graph**, and `HOCH` (one above every declared rank) where
+/// that set is empty. It is sound and it is the most permissive choice that is:
+///
+/// * `StufenOk`: the floor is at most every rank the body takes directly.
+/// * `hb`: `reach g ⊆ reach f` for every callee `g` of `f`, so
+///   `floor f ≤ floor g` -- never refused for a call inside the unit again.
+/// * `hx`: an extra lock must rank below the floor, i.e. below every rank the
+///   callee (or anything it calls) takes -- which is exactly `H006` carried
+///   across the call boundary.
+///
+/// A unit with no locks keeps `none` throughout: there is no rank to be above,
+/// and `hb`/`hx` are vacuous there.
+fn resolve_floors(checked: &mut [CheckedFn], model: &Model) {
+    if model.locks.is_empty() {
+        return;
+    }
+    let hoch = model.locks.iter().map(|l| l.rank).max().expect("nonempty") + 1;
+    let idx: std::collections::HashMap<&str, usize> =
+        checked.iter().enumerate().map(|(i, f)| (f.name.as_str(), i)).collect();
+    let mut floors = Vec::with_capacity(checked.len());
+    for i in 0..checked.len() {
+        // The reachable set, by worklist: recursion and cycles are a SET
+        // question, not a recursive descent, so they terminate here.
+        let mut seen = vec![false; checked.len()];
+        let mut stack = vec![i];
+        seen[i] = true;
+        let mut floor: Option<i128> = None;
+        while let Some(j) = stack.pop() {
+            if let Some(c) = checked[j].direct_floor {
+                floor = Some(floor.map_or(c, |m: i128| m.min(c)));
+            }
+            for name in &checked[j].calls {
+                if let Some(&k) = idx.get(name.as_str()) {
+                    if !seen[k] {
+                        seen[k] = true;
+                        stack.push(k);
+                    }
+                }
+            }
+        }
+        floors.push(Some(floor.unwrap_or(hoch)));
+    }
+    for (f, c) in checked.iter_mut().zip(floors) {
+        f.boden = c;
+    }
+}
+
 /// Export the checked unit as a Lean file, or refuse it by name.
 pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
     export_ns(source_name, tree, &namespace_of(source_name))
@@ -1163,6 +1234,7 @@ pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<
     for f in &model.fns {
         checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
+    resolve_floors(&mut checked, &model);
     let mut out = Out::default();
     for c in &checked {
         check_contracts(c, &model, &scope, &mut out)?;
@@ -1203,6 +1275,7 @@ pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, 
     for f in &model.fns {
         checked.push(check_fn(f, &model, &scope, &abgeleitet)?);
     }
+    resolve_floors(&mut checked, &model);
     let mut out = Out::default();
     for c in &checked {
         check_contracts(c, &model, &scope, &mut out)?;
@@ -3745,6 +3818,14 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     // field whose range holds no zero, so each `by decide` below closes.
     out.push_str("-- The declared initial memory (`Speicher gD`): every slot at zero,\n");
     out.push_str("-- every global at its DECLARED initialiser (a `static` names one).\n");
+    // **Both halves stand PARENTHESIZED, and that is a measured necessity.**
+    // `⟨fun t => nomatch t, (fun g => nomatch g)⟩` does not parse as two
+    // fields: `nomatch` takes a COMMA-SEPARATED list of discriminants, so the
+    // second half is swallowed and Lean reports "only 1 was provided". Every
+    // table-less export carried that since `gSp0` was introduced (lane 198),
+    // and no run had compiled one -- found 2026-09-15 by compiling every
+    // export with `lake env lean`. *An export that does not typecheck is a
+    // refusal the exporter failed to make.*
     let slots = if model.tables.is_empty() {
         "fun t => nomatch t".to_string()
     } else {
@@ -3772,7 +3853,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }).collect();
         format!("fun {}", arme.join(" "))
     };
-    out.push_str(&format!("def gSp0 : Speicher gD :=\n  ⟨{slots}, ({globs})⟩\n\n"));
+    out.push_str(&format!("def gSp0 : Speicher gD :=\n  ⟨({slots}), ({globs})⟩\n\n"));
     // The program as ONE declaration (lane 198): the code with its
     // contracts (`gP`), the lock invariants (`gS`), the axioms' declared
     // ensures (no axiom exists: `fun _ _ _ => true`, the `axWahr` shape),

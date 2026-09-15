@@ -83,6 +83,40 @@ fn export_108_succeeds() {
     );
 }
 
+/// **124 exports**: a floored caller (`hauptA` takes `L`) calling a lock-free
+/// callee (`setze`, `pruefeA`). Before 2026-09-15 the exporter gave a
+/// lock-free body the floor `none` -- the one value that promises callers
+/// nothing -- and refused the call at `RufPasst.hb`. The floor is now the
+/// minimum rank taken in the reachable call graph, `HOCH` where there is none.
+#[test]
+fn export_124_succeeds() {
+    let text = export_file("124-two-threads-private.gab");
+    assert!(text.contains("def gSig_setze"), "{text}");
+    // `L` has rank 0, so `HOCH` is 1: the lock-free callees carry it, and
+    // `hauptA`, which takes `L`, carries 0.
+    assert!(text.contains("boden := some 1"), "a lock-free body gets HOCH: {text}");
+    assert!(text.contains("boden := some 0"), "a body taking rank 0 gets 0: {text}");
+    assert!(text.contains("theorem gHp_hauptA_in_L_setze"), "{text}");
+}
+
+/// **`gSp0` parenthesises both halves.** `⟨fun t => nomatch t, (fun g => …)⟩`
+/// does NOT parse as two fields -- `nomatch` takes a comma-separated list of
+/// discriminants and swallows the second half. Every table-less export
+/// carried that since `gSp0` was introduced.
+#[test]
+fn sp0_halves_are_parenthesised() {
+    let text = export("ohnetab.gab", &tree(
+        "module test::ohnetab {\n\
+         impl fn f(x : u32) -> u32 effects { pure } costs <= 1 ops { return x; }\n\
+         }\n",
+    ))
+    .expect("a table-less unit must export");
+    assert!(
+        text.contains("⟨(fun t => nomatch t), (fun g => nomatch g)⟩"),
+        "both halves must stand parenthesised: {text}"
+    );
+}
+
 /// The namespace is derived from the file name, so two exports never
 /// declare the same names.
 #[test]
