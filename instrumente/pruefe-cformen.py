@@ -59,6 +59,33 @@ WHAT THE NUMBERS DO NOT SAY
   the premise holds.** `AxCorr` holds per foreign function (the kernel behind the stub);
   `hdev`/`RegLokal` hold per device (the hardware profile). A program whose stub or
   device misbehaves is outside the theorem, not inside a proof.
+
+THE C TYPE DECIDES, NOT THE STATEMENT TEXT (repaired 2026-09-15)
+---------------------------------------------------------------
+Until 2026-09-15 the classifier built its row key from the statement TEXT alone. `return
+c.len;` and `return (Nachricht){ .marke = ... };` were the same row `stmt:return-expr`, and
+`uint32_t c = f(k);` and `Completion c = f(k);` the same row `stmt:bind-call-unit` -- both
+rows in state (i), naming a lemma. **But the certificate cannot carry an aggregate C value
+at all:** `CSpeicher.lean` section 1 has `CTy := int (sgn) (w) | ptr` and section 2 has
+`CVal := int | ptr | undef`, so every `CTy` in a `GRow` is a scalar. The named lemmas
+(`scorr_ret`/`ergCorr_run`, `bsem_bindCall`) are about those scalars. *A guardian that books
+a form under a lemma that does not cover it is worse than one that reports it uncovered.*
+
+The classifier therefore now knows the unit's aggregate types (`typedef struct`/`typedef
+union`; an `enum` typedef is a scalar and is NOT one), the C return type of every function,
+and the aggregate-typed names in every body. **The rule is the DESTINATION of a value:** a
+statement is aggregate-classified when it makes a C value of aggregate type FLOW --
+
+  * into the return slot     -> `stmt:return-aggregate`
+  * into a fresh local       -> `stmt:bind-aggregate` (`stmt:struct-init` keeps the
+                                compound literal, which was already uncovered)
+  * into memory or a variable-> `stmt:store-aggregate`
+  * into a parameter         -> `stmt:call-aggregate-arg`
+
+`(void)x;` on an aggregate is deliberately NOT in the list: it has no destination, the
+certificate emits no row for it, and `cCorr_block` (`BlockCorr.pre`) is about the block, not
+about the value. A POINTER to an aggregate (`&v`, `p->f`) is a scalar `CVal.ptr` and stays
+where it was.
 """
 import argparse
 import collections
@@ -126,6 +153,18 @@ FORMS = {
     # statement forms without a lemma: state (ii) assumptions and state (iii) uncovered
     "stmt:switch-tag":         ([], "R5 proved (gcorr_onTag), not inhabitable"),
     "stmt:decl-union-payload": ([], "`T x = m.last.F;` (onTag payload)"),
+    # AGGREGATE C VALUES: a whole struct/union moved by value. `CTy` is `int | ptr` and
+    # `CVal` is `int | ptr | undef` (CSpeicher.lean 1 and 2), so NO `GRow` can carry one --
+    # not `ret`, not `bindLet`, not `setVar`, not `call`'s destination or its arguments.
+    # These four rows are the same absence at four destinations; see the module docstring.
+    "stmt:return-aggregate":   ([], "`return e;` where the function returns a struct BY VALUE "
+                                "(GRow.ret carries a CTy, and CTy has no aggregate)"),
+    "stmt:bind-aggregate":     ([], "`T x = e;` with `T` a struct/union typedef "
+                                "(GRow.bindLet carries a CTy)"),
+    "stmt:store-aggregate":    ([], "a store whose right-hand side is a whole struct value "
+                                "(GRow.setVar / the memory carry a CVal)"),
+    "stmt:call-aggregate-arg": ([], "a call passing a struct BY VALUE (GRow.call's arguments "
+                                "are CX, evaluated to CVal)"),
     # state (ii): named assumptions (see NAMED_ASSUMPTIONS) -- no C meaning by
     # construction, entering the closing theorem as a premise
     "stmt:reg-store":          ([], "H10 device write: assumption, not lemma (NAMED_ASSUMPTIONS)"),
@@ -195,6 +234,24 @@ KNOWN_UNCOVERED = {
     "stmt:switch-tag": ("2026-09-13", "gcorr_onTag is proved, but ValCorr has no case for "
                         "a tagged union, so no related state has a union variable"),
     "stmt:decl-union-payload": ("2026-09-13", "the payload read of an onTag arm"),
+    # The four aggregate rows. They are NOT new emitter shapes -- the emitter has written
+    # them all along; they are newly VISIBLE, because until today the classifier read the
+    # statement text and not the C type, and booked them under `scorr_ret`/`ergCorr_run`,
+    # `bsem_bindCall`, `scorr_assignSlotParam` and `scorr_axiomCall`. Measured on the day
+    # they were separated: 19 occurrences in 15 programs left state (i) for state (iii),
+    # and 2 more moved from `stmt:bind-call-foreign` into `stmt:bind-aggregate`.
+    # The absence is ONE absence at four destinations, and it is named in `OFFEN.md` O16.
+    "stmt:return-aggregate": ("2026-09-15", "`GRow.ret` carries an `Option (CTy x CX)` and "
+                              "`CTy` is `int | ptr` (CSpeicher.lean 1): a struct returned by "
+                              "value has no row, and no ABI in the model to have one by"),
+    "stmt:bind-aggregate": ("2026-09-15", "`GRow.bindLet x tc ce` carries a `CTy`: a local of "
+                            "struct type is a stack BLOCK of `RecLay` shape with one store "
+                            "per field, not one row"),
+    "stmt:store-aggregate": ("2026-09-15", "the memory of `CSpeicher.lean` maps addresses to "
+                             "`CVal = int | ptr | undef`: a whole struct stored in one "
+                             "statement is n field stores, not one"),
+    "stmt:call-aggregate-arg": ("2026-09-15", "`GRow.call`'s arguments are `CX`, evaluated to "
+                                "`CVal`: a struct passed by value has no argument node"),
     "stmt:for-ever-other": ("2026-09-13", "the CAS loop and the walk (no lemma)"),
     "stmt:for-chain": ("2026-09-13", "the chain walk has no Gabbro constructor"),
     "stmt:cas-loop": ("2026-09-13", "only the CAS step is covered (cas_success/failure)"),
@@ -323,6 +380,23 @@ def strip_comments(src):
     return re.sub(r"//[^\n]*", "", src)
 
 
+# The head of a C function, definition or prototype: the optional storage class, then the
+# return TYPE (group 1), then the name (group 2), then the parameter list (group 3).
+FNHEAD = (r"(?:static\s+|extern\s+|_Noreturn\s+)*([A-Za-z_][A-Za-z0-9_ \*]*?)\b(" + IDENT
+          + r")\s*\(")
+
+
+class Body:
+    """One emitted function body, with what the classifier needs about its C TYPES."""
+
+    def __init__(self, name, channel, retty):
+        self.name = name
+        self.channel = channel    # the out-parameter channel (`_grund` in the parameters)
+        self.retty = retty        # the C return type, as written
+        self.lines = []
+        self.aggnames = set()     # names bound here to a WHOLE struct/union (params, locals)
+
+
 class Unit:
     """What the classifier needs to know about one emitted file."""
 
@@ -334,8 +408,45 @@ class Unit:
         self.floats = set()       # names of `double` parameters and locals (any function)
         self.fmacros = set()      # `#define NAME <float literal>`
         self.enums = set()        # enum constants
-        self.bodies = []          # (function name, has channel, [statements])
+        self.aggregates = set()   # `typedef struct`/`typedef union` names (NOT enum)
+        self.fnret = {}           # function name -> its C return type, as written
+        self.bodies = []          # Body objects
+        self._scan_aggregates()
         self._scan()
+
+    def _scan_aggregates(self):
+        """The unit's AGGREGATE type names: `typedef struct { ... } T;` and the union form.
+
+        A `typedef enum { ... } T;` is NOT one -- an enum is an integer, which `CTy.int`
+        carries; that is the whole reason a tagged union's `marke` field is fine and its
+        `last` field is not. The scan counts braces because the emitter nests a union
+        inside the tagged-union struct, so no single regular expression spans it.
+        """
+        depth, kind = 0, None
+        for ln in self.src.split("\n"):
+            s = ln.strip()
+            if depth == 0:
+                m = re.match(r"^typedef\s+(struct|union|enum)\b", s)
+                if not m:
+                    continue
+                kind = m.group(1)
+                depth = s.count("{") - s.count("}")
+                if depth > 0:
+                    continue
+                # a one-line `typedef struct { ... } T;`
+                mm = re.search(r"\}\s*(" + IDENT + r")\s*;", s)
+                if mm and kind != "enum":
+                    self.aggregates.add(mm.group(1))
+                kind = None
+                continue
+            depth += s.count("{") - s.count("}")
+            if depth > 0:
+                continue
+            depth = 0
+            mm = re.match(r"^\}\s*(" + IDENT + r")\s*;", s)
+            if mm and kind != "enum":
+                self.aggregates.add(mm.group(1))
+            kind = None
 
     def _scan(self):
         for m in re.finditer(r"^#define (" + IDENT + r") (" + FLIT + r")\s*$", self.src, re.M):
@@ -344,9 +455,10 @@ class Unit:
             self.floats.add(m.group(1))
         for m in re.finditer(r"^\s*(" + IDENT + r")\s*(?:=\s*-?\d+)?\s*,\s*$", self.src, re.M):
             self.enums.add(m.group(1))
-        for m in re.finditer(r"^(?:static\s+|extern\s+|_Noreturn\s+)*[A-Za-z_][A-Za-z0-9_ \*]*?\b("
-                             + IDENT + r")\s*\([^;{]*\)\s*(?:__attribute__\S*\s*)*;", self.src, re.M):
-            self.declared.add(m.group(1))
+        for m in re.finditer(r"^" + FNHEAD + r"[^;{]*\)\s*(?:__attribute__\S*\s*)*;",
+                             self.src, re.M):
+            self.declared.add(m.group(2))
+            self.fnret[m.group(2)] = m.group(1).strip()
         for m in re.finditer(r"^static\s+(?:_Atomic\s+)?(?:const\s+)?(?:volatile\s+)?"
                              + IDENT + r"\s+(" + IDENT + r")\s*(?:\[[^\]]*\])?\s*(?:=|;)",
                              self.src, re.M):
@@ -361,15 +473,21 @@ class Unit:
             if not s:
                 continue
             if depth == 0:
-                m = re.match(r"^(?:static\s+|_Noreturn\s+)*[A-Za-z_][A-Za-z0-9_ \*]*?\b(" + IDENT
-                             + r")\s*\((.*)\)\s*(?:__attribute__\S*\s*)*\{$", s)
+                m = re.match(r"^" + FNHEAD + r"(.*)\)\s*(?:__attribute__\S*\s*)*\{$", s)
                 if m and not s.startswith("typedef"):
-                    cur = (m.group(1), "_grund" in m.group(2), [])
-                    for par in m.group(2).split(","):
+                    ret, name, params = m.group(1).strip(), m.group(2), m.group(3)
+                    cur = Body(name, "_grund" in params, ret)
+                    for par in params.split(","):
                         pm = re.match(r"^\s*(?:const\s+)?double\s+(" + IDENT + r")\s*$", par)
                         if pm:
                             self.floats.add(pm.group(1))
-                    self.defined.add(m.group(1))
+                        # a PARAMETER of aggregate type: a struct passed by value
+                        pa = re.match(r"^\s*(?:const\s+)?(" + IDENT + r")\s+(" + IDENT + r")\s*$",
+                                      par)
+                        if pa and pa.group(1) in self.aggregates:
+                            cur.aggnames.add(pa.group(2))
+                    self.defined.add(name)
+                    self.fnret[name] = ret
                     self.bodies.append(cur)
                     depth = 1
                     continue
@@ -381,7 +499,13 @@ class Unit:
                 cur = None
                 continue
             if cur is not None:
-                cur[2].append(s)
+                cur.lines.append(s)
+                # a LOCAL of aggregate type, collected in the same pass so that a use of
+                # the name later in the body knows the value is a whole struct
+                for st in split_statements(s):
+                    md = re.match(r"^(" + IDENT + r") (" + IDENT + r")\s*(?: = .*)?;$", st)
+                    if md and md.group(1) in self.aggregates:
+                        cur.aggnames.add(md.group(2))
 
 
 def split_statements(line):
@@ -401,8 +525,59 @@ def split_statements(line):
     return [s for s in out if s]
 
 
-def classify_stmt(s, unit, channel, prev=None):
-    """The statement form of `s`, or None. `prev` is the form of the statement before."""
+def split_args(text):
+    """Split a call's argument list at top-level commas."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append(text[start:i].strip())
+            start = i + 1
+    rest = text[start:].strip()
+    if rest:
+        out.append(rest)
+    return out
+
+
+def aggregate_value(text, unit, body):
+    """Does this C expression DENOTE a whole struct/union value?
+
+    A field of one (`x.f`, `p->f`), an element of one and a POINTER to one (`&x`) are all
+    scalars in the model's `CVal` and are NOT aggregate values -- only the whole thing is.
+    Three shapes produce one: a name bound to a struct, a compound literal, and a call of a
+    function whose C return type is a struct.
+    """
+    if body is None:
+        return False
+    t = text.strip()
+    if re.fullmatch(IDENT, t):
+        return t in body.aggnames
+    m = re.fullmatch(r"\((" + IDENT + r")\)\{.*\}", t, re.S)
+    if m:
+        return m.group(1) in unit.aggregates
+    m = re.fullmatch(r"(" + IDENT + r")\((.*)\)", t, re.S)
+    if m:
+        return unit.fnret.get(m.group(1)) in unit.aggregates
+    return False
+
+
+def classify_stmt(s, unit, channel, prev=None, body=None):
+    """The statement form of `s`, or None. `prev` is the form of the statement before.
+
+    `body` carries the C types of the enclosing function (return type, aggregate-typed
+    names); without it the classifier falls back to the pre-2026-09-15 text-only rows.
+    """
+    retagg = body is not None and body.retty in unit.aggregates
+
+    def agg(text):
+        return aggregate_value(text, unit, body)
+
+    def agg_args(text):
+        return any(agg(a) for a in split_args(text))
+
     if s in ("{", "}"):
         return "brace"
     if s.startswith("#"):
@@ -454,7 +629,7 @@ def classify_stmt(s, unit, channel, prev=None):
     if re.match(r"^if \(!" + IDENT + r"\(.*&" + IDENT + r", &" + IDENT + r"\)\) \{$", s):
         return "stmt:if-call-else"
     if re.match(r"^if \(.*\) return [^;]*;$", s):
-        return "stmt:if-return"
+        return "stmt:return-aggregate" if retagg else "stmt:if-return"
     if re.match(r"^if \(.*\) (break|continue);$", s):
         return "stmt:cas-loop"
     if re.match(r"^if \(.*\) \{$", s):
@@ -466,7 +641,9 @@ def classify_stmt(s, unit, channel, prev=None):
     if channel and s == "return false;":
         return "stmt:channel-return-false"
     if re.match(r"^return .*;$", s):
-        return "stmt:return-expr"
+        # THE RETURN TYPE decides, not the returned text: a function returning a struct by
+        # value has no `GRow.ret` (`ret` carries a `CTy`, and `CTy` is `int | ptr`).
+        return "stmt:return-aggregate" if retagg else "stmt:return-expr"
     if re.match(r"^goto " + IDENT + r";$", s):
         return "stmt:goto"
     if re.match(r"^" + IDENT + r": ;$", s):
@@ -484,8 +661,10 @@ def classify_stmt(s, unit, channel, prev=None):
         return "stmt:publish"
     if re.match(r"^\(void\)" + IDENT + r";$", s):
         return "stmt:void-expr"
-    m = re.match(r"^\(void\)(" + IDENT + r")\(.*\);$", s)
+    m = re.match(r"^\(void\)(" + IDENT + r")\((.*)\);$", s)
     if m:
+        if agg_args(m.group(2)):
+            return "stmt:call-aggregate-arg"
         return "stmt:call-unit" if m.group(1) in unit.defined else "stmt:call-foreign"
     if re.match(r"^if \(.*\) __builtin_trap\(\);$", s):
         return "stmt:trap-guard"
@@ -495,6 +674,11 @@ def classify_stmt(s, unit, channel, prev=None):
     m = re.match(r"^(" + IDENT + r")\((.*)\);$", s)
     if m:
         f = m.group(1)
+        # AN ARGUMENT'S TYPE decides before the callee does: `GRow.call` evaluates its
+        # arguments to `CVal`, which has no aggregate, so a struct passed by value has no
+        # row whether the callee is in the unit or foreign.
+        if agg_args(m.group(2)):
+            return "stmt:call-aggregate-arg"
         if re.search(r"_(nimm|gib)$", f) or re.search(r"_(lese|schreib)_(start|ende)$", f):
             return "stmt:call-lock"
         return "stmt:call-unit" if f in unit.defined else "stmt:call-foreign"
@@ -504,6 +688,9 @@ def classify_stmt(s, unit, channel, prev=None):
     m = re.match(r"^(" + CTYPE + r"|" + IDENT + r") (" + IDENT + r")( = (.*))?;$", s)
     if m:
         init = m.group(4)
+        # THE DECLARED TYPE decides: `GRow.bindLet x tc ce` carries a `CTy`, so a local of
+        # struct type has no row -- whatever the initialiser looks like.
+        declagg = m.group(1) in unit.aggregates
         if init is None:
             return "stmt:decl-cell"
         if re.match(r"^\(" + IDENT + r"\)\{", init):
@@ -512,10 +699,14 @@ def classify_stmt(s, unit, channel, prev=None):
             return "stmt:awaits"
         if re.match(r"^\(\*\(volatile ", init) or re.match(r"^\(+\*\(volatile ", init):
             return "stmt:reg-load"
+        if declagg:
+            return "stmt:bind-aggregate"
         if ".last." in init:
             return "stmt:decl-union-payload"
         mc = re.match(r"^(" + IDENT + r")\((.*)\)$", init)
         if mc and mc.group(1) not in ("sizeof",):
+            if agg_args(mc.group(2)):
+                return "stmt:call-aggregate-arg"
             return "stmt:bind-call-unit" if mc.group(1) in unit.defined else "stmt:bind-call-foreign"
         return "stmt:decl-init"
     if re.match(r"^" + IDENT + r"(\[[^\]]*\]|\.buf\[)", s) and "=" in s:
@@ -524,6 +715,12 @@ def classify_stmt(s, unit, channel, prev=None):
         return "stmt:store-array"
     if re.match(r"^" + IDENT + r"\.buf\[", s):
         return "stmt:store-array"
+    # THE STORED VALUE'S TYPE decides: a slot field that takes a WHOLE struct is not the
+    # scalar slot store `scorr_assignSlotParam`/`scorr_assignSlotNamed` speaks about --
+    # the memory of `CSpeicher.lean` holds `CVal`, which has no aggregate.
+    m = re.match(r"^" + IDENT + r"(?:->|\.)slots\[[^\]]*\]\.[A-Za-z0-9_.]+ = (.*);$", s)
+    if m and agg(m.group(1)):
+        return "stmt:store-aggregate"
     if re.match(r"^" + IDENT + r"->slots\[[^\]]*\]\.[A-Za-z0-9_.]+ = .*;$", s):
         return "stmt:store-slot-ptr"
     if re.match(r"^" + IDENT + r"\.slots\[[^\]]*\]\.[A-Za-z0-9_.]+ = .*;$", s):
@@ -539,7 +736,12 @@ def classify_stmt(s, unit, channel, prev=None):
     if m:
         if m.group(2).startswith("atomic_load_explicit("):
             return "stmt:awaits"
+        if agg(m.group(2)):
+            return "stmt:store-aggregate"
         return "stmt:assign-global" if m.group(1) in unit.globals else "stmt:assign-local"
+    m = re.match(r"^" + IDENT + r"(?:->|\.)[A-Za-z0-9_.]+ = (.*);$", s)
+    if m and agg(m.group(1)):
+        return "stmt:store-aggregate"
     if re.match(r"^" + IDENT + r"\.[A-Za-z0-9_.]+ = .*;$", s):
         return "stmt:struct-init"
     if re.match(r"^" + IDENT + r"->[A-Za-z0-9_.]+ = .*;$", s):
@@ -606,7 +808,11 @@ def classify_exprs(text, unit, cells, form):
     # calls inside the expression (a statement-level call is its statement form)
     body = text
     if form in ("stmt:call-unit", "stmt:call-foreign", "stmt:call-lock", "stmt:bind-call-unit",
-                "stmt:bind-call-foreign", "stmt:call-indirect", "stmt:publish", "stmt:cas"):
+                "stmt:bind-call-foreign", "stmt:call-indirect", "stmt:publish", "stmt:cas",
+                # the aggregate rows are the same statement-level calls under another row:
+                # without them the call would be counted a second time as `expr:call`, and
+                # the repair would look as if it had found expressions it did not find
+                "stmt:call-aggregate-arg", "stmt:bind-aggregate"):
         # `(void)f(a);` is the same call with its answer discarded (C11 6.3.2.2): the cast
         # is not the argument list. Found 2026-09-15: without this the `(void)` parenthesis
         # was read as the arguments and `f(` itself as a call INSIDE an expression, which
@@ -719,12 +925,12 @@ def main():
         emitted += 1
         src = strip_comments(r.stdout)
         unit = Unit(src)
-        for fname, channel, lines in unit.bodies:
+        for body in unit.bodies:
             cells = set()
             prev = None
-            for ln in lines:
+            for ln in body.lines:
                 for s in split_statements(ln):
-                    form = classify_stmt(s, unit, channel, prev)
+                    form = classify_stmt(s, unit, body.channel, prev, body)
                     prev = form
                     if form is None:
                         unclassified[s] += 1

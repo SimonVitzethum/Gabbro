@@ -698,6 +698,56 @@ returns to (the contract reads), not in a handler's answers, so the premise
 `HandlerUnter Er` cannot be formed for that pair. What the lemma does give that item is the
 depth half of the `Tief` residue (4e(i)).
 
+### 6.10 Sieve (d) was 60 because the guardian could not see a C TYPE -- it is 55 (2026-09-15)
+
+*Opus lane `aggregat`. Files: `instrumente/pruefe-cformen.py`, `instrumente/zaehle-kette.py`.
+Ledger: `dokumente/OFFEN.md` `O16`. Report: `messung/muse/OPUS-BERICHT-AGGREGAT.md`. No Lean
+and no Rust was touched; `#print axioms gabbro_ziel` and `gabbro_ziel` are untouched by
+construction.*
+
+**The finding.** `pruefe-cformen.py` built its row key from the statement TEXT. `return
+c.len;` and `return (Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = x };` were the same row
+`stmt:return-expr` -- state (i), lemma `scorr_ret`/`ergCorr_run`. But `CTy` is `int | ptr` and
+`CVal` is `int | ptr | undef` (`CSpeicher.lean` §1-§2), so **no `GRow` can carry a struct by
+value** and neither lemma is about one. *A guardian that books a form under a lemma that does
+not cover it is worse than one that reports it uncovered.*
+
+**The repair, and what it moved.** The classifier reads the unit's aggregate typedefs, every
+function's C return type and every body's aggregate-typed names, and classifies by the
+DESTINATION of a value: return slot (`stmt:return-aggregate`), fresh local
+(`stmt:bind-aggregate`), memory (`stmt:store-aggregate`), parameter
+(`stmt:call-aggregate-arg`). Measured by running the guardian of `HEAD` and the repaired one
+over the same emitted C, statement by statement:
+
+| | before | after |
+|---|---|---|
+| forms seen | 77 (51 lemma, 4 assumption, **22** uncovered) | 81 (51 lemma, 4 assumption, **26** uncovered) |
+| occurrences | **1905** lemma, 187 assumption, **400** uncovered | **1886** lemma, 187 assumption, **419** uncovered |
+| verdict | GREEN | **RED: 4 new uncovered forms** -- then GREEN with the four dated `2026-09-15` in `KNOWN_UNCOVERED`, which is the guardian's own mechanism for a named absence |
+| sieve (d) | **60** of 113 | **55** of 113 |
+| chain count | 2 | **2 -- unchanged** |
+
+**19 occurrences in 15 programs left state (i) for state (iii)**, and 2 more moved inside
+state (iii). The five programs that lose sieve (d) are `80`, `94`, `95`, `100`, `101`; nine
+more carry an aggregate and were already failing (d) for other reasons.
+
+**The extension was PRICED AND REFUSED, by a sweep and not by the census row.** A probe in
+which the four rows carry a lemma name -- *the obstacle removed* -- was put in place and the
+whole 113-program sweep re-run: **(b) 15, (c) 15, (d) 60, (e) 2**, i.e. sieve (d) returns to
+60 and **nothing else moves**. Of the 15 programs that export, **not one** fails (d) on
+aggregates alone; `120-tagged-construction` fails on the tagged-union READ side besides
+(`switch (m.marke)`, `m.last.F`), uncovered since 2026-09-13 with its own reason. The five
+programs an aggregate C model would repair at (d) are stopped **two sieves earlier**, at (b),
+by `LG001 assume …`/`requires profile has no G form` and by `LG001 function … is not \`impl\``.
+**Carrying aggregates in the C model unblocks ZERO corpus programs**, and the chain count
+could not move either way: sieve (a) passes 2 (`104`, `108`), both aggregate-free.
+
+> **The thing sieve (d) measures got smaller and the thing it measures got truer**, and those
+> are the same event. A number that falls because the instrument started seeing is not a
+> regression; the 60 was the regression, and it stands booked four times in the live ledgers
+> (§6.3 twice, §6.8 once, `SATZKARTE.md` §35 once) and in five lane reports. Those are dated
+> protocol and are NOT rewritten -- **55 is the number from 2026-09-15 on.**
+
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 
 *Added 2026-09-15. Files: `grammatik/Grammatik/CNebenlaeufig.lean` (generic: semantics,
