@@ -1096,3 +1096,295 @@ fn entry_root_travels_to_starts() {
         "entry root travels:\n{text}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// `tagged type` -- `Ty.sum` (2026-09-15)
+//
+// The type declaration used to be `LG001 type X has no G form`, and that
+// stopped TEN corpus programs before the exporter had looked at a single
+// statement. `Ty.sum`, `Expr.fall`, `Stmt.onTag` and `Arms` are all in
+// `Syntax.lean`/`Typen.lean`; what is NOT there -- a payload that is not one
+// integer range, a case list that is empty -- is refused BY NAME below.
+// ---------------------------------------------------------------------------
+
+/// **A `tagged` parameter, its construction and its `match`** (positive
+/// probe): the type is `Ty.sum`, the constructor `Expr.fall` and the match
+/// `Stmt.onTag` with one arm per case in DECLARATION order.
+#[test]
+fn tagged_type_travels_as_sum() {
+    let q = "module test::leang_tag {\n\
+        tagged type N = { Leer, Kurz(u32 in 0 .. 100) };\n\
+        impl fn baue(k : bool, x : u32 in 0 .. 100) -> N effects { pure } costs <= 8 ops {\n\
+        if k { return Kurz(x); }\n\
+        return Leer;\n}\n\
+        impl fn nimm(m : N) -> u32 in 0 .. 100 effects { pure } costs <= 8 ops {\n\
+        match m { Leer => { return 0; } Kurz(v) => { return v; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let text = export("leang_tag", &tree(q)).expect("tagged unit must export");
+    for teil in [
+        "params := [(.sum [none, some (0, 100)])]",
+        "erg := some ((.sum [none, some (0, 100)]))",
+        ".fall [none, some (0, 100)] ⟨1, by decide⟩ (.zahl",
+        ".fall [none, some (0, 100)] ⟨0, by decide⟩ .keine",
+        ".onTag",
+    ] {
+        assert!(text.contains(teil), "tagged export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **A `tagged` slot field and a `tagged` static** (positive probe): the
+/// field type is `Ty.sum`, and `gSp0` starts the slot at case 0 and the
+/// global at the case its `static` names.
+#[test]
+fn tagged_slot_and_static_travel() {
+    let q = "module test::leang_tagm {\n\
+        tagged type N = { Leer, Kurz(u32) };\n\
+        table T count 2 { slot { was : N, } }\n\
+        static ANFANG : N = Kurz(5);\n\
+        impl fn lies(t : ptr<normal, r> T, i : index into T) -> u32\n\
+        effects { reads t.slots } costs <= 8 ops {\n\
+        match t.slots[i].was { Leer => { return 0; } Kurz(v) => { return v; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let text = export("leang_tagm", &tree(q)).expect("tagged carrier unit must export");
+    for teil in [
+        "| .T, .was => ((.sum [none, some (0, 4294967295)]))",
+        "| .T, .was => ⟨⟨0, by decide⟩, ()⟩",
+        "| .ANFANG => ⟨⟨1, by decide⟩, ⟨5, by decide, by decide⟩⟩",
+        ".onTag (Expr.durch",
+    ] {
+        assert!(text.contains(teil), "tagged carrier export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **LG002 -- a payload that is no integer range has no `Nutzlast`** (poison
+/// probe): `Nutzlast` is `Option (Int × Int)`, so a `bool` payload has none.
+#[test]
+fn refuses_tagged_payload_without_range() {
+    let q = "module test::leang_tagb {\n\
+        tagged type N = { Leer, Flag(bool) };\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let w = export("leang_tagb", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG002", "{w}");
+    assert!(w.message.contains("Flag") && w.message.contains("Nutzlast"), "{w}");
+}
+
+/// **A `tagged` type with no case never reaches the exporter** -- the READER
+/// refuses `{ }` with `P035` ("neither a record nor a sum type"), and the
+/// item is dropped before `collect` sees it. The exporter's own LG002 guard
+/// for the empty case list is therefore a SECOND reader of the same rule, and
+/// it is what makes `cases[0]` (the `sp0` value of a `tagged` slot) total.
+/// *Measured, not assumed: this test exists because the guard's poison probe
+/// exported cleanly and the reason was upstream.*
+#[test]
+fn empty_tagged_type_is_refused_by_the_reader() {
+    let q = "module test::leang_tage {\n\
+        tagged type N = { };\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let (_, absagen) = gabbro_syntax::lies("leang_tage", q);
+    assert!(
+        format!("{absagen:?}").contains("P035"),
+        "the reader refuses an empty sum before the exporter sees it: {absagen:?}"
+    );
+}
+
+/// **LG001 -- `linear` and `ghost` still refuse** (poison probe): the
+/// `tagged` arm must not have opened a door for the resource marks, which
+/// are `D.Marke`/`Res.marke` and not a `Ty`.
+#[test]
+fn linear_type_still_refuses_after_tagged() {
+    for q in [
+        "module test::leang_lin { linear ghost type M;\n\
+         impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n",
+        "module test::leang_ord { linear ghost type M order { a, b };\n\
+         impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n",
+    ] {
+        let w = export("leang_lin", &tree(q)).expect_err("must refuse");
+        assert_eq!(w.code, "LG001", "{w}");
+    }
+}
+
+/// **A `match` over an `option` is not a `match` over a tagged value**
+/// (poison probe): `Stmt.onOption` is its form and is not built here, and
+/// the refusal must name a form rather than fall through the tagged arm.
+#[test]
+fn refuses_option_match_by_name() {
+    let q = "module test::leang_opt {\n\
+        table T count 4 { slot { n : option index into T, } }\n\
+        impl fn f(t : ptr<normal, r> T, i : index into T) -> u32\n\
+        effects { reads t.slots } costs <= 8 ops {\n\
+        match t.slots[i].n { None => { return 0; } Some(j) => { return 1; } }\n\
+        return 0;\n}\n\
+        }\n";
+    let w = export("leang_opt", &tree(q)).expect_err("must refuse");
+    assert!(
+        w.message.contains("onOption") || w.code == "LG002",
+        "an option match names its own form: {w}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The record -- a CARRIER (`Tab` with `count 1`), never a value (2026-09-15)
+//
+// `Syntax.lean` §1/§9: "ein `format` und ein Verbund sind Tabellen mit
+// `count 1`". That half is class (i) and is built. A record as a VALUE is
+// class (ii): `Typen.lean` §1 lists every `Ty` there is, and none of them is
+// a product -- so `-> Completion` and `let c = fertig(k, 7)` name no type,
+// and no exporter work makes them one.
+// ---------------------------------------------------------------------------
+
+/// **A record behind a pointer travels** (positive probe): the record is a
+/// table of `count 1`, `p->f` is `Expr.durch` at index 0, `p->f = e` is
+/// `Stmt.assignDurch`, and a bare `writes p` is the table's write right.
+#[test]
+fn record_travels_as_table_of_count_one() {
+    let q = "module test::leang_rec {\n\
+        type Zelle = { wert : u32 in 0 .. 1000, fertig : bool, };\n\
+        impl fn lies(p : ptr<normal, r> Zelle) -> u32 in 0 .. 1000\n\
+        effects { reads p } costs <= 2 ops { return p->wert; }\n\
+        impl fn setze(p : ptr<normal, rw> Zelle, v : u32 in 0 .. 1000)\n\
+        effects { writes p } costs <= 4 ops { p->wert = v; p->fertig = true; }\n\
+        }\n";
+    let text = export("leang_rec", &tree(q)).expect("record carrier must export");
+    for teil in [
+        "| Zelle",
+        "count := fun | .Zelle => 1",
+        "| .Zelle, .wert => ((.int 0 1000)) | .Zelle, .fertig => (.bool)",
+        "Expr.durch",
+        ".assignDurch",
+    ] {
+        assert!(text.contains(teil), "record export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **The footprint mirror must SEE `p->f`** -- and this test exists because
+/// Lean found that it did not. With the record access uncounted, `fuss_holds`
+/// said the old footprint check passes and the export printed
+/// `example : fussOrtGB gP gFs = true := by decide`, which Lean DISPROVED.
+/// A guarded record must therefore print the claim, and an unguarded shared
+/// one must not.
+#[test]
+fn record_access_counts_in_the_footprint_mirror() {
+    let q = "module test::leang_recf {\n\
+        type Zelle = { wert : u32, };\n\
+        impl fn lies(p : ptr<normal, r> Zelle) -> u32\n\
+        effects { reads p } costs <= 2 ops { return p->wert; }\n\
+        impl fn setze(p : ptr<normal, rw> Zelle, v : u32)\n\
+        effects { writes p } costs <= 4 ops { p->wert = v; }\n\
+        }\n";
+    let text = export("leang_recf", &tree(q)).expect("record carrier must export");
+    assert!(
+        !text.contains("example : fussOrtGB gP gFs = true"),
+        "a written, lock-free record is not in the old footprint fragment, and the CLAIM must \
+         not be printed (the header may still name the check and say why):\n{text}"
+    );
+}
+
+/// **LG002 -- a record as a VALUE is class (ii)** (poison probe): the result
+/// type, a parameter and a `let` annotation each name the record, and each
+/// refusal says that `Ty` has no product former.
+#[test]
+fn refuses_record_as_a_value_by_name() {
+    let kopf = "module test::leang_recv {\n\
+        type C = { id : u32, len : u32, };\n";
+    for (extra, wo) in [
+        ("impl fn f(k : u32) -> C effects { pure } costs <= 4 ops { return C(id: k, len: 1); }\n",
+         "the result of f"),
+        ("impl fn g(c : C) -> u32 effects { pure } costs <= 4 ops { return 1; }\n",
+         "a parameter of g"),
+    ] {
+        let w = export("leang_recv", &tree(&format!("{kopf}{extra}}}\n"))).expect_err("must refuse");
+        assert_eq!(w.code, "LG002", "{w}");
+        assert!(w.message.starts_with(wo), "the refusal names the position: {w}");
+        assert!(
+            w.message.contains("no product") && w.message.contains("count 1"),
+            "the refusal names the class-(ii) reason AND the carrier form that does work: {w}"
+        );
+    }
+}
+
+/// **LG002 -- a record field that is no `Ty` is refused BY NAME** (poison
+/// probe): an array field and a function-pointer field are the two shapes
+/// the corpus actually has, and both name the field and the rule.
+#[test]
+fn refuses_record_field_without_ty() {
+    for q in [
+        "module test::leang_recA { const K = 4;\n\
+         type T = { bytes : [u8; K], len : u32, };\n\
+         impl fn f(p : ptr<normal, r> T) -> u32 effects { reads p } costs <= 2 ops \
+         { return p->len; } }\n",
+        "module test::leang_recB {\n\
+         type D = { senden : fn(u8) effects { pure } costs <= 4 ops, };\n\
+         impl fn f(p : ptr<normal, r> D) -> u32 effects { reads p } costs <= 2 ops \
+         { return 1; } }\n",
+    ] {
+        let w = export("leang_rec_f", &tree(q)).expect_err("must refuse");
+        assert_eq!(w.code, "LG002", "{w}");
+        assert!(w.message.contains("of record"), "the refusal names the field and its record: {w}");
+    }
+}
+
+/// **A `->` through a pointer to a real TABLE stays refused** (poison probe):
+/// a table has more than one slot, so the access must name it. The record arm
+/// must not have turned every table pointer into a one-slot read.
+#[test]
+fn refuses_arrow_through_a_table_pointer() {
+    let q = "module test::leang_recT {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        impl fn f(p : ptr<normal, r> T) -> u32 effects { reads p.slots } costs <= 2 ops \
+        { return p->v; } }\n";
+    let w = export("leang_recT", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG003", "{w}");
+    assert!(w.message.contains("no record"), "{w}");
+    assert!(w.message.contains(".slots[i]."), "the refusal names the spelling that works: {w}");
+}
+
+/// **LG001 -- the linear family is refused BY NAME, with its fields**
+/// (poison probe): the type arm was the last catch-all of its kind, and
+/// every shape must now say what the specification would carry it as.
+#[test]
+fn linear_family_names_its_fields() {
+    for (q, wort) in [
+        ("module test::l1 { linear type M;\n\
+          impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n", "D.Marke"),
+        ("module test::l2 { linear ghost type M order { a, b };\n\
+          impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n", "Stmt.advances"),
+    ] {
+        let w = export("l", &tree(q)).expect_err("must refuse");
+        assert_eq!(w.code, "LG001", "{w}");
+        assert!(w.message.contains(wort), "the refusal names the field: {w}");
+        assert!(
+            w.message.contains("RESOURCE"),
+            "and it says WHY a mark is not a `Ty`: {w}"
+        );
+    }
+}
+
+/// **LG002 -- a float alias names `Ty.fl`** (poison probe): the alias arm
+/// used to say only "is not an integer range" over five different shapes.
+#[test]
+fn float_alias_names_its_form() {
+    let q = "module test::lf { type A = f64 in 0.0 .. 1.0;\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; } }\n";
+    let w = export("lf", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG002", "{w}");
+    assert!(w.message.contains("Ty.fl"), "{w}");
+}
+
+/// **The three corpus programs the `tagged` work moved into sieve (b)**
+/// (positive probe, on the files): a construction unit, a file-scope
+/// initialiser and the carrier/parameter unit.
+#[test]
+fn tagged_corpus_programs_export() {
+    for name in [
+        "120-tagged-construction.gab",
+        "121-tagged-static-init.gab",
+        "34-markierter-wert.gab",
+    ] {
+        let text = export_file(name);
+        assert!(text.contains(".sum ["), "{name} must carry a `Ty.sum`:\n{text}");
+    }
+}

@@ -276,6 +276,24 @@ elaboration 89, (a) parser 20.
 > stopping sieve of the 111 open programs: (a) elaboration 91, (a) parser 20.
 > **CHAIN COUNT 2 of 113 — unchanged, and it could not change**: sieve (a) binds, and this
 > lane touched only sieve (b). *An export is not a chain.*
+>
+> **Re-measured again 2026-09-15**, after the `tagged`/record lane
+> (`messung/muse/OPUS-BERICHT-LINEAR.md`): **(a) 2, (b) 15, (c) 15, (d) 60, (e) 2**; first
+> stopping sieve of the 111 open programs: (a) elaboration 91, (a) parser 20.
+> **CHAIN COUNT 2 of 113 — unchanged again, and for the same reason.**
+> The three programs sieve (b) gained are `120-tagged-construction`,
+> `121-tagged-static-init` and `34-markierter-wert`, all through `Ty.sum`.
+>
+> > **And a rule for reading this census at all, measured in that lane.** Its rows are
+> > FIRST refusals, and a first-refusal count is **not** a count of programs a lane would
+> > gain. The two largest class-(i) rows were the `linear` types (10 programs) and the
+> > record types (14). A probe that skipped only those two declarations and re-ran the whole
+> > sweep found that **every one of the 24 stops at a SECOND wall from another group** — a
+> > `walk`, a `backed` table, a device, a foreign body, an `option` field, an `assume`, an
+> > `atomic`, a shared lock hold, the `mmio` address space, an array field. *Closing either
+> > group completely would have moved sieve (b) by ZERO*, and the record group turned out to
+> > be two groups with different classes (carrier: (i), built; value: (ii), `Ty` has no
+> > product former). **Coverage is multiplicative in the sieves AND inside sieve (b).**
 
 **A finding on the way (the census, not the chain).** The emitter now writes 104's call as
 `(void)lies(k, i);` (the quote in `CFormenZeuge.lean` of 2026-09-13 reads `lies(k, i);`).
