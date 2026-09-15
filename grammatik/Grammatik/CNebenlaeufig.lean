@@ -320,6 +320,21 @@ theorem laufC_erreichbar {E : CEinheit} {LP : SperrSem} {K0 : KonfC} {ks : Nat �
   | 0, _ => by rw [hl.1]; exact .start
   | i + 1, hi => .schritt (laufC_erreichbar hl i (by omega)) (hl.2 i (by omega))
 
+/-- A run extended by one step at its end. -/
+theorem laufC_snoc {E : CEinheit} {LP : SperrSem} {K0 : KonfC} {ks : Nat → KonfC}
+    {ts : Nat → Faden} {ls : Nat → Etikett} {n : Nat} (hl : LaufC E LP K0 ks ts ls n)
+    {t : Faden} {ℓ : Etikett} {K' : KonfC} (hs : SchrittC E LP (ks n) t ℓ K') :
+    LaufC E LP K0 (fun i => if i ≤ n then ks i else K') (fun i => if i < n then ts i else t)
+      (fun i => if i < n then ls i else ℓ) (n + 1) := by
+  refine ⟨by simp only [Nat.zero_le, if_true]; exact hl.1, fun i hi => ?_⟩
+  by_cases hin : i < n
+  · simp only [if_pos (Nat.le_of_lt hin), if_pos hin, if_pos (show i + 1 ≤ n by omega)]
+    exact hl.2 i hin
+  · have e : i = n := by omega
+    subst e
+    simp only [Nat.le_refl, if_true, Nat.lt_irrefl, if_false, show ¬ (i + 1 ≤ i) by omega]
+    exact hs
+
 theorem erreichbarC_mono {E : CEinheit} {LP LP' : SperrSem}
     (hLP : ∀ t op h h', LP t op h h' → LP' t op h h') {K0 K : KonfC}
     (h : ErreichbarC E LP K0 K) : ErreichbarC E LP' K0 K := by

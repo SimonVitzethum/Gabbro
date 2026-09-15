@@ -372,7 +372,10 @@ race free by the theorem, and a concrete 20-step SC run: thread 0 takes the lock
 reaches `L_nimm();` and CANNOT step while thread 0 holds it; thread 0 releases, thread 1 takes
 the lock; both return; at the end the lock is free and the C memory shows `konto[0] ==
 konto[1]` and `privA[0] == 7` -- by the theorem, read through the relation -- where `privA[0]`
-was 0 at the start.
+was 0 at the start. **Witness of the race transfer** (`rennfreiC_zeuge_124`): the same run as an
+indexed SC run of 20 steps; its two critical sections (step 10, thread 0's `setze(30);`, and
+step 15, thread 1's `setze(70);`) conflict on `konto_speicher`, and the race freedom proved from
+G orders them through a lock (thread 0's `L_gib();` at step 12, thread 1's `L_nimm();` at 13).
 
 ### 7.6 What is open, each step named
 

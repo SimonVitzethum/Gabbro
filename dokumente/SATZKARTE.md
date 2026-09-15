@@ -2931,7 +2931,9 @@ none for splits and returns; the C blocks run from every related state (`cStore_
 `schlusssatz_124_zeuge`: every premise jointly, race freedom by the theorem, and a 20-step SC
 run in which thread 1 stands at `L_nimm();` and CANNOT step while thread 0 holds the lock, the
 lock then passes from thread 0 to thread 1, both return, and the final C memory shows the
-invariant and `privA[0] == 7` by the theorem (0 at the start). Measured: of the six
+invariant and `privA[0] == 7` by the theorem (0 at the start). `rennfreiC_zeuge_124`: the
+same run indexed (`laufC_snoc`); its two critical sections (steps 10 and 15) conflict on
+`konto`, and the proved race freedom orders them (release at 12, acquire at 13). Measured: of the six
 multi-thread corpus programs only 108 exports (`lean-g`) and it takes no lock; 124's G program
 is written from the source (`Korpus124.lean`), because the hand model `mP` lacks `pruefeA`'s
 read of `privA`. Finding: the source's `setze` contract is too weak for premise (b) (the
@@ -2940,6 +2942,7 @@ release check fails); `kP` keeps `mP`'s stronger `ensures`.
 ### 26.5 Axiom record
 
 `schlusssatz_124`, `schlusssatz_124_bei`, `schlusssatz_124_c`, `schlusssatz_124_zeuge`,
+`rennfreiC_zeuge_124`,
 `sim124`, `schrittA`, `schrittB`, `r124_start`, `gSetze`, `k124_ziel`, `kE_nutzerPflicht`,
 `sim_lauf`, `rennfreiC_aus_sim`, `schluss_b`, `ev_zform_blk`: `propext`, `Classical.choice`,
 `Quot.sound`; `kP_akzeptiert`: `propext`, `Quot.sound`; `c124_direkt`: `propext`;

@@ -1634,6 +1634,70 @@ theorem schlusssatz_124_zeuge :
 
 end Zeuge
 
+section ZeugeRennen
+
+/-- **WITNESS of the race transfer** (`rennfreiC_aus_sim`, rule 13): on the
+    contended run of `schlusssatz_124_zeuge`, taken as an indexed SC run of
+    20 steps, the two critical sections -- step 10, thread 0's `setze(30);`,
+    and step 15, thread 1's `setze(70);` -- CONFLICT (both write
+    `konto_speicher`), and the race freedom PROVED from machine G orders them
+    through a lock; here the order is thread 0's `L_gib();` at step 12 and
+    thread 1's `L_nimm();` at step 13. -/
+theorem rennfreiC_zeuge_124 :
+    ∃ (ks : Nat → KonfC) (ts : Nat → Faden) (ls : Nat → Etikett),
+      LaufC c124 sperrAbstrakt KAB ks ts ls 20 ∧ KonfliktC c124 ls 10 15 (.tab 0) ∧
+      ts 10 ≠ ts 15 ∧ (∃ L, GeordnetC ts ls L 10 15) ∧
+      ls 12 = .sperre (.gib 0) ∧ ls 13 = .sperre (.nimm 0) ∧ ts 12 = 0 ∧ ts 13 = 1 := by
+  have hDRF : DRFSC c124 sperrAbstrakt KAB
+      (fun b => ∃ K, ErreichbarC c124 sperrAbstrakt KAB K ∧ beobC K = b) := fun _ _ hb => hb
+  obtain ⟨-, hRC, -, -⟩ := schlusssatz_124_bei 0 wAB wAB_wurzeln sperrAbstrakt
+    (fun _ _ _ _ h => h) _ hDRF
+  obtain ⟨st1, hx1, hc1, -⟩ := cStore_lauf 2 (CallAt c124.L c124.orc keinXR c124.Pr 1) keinXR
+    KTab.privA 0 (by decide) (.lit 7) 7 ρ0 (fun _ => rfl) (by decide) _ st0 corrW_st0 []
+    ⟨7, by decide, by decide⟩ rfl
+  obtain ⟨st2, hx2, hc2, -⟩ := cStore_lauf 2 (CallAt c124.L c124.orc keinXR c124.Pr 1) keinXR
+    KTab.privA 1 (by decide) (.lit 7) 7 ρ0 (fun _ => rfl) (by decide) _ st1 hc1 []
+    ⟨7, by decide, by decide⟩ rfl
+  obtain ⟨st3, hx3, hc3, -⟩ := cStore_lauf 2 (CallAt c124.L c124.orc keinXR c124.Pr 1) keinXR
+    KTab.privB 0 (by decide) (.lit 5) 5 ρ0 (fun _ => rfl) (by decide) _ st2 hc2 []
+    ⟨5, by decide, by decide⟩ rfl
+  obtain ⟨st4, hx4, hc4⟩ := cSetze_lauf 30 (by decide) _ st3 hc3 ρ0 [] [] ⟨30, by decide, by decide⟩ rfl
+  obtain ⟨st5, hx5, hc5⟩ := cSetze_lauf 70 (by decide) _ st4 hc4 ρ0 [] [] ⟨70, by decide, by decide⟩ rfl
+  have hx6 := cPruefe_lauf _ st5 hc5 ρ0
+  have l0 : LaufC c124 sperrAbstrakt KAB (fun _ => KAB) (fun _ => 0) (fun _ => .still) 0 :=
+    ⟨rfl, fun i hi => absurd hi (Nat.not_lt_zero i)⟩
+  have l1 := laufC_snoc l0 (SchrittC.teile _ 0 cA0 cRestA1 [] ρ0 rfl)
+  have l2 := laufC_snoc l1 (SchrittC.block _ 0 cA0 [cRestA1] ρ0 st1 ρ0 rfl rfl hx1)
+  have l3 := laufC_snoc l2 (SchrittC.teile _ 0 cA1 cRestA2 [] ρ0 rfl)
+  have l4 := laufC_snoc l3 (SchrittC.block _ 0 cA1 [cRestA2] ρ0 st2 ρ0 rfl rfl hx2)
+  have l5 := laufC_snoc l4 (SchrittC.teile _ 0 cNimm cRestA3 [] ρ0 rfl)
+  have l6 := laufC_snoc l5 (SchrittC.sperre _ 0 0 [cRestA3] ρ0 (.nimm 0)
+    (halterSetze (fun _ => none) 0 (some 0)) rfl rfl ⟨rfl, rfl⟩)
+  have l7 := laufC_snoc l6 (SchrittC.teile _ 0 cSetzeA cRestA4 [] ρ0 rfl)
+  have l8 := laufC_snoc l7 (SchrittC.teile _ 1 cB0 cRestB1 [] ρ0 rfl)
+  have l9 := laufC_snoc l8 (SchrittC.block _ 1 cB0 [cRestB1] ρ0 st3 ρ0 rfl rfl hx3)
+  have l10 := laufC_snoc l9 (SchrittC.teile _ 1 cNimm cRestB2 [] ρ0 rfl)
+  have l11 := laufC_snoc l10 (SchrittC.block _ 0 cSetzeA [cRestA4] ρ0 st4 ρ0 rfl rfl hx4)
+  have l12 := laufC_snoc l11 (SchrittC.teile _ 0 cGib cPruefe [] ρ0 rfl)
+  have l13 := laufC_snoc l12 (SchrittC.sperre _ 0 1 [cPruefe] ρ0 (.gib 0)
+    (halterSetze (halterSetze (fun _ => none) 0 (some 0)) 0 none) rfl rfl ⟨rfl, rfl⟩)
+  have l14 := laufC_snoc l13 (SchrittC.sperre _ 1 0 [cRestB2] ρ0 (.nimm 0)
+    (halterSetze (halterSetze (halterSetze (fun _ => none) 0 (some 0)) 0 none) 0 (some 1))
+    rfl rfl ⟨rfl, rfl⟩)
+  have l15 := laufC_snoc l14 (SchrittC.teile _ 1 cSetzeB cGib [] ρ0 rfl)
+  have l16 := laufC_snoc l15 (SchrittC.block _ 1 cSetzeB [cGib] ρ0 st5 ρ0 rfl rfl hx5)
+  have l17 := laufC_snoc l16 (SchrittC.sperre _ 1 1 [] ρ0 (.gib 0)
+    (halterSetze (halterSetze (halterSetze (halterSetze (fun _ => none) 0 (some 0)) 0 none) 0
+      (some 1)) 0 none) rfl rfl ⟨rfl, rfl⟩)
+  have l18 := laufC_snoc l17 (SchrittC.ende _ 1 ρ0 rfl)
+  have l19 := laufC_snoc l18 (SchrittC.block _ 0 cPruefe [] ρ0 _ ρ0 rfl rfl hx6)
+  have l20 := laufC_snoc l19 (SchrittC.ende _ 0 ρ0 rfl)
+  refine ⟨_, _, _, l20, ⟨by decide, by decide, Or.inl (by decide)⟩, by decide,
+    hRC _ _ _ 20 l20 10 15 (.tab 0) (by decide) (by decide) (by decide)
+      ⟨by decide, by decide, Or.inl (by decide)⟩, rfl, rfl, rfl, rfl⟩
+
+end ZeugeRennen
+
 /-
 CUTS: what this file does not do, by name (PLAN §7 lists the open steps).
 - The C unit `c124` is the emitted text transcribed as data by hand; there is
@@ -1675,3 +1739,4 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.K124.c124_ende
 #print axioms Gabbro.Grammatik.K124.schlusssatz_124_c
 #print axioms Gabbro.Grammatik.K124.schlusssatz_124_zeuge
+#print axioms Gabbro.Grammatik.K124.rennfreiC_zeuge_124
