@@ -15,6 +15,54 @@ The point is not to have another language. The point is to write an operating sy
 
 ---
 
+## 0. Check the central claim yourself — two commands, five minutes
+
+**Everything below is a claim. This section is how you stop taking it on trust.** The one
+sentence this project stands on is proved in Lean 4 over a model of the language; the kernel
+will tell you what that proof rests on, in your own build:
+
+```bash
+git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro/grammatik
+lake build Grammatik.Zielsatz.Beweis Grammatik.Zielsatz.Proben Grammatik.Zielsatz.ProbenW1
+lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence named below
+```
+
+**Measured, not estimated** (2026-09-15, 16 cores, from an empty build directory): the build is
+**4 min 33 s** wall clock (260,7 s + 12,3 s; 90 modules) and peaks at **2,3 GB** resident; the check itself takes
+**0,16 s**. `elan`/`lake` come from [leanprover/elan](https://github.com/leanprover/elan) and the
+toolchain (Lean 4.33.1) pins itself from `grammatik/lean-toolchain`. **There is no mathlib and no
+other dependency.**
+
+> **The whole library is a different matter, and you should know it before you start it.**
+> `lake build` (240 modules, `Nachpruefung.lean` checks all of it, including the translation
+> validation of §4) needs **about 25 minutes on 16 cores — and 72 GB of memory**, because two
+> chain files (`Kette104.lean`, `Kette108.lean`) evaluate the whole parse-and-check pipeline of a
+> program by kernel reduction. On a 16 GB machine those two files are killed by the OOM killer,
+> which looks exactly like a failed proof and is not one. It is booked as a defect of ours, with
+> what would fix it, in [`dokumente/OFFEN.md`](dokumente/OFFEN.md) O13 — *a proof only one machine
+> in the world can replay is not a checkable proof.* **The goal theorem above is not affected:
+> it is the cheap path, and that is why it stands first.**
+
+What the second command prints, and what each line is worth:
+
+| Printed line | What it means |
+|---|---|
+| `Zielsatz.gabbro_ziel depends on axioms: [propext, Classical.choice, Quot.sound]` | the goal theorem's proof uses **only Lean's standard three** — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved**, which is exactly why the command is printed rather than described |
+| `…gabbro_ziel_zeuge…` | a two-thread program that actually moves memory satisfies it, so the sentence is not empty for want of an accepted program |
+| `…probeA_widerlegt_gilt…`, `…probeD_…`, `…w1_abgelehnt…` | programs the checker **refuses**. A checker that accepts everything would make the theorem worthless; these say it does not |
+| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | translation validation: source text → model → emitted C, for two programs single-threaded and one concurrent. **These four come from `Nachpruefung.lean`, not from the cheap check** — they need the full build and its 72 GB |
+
+**And here is what those lines do NOT say.** An axiom list proves that a *proof* is valid. It
+says nothing about whether the *statement* is the right one — that is a reading job, and the
+statement is written to be read: [`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean),
+whose header carries the one assumption list and the explicit NOT-CLAIMED list. The honest
+sentence is **"the goal theorem is proved over the model, with a witness and non-degeneracy"**
+— not "Gabbro is verified". The checker in that theorem is the **Lean** checker; the Rust tool
+people actually run is bridged to it by translation validation, which is closed for three
+programs and open for the rest (§6).
+
+---
+
 ## 1. The problem
 
 seL4 is the reference point, and it is an honest one: a verified microkernel, with roughly

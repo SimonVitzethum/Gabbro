@@ -568,3 +568,30 @@ asks the question the model asks.
 | **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. (2) **the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision |
 | **why it must not be closed by strengthening alone** | strengthening the file makes the corpus green and leaves the blind spot in place. *The finding is about the checker; the file is only where it became visible* |
 | **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one |
+
+---
+
+## O13 — Two chain files need 72 GB of memory, so almost nobody can replay them
+
+*Measured 2026-09-15 on `ki-pc-fisch-101` (110 GB, 16 cores), from an empty build directory,
+while writing README §0. Not found by a guardian — found by trying to be a reviewer.*
+
+| Target | Wall clock | Peak resident |
+|---|---|---|
+| `Grammatik.Zielsatz.Beweis` + the two probe files (the goal theorem, 90 modules) | 4 min 33 s | **2,3 GB** |
+| `Grammatik.Kette104` alone | 4 min 40 s | **72 GB** |
+| `Grammatik.Kette108` alone | 6 min 50 s | **72 GB** |
+| the whole library (240 modules) | about 25 min | 72 GB |
+
+**What happens on a normal machine.** The first cold run of the full build died at exactly those
+two files with `error: Lean exited with code 137` — the OOM killer. *That reads like a proof that
+does not go through, and it is not one*; it is the same class as the 3 GB watchdog in CLAUDE.md,
+one machine further out.
+
+| | |
+|---|---|
+| **why they are expensive** | `Kette104`/`Kette108` run the WHOLE pipeline of a program — lex, parse, preprocess, elaborate, lower, and the checker Bool — by kernel reduction (`rfl`/`decide` on closed terms). Every intermediate term of a real source file lives in the kernel's memory at once |
+| **what is NOT the cause** | the built library is 801 MB over 181 modules, so this is not olean loading; the cheap path proves it by peaking at 2,3 GB with the same imports |
+| **what it costs us** | the ten-minute checkability of §0 holds for the goal theorem and NOT for translation validation. A reviewer with 16 GB can confirm the central claim and must take the chain on trust — which is precisely the position §0 exists to end |
+| **what would close it** | (a) `Nat`/`String` reduction inside the parse pipeline replaced by compiled evaluation with a proved bridge, or (b) the pipeline equations proved by rewriting instead of evaluation (each stage a lemma, as `Uebersetze.lean`'s `Bool` pins already are in part), or (c) the certificate checked in Lean but PRODUCED outside it, so the kernel only re-checks a small witness. (c) is the direction the correspondence certificate already goes; the parse side has not followed |
+| **what must not close it** | `native_decide`. It moves the cost out of the kernel by moving the trust out with it, and this tree's whole point is the axiom list |
