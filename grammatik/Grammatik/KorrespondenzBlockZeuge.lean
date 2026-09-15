@@ -13,10 +13,15 @@
   * a POSITIVE probe -- the emitted form the arm is meant to accept;
   * a PLANTED DEFECT -- exactly the mistake the arm exists to catch.
 
-  THE FIXTURE is the one of `KorrespondenzWeitZeuge.lean` (`wD`, `wEL`,
-  `wK`: one table `T` of four `u32` slots, two `u32` parameters in C locals
-  `0` and `1`), so that the probes below add a block structure over a
-  statement stock that is already probed. Everything is `decide`.
+  THE FIXTURES. The first is the one of `KorrespondenzWeitZeuge.lean`
+  (`wD`, `wEL`, `wK`: one table `T` of four `u32` slots, two `u32`
+  parameters in C locals `0` and `1`), so that the probes below add a
+  block structure over a statement stock that is already probed. The
+  second (`cD`, section 3) is the same declaration with ONE function,
+  because `wD` has `Fn := Empty` and a call needs a callee.
+
+  Everything is `decide`: the check is a Bool, and a probe that needed a
+  proof would be probing something else.
 -/
 import Grammatik.KorrespondenzWeitZeuge
 

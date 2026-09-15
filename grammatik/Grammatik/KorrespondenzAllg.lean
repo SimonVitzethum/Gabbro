@@ -322,13 +322,14 @@ def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEn
 
 mutual
 
-/-- **STATEMENTS**: `stOk0` plus the statements that carry a BLOCK.
+/-- **STATEMENTS**: `stOk0` plus the two statements that carry a BLOCK.
     `if (c) { … } else { … }` is the row `GRow.ite`, which carries a row
     list per branch and elaborates to exactly the C `if`/`else` the
     emitter writes (`growRow`); the Gabbro side is `Stmt.ite` with a
     `Block` per branch, and both branches are walked by `blOk`. The
-    descent is STRUCTURAL on the ROW -- `tRows` and `eRows` are
-    components of the row -- so no fuel and no well-founded recursion
+    `traverse` header is `GRow.forTrav` with the loop body's rows. The
+    descent is STRUCTURAL on the ROW -- `tRows`, `eRows` and `bodyRows`
+    are components of the row -- so no fuel and no well-founded recursion
     enter the check. -/
 def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
     (s : Stmt D V l Γ Λ Λ') : GRow → Bool
@@ -350,11 +351,11 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
       | _, _ => false)
   | r => stOk0 EL fnum c K s r
 
-/-- **BLOCKS** (`Block`: an `if` arm, later a loop body): row by row, the
-    same reading `enOk` gives a terminal block -- `(void)x;`, `let`, and
-    every other row against the block's head statement. A block does not
-    end in a `return`, so there is no `ret` row here; the list ends with
-    the block (`Block.nil`). -/
+/-- **BLOCKS** (`Block`: an `if` arm or a loop body): row by row, the same
+    reading `enOk` gives a terminal block -- `(void)x;`, `let`, `let` of a
+    call, and every other row against the block's head statement. A block
+    does not end in a `return`, so there is no `ret` row here; the list
+    ends with the block (`Block.nil`). -/
 def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
     (b : Block D V l Γ Λ Λ') : List GRow → Bool
   | [] => (match b with
@@ -1191,7 +1192,8 @@ theorem stOk0_sound (hF : AlleRufe X fnum c) :
     row is strictly heavier than its arms), and the block half at `n + 1`
     then uses the statement half at `n + 1` for its head row and itself
     at `n` for the tail. Nothing new is assumed: an `if` row ends in
-    `scorr_ite`, every other row in `stOk0_sound`. -/
+    `scorr_ite`, a loop header in `scorr_traverse`, a call with a
+    destination in `bsem_bindCall`, every other row in `stOk0_sound`. -/
 theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
     (∀ (mm : Nat) {V : Vertrag D} {l : Bool} {Γ₀ : Ctx} {Λ₀ Λ₁ : List (Res D)}
         (K₀ : CEnvLay D Γ₀) (s : Stmt D V l Γ₀ Λ₀ Λ₁) (r : GRow), rowSize r ≤ n →

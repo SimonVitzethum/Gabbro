@@ -395,15 +395,11 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   measured not to:* 23 arms were added and the count stayed at 2.
 - **What `korrOk` still refuses, after the 2026-09-15 widening** (§6.2), each with its reason
   rather than a promise:
-  * **`if`/`else` and `traverse`** -- `scorr_ite`/`scorr_traverse` are proved, but both rows
-    carry a ROW LIST and their Gabbro side is a `Block`, which `enOk` never walks. What is
-    missing is a check over `Block`, and it must stay STRUCTURAL, because `korrOk` is settled
-    by `decide` and a well-founded definition does not reduce in the kernel. It can be built
-    WITHOUT a mutual block, by staging: `stOk0` (today's flat arms) → a self-recursive `blOk`
-    over `List GRow` that handles `ite`/`forTrav` itself → `stOk` = `stOk0` plus two arms
-    through `blOk` → `enOk` unchanged.
-  * **`let x = f(…)`** (`bsem_bindCall` proved) is a `Block` constructor, not an `Endblock`
-    one: it cannot occur in a body `korrOk` walks until the item above exists.
+  * ~~**`if`/`else` and `traverse`**~~ and ~~**`let x = f(…)`**~~ -- **closed 2026-09-15**, see
+    §6.7 below.
+  * **A `traverse` whose bound is not a literal.** `scorr_traverse` wants `ev hiC` to be the
+    table's count at EVERY C state, and the only C expression the check can decide that of is
+    a literal; a header that computes its bound is a refusal.
   * **`!=`**, **`(T)(e)` as a C wrapper** (`ecorr_cast` proved) and **`_Atomic` globals**
     (`ecorr_globAtomar`, `scorr_assignGlobAtomar` proved) -- each named at the site
     (`KorrespondenzAllg.lean`, CUTS) with the reason it is not one arm.
@@ -468,6 +464,50 @@ representation, and forcing the FIRST character of a 1419-byte string LITERAL co
 The same text as a `List Char` of 45 short pieces costs 3,3 GB. `dokumente/OFFEN.md` O13
 carries the measurement, because the Gabbro-side pins that cost 72 GB lex a `String` the same
 way.
+
+### 6.7 The certificate's BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
+
+*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the staged check and its soundness),
+`grammatik/Grammatik/KorrespondenzBlockZeuge.lean` (new: the probes). Theorem map:
+SATZKARTE §30. Report: `messung/muse/OPUS-BERICHT-BLOCK.md`.*
+
+**What was missing was the recursion, not a lemma.** `scorr_ite`, `scorr_traverse` and
+`bsem_bindCall` had all been proved in `CFormenI.lean`/`CFormenM.lean`; the three rows that
+need them (`GRow.ite`, `GRow.forTrav`, `GRow.call` with a destination) fell through
+`stOk`'s `_ => false`, because their Gabbro side is a `Block` and `enOk` walks only
+`Endblock`.
+
+**The staging**, as §6.5 said to build it and as it now stands:
+
+    stOk0   the flat arms of before -- no recursion at all
+    blOk    a `Block` against a row list, self-recursive on the ROWS
+    stOk    stOk0 plus the arms whose row carries rows (`ite`, `forTrav`)
+    enOk    unchanged
+
+`stOk` and `blOk` are ONE `mutual` over `GRow` / `List GRow` -- the nested-inductive shape
+`growRow`/`growsCS` and `rowFreshOk`/`rowsFresh` already have in `Korrespondenz.lean`. (The
+§6.5 note guessed that Lean would not take two functions in one mutual here; measured, it
+does, as long as one of them is over `GRow` and the other over `List GRow`.) The descent is
+on the ROW, so the check stays STRUCTURAL: no fuel, no well-founded recursion, and `decide`
+still reduces it in the kernel. *This is the opposite of O13's second pathology, and
+deliberately so: a mutual recursion through a FUEL argument compiles to a mutual `Nat.brecOn`
+and is exponential in the fuel.* The SOUNDNESS runs on a plain measure (`rowSize`), which a
+proof may do because a proof never reduces.
+
+**What the arms decide**, each ending in the lemma that was already there:
+
+| row | Gabbro | ends in | decided, not assumed |
+|---|---|---|---|
+| `GRow.ite cc t e` | `Stmt.ite` | `scorr_ite` | the condition, and BOTH arms row by row |
+| `GRow.call fc args (some (y, τc))` | `Block.bindCall` | `bsem_bindCall` | callee number, `y` fresh, `declOk`, `callMapOk`, `argsOk`, and the rows after the binder under the PUSHED map |
+| `GRow.forTrav x t (.lit N) rows m'` | `Stmt.traverse` | `scorr_traverse` | `N` is the table's count, `x` fresh, the type holds `0 .. N`, and the body does not write `x` |
+
+Coverage: `stOk` **5 → 7 of the 27 `Stmt` constructors**; `blOk` is new and reads **4 of the
+17 `Block` constructors** (`nil`, `cons`, `bind`, `bindCall`); `enOk` unchanged. `korrOk_fnCorr`
+and `korrOk_jeder_lauf` keep their statements word for word, and every new arm has a positive
+probe AND a planted defect.
+
+**The chain count did not move, and could not**: sieve (a) still binds (§6.3, §6.5).
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 

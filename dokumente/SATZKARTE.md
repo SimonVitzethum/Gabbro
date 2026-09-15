@@ -3199,5 +3199,73 @@ lists of lines; the expression parser has no recursion), and `dokumente/OFFEN.md
 the measurement, because the same `String.toList` stands in the Gabbro-side pins that cost
 72 GB.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §§1-10 history above.)
+## 30. `korrOk` gets its BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
+
+*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the staged check and its soundness),
+`grammatik/Grammatik/KorrespondenzBlockZeuge.lean` (new: two fixtures and the probes).
+Report: `messung/muse/OPUS-BERICHT-BLOCK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.5, §6.7.*
+
+### 30.1 The finding
+
+**The three rows that carry OTHER ROWS had no arm, and the lemmas for all three were already
+proved.** `scorr_ite` (`CFormenI.lean`), `scorr_traverse` (`CFormenI.lean`) and
+`bsem_bindCall` (`CFormenM.lean`) stood unused by the certificate, because their Gabbro side
+is a `Block` and `enOk` walks only `Endblock`. What was missing was a check over `Block` --
+a recursion -- not a fact about the model.
+
+### 30.2 The staging, and why it is not a mutual over the fuel
+
+    stOk0   the flat arms of before -- no recursion at all
+    blOk    a `Block` against a row list, self-recursive on the ROWS
+    stOk    stOk0 plus the arms whose row carries rows (`ite`, `forTrav`)
+    enOk    unchanged
+
+`stOk` and `blOk` are ONE `mutual` over `GRow` / `List GRow` -- the nested-inductive shape
+`growRow`/`growsCS` and `rowFreshOk`/`rowsFresh` already have in `Korrespondenz.lean`; the
+descent is on the ROW (`tRows`, `eRows`, `bodyRows` are components of the row). So the check
+is STRUCTURAL: `korrOk` is settled by `decide` in every chain instance, and a well-founded
+definition does not reduce in the kernel. **This is deliberately the opposite of O13's second
+pathology** (§29.6): a mutual recursion through a FUEL argument compiles to a mutual
+`Nat.brecOn` and is exponential in the fuel. The SOUNDNESS (`stOkBl_sound`) runs on a plain
+measure `rowSize`/`rowsSize`, which a proof may do because a proof never reduces.
+
+### 30.3 The three arms
+
+| row | Gabbro | ends in | what the arm DECIDES |
+|---|---|---|---|
+| `GRow.ite cc t e` | `Stmt.ite` | `scorr_ite` | the condition is the emitted form, and BOTH arms are, row by row |
+| `GRow.call fc args (some (y, τc))` | `Block.bindCall` | `bsem_bindCall` | the callee's C number, `y` fresh, `declOk` of the answer type, `callMapOk` of the callee, `argsOk` of the arguments, and the rows after the binder read under the PUSHED map |
+| `GRow.forTrav x t (.lit N) rows m'` | `Stmt.traverse` | `scorr_traverse` | `N` IS the table's count (the only bound whose `ev` this file can decide), `x` fresh, the computation type holds `0 .. N`, `0 ≤ N`, and the body does not write `x` (`hw`, on the ELABORATED rows) |
+
+`blOk` reads `Block.nil`, `.cons`, `.bind` and `.bindCall`, plus the `(void)x;` pre-row;
+everything else is a refusal. The loop's budget `m'` is data of the row and is NOT checked --
+it is the `forC` step count of the C semantics, and the correspondence holds at whatever it
+is.
+
+**Coverage:** `stOk` **5 → 7 of the 27 `Stmt` constructors**; `blOk` is new and reads **4 of
+the 17 `Block` constructors**; `enOk` unchanged at 3 of the 6 `Endblock` constructors.
+`korrOk_fnCorr` and `korrOk_jeder_lauf` keep their statements word for word.
+
+### 30.4 The probes -- a planted defect per arm
+
+`KorrespondenzBlockZeuge.lean` carries ten probe theorems, all by `decide`, all
+`propext`/`Quot.sound`, over two fixtures (`wD` of §28, and `cD` -- the same declaration with
+ONE function, because `wD` has `Fn := Empty`). The planted defects are the ones a BLOCK check
+can let through where a flat one cannot: the two branches SWAPPED, a statement dropped from
+the `then` arm, a statement dropped from the `else` arm, a statement added to an arm, the
+condition read as the opposite comparison, a block row against a statement of another kind,
+the WRONG LOOP BOUND (too high, too low, not a constant), the loop variable taken from the
+parameters, a loop BODY THAT WRITES THE LOOP VARIABLE (with the row that matches it, so the
+refusal is `scorr_traverse`'s `hw` and nothing else), the call's answer bound to a local the
+following row does not read, the answer bound to a parameter, the answer discarded, a callee
+whose map is not its parameter list, and a callee missing from the certificate.
+`probe_nested` runs an `if` INSIDE a `traverse`, so the nesting of the recursion is measured.
+
+### 30.5 The chain count did NOT move
+
+**2, before and after.** Sieve (a) -- the Lean parser and elaborator -- binds; the programs
+that stop there never reach a certificate. *Arms added and chain count are two numbers and
+are reported separately.*
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §§1-10 history above.)
 
