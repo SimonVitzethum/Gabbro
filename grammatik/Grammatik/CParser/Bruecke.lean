@@ -114,8 +114,7 @@ theorem schlusssatz_text {src : String} (K : Kette src) {s : List Char} (hA2 : A
         (ρG : Env (declOf K.u) ((declOf K.u).params f)),
       (∀ g : (declOf K.u).Fn, rufAt K.E.P O passes n f σ ρG ≠ .logik (.abstieg g)) →
         ∀ k : Nat, rufAt K.E.P O passes (n + k) f σ ρG = rufAt K.E.P O passes n f σ ρG) ∧
-      ((∀ passes n : Nat, RufRahmenTreu K.E.P (rufAt K.E.P O passes n)) →
-        ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+      (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
           (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Logik (declOf K.u)),
           ReqAmEintritt K.E.P f σ ρG → rufAt K.E.P O passes n f σ ρG = .logik e →
             ∃ h : (declOf K.u).Fn, e = .abstieg h)) ∧

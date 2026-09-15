@@ -269,6 +269,7 @@ import Grammatik.CTicket
 import Grammatik.Schlusssatz124Ticket
 import Grammatik.RufOhneHardware
 import Grammatik.RufOhneHardwareZeuge
+import Grammatik.RahmenTreu
 import Grammatik.HandlerKongruenz
 import Grammatik.RufTiefe
 import Grammatik.RufLogik

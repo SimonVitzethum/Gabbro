@@ -110,7 +110,11 @@ library anyway: small, concurrent, and the same for every program.*
 - [ ] **`korrOk` arms** for `if`, `traverse`, compound assignment, globals, `let` of a call, and
   arithmetic. Each is one arm over an existing lemma. Measure each by the chain count it moves.
 - [ ] **Discharge the "no model error" condition** of part 4 from the model judgement, instead
-  of carrying it.
+  of carrying it. *Down to ONE residue since 2026-09-15: the hardware half is 4b, six of the
+  seven `logik` kinds fall to the user's own duty (4e(ii), now unconditional --
+  `SATZKARTE.md` §§36-37), and what is left is the `abstieg` DEPTH, which 4e(i) turns into a
+  computation at one depth. To finish it, the depth has to come from the program (a measure
+  the checker reads) rather than from the chain author.*
 - [ ] **Re-instantiate the link between the single-thread machine and `rufAt`** inside the
   closing theorem. Today it is the adequacy chain, outside it.
 - [ ] **Take the `Einheit` of a chain from the exporter** (depends on lane 198) instead of the
