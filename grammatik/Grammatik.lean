@@ -257,3 +257,9 @@ import Grammatik.ZielOrtInvGrundZeuge
 import Grammatik.Nichtinterferenz.Freigabe
 import Grammatik.Nichtinterferenz.Korpus
 import Grammatik.Nichtinterferenz.ZeugeMehrfaden
+import Grammatik.KorrespondenzAllg
+import Grammatik.Schlusssatz
+import Grammatik.Kette104
+import Grammatik.Kette104Satz
+import Grammatik.Kette108
+import Grammatik.SchlusssatzZeuge
