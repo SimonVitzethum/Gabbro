@@ -821,7 +821,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] ~~105~~ ~~108~~ **117 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 143 sind tragend, 8 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 143 sind tragend, 9 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *2026-09-12, lane E1: recomputed (`7 verdaechtig · 139 tragend · 107 unklar`); `N057`
       states its obligation (`until lane E2 discharges that obligation`) and stands in the tragend column — +1 of it is
       this lane, the rest is wave drift other lanes owe their own entries for.* *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
@@ -834,6 +834,14 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       faltet nicht), `C180`-`C183` in der unklaren; `143 - 139 = 4` und `117 - 107 - 4 = 6`
       sind Wellendrift. Die 7 davor steht weiter oben ohne Streichung, weil das Muster
       `Zahl + "sind tragend, " + Zahl` keine zweite Streichung verträgt.*
+      *8 → 9 verdächtig am 2026-09-15 (lane: the specification half of the grammar
+      census): `N320` — `section` at a FUNCTION — justifies itself through the ARTEFACT
+      (`byte-identical C`), and the guardian is right to say so. **Here that is the
+      sentence and not a slip:** the rule's whole content is that the clause reaches no
+      register at all — not the C, not an obligation, not the G program term — so a
+      justification out of the promise would be the dishonest one. The number is moved
+      without a strikethrough because the pattern `Zahl + "sind tragend, " + Zahl`
+      tolerates none, as the line above already says.*
       *162 → 163 tragend, 145 → 145 unklar am 2026-09-13 (lane 145): `N260` nennt seine
       Wirkungsfolge im eigenen Text (die deklarierten Wirkungen sind Aussagen über das
       Objekt hinter dem Zeiger) und steht in der tragenden Spalte — +1 davon ist diese

@@ -1,0 +1,45 @@
+-- erwartet: N320 allein
+-- **980 -- a `section` at a FUNCTION places nothing.**
+--
+-- `section "…"` at a `static` becomes `__attribute__((section("…")))` in the C
+-- (`emit.rs`, the record case; `D6` holds the name to what a section name can be, and
+-- `gift/646`, `/663`-`/665` are the probes for that half). **At a function the clause
+-- reaches nothing at all.**
+--
+-- Measured 2026-09-15 with `instrumente/miss-grammatikdeckung.py --nur fndecl.section`,
+-- before the rule:
+--
+--     fndecl.section   UNCOVERED   C byte-identical, no obligation, no checker error
+--                                  names it
+--
+-- Three registers, and all three empty: the emitter never reads the field (the C of a
+-- function WITH the clause is byte-identical to the C without it), no pass names the
+-- word, and `gabbro lean-g` drops it from the G program term *without saying so* -- it is
+-- not in the NO-FORM list the exporter writes into its own header. *A clause that changes
+-- neither the artefact nor an obligation is a promise nobody keeps, and it looks kept.*
+--
+-- > **`SPRACHE.md` §S2 asks for exactly this placement** -- `raw fn` lies forcibly in
+-- > `section ".boot"` -- **and says in the same row that it is NOT enforced**;
+-- > `messung/BOOT-S3.md` item 4 books it as open. The refusal is the honest interim
+-- > state, not a verdict against the form: it makes the gap loud, and it goes the day the
+-- > emitter carries the attribute for a function.
+--
+-- `-- erwartet: N320 allein` is the sharper claim and it is the right one here: without
+-- this rule NOTHING falls -- the emitted C is valid and `cc -Werror` takes it. That is
+-- the counterfactual the sentence `namen.section_an_funktion` needs.
+--
+-- Measured over `beispiele/*.gab` before the rule: two `section` sites, **both on a
+-- `static`** (`05-nebenlaeufigkeit`, `40-werte-und-griffe`). No corpus program places a
+-- function, so the refusal costs the corpus nothing.
+
+module gift::section_an_einer_funktion {
+
+impl fn heiss(a : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { pure }
+    costs   <= 2 ops
+    section ".text.hot"
+{
+    return a;
+}
+
+}

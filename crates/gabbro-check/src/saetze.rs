@@ -276,6 +276,36 @@ pub const NAMEN: &[Satz] = &[
                       by a line nothing measures.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12",
     },
+    // --- 2026-09-15: the specification half of the grammar census ------------------------
+    //
+    // **A clause that reaches no register at all is refused until it reaches one.**
+    // `fndecl.section` was measured `UNCOVERED` by
+    // `instrumente/miss-grammatikdeckung.py`: the C with the clause is byte-identical to
+    // the C without it, no obligation is booked, and no checker error names the word. The
+    // Lean bridge (`gabbro lean-g`) drops it as well -- and does not name it in the
+    // NO-FORM list it writes into its own header, so the drop was silent on both sides.
+    Satz {
+        name: "namen.section_an_funktion",
+        kennungen: &["N320"],
+        aussage: "A `section` clause stands at a `static` and nowhere else: at a \
+                  FUNCTION it is refused by name, because it reaches neither the C \
+                  (byte-identical without it), nor an obligation, nor the G program \
+                  term.",
+        vorbehalt: "This is an INTERIM refusal, not a verdict against the form. \
+                    `SPRACHE.md` §S2 wants `raw fn` placed in `section \".boot\"` and \
+                    says in the same row that the placement is not enforced \
+                    (`messung/BOOT-S3.md` item 4). The day the emitter writes the \
+                    attribute for a function, this rule goes. The clause at a `static` \
+                    is untouched and keeps `D6` (`gift/646`, `/663`-`/665`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/980` (`-- erwartet: N320 allein`: the checker falls \
+                      with `N320`, and WITHOUT the rule `cc -Werror` accepts the emitted \
+                      C -- nothing else catches it). Counter-direction: two corpus \
+                      `section` sites, both on a `static`, stay green \
+                      (`beispiele/05-nebenlaeufigkeit.gab`, `/40-werte-und-griffe.gab`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §6 (`fndecl`); \
+                     dokumente/SPRACHE.md §S2",
+    },
     // --- 2026-09-04: a falsifier that resolves must be able to go red ---------------------
     //
     // **The rule that was NOT built is the load-bearing half of this sentence.** `falsifier`

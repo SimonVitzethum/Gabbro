@@ -21,6 +21,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     formatklauseln(baum, absagen);
     bootschritte(baum, absagen);
     asm_versiegelt(baum, absagen);
+    section_an_funktion(baum, absagen);
     annahme_arch(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
@@ -690,23 +691,40 @@ fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         crate::jeder_typausdruck_im_item(item, &mut |t| {
             let TypExpr::FnZeiger(f) = t else { return };
-            // **One rule, one refusal site** -- the two missing clauses are two halves of
+            // **One rule, one refusal** -- the two missing clauses are two halves of
             // "this type carries no contract", not two rules. See `fnptr_passt` in `m1.rs`
             // for the same decision and `instrumente/pruefe-vergabe.py` for why it matters.
+            //
+            // **The three branches carry the words `effects` and `costs` in their OWN
+            // format literal, and that is not a style choice** (2026-09-15). Until then the
+            // message was `"`{}` declares no {fehlt}"` with the backticked words in a
+            // variable -- and `pruefe-grammatiktafel.prueferworte()` reads the LITERAL of
+            // `Absage::fehler`, so the register never saw them. The rule existed, the words
+            // did not: `miss-grammatikdeckung.py` read `fnptr.effects`/`fnptr.costs` as
+            // forms no checker error names. *A word that reaches the message through a
+            // variable is invisible to every register that reads the source.* At most one
+            // branch fires, so the refusal count is unchanged.
             let fehlt = match (f.effects.is_none(), f.costs.is_none()) {
-                (true, true) => Some("`effects` and no `costs`"),
-                (true, false) => Some("`effects`"),
-                (false, true) => Some("`costs`"),
+                (true, true) => Some(Absage::fehler(
+                    "N035",
+                    f.span,
+                    format!("`{}` declares no `effects` and no `costs`", f.shape()),
+                )),
+                (true, false) => Some(Absage::fehler(
+                    "N035",
+                    f.span,
+                    format!("`{}` declares no `effects`", f.shape()),
+                )),
+                (false, true) => Some(Absage::fehler(
+                    "N035",
+                    f.span,
+                    format!("`{}` declares no `costs`", f.shape()),
+                )),
                 (false, false) => None,
             };
-            if let Some(fehlt) = fehlt {
+            if let Some(a) = fehlt {
                 absagen.schiebe(
-                    Absage::fehler(
-                        "N035",
-                        f.span,
-                        format!("`{}` declares no {fehlt}", f.shape()),
-                    )
-                    .mit_notiz(
+                    a.mit_notiz(
                         "a call through this pointer would end the effect hull -- `E008` \
                          became compositional on 2026-08-15, and an indirect call without a \
                          contract takes that back; without a bound the call would cost \
@@ -5311,6 +5329,57 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
             .mit_notiz(
                 "name the machine at an `entry`, a `boot`, an `entrust` or an `asm` \
                  body -- that is where this unit says which machine it runs on",
+            ),
+        );
+    });
+}
+
+/// **`N320` -- a `section` at a FUNCTION places nothing.**
+///
+/// At a `static` the clause becomes `__attribute__((section("…")))` in the C (`emit.rs`,
+/// the record case; `D6` holds the name to what a section name can be). At a FUNCTION it
+/// reaches nothing at all, and that is measured and not assumed: with
+/// `instrumente/miss-grammatikdeckung.py` the C of a function carrying `section` is
+/// **byte-identical** to the C without it, no pass names the word, and `gabbro lean-g`
+/// drops it from the G program term *without saying so* -- it is not in the NO-FORM list
+/// the exporter writes into its own header. *A clause that changes neither the artefact
+/// nor an obligation is a promise nobody keeps, and it looks kept.*
+///
+/// **`SPRACHE.md` §S2 asks for exactly this placement** (`raw fn` lies forcibly in
+/// `section ".boot"`) **and says in the same row that it is NOT enforced**;
+/// `messung/BOOT-S3.md` item 4 books it as open. Until the emitter carries the attribute
+/// for a function, the refusal is the honest state: the gap is loud instead of silent,
+/// and this rule goes the day the attribute arrives.
+///
+/// Measured over `beispiele/*.gab` before the rule: two `section` sites, **both on a
+/// `static`** -- no corpus program places a function, so the refusal costs the corpus
+/// nothing. `beispiele/gift/980` is the probe.
+fn section_an_funktion(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let Some(t) = &f.section else {
+            return;
+        };
+        absagen.schiebe(
+            Absage::fehler(
+                "N320",
+                t.span,
+                format!(
+                    "`{}` carries `section \"{}\"`, and a function is placed nowhere",
+                    f.name.text, t.text
+                ),
+            )
+            .mit_notiz(
+                "the placement attribute exists for a `static` only -- at a function the \
+                 clause reaches neither the C (byte-identical without it) nor the G program \
+                 term, and nothing refuses it either",
+            )
+            .mit_notiz(
+                "`SPRACHE.md` §S2 asks for `raw fn` in `section \".boot\"` and says in the \
+                 same row that the placement is not enforced -- drop the clause until the \
+                 emitter carries it, and this refusal goes with it",
             ),
         );
     });
