@@ -29,7 +29,10 @@
 //!   travels as `List.elem … = true` by `decide`, per lock and protected
 //!   carrier in both directions; the read half and the release duty are the
 //!   user's, booked beside the `ensures` duties.
-//! * `impl fn` with pointer/index/range/`bool` parameters, `requires Held(L)`,
+//! * `impl fn` with pointer/index/range/`bool` parameters, `requires Held(L)`
+//!   plus value clauses (lane 198: a `Held`-only clause names the
+//!   signature-held set, every other clause travels as an `Expr` like the
+//!   `ensures`, refusing by name what has no `Expr` form),
 //!   `ensures` over comparisons of slot reads, `old`, `result` and literals,
 //!   `effects { reads/writes/locks }`, an optional `or R` reason channel, and
 //!   a body of slot writes, direct calls, `locks` blocks, `if`/`else`,
@@ -57,19 +60,38 @@
 //!
 //! ## Refusal codes (`LG`)
 //!
-//! * `LG001` item with no G form (globals, devices, axioms, entries, ...)
+//! * `LG001` item with no G form (globals, devices, axioms, statics,
+//!   `entrust`, ...); since lane 198 also a declared start with parameters
+//!   (no `Env` argument form) -- `entry`/`boot` items themselves travel
+//!   only as their dispatch root (see below)
 //! * `LG002` type with no `Ty` form (floats, records, pointers outside `normal`, ...)
-//! * `LG003` contract or value expression with no `Expr` form
+//! * `LG003` contract or value expression with no `Expr` form -- since lane
+//!   198 also a `requires` value clause with none, and an integer field
+//!   whose range holds no zero (no `sp0` value)
 //! * `LG004` body statement with no `Stmt`/`Endblock` form (this covers the
 //!   `RufPasst` proof failures `hh`/`hx`/`hb`/`hw`, which are named in the
 //!   message -- the checker accepts the call, the model cannot type it)
 //! * `LG005` unresolvable name, count, rank or range (unknown table, lock,
-//!   function, constant or type alias)
+//!   function, constant or type alias) -- since lane 198 also a start
+//!   (`concurrent` member, `entry`/`boot` dispatch) naming nothing
+//!   exported, or naming two functions at once
 //! * `LG006` loop with no export form (`retry`, `forever`, a `traverse` that
 //!   is not `traverse i over slots of T` with a translatable invariant)
 //! * `LG007` reason-channel form with no export form (`let … else` over a
 //!   place, a falling-off `else` branch, a valueless reason function in
 //!   `let … else`)
+//!
+//! ## The program as one declaration (lane 198)
+//!
+//! Beside the program `gP` the export assembles what `GabbroZiel`
+//! (`Zielsatz/Spec.lean`) quantifies over: the lock-invariant family `gS`
+//! (lane 156), the member lists `gFs`/`gLs`/`gCs`, the declared initial
+//! memory `gSp0` (the zero memory -- every slot at zero, `false` for
+//! `bool`; a `static` has no G form, so no initializer travels beside it)
+//! and the declared starts `gE.starts` (the `concurrent` members, then the
+//! `entry`/`boot` dispatch roots; every start is parameterless, its
+//! argument list `.nil`), as `def gE : Einheit gD` (no axiom exists, so
+//! `Q` is `fun _ _ _ => true`).
 //!
 //! ## NO FORM in G (accepted and dropped, each named in the header)
 //!
@@ -78,8 +100,9 @@
 //! the `by unvisited`/`by consuming` run form, the `decreases` witness and
 //! the `touches` clause of a `traverse` (static annotations, like `costs`);
 //! `by ops` on a field (a writer discipline the checker holds);
-//! `mut` on a `let` (reassignments still refuse by name); `concurrent` (all
-//! functions travel in `gFs`; which of them start threads is not a G notion).
+//! `mut` on a `let` (reassignments still refuse by name); the `entry`/`boot`
+//! hardware around a dispatch (the vector, the registers, the steps -- only
+//! the dispatch root travels, as a declared start where exportable).
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::kw::Kw;
@@ -178,6 +201,10 @@ pub(crate) struct Model {
     pub(crate) fns: Vec<FnModel>,
     #[allow(dead_code)]
     concurrent: Vec<String>,
+    /// `entry`/`boot` dispatch roots (lane 198): the hardware around them
+    /// (vectors, registers, steps) has no G form, but the dispatched
+    /// function is a declared start like a `concurrent` member.
+    wurzeln: Vec<Pfad>,
     reasons: std::collections::HashMap<String, usize>,
 }
 
@@ -293,7 +320,7 @@ fn int_ty(t: &TypExpr, scope: &Scope) -> Option<VTy> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], locks: vec![], fns: vec![], concurrent: vec![], reasons: std::collections::HashMap::new() };
+    let mut model = Model { tables: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
     let mut scope = Scope::default();
     // Pass one: constants and type aliases, so `count` and field types resolve.
     fn pass_one(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
@@ -353,6 +380,13 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                         model.concurrent.push(last.text.clone());
                     }
                 }
+                // An `entry`/`boot` item is hardware around one dispatch
+                // (lane 198): the vector, the registers, the steps have no
+                // G form and travel nowhere, but the dispatched function is
+                // a declared start. What names no exported function is
+                // refused where the starts resolve, by name.
+                ItemArt::Entry(e) => model.wurzeln.push(e.dispatch.clone()),
+                ItemArt::Boot(b) => model.wurzeln.push(b.dispatch.clone()),
                 other => {
                     return Err(refuse("LG001", format!("{} has no G form", other.benennung())));
                 }
@@ -388,6 +422,11 @@ pub(crate) struct CheckedFn {
     held: Vec<usize>,
     writes: Vec<usize>,
     pub(crate) ensures: Vec<Pred>,
+    /// `requires` past the signature-held locks: every non-`Held` clause
+    /// travels as an `Expr` (lane 198), conjoined under `.und` (`.wahr`
+    /// where there is none). A `Held`-only clause names the signature set
+    /// above, never this list.
+    pub(crate) requires: Vec<Pred>,
     pub(crate) body: Block,
     /// `-> T or R`: the case count of the named `reason`, 0 without one.
     pub(crate) gruende: usize,
@@ -623,22 +662,22 @@ fn check_fn(
             refuse("LG002", format!("result of {} has no integer-range or bool form", f.name))
         })?),
     };
-    // `requires Held(L)` names exactly the signature-held locks.
+    // `requires` in two channels (lane 198): a `Held`-only clause names
+    // the signature-held set; every other clause travels as an `Expr`
+    // (translated like the `ensures`, refusing by name what has no `Expr`
+    // form). A `Held` nested inside a value shape has neither channel and
+    // is refused where the value translation meets it (LG003).
     let mut held = Vec::new();
+    let mut requires = Vec::new();
     for r in &d.requires {
-        match &r.art {
-            PredArt::Held { sperre, geteilt, .. } => {
-                if *geteilt {
-                    return Err(refuse("LG001", format!("shared `Held` in {} has no G form", f.name)));
-                }
-                let Some(li) = model.locks.iter().position(|l| l.name == sperre.text) else {
-                    return Err(refuse("LG005", format!("{} requires unknown lock {}", f.name, sperre.text)));
-                };
+        if let Some(h) = held_aus_klausel(r, model, &f.name)? {
+            for li in h {
                 if !held.contains(&li) {
                     held.push(li);
                 }
             }
-            _ => return Err(refuse("LG003", format!("requires-clause in {} has no G form", f.name))),
+        } else {
+            requires.push(r.clone());
         }
     }
     // Effects: `locks L` must say what `requires Held(L)` says; `writes`
@@ -721,7 +760,38 @@ fn check_fn(
     }
     // The lock floor: the minimum rank the body takes, or `none`.
     let boden = taken.iter().map(|li| model.locks[*li].rank).min();
-    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, ensures: d.ensures.clone(), body: body.clone(), gruende, boden, calls: scan.calls })
+    Ok(CheckedFn { name: f.name.clone(), params, result, held, writes, ensures: d.ensures.clone(), requires, body: body.clone(), gruende, boden, calls: scan.calls })
+}
+
+/// A `requires` clause as signature-held locks: `Some` where the whole
+/// clause is `Held` (under `Und`/`Klammer`), `None` where any value shape
+/// stands beside it (then the whole clause travels as an `Expr`). Shared
+/// holding and unknown locks refuse exactly as before.
+fn held_aus_klausel(p: &Pred, model: &Model, fname: &str) -> Result<Option<Vec<usize>>, Refusal> {
+    match &p.art {
+        PredArt::Held { sperre, geteilt, .. } => {
+            if *geteilt {
+                return Err(refuse("LG001", format!("shared `Held` in {fname} has no G form")));
+            }
+            let Some(li) = model.locks.iter().position(|l| l.name == sperre.text) else {
+                return Err(refuse("LG005", format!("{fname} requires unknown lock {}", sperre.text)));
+            };
+            Ok(Some(vec![li]))
+        }
+        PredArt::Und(a, b) => {
+            let (Some(mut x), Some(y)) = (held_aus_klausel(a, model, fname)?, held_aus_klausel(b, model, fname)?) else {
+                return Ok(None);
+            };
+            for li in y {
+                if !x.contains(&li) {
+                    x.push(li);
+                }
+            }
+            Ok(Some(x))
+        }
+        PredArt::Klammer(q) => held_aus_klausel(q, model, fname),
+        _ => Ok(None),
+    }
 }
 
 /// The table a `writes` place names: `writes k.slots` through a pointer
@@ -908,7 +978,9 @@ pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<
         check_body(c, &model)?;
     }
     check_locks(&model, &scope)?;
-    Ok(emit(source_name, namespace, &model, &checked, &scope, &mut out)?)
+    check_sp0(&model)?;
+    let startet = check_starts(&model)?;
+    Ok(emit(source_name, namespace, &model, &checked, &scope, &mut out, &startet)?)
 }
 
 /// The function names of the export, in declaration order (the `g_<fn>`
@@ -946,6 +1018,8 @@ pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, 
         check_body(c, &model)?;
     }
     check_locks(&model, &scope)?;
+    check_sp0(&model)?;
+    check_starts(&model)?;
     Ok(Analyse { model, fns: checked, scope })
 }
 
@@ -1080,6 +1154,10 @@ struct Ctx<'a> {
     locks_open: bool,
     in_body: bool,
     with_result: bool,
+    /// A `requires` clause (lane 198): the same translator as the
+    /// `ensures`, over the parameters alone -- no result slot, so
+    /// `result` has no form here, and the messages name `requires`.
+    in_requires: bool,
     gamma: String,
     lambda: String,
 }
@@ -1096,6 +1174,7 @@ fn body_ctx<'a>(cf: &'a CheckedFn, model: &'a Model) -> Ctx<'a> {
         locks_open: false,
         in_body: true,
         with_result: false,
+        in_requires: false,
         gamma: format!("gCtx_{g}"),
         lambda: format!("gL_{g}"),
     }
@@ -1113,12 +1192,37 @@ fn ensures_ctx<'a>(cf: &'a CheckedFn, model: &'a Model) -> Ctx<'a> {
         locks_open: false,
         in_body: false,
         with_result: cf.result.is_some(),
+        in_requires: false,
         gamma: format!("(ErgCtx (gD.params g_{g}) (gD.erg g_{g}))"),
         lambda: format!("gL_{g}"),
     }
 }
 
+fn requires_ctx<'a>(cf: &'a CheckedFn, model: &'a Model) -> Ctx<'a> {
+    let g = lean_fn(&cf.name);
+    let names = cf.params.iter().map(|(n, p)| (n.clone(), p.vty(model), NameKind::Param)).collect();
+    Ctx {
+        cf,
+        model,
+        names,
+        held: cf.held.clone(),
+        tag: String::new(),
+        locks_open: false,
+        in_body: false,
+        with_result: false,
+        in_requires: true,
+        gamma: format!("(gD.params g_{g})"),
+        lambda: format!("gL_{g}"),
+    }
+}
+
 impl<'a> Ctx<'a> {
+    /// The clause kind for refusal messages: the `requires` shares the
+    /// `ensures` translator, never its name.
+    fn quelle(&self) -> &'static str {
+        if self.in_requires { "requires" } else { "ensures" }
+    }
+
     /// The de Bruijn variable at stack position `j`.
     fn var(&self, j: usize) -> String {
         let depth = if self.with_result { j + 1 } else { j };
@@ -1366,7 +1470,10 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             Ok((base, ty))
         }
         ExprArt::Ergebnis => {
-            if ctx.in_body {
+            // No result slot in a body, and none in a `requires` (its
+            // context is the parameters alone -- `.var .hier` there would
+            // name the first parameter, not a result).
+            if ctx.in_body || ctx.in_requires {
                 return Err(refuse("LG003", format!("`result` in {fname} has no G form here")));
             }
             let Some(ty) = ctx.cf.result.clone() else {
@@ -1638,6 +1745,9 @@ fn tr_side(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: 
             Ok((base, ty))
         }
         ExprArt::Ergebnis => {
+            if ctx.in_requires {
+                return Err(refuse("LG003", format!("`result` in {fname} has no G form here")));
+            }
             let Some(ty) = ctx.cf.result.clone() else {
                 return Err(refuse("LG003", format!("`result` in {fname} has no G form here")));
             };
@@ -1815,20 +1925,22 @@ fn tr_sinv_val(e: &Expr, model: &Model, scope: &Scope, lock: &str) -> Result<Str
     }
 }
 
-/// One `ensures` predicate.
+/// One `ensures` predicate -- and, over a `requires` context, one
+/// `requires` predicate (lane 198): the same translator, the clause name
+/// off the context.
 fn tr_ensures(p: &Pred, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: &mut Out) -> Result<String, Refusal> {
     match &p.art {
         PredArt::Vergleich(e) => match &e.art {
             ExprArt::Binaer(op, l, r) if op.ist_vergleich() => tr_cmp(op, l, r, ctx, model, scope, fname, out),
             ExprArt::Wahr => Ok(".wahr".to_string()),
             ExprArt::Falsch => Ok(".falsch".to_string()),
-            _ => Err(refuse("LG003", format!("ensures-clause in {fname} has no G form"))),
+            _ => Err(refuse("LG003", format!("{}-clause in {fname} has no G form", ctx.quelle()))),
         },
         PredArt::Klammer(q) => tr_ensures(q, ctx, model, scope, fname, out),
         PredArt::Und(a, b) => Ok(format!("(.und {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
         PredArt::Oder(a, b) => Ok(format!("(.oder {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
         PredArt::Nicht(q) => Ok(format!("(.nicht {})", tr_ensures(q, ctx, model, scope, fname, out)?)),
-        _ => Err(refuse("LG003", format!("ensures-clause in {fname} has no G form"))),
+        _ => Err(refuse("LG003", format!("{}-clause in {fname} has no G form", ctx.quelle()))),
     }
 }
 
@@ -1842,12 +1954,85 @@ fn check_locks(model: &Model, scope: &Scope) -> Result<(), Refusal> {
     Ok(())
 }
 
+/// The declared starts as function indices (lane 198): the `concurrent`
+/// members first, then the `entry`/`boot` dispatch roots -- one pool,
+/// because one boot assignment starts them all (the order
+/// `startexklusiv.rs` reads). Every start resolves to exactly one exported
+/// `impl fn`; a start with parameters has no `Env` form (the declaration
+/// carries no arguments) and is refused by name, as is a dispatch that
+/// names nothing exported.
+fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
+    fn nimm(model: &Model, kurz: &str, quelle: &str, aus: &mut Vec<usize>) -> Result<(), Refusal> {
+        let treffer: Vec<usize> =
+            model.fns.iter().enumerate().filter(|(_, f)| f.name == kurz).map(|(i, _)| i).collect();
+        let Some((&i, rest)) = treffer.split_first() else {
+            return Err(refuse("LG005", format!("{quelle} names unknown function {kurz}")));
+        };
+        if !rest.is_empty() {
+            return Err(refuse("LG005", format!("{quelle} names ambiguous function {kurz}")));
+        }
+        if !model.fns[i].decl.parameter.is_empty() {
+            return Err(refuse(
+                "LG001",
+                format!("start `{kurz}` takes parameters, which have no start-argument form"),
+            ));
+        }
+        aus.push(i);
+        Ok(())
+    }
+    let mut aus = Vec::new();
+    for name in &model.concurrent {
+        let quelle = format!("concurrent member `{name}`");
+        nimm(model, name, &quelle, &mut aus)?;
+    }
+    for pfad in &model.wurzeln {
+        let Some(last) = pfad.teile.last() else {
+            return Err(refuse("LG005", "empty dispatch path has no G form".to_string()));
+        };
+        let quelle = format!("dispatch `{}`", pfad.text());
+        nimm(model, &last.text, &quelle, &mut aus)?;
+    }
+    Ok(aus)
+}
+
+/// The declared initial memory is the zero memory (lane 198): every slot
+/// starts at zero (`false` for `bool`), as the loader establishes it
+/// (`Laufzeit.lader` of the goal theorem). A `static` item has no G form
+/// (LG001, as before), so no initializer travels beside it; an integer
+/// field whose range holds no zero has no `sp0` value and is refused here,
+/// by name.
+fn check_sp0(model: &Model) -> Result<(), Refusal> {
+    for t in &model.tables {
+        for f in &t.fields {
+            if let VTy::Int { lo, hi, .. } = &f.ty {
+                if *lo > 0 || 0 > *hi {
+                    return Err(refuse(
+                        "LG003",
+                        format!(
+                            "zero-initialised memory of {}.{} lies outside {lo}..{hi} and has no `sp0` form",
+                            t.name, f.name
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Every `ensures` clause must translate (the conjunction is the contract).
 fn check_contracts(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut Out) -> Result<(), Refusal> {
     // `ErgCtx` prepends the result only where there is one.
     let ctx = ensures_ctx(cf, model);
     for p in &cf.ensures {
         tr_ensures(p, &ctx, model, scope, &cf.name, out)?;
+    }
+    // Every `requires` past the signature-held locks must translate too
+    // (lane 198): over the parameters alone, refusing by name what has no
+    // `Expr` form.
+    let rctx = requires_ctx(cf, model);
+    for p in &cf.requires {
+        tr_ensures(p, &rctx, model, scope, &cf.name, out)?;
     }
     Ok(())
 }
@@ -2401,6 +2586,24 @@ fn tr_contract(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut Out) -> R
     Ok(Some(acc))
 }
 
+/// One `requires` contract as an `Expr` term (lane 198): the value
+/// clauses past the signature-held locks, conjoined (`.wahr` where there
+/// are none -- like the default `ensures` of `gP`).
+fn tr_contract_requires(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut Out) -> Result<Option<String>, Refusal> {
+    if cf.requires.is_empty() {
+        return Ok(None);
+    }
+    let ctx = requires_ctx(cf, model);
+    let mut it = cf.requires.iter();
+    let first = tr_ensures(it.next().expect("nonempty"), &ctx, model, scope, &cf.name, out)?;
+    let mut acc = first;
+    for p in it {
+        let t = tr_ensures(p, &ctx, model, scope, &cf.name, out)?;
+        acc = format!("(.und {acc} {t})");
+    }
+    Ok(Some(acc))
+}
+
 /// The carrier a place names: a table name, or a pointer parameter (which
 /// names its table). Lenient -- translation refuses strictly.
 fn foot_carrier(o: &Ort, model: &Model, params: &[(String, ParamTy)]) -> Option<usize> {
@@ -2530,9 +2733,10 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
     }
 }
 
-/// The footprint mirror of a function: its `ensures` carriers, its body
-/// carriers, and its direct callees' `ensures` carriers (`fussOrte`, one
-/// level; `requires` prints `.wahr`, invariants are not admitted).
+/// The footprint mirror of a function: its `ensures` and `requires`
+/// carriers (lane 198: the `requires` travels now, so its carriers count),
+/// its body carriers, and its direct callees' `ensures` carriers
+/// (`fussOrte`, one level; invariants are not admitted).
 fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
     fn foot_pred(p: &Pred, model: &Model, params: &[(String, ParamTy)], acc: &mut Vec<usize>) {
         match &p.art {
@@ -2569,6 +2773,9 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
     }
     let mut acc = Vec::new();
     for p in &cf.ensures {
+        foot_pred(p, model, &cf.params, &mut acc);
+    }
+    for p in &cf.requires {
         foot_pred(p, model, &cf.params, &mut acc);
     }
     foot_block(&cf.body, model, &cf.params, &mut acc);
@@ -2615,7 +2822,7 @@ pub fn namespace_of(source_name: &str) -> String {
 }
 
 /// The printed Lean file.
-fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &Scope, collected: &mut Out) -> Result<String, Refusal> {
+fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &Scope, collected: &mut Out, startet: &[usize]) -> Result<String, Refusal> {
     let nt = model.tables.len();
     let mut out = String::new();
     // Header: generated marker, source, and the NO-FORM ledger.
@@ -2630,8 +2837,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");
     out.push_str("-- `traverse` (static annotations, like `costs`); `by ops` on a field\n");
     out.push_str("-- (a writer discipline the checker holds); `mut` on a `let`;\n");
-    out.push_str("-- `concurrent` (all functions travel\n");
-    out.push_str("-- in `gFs`; which of them start threads is not a G notion).\n--\n");
+    out.push_str("-- `concurrent` (its members travel as the declared starts\n");
+    out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
+    out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
+    out.push_str("-- NO FORM; only the dispatch root travels, as a declared start\n");
+    out.push_str("-- where exportable).\n--\n");
     for (ti, t) in model.tables.iter().enumerate() {
         out.push_str(&format!("-- table {ti}: {} (count {})", t.name, t.count));
         for f in &t.fields {
@@ -2661,7 +2871,10 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }
         out.push_str(")\n");
     }
-    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
+    for (n, i) in startet.iter().enumerate() {
+        out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
+    }
+    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n\nnamespace Gabbro.Grammatik\n\nnamespace ");
     out.push_str(ns);
     out.push_str("\n\n");
     // The carrier inductives: one constructor per table, lock and field.
@@ -2949,13 +3162,28 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             out.push_str(&format!("def gEns_{name} : Expr gD (ErgCtx (gD.params g_{name}) (gD.erg g_{name})) (vertragVon gD g_{name}).ende .bool :=\n  {term}\n\n"));
         }
     }
+    // The `requires` past the signature-held locks (lane 198): one `Expr`
+    // per function carrying a value clause, over the parameters alone.
+    let mut reqs = Vec::new();
+    for f in fns {
+        reqs.push((f.name.clone(), tr_contract_requires(f, model, scope, collected)?));
+    }
+    for (name, term) in &reqs {
+        if let Some(term) = term {
+            out.push_str(&format!("def gReq_{name} : Expr gD (gD.params g_{name}) (Signatur.anfang gD (gD.signatur g_{name})) .bool :=\n  {term}\n\n"));
+        }
+    }
     for (name, term) in &bodies {
         out.push_str(&format!("def gBody_{name} : Endblock gD (vertragVon gD g_{name}) false gCtx_{name} gL_{name} :=\n  {term}\n\n", name = lean_fn(name)));
     }
     // The program, the member list, and the decidable checks.
     out.push_str("def gP : Programm gD where\n");
     out.push_str("  invariante := fun i => nomatch i\n");
-    out.push_str("  requires := fun _ => .wahr\n");
+    out.push_str("  requires\n");
+    for f in fns {
+        let rhs = if f.requires.is_empty() { ".wahr".to_string() } else { format!("gReq_{}", lean_fn(&f.name)) };
+        out.push_str(&format!("    | .{} => {rhs}\n", lean_fn(&f.name)));
+    }
     out.push_str("  ensures\n");
     for f in fns {
         let rhs = if f.ensures.is_empty() { ".wahr".to_string() } else { format!("gEns_{}", lean_fn(&f.name)) };
@@ -2967,6 +3195,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     }
     out.push_str(&format!("\ndef gFs : List gD.Fn := [{}]\n\n",
         fns.iter().map(|f| format!("g_{}", lean_fn(&f.name))).collect::<Vec<_>>().join(", ")));
+    // The lock and carrier member lists (lane 198): the complete
+    // enumerations the goal theorem's checker premise runs over (the
+    // obligation export states their completeness beside them).
+    out.push_str(&format!("def gLs : List gD.Lock := [{}]\n\n",
+        (0..model.locks.len()).map(|li| lock_ctor(model, li)).collect::<Vec<_>>().join(", ")));
+    out.push_str(&format!("def gCs : List (gD.Tab ⊕ gD.Glob) := [{}]\n\n",
+        (0..model.tables.len()).map(|ti| format!("(.inl {})", tab_ctor(model, ti))).collect::<Vec<_>>().join(", ")));
     // The fragment check holds structurally (no registers, no indirect
     // calls); the footprint check holds exactly where every accessed
     // carrier is signature-guarded or written by none -- never guessed.
@@ -3041,6 +3276,44 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }
     }
     out.push('\n');
+    // The declared initial memory `gSp0` (lane 198): the zero memory --
+    // every slot at zero (`false` for `bool`), no globals -- as the loader
+    // establishes it (`Laufzeit.lader`). `check_sp0` refused every integer
+    // field whose range holds no zero, so each `by decide` below closes.
+    out.push_str("-- The declared initial memory (`Speicher gD`): the zero memory.\n");
+    if model.tables.is_empty() {
+        out.push_str("def gSp0 : Speicher gD :=\n  ⟨fun t => nomatch t, (fun g => nomatch g)⟩\n\n");
+    } else {
+        let mut arme = Vec::new();
+        for t in model.tables.iter() {
+            for f in &t.fields {
+                let wert = match &f.ty {
+                    VTy::Bool => "false".to_string(),
+                    _ => "⟨0, by decide, by decide⟩".to_string(),
+                };
+                arme.push(format!("| .{}, .{} => {wert}", t.name, f.name));
+            }
+        }
+        out.push_str("def gSp0 : Speicher gD :=\n  ⟨fun t _ f => match t, f with ");
+        out.push_str(&arme.join(" "));
+        out.push_str(", (fun g => nomatch g)⟩\n\n");
+    }
+    // The program as ONE declaration (lane 198): the code with its
+    // contracts (`gP`), the lock invariants (`gS`), the axioms' declared
+    // ensures (no axiom exists: `fun _ _ _ => true`, the `axWahr` shape),
+    // the declared starts with their arguments (`gE.starts`: every start
+    // is parameterless, its argument list `.nil`) and the declared initial
+    // memory (`gSp0`) -- exactly the `Einheit` the goal theorem quantifies
+    // over (`GabbroZiel`, `Zielsatz/Spec.lean`).
+    let startet_terme: Vec<String> = startet.iter()
+        .map(|i| format!("⟨g_{}, .nil⟩", lean_fn(&fns[*i].name)))
+        .collect();
+    out.push_str("def gE : Zielsatz.Einheit gD where\n");
+    out.push_str("  P := gP\n");
+    out.push_str("  S := gS\n");
+    out.push_str("  Q := fun _ _ _ => true\n");
+    out.push_str(&format!("  starts := [{}]\n", startet_terme.join(", ")));
+    out.push_str("  sp0 := gSp0\n\n");
     out.push_str(&format!("end {ns}\n\nend Gabbro.Grammatik\n"));
     Ok(out)
 }
