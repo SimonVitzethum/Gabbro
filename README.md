@@ -230,11 +230,13 @@ This section exists because the alternative is that a reader has to find it out.
     (`N310`–`N314`). Tag `milestone-2026-09-15-zielsatz-bestaetigt`.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
-- **The chain of section 4 is closed for one program.** `beispiele/104`, theorem
-  `schlusssatz_104` (single-threaded; the runtime start and the binary-run correspondence as
-  hypotheses, the C compiler and the hand transcription of the emitted text named). Every other
-  program: open — chain count 1 of 101 (`instrumente/zaehle-kette.py`). Concurrent translation
-  validation (stage b) is not started.
+- **The chain of section 4 is closed for two programs, by ONE generic theorem.** `schlusssatz`
+  (single-threaded; for every source text whose chain data check -- the Lean parse, the
+  checker's Bool, the user's proof, the correspondence certificate; the runtime start and the
+  binary-run correspondence as hypotheses, the C compiler named), instantiated for
+  `beispiele/104` and `beispiele/108` (PLAN-UEBERSETZUNGSVALIDIERUNG §6). Every other program:
+  open, stopped at the Lean parser or elaborator — chain count 2 of 111
+  (`instrumente/zaehle-kette.py`). Concurrent translation validation (stage b) is not started.
 - **The proof-to-code ratio has no measured value.** The floor is about 0,5 : 1 — the abstract
   specification itself — and Gabbro does not claim to prove functional correctness, so the true
   figure is strictly above it. The upper bound is unknown, and a number without a source list

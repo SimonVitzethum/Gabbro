@@ -2879,5 +2879,100 @@ used `decide` on `Akzeptiert` (G1 float register included) still computes `true`
 `axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
 green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §§1-10 history above.)
+## 26. The closing theorem, stage (a), generic: `schlusssatz`; chain count 2 (2026-09-15)
+
+PLAN-UEBERSETZUNGSVALIDIERUNG §6 (rewritten). `schlusssatz_104` (§ of 2026-09-14, Schlusssatz104.lean)
+is about ONE program by hand; this section is the same statement for every source text whose
+chain data check.
+
+### 26.1 The pieces
+
+| Piece | File | Generic in |
+|---|---|---|
+| the pipeline `uebersetzeAllg` (lex, parse, `pre108`, `elabU`, `lowerAllg` onto `declOf u`) | Schlusssatz.lean | the source text |
+| T2 proper: `korrOk EL fnum c P fs` (decidable), `korrOk_fnCorr` (every depth), `korrOk_jeder_lauf` (every C run, by `exec_det`), `argsTo_of` (the argument passing of any call), `scorr_assignSlotVia` | KorrespondenzAllg.lean | the declaration, the program, the certificate |
+| `EinFadenStart` (A4, one active thread), `einfaden_ziel` (the machine, from `ziel_ort_einfaden_ende` on `E.P.mitRuhe`) | Schlusssatz.lean | the unit `E : Einheit D` |
+| `Kette src` (a closed chain), `schlusssatz` | Schlusssatz.lean | the source text |
+| `kette_104`, `kette_108` | Kette104.lean, Kette104Satz.lean, Kette108.lean | -- (instances) |
+| witnesses, the check seen failing | SchlusssatzZeuge.lean, Kette104Satz.lean, Kette108.lean | -- |
+
+### 26.2 The statement
+
+    theorem schlusssatz {src : String} (K : Kette src)
+        (O : Orakel (declOf K.u)) (hH : HardwareAnnahmen O K.E.Q)
+        (orc : DevOrc) (XR : CCallR) (hXR : XR.Funktional)
+        (bin : (declOf K.u).Fn → CSt → List CVal → CSt → Option CVal → Prop)
+        (tief : (declOf K.u).Fn → Nat)
+        (hA1 : ∀ f st vs st' rv, bin f st vs st' rv →
+          CallAt K.EL.lay orc XR (kProg K.zert) (tief f) (fnNr f) st vs st' rv)
+        (sp …) (init …) (hA4 : EinFadenStart K.E sp init) :
+      uebersetzeAllg src = .ok ⟨K.u, K.E.P, K.fs0⟩ ∧                         -- 1 parse
+      (akzeptiert … = true ∧ AkzeptiertSpec … ∧ korrOk … = true) ∧            -- 2 certificates
+      NutzerPflicht K.E ∧                                                     -- 3 model judgement
+      (∀ passes n f k, … → rufAt … .istFehler = false →                        -- 4 every C run
+        (∃ C run) ∧ ∀ C run, RufOut K.EL (rufAt …) st' rv) ∧
+      ((∀ passes n, RufRu (rufAt K.E.P O passes n) (rufAt K.E.P.mitRuhe O.mitRuhe passes n)) ∧
+       (∀ passes M, reachable from init → SpurInv M ∧ contract legs ∧ StartEndeG ∧ …) ∧
+       (∀ passes sp' init', Laufzeit K.E sp' init' → ∀ M, reachable → Ziel …)) ∧ -- 5 machine
+      (∀ passes f k, … → ∀ st' rv, bin f st vs st' rv → RufOut …)              -- 6 binary
+
+`Kette src` holds: `u`, `E : Einheit (declOf u)`, `fs0`, `uebersetzt : uebersetzeAllg src = .ok
+⟨u, E.P, fs0⟩`, enumerations `fs ls cs`, `akzeptiert` (the checker's Bool, (a)), `nutzer :
+NutzerPflicht E` ((b)), `EL : EmitLay (declOf u)`, `zert : KCert (declOf u)`, `zertOk : korrOk EL
+fnNr zert E.P fs = true`.
+
+### 26.3 What `korrOk` covers and what makes it `false`
+
+Statements: `assignDurch`, `assignSlot` (row `storeSlot` through any pointer form, or
+`storeNamed`), `assignVar` (`setVar`), `call` (`call fc cargs none`, `fc = fnum g`, arguments by
+`exOk` and `declOk`, the callee's map = its parameter list), `bind` (`bindLet`, fresh local),
+`(void)x;` (`void`), `ret` (`ret cr` by `ergOk`; falling off a `void` body). Expressions: `lit`,
+`var`, `weiter`, `slot`/`durch` (`.ld (.slotA base ci n ss off) τc`, base a named table, a map
+pointer or a pointer variable, the layout numbers `EL`'s), `ptrOf`. Everything else: `false`.
+`korrOk_faellt` (by `decide`): a field offset `1` for `0`, a stored `99` for `100`, `refD`'s
+index-fixed map (`ks = [(1, 0)]`), a missing call row -- each refused.
+
+### 26.4 Instances and witnesses
+
+* `kette_104 : Kette src104real` -- the real text with comments, the generic lowering, no
+  declared start; user logic `ein4_R` (the argument of `gP_einzahlen_R` over `declOf uExp104`)
+  and `lies4_V`; `zert104` pasted from `gabbro corr-lean` (third section). Witness
+  `kette_104_zeuge` = `schlusssatz_zeuge`: `einzahlen(k, 0, 7)` from the zero state, through the
+  generic theorem, the slot `0 -> 100` in Gabbro and in EVERY C run.
+* `kette_108 : Kette src108` -- two declared concurrent starts, accepted; `zert108` pasted (the
+  named-table loads). Witnesses `kette_108_zeuge` (`read_a()` returns `42` in Gabbro and in
+  EVERY C run) and `kette_108_nebenlaeufig` (the declared concurrent start meets (d); part 5's
+  `Ziel` holds at its machine).
+* `korrOk_zeuge` (the check holds and its C run moves memory), `einfaden_ziel_zeuge` (the
+  premises of `einfaden_ziel` hold jointly with thread 0 running `einzahlen`, a lock-holding
+  writer the runtime premise (d) would refuse as a start).
+
+### 26.5 Axiom record
+
+`korrOk_fnCorr`, `korrOk_jeder_lauf`, `exOk_sound`, `stOk_sound`, `enOk_sound`, `argsTo_of`,
+`einfaden_ziel`, `schlusssatz`, `kette_104`, `kette_108`, `kette_104_zeuge`, `kette_108_zeuge`,
+`kette_108_nebenlaeufig`, `korrOk_zeuge`, `einfaden_ziel_zeuge`, `schlusssatz_zeuge`: `propext`,
+`Classical.choice`, `Quot.sound`; `ptrOk_sound`, `korrOk_faellt`: `propext`, `Quot.sound`. No
+`sorry`, no `native_decide`, no new `axiom`. `lake build` on `ki-pc-fisch-101`
+(`~/gabbro-opus-tv/`): 236 jobs, green.
+
+### 26.6 The counter
+
+`instrumente/zaehle-kette.py` counts a chain as closed only for a program with a Lean-checked
+instance of `schlusssatz`: a `CHAIN-INSTANCE <program> <name>` marker, `def <name> : Kette <src>`
+with `<src>` byte-identical to the file, the instance's certificate text-identical to the
+printer's `KCert`, an application `schlusssatz <name>`, and with `--lean` a green `lake build`
+plus sieve (a) (the pipeline evaluated in Lean over every program) and (d). Measured on
+`ki-pc-fisch-101`: **CHAIN COUNT 2 of 111** (104, 108; before: 1 of 101). On the way, the C-form
+census read 104's `(void)lies(k, i);` as a call inside an expression; repaired in
+`pruefe-cformen.py` (PLAN §6.3).
+
+### 26.7 What remains
+
+Sieve (a) (T3) is binding: 20 corpus programs stop at the Lean parser, 89 at the elaborator
+(PLAN §6.3). `korrOk`'s missing forms are one arm each over existing T4 lemmas. Part 4 is
+conditional on the Gabbro call ending without a model error; A2 and the non-Lean parts of
+A1/A3/A4 stay outside; the adequacy chain and stage (b) are untouched (PLAN §6.5).
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §§1-10 history above.)
 
