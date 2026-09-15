@@ -39,8 +39,8 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (e0 : Ereignis D)
     {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (hF : FadenV P passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log) :
-    FadenV P passes (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
+    (hF : FadenV P O passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log) :
+    FadenV P O passes (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -547,7 +547,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       have := congrArg Prod.fst hax
       simp only [axiomAntwort] at this
       exact this.symm
-    have hv : einpassenErg (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwort] at this
       exact this
@@ -558,10 +558,10 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
-      hfr (fun O' R σ hwk => ?_), hL⟩
+      hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
-    simp only [execBlock, axiomAntwort, hwk, hv]
+    simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
     rfl
   -- pushes
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
@@ -971,8 +971,8 @@ theorem andereV (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {u : Faden} (hs : RufSchrittG P O passes M u M') (t : Faden) (htu : t ≠ u)
-    (hF : FadenV P passes (M.faeden t) (M.weltVon t)) :
-    FadenV P passes (M'.faeden t) (M'.weltVon t) := by
+    (hF : FadenV P O passes (M.faeden t) (M.weltVon t)) :
+    FadenV P O passes (M'.faeden t) (M'.weltVon t) := by
   have e : M'.faeden t = M.faeden t := rufSchrittG_fremd hs t htu
   have hW : M'.weltVon t = M'.speicher.welt (M.faeden t).spur := by
     unfold RufMaschineG.weltVon; rw [e]
@@ -986,7 +986,7 @@ theorem andereV (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
 /-- **The start machine is replayed.** -/
 theorem zielInvV_start (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hStart : StartGut P sp init) :
-    ZielInvV P passes (RufStartG P sp init) := by
+    ZielInvV P O passes (RufStartG P sp init) := by
   have hz : ∀ t, (RufStartG P sp init).faeden t =
       ⟨[], ⟨(init t).1, (init t).2, sp.welt [], ⟨false, D.params (init t).1,
         Signatur.anfang D (D.signatur (init t).1), (init t).2, .ende (P.rumpf (init t).1)⟩⟩,
@@ -1003,7 +1003,7 @@ theorem zielInvV_start (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) 
     rw [hz t]
     exact ⟨⟨[], [], sp.welt [], hStart t, funkV_nil, vertraegeOkV_nil P, kurzV_nil _, funkA_nil,
       rahmenA_nil, kurzA_nil _, GleichAuf.vonSpeicher rfl, ⟨hFrag _, fuss_rumpf P _⟩,
-      fun R O' _ _ => ZErg.folgt_refl _⟩, trivial⟩
+      fun R O' _ _ _ => ZErg.folgt_refl _⟩, trivial⟩
   · rw [hz t]
     exact logOk_eintritt (fun _ h => absurd h List.not_mem_nil) (hStart t)
 
@@ -1013,8 +1013,8 @@ theorem zielInvV_schritt (hO : GutO O) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g
     (hFrag : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true) (e0 : Ereignis D) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hex : StartExklusiv init)
     {M M' : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
-    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvV P passes M) :
-    ZielInvV P passes M' := by
+    {u : Faden} (hs : RufSchrittG P O passes M u M') (hI : ZielInvV P O passes M) :
+    ZielInvV P O passes M' := by
   refine ⟨fun t => ?_, fun t => ?_⟩
   · by_cases htu : t = u
     · subst htu
@@ -1062,7 +1062,7 @@ theorem ziel_ort_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List 
   have hFragF : ∀ f, (P.rumpf f).vOk (kandP P (fussOrte P f)) = true :=
     programmImFragmentV_ok P hvoll hFrag
   intro M hr
-  have hI : ZielInvV P passes M := by
+  have hI : ZielInvV P O passes M := by
     induction hr with
     | start => exact zielInvV_start hFragF sp init hStart
     | schritt M M' u hr' hs ih =>

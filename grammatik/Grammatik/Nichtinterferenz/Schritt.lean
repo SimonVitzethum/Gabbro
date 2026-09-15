@@ -268,13 +268,13 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
           σ₂.speicher
       | (_, none) => none
   | _, _, _, _, ρ, .regLies r _ rest, k =>
-      match einpassen (D.rtyp r) (O.regLies r (sp.welt spur)) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
       | some v =>
           if D.rzusage r v = true then kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) spur sp
           else none
       | none => none
   | _, _, Λ, _, ρ, .regLiesElse r _ zusage sonst rest, k =>
-      match einpassen (D.rtyp r) (O.regLies r (sp.welt spur)) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
       | some v =>
           let σ₁ := (sp.welt spur).lese Λ zusage.orte
           if wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = true then

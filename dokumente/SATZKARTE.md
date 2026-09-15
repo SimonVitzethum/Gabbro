@@ -2651,5 +2651,171 @@ Full `lake build` from the changed `Syntax.lean` up, 226 jobs, green, 19 min 44 
   check `gabbro_hardware(IEEE)` is unchanged and is now a check the user proved passes).
 - Everything named in §22.6.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §§1-10 history above.)
+## 24. G1: every type has a decoding, and an empty answer type is a call that does not return (2026-09-15)
+
+The round-5 confirmation review found one more stop the MODEL decided and filed as hardware
+(G1, the class of F1). This section is a reviewed diff of `Spec.lean` (`KopfHalt`, `HaltArt`,
+`FortschrittG`, the ONE list; `GabbroZiel`, `Ziel` and every premise unchanged) and of the
+sequential semantics' decoding, re-proved.
+
+### 24.1 The finding
+
+`einpassen` (Semantik.lean) holds a raw machine answer against the declared type. It answered
+`none` for EVERY raw word of `.sum` (a `tagged` result, the `ok | reason` of a syscall), `.fl`
+(a float) and `.fnptr` (a function pointer). Every call of an axiom with such a result ended in
+`hardware (annahme a)`, every read of such a register in `hardware (register r)`, for EVERY
+oracle. `KoerperGutS` does not constrain hardware outcomes, `AxVertragO` was vacuous for such
+axioms, and probe A (`ensures false`) behind one such call met (b), passed the checker and
+was certified by `gabbro_ziel`. It contradicted SYNTAX.md §12.1 ("`einpassen` holds the raw
+answer against it") and the Spec header's justification of the hardware class ("an ill-typed
+answer is the foreign code breaking its declaration" -- there was no well-typed one).
+
+### 24.2 The decodings (Semantik.lean)
+
+* **`.sum cs` -- `summePasst`.** The emitter lays a `tagged` value out as
+  `struct { T_marke marke; union { … } last; }` (`emit.rs`, `markiert`): the case number as a C
+  `enum` (cases numbered `0, 1, …` in declaration order) and the payload of that case (no
+  member for a bare case). The ONE raw word is that pair packed **mixed-radix, case number in
+  the low digit: `roh = marke + |cases| * last`**, so `marke = roh % |cases|`,
+  `last = roh / |cases|` (Euclidean). The packing is a bijection `Int ≅ Fin |cases| × Int`, so
+  every value of the `tagged` type has exactly one raw word (`summeRoh`, `summePasst_voll`); a
+  bare case must carry `0` (whatever the C union holds there), a payload case a number in its
+  range (`nutzPasst`). A syscall's
+  `ok value | reason r` is such a sum; the generated errno decoding (`dekodiere`,
+  Syscall.lean) is the emitted C that forms the pair, and an errno outside the table has no
+  pair -- `hardware (annahme a)`, the kernel outside its contract (SYNTAX.md §12.1).
+* **`.fl lo hi` -- `gleitWortPasst`.** The word is the IEEE-754 binary64 bit pattern
+  (`0 <= roh < 2^64`, `Gleitkomma.ausBits`, the inverse of `zuBits` on well-formed triples),
+  held against the range exactly like a computed float (`gleitPasst`: finite, inside). `Ty.fl`
+  carries no width and the model computes binary64 (GLEITKOMMA.md §7), so an `f32` register is
+  read as its binary64 value -- the same named cut. Every well-formed value in range is the
+  decoding of its bits (`gleitWortPasst_voll`); every decoded value is well-formed
+  (`gleitWortPasst_wf`).
+* **`.fnptr m` -- `zeigerPasst`.** The word is a code address; the LOADED IMAGE names the
+  function there -- a new oracle field `Orakel.zeiger : Int → Option D.Fn` (default: no
+  function anywhere) -- and its signature number is checked against the declared `m`. Why the
+  oracle and not the declaration: which address a function has is the linker's and loader's;
+  a declared table would have to be the real layout (an unnamed assumption), while an oracle
+  field is quantified in (b) like every answer, so the user's proof holds for every layout.
+  Every function of signature `m` is the answer of some image (`zeigerPasst_voll`).
+* `.never` has no value, hence no answer; `.int`, `.bool`, `.opt`, `.grund`, `.ptr` unchanged.
+
+**Proved (EinpassenVoll.lean).** `einpassen_voll`: every value of every type (floats:
+well-formed, `WertOk`) is the decoding of some raw word under some image;
+`einpassen_wertOk`: every decoded value is such a value; hence **`antwortLeer_iff`**: the
+answer class of `τ` is empty (`AntwortLeer`, no raw word decodes under any image) EXACTLY when
+`τ` has no such value -- the model refuses no answer the declared type admits.
+`antwortLeer_never`, `antwortLeer_grund0`, `antwortLeer_int_leer` name the empties;
+`antwortLeer_keinErg`: an axiom without a result always answers.
+
+### 24.3 `never` and the empty types: a named "does not return" stop
+
+A call whose declared answer type is empty cannot return: there is no answer, and "the
+machine answered outside the type" has no content. Decision: **its continuation is
+unreachable, the obligation still covers everything before it, and the stop is named** --
+`HaltArt.nieZurueck`, with `KopfHalt .nieZurueck` at an axiom (or register) head whose type is
+`AntwortLeer`; `KopfHalt .hardware` there now requires `¬ AntwortLeer`, so the two kinds
+partition the head's failures; `FortschrittG` lists the new kind (`fort_nie`, Fortschritt.lean,
+by `by_cases` on `AntwortLeer` at the three heads). Why not "only in tail position": for
+`-> never` the non-return IS the declaration -- the emitter writes `_Noreturn` on the
+prototype (`emit.rs`, `Noreturn`), so the code after the call is unreachable in the C exactly
+as in G; and every outcome before the call (a `logik` outcome, a failed callee `requires`) is
+an outcome of the body, which `KoerperGutS` excludes. What stays vacuous is only the
+unreachable continuation and the function's own `ensures` -- partial correctness, as for a
+body that recurses forever. A foreign `never` body that returns breaks its declaration: a
+foreign-code fact like every entry of (c), named in the ONE list. Another empty type (`.grund 0`,
+an empty range) is the declaration making the call unanswerable, visible in the declaration
+like `Q := false`. No fragment refusal was added: the exporter emits no axiom today
+(`lean_g.rs`: `aerg := fun e => nomatch e`), and a refusal would have been a new checker
+obligation, where the named stop is a statement.
+
+### 24.4 The G1 probes, refuted (Zielsatz/ProbenG1.lean)
+
+`g1D`: no table, global or lock; `haupt`; axiom `holen() -> ok (0 .. 10) | err` writing
+nothing; register `temp : f64 in 0 .. 1` without device carriers.
+`g1PA` = `if true { let x = holen(); } return;`, `g1PR` = `if true { let t = temp; } return;`,
+both under `ensures false`; both pass the concrete checker (`g1PA_akzeptiert`,
+`g1PR_akzeptiert`), so a refusal is (b)'s.
+
+* **The oracle can answer:** `g1_holen_antwortet` -- for a declared ensures holding at some
+  answer, an oracle meets ALL of (c) (`GutO`, `RegLokal`, `AxVertragO`) and its answer to
+  `holen` FITS (`summeRoh`); `g1_temp_antwortet` -- an oracle meets (c) for every declared
+  ensures, and `temp` answers `0.5` (`0x3FE0000000000000`, decoded by the kernel,
+  `g1_temp_wort`); `g1_nicht_leer`: neither type is empty.
+* **The program relying on a false `ensures` is refuted:** `g1PA_widerlegt` -- no program with
+  the code `g1PA` meets (b), whenever the declared ensures of `holen` holds at SOME answer
+  (if at none, `AxVertragO` admits only oracles whose answers never fit: that is `Q := false`,
+  the visible false named assumption of the ONE list); `g1PR_widerlegt` (`NutzerWiderlegt`) --
+  for every program with that code, whatever its lock family, ensures, starts, memory.
+* **The contrast:** `g1_never_leer` -- an axiom returning `never` has an empty answer class.
+
+### 24.5 The sweep: every outcome the model could decide independently of the oracle
+
+Checked, per source of a non-`ok` outcome in `execStmt`/`execBlock` (Semantik.lean) and
+`execStmtH`/`execBlockH` (SperreSem.lean), with the kind G reports:
+
+| source | who decides | status |
+|---|---|---|
+| `bindAxiom`, answer does not decode (`Hardware.annahme`) | the oracle, for an answerable type (`einpassen_voll`); the declaration, for an empty type | REPAIRED (G1): `hardware` resp. `nieZurueck` |
+| `axiomCall` (no result) | never fails: `einpassenErg _ none _ = some ()` | checked, dead branch (`antwortLeer_keinErg`) |
+| `regLies`/`regLiesElse`, answer does not decode (`Hardware.register`) | as `bindAxiom` | REPAIRED (G1) |
+| `regLies`, answer against `requires` (`Hardware.geraet`) | oracle answer AND the declared promise `D.rzusage`; a promise false at every value is visible in the declaration | named (ONE list), unchanged |
+| `awaits`, flag not visible (`Hardware.sichtbarkeit`) | the oracle (`sichtbar`); `RegLokal` leaves `true` admissible | `flagge`, named, unchanged |
+| `forever` budget spent (`Hardware.fortschritt`) | the budget, quantified in (b) and in `GabbroZiel` | `budget`, a model artefact, named |
+| float out of range (`Logik.bereich`, was `Hardware.ieee`) | the program's own values | F1, the user's logic |
+| a call whose callee returns `never` (`bindCall`, `bindCallInd`) | the handler has no `ok` answer, so the caller's continuation is unreachable; in G the callee frame runs and nothing is filed at the caller | checked: sound, no stop filed |
+| `regSchreib`, `transition`, `publish`, `exchange` | no failure outcome (the raw write `roh` is `Unit` to the model) | checked |
+| `callInd` through a `fnptr` value | the value IS a function of the signature (`Val`) | checked, no stop |
+| `einpassen` for `.opt`, `.bool`, `.ptr`, `.int`, `.grund` | every value decodes (`einpassen_voll`) | checked |
+
+The only remaining model-decided failures are the EMPTY answer types, and `antwortLeer_iff`
+says they are exactly the types without a value -- named `nieZurueck`.
+
+### 24.6 Carried
+
+Every `einpassen`/`einpassenErg` site takes the image (`O.zeiger`; mechanical, in every file that names it);
+`VertragA` takes it (the recorded answers decode with the machine's image); `GleichRS` gains
+`ZeigerGleich O O'` and `orakelAus` copies the image, so the replays (`ZielOrtRahmen`,
+`ZielOrtGeraet`, `SperreBeweis`/`ZielOrtSperre`) use it at the axiom and register steps; the
+two older replays (`ZielOrtVollBeweis`/`ZielOrtVoll`, `ZielOrtAxBeweis`/`ZielOrtAx`) quantify
+over sequential oracles with the machine's image (`ZeigerGleich O O'` in `KopfV`/`WarteV`,
+`KopfA`/`WarteA`, which now take the machine oracle `O`). The idle root:
+`Orakel.mitRuhe` maps the image, `Orakel.zurueck` drops the root; `zurueck_mitRuhe` (an
+EQUALITY of oracles) no longer holds -- an oracle of `D.mitRuhe` may place the root at an
+address -- and is replaced by `OrakelRu`/`orakelRu_zurueck`: every oracle of `D.mitRuhe`
+ANSWERS like one of `D` (the root has signature `0`, which no translated `fnptr` type names,
+`einpassen_ru`); `execStmtH_ru`/`execEndH_ru`/`rumpfH_mitRuhe` (MitRuheSperre.lean) are stated
+for any such `O'`. `Fortschritt.lean` (`FortFaden` seven-way, `fort_nie`),
+`FortschrittZeuge.lean`, `Lebendigkeit.lean` (`abschnittAktiv_aus`): one more stop kind.
+
+### 24.7 Axiom record
+
+CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 min 51 s on
+`ki-pc-fisch-101` (`~/gabbro-muse/opus-g1/`); no `sorryAx` anywhere in the log.
+`gabbro_ziel`, `gabbro_ziel_zeuge`, `probeF1_widerlegt_gilt`, `fortschrittG_aus`,
+`koerperGutS_mitRuhe`, `orakelRu_zurueck`, `g1PA_widerlegt`, `g1PR_widerlegt`: `propext`,
+`Classical.choice`, `Quot.sound`. `einpassen_voll`, `antwortLeer_iff`, `summePasst_voll`,
+`gleitWortPasst_voll`, `g1_holen_antwortet`, `g1_temp_antwortet`, `g1_nicht_leer`: `propext`,
+`Quot.sound`. `g1PA_akzeptiert`, `g1PR_akzeptiert`: `propext`. No `sorry`, no new `axiom`, no
+`native_decide`; the three facts of the decoded `0.5` (`g1HalbW`) are `decide +kernel`
+(kernel evaluation, no native code) -- the elaborator's `rfl` ran out of recursion depth.
+
+### 24.8 What remains
+
+- **C side, not repaired:** `encW` (CSpeicher.lean) gives `.sum`, `.fl`, `.fnptr` register
+  cells no integer encoding and `tyFits` refuses them, so `regLies_step` (CFormenH.lean) covers
+  no register of those types -- the named CUT is unchanged. And for `option index into T` the
+  emitter's `T_NONE` sentinel is `n` (`encOpt none = n`), which `einpassen` decodes as
+  `hardware` (it reads `none` from a NEGATIVE word): `regLies_step`'s premises are
+  unsatisfiable for a `none` answer, so the C-side lemma is vacuous there. A register of
+  option type is not in the fragment's corpus; aligning `einpassen` with `encOpt` is one line
+  and a re-proof of `einpassen_ru`, left open.
+- `roh` (a value as a raw word for a register WRITE) is not the inverse of `einpassen` for
+  sums (the case number only), floats (truncation, the old `Float` model's) and pointers (`0`);
+  the model's `regSchreib` answers `Unit`, so no outcome depends on it.
+- The exporter emits no axiom and no register of the G1 types; `GabbroZiel`'s programs with
+  such axioms are reached by hand-written terms (as before, §22.6).
+- Everything named in §23.7.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §§1-10 history above.)
 

@@ -1742,7 +1742,8 @@ example : wahr? (eval (D := leer) (Γ := []) (Λ := []) leereWelt (.und .wahr (.
 
 def leerV : Vertrag leer := ⟨fun t => t.elim, fun g => g.elim, none, 0, [], [], none⟩
 
-def leerO : Orakel leer := ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim⟩
+def leerO : Orakel leer :=
+  ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => Option.none⟩
 
 def gleitProbe : Block leer leerV false [] [] [] :=
   .gleitLit (3, 2) (0, 1) (10, 1) .nil

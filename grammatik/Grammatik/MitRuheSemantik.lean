@@ -406,43 +406,114 @@ theorem wirkt_mitRuhe (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.ap
     (O.wirkt a (worldZ (worldR σ)) (envZ (envR ρ))).2) = _
   rw [worldZ_worldR, envZ_envR]
 
-theorem einpassen_ru : ∀ (τ : Ty) (n : Int),
-    einpassen (D := D.mitRuhe) (tyR τ) n = (einpassen (D := D) τ n).map (valR τ)
+/-- **An oracle of `D.mitRuhe` answering like `O`** on translated worlds and arguments. Until
+    2026-09-15 the only such oracle the transfer used was `O.mitRuhe` itself, and every oracle
+    of `D.mitRuhe` was one (`zurueck_mitRuhe`). Since the loaded image joined the oracle (G1
+    repair, `Orakel.zeiger`), an oracle of `D.mitRuhe` may place the runtime's root at an
+    address, which no oracle of `D` can: `O.mitRuhe` is then not `O'`, but it still ANSWERS
+    like `O'` on every translated type -- the root has signature number `0`, which no
+    translated `fnptr` type names (`einpassen_ru`). -/
+structure OrakelRu (O : Orakel D) (O' : Orakel D.mitRuhe) : Prop where
+  wirkt : ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)),
+    O'.wirkt a (worldR σ) (envR ρ) = (worldR (O.wirkt a σ ρ).1, (O.wirkt a σ ρ).2)
+  regLies : ∀ (r : D.Reg) (σ : World D), O'.regLies r (worldR σ) = O.regLies r σ
+  sichtbar : ∀ (g : D.Glob) (σ : World D), O'.sichtbar g (worldR σ) = O.sichtbar g σ
+  zeiger : ∀ k, (O'.zeiger k).bind id = O.zeiger k
+
+/-- A raw answer decodes in `D.mitRuhe` as in `D`, under images that agree off the root. -/
+theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn)
+    (hz : ∀ k, (z' k).bind id = z k) : ∀ (τ : Ty) (n : Int),
+    einpassen (D := D.mitRuhe) z' (tyR τ) n = (einpassen (D := D) z τ n).map (valR τ)
   | .int lo hi, n => by
-      show einpassen (D := D.mitRuhe) (.int lo hi) n =
-        Option.map (valR (.int lo hi)) (einpassen (D := D) (.int lo hi) n)
+      show einpassen (D := D.mitRuhe) z' (.int lo hi) n =
+        Option.map (valR (.int lo hi)) (einpassen (D := D) z (.int lo hi) n)
       simp only [einpassen]
       split <;> rfl
   | .bool, _ => rfl
   | .opt m, n => by
-      show einpassen (D := D.mitRuhe) (.opt m) n =
-        Option.map (valR (.opt m)) (einpassen (D := D) (.opt m) n)
+      show einpassen (D := D.mitRuhe) z' (.opt m) n =
+        Option.map (valR (.opt m)) (einpassen (D := D) z (.opt m) n)
       simp only [einpassen]
       split
       · rfl
       · split <;> rfl
-  | .sum _, _ => rfl
+  | .sum cs, n => by
+      show summePasst cs n = Option.map (valR (D := D) (.sum cs)) (summePasst cs n)
+      cases summePasst cs n <;> rfl
   | .grund m, n => by
-      show einpassen (D := D.mitRuhe) (.grund m) n =
-        Option.map (valR (.grund m)) (einpassen (D := D) (.grund m) n)
+      show einpassen (D := D.mitRuhe) z' (.grund m) n =
+        Option.map (valR (.grund m)) (einpassen (D := D) z (.grund m) n)
       simp only [einpassen]
       split <;> rfl
   | .never, _ => rfl
-  | .fl _ _, _ => rfl
-  | .fnptr _, _ => rfl
+  | .fl lo hi, n => by
+      show gleitWortPasst lo hi n = Option.map (valR (D := D) (.fl lo hi)) (gleitWortPasst lo hi n)
+      cases gleitWortPasst lo hi n <;> rfl
+  | .fnptr m, n => by
+      show zeigerPasst (D := D.mitRuhe) z' (m + 1) n =
+        Option.map (valR (D := D) (.fnptr m)) (zeigerPasst z m n)
+      have h := hz n
+      cases hz' : z' n with
+      | none =>
+          have hzn : z n = Option.none := by rw [← h, hz']; rfl
+          simp only [zeigerPasst, hz', hzn]
+          try rfl
+      | some g =>
+          cases g with
+          | none =>
+              have hzn : z n = Option.none := by rw [← h, hz']; rfl
+              have hs : ¬ (D.mitRuhe).sig Option.none = m + 1 := by
+                show ¬ 0 = m + 1
+                omega
+              simp only [zeigerPasst, hz', hzn, dif_neg hs]
+              try rfl
+          | some f =>
+              have hzn : z n = some f := by rw [← h, hz']; rfl
+              by_cases h2 : D.sig f = m
+              · have h2' : (D.mitRuhe).sig (some f) = m + 1 := by
+                  show D.sig f + 1 = m + 1
+                  omega
+                simp only [zeigerPasst, hz', hzn, dif_pos h2, dif_pos h2']
+                try rfl
+              · have h2' : ¬ (D.mitRuhe).sig (some f) = m + 1 := by
+                  show ¬ D.sig f + 1 = m + 1
+                  omega
+                simp only [zeigerPasst, hz', hzn, dif_neg h2, dif_neg h2']
+                try rfl
   | .ptr _ _, _ => rfl
 
-theorem einpassenErg_ru : ∀ (e : Option Ty) (n : Int),
-    einpassenErg (D := D.mitRuhe) (e.map tyR) n = (einpassenErg (D := D) e n).map (ergR e)
+theorem einpassenErg_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn)
+    (hz : ∀ k, (z' k).bind id = z k) : ∀ (e : Option Ty) (n : Int),
+    einpassenErg (D := D.mitRuhe) z' (e.map tyR) n = (einpassenErg (D := D) z e n).map (ergR e)
   | none, _ => rfl
-  | some τ, n => einpassen_ru τ n
+  | some τ, n => einpassen_ru z z' hz τ n
+
+/-- The translated image agrees with `O`'s off the root (it never names the root). -/
+theorem zeiger_mitRuhe (O : Orakel D) (k : Int) : (O.mitRuhe.zeiger k).bind id = O.zeiger k := by
+  show (Option.map some (O.zeiger k)).bind id = O.zeiger k
+  cases O.zeiger k <;> rfl
+
+theorem orakelRu_mitRuhe (O : Orakel D) : OrakelRu O O.mitRuhe :=
+  ⟨wirkt_mitRuhe O, fun r σ => by
+      show O.regLies r (worldZ (worldR σ)) = _
+      rw [worldZ_worldR],
+    fun g σ => by
+      show O.sichtbar g (worldZ (worldR σ)) = _
+      rw [worldZ_worldR],
+    zeiger_mitRuhe O⟩
+
+theorem axiomAntwort_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : OrakelRu O O') (a : D.Ax)
+    (σ : World D) (ρ : Env D (D.aparams a)) :
+    axiomAntwort O' a (worldR σ) (envR ρ) =
+      (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) := by
+  unfold axiomAntwort
+  rw [hO.wirkt]
+  exact congrArg _ (einpassenErg_ru O.zeiger O'.zeiger hO.zeiger (D.aerg a) _)
 
 theorem axiomAntwort_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwort O.mitRuhe a (worldR σ) (envR ρ) =
-      (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) := by
-  unfold axiomAntwort
-  rw [wirkt_mitRuhe]
-  exact congrArg _ (einpassenErg_ru (D.aerg a) _)
+      (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) :=
+  axiomAntwort_ruG (orakelRu_mitRuhe O) a σ ρ
 
 theorem regLies_mitRuhe (O : Orakel D) (r : D.Reg) (σ : World D) :
     O.mitRuhe.regLies r (worldR σ) = O.regLies r σ := by
@@ -906,8 +977,8 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               rfl
   | _, _, _, _, .regLies r hk rest, σ, ρ => by
       simp only [ruB, execBlock]
-      rw [regLies_mitRuhe, einpassen_ru]
-      cases einpassen (D.rtyp r) (O.regLies r σ) with
+      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -920,8 +991,8 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               rfl
   | _, _, Λ, _, .regLiesElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
-      rw [regLies_mitRuhe, einpassen_ru]
-      cases einpassen (D.rtyp r) (O.regLies r σ) with
+      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => rfl
       | some v =>
           simp only [Option.map]

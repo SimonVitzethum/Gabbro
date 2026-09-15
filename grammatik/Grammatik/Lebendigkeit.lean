@@ -954,11 +954,12 @@ theorem abschnittAktiv_aus (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
   have hr := R.erreichbar hr0 n
   have hND := startSpur_nodup_leer init hLeer
   rcases fortschrittG_aus hO hSt sp init hND hr (hL n) (hB n) u with
-    hF | hW | hHalt | hHalt | hHalt | hs
+    hF | hW | hHalt | hHalt | hHalt | hHalt | hs
   · have e := fertig_leer (rangInvG_erreichbar hO hSt sp init hND hr u) (hLeer u) hF
     rw [e] at hu
     exact absurd hu List.not_mem_nil
   · exact Or.inr hW.1
+  · exact absurd hHalt (hHw n u L hu _)
   · exact absurd hHalt (hHw n u L hu _)
   · exact absurd hHalt (hHw n u L hu _)
   · exact absurd hHalt (hHw n u L hu _)

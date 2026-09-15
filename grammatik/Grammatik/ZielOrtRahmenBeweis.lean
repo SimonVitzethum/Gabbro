@@ -33,7 +33,7 @@ variable {D : Deklaration}
 
   The replay below is generic in a declared axiom ensures `Q` (as the replay
   of `ziel_ort_voll_ax`, `ZielOrtAxBeweis.lean`): the records keep
-  `VertragA Q HA`, so the record oracle meets `Q` (`orakelAus_vertrag`) and
+  `VertragA O.zeiger Q HA`, so the record oracle meets `Q` (`orakelAus_vertrag`) and
   the obligation may quantify over the oracles that meet it. With the
   trivial ensures `axWahr` every oracle meets it, and the obligation is
   `KoerperGutR` (`koerperGutRQ_of_R`). -/
@@ -91,7 +91,7 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
 def KopfR (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (σ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzA σ.spur.length HA ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA σ.spur.length HA ∧
     GleichAuf (fussOrteG P F.f) σ W ∧ F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
       PasstV R H → PasstA O' HA → GleichRS O O' →
@@ -103,7 +103,7 @@ def KopfR (F : RufRahmenG D) (W : World D) : Prop :=
 def WarteR (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (κ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA Q HA ∧ KurzA κ.spur.length HA ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA κ.spur.length HA ∧
     F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     (GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧
@@ -225,7 +225,7 @@ theorem popR_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : �
 theorem pushR_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : ∀ f, KoerperGutRQ P passes Q f) {F : RufRahmenG D}
     {H : List (EintragV D)} {HA : List (AxEintrag D)} {σ : World D}
     (hreq : ReqAmEintritt P F.f F.s0 F.rho) (hf : FunkV H) (hv : VertraegeOkR P H)
-    (hfa : FunkA HA) (hra : RahmenA HA) (hqa : VertragA Q HA)
+    (hfa : FunkA HA) (hra : RahmenA HA) (hqa : VertragA O.zeiger Q HA)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     (r : GRest D (vertragVon D F.f) l Γ Λ)
     (heq : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
@@ -386,7 +386,7 @@ theorem pushR_ok (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : �
   have hreq0 := req_transfer hreqκ
     (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hctrκ)
   refine ⟨⟨⟨[], [], W.lese Λ args.orte, hreq0, funkV_nil, vertraegeOkR_nil P, kurzV_nil _,
-    funkA_nil, rahmenA_nil, vertragA_nil Q, kurzA_nil _,
+    funkA_nil, rahmenA_nil, vertragA_nil _ Q, kurzA_nil _,
     GleichAuf.refl _ _, ⟨hFrag g, fuss_rumpfG P g⟩, fun R O' _ _ _ => ZErg.folgt_refl _⟩,
     ⟨H, HA, σ.lese Λ args.orte, hreq, hf, hv, kurzV_mono hk (lese_laenge _ _ _), hfa, hra, hqa,
       kurzA_mono hka (lese_laenge _ _ _), hrc hok', hreqκ, ⟨hctrκ, hctr, hgκ⟩, ?_⟩, hSt⟩, hreq0⟩
@@ -448,7 +448,7 @@ theorem pushR_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : �
   have hreq0 := req_transfer hreqκ
     (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hctrκ)
   refine ⟨⟨⟨[], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, kurzV_nil _,
-    funkA_nil, rahmenA_nil, vertragA_nil Q, kurzA_nil _,
+    funkA_nil, rahmenA_nil, vertragA_nil _ Q, kurzA_nil _,
     GleichAuf.refl _ _, ⟨hFrag g, fuss_rumpfG P g⟩, fun R O' _ _ _ => ZErg.folgt_refl _⟩,
     ⟨H, HA, σ.lese Λ os, hreq, hf, hv, kurzV_mono hk (lese_laenge _ _ _), hfa, hra, hqa,
       kurzA_mono hka (lese_laenge _ _ _), hrc hok', hreqκ, ⟨hctrκ, hctr, hgκ⟩, ?_⟩, hSt⟩, hreq0⟩
@@ -480,9 +480,9 @@ theorem fadenR_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenR
     (hok : r.okG P (fussOrteG P z.kopf.f) → r'.okG P (fussOrteG P z.kopf.f))
     (xm : World D × Int) (hxm : Rahmen (D.aschreibt a) (D.agschreibt a) (W.lese Λ args.orte) xm.1)
     (hlok : AxEnsLokal Q)
-    (hxq : ∀ v : ErgVal D (D.aerg a), einpassenErg (D.aerg a) xm.2 = some v → Q a xm.1 v = true)
+    (hxq : ∀ v : ErgVal D (D.aerg a), einpassenErg O.zeiger (D.aerg a) xm.2 = some v → Q a xm.1 v = true)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-      (σ : World D),
+      (σ : World D), ZeigerGleich O O' →
       O'.wirkt a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
         (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2) →
       (semV O' passes R r σ ρ).folgt
@@ -522,7 +522,7 @@ theorem fadenR_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenR
   · intro R O' hR hA hQ
     have h1 := heq R O' hR (passtA_append hA) hQ
     rw [hr] at h1
-    exact ZErg.folgt_trans h1 (hsem O' R σ (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
+    exact ZErg.folgt_trans h1 (hsem O' R σ hQ.2.2 (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
 
 /-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
     axiom call by recording its answer (`fadenR_ax`). -/
@@ -563,11 +563,11 @@ theorem fadenR_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
             (fun v hv => by
               rw [e1]
               exact hQ a _ _ v hv) ?_
-          intro O' R σ hw
+          intro O' R σ hz hw
           rw [hsem]
           apply ZErg.folgt_of_eq
           simp only [execStmt, axiomAntwort, hw]
-          simp only [hu]
+          simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp [Stmt.istAxiom] at hax
 

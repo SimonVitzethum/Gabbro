@@ -1035,7 +1035,7 @@ theorem w_regLies {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLies r hk rest) k⟩)
     (v : Wert D (D.rtyp r))
-    (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+    (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hzs : D.rzusage r v = true)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
@@ -1054,7 +1054,7 @@ theorem w_regLiesElseWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
     (v : Wert D (D.rtyp r))
-    (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+    (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
       ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = true)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
@@ -1074,7 +1074,7 @@ theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
     (v : Wert D (D.rtyp r))
-    (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+    (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
       ((M.weltVon f).lese Λ zusage.orte) (.cons v ρ)) = false)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :

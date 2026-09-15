@@ -307,7 +307,7 @@ theorem rLeser_lauf (O' : Orakel rD) (passes : Nat)
   show (∃ σ', execEnd O' passes R rRumpfLeser σ ρ = .zurueck σ' true) ∨
     ∃ e, execEnd O' passes R rRumpfLeser σ ρ = .hardware e
   simp only [rRumpfLeser, rLesBlock, execEnd, execStmt, execBlock, if_true, rZusage]
-  cases hv : einpassen (rD.rtyp ()) (O'.regLies () (σ.lese [] (Expr.wahr : Expr rD [] [] .bool).orte)) with
+  cases hv : einpassen O'.zeiger (rD.rtyp ()) (O'.regLies () (σ.lese [] (Expr.wahr : Expr rD [] [] .bool).orte)) with
   | none =>
       right
       exact ⟨_, rfl⟩
@@ -444,7 +444,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
     rfl
   -- first read: 0
   obtain ⟨M4, s4, hZ4⟩ := w_regLies (P := rP) (O := rO) (passes := 0) e3 () rfl _ _ .nil rfl rNull
-    (by show einpassen (.int 0 1) ((M3.speicher.slots () 0 ()).n) = some rNull
+    (by show einpassen rO.zeiger (.int 0 1) ((M3.speicher.slots () 0 ()).n) = some rNull
         rw [hsp3]; rfl)
     rfl (rHg0 (rHoff_e e3 hoff3)).heldIn
   have e4 := hZ4.1
@@ -464,7 +464,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   have e4' : M5.faeden 0 = _ := h50.trans e4
   -- second read: 1
   obtain ⟨M6, s6, hZ6⟩ := w_regLies (P := rP) (O := rO) (passes := 0) e4' () rfl _ _ _ rfl rEinsW
-    (by show einpassen (.int 0 1) ((M5.speicher.slots () 0 ()).n) = some rEinsW
+    (by show einpassen rO.zeiger (.int 0 1) ((M5.speicher.slots () 0 ()).n) = some rEinsW
         rw [hsp5]; rfl)
     rfl (rHg0 (rHoff_e e4' (by rw [h50, hZ4.spur, rOffen_weltVon]; exact hoff3))).heldIn
   have e6 := hZ6.1

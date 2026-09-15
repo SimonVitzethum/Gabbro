@@ -1804,7 +1804,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regLies r hk rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
       (hz : D.rzusage r v = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG P O passes M f
@@ -1827,7 +1827,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ zusage.orte)
       (hw : wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = true)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
@@ -1852,7 +1852,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ zusage.orte)
       (hw : wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = false)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)

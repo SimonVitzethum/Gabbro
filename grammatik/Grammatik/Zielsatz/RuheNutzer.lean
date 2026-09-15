@@ -83,10 +83,11 @@ theorem regLokal_zurueck {O' : Orakel D.mitRuhe} (h : RegLokal O') :
 theorem axVertrag_zurueck {Q : AxEns D} {O' : Orakel D.mitRuhe} (h : AxVertragO (axEnsRuhe Q) O') :
     AxVertragO Q (Orakel.zurueck O') := by
   intro a σ ρ v hv
-  change einpassenErg (D.aerg a) (O'.wirkt a (worldR σ) (envR ρ)).2 = some v at hv
-  have e : einpassenErg (D := D.mitRuhe) ((D.aerg a).map tyR) (O'.wirkt a (worldR σ) (envR ρ)).2 =
-      some (ergR (D.aerg a) v) := by
-    rw [einpassenErg_ru, hv]
+  change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a) (O'.wirkt a (worldR σ) (envR ρ)).2 =
+    some v at hv
+  have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)
+      (O'.wirkt a (worldR σ) (envR ρ)).2 = some (ergR (D.aerg a) v) := by
+    rw [einpassenErg_ru (Orakel.zurueck O').zeiger O'.zeiger (fun _ => rfl), hv]
     rfl
   have hq := h a (worldR σ) (envR ρ) (ergR (D.aerg a) v) e
   change Q a (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1) (ergZ (D.aerg a) (ergR (D.aerg a) v)) = true
@@ -219,10 +220,8 @@ theorem rumpf_rel (P : Programm D) (S : SperrInv D) (passes : Nat) (O' : Orakel 
     @EndRel D (vertragVon D f) false (D.params f)
       (execEndH S.mitRuhe O' U' passes R' (P.mitRuhe.rumpf (some f)) (worldR σ0) (envR ρ0))
       (execEndH S (Orakel.zurueck O') (umweltZ U') passes R (P.rumpf f) σ0 ρ0) := by
-  have h := rumpfH_mitRuhe P S (Orakel.zurueck O') (umweltZ U') U' passes R R' (umweltZ_ru U') hR
-    f σ0 ρ0
-  rw [zurueck_mitRuhe] at h
-  exact h
+  exact rumpfH_mitRuhe P S (Orakel.zurueck O') O' (orakelRu_zurueck O') (umweltZ U') U' passes R R'
+    (umweltZ_ru U') hR f σ0 ρ0
 
 theorem invAmRueck_mitRuhe (P : Programm D) (f : D.Fn) (σ : World D) :
     InvAmRueck P.mitRuhe (some f) (worldR σ) ↔ InvAmRueck P f σ := by
@@ -469,10 +468,10 @@ theorem regLokal_mitRuhe {O : Orakel D} (h : RegLokal O) : RegLokal O.mitRuhe :=
 theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
     AxVertragO (axEnsRuhe Q) O.mitRuhe := by
   intro a σ ρ v hv
-  change einpassenErg (D := D.mitRuhe) ((D.aerg a).map tyR) (O.wirkt a (worldZ σ) (envZ ρ)).2 =
-    some v at hv
-  rw [einpassenErg_ru] at hv
-  cases hx : einpassenErg (D.aerg a) (O.wirkt a (worldZ σ) (envZ ρ)).2 with
+  change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
+    (O.wirkt a (worldZ σ) (envZ ρ)).2 = some v at hv
+  rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv
+  cases hx : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (worldZ σ) (envZ ρ)).2 with
   | none => rw [hx] at hv; cases hv
   | some v0 =>
       rw [hx] at hv

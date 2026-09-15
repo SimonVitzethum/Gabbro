@@ -360,7 +360,7 @@ theorem geLeser_lauf (O' : Orakel geD) (hRL : RegLokal O') (passes : Nat)
   simp only [geRumpfLeser, geLesBlock, geNotiz, execEnd, execStmt, execBlock]
   generalize hσ1 : σ.lese geLg (Expr.wahr : Expr geD [] geLg .bool).orte = σ1
   simp only [eval, wahr?, if_true]
-  cases hv : einpassen (geD.rtyp ()) (O'.regLies () σ1) with
+  cases hv : einpassen O'.zeiger (geD.rtyp ()) (O'.regLies () σ1) with
   | none =>
       right
       exact ⟨_, rfl⟩
@@ -531,7 +531,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   -- first read: 0
   obtain ⟨M4, s4, hZ4⟩ := w_regLies (P := geP) (O := geO) (passes := 0) e3 () rfl _ _ .nil rfl
     geNull
-    (by show einpassen (.int 0 1) ((M3.speicher.slots GeTab.geraet 0 ()).n) = some geNull
+    (by show einpassen geO.zeiger (.int 0 1) ((M3.speicher.slots GeTab.geraet 0 ()).n) = some geNull
         rw [hsp3]; rfl)
     rfl (geHgLg (geHoff_e e3 hoff3)).heldIn
   have e4 := hZ4.1
@@ -572,7 +572,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
     rfl
   -- second read: 0
   obtain ⟨M7, s7, hZ7⟩ := w_regLies (P := geP) (O := geO) (passes := 0) e5' () rfl _ _ _ rfl geNull
-    (by show einpassen (.int 0 1) ((M6.speicher.slots GeTab.geraet 0 ()).n) = some geNull
+    (by show einpassen geO.zeiger (.int 0 1) ((M6.speicher.slots GeTab.geraet 0 ()).n) = some geNull
         rw [hsp6g]; rfl)
     rfl (geHgLg (geHoff_e e5' (by rw [h60]; exact hoff5))).heldIn
   have e7 := hZ7.1

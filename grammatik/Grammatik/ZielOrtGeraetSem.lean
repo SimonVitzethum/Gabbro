@@ -54,10 +54,10 @@ def RegLokal (O : Orakel D) : Prop :=
 /-- The sequential oracle `O'` gives the register and visibility answers of
     the machine's oracle `O`. -/
 def GleichRS (O O' : Orakel D) : Prop :=
-  O'.regLies = O.regLies ∧ O'.sichtbar = O.sichtbar
+  O'.regLies = O.regLies ∧ O'.sichtbar = O.sichtbar ∧ ZeigerGleich O O'
 
 theorem gleichRS_orakelAus (O : Orakel D) (HA : List (AxEintrag D)) :
-    GleichRS O (orakelAus O HA) := ⟨rfl, rfl⟩
+    GleichRS O (orakelAus O HA) := ⟨rfl, rfl, rfl⟩
 
 /-- The oracle of a record answers registers and visibility like the
     machine's oracle, so it is local when the machine's oracle is. -/
@@ -76,7 +76,7 @@ theorem regLies_gleich {O O' : Orakel D} (hRL : RegLokal O) (hQ : GleichRS O O')
 theorem sichtbar_gleich {O O' : Orakel D} (hRL : RegLokal O) (hQ : GleichRS O O') (g : D.Glob)
     {S : List (D.Tab ⊕ D.Glob)} (hS : Sum.inr g ∈ S) {σ W : World D}
     (hg : GleichAuf S σ W) : O'.sichtbar g σ = O.sichtbar g W := by
-  rw [hQ.2]
+  rw [hQ.2.1]
   exact hRL.2 g σ W (GleichAuf.mono (fun o ho => by
     rw [List.mem_singleton] at ho
     subst ho
@@ -587,7 +587,7 @@ variable (O : Orakel D) (passes : Nat)
 
 theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hz : D.rzusage r v = true) :
     semV O passes R (.dann (.regLies r hk rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
@@ -598,7 +598,7 @@ theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
 theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
     semV O passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
@@ -609,7 +609,7 @@ theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
 theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semV O passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
       (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by

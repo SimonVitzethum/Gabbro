@@ -142,9 +142,10 @@ theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
   have hH0 : ∀ k, ¬ Zielsatz.HaltBenannt mO 0 Ms k 0 := nicht_haltBenannt (by rw [hZs.1]; rfl)
   -- so the theorem gives thread 0 a step
   have hS0 : ∃ M', RufSchrittG mP mO 0 Ms 0 M' := by
-    rcases hF 0 with h | h | h | h | h | h
+    rcases hF 0 with h | h | h | h | h | h | h
     · exact absurd h hF0
     · exact absurd h hW0
+    · exact absurd h (hH0 _)
     · exact absurd h (hH0 _)
     · exact absurd h (hH0 _)
     · exact absurd h (hH0 _)

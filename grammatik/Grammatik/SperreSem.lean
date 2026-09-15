@@ -311,13 +311,13 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | (σ', Option.some v) => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
   | .regLies r _ rest, σ, ρ =>
-      match einpassen (D.rtyp r) (O.regLies r σ) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlockH rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regLiesElse r _ zusage sonst rest, σ, ρ =>
-      match einpassen (D.rtyp r) (O.regLies r σ) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execBlockH rest σ (.cons v ρ)).schrumpf
@@ -1695,7 +1695,7 @@ theorem semH_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
 
 theorem semH_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hz : D.rzusage r v = true) :
     semH S O U passes R (.dann (.regLies r hk rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
@@ -1706,7 +1706,7 @@ theorem semH_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
 theorem semH_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
     semH S O U passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
@@ -1718,7 +1718,7 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semH S O U passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
       (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
