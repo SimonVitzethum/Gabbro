@@ -31,7 +31,9 @@
                                           signature locks, `ls` complete);
   * `keinZyklus` (`KeinWarteZyklus`)   -- `kein_warteZyklusG` (the same rank invariant;
                                           2026-09-15, verdict F2);
-  * `fortschritt` (`FortschrittG`)     -- `fortschrittG_aus` (the `keinLogikHalt` leg,
+  * `fortschritt` (`FortschrittG`)     -- `fortschrittG_aus` (`AkzeptiertSpec.antworten`: a
+                                          head at an empty answer type is an axiom `-> never`,
+                                          since W1; the `keinLogikHalt` leg,
                                           a lock-free hence duplicate-free start trace,
                                           and `bereichG_mehrfaden`: every float range
                                           check passes, since the body obligation excludes
@@ -146,6 +148,7 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
       main.1.1.2.2.1
       (bereichG_mehrfaden P O passes Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1 hH.2.2
         hN.2.2 hS fs.2 hFrag hAbg hW hFuss (fun f => (hN.1 passes f).1) hStart hSstart hex M hr)
+      hA.antworten
     zeit := fun f g n _ _ _ hadm hE _ run hA' =>
       frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
 

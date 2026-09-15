@@ -2729,6 +2729,10 @@ like `Q := false`. No fragment refusal was added: the exporter emits no axiom to
 (`lean_g.rs`: `aerg := fun e => nomatch e`), and a refusal would have been a new checker
 obligation, where the named stop is a statement.
 
+**Superseded in part by §25 (W1):** the reason "unreachable in the C" holds for `-> never` only;
+every other empty answer type is now REFUSED by the checker, and `nieZurueck` is an axiom
+`-> never` alone.
+
 ### 24.4 The G1 probes, refuted (Zielsatz/ProbenG1.lean)
 
 `g1D`: no table, global or lock; `haupt`; axiom `holen() -> ok (0 .. 10) | err` writing
@@ -2817,5 +2821,63 @@ CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 mi
   such axioms are reached by hand-written terms (as before, §22.6).
 - Everything named in §23.7.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §§1-10 history above.)
+## 25. W1: the checker refuses an empty answer type other than `never` (2026-09-15)
+
+Both round-6 reviews (URTEIL-OPUS-2026-09-15d.md §3, URTEIL-MUSE-2026-09-15d.md) confirmed "the
+goal with named gaps -- no unnamed gap found" and reproduced one escape. This section is a
+reviewed diff: `AkzeptiertSpec` gains the field `antworten`, `KopfHalt .nieZurueck` is
+narrowed; `GabbroZiel` and every other premise are unchanged.
+
+**The finding.** §24.3 named every empty declared answer type as `nieZurueck`, with the reason
+"the continuation is unreachable in the C as in G". That holds only for an axiom `-> never`
+(`_Noreturn` prototype). An axiom returning `.grund 0`, an empty range, a sum without a value
+or `fn(sig n)` with no function of signature `n` has an ordinary prototype: the C call returns
+and the continuation runs, covered by nothing; a register read never "does not return".
+Probe A behind `let p = hol();` with `hol() -> fn(sig 5)` met (b), passed the checker and was
+certified (the reviewers' `n_ziel`).
+
+**The repair (option (ii) of the verdict).** A new checker component, `antworten`:
+* `Block.ants` & co. (AntwortOrte.lean) collect a body's answer sites -- `bindAxiom` and
+  `axiomCall` (`inl a`), `regLies` and `regLiesElse` (`inr r`); `StelleOk`: the site is an
+  axiom whose declared result is `never`, or its declared answer type is not `AntwortLeer`.
+* `antwortenB` (Zielsatz/Akzeptiert.lean) is the Bool, part of `Akzeptiert`;
+  `antwortenB_iff` proves it decides the field exactly. Emptiness is decided by `antwortB`
+  (EinpassenVoll.lean, `antwortB_iff`, through `antwortLeer_iff`): range bounds, reason count,
+  sum cases, `fnptr n` over the enumerated function list, and a float range by three
+  candidate witnesses (the rounded bounds and `+0`) -- complete because the kernel IEEE order
+  is transitive on finite values (`flt_trans_endlich`).
+* G continues only with sub-blocks of the bodies: `GRest.aR`, kept by every rule
+  (`schrittAnt`, the twin of `schrittOrte`), gives `antInvG_erreichbar` -- every frame's residue
+  on every reachable machine has admissible sites when every body has (`kopf_ants`).
+* `fort_dann` (Fortschritt.lean) uses it at the head: an empty axiom type is `never`, an empty
+  register type cannot occur. So `KopfHalt .nieZurueck` now holds ONLY at an axiom whose
+  declared result is `never`; the register cases are gone. `fortschrittG_aus`,
+  `fortschrittG_sperre`, `fortschrittG_mehrfaden`, `abschnittAktiv_aus`,
+  `wartezeit_schranke` take the component; `ziel_aus` passes `hA.antworten`, transferred to
+  `P.mitRuhe` by `akzeptiertSpec_mitRuhe` (`rumpf_mitRuhe_ants`, `antwortLeer_mitRuhe`,
+  `stelleOk_mitRuhe`, Zielsatz/Ruhe.lean).
+
+**Corrected sentences (Spec.lean).** The ONE list's `nieZurueck` entry is now "a call of an
+axiom whose declared result is `never` -- the call does not return ... The continuation is
+unreachable in the C as in G", which is true; the escape is removed from the list and named as
+refused. The (c) entry reads "for an `E.Q` satisfiable at a DECODABLE value (for a float: a
+well-formed one, `WertOk`)". NOT CLAIMED names linking of separately compiled units
+(PLAN-ZIELSATZ §10).
+
+**Refuted (Zielsatz/ProbenW1.lean).** `w1_spec_nicht`: no lock family, function list or start
+list makes the round-6 probe meet `AkzeptiertSpec`; `w1_abgelehnt`: `akzeptiert_pruefer`
+refuses every program with its code; `w1_bool`/`w1_sonst_alles`: computed, the Bool is
+`false` and every other component is `true`, so the refusal is `antwortenB`'s alone. The same
+for an empty register range (`w1r_spec_nicht`, `w1r_bool`) and `.grund 0` (`w1g_bool`). The
+contrast: behind an axiom `-> never` the code is accepted (`w1v_bool`) and the head is
+`nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`). Every earlier probe that
+used `decide` on `Akzeptiert` (G1 float register included) still computes `true`.
+
+**Axioms.** `gabbro_ziel`, `schrittAnt`, `antInvG_erreichbar`, `antwortB_iff`,
+`w1_abgelehnt`: `propext`, `Classical.choice`, `Quot.sound`; `flt_trans_endlich`,
+`gleitBarB_iff`: `propext`, `Quot.sound`; `w1_bool`, `w1v_bool`: `propext`. No `sorry`, no new
+`axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
+green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §§1-10 history above.)
 

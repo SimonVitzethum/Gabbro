@@ -31,6 +31,160 @@ open Zielsatz
 
 variable {D : Deklaration}
 
+/-! ## The answer sites on `P.mitRuhe` (round-6 finding W1) -/
+
+section Ants
+
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx}
+
+theorem ants_nachΛ {Λ Λ₁ Λ₂ : List (Res D)} (h : Λ₁ = Λ₂) (s : Stmt D V l Γ Λ Λ₁) :
+    (Stmt.nachΛ h s).ants = s.ants := by subst h; rfl
+theorem ants_vorΛ {Λ₁ Λ₂ Λ' : List (Res D)} (h : Λ₁ = Λ₂) (b : Block D V l Γ Λ₁ Λ') :
+    (Block.vorΛ h b).ants = b.ants := by subst h; rfl
+theorem ants_umΛ {Λ₁ Λ₂ : List (Res D)} (h : Λ₁ = Λ₂) (e : Endblock D V l Γ Λ₁) :
+    (Endblock.umΛ h e).ants = e.ants := by subst h; rfl
+
+end Ants
+
+mutual
+
+theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ'), (ruS s).ants = s.ants
+  | _, _, _, _, .assignSlot .. => rfl
+  | _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, .assignGlob .. => rfl
+  | _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, .assignVar .. => rfl
+  | _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruB_ants t) (ruB_ants e)
+  | _, _, _, _, .onOption _ p a => kongr₂ (· ++ ·) (ruB_ants p) (ruB_ants a)
+  | _, _, _, _, .onTag _ arms => ruArms_ants arms
+  | _, _, _, _, .onGrund _ arms => ruGArms_ants arms
+  | _, _, _, _, .call .. => ants_nachΛ _ _
+  | _, _, _, _, .callInd .. => ants_nachΛ _ _
+  | _, _, _, _, .locks _ _ body => ruB_ants body
+  | _, _, _, _, .breaking _ body => ruB_ants body
+  | _, _, _, _, .traverse _ _ body => ruB_ants body
+  | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_ants body) (ruB_ants ueber)
+  | _, _, _, _, .forever _ _ body => ruB_ants body
+  | _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, .transition .. => rfl
+  | _, _, _, _, .publish .. => rfl
+  | _, _, _, _, .advances .. => ants_nachΛ _ _
+  | _, _, _, _, .retires .. => ants_nachΛ _ _
+  | _, _, _, _, .ret .. => rfl
+  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .leave _ => rfl
+  | _, _, _, _, .next _ => rfl
+
+theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ'), (ruB b).ants = b.ants
+  | _, _, _, _, .nil => rfl
+  | _, _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruB_ants rest)
+  | _, _, _, _, .bind _ rest => ruB_ants rest
+  | _, _, _, _, .bindCall _ _ _ _ _ rest => (ants_vorΛ _ _).trans (ruB_ants rest)
+  | _, _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_vorΛ _ _).trans (ruB_ants rest)
+  | _, _, _, _, .bindCallElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
+        ((ants_vorΛ _ _).trans (ruB_ants rest))
+  | _, _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruB_ants rest)
+  | _, _, _, _, .regLies r _ rest => congrArg (Sum.inr r :: ·) (ruB_ants rest)
+  | _, _, _, _, .regLiesElse r _ _ sonst rest =>
+      congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest))
+  | _, _, _, _, .awaits _ _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .exchange _ _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+  | _, _, _, _, .pruefung _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+  | _, _, _, _, .gleit _ _ _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .gleitLit _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .gleitVon _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .gleitNarrow _ _ _ sonst rest =>
+      kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+
+theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e : Endblock D V l Γ Λ), (ruEnd e).ants = e.ants
+  | _, _, _, .ret .. => rfl
+  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .leave _ => rfl
+  | _, _, _, .next _ => rfl
+  | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruEnd_ants rest)
+  | _, _, _, .bind _ rest => ruEnd_ants rest
+
+theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    (ruArms arms).ants = arms.ants
+  | _, _, _, _, _, .nil => rfl
+  | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
+  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+      kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
+
+theorem ruGArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (arms : GrundArms D V l Γ Λ Λ' n), (ruGArms arms).ants = arms.ants
+  | _, _, _, _, _, .nil => rfl
+  | _, _, _, _, _, .cons b rest => kongr₂ (· ++ ·) (ruB_ants b) (ruGArms_ants rest)
+
+end
+
+/-- A body of `P.mitRuhe` has the answer sites of the body of `P`; the root has none. -/
+theorem rumpf_mitRuhe_ants (P : Programm D) (f : D.Fn) :
+    (P.mitRuhe.rumpf (some f)).ants = (P.rumpf f).ants :=
+  (ants_umΛ _ _).trans (ruEnd_ants _)
+
+theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
+    WertOk (D := D.mitRuhe) (tyR τ) (valR τ v) ↔ WertOk τ v
+  | .int _ _, _ => Iff.rfl
+  | .bool, _ => Iff.rfl
+  | .opt _, _ => Iff.rfl
+  | .sum _, _ => Iff.rfl
+  | .grund _, _ => Iff.rfl
+  | .never, _ => Iff.rfl
+  | .fl _ _, _ => Iff.rfl
+  | .fnptr _, _ => Iff.rfl
+  | .ptr _ _, _ => Iff.rfl
+
+/-- **An answer class of `D.mitRuhe` is empty exactly when it is in `D`**: the shifted types
+    have the shifted values (`valR`/`valZ`), and no shifted pointer type names the root. -/
+theorem antwortLeer_mitRuhe (e : Option Ty) :
+    AntwortLeer D.mitRuhe (e.map tyR) ↔ AntwortLeer D e := by
+  cases e with
+  | none => exact ⟨fun h => absurd h antwortLeer_keinErg, fun h => absurd h antwortLeer_keinErg⟩
+  | some τ =>
+      show AntwortLeer D.mitRuhe (some (tyR τ)) ↔ _
+      rw [antwortLeer_iff, antwortLeer_iff]
+      constructor
+      · intro h v hv
+        exact h (valR τ v) ((wertOk_valR τ v).mpr hv)
+      · intro h v hv
+        have e : valR τ (valZ τ v) = v := valR_valZ τ v
+        rw [← e] at hv
+        exact h (valZ τ v) ((wertOk_valR τ _).mp hv)
+
+theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
+  | .int _ _ => by simp
+  | .bool => by simp
+  | .opt _ => by simp
+  | .sum _ => by simp
+  | .grund _ => by simp
+  | .never => by simp
+  | .fl _ _ => by simp
+  | .fnptr _ => by simp
+  | .ptr _ _ => by simp
+
+theorem stelleAx_mitRuhe (e : Option Ty) :
+    (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔
+      (e = some .never ∨ ¬ AntwortLeer D e) := by
+  rw [antwortLeer_mitRuhe]
+  cases e with
+  | none => simp
+  | some τ => simp only [Option.map_some, Option.some.injEq, tyR_never]
+
+/-- An answer site of `D.mitRuhe` is admissible exactly when it is in `D`. -/
+theorem stelleOk_mitRuhe (x : D.Ax ⊕ D.Reg) : StelleOk D.mitRuhe x ↔ StelleOk D x := by
+  cases x with
+  | inl a => exact stelleAx_mitRuhe (D.aerg a)
+  | inr r => exact not_congr (antwortLeer_mitRuhe (some (D.rtyp r)))
+
 theorem decide_succ_eq (a b : Nat) : decide (a + 1 = b + 1) = decide (a = b) :=
   decide_eq_decide.mpr ⟨Nat.succ.inj, fun e => e ▸ rfl⟩
 
@@ -224,6 +378,10 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
   einzeln := List.Pairwise.map some (fun _ _ h e => h (Option.some.inj e)) hA.einzeln
   renn := fun c hB hAt => schreibGetrennt_mitRuhe P hvoll hA.abg
     (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt)
+  antworten
+    | none, _, hx => absurd hx List.not_mem_nil
+    | some f, x, hx => (stelleOk_mitRuhe (D := D) x).mpr
+        (hA.antworten f x (by rw [← rumpf_mitRuhe_ants P f]; exact hx))
 
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
     (the member lists of locks and carriers are the same). -/

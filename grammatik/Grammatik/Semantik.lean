@@ -419,8 +419,9 @@ def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn
     oracle -- a stop the MODEL decided and filed as hardware). Every value of every type is
     the decoding of some raw word under some image (`einpassen_voll`, EinpassenVoll.lean; for
     floats: every well-formed one). What is left without an answer is exactly the EMPTY
-    types -- `never`, `.grund 0`, an empty range, a sum without a value -- and a call whose
-    declared answer type is empty does not return (`HaltArt.nieZurueck`, Zielsatz/Spec.lean).
+    types -- `never`, `.grund 0`, an empty range, a sum without a value -- and among them the
+    checker admits only an axiom `-> never` (round-6 finding W1, `AkzeptiertSpec.antworten`),
+    whose call does not return (`HaltArt.nieZurueck`, Zielsatz/Spec.lean).
     `z` is the loaded image (`Orakel.zeiger`), read only by `fnptr`. -/
 def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D τ)
   | .int lo hi, n => if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else Option.none
@@ -443,7 +444,9 @@ def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option
     without a value, a pointer type no function has; `einpassen_voll`, EinpassenVoll.lean,
     shows that every value IS some answer). A call whose answer class is empty cannot
     return, and the machine cannot fail to answer it "outside its type": there is no inside.
-    That stop is `HaltArt.nieZurueck` (Zielsatz/Spec.lean), not a hardware stop. -/
+    That stop is `HaltArt.nieZurueck` (Zielsatz/Spec.lean), not a hardware stop -- and since
+    W1 the checker admits it only for an axiom `-> never` (whose C prototype is `_Noreturn`);
+    every other empty answer type is refused (`AkzeptiertSpec.antworten`). -/
 def AntwortLeer (D : Deklaration) (e : Option Ty) : Prop :=
   ∀ (z : Int → Option D.Fn) (n : Int), einpassenErg z e n = Option.none
 

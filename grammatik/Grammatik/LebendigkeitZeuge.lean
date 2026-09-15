@@ -793,7 +793,8 @@ theorem wartezeit_zeuge : ∃ R : PlanLauf mP mO 0,
       (R.erreichbar (by rw [h0]; exact .start) n)
   have hW := wartezeit_schranke R mO_gut mP_stufen mSp mInit mInit_leer
     (ls := [()]) (fun L => by cases L; exact List.mem_singleton_self _)
-    (by rw [h0]; exact .start) hL hB hLZ hH hHw hAnw () 1 5 hA5
+    (by rw [h0]; exact .start) hL hB
+    (fun g x hx => absurd hx (by cases g <;> exact List.not_mem_nil)) hLZ hH hHw hAnw () 1 5 hA5
   rw [lW_eq] at hW
   exact ⟨R, h0, hLZ, hH, hHw, hAnw, hA5, halt0, by rw [hakt]; rfl, h16, lW_eq, hW⟩
 
