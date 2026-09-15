@@ -44,9 +44,11 @@
 //!
 //! ## Known boundaries (measured, not assumed)
 //!
-//! * `lean-g` drops `requires` (`requires := fun _ => .wahr`): every input
-//!   satisfies it, and the file kernel-checks that fact rather than hiding
-//!   it. Counterexamples are against `ensures` under vacuous `requires`.
+//! * `lean-g` carries `requires` (lane 198: the value clauses travel as
+//!   `gReq` arms, `.wahr` where none stands): the searcher enumerates
+//!   inputs freely, and the file kernel-checks `requires = true` per
+//!   candidate rather than hiding it. A hit whose `requires` fails fails
+//!   the file LOUDLY (red, not wrong).
 //! * Lock invariants travel as the separate family `gS`; the export sets
 //!   `invs := []`, so `rufAt` never reports `.invariante`. Only `ensures`
 //!   violations are searched.
@@ -1437,9 +1439,9 @@ fn kandidat_emit(
     ));
     out.push_str(&format!("def gx_{g}_s{nr} : World gD := {}\n", welt_term(modell, zellen, &k.zellen)));
     out.push_str(&format!("def gx_{g}_r{nr} : Env gD gCtx_{g} := {}\n", env_term(&k.params)));
-    // The CONTRACT verdict: `rufAt` on the exported program (requires is
-    // `.wahr` in the export, so `vorbedingung` cannot fire -- the file
-    // still checks `requires = true` below). Only the function's OWN
+    // The CONTRACT verdict: `rufAt` on the exported program (a violated
+    // `requires` reads `vorbedingung` here -- the file still checks
+    // `requires = true` below). Only the function's OWN
     // `nachbedingung` counts: a caller that dies in a callee's violated
     // contract reads false here (its own `ensures` never ran -- the
     // comment above says where the run died, and the callee's own
@@ -1704,8 +1706,8 @@ fn abschnitt(
     out.push_str("-- kernel-checked `example ... := by decide`. A searcher false\n");
     out.push_str("-- positive fails the file LOUDLY; \"none found\" is NEVER a proof.\n");
     out.push_str("--\n");
-    out.push_str("-- Boundaries, measured: `requires` is `.wahr` in the export, so\n");
-    out.push_str("-- every input satisfies it (still kernel-checked per hit); lock\n");
+    out.push_str("-- Boundaries, measured: `requires` travels (`gReq` arms, `.wahr`\n");
+    out.push_str("-- where none stands) and is kernel-checked per hit; lock\n");
     out.push_str("-- invariants are the separate family `gS` (`invs := []`), so only\n");
     out.push_str("-- `ensures` violations are searched. Searcher and file share one\n");
     out.push_str(&format!(

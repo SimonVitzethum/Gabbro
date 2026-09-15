@@ -696,3 +696,166 @@ fn refuses_bare_call_of_reason_fn() {
     let w = export("leang_rruf", &tree(q)).expect_err("must refuse");
     assert_eq!(w.code, "LG004", "{w}");
 }
+
+/// **Lane 198 -- the program as ONE declaration.** Beside `gP` the export
+/// assembles `gE : Zielsatz.Einheit gD`: the lock/carrier member lists, the
+/// zero-memory `gSp0` and the declared starts (104 declares none).
+#[test]
+fn export_104_carries_the_unit() {
+    let text = export_file("104-referenz.gab");
+    for teil in [
+        "import Grammatik.Zielsatz.Spec",
+        "def gLs : List gD.Lock",
+        "def gCs : List (gD.Tab ⊕ gD.Glob)",
+        "def gSp0 : Speicher gD",
+        "def gE : Zielsatz.Einheit gD where",
+        "  P := gP",
+        "  S := gS",
+        "  Q := fun _ _ _ => true",
+        "  starts := []",
+        "  sp0 := gSp0",
+    ] {
+        assert!(text.contains(teil), "104 export must contain {teil:?}");
+    }
+}
+
+/// **Lane 198 -- 104's `requires` is `Held`-only**, so every arm stays
+/// `.wahr`: the signature-held set travels in the signature, never in a
+/// `gReq` definition.
+#[test]
+fn export_104_requires_stays_true() {
+    let text = export_file("104-referenz.gab");
+    for teil in ["    | .einzahlen => .wahr", "    | .lies => .wahr"] {
+        assert!(text.contains(teil), "104 export must contain {teil:?}");
+    }
+    assert!(
+        !text.contains("gReq_"),
+        "Held-only requires travel no gReq definition:\n{text}"
+    );
+}
+
+/// **Lane 198 -- a value `requires` travels as `gReq`** (positive probe):
+/// the clause over the slot reads exactly like an `ensures`, over the
+/// parameters alone. (Over an unprotected table: a protected one still
+/// needs its guard, `LG004`.)
+#[test]
+fn requires_value_travels() {
+    let q = "module test::leang_req {\n\
+        table U count 4 { slot { w : u32, } }\n\
+        impl fn f() -> u32 requires U.slots[0].w == 7 ensures result == U.slots[0].w\n\
+        effects { reads U.slots } costs <= 8 ops\n\
+        {\n    return U.slots[0].w;\n}\n\
+        }\n";
+    let text = export("leang_req", &tree(q)).expect("value requires must export");
+    for teil in ["def gReq_f", "| .f => gReq_f"] {
+        assert!(text.contains(teil), "value requires must travel as {teil:?}:\n{text}");
+    }
+}
+
+/// **Lane 198 -- `Held` beside a value clause still names the signature
+/// set** (positive probe): the lock travels in `haelt`, the value in
+/// `gReq_f`.
+#[test]
+fn requires_held_and_value_travel() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f() requires Held(L), T.slots[0].v == 7\n\
+        effects { reads T.slots, locks L } costs <= 4 ops\n\
+        {\n}\n",
+    )))
+    .expect("mixed requires must export");
+    for teil in ["haelt := [GLock.L]", "def gReq_f", "| .f => gReq_f"] {
+        assert!(text.contains(teil), "mixed requires must travel as {teil:?}:\n{text}");
+    }
+}
+
+/// **Lane 198, LG003 -- a `requires` with no `Expr` form is refused by
+/// name** (poison probe): a call travels in no contract.
+#[test]
+fn refuses_call_in_requires() {
+    let w = refuse_of(&einheit(
+        "impl fn g() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn f() -> u32 requires g() == 1 effects { pure } costs <= 1 ops { return 1; }\n",
+    ));
+    assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **Lane 198, LG003 -- `result` has no form in a `requires`** (poison
+/// probe): the context is the parameters alone.
+#[test]
+fn refuses_result_in_requires() {
+    let w = refuse_of(&einheit(
+        "impl fn f() -> u32 requires result == 7 effects { pure } costs <= 1 ops { return 7; }\n",
+    ));
+    assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **Lane 198 -- `concurrent` members travel as declared starts**
+/// (positive probe): every start is parameterless, its argument list
+/// `.nil`.
+#[test]
+fn concurrent_members_travel_to_starts() {
+    let text = export("lean_g", &tree(&einheit(
+        "impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        impl fn g() -> u32 effects { pure } costs <= 1 ops { return 2; }\n\
+        concurrent { f, g };\n",
+    )))
+    .expect("concurrent starts must export");
+    assert!(
+        text.contains("starts := [⟨g_f, .nil⟩, ⟨g_g, .nil⟩]"),
+        "starts travel with .nil arguments:\n{text}"
+    );
+}
+
+/// **Lane 198 -- 108's starts travel**: the two lock-free readers are the
+/// declared starts of the unit.
+#[test]
+fn export_108_starts_travel() {
+    let text = export_file("108-disjoint-start-locks.gab");
+    assert!(
+        text.contains("starts := [⟨g_read_a, .nil⟩, ⟨g_read_c, .nil⟩]"),
+        "108 starts travel:\n{text}"
+    );
+}
+
+/// **Lane 198, LG001 -- a start with parameters has no start-argument
+/// form** (poison probe): the declaration carries no arguments.
+#[test]
+fn refuses_start_with_params() {
+    let w = refuse_of(&einheit(
+        "impl fn f(x : u32) -> u32 effects { pure } costs <= 1 ops { return x; }\n\
+        concurrent { f };\n",
+    ));
+    assert_eq!(w.code, "LG001", "{w}");
+}
+
+/// **Lane 198, LG003 -- an integer range holding no zero has no `sp0`
+/// value** (poison probe): the declared initial memory is the zero memory.
+#[test]
+fn refuses_sp0_outside_zero() {
+    let q = "module test::leang_sp0 {\n\
+        type P = u32 in 1 .. 10;\n\
+        table T count 4 { slot { v : P, } }\n\
+        impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n\
+        }\n";
+    let w = export("leang_sp0", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG003", "{w}");
+}
+
+/// **Lane 198 -- an `entry` dispatch root travels as a declared start**
+/// (positive probe): the vector, the registers and the steps have no G
+/// form, only the dispatched function travels.
+#[test]
+fn entry_root_travels_to_starts() {
+    let q = "module test::leang_entry {\n\
+        impl fn root() effects { pure } costs <= 1 ops { }\n\
+        entry e vector 0x80 arch x86_64 {\n\
+        regs in { } regs out { } preserves { rbx } clobbers { rcx }\n\
+        stack ka per cpu nested never\n\
+        dispatch test::leang_entry::root;\n}\n\
+        }\n";
+    let text = export("leang_entry", &tree(q)).expect("entry root must export");
+    assert!(
+        text.contains("starts := [⟨g_root, .nil⟩]"),
+        "entry root travels:\n{text}"
+    );
+}

@@ -1,60 +1,39 @@
-//! **The user's obligation over a G program term (the flagship's duties, stated).**
+//! **The user's obligation over a G program term (the goal's duties, stated).**
 //!
-//! `gabbro lean-g` writes the program (`gD`, `gP`, `gFs`, the lock-invariant
-//! family `gS`, the two decidable checks). This module runs that export and
-//! appends what the flagship goal theorem asks the USER for -- stated, never
-//! discharged. The closing theorem is `ziel_ort_sperre_ende`
-//! (`ZielOrtStart.lean`): the member of the flagship family whose footprint
-//! premise (`fussSperreB`) is decidable per program, with the conclusion of
-//! `ziel_ort_sperre_inv` (contracts and owed invariants at every logged
-//! return, the machine lock invariant, no `logik` halt, progress) plus the
-//! start functions' completion (`StartEndeG`) and no start at a reason
-//! return (`KeinStartGrundG`).
+//! `gabbro lean-g` writes the program as ONE declaration (`gD`, `gP`, the
+//! member lists `gFs`/`gLs`/`gCs`, the lock-invariant family `gS`, the
+//! declared starts and initial memory as `gE : Einheit gD`, the two
+//! decidable checks). This module runs that export and appends what the
+//! goal theorem `gabbro_ziel` (`Zielsatz/Beweis.lean`) asks the USER for --
+//! stated, never discharged: `NutzerPflicht gE` (the bodies' `LogikPflicht`
+//! and the `StartPflicht`), with the closing theorem `gP_gabbro` deriving
+//! the conclusion of `GabbroZiel` for `gE` from `gabbro_ziel` -- the
+//! checker premise (`akzeptiert_pruefer` on the member lists) discharged
+//! here `by decide`, the user obligation an open hypothesis.
 //!
-//! Per function the file states, as a `def <fn>_pflicht : Prop` with no
-//! proof (the proof is the user's job), the obligation at EVERY `forever`
-//! budget -- a duty at one budget says nothing about a `forever` body
-//! (probe D), so a fixed budget must never be stated:
-//!
-//! * `∀ passes, KoerperGutS gP passes (axWahr gD) gS g_<fn>` -- the
-//!   sequential triple against handlers, the caller duty and no `logik`
-//!   outcome, over `execEndH` for every environment move in `HavocOk gS`;
-//! * `∀ passes, InvGutS gP passes (axWahr gD) gS g_<fn>` -- the owed table
-//!   invariants at a normal return;
-//!
-//! and the lock invariants at the start memory as
-//! `def startPflicht (sp : Speicher gD) : Prop` (the boot duty). The
-//! decidable premises travel as named theorems proved `by decide`
-//! (`gP_voll`, `gP_fragment`, `gP_fussS`), so the closing theorem `gP_ziel`
-//! derives the flagship's conclusion -- at every budget -- from the user's
-//! obligations (open hypotheses) and nothing else. The start premises are
-//! `StartGut`, the lock establishment, `StartExklusiv` and `StartOhneGrund`
-//! (no start function declares a reason).
-//!
-//! The obligation is stated through the IMPORTED definitions `KoerperGutS`
-//! and `InvGutS`, never by copying their bodies: a change to what the
-//! flagship asks (another lane is reworking the `passes` quantification)
-//! cannot silently age the stated duty. The namespace is the lean-g one
-//! with `_oblig` appended, so this export and the plain `lean-g` export of
-//! the same file never declare the same names. Every form `lean-g`
-//! refuses is refused here with the same `LG` code -- this module adds no
-//! refusal, code or otherwise, of its own.
+//! The obligation is stated through the IMPORTED definition
+//! `NutzerPflicht`, never by copying its body: a change to what the goal
+//! asks cannot silently age the stated duty. The namespace is the lean-g
+//! one with `_oblig` appended, so this export and the plain `lean-g`
+//! export of the same file never declare the same names. Every form
+//! `lean-g` refuses is refused here with the same `LG` code -- this module
+//! adds no refusal, code or otherwise, of its own.
 
 use gabbro_syntax::ast::*;
 
-use crate::lean_g::{export_ns, function_names, namespace_of, Refusal};
+use crate::lean_g::{export_ns, namespace_of, Refusal};
 
-/// The extra import the obligation section needs (the flagship theorem and
-/// the obligation definitions). It must precede every command, so it is
-/// inserted beside the lean-g imports rather than appended.
-const MEHR_IMPORT: &str = "import Grammatik.ZielOrtStart\n";
+/// The extra imports the obligation section needs (the goal theorem, the
+/// concrete checker and the obligation definitions). They must precede
+/// every command, so they are inserted beside the lean-g imports rather
+/// than appended.
+const MEHR_IMPORT: &str = "import Grammatik.Zielsatz.Akzeptiert\nimport Grammatik.Zielsatz.Beweis\n";
 
 /// Export the checked unit as a Lean file with the user's obligations
 /// stated, or refuse it by name exactly where `lean-g` refuses it.
 pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
     let ns = format!("{}_oblig", namespace_of(source_name));
     let text = export_ns(source_name, tree, &ns)?;
-    let fns = function_names(source_name, tree)?;
     // Name the real command: the body below is the lean-g export, the rest
     // is this subcommand's.
     let lean_zeile =
@@ -73,80 +52,53 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
         .expect("lean-g export ends its namespaces")
         .to_string();
     text = rumpf;
-    text.push_str(&abschnitt(&fns));
+    text.push_str(&abschnitt());
     text.push_str(&schluss);
     Ok(text)
 }
 
 /// The appended obligation section, inside the program's namespace.
-fn abschnitt(fns: &[String]) -> String {
+fn abschnitt() -> String {
     let mut out = String::new();
     out.push_str("-- THE USER'S OBLIGATION (stated, not discharged).\n");
     out.push_str("--\n");
-    out.push_str("-- Per function, `KoerperGutS` (the sequential triple against handlers,\n");
-    out.push_str("-- the caller duty and no `logik` outcome, over `execEndH`) and `InvGutS`\n");
-    out.push_str("-- (the owed table invariants at a normal return), at EVERY `forever`\n");
-    out.push_str("-- budget -- a duty at one budget says nothing about a `forever` body --\n");
-    out.push_str("-- over the lock-invariant family `gS` above and the trivial axiom\n");
-    out.push_str("-- ensures. Each is a `def` with no proof: the proof is the user's job.\n");
-    out.push_str("-- The definitions name `KoerperGutS`/`InvGutS` through their imports;\n");
-    out.push_str("-- their bodies are never copied here.\n");
-    for f in fns {
-        out.push_str(&format!(
-            "def {f}_pflicht : Prop :=\n  ∀ passes, KoerperGutS gP passes (axWahr gD) gS g_{f}\n\n"
-        ));
-        out.push_str(&format!(
-            "def {f}_invPflicht : Prop :=\n  ∀ passes, InvGutS gP passes (axWahr gD) gS g_{f}\n\n"
-        ));
-    }
-    out.push_str("-- The two duties as families, so the closing theorem takes them as one\n");
-    out.push_str("-- hypothesis each (`∀ f, ...`).\n");
-    out.push_str("def pflicht : GFn → Prop\n");
-    for f in fns {
-        out.push_str(&format!("  | .{f} => {f}_pflicht\n"));
-    }
-    out.push('\n');
-    out.push_str("def pflichtInv : GFn → Prop\n");
-    for f in fns {
-        out.push_str(&format!("  | .{f} => {f}_invPflicht\n"));
-    }
-    out.push('\n');
-    out.push_str("-- The lock invariants at the start memory (the boot duty).\n");
-    out.push_str("def startPflicht (sp : Speicher gD) : Prop :=\n  ∀ L, gS.inv L sp = true\n\n");
-    out.push_str("-- The decidable premises, discharged here so the closing theorem below\n");
-    out.push_str("-- needs no program fact beyond the user's obligations.\n");
-    out.push_str("theorem gP_voll : ∀ g : gD.Fn, g ∈ gFs := by\n  intro g\n  cases g <;> decide\n\n");
-    out.push_str("theorem gP_fragment : programmImFragmentG gP gFs = true := by decide\n\n");
-    out.push_str("theorem gP_fussS : fussSperreB gP gS gFs = true := by decide\n\n");
-    out.push_str("-- THE CLOSING THEOREM: the flagship's conclusion for this program from\n");
-    out.push_str("-- the user's obligations. The obligations stay open as hypotheses -- that\n");
-    out.push_str("-- is the point. Apply it once the `..._pflicht` duties above are proved.\n");
-    out.push_str("theorem gP_ziel (O : Orakel gD) (sp : Speicher gD)\n");
-    out.push_str("    (init : Faden → Σ f : gD.Fn, Env gD (gD.params f))\n");
-    out.push_str("    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO (axWahr gD) O)\n");
-    out.push_str("    (hK : ∀ f, pflicht f) (hI : ∀ f, pflichtInv f)\n");
-    out.push_str("    (hStart : StartGut gP sp init) (hSstart : startPflicht sp)\n");
-    out.push_str("    (hex : StartExklusiv init) (hS : SperrInvOk gS)\n");
-    out.push_str("    (hGrund : StartOhneGrund init)\n");
-    out.push_str("    (passes : Nat) (M : RufMaschineG gD)\n");
-    out.push_str("    (hr : RufErreichbarG gP O passes (RufStartG gP sp init) M) :\n");
-    out.push_str("    ((VertragAmOrtG gP M ∧ SperrInvG gS M ∧ KeinLogikHaltG O passes M ∧\n");
-    out.push_str("      ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →\n");
-    out.push_str("        AnPruefungG M t → ∃ M', RufSchrittG gP O passes M t M') ∧\n");
-    out.push_str("    InvAmOrtG gP M) ∧ StartEndeG gP M ∧ KeinStartGrundG M := by\n");
-    out.push_str("  have hK' : ∀ (passes : Nat) (f : gD.Fn), KoerperGutS gP passes (axWahr gD) gS f := by\n");
-    out.push_str("    intro passes f\n");
-    out.push_str("    cases f\n");
-    for f in fns {
-        out.push_str(&format!("    · exact hK .{f} passes\n"));
-    }
-    out.push_str("  have hI' : ∀ (passes : Nat) (f : gD.Fn), InvGutS gP passes (axWahr gD) gS f := by\n");
-    out.push_str("    intro passes f\n");
-    out.push_str("    cases f\n");
-    for f in fns {
-        out.push_str(&format!("    · exact hI .{f} passes\n"));
-    }
-    out.push_str("  exact ziel_ort_sperre_ende gP O (axWahr gD) gS gFs sp init hO hRL hQ\n");
-    out.push_str("    axEnsLokal_wahr hS gP_voll gP_fragment gP_fussS hK' hStart hSstart hex hI' hGrund passes M hr\n");
+    out.push_str("-- `NutzerPflicht gE`: the bodies' logic (`LogikPflicht` -- per function\n");
+    out.push_str("-- and at EVERY `forever` budget the body triple with caller duty and no\n");
+    out.push_str("-- `logik` outcome, owed invariants at value AND reason exits) and the\n");
+    out.push_str("-- start obligation (`StartPflicht` -- every lock invariant at `gE.sp0`,\n");
+    out.push_str("-- every declared start's `requires` there with its declared arguments).\n");
+    out.push_str("-- A `def` with no proof: the proof is the user's job. Stated through the\n");
+    out.push_str("-- IMPORTED definition `NutzerPflicht`; its body is never copied here.\n");
+    out.push_str("def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE\n\n");
+    out.push_str("-- The member lists are complete (the `Aufzaehlung`s the goal theorem\n");
+    out.push_str("-- quantifies over), decided here so the closing theorem below needs no\n");
+    out.push_str("-- program fact beyond the user's obligation.\n");
+    out.push_str("theorem gFs_voll : ∀ g : gD.Fn, g ∈ gFs := by\n  intro g\n  cases g <;> decide\n\n");
+    out.push_str("theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by\n  intro L\n  cases L <;> decide\n\n");
+    out.push_str("-- Carriers are tables or globals; the export declares no global\n");
+    out.push_str("-- (`Glob := Empty`), so the right arm closes by cases. `simp [gCs]`\n");
+    out.push_str("-- and not `decide`: `DecidableEq (gD.Tab ⊕ gD.Glob)` does not unfold\n");
+    out.push_str("-- the `gD` declaration during instance search (measured on 104/108:\n");
+    out.push_str("-- `failed to synthesize Decidable (Sum.inl … ∈ gCs)`), while `simp`\n");
+    out.push_str("-- rewrites membership over the literal list to constructor equalities.\n");
+    out.push_str("theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by\n  intro c\n");
+    out.push_str("  cases c with\n  | inl t => cases t <;> simp [gCs]\n  | inr g => cases g <;> simp [gCs]\n\n");
+    out.push_str("-- The checker premise, discharged here: the concrete checker of the\n");
+    out.push_str("-- goal theorem (`akzeptiert_pruefer`) accepts this program on these\n");
+    out.push_str("-- lists. Where it does not, this `decide` fails -- loudly, not wrongly.\n");
+    out.push_str("theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide\n\n");
+    out.push_str("-- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program,\n");
+    out.push_str("-- derived from `gabbro_ziel`. The checker premise travels discharged\n");
+    out.push_str("-- (`gCheck`); the user's obligation stays open as a hypothesis -- that\n");
+    out.push_str("-- is the point. Apply it once `nutzerPflicht` is proved.\n");
+    out.push_str("theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)\n");
+    out.push_str("    (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)\n");
+    out.push_str("    (sp : Speicher gD.mitRuhe)\n");
+    out.push_str("    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))\n");
+    out.push_str("    (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)\n");
+    out.push_str("    (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :\n");
+    out.push_str("    Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=\n");
+    out.push_str("  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
+    out.push_str("    gCheck hN O hH passes sp init hL M hr\n");
     out
 }
