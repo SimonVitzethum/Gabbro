@@ -6,10 +6,12 @@
   CHAIN-INSTANCE beispiele/104-referenz.gab kette_104
 -/
 import Grammatik.Kette104
+import Grammatik.CText104
 
 namespace Gabbro.Grammatik.Kette104
 
 open Gabbro.Grammatik Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.UebersetzeAllg2 Zielsatz
+open Gabbro.Grammatik.CParser Gabbro.Grammatik.CText104
 
 set_option maxRecDepth 100000
 
@@ -244,8 +246,53 @@ theorem kette_104_zeuge :
   obtain ⟨hc, hrv⟩ := hO
   exact ⟨(hc.1 t4 rfl).2 0 f4 (by decide) (by decide), hrv⟩
 
+/-! ## 8. A2 discharged: the C side READ FROM THE EMITTED TEXT
+
+    Until 2026-09-15 the C side of this chain was the certificate's
+    elaboration `kProg zert104`, and that the EMITTED TEXT means the same
+    thing was assumption A2 -- a hand transcription. `CText104.lean` pins
+    the emitted text (`ctext104`, byte-identical to `gabbro emit`) and
+    proves `parseC ctext104 = some (kFuns zert104)` by kernel reduction,
+    so the two theorems below say the same as their neighbours above,
+    about the TEXT. What stays of A2 is "the C compiler's front end reads
+    this subset as `parseC` does" -- part of A1. -/
+
+/-- **A2 DISCHARGED on 104, part 6 of the closing theorem**: every run of
+    the compiled binary of `f` ends related to the Gabbro call -- under
+    A1 stated about the C unit of the EMITTED TEXT. -/
+theorem kette_104_binaer_text
+    (orc : DevOrc) (XR : CCallR) (hXR : XR.Funktional)
+    (bin : D4.Fn → CSt → List CVal → CSt → Option CVal → Prop) (tief : D4.Fn → Nat)
+    (hA1 : ∀ f st vs st' rv, bin f st vs st' rv →
+      CallAt EL4.lay orc XR (cProgC ctext104) (tief f) (fnNr f) st vs st' rv)
+    (sp : Speicher D4.mitRuhe)
+    (init : Faden → Σ f : D4.mitRuhe.Fn, Env D4.mitRuhe (D4.mitRuhe.params f))
+    (hA4 : EinFadenStart E4 sp init) :
+    ∀ (passes : Nat) (f : D4.Fn) (k : KFun D4), zert104[fnNr f]? = some k →
+      ∀ (σ : World D4) (st : CSt) (ρG : Env D4 (D4.params f)) (vs : List CVal) (ρ0 : CLok),
+        corrW EL4 σ st → bindParams k.params vs = some ρ0 → EnvRel EL4 k.lay ρG ρ0 →
+        (rufAt P4 O4 passes (tief f) f σ ρG).istFehler = false →
+        ∀ st' rv, bin f st vs st' rv → RufOut EL4 (rufAt P4 O4 passes (tief f) f σ ρG) st' rv :=
+  (schlusssatz_text kette_104 a2_104 O4 hw4 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2
+
+/-- **WITNESS**: `kette_104_zeuge` again, with the C side read from the
+    emitted TEXT -- `einzahlen(k, 0, 7)` from the zero state moves the
+    Gabbro slot `0 -> 100`, and EVERY run of the C the emitted text
+    denotes ends with the C cell at `100`. -/
+theorem kette_104_zeuge_text :
+    ∃ σ' : World D4, rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 = .ok σ' () ∧
+      ((sp4.welt []).slots t4 0 f4).n = 0 ∧ (σ'.slots t4 0 f4).n = 100 ∧
+      refSt0.mem (.tab 0) 0 = .int 0 ∧
+      (∃ st' rv, CallAt EL4.lay tvOrc tvXR (cProgC ctext104) 2 0 refSt0 einArgs st' rv) ∧
+      ∀ st' rv, CallAt EL4.lay tvOrc tvXR (cProgC ctext104) 2 0 refSt0 einArgs st' rv →
+        st'.mem (.tab 0) 0 = .int 100 ∧ rv = none := by
+  rw [cprog_104]
+  exact kette_104_zeuge
+
 #print axioms Gabbro.Grammatik.Kette104.nutzer4
 #print axioms Gabbro.Grammatik.Kette104.kette_104
 #print axioms Gabbro.Grammatik.Kette104.kette_104_zeuge
+#print axioms Gabbro.Grammatik.Kette104.kette_104_binaer_text
+#print axioms Gabbro.Grammatik.Kette104.kette_104_zeuge_text
 
 end Gabbro.Grammatik.Kette104

@@ -595,3 +595,36 @@ one machine further out.
 | **what it costs us** | the ten-minute checkability of §0 holds for the goal theorem and NOT for translation validation. A reviewer with 16 GB can confirm the central claim and must take the chain on trust — which is precisely the position §0 exists to end |
 | **what would close it** | (a) `Nat`/`String` reduction inside the parse pipeline replaced by compiled evaluation with a proved bridge, or (b) the pipeline equations proved by rewriting instead of evaluation (each stage a lemma, as `Uebersetze.lean`'s `Bool` pins already are in part), or (c) the certificate checked in Lean but PRODUCED outside it, so the kernel only re-checks a small witness. (c) is the direction the correspondence certificate already goes; the parse side has not followed |
 | **what must not close it** | `native_decide`. It moves the cost out of the kernel by moving the trust out with it, and this tree's whole point is the axiom list |
+
+**MEASURED 2026-09-15, and it moves the cause: the cost is `String.toList`, not the
+pipeline.** The A2 lane (PLAN-UEBERSETZUNGSVALIDIERUNG §6.6) built a Lean parser for the
+emitted C and ran into the same wall at a 1419-byte text -- 44,6 GB. Cut apart on
+`ki-pc-fisch-101` (Lean 4.33.1), with the other agents' load beside it:
+
+| what the kernel was asked to reduce | wall clock | peak resident |
+|---|---|---|
+| `lexC` over the 1419-byte text as ONE `String` literal | 364 s | **44,6 GB** |
+| `(String.toList s).length = 1419`, same literal | 235 s | **38,2 GB** (OOM-killed) |
+| `(String.toList s).isEmpty = false` -- the FIRST character only | 217 s | **33,7 GB** |
+| the same text as 45 short `String` literals joined by `++` | 449 s | 34,6 GB |
+| the same text as a `List Char` of 45 short `"…".toList` pieces, lexed AND counted | 20 s | **3,3 GB** |
+| the whole parse of that `List Char` against the certificate (`a2_104`) | 11 s | 2,7 GB |
+
+*Forcing ONE character of a long string literal costs 33,7 GB.* In Lean 4.33 a `String` is
+an array underneath (`String.toList s = (String.Internal.toArray s).toList`), and
+`String.length` is `s.toList.length`, so `lex s = scan s.toList (s.length + 1)` -- the shape
+of `Parser/Lexer.lean` and of every `src…real` pin -- pays that conversion twice. Splitting
+the literal at the `String` level does NOT help; `String.append` goes through the array too.
+**What helps is pinning the text as a `List Char` built from short `"…".toList` pieces**, and
+having the lexer take `List Char`. That is what `Grammatik/CText104.lean` and
+`CParser/CLexer.lean` do, and it is a factor of 13 in memory and 18 in time on the same
+theorem.
+
+This does not close O13 -- `Kette104`/`Kette108` have not been converted, and nobody has
+measured what stays after the conversion (the elaborator and the checker `decide` are still
+in there). It names the FIRST thing to try, cheaply: change `lex` to take a `List Char`,
+pin `src104real` as its lines, and re-measure the 72 GB. **A second pathology found the same
+day, for whoever converts:** a MUTUAL recursion through a fuel argument compiles to a mutual
+`Nat.brecOn`, and reducing it is EXPONENTIAL in the fuel -- a seven-token probe grew to
+112 GB before it was killed, while the same parser without the mutual block costs 0,9 GB.
+Fuel that comes from a token count must never reach a mutual recursion.

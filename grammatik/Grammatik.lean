@@ -268,3 +268,10 @@ import Grammatik.Kette104
 import Grammatik.Kette104Satz
 import Grammatik.Kette108
 import Grammatik.SchlusssatzZeuge
+import Grammatik.CParser.CLexer
+import Grammatik.CParser.CParse
+import Grammatik.CParser.CProben
+import Grammatik.CParser.Bruecke
+import Grammatik.CText104
+import Grammatik.CText104Zeuge
+import Grammatik.CText108

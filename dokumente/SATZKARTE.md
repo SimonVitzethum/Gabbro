@@ -3118,5 +3118,86 @@ refuses, each with its reason, is in PLAN §6.5 and in the file's CUTS; the larg
 `if`/`traverse`, needs a check over `Block` that stays STRUCTURAL (a `decide` must reduce in the
 kernel), and the note there says how to build it without a mutual block.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §§1-10 history above.)
+## 29. A2 discharged: a Lean parser for the emitted C subset (2026-09-15)
+
+*Files: `grammatik/Grammatik/CParser/CLexer.lean` (the C lexer), `CParser/CParse.lean`
+(`parseC`), `CParser/CProben.lean` (the refusals), `CParser/Bruecke.lean` (`A2`, `kFuns`,
+`schlusssatz_text`), `CText104.lean` + `CText104Zeuge.lean`, `CText108.lean`, and the two
+theorems added at the end of `Kette104Satz.lean`. Guardian:
+`instrumente/pruefe-ctext.py`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG.md §6.6.*
+
+### 29.1 What was assumed, and what is proved instead
+
+The closing theorem's C side is `kProg K.zert` -- the unit the CORRESPONDENCE CERTIFICATE
+elaborates to. That the emitted TEXT means the same thing was assumption **A2**, a hand
+transcription nobody checked (§6.4 of the plan, and PLAN §6.3 records the transcription
+going stale in spelling once already).
+
+Now, for the two closed chains:
+
+```
+a2_104 : parseC ctext104 = some (kFuns zert104)     -- by `rfl`, kernel
+a2_108 : parseC ctext108 = some (kFuns zert108)     -- by `rfl`, kernel
+```
+
+`ctext104`/`ctext108` are the emitted texts as DATA, pinned line by line, byte-identical to
+`gabbro emit` (the guardian re-emits and compares). What stays of A2 is "the C compiler's
+front end reads this subset as `parseC` does" -- a part of A1, not an assumption of its own.
+
+### 29.2 The parser, and what it refuses
+
+`parseC : List Char → Option (List CFun)` reads exactly the forms the emitted C of the
+closed chains uses: the prelude (four `#include`s and the TWO `_Static_assert` pins, both
+REQUIRED), `#define NAME <int>`, the two table `typedef struct`s, `static T T_speicher;`,
+`void f(void);` (foreign), `static` declarations and definitions with `__attribute__((word))`;
+statements `(void)x;`, `p->slots[i].f = e;`, `T_speicher.slots[i].f = e;`, `f(args);`,
+`(void)f(args);`, `return;`, `return e;`; expressions: literals, locals, slot reads.
+Everything else is `none` -- `CProben.lean` probes seven refusals (`if`, arithmetic, `let`,
+volatile, a missing pin, a declared-but-undefined function). The table geometry (`2 4 0`)
+is COMPUTED from the declarations through `natLay`, not transcribed, and the C function
+numbers, the C locals and the table block numbers come from the order the text declares
+them.
+
+### 29.3 The theorem with A2 discharged
+
+`schlusssatz_text` (Bruecke.lean) is `schlusssatz` with ONE premise different: `hA1` speaks
+about `cProgC s`, the C unit of the emitted TEXT, instead of `kProg K.zert`. Its conclusion
+is written out, so a change to `schlusssatz` breaks the build instead of silently promising
+the old thing. Per program: `kette_104_binaer_text` and `kette_108_binaer_text` (part 6 of
+the closing theorem, the binary's runs), and the witnesses `kette_104_zeuge_text` (the slot
+`0 -> 100` in Gabbro and in EVERY C run of the emitted text) and `kette_108_zeuge_text`
+(`read_a()` returns `42` both ways).
+
+### 29.4 Negative witnesses
+
+`a2_104_gegenprobe_programm`/`_korr`/`_keine` and `a2_108_gegenprobe`: with ONE line of the
+emitted text changed, `parseC` answers with a DIFFERENT program -- the stored value `99`,
+the slot count `3` (the geometry is read, not remembered), 108's index `2` -- and `korrOk`
+then REFUSES that program against the parsed Gabbro program; or it answers `none` (a
+deleted `_Static_assert` pin, an undeclared field, a deleted table object).
+
+### 29.5 Axiom record
+
+`a2_104`, `cprog_104`, `a2_108`, `cprog_108`, `kProg_kFuns`, `a2_kProg`, `a2_hA1`,
+`schlusssatz_text`, `kette_104_binaer_text`, `kette_104_zeuge_text`, `kette_108_binaer_text`,
+`kette_108_zeuge_text`, the `gegenprobe` theorems and the `CProben` refusals: `propext`,
+`Classical.choice`, `Quot.sound` (`kProg_kFuns`, `a2_104_gegenprobe_korr`: `propext`,
+`Quot.sound`). No `sorry`, no `native_decide`, no new `axiom`. `lake build` on
+`ki-pc-fisch-101`: 247 jobs, green, peak 2,9 GB.
+
+### 29.6 The cost, measured -- and O13
+
+Kernel-reducing a parse of 1419 bytes cost **44,6 GB** at first, and the reason was not the
+parser: in Lean 4.33 `String.toList` goes through the array representation, and forcing the
+FIRST character of one 1419-byte string literal costs **33,7 GB / 217 s**. Splitting the
+literal into 45 short ones joined by `++` does not help (`String.append` goes through the
+array too); the SAME text as a `List Char` built from 45 short `"…".toList` pieces costs
+**3,3 GB**. A second pathology: a MUTUAL recursion through a fuel argument compiles to a
+mutual `Nat.brecOn`, and reducing that is exponential in the fuel -- one seven-token probe
+grew to 112 GB before it was killed. Both are avoided by construction now (the pins are
+lists of lines; the expression parser has no recursion), and `dokumente/OFFEN.md` O13 has
+the measurement, because the same `String.toList` stands in the Gabbro-side pins that cost
+72 GB.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §§1-10 history above.)
 
