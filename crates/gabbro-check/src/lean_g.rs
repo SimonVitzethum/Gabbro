@@ -513,8 +513,52 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // refused where the starts resolve, by name.
                 ItemArt::Entry(e) => model.wurzeln.push(e.dispatch.clone()),
                 ItemArt::Boot(b) => model.wurzeln.push(b.dispatch.clone()),
+                // **Every remaining item kind has its OWN arm**, and each
+                // says what the specification would carry it as and what is
+                // missing. *A catch-all that happens to fire is not a refusal
+                // anybody can act on -- and the day an arm is added above,
+                // it stops firing without a word* (the defect `N320` and O14
+                // were written for). The name of the item is in the message
+                // wherever the kind has one, so a reader can find the line.
                 other => {
-                    return Err(refuse("LG001", format!("{} has no G form", other.benennung())));
+                    let wo = other.name().map(|n| format!(" {}", n.text)).unwrap_or_default();
+                    let grund: &str = match other {
+                        ItemArt::Device(_) => "a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, \
+                            and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`",
+                        ItemArt::Assume(_) => "a named assumption is `D.Annahme`, which the specification \
+                            consumes only at `Stmt.forever` and `Stmt.retires`; this exporter builds no `Annahme` \
+                            and exports neither statement",
+                        ItemArt::Format(_) => "a `format` is a `Tab` with `count 1` whose `where` clauses are \
+                            `Block.pruefung` (Syntax.lean §9); this exporter builds no such table",
+                        ItemArt::Atomic(_) => "an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, \
+                            and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter \
+                            writes `atomar := fun _ => false` and exports none of the three",
+                        ItemArt::Gruppe(_) => "a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); \
+                            this exporter writes `Inv := Empty`",
+                        ItemArt::Accumulates(_) => "an `accumulates` is a `Glob` plus a generated assignment \
+                            (Syntax.lean §11); this exporter generates none",
+                        ItemArt::State(_) => "a `state` declaration fills `D.erlaubt`, and its assignments are \
+                            `Stmt.uebergang`; this exporter writes `erlaubt := fun _ _ _ _ => false`",
+                        ItemArt::Axiom(_) | ItemArt::Entrust(_) | ItemArt::Syscall(_) =>
+                            "a foreign body is `D.Ax` with `aparams`/`aerg`/`aschreibt`, called through \
+                            `Stmt.axiomCall`/`Block.bindAxiom`; this exporter writes `Ax := Empty`",
+                        ItemArt::Check(_) => "a `check` produces a `Duty` mark consumed by `gates` (Syntax.lean §13); \
+                            this exporter writes `Marke := Empty`",
+                        ItemArt::Rcu(_) => "an RCU domain is a `D.Lock` whose `observes` is `Stmt.locks`; \
+                            this exporter reads only `lock` declarations",
+                        ItemArt::Walk(_) => "a `walk` is one `Stmt.traverse` per level with `levels` constant \
+                            (Syntax.lean §9); this exporter generates none",
+                        ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) =>
+                            "a hardware profile is a set of NAMED ASSUMPTIONS about the machine, and `Deklaration` \
+                            carries assumptions only as `D.Annahme` at the two statements that consume them",
+                        ItemArt::Use(_) => "a `use` names another UNIT, and `Deklaration` has no unit boundary \
+                            -- what it imports is not in this term at all",
+                        _ => "no `Deklaration` field carries it",
+                    };
+                    return Err(refuse(
+                        "LG001",
+                        format!("{}{wo} has no G form: {grund}", other.benennung()),
+                    ));
                 }
             }
         }

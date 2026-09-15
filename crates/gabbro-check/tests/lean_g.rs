@@ -243,6 +243,28 @@ fn refuses_tagged_and_linear_types() {
     }
 }
 
+/// **No item kind leaves through a catch-all.** Every refusal names the item
+/// (where the kind has a name) and says what the specification would carry it
+/// as -- the defect `N320` and `OFFEN.md` O14 were written for.
+#[test]
+fn every_item_kind_refuses_with_a_reason() {
+    for (zeile, wort, grund) in [
+        ("device D(basis : u64) at mmio {\n    reg R : u32 @0x00 class r\n}\n", "device D", "D.Reg"),
+        ("assume a \"the device answers\" falsifier probe_a;\n", "assume a", "D.Annahme"),
+        ("atomic A : u32 release;\n", "atomic A", "atomar"),
+        ("group G over { T, T } {\n    invariant nichtnull cost O(n) runs offline :\n        \
+          forall k in slots of T : T.slots[k].v == 0;\n}\n", "group G", "D.Inv"),
+        ("use andere::stelle::Pa;\n", "use", "unit boundary"),
+    ] {
+        let quelle = einheit(&format!(
+            "{zeile}impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n"));
+        let w = refuse_of(&quelle);
+        assert_eq!(w.code, "LG001", "{zeile}: {w}");
+        assert!(w.message.contains(wort), "must name the item: {w}");
+        assert!(w.message.contains(grund), "must name the form it would have: {w}");
+    }
+}
+
 /// **LG001**: an `extern fn` has no G form (no body to translate).
 #[test]
 fn refuses_extern_fn() {
