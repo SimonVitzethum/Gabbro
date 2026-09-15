@@ -19,6 +19,12 @@
 //!
 //! The checker runs before this (like `emit` and `zeugnis`): a certificate over a tree
 //! the passes refused would certify a program Gabbro rejects.
+//!
+//! Three sections are printed: the 104-cut `Cert104` above (lane 164), the general
+//! `GRow` bodies with `refD`'s index-fixed map (`Korrespondenz.lean`), and -- since
+//! 2026-09-15 -- the GENERIC certificate `KCert` (`kzeige`) with the EXPORTER'S map, the
+//! one `korrOk` (`KorrespondenzAllg.lean`) checks and the closing theorem `schlusssatz`
+//! consumes. Only the last carries no model datum.
 
 use gabbro_syntax::ast::*;
 
@@ -629,6 +635,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         }
     }
     aus.push_str(&gzeige(baum, datei));
+    aus.push_str(&kzeige(baum, datei));
     aus
 }
 
@@ -879,6 +886,58 @@ impl fn f(k : ptr<normal, rw> Konto, i : index into Konto, b : Betrag)
         assert!(body.rows[1].starts_with("GRow.setOp 3 ("), "+= on the let local: {:?}", body.rows);
         assert!(body.rows[2].starts_with("GRow.storeSlot 0 (.var 1) 2 4 0"), "store of the local: {:?}", body.rows);
     }
+
+    #[test]
+    fn generic_104_exporter_map() {
+        let text = kzeige(&parse(MINI), "probe.gab");
+        assert!(!text.contains("KREFUSAL"), "unexpected generic refusal: {text}");
+        assert!(text.contains("-- pasteable as KCert"), "no literal: {text}");
+        // einzahlen: the exporter's map, every parameter a Gabbro variable in order.
+        assert!(text.contains(
+            "{ params := [(0, .ptr), (1, .int false .w32), (2, .int false .w32)], locals := [], rows := [GRow.void 2, GRow.storeSlot 0 (.var 1) 2 4 0 (.int false .w32) (.lit 100), GRow.call 1 [.var 0, .var 1] none], vm := [0, 1, 2], pp := [], ks := [] }"
+        ), "einzahlen entry: {text}");
+        assert!(text.contains("vm := [0, 1], pp := [], ks := [] }]"), "lies entry last: {text}");
+        assert!(!text.contains("MODEL DATUM"), "no model data in the generic section: {text}");
+    }
+
+    const NAMED: &str = r#"
+module probe::named {
+table T count 4 {
+    slot { v : u32, }
+}
+impl fn lies_a() -> u32
+{
+    return T.slots[0].v;
+}
+impl fn setze(b : u32)
+{
+    T.slots[1].v = b;
+}
+}
+"#;
+
+    #[test]
+    fn general_named_table_load_and_store() {
+        let cert = gzertifiziere(&parse(NAMED));
+        assert!(cert.refusals.is_empty(), "unexpected general refusals: {:?}", cert.refusals);
+        let a = cert.bodies.iter().find(|b| b.name == "lies_a").expect("lies_a");
+        assert_eq!(
+            a.rows,
+            vec!["GRow.ret (some ((.int false .w32), (.ld (.slotA (.addr (.tab 0)) (.lit 0) 4 4 0) (.int false .w32))))"]
+        );
+        let s = cert.bodies.iter().find(|b| b.name == "setze").expect("setze");
+        assert_eq!(s.rows, vec!["GRow.storeNamed 0 (.lit 1) 4 4 0 (.int false .w32) (.var 0)"]);
+        let text = kzeige(&parse(NAMED), "probe.gab");
+        assert!(text.contains("params := [(0, .int false .w32)]"), "setze params: {text}");
+    }
+
+    #[test]
+    fn generic_refuses_a_refused_body_by_name() {
+        let src = MINI.replace("    lies(k, i);", "    lies(k, i);\n    g = 1;");
+        let text = kzeige(&parse(&src), "probe.gab");
+        assert!(text.contains("-- KREFUSAL: function `einzahlen`"), "refused body named: {text}");
+        assert!(!text.contains("pasteable as KCert"), "no literal with a refusal: {text}");
+    }
 }
 
 /// Render an `if/else if/else` chain as a general `ite` row: the arms
@@ -1041,6 +1100,24 @@ fn gfunktion(um: &Umgebung, impls: &[String], f: &FnDecl, cert: &mut GUnitCert) 
             _ => None,
         })
         .collect();
+    // The C parameters as the emitter declares them (`T *restrict k`,
+    // `uint32_t i` for every index, the integer cell of a value), for the
+    // generic certificate (`KFun.params`).
+    let mut cparams: Result<Vec<String>, String> = Ok(Vec::new());
+    for (i, (p, k)) in f.parameter.iter().zip(kinds.iter()).enumerate() {
+        let cty = match k {
+            ParamKind::PtrTable(_) => Some(".ptr".to_string()),
+            ParamKind::IndexTable(_) => Some(".int false .w32".to_string()),
+            ParamKind::Value => width_of_typ(um, &p.typ).map(|w| w.cty()),
+        };
+        match (cty, &mut cparams) {
+            (Some(c), Ok(v)) => v.push(format!("({i}, {c})")),
+            (None, Ok(_)) => {
+                cparams = Err(format!("parameter `{}`: no C cell type (only table pointers, indices and integers)", p.name.text));
+            }
+            (_, Err(_)) => {}
+        }
+    }
     cert.bodies.push(GBodyCert {
         name,
         rows: alle,
@@ -1048,6 +1125,8 @@ fn gfunktion(um: &Umgebung, impls: &[String], f: &FnDecl, cert: &mut GUnitCert) 
         pp,
         ks,
         lay,
+        nparams: params.len(),
+        cparams,
     });
 }
 
@@ -1246,7 +1325,10 @@ fn width_of_expr(sc: &GScope, um: &Umgebung, e: &Expr) -> Option<IntW> {
         ExprArt::Ort(o) if o.suffixe.is_empty() => sc.width(&o.basis.text),
         ExprArt::Ort(o) => match gslot(o, sc) {
             Some((_, tab, _, feld)) => field_intw(um, &tab, &feld),
-            None => None,
+            None => match gnamed(o, sc, um) {
+                Some((_, tab, _, feld)) => field_intw(um, &tab, &feld),
+                None => None,
+            },
         },
         ExprArt::Binaer(op, a, b) => {
             use BinOp::*;
@@ -1290,6 +1372,21 @@ fn gslot<'o>(ort: &'o Ort, sc: &GScope) -> Option<(u32, String, &'o Expr, String
     let tab = sc.ptable(&ort.basis.text)?.to_string();
     if let [OrtSuffix::Feld(_), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] = &ort.suffixe[..] {
         return Some((kp, tab, idx, feld.text.clone()));
+    }
+    None
+}
+
+/// `T.slots[i].f` with `T` a table named directly (no parameter or local of
+/// that name): the table's C block number (its position among the unit's
+/// tables, the numbering `EmitLay.tnr` of the Lean chain instances), table,
+/// index expression, field name.
+fn gnamed<'o>(ort: &'o Ort, sc: &GScope, um: &Umgebung) -> Option<(u32, String, &'o Expr, String)> {
+    if sc.local(&ort.basis.text).is_some() {
+        return None;
+    }
+    let tn = um.tabellen.iter().position(|t| t.name.text == ort.basis.text)? as u32;
+    if let [OrtSuffix::Feld(_), OrtSuffix::Index(idx), OrtSuffix::Feld(feld)] = &ort.suffixe[..] {
+        return Some((tn, ort.basis.text.clone(), idx, feld.text.clone()));
     }
     None
 }
@@ -1339,10 +1436,30 @@ fn gcx(sc: &GScope, um: &Umgebung, e: &Expr, benutzt: &mut [bool]) -> Result<Str
                     None => Err(format!("slot load `{}`: layout has no byte size", o.text())),
                 }
             }
-            None => Err(format!(
-                "place `{}`: only bare locals and `param.slots[i].field` loads have rows",
-                o.text()
-            )),
+            None => match gnamed(o, sc, um) {
+                // A table named directly: its storage `T_speicher` is C block
+                // `.tab tn` (the Lean chain's `EmitLay.tnr`).
+                Some((tn, tab, idx, feld)) => {
+                    let index = gcx(sc, um, idx, &mut *benutzt)?;
+                    match um.layout(&tab, &feld) {
+                        Some(l) => match field_intw(um, &tab, &feld) {
+                            Some(w) => Ok(format!(
+                                ".ld (.slotA (.addr (.tab {tn})) ({index}) {} {} {}) ({})",
+                                l.n,
+                                l.ss,
+                                l.off,
+                                w.cty()
+                            )),
+                            None => Err(format!("slot load `{}`: field `{tab}.{feld}` has no integer width", o.text())),
+                        },
+                        None => Err(format!("slot load `{}`: layout has no byte size", o.text())),
+                    }
+                }
+                None => Err(format!(
+                    "place `{}`: only bare locals, `param.slots[i].field` and `Table.slots[i].field` loads have rows",
+                    o.text()
+                )),
+            },
         },
         ExprArt::Binaer(op, a, b) => {
             use BinOp::*;
@@ -1387,6 +1504,10 @@ pub struct GBodyCert {
     pub ks: Vec<String>,
     /// Layout facts used by a slot row, if any.
     pub lay: Option<LayFacts>,
+    /// Number of parameters (the exporter's map is `vm = [0, …, n-1]`).
+    pub nparams: usize,
+    /// The C parameters `(local, C type)`, or why one has no C cell type.
+    pub cparams: Result<Vec<String>, String>,
 }
 
 /// The whole unit in general syntax: certified bodies plus refusals.
@@ -1529,6 +1650,34 @@ fn gblock(
                             return false;
                         }
                     }
+                } else if let Some((tn, tab, idx, feld)) = gnamed(&z.ziel, sc, um) {
+                    // A store to a table named directly: `T_speicher.slots[i].f = e;`.
+                    let index = match gcx(sc, um, idx, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("slot store to `{target}`: index {was}"));
+                            return false;
+                        }
+                    };
+                    let val = match gcx(sc, um, &z.wert, &mut *benutzt) {
+                        Ok(c) => c,
+                        Err(was) => {
+                            cert.refuse(wo, format!("slot store to `{target}` of {was}"));
+                            return false;
+                        }
+                    };
+                    let (Some(l), Some(w)) = (um.layout(&tab, &feld), field_intw(um, &tab, &feld)) else {
+                        cert.refuse(wo, format!("slot store to `{tab}.{feld}`: no layout or no integer width"));
+                        return false;
+                    };
+                    rows.push(format!(
+                        "GRow.storeNamed {tn} ({index}) {} {} {} ({}) ({val})",
+                        l.n,
+                        l.ss,
+                        l.off,
+                        w.cty()
+                    ));
+                    *lay = Some(l);
                 } else if z.ziel.suffixe.is_empty() {
                     match sc.local(&z.ziel.basis.text) {
                         Some(x) => {
@@ -1654,6 +1803,70 @@ pub fn gzeige(baum: &Programm, datei: &str) -> String {
     }
     for r in &cert.refusals {
         aus.push_str(&format!("-- GREFUSAL: {}: {}\n", r.wo, r.was));
+    }
+    aus
+}
+
+/// Render the GENERIC certificate (`KCert`, `grammatik/Grammatik/KorrespondenzAllg.lean`,
+/// checked by `korrOk` and consumed by the closing theorem `schlusssatz`): per `impl fn`,
+/// in source order (entry `n` is C function `n`), its C parameters, its rows and the
+/// EXPORTER'S locals map -- Gabbro variable `j` is C local `j`, a table pointer is an
+/// ordinary variable, nothing is fixed by a model (`pp = ks = []`). Unlike the two
+/// sections above, no value here is model data. A refusal of any body, or a parameter
+/// without a C cell type, is a named `KREFUSAL` and suppresses the literal.
+pub fn kzeige(baum: &Programm, datei: &str) -> String {
+    let cert = gzertifiziere(baum);
+    let mut impls: Vec<String> = Vec::new();
+    fn sammle(items: &[Item], impls: &mut Vec<String>) {
+        for item in items {
+            match &item.art {
+                ItemArt::Modul(m) => sammle(&m.items, impls),
+                ItemArt::Funktion(f) if matches!(f.klasse, Some(FnKlasse::Impl)) => {
+                    impls.push(f.name.text.clone())
+                }
+                _ => {}
+            }
+        }
+    }
+    sammle(&baum.items, &mut impls);
+    let mut aus = format!(
+        "-- generic corr-lean certificate for `{datei}` (KCert, Schlusssatz.lean): the exporter's map.\n"
+    );
+    let mut eintraege: Vec<String> = Vec::new();
+    let mut absagen: Vec<String> = Vec::new();
+    for (n, name) in impls.iter().enumerate() {
+        let wo = format!("function `{name}`");
+        if cert.refusals.iter().any(|r| r.wo == wo) {
+            absagen.push(format!("{wo}: refused in the general section (GREFUSAL above)"));
+            continue;
+        }
+        let Some(b) = cert.bodies.iter().find(|b| &b.name == name) else {
+            absagen.push(format!("{wo}: no general rows"));
+            continue;
+        };
+        let ps = match &b.cparams {
+            Ok(ps) => ps.join(", "),
+            Err(was) => {
+                absagen.push(format!("{wo}: {was}"));
+                continue;
+            }
+        };
+        let vm: Vec<String> = (0..b.nparams).map(|i| i.to_string()).collect();
+        aus.push_str(&format!("-- function `{name}` = C function {n}: params [{ps}]\n"));
+        eintraege.push(format!(
+            // One line per entry: a Lean structure literal must not break after a comma.
+            "{{ params := [{ps}], locals := [], rows := [{}], vm := [{}], pp := [], ks := [] }}",
+            b.rows.join(", "),
+            vm.join(", ")
+        ));
+    }
+    for a in &absagen {
+        aus.push_str(&format!("-- KREFUSAL: {a}\n"));
+    }
+    if absagen.is_empty() && !impls.is_empty() {
+        aus.push_str("-- pasteable as KCert (entry n is C function n):\n[");
+        aus.push_str(&eintraege.join(",\n "));
+        aus.push_str("]\n");
     }
     aus
 }
