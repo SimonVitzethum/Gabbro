@@ -571,10 +571,64 @@ asks the question the model asks.
 
 ---
 
-## O13 — Two chain files need 72 GB of memory, so almost nobody can replay them
+## O13 — ~~Two chain files need 72 GB of memory, so almost nobody can replay them~~ — **CLOSED 2026-09-15: the whole library builds from empty in 5 min 20 s at a peak of 6,86 GB**
 
-*Measured 2026-09-15 on `ki-pc-fisch-101` (110 GB, 16 cores), from an empty build directory,
-while writing README §0. Not found by a guardian — found by trying to be a reviewer.*
+> **THE CLOSING MEASUREMENT** (`ki-pc-fisch-101`, idle, Lean 4.33.1, empty build directory,
+> 248 jobs, exit 0, `/usr/bin/time -f "WANDUHR %e s SPEICHER %M kB"`):
+>
+> | Target | before | after |
+> |---|---|---|
+> | `Grammatik.Kette104` | 4 min 40 s / **72 GB** | 1,6 s / **0,92 GB** |
+> | `Grammatik.Kette108` | 6 min 50 s / **72 GB** | 1,1 s / **0,87 GB** |
+> | `Grammatik.Parser.Uebersetze` | 47,6 s / 9,17 GB | 10,5 s / 1,99 GB |
+> | `Grammatik.Schlusssatz104` | 32,5 s / 8,91 GB | 2,4 s / 0,93 GB |
+> | the whole library from empty | about 25 min / **72 GB** | **5 min 20 s / 6,86 GB** |
+>
+> **AND THE CAUSE WAS NOT WHERE THIS ENTRY SAID IT WAS.** The `String.toList` finding below
+> is right about the mechanism and was only part of the bill. Cutting `Kette104.lean` into
+> prefixes and elaborating each puts the whole 72 GB on **one theorem**: `low_some` (a
+> `decide` over the entire generic lowering) costs 0,73 GB, `parse4` 0,98 GB, `elab4`/`low4`
+> 0,90 GB — *every stage of the pipeline is cheap under kernel reduction* — and
+> `uebersetzt4` costs **69,9 GB and 291 s**. It is the theorem that glues the stages
+> together, and its first tactic was `unfold uebersetzeAllg` **at the concrete source**:
+> the equation lemma's right-hand side is `match lex s with …`, simplification looks at the
+> discriminant, and whnf of `lex src104real` runs the UTF-8 decoder over 2064 bytes inside
+> the kernel.
+>
+> **THE REPAIR, in two parts, both needed.** (a) The sources are pinned as CHARACTERS —
+> `SRC-BEGIN`/`SRC-END` blocks of short `"…".toList` pieces, `def src104real : String :=
+> String.ofList srcQuelle104`, with the bridge `lex_ofList` (`Parser/Lexer.lean`) proved by
+> rewriting with the core lemmas `String.toList_ofList` and `String.length_ofList`, so the
+> decoder is never run at all. (b) The unfolding happens ONCE, at a VARIABLE character list:
+> `uebersetzeAllg_von_zeichen` (`Schlusssatz.lean`) takes the four stages as hypotheses, and
+> the chain files apply it in one term. The same two moves fixed `u104lex`
+> (`Parser/Uebersetze.lean`) and `uebersetze104_ok` (`Schlusssatz104.lean`).
+>
+> **NOTHING WAS WEAKENED.** Every theorem statement is unchanged character for character —
+> `uebersetzt4`, `uebersetzt8`, `lex104real`, `lex108`, `kette_104 : Kette src104real`,
+> `kette_108 : Kette src108`; `Kette` is still indexed by a `String`. `src104real` IS the
+> text by definition, and `zaehle-kette.py` still decides whether the pin is the file byte
+> for byte (it reads the `SRC-BEGIN` block now, with four new speech-test directions,
+> including *the same text cut differently is the same text*). Measured after the repair:
+> **chain count 2 of 2 CLOSED**, all five sieves green with `--lean`. `#print axioms` is the
+> standard three for every theorem touched.
+>
+> **What is the peak NOW, and why this entry does not stay open for it.** The library's
+> largest single module is `Parser/ElementTiefProben.lean` at **6,84 GB** — 59 agreement
+> probes of the shape `lex "…" = .ok […]`, the longest literal 489 bytes, so it is the same
+> `String.toList` cost in a file that has nothing to do with the chain. It fits in 16 GB
+> with room, so it is a cost note and not an absence; the cheap fix, if anyone wants the
+> library under 3 GB, is the same one — pin those probe texts as pieces and state them with
+> `lex (String.ofList …)`. `CText104Zeuge.lean` (2,95 GB) and `CText108.lean` (2,91 GB) come
+> next, then `Parser/UebersetzeAllg2.lean` (2,97 GB) and `Parser/Lexer.lean` (2,35 GB,
+> `lex_keywords` over 243 words). Everything else is at or below 1,12 GB.
+>
+> **And the second pathology recorded below is WITHDRAWN**, see the end of this entry.
+> Report: `messung/muse/OPUS-BERICHT-O13.md`.
+
+*The original entry, kept because the finding is the interesting part. Measured 2026-09-15
+on `ki-pc-fisch-101` (110 GB, 16 cores), from an empty build directory, while writing
+README §0. Not found by a guardian — found by trying to be a reviewer.*
 
 | Target | Wall clock | Peak resident |
 |---|---|---|
@@ -620,11 +674,29 @@ having the lexer take `List Char`. That is what `Grammatik/CText104.lean` and
 `CParser/CLexer.lean` do, and it is a factor of 13 in memory and 18 in time on the same
 theorem.
 
-This does not close O13 -- `Kette104`/`Kette108` have not been converted, and nobody has
-measured what stays after the conversion (the elaborator and the checker `decide` are still
-in there). It names the FIRST thing to try, cheaply: change `lex` to take a `List Char`,
-pin `src104real` as its lines, and re-measure the 72 GB. **A second pathology found the same
-day, for whoever converts:** a MUTUAL recursion through a fuel argument compiles to a mutual
-`Nat.brecOn`, and reducing it is EXPONENTIAL in the fuel -- a seven-token probe grew to
-112 GB before it was killed, while the same parser without the mutual block costs 0,9 GB.
-Fuel that comes from a token count must never reach a mutual recursion.
+This did not close O13 by itself -- the conversion was made on 2026-09-15 and is only half
+the story; see the closing measurement at the top. The re-measured figure for the same probe
+on an IDLE machine is **17,8 GB / 95 s**, not 33,7 GB / 217 s: the original was taken with
+the other lanes' load beside it. Growth is about `n^1,9`, and the 1419 bytes as 57 pieces of
+25 bytes cost **1,46 GB FULLY FORCED** against 17,8 GB for one character of the literal.
+
+**THE SECOND PATHOLOGY RECORDED HERE IS WITHDRAWN.** It said: *a MUTUAL recursion through a
+fuel argument compiles to a mutual `Nat.brecOn`, and reducing it is EXPONENTIAL in the fuel
+-- a seven-token probe grew to 112 GB before it was killed*, with the rule *"fuel that comes
+from a token count must never reach a mutual recursion"*. **Measured again on 2026-09-15
+(O13 lane) and it does not hold**: two-way and three-way mutual recursions whose first
+argument is fuel, fuel really traversed, stay at the bare `lean` baseline (0,477 GB) from
+fuel 10 to fuel 320, flat, with no trend. And this tree refutes the rule directly --
+`Parser/Anweisung.lean`, `Parser/Element.lean` and `Parser/ElementTief.lean` are exactly
+that shape, `parseTopTief` runs them at fuel `toks.length * 8 + 32` = **2032** for `tt104`,
+and `parse4` reduces it in **0,98 GB**. The 112 GB had another cause, which was not
+identified. `CParser/CParse.lean` §4 carries the withdrawal beside the design it used to
+justify; the design (no recursion in the C expression parser) stands on its scope reason.
+
+*A note on the measuring apparatus, because it cost an hour: **`ulimit -v` is the wrong bar
+for a Lean build.** Lean reserves far more address space than it touches, and two `lean`
+processes under a 30 GB virtual cap DEADLOCKED (`futex_wait`, VmSize 16 GB, RSS 0,5 GB, zero
+CPU) instead of aborting -- a bound that hangs the run looks exactly like a run that is slow.
+A watchdog on RESIDENT memory is the honest bar. And it must count only its OWN directory's
+processes: the first one read `ps -C lean` for the whole machine, saw ANOTHER lane at 72 GB
+and killed this run -- the `W16` family again, a measuring device that counts the neighbour.*
