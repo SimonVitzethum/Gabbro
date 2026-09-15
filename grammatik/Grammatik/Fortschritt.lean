@@ -542,7 +542,7 @@ def FortFaden (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D
     Prop :=
   FertigG M t ∨ WartetG M t ∨ Zielsatz.HaltBenannt O passes M .flagge t ∨
     Zielsatz.HaltBenannt O passes M .budget t ∨ Zielsatz.HaltBenannt O passes M .hardware t ∨
-    ∃ M', RufSchrittG P O passes M t M'
+    Zielsatz.HaltBenannt O passes M .nieZurueck t ∨ ∃ M', RufSchrittG P O passes M t M'
 
 theorem fort_hw {M : RufMaschineG D} {t : Faden}
     (h : Zielsatz.HaltBenannt O passes M .hardware t) : FortFaden P O passes M t :=
@@ -559,11 +559,15 @@ theorem fort_budget {M : RufMaschineG D} {t : Faden}
 theorem fort_schritt {M : RufMaschineG D} {t : Faden} {X : RufMaschineG D → Prop}
     (h : ∃ M', RufSchrittG P O passes M t M' ∧ X M') : FortFaden P O passes M t := by
   obtain ⟨M', hs, _⟩ := h
-  exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨M', hs⟩))))
+  exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨M', hs⟩)))))
 
 theorem fort_schritt' {M : RufMaschineG D} {t : Faden}
     (h : ∃ M', RufSchrittG P O passes M t M') : FortFaden P O passes M t :=
-  Or.inr (Or.inr (Or.inr (Or.inr (Or.inr h))))
+  Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr h)))))
+
+theorem fort_nie {M : RufMaschineG D} {t : Faden}
+    (h : Zielsatz.HaltBenannt O passes M .nieZurueck t) : FortFaden P O passes M t :=
+  Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl h)))))
 
 /-- **The caller receives a value** (`FormG`, the invariant of the pop). -/
 theorem popArt_von {M : RufMaschineG D} {t : Faden} {caller : RufRahmenG D}
@@ -725,7 +729,9 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v⟩
-      · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
+      · by_cases hleer : AntwortLeer D (D.aerg a)
+        · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
         show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
             = none
@@ -747,17 +753,22 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
         exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiom M t l Γ Λ _ _ a args he hw hg hd hgd rest
           k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
   | regLies r hk rest =>
-      by_cases hex : ∃ v, einpassen (D := D) (D.rtyp r) (O.regLies r (M.weltVon t)) = some v ∧
+      by_cases hex : ∃ v, einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) = some v ∧
           D.rzusage r v = true
       · obtain ⟨v, hv, hz⟩ := hex
         exact fort_schritt (w_regLies rfl r hk rest k ρ hx v hv hz hΛ)
-      · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, fun v hv => ?_⟩
+      · by_cases hleer : AntwortLeer D (some (D.rtyp r))
+        · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, fun v hv => ?_, hleer⟩
         cases hz : D.rzusage r v
         · rfl
         · exact absurd ⟨v, hv, hz⟩ hex
   | regLiesElse r hk zusage sonst rest =>
-      cases hv : einpassen (D := D) (D.rtyp r) (O.regLies r (M.weltVon t)) with
-      | none => exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hv⟩
+      cases hv : einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) with
+      | none =>
+          by_cases hleer : AntwortLeer D (some (D.rtyp r))
+          · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+          · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hv, hleer⟩
       | some v =>
           cases hw : wahr? (eval ((M.weltVon t).lese Λ zusage.orte) zusage
               ((M.weltVon t).lese Λ zusage.orte) (.cons v ρ)) with

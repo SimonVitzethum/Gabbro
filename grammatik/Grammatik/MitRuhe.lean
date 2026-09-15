@@ -654,6 +654,7 @@ def Orakel.mitRuhe (O : Orakel D) : Orakel D.mitRuhe where
   regLies r σ := O.regLies r (worldZ σ)
   regSchreib := O.regSchreib
   sichtbar g σ := O.sichtbar g (worldZ σ)
+  zeiger k := (O.zeiger k).map some
 
 /-- **The lock invariants of `D.mitRuhe`**: the same carriers, `S.inv` on the
     translated-back memory. -/

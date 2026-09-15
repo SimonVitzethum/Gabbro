@@ -49,7 +49,7 @@ abbrev AxEns (D : Deklaration) := ∀ a : D.Ax, World D → ErgVal D (D.aerg a) 
     as `GutO` is the one of the frame). -/
 def AxVertragO (Q : AxEns D) (O : Orakel D) : Prop :=
   ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
-    einpassenErg (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
+    einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
 
 /-- The declared ensures reads only the axiom's declared write carriers of
     the answer world (and the result). -/
@@ -70,18 +70,18 @@ theorem koerperGutA_of_V {P : Programm D} {passes : Nat} (Q : AxEns D) {f : D.Fn
   fun O' hr _ => h O' hr
 
 /-- Every recorded axiom answer meets the declared ensures. -/
-def VertragA (Q : AxEns D) (HA : List (AxEintrag D)) : Prop :=
+def VertragA (z : Int → Option D.Fn) (Q : AxEns D) (HA : List (AxEintrag D)) : Prop :=
   ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (x : World D × Int),
     (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA →
-      ∀ v : ErgVal D (D.aerg a), einpassenErg (D.aerg a) x.2 = some v → Q a x.1 v = true
+      ∀ v : ErgVal D (D.aerg a), einpassenErg z (D.aerg a) x.2 = some v → Q a x.1 v = true
 
-theorem vertragA_nil (Q : AxEns D) : VertragA Q ([] : List (AxEintrag D)) :=
+theorem vertragA_nil (z : Int → Option D.Fn) (Q : AxEns D) : VertragA z Q ([] : List (AxEintrag D)) :=
   fun _ _ _ _ h => absurd h List.not_mem_nil
 
 /-- The oracle of a record meets the declared ensures when the machine's
     oracle does and every recorded answer does. -/
 theorem orakelAus_vertrag {Q : AxEns D} {O : Orakel D} (hQ : AxVertragO Q O)
-    {HA : List (AxEintrag D)} (hv : VertragA Q HA) : AxVertragO Q (orakelAus O HA) := by
+    {HA : List (AxEintrag D)} (hv : VertragA O.zeiger Q HA) : AxVertragO Q (orakelAus O HA) := by
   intro a σ ρ v
   simp only [orakelAus]
   split
@@ -330,13 +330,13 @@ theorem koerperGutV_nur_rahmen (E : AxEnsZ) (h : KoerperGutV (axPE E) 0 axZaehle
     wahr? (eval σ E (σ.storeSlot () 0 () w) (.cons v .nil)) = true := by
   have hK := (h (axOrakel v w) (axOrakel_rahmen v w) keinRuf (keinRuf_respektiert _)
     keinRuf_ohne σ .nil rfl).1
-  have hein : einpassenErg (D := axD) (axD.aerg axInc) v.n = some v := by
-    show einpassen (.int 0 3) v.n = some v
+  have hein : einpassenErg (D := axD) (axOrakel v w).zeiger (axD.aerg axInc) v.n = some v := by
+    show einpassen (axOrakel v w).zeiger (.int 0 3) v.n = some v
     simp only [einpassen, dif_pos (show 0 ≤ v.n ∧ v.n ≤ 3 from ⟨v.lo_le, v.le_hi⟩)]
     rfl
   have hax : axiomAntwort (axOrakel v w) axInc ((σ.lese axL []).lese axL []) .nil =
       (((σ.lese axL []).lese axL []).storeSlot () 0 () w, some v) := by
-    show (_, einpassenErg (D := axD) (axD.aerg axInc) v.n) = _
+    show (_, einpassenErg (D := axD) (axOrakel v w).zeiger (axD.aerg axInc) v.n) = _
     rw [hein]
     rfl
   have hrun := axZaehle_lauf E (axOrakel v w) 0 keinRuf σ _ _ hax
@@ -374,12 +374,12 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
   subst hρ
   have hax : axiomAntwort O' axInc ((σ.lese axL []).lese axL []) .nil =
       ((O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).1,
-        einpassenErg (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2) :=
+        einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2) :=
     rfl
   refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 R σ _ _ hax)
     revert e
-    cases hw : einpassenErg (axD.aerg axInc)
+    cases hw : einpassenErg O'.zeiger (axD.aerg axInc)
         (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2 with
     | none => intro e; cases e
     | some u =>
@@ -388,7 +388,7 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
         exact hQ axInc _ .nil _ hw
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 (torRuf axP R) σ _ _ hax)
     revert e
-    cases einpassenErg (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2 with
+    cases einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2 with
     | none => intro e; cases e
     | some u => intro e; cases e
 

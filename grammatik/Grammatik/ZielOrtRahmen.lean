@@ -560,7 +560,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       have := congrArg Prod.fst hax
       simp only [axiomAntwort] at this
       exact this.symm
-    have hv : einpassenErg (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwort] at this
       exact this
@@ -571,10 +571,10 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
-      hfr hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw') (fun O' R σ hwk => ?_), hL⟩
+      hfr hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw') (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
-    simp only [execBlock, axiomAntwort, hwk, hv]
+    simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
     rfl
   -- pushes
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
@@ -1003,7 +1003,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact ZErg.folgt_of_eq
-      (semV_regLies O' passes R r hk rest k σ ρ v (by rw [hrl]; exact hv) hz)
+      (semV_regLies O' passes R r hk rest k σ ρ v (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hz)
   | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenR_lokalQ hF hhead (.cons v ρ) (.dann rest (.schrumpf k)) σ₁.spur
@@ -1021,7 +1021,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact ZErg.folgt_of_eq (semV_regLiesElseWahr O' passes R r hk zusage sonst rest k σ ρ v
-      (by rw [hrl]; exact hv) hw')
+      (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hw')
   | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu
       hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -1040,7 +1040,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact semV_regLiesElseFalsch O' passes R r hk zusage sonst rest k σ ρ v
-      (by rw [hrl]; exact hv) hw'
+      (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hw'
   | dannAwaits l Γ Λ Λ' g payload hp hLg rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenR_lokalQ hF hhead (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₁.spur
@@ -1107,7 +1107,7 @@ theorem zielInvR_start
   · unfold RufMaschineG.weltVon
     rw [hz t]
     exact ⟨⟨[], [], sp.welt [], hStart t, funkV_nil, vertraegeOkR_nil P, kurzV_nil _, funkA_nil,
-      rahmenA_nil, vertragA_nil Q, kurzA_nil _, GleichAuf.vonSpeicher rfl, ⟨hFrag _, fuss_rumpfG P _⟩,
+      rahmenA_nil, vertragA_nil _ Q, kurzA_nil _, GleichAuf.vonSpeicher rfl, ⟨hFrag _, fuss_rumpfG P _⟩,
       fun R O' _ _ _ => ZErg.folgt_refl _⟩, trivial⟩
   · rw [hz t]
     exact logOk_eintritt (fun _ h => absurd h List.not_mem_nil) (hStart t)

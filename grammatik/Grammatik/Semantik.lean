@@ -48,6 +48,7 @@
          der Ausgang `fortschritt a` -- die Annahme, die der Schreiber am `progress` nannte.
 -/
 import Grammatik.Syntax
+import Grammatik.GleitkommaBits
 
 namespace Gabbro.Grammatik
 
@@ -343,23 +344,107 @@ inductive RufAusgang {D : Deklaration} (f : D.Fn) : Type where
 
 /-! ## 4. Das Orakel -- die Hardware, als Parameter -/
 
+/-- A float result against its declared range: finite and inside, or nothing. NaN and the
+    infinities fail `gleitEndlich` and fall into the `none` branch -- the `logik bereich`
+    outcome of a computed float (or a `narrow`'s `else`), and a refused register or axiom
+    answer (`einpassen`). -/
+def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
+  if h : gleitEndlich x = true ∧ gleitLe (bruch lo) x = true ∧ gleitLe x (bruch hi) = true then
+    some ⟨x, h.1, h.2.1, h.2.2⟩
+  else Option.none
+
+/-- The payload of a `tagged` case against its declared payload: a bare case carries `0`
+    (the C struct has no `last` member for it), a payload case a number in its range. -/
+def nutzPasst : (c : Option (Int × Int)) → Int → Option (Nutzlast c)
+  | Option.none, p => if p = 0 then some () else Option.none
+  | Option.some (lo, hi), p => if h : lo ≤ p ∧ p ≤ hi then some ⟨p, h.1, h.2⟩ else Option.none
+
+/-- The number of `tagged` cases, as an `Int`. -/
+abbrev fallZahl (cs : List (Option (Int × Int))) : Int := (cs.length : Int)
+
+theorem fall_marke_lt (cs : List (Option (Int × Int))) (n : Int) (hk : 0 < cs.length) :
+    (n % fallZahl cs).toNat < cs.length := by
+  have h0 : (0 : Int) < fallZahl cs := by unfold fallZahl; omega
+  have h1 := Int.emod_nonneg n (Int.ne_of_gt h0)
+  have h2 := Int.emod_lt_of_pos n h0
+  unfold fallZahl at h1 h2 ⊢
+  omega
+
+/-- **A raw word as a `tagged` value** (G1 repair, 2026-09-15). The emitter lays a `tagged`
+    value out as `struct { T_marke marke; union { … } last; }` (`emit.rs`, `markiert`): the
+    case number `marke` (a C `enum`, the cases numbered `0, 1, …` in declaration order) and
+    the payload `last` of that case (none for a bare case). The machine's ONE raw word is that
+    pair, PACKED MIXED-RADIX with the case number in the low digit:
+    `roh = marke + |cases| * last` -- so `marke = roh % |cases|` and `last = roh / |cases|`
+    (Euclidean). The packing is a bijection between `Int` and the pairs
+    `(marke < |cases|, last : Int)`, so every C value of the struct has exactly one raw word
+    (`einpassen_voll`, EinpassenVoll.lean); `nutzPasst` then holds the payload against its
+    range. A syscall's `ok value | reason r` is such a sum; its generated errno decoding
+    (`dekodiere`, Syscall.lean) is the emitted C that forms the pair. -/
+def summePasst (cs : List (Option (Int × Int))) (n : Int) :
+    Option (Σ i : Fin cs.length, Nutzlast (cs.get i)) :=
+  if hk : 0 < cs.length then
+    let i : Fin cs.length := ⟨(n % fallZahl cs).toNat, fall_marke_lt cs n hk⟩
+    (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, x⟩
+  else Option.none
+
+/-- The width of the raw float word: the IEEE-754 binary64 bit pattern is an unsigned
+    64-bit integer. -/
+abbrev gleitWortGrenze : Int := 18446744073709551616
+
+/-- **A raw word as a float** (G1 repair): the word is the IEEE-754 binary64 bit pattern
+    (sign, exponent, significand; `Gleitkomma.ausBits`, the inverse of `zuBits` on
+    well-formed triples), held against the declared range like a computed float
+    (`gleitPasst`: finite and inside). `Ty.fl` carries no width and the model computes in
+    binary64 (GLEITKOMMA.md section 7), so an `f32` register's answer is read as its binary64
+    value -- the same named cut. -/
+def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
+  if 0 ≤ n ∧ n < gleitWortGrenze then
+    gleitPasst lo hi (Gleitkomma.ausBits Gleitkomma.f64 n.toNat)
+  else Option.none
+
+/-- **A raw word as a function pointer** (G1 repair): the word is a code address; the loaded
+    image `z` (`Orakel.zeiger`) names the function at it, and its signature number is held
+    against the declared `fnptr n`. -/
+def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn // D.sig f = m} :=
+  match z n with
+  | Option.some f => if h : D.sig f = m then some ⟨f, h⟩ else Option.none
+  | Option.none => Option.none
+
 /-- Ein rohes Ergebnis der Maschine, gegen einen Typ gehalten: passt es nicht, ist die
-    Annahme widerlegt. -/
-def einpassen : (τ : Ty) → Int → Option (Wert D τ)
+    Annahme widerlegt. **Every type has a real decoding** since 2026-09-15 (round-5 finding
+    G1: `sum`, `fl` and `fnptr` answered `none` for EVERY raw word, so every call of an axiom
+    with such a result, and every read of such a register, stopped at `hardware` for every
+    oracle -- a stop the MODEL decided and filed as hardware). Every value of every type is
+    the decoding of some raw word under some image (`einpassen_voll`, EinpassenVoll.lean; for
+    floats: every well-formed one). What is left without an answer is exactly the EMPTY
+    types -- `never`, `.grund 0`, an empty range, a sum without a value -- and a call whose
+    declared answer type is empty does not return (`HaltArt.nieZurueck`, Zielsatz/Spec.lean).
+    `z` is the loaded image (`Orakel.zeiger`), read only by `fnptr`. -/
+def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D τ)
   | .int lo hi, n => if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else Option.none
   | .bool, n => some (decide (n ≠ 0))
   | .opt m, n => if h : 0 ≤ n ∧ n ≤ m - 1 then some (some ⟨n, h.1, h.2⟩)
                  else if n < 0 then some Option.none else Option.none
-  | .sum _, _ => Option.none
+  | .sum cs, n => summePasst cs n
   | .grund m, n => if h : 0 ≤ n ∧ n < m then some ⟨n.toNat, by omega⟩ else Option.none
   | .never, _ => Option.none
-  | .fl _ _, _ => Option.none
-  | .fnptr _, _ => Option.none
+  | .fl lo hi, n => gleitWortPasst lo hi n
+  | .fnptr m, n => zeigerPasst z m n
   | .ptr _ _, _ => some ()
 
-def einpassenErg : (τ : Option Ty) → Int → Option (ErgVal D τ)
+def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option (ErgVal D τ)
   | Option.none, _ => some ()
-  | Option.some τ, n => einpassen τ n
+  | Option.some τ, n => einpassen z τ n
+
+/-- **An empty answer class** (G1 repair, 2026-09-15): no raw word decodes under any image --
+    the declared answer type has no value (`never`, `.grund 0`, an empty range, a sum
+    without a value, a pointer type no function has; `einpassen_voll`, EinpassenVoll.lean,
+    shows that every value IS some answer). A call whose answer class is empty cannot
+    return, and the machine cannot fail to answer it "outside its type": there is no inside.
+    That stop is `HaltArt.nieZurueck` (Zielsatz/Spec.lean), not a hardware stop. -/
+def AntwortLeer (D : Deklaration) (e : Option Ty) : Prop :=
+  ∀ (z : Int → Option D.Fn) (n : Int), einpassenErg z e n = Option.none
 
 /-- (H1) Was ein Axiom tut: eine neue Welt und eine rohe Antwort. -/
 structure Orakel (D : Deklaration) where
@@ -371,6 +456,13 @@ structure Orakel (D : Deklaration) where
   /-- (A10) Ob ein `awaits` auf `g` die letzte Veroeffentlichung SIEHT -- das Speichermodell
       der Maschine, als Antwort. -/
   sichtbar : D.Glob → World D → Bool
+  /-- **The loaded image** (G1 repair, 2026-09-15): the function at a code address, for a
+      raw answer of `fnptr` type (`zeigerPasst`). Which address a function has is the
+      linker's and loader's, not the program's, so it is the machine's answer like every
+      other: `einpassen` checks the signature number, and every function of a signature is
+      some image's answer. Default: no function at any address (a witness oracle that
+      answers no pointer). -/
+  zeiger : Int → Option D.Fn := fun _ => Option.none
 
 /-! ## 5. Die Bedeutung einer Anweisung -/
 
@@ -556,14 +648,6 @@ def gleitRechne : GleitOp → GFloat → GFloat → GFloat
   | .mul, a, b => Gleitkomma.mul Gleitkomma.f64 a b
   | .div, a, b => Gleitkomma.div Gleitkomma.f64 a b
 
-/-- Ein Maschinenergebnis gegen den erklaerten Bereich: endlich und drin, oder nichts.
-    NaN and the infinities fail `gleitEndlich` and fall into the `none` branch -- the
-    `logik bereich` outcome (or a `narrow`'s `else`), as with the `Float` model. -/
-def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
-  if h : gleitEndlich x = true ∧ gleitLe (bruch lo) x = true ∧ gleitLe x (bruch hi) = true then
-    some ⟨x, h.1, h.2.1, h.2.2⟩
-  else Option.none
-
 section Rumpf
 -- Die Bedeutung eines Rufs auf dieser Rekursionstiefe -- von aussen gegeben, und in
 -- `rufAt` aus dem Rumpf des Gerufenen gebaut.
@@ -577,7 +661,7 @@ def keinGrund {f : D.Fn} (hr : D.gruende f = 0) (r : Fin (D.gruende f)) : α :=
 def axiomAntwort (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     World D × Option (ErgVal D (D.aerg a)) :=
   let (σ', roh) := O.wirkt a σ ρ
-  (σ', einpassenErg (D.aerg a) roh)
+  (σ', einpassenErg O.zeiger (D.aerg a) roh)
 
 mutual
 
@@ -707,13 +791,13 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | (σ', Option.some v) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
   | .regLies r _ rest, σ, ρ =>
-      match einpassen (D.rtyp r) (O.regLies r σ) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlock rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regLiesElse r _ zusage sonst rest, σ, ρ =>
-      match einpassen (D.rtyp r) (O.regLies r σ) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execBlock rest σ (.cons v ρ)).schrumpf

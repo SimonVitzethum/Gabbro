@@ -424,7 +424,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       simp only [kDann]
       rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
         (alle_von hST hb.1))]
-      generalize einpassen (D.rtyp r) _ = x
+      generalize einpassen _ (D.rtyp r) _ = x
       cases x with
       | none => exact KRel.none_l _
       | some v => exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp) (fun _ => KRel.none_l _)
@@ -433,7 +433,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       simp only [kDann]
       rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
         (alle_von hST hb.1.1.1))]
-      generalize einpassen (D.rtyp r) _ = x
+      generalize einpassen _ (D.rtyp r) _ = x
       cases x with
       | none => exact KRel.none_l _
       | some v =>

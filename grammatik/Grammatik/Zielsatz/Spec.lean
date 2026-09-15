@@ -21,6 +21,49 @@
   Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
   carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
 
+  WHAT CHANGED ON 2026-09-15 (THIRD ROUND), AND WHY (round-5 confirmation review, finding
+  G1 -- a REVIEWED DIFF of this file: `KopfHalt`, `HaltArt`, `FortschrittG` and the ONE list
+  below. The text of `GabbroZiel` and every premise are unchanged; the leg `fortschritt` of
+  `Ziel` names one more stop kind, and its `hardware` kind is narrowed to answerable types):
+  * G1 -- `einpassen`, which holds a raw machine answer against the declared type, answered
+    `none` for EVERY raw word of a `tagged` sum (an `ok | reason` syscall result), a float
+    and a function pointer. So every call of an axiom with such a result stopped at
+    `hardware (annahme a)`, every read of such a register at `hardware (register r)`, for
+    EVERY oracle: a stop the MODEL decided, filed as hardware -- the class of F1. (b) does not
+    constrain hardware outcomes, so probe A behind one such call met (b), passed the checker
+    and was certified; `AxVertragO` was vacuous for those axioms. REPAIR, in the model
+    (Semantik.lean): every type has a real decoding -- a sum packs the emitter's C value
+    `struct { marke; union last; }` as `roh = marke + |cases| * last` (`summePasst`); a float
+    is its IEEE-754 binary64 bit pattern, range-checked like a computed float
+    (`gleitWortPasst`); a function pointer is a code address that the LOADED IMAGE names
+    (`Orakel.zeiger`, a new oracle field -- which address a function has is the linker's and
+    loader's, so it is the machine's answer; the signature number is checked against the
+    declared `fnptr n`). PROVED (EinpassenVoll.lean): every value of every type (floats:
+    well-formed) is the decoding of some raw word under some image (`einpassen_voll`), and
+    the answer class is empty EXACTLY when the declared type has no value (`antwortLeer_iff`)
+    -- the model decides no stop the declared type does not. Refuted: the G1 probes
+    (Zielsatz/ProbenG1.lean) -- an axiom with an `ok | err` result and a float register, each
+    in front of `ensures false`, both accepted by the checker: an oracle meeting (c) answers
+    them (`g1_holen_antwortet`, `g1_temp_antwortet`), and no program with that code meets (b)
+    (`g1PA_widerlegt`, whenever the declared ensures holds at SOME answer; `g1PR_widerlegt`).
+  * THE EMPTY TYPES, and `never` (NEW kind `HaltArt.nieZurueck`): a declared answer type
+    without a value (`never`, `.grund 0`, an empty range, a sum without a value, a pointer
+    type no function has; `AntwortLeer`) admits no answer at all -- so its call does not
+    return. That is not the machine answering "outside" a type that has no inside, so it is
+    no longer a `hardware` stop: `KopfHalt .hardware` at an axiom or register head now
+    requires the type to be answerable (`¬ AntwortLeer`), and `KopfHalt .nieZurueck` names
+    the empty case; `FortschrittG` lists it. WHY this and not "only in tail position": for
+    `-> never` the non-return IS the declaration (the emitter writes `_Noreturn` on the
+    prototype), the code after the call is unreachable in the C exactly as in G, and (b)
+    still covers every statement BEFORE the call -- a `logik` outcome or a failed callee
+    `requires` there is an outcome of the body, which `KoerperGutS` excludes. What stays
+    vacuous is only the unreachable continuation and the function's own `ensures` (a body
+    that never returns meets every `ensures`, partial correctness, as for recursion).
+  * The replay of the user's sequential proof into G (`GleichRS`, `ZeigerGleich`) and the
+    idle-root transfer (`OrakelRu`, MitRuheSemantik.lean: an oracle of `E.P.mitRuhe` may
+    place the root at an address, which no translated type accepts) carry the image; no
+    premise changed.
+
   WHAT CHANGED ON 2026-09-15 (SECOND ROUND), AND WHY (fourth Opus verdict,
   URTEIL-OPUS-2026-09-15b.md):
   * F1 -- a float result outside its declared range ended the body in `Hardware.ieee` for
@@ -106,6 +149,8 @@
     (c) stays inhabited by oracles whose answers never fit the type, and every call of that
     axiom then stops at a `hardware` stop (`Hardware.annahme`). Both are the honest kind of
     vacuity -- a visible false assumption, reported as such -- but they are two kinds.
+    SINCE G1 (2026-09-15) "fits" is a real decoding for EVERY type (`einpassen_voll`): for a
+    satisfiable `E.Q`, oracles with fitting answers exist, and (b) must cover them.
   * (d) `Laufzeit.lader` -- the loader establishes the program's declared initial memory
     `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
     that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
@@ -123,9 +168,19 @@
     - `hardware`, axiom answer outside its type (`dannBindAxiom`, an axiom leaf;
       `Hardware.annahme`) -- the answer of FOREIGN code, which (c) describes only by its
       frame (`GutO`) and its declared `ensures` (`AxVertragO`); a type-correct answer is
-      constrained, an ill-typed one is the foreign code breaking its declaration.
+      constrained, an ill-typed one is the foreign code breaking its declaration. Only for
+      an ANSWERABLE type (`¬ AntwortLeer`, since G1): the type has values, each of them some
+      raw word under some image (`einpassen_voll`), so the machine could have answered.
     - `hardware`, register answer outside its type (`dannRegLies*`; `Hardware.register`) --
-      the device answered a bit pattern its declared type excludes.
+      the device answered a bit pattern its declared type excludes (answerable types only,
+      as above).
+    - `nieZurueck` (since G1), an axiom call or register read whose DECLARED answer type is
+      empty (`AntwortLeer`: `never`, `.grund 0`, an empty range, ...) -- the call does not
+      return. For `-> never` that is the declaration's promise about the foreign code (the
+      C prototype is `_Noreturn`; a foreign body that returns breaks it, a hardware/foreign
+      fact like every entry of (c)); for another empty type it is the declaration making a
+      call unanswerable, visible in the declaration like `Q := false`. The continuation is
+      unreachable in the C as in G; everything before the call is covered by (b).
     - `hardware`, register answer against its declared promise (`regLies` of a `requires`
       without `else`; `Hardware.geraet`) -- the device broke the promise its declaration
       makes (`D.rzusage`). A promise the user declares `false` makes every read a stop: the
@@ -202,9 +257,14 @@
     signature locks; reachable = finitely many steps / a start C does not make is irrelevant.
   * `execStmt` Semantik:574, `keinRuf` Maschine:383, `Stmt.istBlatt` Maschine:392 -- one
     statement sequentially; leaves are what G runs in one step / wrong leaves = wrong steps.
-  * `Logik`/`Hardware` Semantik:275/295 -- the failure outcomes; `Logik.bereich` (a float
+  * `Logik`/`Hardware` Semantik:277/296 -- the failure outcomes; `Logik.bereich` (a float
     result outside its range, since 2026-09-15) / a user-decided failure filed as
     `Hardware` would pass (b) unconstrained (verdict F1).
+  * `einpassen` Semantik:424 (`summePasst`, `gleitWortPasst`, `zeigerPasst` above it),
+    `AntwortLeer` :446, `Orakel.zeiger` :450 -- a raw answer held against the declared type,
+    and the loaded image / a type the decoding refused for every word would be a stop the
+    model decides and files as hardware (finding G1); `einpassen_voll`, `antwortLeer_iff`
+    (EinpassenVoll.lean) say it refuses exactly the values the type lacks.
   * `execEndH` SperreSem:363, `HavocOk` :71, `SperrInv` :45 -- the sequential body semantics the
     user proves against: `locks L` runs from any move keeping `S.inv L`, a release checks it /
     if it differs from `execStmt` outside `locks`, the user proves the wrong body.
@@ -487,11 +547,12 @@ def InvAmGrundG (P : Programm D) (M : RufMaschineG D) : Prop :=
     ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       ev = RufEreignisF.grund g rho r s0 s1 → InvAmRueck P g s1
 
-/-- **The kinds of named stop** (2026-09-15, verdicts F1 and F3). Each is a place where G has
-    no rule for a thread and the statement reports it instead of claiming more:
+/-- **The kinds of named stop** (2026-09-15, verdicts F1 and F3, finding G1). Each is a place
+    where G has no rule for a thread and the statement reports it instead of claiming more:
     * `hardware` -- a hardware assumption of (c) fails at the head: an axiom (foreign code)
-      answered outside its type, a register (a device) outside its type or against the
-      promise its declaration makes;
+      answered outside its (answerable) type, a register (a device) outside its type or
+      against the promise its declaration makes;
+    * `nieZurueck` -- the head's declared answer type is empty: the call does not return;
     * `flagge` -- a WAIT for a publication: the head is `awaits g` and `g` is not visible;
     * `budget` -- the `forever` budget is spent: G's finite stand-in for a loop the C runs
       without end.
@@ -501,19 +562,36 @@ inductive HaltArt where
   | hardware
   | flagge
   | budget
+  /-- The head is an axiom call (or a register read) whose DECLARED answer type is empty
+      (`AntwortLeer`: `-> never`, `.grund 0`, an empty range, a sum without a value, a
+      pointer type no function has) -- the call does not return. For `-> never` that is
+      the declaration's promise (the emitter writes `_Noreturn` on the prototype), and the
+      code after the call is unreachable in the C as in G; the obligation (b) still covers
+      everything before the call. NEW 2026-09-15 (round-5 finding G1): before, this stop
+      was filed as `hardware`, as if the machine had answered outside a type that has no
+      inside. -/
+  | nieZurueck
 
 /-- The first layer of the head block is a named stop of kind `k` at the world `σ`: the
     failing side conditions of `dannBlatt` (a leaf's hardware outcome), `dannBindAxiom`,
-    `dannRegLies*` (`hardware`) and `dannAwaits` (`flagge`). -/
+    `dannRegLies*` (`hardware` for an answerable type, `nieZurueck` for an empty one, since
+    G1) and `dannAwaits` (`flagge`). -/
 def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (σ : World D) (ρ : Env D Γ) : HaltArt → Block D V l Γ Λ Λ' → Prop
   | .hardware, .cons s _ => s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
   | .hardware, .bindAxiom a args .. =>
       (axiomAntwort O a (σ.lese Λ args.orte)
-        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
+      ¬ AntwortLeer D (D.aerg a)
   | .hardware, .regLies r .. =>
-      ∀ v, einpassen (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false
-  | .hardware, .regLiesElse r .. => einpassen (D := D) (D.rtyp r) (O.regLies r σ) = none
+      (∀ v, einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false) ∧
+      ¬ AntwortLeer D (some (D.rtyp r))
+  | .hardware, .regLiesElse r .. =>
+      einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r σ) = none ∧
+      ¬ AntwortLeer D (some (D.rtyp r))
+  | .nieZurueck, .bindAxiom a .. => AntwortLeer D (D.aerg a)
+  | .nieZurueck, .regLies r .. => AntwortLeer D (some (D.rtyp r))
+  | .nieZurueck, .regLiesElse r .. => AntwortLeer D (some (D.rtyp r))
   | .flagge, .awaits g .. => O.sichtbar g σ = false
   | _, _ => False
 
@@ -535,13 +613,13 @@ def HaltBenannt (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (k : HaltArt)
     (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RestHalt O passes (M.weltVon t) ρ k r
 
 /-- **Every stop is named**: each thread is finished, waits for a lock another thread holds,
-    waits for a publication, has spent its `forever` budget, stands at a hardware stop, or can
-    step. Nothing else: no thread ever stands at a failing `logik` check (`keinLogikHalt`) or
+    waits for a publication, has spent its `forever` budget, stands at a hardware stop, stands
+    at a call that does not return (an empty answer type, since G1), or can step. Nothing else: no thread ever stands at a failing `logik` check (`keinLogikHalt`) or
     at a float result outside its range. -/
 def FortschrittG (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
   ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M .flagge t ∨
     HaltBenannt O passes M .budget t ∨ HaltBenannt O passes M .hardware t ∨
-    ∃ M', RufSchrittG P O passes M t M'
+    HaltBenannt O passes M .nieZurueck t ∨ ∃ M', RufSchrittG P O passes M t M'
 
 /-- Thread `t` stands at `locks L` while thread `u` holds `L`. -/
 def WartetAuf (M : RufMaschineG D) (t u : Faden) (L : D.Lock) : Prop :=

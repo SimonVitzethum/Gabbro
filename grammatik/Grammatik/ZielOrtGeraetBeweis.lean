@@ -398,7 +398,7 @@ theorem fadenG_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenG
     (hok : r.okG P (fussOrteG P z.kopf.f) → r'.okG P (fussOrteG P z.kopf.f))
     (xm : World D × Int) (hxm : Rahmen (D.aschreibt a) (D.agschreibt a) (W.lese Λ args.orte) xm.1)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-      (σ : World D),
+      (σ : World D), ZeigerGleich O O' →
       O'.wirkt a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
         (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2) →
       (semV O' passes R r σ ρ).folgt
@@ -432,7 +432,7 @@ theorem fadenG_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenG
   · intro R O' hR hA hQ
     have h1 := heq R O' hR (passtA_append hA) hQ
     rw [hr] at h1
-    exact ZErg.folgt_trans h1 (hsem O' R σ (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
+    exact ZErg.folgt_trans h1 (hsem O' R σ hQ.2.2 (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
 
 /-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
     axiom call by recording its answer (`fadenG_ax`). -/
@@ -469,11 +469,11 @@ theorem fadenG_blatt (e0 : Ereignis D) (hO : GutO O) {z : RufFadenG D} {W : Worl
           refine fadenG_ax e0 hF hr ρ' K σ'.spur a args (fun h' => (hok h').2)
             (σ', (O.wirkt a (W.lese Λ args.orte)
               (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).2) hfr ?_
-          intro O' R σ hw
+          intro O' R σ hz hw
           rw [hsem]
           apply ZErg.folgt_of_eq
           simp only [execStmt, axiomAntwort, hw]
-          simp only [hu]
+          simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp [Stmt.istAxiom] at hax
 

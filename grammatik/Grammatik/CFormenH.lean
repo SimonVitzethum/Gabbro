@@ -225,10 +225,10 @@ theorem scorr_axiomCall (m : Nat) {V : Vertrag D} {l : Bool} (a : D.Ax)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG) =
       ((X.O.wirkt a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG)).1,
-       einpassenErg (D.aerg a) (X.O.wirkt a (σ.lese Λ args.orte)
+       einpassenErg X.O.zeiger (D.aerg a) (X.O.wirkt a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG)).2) := rfl
   rw [hant] at hnf ⊢
-  cases hE : einpassenErg (D.aerg a) (X.O.wirkt a (σ.lese Λ args.orte)
+  cases hE : einpassenErg X.O.zeiger (D.aerg a) (X.O.wirkt a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG)).2 with
   | some _ =>
       exact ⟨_, Exec.ext hev hx rfl, st2, ρC, rfl, hc2, hr⟩
@@ -624,7 +624,7 @@ theorem regLies_step (r : D.Reg) (d : Nat) (B : BlkLay) (hL : X.EL.lay (.dev d) 
     (ρG : Env D Γ) (ρC : CLok) (hr : EnvRel X.EL K ρG ρC) (hK : K.okB = true) {x : Nat}
     (hf : K.freshB x = true) (τc : CTy) (hfit : tyFits (D.rtyp r) τc = true)
     (hdev : cWrap w (X.orc st.obs ⟨.dev d, Kr⟩ (.int false w)) = X.O.regLies r σ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen (D.rtyp r) (X.O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen X.O.zeiger (D.rtyp r) (X.O.regLies r σ) = some v)
     (henc : encW (D.rtyp r) v = X.O.regLies r σ) :
     ∃ st', Exec X.EL.lay X.orc X.fr X.CR X.XR
         (.set x τc (.vld (.padd (.devH d B.base) (.lit Kr)) (.int false w))) st ρC
@@ -667,7 +667,7 @@ theorem regLies_step (r : D.Reg) (d : Nat) (B : BlkLay) (hL : X.EL.lay (.dev d) 
     exact convV_of_valFits _ _ (encW_fits _ _ v hfit)
   refine ⟨_, Exec.set hev hconv, hc, rfl, envRel_push hK hf hr v _ hvc, ?_⟩
   intro V l Λ' hkl rest hz
-  show (match einpassen (D.rtyp r) (X.O.regLies r σ) with
+  show (match einpassen X.O.zeiger (D.rtyp r) (X.O.regLies r σ) with
     | Option.some v => if D.rzusage r v then (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf
         else .hardware (.geraet r)
     | Option.none => .hardware (.register r)) = _

@@ -100,12 +100,19 @@ def Orakel.zurueck (O' : Orakel D.mitRuhe) : Orakel D where
   regLies r σ := O'.regLies r (worldR σ)
   regSchreib := O'.regSchreib
   sichtbar g σ := O'.sichtbar g (worldR σ)
+  zeiger k := (O'.zeiger k).bind id
 
-/-- Every oracle of `D.mitRuhe` is the translation of one of `D`. -/
-theorem zurueck_mitRuhe (O' : Orakel D.mitRuhe) : (Orakel.zurueck O').mitRuhe = O' := by
-  cases O' with
-  | mk w r s v =>
-      simp only [Orakel.mitRuhe, Orakel.zurueck, worldR_worldZ, envR_envZ]
+/-- **Every oracle of `D.mitRuhe` answers like one of `D`** (`OrakelRu`). Until 2026-09-15
+    it WAS the translation of one (`(Orakel.zurueck O').mitRuhe = O'`); since the loaded image
+    joined the oracle (G1 repair) an oracle of `D.mitRuhe` may place the root at an address,
+    which the translation of an oracle of `D` never does -- but no translated type accepts
+    the root, so every run agrees. -/
+theorem orakelRu_zurueck (O' : Orakel D.mitRuhe) : OrakelRu (Orakel.zurueck O') O' :=
+  ⟨fun a σ ρ => by
+      show O'.wirkt a (worldR σ) (envR ρ) =
+        (worldR (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1), (O'.wirkt a (worldR σ) (envR ρ)).2)
+      rw [worldR_worldZ],
+    fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 /-- The move of `D` a move of `D.mitRuhe` makes. -/
 def umweltZ (U' : Umwelt D.mitRuhe) : Umwelt D := fun L σ => worldZ (U' L (worldR σ))
@@ -337,13 +344,14 @@ end Hilfen
 
 section Haupt
 
-variable (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (U' : Umwelt D.mitRuhe) (passes : Nat)
+variable (S : SperrInv D) (O : Orakel D) (O' : Orakel D.mitRuhe) (hO : OrakelRu O O')
+  (U : Umwelt D) (U' : Umwelt D.mitRuhe) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
   (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitRuhe.params f) → RufAusgang f)
   (hU : ∀ L σ, U' L (worldR σ) = worldR (U L σ))
   (hR : RufRel R R')
 
-include hU hR
+include hO hU hR
 
 set_option maxHeartbeats 4000000 in
 mutual
@@ -352,7 +360,7 @@ mutual
     semantics**, up to the label of a logic failure. -/
 theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
-    AusRelRu (execStmtH S.mitRuhe O.mitRuhe U' passes R' (ruS s) (worldR σ) (envR ρ))
+    AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS s) (worldR σ) (envR ρ))
       (execStmtH S O U passes R s σ ρ)
   | _, _, Λ, _, .assignSlot t f i e hw hL, σ, ρ => by
       refine Or.inl ?_
@@ -470,7 +478,7 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | l, _, Λ, _, .traverse t inv body, σ, ρ => by
       simp only [ruS, execStmtH]
       have hL := traverseLauf_rel (l := l) (fun σ ρ => execBlockH S O U passes R body σ ρ)
-        (fun σ ρ => execBlockH S.mitRuhe O.mitRuhe U' passes R' (ruB body) σ ρ)
+        (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB body) σ ρ)
         (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
         (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
           wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv)
@@ -483,20 +491,20 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | _, _, Λ, _, .retry n bis body ueber, σ, ρ => by
       simp only [ruS, execStmtH]
       exact retryLauf_rel (fun σ ρ => execBlockH S O U passes R body σ ρ)
-        (fun σ ρ => execBlockH S.mitRuhe O.mitRuhe U' passes R' (ruB body) σ ρ)
+        (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB body) σ ρ)
         (fun σ ρ => (σ.lese Λ bis.orte, wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ)))
         (fun σ ρ => (σ.lese (Λ.map resR) (ruE bis).orte,
           wahr? (eval (σ.lese (Λ.map resR) (ruE bis).orte) (ruE bis)
             (σ.lese (Λ.map resR) (ruE bis).orte) ρ)))
         (fun σ ρ => execBlockH S O U passes R ueber σ ρ)
-        (fun σ ρ => execBlockH S.mitRuhe O.mitRuhe U' passes R' (ruB ueber) σ ρ)
+        (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB ueber) σ ρ)
         (fun σ ρ => execBlockH_ru body σ ρ)
         (fun σ ρ => by simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?])
         (fun σ ρ => execBlockH_ru ueber σ ρ) n σ ρ
   | _, _, Λ, _, .forever a inv body, σ, ρ => by
       simp only [ruS, execStmtH]
       exact foreverLauf_rel a (fun σ ρ => execBlockH S O U passes R body σ ρ)
-        (fun σ ρ => execBlockH S.mitRuhe O.mitRuhe U' passes R' (ruB body) σ ρ)
+        (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB body) σ ρ)
         (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
         (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
           wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv)
@@ -506,7 +514,7 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | _, _, Λ, _, .axiomCall a args h hw hg hd hgd, σ, ρ => by
       refine Or.inl ?_
       simp only [ruS, execStmtH]
-      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ruG hO]
       cases axiomAntwort O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | mk σ' w =>
@@ -545,7 +553,7 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
 
 theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
-    AusRelRu (execBlockH S.mitRuhe O.mitRuhe U' passes R' (ruB b) (worldR σ) (envR ρ))
+    AusRelRu (execBlockH S.mitRuhe O' U' passes R' (ruB b) (worldR σ) (envR ρ))
       (execBlockH S O U passes R b σ ρ)
   | _, _, _, _, .nil, σ, ρ => Or.inl rfl
   | _, _, _, _, .cons s rest, σ, ρ => by
@@ -631,7 +639,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
         exact Or.inr ⟨e', e, rfl, rfl, ht⟩
   | _, _, Λ, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [ruB, execBlockH]
-      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ruG hO]
       cases axiomAntwort O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | mk σ' w =>
@@ -643,8 +651,8 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
               exact AusRelRu.schrumpf (execBlockH_ru rest σ' (Env.cons (ergWert he v) ρ))
   | _, _, _, _, .regLies r hk rest, σ, ρ => by
       simp only [ruB, execBlockH]
-      rw [regLies_mitRuhe, einpassen_ru]
-      cases einpassen (D.rtyp r) (O.regLies r σ) with
+      rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -656,8 +664,8 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
               exact AusRelRu.schrumpf (execBlockH_ru rest σ (Env.cons v ρ))
   | _, _, Λ, _, .regLiesElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlockH]
-      rw [regLies_mitRuhe, einpassen_ru]
-      cases einpassen (D.rtyp r) (O.regLies r σ) with
+      rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -674,7 +682,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
               exact AusRelRu.schrumpf (execBlockH_ru rest _ (Env.cons v ρ))
   | _, _, Λ, _, .awaits g payload hp hL rest, σ, ρ => by
       simp only [ruB, execBlockH]
-      rw [sichtbar_mitRuhe]
+      rw [hO.sichtbar]
       cases O.sichtbar g σ with
       | false => exact Or.inl rfl
       | true =>
@@ -747,7 +755,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
 
 theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
-    EndRel (execEndH S.mitRuhe O.mitRuhe U' passes R' (ruEnd e) (worldR σ) (envR ρ))
+    EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd e) (worldR σ) (envR ρ))
       (execEndH S O U passes R e σ ρ)
   | _, _, Λ, .ret e hΛ, σ, ρ => by
       refine Or.inl ?_
@@ -775,7 +783,7 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
 theorem execArmsH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),
-    AusRelRu (execArmsH S.mitRuhe O.mitRuhe U' passes R' (ruArms arms) (valR (.sum cs) v)
+    AusRelRu (execArmsH S.mitRuhe O' U' passes R' (ruArms arms) (valR (.sum cs) v)
         (worldR σ) (envR ρ))
       (execArmsH S O U passes R arms v σ ρ)
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => execBlockH_ru b σ ρ
@@ -788,7 +796,7 @@ theorem execArmsH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
 
 theorem execGrundH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n) (σ : World D) (ρ : Env D Γ),
-    AusRelRu (execGrundH S.mitRuhe O.mitRuhe U' passes R' (ruGArms arms) r (worldR σ) (envR ρ))
+    AusRelRu (execGrundH S.mitRuhe O' U' passes R' (ruGArms arms) r (worldR σ) (envR ρ))
       (execGrundH S O U passes R arms r σ ρ)
   | _, _, _, _, _, .cons b _, ⟨0, _⟩, σ, ρ => execBlockH_ru b σ ρ
   | _, _, _, _, _, .cons _ rest, ⟨i + 1, h⟩, σ, ρ =>
@@ -800,26 +808,26 @@ end Haupt
 
 /-- **The body of `some f` in `P.mitRuhe` under the lock-invariant semantics
     runs as the body of `f` in `P`**, up to the label of a logic failure. -/
-theorem rumpfH_mitRuhe (P : Programm D) (S : SperrInv D) (O : Orakel D) (U : Umwelt D)
-    (U' : Umwelt D.mitRuhe) (passes : Nat)
+theorem rumpfH_mitRuhe (P : Programm D) (S : SperrInv D) (O : Orakel D) (O' : Orakel D.mitRuhe)
+    (hO : OrakelRu O O') (U : Umwelt D) (U' : Umwelt D.mitRuhe) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitRuhe.params f) →
       RufAusgang f)
     (hU : ∀ L σ, U' L (worldR σ) = worldR (U L σ)) (hR : RufRel R R')
     (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) :
     @EndRel D (vertragVon D f) false (D.params f)
-      (execEndH S.mitRuhe O.mitRuhe U' passes R' (P.mitRuhe.rumpf (some f)) (worldR σ) (envR ρ))
+      (execEndH S.mitRuhe O' U' passes R' (P.mitRuhe.rumpf (some f)) (worldR σ) (envR ρ))
       (execEndH S O U passes R (P.rumpf f) σ ρ) := by
-  have e := execEndH_umΛ S.mitRuhe O.mitRuhe U' passes R' (anfang_map (D.signatur f))
+  have e := execEndH_umΛ S.mitRuhe O' U' passes R' (anfang_map (D.signatur f))
     (ruEnd (P.rumpf f)) (worldR σ) (envR ρ)
-  show @EndRel D (vertragVon D f) false (D.params f) (execEndH S.mitRuhe O.mitRuhe U' passes R'
+  show @EndRel D (vertragVon D f) false (D.params f) (execEndH S.mitRuhe O' U' passes R'
     (Endblock.umΛ (anfang_map (D.signatur f)) (ruEnd (P.rumpf f))) (worldR σ) (envR ρ)) _
   rw [e]
-  exact execEndH_ru S O U U' passes R R' hU hR (P.rumpf f) σ ρ
+  exact execEndH_ru S O O' hO U U' passes R R' hU hR (P.rumpf f) σ ρ
 
 #print axioms Gabbro.Grammatik.worldR_worldZ
 #print axioms Gabbro.Grammatik.envR_envZ
-#print axioms Gabbro.Grammatik.zurueck_mitRuhe
+#print axioms Gabbro.Grammatik.orakelRu_zurueck
 #print axioms Gabbro.Grammatik.execStmtH_ru
 #print axioms Gabbro.Grammatik.execEndH_ru
 #print axioms Gabbro.Grammatik.rumpfH_mitRuhe
