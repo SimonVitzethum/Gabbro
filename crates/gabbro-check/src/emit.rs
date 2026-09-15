@@ -6043,6 +6043,50 @@ pub(crate) fn zeiger_schreibend(z: &gabbro_syntax::ast::PtrTy) -> bool {
     })
 }
 
+/// **The C qualifier the pointer's SPACE earns -- `volatile` for `mmio` and `dma`, nothing
+/// else** (2026-09-15, lane "grammar into the emitter").
+///
+/// It stands here because `R008` in `m3.rs` says of itself, word for word:
+///
+/// > *"the address space is part of what a pointer IS -- `mmio` is volatile and
+/// > device-mapped, `normal` is not, **and the emitter lowers them differently**"*
+///
+/// **And until today it did not.** Measured 2026-09-15 on six programs differing in nothing
+/// but the space word, each dereferencing through the pointer: six byte-identical C files.
+/// *A refusal that names a lowering the generator does not write is a promise nobody keeps* --
+/// and it is the worse half of `W16`, because the sentence reads like a measurement.
+///
+/// **Two spaces earn the qualifier and four do not, and the reason is per space:**
+///
+/// * `mmio` -- a load IS the device access. Without `volatile` the C compiler may fold two
+///   reads into one, hoist one out of a loop, or delete a store whose value is never read
+///   back. Every one of those is a different program at the device, and none of them is a
+///   diagnostic. The device HANDLE already carries `volatile uint8_t *basis` for exactly this
+///   reason (`geraet`); a `ptr<mmio, …>` at a plain carrier had nothing.
+/// * `dma` -- memory a device writes behind the CPU's back. The same three transformations
+///   are the same defect; that the other writer is a bus master rather than a register file
+///   changes nothing the compiler can see.
+/// * `normal` is ordinary memory, `boot` is ordinary memory in a link-time section
+///   (`SYNTAX.md`:1607) -- a section is a placement, not an access form. `code` is never
+///   dereferenced (an incomplete type behind an `extern fn`), so there is no access to
+///   qualify. `port` never reaches this function: `funktion` refuses a body carrying a
+///   `ptr<port, …>` that is not a port device, and a port device is reached by `in`/`out`.
+///
+/// **Why `volatile` and not a second pass:** C already has the word for "this object may
+/// change without this program changing it", and `cc` enforces it at every access. Inventing
+/// a Gabbro-side rule beside it would be a second register over one fact (`W7`), and the
+/// second one would be the one that forgets an access form.
+/// * `Benannt` -- a space a program declared itself (`ptr<user, r> u8`). The generator knows
+///   no access form for it and must not invent one; it lowers like `normal`, which is what it
+///   did before this function existed. *A qualifier guessed for a name is the move `C001`
+///   stands against.*
+pub(crate) fn raumqualifizierer(raum: &Raum) -> &'static str {
+    match raum {
+        Raum::Mmio | Raum::Dma => "volatile ",
+        Raum::Normal | Raum::Boot | Raum::Code | Raum::Port | Raum::Benannt(_) => "",
+    }
+}
+
 /// The primitive type words, by their Gabbro spelling. **The one home of these eleven rows.**
 pub(crate) fn primitivwort(n: &str) -> Option<&'static str> {
     Some(match n {
@@ -6158,7 +6202,40 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 },
             };
             let konst = if zeiger_schreibend(z) { "" } else { "const " };
-            Some(format!("{konst}{ziel} *"))
+            // **The qualifier goes where THIS function writes the access, and nowhere else.**
+            // A `device` handle and a `format` handle are both dereferenced by a GENERATED
+            // ACCESSOR (`Virtq_AVAIL_RING_setz_e`, `EthArp_setz_ethertyp`), never by the
+            // caller; the accessor is the one home of that access form, and it is generated
+            // once per declaration, not once per space. Qualifying the HANDLE at the caller
+            // would make the two disagree about a pointer neither of them dereferences
+            // directly -- measured 2026-09-15: `-Werror=discarded-qualifiers` at every call
+            // site of a generated setter, in `messung/treiber/virtio-net.gab` and
+            // `messung/proben/probe-netz-rahmen-und-ergebnis.gab`.
+            //
+            // For the device half the rule is already written down. `beispiele/gift/416`, in
+            // its own text: *"the space at the POINTER does not decide the access form -- the
+            // `device` declaration does"*. A `ptr<mmio, r> SerialCom1` does not point at
+            // device memory; it points at the HANDLE, which is ordinary memory carrying
+            // `volatile uint8_t *basis`, and the register access is volatile down there
+            // already.
+            //
+            // **What stays open, and it is named rather than papered over:** a `format` in
+            // `dma` is a byte view of memory a device writes, and its accessor does NOT
+            // qualify its loads and stores. The space is carried at the CALLER for every
+            // target this function lowers inline -- a primitive, a record, a table, an index
+            // -- and at the generated accessor for the two that have one.
+            let hinter_erzeugtem_zugriff = match &z.ziel {
+                TypExpr::Pfad(p) => p.teile.last().is_some_and(|t| {
+                    u.geraete.contains_key(&t.text) || u.formate.contains(&t.text)
+                }),
+                _ => false,
+            };
+            let raum = if hinter_erzeugtem_zugriff {
+                ""
+            } else {
+                raumqualifizierer(&z.raum)
+            };
+            Some(format!("{konst}{raum}{ziel} *"))
         }
         _ => None,
     }
