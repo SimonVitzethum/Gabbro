@@ -1,0 +1,21 @@
+-- erwartet: N312
+-- **Lane 194 (`N312`): an axiom call/binding at an orphan `fn(...)` answer.**
+--
+-- `hol` promises `fn(u32) -> u64`, but the only function of the unit takes
+-- `(u32) -> u32`: a `fnptr` value IS a function of exactly its signature,
+-- so no loaded image can place this answer. Signature identity is the C
+-- prototype (widths, not ranges -- `M142`'s reading). The twin declares the
+-- matching function and stays silent; it is pinned inline (`w1_proben` in
+-- `m1.rs`).
+module gift974 {
+
+impl fn arm(x : u32) -> u32 effects { pure } costs <= 2 ops { return x; }
+
+axiom hol() -> fn(u32) -> u64 effects { pure } costs <= 2 ops effects { pure } unfalsifiable "probe";
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let p = hol();
+    return 1;
+}
+
+}

@@ -1,0 +1,27 @@
+-- erwartet: N310
+-- **Lane 194 (`N310`): an axiom call/binding at an empty range answer.**
+--
+-- `hol` promises `u32 in 5 .. 0`: no raw word decodes to a value of it, so
+-- the call binds no answer and the continuation runs outside every
+-- assumption. Both call positions fall here -- the binding in the body and
+-- the discarding step in the boot block, the one site no other rule looks
+-- at. The twin is the `-> never` axiom, which stays accepted (the declared
+-- "does not return"); it is pinned inline (`w1_proben` in `m1.rs`).
+module gift972 {
+
+axiom hol() -> u32 in 5 .. 0 effects { pure } unfalsifiable "probe";
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    hol();
+    let x = hol();
+    return x;
+}
+
+boot b arch x86_64 {
+    step hol();
+    dispatch g;
+}
+
+extern fn g() effects { pure };
+
+}

@@ -171,6 +171,19 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
     // whose ends are not integers is a declaration M1 silently widened to the whole
     // word. *It needs no environment -- a float literal is decidable from the source.*
     bereichsgrenzen(baum, &umgebung, absagen);
+    // **Lane 194 (W1): the declared answers of axioms and the signatures of the
+    // unit's functions, read once for the whole pass.** The empty-answer refusal
+    // below asks them at every axiom call and every register read; collecting
+    // them here keeps the declaration walk in one place instead of re-reading
+    // the tree at every site.
+    let axiome = sammle_axiome(baum);
+    let fn_gestalten = sammle_fn_gestalten(baum, &umgebung);
+    // **Lane 194 (W1): axiom calls in boot steps.** Bodies go through the
+    // typing walk below (`ruf_aufgeloest`); boot steps never reach it (this
+    // pass does not walk `Boot` at all), and a call there to an axiom whose
+    // declared answer type has no value passed with 0 errors. Same codes,
+    // same reader, one file.
+    leere_boot_antwort(baum, &umgebung, &axiome, &fn_gestalten, absagen);
     let mut spezifikationen = std::collections::HashMap::new();
     sammle_spezifikationen(&baum.items, &mut spezifikationen);
     let mut spec_fns = std::collections::HashMap::new();
@@ -192,9 +205,376 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         geraete: crate::m3::geraetetabelle(baum),
         griffe: std::collections::BTreeMap::new(),
         abgeleitet: crate::ableitung::leite_ab(baum, true),
+        // **Lane 194 (W1): whose answer is being bound, and who could hold a
+        // pointer.** Read once above; asked at every call and every read below.
+        axiome,
+        fn_gestalten,
     };
     p.programm(baum);
     (p.zaehlung, p.fremd, p.zeigerverf)
+}
+
+// ===================================================================================
+// Lane 194 (W1): no answer where the declaration has no value.
+// ===================================================================================
+//
+// The Lean checker (round 6, another lane) refuses `bindAxiom`/`regLies`/
+// `regLiesElse` at an `AntwortLeer` type other than an axiom's `never`: an
+// empty integer range, a reason with zero cases, a `fn(...)` type no function
+// has, a sum with no cases, a record/sum whose every case is empty. This is
+// the Rust side of the same refusal -- one module (this one), five codes:
+//
+// | code   | refuses                                        | probe |
+// |--------|-----------------------------------------------|-------|
+// | `N310` | an axiom call/binding at an empty range answer | gift 972 |
+// | `N311` | an axiom call/binding at an empty reason answer| gift 973 |
+// | `N312` | an axiom call/binding at an empty `fn(...)`   | gift 974 |
+// | `N313` | an axiom call/binding at an empty sum/record  | inline (gifts spent) |
+// | `N314` | a register READ at an empty answer type        | gift 975 |
+//
+// An axiom `-> never` stays accepted: the declared "does not return" (the C
+// prototype is `_Noreturn`, and the continuation is unreachable in the C as
+// in G). A procedure axiom (no answer at all) answers trivially and is not
+// asked. A normal `ok | err` syscall stays accepted: syscalls are kernel
+// traps, not axioms, and their `or R` channel is not an answer type.
+//
+// MEASURED placement (the task's parenthetical): of the three candidates,
+// none decides answer types. `m3.rs::geraetetabelle` decides register CLASSES
+// (readable/writable, phases, the `requires ... else` falsifier) and carries
+// no type; `syscall.rs` decides the register MAP and the `errors` MAP (names
+// bound once, every errno delivered) and carries no type; `typen.rs` OWNS the
+// domain (`IntBereich::ist_leer`, the `Typ` shape) but decides no
+// declaration. What decides a declared answer is `umgebung.rs`
+// (`typexpr`/`intbereich`/`typ_von_reg` into `Typ`), and what answers a use
+// is this pass (`ruf_aufgeloest` for calls, `typ_von_ort` for reads) -- so
+// the refusal hooks live here, where both use sites are already resolved.
+//
+// What this lane does NOT do, and why:
+// - No declaration refusal. `M117` already owns the empty range at a
+//   type/parameter/result/const/static; `P035` owns `{ }` at the parser. An
+//   axiom answer, a syscall result and a register range are the three outer
+//   forms NEITHER owns -- and owning them here would newly refuse files the
+//   corpus holds for other reasons. The use-site refusal fires beside those
+//   codes where they already fall, and alone where nothing else looks (boot
+//   steps, register reads): the lane report's corpus sweep counts zero new
+//   refusals, file by file.
+// - No float emptiness. The five classes name no float range, and there is
+//   no sixth code reserved. A `Gleitkomma` answer is never refused here;
+//   the residual is booked in the sentence.
+// - No writes. A store to an empty register already falls at the value
+//   (`passt` holds the stored value against the declared range); what runs
+//   uncovered is the READ, and only reads are refused (`N314`).
+// - No `narrow`, no contracts, no `spec` bodies. A `narrow` checks a range,
+//   it does not bind an answer; predicates are ghost expressions this pass
+//   does not type (see the non-goals list at the top of the file); a `spec`
+//   body is proof-only. An axiom call inside a contract still draws `H021`
+//   through the graph -- the wrong-reason refusal this lane leaves standing.
+
+/// **Lane 194 (W1): the declared answer of one axiom.**
+#[derive(Debug, Clone)]
+struct AxiomAntwort {
+    /// The module the answer type is read in -- ranges resolve names.
+    modul: String,
+    /// `None`: a procedure axiom, no answer, nothing to ask.
+    rueckgabe: Option<TypExpr>,
+}
+
+/// **Lane 194 (W1): the signature of one runtime function.**
+#[derive(Debug, Clone)]
+struct FnGestalt {
+    parameter: Vec<Typ>,
+    ergebnis: Option<Typ>,
+}
+
+/// **Lane 194 (W1): every axiom answer, by qualified name.**
+fn sammle_axiome(baum: &Programm) -> std::collections::BTreeMap<String, AxiomAntwort> {
+    let mut aus = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Axiom(a) = &item.art {
+            aus.insert(
+                crate::umgebung::qualifiziere(modul, &a.name.text),
+                AxiomAntwort {
+                    modul: modul.to_string(),
+                    rueckgabe: a.rueckgabe.clone(),
+                },
+            );
+        }
+    });
+    aus
+}
+
+/// **Lane 194 (W1): every runtime function signature of the unit.**
+///
+/// `spec` is proof-only and `const` is comptime-only: neither has an address
+/// in the loaded image, so neither inhabits a `fn(...)` type. Everything
+/// else with a signature does -- `impl` bodies, `extern`/`raw`/`prim`/
+/// `divergent` declarations and `asm` bodies are linked code. Syscalls are
+/// kernel traps and axioms foreign answers: neither is a function here.
+fn sammle_fn_gestalten(baum: &Programm, u: &Umgebung) -> Vec<FnGestalt> {
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if matches!(f.klasse, Some(FnKlasse::Spec) | Some(FnKlasse::Konst)) {
+            return;
+        }
+        aus.push(FnGestalt {
+            parameter: f
+                .parameter
+                .iter()
+                .map(|p| u.typ_von_ausdruck_decl(modul, &p.typ))
+                .collect(),
+            ergebnis: f.ergebnis.as_ref().map(|t| u.typ_von_ausdruck_decl(modul, t)),
+        });
+    });
+    aus
+}
+
+/// **Lane 194 (W1): does this declared answer type have NO value?**
+///
+/// Exact on Rust value semantics, through names (`Benannt` is transparent,
+/// `N030`): an empty range, a reason with zero cases, a `fn(...)` no runtime
+/// function matches, a sum with no inhabitant (no cases, or every case
+/// carrying an empty payload and no nullary case -- a bare case IS a value),
+/// a record with an empty field (one suffices: a record value needs them
+/// all), an array with an empty element (except `[T; 0]`, the empty array --
+/// one value), `never` (the caller exempts it, it is still empty). Anything
+/// unknown (`Unbekannt`, an unresolvable reason, a float range) is inhabited
+/// by fiat: not refused is not confirmed (W10).
+///
+/// The `besucht` set guards `Benannt` cycles; a revisit answers inhabited --
+/// value recursion through a name is refused elsewhere ("no record contains
+/// itself by value"), and through a pointer every type is inhabited.
+fn antwort_leer(
+    u: &Umgebung,
+    von: &str,
+    t: &Typ,
+    fns: &[FnGestalt],
+    besucht: &mut std::collections::HashSet<String>,
+) -> bool {
+    match t {
+        Typ::Ganzzahl(b) | Typ::Umlaufend(b) => b.ist_leer(),
+        Typ::Register { bereich, .. } => bereich.ist_leer(),
+        Typ::Benannt { name, unter, .. } => {
+            if !besucht.insert(name.clone()) {
+                return false;
+            }
+            antwort_leer(u, von, unter, fns, besucht)
+        }
+        Typ::Grund(n) => u.gruende.get(n).is_some_and(|f| f.is_empty()),
+        Typ::FnPtr(v) => !fns.iter().any(|f| fn_gestalt_passt(f, v)),
+        Typ::Summe { varianten, .. } => {
+            if varianten.is_empty() {
+                return true;
+            }
+            if varianten.iter().any(|(_, p)| p.is_none()) {
+                return false;
+            }
+            varianten
+                .iter()
+                .all(|(_, p)| p.as_ref().is_some_and(|p| antwort_leer(u, von, p, fns, besucht)))
+        }
+        Typ::Verbund(felder) => {
+            if felder.is_empty() {
+                return false;
+            }
+            felder
+                .iter()
+                .any(|(_, f)| antwort_leer(u, von, f, fns, besucht))
+        }
+        Typ::Feld { element, laenge } => {
+            if *laenge == Some(0) {
+                return false;
+            }
+            antwort_leer(u, von, element, fns, besucht)
+        }
+        Typ::Nie => true,
+        Typ::Wahrheit
+        | Typ::Zeiger(_)
+        | Typ::Tabelle(_)
+        | Typ::Verbundname(_)
+        | Typ::Gleitkomma(_)
+        | Typ::Unbekannt => false,
+    }
+}
+
+/// **Lane 194 (W1): does this runtime function have the pointer's signature?**
+///
+/// The C prototype is what a `fnptr` value IS (SYNTAX §2: "a function of
+/// exactly this signature"), so identity is representation-level:
+/// `darstellung_grund` -- the same question `M142` asks of producer and
+/// slot, params pairwise and the result for presence and word. Ranges are
+/// deliberately not compared (nobody holds them at a `fn(...)` slot, per
+/// `M142`'s own note); `Unbekannt` on either side matches (W10).
+fn fn_gestalt_passt(f: &FnGestalt, v: &crate::typen::FnPtrContract) -> bool {
+    if f.parameter.len() != v.parameters.len() {
+        return false;
+    }
+    let params = f
+        .parameter
+        .iter()
+        .zip(v.parameters.iter())
+        .all(|(a, (_, b))| darstellung_grund(a, b).is_none());
+    if !params {
+        return false;
+    }
+    match (&f.ergebnis, &v.result) {
+        (None, None) => true,
+        (Some(a), Some(b)) => darstellung_grund(a, b).is_none(),
+        _ => false,
+    }
+}
+
+/// **Lane 194 (W1): which code owns this empty answer?**
+///
+/// Through names to the operative shape: a named range alias is still a
+/// range (`N310`). `None` where the shape is inhabited -- the caller fires
+/// only on `Some`.
+fn leere_code(t: &Typ) -> Option<&'static str> {
+    match ohne_namen(t) {
+        Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Register { .. } => Some("N310"),
+        Typ::Grund(_) => Some("N311"),
+        Typ::FnPtr(_) => Some("N312"),
+        Typ::Summe { .. } | Typ::Verbund(_) | Typ::Feld { .. } | Typ::Nie => Some("N313"),
+        // Dead arm: `ohne_namen` strips every `Benannt`, so it never answers
+        // one -- but the match must stay exhaustive over `Typ`, and a `_`
+        // would swallow the next variant somebody adds.
+        Typ::Benannt { .. } => None,
+        Typ::Wahrheit
+        | Typ::Zeiger(_)
+        | Typ::Tabelle(_)
+        | Typ::Verbundname(_)
+        | Typ::Gleitkomma(_)
+        | Typ::Unbekannt => None,
+    }
+}
+
+/// **Lane 194 (W1): the shared axiom-call check -- bodies and boot steps.**
+///
+/// Resolves the written callee against the axiom table (module-aware, the
+/// same candidate order every other resolution uses) and refuses the call
+/// where the declared answer is empty -- except `-> never`, the declared
+/// "does not return", which stays accepted. Reports and does not return:
+/// the arguments still get their own checks at the body site.
+fn pruefe_axiom_ruf(
+    u: &Umgebung,
+    axiome: &std::collections::BTreeMap<String, AxiomAntwort>,
+    fns: &[FnGestalt],
+    modul: &str,
+    ziel: &str,
+    span: Span,
+    absagen: &mut Absagen,
+) {
+    let Some(ax) = u
+        .kandidaten_aufloesbar(modul, ziel)
+        .into_iter()
+        .find_map(|k| axiome.get(&k))
+    else {
+        return;
+    };
+    let Some(ret) = &ax.rueckgabe else {
+        return;
+    };
+    let t = u.typ_von_ausdruck_decl(&ax.modul, ret);
+    // **`-> never` is the honest form.** The C prototype is `_Noreturn`; the
+    // continuation is unreachable in the C as in G. Every other empty answer
+    // type returns some word and runs the continuation outside every
+    // assumption -- like a call after `Q := false`.
+    if matches!(t.durchgreifen(), Typ::Nie) {
+        return;
+    }
+    let mut besucht = std::collections::HashSet::new();
+    if !antwort_leer(u, &ax.modul, &t, fns, &mut besucht) {
+        return;
+    }
+    let code = leere_code(&t).unwrap_or("N313");
+    let (was, detail) = match code {
+        "N310" => (
+            "an empty range",
+            "no raw word decodes to a value of it (`einpassen_voll`: every value IS some answer)",
+        ),
+        "N311" => (
+            "a reason with no cases",
+            "the channel names no value any answer could carry",
+        ),
+        "N312" => (
+            "a pointer type no function of this unit has",
+            "a `fnptr` value IS a function of exactly this signature (SYNTAX §2), and none is declared here",
+        ),
+        _ => (
+            "a sum/record with no inhabitant",
+            "no cases, or every case empty -- a bare case would be a value, and there is none",
+        ),
+    };
+    absagen.schiebe(
+        Absage::fehler(
+            code,
+            span,
+            format!(
+                "`{ziel}` answers `{}` -- {was}, and this call binds no answer",
+                t.text()
+            ),
+        )
+        .mit_notiz(format!("{detail}"))
+        .mit_notiz(
+            "the declaration is false (no answer can meet it), so the C continuation runs \
+             outside every assumption and is covered by nothing, like a call after `Q := false`",
+        )
+        .mit_notiz(
+            "the honest form is `-> never`: a declared \"does not return\" (`_Noreturn`), \
+             where the continuation is unreachable in the C as in G",
+        ),
+    );
+}
+
+/// **Lane 194 (W1): the nested calls of one boot expression.**
+///
+/// One helper so the step's own call and the calls inside arguments and
+/// `Setzt` values share the reader without borrowing the findings twice.
+fn rufe_in_boot_ausdruck(
+    u: &Umgebung,
+    axiome: &std::collections::BTreeMap<String, AxiomAntwort>,
+    fns: &[FnGestalt],
+    modul: &str,
+    e: &Expr,
+    absagen: &mut Absagen,
+) {
+    for x in crate::alle_ausdruecke(e) {
+        if let ExprArt::Ruf(ri) = &x.art {
+            pruefe_axiom_ruf(u, axiome, fns, modul, &ri.target_text(), ri.span, absagen);
+        }
+    }
+}
+
+/// **Lane 194 (W1): axiom calls in boot steps.**
+///
+/// This pass never walks `Boot` -- bodies go through `ruf_aufgeloest`, boot
+/// steps go nowhere, and a step calling an empty-typed axiom passed with 0
+/// errors. Same codes as the body site, same reader, one file. Argument and
+/// `Setzt`-value expressions are walked for nested calls (`step f(hol())`);
+/// the step's own call is checked directly.
+fn leere_boot_antwort(
+    baum: &Programm,
+    u: &Umgebung,
+    axiome: &std::collections::BTreeMap<String, AxiomAntwort>,
+    fns: &[FnGestalt],
+    absagen: &mut Absagen,
+) {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Boot(b) = &item.art else { return };
+        for schritt in &b.schritte {
+            match schritt {
+                BootSchritt::Ruf(r) => {
+                    pruefe_axiom_ruf(u, axiome, fns, modul, &r.target_text(), r.span, absagen);
+                    for a in &r.argumente {
+                        rufe_in_boot_ausdruck(u, axiome, fns, modul, a, absagen);
+                    }
+                }
+                BootSchritt::Setzt { wert, .. } => {
+                    rufe_in_boot_ausdruck(u, axiome, fns, modul, wert, absagen);
+                }
+            }
+        }
+    });
 }
 
 /// **Alles, was `maintains` nennen darf** -- und das sind ZWEI Arten, nicht eine.
@@ -334,6 +714,21 @@ struct Pruefer<'a> {
     /// function writes *according to `effects`* — where the clause is
     /// omitted over a settled derivation, the derived writes stand in.
     abgeleitet: crate::ableitung::Ableitung,
+    /// **Lane 194 (W1): the declared answer of every axiom, by qualified
+    /// name.** `Umgebung` carries axioms as signatures with NO result (an
+    /// assumption, not a callee), so the answer type a call binds is
+    /// invisible to call-site typing -- and that is the hole this lane
+    /// closes. Read once in `lauf`; asked in `ruf_aufgeloest` and in the
+    /// boot walk below.
+    axiome: std::collections::BTreeMap<String, AxiomAntwort>,
+    /// **Lane 194 (W1): the signature of every runtime function of the
+    /// unit.** A `fn(...)` answer type is empty exactly where no function
+    /// has its signature; the table is what that question is asked against.
+    /// `spec` and `const` functions are proof- and comptime-only (no
+    /// address in the image); `extern`/`raw`/`prim`/`divergent`/`asm` are
+    /// linked code and count. Syscalls are kernel traps, not functions,
+    /// and axioms are foreign answers, not functions -- neither counts.
+    fn_gestalten: Vec<FnGestalt>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -863,6 +1258,11 @@ impl<'a> Pruefer<'a> {
                 let t = match &l.quelle {
                     LetQuelle::Ruf(r) => self.ruf(r, lage),
                     LetQuelle::Ort(o) => {
+                        // **Lane 194 (W1): a fallible register read is still a
+                        // read.** The raw place type is asked before the
+                        // option is unpacked: an empty register has no answer
+                        // to unpack.
+                        self.leere_register_lesung(o, lage, o.span);
                         let roh = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
                         match option_nutzlast(&roh) {
                             Some(nutz) => nutz,
@@ -2295,6 +2695,11 @@ impl<'a> Pruefer<'a> {
                 }
                 self.index_pruefen(o, lage);
                 let grund = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
+                // **Lane 194 (W1): a register read at an empty answer type.**
+                // The declared type is asked, not the narrowed one: facts
+                // cannot fill a type that has no value. `N314` fires beside
+                // whatever else this read draws.
+                self.leere_register_lesung(o, lage, e.span);
                 // **Eine benannte Konstante behaelt ihren WERT** (Rezension 2026-08-20).
                 //
                 // `return x + 8;` ging durch, `const RESERVE : u32 = 8; return x + RESERVE;`
@@ -3240,6 +3645,81 @@ impl<'a> Pruefer<'a> {
         self.ruf_aufgeloest(&ziel, r.span, uebergang, &argtypen, &sig)
     }
 
+    /// **Lane 194 (W1): the body-site half of the axiom-call refusal.**
+    ///
+    /// One hook in the one funnel every call form reaches exactly once, so
+    /// bare calls and bindings are refused at the same line. Boot steps
+    /// never reach the funnel; they are walked separately (`leere_boot_antwort`).
+    fn leere_axiom_antwort(&mut self, ziel: &str, span: Span) {
+        pruefe_axiom_ruf(
+            self.u,
+            &self.axiome,
+            &self.fn_gestalten,
+            &self.modul,
+            ziel,
+            span,
+            self.absagen,
+        );
+    }
+
+    /// **Lane 194 (W1): the register half -- `N314`.**
+    ///
+    /// Walks the place the way `typ_von_ort` does and asks the first
+    /// register on the path for its DECLARED range. A field read
+    /// (`d.REG.F`) projects the bits but answers them; an empty register
+    /// has no answer at any suffix. Write targets never reach this helper
+    /// (assignments resolve through `typ_von_ort` directly), so what stands
+    /// here is always a READ. One refusal per read.
+    fn leere_register_lesung(&mut self, o: &Ort, lage: &Lage, span: Span) {
+        let mut aktuell = lage
+            .lokal
+            .get(&o.basis.text)
+            .cloned()
+            .or_else(|| self.u.suche_global(&self.modul, &o.basis.text).cloned())
+            .unwrap_or(Typ::Unbekannt);
+        for suffix in &o.suffixe {
+            aktuell = match suffix {
+                OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => {
+                    self.u.feld_von(&self.modul, &aktuell, &f.text)
+                }
+                OrtSuffix::Index(_) => match aktuell.durchgreifen() {
+                    Typ::Feld { element, .. } => (**element).clone(),
+                    _ => Typ::Unbekannt,
+                },
+            };
+            if let Typ::Register { bereich, .. } = aktuell.durchgreifen() {
+                if bereich.ist_leer() {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N314",
+                            span,
+                            format!(
+                                "`{}` reads `{}` -- an EMPTY answer (`{} .. {}` holds no value)",
+                                o.text(),
+                                aktuell.text(),
+                                bereich.min,
+                                bereich.max
+                            ),
+                        )
+                        .mit_notiz(
+                            "the device answers a word the declaration excludes, so the \
+                             continuation is covered by nothing -- like a call after \
+                             `Q := false`, but at a read",
+                        )
+                        .mit_notiz(
+                            "the honest forms are a readable range, or no read: a register \
+                             whose range is empty admits no answer under any image",
+                        ),
+                    );
+                }
+                return;
+            }
+            if aktuell.ist_unbekannt() {
+                return;
+            }
+        }
+    }
+
     /// **Lane E2: a resolved call, whoever spelled it.**
     ///
     /// The tail of `ruf_roh`'s direct path -- arity (`M143`), per-argument
@@ -3259,6 +3739,14 @@ impl<'a> Pruefer<'a> {
         argtypen: &[(Typ, Span)],
         sig: &crate::umgebung::Signatur,
     ) -> Typ {
+        // **Lane 194 (W1): an axiom call at an empty answer type.**
+        //
+        // Every call form funnels through here exactly once (bare calls,
+        // bindings, `let ... else`, nested expression calls, const/static
+        // initialisers -- library calls land here too, with a `@lib#f`
+        // target no axiom table can hold). Reports and does not return:
+        // arity, shape and `requires` still get their own checks below.
+        self.leere_axiom_antwort(ziel, span);
         if !uebergang && argtypen.len() != sig.parameter.len() {
             let (n, m) = (sig.parameter.len(), argtypen.len());
             self.absagen.schiebe(
@@ -7980,5 +8468,274 @@ mod vsub_proben {
             f.is_empty(),
             "narrowed V2 difference must stay silent, fell with {f:?}"
         );
+    }
+}
+
+/// **Lane 194 (W1) probes -- no answer where the declaration has none.
+///
+/// The gift files `972`-`975` pin one shape per file; these tests pin the
+/// exactness the file-level run cannot: each must-fall fires EXACTLY once
+/// (no second site, no second `N31x` beside it), each must-pass twin fires
+/// NO `N31x` at all, and the two positives (`-> never` at a boot step, a
+/// normal `ok | err` syscall) stay fully silent. `N313` has no gift file
+/// (the four reserved numbers are spent on the other four classes); its
+/// fall and its twins are pinned here instead, with the same force.
+#[cfg(test)]
+mod w1_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("w1.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    fn n31x(f: &[&'static str]) -> Vec<&'static str> {
+        f.iter().copied().filter(|c| c.len() == 4 && c.starts_with("N31")).collect()
+    }
+
+    /// Must-fall: an axiom answering an empty range, bound in a body.
+    /// Without `N310` this program fell already -- at `H021`/`K003`, for the
+    /// graph and the costs, never for the missing answer.
+    #[test]
+    fn axiom_mit_leerem_bereich_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_bereich {\n\
+             axiom hol() -> u32 in 5 .. 0 effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let x = hol();\n\
+                 return x;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N310"], "empty range answer must fall once: {f:?}");
+    }
+
+    /// Must-fall: the same empty answer through a boot step -- the site no
+    /// other rule looks at (measured: 0 errors before this lane).
+    #[test]
+    fn bootruf_mit_leerem_bereich_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_boot {\n\
+             axiom hol() -> u32 in 5 .. 0 effects { pure } unfalsifiable \"probe\";\n\
+             boot b arch x86_64 {\n\
+                 step hol();\n\
+                 dispatch f;\n\
+             }\n\
+             extern fn f() effects { pure };\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N310"], "boot call at empty answer must fall once: {f:?}");
+    }
+
+    /// Must-pass: `-> never` is the honest form -- the declared "does not
+    /// return". At a boot step the file was already silent and stays so.
+    #[test]
+    fn axiom_mit_never_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_never {\n\
+             axiom halt() -> never effects { diverges } unfalsifiable \"probe\";\n\
+             boot b arch x86_64 {\n\
+                 step halt();\n\
+                 dispatch f;\n\
+             }\n\
+             extern fn f() effects { pure };\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "`-> never` must stay silent, fell with {f:?}");
+    }
+
+    /// Must-fall: an axiom answering a reason with zero cases.
+    #[test]
+    fn axiom_mit_leerem_grund_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_grund {\n\
+             reason Leer {\n\
+             }\n\
+             axiom hol() -> Leer effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let x = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N311"], "caseless reason answer must fall once: {f:?}");
+    }
+
+    /// Must-fall: an axiom answering a pointer type no function has. The
+    /// unit declares `(u32) -> u32`; the answer promises `(u32) -> u64`.
+    #[test]
+    fn axiom_mit_verwaistem_zeiger_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_zeiger {\n\
+             impl fn arm(x : u32) -> u32 effects { pure } costs <= 2 ops { return x; }\n\
+             axiom hol() -> fn(u32) -> u64 effects { pure } costs <= 2 ops effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N312"], "orphaned pointer answer must fall once: {f:?}");
+    }
+
+    /// Must-pass twin: the same pointer shape, but an `extern` function of
+    /// the unit has the signature -- linked code inhabits it.
+    #[test]
+    fn bewohnter_zeiger_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_zeiger_bewohnt {\n\
+             extern fn arm(x : u32) -> u64 effects { pure } costs <= 2 ops;\n\
+             axiom hol() -> fn(u32) -> u64 effects { pure } costs <= 2 ops effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert!(n31x(&f).is_empty(), "inhabited pointer answer must draw no N31x: {f:?}");
+    }
+
+    /// Must-fall (`N313`, inline -- no gift number left): a sum whose every
+    /// case carries an empty payload.
+    #[test]
+    fn axiom_mit_leerer_summe_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_summe {\n\
+             type Paar = { A(u32 in 5 .. 0), B(u32 in 7 .. 6), };\n\
+             axiom hol() -> Paar effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N313"], "all-empty sum answer must fall once: {f:?}");
+    }
+
+    /// Must-fall twin: a record with ONE empty field has no value either.
+    #[test]
+    fn axiom_mit_leerem_verbund_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_verbund {\n\
+             type R = { a : u32 in 5 .. 0, b : u32, };\n\
+             axiom hol() -> R effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N313"], "record with an empty field must fall once: {f:?}");
+    }
+
+    /// Must-pass twin: one nullary case IS a value -- the sum is inhabited.
+    #[test]
+    fn summe_mit_leerem_fall_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_summe_bewohnt {\n\
+             type T = { A(u32 in 5 .. 0), Leer, };\n\
+             axiom hol() -> T effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert!(n31x(&f).is_empty(), "sum with a nullary case must draw no N31x: {f:?}");
+    }
+
+    /// Must-fall: a register read at an empty range -- the silent shape
+    /// (measured: 0 errors before this lane, even behind `ensures false`).
+    #[test]
+    fn registerlesung_mit_leerem_bereich_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_register {\n\
+             opaque type Pa = u64;\n\
+             device D(basis : Pa) at mmio {\n\
+                 reg LEER : u32 in 5 .. 0 @0x00 class rw\n\
+             }\n\
+             impl fn f(d : ptr<mmio, rw> D) -> u32 effects { reads d } costs <= 8 ops {\n\
+                 let x = d.LEER;\n\
+                 return x;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N314"], "empty register read must fall once: {f:?}");
+    }
+
+    /// Must-pass twin: a STORE to the same empty register is no read --
+    /// `N314` stays silent there (the value falls at its own rule).
+    #[test]
+    fn registerschreibung_bleibt_ohne_n314() {
+        let f = fehler(
+            "module probe::w1_schreibung {\n\
+             opaque type Pa = u64;\n\
+             device D(basis : Pa) at mmio {\n\
+                 reg LEER : u32 in 5 .. 0 @0x00 class rw\n\
+             }\n\
+             impl fn f(d : ptr<mmio, rw> D) effects { writes d } costs <= 8 ops {\n\
+                 d.LEER = 5;\n\
+             }\n\
+             }\n",
+        );
+        assert!(n31x(&f).is_empty(), "a store must draw no N31x: {f:?}");
+    }
+
+    /// Must-pass: an axiom answering an inhabited range draws no `N31x`
+    /// (the `H021` beside it is the graph's, not this lane's).
+    #[test]
+    fn bewohnte_axiom_antwort_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_bewohnt {\n\
+             axiom hol() -> u32 effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let x = hol();\n\
+                 return x;\n\
+             }\n\
+             }\n",
+        );
+        assert!(n31x(&f).is_empty(), "inhabited axiom answer must draw no N31x: {f:?}");
+    }
+
+    /// Must-pass: a normal `ok | err` syscall -- value type inhabited, the
+    /// `or R` channel is not an answer type. Fully silent, as before.
+    #[test]
+    fn syscall_mit_kanal_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_syscall {\n\
+             reason IoError {\n\
+                 BadFd = 9 \"closed\"\n\
+                 exhaustive\n\
+             }\n\
+             assume c \"Write keeps its contract.\" falsifier s;\n\
+             syscall write(fd : u64, len : u64) -> u64 or IoError\n\
+                 abi linux arch x86_64 number 1\n\
+                 regs in { rdi = fd, rdx = len }\n\
+                 regs out { rax }\n\
+                 clobbers { rcx, r11 }\n\
+                 errors { EBADF => BadFd }\n\
+                 requires len <= 1024\n\
+                 ensures result <= len\n\
+                 effects { pure }\n\
+                 assume c falsifier s;\n\
+             impl fn f(b : u64, n : u64) -> u64\n\
+                 effects { pure }\n\
+             {\n\
+                 let m = write(b, n) else (e) {\n\
+                     match e {\n\
+                         BadFd => { return 777; }\n\
+                     }\n\
+                 }\n\
+                 return m;\n\
+             }\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "a normal ok|err syscall must stay silent, fell with {f:?}");
     }
 }

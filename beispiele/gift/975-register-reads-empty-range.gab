@@ -1,0 +1,23 @@
+-- erwartet: N314
+-- **Lane 194 (`N314`): a register read at an empty answer type.**
+--
+-- `LEER` promises `u32 in 5 .. 0`: the device answers a word the
+-- declaration excludes, so the continuation is covered by nothing. Before
+-- this lane the read passed with 0 errors -- even behind an `ensures` no
+-- value could meet, which the empty type then "proved". What falls is the
+-- READ: a store to the same register is no read and draws its own rule,
+-- pinned inline (`w1_proben` in `m1.rs`).
+module gift975 {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg LEER : u32 in 5 .. 0 @0x00 class rw
+}
+
+impl fn f(d : ptr<mmio, rw> D) -> u32 effects { reads d } costs <= 8 ops {
+    let x = d.LEER;
+    return x;
+}
+
+}

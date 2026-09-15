@@ -90,6 +90,12 @@ const BENANNT: &[&str] = &[
     // so the corpus run counts the rule, not noise. (An omitted `costs`
     // is never refused, so it names no code.)
     "N305",
+    // Lane 194 (W1): `N310`-`N313` an axiom call/binding at an empty answer
+    // (range, caseless reason, orphan `fn(...)`, uninhabited sum/record),
+    // `N314` a register read at one. Named here so the corpus run counts
+    // the rules, not noise; the corpus holds no site (measured: old-vs-new
+    // sweep over 870 files, zero diffs), so the entries are the names.
+    "N310", "N311", "N312", "N313", "N314",
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)
     "H001", "H002", "H003", "H004", "H005", "H006", // geteilter Halt, Rangordnung
