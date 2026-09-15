@@ -29,7 +29,7 @@ Standards: no `sorry`, no `native_decide`, no new `axiom`; **every one of the 44
 theorems has a `#print axioms` line**, and every one prints the standard three or fewer
 (`lexC_total` and `lcEq_eq`: `propext` only; `kProg_kFuns`, `a2_104_gegenprobe_korr`:
 `propext`, `Quot.sound`); every theorem with a ∀-over-syntax premise has non-degenerate
-witnesses, named at the theorem (`lexC_total` → the 14 lexer probes; `parseC_total` → the
+witnesses, named at the theorem (`lexC_total` → the 15 lexer probes; `parseC_total` → the
 seven refusals and the two pins on the real texts; `schlusssatz_text` → the two
 `kette_*_zeuge_text`); `lake build` of the whole library: **247 jobs, green, peak 2,9 GB**.
 
@@ -134,7 +134,7 @@ a bigger headline number would be reporting the wrong thing.*
 | theorem | file | content |
 |---|---|---|
 | `lexC_total`, `parseC_total` | `CParser/CLexer.lean`, `CParse.lean` | the lexer and the parser are TOTAL functions — every text has an outcome, and a text outside the subset has the outcome `none` |
-| 14 lexer probes | `CLexer.lean` | one per lexer decision, including four refusals (`0b101`, `2ux`, an unterminated comment, a character outside the subset) |
+| 15 lexer probes | `CLexer.lean` | one per lexer decision, **six of them refusals**: `2ux` (a letter after the suffix), `0b101` (no binary literals), an unterminated block comment, a nested directive, `$` and `\` (characters outside the subset) |
 | 7 parser refusals | `CParser/CProben.lean` | `if`, arithmetic, `let`, a volatile access, a missing prelude pin, a declared-but-undefined function, and the smallest accepted unit |
 | `kProg_kFuns`, `a2_kProg` | `CParser/Bruecke.lean` | the certificate's unit as a list, and `A2 s c → cProgC s = kProg c` |
 | `a2_hA1`, **`schlusssatz_text`** | `CParser/Bruecke.lean` | the closing theorem with its A1 premise stated about the TEXT — the conclusion written out, so a change to `schlusssatz` breaks the build |

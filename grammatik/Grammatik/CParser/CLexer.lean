@@ -372,8 +372,8 @@ theorem lexC_backslash : lexS "a \\ b" = none := rfl
 
 -- **THE WITNESS OBLIGATION of `lexC_total`** (rule 13): its premise is a ∀ over
 -- syntax -- every character list -- and the probes above are the non-degenerate
--- witnesses, in both directions: six texts that lex to a named token list, and
--- five that are REFUSED. A totality theorem without them would be a decoration.
+-- witnesses, in both directions: NINE texts that lex to a named token list, and
+-- SIX that are REFUSED. A totality theorem without them would be a decoration.
 #print axioms Gabbro.Grammatik.CParser.lcEq_refl
 #print axioms Gabbro.Grammatik.CParser.lcEq_eq
 #print axioms Gabbro.Grammatik.CParser.lexC_total
