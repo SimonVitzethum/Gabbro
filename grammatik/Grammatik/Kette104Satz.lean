@@ -296,7 +296,7 @@ theorem kette_104_binaer_text
         corrW EL4 σ st → bindParams k.params vs = some ρ0 → EnvRel EL4 k.lay ρG ρ0 →
         (rufAt P4 O4 passes (tief f) f σ ρG).istFehler = false →
         ∀ st' rv, bin f st vs st' rv → RufOut EL4 (rufAt P4 O4 passes (tief f) f σ ρG) st' rv :=
-  (schlusssatz_text kette_104 a2_104 O4 hw4 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2.2.2.2
+  (schlusssatz_text kette_104 a2_104 O4 hw4 orc XR hXR bin tief hA1 sp init hA4).2.2.2.2.2.2.2.2.2
 
 /-- **WITNESS**: `kette_104_zeuge` again, with the C side read from the
     emitted TEXT -- `einzahlen(k, 0, 7)` from the zero state moves the
