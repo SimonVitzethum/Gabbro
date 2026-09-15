@@ -547,3 +547,24 @@ under a `table … ops` is treated as discharged by `table.ops.erhaltung`
 (`beweise/Table_Ops_Erhaltung.thy`), which covers the GENERATED mutations; whether a
 hand-written body that touches the same slots can break it is a question this entry did not
 ask and does not answer.
+
+---
+
+## O12 — `beispiele/124`'s `setze` promises too little for its own locked section
+
+*Found 2026-09-15 by the stage (b) Opus agent while writing a G model for the program
+(`messung/OPUS-BERICHT-STUFE-B.md`, `grammatik/Grammatik/Korpus124.lean`), not by a guardian.*
+
+`setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
+and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a
+postcondition that says nothing about `konto[1]`, the caller cannot conclude it. **So premise
+(b) of the goal theorem (`NutzerPflicht`, the user's own obligation) does NOT hold for the
+source as written** — while the Rust checker accepts the file, because no rule of the checker
+asks the question the model asks.
+
+| | |
+|---|---|
+| **what is NOT open** | the model side. `Korpus124.lean`'s `kP` carries the stronger contract (the one the hand model `mP` always had), every premise group is proved on it, and `schlusssatz_124` is about `kP`. Nothing is claimed about the `.gab` file |
+| **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. (2) **the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision |
+| **why it must not be closed by strengthening alone** | strengthening the file makes the corpus green and leaves the blind spot in place. *The finding is about the checker; the file is only where it became visible* |
+| **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one |
