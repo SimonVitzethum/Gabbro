@@ -3660,9 +3660,80 @@ of `rufAt_tiefer` inhabited on one program). `nurAbstieg_zeuge_108` -- the 108 c
 lock, so `RufRahmenTreu` is free there and clause 4e(ii) lands UNCONDITIONALLY: no call of
 108's program ends in a `logik` outcome other than an `abstieg`, at any depth.
 
+*Superseded in part by §37 (the next day's hour): `RufRahmenTreu` is no longer a hypothesis
+of anything -- `rufAt_treu` proves it at every world, `rufRahmenTreu_ohneSperren` is gone
+with the gap it measured, and the 108 witness keeps its statement as the lock-free control
+beside a LOCKED one on 104.*
+
 **Axioms: the standard three** for every new theorem (`enOk_ohneLocks` and
 `korrOk_ohneLocks`: the two purely computational ones), `#print axioms gabbro_ziel`
 unchanged, whole library **262 jobs** green, no `sorry`, no `native_decide`, no new `axiom`.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §§1-10 history above.)
+## 37. The frame at every world: `rufAt` is in `RespektiertRahmen`, and part 4's condition is the depth alone
+
+*Added 2026-09-15 (Opus lane `rahmen`). Files: `Grammatik/RahmenTreu.lean` (new, 668
+lines), `Grammatik/RufLogik.lean`, `Grammatik/RufLogikZeuge.lean`,
+`Grammatik/Schlusssatz.lean`, `Grammatik/CParser/Bruecke.lean`, `Grammatik.lean`. Plan:
+`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10. Report:
+`messung/muse/OPUS-BERICHT-RAHMEN.md`.*
+
+**THE QUESTION** §36 left open: `rufAt_gut` (`Satz.lean`) proves the frame of a call only at
+worlds meeting `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`, and
+part 4 of `schlusssatz` quantifies over ANY Gabbro world. Is the frame TRUE at the other
+worlds?
+
+**THE MEASUREMENT that answered it.** `Gut W G σ σ'` is three facts, and the `HeldB` premise
+is spent on exactly one of them:
+
+| fact of `Gut` | what the lock discipline buys it |
+|---|---|
+| `Rahmen W G σ σ'` | nothing: every write carries its own `hw : V.schreibt t = true` |
+| `σ'.haelt = σ.haelt` | nothing: `gut_nimmt_gibt` proves this half without its `hn` argument |
+| every new event GOOD, `Konsistent` preserved | everything: `Ereignis.gut` of an access is `darf ∧ HeldIn`, of a `nimmt` the strict rank order |
+
+So the answer is **yes, at every world** -- and the route is to prove the first two facts
+alone.
+
+**THE THEOREM** (`RahmenTreu.lean`). `Treu W G σ σ' := Rahmen W G σ σ' ∧ σ'.haelt = σ.haelt`,
+and the same mutual induction over the whole grammar that `Satz.lean` runs, with `HeldB`
+deleted from the statement:
+
+| theorem | statement |
+|---|---|
+| `stmt_treu`, `block_treu`, `end_treu`, `arms_treu`, `grund_treu` | a body run keeps the contract's frame and the held locks, from EVERY world |
+| `traverseLauf_treu`, `retryLauf_treu`, `foreverLauf_treu` | the same for the three loop combinators |
+| `rufAt_treu` | `TreuR (rufAt P O passes fuel)`, by induction on the depth |
+| `rufAt_rahmenTreu` (`RufLogik.lean`) | `RufRahmenTreu P (rufAt P O passes n)` -- the frame half of `RespektiertRahmen` |
+| `rufAt_respektiertRahmen` (`RufLogik.lean`) | both halves together: `rufAt_vertraege` and the above |
+
+Premises: `TreuR R` for the handler and `TreuO O` for the oracle -- the first two conjuncts
+of `GutO`, i.e. H1, no more. NOT needed: `StufenOk`, `GutO`'s trace shape, `HeldB` anywhere.
+
+**WHY THE HELD SET SURVIVES A WORLD THAT ALREADY HOLDS THE LOCK.**
+`offen (gibt L :: nimmt L h :: s) = (L :: offen s).erase L = offen s`, because `List.erase`
+takes the FIRST occurrence and that is the one `nimmt` just put there. Such a world is not
+well-disciplined and `Gut` rightly refuses it -- its `nimmt` event is not good -- but the
+frame and the held set survive it. That asymmetry is the whole reason the premise was
+removable.
+
+**WHAT DISAPPEARED FROM `schlusssatz`.** Clause 4e(ii) lost its hypothesis
+`(∀ passes n, RufRahmenTreu K.E.P (rufAt K.E.P O passes n)) →`. The premise list is
+unchanged character for character; one implication vanished from the conclusion, so the
+statement is strictly stronger. `schlusssatz_104`, `schlusssatz_124` and `gabbro_ziel` were
+not edited. Of part 4's condition, the DEPTH residue of 4e(i) is now the only thing left.
+
+**WITNESS ON A LOCKED PROGRAM** (`Kette104.nurAbstieg_zeuge_104`). 104 declares the lock `M`
+and both its functions `requires Held(M)`, so the entry's `Λ` names `Res.held m4`; the world
+the chain's own witness runs from holds nothing, and that is PROVED, not assumed
+(`heldB_faellt_104` : `¬ HeldB …`). At that world `rufAt_gut` says nothing. The witness
+carries, beside clause 4e(ii): the run of `einzahlen(k, 0, 7)` that returns and leaves the
+slot at `100`; `D4.schreibt lies4 t4 = false`; and the frame and held set of the call
+`lies(k, 0)` from that world -- so the frame clause forbids something that could have
+happened. `nurAbstieg_zeuge_108` stays as the lock-free control.
+
+**Axioms: the standard three** for every new theorem, `#print axioms gabbro_ziel`,
+`schlusssatz`, `schlusssatz_104`, `schlusssatz_124` unchanged; whole library **263 jobs**
+green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-15 (that frame fact PROVED at every world: rufAt is in RespektiertRahmen, clause 4e(ii) unconditional, witness on the locked chain 104); §§1-10 history above.)
 

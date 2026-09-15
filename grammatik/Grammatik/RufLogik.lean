@@ -28,14 +28,20 @@
      `rufAt` adds on its own -- `vorbedingung`, `nachbedingung`,
      `invariante` -- fall to the caller duty, the body triple and `InvGutS`.
 
-  WHAT IS LEFT, AND IT IS NAMED. `RespektiertRahmen P (rufAt P O passes n)` is
-  NOT proved here and is carried as a hypothesis (`RufRahmenTreu`, the FRAME
-  half; the contract half is proved, `rufAt_vertraege`). `rufAt_gut`
-  (`Satz.lean`) proves the frame only at worlds meeting
-  `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`, and
-  part 4 quantifies over ANY world. See
-  `messung/muse/OPUS-BERICHT-KONGRUENZ.md`.
+  WHAT IS LEFT -- AND SINCE 2026-09-15 IT IS NOTHING BUT THE DEPTH.
+  `RespektiertRahmen P (rufAt P O passes n)` has two halves. The CONTRACT
+  half is `rufAt_vertraege` below. The FRAME half was carried as a named
+  hypothesis (`RufRahmenTreu`) for one day, because `rufAt_gut` (`Satz.lean`)
+  proves the frame only at worlds meeting
+  `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` and
+  part 4 quantifies over ANY world. `RahmenTreu.lean` now proves it at every
+  world (`rufAt_treu`), by the same induction over the grammar with the lock
+  discipline deleted from the conclusion: the frame and the held set never
+  needed it, only the trace QUALITY did. So `rufAt_nurAbstieg` is
+  unconditional in that hypothesis. See `messung/muse/OPUS-BERICHT-RAHMEN.md`
+  and `-KONGRUENZ.md`.
 -/
+import Grammatik.RahmenTreu
 import Grammatik.RufTiefe
 import Grammatik.SperreFuss
 import Grammatik.ZielOrtInv
@@ -318,16 +324,26 @@ theorem kong_rufAt_torRuf (P : Programm D) (O : Orakel D) (passes n : Nat)
 
 /-! ## 5. THE DISCHARGE -/
 
-/-- **The residual hypothesis, named**: `rufAt` keeps the callee's declared
-    frame at EVERY world. `rufAt_gut` (`Satz.lean`) gives it at worlds meeting
-    `HeldB`; part 4 quantifies over all of them. THE one thing this file does
-    not prove. -/
+/-- **The frame half of `RespektiertRahmen`, for a handler**: an `ok` answer
+    keeps the callee's declared frame and gives back every lock it took, at
+    EVERY world. `rufAt_gut` (`Satz.lean`) gives it only at worlds meeting
+    `HeldB`, and part 4 quantifies over all of them; `rufAt_treu`
+    (`RahmenTreu.lean`) gives it at all of them. -/
 def RufRahmenTreu (P : Programm D)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
   ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (v : ErgVal D (D.erg f)),
     R f σ ρ = RufAusgang.ok σ' v →
       Rahmen (D.schreibt f) (D.gschreibt f) σ σ' ∧ offen σ'.spur = offen σ.spur
 
+/-- **THE FRAME HALF OF `RespektiertRahmen` FOR `rufAt`, AT EVERY WORLD --
+    PROVED** (`rufAt_treu`, RahmenTreu.lean). The only premise is the
+    hardware's: an axiom keeps the frame of its declared `effects` and leaves
+    the held locks alone. Together with `rufAt_vertraege` this puts `rufAt`
+    into `RespektiertRahmen` wherever the caller's duty holds. -/
+theorem rufAt_rahmenTreu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O) :
+    ∀ n : Nat, RufRahmenTreu P (rufAt P O passes n) := by
+  intro n f σ ρ σ' v h
+  exact rufAt_treu P O passes hO n f σ ρ σ' (by rw [h]; rfl)
 
 section Entladung
 
@@ -335,16 +351,18 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D) (S : Sperr
   (U : Umwelt D)
 
 /-- **THE DISCHARGE, BY INDUCTION ON THE DEPTH.** Under the user's own
-    obligation (`KoerperGutS`, `InvGutS`), an oracle in the named class, bodies
-    without `locks` and the residual frame hypothesis: at an entry meeting the
-    callee's `requires`, the ONLY `logik` outcome `rufAt` has is an
-    `abstieg` -- the depth residue, which `rufAt_stabil_ab` turns into a
-    computation at one depth. -/
-theorem rufAt_nurAbstieg (hRO : RahmenO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    obligation (`KoerperGutS`, `InvGutS`), an oracle in the named class and
+    bodies without `locks`: at an entry meeting the callee's `requires`, the
+    ONLY `logik` outcome `rufAt` has is an `abstieg` -- the depth residue,
+    which `rufAt_stabil_ab` turns into a computation at one depth. NO
+    hypothesis about the frame: `rufAt_rahmenTreu` proves it. -/
+theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hU : HavocOk S U) (hlocks : ∀ f : D.Fn, (P.rumpf f).ohneLocks = true)
-    (hRT : ∀ n : Nat, RufRahmenTreu P (rufAt P O passes n))
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hI : ∀ f : D.Fn, InvGutS P passes Q S f) :
     ∀ n : Nat, NurAbstieg P O passes n := by
+  have hRO : RahmenO O := fun a σ ρ => (hTO a σ ρ).1
+  have hRT : ∀ n : Nat, RufRahmenTreu P (rufAt P O passes n) :=
+    rufAt_rahmenTreu P O passes hTO
   have hFrame : ∀ n : Nat, RespektiertRahmen P (rufFrei P O passes n) := fun n =>
     ⟨fun f σ ρ hreq σ' v h =>
         rufAt_vertraege P O passes n f σ ρ hreq σ' v (rufFrei_ok P O passes n f σ ρ σ' v h),
@@ -431,23 +449,23 @@ theorem rufAt_nurAbstieg (hRO : RahmenO O) (hRL : RegLokal O) (hQ : AxVertragO Q
         cases heq
         exact ⟨hh, rfl⟩
 
-/-- **WHERE THE RESIDUAL HYPOTHESIS IS FREE**: a declaration with NO LOCKS.
-    Then every world holds nothing, `HeldB` is vacuous, and `rufAt_gut`
-    (`Satz.lean`) gives the frame at every world. So the gap `RufRahmenTreu`
-    names is about LOCKS and nothing else -- it is the lock discipline's
-    `HeldB` premise, not the frame itself. -/
-theorem rufRahmenTreu_ohneSperren (P : Programm D) (O : Orakel D) (passes : Nat)
-    (hO : GutO O) (hP : StufenOk P) (hL : D.Lock → False) :
-    ∀ n : Nat, RufRahmenTreu P (rufAt P O passes n) := by
-  intro n f σ ρ σ' v h
-  have hh : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt :=
-    ⟨fun L _ => (hL L).elim, fun L _ _ => (hL L).elim⟩
-  have hg := rufAt_gut P O passes hO hP n f σ ρ hh σ' (by rw [h]; rfl)
-  exact ⟨hg.1, hg.haelt⟩
+/-- **THE TWO HALVES, TOGETHER**: wherever the caller's duty holds, `rufAt`
+    IS in the handler class the user's obligation is quantified over. That
+    is the fact the discharge above turns into a statement about `logik`
+    outcomes; it is stated on its own because it is the answer to "is
+    `rufAt` in `RespektiertRahmen`?", which the CUTS of `Schlusssatz.lean`
+    used to answer with "no, and here is the missing half". -/
+theorem rufAt_respektiertRahmen (hTO : TreuO O) :
+    ∀ n : Nat, RespektiertVertraege P (rufAt P O passes n) ∧
+      (∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D)
+        (v : ErgVal D (D.erg f)), rufAt P O passes n f σ ρ = .ok σ' v →
+          Rahmen (D.schreibt f) (D.gschreibt f) σ σ' ∧ offen σ'.spur = offen σ.spur) :=
+  fun n => ⟨rufAt_vertraege P O passes n, rufAt_rahmenTreu P O passes hTO n⟩
 
 end Entladung
 
-#print axioms Gabbro.Grammatik.rufRahmenTreu_ohneSperren
+#print axioms Gabbro.Grammatik.rufAt_rahmenTreu
+#print axioms Gabbro.Grammatik.rufAt_respektiertRahmen
 #print axioms Gabbro.Grammatik.rufAt_vertraege
 #print axioms Gabbro.Grammatik.rufSchritt_nicht_logik
 #print axioms Gabbro.Grammatik.rufAt_nurAbstieg

@@ -666,7 +666,7 @@ handler premise. The side conditions live in the CONSUMERS:
 | `RahmenO`/`RegLokal`/`AxVertragO` on the oracle | the classes `KoerperGutS`/`InvGutS` quantify over -- 4e(ii) |
 | `HavocOk S U`, inhabited under (b) | `execEndH`'s environment move -- 4e(ii) |
 | `(P.rumpf f).ohneLocks`, from `korrOk_ohneLocks` | `execEndH = execEnd` -- 4e(ii) |
-| `RufRahmenTreu P (rufAt …)` | **the residue**; not proved, named -- 4e(ii) |
+| ~~`RufRahmenTreu P (rufAt …)`~~ | was the residue for one day; **proved**, see §6.10 |
 
 **Clause by clause: what disappeared from part 4's condition.**
 
@@ -680,16 +680,13 @@ handler premise. The side conditions live in the CONSUMERS:
 | `vorbedingung` of the CALL ITSELF | open | it IS the hypothesis `ReqAmEintritt` (clause 4d says the condition implies it) |
 | `abstieg` | open | **stays**, and is now stable upwards: 4e(i) makes it a computation at ONE depth |
 
-**What resists, exactly.** `RespektiertRahmen` is a conjunction; its CONTRACT half is proved
-for `rufAt` (`rufAt_vertraege`) and its FRAME half is not. `rufAt_gut` (`Satz.lean`) proves
-the frame at worlds meeting `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f))
-σ.haelt`; part 4 quantifies over ANY world, including worlds holding locks out of the
-function's floor. Removing the premise means a second long induction over the semantics (a
-`HeldB`-free `Rahmen` theorem, or "every call site of a body run inherits `HeldB` from the
-entry" made explicit out of `end_gutB`'s proof). `rufRahmenTreu_ohneSperren` shows the whole
-gap is about locks: a declaration with no `D.Lock` gets the hypothesis free, and chain 108
-is such a declaration -- there clause 4e(ii) lands unconditionally
-(`Kette108.nurAbstieg_zeuge_108`).
+**What resisted, exactly, and for how long.** `RespektiertRahmen` is a conjunction; its
+CONTRACT half is proved for `rufAt` (`rufAt_vertraege`) and its FRAME half was not.
+`rufAt_gut` (`Satz.lean`) proves the frame at worlds meeting
+`HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`; part 4 quantifies
+over ANY world, including worlds holding locks out of the function's floor. The estimate in
+this section -- "removing the premise means a second long induction over the semantics" --
+was right, and §6.10 is that induction.
 
 **The other consumer, checked against the lemma BEFORE it was built.** The congruence does
 NOT close the `rufAt` ↔ machine-G item of §6.5. It relates two runs of the same body text
@@ -697,6 +694,56 @@ from the same world; `rufAt` and `rufRumpf` differ in the WORLD the body runs fr
 returns to (the contract reads), not in a handler's answers, so the premise
 `HandlerUnter Er` cannot be formed for that pair. What the lemma does give that item is the
 depth half of the `Tief` residue (4e(i)).
+
+### 6.10 The frame at every world: the last piece of part 4's condition (2026-09-15)
+
+*Files: `grammatik/Grammatik/RahmenTreu.lean` (new), `RufLogik.lean`, `RufLogikZeuge.lean`,
+`Schlusssatz.lean`, `CParser/Bruecke.lean`. Theorem map: SATZKARTE §37. Report:
+`messung/muse/OPUS-BERICHT-RAHMEN.md`.*
+
+**The question §6.9 left.** Is `RufRahmenTreu P (rufAt P O passes n)` -- an `ok` answer of
+the model's own call handler keeps the callee's declared frame and gives back every lock it
+took, at EVERY world -- true, false, or true only where `HeldB` holds? Three routes were
+open: derive `HeldB` for reachable worlds, prove the frame without `rufAt_gut`, or find a
+world where it fails.
+
+**The measurement that picked the route.** `Gut` (Satz.lean) bundles three facts, and only
+the third needs the lock discipline:
+
+| fact | where the `HeldB` premise is spent |
+|---|---|
+| `Rahmen` -- writes stay inside the contract | nowhere: each write carries its own `hw : V.schreibt t = true` |
+| `σ'.haelt = σ.haelt` -- every lock given back | nowhere: `gut_nimmt_gibt` proves this half without its `hn` argument |
+| every event GOOD, trace consistent | everywhere: `Ereignis.gut` of an access is `darf ∧ HeldIn`, of a `nimmt` the rank order |
+
+So route (c) is **false** -- the statement holds at every world -- and route (b) is the
+honest one: `RahmenTreu.lean` re-runs `Satz.lean`'s induction over the whole grammar with
+the third fact deleted from the CONCLUSION and hence the premise from the statement. The
+reason the held set survives is worth naming: `offen (gibt L :: nimmt L h :: s)` is
+`(L :: offen s).erase L`, and `List.erase` takes the FIRST occurrence -- the one `nimmt`
+just put there. A world that already holds `L` is not well-disciplined and `Gut` rightly
+refuses it, but the frame and the held set survive it.
+
+**What the new file proves.** `Treu W G σ σ'` = `Rahmen W G σ σ' ∧ σ'.haelt = σ.haelt`;
+`stmt_treu`/`block_treu`/`end_treu`/`arms_treu`/`grund_treu` over the mutual grammar, the
+three loop combinators beside them, and `rufAt_treu` by induction on the depth. Premises:
+`TreuR R` for the handler and `TreuO O` for the oracle -- the first two conjuncts of `GutO`,
+i.e. H1. NOT needed: `StufenOk`, `GutO`'s trace shape, `HeldB` anywhere.
+
+**What disappeared from `schlusssatz`.** Clause 4e(ii) lost its hypothesis: it now reads
+"at an entry meeting the callee's `requires`, the only `logik` outcome of `rufAt` is an
+`abstieg`", unconditionally, for every certified chain. The premise list of `schlusssatz` is
+unchanged; `schlusssatz_104`, `schlusssatz_124` and `gabbro_ziel` are untouched. So of part
+4's condition, what is left is the depth residue of 4e(i) ALONE, and that is a computation
+at one depth, not a promise.
+
+**Witness on a LOCKED program.** `Kette104.nurAbstieg_zeuge_104`: 104 declares the lock `M`
+and both its functions `requires Held(M)`, so the entry's static resource context names
+`Res.held m4` -- and the world the chain's own witness runs from holds nothing
+(`heldB_faellt_104`, proved). At that world `rufAt_gut` says nothing at all. The witness
+carries the frame read on the function that may NOT write (`lies`, `D4.schreibt lies4 t4 =
+false`) at a world whose slot stands at `100`, so the frame clause forbids something that
+could have happened.
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 
