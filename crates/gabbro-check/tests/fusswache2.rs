@@ -474,11 +474,17 @@ fn doppelter_schreibender_start_faellt_n304() {
         codes.iter().any(|c| c == "N304"),
         "a writing routine on two threads must flag N304: {codes:?}"
     );
+    assert!(
+        !codes.iter().any(|c| c == "N315"),
+        "the busy shape belongs to N304 alone: {codes:?}"
+    );
 }
 
 #[test]
-fn doppelter_ruhiger_start_schweigt_n304() {
-    // The idle twin: a pure routine may back any number of entries.
+fn doppelter_ruhiger_start_faellt_n315() {
+    // Lane 196: the idle twin no longer stays silent. Two entries behind one
+    // idle routine are two threads, and `einzelnB` (`ws.Nodup`) admits no
+    // duplicate, idle or not -- `N304` stays silent here, `N315` fires.
     let quelle = "module test::fusswache2 {\n\
         impl fn idle() -> u32 effects { pure } costs <= 1 ops { return 0; }\n\
         entry entry_a vector 0x80 arch x86_64 {\n    regs in { } regs out { } \
@@ -490,16 +496,22 @@ fn doppelter_ruhiger_start_schweigt_n304() {
         }\n";
     let codes = fehler(quelle);
     assert!(
+        codes.iter().any(|c| c == "N315"),
+        "an idle routine on two entries must flag N315: {codes:?}"
+    );
+    assert!(
         !codes
             .iter()
             .any(|c| c == "N300" || c == "N301" || c == "N302" || c == "N303" || c == "N304"),
-        "an idle routine on two threads stays silent: {codes:?}"
+        "only the distinctness refusal fires: {codes:?}"
     );
 }
 
 #[test]
-fn nutzlast_zwillinge_schweigen_n300() {
-    // Two starts publishing one payload on one atomic: `PaarungAusgenommen`.
+fn nutzlast_zwillinge_fallen_n300() {
+    // Lane 196 (verdict P3): two starts writing one unguarded payload are a
+    // C11 race on a non-atomic object -- the payload exemption is gone, and
+    // `N300` fires beside `W001`.
     let quelle = "module test::fusswache2 {\n\
         static mut bericht : u64 = 0;\n\
         atomic BEREIT : bool release;\n\
@@ -511,8 +523,12 @@ fn nutzlast_zwillinge_schweigen_n300() {
         }\n";
     let codes = fehler(&quelle);
     assert!(
-        !codes.iter().any(|c| c == "N300" || c == "N301"),
-        "a publish payload of an atomic stays silent: {codes:?}"
+        codes.iter().any(|c| c == "N300"),
+        "a payload written by two starts must flag N300: {codes:?}"
+    );
+    assert!(
+        !codes.iter().any(|c| c == "N301"),
+        "a pair that writes on both sides belongs to N300 alone: {codes:?}"
     );
 }
 

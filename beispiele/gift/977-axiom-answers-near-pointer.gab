@@ -1,0 +1,25 @@
+-- erwartet: N316
+-- **Lane 196 (`N316`): an axiom call/binding at a `fn(...)` no function has
+-- EXACTLY.**
+--
+-- `hol` promises `fn(u32 in 0 .. 5) -> u32`, and the only function of the
+-- unit takes `(u32 in 0 .. 10) -> u32`: the same machine words, a different
+-- signature. `N312` stays silent (the representation matches -- `M142`'s
+-- reading for slot storage), but a `fnptr` value IS a function of exactly
+-- its signature (SYNTAX §2), and `antwortB` compares `D.sig` exactly -- so
+-- no loaded image can place this answer. The twin declares the
+-- range-exact function and stays silent (no `N316`); the orphan (no
+-- representation at all) falls with `N312` instead. Both are pinned inline
+-- (`w1_proben` in `crates/gabbro-check/src/m1.rs`).
+module gift977 {
+
+impl fn arm(x : u32 in 0 .. 10) -> u32 effects { pure } costs <= 2 ops { return x; }
+
+axiom hol() -> fn(u32 in 0 .. 5) -> u32 effects { pure } costs <= 2 ops effects { pure } unfalsifiable "probe";
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let p = hol();
+    return 1;
+}
+
+}

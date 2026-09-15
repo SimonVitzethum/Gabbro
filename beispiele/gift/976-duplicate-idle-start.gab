@@ -1,0 +1,23 @@
+-- erwartet: N315
+-- **Lane 196 (`N315`): the same idle routine named twice as a start.**
+--
+-- `ruhe` is idle (no lock, no reason, no writes, no footprint), so `N304`
+-- stays silent -- but the declared starts are not distinct, and `Akzeptiert`
+-- demands `einzelnB` (`ws.Nodup`) with no idle exemption: two entries are
+-- two threads, and the race component separates DIFFERENT starts only. The
+-- busy twin (one writing routine behind two entries) falls with `N304`
+-- instead; two DIFFERENT idle routines stay silent. Both twins are pinned
+-- inline (`doppelter_schreibender_start_faellt_n304`,
+-- `doppelter_ruhiger_start_faellt_n315` in
+-- `crates/gabbro-check/tests/fusswache2.rs`).
+module gift976 {
+
+impl fn ruhe()
+    effects { pure }
+    costs   <= 1 ops
+{
+}
+
+concurrent { ruhe, ruhe };
+
+}

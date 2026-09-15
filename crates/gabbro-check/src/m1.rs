@@ -231,6 +231,8 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
 // | `N312` | an axiom call/binding at an empty `fn(...)`   | gift 974 |
 // | `N313` | an axiom call/binding at an empty sum/record  | inline (gifts spent) |
 // | `N314` | a register READ at an empty answer type        | gift 975 |
+// | `N316` | an axiom call/binding at a `fn(...)` no function has EXACTLY (lane 196) | gift 977 |
+// |        | (same C prototype, different ranges -- `antwortB` compares `D.sig` exactly) | |
 //
 // An axiom `-> never` stays accepted: the declared "does not return" (the C
 // prototype is `_Noreturn`, and the continuation is unreachable in the C as
@@ -424,6 +426,80 @@ fn fn_gestalt_passt(f: &FnGestalt, v: &crate::typen::FnPtrContract) -> bool {
     }
 }
 
+/// **Lane 196 (N316): does this runtime function have EXACTLY the pointer's
+/// signature -- ranges included?**
+///
+/// `antwortB` (`EinpassenVoll.lean`) decides `fnptr m` over the function list
+/// by exact signature identity (`D.sig f = m`): a `fnptr` value IS a function
+/// of exactly its signature. `fn_gestalt_passt` above asks the coarser
+/// C-prototype question (`M142`'s reading for SLOT STORAGE -- nobody holds
+/// ranges at a `fn(...)` slot); a function with the same widths but different
+/// ranges passes it and misses the answer. This asks the finer one, pairwise
+/// and for the result, through names (`N030`) but WITH ranges.
+///
+/// Effects are deliberately not compared: they are ghost (no runtime
+/// content), so a function with the same params and result IS a value of the
+/// type whatever it declares. `Unbekannt` on either side matches by fiat
+/// (W10 -- not refused is not confirmed), decided by `enthaelt_unbekannt`.
+fn fn_gestalt_genau(f: &FnGestalt, v: &crate::typen::FnPtrContract) -> bool {
+    if f.parameter.len() != v.parameters.len() {
+        return false;
+    }
+    let params = f
+        .parameter
+        .iter()
+        .zip(v.parameters.iter())
+        .all(|(a, (_, b))| {
+            ohne_namen(a) == ohne_namen(b)
+                && !enthaelt_unbekannt(a)
+                && !enthaelt_unbekannt(b)
+        });
+    if !params {
+        return false;
+    }
+    match (&f.ergebnis, &v.result) {
+        (None, None) => true,
+        (Some(a), Some(b)) => {
+            ohne_namen(a) == ohne_namen(b)
+                && !enthaelt_unbekannt(a)
+                && !enthaelt_unbekannt(b)
+        }
+        _ => false,
+    }
+}
+
+/// **Lane 196 (N316): does this type hide an unknown?**
+///
+/// The W10 fiat for the exact question: where either side is (or contains)
+/// `Unbekannt`, exactness stays silent. `Benannt` never reaches the wildcard:
+/// `ohne_namen` strips every one, so the arm documents the shape instead of
+/// swallowing the next variant somebody adds.
+fn enthaelt_unbekannt(t: &Typ) -> bool {
+    match ohne_namen(t) {
+        Typ::Unbekannt => true,
+        Typ::Zeiger(z) => enthaelt_unbekannt(z),
+        Typ::Summe { varianten, .. } => varianten
+            .iter()
+            .any(|(_, p)| p.as_ref().is_some_and(enthaelt_unbekannt)),
+        Typ::Verbund(felder) => felder.iter().any(|(_, f)| enthaelt_unbekannt(f)),
+        Typ::Feld { element, .. } => enthaelt_unbekannt(element),
+        Typ::FnPtr(v) => {
+            v.parameters.iter().any(|(_, p)| enthaelt_unbekannt(p))
+                || v.result.as_ref().is_some_and(|r| enthaelt_unbekannt(r))
+        }
+        Typ::Benannt { .. } => false,
+        Typ::Ganzzahl(_)
+        | Typ::Umlaufend(_)
+        | Typ::Register { .. }
+        | Typ::Wahrheit
+        | Typ::Nie
+        | Typ::Tabelle(_)
+        | Typ::Verbundname(_)
+        | Typ::Grund(_)
+        | Typ::Gleitkomma(_) => false,
+    }
+}
+
 /// **Lane 194 (W1): which code owns this empty answer?**
 ///
 /// Through names to the operative shape: a named range alias is still a
@@ -484,6 +560,45 @@ fn pruefe_axiom_ruf(
     }
     let mut besucht = std::collections::HashSet::new();
     if !antwort_leer(u, &ax.modul, &t, fns, &mut besucht) {
+        // **Lane 196 (`N316`): same representation, different signature.** The
+        // answer is inhabited by `M142`'s coarse reading (widths), but no
+        // runtime function has EXACTLY it (ranges) -- and `antwortB` decides
+        // `fnptr m` by exact signature identity (`D.sig f = m`). Reports and
+        // does not return, like the empty half below.
+        if let Typ::FnPtr(v) = ohne_namen(&t) {
+            if fns.iter().any(|f| fn_gestalt_passt(f, v))
+                && !fns.iter().any(|f| fn_gestalt_genau(f, v))
+            {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N316",
+                        span,
+                        format!(
+                            "`{ziel}` answers `{}` -- a representation some function \
+                             of this unit has, but no function has exactly this \
+                             signature, and this call binds no answer",
+                            t.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "a `fnptr` value IS a function of exactly its signature \
+                         (SYNTAX §2): the same machine words in narrower ranges \
+                         are a different signature, and `antwortB` compares \
+                         `D.sig` exactly",
+                    )
+                    .mit_notiz(
+                        "the declaration is false (no answer can meet it), so the C \
+                         continuation runs outside every assumption and is covered \
+                         by nothing, like a call after `Q := false`",
+                    )
+                    .mit_notiz(
+                        "the honest form is `-> never`: a declared \"does not \
+                         return\" (`_Noreturn`), where the continuation is \
+                         unreachable in the C as in G",
+                    ),
+                );
+            }
+        }
         return;
     }
     let code = leere_code(&t).unwrap_or("N313");
@@ -8701,6 +8816,60 @@ mod w1_proben {
              }\n",
         );
         assert!(n31x(&f).is_empty(), "inhabited axiom answer must draw no N31x: {f:?}");
+    }
+
+    /// Must-fall (`N316`, lane 196): an axiom answering a `fn(...)` the unit
+    /// has by representation but not EXACTLY -- same machine words, narrower
+    /// ranges. `N312` stays silent (the C prototype matches); `antwortB`
+    /// compares `D.sig` exactly, so no loaded image can place this answer.
+    #[test]
+    fn axiom_mit_beinahe_zeiger_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::w1_beinahe {\n\
+             impl fn arm(x : u32 in 0 .. 10) -> u32 effects { pure } costs <= 2 ops { return x; }\n\
+             axiom hol() -> fn(u32 in 0 .. 5) -> u32 effects { pure } costs <= 2 ops effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N316"], "near-miss pointer answer must fall once: {f:?}");
+    }
+
+    /// Must-pass twin: the range-exact function inhabits the answer -- no
+    /// `N31x` at all (the `H021`/`K003` beside it are the graph's and the
+    /// costs', not this lane's).
+    #[test]
+    fn bereichsgenauer_zeiger_bleibt_stumm() {
+        let f = fehler(
+            "module probe::w1_genau {\n\
+             impl fn arm(x : u32 in 0 .. 5) -> u32 effects { pure } costs <= 2 ops { return x; }\n\
+             axiom hol() -> fn(u32 in 0 .. 5) -> u32 effects { pure } costs <= 2 ops effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert!(n31x(&f).is_empty(), "exact pointer answer must draw no N31x: {f:?}");
+    }
+
+    /// Must-fall twin: the orphan (no representation at all) stays `N312`'s
+    /// alone -- `N316` fires only where the prototype matches.
+    #[test]
+    fn verwaister_zeiger_bleibt_ohne_n316() {
+        let f = fehler(
+            "module probe::w1_waise {\n\
+             impl fn arm(x : u32) -> u32 effects { pure } costs <= 2 ops { return x; }\n\
+             axiom hol() -> fn(u32) -> u64 effects { pure } costs <= 2 ops effects { pure } unfalsifiable \"probe\";\n\
+             impl fn f() -> u32 effects { pure } costs <= 8 ops {\n\
+                 let p = hol();\n\
+                 return 1;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(n31x(&f), vec!["N312"], "orphaned pointer stays N312 alone: {f:?}");
     }
 
     /// Must-pass: a normal `ok | err` syscall -- value type inhabited, the
