@@ -271,6 +271,12 @@ programs): sieve totals (a) 2, (b) `lean-g` 10, (c) `certificate` 15, (d) C form
 generic `KCert` printed and pasted 2; first stopping sieve of the 109 open programs: (a)
 elaboration 89, (a) parser 20.
 
+> **Re-measured 2026-09-15** over **113** tracked programs, after the exporter lane
+> (`messung/muse/OPUS-BERICHT-EXPORT.md`): **(a) 2, (b) 12, (c) 15, (d) 60, (e) 2**; first
+> stopping sieve of the 111 open programs: (a) elaboration 91, (a) parser 20.
+> **CHAIN COUNT 2 of 113 — unchanged, and it could not change**: sieve (a) binds, and this
+> lane touched only sieve (b). *An export is not a chain.*
+
 **A finding on the way (the census, not the chain).** The emitter now writes 104's call as
 `(void)lies(k, i);` (the quote in `CFormenZeuge.lean` of 2026-09-13 reads `lies(k, i);`).
 `pruefe-cformen.py` read the `(void)` parenthesis as the argument list and `lies(` as a call
@@ -412,10 +418,16 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   `OFFEN.md` O14, `SATZKARTE.md` §33). `alloc`/`reset` had no `Stmt` constructor at all; since
   `Grammatik/ArenaZucker.lean` they are sugar over `Block.narrow` + `Stmt.assignSlot` +
   `Stmt.assignGlob` over a table of `count = hi` slots and a `used` global -- the pair the
-  emitter itself writes. **What is missing is `lean_g.rs`**, which refuses an arena declaration
-  BY NAME instead of synthesising that pair, so `beispiele/98` and `99` stop at sieve (b) and
-  are counted as such. *Because the form is sugar, `gabbro_ziel` already covers an arena
-  program: no new `Stmt` case and no re-proof.*
+  emitter itself writes. ~~**What is missing is `lean_g.rs`**, which refuses an arena declaration
+  BY NAME instead of synthesising that pair~~ — **the exporter builds the pair since
+  2026-09-15** (`messung/muse/OPUS-BERICHT-EXPORT.md`): a table of `count = hi` with one field,
+  a global `A_used : int 0 hi`, `def gArena_A : ArenaForm gD`, and `Stmt.arenaReset` /
+  `Block.arenaAlloc` / the slot read `A[i]`; a probe with all four forms exports and compiles
+  under Lean. **`beispiele/98` and `99` still stop at sieve (b)**, at two statement SHAPES that
+  are refused by name: an `alloc` without `else` (the model form always carries a full-arena
+  branch and the emitted C carries none), and an `alloc` at the top level of a body (a `Block`
+  former where an `Endblock` is wanted — the same wall `let x = f()` hits). *Because the form is
+  sugar, `gabbro_ziel` already covers an arena program: no new `Stmt` case and no re-proof.*
 - **The unit's data.** `Kette.E`'s lock invariants, axiom ensures, declared starts and initial
   memory are written next to the source by the chain's author (the exporter fills none of
   them); a wrong `starts` is a different program, visible in the chain file.
