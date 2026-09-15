@@ -220,10 +220,24 @@ program predates the merged `wurzelnB` and contradicted it:
 - `Export108.lean` namespace block byte-verbatim vs fresh `gabbro lean-g`
   output (checked with a script, not by eye); `src108` byte-identical to
   `beispiele/108` on disk (checked with a script).
-- NOT run: the Lean build (`lake`/`isabelle` — no toolchain here). The
-  `.lean` edits are pins, not proofs: `src108`/`toks108`/`items108` are
-  self-consistent (`lex108` is `by decide` over comment-free tokens, and
-  only comment lines were added), the `Export108` checks are `by decide`
-  over the verbatim export, and the `ZeugnisKorpus` fix is forced (the old
-  line names constructors that no longer exist). Full acceptance
-  (`abnahme.py`) is left to a tree with a Lean toolchain.
+- Lean, measured on this tree (toolchain present: elan + lake; `free -g`
+  beside the runs: 110 total, 78–80 available):
+  - `./lean-probe Export108.lean`: exit 0, 0 errors.
+  - `./lean-probe ZeugnisKorpus.lean`, first run: 2 errors (the read_c
+    cert at lines 375/379) — a STALE-OLEAN artifact, not a finding: the
+    tree's `Export108.olean` (14:59) predated the lane's source edit
+    (21:28), so the probe measured new pins against the old declaration
+    (scratch `#eval`s confirmed it: `darf` false, `braucht = [L]` — the
+    old world). Same class as the `rsync -a`/cargo staleness: a tool
+    measuring a mixture of new source and old artifact. Resolved by
+    rebuilding, not by editing.
+  - `./lean-bau` (`lake build`, full `grammatik/`): exit 0, 0 errors,
+    "Build completed successfully (206 jobs)" — this rebuilds Export108,
+    UebersetzeAllg2 (whose direct probe twice exceeded the 10-minute
+    timeout and is covered by the build instead: `lex108`, `parse108`,
+    `elab108`, `kette108`, `lowerAllg108*` all appear in the build's
+    axiom-dependency list) and ZeugnisKorpus with the fixed pin.
+  - `./lean-probe ZeugnisKorpus.lean` after the build: exit 0, 0 errors.
+- Full acceptance (`abnahme.py`, multi-hour) not run — beyond this lane's
+  scope; the lane asked for `lean-probe`, `lean-bau`, `cargo-pruef`, and
+  emission only if the emitter was touched (it was not).
