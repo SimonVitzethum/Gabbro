@@ -3330,7 +3330,13 @@ MARKE_EMIT=114
 # concurrent WRITE is clean (`g_a` writes `T`, `g_b` reads `T`, no lock). That is a
 # read-write data race; the old rule compared write sets only. The flagship's footprint
 # rule `N291` (lane 175) refuses it. The probe's own header predicted this day.
-MARKE_EMIT_M=132
+# **132 -> 141 on 2026-09-15 (merge review of the write census).** The lane that measured
+# what CANNOT be written in Gabbro committed its 22 probe files under `messung/schreibprobe/`
+# -- nine of them emit, and the guardian counted them at once ("the good case, and a finding
+# nonetheless"). Re-measured by the merger, not by the lane: 141 of 141 emitting files under
+# `messung/` compile, 275 of 275 in the whole tree, and `clang` takes every one that `cc`
+# takes. *A probe that shows a refusal is still a file, and a file that emits is counted.*
+MARKE_EMIT_M=141
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
