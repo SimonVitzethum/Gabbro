@@ -2944,8 +2944,8 @@ release check fails); `kP` keeps `mP`'s stronger `ensures`.
 `sim_lauf`, `rennfreiC_aus_sim`, `schluss_b`, `ev_zform_blk`: `propext`, `Classical.choice`,
 `Quot.sound`; `kP_akzeptiert`: `propext`, `Quot.sound`; `c124_direkt`: `propext`;
 `sperrAbstrakt_rahmen`, `sperrAbstrakt_nur_eigen`: none. No `sorry`, no new `axiom`, no
-`native_decide`. Built on `ki-pc-fisch-101` (`~/gabbro-opus-nb/`), `lake build
-Grammatik.Schlusssatz124`, green.
+`native_decide`. Built on `ki-pc-fisch-101` (`~/gabbro-opus-nb/`): full `lake build`, 233
+jobs, green, no `sorryAx` in the log.
 
 ### 26.6 What remains
 
@@ -2953,8 +2953,9 @@ Region serialisability (inside `DRFSC`; needs a fine-grained C semantics); footp
 soundness in general (`FussTreu`, needs an access-instrumented `Exec`; key lemma
 `ev_zform_blk` proved); the ticket lock refining `sperrAbstrakt`; a checker for concurrent
 correspondence certificates (T2 for stage (b)); the exporter for 124 and parse fidelity; the
-emitted text as data (no C parser); lock calls inside loops, branches or callees, and atomics,
-volatile and foreign calls in blocks. The chain count stays 1 (PLAN §7.6).
+emitted text as data (no C parser); lock calls inside loops, branches or callees, volatile and
+foreign calls in blocks, and atomics as a source of ordering (an atomic access counts like a
+plain one in `RennfreiC`, and no A10 ordering yet). The chain count stays 1 (PLAN §7.6).
 
 (End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §§1-10 history above.)
 

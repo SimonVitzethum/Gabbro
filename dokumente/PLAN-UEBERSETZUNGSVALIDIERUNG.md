@@ -399,9 +399,15 @@ was 0 at the start.
 6. **The emitted text as data.** `c124` transcribes the printed C by hand (the joint A2 of
    stage (a); a Lean C parser would replace it).
 7. **Semantics extensions.** A lock call is a step only at the top of a root's continuation,
-   not inside a loop, a branch or a callee; foreign calls other than the lock primitive,
-   volatile and atomic accesses are outside the direct fragment; a root whose block never
-   ends (a `forever` loop) has no step, so the statement says nothing about it.
+   not inside a loop, a branch or a callee; foreign calls other than the lock primitive and
+   volatile accesses are outside the direct fragment; a root whose block never ends (a
+   `forever` loop) has no step, so the statement says nothing about it. **Atomics**: a
+   top-level atomic statement is its own SC step (a block of one `Exec` rule), but an atomic
+   access is neither exempt from `RennfreiC` (it counts like a plain access: conservative) nor
+   a source of ordering (`GeordnetC` orders through locks only), and `SegPasst` cannot cover
+   an `atomic` carrier -- the release/acquire ordering of `publish`/`awaits` (A10) is the next
+   extension, and until then a program whose threads meet only through atomics is outside
+   what stage (b) certifies.
 
 **The chain count stays 1.** 124 closes stage (b), but it does not pass columns (a) (Lean
 parse), (b) (`lean-g`) and (e) (a printed, Lean-checked correspondence certificate) of

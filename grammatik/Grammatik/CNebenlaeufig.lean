@@ -73,6 +73,20 @@
       goal theorem's conclusion `Ziel` holds.
   The program-specific part (the certificate for one corpus program, its
   witness) is `Schlusssatz124.lean`.
+
+  CUTS (PLAN §7.6)
+    * Atomics: a top-level atomic statement is its own SC step (a block of
+      one `Exec` rule), but an atomic access is neither exempt from
+      `RennfreiC` (it counts like a plain one: conservative) nor a source of
+      ordering (`GeordnetC` orders through locks only), and `SegPasst` cannot
+      cover an `atomic` carrier; a program racing only on atomics is
+      therefore outside what this file can certify. Volatile and foreign
+      calls other than the lock primitive are outside the direct fragment.
+    * A lock call is a step only at the top of a root's continuation.
+    * Stack objects of different threads share their numbering (frames are
+      numbered by call depth, `CallAt`); the direct fragment has none.
+    * A block whose `Exec` never ends (a `forever` loop) has no step: the
+      statement then says nothing about that thread from there on.
 -/
 import Grammatik.CFormenDet
 import Grammatik.Zielsatz.Beweis
@@ -324,9 +338,11 @@ never held in locals, never loaded from memory; no volatile, atomic or
 foreign access) every load and store of an executed block hits an object of
 its footprint -- the pointer an expression computes lies in an object it
 names (`ev_zform_blk`), and every load or store of the fragment goes through
-such an expression. That is why race freedom over these footprints
-(`RennfreiC`) is at least as strong as the C11 notion over single accesses:
-a write counts even when it stores the value already there. -/
+such an expression. That is the argument that race freedom over these
+footprints (`RennfreiC`) is at least as strong as the C11 notion over single
+accesses (a write counts even when it stores the value already there); its
+key lemma is `ev_zform_blk`, and the full statement over an
+access-instrumented `Exec` is open (PLAN §7.6 item 2). -/
 
 /-- The objects an expression names. -/
 def CX.obj : CX → List CBlk
