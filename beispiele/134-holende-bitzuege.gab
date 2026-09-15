@@ -1,0 +1,114 @@
+-- 134 -- **The three `exchange update` bodies that are ONE instruction.**
+--
+-- `SPRACHE.md` Part III §1 promises `atomic_fetch_*` where an `update` body
+-- corresponds to a primitive, and the bounded CAS loop otherwise. Until
+-- 2026-09-15 the emitter had only the loop -- lane 201 measured it on the
+-- runtime's own ticket lock. This file is the other half: `t | m`, `t & m`
+-- and `t ^ m` lower to `atomic_fetch_or/and/xor_explicit`, one wait-free
+-- instruction each, no bound and no exit.
+--
+-- **The clauses stay written even so.** `bounded 8 ops on_exceeded aufgegeben`
+-- is still demanded by the emitter, and that is deliberate: the lowering lost
+-- the clauses' CONSEQUENCE (nothing can exceed a bound it never loops on),
+-- not the obligation. A construct that drops its own clauses when the
+-- generator happens to find a shortcut would make the shortcut a language
+-- rule.
+--
+-- **What the arithmetic forms do here is nothing, and that is the finding.**
+-- `t + 1` is not written below because it cannot be: an `update` body without
+-- a side condition answers in the atomic's own type for every value the
+-- atomic holds, and a checked `+1` shifts the interval by one. The saturating
+-- shape (`beispiele/05`, `41`, `42`) keeps its loop, and so does the ticket
+-- draw in `laufzeit/sperre.gab` -- see `messung/muse/OPUS-BERICHT-FETCHADD.md`.
+module beispiel134 {
+
+-- One word of flags, drawn and published by nobody: the ordering word is the
+-- whole visibility statement, and `relaxed` says the bits carry no payload.
+atomic FAHNEN : u32 relaxed;
+
+-- The same bits under a release/acquire declaration. One read-modify-write
+-- instruction cannot spend a store order and a load order separately, so the
+-- emitted `atomic_fetch_*` carries their join (`memory_order_acq_rel`).
+atomic TOR : u32 acquire;
+
+const BEREIT  : u32 = 1;
+const OHNE_BEREIT : u32 = 4294967294;
+const GEPRUEFT : u32 = 8;
+
+-- The bound's exit. It is never called out of a fetch form -- a single
+-- instruction never loses a race -- and it stays declared because the clause
+-- that names it stays written.
+extern fn aufgegeben() -> never effects { diverges };
+
+-- `set`: turn the ready bit on, answer whether it was already on.
+impl fn setze_bereit() -> bool
+    effects { reads FAHNEN, writes FAHNEN }
+    costs   <= 16 ops
+{
+    let alt : u32 = FAHNEN exchange update(t)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return t | BEREIT; } publishes nothing;
+    return (alt & BEREIT) == BEREIT;
+}
+
+-- `clear`: turn it off again, with the complement as the mask. The mask is a
+-- `const`, so it rides out as its NAME and the `#define` stands beside it.
+impl fn loesche_bereit() -> bool
+    effects { reads FAHNEN, writes FAHNEN }
+    costs   <= 16 ops
+{
+    let alt : u32 = FAHNEN exchange update(t)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return t & OHNE_BEREIT; } publishes nothing;
+    return (alt & BEREIT) == BEREIT;
+}
+
+-- `toggle`: the third form, and the one C11 names `atomic_fetch_xor`.
+impl fn kippe_geprueft() -> bool
+    effects { reads FAHNEN, writes FAHNEN }
+    costs   <= 16 ops
+{
+    let alt : u32 = FAHNEN exchange update(t)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return t ^ GEPRUEFT; } publishes nothing;
+    return (alt & GEPRUEFT) == GEPRUEFT;
+}
+
+-- The ordered declaration: the same shape, one order instead of two.
+impl fn oeffne_tor() -> bool
+    effects { reads TOR, writes TOR }
+    costs   <= 16 ops
+{
+    let alt : u32 = TOR exchange update(t)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return t | BEREIT; } publishes nothing;
+    return (alt & BEREIT) == BEREIT;
+}
+
+-- **And the counter-example, in the same unit so the two stand side by side.**
+-- The body saturates, so it is not one operation and no single instruction
+-- computes it: this one keeps its bounded CAS loop, its pass counter and its
+-- exit at 8 passes.
+atomic ANFRAGEN : u32 in 0 .. 1000 relaxed;
+
+impl fn zaehle_anfrage() -> u32 in 0 .. 1000
+    effects { reads ANFRAGEN, writes ANFRAGEN }
+    costs   <= 64 ops
+{
+    let alt : u32 in 0 .. 1000 = ANFRAGEN exchange update(v)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    {
+        if v < 1000 {
+            return v + 1;
+        }
+        return v;
+    } publishes nothing;
+    return alt;
+}
+
+}
