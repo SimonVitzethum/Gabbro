@@ -241,3 +241,20 @@ program predates the merged `wurzelnB` and contradicted it:
 - Full acceptance (`abnahme.py`, multi-hour) not run — beyond this lane's
   scope; the lane asked for `lean-probe`, `lean-bau`, `cargo-pruef`, and
   emission only if the emitter was touched (it was not).
+- Text guardians, triaged 2026-09-15 (all redness pre-existing, none from
+  this lane):
+  - `pruefe-kennungen.py`: ALL PASS — `N300`–`N304` each belong to exactly
+    one file (`fusswache2.rs`).
+  - `pruefe-syntax.sh`: SYNTAX section ALL PASS (covers the reworked 108
+    and gifts 964–967); the Warnungen section lists 8 warnings, all in
+    `certstmt.rs` / `referenz.rs` tests — files this lane never touched.
+  - `pruefe-zahlen.py`: 29 findings, none lane-caused: the vergabe 84→88
+    drift contains none of gifts 964–967 (`--liste` confirms); the
+    blindstellen poison-only set is byte-identical base-vs-lane (24 cells);
+    the kennungen booking 381→396 was already red at base (391 without
+    this lane's +5).
+  - `pruefe-todo.py`: EBNF/Kennzahlen/fett drift (170→177, 89→85,
+    179→180) — grammar/instrument lanes, not this one.
+  - `pruefe-englisch.py`: stops in Quellsprache (7892→7940 ratsche); the
+    lane's diff adds zero German comment lines (scanned), and the listed
+    German pieces in `saetze.rs` are all pre-existing lines.
