@@ -67,8 +67,10 @@ on 2026-09-13) pass the WHOLE chain: Lean parse of the source → elaboration to
 certificate accepted → correspondence certificate of the emitted C accepted. It replaces the
 per-pillar numbers as the headline; the per-pillar numbers stay as diagnostics. **On 2026-09-13
 it is 0** (T2 does not exist yet). **On 2026-09-14 it is 1**: `beispiele/104`, theorem
-`schlusssatz_104` (§6). A guardian prints it; it only ever counts programs whose
-chain Lean actually checked.
+`schlusssatz_104` (§6.4). **On 2026-09-15 it is 2 of 111**: `beispiele/104` and `beispiele/108`,
+each a Lean-checked instance of the GENERIC closing theorem `schlusssatz` (§6). A guardian prints
+it; since 2026-09-15 it counts a chain as closed only for a program with a Lean-checked instance
+of the generic theorem (`instrumente/zaehle-kette.py`).
 
 1. **Close ONE chain first: T2 minimal, for `beispiele/104`.** The correspondence certificate
    (`corrcert.rs` print format) and its Lean rechecker, restricted to the forms 104's emitted C
@@ -149,11 +151,120 @@ The costs of the Opus agent for the memory model are on the Claude account and n
   program every real execution has the observation of an SC interleaving of synchronisation-free
   blocks. Its hypothesis, race freedom, is PROVED from machine G (`rennfreiC_aus_sim`).
 
-## 6. Chain count: 1 -- beispiele/104, theorem schlusssatz_104
+## 6. Chain count: 2 -- beispiele/104 and beispiele/108, theorem schlusssatz (generic)
 
-*Added 2026-09-14. File: `grammatik/Grammatik/Schlusssatz104.lean`. Stage (a) of §3 item 2,
-for one program. Axioms of every theorem named here: `propext`, `Classical.choice`,
-`Quot.sound`; no `sorry`, no `native_decide`, no new `axiom`.*
+*Added 2026-09-15. Stage (a) of §3 item 2, GENERIC: one theorem for every single-threaded
+program whose chain data check. Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (T2
+proper), `Schlusssatz.lean` (the theorem), `Kette104.lean` + `Kette104Satz.lean` and
+`Kette108.lean` (the two chains), `SchlusssatzZeuge.lean` (witnesses). Axioms of every theorem
+named here: `propext`, `Classical.choice`, `Quot.sound` (`korrOk_faellt`: `propext`,
+`Quot.sound`); no `sorry`, no `native_decide`, no new `axiom`. `lake build` of the whole
+library on `ki-pc-fisch-101`: 236 jobs, green.*
+
+### 6.1 The statement
+
+A CLOSED CHAIN for a source text `src` is a value `K : Kette src` (Schlusssatz.lean) -- every
+field a Lean proposition about the program, or data:
+* `uebersetzt : uebersetzeAllg src = .ok ⟨K.u, K.E.P, K.fs0⟩` -- the GENERIC Lean pipeline
+  (lex, parse, the lane-162 preprocessing, elaborate, the generic lowering `lowerAllg` onto the
+  declaration `declOf u` built from the source) produces the code the rest is about;
+* `E : Einheit (declOf u)` -- the program as the goal theorem's unit (Zielsatz/Spec.lean); its
+  code is the parser's, its lock invariants, axiom ensures, declared starts and initial memory
+  are data read next to the source (the exporter does not fill them, Spec NOT CLAIMED);
+* `akzeptiert : akzeptiert_pruefer.akzeptiert E fs ls cs = true` -- the checker's Bool, (a);
+* `nutzer : NutzerPflicht E` -- the user's logic and start obligation, (b);
+* `EL : EmitLay (declOf u)`, `zert : KCert (declOf u)`, `zertOk : korrOk EL fnNr zert E.P fs =
+  true` -- the emitter's layout and the correspondence certificate, checked (T2).
+
+`schlusssatz (K : Kette src) O hH orc XR hXR bin tief hA1 sp init hA4`, with the NAMED
+hypotheses about the world outside Lean: `hH : HardwareAnnahmen O K.E.Q` (the goal theorem's
+(c)); `hXR : XR.Funktional` (foreign calls of the C side deterministic; the covered forms emit
+none); `hA1 : ∀ f st vs st' rv, bin f st vs st' rv → CallAt K.EL.lay orc XR (kProg K.zert) (tief
+f) (fnNr f) st vs st' rv` (A1 with A2 and A3: every run of the binary's `f` is a run of the C
+semantics of the unit the certificate elaborates to, at the emitter's layout, at the call depth
+its call tree needs); `hA4 : EinFadenStart K.E sp init` (A4 single-threaded: the loader's memory
+is the declared initial memory, every thread but `0` idles in the runtime's root, thread `0`
+runs what the driver calls -- nothing, or one function whose `requires` holds with the driver's
+arguments). It concludes the six parts of the old §6, generically:
+
+1. **Parse fidelity**: `src` translates to `K.E.P`.
+2. **The certificates**: the checker's Bool holds and means `AkzeptiertSpec`; the
+   correspondence certificate checks against `K.E.P`.
+3. **The model judgement**: `NutzerPflicht K.E` (every body at every budget, owed invariants at
+   value and reason exits, the start obligation).
+4. **Every C run**: for every function, call depth `n` and budget, from a C state related to
+   ANY Gabbro world and C arguments related to ANY Gabbro arguments: when the Gabbro call
+   `rufAt K.E.P O passes n f` ends in no model error, the C call has a run and EVERY run of it
+   ends related to the Gabbro outcome (`korrOk_jeder_lauf`: `korrOk_fnCorr` + `exec_det`).
+5. **The machine**: `K.E.P.mitRuhe` (the goal theorem's generic idle root) behaves as `K.E.P`
+   at every depth (`rufAt_mitRuhe` -- the generic `gPB_wie_gP`); on every machine reachable
+   from the single-threaded start, at every budget: `SpurInv`, the contracts at every logged
+   event, the lock invariants, no thread stuck at a `logik` check, progress at a check, the
+   owed invariants at returns, the root function's `ensures` at its completion and no reason
+   exit of it (`einfaden_ziel`, from `ziel_ort_einfaden_ende` -- no machine fact re-derived by
+   hand); and for every start of the goal theorem's runtime shape (the DECLARED starts,
+   concurrently) every leg of `Ziel` (`gabbro_ziel`).
+6. **Every run of the binary**: under `hA1`, from related starts, when the Gabbro call at depth
+   `tief f` ends in no model error, every run of `bin f` ends related to it.
+
+### 6.2 T2 proper: `korrOk` (KorrespondenzAllg.lean)
+
+ONE decidable check for every program: `korrOk EL fnum c P fs` walks every body with its
+printed rows and decides, statement by statement, that the row is the emitted form of the
+statement -- replacing `certOkG`, which compared with 104's rows. Covered: slot stores through a
+pointer or at a named table (`assignDurch`, `assignSlot`), stores to a local (`assignVar`),
+direct calls with their arguments, `let`, `(void)x;`, `return` of an expression or of nothing,
+falling off a `void` body; expressions: literals, locals, widenings, slot loads through a
+pointer or at a named table, table pointers. Every other form makes the Bool `false`.
+Soundness at EVERY call depth (`korrOk_fnCorr`, by induction on the depth through `cCorr_ruf`);
+each row is one existing T4 lemma, the one new lemma is the argument passing of any call
+(`argsTo_of`). The locals map is the EXPORTER'S (Gabbro variable `j` is C local `vm[j]`,
+pointer parameters are ordinary variables); a callee's map must be its C parameter list.
+Seen failing (`korrOk_faellt`): a wrong field offset, a wrong stored value, `refD`'s
+index-fixed map, a missing call row.
+
+**The printer** (`crates/gabbro-check/src/corrlean.rs`) prints a third section, `KCert` with the
+exporter's map (no `MODEL DATUM`), one line per function; named-table loads and stores
+(`T_speicher.slots[i].f`, C block = the table's position) are rows now (they were refusals).
+The two older sections (104-cut `Cert104`, `GRow` bodies with `refD`'s map) are unchanged.
+
+### 6.3 The count: 2 of 111, and where the other 109 stop
+
+| Program | Chain | Witness |
+|---|---|---|
+| `beispiele/104-referenz.gab` | `kette_104` (Kette104.lean, Kette104Satz.lean) -- the REAL text with comments (`src104real`, byte-identical to the file); no declared start; the user's logic re-proved over the parser's declaration (`ein4_R`, `lies4_V`) | `kette_104_zeuge`: `einzahlen(k, 0, 7)` from the zero state through the GENERIC theorem -- the Gabbro call ends `ok` with the slot `0 -> 100`, every C run ends with the C cell at `100` |
+| `beispiele/108-disjoint-start-locks.gab` | `kette_108` (Kette108.lean) -- the real text; its two DECLARED concurrent starts, accepted by the checker | `kette_108_zeuge`: `read_a()` from a memory with `42` returns `42` in Gabbro and EVERY C run returns `42`; `kette_108_nebenlaeufig`: the declared concurrent start meets (d), so part 5's `Ziel` applies |
+
+Where the other 109 tracked programs stop, measured in Lean (`uebersetzeAllg` evaluated over
+every file, `zaehle-kette.py --lean` column (a)): **20 at the parser** (10 `reserved head
+forall`, 4 `wanted ;`, 2 `wanted {`, 2 `@version expected`, 1 `fn without body`, 1 `expression
+expected`) and **89 at elaboration** (69 an item without G form, 12 a unit without a table, 7 the
+type `bool`, 1 a `requires` clause without G form); none at the lowering. So the binding sieve
+is (a), the Lean parser and elaborator (T3): every program past it has a closed chain. The
+later sieves in the order of the chain -- the model's checker and the user's proof (in the
+chain instance), the C-form census (d), the correspondence certificate (e) -- were not reached
+by any other program; their per-program columns stand in the counter's output as diagnostics.
+Measured with `zaehle-kette.py --lean` on `ki-pc-fisch-101` (this branch, 111 tracked
+programs): sieve totals (a) 2, (b) `lean-g` 10, (c) `certificate` 15, (d) C forms 60, (e)
+generic `KCert` printed and pasted 2; first stopping sieve of the 109 open programs: (a)
+elaboration 89, (a) parser 20.
+
+**A finding on the way (the census, not the chain).** The emitter now writes 104's call as
+`(void)lies(k, i);` (the quote in `CFormenZeuge.lean` of 2026-09-13 reads `lies(k, i);`).
+`pruefe-cformen.py` read the `(void)` parenthesis as the argument list and `lies(` as a call
+INSIDE an expression, which put 104 into state (iii) (`expr:call`) and would have kept its
+chain open on a census artefact. Repaired in `classify_exprs` (the cast is stripped before the
+arguments are taken; both spellings are the same C call with its answer discarded, C11
+6.3.2.2, and the same CS node `.call fc args none`); the census stays green, 10 `expr:call`
+occurrences in 5 programs moved out of state (iii), and `zaehle-kette.py`'s speech test now
+plants both a `(void)f(a);` and a call inside a condition. For A2 it means: the hand quote of
+the emitted text is stale in SPELLING (not in meaning) -- one more reason for a Lean C parser.
+
+### 6.4 The by-hand theorem of one program: `schlusssatz_104` (2026-09-14)
+
+*File: `grammatik/Grammatik/Schlusssatz104.lean`, unchanged; it stands beside the generic
+theorem (it speaks about `gP` over `G104_referenz.gD`, the 104-keyed lowering, and carries the
+three-step machine witness). The text below is the 2026-09-14 booking.*
 
 **The statement** (restated 2026-09-14, second round: the named assumptions that are Lean
 propositions are hypotheses, and the `forever` budget is quantified).
@@ -244,6 +355,35 @@ body printer `printEnd104` (104's shapes), the idle root (either the exporter em
 `gDB` becomes a generic declaration extension with a generic renaming), and the per-program
 computations `rufEin_ok`/`rufLies_ok`, which stand in for a general theorem "the
 per-function obligations imply `rufAt` ends `ok`".
+
+*Status of these items on 2026-09-15, after the generic theorem (§6.1-6.3):* the printer prints
+the exporter's map (third section, `KCert`); the chains run on the REAL texts with comments
+(`src104real`, `src108`); the lowering, the correspondence check and the idle root are generic
+(`lowerAllg`, `korrOk`, `P.mitRuhe` with `rufAt_mitRuhe`); `printEnd104` is no longer a link of
+the generic chain -- the model judgement is the checker's Bool `Akzeptiert` plus the user's
+proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
+
+### 6.5 What stays open (generic theorem)
+
+- **Sieve (a) is the binding one.** 109 of 111 programs stop at the Lean parser (20) or
+  elaborator (89) (§6.3). Widening the chain count now means widening T3 -- the `elabU`
+  fragment (tables only, `u32` ranges, writes, calls, a trailing return) and the lowering --
+  and, behind it, the forms `korrOk` covers (§6.2: `if`, `traverse`, compound assignments,
+  globals, `let` of a call, arithmetic are T4 lemmas already, one arm each).
+- **The unit's data.** `Kette.E`'s lock invariants, axiom ensures, declared starts and initial
+  memory are written next to the source by the chain's author (the exporter fills none of
+  them); a wrong `starts` is a different program, visible in the chain file.
+- **The user's logic is per program.** `NutzerPflicht` is proved per chain (104: the argument
+  of `gP_einzahlen_R` again, over the parser's declaration; 108: two returns). That is the
+  goal's intent -- "the user proves only their own logic" -- not a gap; but the chain count
+  moves only with such proofs.
+- **Part 4 is conditional** on the Gabbro call ending in no model error (a failed contract,
+  the call-depth bound `abstieg`, a hardware answer); the model judgement does not yet say
+  that `rufAt` at the call tree's depth ends `ok` -- the two witnesses compute it.
+- **A2 and the rest of A1/A3/A4** stay outside Lean exactly as in §6.4; the emitted TEXT is not
+  parsed in Lean (`kProg` is the certificate's elaboration, not the file's).
+- **The adequacy chain** (one active thread of G against `rufAt`) is not re-instantiated; the
+  concurrent conclusion of part 5 is the MODEL's (`gabbro_ziel`), not the C's -- stage (b).
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 
