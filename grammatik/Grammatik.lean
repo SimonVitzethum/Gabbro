@@ -261,6 +261,8 @@ import Grammatik.Nichtinterferenz.ZeugeMehrfaden
 import Grammatik.CNebenlaeufig
 import Grammatik.Korpus124
 import Grammatik.Schlusssatz124
+import Grammatik.CTicket
+import Grammatik.Schlusssatz124Ticket
 import Grammatik.KorrespondenzAllg
 import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.KorrespondenzBlockZeuge
