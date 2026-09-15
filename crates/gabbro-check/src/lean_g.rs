@@ -78,8 +78,19 @@
 //! the `by unvisited`/`by consuming` run form, the `decreases` witness and
 //! the `touches` clause of a `traverse` (static annotations, like `costs`);
 //! `by ops` on a field (a writer discipline the checker holds);
-//! `mut` on a `let` (reassignments still refuse by name); `concurrent` (all
+//! `mut` on a `let` (reassignments still refuse by name); **`pub`** (visibility
+//! is a rule about a UNIT BOUNDARY, and `Deklaration` has no boundary);
+//! `concurrent` (all
 //! functions travel in `gFs`; which of them start threads is not a G notion).
+//!
+//! > **`pub` joined this list on 2026-09-15, and it had been dropped for longer
+//! > than that.** Measured with a differential over `gabbro lean-g`: a unit with
+//! > `pub const Q` and one with `const Q` export a BYTE-IDENTICAL term. The drop
+//! > was right; naming it is what this ledger is for, and the omission is the
+//! > same class as an `UNCOVERED` grammar form -- *it looked carried on both
+//! > sides.* `section` at a function was the second such cell and is refused by
+//! > name instead (`N320`, `namen.rs`); `section` at a `static` never reaches
+//! > here, because a `static` is `LG001`.
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::kw::Kw;
@@ -2630,6 +2641,10 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");
     out.push_str("-- `traverse` (static annotations, like `costs`); `by ops` on a field\n");
     out.push_str("-- (a writer discipline the checker holds); `mut` on a `let`;\n");
+    out.push_str("-- `pub` (visibility is a unit-boundary rule, and `Deklaration`\n");
+    out.push_str("-- has no boundary -- added 2026-09-15: it was dropped here before\n");
+    out.push_str("-- and named nowhere, which is the one thing this ledger exists\n");
+    out.push_str("-- to prevent);\n");
     out.push_str("-- `concurrent` (all functions travel\n");
     out.push_str("-- in `gFs`; which of them start threads is not a G notion).\n--\n");
     for (ti, t) in model.tables.iter().enumerate() {

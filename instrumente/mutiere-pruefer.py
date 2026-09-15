@@ -1042,6 +1042,18 @@ MUTATIONEN = [
         "D025 -- a `count` over `threads` passes again: an END is not a LENGTH, and "
         "nothing bounds how many entries the walk passes. Probe 693 is the witness.",
     ),
+    # **`N320`, one mutation.** The whole rule is the guard on the field: without it a
+    # `section` at a function passes again, and the clause goes back to reaching NO
+    # register at all -- not the C, not an obligation, not the G program term.
+    Mutation(
+        "section-an-einer-funktion-geht-durch",
+        "namen.rs",
+        "        let Some(t) = &f.section else {",
+        "        let Some(t) = &None::<gabbro_syntax::ast::Textliteral> else {",
+        "N320 -- a `section` at a FUNCTION passes again, and `fndecl.section` falls back "
+        "to `UNCOVERED`: byte-identical C, no obligation, no error naming the word. "
+        "Probe 980 is the witness.",
+    ),
     # **`N054`, one mutation.** The shape half of the feature demand -- the half that needs
     # no declared list. `Has(RDTSCP, XSAVE)` reads as a demand for two features and is one.
     Mutation(

@@ -33,11 +33,13 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## Absagen ohne erkennbaren Grund
 
-- [ ] ~~105~~ ~~108~~ **117 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
+- [ ] ~~105~~ ~~108~~ **117 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen**
+
+      *8 → 9 verdächtig am 2026-09-15 (Opus-Bahn: die Spezifikationshälfte der Grammatikzählung): `N320` — `section` an einer FUNKTION — begründet sich über das ARTEFAKT (`byte-identical C`), und der Wächter hat recht, das zu sagen. **Hier ist das der Satz und kein Ausrutscher:** der ganze Inhalt der Regel ist, dass die Klausel in KEIN Register gelangt — nicht ins C, nicht in eine Pflicht, nicht in den G-Programmterm —, und eine Begründung aus der Zusage wäre hier die unehrliche. Die Zahl wandert ohne Streichung, weil das Muster `Zahl + "sind tragend, " + Zahl` keine verträgt.* (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
 
 ## Absagen, deren Text den tragenden Grund nennt / Absagen, die sich ueber die DARSTELLUNG begruenden
 
-      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 143 sind tragend, 8 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 143 sind tragend, 9 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
 
 ## Item-Arten, die ein Pass anfasst
 

@@ -268,10 +268,42 @@ def _in_ruecken(text):
     return aus
 
 
+def _in_ruecken_je(texte):
+    """The same, but PER TEXT -- and that is not a refactoring.
+
+    **Joining first and pairing afterwards lets ONE unbalanced text scramble every
+    text behind it.** Measured 2026-09-15: a single missing closing backtick in
+    `m1.rs` (`M159`, the `rotl`/`rotr` range) shifted the pairing for every file
+    sorted after it -- the register LOST 80 real form words (`arch`, `costs`,
+    `impl`, `pub`, `spec`, `Self`, `consumes`, `floor`, `ensures`, …) and GAINED
+    about 450 PHANTOMS out of the prose between the groups (`the`, `is`, `not`).
+    Both directions are wrong and both were silent: the guardian stayed green,
+    `miss-grammatikdeckung.py` read four `GUARDS` that no rule covers and eleven
+    `UNCOVERED` that a rule does.
+
+    *A register that pairs per text cannot be scrambled by its neighbour* -- and
+    the unbalanced text itself is caught by the sixth direction of the speech test.
+    """
+    aus = set()
+    for t in texte:
+        aus |= _in_ruecken(t)
+    return aus
+
+
+def unpaarige_ruecken(texte):
+    """The diagnostic texts with an ODD number of backticks -- each one a scrambler."""
+    return [t for t in texte if t.count("`") % 2]
+
+
+def absage_texte_roh():
+    """The raw refusal forms of the EMITTER -- `(zeile, text, …)`, for the pairing probe."""
+    return _lade("zaehle-absagen.py", ["x"]).formen()
+
+
 def absageworte():
     """The words the EMITTER names in a refusal."""
     za = _lade("zaehle-absagen.py", ["x"])
-    return _in_ruecken(" ".join(t for _, t, _ in za.formen())), za
+    return _in_ruecken_je([t for _, t, _ in za.formen()]), za
 
 
 def _form(text):
@@ -384,13 +416,19 @@ def herkunft(t, gemessen, erwaehnt):
     return "niemand nennt es"
 
 
-def prueferworte():
-    """The words a CHECKER ERROR names -- every pass but the emitter."""
+def pruefertexte():
+    """Every CHECKER ERROR text -- every pass but the emitter, in file order."""
     texte = []
     for q in sorted(CHECK.glob("*.rs")):
         if q.name != "emit.rs":
             texte += FEHLER.findall(q.read_text())
-    return _in_ruecken(" ".join(texte)), len(texte)
+    return texte
+
+
+def prueferworte():
+    """The words a CHECKER ERROR names -- every pass but the emitter."""
+    texte = pruefertexte()
+    return _in_ruecken_je(texte), len(texte)
 
 
 def volle_emission(korpus, wurzel=None):
@@ -557,7 +595,7 @@ GIFT_GRUND = "limited range"
 
 def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wurzel=None,
                 gemessen=None, erwaehnt=None):
-    """**In FUENF Richtungen, und jede steht fuer eine Behauptung dieses Werkzeugs.**
+    """**In SECHS Richtungen, und jede steht fuer eine Behauptung dieses Werkzeugs.**
 
     * eine kuenstlich ENTFERNTE Absenkung muss die Tafel rot machen,
     * eine kuenstlich ERFUNDENE Grammatikregel auch,
@@ -567,6 +605,12 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
       `MARKE_ALLEIN` eine gelesene Zahl und keine gemessene (2026-08-31),
     * **ein nur ERWAEHNTES Wort darf keine Absage zugeschrieben bekommen** -- die
       Richtung von `W25` (2026-08-31),
+    * **KEIN Diagnosetext darf eine ungerade Zahl Rueckstriche tragen** -- die
+      Richtung von 2026-09-15: ein einziger fehlender Schlussrueckstrich in `m1.rs`
+      verschob die Paarung fuer jede Datei dahinter, und das Wortregister verlor
+      80 echte Formworte und gewann rund 450 Phantome aus der Prosa dazwischen.
+      *Der Waechter blieb dabei gruen* -- er las ja ein Register, das es gab, nur
+      nicht das gemeinte,
     * und ein unveraenderter Lauf darf keines der Woerter nennen.
 
     *Ein Werkzeug, das ueber die Sprache urteilt und selbst ungeprueft ist, ist die
@@ -574,6 +618,18 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
     """
     proben = []
     sauber = tafel(term, gesenkt, absage, pruefer)
+
+    # (g) **THE PAIRING.** It stands FIRST because every other direction reads the
+    #     register it guards: a scrambled register makes the whole table plausible and
+    #     wrong. The two texts are checked apart, because they come from two readers.
+    unpaarig = unpaarige_ruecken(pruefertexte())
+    proben.append(("kein Pruefer-Absagetext traegt eine ungerade Zahl Rueckstriche"
+                   + ("" if not unpaarig else f" -- {len(unpaarig)}: {unpaarig[0][:60]!r}"),
+                   not unpaarig))
+    unpaarig_e = unpaarige_ruecken([t for _, t, _ in absage_texte_roh()])
+    proben.append(("und kein Emitter-Absagetext auch nicht"
+                   + ("" if not unpaarig_e else f" -- {len(unpaarig_e)}: {unpaarig_e[0][:60]!r}"),
+                   not unpaarig_e))
 
     # (a) The REMOVED lowering. It takes a word that is `gesenkt` today -- the first in a
     #     fixed order, so that the probe does not travel with the corpus.
@@ -793,7 +849,7 @@ def main():
     gemessen = gemessene_absagen(korpus)
     erwaehnt = erwaehnungen(za)
 
-    print("== Sprechprobe -- in FUENF Richtungen ==")
+    print("== Sprechprobe -- in SECHS Richtungen ==")
     proben = sprechprobe(term, gesenkt, absage, pruefer,
                          korpus=korpus, uebersetzt=uebersetzt,
                          gemessen=gemessen, erwaehnt=erwaehnt)
