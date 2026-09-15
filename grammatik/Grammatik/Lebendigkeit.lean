@@ -948,12 +948,13 @@ theorem abschnittAktiv_aus (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
     (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x)
     (hHw : HardwareImAbschnitt R) :
     AbschnittAktiv R := by
   intro n u L hu
   have hr := R.erreichbar hr0 n
   have hND := startSpur_nodup_leer init hLeer
-  rcases fortschrittG_aus hO hSt sp init hND hr (hL n) (hB n) u with
+  rcases fortschrittG_aus hO hSt sp init hND hr (hL n) (hB n) hAnt u with
     hF | hW | hHalt | hHalt | hHalt | hHalt | hs
   · have e := fertig_leer (rangInvG_erreichbar hO hSt sp init hND hr u) (hLeer u) hF
     rw [e] at hu
@@ -969,7 +970,8 @@ theorem abschnittAktiv_aus (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     machine G that starts at a reachable machine, under
     * the goal theorem's premises used here -- `GutO` (hardware), `StufenM`
       (checker), starts without signature locks (`AkzeptiertSpec.wurzeln`,
-      idle roots), a complete lock list, and `KeinLogikHaltG` at every machine
+      idle roots), admissible answer sites (`AkzeptiertSpec.antworten`, W1),
+      a complete lock list, and `KeinLogikHaltG` at every machine
       of the run (the conjunct `Ziel.keinLogikHalt`, which `gabbro_ziel`
       supplies at every reachable machine);
     * THE RUNTIME ASSUMPTION `LaufzeitAnnahme R F` (FIFO lock, fairness `F`);
@@ -983,7 +985,7 @@ theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (hls : ∀ L : D.Lock, L ∈ ls)
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
     (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
-    (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : HardwareImAbschnitt R)
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : HardwareImAbschnitt R)
     (hAnw : Anwaerter R Ts)
     (L : D.Lock) (t : Faden) (n0 : Nat) (hA : AnSperre (R.M n0) t L) :
     ∃ j, n0 ≤ j ∧ j < n0 + wartezeit ls Ts h k F L ∧ R.akt j = some t ∧
@@ -995,7 +997,7 @@ theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
       L ∈ offen ((R.M n).faeden f).spur → L ∉ offen ((R.M n).faeden g).spur :=
     fun n => exklusivG hO sp init (startExklusiv_ohne_haelt init hLeer) (R.erreichbar hr0 n)
   exact wartezeit_kern R hO hls hRang hEx hLZ.1 hLZ.2 hH
-    (abschnittAktiv_aus R hO hSt sp init hLeer hr0 hL hB hHw) hAnw L t n0 hA
+    (abschnittAktiv_aus R hO hSt sp init hLeer hr0 hL hB hAnt hHw) hAnw L t n0 hA
 
 end Kern
 

@@ -246,6 +246,7 @@ import Grammatik.Zielsatz.Beweis
 import Grammatik.Zielsatz.Proben
 import Grammatik.EinpassenVoll
 import Grammatik.Zielsatz.ProbenG1
+import Grammatik.Zielsatz.ProbenW1
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt

@@ -704,7 +704,9 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
 
 /-- **A `dann` head**: every block form fires, waits for a lock, or stops
     at its hardware answer; `leave`/`next` find an absorbing continuation
-    (`fOk`). -/
+    (`fOk`). An empty answer type stops the head only at an axiom `-> never`
+    (`nieZurueck`): the head's answer sites are admissible (`hAnt`, from the
+    checker's `antworten` through `kopf_ants`; round-6 finding W1). -/
 theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t)
     (hB : BereichG M t)
@@ -713,7 +715,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (b : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ')
     (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ')
     (hx : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann b k⟩) (hnimmt : k.nimmtAb = true)
-    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) : FortFaden P O passes M t := by
+    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : b.ants.all (stelleC D) = true) :
+    FortFaden P O passes M t := by
   cases b with
   | nil => exact fort_schritt (w_dannLeer rfl k ρ hx)
   | bind e rest => exact fort_schritt (w_dannBind rfl e rest k ρ hx hΛ)
@@ -730,7 +733,10 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v⟩
       · by_cases hleer : AntwortLeer D (D.aerg a)
-        · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+        · -- the checker admits an empty answer type at an axiom only for `-> never` (W1)
+          simp only [Block.ants, List.all_cons, Bool.and_eq_true] at hAnt
+          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx,
+            (stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer⟩
         refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
         show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
@@ -758,7 +764,9 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       · obtain ⟨v, hv, hz⟩ := hex
         exact fort_schritt (w_regLies rfl r hk rest k ρ hx v hv hz hΛ)
       · by_cases hleer : AntwortLeer D (some (D.rtyp r))
-        · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+        · -- the checker refuses a register with an empty type (W1)
+          simp only [Block.ants, List.all_cons, Bool.and_eq_true] at hAnt
+          exact absurd hleer (stelleC_iff.mp hAnt.1)
         refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, fun v hv => ?_, hleer⟩
         cases hz : D.rzusage r v
         · rfl
@@ -767,7 +775,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       cases hv : einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) with
       | none =>
           by_cases hleer : AntwortLeer D (some (D.rtyp r))
-          · exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, hleer⟩
+          · simp only [Block.ants, List.all_cons, Bool.and_eq_true] at hAnt
+            exact absurd hleer (stelleC_iff.mp hAnt.1)
           · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hv, hleer⟩
       | some v =>
           cases hw : wahr? (eval ((M.weltVon t).lese Λ zusage.orte) zusage
@@ -882,11 +891,12 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
 theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hI : FortInvG (M.faeden t)) (hnw : (M.faeden t).kopf.wartend = false)
     (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
-    (hP : PrueftG O passes M t) (hB : BereichG M t) (hR : RangInvG w0 (M.faeden t)) :
+    (hP : PrueftG O passes M t) (hB : BereichG M t) (hR : RangInvG w0 (M.faeden t))
+    (hA : (M.faeden t).kopf.rest.2.2.2.2.aR (stelleC D)) :
     FortFaden P O passes M t := by
   obtain ⟨hk, hb, _, hkt⟩ := hI
   have hnw' : (M.faeden t).kopf.rest.2.2.2.2.wartend = false := hnw
-  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw'
+  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw' hA
   obtain ⟨l, Γ, Λ, ρ, r⟩ := x
   have hΛ : HeldIn Λ (offen (M.faeden t).spur) := hH
   cases r with
@@ -899,7 +909,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
         simp only [GRest.fOk, Bool.and_eq_true]
         intro hk
         exact hk.1.2
-      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ
+      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ hA.1
   | schrumpf k =>
       cases ρ with
       | cons v ρ₀ => exact fort_schritt (w_schrumpf rfl k v ρ₀ hx)
@@ -1033,12 +1043,12 @@ theorem fortschrittG_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Gu
     (hSt : StufenM P) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) {M : RufMaschineG D}
     (hr : RufErreichbarG P O passes (RufStartG P sp init) M) (hL : KeinLogikHaltG O passes M)
-    (hB : ∀ t, BereichG M t) :
+    (hB : ∀ t, BereichG M t) (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) :
     Zielsatz.FortschrittG P O passes M := fun t =>
   fortschritt_faden hO (fortInvG_erreichbar sp init hr t)
     (rufG_nie_wartend P O passes sp init M hr t)
     (fun L hL' => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL') (hL t) (hB t)
-    (rangInvG_erreichbar hO hSt sp init hND hr t)
+    (rangInvG_erreichbar hO hSt sp init hND hr t) (kopf_ants hAnt sp init hr t)
 
 /-- **Progress up to named stops under the premises of the flagship**
     (`ziel_ort_sperre`, whose conclusion supplies `KeinLogikHaltG`), the
@@ -1051,7 +1061,8 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     (hFrag : programmImFragmentG P fs = true) (hFuss : fussSperreB P S fs = true)
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hSt : StufenM P) (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) :
+    (hSt : StufenM P) (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup)
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) :
     ∀ M : RufMaschineG D, RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.FortschrittG P O passes M := fun M hr =>
   fortschrittG_aus hO hSt sp init hND hr
@@ -1060,6 +1071,7 @@ theorem fortschrittG_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
     (bereichG_erreichbarL P O passes Q S (freiB fs) sp init hO hRL hQ hlok hS
       (programmImFragmentS_ok P S hvoll hFrag (fussSperreB_ok hvoll hFuss))
       (fussSperreB_ok hvoll hFuss) (lokOk_frei hO hvoll sp init) hK hStart hSstart hex M hr)
+    hAnt
 
 /-- **Progress up to named stops under the premises of `ziel_ort_mehrfaden`**
     (several active threads with thread-local carriers, every budget), the
@@ -1076,14 +1088,15 @@ theorem fortschrittG_mehrfaden (P : Programm D) (O : Orakel D) (Q : AxEns D)
     (hK : ∀ (passes : Nat) (f : D.Fn), KoerperGutS P passes Q S f) (hStart : StartGut P sp init)
     (hSstart : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
     (hI : ∀ (passes : Nat) (f : D.Fn), InvGutS P passes Q S f)
-    (hSt : StufenM P) (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) :
+    (hSt : StufenM P) (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup)
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) :
     ∀ (passes : Nat) (M : RufMaschineG D), RufErreichbarG P O passes (RufStartG P sp init) M →
       Zielsatz.FortschrittG P O passes M := fun passes M hr =>
   fortschrittG_aus hO hSt sp init hND hr
     (ziel_ort_mehrfaden P O Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel hFuss hK
       hStart hSstart hex hI passes M hr).1.2.2.1
     (bereichG_mehrfaden P O passes Q S fs sp init K hO hRL hQ hlok hS hvoll hFrag hAbg hWurzel
-      hFuss (hK passes) hStart hSstart hex M hr)
+      hFuss (hK passes) hStart hSstart hex M hr) hAnt
 
 /-- Starts without signature locks (the declared starts of `AkzeptiertSpec`
     and every idle start, `Zielsatz.Ruhig`) have a duplicate-free start

@@ -22,6 +22,7 @@
   | `wurzeln`      | `wurzelnB`             | `∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0`           | `hLeer` / `hex`; no reasons at a start (`StartOhneGrund`) |
   | `einzeln`      | `einzelnB`             | `ws.Nodup`                                             | the runtime's exact start is covered (`laufzeit_voll`) |
   | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
+  | `antworten`    | `antwortenB`           | every answer site of every body is an axiom `-> never` or has a non-empty type (`StelleOk`) | `fortschrittG_aus` (the stop `nieZurueck` is an axiom `-> never` only) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no
@@ -38,6 +39,15 @@
   `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
   list as an argument. The call graphs are COMPUTED from it (`reachB`),
   never supplied.
+
+  **Changes of 2026-09-15 (round-6 verdicts, finding W1):**
+  * `antworten` is NEW: no body calls an axiom or reads a register at a declared answer
+    type without a value, except an axiom `-> never` (`antwortenB`, decided exactly by
+    `antwortenB_iff`; emptiness by `antwortB_iff`, EinpassenVoll.lean, over the function
+    list for `fnptr n`). Before, such a site made every run of its body stop at
+    `nieZurueck`, whose reason ("unreachable in the C as in G") holds only for `never`: the C
+    call returns into a continuation nothing covered. Probe: `w1_abgelehnt`
+    (Zielsatz/ProbenW1.lean) -- refused now, accepted by the old conjunction.
 
   **Changes of 2026-09-15 (third Opus verdict):**
   * `renn` no longer exempts publish payloads (P3): two starts writing one
@@ -81,6 +91,7 @@
 -/
 import Grammatik.Zielsatz.Spec
 import Grammatik.RennfreiOrte
+import Grammatik.EinpassenVoll
 
 namespace Gabbro.Grammatik
 
@@ -301,11 +312,23 @@ def wurzelnB (ws : List D.Fn) : Bool :=
 def einzelnB (ws : List D.Fn) : Bool :=
   decide ws.Nodup
 
+/-- **An answer site, decided** (`StelleOk`, AntwortOrte.lean; round-6 finding W1): an axiom
+    whose declared result is `never`, or a site whose declared answer type has a value over
+    the function list `fs` (`antwortB`, EinpassenVoll.lean). -/
+def stelleB (fs : List D.Fn) : D.Ax ⊕ D.Reg → Bool
+  | .inl a => decide (D.aerg a = some .never) || antwortB fs (D.aerg a)
+  | .inr r => antwortB fs (some (D.rtyp r))
+
+/-- **The answer component** (2026-09-15, W1): no body calls an axiom or reads a register at
+    a declared answer type without a value, except an axiom `-> never`. -/
+def antwortenB (P : Programm D) (fs : List D.Fn) : Bool :=
+  fs.all fun f => (P.rumpf f).ants.all (stelleB fs)
+
 /-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
-    sperrOrteB S ls && wurzelnB ws && einzelnB ws && rennB P fs cs ws
+    sperrOrteB S ls && wurzelnB ws && einzelnB ws && rennB P fs cs ws && antwortenB P fs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 
@@ -375,6 +398,29 @@ theorem wurzelnB_iff : wurzelnB (D := D) ws = true ↔ ∀ w ∈ ws, D.haelt w =
   refine forall_congr' fun w => imp_congr_right fun _ => ?_
   simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
 
+omit [DecidableEq D.Fn] in
+theorem stelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (x : D.Ax ⊕ D.Reg) :
+    stelleB fs x = true ↔ StelleOk D x := by
+  cases x with
+  | inl a =>
+      simp only [stelleB, StelleOk, Bool.or_eq_true, decide_eq_true_eq]
+      rw [antwortB_iff hvoll]
+  | inr r =>
+      show antwortB fs (some (D.rtyp r)) = true ↔ ¬ AntwortLeer D (some (D.rtyp r))
+      exact antwortB_iff hvoll _
+
+omit [DecidableEq D.Fn] in
+/-- **The answer component decides its field** (`AkzeptiertSpec.antworten`). -/
+theorem antwortenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
+    antwortenB P fs = true ↔ ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x := by
+  unfold antwortenB
+  constructor
+  · intro h f x hx
+    exact (stelleB_iff hvoll x).mp (List.all_eq_true.mp ((List.all_eq_true.mp h) f (hvoll f)) x hx)
+  · intro h
+    exact List.all_eq_true.mpr fun f _ => List.all_eq_true.mpr fun x hx =>
+      (stelleB_iff hvoll x).mpr (h f x hx)
+
 /-- **`Akzeptiert` decides exactly `AkzeptiertSpec`** (given complete member
     lists). -/
 theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
@@ -383,14 +429,15 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
     exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
       (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, of_decide_eq_true h7,
-      (rennB_iff hvoll hcs).mp h8⟩
+      (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9⟩
   · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
-      wurzelnB_iff.mpr h.wurzeln⟩, decide_eq_true h.einzeln⟩, (rennB_iff hvoll hcs).mpr h.renn⟩
+      wurzelnB_iff.mpr h.wurzeln⟩, decide_eq_true h.einzeln⟩, (rennB_iff hvoll hcs).mpr h.renn⟩,
+      (antwortenB_iff hvoll).mpr h.antworten⟩
 
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
@@ -629,6 +676,7 @@ end Tafel
 #print axioms Gabbro.Grammatik.getrenntW_iff
 #print axioms Gabbro.Grammatik.schreibGetrenntW_iff
 #print axioms Gabbro.Grammatik.rennB_iff
+#print axioms Gabbro.Grammatik.antwortenB_iff
 #print axioms Gabbro.Grammatik.akzeptiert_iff
 #print axioms Gabbro.Grammatik.akzeptiert_pruefer
 #print axioms Gabbro.Grammatik.ruheB_iff

@@ -87,6 +87,12 @@ theorem nicht_haltBenannt {O : Orakel D} {passes : Nat} {M : RufMaschineG D} {t 
 
 /-! ## 2. The reached machine -/
 
+/-- The two-writer program calls no axiom and reads no register: no answer site. -/
+theorem mP_ants : ∀ g, ∀ x ∈ (mP.rumpf g).ants, StelleOk mD x := fun g x hx => by
+  have e : (mP.rumpf g).ants = [] := by cases g <;> rfl
+  rw [e] at hx
+  exact absurd hx List.not_mem_nil
+
 /-- **`fortschritt_zeuge`**: on a machine of the two-writer program reached
     in six steps, `fortschrittG_aus` holds (all its premises are the
     fixture's) and classifies every thread: thread 1 waits for the lock
@@ -119,7 +125,7 @@ theorem fortschritt_zeuge : ∃ M : RufMaschineG mD,
       (mP_zertifiziert 0 Ms hrs).1.1.2.2.1
       (bereichG_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal
         (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
-        (mP_koerper_alle 0) mP_start mSI_start mInit_exklusiv Ms hrs)
+        (mP_koerper_alle 0) mP_start mSI_start mInit_exklusiv Ms hrs) mP_ants
   -- thread 1 waits
   have hW : WartetG Ms 1 :=
     ⟨⟨(), anSperre_von (hs1.trans hz1.1)⟩, fun L _ => ⟨0, by decide, by
