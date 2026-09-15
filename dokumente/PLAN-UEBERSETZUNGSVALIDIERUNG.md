@@ -223,6 +223,25 @@ pointer parameters are ordinary variables); a callee's map must be its C paramet
 Seen failing (`korrOk_faellt`): a wrong field offset, a wrong stored value, `refD`'s
 index-fixed map, a missing call row.
 
+**Widened on 2026-09-15** (`messung/muse/OPUS-BERICHT-KORROK.md`). The check was NARROWER THAN
+ITS OWN STOCK OF PROVED LEMMAS -- `ecorr_add` … `ecorr_shr`, `ecorr_lt` … `ecorr_eq`,
+`ecorr_nicht`, `ecorr_und`, `ecorr_oder`, `ecorr_glob`, `scorr_assignGlob` and the four `Zucker`
+compound assignments were all proved and all fell through `_ => false`. **21 expression arms**
+(`true`/`false`, plain globals, `+ - *`, `/ %` signed and unsigned, `& | ^ << >>`, `< <= ==`
+each also in its swapped C spelling `> >=`, `&& || !`) and **2 statement arms** (`g = e;` on a
+plain file-scope scalar; the compound assignment `x op= e`, which IS `assignVar` of a binary
+expression and elaborates to the same C statement) moved inside, each over an existing
+`ecorr_*`/`scorr_*`. `exOk` now covers **27 of the 42 `Expr` constructors** (was 6), `stOk`
+**5 of the 27 `Stmt` constructors** (was 4). The ONE new lemma is `ecorr_geSwap`, and it is
+`ecorr_cmp` with its operator fact. `KorrespondenzWeitZeuge.lean` carries a positive probe AND a
+PLANTED DEFECT for every arm -- a computation type too narrow for the result, a `>`/`>=` without
+the operand swap, `INT_MIN / -1` not excluded, the wrong local, the wrong global block, an
+`_Atomic` global taken for a plain one -- plus the witness of `ecorr_geSwap` at BOTH answers.
+**The chain count did NOT move**, and could not: sieve (a) binds (§6.3, §6.5). Two things
+measured on the way: `Zucker.gt`/`ge`/`ne` are `lt`/`le`/`nicht ∘ eq`, so `>`/`>=` are row
+shapes of the `lt`/`le` arms and `!=` is NOT the cheap arm §5.3 of the emitter report took it
+for; and the PRINTER is now narrower than the check (`gcx` prints only `+ - *` and `== < <= >`).
+
 **The printer** (`crates/gabbro-check/src/corrlean.rs`) prints a third section, `KCert` with the
 exporter's map (no `MODEL DATUM`), one line per function; named-table loads and stores
 (`T_speicher.slots[i].f`, C block = the table's position) are rows now (they were refusals).
@@ -367,9 +386,28 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
 
 - **Sieve (a) is the binding one.** 109 of 111 programs stop at the Lean parser (20) or
   elaborator (89) (§6.3). Widening the chain count now means widening T3 -- the `elabU`
-  fragment (tables only, `u32` ranges, writes, calls, a trailing return) and the lowering --
-  and, behind it, the forms `korrOk` covers (§6.2: `if`, `traverse`, compound assignments,
-  globals, `let` of a call, arithmetic are T4 lemmas already, one arm each).
+  fragment (tables only, `u32` ranges, writes, calls, a trailing return) and the lowering.
+  *Widening `korrOk` does NOT move the count while (a) binds, and on 2026-09-15 it was
+  measured not to:* 23 arms were added and the count stayed at 2.
+- **What `korrOk` still refuses, after the 2026-09-15 widening** (§6.2), each with its reason
+  rather than a promise:
+  * **`if`/`else` and `traverse`** -- `scorr_ite`/`scorr_traverse` are proved, but both rows
+    carry a ROW LIST and their Gabbro side is a `Block`, which `enOk` never walks. What is
+    missing is a check over `Block`, and it must stay STRUCTURAL, because `korrOk` is settled
+    by `decide` and a well-founded definition does not reduce in the kernel. It can be built
+    WITHOUT a mutual block, by staging: `stOk0` (today's flat arms) → a self-recursive `blOk`
+    over `List GRow` that handles `ite`/`forTrav` itself → `stOk` = `stOk0` plus two arms
+    through `blOk` → `enOk` unchanged.
+  * **`let x = f(…)`** (`bsem_bindCall` proved) is a `Block` constructor, not an `Endblock`
+    one: it cannot occur in a body `korrOk` walks until the item above exists.
+  * **`!=`**, **`(T)(e)` as a C wrapper** (`ecorr_cast` proved) and **`_Atomic` globals**
+    (`ecorr_globAtomar`, `scorr_assignGlobAtomar` proved) -- each named at the site
+    (`KorrespondenzAllg.lean`, CUTS) with the reason it is not one arm.
+  * **Floats** have no `ecorr_*` at all and `CX` has no float operand a `GRow` could carry.
+- **The printer is narrower than the check** since 2026-09-15: `gcx` (`corrlean.rs`) prints
+  only `+ - *` and `== < <= >`, so `/ % & | ^ << >>`, `&& || !`, `true`/`false`, plain globals
+  and `storeGlob` have no printer path. That is Rust work; until it is done those arms are
+  exercised only by the probes.
 - **The unit's data.** `Kette.E`'s lock invariants, axiom ensures, declared starts and initial
   memory are written next to the source by the chain's author (the exporter fills none of
   them); a wrong `starts` is a different program, visible in the chain file.
