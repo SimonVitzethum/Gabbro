@@ -102,6 +102,68 @@ if head -1 "$MSG" | grep -q '^merge:' && [ ! -f "$GITDIR/MERGE_HEAD" ]; then
     echo "  dann die Konfliktloesung neu -- der Zweig traegt alles."
     exit 2
 fi
+# **Der Lean-Riegel: es wird nur committet, was Lean gerade durchgebaut hat.**
+#
+# *Gesetzt am 2026-09-15 auf Wunsch des Ordners.* Ein Merge, der einzeln gruen war und im
+# Zusammentreffen bricht, ist an EINEM Tag zweimal vorgekommen (die Gerätezeilen gegen den
+# Kongruenzbeweis; der Exporter gegen die erzeugten Pflichtdateien). Beide Male hat es NUR
+# der Bau gezeigt -- der Diff sah sauber aus, die Konfliktmarken standen in Dokumenten.
+# *Eine Regel im Kopf ist ein Diktat; eine Regel im Werkzeug ist eine Struktur.*
+#
+# Der Riegel laeuft in ALLEN DREI Umgebungen, in denen dieses Skript benutzt wird, und er
+# sucht sich die passende selbst:
+#   1. Klon einer Bahn  -> `./lean-bau` (die Warteschlange; die Bahn darf `lake` nicht rufen)
+#   2. auf `fisch`      -> `lake build` in `grammatik/`, ueber `lean-slot` wenn vorhanden
+#   3. Orchestrator     -> `grammatik/` per rsync auf `fisch` und dort bauen
+#
+# **Wo KEINE der drei geht, ist das kein gruener Bau, sondern gar keiner** -- dann bricht
+# der Commit ab und nennt den Befehl, der fehlt. Der Ausweg ist benannt und hinterlaesst
+# eine Spur: `GABBRO_OHNE_LEAN="<Grund>" ./commit.sh` traegt den Grund als Zeile in die
+# Nachricht ein. *Ein Ausgang, der im Diff verschwindet, waere die Luecke, gegen die der
+# Riegel steht; einer, der sich selbst aufschreibt, ist einer.*
+lean_riegel() {
+    if [ -n "${GABBRO_OHNE_LEAN:-}" ]; then
+        echo "  Lean-Riegel UMGANGEN: $GABBRO_OHNE_LEAN"
+        printf '\nLean-Bau: NICHT gefahren -- %s\n' "$GABBRO_OHNE_LEAN" >> "$MSG"
+        return 0
+    fi
+    if [ -x "$W/lean-bau" ]; then
+        AUS="$(cd "$W" && ./lean-bau 2>&1)"
+        echo "$AUS" | grep -q "Build completed successfully" && return 0
+        echo "$AUS" | tail -12; return 1
+    fi
+    if command -v lake >/dev/null 2>&1 || [ -x "$HOME/.elan/bin/lake" ]; then
+        LAKE="$(command -v lake || echo "$HOME/.elan/bin/lake")"
+        SLOT="$HOME/gabbro-muse/bin/lean-slot"
+        if [ -x "$SLOT" ]; then AUS="$("$SLOT" bash -c "cd '$W/grammatik' && '$LAKE' build 2>&1")"
+        else AUS="$(cd "$W/grammatik" && "$LAKE" build 2>&1)"; fi
+        echo "$AUS" | grep -q "Build completed successfully" && return 0
+        echo "$AUS" | grep -E "error" | head -8; return 1
+    fi
+    H=ki-pc-fisch-101
+    ssh -o BatchMode=yes -o ConnectTimeout=20 "$H" true 2>/dev/null || {
+        echo "  weder ./lean-bau noch lake hier, und $H antwortet nicht"; return 2; }
+    rsync -rlpgoD --delete --exclude '.lake/' "$W/grammatik/" "$H:gabbro-muse/merge-bau/grammatik/" >/dev/null || return 2
+    AUS="$(ssh -o BatchMode=yes "$H" 'cd ~/gabbro-muse/merge-bau/grammatik && ~/gabbro-muse/bin/lean-slot bash -c "timeout 3000 ~/.elan/bin/lake build 2>&1" | grep -E "error|Build completed" | tail -6')"
+    echo "$AUS" | grep -q "Build completed successfully" && return 0
+    echo "$AUS"; return 1
+}
+# **`set -e` ist hier eine Falle, und zwar meine eigene gewesen:** ein Funktionsaufruf in
+# gewoehnlicher Position bricht das Skript bei Rueckgabe != 0 ab, BEVOR der Wert gelesen
+# wird -- der Riegel haette dann statt seiner Meldung nur einen stummen Ausgang erzeugt.
+# In einer `if`-Bedingung ist `set -e` ausgesetzt; genau darum steht der Aufruf so da.
+echo "  Lean-Riegel: baue grammatik/ ..."
+if lean_riegel; then LR=0; else LR=$?; fi
+if [ $LR = 1 ]; then
+    echo "ABBRUCH: der Lean-Bau ist ROT -- es wird nichts committet."
+    echo "  Ein Commit auf rotem Bau vererbt den Bruch an jeden, der danach misst."
+    exit 2
+elif [ $LR = 2 ]; then
+    echo "ABBRUCH: der Lean-Bau wurde NICHT GEFAHREN -- und das ist kein gruener Bau."
+    echo "  Heilung: auf fisch bauen, oder mit Grund umgehen:"
+    echo "  GABBRO_OHNE_LEAN=\"<warum>\" ./commit.sh"
+    exit 2
+fi
 grep -q "Co-Authored-By" "$MSG" || printf '\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' >> "$MSG"
 git -C "$W" commit -q -F "$MSG" --cleanup=verbatim
 git -C "$W" log -1 --format='%h %s'
