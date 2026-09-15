@@ -3055,5 +3055,68 @@ Sieve (a) (T3) is binding: 20 corpus programs stop at the Lean parser, 89 at the
 conditional on the Gabbro call ending without a model error; A2 and the non-Lean parts of
 A1/A3/A4 stay outside; the adequacy chain and stage (b) are untouched (PLAN §6.5).
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §§1-10 history above.)
+## 28. `korrOk` widened to its own lemma stock — 23 arms, chain count unchanged (2026-09-15)
+
+*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the check and its soundness),
+`grammatik/Grammatik/KorrespondenzWeitZeuge.lean` (new: the fixture, the probes, the witness).
+Report: `messung/muse/OPUS-BERICHT-KORROK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.2, §6.5.*
+
+### 28.1 The finding
+
+**The correspondence check was narrower than the stock of lemmas already proved for it.**
+`ecorr_add` … `ecorr_shr`, `ecorr_lt` … `ecorr_eq`, `ecorr_nicht`, `ecorr_und`, `ecorr_oder`,
+`ecorr_wahr`, `ecorr_falsch`, `ecorr_glob`, `scorr_assignGlob` and the four `Zucker` compound
+assignments all stood in `CFormenI.lean`/`CFormenM.lean`, and all fell through `exOk`'s and
+`stOk`'s `_ => false`. Nothing in the model was missing; the arms were.
+
+### 28.2 What moved inside
+
+**21 expression arms** (`wahr`, `falsch`, `glob` plain, `add`, `sub`, `mul`, `div`, `rem`,
+`sdiv`, `srem`, `band`, `bor`, `bxor`, `shl`, `shr`, `lt`, `le`, `eq`, `und`, `oder`, `nicht`)
+= 23 accepted C node shapes, because `lt` also accepts `.cmp .gt` with the operands swapped and
+`le` also `.cmp .ge`. **2 statement arms**: `assignGlob` against `GRow.storeGlob`, and
+`assignVar` against the additional row `GRow.setOp` (the compound assignments — the same C
+statement, `growRow (.setOp x τc op t ce) = .set x τc (.bin op t (.var x) ce)`).
+
+Coverage: `exOk` 6 → **27 of the 42 `Expr` constructors**; `stOk` 4 → **5 of the 27 `Stmt`
+constructors**.
+
+**The ONE new lemma is `ecorr_geSwap`** — `ExprCorr (.cmp .ge t ca cb) (.le b a)`, i.e. the C
+operator `>=` for the way Gabbro spells `a >= b` (`Zucker.ge a b = le b a`). It is `ecorr_cmp`
+with its operator fact (`fun _ _ => rfl`). No new model reasoning.
+
+**The side conditions are DECIDED, not assumed**: `randOk t l1 h1 l2 h2` (the C computation type
+holds BOTH operand ranges — the signed/unsigned pitfall `-1 < 1u` as a sieve), the result-range
+condition `M104` at `+ - *` and `<<`, and `sgnMin_sound` at `sdiv`/`srem` (unsigned type, or the
+dividend's range starts above the type's minimum — which excludes `INT_MIN / -1`, C11 6.5.5p6).
+
+### 28.3 Seen failing
+
+`KorrespondenzWeitZeuge.lean`: a fixture `wD` (one table of four `u32` slots; a plain global `G`
+and an `_Atomic` `A` at adjacent block numbers; the exporter's map), and for **every** new arm a
+positive probe beside a PLANTED DEFECT — a computation type too narrow for the result, the wrong
+C operator, a `>`/`>=` without the operand swap (the opposite comparison), `INT_MIN / -1` not
+excluded, the wrong local, the wrong global block, the wrong cell type, an `_Atomic` global taken
+for a plain one. 14 probe theorems, all `decide`.
+
+**Witness** `ecorr_geSwap_zeuge`: the new lemma instantiated through `exOk_sound` on a C state
+whose two locals differ, at BOTH answers — `b >= a` gives `1` at `(5, 9)` and `0` at `(9, 5)`.
+
+### 28.4 Axiom record
+
+`exOk_sound`, `stOk_sound`, `enOk_sound`, `argsTo_of`, `korrOk_fnCorr`, `korrOk_jeder_lauf`,
+`ecorr_geSwap`, `ecorr_geSwap_zeuge`: `propext`, `Classical.choice`, `Quot.sound`;
+`ptrOk_sound` and the 14 probes: `propext`, `Quot.sound`. No `sorry`, no `native_decide`, no new
+`axiom`.
+
+### 28.5 The chain count did NOT move
+
+**2, before and after.** Sieve (a) — the Lean parser and elaborator — binds: the corpus programs
+that stop there never reach a certificate, and the two that do (104, 108) were already checked.
+*Arms added and chain count are two numbers and are reported separately.* What `korrOk` still
+refuses, each with its reason, is in PLAN §6.5 and in the file's CUTS; the largest item,
+`if`/`traverse`, needs a check over `Block` that stays STRUCTURAL (a `decide` must reduce in the
+kernel), and the note there says how to build it without a mutual block.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §§1-10 history above.)
 
