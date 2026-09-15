@@ -3462,5 +3462,61 @@ whole library builds: 250 jobs, exit 0. No `sorry`, no `native_decide`, no new `
 declaration -- now BY NAME, naming this file and the repair, instead of through a catch-all --
 so no arena program closes a chain yet. The form exists; the export does not.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §§1-10 history above.)
+## 34. The transfer chain CLOSED on two real programs -- the user's duty, proved, over the exported unit
+
+*Added 2026-09-15 (Opus lane `pflicht`). Files: `Grammatik/GenOblig104.lean` (REGENERATED),
+`Grammatik/Pflicht104.lean` (migrated), `Grammatik/GenOblig108.lean` (new, generated),
+`Grammatik/Pflicht108.lean` (new), imported by `Grammatik.lean`. Guardian:
+`instrumente/pruefe-genlean.py`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md`.*
+
+**What was missing.** Lane 198 made `gabbro lean-g` produce a full `Zielsatz.Einheit gE` and
+`gabbro obligations --g` state `def nutzerPflicht := Zielsatz.NutzerPflicht gE` beside the
+per-program theorem `gP_gabbro` (derived from `gabbro_ziel`, checker premise `by decide`, the
+user's duty an open hypothesis). Nothing proved that hypothesis: `GenOblig104.lean` still held
+the PRE-`Einheit` obligation form, and `Pflicht104.lean` proved duties over names
+(`pflicht`/`pflichtInv`/`startPflicht`/`gP_ziel`) the exporter no longer writes.
+
+**Both obligation files are now the exporter's own output, and the duty is proved for both.**
+
+| Conjunct of `NutzerPflicht E` (`Zielsatz/Spec.lean`) | 104 | 108 |
+|---|---|---|
+| `logik.1` `KoerperGutS` at EVERY budget | `oblig_koerper` (`koerperGutS_ohne` + `koerperGutS_alle`; `einzahlen` by frame reasoning, `lies` by `KoerperGutV`) | `p108_koerper` (both bodies a single `return <slot>`) |
+| `logik.1` `InvGutS` | `oblig_inv` (`invGutS_leer`, `gD.invs = []`) | `p108_inv` (same) |
+| `logik.1` `InvGutGrund` | `oblig_invGrund` (`invGutGrund_ohneGrund`, no reasons) | `p108_invGrund` (same) |
+| `logik.2` `SperrInvLokal S` | `oblig_S_lokal` (lock `M`, invariant `fun _ => true`) | `p108_S_lokal` (no lock exists) |
+| `logik.3` `AxEnsLokal Q` | `oblig_ax_lokal` = `axEnsLokal_wahr` | `p108_ax_lokal` (same) |
+| `start.sperren` | `oblig_start_sperren` | `p108_start_sperren` |
+| `start.req` | `oblig_start_req` -- **VACUOUS**, `gE.starts = []` | `p108_start_req` -- **two declared starts**, `requires` `true` at `gSp0` |
+
+**The closing theorems** are `oblig_ziel` and `p108_ziel`: `Zielsatz.Ziel` at every reachable
+machine, with the exporter's `gP_gabbro` applied and all three of its premises discharged here
+-- the duty (above), `Zielsatz.HardwareAnnahmen` (this declaration has no axiom, register or
+global) and A4 `Zielsatz.Laufzeit` (`laufzeit_initRuhe`, the runtime's own start).
+
+**ZEUGEN.** 104: `oblig_ruf_bewegt` (`einzahlen(k,0,7)` from `gSp0` ends `ok` and moves the
+slot `0 -> 100`) and `oblig_ens_faellt` (the exported `ensures` FAILS on a world that lowers
+the slot -- a duty no world can break would say nothing). 108: `p108_starts_laufen` (thread 0
+runs `read_a`, thread 1 runs `read_c`), `p108_starts_zwei` (the two starts are two different
+functions) and `p108_ruf_liest` (the readers answer slot 0 and slot 1 of the shared table).
+
+**The one finding, and it is about the SOURCE and not repaired by weakening the duty:**
+104 declares no `concurrent` and no `entry`, so the exporter writes `starts := []`, and
+`Zielsatz.Laufzeit gE sp init` then admits ONLY assignments in which every thread runs the
+idle root. `oblig_ziel` is therefore true about an IDLE machine. That is faithful -- 104
+declares no thread -- but it means the concurrency legs of `Ziel` (`rennfrei`, no deadlock,
+`KeinWarteZyklus`) carry no weight on 104. They carry weight on 108, which is why both are
+here. *`beispiele/124` is not a third candidate: it does not export at all (`LG004`).*
+
+**Axioms: the standard three** for every theorem in both files, and `#print axioms
+gabbro_ziel` is unchanged. The whole library builds: 254 jobs, exit 0. No `sorry`, no
+`native_decide`, no new `axiom`.
+
+**The guardian.** `instrumente/pruefe-genlean.py` re-runs `gabbro lean-g` / `gabbro
+obligations --g` on every COMMITTED generated Lean file and compares the WHOLE FILE byte for
+byte. It finds its work by the generator's own first line (`-- GENERATED by \`gabbro …\``),
+so there is no second register beside the tree. Measured: 2 of 2 files byte-identical, 18 582
+bytes; and red on a single changed byte, green again after restoring.
+
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §§1-10 history above.)
 

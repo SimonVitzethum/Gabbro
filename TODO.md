@@ -37,6 +37,13 @@ Each item names its owner (lane or agent) where one is running.
   `gabbro obligations --g` states `NutzerPflicht gE` and derives the per-program theorem from
   `gabbro_ziel`, with the checker premise closed by `decide`. The demonstration covers 104 and
   one concurrent program.
+
+  *2026-09-15, the middle link closed:* the stated duty is now PROVED for both, over the
+  regenerated export — `GenOblig104.lean` + `Pflicht104.lean` (`oblig_nutzer`, `oblig_ziel`)
+  and `GenOblig108.lean` + `Pflicht108.lean` (`p108_nutzer`, `p108_ziel`, two declared
+  starts), standard three axioms, and `instrumente/pruefe-genlean.py` holds both generated
+  files against their generator byte for byte. What is still open here is the WIDTH: 104 and
+  108 are two programs, not the corpus.
 - [ ] **The Rust checker computes the whole Lean checker Bool `Akzeptiert`** — lane 196
   (running; codes N315–N319). It works component by component: the call-graph closure, lock
   floors, `sperrOrte`, `einzeln`, and whatever else has no Rust counterpart yet. The

@@ -231,6 +231,8 @@ import Grammatik.MehrfadenZeuge
 import Grammatik.MehrfadenLauf
 import Grammatik.GenOblig104
 import Grammatik.Pflicht104
+import Grammatik.GenOblig108
+import Grammatik.Pflicht108
 import Grammatik.ProbeD
 import Grammatik.ZielOrtGrund
 import Grammatik.RennfreiOrte

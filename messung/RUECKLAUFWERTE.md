@@ -229,9 +229,9 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
-  ~~52 von 55~~ ~~53 von 58~~ ~~54 von 56~~ ~~54 von 59~~ ~~55 von 60~~ ~~56 von 61~~   ~~58 von 61~~ ~~59 von 64~~ ~~61 von 66~~ **65 von 71** Wächtern können mitten im Lauf
+  ~~52 von 55~~ ~~53 von 58~~ ~~54 von 56~~ ~~54 von 59~~ ~~55 von 60~~ ~~56 von 61~~   ~~58 von 61~~ ~~59 von 64~~ ~~61 von 66~~ ~~65 von 71~~ **66 von 72** Wächtern können mitten im Lauf
   abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ ~~320~~ ~~325~~ ~~333~~ ~~339~~ ~~342~~ ~~346~~ ~~352~~   ~~357~~ ~~365~~ ~~369~~ ~~376~~ **409 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ ~~320~~ ~~325~~ ~~333~~ ~~339~~ ~~342~~ ~~346~~ ~~352~~   ~~357~~ ~~365~~ ~~369~~ ~~376~~ ~~409~~ **414 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
 
   *`61 von 66`/`376` → `65 von 71`/`409` am 2026-09-15, nachgemessen in beiden Bäumen:* der
@@ -240,6 +240,11 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Die vierte ist `pruefe-ctext.py` (die A2-Anheftung gegen `gabbro emit`). **Gebucht wird der
   gemessene Stand, nicht der Anteil dieser Bahn** — eine Zahl, die nur den eigenen Zuwachs
   einträgt, bleibt falsch und sieht gebucht aus.
+
+  *`65 von 71`/`409` → `66 von 72`/`414` am 2026-09-15, gleicher Tag, eine Bahn später:* der
+  neue Wächter ist `pruefe-genlean.py` (die erzeugten Lean-Dateien gegen ihren Erzeuger,
+  byteweise). Nachgemessen mit `pruefe-zahlen.py` gegen einen Wegwerf-Baum auf dem Stand
+  davor — 24 Befunde dort, 26 hier, und genau diese zwei Zeilen waren der Unterschied.
 
   > **Hier standen am 2026-09-03 ZWEI Zeilen über derselben Sache, und beide waren richtig
   > gemessen** — `54 von 56 … 325` und `54 von 59 … 320`, aus zwei Zweigen, die je ihren
