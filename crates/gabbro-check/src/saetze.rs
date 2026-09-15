@@ -2281,6 +2281,39 @@ pub const M1: &[Satz] = &[
                      crates/gabbro-check/tests/variant_konstruktor.rs",
     },
     Satz {
+        name: "m1.leere_antwort",
+        kennungen: &["N310", "N311", "N312", "N313", "N314"],
+        aussage: "An axiom call or binding whose declared answer type has no value is \
+                  refused where it stands (`N310` an empty range, `N311` a reason with \
+                  no cases, `N312` a `fn(...)` no runtime function of the unit has, \
+                  `N313` a sum/record with no inhabitant); so is a register READ at \
+                  an empty answer type (`N314`). The declaration is false -- no answer \
+                  can meet it -- so the continuation runs outside every assumption, \
+                  like a call after `Q := false`; the named stop is `nieZurueck`.",
+        vorbehalt: "An axiom `-> never` stays accepted: the declared \"does not return\" \
+                    (`_Noreturn`), where the continuation is unreachable in the C as in \
+                    G. A procedure axiom (no answer) answers trivially. Stores are not \
+                    reads: a write to an empty register falls at its value, never here. \
+                    Float ranges are never refused here (no sixth code is reserved). \
+                    A `tagged` sum with NO cases is `P035`'s at the parser, not this \
+                    rule's. Calls in contracts and `spec` bodies are not typed by this \
+                    pass; an axiom call there still draws `H021` through the graph. \
+                    Syscalls are kernel traps, not axioms: a normal `ok | err` syscall \
+                    stays accepted.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/972 (N310, binding and boot step), /973 (N311), \
+                      /974 (N312), /975 (N314, register read); N313 (all-empty sum, \
+                      one-empty-field record) and the twins (nullary case, inhabited \
+                      pointer, `-> never` at a boot step, a normal `ok | err` syscall, \
+                      a store) are pinned inline (`w1_proben` in \
+                      crates/gabbro-check/src/m1.rs). Old-vs-new sweep over 870 corpus \
+                      files: zero diffs.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`antwort_leer`, `pruefe_axiom_ruf`, \
+                     `leere_register_lesung`, `leere_boot_antwort`); \
+                     messung/URTEIL-OPUS-2026-09-15d.md §3 (W1), \
+                     messung/URTEIL-MUSE-2026-09-15d.md §2 Table B",
+    },
+    Satz {
         name: "consts.evaluable",
         kennungen: &["K190"],
         aussage: "A `const` initializer, or a const-table element, outside the total, \

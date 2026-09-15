@@ -1,0 +1,22 @@
+-- erwartet: N311
+-- **Lane 194 (`N311`): an axiom call/binding at an empty reason answer.**
+--
+-- `reason Leer` names no cases: the channel carries no value any answer
+-- could take, so binding it binds nothing. The declaration itself parses
+-- (an empty case list is grammatical); what falls is the USE, where the
+-- missing answer would flow. The twin is a one-case reason, which stays
+-- accepted; it is pinned inline (`w1_proben` in `m1.rs` covers the
+-- inhabited direction through the syscall probe).
+module gift973 {
+
+reason Leer {
+}
+
+axiom hol() -> Leer effects { pure } unfalsifiable "probe";
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let x = hol();
+    return 1;
+}
+
+}

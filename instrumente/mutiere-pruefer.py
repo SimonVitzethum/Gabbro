@@ -142,6 +142,43 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- m1.rs: W1, the empty answer (lane 194) -------------------------------------------
+    #
+    # Three twists over the one reader: the range arm goes quiet, the `never`
+    # exemption moves to an uninhabitable shape, and the register read goes
+    # quiet. Each is caught by its own probe -- 972, the `never` twin and 975
+    # (all three also pinned inline in `m1.rs::w1_proben`, which is what the
+    # verification below runs).
+    Mutation(
+        "leere-antwort-bereich-stumm",
+        "m1.rs",
+        "        Typ::Ganzzahl(b) | Typ::Umlaufend(b) => b.ist_leer(),",
+        "        Typ::Ganzzahl(b) | Typ::Umlaufend(b) => false,",
+        "W1 (`N310`) -- an empty range answers again; the axiom call binds "
+        "nothing and no rule names the missing answer",
+    ),
+    Mutation(
+        "leere-antwort-never-faellt",
+        "m1.rs",
+        "    if matches!(t.durchgreifen(), Typ::Nie) {\n"
+        "        return;\n"
+        "    }",
+        "    if matches!(t.durchgreifen(), Typ::Wahrheit) {\n"
+        "        return;\n"
+        "    }",
+        "W1 (the `never` exemption) -- the honest form falls as well; a declared "
+        "\"does not return\" is refused like any other empty answer",
+    ),
+    Mutation(
+        "leere-register-lesung-stumm",
+        "m1.rs",
+        "            if let Typ::Register { bereich, .. } = aktuell.durchgreifen() {\n"
+        "                if bereich.ist_leer() {",
+        "            if let Typ::Register { bereich, .. } = aktuell.durchgreifen() {\n"
+        "                if false && bereich.ist_leer() {",
+        "W1 (`N314`) -- an empty register reads again; the device answers a word "
+        "the declaration excludes and no rule names it",
+    ),
     # -- gruppe.rs: the rank resolved in the wrong module (2026-08-24) --------------------
     #
     # `konst_wert("", …).unwrap_or(0)` -- empty module path, and the failure became a `0`
