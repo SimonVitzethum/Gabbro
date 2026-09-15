@@ -103,11 +103,77 @@ fn refuses_extern_fn() {
     assert_eq!(w.code, "LG001", "{w}");
 }
 
-/// **LG001**: a `static` has no G form.
+/// **A scalar `static` IS a `Glob`** (2026-09-15): the declaration carries
+/// `GGlob`/`gtyp`, the initialiser is the `gSp0` entry, a read is
+/// `Expr.glob`, a write is `Stmt.assignGlob` under the write right off
+/// `effects { writes s }`, and `lock L protects { s }` puts `L` in
+/// `gbraucht s`.
 #[test]
-fn refuses_static() {
-    let w = refuse_of(&einheit("static s : u32 = 1;\n"));
+fn exports_scalar_static() {
+    let text = export("statik.gab", &tree(
+        "module test::statik {\n\
+         table T count 4 { slot { v : u32, } }\n\
+         static mut s : u32 in 0 .. 100 = 7;\n\
+         lock L protects { s } rank 0 held <= 100 ops;\n\
+         impl fn f(x : u32 in 0 .. 100)\n\
+             requires Held(L)\n\
+             ensures  s == x\n\
+             effects  { reads s, writes s }\n\
+             costs    <= 4 ops\n\
+         {\n    s = x;\n}\n\
+         }\n",
+    ))
+    .expect("a scalar static must export");
+    for teil in [
+        "inductive GGlob where",
+        "| s",
+        "gtyp := fun | .s => (.int 0 100)",
+        "gbraucht := fun | .s => [.inl GLock.L]",
+        "ggeteilt := fun | .s => true",
+        "theorem gGDarf_f_s : gdarf gD GGlob.s gL_f",
+        ".assignGlob GGlob.s",
+        "Expr.glob (D := gD) GGlob.s",
+        "(.inr GGlob.s)",
+        // the declared initialiser, not zero
+        "| .s => ⟨7, by decide, by decide⟩",
+    ] {
+        assert!(text.contains(teil), "static export must contain {teil:?}\n{text}");
+    }
+}
+
+/// **LG002**: an ARRAY `static` has no `Glob` form -- a `Glob` carries ONE
+/// `Wert`, not a row -- and it is refused BY NAME, never by a catch-all.
+#[test]
+fn refuses_array_static() {
+    let w = refuse_of(&einheit("static mut s : [u8; 4] = 0;\n"));
+    assert_eq!(w.code, "LG002", "{w}");
+    assert!(w.message.contains("static s"), "must name the static: {w}");
+    assert!(w.message.contains("ONE value"), "must say why: {w}");
+}
+
+/// **LG001**: a `section` at a `static` is a PLACEMENT, and a `Glob` has
+/// none. Before the `Glob` arm this hid behind the blanket `static` refusal.
+#[test]
+fn refuses_static_with_section() {
+    let w = refuse_of(&einheit("static mut s : u32 = 1 section \".data\";\n"));
     assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("section"), "must name the cause: {w}");
+}
+
+/// **LG004**: a write to a global the `effects` do not name has no write
+/// right; it is refused here rather than left to a failing `by decide`.
+#[test]
+fn refuses_unowned_global_write() {
+    let w = refuse_of(
+        "module test::statik2 {\n\
+         table T count 4 { slot { v : u32, } }\n\
+         static mut s : u32 in 0 .. 100 = 0;\n\
+         impl fn f() effects { reads s } costs <= 4 ops\n\
+         {\n    s = 1;\n}\n\
+         }\n",
+    );
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("global s"), "must name the global: {w}");
 }
 
 /// **LG001**: `locks L` in the effects without `requires Held(L)` would need
