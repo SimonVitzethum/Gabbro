@@ -14,7 +14,7 @@
     `0x3FD3333333333334` (0.30000000000000004) in the global `G`;
   * `lauf01_ueber03`: the same sum with the declared range `0 .. 3/10`
     is OUT of range (`0.30000000000000004 > 0.3`, both as doubles), and
-    the step takes the `hardware ieee` outcome -- the range check bites on
+    the step takes the `logik bereich` outcome -- the range check bites on
     the last ulp;
   * `lauf01_vergleich`: `0.1 + 0.2 < 0.3` is FALSE and `0.3 < 0.1 + 0.2`
     TRUE (the comparisons of the model, `Expr.fllt`);
@@ -23,7 +23,7 @@
   * `roh_trunc`: a float written to a register is truncated toward zero
     (`gleitRoh`, the meaning the `Float` model's `toInt64` had);
   * `laufDurchNull`: `1 / 0` is infinite, not finite, and falls into the
-    range check's failure branch (`hardware ieee`) -- floats stay FINITE.
+    range check's failure branch (`logik bereich`) -- floats stay FINITE.
 -/
 import Grammatik.Semantik
 
@@ -125,9 +125,10 @@ def gzGespeichert {Γ : Ctx} : Ausgang gzV false Γ → Option Nat
   | .ok σ _ => some (zuBits f64 (σ.globs ()).x)
   | _ => none
 
-/-- `true` exactly for the `hardware ieee` outcome. -/
+/-- `true` exactly for the out-of-range outcome, `logik bereich` (it was `hardware ieee`
+    until 2026-09-15, verdict F1: the kernel IEEE model decides it, no oracle). -/
 def gzIeee {Γ : Ctx} : Ausgang gzV false Γ → Bool
-  | .hardware .ieee => true
+  | .logik .bereich => true
   | _ => false
 
 /-! ## 2. `0.1 + 0.2`, range-checked and stored -/
@@ -157,7 +158,7 @@ def gzSummeEng : Block gzD gzV false [] [] [] :=
 
 /-- **The range check bites on the last ulp**: `0.1 + 0.2` declared in
     `0 .. 3/10` leaves its range (`0x3FD3333333333334 > 0x3FD3333333333333 =
-    (double)0.3`), and the step's outcome is `hardware ieee`. -/
+    (double)0.3`), and the step's outcome is `logik bereich`. -/
 theorem lauf01_ueber03 :
     gzIeee (execBlock gzO 0 gzR gzSummeEng gzWelt .nil) = true := by decide
 
@@ -193,7 +194,7 @@ theorem roh_trunc : gleitRoh (bruch (5, 2)) = 2 ∧ gleitRoh (bruch (-5, 2)) = -
 
 /-- `let e = 1 as f64; let z = 0 as f64; let q = e / z in 0 .. 1` -- the
     integer conversions are range-checked, the quotient is `+inf`, not finite,
-    and the step takes `hardware ieee`. -/
+    and the step takes `logik bereich`. -/
 def gzDurchNull : Block gzD gzV false [] [] [] :=
   .gleitVon (.lit 1) gzLo gzHi
     (.gleitVon (.lit 0) gzLo gzHi

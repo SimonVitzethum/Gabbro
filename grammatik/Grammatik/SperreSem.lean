@@ -344,16 +344,16 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := σ.lese Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitLit q lo hi rest, σ, ρ =>
       match gleitPasst lo hi (bruch q) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitVon e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
-      | Option.none => .hardware .ieee
+      | Option.none => .logik .bereich
   | .gleitNarrow e lo hi sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (eval σ e σ ρ).x with

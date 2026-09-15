@@ -21,7 +21,39 @@
   Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
   carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
 
-  WHAT CHANGED ON 2026-09-15, AND WHY (third Opus verdict, URTEIL-OPUS-2026-09-15.md):
+  WHAT CHANGED ON 2026-09-15 (SECOND ROUND), AND WHY (fourth Opus verdict,
+  URTEIL-OPUS-2026-09-15b.md):
+  * F1 -- a float result outside its declared range ended the body in `Hardware.ieee` for
+    EVERY oracle: the kernel IEEE model (`gleitRechne`, Annex F) decides it from the
+    program's own values, no machine is involved. `KoerperGutS` constrains only returns and
+    `logik` outcomes, so probe A behind an out-of-range literal (`f1P`, SpecProben) met (b),
+    passed the checker with its start declared and running, and was certified -- by a stop
+    labelled "hardware". REPAIR, in the model: the three float forms without `else`
+    (`gleit`, a float literal, `gleitVon`) answer `Logik.bereich` there (Semantik.lean,
+    SperreSem.lean; `Hardware.ieee` is no longer produced). Why this and not a new clause
+    "`≠ hardware ieee`" in (b): the range is the program's logic exactly as a `state`
+    pre-state is (`Logik.vorzustand`), so the existing clause "no `logik` outcome" of
+    `KoerperGutS` covers it with no new obligation shape; and the replay already carries
+    `logik` outcomes to the machine, so the CONCLUSION gains it too: no reachable machine
+    has a thread at a failing range check (`BereichG`, Fortschritt.lean, from the
+    obligation) -- `FortschrittG` lists no float stop any more. Machine G's rules are
+    unchanged (they fire only on an in-range result, as before). That the FPU computes the
+    kernel model is `gleitkomma_ieee`, on the C side, where it always was. Refuted:
+    `probeF1_widerlegt_gilt` (Proben.lean); the checker accepts `f1P` (`f1_akzeptiert`), so
+    the refusal is (b)'s.
+  * F2 -- `keineVerklemmung` ruled out only GLOBAL deadlock. New leg `keinZyklus`
+    (`KeinWarteZyklus`): no threads `t₀ … tₙ₊₁ = t₀` each standing at a lock the next one
+    holds, whatever the other threads do; proved from the rank invariant
+    (`kein_warteZyklusG`, Zielsatz/Beweis.lean).
+  * F3 -- the named stops are now of three KINDS (`HaltArt`) and listed, with their
+    reasons, in THE ONE ASSUMPTION LIST below: `hardware` (axiom and register answers),
+    `flagge` (an `awaits` whose flag is not visible: a WAIT, no longer called hardware),
+    `budget` (a spent `forever` budget: a model artefact, not called hardware).
+  * Header corrections: `speicherSicher` needs no checker (only `GutO`); "`Q := false`
+    empties (c)" holds only for axioms without a result (see (c) `AxVertragO`).
+
+  WHAT CHANGED ON 2026-09-15, FIRST ROUND, AND WHY (third Opus verdict,
+  URTEIL-OPUS-2026-09-15.md):
   * P1 -- an unsatisfiable lock invariant (`invariant false`) emptied (b): every body
     obligation quantifies `∀ U, HavocOk S U → …`, and `HavocOk` had no member. It also
     emptied the conclusion: the old premise `StartZulaessig` demanded every invariant at the
@@ -66,10 +98,14 @@
     repaired here: G's oracle answers a read from the world alone, and the replay linking the
     user's sequential proof to G (`regLies_gleich`) needs the answer to be a function of the
     carriers the two worlds share.
-  * (c) `AxVertragO E.Q O` -- every axiom answer meets the `ensures` the program declares for
-    it. That is the contract of foreign code or a device, which the user writes and nothing
-    checks: a false `E.Q` is a false NAMED assumption (visible in the declaration), and
-    `Q := false` makes (c) unsatisfiable, the honest kind of vacuity.
+  * (c) `AxVertragO E.Q O` -- every axiom answer THAT FITS ITS DECLARED RESULT TYPE meets
+    the `ensures` the program declares for it. That is the contract of foreign code or a
+    device, which the user writes and nothing checks: a false `E.Q` is a false NAMED
+    assumption (visible in the declaration). CORRECTED 2026-09-15 (verdict): `Q := false`
+    makes (c) unsatisfiable only for an axiom WITHOUT a result; for an axiom with a result,
+    (c) stays inhabited by oracles whose answers never fit the type, and every call of that
+    axiom then stops at a `hardware` stop (`Hardware.annahme`). Both are the honest kind of
+    vacuity -- a visible false assumption, reported as such -- but they are two kinds.
   * (d) `Laufzeit.lader` -- the loader establishes the program's declared initial memory
     `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
     that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
@@ -81,6 +117,40 @@
     machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
     (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
     (MitRuheSemantik.lean).
+  * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
+    the places where the theorem reports instead of claiming more. Each with why it is not
+    the user's logic:
+    - `hardware`, axiom answer outside its type (`dannBindAxiom`, an axiom leaf;
+      `Hardware.annahme`) -- the answer of FOREIGN code, which (c) describes only by its
+      frame (`GutO`) and its declared `ensures` (`AxVertragO`); a type-correct answer is
+      constrained, an ill-typed one is the foreign code breaking its declaration.
+    - `hardware`, register answer outside its type (`dannRegLies*`; `Hardware.register`) --
+      the device answered a bit pattern its declared type excludes.
+    - `hardware`, register answer against its declared promise (`regLies` of a `requires`
+      without `else`; `Hardware.geraet`) -- the device broke the promise its declaration
+      makes (`D.rzusage`). A promise the user declares `false` makes every read a stop: the
+      same honest vacuity as `Q := false`, visible in the declaration.
+    - `flagge`, an `awaits g` whose flag is not visible (`dannAwaits`) -- a WAIT, not a
+      failure: G tests visibility once where the C spins. It covers three cases G does not
+      separate: not yet published (a wait whose end is liveness, not claimed), published
+      but not visible (A10 fails: the hardware part), and NEVER published (the program's
+      own pairing, verdict F3). Why the last is not made a checker or user obligation: (d)
+      covers runs with ANY SUBSET of the declared starts, so on a covered run the publisher
+      need not run at all, and no static pairing check can exclude the permanent wait; and
+      G has no "later" in which a publication could arrive -- whether it does is a liveness
+      fact, like the end of a lock wait, and the statement claims no liveness. So it is
+      reported, as a wait, and named here.
+    - `budget`, a spent `forever` budget (`.ewig _ 0`) -- a MODEL ARTEFACT, not hardware:
+      G unrolls `forever` at most `passes` times, and `GabbroZiel` quantifies every
+      `passes`, so every finite prefix of the C's endless loop is a run of a larger budget.
+      A thread at this stop is one the C keeps running.
+    - GONE (verdict F1): `ieee`, a float result outside its range. It is `Logik.bereich`,
+      excluded by (b), and `FortschrittG` has no such stop.
+    NAMED NEXT TO PROGRESS: a thread at ANY of these stops while it holds a lock `L` leaves
+    every thread that needs `L` waiting forever -- `WartetG` then holds for them at every
+    later machine, and every leg of `Ziel` still holds. Progress is "every stop is named",
+    not "every wait ends"; the waiting bound (Lebendigkeit.lean) assumes no such stop inside
+    a critical section (`HardwareImAbschnitt`), and is not in `Ziel`.
   * Not premises, but assumptions of the reading: machine G is the meaning of the C
     (translation validation, PLAN-UEBERSETZUNGSVALIDIERUNG); the hardware is DRF-SC.
 
@@ -91,7 +161,12 @@
   `requires`, and never ends in `logik`; plus the start obligation. `Ziel` speaks about the
   INTERLEAVED machine G:
   * `speicherSicher` (`SpurInv`) -- NOT in (b) at all: every access in every run carries its
-    carrier's guards and those locks are really held. From the checker and G.
+    carrier's guards and those locks are really held. CORRECTED 2026-09-15 (verdict): it
+    needs NO checker and no user proof -- `spurInv_erreichbar` uses only `GutO`, so it holds
+    for EVERY well-typed program of G: carried by the intrinsic typing of `Programm D`
+    (bounds are `.index n` types, pointers are declared tables, no heap). That is literally
+    "by the language", but for Lean terms: its force for a `.gab` file rests on the
+    `.gab -> Programm D` step (the exporter). Stack depth is not covered.
   * `rennfrei` (`RennfreiBis`) -- NOT in (b): cross-thread access pairs with a write are
     lock-ordered, or do not exist. From the checker and G.
   * `vertrag`, `invRueck`, `invGrund`, `keinLogikHalt`, `startEnde`, `keinStartGrund` --
@@ -103,9 +178,14 @@
   * `sperrInv` (`SperrInvG`) -- NEW: every lock no thread holds has its invariant IN SHARED
     MEMORY at every reached machine. (b) only checks the invariant at each release of one
     body; the global cross-thread fact is the theorem's.
-  * `keineVerklemmung`, `fortschritt` -- NOT in (b): no deadlock from lock ranks, and G
-    never stops silently (every thread finished, waiting, at a NAMED hardware stop, or able
-    to step). This also keeps the safety legs from being vacuous by G getting stuck.
+  * `keineVerklemmung`, `keinZyklus`, `fortschritt` -- NOT in (b): no global deadlock, and
+    (since 2026-09-15, F2) no wait CYCLE among any threads, both from lock ranks; and G
+    never stops silently: every thread is finished, waits for a lock, waits for a
+    publication, has spent its `forever` budget, stands at a hardware stop, or can step.
+    Since F1 the user's own code has no stop of its own in that list: a failing loop
+    invariant, `state` pre-state or float range is excluded (`keinLogikHalt`, `BereichG`).
+    So the safety legs cannot be made vacuous by a stop the USER's code decides; they can
+    by a stop of the list above (hardware, a wait, the budget) -- each named.
   * `zeit` (`ZeitAb`) -- NOT in (b), and WEAK: a bound on a frame's OWN G-steps by the
     syntax-computed `kostenTief`, for frames with a finite call tree only (`rufTief`). It
     holds for EVERY program of G with no premise (`frame_schritte_beschraenkt`), so it says
@@ -122,6 +202,9 @@
     signature locks; reachable = finitely many steps / a start C does not make is irrelevant.
   * `execStmt` Semantik:574, `keinRuf` Maschine:383, `Stmt.istBlatt` Maschine:392 -- one
     statement sequentially; leaves are what G runs in one step / wrong leaves = wrong steps.
+  * `Logik`/`Hardware` Semantik:275/295 -- the failure outcomes; `Logik.bereich` (a float
+    result outside its range, since 2026-09-15) / a user-decided failure filed as
+    `Hardware` would pass (b) unconstrained (verdict F1).
   * `execEndH` SperreSem:363, `HavocOk` :71, `SperrInv` :45 -- the sequential body semantics the
     user proves against: `locks L` runs from any move keeping `S.inv L`, a release checks it /
     if it differs from `execStmt` outside `locks`, the user proves the wrong body.
@@ -140,7 +223,7 @@
   * `AxVertragO`/`AxEnsLokal`/`AxEns` AxiomVertrag:50/56/44 -- axiom answers meet the declared
     `ensures`; the declared ensures reads only the axiom's write carriers.
   * `KoerperGutS` SperreFuss:374 -- per function, sequential: triple, caller duty, no `logik`
-    outcome, against every frame-respecting handler (`RespektiertRahmen` ZielOrtRahmenSem:48,
+    outcome (since 2026-09-15 that includes `logik bereich`, a float out of range), against every frame-respecting handler (`RespektiertRahmen` ZielOrtRahmenSem:48,
     `OhneVorbedingung` ZielOrt:87, `OhneLogik` ZielOrtGanz:51), oracle (`RahmenO`
     ZielOrtVollBeweis:48) and move / an empty handler/oracle/move class empties it (probe A/D;
     the move class is inhabited under (b) since 2026-09-15, `havocOk_bewohnt`).
@@ -160,9 +243,13 @@
   * `InvAmOrtG` ZielOrtInv:66; `StartEndeG` ZielOrtStart:70 (`RetKopf` :59); `KeinStartGrundG`
     :191; `KeinLogikHaltG`/`PrueftG` ZielOrtGanz:658/622 -- no thread stuck at a loop invariant
     or transition test. `FertigG`/`WartetG`/`AnSperre` Verklemmung:746/751/652.
+    `BereichG` Fortschritt.lean -- the float range checks pass at every head (proof side,
+    not in `Ziel`: `FortschrittG` lists no float stop, so it follows from `fortschritt`).
   * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
-  NEW here: `Einheit`, `LogikPflicht`, `StartPflicht`, `Laufzeit` (2026-09-15); `InvGutGrund`,
-  `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the named stops), `RennfreiBis`
+  NEW here: `Einheit`, `LogikPflicht`, `StartPflicht`, `Laufzeit` (2026-09-15); `HaltArt`,
+  `KopfHalt`, `RestHalt`, `WartetAuf`, `KeinWarteZyklus` (2026-09-15, verdicts F2/F3);
+  `InvGutGrund`, `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the named
+  stops, by kind), `RennfreiBis`
   (DRF for every non-atomic carrier), `Getrennt`, `SchreibGetrennt` (write separation of
   unguarded carriers, the counterpart of `H013`; with it `rennfreiBis_of`, Akzeptiert.lean,
   proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
@@ -172,7 +259,8 @@
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
   and (d) (`Laufzeit`) since 2026-09-15; nothing else restricts the quantified runs.
   3. Can a user-controlled choice empty an obligation? Probes A/D: closed by `NutzerPflicht`
-  at every budget. An unsatisfiable lock family or start `requires`: closed, it refutes (b)
+  at every budget. Probe F1 (an out-of-range float, the one stop the user's code decided
+  for every oracle): closed, `logik bereich` (`probeF1_widerlegt_gilt`). An unsatisfiable lock family or start `requires`: closed, it refutes (b)
   (`unerfuellbar_widerlegt`, `start_req_widerlegt`). The run class is never empty: the root
   on every thread from `E.sp0` meets (d) (`laufzeit_ruhe`). What stays in the user's hand,
   honestly: `E.starts = []` (the program runs nothing; the statement is then about the root,
@@ -186,7 +274,8 @@
   consistent; `atomic` globals are ordered by A10, not by locks, and are excluded from
   `rennfrei`); the publish/await hand-off of an unguarded payload (refused by the checker,
   see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
-  side; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
+  side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
+  hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
   locks are held (claimed at returns only); one thread per busy start (SMP-symmetric code
   running one start on several cores is outside (d)). Declared `costs` are not in
   `Deklaration`: `zeit` is the syntax-computed bound. The `.gab` -> `Einheit` step is the
@@ -398,48 +487,72 @@ def InvAmGrundG (P : Programm D) (M : RufMaschineG D) : Prop :=
     ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       ev = RufEreignisF.grund g rho r s0 s1 → InvAmRueck P g s1
 
-/-- The first layer of the head block answers a HARDWARE outcome at the world `σ`: a leaf's
-    hardware outcome, an axiom answer outside its type, a register answer outside its type or
-    against its promise, an invisible `awaits`, a float result outside its range. Exactly the
-    failing side conditions of `blatt`/`dannBlatt`, `dannBindAxiom`, `dannRegLies*`,
-    `dannAwaits`, `dannGleit*`. -/
-def KopfHardware (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} (σ : World D) (ρ : Env D Γ) : Block D V l Γ Λ Λ' → Prop
-  | .cons s _ => s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
-  | .bindAxiom a args .. =>
+/-- **The kinds of named stop** (2026-09-15, verdicts F1 and F3). Each is a place where G has
+    no rule for a thread and the statement reports it instead of claiming more:
+    * `hardware` -- a hardware assumption of (c) fails at the head: an axiom (foreign code)
+      answered outside its type, a register (a device) outside its type or against the
+      promise its declaration makes;
+    * `flagge` -- a WAIT for a publication: the head is `awaits g` and `g` is not visible;
+    * `budget` -- the `forever` budget is spent: G's finite stand-in for a loop the C runs
+      without end.
+    An out-of-range float is NOT a stop any more: it is `Logik.bereich`, excluded by the
+    user's obligation, and no reachable machine stands at one (verdict F1). -/
+inductive HaltArt where
+  | hardware
+  | flagge
+  | budget
+
+/-- The first layer of the head block is a named stop of kind `k` at the world `σ`: the
+    failing side conditions of `dannBlatt` (a leaf's hardware outcome), `dannBindAxiom`,
+    `dannRegLies*` (`hardware`) and `dannAwaits` (`flagge`). -/
+def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (σ : World D) (ρ : Env D Γ) : HaltArt → Block D V l Γ Λ Λ' → Prop
+  | .hardware, .cons s _ => s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
+  | .hardware, .bindAxiom a args .. =>
       (axiomAntwort O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
-  | .regLies r .. => ∀ v, einpassen (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false
-  | .regLiesElse r .. => einpassen (D := D) (D.rtyp r) (O.regLies r σ) = none
-  | .awaits g .. => O.sichtbar g σ = false
-  | .gleit op a b lo hi _ =>
-      gleitPasst lo hi (gleitRechne op (eval (σ.lese Λ (a.orte ++ b.orte)) a
-        (σ.lese Λ (a.orte ++ b.orte)) ρ).x (eval (σ.lese Λ (a.orte ++ b.orte)) b
-        (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none
-  | .gleitLit q lo hi _ => gleitPasst lo hi (bruch q) = none
-  | .gleitVon e lo hi _ =>
-      gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none
-  | _ => False
+  | .hardware, .regLies r .. =>
+      ∀ v, einpassen (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false
+  | .hardware, .regLiesElse r .. => einpassen (D := D) (D.rtyp r) (O.regLies r σ) = none
+  | .flagge, .awaits g .. => O.sichtbar g σ = false
+  | _, _ => False
 
-/-- A residue at a named hardware stop: a spent `forever` budget (`hardware fortschritt`), or
-    its head block's first layer answers hardware. -/
-def RestHardware (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ : List (Res D)} (σ : World D) (ρ : Env D Γ) : GRest D V l Γ Λ → Prop
-  | .ewig _ 0 _ _ _ => True
-  | .ende (.cons s _) => s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
-  | .dann b _ => KopfHardware O passes σ ρ b
-  | _ => False
+/-- A residue at a named stop of kind `k`: a spent `forever` budget (`budget`), a leaf's
+    hardware outcome at the end block's head (`hardware`), or its head block's first layer. -/
+def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (σ : World D) (ρ : Env D Γ) : HaltArt → GRest D V l Γ Λ → Prop
+  | .budget, .ewig _ 0 _ _ _ => True
+  | .hardware, .ende (.cons s _) =>
+      s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
+  | k, .dann b _ => KopfHalt O passes σ ρ k b
+  | _, _ => False
 
-/-- Thread `t` stands at a named stop: a named hardware assumption fails at its head. -/
-def HaltBenannt (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (t : Faden) : Prop :=
+/-- Thread `t` stands at a named stop of kind `k`. -/
+def HaltBenannt (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (k : HaltArt) (t : Faden) :
+    Prop :=
   ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
     (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
-    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RestHardware O passes (M.weltVon t) ρ r
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RestHalt O passes (M.weltVon t) ρ k r
 
 /-- **Every stop is named**: each thread is finished, waits for a lock another thread holds,
-    stands at a named hardware stop, or can step. -/
+    waits for a publication, has spent its `forever` budget, stands at a hardware stop, or can
+    step. Nothing else: no thread ever stands at a failing `logik` check (`keinLogikHalt`) or
+    at a float result outside its range. -/
 def FortschrittG (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
-  ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M t ∨ ∃ M', RufSchrittG P O passes M t M'
+  ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M .flagge t ∨
+    HaltBenannt O passes M .budget t ∨ HaltBenannt O passes M .hardware t ∨
+    ∃ M', RufSchrittG P O passes M t M'
+
+/-- Thread `t` stands at `locks L` while thread `u` holds `L`. -/
+def WartetAuf (M : RufMaschineG D) (t u : Faden) (L : D.Lock) : Prop :=
+  AnSperre M t L ∧ L ∈ offen (M.faeden u).spur
+
+/-- **No wait cycle** (verdict F2): there are no threads `t₀, …, tₙ₊₁` with `tₙ₊₁ = t₀` where
+    each `tᵢ` stands at a lock that `tᵢ₊₁` holds -- whatever the OTHER threads do. (The global
+    `keineVerklemmung` only rules out that EVERY unfinished thread waits.) -/
+def KeinWarteZyklus (M : RufMaschineG D) : Prop :=
+  ∀ (n : Nat) (ts : Nat → Faden) (Ls : Nat → D.Lock),
+    (∀ i, i ≤ n → WartetAuf M (ts i) (ts (i + 1)) (Ls i)) → ts (n + 1) ≠ ts 0
 
 /-- **Time**: a frame entered at `M`, of a function whose calls nest at most `n` deep, takes
     at most `kostenTief P passes (n + 1) g` own steps on every run while it is active. -/
@@ -466,6 +579,7 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   keinLogikHalt : KeinLogikHaltG O passes M
   -- progress
   keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
+  keinZyklus : KeinWarteZyklus M
   fortschritt : FortschrittG P O passes M
   -- time
   zeit : ZeitAb P O passes M

@@ -296,9 +296,9 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .pruefung _ sonst rest => sonst.logikFrei && rest.logikFrei
-  | .gleit _ _ _ _ _ rest => rest.logikFrei
-  | .gleitLit _ _ _ rest => rest.logikFrei
-  | .gleitVon _ _ _ rest => rest.logikFrei
+  | .gleit .. => false
+  | .gleitLit q lo hi rest => (gleitPasst lo hi (bruch q)).isSome && rest.logikFrei
+  | .gleitVon .. => false
   | .gleitNarrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
 
 def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -530,24 +530,16 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ he
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
-  | .gleit op a b lo hi rest, h, σ, ρ, e, he => by
-      simp only [Block.logikFrei] at h
-      simp only [execBlock] at he
-      split at he
-      · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
-      · cases he
+  | .gleit .., h, _, _, _, _ => by simp [Block.logikFrei] at h
   | .gleitLit q lo hi rest, h, σ, ρ, e, he => by
-      simp only [Block.logikFrei] at h
+      simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
-      · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
-      · cases he
-  | .gleitVon x lo hi rest, h, σ, ρ, e, he => by
-      simp only [Block.logikFrei] at h
-      simp only [execBlock] at he
-      split at he
-      · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
-      · cases he
+      · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
+      · rename_i hn
+        rw [hn] at h
+        simp at h
+  | .gleitVon .., h, _, _, _, _ => by simp [Block.logikFrei] at h
   | .gleitNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he

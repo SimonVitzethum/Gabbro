@@ -70,7 +70,10 @@ replacement models -- as data.
   range, `rounded` compulsory at inexact literals, `finite` behind
   `narrow`, total comparisons (`fllt`/`flle` -- finite by type, no NaN
   quadrant), `hardware ieee` when a result leaves its range or is not
-  finite.
+  finite -- since 2026-09-15 `logik bereich` in the model (verdict F1 of
+  `messung/URTEIL-OPUS-2026-09-15b.md`: the kernel IEEE model decides the
+  range from the program's values, so it is the user's logic, not a
+  hardware stop; `gleitkomma_ieee` stays the C-side assumption).
 * Corpus: `beispiele/` 4x `f32` + 33x `f64`; `messung/` 40x `f32` +
   36x `f64`. One example file (`26-gleitkomma.gab`).
 * Emitter (`crates/gabbro-check/src/emit.rs`): `f32 -> float`,

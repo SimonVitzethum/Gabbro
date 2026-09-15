@@ -45,15 +45,15 @@ structure BefundZ (z : RufFadenG mD) (o : List Unit) (a : Bool) (f : Bool) : Pro
   off : offen z.spur = o
   kopf : z.kopf.rest.2.2.2.2.kopfSperre = (if a then some () else none)
   fertig : f = true → z.stapel = [] ∧ z.kopf.rest.2.2.2.2.istEndeRet = true
-  frei : o ≠ [] → ∀ σ : World mD,
-    ¬ Zielsatz.RestHardware mO 0 σ z.kopf.rest.2.2.2.1 z.kopf.rest.2.2.2.2
+  frei : o ≠ [] → ∀ (σ : World mD) (k : Zielsatz.HaltArt),
+    ¬ Zielsatz.RestHalt mO 0 σ z.kopf.rest.2.2.2.1 k z.kopf.rest.2.2.2.2
 
 theorem befund_von {M : RufMaschineG mD} {t : Faden} {z : RufFadenG mD} (hz : M.faeden t = z)
     {o : List Unit} {a f : Bool} (hoff : offen (M.faeden t).spur = o)
     (hk : z.kopf.rest.2.2.2.2.kopfSperre = (if a then some () else none))
     (hf : f = true → z.stapel = [] ∧ z.kopf.rest.2.2.2.2.istEndeRet = true)
-    (hh : o ≠ [] → ∀ σ : World mD,
-      ¬ Zielsatz.RestHardware mO 0 σ z.kopf.rest.2.2.2.1 z.kopf.rest.2.2.2.2) :
+    (hh : o ≠ [] → ∀ (σ : World mD) (k : Zielsatz.HaltArt),
+      ¬ Zielsatz.RestHalt mO 0 σ z.kopf.rest.2.2.2.1 k z.kopf.rest.2.2.2.2) :
     BefundZ (M.faeden t) o a f := by
   rw [hz] at hoff ⊢
   exact ⟨hoff, hk, hf, hh⟩
@@ -64,8 +64,9 @@ theorem befund_gleich {z z' : RufFadenG mD} {o : List Unit} {a f : Bool} (h : z'
 theorem kein_fertig {z : RufFadenG mD} :
     false = true → z.stapel = [] ∧ z.kopf.rest.2.2.2.2.istEndeRet = true := fun h => by cases h
 
-theorem kein_halt_leer {z : RufFadenG mD} : ([] : List Unit) ≠ [] → ∀ σ : World mD,
-    ¬ Zielsatz.RestHardware mO 0 σ z.kopf.rest.2.2.2.1 z.kopf.rest.2.2.2.2 :=
+theorem kein_halt_leer {z : RufFadenG mD} : ([] : List Unit) ≠ [] →
+    ∀ (σ : World mD) (k : Zielsatz.HaltArt),
+    ¬ Zielsatz.RestHalt mO 0 σ z.kopf.rest.2.2.2.1 k z.kopf.rest.2.2.2.2 :=
   fun h => absurd rfl h
 
 /-- The idle threads: every thread from 2 on starts in `ruhe`, finished. -/
@@ -150,22 +151,26 @@ theorem lAbschnitt {M : RufMaschineG mD} (t : Faden) (fn : mD.Fn) (rho : Env mD 
   obtain ⟨M8, s8, hZ8⟩ := w_dannLeer (P := mP) (O := mO) (passes := 0) hZ7.1 _ _ rfl
   refine ⟨M1, M2, M3, M4, M5, M6, M7, M8, s1, s2, s3, s4, s5, s6, s7, s8, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, _, _, hZ8, ?_⟩
-  · refine befund_von hZ1.1 hoff1 rfl kein_fertig fun _ σ hR => ?_
-    simp [Zielsatz.RestHardware, Zielsatz.KopfHardware, Stmt.istBlatt] at hR
-  · refine befund_von hZ2.1 hoff2 rfl kein_fertig fun _ σ hR => ?_
-    obtain ⟨_, hw, he⟩ := hR
-    have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
-    cases he'
-  · refine befund_von hZ3.1 hoff3 rfl kein_fertig fun _ σ hR => ?_
-    obtain ⟨_, hw, he⟩ := hR
-    have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
-    cases he'
-  · refine befund_von hZ4.1 hoff4 rfl kein_fertig fun _ σ hR => ?_
-    simp [Zielsatz.RestHardware] at hR
-  · refine befund_von hG5.1 hoff5 rfl kein_fertig fun _ σ hR => ?_
-    simp [Zielsatz.RestHardware, Zielsatz.KopfHardware] at hR
-  · refine befund_von hZ6.1 hoff6 rfl kein_fertig fun _ σ hR => ?_
-    simp [Zielsatz.RestHardware] at hR
+  · refine befund_von hZ1.1 hoff1 rfl kein_fertig fun _ σ k hR => ?_
+    cases k <;> simp [Zielsatz.RestHalt, Zielsatz.KopfHalt, Stmt.istBlatt] at hR
+  · refine befund_von hZ2.1 hoff2 rfl kein_fertig fun _ σ k hR => ?_
+    cases k
+    · obtain ⟨_, hw, he⟩ := hR
+      have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
+      cases he'
+    all_goals simp [Zielsatz.RestHalt] at hR
+  · refine befund_von hZ3.1 hoff3 rfl kein_fertig fun _ σ k hR => ?_
+    cases k
+    · obtain ⟨_, hw, he⟩ := hR
+      have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
+      cases he'
+    all_goals simp [Zielsatz.RestHalt] at hR
+  · refine befund_von hZ4.1 hoff4 rfl kein_fertig fun _ σ k hR => ?_
+    cases k <;> simp [Zielsatz.RestHalt] at hR
+  · refine befund_von hG5.1 hoff5 rfl kein_fertig fun _ σ k hR => ?_
+    cases k <;> simp [Zielsatz.RestHalt, Zielsatz.KopfHalt] at hR
+  · refine befund_von hZ6.1 hoff6 rfl kein_fertig fun _ σ k hR => ?_
+    cases k <;> simp [Zielsatz.RestHalt] at hR
   · exact befund_von hZ7.1 hoff7 rfl kein_fertig kein_halt_leer
   · show offen (M7.faeden t).spur = []
     exact hoff7
@@ -733,15 +738,15 @@ theorem lZeuge : ∃ R : PlanLauf mP mO 0,
       · rw [hu] at hu'; exact absurd hu' (by decide)
       · omega
   · -- no hardware stop in a critical section
-    intro n u L hL hH
+    intro n u L hL k hH
     have hk := halt_kopf hH
     rcases lHaelt hB0 hB1 hI hL with ⟨rfl, _⟩ | ⟨rfl, _⟩
     · have hne : lO0 n ≠ [] := by
         intro e; rw [(hB0 n).off, e] at hL; exact List.not_mem_nil hL
-      exact (hB0 n).frei hne _ hk
+      exact (hB0 n).frei hne _ _ hk
     · have hne : lO1 n ≠ [] := by
         intro e; rw [(hB1 n).off, e] at hL; exact List.not_mem_nil hL
-      exact (hB1 n).frei hne _ hk
+      exact (hB1 n).frei hne _ _ hk
   · -- the contenders
     intro n u L h
     rcases h with h | h
@@ -781,9 +786,14 @@ theorem wartezeit_zeuge : ∃ R : PlanLauf mP mO 0,
     ∃ j, 5 ≤ j ∧ j < 5 + 32 ∧ R.akt j = some 1 ∧ () ∈ offen ((R.M (j + 1)).faeden 1).spur := by
   obtain ⟨R, h0, hakt, hLZ, hH, hHw, hAnw, hL, an1, halt0, h16⟩ := lZeuge
   have hA5 : AnSperre (R.M 5) 1 () := an1 5 (Nat.le_refl 5) (by decide)
+  have hB : ∀ n t, BereichG (R.M n) t := fun n =>
+    bereichG_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal
+      (axVertragO_wahr mO) axEnsLokal_wahr mSI_ok mFs_voll mP_fragmentG mAbg mWurzel mP_fuss
+      (mP_koerper_alle 0) mP_start mSI_start mInit_exklusiv (R.M n)
+      (R.erreichbar (by rw [h0]; exact .start) n)
   have hW := wartezeit_schranke R mO_gut mP_stufen mSp mInit mInit_leer
     (ls := [()]) (fun L => by cases L; exact List.mem_singleton_self _)
-    (by rw [h0]; exact .start) hL hLZ hH hHw hAnw () 1 5 hA5
+    (by rw [h0]; exact .start) hL hB hLZ hH hHw hAnw () 1 5 hA5
   rw [lW_eq] at hW
   exact ⟨R, h0, hLZ, hH, hHw, hAnw, hA5, halt0, by rw [hakt]; rfl, h16, lW_eq, hW⟩
 

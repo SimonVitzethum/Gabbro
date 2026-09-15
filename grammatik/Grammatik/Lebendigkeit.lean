@@ -52,8 +52,10 @@
   * `wartezeit_schranke`: the same from the goal theorem's premises
     (`GutO`, `StufenM`, starts without signature locks, the run starting at a
     reachable machine, `KeinLogikHaltG` along the run -- a conjunct of
-    `Ziel`) plus `HardwareImAbschnitt` (no named hardware stop inside a
-    critical section).
+    `Ziel` -- and `BereichG` along the run, every float range check passes,
+    from the body obligation, `bereichG_erreichbarL`) plus
+    `HardwareImAbschnitt` (no named stop of any kind inside a critical
+    section).
   * Machine-G facts used: `sperre_schritt` (a step at a `locks L` head takes
     `L`, and only if it is free), `schritt_sperre_art` (a step either stands
     at a `locks` head or does not grow the held set), `nimmt_an_sperre`.
@@ -428,9 +430,9 @@ theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
       simp [GRest.istEndeRet] at hk
 
 /-- A named hardware stop, read off the head residue. -/
-theorem halt_kopf {M : RufMaschineG D} {t : Faden}
-    (h : Zielsatz.HaltBenannt O passes M t) :
-    Zielsatz.RestHardware O passes (M.weltVon t) (M.faeden t).kopf.rest.2.2.2.1
+theorem halt_kopf {M : RufMaschineG D} {t : Faden} {k : Zielsatz.HaltArt}
+    (h : Zielsatz.HaltBenannt O passes M k t) :
+    Zielsatz.RestHalt O passes (M.weltVon t) (M.faeden t).kopf.rest.2.2.2.1 k
       (M.faeden t).kopf.rest.2.2.2.2 := by
   obtain ⟨l, Γ, Λ, ρ, r, he, hr⟩ := h
   rw [he]
@@ -487,11 +489,11 @@ def AbschnittAktiv (R : PlanLauf P O passes) : Prop :=
 def Anwaerter (R : PlanLauf P O passes) (Ts : D.Lock → List Faden) : Prop :=
   ∀ n u L, (L ∈ offen ((R.M n).faeden u).spur ∨ AnSperre (R.M n) u L) → u ∈ Ts L
 
-/-- **No named hardware stop inside a critical section** (a hardware
-    assumption: devices answer, `awaits` payloads become visible, the
-    `forever` budget is not spent while a lock is held). -/
+/-- **No named stop inside a critical section**, of any kind (`Zielsatz.HaltArt`): devices
+    and axioms answer, `awaits` payloads become visible, the `forever` budget is not spent
+    while a lock is held. -/
 def HardwareImAbschnitt (R : PlanLauf P O passes) : Prop :=
-  ∀ n u L, L ∈ offen ((R.M n).faeden u).spur → ¬ Zielsatz.HaltBenannt O passes (R.M n) u
+  ∀ n u L, L ∈ offen ((R.M n).faeden u).spur → ∀ k, ¬ Zielsatz.HaltBenannt O passes (R.M n) k u
 
 end Annahmen
 
@@ -945,17 +947,21 @@ end Beweis
 theorem abschnittAktiv_aus (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
-    (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hHw : HardwareImAbschnitt R) :
+    (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
+    (hHw : HardwareImAbschnitt R) :
     AbschnittAktiv R := by
   intro n u L hu
   have hr := R.erreichbar hr0 n
   have hND := startSpur_nodup_leer init hLeer
-  rcases fortschrittG_aus hO hSt sp init hND hr (hL n) u with hF | hW | hHalt | hs
+  rcases fortschrittG_aus hO hSt sp init hND hr (hL n) (hB n) u with
+    hF | hW | hHalt | hHalt | hHalt | hs
   · have e := fertig_leer (rangInvG_erreichbar hO hSt sp init hND hr u) (hLeer u) hF
     rw [e] at hu
     exact absurd hu List.not_mem_nil
   · exact Or.inr hW.1
-  · exact absurd hHalt (hHw n u L hu)
+  · exact absurd hHalt (hHw n u L hu _)
+  · exact absurd hHalt (hHw n u L hu _)
+  · exact absurd hHalt (hHw n u L hu _)
   · exact Or.inl hs
 
 /-- **THE WAITING BOUND (`wartezeit_schranke`).** On a scheduled run of
@@ -975,7 +981,7 @@ theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
     (hls : ∀ L : D.Lock, L ∈ ls)
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
-    (hL : ∀ n, KeinLogikHaltG O passes (R.M n))
+    (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
     (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : HardwareImAbschnitt R)
     (hAnw : Anwaerter R Ts)
     (L : D.Lock) (t : Faden) (n0 : Nat) (hA : AnSperre (R.M n0) t L) :
@@ -988,7 +994,7 @@ theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
       L ∈ offen ((R.M n).faeden f).spur → L ∉ offen ((R.M n).faeden g).spur :=
     fun n => exklusivG hO sp init (startExklusiv_ohne_haelt init hLeer) (R.erreichbar hr0 n)
   exact wartezeit_kern R hO hls hRang hEx hLZ.1 hLZ.2 hH
-    (abschnittAktiv_aus R hO hSt sp init hLeer hr0 hL hHw) hAnw L t n0 hA
+    (abschnittAktiv_aus R hO hSt sp init hLeer hr0 hL hB hHw) hAnw L t n0 hA
 
 end Kern
 

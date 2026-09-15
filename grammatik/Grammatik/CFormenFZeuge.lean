@@ -126,7 +126,7 @@ theorem klemmen_corr (X : TVCtx D) (lo0 hi0 : Int × Int) :
   have hex1 : execBlock X.O X.passes X.R (kBlock (D := D) lo0 hi0) σ ρG =
       match gleitPasst (0, 1) (1, 1) (bruch (1, 2)) with
       | some v => (execBlock X.O X.passes X.R (kNarrow lo0 hi0) σ (.cons v ρG)).schrumpf
-      | none => .hardware .ieee := rfl
+      | none => .logik .bereich := rfl
   rw [hex1, hH]
   simp only [kNarrow, execBlock, eval, Expr.orte]
   split
