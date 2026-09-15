@@ -7438,6 +7438,32 @@ fn funktion(
             "    (void)_grund; /* this body never returns a reason -- N034 */\n",
         );
     }
+    // **And the OTHER channel needed the same line, and had it for nobody** (2026-09-15).
+    //
+    // A `-> T or R` lowers to `bool f(T *_wert, R *_grund)`. The guard above covers the body
+    // that never writes `_grund`; the mirror -- a body whose every exit is a REASON, so
+    // `_wert` is never written -- had none. Measured:
+    //
+    // ```text
+    // fn f() -> u32 or R effects { pure } costs <= 2 ops { return R::Leer; }
+    //   ->  static bool f(uint32_t *_wert, R *_grund) { *_grund = R_Leer; return false; }
+    //   cc: error: unused parameter '_wert' [-Werror=unused-parameter]
+    // ```
+    //
+    // *Zero checker errors, `gabbro emit` returned 0, and the C did not compile at either
+    // level.* The form is not exotic: a routine that only ever fails is what a stub of a
+    // fallible one looks like, and `Stmt.retGrund` is a constructor of the grammar in its
+    // own right (`Syntax.lean`:523).
+    //
+    // **`rumpf_gibt_wert` and not `!rumpf_scheitert`:** a body may do both, and the two
+    // questions are independent. Asking the wrong one would silence a parameter the body
+    // does write -- and `(void)x;` on a written parameter is not an error, which is exactly
+    // why it has to be the right question rather than a safe-looking one.
+    if f.fehler.is_some() && f.ergebnis.is_some() && !rumpf_gibt_wert(b) {
+        aus.push_str(
+            "    (void)_wert; /* every exit of this body is a reason -- the value channel stays unwritten */\n",
+        );
+    }
     let rahmen = Austritt {
         freigaben: Vec::new(),
         rueck_option: match &f.ergebnis {
@@ -12698,6 +12724,24 @@ fn rumpf_scheitert(b: &Block) -> bool {
     })
 }
 
+/// **Does any exit of this body carry a VALUE?** -- the mirror of [`rumpf_scheitert`], and
+/// the two are independent questions over the same body (a body may do both, or neither).
+///
+/// It answers exactly one thing for the emitter: whether `*_wert` is ever written, so that a
+/// body all of whose exits are reasons gets its `(void)_wert;` and the generated C does not
+/// fall at `-Werror=unused-parameter`. A `return;` without an expression writes nothing, and
+/// a `return R::F;` writes the reason channel -- neither counts.
+fn rumpf_gibt_wert(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        if let StmtArt::Return(Some(e)) = &s.art {
+            if !matches!(e.art, ExprArt::Grund { .. }) {
+                return true;
+            }
+        }
+        crate::unterbloecke(s).into_iter().any(rumpf_gibt_wert)
+    })
+}
+
 fn geist_wert(e: &Expr, u: &Namen) -> bool {
     match &e.art {
         ExprArt::Ruf(r) => r
@@ -13679,8 +13723,26 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // > *Es fiel nicht auf, solange jede Datei mit einem `format` aus einem anderen Grund
     // > `C001` sagte.* Genau die Bauart, die dieser Ordner schon zweimal bezahlt hat: ein
     // > Fehler, den eine Weigerung davor verdeckt.
+    // **And `m->a` is the SAME access as `m.a`, so it takes the same arm** (2026-09-15).
+    //
+    // It did not, and the consequence was the very defect the paragraph above describes --
+    // one spelling later. `m : ptr<normal, r> F` with `return m->a;` passed `gabbro pruefe`
+    // with zero errors and emitted `return m->a;` into a
+    // `typedef struct { uint8_t *bytes; uint32_t len; } F;`. *`cc` says `'F' has no member
+    // named 'a'`, `gabbro emit` returned 0, and `C001` said nothing* -- a silently wrong
+    // lowering, which this file holds to be worse than a refusal because a refusal stands in
+    // the certificate.
+    //
+    // The two spellings cannot differ here: `formatwerte` is filled from a `TypExpr::Pfad`
+    // AND from a `TypExpr::Zeiger` at a format (`eigene_sicht`), the generated reader takes
+    // the handle by pointer either way (`F_a(const F *v)`), and the pointer-ness is already
+    // in the C type. **A field of a `format` is reached by its reader, and by nothing else.**
     if let Some(fmt) = u.formatwerte.get(&o.basis.text) {
-        if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+        let erste = match o.suffixe.first() {
+            Some(OrtSuffix::Feld(f)) | Some(OrtSuffix::Ueber(f)) => Some(f),
+            _ => None,
+        };
+        if let Some(f) = erste {
             if o.suffixe.len() == 1 {
                 return format!("{fmt}_{}({})", f.text, o.basis.text);
             }
@@ -13691,6 +13753,44 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                  has no place inside the bytes",
             );
             return String::new();
+        }
+    }
+    // **A place over a TABLE reaches its slots and nothing else -- and until today the
+    // generator wrote the nothing else out** (2026-09-15).
+    //
+    // A `table T count 4 { slot { wert : u32, } }` lowers to
+    // `typedef struct { T_slot slots[4]; } T;` -- ONE member, named `slots`. `q->wert` on a
+    // `q : ptr<normal, r> T` passed `gabbro pruefe` with zero errors and came out as
+    // `return q->wert;`: a member the struct does not have. Same shape as the `format` case
+    // directly above and found the same way -- by compiling what the emitter claims is
+    // finished.
+    //
+    // **Coarse in the safe direction (`W9`):** the refusal asks only whether the FIRST
+    // suffix is `slots`, which is the only member there is. A table-level `const` is not a
+    // member at all (it lowers to a `#define`, `table.const`), and a name that is neither is
+    // the defect itself. *The exact answer -- is this a declared slot field? -- belongs to
+    // the checker, and that it does not give one is named in the report, not papered over
+    // here.*
+    if u.tabellenzeiger.contains_key(&o.basis.text) || u.tabellenglobal.contains(&o.basis.text) {
+        let erste = match o.suffixe.first() {
+            Some(OrtSuffix::Feld(f)) | Some(OrtSuffix::Ueber(f)) => Some(f),
+            _ => None,
+        };
+        if let Some(f) = erste {
+            if f.text != "slots" {
+                weigere(
+                    absagen,
+                    f.span,
+                    &format!(
+                        "`{}` over a `table` -- a table handle has exactly ONE member in C, \
+                         `slots`, and a slot field is reached through it (`{}.slots[i].{}`). \
+                         What stood here would have named a member of the generated struct \
+                         that does not exist",
+                        f.text, o.basis.text, f.text
+                    ),
+                );
+                return String::new();
+            }
         }
     }
     // **Ein `accumulates` wird beim LESEN gefaltet.** Der Name steht fuer den ganzen
