@@ -362,7 +362,7 @@ theorem kA_lauf {O : Orakel kD} {U : Umwelt kD} (hU : HavocOk kSI U)
       rcases execStmtH_call_fall (S := kSI) (O := O) (U := U) (passes := 0) (R := R)
         (l := false) (Γ := []) kPruefeA .nil kHpPruefe rfl (σ1.gibt ()) ρ with
         ⟨σ3, v3, hR3, h3⟩ | ⟨e3, he3, h3⟩ | ⟨e3, h3⟩ <;> erw [h3] at hrun
-      · simp only [execEndH] at hrun
+      · simp only at hrun
         cases hrun
         have hf3 := (hR.2 _ _ _ _ _ hR3).1.1 KTab.privA rfl
         have e0 : σ3.slots KTab.privA 0 () = σ2.slots KTab.privA 0 () :=
