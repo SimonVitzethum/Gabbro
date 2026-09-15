@@ -234,6 +234,16 @@ opus/…:opus/…` first.
   `gabbro-opus-nb`. The prompt says so explicitly:
   - sync with `rsync -rlpgoD --delete --exclude .lake/ --exclude target/ …`;
   - seed the cache with `cp -a ~/gabbro-muse/stage/lake3 …/grammatik/.lake`;
+  - **and `programmlogik/.lake` is the one that bites `cargo test`.** `gabbro prove` builds
+    `programmlogik/`, which needs **mathlib**; with no cache there, `lake` goes off to clone
+    mathlib4 and the run hangs with zero CPU. *Measured 2026-09-15: two Opus trees stalled 13
+    and 19 minutes on exactly this, and both times it was the apparatus and not the tree.*
+    There is no staged cache for it yet — until there is, either copy `programmlogik/.lake`
+    from a tree that has one, or keep `cargo test` off the lane and say so in the report;
+  - a stale `programmlogik/.lake` is worse than none: an `incompatible header` makes
+    `pruefe-lean-programm.sh` announce *"the exported program is not valid Lean"*, which is a
+    sentence about the olean and not about the program (met in the acceptance run of
+    2026-09-15);
   - build with `ssh … lake build`.
 - **The prompt names:** the standards (no `sorry`, `native_decide` or new `axiom`; standard
   axioms; witnesses), the plan and SATZKARTE updates expected, "commit on your branch, do not
