@@ -207,6 +207,50 @@ theorem einfaden_ziel (E : Einheit D) (fs : Aufzaehlung D.Fn)
 
 end Einfaden
 
+/-! ## 2b. What part 4's condition is, and what it can no longer be
+
+    Part 4 (and part 6 through it) is conditional on the Gabbro call ending
+    in NO MODEL ERROR (`istFehler = false`). The model knows two error
+    outcomes: the writer's logic and an assumption about the machine
+    (`Semantik.lean`). The second one is discharged for every chain, and
+    syntactically: the five forms whose outcome is `hardware` -- an axiom
+    call, an axiom bind, a register read in either shape, an `awaits`, a
+    `forever` budget -- are all outside the certificate check's covered set,
+    so a program with a certificate carries none of them, so `rufAt` never
+    ends in one, at any depth, against any oracle
+    (`korrOk_rufAt_ohneHardware`, KorrespondenzAllg.lean §5, over
+    `rufAt_ohneHardware`).
+
+    What is LEFT of the condition is the writer's logic, and the two lemmas
+    here say what its first case is: at any depth above `0` the very first
+    thing `rufAt` does is test the callee's `requires` at the entry world,
+    so the condition IMPLIES the caller's duty `ReqAmEintritt` -- the
+    theorem hands the C side ANY Gabbro world and ANY arguments, and a
+    callee with a non-trivial `requires` fails at most of them. That is not
+    a defect of the model; it is the condition being stated on the
+    COMPUTATION where the contract would do. -/
+
+/-- **`rufAt`'s gate IS the entry contract.** The requires test stands at
+    the world after the entry read, and a read only appends trace events;
+    an expression reads carriers, so the two tests are the same Bool. -/
+theorem rufAt_tor {D : Deklaration} (P : Programm D) (f : D.Fn) (σ : World D)
+    (ρ : Env D (D.params f)) :
+    wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) (P.requires f)
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ) =
+      wahr? (eval σ (P.requires f) σ ρ) := by
+  rw [eval_gleichAuf (S := (P.requires f).orte) (P.requires f) (fun _ h => h)
+    (GleichAuf.lese_links (GleichAuf.refl _ σ) _ _) ρ]
+
+/-- **A call at a depth above `0` whose entry contract fails IS a model
+    error** -- so part 4's condition implies the caller's duty. -/
+theorem rufAt_vorbedingung {D : Deklaration} (P : Programm D) (O : Orakel D) (passes n : Nat)
+    (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (h : ¬ ReqAmEintritt P f σ ρ) :
+    rufAt P O passes (n + 1) f σ ρ = .logik (.vorbedingung f) := by
+  simp only [rufAt]
+  rw [if_pos]
+  rw [rufAt_tor]
+  simpa [ReqAmEintritt] using h
+
 /-! ## 3. A closed chain -/
 
 /-- **A CLOSED CHAIN for the source text `src`**: everything the closing
@@ -271,6 +315,24 @@ structure Kette (src : String) where
        C arguments related to ANY Gabbro world and arguments: when the Gabbro
        call ends in no model error, the C call has a run and EVERY run of it
        ends related to the Gabbro outcome;
+    4b. NO HARDWARE ERROR: part 4's condition can never fail for a machine
+       reason. A certified program carries none of the five forms whose
+       outcome is `hardware` (`korrOk_rufAt_ohneHardware`), so `rufAt` never
+       ends in one -- at any depth, any budget, any world, any arguments,
+       against any oracle. This is NOT the goal theorem's premise (c) doing
+       the work: `HardwareAnnahmen` is conditional on the raw answer fitting
+       the declared type and leaves the error standing
+       (`befund_hardware_bleibt`, RufOhneHardwareZeuge.lean);
+    4c. WHAT IS LEFT of part 4's condition is the WRITER'S LOGIC alone --
+       `vorbedingung`, `nachbedingung`, `invariante`, `abstieg`, and the two
+       body-own kinds `schleife`/`vorzustand`/`bereich`;
+    4d. AND ABOVE DEPTH `0` the condition IMPLIES the caller's duty: the
+       entry contract of the called function at the given world and
+       arguments. Parts 4 and 6 quantify over ANY Gabbro world and ANY
+       arguments, and `rufAt`'s first act is the `requires` test, so a
+       callee with a non-trivial `requires` fails at most of them. That is
+       the condition being stated on the COMPUTATION where the contract
+       would do;
     5. THE MACHINE: `K.E.P.mitRuhe` behaves as `K.E.P` at every depth; on
        every machine reachable from the single-threaded start, at every
        budget, memory safety and the goal theorem's contract legs hold,
@@ -307,6 +369,23 @@ theorem schlusssatz {src : String} (K : Kette src)
         (∃ st' rv, CallAt K.EL.lay orc XR (kProg K.zert) n (fnNr f) st vs st' rv) ∧
         ∀ st' rv, CallAt K.EL.lay orc XR (kProg K.zert) n (fnNr f) st vs st' rv →
           RufOut K.EL (rufAt K.E.P O passes n f σ ρG) st' rv) ∧
+    -- 4b. NO HARDWARE ERROR: the condition of parts 4 and 6 can never fail
+    --     for a machine reason -- a certified program carries no oracle form
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Hardware (declOf K.u)),
+      rufAt K.E.P O passes n f σ ρG ≠ .hardware e) ∧
+    -- 4c. so what is left of that condition is the WRITER'S LOGIC, alone
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes n f σ ρG).istFehler = true →
+        ∃ e : Logik (declOf K.u), rufAt K.E.P O passes n f σ ρG = .logik e) ∧
+    -- 4d. and above depth `0` the condition IMPLIES the caller's duty: the
+    --     entry contract of the called function at the given world and
+    --     arguments (the theorem quantifies over ANY of both)
+    (∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+        (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes (n + 1) f σ ρG).istFehler = false →
+        ReqAmEintritt K.E.P f σ ρG) ∧
     -- 5. the machine
     ((∀ passes n : Nat, RufRu (rufAt K.E.P O passes n) (rufAt K.E.P.mitRuhe O.mitRuhe passes n)) ∧
       (∀ (passes : Nat) (M : RufMaschineG (declOf K.u).mitRuhe),
@@ -334,7 +413,30 @@ theorem schlusssatz {src : String} (K : Kette src)
     akzeptiert_pruefer.korrekt K.E K.fs K.ls K.cs K.akzeptiert
   have hlauf := fun passes n f k hk σ st ρG vs ρ0 hw hb hr hnf =>
     korrOk_jeder_lauf K.fs.2 K.zertOk orc XR hXR O passes n f k hk σ st ρG vs ρ0 hw hb hr hnf
-  refine ⟨K.uebersetzt, ⟨K.akzeptiert, hA, K.zertOk⟩, K.nutzer, hlauf,
+  have hhw : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+      (ρG : Env (declOf K.u) ((declOf K.u).params f)) (e : Hardware (declOf K.u)),
+      rufAt K.E.P O passes n f σ ρG ≠ .hardware e :=
+    fun passes n => korrOk_rufAt_ohneHardware K.EL fnNr K.zert K.fs.2 K.zertOk O passes n
+  have hlog : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+      (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes n f σ ρG).istFehler = true →
+        ∃ e : Logik (declOf K.u), rufAt K.E.P O passes n f σ ρG = .logik e := by
+    intro passes n f σ ρG hf
+    cases hr : rufAt K.E.P O passes n f σ ρG with
+    | ok σ' v => rw [hr] at hf; exact absurd hf (by simp [RufAusgang.istFehler])
+    | grund σ' r => rw [hr] at hf; exact absurd hf (by simp [RufAusgang.istFehler])
+    | logik e => exact ⟨e, rfl⟩
+    | hardware e => exact absurd hr (hhw passes n f σ ρG e)
+  have hreq : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))
+      (ρG : Env (declOf K.u) ((declOf K.u).params f)),
+      (rufAt K.E.P O passes (n + 1) f σ ρG).istFehler = false →
+        ReqAmEintritt K.E.P f σ ρG := by
+    intro passes n f σ ρG hf
+    rcases Classical.em (ReqAmEintritt K.E.P f σ ρG) with hq | hq
+    · exact hq
+    · rw [rufAt_vorbedingung K.E.P O passes n f σ ρG hq] at hf
+      exact absurd hf (by simp [RufAusgang.istFehler])
+  refine ⟨K.uebersetzt, ⟨K.akzeptiert, hA, K.zertOk⟩, K.nutzer, hlauf, hhw, hlog, hreq,
     ⟨fun passes => rufAt_mitRuhe K.E.P O passes,
       einfaden_ziel K.E K.fs hA K.nutzer O hH sp init hA4,
       fun passes sp' init' hL M hr => gabbro_ziel akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
@@ -353,10 +455,28 @@ list for the whole chain):
 - `Kette.E`'s fields other than the code are the chain's data, not the
   exporter's: `S`, `Q`, `starts`, `sp0` are read next to the source.
 - Part 4 relates C runs to `rufAt` (the sequential semantics) and is
-  conditional on the Gabbro call ending in no model error; part 5 states the
-  machine. That the one active thread of G agrees with `rufAt` is the
-  adequacy chain (`rufG_adaequat_ruf`), not re-instantiated here -- the same
-  cut as `schlusssatz_104`'s.
+  conditional on the Gabbro call ending in no model error. The HARDWARE half
+  of that condition is discharged (4b); the WRITER'S LOGIC half is not, and
+  the reason is nameable: the user's obligation `KoerperGutS`
+  (Zielsatz/Spec.lean (b)) is quantified over handlers in the classes
+  `RespektiertRahmen ∧ OhneVorbedingung` and `RespektiertRahmen ∧ OhneLogik`,
+  and `rufAt` -- the very handler part 4 speaks about -- is in NEITHER: it
+  answers `logik (vorbedingung g)` at every key whose `requires` fails,
+  `logik (abstieg g)` at depth `0`, and its frame theorem `rufAt_gut`
+  (Satz.lean) is CONDITIONAL on `HeldB` of the entry world where
+  `RespektiertRahmen` promises the frame at EVERY world. Applying the
+  obligation to `rufAt` needs a congruence lemma over `execEnd` in its
+  handler (two handlers that differ only where both answer an error give
+  outcomes that differ only where both are errors), which the tree does not
+  have. Booked in `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.5.
+- Part 5 states the machine. That the one active thread of G agrees with
+  `rufAt` is the adequacy chain (`rufG_adaequat_ruf`), not re-instantiated
+  here -- the same cut as `schlusssatz_104`'s. Of the four things in the way,
+  the covered FRAGMENT is not one (`korrOk_endR`, KorrOkAdaequat.lean: every
+  certified body is in `EndR`); the other three are that the chain realises
+  `rufRumpf` and not `rufAt` (contracts checked, and their carriers READ, so
+  the two differ on the TRACE), that `Tief` carries the same depth residue,
+  and that the adequacy is existential over machines of a given frame shape.
 - A2 (the emitted TEXT means `kProg K.zert`) and the parts of A1/A3/A4 that
   are no Lean proposition stay outside, exactly as for `schlusssatz_104`.
 - Stage (b), concurrency on the C side, is not addressed: the concurrent
