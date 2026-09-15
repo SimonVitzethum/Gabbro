@@ -265,8 +265,100 @@ theorem probe_bindCall_karte :
       [.call 0 [.var 0] (some (2, bU32c)), .setVar 0 bU32c (.var 2)] = false := by
   decide
 
+/-! ## 4. `traverse` -- the counting loop
+
+    The table `T` of the fixture has four slots, so the emitted header is
+    `for (uint32_t v = 0; v < 4; v += 1)`. Three things the arm decides
+    that `scorr_traverse` assumes: the bound is the table's count, the
+    loop variable is fresh, and the BODY DOES NOT WRITE the loop
+    variable. Each of the three is a planted defect below. -/
+
+/-- The loop body's context: the index, then the two parameters. -/
+abbrev bTravCtx : Ctx := Ty.index (wD.count ()) :: wCtx
+
+/-- `traverse T { a = 1; }` -- the body writes a PARAMETER (C local `0`),
+    not the loop variable. -/
+def bTravBody : Block wD wV true bTravCtx [] [] :=
+  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 1))) .nil
+
+def bTrav : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bTravBody
+
+/-- The same loop, with a body that writes the LOOP VARIABLE (`v = 0;`).
+    The model allows the statement; `scorr_traverse` does not cover it
+    (`hw`), so the check must REFUSE its row -- and the refusal is the
+    hygiene check, not a mismatch of the rows. -/
+def bTravBodySchreibt : Block wD wV true bTravCtx [] [] :=
+  .cons (Stmt.assignVar .hier (.weiter (by decide) (by decide) (Expr.lit 0))) .nil
+
+def bTravSchreibt : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bTravBodySchreibt
+
+/-- The loop row, accepted and refused. PLANTED DEFECTS: the WRONG LOOP
+    BOUND (too high, too low, and not a constant at all), the loop
+    variable taken from the parameters (not fresh), the body one
+    statement short, the body one statement too long, and the body's one
+    statement replaced by a different one. -/
+theorem probe_forTrav :
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 4) [bRowT] 0) = true ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 5) [bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 3) [bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.var 1) [bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 0 CIT.u32 (.lit 4) [bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 4) [] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 4) [bRowT, bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.forTrav 2 CIT.u32 (.lit 4) [bRowE] 0) = false := by
+  decide
+
+/-- A loop whose body writes the loop variable is refused, and its row is
+    the one that MATCHES the body -- so the refusal is `scorr_traverse`'s
+    `hw` premise and nothing else. -/
+theorem probe_forTrav_hygiene :
+    stOk wEL wFnum wZert wK bTravSchreibt
+      (.forTrav 2 CIT.u32 (.lit 4) [.setVar 2 bU32c (.lit 0)] 0) = false := by
+  decide
+
+/-- A loop row against a statement that is not a loop, and a loop
+    statement against a row that is not a loop row. -/
+theorem probe_forTrav_fremd :
+    stOk wEL wFnum wZert wK bIte (.forTrav 2 CIT.u32 (.lit 4) [bRowT] 0) = false ∧
+    stOk wEL wFnum wZert wK bTrav (.ite bCond [bRowT] [bRowE]) = false := by
+  decide
+
+/-! ## 5. The recursion NESTS: an `if` inside a `traverse` -/
+
+def by0 : Expr wD bTravCtx [] wU32 := .var (.dort .hier)
+def by1 : Expr wD bTravCtx [] wU32 := .var (.dort (.dort .hier))
+
+def bNestT : Block wD wV true bTravCtx [] [] :=
+  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 1))) .nil
+
+def bNestE : Block wD wV true bTravCtx [] [] :=
+  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 2))) .nil
+
+/-- `traverse T { if (a < b) { a = 1; } else { a = 2; } }` -/
+def bNestBody : Block wD wV true bTravCtx [] [] :=
+  .cons (Stmt.ite (Expr.lt by0 by1) bNestT bNestE) .nil
+
+def bNest : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bNestBody
+
+/-- Two levels of row list, and the check still reads both -- with the
+    branches swapped at the INNER level as the planted defect. -/
+theorem probe_nested :
+    stOk wEL wFnum wZert wK bNest
+      (.forTrav 2 CIT.u32 (.lit 4) [.ite bCond [bRowT] [bRowE]] 0) = true ∧
+    stOk wEL wFnum wZert wK bNest
+      (.forTrav 2 CIT.u32 (.lit 4) [.ite bCond [bRowE] [bRowT]] 0) = false ∧
+    stOk wEL wFnum wZert wK bNest
+      (.forTrav 2 CIT.u32 (.lit 4) [.ite bCond [bRowT] []] 0) = false ∧
+    stOk wEL wFnum wZert wK bNest
+      (.forTrav 2 CIT.u32 (.lit 5) [.ite bCond [bRowT] [bRowE]] 0) = false := by
+  decide
+
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_ite
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_ite_fremd
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_forTrav
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_forTrav_hygiene
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_forTrav_fremd
+#print axioms Gabbro.Grammatik.BlockZeuge.probe_nested
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_blOk_void
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_blOk_let
 #print axioms Gabbro.Grammatik.BlockZeuge.probe_bindCall

@@ -45,7 +45,10 @@
   BLOCKS as well as terminal blocks: `if (c) { … } else { … }`
   (`GRow.ite` against `Stmt.ite`) is decided arm by arm, and inside a
   block `T y = g(a);` (`GRow.call` with a destination against
-  `Block.bindCall`) binds the callee's answer to a fresh C local. A row that
+  `Block.bindCall`) binds the callee's answer to a fresh C local; the
+  `traverse` header `for (T v = 0; v < N; v += 1) { … }` (`GRow.forTrav`
+  against `Stmt.traverse`) is decided with its bound, its loop variable's
+  freshness and the body's hygiene. A row that
   carries rows needs a recursion, and the recursion is STAGED, not
   mutual: `stOk0` (flat, no recursion) -> `blOk` (self-recursive over the
   rows, structurally) -> `stOk` (`stOk0` plus the block arms) -> `enOk`
@@ -332,6 +335,19 @@ def stOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
   | .ite cc tRows eRows => (match s with
       | .ite cnd t e => exOk EL K cnd cc && blOk K t tRows && blOk K e eRows
       | _ => false)
+  -- `for (T v = 0; v < N; v += 1) { … }` -- the `traverse` header. The
+  -- upper bound must be the LITERAL count of the table (`scorr_traverse`
+  -- wants `ev hiC = N` at every state, and a literal is the only C
+  -- expression this file can decide that of), the loop variable must be
+  -- fresh, and the body must not write it (`hw`, decided on the
+  -- ELABORATED rows, as `rowsTravOk` does it in Korrespondenz.lean).
+  | .forTrav x ti hiC bodyRows _m' => (match s, hiC with
+      | .traverse tb _ body, .lit v =>
+          K.okB && K.freshB x && decide (v = D.count tb) && decide (0 ≤ D.count tb) &&
+            decide (ti.holds 0 (D.count tb)) &&
+            decide ((growsCS bodyRows .skip).writesV x = false) &&
+            blOk (K.push (.index (D.count tb)) x) body bodyRows
+      | _, _ => false)
   | r => stOk0 EL fnum c K s r
 
 /-- **BLOCKS** (`Block`: an `if` arm, later a loop body): row by row, the
@@ -1212,6 +1228,23 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) : ∀ (n : Nat),
                   (cCorr_block X mm (ih.2 mm K₀ t tRows (by omega) hT))
                   (cCorr_block X mm (ih.2 mm K₀ e eRows (by omega) hE))
             | _ => exact absurd h (by simp [stOk])
+        | forTrav x ti hiC bodyRows m' =>
+            cases s with
+            | traverse tb inv body =>
+                cases hiC with
+                | lit v =>
+                    simp only [stOk, Bool.and_eq_true] at h
+                    obtain ⟨⟨⟨⟨⟨⟨hK, hf⟩, hv⟩, hN0⟩, hN⟩, hwb⟩, hb⟩ := h
+                    simp only [rowSize] at hn
+                    have hv' : v = D.count tb := of_decide_eq_true hv
+                    subst hv'
+                    exact scorr_traverse X mm m' K₀ hK hf tb ti (of_decide_eq_true hN0)
+                      (of_decide_eq_true hN) (.lit (D.count tb)) (fun _ _ => rfl) inv body
+                      (growsCS bodyRows .skip)
+                      (cCorr_block X m' (ih.2 m' _ body bodyRows (by omega) hb))
+                      (of_decide_eq_true hwb)
+                | _ => exact absurd h (by simp [stOk])
+            | _ => exact absurd h (by simp [stOk])
         | _ => exact stOk0_sound X fnum c hF mm K₀ s _ h
       refine ⟨h1, ?_⟩
       intro mm V l Γ₀ Λ₀ Λ₁ K₀ b rs hn h
@@ -1410,11 +1443,17 @@ end Tiefe
 CUTS -- what this file does not do, by name.
 - COVERED FORMS: the statement and expression families listed in the header.
   Not covered (the Bool is `false`, a refusal), with the reason for each:
-  * `traverse` (`GRow.forTrav`) carries a ROW LIST like `GRow.ite`, and
-    its arm is the same shape -- `blOk` on the loop body. It is not in
-    yet; `scorr_traverse` is proved, and its side conditions (the loop
-    bound, the loop variable fresh and not written by the body) are all
-    decidable.
+  * `traverse` (`GRow.forTrav`) is in, but only with a CONSTANT bound:
+    `scorr_traverse` wants `ev hiC = D.count tb` at EVERY C state, and
+    the only C expression this file can decide that of is a literal.
+    A header that computes its bound is a refusal, not an admission.
+    The loop's own budget `m'` is data of the row and not checked: it is
+    the `forC` step count of the C semantics, and the correspondence
+    holds at whatever it is.
+  * `retry`, `forever` and the other block statements (`locks`,
+    `breaking`, `onOption`, `onTag`, `onGrund`) have rows in neither
+    `GRow` nor the printer, so `blOk` never meets them; `stOk0` refuses
+    their statements.
   * `let x = f(…)` (`bindCall`) is a `Block` constructor and NOT an
     `Endblock` one, so it is checked in `blOk` and nowhere else: a body
     whose TOP level binds a call's answer is not expressible in the model
