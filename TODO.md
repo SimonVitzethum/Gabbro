@@ -25,6 +25,41 @@ Each item names its owner (lane or agent) where one is running.
 
 ---
 
+# 0. The runtime — MAXIMUM PRIORITY (owner, 2026-09-15)  ⟨A⟩
+
+*Measured the same day, with `gabbro emit beispiele/124-two-threads-private.gab`: the emitted C
+of a two-thread program declares `void L_nimm(void); void L_gib(void);` and defines neither;
+`hauptA`/`hauptB` are `static` and **nobody calls them**; there is no `main`. **A program that
+the checker accepts, the emitter emits and `cc` compiles still does not run.** The runtime is
+assumption A4 of the goal theorem today — and an assumption is the right place for it only as
+long as nobody has written it.*
+
+- [ ] **The lock primitive, written in Gabbro.** `L_nimm`/`L_gib` are external symbols. The
+  ticket lock is proved in Lean (`CTicket.lean`, SATZKARTE §32) as four instructions; the
+  language has atomics with orderings and a compare-exchange that lowers to
+  `atomic_compare_exchange_strong_explicit`. If the lock can be WRITTEN IN GABBRO and accepted
+  by the checker, the runtime stops being an assumption and becomes a program the same chain
+  covers. Where the checker refuses it, **the refusal is the finding** — it says what the
+  language cannot yet express about its own runtime.
+- [ ] **Thread start and the idle root.** Something must place the declared `concurrent`
+  members on threads and leave every other thread in the idle root — that is exactly the shape
+  A4 demands (`LaufzeitStart`). A hosted driver first (it can be run and measured), the
+  bare-metal form after it.
+- [ ] **One concurrent program that actually RUNS**, through the emission guardian's executed
+  set, with its result compared against a handwritten version — the way 37 single-threaded
+  units already are.
+- [ ] **Then: A4 discharged, or narrowed.** With the driver written, the premise is either
+  proved against it (as the ticket lock's premise was on 2026-09-15) or it stays and says
+  precisely what about the driver is assumed.
+- [ ] **`entry`/`boot`: the vector and the dispatch.** Today only the dispatch root travels;
+  the vector, the registers and the steps have no form. After the hosted driver.
+
+**The standard library is DEFERRED** (owner, same day): the language mechanism exists
+(`library fn` with `payload`, `@lib#fn(...)` calls, a three-unit library chain in the emission
+guardian) — what does not exist is content: no memory copy, no ring buffer, no queue, no
+strings. It waits until the runtime runs. *The runtime is the first thing that belongs in that
+library anyway: small, concurrent, and the same for every program.*
+
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
 - [ ] **The exporter produces a full `Einheit`** — lane 198 (running). `gabbro lean-g` writes:
