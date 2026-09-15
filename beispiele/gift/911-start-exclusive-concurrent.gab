@@ -6,8 +6,9 @@
 -- declaring the carrier shared, and it is not starting them lock-free either:
 -- N240 falls for the shared signature lock. Both bodies only READ, so the
 -- write-hull rules stay silent (`W001` lets shared reads overlap freely, and
--- with no `entry` there is no `W002`/`H013`): the refusal set is exactly
--- `[N240]`. The second set pairs two lock-free bodies -- the positive twin:
+-- with no `entry` there is no `W002`/`H013`); `N303` falls beside `N240`, once
+-- per lock-holding start (lane 183: starts hold NO lock by signature, so the
+-- refusal set is `[N240, N303]`, not `[N240]` alone). The second set pairs two lock-free bodies -- the positive twin:
 -- a disjoint pair in the same unit stays silent. (It must use bodies of its
 -- own: naming `read_a` a second time would start it twice, and two starts in
 -- one lock-holding routine fall on their own -- gift 912 pins that shape.)

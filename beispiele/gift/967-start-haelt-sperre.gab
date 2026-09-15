@@ -1,0 +1,46 @@
+-- erwartet: N303
+-- **A declared start whose function holds a lock by signature.**
+--
+-- `leser_a` runs as a `concurrent` member and requires `Held(L)` -- nobody
+-- holds a lock for a thread before it starts (`wurzelnB`: `D.haelt w = []`,
+-- the strong form of `N240`, which only bans locks two starts SHARE: `L`
+-- stands in one held set alone, so `N240` stays silent). `T` is lock-guarded
+-- and `U` is unguarded but never written, so the race legs stay silent
+-- beside the root refusal; the remedy is the `109` discipline -- take the
+-- lock inside (`locks L { … }`) instead of requiring it. The refusal set is
+-- exactly `N303`: `leser_b` reads its table bare, but a carrier no function
+-- writes needs no guard.
+module gift::wurzel_haelt_sperre {
+
+table T count 4 {
+    slot {
+        v : u32,
+    }
+}
+
+table U count 4 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn leser_a() -> u32
+    requires Held(L)
+    effects { reads T.slots }
+    costs   <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn leser_b() -> u32
+    effects { reads U.slots }
+    costs   <= 4 ops
+{
+    return U.slots[1].v;
+}
+
+concurrent { leser_a, leser_b };
+
+}

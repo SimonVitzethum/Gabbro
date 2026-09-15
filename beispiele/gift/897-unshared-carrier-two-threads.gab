@@ -7,7 +7,10 @@
 -- already sees one thread, H222 sees the PAIR. The pair is even declared
 -- `concurrent` below, and H222 fires anyway: declaring that two bodies MAY
 -- run together is not declaring the carrier shared -- and the pair rule W001
--- fires third, for the overlapping write hulls. `allein` under its single
+-- fires third, for the overlapping write hulls. Fourth and fifth come from
+-- lane 183: `N300` (both graphs write the unguarded `z`) and `N304` (each
+-- routine is listed twice -- concurrent member and entry root -- and neither
+-- is idle). `allein` under its single
 -- entry draws H013 but NOT H222 -- the positive twin of this rule: one
 -- thread alone owns its carrier, and H222 names only `z`, never `eigen`.
 module gift::ungeteilt_zwei_faeden {

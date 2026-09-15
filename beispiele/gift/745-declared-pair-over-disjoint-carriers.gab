@@ -8,6 +8,9 @@
 -- what falls is `H013`, once per carrier, and the W5 answer beside it names the
 -- same two. The declaration changes nothing about the verdict -- a pair list is
 -- the second half of `BauLauf` (`nurPaareLaufen`), not of `pruefeUngeteilt`.
+-- Note the double listing: each member also backs an entry, so each writing
+-- routine starts twice -- since lane 183 (`N304`: twice-started means idle)
+-- that draws `N304` beside `H013`.
 -- The twin `ruhig` writes a lock-guarded table under its guard and stands in no
 -- entry.
 module gift::bau_declared_pair {

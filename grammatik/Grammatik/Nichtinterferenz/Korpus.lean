@@ -33,33 +33,37 @@ namespace Gabbro.Grammatik
 
 open NIZeuge
 
-/-! ## 108: two readers of disjoint tables -- admitted -/
+/-! ## 108: two lock-free readers of ONE table -- admitted with a kernel label
+
+Lane 183 (2026-09-15) reworked `beispiele/108`: its starts held locks by
+signature, which the goal's checker refuses; now `read_a` and `read_c` both
+read the one table `T` without a lock. For noninterference `T` must flow to
+both reading domains, which the kernel label `K` does. -/
 
 instance : DecidableEq G108_disjoint_start_locks.gD.Fn :=
   inferInstanceAs (DecidableEq G108_disjoint_start_locks.GFn)
 
 def k108L : FlussEtiketten G108_disjoint_start_locks.gD NDom where
   lab
-    | .inl .T => .A
-    | .inl .U => .B
+    | .inl .T => .K
   labAx := fun a => nomatch a
   wurzel
     | .read_a => some .A
     | .read_c => some .B
 
 def k108Cs : List (G108_disjoint_start_locks.gD.Tab ⊕ G108_disjoint_start_locks.gD.Glob) :=
-  [.inl .T, .inl .U]
+  [.inl .T]
 
-/-- **108 is admitted** under the split `read_a, T : A` / `read_c, U : B`. -/
+/-- **108 is admitted** with `T : K` (kernel data both tenants may read). -/
 theorem k108_fluss :
     flussB nπ G108_disjoint_start_locks.gP G108_disjoint_start_locks.gFs k108Cs k108L = true := by
   decide
 
-/-- The crossed split (`read_a` reads `T`, labelled `B`) is refused: the
-    check reads the labels. -/
+/-- Labelling `T` as tenant A's data is refused: `read_c` (domain B) reads
+    it. The check reads the labels. -/
 theorem k108_gekreuzt :
     flussB nπ G108_disjoint_start_locks.gP G108_disjoint_start_locks.gFs k108Cs
-      { k108L with lab := fun | .inl .T => .B | .inl .U => .A } = false := by
+      { k108L with lab := fun | .inl .T => .A } = false := by
   decide
 
 /-! ## 104: a writer and a reader of one account -- refused for every label -/

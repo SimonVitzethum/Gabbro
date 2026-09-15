@@ -835,7 +835,69 @@ def pre108 (items : List SItemTief) : List SItemTief :=
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
 /-- The real `beispiele/108-disjoint-start-locks.gab` text. -/
-def src108 : String := "-- 108 -- Declared-concurrent readers under disjoint signature locks.\n--\n-- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): the start functions of\n-- distinct threads hold no signature lock in common. Here `read_a` requires\n-- `Held(L)` and `read_c` requires `Held(M)` -- disjoint sets -- so the\n-- declared pair `concurrent { read_a, read_c }` starts exclusively and every\n-- rule stays silent: N240 (disjoint), W001 (reads overlap freely), W003\n-- (both hulls complete). The passing side of gifts 911/913 at corpus level.\nmodule beispiel::disjoint_start_locks {\n\ntable T count 4 {\n    slot { v : u32, }\n}\n\ntable U count 4 {\n    slot { v : u32, }\n}\n\nlock L protects { T } rank 0 held <= 100 ops;\n\nlock M protects { U } rank 1 held <= 100 ops;\n\nimpl fn read_a() -> u32\n    requires Held(L)\n    effects { reads T.slots }\n    costs <= 4 ops\n{\n    return T.slots[0].v;\n}\n\nimpl fn read_c() -> u32\n    requires Held(M)\n    effects { reads U.slots }\n    costs <= 4 ops\n{\n    return U.slots[0].v;\n}\n\nconcurrent { read_a, read_c };\n\n}\n"
+def src108 : String := "-- 108 -- Two lock-free readers over one shared, never-written table.
+--
+-- TRANSFER of `StartExklusiv` (`RufMaschineG.lean`): the start functions of
+-- distinct threads hold no signature lock in common -- and since lane 183
+-- (`wurzelnB`) they hold NO signature lock at all: nobody holds a lock for a
+-- thread before it starts. This file used to show the disjoint shape
+-- (`read_a` under `Held(L)`, `read_c` under `Held(M)`); that shape is now
+-- refused at both starts (`N303`), and the take-inside remedy has no G form
+-- for value readers (`LG004`: no `return` under `locks`). What remains is
+-- the silent side both rules share: two readers over one table nobody
+-- writes -- every rule stays silent (`N240`/`N303`: nothing held; `N290`/
+-- `N291`/`N300`/`N301`: unwritten carriers; `W001`: reads overlap freely).
+-- The refused root shape lives in `beispiele/gift/967`, the pair side in
+-- gifts 910-915. The G export of this file is pinned in
+-- `grammatik/Grammatik/Export108.lean`.
+--
+-- Evidence: the pre-183 program this file replaces, kept verbatim as a
+-- comment. It is refused since lane 183 at both starts by `N303`
+-- (`wurzelnB`: `D.haelt w = []` -- nobody holds a lock for a thread before
+-- it starts), although `N240` stays silent on it (disjoint held sets):
+--   table U count 4 {
+--       slot { v : u32, }
+--   }
+--   lock L protects { T } rank 0 held <= 100 ops;
+--   lock M protects { U } rank 1 held <= 100 ops;
+--   impl fn read_a() -> u32
+--       requires Held(L)
+--       effects { reads T.slots }
+--       costs <= 4 ops
+--   {
+--       return T.slots[0].v;
+--   }
+--   impl fn read_c() -> u32
+--       requires Held(M)
+--       effects { reads U.slots }
+--       costs <= 4 ops
+--   {
+--       return U.slots[0].v;
+--   }
+module beispiel::disjoint_start_locks {
+
+table T count 4 {
+    slot { v : u32, }
+}
+
+impl fn read_a() -> u32
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[0].v;
+}
+
+impl fn read_c() -> u32
+    effects { reads T.slots }
+    costs <= 4 ops
+{
+    return T.slots[1].v;
+}
+
+concurrent { read_a, read_c };
+
+}
+"
 
 /-- The token list of the 108 source (`lex108` checks it). -/
 def toks108 : List Token := [.wort "module",
@@ -856,45 +918,6 @@ def toks108 : List Token := [.wort "module",
  .zeichen ",",
  .zeichen "}",
  .zeichen "}",
- .wort "table",
- .ident "U",
- .wort "count",
- .zahl 4,
- .zeichen "{",
- .wort "slot",
- .zeichen "{",
- .ident "v",
- .zeichen ":",
- .wort "u32",
- .zeichen ",",
- .zeichen "}",
- .zeichen "}",
- .wort "lock",
- .ident "L",
- .wort "protects",
- .zeichen "{",
- .ident "T",
- .zeichen "}",
- .wort "rank",
- .zahl 0,
- .wort "held",
- .zeichen "<=",
- .zahl 100,
- .wort "ops",
- .zeichen ";",
- .wort "lock",
- .ident "M",
- .wort "protects",
- .zeichen "{",
- .ident "U",
- .zeichen "}",
- .wort "rank",
- .zahl 1,
- .wort "held",
- .zeichen "<=",
- .zahl 100,
- .wort "ops",
- .zeichen ";",
  .wort "impl",
  .wort "fn",
  .ident "read_a",
@@ -902,11 +925,6 @@ def toks108 : List Token := [.wort "module",
  .zeichen ")",
  .zeichen "->",
  .wort "u32",
- .wort "requires",
- .ident "Held",
- .zeichen "(",
- .ident "L",
- .zeichen ")",
  .wort "effects",
  .zeichen "{",
  .wort "reads",
@@ -937,15 +955,10 @@ def toks108 : List Token := [.wort "module",
  .zeichen ")",
  .zeichen "->",
  .wort "u32",
- .wort "requires",
- .ident "Held",
- .zeichen "(",
- .ident "M",
- .zeichen ")",
  .wort "effects",
  .zeichen "{",
  .wort "reads",
- .ident "U",
+ .ident "T",
  .zeichen ".",
  .wort "slots",
  .zeichen "}",
@@ -955,11 +968,11 @@ def toks108 : List Token := [.wort "module",
  .wort "ops",
  .zeichen "{",
  .wort "return",
- .ident "U",
+ .ident "T",
  .zeichen ".",
  .wort "slots",
  .zeichen "[",
- .zahl 0,
+ .zahl 1,
  .zeichen "]",
  .zeichen ".",
  .ident "v",
@@ -975,7 +988,9 @@ def toks108 : List Token := [.wort "module",
  .zeichen "}",
  .ende]
 
+
 set_option maxHeartbeats 12000000 in
+
 theorem lex108 : lex src108 = .ok toks108 := by
   decide
 
@@ -997,43 +1012,13 @@ def items108 : List SItemTief := [.modulT
             wo := none,
             reserviert := false,
             byOps := false }]],
-    .tabelleT
-      "U"
-      (some (.lit 4))
-      none
-      none
-      false
-      [.tPlatz
-         [{ fname := "v",
-            ftyp := .atom "u32",
-            pos := none,
-            bezug := none,
-            wo := none,
-            reserviert := false,
-            byOps := false }]],
-    .sperreT
-      "L"
-      [.variable "T"]
-      (.lit 0)
-      (some (.lit 100))
-      none
-      none,
-    .sperreT
-      "M"
-      [.variable "U"]
-      (.lit 1)
-      (some (.lit 100))
-      none
-      none,
     .funktionT
       { art := "impl",
         name := "read_a",
         params := [],
         ergebnis := some (.atom "u32"),
         fehler := none,
-        klauseln := [.voraus
-                       (.ruf "Held" [.variable "L"]),
-                     .wirkung
+        klauseln := [.wirkung
                        [.liest
                           (.feld (.variable "T") "slots")],
                      .kosten (.lit 4)] }
@@ -1051,19 +1036,17 @@ def items108 : List SItemTief := [.modulT
         params := [],
         ergebnis := some (.atom "u32"),
         fehler := none,
-        klauseln := [.voraus
-                       (.ruf "Held" [.variable "M"]),
-                     .wirkung
+        klauseln := [.wirkung
                        [.liest
-                          (.feld (.variable "U") "slots")],
+                          (.feld (.variable "T") "slots")],
                      .kosten (.lit 4)] }
       (.block
         []
         (some (.ret
            (some (.feld
               (.index
-                (.feld (.variable "U") "slots")
-                (.lit 0))
+                (.feld (.variable "T") "slots")
+                (.lit 1))
               "v"))))),
     .nebenT [["read_a"], ["read_c"]]]]
 
@@ -1072,9 +1055,9 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
-def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }, { name := "U", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [{ name := "L", rank := 0, schutz := ["T"] }, { name := "M", rank := 1, schutz := ["U"] }], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := ["L"], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := ["M"], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "U" "v" (.lit 0)) }] }
 
-set_option maxHeartbeats 12000000 in
+def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 1)) }] }
+
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide
 
@@ -1098,28 +1081,16 @@ theorem lowerAllg108fuss :
 theorem lowerAllg108data :
     (declOf uExp108).count ⟨0, by decide⟩ = 4 ∧
     G108_disjoint_start_locks.gD.count G108_disjoint_start_locks.GTab.T = 4 ∧
-    (declOf uExp108).count ⟨1, by decide⟩ = 4 ∧
-    G108_disjoint_start_locks.gD.count G108_disjoint_start_locks.GTab.U = 4 ∧
     (declOf uExp108).typ ⟨0, by decide⟩ ⟨0, by decide⟩ = .int 0 4294967295 ∧
     G108_disjoint_start_locks.gD.typ G108_disjoint_start_locks.GTab.T G108_disjoint_start_locks.GTFeld.v = .int 0 4294967295 ∧
-    (declOf uExp108).typ ⟨1, by decide⟩ ⟨0, by decide⟩ = .int 0 4294967295 ∧
-    G108_disjoint_start_locks.gD.typ G108_disjoint_start_locks.GTab.U G108_disjoint_start_locks.GUFeld.v = .int 0 4294967295 ∧
-    (declOf uExp108).rang ⟨0, by decide⟩ = 0 ∧
-    G108_disjoint_start_locks.gD.rang G108_disjoint_start_locks.GLock.L = 0 ∧
-    (declOf uExp108).rang ⟨1, by decide⟩ = 1 ∧
-    G108_disjoint_start_locks.gD.rang G108_disjoint_start_locks.GLock.M = 1 ∧
-    (declOf uExp108).braucht ⟨0, by decide⟩ = ([.inl (⟨0, by decide⟩ : Fin uExp108.sperren.length)] : List ((declOf uExp108).Lock ⊕ ((declOf uExp108).Marke × Nat))) ∧
-    G108_disjoint_start_locks.gD.braucht G108_disjoint_start_locks.GTab.T = [.inl G108_disjoint_start_locks.GLock.L] ∧
-    (declOf uExp108).braucht ⟨1, by decide⟩ = ([.inl (⟨1, by decide⟩ : Fin uExp108.sperren.length)] : List ((declOf uExp108).Lock ⊕ ((declOf uExp108).Marke × Nat))) ∧
-    G108_disjoint_start_locks.gD.braucht G108_disjoint_start_locks.GTab.U = [.inl G108_disjoint_start_locks.GLock.M] ∧
-    ((declOf uExp108).signatur ⟨0, by decide⟩).haelt = ([(⟨0, by decide⟩ : Fin uExp108.sperren.length)] : List (declOf uExp108).Lock) ∧
-    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_a = [G108_disjoint_start_locks.GLock.L] ∧
-    ((declOf uExp108).signatur ⟨1, by decide⟩).haelt = ([(⟨1, by decide⟩ : Fin uExp108.sperren.length)] : List (declOf uExp108).Lock) ∧
-    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_c = [G108_disjoint_start_locks.GLock.M] ∧
+    ((declOf uExp108).signatur ⟨0, by decide⟩).haelt = ([] : List (declOf uExp108).Lock) ∧
+    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_a = [] ∧
+    ((declOf uExp108).signatur ⟨1, by decide⟩).haelt = ([] : List (declOf uExp108).Lock) ∧
+    G108_disjoint_start_locks.gD.haelt G108_disjoint_start_locks.g_read_c = [] ∧
     ((declOf uExp108).signatur ⟨0, by decide⟩).schreibt ⟨0, by decide⟩ = false ∧
     (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_a).schreibt G108_disjoint_start_locks.GTab.T = false ∧
-    ((declOf uExp108).signatur ⟨1, by decide⟩).schreibt ⟨1, by decide⟩ = false ∧
-    (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_c).schreibt G108_disjoint_start_locks.GTab.U = false := by
+    ((declOf uExp108).signatur ⟨1, by decide⟩).schreibt ⟨0, by decide⟩ = false ∧
+    (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_c).schreibt G108_disjoint_start_locks.GTab.T = false := by
   decide
 
 /-- One theorem chaining every stage for 108. -/

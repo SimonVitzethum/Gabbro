@@ -1,0 +1,36 @@
+-- erwartet: N301
+-- **A write-read race on an unguarded carrier across two starts.**
+--
+-- `schreiber` writes `G` on the second thread while `leser` carries `G` in
+-- its footprint on the first -- so the footprint leg (`N291`) fires beside
+-- it: the read is bare, guarded by nothing. `N301` is the race half of the
+-- same shape: a carrier one start's call graph writes is READ by a different
+-- start's graph, unguarded, neither atomic nor a publish payload
+-- (`SchreibGetrennt`, the `rennB` component). The twin with two writers and
+-- no reader is `964` (`N300`); a pair that writes on both sides belongs to
+-- `N300` alone.
+module gift::renn_schreiber_leser {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn schreiber()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+impl fn leser() -> u32
+    effects { reads G.slots }
+    costs   <= 64 ops
+{
+    return G.slots[0].v;
+}
+
+concurrent { schreiber, leser };
+
+}

@@ -6,7 +6,9 @@
 -- threads start holding one lock -- the audit's usual shape is a lock-free
 -- ENTRY, with the lock taken inside. Both functions only READ here, so no
 -- write-hull rule fires beside it (`W001`/`W002`/`H013` stay silent): what
--- falls is the shared signature lock alone, once for the pair. The third
+-- falls is the shared signature lock alone, once for the pair -- plus `N303`
+-- twice, one per lock-holding start (lane 183: starts hold NO lock by
+-- signature, shared or not). The third
 -- entry dispatches to `idle`, which holds no lock -- the positive twin:
 -- disjoint starts stay silent, and N240 names only the `L` pair, never `idle`.
 module gift::start_exclusive_entry {

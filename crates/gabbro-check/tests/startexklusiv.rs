@@ -48,16 +48,21 @@ fn shared_lock_at_two_starts_falls() {
 
 #[test]
 fn disjoint_locks_stay_silent() {
+    // Since lane 183 (`wurzelnB`) starts hold NO signature lock at all -- the
+    // old `requires Held` shape falls with N303 (see `beispiele/108` and gift
+    // 967). Disjointness now shows as disjoint locks TAKEN INSIDE.
     let codes = fehler(&einheit(&format!(
         "table U count 4 {{ slot {{ v : u32, }} }}\n\
-         lock M protects {{ U }} rank 1 held <= 100 ops;\n{} {}\nconcurrent {{ read_a, read_c }};\n",
-        reader("read_a", "requires Held(L)"),
-        "impl fn read_c() -> u32\n    requires Held(M)\n    effects { reads U.slots }\n    \
-         costs <= 4 ops\n{\n    return U.slots[1].v;\n}\n"
+         lock M protects {{ U }} rank 1 held <= 100 ops;\n\
+         impl fn read_a() -> u32\n    effects {{ reads T.slots, locks L }}\n    \
+         costs <= 64 ops\n{{\n    locks L {{ return T.slots[0].v; }}\n}}\n\
+         impl fn read_c() -> u32\n    effects {{ reads U.slots, locks M }}\n    \
+         costs <= 64 ops\n{{\n    locks M {{ return U.slots[1].v; }}\n}}\n\
+         concurrent {{ read_a, read_c }};\n",
     )));
     assert!(
         codes.is_empty(),
-        "disjoint signature locks must stay silent: {codes:?}"
+        "disjoint locks taken inside must stay silent: {codes:?}"
     );
 }
 

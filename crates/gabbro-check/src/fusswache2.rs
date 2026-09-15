@@ -34,6 +34,28 @@
 //!   so this leg fires exactly where they stay silent; same-lock pairs are exempt there
 //!   as here (the real same-lock take is `H003`'s).
 //!
+//! Five more codes, one per leg of the race component (lane 183):
+//!
+//! * `N300` -- a WRITE-WRITE race across two DIFFERENT starts: one start's call graph
+//!   may write an unguarded, non-atomic, non-payload carrier another start's graph
+//!   writes too. This is the gap the footprint legs above cannot see: footprints list
+//!   reads, so two writers with no reader anywhere pass `N290`-`N294` silently.
+//!   Decides the write-write half of `SchreibGetrennt` (`rennB`).
+//! * `N301` -- a WRITE-READ race across two DIFFERENT starts: one start's graph may
+//!   write a carrier the other start's graph carries in a footprint. Fires only where
+//!   `N300` does not (the other graph writes nothing there): the write-write shape
+//!   belongs to `N300` alone. Decides the write-read half of `SchreibGetrennt`.
+//! * `N302` -- a declared start whose function declares a reason channel (`-> T or R`).
+//!   A start's reason has no caller to take it; `wurzelnB` demands `D.gruende w = 0`.
+//! * `N303` -- a declared start whose function holds a lock by signature
+//!   (`requires Held(L)`, any strength). Nobody holds a lock for a thread before it
+//!   starts; `wurzelnB` demands `D.haelt w = []` (the strong form of `N240`, which
+//!   only bans locks two starts SHARE).
+//! * `N304` -- the same routine starting two threads without being idle: two declared
+//!   starts resolve to one function whose call graph writes a carrier or carries a
+//!   footprint. `StartZulaessig.einmal` admits a twice-started routine only as `Ruhig`
+//!   (no lock, no reasons, empty footprints, no writes -- idle starts write nothing).
+//!
 //! Surface mapping, each with its Lean ground:
 //!
 //! * Started threads are the `concurrent` members plus the `entry`/`boot` dispatch roots
@@ -194,8 +216,8 @@ fn schreibtraeger(
 /// members, `entry` roots, `boot` dispatch.
 struct Start {
     funktion: String,
-    #[allow(dead_code)]
     quelle: String,
+    span: Span,
 }
 
 fn startet(
@@ -211,6 +233,11 @@ fn startet(
                     aus.push(Start {
                         funktion: k,
                         quelle: format!("concurrent member `{}`", pfad.text()),
+                        span: pfad
+                            .teile
+                            .last()
+                            .map(|i| i.span)
+                            .unwrap_or(item.span),
                     });
                 }
             }
@@ -221,6 +248,7 @@ fn startet(
             aus.push(Start {
                 funktion: voll,
                 quelle: format!("entry `{}`", k.name),
+                span: k.span,
             });
         }
     }
@@ -230,6 +258,7 @@ fn startet(
                 aus.push(Start {
                     funktion: voll,
                     quelle: format!("boot `{}`", b.name.text),
+                    span: item.span,
                 });
             }
         }
@@ -961,6 +990,342 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                 absagen,
                             );
                         }
+                    }
+                }
+            }
+        }
+    }
+    race(
+        baum,
+        &starts,
+        &faeden,
+        &funktionen,
+        &schreibt,
+        &fuss,
+        &sperrkarte,
+        &gehalten,
+        absagen,
+    );
+}
+
+/// The `atomic` globals of the unit -- the surface of `D.atomar` (`AtomarAusgenommen`).
+fn atomics(baum: &Programm) -> BTreeSet<String> {
+    let mut aus = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Atomic(a) = &item.art {
+            aus.insert(a.name.text.clone());
+        }
+    });
+    aus
+}
+
+/// The per-core accumulators (`accumulates … per cpu N`) -- one cell per core, merged
+/// over the `N`-bounded loop. One surface name denotes N distinct carriers, so no
+/// shared carrier stands behind it -- the same reason `H013` exempts them ("it has
+/// one cell per core -- there is nothing to share"). A NON-per-core accumulator
+/// would be one shared cell and is NOT exempt here; the corpus has none.
+fn per_core(baum: &Programm) -> BTreeSet<String> {
+    let mut aus = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Accumulates(a) = &item.art {
+            if a.pro_kern.is_some() {
+                aus.insert(a.name.text.clone());
+            }
+        }
+    });
+    aus
+}
+
+/// The payloads published on atomic targets -- the surface of `D.nutzlast` behind
+/// `PaarungAusgenommen` (a payload `p` of an atomic `a`: `p ∈ D.nutzlast a` with
+/// `D.atomar a`). Collected from `publishes` statements (`Publish` and the publish
+/// half of `Exchange`) whose target root is an atomic; the `awaits` side names the
+/// same carriers back but founds no `nutzlast` relation, so it is not read. Only
+/// function bodies are walked: the pairing is a run-time relation, and every other
+/// statement-level walk in this file reads the same bodies.
+fn payloads(baum: &Programm, atomic: &BTreeSet<String>) -> BTreeSet<String> {
+    let mut aus = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let FnRumpf::Block(einlass) = &f.rumpf else { return };
+        let mut stapel = vec![einlass];
+        while let Some(b) = stapel.pop() {
+            for s in &b.anweisungen {
+                match &s.art {
+                    StmtArt::Publish(p) => {
+                        if let Nutzlast::Orte(liste) = &p.nutzlast {
+                            if atomic.contains(wurzel(&p.ziel.text())) {
+                                for o in liste {
+                                    aus.insert(wurzel(&o.text()).to_string());
+                                }
+                            }
+                        }
+                    }
+                    StmtArt::Exchange(e) => {
+                        if let Some(Nutzlast::Orte(liste)) = &e.nutzlast {
+                            if atomic.contains(wurzel(&e.ort.text())) {
+                                for o in liste {
+                                    aus.insert(wurzel(&o.text()).to_string());
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+                for k in crate::unterbloecke(s) {
+                    stapel.push(k);
+                }
+            }
+        }
+    });
+    aus
+}
+
+/// **The race component -- `rennB` with `wurzelnB` beside it (lane 183).**
+///
+/// `N300`/`N301` decide `SchreibGetrennt` over the declared starts: for every carrier
+/// with no guard lock, neither atomic nor a publish payload, that one start's call
+/// graph may write, no DIFFERENT start's graph may write it (`N300`) or carry it in
+/// a footprint (`N301`). `N302`/`N303` decide `wurzelnB` per start (no reasons, no
+/// signature-held lock); `N304` decides the `einmal` half of `StartZulaessig` for
+/// twice-started routines (idle starts write nothing).
+///
+/// What is reused, and what it decides in Lean:
+/// * starts -- `startet` above: `concurrent` members, `entry`/`boot` roots, the
+///   checker's `ws` (`startexklusiv.rs` reads the same pool). Unresolvable starts
+///   are skipped there, not cleared (`W003`/`N018` own them); `entrust` roots are
+///   skipped (the guest is unknown). Same-function pairs go to `N304`, not here:
+///   `SchreibGetrennt` quantifies over `w₁ ≠ w₂`, and the proof (`schreibGetrenntK_of`)
+///   sends same-function threads through `einmal`/`Ruhig` instead.
+/// * graphs -- the `faeden` fixpoints over resolved direct edges plus the indirect
+///   pool: the surface of `reachB` with `AbgK` over indirect calls by signature.
+/// * may-write -- `schreibt`: DECLARED `writes`/`publishes`/`allocs` resolved to
+///   carriers, exactly what `GetrenntK` judges (`TraegerSchreibt`). With no declared
+///   start the unit is single-threaded and the legs stay silent: one thread owns
+///   every carrier, the same ground the `N290`-`N294` loop stands on.
+/// * footprints -- `fuss`: contracts, body reads, direct callee contracts, the surface
+///   of `fussOrte` (`fussOrteG` adds device-register carriers, which have no surface
+///   carrier behind them -- `Glob := Empty` in the export).
+/// * guards -- `sperrkarte`: `lock L protects` resolved to carriers (the `N275`
+///   resolution), the surface of `Bewacht`. The exemption needs a guard LOCK, not a
+///   held one: ordering comes from the guard's existence (`rennfrei_g_voll`), so
+///   nothing is asked about who holds it. `rcu … protects` does NOT exempt (an RCU
+///   domain is no `D.Lock`), and neither do `masks`/`ein_kern` (they order one core
+///   against preemption, not two writers against each other).
+#[allow(clippy::too_many_arguments)]
+fn race(
+    baum: &Programm,
+    starts: &[Start],
+    faeden: &[BTreeSet<String>],
+    funktionen: &BTreeMap<String, FnDecl>,
+    schreibt: &BTreeMap<String, BTreeSet<String>>,
+    fuss: &BTreeMap<String, BTreeSet<String>>,
+    sperrkarte: &BTreeMap<String, Sperre>,
+    gehalten: &BTreeMap<String, Vec<String>>,
+    absagen: &mut Absagen,
+) {
+    // N302/N303 -- one refusal per START FUNCTION, not per occurrence: two entries
+    // behind one routine name one defect (`wurzelnB` is per list element, but the
+    // second refusal would pin the same declaration twice).
+    let mut root_filed: BTreeSet<(&str, String)> = BTreeSet::new();
+    for s in starts {
+        let Some(f) = funktionen.get(&s.funktion) else {
+            continue;
+        };
+        let short = s.funktion.rsplit("::").next().unwrap_or(&s.funktion);
+        if f.fehler.is_some() && root_filed.insert(("N302", s.funktion.clone())) {
+            let reason = f.fehler.as_ref().map(|r| r.text.clone()).unwrap_or_default();
+            melde(
+                "N302",
+                s.span,
+                format!(
+                    "thread start {} runs `{short}` which declares a reason channel \
+                     (`or {reason}`) -- a start's reason has no caller to take it",
+                    s.quelle
+                ),
+                &[
+                    "declared starts declare no reasons (`wurzelnB`: `D.gruende w = 0`, \
+                     `StartOhneGrund`) -- only `let x = f() else (e)` takes a reason, \
+                     and no caller stands behind a thread start",
+                ],
+                absagen,
+            );
+        }
+        if let Some(held) = gehalten.get(&s.funktion) {
+            if !held.is_empty() && root_filed.insert(("N303", s.funktion.clone())) {
+                melde(
+                    "N303",
+                    s.span,
+                    format!(
+                        "thread start {} runs `{short}` which holds {} by signature \
+                         -- nobody holds a lock for a thread before it starts",
+                        s.quelle,
+                        held.join(", ")
+                    ),
+                    &[
+                        "declared starts hold no lock by signature (`wurzelnB`: \
+                         `D.haelt w = []` -- the strong form of `N240`, which only \
+                         bans locks two starts SHARE)",
+                        "take the lock inside (`locks L { … }`) instead of requiring \
+                         it, or stop starting this routine",
+                    ],
+                    absagen,
+                );
+            }
+        }
+    }
+    if starts.len() < 2 {
+        return;
+    }
+    let atomic = atomics(baum);
+    let core = per_core(baum);
+    let payload = payloads(baum, &atomic);
+    // The carrier universe: declared tables, mutable statics, state -- plus atomics
+    // and per-core cells, which the exemption below always skips (they never reach
+    // `schreibt` through a declared `writes` today; the exemption is the load-bearing
+    // half should that widen, and documents where the model ends).
+    let mut world: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Tabelle(t) => {
+            world.insert(t.name.text.clone());
+        }
+        ItemArt::Statisch(s) if s.veraenderlich => {
+            world.insert(s.name.text.clone());
+        }
+        ItemArt::State(s) => {
+            world.insert(s.name.text.clone());
+        }
+        _ => {}
+    });
+    world.extend(atomic.iter().cloned());
+    world.extend(core.iter().cloned());
+    let guarded = |c: &str| -> bool {
+        sperrkarte.values().any(|s| s.schutz.contains(c))
+    };
+    // Per-start graphs as write sets and footprint sets.
+    let graph_writes: Vec<BTreeSet<String>> = faeden
+        .iter()
+        .map(|graph| {
+            graph
+                .iter()
+                .filter_map(|f| schreibt.get(f))
+                .flatten()
+                .cloned()
+                .collect()
+        })
+        .collect();
+    let graph_foot: Vec<BTreeSet<String>> = faeden
+        .iter()
+        .map(|graph| {
+            graph
+                .iter()
+                .filter_map(|f| fuss.get(f))
+                .flatten()
+                .cloned()
+                .collect()
+        })
+        .collect();
+    let mut race_filed: BTreeSet<(&str, String)> = BTreeSet::new();
+    for i in 0..starts.len() {
+        for j in (i + 1)..starts.len() {
+            if starts[i].funktion == starts[j].funktion {
+                // N304 -- the `einmal` shape: one routine on two threads must be
+                // idle (`Ruhig` -- no lock, no reasons, empty footprints, no
+                // writes). The graphs coincide by construction (same root, same
+                // fixpoint); judging one judges both.
+                let idle = gehalten
+                    .get(&starts[i].funktion)
+                    .is_none_or(|h| h.is_empty())
+                    && funktionen
+                        .get(&starts[i].funktion)
+                        .is_none_or(|f| f.fehler.is_none())
+                    && graph_writes[i].is_empty()
+                    && graph_foot[i].is_empty();
+                if !idle && race_filed.insert(("N304", starts[i].funktion.clone())) {
+                    let short = starts[i]
+                        .funktion
+                        .rsplit("::")
+                        .next()
+                        .unwrap_or(&starts[i].funktion);
+                    melde(
+                        "N304",
+                        starts[j].span,
+                        format!(
+                            "thread starts {} and {} run one routine `{short}`, and it \
+                             is not idle -- it holds a lock, declares a reason, \
+                             writes a carrier, or carries a footprint",
+                            starts[i].quelle, starts[j].quelle
+                        ),
+                        &[
+                            "the same routine on two threads is admitted only idle \
+                             (`StartZulaessig.einmal`: `Ruhig` -- idle starts write \
+                             nothing, hold nothing, and read nothing)",
+                            "give each thread its own routine, or leave this one \
+                             lock-free, reason-free, and without a carrier",
+                        ],
+                        absagen,
+                    );
+                }
+                continue;
+            }
+            for c in &world {
+                if guarded(c) || atomic.contains(c) || payload.contains(c) || core.contains(c)
+                {
+                    continue;
+                }
+                let wi = graph_writes[i].contains(c);
+                let wj = graph_writes[j].contains(c);
+                if wi && wj {
+                    // N300 -- write-write, the shape no footprint lists: two
+                    // writers, no reader anywhere. One refusal per carrier; the
+                    // first pair in start order names the witness.
+                    if race_filed.insert(("N300", c.clone())) {
+                        melde(
+                            "N300",
+                            starts[j].span,
+                            format!(
+                                "thread starts {} and {} both write `{c}` -- an \
+                                 unguarded carrier no footprint reads, so the \
+                                 footprint rule cannot see this race",
+                                starts[i].quelle, starts[j].quelle
+                            ),
+                            &[
+                                "a carrier one start's call graph writes is neither \
+                                 written nor read by a different start's graph \
+                                 unless a lock guards it or it is atomic / a publish \
+                                 payload (`SchreibGetrennt`, the `rennB` component)",
+                                "guard it (`lock … protects`), or give each start its \
+                                 own carrier",
+                            ],
+                            absagen,
+                        );
+                    }
+                } else if (wi && graph_foot[j].contains(c)) || (wj && graph_foot[i].contains(c))
+                {
+                    // N301 -- write-read across the graphs. Only where N300 stays
+                    // silent: a pair that writes on both sides belongs to N300
+                    // alone, and one refusal names one defect.
+                    if race_filed.insert(("N301", c.clone())) {
+                        let (writer, reader) = if wi { (i, j) } else { (j, i) };
+                        melde(
+                            "N301",
+                            starts[reader].span,
+                            format!(
+                                "thread start {} writes `{c}` while thread start {} \
+                                 carries it in a footprint -- a write-read race on \
+                                 an unguarded carrier",
+                                starts[writer].quelle, starts[reader].quelle
+                            ),
+                            &[
+                                "a carrier one start's call graph writes is neither \
+                                 written nor read by a different start's graph \
+                                 unless a lock guards it or it is atomic / a publish \
+                                 payload (`SchreibGetrennt`, the `rennB` component)",
+                                "guard it (`lock … protects`), or keep it out of the \
+                                 other start's footprint",
+                            ],
+                            absagen,
+                        );
                     }
                 }
             }
