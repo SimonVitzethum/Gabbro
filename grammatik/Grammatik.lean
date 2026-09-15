@@ -262,6 +262,7 @@ import Grammatik.CNebenlaeufig
 import Grammatik.Korpus124
 import Grammatik.Schlusssatz124
 import Grammatik.KorrespondenzAllg
+import Grammatik.KorrespondenzWeitZeuge
 import Grammatik.Schlusssatz
 import Grammatik.Kette104
 import Grammatik.Kette104Satz
