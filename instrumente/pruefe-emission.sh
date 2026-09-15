@@ -3081,7 +3081,18 @@ fi
 # **-> 107 on 2026-09-14 (merge review, after lane 175: examples 124/125).**
 # **-> 109 on 2026-09-15 (merge review, after lane 177: examples 126/127).**
 # **-> 111 on 2026-09-15 (merge review, after lane 191: examples 130/131).**
-MARKE_EMIT=111
+# **-> 113 on 2026-09-15 (lane "grammar into the emitter", examples 132/133).**
+# Booked by the LANE and not by the merge, against the rule two lines up, because
+# both files exist to PIN a lowering this lane changed and a silence it closed:
+# `132` is the pair that makes `R008`'s own sentence true (`ptr<mmio, …>` and
+# `ptr<dma, …>` now carry `volatile`, `ptr<normal, …>` does not), and `133`
+# carries the two forms that passed the checker and fell at `cc -Werror`
+# (`Stmt.retGrund` with an unwritten value channel, a `format` field through
+# `->`). A pin whose file the mark does not count is not a pin -- stage 9 would
+# skip it and the guardian would be green over the very regression it exists for.
+# The third form of the lane is a REFUSAL and adds nothing here:
+# `beispiele/gift/1000` does not emit, so `MARKE_EMIT_G` stays at 18.
+MARKE_EMIT=113
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

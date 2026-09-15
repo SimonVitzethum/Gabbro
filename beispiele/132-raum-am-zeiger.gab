@@ -1,0 +1,54 @@
+-- 132 -- **the address space at a pointer reaches the C, and it reaches it as `volatile`.**
+--
+-- `R008` has said of itself since it was written: *"the address space is part
+-- of what a pointer IS -- `mmio` is volatile and device-mapped, `normal` is
+-- not, and the emitter lowers them differently"*. Until 2026-09-15 it did not:
+-- six functions differing in nothing but the space word emitted six
+-- byte-identical C files (`messung/ADRESSRAEUME.md` §2).
+--
+-- This file is the pair the claim needs. `lies_normal` and `lies_mmio` differ
+-- in one word, and their emitted C differs in one qualifier:
+--
+--     static uint32_t lies_normal(const Zelle *restrict p)          { return p->wert; }
+--     static uint32_t lies_mmio(const volatile Zelle *restrict p)   { return p->wert; }
+--
+-- **Why it matters and is not decoration.** Without `volatile` the C compiler
+-- may fold two reads of a device register into one, hoist one out of a loop,
+-- or delete a store whose value is never read back. Each of those is a
+-- different program AT THE DEVICE, and none of them is a diagnostic.
+--
+-- `dma` earns the same qualifier for the same reason with a bus master as the
+-- other writer; `code` and `boot` earn none (`code` is never dereferenced, a
+-- section is a placement and not an access form), and `port` is refused in a
+-- body altogether (`beispiele/gift/415`).
+--
+-- **Two targets keep the qualifier off**, and the rule is one sentence: it goes
+-- where the emitter writes the access itself. A `device` handle and a `format`
+-- handle are dereferenced by a GENERATED ACCESSOR, never by the caller --
+-- `beispiele/gift/416` writes the device half down word for word.
+module beispiel132 {
+
+type Zelle = { wert : u32, };
+
+impl fn lies_normal(p : ptr<normal, r> Zelle) -> u32
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p->wert;
+}
+
+impl fn lies_mmio(p : ptr<mmio, r> Zelle) -> u32
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p->wert;
+}
+
+impl fn lies_dma(p : ptr<dma, r> Zelle) -> u32
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p->wert;
+}
+
+}

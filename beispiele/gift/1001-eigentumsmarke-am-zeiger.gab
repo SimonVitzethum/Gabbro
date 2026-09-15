@@ -1,0 +1,53 @@
+-- erwartet: C001
+-- 1001 -- **`own@m`: a form the grammar admits and no side of the compiler answers for.**
+--
+-- `parse::right` reads `own [ "@" ident ]` and builds `Recht::Eigen(Some(marke))`.
+-- **That line is the last one in the repository that looks inside the `Some`.**
+-- Measured 2026-09-15:
+--
+--     grep -rn "Eigen(Some" crates/    ->  parse.rs:1418, and nothing else
+--
+-- Every other reader -- `m3.rs` twice, `alias.rs`, `lean_g.rs` twice, `emit.rs` --
+-- matches `Recht::Eigen(_)` and drops the mark on the floor. So:
+--
+--   * `ptr<normal, own@m> u32` and `ptr<normal, own> u32` emit the SAME C to the byte,
+--   * they book the same obligations (none),
+--   * and no pass refuses either of them.
+--
+-- **The specification has no constructor for it either.** `Ty.ptr` in
+-- `grammatik/Grammatik/Syntax.lean` carries `(t : Nat)` and `(rw : Bool)` -- a
+-- target and a write bit, and no mark.
+--
+-- The corpus asks for the form ZERO times (`grep -rn "own@" --include=*.gab` is
+-- empty). It was a promise nobody keeps, and it looked kept.
+--
+-- WHY THE REFUSAL AND NOT THE PASS
+-- --------------------------------
+-- The mark would mean *"the target is owned, and the owning mark is `m`"* -- a
+-- statement about linearity the checker would have to hold at every call site.
+-- Rule A: a construct without a measured need is not built. Saying so by name
+-- costs nothing and stops the silence. The refusal prints the repair: write
+-- `own`, and name the owner where the language does hold it, in
+-- `effects { consumes m }`.
+--
+-- AT THE SIGNATURE, NOT AT THE ACCESS («W10»)
+-- --------------------------------------------
+-- A body that takes the pointer and never touches it is refused too -- coarser
+-- than the defect, and coarse in the safe direction. The exact rule would need
+-- the mark at every access site, and the expression lowering does not carry it.
+-- The `ptr<port, …>` refusal directly above it in `emit.rs` makes the same cut
+-- for the same reason.
+module gift::eigentumsmarke {
+
+linear ghost type Besitz;
+
+type Zelle = { wert : u32, };
+
+impl fn lies(p : ptr<normal, own@Besitz> Zelle) -> u32
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p->wert;
+}
+
+}

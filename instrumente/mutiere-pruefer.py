@@ -4493,6 +4493,71 @@ MUTATIONEN = [
         "`W003` -- gifts 706/707 pass silently instead of refusing, and the gift "
         "probes fall over the missing code",
     ),
+    # -- emit.rs: the five rules of the lane "grammar into the emitter" (2026-09-15) -------
+    #
+    # All five were found by walking the constructors of `grammatik/Grammatik/Syntax.lean`
+    # one by one and COMPILING what came out. Three of them were silently wrong lowerings
+    # (checker green, `gabbro emit` returning 0, `cc -Werror` refusing at both levels), one
+    # closed a form no pass reads, and one made a written promise true.
+    Mutation(
+        "raum-am-zeiger-wieder-blind",
+        "emit.rs",
+        '        Raum::Mmio | Raum::Dma => "volatile ",',
+        '        Raum::Mmio | Raum::Dma => "",',
+        "the address space at a pointer stops reaching the C: `ptr<mmio, …>` and "
+        "`ptr<normal, …>` are byte-identical again, and `R008`'s own sentence -- *\"the "
+        "emitter lowers them differently\"* -- names a lowering nobody writes "
+        "(`beispiele/132`)",
+        "code",
+    ),
+    Mutation(
+        "wertkanal-ohne-ruhigstellung",
+        "emit.rs",
+        "    if f.fehler.is_some() && f.ergebnis.is_some() && !rumpf_gibt_wert(b) {",
+        "    if false && f.fehler.is_some() && f.ergebnis.is_some() && !rumpf_gibt_wert(b) {",
+        "`Stmt.retGrund` -- a body all of whose exits are reasons leaves `*_wert` unwritten "
+        "and unsilenced; the C falls at `-Werror=unused-parameter` (`beispiele/133`)",
+        "code",
+    ),
+    Mutation(
+        "formatfeld-am-pfeil-wieder-blind",
+        "emit.rs",
+        "            Some(OrtSuffix::Feld(f)) | Some(OrtSuffix::Ueber(f)) => Some(f),\n"
+        "            _ => None,\n"
+        "        };\n"
+        "        if let Some(f) = erste {\n"
+        "            if o.suffixe.len() == 1 {",
+        "            Some(OrtSuffix::Feld(f)) => Some(f),\n"
+        "            _ => None,\n"
+        "        };\n"
+        "        if let Some(f) = erste {\n"
+        "            if o.suffixe.len() == 1 {",
+        "a `format` field through `->` falls back to the generic place walk and names a "
+        "member the generated struct does not have; `cc` says `'F' has no member named …` "
+        "(`beispiele/133`)",
+        "code",
+    ),
+    Mutation(
+        "tabellenfeld-am-pfeil-geht-durch",
+        "emit.rs",
+        '            if f.text != "slots" {',
+        '            if false && f.text != "slots" {',
+        "a place over a `table` whose first suffix is not `slots` emits a member of the "
+        "generated struct that does not exist, instead of the named refusal "
+        "(`beispiele/gift/1000`)",
+        "code",
+    ),
+    Mutation(
+        "eigentumsmarke-wieder-stumm",
+        "emit.rs",
+        "                if let Some(marke) = z.rechte.iter().find_map(|r| match r {\n"
+        "                    Recht::Eigen(Some(m)) => Some(m),",
+        "                if let Some(marke) = z.rechte.iter().take(0).find_map(|r| match r {\n"
+        "                    Recht::Eigen(Some(m)) => Some(m),",
+        "`own@m` is silent again -- the owner mark is parsed, read by no pass, and emits "
+        "the same C as a bare `own` (`beispiele/gift/1001`)",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

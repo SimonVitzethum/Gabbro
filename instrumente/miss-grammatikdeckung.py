@@ -721,7 +721,7 @@ def prueferworte():
 PRUEFERWORTE = None
 
 
-def urteil(b, v, term=""):
+def urteil(b, v, term="", geg=None):
     """The verdict, and the reason beside it."""
     if not v["angenommen"]:
         return "REFUSES", "checker: " + ",".join(v["codes"])
@@ -735,6 +735,12 @@ def urteil(b, v, term=""):
         return "DEMANDS", f"pflichten {b['pflichten']} -> {v['pflichten']}"
     if v["c_hash"] != b["c_hash"]:
         return "CARRIES", f"C differs ({b['c_hash']} -> {v['c_hash']})"
+    # **The GEGENPROBE, and it is consulted BEFORE the word list** (2026-09-15). It answers
+    # the same question by measurement instead of by reading: does a WRONG use of this form
+    # fall, and does the refusal say which form it is about? See the `GEGEN` section at the
+    # foot of this file for why the word list alone could not.
+    if geg is not None and geg[0]:
+        return "GUARDS", f"gegenprobe: {geg[1]} names the form"
     if term and term in PRUEFERWORTE:
         return "GUARDS", "no C of its own -- but a checker error text names the word"
     return "UNCOVERED", "C byte-identical, no obligation, no checker error names it"
@@ -808,7 +814,7 @@ def main():
         elif b["c001"]:
             u, grund = "BASIS-C001", "the base program is already refused by the emitter"
         else:
-            u, grund = urteil(b, v, k.split(".", 1)[-1])
+            u, grund = urteil(b, v, k.split(".", 1)[-1], gegenlauf(k))
         zaehler[u] = zaehler.get(u, 0) + 1
         zeilen.append((k, u, grund))
         if args.nur:
@@ -1486,6 +1492,363 @@ probe("fnptr.costs", "fnptr2", "effects { pure } costs <= 4 ops",
       "effects { pure } costs <= 8 ops")
 
 
+# ============ round four, part one: the pairs that were not pairs ======================
+# **Twelve probes of the expression/statement/type/device half measured their HOST and not
+# their form.** Each line below says which, and none of them moves a verdict by weakening a
+# question -- they move it by asking the question the form is about.
+
+# `orexpr.||` had the host of `orpred.||`: a PREDICATE, where no C is written at all. The
+# expression-level `||` is the one `andexpr.&&` is probed with, in an `if`, and the emitter
+# writes it. The cost bound is 40 and not 9 because a second comparison costs.
+_ODER = ("module p {{\n"
+         "    impl fn f(a : u32 in 0 .. 100, b : u32 in 1 .. 100) -> u32 in 0 .. 100000\n"
+         "        effects {{ pure }} costs <= 40 ops {{\n"
+         "        let mut r : u32 in 0 .. 100000 = a;\n"
+         "        if {X} {{ r = 1; }}\n"
+         "        return r;\n    }}\n}}\n")
+HOST["oder"] = _ODER
+probe("orexpr.||", "oder", "a == b", "a == b || b == 1")
+
+# `letform.:` held `let z = a;` against `let z : u32 = a;` -- and those two ARE the same
+# program: the annotation agrees with the inferred type, so nothing can differ. The form is
+# "a `let` carries a declared type", and what a declared type BUYS is a storage width the
+# initialiser does not have. `u64` shows it; `u32` could not.
+HOST["rumpf2"] = ("module p {{\n"
+                  "    impl fn f(a : u32 in 0 .. 100, b : u32 in 1 .. 100) -> u32 in 0 .. 100000\n"
+                  "        effects {{ pure }} costs <= 40 ops {{\n"
+                  "        let mut r : u32 in 0 .. 100000 = a;\n"
+                  "{X}\n"
+                  "        return r;\n    }}\n}}\n")
+probe("letform.:", "rumpf2", "        let z = a;", "        let z : u64 = a;")
+
+# `range...<` sat on the `typ` host, where a range moves the CHECKS and not the storage --
+# `u32 in 0 .. 10` and `u32 in 0 ..< 10` are both `uint32_t`. The one place a bound reaches
+# the artefact is a `narrow`, where the generator writes the comparison itself.
+probe("range...<", "rumpf2",
+      "        narrow r to 0 .. 10 else { return 0; }",
+      "        narrow r to 0 ..< 10 else { return 0; }")
+
+# `verbund_oder_varianten.(` declared a type nobody used, so there was nothing to lower.
+# The pair now matches on it, exactly as `matchstmt.(` does -- and the payload reaches the C
+# as a union member.
+probe("verbund_oder_varianten.(", "modul",
+      "    tagged type K = { A, B };\n"
+      "    impl fn f(k : K) effects { pure } costs <= 4 ops "
+      "{ match k { A => { return; } B => { return; } } }",
+      "    tagged type K = { A(u32), B };\n"
+      "    impl fn f(k : K) effects { pure } costs <= 4 ops "
+      "{ match k { A(v) => { return; } B => { return; } } }")
+
+# `device.mirrors` had a host with no `transition`, and the mirror is READ at a transition
+# and nowhere else (`uebergang`). Without one the clause has nothing to reach.
+HOST["spiegel"] = ("module p {{\n"
+                   "    opaque type Pa = u64;\n"
+                   "    device D(basis : Pa) at mmio {{\n"
+                   "        reg CTRL   : u32 @0x0 class w\n"
+                   "        reg SHADOW : u32 @0x8 class rw\n"
+                   "{X}"
+                   "        transition t {{ CTRL : 0 -> 1 }}\n"
+                   "    }}\n}}\n")
+probe("device.mirrors", "spiegel", "", "        mirrors CTRL from SHADOW;\n")
+
+# `stmt.leave` and `stmt.next` were NOT PROBED, and the reason was a bug in the entry rather
+# than a missing host: both sat on the `forever` host with the difference in `{Y}`, so base
+# and variant came out of the SAME `{X}` and were byte-identical source. A `forever` cannot
+# carry them either way -- it lives in a `divergent fn -> never`, and leaving it makes the
+# body fall off its end (`S009`). A `retry … until` is the loop an ordinary function has.
+HOST["retry"] = ("module p {{\n"
+                 "    extern fn g() -> never effects {{ diverges }};\n"
+                 "    impl fn f(a : u32 in 0 .. 100) -> u32 in 0 .. 100\n"
+                 "        effects {{ pure }} costs <= 40 ops {{\n"
+                 "        let mut r : u32 in 0 .. 100 = a;\n"
+                 "        retry m until r == 0 bounded 4 ops on_exceeded g {{ r = 0;{X} }}\n"
+                 "        return r;\n    }}\n}}\n")
+PROBEN.pop("stmt.leave", None)
+PROBEN.pop("stmt.next", None)
+probe("stmt.leave", "retry", "", " leave m;")
+probe("stmt.next", "retry", "", " next m;")
+
+# `primary.Some` / `primary.None` had NO HOST. The one position the emitter lowers an
+# `option` constructor in is an assignment or a `return` (a `let` of a declared `option`
+# type is still `C001`, *"`option` has no representation yet"*), so the pair writes a field.
+HOST["option"] = ("module p {{\n"
+                  "    table T count 4 {{ slot {{ wert : u32, elter : option index into T, }} }}\n"
+                  "    impl fn f(t : ptr<normal, rw> T, i : index into T) "
+                  "effects {{ writes t }} costs <= 4 ops {{ t.slots[i].elter = {X}; }}\n}}\n")
+probe("primary.Some", "option", "None", "Some(i)")
+probe("primary.None", "option", "Some(i)", "None")
+
+# `primary.Self` had NO HOST. `Self` is a TYPE word (`typ_oder_ort` takes it as one unless a
+# `.` follows); in value position it is an ordinary name and is declared nowhere.
+probe("primary.Self", "modul",
+      "    impl fn f(x : u32) -> u32 effects { pure } costs <= 2 ops { return x; }",
+      "    impl fn f(x : u32) -> u32 effects { pure } costs <= 2 ops { return Self; }")
+
+# `typ_oder_ort.{` had NO HOST. It is the same decision `typ_oder_ort.intty` probes -- a
+# TYPE where a place could stand -- with the record spelling instead of the word, and it
+# meets the same named refusal.
+probe("typ_oder_ort.{", "ausdruck", "a", "sizeof({ g : u32, })")
+
+# `slottype.wrapping` had NO HOST. `beispiele/01` writes the form (`marke : u32 wrapping`);
+# the pair is a slot field with and without it.
+probe("slottype.wrapping", "modul",
+      "    table T count 4 { slot { wert : u32, } }\n"
+      "    impl fn f(t : ptr<normal, rw> T, i : index into T) effects { writes t } "
+      "costs <= 4 ops { t.slots[i].wert = 1; }",
+      "    table T count 4 { slot { wert : u32 wrapping, } }\n"
+      "    impl fn f(t : ptr<normal, rw> T, i : index into T) effects { writes t } "
+      "costs <= 4 ops { t.slots[i].wert = 1; }")
+
+# `typedecl.(` held `type Q = u32;` against `type Q(u32) = u32;`, and the parameter list of a
+# type is a GHOST form: every corpus site is a `linear ghost type Q(Subject);`
+# (`beispiele/gift/53`, `56`, `messung/proben/probe-zeugenpflicht.gab`). The pair now names
+# the form where it is written.
+probe("typedecl.(", "modul", "    linear ghost type Q;",
+      "    linear type Sub = u32;\n    linear ghost type Q(Sub);")
+
+# `typedecl.=` held a ghost against an alias and declared it nowhere used. The alias is
+# TRANSPARENT by design, so the pair uses it as a parameter type -- where, if the emitter
+# wrote a `typedef`, the C would differ. It does not, and that is the measurement.
+probe("typedecl.=", "modul",
+      "    impl fn f(x : u32) effects { pure } costs <= 1 ops { return; }",
+      "    type Q = u32;\n"
+      "    impl fn f(x : Q) effects { pure } costs <= 1 ops { return; }")
+
+
+# =======================================================================================
+# ROUND FOUR, PART TWO (2026-09-15) -- THE GEGENPROBE, PROMISED IN THE HEADER, NEVER BUILT
+# =======================================================================================
+#
+# Line 51 of this file's own header says:
+#
+# > *"The run therefore also records whether a deliberately broken variant is refused
+# > (`gegenprobe`), and prints that column beside the verdict."*
+#
+# **It did not.** There was no table of broken twins, no run, and no column; the word
+# appeared twice in prose and nowhere in code. *A documented column that was never built is
+# the same shape as the `when` clause this instrument was written to catch* -- a promise
+# nobody keeps, which looks kept.
+#
+# WHAT IT MEASURES THAT THE WORD LIST CANNOT
+# -------------------------------------------
+# `GUARDS` asked: is the form's word inside backticks in some checker refusal? That is read
+# off STATIC string literals (`prueferworte`, `pruefe-grammatiktafel.py`). **A refusal that
+# names the form through an interpolated `{}` is invisible to it**, and the checker is full
+# of them:
+#
+#     D007:  "`tree {wort} {}` is not `option index into {}`"   -> prints `tree parent elter`
+#     R006:  "`{}` is written, but `{}` is `class {}`"          -> prints `class rc`
+#     R008:  "`{}` passes `{}` in space `{}` to ..."            -> prints `space mmio`
+#     D018:  "`{form} {}` needs {}, and `{}` is {}"             -> prints `queue`, `elems`, ...
+#
+# Measured 2026-09-15: SEVEN form families of the expression/type/device half read
+# `UNCOVERED` -- the class this file calls the dangerous one -- while a checker rule about
+# each one exists, fires, and prints the form's own word. *The instrument was not measuring
+# the language; it was measuring how the sentence happened to be spelled.*
+#
+# THE ONE TRAP, AND IT CAUGHT THE FIRST DRAFT
+# --------------------------------------------
+# **A diagnostic ECHOES THE SOURCE LINE**, and the source line contains the form's word
+# trivially. A matcher over the whole output therefore always succeeds and measures the
+# probe rather than the checker. The first draft did exactly that and reported seven domains
+# as guarded on programs the checker had ACCEPTED. `absagetext` keeps only the `error:`/
+# `hint:` lines and their `=` notes -- never the echoed snippet -- and the fourth direction
+# of the speech test holds it there.
+#
+# WHY THE NOTES COUNT AND THE SOURCE DOES NOT
+# --------------------------------------------
+# A `.mit_notiz(...)` is part of the refusal: it is written by the same pass, printed at the
+# same site, and this folder puts the naming half there on purpose (`M108` says *"the index
+# lies inside the address space"* in the sentence and names `backed` in the note). The source
+# echo is written by the DIAGNOSTIC PRINTER out of the user's own file and says nothing about
+# any pass.
+
+GEGEN = {}
+
+
+def gegen(kennung, programm, *worte, wo="pruefe"):
+    """A deliberately BROKEN use of `kennung`, and the words its refusal must name.
+
+    `wo` is the tool that must refuse: `pruefe` for a checker rule, `emit` for a named
+    emitter refusal. **Both count, and the verdict says which**: a form the language carries
+    by refusing wrong uses is carried whether the refusal falls in a pass or in the
+    generator. What does NOT count is silence.
+    """
+    GEGEN[kennung] = (programm, worte, wo)
+
+
+def absagetext(text):
+    """The refusal and its notes -- and NOT the echoed source line. See the trap above."""
+    return "\n".join(
+        z.strip()
+        for z in text.splitlines()
+        if z.strip().startswith(("error: [", "hint: [", "= "))
+    )
+
+
+def gegenlauf(kennung):
+    """`(haelt, beschreibung)` for one broken twin, or `None` where none is written.
+
+    `haelt` is true only when the tool REFUSED and the refusal text names every word the
+    entry demands. A twin that checks clean measures nothing; a refusal that does not say
+    which form it is about is the `UNCOVERED` case with extra steps.
+    """
+    eintrag = GEGEN.get(kennung)
+    if eintrag is None:
+        return None
+    programm, worte, wo = eintrag
+    with tempfile.NamedTemporaryFile("w", suffix=".gab", dir="/tmp", delete=False) as f:
+        f.write(programm)
+        pfad = f.name
+    try:
+        rc, aus, err = lauf([str(GABBRO), wo, pfad])
+        t = absagetext(aus + err)
+        codes = sorted(
+            {z.split("[")[1].split("]")[0] for z in t.splitlines() if z.startswith("error: [")}
+        )
+        if rc == 0 or not codes:
+            return False, "the broken twin is NOT refused"
+        fehlt = [w for w in worte if w not in t]
+        if fehlt:
+            return False, f"[{','.join(codes)}] does not name {','.join(fehlt)}"
+        return True, f"[{','.join(codes)}] at `{wo}`"
+    finally:
+        os.unlink(pfad)
+
+
+# -- the broken twins, family by family -------------------------------------------------
+_GER_W = (
+    "module p {{\n    opaque type Pa = u64;\n"
+    "    device D(basis : Pa) at mmio {{ reg X : u32 @0x8 class {K} }}\n"
+    "    impl fn f(d : ptr<mmio, rw> D) effects {{ writes d.X }} costs <= 2 ops "
+    "{{ d.X = 1; }}\n}}\n"
+)
+_GER_L = (
+    "module p {{\n    opaque type Pa = u64;\n"
+    "    device D(basis : Pa) at mmio {{ reg X : u32 @0x8 class {K} }}\n"
+    "    impl fn f(d : ptr<mmio, r> D) -> u32 effects {{ reads d.X }} costs <= 2 ops "
+    "{{ return d.X; }}\n}}\n"
+)
+# A read-modify-write of ONE BIT of a word whose class clears on access -- `R012`, the rule
+# `beispiele/gift/448` and `449` were written for. It is the ONLY rule that separates `w1c`
+# from `rw`: both are readable and both are writable, so `R005`/`R006` cannot tell them
+# apart -- and neither can `Regklasse.lesbar`/`.schreibbar` in `Syntax.lean`.
+_GER_RMW = (
+    "module p {{\n    opaque type Pa = u64;\n"
+    "    device D(basis : Pa) at mmio "
+    "{{ reg X : u32 @0x8 class {K} fields {{ A @0, B @1, }} }}\n"
+    "    impl fn f(d : ptr<mmio, rw> D) effects {{ reads d.X, writes d.X }} costs <= 6 ops "
+    "{{ d.X.A = 1; }}\n}}\n"
+)
+gegen("regklasse.r", _GER_W.format(K="r"), "class r")
+gegen("regklasse.w", _GER_L.format(K="w"), "class w")
+gegen("regklasse.rc", _GER_RMW.format(K="rc"), "rc")
+gegen("regklasse.w1c", _GER_RMW.format(K="w1c"), "w1c")
+# `regklasse.rw` gets NO entry, and the empty line is the finding: `rw` is the permissive
+# class, defined by what the other four forbid relative to it. There is nothing a program
+# can do with an `rw` register that any pass refuses, so there is no broken twin to write --
+# and `Syntax.lean` cannot distinguish `.rw` from `.w1c` either (`lesbar` and `schreibbar`
+# agree on both). *An entry invented here would be a twin broken for some other reason.*
+
+_TREE = "module p {{\n    table T count 4 {{ slot {{ wert : u32, }} tree {{ {E} wert }} }}\n}}\n"
+for _e in ("parent", "child", "sibling"):
+    gegen(f"treedecl.{_e}", _TREE.format(E=_e), _e)
+
+# A pointer handed to a parameter declared in a DIFFERENT space -- `R008`, which prints both
+# spaces. `mmio` and `dma` also CARRY since the same day (they lower to `volatile`); the
+# entry stays because the two answers are independent and losing either would be silent.
+_SPC = (
+    "module p {{\n    type S = {{ g : u32, }};\n"
+    "    impl fn g(s : ptr<normal, r> S) -> u32 effects {{ reads s }} costs <= 2 ops "
+    "{{ return s->g; }}\n"
+    "    impl fn f(s : ptr<{R}, r> S) -> u32 effects {{ reads s }} costs <= 4 ops "
+    "{{ return p::g(s); }}\n}}\n"
+)
+for _r in ("mmio", "dma", "code", "boot"):
+    gegen(f"space.{_r}", _SPC.format(R=_r), _r)
+
+# `backed k` is the MEMORY where `count N` is the address space: an index inside the address
+# space that nothing shows to be backed is `M108`, which names `backed` in its note.
+gegen(
+    "table.backed",
+    "module p {\n    const K : u32 = 2;\n    table T count 8 backed K "
+    "{ slot { wert : u32, } }\n"
+    "    impl fn f(t : ptr<normal, r> T, i : index into T) -> u32 effects { reads t } "
+    "costs <= 4 ops { return t.slots[i].wert; }\n}\n",
+    "backed",
+)
+
+# `order { … }` names the stages a mark walks; `advances` over a mark without one is `O001`.
+gegen(
+    "typedecl.order",
+    "module p {\n    linear ghost type Q;\n"
+    "    impl fn f(q : Q) advances roh -> mmu effects { pure } costs <= 1 ops "
+    "{ return; }\n}\n",
+    "order",
+)
+
+# The nine quantifier domains. Seven are refused by a PASS and two by the GENERATOR:
+# `descendants of` and `ancestors of` over a table that declares no `tree` edge is the
+# refusal `beispiele/gift/195` and `196` were written for, and it falls at `emit`.
+_DOM = (
+    "module p {{\n"
+    "    table T count 8 {{ slot {{ wert : u32, elter : option index into T, }} }}\n"
+    "    spec fn d(t : ptr<normal, r> T, s : index into T) -> bool = "
+    "forall i in {X} : true;\n}}\n"
+)
+gegen("domain.slots", _DOM.format(X="slots of t.slots[s]"), "slots")
+gegen("domain.queue", _DOM.format(X="queue t"), "queue")
+gegen("domain.elems", _DOM.format(X="elems of t"), "elems")
+gegen("domain.mappings", _DOM.format(X="mappings of t"), "mappings")
+gegen("domain.chain", _DOM.format(X="chain(wert, wert) in t.slots[s]"), "chain")
+_DOM_TR = (
+    "module p {{\n"
+    "    table T count 8 {{ slot {{ wert : u32, elter : option index into T, }} }}\n"
+    "    impl fn r(t : ptr<normal, rw> T, s : index into T)\n"
+    "        effects {{ writes t.slots }} costs <= 80 ops\n"
+    "    {{ traverse v over {X} of t.slots[s] by unvisited touches writes t.slots {{ }} }}\n}}\n"
+)
+for _k in ("descendants", "ancestors"):
+    gegen(f"domain.{_k}", _DOM_TR.format(X=_k), _k, wo="emit")
+
+
+# -- the speech test of the gegenprobe itself -------------------------------------------
+# Four directions, and the fourth is the one that caught the first draft.
+_SP_TREE_SCHLECHT = "module p {\n    table T count 4 { slot { wert : u32, } tree { parent wert } }\n}\n"
+_SP_TREE_GUT = (
+    "module p {\n    table T count 4 { slot { wert : u32, elter : option index into T, }\n"
+    "        tree { parent elter } }\n}\n"
+)
+# The word `wrapping` stands in the SOURCE of this program and in no line `D006` writes.
+_SP_ECHO = (
+    "module p {\n    table T count 4 { slot { wert : u32 wrapping, } tree { parent wert } }\n}\n"
+)
+GEGEN_SPRECHPROBEN = [
+    ("a refused twin whose text names the form HOLDS", _SP_TREE_SCHLECHT, ("parent",), True),
+    ("a twin the checker ACCEPTS does not hold", _SP_TREE_GUT, ("parent",), False),
+    ("a refusal that does not name the form does not hold",
+     _SP_TREE_SCHLECHT, ("kein_solches_wort",), False),
+    ("a word only in the ECHOED SOURCE does not hold", _SP_ECHO, ("wrapping",), False),
+]
+
+
+def gegen_sprechprobe():
+    """Returns the number of directions that do NOT hold."""
+    schlecht = 0
+    # English, and the German twin two functions down is not a model: `CLAUDE.md` puts the
+    # instruments in English, and the line is measured -- `pruefe-englisch.py` counts it,
+    # and its ratchet may fall and not rise.
+    print("== Gegenprobe speech test -- four directions ==")
+    for satz, programm, worte, soll in GEGEN_SPRECHPROBEN:
+        GEGEN["__probe__"] = (programm, worte, "pruefe")
+        ist = gegenlauf("__probe__")[0]
+        del GEGEN["__probe__"]
+        ok = ist == soll
+        schlecht += not ok
+        print(f"  {'ok         ' if ok else 'GESCHEITERT'}   {satz} ({ist})")
+    return schlecht
+
+
 # =======================================================================================
 # THE SPEECH TEST -- five directions, and each one is a way this instrument could go quiet
 # =======================================================================================
@@ -1547,7 +1910,10 @@ def sprechprobe():
         ok = ist == soll
         schlecht += not ok
         print(f"  {'ok         ' if ok else 'GESCHEITERT'}   {satz} ({ist})")
-    return schlecht
+    # **The gegenprobe decides verdicts, so it is held by a probe of its own.** A broken
+    # matcher here would hand out `GUARDS` for nothing -- the same direction of failure as a
+    # broken byte comparison handing out `UNCOVERED` for everything, and just as quiet.
+    return schlecht + gegen_sprechprobe()
 
 if __name__ == "__main__":
     sys.exit(main())

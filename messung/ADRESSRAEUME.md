@@ -10,6 +10,33 @@ saubere `ptr<mmio, …>` im Korpus auf einen `device`-Typ zeigt** — und das `v
 aus der `device`-Absenkung, nicht aus dem Raum am Zeiger. *Ein Raum, der nur deshalb
 ankommt, weil kein Gegenbeispiel geschrieben wurde, ist keine Zusage.*
 
+> ## SINCE 2026-09-15 THE TITLE IS HALF FALSE, AND THE OTHER HALF IS WHY IT STOOD
+>
+> **`ctyp` now reads `z.raum` for two of the six.** `mmio` and `dma` earn a `volatile` on the
+> C pointer type; `normal`, `boot`, `code` and a named space earn nothing, and `port` never
+> reaches the branch (the refusal of §8 stands). The one home is `emit::raumqualifizierer`,
+> which carries the reason per space.
+>
+> **What set it going is the sentence `R008` prints about itself:** *"the address space is
+> part of what a pointer IS -- `mmio` is volatile and device-mapped, `normal` is not, and the
+> emitter lowers them differently"*. This document's own §1 shows the emitter did not, so the
+> refusal named a lowering nobody wrote -- the worse half of `W16`, because the sentence reads
+> like a measurement.
+>
+> **The paragraph above stays exactly as it was measured, and it stays because it was right.**
+> Its finding -- *"`mmio` arrives only because every clean `ptr<mmio, …>` in the corpus points
+> at a `device` type"* -- is what made the repair land where it did: a pointer AT a device
+> handle still earns nothing, because the handle is ordinary memory and the register access is
+> volatile down at `basis`. The same holds at a `format` handle, where a generated accessor is
+> the one home of the access form. *Measured without those two exceptions:
+> `-Werror=discarded-qualifiers` at every generated setter call in the corpus.*
+>
+> Verified: `pruefe-emission.sh` ALL PASS (262 of 262 compile), `cargo test --no-fail-fast`
+> green. Measured again the way §2 measured it -- six programs differing in nothing but the
+> space word, each dereferencing through the pointer: **two distinct C files plus one named
+> refusal**, where §2 found one file six times. `normal`/`code`/`boot` share `b2a7a73399`,
+> `mmio`/`dma` share `022f036217`, and `port` emits nothing and says why.
+
 ---
 
 ## §1 Die Stelle

@@ -6043,6 +6043,50 @@ pub(crate) fn zeiger_schreibend(z: &gabbro_syntax::ast::PtrTy) -> bool {
     })
 }
 
+/// **The C qualifier the pointer's SPACE earns -- `volatile` for `mmio` and `dma`, nothing
+/// else** (2026-09-15, lane "grammar into the emitter").
+///
+/// It stands here because `R008` in `m3.rs` says of itself, word for word:
+///
+/// > *"the address space is part of what a pointer IS -- `mmio` is volatile and
+/// > device-mapped, `normal` is not, **and the emitter lowers them differently**"*
+///
+/// **And until today it did not.** Measured 2026-09-15 on six programs differing in nothing
+/// but the space word, each dereferencing through the pointer: six byte-identical C files.
+/// *A refusal that names a lowering the generator does not write is a promise nobody keeps* --
+/// and it is the worse half of `W16`, because the sentence reads like a measurement.
+///
+/// **Two spaces earn the qualifier and four do not, and the reason is per space:**
+///
+/// * `mmio` -- a load IS the device access. Without `volatile` the C compiler may fold two
+///   reads into one, hoist one out of a loop, or delete a store whose value is never read
+///   back. Every one of those is a different program at the device, and none of them is a
+///   diagnostic. The device HANDLE already carries `volatile uint8_t *basis` for exactly this
+///   reason (`geraet`); a `ptr<mmio, …>` at a plain carrier had nothing.
+/// * `dma` -- memory a device writes behind the CPU's back. The same three transformations
+///   are the same defect; that the other writer is a bus master rather than a register file
+///   changes nothing the compiler can see.
+/// * `normal` is ordinary memory, `boot` is ordinary memory in a link-time section
+///   (`SYNTAX.md`:1607) -- a section is a placement, not an access form. `code` is never
+///   dereferenced (an incomplete type behind an `extern fn`), so there is no access to
+///   qualify. `port` never reaches this function: `funktion` refuses a body carrying a
+///   `ptr<port, …>` that is not a port device, and a port device is reached by `in`/`out`.
+///
+/// **Why `volatile` and not a second pass:** C already has the word for "this object may
+/// change without this program changing it", and `cc` enforces it at every access. Inventing
+/// a Gabbro-side rule beside it would be a second register over one fact (`W7`), and the
+/// second one would be the one that forgets an access form.
+/// * `Benannt` -- a space a program declared itself (`ptr<user, r> u8`). The generator knows
+///   no access form for it and must not invent one; it lowers like `normal`, which is what it
+///   did before this function existed. *A qualifier guessed for a name is the move `C001`
+///   stands against.*
+pub(crate) fn raumqualifizierer(raum: &Raum) -> &'static str {
+    match raum {
+        Raum::Mmio | Raum::Dma => "volatile ",
+        Raum::Normal | Raum::Boot | Raum::Code | Raum::Port | Raum::Benannt(_) => "",
+    }
+}
+
 /// The primitive type words, by their Gabbro spelling. **The one home of these eleven rows.**
 pub(crate) fn primitivwort(n: &str) -> Option<&'static str> {
     Some(match n {
@@ -6158,7 +6202,40 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 },
             };
             let konst = if zeiger_schreibend(z) { "" } else { "const " };
-            Some(format!("{konst}{ziel} *"))
+            // **The qualifier goes where THIS function writes the access, and nowhere else.**
+            // A `device` handle and a `format` handle are both dereferenced by a GENERATED
+            // ACCESSOR (`Virtq_AVAIL_RING_setz_e`, `EthArp_setz_ethertyp`), never by the
+            // caller; the accessor is the one home of that access form, and it is generated
+            // once per declaration, not once per space. Qualifying the HANDLE at the caller
+            // would make the two disagree about a pointer neither of them dereferences
+            // directly -- measured 2026-09-15: `-Werror=discarded-qualifiers` at every call
+            // site of a generated setter, in `messung/treiber/virtio-net.gab` and
+            // `messung/proben/probe-netz-rahmen-und-ergebnis.gab`.
+            //
+            // For the device half the rule is already written down. `beispiele/gift/416`, in
+            // its own text: *"the space at the POINTER does not decide the access form -- the
+            // `device` declaration does"*. A `ptr<mmio, r> SerialCom1` does not point at
+            // device memory; it points at the HANDLE, which is ordinary memory carrying
+            // `volatile uint8_t *basis`, and the register access is volatile down there
+            // already.
+            //
+            // **What stays open, and it is named rather than papered over:** a `format` in
+            // `dma` is a byte view of memory a device writes, and its accessor does NOT
+            // qualify its loads and stores. The space is carried at the CALLER for every
+            // target this function lowers inline -- a primitive, a record, a table, an index
+            // -- and at the generated accessor for the two that have one.
+            let hinter_erzeugtem_zugriff = match &z.ziel {
+                TypExpr::Pfad(p) => p.teile.last().is_some_and(|t| {
+                    u.geraete.contains_key(&t.text) || u.formate.contains(&t.text)
+                }),
+                _ => false,
+            };
+            let raum = if hinter_erzeugtem_zugriff {
+                ""
+            } else {
+                raumqualifizierer(&z.raum)
+            };
+            Some(format!("{konst}{raum}{ziel} *"))
         }
         _ => None,
     }
@@ -7060,12 +7137,21 @@ fn funktion(
     // **`ptr<port, …>` in a body: refused, because there is no lowering and there cannot be
     // one** (2026-08-31, `messung/ADRESSRAEUME.md`).
     //
-    // `ctyp` reads `z.raum` for NO space -- measured: six functions differing in nothing but
-    // the space word emit six byte-identical lines. For five of the six that is right:
-    // `normal` is ordinary memory, `boot` is ordinary memory in a link-time section
-    // (`SYNTAX.md`:1607), `code` is never dereferenced (an incomplete type behind an
-    // `extern fn`), and `mmio`/`dma` are carried by the CHECKER (`R001`, `R008`, and the W9
-    // clause in `m3.rs`:22).
+    // `ctyp` read `z.raum` for NO space -- measured 2026-08-31: six functions differing in
+    // nothing but the space word emit six byte-identical lines. For five of the six that was
+    // held to be right: `normal` is ordinary memory, `boot` is ordinary memory in a link-time
+    // section (`SYNTAX.md`:1607), `code` is never dereferenced (an incomplete type behind an
+    // `extern fn`), and `mmio`/`dma` were said to be carried by the CHECKER (`R001`, `R008`,
+    // and the W9 clause in `m3.rs`:22).
+    //
+    // > **TWO OF THE FIVE FELL ON 2026-09-15, and they fell on `R008`'s own sentence.** That
+    // > refusal says of itself *"`mmio` is volatile and device-mapped, `normal` is not, and
+    // > the emitter lowers them differently"* -- a claim the six byte-identical files above
+    // > contradict. `ctyp` now reads the space through `raumqualifizierer`: `mmio` and `dma`
+    // > earn `volatile`, the other four earn nothing, and each of the six carries its reason
+    // > there. *The paragraph stays because the `port` half of it is untouched -- and because
+    // > a measurement that later stopped holding is worth more standing next to what replaced
+    // > it than deleted.*
     //
     // **`port` is the sixth, and it is wrong under a written promise.** `SPRACHE.md`:2188:
     // *"`at port` lowers accesses to `in`/`out` instead of to volatile loads/stores"*. What
@@ -7111,6 +7197,52 @@ fn funktion(
                          struct field at an offset behind a pointer is not one. A `device … \
                          at port` names the port number and lowers; nothing else in the \
                          language does",
+                    );
+                    return;
+                }
+                // **`own@m` -- the owner MARK, and nothing in this tree reads it**
+                // (2026-09-15).
+                //
+                // `parse::right` builds `Recht::Eigen(Some(marke))`, and that is the last
+                // line in the whole repository that looks inside the `Some`. Measured:
+                // `grep -rn "Eigen(Some" crates/` names the parser and nobody else; every
+                // other reader -- `m3.rs` twice, `alias.rs`, `lean_g.rs` twice, this file --
+                // matches `Recht::Eigen(_)` and drops the mark. `ptr<normal, own@m> u32` and
+                // `ptr<normal, own> u32` emit the same C to the byte, book the same
+                // obligations, and draw the same refusals: none.
+                //
+                // **`Ty.ptr` in `grammatik/Grammatik/Syntax.lean` carries `(t : Nat)` and
+                // `(rw : Bool)` and nothing else**, so the mark has no constructor in the
+                // specification either. It is a form the grammar admits and no side of the
+                // compiler answers for -- a promise nobody keeps, which looks kept.
+                //
+                // **The refusal and not the lowering, and Rule A says why:** the mark would
+                // mean *"the target is owned, and the owning mark is `m`"*, which is a
+                // statement about linearity that the checker would have to hold at every
+                // call. The corpus asks for it ZERO times (`grep -rn "own@" --include=*.gab`
+                // is empty). Building the pass would be a construct without a measured need;
+                // saying so by name costs nothing and stops the silence.
+                //
+                // **At the SIGNATURE, like the `port` refusal above, and for the same
+                // reason** (`W10`): a body that takes the pointer and never touches it is
+                // refused too. That is coarser than the defect and coarse in the safe
+                // direction -- the exact rule would need the mark at every access site,
+                // which the expression lowering does not carry.
+                if let Some(marke) = z.rechte.iter().find_map(|r| match r {
+                    Recht::Eigen(Some(m)) => Some(m),
+                    _ => None,
+                }) {
+                    weigere(
+                        absagen,
+                        p.name.span,
+                        &format!(
+                            "`own@{}` -- the owner mark is parsed and READ BY NOTHING: every \
+                             pass matches `own` and drops the mark, `ptr<…, own@{}>` emits \
+                             the same C as `ptr<…, own>` to the byte, and `Ty.ptr` of the \
+                             grammar carries no mark at all. Write `own` and name the owner \
+                             where the language does hold it -- `effects {{ consumes {} }}`",
+                            marke.text, marke.text, marke.text
+                        ),
                     );
                     return;
                 }
@@ -7359,6 +7491,32 @@ fn funktion(
     if f.fehler.is_some() && !rumpf_scheitert(b) {
         aus.push_str(
             "    (void)_grund; /* this body never returns a reason -- N034 */\n",
+        );
+    }
+    // **And the OTHER channel needed the same line, and had it for nobody** (2026-09-15).
+    //
+    // A `-> T or R` lowers to `bool f(T *_wert, R *_grund)`. The guard above covers the body
+    // that never writes `_grund`; the mirror -- a body whose every exit is a REASON, so
+    // `_wert` is never written -- had none. Measured:
+    //
+    // ```text
+    // fn f() -> u32 or R effects { pure } costs <= 2 ops { return R::Leer; }
+    //   ->  static bool f(uint32_t *_wert, R *_grund) { *_grund = R_Leer; return false; }
+    //   cc: error: unused parameter '_wert' [-Werror=unused-parameter]
+    // ```
+    //
+    // *Zero checker errors, `gabbro emit` returned 0, and the C did not compile at either
+    // level.* The form is not exotic: a routine that only ever fails is what a stub of a
+    // fallible one looks like, and `Stmt.retGrund` is a constructor of the grammar in its
+    // own right (`Syntax.lean`:523).
+    //
+    // **`rumpf_gibt_wert` and not `!rumpf_scheitert`:** a body may do both, and the two
+    // questions are independent. Asking the wrong one would silence a parameter the body
+    // does write -- and `(void)x;` on a written parameter is not an error, which is exactly
+    // why it has to be the right question rather than a safe-looking one.
+    if f.fehler.is_some() && f.ergebnis.is_some() && !rumpf_gibt_wert(b) {
+        aus.push_str(
+            "    (void)_wert; /* every exit of this body is a reason -- the value channel stays unwritten */\n",
         );
     }
     let rahmen = Austritt {
@@ -12621,6 +12779,24 @@ fn rumpf_scheitert(b: &Block) -> bool {
     })
 }
 
+/// **Does any exit of this body carry a VALUE?** -- the mirror of [`rumpf_scheitert`], and
+/// the two are independent questions over the same body (a body may do both, or neither).
+///
+/// It answers exactly one thing for the emitter: whether `*_wert` is ever written, so that a
+/// body all of whose exits are reasons gets its `(void)_wert;` and the generated C does not
+/// fall at `-Werror=unused-parameter`. A `return;` without an expression writes nothing, and
+/// a `return R::F;` writes the reason channel -- neither counts.
+fn rumpf_gibt_wert(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        if let StmtArt::Return(Some(e)) = &s.art {
+            if !matches!(e.art, ExprArt::Grund { .. }) {
+                return true;
+            }
+        }
+        crate::unterbloecke(s).into_iter().any(rumpf_gibt_wert)
+    })
+}
+
 fn geist_wert(e: &Expr, u: &Namen) -> bool {
     match &e.art {
         ExprArt::Ruf(r) => r
@@ -13602,8 +13778,28 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // > *Es fiel nicht auf, solange jede Datei mit einem `format` aus einem anderen Grund
     // > `C001` sagte.* Genau die Bauart, die dieser Ordner schon zweimal bezahlt hat: ein
     // > Fehler, den eine Weigerung davor verdeckt.
+    // **And `m->a` is the SAME access as `m.a`, so it takes the same arm** (2026-09-15).
+    //
+    // It did not, and the consequence was the very defect the paragraph above describes --
+    // one spelling later. `m : ptr<normal, r> F` with `return m->a;` passed `gabbro pruefe`
+    // with zero errors and emitted `return m->a;` into a
+    // `typedef struct { uint8_t *bytes; uint32_t len; } F;`. *`cc` says `'F' has no member
+    // named 'a'`, `gabbro emit` returned 0, and `C001` said nothing* -- a silently wrong
+    // lowering, which this file holds to be worse than a refusal because a refusal stands in
+    // the certificate. The German paragraph directly above says the same thing about the DOT
+    // spelling and closed only that one; this is the same finding, found again, one spelling
+    // later.
+    //
+    // The two spellings cannot differ here: `formatwerte` is filled from a `TypExpr::Pfad`
+    // AND from a `TypExpr::Zeiger` at a format (`eigene_sicht`), the generated reader takes
+    // the handle by pointer either way (`F_a(const F *v)`), and the pointer-ness is already
+    // in the C type. **A field of a `format` is reached by its reader, and by nothing else.**
     if let Some(fmt) = u.formatwerte.get(&o.basis.text) {
-        if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+        let erste = match o.suffixe.first() {
+            Some(OrtSuffix::Feld(f)) | Some(OrtSuffix::Ueber(f)) => Some(f),
+            _ => None,
+        };
+        if let Some(f) = erste {
             if o.suffixe.len() == 1 {
                 return format!("{fmt}_{}({})", f.text, o.basis.text);
             }
@@ -13614,6 +13810,44 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                  has no place inside the bytes",
             );
             return String::new();
+        }
+    }
+    // **A place over a TABLE reaches its slots and nothing else -- and until today the
+    // generator wrote the nothing else out** (2026-09-15).
+    //
+    // A `table T count 4 { slot { wert : u32, } }` lowers to
+    // `typedef struct { T_slot slots[4]; } T;` -- ONE member, named `slots`. `q->wert` on a
+    // `q : ptr<normal, r> T` passed `gabbro pruefe` with zero errors and came out as
+    // `return q->wert;`: a member the struct does not have. Same shape as the `format` case
+    // directly above and found the same way -- by compiling what the emitter claims is
+    // finished.
+    //
+    // **Coarse in the safe direction (`W9`):** the refusal asks only whether the FIRST
+    // suffix is `slots`, which is the only member there is. A table-level `const` is not a
+    // member at all (it lowers to a `#define`, `table.const`), and a name that is neither is
+    // the defect itself. *The exact answer -- is this a declared slot field? -- belongs to
+    // the checker, and that it does not give one is named in the report, not papered over
+    // here.*
+    if u.tabellenzeiger.contains_key(&o.basis.text) || u.tabellenglobal.contains(&o.basis.text) {
+        let erste = match o.suffixe.first() {
+            Some(OrtSuffix::Feld(f)) | Some(OrtSuffix::Ueber(f)) => Some(f),
+            _ => None,
+        };
+        if let Some(f) = erste {
+            if f.text != "slots" {
+                weigere(
+                    absagen,
+                    f.span,
+                    &format!(
+                        "`{}` over a `table` -- a table handle has exactly ONE member in C, \
+                         `slots`, and a slot field is reached through it (`{}.slots[i].{}`). \
+                         What stood here would have named a member of the generated struct \
+                         that does not exist",
+                        f.text, o.basis.text, f.text
+                    ),
+                );
+                return String::new();
+            }
         }
     }
     // **Ein `accumulates` wird beim LESEN gefaltet.** Der Name steht fuer den ganzen

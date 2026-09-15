@@ -1,0 +1,68 @@
+-- 133 -- **two forms the checker passed and the C compiler did not.**
+--
+-- Both were found by walking the constructors of
+-- `grammatik/Grammatik/Syntax.lean` one by one and COMPILING what came out.
+-- Both were zero checker errors, `gabbro emit` returning 0, and `cc -std=c11
+-- -Wall -Wextra -Werror` refusing at both -O0 and -O2.
+--
+-- 1. `Stmt.retGrund` (`Syntax.lean`:523) -- a body all of whose exits are
+--    reasons. `-> T or R` lowers to `bool f(T *_wert, R *_grund)`, and a body
+--    that never writes the value channel left `_wert` unread:
+--
+--        error: unused parameter '_wert' [-Werror=unused-parameter]
+--
+--    The mirror guard for the OTHER channel has stood since stage 7
+--    (`(void)_grund; /* ... N034 */`); this one had nobody. The form is not
+--    exotic: a routine that only ever fails is what a stub of a fallible one
+--    looks like.
+--
+-- 2. `Expr.leseBytes` through `->` -- a `format` field reached through a
+--    pointer. The dot spelling `m.marke` took the generated reader
+--    (`Wort_marke(m)`); the arrow fell through to the generic place walk and
+--    emitted `m->marke` into a `typedef struct { uint8_t *bytes; uint32_t
+--    len; } Wort;`:
+--
+--        error: 'Wort' has no member named 'marke'
+--
+--    The two spellings cannot differ: the generated reader takes the handle by
+--    pointer either way, and the pointer-ness is already in the C type.
+--
+-- The third of the day is a REFUSAL and lives in `beispiele/gift/1000`: a place
+-- over a `table` whose first suffix is not `slots` named a struct member that
+-- does not exist, and now says so by name.
+module beispiel133 {
+
+reason LeseFehler {
+    Leer = 1 "nothing was ever written here"
+    exhaustive
+}
+
+format Wort endian little {
+    marke : bool @0,
+    rest    : u32  @[31:1] reserved,
+}
+
+-- (1) every exit is a reason -- the value channel is never written.
+impl fn immer_leer() -> u32 or LeseFehler
+    effects { pure }
+    costs   <= 2 ops
+{
+    return LeseFehler::Leer;
+}
+
+-- (2) a `format` field through the arrow, beside the same field through the dot.
+impl fn ueber_pfeil(m : ptr<normal, r> Wort) -> bool
+    effects { reads m }
+    costs   <= 2 ops
+{
+    return m->marke;
+}
+
+impl fn ueber_punkt(m : ptr<normal, r> Wort) -> bool
+    effects { reads m }
+    costs   <= 2 ops
+{
+    return m.marke;
+}
+
+}
