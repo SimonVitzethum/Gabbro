@@ -393,6 +393,142 @@ pub fn pruefe(gabbro_sites: &[u32], cert: &CorrCert) -> CorrPruefung {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Stage (b): the printed simulation certificate for 124 (lane 206).
+//
+// `sim124` (`grammatik/Grammatik/Schlusssatz124.lean`) is built by hand. This
+// section prints its relation tables as data so the Lean checker
+// (`grammatik/Grammatik/SimPruef.lean`: `SimCert`, `pruefeSim`) can re-check
+// them: per C position the G residue (`gOfA`/`gOfB`), and per G residue
+// whether the thread holds the lock (`heldGA`/`heldGB`, `1` = holds `lL`).
+// The per-step G segments (`gBlatt`, `gNimm`, `gSetze`, `gGib`, `gPruefe`)
+// are NOT printed: the checker covers the tables, not the segments (named
+// gap for program #2). `DRFSC`/`LaufzeitC` travel as named premises, never
+// as printed proofs.
+//
+// Grammar of the JSON sidecar (`<stem>.simcert` beside the C, same
+// convention as `CorrCert::sidecar_path`):
+//   {"program":"124-two-threads-private","gA":[…],"hA":[…],"gB":[…],"hB":[H…]}
+// with H the four lists in `SimCert` order. The Lean side (`to_lean`) is the
+// literal body of `cert124_printed` in `SimPruef.lean`.
+// ---------------------------------------------------------------------------
+
+/// **The printed simulation certificate for 124**: the four position tables
+/// of `R124` as data. Mirrors Lean `SimCert` field for field.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimCert124 {
+    /// C position to G residue for `hauptA` threads (13 positions, `gOfA`).
+    pub g_a: Vec<u32>,
+    /// Held-lock flag per G residue of `hauptA` (7 residues, `heldGA`).
+    pub h_a: Vec<u32>,
+    /// C position to G residue for `hauptB` threads (9 positions, `gOfB`).
+    pub g_b: Vec<u32>,
+    /// Held-lock flag per G residue of `hauptB` (5 residues, `heldGB`).
+    pub h_b: Vec<u32>,
+}
+
+impl SimCert124 {
+    /// `gOfA` as a list (positions 0-12; position 12 is `.aus`, residue 6).
+    pub fn erwartet_g_a() -> Vec<u32> {
+        vec![0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6]
+    }
+
+    /// `heldGA` as flags (residues 0-6; residues 3 and 4 hold `lL`).
+    pub fn erwartet_h_a() -> Vec<u32> {
+        vec![0, 0, 0, 1, 1, 0, 0]
+    }
+
+    /// `gOfB` as a list (positions 0-8; position 8 is `.aus`, residue 4).
+    pub fn erwartet_g_b() -> Vec<u32> {
+        vec![0, 0, 1, 1, 2, 2, 3, 3, 4]
+    }
+
+    /// `heldGB` as flags (residues 0-4; residues 2 and 3 hold `lL`).
+    pub fn erwartet_h_b() -> Vec<u32> {
+        vec![0, 0, 1, 1, 0]
+    }
+
+    /// The printed certificate for 124: the exact tables above.
+    pub fn gedruckt() -> SimCert124 {
+        SimCert124 {
+            g_a: Self::erwartet_g_a(),
+            h_a: Self::erwartet_h_a(),
+            g_b: Self::erwartet_g_b(),
+            h_b: Self::erwartet_h_b(),
+        }
+    }
+
+    /// The checker in printer form — mirrors Lean `pruefeSim`: all four
+    /// tables equal the expected ones. A forged table fails loudly here,
+    /// never by falling through to the hand-built simulation.
+    pub fn pruefe(&self) -> bool {
+        self.g_a == Self::erwartet_g_a()
+            && self.h_a == Self::erwartet_h_a()
+            && self.g_b == Self::erwartet_g_b()
+            && self.h_b == Self::erwartet_h_b()
+    }
+
+    /// The sidecar path beside an emitted C file — `<stem>.simcert`, the
+    /// same convention as [`CorrCert::sidecar_path`].
+    pub fn sidecar_path(c_path: &str) -> String {
+        match c_path.rfind('.') {
+            Some(i) => format!("{}.simcert", &c_path[..i]),
+            None => format!("{c_path}.simcert"),
+        }
+    }
+
+    fn liste(liste: &[u32]) -> String {
+        let mut aus = String::from("[");
+        for (i, v) in liste.iter().enumerate() {
+            if i > 0 {
+                aus.push(',');
+            }
+            aus.push_str(&v.to_string());
+        }
+        aus.push(']');
+        aus
+    }
+
+    /// Renders the certificate as JSON: the program name plus the four
+    /// tables in `SimCert` order. Hand-rolled like [`CorrCert::to_json`] —
+    /// no JSON dependency for four number lists.
+    pub fn to_json(&self) -> String {
+        format!(
+            "{{\"program\":\"124-two-threads-private\",\"gA\":{},\"hA\":{},\"gB\":{},\"hB\":{}}}",
+            Self::liste(&self.g_a),
+            Self::liste(&self.h_a),
+            Self::liste(&self.g_b),
+            Self::liste(&self.h_b),
+        )
+    }
+
+    fn lean_liste(liste: &[u32]) -> String {
+        let mut aus = String::from("[");
+        for (i, v) in liste.iter().enumerate() {
+            if i > 0 {
+                aus.push_str(", ");
+            }
+            aus.push_str(&v.to_string());
+        }
+        aus.push(']');
+        aus
+    }
+
+    /// Renders the certificate as the Lean literal body of `cert124_printed`
+    /// in `SimPruef.lean` (same four lists, same order). The Lean checker
+    /// decides this literal with `pruefeSim`; the unit test below pins the
+    /// exact spelling so printer and checker cannot drift apart silently.
+    pub fn to_lean(&self) -> String {
+        format!(
+            "⟨{}, {},\n   {}, {}⟩",
+            Self::lean_liste(&self.g_a),
+            Self::lean_liste(&self.h_a),
+            Self::lean_liste(&self.g_b),
+            Self::lean_liste(&self.h_b),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -537,5 +673,75 @@ mod tests {
         );
         assert_eq!(CorrCert::sidecar_path("einheit.c"), "einheit.corrcert");
         assert_eq!(CorrCert::sidecar_path("einheit"), "einheit.corrcert");
+    }
+
+    // Stage (b): the printed simulation certificate for 124 (lane 206).
+
+    #[test]
+    fn sim124_gedruckt_besteht_die_pruefung() {
+        // The printed tables are exactly the relation tables of R124.
+        let cert = SimCert124::gedruckt();
+        assert_eq!(cert.g_a.len(), 13, "gOfA covers positions 0-12");
+        assert_eq!(cert.h_a.len(), 7, "heldGA covers residues 0-6");
+        assert_eq!(cert.g_b.len(), 9, "gOfB covers positions 0-8");
+        assert_eq!(cert.h_b.len(), 5, "heldGB covers residues 0-4");
+        assert!(cert.pruefe(), "the printed certificate must check");
+    }
+
+    #[test]
+    fn sim124_gefaelschte_tabelle_faellt_laut() {
+        // One forged entry in each table fails the check: no silent pass.
+        let mut cert = SimCert124::gedruckt();
+        cert.g_a[7] = 4;
+        assert!(!cert.pruefe(), "forged gA entry must fail");
+        let mut cert = SimCert124::gedruckt();
+        cert.h_a[3] = 0;
+        assert!(!cert.pruefe(), "forged hA entry must fail");
+        let mut cert = SimCert124::gedruckt();
+        cert.g_b[5] = 3;
+        assert!(!cert.pruefe(), "forged gB entry must fail");
+        let mut cert = SimCert124::gedruckt();
+        cert.h_b[2] = 0;
+        assert!(!cert.pruefe(), "forged hB entry must fail");
+        let mut cert = SimCert124::gedruckt();
+        cert.g_a.pop();
+        assert!(!cert.pruefe(), "a truncated table must fail");
+    }
+
+    #[test]
+    fn sim124_json_traegt_programm_und_vier_tabellen() {
+        let cert = SimCert124::gedruckt();
+        assert_eq!(
+            cert.to_json(),
+            concat!(
+                "{\"program\":\"124-two-threads-private\",",
+                "\"gA\":[0,0,1,1,2,2,3,3,4,4,5,6,6],",
+                "\"hA\":[0,0,0,1,1,0,0],",
+                "\"gB\":[0,0,1,1,2,2,3,3,4],",
+                "\"hB\":[0,0,1,1,0]}"
+            )
+        );
+    }
+
+    #[test]
+    fn sim124_lean_literal_stimmt_mit_simpruef_ueberein() {
+        // Byte-pinned against `cert124_printed` in SimPruef.lean: if this
+        // test changes, the Lean literal changes with it, or the round
+        // trip is broken and the test says so.
+        let cert = SimCert124::gedruckt();
+        assert_eq!(
+            cert.to_lean(),
+            "⟨[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6], [0, 0, 0, 1, 1, 0, 0],\n   [0, 0, 1, 1, 2, 2, 3, 3, 4], [0, 0, 1, 1, 0]⟩"
+        );
+    }
+
+    #[test]
+    fn simcert_seitenwagenpfad_teilt_die_konvention() {
+        assert_eq!(
+            SimCert124::sidecar_path("out/einheit.c"),
+            "out/einheit.simcert"
+        );
+        assert_eq!(SimCert124::sidecar_path("einheit.c"), "einheit.simcert");
+        assert_eq!(SimCert124::sidecar_path("einheit"), "einheit.simcert");
     }
 }
