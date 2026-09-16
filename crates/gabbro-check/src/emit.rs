@@ -7541,6 +7541,25 @@ fn funktion(
     // nicht liest, also darf der C-Uebersetzer ihn nicht wegen unbenutzten Ergebnisses
     // streichen. *Wer den Text nicht liest, darf ihn auch nicht fuer entbehrlich halten.*
     if let FnRumpf::Asm(a) = &f.rumpf {
+        // **`-> never` with `out { result }` is not C** (N321, 2026-09-16).
+        //
+        // `prototyp_kern` lowers `-> never` to `_Noreturn void`, and the `out`
+        // below lowers to `return result;` -- together a `return` in a `_Noreturn`
+        // function, which `cc -Werror` refuses. The checker names it (N321); the
+        // emitter refuses here too, so the contradiction is loud on both channels
+        // even with the rule dropped (pinned at `gift/985` as `C001`).
+        if matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
+            if let Some((n, _)) = a.aus.iter().find(|(n, _)| n.text == "result") {
+                weigere(
+                    absagen,
+                    n.span,
+                    "`-> never` with an `asm` body that names `out { result }` -- `_Noreturn` \
+                     together with `return result` is not C; whoever reads the assembler's \
+                     result declares a result type, whoever never returns writes no `out`",
+                );
+                return;
+            }
+        }
         // **Der Rueckgabewert heisst `result`, und er ist ein AUSGANGSOPERAND** (2026-08-20).
         //
         // Bis dahin weigerte sich der Erzeuger fuer jeden `asm`-Rumpf mit Ergebnis -- und

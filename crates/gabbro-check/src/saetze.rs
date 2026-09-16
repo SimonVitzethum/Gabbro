@@ -276,6 +276,39 @@ pub const NAMEN: &[Satz] = &[
                       by a line nothing measures.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12",
     },
+    Satz {
+        name: "namen.asm_never",
+        kennungen: &["N321"],
+        aussage: "A `-> never` function with an `asm` body names no `out { result }`: \
+                  `-> never` lowers to `_Noreturn void` and the `out` to `return result` \
+                  -- together that is not C. Whoever reads the assembler's result declares \
+                  a result type, whoever never returns writes no `out`.",
+        vorbehalt: "The rule fires on `result` in the OUT operands only -- the shape the \
+                    model side (`AxNeverGut`, `Zielsatz/NeverAsm.lean`) forbids: a `never` \
+                    axiom delivers no out value. `S009` holds the declaration against a \
+                    BLOCK body only and never saw this shape. The emitter refuses the same \
+                    combination as `C001`, so the contradiction is loud on both channels. \
+                    A `-> never` `asm` body WITHOUT `out` takes a different path -- the \
+                    checker stays silent and the emitter falls at the older `hat_ergebnis` \
+                    arm -- and the honest shape (a halting `asm` under `-> never` that \
+                    compiles) is open, not built. Reserved as `N320`; that code is taken \
+                    by `namen.section_an_funktion` since 2026-09-15, so this rule carries \
+                    the next free number.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured before the build: `pruefe` reports 0 errors over a `-> never` \
+                      `asm` body with `out { result }` (`S009` returns early on non-`Block` \
+                      bodies); after the build it falls with `N321` \
+                      (`beispiele/gift/984`, `-- erwartet: N321`). Emitter half: \
+                      `beispiele/gift/985` (`-- erwartet: C001`). Deliberately NOT \
+                      `-- erwartet: N321 allein`: without the checker rule the emitter still \
+                      refuses (a `static` prototype with no definition, which `cc` rejects \
+                      for that other reason), so `nothing else catches it' would be false. \
+                      Counter-direction: `beispiele/36-asm.gab` (`schreiben -> u64` with \
+                      `out { result }`, and `ausgeben` with neither) stays green.",
+        fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`); \
+                     crates/gabbro-check/src/emit.rs (the `asm` arm); \
+                     grammatik/Grammatik/Zielsatz/NeverAsm.lean",
+    },
     // --- 2026-09-15: the specification half of the grammar census ------------------------
     //
     // **A clause that reaches no register at all is refused until it reaches one.**

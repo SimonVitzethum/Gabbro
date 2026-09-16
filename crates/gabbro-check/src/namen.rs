@@ -5963,6 +5963,42 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
                 );
             }
         }
+        // **`N321` -- `-> never` with `out { result }` is contradictory** (2026-09-16).
+        //
+        // `prototyp_kern` (emit.rs) lowers `-> never` to `_Noreturn void`, and an
+        // `out { result }` lowers to `return result;` -- together not C. The checker
+        // accepted it: `S009` (schleifen.rs) returns early on every non-`Block` body,
+        // so an `asm` body was never held against its `-> never` declaration. The
+        // model side (`grammatik/Grammatik/Zielsatz/NeverAsm.lean`, `AxNeverGut`) says
+        // the same from the other end: a `never` axiom delivers no out value.
+        // `beispiele/36-asm.gab` (`schreiben -> u64` with `out`) is the
+        // counter-direction and stays green; `beispiele/gift/984` is the probe.
+        // (Reserved as N320; that code is taken by `section_an_funktion` since
+        // 2026-09-15, so this rule carries the next free number.)
+        if matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
+            if let Some((n, _)) = a.aus.iter().find(|(n, _)| n.text == "result") {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N321",
+                        n.span,
+                        format!(
+                            "`{}` is declared `-> never` but its `asm` body names `out {{ result }}`",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "`-> never` lowers to `_Noreturn void` and the `out` to `return result` \
+                         -- together that is not C; whoever reads the assembler's result \
+                         declares a result type, whoever never returns writes no `out`",
+                    )
+                    .mit_notiz(
+                        "`S009` holds a `-> never` declaration against a BLOCK body only -- \
+                         an `asm` body was never asked; the model side (`AxNeverGut`, \
+                         `Zielsatz/NeverAsm.lean`) delivers no out value at `never`",
+                    ),
+                );
+            }
+        }
         // **Die Vorgabe ist `memory`, nicht ihr Fehlen.** Ein Hinweis und keine Absage: es
         // gibt Befehle, die wirklich nichts anfassen -- aber wer das behauptet, soll es
         // sehen. *Wer die Vorgabe umdreht, spart eine Zeile und verliert eine Zusage.*
