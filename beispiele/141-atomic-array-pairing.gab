@@ -1,0 +1,46 @@
+-- 141 -- **An ORDERED atomic array: one flag per slot, and the pairing runs
+-- through the element.**
+--
+-- The twin of `beispiele/140` (a payload-free atomic array) and of
+-- `beispiele/117` (an ordered SCALAR atomic): here the flag is one element of
+-- an array, so the store is `atomic_store_explicit(&BEREIT[i], …, BEREIT_ORDER)`
+-- and the load `atomic_load_explicit(&BEREIT[i], memory_order_acquire)`. The
+-- `#define BEREIT_ORDER` stands once at the declaration, as for a scalar --
+-- **the order is a property of the CARRIER, and an atomic array is one
+-- carrier.** That is the same sentence the goal theorem's race component makes
+-- (`Akzeptiert.lean`, `atomarB`: one Bool per global carrier, and a table is
+-- never exempt), and it is why an array here is a widening of what a carrier
+-- may LOOK like and not of what is exempt.
+--
+-- The pairing itself is the scalar's, unchanged: `publishes { bericht }` at
+-- the store, `awaits { bericht }` at the load, held by V001-V004 at compile
+-- time. The index takes the bound every other index takes -- `i : u32 in
+-- 0 .. 3` against `[bool; 4]`, checked by `M103` at BOTH statements since
+-- 2026-09-16 (the `awaits` side was unchecked until then; the poison is
+-- `beispiele/gift/1043`).
+module beispiel141 {
+
+static mut bericht : u64 = 0;
+
+atomic BEREIT : [bool; 4] acquire;
+
+impl fn melde(i : u32 in 0 .. 3, w : u64)
+    effects { writes bericht, publishes BEREIT }
+    costs   <= 8 ops
+{
+    bericht = w;
+    BEREIT[i] = true publishes { bericht };
+}
+
+impl fn lies(i : u32 in 0 .. 3) -> u64
+    effects { reads BEREIT, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = BEREIT[i] awaits { bericht };
+    if fertig {
+        return bericht;
+    }
+    return 0;
+}
+
+}

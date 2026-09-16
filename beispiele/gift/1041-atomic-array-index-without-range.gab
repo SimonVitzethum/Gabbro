@@ -1,0 +1,25 @@
+-- erwartet: N380
+-- **An index into an `atomic` array whose type carries no range at all.**
+--
+-- `M103` asks the index type for its range and compares it with the length.
+-- A `bool` has no range, so the comparison never happens and the rule is
+-- silent -- measured 2026-09-16 through the unchanged checker: `0 errors,
+-- 0 hints` for exactly this shape.
+--
+-- The answer is not "assume in range", it is "say the range": a declared
+-- parameter (`r : u32 in 0 .. 255`) carries it, and so does
+-- `narrow <index> to 0 ..< 256 else { … }`. Coarsening here would be the one
+-- coarsening `W9` does not license -- the exact answer is available, and the
+-- carrier is the one race freedom does not cover.
+module gift::atomic_array_index_without_range {
+
+atomic REGEL : [u32; 256] relaxed;
+
+impl fn setz(b : bool, v : u32)
+    effects { writes REGEL }
+    costs   <= 4 ops
+{
+    REGEL[b] = v publishes nothing;
+}
+
+}

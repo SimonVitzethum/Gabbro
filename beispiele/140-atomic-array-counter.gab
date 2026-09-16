@@ -1,0 +1,75 @@
+-- 140 -- **An atomic ARRAY: one carrier, 256 counters, and every access an
+-- atomic operation on one element.**
+--
+-- Until 2026-09-16 `atomic REGEL : [u32; 256]` checked clean at the indexed
+-- update and the emitter refused the DECLARATION (`C001`, *"`atomic` of an
+-- unresolvable type"*) -- so a program that needed one counter per rule wrote
+-- 256 scalar atomics and a flat if-dispatch to pick between them. Measured in
+-- a firewall written outside this tree (`messung/muse/OPUS-BERICHT-ATOMFELD.md`):
+-- 5136 lines and 1797 ops for a single increment, instead of the ~60 lines here.
+--
+-- **What the lowering is.** `_Atomic uint32_t REGEL[256];` -- C11 6.7.2.4p3
+-- puts the qualifier on the ELEMENT type (an `_Atomic` ARRAY type is a
+-- constraint violation), so every element is an atomic object of its own and
+-- `&REGEL[i]` is an `_Atomic uint32_t *`: the first argument of every
+-- `atomic_*_explicit` generic, unchanged.
+--
+-- **What keeps it honest.** The goal theorem (`Zielsatz/Spec.lean`) proves
+-- `RennfreiBis` for every carrier EXCEPT the atomics, and the exemption
+-- (`Akzeptiert.lean`, `atomarB`) is one Bool per global carrier -- a table is
+-- never exempt. This array is ONE carrier: it is named once in `effects`, once
+-- in the footprint, once under `atomare`. Two things follow and both are
+-- measured here:
+--   * every access is an atomic operation -- the bare indexed read below
+--     lowers to `atomic_load_explicit(&REGEL[r], …)`, never to a plain
+--     `REGEL[r]` beside a CAS loop;
+--   * the index is bounded before it is used. `M103` compares the declared
+--     range against the length (`beispiele/gift/1042`, `1043`), and `N380`
+--     refuses an access whose bound cannot be shown at all
+--     (`beispiele/gift/1040`, `1041`).
+--
+-- The increment is a bounded CAS loop because the language forbids an
+-- unbounded one, and `folge` carries the wrapping step because the emitter
+-- reads exact ranges off a declaration and not off an `exchange` binder.
+module beispiel140 {
+
+pub atomic REGEL : [u32; 256] relaxed;
+
+extern fn regel_streit() -> never effects { diverges };
+
+impl fn folge(x : u32) -> u32
+    costs <= 2 ops
+{
+    return x +% 1;
+}
+
+-- The increment: one element, one bounded compare-exchange loop.
+pub impl fn zaehle_regel(r : u32 in 0 .. 255)
+    effects { reads REGEL, writes REGEL }
+    costs   <= 8 ops
+{
+    let alt : u32 = REGEL[r] exchange update(t)
+        bounded 64 ops
+        on_exceeded regel_streit
+    { return folge(t); } publishes nothing;
+}
+
+-- The reader: a bare indexed read, and it is an explicit relaxed load.
+pub impl fn lies_regel(r : u32 in 0 .. 255) -> u32
+    effects { reads REGEL }
+    costs   <= 4 ops
+{
+    let n : u32 = REGEL[r];
+    return n;
+}
+
+-- The reset: a store into one element is a `publishstmt` like every other
+-- store to an atomic (`SPRACHE.md` §11.3), and it carries no payload.
+pub impl fn loesche_regel(r : u32 in 0 .. 255)
+    effects { writes REGEL }
+    costs   <= 4 ops
+{
+    REGEL[r] = 0 publishes nothing;
+}
+
+}

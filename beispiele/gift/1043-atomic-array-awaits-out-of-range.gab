@@ -1,0 +1,39 @@
+-- erwartet: M103
+-- **An `awaits` load whose index runs past the end of the array -- the other
+-- half of the hole `beispiele/gift/1042` closes.**
+--
+-- The receiving side of a pairing was as unchecked as the read-modify-write:
+-- `M1::index_pruefen` ran at an assignment and at a `publishes` and at neither
+-- atomic LOAD. Measured 2026-09-16 through the unchanged checker on this shape:
+-- `0 errors`.
+--
+-- It reads rather than writes, so the fault is one step milder than 1042's --
+-- and only one step. The load is what the acquire hangs on, so an
+-- out-of-range one acquires visibility from an object outside the array and
+-- then reads `bericht` under it.
+module gift::atomic_array_awaits_out_of_range {
+
+static mut bericht : u64 = 0;
+
+atomic BEREIT : [bool; 4] acquire;
+
+impl fn melde(i : u32 in 0 .. 3, w : u64)
+    effects { writes bericht, publishes BEREIT }
+    costs   <= 8 ops
+{
+    bericht = w;
+    BEREIT[i] = true publishes { bericht };
+}
+
+impl fn lies(i : u32 in 0 .. 9) -> u64
+    effects { reads BEREIT, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = BEREIT[i] awaits { bericht };
+    if fertig {
+        return bericht;
+    }
+    return 0;
+}
+
+}

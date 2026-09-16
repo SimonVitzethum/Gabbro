@@ -1,0 +1,29 @@
+-- erwartet: N271
+-- **The boundary of the widening: ONE index into an atomic array is a form,
+-- and nothing else on an atomic is.**
+--
+-- `N271` refuses every suffixed place over an `atomic` because an atomic
+-- carries a scalar -- `AT[0]` names no element (`beispiele/gift/939`). Since
+-- 2026-09-16 there is exactly one exception: a single index into an atomic
+-- whose declared type is an ARRAY, because there the element really exists and
+-- is an atomic object of its own.
+--
+-- **`REGEL[0].x` is not that exception, and this file pins the edge.** The
+-- element of `[u32; 256]` is a `u32`; a field on it names nothing at either
+-- width, and the emitter would write `REGEL[0].x` into the C over
+-- `_Atomic uint32_t REGEL[256]`. A widening whose boundary is not measured is
+-- a widening nobody can state -- so this is the poison for the part that did
+-- NOT move.
+module gift::atomic_array_field_behind_index {
+
+atomic REGEL : [u32; 256] relaxed;
+
+impl fn lies() -> u32
+    effects { reads REGEL }
+    costs   <= 4 ops
+{
+    let x : u32 = REGEL[0].x;
+    return x;
+}
+
+}

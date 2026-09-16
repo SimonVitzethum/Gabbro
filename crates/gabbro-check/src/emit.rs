@@ -204,6 +204,25 @@ struct Namen {
     /// `beispiele/14` -- der C-Uebersetzer haette es auch gesagt, aber sich darauf zu
     /// verlassen hiesse, die Absage zu delegieren, wo die Antwort hier steht.*
     atomics: HashMap<String, (String, &'static str, &'static str)>,
+    /// **The atomics whose declared type is an ARRAY, with their length** --
+    /// `atomic REGEL : [u32; 256] relaxed;` lowers to `_Atomic uint32_t REGEL[256];`
+    /// (C11 6.7.2.4: `_Atomic` qualifies the ELEMENT type, so every element is an
+    /// atomic object of its own and `&REGEL[i]` is a valid first argument to every
+    /// `atomic_*_explicit` call).
+    ///
+    /// **It is a SECOND map beside `atomics` and not a field inside it**, because the
+    /// two answer different questions and only one of them has a second reader: the C
+    /// type of ONE element is what every access needs (and `atomics` carries exactly
+    /// that -- the element type, not the array type), while the length is needed at the
+    /// declaration alone. *A name in here is in `atomics` too; the membership is what
+    /// says "indexed access is a form here".*
+    ///
+    /// **And the carrier stays ONE carrier.** In the goal theorem's race component
+    /// (`Zielsatz/Akzeptiert.lean`, `atomarB`) the exemption from `RennfreiBis` is one
+    /// Bool per `D.Glob` -- a table (`.inl`) is never exempt. An atomic array is the
+    /// global `REGEL`, named once in `effects`, in the footprint and under `atomare`;
+    /// it does not become a table anywhere, and nothing here widens that exemption.
+    atom_arrays: HashMap<String, u128>,
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
@@ -1536,9 +1555,28 @@ pub fn emittiere_mit(
 
     {
         let mut typen: Vec<(String, String)> = Vec::new();
+        let mut laengen: Vec<(String, u128)> = Vec::new();
         crate::fuer_jedes_item(baum, &mut |item| {
             if let ItemArt::Atomic(a) = &item.art {
-                if let Some(c) = ctyp(&a.typ, &namen) {
+                // **An atomic ARRAY carries its ELEMENT type in `atomics`**, because
+                // that is what every access to it yields: `atomic_load_explicit(&R[i],
+                // …)` has the element's type, and so has the CAS operand. The array
+                // type itself appears in exactly one place, the declaration, and the
+                // length below carries it there. *Storing the array type here would
+                // give four arms a type none of them can use.*
+                //
+                // Both halves must resolve or neither is entered: a length the emitter
+                // cannot fold is a size it would have to guess, and the declaration arm
+                // then refuses by name (`C001`) instead of writing `[]`.
+                if matches!(&a.typ, TypExpr::Feld(_)) {
+                    let TypExpr::Feld(f) = &a.typ else { unreachable!() };
+                    if let (Some(c), Some(n)) =
+                        (ctyp(&f.element, &namen), feldlaenge_von(&a.typ, &namen))
+                    {
+                        typen.push((a.name.text.clone(), c));
+                        laengen.push((a.name.text.clone(), n));
+                    }
+                } else if let Some(c) = ctyp(&a.typ, &namen) {
                     typen.push((a.name.text.clone(), c));
                 }
             }
@@ -1547,6 +1585,9 @@ pub fn emittiere_mit(
             if let Some(e) = namen.atomics.get_mut(&n) {
                 e.0 = c;
             }
+        }
+        for (n, l) in laengen {
+            namen.atom_arrays.insert(n, l);
         }
     }
 
@@ -2435,9 +2476,9 @@ pub fn emittiere_mit(
                 Some(Ordnung::Relaxed) | None
                     if matches!(a.obermenge, None | Some(Nutzlast::Nichts(_))) =>
                 {
-                    match ctyp(&a.typ, &namen) {
-                        Some(c) => aus.push_str(&format!("\n_Atomic {c} {};\n", a.name.text)),
-                        None => weigere(absagen, a.span, "`atomic` of an unresolvable type"),
+                    match atom_declarator(a, &namen) {
+                        Some(d) => aus.push_str(&format!("\n_Atomic {d};\n")),
+                        None => weigere(absagen, a.span, atom_refusal(a, &namen)),
                     }
                 }
                 // **K11.2.3 (2026-08-17): `release`/`acquire`/`seq` senken ab.**
@@ -2462,7 +2503,7 @@ pub fn emittiere_mit(
                 // *Das ist die strukturelle Zusage; mehr kann eine Uebersetzung hier nicht
                 // geben, und ein Differenztest koennte die Abwesenheit eines Rennens ohnehin
                 // nicht zeigen.*
-                Some(o) => match ctyp(&a.typ, &namen) {
+                Some(o) => match atom_declarator(a, &namen) {
                     Some(c) => {
                         let (wort, notiz) = match o {
                             Ordnung::Release => ("memory_order_release", "publishes"),
@@ -2489,11 +2530,11 @@ pub fn emittiere_mit(
                         aus.push_str(&format!(
                             "\n/* {} under A10 (release_stellt_sichtbarkeit_her, UNFALSIFIABLE):\n\
                              \x20* the ordering below is the one the source declared, not C's default.\n\
-                             \x20* payload: {last} */\n_Atomic {c} {};\n#define {}_ORDER {wort}\n",
-                            notiz, a.name.text, a.name.text
+                             \x20* payload: {last} */\n_Atomic {c};\n#define {}_ORDER {wort}\n",
+                            notiz, a.name.text
                         ));
                     }
-                    None => weigere(absagen, a.span, "`atomic` of an unresolvable type"),
+                    None => weigere(absagen, a.span, atom_refusal(a, &namen)),
                 },
                 None => weigere(
                     absagen,
@@ -3239,6 +3280,53 @@ fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
              generator that guesses undoes every pass in front of it",
         ),
     );
+}
+
+/// **The atomic OBJECT a place names: its C designator, the C type of one element, and
+/// the declaration's two memory orders.**
+///
+/// The four arms that touch an atomic (`publishes`, `awaits`, `exchange`, and the bare
+/// read in `ort`) each asked `u.atomics.get(&place.text())` for themselves. That answers
+/// the scalar and nothing else -- `REGEL[r]` is not a key of that map and never will be,
+/// so all four refused an indexed atomic by the same accident. **One reader now, and it
+/// answers the two shapes an atomic can have:**
+///
+/// * `GESAMT` -> `("GESAMT", "uint32_t", …)` -- byte for byte what the four arms built
+///   before, because `Ort::text()` of a suffix-free place IS the name;
+/// * `REGEL[r]` over `atomic REGEL : [u32; 256]` -> `("REGEL[r]", "uint32_t", …)`.
+///
+/// **Exactly ONE index suffix, and nothing else.** A field suffix on an atomic names
+/// nothing (`N271` in the checker -- an atomic carries a scalar or an array of scalars,
+/// never a record), and two indices would need a nested array, which no declaration can
+/// write. *The refusal for everything else stays where it was: the caller sees `None`
+/// and says `C001` in its own words.*
+///
+/// **The index is an ordinary expression and is lowered as one** -- so the bound is the
+/// bound M1 proved (`M103`, and `N380` where it could not be proved at all), and nothing
+/// is re-checked at run time that the checker decided (W6). *A place whose index the
+/// checker could not bound never reaches this function: `gabbro emit` writes no C for a
+/// unit with errors.*
+fn atom_target(
+    o: &Ort,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<(String, String, &'static str, &'static str)> {
+    if let Some((typ, sp, ld)) = u.atomics.get(&o.text()) {
+        return Some((o.text(), typ.clone(), sp, ld));
+    }
+    if o.suffixe.len() != 1 || !u.atom_arrays.contains_key(&o.basis.text) {
+        return None;
+    }
+    let OrtSuffix::Index(idx) = &o.suffixe[0] else {
+        return None;
+    };
+    let (typ, sp, ld) = u.atomics.get(&o.basis.text)?;
+    Some((
+        format!("{}[{}]", o.basis.text, ausdruck(idx, u, absagen)),
+        typ.clone(),
+        sp,
+        ld,
+    ))
 }
 
 /// **CForm zeigerArithmetik: a `*` at the end of the RESOLVED C type is a
@@ -6117,6 +6205,51 @@ pub(crate) fn primitivwort(n: &str) -> Option<&'static str> {
     })
 }
 
+/// **The C declarator of an `atomic`, WITHOUT the `_Atomic` in front of it.**
+///
+/// `atomic GESAMT : u32` gives `uint32_t GESAMT`; `atomic REGEL : [u32; 256]` gives
+/// `uint32_t REGEL[256]`. The caller writes the `_Atomic` and the `;`, so the two
+/// declaration arms (ordered and payload-free) stay one line each.
+///
+/// **Why the array is a qualified ELEMENT type and not a qualified array type.** C11
+/// 6.7.2.4p3 forbids `_Atomic` applied to an array type -- `_Atomic (uint32_t[256])` is
+/// a constraint violation. `_Atomic uint32_t REGEL[256]` is the other thing: an array
+/// whose ELEMENTS are atomic objects, and `&REGEL[i]` is then an `_Atomic uint32_t *`,
+/// which is exactly the first parameter of every `atomic_*_explicit` generic. *One
+/// atomic object per element is also what the source says -- an indexed increment
+/// touches one counter, never the array.*
+///
+/// **The length must FOLD, and an unfoldable one is a refusal and not a guess.** `[]`
+/// with no size would be an incomplete type at file scope; a guessed size would be a
+/// buffer the program never asked for. `feldlaenge_von` reads the constant `umgebung.rs`
+/// already folded (W7: one fold, one reader).
+fn atom_declarator(a: &gabbro_syntax::ast::AtomicDecl, u: &Namen) -> Option<String> {
+    match &a.typ {
+        TypExpr::Feld(f) => {
+            let c = ctyp(&f.element, u)?;
+            let n = feldlaenge_von(&a.typ, u)?;
+            Some(format!("{c} {}[{n}]", a.name.text))
+        }
+        t => Some(format!("{} {}", ctyp(t, u)?, a.name.text)),
+    }
+}
+
+/// **The reason an `atomic` declaration has no lowering, and the two reasons are
+/// different.** An unresolvable element word and an unfoldable length both end at the
+/// same `None` above, and a reader who gets "unresolvable type" for `[u32; N]` with a
+/// perfectly good `u32` in it goes looking in the wrong half. *The old sentence stands
+/// unchanged wherever it was right.*
+fn atom_refusal(a: &gabbro_syntax::ast::AtomicDecl, u: &Namen) -> &'static str {
+    match &a.typ {
+        TypExpr::Feld(f) if ctyp(&f.element, u).is_some() => {
+            "`atomic` array whose length is not a compile-time constant -- the C \
+             declaration needs a size, `[]` at file scope is an incomplete type, and a \
+             guessed one is a buffer nobody asked for"
+        }
+        _ => "`atomic` of an unresolvable type",
+    }
+}
+
 fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
     // **The rows that need no unit** stand in `ctyp_primitiv` and are read from TWO places
     // now: here, and the signature comparison behind `N046`. *A second reader is exactly the
@@ -8472,23 +8605,49 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             StmtArt::ResetArena(tisch) => {
                 aus.insert(tisch.text.clone());
             }
-            // **Only the value.** The target of a `publishes` is an ATOMIC global -- the
-            // lowering looks it up in `u.atomics` and refuses anything else -- so it is
-            // neither a parameter (no parameter is an atomic) nor a table. It belongs to
-            // neither consumer of this set. The `publishes { … }` payload lands in a
-            // comment; the pairing was decided at compile time (V001-V004).
-            StmtArt::Publish(p) => e(&p.wert, aus),
-            StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
-            StmtArt::Exchange(x) => match &x.form {
-                XForm::Update { rumpf, .. } => benutzte_namen(rumpf, aus),
-                XForm::Vergleich { wert, bedingung, .. } => {
-                    e(wert, aus);
-                    pred_namen(bedingung, aus);
+            // **The value, and the INDICES of the target.** The base of a `publishes`
+            // target is an ATOMIC global -- the lowering looks it up in `u.atomics` and
+            // refuses anything else -- so the base is neither a parameter (no parameter is
+            // an atomic) nor a table, and belongs to neither consumer of this set. The
+            // `publishes { … }` payload lands in a comment; the pairing was decided at
+            // compile time (V001-V004).
+            //
+            // **Its indices are another matter, and were wrong for exactly as long as
+            // there were none.** `REGEL[r] = v publishes nothing;` over an atomic ARRAY
+            // reads `r` -- the emitted `atomic_store_explicit(&REGEL[r], …)` names it --
+            // and this walker did not see it. Measured 2026-09-16 at the first emitted
+            // atomic array: `void setz(uint32_t r, …) { (void)r; … &REGEL[r] …}`. *`cc`
+            // accepts that (a `(void)` before a use is legal), which is the bad half: the
+            // line is a STATEMENT that the parameter is unread, and it was false.* Only
+            // the index expressions go in, never the base -- a name too many here keeps a
+            // `-Wextra` warning alive that `-Werror` turns into an error.
+            StmtArt::Publish(p) => {
+                e(&p.wert, aus);
+                for i in crate::ausdruecke_im_ort(&p.ziel) {
+                    e(i, aus);
                 }
-            },
+            }
+            StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
+            StmtArt::Exchange(x) => {
+                for i in crate::ausdruecke_im_ort(&x.ort) {
+                    e(i, aus);
+                }
+                match &x.form {
+                    XForm::Update { rumpf, .. } => benutzte_namen(rumpf, aus),
+                    XForm::Vergleich { wert, bedingung, .. } => {
+                        e(wert, aus);
+                        pred_namen(bedingung, aus);
+                    }
+                }
+            }
             // `let x = place awaits { … }` -- same as `publishes`, from the other side: the
             // source is an atomic global, and the `awaits { … }` list lands in a comment.
-            StmtArt::AwaitLoad(_) => {}
+            // Its indices are read for the same reason as the two arms above.
+            StmtArt::AwaitLoad(al) => {
+                for i in crate::ausdruecke_im_ort(&al.quelle) {
+                    e(i, aus);
+                }
+            }
             // **`breaking l { … }` LOWERS since 2026-08-31, so this arm descends.**
             //
             // What stood here was right for as long as its premise was: *"`anweisung`
@@ -9209,8 +9368,7 @@ fn anweisung(
         // hat sie schon geprueft (`V001`-`V004`). W6 -- was der Pruefer entschieden hat, muss
         // die Maschine nicht noch einmal pruefen.
         StmtArt::Publish(pb) => {
-            let ziel = pb.ziel.text();
-            let Some((atyp, ordnung, _)) = u.atomics.get(&ziel) else {
+            let Some((ziel, atyp, ordnung, _)) = atom_target(&pb.ziel, u, absagen) else {
                 weigere(absagen, s.span, "`publishes` on something that is not an atomic");
                 return;
             };
@@ -9233,8 +9391,7 @@ fn anweisung(
             ));
         }
         StmtArt::AwaitLoad(al) => {
-            let quelle = al.quelle.text();
-            let Some((typ, _, ordnung)) = u.atomics.get(&quelle) else {
+            let Some((quelle, typ, _, ordnung)) = atom_target(&al.quelle, u, absagen) else {
                 weigere(absagen, s.span, "`awaits` on something that is not an atomic");
                 return;
             };
@@ -9307,8 +9464,7 @@ fn anweisung(
         // > *Die Sprache emittiert nichts, was sie verbietet* (die `accumulates`-Lehre). Eine
         // > unbeschraenkte CAS-Schleife waere genau das.
         StmtArt::Exchange(x) => {
-            let ziel = x.ort.text();
-            let Some((typ, speichern, laden)) = u.atomics.get(&ziel).cloned() else {
+            let Some((mut ziel, typ, speichern, laden)) = atom_target(&x.ort, u, absagen) else {
                 weigere(
                     absagen,
                     s.span,
@@ -9318,6 +9474,35 @@ fn anweisung(
                 );
                 return;
             };
+            // **An INDEXED exchange hoists its index, and that is not a nicety.**
+            //
+            // The designator stands in the lowering three times over: the initial load,
+            // the `atomic_compare_exchange_weak_explicit` INSIDE the retry loop, and the
+            // comment. Written straight in, `&REGEL[naechster()]` would be evaluated once
+            // per lost race -- *a different element on every pass*, which is not the
+            // statement the source wrote and not an atomic RMW on anything. A parameter
+            // index would be harmless and a call index would be a defect, and this
+            // generator does not sort its correctness by how the caller wrote the index.
+            //
+            // One `const` binding before the loop settles it for every index at once:
+            // evaluated exactly once, in the order it stands in, and the loop reads a
+            // value. *`lese_bytes` next door takes the other road (`index_ist_rein`, and
+            // fall back to the plain access when the index is impure) because there the
+            // second evaluation is the OPTIONAL half -- here there is nothing to fall
+            // back to.*
+            let mut vorlauf = String::new();
+            if !x.ort.suffixe.is_empty() {
+                let h = format!("_ax{tiefe}");
+                vorlauf = format!(
+                    "{e}/* the index, evaluated ONCE -- the loop below re-reads the value, \
+                     never the expression */\n{e}uint64_t {h} = (uint64_t)({});\n",
+                    match &x.ort.suffixe[0] {
+                        OrtSuffix::Index(i) => ausdruck(i, u, absagen),
+                        _ => String::new(),
+                    }
+                );
+                ziel = format!("{}[{h}]", x.ort.basis.text);
+            }
             // **Relaxed publish-side exchange + exchange-`erwartet` ordering (lane-149).**
             //
             // Lane 45 closed the relaxed gap for the two single-sided forms -- a
@@ -9459,6 +9644,7 @@ fn anweisung(
                         holform(rumpf, &binder.text, u, &typ),
                         holordnung(speichern, laden),
                     ) {
+                        aus.push_str(&vorlauf);
                         aus.push_str(&format!(
                             "{e}/* {ziel} exchange update({b}) -- ONE C11 read-modify-write and no\n\
                              {e} * loop: SPRACHE.md's RMW lowering, the primitive half. `{ausgang}`\n\
@@ -9503,6 +9689,7 @@ fn anweisung(
                     let gaenge = ausdruck(n, u, absagen);
                     let (h, neu_, i) =
                         (format!("_cx{tiefe}"), format!("_cn{tiefe}"), format!("_ci{tiefe}"));
+                    aus.push_str(&vorlauf);
                     // **Der Rumpf rechnet alt -> neu und ist REIN** -- er wird eine
                     // `static inline`-Funktion, damit die Schleife ihn je Durchgang neu
                     // auswertet und der C-Uebersetzer ihn trotzdem einsetzen darf.
@@ -9643,6 +9830,7 @@ fn anweisung(
                 return;
             }
             let h = format!("_cx{tiefe}");
+            aus.push_str(&vorlauf);
             // **Ordered halves are named, not dropped** -- see the `update` arm above:
             // `publishes nothing` and a missing clause stay byte-identical.
             if let Some(last) = &traege_nutzlast {
@@ -14214,14 +14402,34 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // binder in `laufvariablen` is a loop counter. All four views are
     // function-scoped (`eigene_sicht`, `laufsicht`), so a shadowing in one
     // function changes nothing in another.
-    if o.suffixe.is_empty() {
+    //
+    // **And an INDEXED read of an atomic ARRAY is the same load on one element**
+    // (`REGEL[r]` over `atomic REGEL : [u32; 256]`). It has to be: the goal theorem's
+    // race component exempts an `atomic` carrier from `RennfreiBis` ENTIRELY, and that
+    // exemption is only honest if every access to it is an atomic operation. A plain
+    // `REGEL[r]` beside the CAS loop would be a non-atomic access to an `_Atomic`
+    // object -- undefined in C11 and stuck in the C model, and this time with nothing
+    // left to catch it. *The checker (`N271`) refuses the indexed read on a SCALAR
+    // atomic, which is what it always did; it lets the array through to here.*
+    if u.atom_arrays.contains_key(&o.basis.text)
+        || (o.suffixe.is_empty() && u.atomics.contains_key(&o.basis.text))
+    {
         if let Some((_, _, laden)) = u.atomics.get(&o.basis.text) {
             if !u.parametertyp.contains_key(&o.basis.text)
                 && !u.lokaltyp.contains_key(&o.basis.text)
                 && !u.werte.contains(&o.basis.text)
                 && !u.laufvariablen.contains(&o.basis.text)
             {
-                return format!("atomic_load_explicit(&{}, {laden})", o.basis.text);
+                if o.suffixe.is_empty() {
+                    return format!("atomic_load_explicit(&{}, {laden})", o.basis.text);
+                }
+                if let [OrtSuffix::Index(i)] = &o.suffixe[..] {
+                    return format!(
+                        "atomic_load_explicit(&{}[{}], {laden})",
+                        o.basis.text,
+                        ausdruck(i, u, absagen)
+                    );
+                }
             }
         }
     }

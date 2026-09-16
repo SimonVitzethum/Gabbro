@@ -2193,6 +2193,15 @@ impl<'a> Pruefer<'a> {
                 }
             }
             StmtArt::AwaitLoad(a) => {
+                // **The index of an `awaits` load was never bound-checked** (2026-09-16).
+                //
+                // `Zuweisung` and `Publish` call this; the two atomic loads did not, and
+                // the `N271` note next door says why nobody noticed: *"the legal indexed
+                // atomics never reach that arm -- all three read their source through
+                // `typ_von_ort` directly"*. They read the TYPE directly, and `M103` does
+                // not live in `typ_von_ort`. **U9's own sentence applies unchanged: M4
+                // holds on both sides, and it ran past the index here.**
+                self.index_pruefen(&a.quelle, lage);
                 let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
                 self.buche(&t);
                 lage.lokal.insert(a.name.text.clone(), t);
@@ -2221,6 +2230,12 @@ impl<'a> Pruefer<'a> {
             StmtArt::Exchange(e) => {
                 // **«E4»:** an exchange writes -- no RMW outside `alloc`.
                 self.arena_schreibziel(&e.ort, lage);
+                // **And the index of the RMW gets the same bound as every other index**
+                // (2026-09-16, see the `AwaitLoad` arm above for the measurement). An
+                // exchange WRITES, which U9 calls the more dangerous direction -- and it
+                // is more dangerous here than at an ordinary store, because an `atomic`
+                // carrier is the one the goal theorem exempts from race freedom.
+                self.index_pruefen(&e.ort, lage);
                 let t = self.u.typ_von_ort(&self.modul, &e.ort, &lage.lokal);
                 self.buche(&t);
                 let gebunden = match &e.form {
@@ -2776,28 +2791,56 @@ impl<'a> Pruefer<'a> {
                 // name (lowered to an explicit load) -- a suffix on it is no
                 // form. Like `M138` above it answers `Unbekannt`, so no second
                 // rule reports on the same fault.
+                //
+                // **And ONE suffix shape is a form after all: an index into an
+                // atomic ARRAY** (`atomic REGEL : [u32; 256]`). The sentence above
+                // is about what an atomic IS, and an atomic array carries 256
+                // scalars, each of them an atomic object of its own
+                // (`_Atomic uint32_t REGEL[256]`, C11 6.7.2.4p3 -- the qualifier
+                // sits on the ELEMENT). `REGEL[r]` names one of them, the emitter
+                // lowers it to `atomic_load_explicit(&REGEL[r], …)`, and the bound
+                // is `M103`'s and `N380`'s, exactly as at a table index.
+                //
+                // *The scalar keeps every word of the refusal*, and so does every
+                // other suffix shape: a field on an atomic names nothing at either
+                // width, and two indices would need a nested array, which no
+                // `atomic` declaration can write.
                 if !o.suffixe.is_empty()
                     && !lage.lokal.contains_key(&o.basis.text)
                     && self.u.nennt_atomic(&self.modul, &o.basis.text)
+                    && !(o.suffixe.len() == 1
+                        && matches!(o.suffixe[0], OrtSuffix::Index(_))
+                        && self.atom_array(&o.basis.text, lage).is_some())
                 {
-                    self.absagen.schiebe(
-                        Absage::fehler(
-                            "N271",
-                            e.span,
-                            format!(
-                                "`{}` is an `atomic`, a scalar -- `{}` names no \
-                                 element or field",
-                                o.basis.text,
-                                o.text()
-                            ),
-                        )
-                        .mit_notiz(
-                            "reads go through the bare name (an explicit load in \
-                             the declared order) or through `awaits`; an indexed \
-                             atomic at `publishes`/`awaits`/`exchange` is its own \
-                             statement and never stands here",
+                    // **Two carriers, two sentences.** A reader told "`REGEL` is a
+                    // scalar" about a declared `[u32; 256]` goes looking at the
+                    // declaration, which is right; the defect is the SUFFIX.
+                    let feld = self.atom_array(&o.basis.text, lage).is_some();
+                    let mut a = Absage::fehler(
+                        "N271",
+                        e.span,
+                        format!(
+                            "`{}` is an `atomic`, {} -- `{}` names no element or \
+                             field",
+                            o.basis.text,
+                            if feld { "an array of scalars" } else { "a scalar" },
+                            o.text()
                         ),
+                    )
+                    .mit_notiz(
+                        "reads go through the bare name (an explicit load in the \
+                         declared order) or through `awaits`; an indexed atomic at \
+                         `publishes`/`awaits`/`exchange` is its own statement and \
+                         never stands here",
                     );
+                    if feld {
+                        a = a.mit_notiz(
+                            "an `atomic` ARRAY takes ONE index and nothing else: its \
+                             elements are scalars, so a field on one names nothing, \
+                             and no `atomic` declaration writes a nested array",
+                        );
+                    }
+                    self.absagen.schiebe(a);
                     return Typ::Unbekannt;
                 }
                 // **Die INDIZES sind Ausdruecke, und M1 zaehlte sie nicht.** `t.slots[j].x`
@@ -7196,6 +7239,27 @@ impl<'a> Pruefer<'a> {
         true
     }
 
+    /// **Does this bare name stand for an `atomic` whose declared type is an ARRAY, and
+    /// what length did the declaration fold?**
+    ///
+    /// `Some(Some(256))` for `atomic REGEL : [u32; 256]`; `Some(None)` for one whose
+    /// length is not a compile-time constant -- it IS an atomic array, and nothing says
+    /// how long. `None` for a scalar atomic, for a local shadowing the name, and for
+    /// everything that is no atomic at all.
+    ///
+    /// *The two answers inside `Some` must stay apart:* the outer one decides whether an
+    /// indexed access is a form here (`N271`), the inner one whether its bound can be
+    /// shown (`N380`). Folding them would make an unbounded array read like a scalar.
+    fn atom_array(&self, name: &str, lage: &Lage) -> Option<Option<u128>> {
+        if lage.lokal.contains_key(name) || !self.u.nennt_atomic(&self.modul, name) {
+            return None;
+        }
+        match self.u.suche_global(&self.modul, name).map(Typ::durchgreifen) {
+            Some(Typ::Feld { laenge, .. }) => Some(*laenge),
+            _ => None,
+        }
+    }
+
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **«E4»:** an arena place is owned by `arena_ort` below -- shape,
         // index belonging, and nothing else. A local shadowing the arena
@@ -7239,6 +7303,70 @@ impl<'a> Pruefer<'a> {
             Typ::Tabelle(q) => Some(q.clone()),
             _ => None,
         };
+        // **`N380` -- an indexed access to an `atomic` array whose bound is not SHOWN.**
+        //
+        // `M103` below compares the index range against the length, and it stays silent
+        // in two cases: the declaration's length did not fold to a constant
+        // (`Typ::Feld { laenge: None }`, so the arm does not even match), and the index
+        // carries no readable range (`bereich()` is `None` -- a `bool`, or anything M1
+        // failed to type). *Both measured 2026-09-16 through the unchanged checker:
+        // `atomic R : [u32; WIE_VIELE]` with a `static` length and an index of
+        // `u32 in 0 .. 300`, and `R[b]` with `b : bool`, each `0 errors, 0 hints`.*
+        //
+        // **On an ordinary table that silence is old and shared, and this rule does not
+        // touch it** -- `T.slots[b].z` is just as silent today, over the whole corpus,
+        // and closing it is a measurement of its own with its own moved numbers. **On an
+        // atomic array the same silence is worse by exactly one step, and that step is
+        // the reason this rule is here and not there:** the goal theorem's race
+        // component (`Zielsatz/Akzeptiert.lean`, `atomarB`) exempts an `atomic` carrier
+        // from `RennfreiBis` entirely. An out-of-range atomic RMW is therefore an
+        // unchecked write to an arbitrary address that NOTHING else in the statement
+        // covers -- not the footprint, not the guard, not race freedom. *An arm that is
+        // new owes no corpus a migration, so it can take the strict rule for free.*
+        //
+        // It refuses rather than coarsens: the answer is not "assume in range", it is
+        // "say the range". A parameter (`r : u32 in 0 .. 255`) or a `narrow` carries it.
+        if let Some(laenge) = self.atom_array(&o.basis.text, lage) {
+            if let Some(OrtSuffix::Index(idx)) = o.suffixe.first() {
+                let it = self.ausdruck_roh(idx, lage);
+                let grund = match (laenge, it.bereich()) {
+                    (None, _) => Some(
+                        "the length of the `atomic` array is not a compile-time constant, \
+                         so there is no number to compare the index against"
+                            .to_string(),
+                    ),
+                    (Some(_), None) => Some(format!(
+                        "the index has `{}`, which carries no range",
+                        it.text()
+                    )),
+                    (Some(_), Some(_)) => None,
+                };
+                if let Some(g) = grund {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N380",
+                            idx.span,
+                            format!(
+                                "the bound of this access to the `atomic` array `{}` is \
+                                 not shown -- {g}",
+                                o.basis.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "an `atomic` carrier is the ONE carrier the goal theorem \
+                             exempts from race freedom, so an out-of-range atomic \
+                             read-modify-write is covered by nothing else -- the bound \
+                             is not optional here",
+                        )
+                        .mit_notiz(
+                            "write the range at the declaration (`r : u32 in 0 .. 255`), \
+                             or carry it in with `narrow <index> to 0 ..< <length> \
+                             else { … }`",
+                        ),
+                    );
+                }
+            }
+        }
         for suffix in &o.suffixe {
             match suffix {
                 OrtSuffix::Index(idx) => {
