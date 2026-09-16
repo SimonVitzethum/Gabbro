@@ -129,6 +129,66 @@ instance : DecidableEq kD.Fn := inferInstanceAs (DecidableEq QFn)
 instance : DecidableEq kD.Lock := inferInstanceAs (DecidableEq QLock)
 instance : DecidableEq kD.Glob := inferInstanceAs (DecidableEq QGlob)
 
+abbrev kLW : List (Res kD) := [Res.held (D := kD) QLock.w]
+
+theorem kGdarfW : gdarf kD QGlob.z kLW := by
+  intro w h
+  change w ∈ ([Sum.inl QLock.w] : List (QLock ⊕ (Empty × Nat))) at h
+  have e : w = Sum.inl QLock.w := List.mem_singleton.mp h
+  subst e
+  exact List.mem_singleton.mpr rfl
+
+/-- `0 : u32`, the constant `setze_null` writes. -/
+def kNull {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+/-- `setze_null()`: `locks WACHE { z = 0; }` -- exactly the source body. -/
+def kRumpfSetzeNull : Endblock kD (vertragVon kD kSetzeNull) false [] [] :=
+  .cons (.locks QLock.w (fun _ h => nomatch h)
+    (.cons (.assignGlob QGlob.z kNull rfl kGdarfW) .nil))
+    (.ret .keine List.Perm.nil)
+
+/-- `lese_schreibe` RESHAPED: the writeback `z = z` inside `locks WACHE`,
+    `return 0` outside. The source returns `z` inside; that term does not
+    exist (`offen125_ret_unter_locks` below), and a guarded read outside the
+    lock is untypeable too (`offen125_lese_aussen`), so the reshaped return
+    is a constant. Both divergences are findings, not silent changes. -/
+def kRumpfLese : Endblock kD (vertragVon kD kLese) false [] [] :=
+  .cons (.locks QLock.w (fun _ h => nomatch h)
+    (.cons (.assignGlob QGlob.z (.glob QGlob.z kGdarfW) rfl kGdarfW) .nil))
+    (.ret (.wert kNull) List.Perm.nil)
+
+/-- **The program of `beispiele/125`** with the reshaped `lese_schreibe`;
+    trivial contracts (the source declares no `requires`/`ensures`). -/
+def kP : Programm kD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | .lese => kRumpfLese
+    | .setzeNull => kRumpfSetzeNull
+
+def kFs : List kD.Fn := [kLese, kSetzeNull]
+
+theorem kFs_voll : ∀ g : kD.Fn, g ∈ kFs := by
+  intro g
+  cases g
+  · exact List.mem_cons_self
+  · exact List.mem_cons_of_mem _ List.mem_cons_self
+
+/-- **The lock family**: `WACHE` protects `z`; the source declares no
+    invariant, so it is trivially true. -/
+def kSI : SperrInv kD :=
+  ⟨fun _ => [.inr QGlob.z], fun _ _ => true⟩
+
+theorem kSI_ok : SperrInvOk kSI := by
+  refine ⟨fun L c hc => ?_, fun L s s' h => rfl⟩
+  · cases L
+    have e : c = .inr QGlob.z := List.mem_singleton.mp hc
+    subst e
+    change Sum.inl QLock.w ∈ ([Sum.inl QLock.w] : List (QLock ⊕ (Empty × Nat)))
+    exact List.mem_singleton.mpr rfl
+
 end K125
 
 end Gabbro.Grammatik
