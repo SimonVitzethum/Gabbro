@@ -1,0 +1,66 @@
+-- erwartet: N390 allein
+-- **1050 -- a lock chosen by the data: `Held(SPERRE[eimer])`.**
+--
+-- The shape every striped hash table wants. The reason this probe exists is not
+-- that the shape is wrong but that it was SILENT. Measured 2026-09-16 against the
+-- checker WITHOUT the rule, on this very file:
+--
+--   1050-held-mit-index.gab: 5 items, 0 errors, 0 hints
+--     M1 saw 4 expressions, 0 of them without a type (100 % coverage)
+--
+-- Zero errors over a file whose only lock guard is a lock that does not exist --
+-- and `cc -std=c11 -Wall -Wextra -Werror -fsyntax-only` ACCEPTS the C this file
+-- emits without the rule. That is the `allein` contract: nothing else catches it,
+-- not the checker and not the compiler.
+--
+-- WHY IT WAS SILENT. `heldpred` is `"Held" "(" ident [ "," "shared" ] ")"`; the
+-- bracket does not fit it, so the parse attempt BACKTRACKS -- and `versuch`
+-- truncates the refusals on the way out, so nothing was said. The words were then
+-- re-read as an ordinary call inside an expression and the clause vanished: no
+-- pass saw it, and `gabbro lean` mentioned it only in a doc comment over the body
+-- ("DROPPED from the precondition ... requires #1 (call-in-expression)").
+--
+-- AND IT DID NOT VANISH CLEANLY. `held_aus_expr` pushes `Ort::text()` of the
+-- argument into the held-lock set, and an index renders as the literal `[...]`.
+-- Two `concurrent` starts written this way drew
+--
+--   error: [N240] ... thread starts concurrent member `w0` and concurrent member
+--   `w1` share a signature-held lock: `probe::phantom::w0` requires
+--   Held(SPERRE[...]) and `probe::phantom::w1` requires Held(SPERRE[...])
+--
+-- in the SAME run in which `H008` said `SPERRE ... is taken nowhere`. Two beliefs
+-- about one word, in one report. (Measured 2026-09-16; the second malformed
+-- shape, a call inside the guard, is `beispiele/gift/1051`.)
+--
+-- WHAT TO WRITE INSTEAD is not a different guard but a different shape: stripe
+-- the TABLES, not the locks -- `beispiele/146-sperrstreifen.gab`. Why that is the
+-- only honest answer here and not a matter of taste:
+-- `grammatik/Grammatik/Sperrstreifen.lean` proves that `darf` is CONJUNCTIVE, so
+-- N locks over ONE carrier are held TOGETHER at every access and never chosen
+-- between (`zugriff_haelt_jeden_waechter`, `streifensperren_kosten_alle`), and
+-- `ziel_haelt_jeden_waechter` says the same over the conclusion of `gabbro_ziel`.
+
+module gift::held_mit_index {
+
+const ANZAHL : u32 = 16;
+
+table Verbindung count ANZAHL {
+    slot {
+        zustand : u32 in 0 .. 3,
+    }
+}
+
+lock SPERRE protects { Verbindung } rank 0 held <= 64 ops;
+
+impl fn suche(eimer : u32 in 0 .. 3, s : index into Verbindung) -> u32 in 0 .. 3
+    requires Held(SPERRE[eimer])
+    effects { reads Verbindung.slots, locks SPERRE }
+    costs   <= 64 ops
+{
+    locks SPERRE {
+        let v : u32 in 0 .. 3 = Verbindung.slots[s].zustand;
+        return v;
+    }
+}
+
+}

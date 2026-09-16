@@ -1,0 +1,174 @@
+-- 146 -- **STRIPE THE TABLES, NOT THE LOCKS.** The answer to `N390`, and the
+-- scaling shape of every multithreaded Gabbro program that shares one structure.
+--
+-- The question came from outside this tree. A firewall written in Gabbro keeps a
+-- connection table of 1024 buckets x 4 slots, and every worker thread hits it on
+-- every packet. It wanted one lock per bucket group and could not have it: a
+-- signature names a FIXED set of locks, and which stripe lock a packet needs is
+-- data. So it took ONE coarse lock over the whole table -- a firewall that does
+-- not scale past one core -- and wrote down the upgrade path it could not take.
+-- This file is that upgrade path, and the measurement is that it needs NO new
+-- language: it checks with `0 errors, 0 hints`.
+--
+-- WHY per-carrier striping is not merely unimplemented but MEANINGLESS here, and
+-- this is proved and not asserted (`grammatik/Grammatik/Sperrstreifen.lean`):
+-- `darf` is CONJUNCTIVE (`Syntax.lean`) -- an access must hold EVERY guard of its
+-- carrier, not one of them. So N locks over ONE table are not N choices, they are
+-- one conjunction: `zugriff_haelt_jeden_waechter` says every good access records
+-- every guard as really held, and `ziel_haelt_jeden_waechter` says the same over
+-- the conclusion of `gabbro_ziel` itself. Striping the LOCKS of a table costs a
+-- second take on the packet path and buys nothing. Striping the TABLES gives each
+-- carrier exactly one guard, and the guard sets are disjoint
+-- (`streifen_getrennt`, `streifen_waechter_disjunkt`) -- which is the parallelism.
+--
+-- THE TRICK is in `suche`: the stripe is DATA (the hash), but the LOCK in each
+-- branch is not. The checker never has to decide which lock a value picks; it
+-- reads four branches, each naming one constant lock and one constant table.
+-- Exactly one `locks` take runs per call -- `gabbro emit` writes one
+-- `S<k>_nimm()`/`S<k>_gib()` pair per branch, and the packet takes one branch.
+--
+-- TWO PRICES, both named rather than hidden:
+-- 1. Anything that shared the lock stripes with it. A single shared counter table
+--    under S0..S3 would be one carrier with four guards, and by `darf` every
+--    access would hold all four -- the coarse lock back again, in disguise.
+-- 2. FOUR DISTINCT WORKER ROOTS. `Laufzeit.einmal` (`Zielsatz/Spec.lean`) admits
+--    one thread per busy start; `N304` refuses the same routine on two threads
+--    unless it is idle. SMP symmetry is spelled out here, not declared.
+--
+-- The refused shape lives in `beispiele/gift/1050`.
+module beispiel::sperrstreifen {
+
+const JE : u32 = 4;
+
+table V0 count JE { slot { zustand : u32 in 0 .. 3, schluessel : u32, } }
+table V1 count JE { slot { zustand : u32 in 0 .. 3, schluessel : u32, } }
+table V2 count JE { slot { zustand : u32 in 0 .. 3, schluessel : u32, } }
+table V3 count JE { slot { zustand : u32 in 0 .. 3, schluessel : u32, } }
+
+-- One lock per table, and the ranks RISE. Equal ranks would be right for the
+-- packet path (it takes exactly one) and wrong for a sweep: `H006` demands a
+-- strict rise, so a thread that wants two stripes at once needs them ordered.
+-- `streifen_nur_eine_richtung` in `Sperrstreifen.lean` is that fact as a theorem.
+lock S0 protects { V0 } rank 0 held <= 64 ops;
+lock S1 protects { V1 } rank 1 held <= 64 ops;
+lock S2 protects { V2 } rank 2 held <= 64 ops;
+lock S3 protects { V3 } rank 3 held <= 64 ops;
+
+impl fn suche0(f : index into V0, schluessel : u32) -> u32 in 0 .. 3
+    requires Held(S0)
+    effects { reads V0.slots, writes V0.slots, locks S0 }
+    costs   <= 16 ops
+{
+    if V0.slots[f].schluessel == schluessel {
+        return V0.slots[f].zustand;
+    }
+    V0.slots[f].schluessel = schluessel;
+    V0.slots[f].zustand = 1;
+    return 1;
+}
+
+impl fn suche1(f : index into V1, schluessel : u32) -> u32 in 0 .. 3
+    requires Held(S1)
+    effects { reads V1.slots, writes V1.slots, locks S1 }
+    costs   <= 16 ops
+{
+    if V1.slots[f].schluessel == schluessel {
+        return V1.slots[f].zustand;
+    }
+    V1.slots[f].schluessel = schluessel;
+    V1.slots[f].zustand = 1;
+    return 1;
+}
+
+impl fn suche2(f : index into V2, schluessel : u32) -> u32 in 0 .. 3
+    requires Held(S2)
+    effects { reads V2.slots, writes V2.slots, locks S2 }
+    costs   <= 16 ops
+{
+    if V2.slots[f].schluessel == schluessel {
+        return V2.slots[f].zustand;
+    }
+    V2.slots[f].schluessel = schluessel;
+    V2.slots[f].zustand = 1;
+    return 1;
+}
+
+impl fn suche3(f : index into V3, schluessel : u32) -> u32 in 0 .. 3
+    requires Held(S3)
+    effects { reads V3.slots, writes V3.slots, locks S3 }
+    costs   <= 16 ops
+{
+    if V3.slots[f].schluessel == schluessel {
+        return V3.slots[f].zustand;
+    }
+    V3.slots[f].schluessel = schluessel;
+    V3.slots[f].zustand = 1;
+    return 1;
+}
+
+-- THE DISPATCH. Four branches, each naming a CONSTANT lock and a CONSTANT table.
+impl fn suche(schluessel : u32) -> u32 in 0 .. 3
+    effects { reads V0.slots, writes V0.slots, reads V1.slots, writes V1.slots,
+              reads V2.slots, writes V2.slots, reads V3.slots, writes V3.slots,
+              locks S0, locks S1, locks S2, locks S3 }
+    costs   <= 256 ops
+{
+    let streifen : u32 = schluessel % 4;
+    let roh : u32 = (schluessel / 4) % JE;
+    narrow roh to 0 ..< JE else { return 0; }
+    let mut antwort : u32 in 0 .. 3 = 0;
+    if streifen == 0 {
+        locks S0 { antwort = suche0(roh, schluessel); }
+    } else {
+        if streifen == 1 {
+            locks S1 { antwort = suche1(roh, schluessel); }
+        } else {
+            if streifen == 2 {
+                locks S2 { antwort = suche2(roh, schluessel); }
+            } else {
+                locks S3 { antwort = suche3(roh, schluessel); }
+            }
+        }
+    }
+    return antwort;
+}
+
+impl fn arbeiter0(schluessel : u32) -> u32 in 0 .. 3
+    effects { reads V0.slots, writes V0.slots, reads V1.slots, writes V1.slots,
+              reads V2.slots, writes V2.slots, reads V3.slots, writes V3.slots,
+              locks S0, locks S1, locks S2, locks S3 }
+    costs   <= 512 ops
+{
+    return suche(schluessel);
+}
+
+impl fn arbeiter1(schluessel : u32) -> u32 in 0 .. 3
+    effects { reads V0.slots, writes V0.slots, reads V1.slots, writes V1.slots,
+              reads V2.slots, writes V2.slots, reads V3.slots, writes V3.slots,
+              locks S0, locks S1, locks S2, locks S3 }
+    costs   <= 512 ops
+{
+    return suche(schluessel);
+}
+
+impl fn arbeiter2(schluessel : u32) -> u32 in 0 .. 3
+    effects { reads V0.slots, writes V0.slots, reads V1.slots, writes V1.slots,
+              reads V2.slots, writes V2.slots, reads V3.slots, writes V3.slots,
+              locks S0, locks S1, locks S2, locks S3 }
+    costs   <= 512 ops
+{
+    return suche(schluessel);
+}
+
+impl fn arbeiter3(schluessel : u32) -> u32 in 0 .. 3
+    effects { reads V0.slots, writes V0.slots, reads V1.slots, writes V1.slots,
+              reads V2.slots, writes V2.slots, reads V3.slots, writes V3.slots,
+              locks S0, locks S1, locks S2, locks S3 }
+    costs   <= 512 ops
+{
+    return suche(schluessel);
+}
+
+concurrent { arbeiter0, arbeiter1, arbeiter2, arbeiter3 };
+
+}
