@@ -189,6 +189,50 @@ theorem kSI_ok : SperrInvOk kSI := by
     change Sum.inl QLock.w ∈ ([Sum.inl QLock.w] : List (QLock ⊕ (Empty × Nat)))
     exact List.mem_singleton.mpr rfl
 
+theorem kLocks_voll : ∀ L : kD.Lock, L ∈ ([QLock.w] : List kD.Lock) := fun L => by
+  cases L
+  exact List.mem_singleton_self _
+
+def kCs : List (kD.Tab ⊕ kD.Glob) := [.inr QGlob.z]
+
+theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
+  rcases c with t | g
+  · exact nomatch t
+  · cases g; simp [kCs]
+
+/-- **The checker accepts the reshaped program** with its declared starts
+    `lese_schreibe`, `setze_null` (the `concurrent` members). -/
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true := by decide
+
+/-! ## 3. The blocking facts, proved -/
+
+/-- `lese_schreibe` holds nothing by signature, so its end holdings are `[]`. -/
+theorem kEndeLese : (vertragVon kD kLese).ende = [] := rfl
+
+/-- **No faithful `lese_schreibe` body exists**: a return inside
+    `locks WACHE` would need `[held WACHE].Perm []` (the `hΛ` of `Stmt.ret`
+    at `Λ = [held WACHE]` against `ende = []`), which is uninhabited. -/
+theorem offen125_ret_unter_locks :
+    ¬ (([Res.held (D := kD) QLock.w] : List (Res kD)).Perm (vertragVon kD kLese).ende) := by
+  rw [kEndeLese]
+  intro h
+  have := List.Perm.length_eq h
+  simp at this
+
+/-- **No guarded read outside the lock**: `z` is shared and guarded, so
+    `gdarf z []` is uninhabited -- the reshaped `return 0` cannot read `z`. -/
+theorem offen125_lese_aussen : ¬ gdarf kD QGlob.z [] := by
+  intro h
+  have h2 : Res.held (D := kD) QLock.w ∈ ([] : List (Res kD)) :=
+    h _ (List.mem_singleton.mpr rfl)
+  simp at h2
+
+/-- Named open premise for the corpus decision (lane 204's territory): the
+    source-shape `return z` inside `locks WACHE` has no G term until the
+    example moves it out or G gains value-return under lock. -/
+def offen125 : String :=
+  "lese_schreibe returns z inside locks WACHE: no G term (offen125_ret_unter_locks); move the return out or add the form"
+
 end K125
 
 end Gabbro.Grammatik
