@@ -29,7 +29,7 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## besetzte Zellen der Tafel -- die Zahl, die „gedeckt" heissen soll / Zellen, die NUR im Giftkorpus vorkommen
 
-      ~~169~~ ~~170~~ ~~25~~ ~~171~~ **172 besetzte Zellen** stehen daneben, **25 nur im Gift** (2026-09-14, lane 170: `traverse in traverse` turns covered -- `beispiele/122` nests two `elems of` loops; 2026-09-13, lane 152: `atomic × written` and `tagged × return (body)` turn poison-only, `atomic × read` turns covered) — und `gabbro blindstellen`
+      ~~169~~ ~~170~~ ~~25~~ ~~171~~ **172 besetzte Zellen** stehen daneben, **24 nur im Gift** (~~25~~ am 2026-09-16, Opus-Bahn Sperrstreifen: `beispiele/146-sperrstreifen.gab` deckt eine Zelle, die vorher nur eine Giftprobe trug — die einzige Zahl dieser Tafel, die die Bahn bewegt hat und die vorher STIMMTE; die 172 daneben war schon vorher veraltet, der Lauf sagt 175; 2026-09-14, lane 170: `traverse in traverse` turns covered -- `beispiele/122` nests two `elems of` loops; 2026-09-13, lane 152: `atomic × written` and `tagged × return (body)` turn poison-only, `atomic × read` turns covered) — und `gabbro blindstellen`
 
 ## Absagen ohne erkennbaren Grund
 

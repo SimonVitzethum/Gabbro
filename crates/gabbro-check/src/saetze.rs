@@ -1199,6 +1199,47 @@ pub const D1D2: &[Satz] = &[
                      messung/fragmente/F01.gab",
     },
     Satz {
+        name: "d.heldform",
+        kennungen: &["N390"],
+        aussage: "A lock guard names a DECLARED lock and nothing else. `Held(L)` and \
+                  `Held(L, shared)` are the whole rule (`heldpred`, SYNTAX.md); \
+                  `Held(L[i])`, `Held(f(x))`, `Held(p->f)` and `Held()` are REFUSED where \
+                  they are written, in every contract position this pass walks. Before the \
+                  rule they were not refused and not honoured either: the parse backtracked \
+                  in silence, the clause reached no pass, `gabbro lean` dropped it from \
+                  `<fn>_pre` as a `call-in-expression` -- and `aufrufgraph::held_aus_expr` \
+                  left the rendered place text in the held-lock set, where `N240`/`N303` \
+                  read it and printed a lock no declaration carries.",
+        vorbehalt: "**It refuses a SHAPE, it does not offer one.** A lock chosen by a value \
+                    stays unwritable, and that is a statement about the model and not about \
+                    the parser: the touch rule of a carrier (`H007`, and `Syntax.lean` under \
+                    it) is CONJUNCTIVE, so N locks over ONE carrier are held together at \
+                    every access, never chosen between \
+                    (`Grammatik/Sperrstreifen.lean`, `zugriff_haelt_jeden_waechter` and \
+                    `streifensperren_kosten_alle`; `ziel_haelt_jeden_waechter` says the \
+                    same over the conclusion of `gabbro_ziel`). The scaling shape is N \
+                    TABLES with one lock each and a dispatch naming constant locks, and it \
+                    needs no rule at all -- it checks today. The rule is also BY NAME: a \
+                    user function called `Held` in a contract would be refused, the same \
+                    coarseness `D021`'s exemption of `Held`/`Has` already carries, and \
+                    coarse in the quiet direction (a refusal, never a pass).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/1050` (`-- erwartet: N390`): the guard the striped \
+                      firewall table wants. WITHOUT the rule the same file reports `0 \
+                      errors, 0 hints` -- measured 2026-09-15, and that counterfactual is \
+                      the whole point: no other pass catches it. Second poison direction, \
+                      measured on the same day: two `concurrent` starts with \
+                      `requires Held(SPERRE[eimer])` drew `N240 … share a signature-held \
+                      lock: … requires Held(SPERRE[…])` beside `H008 SPERRE … is taken \
+                      nowhere`. Counter-direction: the whole positive corpus, which writes \
+                      `Held(KAPPEN)` at every `impl fn` of `beispiele/01-tabelle.gab`, the \
+                      shared-strength form `Held(L, shared)` in `beispiele/13`, and the new \
+                      `beispiele/146-sperrstreifen.gab` (four tables, four locks, a \
+                      dispatch) -- the rule falls in none of them.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; grammatik/Grammatik/Sperrstreifen.lean; \
+                     messung/muse/OPUS-BERICHT-SPERRSTREIFEN.md",
+    },
+    Satz {
         name: "d.binderverwendung",
         kennungen: &["D022"],
         aussage: "The DOMAIN of a quantifier decides what the binder is, and every use of \

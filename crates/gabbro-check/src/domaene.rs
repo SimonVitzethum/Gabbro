@@ -759,6 +759,7 @@ fn aus_pred(
         //
         // They carry PLACES, though, and `M141` reads the literal index of each.
         PredArt::Vergleich(e) => {
+            held_form_pruefen(e, st, absagen);
             let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
@@ -790,6 +791,7 @@ fn aus_pred(
         // It binds no variable, so `geb` travels unchanged.
         PredArt::Element(e, d) => {
             domaene_pruefen(d, s, st, geb, absagen);
+            held_form_pruefen(e, st, absagen);
             let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
@@ -1308,6 +1310,79 @@ fn grundname_im_praedikat(
              positions that had no reader",
         ),
     );
+}
+
+/// **`N390` -- `Held(…)` over anything but a bare lock name: A LOCK CHOSEN BY THE DATA.**
+///
+/// The grammar's guard rule is `heldpred = "Held" "(" ident [ "," "shared" ] ")"`
+/// (`SYNTAX.md`). `Held(SPERRE[eimer])` -- the lock a striped hash table wants, picked by
+/// the bucket index -- does not match it. The parser does not say so: the attempt
+/// BACKTRACKS (`parse.rs`, `versuch` restores the position AND truncates the refusals) and
+/// the words are re-read as an ordinary call inside an expression.
+///
+/// **What that cost, measured 2026-09-15 on a six-line probe:**
+/// * `gabbro pruefe` reported `0 errors, 0 hints` on a file whose ONLY lock guard was
+///   `requires Held(SPERRE[eimer])`. The clause reached no pass and no `<fn>_pre`. The one
+///   channel that mentioned it at all was `gabbro lean`, in a doc comment:
+///   *"DROPPED from the precondition (a hypothesis fewer makes the goal harder, never the
+///   proof wrong): requires #1 (call-in-expression)"*.
+/// * And it is not dropped everywhere. `aufrufgraph::held_aus_expr` pushes `Ort::text()`
+///   of the argument into the held-lock set, and `Ort::text()` renders an index as the
+///   literal `[…]`. Two thread starts written that way drew
+///   `N240: … share a signature-held lock: … requires Held(SPERRE[…]) and …` -- a refusal
+///   naming a lock NO declaration carries, in the same run in which `H008` said
+///   `SPERRE … is taken nowhere`. Two beliefs about one word, in one report.
+///
+/// So the form is refused where it is written. **The way out is not a rule, it is a
+/// shape:** stripe the TABLES, not the locks -- N tables with one lock each, picked by a
+/// dispatch whose branches name CONSTANT locks. `Grammatik/Sperrstreifen.lean` proves why
+/// that is the only honest answer at this granularity: `darf` (`Syntax.lean`) is
+/// CONJUNCTIVE, so N locks over ONE carrier are held TOGETHER at every access, never
+/// chosen between (`zugriff_haelt_jeden_waechter`, `streifensperren_kosten_alle`).
+fn held_form_pruefen(e: &Expr, st: Stellung, absagen: &mut Absagen) {
+    for x in crate::alle_ausdruecke(e) {
+        let ExprArt::Ruf(r) = &x.art else { continue };
+        if !r.heisst("Held") {
+            continue;
+        }
+        // **The well-formed shape reaches this walk too**, and must stay silent: brackets
+        // around it (`(Held(L))`) make `Held` an ordinary call in an expression -- the
+        // measurement of 2026-09-02 that `merkmalsnamen` below is built on. A bare name
+        // with no suffix is that shape.
+        let erst = r.argumente.first().map(|a| &crate::ohne_klammern(a).art);
+        let wie = match erst {
+            Some(ExprArt::Ort(o)) if o.suffixe.is_empty() => continue,
+            Some(ExprArt::Ort(o)) => format!("the place `{}`", o.text()),
+            Some(_) => "an expression".to_string(),
+            None => "nothing".to_string(),
+        };
+        absagen.schiebe(
+            Absage::fehler(
+                "N390",
+                x.span,
+                format!(
+                    "`Held(…)` in {} names {}, and a lock guard names a DECLARED lock and \
+                     nothing else -- a lock picked by a value is not one a signature can \
+                     promise",
+                    st.wort(),
+                    wie
+                ),
+            )
+            .mit_notiz(
+                "the rule is `Held \"(\" ident [ \",\" \"shared\" ] \")\"`; anything else \
+                 backtracks out of it and is re-read as a call in an expression -- it then \
+                 reaches no pass, `gabbro lean` DROPS it from `<fn>_pre`, and what is left \
+                 behind is a lock name no declaration carries, which `N240` and `N303` read \
+                 and print",
+            )
+            .mit_notiz(
+                "a table striped over N locks is not N choices but one conjunction: every \
+                 access needs EVERY guard of its carrier (`H007`). What scales is N TABLES \
+                 with one lock each, chosen by a dispatch whose branches name constant \
+                 locks -- one `locks` take per call, N threads in the structure at once",
+            ),
+        );
+    }
 }
 
 /// The names a predicate expression spells as a CALL but does not mean as a place:

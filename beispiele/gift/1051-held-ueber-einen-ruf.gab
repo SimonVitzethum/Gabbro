@@ -1,0 +1,50 @@
+-- erwartet: N390
+-- **1051 -- the second malformed guard: a CALL inside `Held(…)`.**
+--
+-- `beispiele/gift/1050` is the indexed place; this is the other way a guard can
+-- fail to name a lock, and it fails DIFFERENTLY inside the checker, which is the
+-- reason it has a probe of its own.
+--
+-- * `Held(SPERRE[eimer])` leaves a phantom behind: `held_aus_expr` takes
+--   `Ort::text()` of the argument and pushes `SPERRE[...]` into the held-lock set,
+--   which `N240` then prints as if it were a lock.
+-- * `Held(waehle(eimer))` leaves NOTHING behind: the argument is not an `Ort` at
+--   all, the `if let` in `held_aus_expr` does not fire, and the guard is simply
+--   gone. Measured 2026-09-16 without the rule: `6 items, 1 errors, 1 hints` --
+--   one `H007` ("`Verbindung.slots[...].zustand` is protected by `SPERRE`, and
+--   `suche` does not hold it") and one `H008`. A refusal with the RIGHT verdict
+--   and the WRONG reason: the author wrote a guard, and the report says none was
+--   written.
+--
+-- So the two shapes are two failure modes of one hole, and the rule closes both
+-- at the place where the words stand. `N390` is not `allein` here: `H007` speaks
+-- too, which is exactly why the probe is worth keeping -- it pins that the new
+-- refusal names the CAUSE beside the old one that names the symptom. With the
+-- rule the file reads `6 items, 2 errors, 1 hints`: `N390` at the guard, `H007`
+-- at the access, `H008` at the lock.
+
+module gift::held_ueber_einen_ruf {
+
+const ANZAHL : u32 = 16;
+
+table Verbindung count ANZAHL {
+    slot {
+        zustand : u32 in 0 .. 3,
+    }
+}
+
+lock SPERRE protects { Verbindung } rank 0 held <= 64 ops;
+
+spec fn waehle(eimer : u32 in 0 .. 3) -> u32 in 0 .. 3
+    effects { pure }
+    = eimer;
+
+impl fn suche(eimer : u32 in 0 .. 3, s : index into Verbindung) -> u32 in 0 .. 3
+    requires Held(waehle(eimer))
+    effects { reads Verbindung.slots }
+    costs   <= 8 ops
+{
+    return Verbindung.slots[s].zustand;
+}
+
+}
