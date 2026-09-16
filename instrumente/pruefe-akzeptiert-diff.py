@@ -50,23 +50,46 @@ sys.path.insert(0, os.path.join(W, "instrumente"))
 # The nine components of `Akzeptiert` (Akzeptiert.lean §3), each with the
 # Rust rule that decides it. `None` = decided by construction / vacuous on
 # the export fragment (named in the report, never silently dropped).
+# Vacuity mechanisms, verified by lane 208 (MUSE-REPORT-208.md):
+# * `abg`: `reachB` runs `fs.length` rounds of `erreichSchritt`, which is the
+#   fixpoint over `ruftB` -- the same relation `rufM` closes over -- so every
+#   computed graph is closed on every export, with no Rust rule involved.
+# * `stufen`: `resolve_floors` (`lean_g.rs`, which this lane must not touch)
+#   writes each floor as the minimum rank taken anywhere in the function's
+#   reachable set, so `mE (bodenM f)` holds per body by construction. `N294`
+#   decides a DIFFERENT property (no take at/below a signature-held lock,
+#   the `H006` shape, also enforced at export time by `tr_locks`/`LG004`).
+# * `sperrOrte`: `S.orte` and `D.braucht`/`D.gbraucht` are built from the one
+#   `LockModel.guards` set (`read_lock`), so the implication holds per
+#   carrier by construction; unknown `protects` entries refuse at export
+#   (`LG005`).
+# * `antworten`: no answer site exports -- axioms write `Ax := Empty` and
+#   register accesses have no `Reg` form (both `LG...` refusals) -- so the
+#   component is `true` on every export; `N310`-`N316` pin the refuse
+#   direction, measured by gift probes, not by this script.
 KOMPONENTEN = [
     # (short, lean-bool-template, rust-codes)
     ("frag", "programmImFragmentG {P} {fs}",
      ["LG004"]),  # export refuses untranslatable bodies; N293 the indirect leg
-    ("abg", "abgAlleB {P} {fs}", None),  # closed by construction, both sides
+    ("abg", "abgAlleB {P} {fs}", None),  # vacuous: fixpoint, see above
     ("fuss", "fussWB {P} {S} {fs} {ws}",
      ["N290", "N291", "N292", "N293", "N294"]),
-    ("stufen", "stufenB {P} {fs}", ["N294"]),
-    ("sperrOrte", "sperrOrteB {S} {ls}", None),  # S.orte/braucht one source
+    ("stufen", "stufenB {P} {fs}", ["N294"]),  # N294 is the held-take rule;
+    # stufenB proper is vacuous (minimum-floor construction, see above)
+    ("sperrOrte", "sperrOrteB {S} {ls}", None),  # vacuous: one source, see above
     ("wurzeln", "wurzelnB {ws}", ["N302", "N303"]),
     ("einzeln", "einzelnB {ws}", ["N304", "N315"]),
     ("renn", "rennB {P} {fs} {cs} {ws}", ["N300", "N301"]),
     ("antworten", "antwortenB {P} {fs}",
      ["N310", "N311", "N312", "N313", "N314", "N316"]),
+    # vacuous on the export (no Ax/Reg sites); refuse direction by gifts
 ]
 
 # The Rust verdict: ACCEPT iff none of these fires (all are ERROR severity).
+# `N317`-`N319` are PHANTOM codes (lane 208): reserved as transfer-2
+# additions, implemented nowhere, firing on nothing. They stay in the set
+# so the day a rule takes one, the verdict reads it with no script change;
+# until then they change no verdict.
 AKZEPTIERT_CODES = frozenset([
     "N290", "N291", "N292", "N293", "N294",
     "N300", "N301", "N302", "N303", "N304",
@@ -293,6 +316,13 @@ def main():
     dateien = korpus_dateien()
     zeilen, befunde, partial, skip = [], [], [], []
     nicht_gemessen = []
+    # Coverage denominator (lane 208): per compared program, the static
+    # facts that decide whether a component was NON-TRIVIALLY exercised.
+    # `wurzeln` needs >= 1 start; `einzeln`, `renn` and the thread legs of
+    # `fuss` need >= 2 starts (their Bools are vacuous over fewer);
+    # `stufen`/`sperrOrte` need >= 1 lock; `renn` needs >= 1 table.
+    # `abg`/`antworten` are vacuous on every export (see KOMPONENTEN).
+    deckung = []
     for datei in dateien:
         rel = os.path.relpath(datei, W)
         quelle = open(datei, encoding="utf-8").read()
@@ -335,12 +365,34 @@ def main():
                                     ("refuse@" + ",".join(gefallen)
                                      if gefallen else "refuse")),
                        status))
+        if not is_partial:
+            deckung.append((rel, len(starts), len(parsed["sperren"]),
+                            len(parsed["tabellen"]), len(parsed["funktionen"])))
     print("| file | Rust | Lean | verdict |")
     print("|---|---|---|---|")
     for rel, r, l, s in zeilen:
         print("| %s | %s | %s | %s |" % (rel, r, l, s))
     print("compared=%d skip=%d partial=%d findings=%d not-measured=%d"
           % (len(zeilen), len(skip), len(partial), len(befunde), len(nicht_gemessen)))
+    # The coverage table: how many compared programs exercise each
+    # component NON-TRIVIALLY. A "0 findings" over a denominator that never
+    # reaches a component measures nothing about it -- this table says
+    # which components the denominator reaches. (PARTIAL files excluded:
+    # their Lean side drops the entry/boot roots, so no component verdict
+    # on them is comparable.)
+    n = len(deckung)
+    mit_start = sum(1 for (_, s, _, _, _) in deckung if s >= 1)
+    mit_paar = sum(1 for (_, s, _, _, _) in deckung if s >= 2)
+    mit_sperre = sum(1 for (_, _, l, _, _) in deckung if l >= 1)
+    mit_tabelle = sum(1 for (_, _, _, t, _) in deckung if t >= 1)
+    print("coverage: of %d comparable programs," % n)
+    print("coverage: wurzeln(>=1 start): %d | einzeln/renn/fuss-thread-legs(>=2 starts): %d | "
+          "stufen/sperrOrte(>=1 lock): %d | renn(>=1 table): %d"
+          % (mit_start, mit_paar, mit_sperre, mit_tabelle))
+    print("coverage: abg/antworten vacuous on every export (fixpoint / no Ax-Reg sites); "
+          "their refuse direction is pinned by gift probes, not here")
+    for rel, s, l, t, f in deckung:
+        print("deckt: %s (starts=%d locks=%d tables=%d fns=%d)" % (rel, s, l, t, f))
     for rel, grund in skip:
         print("skip: %s (%s)" % (rel, grund))
     for rel in partial:
