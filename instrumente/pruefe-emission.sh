@@ -3111,7 +3111,11 @@ fi
 # the old and the new emitter, 0 occurrences before, and exactly ONE file whose C
 # differs after -- this one). A pin whose file the mark does not count is not a pin.
 # `MARKE_EMIT_G` is untouched: this lane adds no refusal and no poison file.
-MARKE_EMIT=114
+# **114 -> 116 on 2026-09-16 (merge review of the atomic-array lane).** Two examples came with
+# it (140, 141: the array itself and its bound refusal). The lane measured the delta, named it,
+# and left the counter alone -- which is the rule: a lane that books its own counter absorbs
+# the drift of every other lane merged since.
+MARKE_EMIT=116
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
