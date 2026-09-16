@@ -148,7 +148,7 @@ theorem antwort_ptr_zeuge :
 
 /-- So its answer class is not empty -- beside the `.never` class, which is. -/
 theorem antwort_ptr_nicht_leer : ¬ AntwortLeer wD (some (.ptr 0 true)) :=
-  ((antwortB_iff (fs := []) (fun g => nomatch g) _).mp rfl)
+  ((antwortB_iff (fs := []) (fun (g : wD.Fn) => nomatch g) (some (.ptr 0 true))).mp rfl)
 
 /-- **WITNESS pair**: `.never` answers nothing. -/
 theorem antwort_never_leer_zeuge : AntwortLeer wD (some .never) :=
@@ -158,7 +158,7 @@ theorem antwort_never_leer_zeuge : AntwortLeer wD (some .never) :=
     through-write count pointer, index and value. -/
 theorem kosten_ptr_zeuge :
     kostenExpr (D := wD) zPtrW = 0 ∧
-    kostenExpr (D := wD) zIdxW = 1 + kostenExpr (D := wD) (.lit 0) ∧
+    kostenExpr (D := wD) zIdxW = 1 + kostenExpr (D := wD) ((.lit 0) : Expr wD [] [] (.int 0 0)) ∧
     kostenStmt (D := wD) (fun _ => 0) 0 zSchreibW =
       1 + kostenExpr (D := wD) zPtrW + kostenExpr (D := wD) zIdxW +
         kostenExpr (D := wD) zWertW := by
