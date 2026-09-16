@@ -54,11 +54,99 @@ long as nobody has written it.*
 - [ ] **`entry`/`boot`: the vector and the dispatch.** Today only the dispatch root travels;
   the vector, the registers and the steps have no form. After the hosted driver.
 
-**The standard library is DEFERRED** (owner, same day): the language mechanism exists
-(`library fn` with `payload`, `@lib#fn(...)` calls, a three-unit library chain in the emission
-guardian) — what does not exist is content: no memory copy, no ring buffer, no queue, no
-strings. It waits until the runtime runs. *The runtime is the first thing that belongs in that
-library anyway: small, concurrent, and the same for every program.*
+**The standard library is NO LONGER deferred** (owner, 2026-09-16): it moved to §0b, and the
+reason is the same measurement that set this section's priority — a firewall written entirely in
+Gabbro ran, and what it kept hitting was the empty shelf. *The runtime is still first: it is the
+smallest piece of that shelf and the one every other piece stands on.*
+
+# 0b. The standard library, native in Gabbro  ⟨A⟩
+
+*Owner, 2026-09-16: **everything a standard library does — except networking, files, graphics
+and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The
+plan is `dokumente/PLAN-STDLIB.md`; what stands here is the work.*
+
+- [ ] **Composition across units comes FIRST, and nothing below is worth building without it.**
+  Measured in the firewall on 2026-09-16: a module reading another module's table draws
+  `[M119] … is declared nowhere`; `use` parses and reaches nothing; the honest workaround is an
+  `extern fn` mirror **plus a named assumption per crossing**. A library whose guarantees enter
+  the caller as assumptions is the opposite of a library. Decide and build: what a unit sees of
+  another unit (functions with contracts — tables never?), who checks the crossing (the checker
+  over both units, or the linking theorem over both certificates), and what the goal theorem
+  says about two units. **This item and the linking theorem (§2) are one item seen from two
+  sides.**
+- [ ] **The generic question, measured before anything is written.** Tables are concrete, so a
+  ring of `u32` and a ring of a record are two modules. Three routes — per-type by hand, a
+  generator with a byte-identity guardian (`pruefe-genlean.py` is the precedent), or a type
+  parameter in the language. **The last one touches `Ty`, which is deliberately non-recursive,
+  and `OFFEN.md` O15's rule applies: it must pay for itself in programs.**
+- [ ] **L1 primitives**: copy/set/compare over table slices, endianness, bit operations,
+  saturating and wrapping helpers, `log2`/`sqrt`/division. Everything else stands on these, and
+  they are where the bound checks live.
+- [ ] **L5 concurrency, early and not late** — the ticket lock (written 2026-09-15, in
+  `laufzeit/sperre.gab`), futex wait/wake, sequence lock, epoch reclamation. **The runtime (§0)
+  needs these, and the runtime is the top priority.**
+- [ ] **L2 containers**: ring buffer (SPSC and MPSC), timer wheel first — a firewall and every
+  driver want those two before anything else — then stack, bitset, fixed hash map and set,
+  sorted array, index-linked list.
+- [ ] **L3 algorithms** (sort, binary search, hashing, CRC and Internet checksum), **L4 text**
+  (byte strings, number formatting and parsing, no allocation), **L6 randomness** (counter-based
+  PRNG plus kernel entropy through a system call).
+- [ ] **Every item owes five things** (plan §3): a contract, its `ensures` **proved once** so the
+  caller inherits it, a cost bound, a poison and a positive probe, and the named absence where a
+  C library would allocate or grow.
+- [ ] **It lives in `bibliothek/` in THIS tree**, under the same guardians as the corpus. A
+  standard library measured by different instruments is a promise, not a library.
+
+# 0c. What a real program hit — the walls, from the firewall  ⟨A⟩
+
+*All measured 2026-09-16 while writing a Linux firewall entirely in Gabbro (7494 lines, eight
+modules, netlink socket open and the worker parked in `recvfrom`). Twenty-three named findings
+in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the language.*
+
+- [x] **No atomic array** — 256 counters cost 5136 lines and 1797 ops per increment. Built
+  2026-09-16; measured payoff 287 lines and 11 ops. *And the wall was hiding three silences: the
+  index bound was never checked at two of three atomic access forms.*
+- [x] **`Held(L[i])` evaporated silently** — a file whose only lock guard named a lock that does
+  not exist passed with `0 errors, 0 hints`. Refused by name since 2026-09-16 (`N390`), and the
+  answer to striping is **stripe the tables, not the locks**: 8× the concurrency for 4,9 % more
+  ops (measured), because the permission predicate is conjunctive and `Held(L[i])` could only
+  ever mean "hold all N".
+- [ ] **Cross-unit table access does not exist** (`M119`) — see §0b, first item. **This is the
+  one the owner named: it blocks the library and it blocked the firewall's own wiring.**
+- [ ] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
+  one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
+  than the lock was**, and it needs its own lane.
+- [ ] **No thread start at all** — every shape refused (`P017`, measured 2026-09-15). §0 owns it.
+- [ ] **No early exit from a `traverse`** (`S001`, no label) — "find the first, then continue"
+  is unwritable.
+- [ ] **`match` has no integer arms** and nesting is capped at 32 (`P038`), so a 256-way
+  dispatch becomes a flat chain of comparisons, measured at 1797 ops.
+- [ ] **`accumulates` cannot be `pub`** (`P041` against `N038`).
+- [ ] **A `bool` static checks clean and never becomes C** (`C001`).
+- [ ] **`transition` and `advances` stand in `SYNTAX.md` §8 with no parser arm** — one of them
+  with a Lean constructor and a theorem. Two of sixteen statement head words, and **nothing in
+  the tree measures this class**.
+- [ ] **The emitter has no `atomic_fetch_add`**, and the measured reason is real: a checked
+  `±1` cannot answer in its own type, and `+%` would wrap at a different width than C's
+  fetch-add. The owner decides whether the binder-range refusal is lifted (`OPUS-BERICHT-FETCHADD.md`
+  §2.3 has the patch shape and the test that must survive it).
+
+# 0d. The claims, as they stand — corrected against today's measurements  ⟨Q⟩
+
+*The owner listed these on 2026-09-16 as the things that must be written down. Where a line was
+stale, the measured number stands beside it: a status list nobody re-measures is the thing this
+tree refuses everywhere else.*
+
+| the claim | as measured 2026-09-16 |
+|---|---|
+| chain count 2 of 111 | **2 of 113** (`zaehle-kette.py --lean`); sieves (a) 2, (b) 15, (c) 15, (d) 55, (e) 2 |
+| T2, the re-checker: designed, not built | **built** — `korrOk` (`KorrespondenzAllg.lean`), 23 expression arms plus the block structure (`if`, `let` of a call, `traverse`), sound with a planted defect per arm |
+| 16 of 21 templates are an abstract core | unchanged, and still the honest state of T5 |
+| the concurrent half not begun | **begun and closed for ONE program**: `schlusssatz_124`, every SC run of the emitted C simulated in G, race freedom PROVED from the model's rather than assumed; the generic concurrent case is untouched |
+| no pass proved individually | unchanged. 163 sentences, 155 measured, 0 proved — and that is the gap between "the checker is measured" and "the checker is proved" |
+| Caprock: fragments only | unchanged. Six areas written out, 10 of 10 units error-free, nothing compiled into a kernel |
+| the runtime | assumption A4, and the two-thread program still does not run: no `main`, the lock primitives declared and undefined, no thread start (§0) |
+| the standard library | empty shelf; §0b is the plan since today |
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
