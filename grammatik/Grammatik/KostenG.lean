@@ -1102,9 +1102,10 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
       `kostenExpr` counts their operators. G evaluates every expression in
       the step that uses it, so this only makes the Lean number larger.
     Not mirrored (no checker number determined by the Lean term): indirect
-    calls (F8), `retry` (F2), `forever` (F3), axiom calls (foreign costs are
-    certificate lines, the Lean `Ax` has none), `transition`, `advances`,
-    `retires`. -/
+    calls (F8), `retry` (F2), `forever` (F3), `transition`, `advances`,
+    `retires`. Axiom calls are outside `spiegelS` (their checker number is a
+    certificate line, not a Lean term), but §13 counts them in the Lean bound
+    through the declared table `fa`. -/
 
 mutual
 /-- The forms whose checker number the Lean term determines. -/
@@ -1676,6 +1677,227 @@ theorem frame_schritte_beschraenkt_tief (P : Programm D) (O : Orakel D) (passes 
     segZaehle run f ≤ kostenTief P passes (n + 1) g :=
   frame_schritte_beschraenkt P O passes f g n (tief_rufTief P A (n + 1) g hT) hE run hA
 
+/-! ## 13. Foreign edges: declared costs for `axiomCall`/`bindAxiom`
+
+    A call counts the callee's DECLARED cost (`c g` in §1, the `call counts
+    DECLARED costs` rule). A foreign edge -- `Stmt.axiomCall` (a syscall, an
+    `extern fn`, `prim`, `asm`) and `Block.bindAxiom` -- had no such number:
+    §1 counts `1 + args` for it, `spiegelS` excludes it, and `D.Ax` carries
+    no cost field. This section closes that gap as an UPPER-BOUND layer,
+    without touching §1:
+
+    * `fa : D.Ax → Nat` is the declared cost table for foreign edges (the
+      counterpart of `c : D.Fn → Nat`; cf. `beispiele/96`, where a `syscall`
+      carries no `costs` clause by grammar -- here the table is a Lean
+      parameter, not a grammar change).
+    * `fremdStmt`/`fremdBlock`/`fremdArms`/`fremdGArms`/`fremdEnd` sum the
+      declared foreign costs over the syntax, with the SAME combinators as
+      §1 (maximum over branches, multiplication by the domain bound under
+      `traverse`/`retry`/`forever`); plain calls contribute `0` here (their
+      callee's cost, foreign or not, is counted at the callee's body through
+      `kostenTiefF`).
+    * `kostenStmtF`/`kostenBlockF`/`kostenEndF`/`kostenSonstF` add the §1
+      cost and the foreign cost. `fremd_kein_null_stmt`/`fremd_kein_null_bind`:
+      no zero slip -- a foreign edge costs at least one step even at
+      declared `0` (the §1 dispatch step).
+    * `kostenTiefF`/`kostenTiefF_ge`: the depth bound with foreign costs on
+      top; `fremd_budget_erhalten`: budget preservation over foreign calls --
+      every run admitted by `rufTief`, foreign steps included, fits under it
+      (by transitivity through `frame_schritte_beschraenkt`).
+
+    Docking at `Zielsatz.ZeitAb`/`FortschrittG` (Spec.lean): `ZeitAb` has
+    exactly the shape of `frame_schritte_beschraenkt`, so `kostenTiefF` is a
+    drop-in right-hand side with identical premises; `FortschrittG` needs no
+    new stop kind -- a foreign edge fires as a `blatt` step
+    (`Stmt.istBlatt`, Maschine.lean: `axiomCall` is not in the compound
+    list), hence under `schrittArt` case (A), which lowers the potential by
+    at least one for EVERY leaf.
+
+    What stays booked (not faked): re-verifying the engine with a foreign
+    table (`hS1`/`hS2` of `kinv_schritt` over `kostenTiefF`, i.e. the callee
+    counting its own foreign costs at the call site) and reading `fa` off
+    checker syntax (`costs` on `syscalldecl`, the lane-114 gap). -/
+
+mutual
+def fremdStmt (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
+  | .ite _ t e => max (fremdBlock fa pa t) (fremdBlock fa pa e)
+  | .onOption _ p a => max (fremdBlock fa pa p) (fremdBlock fa pa a)
+  | .onTag _ arms => fremdArms fa pa arms
+  | .onGrund _ arms => fremdGArms fa pa arms
+  | .locks _ _ body => fremdBlock fa pa body
+  | .breaking _ body => fremdBlock fa pa body
+  | .traverse t _ body => (D.count t).toNat * fremdBlock fa pa body
+  | .retry n _ body ueber => n * fremdBlock fa pa body + fremdBlock fa pa ueber
+  | .forever _ _ body => pa * fremdBlock fa pa body
+  | .axiomCall a _ _ _ _ _ _ => fa a
+  | _ => 0
+
+def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
+  | .nil => 0
+  | .cons s rest => fremdStmt fa pa s + fremdBlock fa pa rest
+  | .bind _ rest => fremdBlock fa pa rest
+  | .bindCall _ _ _ _ _ rest => fremdBlock fa pa rest
+  | .bindCallInd _ _ _ _ _ rest => fremdBlock fa pa rest
+  | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
+  | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
+  | .regLies _ _ rest => fremdBlock fa pa rest
+  | .regLiesElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .awaits _ _ _ _ rest => fremdBlock fa pa rest
+  | .exchange _ _ _ _ rest => fremdBlock fa pa rest
+  | .narrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .pruefung _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .gleit _ _ _ _ _ rest => fremdBlock fa pa rest
+  | .gleitLit _ _ _ rest => fremdBlock fa pa rest
+  | .gleitVon _ _ _ rest => fremdBlock fa pa rest
+  | .gleitNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+
+def fremdArms (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+  | .nil => 0
+  | .cons b rest => max (fremdBlock fa pa b) (fremdArms fa pa rest)
+
+def fremdGArms (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} : GrundArms D V l Γ Λ Λ' n → Nat
+  | .nil => 0
+  | .cons b rest => max (fremdBlock fa pa b) (fremdGArms fa pa rest)
+
+def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
+  | .ret .. => 0
+  | .retGrund .. => 0
+  | .leave _ => 0
+  | .next _ => 0
+  | .cons s rest => fremdStmt fa pa s + fremdEnd fa pa rest
+  | .bind _ rest => fremdEnd fa pa rest
+end
+
+/-- The §1 cost plus the declared foreign cost, per statement form. -/
+def kostenStmtF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') : Nat :=
+  kostenStmt c pa s + fremdStmt fa pa s
+
+/-- The §1 cost plus the declared foreign cost, per block. -/
+def kostenBlockF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') : Nat :=
+  kostenBlock c pa b + fremdBlock fa pa b
+
+/-- The §1 cost plus the declared foreign cost, per end block. -/
+def kostenEndF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) : Nat :=
+  kostenEnd c pa e + fremdEnd fa pa e
+
+/-- The §1 cost plus the declared foreign cost, per `else` branch. -/
+def kostenSonstF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) : Nat :=
+  kostenSonst c pa e + fremdEnd fa pa e
+
+theorem kostenStmtF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
+    kostenStmt c pa s ≤ kostenStmtF fa c pa s := by
+  simp only [kostenStmtF]; omega
+
+theorem kostenBlockF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
+    kostenBlock c pa b ≤ kostenBlockF fa c pa b := by
+  simp only [kostenBlockF]; omega
+
+theorem kostenEndF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
+    kostenEnd c pa e ≤ kostenEndF fa c pa e := by
+  simp only [kostenEndF]; omega
+
+theorem kostenSonstF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
+    kostenSonst c pa e ≤ kostenSonstF fa c pa e := by
+  simp only [kostenSonstF]; omega
+
+/-- A foreign statement site counts exactly its declared cost. -/
+theorem fremd_axiomCall (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+    (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
+    fremdStmt (V := V) fa pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) = fa a := rfl
+
+/-- A foreign bind site counts exactly its declared cost plus its continuation. -/
+theorem fremd_bindAxiom (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+    (he : D.aerg a = some τ)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Block D V l (τ :: Γ) Λ Λ') :
+    fremdBlock (V := V) fa pa (Block.bindAxiom (V := V) (l := l) a args he hw hg hd hgd rest)
+      = fa a + fremdBlock fa pa rest := rfl
+
+/-- No zero slip, statement site: a foreign call costs at least one step even
+    at declared `0` (the §1 dispatch step). -/
+theorem fremd_kein_null_stmt (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
+    (V : Vertrag D) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
+    (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
+    1 ≤ kostenStmtF (V := V) fa c pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) := by
+  simp only [kostenStmtF, kostenStmt]; omega
+
+/-- No zero slip, bind site: a foreign bind costs at least one step even at
+    declared `0`. -/
+theorem fremd_kein_null_bind (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
+    (V : Vertrag D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (a : D.Ax)
+    (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Block D V l (τ :: Γ) Λ Λ') :
+    1 ≤ kostenBlockF (V := V) fa c pa (Block.bindAxiom (V := V) (l := l) a args he hw hg hd hgd rest) := by
+  simp only [kostenBlockF, kostenBlock]; omega
+
+/-- The depth bound with declared foreign costs on top: the §1 depth cost of
+    the body plus the body's foreign costs. -/
+def kostenTiefF (P : Programm D) (fa : D.Ax → Nat) (pa : Nat) : Nat → D.Fn → Nat
+  | 0, _ => 0
+  | n + 1, g => kostenEnd (kostenTief P pa n) pa (P.rumpf g) + fremdEnd fa pa (P.rumpf g)
+
+/-- The foreign-inclusive depth bound covers the §1 depth bound. -/
+theorem kostenTiefF_ge (P : Programm D) (fa : D.Ax → Nat) (pa : Nat) (n : Nat) (g : D.Fn) :
+    kostenTief P pa n g ≤ kostenTiefF P fa pa n g := by
+  cases n with
+  | zero => exact Nat.le_refl _
+  | succ m => simp only [kostenTief, kostenTiefF]; omega
+
+/-- **Budget preservation over foreign calls.** Let thread `f` enter a frame
+    of `g` admitted at call depth `n + 1`, as in `frame_schritte_beschraenkt`.
+    On ANY run on which the frame stays active, thread `f` takes at most
+    `kostenTiefF P fa passes (n + 1) g` own steps -- foreign (`axiomCall`,
+    `bindAxiom`: syscall/Ax/extern) steps included, each counting its
+    DECLARED cost `fa` on top of the §1 dispatch step, never slipping
+    through at zero. Same premises as `Zielsatz.ZeitAb`, drop-in
+    right-hand side; `FortschrittG` is untouched (foreign edges are `blatt`
+    steps, `schrittArt` case (A)). -/
+theorem fremd_budget_erhalten (P : Programm D) (O : Orakel D) (passes : Nat)
+    (fa : D.Ax → Nat) (f : Faden) (g : D.Fn) (n : Nat) (hadm : rufTief P (n + 1) g = true)
+    {rho : Env D (D.params g)} {s0 : World D} {k : Nat} {M1 M2 : RufMaschineG D}
+    (hE : Eintritt P f g rho s0 k M1)
+    (run : SegLauf P O passes M1 M2) (hA : aktivVor f k run) :
+    segZaehle run f ≤ kostenTiefF P fa passes (n + 1) g :=
+  Nat.le_trans (frame_schritte_beschraenkt P O passes f g n hadm hE run hA)
+    (kostenTiefF_ge P fa passes (n + 1) g)
+
+#print axioms Gabbro.Grammatik.fremd_axiomCall
+#print axioms Gabbro.Grammatik.fremd_bindAxiom
+#print axioms Gabbro.Grammatik.fremd_kein_null_stmt
+#print axioms Gabbro.Grammatik.fremd_kein_null_bind
+#print axioms Gabbro.Grammatik.kostenTiefF_ge
+#print axioms Gabbro.Grammatik.fremd_budget_erhalten
+
 end Gabbro.Grammatik
 
 /-! ## CUTS:
@@ -1697,6 +1919,11 @@ end Gabbro.Grammatik
   * `eintritt_start`, `eintritt_push` -- every frame begins in `Eintritt`;
     `segLauf_erreichbar`/`erreichbar_segLauf` -- counted runs are exactly
     the reachability derivations.
+  * `fremd_axiomCall`/`fremd_bindAxiom` (§13) -- foreign edges count their
+    DECLARED cost `fa`; `fremd_kein_null_stmt`/`fremd_kein_null_bind` -- no
+    zero slip; `kostenTiefF_ge`/`fremd_budget_erhalten` -- budget
+    preservation over foreign calls, drop-in for `Zielsatz.ZeitAb`
+    (`FortschrittG` untouched: foreign edges are `blatt` steps).
 
   What the bound does NOT say:
   * WAITING. A step that cannot fire is no step: `dannLocks` needs the lock

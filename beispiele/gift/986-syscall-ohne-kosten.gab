@@ -1,0 +1,43 @@
+-- erwartet: N322 allein
+-- **986 -- a `syscall` with no countable `costs` promise.**
+--
+-- A foreign edge counts its DECLARED cost on top of the dispatch step (`1 +
+-- fa`, `KostenG.lean` §13: `fremd_kein_null_*`). A `syscall` without the
+-- clause is cost-opaque: a call through it counts nothing, no bounded loop
+-- can host one (`beispiele/96`), and a caller with a cost promise meets
+-- `K003` over it. So the declaration itself falls here, by name (`N322`).
+--
+-- Everything else about this declaration is valid on purpose: the registers
+-- are distinct and bound (`N063`-`N066` silent), the `errors` map answers its
+-- one errno with a declared case (`N067` silent), the machine is implemented
+-- (`A006` silent) and the counterpart is named (`N068` silent). The callee is
+-- never called, so no `K003` speaks beside the declaration fault.
+--
+-- `-- erwartet: N322 allein` is the sharper claim and it is the right one
+-- here: without this rule NOTHING falls -- the emitted stub is valid C and
+-- `cc -Werror` takes it. That is the counterfactual the sentence
+-- `syscall.kosten` needs.
+
+module gift::syscall_ohne_kosten {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

@@ -252,6 +252,7 @@ import Grammatik.Zielsatz.Proben
 import Grammatik.EinpassenVoll
 import Grammatik.Zielsatz.ProbenG1
 import Grammatik.Zielsatz.ProbenW1
+import Grammatik.Zielsatz.NeverAsm
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
@@ -278,6 +279,7 @@ import Grammatik.KorrOkAdaequat
 import Grammatik.KorrOkOhneLocks
 import Grammatik.RufLogikZeuge
 import Grammatik.KorrespondenzWeitZeuge
+import Grammatik.ReferenzZeuge
 import Grammatik.KorrespondenzBlockZeuge
 import Grammatik.KorrespondenzGeraetZeuge
 import Grammatik.Schlusssatz
@@ -293,3 +295,4 @@ import Grammatik.CText104
 import Grammatik.CText104Zeuge
 import Grammatik.CText108
 import Grammatik.Sperrstreifen
+import Grammatik.SperrImpl

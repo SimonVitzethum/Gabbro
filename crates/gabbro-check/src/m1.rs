@@ -2351,15 +2351,33 @@ impl<'a> Pruefer<'a> {
             // a function, and the fix is a different one.
             ExprArt::FnWert(p) => {
                 let Some(sig) = self.u.funktion(&self.modul, p) else {
+                    // **`&T` -- the producer of a table pointer** (2026-09-16).
+                    //
+                    // Until today `&` named a function and nothing else: anything else
+                    // fell at `M127` below. The model has long had the second producer
+                    // (`Expr.ptrOf` / `Ty.ptr`, `ptrTypB`), so the checker takes it too:
+                    // where the path names no function but a TABLE, the value is a
+                    // pointer to that table. **Function first, table second** -- a name
+                    // that declares both keeps the old reading, and the emitter lowers
+                    // in the same order.
+                    //
+                    // The nominal half at the slot is `M140`'s and needs no new code:
+                    // `gestalt_grund` compares pointers at their pointee, and two
+                    // tables are two declarations -- so `&Falsche` at a
+                    // `ptr<…> Richtige` slot falls exactly where a number at a pointer
+                    // slot falls (the `ptrTypB` decision: the number names the table).
+                    if let Some(t) = self.u.nennt_tabelle(&self.modul, &p.text()) {
+                        return Typ::Zeiger(Box::new(Typ::Tabelle(t)));
+                    }
                     self.absagen.schiebe(
                         Absage::fehler(
                             "M127",
                             e.span,
-                            format!("`&{}` does not name a function", p.text()),
+                            format!("`&{}` names neither a function nor a table", p.text()),
                         )
                         .mit_notiz(
-                            "`&` makes a FUNCTION into a value; there is no address-of for a \
-                             variable or a type in Gabbro",
+                            "`&` makes a FUNCTION into a value and a TABLE into a \
+                             pointer; there is no address-of for anything else in Gabbro",
                         ),
                     );
                     return Typ::Unbekannt;
@@ -6626,7 +6644,7 @@ impl<'a> Pruefer<'a> {
                     continue;
                 }
                 // **`&f` -- the producer of a function pointer, and its name is a FUNCTION
-                // name.** It resolves in a different table from every other name here, and
+                // name -- or, since `&T`, a TABLE name.** It resolves in a different table from every other name here, and
                 // it is neither `result` nor a written place: whatever else the
                 // postcondition says, this half of it establishes nothing.
                 if let Some(fnname) = n.strip_prefix('&') {
@@ -6634,7 +6652,8 @@ impl<'a> Pruefer<'a> {
                         .u
                         .kandidaten_aufloesbar(&self.modul, fnname)
                         .iter()
-                        .any(|k| self.u.funktionen.contains_key(k));
+                        .any(|k| self.u.funktionen.contains_key(k))
+                        || self.u.nennt_tabelle(&self.modul, fnname).is_some();
                     if !bekannt {
                         self.absagen.schiebe(
                             Absage::fehler(
@@ -6643,8 +6662,9 @@ impl<'a> Pruefer<'a> {
                                 format!("`{fnname}` in `ensures` is not declared here"),
                             )
                             .mit_notiz(
-                                "`&f` makes a function into a value, so the name has to be \
-                                    a function -- and this one is none",
+                                "`&f` makes a function into a value and `&T` a table \
+                                    into a pointer, so the name has to be one of the \
+                                    two -- and this one is none",
                             )
                             .mit_notiz(
                                 "a postcondition whose names do not resolve stands in the \
@@ -9020,6 +9040,7 @@ mod w1_proben {
                  requires len <= 1024\n\
                  ensures result <= len\n\
                  effects { pure }\n\
+                 costs <= 8 ops\n\
                  assume c falsifier s;\n\
              impl fn f(b : u64, n : u64) -> u64\n\
                  effects { pure }\n\

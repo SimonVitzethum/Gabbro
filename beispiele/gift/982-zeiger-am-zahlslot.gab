@@ -1,0 +1,31 @@
+-- erwartet: M140
+-- **Poison 982 -- `&Puffer` at a `u32` slot.**
+--
+-- The `M140` half from the producer side: a pointer does not answer for a number, so
+-- `&T` at a number slot falls exactly where a number at a pointer slot falls
+-- (`beispiele/38` notes that direction: *a number is null (`N260`) or refused
+-- (`M140`)*). The literal zero is the one exception on both sides -- it is the null
+-- pointer (`m1.rs`, `ist_null`) -- and this probe plants a table address, not a zero.
+--
+-- The nominal twin -- the right shape, the wrong table -- is `981`.
+
+module gift::zeiger_am_zahlslot {
+
+table Puffer count 4 {
+    slot {
+        a : u32 in 0 .. 100,
+    }
+}
+
+type Halter = {
+    n : u32 in 0 .. 100,
+};
+
+impl fn baue() -> Halter
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Halter(n: &Puffer);
+}
+
+}

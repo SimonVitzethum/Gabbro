@@ -225,20 +225,34 @@ fn haltezeit_ist_keine_zahl(l: &LockDecl, wort: &str, span: Span) -> Absage {
 ///
 /// `pass` keeps its own walk — a non-constant `held` fires `K010` there, with
 /// a span — and this one serves the readers: `bericht` and the cost
-/// derivation below. Same three maps, no refusals.
+/// derivation below. Same three maps, no refusals — plus the FOREIGN one:
+/// every `syscall` with a countable `costs` promise (`N322` where none
+/// stands) carries its `fa` here, read through the one predicate
+/// (`Umgebung::syscall_kosten`) the refusal asks.
 fn kostenkarten(
     baum: &Programm,
     u: &Umgebung,
-) -> (HashMap<String, i128>, HashMap<String, i128>, HashMap<String, i128>) {
+) -> (
+    HashMap<String, i128>,
+    HashMap<String, i128>,
+    HashMap<String, i128>,
+    HashMap<String, i128>,
+) {
     let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
     let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    let mut fremd: HashMap<String, i128> = HashMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Funktion(f) => {
             if let Some(c) = &f.costs {
                 if let Some(n) = u.konst_wert(modul, c) {
                     deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
                 }
+            }
+        }
+        ItemArt::Syscall(s) => {
+            if let Some(n) = u.syscall_kosten(modul, s) {
+                fremd.insert(crate::umgebung::qualifiziere(modul, &s.name.text), n);
             }
         }
         ItemArt::Lock(l) => {
@@ -253,7 +267,7 @@ fn kostenkarten(
         }
         _ => {}
     });
-    (deklariert, haltezeiten, geteilte_haltezeiten)
+    (deklariert, haltezeiten, geteilte_haltezeiten, fremd)
 }
 
 /// **Lane 191: every derivable omitted `costs`, bottom-up.**
@@ -268,7 +282,7 @@ fn kostenkarten(
 /// omitted `costs` stays silent there, as before.
 pub fn abgeleitete_kosten(baum: &Programm) -> BTreeMap<String, i128> {
     let u = Umgebung::sammle(baum);
-    let (erklaert, haltezeiten, geteilte_haltezeiten) = kostenkarten(baum, &u);
+    let (erklaert, haltezeiten, geteilte_haltezeiten, fremd) = kostenkarten(baum, &u);
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let geraete = crate::m3::geraetetabelle(baum);
     let mut abgeleitet: BTreeMap<String, i128> = BTreeMap::new();
@@ -312,6 +326,7 @@ pub fn abgeleitete_kosten(baum: &Programm) -> BTreeMap<String, i128> {
                 deklariert: &vereint,
                 haltezeiten: &haltezeiten,
                 geteilte_haltezeiten: &geteilte_haltezeiten,
+                fremd: &fremd,
                 lokal,
                 geraete: &geraete,
                 griffe: crate::m3::griffe_von(f, &geraete),
@@ -388,18 +403,22 @@ pub fn ohne_total(
     menge
 }
 
-/// **Lane 191: the declared syscalls of a unit, by qualified key.**
+/// **The cost-opaque `syscall` edges: declared `syscall`s with no countable
+/// `costs` promise.**
 ///
-/// A `syscall` item carries no `costs` clause by grammar (lane S5) — so a
-/// call through one is cost-opaque, and no omission over such an edge can
-/// ever derive. The pass stays silent there, as over every omission; a
-/// written bound still meets `K003` over it, as before. The views name the
-/// edge instead of a number.
-pub fn syscall_namen(baum: &Programm) -> std::collections::BTreeSet<String> {
+/// The same predicate the refusal asks (`Umgebung::syscall_kosten`, `N322`
+/// where it fails) -- so a derivation the views refuse to settle is exactly
+/// one the checker refuses at the declaration. A costed `syscall` is no
+/// longer opaque: its callers count `1 + fa`, and `abgeleitete_kosten`
+/// settles over it like over any declared edge.
+pub fn syscall_ohne_kosten(baum: &Programm) -> std::collections::BTreeSet<String> {
+    let u = Umgebung::sammle(baum);
     let mut aus = std::collections::BTreeSet::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Syscall(s) = &item.art {
-            aus.insert(crate::umgebung::qualifiziere(modul, &s.name.text));
+            if u.syscall_kosten(modul, s).is_none() {
+                aus.insert(crate::umgebung::qualifiziere(modul, &s.name.text));
+            }
         }
     });
     aus
@@ -432,6 +451,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
     let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    // **The foreign map beside the declared one.** Every `syscall` with a
+    // countable promise (`N322` where none stands) carries its `fa` here, read
+    // through the one predicate the refusal asks -- so a call the pass prices
+    // is exactly one the checker accepts.
+    let mut fremd: HashMap<String, i128> = HashMap::new();
 
     // Erst alle Deklarationen einsammeln: ein Aufruf zaehlt die deklarierten Kosten des
     // Gerufenen, und der kann weiter unten stehen.
@@ -441,6 +465,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                 if let Some(n) = u.konst_wert(modul, c) {
                     deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
                 }
+            }
+        }
+        ItemArt::Syscall(s) => {
+            if let Some(n) = u.syscall_kosten(modul, s) {
+                fremd.insert(crate::umgebung::qualifiziere(modul, &s.name.text), n);
             }
         }
         ItemArt::Lock(l) => {
@@ -506,6 +535,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             deklariert: &deklariert,
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
+            fremd: &fremd,
             lokal,
             geraete: &geraete,
             griffe: crate::m3::griffe_von(f, &geraete),
@@ -778,6 +808,15 @@ struct Rechner<'a> {
     /// **Der eigene Zweig der geteilten Seite** (MESSUNGEN.md, Nebenbefund N3): `held` ist
     /// fuer exklusive Halter gedacht, und der Kostenpass rechnete bis dahin nur den.
     geteilte_haltezeiten: &'a HashMap<String, i128>,
+    /// **The foreign costs (`fa`): every `syscall` with a countable `costs`
+    /// promise, by qualified key.**
+    ///
+    /// Read FIRST at a call (`ruf` below): a foreign edge counts its DECLARED
+    /// cost on top of the §1 dispatch step -- `1 + fa` plus the arguments --
+    /// never slipping through at zero (`fremd_kein_null_*`, `KostenG.lean`
+    /// §13). Without a number here the edge stays unknown (`K003` where the
+    /// caller promises a bound), and the declaration itself meets `N322`.
+    fremd: &'a HashMap<String, i128>,
     /// Die Parameter der Funktion. **Ohne sie hat `c` in `slots of c` keinen Typ**, und die
     /// Domaenenschranke ist unauffindbar -- der Pass haette dann jede Traversierung als
     /// unbekannt gemeldet und damit seine eigene Blindheit gezaehlt.
@@ -1411,6 +1450,33 @@ impl<'a> Rechner<'a> {
                     a.plus(self.ausdruck(e, lokal))
                 });
         }
+        // **A foreign edge counts its DECLARED cost on top of the dispatch
+        // step -- `1 + fa` plus the arguments.**
+        //
+        // The lane-114 rule, extended from "a call counts the DECLARED costs
+        // of the callee" to the calls the old rule never reached: `syscall`
+        // edges were cost-opaque by grammar, so every caller either met
+        // `K003` or stayed silent over an unknown quantity. With the clause
+        // the edge counts `fa` plus the §1 dispatch step -- `fremdStmt` beside
+        // `kostenStmt` (`KostenG.lean` §13) -- and never slips through at zero:
+        // even a declared `0` still traps to the kernel. What carries no
+        // number here falls through to the `K003` below, as before, and the
+        // declaration itself meets `N322`.
+        if let Some(n) = self
+            .u
+            .kandidaten_aufloesbar(self.modul, &pfad_text)
+            .into_iter()
+            .find_map(|k| self.fremd.get(&k).copied())
+        {
+            let mut summe = match n.checked_add(1) {
+                Some(m) => Kosten::Zahl(m),
+                None => Kosten::ueberlauf(Some(r.span)),
+            };
+            for a in &r.argumente {
+                summe = summe.plus(self.ausdruck(a, lokal));
+            }
+            return summe;
+        }
         let uebergang = self
             .u
             .kandidaten_aufloesbar(self.modul, &name)
@@ -1692,7 +1758,10 @@ pub fn bericht(baum: &Programm) -> String {
     let u = Umgebung::sammle(baum);
     // **Lane 191: one reader for the declared numbers** (`kostenkarten` above).
     // What it replaces stood here: the same three maps, built a second time.
-    let (mut deklariert, haltezeiten, geteilte_haltezeiten) = kostenkarten(baum, &u);
+    // The fourth -- the foreign `fa` -- rides the same reader since the
+    // lane-114 clause: a call through a costed `syscall` counts `1 + fa`
+    // here exactly as in the pass.
+    let (mut deklariert, haltezeiten, geteilte_haltezeiten, fremd) = kostenkarten(baum, &u);
     // **Lane 191: derived numbers stand where written ones would.** A call to
     // a callee whose clause is omitted over a computable body counts the
     // derived cost — the same map the pass decides with.
@@ -1730,6 +1799,7 @@ pub fn bericht(baum: &Programm) -> String {
             deklariert: &deklariert,
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
+            fremd: &fremd,
             lokal,
             geraete: &geraete,
             griffe: crate::m3::griffe_von(f, &geraete),
@@ -1841,6 +1911,18 @@ pub fn durchgangskosten(
             }
         }
     });
+    // **The foreign map beside the declared one.** A `retry` over a costed
+    // `syscall` divides by a per-pass cost that counts `1 + fa` -- without
+    // this map the lane-114 clause would price the pass (`K006`) but never
+    // lower the loop (`C001`).
+    let mut fremd: HashMap<String, i128> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, m| {
+        if let ItemArt::Syscall(s) = &item.art {
+            if let Some(n) = u.syscall_kosten(m, s) {
+                fremd.insert(crate::umgebung::qualifiziere(m, &s.name.text), n);
+            }
+        }
+    });
     let leer: HashMap<String, i128> = HashMap::new();
     // **Lane 139 (F4): die Geraetetabelle fuer die fehlbaren Lesungen im Rumpf.** Der
     // Erzeuger teilt durch dieselbe Durchgangszahl wie `K006` -- mit einer anderen waere
@@ -1853,6 +1935,7 @@ pub fn durchgangskosten(
         deklariert: &deklariert,
         haltezeiten: &leer,
         geteilte_haltezeiten: &leer,
+        fremd: &fremd,
         lokal,
         geraete: &geraete,
         griffe: crate::m3::griffe_von(f, &geraete),

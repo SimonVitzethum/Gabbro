@@ -36,13 +36,11 @@
 -- shape of `beispiele/41`). Its `progress` is the write contract itself --
 -- every pass answers under `linux_write_contract`, with `n <= len` or a
 -- reason, so a live kernel ends the loop. A `retry ... until` would say the
--- same with a number, and the number is exactly what the emitter cannot
--- build: a `retry` lowers through a static trip count (`bounded` over the
--- per-pass cost), and a call to a costless callee has no per-pass cost. A
--- syscall carries no `costs` clause by grammar, so no bounded loop can host
--- one today -- `forever` can, and the `leave` is its trip count. That gap
--- (costs on `syscalldecl`) is booked in the lane-114 report, not worked
--- around here. The capacity is 4 on purpose: six pushed bytes flush once
+-- same with a number, and the number is exactly what the `costs` clause on
+-- the `syscalldecl` now supplies: one pass costs `1 + fa` plus its
+-- arguments, so a bounded loop CAN host the call today. This file keeps
+-- `forever` -- the retry form is exercised by the checker's own probes, not
+-- by the driver. The capacity is 4 on purpose: six pushed bytes flush once
 -- midway, so the driver exercises the full-buffer path, not only the end.
 
 module beispiel::buffered_writer {
@@ -80,6 +78,7 @@ syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
     requires len <= 1024
     ensures result <= len
     effects { pure }
+    costs <= 8 ops
     assume linux_write_contract falsifier sonde_write;
 
 -- PUSH one byte. Full means flush first: the flushed count (`CAP`) is the

@@ -2209,6 +2209,14 @@ pub struct SyscallDecl {
     pub requires: Vec<Pred>,
     pub ensures: Vec<Pred>,
     pub effects: Wirkungen,
+    /// **`costs <= n ops` -- the DECLARED cost of one call through this gate.**
+    ///
+    /// The lane-114 gap, closed: a `syscall` without this clause is cost-opaque
+    /// (`N322` in `syscall.rs`), and no bounded loop can host a call through
+    /// it (`beispiele/96`). With the clause a call counts `1 + n` -- the
+    /// declared cost `fa` on top of the §1 dispatch step, never slipping
+    /// through at zero (`fremd_kein_null_*`, `KostenG.lean` §13).
+    pub costs: Option<Expr>,
     pub paarung: SyscallPaarung,
     pub span: Span,
 }

@@ -51,7 +51,13 @@
                                elaborates (meaning, reused) AND fits the max
                                (count, new).
     `modell_lauf_erhalten`   -- over modeled runs the lowered count IS the source
-                               count: one op in, one op out.
+                                count: one op in, one op out.
+    `fremdOp_kosten`         -- a foreign edge costs declared plus one dispatch step.
+    `fremd_kein_null`        -- no zero slip: a foreign edge costs at least one op.
+    `fremd_totalCost`        -- a lone foreign edge totals to declared plus one.
+    `runOps_fremd_within`    -- a foreign edge within bound reports the exact leftover.
+    `runOps_fremd_exceeds`   -- a foreign edge over bound names the budget outcome.
+    `budget_erhaltung_fremd` -- preservation over foreign calls, through `runPass_within`.
 
   Premises (trusted, not proved):
     P1  Declared costs are faithful: `Op.cost` is the cost the declaration
@@ -453,6 +459,73 @@ theorem bounded_respected_gilt (N : Nat) (paesse : List Pass) :
   per_pass_respected ⟨N⟩ paesse
 
 #print axioms Gabbro.Grammatik.bounded_respected_gilt
+
+/-! ## Foreign edges: declared costs, no zero slip
+
+    A foreign edge -- a syscall, an `Ax`/`extern` call -- counts its DECLARED
+    cost `decl` plus one dispatch step (`fremdOp`): the call rule `call counts
+    DECLARED costs` lifted to edges the checker cannot see into. The `+ 1`
+    is the no-zero-slip rule: even a foreign edge declared at `0` still costs
+    one budgeted op, so no foreign call passes the budget silently.
+    `budget_erhaltung_fremd` is the preservation lemma: a pass holding a
+    foreign edge fits the bound exactly when the numbers say so, and an
+    over-budget foreign edge stops with the named outcome -- through
+    `runOps_within`/`runOps_exceeds`/`runPass_within`, nothing re-proved.
+-/
+
+/-- A foreign edge as a budgeted op: declared cost plus one dispatch step. -/
+def fremdOp (decl : Nat) : Op := ⟨decl + 1⟩
+
+/-- A foreign edge costs exactly its declared cost plus one. -/
+theorem fremdOp_kosten (decl : Nat) : (fremdOp decl).cost = decl + 1 := rfl
+
+/-- No zero slip: a foreign edge costs at least one op, even declared at `0`. -/
+theorem fremd_kein_null (decl : Nat) : 1 ≤ (fremdOp decl).cost := by
+  simp only [fremdOp]; omega
+
+/-- A lone foreign edge totals to its declared cost plus one. -/
+theorem fremd_totalCost (decl : Nat) : totalCost [fremdOp decl] = decl + 1 := rfl
+
+/-- A foreign edge within bound executes and reports the exact leftover. -/
+theorem runOps_fremd_within (bound left decl : Nat) (h : decl + 1 ≤ left) :
+    runOps bound left [fremdOp decl] = .ok (left - (decl + 1)) := by
+  apply runOps_within
+  simp only [fremd_totalCost]
+  exact h
+
+/-- A foreign edge over bound stops with the named budget outcome. -/
+theorem runOps_fremd_exceeds (bound left decl : Nat) (h : left < decl + 1) :
+    ∃ needed, runOps bound left [fremdOp decl] = .budget "per_pass.ops" needed bound := by
+  apply runOps_exceeds
+  simp only [fremd_totalCost]
+  exact h
+
+/-- **Budget preservation over foreign calls**: a pass holding a foreign edge
+    of declared cost `decl` runs `ok` whenever `decl + 1` fits the bound --
+    through `runPass_within`, hence under `per_pass_respected`. -/
+theorem budget_erhaltung_fremd (b : Budget) (decl : Nat) (h : decl + 1 ≤ b.perPass) :
+    ∃ left, runPass b [fremdOp decl] = .ok left :=
+  runPass_within b [fremdOp decl] (by simp only [fremd_totalCost]; exact h)
+
+/-- Accept: a foreign edge declared at `0` still costs exactly one op. -/
+example : (fremdOp 0).cost = 1 := rfl
+
+/-- Accept: a foreign edge declared at `3` totals to four ops. -/
+example : totalCost [fremdOp 3] = 4 := rfl
+
+/-- Accept: that edge fits a bound of five with leftover one. -/
+example : runPass ⟨5⟩ [fremdOp 3] = .ok 1 := rfl
+
+/-- Reject: it does not fit a bound of three -- the run names the breach. -/
+example : ∃ needed, runOps 3 3 [fremdOp 3] = .budget "per_pass.ops" needed 3 :=
+  runOps_fremd_exceeds 3 3 3 (by omega)
+
+#print axioms Gabbro.Grammatik.fremdOp_kosten
+#print axioms Gabbro.Grammatik.fremd_kein_null
+#print axioms Gabbro.Grammatik.fremd_totalCost
+#print axioms Gabbro.Grammatik.runOps_fremd_within
+#print axioms Gabbro.Grammatik.runOps_fremd_exceeds
+#print axioms Gabbro.Grammatik.budget_erhaltung_fremd
 
 end Gabbro.Grammatik
 

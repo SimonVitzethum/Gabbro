@@ -724,6 +724,25 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **The countable cost promise of a `syscall` -- the ONE predicate behind
+    /// `N322`, `cost_bound` and the cost maps.**
+    ///
+    /// `Some(n)` exactly when the clause stands and reads as one non-negative
+    /// number (`konst_wert` from the declaring module). Missing, symbolic and
+    /// negative promises are all `None`: a missing clause names no number, a
+    /// symbolic one names no single number the trip-count division
+    /// (`durchgangskosten`) could divide by, and a negative one promises less
+    /// than the dispatch step every foreign edge pays (`fremd_kein_null_*`).
+    /// The refusal (`N322`, `syscall.rs`) and every reader (`kostenkarten`,
+    /// `durchgangskosten`, `syscall_ohne_kosten` in `kosten.rs`) ask here, so
+    /// a promise the checker counts is exactly one it accepts.
+    pub fn syscall_kosten(&self, modul: &str, s: &SyscallDecl) -> Option<i128> {
+        s.costs
+            .as_ref()
+            .and_then(|c| self.konst_wert(modul, c))
+            .filter(|n| *n >= 0)
+    }
+
     /// **Resolves `@lib#func` from the caller's module (lane E2).**
     ///
     /// `lib` goes through the same candidate order every other name uses
@@ -1319,11 +1338,13 @@ impl Umgebung {
                     // **A `syscall` is callable exactly like an `extern fn`.**
                     // The declaration carries its contract (parameters, result,
                     // `or R` channel, `requires`/`ensures`, declared effects);
-                    // the body is the machine, so `rumpf_da` is false and there
-                    // is no `costs` clause to evaluate -- a caller with a cost
-                    // promise meets `K003` over it, as over an `extern fn`
-                    // without `costs`. *Without this entry every call site
-                    // reads the callee as unknown.*
+                    // the body is the machine, so `rumpf_da` is false. The
+                    // `costs` clause (lane-114 gap, closed) is read here exactly
+                    // like at an `fn` (`syscall_kosten` below): with it a call
+                    // counts `1 + n` (`kosten.rs`), without it a caller with a
+                    // cost promise meets `K003` over it -- and the declaration
+                    // itself meets `N322` (`syscall.rs`). *Without this entry
+                    // every call site reads the callee as unknown.*
                     if let Some(r) = &s.fehler {
                         self.fehlerkanaele
                             .insert(q(&s.name.text), (pfad.to_string(), r.text.clone()));
@@ -1344,7 +1365,7 @@ impl Umgebung {
                             .iter()
                             .map(|e| e.art.text())
                             .collect(),
-                        cost_bound: None,
+                        cost_bound: self.syscall_kosten(pfad, s),
                         span: s.span,
                     };
                     self.funktionen.insert(q(&s.name.text), sig);
