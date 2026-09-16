@@ -137,6 +137,159 @@ def kDistB : kD.Fn := KFn.distB
 instance : DecidableEq kD.Fn := inferInstanceAs (DecidableEq KFn)
 instance : DecidableEq kD.Lock := inferInstanceAs (DecidableEq KLock)
 
+abbrev kLA : List (Res kD) := [Res.held (D := kD) KLock.l]
+abbrev kLB : List (Res kD) := [Res.held (D := kD) KLock.m]
+
+theorem kDarfTA : darf kD KTab.t kLA := by
+  intro w h
+  change w ∈ ([Sum.inl KLock.l] : List (KLock ⊕ (Empty × Nat))) at h
+  have e : w = Sum.inl KLock.l := List.mem_singleton.mp h
+  subst e
+  exact List.mem_singleton.mpr rfl
+
+theorem kDarfUB : darf kD KTab.u kLB := by
+  intro w h
+  change w ∈ ([Sum.inl KLock.m] : List (KLock ⊕ (Empty × Nat))) at h
+  have e : w = Sum.inl KLock.m := List.mem_singleton.mp h
+  subst e
+  exact List.mem_singleton.mpr rfl
+
+/-- The index literal `0` (call argument and slot index). -/
+def kJ0 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (Ty.index 4) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+/-- The constants the leaves write. -/
+def kEins {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
+  .weiter (by decide) (by decide) (.lit 1)
+
+def kZwei {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
+  .weiter (by decide) (by decide) (.lit 2)
+
+/-- The call-site typing of every call. -/
+theorem kHaeltWriteA : (kD.signatur kWriteA).haelt = [KLock.l] := rfl
+
+theorem kHaeltWriteB : (kD.signatur kWriteB).haelt = [KLock.m] := rfl
+
+theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
+    (hw : ∀ t, (kD.signatur callee).schreibt t = true → (vertragVon kD caller).schreibt t = true)
+    (hh : ∀ L, L ∈ (kD.signatur callee).haelt → Res.held L ∈ Λ)
+    (hx : ∀ L, Res.held L ∈ Λ → L ∈ (kD.signatur callee).haelt)
+    (hk : (kD.signatur callee).konsumiert = []) (hbc : (kD.signatur caller).boden = none) :
+    RufPasst kD (vertragVon kD caller) (kD.signatur callee) Λ where
+  hw := hw
+  hg := fun g => nomatch g
+  hb := fun c hc => by
+    have : (vertragVon kD caller).boden = (kD.signatur caller).boden := rfl
+    rw [this, hbc] at hc; cases hc
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hh := hh
+  hx := fun L hL hn => absurd (hx L hL) hn
+
+theorem kHpWriteA : RufPasst kD (vertragVon kD kDistA) (kD.signatur kWriteA) kLA :=
+  kHp kDistA kWriteA (fun t h => by cases t <;> simp_all [kD, kWriteA, kDistA, Deklaration.signatur,
+    kSigNr, kSigOf, kSig, vertragVon, Vertrag.vonSig])
+    (fun L hL => by cases L with
+      | l => exact List.mem_singleton.mpr rfl
+      | m => rw [kHaeltWriteA] at hL; exact KLock.noConfusion (List.mem_singleton.mp hL))
+    (fun L hL => by
+      have h2 : Res.held L = Res.held KLock.l := List.mem_singleton.mp hL
+      have h3 : L = KLock.l := by cases h2; rfl
+      rw [h3, kHaeltWriteA]; exact List.mem_singleton.mpr rfl) rfl rfl
+
+theorem kHpWriteB : RufPasst kD (vertragVon kD kDistB) (kD.signatur kWriteB) kLB :=
+  kHp kDistB kWriteB (fun t h => by cases t <;> simp_all [kD, kWriteB, kDistB, Deklaration.signatur,
+    kSigNr, kSigOf, kSig, vertragVon, Vertrag.vonSig])
+    (fun L hL => by cases L with
+      | l => rw [kHaeltWriteB] at hL; exact KLock.noConfusion (List.mem_singleton.mp hL)
+      | m => exact List.mem_singleton.mpr rfl)
+    (fun L hL => by
+      have h2 : Res.held L = Res.held KLock.m := List.mem_singleton.mp hL
+      have h3 : L = KLock.m := by cases h2; rfl
+      rw [h3, kHaeltWriteB]; exact List.mem_singleton.mpr rfl) rfl rfl
+
+/-- `write_a(i)`: `T.slots[i].v = 1;`. -/
+def kRumpfWriteA : Endblock kD (vertragVon kD kWriteA) false [Ty.index 4] kLA :=
+  .cons (.assignSlot KTab.t () (.var .hier) kEins rfl kDarfTA)
+    (.ret .keine (by rfl))
+
+/-- `write_b(i)`: `U.slots[i].v = 2;`. -/
+def kRumpfWriteB : Endblock kD (vertragVon kD kWriteB) false [Ty.index 4] kLB :=
+  .cons (.assignSlot KTab.u () (.var .hier) kZwei rfl kDarfUB)
+    (.ret .keine (by rfl))
+
+/-- The call `write_a(0)` inside `distribute_a`'s lock. -/
+def kRufA : Stmt kD (vertragVon kD kDistA) false [] kLA kLA :=
+  .call kWriteA (.cons kJ0 .nil) kHpWriteA rfl
+
+/-- `distribute_a`'s `locks L { write_a(0); }`. -/
+def kLocksA : Stmt kD (vertragVon kD kDistA) false [] [] [] :=
+  .locks KLock.l (fun _ h => nomatch h) (.cons kRufA .nil)
+
+/-- `distribute_a`, as in the source. -/
+def kRumpfDistA : Endblock kD (vertragVon kD kDistA) false [] [] :=
+  .cons kLocksA (.ret .keine List.Perm.nil)
+
+/-- The call `write_b(0)` inside `distribute_b`'s lock. -/
+def kRufB : Stmt kD (vertragVon kD kDistB) false [] kLB kLB :=
+  .call kWriteB (.cons kJ0 .nil) kHpWriteB rfl
+
+/-- `distribute_b`'s `locks M { write_b(0); }`. -/
+def kLocksB : Stmt kD (vertragVon kD kDistB) false [] [] [] :=
+  .locks KLock.m (fun _ h => nomatch h) (.cons kRufB .nil)
+
+/-- `distribute_b`, as in the source. -/
+def kRumpfDistB : Endblock kD (vertragVon kD kDistB) false [] [] :=
+  .cons kLocksB (.ret .keine List.Perm.nil)
+
+/-- **The program of `beispiele/109`**: the source's bodies; trivial contracts
+    (the source declares no `requires`/`ensures` on these four functions). -/
+def kP : Programm kD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | .writeA => kRumpfWriteA
+    | .distA => kRumpfDistA
+    | .writeB => kRumpfWriteB
+    | .distB => kRumpfDistB
+
+def kFs : List kD.Fn := [kWriteA, kDistA, kWriteB, kDistB]
+
+theorem kFs_voll : ∀ g : kD.Fn, g ∈ kFs := by
+  intro g
+  cases g
+  · exact List.mem_cons_self
+  · exact List.mem_cons_of_mem _ List.mem_cons_self
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+
+/-- **The lock family**: `L` protects `T`, `M` protects `U`; the source
+    declares no invariant, so both are trivially true. -/
+def kSI : SperrInv kD :=
+  ⟨fun | KLock.l => [.inl KTab.t] | KLock.m => [.inl KTab.u], fun _ _ => true⟩
+
+theorem kSI_ok : SperrInvOk kSI := by
+  refine ⟨fun L c hc => ?_, fun L s s' h => rfl⟩
+  · cases L
+    · rw [List.mem_singleton.mp hc]; exact List.mem_singleton.mpr rfl
+    · rw [List.mem_singleton.mp hc]; exact List.mem_singleton.mpr rfl
+
+theorem kLocks_voll : ∀ L : kD.Lock, L ∈ ([KLock.l, KLock.m] : List kD.Lock) := fun L => by
+  cases L
+  · exact List.mem_cons_self
+  · exact List.mem_cons_of_mem _ List.mem_cons_self
+
+def kCs : List (kD.Tab ⊕ kD.Glob) := [.inl KTab.t, .inl KTab.u]
+
+theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
+  rcases c with t | g
+  · cases t <;> simp [kCs]
+  · exact nomatch g
+
+/-- **The checker accepts the program** with its declared starts
+    `distribute_a`, `distribute_b` (the two entry dispatch roots). -/
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] = true := by decide
+
 end K109
 
 end Gabbro.Grammatik
