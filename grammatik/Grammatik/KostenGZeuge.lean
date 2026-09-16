@@ -15,6 +15,7 @@
 
 import Grammatik.KostenG
 import Grammatik.ZielOrtZeuge
+import Grammatik.AxiomVertrag
 
 namespace Gabbro.Grammatik
 
@@ -273,6 +274,43 @@ theorem frame_schritte_beschraenkt_zeuge_schleife :
     frame_schritte_beschraenkt hP rufOF 0 0 (initF 0).1 1 hP_tief
       (eintritt_start hP spF initF 0) lauf hA⟩
 
+/-! ## 5. Foreign edges (§13 of `KostenG.lean`)
+
+    `axD` (AxiomVertrag.lean) has `Ax = Unit` and `axIncBlock` is
+    `let r = inc(); return r` -- a real foreign site. At declared `3` it
+    counts `3`; at declared `0` the bind still costs at least one step (no
+    zero slip). On `zP` (whose `Ax` is `Empty`, hence foreign-free) the
+    foreign-inclusive depth bound coincides with the §1 bound, and the §2
+    witness run of `wrap` satisfies `fremd_budget_erhalten` with all premises
+    holding jointly. -/
+
+/-- The foreign site counts its declared cost: `inc` at `3` costs `3`. -/
+theorem fremd_zeuge_axInc : fremdBlock (fun _ => 3) 0 axIncBlock = 3 := rfl
+
+/-- The foreign-inclusive block cost splits into §1 plus foreign: `4 + 3`. -/
+theorem fremd_kostenF_zeuge :
+    kostenBlockF (fun _ => 3) (fun _ => 0) 0 axIncBlock
+      = kostenBlock (fun _ => 0) 0 axIncBlock + 3 := rfl
+
+/-- No zero slip on a real foreign site: `inc` declared at `0` still costs. -/
+theorem fremd_kein_null_zeuge :
+    1 ≤ kostenBlockF (fun _ => 0) (fun _ => 0) 0 axIncBlock := by decide
+
+/-- **`fremd_budget_erhalten_zeuge`.** On `zP` the foreign layer is empty
+    (`Ax = Empty`), so the foreign-inclusive bound is the §1 bound -- and the
+    witness run of `wrap` (7 own steps) satisfies the foreign preservation
+    lemma with admission, entry and activity holding jointly. -/
+theorem fremd_budget_erhalten_zeuge :
+    fremdEnd (fun a : zD.Ax => nomatch a) 0 (zP.rumpf zWrap) = 0 ∧
+    kostenTiefF zP (fun a : zD.Ax => nomatch a) 0 2 zWrap
+      = kostenTief zP 0 2 zWrap ∧
+    ∃ (M3 M10 : RufMaschineG zD) (lauf : SegLauf zP zO 0 M3 M10),
+      segZaehle lauf 1 = 7 ∧
+      segZaehle lauf 1 ≤ kostenTiefF zP (fun a : zD.Ax => nomatch a) 0 2 zWrap := by
+  obtain ⟨M3, M10, _, _, rho, s0, lauf, _, _, hr, hE, hA, _, hz, _, _, _, _, _, _⟩ := zP_laeufe
+  refine ⟨by decide, by decide, M3, M10, lauf, hz,
+    fremd_budget_erhalten zP zO 0 _ 1 zWrap 1 zP_tief_wrap hE lauf hA⟩
+
 end Gabbro.Grammatik
 
 /-! ## CUTS:
@@ -286,7 +324,15 @@ end Gabbro.Grammatik
     waiting the bound does not count.
   - The loop witness has one try (`retry 1`); a `traverse` or `forever`
     run is not witnessed (the step lemma covers them: `schrittArt`).
+  - The foreign witness counts a real foreign site (`axIncBlock` at
+    declared `3` and at declared `0`); the preservation witness reuses the
+    `wrap` run of §2 over the foreign-free `zP`, where the two bounds
+    coincide by `decide`.
 -/
 
 #print axioms Gabbro.Grammatik.frame_schritte_beschraenkt_zeuge
 #print axioms Gabbro.Grammatik.frame_schritte_beschraenkt_zeuge_schleife
+#print axioms Gabbro.Grammatik.fremd_zeuge_axInc
+#print axioms Gabbro.Grammatik.fremd_kostenF_zeuge
+#print axioms Gabbro.Grammatik.fremd_kein_null_zeuge
+#print axioms Gabbro.Grammatik.fremd_budget_erhalten_zeuge

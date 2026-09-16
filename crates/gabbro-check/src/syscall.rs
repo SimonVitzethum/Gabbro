@@ -16,6 +16,7 @@
 //! | `N066` | every named register is an x86_64 general register | gift: unknown register |
 //! | `N067` | the `errors` map is total over the listed errnos and every target is a case of the `or R` channel | gift: errno mapped to an undeclared reason |
 //! | `N068` | a `kernel` pairing is refused until the pairing check lands | gift: kernel path |
+//! | `N322` | the `syscall` declares a countable `costs` promise (the lane-114 gap, closed) | gift 986: costless syscall |
 //! | `A006` | the syscall names no sealed architecture -- x86_64 only | gift: arch mismatch |
 //!
 //! Three questions belong to existing rules and are NOT re-issued here: the
@@ -44,6 +45,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         registerkarte(s, absagen);
         fehlertabelle(baum, modul, s, absagen);
         bauart(s, absagen);
+        kostenversprechen(baum, modul, s, absagen);
     });
 }
 
@@ -322,4 +324,71 @@ fn bauart(s: &SyscallDecl, absagen: &mut Absagen) {
             ),
         );
     }
+}
+
+/// **`N322` -- the `syscall` declares a countable `costs` promise.**
+///
+/// The lane-114 gap, closed at the declaration: a foreign edge counts its
+/// DECLARED cost `fa` on top of the §1 dispatch step (`fremd_kein_null_*`,
+/// `KostenG.lean` §13), so a `syscall` without a countable promise is
+/// cost-opaque -- no bounded loop can host a call through it (`beispiele/96`)
+/// and a caller with a cost promise meets `K003` over it. Three shapes, one
+/// issuance site below: a missing clause, a clause the pass cannot read as
+/// one number, and a bound below zero (less than the dispatch step every
+/// foreign edge pays).
+///
+/// What is NOT demanded here is HONESTY: `fa` is a promise about the kernel,
+/// like `costs` at an `extern fn` -- the checker counts it, it does not
+/// re-measure it. And symbolic bounds (`64 + 12 * lenof(m)`, readable at an
+/// `fn`) stay refused: the trip-count division (`durchgangskosten`) divides
+/// by one number, and a symbol is none.
+fn kostenversprechen(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    if u.syscall_kosten(modul, s).is_some() {
+        return;
+    }
+    let (span, detail) = match &s.costs {
+        None => (
+            s.name.span,
+            "declares no `costs` -- a call through it counts nothing, and no \
+             bounded loop can host one"
+                .to_string(),
+        ),
+        Some(c) => match u.konst_wert(modul, c) {
+            None => (
+                c.span,
+                "promises costs the pass cannot read as one number -- `40`, \
+                 `NSLOTS * 8`, never `n * 100`"
+                    .to_string(),
+            ),
+            Some(n) => (
+                c.span,
+                format!(
+                    "promises `{n} ops`, below the dispatch step every foreign edge pays"
+                ),
+            ),
+        },
+    };
+    // **The one issuance site of this rule.** Missing, unreadable and negative
+    // are mutually exclusive -- one declaration carries one clause -- so one
+    // fault falls here at most once.
+    absagen.schiebe(
+        Absage::fehler(
+            "N322",
+            span,
+            format!(
+                "`{}` carries no countable cost promise -- {}",
+                s.name.text, detail
+            ),
+        )
+        .mit_notiz(
+            "a foreign edge counts its DECLARED cost on top of the dispatch step \
+             (`KostenG.lean` §13: `fa` plus dispatch, never zero) -- without a \
+             number here there is nothing to count",
+        )
+        .mit_notiz(
+            "the clause stands behind `effects` in fixed order: \
+             `effects { … } costs <= N ops assume … ;`",
+        ),
+    );
 }

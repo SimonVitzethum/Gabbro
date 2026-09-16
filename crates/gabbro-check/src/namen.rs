@@ -41,6 +41,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
+    sperrprimitiv_vertrag(baum, absagen);
     bibliothek_pruefen(baum, absagen);
     profil_pruefen(baum, absagen);
     intrinsik_name_vergeben(baum, absagen);
@@ -141,6 +142,509 @@ fn erzeugter_name_zweimal(baum: &Programm, absagen: &mut Absagen) {
             );
         }
     }
+}
+
+/// **`N323` -- an own lock primitive owes the lock contract (`LockGiltAn`).**
+///
+/// `N042` next door refuses the NAME: `lock TOR` beside any `TOR_nimm` is one C
+/// symbol for two declarations. This rule reads the BODY where there is one to
+/// read -- a bodied `TOR_nimm`/`TOR_gib` (an `impl fn` with a block) is a LOCK
+/// IMPLEMENTATION, and `grammatik/Grammatik/SperrImpl.lean` says what it owes:
+/// every behaviour of the primitive is a behaviour of `sperrAbstrakt`
+/// (`LockImplVertrag`), demanded per lock as `LockGiltAn`.
+///
+/// (Reserved as `N321`; that code is taken by `namen.asm_never` since
+/// 2026-09-16 -- `beispiele/gift/984` -- and `N322` by the syscall-costs rule
+/// (`syscall.rs`, gift 986) the same week, so this rule carries the next free
+/// number.)
+///
+/// Three legs, one per aspect of the Lean contract (§2 of that file):
+///
+/// * **atomicity** (`lockVertrag_atomar`): the body stores no program memory, takes
+///   no lock and calls nothing but pure functions of this unit (bit intrinsics
+///   included -- they lower to `__builtin_*` and touch no state). A store to a
+///   declared atomic, including `Z = e publishes nothing`, is the holder entry,
+///   not program memory.
+/// * **order** (`lockVertrag_ordnung_nimm`, `lockVertrag_ordnung_gib`): the body
+///   reads a declared atomic. `nimm` fires only on a free lock, `gib` only for
+///   the holder -- a body that never consults the holder state can show neither.
+/// * **hold time** (`lockVertrag_halte_nimm`, `lockVertrag_halte_gib`): the body
+///   writes a declared atomic. The acquire must make the caller the holder, the
+///   release must free exactly that entry -- a blind store releases like `rohLP`,
+///   and `rohLP_verletzt` says that shape is not the contract.
+///
+/// **What stays where it was.** A bodiless `extern fn TOR_nimm` keeps `N042`
+/// alone: a foreign body is trust base, not a checked body (the emitter never
+/// defines the prototype, same as `write_cr3`). `N042` also keeps firing beside
+/// this rule -- the contract check does not move the name. An `asm` body is
+/// skipped for the same reason as an `extern` one: sealed, not checked.
+///
+/// **What this rule does NOT check** (each booked, none silent): FIFO order
+/// (`ticket_fifo` is a ticket-only strength, not safety); wraparound at 2^32
+/// (a CUT of `CTicket.lean`); exclusion across steps (`lockVertrag_exklusiv`
+/// is emergent, not re-proved per body); the arity (a non-`void(void)` shape
+/// is `N042` plus `cc`); calls are trusted by their declared `effects`, not
+/// re-verified; matching is by short name unit-wide, exactly `N042`'s
+/// population. *A sufficient condition with its residue named, not a decision
+/// procedure.* `laufzeit/sperre.gab` is the shape that passes.
+///
+/// Measured before the build: no file under `beispiele/` pairs a `lock` with a
+/// bodied `{Lock}_nimm`/`{Lock}_gib`, so the rule costs the corpus nothing --
+/// `beispiele/gift/983` is the probe, `/988` the foreign-shape control.
+fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
+    // **The locks of this unit, by short name** -- mirrors `N042`'s population:
+    // `{Lock}_nimm`/`{Lock}_gib`, plus the shared pair where the declaration
+    // carries one (the emitter writes those prototypes only then).
+    let mut sperren: BTreeMap<String, bool> = BTreeMap::new();
+    // **The atomics of this unit, by short name** -- the only state a primitive
+    // may consult and change.
+    let mut atomare: HashSet<String> = HashSet::new();
+    // **The pure functions of this unit, by short name** -- the only calls that
+    // do not cross the atomicity leg. `effects { pure }` and nothing else.
+    let mut rein: HashSet<String> = HashSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Lock(l) => {
+            sperren.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
+        }
+        ItemArt::Atomic(a) => {
+            atomare.insert(a.name.text.clone());
+        }
+        ItemArt::Funktion(f) => {
+            if let Some(w) = &f.effects {
+                if !w.liste.is_empty()
+                    && w.liste.iter().all(|e| matches!(e.art, WirkungArt::Rein))
+                {
+                    rein.insert(f.name.text.clone());
+                }
+            }
+        }
+        _ => {}
+    });
+    if sperren.is_empty() {
+        return;
+    }
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        // **The role, or no role.** Shared suffixes first: `{L}_nimm_geteilt`
+        // does not end in `_nimm`, but the order documents the intent.
+        let mut rolle: Option<(&str, bool)> = None;
+        for (sperre, geteilt) in &sperren {
+            if *geteilt && f.name.text == format!("{sperre}_nimm_geteilt") {
+                rolle = Some((sperre, true));
+                break;
+            }
+            if *geteilt && f.name.text == format!("{sperre}_gib_geteilt") {
+                rolle = Some((sperre, false));
+                break;
+            }
+            if f.name.text == format!("{sperre}_nimm") {
+                rolle = Some((sperre, true));
+                break;
+            }
+            if f.name.text == format!("{sperre}_gib") {
+                rolle = Some((sperre, false));
+                break;
+            }
+        }
+        let Some((sperre, nimmt)) = rolle else {
+            return;
+        };
+        let mut lokal: HashSet<String> = HashSet::new();
+        for p in &f.parameter {
+            lokal.insert(p.name.text.clone());
+        }
+        bindungen_sammeln(b, &mut lokal);
+        let mut fakten = PrimFakten::default();
+        rumpf_falten(b, &atomare, &lokal, &rein, &mut fakten);
+        if fakten.fremd.is_empty()
+            && fakten.sperrt.is_empty()
+            && fakten.rufe.is_empty()
+            && fakten.liest
+            && fakten.schreibt
+        {
+            return;
+        }
+        let art = if nimmt { "acquire" } else { "release" };
+        let mut absage = Absage::fehler(
+            "N323",
+            f.name.span,
+            format!(
+                "`{}` is the {art} primitive of `lock {sperre}`, and its body does not meet \
+                 the lock contract",
+                f.name.text
+            ),
+        );
+        for (ort, _) in &fakten.fremd {
+            absage = absage.mit_notiz(format!(
+                "it stores `{ort}` -- program memory outside the lock (`lockVertrag_atomar` \
+                 in `grammatik/Grammatik/SperrImpl.lean`: a contract-faithful step changes \
+                 only its own lock's holder entry)"
+            ));
+        }
+        for _ in &fakten.sperrt {
+            absage = absage.mit_notiz(
+                "it takes a lock inside the primitive -- the contract grants no re-entry: \
+                 `sperrAbstrakt` is one holder entry per lock, not a discipline the \
+                 implementation may re-enter"
+                    .to_string(),
+            );
+        }
+        for (ruf, _) in &fakten.rufe {
+            absage = absage.mit_notiz(format!(
+                "it calls `{ruf}`, which is not a pure function of this unit -- atomicity \
+                 does not cross that call (`lockVertrag_atomar`); bit intrinsics \
+                 (`clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, `rotr`, `bswap`) are the \
+                 only foreign spellings allowed, and they touch no state"
+            ));
+        }
+        if !fakten.liest {
+            absage = absage.mit_notiz(format!(
+                "it never reads a declared atomic -- {} (`lockVertrag_ordnung_{}` in \
+                 `grammatik/Grammatik/SperrImpl.lean`); a body that never consults the \
+                 holder state can show neither",
+                if nimmt {
+                    "`nimm` fires only on a free lock"
+                } else {
+                    "`gib` fires only for the holder"
+                },
+                if nimmt { "nimm" } else { "gib" },
+            ));
+        }
+        if !fakten.schreibt {
+            absage = absage.mit_notiz(format!(
+                "it never writes a declared atomic -- {} (`lockVertrag_halte_{}`); a body \
+                 that stores nothing releases like `rohLP`, and `rohLP_verletzt` says that \
+                 shape is not the contract",
+                if nimmt {
+                    "the acquire must make the caller the holder"
+                } else {
+                    "the release must free exactly that entry"
+                },
+                if nimmt { "nimm" } else { "gib" },
+            ));
+        }
+        absage = absage
+            .mit_notiz(
+                "write the primitive over declared atomics only -- `laufzeit/sperre.gab` is \
+                 the shape that passes: fetch-add, a spin on the served ticket, a pure step, \
+                 `publishes nothing` at the store",
+            )
+            .mit_notiz(
+                "the name beside the lock stays refused as `N042`: one C symbol, two \
+                 declarations -- the contract check does not move the name, and a foreign \
+                 body (`extern fn`) stays `N042` alone",
+            );
+        absagen.schiebe(absage);
+    });
+}
+
+/// What one lock-primitive body owes, folded out of its statements.
+#[derive(Default)]
+struct PrimFakten {
+    /// Stores outside the lock: program memory (`place text`, statement span).
+    fremd: Vec<(String, Span)>,
+    /// `locks` blocks inside the primitive.
+    sperrt: Vec<Span>,
+    /// Calls no pure in-unit function answers (`callee text`, span).
+    rufe: Vec<(String, Span)>,
+    /// Reads a declared atomic.
+    liest: bool,
+    /// Writes a declared atomic.
+    schreibt: bool,
+}
+
+/// **The binders of a body, before the facts.** A store to a `let` local is
+/// thread-local, not program memory -- but only where the name IS bound here.
+/// Runs first so a use never meets a binder collected later in source order.
+fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => {
+                lokal.insert(l.name.text.clone());
+            }
+            StmtArt::LetSonst(x) => {
+                lokal.insert(x.name.text.clone());
+                lokal.insert(x.fehlername.text.clone());
+            }
+            StmtArt::Alloc(a) => {
+                lokal.insert(a.name.text.clone());
+            }
+            StmtArt::AwaitLoad(a) => {
+                lokal.insert(a.name.text.clone());
+            }
+            StmtArt::Exchange(e) => {
+                if let XForm::Update { binder, .. } = &e.form {
+                    lokal.insert(binder.text.clone());
+                }
+            }
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(t) = sch.as_ref() {
+                    lokal.insert(t.variable.text.clone());
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    if let Some(n) = &z.binder {
+                        lokal.insert(n.text.clone());
+                    }
+                }
+            }
+            StmtArt::Zuweisung(_)
+            | StmtArt::Wenn(_)
+            | StmtArt::Bricht(_)
+            | StmtArt::Narrow(_)
+            | StmtArt::Sperrt(_)
+            | StmtArt::Observiert(_)
+            | StmtArt::Leave(_)
+            | StmtArt::Next(_)
+            | StmtArt::Publish(_)
+            | StmtArt::Return(_)
+            | StmtArt::Ruf(_)
+            | StmtArt::LibraryCall(_)
+            | StmtArt::ResetArena(_) => {}
+        }
+        for u in crate::unterbloecke(s) {
+            bindungen_sammeln(u, lokal);
+        }
+    }
+}
+
+/// Fold one body into [`PrimFakten`] -- exhaustive over `StmtArt`, no `_` arm,
+/// so a new statement form is a compile error here, not a hole the primitive
+/// inherits.
+fn rumpf_falten(
+    b: &Block,
+    atomare: &HashSet<String>,
+    lokal: &HashSet<String>,
+    rein: &HashSet<String>,
+    fakten: &mut PrimFakten,
+) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => knoten_ausdruck(&l.wert, atomare, rein, fakten),
+            StmtArt::LetSonst(x) => {
+                match &x.quelle {
+                    LetQuelle::Ruf(r) => {
+                        ruf_bewerten(r, s.span, rein, fakten);
+                        for a in &r.argumente {
+                            knoten_ausdruck(a, atomare, rein, fakten);
+                        }
+                    }
+                    LetQuelle::Ort(o) => ort_liest(o, atomare, fakten),
+                }
+                rumpf_falten(&x.sonst, atomare, lokal, rein, fakten);
+            }
+            StmtArt::Zuweisung(z) => {
+                if lokal.contains(&z.ziel.basis.text) {
+                    // Thread-local -- the holder entry is untouched either way.
+                } else if atomare.contains(&z.ziel.basis.text) {
+                    fakten.schreibt = true;
+                } else {
+                    fakten.fremd.push((z.ziel.text(), s.span));
+                }
+                knoten_ausdruck(&z.wert, atomare, rein, fakten);
+            }
+            StmtArt::Wenn(w) => {
+                for (bedingung, rumpf) in &w.zweige {
+                    knoten_ausdruck(bedingung, atomare, rein, fakten);
+                    rumpf_falten(rumpf, atomare, lokal, rein, fakten);
+                }
+                if let Some(sonst) = &w.sonst {
+                    rumpf_falten(sonst, atomare, lokal, rein, fakten);
+                }
+            }
+            StmtArt::Match(m) => {
+                knoten_ausdruck(&m.gegenstand, atomare, rein, fakten);
+                for z in &m.zweige {
+                    rumpf_falten(&z.rumpf, atomare, lokal, rein, fakten);
+                }
+            }
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => {
+                    for g in t.gegenstand.iter().chain(t.mass.iter()) {
+                        knoten_ausdruck(g, atomare, rein, fakten);
+                    }
+                    rumpf_falten(&t.rumpf, atomare, lokal, rein, fakten);
+                }
+                Schleife::Retry(r) => {
+                    for p in r.bis.iter() {
+                        knoten_praedikat(p, atomare, rein, fakten);
+                    }
+                    rumpf_falten(&r.rumpf, atomare, lokal, rein, fakten);
+                }
+                Schleife::Forever(x) => {
+                    // **`je_durchgang` runs every pass** -- `eigene_ausdruecke` does not
+                    // list it, so it is read here and not there.
+                    knoten_ausdruck(&x.je_durchgang, atomare, rein, fakten);
+                    rumpf_falten(&x.rumpf, atomare, lokal, rein, fakten);
+                }
+            },
+            StmtArt::Bricht(x) => rumpf_falten(&x.rumpf, atomare, lokal, rein, fakten),
+            StmtArt::Narrow(x) => {
+                ort_liest(&x.ort, atomare, fakten);
+                rumpf_falten(&x.sonst, atomare, lokal, rein, fakten);
+            }
+            StmtArt::Sperrt(x) => {
+                fakten.sperrt.push(s.span);
+                rumpf_falten(&x.rumpf, atomare, lokal, rein, fakten);
+            }
+            StmtArt::Observiert(x) => {
+                rumpf_falten(&x.rumpf, atomare, lokal, rein, fakten);
+            }
+            StmtArt::Publish(p) => {
+                if atomare.contains(&p.ziel.basis.text) {
+                    fakten.schreibt = true;
+                } else {
+                    fakten.fremd.push((p.ziel.text(), s.span));
+                }
+                knoten_ausdruck(&p.wert, atomare, rein, fakten);
+                if let Nutzlast::Orte(orte) = &p.nutzlast {
+                    for o in orte {
+                        ort_liest(o, atomare, fakten);
+                    }
+                }
+            }
+            StmtArt::AwaitLoad(a) => {
+                ort_liest(&a.quelle, atomare, fakten);
+            }
+            StmtArt::Exchange(e) => {
+                if lokal.contains(&e.ort.basis.text) {
+                    // Thread-local RMW -- touches neither program memory nor a holder.
+                } else if atomare.contains(&e.ort.basis.text) {
+                    fakten.liest = true;
+                    fakten.schreibt = true;
+                } else {
+                    fakten.fremd.push((e.ort.text(), s.span));
+                }
+                match &e.form {
+                    XForm::Update { rumpf, .. } => {
+                        rumpf_falten(rumpf, atomare, lokal, rein, fakten);
+                    }
+                    XForm::Vergleich { wert, bedingung, .. } => {
+                        knoten_ausdruck(wert, atomare, rein, fakten);
+                        knoten_praedikat(bedingung, atomare, rein, fakten);
+                    }
+                }
+            }
+            StmtArt::Return(e) => {
+                for x in e.iter() {
+                    knoten_ausdruck(x, atomare, rein, fakten);
+                }
+            }
+            StmtArt::Ruf(r) => {
+                ruf_bewerten(r, s.span, rein, fakten);
+                for a in &r.argumente {
+                    knoten_ausdruck(a, atomare, rein, fakten);
+                }
+            }
+            StmtArt::LibraryCall(r) => {
+                fakten.rufe.push((
+                    format!("@{}#{}", r.library.text, r.function.text),
+                    s.span,
+                ));
+                for a in &r.args {
+                    knoten_ausdruck(a, atomare, rein, fakten);
+                }
+            }
+            StmtArt::Alloc(a) => {
+                fakten.fremd.push((format!("arena {}", a.tisch.text), s.span));
+                knoten_ausdruck(&a.wert, atomare, rein, fakten);
+                if let Some(sonst) = &a.sonst {
+                    rumpf_falten(sonst, atomare, lokal, rein, fakten);
+                }
+            }
+            StmtArt::ResetArena(i) => {
+                fakten.fremd.push((format!("arena {}", i.text), s.span));
+            }
+            StmtArt::Leave(_) | StmtArt::Next(_) => {}
+        }
+    }
+}
+
+/// Every atomic mention inside one expression -- reads consult the holder
+/// state, calls must answer to a pure function. Classification only: descent
+/// is `crate::alle_ausdruecke`'s business, so a new `ExprArt` still reaches
+/// every node below it.
+fn knoten_ausdruck(
+    e: &Expr,
+    atomare: &HashSet<String>,
+    rein: &HashSet<String>,
+    fakten: &mut PrimFakten,
+) {
+    for x in crate::alle_ausdruecke(e) {
+        match &x.art {
+            ExprArt::Ort(o) => ort_liest(o, atomare, fakten),
+            ExprArt::Ruf(r) => {
+                ruf_bewerten(r, x.span, rein, fakten);
+            }
+            ExprArt::LibraryCall(r) => {
+                fakten.rufe.push((
+                    format!("@{}#{}", r.library.text, r.function.text),
+                    x.span,
+                ));
+            }
+            ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::FnWert(_)
+            | ExprArt::Klammer(_)
+            | ExprArt::Eingebaut(_)
+            | ExprArt::Alt(_)
+            | ExprArt::Ergebnis
+            | ExprArt::Grund { .. }
+            | ExprArt::Zaehle { .. }
+            | ExprArt::Unaer(..)
+            | ExprArt::Binaer(..)
+            | ExprArt::ArrayLit(_) => {}
+        }
+    }
+}
+
+fn knoten_praedikat(
+    p: &Pred,
+    atomare: &HashSet<String>,
+    rein: &HashSet<String>,
+    fakten: &mut PrimFakten,
+) {
+    for e in crate::ausdruecke_im_praedikat(p) {
+        knoten_ausdruck(e, atomare, rein, fakten);
+    }
+}
+
+fn ort_liest(o: &Ort, atomare: &HashSet<String>, fakten: &mut PrimFakten) {
+    if atomare.contains(&o.basis.text) {
+        fakten.liest = true;
+    }
+}
+
+/// A call inside the primitive: answered by a pure in-unit function or a bit
+/// intrinsic, or it carries the body across the atomicity leg.
+fn ruf_bewerten(r: &Ruf, span: Span, rein: &HashSet<String>, fakten: &mut PrimFakten) {
+    if crate::ist_praedikatswort(r) {
+        fakten.rufe.push((r.ziel.text(), span));
+        return;
+    }
+    let Some(pfad) = r.path() else {
+        fakten.rufe.push((r.ziel.text(), span));
+        return;
+    };
+    let Some(name) = pfad.teile.last() else {
+        fakten.rufe.push((r.ziel.text(), span));
+        return;
+    };
+    if crate::ist_bitintrinsik(&name.text) {
+        return;
+    }
+    if rein.contains(&name.text) {
+        return;
+    }
+    fakten.rufe.push((r.ziel.text(), span));
 }
 
 /// **`N041` -- a name C has already taken.**
@@ -6249,5 +6753,101 @@ fn sammle_lineare(items: &[Item], aus: &mut Vec<String>) {
             ItemArt::Typ(t) if t.linear && !t.ghost => aus.push(t.name.text.clone()),
             _ => {}
         }
+    }
+}
+
+/// **Snippet tests for `N323` (`sperrprimitiv_vertrag`).**
+///
+/// The gift probes (`beispiele/gift/983`, `/988`) pin the verdicts file by file;
+/// these pin the four directions in one place: the violating body falls, the
+/// foreign shape stays `N042` alone, a lock without an own primitive is silent,
+/// and the atomic read+write shape passes.
+#[cfg(test)]
+mod sperrprimitiv_tests {
+    use gabbro_syntax::diag::Stufe;
+
+    fn codes_fuer(quelle: &str) -> Vec<(&'static str, Stufe)> {
+        let (baum, mut absagen) = gabbro_syntax::lies("<n322>", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen.absagen.iter().map(|a| (a.code, a.stufe)).collect()
+    }
+
+    fn faellt(codes: &[(&'static str, Stufe)], code: &str) -> bool {
+        codes.iter().any(|(k, s)| *k == code && *s == Stufe::Fehler)
+    }
+
+    const RUMPF_OHNE_VERTRAG: &str = "module m {\n\
+        pub static mut spur : u32 = 0;\n\
+        pub lock TOR protects { spur } rank 0 held <= 8 ops;\n\
+        pub impl fn TOR_nimm() effects { writes spur } costs <= 2 ops {\n\
+            spur = 7;\n\
+        }\n\
+        pub impl fn arbeite() effects { writes spur, locks TOR } costs <= 8 ops {\n\
+            locks TOR {\n\
+                spur = 1;\n\
+            }\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn rumpf_ohne_vertrag_faellt_mit_n323() {
+        let codes = codes_fuer(RUMPF_OHNE_VERTRAG);
+        assert!(faellt(&codes, "N323"), "N323 erwartet, gefallen ist {codes:?}");
+        // **The name stays refused beside it** -- the contract does not move it.
+        assert!(faellt(&codes, "N042"), "N042 erwartet daneben, gefallen ist {codes:?}");
+    }
+
+    const FREMDER_RUMPF: &str = "module m {\n\
+        pub static mut nutz : u32 = 0;\n\
+        pub lock TOR protects { nutz } rank 0 held <= 8 ops;\n\
+        extern fn TOR_nimm() effects { pure } costs <= 1 ops;\n\
+        pub impl fn arbeite() effects { writes nutz, locks TOR } costs <= 8 ops {\n\
+            locks TOR {\n\
+                nutz = 1;\n\
+            }\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn fremder_rumpf_bleibt_n042_allein() {
+        let codes = codes_fuer(FREMDER_RUMPF);
+        assert!(faellt(&codes, "N042"), "N042 erwartet, gefallen ist {codes:?}");
+        assert!(!faellt(&codes, "N323"), "N323 muss schweigen, gefallen ist {codes:?}");
+    }
+
+    const SPERRE_OHNE_RUMPF: &str = "module m {\n\
+        pub static mut nutz : u32 = 0;\n\
+        pub lock TOR protects { nutz } rank 0 held <= 8 ops;\n\
+        pub impl fn arbeite() effects { writes nutz, locks TOR } costs <= 8 ops {\n\
+            locks TOR {\n\
+                nutz = 1;\n\
+            }\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn sperre_ohne_rumpf_schweigt() {
+        let codes = codes_fuer(SPERRE_OHNE_RUMPF);
+        assert!(!faellt(&codes, "N323"), "N323 muss schweigen, gefallen ist {codes:?}");
+        assert!(!faellt(&codes, "N042"), "N042 muss schweigen, gefallen ist {codes:?}");
+    }
+
+    const ATOMARER_RUMPF: &str = "module m {\n\
+        atomic Z : u32 relaxed;\n\
+        pub lock TOR protects { Z } rank 0 held <= 8 ops;\n\
+        impl fn TOR_nimm() effects { reads Z, writes Z } costs <= 4 ops {\n\
+            let n : u32 = Z;\n\
+            Z = n publishes nothing;\n\
+        }\n\
+        impl fn TOR_gib() effects { reads Z, writes Z } costs <= 4 ops {\n\
+            let n : u32 = Z;\n\
+            Z = n publishes nothing;\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn atomarer_rumpf_besteht() {
+        let codes = codes_fuer(ATOMARER_RUMPF);
+        assert!(!faellt(&codes, "N323"), "N323 muss schweigen, gefallen ist {codes:?}");
     }
 }

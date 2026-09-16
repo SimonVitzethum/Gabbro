@@ -1,0 +1,38 @@
+-- erwartet: M140
+-- **Poison 981 -- `&Falsche` at a `ptr<…> Richtige` slot.**
+--
+-- `&T` makes a TABLE into a pointer, and only to its own table. The two tables below
+-- declare the same slot shape on purpose: the refusal is nominal, not structural --
+-- two tables are two declarations even where their fields line up (`m1.rs`,
+-- `gestalt_grund`). That is the checker's half of the `ptrTypB` decision: the number
+-- names the table, and a pointer made from one table does not answer for another.
+--
+-- The reverse direction -- a number at a pointer slot -- is the long-standing `M140`
+-- (`beispiele/38` notes it); `982` plants it from the producer side.
+
+module gift::tabelle_am_falschen_zeigerslot {
+
+table Richtige count 4 {
+    slot {
+        a : u32 in 0 .. 100,
+    }
+}
+
+table Falsche count 4 {
+    slot {
+        a : u32 in 0 .. 100,
+    }
+}
+
+type Halter = {
+    p : ptr<normal, r> Richtige,
+};
+
+impl fn baue() -> Halter
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Halter(p: &Falsche);
+}
+
+}

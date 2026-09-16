@@ -33,6 +33,7 @@ syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     requires len <= 1024
     ensures result <= len
     effects { pure }
+    costs <= 8 ops
     assume linux_write_contract falsifier sonde_write;
 
 -- The call: `let … else` because the callee can fail, and nothing else owed.

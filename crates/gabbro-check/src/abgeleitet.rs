@@ -36,7 +36,7 @@ pub fn ertraege(baum: &Programm) -> Vec<Vertrag> {
     let ab = crate::ableitung::leite_ab(baum, true);
     let kosten = crate::kosten::abgeleitete_kosten(baum);
     let g = crate::aufrufgraph::erhebe_roh(baum);
-    let syscalls = crate::kosten::syscall_namen(baum);
+    let syscalls = crate::kosten::syscall_ohne_kosten(baum);
     let kein_total = crate::kosten::ohne_total(baum, &g);
     let mut aus = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
@@ -87,9 +87,10 @@ pub fn ertraege(baum: &Programm) -> Vec<Vertrag> {
 /// omitted `costs` — the omission keeps its old meaning (no promise, no
 /// check) — so these are view-only reasons, not refusing codes: no
 /// total behind `forever` (`per_pass` world), the cost-opaque `syscall`
-/// edge (no `costs` clause exists on `syscall` by grammar), a recursion
-/// without `decreases` (unbounded through the cycle), an indirect call
-/// without a pointer-type cost, or anything else the body leaves unsettled.
+/// edge (a `syscall` with no countable promise — `N322` where it stands — so
+/// its callers count nothing), a recursion without `decreases` (unbounded
+/// through the cycle), an indirect call without a pointer-type cost, or
+/// anything else the body leaves unsettled.
 fn costs_grund(
     f: &FnDecl,
     key: &str,
@@ -101,7 +102,7 @@ fn costs_grund(
         return Some("no total cost: `forever` promises `per_pass`, not `costs`".to_string());
     }
     if crate::kosten::ruft_syscall(g, &key, syscalls) {
-        return Some("cost-opaque `syscall` edge (tolerated)".to_string());
+        return Some("cost-opaque `syscall` edge (`N322` at the declaration)".to_string());
     }
     if f.decreases.is_none() && g.im_zyklus(&key) {
         return Some("recursion without `decreases` (unbounded through the cycle)".to_string());

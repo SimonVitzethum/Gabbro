@@ -1,0 +1,39 @@
+-- erwartet: K001
+-- **987 -- a call through a costed `syscall` counts `1 + fa`.**
+--
+-- The positive direction of gift 986 (`N322`): with the clause the foreign
+-- edge is no longer opaque. The call counts the DECLARED cost on top of the
+-- §1 dispatch step -- `1 + fa` plus the arguments, never zero
+-- (`KostenG.lean` §13). Here `fa` is 8 and the one argument is a place (one
+-- load), so the body costs 1 + 8 + 1 = 10 against a promise of 9: `K001`
+-- fires, and the arithmetic pins the dispatch step -- at `fa` alone the body
+-- would cost 9 and pass.
+--
+-- Nothing else speaks: the declaration carries its clause (`N322` silent),
+-- the maps are valid (`N063`-`N066`, `A006` silent) and the caller promises
+-- pure over a pure callee.
+
+module gift::syscall_kosten_zaehlen {
+
+assume kernel_antwortet
+    "The kernel answers this number."
+    falsifier sonde_read;
+
+syscall lesenummer(fd : u64) -> u64
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_antwortet falsifier sonde_read;
+
+impl fn ruft(fd : u64) -> u64
+    effects { pure }
+    costs <= 9 ops
+{
+    return lesenummer(fd);
+}
+
+}

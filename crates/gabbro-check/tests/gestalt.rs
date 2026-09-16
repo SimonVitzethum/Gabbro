@@ -206,3 +206,70 @@ fn ein_feldfeld_bekommt_seine_klammern() {
          literal:\n{c}"
     );
 }
+
+/// **`&T` -- the producer of a table pointer (M127b, 2026-09-16).**
+///
+/// Until this lane `&` named a function and nothing else: `&X` for a non-function fell at
+/// `M127` (`beispiele/gift/244`). The model has long had the second producer
+/// (`Expr.ptrOf` / `Ty.ptr`, `ptrTypB` in `grammatik/Grammatik/ReferenzZeuge.lean`), so the
+/// checker takes it too: where the path names no function but a TABLE, the value is a
+/// pointer to that table, lowered to `&T_speicher`. The nominal half at the slot is
+/// `M140`'s and needs no new code -- pointers compare at their pointee, and two tables
+/// are two declarations. The poison probes are `beispiele/gift/981` (the wrong table)
+/// and `/982` (a pointer at a number); this test is the positive side both point at.
+#[test]
+fn der_tabellenzeiger_wird_gebaut() {
+    let quelle = "module app::t {\n\
+        table Puffer count 4 { slot { a : u32 in 0 .. 100, } }\n\
+        table Fremd count 4 { slot { a : u32 in 0 .. 100, } }\n\
+        impl fn nimmt(p : ptr<normal, r> Puffer) effects { pure } costs <= 2 ops {}\n\
+        impl fn ruft() effects { pure } costs <= 6 ops { nimmt(&Puffer); }\n\
+        }\n";
+    let (baum, mut absagen) = gabbro_syntax::lies("tabellenzeiger.gab", &quelle);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let fehler: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    assert!(
+        fehler.is_empty(),
+        "&Puffer at its own slot must stay silent -- fell with {fehler:?}"
+    );
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert!(
+        c.contains("static Puffer Puffer_speicher;"),
+        "naming the table by address buys it its storage:\n{c}"
+    );
+    assert!(
+        c.contains("nimmt(&Puffer_speicher);"),
+        "a table pointer lowers to the address of the storage:\n{c}"
+    );
+    // The nominal half beside it, exactly one refusal each: the wrong table, and a
+    // pointer at a number. Same shape as the `die_null…` rows above.
+    for (was, feld, wert) in [
+        ("the wrong table at the slot", "p : ptr<normal, r> Puffer", "&Fremd"),
+        ("a table pointer at a number", "n : u32 in 0 .. 100", "&Puffer"),
+    ] {
+        let q = format!(
+            "module app::t {{\n\
+             table Puffer count 4 {{ slot {{ a : u32 in 0 .. 100, }} }}\n\
+             table Fremd count 4 {{ slot {{ a : u32 in 0 .. 100, }} }}\n\
+             type Halter = {{ {feld}, }};\n\
+             impl fn baue() -> Halter effects {{ pure }} costs <= 2 ops \
+                 {{ return Halter({kurz}: {wert}); }}\n\
+             }}\n",
+            kurz = feld.split(':').next().unwrap().trim(),
+        );
+        let (b2, mut a2) = gabbro_syntax::lies("tabellenzeiger.gab", &q);
+        let _ = gabbro_check::pruefe(&b2, &mut a2);
+        let g: Vec<String> = a2
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code.to_string())
+            .collect();
+        assert_eq!(g, vec!["M140"], "{was} draws exactly `M140` -- fell with {g:?}");
+    }
+}

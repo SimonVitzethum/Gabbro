@@ -1,0 +1,39 @@
+-- erwartet: N042 allein
+-- 988 -- **a foreign lock primitive stays `N042` alone: `N323` is silent.**
+--
+-- The control beside `beispiele/gift/983`. Same family -- `lock TOR` next to a
+-- function the generator's `{Lock}_gib` collides with -- but a FOREIGN body:
+-- `extern fn TOR_gib()` has no block for any checker to read. `N042` refuses
+-- the name (one C symbol, two declarations: `void TOR_gib(void);` twice is a
+-- legal repetition in C, so `cc -Werror` accepts the emitted unit and nothing
+-- else in the chain says a word). `N323`
+-- (`namen.rs::sperrprimitiv_vertrag`) stays silent BY DESIGN: a foreign body
+-- is trust base, not a checked body -- the emitter never defines the prototype,
+-- same as `write_cr3`. The name exemption stays where it was; the contract is
+-- framework work beside it, not a second verdict on the name.
+--
+-- The day `N323` fires here, the rule has learned to judge what it cannot see
+-- -- this file goes red exactly then (it asserts `N042`, and the reviewer
+-- confirms `N323` absent), which is what a control is for.
+
+module gift::sperrprimitiv_fremd {
+
+pub static mut nutz : u32 = 0;
+
+pub lock TOR protects { nutz } rank 0 held <= 8 ops;
+
+-- **Here.** The writer means their own foreign release function; they get the
+-- lock primitive's name. No body stands behind it in this unit, so there is
+-- nothing `LockGiltAn` could be held against.
+extern fn TOR_gib() effects { pure } costs <= 1 ops;
+
+pub impl fn arbeite()
+    effects { writes nutz, locks TOR }
+    costs   <= 8 ops
+{
+    locks TOR {
+        nutz = 1;
+    }
+}
+
+}

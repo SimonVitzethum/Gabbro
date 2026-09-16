@@ -1,0 +1,35 @@
+-- erwartet: N321
+-- **984 -- `-> never` with an `asm` body that names `out { result }`.**
+--
+-- `prototyp_kern` (emit.rs) lowers `-> never` to `_Noreturn void`, and an
+-- `out { result }` lowers to `return result;` -- together not C. The checker
+-- accepted it: `S009` (schleifen.rs) returns early on every non-`Block` body
+-- (`let FnRumpf::Block(b) = &f.rumpf else { return };`), so an `asm` body was
+-- never held against its `-> never` declaration -- phase 2 reported 0 errors.
+--
+-- The model side (`grammatik/Grammatik/Zielsatz/NeverAsm.lean`, `AxNeverGut`)
+-- says the same from the other end: a `never` axiom delivers no out value,
+-- and the call never continues (`execBlock_bindAxiom_never`, head
+-- `nieZurueck`). Forbidding the contradictory `out` is the checker's job --
+-- this rule (`N321` in `asm_versiegelt`); the emitter refuses the same
+-- combination as `C001` (`985` pins that half), so the contradiction is loud on
+-- both channels -- and that is why this probe is NOT `-- erwartet: N321 allein`:
+-- without the checker rule the emitter still refuses (leaving a `static`
+-- prototype with no definition, which `cc` rejects for that other reason), so
+-- "nothing else catches it" would be false. The counterfactual this rule needs
+-- is the checker's: before the build `pruefe` reported 0 errors over this shape;
+-- after it, `N321`. The counter-direction is `beispiele/36-asm.gab`
+-- (`schreiben -> u64` with `out { result }` stays green).
+module gift::never_asm_mit_out {
+
+divergent fn halt() -> never
+    effects { diverges }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "hlt"
+        out { result : "=a" }
+        clobbers { memory }
+    };
+
+}

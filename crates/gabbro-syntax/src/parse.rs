@@ -5532,11 +5532,19 @@ impl<'a> Parser<'a> {
     ///               [ "requires" predlist ]
     ///               [ "ensures"  predlist ]
     ///               "effects" "{" efflist "}"
+    ///               [ "costs" "<=" expr "ops" ]
     ///               ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
     ///               | "kernel" path ";" ) ;
     /// sysregbind = ident ( "=" | ":" ) ident ;   (* register first, parameter second *)
     /// errmap     = ident "=>" ident ;
     /// ```
+    ///
+    /// **The `costs` clause is the lane-114 gap, closed.** It stands behind
+    /// `effects` in the fixed E4 order and is read by the same shape an `fn`
+    /// carries (`"<=" expr "ops"`); whether it MAY stand is the checker's
+    /// decision (`N322` in `syscall.rs`), because a refusal with a sentence
+    /// is worth more than a `P001` at a bracket -- the same reason `fnptr`
+    /// leaves its clauses to `N026` above.
     ///
     /// **Two places where the written examples fix the production's letter.** The §1
     /// production line says `regbind` (`ident ":" ident`, entry order) for both maps,
@@ -5601,6 +5609,18 @@ impl<'a> Parser<'a> {
             Vec::new()
         };
         let effects = self.effects_block()?;
+        // **The lane-114 `costs` clause.** Optional in the grammar, owed to the
+        // checker: a `syscall` without it is cost-opaque (`N322`), and no
+        // bounded loop can host a call through it. Fixed position (E4) --
+        // behind `effects`, before the counterpart.
+        let costs = if self.friss_kw(Kw::Costs) {
+            self.erwarte_z(Z::KleinerGleich)?;
+            let e = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            Some(e)
+        } else {
+            None
+        };
         // `assume … falsifier …` or `kernel <path>` -- exactly one of the two (E3:
         // nothing is implicit, and a missing counterpart is the absence of both
         // entries, a compile error at `P001`/`P029`).
@@ -5630,6 +5650,7 @@ impl<'a> Parser<'a> {
             requires,
             ensures,
             effects,
+            costs,
             paarung,
             span: anfang.bis_zu(self.vorheriger_span()),
         })

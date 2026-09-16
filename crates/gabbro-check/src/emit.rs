@@ -8482,8 +8482,19 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
         // **A function pointer value DOES name one.** `&f` names `f`, and a collector that
         // skipped it would report the emitted C as touching fewer names than it does.
         // *Added when the compiler asked, 2026-08-21.*
+        //
+        // **Since `&T` (2026-09-16) the short name rides along.** The emitted C
+        // names the last segment only (`&f`, `&T_speicher`), while `pfad.text()`
+        // carries the qualification (`&m::f`); and `tabellenglobal` -- the set
+        // that buys `T_speicher` its storage -- holds short table names. Without
+        // the short form a qualified `&m::T` would lower to `&T_speicher` the
+        // unit never declares. Unqualified paths insert the same word twice
+        // into a set, which is no change at all.
         ExprArt::FnWert(pfad) => {
             aus.insert(pfad.text());
+            if let Some(letztes) = pfad.teile.last() {
+                aus.insert(letztes.text.clone());
+            }
         }
     }
 }
@@ -14995,10 +15006,25 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         //
         // Only the LAST segment is emitted: a Gabbro module path is not a C name, and the
         // rest of this generator resolves callees the same way (`fn ruf`).
-        ExprArt::FnWert(p) => format!(
-            "&{}",
-            p.teile.last().map(|i| i.text.clone()).unwrap_or_default()
-        ),
+        //
+        // **`&T` lowers to `&T_speicher`** (2026-09-16) -- the address of the table
+        // storage `tabelle()` writes where the source addresses the table BY NAME.
+        // The checker reads function first and table second (`m1.rs`), and this arm
+        // decides in the same order: a short name that is both keeps the `&f`
+        // reading. Where the checker refused (`M127`), this arm still writes the
+        // bare `&f` form -- the refusal stands one pass earlier, and `cc` would
+        // only repeat it.
+        ExprArt::FnWert(p) => {
+            let kurz = p.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+            if !u.funktionen.contains_key(&kurz) && u.tabellen.iter().any(|t| *t == kurz) {
+                format!("&{kurz}_speicher")
+            } else {
+                format!(
+                    "&{}",
+                    p.teile.last().map(|i| i.text.clone()).unwrap_or_default()
+                )
+            }
+        }
         // **`R::F` wird `R_F`** (Stufe 7, 2026-08-21) -- genau der Name, den
         // `ItemArt::Reason` weiter oben in sein `typedef enum` schreibt. *Die zwei Stellen
         // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den

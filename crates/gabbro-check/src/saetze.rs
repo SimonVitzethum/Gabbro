@@ -832,6 +832,45 @@ pub const NAMEN: &[Satz] = &[
                       compares the shipping C against the check C.",
         fundstelle: "crates/gabbro-check/src/gatter.rs; SYNTAX.md section 1, «TB»",
     },
+    Satz {
+        name: "namen.sperrprimitiv_vertrag",
+        kennungen: &["N323"],
+        aussage: "An own lock primitive -- a bodied `L_nimm`/`L_gib` beside `lock L` -- \
+                  meets the per-lock contract `LockGiltAn`: it reads and writes a declared \
+                  atomic, and it stores no program memory, takes no lock and calls nothing \
+                  but pure functions of the unit. A program that passes has no foreign body \
+                  smuggled behind the lock's C name that the checker did not hold against \
+                  the contract.",
+        vorbehalt: "**Three legs, each sufficient, none deciding.** Atomicity counts direct \
+                    stores, `locks` blocks, arena operations and calls answered by no pure \
+                    in-unit function (bit intrinsics exempt -- they touch no state); order \
+                    and hold time count atomic reads and writes. NOT checked: the ticket \
+                    order (FIFO is a ticket-only strength, `ticket_fifo`, not safety); \
+                    wraparound at 2^32 (a CUT of `CTicket.lean`); exclusion across steps \
+                    (`lockVertrag_exklusiv` is emergent, not re-proved per body); the arity \
+                    (a non-`void(void)` shape is `N042` plus `cc`); calls trusted by their \
+                    declared `effects`; matching by short name unit-wide, exactly `N042`'s \
+                    population. Bodiless (`extern fn`) and `asm` bodies are trust base and \
+                    stay `N042` alone -- the name exemption stays where it was, this rule \
+                    is framework work beside it, not a second verdict on the name. Reserved \
+                    as `N321` (taken by `namen.asm_never`) and `N322` (taken by the \
+                    syscall-costs rule the same week); this rule carries the next free \
+                    number.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/983 (`-- erwartet: N323 allein`: a bodied `TOR_nimm` \
+                      storing program state with no atomic touch -- the checker falls with \
+                      `N323` beside `N042`, and `cc -Werror` accepts the emitted C); /988 \
+                      (the foreign shape: `extern fn TOR_gib` -- `N042` alone, `N323` \
+                      silent); snippet tests in `namen.rs` (the atomic read+write shape \
+                      passes, a lock without an own primitive is silent). Corpus diff: no \
+                      other file under `beispiele/` draws `N323`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::sperrprimitiv_vertrag; \
+                     grammatik/Grammatik/SperrImpl.lean (`LockImplVertrag`, `LockGiltAn`, \
+                     `lockVertrag_atomar`, `lockVertrag_ordnung_nimm`, \
+                     `lockVertrag_ordnung_gib`, `lockVertrag_halte_nimm`, \
+                     `lockVertrag_halte_gib`, `rohLP_verletzt`); laufzeit/sperre.gab (the \
+                     passing shape)",
+    },
 ];
 
 // ===================================================================================
@@ -3651,6 +3690,37 @@ pub const PHASEN: &[Satz] = &[
                       on `A006`; beispiele/74 checks clean and emits the stub, \
                       beispiele/90 the error path.",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
+        name: "syscall.kosten",
+        kennungen: &["N322"],
+        aussage: "A `syscall` declaration carries a countable `costs` promise, and a \
+                  call through it counts that promise on top of the dispatch step: \
+                  `1 + fa` plus the arguments, never zero (`N322` where no countable \
+                  promise stands). The call-counts-declared-costs rule that held for \
+                  every `fn` callee holds for the foreign edge too -- a caller with \
+                  a cost promise meets `K001`/`K003`/`K006`/`K007` over a number, \
+                  never over silence -- and a bounded loop can host the call \
+                  (`durchgangskosten` divides by the per-pass cost).",
+        vorbehalt: "A counting rule, not a honesty rule. It says nothing about whether \
+                    the kernel keeps the number -- `fa` is a promise about the machine, \
+                    like `costs` at an `extern fn`: the checker counts it, it does not \
+                    re-measure it. Symbolic bounds stay refused even where an `fn` may \
+                    carry them: the trip-count division divides by one number. And the \
+                    dispatch step of an `extern` call keeps its old convention (inside \
+                    the declared number) -- only the `syscall` edge is priced `fa` \
+                    plus dispatch, because only there the clause is new and no bound \
+                    was ever written against the old silence.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/986 (`-- erwartet: N322 allein`: a costless syscall \
+                      falls once, and without the rule nothing falls -- the emitted C \
+                      is valid `cc -Werror` input) and /987 (`-- erwartet: K001`: a \
+                      caller bound at `fa` over a `1 + fa` call -- without the dispatch \
+                      step it would pass); beispiele/74, /90 and /96 carry \
+                      `costs <= 8 ops` on `write` and check clean.",
+        fundstelle: "crates/gabbro-check/src/syscall.rs (`kostenversprechen`); \
+                     crates/gabbro-check/src/kosten.rs (`fremd`, `ruf`); \
+                     dokumente/SYNTAX.md §12.1",
     },
     Satz {
         name: "syscall.stub",

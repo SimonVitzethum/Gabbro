@@ -1,0 +1,24 @@
+-- erwartet: C001
+-- **985 -- the emitter half of 984: `-> never` + `out { result }` is no lowering.**
+--
+-- The checker names this combination `N321` (see `984-never-asm-mit-out.gab`);
+-- the emitter must refuse it too instead of emitting broken C (`_Noreturn void`
+-- together with `return result;`, which `cc -Werror` refuses). This probe pins
+-- the emitter half: `pruefe` fires `N321` first, and `emittiere` must fall with
+-- `C001` beside it -- a backstop that bites even with the checker rule dropped.
+--
+-- The counter-direction is `beispiele/36-asm.gab` (`schreiben -> u64` with
+-- `out { result }` lowers cleanly and stays green).
+module gift::never_asm_ohne_absenkung {
+
+divergent fn halt() -> never
+    effects { diverges }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "hlt"
+        out { result : "=a" }
+        clobbers { memory }
+    };
+
+}

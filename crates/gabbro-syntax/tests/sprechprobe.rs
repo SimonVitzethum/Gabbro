@@ -494,3 +494,49 @@ fn syscall_wird_gelesen() {
          preserves { } clobbers { r11 } stack s dispatch m::f; }",
     );
 }
+
+// -- syscall `costs` (lane-114 gap, closed) -------------------------------------------
+//
+// The clause stands behind `effects` in fixed order and reads into
+// `SyscallDecl::costs`; without it the field is `None` (the checker says
+// `N322` there -- this crate never refuses what it can read).
+#[test]
+fn syscall_kosten_werden_gelesen() {
+    let quelle = "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+         regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+         errors { EBADF => BadFd } effects { pure } costs <= 8 ops \
+         assume linux_write_contract falsifier probe_write;";
+    let (baum, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    assert!(
+        !absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a syscall with a costs clause parses:\n{}",
+        absagen.zeige(quelle)
+    );
+    let gabbro_syntax::ast::ItemArt::Syscall(s) = &baum.items[0].art else {
+        panic!("a syscall parses as a syscall");
+    };
+    assert!(
+        s.costs.is_some(),
+        "the costs clause lands in the field, not in nothing"
+    );
+    // Without the clause the field is `None`, and the declaration still reads.
+    let (baum2, absagen2) = gabbro_syntax::lies(
+        "<probe>",
+        "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+         regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+         errors { EBADF => BadFd } effects { pure } \
+         assume linux_write_contract falsifier probe_write;",
+    );
+    assert!(
+        !absagen2.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a syscall without the clause still parses:\n{}",
+        absagen2.zeige(quelle)
+    );
+    let gabbro_syntax::ast::ItemArt::Syscall(s2) = &baum2.items[0].art else {
+        panic!("a syscall parses as a syscall");
+    };
+    assert!(
+        s2.costs.is_none(),
+        "no clause, no promise -- the checker owns the refusal"
+    );
+}

@@ -1,0 +1,55 @@
+-- erwartet: N323 allein
+-- 983 -- **an own lock primitive without the lock contract.**
+--
+-- `lock TOR` beside a bodied `pub impl fn TOR_nimm()` is the `m1-hijack` shape
+-- (`messung/STILLE-KOLLISIONEN.md` §4a): the lock's acquire call lands in the
+-- writer's body, `spur` goes from 0 to 7, `nutz` is written, **and no lock was
+-- ever taken.** `N042` refuses the name -- one C symbol, two declarations.
+-- `N323` (`namen.rs::sperrprimitiv_vertrag`) reads the body against
+-- `LockGiltAn` (`grammatik/Grammatik/SperrImpl.lean`): this one stores program
+-- memory (`spur`), never reads a declared atomic (no order to show:
+-- `lockVertrag_ordnung_nimm`) and never writes one (no hold time to show:
+-- `lockVertrag_halte_nimm`) -- all three legs fail on one body.
+--
+-- `-- erwartet: N323 allein` is the sharper claim: the checker must fall with
+-- `N323` (beside `N042`, which stays where it was), and `cc -Werror` must
+-- ACCEPT the emitted C -- without the two rules nothing falls here, neither in
+-- the checker nor in the translator. The day `cc` or the emitter catches this
+-- shape, the probe goes red and asks to be re-classified.
+--
+-- The passing shape is `laufzeit/sperre.gab` (fetch-add, a spin on the served
+-- ticket, a pure step, `publishes nothing` at the store); the foreign shape --
+-- a bodiless `extern fn`, trust base instead of a checked body -- is
+-- `beispiele/gift/988`, where `N323` stays silent.
+--
+-- Measured before the rule: no file under `beispiele/` pairs a `lock` with a
+-- bodied `{Lock}_nimm`/`{Lock}_gib`, so the rule costs the corpus nothing
+-- beyond this probe.
+
+module gift::sperrprimitiv_vertrag {
+
+pub static mut spur : u32 = 0;
+
+pub static mut nutz : u32 = 0;
+
+pub lock TOR protects { nutz } rank 0 held <= 8 ops;
+
+-- **Here.** The writer ships their own acquire body; it takes no lock,
+-- consults no holder state and installs none -- it stores a program global.
+pub impl fn TOR_nimm()
+    effects { writes spur }
+    costs   <= 2 ops
+{
+    spur = 7;
+}
+
+pub impl fn arbeite()
+    effects { writes nutz, locks TOR }
+    costs   <= 8 ops
+{
+    locks TOR {
+        nutz = 1;
+    }
+}
+
+}
