@@ -290,6 +290,165 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
     `distribute_a`, `distribute_b` (the two entry dispatch roots). -/
 theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] = true := by decide
 
+/-! ## 3. The user obligations -/
+
+/-- Every `requires` is `.wahr`, at every function, world and environment. -/
+theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
+    ReqAmEintritt kP f W ρ := rfl
+
+theorem kP_koerper_writeA : KoerperGutS kP 0 (axWahr kD) kSI kWriteA := by
+  have hr : kP.rumpf kWriteA = kRumpfWriteA := rfl
+  refine ⟨fun O' _ _ _ U _ R _ _ σ ρ _ => ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R _ _ σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    simp only [kRumpfWriteA, execEndH, execStmtH] at hrun
+    cases hrun
+    cases ρ with
+    | cons x rest =>
+      cases rest
+      rfl
+  · rw [hr] at hrun
+    simp only [kRumpfWriteA, execEndH, execStmtH] at hrun
+    cases hrun
+  · rw [hr] at hrun
+    simp only [kRumpfWriteA, execEndH, execStmtH] at hrun
+    cases hrun
+
+theorem kP_koerper_writeB : KoerperGutS kP 0 (axWahr kD) kSI kWriteB := by
+  have hr : kP.rumpf kWriteB = kRumpfWriteB := rfl
+  refine ⟨fun O' _ _ _ U _ R _ _ σ ρ _ => ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R _ _ σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    simp only [kRumpfWriteB, execEndH, execStmtH] at hrun
+    cases hrun
+    cases ρ with
+    | cons x rest =>
+      cases rest
+      rfl
+  · rw [hr] at hrun
+    simp only [kRumpfWriteB, execEndH, execStmtH] at hrun
+    cases hrun
+  · rw [hr] at hrun
+    simp only [kRumpfWriteB, execEndH, execStmtH] at hrun
+    cases hrun
+
+theorem kDistA_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : Nat}
+    {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
+    (ρ : Env kD (kD.params kDistA)) :
+    ∃ σ2 : World kD, execEndH S O U passes R kRumpfDistA σ ρ =
+        execEndH S O U passes R (.cons kLocksA (.ret .keine List.Perm.nil)) σ2 ρ :=
+  ⟨_, rfl⟩
+
+theorem kDistB_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : Nat}
+    {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
+    (ρ : Env kD (kD.params kDistB)) :
+    ∃ σ2 : World kD, execEndH S O U passes R kRumpfDistB σ ρ =
+        execEndH S O U passes R (.cons kLocksB (.ret .keine List.Perm.nil)) σ2 ρ :=
+  ⟨_, rfl⟩
+
+/-- `distribute_a`: `ensures` is `.wahr`; the caller duty of the call from the
+    trivial `requires`; no `logik` outcome because the release check is the
+    trivially-true invariant. -/
+theorem kP_koerper_distA : KoerperGutS kP 0 (axWahr kD) kSI kDistA := by
+  have hr : kP.rumpf kDistA = kRumpfDistA := rfl
+  refine ⟨fun O' _ _ _ U hU R hR hOV σ ρ _ => ⟨fun σ' v _ => rfl, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R hR hOL σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    obtain ⟨σ2, e2⟩ := kDistA_schreib (S := kSI) (O := O') (U := U) (passes := 0)
+      (R := torRuf kP R) σ ρ
+    erw [e2] at hrun
+    simp only [execEndH, kLocksA] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    have hreq : ReqAmEintritt kP kWriteA (((U KLock.l σ2).nimmt KLock.l).lese kLA [])
+        (evalArgs (((U KLock.l σ2).nimmt KLock.l).lese kLA []) (Args.cons (Λ := kLA) (Γ := []) kJ0 .nil)
+          (((U KLock.l σ2).nimmt KLock.l).lese kLA []) ρ) := kReqWahr _ _ _
+    rcases execStmtH_call_fall (S := kSI) (O := O') (U := U) (passes := 0) (R := torRuf kP R)
+      (l := false) (Γ := []) kWriteA (.cons kJ0 .nil) kHpWriteA rfl ((U KLock.l σ2).nimmt KLock.l) ρ with
+      ⟨σ1, v1, hR1, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
+    · have hinv : kSI.inv KLock.l σ1.speicher = true := rfl
+      simp only [freiH, hinv, if_true] at hrun
+      cases hrun
+    · simp only [freiH] at hrun
+      cases hrun
+      have htor : torRuf kP R kWriteA _ _ = R kWriteA _ _ := if_pos hreq
+      exact hOV _ _ _ _ (htor.symm.trans he1) g rfl
+    · simp only [freiH] at hrun; cases hrun
+  · rw [hr] at hrun
+    obtain ⟨σ2, e2⟩ := kDistA_schreib (S := kSI) (O := O') (U := U) (passes := 0) (R := R) σ ρ
+    erw [e2] at hrun
+    simp only [execEndH, kLocksA] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    rcases execStmtH_call_fall (S := kSI) (O := O') (U := U) (passes := 0) (R := R)
+      (l := false) (Γ := []) kWriteA (.cons kJ0 .nil) kHpWriteA rfl ((U KLock.l σ2).nimmt KLock.l) ρ with
+      ⟨σ1, v1, hR1, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
+    · have hinv : kSI.inv KLock.l σ1.speicher = true := rfl
+      simp only [freiH, hinv, if_true] at hrun
+      cases hrun
+    · simp only [freiH] at hrun
+      cases hrun
+      exact hOL _ _ _ _ he1
+    · simp only [freiH] at hrun; cases hrun
+
+/-- `distribute_b`: the mirror image over `M`/`U`. -/
+theorem kP_koerper_distB : KoerperGutS kP 0 (axWahr kD) kSI kDistB := by
+  have hr : kP.rumpf kDistB = kRumpfDistB := rfl
+  refine ⟨fun O' _ _ _ U hU R hR hOV σ ρ _ => ⟨fun σ' v _ => rfl, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R hR hOL σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    obtain ⟨σ2, e2⟩ := kDistB_schreib (S := kSI) (O := O') (U := U) (passes := 0)
+      (R := torRuf kP R) σ ρ
+    erw [e2] at hrun
+    simp only [execEndH, kLocksB] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    have hreq : ReqAmEintritt kP kWriteB (((U KLock.m σ2).nimmt KLock.m).lese kLB [])
+        (evalArgs (((U KLock.m σ2).nimmt KLock.m).lese kLB []) (Args.cons (Λ := kLB) (Γ := []) kJ0 .nil)
+          (((U KLock.m σ2).nimmt KLock.m).lese kLB []) ρ) := kReqWahr _ _ _
+    rcases execStmtH_call_fall (S := kSI) (O := O') (U := U) (passes := 0) (R := torRuf kP R)
+      (l := false) (Γ := []) kWriteB (.cons kJ0 .nil) kHpWriteB rfl ((U KLock.m σ2).nimmt KLock.m) ρ with
+      ⟨σ1, v1, hR1, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
+    · have hinv : kSI.inv KLock.m σ1.speicher = true := rfl
+      simp only [freiH, hinv, if_true] at hrun
+      cases hrun
+    · simp only [freiH] at hrun
+      cases hrun
+      have htor : torRuf kP R kWriteB _ _ = R kWriteB _ _ := if_pos hreq
+      exact hOV _ _ _ _ (htor.symm.trans he1) g rfl
+    · simp only [freiH] at hrun; cases hrun
+  · rw [hr] at hrun
+    obtain ⟨σ2, e2⟩ := kDistB_schreib (S := kSI) (O := O') (U := U) (passes := 0) (R := R) σ ρ
+    erw [e2] at hrun
+    simp only [execEndH, kLocksB] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    rcases execStmtH_call_fall (S := kSI) (O := O') (U := U) (passes := 0) (R := R)
+      (l := false) (Γ := []) kWriteB (.cons kJ0 .nil) kHpWriteB rfl ((U KLock.m σ2).nimmt KLock.m) ρ with
+      ⟨σ1, v1, hR1, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
+    · have hinv : kSI.inv KLock.m σ1.speicher = true := rfl
+      simp only [freiH, hinv, if_true] at hrun
+      cases hrun
+    · simp only [freiH] at hrun
+      cases hrun
+      exact hOL _ _ _ _ he1
+    · simp only [freiH] at hrun; cases hrun
+
+theorem kP_koerper : ∀ f : kD.Fn, KoerperGutS kP 0 (axWahr kD) kSI f := by
+  intro f
+  cases f
+  · exact kP_koerper_writeA
+  · exact kP_koerper_distA
+  · exact kP_koerper_writeB
+  · exact kP_koerper_distB
+
+theorem kP_inv : ∀ f : kD.Fn, InvGutS kP 0 (axWahr kD) kSI f :=
+  fun _ => invGutS_ohne fun i _ => nomatch i
+
+theorem kP_ohneEwig : ohneEwigB kP kFs = true := by decide
+
+theorem kP_koerper_alle : ∀ (passes : Nat) (f : kD.Fn), KoerperGutS kP passes (axWahr kD) kSI f :=
+  koerperGutS_alle kFs_voll kP_ohneEwig kP_koerper
+
+theorem kP_inv_alle : ∀ (passes : Nat) (f : kD.Fn), InvGutS kP passes (axWahr kD) kSI f :=
+  invGutS_alle kFs_voll kP_ohneEwig kP_inv
+
 end K109
 
 end Gabbro.Grammatik
