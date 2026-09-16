@@ -296,3 +296,7 @@ import Grammatik.CText104Zeuge
 import Grammatik.CText108
 import Grammatik.Sperrstreifen
 import Grammatik.SperrImpl
+import Grammatik.Korpus07
+import Grammatik.Korpus59
+import Grammatik.Korpus109
+import Grammatik.Korpus125
