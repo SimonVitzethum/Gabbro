@@ -31,20 +31,20 @@ set_option maxHeartbeats 4000000
 
 /-- Line 38, the store, with `100` changed to `99`. -/
 def ctext104_wert : List Char :=
-  zusammen (zeilen104.set 38 "    k->slots[i].stand = 99;\n".toList)
+  zusammen (zeilen104.set 39 "    k->slots[i].stand = 99;\n".toList)
 
 /-- Line 18, `#define NKONTO 2u` changed to `3u` -- one token, and the
     table's geometry is a different one. -/
 def ctext104_anzahl : List Char :=
-  zusammen (zeilen104.set 18 "#define NKONTO 3u\n".toList)
+  zusammen (zeilen104.set 19 "#define NKONTO 3u\n".toList)
 
 /-- Line 16, the second `_Static_assert` pin, deleted. -/
-def ctext104_ohnePin : List Char := zusammen (zeilen104.set 16 [])
+def ctext104_ohnePin : List Char := zusammen (zeilen104.set 17 [])
 
-/-- Line 43, the read in `lies`, at a field the slot record does not
+/-- Line 44, the read in `lies`, at a field the slot record does not
     declare. -/
 def ctext104_feld : List Char :=
-  zusammen (zeilen104.set 43 "    return k->slots[i].fehlt;\n".toList)
+  zusammen (zeilen104.set 44 "    return k->slots[i].fehlt;\n".toList)
 
 /-! ## 2. What `parseC` answers -/
 

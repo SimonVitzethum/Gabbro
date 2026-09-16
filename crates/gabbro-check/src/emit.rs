@@ -738,8 +738,9 @@ pub const KOPF: &str = "\
  * This file was generated. Edit the .gab source, not this file.
  *
  * Gabbro is AGPL-3.0 with an additional permission: this generated file and the program it
- * belongs to are NOT a derived work of Gabbro. The permission is conditional on this notice
- * being preserved. See LIZENZ-ZUSATZ.md.
+ * belongs to are NOT a derived work of Gabbro. You may remove this notice -- keeping it is a
+ * condition only where the result is presented as formally verified or secure, because a proof
+ * claim whose origin cannot be looked up is a claim nobody can check. See LIZENZ-ZUSATZ.md.
  */
 #include <stdint.h>
 #include <stdbool.h>

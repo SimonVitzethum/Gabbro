@@ -9,9 +9,10 @@ The point is not to have another language. The point is to write an operating sy
 
 > **License: AGPL-3.0** ([LICENSE](LICENSE)) — **with an additional permission that answers the
 > important question up front:** what you write in Gabbro is not a derived work. Your program,
-> the generated C and the binaries are yours, under any license you like. The condition is one
-> line: generated C files and binaries carry a notice saying they came out of Gabbro. Details in
-> [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
+> the generated C and the binaries are yours, under any license you like. **The condition applies
+> only if you call the result formally verified or secure**: then the generated files say which
+> checker said so, because a proof claim whose origin cannot be looked up is a claim nobody can
+> check. Claim nothing and you owe nothing. Details in [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
 
 > **How this repository is written — AI agents, and where the human stands.**
 > **Implementation, checking and coordination are done by AI agents**: one orchestrating
