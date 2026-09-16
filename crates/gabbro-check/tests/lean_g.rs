@@ -732,10 +732,12 @@ fn accepts_traverse_slots() {
     assert!(text.contains("(.traverse"), "traverse travels:\n{text}");
 }
 
-/// **LG006**: a `traverse` over a pointer has no `Stmt` form (the model
-/// traverses a table, `Stmt.traverse (t : D.Tab)`).
+/// **Lane 207 -- `traverse` over a pointer resolves to ITS table**
+/// (positive probe): with two tables in scope, `over slots of t` is the
+/// domain of `T`, not of `U`. This shape was `LG006` before the pointer
+/// arm; the refusal now holds only where the name is no pointer.
 #[test]
-fn refuses_traverse_pointer() {
+fn traverse_pointer_domain_resolves_to_its_table() {
     let q = "module test::leang_travp {\n\
         table T count 4 { slot { v : u32, } }\n\
         lock L protects { T } rank 0 held <= 100 ops;\n\
@@ -745,8 +747,11 @@ fn refuses_traverse_pointer() {
         {\n    traverse i over slots of t by unvisited\n\
         {\n        t.slots[i].v = 0;\n}\n}\n\
         }\n";
-    let w = export("leang_travp", &tree(q)).expect_err("must refuse");
-    assert_eq!(w.code, "LG006", "{w}");
+    let text = export("leang_travp", &tree(q)).expect("pointer-domain traverse must export");
+    assert!(
+        text.contains("(.traverse GTab.T"),
+        "the domain is the table the pointer names:\n{text}"
+    );
 }
 
 /// **LG006**: `retry` and `forever` have no form in this fragment (the
@@ -1386,5 +1391,109 @@ fn tagged_corpus_programs_export() {
     ] {
         let text = export_file(name);
         assert!(text.contains(".sum ["), "{name} must carry a `Ty.sum`:\n{text}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Lane 207 -- `traverse i over slots of p` where `p` is a pointer-typed name
+//
+// A `ptr<normal, _> T` statically names its table `T`, and the slots of what
+// it points to are the slots of `T` itself -- the same domain the table
+// spelling names. `beispiele/19` and `46` spell it this way (and both stop
+// at a SECOND wall, `+=` on a `let mut` local, which has no `Stmt` form:
+// a first-refusal count is not a count of programs gained).
+// ---------------------------------------------------------------------------
+
+/// **A `traverse` over a pointer-typed parameter travels** (positive probe):
+/// with two tables in scope the domain is the table the pointer statically
+/// names, never the other one.
+#[test]
+fn accepts_traverse_over_pointer_domain() {
+    let q = "module test::leang_travd {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 4 { slot { w : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        lock C protects { U } rank 10 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T, u : ptr<normal, rw> U)\n\
+        requires Held(L)\n\
+        effects { writes t.slots, locks L } costs <= 64 ops\n\
+        {\n    traverse i over slots of t by unvisited\n\
+        {\n        t.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let text = export("leang_travd", &tree(q)).expect("pointer-domain traverse must export");
+    assert!(
+        text.contains("(.traverse GTab.T"),
+        "the domain is the table the pointer names:\n{text}"
+    );
+    assert!(
+        !text.contains("(.traverse GTab.U"),
+        "and never the table it does not name:\n{text}"
+    );
+}
+
+/// **LG006 -- a `traverse` over an integer is still no table** (poison
+/// probe): only a pointer-typed name resolves, never a value.
+#[test]
+fn refuses_traverse_over_integer_domain() {
+    let q = "module test::leang_travi {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        impl fn f(x : u32)\n\
+        effects { pure } costs <= 64 ops\n\
+        {\n    traverse i over slots of x by unvisited\n\
+        {\n        let z = i;\n}\n}\n\
+        }\n";
+    let w = export("leang_travi", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG006", "{w}");
+    assert!(w.message.contains("is not a table"), "must name the domain failure: {w}");
+}
+
+/// **LG006 -- a `traverse` over an unknown name is still no table**
+/// (poison probe): the pointer arm resolves names in scope, it does not
+/// invent them.
+#[test]
+fn refuses_traverse_over_unknown_domain() {
+    let q = "module test::leang_travu {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        effects { writes t.slots } costs <= 64 ops\n\
+        {\n    traverse i over slots of nope by unvisited\n\
+        {\n        t.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let w = export("leang_travu", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG006", "{w}");
+    assert!(w.message.contains("is not a table"), "must name the domain failure: {w}");
+}
+
+/// **Lane 207 -- the `Einheit` width in one unit** (positive probe): the
+/// real `requires` (`gReq_arbeiter`), the declared start with its argument
+/// list, the declared initial memory (`gSp0`: slots at zero, the global at
+/// its initialiser), the lock-invariant family (`gS`) and the unit itself
+/// (`gE : Zielsatz.Einheit gD`).
+#[test]
+fn einheit_width_travels_together() {
+    let q = "module test::leang_einheit {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        static mut s : u32 in 0 .. 100 = 3;\n\
+        lock L protects { T, s } rank 0 held <= 100 ops invariant T.slots[0].v == 1;\n\
+        impl fn starter() effects { pure } costs <= 1 ops { }\n\
+        impl fn arbeiter(t : ptr<normal, rw> T)\n\
+        requires Held(L), T.slots[0].v == 7\n\
+        effects { writes t.slots, locks L } costs <= 8 ops\n\
+        {\n    t.slots[0].v = 8;\n}\n\
+        concurrent { starter };\n\
+        }\n";
+    let text = export("leang_einheit", &tree(q)).expect("the unit must export");
+    for teil in [
+        "def gReq_arbeiter",
+        "starts := [⟨g_starter, .nil⟩]",
+        "| .T, .v => ⟨0, by decide, by decide⟩",
+        "| .s => ⟨3, by decide, by decide⟩",
+        "def gS : SperrInv gD where",
+        "def gE : Zielsatz.Einheit gD where",
+        "  P := gP",
+        "  S := gS",
+        "  sp0 := gSp0",
+    ] {
+        assert!(text.contains(teil), "unit export must contain {teil:?}:\n{text}");
     }
 }
