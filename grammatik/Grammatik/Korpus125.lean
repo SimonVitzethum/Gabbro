@@ -233,6 +233,155 @@ theorem offen125_lese_aussen : ¬ gdarf kD QGlob.z [] := by
 def offen125 : String :=
   "lese_schreibe returns z inside locks WACHE: no G term (offen125_ret_unter_locks); move the return out or add the form"
 
+/-! ## 4. The user obligations on the reshaped program -/
+
+/-- Every `requires` is `.wahr`, at every function, world and environment. -/
+theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
+    ReqAmEintritt kP f W ρ := rfl
+
+theorem kP_koerper_setzeNull : KoerperGutS kP 0 (axWahr kD) kSI kSetzeNull := by
+  have hr : kP.rumpf kSetzeNull = kRumpfSetzeNull := rfl
+  refine ⟨fun O' _ _ _ U _ R _ _ σ ρ _ => ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R _ _ σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    simp only [kRumpfSetzeNull, execEndH, execStmtH, execBlockH, freiH, kSI] at hrun
+    cases hrun
+    rfl
+  · rw [hr] at hrun
+    simp only [kRumpfSetzeNull, execEndH] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    simp only [freiH, kSI, execStmtH] at hrun
+    simp at hrun
+  · rw [hr] at hrun
+    simp only [kRumpfSetzeNull, execEndH] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    simp only [freiH, kSI, execStmtH] at hrun
+    simp at hrun
+
+theorem kP_koerper_lese : KoerperGutS kP 0 (axWahr kD) kSI kLese := by
+  have hr : kP.rumpf kLese = kRumpfLese := rfl
+  refine ⟨fun O' _ _ _ U _ R _ _ σ ρ _ => ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩,
+    fun O' _ _ _ U _ R _ _ σ ρ _ e hrun => ?_⟩
+  · rw [hr] at hrun
+    simp only [kRumpfLese, execEndH, execStmtH, execBlockH, freiH, kSI] at hrun
+    cases hrun
+    rfl
+  · rw [hr] at hrun
+    simp only [kRumpfLese, execEndH] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    simp only [freiH, kSI, execStmtH] at hrun
+    simp at hrun
+  · rw [hr] at hrun
+    simp only [kRumpfLese, execEndH] at hrun
+    erw [execStmtH_locks_eins] at hrun
+    simp only [freiH, kSI, execStmtH] at hrun
+    simp at hrun
+
+theorem kP_koerper : ∀ f : kD.Fn, KoerperGutS kP 0 (axWahr kD) kSI f := by
+  intro f
+  cases f
+  · exact kP_koerper_lese
+  · exact kP_koerper_setzeNull
+
+theorem kP_inv : ∀ f : kD.Fn, InvGutS kP 0 (axWahr kD) kSI f :=
+  fun _ => invGutS_ohne fun i _ => nomatch i
+
+theorem kP_ohneEwig : ohneEwigB kP kFs = true := by decide
+
+theorem kP_koerper_alle : ∀ (passes : Nat) (f : kD.Fn), KoerperGutS kP passes (axWahr kD) kSI f :=
+  koerperGutS_alle kFs_voll kP_ohneEwig kP_koerper
+
+theorem kP_inv_alle : ∀ (passes : Nat) (f : kD.Fn), InvGutS kP passes (axWahr kD) kSI f :=
+  invGutS_alle kFs_voll kP_ohneEwig kP_inv
+
+/-! ## 5. The reshaped program as one declaration -/
+
+/-- No tables: every slot function is vacuous. -/
+theorem kTabLeer (t : kD.Tab) : False := by cases t
+
+def kSlots : ∀ t : kD.Tab, Int → ∀ f : kD.Feld t, Wert kD (kD.typ t f) :=
+  fun t => False.elim (kTabLeer t)
+
+/-- The start memory: the declared initializer `z = 0`. -/
+def kSp : Speicher kD :=
+  ⟨kSlots, fun _ => ⟨0, by decide, by decide⟩⟩
+
+/-- A world with `z = 5` (for the memory-changing witness run). -/
+def kSp5 : Speicher kD :=
+  ⟨kSlots, fun _ => ⟨5, by decide, by decide⟩⟩
+
+/-- **`beispiele/125` as ONE declaration, reshaped**: code `kP` (with the
+    reshaped `lese_schreibe`), lock family `kSI`, no axiom, declared starts
+    `lese_schreibe` and `setze_null` (the `concurrent` members), initial
+    memory `z = 0` as declared. -/
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩], kSp⟩
+
+/-- The premise group on the RESHAPED program -- honestly named, never
+    `korpus125_nutzer`: the source-shape group stays open (`offen125`). -/
+theorem korpus125_nutzer_umgestaltet : Zielsatz.NutzerPflicht kE :=
+  ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
+      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, fun _ _ _ _ => rfl, axEnsLokal_wahr⟩,
+    ⟨fun _ => rfl, fun a ha => by
+      simp only [kE, List.mem_cons, List.not_mem_nil, or_false] at ha
+      rcases ha with rfl | rfl <;> rfl⟩⟩
+
+/-- No axiom, no register: the oracle sees no global (the global is a
+    carrier, not a device); nothing awaits, so visibility is constantly
+    false. -/
+def kO : Orakel kD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun _ _ => false
+
+theorem kO_gut : GutO kO := fun a => nomatch a
+
+theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g σ σ' _ => rfl)⟩
+
+theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
+
+theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true :=
+  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true; exact kP_akzeptiert)
+
+/-- **The goal theorem on the reshaped 125 program** -- `gabbro_ziel` with
+    the concrete checker. -/
+theorem korpus125_ziel_umgestaltet (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q)
+    (passes : Nat)
+    (sp : Speicher kD.mitRuhe)
+    (init : Faden → Σ f : kD.mitRuhe.Fn, Env kD.mitRuhe (kD.mitRuhe.params f))
+    (hL : Zielsatz.Laufzeit kE sp init) (M : RufMaschineG kD.mitRuhe)
+    (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
+    Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
+  Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[QLock.w], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
+    kE_akzeptiert korpus125_nutzer_umgestaltet O hO passes sp init hL M hM
+
+/-- **Witness for the reshaped group** (rule 13): the premise group jointly
+    with a non-degenerate run -- `setze_null`'s body from the `z = 5` world
+    returns with `z = 0`: a reached run with a memory-changing step, on the
+    table... the global a function writes. -/
+theorem korpus125_nutzer_umgestaltet_zeuge
+    (R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f) :
+    Zielsatz.NutzerPflicht kE ∧ ∃ (σ' : World kD) (v : ErgVal kD (kD.erg kSetzeNull)),
+      execEndH kSI kO (fun _ σ => σ) 0 R kRumpfSetzeNull (kSp5.welt []) .nil = .zurueck σ' v ∧
+      (σ'.globs QGlob.z).n = 0 ∧ ((kSp5.welt []).globs QGlob.z).n = 5 :=
+  ⟨korpus125_nutzer_umgestaltet, _, _, rfl, rfl, rfl⟩
+
+/-
+  CUTS: the source-shape `lese_schreibe` (value `return` inside `locks
+  WACHE`) has no G term -- proved (`offen125_ret_unter_locks`), named gap
+  `offen125`. The file proves the full premise groups only for the reshaped
+  program (return moved out, constant -- a guarded read outside is
+  untypeable, `offen125_lese_aussen`). What is NOT claimed: `korpus125_nutzer`
+  on the source shape (open), anything about the `.gab` source text (no
+  exporter link -- lane 201), and no stage-(b) simulation certificate.
+-/
+#print axioms K125.kP_akzeptiert
+#print axioms K125.korpus125_nutzer_umgestaltet
+#print axioms K125.korpus125_ziel_umgestaltet
+#print axioms K125.korpus125_nutzer_umgestaltet_zeuge
+#print axioms K125.offen125_ret_unter_locks
+#print axioms K125.offen125_lese_aussen
+
 end K125
 
 end Gabbro.Grammatik
