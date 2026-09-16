@@ -166,3 +166,109 @@ fn refuses_unknown_call_like_lean_g() {
     .expect_err("must refuse");
     assert_eq!(w.code, "LG005", "{w}");
 }
+
+// ---------------------------------------------------------------------------------------
+// O12: the release obligation in the obligation channel.
+// ---------------------------------------------------------------------------------------
+
+/// The O12 corpus shape (the `beispiele/124` lock and callee, minimal):
+/// a lock with an invariant over two slot cells, a callee, and a locked
+/// section calling it. The callee's promise is the parameter.
+const O12_KOPF: &str = "module test::o12 {\n\
+    type Stand = u32 in 0 .. 100;\n\
+    table konto count 2 { slot { stand : Stand, } }\n\
+    lock L protects { konto } rank 0 held <= 100 ops\n\
+        invariant konto.slots[0].stand == konto.slots[1].stand;\n";
+
+fn o12_einheit(ensures_setze: &str) -> String {
+    format!(
+        "{O12_KOPF}\
+        impl fn setze(x : Stand)\n\
+        \x20   requires Held(L), konto.slots[0].stand == konto.slots[1].stand\n\
+        \x20   ensures  {ensures_setze}\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 64 ops\n\
+        {{\n\
+        \x20   konto.slots[0].stand = x;\n\
+        \x20   konto.slots[1].stand = x;\n\
+        }}\n\
+        impl fn haupt()\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 512 ops\n\
+        {{\n\
+        \x20   locks L {{\n\
+        \x20       setze(30);\n\
+        \x20   }}\n\
+        }}\n\
+        concurrent {{ haupt }};\n\
+        }}\n"
+    )
+}
+
+fn o12_export(ensures_setze: &str) -> String {
+    let quelle = o12_einheit(ensures_setze);
+    let (baum, mut absagen) = gabbro_syntax::lies("o12", &quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert!(
+        absagen.fehler_zahl() == 0,
+        "the O12 snippet stays checker-clean: {}",
+        absagen.zeige(&quelle)
+    );
+    export("o12", &baum).expect("the O12 snippet must export")
+}
+
+/// **O12, the failing half: a callee promising only `konto[0] == x` leaves
+/// the release obligation UNPROVED** -- naming the locked section (`haupt`
+/// locking `L`), the callee promise (`setze`), and the unproved release
+/// goal (`konto.slots[1].stand`). No new refusal: the export succeeds, so
+/// the failure is stated in the obligation channel, never diagnosed.
+#[test]
+fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
+    let text = o12_export("konto.slots[0].stand == x");
+    for teil in [
+        "RELEASE OBLIGATIONS",
+        "haupt",
+        "`L`",
+        "setze promises {konto.slots[0].stand}",
+        "RELEASE UNPROVED",
+        "no callee promises konto.slots[1].stand",
+    ] {
+        assert!(text.contains(teil), "the failing release row must contain {teil:?}");
+    }
+}
+
+/// **O12, the fixed half: a callee promising both slots HOLDS** -- the
+/// shape `beispiele/124` carries since the O12 corpus fix.
+#[test]
+fn o12_starkes_ensures_haelt_die_freigabe() {
+    let text = o12_export(
+        "konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x",
+    );
+    assert!(
+        text.contains("RELEASE HOLDS (syntactic)"),
+        "the fixed release row must hold"
+    );
+    assert!(
+        !text.contains("RELEASE UNPROVED:"),
+        "no release row may fail once both slots are promised"
+    );
+}
+
+/// **O12 on the corpus file itself: `124` holds at every release** -- the
+/// strengthened `setze` contract re-establishes the lock invariant from the
+/// callee's promise, at both locked sections.
+#[test]
+fn o12_beispiel_124_haelt_an_jeder_freigabe() {
+    let text = export_file("124-two-threads-private.gab");
+    assert!(
+        text.contains("RELEASE HOLDS (syntactic)"),
+        "124 must hold at its releases since the O12 fix"
+    );
+    assert!(
+        !text.contains("RELEASE UNPROVED:"),
+        "124 must have no failing release row since the O12 fix"
+    );
+    for teil in ["hauptA", "hauptB", "`L`", "setze promises"] {
+        assert!(text.contains(teil), "124 release rows must name {teil:?}");
+    }
+}

@@ -39,7 +39,11 @@ lock L protects { konto } rank 0 held <= 100 ops
 
 impl fn setze(x : Stand)
     requires Held(L), konto.slots[0].stand == konto.slots[1].stand
-    ensures  konto.slots[0].stand == x
+    -- O12: the `ensures` speaks about BOTH slots. Promising only
+    -- `konto.slots[0].stand == x` leaves `konto[1]` free, so a locked
+    -- section calling `setze` cannot re-establish the lock invariant
+    -- `konto[0] == konto[1]` at release from the callee's promise.
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
     effects  { reads konto.slots, writes konto.slots, locks L }
     costs    <= 64 ops
 {
