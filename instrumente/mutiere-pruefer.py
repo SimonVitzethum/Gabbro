@@ -3080,8 +3080,15 @@ MUTATIONEN = [
     Mutation(
         "laden-nimmt-die-speicherordnung",
         "emit.rs",
-        "            let Some((typ, _, ordnung)) = u.atomics.get(&quelle) else {",
-        "            let Some((typ, ordnung, _)) = u.atomics.get(&quelle) else {",
+        # **Re-anchored 2026-09-16 (atomic arrays).** The line moved when the four
+        # atomic arms stopped each asking `u.atomics` for themselves and started
+        # asking `atom_target`, which answers the scalar AND the array element.
+        # The MUTATION is unchanged in every respect that matters: it still swaps
+        # the store order into the load position, and the anchor still sits at the
+        # `awaits` arm. *An anchor that no longer grips measures nothing, and reads
+        # exactly like one that does* -- `--anker` caught this one the same day.
+        "            let Some((quelle, typ, _, ordnung)) = atom_target(&al.quelle, u, absagen) else {",
+        "            let Some((quelle, typ, ordnung, _)) = atom_target(&al.quelle, u, absagen) else {",
         "K11.2.3 -- ein Laden mit `memory_order_release`; das gibt es in C11 nicht",
     ),
     # -- K11.2.1: `protects` beisst ---------------------------------------------------------

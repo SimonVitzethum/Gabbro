@@ -1583,6 +1583,51 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
     },
     Satz {
+        name: "m1.atomic_array_bound",
+        kennungen: &["N380"],
+        aussage: "Every indexed access to an `atomic` ARRAY carries a bound that is SHOWN. \
+                  `M103` compares the index range against the declared length and refuses \
+                  the access whose index reaches past it; where it can make no comparison \
+                  at all -- the declaration's length did not fold to a constant, or the \
+                  index type carries no range -- `N380` refuses instead of stepping aside. \
+                  And `M103` now reaches the two statements it never reached: an `exchange` \
+                  and an `awaits` are bound-checked like a store, so all four forms an \
+                  atomic array admits (indexed read, `publishes`, `awaits`, `exchange`) \
+                  carry the same bound. The reason the strict half sits here and not at an \
+                  ordinary table index: the goal theorem (`Zielsatz/Spec.lean`) proves \
+                  `RennfreiBis` for every carrier EXCEPT the atomics \
+                  (`Akzeptiert.lean`, `atomarB`), so an out-of-range atomic \
+                  read-modify-write is an unchecked write to an arbitrary address that \
+                  nothing else in the statement covers -- not the footprint, not the \
+                  guard, not race freedom.",
+        vorbehalt: "**It holds the atomic array and no other carrier**, and the same two \
+                    silences are open at an ordinary table to this day: `T.slots[b].z` with \
+                    `b : bool` checks clean, and so does an index into an array whose \
+                    length did not fold. Closing that half is a measurement of its own with \
+                    its own moved corpus numbers; this arm is NEW, so it owes no corpus a \
+                    migration and takes the strict rule for free. The rule asks the \
+                    DECLARATION and the index type, nothing else: it does not look for a \
+                    flow fact that would bound a rangeless index, because there is no such \
+                    type to carry one. A local shadowing the atomic's name silences it -- \
+                    the access is the local's, exactly as at `N270`/`N271`. **And the \
+                    bound is compile-time only**: no run-time check is emitted, because \
+                    `gabbro emit` writes no C for a unit with errors (W6).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1040-atomic-array-length-not-constant.gab (a `static` \
+                      length -- N380, and the emitter refuses the declaration too); \
+                      beispiele/gift/1041-atomic-array-index-without-range.gab (a `bool` index \
+                      -- N380); beispiele/gift/1042-atomic-array-exchange-out-of-range.gab (M103 at \
+                      an `exchange`); beispiele/gift/1043-atomic-array-awaits-out-of-range.gab \
+                      (M103 at an `awaits`). **All four checked clean through the UNCHANGED \
+                      checker on 2026-09-16** -- `0 errors, 0 hints` for 1040 and 1041, \
+                      `0 errors` for 1042 and 1043 -- while `publishes` on the very same \
+                      array reported `M103`. The silent direction is beispiele/140 and \
+                      beispiele/141, where the bound is declared and all four forms pass.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (atom_array, index_pruefen, the \
+                     Exchange and AwaitLoad arms); crates/gabbro-check/src/emit.rs \
+                     (atom_target, atom_declarator)",
+    },
+    Satz {
         name: "m1.stelligkeit",
         kennungen: &["M143"],
         aussage: "A direct call passes exactly as many arguments as the callee declares \
@@ -2193,7 +2238,16 @@ pub const M1: &[Satz] = &[
                   without one would carry the pairing past the checker in silence. A \
                   suffixed place over an atomic is refused too (`N271`): the atomic is a \
                   scalar, so `AT[0]` names no element -- it checked clean (the indexed \
-                  type falls out as untyped) and emitted an index into a scalar. The \
+                  type falls out as untyped) and emitted an index into a scalar. **Since \
+                  2026-09-16 that refusal has ONE exception, and exactly one**: a single \
+                  index into an atomic whose declared type is an ARRAY \
+                  (`atomic REGEL : [u32; 256]`), where the element really exists as an \
+                  atomic object of its own (`_Atomic uint32_t REGEL[256]`, C11 6.7.2.4p3 \
+                  -- the qualifier sits on the element type). It lowers to \
+                  `atomic_load_explicit(&REGEL[r], …)`, and the bound of the index is \
+                  `M103`'s and `N380`'s. Every other suffix shape keeps every word of the \
+                  refusal: a field behind the index names nothing at either width, and no \
+                  `atomic` declaration writes a nested array. The \
                   twin half is the emitter's: a bare READ lowers to \
                   `atomic_load_explicit` in the declared load order (a `release` \
                   declaration loads `acquire`), through the one place every runtime \
@@ -2214,7 +2268,15 @@ pub const M1: &[Satz] = &[
                       (and `cc` still accepts the emitted C, hence `allein`); \
                       beispiele/gift/937-bare-store-despite-pairing.gab falls with N270 \
                       ALONE beside a live `publishes`/`awaits` pairing; \
-                      beispiele/gift/939-index-into-atomic.gab falls with N271 ALONE. The silent \
+                      beispiele/gift/939-index-into-atomic.gab falls with N271 ALONE (the \
+                      SCALAR, unchanged); beispiele/gift/1044-atomic-array-field-behind-index.gab \
+                      pins the edge of the array exception -- `REGEL[0].x` over an atomic \
+                      array still falls with N271. The positive side of the exception is \
+                      beispiele/140 (payload-free atomic array: indexed exchange, indexed \
+                      bare read, indexed publish) and beispiele/141 (ordered atomic array \
+                      with a live publishes/awaits pairing through the element); both emit \
+                      C that `cc -std=c11 -Wall -Wextra -Werror` accepts at -O0 and -O2. \
+                      The silent \
                       direction is `beispiele/116` (payload-free counter, bare read \
                       lowering to a `relaxed` load) and `beispiele/117` (the \
                       `publishes`/`awaits` pair); the spin direction is \

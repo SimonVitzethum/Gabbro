@@ -1,0 +1,36 @@
+-- erwartet: N380
+-- **An `atomic` array whose length is not a compile-time constant: nothing
+-- says what "in range" means, so no access to it has a bound.**
+--
+-- `M103` compares the index range against the LENGTH, and a length that did
+-- not fold leaves it with no number to compare against -- the rule does not
+-- even match its own arm (`Typ::Feld { laenge: None }`) and stays silent.
+-- Measured 2026-09-16 through the unchanged checker: this file, with the index
+-- reaching 300 over a `static` length of 256, reported `0 errors, 0 hints`.
+--
+-- On an ordinary table that silence is old and shared. Here it is one step
+-- worse, and that step is why `N380` exists: an `atomic` carrier is the ONE
+-- carrier the goal theorem exempts from race freedom (`RennfreiBis`,
+-- `Zielsatz/Akzeptiert.lean` `atomarB`), so an out-of-range atomic
+-- read-modify-write is an unchecked write to an arbitrary address that nothing
+-- else in the statement covers -- not the footprint, not the guard, not race
+-- freedom.
+--
+-- The emitter has its own half of this: it refuses the DECLARATION too
+-- (`C001`, *"`atomic` array whose length is not a compile-time constant"*),
+-- because `[]` at file scope is an incomplete type and a guessed size is a
+-- buffer nobody asked for.
+module gift::atomic_array_length_not_constant {
+
+static WIE_VIELE : u32 = 256;
+
+atomic REGEL : [u32; WIE_VIELE] relaxed;
+
+impl fn setz(r : u32 in 0 .. 300, v : u32)
+    effects { writes REGEL }
+    costs   <= 4 ops
+{
+    REGEL[r] = v publishes nothing;
+}
+
+}

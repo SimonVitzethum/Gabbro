@@ -1,0 +1,39 @@
+-- erwartet: M103
+-- **An `exchange` whose index runs past the end of the array -- and until
+-- 2026-09-16 no rule looked.**
+--
+-- `M1::index_pruefen` ran at an assignment and at a `publishes` and nowhere
+-- else. The `N271` note beside it says why nobody noticed: *"the legal indexed
+-- atomics never reach that arm -- all three read their source through
+-- `typ_von_ort` directly"*. They read the TYPE directly, and `M103` does not
+-- live in `typ_von_ort`. Measured through the unchanged checker on the same
+-- file with the same 0 .. 300 index: `0 errors`, while `publishes` on the very
+-- same array reported `M103`. **U9's own sentence held and was not applied: M4
+-- holds on both sides, and an `exchange` is the writing side.**
+--
+-- It is the more dangerous side here in a way it is not at a table: the CAS
+-- loop writes, and an `atomic` carrier is the ONE carrier the goal theorem
+-- exempts from race freedom, so nothing downstream would have caught it.
+module gift::atomic_array_exchange_out_of_range {
+
+atomic REGEL : [u32; 256] relaxed;
+
+extern fn regel_streit() -> never effects { diverges };
+
+impl fn folge(x : u32) -> u32
+    costs <= 2 ops
+{
+    return x +% 1;
+}
+
+impl fn zaehle(r : u32 in 0 .. 300)
+    effects { reads REGEL, writes REGEL }
+    costs   <= 8 ops
+{
+    let alt : u32 = REGEL[r] exchange update(t)
+        bounded 64 ops
+        on_exceeded regel_streit
+    { return folge(t); } publishes nothing;
+}
+
+}
