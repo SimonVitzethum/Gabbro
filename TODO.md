@@ -30,13 +30,13 @@ Each item names its owner (lane or agent) where one is running.
 *14 walls from the firewall-in-Gabbro tree (`Verdict/messung/BEFUNDE-bm*.md`,
 measured against Gabbro master `71c5eaea`); 3 cost nothing — N042/N323 and
 atomic arrays are built, sigaction stays out by design (threshold counters
-are free). The remaining 11 are cut into 16 lanes in 3 waves below: 14 Muse
-lanes (workers 221–235, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
+are free). The remaining 11 are cut into 18 lanes in 3 waves below: 16 Muse
+lanes (workers 221–237, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
 both touch the model core; PARKED 2026-09-17, no Opus capacity — wave A
 runs without them). Review loop (`bin/review-wache.sh`, max 3
 rounds, builds re-run by the reviewer) covers workers 221–235 with
 reviewers from 321; the dispatcher worker list needs the extension
-(orchestrator step). Max parallel: 6 at start (222–226; O-1 parked), up to 8
+(orchestrator step). Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
 in wave B.*
 
 **Binding constraint (owner): no language feature hard-depends on an OS.**
@@ -59,11 +59,13 @@ patch shape + surviving test).
 | lane | wall | files owned (exclusive) | size | reserves N / gift / ex |
 |---|---|---|---|---|
 | 221 | `+%` fetch_add (bm4-F5) | `emit.rs` fetch arm, `tests/holform.rs` | S | N391–395 / 1052–1056 / — |
-| 222 | syntax: int-match arms + traverse domain | `parse.rs`, `lex.rs`, `kw.rs`, `ast.rs` | M | no new P-codes planned / — / 147–148 |
+| 222 | syntax: int-match arms + traverse domain | `parse.rs`, `lex.rs`, `kw.rs`, `ast.rs` | M | snippets only (no corpus files) |
 | 223 | costs on extern, trusted (K003) | `kosten.rs` | S | N396–400 / 1057–1061 / — |
 | 224 | m1 bound shapes (`k-1` class, first shapes) | `m1.rs` | M | none (existing M101) / — / — |
 | 225 | never-bodies accept (asm/forever) | `namen.rs` (`asm_never` region) | M | N401–405 / 1062–1066 / — |
 | 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
+| 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick | new `beispiele/` only | M | no new codes / — / 147–148 |
+| 237 | layout-factor muster: word tables + index arithmetic (`i>>2`, `(i&3)*8`), static-link budget measured | new `beispiele/` + report only, NO `m1.rs` (lane 224 owns it) | S | no new codes / — / 151–152 |
 | O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | PARKED (Opus) |
 
 **Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
@@ -88,6 +90,13 @@ witnesses instead of poison probes.*
 |---|---|---|---|---|
 | 235 | never/never-asm lowering | `emit.rs` | M | 234 |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
+
+*Deferred, priced, not launched: **mmap-backed tables** (Obergrenze #2).
+`table … storage mmap`: same checker rules, emitter maps at startup,
+Lean region + mmap-contract assumption. Price: 1 design lane (M) + 1
+build lane (M) + ONE-list entry; the 40 GB number itself is irrelevant —
+what counts is statically linkable, bucket-bounded, refuse-on-full
+(lanes 236/237 prove the discipline without it).*
 
 *Not lanes: sigaction (out, see above); M147 foreign taint (bm8-F2, helper
 discipline, no build); TIEFE_MAX stays 32 (raise = constant + fuzz inside
