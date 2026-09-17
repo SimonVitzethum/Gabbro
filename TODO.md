@@ -32,11 +32,12 @@ measured against Gabbro master `71c5eaea`); 3 cost nothing — N042/N323 and
 atomic arrays are built, sigaction stays out by design (threshold counters
 are free). The remaining 11 are cut into 16 lanes in 3 waves below: 14 Muse
 lanes (workers 221–235, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
-both touch the model core). Review loop (`bin/review-wache.sh`, max 3
+both touch the model core; PARKED 2026-09-17, no Opus capacity — wave A
+runs without them). Review loop (`bin/review-wache.sh`, max 3
 rounds, builds re-run by the reviewer) covers workers 221–235 with
 reviewers from 321; the dispatcher worker list needs the extension
-(orchestrator step). Max parallel: 7 at start (221–226 + O-1), up to 8
-while O-1 overlaps wave B.*
+(orchestrator step). Max parallel: 6 at start (222–226; O-1 parked), up to 8
+in wave B.*
 
 **Binding constraint (owner): no language feature hard-depends on an OS.**
 Syscalls are always user-made — declared in-program (`extern`/`syscall`
@@ -61,7 +62,7 @@ lift the refusal or keep it (`OPUS-BERICHT-FETCHADD.md` §2.3). Without it,
 | 224 | m1 bound shapes (`k-1` class, first shapes) | `m1.rs` | M | none (existing M101) / — / — |
 | 225 | never-bodies accept (asm/forever) | `namen.rs` (`asm_never` region) | M | N401–405 / 1062–1066 / — |
 | 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
-| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | Opus, none yet |
+| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | PARKED (Opus) |
 
 **Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
 
@@ -84,7 +85,7 @@ witnesses instead of poison probes.*
 | lane | wall | files owned (exclusive) | size | after |
 |---|---|---|---|---|
 | 235 | never/never-asm lowering | `emit.rs` | M | 234 |
-| C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | O-1 (Opus) |
+| C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
 *Not lanes: sigaction (out, see above); M147 foreign taint (bm8-F2, helper
 discipline, no build); TIEFE_MAX stays 32 (raise = constant + fuzz inside
