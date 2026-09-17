@@ -1,0 +1,331 @@
+-- 148 -- FTP ALG data plane: the per-packet verdict, running.
+--
+-- The twin of `beispiele/147`: where 147 stages rules, retires them and
+-- gates commands, this unit answers one question per packet -- ACCEPT or
+-- miss -- against the same fixed 1024-entry table under the same windowed
+-- expiry. It is a SECOND unit, not a second half: units are self-contained
+-- (cross-unit table access does not exist), so the table, the lock, the
+-- hash and the sweep stand here again, with IDENTICAL parameters (1024
+-- buckets, window 64, 16 rounds, age limit 63) -- no layout experiments.
+--
+-- The verdict discipline, one bucket per packet, constant cost:
+--
+--   * hash the control 5-tuple in-program (FNV-1a, the `147` shape: the xor
+--     is a function because the emitter reads wrapping sites off
+--     declarations, and the prime travels as an argument because the
+--     checker refuses a singleton next to a wrap);
+--   * empty bucket or foreign tuple -> MISS (the packet goes to the rules;
+--     a miss is an answer, not a failure);
+--   * aged-out bucket -> expire it NOW (lazy expiry: exact for every bucket
+--     the packet actually visits) and answer ABGELAUFEN;
+--   * live bucket whose data tuple is NOT the expected one -> MISS;
+--   * live bucket with the expected data tuple -> refresh the age to zero
+--     (deadline care on the hit) and answer AKZEPTIERT.
+--
+-- Fail-closed both ways, as in 147: expiry comes late (the sweep visits
+-- each bucket once per 16 ticks, the lazy check only fires on visit), never
+-- early (ages grow monotonically between refreshes, and a refresh writes
+-- zero, never a smaller age).
+module beispiel::ftp_alg_daten {
+
+const EINTRAG_ZAHL : u32 = 1024;
+const FENSTER      : u32 = 64;
+const ALTER_MAX    : u32 = 63;
+const LETZTE_RUNDE : u32 = 15;
+const RASTER_MAX   : u32 = 960;
+const LETZTER_SCHRITT : u32 = 63;
+
+const FNV_OFFSET : u32 = 2166136261;
+const FNV_PRIM   : u32 = 16777619;
+
+type Port  = u32 in 0 .. 65535;
+type Proto = u32 in 0 .. 255;
+type Code  = u32 in 0 .. 7;
+
+const OK         : u32 = 0;
+const MISS       : u32 = 1;
+const VOLL       : u32 = 2;
+const ABGELAUFEN : u32 = 4;
+const AKZEPTIERT : u32 = 5;
+
+table stroeme count EINTRAG_ZAHL {
+    slot {
+        belegt : bool,
+        qsip   : u32,
+        qdip   : u32,
+        qsp    : Port,
+        qdp    : Port,
+        qpr    : Proto,
+        xsip   : u32,
+        xdp    : Port,
+        alter  : u32 in 0 .. ALTER_MAX,
+    }
+}
+
+static mut runde : u32 in 0 .. LETZTE_RUNDE = 0;
+
+lock FD protects { stroeme, runde } rank 0 held <= 16384 ops;
+
+-- The FNV-1a steps, `beispiele/147`'s shape word for word: `xor_worte` is a
+-- function because the emitter accepts a call result (never a `^`) as a
+-- wrapping side, and the prime is an argument because the checker refuses a
+-- singleton next to a `*%`. Bare `u32` throughout: a named exact range
+-- checks but does not lower.
+impl fn xor_worte(a : u32, b : u32) -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return a ^ b;
+}
+
+impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
+    effects { pure }
+    costs <= 16 ops
+{
+    return xor_worte(h, w) *% p;
+}
+
+impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
+    costs <= 95 ops
+{
+    let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
+    let h1 : u32 = fnv_schritt(h0, dip, FNV_PRIM);
+    let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
+    let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
+    let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
+    return h4;
+}
+
+-- Release a slot back to pristine (`beispiele/147`'s rule: a stale match
+-- field would accept a packet the rules no longer cover). Naked access
+-- under the caller's duty (`requires Held(FD)`).
+impl fn freigeben(i : index into stroeme)
+    requires Held(FD)
+    effects  { writes stroeme.slots, locks FD }
+    costs    <= 64 ops
+{
+    stroeme.slots[i].belegt = false;
+    stroeme.slots[i].qsip = 0;
+    stroeme.slots[i].qdip = 0;
+    stroeme.slots[i].qsp = 0;
+    stroeme.slots[i].qdp = 0;
+    stroeme.slots[i].qpr = 0;
+    stroeme.slots[i].xsip = 0;
+    stroeme.slots[i].xdp = 0;
+    stroeme.slots[i].alter = 0;
+}
+
+-- Stage one expectation: the same take-it-or-refuse as 147's `ablege`
+-- (direct-mapped, VOLL on a live occupant, inline reclaim of an aged-out
+-- bucket). The unit stages its own rules because it answers its own
+-- packets.
+impl fn erwarte_innen(r : index into stroeme,
+                      sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+                      xsip : u32, xdp : Port) -> Code
+    requires Held(FD)
+    effects { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs   <= 128 ops
+{
+    if stroeme.slots[r].belegt {
+        if stroeme.slots[r].alter >= ALTER_MAX {
+            freigeben(r);
+        } else {
+            return VOLL;
+        }
+    }
+    stroeme.slots[r].belegt = true;
+    stroeme.slots[r].qsip = sip;
+    stroeme.slots[r].qdip = dip;
+    stroeme.slots[r].qsp = sp;
+    stroeme.slots[r].qdp = dp;
+    stroeme.slots[r].qpr = pr;
+    stroeme.slots[r].xsip = xsip;
+    stroeme.slots[r].xdp = xdp;
+    stroeme.slots[r].alter = 0;
+    return OK;
+}
+
+impl fn erwarte(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+                xsip : u32, xdp : Port) -> Code
+    effects { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs   <= 256 ops
+{
+    let h : u32 = fnv(sip, dip, sp, dp, pr);
+    let r : u32 = h % EINTRAG_ZAHL;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return MISS; }
+    locks FD {
+        return erwarte_innen(r, sip, dip, sp, dp, pr, xsip, xdp);
+    }
+}
+
+-- The verdict, one bucket per packet. Five gates in order: occupancy,
+-- control-tuple match, age, data-tuple match, then ACCEPT with the age
+-- refreshed to zero (deadline care on the hit: the next 63 ticks are paid
+-- for by this packet). The nesting is the match -- a flat `&&` chain would
+-- read `stroeme.slots[r]` the same five times and prove nothing less, but
+-- the checker bills the reads per gate either way, so the shape stays
+-- explicit.
+impl fn urteil_innen(r : index into stroeme,
+                     sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+                     dsip : u32, ddp : Port) -> Code
+    requires Held(FD)
+    effects { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs   <= 192 ops
+{
+    if stroeme.slots[r].belegt {
+        if stroeme.slots[r].qsip == sip {
+            if stroeme.slots[r].qdip == dip {
+                if stroeme.slots[r].qsp == sp {
+                    if stroeme.slots[r].qdp == dp {
+                        if stroeme.slots[r].qpr == pr {
+                            if stroeme.slots[r].alter >= ALTER_MAX {
+                                freigeben(r);
+                                return ABGELAUFEN;
+                            } else {
+                                if stroeme.slots[r].xsip == dsip {
+                                    if stroeme.slots[r].xdp == ddp {
+                                        stroeme.slots[r].alter = 0;
+                                        return AKZEPTIERT;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return MISS;
+}
+
+impl fn daten_paket(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+                    dsip : u32, ddp : Port) -> Code
+    effects { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs   <= 320 ops
+{
+    let h : u32 = fnv(sip, dip, sp, dp, pr);
+    let r : u32 = h % EINTRAG_ZAHL;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return MISS; }
+    locks FD {
+        return urteil_innen(r, sip, dip, sp, dp, pr, dsip, ddp);
+    }
+}
+
+-- The windowed sweep, 147's parameters to the number (64 buckets per tick,
+-- 16 rounds, subtraction-free): an entry's death is found at most 15 ticks
+-- after its age limit. No full scan under the held lock -- the unrolled
+-- window is the bound, constant cost per tick.
+impl fn alter_eintrag(i : index into stroeme)
+    requires Held(FD)
+    effects  { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs    <= 70 ops
+{
+    if stroeme.slots[i].belegt {
+        if stroeme.slots[i].alter >= ALTER_MAX {
+            freigeben(i);
+        } else {
+            stroeme.slots[i].alter += 1;
+        }
+    }
+}
+
+impl fn fenster_schritt(basis : u32 in 0 .. RASTER_MAX, k : u32 in 0 .. LETZTER_SCHRITT)
+    requires Held(FD)
+    effects  { reads stroeme.slots, writes stroeme.slots, locks FD }
+    costs    <= 128 ops
+{
+    let r : u32 = basis + k;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return; }
+    alter_eintrag(r);
+}
+
+impl fn tick_runde() -> Code
+    requires Held(FD)
+    effects { reads stroeme.slots, writes stroeme.slots,
+              reads runde, writes runde, locks FD }
+    costs   <= 8320 ops
+{
+    let basis : u32 = runde * 64;
+    fenster_schritt(basis, 0);
+    fenster_schritt(basis, 1);
+    fenster_schritt(basis, 2);
+    fenster_schritt(basis, 3);
+    fenster_schritt(basis, 4);
+    fenster_schritt(basis, 5);
+    fenster_schritt(basis, 6);
+    fenster_schritt(basis, 7);
+    fenster_schritt(basis, 8);
+    fenster_schritt(basis, 9);
+    fenster_schritt(basis, 10);
+    fenster_schritt(basis, 11);
+    fenster_schritt(basis, 12);
+    fenster_schritt(basis, 13);
+    fenster_schritt(basis, 14);
+    fenster_schritt(basis, 15);
+    fenster_schritt(basis, 16);
+    fenster_schritt(basis, 17);
+    fenster_schritt(basis, 18);
+    fenster_schritt(basis, 19);
+    fenster_schritt(basis, 20);
+    fenster_schritt(basis, 21);
+    fenster_schritt(basis, 22);
+    fenster_schritt(basis, 23);
+    fenster_schritt(basis, 24);
+    fenster_schritt(basis, 25);
+    fenster_schritt(basis, 26);
+    fenster_schritt(basis, 27);
+    fenster_schritt(basis, 28);
+    fenster_schritt(basis, 29);
+    fenster_schritt(basis, 30);
+    fenster_schritt(basis, 31);
+    fenster_schritt(basis, 32);
+    fenster_schritt(basis, 33);
+    fenster_schritt(basis, 34);
+    fenster_schritt(basis, 35);
+    fenster_schritt(basis, 36);
+    fenster_schritt(basis, 37);
+    fenster_schritt(basis, 38);
+    fenster_schritt(basis, 39);
+    fenster_schritt(basis, 40);
+    fenster_schritt(basis, 41);
+    fenster_schritt(basis, 42);
+    fenster_schritt(basis, 43);
+    fenster_schritt(basis, 44);
+    fenster_schritt(basis, 45);
+    fenster_schritt(basis, 46);
+    fenster_schritt(basis, 47);
+    fenster_schritt(basis, 48);
+    fenster_schritt(basis, 49);
+    fenster_schritt(basis, 50);
+    fenster_schritt(basis, 51);
+    fenster_schritt(basis, 52);
+    fenster_schritt(basis, 53);
+    fenster_schritt(basis, 54);
+    fenster_schritt(basis, 55);
+    fenster_schritt(basis, 56);
+    fenster_schritt(basis, 57);
+    fenster_schritt(basis, 58);
+    fenster_schritt(basis, 59);
+    fenster_schritt(basis, 60);
+    fenster_schritt(basis, 61);
+    fenster_schritt(basis, 62);
+    fenster_schritt(basis, 63);
+    if runde >= LETZTE_RUNDE {
+        runde = 0;
+    } else {
+        runde = runde + 1;
+    }
+    return OK;
+}
+
+impl fn tick() -> Code
+    effects { reads stroeme.slots, writes stroeme.slots,
+              reads runde, writes runde, locks FD }
+    costs   <= 8400 ops
+{
+    locks FD {
+        return tick_runde();
+    }
+}
+
+}
