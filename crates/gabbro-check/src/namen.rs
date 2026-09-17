@@ -5975,6 +5975,19 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
         // counter-direction and stays green; `beispiele/gift/984` is the probe.
         // (Reserved as N320; that code is taken by `section_an_funktion` since
         // 2026-09-15, so this rule carries the next free number.)
+        //
+        // **The acceptance beside the refusal (lane 225).** A `-> never` `asm`
+        // body WITHOUT `out { result }` is accepted here once `arch` (`A001`),
+        // `effects` (`A002`) and `costs` (`A003`) are declared and every other
+        // operand names a parameter (`A004`): the text is unchecked by
+        // construction, so the declaration carries everything, and the
+        // divergence evidence is the `-> never` itself -- callers read all
+        // three spellings (`-> never`, `divergent`, `diverges`), so no extra
+        // word is demanded. The emitter is one lane behind: it still refuses
+        // this accepted shape at the older `hat_ergebnis` arm (`C001`,
+        // `beispiele/gift/1066` pins the handoff for lane 235), while the
+        // `N321` shape above ends at the `C001` arm beside it (`gift/985`) and
+        // stays refused on both channels.
         if matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
             if let Some((n, _)) = a.aus.iter().find(|(n, _)| n.text == "result") {
                 absagen.schiebe(

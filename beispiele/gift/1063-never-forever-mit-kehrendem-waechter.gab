@@ -1,0 +1,29 @@
+-- erwartet: S006
+-- **1063 -- a `-> never` body ending in `forever` needs a DIVERGING exit.**
+--
+-- The `on_exceeded` watchdog is the exit at which the `per_pass` bound touches
+-- reality (`schleifen.rs::ausgang_pruefen`): if it returned, the loop would
+-- carry on and the bound would be a number without a consequence. Here it
+-- names `heimkehr`, a function that returns, so `S006` fires. The honest shape
+-- names a diverging function instead (`-> never`, `divergent`, or
+-- `effects { diverges }`): then the `-> never` body is accepted and lowers to
+-- `for (;;)` with the watchdog pinned beside it.
+--
+-- Lane 225 pins the exit side of the `-> never` + `forever` acceptance: a
+-- `forever` with no diverging exit stays refused.
+module gift::never_forever_mit_kehrendem_waechter {
+
+extern fn heimkehr() -> u32 effects { pure } costs <= 1 ops;
+
+divergent fn dienst() -> never
+    effects { diverges }
+{
+    forever s
+        per_pass bounded 4 ops
+        on_exceeded heimkehr
+        effects { pure }
+    {
+    }
+}
+
+}

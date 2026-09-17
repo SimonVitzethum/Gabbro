@@ -293,7 +293,13 @@ pub const NAMEN: &[Satz] = &[
                     arm -- and the honest shape (a halting `asm` under `-> never` that \
                     compiles) is open, not built. Reserved as `N320`; that code is taken \
                     by `namen.section_an_funktion` since 2026-09-15, so this rule carries \
-                    the next free number.",
+                    the next free number. **Lane 225 closes the checker half of that open \
+                    shape without moving this line**: a `-> never` `asm` body with declared \
+                    `arch`/`effects`/`costs` and no `out { result }` is ACCEPTED (the text \
+                    is unchecked by construction; the divergence evidence is the \
+                    `-> never` declaration itself, which callers read in all three \
+                    spellings) -- see `namen.asm_never_angenommen`. What stays refused \
+                    here stays refused: the `out` shape above on both channels.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured before the build: `pruefe` reports 0 errors over a `-> never` \
                       `asm` body with `out { result }` (`S009` returns early on non-`Block` \
@@ -304,10 +310,77 @@ pub const NAMEN: &[Satz] = &[
                       refuses (a `static` prototype with no definition, which `cc` rejects \
                       for that other reason), so `nothing else catches it' would be false. \
                       Counter-direction: `beispiele/36-asm.gab` (`schreiben -> u64` with \
-                      `out { result }`, and `ausgeben` with neither) stays green.",
+                      `out { result }`, and `ausgeben` with neither) stays green. \
+                      **Lane 225** adds the acceptance pins beside it: `gift/1065` \
+                      (`-- erwartet: A003`, the declaration the accepted shape still owes) \
+                      and `gift/1066` (`-- erwartet: C001`, checker silent -- the accepted \
+                      shape, emitter still refusing: the handoff to lane 235).",
         fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`); \
                      crates/gabbro-check/src/emit.rs (the `asm` arm); \
                      grammatik/Grammatik/Zielsatz/NeverAsm.lean",
+    },
+    Satz {
+        name: "namen.asm_never_angenommen",
+        kennungen: &[],
+        aussage: "A `-> never` function with an `asm` body and no `out { result }` is \
+                  accepted once `arch`, `effects` and `costs` are declared and every \
+                  remaining operand names a parameter: the instruction text is unchecked \
+                  by construction, so the declaration carries everything, and the \
+                  divergence evidence is the `-> never` declaration itself -- callers \
+                  read all three divergence spellings (`-> never`, `divergent`, \
+                  `effects { diverges }`), so no further word is demanded of the body.",
+        vorbehalt: "**This sentence has no diagnostic code of its own**: it widens \
+                    nothing and refuses nothing -- it pins a silence that used to be \
+                    silence by omission (`S009` returns early on every non-`Block` body). \
+                    What it does NOT accept is named beside it: `out { result }` stays \
+                    `N321` (`namen.asm_never`), a missing `arch`/`effects`/`costs` stays \
+                    `A001`/`A002`/`A003`, and a foreign operand stays `A004`. The emitter \
+                    is one lane behind: the accepted shape ends at its older \
+                    `hat_ergebnis` arm (`C001`), the handoff lane 235 lowers -- and 235 \
+                    must not touch the `N321` shape, which stays refused on both \
+                    channels (`gift/984`/`985`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Positive side pinned inline (`never_ruempfe_werden_angenommen_225` \
+                      in `crates/gabbro-check/tests/paesse.rs`: halting `asm` under \
+                      `-> never` with declared clauses falls with nothing). Refusal side: \
+                      `beispiele/gift/1065` (`-- erwartet: A003`) and `gift/1066` \
+                      (`-- erwartet: C001`, checker silent). N321's own probes (`984`, \
+                      `985`) stay green and unmoved.",
+        fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`, the `N321` arm); \
+                     crates/gabbro-check/src/emit.rs (the `hat_ergebnis` arm); \
+                     beispiele/gift/1065-1066",
+    },
+    Satz {
+        name: "namen.never_forever_angenommen",
+        kennungen: &[],
+        aussage: "A `-> never` function whose body ends in a `forever` loop that cannot \
+                  be left is accepted: the loop carries its divergence evidence as \
+                  `per_pass bounded N ops` with a diverging `on_exceeded` exit, and no \
+                  total `costs` is written over it. A `forever` with no diverging exit \
+                  (`S006`), a total promise over it (`K003`), and a loop the body leaves \
+                  (`S009` fall-off-the-end) stay refused.",
+        vorbehalt: "**This sentence has no diagnostic code of its own and changes no \
+                    rule**: it pins the joint answer of three existing ones -- `S009` \
+                    (`endet_immer` with the leave-binding read by `verlassen`: unlabelled \
+                    loops, and labelled ones no `leave` names, diverge), `S006` (the \
+                    `on_exceeded` exit must diverge; unknown stays the `S007` hint for \
+                    excerpts), and lane 191's cost silence (omitted `costs` over a \
+                    `forever` body is correct by construction; a written one is `K003`). \
+                    The emitter already lowers every accepted shape here (`for (;;)` \
+                    with the watchdog pinned beside it), so there is no handoff -- lanes \
+                    235/236 own only the `asm` half. The `leave`-bound half of the task \
+                    title is this `verlassen` reading: what is left is no divergence \
+                    evidence, and it falls exactly where a falling body falls.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Positive side pinned inline (`never_ruempfe_werden_angenommen_225` \
+                      in `crates/gabbro-check/tests/paesse.rs`: labelled, unlabelled and \
+                      tail-call `-> never` ends fall with nothing; the emitted C of each \
+                      is `for (;;)`/`_Noreturn` and compiles under `cc -Werror`). Refusal \
+                      side: `beispiele/gift/1062` (`-- erwartet: K003`), `/1063` \
+                      (`-- erwartet: S006`), `/1064` (`-- erwartet: S009`).",
+        fundstelle: "crates/gabbro-check/src/schleifen.rs (`nie_rueckkehr`, \
+                     `ausgang_pruefen`); crates/gabbro-check/src/kosten.rs \
+                     (`ohne_summe`, lane 191); beispiele/gift/1062-1064",
     },
     // --- 2026-09-15: the specification half of the grammar census ------------------------
     //
