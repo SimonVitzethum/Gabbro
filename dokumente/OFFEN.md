@@ -776,3 +776,17 @@ one of the 15 programs that export today, and its emitted C is
 | **why it is refused and not merely postponed** | *a model extension that pays for nothing is worse than a named absence* — the rule `O15` was decided under, applied to the C side this time. Carrying an aggregate means a `CTy`/`CVal` that is no longer flat, a memory that stores composites, an ABI decision for the struct return, a `korrOk` arm per destination with a planted defect each, and `korrOk_fnCorr` re-proved sound. **The chain count could not move either way**: sieve (a) passes 2 (`104`, `108`), both of them aggregate-free, and coverage is multiplicative |
 | **what pays FIRST, measured on the same run** | the **tagged-union READ side** — `switch (m.marke)`, `m.last.F`, `T x = m.last.F;` — which is what actually holds `120`, `121` and `34`, the three exporting programs that fail (d) on something other than `expr:neg`. All three carry the aggregate rows too, so the read side is necessary and the aggregate side is not sufficient; but the read side is the binding one, and `gcorr_onTag` is already PROVED and merely uninhabitable (`ValCorr` has no case for a tagged union) |
 | **what would close it** | `CTy`/`CVal` gain an aggregate arm, the memory of `CSpeicher.lean` stores it (or `RecLay` + `CX.fld` carry it as the `nf` field stores and loads it really is — the machinery exists), `CFormen*`'s return and bind lemmas gain their arm, `korrOk` gains one arm per destination with a planted defect per arm, and the four `KNOWN_UNCOVERED` rows dated 2026-09-15 in `pruefe-cformen.py` move to state (i). **And the warrant is then a re-measured sweep, not this row** |
+
+## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17)
+
+`fusswache2.rs::per_core` exempts `accumulates … per cpu` carriers
+("one surface name denotes N distinct carriers", same rationale as
+`H013`, `N300`/`N301`); lane 245's narrowed `N304` admits them in pools
+too. The Lean `PoolSicher` covers guarded-or-atomic only and states the
+gap openly (`PoolSym.lean`: "the model has no notion for it").
+
+| | |
+|---|---|
+| **why this is not a soundness gap in the goal** | the exporter refuses `accumulates` items outright (`lean_g.rs` LG-table: generates none), so per-core programs never reach premise (a) — same standing as every checked-but-unexported program. Unguarded sharing still refuses (`N304`, gift `1097`). Memory safety holds regardless: the cells are `_Atomic`, so the worst case is lost updates (user-logic merge discipline at quiescent points, per the emitter's own comment), never a data race. |
+| **what stays open** | the locality notion itself (per-thread disjointness under migration without pinning) and, on the checker side, whether `|| core` should narrow the way 208 narrowed vacuous rules. Wave-B is tasked with exactly this: model per-core or restrict the exemption. |
+| **what would close it** | a `PoolSicher` disjunct with a disjointness proof over thread identity (or the pinning the runtime does not do today), plus the exporter covering `accumulates` so the bridge `einzelnPoolB ↔ EinzelnPool` ranges over it. |
