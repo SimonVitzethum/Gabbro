@@ -1284,6 +1284,53 @@ fn k006_haelt_den_until_dagegen() {
     faellt_nicht(&quelle("101"));
 }
 
+/// **Lane 223: a trusted `costs` bound on the `extern` edge counts at callers.**
+///
+/// The clause is trust, like `effects`: the checker counts the number, it does
+/// not re-measure the foreign body. Three shapes, always both directions. The
+/// file-level poison probes are `beispiele/gift/1057` (`K003` over the missing
+/// clause, `allein`) and `/1058` (the `K001` arithmetic below); the `syscall`
+/// edge with its `1 + fa` dispatch step is gifts 986/987 instead (`N322`).
+#[test]
+fn trusted_extern_costs_count_at_callers() {
+    // The edge WITHOUT the clause: a caller promising costs meets `K003` --
+    // missing costs stays `K003`, no weaker reading is built.
+    let ohne = |zusage: Option<&str>| {
+        format!(
+            "module p {{\nextern fn stumm() -> u32 effects {{ pure }};\n\
+             impl fn ruft() -> u32 effects {{ pure }}{} \
+             {{ let x = stumm(); return x; }}\n}}",
+            zusage.map(|z| format!(" costs <= {z} ops")).unwrap_or_default()
+        )
+    };
+    faellt_mit(&ohne(Some("7")), "K003");
+    // Without a promise there is nothing to hold: the omission keeps its old
+    // meaning (no promise, no check), as for every bodied callee.
+    faellt_nicht(&ohne(None));
+    // The edge WITH the clause: the call counts exactly the declared number,
+    // with NO dispatch step on top -- `let` (1) + call (5) + loaded return
+    // (1) = 7. A `syscall`-style `1 + fa` would read 8 here (gift 987).
+    let mit = |zusage: &str| {
+        format!(
+            "module p {{\nextern fn fremd() -> u32 effects {{ pure }} costs <= 5 ops;\n\
+             impl fn ruft() -> u32 effects {{ pure }} costs <= {zusage} ops \
+             {{ let x = fremd(); return x; }}\n}}"
+        )
+    };
+    faellt_mit(&mit("6"), "K001");
+    faellt_nicht(&mit("7"));
+    // A bounded `retry` over the costed edge divides by the per-pass cost that
+    // counts the trusted number (`durchgangskosten`): no `C001`, no `K006`.
+    faellt_nicht(
+        "module p {\nextern fn fremd() -> u32 in 0 .. 100 effects { pure } costs <= 5 ops;\n\
+         extern fn leer() -> never effects { diverges } costs <= 0 ops;\n\
+         impl fn f() -> u32 in 0 .. 100 effects { pure } costs <= 4096 ops\n\
+         { let mut x : u32 in 0 .. 100 = 0;\n\
+         retry warten until x == 7 bounded 60 ops on_exceeded leer effects { pure } { x = fremd(); }\n\
+         return x; }\n}",
+    );
+}
+
 /// **`match (a)` named no variants at all** (`beispiele/gift/595`).
 ///
 /// The subject was read with a bare `if let ExprArt::Ort(…)`, so one pair of brackets took

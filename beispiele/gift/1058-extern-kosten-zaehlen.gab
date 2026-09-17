@@ -1,0 +1,33 @@
+-- erwartet: K001
+-- **1058 -- a call through a costed `extern` counts exactly the declared number.**
+--
+-- The positive direction of gift 1057 (`K003`): with the clause the foreign
+-- edge is no longer opaque. The call counts the DECLARED cost -- 5 here, with
+-- NO dispatch step on top: `let` (1) + call (5) + the loaded return (1) = 7
+-- against a promise of 6, so `K001` fires. At 7 the unit checks clean (the
+-- checked twin stands in `paesse.rs`, `trusted_extern_costs_count_at_callers`).
+--
+-- The arithmetic pins the `extern`/`syscall` asymmetry the sentence
+-- `syscall.kosten` books: a `syscall` edge counts `1 + fa` (gift 987 -- at
+-- `fa` alone its body would cost 9 and pass), an `extern` edge counts exactly
+-- what the clause trusts. With a `syscall`-style dispatch step this body
+-- would cost 8, not 7, and the `K001` text would say so.
+--
+-- Nothing else speaks: the declaration carries its clause, both sides promise
+-- `pure` over `pure`, and the call is well-typed. The number itself is
+-- trusted, not re-measured -- that trust is the named assumption in
+-- `MUSE-REPORT-223.md`, not a second refusal.
+
+module gift::extern_kosten_zaehlen {
+
+extern fn fremd_lese() -> u32 effects { pure } costs <= 5 ops;
+
+impl fn ruft() -> u32
+    effects { pure }
+    costs <= 6 ops
+{
+    let x = fremd_lese();
+    return x;
+}
+
+}
