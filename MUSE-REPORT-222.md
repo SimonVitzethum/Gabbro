@@ -21,15 +21,16 @@ plus length). Both words are contextual vocabulary, so the word list
 does not move; the decision is positional (after a complete domain only
 `by` or `from` may stand), so no program that parsed before changes
 meaning. The shape is validated precisely (full start/length
-expressions, full tail) and then refused with the new code **P045**,
-naming the wave-B handoff. No `Traverse` is built, so nothing downstream
-can meet a window it cannot see. Why refusal and not AST: there is no
-AST home for the window that keeps the checker compiling — a new
-`Domaene` variant breaks its exhaustive matches (e.g. the emitter's
-`traverse` lowering ends in an 8-arm exhaustive match producing the
-refusal sentence), and a new `Traverse` field breaks its literal
-constructions (`emit.rs::zaehlstelle`). Carrying the window silently as
-a whole-table walk (or hijacking `of`/`decreases`/`touches` for it) is
+expressions, full tail) and then refused with the pre-existing code
+**P001** plus a handoff note naming lanes 229/234. No `Traverse` is
+built, so nothing downstream can meet a window it cannot see. Why
+refusal, and why no new code: there is no AST home for the window that
+keeps the checker compiling — a new `Domaene` variant breaks its
+exhaustive matches (e.g. the emitter's `traverse` lowering ends in an
+8-arm exhaustive match producing the refusal sentence), and a new
+`Traverse` field breaks its literal constructions
+(`emit.rs::zaehlstelle`). Carrying the window silently as a
+whole-table walk (or hijacking `of`/`decreases`/`touches` for it) is
 the one thing the reader must not do. Lanes 229 (checker) and 234
 (lowering) lift the refusal; §6 gives them the exact AST design.
 
@@ -54,7 +55,8 @@ redesign), but the next depth growth needs it.
   placeholder carrying the printed pattern, `binder` always `None`).
 - `print.rs` (new): `int_pattern`, `int_bound`.
 - `parse.rs`: `is_int_arm`, `int_bound`, `int_arm`, `window`,
-  `parse_with_max_depth`, `Parser::max_depth`, refusal `P045`.
+  `parse_with_max_depth`, `Parser::max_depth`, window refusal under
+  pre-existing `P001` (no new code, no sentence owed).
 - Tests (`sprechprobe.rs`, all English names): `lane222_int_arms_parse`,
   `lane222_int_arm_poison_keeps_existing_codes`,
   `lane222_int_pattern_prints_and_round_trips`,
@@ -74,7 +76,7 @@ redesign), but the next depth growth needs it.
 | option + int arm | 0 errors | C001 ``needs exactly `Some` and `None` `` (code-read, same shape) |
 | reason + int arm | **M123** invented-name (verified with a `GibtsGarNicht` arm) | — |
 | int + variant arm | 0 errors | C001 same as first row (verified) |
-| windowed traverse | **P045** (parser; precise span over `from … count …`) | — (never reaches downstream) |
+| windowed traverse | **P001** + handoff note (parser; precise span over `from … count …`) | — (never reaches downstream) |
 | `gabbro lean` on int match | prints `(.onReason g …)` (reason branch) | model: non-reason subject → `.stuck` (`programmlogik/Gabbro/Coverage.lean`, ``honest outcome, not a silent fall-through``); lane 228 owns the proper form |
 | `gabbro lean-g` / `gegenbeispiel` on int match | — | **LG004** by name, no panic |
 | obligations/zeremonie/zeugnis/costs/alias | all run clean | no panics anywhere |
@@ -89,20 +91,16 @@ Malformed new shapes keep existing codes: `-x =>` → P004, `0(k) =>`
 
 - `./cargo-pruef`: `== exit 0; failing tests: 0` (full suite, includes
   the corpus verdict tests `korpus.rs`/`beispiele.rs` — corpus verdict
-  diff ZERO: no new syntax fires on any corpus file; P045/int arms are
-  absent from the corpus).
+  diff ZERO: no new syntax fires on any corpus file; window/int arms
+  are absent from the corpus).
 - `pruefe-wortschatz.py dokumente/SYNTAX.md`: 240/240 green (no new words).
 - `pruefe-englisch.py`: my additions contribute zero German (verified by
   file grep); its broken ratchets (comment lines 7961 vs 7949 booked,
   sinks 5 vs 2) are pre-existing in files I did not touch.
-- `pruefe-saetze.py`: **exit 1** —
-  `FUND: 56 Kennungen ohne Satz, gebucht sind 55` — the delta is exactly
-  P045, which has no `Satz` yet. Fixing it means one entry in
-  `crates/gabbro-check/src/saetze.rs`, which is outside this lane's
-  scope: **scoped exception requested from the dispatcher** (see §7;
-  entry drafted and ready to apply on grant, P043/P044 pattern).
-- `pruefe-kennungen.py`: ALL PASS (P045 belongs to exactly one file,
-  `parse.rs`; trust surface ALL PASS).
+- `pruefe-saetze.py`: **exit 0** —
+  `55 ohne Satz` at booked mark 55 (no new code issued: the window
+  refusal reuses P001, which owns its sentences).
+- `pruefe-kennungen.py`: **ALL PASS** (trust surface ALL PASS).
 - `emission-pruef` not run: no emitter/doc/counter changes exist to
   move it; corpus emission is covered by `beispiele.rs` in cargo-pruef.
 
@@ -121,49 +119,38 @@ Malformed new shapes keep existing codes: `-x =>` → P004, `0(k) =>`
   lane's business; EBNF untouched so `pruefe-syntax.sh` closure is
   unaffected).
 
-## 7. Requests to the dispatcher (round 2 — nothing below is applied)
+## 7. Requests to the dispatcher (round 3 — F1 resolved unilaterally)
 
-- **F1 scoped exception**: one `Satz` entry for P045 in
-  `crates/gabbro-check/src/saetze.rs`, P043/P044 pattern
-  (`parser.bibliothek-nutzlast`/`parser.bibliothek-rumpf`), placed
-  directly after the P044 entry. Draft ready to apply on grant:
-  name `parser.traverse-window`, `kennungen: &["P045"]`,
-  `aussage`: windowed `traverse` is read precisely and refused at the
-  reader so no pass meets a window it cannot see;
-  `vorbehalt`: shape rule of the parser only, typing/lowering belong
-  to lanes 229/234 which lift the refusal;
-  `stand: Satzstand::Gemessen`,
-  `gemessen_an`: snippet tests
-  `lane222_windowed_traverse_refused_by_name` +
-  `lane222_window_malformed_keeps_existing_codes` (no gift numbers
-  consumed per the task text),
-  `fundstelle`: `parse.rs` (`traverse`, `window`).
-  Precedent: the P042 entry arrived with its code in the same commit
-  (quoted in `pruefe-saetze.py` itself); the mark stays 55.
-- **F2 ruling**: (a) accept P045 as the wave-A handoff with lanes
-  229/234 lifting it (my recommendation, and the reviewer's — the code
-  is already that), or (b) grant a scoped wave-B exception (AST
-  window home + sentence) for me to implement. Either way the F1
-  sentence stays in scope. Do NOT want silent acceptance.
+- **F1 resolved without any checker touch** (review round 3, option
+  F1(b)): the window refusal reuses pre-existing P001 plus a handoff
+  note, so no sentence is owed and `pruefe-saetze.py` stays green. The
+  earlier P045 sentence-exception request is withdrawn. No
+  checker/Lean/emitter file is touched on this branch.
+- **F2 ruling still requested**: (a) accept the P001+handoff refusal as
+  the wave-A handoff with lanes 229/234 lifting it (my recommendation
+  — the code is already that), or (b) grant a scoped wave-B exception
+  (AST window home per §5 + sentence) for me to implement. Do NOT want
+  silent acceptance.
 - This branch currently touches **no** checker/Lean/emitter file; the
-  two requests above are the only scope changes on the table.
+  F2 ruling is the only scope question left on the table.
 
 ## 6. Where this lane deviates from the task letter, and why
 
 - Deliverable 2 asks for a checker-or-C001 code per form. For integer
   arms it holds (C001 + M123/LG004, §3). For the windowed traverse no
   checker/C001 code can fire correctly without checker changes (proven
-  above: no green-build AST home), so the probe shows **P045** instead
-  — a defined starting point with the handoff in the sentence, rather
-  than a silence or a misleading code.
+  above: no green-build AST home), so the probe shows a parser refusal
+  instead — a defined starting point with the handoff in the note,
+  rather than a silence or a misleading code.
 - "Parse + AST + print/parse round-trip for both forms": the AST and
   round-trip cover the integer patterns (both sub-forms: exact and
   range); the window has a fixed shape but no AST node yet (§1, §5).
 - TODO §-1 table reserves examples 147–148 for lane 222, but the task
   text says snippet tests, not corpus files — followed the task text;
   no example numbers consumed (pool untouched for downstream).
-- No diagnostic codes were planned, but the well-formed window is a
-  measured new refusal need (must not parse silently, cannot reach
-  downstream): took next free P per the maintainer rule — **P045**
-  (P031/P032/P042 retired or allowlisted-only; P043/P044 taken) — with
-  sentence plus snippet probes, no corpus/gift files.
+- No new diagnostic codes at all: the well-formed window is refused
+  with pre-existing P001 plus a handoff note (review round 3, option
+  F1(b)) — no sentence owed, no new code, no gift files. An earlier
+  revision of this branch issued P045 for the same shape; it was
+  replaced precisely because a new code owes a sentence in
+  `saetze.rs`, which is outside this lane's scope.

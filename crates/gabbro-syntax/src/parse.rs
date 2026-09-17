@@ -4081,13 +4081,14 @@ impl<'a> Parser<'a> {
         // contextual vocabulary, so the word list does not move, and the
         // decision is positional: after a complete domain only `by` or
         // `from` may stand, so no program that parsed before changes
-        // meaning. The shape is read precisely and then refused with
-        // `P045` (see `window`): there is no AST home for the window
-        // that keeps the checker compiling -- a new `Domaene` variant
-        // breaks its exhaustive matches and a new `Traverse` field its
-        // literal constructions -- so carrying it silently as a
-        // whole-table walk is the one thing the reader must not do.
-        // Lanes 229 (checker) and 234 (lowering) lift the refusal.
+        // meaning. The shape is read precisely and then refused with the
+        // pre-existing `P001` plus a handoff note (see `window`): there
+        // is no AST home for the window that keeps the checker compiling
+        // -- a new `Domaene` variant breaks its exhaustive matches and a
+        // new `Traverse` field its literal constructions -- so carrying
+        // it silently as a whole-table walk is the one thing the reader
+        // must not do. No new code is issued, so no sentence is owed;
+        // lanes 229 (checker) and 234 (lowering) lift the refusal.
         let window = if matches!(&domaene, Domaene::SlotsVon(_)) && self.ist_kw(Kw::From) {
             Some(self.window()?)
         } else {
@@ -4142,15 +4143,18 @@ impl<'a> Parser<'a> {
         };
         let invariante = self.schleifeninvariante()?;
         let rumpf = self.block()?;
-        // Lane 222: the windowed walk ends here, refused by name. The
+        // Lane 222: the windowed walk ends here, refused by name under
+        // the pre-existing `P001` (no new code, no sentence owed). The
         // whole tail (run form, clauses, body) parsed above, so a
         // malformed tail still reports its own shape error beside this
         // one, and body errors still surface. No `Traverse` is built:
-        // nothing downstream may meet a window it cannot see.
+        // nothing downstream may meet a window it cannot see. The code
+        // is the generic shape refusal; the handoff note below is what
+        // makes it a defined starting point for lanes 229/234.
         if let Some(window_span) = window {
             self.absage(
                 Absage::fehler(
-                    "P045",
+                    "P001",
                     window_span,
                     "`traverse … from … count …` names a windowed walk, and the window \
                      has no lowering yet",
@@ -4183,7 +4187,7 @@ impl<'a> Parser<'a> {
     /// `from <start> count <len>` -- the window over `slots of`
     /// (lane 222). Both bounds are full expressions: a window whose
     /// start is computed (`base + i`) is the bm13 shape, not a corner.
-    /// Returns the span of the whole clause for the `P045` refusal; the
+    /// Returns the span of the whole clause for the refusal; the
     /// bounds themselves are validated and then dropped -- the AST has
     /// no home for them yet (see `traverse`), and a dropped bound with
     /// no refusal would be a silence.

@@ -693,11 +693,13 @@ fn lane222_int_pattern_prints_and_round_trips() {
 //
 // `traverse i over slots of T from <start> count <len> by …`: the bm13
 // window shape (start plus length). The reader fixes the shape
-// precisely and refuses it with `P045` -- there is no AST home for the
-// window that keeps the checker compiling (a new `Domaene` variant
-// breaks its exhaustive matches, a new `Traverse` field its literal
-// constructions), so carrying it silently as a whole-table walk is the
-// one thing the reader must not do. Lanes 229 and 234 lift the refusal.
+// precisely and refuses it with the pre-existing `P001` plus a handoff
+// note -- there is no AST home for the window that keeps the checker
+// compiling (a new `Domaene` variant breaks its exhaustive matches, a
+// new `Traverse` field its literal constructions), so carrying it
+// silently as a whole-table walk is the one thing the reader must not
+// do, and no new code is issued for it. Lanes 229 and 234 lift the
+// refusal.
 
 /// The refusal a well-formed windowed walk carries, code and sentence.
 ///
@@ -735,21 +737,21 @@ fn traverse_scaffold(domain: &str) -> String {
 #[test]
 fn lane222_windowed_traverse_refused_by_name() {
     // The well-formed window: table, start expression, length
-    // expression -- refused with P045, naming the handoff.
+    // expression -- refused with P001, naming the handoff in the note.
     falls_with_note(
         &traverse_scaffold("slots of T from 2 count 2"),
-        "P045",
+        "P001",
         "has no lowering yet",
     );
     falls_with_note(
         &traverse_scaffold("slots of T from 0 count 4"),
-        "P045",
+        "P001",
         "lane 234",
     );
     // Computed bounds are the shape, not a corner.
     faellt_mit(
         &traverse_scaffold("slots of T from base + i count n - k"),
-        "P045",
+        "P001",
     );
     // The plain walk beside it parses untouched.
     faellt_nicht(&traverse_scaffold("slots of T"));
