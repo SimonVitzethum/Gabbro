@@ -48,6 +48,13 @@ stay in user code) and C-2 (address + timespec carrier, no `CLOCK_*` in
 the tree). A lane that smuggles an OS constant into `crates/` or
 `grammatik/` fails review.
 
+**Safety is never traded for features** (owner): no lane weakens a
+guarantee — memory safety, race freedom, contracts, costs, lock
+discipline — to make a wall go green. A wall that only yields by
+weakening is recorded as a finding (like 208's vacuity pins or 203's
+proved blockage), never bypassed. A bypass fails review, no matter how
+green its build is.
+
 **Decision gate RESOLVED 2026-09-17 (owner): LIFT.** Criterion was the
 project goal — a `folge()` wrapper around a proved bound is user ceremony
 for language plumbing, and plumbing belongs to the language, not to the

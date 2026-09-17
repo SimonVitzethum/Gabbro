@@ -101,6 +101,10 @@ README §6 says exactly this; keep it that way.
 - **Simplicity is a goal, but no guarantee is given up for it** (PLAN-EINFACHHEIT.md). The measure
   is: ceremony count down AND pass register constant. Never derive `ensures`, and never turn a
   refusal into a warning.
+- **Safety is never traded for features** (owner, 2026-09-17). No lane weakens a guarantee —
+  memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
+  Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
+  proved blockage). Reviewers reject bypasses, no matter how green the build.
 - **Floats are in scope** (IEEE model done). Probabilistic statements and dynamic unbounded data
   structures are OUT of scope for now.
 - **Tag milestones** at the push that reaches them.
