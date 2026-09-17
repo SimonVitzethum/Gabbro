@@ -1,0 +1,26 @@
+-- erwartet: C001
+-- **The subtraction twin of gift 1052: `t -% 1` over a narrower exact range.**
+--
+-- Same gate, same refusal: `u32 in 0 .. 65535` wraps modulo 2^16, and
+-- `atomic_fetch_sub` would wrap at 2^32. The full-width twin lowers to one
+-- `atomic_fetch_sub` since lane 221; this file pins the side that must NOT
+-- move. (The binder on the RIGHT, `1 -% t`, is refused for a second reason --
+-- subtraction does not commute -- and is pinned in `tests/holform.rs`.)
+module gift::fetch_sub_narrow_range {
+
+atomic ENG : u32 in 0 .. 65535 relaxed;
+
+extern fn aufgegeben() -> never effects { diverges };
+
+impl fn zug() -> u32 in 0 .. 65535
+    effects { reads ENG, writes ENG }
+    costs   <= 300 ops
+{
+    let alt : u32 in 0 .. 65535 = ENG exchange update(t)
+        bounded 64 ops
+        on_exceeded aufgegeben
+    { return t -% 1; } publishes nothing;
+    return alt;
+}
+
+}
