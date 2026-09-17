@@ -3978,6 +3978,59 @@ pub const PHASEN: &[Satz] = &[
                      crates/gabbro-check/src/m1.rs (`N214`); \
                      dokumente/SYNTAX.md §9.1; PLAN-ERWEITUNG.md §3",
     },
+    // --- lane 240, 2026-09-17: the cap and the visible growth points (wave D) ------------
+    //
+    // **No new refusal code, and that is measured, not omitted.** With no
+    // `max` syntax the ceiling is `hi` (`PLAN-DYNAMISCH.md` §2 has the
+    // clause, no lane of TODO wave D owns the parser to build it): the
+    // over-cap shape without an `else` is the `N212` shape past `hi`, and
+    // the shape WITH an `else` is load-bearing corpus behavior
+    // (`beispiele/99`'s third `alloc`), so `R-max` stays unwired — a
+    // tightening of the lane-184 class. The reserves (`N426`–`N430`) go
+    // back unused; lane 241 mints from them once `max` scopes `M` above
+    // `hi`. What this sentence pins instead is the accounting half: every
+    // storage-growth point is an `alloc` or a `reset`, each carries its
+    // cost into `K001`/`K002`/`K003`, and the pass tracks `(count,
+    // committed)` with the §4 join directions (`max` on counts, `min` on
+    // committed, floor restored at `reset`, no saturation on the committed
+    // axis).
+    Satz {
+        name: "arena.wachstum_sichtbar",
+        kennungen: &[],
+        aussage: "Every storage-growth point of an arena is an `alloc` or a \
+                  `reset`, and each carries its cost: `alloc` counts one \
+                  primitive plus the value plus the `else`, `reset` one \
+                  primitive — so growth inside a `locks` block counts \
+                  against `held` (`K002`) and an uncountable growth value \
+                  stays unknown (`K003`). Growth past the ceiling without a \
+                  failure branch is refused (`N212`, past `hi` like past \
+                  `lo`); growth with the branch declared is accepted. The \
+                  pass tracks `(count, committed)` per path with the \
+                  `PLAN-DYNAMISCH.md` §4 join directions.",
+        vorbehalt: "**This sentence has no diagnostic code of its own**: it \
+                     pins an accounting, not a refusal. The count is per \
+                     function body (like `costs`); `R-max`/`R-grow-else`/\
+                     `R-grow-const`/`R-grow-form` need the `max`/`grow` \
+                     syntax and stay unbuilt until the parser lane lands — \
+                     the reserves `N426`–`N430` go back unused. A `max` \
+                     clause on tables is reserved future syntax (§1 scope \
+                     reading), not parsed, not refused, not built.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/1087` (`-- erwartet: N212`: over-cap \
+                      growth without a branch, nothing else falls); \
+                      `paesse.rs` (`arena_kappe_ohne_else_n212` with its \
+                      clean twin, `arena_wachstum_in_sperre_k002` with its \
+                      clean twin — growth counted against `held`); unit \
+                      tests in `arena.rs` (`wachstumstests`: join \
+                      directions, floor discipline, the unwired `R-max` \
+                      predicate firing on the `99` shape); `beispiele/98` \
+                      and `/99` stay clean and emitting.",
+        fundstelle: "crates/gabbro-check/src/arena.rs (the `(count, \
+                     committed)` flow, `N212` unchanged); \
+                     crates/gabbro-check/src/kosten.rs (the `Alloc`/`ResetArena` \
+                     arms and `sperrbloecke`, read-only for this lane); \
+                     dokumente/PLAN-DYNAMISCH.md §§2–4",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],

@@ -1,0 +1,22 @@
+-- erwartet: N212
+-- Lane 240: over-cap growth without a branch -- the third `alloc` out of
+-- `Winzig capacity 1 .. 2` stands at the ceiling (`hi`) with no `else`.
+-- The first `alloc` is inside the reservation, the second carries its
+-- branch; only the third names storage nobody committed with no failure
+-- path written down. Nothing else is wrong with this unit: the indices are
+-- of the current generation, the effects and the budget are clean.
+module beispiel::arena_kappe {
+arena Winzig capacity 1 .. 2 of u16;
+
+impl fn f() -> u32 effects { writes Winzig } costs <= 32 ops {
+    let a = alloc Winzig (1);
+    let b = alloc Winzig (2) else {
+        return 100;
+    };
+    let c = alloc Winzig (3);
+    let x : u32 = Winzig[a];
+    let y : u32 = Winzig[b];
+    let z : u32 = Winzig[c];
+    return x + y + z;
+}
+}
