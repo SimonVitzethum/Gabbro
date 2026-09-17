@@ -30,6 +30,7 @@ const ALTER_MAX    : u32 = 63;
 const RUNDEN       : u32 = 16;
 const LETZTE_RUNDE : u32 = 15;
 const RASTER_MAX   : u32 = 960;
+const LETZTER_SCHRITT : u32 = 63;
 const PUFFER       : u32 = 512;
 
 const FNV_OFFSET : u32 = 2166136261;
@@ -38,10 +39,6 @@ const FNV_PRIM   : u32 = 16777619;
 type Port  = u32 in 0 .. 65535;
 type Proto = u32 in 0 .. 255;
 type Code  = u32 in 0 .. 7;
--- The hash word: the EXACT range `0 .. 2^32 - 1`, because wrapping `*%`
--- (M153) is only derivable there -- on a bare `u32` or a subrange it is
--- ambiguous (mod 6 would cost a division per operation).
-type Wort = u32 in 0 .. 4294967295;
 
 const OK         : u32 = 0;
 const MISS       : u32 = 1;
@@ -73,32 +70,327 @@ table befehl count PUFFER {
 static mut runde : u32 in 0 .. LETZTE_RUNDE = 0;
 static mut haben : u32 in 0 .. PUFFER = 0;
 
-lock FW protects { regeln, befehl } rank 0 held <= 16384 ops;
+lock FW protects { regeln, befehl, runde, haben } rank 0 held <= 16384 ops;
 
 -- FNV-1a over the five control words: five xor-multiply steps, no branch,
--- no memory. Cost is constant by construction. The SHAPE (two functions,
--- not one) is forced by M153: wrapping `*%` needs both operands on the
--- exact range `0 .. 2^32 - 1`, and only parameters carry their declared
--- type into an expression -- a `let` keeps its initializer's type (a const
--- stays a singleton, a `^` stays a full `u32`). So the step takes all three
--- operands as `Wort` parameters, and the constants travel as arguments
--- (a singleton argument is CONTAINED in `Wort` at the call site).
-impl fn fnv_schritt(h : Wort, w : Wort, p : Wort) -> Wort
+-- no memory. Cost is constant by construction. The SHAPE (named steps, not
+-- one expression) is forced from both sides at once:
+--
+--   * the CHECKER (M153) refuses a singleton next to a wrap: the FNV prime
+--     as a bare const poisons the `*%`, so it travels as an ARGUMENT into a
+--     `u32` parameter (a singleton argument is contained in `u32`);
+--   * the EMITTER re-derives every wrapping site from declarations
+--     (`emit.rs`: `wrap_form`) and reads an exact range off a bare storage
+--     word -- but NOT off a named range type (`Wort` checked and refused to
+--     lower), and never a `^`. So the xor is a FUNCTION whose call result is
+--     a side: `xor_worte(h, w) *% p` is a call times a parameter, while
+--     `(h ^ w) *% p` is unlowerable (C001). On unsigned storage the emitted
+--     `*` wraps for free, which is exactly FNV's arithmetic.
+impl fn xor_worte(a : u32, b : u32) -> u32
     effects { pure }
-    costs <= 8 ops
+    costs <= 4 ops
 {
-    return (h ^ w) *% p;
+    return a ^ b;
 }
 
-impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> Wort
-    costs <= 64 ops
+impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
+    effects { pure }
+    costs <= 16 ops
 {
-    let h0 : Wort = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
-    let h1 : Wort = fnv_schritt(h0, dip, FNV_PRIM);
-    let h2 : Wort = fnv_schritt(h1, sp, FNV_PRIM);
-    let h3 : Wort = fnv_schritt(h2, dp, FNV_PRIM);
-    let h4 : Wort = fnv_schritt(h3, pr, FNV_PRIM);
+    return xor_worte(h, w) *% p;
+}
+
+impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
+    costs <= 95 ops
+{
+    let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
+    let h1 : u32 = fnv_schritt(h0, dip, FNV_PRIM);
+    let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
+    let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
+    let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
     return h4;
+}
+
+-- Release a slot back to pristine: no stale tuple may survive (a stale
+-- match field would accept a packet the rules no longer cover -- fail
+-- closed means zeroing, not just clearing `belegt`). The `beispiele/01`
+-- idiom: naked access, the caller's duty (`requires Held(FW)`), so the
+-- three callers below share one zeroing instead of three copies.
+impl fn freigeben(i : index into regeln)
+    requires Held(FW)
+    effects  { writes regeln.slots, locks FW }
+    costs    <= 64 ops
+{
+    regeln.slots[i].belegt = false;
+    regeln.slots[i].qsip = 0;
+    regeln.slots[i].qdip = 0;
+    regeln.slots[i].qsp = 0;
+    regeln.slots[i].qdp = 0;
+    regeln.slots[i].qpr = 0;
+    regeln.slots[i].xsip = 0;
+    regeln.slots[i].xdp = 0;
+    regeln.slots[i].alter = 0;
+}
+
+-- Insert a control rule: hash the 5-tuple, fold to one bucket, take it or
+-- refuse. There is no probing and no eviction: an occupied live bucket
+-- answers VOLL (like bm3), and the sender retries after the next tick. A
+-- bucket past its age is reclaimed INLINE (the windowed sweep has not
+-- visited it yet -- expiry comes late, never early, and never leaks the
+-- slot). The `%` keeps the value in range; the `narrow` turns the range
+-- into the evidence the slot access needs (`beispiele/146`).
+--
+-- The SPLIT (thin `ablege` outside the lock, `ablege_innen` under
+-- `requires Held(FW)`) is `beispiele/146`'s: a body that touches a guarded
+-- carrier carries the guard in its signature, so E247 stays silent.
+impl fn ablege_innen(r : index into regeln,
+                     sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+                     xsip : u32, xdp : Port) -> Code
+    requires Held(FW)
+    effects { reads regeln.slots, writes regeln.slots, locks FW }
+    costs   <= 128 ops
+{
+    if regeln.slots[r].belegt {
+        if regeln.slots[r].alter >= ALTER_MAX {
+            freigeben(r);
+        } else {
+            return VOLL;
+        }
+    }
+    regeln.slots[r].belegt = true;
+    regeln.slots[r].qsip = sip;
+    regeln.slots[r].qdip = dip;
+    regeln.slots[r].qsp = sp;
+    regeln.slots[r].qdp = dp;
+    regeln.slots[r].qpr = pr;
+    regeln.slots[r].xsip = xsip;
+    regeln.slots[r].xdp = xdp;
+    regeln.slots[r].alter = 0;
+    return OK;
+}
+
+impl fn ablege(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
+               xsip : u32, xdp : Port) -> Code
+    effects { reads regeln.slots, writes regeln.slots, locks FW }
+    costs   <= 256 ops
+{
+    let h : u32 = fnv(sip, dip, sp, dp, pr);
+    let r : u32 = h % EINTRAG_ZAHL;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return MISS; }
+    locks FW {
+        return ablege_innen(r, sip, dip, sp, dp, pr, xsip, xdp);
+    }
+}
+
+-- Age one bucket by one tick: empty stays empty, an aged-out entry is
+-- cleared EAGERLY (its match fields must not survive it), anything else
+-- grows one tick older. The `+= 1` stands behind the `< ALTER_MAX` guard --
+-- the counter rule (`beispiele/01`): the check belongs BEFORE the
+-- arithmetic, and `>= ALTER_MAX` above is the same cut from the other side.
+impl fn alter_eintrag(i : index into regeln)
+    requires Held(FW)
+    effects  { reads regeln.slots, writes regeln.slots, locks FW }
+    costs    <= 70 ops
+{
+    if regeln.slots[i].belegt {
+        if regeln.slots[i].alter >= ALTER_MAX {
+            freigeben(i);
+        } else {
+            regeln.slots[i].alter += 1;
+        }
+    }
+}
+
+-- One step of the window: bucket `basis + k`. Both operands are bounded
+-- (`0 .. 960` and `0 .. 63`), so the sum never leaves the table --
+-- subtraction-free by construction, and the `narrow` is the evidence the
+-- call needs, not a confession of doubt.
+impl fn fenster_schritt(basis : u32 in 0 .. RASTER_MAX, k : u32 in 0 .. LETZTER_SCHRITT)
+    requires Held(FW)
+    effects  { reads regeln.slots, writes regeln.slots, locks FW }
+    costs    <= 128 ops
+{
+    let r : u32 = basis + k;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return; }
+    alter_eintrag(r);
+}
+
+-- The expiry tick: age ONE window of 64 buckets, then move the round
+-- forward. A full cycle is 16 ticks; a bucket's death is discovered at
+-- most 15 ticks after its age limit -- late, never early. The 64 calls
+-- are spelled out because there is no indexed loop in the language
+-- (`traverse` always covers ALL slots, and a full scan under the held
+-- lock is exactly what H-1/H-3 forbid): the unrolled window IS the bound,
+-- constant cost per tick under flood and at idle.
+--
+-- The SPLIT is `beispiele/146`'s again: `tick` only takes the lock,
+-- `tick_runde` carries `requires Held(FW)` and touches `runde` -- a bare
+-- carrier read, even inside a `locks` block, owes the guard (E247).
+impl fn tick_runde() -> Code
+    requires Held(FW)
+    effects { reads regeln.slots, writes regeln.slots,
+              reads runde, writes runde, locks FW }
+    costs   <= 8320 ops
+{
+    let basis : u32 = runde * 64;
+        fenster_schritt(basis, 0);
+        fenster_schritt(basis, 1);
+        fenster_schritt(basis, 2);
+        fenster_schritt(basis, 3);
+        fenster_schritt(basis, 4);
+        fenster_schritt(basis, 5);
+        fenster_schritt(basis, 6);
+        fenster_schritt(basis, 7);
+        fenster_schritt(basis, 8);
+        fenster_schritt(basis, 9);
+        fenster_schritt(basis, 10);
+        fenster_schritt(basis, 11);
+        fenster_schritt(basis, 12);
+        fenster_schritt(basis, 13);
+        fenster_schritt(basis, 14);
+        fenster_schritt(basis, 15);
+        fenster_schritt(basis, 16);
+        fenster_schritt(basis, 17);
+        fenster_schritt(basis, 18);
+        fenster_schritt(basis, 19);
+        fenster_schritt(basis, 20);
+        fenster_schritt(basis, 21);
+        fenster_schritt(basis, 22);
+        fenster_schritt(basis, 23);
+        fenster_schritt(basis, 24);
+        fenster_schritt(basis, 25);
+        fenster_schritt(basis, 26);
+        fenster_schritt(basis, 27);
+        fenster_schritt(basis, 28);
+        fenster_schritt(basis, 29);
+        fenster_schritt(basis, 30);
+        fenster_schritt(basis, 31);
+        fenster_schritt(basis, 32);
+        fenster_schritt(basis, 33);
+        fenster_schritt(basis, 34);
+        fenster_schritt(basis, 35);
+        fenster_schritt(basis, 36);
+        fenster_schritt(basis, 37);
+        fenster_schritt(basis, 38);
+        fenster_schritt(basis, 39);
+        fenster_schritt(basis, 40);
+        fenster_schritt(basis, 41);
+        fenster_schritt(basis, 42);
+        fenster_schritt(basis, 43);
+        fenster_schritt(basis, 44);
+        fenster_schritt(basis, 45);
+        fenster_schritt(basis, 46);
+        fenster_schritt(basis, 47);
+        fenster_schritt(basis, 48);
+        fenster_schritt(basis, 49);
+        fenster_schritt(basis, 50);
+        fenster_schritt(basis, 51);
+        fenster_schritt(basis, 52);
+        fenster_schritt(basis, 53);
+        fenster_schritt(basis, 54);
+        fenster_schritt(basis, 55);
+        fenster_schritt(basis, 56);
+        fenster_schritt(basis, 57);
+        fenster_schritt(basis, 58);
+        fenster_schritt(basis, 59);
+        fenster_schritt(basis, 60);
+        fenster_schritt(basis, 61);
+        fenster_schritt(basis, 62);
+        fenster_schritt(basis, 63);
+        if runde >= LETZTE_RUNDE {
+            runde = 0;
+        } else {
+            runde = runde + 1;
+        }
+        return OK;
+}
+
+impl fn tick() -> Code
+    effects { reads regeln.slots, writes regeln.slots,
+              reads runde, writes runde, locks FW }
+    costs   <= 8400 ops
+{
+    locks FW {
+        return tick_runde();
+    }
+}
+
+-- Teardown by tuple: only the rule the 5-tuple names may fall. A bucket
+-- held by somebody else's tuple answers MISS -- deleting it would open a
+-- hole the data plane still trusts.
+impl fn entferne_innen(r : index into regeln,
+                       sip : u32, dip : u32, sp : Port, dp : Port,
+                       pr : Proto) -> Code
+    requires Held(FW)
+    effects { reads regeln.slots, writes regeln.slots, locks FW }
+    costs   <= 128 ops
+{
+    if regeln.slots[r].belegt {
+        if regeln.slots[r].qsip == sip {
+            if regeln.slots[r].qdip == dip {
+                if regeln.slots[r].qsp == sp {
+                    if regeln.slots[r].qdp == dp {
+                        if regeln.slots[r].qpr == pr {
+                            freigeben(r);
+                            return OK;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return MISS;
+}
+
+impl fn entferne(sip : u32, dip : u32, sp : Port, dp : Port,
+                 pr : Proto) -> Code
+    effects { reads regeln.slots, writes regeln.slots, locks FW }
+    costs   <= 256 ops
+{
+    let h : u32 = fnv(sip, dip, sp, dp, pr);
+    let r : u32 = h % EINTRAG_ZAHL;
+    narrow r to 0 ..< EINTRAG_ZAHL else { return MISS; }
+    locks FW {
+        return entferne_innen(r, sip, dip, sp, dp, pr);
+    }
+}
+
+-- The 512-byte command buffer: one byte per slot, the length beside it.
+-- A longer input is REFUSED (`ZU_LANG`), never truncated -- truncation
+-- would silently reframe the command that follows.
+impl fn befehl_schreibe(i : index into befehl, v : u8)
+    requires Held(FW)
+    effects { writes befehl.slots, locks FW }
+    costs   <= 16 ops
+{
+    befehl.slots[i].b = v;
+}
+
+impl fn befehl_lese(i : index into befehl) -> u8
+    requires Held(FW)
+    effects { reads befehl.slots, locks FW }
+    costs   <= 16 ops
+{
+    return befehl.slots[i].b;
+}
+
+impl fn befehl_merke(n : u32 in 0 .. PUFFER) -> Code
+    requires Held(FW)
+    effects { writes haben, locks FW }
+    costs   <= 16 ops
+{
+    haben = n;
+    return OK;
+}
+
+impl fn befehl_nehme(n : u32) -> Code
+    effects { writes haben, locks FW }
+    costs   <= 64 ops
+{
+    narrow n to 0 .. PUFFER else { return ZU_LANG; }
+    locks FW {
+        return befehl_merke(n);
+    }
 }
 
 }
