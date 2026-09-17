@@ -48,9 +48,11 @@ stay in user code) and C-2 (address + timespec carrier, no `CLOCK_*` in
 the tree). A lane that smuggles an OS constant into `crates/` or
 `grammatik/` fails review.
 
-**Decision gate (owner):** lane 221 needs the binder-range decision first —
-lift the refusal or keep it (`OPUS-BERICHT-FETCHADD.md` §2.3). Without it,
-221, the F5 workaround and the M101 shapes stay as they are.
+**Decision gate RESOLVED 2026-09-17 (owner): LIFT.** Criterion was the
+project goal — a `folge()` wrapper around a proved bound is user ceremony
+for language plumbing, and plumbing belongs to the language, not to the
+proof. Lane 221 launched on that basis (`OPUS-BERICHT-FETCHADD.md` §2.3
+patch shape + surviving test).
 
 **Wave A (parallel now):**
 
