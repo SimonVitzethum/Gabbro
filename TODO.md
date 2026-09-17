@@ -161,6 +161,16 @@ reason is the same measurement that set this section's priority — a firewall w
 Gabbro ran, and what it kept hitting was the empty shelf. *The runtime is still first: it is the
 smallest piece of that shelf and the one every other piece stands on.*
 
+**Threading is a MUST (owner, 2026-09-17): 3 Muse lanes now, Opus handoff later.**
+O-1 (clone handoff) stays parked; these three feed it (sound pool semantics,
+generated driver, lock through the chain). Reviewers from 321.
+
+| lane | what | files owned (exclusive) | size | reserves N / gift / ex |
+|---|---|---|---|---|
+| 245 | symmetric pool: lift N304 with soundness + driver + Lean starts multiset | `fusswache2.rs`, `laufzeit/*`, starts-Lean | M–L | N436–440 / 1097–1101 / — |
+| 246 | generated per-unit driver (ROOTS from `concurrent`) + P017 findings | `bau.rs`, new gen module | M | N441–445 / 1102–1106 / — |
+| 247 | ticket lock through the chain (checks, emits, RUNS) | `laufzeit/sperre.gab` only | S | none |
+
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
 *Owner, 2026-09-16: **everything a standard library does — except networking, files, graphics
