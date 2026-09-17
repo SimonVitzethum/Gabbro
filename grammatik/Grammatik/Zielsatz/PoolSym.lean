@@ -258,6 +258,72 @@ theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
       · simp [he]
         exact ih hndl
 
+/-- **Duplicates allowed iff pool-safe, decided**: every declared start
+    occurring at least twice is pool-safe at its computed graph. Decides
+    `EinzelnPool` given complete member lists. -/
+def einzelnPoolB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
+    (ws : List D.Fn) : Bool :=
+  ws.all fun w =>
+    decide ((ws.filter (fun v => decide (v = w))).length ≤ 1) ||
+      poolSicherWB P fs cs w
+
+theorem einzelnPoolB_iff {P : Programm D} {fs : List D.Fn}
+    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
+    einzelnPoolB P fs cs ws = true ↔ EinzelnPool P fs ws := by
+  unfold einzelnPoolB EinzelnPool
+  rw [List.all_eq_true]
+  constructor
+  · intro h w hw hlt
+    have h1 := h w hw
+    rw [Bool.or_eq_true] at h1
+    rcases h1 with h1 | h1
+    · have hle := of_decide_eq_true h1
+      omega
+    · exact (poolSicherWB_iff hvoll hcs).mp h1
+  · intro h w hw
+    rw [Bool.or_eq_true]
+    by_cases hc : (ws.filter (fun v => decide (v = w))).length ≤ 1
+    · exact Or.inl (decide_eq_true hc)
+    · exact Or.inr ((poolSicherWB_iff hvoll hcs).mpr (h w hw (by omega)))
+
+/-- **Never weakened**: pairwise distinct starts satisfy the new check --
+    the old `einzelnB` verdicts all stay acceptances. -/
+theorem einzelnPoolB_of_einzelnB {P : Programm D} {fs : List D.Fn}
+    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+    (h : einzelnB ws = true) : einzelnPoolB P fs cs ws = true := by
+  have hnd : ws.Nodup := of_decide_eq_true h
+  refine List.all_eq_true.mpr fun w _ => ?_
+  rw [Bool.or_eq_true]
+  exact Or.inl (decide_eq_true (nodup_filter_length_le_one hnd w))
+
+/-- **The symmetric pair is admitted exactly when pool-safe**: the
+    extension direction the old `einzeln` refused. -/
+theorem einzelnPool_paar {P : Programm D} {fs : List D.Fn} {w : D.Fn} :
+    EinzelnPool P fs [w, w] ↔ PoolSicherW P fs w := by
+  constructor
+  · intro h
+    have hff : ([w, w].filter (fun v => decide (v = w))) = [w, w] := by
+      simp
+    have hlt : 1 < ([w, w].filter (fun v => decide (v = w))).length := by
+      rw [hff]
+      show 1 < 2
+      decide
+    exact h w List.mem_cons_self hlt
+  · intro hpool w' hw' hlt
+    have heq : w' = w := by simpa using hw'
+    subst heq
+    exact hpool
+
+/-- Every program the old checker accepted satisfies the pool condition:
+    the Prop-level "never weakened" direction. -/
+theorem akzeptiertSpec_pool {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (hA : AkzeptiertSpec P S fs ws) : EinzelnPool P fs ws :=
+  (einzelnPoolB_iff hvoll hcs).mp
+    (einzelnPoolB_of_einzelnB (decide_eq_true hA.einzeln))
+
 end PoolBool
 
 /-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
