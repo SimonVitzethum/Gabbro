@@ -173,7 +173,72 @@ def poolP : Programm poolD where
           (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 7)))
           (List.Perm.refl _)
 
-/-! CUTS (fixtures): the joint witness and the refusal witness are not
-  yet proved. -/
+/-! ## The rule-13 witnesses -/
 
-#print axioms Gabbro.Grammatik.poolD
+/-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
+    function writes a table). -/
+theorem pool_schreibt_zeigt :
+    TraegerSchreibt (D := poolD) true (.inl ()) = true := rfl
+
+/-- Decidable equality on the variant's functions: `Bool` underneath, as
+    a named instance so kernel evaluation (`decide` over computed graphs)
+    unfolds it. A `haveI` hypothesis would stay opaque and block `decide`. -/
+instance poolDecEq : DecidableEq poolD.Fn := inferInstanceAs (DecidableEq Bool)
+
+/-- **The joint witness for `pool_schreibt_nicht`**: every premise
+    instantiated jointly on the lock-free fixture -- the empty member list
+    (the graph is then definitionally `{einzahlen}`, so no body is ever
+    unfolded), the unguarded, non-atomic, never-written global `frei` as
+    the carrier, thread 0 running `einzahlen` with argument 7. -/
+theorem pool_schreibt_nicht_zeuge :
+    ∃ (D : Deklaration) (_ : DecidableEq D.Fn) (P : Programm D) (fs : List D.Fn)
+      (w : D.Fn)
+      (init : Faden → Σ f : D.Fn, Env D (D.params f)) (t : Faden)
+      (c : D.Tab ⊕ D.Glob) (g : D.Fn),
+      (init t).1 = w ∧ PoolSicher D (reachB P fs w) w ∧
+      (∀ L, ¬ Bewacht c L) ∧ ¬ AtomarAusgenommen c ∧
+      kVon P fs init t g = true := by
+  refine ⟨poolD, inferInstance, poolP, [], true, fun _ => ⟨true, poolRho⟩, 0,
+    .inr (), true, rfl, ?_, ?_, ?_, ?_⟩
+  · refine ⟨rfl, rfl, fun f hf c hc => ?_⟩
+    cases f with
+    | false => exact absurd hf (by decide)
+    | true =>
+        cases c with
+        | inl _ => exact Or.inl ⟨(), List.mem_cons_self⟩
+        | inr x => cases x; exact absurd hc (by decide)
+  · intro L h
+    cases h
+  · intro hA
+    obtain ⟨g, _, hg2⟩ := hA
+    cases g
+    exact absurd hg2 (by decide)
+  · unfold kVon
+    exact reachB_wurzel _ _ _
+
+/-- **The refusal witness**: on the reference fixture itself, `PoolSicher`
+    is uninhabited -- both functions hold the lock by signature. This is
+    why the joint witness lives on the lock-free variant, and why the
+    checker refuses the fixture's writer on two threads (`N304`). -/
+theorem poolSicher_refD_unmoeglich (K : refD.Fn → Bool) (w : refD.Fn) :
+    ¬ PoolSicher refD K w := by
+  intro h
+  cases w with
+  | true => exact absurd h.1 (by decide)
+  | false => exact absurd h.1 (by decide)
+
+/-! CUTS: what is not proved.
+  * The run-level race-freedom leg (`RennfreiBis` over a multiset start)
+    is not proved here: it needs `Laufzeit.einmal` lifted (F4, specified
+    in MUSE-REPORT-245.md). Proved instead: the separation premise both
+    threads of a symmetric pair satisfy (`pool_schreibt_nicht`), jointly
+    witnessed above, with the refusal direction on `refD`.
+  * Per-core writes are not covered model-side: the surface exempts
+    `accumulates … per cpu`, the model has no notion for it.
+  * No joint `_zeuge` shape beyond the one above: `poolP`'s bodies are
+    trivial by design (the witness graph never unfolds them). -/
+
+#print axioms Gabbro.Grammatik.pool_schreibt_nicht
+#print axioms Gabbro.Grammatik.pool_schreibt_nicht_zeuge
+#print axioms Gabbro.Grammatik.pool_schreibt_zeigt
+#print axioms Gabbro.Grammatik.poolSicher_refD_unmoeglich
