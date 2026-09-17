@@ -50,23 +50,49 @@ sys.path.insert(0, os.path.join(W, "instrumente"))
 # The nine components of `Akzeptiert` (Akzeptiert.lean §3), each with the
 # Rust rule that decides it. `None` = decided by construction / vacuous on
 # the export fragment (named in the report, never silently dropped).
+# Vacuity mechanisms, verified by lane 208 (MUSE-REPORT-208.md):
+# * `abg`: `reachB` runs `fs.length` rounds of `erreichSchritt`, which is the
+#   fixpoint over `ruftB` -- the same relation `rufM` closes over -- so every
+#   computed graph is closed on every export, with no Rust rule involved.
+# * `stufen`: `resolve_floors` (`lean_g.rs`, which this lane must not touch)
+#   writes each floor as the minimum rank taken anywhere in the function's
+#   reachable set, so `mE (bodenM f)` holds per body by construction. `N294`
+#   decides a DIFFERENT property (no take at/below a signature-held lock,
+#   the `H006` shape, also enforced at export time by `tr_locks`/`LG004`).
+# * `sperrOrte`: `S.orte` and `D.braucht`/`D.gbraucht` are built from the one
+#   `LockModel.guards` set (`read_lock`), so the implication holds per
+#   carrier by construction; unknown `protects` entries refuse at export
+#   (`LG005`).
+# * `antworten`: no answer site exports -- axioms write `Ax := Empty` and
+#   register accesses have no `Reg` form (both `LG...` refusals) -- so the
+#   component is `true` on every export; `N310`-`N316` pin the refuse
+#   direction, measured by gift probes, not by this script.
 KOMPONENTEN = [
     # (short, lean-bool-template, rust-codes)
     ("frag", "programmImFragmentG {P} {fs}",
      ["LG004"]),  # export refuses untranslatable bodies; N293 the indirect leg
-    ("abg", "abgAlleB {P} {fs}", None),  # closed by construction, both sides
+    ("abg", "abgAlleB {P} {fs}", None),  # vacuous: fixpoint, see above
     ("fuss", "fussWB {P} {S} {fs} {ws}",
      ["N290", "N291", "N292", "N293", "N294"]),
-    ("stufen", "stufenB {P} {fs}", ["N294"]),
-    ("sperrOrte", "sperrOrteB {S} {ls}", None),  # S.orte/braucht one source
+    ("stufen", "stufenB {P} {fs}", None),  # vacuous: minimum-floor
+    # construction, see above. `N294` decides a DIFFERENT property (the
+    # signature-held take rule, the `H006` shape, also enforced at export
+    # by `tr_locks`/`LG004`) and is listed only under `fuss`, where its
+    # floor leg belongs.
+    ("sperrOrte", "sperrOrteB {S} {ls}", None),  # vacuous: one source, see above
     ("wurzeln", "wurzelnB {ws}", ["N302", "N303"]),
     ("einzeln", "einzelnB {ws}", ["N304", "N315"]),
     ("renn", "rennB {P} {fs} {cs} {ws}", ["N300", "N301"]),
     ("antworten", "antwortenB {P} {fs}",
      ["N310", "N311", "N312", "N313", "N314", "N316"]),
+    # vacuous on the export (no Ax/Reg sites); refuse direction by gifts
 ]
 
 # The Rust verdict: ACCEPT iff none of these fires (all are ERROR severity).
+# `N317`-`N319` are PHANTOM codes (lane 208): reserved as transfer-2
+# additions, implemented nowhere, firing on nothing. They stay in the set
+# so the day a rule takes one, the verdict reads it with no script change;
+# until then they change no verdict.
 AKZEPTIERT_CODES = frozenset([
     "N290", "N291", "N292", "N293", "N294",
     "N300", "N301", "N302", "N303", "N304",
@@ -168,6 +194,106 @@ def parse_export(text):
         return None
     return {"ns": ns, "tabellen": tabellen, "sperren": sperren,
             "funktionen": funktionen}
+
+
+def pruefe_konstruktion(export, exp):
+    """Pin the exporter CONSTRUCTION the four vacuous components rest on.
+
+    Each `Akzeptiert` component without a Rust rule holds on every export
+    for a stated construction reason (see `KOMPONENTEN`). Those reasons
+    are facts about the EXPORT TEXT, so they are asserted here, on every
+    compared program, and any drift exits 2 (`KONSTRUKTION:`) -- a comment
+    never goes red, this does. Returns a list of violation strings (empty
+    = the construction stands as cited).
+
+    K1 (antworten): the export declares `Ax := Empty` and `Reg := Empty`
+        -- no axiom call and no register access has a G form, so no
+        answer site exists to judge (`lean_g.rs`, the `LG...` refusals).
+    K2 (sperrOrte): `S.orte` and `D.braucht`/`D.gbraucht` name the same
+        guards in both directions -- both are printed from the one
+        `LockModel.guards` set (`read_lock`), so `c in S.orte L`
+        implies `L in braucht c` and back.
+    K3 (stufen): where locks exist, every signature floor is `some` --
+        `resolve_floors` writes the minimum rank taken anywhere in the
+        reachable set (never `none`), which is what `mE (bodenM f)`
+        checks per body (full minimality is decided by the Lean
+        `stufen` probe itself, tallied below as `pin:`).
+    K4 (abg): every `GFn.X` named anywhere in the export is a declared
+        member -- no call leaves the member list, which is the premise
+        the `reachB` fixpoint closure needs (`ZielOrtMehrfaden.lean`).
+    """
+    bruch = []
+    if "Ax := Empty" not in export:
+        bruch.append("K1: `Ax := Empty` gone -- axiom calls may export, "
+                     "and `antworten` is no longer vacuous")
+    if "Reg := Empty" not in export:
+        bruch.append("K1: `Reg := Empty` gone -- register accesses may "
+                     "export, and `antworten` is no longer vacuous")
+
+    def arme(zeile, name):
+        # `name := fun | .A => [...] | .B => [...]`, `fun _ => []` or
+        # `fun e => nomatch e`. Returns {ctor: [entries]} or {}.
+        m = re.search(r"(?m)^  %s := fun (.*)$" % re.escape(name), zeile)
+        if not m:
+            return None
+        rest = m.group(1).strip()
+        if rest in ("_ => []", "e => nomatch e", "_ => false"):
+            return {}
+        out = {}
+        for arm in re.finditer(r"\| \.(\w+) => \[([^\]]*)\]", rest):
+            out[arm.group(1)] = arm.group(2)
+        return out
+
+    orte = arme(export, "orte")
+    braucht = arme(export, "braucht")
+    gbraucht = arme(export, "gbraucht")
+    if orte is None or braucht is None or gbraucht is None:
+        bruch.append("K2: `orte`/`braucht`/`gbraucht` lines parse not -- "
+                     "the guard printing changed shape")
+    else:
+        # K2 forward: every carrier in S.orte L lists L as a guard.
+        for lock, traeger in orte.items():
+            for c in re.finditer(r"\.inl GTab\.(\w+)|\.inr GGlob\.(\w+)",
+                                 traeger):
+                t, g = c.group(1), c.group(2)
+                if t is not None:
+                    if ("GLock.%s" % lock) not in braucht.get(t, ""):
+                        bruch.append("K2: `orte` names %s for lock %s, but "
+                                     "`braucht` does not list it" % (t, lock))
+                else:
+                    if ("GLock.%s" % lock) not in gbraucht.get(g, ""):
+                        bruch.append("K2: `orte` names %s for lock %s, but "
+                                     "`gbraucht` does not list it" % (g, lock))
+        # K2 back: every guard a braucht arm lists owns the carrier.
+        for t, eintrag in braucht.items():
+            for l in re.finditer(r"GLock\.(\w+)", eintrag):
+                if (".inl GTab.%s" % t) not in orte.get(l.group(1), ""):
+                    bruch.append("K2: `braucht` names lock %s for table %s, "
+                                 "but `orte` does not list it"
+                                 % (l.group(1), t))
+        for g, eintrag in gbraucht.items():
+            for l in re.finditer(r"GLock\.(\w+)", eintrag):
+                if (".inr GGlob.%s" % g) not in orte.get(l.group(1), ""):
+                    bruch.append("K2: `gbraucht` names lock %s for global "
+                                 "%s, but `orte` does not list it"
+                                 % (l.group(1), g))
+
+    if exp["sperren"]:
+        boeden = re.findall(r"(?m)^  boden := (.*)$", export)
+        if not boeden:
+            bruch.append("K3: no `boden :=` lines with locks declared -- "
+                         "the floor printing changed shape")
+        for b in boeden:
+            if not b.strip().startswith("some "):
+                bruch.append("K3: floor `%s` is not `some` -- "
+                             "`resolve_floors` no longer writes minima" % b)
+
+    mitglieder = set(exp["funktionen"])
+    for ref in set(re.findall(r"GFn\.(\w+)", export)):
+        if ref not in mitglieder:
+            bruch.append("K4: `GFn.%s` named but not a declared member -- "
+                         "a call leaves the member list" % ref)
+    return bruch
 
 
 def sonde(ns, exp, starts):
@@ -293,6 +419,20 @@ def main():
     dateien = korpus_dateien()
     zeilen, befunde, partial, skip = [], [], [], []
     nicht_gemessen = []
+    konstruktion = []
+    # Per-component pass tally: on how many compared programs each Lean
+    # component evaluated to `true`. For the vacuous components this is
+    # the outcome half of the pin -- the mechanism half is `K1`-`K4`
+    # above; both print, so a silent denominator is visible.
+    pin_zaehler = {kurz: 0 for kurz, _, _ in KOMPONENTEN}
+    pin_nenner = 0
+    # Coverage denominator (lane 208): per compared program, the static
+    # facts that decide whether a component was NON-TRIVIALLY exercised.
+    # `wurzeln` needs >= 1 start; `einzeln`, `renn` and the thread legs of
+    # `fuss` need >= 2 starts (their Bools are vacuous over fewer);
+    # `stufen`/`sperrOrte` need >= 1 lock; `renn` needs >= 1 table.
+    # `abg`/`antworten` are vacuous on every export (see KOMPONENTEN).
+    deckung = []
     for datei in dateien:
         rel = os.path.relpath(datei, W)
         quelle = open(datei, encoding="utf-8").read()
@@ -312,6 +452,14 @@ def main():
         if unbekannt:
             print("ABBRUCH: %s starts %s not in export" % (rel, unbekannt))
             return 2
+        # The construction pin (lane 208 round 2): the exporter facts
+        # the vacuous components rest on, asserted on every export that
+        # parses -- before any verdict, so a drift can never hide behind
+        # an agreement. A violation is infrastructure-red (exit 2), not a
+        # finding: it says the MEASURE no longer measures, not that the
+        # checker disagrees.
+        for bruch in pruefe_konstruktion(export, parsed):
+            konstruktion.append((rel, bruch))
         fehler, _ = pruefe_codes(gabbro, datei)
         rust_ok = not (fehler & AKZEPTIERT_CODES)
         ok, gefallen, raw = lean_lauf(sonde(parsed["ns"], parsed, starts),
@@ -335,12 +483,38 @@ def main():
                                     ("refuse@" + ",".join(gefallen)
                                      if gefallen else "refuse")),
                        status))
+        if not is_partial:
+            deckung.append((rel, len(starts), len(parsed["sperren"]),
+                            len(parsed["tabellen"]), len(parsed["funktionen"])))
+            pin_nenner += 1
+            for kurz, _, _ in KOMPONENTEN:
+                if kurz not in gefallen:
+                    pin_zaehler[kurz] += 1
     print("| file | Rust | Lean | verdict |")
     print("|---|---|---|---|")
     for rel, r, l, s in zeilen:
         print("| %s | %s | %s | %s |" % (rel, r, l, s))
     print("compared=%d skip=%d partial=%d findings=%d not-measured=%d"
           % (len(zeilen), len(skip), len(partial), len(befunde), len(nicht_gemessen)))
+    # The coverage table: how many compared programs exercise each
+    # component NON-TRIVIALLY. A "0 findings" over a denominator that never
+    # reaches a component measures nothing about it -- this table says
+    # which components the denominator reaches. (PARTIAL files excluded:
+    # their Lean side drops the entry/boot roots, so no component verdict
+    # on them is comparable.)
+    n = len(deckung)
+    mit_start = sum(1 for (_, s, _, _, _) in deckung if s >= 1)
+    mit_paar = sum(1 for (_, s, _, _, _) in deckung if s >= 2)
+    mit_sperre = sum(1 for (_, _, l, _, _) in deckung if l >= 1)
+    mit_tabelle = sum(1 for (_, _, _, t, _) in deckung if t >= 1)
+    print("coverage: of %d comparable programs," % n)
+    print("coverage: wurzeln(>=1 start): %d | einzeln/renn/fuss-thread-legs(>=2 starts): %d | "
+          "stufen/sperrOrte(>=1 lock): %d | renn(>=1 table): %d"
+          % (mit_start, mit_paar, mit_sperre, mit_tabelle))
+    print("coverage: abg/antworten vacuous on every export (fixpoint / no Ax-Reg sites); "
+          "their refuse direction is pinned by gift probes, not here")
+    for rel, s, l, t, f in deckung:
+        print("deckt: %s (starts=%d locks=%d tables=%d fns=%d)" % (rel, s, l, t, f))
     for rel, grund in skip:
         print("skip: %s (%s)" % (rel, grund))
     for rel in partial:
@@ -350,6 +524,16 @@ def main():
               % (rel, "accept" if rust_ok else "refuse", ",".join(gefallen)))
     for rel, grund in nicht_gemessen:
         print("BEFUND: %s was NOT measured -- %s" % (rel, grund))
+    for kurz, _, _ in KOMPONENTEN:
+        print("pin: %s true on %d/%d comparable programs"
+              % (kurz, pin_zaehler[kurz], pin_nenner))
+    for rel, bruch in konstruktion:
+        print("KONSTRUKTION: %s -- %s" % (rel, bruch))
+    if konstruktion:
+        print("== RED: %d construction assertion(s) broken -- the exporter "
+              "no longer builds what the vacuous components assume; no "
+              "verdict above may be read as agreement ==" % len(konstruktion))
+        return 2
     if nicht_gemessen:
         print("== RED: %d program(s) could not be measured -- a run that cannot tell "
               "'refused' from 'never ran' measures nothing about them ==" % len(nicht_gemessen))
