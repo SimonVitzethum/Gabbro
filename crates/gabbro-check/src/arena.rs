@@ -24,6 +24,42 @@
 //! (`N214`, `m1.rs`, at the one place that types every `Ort`), and the
 //! unknown bare name (`M119`, `m1.rs`).
 //!
+//! ## Growth accounting (wave D, lane 240)
+//!
+//! `PLAN-DYNAMISCH.md` §4 tracks, per function body and per path, a pair
+//! `(count, committed)` per arena: `count` is the static allocation count
+//! since the last reset (this file's `zaehlung`), `committed` is the storage
+//! actually usable on the path. The growth points of a program are then
+//! enumerable by grep: `alloc` moves `count`, `reset` restores `(0, floor)`.
+//!
+//! What stands HERE is the accounting with the ceiling tied to `hi`: no
+//! `max` syntax exists (parser gap — no lane of TODO wave D owns
+//! `lex.rs`/`parse.rs`/`ast.rs`, see the lane report), so floor and ceiling
+//! coincide by construction (`M = hi`, `committed = hi` on every path).
+//! Joins take the maximum of counts (as before) and the minimum of
+//! committed (the sound direction: what both paths guarantee); loops keep
+//! the minimum, capped by `M` by construction, so committed needs no
+//! `UNENDLICH` saturation. `reset` restores the floor: commit never shrinks.
+//!
+//! Every growth point is cost-visible where the latency promises live, and
+//! that is measured, not asserted: `kosten.rs` counts `alloc` as one
+//! primitive plus the value plus the `else` (the `Alloc` arm) and `reset`
+//! as one primitive (the `ResetArena` arm); `sperrbloecke` walks the same
+//! arms, so a `grow`-shaped body inside `locks` counts against `held`
+//! (`K002`), and an uncountable alloc value stays unknown (`K003`).
+//! Lane 232 owns `kosten.rs`; this file only reads its contract.
+//!
+//! What is NOT built, and why (finding, measured): `PLAN-DYNAMISCH.md` §4
+//! `R-max` — refuse the `alloc` whose static count may reach `M` even with
+//! an `else` beside it. Wired with `M = hi` it fires on
+//! `beispiele/99-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
+//! count 2 == `M`, `else` present): load-bearing corpus behavior (the
+//! boundary demo, emission included) would go red. That is a tightening of
+//! the kind lane 184 was rejected for. `R-max` needs the `max` syntax to
+//! scope `M` above `hi` (lane 241/242 handoff, see the lane report); until
+//! then the over-cap shape without an `else` stays `N212` (gift 1087 pins
+//! it past `hi`), and the shape with an `else` stays accepted.
+//!
 //! ## Counting
 //!
 //! The count runs per function body, like `costs`: a reset sets it to zero,
@@ -67,10 +103,19 @@ const UNENDLICH: u64 = u64::MAX;
 /// Flow state for one function body: the current generation and the static
 /// allocation count of every arena, plus which local names are live indices
 /// of which generation.
+///
+/// Wave D adds the committed count per arena (`verpflichtet`): the storage
+/// actually usable on this path. With no `max` syntax it coincides with the
+/// floor (`hi`) everywhere — see the module head — but the joins already run
+/// the §4 directions (counts join with `max`, committed with `min`), so the
+/// `grow` arm (lane 241) only touches the bump site, never the merge.
 #[derive(Debug, Clone, Default)]
 struct Stand {
     generation: HashMap<String, u64>,
     zaehlung: HashMap<String, u64>,
+    /// Committed prefix per arena on this path (`PLAN-DYNAMISCH.md` §4).
+    /// Absent means the floor: `verpflichtung` falls back to `boden`.
+    verpflichtet: HashMap<String, u64>,
     /// Local name -> (arena, generation). Only `alloc` binds these.
     gebunden: HashMap<String, (String, u64)>,
     /// Local name whose index value is no longer tracked (reassigned,
@@ -93,16 +138,39 @@ impl Stand {
     }
 
     /// A fresh generation for `arena`: the reset consumes the old one.
-    fn reset(&mut self, arena: &str, frisch: &mut u64) {
+    /// The committed count returns to the floor: commit never shrinks
+    /// (`PLAN-DYNAMISCH.md` §3, monotone commit). `boden` is `None` exactly
+    /// when the declaration never resolved to usable bounds (then `N210`
+    /// already fell, and no count question is asked anywhere).
+    fn reset(&mut self, arena: &str, frisch: &mut u64, boden: Option<u64>) {
         *frisch = frisch.saturating_add(1);
         self.generation.insert(arena.to_string(), *frisch);
         self.zaehlung.insert(arena.to_string(), 0);
+        match boden {
+            Some(f) => {
+                self.verpflichtet.insert(arena.to_string(), f);
+            }
+            None => {
+                self.verpflichtet.remove(arena);
+            }
+        }
     }
 
     /// Join two branch states: the count is the maximum, and a generation
     /// that differs between the sides is replaced by a fresh one -- an
     /// older index MAY be stale on the joined path.
-    fn vereinige(&mut self, andere: &Stand, frisch: &mut u64) {
+    ///
+    /// The committed count joins with the minimum — the sound direction:
+    /// what both paths guarantee (`PLAN-DYNAMISCH.md` §4). A side that never
+    /// touched the arena stands at the floor, so `boden` (the floor per
+    /// arena, `None` where the declaration is unusable) fills absent
+    /// entries. The result never exceeds either side and never the ceiling.
+    fn vereinige(
+        &mut self,
+        andere: &Stand,
+        frisch: &mut u64,
+        boden: &HashMap<String, u64>,
+    ) {
         let mut arenan: HashSet<String> = HashSet::new();
         for k in self.zaehlung.keys() {
             arenan.insert(k.clone());
@@ -110,12 +178,34 @@ impl Stand {
         for k in andere.zaehlung.keys() {
             arenan.insert(k.clone());
         }
+        for k in self.verpflichtet.keys() {
+            arenan.insert(k.clone());
+        }
+        for k in andere.verpflichtet.keys() {
+            arenan.insert(k.clone());
+        }
         for a in arenan {
             let z = self.zaehlung(&a).max(andere.zaehlung(&a));
             self.zaehlung.insert(a.clone(), z);
             if self.generation(&a) != andere.generation(&a) {
                 *frisch = frisch.saturating_add(1);
-                self.generation.insert(a, *frisch);
+                self.generation.insert(a.clone(), *frisch);
+            }
+            match (self.verpflichtet.get(&a).copied(), andere.verpflichtet.get(&a).copied()) {
+                (Some(x), Some(y)) => {
+                    self.verpflichtet.insert(a, x.min(y));
+                }
+                (Some(x), None) => {
+                    let c = boden.get(&a).copied().map(|f| x.min(f)).unwrap_or(x);
+                    self.verpflichtet.insert(a, c);
+                }
+                (None, Some(y)) => {
+                    let c = boden.get(&a).copied().map(|f| y.min(f)).unwrap_or(y);
+                    self.verpflichtet.insert(a, c);
+                }
+                // Both sides at the floor: absent means the floor, so no
+                // entry is written.
+                (None, None) => {}
             }
         }
     }
@@ -127,15 +217,41 @@ struct Laeufer<'a> {
     absagen: &'a mut Absagen,
     stand: Stand,
     frisch: u64,
+    /// The commit floor per arena (qualified name -> `hi`), built once per
+    /// pass from the declarations. With no `max` syntax the floor is also
+    /// the ceiling (`M = hi`); lane 241 splits the two when the clause
+    /// lands. Absent exactly where the declaration is unusable (`N210`).
+    boden: HashMap<String, u64>,
     /// (code, span) pairs already reported: a loop body walks twice (see
     /// `schleife`), and the second walk must not report the first walk's
     /// findings again.
     gemeldet: HashSet<(String, u32, u32)>,
 }
 
+/// The floor of `sig`: the initially committed count. `Some(hi)` exactly
+/// when the declaration resolves to usable bounds (the `N210` shape —
+/// `0 <= lo <= hi`, `hi >= 1`, `hi` namable); `None` where `N210` already
+/// fell, so no committed question is asked there either.
+fn bodenwert(sig: &crate::umgebung::ArenaSig) -> Option<u64> {
+    match (sig.lo, sig.hi) {
+        (Some(lo), Some(hi))
+            if 0 <= lo && lo <= hi && hi >= 1 && hi <= u32::MAX as i128 =>
+        {
+            Some(hi as u64)
+        }
+        _ => None,
+    }
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     erklaerungen(baum, &u, absagen);
+    let mut boden: HashMap<String, u64> = HashMap::new();
+    for (q, sig) in &u.arenen {
+        if let Some(f) = bodenwert(sig) {
+            boden.insert(q.clone(), f);
+        }
+    }
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
@@ -149,6 +265,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             absagen,
             stand: Stand::default(),
             frisch: 0,
+            boden: boden.clone(),
             gemeldet: HashSet::new(),
         };
         for p in &f.parameter {
@@ -253,6 +370,55 @@ impl<'a> Laeufer<'a> {
         }
     }
 
+    /// The ceiling of `arena` (`M` in `PLAN-DYNAMISCH.md` §4): with no `max`
+    /// syntax it is the floor (`hi`), read off the per-pass table. `None`
+    /// where the declaration is unusable.
+    fn obergrenze(&self, arena: &str) -> Option<u64> {
+        self.boden.get(arena).copied()
+    }
+
+    /// The committed prefix on this path: the tracked value, or the floor
+    /// where the path never moved it (absent means the floor).
+    fn verpflichtung(&self, arena: &str) -> Option<u64> {
+        self.stand
+            .verpflichtet
+            .get(arena)
+            .copied()
+            .or_else(|| self.boden.get(arena).copied())
+    }
+
+    /// Loop join for the committed axis only: per arena the minimum of the
+    /// entry and the one-pass exit, with the floor filling the side that
+    /// never moved it. Counts and generations keep their own loop rules
+    /// (saturation, fresh generation); this axis needs neither, since the
+    /// ceiling caps it by construction.
+    fn verbinde_verpflichtung(&self, vor: &Stand, nach_eins: &Stand, nach: &mut Stand) {
+        let mut arenan: HashSet<String> = HashSet::new();
+        for k in vor.verpflichtet.keys().chain(nach_eins.verpflichtet.keys()) {
+            arenan.insert(k.clone());
+        }
+        for a in arenan {
+            let c = match (
+                vor.verpflichtet.get(&a).copied(),
+                nach_eins.verpflichtet.get(&a).copied(),
+            ) {
+                (Some(x), Some(y)) => Some(x.min(y)),
+                (Some(x), None) | (None, Some(x)) => {
+                    Some(self.boden.get(&a).copied().map(|f| x.min(f)).unwrap_or(x))
+                }
+                (None, None) => None,
+            };
+            match c {
+                Some(c) => {
+                    nach.verpflichtet.insert(a, c);
+                }
+                None => {
+                    nach.verpflichtet.remove(&a);
+                }
+            }
+        }
+    }
+
     /// Bind a local name: it shadows any arena of the same spelling from
     /// here on, and it is no live index.
     fn binde_lokal(&mut self, name: &str) {
@@ -348,7 +514,7 @@ impl<'a> Laeufer<'a> {
                     self.block(rumpf);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
                     }
                 }
                 if let Some(sonst) = &w.sonst {
@@ -356,10 +522,10 @@ impl<'a> Laeufer<'a> {
                     self.block(sonst);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
                     }
                 } else if let Some(n) = &mut nach {
-                    n.vereinige(&vor, &mut self.frisch);
+                    n.vereinige(&vor, &mut self.frisch, &self.boden);
                 }
                 // Bindings are block-scoped per arm (`block` restores them),
                 // so the join holds flow only -- and `vereinige` touches
@@ -380,7 +546,7 @@ impl<'a> Laeufer<'a> {
                     self.block(&z.rumpf);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
                     }
                 }
                 if let Some(n) = nach {
@@ -446,7 +612,7 @@ impl<'a> Laeufer<'a> {
         } else {
             let nach_sonst = self.stand.clone();
             self.stand = nach_haupt;
-            self.stand.vereinige(&nach_sonst, &mut self.frisch);
+            self.stand.vereinige(&nach_sonst, &mut self.frisch, &self.boden);
         }
     }
 
@@ -484,6 +650,14 @@ impl<'a> Laeufer<'a> {
         // allocations since the last reset on this path, and the next slot
         // is owed its failure branch exactly when that number may exceed
         // the reservation.
+        //
+        // Unchanged by wave D on purpose: the path's committed value
+        // (`verpflichtung`, `R-commit` in `PLAN-DYNAMISCH.md` §4) coincides
+        // with `hi` on every path while no `grow` statement exists, and
+        // `hi >= lo`, so holding the `else` against `lo` is the sharper of
+        // the two — a refusal `R-commit` would add is one `N212` already
+        // carries. Lane 241 re-points this comparison at the committed
+        // value where it exceeds `hi`.
         if let Some(lo) = self.reservierung(&q) {
             let n = self.stand.zaehlung(&q);
             if n >= lo as u64 && a.sonst.is_none() {
@@ -503,6 +677,22 @@ impl<'a> Laeufer<'a> {
                      path is written down, not hoped away",
                 );
             }
+            // **Wave D: the ceiling invariant, pinned without a verdict.**
+            //
+            // The committed prefix never exceeds the ceiling `M`
+            // (`obergrenze`, today `hi`). `R-max` — refusing the `alloc`
+            // that reaches `M` even with an `else` — is NOT wired here: on
+            // `beispiele/99` (`Klein capacity 2 .. 2`, third `alloc`, count
+            // 2 == `M`, `else` present) it fires, so wiring it reddens
+            // load-bearing corpus behavior. See the module head and the
+            // lane report; the `else`-less over-cap shape stays `N212`.
+            if let Some(m) = self.obergrenze(&q) {
+                debug_assert!(
+                    self.verpflichtung(&q).map_or(true, |c| c <= m),
+                    "committed prefix exceeds the ceiling on `{}`",
+                    a.tisch.text
+                );
+            }
         }
         let g = self.stand.generation(&q);
         self.stand.zaehlung.insert(q.clone(), self.stand.zaehlung(&q).saturating_add(1));
@@ -519,7 +709,7 @@ impl<'a> Laeufer<'a> {
             } else {
                 let nach_sonst = self.stand.clone();
                 self.stand = nach_haupt;
-                self.stand.vereinige(&nach_sonst, &mut self.frisch);
+                self.stand.vereinige(&nach_sonst, &mut self.frisch, &self.boden);
             }
         }
     }
@@ -542,7 +732,10 @@ impl<'a> Laeufer<'a> {
             }
             return;
         };
-        self.stand.reset(&q, &mut self.frisch);
+        // A reset restores the commit floor beside the fresh generation:
+        // commit never shrinks (`PLAN-DYNAMISCH.md` §3).
+        let boden = self.boden.get(&q).copied();
+        self.stand.reset(&q, &mut self.frisch, boden);
     }
 
     /// A loop: the body walks from the entry state, then once more from the
@@ -566,7 +759,7 @@ impl<'a> Laeufer<'a> {
                 self.block(&t.rumpf);
                 let nach_eins = self.stand.clone();
                 let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch);
+                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
                 self.stand = verbunden.clone();
                 self.block(&t.rumpf);
                 let mut nach = vor.clone();
@@ -586,6 +779,10 @@ impl<'a> Laeufer<'a> {
                         nach.generation.insert(a.clone(), self.frisch);
                     }
                 }
+                // Wave D: the committed axis joins with the minimum over
+                // entry and exit — the loop analogue of `vereinige`, capped
+                // by `M` by construction, so no `UNENDLICH` saturation.
+                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
                 let gebunden = vor.gebunden.clone();
                 let unsicher = vor.unsicher.clone();
                 let lokal = vor.lokal.clone();
@@ -599,7 +796,7 @@ impl<'a> Laeufer<'a> {
                 self.block(&r.rumpf);
                 let nach_eins = self.stand.clone();
                 let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch);
+                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
                 self.stand = verbunden;
                 self.block(&r.rumpf);
                 let schranke = self.u.konst_wert(&self.modul, &r.schranke).unwrap_or(-1);
@@ -624,6 +821,10 @@ impl<'a> Laeufer<'a> {
                         nach.generation.insert(a.clone(), self.frisch);
                     }
                 }
+                // Wave D: the committed axis joins with the minimum over
+                // entry and exit — the loop analogue of `vereinige`, capped
+                // by `M` by construction, so no `UNENDLICH` saturation.
+                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
                 let gebunden = vor.gebunden.clone();
                 let unsicher = vor.unsicher.clone();
                 let lokal = vor.lokal.clone();
@@ -636,7 +837,7 @@ impl<'a> Laeufer<'a> {
                 self.block(&f.rumpf);
                 let nach_eins = self.stand.clone();
                 let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch);
+                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
                 self.stand = verbunden;
                 self.block(&f.rumpf);
                 let mut nach = vor.clone();
@@ -652,6 +853,10 @@ impl<'a> Laeufer<'a> {
                         nach.generation.insert(a.clone(), self.frisch);
                     }
                 }
+                // Wave D: the committed axis joins with the minimum over
+                // entry and exit — the loop analogue of `vereinige`, capped
+                // by `M` by construction, so no `UNENDLICH` saturation.
+                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
                 let gebunden = vor.gebunden.clone();
                 let unsicher = vor.unsicher.clone();
                 let lokal = vor.lokal.clone();
@@ -753,4 +958,111 @@ fn entklammert<'b>(e: &'b Expr) -> &'b Expr {
         e = x;
     }
     e
+}
+
+/// **Wave-D growth accounting, pinned at the unit level.**
+///
+/// These tests drive the merge directions (`max` on counts, `min` on
+/// committed) and the floor discipline directly: through the real pass they
+/// would be invisible, because with no `grow` statement every committed
+/// value coincides with the floor and no verdict moves.
+#[cfg(test)]
+mod wachstumstests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn boden(paare: &[(&str, u64)]) -> HashMap<String, u64> {
+        paare.iter().map(|(k, v)| ((*k).to_string(), *v)).collect()
+    }
+
+    #[test]
+    fn verbindung_max_zaehlung_min_verpflichtung() {
+        let b = boden(&[("m::A", 8)]);
+        let mut links = Stand::default();
+        links.zaehlung.insert("m::A".to_string(), 3);
+        links.verpflichtet.insert("m::A".to_string(), 8);
+        let mut rechts = Stand::default();
+        rechts.zaehlung.insert("m::A".to_string(), 5);
+        rechts.verpflichtet.insert("m::A".to_string(), 6);
+        let mut frisch = 0u64;
+        links.vereinige(&rechts, &mut frisch, &b);
+        assert_eq!(links.zaehlung.get("m::A"), Some(&5));
+        assert_eq!(links.verpflichtet.get("m::A"), Some(&6));
+    }
+
+    #[test]
+    fn unberuehrte_seite_steht_am_boden() {
+        let b = boden(&[("m::A", 8)]);
+        let mut links = Stand::default();
+        links.zaehlung.insert("m::A".to_string(), 3);
+        links.verpflichtet.insert("m::A".to_string(), 8);
+        let rechts = Stand::default();
+        let mut frisch = 0u64;
+        links.vereinige(&rechts, &mut frisch, &b);
+        assert_eq!(links.verpflichtet.get("m::A"), Some(&8));
+    }
+
+    #[test]
+    fn seite_ueber_boden_wird_am_minimum_gekappt() {
+        // A grown side (lane 241's shape) joined with an untouched one
+        // falls back to the floor: the joined path guarantees only what
+        // both sides guarantee.
+        let b = boden(&[("m::A", 8)]);
+        let mut links = Stand::default();
+        links.zaehlung.insert("m::A".to_string(), 9);
+        links.verpflichtet.insert("m::A".to_string(), 12);
+        let rechts = Stand::default();
+        let mut frisch = 0u64;
+        links.vereinige(&rechts, &mut frisch, &b);
+        assert_eq!(links.verpflichtet.get("m::A"), Some(&8));
+        assert_eq!(links.zaehlung.get("m::A"), Some(&9));
+    }
+
+    #[test]
+    fn reset_stellt_boden_wieder_her() {
+        let mut s = Stand::default();
+        let mut frisch = 0u64;
+        s.zaehlung.insert("m::A".to_string(), 7);
+        s.verpflichtet.insert("m::A".to_string(), 12);
+        s.reset("m::A", &mut frisch, Some(8));
+        assert_eq!(s.zaehlung.get("m::A"), Some(&0));
+        assert_eq!(s.verpflichtet.get("m::A"), Some(&8));
+        // An unusable declaration leaves unknown state, not zero: `N210`
+        // owns that shape, and no count is invented for it.
+        s.verpflichtet.insert("m::B".to_string(), 5);
+        s.reset("m::B", &mut frisch, None);
+        assert_eq!(s.verpflichtet.get("m::B"), None);
+    }
+
+    #[test]
+    fn bodenwert_nur_brauchbare_schranken() {
+        use crate::typen::Typ;
+        let sig = |lo, hi| crate::umgebung::ArenaSig {
+            lo,
+            hi,
+            element: Typ::Unbekannt,
+        };
+        assert_eq!(bodenwert(&sig(Some(2), Some(8))), Some(8));
+        assert_eq!(bodenwert(&sig(Some(8), Some(2))), None);
+        assert_eq!(bodenwert(&sig(Some(0), Some(0))), None);
+        assert_eq!(bodenwert(&sig(None, Some(8))), None);
+        assert_eq!(bodenwert(&sig(Some(2), None)), None);
+    }
+
+    /// The `R-max` shape (`PLAN-DYNAMISCH.md` §4) as a predicate, NOT wired
+    /// into the pass: with `M = hi` it fires on `beispiele/99`'s third
+    /// `alloc` (`Klein capacity 2 .. 2`, count 2, `else` present), so wiring
+    /// it would redden load-bearing corpus behavior (the lane-184 class of
+    /// tightening). Lane 241 wires it once `max` scopes `M` above `hi`.
+    #[test]
+    fn kappe_erreicht_feuert_auf_neunundneunzig() {
+        fn kappe_erreicht(zaehlung: u64, maximum: u64) -> bool {
+            zaehlung >= maximum
+        }
+        // 99's third alloc: two allocations stand, the ceiling is two.
+        assert!(kappe_erreicht(2, 2));
+        // The first two owe nothing to the ceiling.
+        assert!(!kappe_erreicht(0, 2));
+        assert!(!kappe_erreicht(1, 2));
+    }
 }

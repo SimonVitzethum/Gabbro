@@ -3937,6 +3937,86 @@ impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
     );
 }
 
+// -- Lane 240 (wave D): the cap and the visible growth points -------------------------------
+// No `max` syntax exists (parser gap, see the lane report), so the ceiling is
+// `hi` and no new code is minted: over-cap growth without an `else` is the
+// `N212` shape past `hi`, and every growth point (`alloc`, `reset`) is
+// cost-visible (`kosten.rs` counts it, `sperrbloecke` holds it against
+// `held`). `R-max` — refusing over-cap growth WITH an `else` — stays
+// unwired: it fires on `beispiele/99`'s third `alloc`.
+
+/// **Over-cap growth without a branch is `N212`, past `hi` like past `lo`.**
+///
+/// `Winzig capacity 1 .. 2`: the third `alloc` (count 2 == `hi`) names a
+/// slot past the ceiling with no failure branch. The twin carries the
+/// `else` — the `beispiele/99` shape — and stays clean: `R-max` is not
+/// wired, by measurement and on purpose.
+#[test]
+fn arena_kappe_ohne_else_n212() {
+    faellt_genau(
+        "arena Winzig capacity 1 .. 2 of u16;
+impl fn f() -> u32 effects { writes Winzig } costs <= 32 ops {
+    let a = alloc Winzig (1);
+    let b = alloc Winzig (2) else {
+        return 100;
+    };
+    let c = alloc Winzig (3);
+    let x : u32 = Winzig[a];
+    let y : u32 = Winzig[b];
+    let z : u32 = Winzig[c];
+    return x + y + z;
+}",
+        &["N212"],
+    );
+    // The same growth with the branch declared: capped, counted, clean.
+    faellt_nicht(
+        "arena Winzig capacity 1 .. 2 of u16;
+impl fn f() -> u32 effects { writes Winzig } costs <= 32 ops {
+    let a = alloc Winzig (1);
+    let b = alloc Winzig (2) else {
+        return 100;
+    };
+    let c = alloc Winzig (3) else {
+        return 200;
+    };
+    let x : u32 = Winzig[a];
+    let y : u32 = Winzig[b];
+    let z : u32 = Winzig[c];
+    return x + y + z;
+}",
+    );
+}
+
+/// **Growth points are visible where the latency promise lives (`K002`).**
+///
+/// Three `alloc`s inside `locks L` cost against `held <= 2 ops` and fall at
+/// `K002` with the lock named — the wave-D payoff stated as a probe. The
+/// twin holds the same growth under a covering promise and stays clean.
+#[test]
+fn arena_wachstum_in_sperre_k002() {
+    let quelle = |held: &str| {
+        format!(
+            "module p {{\narena Puffer capacity 2 .. 8 of u16;\nstatic wert : u32 in 0 .. 100 = 4;\n\
+             lock L protects {{ wert }} rank 0 held <= {held} ops;\n\
+             impl fn f() -> u32 effects {{ writes Puffer, locks L }} costs <= 32 ops {{\n\
+             locks L {{\n\
+                 let a = alloc Puffer (1);\n\
+                 let b = alloc Puffer (2);\n\
+                 let c = alloc Puffer (3) else {{\n\
+                     return 100;\n\
+                 }};\n\
+                 let x : u32 = Puffer[a];\n\
+                 let y : u32 = Puffer[b];\n\
+                 let z : u32 = Puffer[c];\n\
+                 return x + y + z;\n\
+             }}\n\
+             }}\n}}"
+        )
+    };
+    faellt_genau(&quelle("2"), &["K002"]);
+    faellt_nicht(&quelle("64"));
+}
+
 // -- Lane 151: the owner-mark producer (D265/D266/D267, D026 lifts) --------
 
 /// **D265 -- the mark must be a declared linear type, and D026 stays silent.**
