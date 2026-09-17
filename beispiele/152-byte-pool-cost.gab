@@ -1,0 +1,55 @@
+-- 152 -- **THE OTHER SIDE OF THE LAYOUT FACTOR: the byte pool, direct.**
+--
+-- The same byte API as `151-word-pool-discipline.gab` (read a byte, write a
+-- byte, neighbouring bytes survive), but the storage is a byte carrier itself:
+-- `static mut BYTES : [u8; POOLBYTES]`, indexed directly by `i`. No shift, no
+-- mask, no `u32(255)` -- and the checker is still silent (`0 errors, 0 hints`).
+--
+-- THE PRICE IS IN THE EMITTED C, per access. A direct index into a byte carrier
+-- is not a shape the emitter re-derives a bound for (`ausdruck_obergrenze`
+-- covers a bare `index into T`, `x & MASK` and `x >> N` -- a bare ranged `i`
+-- is none of them), so every access carries the emitter's second opinion, a
+-- run-bound check (`leseBytes`/`schreibBytes`):
+--
+--     return ((uint64_t)(i) < 4096u ? BYTES[(uint64_t)(i)] : (__builtin_trap(), (uint8_t)0));
+--
+-- -- 79 characters of C where 151 emits `WPOOL_speicher.slots[w].w` (25): x3.16
+-- -- per read, measured character by character; the write is a three-line
+-- -- bind-check-store block where 151 emits one assignment. At -O0 and at -O2
+-- -- alike (the check survives optimisation; both levels compute the same
+-- -- answers -- measured, see MUSE-REPORT-237). The static storage is identical
+-- -- either way: 4096 payload bytes are 4096 bytes of bss in both files
+-- -- (measured `.o`: 4096 bss both; text 246 vs 202 bytes -- the word side pays
+-- -- its arithmetic in code, the byte side in the branch).
+--
+-- So the two files are the two answers to one question, and the trade is
+-- written down instead of hidden: 151 proves the bound ONCE (in the checker,
+-- over `i >> 2`'s range, held by M103) and emits plain accesses at 14/24 ops;
+-- 152 proves nothing per access in the checker beyond the declaration and pays
+-- a bound check per access at 2/3 ops of Gabbro cost but ~4x the emitted C.
+-- Where a pool is read on every packet, that is the number that decides.
+module beispiel152 {
+
+pub const POOLBYTES : u32 = 4096;
+
+pub static mut BYTES : [u8; POOLBYTES] = 0;
+
+pub lock BSPERRE protects { BYTES } rank 0 held <= 64 ops;
+
+pub impl fn lies(i : u32 in 0 ..< POOLBYTES) -> u8
+    requires Held(BSPERRE)
+    effects { reads BYTES, locks BSPERRE }
+    costs   <= 2 ops
+{
+    return BYTES[i];
+}
+
+pub impl fn schreibe(i : u32 in 0 ..< POOLBYTES, v : u8)
+    requires Held(BSPERRE)
+    effects { writes BYTES, locks BSPERRE }
+    costs   <= 3 ops
+{
+    BYTES[i] = v;
+}
+
+}
