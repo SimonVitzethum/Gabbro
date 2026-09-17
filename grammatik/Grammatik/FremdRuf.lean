@@ -315,4 +315,87 @@ theorem fdQ_vertrag : AxVertragO fdQ fdO := by
         Val.int_bereich (σ.slots () 0 ())
       exact absurd hslot hcond
 
+/-! ## 5. Gates as data, answers only by ensures -/
+
+/-- The open gate as program data: an illustration dispatch label with
+    abstract register bindings, a cost bound and the declared effects.
+    The label, bindings and cost constrain no answer; only the effects
+    must match the frame (see `fremdruf_gate_gilt`). -/
+def fdGateOpen : GateData fdD :=
+  { num := 1001, regs := [0], kosten := 40, eff := fun _ => true,
+    effG := fun g => nomatch g }
+
+/-- The read gate as program data: a different illustration label. -/
+def fdGateRead : GateData fdD :=
+  { num := 1002, regs := [0, 1], kosten := 40, eff := fun _ => true,
+    effG := fun g => nomatch g }
+
+/-- The two illustration labels differ: two gates, not one. -/
+theorem fdGate_num : fdGateOpen.num ≠ fdGateRead.num := by decide
+
+/-- The open gate declares the frame it runs in. -/
+theorem fdGateOpen_eff : fdGateOpen.eff = fdD.aschreibt fdOpen := rfl
+
+/-- The open gate declares no global writes. -/
+theorem fdGateOpen_effG : fdGateOpen.effG = fdD.agschreibt fdOpen := rfl
+
+/-- The read gate declares the frame it runs in. -/
+theorem fdGateRead_eff : fdGateRead.eff = fdD.aschreibt fdRead := rfl
+
+/-- The read gate declares no global writes. -/
+theorem fdGateRead_effG : fdGateRead.effG = fdD.agschreibt fdRead := rfl
+
+/-- One gate call: the fitting answer meets the declared ensures and
+    the step keeps the gate-declared frame. The dispatch label, the
+    register bindings and the cost appear nowhere: answers are
+    constrained only by the ensures, memory only by the frame. Every
+    premise is used: `hQ` gives the ensures, `hO` the frame,
+    `hEff`/`hEffG` restate it in the gate's own effect terms. -/
+theorem fremdruf_gate_gilt (g : GateData fdD) (a : fdD.Ax) (O : Orakel fdD) (Q : AxEns fdD)
+    (hO : GutO O) (hQ : AxVertragO Q O)
+    (hEff : g.eff = fdD.aschreibt a) (hEffG : g.effG = fdD.agschreibt a)
+    (σ : World fdD) (ρ : Env fdD (fdD.aparams a))
+    (v : ErgVal fdD (fdD.aerg a))
+    (hfit : einpassenErg O.zeiger (fdD.aerg a) (O.wirkt a σ ρ).2 = some v) :
+    Q a (O.wirkt a σ ρ).1 v = true ∧
+    Rahmen g.eff g.effG σ (O.wirkt a σ ρ).1 := by
+  refine ⟨hQ a σ ρ v hfit, ?_⟩
+  have hfr := (hO a σ ρ).1
+  rw [hEff, hEffG]
+  exact hfr
+
+/-- Open then read: both fitting answers meet their declared ensures
+    and both steps keep their gate-declared frames. The descriptor
+    itself is never computed on; no label, binding or cost is
+    consulted. Every premise is used through the two single-gate
+    facts. -/
+theorem fremdruf_offen_lesen (gOpen gRead : GateData fdD)
+    (O : Orakel fdD) (Q : AxEns fdD)
+    (hO : GutO O) (hQ : AxVertragO Q O)
+    (hEffO : gOpen.eff = fdD.aschreibt fdOpen)
+    (hEffGO : gOpen.effG = fdD.agschreibt fdOpen)
+    (hEffR : gRead.eff = fdD.aschreibt fdRead)
+    (hEffGR : gRead.effG = fdD.agschreibt fdRead)
+    (σ : World fdD) (ρo : Env fdD (fdD.aparams fdOpen))
+    (ρr : Env fdD (fdD.aparams fdRead))
+    (v : ErgVal fdD (fdD.aerg fdOpen)) (w : ErgVal fdD (fdD.aerg fdRead))
+    (hfitO : einpassenErg O.zeiger (fdD.aerg fdOpen) (O.wirkt fdOpen σ ρo).2 = some v)
+    (hfitR : einpassenErg O.zeiger (fdD.aerg fdRead)
+      (O.wirkt fdRead (O.wirkt fdOpen σ ρo).1 ρr).2 = some w) :
+    Q fdOpen (O.wirkt fdOpen σ ρo).1 v = true ∧
+    Rahmen gOpen.eff gOpen.effG σ (O.wirkt fdOpen σ ρo).1 ∧
+    Q fdRead (O.wirkt fdRead (O.wirkt fdOpen σ ρo).1 ρr).1 w = true ∧
+    Rahmen gRead.eff gRead.effG (O.wirkt fdOpen σ ρo).1
+      (O.wirkt fdRead (O.wirkt fdOpen σ ρo).1 ρr).1 := by
+  obtain ⟨hQo, hRo⟩ :=
+    fremdruf_gate_gilt gOpen fdOpen O Q hO hQ hEffO hEffGO σ ρo v hfitO
+  obtain ⟨hQr, hRr⟩ :=
+    fremdruf_gate_gilt gRead fdRead O Q hO hQ hEffR hEffGR _ ρr w hfitR
+  exact ⟨hQo, hRo, hQr, hRr⟩
+
+/-- The descriptor is opaque: the reading gate answers the current
+    slot value no matter which descriptor value it is passed. -/
+theorem fd_opak (σ : World fdD) (ρ1 ρ2 : Env fdD (fdD.aparams fdRead)) :
+    (fdO.wirkt fdRead σ ρ1).2 = (fdO.wirkt fdRead σ ρ2).2 := rfl
+
 end Gabbro.Grammatik
