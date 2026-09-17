@@ -304,3 +304,4 @@ import Grammatik.Korpus125
 import Grammatik.SimPruef
 import Grammatik.ArenaDyn
 import Grammatik.FremdRuf
+import Grammatik.Zielsatz.PoolSym
