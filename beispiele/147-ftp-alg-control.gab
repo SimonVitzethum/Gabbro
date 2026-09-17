@@ -1,0 +1,104 @@
+-- 147 -- FTP ALG control plane: the Obergrenze discipline, running.
+--
+-- An FTP application-level gateway keeps a FIXED 1024-entry table from the
+-- control 5-tuple to the expected data tuple plus a packet-tick deadline.
+-- Everything about this file is a BOUND, and every bound is checked:
+--
+--   * the table has `count 1024` -- no growth, no eviction: VOLL refuses;
+--   * the hash is in-program (FNV-1a over the 5-tuple, `^` + `*%`, five
+--     updates, constant cost) -- there is no L3 library hash yet and no
+--     `extern` shortcut for it (extern is the OS border; this file has none);
+--   * the index arithmetic is subtraction-free (`%`, `*`, guarded `+`);
+--   * expiry is a windowed tick (`tick` sweeps 64 of 1024 slots per call,
+--     round-robin over 16 rounds) -- never a full scan under the held lock;
+--   * deadlines are packet ticks, not wall clock: expiry comes LATE (up to
+--     15 ticks after the age limit on an unswept window), never early --
+--     fail closed both ways;
+--   * the command buffer holds 512 bytes; a longer input is REFUSED
+--     (`ZU_LANG`), not truncated.
+--
+-- The control table lives under the lock `FW` the way `beispiele/124` keeps
+-- `konto` under `L`: every access runs inside `locks FW`, helpers carry
+-- `requires Held(FW)`. There is deliberately NO lock invariant: the slots of
+-- a direct-mapped table are independent (unlike 124's mirrored pair), so a
+-- clause over fixed indices would be decoration, and decoration is refused.
+module beispiel::ftp_alg_control {
+
+const EINTRAG_ZAHL : u32 = 1024;
+const FENSTER      : u32 = 64;
+const ALTER_MAX    : u32 = 63;
+const RUNDEN       : u32 = 16;
+const LETZTE_RUNDE : u32 = 15;
+const RASTER_MAX   : u32 = 960;
+const PUFFER       : u32 = 512;
+
+const FNV_OFFSET : u32 = 2166136261;
+const FNV_PRIM   : u32 = 16777619;
+
+type Port  = u32 in 0 .. 65535;
+type Proto = u32 in 0 .. 255;
+type Code  = u32 in 0 .. 7;
+-- The hash word: the EXACT range `0 .. 2^32 - 1`, because wrapping `*%`
+-- (M153) is only derivable there -- on a bare `u32` or a subrange it is
+-- ambiguous (mod 6 would cost a division per operation).
+type Wort = u32 in 0 .. 4294967295;
+
+const OK         : u32 = 0;
+const MISS       : u32 = 1;
+const VOLL       : u32 = 2;
+const ZU_LANG    : u32 = 3;
+const ABGELAUFEN : u32 = 4;
+const AKZEPTIERT : u32 = 5;
+
+table regeln count EINTRAG_ZAHL {
+    slot {
+        belegt : bool,
+        qsip   : u32,
+        qdip   : u32,
+        qsp    : Port,
+        qdp    : Port,
+        qpr    : Proto,
+        xsip   : u32,
+        xdp    : Port,
+        alter  : u32 in 0 .. ALTER_MAX,
+    }
+}
+
+table befehl count PUFFER {
+    slot {
+        b : u8,
+    }
+}
+
+static mut runde : u32 in 0 .. LETZTE_RUNDE = 0;
+static mut haben : u32 in 0 .. PUFFER = 0;
+
+lock FW protects { regeln, befehl } rank 0 held <= 16384 ops;
+
+-- FNV-1a over the five control words: five xor-multiply steps, no branch,
+-- no memory. Cost is constant by construction. The SHAPE (two functions,
+-- not one) is forced by M153: wrapping `*%` needs both operands on the
+-- exact range `0 .. 2^32 - 1`, and only parameters carry their declared
+-- type into an expression -- a `let` keeps its initializer's type (a const
+-- stays a singleton, a `^` stays a full `u32`). So the step takes all three
+-- operands as `Wort` parameters, and the constants travel as arguments
+-- (a singleton argument is CONTAINED in `Wort` at the call site).
+impl fn fnv_schritt(h : Wort, w : Wort, p : Wort) -> Wort
+    effects { pure }
+    costs <= 8 ops
+{
+    return (h ^ w) *% p;
+}
+
+impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> Wort
+    costs <= 64 ops
+{
+    let h0 : Wort = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
+    let h1 : Wort = fnv_schritt(h0, dip, FNV_PRIM);
+    let h2 : Wort = fnv_schritt(h1, sp, FNV_PRIM);
+    let h3 : Wort = fnv_schritt(h2, dp, FNV_PRIM);
+    let h4 : Wort = fnv_schritt(h3, pr, FNV_PRIM);
+    return h4;
+}
+
+}
