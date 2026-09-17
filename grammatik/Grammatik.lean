@@ -301,3 +301,4 @@ import Grammatik.Korpus07
 import Grammatik.Korpus59
 import Grammatik.Korpus109
 import Grammatik.Korpus125
+import Grammatik.SimPruef
