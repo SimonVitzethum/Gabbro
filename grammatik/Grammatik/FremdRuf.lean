@@ -496,4 +496,222 @@ theorem fdFitR : einpassenErg fdO.zeiger (fdD.aerg fdRead)
     have hpos : (0 : Int) ≤ (0 : Int) ∧ (0 : Int) ≤ (100 : Int) := by decide
     exact absurd hpos hcond
 
+/-! ## 7. The reached run: one writing leaf -/
+
+/-- Thread program: thread 1 fires the writing leaf, thread 0 rests. -/
+def fdProg : PCProg fdD
+  | 1 => [.leaf [] [Sum.inl ()]]
+  | _ => []
+
+/-- The start machine for the run. -/
+def fdPC0 : GenMaschine fdD := GenStart fdSp0
+
+/-- The evaluated index: `0`. -/
+def fdK0 : Int := 0
+
+/-- The evaluated value: `5` in range. -/
+def fdV5 : Wert fdD (.int 0 100) := ⟨5, by decide, by decide⟩
+
+/-- After the leaf: memory carries `5` at slot `0`. -/
+def fdPC1 : GenMaschine fdD :=
+  ⟨(((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+      (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
+      fdK0 () fdV5).speicher,
+   genUpdate fdPC0.spuren 1
+     (((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+       (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
+       fdK0 () fdV5).spur,
+   fdPC0.lauf ++ genEigen 1
+     [Ereignis.zugriff () true ([] : List (Res fdD)) (fdPC0.weltVon 1).haelt],
+   fdPC0.start,
+   fdPC0.welten ++
+     [((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+       (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
+       fdK0 () fdV5],
+   fdPC0.tiefe + 1⟩
+
+/-- Firing the write from the start world stores `5` at slot `0`. -/
+theorem fdPCwrite :
+    (execStmt (D := fdD) (V := vertragVon fdD fdArbeit) fdO 0 keinRuf
+      fdWriteSt (fdPC0.weltVon 1) Env.nil).welt =
+      some (((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+        (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
+        fdK0 () fdV5) := rfl
+
+/-- Thread 1 holds nothing at the start, as the leaf demands. -/
+theorem fdPC1haelt :
+    HeldGenau ([] : List (Res fdD)) (offen (fdPC0.spuren 1)) := by
+  have e : offen (fdPC0.spuren 1) = [] := rfl
+  rw [e]
+  intro L
+  exact nomatch L
+
+/-- One PC step: thread 1 fires the writing leaf. -/
+theorem fdPCschritt :
+    PCSchritt fdP fdO 0 fdProg fdPC0 (fun _ => 0) 1 fdPC1
+      (pcAdvance (fun _ => 0) 1) := by
+  have hpc : (fdProg 1)[(fun _ => 0) 1]? =
+      some (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) := rfl
+  have hneu : (((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+      (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
+      fdK0 () fdV5).spur =
+      [Ereignis.zugriff () true ([] : List (Res fdD))
+        (fdPC0.weltVon 1).haelt] ++ fdPC0.spuren 1 := rfl
+  have hkn : ∀ (L : fdD.Lock) (h : List fdD.Lock),
+      Ereignis.nimmt L h ∉ [Ereignis.zugriff () true ([] : List (Res fdD))
+        (fdPC0.weltVon 1).haelt] := by
+    intro L h hm
+    simp at hm
+  have hmark : ∀ e ∈ [Ereignis.zugriff () true ([] : List (Res fdD))
+      (fdPC0.weltVon 1).haelt], ∀ (m : fdD.Marke) (st : Nat),
+      Res.marke m st ∈ e.lambda →
+        m ∈ PCAtom.marks (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) := by
+    intro e hm m st hlam
+    simp at hm
+    subst hm
+    simp [Ereignis.lambda] at hlam
+  have hcar : ∀ e ∈ [Ereignis.zugriff () true ([] : List (Res fdD))
+      (fdPC0.weltVon 1).haelt], ∀ o, e.traeger = some o →
+        o ∈ PCAtom.carriers
+          (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) := by
+    intro e hm o ho
+    simp at hm
+    subst hm
+    simp [Ereignis.traeger] at ho
+    subst ho
+    have hc : PCAtom.carriers (D := fdD)
+        (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) =
+        [Sum.inl (())] := rfl
+    rw [hc]
+    exact List.Mem.head _
+  exact PCSchritt.leaf fdPC0 (fun _ => 0) 1
+    (vertragVon fdD fdArbeit) false [] [] []
+    fdWriteSt Env.nil rfl fdPC1haelt _ _ fdPCwrite hneu hkn
+    [] [Sum.inl ()] hpc rfl hmark hcar
+
+/-- The witness run from `GenStart`: the writing leaf. -/
+theorem fdPC_erreicht :
+    PCReach fdP fdO 0 fdProg (GenStart fdSp0) fdPC1
+      (pcAdvance (fun _ => 0) 1) :=
+  PCReach.step _ _ _ _ _ PCReach.start fdPCschritt
+
+/-- The final memory carries `5` at slot `0`. -/
+theorem fdPC_slot5 : fdPC1.speicher.slots () 0 () = fdV5 := by
+  have hhit := storeSlot_hit (D := fdD)
+    ((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+      (fdIdx.orte ++ fdVal5.orte)) () fdK0 () fdV5
+  have k0 : fdK0 = (0 : Int) := rfl
+  have hmem : fdPC1.speicher.slots () 0 () =
+      ((((fdPC0.weltVon 1).lese ([] : List (Res fdD))
+        (fdIdx.orte ++ fdVal5.orte)).storeSlot ()
+        fdK0 () fdV5).slots () 0 ()) := rfl
+  rw [k0] at hhit
+  rw [hmem, k0]
+  exact hhit
+
+/-- Memory really moved: slot `0` reads `5`, the start reads `0`. -/
+theorem fdPC_schreibt : fdPC1.speicher.slots () 0 () ≠
+    fdSp0.slots () 0 () := by
+  have h5 := fdPC_slot5
+  have h0 : fdSp0.slots () 0 () =
+      (⟨0, by decide, by decide⟩ : Wert fdD (fdD.typ () ())) := rfl
+  rw [h5, h0]
+  intro hcon
+  have hn : (fdV5.n) = ((⟨0, by decide, by decide⟩ :
+      Wert fdD (fdD.typ () ())).n) := congrArg Zahl.n hcon
+  simp [fdV5] at hn
+
+/-! ## 8. Witnesses: joint premises on a non-degenerate program -/
+
+/-- ZEUGE: every premise of `fremdruf_offen_lesen` holds jointly on
+    the fixture -- the handing-out gate answers descriptor `3`, the
+    reading gate is called with descriptor `3` and answers count `0`,
+    both answers meet the declared ensures, both steps keep the
+    gate-declared frames -- and the program is non-degenerate: the
+    function writes the table and a reached run moves memory
+    (`0 -> 5` at slot `0`). -/
+theorem fremdruf_fd_zeuge :
+    ∃ (σ : World fdD) (ρo : Env fdD (fdD.aparams fdOpen))
+      (ρr : Env fdD (fdD.aparams fdRead))
+      (v : ErgVal fdD (fdD.aerg fdOpen)) (w : ErgVal fdD (fdD.aerg fdRead)),
+      GutO fdO ∧ AxVertragO fdQ fdO ∧
+      fdGateOpen.eff = fdD.aschreibt fdOpen ∧
+      fdGateOpen.effG = fdD.agschreibt fdOpen ∧
+      fdGateRead.eff = fdD.aschreibt fdRead ∧
+      fdGateRead.effG = fdD.agschreibt fdRead ∧
+      einpassenErg fdO.zeiger (fdD.aerg fdOpen) (fdO.wirkt fdOpen σ ρo).2 = some v ∧
+      einpassenErg fdO.zeiger (fdD.aerg fdRead)
+        (fdO.wirkt fdRead (fdO.wirkt fdOpen σ ρo).1 ρr).2 = some w ∧
+      fdD.schreibt fdArbeit () = true ∧
+      ∃ (M : GenMaschine fdD) (pc : PCStand),
+        PCReach fdP fdO 0 fdProg (GenStart fdSp0) M pc ∧
+        M.speicher.slots () 0 () ≠ fdSp0.slots () 0 () :=
+  ⟨fdWelt0, Env.nil, fdRho3, fdV3, fdW0,
+    fdO_gut, fdQ_vertrag,
+    fdGateOpen_eff, fdGateOpen_effG, fdGateRead_eff, fdGateRead_effG,
+    fdFitO, fdFitR, rfl,
+    fdPC1, _, fdPC_erreicht, fdPC_schreibt⟩
+
+/-- Companion of `fremdruf_offen_lesen`: its premises, jointly. -/
+theorem fremdruf_offen_lesen_zeuge :
+    ∃ (gOpen gRead : GateData fdD) (σ : World fdD)
+      (ρo : Env fdD (fdD.aparams fdOpen)) (ρr : Env fdD (fdD.aparams fdRead))
+      (v : ErgVal fdD (fdD.aerg fdOpen)) (w : ErgVal fdD (fdD.aerg fdRead)),
+      GutO fdO ∧ AxVertragO fdQ fdO ∧
+      gOpen.eff = fdD.aschreibt fdOpen ∧
+      gOpen.effG = fdD.agschreibt fdOpen ∧
+      gRead.eff = fdD.aschreibt fdRead ∧
+      gRead.effG = fdD.agschreibt fdRead ∧
+      einpassenErg fdO.zeiger (fdD.aerg fdOpen) (fdO.wirkt fdOpen σ ρo).2 = some v ∧
+      einpassenErg fdO.zeiger (fdD.aerg fdRead)
+        (fdO.wirkt fdRead (fdO.wirkt fdOpen σ ρo).1 ρr).2 = some w := by
+  obtain ⟨σ, ρo, ρr, v, w, hO, hQ, hEO, hEGO, hER, hEGR, hfO, hfR, _, _, _, _, _⟩ :=
+    fremdruf_fd_zeuge
+  exact ⟨fdGateOpen, fdGateRead, σ, ρo, ρr, v, w,
+    hO, hQ, hEO, hEGO, hER, hEGR, hfO, hfR⟩
+
+/-- Companion of `fremdruf_gate_gilt`: its premises, jointly. -/
+theorem fremdruf_gate_gilt_zeuge :
+    ∃ (g : GateData fdD) (a : fdD.Ax) (σ : World fdD)
+      (ρ : Env fdD (fdD.aparams a)) (v : ErgVal fdD (fdD.aerg a)),
+      GutO fdO ∧ AxVertragO fdQ fdO ∧
+      g.eff = fdD.aschreibt a ∧ g.effG = fdD.agschreibt a ∧
+      einpassenErg fdO.zeiger (fdD.aerg a) (fdO.wirkt a σ ρ).2 = some v :=
+  ⟨fdGateOpen, fdOpen, fdWelt0, Env.nil, fdV3,
+    fdO_gut, fdQ_vertrag, fdGateOpen_eff, fdGateOpen_effG, fdFitO⟩
+
+/-! ## CUTS: what is not proved.
+
+  - The dispatch labels, register bindings and costs of `GateData`
+    are uninterpreted: no theorem connects them to emitted code. That
+    is the emitter's stub contract (PLAN-SYSCALL.md S6), not the
+    model's. The model shows they constrain no answer and no memory
+    step (`fremdruf_gate_gilt`, `fremdruf_offen_lesen` never consult
+    `num`, `regs` or `kosten`).
+  - The kernel side is a hypothesis, not a verification: there is no
+    pairing with a proved dispatch entry (that is `SyscallPaarung`),
+    only the oracle-side reading of premise (c) for gates.
+  - The reached run fires a plain writing leaf, not a gate call: the
+    gate calls appear as oracle answers at concrete call sites
+    (`fdFitO`, `fdFitR`), not as machine steps. A run stepping
+    through `bindAxiom` would need the F-machine residue shape.
+  - The planted-defect check: `fremdruf_falsch_abgelehnt` proves the
+    negation (an ensures demanding `6` is refused); the positive
+    attempt `AxVertragO fdQfalsch fdO` fails at the `3 = 6`
+    obligation (see MUSE-REPORT-233.md for the failure line).
+-/
+
+#print axioms Gabbro.Grammatik.gate_daten_gleich
+#print axioms Gabbro.Grammatik.fdO_gut
+#print axioms Gabbro.Grammatik.fdQ_vertrag
+#print axioms Gabbro.Grammatik.fremdruf_gate_gilt
+#print axioms Gabbro.Grammatik.fremdruf_offen_lesen
+#print axioms Gabbro.Grammatik.fd_opak
+#print axioms Gabbro.Grammatik.fremdruf_falsch_abgelehnt
+#print axioms Gabbro.Grammatik.fdPC_erreicht
+#print axioms Gabbro.Grammatik.fdPC_schreibt
+#print axioms Gabbro.Grammatik.fremdruf_fd_zeuge
+#print axioms Gabbro.Grammatik.fremdruf_offen_lesen_zeuge
+#print axioms Gabbro.Grammatik.fremdruf_gate_gilt_zeuge
+
 end Gabbro.Grammatik
