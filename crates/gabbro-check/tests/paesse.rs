@@ -4384,3 +4384,97 @@ impl fn maske(fd : Fd, kennzeichen : u32) -> Fd
         &["D003"],
     );
 }
+
+/// **Lane 232 (N421): the unchunked scan still falls at K002 -- and names its remedy.**
+///
+/// A full `traverse` (64 slots x 2 ops) inside one `locks` acquisition against
+/// `held <= 32 ops`. K002 is untouched (same condition, same span), and N421
+/// stands beside it: one acquisition pays the whole table at once, so the scan,
+/// not the bound, is what moves. The file form is `beispiele/gift/1082`.
+#[test]
+fn haltezeit_fenster_ungestueckelt_faellt_mit_k002_und_n421() {
+    faellt_genau(
+        "module p {
+table Auftraege count 64 { slot { aktiv : bool, } }
+lock TOR protects { Auftraege } rank 0 held <= 32 ops;
+impl fn alles_loeschen(t : ptr<normal, rw> Auftraege)
+    effects { writes t.slots, locks TOR }
+    costs   <= 512 ops
+{
+    locks TOR {
+        traverse s over slots of t by unvisited touches writes t.slots {
+            t.slots[s].aktiv = false;
+        }
+    }
+}
+}",
+        &["K002", "N421"],
+    );
+}
+
+/// **Lane 232, the boundary: an overflow without a written scan stays K002 alone.**
+///
+/// 20 plain stores (20 ops) against `held <= 8 ops` -- over the bound, but no
+/// domain is scanned here, so there is no shape to name and N421 stays silent.
+/// A rule that fired without the scan would be a second K002 under another
+/// name; this test pins that it is not.
+#[test]
+fn haltezeit_fenster_ohne_scan_bleibt_k002_allein() {
+    faellt_genau(
+        "module p {
+static mut z : u32 in 0 .. 100 = 0;
+lock L protects { z } rank 0 held <= 8 ops;
+impl fn f()
+    effects { writes z, locks L }
+    costs   <= 64 ops
+{
+    locks L {
+        z = 1; z = 2; z = 3; z = 4; z = 5; z = 6; z = 7; z = 8; z = 9; z = 10;
+        z = 11; z = 12; z = 13; z = 14; z = 15; z = 16; z = 17; z = 18; z = 19;
+        z = 20;
+    }
+}
+}",
+        &["K002"],
+    );
+}
+
+/// **Lane 232, the positive half: the windowed scan passes.**
+///
+/// The same 64 slots swept as one bounded window of 16 constant-index stores
+/// (16 ops) per `locks` acquisition under `held <= 64 ops` -- no `traverse`
+/// under a held lock anywhere, so neither K002 nor N421 has anything to hold.
+/// The production shape (unrolled windows with a round-robin tick over 1024
+/// slots) is `beispiele/147-ftp-alg-control.gab`; this is its minimal core:
+/// each window fits the bound, and each window re-establishes the lock
+/// invariant at its own release, so the lock leg holds across chunks.
+#[test]
+fn haltezeit_fenster_gefenstert_bleibt_sauber() {
+    faellt_nicht(
+        "module p {
+table T count 64 { slot { aktiv : bool, } }
+lock TOR protects { T } rank 0 held <= 64 ops;
+impl fn fenster0(t : ptr<normal, rw> T)
+    effects { writes t.slots, locks TOR }
+    costs   <= 32 ops
+{
+    locks TOR {
+        t.slots[0].aktiv = false; t.slots[1].aktiv = false;
+        t.slots[2].aktiv = false; t.slots[3].aktiv = false;
+        t.slots[4].aktiv = false; t.slots[5].aktiv = false;
+        t.slots[6].aktiv = false; t.slots[7].aktiv = false;
+        t.slots[8].aktiv = false; t.slots[9].aktiv = false;
+        t.slots[10].aktiv = false; t.slots[11].aktiv = false;
+        t.slots[12].aktiv = false; t.slots[13].aktiv = false;
+        t.slots[14].aktiv = false; t.slots[15].aktiv = false;
+    }
+}
+impl fn sweep(t : ptr<normal, rw> T)
+    effects { writes t.slots, locks TOR }
+    costs   <= 128 ops
+{
+    fenster0(t);
+}
+}",
+    );
+}
