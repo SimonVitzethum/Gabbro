@@ -103,7 +103,8 @@
 //!   `ensures` over comparisons of slot reads, `old`, `result` and literals,
 //!   `effects { reads/writes/locks }`, an optional `or R` reason channel, and
 //!   a body of slot writes, direct calls, `locks` blocks, `if`/`else`,
-//!   `traverse ... over slots of T`, `let` bindings and a trailing `return`
+//!   `traverse ... over slots of T` (or of a pointer-typed name for `T`,
+//!   lane 207), `let` bindings and a trailing `return`
 //! * `-> T or R` -- the reason channel: `gruende` is the number of cases of
 //!   the named `reason` declaration. A bare call of such a function has no
 //!   form (its `hr` needs `gruende = 0`); only `let x = f() else (e) { … }`
@@ -166,7 +167,8 @@
 //!   (`concurrent` member, `entry`/`boot` dispatch) naming nothing
 //!   exported, or naming two functions at once
 //! * `LG006` loop with no export form (`retry`, `forever`, a `traverse` that
-//!   is not `traverse i over slots of T` with a translatable invariant)
+//!   is not `traverse i over slots of T` -- or of a pointer-typed name for
+//!   `T`, lane 207 -- with a translatable invariant)
 //! * `LG007` reason-channel form with no export form (`let … else` over a
 //!   place, a falling-off `else` branch, a valueless reason function in
 //!   `let … else`)
@@ -3467,7 +3469,11 @@ fn tr_locks(sp: &SperrtStmt, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Che
     Ok(format!("(.locks {} (fun M => by cases M <;> decide) {body})", lock_ctor(model, li)))
 }
 
-/// A `traverse i over slots of T` loop. The mode, the `decreases` witness
+/// A `traverse i over slots of T` loop -- or over a pointer-typed name
+/// for `T` (lane 207): a `ptr<normal, _> T` statically names its table, and
+/// the slots of what it points to are the slots of `T` itself, so the domain
+/// is the same one the table spelling names (`beispiele/19`, `46` spell it
+/// this way). The mode, the `decreases` witness
 /// and `touches` are static annotations (NO FORM, like `costs`); the
 /// invariant travels where it translates, and `.wahr` where none stands
 /// (like the default `requires` of `gP`).
@@ -3481,8 +3487,16 @@ fn tr_traverse(t: &Traverse, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Che
     if !o.suffixe.is_empty() {
         return Err(refuse("LG006", format!("`traverse` domain in {fname} has no G form")));
     }
-    let Some(ti) = model.tables.iter().position(|t| t.name == o.basis.text) else {
-        return Err(refuse("LG006", format!("`traverse` domain in {fname} is not a table")));
+    let ti = match model.tables.iter().position(|t| t.name == o.basis.text) {
+        Some(ti) => ti,
+        // No table of that name: a pointer-typed name in scope (a parameter
+        // or a `let`-bound pointer) resolves to the table its type names.
+        // Anything else -- an integer, a `bool`, an unknown name -- is still
+        // refused, naming the domain.
+        None => match ctx.lookup(&o.basis.text) {
+            Some((_, VTy::Ptr { table, .. }, _)) => table,
+            _ => return Err(refuse("LG006", format!("`traverse` domain in {fname} is not a table"))),
+        },
     };
     // The invariant is over the outer context (the binder is not in scope).
     let inv = match &t.invariante {
