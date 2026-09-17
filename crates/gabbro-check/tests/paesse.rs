@@ -4266,3 +4266,41 @@ impl fn runde(i : index into Plaetze) -> bool
 }}"),
     );
 }
+
+/// **Lane 226 (fd gates, TODO §-1 wave A): the checker knows no OS table.**
+///
+/// A user-made gate over an opaque `Fd` carrier -- invented ABI name,
+/// invented number, no errno names at all -- checks clean: no rule keys on
+/// `linux`, on a number, or on an errno name. The file forms of the same
+/// shape are `beispiele/149-fd-offen.gab` + `/150-fd-lesen.gab` (real user
+/// data, checked and emitted); the poison sides are `beispiele/gift/1067`
+/// (`D004`, the crossing) and `/1068` (`D003`, the computation, pinned
+/// exactly below).
+#[test]
+fn fd_gates_are_user_made() {
+    // The declaration shape with nothing OS in it: clean.
+    faellt_nicht(
+        "opaque type Fd = u32;
+assume tor_annahme \"The gate keeps its contract.\" falsifier sonde_tor;
+syscall gate_lesen(fd : Fd, anzahl : u64) -> u64
+    abi myabi arch x86_64 number 100
+    regs in { rdi = fd, rsi = anzahl }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors {}
+    effects { pure }
+    costs <= 40 ops
+    assume tor_annahme falsifier sonde_tor;",
+    );
+    // Computing on the carrier falls, exactly `D003` (`beispiele/gift/1068`
+    // pins the file form; this pins the code set).
+    faellt_genau(
+        "opaque type Fd = u32;
+impl fn maske(fd : Fd, kennzeichen : u32) -> Fd
+    effects { pure }
+    costs <= 4 ops {
+    return fd | kennzeichen;
+}",
+        &["D003"],
+    );
+}

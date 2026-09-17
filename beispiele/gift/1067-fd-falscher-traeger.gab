@@ -1,0 +1,45 @@
+-- erwartet: D004
+-- **Gift 1067 -- a count where a descriptor is owed, at a user-made gate.**
+--
+-- The open/read gates of `beispiele/149` + `/150` traffic in `Fd`, an
+-- opaque carrier: no arithmetic (`D003`, `beispiele/gift/1068`) and no
+-- implicit conversion past the module wall. This probe is the wall, at the
+-- gate itself: a bare `u32` count crosses into another module's `Fd`
+-- parameter, and the call falls. The gate is deliberately user-made down
+-- to the invented constants (`myabi`, number `100`): the refusal
+-- keys on the carrier crossing, on no OS table.
+--
+-- The per-call assumption is the reused pair of `beispiele/74` (`N024`
+-- neutral: same name, same text, same probe, no new obligation).
+
+module gift::fd_falscher_traeger {
+
+module tor {
+    opaque type Fd = u32;
+
+    assume linux_write_contract
+        "Write keeps its contract on this machine."
+        falsifier sonde_write;
+
+    syscall gate_lesen(fd : Fd, anzahl : u64) -> u64
+        abi myabi arch x86_64 number 100
+        regs in { rdi = fd, rsi = anzahl }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors {}
+        effects { pure }
+        costs <= 40 ops
+        assume linux_write_contract falsifier sonde_write;
+}
+
+module anwender {
+    use gift::fd_falscher_traeger::tor::gate_lesen;
+
+    impl fn hole(anzahl : u32) -> u64
+        effects { pure }
+    {
+        return gate_lesen(anzahl, 8);
+    }
+}
+
+}

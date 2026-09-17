@@ -1,0 +1,88 @@
+-- 149 -- opening a file through a user-declared gate: the fd carrier.
+--
+-- `beispiele/74` calls `write` through a `syscall` item with a bare `u64`
+-- where the descriptor stands. That replays the Caprock cpu/dev mixup the
+-- language exists to prevent: a count and a descriptor share one type, so
+-- nothing refuses a count where a descriptor is owed. This file declares
+-- the carrier instead -- `opaque type Fd = u32`, a nominal type with no
+-- arithmetic and no implicit conversion past the module wall (`D003` bites
+-- at the computation, `D004` at the crossing) -- and an `open` gate that
+-- traffics in it.
+--
+-- The gate itself is USER-MADE, like every `syscall` since lane S5: the ABI
+-- name, the call number, the register map, the errno decoding, the costs
+-- and the effects all stand in-program. The numbers below (`number 2`,
+-- `ENOENT`/`EACCES`/`EEXIST`, the `rdi`/`rsi`/`rdx`/`r10` map) are constants
+-- of THIS program, not facts of the tree: the checker holds only the shape
+-- (`N063`-`N068`, `A005`/`A006`, `N322`), and the emitter knows exactly one
+-- stub template (`abi linux arch x86_64`, `C182` refusing every other pair
+-- by name). A tree that knew these numbers would be an OS table, and there
+-- is none.
+--
+-- The stub answers a bare integer (`C183` holds every named result type
+-- against the declared answer range, and a carrier has no range to check),
+-- so the gate answers `u64` and the wrapper `oeffnen` converts once, at one
+-- named place, into `Fd`. Inside this module the conversion is silent by
+-- design (`D004`'s wall stands at the boundary, not inside it); outside it
+-- a bare `u64` where `Fd` is owed falls (`beispiele/gift/1067`). The
+-- `ensures result <= 4294967295` is the promise that makes the wrap
+-- range-honest: a descriptor fits the carrier, and the literal (not a
+-- `const`) is what carries the fact to the wrapper's `return n`.
+--
+-- The per-call assumption is the reused pair of `beispiele/74`, `/90` and
+-- `/96` (`linux_write_contract`, probe `sonde_write`): same name, same
+-- text, same probe, so no new obligation and no new row in the probe quota
+-- (`N024`, `pruefe-sondendeckung.py`). The historical name says "write";
+-- what travels here is the machine-answers-its-gates contract the three
+-- files share. Splitting it per gate is open, not built.
+
+module beispiel::fd_offen {
+
+opaque type Fd = u32;
+
+const MAXLEN : u64 = 1024;
+
+reason OpenError {
+    NotFound = 2  "no entry under that path"
+    Denied   = 13 "permission denied"
+    Exists   = 17 "already exists, exclusive create asked"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64, mode : u64) -> u64 or OpenError
+    abi linux arch x86_64 number 2
+    regs in { rdi = path, rsi = pathlen, rdx = flags, r10 = mode }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { ENOENT => NotFound, EACCES => Denied, EEXIST => Exists }
+    requires pathlen <= MAXLEN
+    -- 4294967295 is 2^32 - 1, the carrier's bound, spelled out: the range
+    -- fact reaches the wrapper's `return n` only as a literal (a `const`
+    -- beside it does not propagate there -- measured, not filed, `m1.rs` is
+    -- another lane's). The promise itself is the gate's: a descriptor fits
+    -- the carrier, so the one wrap is range-honest.
+    ensures result <= 4294967295
+    effects { reads path }
+    costs <= 40 ops
+    assume linux_write_contract falsifier sonde_write;
+
+-- The one wrap: raw answer in, carrier out. Four registers where the C
+-- gate takes three: the length rides along because a Gabbro path carries
+-- its end BESIDE the pointer, not in the data (the `N052` lesson --
+-- `beispiele/gift/661` falls an `extern fn open` for reading its end out of
+-- the bytes). `requires` holds the length at every call site, and the
+-- number names this gate's slot in the program's own dispatch, not a kernel
+-- table: every constant on these lines is this program's, none is the
+-- tree's.
+impl fn oeffnen(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> Fd or OpenError
+    effects { reads path }
+{
+    let n = gate_open(path, pathlen, flags, 0) else (e) { return e; }
+    return n;
+}
+
+}
