@@ -540,3 +540,284 @@ fn syscall_kosten_werden_gelesen() {
         "no clause, no promise -- the checker owns the refusal"
     );
 }
+
+// -- Lane 222: integer `match` arms ------------------------------------------------------
+//
+// `match` over an integer scrutinee with range/exact arms: the 256-way
+// dispatch leaves the flat-comparison chain. Arms parse into AST that
+// says what they mean (`IntFall`); exhaustiveness is lane 228's
+// business, lowering lane 227's -- until they land the checker accepts
+// (0 errors, bodies checked) and the emitter refuses by name (C001
+// "`match` over something other than an `option index into T`"), each
+// shown with the shipped binary and booked in MUSE-REPORT-222.md.
+
+fn match_scaffold(arms: &str) -> String {
+    format!(
+        "impl fn f(x : u32) -> u32 effects {{ pure }} costs <= 8 ops \
+         {{ match x {{ {arms} }} return 0; }}"
+    )
+}
+
+/// The integer pattern of the single arm in `match x { <arm> => { return 0; } }`.
+fn int_pattern_of(arm: &str) -> gabbro_syntax::ast::IntPat {
+    let quelle = match_scaffold(&format!("{arm} => {{ return 0; }}"));
+    let (baum, absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    assert!(
+        !absagen
+            .absagen
+            .iter()
+            .any(|a| a.stufe == Stufe::Fehler),
+        "integer arm parses:\n{}",
+        absagen.zeige(&quelle)
+    );
+    let gabbro_syntax::ast::ItemArt::Funktion(f) = &baum.items[0].art else {
+        panic!("a function parses as a function");
+    };
+    let gabbro_syntax::ast::FnRumpf::Block(b) = &f.rumpf else {
+        panic!("a body parses as a block");
+    };
+    let gabbro_syntax::ast::StmtArt::Match(m) = &b.anweisungen[0].art else {
+        panic!("a match parses as a match");
+    };
+    assert_eq!(m.zweige.len(), 1, "one arm in, one arm out");
+    m.zweige[0].intpat.clone().expect("an integer arm carries its pattern")
+}
+
+#[test]
+fn lane222_int_arms_parse() {
+    // Exact arms, every literal shape the lexer folds.
+    faellt_nicht(&match_scaffold("0 => { return 0; }"));
+    faellt_nicht(&match_scaffold("255 => { return 0; }"));
+    faellt_nicht(&match_scaffold("0xFF => { return 0; }"));
+    faellt_nicht(&match_scaffold("0b1010 => { return 0; }"));
+    faellt_nicht(&match_scaffold("-1 => { return 0; }"));
+    // Range arms, both range words, negative bounds.
+    faellt_nicht(&match_scaffold("0 .. 255 => { return 0; }"));
+    faellt_nicht(&match_scaffold("0 ..< 256 => { return 0; }"));
+    faellt_nicht(&match_scaffold("-10 .. -1 => { return 0; }"));
+    faellt_nicht(&match_scaffold("0..10 => { return 0; }"));
+    // Several arms together, and mixed with variant arms: the parser
+    // accepts the mix (it cannot know the scrutinee's type), and every
+    // mix is refused downstream by an existing rule -- C001 exactness
+    // over `tagged`/`option`, M123 invented-name over `reason`, C001
+    // over integers (MUSE-REPORT-222.md carries the matrix).
+    faellt_nicht(&match_scaffold(
+        "0 => { return 0; } 1 ..< 4 => { return 1; } 4 .. 255 => { return 2; }",
+    ));
+    faellt_nicht(&match_scaffold(
+        "Leer => { return 0; } 1 => { return 1; }",
+    ));
+    // The tagged shape from beispiele/120 keeps parsing untouched.
+    faellt_nicht(&match_scaffold(
+        "Leer => { return 0; } Kurz(k) => { return k; }",
+    ));
+}
+
+#[test]
+fn lane222_int_arm_poison_keeps_existing_codes() {
+    // A `-` before anything but a literal is no bound at all.
+    faellt_mit(&match_scaffold("-x => { return 0; }"), "P004");
+    // An integer arm binds nothing: `0(k)` has no `=>` where one stands.
+    faellt_mit(&match_scaffold("0(k) => { return 0; }"), "P001");
+    // An open range is an unfinished bound.
+    faellt_mit(&match_scaffold("0 .. => { return 0; }"), "P004");
+    // A float is not an integer arm and not a variant arm either.
+    let (_, absagen) = gabbro_syntax::lies("<probe>", &match_scaffold("1.5 => { return 0; }"));
+    assert!(
+        absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a float arm falls, with whatever code names the position"
+    );
+}
+
+#[test]
+fn lane222_int_pattern_prints_and_round_trips() {
+    use gabbro_syntax::ast::IntPat;
+    // Two spellings of one value print to one canonical text: the tree
+    // says what the arm means, not how the bound was spelled. (Spans
+    // differ, as they should -- `Ident` compares with its span house-wide.)
+    assert_eq!(
+        gabbro_syntax::print::int_pattern(&int_pattern_of("0x10")),
+        "16"
+    );
+    assert_eq!(
+        gabbro_syntax::print::int_pattern(&int_pattern_of("0x10")),
+        gabbro_syntax::print::int_pattern(&int_pattern_of("16"))
+    );
+    assert_eq!(
+        gabbro_syntax::print::int_pattern(&int_pattern_of("0b1010")),
+        gabbro_syntax::print::int_pattern(&int_pattern_of("10"))
+    );
+    // Each shape prints canonically, and the printed text re-parses to
+    // the same pattern -- print/parse round-trip of the new form.
+    for (spell, canonical) in [
+        ("3", "3"),
+        ("-1", "-1"),
+        ("0xFF", "255"),
+        ("0 .. 255", "0 .. 255"),
+        ("0 ..< 256", "0 ..< 256"),
+        ("-10 .. -1", "-10 .. -1"),
+    ] {
+        let pat = int_pattern_of(spell);
+        let printed = gabbro_syntax::print::int_pattern(&pat);
+        assert_eq!(printed, canonical, "canonical print of {spell}");
+        let back = int_pattern_of(&printed);
+        assert!(
+            match (&pat, &back) {
+                (IntPat::Exact(a), IntPat::Exact(b)) => a.negative == b.negative && a.value == b.value,
+                (
+                    IntPat::Range {
+                        lo: a1,
+                        hi: b1,
+                        exclusive: e1,
+                    },
+                    IntPat::Range {
+                        lo: a2,
+                        hi: b2,
+                        exclusive: e2,
+                    },
+                ) => {
+                    a1.negative == a2.negative
+                        && a1.value == a2.value
+                        && b1.negative == b2.negative
+                        && b1.value == b2.value
+                        && e1 == e2
+                }
+                _ => false,
+            },
+            "print/parse round-trip of {spell}"
+        );
+    }
+}
+
+// -- Lane 222: the windowed `traverse` domain --------------------------------------------
+//
+// `traverse i over slots of T from <start> count <len> by …`: the bm13
+// window shape (start plus length). The reader fixes the shape
+// precisely and refuses it with `P045` -- there is no AST home for the
+// window that keeps the checker compiling (a new `Domaene` variant
+// breaks its exhaustive matches, a new `Traverse` field its literal
+// constructions), so carrying it silently as a whole-table walk is the
+// one thing the reader must not do. Lanes 229 and 234 lift the refusal.
+
+/// The refusal a well-formed windowed walk carries, code and sentence.
+///
+/// Both halves, or neither is a measurement: the code alone would pass
+/// with the handoff note deleted, the note alone with the refusal moved
+/// to another rule (same shape as `faellt_mit_notiz` above).
+fn falls_with_note(quelle: &str, code: &str, teil: &str) {
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    let treffer: Vec<_> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler && a.code == code)
+        .collect();
+    assert!(
+        !treffer.is_empty(),
+        "expected {code}:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+    assert!(
+        treffer.iter().any(|a| a.text.contains(teil)
+            || a.notizen.iter().any(|n| n.contains(teil))),
+        "{code} fell, but neither text nor note carries {teil:?}:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+}
+
+fn traverse_scaffold(domain: &str) -> String {
+    format!(
+        "module probe {{ table T count 4 {{ slot {{ v : u32, }} }} \
+         impl fn f() effects {{ writes T.slots }} costs <= 64 ops \
+         {{ traverse i over {domain} by unvisited {{ T.slots[i].v = 0; }} }} }}"
+    )
+}
+
+#[test]
+fn lane222_windowed_traverse_refused_by_name() {
+    // The well-formed window: table, start expression, length
+    // expression -- refused with P045, naming the handoff.
+    falls_with_note(
+        &traverse_scaffold("slots of T from 2 count 2"),
+        "P045",
+        "has no lowering yet",
+    );
+    falls_with_note(
+        &traverse_scaffold("slots of T from 0 count 4"),
+        "P045",
+        "lane 234",
+    );
+    // Computed bounds are the shape, not a corner.
+    faellt_mit(
+        &traverse_scaffold("slots of T from base + i count n - k"),
+        "P045",
+    );
+    // The plain walk beside it parses untouched.
+    faellt_nicht(&traverse_scaffold("slots of T"));
+}
+
+#[test]
+fn lane222_window_malformed_keeps_existing_codes() {
+    // `from` without `count` is an unfinished clause: `count` expected.
+    faellt_mit(&traverse_scaffold("slots of T from 2"), "P001");
+    // `from` without a bound is no bound at all.
+    let (_, absagen) =
+        gabbro_syntax::lies("<probe>", &traverse_scaffold("slots of T from by unvisited"));
+    assert!(
+        absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a window without a start falls"
+    );
+    // A window over any other domain is still `by`-shaped: the old
+    // refusal stands, no new code fires there.
+    faellt_mit(
+        &traverse_scaffold("descendants of T from 2 count 2"),
+        "P001",
+    );
+}
+
+// -- Lane 222: `TIEFE_MAX` over the corpus ------------------------------------------------
+//
+// 32 stands 4x over the corpus (the reader's own ledger line,
+// `parse.rs::TIEFE_MAX`): the deepest corpus file nests 7 deep. This
+// test re-measures the true parser depth over every corpus file -- a
+// bump would be a constant plus fuzz evidence, never a redesign.
+
+#[test]
+fn lane222_depth_stands_fourfold_over_corpus() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    let mut tiefst = 0usize;
+    let mut dateien = 0usize;
+    let mut gelesene: Vec<_> = std::fs::read_dir(wurzel.join("beispiele"))
+        .expect("beispiele readable")
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|e| e == "gab"))
+        .collect();
+    gelesene.sort();
+    for pfad in &gelesene {
+        let quelle = std::fs::read_to_string(pfad)
+            .unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+        let mut absagen = gabbro_syntax::Absagen::neu("<korpus>");
+        let (_, stand) = gabbro_syntax::parse::parse_with_max_depth(&quelle, &mut absagen);
+        dateien += 1;
+        if stand > tiefst {
+            tiefst = stand;
+        }
+        assert!(
+            !absagen
+                .absagen
+                .iter()
+                .any(|a| a.stufe == Stufe::Fehler && a.code == "P038"),
+            "no corpus file hits TIEFE_MAX: {}",
+            pfad.display()
+        );
+    }
+    assert!(dateien > 100, "the corpus population stands: {dateien} files");
+    // The measurement, printed so a run says the number, not just the verdict.
+    eprintln!("lane222: deepest corpus nesting {tiefst} over {dateien} files");
+    assert!(
+        tiefst * 4 <= gabbro_syntax::parse::TIEFE_MAX,
+        "deepest corpus file nests {tiefst} -- TIEFE_MAX {} no longer stands 4x over it",
+        gabbro_syntax::parse::TIEFE_MAX
+    );
+}

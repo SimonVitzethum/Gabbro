@@ -1424,6 +1424,53 @@ pub struct MatchZweig {
     pub binder: Option<Ident>,
     pub rumpf: Block,
     pub span: Span,
+    /// Integer pattern (lane 222): `Some` on an arm over an integer
+    /// scrutinee (`3 =>`, `0 ..< 10 =>`), `None` on every variant arm.
+    ///
+    /// While `Some`, `variante` is a placeholder carrying the printed
+    /// pattern (never a declared case name: it holds digits or range
+    /// punctuation, and a case name is an identifier) and `binder` is
+    /// always `None` (an integer arm binds nothing). Every pass that
+    /// reads `variante`/`binder` fires only on a `tagged`, `option` or
+    /// `reason` scrutinee (D005, M123, the three emitter lowerings and
+    /// both Lean printers), so on an integer scrutinee the placeholder
+    /// is never read; the emitter refuses the whole match by name
+    /// (C001 "`match` over something other than an `option index into
+    /// T`") until lane 228 lowers it, and on a `tagged`/`option`/
+    /// `reason` scrutinee the same exactness rules refuse the mixed
+    /// arm (C001 exactness, M123 invented-name). Bodies of integer arms
+    /// are checked like any other arm body through `rumpf`.
+    pub intpat: Option<IntPat>,
+}
+
+/// One integer `match` arm pattern (lane 222): an exact value or a
+/// range with literal bounds. The bounds are literals on purpose: an
+/// exhaustive integer match (lane 228) decides over constants, and a
+/// computed bound would move that decision into user logic. Full
+/// expressions stay where they belong -- in `narrow` and in guards.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IntPat {
+    /// `3 =>`, `-1 =>`, `0xFF =>`
+    Exact(IntBound),
+    /// `0 .. 255 =>` (inclusive) and `0 ..< 256 =>` (exclusive)
+    Range {
+        lo: IntBound,
+        hi: IntBound,
+        exclusive: bool,
+    },
+}
+
+/// One bound of an integer arm: an integer literal as written. The
+/// magnitude is the lexer's folded value (decimal, hex, binary and
+/// `_` separators all arrive folded); `negative` is the optional
+/// leading `-`. Stored unfolded so the printer reproduces the value
+/// exactly; two spellings of one value print to one canonical text
+/// (spans still differ, as everywhere in this tree).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntBound {
+    pub negative: bool,
+    pub value: u128,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
