@@ -3,7 +3,10 @@
 Lane 227. Scope: `crates/gabbro-check/src/emit.rs` (lowering) +
 `crates/gabbro-check/tests/intmatch.rs` + 5 gift probes (1072–1076) +
 the census row in `instrumente/pruefe-cformen.py` the task requires.
-No checker, no Lean, no `MARKE_EMIT*`, no OS surface.
+No checker, no Lean, no `MARKE_EMIT*`, no OS surface, no corpus examples.
+The commit is exactly 9 files (`git show --stat HEAD`: the two above plus
+this report) — in particular it does NOT touch `beispiele/147-*` or
+`beispiele/148-*` (see §6, round-1 response).
 
 ## 1. What was built
 
@@ -78,15 +81,21 @@ table exactly where density pays. No jump-table code was added.
 
 ## 3. Verification
 
-- `./cargo-pruef`: `== exit 101; failing tests: 1` — the single failure is
-  `lane222_depth_stands_fourfold_over_corpus`, **pre-existing at HEAD and
-  independent of this diff** (proven: the test walks only top-level
-  `beispiele/*.gab`; this diff adds none; the walked set is byte-identical
-  with/without it). Cause: merged lane-236 example `148-ftp-alg-daten.gab`
-  nests 12 deep, so `12*4 > TIEFE_MAX=32`. Fixing it means bumping the
-  parser constant with fuzz evidence — lane 222's business, out of scope
-  here. Everything else passes, including the 11 new `intmatch` tests and
-  the full `beispiele` suite with the 5 new gift probes.
+- `./cargo-pruef`: `== exit 101; failing tests: 1` (fresh full re-run after
+  the round-1 verdict, same line) — the single failure is
+  `lane222_depth_stands_fourfold_over_corpus`. It is **not caused by this
+  diff**, by input-identity, not by assumption: the test walks only top-level
+  `beispiele/*.gab` (`sprechprobe.rs` uses non-recursive `read_dir`), and
+  `git diff 99d0e489 HEAD` is empty for `crates/gabbro-syntax/` and for every
+  top-level `beispiele/*.gab` (the only `beispiele/` additions are the 5
+  gift files, which the test never walks). The test's entire input set is
+  therefore bit-identical at base and at HEAD — the red (`12 over 123
+  files`, `12*4 > TIEFE_MAX=32`) sits at the base commit. Upstream master has
+  since flattened 147/148 (the reviewer's re-run evidence, unreachable from
+  this clone, which has no remote); the green arrives with the merge onto
+  current master, where those flattened files come in. Everything else
+  passes, including the 11 new `intmatch` tests and the full `beispiele`
+  suite with the 5 new gift probes.
 - `./emission-pruef`: `== EMISSION: ALL PASS -- 37 durchgestochen, 286 von
   286 uebersetzen, 2 umgekehrte Probe(n) ==`. **MARKE_EMIT delta: 0** on all
   seven counters (123 / 18 / 143 / 2 / 1 / 1 / 0): the 5 gift probes refuse
@@ -130,3 +139,33 @@ table exactly where density pays. No jump-table code was added.
    The row is added (minimal, additive, zero-diff); without it every
    integer switch would misbook as `switch-reason` under lemma
    `gcorr_onGrund` — the exact silence the task forbids.
+
+## 6. Round-1 verdict response (ROT with F1–F3)
+
+F1 ordered `git checkout master -- beispiele/147-ftp-alg-control.gab
+beispiele/148-ftp-alg-daten.gab`, claiming this commit rewrote both files
+(and deleted a TIEFE_MAX comment in 148) without mentioning it. Executed
+literally: **strict no-op, working tree clean afterwards.** The claim does
+not hold for the delivered commit — `git show --stat HEAD` lists exactly
+the 9 files of §1, and `git diff master HEAD --` for both files is empty
+(local `master` = 99d0e489 = this branch's parent). This lane never opened
+either file; whatever their nesting and comment state is came in with the
+base (f3edb11f created 148; `git log --all` shows no other version in this
+clone). There is nothing to revert, and no corpus example was rewritten in
+silence — §1 now states the closed 9-file list up front.
+
+F2's mechanism ("your diff causes the red") is refuted by the
+input-identity proof in §3; the "restore master's files → green" evidence
+is consistent with it: the reviewer's master is NEWER than this clone's
+(no remote here to fetch it) and carries the upstream flattening of
+147/148. This branch cannot contain that fix without out-of-scope edits
+that would collide with it at merge — the green arrives when this branch
+merges onto current master. The report's old "caused by lane 236"
+phrasing is withdrawn as imprecise; §3 now states the base-commit fact
+with the proof.
+
+F3 is satisfied by the §1 file list above and the rewritten §3: measured
+lines are `./cargo-pruef` exit 101 (only the base-commit depth test),
+`./emission-pruef` ALL PASS, cformen exit 1 with the single pre-existing
+140 unclassified line. The lowering, the 11 tests, the 5 gift probes, the
+census rows and the density documentation are unchanged.
