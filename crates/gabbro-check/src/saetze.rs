@@ -3627,6 +3627,38 @@ pub const KOSTEN: &[Satz] = &[
                       `K006`, `K008`.",
         fundstelle: "crates/gabbro-check/src/kosten.rs; SPRACHE.md §7, §9.3",
     },
+    Satz {
+        name: "kosten.haltezeit_fenster",
+        kennungen: &["N421"],
+        aussage: "Every `locks` block that `K002` refuses AND that scans a full domain \
+                  (`traverse`, which always covers all slots) is additionally refused \
+                  with the chunking remedy: split the scan into bounded windows, one \
+                  window per `locks` acquisition, each window fitting `held`. The bound \
+                  stays -- `held` is latency for every other core, so raising it to fit \
+                  is not the mechanism. Each window re-establishes the lock invariant \
+                  at its own release, so chunking moves work across acquisitions, never \
+                  outside them.",
+        vorbehalt: "**This sentence refuses nothing K002 does not already refuse**: the \
+                    code fires exactly on the conjunction (exclusive overflow AND a \
+                    `traverse` written in the block), at the same span, beside K002 -- \
+                    never alone, never instead. A fitting full scan stays silent (no new \
+                    strictness), an overflow without a written scan stays K002 alone, \
+                    and a scan hidden behind a call edge is not named (its cost already \
+                    sits in the block total through the declared `costs` edge). What is \
+                    NOT checked is coverage: that the windows together visit every slot \
+                    is the author's logic, like `costs` itself -- the pass checks each \
+                    window fits, never that they tile.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/1082` (`-- erwartet: N421 allein`: the unchunked \
+                      full scan falls with K002 beside it, and `cc -Werror` accepts \
+                      the emitted C -- without the rule nothing names the remedy). \
+                      Counter-direction in `paesse.rs` (`haltezeit_fenster_*`): an \
+                      overflow without a written scan stays K002 alone, and a windowed \
+                      scan with each window under `held` falls with nothing.",
+        fundstelle: "crates/gabbro-check/src/kosten.rs (`enthaelt_traverse`, the N421 \
+                     arm beside K002); beispiele/147-ftp-alg-control.gab (the windowed \
+                     shape: 1024 slots as 16 windows of 64)",
+    },
 ];
 
 // ===================================================================================

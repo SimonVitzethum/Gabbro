@@ -1694,6 +1694,46 @@ impl<'a> Rechner<'a> {
                                         other core hangs on this number",
                                 ),
                             );
+                            // **Lane 232 (N421): the unchunked scan names its remedy.**
+                            //
+                            // K002 above is untouched -- same condition, same span, same
+                            // strictness. Where the overflowing exclusive block scans a
+                            // FULL domain (`traverse`, which always covers all slots),
+                            // the defect is not the bound but the shape: one
+                            // acquisition pays the whole table at once. The bound stays
+                            // -- `held` is latency for every other core, so raising it
+                            // to fit is not the mechanism -- and the scan is chunked:
+                            // one bounded window per `locks` acquisition, each window
+                            // fitting `held` (the in-the-wild shape is
+                            // `beispiele/147-ftp-alg-control.gab`: 1024 slots as 16
+                            // windows of 64, 8320 ops per tick under
+                            // `held <= 16384`). Each window re-establishes the lock
+                            // invariant at its own release, so chunking moves work
+                            // across acquisitions, never outside them.
+                            if code == "K002" && enthaelt_traverse(&l.rumpf) {
+                                absagen.schiebe(
+                                    Absage::fehler(
+                                        "N421",
+                                        l.sperre.span,
+                                        format!(
+                                            "the block holding `{}` scans a full domain while \
+                                             holding it for {n} ops against `held <= {zusage} ops` \
+                                             -- split the scan into bounded windows, one window \
+                                             per `locks` acquisition, each window fitting `held`",
+                                            l.sperre.text()
+                                        ),
+                                    )
+                                    .mit_notiz(
+                                        "SPRACHE.md §7: a traverse costs body x domain bound \
+                                         -- a full scan under one acquisition pays the whole \
+                                         table at once",
+                                    )
+                                    .mit_notiz(
+                                        "the bound is right and the scan is chunked: raising \
+                                         `held` to fit is latency for all cores, not a fix",
+                                    ),
+                                );
+                            }
                         }
                     }
                     self.sperrbloecke(&l.rumpf, &lokal, absagen);
@@ -1724,6 +1764,43 @@ impl<'a> Rechner<'a> {
             self.binde(s, &mut lokal);
         }
     }
+}
+
+/// **Lane 232: does this block scan a full domain anywhere inside?**
+///
+/// A `traverse` always covers ALL slots of its domain (that is why the
+/// in-the-wild windowed tick in `beispiele/147` is spelled as unrolled calls
+/// instead: a full scan under one held acquisition is exactly what K002
+/// forbids at scale). The walk covers every statement form carrying a
+/// sub-block, including `observes` and nested `locks` -- a scan under two
+/// acquisitions is still one acquisition paying the whole table. What it does
+/// NOT see is calls: a callee may traverse, and that cost already sits in the
+/// block total through the declared `costs` edge -- N421 names the remedy only
+/// where the scan stands written in the block itself.
+fn enthaelt_traverse(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| match &s.art {
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Traverse(_) => true,
+            Schleife::Retry(r) => enthaelt_traverse(&r.rumpf),
+            Schleife::Forever(f) => enthaelt_traverse(&f.rumpf),
+        },
+        StmtArt::Sperrt(l) => enthaelt_traverse(&l.rumpf),
+        StmtArt::Wenn(w) => {
+            w.zweige.iter().any(|(_, r)| enthaelt_traverse(r))
+                || w.sonst.as_ref().is_some_and(enthaelt_traverse)
+        }
+        StmtArt::Match(m) => m.zweige.iter().any(|z| enthaelt_traverse(&z.rumpf)),
+        StmtArt::Bricht(x) => enthaelt_traverse(&x.rumpf),
+        StmtArt::Narrow(x) => enthaelt_traverse(&x.sonst),
+        StmtArt::LetSonst(x) => enthaelt_traverse(&x.sonst),
+        StmtArt::Observiert(o) => enthaelt_traverse(&o.rumpf),
+        StmtArt::Exchange(e) => match &e.form {
+            XForm::Update { rumpf, .. } => enthaelt_traverse(rumpf),
+            XForm::Vergleich { .. } => false,
+        },
+        StmtArt::Alloc(a) => a.sonst.as_ref().is_some_and(enthaelt_traverse),
+        _ => false,
+    })
 }
 
 /// Verlaesst der Block seinen Weg immer? Dieselbe syntaktische Frage, die M1 fuer die
