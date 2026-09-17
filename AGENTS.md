@@ -213,6 +213,11 @@ clone, then check:
 
 The message file ends with the attribution lines. Other conflicts abort; resolve them by hand,
 then `git add` + `./commit.sh`.
+After the commit, `muse-merge.sh` calls `lane-putzen.sh`: the standard is
+COMPLETE cleanup but only after merge — session rows, state line and
+`/tmp` leftovers go; `lanes/NN.md`, `logs/NN.log` and the merged report
+stay as audit. The review loop archives reviewer evidence and deletes
+reviewer clones on FREI/FINAL-ROT the same way.
 
 **Merging an Opus branch:** `bash .claude/muse-arbeit/opus-merge.sh BRANCH msgfile`, the same
 flow for a local worktree branch. For a branch that arrives via GitHub, `git fetch origin
