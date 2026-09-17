@@ -98,6 +98,29 @@ build lane (M) + ONE-list entry; the 40 GB number itself is irrelevant —
 what counts is statically linkable, bucket-bounded, refuse-on-full
 (lanes 236/237 prove the discipline without it).*
 
+**Wave D — bounded dynamic memory: 300 MiB working set, 30 GB ceiling,
+near-Rust efficiency (owner).** Reservation vs commit split: the program
+declares the ceiling statically, the runtime (A4-style assumption, NOT a
+language feature — the OS rule holds: no ABI constant in the tree)
+reserves virtual and commits on demand; faults cost as a named hardware
+assumption. Efficiency is measured first (census vs handwritten Rust
+`repr(C)`), then enforced: Gabbro owes at most the proved plumbing over
+Rust, never a header per object.
+
+| lane | what | files owned (exclusive) | size | after |
+|---|---|---|---|---|
+| 238 | efficiency census: emitted layouts vs Rust | new `messung/` report only, NOTHING else | S | — |
+| 239 | dynamic-table design (`PLAN-DYNAMISCH.md`): `max` cap clause, fault-vs-explicit growth, free discipline, fault-latency assumption text, Lean sketch, efficiency budget | new doc only | M | 238 consults |
+| 240 | checker: `max` cap, growth points, cap refusal | `arena.rs` + new module, NOT `kosten.rs` (223/232) | M | 239 |
+| 241 | Lean: virtual region + commit subset + refinement | new files | M–L | 239 |
+| 242 | emitter + runtime: reserve/commit, OOM fail-stop | `emit.rs` (after 235) + `laufzeit/` | M | 239, 235 |
+| 243 | free discipline (arena-reset proof or linear free-list) | new files + 240's region | M | 240 |
+| 244 | efficiency fixes: kill census overhead | measured sites only | S–M | 238 |
+
+*Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096. Example
+pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
+238 + 239 alongside wave A (10 total on fisch).*
+
 *Not lanes: sigaction (out, see above); M147 foreign taint (bm8-F2, helper
 discipline, no build); TIEFE_MAX stays 32 (raise = constant + fuzz inside
 lane 222 if measured); M101 further shapes are one small lane per shape,
