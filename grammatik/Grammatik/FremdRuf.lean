@@ -398,4 +398,102 @@ theorem fremdruf_offen_lesen (gOpen gRead : GateData fdD)
 theorem fd_opak (σ : World fdD) (ρ1 ρ2 : Env fdD (fdD.aparams fdRead)) :
     (fdO.wirkt fdRead σ ρ1).2 = (fdO.wirkt fdRead σ ρ2).2 := rfl
 
+/-! ## 6. Start memory, the wrong ensures, the program -/
+
+/-- Start memory: every slot reads `0`. -/
+def fdSp0 : Speicher fdD :=
+  ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
+
+/-- Start world: start memory with an empty trace. -/
+def fdWelt0 : World fdD := fdSp0.welt []
+
+/-- A wrong ensures for the handing-out gate: demands descriptor `6`
+    while the oracle answers `3`. -/
+def fdQfalsch : AxEns fdD
+  | true, _, v => decide ((v : Zahl 0 7).n = 6)
+  | false, σ', v => decide ((v : Zahl 0 100).n = (σ'.slots () 0 ()).n)
+
+/-- Planted defect, rejected: no oracle answering `3` meets an ensures
+    demanding `6`. A proof attempt for `AxVertragO fdQfalsch fdO`
+    fails at the `3 = 6` obligation. -/
+theorem fremdruf_falsch_abgelehnt : ¬ AxVertragO fdQfalsch fdO := by
+  intro hcon
+  have hfit3 : einpassenErg fdO.zeiger (fdD.aerg true)
+        (fdO.wirkt true fdWelt0 Env.nil).2
+        = some (⟨3, by decide, by decide⟩ : Wert fdD (.int 0 7)) := by
+    have hred : einpassenErg fdO.zeiger (fdD.aerg true)
+          (fdO.wirkt true fdWelt0 Env.nil).2
+          = einpassen (D := fdD) fdO.zeiger (.int 0 7) 3 := rfl
+    rw [hred]
+    simp only [einpassen]
+    split
+    next hcond => rfl
+    next hcond =>
+      have hpos : (0 : Int) ≤ (3 : Int) ∧ (3 : Int) ≤ (7 : Int) := by decide
+      exact absurd hpos hcond
+  have h3 := hcon true fdWelt0 Env.nil _ hfit3
+  have h3d : decide (((⟨3, by decide, by decide⟩ : Wert fdD (.int 0 7)) :
+      Zahl 0 7).n = 6) = true := h3
+  have h6 : (3 : Int) = 6 := of_decide_eq_true h3d
+  omega
+
+/-- The program: true everywhere, write-only body below. -/
+def fdP : Programm fdD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf := fun _ => .ret .keine (by rfl)
+
+/-- Index `0` into the two-slot table. -/
+def fdIdx : Expr fdD [] ([] : List (Res fdD)) (.index (fdD.count ())) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+/-- The stored value `5` in range. -/
+def fdVal5 : Expr fdD [] ([] : List (Res fdD)) (.int 0 100) :=
+  .weiter (by decide) (by decide) (.lit 5)
+
+/-- The write `konto[0] := 5` at empty holdings. -/
+def fdWriteSt : Stmt fdD (vertragVon fdD fdArbeit) false [] [] [] :=
+  .assignSlot () () fdIdx fdVal5 rfl (fdD_darf ())
+
+/-- The handed-out descriptor value `3` as an answer. -/
+def fdV3 : ErgVal fdD (fdD.aerg fdOpen) := ⟨3, by decide, by decide⟩
+
+/-- The read-back count `0` as an answer. -/
+def fdW0 : ErgVal fdD (fdD.aerg fdRead) := ⟨0, by decide, by decide⟩
+
+/-- The read call environment, carrying descriptor `3`. -/
+def fdRho3 : Env fdD (fdD.aparams fdRead) :=
+  Env.cons (⟨3, by decide, by decide⟩ : Wert fdD (.int 0 7)) Env.nil
+
+/-- The open fit at the witness call site. -/
+theorem fdFitO : einpassenErg fdO.zeiger (fdD.aerg fdOpen)
+    (fdO.wirkt fdOpen fdWelt0 Env.nil).2 = some fdV3 := by
+  have hred : einpassenErg fdO.zeiger (fdD.aerg fdOpen)
+        (fdO.wirkt fdOpen fdWelt0 Env.nil).2
+        = einpassen (D := fdD) fdO.zeiger (.int 0 7) 3 := rfl
+  rw [hred]
+  simp only [einpassen]
+  split
+  next hcond => rfl
+  next hcond =>
+    have hpos : (0 : Int) ≤ (3 : Int) ∧ (3 : Int) ≤ (7 : Int) := by decide
+    exact absurd hpos hcond
+
+/-- The read fit at the witness call site: after the open call the
+    slot still reads `0`. -/
+theorem fdFitR : einpassenErg fdO.zeiger (fdD.aerg fdRead)
+    (fdO.wirkt fdRead (fdO.wirkt fdOpen fdWelt0 Env.nil).1 fdRho3).2
+    = some fdW0 := by
+  have hred : einpassenErg fdO.zeiger (fdD.aerg fdRead)
+        (fdO.wirkt fdRead (fdO.wirkt fdOpen fdWelt0 Env.nil).1 fdRho3).2
+        = einpassen (D := fdD) fdO.zeiger (.int 0 100) 0 := rfl
+  rw [hred]
+  simp only [einpassen]
+  split
+  next hcond => rfl
+  next hcond =>
+    have hpos : (0 : Int) ≤ (0 : Int) ∧ (0 : Int) ≤ (100 : Int) := by decide
+    exact absurd hpos hcond
+
 end Gabbro.Grammatik
