@@ -226,6 +226,38 @@ theorem poolSicherWB_iff {P : Programm D} {fs : List D.Fn}
             · have hag : atomarB (.inr g) = true := hg
               simp [hag]
 
+/-- Filtering for an absent value leaves nothing. -/
+theorem pool_filter_nil {l : List D.Fn} {w : D.Fn} (h : w ∉ l) :
+    l.filter (fun v => decide (v = w)) = [] := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+      simp only [List.filter_cons]
+      by_cases he : decide (a = w) = true
+      · have haw : a = w := of_decide_eq_true he
+        rw [haw] at h
+        exact absurd List.mem_cons_self h
+      · simp only [he]
+        exact ih (fun hm => h (List.mem_cons_of_mem _ hm))
+
+/-- A routine occurring in a repetition-free list occurs at most once:
+    filtering for it leaves at most one element. (The one induction the
+    `Nodup` bridge needs; everything below assembles from it.) -/
+theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
+    (w : D.Fn) : (ws.filter (fun v => decide (v = w))).length ≤ 1 := by
+  induction ws with
+  | nil => simp
+  | cons a l ih =>
+      obtain ⟨hna, hndl⟩ := List.nodup_cons.mp hnd
+      by_cases he : decide (a = w) = true
+      · have haw : a = w := of_decide_eq_true he
+        subst w
+        have hempty : l.filter (fun v => decide (v = a)) = [] :=
+          pool_filter_nil hna
+        simp [hempty]
+      · simp [he]
+        exact ih hndl
+
 end PoolBool
 
 /-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
