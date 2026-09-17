@@ -762,9 +762,14 @@ pub fn rest(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     }
-    if a.min >= 0 && b.min > 0 {
-        // Der Rest ist kleiner als der Nenner -- und nie groesser als der Zaehler.
-        return ergebnis(breite, vz, 0, (b.max - 1).min(a.max));
+    if a.min >= 0 {
+        // The remainder is smaller than the divisor -- and never bigger than the dividend.
+        // C gives the remainder the sign of the DIVIDEND: with a non-negative dividend
+        // it is never negative, even over a NEGATIVE divisor -- then `|d| - 1` counts.
+        // (Lane 224, shape 2: `x % d` with `d : i32 in -8 .. -1` answered `-7 .. 7`
+        // and fell as an index, where `0 .. 7` is the true bound.)
+        let schranke = b.min.abs().max(b.max.abs()) - 1;
+        return ergebnis(breite, vz, 0, schranke.min(a.max));
     }
     let schranke = b.min.abs().max(b.max.abs()) - 1;
     ergebnis(breite, vz, -schranke, schranke)
@@ -937,6 +942,33 @@ mod proben {
             schiebe_links(&nur_unten, &zwanzig).laeuft_ueber,
             "-3000 << 20 leaves i32 at the bottom"
         );
+    }
+
+    /// **Lane 224, shape 2: the remainder over a negative divisor.**
+    ///
+    /// C gives the remainder the sign of the dividend: with a non-negative
+    /// dividend it stays `0 .. |d| - 1`, whatever the divisor's sign. The
+    /// positive-divisor row is unchanged (same numbers, same order); the
+    /// negative row is the new shape; the possibly-negative dividend keeps the
+    /// symmetric answer.
+    #[test]
+    fn rest_mit_negativem_nenner() {
+        let zaehler = IntBereich::genau(32, true, 0, 100);
+        let positiv = IntBereich::genau(32, true, 1, 8);
+        let negativ = IntBereich::genau(32, true, -8, -1);
+        let r = rest(&zaehler, &positiv);
+        let b = r.bereich.expect("range");
+        assert_eq!((b.min, b.max), (0, 7));
+        assert!(!r.laeuft_ueber);
+        let r = rest(&zaehler, &negativ);
+        let b = r.bereich.expect("range");
+        assert_eq!((b.min, b.max), (0, 7));
+        assert!(!r.laeuft_ueber);
+        // A dividend that can be negative keeps the symmetric range.
+        let offen = IntBereich::voll(32, true);
+        let r = rest(&offen, &negativ);
+        let b = r.bereich.expect("range");
+        assert_eq!((b.min, b.max), (-7, 7));
     }
 
     /// **PLAN-BITS section 4 (lane 88): only exact `0 .. 2^N-1` ranges wrap.**

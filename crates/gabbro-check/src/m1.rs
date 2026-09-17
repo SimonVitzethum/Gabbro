@@ -1669,7 +1669,34 @@ impl<'a> Pruefer<'a> {
                     // sieht `if z >= 1 { z -= 1; }` aus wie `z -= 1`.
                     op => {
                         let gelesen = self.mit_fakt(&z.ziel, ziel.clone(), lage);
-                        self.rechnung_zuweisung(&gelesen, &quelle, op, &z.ziel, z.wert.span)
+                        // **Lane 224, shape 3: `k -= k % c` rounds the target down
+                        // in place.** The same bound as the expression form
+                        // (`abrunden_ort`); the read carries the target's facts,
+                        // so the narrowed range is what is rounded. `None` falls
+                        // through to the ordinary compound subtraction.
+                        if op == ZuwOp::Minus {
+                            if let (Some(ba), Some(bb)) =
+                                (gelesen.bereich(), quelle.bereich())
+                            {
+                                if let Some(eng) =
+                                    self.abrunden_ort(&z.ziel, &z.wert, &ba, &bb, lage)
+                                {
+                                    Typ::Ganzzahl(eng)
+                                } else {
+                                    self.rechnung_zuweisung(
+                                        &gelesen, &quelle, op, &z.ziel, z.wert.span,
+                                    )
+                                }
+                            } else {
+                                self.rechnung_zuweisung(
+                                    &gelesen, &quelle, op, &z.ziel, z.wert.span,
+                                )
+                            }
+                        } else {
+                            self.rechnung_zuweisung(
+                                &gelesen, &quelle, op, &z.ziel, z.wert.span,
+                            )
+                        }
                     }
                 };
                 // Ein `wrapping`-Slot hat seinen Ueberlauf DEKLARIERT; dort ist er kein Befund.
@@ -3356,6 +3383,18 @@ impl<'a> Pruefer<'a> {
             }
         }
 
+        // **Lane 224, shape 1: `x - (x % c)` rounds down and cannot underflow.**
+        //
+        // Interval subtraction reads `0 .. 255 - 0 .. 7` as `-7 .. 255` and fires
+        // `M104`, though the value is the largest multiple of `c` at or below `x`.
+        // `abrunden` answers that exact range, which always fits the width the
+        // minuend fits; `None` falls through to the ordinary subtraction.
+        if op == BinOp::Minus {
+            if let Some(eng) = self.abrunden(a, b, &ba, &bb, lage) {
+                return Typ::Ganzzahl(eng);
+            }
+        }
+
         // **PLAN-BITS section 4 (lane 88): the overflow operators never take
         // the width-overflow path below.** Wrapping is defined modulo 2^N on an
         // exact unsigned range and saturating clamps into the shared operand
@@ -4905,6 +4944,100 @@ impl<'a> Pruefer<'a> {
             return grund;
         }
         Typ::Ganzzahl(IntBereich::genau(b.breite, b.vorzeichen, min, max))
+    }
+
+    /// **Lane 224, shape 1: the range of `x - (x % c)` for a positive `c`.**
+    ///
+    /// Thin wrapper over `abrunden_ort` for the expression form: the minuend
+    /// must stand there as a bare place.
+    fn abrunden(
+        &self,
+        a: &Expr,
+        b: &Expr,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        lage: &Lage,
+    ) -> Option<IntBereich> {
+        let ExprArt::Ort(oa) = &ohne_klammern(a).art else {
+            return None;
+        };
+        self.abrunden_ort(oa, b, ba, bb, lage)
+    }
+
+    /// **Lane 224, shapes 1 and 3: the range of `x - (x % c)`, shared by the
+    /// expression form and the `-=` form.**
+    ///
+    /// `None` where the shape does not apply -- the caller falls through to the
+    /// ordinary interval subtraction. Every gate below is load-bearing:
+    /// - the same LOCAL place on both sides, compared by fact key
+    ///   (`schluessel_und_indizes`): two reads of one local with no intervening
+    ///   write are one value (Gabbro has no address-of, so no call between them
+    ///   can move a local; every index name is held to the same standard);
+    /// - no device handle (`griffe`): a handle samples hardware twice;
+    /// - no `->` suffix: a device or function-pointer lane, never a stable read;
+    /// - a positive divisor that is a literal or a named constant
+    ///   (`konst_wert_von_namen`): a pure lookup, so no expression is typed
+    ///   twice and no finding is reported twice.
+    /// The bound is exact: `f(x) = x - (x % c) = c * trunc(x / c)` is
+    /// non-decreasing in `x` for fixed `c > 0`, so the range is the `f` of the
+    /// endpoints (`/` truncates toward zero, exactly like C `%`). `|f(x)|` never
+    /// exceeds `|x|`, so where the minuend fits its width the answer fits too --
+    /// and where it does not, `None` sends the caller back to the ordinary
+    /// subtraction, which asks the width question itself.
+    fn abrunden_ort(
+        &self,
+        ziel: &Ort,
+        wert: &Expr,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        lage: &Lage,
+    ) -> Option<IntBereich> {
+        let ExprArt::Binaer(BinOp::Rest, links, nenner) = &ohne_klammern(wert).art
+        else {
+            return None;
+        };
+        let ExprArt::Ort(ob) = &ohne_klammern(links).art else {
+            return None;
+        };
+        let (Some((ka, ia)), Some((kb, _))) =
+            (schluessel_und_indizes(ziel), schluessel_und_indizes(ob))
+        else {
+            return None;
+        };
+        if ka != kb {
+            return None;
+        }
+        if !lage.lokal.contains_key(&ziel.basis.text)
+            || self.griffe.contains_key(&ziel.basis.text)
+            || ia.iter().any(|n| !lage.lokal.contains_key(n))
+        {
+            return None;
+        }
+        if ziel
+            .suffixe
+            .iter()
+            .any(|s| matches!(s, OrtSuffix::Ueber(_)))
+        {
+            return None;
+        }
+        let c = match &ohne_klammern(nenner).art {
+            ExprArt::Zahl(v) => i128::try_from(*v).ok()?,
+            ExprArt::Ort(o) if o.suffixe.is_empty() => self
+                .u
+                .konst_wert_von_namen(&self.modul, &o.basis.text)?,
+            _ => return None,
+        };
+        if c <= 0 {
+            return None;
+        }
+        let Some((breite, vz)) = typen::gemeinsame_form(ba, bb) else {
+            return None;
+        };
+        let eng = IntBereich::genau(breite, vz, c * (ba.min / c), c * (ba.max / c));
+        if !eng.passt_in_die_breite() {
+            return None;
+        }
+        Some(eng)
     }
 
     /// V2 -- gibt die Untergrenze von `a - b`, wenn ein Vergleichsfakt sie traegt.
@@ -7525,6 +7658,16 @@ impl<'a> Pruefer<'a> {
     }
 }
 
+/// Parentheses say the grouping out loud and change no value: structural rules
+/// read through them. (Lane 224, shape 1: `(x) - ((x) % 8)` is the same program
+/// as the bare form.)
+fn ohne_klammern(e: &Expr) -> &Expr {
+    match &e.art {
+        ExprArt::Klammer(x) => ohne_klammern(x),
+        _ => e,
+    }
+}
+
 /// Der Schluessel eines Ortes -- `None`, wenn ein Index kein einfacher Ort und keine Zahl
 /// ist. **Ohne Schluessel kein Fakt:** zwei verschiedene Indizes duerfen nicht denselben
 /// Namen bekommen, sonst verengt eine Pruefung ueber `a[i]` auch `a[j]`.
@@ -9055,5 +9198,274 @@ mod w1_proben {
              }\n",
         );
         assert!(f.is_empty(), "a normal ok|err syscall must stay silent, fell with {f:?}");
+    }
+}
+
+/// **Lane 224, shape 1 probes -- `x - (x % c)` rounds down (`abrunden`).**
+///
+/// The poison twin differs by the BASE (`x - (y % 8)`): the shape must not
+/// fire, and the operation falls at `M104` exactly where the aligned form
+/// stays silent. The open twin pins the boundary the other way: the `M104`
+/// is gone (the value cannot underflow), the `M103` at the use remains (the
+/// value can still exceed the carrier).
+#[cfg(test)]
+mod align_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("align.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Must-pass: the aligned index into a 32-slot table. Without the shape
+    /// this fell with `M104` at the `-` (measured over the unchanged checker).
+    #[test]
+    fn gleiche_basis_schweigt() {
+        let f = fehler(
+            "module probe::align_still {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             impl fn f(x : u32 in 0 .. 31) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let k = x - (x % 8);\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "aligned round-down must stay silent, fell with {f:?}");
+    }
+
+    /// Must-pass: the same shape through a named constant divisor.
+    #[test]
+    fn konstante_schweigt() {
+        let f = fehler(
+            "module probe::align_const {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             const SCHRITT : u32 = 8;\n\
+             impl fn f(x : u32 in 0 .. 31) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let k = x - (x % SCHRITT);\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "round-down over a constant must stay silent, fell with {f:?}");
+    }
+
+    /// Must-fall: a different base on each side. The shape does not apply,
+    /// and the operation falls exactly where it always did.
+    #[test]
+    fn fremde_basis_faellt_an_der_operation() {
+        let f = fehler(
+            "module probe::align_fremd {\n\
+             impl fn f(x : u32 in 0 .. 31, y : u32 in 0 .. 31) -> u32\n\
+                 effects { pure }\n\
+                 costs <= 8 ops\n\
+             {\n\
+                 return x - (y % 8);\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(
+            f,
+            vec!["M104", "M101"],
+            "different bases must fall at the operation and the return"
+        );
+    }
+
+    /// Boundary: an open minuend. The `M104` is gone -- rounding down cannot
+    /// underflow -- and the `M103` at the use remains, exactly once.
+    #[test]
+    fn offene_basis_behaelt_nur_m103() {
+        let f = fehler(
+            "module probe::align_offen {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             impl fn f(x : u32) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let k = x - (x % 8);\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(
+            f,
+            vec!["M103"],
+            "open round-down keeps only the index refusal: {f:?}"
+        );
+    }
+
+    /// Must-fall: a table slot is no local -- a call between the two reads
+    /// could move it, so the shape stays out and the operation falls.
+    #[test]
+    fn tabellenplatz_bleibt_ausserhalb() {
+        let f = fehler(
+            "module probe::align_tabelle {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             impl fn f(i : u32 in 0 .. 31) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let k = T.slots[i].v - (T.slots[i].v % 8);\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(
+            f,
+            vec!["M104", "M103"],
+            "a non-local base must fall as before: {f:?}"
+        );
+    }
+
+    /// Must-pass: `k -= k % 8` rounds the target down in place (shape 3).
+    /// Without the shape this fell with `M104` and `M101` at the `-=`
+    /// (measured over the unchanged checker).
+    #[test]
+    fn minus_gleich_schweigt() {
+        let f = fehler(
+            "module probe::align_minus {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             impl fn f(x : u32 in 0 .. 31) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let mut k : u32 in 0 .. 31 = x;\n\
+                 k -= k % 8;\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "in-place round-down must stay silent, fell with {f:?}");
+    }
+
+    /// Boundary: an open target. No `M104` (rounding down cannot underflow
+    /// past the declared range either), the `M103` at the use remains.
+    #[test]
+    fn minus_offen_behaelt_m103() {
+        let f = fehler(
+            "module probe::align_minus_offen {\n\
+             table T count 32 { slot { v : u32, } }\n\
+             impl fn f(x : u32) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let mut k : u32 = x;\n\
+                 k -= k % 8;\n\
+                 return T.slots[k].v;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M103"], "open in-place round-down keeps only M103: {f:?}");
+    }
+
+    /// Must-fall: a different place on the right. The shape does not apply,
+    /// and the compound subtraction falls exactly where it always did.
+    #[test]
+    fn minus_fremd_faellt() {
+        let f = fehler(
+            "module probe::align_minus_fremd {\n\
+             impl fn f(x : u32 in 0 .. 31, j : u32 in 0 .. 31) -> u32\n\
+                 effects { pure }\n\
+                 costs <= 8 ops\n\
+             {\n\
+                 let mut k : u32 in 0 .. 31 = x;\n\
+                 k -= j % 8;\n\
+                 return k;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(
+            f,
+            vec!["M104", "M101"],
+            "a different base at `-=` must fall as before: {f:?}"
+        );
+    }
+}
+
+/// **Lane 224, shape 2 probes -- `%` over a negative divisor (`typen::rest`).**
+///
+/// The poison twin differs by the DIVIDEND: where it can be negative, C gives
+/// the remainder its sign and the wide range stays. The zero twin pins the
+/// unchanged `M102` beside the new rule.
+#[cfg(test)]
+mod negmod_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("negmod.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Must-pass: a non-negative dividend over `i32 in -8 .. -1` is `0 .. 7.
+    /// Without the shape this fell with `M103` (measured over the unchanged
+    /// checker: the range was `-7 .. 7`).
+    #[test]
+    fn negativer_nenner_schweigt() {
+        let f = fehler(
+            "module probe::negmod_still {\n\
+             table T count 8 { slot { v : u32, } }\n\
+             impl fn f(x : i32 in 0 .. 100, d : i32 in -8 .. -1) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let i = x % d;\n\
+                 return T.slots[i].v;\n\
+             }\n\
+             }\n",
+        );
+        assert!(f.is_empty(), "remainder over a negative divisor must stay silent, fell with {f:?}");
+    }
+
+    /// Must-fall: where the dividend can be negative, the remainder keeps its
+    /// sign and the index refusal remains, exactly once. (Bounded away from
+    /// the smallest value, so `M152` stays out of the picture.)
+    #[test]
+    fn negativer_zaehler_behaelt_m103() {
+        let f = fehler(
+            "module probe::negmod_zaehler {\n\
+             table T count 8 { slot { v : u32, } }\n\
+             impl fn f(x : i32 in -100 .. 100, d : i32 in -8 .. -1) -> u32\n\
+                 effects { reads T }\n\
+                 costs <= 12 ops\n\
+             {\n\
+                 let i = x % d;\n\
+                 return T.slots[i].v;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M103"], "a possibly-negative dividend keeps M103: {f:?}");
+    }
+
+    /// Must-fall: a divisor range reaching zero is `M102`'s, before and after.
+    #[test]
+    fn null_nenner_bleibt_m102() {
+        let f = fehler(
+            "module probe::negmod_null {\n\
+             impl fn f(x : i32 in 0 .. 100, d : i32 in -8 .. 8) -> i32\n\
+                 effects { pure }\n\
+                 costs <= 8 ops\n\
+             {\n\
+                 return x % d;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M102"], "a divisor reaching zero stays M102: {f:?}");
     }
 }
