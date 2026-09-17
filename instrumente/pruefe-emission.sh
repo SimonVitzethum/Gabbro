@@ -3343,7 +3343,11 @@ MARKE_EMIT=117
 # nonetheless"). Re-measured by the merger, not by the lane: 141 of 141 emitting files under
 # `messung/` compile, 275 of 275 in the whole tree, and `clang` takes every one that `cc`
 # takes. *A probe that shows a refusal is still a file, and a file that emits is counted.*
-MARKE_EMIT_M=141
+# **141 -> 143 on 2026-09-17 (merge of lane 208).** Its two agreement probes
+# (`messung/proben/probe-akzeptiert-diff-guarded.gab`,
+# `probe-akzeptiert-diff-deepchain.gab`) emit and compile -- the good case,
+# and a finding nonetheless. Re-measured by the merger: 143 of 143.
+MARKE_EMIT_M=143
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
