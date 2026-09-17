@@ -196,3 +196,87 @@ fn lean_g_absage_gilt_hier() {
     let w = export("gegenbeispiel", &baum, None, &Suche::default()).expect_err("must refuse");
     assert_eq!(w.code, "LG001", "{w}");
 }
+
+// ---------------------------------------------------------------------------------------
+// O12: the release obligation beside the search.
+// ---------------------------------------------------------------------------------------
+
+/// The O12 corpus shape (the `beispiele/124` lock and callee, minimal):
+/// a lock with an invariant over two slot cells, a callee, and a locked
+/// section calling it. The per-function search above cannot see the release
+/// duty -- it runs each body in isolation, while the duty sits at the
+/// CALLER, between the callee's promise and the lock invariant -- so the
+/// release section states it beside the search, never as a diagnostic.
+const O12_KOPF: &str = "module test::o12 {\n\
+    type Stand = u32 in 0 .. 100;\n\
+    table konto count 2 { slot { stand : Stand, } }\n\
+    lock L protects { konto } rank 0 held <= 100 ops\n\
+        invariant konto.slots[0].stand == konto.slots[1].stand;\n";
+
+fn o12_einheit(ensures_setze: &str) -> String {
+    format!(
+        "{O12_KOPF}\
+        impl fn setze(x : Stand)\n\
+        \x20   requires Held(L), konto.slots[0].stand == konto.slots[1].stand\n\
+        \x20   ensures  {ensures_setze}\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 64 ops\n\
+        {{\n\
+        \x20   konto.slots[0].stand = x;\n\
+        \x20   konto.slots[1].stand = x;\n\
+        }}\n\
+        impl fn haupt()\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 512 ops\n\
+        {{\n\
+        \x20   locks L {{\n\
+        \x20       setze(30);\n\
+        \x20   }}\n\
+        }}\n\
+        concurrent {{ haupt }};\n\
+        }}\n"
+    )
+}
+
+fn o12_suche(ensures_setze: &str) -> String {
+    let quelle = o12_einheit(ensures_setze);
+    let baum = checked(&quelle);
+    export("gegenbeispiel", &baum, None, &Suche::default()).expect("search must export")
+}
+
+/// **O12, the failing half: a callee promising only `konto[0] == x` leaves
+/// the release obligation UNPROVED** -- naming the locked section (`haupt`
+/// locking `L`), the callee promise (`setze`), and the unproved release
+/// goal (`konto.slots[1].stand`). The checker still accepts the file (see
+/// `checked`), so the failure surfaces here, not as a diagnostic.
+#[test]
+fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
+    let text = o12_suche("konto.slots[0].stand == x");
+    for teil in [
+        "RELEASE OBLIGATIONS",
+        "haupt",
+        "`L`",
+        "setze promises {konto.slots[0].stand}",
+        "RELEASE UNPROVED",
+        "no callee promises konto.slots[1].stand",
+    ] {
+        assert!(text.contains(teil), "the failing release row must contain {teil:?}");
+    }
+}
+
+/// **O12, the fixed half: a callee promising both slots HOLDS** -- the
+/// shape `beispiele/124` carries since the O12 corpus fix.
+#[test]
+fn o12_starkes_ensures_haelt_die_freigabe() {
+    let text = o12_suche(
+        "konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x",
+    );
+    assert!(
+        text.contains("RELEASE HOLDS (syntactic)"),
+        "the fixed release row must hold"
+    );
+    assert!(
+        !text.contains("RELEASE UNPROVED:"),
+        "no release row may fail once both slots are promised"
+    );
+}
