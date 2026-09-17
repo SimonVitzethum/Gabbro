@@ -1,0 +1,72 @@
+-- Positive agreement probe for `instrumente/pruefe-akzeptiert-diff.py`
+-- (lane 208): a three-deep call chain (`start_a` -> `mittel` -> `tief`)
+-- with the lock taken at the top and held by signature below (the shape
+-- of `beispiele/124`), plus a second lock on a second table.
+--
+-- Both checkers accept: the call-graph closure (`abg`) spans the longer
+-- chain, the transitive floors (`stufen`) hold, and the race rule sees
+-- only guarded writes. Stays clean on purpose: the day either side
+-- refuses, the closure, the floor construction, or the guard
+-- construction has drifted.
+--
+-- GEMESSEN (lane 208, round 2)
+-- ---------------------------
+--
+--     $ gabbro pruefe messung/proben/probe-akzeptiert-diff-deepchain.gab
+--     …: 0 errors
+--     $ python3 instrumente/pruefe-akzeptiert-diff.py  # walks this file
+--     …: rust=accept lean=accept agree
+module probe::akzeptiertdiffdeepchain {
+
+table T count 2 {
+    slot { v : u32, }
+}
+
+table U count 2 {
+    slot { v : u32, }
+}
+
+lock L protects { T } rank 0 held <= 500 ops;
+lock M protects { U } rank 1 held <= 500 ops;
+
+impl fn tief(x : u32)
+    requires Held(L)
+    effects { reads T.slots, writes T.slots }
+    costs   <= 64 ops
+{
+    T.slots[0].v = x;
+}
+
+impl fn mittel(x : u32)
+    requires Held(L)
+    effects { reads T.slots, writes T.slots }
+    costs   <= 128 ops
+{
+    tief(x);
+    T.slots[1].v = x;
+}
+
+impl fn start_a()
+    effects { reads T.slots, writes T.slots, reads U.slots, writes U.slots, locks L, locks M }
+    costs   <= 256 ops
+{
+    locks L {
+        mittel(3);
+    }
+    locks M {
+        U.slots[1].v = 9;
+    }
+}
+
+impl fn start_b()
+    effects { reads T.slots, writes T.slots, locks L }
+    costs   <= 128 ops
+{
+    locks L {
+        T.slots[0].v = 4;
+    }
+}
+
+concurrent { start_a, start_b };
+
+}
