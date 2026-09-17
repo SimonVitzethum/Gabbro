@@ -3410,8 +3410,14 @@ pub const KOSTEN: &[Satz] = &[
                     promise is then not compared at all -- it is refused, not passed. \
                     Non-negativity of every symbol is a PREMISE and is checked (`K005`); \
                     without it there would be no smallest assignment. A product of two \
-                    symbols is not readable, and that stands as a refusal rather than as \
-                    silence. **And the weakest link of the argument is not recursion:** \
+                     symbols is not readable, and that stands as a refusal rather than as \
+                     silence. **A `costs` clause on an `extern fn` is TRUSTED, like \
+                     `effects`:** the checker counts the declared number at every call \
+                     through the edge -- exactly the number, with no dispatch step on \
+                     top (the `syscall` edge counts `1 + fa`, `syscall.kosten`) -- and \
+                     never holds it against a body, because there is none. Where the \
+                     clause is missing a caller promising costs meets `K003`, never a \
+                     weaker reading. **And the weakest link of the argument is not recursion:** \
                     `cost(compile-time constant) = 0` is a statement about the EMITTER, and \
                     nothing in this pass checks it -- `emit.rs` carries one code and no \
                     sentence (`messung/K001.md` §5).",
@@ -3421,7 +3427,14 @@ pub const KOSTEN: &[Satz] = &[
                       so two bodies of identical meaning measured 2 and 6, and `costs <= 2 \
                       ops` passed on the first with zero errors. Corrected, with probe 256 \
                       and the anchor `zweigkette-verliert-praefix`. \
-                      beispiele/gift: 3 probes on `K001`, 2 on `K005`. The class is measured \
+                       beispiele/gift: 3 probes on `K001`, 2 on `K005`. The trusted \
+                       `extern` edge is pinned beside them: `1057` (`K003 allein` \
+                       over the missing clause -- without the rule nothing falls) \
+                       and `1058` (the call counts exactly the declared 5, so a \
+                       promise of 6 over a body of 7 is `K001`; the checked twin \
+                       at 7 and the bounded `retry` over the edge stand in \
+                       `paesse.rs`, `trusted_extern_costs_count_at_callers`). \
+                       The class is measured \
                       twice in the corpus itself: F1 `revoke` promised 200 ops and cost 16 \
                       452 480, A4 promised 4 096 and cost 831 488 -- both times a HUMAN wrote \
                       the typical case instead of the bound, and this pass caught it.",

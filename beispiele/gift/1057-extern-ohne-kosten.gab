@@ -1,0 +1,34 @@
+-- erwartet: K003 allein
+-- **1057 -- a caller promising costs over a costless `extern fn`.**
+--
+-- A `costs <= N ops` clause on an `extern fn` is TRUSTED: the checker counts
+-- the number, it does not re-measure the foreign body. Where the clause is
+-- missing there is nothing to count, so a caller that promises costs meets
+-- `K003` over the edge -- the promise would otherwise be a number over an
+-- unknown quantity. Missing costs stays `K003`; no weaker reading is built.
+--
+-- `-- erwartet: K003 allein` is the sharper claim and it is the right one
+-- here: without this rule NOTHING falls -- the unit checks clean and the
+-- emitted C is valid `cc -Werror` input (measured on the costed twin, which
+-- is gift 1058 at a promise of 7). That is the counterfactual the trust
+-- needs: the rule is the only line between the promise and the shipment.
+--
+-- Nothing else speaks on purpose: both sides promise `pure` over `pure`
+-- (`E008` silent), the call is well-typed (`M1` silent), and the callee is
+-- called once, so no second `K003` stands beside the edge fault. The older
+-- `K003` probe is gift 36 (same code, module-less style, not `allein`); the
+-- declaration-side analogue on the `syscall` edge is gift 986 (`N322`).
+
+module gift::extern_ohne_kosten {
+
+extern fn stumm() -> u32 effects { pure };
+
+impl fn ruft() -> u32
+    effects { pure }
+    costs <= 7 ops
+{
+    let x = stumm();
+    return x;
+}
+
+}
