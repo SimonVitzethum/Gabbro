@@ -570,6 +570,30 @@ structure StartZulaessig (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   req : StartGut P sp init
   sperren : ∀ L, S.inv L sp = true
 
+/-- **Pool-safe**: routine `w` may run on any number of threads. It starts
+    like any admitted start (no signature-held lock, no reasons), and every
+    carrier some function of the thread graph `K` may write is guarded by a
+    lock or atomic. Reads need nothing: with no unguarded writer, two
+    threads reading one carrier do not race. (Lane 245: the model side of
+    the narrowed `N304`; the legs live in `Zielsatz/PoolSym.lean`.) -/
+def PoolSicher (D : Deklaration) (K : D.Fn → Bool) (w : D.Fn) : Prop :=
+  D.haelt w = [] ∧ D.gruende w = 0 ∧
+    ∀ f, K f = true → ∀ c, TraegerSchreibt f c = true →
+      (∃ L, Bewacht c L) ∨ AtomarAusgenommen c
+
+/-- **Pool-safe at its computed graph**: `PoolSicher` with the thread
+    graph `reachB P fs w`. -/
+def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
+  PoolSicher D (reachB P fs w) w
+
+/-- **Duplicates allowed iff pool-safe**: every declared start occurring
+    at least twice is pool-safe at its computed graph. `ws.Nodup` implies
+    it vacuously; the symmetric pair `[w, w]` satisfies it exactly for
+    pool-safe `w` (both in `Zielsatz/PoolSym.lean`). The checker's `N304`
+    decides this shape for same-routine pairs. -/
+def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
+  ∀ w ∈ ws, 1 < (ws.filter (fun v => decide (v = w))).length → PoolSicherW P fs w
+
 end Start
 
 /-! ## The legs of the goal -/
