@@ -1,0 +1,27 @@
+-- erwartet: N304
+-- **Lane 245 (symmetric worker pool, poison): one routine on two threads
+-- sharing an unguarded carrier.**
+--
+-- `concurrent { arb, arb }` runs `arb` twice. `arb` writes the unguarded
+-- table `G`, so the pair is not pool-safe (`PoolSicher` demands every
+-- written carrier guarded, atomic, or per-core) and `N304` refuses, as
+-- before the narrowing. The clean twin -- writes under a lock -- stays
+-- silent (pinned inline in `crates/gabbro-check/tests/fusswache2.rs`).
+module gift1097 {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn arb()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[0].v = 1;
+}
+
+concurrent { arb, arb };
+
+}

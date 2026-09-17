@@ -533,6 +533,80 @@ fn nutzlast_zwillinge_fallen_n300() {
 }
 
 #[test]
+fn pool_sauberer_arbeiter_bleibt_still() {
+    // Lane 245 (symmetric worker pool): one routine on two threads whose
+    // every written carrier is guarded. `arbeiter` writes `K` only under
+    // `L`, holds nothing by signature, declares no reason -- pool-safe, so
+    // `N304` stays silent beside `N315` (not idle, hence no distinctness
+    // refusal) and `N300`/`N301` (no unguarded writer anywhere).
+    let quelle = "module test::fusswache2 {\n\
+        type Stand = u32 in 0 .. 100;\n\
+        table K count 2 {\n\
+            slot {\n\
+                stand : Stand,\n\
+            }\n\
+        }\n\
+        lock L protects { K } rank 0 held <= 100 ops\n\
+            invariant K.slots[0].stand == K.slots[1].stand;\n\
+        impl fn setze(x : Stand)\n\
+            requires Held(L), K.slots[0].stand == K.slots[1].stand\n\
+            ensures K.slots[0].stand == K.slots[1].stand && K.slots[0].stand == x\n\
+            effects { reads K.slots, writes K.slots, locks L }\n\
+            costs <= 64 ops\n\
+        {\n\
+            K.slots[0].stand = x;\n\
+            K.slots[1].stand = x;\n\
+        }\n\
+        impl fn arbeiter()\n\
+            effects { reads K.slots, writes K.slots, locks L }\n\
+            costs <= 512 ops\n\
+        {\n\
+            locks L {\n\
+                setze(30);\n\
+            }\n\
+        }\n\
+        concurrent { arbeiter, arbeiter };\n\
+        }\n";
+    let codes = fehler(quelle);
+    assert!(
+        !codes.iter().any(|c| c == "N300"
+            || c == "N301"
+            || c == "N302"
+            || c == "N303"
+            || c == "N304"
+            || c == "N315"),
+        "a pool-safe routine on two threads draws no race refusal: {codes:?}"
+    );
+}
+
+#[test]
+fn pool_reine_leser_bleiben_still() {
+    // Lane 245: one routine on two threads that only reads. No writer
+    // anywhere, so no race shape exists -- `N304` stays silent (pool-safe
+    // with empty writes) and `N300`/`N301` have no writer to name.
+    let quelle = "module test::fusswache2 {\n\
+        table G count 2 {\n\
+            slot {\n\
+                v : u32,\n\
+            }\n\
+        }\n\
+        impl fn leser() -> u32 effects { reads G.slots } costs <= 64 ops \
+        { return G.slots[0].v; }\n\
+        concurrent { leser, leser };\n\
+        }\n";
+    let codes = fehler(quelle);
+    assert!(
+        !codes.iter().any(|c| c == "N300"
+            || c == "N301"
+            || c == "N302"
+            || c == "N303"
+            || c == "N304"
+            || c == "N315"),
+        "a read-only routine on two threads draws no race refusal: {codes:?}"
+    );
+}
+
+#[test]
 fn pro_kern_zwillinge_schweigen_n300() {
     // Two starts writing one per-core cell: one name, N distinct carriers.
     let quelle = "module test::fusswache2 {\n\

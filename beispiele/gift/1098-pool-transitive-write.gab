@@ -1,0 +1,33 @@
+-- erwartet: N304
+-- **Lane 245 (symmetric worker pool, poison, transitive): the unguarded
+-- write hides in a callee.**
+--
+-- `concurrent { arb, arb }` runs `arb` twice. `arb` itself only calls;
+-- the write to the unguarded table `G` sits in `helfer`, reached over the
+-- call graph. Pool-safety is judged over the graph (`reachB`), not the
+-- single body, so `N304` refuses exactly as for the direct shape (1097).
+module gift1098 {
+
+table G count 2 {
+    slot {
+        v : u32,
+    }
+}
+
+impl fn helfer()
+    effects { writes G.slots }
+    costs   <= 64 ops
+{
+    G.slots[1].v = 2;
+}
+
+impl fn arb()
+    effects { writes G.slots }
+    costs   <= 128 ops
+{
+    helfer();
+}
+
+concurrent { arb, arb };
+
+}

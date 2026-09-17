@@ -53,10 +53,14 @@
 //!   (`requires Held(L)`, any strength). Nobody holds a lock for a thread before it
 //!   starts; `wurzelnB` demands `D.haelt w = []` (the strong form of `N240`, which
 //!   only bans locks two starts SHARE).
-//! * `N304` -- the same routine starting two threads without being idle: two declared
-//!   starts resolve to one function whose call graph writes a carrier or carries a
-//!   footprint. `StartZulaessig.einmal` admits a twice-started routine only as `Ruhig`
-//!   (no lock, no reasons, empty footprints, no writes -- idle starts write nothing).
+//! * `N304` -- the same routine starting two threads without being pool-safe:
+//!   two declared starts resolve to one function whose call graph holds a
+//!   lock, declares a reason, or writes a carrier no lock guards that is
+//!   neither atomic nor per-core. `StartZulaessig.einmal` admits a
+//!   twice-started routine as `Ruhig` (no lock, no reasons, empty
+//!   footprints, no writes -- idle starts write nothing); lane 245 lifts
+//!   the admission to pool-safe routines (`PoolSicher`), whose every
+//!   written carrier is guarded, atomic, or per-core.
 //! * `N315` (lane 196) -- the same routine named twice while idle: `N304` stays
 //!   silent there, but `Akzeptiert` demands `einzelnB` (`ws.Nodup`) with no idle
 //!   exemption -- two entries are two threads, and the race component separates
@@ -1096,7 +1100,9 @@ fn payloads(baum: &Programm, atomic: &BTreeSet<String>) -> BTreeSet<String> {
 /// writing one unguarded payload is a C11 race on a non-atomic object; `H013` has
 /// no payload exemption either). `N302`/`N303` decide `wurzelnB` per start (no reasons, no
 /// signature-held lock); `N304` decides the `einmal` half of `StartZulaessig` for
-/// twice-started routines (idle starts write nothing).
+/// twice-started routines (idle starts write nothing; lane 245 admits the
+/// pool-safe ones, whose every written carrier is guarded, atomic, or
+/// per-core).
 ///
 /// What is reused, and what it decides in Lean:
 /// * starts -- `startet` above: `concurrent` members, `entry`/`boot` roots, the
@@ -1237,10 +1243,17 @@ fn race(
     for i in 0..starts.len() {
         for j in (i + 1)..starts.len() {
             if starts[i].funktion == starts[j].funktion {
-                // N304 -- the `einmal` shape: one routine on two threads must be
-                // idle (`Ruhig` -- no lock, no reasons, empty footprints, no
-                // writes). The graphs coincide by construction (same root, same
-                // fixpoint); judging one judges both.
+                // N304 -- the `einmal` shape, narrowed by lane 245 for the
+                // symmetric worker pool: one routine on two threads is
+                // admitted when it is pool-safe -- it starts like any
+                // admitted start (no signature-held lock, no reasons) and
+                // every carrier its graph may write is guarded by a lock,
+                // atomic, or per-core. Reads need nothing: with no
+                // unguarded writer, two threads reading one carrier do not
+                // race. The graphs coincide by construction (same root, same
+                // fixpoint); judging one judges both. The model side is
+                // `PoolSicher` (`Zielsatz/Spec.lean`) with the legs in
+                // `Zielsatz/PoolSym.lean`.
                 let idle = gehalten
                     .get(&starts[i].funktion)
                     .is_none_or(|h| h.is_empty())
@@ -1249,7 +1262,16 @@ fn race(
                         .is_none_or(|f| f.fehler.is_none())
                     && graph_writes[i].is_empty()
                     && graph_foot[i].is_empty();
-                if !idle && race_filed.insert(("N304", starts[i].funktion.clone())) {
+                let pool_sicher = gehalten
+                    .get(&starts[i].funktion)
+                    .is_none_or(|h| h.is_empty())
+                    && funktionen
+                        .get(&starts[i].funktion)
+                        .is_none_or(|f| f.fehler.is_none())
+                    && graph_writes[i]
+                        .iter()
+                        .all(|c| guarded(c) || atomic.contains(c) || core.contains(c));
+                if !pool_sicher && race_filed.insert(("N304", starts[i].funktion.clone())) {
                     let short = starts[i]
                         .funktion
                         .rsplit("::")
@@ -1260,16 +1282,19 @@ fn race(
                         starts[j].span,
                         format!(
                             "thread starts {} and {} run one routine `{short}`, and it \
-                             is not idle -- it holds a lock, declares a reason, \
-                             writes a carrier, or carries a footprint",
+                             is not pool-safe -- it holds a lock, declares a reason, \
+                             or writes a carrier no lock guards and that is neither \
+                             atomic nor per-core",
                             starts[i].quelle, starts[j].quelle
                         ),
                         &[
-                            "the same routine on two threads is admitted only idle \
-                             (`StartZulaessig.einmal`: `Ruhig` -- idle starts write \
-                             nothing, hold nothing, and read nothing)",
-                            "give each thread its own routine, or leave this one \
-                             lock-free, reason-free, and without a carrier",
+                            "the same routine on two threads is admitted only pool-safe \
+                             (`PoolSicher`: no signature-held lock, no reasons, every \
+                             written carrier guarded, atomic, or per-core -- idle starts \
+                             are the empty case)",
+                            "give each thread its own routine, guard every carrier the \
+                             routine writes (`lock … protects`), or leave this one \
+                             lock-free, reason-free, and without an unguarded carrier",
                         ],
                         absagen,
                     );

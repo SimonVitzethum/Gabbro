@@ -3353,8 +3353,9 @@ pub const WIRKUNGEN: &[Satz] = &[
                   P3). Declared starts declare no reason channel (`N302`, \
                   `or R` has no caller behind a thread start) and hold no lock by \
                   signature (`N303`, the strong form of `N240`). One routine on two \
-                  threads is admitted only idle -- no lock, no reasons, no writes, no \
-                  footprint (`N304`, `StartZulaessig.einmal`) -- and never twice \
+                  threads is admitted only pool-safe -- no lock, no reasons, and \
+                  every written carrier guarded, atomic, or per-core (`N304`, \
+                  `PoolSicher`; idle routines are the empty case) -- and never twice \
                   under one name, idle or not (`N315`, `einzelnB`: `ws.Nodup`). All \
                   six refuse as errors.",
         vorbehalt: "Starts are the `concurrent` members plus the `entry`/`boot` roots \
@@ -3366,25 +3367,36 @@ pub const WIRKUNGEN: &[Satz] = &[
                     or not. `rcu … protects`, `masks`/`ein_kern` and non-per-core \
                     accumulators do NOT exempt; `accumulates … per cpu` does (one name, \
                     N core cells -- no shared carrier; the model has no notion the \
-                    Bool could decide instead). Same-function pairs go to \
-                    `N304` (busy) or `N315` (idle), never to `N300`/`N301` (`w₁ ≠ w₂`); \
+                    Bool could decide instead). Same-function pairs go to `N304` \
+                    (busy, unless pool-safe) \
+                    or `N315` (idle), never to `N300`/`N301` (`w₁ ≠ w₂`); a \
+                    pool-safe busy pair draws neither (guarded, atomic, or \
+                    per-core writes only -- it stays silent); \
                     a pair that writes on both sides belongs to `N300` alone.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/964 (two writers, no reader, N300), 965 \
                       (write-read, N301), 966 (a start with `or R`, N302), 967 (a start \
                       holding a signature lock, N303), 976 (an idle routine named \
-                      twice, N315); positives as snippet tests \
+                      twice, N315), 1097 (a pool pair sharing an unguarded carrier, \
+                      N304), 1098 (the transitive shape: the write hides in a callee, \
+                      N304); positives as snippet tests \
                       (own tables, guarded carriers, single start, atomic, \
                       per-core, twice-started busy). beispiele/108 (reworked lock-free \
                       by lane 183) is accepted by both sides -- it stands in the \
                       lane report's agreement table (12/12, zero findings); the \
                       N303 refusal it once drew is gone with the locks. Lane 196 drops `payload` from the \
                       positives (verdict P3 -- the exemption is gone, `N300` fires \
-                      beside `W001`); the fallout table stands in the lane report.",
+                      beside `W001`); the fallout table stands in the lane report. \
+                      Lane 245 narrows `N304` to pool-unsafe pairs (a pool-safe \
+                      duplicate -- guarded writes only, then a pure read pair -- \
+                      stays silent, pinned inline); the corpus verdict diff is empty \
+                      (no corpus file changes verdict).",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs (`renn`); \
                      grammatik/Grammatik/Zielsatz/Akzeptiert.lean (`rennB`, \
                      `SchreibGetrennt`, `wurzelnB`, `ruheB`, `einzelnB`); \
-                     grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`)",
+                     grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`, \
+                     `PoolSicher`, `EinzelnPool`); \
+                     grammatik/Grammatik/Zielsatz/PoolSym.lean (the pool legs)",
     },
 ];
 
