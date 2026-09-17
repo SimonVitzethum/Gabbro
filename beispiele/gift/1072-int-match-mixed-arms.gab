@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- Lane 227 poison: one `switch` cannot meet both. The `0` arm names an integer
+-- value, the `Some` arm names a case; the emitter refuses the mixed match by
+-- name instead of lowering half of it.
+module gift::int_match_mixed_arms {
+impl fn klassifiziere(x : u32) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        0 => { return 1; }
+        Some => { return 2; }
+    }
+    return 0;
+}
+}

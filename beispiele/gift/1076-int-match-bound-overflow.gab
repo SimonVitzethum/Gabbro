@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- Lane 227 poison: a bound past `2^127 - 1` in magnitude. No C integer type
+-- holds it (`cc` says `integer constant is too large for its type`), so there
+-- is no `case` spelling to write.
+module gift::int_match_bound_overflow {
+impl fn klassifiziere(x : u32) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        -170141183460469231731687303715884105729 => { return 1; }
+        0 => { return 0; }
+    }
+    return 0;
+}
+}

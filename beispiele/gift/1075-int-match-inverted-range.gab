@@ -1,0 +1,14 @@
+-- erwartet: C001
+-- Lane 227 poison: an inverted range. `5 .. 3` names no value, so no arm could
+-- ever run; the emitter refuses instead of lowering an arm that never fires.
+module gift::int_match_inverted_range {
+impl fn klassifiziere(x : u32) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        5 .. 3 => { return 1; }
+    }
+    return 0;
+}
+}
