@@ -1,0 +1,111 @@
+-- 150 -- reading through a user-declared gate: the fd at work.
+--
+-- The second half of the `149` pair. `149` opens: the carrier is declared,
+-- the gate answers a bare integer, one wrapper converts into `Fd`. This
+-- file spends the carrier: a `read` gate takes `fd : Fd` -- a bare `u64`
+-- where it stands falls at the module wall (`D004`,
+-- `beispiele/gift/1067`), arithmetic on it falls where it stands (`D003`,
+-- `beispiele/gift/1068`) -- and a counting loop drains a whole stream
+-- through it, keeping only the total.
+--
+-- Same user-made shape as `149` (ABI name, number, register map, errno
+-- decoding, costs and effects in-program; every constant on those lines is
+-- this program's, none is the tree's), same reused per-call assumption
+-- (`linux_write_contract`, probe `sonde_write` -- see `149` for why the
+-- pair travels unchanged), same honesty about the stub (`C183` keeps named
+-- results out of the decoding, so gates answer integers and wrappers carry
+-- the carrier). The loop idiom is `beispiele/96`'s: `forever` with a
+-- `per_pass` bound, a `-> never` watchdog for the overrun, and the gate
+-- contract as `progress`. A 0-answer ends the stream, `SCHRANK` ends a
+-- longer one; an error reason comes back with the count untouched by
+-- construction (the loop advances locals only).
+
+module beispiel::fd_lesen {
+
+opaque type Fd = u32;
+
+const MAXLEN : u64 = 1024;
+const CAP : u64 = 64;
+const SCHRANK : u64 = 1048576;
+
+static mut EIMER : [u8; 64] = 0;
+
+reason ReadError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted"
+    Invalid     = 22 "invalid argument"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+extern fn leser_haengt() -> never effects { diverges } costs <= 1 ops;
+
+syscall gate_read(fd : Fd, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted, EINVAL => Invalid }
+    requires len <= MAXLEN
+    ensures result <= len
+    effects { writes buf }
+    costs <= 40 ops
+    assume linux_write_contract falsifier sonde_write;
+
+-- One read, honest effects: the kernel writes through `buf`, so the
+-- declaration says `writes buf` (no `pure` fiction here -- contrast the
+-- write gate of `beispiele/74`, whose `r` pointer keeps the fiction).
+impl fn lies(fd : Fd, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    effects { writes buf }
+{
+    let n = gate_read(fd, buf, len) else (e) { return e; }
+    return n;
+}
+
+-- COUNT the bytes of a stream, up to `SCHRANK`: read chunks into `EIMER`,
+-- keep the total. Each pass overwrites the bucket and adds to the local
+-- alone, so an error leaves no half-written state behind -- there is no
+-- cross-pass carrier to corrupt, only `gesamt`. Full at `SCHRANK - CAP`
+-- (both consts, so the subtraction folds): one more chunk of at most `CAP`
+-- lands exactly on the cap, `gesamt += n` never leaves `u64` (`M104`), and
+-- the answer keeps its `ensures`.
+impl fn zaehle(fd : Fd) -> u64 or ReadError
+    ensures result <= SCHRANK
+    effects { writes EIMER }
+{
+    let mut gesamt : u64 = 0;
+    forever lesend
+        per_pass bounded 1024 ops
+        on_exceeded leser_haengt
+        effects { writes EIMER }
+        progress linux_write_contract
+    {
+        if gesamt > SCHRANK - CAP {
+            leave lesend;
+        }
+        -- The chunk is narrowed through a plain `let` copy: the gate's
+        -- `ensures result <= len` proves the `return` inside `lies`, but the
+        -- fact does not ride along into the caller's arithmetic (measured:
+        -- without the `narrow`, `M104` reads `n` full-range here, while the
+        -- same promise keeps `return n` range-honest in `149`). And the copy
+        -- is no ceremony: `let … else` is no plain `let`, and the emitter's
+        -- unsignedness collector does not see it -- narrowing the call
+        -- binding directly keeps a `>= 0` over `u64` that `cc`
+        -- `-Wtype-limits` refuses. The arm that cannot run answers
+        -- `Invalid`, the way `beispiele/96` answers `WouldBlock` where its
+        -- count cannot overrun.
+        let n0 : u64 = lies(fd, EIMER, CAP) else (e) { return e; }
+        let n : u64 = n0;
+        narrow n to 0 .. CAP else { return ReadError::Invalid; }
+        if n == 0 {
+            leave lesend;
+        }
+        gesamt += n;
+    }
+    return gesamt;
+}
+
+}

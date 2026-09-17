@@ -1,0 +1,47 @@
+-- erwartet: D003
+-- **Gift 1068 -- a descriptor does not compute.**
+--
+-- `Fd` (`beispiele/149`) is an opaque carrier: counts stay `u64`, flags
+-- stay `u64`, and the two never meet in an operation. OR-ing a flag word
+-- into a descriptor falls where it stands -- the same rule
+-- `beispiele/gift/211` pins for its own carrier, here in the clothes the
+-- open/read wrappers wear. What the wrappers may do instead stands beside
+-- it: pass counts and flags as their own parameters (`scheck` stays
+-- green), and convert once, at the gate, into `Fd`.
+--
+-- The gate below is user-made down to the invented constants (`myabi`, number `101`): it stands so the file says what the computed value was
+-- FOR. The refusal itself needs no gate -- `D003` bites at the `return`.
+
+module gift::fd_wird_gerechnet {
+
+opaque type Fd = u32;
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall gate_lesen(fd : Fd, anzahl : u64) -> u64
+    abi myabi arch x86_64 number 101
+    regs in { rdi = fd, rsi = anzahl }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors {}
+    effects { pure }
+    costs <= 40 ops
+    assume linux_write_contract falsifier sonde_write;
+
+impl fn scheck(fd : Fd, kennzeichen : u32) -> Fd
+    effects { pure }
+    costs <= 4 ops
+{
+    return kennzeichen;
+}
+
+impl fn maske(fd : Fd, kennzeichen : u32) -> Fd
+    effects { pure }
+    costs <= 4 ops
+{
+    return fd | kennzeichen;
+}
+
+}
