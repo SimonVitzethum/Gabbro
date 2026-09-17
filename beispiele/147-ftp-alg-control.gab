@@ -325,19 +325,14 @@ impl fn entferne_innen(r : index into regeln,
     effects { reads regeln.slots, writes regeln.slots, locks FW }
     costs   <= 128 ops
 {
-    if regeln.slots[r].belegt {
-        if regeln.slots[r].qsip == sip {
-            if regeln.slots[r].qdip == dip {
-                if regeln.slots[r].qsp == sp {
-                    if regeln.slots[r].qdp == dp {
-                        if regeln.slots[r].qpr == pr {
-                            freigeben(r);
-                            return OK;
-                        }
-                    }
-                }
-            }
-        }
+    if regeln.slots[r].belegt
+        && regeln.slots[r].qsip == sip
+        && regeln.slots[r].qdip == dip
+        && regeln.slots[r].qsp == sp
+        && regeln.slots[r].qdp == dp
+        && regeln.slots[r].qpr == pr {
+        freigeben(r);
+        return OK;
     }
     return MISS;
 }

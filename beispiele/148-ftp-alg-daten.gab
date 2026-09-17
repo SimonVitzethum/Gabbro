@@ -161,10 +161,9 @@ impl fn erwarte(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
 -- The verdict, one bucket per packet. Five gates in order: occupancy,
 -- control-tuple match, age, data-tuple match, then ACCEPT with the age
 -- refreshed to zero (deadline care on the hit: the next 63 ticks are paid
--- for by this packet). The nesting is the match -- a flat `&&` chain would
--- read `stroeme.slots[r]` the same five times and prove nothing less, but
--- the checker bills the reads per gate either way, so the shape stays
--- explicit.
+-- for by this packet). The match is one flat `&&` chain: same five reads
+-- in the same order, same read set, less nesting (parser depth budget;
+-- TIEFE_MAX stands 4x over the corpus and the chain kept its margin).
 impl fn urteil_innen(r : index into stroeme,
                      sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
                      dsip : u32, ddp : Port) -> Code
@@ -172,26 +171,20 @@ impl fn urteil_innen(r : index into stroeme,
     effects { reads stroeme.slots, writes stroeme.slots, locks FD }
     costs   <= 192 ops
 {
-    if stroeme.slots[r].belegt {
-        if stroeme.slots[r].qsip == sip {
-            if stroeme.slots[r].qdip == dip {
-                if stroeme.slots[r].qsp == sp {
-                    if stroeme.slots[r].qdp == dp {
-                        if stroeme.slots[r].qpr == pr {
-                            if stroeme.slots[r].alter >= ALTER_MAX {
-                                freigeben(r);
-                                return ABGELAUFEN;
-                            } else {
-                                if stroeme.slots[r].xsip == dsip {
-                                    if stroeme.slots[r].xdp == ddp {
-                                        stroeme.slots[r].alter = 0;
-                                        return AKZEPTIERT;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    if stroeme.slots[r].belegt
+        && stroeme.slots[r].qsip == sip
+        && stroeme.slots[r].qdip == dip
+        && stroeme.slots[r].qsp == sp
+        && stroeme.slots[r].qdp == dp
+        && stroeme.slots[r].qpr == pr {
+        if stroeme.slots[r].alter >= ALTER_MAX {
+            freigeben(r);
+            return ABGELAUFEN;
+        } else {
+            if stroeme.slots[r].xsip == dsip
+                && stroeme.slots[r].xdp == ddp {
+                stroeme.slots[r].alter = 0;
+                return AKZEPTIERT;
             }
         }
     }
