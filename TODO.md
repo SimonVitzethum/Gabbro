@@ -150,42 +150,71 @@ tree refuses everywhere else.*
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
-- [ ] **The exporter produces a full `Einheit`** — lane 198 (running). `gabbro lean-g` writes:
-  - the real `requires`;
-  - the declared starts with their arguments;
-  - the declared initial memory as `sp0`;
-  - the lock-invariant family `S`;
-  - `def gE : Einheit gD`.
-
-  `gabbro obligations --g` states `NutzerPflicht gE` and derives the per-program theorem from
-  `gabbro_ziel`, with the checker premise closed by `decide`. The demonstration covers 104 and
-  one concurrent program.
-
-  *2026-09-15, the middle link closed:* the stated duty is now PROVED for both, over the
-  regenerated export — `GenOblig104.lean` + `Pflicht104.lean` (`oblig_nutzer`, `oblig_ziel`)
-  and `GenOblig108.lean` + `Pflicht108.lean` (`p108_nutzer`, `p108_ziel`, two declared
-  starts), standard three axioms, and `instrumente/pruefe-genlean.py` holds both generated
-  files against their generator byte for byte. What is still open here is the WIDTH: 104 and
-  108 are two programs, not the corpus.
-- [ ] **The Rust checker computes the whole Lean checker Bool `Akzeptiert`** — lane 196
-  (running; codes N315–N319). It works component by component: the call-graph closure, lock
-  floors, `sperrOrte`, `einzeln`, and whatever else has no Rust counterpart yet. The
-  differential test `instrumente/pruefe-akzeptiert-diff.py` compares the Rust verdict with the
-  Lean Bool on every exported corpus program. Every disagreement is a finding.
-- [ ] **The exporter covers the concurrent programs.** Of 07, 59, 108, 109, 124 and 125, only 108
-  exports today. 124 needed a hand model (`Korpus124.lean`, `kP`). Widen `lean-g` for locks,
-  `held` sections and multiple starts, measured by how many of the six export.
-- [ ] **`beispiele/124`'s `setze` promises too little** (`dokumente/OFFEN.md` O12). With the
-  source's contract, the release check in `hauptA`'s locked section fails, so the user
-  obligation does not hold as written. Two steps:
-  1. Fix the example's contract.
-  2. Decide how the tool chain surfaces a user obligation that fails: `gabbro obligations` and
-     `gabbro counterexample` should show it, since the checker cannot refuse user logic.
-- [ ] **The C read correspondence for nested arrays** (lanes 170 and 185 built the rule side,
-  N285–N289). The emitted reads of `[[T; n]; m]` still need their correspondence lemma.
-- [ ] **The certificate printer prints the simulation certificate for stage (b).** `sim124` is
-  built by hand. A printed certificate, plus a Lean checker that turns it into the simulation,
-  is what makes stage (b) scale beyond one program.
+- [x] **The exporter produces a full `Einheit`** — lanes 198 (fields) and 207
+  (verification + widening), reviewed (reviewer 215) and merged (`9586c8c6`,
+  2026-09-17). The five width items (real `requires`, starts with arguments,
+  `sp0`, lock family `S`, `def gE : Einheit gD`) were complete from 198;
+  207 verified them against the tree and added the `traverse`-over-pointer
+  widening (`lean_g.rs::tr_traverse`, with one positive and two LG006
+  poison tests in `tests/lean_g.rs`).
+- [ ] **Corpus width of the exporter (the residue of the bullet above).**
+  Census 2026-09-17 over `beispiele/*.gab` (117 files): 15 export, before and
+  after 207 — the identical 15 (104, 108, 109, 118, 119, 120, 121, 124, 130,
+  15, 16, 34, 62, 69, 73). First refusals: LG001 x71, LG002 x19, LG003 x1,
+  LG004 x5, LG005 x4, LG006 x2. The widening moved 19/46 from LG006 to LG005
+  with zero corpus gain, honestly reported. Next: the sieve classes one by
+  one, measured by the export count.
+- [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
+  208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
+  2026-09-17). Closed by finding, not by construction: five of nine
+  components are decided by existing Rust rules with zero disagreements;
+  four (`abg`, `stufen`, `sperrOrte`, `antworten`) are vacuous on every
+  exported program by exporter construction, so no Rust rules were built
+  for them. Delivered instead: `pruefe-akzeptiert-diff.py` with honest
+  denominator (compared=19, skip=182, partial=1, findings=0) and
+  machine-checkable vacuity pins K1–K4 (exit 2 on drift, negative-tested),
+  two agreement probes
+  (`messung/proben/probe-akzeptiert-diff-guarded.gab`,
+  `probe-akzeptiert-diff-deepchain.gab`), the corrected `stufen` row
+  (`N294` decides the take rule, not `stufenB`), and `N317`–`N319`
+  identified as phantom codes. No N codes consumed. Side effect, booked by
+  the merger: `MARKE_EMIT_M` 141 → 143 (the two probes emit).
+- [x] **Hand models for the concurrent programs** — lane 203, reviewed
+  (reviewer 217, r2) and merged (`2c53e282`, 2026-09-17). `Korpus07.lean`,
+  `Korpus59.lean`, `Korpus109.lean`, `Korpus125.lean` after the `Korpus124`
+  template: 4 of 6 with full models (108, 124, 109, 59), 125
+  reshaped-with-proved-blockage, 07 with proved impossibility of a
+  non-degenerate witness.
+- [ ] **Exporter-side concurrent coverage (the residue).** `lean-g` still
+  refuses locks, `held` sections and multiple starts (LG001/LG004); only
+  108 of the six exports. The hand models above are the bridge, not the
+  widening. Measured by how many of 07, 59, 108, 109, 124 and 125 export.
+- [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
+  O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
+  2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
+  konto.slots[0].stand == x`, so the locked section re-establishes the lock
+  invariant from the callee's promise. `gabbro obligations` and
+  `gabbro counterexample` display a failing user obligation
+  (`obligations_g.rs`, `gegenbeispiel.rs` + tests); no new refusal, the
+  checker still accepts. The release rule (demand the invariant from callee
+  promises at every locked-section exit) stays a proposal in
+  `MUSE-REPORT-204.md`, not built.
+- [x] **The C read correspondence for nested arrays** — lane 205, reviewed
+  (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
+  `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the
+  emitted reads of `[[T; n]; m]` plus `cform_nested_read_zeuge`, standard
+  three axioms, planted-defect check (a swapped stride fails red). The
+  `Grammatik.lean` import was added by the merger. The reviewer verified
+  that `pruefe-cformen.py` carries no nested-array row to flip (only
+  `expr:array-read`).
+- [x] **The simulation-certificate printer for stage (b)** — lane 206,
+  reviewed (reviewer 220, r1) and merged (`71c5eaea`, 2026-09-17).
+  `corrcert.rs::SimCert124` prints the four R124 position tables as JSON
+  (`.simcert`) and as the Lean literal `cert124_printed`, with unit tests
+  (every forged table fails, both spellings pinned);
+  `grammatik/Grammatik/SimPruef.lean` checks the printed certificate into
+  the `sim124` conclusion (`simpruef_liefert`, `simpruef_124_zeuge`).
+  Round trip measured on 124; program #2 is §2 stage-(b) work.
 
 # 2. Translation validation  ⟨D⟩
 

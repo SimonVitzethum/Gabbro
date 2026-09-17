@@ -1576,3 +1576,71 @@ with no site is the thing this folder hunts, not the thing it adds.*
 >
 > *All four moved in the same direction: the register understated what is here.* That is
 > the harmless direction — and it is still an unmeasured number.
+
+## Moved out of TODO.md on 2026-09-17 — §1, transfer into the checker and emitter
+
+Six bullets, worked as lanes 203–208 (201/202 relaunched as 207/208 after a
+stale-title start on old session names) and reviewed by a second lane each
+under `bin/review-wache.sh` (max three rounds, builds re-run by the
+reviewer, never trusted from logs). Residues that stay open stand in
+TODO.md §1 (exporter corpus width, 15 of 117; exporter-side concurrent
+coverage); what stands here is closed. Evidence per bullet is the merged
+commit plus the command that re-measures it.
+
+**Exporter Einheit fields, lanes 198 + 207** (`9586c8c6`). The five width
+items — real `requires`, starts with arguments, `sp0`, lock family `S`,
+`def gE : Einheit gD` — were complete from 198; 207 verified them against
+the tree and added the `traverse`-over-pointer widening in
+`crates/gabbro-check/src/lean_g.rs` with one positive and two LG006
+refusal tests in `crates/gabbro-check/tests/lean_g.rs`. Census 2026-09-17
+over `beispiele/*.gab` (117 files): 15 export, identical before and after
+— re-run `gabbro lean-g` per file and count the successes. The widening
+moved two files from LG006 to LG005 with zero corpus gain, honestly
+reported in `messung/muse/MUSE-REPORT-207.md`.
+
+**Akzeptiert diff with vacuity pins, lane 208** (`c8b9c1a4`). Five of nine
+components decided by existing Rust rules with zero disagreements; four
+(`abg`, `stufen`, `sperrOrte`, `antworten`) vacuous on every exported
+program by exporter construction — no decorative rules built.
+`instrumente/pruefe-akzeptiert-diff.py` carries the honest denominator
+(compared=19, skip=182, partial=1, findings=0) and the K1–K4
+machine-checkable pins (exit 2 on drift, each negative-tested); re-run it
+for the current count. Two agreement probes committed under
+`messung/proben/` (`probe-akzeptiert-diff-guarded.gab`,
+`probe-akzeptiert-diff-deepchain.gab`); the `stufen` row corrected
+(`N294` decides the take rule, not `stufenB`); `N317`–`N319` recorded as
+phantom codes. No N codes consumed. Side effect, booked by the merger:
+`MARKE_EMIT_M` 141 → 143 in `instrumente/pruefe-emission.sh`, since both
+probes emit — re-measured with `./instrumente/pruefe-emission.sh`.
+
+**Concurrent hand models, lane 203** (`2c53e282`). `Korpus07.lean`,
+`Korpus59.lean`, `Korpus109.lean`, `Korpus125.lean` under `grammatik/`
+after the `Korpus124` template: full models for 108, 124, 109 and 59;
+125 reshaped-with-proved-blockage; 07 with proved impossibility of a
+non-degenerate witness. Standard three axioms throughout; re-build with
+`lake build` in `grammatik/`. Full statements and per-program notes in
+`messung/muse/MUSE-REPORT-203.md`.
+
+**O12: setze promises both slots, lane 204** (`5ececd63`).
+`beispiele/124-two-threads-private.gab` now ensures both slots, so the
+locked section re-establishes the lock invariant from the callee's
+promise; `gabbro obligations` and `gabbro counterexample` display a
+failing user obligation (`crates/gabbro-check/src/obligations_g.rs`,
+`crates/gabbro-check/src/gegenbeispiel.rs` with tests) instead of
+refusing it. Re-check with `./cargo-pruef` (zero failures) and
+`./instrumente/pruefe-emission.sh` for the touched units. The release
+rule stays a proposal in `messung/muse/MUSE-REPORT-204.md`, not built.
+
+**Nested-array read correspondence, lane 205** (`1198a0b9`).
+`grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for emitted
+reads of `[[T; n]; m]` plus `cform_nested_read_zeuge`, standard three
+axioms, planted-defect check (a swapped stride fails red). Import added
+by the merger. Re-build with `lake build` in `grammatik/`.
+
+**Stage-(b) simulation-certificate printer, lane 206** (`71c5eaea`).
+`crates/gabbro-check/src/corrcert.rs` prints `SimCert124` as JSON and as
+the Lean literal `cert124_printed` (unit tests: every forged table fails,
+both spellings pinned); `grammatik/Grammatik/SimPruef.lean` checks the
+printed certificate into the `sim124` conclusion. Round trip measured on
+124 in `messung/muse/MUSE-REPORT-206.md`. Re-check with `./cargo-pruef`
+and `lake build` in `grammatik/`.
