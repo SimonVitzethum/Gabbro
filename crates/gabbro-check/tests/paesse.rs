@@ -2454,6 +2454,103 @@ fn eine_nie_antwortende_routine_die_zurueckkehrt() {
     ));
 }
 
+/// **Lane 225 -- `-> never` bodies that diverge are accepted: `asm` and `forever`.**
+///
+/// The checker half of the never-bodies wall. Four shapes, all measured silent
+/// before this lane (silence by omission: `S009` returns early on every
+/// non-`Block` body, and `endet_immer` answers the loop) and now pinned as
+/// ACCEPTED by sentence (`namen.asm_never_angenommen`,
+/// `namen.never_forever_angenommen`):
+///
+/// * (a) a halting `asm` body with declared `arch`/`effects`/`costs` and no
+///   `out { result }` -- the text is unchecked by construction, the divergence
+///   evidence is the `-> never` declaration itself. The emitter still refuses
+///   it (`C001`, `hat_ergebnis` arm -- the handoff lane 235 lowers).
+/// * (b) a labelled `forever` loop that is never left, with `per_pass bounded`
+///   and a diverging `on_exceeded` exit, and no total `costs`.
+/// * (c) the same loop without a label (no `leave` can name it).
+/// * (d) a body ending in a call to another `-> never` routine.
+///
+/// The second half pins the exact refusal sets of the four poison gifts, so no
+/// second voice may speak beside the named code: `1062` (`K003`, a total promise
+/// over the loop), `1063` (`S006`, a returning watchdog), `1064` (`S009`, a loop
+/// the body leaves), `1065` (`A003`, an `asm` body without `costs`). The `N321`
+/// shape stays where it is (`gift/984`/`985`, unmoved).
+#[test]
+fn never_ruempfe_werden_angenommen_225() {
+    let m = |inhalt: &str| format!("module p::d {{\n{inhalt}\n}}");
+    let wach = "extern fn watchdog() -> never effects { diverges } costs <= 1 ops;\n";
+    // (a) the halting `asm` under `-> never` -- checker silent, emitter `C001`.
+    faellt_nicht(&m(
+        "divergent fn halt() -> never\n effects { diverges }\n costs <= 1 ops\n arch x86_64\n \
+         = asm {\n \"hlt\"\n clobbers { memory }\n };",
+    ));
+    // (b) the labelled `forever` that is never left.
+    faellt_nicht(&m(&format!(
+        "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n{{\n \
+         forever s\n per_pass bounded 4 ops\n on_exceeded watchdog\n effects {{ pure }}\n{{ }}\n}}"
+    )));
+    // (c) the same loop without a label -- no `leave` can name it.
+    faellt_nicht(&m(&format!(
+        "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n{{\n \
+         forever\n per_pass bounded 4 ops\n on_exceeded watchdog\n effects {{ pure }}\n{{ }}\n}}"
+    )));
+    // (d) a body ending in a call to another `-> never` routine.
+    faellt_nicht(&m(&format!(
+        "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n costs <= 8 ops\n{{\n \
+         watchdog();\n}}"
+    )));
+
+    // -- The refusal side: exactly one code each --------------------------------
+    let genau_einmal = |quelle: &str, code: &str| {
+        let c = codes(quelle);
+        let gefallen: Vec<&str> = c
+            .iter()
+            .filter(|(_, s)| *s == Stufe::Fehler)
+            .map(|(k, _)| *k)
+            .collect();
+        assert_eq!(
+            gefallen,
+            vec![code],
+            "erwartet war genau einmal {code}, gefallen ist {gefallen:?}\n{quelle}"
+        );
+    };
+    // `1062`: a total promise over the loop.
+    genau_einmal(
+        &m(&format!(
+            "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n costs <= 8 ops\n{{\n \
+             forever s\n per_pass bounded 4 ops\n on_exceeded watchdog\n effects {{ pure }}\n{{ }}\n}}"
+        )),
+        "K003",
+    );
+    // `1063`: the exit returns.
+    genau_einmal(
+        &m(
+            "extern fn heimkehr() -> u32 effects { pure } costs <= 1 ops;\n\
+             divergent fn dienst() -> never\n effects { diverges }\n{\n \
+             forever s\n per_pass bounded 4 ops\n on_exceeded heimkehr\n effects { pure }\n{ }\n}",
+        ),
+        "S006",
+    );
+    // `1064`: the loop is left, so the body falls off its end.
+    genau_einmal(
+        &m(&format!(
+            "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n{{\n \
+             forever s\n per_pass bounded 4 ops\n on_exceeded watchdog\n effects {{ pure }}\n{{ \
+             leave s; }}\n}}"
+        )),
+        "S009",
+    );
+    // `1065`: an `asm` body without `costs`.
+    genau_einmal(
+        &m(
+            "divergent fn halt() -> never\n effects { diverges }\n arch x86_64\n \
+             = asm {\n \"hlt\"\n clobbers { memory }\n };",
+        ),
+        "A003",
+    );
+}
+
 /// **The `elems of` binder carries the bound of the array it runs over** -- §2.4's fourth
 /// domain, closed 2026-09-08.
 ///

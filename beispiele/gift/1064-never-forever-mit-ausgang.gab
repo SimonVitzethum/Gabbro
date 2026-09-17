@@ -1,0 +1,29 @@
+-- erwartet: S009
+-- **1064 -- a `-> never` body whose `forever` loop CAN be left falls off its end.**
+--
+-- `S009` holds a `-> never` declaration against its body: no `return` anywhere,
+-- and no fall off the end (`endet_immer`). A `forever s` loop that the body
+-- leaves with `leave s` falls through, so the body ends normally and the
+-- declaration is false at it. The honest shape is the same loop WITHOUT the
+-- `leave`: un-leavable, hence diverging, hence an accepted `-> never` end.
+--
+-- Lane 225 pins the leave-binding side of the `-> never` + `forever`
+-- acceptance: the checker reads the leave binding (`verlassen`), not the
+-- keyword, and a loop that is left is no divergence evidence.
+module gift::never_forever_mit_ausgang {
+
+extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+
+divergent fn dienst() -> never
+    effects { diverges }
+{
+    forever s
+        per_pass bounded 4 ops
+        on_exceeded watchdog
+        effects { pure }
+    {
+        leave s;
+    }
+}
+
+}

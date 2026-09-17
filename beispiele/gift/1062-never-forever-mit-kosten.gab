@@ -1,0 +1,31 @@
+-- erwartet: K003
+-- **1062 -- a `-> never` body ending in `forever` must not promise a total `costs`.**
+--
+-- A `forever` loop has no total cost: its promise is `per_pass`, not `costs`
+-- (`kosten.rs::schleife`, lane 191: `ohne_summe`). Writing `costs <= 8 ops`
+-- over it is a promise over an unknown quantity, and `K003` names it. The
+-- honest shape is the same body WITHOUT the clause (omitted costs over a
+-- `forever` body is correct by construction since lane 191): it passes the
+-- checker (`S009` accepts the un-leavable loop as the diverging end) and the
+-- emitter lowers it to `for (;;)`.
+--
+-- Lane 225 pins the refusal side of the `-> never` + `forever` acceptance:
+-- the divergence evidence the checker demands is the bounded pass
+-- (`per_pass bounded … ops` with a diverging `on_exceeded`), never a total.
+module gift::never_forever_mit_kosten {
+
+extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+
+divergent fn dienst() -> never
+    effects { diverges }
+    costs   <= 8 ops
+{
+    forever s
+        per_pass bounded 4 ops
+        on_exceeded watchdog
+        effects { pure }
+    {
+    }
+}
+
+}

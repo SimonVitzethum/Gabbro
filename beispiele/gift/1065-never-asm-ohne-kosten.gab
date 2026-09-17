@@ -1,0 +1,24 @@
+-- erwartet: A003
+-- **1065 -- a `-> never` `asm` body still owes its `costs`.**
+--
+-- The instruction text is unchecked by construction (`asm_versiegelt`), so the
+-- declaration carries everything: `arch` (`A001`), `effects` (`A002`) and
+-- `costs` (`A003`). Divergence needs no extra word beyond `-> never` itself --
+-- callers read all three spellings -- but the termination chain still tears
+-- where no number stands, `never` or not. The honest shape adds
+-- `costs <= 1 ops`: the checker accepts it, and the emitter is next
+-- (lane 235; today it falls at `C001`, pinned at `1066`).
+--
+-- This probe doubles as the missing `A003` probe the `namen.asm_versiegelt`
+-- sentence books as unmeasured (`A002`/`A003` had no probe).
+module gift::never_asm_ohne_kosten {
+
+divergent fn halt() -> never
+    effects { diverges }
+    arch    x86_64
+    = asm {
+        "hlt"
+        clobbers { memory }
+    };
+
+}
