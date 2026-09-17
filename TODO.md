@@ -25,6 +25,73 @@ Each item names its owner (lane or agent) where one is running.
 
 ---
 
+# -1. Verdict walls: the not-going code (first)  ⟨A⟩
+
+*14 walls from the firewall-in-Gabbro tree (`Verdict/messung/BEFUNDE-bm*.md`,
+measured against Gabbro master `71c5eaea`); 3 cost nothing — N042/N323 and
+atomic arrays are built, sigaction stays out by design (threshold counters
+are free). The remaining 11 are cut into 16 lanes in 3 waves below: 14 Muse
+lanes (workers 221–235, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
+both touch the model core). Review loop (`bin/review-wache.sh`, max 3
+rounds, builds re-run by the reviewer) covers workers 221–235 with
+reviewers from 321; the dispatcher worker list needs the extension
+(orchestrator step). Max parallel: 7 at start (221–226 + O-1), up to 8
+while O-1 overlaps wave B.*
+
+**Binding constraint (owner): no language feature hard-depends on an OS.**
+Syscalls are always user-made — declared in-program (`extern`/`syscall`
+items carrying ABI numbers, registers, costs), never baked into the tree
+as OS tables. This shapes lane 226 (fd + open/read declarations, no
+number table in `crates/`), O-1 (handoff shape OS-agnostic, clone numbers
+stay in user code) and C-2 (address + timespec carrier, no `CLOCK_*` in
+the tree). A lane that smuggles an OS constant into `crates/` or
+`grammatik/` fails review.
+
+**Decision gate (owner):** lane 221 needs the binder-range decision first —
+lift the refusal or keep it (`OPUS-BERICHT-FETCHADD.md` §2.3). Without it,
+221, the F5 workaround and the M101 shapes stay as they are.
+
+**Wave A (parallel now):**
+
+| lane | wall | files owned (exclusive) | size | reserves N / gift / ex |
+|---|---|---|---|---|
+| 221 | `+%` fetch_add (bm4-F5) | `emit.rs` fetch arm, `tests/holform.rs` | S | N391–395 / 1052–1056 / — |
+| 222 | syntax: int-match arms + traverse domain | `parse.rs`, `lex.rs`, `kw.rs`, `ast.rs` | M | no new P-codes planned / — / 147–148 |
+| 223 | costs on extern, trusted (K003) | `kosten.rs` | S | N396–400 / 1057–1061 / — |
+| 224 | m1 bound shapes (`k-1` class, first shapes) | `m1.rs` | M | none (existing M101) / — / — |
+| 225 | never-bodies accept (asm/forever) | `namen.rs` (`asm_never` region) | M | N401–405 / 1062–1066 / — |
+| 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
+| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | Opus, none yet |
+
+**Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
+
+| lane | wall | files owned (exclusive) | size | after |
+|---|---|---|---|---|
+| 227 | switch lowering (int-match) | `emit.rs` | M | 221 |
+| 228 | match semantics (Lean) | new `CFormMatch`-family file | M | 222 |
+| 229 | subrange traverse checker: effects + early exit (S001) | `wirkungen.rs`, `absenkung.rs` | L | 222 |
+| 231 | divergence lemmas (Lean) | new file | M | 225 design |
+| 232 | hold chunking (K002) | `kosten.rs` | M | 223 |
+| 233 | syscall/fd model (Lean) | new file, no OS constants | M | 226 |
+| 234 | traverse lowering | `emit.rs` | M | 227 |
+
+*Wave-B reserves: 227: N411–415 / 1072–1076; 229: N416–420 / 1077–1081 /
+151; 232: N421–425 / 1082–1086. Lean lanes (228, 231, 233) need no codes —
+witnesses instead of poison probes.*
+
+**Wave C:**
+
+| lane | wall | files owned (exclusive) | size | after |
+|---|---|---|---|---|
+| 235 | never/never-asm lowering | `emit.rs` | M | 234 |
+| C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | O-1 (Opus) |
+
+*Not lanes: sigaction (out, see above); M147 foreign taint (bm8-F2, helper
+discipline, no build); TIEFE_MAX stays 32 (raise = constant + fuzz inside
+lane 222 if measured); M101 further shapes are one small lane per shape,
+priced per shape, never as "done". Example pool 147–155 shared in order;
+`keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions.*
+
 # 0. The runtime — MAXIMUM PRIORITY (owner, 2026-09-15)  ⟨A⟩
 
 *Measured the same day, with `gabbro emit beispiele/124-two-threads-private.gab`: the emitted C
