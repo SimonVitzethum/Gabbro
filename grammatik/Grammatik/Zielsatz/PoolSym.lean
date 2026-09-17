@@ -326,6 +326,53 @@ theorem akzeptiertSpec_pool {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
 
 end PoolBool
 
+/-! ## The legs over multiset starts -/
+
+section PoolLegs
+
+variable [DecidableEq D.Fn]
+
+/-- **No unguarded write on a run**: if thread `ts k` of a run starts the
+    pool-safe routine `w`, its `k`-th step writes no unguarded, non-atomic
+    carrier. The run-level lifting of `pool_schreibt_nicht` -- applied to
+    both threads of a symmetric pair, no write-write and no write-read
+    race on unguarded carriers exists. The footprint half of
+    `SchreibGetrenntK` is not needed and not claimed: with no unguarded
+    writer, the write side of every race pair is already empty. Guarded
+    carriers keep their leg unchanged (`rennfrei_g_voll`, via
+    `pool_startExklusiv` below). -/
+theorem pool_schreibt_nicht_lauf {P : Programm D} {O : Orakel D} {passes : Nat}
+    {fs : List D.Fn} {w : D.Fn}
+    (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hAbg : ∀ t, AbgK P fs (kVon P fs init t))
+    (hWurzel : ∀ t, kVon P fs init t (init t).1 = true)
+    (ms : Nat → RufMaschineG D) (ts : Nat → Faden) (n : Nat)
+    (hl : LaufG P O passes (RufStartG P sp init) ms ts n)
+    (k : Nat) (hk : k < n)
+    (ht : (init (ts k)).1 = w) (hpoolW : PoolSicher D (reachB P fs w) w)
+    (c : D.Tab ⊕ D.Glob) (hB : ∀ L, ¬ Bewacht c L) (hAt : ¬ AtomarAusgenommen c)
+    (hw : SchreibG (ms k) (ms (k + 1)) (ts k) c) : False := by
+  obtain ⟨g, hg, hgw⟩ := (zugriff_im_graph hO hvoll sp init (kVon P fs init) hAbg
+    hWurzel (laufG_erreichbar hl k (by omega)) (hl.2 k (by omega)) c).2 hw
+  have hnw : TraegerSchreibt g c = false :=
+    pool_schreibt_nicht ht hpoolW hB hAt hg
+  rw [hnw] at hgw
+  cases hgw
+
+end PoolLegs
+
+/-- **Pool starts keep lock exclusivity**: per-thread start hygiene (no
+    signature lock, no reasons) over a multiset start assignment gives
+    `StartExklusiv` -- the premise the guarded race leg (`rennfrei_g_voll`)
+    takes. No distinctness is used anywhere: `wurzeln` is
+    membership-based, so the lock legs transfer to duplicates unchanged. -/
+theorem pool_startExklusiv {ws : List D.Fn}
+    {init : Faden → Σ f : D.Fn, Env D (D.params f)}
+    (hws : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0)
+    (hinit : ∀ t, (init t).1 ∈ ws) : StartExklusiv init :=
+  startExklusiv_ohne_haelt init (fun t => (hws _ (hinit t)).1)
+
 /-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
     function writes a table). -/
 theorem pool_schreibt_zeigt :
@@ -379,17 +426,33 @@ theorem poolSicher_refD_unmoeglich (K : refD.Fn → Bool) (w : refD.Fn) :
   | false => exact absurd h.1 (by decide)
 
 /-! CUTS: what is not proved.
-  * The run-level race-freedom leg (`RennfreiBis` over a multiset start)
-    is not proved here: it needs `Laufzeit.einmal` lifted (F4, specified
-    in MUSE-REPORT-245.md). Proved instead: the separation premise both
-    threads of a symmetric pair satisfy (`pool_schreibt_nicht`), jointly
-    witnessed above, with the refusal direction on `refD`.
+  * The full `RennfreiBis` over a multiset start is not proved here: that
+    needs the `einzeln` field of `AkzeptiertSpec` (and `Laufzeit.einmal`)
+    swapped to `EinzelnPool` -- specified as wave-B input in
+    MUSE-REPORT-245.md, with every bridge lemma it needs proved above
+    (`einzelnPoolB_of_einzelnB`, `einzelnPoolB_iff`, `akzeptiertSpec_pool`,
+    `einzelnPool_paar`). Proved instead, over multiset starts: the
+    unguarded-write leg per writing thread (`pool_schreibt_nicht_lauf`),
+    the guarded-leg bridge (`pool_startExklusiv`), and the separation
+    premise (`pool_schreibt_nicht`), jointly witnessed, with the refusal
+    direction on `refD`.
   * Per-core writes are not covered model-side: the surface exempts
     `accumulates … per cpu`, the model has no notion for it.
-  * No joint `_zeuge` shape beyond the one above: `poolP`'s bodies are
-    trivial by design (the witness graph never unfolds them). -/
+  * No joint `_zeuge` beyond `pool_schreibt_nicht_zeuge`: `poolP`'s bodies
+    are trivial by design (the witness graph never unfolds them), and the
+    run-level lemma takes a `LaufG` run no finite fixture supplies (same
+    standing as `rennfrei_ungeschuetzt`, which has none either). -/
 
 #print axioms Gabbro.Grammatik.pool_schreibt_nicht
 #print axioms Gabbro.Grammatik.pool_schreibt_nicht_zeuge
 #print axioms Gabbro.Grammatik.pool_schreibt_zeigt
 #print axioms Gabbro.Grammatik.poolSicher_refD_unmoeglich
+#print axioms Gabbro.Grammatik.poolSicherWB_iff
+#print axioms Gabbro.Grammatik.einzelnPoolB_iff
+#print axioms Gabbro.Grammatik.einzelnPoolB_of_einzelnB
+#print axioms Gabbro.Grammatik.einzelnPool_paar
+#print axioms Gabbro.Grammatik.akzeptiertSpec_pool
+#print axioms Gabbro.Grammatik.pool_schreibt_nicht_lauf
+#print axioms Gabbro.Grammatik.pool_startExklusiv
+#print axioms Gabbro.Grammatik.Zielsatz.PoolSicher
+#print axioms Gabbro.Grammatik.Zielsatz.EinzelnPool
