@@ -95,6 +95,14 @@ Malformed new shapes keep existing codes: `-x =>` → P004, `0(k) =>`
 - `pruefe-englisch.py`: my additions contribute zero German (verified by
   file grep); its broken ratchets (comment lines 7961 vs 7949 booked,
   sinks 5 vs 2) are pre-existing in files I did not touch.
+- `pruefe-saetze.py`: **exit 1** —
+  `FUND: 56 Kennungen ohne Satz, gebucht sind 55` — the delta is exactly
+  P045, which has no `Satz` yet. Fixing it means one entry in
+  `crates/gabbro-check/src/saetze.rs`, which is outside this lane's
+  scope: **scoped exception requested from the dispatcher** (see §7;
+  entry drafted and ready to apply on grant, P043/P044 pattern).
+- `pruefe-kennungen.py`: ALL PASS (P045 belongs to exactly one file,
+  `parse.rs`; trust surface ALL PASS).
 - `emission-pruef` not run: no emitter/doc/counter changes exist to
   move it; corpus emission is covered by `beispiele.rs` in cargo-pruef.
 
@@ -108,9 +116,37 @@ Malformed new shapes keep existing codes: `-x =>` → P004, `0(k) =>`
   start, len}` (or a `Traverse` field) plus fixing every exhaustive
   `Domaene` match and the `Traverse` literal in `emit.rs::zaehlstelle`
   — all checker files, hence wave-B scope, not this lane's.
-- The `parse.rs` TIEFE_MAX ledger line still says corpus max 7
-  (measured 8 now); SYNTAX.md has no window/int-arm section (doc lane's
-  business; EBNF untouched so `pruefe-syntax.sh` closure is unaffected).
+- The `parse.rs` TIEFE_MAX ledger line is fixed to the measured 8 in
+  this round (was 7); SYNTAX.md has no window/int-arm section (doc
+  lane's business; EBNF untouched so `pruefe-syntax.sh` closure is
+  unaffected).
+
+## 7. Requests to the dispatcher (round 2 — nothing below is applied)
+
+- **F1 scoped exception**: one `Satz` entry for P045 in
+  `crates/gabbro-check/src/saetze.rs`, P043/P044 pattern
+  (`parser.bibliothek-nutzlast`/`parser.bibliothek-rumpf`), placed
+  directly after the P044 entry. Draft ready to apply on grant:
+  name `parser.traverse-window`, `kennungen: &["P045"]`,
+  `aussage`: windowed `traverse` is read precisely and refused at the
+  reader so no pass meets a window it cannot see;
+  `vorbehalt`: shape rule of the parser only, typing/lowering belong
+  to lanes 229/234 which lift the refusal;
+  `stand: Satzstand::Gemessen`,
+  `gemessen_an`: snippet tests
+  `lane222_windowed_traverse_refused_by_name` +
+  `lane222_window_malformed_keeps_existing_codes` (no gift numbers
+  consumed per the task text),
+  `fundstelle`: `parse.rs` (`traverse`, `window`).
+  Precedent: the P042 entry arrived with its code in the same commit
+  (quoted in `pruefe-saetze.py` itself); the mark stays 55.
+- **F2 ruling**: (a) accept P045 as the wave-A handoff with lanes
+  229/234 lifting it (my recommendation, and the reviewer's — the code
+  is already that), or (b) grant a scoped wave-B exception (AST
+  window home + sentence) for me to implement. Either way the F1
+  sentence stays in scope. Do NOT want silent acceptance.
+- This branch currently touches **no** checker/Lean/emitter file; the
+  two requests above are the only scope changes on the table.
 
 ## 6. Where this lane deviates from the task letter, and why
 

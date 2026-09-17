@@ -121,7 +121,8 @@ pub struct Parser<'a> {
 /// fetter, und Debug ist es, was der Testlaeufer und `cargo run` fahren. Gemessen wird
 /// deshalb der SCHLECHTESTE Fall, nicht der bequemste.
 ///
-/// 32 steht damit **viermal ueber dem Korpus** (der kommt auf **7**) und **zweieinhalbfach
+/// 32 steht damit **viermal ueber dem Korpus** (der kommt auf **8**, gemessen 2026-09-17
+/// ueber 117 Dateien -- frueher 7) und **zweieinhalbfach
 /// unter** dem gemessenen Tod auf dem duennsten Stapel im fettesten Profil. *Eine Grenze,
 /// die nur auf dem groessten Stapel im schlanksten Profil haelt, ist keine* -- und dass sie
 /// haelt, prueft seit heute ein Test auf einem eigens 2 MiB grossen Faden nach, damit die

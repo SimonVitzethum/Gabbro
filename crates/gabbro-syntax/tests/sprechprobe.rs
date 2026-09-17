@@ -777,7 +777,7 @@ fn lane222_window_malformed_keeps_existing_codes() {
 // -- Lane 222: `TIEFE_MAX` over the corpus ------------------------------------------------
 //
 // 32 stands 4x over the corpus (the reader's own ledger line,
-// `parse.rs::TIEFE_MAX`): the deepest corpus file nests 7 deep. This
+// `parse.rs::TIEFE_MAX`): the deepest corpus file nests 8 deep. This
 // test re-measures the true parser depth over every corpus file -- a
 // bump would be a constant plus fuzz evidence, never a redesign.
 
