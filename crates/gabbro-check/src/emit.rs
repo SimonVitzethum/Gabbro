@@ -223,6 +223,15 @@ struct Namen {
     /// global `REGEL`, named once in `effects`, in the footprint and under `atomare`;
     /// it does not become a table anywhere, and nothing here widens that exemption.
     atom_arrays: HashMap<String, u128>,
+    /// **Atomic name -> its DECLARED element type (lane 221).** `atomics` above
+    /// carries the C word, and a C word has forgotten what the declaration
+    /// said: `uint32_t` no longer knows whether the source promised the whole
+    /// word or `0 .. 65535`. The fetch-add gate (`holwrap_form`) needs the
+    /// declaration, not its C image -- *a fetch-add bought by guessing a
+    /// modulus is not an improvement* (`OPUS-BERICHT-FETCHADD.md` §2.3). For
+    /// an array atomic this is the ELEMENT type, the same choice `atomics`
+    /// makes, for the same reason. A name in here is in `atomics` too.
+    atomic_elem_typs: HashMap<String, TypExpr>,
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
@@ -1557,6 +1566,7 @@ pub fn emittiere_mit(
     {
         let mut typen: Vec<(String, String)> = Vec::new();
         let mut laengen: Vec<(String, u128)> = Vec::new();
+        let mut elemtypen: Vec<(String, TypExpr)> = Vec::new();
         crate::fuer_jedes_item(baum, &mut |item| {
             if let ItemArt::Atomic(a) = &item.art {
                 // **An atomic ARRAY carries its ELEMENT type in `atomics`**, because
@@ -1576,9 +1586,11 @@ pub fn emittiere_mit(
                     {
                         typen.push((a.name.text.clone(), c));
                         laengen.push((a.name.text.clone(), n));
+                        elemtypen.push((a.name.text.clone(), f.element.clone()));
                     }
                 } else if let Some(c) = ctyp(&a.typ, &namen) {
                     typen.push((a.name.text.clone(), c));
+                    elemtypen.push((a.name.text.clone(), a.typ.clone()));
                 }
             }
         });
@@ -1589,6 +1601,13 @@ pub fn emittiere_mit(
         }
         for (n, l) in laengen {
             namen.atom_arrays.insert(n, l);
+        }
+        // **The declared element type travels beside the C word.** Both halves
+        // must resolve or neither is entered -- the same joint rule as above:
+        // a declaration the emitter cannot spell in C has no exactness to read
+        // either, and the fetch gate then stays silent (`None`, the loop).
+        for (n, t) in elemtypen {
+            namen.atomic_elem_typs.insert(n, t);
         }
     }
 
@@ -9671,8 +9690,15 @@ fn anweisung(
                     // -- a refusal is not a price this arm pays. What the clauses lose is
                     // their CONSEQUENCE, and only because no bound can be exceeded by an
                     // instruction that never loses a race. The C says so where it stands.
+                    // **The binder's declared type travels into the fetch table
+                    // (lane 221).** The wrapping rows read the wrap modulus off
+                    // the atomic's declaration -- the one place the range IS
+                    // readable for a name that lives only inside the loop the
+                    // fetch would remove. `None` (an unresolvable declaration)
+                    // answers no wrapping row; the bitwise rows never look.
+                    let binder_typ = atom_elem_typ(&x.ort, u);
                     if let (Some(hol), Some(ordnung)) = (
-                        holform(rumpf, &binder.text, u, &typ),
+                        holform(rumpf, &binder.text, u, &typ, binder_typ.as_ref()),
                         holordnung(speichern, laden),
                     ) {
                         aus.push_str(&vorlauf);
@@ -10880,6 +10906,69 @@ struct Holform<'a> {
     operand: &'a Expr,
 }
 
+/// **The declared element type of the atomic an `exchange` stands on (lane 221).**
+///
+/// A scalar atomic answers with its own declaration; an indexed one (`REGEL[r]`
+/// over `atomic REGEL : [u32; 256]`) with the ELEMENT's, the same choice
+/// `atom_target` and `Namen::atomics` make. `None` is the loop, never a guess.
+fn atom_elem_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
+    if o.suffixe.is_empty() {
+        return u.atomic_elem_typs.get(&o.basis.text).cloned();
+    }
+    if o.suffixe.len() == 1 && matches!(o.suffixe[0], OrtSuffix::Index(_)) {
+        return u.atomic_elem_typs.get(&o.basis.text).cloned();
+    }
+    None
+}
+
+/// **The fetch-add gate: `(bits, n)` of a `binder +% m` / `binder -% m` site
+/// (lane 221).** Mirrors the checker's `M153` rule through the same three
+/// helpers the general wrap lowering uses (`storage`, `intty_interval`,
+/// `exact_wrap_n`), with the binder's type read off the ATOMIC's declaration
+/// (`atom_elem_typ`) instead of off a static or parameter -- the one place the
+/// range IS readable for a name that lives only inside the loop the fetch
+/// would remove (`OPUS-BERICHT-FETCHADD.md` §2.3).
+///
+/// The operand answers the same question `wrap_form` asks a literal side: it
+/// must be a translation-time constant in `0 .. 2^N - 1` (a runtime operand is
+/// evaluated once as a fetch and once per pass as a loop -- the row-9 reason
+/// `holform` keeps, so a parameter or `let` never passes here).
+///
+/// **`None` is the loop (or `C001` further down), never a guessed modulus.**
+/// In particular `n != bits` refuses: `+%` wraps at the operands' EXACT range,
+/// and where that range is narrower than the storage word (`u32 in 0 .. 65535`,
+/// modulus 2^16) the general lowering masks (`wrap_c`) while `atomic_fetch_add`
+/// would wrap at 2^32 -- a DIFFERENT operation, silently. The accepted cases
+/// are exactly those where the general lowering would emit the UNMASKED form,
+/// plain C unsigned arithmetic, which C11 6.2.5p9 defines as modulo 2^N --
+/// the same operation `atomic_fetch_add` names. *The gate does not argue the
+/// modulus equals the width; it checks it, and the check below is the whole
+/// soundness argument.*
+fn holwrap_form(binder_typ: &TypExpr, operand: &Expr, u: &Namen) -> Option<(u32, u32)> {
+    let TypExpr::Int(i) = binder_typ else {
+        return None;
+    };
+    let (bits, signed) = storage(i)?;
+    if signed {
+        return None;
+    }
+    let (lo, hi) = intty_interval(i, u)?;
+    let n = crate::typen::exact_wrap_n(&crate::typen::IntBereich::genau(
+        bits as u8, false, lo, hi,
+    ))?;
+    if n == 0 || n > bits {
+        return None;
+    }
+    let v = constexpr_value(operand, u)?;
+    if v < 0 || v > (1i128 << n) - 1 {
+        return None;
+    }
+    if n != bits {
+        return None;
+    }
+    Some((bits, n))
+}
+
 /// **`SPRACHE.md` Part III §1 promised `atomic_fetch_*` and the emitter had only
 /// the loop -- this is the table that decides which is which** (2026-09-15).
 ///
@@ -10906,18 +10995,20 @@ struct Holform<'a> {
 ///   falls at `M104` + `M101`; a ranged `u32 in 0 .. 1000` falls at `M101` the
 ///   same way. Nothing this emitter does can change that -- the refusal is M1's
 ///   and it is right.
-/// * **The wrapping forms `t +% 1`, `t -% 1` are OUT too**, and this is the row
-///   that costs something. They are the shapes that MATCH C11's fetch-add (which
-///   wraps silently by definition), and they are what `laufzeit/sperre.gab` wants.
-///   They fall today at `C001` -- `wrap_side`/`ort_typ` resolve a bare name only
-///   through statics and parameters, never through an `exchange` binder, so the
-///   exact range cannot be read. **Lifting that refusal is a separate decision and
-///   not this table's**: the range it cannot read is the one that decides whether
-///   `+%` wraps at the storage word (`u32`, where fetch-add is exact) or at a
-///   narrower exact range (`u32 in 0 .. 65535`, where fetch-add would wrap at the
-///   WRONG modulus and be a different operation). *A fetch-add bought by guessing
-///   a modulus is not an improvement.* `messung/muse/OPUS-BERICHT-FETCHADD.md` §2
-///   carries the measurement and what would have to move.
+/// * **The wrapping forms `t +% m`, `t -% m` are IN through the fetch-add
+///   gate (lane 221).** They are the shapes that MATCH C11's fetch-add (which
+///   wraps silently by definition), and they are what `laufzeit/sperre.gab`
+///   wants -- spelled through a `folge` helper today because the direct form
+///   fell at `C001`: `wrap_side`/`ort_typ` resolve a bare name only through
+///   statics and parameters, never through an `exchange` binder, so the exact
+///   range could not be read. The gate (`holwrap_form`) reads it off the
+///   atomic's declaration instead, and accepts exactly where the wrap modulus
+///   IS the storage word (`u32`, where fetch-add is exact). Where the range is
+///   narrower (`u32 in 0 .. 65535`, where fetch-add would wrap at the WRONG
+///   modulus and be a different operation) the refusal stays -- `None` is the
+///   loop, and the loop still ends at the same `C001`, narrowed, not lifted.
+///   *A fetch-add bought by guessing a modulus is not an improvement.*
+///   `messung/muse/OPUS-BERICHT-FETCHADD.md` §2 carries the measurement.
 /// * **A body with a side condition stays a loop** -- the whole corpus shape
 ///   (`if v < GRENZE { return v + 1; } return v;`). It is not one operation and
 ///   no single instruction computes it.
@@ -10941,7 +11032,15 @@ struct Holform<'a> {
 /// `typ` is the atomic's C type. Only the eight integer words qualify: C11 defines
 /// `atomic_fetch_*` for integer atomics, and `bool`, `float` and `double` have no
 /// such instruction. The word list is the one `ganzzahlwort` writes.
-fn holform<'a>(rumpf: &'a Block, binder: &str, u: &Namen, typ: &str) -> Option<Holform<'a>> {
+/// `binder_typ` is the atomic's DECLARED element type (`atom_elem_typ`) -- the
+/// wrapping rows need the declaration, the bitwise rows never look at it.
+fn holform<'a>(
+    rumpf: &'a Block,
+    binder: &str,
+    u: &Namen,
+    typ: &str,
+    binder_typ: Option<&TypExpr>,
+) -> Option<Holform<'a>> {
     match typ {
         "uint8_t" | "uint16_t" | "uint32_t" | "uint64_t" | "int8_t" | "int16_t" | "int32_t"
         | "int64_t" => {}
@@ -10962,17 +11061,52 @@ fn holform<'a>(rumpf: &'a Block, binder: &str, u: &Namen, typ: &str) -> Option<H
     // **Spelled out, every one.** A `_ =>` here would silently answer for an
     // operator that does not exist yet, and the one thing this arm must never do
     // is give a body a DIFFERENT operation than the one written.
+    //
+    // **The binder test stands before both halves**: the bitwise rows need it
+    // for the operand side, the wrapping rows need it for the side AND the
+    // commutativity question.
+    let ist_binder = |x: &Expr| {
+        matches!(&ohne_klammern(x).art, ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == binder)
+    };
+    // **The wrapping rows (lane 221).** `t +% m` is `atomic_fetch_add` and
+    // `t -% m` is `atomic_fetch_sub` -- C11 7.17.7.5 defines both as exactly
+    // `*obj = *obj +/- arg` with the OLD value returned, wrapping silently,
+    // which is what `+%`/`-%` say and what the `let alt = …` binds.
+    if matches!(op, BinOp::PlusWrap | BinOp::MinusWrap) {
+        let ruf = if matches!(op, BinOp::PlusWrap) {
+            "atomic_fetch_add_explicit"
+        } else {
+            "atomic_fetch_sub_explicit"
+        };
+        // **Subtraction does not commute, and neither does this row.** `t -% m`
+        // computes `X - m`, which is what `atomic_fetch_sub` computes; `m -% t`
+        // computes `m - X`, which no fetch computes -- the row-7 reason, so the
+        // binder on the right stays a loop. Addition commutes modulo 2^N, so
+        // `m +% t` is the same instruction as `t +% m`.
+        let operand = if ist_binder(a) && !ist_binder(b) {
+            b.as_ref()
+        } else if matches!(op, BinOp::PlusWrap) && ist_binder(b) && !ist_binder(a) {
+            a.as_ref()
+        } else {
+            return None;
+        };
+        // The operand rides once, not once per pass, so it must be a
+        // translation-time constant (the row-9 reason, same as the bitwise
+        // rows) -- and the modulus must BE the storage width (the gate).
+        holwrap_form(binder_typ?, operand, u)?;
+        return Some(Holform { ruf, operand });
+    }
     let ruf = match op {
         BinOp::BitOder => "atomic_fetch_or_explicit",
         BinOp::BitUnd => "atomic_fetch_and_explicit",
         BinOp::BitXor => "atomic_fetch_xor_explicit",
         // `+`/`-`: unreachable through M1, see the head of this function.
-        // `+%`/`-%`: the modulus cannot be read off an `exchange` binder, see
-        // the head of this function. The rest is not a fetch form in any C.
+        // `+%`/`-%`: answered above, through the fetch-add gate -- the arms
+        // below are unreachable, and the table stays spelled out (no `_`).
+        BinOp::PlusWrap | BinOp::MinusWrap => return None,
+        // The rest is not a fetch form in any C.
         BinOp::Plus
         | BinOp::Minus
-        | BinOp::PlusWrap
-        | BinOp::MinusWrap
         | BinOp::PlusSat
         | BinOp::Mal
         | BinOp::MalWrap
@@ -10993,9 +11127,6 @@ fn holform<'a>(rumpf: &'a Block, binder: &str, u: &Namen, typ: &str) -> Option<H
     // Exactly ONE side is the bare binder; the other is a translation-time
     // constant that is not the binder. All three operators are commutative, so
     // no row of this table depends on which side that is.
-    let ist_binder = |x: &Expr| {
-        matches!(&ohne_klammern(x).art, ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == binder)
-    };
     let operand = if ist_binder(a) && !ist_binder(b) && constexpr_value(b, u).is_some() {
         b.as_ref()
     } else if ist_binder(b) && !ist_binder(a) && constexpr_value(a, u).is_some() {

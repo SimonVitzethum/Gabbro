@@ -1,0 +1,27 @@
+-- erwartet: C001
+-- **A wrapping `exchange update` body over a NARROWER exact range stays refused.**
+--
+-- `ENG` promises `u32 in 0 .. 65535`, so `t +% 1` wraps modulo 2^16.
+-- `atomic_fetch_add` would wrap at 2^32 -- a DIFFERENT operation, silently.
+-- The fetch-add gate (lane 221) checks `n == bits` and declines; the loop path
+-- ends at the same `C001` as before, narrowed, not lifted. The full-width twin
+-- (`atomic ROH : u32`, modulus 2^32) lowers to one `atomic_fetch_add` since
+-- lane 221; this file pins the side that must NOT move.
+module gift::fetch_add_narrow_range {
+
+atomic ENG : u32 in 0 .. 65535 relaxed;
+
+extern fn aufgegeben() -> never effects { diverges };
+
+impl fn zug() -> u32 in 0 .. 65535
+    effects { reads ENG, writes ENG }
+    costs   <= 300 ops
+{
+    let alt : u32 in 0 .. 65535 = ENG exchange update(t)
+        bounded 64 ops
+        on_exceeded aufgegeben
+    { return t +% 1; } publishes nothing;
+    return alt;
+}
+
+}

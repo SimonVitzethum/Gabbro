@@ -17,9 +17,13 @@
 //!
 //! What the rows measure:
 //!
-//! * the three reachable fetch forms (`t | m`, `t & m`, `t ^ m`) lower to one
-//!   instruction, on either side of the operator, in all four widths and both
-//!   signednesses;
+//! * the three reachable bitwise fetch forms (`t | m`, `t & m`, `t ^ m`) lower
+//!   to one instruction, on either side of the operator, in all four widths
+//!   and both signednesses;
+//! * the two WRAPPING forms (`t +% m`, `t -% m`), which are the ones that match
+//!   C11's silently-wrapping fetch-add, lower to `atomic_fetch_add/sub` where
+//!   the binder's declared range IS the storage word, and stay refused where
+//!   it is narrower -- the modulus is checked, never guessed;
 //! * the ordering is the JOIN of the declaration's two halves -- `relaxed`
 //!   stays `relaxed`, `release`/`acquire` becomes `acq_rel`, `seq` stays
 //!   `seq_cst`;
@@ -29,9 +33,15 @@
 //!   interval by one -- `[lo+1, hi+1] ⊆ [lo, hi]` is false for every non-empty
 //!   interval. `M104`/`M101`, not `C001`;
 //! * the WRAPPING forms, which are the ones that match C11's silently-wrapping
-//!   fetch-add, stay at `C001`: the modulus cannot be read off an `exchange`
-//!   binder, and a fetch-add bought by guessing a modulus is not an
-//!   improvement;
+//!   fetch-add, lower to one instruction where the binder's declared range is
+//!   the storage word itself, and stay at `C001` where it is narrower: `+%`
+//!   wraps at the operands' EXACT range, and that range is read off the
+//!   atomic's declaration (the one place it IS readable for an `exchange`
+//!   binder). On `u32` the modulus is 2^32 and the fetch exact; on
+//!   `u32 in 0 .. 65535` it is 2^16 and the fetch a DIFFERENT operation.
+//!   *A wait-free primitive bought by guessing a modulus is not an
+//!   improvement* -- so the gate checks `n == bits`, and
+//!   `OPUS-BERICHT-FETCHADD.md` §2 carries the measurement;
 //! * a body that merely LOOKS like a fetch form gets the loop -- the binder on
 //!   both sides, the binder on the wrong side of a non-commutative operator, a
 //!   runtime operand, a shift, a side condition, two statements, a non-integer
@@ -304,29 +314,217 @@ fn plus_zwei_faellt_genauso() {
     assert_eq!(fehler(&roh("return t + 2;")), vec!["M104", "M101"]);
 }
 
-/// **The wrapping form is the one that MATCHES C11's fetch-add, and it stays a
-/// refusal.** `atomic_fetch_add` wraps silently by definition; `+%` says wrap.
-/// But `+%` wraps at the operands' EXACT range, and that range cannot be read
-/// off an `exchange` binder (`wrap_side`/`ort_typ` resolve statics and
-/// parameters only). On `u32` the modulus would be 2^32 and the fetch exact; on
-/// `u32 in 0 .. 65535` it would be 2^16 and the fetch a DIFFERENT operation.
-/// *A wait-free primitive bought by guessing a modulus is not an improvement* --
-/// so `C001` stands, and `OPUS-BERICHT-FETCHADD.md` §2 carries what would have
-/// to move.
+/// **The wrapping form is the one that MATCHES C11's fetch-add, and over the
+/// whole word it lowers to it.** `atomic_fetch_add` wraps silently by
+/// definition; `t +% 1` over `u32` wraps modulo 2^32 -- the same operation, so
+/// one instruction and no loop. The binder's range is read off the atomic's
+/// declaration (lane 221); the operand rides as the constant it is.
 #[test]
-fn die_umlaufform_bleibt_eine_absage() {
-    let (c, codes) = erzeugt_mit_absagen(&roh("return t +% 1;"));
-    assert_eq!(codes, vec!["C001"], "the emitter refuses, the checker does not");
+fn die_umlaufform_wird_eine_anweisung() {
+    let c = erzeugt(&roh("return t +% 1;"));
     assert!(
-        !c.contains("atomic_fetch"),
-        "and no fetch was emitted on the way out:\n{c}"
+        c.contains("atomic_fetch_add_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
+        "`t +% 1` over `u32` is C11's `atomic_fetch_add`, not a loop:\n{c}"
+    );
+    assert!(
+        !c.contains("compare_exchange"),
+        "and no CAS is left beside it:\n{c}"
     );
 }
 
 #[test]
-fn die_umlaufende_differenz_bleibt_eine_absage() {
-    let (_, codes) = erzeugt_mit_absagen(&roh("return t -% 1;"));
+fn die_umlaufende_differenz_wird_eine_anweisung() {
+    let c = erzeugt(&roh("return t -% 1;"));
+    assert!(
+        c.contains("atomic_fetch_sub_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
+        "`t -% 1` over `u32` is C11's `atomic_fetch_sub`:\n{c}"
+    );
+    assert!(!c.contains("compare_exchange"), "{c}");
+}
+
+// ---------------------------------------------------------------------------
+// The fetch-add gate: full-width lowers, narrower stays refused.
+// ---------------------------------------------------------------------------
+
+/// **The poison row the report names: a narrower exact range stays refused.**
+/// `u32 in 0 .. 65535` wraps modulo 2^16; `atomic_fetch_add` would wrap at
+/// 2^32 -- a DIFFERENT operation, silently. So `C001` stands, narrowed, not
+/// lifted: the same code, firing where the modulus does not match.
+#[test]
+fn die_enge_umlaufform_bleibt_eine_absage() {
+    let src = einheit(
+        "atomic ENG : u32 in 0 .. 65535 relaxed;\n",
+        "ENG",
+        "u32 in 0 .. 65535",
+        "return t +% 1;",
+    );
+    let (c, codes) = erzeugt_mit_absagen(&src);
+    assert_eq!(codes, vec!["C001"], "the emitter refuses, the checker does not");
+    assert!(!c.contains("atomic_fetch"), "and no fetch was emitted:\n{c}");
+}
+
+/// The same gate on the subtraction row.
+#[test]
+fn die_enge_umlaufdifferenz_bleibt_eine_absage() {
+    let src = einheit(
+        "atomic ENG : u32 in 0 .. 65535 relaxed;\n",
+        "ENG",
+        "u32 in 0 .. 65535",
+        "return t -% 1;",
+    );
+    let (_, codes) = erzeugt_mit_absagen(&src);
     assert_eq!(codes, vec!["C001"]);
+}
+
+/// **A non-power-of-two range never reaches the emitter.** `0 .. 1000` holds
+/// 1001 values -- no `2^N` -- so the CHECKER owns this row (`M153`); the
+/// emitter's `C001` beside it is the echo, not the decision.
+#[test]
+fn die_unexakte_umlaufform_faellt_am_pruefer() {
+    let src = einheit(
+        "atomic GESTUFT : u32 in 0 .. 1000 relaxed;\n",
+        "GESTUFT",
+        "u32 in 0 .. 1000",
+        "return t +% 1;",
+    );
+    assert_eq!(fehler(&src), vec!["M153"], "the range rules own this");
+}
+
+/// **An explicitly written full-width range IS the word.** Exactness is a
+/// property of the interval, not of whether the source wrote a bound:
+/// `u32 in 0 .. 4294967295` promises `0 .. 2^32 - 1`, modulus 2^32.
+#[test]
+fn die_ausgeschriebene_wortweite_wird_eine_anweisung() {
+    let src = einheit(
+        "atomic VOLL : u32 in 0 .. 4294967295 relaxed;\n",
+        "VOLL",
+        "u32 in 0 .. 4294967295",
+        "return t +% 1;",
+    );
+    let c = erzeugt(&src);
+    assert!(
+        c.contains("atomic_fetch_add_explicit(&VOLL, (uint32_t)(1), memory_order_relaxed)"),
+        "{c}"
+    );
+    assert!(!c.contains("compare_exchange"), "{c}");
+}
+
+/// **All widths fetch.** `u8`/`u16`/`u64` carry their own modulus; the gate
+/// checks `n == bits` on each.
+#[test]
+fn umlauf_alle_breiten() {
+    for (dekl, name, typ, ctyp) in [
+        ("atomic W8 : u8 relaxed;\n", "W8", "u8", "uint8_t"),
+        ("atomic W16 : u16 relaxed;\n", "W16", "u16", "uint16_t"),
+        ("atomic W64 : u64 relaxed;\n", "W64", "u64", "uint64_t"),
+    ] {
+        let c = erzeugt(&einheit(dekl, name, typ, "return t +% 1;"));
+        let erwartet =
+            format!("{ctyp} alt = atomic_fetch_add_explicit(&{name}, ({ctyp})(1), memory_order_relaxed)");
+        assert!(c.contains(&erwartet), "missing `{erwartet}` in:\n{c}");
+    }
+}
+
+/// **A signed word never wraps, so it never fetches.** The checker owns this
+/// row (`M153`, unsigned-only); the gate repeats it as defense in depth for
+/// an unchecked tree.
+#[test]
+fn umlauf_vorzeichen_faellt_am_pruefer() {
+    let src = einheit(
+        "atomic VOR : i32 relaxed;\n",
+        "VOR",
+        "i32",
+        "return t +% 1;",
+    );
+    assert_eq!(fehler(&src), vec!["M153"], "the range rules own this");
+}
+
+/// **Addition commutes, so the binder may stand on the right.** `1 +% t` is
+/// `X + 1` modulo 2^32 -- the same instruction as `t +% 1`.
+#[test]
+fn umlauf_binder_rechts_add() {
+    let c = erzeugt(&roh("return 1 +% t;"));
+    assert!(
+        c.contains("atomic_fetch_add_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
+        "{c}"
+    );
+}
+
+/// **Subtraction does not, so on the right it stays refused.** `1 -% t` is
+/// `1 - X`; `atomic_fetch_sub` computes `X - 1`. A table that commuted would
+/// give this body a different operation and nothing would say so (row 7) --
+/// so the gate declines, and the loop path ends at the same `C001` as before.
+#[test]
+fn umlauf_binder_rechts_sub_bleibt_absage() {
+    let (c, codes) = erzeugt_mit_absagen(&roh("return 1 -% t;"));
+    assert_eq!(codes, vec!["C001"]);
+    assert!(!c.contains("atomic_fetch"), "`1 -% t` is not `atomic_fetch_sub`:\n{c}");
+}
+
+/// **A runtime operand stays out.** In the loop the body is re-run per pass;
+/// as a fetch operand it is evaluated once (the row-9 reason). `p` is a
+/// full-width `u32` -- exact, but not constant -- so the gate declines and the
+/// loop path ends at the same `C001` as before: the binder resolves nowhere
+/// outside the gate.
+#[test]
+fn umlauf_laufzeitoperand_bleibt_absage() {
+    let (c, codes) = erzeugt_mit_absagen(&roh("return t +% p;"));
+    assert_eq!(codes, vec!["C001"]);
+    assert!(!c.contains("atomic_fetch"), "{c}");
+}
+
+/// **A `const` name does NOT adopt (checker).** Only a literal takes the
+/// other's exact range (`wrapping_or_saturating`); a `const` carries its value
+/// point, so `t +% MASKE` falls at `M153` before the emitter is asked. The
+/// gate's const path therefore serves unchecked trees only -- mirroring
+/// `wrap_side`, which reads `konstwert` the same way -- and no checked program
+/// rides a NAME into a fetch-add. (The bitwise `MASKE` row above is unaffected:
+/// `^` carries no exactness rule.)
+#[test]
+fn umlauf_konstante_faellt_am_pruefer() {
+    assert_eq!(
+        fehler(&roh("return t +% MASKE;")),
+        vec!["M153"],
+        "the range rules own this, not `C001` and not the fetch table"
+    );
+}
+
+/// **The ordering rides along.** A `release` declaration is (store release,
+/// load acquire); ONE RMW carries their join `acq_rel` -- the same join the
+/// bitwise rows pin.
+#[test]
+fn umlauf_freigabe_wird_acq_rel() {
+    let c = erzeugt(&einheit(
+        "atomic FREI : u32 release;\n",
+        "FREI",
+        "u32",
+        "return t +% 1;",
+    ));
+    assert!(
+        c.contains("(&FREI, (uint32_t)(1), memory_order_acq_rel)"),
+        "{c}"
+    );
+}
+
+/// **The indexed atomic fetches on its element (the 140 shape).**
+/// `REGEL[r]` over `atomic REGEL : [u32; 256]` binds `t` at the ELEMENT type
+/// `u32` -- full width, so one `atomic_fetch_add` on `&REGEL[i]`, no loop.
+#[test]
+fn umlauf_indiziert_wird_eine_anweisung() {
+    let src = "module test::holform {\n\
+         atomic REG : [u32; 256] relaxed;\n\
+         extern fn aufgegeben() -> never effects { diverges };\n\
+         impl fn zug(r : u32 in 0 .. 255) -> u32 effects { reads REG, writes REG } costs <= 300 ops {\n\
+         let alt : u32 = REG[r] exchange update(t) bounded 64 ops on_exceeded aufgegeben \
+         { return t +% 1; } publishes nothing;\n\
+         return alt; }\n\
+         }\n";
+    let c = erzeugt(src);
+    assert!(
+        c.contains("atomic_fetch_add_explicit(&REG["),
+        "the fetch stands on the indexed element:\n{c}"
+    );
+    assert!(!c.contains("compare_exchange"), "{c}");
 }
 
 /// **The binder on BOTH sides is not a fetch form**: the operand would be `t`,
