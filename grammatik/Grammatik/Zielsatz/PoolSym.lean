@@ -165,7 +165,68 @@ def poolP : Programm poolD where
           (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 7)))
           (List.Perm.refl _)
 
-/-! ## The rule-13 witnesses -/
+/-! ## The decidable pool checks -/
+
+section PoolBool
+
+variable [DecidableEq D.Fn]
+
+/-- **Pool-safe, decided**: no signature lock, no reasons, and every
+    function the graph reaches writes only carriers of the list `cs`
+    that are guarded or atomic. Decides `PoolSicherW` given complete
+    member lists (mirrors `ruheB`/`ruheB_iff`). -/
+def poolSicherWB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
+    (w : D.Fn) : Bool :=
+  (D.haelt w).isEmpty && decide (D.gruende w = 0) && fs.all fun f =>
+    !(reachB P fs w f) ||
+      (cs.all fun c => !(TraegerSchreibt f c) ||
+        (!(waechterVon c).isEmpty || atomarB c))
+
+theorem poolSicherWB_iff {P : Programm D} {fs : List D.Fn}
+    {cs : List (D.Tab ⊕ D.Glob)}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    {w : D.Fn} : poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w := by
+  unfold poolSicherWB PoolSicherW PoolSicher
+  simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
+  constructor
+  · rintro ⟨⟨h1, h2⟩, h3⟩
+    refine ⟨h1, h2, fun f hf c hc => ?_⟩
+    have h4 := (List.all_eq_true.mp h3) f (hvoll f)
+    rw [hf] at h4
+    simp only [Bool.not_true, Bool.false_or] at h4
+    have h5 := (List.all_eq_true.mp h4) c (hcs c)
+    rw [hc] at h5
+    simp only [Bool.not_true, Bool.false_or] at h5
+    cases hl : waechterVon c with
+    | nil =>
+        have he : (([] : List D.Lock).isEmpty) = true := rfl
+        rw [hl, he] at h5
+        simp only [Bool.not_true, Bool.false_or] at h5
+        cases c with
+        | inl _ => simp [atomarB] at h5
+        | inr g => exact Or.inr ⟨g, rfl, h5⟩
+    | cons L _ => exact Or.inl ⟨L, waechterVon_mem.mp (hl.symm ▸ List.mem_cons_self)⟩
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨⟨h1, h2⟩, List.all_eq_true.mpr fun f _ => ?_⟩
+    cases hf : reachB P fs w f with
+    | false => rfl
+    | true =>
+        refine List.all_eq_true.mpr fun c _ => ?_
+        cases hc : TraegerSchreibt f c with
+        | false => rfl
+        | true =>
+            rcases h3 f hf c hc with ⟨L, hL⟩ | ⟨g, rfl, hg⟩
+            · have he : (waechterVon c).isEmpty = false := by
+                have hmem : L ∈ waechterVon c := waechterVon_mem.mpr hL
+                cases hl : waechterVon c with
+                | nil => rw [hl] at hmem; cases hmem
+                | cons _ _ => rfl
+              rw [he]
+              rfl
+            · have hag : atomarB (.inr g) = true := hg
+              simp [hag]
+
+end PoolBool
 
 /-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
     function writes a table). -/
