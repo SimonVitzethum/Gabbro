@@ -22,6 +22,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+/// Per-unit hosted driver generator (lane 246): one wrapper per root, one
+/// thread per root, join all, idle root present, lock primitives defined.
+/// Declared here (and not in `main.rs`) so the build owns it beside the
+/// entry rule: the driver is a build artefact, not a language change.
+#[path = "treiber.rs"]
+mod treiber;
+
 /// What a unit becomes. **`object` compiles, `program` links** -- and the difference is not a
 /// language question, which is why it stands in the manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,6 +216,35 @@ struct Eintritt {
     parameter: usize,
 }
 
+/// **What a unit declares for the driver, and what the driver needs.**
+///
+/// One walk, like the entry: a second parse for the roots would be a second
+/// reading of one text, and the two could drift the first time either walk
+/// learned to nest differently.
+#[derive(Debug, Clone)]
+struct TreiberFund {
+    /// The member path as written (`hauptA` or `modul::hauptA`).
+    gab_pfand: String,
+    /// The last segment (`hauptA`): the C name, since C has one namespace
+    /// (the same reason the entry rule records the module and does not
+    /// compare it).
+    kurz: String,
+    datei: String,
+}
+
+#[derive(Debug, Clone)]
+struct TreiberSperre {
+    name: String,
+    geteilt: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FunktionsForm {
+    parameter: usize,
+    datei: String,
+    modul: String,
+}
+
 /// The modules a unit declares and uses, **and every declaration of the entry name** -- all
 /// three out of ONE parse of each file.
 ///
@@ -221,15 +257,35 @@ struct Eintritt {
 /// drift apart the first time either walk learned to nest differently.
 fn modulkarte(
     quellen: &[(String, String)],
-) -> (BTreeSet<String>, BTreeSet<String>, Vec<Eintritt>) {
+) -> (
+    BTreeSet<String>,
+    BTreeSet<String>,
+    Vec<Eintritt>,
+    Vec<TreiberFund>,
+    Vec<TreiberSperre>,
+    BTreeMap<String, Vec<FunktionsForm>>,
+) {
     let mut deklariert = BTreeSet::new();
     let mut benutzt = BTreeSet::new();
     let mut eintritte = Vec::new();
+    let mut wurzeln = Vec::new();
+    let mut sperren = Vec::new();
+    let mut funktionen: BTreeMap<String, Vec<FunktionsForm>> = BTreeMap::new();
     for (datei, quelle) in quellen {
         let (baum, _) = gabbro_syntax::lies("<scan>", quelle);
-        sammle(&baum.items, "", datei, &mut deklariert, &mut benutzt, &mut eintritte);
+        sammle(
+            &baum.items,
+            "",
+            datei,
+            &mut deklariert,
+            &mut benutzt,
+            &mut eintritte,
+            &mut wurzeln,
+            &mut sperren,
+            &mut funktionen,
+        );
     }
-    (deklariert, benutzt, eintritte)
+    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen)
 }
 
 fn sammle(
@@ -239,6 +295,9 @@ fn sammle(
     deklariert: &mut BTreeSet<String>,
     benutzt: &mut BTreeSet<String>,
     eintritte: &mut Vec<Eintritt>,
+    wurzeln: &mut Vec<TreiberFund>,
+    sperren: &mut Vec<TreiberSperre>,
+    funktionen: &mut BTreeMap<String, Vec<FunktionsForm>>,
 ) {
     use gabbro_syntax::ast::ItemArt;
     for i in items {
@@ -250,7 +309,17 @@ fn sammle(
                     format!("{pfad}::{}", m.pfad.text())
                 };
                 deklariert.insert(voll.clone());
-                sammle(&m.items, &voll, datei, deklariert, benutzt, eintritte);
+                sammle(
+                    &m.items,
+                    &voll,
+                    datei,
+                    deklariert,
+                    benutzt,
+                    eintritte,
+                    wurzeln,
+                    sperren,
+                    funktionen,
+                );
             }
             ItemArt::Use(u) => {
                 // `use a::b::C;` names the MODULE `a::b` -- the last part is the item.
@@ -262,12 +331,69 @@ fn sammle(
             // **A function of the entry name, wherever it stands.** The module is recorded
             // and not compared: `main` is a C name, and C has one namespace -- a `main` deep
             // in a module is the same symbol as one at the top.
-            ItemArt::Funktion(f) if f.name.text == EINTRITT => eintritte.push(Eintritt {
-                datei: datei.to_string(),
-                modul: if pfad.is_empty() { String::from("(top level)") } else { pfad.to_string() },
-                oeffentlich: f.oeffentlich,
-                parameter: f.parameter.len(),
-            }),
+            ItemArt::Funktion(f) if f.name.text == EINTRITT => {
+                eintritte.push(Eintritt {
+                    datei: datei.to_string(),
+                    modul: if pfad.is_empty() {
+                        String::from("(top level)")
+                    } else {
+                        pfad.to_string()
+                    },
+                    oeffentlich: f.oeffentlich,
+                    parameter: f.parameter.len(),
+                });
+                funktionen
+                    .entry(f.name.text.clone())
+                    .or_default()
+                    .push(FunktionsForm {
+                        parameter: f.parameter.len(),
+                        datei: datei.to_string(),
+                        modul: if pfad.is_empty() {
+                            String::from("(top level)")
+                        } else {
+                            pfad.to_string()
+                        },
+                    });
+            }
+            // **Every other function, for the driver.** A `concurrent` member
+            // resolves to one of these by short name (C has one namespace, as
+            // above); the parameter count decides whether the driver can call
+            // it at all.
+            ItemArt::Funktion(f) => {
+                funktionen
+                    .entry(f.name.text.clone())
+                    .or_default()
+                    .push(FunktionsForm {
+                        parameter: f.parameter.len(),
+                        datei: datei.to_string(),
+                        modul: if pfad.is_empty() {
+                            String::from("(top level)")
+                        } else {
+                            pfad.to_string()
+                        },
+                    });
+            }
+            // **The declared starts.** The full path is kept for the refusal
+            // text; the short name is what the driver spawns.
+            ItemArt::Concurrent(c) => {
+                for p in &c.koerper {
+                    let kurz = p.teile.last().map(|s| s.text.clone()).unwrap_or_default();
+                    wurzeln.push(TreiberFund {
+                        gab_pfand: p.text(),
+                        kurz,
+                        datei: datei.to_string(),
+                    });
+                }
+            }
+            // **The locks the driver must define.** The emitter only declares
+            // them; a shared (`geteilt`) lock additionally needs the
+            // `_nimm_geteilt` / `_gib_geteilt` pair.
+            ItemArt::Lock(l) => {
+                sperren.push(TreiberSperre {
+                    name: l.name.text.clone(),
+                    geteilt: l.geteilte_haltezeit.is_some(),
+                });
+            }
             _ => {}
         }
     }
@@ -371,6 +497,136 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
     }
 }
 
+/// **What the driver step carries per unit: the resolved roots and locks.**
+///
+/// `None` where the unit declares no `concurrent` set -- then no driver is
+/// written at all. A unit whose locks exist but whose roots do not has
+/// nothing to start, so it owns no driver either.
+#[derive(Debug, Clone)]
+struct TreiberPlan {
+    wurzeln: Vec<treiber::Wurzel>,
+    sperren: Vec<treiber::Sperre>,
+}
+
+/// **The driver rule -- every declared root must be exactly one nullary body.**
+///
+/// *Measured against the checker, and the finding is that almost all of it
+/// already stands there:*
+///
+/// | case | who refused it BEFORE this rule |
+/// |---|---|
+/// | a member naming no body | **`W003`**, by name, in Gabbro (fail-closed) |
+/// | the same body twice (`concurrent { f, f }`) | **`N304`**, by name, in Gabbro |
+/// | a member taking parameters | **nobody** -- the emitted root takes them and the driver passes none |
+/// | two bodies sharing one C name | **nobody at the build** -- the checker sees modules, C sees one namespace |
+///
+/// **The last two rows are the rule's whole reason.** Both would otherwise
+/// fail at `cc` (an implicit declaration, a duplicate symbol) or -- worse --
+/// start the wrong thread. Like the entry rule this one speaks in sentences:
+/// the identifier space belongs to the checker (`pruefe-kennungen.py`,
+/// `pruefe-saetze.py`), and a manifest-level refusal has no `Satz` to give
+/// it, so the reserved codes N441-N445 stay free.
+///
+/// Unlike the entry rule there is NO visibility check: the driver includes
+/// the emitted C (`#include EINHEIT_INCLUDE`, like `laufzeit/start.c`), so a
+/// `static` root is nameable -- inclusion, not linkage.
+fn treiberregel(
+    funde: &[TreiberFund],
+    sperren: &[TreiberSperre],
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+) -> Result<Option<TreiberPlan>, String> {
+    if funde.is_empty() {
+        return Ok(None);
+    }
+    let mut gesehen: BTreeSet<&str> = BTreeSet::new();
+    let mut wurzeln = Vec::new();
+    for f in funde {
+        if !treiber::gueltiger_c_name(&f.kurz) {
+            return Err(format!(
+                "`concurrent` names `{}` in {} -- it has no C name, so the driver \
+                 cannot spawn it (names that reach C are ASCII `[A-Za-z_][A-Za-z0-9_]*`)",
+                f.gab_pfand, f.datei
+            ));
+        }
+        if !gesehen.insert(f.kurz.as_str()) {
+            // **Union, not refusal.** A body named twice -- in one block
+            // (`concurrent { f, f }`, the checker's `N304` at CHECK time) or
+            // across two (`{a, b}` and `{a, c}`) -- is still one root and one
+            // thread, so the second naming spawns nothing new. The build
+            // scans the raw sources before the checker runs, but the union
+            // contradicts no checker verdict: it starts exactly the declared
+            // set, which is what every verdict assumes.
+            continue;
+        }
+        match funktionen.get(&f.kurz) {
+            None => {
+                return Err(format!(
+                    "`concurrent` names `{}`, which resolves to no body in this unit -- \
+                     without the body the driver would not link (the checker refuses \
+                     this first as `W003`; the build refuses it here so a stale driver \
+                     is never generated over it)",
+                    f.gab_pfand
+                ));
+            }
+            Some(formen) if formen.len() > 1 => {
+                let orte: Vec<String> =
+                    formen.iter().map(|x| format!("{}::{} in {}", x.modul, f.kurz, x.datei)).collect();
+                return Err(format!(
+                    "`concurrent` names `{}`, and two bodies share that C name -- {} -- \
+                     C has one namespace and the driver could not say which thread runs which",
+                    f.gab_pfand,
+                    orte.join(", ")
+                ));
+            }
+            Some(formen) => {
+                let form = &formen[0];
+                if form.parameter != 0 {
+                    return Err(format!(
+                        "`concurrent` names `{}`, which takes {} parameter(s) -- the driver \
+                         passes none (a declared start takes none; its `Env` travels in \
+                         `E.starts`, not through `pthread_create`)",
+                        f.gab_pfand, form.parameter
+                    ));
+                }
+            }
+        }
+        wurzeln.push(treiber::Wurzel {
+            c_name: f.kurz.clone(),
+            gab_path: f.gab_pfand.clone(),
+        });
+    }
+    // **Deduplicated by name, `geteilt` ORed.** Two `lock` items of one
+    // name are legal input to the build (the build refuses nothing the
+    // checker accepts); the primitives are per NAME (`<name>_nimm` /
+    // `<name>_gib`), so one definition set serves both declarations, and the
+    // OR honours every accepted declaration -- a shared pair asked for by
+    // either declaration is defined. Contradictory `protects` sets stay the
+    // checker's question, not the driver's: the driver defines symbols, it
+    // decides no protection.
+    let mut sperr_namen: BTreeMap<&str, bool> = BTreeMap::new();
+    for s in sperren {
+        if !treiber::gueltiger_c_name(&s.name) {
+            return Err(format!(
+                "lock `{}` has no C name -- its primitives `<name>_nimm` / `<name>_gib` \
+                 would not be C functions",
+                s.name
+            ));
+        }
+        sperr_namen.entry(s.name.as_str()).and_modify(|g| *g |= s.geteilt).or_insert(s.geteilt);
+    }
+    let mut sperren_aus: Vec<treiber::Sperre> = sperr_namen
+        .into_iter()
+        .map(|(name, geteilt)| treiber::Sperre {
+            name: name.to_string(),
+            geteilt,
+        })
+        .collect();
+    sperren_aus.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(Some(TreiberPlan {
+        wurzeln,
+        sperren: sperren_aus,
+    }))
+}
 /// What one unit's build came to. **A built and a current unit both hand on the same two
 /// things** -- its interface, so its dependents can be checked against it, and its
 /// fingerprint, so a change anywhere upstream reaches them.
@@ -406,6 +662,13 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     // **Every declaration of the entry name, per unit** -- the one question the manifest can
     // answer and a single file cannot: `object` or `program` (see `eintrittsregel`).
     let mut eintritte_je_einheit: BTreeMap<String, Vec<Eintritt>> = BTreeMap::new();
+    // **Every declared start and lock, per unit** -- the driver half of the same
+    // question: which threads the unit starts, and which primitives the driver
+    // must define (see `treiberregel`).
+    let mut treiber_funde_je_einheit: BTreeMap<String, Vec<TreiberFund>> = BTreeMap::new();
+    let mut treiber_sperren_je_einheit: BTreeMap<String, Vec<TreiberSperre>> = BTreeMap::new();
+    let mut funktionen_je_einheit: BTreeMap<String, BTreeMap<String, Vec<FunktionsForm>>> =
+        BTreeMap::new();
     for e in &manifest.einheiten {
         let mut quellen = Vec::new();
         for d in &e.dateien {
@@ -417,8 +680,12 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 }
             }
         }
-        let (deklariert, benutzt, eintritte) = modulkarte(&quellen);
+        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen) =
+            modulkarte(&quellen);
         eintritte_je_einheit.insert(e.name.clone(), eintritte);
+        treiber_funde_je_einheit.insert(e.name.clone(), wurzeln);
+        treiber_sperren_je_einheit.insert(e.name.clone(), sperren);
+        funktionen_je_einheit.insert(e.name.clone(), funktionen);
         for m in deklariert {
             // **A module name belongs to at most one unit of a build.** Across the whole tree
             // it does not (`module gift` has 122 files); inside one build it must, or a `use`
@@ -472,6 +739,32 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
+            }
+            // **The dry run carries the driver rule too, for the same reason.**
+            // The roots are read out of the sources this manifest names, so a
+            // plan whose threads could not start says so before anything is
+            // written.
+            match treiberregel(
+                &treiber_funde_je_einheit[name],
+                &treiber_sperren_je_einheit[name],
+                &funktionen_je_einheit[name],
+            ) {
+                Ok(None) => {}
+                Ok(Some(plan)) => {
+                    let wurzeln: Vec<&str> =
+                        plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+                    let sperren: Vec<&str> =
+                        plan.sperren.iter().map(|s| s.name.as_str()).collect();
+                    println!(
+                        "  driver   {name}: roots [{}] locks [{}] -> {name}.treiber.c",
+                        wurzeln.join(", "),
+                        sperren.join(", ")
+                    );
+                }
+                Err(befund) => {
+                    befunde += 1;
+                    println!("  REFUSED  {name} (driver): {befund}");
+                }
             }
         }
         println!("  {} computed edge(s) between units", kanten.len());
@@ -531,12 +824,35 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             println!("REFUSED  {name}: {befund}");
             continue;
         }
-        match baue_einheit(&manifest, e, quellen, &unten, bau, pruefbau) {
+        // **The driver rule runs beside it, for the same reason.** A unit whose
+        // roots the driver cannot spawn would emit cleanly, compile cleanly and
+        // die at the linker -- or start the wrong threads. No C is written for
+        // a unit refused here, and no stale driver is left behind either.
+        let treiber_plan = match treiberregel(
+            &treiber_funde_je_einheit[name],
+            &treiber_sperren_je_einheit[name],
+            &funktionen_je_einheit[name],
+        ) {
+            Ok(plan) => plan,
+            Err(befund) => {
+                abgesagt += 1;
+                println!("REFUSED  {name} (driver): {befund}");
+                continue;
+            }
+        };
+        match baue_einheit(&manifest, e, quellen, &unten, bau, pruefbau, treiber_plan.as_ref()) {
             Ergebnis::Gebaut { gabi, abdruck } => {
                 gebaut += 1;
                 gabi_je_einheit.insert(name.clone(), gabi);
                 abdruck_je_einheit.insert(name.clone(), abdruck);
-                println!("built    {name}");
+                // The driver travels in the same line: it was written beside
+                // the `.c` above, so "built" covers it -- and a missing driver
+                // on a concurrent unit would be a lie this line must not tell.
+                if treiber_plan.as_ref().is_some_and(|p| !p.wurzeln.is_empty()) {
+                    println!("built    {name} (+ {name}.treiber.c)");
+                } else {
+                    println!("built    {name}");
+                }
             }
             Ergebnis::Aktuell { gabi, abdruck } => {
                 aktuell += 1;
@@ -674,6 +990,7 @@ fn baue_einheit(
     unten: &Unterbau,
     bau: gabbro_check::gatter::Bau,
     pruefbau: bool,
+    treiber_plan: Option<&TreiberPlan>,
 ) -> Ergebnis {
     // **The fingerprint covers the content, the compiler line, the build mode -- and the
     // fingerprints of everything this unit rests on.**
@@ -682,7 +999,19 @@ fn baue_einheit(
     // in the content, but *a change to a dependency's PRIVATE body does not move its
     // interface* -- and it does move its object file. Without the upstream fingerprints a
     // program would be reported current over a library it no longer contains.
+    //
+    // The driver needs no fingerprint of its own -- except the generator's
+    // version: it is rendered deterministically out of the same sources, so
+    // any root added or dropped moves the content above, while a TEMPLATE
+    // change with unchanged sources moves nothing. `GENERATOR_KENNUNG` closes
+    // that hole: bump it, and every driver-owning unit rebuilds once.
+    // A unit without roots owns no driver and carries no version either.
+    let treiber_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.treiber.c", e.name));
+    let treiber_erwartet = treiber_plan.is_some_and(|p| !p.wurzeln.is_empty());
     let mut teile: Vec<&[u8]> = Vec::new();
+    if treiber_erwartet {
+        teile.push(treiber::GENERATOR_KENNUNG.as_bytes());
+    }
     for (d, q) in quellen {
         teile.push(d.as_bytes());
         teile.push(q.as_bytes());
@@ -700,6 +1029,9 @@ fn baue_einheit(
     let c_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.c", e.name));
     let gabi_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.gabi", e.name));
     let objekt = PathBuf::from(&manifest.ausgabe).join(format!("{}.o", e.name));
+    // **The driver beside the emitted C.** A build artefact like the `.c`:
+    // `<unit>.treiber.c` in the shape of `laufzeit/start.c`, generated from
+    // the unit's `concurrent` sets -- never edited by hand.
     // **A `program` gets an object of its own too, and then a link.** Compiling and linking
     // in one `cc` call works for one unit and for no chain: the other objects have to stand
     // on the command line, and they are only known once the graph has been walked.
@@ -713,8 +1045,13 @@ fn baue_einheit(
     // record is exactly the gap this whole section stands against -- and since a unit hands
     // its interface to its dependents, **the interface is an artefact of this build too**: a
     // deleted `.gabi` with a valid record would leave the next unit without its bridge.
+    // The driver joins that list: a deleted `<unit>.treiber.c` with a valid
+    // record would leave a stale-or-missing pin, so it is checked too.
     if let Ok(alt) = std::fs::read_to_string(&marke) {
-        if alt.trim() == format!("{abdruck:016x}") && erzeugnis.exists() {
+        if alt.trim() == format!("{abdruck:016x}")
+            && erzeugnis.exists()
+            && (!treiber_erwartet || treiber_pfad.exists())
+        {
             if let Ok(gabi) = std::fs::read_to_string(&gabi_pfad) {
                 return Ergebnis::Aktuell { gabi, abdruck: abdruck_text };
             }
@@ -737,6 +1074,19 @@ fn baue_einheit(
     // `.gabi` on disk is not a claim that anything succeeded -- the record is the only claim.
     if let Err(err) = std::fs::write(&gabi_pfad, &gabi) {
         return Ergebnis::Abgesagt(format!("{}: {err}", gabi_pfad.display()));
+    }
+    // **The driver goes out with the C, before the compiler runs.** It is
+    // rendered, not checked: the rule above already refused what cannot be
+    // spawned. A unit without roots owns no driver, and a driver is never
+    // compiled or linked by this build -- it is the artefact the runtime half
+    // is run from, beside the `.c` it includes.
+    if let Some(plan) = treiber_plan {
+        if !plan.wurzeln.is_empty() {
+            let treiber_c = treiber::erzeuge(&e.name, &plan.wurzeln, &plan.sperren, None);
+            if let Err(err) = std::fs::write(&treiber_pfad, &treiber_c) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
+            }
+        }
     }
 
     let mut ruf = std::process::Command::new(&manifest.compiler[0]);
@@ -789,4 +1139,85 @@ fn baue_einheit(
         return Ergebnis::Abgesagt(format!("{}: {err}", marke.display()));
     }
     Ergebnis::Gebaut { gabi, abdruck: abdruck_text }
+}
+
+#[cfg(test)]
+mod treiberregel_tests {
+    use super::{treiberregel, FunktionsForm, TreiberFund, TreiberSperre};
+    use std::collections::BTreeMap;
+
+    fn fund(pfad: &str) -> TreiberFund {
+        TreiberFund {
+            gab_pfand: pfad.to_string(),
+            kurz: pfad.rsplit("::").next().unwrap_or("").to_string(),
+            datei: "u.gab".to_string(),
+        }
+    }
+
+    fn nullary() -> BTreeMap<String, Vec<FunktionsForm>> {
+        let mut m = BTreeMap::new();
+        for n in ["hauptA", "hauptB"] {
+            m.insert(
+                n.to_string(),
+                vec![FunktionsForm {
+                    parameter: 0,
+                    datei: "u.gab".to_string(),
+                    modul: "m".to_string(),
+                }],
+            );
+        }
+        m
+    }
+
+    /// **Roots form a union across blocks.** A member named in two
+    /// `concurrent` sets is one thread, not two -- the second naming spawns
+    /// nothing new and refuses nothing.
+    #[test]
+    fn wurzeln_sind_vereinigung_ueber_bloecke() {
+        let funde = vec![fund("hauptA"), fund("hauptB"), fund("hauptA")];
+        let plan = treiberregel(&funde, &[], &nullary()).expect("union holds").expect("roots");
+        let namen: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+        assert_eq!(namen, vec!["hauptA", "hauptB"], "deduplicated in order");
+    }
+
+    /// **A root with parameters is refused before any C is written.** The
+    /// driver passes no arguments, so generating a call would be a wrong
+    /// thread, not a loud one.
+    #[test]
+    fn wurzel_mit_parametern_wird_abgewiesen() {
+        let mut f = nullary();
+        f.get_mut("hauptB").expect("present")[0].parameter = 1;
+        let befund = treiberregel(&[fund("hauptB")], &[], &f).expect_err("must refuse");
+        assert!(befund.contains("1 parameter"), "the arity is named:\n{befund}");
+    }
+
+    /// **Duplicate lock declarations unite, like roots.** One primitive
+    /// set per NAME serves every declaration of it; the OR honours each one.
+    /// (`pub` duplicates collide earlier at the checker's `N039` -- "one C
+    /// name, one binding" -- so this arm answers the non-`pub` remainder.)
+    #[test]
+    fn doppelte_sperre_vereinigt_geteilt() {
+        let sperren = vec![
+            TreiberSperre {
+                name: "L".to_string(),
+                geteilt: false,
+            },
+            TreiberSperre {
+                name: "L".to_string(),
+                geteilt: true,
+            },
+        ];
+        let plan = treiberregel(&[fund("hauptA")], &sperren, &nullary())
+            .expect("holds")
+            .expect("roots");
+        assert_eq!(plan.sperren.len(), 1, "one primitive set per name");
+        assert!(plan.sperren[0].geteilt, "either declaration earns the shared pair");
+    }
+
+    /// **No roots, no driver.** A unit without a `concurrent` set owns no
+    /// artefact and draws no refusal.
+    #[test]
+    fn ohne_wurzeln_kein_treiber() {
+        assert!(treiberregel(&[], &[], &nullary()).expect("holds").is_none());
+    }
 }
