@@ -14,6 +14,7 @@ pub mod diag;
 pub mod kw;
 pub mod lex;
 pub mod parse;
+pub mod print;
 pub mod span;
 
 pub use diag::{Absage, Absagen, Stufe};

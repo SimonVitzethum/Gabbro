@@ -91,6 +91,9 @@ pub struct Parser<'a> {
     /// > **Ein Uebersetzer, der an einer Eingabe abstuerzt, sagt ueber sie gar nichts** — und
     /// > ein Absturz ist keine Absage: er hat keine Stelle, keinen Code und keinen Grund.
     tiefe: usize,
+    /// Lane 222: the deepest `tiefe` met on this run (see `tiefer`). Read
+    /// out by `parse_with_max_depth` for the corpus headroom measurement.
+    max_depth: usize,
 }
 
 /// **Die Grenze, und sie ist GEMESSEN, nicht geschaetzt.**
@@ -118,7 +121,8 @@ pub struct Parser<'a> {
 /// fetter, und Debug ist es, was der Testlaeufer und `cargo run` fahren. Gemessen wird
 /// deshalb der SCHLECHTESTE Fall, nicht der bequemste.
 ///
-/// 32 steht damit **viermal ueber dem Korpus** (der kommt auf **7**) und **zweieinhalbfach
+/// 32 steht damit **viermal ueber dem Korpus** (der kommt auf **8**, gemessen 2026-09-17
+/// ueber 117 Dateien -- frueher 7) und **zweieinhalbfach
 /// unter** dem gemessenen Tod auf dem duennsten Stapel im fettesten Profil. *Eine Grenze,
 /// die nur auf dem groessten Stapel im schlanksten Profil haelt, ist keine* -- und dass sie
 /// haelt, prueft seit heute ein Test auf einem eigens 2 MiB grossen Faden nach, damit die
@@ -127,6 +131,13 @@ pub const TIEFE_MAX: usize = 32;
 
 /// Lexes and parses a source. Refusals accumulate in `absagen`.
 pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
+    parse_with_max_depth(quelle, absagen).0
+}
+
+/// Lexes and parses a source, reporting the deepest nesting met on the
+/// run beside the tree (lane 222: the `TIEFE_MAX` headroom measurement
+/// over the corpus reads this, not a proxy count).
+pub fn parse_with_max_depth(quelle: &str, absagen: &mut Absagen) -> (Programm, usize) {
     let tokens = crate::lex::zerlege(quelle, absagen);
     let mut p = Parser {
         quelle,
@@ -137,8 +148,11 @@ pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
         pfeil_ist_suffix: true,
         im_vertrag: false,
         tiefe: 0,
+        max_depth: 0,
     };
-    p.programm()
+    let baum = p.programm();
+    let peak = p.max_depth;
+    (baum, peak)
 }
 
 impl<'a> Parser<'a> {
@@ -1786,6 +1800,12 @@ impl<'a> Parser<'a> {
 
     fn tiefer<T>(&mut self, was: impl FnOnce(&mut Self) -> Erg<T>) -> Erg<T> {
         self.tiefe += 1;
+        // Lane 222: the deepest nesting met on this run, for the corpus
+        // headroom measurement (`TIEFE_MAX` stands 4x over the corpus).
+        // One assignment beside the refusal; it changes no verdict.
+        if self.tiefe > self.max_depth {
+            self.max_depth = self.tiefe;
+        }
         let erg = if self.tiefe > TIEFE_MAX {
             let sp = self.blick().span;
             self.absage(
@@ -3934,6 +3954,14 @@ impl<'a> Parser<'a> {
         let mut zweige = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             let anfang = self.span();
+            // Lane 222: an arm opening with an integer literal -- plain or
+            // negative -- is an integer arm over an integer scrutinee
+            // (`3 =>`, `0 ..< 10 =>`). A variant arm opens with a name;
+            // the two never compete for one token.
+            if self.is_int_arm() {
+                zweige.push(self.int_arm(anfang)?);
+                continue;
+            }
             // «B35»: since 2026-08-15 `Some`/`None` are words of the vocabulary and thus no
             // longer identifiers -- as the variant name of an `option` pattern they stand
             // nonetheless, and at exactly this place.
@@ -3962,12 +3990,77 @@ impl<'a> Parser<'a> {
                 binder,
                 rumpf,
                 span: anfang.bis_zu(self.vorheriger_span()),
+                intpat: None,
             });
         }
         self.erwarte_z(Z::GeschweiftZu)?;
         Ok(MatchStmt {
             gegenstand,
             zweige,
+        })
+    }
+
+    /// Does an integer arm open here: a literal, or `-`.
+    /// A `-` before anything but a literal (`-x =>`) is still one --
+    /// `int_bound` then reports `P004`, which is what that bound is: no
+    /// number. (The fallback would say `P003` "identifier expected" at
+    /// the `-`, naming the wrong position.) No program that parsed
+    /// before opens an arm with `-`, so nothing old changes meaning.
+    fn is_int_arm(&self) -> bool {
+        matches!(self.blick().art, Art::Zahl(_)) || self.ist_z(Z::Minus)
+    }
+
+    /// One bound of an integer arm: an optional `-` and a literal.
+    /// Decimal, hex, binary and `_` separators arrive folded from the
+    /// lexer; the value stored is what the arm means, not how the
+    /// bound was spelled (`0x10` and `16` print to one canonical text).
+    fn int_bound(&mut self) -> Erg<IntBound> {
+        let start = self.span();
+        let negative = self.friss_z(Z::Minus);
+        let (value, _) = self.erwarte_zahl()?;
+        Ok(IntBound {
+            negative,
+            value,
+            span: start.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// One integer arm: `3 => …`, `-1 => …`, `0 .. 255 => …`,
+    /// `0 ..< 256 => …`. The bounds are literals only -- a computed
+    /// bound belongs to `narrow` or a guard, not to dispatch. The
+    /// `variante` placeholder carries the printed pattern (see
+    /// `MatchZweig::intpat` for why no pass can misread it); the binder
+    /// is always `None`, an integer arm binds nothing.
+    fn int_arm(&mut self, start: Span) -> Erg<MatchZweig> {
+        let lo = self.int_bound()?;
+        let pat = if self.friss_z(Z::Bereich) {
+            IntPat::Range {
+                lo,
+                hi: self.int_bound()?,
+                exclusive: false,
+            }
+        } else if self.friss_z(Z::BereichEx) {
+            IntPat::Range {
+                lo,
+                hi: self.int_bound()?,
+                exclusive: true,
+            }
+        } else {
+            IntPat::Exact(lo)
+        };
+        self.erwarte_z(Z::Doppelpfeil)?;
+        let rumpf = self.block()?;
+        let span = start.bis_zu(self.vorheriger_span());
+        let text = crate::print::int_pattern(&pat);
+        Ok(MatchZweig {
+            variante: Ident {
+                text,
+                span,
+            },
+            binder: None,
+            rumpf,
+            span,
+            intpat: Some(pat),
         })
     }
 
@@ -3983,6 +4076,24 @@ impl<'a> Parser<'a> {
         };
         self.erwarte_kw(Kw::Over)?;
         let domaene = self.domain()?;
+        // Lane 222: a window over `slots of` -- `from <start> count
+        // <len>` (the bm13 shape: start plus length). Both words are
+        // contextual vocabulary, so the word list does not move, and the
+        // decision is positional: after a complete domain only `by` or
+        // `from` may stand, so no program that parsed before changes
+        // meaning. The shape is read precisely and then refused with the
+        // pre-existing `P001` plus a handoff note (see `window`): there
+        // is no AST home for the window that keeps the checker compiling
+        // -- a new `Domaene` variant breaks its exhaustive matches and a
+        // new `Traverse` field its literal constructions -- so carrying
+        // it silently as a whole-table walk is the one thing the reader
+        // must not do. No new code is issued, so no sentence is owed;
+        // lanes 229 (checker) and 234 (lowering) lift the refusal.
+        let window = if matches!(&domaene, Domaene::SlotsVon(_)) && self.ist_kw(Kw::From) {
+            Some(self.window()?)
+        } else {
+            None
+        };
         self.erwarte_kw(Kw::By)?;
         let abstieg = match self.blick().art {
             Art::Wort(Kw::Unvisited) => {
@@ -4032,6 +4143,34 @@ impl<'a> Parser<'a> {
         };
         let invariante = self.schleifeninvariante()?;
         let rumpf = self.block()?;
+        // Lane 222: the windowed walk ends here, refused by name under
+        // the pre-existing `P001` (no new code, no sentence owed). The
+        // whole tail (run form, clauses, body) parsed above, so a
+        // malformed tail still reports its own shape error beside this
+        // one, and body errors still surface. No `Traverse` is built:
+        // nothing downstream may meet a window it cannot see. The code
+        // is the generic shape refusal; the handoff note below is what
+        // makes it a defined starting point for lanes 229/234.
+        if let Some(window_span) = window {
+            self.absage(
+                Absage::fehler(
+                    "P001",
+                    window_span,
+                    "`traverse … from … count …` names a windowed walk, and the window \
+                     has no lowering yet",
+                )
+                .mit_notiz(
+                    "the reader fixes the shape -- table, start expression, length \
+                     expression -- and refuses it here so no pass reads it as a \
+                     whole-table walk",
+                )
+                .mit_notiz(
+                    "the checker (effects and early exit, lane 229) and the lowering \
+                     (lane 234) land after this reader; they lift this refusal",
+                ),
+            );
+            return Err(Abbruch);
+        }
         Ok(Traverse {
             variable,
             gegenstand,
@@ -4043,6 +4182,21 @@ impl<'a> Parser<'a> {
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
+    }
+
+    /// `from <start> count <len>` -- the window over `slots of`
+    /// (lane 222). Both bounds are full expressions: a window whose
+    /// start is computed (`base + i`) is the bm13 shape, not a corner.
+    /// Returns the span of the whole clause for the refusal; the
+    /// bounds themselves are validated and then dropped -- the AST has
+    /// no home for them yet (see `traverse`), and a dropped bound with
+    /// no refusal would be a silence.
+    fn window(&mut self) -> Erg<Span> {
+        let head = self.erwarte_kw(Kw::From)?;
+        let _start = self.expr()?;
+        self.erwarte_kw(Kw::Count)?;
+        let _len = self.expr()?;
+        Ok(head.bis_zu(self.vorheriger_span()))
     }
 
     /// **`invariant P` at a loop -- one clause, three forms.**
