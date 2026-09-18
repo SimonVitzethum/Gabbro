@@ -306,3 +306,4 @@ import Grammatik.ArenaDyn
 import Grammatik.FremdRuf
 import Grammatik.Zielsatz.PoolSym
 import Grammatik.CFormMatch
+import Grammatik.Zielsatz.Divergenz
