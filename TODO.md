@@ -85,7 +85,8 @@ patch shape + surviving test).
 | 231 | divergence lemmas (Lean) | new file | M | 225 design |
 | 232 | hold chunking (K002) | `kosten.rs` | M | 223 |
 | 233 | syscall/fd model (Lean) | new file, no OS constants | M | 226 |
-| 234 | traverse lowering | `emit.rs` | M | 227 |
+| 234 | traverse lowering | SUPERSEDED by 252 below (234's tree predated 222/229; pins archived as `archive/234` on origin) | — | — |
+| 252 | traverse lowering, fresh tree (salvages `archive/234` pins) | `emit.rs` | M | 222, 229 merged |
 
 *Wave-B reserves: 227: N411–415 / 1072–1076; 229: N416–420 / 1077–1081 /
 151; 232: N421–425 / 1082–1086. Lean lanes (228, 231, 233) need no codes —
@@ -95,7 +96,10 @@ witnesses instead of poison probes.*
 
 | lane | wall | files owned (exclusive) | size | after |
 |---|---|---|---|---|
-| 235 | never/never-asm lowering | `emit.rs` | M | 234 |
+| 235 | never/never-asm lowering | `emit.rs` | M | 252 |
+| 249 | spill-read rule: child vs caller-frame (Teil 3 gate) | `clone.rs` | S | — |
+| 250 | `D.klon` exporter fill (O-1 remainder) | `lean_g.rs` | M | — |
+| 251 | inline-trap lowering + correspondence (Teil 3, QUEUED) | `emit.rs` | M | 252 merges, 249 green |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
 *Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
