@@ -61,8 +61,10 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     // here.** They are emitter rules with poison probes (`beispiele/gift/850`
     // -`854`), so the emitter must run for them exactly as for `C001` -- a
     // probe the emitter never sees is a probe that never bites.
+    // **Lane O-1: `C185` (the refused `child` block, `beispiele/gift/1112`)
+    // joins them for the same reason.**
     if quelle.starts_with("-- erwartet: C001")
-        || ["C180", "C181", "C182", "C183", "C184"]
+        || ["C180", "C181", "C182", "C183", "C184", "C185"]
             .iter()
             .any(|c| quelle.starts_with(&format!("-- erwartet: {c}")))
     {

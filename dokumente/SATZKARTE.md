@@ -3815,5 +3815,58 @@ happened. `nurAbstieg_zeuge_108` stays as the lock-free control.
 `schlusssatz`, `schlusssatz_104`, `schlusssatz_124` unchanged; whole library **263 jobs**
 green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §§1-10 history above.)
+## 39. The checked clone handoff: `stack`, `child`, and the (d)/(d2) premises (2026-09-18)
+
+*Opus lane O-1 (K-1). Rust: `crates/gabbro-syntax` (`SyscallDecl.stapel`,
+`StmtArt::Child`), `crates/gabbro-check/src/clone.rs` (new, `N446`-`N450`),
+`emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,
+examples `155`/`156`. Lean: `Grammatik/CloneHandoff.lean` (new),
+`Deklaration.klon`, `Laufzeit.klon`, `CloneAssume` in `Spec.lean`. Report:
+`messung/muse/OPUS-BERICHT-CLONE.md`.*
+
+**THE QUESTION** K-1 left open: a `syscall` gate can declare the raw clone call
+(number, registers, error map -- all user-made), but "the child starts on the handed
+stack and must never return into the caller's frame" had no checked shape, and the
+emitted helper stub proved it at run time (child resumes inside the helper on the new
+stack; the helper's `return` pops a garbage address).
+
+**THE SHAPE.** `syscall … stack r` names the handed register AS a stack (the one clause
+that may claim stack-ness: `N446` holds it bound/kept/answered, `N447` refuses the second
+claim); `child { … }` is the child path (`N448`: no `return`, no jump out; `N449`: no
+fall-through, via the shared `endet_immer` over the unit's `-> never` callees; `N450`: a
+gate behind the path). No new keyword (`stack`/`child` are existing contextual words);
+every exhaustive `StmtArt` match gains its arm (walk-through; `lean_g` refuses `LG004` --
+the handed stack has no G counterpart).
+
+**THE MODEL** (`CloneHandoff.lean`, new files only, `Syntax.lean` untouched). `CloneAbi`
+(`SysAbi` + stack register) with `good`, decider `cloneAbiGoodB` + soundness, three legs,
+and joint witnesses (`cloneWitness` good/decided/sound, `cloneBadWitness` failing red);
+run level `ChildNoReturn` (no entry-`rueck` in the child log), `CloneHandoff`,
+`CloneAssume` ((d2) over every reached run), `CloneStart` ((d) population duty);
+laws `cloneHandoff_empty`/`cloneAssume_empty`/`cloneStart_empty` and the joint
+`cloneHandoff_start` (start machine, arbitrary gates, reflexive run).
+
+**THE SPEC DIFF.** `Deklaration.klon` (default `[]`, `mitRuhe` maps entries to `some`);
+`Laufzeit.klon` (entries and starts are distinct populations); `GabbroZiel` gains
+`CloneAssume` (d2, assumed like the start, unused by the legs). Ripple (all gateless):
+`laufzeit_initRuhe`/`voll` take the population hypothesis (`cloneStart_empty`);
+every `gabbro_ziel` application passes `cloneAssume_empty`; `schlusssatz` + the
+`Bruecke` copy gain the (d2) conjunct; `Schlusssatz104`'s `with` maps `klon`;
+`Schlusssatz124`'s `laufzeit_w` holds vacuously.
+
+**THE EMITTER REFUSAL** (`C185`, with its probe `1112` and `beispiele.rs` harness line):
+the helper-form stub cannot lower a stack-switching gate, and the sound lowering (inline
+trap, child entered by jump) is not built -- K-1's fork (a) is the C driver outside the
+language, fork (b) the unchecked `asm` form. Until it lands, every `child` block falls
+here by name (best-effort block beside the refusal, so no `cc` verdict changes); the
+zeugnis books `child` as `UNZUGEORDNET`. Gift `1112` taken beside the reserved
+`1107`-`1111`, reported for renumbering at review.
+
+**Axioms: the standard three** for every new theorem; `#print axioms gabbro_ziel`
+exactly `[propext, Classical.choice, Quot.sound]`; whole library green; no `sorry`,
+no `native_decide`, no new `axiom`; chain count unchanged; emission markers unchanged
+(all eight new files refused at CLI level); `zaehle-gifttreffer` FEHLT 5 → 6 (1112 joins
+the emitter-code class, booked in the tool's comment).
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §§1-10 history above.)
 

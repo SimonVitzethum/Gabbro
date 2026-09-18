@@ -449,6 +449,9 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             | StmtArt::Schleife(_)
             | StmtArt::Bricht(_)
             | StmtArt::Narrow(_)
+            // **Lane O-1:** `child` binds no name itself; locals of the
+            // path are collected through `unterbloecke` below.
+            | StmtArt::Child(_)
             | StmtArt::Alloc(_)
             | StmtArt::ResetArena(_)
             | StmtArt::Sperrt(_)
@@ -8577,6 +8580,10 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             }
             StmtArt::Let(l) => e(&l.wert, aus),
             StmtArt::Sperrt(x) => benutzte_namen(&x.rumpf, aus),
+            // **Lane O-1:** names read on the child path count -- a missed
+            // name here would be silenced with `(void)` while the path reads
+            // it on the handed stack.
+            StmtArt::Child(x) => benutzte_namen(x, aus),
             // **Fehlte bis zum 2026-08-17**, und die Folge war ein `(void)k;` fuer einen
             // Parameter, den der Schleifenrumpf sehr wohl liest -- also eine stillgelegte
             // Warnung ueber einen Namen, der gar nicht tot ist.
@@ -10287,6 +10294,45 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
+        // **Lane O-1: `child { … }` (K-1).** The handoff shape (no return
+        // into the caller's frame, a never-ending tail) is the checker's
+        // business (`N448`/`N449` in `clone.rs`); the lowering is refused
+        // below (`C185`), and the block is written out best-effort beside
+        // the refusal so the refusal changes no `cc` verdict.
+        StmtArt::Child(x) => {
+            // **C185 -- the child path has no lowering in this template.**
+            // The stub above lowers the GATE as one C function; after a
+            // stack-switching call the child resumes inside that helper on
+            // the NEW stack, and the helper's `return` would pop a return
+            // address off the handed stack. The sound lowering is an inline
+            // trap with the child entered by jump (K-1's fork (b) is the
+            // unchecked `asm` form of it; fork (a) the C driver outside the
+            // language) -- until it lands, every `child` block falls here,
+            // by name, never silently. The block is still written out
+            // best-effort below, so the refusal changes no `cc` verdict.
+            syscall_code(
+                absagen,
+                "C185",
+                s.span,
+                &format!(
+                    "`child` has no lowering in the `syscall` stub template -- after a \
+                     stack-switching call the child resumes inside the gate's helper on \
+                     the handed stack, and the helper's return would pop a return address \
+                     off it. The inline trap with the child entered by jump is not built"
+                ),
+            );
+            aus.push_str(&format!(
+                "{e}/* child -- HANDOFF region: runs on the handed stack of the\n\
+                 {e} * stack-carrying gate. Never returns into the caller frame\n\
+                 {e} * (`N448`/`N449`); at run time this is its statements.\n\
+                 {e} */\n"
+            ));
+            aus.push_str(&format!("{e}{{\n"));
+            for k in &x.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+        }
     }
 }
 
@@ -10815,7 +10861,12 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // wohl angesprungen wird. (**Fuenfzehn** bis lane E1; ein Bibliothekruf
                 // springt so wenig wie ein Ruf. **Achtzehn** seit «E4»: `alloc` and
                 // `reset` lower to straight-line C and never jump.)
-                StmtArt::Let(_)
+                // **Lane O-1:** `child` itself jumps nowhere -- a `leave` /
+                // `next` inside it names an outer loop, and the descent
+                // below reaches it through `unterbloecke` like at every
+                // other block form.
+                StmtArt::Child(_)
+                | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
                 | StmtArt::ResetArena(_)
                 | StmtArt::LetSonst(_)
@@ -13250,6 +13301,8 @@ fn needs_saturation(baum: &Programm) -> bool {
                 }
             },
             StmtArt::Bricht(b) => block(&b.rumpf),
+            // **Lane O-1:** the child path is walked like any block.
+            StmtArt::Child(x) => block(x),
             StmtArt::Narrow(n) => {
                 suffixe(&n.ort)
                     || match &n.ziel {

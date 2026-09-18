@@ -1038,6 +1038,10 @@ impl<'a> Rechner<'a> {
             }
             StmtArt::Bricht(b) => self.block(&b.rumpf, lokal),
             StmtArt::Sperrt(l) => self.block(&l.rumpf, lokal),
+            // **Lane O-1:** the child path costs its body -- the handoff
+            // shape (no return, never-ending tail) changes control, not
+            // cost. The never-gate call at the tail counts like any call.
+            StmtArt::Child(x) => self.block(x, lokal),
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),

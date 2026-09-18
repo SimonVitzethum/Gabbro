@@ -3502,8 +3502,8 @@ impl<'a> Parser<'a> {
                 Absage::fehler("P033", anfang, text)
                     .mit_notiz(
                         "the forms with a block -- `if`, `match`, `traverse`, `retry`, \
-                         `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
-                         carry NO trailing semicolon",
+                         `forever`, `breaking`, `narrow … else`, `locks`, `let … else`, \
+                         `child` -- carry NO trailing semicolon",
                     )
                     // Lane 187: the offending token stands alone -- deleting it is the
                     // unique repair, and it deletes no check, only the stray token.
@@ -3539,9 +3539,9 @@ impl<'a> Parser<'a> {
                 return Err(Abbruch);
             }
         }
-        // **The thirteen statement heads are words HERE and places one token later.** See
+        // **The fourteen statement heads are words HERE and places one token later.** See
         // `ist_ortfortsetzung`: `match = 1;` assigns to a variable called `match`, and
-        // `match s { … }` is the form. Without this line every one of the thirteen would be
+        // `match s { … }` is the form. Without this line every one of the fourteen would be
         // a name a user has to avoid, and `next` alone carries 246 foreign declarator sites.
         //
         // **Lane E1: a library call in statement position.** `@` opens no other
@@ -3646,6 +3646,17 @@ impl<'a> Parser<'a> {
                 let tisch = self.erwarte_ident()?;
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::ResetArena(tisch)
+            }
+            // **Lane O-1: `child { … }` -- the clone-child path (K-1).**
+            //
+            // The head word decides, like at `reset` above: `child = 1;`
+            // continues with a place continuation and stays an assignment
+            // to a variable of that spelling. The block carries no trailing
+            // semicolon, like every other block form.
+            Art::Wort(Kw::Child) => {
+                self.pos += 1;
+                let rumpf = self.block()?;
+                StmtArt::Child(rumpf)
             }
             _ => self.zuweisung_oder_ruf()?,
         };
@@ -5681,6 +5692,7 @@ impl<'a> Parser<'a> {
     ///               "abi" ident "arch" ident "number" constexpr
     ///               "regs" "in"  "{" [ sysregbind { "," sysregbind } [ "," ] ] "}"
     ///               "regs" "out" "{" [ ident { "," ident } [ "," ] ] "}"
+    ///               { "stack" ident }
     ///               "clobbers" "{" [ identlist ] "}"
     ///               "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
     ///               [ "requires" predlist ]
@@ -5692,6 +5704,12 @@ impl<'a> Parser<'a> {
     /// sysregbind = ident ( "=" | ":" ) ident ;   (* register first, parameter second *)
     /// errmap     = ident "=>" ident ;
     /// ```
+    ///
+    /// **The `stack` clause is lane O-1 (K-1).** It names the handed-stack
+    /// register AS a stack -- the one clause that may claim stack-ness, and
+    /// only between `regs out` and `clobbers` (E4: fixed order). It repeats
+    /// in the grammar so a second claim falls by name (`N447` in
+    /// `clone.rs`), never as a knock-on `P001` at `clobbers`.
     ///
     /// **The `costs` clause is the lane-114 gap, closed.** It stands behind
     /// `effects` in the fixed E4 order and is read by the same shape an `fn`
@@ -5742,6 +5760,13 @@ impl<'a> Parser<'a> {
         self.erwarte_kw(Kw::Regs)?;
         self.erwarte_kw(Kw::Out)?;
         let regs_out = self.sysregs_out()?;
+        // **Lane O-1: the `stack` clause.** Optional, repeatable, fixed
+        // position (E4) -- between `regs out` and `clobbers`. Zero for an
+        // ordinary gate, one for a clone gate, two or more for `N447`.
+        let mut stapel = Vec::new();
+        while self.friss_kw(Kw::Stack) {
+            stapel.push(self.erwarte_ident()?);
+        }
         self.erwarte_kw(Kw::Clobbers)?;
         self.erwarte_z(Z::GeschweiftAuf)?;
         let clobbers = self.identlist_leer_erlaubt()?;
@@ -5799,6 +5824,7 @@ impl<'a> Parser<'a> {
             nummer,
             regs_in,
             regs_out,
+            stapel,
             clobbers,
             errors,
             requires,

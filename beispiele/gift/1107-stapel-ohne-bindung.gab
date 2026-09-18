@@ -1,0 +1,39 @@
+-- erwartet: N446 allein
+-- **1107 -- a `stack` clause naming a register bound in no `regs in`.**
+--
+-- The handed stack arrives in a register the declaration fills (`regs
+-- in`); `rdx` is a general register but bound nowhere here, so no handed
+-- stack ever arrives. The clause itself is well-placed (between `regs out`
+-- and `clobbers`) and single, so `N447` stays silent; the machine is
+-- implemented (`A006` silent), the map answers its errno (`N067` silent)
+-- and the promise is countable (`N322` silent). Without this rule NOTHING
+-- falls -- the emitted stub is valid C and `cc -Werror` takes it.
+--
+-- The gate is deliberately NOT the raw clone: the rule is gate-agnostic
+-- (the number lives in the user declaration, never in the tree), and the
+-- probe measures the shape, not the call. `1000` is not an OS number; `abi linux` names the
+-- template the stub is written against (986 precedent), not a kernel table.
+
+module gift1107 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rdx
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+}

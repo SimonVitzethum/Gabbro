@@ -1050,6 +1050,8 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                 scan_block(&sp.rumpf, acc);
             }
             StmtArt::Bricht(b) => scan_block(&b.rumpf, acc),
+            // **Lane O-1:** calls on the child path scan like any block.
+            StmtArt::Child(x) => scan_block(x, acc),
             StmtArt::Alloc(al) => {
                 scan_expr(&al.wert, acc);
                 if let Some(b) = &al.sonst {
@@ -3318,6 +3320,9 @@ fn contains_return(b: &Block) -> bool {
         StmtArt::LetSonst(l) => contains_return(&l.sonst),
         StmtArt::Match(m) => m.zweige.iter().any(|z| contains_return(&z.rumpf)),
         StmtArt::Bricht(b) => contains_return(&b.rumpf),
+        // **Lane O-1:** a `return` on the child path is a return -- the
+        // checker refuses it (`N448`); the exporter still sees it.
+        StmtArt::Child(x) => contains_return(x),
         _ => false,
     })
 }
@@ -3719,6 +3724,11 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         // **`let i = alloc A (v) else B;` is `Block.arenaAlloc`** (O14).
         StmtArt::Alloc(al) => tr_alloc(al, ctx, model, scope, fns, fname, out, rest, cont, endblock),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
+        // **Lane O-1:** `child` has no G form in this fragment -- the handed
+        // stack and the no-return-into-caller-frame have no counterpart in
+        // machine G (stacks are C-level). Refused by name, never skipped:
+        // the hand models bridge, like for every other LG004 shape.
+        StmtArt::Child(_) => Err(refuse("LG004", format!("`child` in {fname} has no G form in this fragment"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         StmtArt::Leave(_) | StmtArt::Next(_) => Err(refuse("LG004", format!("`leave`/`next` in {fname} has no G form in this fragment"))),
@@ -4136,6 +4146,9 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                 }
             }
             StmtArt::Sperrt(sp) => foot_block(&sp.rumpf, model, params, acc),
+            // **Lane O-1:** carriers written on the child path count -- a
+            // footprint missing them would clear a race it cannot see.
+            StmtArt::Child(x) => foot_block(x, model, params, acc),
             StmtArt::Schleife(sl) => match &**sl {
                 Schleife::Traverse(t) => {
                     if let Some(p) = &t.invariante {

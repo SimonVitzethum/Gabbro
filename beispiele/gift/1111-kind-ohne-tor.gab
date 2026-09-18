@@ -1,0 +1,29 @@
+-- erwartet: N450 allein
+-- **1111 -- a `child` path with no `stack` gate in the unit.**
+--
+-- The path itself is well-formed on purpose: no `return` inside (`N448`
+-- silent) and every path ends in the never-returning `ausgang` (`N449`
+-- silent, `endet_immer` over the unit's `-> never` callees). But no gate
+-- claims a stack anywhere in the unit, so no stack is ever handed and the
+-- path has nothing to stand on. A faulted gate still counts as a gate
+-- (its own fault names what is broken about it); here there is none at
+-- all, and only `N450` falls.
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block
+-- ending in a `_Noreturn` call, and `cc -Werror` takes it.
+
+module gift1111 {
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn kind_start(stapel : u64) -> u64
+    effects { diverges }
+    costs <= 64 ops
+{
+    child {
+        ausgang(stapel);
+    }
+    return 0;
+}
+
+}

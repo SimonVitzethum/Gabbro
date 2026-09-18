@@ -2011,6 +2011,8 @@ impl<'a> Pruefer<'a> {
             StmtArt::Bricht(b) => self.unterblock(&b.rumpf, lage, ergebnis),
             StmtArt::Sperrt(l) => self.unterblock(&l.rumpf, lage, ergebnis),
             StmtArt::Observiert(o) => self.unterblock(&o.rumpf, lage, ergebnis),
+            // **Lane O-1:** the child path types like any block.
+            StmtArt::Child(x) => self.unterblock(x, lage, ergebnis),
             StmtArt::Schleife(sch) => {
                 // **`M133`: a loop `invariant` has to name something.**
                 //
