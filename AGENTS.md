@@ -84,7 +84,10 @@ README §6 says exactly this; keep it that way.
 ## 3. The owner's standing instructions
 
 - **Push master without asking**, after checked merges. First grep the outgoing diff for keys.
-  Never push red. Never force-push.
+  Never push red. Never force-push. No new branches on GitHub: lane branches stay
+  fisch-local (`muse/NNN` never leaves the clone), Opus branches stay in their
+  worktree until their review lands — the only remote branch besides master is
+  the one under active review.
 - **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`, fisch
   `~/gabbro-muse/aNNN`, and the `gabbro-opus-*` directories.
 - **Opus agents: at most 2 at a time.** The owner said on 2026-09-14: "nutze 2 opus agenten".

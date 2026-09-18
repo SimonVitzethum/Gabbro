@@ -73,7 +73,7 @@ patch shape + surviving test).
 | 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
 | 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick | new `beispiele/` only | M | no new codes / — / 147–148 |
 | 237 | layout-factor muster: word tables + index arithmetic (`i>>2`, `(i&3)*8`), static-link budget measured | new `beispiele/` + report only, NO `m1.rs` (lane 224 owns it) | S | no new codes / — / 151–152 |
-| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | DELIVERED 2026-09-18 (`opus/clone-handoff`, 5 commits, pushed, unmerged): `stack` clause + `child` statement, checker N446–N450, emitter REFUSES by C185 (helper stub measured broken — inline-trap lowering open), Lean model + Spec (d2), axioms standard. Open: lowering+correspondence, spill-read rule, `D.klon` exporter fill, `Ziel` leg. Merge pending review decision. |
+| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | SPLIT 2026-09-18: checker + emitter TRANSFERRED (N446–N450, C185 refusal, LG004 exporter refusal; no Linux constants, verified by grep); Lean model + Spec (d2) stay on `opus/clone-handoff` for the review round. Open: Teil 3 (inline-trap lowering + correspondence), spill-read rule, `D.klon` exporter fill, `Ziel` leg. |
 
 **Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
 
@@ -85,7 +85,8 @@ patch shape + surviving test).
 | 231 | divergence lemmas (Lean) | new file | M | 225 design |
 | 232 | hold chunking (K002) | `kosten.rs` | M | 223 |
 | 233 | syscall/fd model (Lean) | new file, no OS constants | M | 226 |
-| 234 | traverse lowering | `emit.rs` | M | 227 |
+| 234 | traverse lowering | SUPERSEDED by 252 below (234's tree predated 222/229; pins archived as `archive/234` on origin) | — | — |
+| 252 | traverse lowering, fresh tree (salvages `archive/234` pins) | `emit.rs` | M | 222, 229 merged |
 
 *Wave-B reserves: 227: N411–415 / 1072–1076; 229: N416–420 / 1077–1081 /
 151; 232: N421–425 / 1082–1086. Lean lanes (228, 231, 233) need no codes —
@@ -95,7 +96,10 @@ witnesses instead of poison probes.*
 
 | lane | wall | files owned (exclusive) | size | after |
 |---|---|---|---|---|
-| 235 | never/never-asm lowering | `emit.rs` | M | 234 |
+| 235 | never/never-asm lowering | `emit.rs` | M | 252 |
+| 249 | spill-read rule: child vs caller-frame (Teil 3 gate) | `clone.rs` | S | — |
+| 250 | `D.klon` exporter fill (O-1 remainder) | `lean_g.rs` | M | — |
+| 251 | inline-trap lowering + correspondence (Teil 3, QUEUED) | `emit.rs` | M | 252 merges, 249 green |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
 *Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
