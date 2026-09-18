@@ -11,7 +11,8 @@
 --
 -- The gate is deliberately NOT the raw clone: the rule is gate-agnostic
 -- (the number lives in the user declaration, never in the tree), and the
--- probe measures the shape, not the call. `1000` is not an OS number.
+-- probe measures the shape, not the call. `1000` is not an OS number; `abi linux` names the
+-- template the stub is written against (986 precedent), not a kernel table.
 
 module gift1107 {
 
@@ -25,7 +26,7 @@ assume faden_start_vertrag
     falsifier sonde_faden_start;
 
 syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
-    abi test arch x86_64 number 1000
+    abi linux arch x86_64 number 1000
     regs in { rdi = art, rsi = stapel }
     regs out { rax }
     stack rdx

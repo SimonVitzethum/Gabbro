@@ -8,7 +8,8 @@
 -- 1107), so without this rule NOTHING falls here either.
 --
 -- Like 1107 this probe measures the shape, not the call: the gate is not
--- the raw clone, and `1000` is not an OS number.
+-- the raw clone, and `1000` is not an OS number; `abi linux` names the
+-- template the stub is written against (986 precedent), not a kernel table.
 
 module gift1108 {
 
@@ -22,7 +23,7 @@ assume faden_start_vertrag
     falsifier sonde_faden_start;
 
 syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
-    abi test arch x86_64 number 1000
+    abi linux arch x86_64 number 1000
     regs in { rdi = art, rsi = stapel }
     regs out { rax }
     stack rsi

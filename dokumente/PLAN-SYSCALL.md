@@ -98,4 +98,10 @@ additions to `Deklaration`:
   part of the assumption (foreign kernel) or of the kernel proof (Gabbro kernel).
 * **Signals, `fork`, `mmap` of executable memory, `vfork`** change control flow or the
   address space under the caller; they are out of scope for this construct and stay foreign
-  bodies until a separate design exists.
+  bodies until a separate design exists. **2026-09-18 (lane O-1, K-1): the thread-creation
+  half of that exclusion is now a checked shape** -- `syscall … stack r` plus `child { … }`
+  (`N446`-`N450`, emitter `C185`, model `CloneHandoff.lean`, premises (d)/(d2) of the goal;
+  report `messung/muse/OPUS-BERICHT-CLONE.md`). The syscall to the OS stays user-made
+  (numbers, registers, error maps never enter `crates/` or `grammatik/`); what is still
+  missing is the lowering (inline trap, child entered by jump) and the stub correspondence
+  lemma (§2 translation validation).
