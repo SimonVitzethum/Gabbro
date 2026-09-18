@@ -303,5 +303,6 @@ import Grammatik.Korpus109
 import Grammatik.Korpus125
 import Grammatik.SimPruef
 import Grammatik.ArenaDyn
+import Grammatik.ArenaReset
 import Grammatik.FremdRuf
 import Grammatik.Zielsatz.PoolSym
