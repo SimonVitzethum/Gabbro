@@ -274,6 +274,46 @@ fn refuses_extern_fn() {
     assert_eq!(w.code, "LG001", "{w}");
 }
 
+/// **Lane 250: a `stack`-carrying gate names its `D.klon` pair (LG001), and
+/// a `child` block names its entry function (LG004).** Nothing is mapped --
+/// this tree's `Deklaration` has no `klon` field and the export writes
+/// `Ax := Empty` -- so both arms still refuse; what narrowed is the name:
+/// the gate arm carries the gate and the handed register, the child arm the
+/// enclosing function. A gate WITHOUT `stack` keeps the foreign-body shape.
+#[test]
+fn refuses_child_carrying_gate_by_name() {
+    let tor = "syscall tor(a : u64, s : u64) -> u64\n\
+         abi linux arch x86_64 number 1000\n\
+         regs in { rdi = a, rsi = s }\n\
+         regs out { rax }\n\
+         stack rsi\n\
+         clobbers { rcx }\n\
+         errors { NSTACK => KeinStapel }\n\
+         effects { pure }\n\
+         kernel kern::start;\n";
+    let w = refuse_of(&einheit(&format!(
+        "{tor}impl fn f() -> u64 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n"
+    )));
+    assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("tor"), "must name the gate: {w}");
+    assert!(w.message.contains("rsi"), "must name the handed register: {w}");
+    assert!(w.message.contains("D.klon"), "must name the pair it would fill: {w}");
+    let w = refuse_of(&einheit(
+        "impl fn f() -> u64 effects { pure } costs <= 1 ops { child { return 1; } return 0; }\n",
+    ));
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("child"), "must name the statement: {w}");
+    assert!(w.message.contains("f"), "must name the entry function: {w}");
+    assert!(w.message.contains("D.klon"), "must name the pair it would fill: {w}");
+    // A gate without `stack` keeps the old foreign-body refusal, by name.
+    let schlicht = tor.replace("stack rsi\n", "");
+    let w = refuse_of(&einheit(&format!(
+        "{schlicht}impl fn f() -> u64 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n"
+    )));
+    assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("D.Ax"), "a plain gate keeps the Ax shape: {w}");
+}
+
 /// **A scalar `static` IS a `Glob`** (2026-09-15): the declaration carries
 /// `GGlob`/`gtyp`, the initialiser is the `gSp0` entry, a read is
 /// `Expr.glob`, a write is `Stmt.assignGlob` under the write right off

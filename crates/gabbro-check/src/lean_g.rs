@@ -814,6 +814,30 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // refused where the starts resolve, by name.
                 ItemArt::Entry(e) => model.wurzeln.push(e.dispatch.clone()),
                 ItemArt::Boot(b) => model.wurzeln.push(b.dispatch.clone()),
+                // **Lane 250: a `stack`-carrying gate names its `D.klon` pair.**
+                // The handoff is one model pair (gate `Ax`, entry `Fn`) per
+                // stack-carrying gate with the function its `child` path
+                // runs -- the shape `Deklaration.klon : List (Ax × Fn)`
+                // carries on the review branch (`opus/clone-handoff`, parked:
+                // this tree's `Deklaration` has no `klon` field and the export
+                // writes `Ax := Empty`). The pair can therefore not be filled
+                // here; the refusal names the gate and the handed register so
+                // the gate list the model needs is enumerated, never silent.
+                // A gate without `stack` keeps the foreign-body arm below.
+                ItemArt::Syscall(s) if !s.stapel.is_empty() => {
+                    let register = s.stapel.iter().map(|r| r.text.clone())
+                        .collect::<Vec<_>>().join(", ");
+                    return Err(refuse(
+                        "LG001",
+                        format!(
+                            "syscall gate {} hands a stack (`stack {register}`): the handoff is one \
+                             `D.klon` pair (gate `Ax`, entry `Fn`) with the function its `child` path \
+                             runs, and this exporter writes `Ax := Empty` over a `Deklaration` with no \
+                             `klon` field, so the pair for {} stays unmapped, never silent",
+                            s.name.text, s.name.text
+                        ),
+                    ));
+                }
                 // **Every remaining item kind has its OWN arm**, and each
                 // says what the specification would carry it as and what is
                 // missing. *A catch-all that happens to fire is not a refusal
@@ -3724,11 +3748,17 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         // **`let i = alloc A (v) else B;` is `Block.arenaAlloc`** (O14).
         StmtArt::Alloc(al) => tr_alloc(al, ctx, model, scope, fns, fname, out, rest, cont, endblock),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
-        // **Lane O-1:** `child` has no G form in this fragment -- the handed
-        // stack and the no-return-into-caller-frame have no counterpart in
-        // machine G (stacks are C-level). Refused by name, never skipped:
-        // the hand models bridge, like for every other LG004 shape.
-        StmtArt::Child(_) => Err(refuse("LG004", format!("`child` in {fname} has no G form in this fragment"))),
+        // **Lane 250:** `child` has no G form in this fragment -- the handed
+        // stack and the no-return-into-caller-frame are one `D.klon` pair
+        // (gate `Ax`, entry `Fn`) per stack-carrying gate with the function
+        // its `child` path runs, and this exporter writes `Ax := Empty` over
+        // a `Deklaration` with no `klon` field. Refused by name, never
+        // skipped: the refusal names the enclosing function (the entry half
+        // of the pair), the gate arm above names the gate (the `Ax` half).
+        StmtArt::Child(_) => Err(refuse("LG004", format!("`child` in {fname} has no G form: the handoff is one \
+            `D.klon` pair (gate `Ax`, entry `Fn`) with the function its `child` path runs, and this exporter \
+            writes `Ax := Empty` over a `Deklaration` with no `klon` field, so the entry {fname} stays \
+            unmapped, never silent"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         StmtArt::Leave(_) | StmtArt::Next(_) => Err(refuse("LG004", format!("`leave`/`next` in {fname} has no G form in this fragment"))),
