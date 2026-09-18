@@ -1,0 +1,60 @@
+-- erwartet: N452 allein
+-- **1117 -- the handoff after the region hands nothing (lane 249, round 2).**
+--
+-- The prefix pin of the dataflow. The gate is valid (`stack rsi` --
+-- `N446`/`N447` silent, `N450` silent), the path is well-formed (no
+-- `return`, every path ends in `ausgang` -- `N448`/`N449` silent). The
+-- child reads `y` -- and the only call handing `y`
+-- (`roher_start(art, y)`) executes AFTER the region. A call the child
+-- never lived to see hands nothing: when the region runs, `y` is still
+-- a caller-frame slot on a stack the child no longer stands on, so the
+-- read falls (`N452`). A function-wide handed set would stay wrongly
+-- silent here.
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block
+-- passing `y` on, and `cc -Werror` takes it. Same shape gate as
+-- 1107-1116 (not the raw clone, `1000` not an OS number; `abi linux`
+-- names the template the stub is written against, not a kernel table).
+
+module gift1117 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn starter(art : u64, y : u64) -> u64
+    effects { diverges }
+{
+    child {
+        ausgang(y);
+    }
+    let w = roher_start(art, y) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if w == 0 {
+        return 0;
+    }
+    return w;
+}
+
+}

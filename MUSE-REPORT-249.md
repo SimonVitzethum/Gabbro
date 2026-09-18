@@ -14,13 +14,17 @@ effects system -- in the file O-1 owns (`clone.rs`, yours-alone per the
 task), with its sentence in `saetze.rs` in the same commit, and probes
 in both directions.
 
-Delivered, all committed on the branch:
+Round 1 built the rule function-wide; review round 1 (lane 368, F1/F2
+below) moved it to prefix-handed and Satz-conformant shadowing. The
+shipped shape:
 
 - the rule + dataflow (`clone.rs`): `N451` (caller `let`-temporary,
   gate answer with it) and `N452` (caller parameter / loop / match
-  binder), each refused by name;
-- three poison probes (`1113` N451; `1115`, `1116` N452) and one
-  positive probe (`1114`, checker-clean, `-- erwartet: C185`);
+  binder), each refused by name, against the handed PREFIX (calls
+  preceding the region in program order);
+- four poison probes (`1113` N451 incl. shadow; `1115`, `1116`, `1117`
+  N452) and one positive probe (`1114`, checker-clean,
+  `-- erwartet: C185`);
 - two narrowed old probes (`1109`, `1110`: incidental caller reads
   replaced by literals, each back on its own code);
 - `./cargo-pruef` zero failures, emission ALL PASS, Lean untouched
@@ -33,41 +37,45 @@ Delivered, all committed on the branch:
 
 In `crates/gabbro-check/src/clone.rs`, beside `N446`–`N450`:
 
-- `RuferKontext { lets, umfang, uebergeben }` — per enclosing
-  function: `lets` = every `let`-family name bound outside any `child`
-  region (`Let`, `LetSonst` value + error name, `Alloc`, `AwaitLoad`,
-  `Exchange`); `umfang` = parameters + `Traverse.variable` +
-  `MatchZweig.binder` outside any region; `uebergeben` = handed slots.
+- `RuferKontext { lets, umfang }` — per enclosing function: `lets` =
+  every `let`-family name bound outside any `child` region (`Let`,
+  `LetSonst` value + error name, `Alloc`, `AwaitLoad`, `Exchange`);
+  `umfang` = parameters + `Traverse.variable` + `MatchZweig.binder`
+  outside any region.
 - `sammel_anrufer` — caller bindings, stopping at `Child` (a nested
   region binds the handed stack's locals, never the caller's).
-- `sammel_uebergeben` + `ruf_uebergabe` + `expr_uebergabe` +
-  `ort_uebergabe` — the handed set: bare-place call arguments at the
-  stack parameter's position of stack-gate calls outside any region.
+- `spill_block` + `sammel_stmt_uebergeben` + `ruf_uebergabe` +
+  `expr_uebergabe` + `ort_uebergabe` — the handed PREFIX: each
+  statement's stack-gate calls join the set every later region reads;
+  each subblock is walked with its own clone, so a call in one branch
+  hands nothing to a region in its sibling. The handed slot is the
+  bare-place argument at the stack parameter's position (parentheses
+  seen through; computed arguments hand nothing, fail-safe).
   Gate map is short-name → stack-parameter index over gates with
   exactly one `stack` clause whose stack register matches a `regs in`
   pair (a faulted gate hands nothing; its own fault names it).
-  Parentheses are seen through; any computed argument hands nothing
-  (fail-safe side). Predicates carry no handoff (not executed state).
-- `spillpfade` + `spillregion` — the outermost regions `kindpfade`
-  refuses, walked beside it. Read set is the shared
-  `crate::emit::benutzte_namen` (the `(void)k;` walker O-1 already
-  trusts for the child path) minus region-bound names minus handed
-  slots; the remainder against `lets` → `N451`, against `umfang` →
-  `N452`. One refusal per offending name per region, at the region
-  span, in name order (`BTreeSet`). A write target counts as a mention.
+  Predicates carry no handoff (not executed state).
+- `spillregion` — the outermost regions `kindpfade` refuses. Read set
+  is the shared `crate::emit::benutzte_namen` (the `(void)k;` walker
+  O-1 already trusts for the child path) minus the handed prefix;
+  the remainder against `lets` → `N451`, against `umfang` → `N452`.
+  Region binds are NOT counted off (option (a), Satz-conformant). One
+  refusal per offending name per region, at the region span, in name
+  order (`BTreeSet`). A write target counts as a mention.
 - Mootness: with no stack gate in the unit (`tore_mit_stapel == 0`)
   nothing fires here — `N450` is the fault (verified: `1111` stays
   `N450 allein`).
 
 In `crates/gabbro-check/src/saetze.rs`: `Satz { name:
 "klon.spill", kennungen: &["N451", "N452"], … }` directly after
-`klon.uebergabe`, with the four named edges as `vorbehalt`
-(faulted gate hands nothing; short-name resolution; N450 mootness;
-positional shadowing).
+`klon.uebergabe`, with five named edges as `vorbehalt` (faulted gate;
+short-name resolution; N450 mootness; post-region/sibling calls;
+loop-back-edge).
 
 Reserves verified at start, all free: no `N451`+ in `crates/`,
-max gift `1112`. Consumed: `N451`, `N452`; gifts `1113`–`1116`.
-Spare and reported: `N453`–`N455`, gift `1117`.
+max gift `1112`. Consumed: `N451`, `N452`; gifts `1113`–`1117`
+(`1117` verified free in round 2 before taking it).
+Spare and reported: `N453`–`N455`, no gift spare left of the block.
 
 ## 2. Probes and narrowings (corpus verdict diff, measured)
 
@@ -78,37 +86,39 @@ Spare and reported: `N453`–`N455`, gift `1117`.
 | `gift/1110` | `N449` + new `N452` → narrowed to `let s = 0;`, `N449 allein` | fall-through |
 | `gift/1111` | `N450 allein` → unchanged | no gate (mootness) |
 | `gift/1112` | checker-clean → unchanged | emitter refusal |
-| `gift/1113` NEW | `-- erwartet: N451 allein`, falls once (`ausgang(v)`) | gate-answer / return slot |
+| `gift/1113` NEW | `-- erwartet: N451 allein`, falls once (`ausgang(v)`; round 2 adds the shadow `let v = 7` + reread — both orders refuse under the one code) | gate-answer / return slot + shadowing |
 | `gift/1114` NEW | `-- erwartet: C185`, checker silent (worker-call shape) | legal handed read |
 | `gift/1115` NEW | `-- erwartet: N452 allein`, falls once (`ausgang(art)`) | unhanded parameter |
 | `gift/1116` NEW | `-- erwartet: N452 allein`, falls once | same value, different slot (gate took `s2`, child reads `stapel`) |
+| `gift/1117` NEW (round 2) | `-- erwartet: N452 allein`, falls once | handoff call AFTER the region hands nothing |
 
 Every new refusal is real: without its rule the emitted C of `1113`,
-`1115`, `1116` is valid `cc -Werror` input (each header states the
+`1115`, `1116`, `1117` is valid `cc -Werror` input (each header states the
 counterfactual; the `allein` harness checks it). `1116` pins that
 handedness is by slot, not by name — a name-matching rule would stay
-wrongly silent there.
+wrongly silent there; `1117` pins that it is by prefix, not by
+function — a function-wide set would stay wrongly silent there.
 
 No other corpus file moved: `jedes_beispiel_geht_sauber_durch` and
 `jedes_gift_faellt_mit_seinem_code` green in the full run.
 
-## 3. Measurements (exact lines)
+## 3. Measurements (exact lines, round-2 rerun)
 
-- `./cargo-pruef`: `== exit 0; failing tests: 0` (run twice: after the
-  rule, and after Satz + probes + narrowings).
+- `./cargo-pruef`: `== exit 0; failing tests: 0` (round 1 twice,
+  round 2 twice: after the fixes, and after Satz + `1117` + `1113`
+  extension).
 - `python3 instrumente/pruefe-saetze.py`: exit 0 —
-  `425 Kennungen, 176 Saetze, 55 ohne Satz, 0 erfunden`
-  (was 423/175; the `ohne Satz` count holds).
+  `425 Kennungen, 176 Saetze, 55 ohne Satz, 0 erfunden`.
 - `python3 instrumente/pruefe-kennungen.py`: `KENNUNGEN: ALL PASS`,
   `QUELLENVERTRAUEN: ALL PASS`.
-- `python3 instrumente/zaehle-gifttreffer.py`: 733 files (729 + 4 new);
-  sauber 520, begleitet 160, **verdeckt 41 — unchanged** (pre-existing
-  drift per OPUS-BERICHT-CLONE, none mine); FEHLT 5 → 7 = `1112` + new
-  `1114` (the emitter-code class, checker-silent by construction).
-  `--lang` confirms `1109`/`1110`/`1111`/`1113`/`1115`/`1116` sauber.
-  Marks re-booked by the merger, as with O-1.
+- `python3 instrumente/zaehle-gifttreffer.py`: 734 files (729 + 5 new);
+  begleitet 160, **verdeckt 41 — unchanged** (pre-existing drift per
+  OPUS-BERICHT-CLONE, none mine); FEHLT 5 → 7 = `1112` + new `1114`
+  (the emitter-code class, checker-silent by construction).
+  `--lang` confirms `1109`/`1110`/`1111`/`1113`/`1115`/`1116`/`1117`
+  sauber. Marks re-booked by the merger, as with O-1.
 - `./emission-pruef`: `== exit 0`, `EMISSION: ALL PASS`
-  (37 durchgestochen, 286/286). `MARKE_EMIT*` untouched: all four new
+  (37 durchgestochen, 286/286). `MARKE_EMIT*` untouched: all five new
   files refuse at CLI level (checker errors / `C185`).
 - `./lean-bau`: `Build completed successfully (280 jobs)` (no Lean
   file touched; the line the lane rules ask for).
@@ -141,17 +151,35 @@ must carry.
 
 ## 5. What is NOT in this lane (open / for the merger)
 
-- `N453`–`N455`, gift `1117`: spare, unassigned.
+- `N453`–`N455`: spare, unassigned. Gift block `1113`–`1117` fully
+  spent (`1117` taken in round 2 after re-verifying next-free).
 - Docs: `SYNTAX.md` §12.1 and `SATZKARTE.md` §39 still describe
   `N446`–`N450` only — out of scope here (`clone.rs`, `saetze.rs`,
   tests/probes only); the spill sentences belong there at merge.
 - Lean: no model change per the task (the handoff premise (d2) is
   O-1's; a spill leg from the lowering is §2 work).
 - The `allein` counterfactuals assume the emitter keeps writing the
-  child block best-effort beside `C185`; the day it stops, the three
+  child block best-effort beside `C185`; the day it stops, the four
   poison probes ask to be re-classified (same mechanism as `662`).
 
-## 6. What I believe is wrong in this task
+## 6. Review round 1 (lane 368) — F1/F2, both fixed here
+
+- **F1 (handed set function-wide):** reproduced (`0 errors` on the
+  post-region handoff), fixed by carrying the handed PREFIX down
+  `spill_block` — sibling branches cloned, region reads only what
+  precedes it. Pinned by new probe `1117`; `155`/`156`/`1114`
+  re-verified silent (their handing calls precede their regions).
+- **F2 (shadowing):** reproduced (pre-definition read silent), fixed
+  with option (a) — region binds not counted off, exactly what the
+  (already-merged) vorbehalt (4) promised, so claim and code agree
+  without a sentence change in that leg. The benign shadow pays the
+  same refusal (soundness first); pinned by extending `1113` with
+  both orders under the one code. Option (b) declined: it needs a
+  parallel position-tracking walker beside `benutzte_namen`, and this
+  tree's own lesson (`emit.rs`, W7) is that two implementations of one
+  question drift.
+
+## 7. What I believe is wrong in this task
 
 - Nothing load-bearing. Two notes: (a) the wave preamble says the lane
   is an independent reviewer that changes no file, while §-1 and the
