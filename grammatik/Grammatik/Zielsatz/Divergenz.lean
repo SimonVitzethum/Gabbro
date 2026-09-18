@@ -250,4 +250,372 @@ theorem nieZurueck_blatt_frei {D : Deklaration} {M : RufMaschineG D} {t : Faden}
     rw [hhead] at heq
     cases heq
 
+/-! ## 5. Witness declaration: one table, a writer that diverges, a `-> never` axiom -/
+
+/-- Signature of `schreib`: one `.int 0 10` parameter, no result, holds
+    the lock, may write the table. -/
+def divSigW : Signatur Unit Empty Unit Empty where
+  params := [.int 0 10]
+  erg := none
+  gruende := 0
+  haelt := [()]
+  schreibt := fun _ => true
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+/-- Signature of `lies`: no parameters, one `.int 0 100` result, holds the
+    lock, writes nothing. -/
+def divSigR : Signatur Unit Empty Unit Empty where
+  params := []
+  erg := some (.int 0 100)
+  gruende := 0
+  haelt := [()]
+  schreibt := fun _ => false
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+/-- The witness declaration: one table `konto` of 2 slots with one
+    `.int 0 100` field, guarded by the single lock `m`; `schreib` is
+    `true`, `lies` is `false`; and one axiom -- the accepted `asm` shape of
+    a `-> never` routine (`aerg = some .never`, writes nothing). -/
+def divD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 2
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 100
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => nomatch e
+  nutzlast := fun e => nomatch e
+  atomar := fun e => nomatch e
+  geteilt := fun _ => true
+  ggeteilt := fun e => nomatch e
+  Lock := Unit
+  decLock := inferInstance
+  rang := fun _ => 0
+  maskiert := fun _ => false
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun e => nomatch e
+  braucht := fun _ => [.inl ()]
+  gbraucht := fun e => nomatch e
+  eigner := fun _ => []
+  Fn := Bool
+  sig := fun | true => 0 | false => 1
+  sigNr := fun | 0 => divSigW | _ => divSigR
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Unit
+  aparams := fun _ => []
+  aerg := fun _ => some .never
+  aschreibt := fun _ _ => false
+  agschreibt := fun _ g => nomatch g
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t _ => by decide
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun e => nomatch e
+
+/-- The two function ids: `schreib` (`true`) and `lies` (`false`). -/
+def divSchreib : divD.Fn := show divD.Fn from true
+
+def divLies : divD.Fn := show divD.Fn from false
+
+/-- The axiom IS `-> never`: the accepted `asm` shape. -/
+theorem divAx_never : divD.aerg () = some .never := rfl
+
+/-- End holdings of `schreib`: the lock. -/
+theorem divSchreib_ende :
+    (vertragVon divD divSchreib).ende = [Res.held (D := divD) ()] := rfl
+
+/-- The table access is allowed holding the lock. -/
+theorem divDarf : darf divD () [Res.held (D := divD) ()] := by
+  intro w h
+  simp only [divD] at h
+  have e : w = Sum.inl () := List.mem_singleton.mp h
+  have hh : w ∈ divD.braucht () := h
+  rw [e] at hh ⊢
+  exact List.mem_singleton.mpr rfl
+
+/-- Parameters of `schreib`, by computation. -/
+theorem divSchreib_params : divD.params divSchreib = [.int 0 10] := rfl
+
+/-- The argument of the witness run: 7 in `.int 0 10`. -/
+def divRho7 : Env divD (divD.params divSchreib) :=
+  divSchreib_params.symm ▸ (.cons ⟨7, by decide, by decide⟩ .nil :
+    Env divD [.int 0 10])
+
+/-- `schreib` holds the lock: start equals end. -/
+theorem divSchreib_start : Signatur.anfang divD (divD.signatur divSchreib) =
+    [Res.held (D := divD) ()] := rfl
+
+/-- Same access right at the `schreib` end holdings. -/
+theorem divDarfSchreib : darf divD () (vertragVon divD divSchreib).ende := by
+  rw [divSchreib_ende]
+  exact divDarf
+
+/-- Index `0` into the two-slot table, in the `schreib` context. -/
+def divIdx : Expr divD [.int 0 10] [Res.held (D := divD) ()]
+    (.index (divD.count ())) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+/-- The cap value `100` in range. -/
+def divHundert : Expr divD [.int 0 10] [Res.held (D := divD) ()] (.int 0 100) :=
+  .weiter (by decide) (by decide) (.lit 100)
+
+/-- The `schreib` write: `konto[0] := 100`. -/
+def divWriteSt : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
+    (vertragVon divD divSchreib).ende (vertragVon divD divSchreib).ende :=
+  .assignSlot () () divIdx divHundert (by decide) divDarfSchreib
+
+/-- The write at the lock holdings. -/
+def divWriteStAt : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
+    [Res.held (D := divD) ()] [Res.held (D := divD) ()] :=
+  divSchreib_ende ▸ divWriteSt
+
+/-- The accepted diverging loop: `forever () invariant true {}` -- the
+    model shape of lane 225's `never-forever` acceptance (un-leavable body,
+    named `progress` assumption `()` as the exit evidence). -/
+def divSchleife : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
+    [Res.held (D := divD) ()] [Res.held (D := divD) ()] :=
+  .forever () .wahr .nil
+
+/-- `schreib` body: write the cap, then diverge. The `ret` is unreachable
+    but well-typed -- exactly the accepted `-> never`-shaped body. -/
+def divRumpfW :
+    Endblock divD (vertragVon divD divSchreib) false [.int 0 10]
+      [Res.held (D := divD) ()] :=
+  .cons divWriteStAt (.cons divSchleife (.ret .keine (by rfl)))
+
+/-- `lies` holds the lock: start equals end. -/
+theorem divLies_start : Signatur.anfang divD (divD.signatur divLies) =
+    [Res.held (D := divD) ()] := rfl
+
+/-- Index `0` in the `lies` body context, at the start holdings. -/
+def divIdxBodyR : Expr divD [] (Signatur.anfang divD (divD.signatur divLies))
+    (.index (divD.count ())) :=
+  divLies_start ▸
+    (.weiter (by decide) (by decide) (.lit 0) :
+      Expr divD [] [Res.held (D := divD) ()] (.index (divD.count ())))
+
+/-- `lies` locks the table in its body context. -/
+theorem divDarfBodyR :
+    darf divD () (Signatur.anfang divD (divD.signatur divLies)) := by
+  rw [divLies_start]
+  exact divDarf
+
+/-- `lies` body: return `konto[0]`. -/
+def divRumpfR :
+    Endblock divD (vertragVon divD divLies) false []
+      (Signatur.anfang divD (divD.signatur divLies)) :=
+  .ret (.wert (.slot () () divIdxBodyR divDarfBodyR)) (by rfl)
+
+/-- The program: `schreib` writes then diverges, `lies` reads; every
+    contract `true` (nothing is claimed beyond the divergence shapes). -/
+def divP : Programm divD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | true => divSchreib_start ▸ divRumpfW
+    | false => divLies_start ▸ divRumpfR
+
+/-- The witness oracle: the never-axiom keeps the world, answers raw `0`
+    (which never fits `never`); no registers, nothing visible. -/
+def divO : Orakel divD where
+  wirkt := fun _ σ _ => (σ, 0)
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The start memory: both slots read `0`. -/
+def divSp0 : Speicher divD :=
+  ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
+
+/-- Start slot value: `0`. -/
+theorem divSp0_slot :
+    divSp0.slots () 0 () = (⟨0, by decide, by decide⟩ :
+      Wert divD (divD.typ () ())) := rfl
+
+/-- Thread start: thread 0 runs `lies`, thread 1 runs `schreib 7`. -/
+def divInit : Faden → Σ f : divD.Fn, Env divD (divD.params f)
+  | 0 => ⟨divLies, Env.nil⟩
+  | _ => ⟨divSchreib, divRho7⟩
+
+/-! ## 6. The witness run: lock, write, then the head stands at `forever` -/
+
+/-- The start machine for the witness run. -/
+def divM0F : RufMaschineF divD := RufStartF divP divSp0 divInit
+
+/-- The lock is free at the start: every trace is empty. -/
+theorem divFrei0F : RufFreiF divM0F 1 (()) := by
+  intro g hne hmem
+  have e : (divM0F.faeden g).spur = [] := rfl
+  have hnil : offen (divM0F.faeden g).spur = [] := by rw [e]; rfl
+  have h2 : (()) ∈ ([] : List divD.Lock) := hnil ▸ hmem
+  exact (List.mem_nil_iff _).mp h2 |>.elim
+
+/-- Thread 1 holds nothing yet. -/
+theorem divSelf0F : (() : divD.Lock) ∉ offen (divM0F.faeden 1).spur := by
+  intro hmem
+  have e : (divM0F.faeden 1).spur = [] := rfl
+  have hnil : offen (divM0F.faeden 1).spur = [] := by rw [e]; rfl
+  have h2 : (()) ∈ ([] : List divD.Lock) := hnil ▸ hmem
+  exact (List.mem_nil_iff _).mp h2 |>.elim
+
+/-- Thread 1 holds nothing, so the rank side is vacuous. -/
+theorem divRang0F (K : divD.Lock) (hK : K ∈ offen (divM0F.faeden 1).spur) :
+    divD.rang K < divD.rang (()) := by
+  have e : (divM0F.faeden 1).spur = [] := rfl
+  have hnil : offen ([] : List (Ereignis divD)) = [] := rfl
+  rw [e, hnil, List.mem_nil_iff] at hK
+  exact absurd hK (by decide)
+
+/-- Step A: thread 1 takes the lock. -/
+def divM1F : RufMaschineF divD :=
+  ⟨divM0F.speicher,
+   rufUpdateF divM0F.faeden 1
+     ⟨(divM0F.faeden 1).stapel, (divM0F.faeden 1).kopf,
+      Ereignis.nimmt () (offen (divM0F.faeden 1).spur) :: (divM0F.faeden 1).spur,
+      (divM0F.faeden 1).log⟩,
+   divM0F.lauf ++ rufEigenF 1 [Ereignis.nimmt () (offen (divM0F.faeden 1).spur)],
+   divM0F.start⟩
+
+theorem divSchrittAF :
+    RufSchrittF divP divO 0 divM0F 1 divM1F := by
+  unfold divM1F
+  exact RufSchrittF.nimmt divM0F 1 () divSelf0F (fun K hK => divRang0F K hK)
+    divFrei0F
+
+theorem divReachAF : RufErreichbarF divP divO 0 divM0F divM1F :=
+  RufErreichbarF.schritt _ _ 1 RufErreichbarF.start divSchrittAF
+
+/-- Thread 1 holds the lock exactly after step A. -/
+theorem divM1Fhaelt :
+    HeldGenau [Res.held (D := divD) ()]
+      (offen (divM1F.faeden 1).spur) := by
+  intro L
+  have eL : L = () := by cases L <;> rfl
+  have eH : offen (divM1F.faeden 1).spur = [()] := rfl
+  rw [eH, eL]
+  constructor
+  · intro hL
+    have heq : Res.held (D := divD) L = Res.held (D := divD) () :=
+      (List.mem_singleton.mp hL)
+    cases heq
+    exact List.mem_singleton.mpr rfl
+  · intro hL
+    have heq : L = () :=
+      (List.mem_singleton.mp (eH ▸ hL))
+    cases heq
+    exact List.mem_singleton.mpr rfl
+
+/-- The evaluated index: `0`. -/
+def divK0 : Int := 0
+
+/-- The evaluated cap: `100` in range. -/
+def divV100 : Wert divD (.int 0 100) := ⟨100, by decide, by decide⟩
+
+/-- Step B: thread 1 fires the writing leaf `konto[0] := 100`. The head
+    after the step stands at the diverging `forever`. -/
+def divM2F : RufMaschineF divD :=
+  ⟨(((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+      (divIdx.orte ++ divHundert.orte)).schreibSlot () [Res.held (D := divD) ()]
+      divK0 () divV100).speicher,
+   rufUpdateF divM1F.faeden 1
+     ⟨(divM1F.faeden 1).stapel,
+      ⟨(divM1F.faeden 1).kopf.f, (divM1F.faeden 1).kopf.rho,
+       (divM1F.faeden 1).kopf.s0,
+       ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
+        .cons divSchleife (.ret .keine (by rfl))⟩⟩,
+      (((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+        (divIdx.orte ++ divHundert.orte)).schreibSlot () [Res.held (D := divD) ()]
+        divK0 () divV100).spur,
+      (divM1F.faeden 1).log⟩,
+   divM1F.lauf ++ rufEigenF 1
+     [Ereignis.zugriff () true [Res.held (D := divD) ()]
+       (divM1F.weltVon 1).haelt],
+   divM1F.start⟩
+
+theorem divSchrittBF : RufSchrittF divP divO 0 divM1F 1 divM2F := by
+  have hhead : (divM1F.faeden 1).kopf.rest =
+      ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
+        .cons divWriteStAt
+          (.cons divSchleife (.ret .keine (by rfl)))⟩ := rfl
+  have hstep : (execStmt divO 0 keinRuf divWriteStAt
+      (divM1F.weltVon 1) divRho7) =
+      Ausgang.ok (D := divD) (V := vertragVon divD divSchreib)
+        (((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+          (divIdx.orte ++ divHundert.orte)).schreibSlot ()
+          [Res.held (D := divD) ()] divK0 () divV100) divRho7 := rfl
+  have hneu : (((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+      (divIdx.orte ++ divHundert.orte)).schreibSlot () [Res.held (D := divD) ()]
+      divK0 () divV100).spur =
+      [Ereignis.zugriff () true [Res.held (D := divD) ()]
+        (divM1F.weltVon 1).haelt] ++ (divM1F.faeden 1).spur := rfl
+  have hkn : ∀ (L : divD.Lock) (h : List divD.Lock),
+      Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
+        [Res.held (D := divD) ()] (divM1F.weltVon 1).haelt] := by
+    intro L h hm
+    simp at hm
+  exact RufSchrittF.blatt divM1F 1 false [.int 0 10]
+    [Res.held (D := divD) ()] [Res.held (D := divD) ()]
+    divWriteStAt _ divRho7 rfl hhead divM1Fhaelt _ _ _ hstep hneu hkn
+
+theorem divReachBF : RufErreichbarF divP divO 0 divM0F divM2F :=
+  RufErreichbarF.schritt _ _ 1 divReachAF divSchrittBF
+
+/-- `divM0F` IS the start machine. -/
+theorem divM0F_start : divM0F = RufStartF divP divSp0 divInit := rfl
+
+/-- The witness run: lock, then the writing leaf -- reached from start. -/
+theorem divB_erreicht :
+    RufErreichbarF divP divO 0 (RufStartF divP divSp0 divInit) divM2F := by
+  rw [← divM0F_start]
+  exact divReachBF
+
+/-- The final memory carries the written cap at `konto[0]`. -/
+theorem divMB_slot : divM2F.speicher.slots () 0 () = divV100 := by
+  have hhit := storeSlot_hit (D := divD)
+    ((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+      (divIdx.orte ++ divHundert.orte)) () divK0 () divV100
+  have k0 : divK0 = (0 : Int) := rfl
+  have hmem : divM2F.speicher.slots () 0 () =
+      ((((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
+        (divIdx.orte ++ divHundert.orte)).storeSlot ()
+        divK0 () divV100).slots () 0 ()) := rfl
+  rw [k0] at hhit
+  rw [hmem, k0]
+  exact hhit
+
+/-- Memory really moved: `konto[0]` reads `100`, the start reads `0`. -/
+theorem divB_schreibt : divM2F.speicher.slots () 0 () ≠
+    divSp0.slots () 0 () := by
+  have h100 := divMB_slot
+  have h0 : divSp0.slots () 0 () =
+      (⟨0, by decide, by decide⟩ : Wert divD (divD.typ () ())) := rfl
+  rw [h100, h0]
+  intro hcon
+  have hn : (divV100.n) = ((⟨0, by decide, by decide⟩ :
+      Wert divD (divD.typ () ())).n) := congrArg Zahl.n hcon
+  simp [divV100] at hn
+
+/-- After step B the head stands at the diverging `forever`. -/
+theorem divM2kopf : (divM2F.faeden 1).kopf.rest =
+    ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
+      .cons divSchleife (.ret .keine (by rfl))⟩ := rfl
+
 end Gabbro.Grammatik.Zielsatz
