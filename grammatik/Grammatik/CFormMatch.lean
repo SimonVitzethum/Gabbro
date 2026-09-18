@@ -206,4 +206,249 @@ theorem wahl_none_weigert {arms : List IArm} {x : Int}
   rw [hmiss] at hi
   cases hi
 
+/-! ## 3. Exhaustiveness: covered exactly, or with a default -/
+
+/-- An integer match: arms plus whether a default arm stands.
+    The default is EXPLICIT (written by the emitter as `default:`,
+    admitted by the checker) -- never an inserted catch-all. -/
+structure IntMatch where
+  arme : List IArm
+  hatDefault : Bool
+
+/-- Exhaustiveness over `lo .. hi` (the scrutinee's TYPE range: `.int
+    lo hi` admits exactly these values, G1 `einpassen_voll`): every
+    value is matched by some arm, or a default stands. -/
+def erschoepfend (m : IntMatch) (lo hi : Int) : Prop :=
+  ∀ x, lo ≤ x → x ≤ hi → (∃ a ∈ m.arme, trifft a x) ∨ m.hatDefault = true
+
+/-- The value list of `lo .. hi`: the inclusive range arm's expansion. -/
+def werteListe (lo hi : Int) : List Int := armKeys (.range lo hi false)
+
+theorem mem_werteListe (lo hi x : Int) :
+    x ∈ werteListe lo hi ↔ lo ≤ x ∧ x ≤ hi :=
+  mem_armKeys_incl lo hi x
+
+/-- The decidable coverage check: what the checker runs. -/
+def erschoepfendB (m : IntMatch) (lo hi : Int) : Bool :=
+  m.hatDefault || (werteListe lo hi).all (fun x => m.arme.any (fun a => trifftB a x))
+
+/-- The check decides the predicate. -/
+theorem erschoepfendB_richtig (m : IntMatch) (lo hi : Int) :
+    erschoepfendB m lo hi = true ↔ erschoepfend m lo hi := by
+  simp only [erschoepfendB, erschoepfend, Bool.or_eq_true, List.all_eq_true,
+    List.any_eq_true]
+  constructor
+  · intro h x hlo hhi
+    rcases h with hd | hall
+    · exact Or.inr hd
+    · have hx : x ∈ werteListe lo hi := (mem_werteListe lo hi x).mpr ⟨hlo, hhi⟩
+      obtain ⟨a, ha, ht⟩ := hall x hx
+      exact Or.inl ⟨a, ha, ht⟩
+  · intro h
+    by_cases hd : m.hatDefault = true
+    · exact Or.inl hd
+    · refine Or.inr (fun x hx => ?_)
+      obtain ⟨hlo, hhi⟩ := (mem_werteListe lo hi x).mp hx
+      rcases h x hlo hhi with ⟨a, ha, ht⟩ | hd'
+      · exact ⟨a, ha, ht⟩
+      · exact absurd hd' hd
+
+/-- Exhaustiveness leaves no value without an arm or the default:
+    the wave-B safety rule (a missing arm is a refusal downstream,
+    never an inserted default). -/
+theorem erschoepfend_kein_fehlschlag (m : IntMatch) (lo hi x : Int)
+    (hcov : erschoepfend m lo hi) (hlo : lo ≤ x) (hhi : x ≤ hi) :
+    m.hatDefault = true ∨ ∃ i, wahl m.arme x = some i := by
+  rcases hcov x hlo hhi with ⟨a, ha, ht⟩ | hd
+  · exact Or.inr (trifft_wahl_some ⟨a, ha, ht⟩)
+  · exact Or.inl hd
+
+/-- Without a default, every value in range dispatches to an arm. -/
+theorem erschoepfend_ohne_default (m : IntMatch) (lo hi x : Int)
+    (hcov : erschoepfend m lo hi) (hkein : m.hatDefault = false)
+    (hlo : lo ≤ x) (hhi : x ≤ hi) :
+    ∃ i, wahl m.arme x = some i := by
+  rcases erschoepfend_kein_fehlschlag m lo hi x hcov hlo hhi with hd | h
+  · rw [hd] at hkein; cases hkein
+  · exact h
+
+/-! ## 4. Sound against the emitted `switch` -/
+
+/-- The emitted integer `switch` WITH its default arm: a hit runs the
+    chosen arm (every arm ends in `break`, hence `unbreak`), a miss
+    runs the default. `CS.sw` has no `default` constructor, so the
+    default is denoted here at the `Exec` level; the two coincidence
+    lemmas below show each half is exactly `Exec (.sw …)`. -/
+def SwDefExec (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR)
+    (e : CX) (cases : List (Int × CS)) (dflt : CS)
+    (st : CSt) (ρ : CLok) (o : COut) : Prop :=
+  ∃ k st1, ev L orc fr e st ρ = some (.int k, st1) ∧
+    ((∃ s o', cases.lookup k = some s ∧ Exec L orc fr CR XR s st1 ρ o' ∧
+      o = o'.unbreak)
+    ∨ (cases.lookup k = none ∧ Exec L orc fr CR XR dflt st1 ρ o))
+
+/-- Hit: scrutinee, chosen arm and its run build the outcome. -/
+theorem swDef_hit (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR)
+    {e : CX} {cases : List (Int × CS)} {dflt : CS} {st : CSt} {ρ : CLok}
+    {k : Int} {st1 : CSt} {s : CS}
+    (he : ev L orc fr e st ρ = some (.int k, st1))
+    (hl : cases.lookup k = some s)
+    {o' : COut} (hs : Exec L orc fr CR XR s st1 ρ o') :
+    SwDefExec L orc fr CR XR e cases dflt st ρ o'.unbreak :=
+  ⟨k, st1, he, Or.inl ⟨s, o', hl, hs, rfl⟩⟩
+
+/-- Miss: scrutinee, absence and the default run build the outcome. -/
+theorem swDef_miss (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR)
+    {e : CX} {cases : List (Int × CS)} {dflt : CS} {st : CSt} {ρ : CLok}
+    {k : Int} {st1 : CSt} {o : COut}
+    (he : ev L orc fr e st ρ = some (.int k, st1))
+    (hl : cases.lookup k = none)
+    (hd : Exec L orc fr CR XR dflt st1 ρ o) :
+    SwDefExec L orc fr CR XR e cases dflt st ρ o :=
+  ⟨k, st1, he, Or.inr ⟨hl, hd⟩⟩
+
+/-- The hit half IS the emitted `switch` hit (`Exec.swHit`). -/
+theorem exec_sw_hit (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR)
+    {e : CX} {cases : List (Int × CS)} {st : CSt} {ρ : CLok}
+    {k : Int} {st1 : CSt} {s : CS} {o' : COut}
+    (he : ev L orc fr e st ρ = some (.int k, st1))
+    (hl : cases.lookup k = some s)
+    (hs : Exec L orc fr CR XR s st1 ρ o') :
+    Exec L orc fr CR XR (.sw e cases) st ρ o'.unbreak :=
+  Exec.swHit he hl hs
+
+/-- The miss half IS the emitted `switch` fall-through
+    (`Exec.swMiss`); the default runs next. -/
+theorem exec_sw_miss (L : CLayout) (orc : DevOrc) (fr : Nat) (CR XR : CCallR)
+    {e : CX} {cases : List (Int × CS)} {st : CSt} {ρ : CLok}
+    {k : Int} {st1 : CSt}
+    (he : ev L orc fr e st ρ = some (.int k, st1))
+    (hl : cases.lookup k = none) :
+    Exec L orc fr CR XR (.sw e cases) st ρ (.norm st1 ρ) :=
+  Exec.swMiss he hl
+
+/-! ## 5. Witness on the reference fixture -/
+
+/-- The witness arms: `0 .. 99 =>` and `100 =>` over `.int 0 100`. -/
+def matchArme : List IArm := [.range 0 99 false, .exact 100]
+
+def matchM : IntMatch := ⟨matchArme, false⟩
+
+/-- Table-driven scrutinee: the `konto[0]` slot read. -/
+def matchLeser : Expr refD [] [Res.held (D := refD) ()] (.int 0 100) :=
+  .slot () () refIdxLies refDarf
+
+/-- Before the write the slot reads `0`. -/
+theorem matchLeser_start :
+    (eval (refSp0.welt []) matchLeser (refSp0.welt []) Env.nil).n = 0 := rfl
+
+/-- After the reached run's writing step the slot reads `100`. -/
+theorem matchLeser_nach :
+    (eval (MB.weltVon 1) matchLeser (MB.weltVon 1) Env.nil).n = 100 := rfl
+
+/-- The arms cover `.int 0 100` exactly, checked by computation: any
+    dropped arm turns this `decide` red (planted-defect check). -/
+theorem match_erschoepfend : erschoepfend matchM 0 100 :=
+  (erschoepfendB_richtig matchM 0 100).mp (by decide)
+
+/-- Dispatch before the write: `0` takes the range arm. -/
+theorem match_wahl_vor : wahl matchArme 0 = some 0 := rfl
+
+/-- Dispatch after the write: `100` takes the exact arm. -/
+theorem match_wahl_nach : wahl matchArme 100 = some 1 := rfl
+
+/-- Planted defect (negative): value `1` matches neither `0` nor
+    `2 .. 5` -- the gap dispatches to `none`. -/
+theorem match_luecke_zeigt : wahl [.exact 0, .range 2 5 false] 1 = none := rfl
+
+/-- Planted defect (negative): those arms do NOT cover `0 .. 5` --
+    the gap is a refusal downstream, never an inserted default. -/
+theorem match_nicht_erschoepfend :
+    ¬ erschoepfend ⟨[.exact 0, .range 2 5 false], false⟩ 0 5 := by
+  intro hcov
+  obtain ⟨i, hi⟩ :=
+    erschoepfend_ohne_default _ 0 5 1 hcov rfl (by decide) (by decide)
+  rw [match_luecke_zeigt] at hi
+  cases hi
+
+/-- ZEUGE `match_exhaustive_zeuge`: everything jointly on the
+    NON-DEGENERATE reference program -- the integer match over the
+    table-driven scrutinee `matchLeser` (`konto[0]`, type
+    `.int 0 100`), dispatched before the memory-changing step (`0`,
+    range arm) and after it (`100`, exact arm), with the reached F run
+    `refB_erreicht` (lock, writing leaf, call, return) and the memory
+    move `refB_schreibt` (`konto[0]`: `0 -> 100`). -/
+theorem match_exhaustive_zeuge :
+    ∃ (m : IntMatch) (vVor vNach : Int),
+      m.arme = matchArme ∧ m.hatDefault = false ∧
+      vVor = (eval (refSp0.welt []) matchLeser (refSp0.welt []) Env.nil).n ∧
+      vNach = (eval (MB.weltVon 1) matchLeser (MB.weltVon 1) Env.nil).n ∧
+      erschoepfend m 0 100 ∧
+      wahl m.arme vVor = some 0 ∧ wahl m.arme vNach = some 1 ∧
+      RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+      MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
+  ⟨matchM, 0, 100, rfl, rfl, matchLeser_start.symm, matchLeser_nach.symm,
+    match_erschoepfend, match_wahl_vor, match_wahl_nach,
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## CUTS: what is not proved.
+
+  - Lane 227's `switch` lowering is UNMERGED (wave B, after lane 221):
+    the expansion `armKeys`/`fallListe` (one `case` label per covered
+    value, first match wins) is this lane's denotation of what 227
+    writes, read off the task's "including the default arm" plus
+    `CS.sw` (no `default` constructor, every arm ends in `break`).
+    If 227 ranges below stay ranges (nested `if`s) or share one arm
+    body across labels, `fallListe` needs a body map and the lookup
+    bridge a body-equality premise -- the denotation (`trifft`) and
+    the exhaustiveness predicate (`erschoepfend`) stand unchanged.
+  - No Gabbro `Stmt` for the integer match: the Lean grammar
+    (`Syntax.lean`) has `onOption`/`onTag`/`onGrund` only, so the
+    correspondence is stated against the scrutinee VALUE (`k : Int`)
+    and `Exec (.sw …)`, not against a `StmtCorr`. A `Stmt` (and the
+    `onReason` replacement lane 222's report points at) plugs the
+    value-level lemmas in unchanged.
+  - The default arm has a denotation (`SwDefExec`, hit/miss) but no
+    emitted syntax: `CS.sw` cannot write `default:`, so a `default:`
+    in 227's output is denoted by the miss disjunct, not by a
+    constructor. If 227 omits `default:` on proved-exhaustive matches
+    (the tagged-`switch` precedent, `-Wswitch` as second reader),
+    the miss disjunct is dead code under `erschoepfend_ohne_default`.
+  - Overlap and order are out of scope: overlapping arms dispatch to
+    the FIRST match (C `switch` order); the checker may still refuse
+    overlaps (dead arms) -- refused, never reordered.
+  - The scrutinee's range comes from its TYPE (`.int lo hi`,
+    G1 `einpassen_voll`): a scrutinee whose type range exceeds the
+    arms' coverage is refused by `erschoepfendB`, never narrowed.
+-/
+
+#print axioms Gabbro.Grammatik.exact_trifft
+#print axioms Gabbro.Grammatik.range_incl_trifft
+#print axioms Gabbro.Grammatik.range_excl_trifft
+#print axioms Gabbro.Grammatik.mem_aufzaehlung
+#print axioms Gabbro.Grammatik.mem_armKeys_exact
+#print axioms Gabbro.Grammatik.mem_armKeys_incl
+#print axioms Gabbro.Grammatik.mem_armKeys_excl
+#print axioms Gabbro.Grammatik.trifft_mem_armKeys
+#print axioms Gabbro.Grammatik.lookup_mem_isSome
+#print axioms Gabbro.Grammatik.mem_fallListeAux_of
+#print axioms Gabbro.Grammatik.trifft_wahl_some
+#print axioms Gabbro.Grammatik.wahl_none_weigert
+#print axioms Gabbro.Grammatik.mem_werteListe
+#print axioms Gabbro.Grammatik.erschoepfendB_richtig
+#print axioms Gabbro.Grammatik.erschoepfend_kein_fehlschlag
+#print axioms Gabbro.Grammatik.erschoepfend_ohne_default
+#print axioms Gabbro.Grammatik.swDef_hit
+#print axioms Gabbro.Grammatik.swDef_miss
+#print axioms Gabbro.Grammatik.exec_sw_hit
+#print axioms Gabbro.Grammatik.exec_sw_miss
+#print axioms Gabbro.Grammatik.matchLeser_start
+#print axioms Gabbro.Grammatik.matchLeser_nach
+#print axioms Gabbro.Grammatik.match_erschoepfend
+#print axioms Gabbro.Grammatik.match_wahl_vor
+#print axioms Gabbro.Grammatik.match_wahl_nach
+#print axioms Gabbro.Grammatik.match_luecke_zeigt
+#print axioms Gabbro.Grammatik.match_nicht_erschoepfend
+#print axioms Gabbro.Grammatik.match_exhaustive_zeuge
+
 end Gabbro.Grammatik
