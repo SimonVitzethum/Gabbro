@@ -1,0 +1,67 @@
+-- erwartet: C185
+-- **1114 -- the legal handed read: the spill rule stays silent (lane 249).**
+--
+-- The positive pin beside 1113/1115/1116. The gate is valid (`stack rsi`:
+-- bound, kept, answered -- `N446`/`N447` silent), the path is well-formed
+-- (no `return` inside, every path ends in the never-returning `ausgang`
+-- -- `N448`/`N449` silent) and a gate stands behind it (`N450` silent).
+-- The child reads `stapel` -- and `stapel` is exactly what the gate call
+-- handed: the bare-place argument at the stack parameter
+-- (`roher_start(art, stapel)`). The spill rule (`N451`/`N452`) has
+-- nothing to say here: the handed slot travels by construction. `r` is
+-- the region's own `let` and never a caller slot.
+--
+-- What falls is the EMITTER, like 1112: the stub template has no lowering
+-- for the `child` block (`C185`), with the block written out best-effort
+-- beside the refusal. Same shape gate as 1107-1113 (not the raw clone,
+-- `1000` not an OS number; `abi linux` names the template the stub is
+-- written against, not a kernel table).
+
+module gift1114 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn arbeiter(stapel : u64) -> u64
+    effects { pure }
+{
+    return stapel;
+}
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if v == 0 {
+        child {
+            let r = arbeiter(stapel);
+            ausgang(r);
+        }
+    }
+    return v;
+}
+
+}

@@ -9,6 +9,11 @@
 -- never returns (a `-> never` gate, as in 1111's twin) or in a loop that
 -- never exits.
 --
+-- Lane 249 narrowed this probe to its subject: the trailing `let` once
+-- read the caller parameter (`let s = stapel`), an incidental spill read
+-- the new `N452` owns. The literal keeps the shape -- a block ending in
+-- a `let`, falling past its end -- with nothing else to say.
+--
 -- Without this rule NOTHING falls -- the emitted C is a braced block that
 -- falls out of itself, and `cc -Werror` takes it. Same shape gate as
 -- 1107-1109 (not the raw clone, `1000` not an OS number).
@@ -42,7 +47,7 @@ impl fn kind_start(stapel : u64) -> u64
     costs <= 64 ops
 {
     child {
-        let s = stapel;
+        let s = 0;
     }
     return 0;
 }

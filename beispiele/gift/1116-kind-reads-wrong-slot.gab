@@ -1,0 +1,60 @@
+-- erwartet: N452 allein
+-- **1116 -- same value, different slot: handedness is by slot (lane 249).**
+--
+-- The precision pin of the dataflow. The gate is valid (`stack rsi` --
+-- `N446`/`N447` silent, `N450` silent), the path is well-formed (no
+-- `return`, every path ends in `ausgang` -- `N448`/`N449` silent). The
+-- caller copied `stapel` into `s2` and the gate call handed `s2` (the
+-- bare-place argument at the stack parameter). The child reads `stapel`
+-- -- the same VALUE, but not the handed SLOT. Only the passed slot
+-- travels; the name the value used to have stays in the caller frame.
+-- A rule matching by name would stay silent here, and wrongly: after
+-- the handoff `stapel` is dead whatever it once held.
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block
+-- passing `stapel` on, and `cc -Werror` takes it. Same shape gate as
+-- 1107-1115 (not the raw clone, `1000` not an OS number; `abi linux`
+-- names the template the stub is written against, not a kernel table).
+
+module gift1116 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let s2 = stapel;
+    let v = roher_start(art, s2) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if v == 0 {
+        child {
+            ausgang(stapel);
+        }
+    }
+    return v;
+}
+
+}

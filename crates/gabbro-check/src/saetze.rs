@@ -3975,6 +3975,45 @@ pub const PHASEN: &[Satz] = &[
                      grammatik/Grammatik/KlonStapel.lean",
     },
     Satz {
+        name: "klon.spill",
+        kennungen: &["N451", "N452"],
+        aussage: "A `child` path reads no caller-frame name the gate never \
+                  handed: no caller `let`-temporary -- the gate answer (the \
+                  return slot) with it (`N451`) -- and no caller parameter, \
+                  `traverse` variable or `match` binder beside it (`N452`). \
+                  What travels is the dataflow, not the name: the bare-place \
+                  call argument at the stack parameter's position of a \
+                  `stack`-gate call in the enclosing body. Region-bound names \
+                  (the child's own `let`s) and non-caller names (globals, \
+                  tables, statics, callees) stay legal.",
+        vorbehalt: "A dataflow over the shared read set (`benutzte_namen`, \
+                    the `(void)k;` walker), with four named edges. (1) A \
+                    faulted gate hands nothing -- its own fault (`N446`/`N447`) \
+                    names it, and reads behind it report on top. (2) Gate \
+                    resolution is by short name, like the `endet_immer` list \
+                    beside it. (3) With no stack gate in the unit the \
+                    handedness question is moot: `N450` is the fault and \
+                    nothing fires here. (4) Shadowing is positional and this \
+                    set is not: a region-local sharing a caller name stays \
+                    refused. A write target counts as a mention -- a write to \
+                    a dead slot is the same fault from the other side.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1113` (`-- erwartet: N451 allein`: the \
+                      child reads the gate answer `v`), `1115` (`-- erwartet: \
+                      N452 allein`: the child reads the unhanded parameter \
+                      `art`), `1116` (`-- erwartet: N452 allein`: same value, \
+                      different slot -- the gate took `s2`, the child reads \
+                      `stapel`) -- each falls once, and without its rule the \
+                      emitted C is valid `cc -Werror` input in all three; \
+                      `1114` (`-- erwartet: C185`: the worker-call shape, \
+                      checker-clean -- the handed read stays legal). The \
+                      narrowing side is `1109`/`1110`: their incidental caller \
+                      reads became the new rule's subject and were replaced \
+                      by literals, keeping each probe on its own code.",
+        fundstelle: "crates/gabbro-check/src/clone.rs (`spillregion`); \
+                     dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "parser.bibliothek-nutzlast",
         kennungen: &["P043"],
         aussage: "A `library fn` carries its `payload <table>` clause: the grammar \
