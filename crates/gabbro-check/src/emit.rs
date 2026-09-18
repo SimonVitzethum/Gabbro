@@ -11611,6 +11611,21 @@ fn nachfahren(
 
 /// des Ordners («B12»: bindet `elems of` ein Element oder einen Index? «B10»: `traverse`
 /// liefert keinen Wert und kennt kein `break`).
+///
+/// **Exits pass THROUGH a `traverse` (lane 252).** The walk carries no label
+/// (`SYNTAX.md` §8 gives it no slot, `schleifen.rs` registers none), so a
+/// `leave`/`next` in the body can only name an enclosing `retry`/`forever`.
+/// Three lines hold that together, all elsewhere: the body is lowered with
+/// the incoming `austritt` unchanged (no label pushed here), the `Leave`/
+/// `Next` arm emits `goto <marke>_ende|_weiter` with the locks taken inside
+/// released first (never `break`/`continue` -- those would take the walk
+/// itself), and `sprungziele` descends into the walk body so the outer loop
+/// emits the label that is jumped to. `tests/traverse_exit.rs` pins all
+/// four halves: `leave`/`next` through a `slots` walk, `leave` through the
+/// stackless descendant walk, the release on the exit path, and the S001
+/// refusal for an exit naming the walk binder. A windowed walk
+/// (`from <start> count <len>`) never reaches this function: the reader
+/// refuses it with P001 (lane 222), so there is no window arm here.
 fn traverse(
     x: &Traverse,
     s: &Stmt,
