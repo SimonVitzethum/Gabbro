@@ -618,4 +618,112 @@ theorem divM2kopf : (divM2F.faeden 1).kopf.rest =
     ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
       .cons divSchleife (.ret .keine (by rfl))⟩ := rfl
 
+/-! ## 7. The joint witness: every premise together, nothing weakened -/
+
+/-- The remaining body after the write diverges at every budget: the write
+    runs, then the `forever` answers the named assumption. -/
+theorem divRest_divergiert (n : Nat) (σ : World divD) (ρ : Env divD [.int 0 10]) :
+    execEnd divO n keinRuf
+      (.cons divSchleife (.ret .keine (by rfl)) :
+        Endblock divD (vertragVon divD divSchreib) false [.int 0 10]
+          [Res.held (D := divD) ()]) σ ρ =
+      .hardware (.fortschritt ()) := by
+  have hF : execStmt divO n keinRuf divSchleife σ ρ = .hardware (.fortschritt ()) :=
+    forever_leer_divergiert divO n keinRuf () σ ρ
+  simp only [execEnd, hF]
+
+/-- Evidence bundle: the empty body cannot exit, at any oracle and budget. -/
+theorem divNoExit (O : Orakel divD) (passes : Nat)
+    (R : ∀ f : divD.Fn, World divD → Env divD (divD.params f) → RufAusgang f) :
+    NoExit O passes R
+      (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
+        [Res.held (D := divD) ()] [Res.held (D := divD) ()]) :=
+  fun _ _ => Or.inl ⟨_, _, rfl⟩
+
+/-- Evidence bundle: `true` holds everywhere. -/
+theorem divInvWahr :
+    InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+      [Res.held (D := divD) ()] :=
+  fun _ _ => rfl
+
+/-- **ZEUGE: `divergent_body_zeuge`.** All premises JOINTLY on the concrete
+    non-degenerate program `divP`: a writer that writes `konto` then
+    diverges in the accepted `forever` shape, a `-> never` axiom (the
+    accepted `asm` shape), and a reached run that changes memory and stands
+    at the `forever`. The same exit evidence proves the divergence
+    (`forever_noexit_divergiert` applied to the witnessed `hNo`/`hInv`);
+    the run shows it. Nothing is weakened: the table is written
+    (`divB_schreibt`), the run is reached (`divB_erreicht`), the axiom
+    admits its site (`StelleOk`) and fits no answer (`AntwortLeer`). -/
+theorem divergent_body_zeuge :
+    ∃ (σ : World divD) (ρ : Env divD [.int 0 10]),
+    ∃ (hNo : NoExit divO 0 keinRuf
+          (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
+            [Res.held (D := divD) ()] [Res.held (D := divD) ()]))
+      (hInv : InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+          [Res.held (D := divD) ()]),
+      execStmt divO 0 keinRuf
+          ((.forever () .wahr .nil : Stmt divD (vertragVon divD divSchreib) false
+            [.int 0 10] [Res.held (D := divD) ()] [Res.held (D := divD) ()])) σ ρ =
+          .hardware (.fortschritt ()) ∧
+      (∃ M : RufMaschineF divD,
+        RufErreichbarF divP divO 0 (RufStartF divP divSp0 divInit) M ∧
+        M.speicher.slots () 0 () ≠ divSp0.slots () 0 ()) ∧
+      StelleOk divD (.inl ()) ∧ AntwortLeer divD (divD.aerg ()) := by
+  obtain ⟨hNo, hInv⟩ : NoExit divO 0 keinRuf
+      (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
+        [Res.held (D := divD) ()] [Res.held (D := divD) ()]) ∧
+      InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+        [Res.held (D := divD) ()] :=
+    ⟨divNoExit divO 0 keinRuf, divInvWahr⟩
+  refine ⟨divSp0.welt [], divRho7, hNo, hInv, ?_, ?_, ?_, ?_⟩
+  · exact forever_noexit_divergiert (l := false) divO 0 keinRuf () .wahr .nil _ _
+      hNo hInv
+  · exact ⟨divM2F, divB_erreicht, divB_schreibt⟩
+  · exact stelleOk_never_ax (D := divD) () divAx_never
+  · exact asm_never_antwort_leer () divAx_never
+
+/-! ## CUTS
+
+  Proved (every premise used by its proof):
+  * `foreverLauf_noexit` -- syntax-free fuel lemma: exit-free step + true
+    guard gives `hardware (fortschritt a)` at every fuel.
+  * `forever_noexit_divergiert`, `forever_noexit_kein_logik`,
+    `forever_noexit_kein_zurueck` -- the `forever` divergence as declared,
+    never `logik`, never a return.
+  * `forever_leer_divergiert` -- the empty spin, no evidence premises.
+  * `asm_never_antwort_leer`, `asm_never_kein_ok` -- the `-> never` axiom
+    fits no answer and never continues.
+  * `ewig_wahr_schreitet` -- a true-`forever` head takes its G step:
+    divergence serves `KeinLogikHaltG`.
+  * `nieZurueck_blatt_frei` -- a `bindAxiom` head passes both leaf checks.
+  * `divRest_divergiert`, `divergent_body_zeuge` -- the joint witness on
+    `divD`/`divP`: table written (`0 -> 100`), run reached, head at
+    `forever`, axiom site admissible with empty answer class.
+
+  NOT proved, named:
+  * THAT a body's exits are absent / an invariant holds on a REAL program
+    is writer's logic (`NoExit`/`InvWahr` are premises, proved here only for
+    the witness shapes `.nil`/`.wahr`).
+  * No checker acceptance (`antwortenB`, lane 225's sentences) is claimed in
+    Lean: the shapes are the model's, the acceptance is the checker's.
+  * The bridge concludes per-head checks/steps, not `KeinLogikHaltG`
+    itself: the leg's statement (`Spec.lean`) is untouched by design.
+  * `divP` carries no `HeldGenau`/progress story: the run is on the F
+    machine (contracts aside, as in `ReferenzB`), the G step only as the
+    one-step bridge `ewig_wahr_schreitet`.
+-/
+
+#print axioms Gabbro.Grammatik.Zielsatz.foreverLauf_noexit
+#print axioms Gabbro.Grammatik.Zielsatz.forever_noexit_divergiert
+#print axioms Gabbro.Grammatik.Zielsatz.forever_noexit_kein_logik
+#print axioms Gabbro.Grammatik.Zielsatz.forever_noexit_kein_zurueck
+#print axioms Gabbro.Grammatik.Zielsatz.forever_leer_divergiert
+#print axioms Gabbro.Grammatik.Zielsatz.asm_never_antwort_leer
+#print axioms Gabbro.Grammatik.Zielsatz.asm_never_kein_ok
+#print axioms Gabbro.Grammatik.Zielsatz.ewig_wahr_schreitet
+#print axioms Gabbro.Grammatik.Zielsatz.nieZurueck_blatt_frei
+#print axioms Gabbro.Grammatik.Zielsatz.divRest_divergiert
+#print axioms Gabbro.Grammatik.Zielsatz.divergent_body_zeuge
+
 end Gabbro.Grammatik.Zielsatz
