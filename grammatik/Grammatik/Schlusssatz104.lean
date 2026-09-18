@@ -723,7 +723,10 @@ abbrev gDB : Deklaration :=
     sigNr := fun | 2 => sigRuhe | n => G104_referenz.gD.sigNr n
     eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
     rzusage := fun r => nomatch r
-    invarianten_gehalten := fun _ i => nomatch i }
+    invarianten_gehalten := fun _ i => nomatch i
+    -- **Lane O-1:** the `with` copies every other field, but `klon` mentions
+    -- `Fn` -- which this update changes -- so it is mapped like at `mitRuhe`.
+    klon := G104_referenz.gD.klon.map fun (a, f) => (a, some f) }
 
 abbrev gbL : List (Res gDB) := [Res.held (D := gDB) GLock.M]
 

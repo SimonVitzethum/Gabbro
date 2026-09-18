@@ -130,7 +130,10 @@ theorem schlusssatz_text {src : String} (K : Kette src) {s : List Char} (hA2 : A
       (∀ (passes : Nat) (sp' : Speicher (declOf K.u).mitRuhe)
         (init' : Faden → Σ f : (declOf K.u).mitRuhe.Fn,
           Env (declOf K.u).mitRuhe ((declOf K.u).mitRuhe.params f)),
-        Laufzeit K.E sp' init' → ∀ M : RufMaschineG (declOf K.u).mitRuhe,
+        Laufzeit K.E sp' init' →
+          CloneAssume (declOf K.u).mitRuhe K.E.P.mitRuhe (declOf K.u).mitRuhe.klon
+            O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp' init') →
+          ∀ M : RufMaschineG (declOf K.u).mitRuhe,
           RufErreichbarG K.E.P.mitRuhe O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp' init') M →
             Ziel K.E.P.mitRuhe K.E.S.mitRuhe O.mitRuhe passes
               (RufStartG K.E.P.mitRuhe sp' init') M)) ∧

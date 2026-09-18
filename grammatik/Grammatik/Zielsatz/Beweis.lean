@@ -197,9 +197,11 @@ end Start
 /-- **GABBRO_ZIEL, PROVED.** For every checker `C`, every declaration and
     program `E` accepted by it, the user's logic (bodies AND start), the
     named hardware assumptions and the runtime's start of `E` (A4, with the
-    idle root): every leg of `Ziel` on every reachable machine. -/
+    idle root), plus the runtime's handoff duty for clone-spawned threads
+    ((d2), lane O-1 -- assumed, like the start itself, and unused by the
+    legs below): every leg of `Ziel` on every reachable machine. -/
 theorem gabbro_ziel : GabbroZiel := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL M hr
+  intro C D _ E fs ls cs hC hN O hH passes sp init hL _ M hr
   have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hC)
   exact ziel_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
     (wsRuhe E.ws) hA (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp

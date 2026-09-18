@@ -608,7 +608,8 @@ theorem k124_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (passe
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[()], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
-    kE_akzeptiert kE_nutzerPflicht O hO passes sp init hL M hM
+    kE_akzeptiert kE_nutzerPflicht O hO passes sp init hL
+    (cloneAssume_empty _ _ _ _) M hM
 
 end K124
 

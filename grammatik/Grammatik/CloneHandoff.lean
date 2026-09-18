@@ -63,8 +63,6 @@ theorem cloneAbiGoodB_sound (a : CloneAbi) (h : cloneAbiGoodB a = true) :
   exact ⟨sysAbiGutB_sound a.abi hGut, of_decide_eq_true hBound,
     of_decide_eq_true hOut, by simpa using hClob⟩
 
-#print axioms Gabbro.Grammatik.cloneAbiGoodB_sound
-
 /-! ## 2. The handoff legs at declaration level -/
 
 instance : Decidable (CloneAbi.good a) :=
@@ -134,5 +132,100 @@ theorem cloneBadWitness_fails : ¬ cloneBadWitness.good := by decide
 #print axioms Gabbro.Grammatik.cloneWitness_sound
 #print axioms Gabbro.Grammatik.cloneWitness_stackBound
 #print axioms Gabbro.Grammatik.cloneBadWitness_fails
+
+/-! ## 4. The run level: no return into the caller frame -/
+
+variable {D : Deklaration}
+
+/-- The log holds a return of `e`: the G reading of "returns". A `grund`
+    (reason return) is no value return into the caller frame. -/
+def isEntryReturn (D : Deklaration) (e : D.Fn) : RufEreignisF D → Prop
+  | .rueck f _ _ _ _ => f = e
+  | .eintritt _ _ _ => False
+  | .grund _ _ _ _ _ => False
+
+/-- A child thread never returns from its entry: no `.rueck entry` in its
+    log. Returns of SUBFUNCTIONS inside the worker are fine -- only the
+    ENTRY's return would land in the caller's frame. -/
+def ChildNoReturn (D : Deklaration) (M : RufMaschineG D) (child : Faden)
+    (entry : D.Fn) : Prop :=
+  ∀ ev ∈ (M.faeden child).log, ¬ isEntryReturn D entry ev
+
+/-- The handoff on one machine pair: every thread the start machine places
+    at a gate entry never logs its entry's return. -/
+def CloneHandoff (D : Deklaration) (gates : List (D.Ax × D.Fn))
+    (M0 M : RufMaschineG D) : Prop :=
+  ∀ (t : Faden) (g : D.Ax × D.Fn), g ∈ gates →
+    (M0.faeden t).kopf.f = g.2 → ChildNoReturn D M t g.2
+
+/-- (d2) the runtime's handoff duty: the handoff on every reached run. The
+    premise `GabbroZiel` gains beside `Laufzeit` (Spec.lean). -/
+def CloneAssume (D : Deklaration) (P : Programm D) (gates : List (D.Ax × D.Fn))
+    (O : Orakel D) (passes : Nat) (M0 : RufMaschineG D) : Prop :=
+  ∀ M, RufErreichbarG P O passes M0 M → CloneHandoff D gates M0 M
+
+/-- (d) the population duty: a thread starting at a gate entry is no
+    declared start. Entries and starts are distinct populations, so
+    `einmal` and the worker fan-out never govern one thread twice. The
+    field `Laufzeit` gains beside `start`/`einmal` (Spec.lean). -/
+def CloneStart (D : Deklaration) (gates : List (D.Ax × D.Fn)) (starts : List D.Fn)
+    (init : Faden → Σ f, Env D (D.params f)) : Prop :=
+  ∀ t, (init t).1 ∈ gates.map Prod.snd → (init t).1 ∉ starts
+
+/-! ## 5. The empty laws and the start-machine law -/
+
+/-- No gates, no duty: the handoff holds for every machine pair. -/
+theorem cloneHandoff_empty (M0 M : RufMaschineG D) :
+    CloneHandoff D [] M0 M := by
+  intro t g hg _
+  exact absurd hg (by simp)
+
+/-- The (d2) duty with no gates: every run qualifies. -/
+theorem cloneAssume_empty (P : Programm D) (O : Orakel D) (passes : Nat)
+    (M0 : RufMaschineG D) : CloneAssume D P [] O passes M0 := by
+  intro M _
+  exact cloneHandoff_empty M0 M
+
+/-- The (d) duty with no gates: every start qualifies. -/
+theorem cloneStart_empty (starts : List D.Fn)
+    (init : Faden → Σ f, Env D (D.params f)) :
+    CloneStart D [] starts init := by
+  intro t ht
+  exact absurd ht (by simp)
+
+/-- At start nothing has returned: the handoff holds on the start machine
+    for EVERY gate list, empty or not. The joint instantiation the empty
+    laws are not: the start table with the reflexive run, gates admitted
+    non-empty -- the `N449`-checked path has logged no return because it
+    has logged nothing but its entry. -/
+theorem cloneHandoff_start (P : Programm D) (sp : Speicher D)
+    (init : Faden → Σ f, Env D (D.params f)) (gates : List (D.Ax × D.Fn)) :
+    CloneHandoff D gates (RufStartG P sp init) (RufStartG P sp init) := by
+  intro t g _ _ ev hev hret
+  have hlog : ev = RufEreignisF.eintritt (init t).1 (init t).2 (sp.welt []) := by
+    simpa [RufStartG] using hev
+  rw [hlog] at hret
+  simp [isEntryReturn] at hret
+
+#print axioms Gabbro.Grammatik.cloneHandoff_empty
+#print axioms Gabbro.Grammatik.cloneAssume_empty
+#print axioms Gabbro.Grammatik.cloneStart_empty
+#print axioms Gabbro.Grammatik.cloneHandoff_start
+
+/- CUTS: what is not proved.
+   - No leg of `Ziel` follows from the handoff here: that the stub and the
+     runtime keep `ChildNoReturn` on every run is the (d2) ASSUMPTION, and
+     that it preserves race freedom, contracts and progress is translation
+     validation (§2 of TODO.md), not this file.
+   - `D.klon` (the gate list, Syntax.lean) is filled by hand models only:
+     the exporter refuses `child` (`LG004` in `lean_g.rs`), so no compiled
+     unit exhibits a non-empty gate list yet; `Akzeptiert` decides no
+     component for it (like lane 208's vacuous components, but without a
+     pin -- there is nothing to pin against, the exporter never produces
+     one).
+   - The handed STACK has no G counterpart: G is address-free, so "starts
+     on the handed stack" is C-level (the stub sets it) and lives in the
+     (d2) assumption's informal reading, not in `CloneHandoff`.
+-/
 
 end Gabbro.Grammatik

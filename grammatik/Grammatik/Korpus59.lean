@@ -511,7 +511,8 @@ theorem korpus59_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (p
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[KLock.takt, KLock.ring], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
-    kE_akzeptiert korpus59_nutzer O hO passes sp init hL M hM
+    kE_akzeptiert korpus59_nutzer O hO passes sp init hL
+    (cloneAssume_empty _ _ _ _) M hM
 
 /-- The index-`0` environment for the witness run. -/
 def kRho0 : Env kD [Ty.index 64] := .cons ⟨0, by decide, by decide⟩ .nil

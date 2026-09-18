@@ -263,7 +263,7 @@ theorem oblig_hw : Zielsatz.HardwareAnnahmen oO G104_referenz_oblig.gE.Q :=
 theorem oblig_laufzeit :
     Zielsatz.Laufzeit G104_referenz_oblig.gE (speicherR G104_referenz_oblig.gE.sp0)
       (initRuhe G104_referenz_oblig.gE.starts) :=
-  laufzeit_initRuhe G104_referenz_oblig.gE (by decide)
+  laufzeit_initRuhe G104_referenz_oblig.gE (by decide) (cloneStart_empty _ _)
 
 /-- **THE CHAIN, CLOSED ON 104**: what the exporter states, the user proved
     above, and so the goal holds at every reachable machine of the run the
@@ -278,7 +278,8 @@ theorem oblig_ziel (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD.mitRu
       oO.mitRuhe passes
       (RufStartG G104_referenz_oblig.gE.P.mitRuhe (speicherR G104_referenz_oblig.gE.sp0)
         (initRuhe G104_referenz_oblig.gE.starts)) M :=
-  gP_gabbro oblig_nutzer oO oblig_hw passes _ _ oblig_laufzeit M hr
+  gP_gabbro oblig_nutzer oO oblig_hw passes _ _ oblig_laufzeit
+    (cloneAssume_empty _ _ _ _) M hr
 
 /-! ## 5. Witnesses (rule 13) -/
 

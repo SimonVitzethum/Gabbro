@@ -196,6 +196,19 @@
     machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
     (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
     (MitRuheSemantik.lean).
+  * (d) `Laufzeit.klon` -- a thread starting at a clone-gate entry (`D.klon`, lane O-1)
+    is no declared start: entries and starts are distinct populations. With no gates
+    (`D.klon = []`, which the exporter always produces -- it refuses `child` with
+    `LG004`) the field holds vacuously (`cloneStart_empty`, CloneHandoff.lean).
+  * (d2) `CloneAssume` -- the runtime's handoff duty over every reached run: each
+    thread the start machine places at a gate entry never logs its entry's return
+    (`ChildNoReturn`, CloneHandoff.lean). The handed STACK has no G counterpart (G
+    is address-free); that the child starts on it is the stub's business and lives
+    in this assumption's informal reading. With no gates every run qualifies
+    (`cloneAssume_empty`); the start machine qualifies for every gate list
+    (`cloneHandoff_start`). What this does NOT buy is any leg of `Ziel` for the
+    child: that the handoff preserves race freedom, contracts and progress is
+    translation validation (§2 of TODO.md), not this premise.
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not
     the user's logic:
@@ -345,6 +358,10 @@
     `BereichG` Fortschritt.lean -- the float range checks pass at every head (proof side,
     not in `Ziel`: `FortschrittG` lists no float stop, so it follows from `fortschritt`).
   * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
+  * `Deklaration.klon` Syntax.lean (the clone gates, default `[]`) with its `mitRuhe`
+    transport MitRuhe.lean; `CloneAbi`/`CloneAbi.good`/`cloneAbiGoodB`,
+    `isEntryReturn`/`ChildNoReturn`/`CloneHandoff`/`CloneAssume`/`CloneStart`
+    CloneHandoff.lean -- the checked handoff's model side (lane O-1, K-1).
   NEW here: `Einheit`, `LogikPflicht`, `StartPflicht`, `Laufzeit` (2026-09-15); `HaltArt`,
   `KopfHalt`, `RestHalt`, `WartetAuf`, `KeinWarteZyklus` (2026-09-15, verdicts F2/F3);
   `InvGutGrund`, `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the named
@@ -352,11 +369,13 @@
   (DRF for every non-atomic carrier), `Getrennt`, `SchreibGetrennt` (write separation of
   unguarded carriers, the counterpart of `H013`; with it `rennfreiBis_of`, Akzeptiert.lean,
   proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
-  `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`.
+  `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Laufzeit.klon`,
+  `CloneAssume` (lane O-1: the handoff, premise group (d)).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
-  and (d) (`Laufzeit`) since 2026-09-15; nothing else restricts the quantified runs.
+  and (d) (`Laufzeit`, since lane O-1 with the `klon` field, plus the run-level `CloneAssume`
+  as (d2)); nothing else restricts the quantified runs.
   3. Can a user-controlled choice empty an obligation? Probes A/D: closed by `NutzerPflicht`
   at every budget. Probe F1 (an out-of-range float, the one stop the user's code decided
   for every oracle): closed, `logik bereich` (`probeF1_widerlegt_gilt`). An unsatisfiable lock family or start `requires`: closed, it refutes (b)
@@ -396,6 +415,7 @@ import Grammatik.RennfreiVoll
 import Grammatik.KostenG
 import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
+import Grammatik.CloneHandoff
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -537,6 +557,9 @@ def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
     * `start` -- every thread runs the idle root or ONE declared start with its DECLARED
       arguments;
     * `einmal` -- no declared start runs on two threads.
+    * `klon` -- a thread starting at a clone-gate entry (`D.klon`, lane O-1) is no
+      declared start: gate entries and starts are distinct populations, so `einmal`
+      and the worker fan-out never govern one thread twice.
     The runtime starts EXACTLY the declared starts, each on its own thread, the root on every
     other thread (`initRuhe E.starts`); that start meets this predicate whenever the checker
     accepts (`laufzeit_initRuhe`, Zielsatz/Proben.lean), and so does every assignment running
@@ -546,6 +569,7 @@ structure Laufzeit (E : Einheit D) (sp : Speicher D.mitRuhe)
   lader : sp = speicherR E.sp0
   start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩
   einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none
+  klon : CloneStart D.mitRuhe D.mitRuhe.klon (E.ws.map some) init
 
 /-! ## The start the proof works with (derived from (b) and (d), not a premise) -/
 
@@ -743,6 +767,8 @@ def GabbroZiel : Prop :=
     ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init →                                      -- (d) the runtime, A4
+      CloneAssume D.mitRuhe E.P.mitRuhe D.mitRuhe.klon O.mitRuhe passes
+        (RufStartG E.P.mitRuhe sp init) →                       -- (d2) the handoff, A4
       ∀ M : RufMaschineG D.mitRuhe,
         RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M →
           Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M

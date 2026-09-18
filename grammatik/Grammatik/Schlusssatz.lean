@@ -430,7 +430,10 @@ theorem schlusssatz {src : String} (K : Kette src)
       (∀ (passes : Nat) (sp' : Speicher (declOf K.u).mitRuhe)
         (init' : Faden → Σ f : (declOf K.u).mitRuhe.Fn,
           Env (declOf K.u).mitRuhe ((declOf K.u).mitRuhe.params f)),
-        Laufzeit K.E sp' init' → ∀ M : RufMaschineG (declOf K.u).mitRuhe,
+        Laufzeit K.E sp' init' →
+          CloneAssume (declOf K.u).mitRuhe K.E.P.mitRuhe (declOf K.u).mitRuhe.klon
+            O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp' init') →
+          ∀ M : RufMaschineG (declOf K.u).mitRuhe,
           RufErreichbarG K.E.P.mitRuhe O.mitRuhe passes (RufStartG K.E.P.mitRuhe sp' init') M →
             Ziel K.E.P.mitRuhe K.E.S.mitRuhe O.mitRuhe passes
               (RufStartG K.E.P.mitRuhe sp' init') M)) ∧
@@ -489,8 +492,8 @@ theorem schlusssatz {src : String} (K : Kette src)
     ⟨htief, hnur⟩,
     ⟨fun passes => rufAt_mitRuhe K.E.P O passes,
       einfaden_ziel K.E K.fs hA K.nutzer O hH sp init hA4,
-      fun passes sp' init' hL M hr => gabbro_ziel akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
-        K.akzeptiert K.nutzer O hH passes sp' init' hL M hr⟩, ?_⟩
+      fun passes sp' init' hL hK M hr => gabbro_ziel akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
+        K.akzeptiert K.nutzer O hH passes sp' init' hL hK M hr⟩, ?_⟩
   intro passes f k hk σ st ρG vs ρ0 hw hb hr hnf st' rv hbin
   exact (hlauf passes (tief f) f k hk σ st ρG vs ρ0 hw hb hr hnf).2 st' rv (hA1 f st vs st' rv hbin)
 

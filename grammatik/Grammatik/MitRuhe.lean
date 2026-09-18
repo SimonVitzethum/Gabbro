@@ -198,6 +198,10 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), val
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
   ggeist := D.ggeist
+  -- **Lane O-1:** the clone gates travel to the idle-root declaration --
+  -- axioms are `D`'s, functions gain the root (`some`), so each gate keeps
+  -- its axiom and maps its entry.
+  klon := D.klon.map fun (a, f) => (a, some f)
 
 instance instDecEqFnMitRuhe [DecidableEq D.Fn] : DecidableEq D.mitRuhe.Fn :=
   inferInstanceAs (DecidableEq (Option D.Fn))

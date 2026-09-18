@@ -226,11 +226,13 @@ theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
     (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)
     (sp : Speicher gD.mitRuhe)
     (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))
-    (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)
+    (hL : Zielsatz.Laufzeit gE sp init)
+    (hK : CloneAssume gD.mitRuhe gE.P.mitRuhe gD.mitRuhe.klon O.mitRuhe passes
+      (RufStartG gE.P.mitRuhe sp init)) (M : RufMaschineG gD.mitRuhe)
     (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
-    gCheck hN O hH passes sp init hL M hr
+    gCheck hN O hH passes sp init hL hK M hr
 end G108_disjoint_start_locks_oblig
 
 end Gabbro.Grammatik

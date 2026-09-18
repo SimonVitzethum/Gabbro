@@ -202,7 +202,7 @@ theorem p108_laufzeit :
     Zielsatz.Laufzeit G108_disjoint_start_locks_oblig.gE
       (speicherR G108_disjoint_start_locks_oblig.gE.sp0)
       (initRuhe G108_disjoint_start_locks_oblig.gE.starts) :=
-  laufzeit_initRuhe G108_disjoint_start_locks_oblig.gE (by decide)
+  laufzeit_initRuhe G108_disjoint_start_locks_oblig.gE (by decide) (cloneStart_empty _ _)
 
 /-- **THE CHAIN, CLOSED ON 108, CONCURRENTLY**: with the duty proved above,
     the goal holds at every reachable machine of the two-threaded run the
@@ -219,7 +219,8 @@ theorem p108_ziel (passes : Nat)
       (RufStartG G108_disjoint_start_locks_oblig.gE.P.mitRuhe
         (speicherR G108_disjoint_start_locks_oblig.gE.sp0)
         (initRuhe G108_disjoint_start_locks_oblig.gE.starts)) M :=
-  gP_gabbro p108_nutzer p108_O p108_hw passes _ _ p108_laufzeit M hr
+  gP_gabbro p108_nutzer p108_O p108_hw passes _ _ p108_laufzeit
+    (cloneAssume_empty _ _ _ _) M hr
 
 /-! ## 5. Witnesses (rule 13): the run is really concurrent -/
 

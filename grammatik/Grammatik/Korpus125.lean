@@ -353,7 +353,8 @@ theorem korpus125_ziel_umgestaltet (O : Orakel kD) (hO : Zielsatz.HardwareAnnahm
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[QLock.w], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
-    kE_akzeptiert korpus125_nutzer_umgestaltet O hO passes sp init hL M hM
+    kE_akzeptiert korpus125_nutzer_umgestaltet O hO passes sp init hL
+    (cloneAssume_empty _ _ _ _) M hM
 
 /-- **Witness for the reshaped group** (rule 13): the premise group jointly
     with a non-degenerate run -- `setze_null`'s body from the `z = 5` world

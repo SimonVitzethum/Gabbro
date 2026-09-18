@@ -474,10 +474,15 @@ section Laufzeit
 
 /-- **The runtime's exact start meets A4**: the declared starts on threads
     `0 .. k-1` with their declared arguments, the root elsewhere, from the
-    declared initial memory -- whenever the declared starts are distinct. -/
-theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup) :
+    declared initial memory -- whenever the declared starts are distinct. The
+    handoff population (`klon`, lane O-1) travels as a hypothesis: a hand
+    model with gates proves it beside its starts, and every gateless unit --
+    all the exporter's -- meets it vacuously (`cloneStart_empty`). -/
+theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup)
+    (hkl : CloneStart D.mitRuhe D.mitRuhe.klon (E.ws.map some) (initRuhe E.starts)) :
     Laufzeit E (speicherR E.sp0) (initRuhe E.starts) where
   lader := rfl
+  klon := hkl
   start t := by
     unfold initRuhe
     rcases h : E.starts[t]? with _ | ⟨w, ρ⟩
@@ -503,11 +508,14 @@ theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup) :
             exact htu ((List.getElem?_inj hlt hnd').mp (ht'.trans hu'.symm))
 
 /-- The checker's acceptance gives distinct declared starts, so the
-    runtime's exact start is always in the class A4 describes. -/
+    runtime's exact start is always in the class A4 describes -- once the
+    handoff population is held beside it (a hypothesis, like at
+    `laufzeit_initRuhe`; gateless units meet it by `cloneStart_empty`). -/
 theorem laufzeit_voll [DecidableEq D.Fn] (E : Einheit D) {fs : List D.Fn}
-    (hA : AkzeptiertSpec E.P E.S fs E.ws) :
+    (hA : AkzeptiertSpec E.P E.S fs E.ws)
+    (hkl : CloneStart D.mitRuhe D.mitRuhe.klon (E.ws.map some) (initRuhe E.starts)) :
     Laufzeit E (speicherR E.sp0) (initRuhe E.starts) :=
-  laufzeit_initRuhe E hA.einzeln
+  laufzeit_initRuhe E hA.einzeln hkl
 
 /-- **Under A4 a thread runs only what the program declares** (verdict P2):
     a user function runs on a thread only if it is a declared start. -/
@@ -531,11 +539,16 @@ theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) {sp : Speicher
     exact absurd ha List.not_mem_nil
 
 /-- The runtime's root on every thread from the declared memory is always a
-    start A4 admits: the conclusion's run class is never empty. -/
+    start A4 admits: the conclusion's run class is never empty. The handoff
+    population holds because the root is no declared start (`none` is no
+    `some`). -/
 theorem laufzeit_ruhe (E : Einheit D) : Laufzeit E (speicherR E.sp0) (ruheInit D) where
   lader := rfl
   start _ := Or.inl rfl
   einmal _ _ _ _ := rfl
+  klon t ht := by
+    show (none : D.mitRuhe.Fn) ∉ E.ws.map some
+    simp
 
 end Laufzeit
 

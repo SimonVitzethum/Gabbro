@@ -493,7 +493,8 @@ theorem korpus109_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[KLock.l, KLock.m], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
-    kE_akzeptiert korpus109_nutzer O hO passes sp init hL M hM
+    kE_akzeptiert korpus109_nutzer O hO passes sp init hL
+    (cloneAssume_empty _ _ _ _) M hM
 
 /-- The index-`0` environment for the witness run. -/
 def kRho0 : Env kD [Ty.index 4] := .cons ⟨0, by decide, by decide⟩ .nil

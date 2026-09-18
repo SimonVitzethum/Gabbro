@@ -214,7 +214,7 @@ theorem mE_nutzerPflicht : NutzerPflicht mE :=
 theorem zweiFaeden_erfuellbar_gilt : zweiFaeden_erfuellbar :=
   ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll mP_akzeptiert,
     mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO⟩,
-    speicherR mSp, _, laufzeit_initRuhe mE (by decide), initRuhe_laeuft mE⟩
+    speicherR mSp, _, laufzeit_initRuhe mE (by decide) (cloneStart_empty _ _), initRuhe_laeuft mE⟩
 
 /-- **The runtime's start of `mE` moves memory**: one step of thread 0 (`hauptA`'s first
     statement `privA[0] = 7`) changes the shared memory. -/
@@ -223,7 +223,7 @@ theorem zweiFaeden_bewegt_gilt : zweiFaeden_bewegt := by
     (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
-  refine ⟨speicherR mSp, _, 0, M1, laufzeit_initRuhe mE (by decide), .schritt _ _ _ .start s1, ?_⟩
+  refine ⟨speicherR mSp, _, 0, M1, laufzeit_initRuhe mE (by decide) (cloneStart_empty _ _), .schritt _ _ _ .start s1, ?_⟩
   intro h
   have e := congrArg (fun s : Speicher mD.mitRuhe => (s.slots MTab.privA 0 () : Zahl 0 100).n) h
   rw [hZ1.2] at e
@@ -269,14 +269,14 @@ theorem probeB_erfuellbar_haupt : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEB rfl rfl rfl⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB (by decide),
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB (by decide) (cloneStart_empty _ _),
     initRuhe_laeuft zEB⟩
 
 theorem probeC_erfuellbar_haupt : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPC_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEC rfl rfl rfl⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC (by decide),
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC (by decide) (cloneStart_empty _ _),
     initRuhe_laeuft zEC⟩
 
 theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, probeB_erfuellbar_haupt⟩
@@ -300,7 +300,7 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hL : Laufzeit mE (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]) :=
-    laufzeit_initRuhe mE (by decide)
+    laufzeit_initRuhe mE (by decide) (cloneStart_empty _ _)
   refine ⟨speicherR mSp, _, M1, hL, .schritt _ _ _ .start s1, ?_, ?_⟩
   · intro h
     have e := congrArg (fun s : Speicher mD.mitRuhe => (s.slots MTab.privA 0 () : Zahl 0 100).n) h
@@ -310,7 +310,8 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
   · exact gabbro_ziel akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
       (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert)
-      mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ hL M1
+      mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ hL
+      (cloneAssume_empty _ _ _ _) M1
       (.schritt _ _ _ .start s1)
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge

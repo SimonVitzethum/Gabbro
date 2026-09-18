@@ -1290,6 +1290,9 @@ theorem fadenRel_sonst {o : Option Nat} {c : CFaden} {z : RufFadenG DR} (h2 : o 
 theorem laufzeit_w (w : Faden → Option Nat) (hw : Wurzeln w) :
     Laufzeit kE (speicherR kSp) (kInit w) where
   lader := rfl
+  -- **Lane O-1:** 124 declares no gates, so the handoff population holds
+  -- vacuously.
+  klon := cloneStart_empty _ _
   start t := by
     by_cases h2 : w t = some 2
     · exact Or.inr ⟨⟨kHauptA, .nil⟩, List.mem_cons_self, by rw [kInit_2 h2]; rfl⟩

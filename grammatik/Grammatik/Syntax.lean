@@ -203,6 +203,15 @@ structure Deklaration where
       ghost -- `Geist.lean` says what that means. Default: none is ghost. -/
   geist : Tab → Bool := fun _ => false
   ggeist : Glob → Bool := fun _ => false
+  /-- The clone gates (lane O-1, K-1): `(gate, child entry)` pairs -- a
+      `syscall` declaration carrying a `stack` clause with the function its
+      `child` path runs. The handed-stack REGISTER itself is emitter-only
+      (`SysAbi`, consumed by the stub) and has no G counterpart: G is
+      address-free. Default: no gates -- and every hand model with a gate
+      is reviewed as such, since the exporter never produces one (`LG004`
+      in `lean_g.rs`). `CloneHandoff.lean` says what the runtime owes for
+      them; `MitRuhe.lean` carries them to the idle-root declaration. -/
+  klon : List (Ax × Fn) := []
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke
