@@ -1,6 +1,33 @@
 # MUSE-REPORT-234 — traverse lowering for subrange + early exit (TODO §-1 wave B)
 
-## Verdict up front
+## Round 2 (reviewer verdict ROT, finding F1) — option (ii)
+
+The reviewer confirmed the premise findings (F2, no action) and asked for
+exactly one of: (i) scope expansion to parse/AST + checker, or (ii) strengthen
+what is buildable within `emit.rs` + `tests/`. The dispatcher did not expand
+the scope, so this round takes **option (ii)**: the two regression probes are
+kept, and the negative pin the round-1 report implied but no test stated is
+now stated — a `leave` naming the traverse itself is refused, proving the
+traverse carries no label. No dead emitter arm, no prose about postcondition
+preservation that no rule could check.
+
+New in round 2 (`crates/gabbro-check/tests/traverse_exit.rs`, now 4 tests):
+
+- `leave_naming_no_label_from_traverse_falls_with_s001`: `leave suche;`
+  inside a traverse with no enclosing labeled loop falls with exactly
+  `["S001"]`, and the refusal carries the empty-scope note ("no label is in
+  scope here") — the traverse contributes no label.
+- `leave_past_the_outer_label_from_traverse_falls_with_s001`: the same exit
+  inside a traverse inside `forever d` falls with exactly `["S001"]`, and the
+  scope note names exactly `d` ("im Geltungsbereich: d") — the set a future
+  traverse label would extend, and today the traverse adds nothing to it.
+
+Close, as instructed: **lane blocked upstream, no lowering buildable.** The
+windowed `for` and the labelled exit with invariant-at-exit need the parse/AST
+lane first (see "What remains open" — unchanged and still correct); re-running
+this lane without that upstream work cannot produce a lowering.
+
+## Verdict up front (round 1, stands)
 
 The lowering the task asks for is **unbuildable from this lane's file set**,
 for the same measured reason lane 229 reported: the syntax it would lower does
@@ -55,8 +82,10 @@ unrepresentable form would be dead code, not a lowering.
 ## Check results (exact lines)
 
 - `./cargo-pruef`: `== exit 0; failing tests: 0` (full suite; the new
-  binary runs `2 passed; 0 failed`: `leave_from_traverse_reaches_the_outer_label`,
-  `next_from_traverse_reaches_the_outer_label`).
+  binary runs `4 passed; 0 failed`: `leave_from_traverse_reaches_the_outer_label`,
+  `next_from_traverse_reaches_the_outer_label`,
+  `leave_naming_no_label_from_traverse_falls_with_s001`,
+  `leave_past_the_outer_label_from_traverse_falls_with_s001`).
 - `./emission-pruef`: `== EMISSION: ALL PASS -- 37 durchgestochen, 286 von 286
   uebersetzen, 2 umgekehrte Probe(n) ==`.
 - `python3 instrumente/pruefe-cformen.py`: `RED: 0 new uncovered form(s),

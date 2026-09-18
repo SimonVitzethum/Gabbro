@@ -41,6 +41,25 @@ fn emit(source: &str) -> String {
     gabbro_check::emit::emittiere(&tree, &mut refusals)
 }
 
+/// The refusal codes AND notes of a program that must NOT check: the negative
+/// pin below needs the note, not just the code (the note states the scope).
+fn fehler_mit_notizen(source: &str) -> Vec<(String, String, Vec<String>)> {
+    let (tree, mut refusals) = gabbro_syntax::lies("traverse_exit", source);
+    assert_eq!(
+        refusals.fehler_zahl(),
+        0,
+        "the probe does not parse:\n{}",
+        refusals.zeige(source)
+    );
+    let _ = gabbro_check::pruefe(&tree, &mut refusals);
+    refusals
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|a| (a.code.to_string(), a.text.clone(), a.notizen.clone()))
+        .collect()
+}
+
 fn service_with(exit: &str) -> String {
     // No `costs` on `dienst`: the body holds a `forever`, which has no total --
     // its promise is `per_pass`, not `costs` (`K003`; `kosten.rs::ohne_summe`).
@@ -108,5 +127,56 @@ fn next_from_traverse_reaches_the_outer_label() {
     assert!(
         c[release..jump].lines().count() <= 2,
         "the release stands immediately before the jump:\n{c}"
+    );
+}
+
+/// `leave suche;` inside a `traverse` with NO enclosing labeled loop is refused:
+/// a traverse carries no label (`schleifen.rs`: the `Traverse` arm pushes
+/// nothing onto the label scope), so no label is in scope here. This is the
+/// negative half of the two probes above — the exit they pin can only name an
+/// OUTER loop, never the traverse itself.
+#[test]
+fn leave_naming_no_label_from_traverse_falls_with_s001() {
+    let quelle = format!(
+        "{HEAD}impl fn dienst(w : ptr<normal, rw> W) effects {{ reads w.slots, writes w.slots }} \
+         costs <= 500 ops\n\
+         {{ traverse i over slots of w by unvisited touches reads w.slots, writes w.slots\n\
+           {{ w.slots[i].a = fertig(); if w.slots[i].a {{ leave suche; }} }} }} }}"
+    );
+    let fehler = fehler_mit_notizen(&quelle);
+    assert_eq!(
+        fehler.iter().map(|(c, _, _)| c.clone()).collect::<Vec<_>>(),
+        vec!["S001".to_string()],
+        "naming no label from a traverse falls with S001 and nothing else: {fehler:?}"
+    );
+    assert!(
+        fehler.iter().any(|(_, t, n)| t.contains("targets no enclosing loop label")
+            && n.iter().any(|x| x.contains("no label is in scope here"))),
+        "the refusal states the empty scope — the traverse contributes no label: {fehler:?}"
+    );
+}
+
+/// `leave suche;` inside a `traverse` inside `forever d` is refused too, and the
+/// refusal names the EXACT scope: `d`, nothing more. The traverse adds no label
+/// to it — the set a future traverse label would extend.
+#[test]
+fn leave_past_the_outer_label_from_traverse_falls_with_s001() {
+    let quelle = format!(
+        "{HEAD}impl fn dienst(w : ptr<normal, rw> W) effects {{ reads w.slots, writes w.slots }}\n\
+         {{ forever d per_pass bounded 200 ops on_exceeded wacht effects {{ reads w.slots, writes w.slots }}\n\
+           {{ traverse i over slots of w by unvisited touches reads w.slots, writes w.slots\n\
+             {{ w.slots[i].a = fertig(); if w.slots[i].a {{ leave suche; }} }} }} }} }}"
+    );
+    let fehler = fehler_mit_notizen(&quelle);
+    assert_eq!(
+        fehler.iter().map(|(c, _, _)| c.clone()).collect::<Vec<_>>(),
+        vec!["S001".to_string()],
+        "naming past the outer label falls with S001 and nothing else: {fehler:?}"
+    );
+    assert!(
+        fehler
+            .iter()
+            .any(|(_, _, n)| n.iter().any(|x| x.contains("im Geltungsbereich: d"))),
+        "the scope note names exactly the outer label — the traverse adds none: {fehler:?}"
     );
 }
