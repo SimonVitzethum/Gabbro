@@ -22,6 +22,8 @@
 //! | `N448` | the child path never leaves: no `return` inside, no `leave`/`next` past the region | gift 1109 |
 //! | `N449` | the child path never falls through: with no `return` inside, every path ends in a never-returning call or a never-exiting loop | gift 1110 |
 //! | `N450` | a `child` block runs behind a stack-carrying gate -- a handoff with no handed stack falls | gift 1111 |
+//! | `N451` | the child path reads no caller `let`-temporary it was not handed (the gate answer, every other caller `let`) | gift 1113 |
+//! | `N452` | the child path reads no caller parameter (or loop/match binder) it was not handed | gifts 1115, 1116 |
 //! | `C185` | the `child` block has no lowering in the stub template and is refused by name (in `emit.rs`, beside the best-effort block) | gift 1112 |
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
@@ -39,7 +41,7 @@
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// The x86_64 general registers -- and only they. The twin of `REGISTER`
 /// in `syscall.rs`, named here on purpose (see the module head): this pass
@@ -61,6 +63,26 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
+    // **Lane 249: the spill-read map.** Short gate name to the stack
+    // parameter's position in the gate's parameter list -- the slot whose
+    // call-site argument travels to the child. A faulted gate (`N446`:
+    // the stack register bound nowhere, `N447`: claimed twice) hands
+    // nothing soundly and stays out of the map; its own fault names it.
+    let mut tore: HashMap<String, usize> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
+        if let ItemArt::Syscall(s) = &item.art {
+            if s.stapel.len() == 1 {
+                let stapel = &s.stapel[0].text;
+                if let Some((_, param)) = s.regs_in.iter().find(|(r, _)| r.text == *stapel) {
+                    if let Some(stellung) =
+                        s.parameter.iter().position(|p| p.name.text == param.text)
+                    {
+                        tore.insert(s.name.text.clone(), stellung);
+                    }
+                }
+            }
+        }
+    });
     // **The bodies, second:** a `child` block lives in a function body, and
     // the gate count above is unit-wide -- a path with no gate behind it
     // (`N450`) needs both.
@@ -68,6 +90,32 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         if let ItemArt::Funktion(f) = &item.art {
             if let FnRumpf::Block(b) = &f.rumpf {
                 kindpfade(&f.name.text, b, &divergent, tore_mit_stapel, absagen, true);
+                // **Lane 249: the spill reads (round 2: prefix-handed).**
+                // Caller scope against the handed slots, per enclosing
+                // function -- a gate call in one function hands nothing to
+                // the child of another, and a gate call AFTER the region
+                // hands nothing to it either: only calls preceding the
+                // region in program order travel (`spill_block` carries
+                // the prefix set down).
+                if tore_mit_stapel > 0 {
+                    let mut kontext = RuferKontext {
+                        lets: HashSet::new(),
+                        umfang: HashSet::new(),
+                    };
+                    for p in &f.parameter {
+                        kontext.umfang.insert(p.name.text.clone());
+                    }
+                    sammel_anrufer(b, &mut kontext.lets, &mut kontext.umfang);
+                    spill_block(
+                        &f.name.text,
+                        b,
+                        &kontext,
+                        &tore,
+                        &HashSet::new(),
+                        absagen,
+                        true,
+                    );
+                }
             }
         }
     });
@@ -327,6 +375,305 @@ fn sammel_flucht(b: &Block, marken: &HashSet<String>, aus: &mut Vec<gabbro_synta
         }
         for k in crate::unterbloecke(s) {
             sammel_flucht(k, marken, aus);
+        }
+    }
+}
+
+/// **`N451`/`N452` -- the spill-read rule (lane 249).**
+///
+/// The child runs on the handed stack, not in the caller frame: a caller
+/// name the gate never handed dies at the gate, and the child reading it
+/// reads a dead slot. The rule is a dataflow over the shared read set
+/// (`crate::emit::benutzte_namen`, the same walker the `(void)k;`
+/// decision trusts) against the caller scope -- not a second effects
+/// system:
+///
+/// * `lets` (`N451`): every `let`-family name bound in the enclosing
+///   function body outside any `child` region -- `let`, `let … else`
+///   (value and error name), `alloc`, `awaits`, `exchange`. The gate
+///   answer (`let v = gate(…) else …`) is one of them: the return slot.
+/// * `umfang` (`N452`): the function parameters plus the `traverse`
+///   variable and `match` binders bound outside any region.
+/// * the prefix set: the caller slots handed across -- the bare-place
+///   call argument at the stack parameter's position of every
+///   stack-gate call PRECEDING the region in program order (round 2:
+///   a call after the region hands nothing to it -- the child already
+///   runs). A computed argument hands nothing; neither does a call
+///   inside a region (the child hands nothing to itself).
+///
+/// Legal in the region: the handed slots, and every name that is no
+/// caller local at all (globals, tables, statics, callees). A
+/// region-local sharing a caller name stays refused (round 2, option
+/// (a)): the read set is positional-blind, so the pre-definition read
+/// -- which resolves to the caller slot, a dead slot -- is the fault,
+/// and the benign shadow pays the same refusal. Soundness first.
+/// One refusal per offending name per outermost region, at the region
+/// span, naming the variable. Nested regions are part of their outer
+/// region here as under `N448`/`N449`.
+///
+/// What this does NOT do, by decision: with no stack-carrying gate in
+/// the unit (`N450` already fell) handedness is moot and nothing fires
+/// here. A faulted gate hands nothing (its own fault names it), so a
+/// region behind only a faulted gate reports its reads on top. Gate
+/// resolution is by short name, like the `endet_immer` list beside
+/// which this map stands. A loop-back-edge call hands nothing either:
+/// the prefix is textual, and the first pass through the region runs
+/// before any later call.
+struct RuferKontext {
+    lets: HashSet<String>,
+    umfang: HashSet<String>,
+}
+
+/// Caller bindings outside any `child` region: a nested `child` binds
+/// the handed stack's locals, never the caller's.
+fn sammel_anrufer(b: &Block, lets: &mut HashSet<String>, umfang: &mut HashSet<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => {
+                lets.insert(l.name.text.clone());
+            }
+            StmtArt::LetSonst(l) => {
+                lets.insert(l.name.text.clone());
+                lets.insert(l.fehlername.text.clone());
+            }
+            StmtArt::Alloc(a) => {
+                lets.insert(a.name.text.clone());
+            }
+            StmtArt::AwaitLoad(a) => {
+                lets.insert(a.name.text.clone());
+            }
+            StmtArt::Exchange(e) => {
+                lets.insert(e.name.text.clone());
+            }
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(t) = sch.as_ref() {
+                    umfang.insert(t.variable.text.clone());
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    if let Some(binder) = &z.binder {
+                        umfang.insert(binder.text.clone());
+                    }
+                }
+            }
+            // **The region binds its own locals.** Nothing inside is a
+            // caller slot, so the walk stops here -- like `kindpfade`
+            // refusing only the outer region, from the other side.
+            StmtArt::Child(_) => continue,
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammel_anrufer(k, lets, umfang);
+        }
+    }
+}
+
+/// One statement's handoff: its own calls hand the slots for every
+/// region after it in the block. Subblocks are NOT walked here -- the
+/// block walk (`spill_block`) descends into them with the prefix so far,
+/// and their contributions never leak into sibling branches.
+fn sammel_stmt_uebergeben(s: &Stmt, tore: &HashMap<String, usize>, laufend: &mut HashSet<String>) {
+    match &s.art {
+        StmtArt::Ruf(r) => {
+            ruf_uebergabe(r, tore, laufend);
+            for a in &r.argumente {
+                expr_uebergabe(a, tore, laufend);
+            }
+        }
+        StmtArt::LetSonst(l) => {
+            if let LetQuelle::Ruf(r) = &l.quelle {
+                ruf_uebergabe(r, tore, laufend);
+                for a in &r.argumente {
+                    expr_uebergabe(a, tore, laufend);
+                }
+            }
+        }
+        // **The region hands nothing to itself** -- and neither does a
+        // call inside it to anything after it.
+        StmtArt::Child(_) => {}
+        _ => {
+            for e in crate::eigene_ausdruecke(s) {
+                expr_uebergabe(e, tore, laufend);
+            }
+        }
+    }
+}
+
+/// One call site: where the stack argument is a bare caller place, that
+/// slot travels. Every other shape -- a computed argument, an unknown
+/// callee, a missing position -- hands nothing: the fail-safe side.
+fn ruf_uebergabe(r: &Ruf, tore: &HashMap<String, usize>, uebergeben: &mut HashSet<String>) {
+    let CallTarget::Path(pfad) = &r.ziel else {
+        return;
+    };
+    let Some(letztes) = pfad.teile.last() else {
+        return;
+    };
+    let Some(stellung) = tore.get(&letztes.text) else {
+        return;
+    };
+    let Some(arg) = r.argumente.get(*stellung) else {
+        return;
+    };
+    let mut bloecke = arg;
+    while let ExprArt::Klammer(innen) = &bloecke.art {
+        bloecke = innen;
+    }
+    if let ExprArt::Ort(o) = &bloecke.art {
+        if o.suffixe.is_empty() {
+            uebergeben.insert(o.basis.text.clone());
+        }
+    }
+}
+
+/// Gate calls nested in value position (`let x = f(gate(…))`, an index
+/// carrying one): the same handoff, one level down. Predicates
+/// (`Zaehle`) are not executed state and carry none.
+fn expr_uebergabe(x: &Expr, tore: &HashMap<String, usize>, uebergeben: &mut HashSet<String>) {
+    match &x.art {
+        ExprArt::Ruf(r) => {
+            ruf_uebergabe(r, tore, uebergeben);
+            for a in &r.argumente {
+                expr_uebergabe(a, tore, uebergeben);
+            }
+        }
+        ExprArt::LibraryCall(r) => {
+            for a in &r.args {
+                expr_uebergabe(a, tore, uebergeben);
+            }
+        }
+        ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => expr_uebergabe(y, tore, uebergeben),
+        ExprArt::Binaer(_, a, b) => {
+            expr_uebergabe(a, tore, uebergeben);
+            expr_uebergabe(b, tore, uebergeben);
+        }
+        ExprArt::ArrayLit(es) => {
+            for e in es {
+                expr_uebergabe(e, tore, uebergeben);
+            }
+        }
+        ExprArt::Eingebaut(e) => match e.as_ref() {
+            Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                ort_uebergabe(o, tore, uebergeben);
+            }
+            Eingebaut::Aligned(a, b) => {
+                expr_uebergabe(a, tore, uebergeben);
+                expr_uebergabe(b, tore, uebergeben);
+            }
+            _ => {}
+        },
+        ExprArt::Ort(o) | ExprArt::Alt(o) => ort_uebergabe(o, tore, uebergeben),
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::FnWert(_)
+        | ExprArt::Grund { .. }
+        | ExprArt::Ergebnis
+        | ExprArt::Zaehle { .. } => {}
+    }
+}
+
+/// A call hiding in an index suffix hands like any nested call.
+fn ort_uebergabe(o: &Ort, tore: &HashMap<String, usize>, uebergeben: &mut HashSet<String>) {
+    for s in &o.suffixe {
+        if let OrtSuffix::Index(x) = s {
+            expr_uebergabe(x, tore, uebergeben);
+        }
+    }
+}
+
+/// The outermost `child` blocks of a body, for the spill reads -- the
+/// same regions `kindpfade` refuses, walked beside it, carrying the
+/// handed prefix down: each statement's calls join the set every later
+/// region reads, and each subblock is walked with its own clone -- a
+/// call in one branch hands nothing to a region in its sibling.
+fn spill_block(
+    fname: &str,
+    b: &Block,
+    kontext: &RuferKontext,
+    tore: &HashMap<String, usize>,
+    vorher: &HashSet<String>,
+    absagen: &mut Absagen,
+    aussen: bool,
+) {
+    let mut laufend = vorher.clone();
+    for s in &b.anweisungen {
+        if let StmtArt::Child(region) = &s.art {
+            if aussen {
+                spillregion(fname, region, kontext, &laufend, absagen);
+            }
+            spill_block(fname, region, kontext, tore, &laufend, absagen, false);
+        } else {
+            sammel_stmt_uebergeben(s, tore, &mut laufend);
+            for k in crate::unterbloecke(s) {
+                spill_block(fname, k, kontext, tore, &laufend, absagen, aussen);
+            }
+        }
+    }
+}
+
+/// **`N451`/`N452` -- one child region against its caller.**
+///
+/// `N451`: a read of a caller `let`-temporary outside the handed
+/// prefix. `N452`: a read of a caller parameter (or loop/match binder)
+/// outside it. The handed prefix is checked first; a name in both
+/// caller sets reports as the temporary. Region binds are NOT counted
+/// off (round 2, option (a)): the shared read set cannot tell the
+/// pre-definition read (caller slot, dead) from the benign shadow, so
+/// both refuse -- soundness first. The read set is the shared
+/// `benutzte_namen` -- a write target counts as a mention, because a
+/// write to a dead slot is the same fault from the other side.
+fn spillregion(
+    fname: &str,
+    region: &Block,
+    kontext: &RuferKontext,
+    uebergeben: &HashSet<String>,
+    absagen: &mut Absagen,
+) {
+    let mut gelesen: BTreeSet<String> = BTreeSet::new();
+    crate::emit::benutzte_namen(region, &mut gelesen);
+    // **Sorted by construction** (`BTreeSet`): the refusal order is the
+    // name order, and two runs refuse in the same order.
+    for n in &gelesen {
+        if uebergeben.contains(n) {
+            continue;
+        }
+        if kontext.lets.contains(n) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N451",
+                    region.span,
+                    format!(
+                        "`{fname}` reads `{n}` on its `child` path -- `{n}` is a caller \
+                         temporary that dies at the gate"
+                    ),
+                )
+                .mit_notiz(
+                    "the child runs on the handed stack, not in the caller frame: only \
+                     the slot handed at a preceding `stack`-gate call site travels (the \
+                     bare-place argument at the stack parameter), every other caller \
+                     `let` -- the gate answer with it -- stays behind",
+                ),
+            );
+        } else if kontext.umfang.contains(n) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N452",
+                    region.span,
+                    format!(
+                        "`{fname}` reads `{n}` on its `child` path -- `{n}` is a caller \
+                         parameter the gate never handed"
+                    ),
+                )
+                .mit_notiz(
+                    "the child runs on the handed stack, not in the caller frame: only \
+                     the slot handed at a preceding `stack`-gate call site travels (the \
+                     bare-place argument at the stack parameter) -- a parameter beside \
+                     it, and a loop or match binder beside that, stays behind",
+                ),
+            );
         }
     }
 }

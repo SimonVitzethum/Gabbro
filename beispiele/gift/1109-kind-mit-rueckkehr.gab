@@ -3,10 +3,15 @@
 --
 -- The gate is valid on purpose (`stack rsi`: bound, kept, answered --
 -- `N446`/`N447` silent, and a gate stands behind the path, so `N450`
--- stays silent too). The child path returns `s`: on the handed stack, out
--- of the caller's frame, into a frame that is no longer there. The tail
+-- stays silent too). The child path returns out of the caller's frame,
+-- into a frame that is no longer there. The tail
 -- after the block (`return 0`) is the parent's, and it is fine; the fault
 -- is the leaving statement inside, and only it falls.
+--
+-- Lane 249 narrowed this probe to its subject: it once read the caller
+-- parameter (`let s = stapel; return s;`), an incidental spill read the
+-- new `N452` owns. The bare `return` keeps the shape -- a `return` out
+-- of the path -- with nothing else for any rule to say.
 --
 -- Without this rule NOTHING falls -- the emitted C is a braced block with
 -- a `return`, and `cc -Werror` takes it. The gate is the shape probe of
@@ -41,8 +46,7 @@ impl fn kind_start(stapel : u64) -> u64
     costs <= 64 ops
 {
     child {
-        let s = stapel;
-        return s;
+        return 1;
     }
     return 0;
 }

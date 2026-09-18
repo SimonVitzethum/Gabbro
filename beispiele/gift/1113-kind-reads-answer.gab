@@ -1,0 +1,67 @@
+-- erwartet: N451 allein
+-- **1113 -- the `child` path reads the gate answer (lane 249).**
+--
+-- The gate is valid on purpose (`stack rsi`: bound, kept, answered --
+-- `N446`/`N447` silent, and a gate stands behind the path, so `N450`
+-- stays silent too). The path is well-formed beside it: no `return`
+-- inside (`N448` silent) and every path ends in the never-returning
+-- `ausgang` (`N449` silent). What falls is the spill read: `v` is the
+-- caller's `let`-temporary holding the gate's answer -- the return slot
+-- -- and the gate handed only `stapel` (the bare-place argument at the
+-- stack parameter). On the handed stack `v` is a dead slot, and reading
+-- it reads the caller frame the child no longer stands in.
+--
+-- Round 2 extends this probe with the shadow: after the read the region
+-- binds `v` itself (`let v = 7`) and reads it again. The read set cannot
+-- tell the pre-definition read (caller slot, dead) from the benign
+-- shadow, so both refuse under the one code -- soundness first, and the
+-- probe still falls once (one refusal per name per region).
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block
+-- passing `v` on, and `cc -Werror` takes it. Same shape gate as
+-- 1107-1112 (not the raw clone, `1000` not an OS number; `abi linux`
+-- names the template the stub is written against, not a kernel table).
+
+module gift1113 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if v == 0 {
+        child {
+            ausgang(v);
+            let v = 7;
+            ausgang(v);
+        }
+    }
+    return v;
+}
+
+}
