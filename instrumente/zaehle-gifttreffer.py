@@ -132,6 +132,9 @@ MARKE_SAUBER = 271
 # are NOT booked here: they fall at the EMITTER, which this counter never
 # runs (it reads `pruefe` for every code but C001) -- reported as F-GIFT-1,
 # not absorbed into the ceiling.
+# **2026-09-18 (lane O-1): `1112` (C185, the refused `child` block) joins
+# them** -- the sixth of the class, checker-clean and falling at the emitter
+# only. Same reporting, no absorption.
 # **29 -> 24 on 2026-09-14 (lane 191): lane 184 never merged, and its mark
 # goes back with its corpus edits.** Measured both sides with this lane:
 # 25 verdeckt on the unmodified tree (24 booked) and the SAME 25 with it --

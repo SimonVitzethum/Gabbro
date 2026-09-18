@@ -40,7 +40,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **177** measured (`pruefe-syntax.sh` EBNF branch: 177 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **178** measured (`pruefe-syntax.sh` EBNF branch: 178 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
 | vocabulary words | 221 | **240 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 240 EBNF terminals against 240 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
@@ -272,6 +272,7 @@ syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident 
               "abi" ident "arch" ident "number" constexpr
               "regs" "in"  "{" [ regbind { "," regbind } [ "," ] ] "}"
               "regs" "out" "{" [ regbind { "," regbind } [ "," ] ] "}"
+              { "stack" ident }
               "clobbers" "{" [ identlist ] "}"
               "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
               [ "requires" predlist ]
@@ -280,6 +281,10 @@ syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident 
               [ "costs" "<=" expr "ops" ]
               ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
               | "kernel" path ";" ) ;
+(* CHANGED lane O-1 (K-1): `{ "stack" ident }` between `regs out` and `clobbers` names
+   the handed-stack register AS a stack -- the one clause that may claim stack-ness, at
+   most once (`N447`). It names a register bound in `regs in`, kept and answered (`N446`).
+   No new word: `stack` is the `entryextra` word (§1). *)
 errmap     = ident "=>" ident ;
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" )
@@ -316,7 +321,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N450`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the gates with the child entries in `D.klon` (`CloneHandoff.lean`) |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -840,7 +845,7 @@ endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
    register read and a `format` check ends here; the second version said (§7, line 1029) that
    the branch "must diverge or return" and never wrote it. `leave`/`next` only under a loop. A
    `return R::F;` is a `return expr;` whose expression is a ground. *)
-stmt       = letstmt | allocstmt | resetstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
+stmt       = letstmt | allocstmt | resetstmt | childstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
            | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
            | libcall ";" ;                                       (* lane E1: statement position *)
@@ -893,6 +898,15 @@ resetstmt  = "reset" ident ";" ;                                (* «E4», §9.1
 (* A fresh generation of the named arena: the used counter goes back to zero, and every
    index bound before is stale afterwards (`N211`). `reset = 1;` stays an assignment --
    the head word decides, like at every other keyword statement. *)
+childstmt  = "child" block ;                                    (* lane O-1, §12.1 *)
+(* The clone-child path (K-1): the block that runs on the handed stack of a `syscall`
+   gate with a `stack` clause. It never returns into the caller's frame -- no `return`
+   inside (`N448`), no `leave`/`next` past the region, and no fall-through past the
+   block (every path ends in a `-> never` gate call or a never-exiting loop, `N449`) --
+   behind a gate claiming a stack (`N450`). `child = 1;` stays an assignment, like at
+   `reset` above. The emitter refuses the block by name (`C185`) until the inline
+   trap lands; the model side is `CloneHandoff.lean`. No new word: `child` is the
+   `tree` word (§9, `kante`). *)
 ```
 
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
@@ -1843,6 +1857,18 @@ they point at stands in §1 beside `entrydecl`.
   host a call through it, and a caller with a cost promise meets `K003` over
   it. A promise about the kernel, like `costs` at an `extern fn` — counted,
   not re-measured.
+* **`stack r` + `child { … }`** — the checked clone handoff (lane O-1, K-1).
+  The `stack` clause names the handed-stack register AS a stack — the one
+  clause that may claim stack-ness, between `regs out` and `clobbers`, at
+  most once (`N447`); it names a register bound in `regs in`, kept out of
+  `clobbers` and out of `regs out` (`N446`). The `child` block is the child
+  path: it never returns into the caller's frame (`N448`), never falls
+  through past the block (`N449`) and runs behind a gate claiming a stack
+  (`N450`). The gate's number, registers and error map stay user-made in
+  the declaration; the stack switch is the stub's business and the runtime's
+  assumption (d2). The emitter refuses the block by name (`C185`) until the
+  inline trap lands. `beispiele/155` is the clean shape, `156` its branched
+  twin, `gift/1107`-`1112` the six refusals.
 
 **Two places where the written example fixes the production's letter** (measured
 at the build, lane S5): the §1 production line says `regbind` (`ident ":"

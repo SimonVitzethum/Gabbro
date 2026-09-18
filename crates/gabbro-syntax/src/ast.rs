@@ -1333,6 +1333,15 @@ pub enum StmtArt {
     /// Sets the used counter to zero; every index bound before is stale
     /// afterwards (`N211` in the checker).
     ResetArena(Ident),
+    /// `child { … }` -- the clone-child path (lane O-1, K-1).
+    ///
+    /// The block that runs on the handed stack after a stack-carrying
+    /// `syscall` gate answers zero. It never returns into the caller's
+    /// frame: no `return` inside (`N448`), and every falling path ends in
+    /// a never-returning gate call (`N449`). The emitter writes the block
+    /// inline with the fall-through marked dead; every other pass walks
+    /// the body like any block (`crate::unterbloecke`).
+    Child(Block),
 }
 
 #[derive(Debug, Clone)]
@@ -2250,6 +2259,17 @@ pub struct SyscallDecl {
     pub regs_in: Vec<(Ident, Ident)>,
     /// Bare out registers -- never clobbered.
     pub regs_out: Vec<Ident>,
+    /// **`stack r` -- the handed-stack register (lane O-1, K-1).**
+    ///
+    /// At most one clause claims stack-ness, and only here: no parameter
+    /// type, effect or register map declares it. The named register is one
+    /// of `regs in` (the handed stack arrives in it), never clobbered and
+    /// never the out register (`N446`); a second clause falls by name
+    /// (`N447`). Empty for an ordinary gate -- a gate without it hands no
+    /// stack, and no `child` block may run behind it. The parser collects
+    /// every repetition so the checker refuses the second by name instead
+    /// of tripping over it at `P001`.
+    pub stapel: Vec<Ident>,
     pub clobbers: Vec<Ident>,
     /// `(errno, reason case)` -- total over the listed errnos.
     pub errors: Vec<(Ident, Ident)>,

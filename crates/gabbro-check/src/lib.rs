@@ -77,6 +77,12 @@ pub mod abgeleitet;
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
 pub mod syscall;
+/// **Lane O-1 -- the checked clone handoff (K-1).** The `stack` clause
+/// against its shape (`N446`/`N447`) and the `child` path against
+/// no-leave (`N448`), no-fall-through (`N449`) and the gate behind it
+/// (`N450`). Declaration-level beside `syscall.rs`, whose file this module
+/// never touches: the register file is read here, not shared.
+pub mod clone;
 /// **The monotone `arena` («E4», `PLAN-ERWEITUNG.md` §3, checker half).**
 /// The declaration against its own shape (`N210`) and the per-function flow
 /// -- generations, the static count since the last reset, the owed `else`
@@ -483,6 +489,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         z!("syscall", syscall::pass(baum, absagen));
+        z!("clone", clone::pass(baum, absagen));
         z!("arena", arena::pass(baum, absagen));
         z!("konstanten", konstanten::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
@@ -512,8 +519,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // **Directly behind the names** -- the same question one level up: `N001` in `namen.rs`
     // holds a name against its scope, `bindung.rs` against the surface that binds out of the
     // unit. That one knows no modules.
-    bindung::pass(baum, absagen);
-    // **Directly behind it again, and one question further out.** `bindung` asks which name
+    bindung::pass(baum, absagen);    // **Directly behind it again, and one question further out.** `bindung` asks which name
     // leaves the unit; `gatter` asks whether a name exists in THIS BUILD at all. It stands
     // before every pass that reads bodies, because a refusal about a call across the gate is
     // about the artefact, not about the semantics of the call.
@@ -523,6 +529,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // declaration-level like `entry`/`entrust`: its own shape is held here, and
     // every body pass below reads it through the shared maps.
     syscall::pass(baum, absagen);
+    // **Lane O-1, directly behind it.** The handoff shape reads the gate
+    // (`stack`) and the bodies (`child`): after the declaration pass, beside
+    // the arena one, before every body pass that walks the new block form.
+    clone::pass(baum, absagen);
     // **Directly behind it, for the same reason.** The arena declaration is
     // declaration-level like the syscall one: its bounds are held here, and
     // the body flow (generations, counts, the owed `else`) walks beside M1,
@@ -815,6 +825,10 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         StmtArt::Narrow(x) => vec![&x.sonst],
         StmtArt::Sperrt(x) => vec![&x.rumpf],
         StmtArt::Observiert(x) => vec![&x.rumpf],
+        // **Lane O-1:** the child path is a sub-block like any `else` --
+        // whoever walks blocks walks it, and whoever counts bindings
+        // scopes it.
+        StmtArt::Child(x) => vec![x],
         StmtArt::LetSonst(x) => vec![&x.sonst],
         // **«E4»:** the full-arena continuation is a sub-block like any
         // `else` -- whoever walks blocks walks it, and whoever counts
@@ -882,6 +896,7 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Narrow(_)
         | StmtArt::Sperrt(_)
         | StmtArt::Observiert(_)
+        | StmtArt::Child(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::ResetArena(_)
@@ -950,6 +965,8 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         StmtArt::Let(_)
         | StmtArt::Alloc(_)
         | StmtArt::ResetArena(_)
+        // **Lane O-1:** `child` carries a block, not a predicate.
+        | StmtArt::Child(_)
         | StmtArt::LetSonst(_)
         | StmtArt::Zuweisung(_)
         | StmtArt::Return(_)
@@ -1399,9 +1416,12 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf, divergent)),
         // **Eine Klammer ist keine Weiche.** Wer im `locks`-, `observes`- oder
         // `breaking`-Rumpf auf jedem Weg endet, endet auch danach.
+        // **Lane O-1:** same for the `child` path -- a child block that ends
+        // on every path ends after it too.
         StmtArt::Sperrt(x) => endet_immer(&x.rumpf, divergent),
         StmtArt::Observiert(x) => endet_immer(&x.rumpf, divergent),
         StmtArt::Bricht(x) => endet_immer(&x.rumpf, divergent),
+        StmtArt::Child(x) => endet_immer(x, divergent),
         // **Der `else`-Zweig ist der AUSWEG, nicht der Weiterweg** — der Hauptpfad läuft
         // weiter, gleichgültig was darin steht.
         StmtArt::Narrow(_) | StmtArt::LetSonst(_) => false,

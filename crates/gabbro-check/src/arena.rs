@@ -565,6 +565,9 @@ impl<'a> Laeufer<'a> {
             // `observes D` names an RCU domain, not a local: nothing to bind.
             StmtArt::Observiert(x) => self.block(&x.rumpf),
             StmtArt::Bricht(x) => self.block(&x.rumpf),
+            // **Lane O-1:** generations and counts flow through the child
+            // path like any block.
+            StmtArt::Child(x) => self.block(x),
             StmtArt::AwaitLoad(a) => {
                 self.ort(&a.quelle);
                 for o in &a.erwartet {

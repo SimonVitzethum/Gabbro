@@ -426,6 +426,11 @@ pub const EINORDNUNG: &[Posten] = &[
                 generated is the comment carrying the suspended invariants; the restoration \
                 stands as a preservation duty in `gabbro pflichten` and not in the C (W6)",
     },
+    // **Lane O-1:** `child` has NO entry here until its lowering lands --
+    // like `breaking` before 2026-08-31 it is booked as `UNZUGEORDNET`,
+    // and rightly: the emitter refuses it (`C185`). The `zaehle` arm below
+    // still counts it, so the certificate lists the refused block instead
+    // of silently dropping it.
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,
@@ -1017,6 +1022,12 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Bricht(b) => {
                 zaehle(e, "breaking");
                 block(&b.rumpf, e, geister);
+            }
+            // **Lane O-1:** booked like `breaking` -- a block, and the walk
+            // enters it.
+            StmtArt::Child(x) => {
+                zaehle(e, "child");
+                block(x, e, geister);
             }
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),

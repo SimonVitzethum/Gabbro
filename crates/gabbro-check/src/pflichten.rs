@@ -700,6 +700,8 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         | StmtArt::Bricht(_)
         | StmtArt::Sperrt(_)
         | StmtArt::Observiert(_)
+        // **Lane O-1:** same -- the child path binds nothing itself.
+        | StmtArt::Child(_)
         | StmtArt::ResetArena(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
@@ -806,6 +808,9 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             StmtArt::Sperrt(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
             StmtArt::Observiert(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
             StmtArt::Bricht(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
+            // **Lane O-1:** a loop inside the child path owes its invariant
+            // like any loop -- the handoff shape hides no duty.
+            StmtArt::Child(x) => schleifeninvarianten(x, n, funktion, aus),
             StmtArt::LetSonst(x) => schleifeninvarianten(&x.sonst, n, funktion, aus),
             // **«E4»:** the full-arena continuation may loop, so it is
             // walked like any other `else`.

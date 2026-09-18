@@ -2769,6 +2769,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         }
         StmtArt::Exchange(_) => Err(LeanReason::Exchange),
         StmtArt::Observiert(_) => Err(LeanReason::Observe),
+        // **Lane O-1:** the child path is its statements -- the handoff
+        // shape (no return, never-ending tail) is the checker's business
+        // (`N448`/`N449`), and the term carries the sequence unchanged.
+        StmtArt::Child(x) => block_term(x, c),
         StmtArt::Sperrt(l) => Ok(LeanCarried::StmtCriticalSection.term(format!(
             "(.locked {} {})",
             quoted(&l.sperre.basis.text),

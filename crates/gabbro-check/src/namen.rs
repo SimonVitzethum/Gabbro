@@ -400,6 +400,9 @@ fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             | StmtArt::Narrow(_)
             | StmtArt::Sperrt(_)
             | StmtArt::Observiert(_)
+            // **Lane O-1:** `child` binds no name itself; the body is
+            // collected through `unterbloecke` below like every block.
+            | StmtArt::Child(_)
             | StmtArt::Leave(_)
             | StmtArt::Next(_)
             | StmtArt::Publish(_)
@@ -495,6 +498,13 @@ fn rumpf_falten(
             }
             StmtArt::Observiert(x) => {
                 rumpf_falten(&x.rumpf, atomare, lokal, rein, fakten);
+            }
+            // **Lane O-1:** the child path folds like any block -- reads
+            // consult the holder state, calls answer to their callee, and
+            // a `return` inside is the checker's business (`N448`), not
+            // this fold's.
+            StmtArt::Child(x) => {
+                rumpf_falten(x, atomare, lokal, rein, fakten);
             }
             StmtArt::Publish(p) => {
                 if atomare.contains(&p.ziel.basis.text) {
