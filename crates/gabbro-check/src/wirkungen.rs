@@ -447,8 +447,15 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 // Eine `traverse` mit `touches` traegt ihre eigene Wirkungsliste; sie muss
                 // trotzdem von der Funktion gedeckt sein, also zaehlt der Rumpf mit.
                 // **Die Domaene selbst wird gelesen** -- `slots of c` liest `c`.
+                // **Lane 229: the object is read too** -- `traverse v of g over …`
+                // evaluates `g` (the walk starts there), so it reads like the
+                // domain. This closes the booked gap in `wirkungen.rahmen`
+                // ("misses … the object of a `traverse`") for this pass.
                 if let Schleife::Traverse(x) = sch.as_ref() {
                     domaene_liest(&x.domaene, t);
+                    if let Some(g) = &x.gegenstand {
+                        liest_expr(g, t);
+                    }
                 }
             }
             _ => {}
@@ -526,6 +533,21 @@ fn pruefe_touches(
 ) {
     let mut taten = Taten::default();
     sammle_taten(&t.rumpf, &mut taten);
+    // **Lane 229: the object stands against `touches`, the carrier does not.**
+    // The `of` expression is evaluated to delimit the walk (the starting
+    // subject), like a bound -- the day a window (`from start count len`,
+    // lane 222) lands in the AST, its bound expressions join this exact spot
+    // beside it: evaluated means read. The CARRIER walk itself stays the
+    // function level's business (`domaene_liest` in `sammle_taten` below):
+    // `beispiele/09-ohne-zeiger.gab` (`touches consumes Kappenraum.slots`
+    // over `descendants of Kappenraum.slots[s]`) and `beispiele/57-
+    // faedenhalt.gab` (`touches writes Faden.slots` over `slots of Faden`)
+    // both name the body and leave the walk to the function effects -- that
+    // split is deliberate, and holding the carrier here would refuse them
+    // both. Measured 2026-09-18: the carrier hold fires exactly there.
+    if let Some(g) = &t.gegenstand {
+        liest_expr(g, &mut taten);
+    }
     let schreibt: Vec<String> = w
         .liste
         .iter()

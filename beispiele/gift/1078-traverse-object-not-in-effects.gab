@@ -1,0 +1,29 @@
+-- erwartet: E010
+-- **Lane 229 -- the `of` object stands against the function effects.**
+--
+-- `traverse v of y over …` evaluates `y` (the walk starts there), so the
+-- object reads like a bound. The traverse's `touches` names it, but the
+-- function effects do not -- and reading A says reads are declared as
+-- completely as writes.
+--
+-- The twin that holds the same object against `touches` is 1077 (`E011`).
+-- The shape that stays silent -- object in both lists -- is pinned as a
+-- snippet row in `crates/gabbro-check/tests/traverse_object.rs`.
+module gift::traverse_object_not_in_effects {
+
+const N : u32 = 8;
+table W count N { slot { a : u32 in 0 .. 10, parent : u32 in 0 .. 8, } }
+static mut y : u32 = 3;
+
+impl fn f()
+    effects { reads W } costs <= 200 ops
+{
+    traverse v of y over ancestors of W by unvisited
+        touches reads W, reads y
+    {
+        let x : u32 = 1;
+    }
+    return;
+}
+
+}
