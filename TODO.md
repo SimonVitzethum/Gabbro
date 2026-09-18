@@ -73,7 +73,7 @@ patch shape + surviving test).
 | 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
 | 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick | new `beispiele/` only | M | no new codes / — / 147–148 |
 | 237 | layout-factor muster: word tables + index arithmetic (`i>>2`, `(i&3)*8`), static-link budget measured | new `beispiele/` + report only, NO `m1.rs` (lane 224 owns it) | S | no new codes / — / 151–152 |
-| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | PARKED (Opus) |
+| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | DELIVERED 2026-09-18 (`opus/clone-handoff`, 5 commits, pushed, unmerged): `stack` clause + `child` statement, checker N446–N450, emitter REFUSES by C185 (helper stub measured broken — inline-trap lowering open), Lean model + Spec (d2), axioms standard. Open: lowering+correspondence, spill-read rule, `D.klon` exporter fill, `Ziel` leg. Merge pending review decision. |
 
 **Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
 
