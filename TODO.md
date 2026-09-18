@@ -467,6 +467,40 @@ one assumption list, and the number is booked before and after.*
   `gabbro obligations --g` and `gabbro counterexample` (lane 180) as the everyday interface.
 - [ ] **Tool maturity** (LSP, localisation, profiling). After the goal.
 
+**NOT-CLAIMED items that earn a place here, ranked (owner triage 2026-09-18).
+P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
+
+- [ ] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** The
+  statement is about ONE `Einheit`; cross-unit calls go through unchecked
+  `extern` today. Blocks the standard library (§0b first item — one item
+  seen from two sides) and the isolation product. Needs ABI-interface
+  matching decidable from the `_Static_assert` pins, the linking theorem
+  (§2), and what the goal says about two units. Opus-sized plus a review
+  round.
+- [ ] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17).** The
+  checker accepts pools since lane 245; the model covers them only
+  additively and per-core locality is unproved. Either prove per-thread
+  disjointness or restrict the exemption (wave-B tasked with exactly
+  this). Small to medium, gated by nothing.
+- [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
+  full proof: a `costs`-like static budget over call depth with the
+  2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays
+  impossible by construction of the bound. Small to medium.
+- [ ] **Weak memory beyond DRF-SC (P1 — NOT-CLAIMED #4, gated).** Priced
+  under §2; starts only after stage (b) closes generically. Lock-free
+  programmers need it, and linearizability above builds on it.
+- [ ] **Termination and waiting bounds (P2 — NOT-CLAIMED #1).**
+  `forever` budgets plus `Fortschritt` cover the practical shape; the
+  data-sheet variant above comes first. Full termination stays per-program
+  user logic, never a language claim.
+- [ ] **Starvation freedom (P2 — NOT-CLAIMED #7).** After the data-sheet
+  waiting bounds; FIFO lock and fairness window `F` move from
+  `Lebendigkeit.lean` into the ONE list first (§3).
+- [ ] **Invariants at entry (P3 — NOT-CLAIMED #8).** Covered in practice
+  by release-side enforcement; only if a program turns up that needs
+  entry-side claims with no release-side equivalent. Cheapest and lowest
+  deliberately.
+
 # 5. Simplicity without losing a guarantee  ⟨E⟩
 
 *Measure (PLAN-EINFACHHEIT §0): `gabbro zeremonie` goes down AND the pass register stays
