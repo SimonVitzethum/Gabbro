@@ -268,7 +268,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N391** (blocks N391–425 assigned in TODO §-1; N315–N323 consumed since) |
 | Gift (poison-probe) numbers | **1052** (blocks 1052–1086 assigned in TODO §-1) |
 | Example numbers | **147** (pool 147–155 for TODO §-1, taken in order) |
-| Lane numbers | **221** workers (221–244 for TODO §-1, 230 unused; spares 209–210), **321** reviewers |
+| Lane numbers | **221** workers (221–248 for TODO §-1, 230 unused; spares 209–210), **321** reviewers |
 
 - The test `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions between lanes.
 - **Every new refusal code comes with its sentence** in `saetze.rs` in the same commit

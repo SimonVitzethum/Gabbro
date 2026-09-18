@@ -30,11 +30,11 @@ Each item names its owner (lane or agent) where one is running.
 *14 walls from the firewall-in-Gabbro tree (`Verdict/messung/BEFUNDE-bm*.md`,
 measured against Gabbro master `71c5eaea`); 3 cost nothing — N042/N323 and
 atomic arrays are built, sigaction stays out by design (threshold counters
-are free). The remaining 11 are cut into 18 lanes in 3 waves below: 16 Muse
-lanes (workers 221–237, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
+are free). The remaining 11 are cut into 26 lanes in 3 waves below: 24 Muse
+lanes (workers 221–248, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
 both touch the model core; PARKED 2026-09-17, no Opus capacity — wave A
 runs without them). Review loop (`bin/review-wache.sh`, max 3
-rounds, builds re-run by the reviewer) covers workers 221–235 with
+rounds, builds re-run by the reviewer) covers workers 221–248 with
 reviewers from 321; the dispatcher worker list needs the extension
 (orchestrator step). Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
 in wave B.*
@@ -98,12 +98,14 @@ witnesses instead of poison probes.*
 | 235 | never/never-asm lowering | `emit.rs` | M | 234 |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
-*Deferred, priced, not launched: **mmap-backed tables** (Obergrenze #2).
-`table … storage mmap`: same checker rules, emitter maps at startup,
-Lean region + mmap-contract assumption. Price: 1 design lane (M) + 1
-build lane (M) + ONE-list entry; the 40 GB number itself is irrelevant —
-what counts is statically linkable, bucket-bounded, refuse-on-full
-(lanes 236/237 prove the discipline without it).*
+*Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
+**mmap-backed tables** (Obergrenze #2). `table … storage mmap`: same
+checker rules (240's `max` cap), runtime reserves virtual + commits on
+demand (`laufzeit/`, A4-style assumption — OS rule holds: no ABI constant
+in the tree), Lean region (241's `ArenaDyn`) + mmap-contract assumption
+as ONE-list entry. The 40 GB number itself is irrelevant — what counts is
+statically linkable, bucket-bounded, refuse-on-full (lanes 236/237 prove
+the discipline without it).*
 
 **Wave D — bounded dynamic memory: 300 MiB working set, 30 GB ceiling,
 near-Rust efficiency (owner).** Reservation vs commit split: the program
@@ -120,15 +122,23 @@ Rust, never a header per object.
 | 239 | dynamic-table design (`PLAN-DYNAMISCH.md`): `max` cap clause, fault-vs-explicit growth, free discipline, fault-latency assumption text, Lean sketch, efficiency budget | new doc only | M | 238 consults |
 | 240 | checker: `max` cap, growth points, cap refusal | `arena.rs` + new module, NOT `kosten.rs` (223/232) | M | 239 |
 | 241 | Lean: virtual region + commit subset + refinement | new files | M–L | 239 |
-| 242 | emitter + runtime: reserve/commit, OOM fail-stop | `emit.rs` (after 235) + `laufzeit/` | M | 239, 235 |
+| 242 | runtime: reserve/commit, mmap backing, OOM fail-stop + emitter-arm SPEC (no `emit.rs` — owned by 234→235) | `laufzeit/` + new module, examples 153–154 | M | 239, 240, 241 |
 | 243 | free discipline (arena-reset proof or linear free-list) | new files + 240's region | M | 240 |
 | 244 | efficiency fixes: kill census overhead | measured sites only | S–M | 238 |
+| 248 | emitter arm for reserve/commit (QUEUED, starts after 235 merges) | `emit.rs` | S–M | 235, 242 |
 
-*Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096. Example
+*Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096 (only if a
+new refusal is measured — over-cap growth already refuses via 240). 248
+takes no new codes (lowering lane). Example
 pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
-238 + 239 alongside wave A (10 total on fisch).*
+242 alongside waves A/B (11 total on fisch).*
 
-*Not lanes: sigaction (out, see above); M147 foreign taint (bm8-F2, helper
+*Not lanes: sigaction (out by design, not by backlog: an async handler is a
+root that fires at an arbitrary program point, breaking the start/thread
+model — reentrancy against lock invariants, contracts and costs cannot be
+checked at the interruption site, so it would need a Spec diff for a
+guarantee the language cannot hold; threshold counters + exit status cover
+the firewall need fail-closed and free); M147 foreign taint (bm8-F2, helper
 discipline, no build); TIEFE_MAX stays 32 (raise = constant + fuzz inside
 lane 222 if measured); M101 further shapes are one small lane per shape,
 priced per shape, never as "done". Example pool 147–155 shared in order;
@@ -394,6 +404,23 @@ for 124 with `DRFSC` and `LaufzeitC` as named premises. Open, by plan §7.6:
   programs.
 - [ ] **Inline assembly: a small ISA semantics** for exactly the stub patterns the emitter
   writes, so each stub gets a correspondence lemma instead of `AxCorr`.
+
+**Beyond DRF-SC: full weak-memory coverage (priced, deferred — owner, 2026-09-18).**
+Today G is sequentially consistent and data-race freedom buys SC behavior
+(`DRFSC` premise in stage (b)); atomics/pairing are ordered by axiom A10
+and exempt from `rennfrei` (`Spec.lean` NOT-CLAIMED: weak memory beyond
+DRF-SC). Full coverage means: rebuild G on an RC11/IMM-class model
+(memory as history/graph, visibility instead of interleavings), re-prove
+`gabbro_ziel` + one review round, give every ordering its own meaning in
+model + checker (today A10 covers them wholesale), per-architecture
+fence mappings (x86-TSO vs ARM/POWER) with a per-access C semantics, and
+re-do stage (b) with DRF-SC proved instead of assumed (region
+serialisability + footprint soundness become mandatory). Price: ~6–10
+lanes + 2 Opus tracks + 1–2 goal-theorem review rounds, roughly 1–3
+months review-bound — and it invalidates stage-(b) work in flight.
+Gate: starts only after stage (b) is closed generically; until then
+DRF-SC is the honest contract (no races ⇒ SC covers every real
+firewall/driver case).
 
 # 3. The goal statement — follow-ups  ⟨D⟩
 
