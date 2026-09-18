@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- Lane 227 poison: two arms naming one value. C allows a single `case` label
+-- per value (`duplicate case value`), so the second arm could never run; the
+-- emitter refuses instead of emitting what `cc` must refuse.
+module gift::int_match_duplicate_value {
+impl fn klassifiziere(x : u32) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        3 => { return 1; }
+        3 => { return 2; }
+    }
+    return 0;
+}
+}

@@ -136,6 +136,12 @@ FORMS = {
     "stmt:switch-reason":      (["gcorr_onGrund"], "R1"),
     "stmt:case":               (["gcorr_onGrund"], "R1 (an arm)"),
     "stmt:case-end":           (["arm_brk"], "`} break;`"),
+    # INTEGER `match` (lane 227 lowers it to a C `switch`). The correspondence
+    # lemma is lane 228's -- until it exists both rows are state (iii), and the
+    # KNOWN_UNCOVERED entries below name the owner, so the form is booked and
+    # never silent.
+    "stmt:switch-int":         ([], "integer `match` switch (lane 227; lemma: lane 228)"),
+    "stmt:case-int":           ([], "integer `match` arm (lane 227; lemma: lane 228)"),
     "stmt:for-counting":       (["scorr_traverse"], "S7"),
     "stmt:retry-counter":      (["scorr_retry"], "retry: `uint32_t _rN = 0;`"),
     "stmt:retry-header":       (["scorr_retry", "scorrC_retry"], "retry loop header"),
@@ -234,6 +240,13 @@ KNOWN_UNCOVERED = {
     "stmt:switch-tag": ("2026-09-13", "gcorr_onTag is proved, but ValCorr has no case for "
                         "a tagged union, so no related state has a union variable"),
     "stmt:decl-union-payload": ("2026-09-13", "the payload read of an onTag arm"),
+    # Lane 227 (2026-09-17) lowers integer `match` arms to a C `switch`. The
+    # correspondence lemma is lane 228's; until it lands both rows below are
+    # state (iii) with a named owner -- booked, never silent.
+    "stmt:switch-int": ("2026-09-17", "integer `match` switch (lane 227 emits it; "
+                        "correspondence lemma owned by lane 228)"),
+    "stmt:case-int": ("2026-09-17", "integer `match` arm: `case N:` / `case N: {` "
+                      "(lane 227 emits it; correspondence lemma owned by lane 228)"),
     # The four aggregate rows. They are NOT new emitter shapes -- the emitter has written
     # them all along; they are newly VISIBLE, because until today the classifier read the
     # statement text and not the C type, and booked them under `scorr_ret`/`ergCorr_run`,
@@ -600,12 +613,23 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
         return "stmt:case-end"
     if s == "break;":
         return "stmt:break"
-    if re.match(r"^case " + IDENT + r": \{$", s) or re.match(r"^case -?\d+u?: \{$", s):
+    if re.match(r"^case " + IDENT + r": \{$", s):
         return "stmt:case"
+    # Lane 227: an integer `match` arm. Numeric labels (`case 3: {`) and the
+    # stacked bare labels of an expanded range (`case 3:`) are never a reason
+    # or tagged arm -- those spell names, never values (IDENT cannot be digits).
+    if re.match(r"^case -?\d+u?: \{$", s) or re.match(r"^case -?\d+u?:$", s):
+        return "stmt:case-int"
     if re.match(r"^switch \(.*\.marke\) \{$", s):
         return "stmt:switch-tag"
     if re.match(r"^switch \(" + IDENT + r"\) \{$", s):
         return "stmt:switch-reason"
+    # Lane 227: an integer `switch` over a scrutinee that is not a bare name
+    # (`switch (s.len) {`). A bare-name integer switch reads as `switch-reason`
+    # here and is reclassified by its first case in main() below; a complex
+    # scrutinee never matches that row, so it lands here directly.
+    if re.match(r"^switch \(.+\) \{$", s):
+        return "stmt:switch-int"
     if s == "for (;;) {":
         return "stmt:forever" if prev == "stmt:watchdog" else "stmt:for-ever-other"
     if re.match(r"^for \(; !\(.*\) && _r\d+ < \d+u; _r\d+ \+= 1\) \{$", s):
@@ -928,28 +952,42 @@ def main():
         for body in unit.bodies:
             cells = set()
             prev = None
+            trail = []
             for ln in body.lines:
                 for s in split_statements(ln):
                     form = classify_stmt(s, unit, body.channel, prev, body)
                     prev = form
-                    if form is None:
-                        unclassified[s] += 1
-                        unclassified_ex.setdefault(s, f.name)
-                        continue
-                    if form == "stmt:decl-cell":
-                        m = re.match(r"^\S+ (" + IDENT + r");$", s)
-                        if m:
-                            cells.add(m.group(1))
-                    if form != "brace":
-                        counts[form] += 1
-                        programs[form].add(f.name)
-                        if len(examples[form]) < args.examples:
-                            examples[form].append(f"{f.name}: {s[:110]}")
-                    for ex in set(classify_exprs(expression_part(s, form), unit, cells, form)):
-                        counts[ex] += 1
-                        programs[ex].add(f.name)
-                        if len(examples[ex]) < args.examples:
-                            examples[ex].append(f"{f.name}: {s[:110]}")
+                    trail.append((form, s))
+            # Lane 227: an integer `switch` over a bare name shares its header
+            # text with a reason `switch` (`switch (x) {`) -- the cases tell
+            # them apart. A header whose immediately following case is numeric
+            # is an integer switch, not a reason one. Both lowerings place the
+            # first case directly under the header, so anything else in between
+            # keeps the provisional row (conservative: a merged header is a
+            # wrong lemma claim, an unmerged one is at most an extra row).
+            for i, (form, s) in enumerate(trail):
+                if form == "stmt:switch-reason" and i + 1 < len(trail):
+                    if trail[i + 1][0] == "stmt:case-int":
+                        trail[i] = ("stmt:switch-int", s)
+            for (form, s) in trail:
+                if form is None:
+                    unclassified[s] += 1
+                    unclassified_ex.setdefault(s, f.name)
+                    continue
+                if form == "stmt:decl-cell":
+                    m = re.match(r"^\S+ (" + IDENT + r");$", s)
+                    if m:
+                        cells.add(m.group(1))
+                if form != "brace":
+                    counts[form] += 1
+                    programs[form].add(f.name)
+                    if len(examples[form]) < args.examples:
+                        examples[form].append(f"{f.name}: {s[:110]}")
+                for ex in set(classify_exprs(expression_part(s, form), unit, cells, form)):
+                    counts[ex] += 1
+                    programs[ex].add(f.name)
+                    if len(examples[ex]) < args.examples:
+                        examples[ex].append(f"{f.name}: {s[:110]}")
 
     sources = "\n".join(p.read_text() for p in GRAMMATIK.glob("*.lean"))
     missing = []

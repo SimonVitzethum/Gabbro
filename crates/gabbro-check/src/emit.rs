@@ -12094,6 +12094,14 @@ fn match_option(
                 }
             }
         }
+        // **Lane 227: integer arms (lane 222) lower to a `switch` below.** Any integer
+        // arm at all takes this road -- a MIXED match refuses there by name, and the
+        // three lowerings above keep every all-variant match exactly as they read it
+        // (their refusal matrix, MUSE-REPORT-222 §3, is unchanged).
+        if m.zweige.iter().any(|z| z.intpat.is_some()) {
+            match_int(m, s, aus, u, absagen, tiefe, austritt);
+            return;
+        }
         weigere(absagen, s.span, "`match` over something other than an `option index into T`");
         return;
     };
@@ -12121,6 +12129,273 @@ fn match_option(
         anweisung(k, aus, u, absagen, tiefe + 2, austritt);
     }
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+}
+
+/// **At most this many `case` labels from one range arm (lane 227).**
+///
+/// A range arm spells an interval and a C `case` spells one value, so lowering a
+/// range spells the interval OUT. Past 256 values that spelling is no longer a
+/// lowering but an unfolding -- and 256 is not an arbitrary cap: the dense dispatch
+/// of TODO §-1 *is* 256-way, so exactly the canonical dense arm still fits. A wider
+/// interval belongs to interval guards (`if`), whose exhaustiveness design lane 228
+/// owns; here it refuses with `C001`, never silently unfolded.
+const INTPAT_SPANNE: u128 = 256;
+
+/// One `case` label for one integer value, or `None` where C has no spelling.
+///
+/// Non-negative values go through `czahl` (the `u` suffix past `i64::MAX`, refusal
+/// past `u64::MAX); negatives spell `-N`, which needs `N <= 2^63`. Anything outside
+/// `-2^63 ..= 2^64 - 1` reaches no C integer type and is refused at the caller.
+fn int_fall_text(w: i128) -> Option<String> {
+    if w < 0 {
+        let betrag = w.unsigned_abs();
+        if betrag > (i64::MAX as u128) + 1 {
+            return None;
+        }
+        Some(format!("-{betrag}"))
+    } else {
+        czahl(w as u128)
+    }
+}
+
+/// One bound of an integer arm as an `i128`, or `None` after refusing.
+///
+/// The magnitude arrives as a `u128` (the lexer folds decimal, hex, binary and `_`
+/// separators); `-2^127` is spelled `-` plus `2^127`, which does NOT fit `i128` as a
+/// magnitude and gets its own arm instead of falling through the conversion.
+fn int_grenze(
+    g: &IntBound,
+    span: gabbro_syntax::span::Span,
+    absagen: &mut Absagen,
+) -> Option<i128> {
+    let w = if g.negative {
+        if g.value == (1u128 << 127) {
+            Some(i128::MIN)
+        } else {
+            i128::try_from(g.value).ok().and_then(|b| b.checked_neg())
+        }
+    } else {
+        i128::try_from(g.value).ok()
+    };
+    let Some(w) = w else {
+        weigere(
+            absagen,
+            span,
+            "an integer `match` bound past `2^127 - 1` in magnitude -- no C integer type \
+             holds it, and `cc` says `integer constant is too large for its type`. There is \
+             no spelling to write here",
+        );
+        return None;
+    };
+    Some(w)
+}
+
+/// The case values of one integer arm pattern, or `None` after refusing.
+///
+/// An exact arm names one value; a range arm (`lo .. hi`, `lo ..< hi`) names every
+/// value from `lo` to `hi`, bounds included or excluded as written. Three refusals,
+/// all `C001`: an inverted or empty interval (no value could ever meet it), a value
+/// C cannot spell (see `int_fall_text`), and an interval past `INTPAT_SPANNE`.
+fn intpat_werte(
+    pat: &IntPat,
+    span: gabbro_syntax::span::Span,
+    absagen: &mut Absagen,
+) -> Option<Vec<i128>> {
+    match pat {
+        IntPat::Exact(g) => {
+            let w = int_grenze(g, span, absagen)?;
+            if int_fall_text(w).is_none() {
+                weigere(
+                    absagen,
+                    span,
+                    "an integer `match` value past `2^64 - 1` (or below `-2^63`) -- it \
+                     reaches no C integer type, and `cc` says `integer constant is too \
+                     large for its type`",
+                );
+                return None;
+            }
+            Some(vec![w])
+        }
+        IntPat::Range { lo, hi, exclusive } => {
+            let a = int_grenze(lo, span, absagen)?;
+            let mut b = int_grenze(hi, span, absagen)?;
+            if *exclusive {
+                let Some(v) = b.checked_sub(1) else {
+                    weigere(
+                        absagen,
+                        span,
+                        "an integer `match` range ending below everything -- `lo ..< \
+                         -2^127` names no value, so no arm could ever run",
+                    );
+                    return None;
+                };
+                b = v;
+            }
+            if a > b {
+                weigere(
+                    absagen,
+                    span,
+                    "an integer `match` range whose lower bound is past its upper one -- \
+                     no value could ever meet it, so no arm could ever run",
+                );
+                return None;
+            }
+            if int_fall_text(a).is_none() || int_fall_text(b).is_none() {
+                weigere(
+                    absagen,
+                    span,
+                    "an integer `match` range reaching past `2^64 - 1` (or below \
+                     `-2^63`) -- its ends reach no C integer type, and `cc` says \
+                     `integer constant is too large for its type`",
+                );
+                return None;
+            }
+            let anzahl = (b - a) as u128 + 1;
+            if anzahl > INTPAT_SPANNE {
+                weigere(
+                    absagen,
+                    span,
+                    "`match` range wider than 256 values -- spelling it out would unfold \
+                     the interval into one `case` label per value, and past the canonical \
+                     dense width that unfolding is no longer a lowering. Split the interval \
+                     with `if` guards",
+                );
+                return None;
+            }
+            Some((a..=b).collect())
+        }
+    }
+}
+
+/// **Integer `match` lowers to a C `switch` (lane 227).**
+///
+/// Lane 222 added the syntax (`3 =>`, `0 .. 255 =>`, `0 ..< 256 =>` over an integer
+/// scrutinee); until this lane the emitter refused every such match with `C001`. The
+/// lowering is a `switch` over the scrutinee expression: one `case` per exact arm,
+/// one `case` per value of a range arm (stacked labels sharing one body). There is
+/// no `default`: exhaustiveness stays the checker's (lane 228) -- a missing default
+/// is not this lane's to add -- and no `__builtin_unreachable`: unlike `D005`/`M123`
+/// no rule has decided the distinction is closed, so handing that decision to the C
+/// compiler would invent a fact.
+///
+/// A `switch` evaluates its controlling expression exactly once, so unlike the
+/// `tagged` lowering above no temporary is needed for a call scrutinee: the
+/// expression stands once in the header and nowhere else.
+#[allow(clippy::too_many_arguments)]
+fn match_int(
+    m: &MatchStmt,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    // **Integer arms need an integer scrutinee -- read off the C type, not guessed.**
+    // `wert_ctyp` answers from the declaration (parameter, `let` binding, callee
+    // return); a scrutinee it cannot type has no `switch` to stand under, and a
+    // non-integer one gives the arms nothing to meet.
+    let ganz = matches!(
+        wert_ctyp(&m.gegenstand, u).as_deref(),
+        Some(
+            "uint8_t"
+                | "uint16_t"
+                | "uint32_t"
+                | "uint64_t"
+                | "int8_t"
+                | "int16_t"
+                | "int32_t"
+                | "int64_t"
+                | "bool"
+        )
+    );
+    if !ganz {
+        weigere(
+            absagen,
+            s.span,
+            "`match` with integer arms over a scrutinee of non-integer type -- the arms \
+             name integer values, and only an integer (or `bool`) scrutinee gives them \
+             something to meet",
+        );
+        return;
+    }
+    // **Expand every arm to its case values, in arm order.** A variant arm among
+    // integer arms refuses here: it names a case, the others name values, and one
+    // `switch` cannot meet both.
+    let mut faelle: Vec<Vec<i128>> = Vec::with_capacity(m.zweige.len());
+    for z in &m.zweige {
+        let Some(pat) = &z.intpat else {
+            weigere(
+                absagen,
+                z.span,
+                "`match` mixing integer arms with variant arms -- every arm over an \
+                 integer scrutinee names integer values, a variant arm names a case, \
+                 and one `switch` cannot meet both",
+            );
+            return;
+        };
+        let Some(ws) = intpat_werte(pat, z.span, absagen) else {
+            return;
+        };
+        faelle.push(ws);
+    }
+    // **Two arms naming one value would be two `case` labels for it, and C rejects
+    // the program (`duplicate case value`)** -- so the emitter refuses instead of
+    // emitting what `cc` must refuse. Which arm SHOULD win is overlap and belongs to
+    // the checker (lane 228); two spellings of one value refuse here either way.
+    {
+        let mut gesehen = BTreeSet::new();
+        for ws in &faelle {
+            for w in ws {
+                if !gesehen.insert(*w) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "`match` naming one integer value in two arms -- C allows one \
+                         `case` label per value, so the second arm could never run",
+                    );
+                    return;
+                }
+            }
+        }
+    }
+    aus.push_str(&format!(
+        "{e}switch ({}) {{\n",
+        ausdruck(&m.gegenstand, u, absagen)
+    ));
+    for (z, ws) in m.zweige.iter().zip(faelle.iter()) {
+        let Some((letzt, vordere)) = ws.split_last() else {
+            continue;
+        };
+        for w in vordere {
+            let Some(t) = int_fall_text(*w) else {
+                weigere(
+                    absagen,
+                    z.span,
+                    "an integer `match` value past `2^64 - 1` (or below `-2^63`) -- it \
+                     reaches no C integer type",
+                );
+                return;
+            };
+            aus.push_str(&format!("{e}case {t}:\n"));
+        }
+        let Some(t) = int_fall_text(*letzt) else {
+            weigere(
+                absagen,
+                z.span,
+                "an integer `match` value past `2^64 - 1` (or below `-2^63`) -- it \
+                 reaches no C integer type",
+            );
+            return;
+        };
+        aus.push_str(&format!("{e}case {t}: {{\n"));
+        for k in &z.rumpf.anweisungen {
+            anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+        }
+        aus.push_str(&format!("{e}}} break;\n"));
+    }
+    aus.push_str(&format!("{e}}}\n"));
 }
 
 /// **Der erklaerte Typ eines Ortes -- abgelesen, nicht geraten.**

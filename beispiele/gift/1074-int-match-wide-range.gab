@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- Lane 227 poison: a range wider than 256 values (`INTPAT_SPANNE`). Spelling the
+-- interval out would unfold it into one `case` label per value -- past the
+-- canonical dense width that unfolding is no longer a lowering. Split the
+-- interval with `if` guards.
+module gift::int_match_wide_range {
+impl fn klassifiziere(x : u32) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        0 .. 1000 => { return 1; }
+    }
+    return 0;
+}
+}
