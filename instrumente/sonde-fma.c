@@ -16,7 +16,7 @@
  * Without `-mfma` the x86_64 baseline has no FMA instruction at all, so the
  * flag is what makes the question sharp: with it, both compilers contract
  * unless told not to (measured 2026-09-12, GCC 13.3.0 and Clang 18.1.3 here;
- * PLAN-BITS.md names GCC 16 and Clang 22 on the folder owner's machine).
+ * PLAN-BITS.md names GCC 16 and Clang 22 on Simon's machine).
  */
 #include <stdio.h>
 

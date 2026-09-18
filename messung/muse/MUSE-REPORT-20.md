@@ -78,7 +78,7 @@ are each discharged by a distinct imported lemma, not restated premises.
 - `./lean-bau`: green -- `Build completed successfully (29 jobs).` (run after
   the audit; `grammatik/` untouched, as required for a read-only lane).
 
-## Open / for the owner
+## Open / for Simon
 
 - Decide whether `hsingle` (single-thread) steps can ever feed the two-thread
   goal, or whether §12's induction genuinely stays single-thread (then the

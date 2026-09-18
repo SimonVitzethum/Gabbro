@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """No OS memory call outside `laufzeit/` (wave D, lane 242).
 
-Binding constraint (owner): no language feature hard-depends on an OS.
+Binding constraint (Simon): no language feature hard-depends on an OS.
 Reservation and commit live in `laufzeit/` behind the OS-free interface of
 `laufzeit/arena_dyn.h`; the tree above it speaks slot counts, never pages.
 A constant smuggled as documentation is still smuggled, so this scan reads

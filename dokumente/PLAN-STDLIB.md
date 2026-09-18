@@ -1,6 +1,6 @@
 # The standard library, native in Gabbro — the plan
 
-*Owner's decision, 2026-09-16: **everything a standard library does, except networking, files,
+*Simon's decision, 2026-09-16: **everything a standard library does, except networking, files,
 graphics and windows, is to be written in Gabbro itself.** Not as `extern` declarations with a
 named assumption, not as C behind a border — as Gabbro modules the checker checks and the goal
 theorem covers.*
@@ -26,7 +26,7 @@ buffer, no queue, no timer wheel, no strings, no hash, no sort.
 | **L5 time and concurrency** | monotonic clock; durations; sleep; the ticket lock; futex wait/wake; sequence lock; epoch-style reclamation |
 | **L6 randomness** | a counter-based PRNG, and entropy from the kernel through a system call |
 
-**Out, by the owner's line:** networking, files, graphics, windows. Those are I/O against a
+**Out, by Simon's line:** networking, files, graphics, windows. Those are I/O against a
 world with its own rules; they stay system calls at the program's own border, declared where
 they are used.
 

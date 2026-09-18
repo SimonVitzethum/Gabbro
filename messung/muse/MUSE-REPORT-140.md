@@ -81,7 +81,7 @@ exists in `ZielOrtGeraetSem.lean`).
   doesn't list them either -- consistent, but worth a look by a Lean lane).
 - Shared vs exclusive `Held` strength is accepted as held (H001's question).
 - The `A_p` share / `A_u = 2 of 45` prose in PLAN.md was NOT re-measured: 30 new
-  unfalsifiable-by-structure lines entered the census. Owner decision whether the
+  unfalsifiable-by-structure lines entered the census. Simon's decision whether the
   share denominator moves.
 - N259 free for the writer-side guard lane.
 

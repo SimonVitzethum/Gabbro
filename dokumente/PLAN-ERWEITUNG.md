@@ -1,6 +1,6 @@
 # Library syntax, expansion, bounded memory -- the road to extensions such as GPU kernels
 
-*Written 2026-09-12 after a design discussion with the folder owner. Decisions and order;
+*Written 2026-09-12 after a design discussion with Simon. Decisions and order;
 nothing is built. Companion to `PLAN-SYSCALL.md` and `PLAN-BITS.md`.*
 
 ## 0. The idea, and why it fits Gabbro
@@ -19,7 +19,7 @@ and termination are a signature, not a convention, and the expansion is an objec
 talk about: the certificate says "this source expands to this core term", and Lean re-checks
 the expansion without knowing the expander.
 
-## 0b. Decision (owner, 2026-09-12): executed at run time, checked at translation time
+## 0b. Decision (Simon, 2026-09-12): executed at run time, checked at translation time
 
 `@<library>#<function> ( args ) { region }` is a **run-time call** of `<function>` in
 `<library>`. The region is read and checked when the program is translated; at run time the
@@ -38,7 +38,7 @@ program calls the library -- for a GPU kernel, the launch through the driver. So
 * **The verification reaches the hand-over:** arguments, payload type, contract and effects at
   the call are checked; the library's run-time behaviour is the assumption it exports.
 
-**Gabbro code is always compiled at translation time, never at run time (owner, 2026-09-12,
+**Gabbro code is always compiled at translation time, never at run time (Simon, 2026-09-12,
 clarified the same day).** Everything the program does is fixed when it is translated: no
 Gabbro source, region or AST is compiled, generated or interpreted while the program runs. The
 payload of a region is fully produced at translation time; at run time the library only
@@ -58,7 +58,7 @@ removes that assumption at the price of portability.
 Compile-time expansion of regions into core Gabbro (§0) stays possible as a later form, but it
 is not what `@lib#func` means.
 
-## 0c. Decision (owner, 2026-09-12): a library function is always safe Gabbro, with no hardware assumption contradicting the main program
+## 0c. Decision (Simon, 2026-09-12): a library function is always safe Gabbro, with no hardware assumption contradicting the main program
 
 **Why this is load-bearing:** contradictory assumptions make every proof over the combined
 program vacuous -- from a contradiction everything follows. That is the defect class the
@@ -114,9 +114,9 @@ system". Ordinary library functions need no new syntax (`use path`, qualified na
   extension syntax. Experience says this is more work than the expander; it is planned as its
   own step, not as an afterthought.
 
-## 3. Bounded memory -- the owner's rule and its three forms
+## 3. Bounded memory -- Simon's rule and its three forms
 
-**Rule (owner, 2026-09-12):** a heap is allowed, but never one that grows without bound: every
+**Rule (Simon, 2026-09-12):** a heap is allowed, but never one that grows without bound: every
 allocation region carries an upper and a lower bound. The plan fixes WHICH form a region is,
 because the forms carry very different proof load:
 
@@ -173,7 +173,7 @@ mechanism (b) is a hole with a library label. Two further facts for GPU work:
   time. The lowering's correctness is stated against a semantics of the G1 subset only -- small
   because the subset is small -- and the driver's step is the profile assumption of §0b.
 
-### 4a. GPU kernels written in Gabbro -- staged (owner question, 2026-09-12)
+### 4a. GPU kernels written in Gabbro -- staged (Simon question, 2026-09-12)
 
 Gabbro's existing restrictions fit a GPU unusually well: no recursion, bounded loops, no
 unbounded allocation, sized tables. What is new is the concurrency model. The stages differ in
@@ -216,7 +216,7 @@ AST from the start as something that may be the output of a program (on the Rust
 the planned `Ableitung` datum of `PLAN-UMSETZUNG.md` §1). Both cost almost nothing now and
 decide whether this road is open later.
 
-## 6. Scope for the next wave: the structure only (owner decisions, 2026-09-12)
+## 6. Scope for the next wave: the structure only (Simon decisions, 2026-09-12)
 
 **Only the structure that makes run-time library calls with checked regions possible is built
 -- no GPU backend, no concrete translator, no second emitter.** Each lane gets a fixed

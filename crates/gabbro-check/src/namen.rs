@@ -1407,7 +1407,7 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
 /// CPUID probe is the only generator of `ghost Has(Feature)`"* (A14). That probe does not
 /// exist, no `mints Has(F)` form exists, and **nothing in the language declares a feature
 /// name.** Checking the NAME therefore needs a declared list, and who declares it is an
-/// owner's decision with two shapes -- a house table under `arch`, the way
+/// Simon's decision with two shapes -- a house table under `arch`, the way
 /// `cnamen.rs::SIGNATUR` carries what C has taken (no new word), or a language form that
 /// mints the witness (a new word, and the vocabulary ratchet stands at 221/208/333). *That
 /// is named and not built here.*

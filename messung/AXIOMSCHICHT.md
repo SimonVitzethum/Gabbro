@@ -402,7 +402,7 @@ A bar that only ever removes rows is a bar built to remove rows.
   `progress` that rests on an unfalsifiable assumption (`schleifen.rs`:239). *So the honest
   reading is not „reclassify the row" but the sentence `S004` was written to say:* **a loop
   whose termination rests on something nothing can refute has no watchdog.** The repair is a
-  bound at the loop, and it is a decision for the owner, not for this run — which also keeps
+  bound at the loop, and it is a decision for Simon, not for this run — which also keeps
   the guardian's ratchet from being lifted by its own author on the day it was written.
 * **`eingabe_endet`** — *„Ein Manifest traegt endlich viele Saetze, und `lenof` nennt ihre
   Zahl."* The bound is IN the program, named by a Gabbro operator. Under `R3` this is not a

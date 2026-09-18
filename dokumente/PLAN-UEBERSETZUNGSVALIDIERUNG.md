@@ -1,6 +1,6 @@
 # Translation validation — the plan
 
-*Written 2026-09-13. The folder owner decided that this comes AFTER the goal ("the user proves
+*Written 2026-09-13. Simon decided that this comes AFTER the goal ("the user proves
 only their own logic plus hardware assumptions") is confirmed and carried into the checker and
 emitter. The inputs are measurements: `messung/VERIFIKATIONSAUFWAND-2026-09-12.md` (lane 127)
 and `messung/muse/MUSE-REPORT-128.md` (lane 128, the C-semantics probe).*

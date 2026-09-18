@@ -1,12 +1,12 @@
 # The goal theorem as ONE reviewable Lean statement -- plan
 
-*Written 2026-09-14 at the folder owner's request. Why: Lean makes a PROOF unanswerable,
+*Written 2026-09-14 at Simon's request. Why: Lean makes a PROOF unanswerable,
 not a STATEMENT. Both 2026-09-14 verdicts, and probes A and D before them, found theorems
 that were true and said the wrong thing. The remedy is not more theorems. It is one short
 statement of the goal that a human can read in an hour, with everything the kernel cannot
 judge gathered into it and nothing else.*
 
-## 0. The goal, in the owner's words
+## 0. The goal, in Simon's words
 
 > A Gabbro user who wants to formally verify a Gabbro program proves only their OWN logic
 > plus named hardware assumptions; everything else -- memory safety, data-race freedom,
@@ -283,7 +283,7 @@ them all.
 | Annotation burden (`invariant`, `decreases`, `effects`, `costs` by hand; solver languages infer flat obligations and simple loop invariants) | Partly reducible | Infer, then check: `effects` (the hull) and `costs` (`kosten.rs`) are already computed by the checker -- propose/fill them instead of demanding them; simple counting invariants for `traverse`. Every inferred annotation is checked like a written one, so nothing leaves the carried fragment. Measured by the ceremony count. |
 | Timing channels | Possible at program level | Constant-time discipline as an extension of the noninterference flow rule: no branch and no memory index on secret-labelled data (Jasmin, CT-Wasm). Statement: running time independent of secrets, up to named hardware assumptions (cache behaviour, speculation). After noninterference. |
 
-**Out of scope (folder owner, 2026-09-14):** probabilistic statements and dynamic unbounded data structures are taken out of the plan for now. They are not claimed and not worked on; the goal and every extension above are stated without them.
+**Out of scope (Simon, 2026-09-14):** probabilistic statements and dynamic unbounded data structures are taken out of the plan for now. They are not claimed and not worked on; the goal and every extension above are stated without them.
 
 ## 10. Further named gaps (external review, 2026-09-14, second list)
 

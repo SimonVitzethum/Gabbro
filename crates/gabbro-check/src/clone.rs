@@ -33,7 +33,7 @@
 //! handing no register, a path returning into the caller frame, a path
 //! falling past its end, a path with no gate behind it.
 //!
-//! BINDING CONSTRAINT (owner): no OS data enters this file -- no clone
+//! BINDING CONSTRAINT (Simon): no OS data enters this file -- no clone
 //! number, no flag, no errno. The register FILE (`REGISTER` below) is the
 //! pre-existing machine vocabulary `syscall.rs` holds too (its twin, named
 //! here on purpose: the syntax crate takes no checker dependency question,

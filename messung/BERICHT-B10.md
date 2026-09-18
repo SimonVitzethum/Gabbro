@@ -12,7 +12,7 @@ is measured, with the command beside it.
     `queue` -- «B10»: `traverse` yields no value and knows no `break`, so `by consuming`
     drains the WHOLE queue; that is a different program
 
-The owner's decision names something else:
+Simon's decision names something else:
 
 > `traverse … over mappings of` needs a named resolver from frame to readable node; the
 > generated C takes it as a parameter, and Gabbro has no clause to write it.
@@ -125,7 +125,7 @@ whole domain was built to carry, does not need a gate to stop it. **It fails at 
 
 ## 4. The gate anyway, criterion by criterion
 
-The demand already settles it, but the owner asked for the gate, and a criterion measured
+The demand already settles it, but Simon asked for the gate, and a criterion measured
 is worth more than a criterion assumed. Baseline first, so that any later figure has
 something to be a change against.
 
@@ -265,7 +265,7 @@ they are stale in the direction that hides the finding:
 
 The `H = 0` lane removed F09's `traverse`; the register was not re-read. **A register that
 names a site which no longer exercises it reports coverage it does not have** — the same
-class as a guard that measures a mixture. Left for the owner to place rather than edited
+class as a guard that measures a mixture. Left for Simon to place rather than edited
 here: `ABSAGEFORMEN.md` belongs to another lane, and two lanes moving one line is the merge
 fault this week already produced six times.
 
@@ -326,7 +326,7 @@ wanted by nobody and not cheap.*
 | criterion 4, `exec` untouched | **holds** | `AUFTRAG-GABBROV.md` §9 |
 | tree unbroken | `cargo test` **402 / 0** | `--offline --no-fail-fast`, 31 lines summed |
 
-**Verdict: do not build «B10». The demand is zero, criterion 2 falls, and the owner said in
+**Verdict: do not build «B10». The demand is zero, criterion 2 falls, and Simon said in
 advance that this is the answer and not a failure.**
 
 ---
@@ -357,7 +357,7 @@ command, not by adding one.
     # after (re-run, full):  ! ABNAHME ROT: 3 von 51 -- grammatiktafel, manifest, karten
 
 **Three red of 51, and none of the three is this lane's.** `pruefe-grammatiktafel.py` waits
-on an owner decision about `state`, `pruefe-manifest.py` is red by construction until the
+on Simon's decision about `state`, `pruefe-manifest.py` is red by construction until the
 manifest carries its subject, `zaehle-karten.py` on a broken ratchet that arrived at
 `master`. The measurement was run twice on purpose: once to find the fourth, once to show
 it was gone.

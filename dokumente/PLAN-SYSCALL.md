@@ -1,6 +1,6 @@
 # The user side of system calls — a construct, not a foreign body
 
-*Written 2026-09-12. Design proposal; nothing here is built. Decision by the folder owner:
+*Written 2026-09-12. Design proposal; nothing here is built. Decision by Simon:
 the user side of system calls gets explicit syntax, because it makes formally verified
 standard libraries markedly cheaper.*
 

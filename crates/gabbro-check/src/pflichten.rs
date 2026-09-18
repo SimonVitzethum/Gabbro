@@ -1552,6 +1552,6 @@ pub fn h022_weigerung(l: &Zyklenluecke) -> gabbro_syntax::diag::Absage {
 // (`rufe_toeten_fakten`, refused as `M147`, pinned by `beispiele/gift/752`-`754`),
 // so a second refusal would double-book one defect -- and the code-to-pass map puts
 // `W`-codes in `nebeneinander.rs` while the `H`-family lives in `geteilt.rs`.
-// Owner if ever built: whoever owns the `m1` freshness internals, not this lane.
+// Simon if ever built: whoever is responsible for the `m1` freshness internals, not this lane.
 // Until then the code stays assigned-free: this paragraph NAMES it (backticks) and
 // ASSIGNs nothing (no quoted form, per `instrumente/pruefe-kennungen.py`).

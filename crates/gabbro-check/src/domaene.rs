@@ -2023,7 +2023,7 @@ fn binderverwendung_pruefen(
     // surface (`threads over T`, a mark at the table) would be a SYNONYM of `slots of T`
     // -- byte-identical C, the same proposition, and therefore the very decoration this
     // rule is closing. *The surface that would mean something needs a semantics for thread
-    // liveness that Gabbro has never had, and that is the owner's decision.*
+    // liveness that Gabbro has never had, and that is Simon's decision.*
     if art == Binderart::Zahl && absagen.fehler_zahl() == fehler_vorher {
         absagen.schiebe(notiz(
             Absage::fehler(

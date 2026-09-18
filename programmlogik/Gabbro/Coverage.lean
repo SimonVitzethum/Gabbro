@@ -1320,7 +1320,7 @@ theorem ownLogic_is_the_persons : ∀ f : Form, classify f = .ownLogic → IsOwn
   all_goals simp [classify] at h
 
 /-- **And nothing whose statement the language fixes is left in the person's lap.** This is
-    the other half of the owner's sentence, and the half a coverage claim usually skips. -/
+    the other half of Simon's sentence, and the half a coverage claim usually skips. -/
 theorem nothing_of_the_language_is_left_to_the_person :
     ∀ f : Form, origin f = .language → classify f ≠ .ownLogic := by
   intro f h

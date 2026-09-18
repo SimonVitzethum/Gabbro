@@ -168,7 +168,7 @@ them.*
 
 | | |
 |---|---|
-| **the question for the owner** | is «B14» a fourth demand, or a fourth *kind* of demand? |
+| **the question for Simon** | is «B14» a fourth demand, or a fourth *kind* of demand? |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
 
 ---

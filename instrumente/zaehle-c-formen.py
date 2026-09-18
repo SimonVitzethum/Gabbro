@@ -256,7 +256,7 @@ MARKE_UNERLAUBT = 32
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price
-# nobody books.** (Owner, 2026-09-02.)
+# nobody books.** (Simon, 2026-09-02.)
 #
 # Set A carries `goto` at 27 uses and `sprungmarke` at 16, permitted as *"ONLY as a generated
 # loop exit"*. The permission is right -- the emitter needs one exit form, and `39-auftrags-

@@ -1561,7 +1561,7 @@ int main(void) {
 # `block_current(core, f)` -- das C uebersetzt, der Lauf meldet BLOCK statt SWITCH,
 # mit caller=100 (eingereiht) und owner=64 (`Endpoint_NONE`, nie gesetzt). *Ohne
 # diese Gegenprobe belegten drei Zahlen nur, dass das Programm nicht konstant ist.*
-# **The run points at the REWRITE, and it is no longer called `fragment3`** (owner,
+# **The run points at the REWRITE, and it is no longer called `fragment3`** (Simon,
 # 2026-09-03). The piercing run was built while `messung/fragmente/F03.gab` had its
 # load-bearing statement replaced; that rewrite now lives at
 # `messung/proben/probe-ipc-fastpath-durchgestochen.gab` and the fragment stands frozen at 27
@@ -3321,7 +3321,7 @@ MARKE_EMIT=125
 # The two refusals are `beispiele/gift/671` and `672`, and NEITHER emits, so `MARKE_EMIT_G`
 # does not move.
 # **72 -> 73 on 2026-09-03: the relocated piercing run.** The `F03` rewrite moved to
-# `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (owner, same day) and emits from
+# `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (Simon, same day) and emits from
 # there, while the frozen fragment stays at 27 errors and emits nothing. *The object grew by
 # exactly one file and the reason stands here at the mark.*
 # **73 -> 132 on 2026-09-12 (merge resolution, measured).** The run below reads 132;

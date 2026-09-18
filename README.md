@@ -18,7 +18,7 @@ The point is not to have another language. The point is to write an operating sy
 > **Implementation, checking and coordination are done by AI agents**: one orchestrating
 > Claude Opus 5 session, Opus subagents for the hard single pieces, and parallel contributor
 > lanes on a build server. **The idea, the rough planning, the priorities and the oversight rest
-> with one human** — the repository owner decides what the goal is, what counts as reached, what
+> with one human** — Simon decides what the goal is, what counts as reached, what
 > is refused, and what gets merged. Every commit names its model and links its session
 > (`Co-Authored-By`), so that division is readable per change and not only in this paragraph.
 >

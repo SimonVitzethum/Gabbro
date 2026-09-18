@@ -159,7 +159,7 @@ emission lauf `beispiel104` with `TREIBER104`.
 ## Open
 
 - 105 stays free; no gift probes (per task).
-- `concurrent` certificate classification (owner: whoever owns `zeugnis.rs`).
+- `concurrent` certificate classification (Simon: whoever is responsible for `zeugnis.rs`).
 - Per-call-site Held verification for Gabbro callees (`h020` remainder).
 - The four pre-existing emission stage-9 drifts and the guardian reds in F7
   belong to their owners; this lane changed none of them.

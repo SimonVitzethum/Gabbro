@@ -23,7 +23,7 @@ This plan decouples the two: a static, checkable ceiling `max M` (address reserv
 never touched implicitly) from a committed prefix (storage actually usable, grown
 explicitly). Growth beyond `M` is a refusal, never a runtime surprise.
 
-## 1. Binding constraints (owner), and where each lands
+## 1. Binding constraints (Simon), and where each lands
 
 1. **No OS hard-dependence.** Reservation and commit are RUNTIME (`laufzeit/`, A4-style
    named assumption), addressed by declaration data the program carries. No ABI constant,
@@ -145,7 +145,7 @@ step the checker counts, the cost pass prices, and the Lean sketch models.
 Why, with measurement reasoning:
 
 - **Cost visibility (constraint 2 is decisive).** An invisible commit is a design bug
-  by owner fiat, and a page fault is the most invisible commit there is: no statement,
+  by Simon's fiat, and a page fault is the most invisible commit there is: no statement,
   no cost, no checker fact at the growth point. Explicit `grow` is a statement: it
   costs (1 op + the runtime's declared commit costs through the existing `K003`
   callee-costs machinery, §7), it feeds `K002` inside `locks` blocks (§7), and a

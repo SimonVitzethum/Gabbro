@@ -1,6 +1,6 @@
 # MUSE-REPORT-221 — `+%` fetch_add arm: the binder-range refusal is lifted (TODO §-1 wave A)
 
-Lane 221, branch `muse/221`, one commit over master `f6eeef72`. Owner decision
+Lane 221, branch `muse/221`, one commit over master `f6eeef72`. Simon's decision
 2026-09-17 implemented: `t +% 1` lowers to C11 `atomic_fetch_add` wherever both
 sides carry an exact unsigned range `0 .. 2^N - 1` on one storage width. Where
 the range is NOT exact, the refusal stays — same code, narrowed condition.
@@ -152,7 +152,7 @@ holform suite alone: `test result: ok. 40 passed; 0 failed`).
    built resolves the binder side inside the fetch gate only. Locals/params as
    wrap OPERANDS stay excluded by the constexpr rule (row 9, load-bearing), and
    general wrap-over-local (S07) stays refused (emission-population reason, §2).
-   If the owner wants S07's `ueber_lokale` to lower as masked wrap, that is a
+   If Simon wants S07's `ueber_lokale` to lower as masked wrap, that is a
    separate verdict move with its own `MARKE_EMIT_M` booking — not this lane.
 
 ## 7. What remains open

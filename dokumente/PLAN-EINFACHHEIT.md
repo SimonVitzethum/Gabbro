@@ -1,6 +1,6 @@
 # Simplicity without losing a guarantee -- plan
 
-*Written 2026-09-14. The folder owner: "maximum simplicity is an important goal too, but the goal
+*Written 2026-09-14. Simon: "maximum simplicity is an important goal too, but the goal
 must be reached; no guarantee is given up for simplicity." External review: most of the writing
 burden does not carry a guarantee. It only answers who states the guarantee. As long as
 everything derived is checked exactly like everything written, the guarantee does not change.*

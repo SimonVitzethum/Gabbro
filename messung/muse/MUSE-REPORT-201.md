@@ -167,7 +167,7 @@ design: the driver supplies them).
   `beispiele/` only, `pruefe-emission.sh` names files individually).
   `./lean-bau` untouched (no `grammatik/` change).
 
-## 6. Findings for the owner
+## 6. Findings for Simon
 
 1. The lock CAN be written in Gabbro and passes the checker with 0 errors.
    The language expresses its own runtime's ticket lock — modulo §2's

@@ -1,6 +1,6 @@
 # Bits, widths, shifts, intrinsics, floats -- decisions before the build
 
-*Written 2026-09-12 after a review by the folder owner. Design decisions; nothing is built.
+*Written 2026-09-12 after a review by Simon. Design decisions; nothing is built.
 Companion to `dokumente/PLAN-SYSCALL.md`.*
 
 ## 0. The rule for every new error class

@@ -55,7 +55,7 @@ true at measurement time.
   timeline in `.tmp/*.log` and `git log`. Their findings (manifest register,
   p6 proofs, Lean export) touch files this lane never moved.
 
-## Open / for the owner
+## Open / for Simon
 
 - Stage 9 still red on M (132 vs 73), GIFT (8 vs 2), UMG (2 vs 4): multi-lane
   drift from waves 4/5, not mine to book.

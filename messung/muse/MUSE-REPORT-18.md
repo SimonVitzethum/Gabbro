@@ -61,7 +61,7 @@ files touched, no `grammatik/` changes):
   refine-hole closers only); other proof shapes report INCONCLUSIVE.
 - No lane runs were performed here, so the new pair has no
   `messung/PRAEMISSEN-PROBE.md` register entry; that table is for the
-  owner of the tree runs to extend.
+  Simon to extend.
 
 ## What in the task I believe is wrong
 

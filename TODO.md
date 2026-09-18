@@ -14,7 +14,7 @@ machines, lanes, merge scripts, number ranges — is in `AGENTS.md`.*
 
 **Where we are.** `gabbro_ziel : GabbroZiel` is proved over the Lean model and was confirmed by
 two independent reviews in round 6 (tag `milestone-2026-09-15-zielsatz-bestaetigt`). Following
-the owner's end sequence, the work now is:
+Simon's end sequence, the work now is:
 
 1. transfer into the checker and the emitter (§1);
 2. translation validation (§2), whose one headline metric is the **chain count**, from
@@ -39,7 +39,7 @@ reviewers from 321; the dispatcher worker list needs the extension
 (orchestrator step). Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
 in wave B.*
 
-**Binding constraint (owner): no language feature hard-depends on an OS.**
+**Binding constraint (Simon): no language feature hard-depends on an OS.**
 Syscalls are always user-made — declared in-program (`extern`/`syscall`
 items carrying ABI numbers, registers, costs), never baked into the tree
 as OS tables. This shapes lane 226 (fd + open/read declarations, no
@@ -48,14 +48,14 @@ stay in user code) and C-2 (address + timespec carrier, no `CLOCK_*` in
 the tree). A lane that smuggles an OS constant into `crates/` or
 `grammatik/` fails review.
 
-**Safety is never traded for features** (owner): no lane weakens a
+**Safety is never traded for features** (Simon): no lane weakens a
 guarantee — memory safety, race freedom, contracts, costs, lock
 discipline — to make a wall go green. A wall that only yields by
 weakening is recorded as a finding (like 208's vacuity pins or 203's
 proved blockage), never bypassed. A bypass fails review, no matter how
 green its build is.
 
-**Decision gate RESOLVED 2026-09-17 (owner): LIFT.** Criterion was the
+**Decision gate RESOLVED 2026-09-17 (Simon): LIFT.** Criterion was the
 project goal — a `folge()` wrapper around a proved bound is user ceremony
 for language plumbing, and plumbing belongs to the language, not to the
 proof. Lane 221 launched on that basis (`OPUS-BERICHT-FETCHADD.md` §2.3
@@ -112,7 +112,7 @@ statically linkable, bucket-bounded, refuse-on-full (lanes 236/237 prove
 the discipline without it).*
 
 **Wave D — bounded dynamic memory: 300 MiB working set, 30 GB ceiling,
-near-Rust efficiency (owner).** Reservation vs commit split: the program
+near-Rust efficiency (Simon).** Reservation vs commit split: the program
 declares the ceiling statically, the runtime (A4-style assumption, NOT a
 language feature — the OS rule holds: no ABI constant in the tree)
 reserves virtual and commits on demand; faults cost as a named hardware
@@ -148,7 +148,7 @@ lane 222 if measured); M101 further shapes are one small lane per shape,
 priced per shape, never as "done". Example pool 147–155 shared in order;
 `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions.*
 
-# 0. The runtime — MAXIMUM PRIORITY (owner, 2026-09-15)  ⟨A⟩
+# 0. The runtime — MAXIMUM PRIORITY (Simon, 2026-09-15)  ⟨A⟩
 
 *Measured the same day, with `gabbro emit beispiele/124-two-threads-private.gab`: the emitted C
 of a two-thread program declares `void L_nimm(void); void L_gib(void);` and defines neither;
@@ -177,12 +177,12 @@ long as nobody has written it.*
 - [ ] **`entry`/`boot`: the vector and the dispatch.** Today only the dispatch root travels;
   the vector, the registers and the steps have no form. After the hosted driver.
 
-**The standard library is NO LONGER deferred** (owner, 2026-09-16): it moved to §0b, and the
+**The standard library is NO LONGER deferred** (Simon, 2026-09-16): it moved to §0b, and the
 reason is the same measurement that set this section's priority — a firewall written entirely in
 Gabbro ran, and what it kept hitting was the empty shelf. *The runtime is still first: it is the
 smallest piece of that shelf and the one every other piece stands on.*
 
-**Threading is a MUST (owner, 2026-09-17): 3 Muse lanes now, Opus handoff later.**
+**Threading is a MUST (Simon, 2026-09-17): 3 Muse lanes now, Opus handoff later.**
 O-1 (clone handoff) stays parked; these three feed it (sound pool semantics,
 generated driver, lock through the chain). Reviewers from 321.
 
@@ -194,7 +194,7 @@ generated driver, lock through the chain). Reviewers from 321.
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
-*Owner, 2026-09-16: **everything a standard library does — except networking, files, graphics
+*Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The
 plan is `dokumente/PLAN-STDLIB.md`; what stands here is the work.*
 
@@ -245,7 +245,7 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   ops (measured), because the permission predicate is conjunctive and `Held(L[i])` could only
   ever mean "hold all N".
 - [ ] **Cross-unit table access does not exist** (`M119`) — see §0b, first item. **This is the
-  one the owner named: it blocks the library and it blocked the firewall's own wiring.**
+  one Simon named: it blocks the library and it blocked the firewall's own wiring.**
 - [ ] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
   one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
   than the lock was**, and it needs its own lane.
@@ -261,12 +261,12 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   the tree measures this class**.
 - [ ] **The emitter has no `atomic_fetch_add`**, and the measured reason is real: a checked
   `±1` cannot answer in its own type, and `+%` would wrap at a different width than C's
-  fetch-add. The owner decides whether the binder-range refusal is lifted (`OPUS-BERICHT-FETCHADD.md`
+  fetch-add. Simon decides whether the binder-range refusal is lifted (`OPUS-BERICHT-FETCHADD.md`
   §2.3 has the patch shape and the test that must survive it).
 
 # 0d. The claims, as they stand — corrected against today's measurements  ⟨Q⟩
 
-*The owner listed these on 2026-09-16 as the things that must be written down. Where a line was
+*Simon listed these on 2026-09-16 as the things that must be written down. Where a line was
 stale, the measured number stands beside it: a status list nobody re-measures is the thing this
 tree refuses everywhere else.*
 
@@ -409,7 +409,7 @@ for 124 with `DRFSC` and `LaufzeitC` as named premises. Open, by plan §7.6:
 - [ ] **Inline assembly: a small ISA semantics** for exactly the stub patterns the emitter
   writes, so each stub gets a correspondence lemma instead of `AxCorr`.
 
-**Beyond DRF-SC: full weak-memory coverage (priced, deferred — owner, 2026-09-18).**
+**Beyond DRF-SC: full weak-memory coverage (priced, deferred — Simon, 2026-09-18).**
 Today G is sequentially consistent and data-race freedom buys SC behavior
 (`DRFSC` premise in stage (b)); atomics/pairing are ordered by axiom A10
 and exempt from `rennfrei` (`Spec.lean` NOT-CLAIMED: weak memory beyond
@@ -467,7 +467,7 @@ one assumption list, and the number is booked before and after.*
   `gabbro obligations --g` and `gabbro counterexample` (lane 180) as the everyday interface.
 - [ ] **Tool maturity** (LSP, localisation, profiling). After the goal.
 
-**NOT-CLAIMED items that earn a place here, ranked (owner triage 2026-09-18).
+**NOT-CLAIMED items that earn a place here, ranked (Simon triage 2026-09-18).
 P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
 
 - [ ] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** The
@@ -539,7 +539,7 @@ and contextual keywords (lane 188, the residue is irreducible).
   first.
 - **GPU** support belongs in the standard library (SPIR-V payloads, the GPU driver as a named
   assumption), after the chain.
-- **Probabilistic statements and dynamic unbounded data structures** are out of scope (owner,
+- **Probabilistic statements and dynamic unbounded data structures** are out of scope (Simon,
   2026-09-14). They are not claimed and not worked on.
 - **Nonlinear arithmetic over unbounded integers** stays user logic with hand lemmas. It is the
   one place the oracle-plus-certificate pattern does not reach.

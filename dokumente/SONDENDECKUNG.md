@@ -145,7 +145,7 @@ they are read from there rather than invented here:
 about its own table, and that caveat travels with these rows.* What is not an estimate is the
 consequence:
 
-> **`P4` is the work that needs no device, no privilege and no decision by the owner.** Six
+> **`P4` is the work that needs no device, no privilege and no decision by Simon.** Six
 > rows stand in it, **all six have a program (five since 2026-09-04, `sonde_tick` since 2026-09-10)**, and there is nothing left in
 > the class to write.
 >

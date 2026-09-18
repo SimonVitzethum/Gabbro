@@ -2,7 +2,7 @@
 
 *Written 2026-09-15 by the Claude session that ran the project from the laptop until the move to
 the server, as the hand-over of everything it knew that is not in the code. `CLAUDE.md` stays the
-owner's work instructions (German); this file is the operating manual beside it. Where the two
+Simon's work instructions (German); this file is the operating manual beside it. Where the two
 disagree, `CLAUDE.md` wins.*
 
 **Who reads this:**
@@ -18,13 +18,13 @@ disagree, `CLAUDE.md` wins.*
 
 ---
 
-## 1. The goal, in the owner's words, and the end sequence
+## 1. The goal, in Simon's words, and the end sequence
 
 > **A Gabbro user proves only their own logic plus named hardware assumptions.** Memory safety,
 > race freedom, contracts where claimed — in concurrent runs too — and time are carried by the
 > language.
 
-**The owner's end sequence** (memory `zielpruefung-und-opus`):
+**Simon's end sequence** (memory `zielpruefung-und-opus`):
 
 1. **Two independent verdicts** — one Muse lane, one Opus agent — answer the question "is the
    goal reached?"
@@ -81,7 +81,7 @@ README §6 says exactly this; keep it that way.
   units, probabilistic statements, and dynamic unbounded structures. Every extension of the goal
   is reviewed as a diff of `Spec.lean`.
 
-## 3. The owner's standing instructions
+## 3. Simon's standing instructions
 
 - **Push master without asking**, after checked merges. First grep the outgoing diff for keys.
   Never push red. Never force-push. No new branches on GitHub: lane branches stay
@@ -90,13 +90,13 @@ README §6 says exactly this; keep it that way.
   the one under active review.
 - **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`, fisch
   `~/gabbro-muse/aNNN`, and the `gabbro-opus-*` directories.
-- **Opus agents: at most 2 at a time.** The owner said on 2026-09-14: "nutze 2 opus agenten".
+- **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful. Use the free model slots too (3 slots, falling back to
   opencode-go on a rate limit). The Go budget can run out, which is fine.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED
   changes only, so `git add` first.
 - **Language:** documents, comments, commit messages, diagnostics and `TODO.md` are in English.
-  The conversation with the owner is in German. Muster (guardian patterns) become bilingual
+  The conversation with Simon is in German. Muster (guardian patterns) become bilingual
   BEFORE a document changes language.
 - **Work in real folders, not `/tmp`.** `/tmp` is RAM on the laptop. Scratch files go to
   `.claude/muse-arbeit/kratz/`.
@@ -104,7 +104,7 @@ README §6 says exactly this; keep it that way.
 - **Simplicity is a goal, but no guarantee is given up for it** (PLAN-EINFACHHEIT.md). The measure
   is: ceremony count down AND pass register constant. Never derive `ensures`, and never turn a
   refusal into a warning.
-- **Safety is never traded for features** (owner, 2026-09-17). No lane weakens a guarantee —
+- **Safety is never traded for features** (Simon, 2026-09-17). No lane weakens a guarantee —
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
   proved blockage). Reviewers reject bypasses, no matter how green the build.
@@ -115,16 +115,16 @@ README §6 says exactly this; keep it that way.
   - Never write API keys or passwords into the repo, memory or logs. The opencode keys live only
     in fisch `~/gabbro-muse/cfg/key-go` and `key-zen`.
   - When the permission classifier blocks something (e.g. searching the server for credentials),
-    do not work around it; ask the owner.
-  - A local password the owner once gave was for WireGuard only; it is recorded nowhere.
+    do not work around it; ask Simon.
+  - A local password Simon once gave was for WireGuard only; it is recorded nowhere.
 
 ## 4. Machines
 
 | machine | role | notes |
 |---|---|---|
-| `ubuntu@simon.jocraft.cc` (host `GaussBerechnungen`) | **orchestrator since 2026-09-15** | 15 GB RAM, ~9 GB free (Minecraft holds 4 GB: tmux `mc`, `-Xms4G -Xmx4G`). 39 GB disk free. Passwordless `sudo`. Runs WireGuard `wg-quick@wg1`, the link to fisch's network. GitLab is stopped but still enabled — ask the owner before disabling it. No Isabelle. Claude is installed natively in `~/.local/bin` (self-updating); the old npm copy in `/usr/local` can go once no session uses it. |
+| `ubuntu@simon.jocraft.cc` (host `GaussBerechnungen`) | **orchestrator since 2026-09-15** | 15 GB RAM, ~9 GB free (Minecraft holds 4 GB: tmux `mc`, `-Xms4G -Xmx4G`). 39 GB disk free. Passwordless `sudo`. Runs WireGuard `wg-quick@wg1`, the link to fisch's network. GitLab is stopped but still enabled — ask Simon before disabling it. No Isabelle. Claude is installed natively in `~/.local/bin` (self-updating); the old npm copy in `/usr/local` can go once no session uses it. |
 | `ki-pc-fisch-101` (host `fisch`) | **all compute** | 110 GB RAM, 16 cores. Rust in `~/.cargo/bin`, Lean via `~/.elan/bin/lake` (Lean 4.33.1), Isabelle in `~/Isabelle2025-2`. Reached from ubuntu directly: `ssh ki-pc-fisch-101`, key `~/.ssh/id_ed25519_fisch`. |
-| the owner's laptop | former orchestrator | 31 GB RAM with little free. Reaches fisch via `ProxyJump jocraft` (`Host ki-pc`). Local wg1 is down. |
+| Simon's laptop | former orchestrator | 31 GB RAM with little free. Reaches fisch via `ProxyJump jocraft` (`Host ki-pc`). Local wg1 is down. |
 
 - **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key
   `~/.ssh/id_ed25519_github`; the host key was checked against GitHub's published ed25519
@@ -333,7 +333,7 @@ opus/…:opus/…` first.
   Everything heavy goes to fisch.
 - **The combined merge+push was blocked by the classifier once.** Split it into two steps.
 
-## 10. Talking to the owner
+## 10. Talking to Simon
 
 - **German, direct, concrete.** Say what was done, what is open and what is uncertain. Never
   claim more than was measured.
