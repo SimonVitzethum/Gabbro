@@ -426,6 +426,18 @@ pub const EINORDNUNG: &[Posten] = &[
                 generated is the comment carrying the suspended invariants; the restoration \
                 stands as a preservation duty in `gabbro pflichten` and not in the C (W6)",
     },
+    // **Lane O-1:** `child` lowers to a C block, and nothing else -- at run
+    // time the path IS its statements. The handoff shape (no return into
+    // the caller's frame, a never-ending tail) is the checker's business
+    // (`N448`/`N449` in `clone.rs`), not the C's: the fall-through the
+    // block form would generate is marked dead at emission.
+    Posten {
+        konstrukt: "child",
+        traegt: Traegt::Direkt,
+        grund: "a C block, and nothing else -- the child path IS its statements, entered \
+                on the handed stack. What is generated beside it is the dead \
+                fall-through marker; the no-return shape stands as `N448`/`N449`",
+    },
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,
@@ -1017,6 +1029,12 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Bricht(b) => {
                 zaehle(e, "breaking");
                 block(&b.rumpf, e, geister);
+            }
+            // **Lane O-1:** booked like `breaking` -- a block, and the walk
+            // enters it.
+            StmtArt::Child(x) => {
+                zaehle(e, "child");
+                block(x, e, geister);
             }
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),

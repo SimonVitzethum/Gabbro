@@ -3926,6 +3926,44 @@ pub const PHASEN: &[Satz] = &[
                      dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
     },
     Satz {
+        name: "klon.uebergabe",
+        kennungen: &["N446", "N447", "N448", "N449", "N450"],
+        aussage: "A clone handoff holds its checked shape: the `stack` clause names \
+                  the handed-stack register AS a stack -- bound in `regs in`, kept \
+                  out of `clobbers` and out of `regs out` (`N446`) -- claimed once \
+                  and only there (`N447`); and the `child` path never leaves into \
+                  the caller's frame -- no `return` inside, no `leave`/`next` past \
+                  the region (`N448`) -- never falls through past the block (every \
+                  path ends in a `-> never` gate call or a never-exiting loop, \
+                  `N449`) and runs behind a gate claiming a stack (`N450`). The \
+                  gate's number, registers and error map stay user-made in the \
+                  declaration (the bm5 shape precedent); the stack switch itself \
+                  is the stub's business and the runtime's assumption.",
+        vorbehalt: "A shape rule, and nothing else. It says nothing about whether \
+                    the number is the kernel's, whether the child really starts on \
+                    the handed stack, or whether the runtime places the thread -- \
+                    those are the stub's (`emit.rs`, part 3) and the runtime's \
+                    (d2, `KlonAnnahme`). A `leave`/`next` naming a mark defined \
+                    inside the region stays on the path; marks are region-wide, so \
+                    a jump from a nested `child` into an outer region's loop reads \
+                    as staying. The never-returning tail is read off the DECLARED \
+                    `-> never` result (last path segment, like `endet_immer`'s \
+                    `divergent` list beside it); a `locks`-wrapped tail counts as \
+                    ending, and its lock discipline is the exit gate's contract.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1107` (`-- erwartet: N446 allein`: an unbound \
+                      handed register), `1108` (`N447 allein`: stack-ness twice), \
+                      `1109` (`N448 allein`: a `return` out of the path), `1110` \
+                      (`N449 allein`: a falling path), `1111` (`N450 allein`: a path \
+                      with no gate) -- each falls once, and without its rule \
+                      nothing falls (the emitted C is valid `cc -Werror` input in \
+                      all five). The clean side is beispiele/155 (the handoff: \
+                      gate with stack, child ending in the exit gate) and /156 \
+                      (the branched tail, both arms ending).",
+        fundstelle: "crates/gabbro-check/src/clone.rs; dokumente/SYNTAX.md §12.1; \
+                     grammatik/Grammatik/KlonStapel.lean",
+    },
+    Satz {
         name: "parser.bibliothek-nutzlast",
         kennungen: &["P043"],
         aussage: "A `library fn` carries its `payload <table>` clause: the grammar \

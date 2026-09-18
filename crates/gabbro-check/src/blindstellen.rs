@@ -288,6 +288,8 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             StmtArt::AwaitLoad(_) => "awaits",
             StmtArt::Exchange(_) => "exchange",
             StmtArt::Bricht(_) => "breaking",
+            // **Lane O-1:** the clone-child path.
+            StmtArt::Child(_) => "child",
             StmtArt::Return(_) => "return",
             StmtArt::Leave(_) => "leave",
             StmtArt::Next(_) => "next",

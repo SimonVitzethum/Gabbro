@@ -1,0 +1,50 @@
+-- erwartet: N449 allein
+-- **1110 -- a `child` path that can fall through.**
+--
+-- No `return` stands inside (so `N448` stays silent: the return is not the
+-- fault here), the gate is valid and present (`N446`/`N447`/`N450`
+-- silent) -- but the block ends in a `let`, and past the block stands the
+-- caller frame. The fall-through IS the return `N448` forbids, one
+-- statement later: every path through the block must end in a call that
+-- never returns (a `-> never` gate, as in 1111's twin) or in a loop that
+-- never exits.
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block that
+-- falls out of itself, and `cc -Werror` takes it. Same shape gate as
+-- 1107-1109 (not the raw clone, `1000` not an OS number).
+
+module gift1110 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi test arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn kind_start(stapel : u64) -> u64
+    effects { pure }
+    costs <= 64 ops
+{
+    child {
+        let s = stapel;
+    }
+    return 0;
+}
+
+}

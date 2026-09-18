@@ -1,0 +1,50 @@
+-- erwartet: N448 allein
+-- **1109 -- a `return` out of the `child` path.**
+--
+-- The gate is valid on purpose (`stack rsi`: bound, kept, answered --
+-- `N446`/`N447` silent, and a gate stands behind the path, so `N450`
+-- stays silent too). The child path returns `s`: on the handed stack, out
+-- of the caller's frame, into a frame that is no longer there. The tail
+-- after the block (`return 0`) is the parent's, and it is fine; the fault
+-- is the leaving statement inside, and only it falls.
+--
+-- Without this rule NOTHING falls -- the emitted C is a braced block with
+-- a `return`, and `cc -Werror` takes it. The gate is the shape probe of
+-- 1107/1108 (not the raw clone, `1000` not an OS number).
+
+module gift1109 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi test arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn kind_start(stapel : u64) -> u64
+    effects { pure }
+    costs <= 64 ops
+{
+    child {
+        let s = stapel;
+        return s;
+    }
+    return 0;
+}
+
+}

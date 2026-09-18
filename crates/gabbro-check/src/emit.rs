@@ -449,6 +449,9 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             | StmtArt::Schleife(_)
             | StmtArt::Bricht(_)
             | StmtArt::Narrow(_)
+            // **Lane O-1:** `child` binds no name itself; locals of the
+            // path are collected through `unterbloecke` below.
+            | StmtArt::Child(_)
             | StmtArt::Alloc(_)
             | StmtArt::ResetArena(_)
             | StmtArt::Sperrt(_)
@@ -8577,6 +8580,10 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             }
             StmtArt::Let(l) => e(&l.wert, aus),
             StmtArt::Sperrt(x) => benutzte_namen(&x.rumpf, aus),
+            // **Lane O-1:** names read on the child path count -- a missed
+            // name here would be silenced with `(void)` while the path reads
+            // it on the handed stack.
+            StmtArt::Child(x) => benutzte_namen(x, aus),
             // **Fehlte bis zum 2026-08-17**, und die Folge war ein `(void)k;` fuer einen
             // Parameter, den der Schleifenrumpf sehr wohl liest -- also eine stillgelegte
             // Warnung ueber einen Namen, der gar nicht tot ist.
@@ -10287,6 +10294,25 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
+        // **Lane O-1: `child { … }` (K-1).** At run time the path IS its
+        // statements, entered on the handed stack -- a C block, and nothing
+        // else. The handoff shape (no return into the caller's frame, a
+        // never-ending tail) is the checker's business (`N448`/`N449` in
+        // `clone.rs`): the fall-through past this block is dead by checking,
+        // and the stub marker for it lands with the clone stub (part 3).
+        StmtArt::Child(x) => {
+            aus.push_str(&format!(
+                "{e}/* child -- HANDOFF region: runs on the handed stack of the\n\
+                 {e} * stack-carrying gate. Never returns into the caller frame\n\
+                 {e} * (`N448`/`N449`); at run time this is its statements.\n\
+                 {e} */\n"
+            ));
+            aus.push_str(&format!("{e}{{\n"));
+            for k in &x.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+        }
     }
 }
 
@@ -10815,7 +10841,12 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // wohl angesprungen wird. (**Fuenfzehn** bis lane E1; ein Bibliothekruf
                 // springt so wenig wie ein Ruf. **Achtzehn** seit «E4»: `alloc` and
                 // `reset` lower to straight-line C and never jump.)
-                StmtArt::Let(_)
+                // **Lane O-1:** `child` itself jumps nowhere -- a `leave` /
+                // `next` inside it names an outer loop, and the descent
+                // below reaches it through `unterbloecke` like at every
+                // other block form.
+                StmtArt::Child(_)
+                | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
                 | StmtArt::ResetArena(_)
                 | StmtArt::LetSonst(_)
@@ -13250,6 +13281,8 @@ fn needs_saturation(baum: &Programm) -> bool {
                 }
             },
             StmtArt::Bricht(b) => block(&b.rumpf),
+            // **Lane O-1:** the child path is walked like any block.
+            StmtArt::Child(x) => block(x),
             StmtArt::Narrow(n) => {
                 suffixe(&n.ort)
                     || match &n.ziel {

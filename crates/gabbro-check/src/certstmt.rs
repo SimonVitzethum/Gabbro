@@ -933,6 +933,8 @@ fn stmt_name(s: &Stmt) -> String {
         StmtArt::LibraryCall(_) => "library call".to_string(),
         StmtArt::Alloc(_) => "alloc".to_string(),
         StmtArt::ResetArena(_) => "reset arena".to_string(),
+        // **Lane O-1:** the clone-child path, named for refusals.
+        StmtArt::Child(_) => "child".to_string(),
     }
 }
 

@@ -1,0 +1,53 @@
+-- 156 -- The child path through a branch: every arm ends in the exit gate.
+--
+-- The twin of 155 for the branched tail: `endet_immer` reads through `if`
+-- with `else` (both arms end in the never-returning `ausgang`), so `N449`
+-- stays silent beside `N448` and `N450`. Same shape gate (not the raw
+-- clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints, and
+-- the emitted C compiles under `cc -Werror`.
+
+module beispiel::kind_uebergabe_verzweigt {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi test arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if v == 0 {
+        child {
+            if stapel == 0 {
+                ausgang(1);
+            } else {
+                ausgang(0);
+            }
+        }
+    }
+    return v;
+}
+
+}

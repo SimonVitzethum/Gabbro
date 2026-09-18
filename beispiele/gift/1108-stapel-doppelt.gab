@@ -1,0 +1,36 @@
+-- erwartet: N447 allein
+-- **1108 -- stack-ness claimed twice.**
+--
+-- One clause names the handed stack (`rsi`, bound, kept, answered --
+-- `N446` stays silent); the second has no reading, so it falls by name.
+-- The stub hands one register to the child, and two names would split it.
+-- Everything else about the gate is valid on purpose (same silences as
+-- 1107), so without this rule NOTHING falls here either.
+--
+-- Like 1107 this probe measures the shape, not the call: the gate is not
+-- the raw clone, and `1000` is not an OS number.
+
+module gift1108 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi test arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+}

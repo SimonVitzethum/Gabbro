@@ -1,0 +1,71 @@
+-- 155 -- A checked clone handoff: the child starts on the handed stack
+-- and never returns into the caller's frame.
+--
+-- The gate declares the SHAPE, never the call: `stack rsi` names the
+-- handed-stack register AS a stack (bound in `regs in`, kept out of
+-- `clobbers` and `regs out`), and the number, the registers and the error
+-- map live in this user declaration -- no OS data enters the tree. The
+-- `child` block is the child path: it runs the worker on the handed stack
+-- and ends in the never-returning `ausgang` gate, so it neither returns
+-- (`N448`) nor falls through (`N449`) into the caller frame. A gate stands
+-- behind the path (`N450` silent).
+--
+-- The parent tells the two apart the way K-1's probe did: the gate answers
+-- zero in the child. What the machine does with the handed register -- the
+-- stack switch itself -- is the stub's business and the runtime's
+-- assumption (d2, `KlonAnnahme`); what the program can break is checked
+-- here, and this file breaks nothing: 0 errors, 0 hints, and the emitted C
+-- compiles under `cc -Werror`.
+--
+-- The real-number counterpart of this shape lives outside the tree (the
+-- firewall's `gab/systemrufe.gab` declares the raw clone with its Linux
+-- number); this file keeps `1000`, which is not an OS number.
+
+module beispiel::kind_uebergabe {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi test arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn arbeiter(stapel : u64) -> u64
+    effects { pure }
+{
+    return stapel;
+}
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    if v == 0 {
+        child {
+            let r = arbeiter(stapel);
+            ausgang(r);
+        }
+    }
+    return v;
+}
+
+}
