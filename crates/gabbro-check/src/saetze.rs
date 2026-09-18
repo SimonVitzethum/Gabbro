@@ -3261,14 +3261,22 @@ pub const WIRKUNGEN: &[Satz] = &[
                     `static`/`atomic`/`table`/`device`/`state` fall out silently. Coverage \
                     is a PREFIX TEXT COMPARISON on the rendered place, so two names for the \
                     same location are two places. The statement walker is hand-written with \
-                    a `_` arm and misses the source of a `let … else`, the `until` predicate \
-                    of a `retry` and the object of a `traverse`; `lenof(TABLE)` is not a read \
-                    at all. `E011` applies only where `touches` is written, and a `traverse` \
-                    over a PARAMETER is not held against it. **And `retry`/`forever` carry \
+                    a `_` arm and misses the source of a `let … else` and the `until` \
+                    predicate of a `retry`; `lenof(TABLE)` is not a read \
+                    at all. ~~The object of a `traverse` was missed the same way until \
+                    lane 229 walked it: `traverse v of g over …` evaluates `g`, so it \
+                    reads against the function effects (`E010`) and against `touches` \
+                    (`E011`).~~ `E011` applies only where `touches` is written, and a `traverse` \
+                    over a PARAMETER is not held against it. The CARRIER walk itself stays \
+                    out of `touches` -- the function effects carry it (`beispiele/09`, \
+                    `beispiele/57` pin the split). **And `retry`/`forever` carry \
                     their own `effects` clauses that this pass NEVER checks against the \
                     body** -- only `traverse.touches` has a reader.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 2 probes on `E005`, probes on `E010` and `E011`.",
+        gemessen_an: "beispiele/gift: 2 probes on `E005`, probes on `E010` and `E011`, \
+                      plus `1077` (`E011`, traverse object missing from `touches`) and \
+                      `1078` (`E010`, traverse object missing from the function effects); \
+                      silence rows in `crates/gabbro-check/tests/traverse_object.rs`.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs; SPRACHE.md §7",
     },
     Satz {

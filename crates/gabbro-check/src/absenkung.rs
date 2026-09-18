@@ -93,6 +93,18 @@
 //! The count runs to the end of the fragment in every case: a counter
 //! that stops at the first statement past the bound answers whether at
 //! least one primitive is large, not how large this one is.
+//!
+//! ## Lane 229 note: the windowed traverse lowers inside the `Schleife` row
+//!
+//! The `traverse … from <start> count <len>` form (reader refusal `P001`,
+//! lane 222) has no lowering yet (lane 234). When it lands, it lands as a
+//! `Schleife` arm beside `traverse over descendants of`, and this module
+//! already binds it: the window bounds lower as pure index arithmetic
+//! inside the loop scaffold, and the whole arm -- scaffold, bounds and
+//! clamps -- must fit [`STATEMENTS_PER_PRIMITIVE`]. No new row, no new
+//! code: an arm that does not fit reads `C001` like any other over-budget
+//! primitive. That is the lowering-side obligation lane 229 owes, and it
+//! is already enforced.
 
 /// The bound beside the constant in `Ziel.lean`: `proPrimitiv <= 18`.
 pub const STATEMENTS_PER_PRIMITIVE: usize = 18;
