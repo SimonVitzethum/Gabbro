@@ -22,6 +22,7 @@
 //! | `N448` | the child path never leaves: no `return` inside, no `leave`/`next` past the region | gift 1109 |
 //! | `N449` | the child path never falls through: with no `return` inside, every path ends in a never-returning call or a never-exiting loop | gift 1110 |
 //! | `N450` | a `child` block runs behind a stack-carrying gate -- a handoff with no handed stack falls | gift 1111 |
+//! | `C185` | the `child` block has no lowering in the stub template and is refused by name (in `emit.rs`, beside the best-effort block) | gift 1112 |
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
 //! really starts on the handed stack is the stub's business (`emit.rs`,

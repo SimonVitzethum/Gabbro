@@ -426,18 +426,11 @@ pub const EINORDNUNG: &[Posten] = &[
                 generated is the comment carrying the suspended invariants; the restoration \
                 stands as a preservation duty in `gabbro pflichten` and not in the C (W6)",
     },
-    // **Lane O-1:** `child` lowers to a C block, and nothing else -- at run
-    // time the path IS its statements. The handoff shape (no return into
-    // the caller's frame, a never-ending tail) is the checker's business
-    // (`N448`/`N449` in `clone.rs`), not the C's: the fall-through the
-    // block form would generate is marked dead at emission.
-    Posten {
-        konstrukt: "child",
-        traegt: Traegt::Direkt,
-        grund: "a C block, and nothing else -- the child path IS its statements, entered \
-                on the handed stack. What is generated beside it is the dead \
-                fall-through marker; the no-return shape stands as `N448`/`N449`",
-    },
+    // **Lane O-1:** `child` has NO entry here until its lowering lands --
+    // like `breaking` before 2026-08-31 it is booked as `UNZUGEORDNET`,
+    // and rightly: the emitter refuses it (`C185`). The `zaehle` arm below
+    // still counts it, so the certificate lists the refused block instead
+    // of silently dropping it.
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,

@@ -10294,13 +10294,33 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
-        // **Lane O-1: `child { … }` (K-1).** At run time the path IS its
-        // statements, entered on the handed stack -- a C block, and nothing
-        // else. The handoff shape (no return into the caller's frame, a
-        // never-ending tail) is the checker's business (`N448`/`N449` in
-        // `clone.rs`): the fall-through past this block is dead by checking,
-        // and the stub marker for it lands with the clone stub (part 3).
+        // **Lane O-1: `child { … }` (K-1).** The handoff shape (no return
+        // into the caller's frame, a never-ending tail) is the checker's
+        // business (`N448`/`N449` in `clone.rs`); the lowering is refused
+        // below (`C185`), and the block is written out best-effort beside
+        // the refusal so the refusal changes no `cc` verdict.
         StmtArt::Child(x) => {
+            // **C185 -- the child path has no lowering in this template.**
+            // The stub above lowers the GATE as one C function; after a
+            // stack-switching call the child resumes inside that helper on
+            // the NEW stack, and the helper's `return` would pop a return
+            // address off the handed stack. The sound lowering is an inline
+            // trap with the child entered by jump (K-1's fork (b) is the
+            // unchecked `asm` form of it; fork (a) the C driver outside the
+            // language) -- until it lands, every `child` block falls here,
+            // by name, never silently. The block is still written out
+            // best-effort below, so the refusal changes no `cc` verdict.
+            syscall_code(
+                absagen,
+                "C185",
+                s.span,
+                &format!(
+                    "`child` has no lowering in the `syscall` stub template -- after a \
+                     stack-switching call the child resumes inside the gate's helper on \
+                     the handed stack, and the helper's return would pop a return address \
+                     off it. The inline trap with the child entered by jump is not built"
+                ),
+            );
             aus.push_str(&format!(
                 "{e}/* child -- HANDOFF region: runs on the handed stack of the\n\
                  {e} * stack-carrying gate. Never returns into the caller frame\n\
