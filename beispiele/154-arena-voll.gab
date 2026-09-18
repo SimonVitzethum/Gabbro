@@ -1,0 +1,31 @@
+-- 154 -- **Refuse on full, then reset, then reuse.**
+--
+-- The companion to `153-arena-waechst.gab`: where 153 fills a ceiling of eight,
+-- this file meets a ceiling of two (`capacity 2 .. 2`, the `99` boundary shape).
+-- The third allocation takes its `else` -- the refuse path, written down and not
+-- hoped away, the same branch a future `grow` failure will take. Inside the
+-- branch the phase turns over (`reset`) and the same shape allocates again, so
+-- the file shows both halves of the free discipline: over the ceiling there is
+-- no branch to take except the one beside the statement (lane 240: beyond the
+-- ceiling growth refuses, gift `1087` pins the branchless shape), and after a
+-- reset every index is fresh (lane 243: no live reference survives a reset).
+--
+-- Fully clean, and it emits. Executed result: 1004 (see the report).
+module beispiel::arena_voll {
+arena Rand capacity 2 .. 2 of u16;
+
+impl fn voll() -> u32 effects { writes Rand } costs <= 32 ops {
+    let a = alloc Rand (1);
+    let b = alloc Rand (2);
+    let c = alloc Rand (3) else {
+        reset Rand;
+        let d = alloc Rand (4);
+        let r : u32 = Rand[d];
+        return 1000 + r;
+    };
+    let x : u32 = Rand[a];
+    let y : u32 = Rand[b];
+    let z : u32 = Rand[c];
+    return x + y + z;
+}
+}
