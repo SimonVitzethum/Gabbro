@@ -122,6 +122,8 @@ fn stmt_name(art: &StmtArt) -> &'static str {
         StmtArt::ResetArena(_) => "reset",
         // **Lane O-1:** the clone-child path, named for refusals.
         StmtArt::Child(_) => "child",
+        // **Lane 253:** the hosted thread-start statement, named for refusals.
+        StmtArt::Start(_) => "start",
     }
 }
 

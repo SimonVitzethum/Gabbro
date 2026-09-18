@@ -403,6 +403,9 @@ fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             // **Lane O-1:** `child` binds no name itself; the body is
             // collected through `unterbloecke` below like every block.
             | StmtArt::Child(_)
+            // **Lane 253:** `start` binds nothing; its roots are resolved
+            // fail-closed in `nebeneinander.rs` (`W003`).
+            | StmtArt::Start(_)
             | StmtArt::Leave(_)
             | StmtArt::Next(_)
             | StmtArt::Publish(_)
@@ -570,6 +573,14 @@ fn rumpf_falten(
             }
             StmtArt::ResetArena(i) => {
                 fakten.fremd.push((format!("arena {}", i.text), s.span));
+            }
+            // **Lane 253:** a `start` IS calls -- one per named root. The
+            // fold sees them the way it sees a library call's callee: the
+            // roots take no arguments, so there is nothing else to fold.
+            StmtArt::Start(st) => {
+                for w in &st.roots {
+                    fakten.rufe.push((w.text(), s.span));
+                }
             }
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
         }

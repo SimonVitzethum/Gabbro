@@ -598,7 +598,9 @@ impl<'a> Laeufer<'a> {
                 }
             }
             StmtArt::Return(Some(x)) => self.orte_in_expr(x),
-            StmtArt::Return(None)
+            // **Lane 253:** `start` moves no generation and binds nothing.
+            StmtArt::Start(_)
+            | StmtArt::Return(None)
             | StmtArt::Leave(_)
             | StmtArt::Next(_) => {}
         }

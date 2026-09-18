@@ -1029,6 +1029,11 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 zaehle(e, "child");
                 block(x, e, geister);
             }
+            // **Lane 253:** the hosted thread-start statement -- counted,
+            // never lowered beside the count.
+            StmtArt::Start(_) => {
+                zaehle(e, "start");
+            }
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
             // **«C4», 2026-08-19.** Nur die VERGLEICHSform senkt ab; `update` bleibt eine

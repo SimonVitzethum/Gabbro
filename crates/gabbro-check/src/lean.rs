@@ -2482,6 +2482,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // generations live in `grammatik/Grammatik/Arena.lean`, not in the
         // program-logic body model, so both statements lower to no term.
         StmtArt::Alloc(_) | StmtArt::ResetArena(_) => Err(LeanReason::Expression),
+        // **Lane 253:** a statement-level `start` has no term in this
+        // channel either -- the starts live in the declaration, and the
+        // statement-level join rule is handoff, not built here.
+        StmtArt::Start(_) => Err(LeanReason::Expression),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
         // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)

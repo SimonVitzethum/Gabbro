@@ -319,6 +319,23 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// **Lane 253: does `start` open the thread-start statement here?**
+    ///
+    /// `start` is no keyword -- a variable, parameter or function of that
+    /// spelling stays one. Only `start` followed by `{` is the statement;
+    /// everything else (`start = 1;`, `start(x);`, `start f;`) walks the
+    /// ordinary assignment/call road and draws its ordinary refusal.
+    fn is_start_head(&self) -> bool {
+        let b = self.blick();
+        if b.art != Art::Ident || b.text(self.quelle) != "start" {
+            return false;
+        }
+        matches!(
+            self.blick_n(1).art,
+            Art::Zeichen(Z::GeschweiftAuf)
+        )
+    }
+
     fn erwarte_kw(&mut self, k: Kw) -> Erg<Span> {
         if self.ist_kw(k) {
             Ok(self.vor().span)
@@ -3554,6 +3571,21 @@ impl<'a> Parser<'a> {
                 span: anfang.bis_zu(self.vorheriger_span()),
             });
         }
+        // **Lane 253: `start { f, g };` -- hosted thread start.** `start`
+        // stays a plain identifier (no keyword, no `kw.rs` change): the head
+        // word decides, like at `reset`/`child` below. `start = 1;`,
+        // `start(x);`, `start.f = x;` continue with a place continuation
+        // and stay assignments or calls to a name of that spelling -- only
+        // `start` followed by `{` is the statement. The braced list mirrors
+        // the `concurrent` declaration; the unbraced `start f;` keeps its
+        // `P017` (it is not the form).
+        if self.is_start_head() {
+            let start = self.startform()?;
+            return Ok(Stmt {
+                art: StmtArt::Start(start),
+                span: anfang.bis_zu(self.vorheriger_span()),
+            });
+        }
         let kopf = if self.wort_ist_anweisungskopf() {
             self.blick().art
         } else {
@@ -5291,6 +5323,31 @@ impl<'a> Parser<'a> {
         Ok(ConcurrentDecl {
             koerper,
             span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **`start { f, g };` -- hosted thread start (lane 253, P017).**
+    ///
+    /// The statement half of the `concurrent` declaration above: which
+    /// declared roots start here, joined before the starter proceeds. The
+    /// list rule is the same one (one path at least, trailing comma
+    /// allowed); the head is a plain identifier (see `is_start_head`), so
+    /// no keyword is spent and `start` stays a usable name elsewhere.
+    fn startform(&mut self) -> Erg<StartStmt> {
+        let anfang = self.erwarte_ident()?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut roots = vec![self.pfad()?];
+        while self.friss_z(Z::Komma) {
+            if self.ist_z(Z::GeschweiftZu) {
+                break; // Trailing comma -- same rule as everywhere since 2026-08-16
+            }
+            roots.push(self.pfad()?);
+        }
+        let _ = self.erwarte_z(Z::GeschweiftZu)?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(StartStmt {
+            roots,
+            span: anfang.span.bis_zu(ende),
         })
     }
 

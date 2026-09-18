@@ -21,6 +21,8 @@
 //! in writes and share no `concurrent` set fall (`W002`) -- non-declared pairs
 //! are NOT concurrent, so nothing is fail-open. Fail-closed: a declared member
 //! whose hull is incomplete, or that resolves to nothing, refuses (`W003`).
+//! A `start { f, g };` root that resolves to nothing refuses the same way
+//! (`W003`, lane 253) -- the statement names declared roots, never fresh paths.
 //!
 //! ## What this pass does NOT do
 //!
@@ -232,6 +234,57 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             });
         }
     });
+
+    // **Lane 253: every `start` root resolves, fail-closed (`W003`).**
+    //
+    // A `start { f, g };` names already-declared roots and never a fresh
+    // path -- like the `concurrent` members above, an unresolvable root
+    // refuses instead of passing silently. What this walk does NOT owe
+    // yet: membership in a `concurrent` set, the nullary shape, and the
+    // join/effects accounting -- handoff to the next lane, not built here.
+    {
+        fn collect_starts<'a>(b: &'a Block, aus: &mut Vec<&'a StartStmt>) {
+            for s in &b.anweisungen {
+                if let StmtArt::Start(st) = &s.art {
+                    aus.push(st);
+                }
+                for k in crate::unterbloecke(s) {
+                    collect_starts(k, aus);
+                }
+            }
+        }
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            if let ItemArt::Funktion(f) = &item.art {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    let mut starts = Vec::new();
+                    collect_starts(b, &mut starts);
+                    for st in starts {
+                        for pfad in &st.roots {
+                            let span = pfad.teile.last().map(|i| i.span).unwrap_or(item.span);
+                            if g.aufloesen(&u, modul, &pfad.text()).is_none() {
+                                absagen.schiebe(
+                                    Absage::fehler(
+                                        "W003",
+                                        span,
+                                        format!(
+                                            "`start` names `{}`, which resolves to no body -- \
+                                             without the body there is nothing to start, and an \
+                                             unstarted name is not a started one",
+                                            pfad.text()
+                                        ),
+                                    )
+                                    .mit_notiz(
+                                        "fail-closed: an unresolvable root refuses, it never \
+                                         passes silently",
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // Declared pairs, with fail-closed on incomplete hulls.
     let mut deklariert: BTreeSet<(String, String)> = BTreeSet::new();
