@@ -149,4 +149,105 @@ theorem forever_leer_divergiert {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ
     fun _ _ => rfl
   exact forever_noexit_divergiert O passes R a .wahr .nil σ ρ hNo hInv
 
+/-! ## 3. `asm`: a `-> never` foreign body never comes back -/
+
+/-- **The exit evidence for `asm`**: a `-> never` axiom's answer class is
+    empty -- no raw word of any oracle image fits the declared result. A
+    `-> never` foreign body with an `out` has no fitting answer in the
+    model; whatever the machine says, the call is the foreign code breaking
+    its declaration. (Per-axiom form of `axNeverGut_gilt`, NeverAsm.lean.) -/
+theorem asm_never_antwort_leer {D : Deklaration} (a : D.Ax)
+    (h : D.aerg a = some .never) : AntwortLeer D (D.aerg a) := by
+  rw [h]
+  exact antwortLeer_never
+
+/-- **The call never continues**: running a `bindAxiom` whose declared
+    result is `never` never answers `ok` -- the continuation never runs.
+    The outcome is `hardware (annahme a)` (`execBlock_bindAxiom_never`), the
+    named assumption that owns the foreign effects, so divergence holds per
+    the declared effects and never by assertion. -/
+theorem asm_never_kein_ok {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {τ : Ty} (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Block D V l (τ :: Γ) Λ Λ') (hne : τ = .never)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ) :
+    execBlock O passes R ((.bindAxiom a args he hw hg hd hgd rest : Block D V l Γ Λ Λ'))
+      σ ρ ≠ .ok σ' ρ' := by
+  have hE := execBlock_bindAxiom_never O passes R a args he hw hg hd hgd rest hne σ ρ
+  rw [hE]
+  intro hcon
+  cases hcon
+
+/-! ## 4. Bridge to `KeinLogikHaltG`: divergence serves the leg -/
+
+/-- **Bridge, `forever`**: a thread standing at a true-invariant `forever`
+    head takes its G step (`ewigWeiter`, RufMaschineG.lean) -- given the
+    lock-bookkeeping side conditions every reading rule of G carries
+    (`HeldIn` of the head holdings, the read-world spur equation). The
+    `hw` premise of that rule is `PrueftG`'s loop clause at this head, and
+    for `.wahr` it holds by computation: the diverging loop of §2 is
+    therefore no `logik` stop -- it extends the leg `keinLogikHalt`, never
+    weakens it (`Spec.lean` untouched). -/
+theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {t : Faden}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {a : D.Annahme} {n : Nat}
+    {k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ}
+    (hhead : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a (n + 1) (.wahr : Expr D Γ Λ .bool)
+      (.nil : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ) k⟩)
+    (hspur : ((M.weltVon t).lese Λ ((.wahr : Expr D Γ Λ .bool)).orte).spur =
+      (M.faeden t).spur)
+    (hHeld : HeldIn Λ (offen (M.faeden t).spur)) :
+    ∃ M', RufSchrittG P O passes M t M' := by
+  refine ⟨_, RufSchrittG.ewigWeiter M t l Γ Λ a n (.wahr : Expr D Γ Λ .bool)
+    (.nil : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ) k ρ hhead
+    ((M.weltVon t).lese Λ ((.wahr : Expr D Γ Λ .bool)).orte) rfl rfl [] ?_ hHeld⟩
+  simp [hspur]
+
+/-- **Bridge, never-axiom heads**: a thread at a `bindAxiom` head passes
+    both leaf checks of `PrueftG` (clauses 4-5, ZielOrtGanz.lean, restated)
+    -- vacuously, since a call is no leaf (`istBlatt` holds only of `Stmt`
+    leaves, and `bindAxiom` is a `Block` constructor, so the rival head
+    equation discriminates). For a `-> never` axiom this head is
+    additionally the named stop `nieZurueck` (`kopf_nieZurueck_never`,
+    NeverAsm.lean), never `hardware` (`kein_hardware_an_never`): the
+    divergence of §3 and the leg cohere. Stated for every `bindAxiom` head
+    -- the never instance is the joint witness of §5. -/
+theorem nieZurueck_blatt_frei {D : Deklaration} {M : RufMaschineG D} {t : Faden}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {a : D.Ax} {τ : Ty} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ}
+    {hw : ∀ t2, D.aschreibt a t2 = true →
+      (vertragVon D (M.faeden t).kopf.f).schreibt t2 = true}
+    {hg : ∀ g, D.agschreibt a g = true →
+      (vertragVon D (M.faeden t).kopf.f).gschreibt g = true}
+    {hd : ∀ t2, D.aschreibt a t2 = true → darf D t2 Λ}
+    {hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ}
+    {rest : Block D (vertragVon D (M.faeden t).kopf.f) l (τ :: Γ) Λ Λ}
+    {k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ}
+    (O : Orakel D) (passes : Nat)
+    (hhead : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann
+      (.bindAxiom a args he hw hg hd hgd rest) k⟩) :
+    (∀ (l' : Bool) (Γ' : Ctx) (Λx Λ'' : List (Res D)) (ρ' : Env D Γ')
+      (s : Stmt D (vertragVon D (M.faeden t).kopf.f) l' Γ' Λx Λ'')
+      (K : Endblock D (vertragVon D (M.faeden t).kopf.f) l' Γ' Λ''),
+      s.istBlatt = true → (M.faeden t).kopf.rest = ⟨l', Γ', Λx, ρ', .ende (.cons s K)⟩ →
+      ∀ e : Logik D, execStmt O passes keinRuf s (M.weltVon t) ρ' ≠ .logik e) ∧
+    (∀ (l' : Bool) (Γ' : Ctx) (Λx Λ' Λ'' : List (Res D)) (ρ' : Env D Γ')
+      (s : Stmt D (vertragVon D (M.faeden t).kopf.f) l' Γ' Λx Λ')
+      (rst : Block D (vertragVon D (M.faeden t).kopf.f) l' Γ' Λ' Λ'')
+      (k' : GRest D (vertragVon D (M.faeden t).kopf.f) l' Γ' Λ''),
+      s.istBlatt = true → (M.faeden t).kopf.rest = ⟨l', Γ', Λx, ρ', .dann (.cons s rst) k'⟩ →
+      ∀ e : Logik D, execStmt O passes keinRuf s (M.weltVon t) ρ' ≠ .logik e) := by
+  constructor
+  · intro l' Γ' Λx Λ'' ρ' s K hb heq e he
+    rw [hhead] at heq
+    cases heq
+  · intro l' Γ' Λx Λ' Λ'' ρ' s rst k' hb heq e he
+    rw [hhead] at heq
+    cases heq
+
 end Gabbro.Grammatik.Zielsatz
