@@ -137,6 +137,14 @@ takes no new codes (lowering lane). Example
 pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
 242 alongside waves A/B (11 total on fisch).*
 
+**Wave E — bounded strings (owner): general strings are planned, max length
+known like integer ranges.** Lane 256 (RUNNING): bounded string type with
+declared `max N`, literals with known length, `concat`/`length`/index/compare
+with M101-family length discipline; Lean model as bounded char lists;
+emitter REFUSES by name until the lowering lane (staged honesty, lane-222
+precedent). L4 library text (formatting/parsing/UTF) stays library work
+(§0b), not language work.
+
 *Not lanes: sigaction (out by design, not by backlog: an async handler is a
 root that fires at an arbitrary program point, breaking the start/thread
 model — reentrancy against lock invariants, contracts and costs cannot be
