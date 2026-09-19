@@ -206,6 +206,8 @@ pub mod corrcert;
 pub mod corrlean;
 pub mod kostenledger;
 pub mod zeremonie;
+/// Bounded-string length discipline (lane 256): specified, not wired.
+pub mod zeichenfolge;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
