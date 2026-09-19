@@ -4053,12 +4053,18 @@ fn ruecksetzwert(t: &SlotTyp, tn: &str, u: &Namen, tiefe: u32) -> Option<String>
         // reset value is derived here.** Each of them would need its own statement about
         // what "empty" means, and this emitter refuses by name rather than writing a
         // plausible zero.
+        //
+        // Lane 256: a bounded string joins that list -- nothing about `string max N`
+        // says what "empty" lowers to, so there is no reset value either. (This arm
+        // is forced by exhaustiveness over `TypExpr`; it changes no existing
+        // behaviour -- the variant cannot arise from any pre-string source.)
         TypExpr::Zeiger(_)
         | TypExpr::Float(_)
         | TypExpr::Feld(_)
         | TypExpr::Verbund(..)
         | TypExpr::FnZeiger(_)
         | TypExpr::Never(_)
+        | TypExpr::Zeichenkette { .. }
         | TypExpr::Varianten(..) => None,
     }
 }
@@ -6915,11 +6921,17 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
             // Namen ab, und ein Eintrag hier wuerde einen Zugriff erlauben, dessen Typ nie
             // im Erzeugnis steht. Sie stehen darum hier und werden dort abgewiesen, nicht
             // umgekehrt.
+            //
+            // Lane 256: a `string max N` parameter likewise earns no local-view
+            // entry -- a string carries no `.`-access and no `->`, and its
+            // lowering is refused by name elsewhere. (Forced by exhaustiveness
+            // over `TypExpr`; no existing behaviour changes.)
             TypExpr::Int(_)
             | TypExpr::Float(_)
             | TypExpr::Bool(_)
             | TypExpr::Never(_)
             | TypExpr::Index { .. }
+            | TypExpr::Zeichenkette { .. }
             | TypExpr::FnZeiger(_)
             | TypExpr::Feld(_)
             | TypExpr::Verbund(_, _)

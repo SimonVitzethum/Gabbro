@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- **1123 -- a bounded string declaration with `lenof` checks clean (lane 256).**
+--
+-- The positive side of the declaration shape: `string max 8` parameters
+-- and `lenof` over them draw no checker diagnostic. Nothing lowers yet:
+-- the emitter stops the unit with `C001` (parameter type), so no C is
+-- written and the acceptance promises nothing it cannot emit.
+
+module gift1123 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

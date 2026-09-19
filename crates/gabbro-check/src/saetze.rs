@@ -2711,6 +2711,68 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`hull_expr`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
     },
+    Satz {
+        name: "zeichenfolge.laengen",
+        kennungen: &["N453", "N454"],
+        aussage: "A bounded string carries its declared max like `u32` carries \
+                  `in 0 .. N`, and lengths add: `string max A + string max B` \
+                  holds up to A+B, so a slot that fits fewer refuses the sum \
+                  (`N453`); an index proves itself against the max -- a literal \
+                  at or past it is out of range on every value (`N454`). What \
+                  passes here still stops at the emitter (`C001`, no lowering \
+                  for string values), so the acceptance promises nothing it \
+                  cannot emit.",
+        vorbehalt: "Lengths are max-bounds, never exact counts: with no literal \
+                    surface no exact length ever arises, so a computed index \
+                    proves nothing and falls with the out-of-range one \
+                    (`N454` both ways) -- including an index m1 narrowed \
+                    elsewhere, which this pass cannot see. A literal below the \
+                    max is accepted the M103 way, and the lowering lane owes \
+                    the exact-length side before it lowers any index. String \
+                    sources are parameters, `extern` returns and inferred \
+                    `let`s only: `\"hi\"` stays `P011` (a literal needs an \
+                    `ExprArt` arm, and `m1::ausdruck_roh` is exhaustive over \
+                    `ExprArt`). The pass fires only on positive string \
+                    knowledge and stays silent on ignorance; shadowed names \
+                    drop out rather than decide wrongly.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form (checker half \
+                      only -- there is no C for `cc` to take, the emitter stops \
+                      every string program with `C001`): `1118` (`N453`: 5+5 \
+                      into 8), `1119` (`N454`: literal 8 at max 8), `1120` \
+                      (`N454`: computed index, narrowed yet unproven). The \
+                      clean sides are `1123` (declaration plus `lenof`) and \
+                      `1124` (5+3 into 8), both checker-silent with `C001` at \
+                      the emitter.",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
+                     `index_regel`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
+                     (`bconcat_ablehnt`, `bindex_aussen`)",
+    },
+    Satz {
+        name: "zeichenfolge.plaetze",
+        kennungen: &["N455"],
+        aussage: "Strings are their own sort: a non-string value where a string \
+                  stands falls, a string where no string stands falls, and an \
+                  operation with exactly one string side is no form -- `+` of \
+                  two strings concatenates, comparisons of two strings order, \
+                  and everything else with a string in it falls (`N455`).",
+        vorbehalt: "Only positive knowledge fires: an initializer or argument \
+                    the pass cannot see as a string stays silent (m1 owns the \
+                    rest through `Unbekannt`), and a shadowed name drops out. \
+                    Call arguments at string parameters are held past the max; \
+                    arity and unknown callees stay m1's. Contracts, \
+                    `const`/`static` initializers, table slots and `LetSonst` \
+                    sources are not string-checked. Field and `->` suffixes on \
+                    a string fall here; there is no member access on strings.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1121` \
+                      (`N455`: `0` at a string slot), `1122` (`N455`: `s + 1` \
+                      mixed). The clean sides are `1125` (literal index below \
+                      the max) and `1126` (`==` and `<` over two strings), \
+                      both checker-silent with `C001` at the emitter.",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
+                     `expr_regel`, `ort_regel`, `ruf_regel`)",
+    },
 ];
 
 // ===================================================================================

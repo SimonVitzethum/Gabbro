@@ -3946,6 +3946,7 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
         // am anderen Ende steht -- und das ist der ganze Unterschied.
         TypExpr::Zeiger(_)
         | TypExpr::Index { .. }
+        | TypExpr::Zeichenkette { .. }
         | TypExpr::Int(_)
         | TypExpr::Float(_)
         | TypExpr::Bool(_)

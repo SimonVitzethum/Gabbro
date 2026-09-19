@@ -1195,6 +1195,27 @@ impl<'a> Parser<'a> {
                     optional,
                 })
             }
+            // Lane 256: `string max N` -- a bounded string with declared
+            // maximum length. `string` stays an ordinary name everywhere
+            // else (no new keyword): only `string` directly followed by
+            // `max` takes this arm; anything else -- including a user type
+            // named `string` -- falls through to the name arm below. The
+            // maximum is a plain number (`P004` otherwise); named constants
+            // are not accepted here.
+            Art::Ident
+                if t.text(self.quelle) == "string"
+                    && matches!(self.blick_n(1).art, Art::Wort(Kw::Max)) =>
+            {
+                let anfang = t.span;
+                self.pos += 1;
+                self.erwarte_kw(Kw::Max)?;
+                let (max, _) = self.erwarte_zahl()?;
+                let ende = self.vorheriger_span();
+                Ok(TypExpr::Zeichenkette {
+                    max,
+                    span: anfang.bis_zu(ende),
+                })
+            }
             // **A named type may be spelled with a word of the table.** Every arm that heads
             // a type stands above this one, so `ptr`, `option` and `u32` are still not the
             // NAME of a type -- and `type count = u32;` and `x : count` now say the same

@@ -277,6 +277,11 @@ pub enum TypExpr {
         optional: bool,
         span: Span,
     },
+    /// `string max N` (lane 256) -- a bounded string with declared maximum
+    /// length `N`, carried the way `u32` carries `in 0 .. N`. The checker
+    /// (`zeichenfolge.rs`) tracks lengths against the max; unbounded
+    /// strings have no form and stay refused by name.
+    Zeichenkette { max: u128, span: Span },
 }
 
 impl TypExpr {
@@ -292,6 +297,7 @@ impl TypExpr {
             TypExpr::FnZeiger(f) => f.span,
             TypExpr::Varianten(_, s) => *s,
             TypExpr::Index { span, .. } => *span,
+            TypExpr::Zeichenkette { span, .. } => *span,
         }
     }
 }

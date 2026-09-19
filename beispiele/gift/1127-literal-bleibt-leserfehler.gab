@@ -1,0 +1,20 @@
+-- erwartet: P011
+-- **1127 -- a string literal is still a reader refusal (lane 256).**
+--
+-- The one value shape this lane does NOT deliver: `"hi"` has no
+-- expression form, because a literal needs an `ExprArt` arm and
+-- `m1::ausdruck_roh` is exhaustive over `ExprArt` in a file this lane
+-- must not touch (`crates/gabbro-check/src/m1.rs:2368`). String sources
+-- are parameters, `extern` returns and inferred `let`s; the literal
+-- surface belongs to the lane that owns `m1.rs`. Until then the reader
+-- refuses it here, and nothing downstream can misread it.
+
+module gift1127 {
+impl fn nimm() -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let s: string max 8 = "hi";
+    return 0;
+}
+}

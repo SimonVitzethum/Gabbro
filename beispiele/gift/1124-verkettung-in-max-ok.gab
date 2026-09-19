@@ -1,0 +1,16 @@
+-- erwartet: C001
+-- **1124 -- a within-max concat checks clean (lane 256).**
+--
+-- The positive side of `N453`: `string max 5 + string max 3` holds up to
+-- 8, and the `string max 8` slot fits 8, so the checker stays silent.
+-- The emitter stops the unit with `C001`, so no C is written.
+
+module gift1124 {
+impl fn nimm(s: string max 5, t: string max 3) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let u: string max 8 = s + t;
+    return lenof(u);
+}
+}

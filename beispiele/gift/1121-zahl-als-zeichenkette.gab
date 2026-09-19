@@ -1,0 +1,16 @@
+-- erwartet: N455
+-- **1121 -- a non-string value where a string stands (lane 256).**
+--
+-- Strings are their own sort: `0` is a number, not a string of any max,
+-- so the initializer is refused (`N455`). The accepted side binds a
+-- known string (a parameter, an `extern` return, an inferred `let`).
+
+module gift1121 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let u: string max 8 = 0;
+    return lenof(s);
+}
+}
