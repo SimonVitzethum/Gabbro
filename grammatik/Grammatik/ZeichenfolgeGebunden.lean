@@ -9,8 +9,11 @@
   indexing is in-range or refused, comparison is lexicographic.
 
   This file is the VALUE model only (lists with the length invariant).
-  It extends no existing type and changes no existing file. Syntax,
-  checker wiring and lowering are explicitly out of scope (see CUTS).
+  The surface since lane 256 round 2: `string max N` parses
+  (`TypExpr::Zeichenfolge`), the `zeichenfolge.rs` pass holds N453-N455
+  over parameters, `extern` returns and `let`s, and the emitter stops
+  every string program with `C001`. String literals and lowering are
+  explicitly out of scope (see CUTS).
 -/
 import Grammatik.ReferenzB
 
@@ -103,10 +106,10 @@ theorem bliteral_ablehnt (max : Nat) (cs : List Char) (h : max < cs.length) :
   unfold bliteral
   rw [dif_neg (Nat.not_le.mpr h)]
 
-/-- Witness strings: `"hi"` and `"!"` at max 8. -/
+/-- Witness string `"hi"` at max 8. -/
 def z1 : BString 8 := ⟨['h', 'i'], by decide⟩
 
-/-- Witness strings: `"hi"` and `"!"` at max 8. -/
+/-- Witness string `"!"` at max 8. -/
 def z2 : BString 8 := ⟨['!'], by decide⟩
 
 /-- Witness strings: the within-max concat `"hi!"` at max 8. -/
@@ -132,15 +135,15 @@ end Gabbro.Grammatik
   - VALUE MODEL ONLY: `BString max` as a character list with the length
     invariant, plus `bliteral` / `bconcat` / `blaenge` / `bindex` /
     `vergl` / `bvergleiche` with their length, refusal and comparison
-    theorems and the joint witness `bounded_string_zeuge`.
-  - NO syntax: there is no `string max N` declaration form, no literal
-    or operator surface in the language. B22 (`SYNTAX.md`) stays
-    metadata-only strings (claims/reasons/assumes/asm).
-  - NO checker rule: no new N code is measured (N453+ still free,
-    gifts 1118+ still free, both verified); the length discipline here
-    is specified, not wired into `m1.rs` (lane 224 owns it) or any pass.
-  - NO emitter shape: every string-typed value ends at a refusal today;
-    the per-shape handoff list is in `MUSE-REPORT-256.md`.
+    theorems and the joint witness `bounded_string_zeuge`. The model
+    covers literals (`bliteral`) AHEAD of the surface: `"hi"` stays
+    `P011` because a literal needs an `ExprArt` arm and
+    `m1::ausdruck_roh` is exhaustive over `ExprArt` (see gift 1127).
+  - NO lowering: every string program ends at `C001` today (parameter
+    type, return type, unresolvable `let`, non-array `lenof` -- all
+    measured). The index rule accepts literals below the max the M103
+    way; the lowering lane owes the exact-length side before it lowers
+    any index.
   - NO library text (L4): formatting, parsing and UTF handling stay
     library work per `TODO.md` section 0b.
   - Planted-defect check: `bconcat_ablehnt` / `bliteral_ablehnt` prove
@@ -156,9 +159,3 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.bconcat_ablehnt
 #print axioms Gabbro.Grammatik.bliteral_ablehnt
 #print axioms Gabbro.Grammatik.bounded_string_zeuge
-
-/-! ## CUTS:
-  - Skeleton only: operations (`concat`, `length`, `index`, `compare`)
-    and their theorems land next, one definition at a time.
-  - No syntax, no checker rule, no emitter shape yet (see the report).
--/

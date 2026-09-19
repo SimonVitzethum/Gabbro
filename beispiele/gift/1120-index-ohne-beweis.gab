@@ -1,0 +1,17 @@
+-- erwartet: N454
+-- **1120 -- computed index into a bounded string proves nothing (lane 256).**
+--
+-- Lengths are max-bounds, never exact counts: no range the checker can
+-- see shows that `i` stands below the length `s` happens to hold, so the
+-- index is refused (`N454`) -- even though `i` is narrowed to `0 .. 100`
+-- and the max is 8. Only a literal below the max is statically in range.
+
+module gift1120 {
+impl fn nimm(s: string max 8, i: u32 in 0 .. 100) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let c = s[i];
+    return lenof(s);
+}
+}

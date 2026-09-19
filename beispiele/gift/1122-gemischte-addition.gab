@@ -1,0 +1,17 @@
+-- erwartet: N455
+-- **1122 -- a string and a non-string share one `+` (lane 256).**
+--
+-- `+` on two strings concatenates; `+` with exactly one string side is
+-- no form at all -- neither integer arithmetic (the other side is not a
+-- number the checker can see) nor concat. The mixed operation is refused
+-- (`N455`).
+
+module gift1122 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let u: string max 8 = s + 1;
+    return lenof(s);
+}
+}

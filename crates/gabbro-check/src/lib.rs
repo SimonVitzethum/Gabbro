@@ -495,6 +495,11 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("arena", arena::pass(baum, absagen));
         z!("konstanten", konstanten::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
+        // **Lane 256, directly behind M1.** The bounded-string length
+        // discipline: same column as M1 (lengths rhyme with the M101
+        // family), no pass number of its own. It reads bodies beside M1
+        // and decides only where it positively knows stringness.
+        z!("zeichenfolge", zeichenfolge::pass(baum, absagen));
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
@@ -545,6 +550,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // computes, held element-wise, before any body pass reads the values.
     konstanten::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
+    // **Lane 256, directly behind M1** (same column, no pass number --
+    // see the timed pipeline above for the reason).
+    zeichenfolge::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
     geteilt::pass(baum, absagen);

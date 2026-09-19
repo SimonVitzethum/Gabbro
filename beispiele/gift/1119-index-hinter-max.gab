@@ -1,0 +1,16 @@
+-- erwartet: N454
+-- **1119 -- index past the max of a bounded string (lane 256).**
+--
+-- A `string max 8` holds anywhere from zero to 8 characters, so index 8
+-- is out of range on every value it can ever hold. The index is refused
+-- (`N454`); the accepted side is a literal below the max.
+
+module gift1119 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let c = s[8];
+    return lenof(s);
+}
+}

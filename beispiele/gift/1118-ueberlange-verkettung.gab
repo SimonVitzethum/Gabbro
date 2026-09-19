@@ -1,0 +1,18 @@
+-- erwartet: N453
+-- **1118 -- over-max concat into a bounded string slot (lane 256).**
+--
+-- Lengths add like `u32` bounds: `string max 5 + string max 5` holds up to
+-- 10 characters, and the `string max 8` slot fits 8. The sum is refused
+-- (`N453`); without this rule the emitter would have to guess where the
+-- 9th and 10th characters go -- today it stops every string program with
+-- `C001` instead.
+
+module gift1118 {
+impl fn nimm(s: string max 5, t: string max 5) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let u: string max 8 = s + t;
+    return lenof(u);
+}
+}
