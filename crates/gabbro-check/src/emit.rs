@@ -7588,7 +7588,32 @@ fn funktion(
         // damit war ein Systemaufruf nur halb schreibbar: absetzen ging, die Rueckgabe lesen
         // nicht. *`result` steht als Wort laengst in der Grammatik (`primary`), also braucht
         // es kein neues.*
-        let hat_ergebnis = f.ergebnis.is_some();
+        //
+        // **Lane 235: `-> never` has no result slot.** `f.ergebnis` is `Some` for
+        // `-> never` too (it lowers to `_Noreturn void` in `prototyp_kern`), so the
+        // guard below would demand an `out { result }` of a body that must never
+        // answer -- exactly the accepted shape of lane 225 (pinned lowering-side
+        // in `crates/gabbro-check/tests/never_lowering.rs`). `never` therefore
+        // counts as "no result" here: no `result` local, no `return`.
+        // The contradictory `out { result }` stays refused at the N321 arm above
+        // (checker) and beside it (emitter, `gift/985`), and any OTHER `out` on a
+        // `-> never` body is refused just below -- an output into a by-value
+        // parameter dies with the call, so no lowering gives it meaning
+        // (`gift/1066`, `-- erwartet: C001`, checker silent).
+        let ist_nie = matches!(&f.ergebnis, Some(TypExpr::Never(_)));
+        if ist_nie {
+            if let Some((n, _)) = a.aus.first() {
+                weigere(
+                    absagen,
+                    n.span,
+                    "`-> never` with an `asm` body that names an `out` operand -- a body \
+                     that never answers has no result slot, and an output into a by-value \
+                     parameter dies with the call. Whoever never returns writes no `out`",
+                );
+                return;
+            }
+        }
+        let hat_ergebnis = f.ergebnis.is_some() && !ist_nie;
         if hat_ergebnis && !a.aus.iter().any(|(n, _)| n.text == "result") {
             weigere(absagen, f.name.span, "`asm` body returns a value but names no `out { result : … }`");
             return;

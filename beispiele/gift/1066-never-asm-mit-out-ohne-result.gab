@@ -1,0 +1,31 @@
+-- erwartet: C001
+-- **1066 -- a `-> never` `asm` body with a non-`result` `out` stays refused.**
+--
+-- Lineage: lane 225 pinned this number as the handoff (`-- erwartet: C001`,
+-- checker silent -- the accepted never-`asm` shape the emitter still refused).
+-- Lane 235 lowered that shape (bare `__asm__` under `_Noreturn`, no `result`
+-- slot, no `return`; positives plus `cc` proofs in
+-- `crates/gabbro-check/tests/never_lowering.rs`), so the handoff is consumed.
+-- The number stays a poison probe, now for the narrowed boundary: this body
+-- names `out { w }` instead of nothing. The checker is still silent (lane
+-- 225 is merged and read-only), and the emitter refuses by name (`C001`):
+-- a body that never answers has no result slot, and an output into a
+-- by-value parameter dies with the call, so no lowering gives it meaning.
+-- The `N321` shape (`out { result }`, `gift/984`/`985`) stays refused on both
+-- channels beside it.
+module gift::never_asm_mit_out_ohne_result {
+
+static mut GERAET : u32 = 0;
+
+divergent fn halt(w : u8) -> never
+    effects { writes GERAET, diverges }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "outb %[w], $0x80"
+        in { w : "a" }
+        out { w : "=a" }
+        clobbers { memory }
+    };
+
+}
