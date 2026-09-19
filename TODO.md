@@ -99,7 +99,7 @@ witnesses instead of poison probes.*
 | 235 | never/never-asm lowering | `emit.rs` | M | 252 |
 | 249 | spill-read rule: child vs caller-frame (Teil 3 gate) | `clone.rs` | S | — |
 | 250 | `D.klon` exporter fill (O-1 remainder) | `lean_g.rs` | M | — |
-| 251 | inline-trap lowering + correspondence (Teil 3, QUEUED) | `emit.rs` | M | 252 merges, 249 green |
+| 251 | inline-trap lowering + correspondence (Teil 3, RUNNING) | `emit.rs` | M | 252 merges, 249 green |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
 *Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
@@ -309,8 +309,8 @@ tree refuses everywhere else.*
   2026-09-19, same honest result: corpus since grown 117→127 files,
   exports still the identical 15; LG001 now x74, surveyed by subclass
   (each needs model narrowing). Next: LG002 x21, or per-subclass lanes
-  with model-side work. Concurrent lane 255 QUEUED (same file
-  `lean_g.rs`, sequential).**
+  with model-side work. Concurrent lane 255 RUNNING since 2026-09-19
+  (254 merged, file free).**
 - [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
   208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
   2026-09-17). Closed by finding, not by construction: five of nine
@@ -336,7 +336,7 @@ tree refuses everywhere else.*
   refuses locks, `held` sections and multiple starts (LG001/LG004); only
   108 of the six exports. The hand models above are the bridge, not the
   widening. Measured by how many of 07, 59, 108, 109, 124 and 125 export.
-  **Lane 255 QUEUED behind lane 254 (same file, sequential).**
+  **Lane 255 RUNNING since 2026-09-19 (254 merged, file free).**
 - [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
   O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
   2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
