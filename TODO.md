@@ -73,7 +73,7 @@ patch shape + surviving test).
 | 226 | fd + open/read decls (L-2, OS-agnostic) | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150 |
 | 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick | new `beispiele/` only | M | no new codes / — / 147–148 |
 | 237 | layout-factor muster: word tables + index arithmetic (`i>>2`, `(i&3)*8`), static-link budget measured | new `beispiele/` + report only, NO `m1.rs` (lane 224 owns it) | S | no new codes / — / 151–152 |
-| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | SPLIT 2026-09-18: checker + emitter TRANSFERRED (N446–N450, C185 refusal, LG004 exporter refusal; no Linux constants, verified by grep); Lean model + Spec (d2) stay on `opus/clone-handoff` for the review round. Open: Teil 3 (inline-trap lowering + correspondence), spill-read rule, `D.klon` exporter fill, `Ziel` leg. |
+| O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | SPLIT 2026-09-18: checker + emitter TRANSFERRED (N446–N450, C185 refusal, LG004 exporter refusal; no Linux constants, verified by grep); Lean model + Spec (d2) under REVIEW (lane 372, O-1 branch). Open: Teil 3 (inline-trap lowering + correspondence), spill-read rule, `D.klon` exporter fill, `Ziel` leg. |
 
 **Wave B (after A: emit.rs free from 221, AST known from 222, K003 from 223):**
 
@@ -191,6 +191,7 @@ generated driver, lock through the chain). Reviewers from 321.
 | 245 | symmetric pool: lift N304 with soundness + driver + Lean starts multiset | `fusswache2.rs`, `laufzeit/*`, starts-Lean | M–L | N436–440 / 1097–1101 / — |
 | 246 | generated per-unit driver (ROOTS from `concurrent`) + P017 findings | `bau.rs`, new gen module | M | N441–445 / 1102–1106 / — |
 | 247 | ticket lock through the chain (checks, emits, RUNS) | `laufzeit/sperre.gab` only | S | none |
+| 253 | P017 thread-start statement (from 246's findings; hosted form only) | `parse.rs`, `ast.rs` | M | no new P-codes planned |
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
