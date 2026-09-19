@@ -16,6 +16,11 @@
 //!
 //! * `table T count N { slot { f : <int range>, ... } }` -- `Tab`/`Feld`/`typ`/`count`
 //!   (a bare word travels as its full range, the numbers the checker uses).
+//!   A slot index is a literal in range, an `index into T` name, the
+//!   enclosing `traverse` binder, or an integer-typed name (a parameter or a
+//!   `let`) whose range fits the table, through `weiter` (lane 254 -- the
+//!   coercion the checker justified at `M103`; an over-wide name keeps the
+//!   LG004 refusal).
 //!   A `bool` field travels as `Ty.bool` and a `tagged` field as `Ty.sum`
 //!   (see below); `option`, record, float and wrapping fields have no form
 //!   (LG002). A unit without tables travels with `Tab := Empty` (pure
@@ -2350,7 +2355,9 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
 }
 
 /// The index expression for slot `idx` of table `t`: a literal in range,
-/// an index parameter for this table, or the enclosing `traverse` binder.
+/// an index parameter for this table, the enclosing `traverse` binder, or
+/// an integer-typed name (a parameter or a `let`) whose belief fits the
+/// table, through `weiter` (lane 254).
 fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result<String, Refusal> {
     let count = model.tables[t].count;
     match &e.art {
@@ -2367,6 +2374,20 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
             };
             match &ty {
                 VTy::Index { table } if *table == t => Ok(ctx.var(j)),
+                // An integer-typed name whose belief fits the table is an
+                // index through `weiter`: the checker held the access
+                // against `count` (M103) with its own interval, and the
+                // belief here is a sound over-approx of the same value, so
+                // the printed coercion is one the checker justified. The
+                // proofs are decided here, in Rust, by `fit`; a name that
+                // fits nowhere keeps the refusal below, unchanged.
+                VTy::Int { .. } => {
+                    let base = ctx.var(j);
+                    let want = VTy::Index { table: t };
+                    fit(base, &ty, &want, ctx, model, fname).map_err(|_| {
+                        refuse("LG004", format!("index {} in {fname} has no G form", o.text()))
+                    })
+                }
                 _ => Err(refuse("LG004", format!("index {} in {fname} has no G form", o.text()))),
             }
         }
@@ -2672,7 +2693,13 @@ fn tr_binaer(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sc
             let (Some(lo), Some(hi)) = (lo, hi) else {
                 return Err(refuse("LG003", format!("arithmetic in {fname} leaves the checked range")));
             };
-            Ok((format!("(.{ctor} {la} {lb})"), VTy::Int { lo, hi, bits: None }))
+            // The storage width travels where the result still fits it (see
+            // `breite_weiter`): the checker computes in the common form, and
+            // on an accepted program that is the left width wherever the
+            // exporter still names one (a literal takes the other's form, a
+            // disagreement refuses the program before it reaches here).
+            let bits = ta.bits().and_then(|w| breite_weiter(lo, hi, w));
+            Ok((format!("(.{ctor} {la} {lb})"), VTy::Int { lo, hi, bits }))
         }
         BinOp::BitUnd | BinOp::BitOder | BinOp::BitXor | BinOp::SchiebLinks | BinOp::SchiebRechts => {
             tr_bitop(op, a, b, ctx, model, scope, fname, out)
@@ -2719,7 +2746,11 @@ fn tr_unaer(op: UnOp, x: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: 
         }
         UnOp::BitNicht => {
             // `~x` is `x ^ (2^w - 1)` over the storage width, the exact
-            // range M1 reads (`beispiele/61`).
+            // range M1 reads (`beispiele/61`). The emitted type stays the
+            // model's (`Zahl 0 (2^w - 1)`, like `bor`/`bxor`): the belief
+            // MUST equal the elaborated term type, because the `let`
+            // ascription prints it -- the checker's exact complement range
+            // (`MAX - h1 .. MAX - l1`) is model work (see the lane report).
             let (e, ty) = tr_typed(x, ctx, model, scope, fname, out)?;
             let Some((l1, h1)) = ty.range(model) else {
                 return Err(refuse("LG003", format!("complement in {fname} has no G form")));
@@ -2740,9 +2771,37 @@ fn tr_unaer(op: UnOp, x: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: 
     }
 }
 
+/// Keep the storage width where the result still fits it: a belief with
+/// `0 <= lo` and `hi < 2^w` stays a `w`-bit word downstream (the width the
+/// `~`/bit-op positions read). Never claimed past the width -- `None`
+/// refuses there instead, exactly as before.
+///
+/// The width agrees with the checker's wherever both compute one: the
+/// checker computes in the common form, and on an accepted program that is
+/// the left width wherever the exporter still names one (a literal takes
+/// the other's form, a disagreement refuses the program before it reaches
+/// here, and an annotated `let` takes the annotation -- see the `bind`
+/// arm). Widths never enter the emitted ranges; only `~` reads the width
+/// for its VALUE, and there both sides read the same declaration.
+fn breite_weiter(lo: i128, hi: i128, w: u32) -> Option<u32> {
+    if lo >= 0 && hi < (1i128 << w) {
+        Some(w)
+    } else {
+        None
+    }
+}
+
 /// A bit operation (`&`/`|`/`^`/`<<`/`>>`) with the width off the left
 /// operand's storage. Every proof is decided here, in Rust, before it is
 /// printed as `by decide`.
+///
+/// The RESULT RANGES stay exactly what the model computes (`Zahl.band`
+/// yields `Zahl 0 h1`, `shr` yields `Zahl 0 h1`, `bor`/`bxor` yield
+/// `Zahl 0 (2^w - 1)`): the belief MUST equal the elaborated term type,
+/// because the `let` ascription prints it. A narrower belief (the
+/// checker's `min`/`mask`/shift rules in `typen.rs`) would ascribe a type
+/// the term does not have -- closing that gap is model work
+/// (`Typen.lean`, see the lane report), not an exporter tweak.
 fn tr_bitop(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: &mut Out) -> Result<(String, VTy), Refusal> {
     let (la, ta) = tr_typed(a, ctx, model, scope, fname, out)?;
     let (lb, tb) = tr_typed(b, ctx, model, scope, fname, out)?;
@@ -2763,7 +2822,7 @@ fn tr_bitop(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sco
     }
     let top: i128 = 1i128 << w;
     match op {
-        BinOp::BitUnd => Ok((format!("(.band (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi: h1, bits: None })),
+        BinOp::BitUnd => Ok((format!("(.band (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi: h1, bits: breite_weiter(0, h1, w) })),
         BinOp::BitOder | BinOp::BitXor => {
             if h1 >= top || h2 >= top {
                 return Err(refuse("LG003", format!("bit operation in {fname} leaves its width")));
@@ -2784,7 +2843,7 @@ fn tr_bitop(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sco
             } else {
                 h1
             };
-            Ok((format!("(.{ctor} {w} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: None }))
+            Ok((format!("(.{ctor} {w} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: breite_weiter(0, hi, w) }))
         }
         _ => Err(refuse("LG003", format!("operator in {fname} has no G form"))),
     }
@@ -2838,7 +2897,11 @@ fn tr_conversion(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, 
     };
     // The checker gives the conversion the FULL target range; the argument
     // fits it exactly where M1 accepted the program (decided both here, in
-    // Rust, and Lean-side by the printed `weiter`).
+    // Rust, and Lean-side by the printed `weiter`). The belief stays the
+    // target: it MUST equal the elaborated term type (the `weiter` above
+    // has the target type), because the `let` ascription prints it. The
+    // checker's kept source range (K3) is model work with the bit ranges
+    // (see the lane report).
     let (arg, aty) = tr_typed(&r.argumente[0], ctx, model, scope, fname, out)?;
     Ok((fit(arg, &aty, &target, ctx, model, fname)?, target))
 }
@@ -3685,16 +3748,34 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                 }
             }
             let (eterm, vty) = tr_typed(&l.wert, ctx, model, scope, fname, out)?;
-            if let Some(ann) = &l.typ {
-                let aty = annot_ty(ann, model, scope, fname)?;
-                check_annotation(&vty, &aty, model, fname, &l.name.text)?;
-            }
+            let aty = match &l.typ {
+                Some(ann) => {
+                    let aty = annot_ty(ann, model, scope, fname)?;
+                    check_annotation(&vty, &aty, model, fname, &l.name.text)?;
+                    Some(aty)
+                }
+                None => None,
+            };
             // Ascribed with the computed type: unlike every other value
             // position, `bind` gives the value no expected type, so an
             // unascribed `weiter` would leave its range ambiguous and its
             // `by decide` without a goal.
             let ascribed = format!("({eterm} : Expr gD {} {} {})", ctx.gamma, ctx.lambda, vty.term(model));
-            *ctx = ctx.push(l.name.text.clone(), vty, NameKind::Let);
+            // The pushed type carries the COMPUTED range but the ANNOTATED
+            // width (where both are integer ranges): the checker types later
+            // uses of the name by the annotation (`m1.rs`: `lage.lokal`
+            // keeps `ziel.unwrap_or(wert)`), so the width the `~`/bit-op
+            // positions read must be the annotation's -- the complement
+            // width agrees with the checker by construction. The range stays
+            // computed, a sound over-approx the annotation already covers,
+            // so every downstream `weiter` and index fit stays sound.
+            let mut pushed = vty;
+            if let Some(VTy::Int { bits: ab, .. }) = &aty {
+                if let VTy::Int { bits: pb, .. } = &mut pushed {
+                    *pb = *ab;
+                }
+            }
+            *ctx = ctx.push(l.name.text.clone(), pushed, NameKind::Let);
             Ok(format!("(.bind {ascribed} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
         }
         StmtArt::LetSonst(l) => {
