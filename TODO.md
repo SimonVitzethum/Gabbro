@@ -99,7 +99,8 @@ witnesses instead of poison probes.*
 | 235 | never/never-asm lowering | `emit.rs` | M | 252 |
 | 249 | spill-read rule: child vs caller-frame (Teil 3 gate) | `clone.rs` | S | — |
 | 250 | `D.klon` exporter fill (O-1 remainder) | `lean_g.rs` | M | — |
-| 251 | inline-trap lowering + correspondence (Teil 3, RUNNING) | `emit.rs` | M | 252 merges, 249 green |
+| 251 | inline-trap lowering, FIRST attempt (FINAL-ROT after 5 rounds — core deliverable never landed; salvageable parts feed 258) | `emit.rs` | M | superseded by 258 |
+| 258 | Teil-3 trap lowering, second attempt (GRANT: zeugnis `child` booking + marker rebook; D.klon present via 250) | `emit.rs` + `CFormTrap` + tests | M | 249, 250 merged; salvages 251 (CFormTrap skeleton, gifts, harness) |
 | C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
 
 *Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
