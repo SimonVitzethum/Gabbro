@@ -351,6 +351,13 @@ fn gehe(
             }
             // **«E4»:** `reset` moves no value and binds no name.
             StmtArt::ResetArena(_) => {}
+            // **Lane 257:** the commit amount may move a linear value, so
+            // it walks like any bound value; the failure continuation is
+            // a branch like any other. The commit binds no name.
+            StmtArt::Grow(g) => {
+                ausdruck(&g.mehr, s.span, v, zust, absagen);
+                einseitig(&g.sonst, s.span, linear, v, zust, absagen);
+            }
             StmtArt::Return(Some(e)) => {
                 ausdruck(e, s.span, v, zust, absagen);
                 // **Wer zurueckgibt, verbraucht nicht -- er reicht WEITER.** Fuer diese

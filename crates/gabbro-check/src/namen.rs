@@ -374,6 +374,8 @@ fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             StmtArt::Alloc(a) => {
                 lokal.insert(a.name.text.clone());
             }
+            // **Lane 257:** `grow` binds no name -- the commit moves
+            // storage, not bindings.
             StmtArt::AwaitLoad(a) => {
                 lokal.insert(a.name.text.clone());
             }
@@ -412,7 +414,10 @@ fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             | StmtArt::Return(_)
             | StmtArt::Ruf(_)
             | StmtArt::LibraryCall(_)
-            | StmtArt::ResetArena(_) => {}
+            | StmtArt::ResetArena(_)
+            // **Lane 257:** `grow` binds no name either; the `sonst`
+            // locals are collected through `unterbloecke` below.
+            | StmtArt::Grow(_) => {}
         }
         for u in crate::unterbloecke(s) {
             bindungen_sammeln(u, lokal);
@@ -573,6 +578,13 @@ fn rumpf_falten(
             }
             StmtArt::ResetArena(i) => {
                 fakten.fremd.push((format!("arena {}", i.text), s.span));
+            }
+            // **Lane 257:** the commit names its arena, evaluates its
+            // amount, and may run the failure continuation instead.
+            StmtArt::Grow(g) => {
+                fakten.fremd.push((format!("arena {}", g.tisch.text), s.span));
+                knoten_ausdruck(&g.mehr, atomare, rein, fakten);
+                rumpf_falten(&g.sonst, atomare, lokal, rein, fakten);
             }
             // **Lane 253:** a `start` IS calls -- one per named root. The
             // fold sees them the way it sees a library call's callee: the

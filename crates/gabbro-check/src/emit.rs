@@ -457,6 +457,9 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             | StmtArt::Start(_)
             | StmtArt::Alloc(_)
             | StmtArt::ResetArena(_)
+            // **Lane 257:** `grow` binds no name; the amount is a count,
+            // never a record.
+            | StmtArt::Grow(_)
             | StmtArt::Sperrt(_)
             | StmtArt::Observiert(_)
             | StmtArt::Leave(_)
@@ -8748,6 +8751,12 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             // this set -- and `anweisung` refuses the statement by name, so
             // descending would count names the C never reads.
             StmtArt::Start(_) => {}
+            // **Lane 257:** `grow` is refused by name in `anweisung`
+            // below, so descending would count names the C never reads
+            // -- same shape as `start`. The arm lane adds the descent
+            // with its lowering (a lowering and its name set are one
+            // change, not two).
+            StmtArt::Grow(_) => {}
             // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
             // a name of this set.
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -10397,6 +10406,30 @@ fn anweisung(
                     .join(", ")
             ));
         }
+        // **Lane 257: `grow A by n else { … };` has no lowering in this
+        // template.** The commit call (`gabbro_arena_grow`, `laufzeit/`)
+        // and the descriptor land with the arm lane (248's SPEC) -- until
+        // then every `grow` falls here, by name, never silently. Emitted
+        // beside the refusal is only the comment, so the refusal changes
+        // no `cc` verdict.
+        StmtArt::Grow(g) => {
+            weigere(
+                absagen,
+                s.span,
+                &format!(
+                    "`grow` out of arena `{}` has no lowering in this template -- committing \
+                     slots below the ceiling is the dynamic arm (`gabbro_arena_grow`); the \
+                     commit request names no C call this unit could make",
+                    g.tisch.text,
+                ),
+            );
+            aus.push_str(&format!(
+                "{e}/* grow -- HANDOFF region: commit slots of {} below its ceiling\n\
+                 {e} * (`gabbro_arena_grow`); at run time this is the runtime's half.\n\
+                 {e} */\n",
+                g.tisch.text,
+            ));
+        }
     }
 }
 
@@ -10933,6 +10966,10 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // **Lane 253:** `start` itself jumps nowhere and carries no
                 // block for the descent below.
                 | StmtArt::Start(_)
+                // **Lane 257:** `grow` itself jumps nowhere; a `leave` /
+                // `next` inside its `else` names an outer loop, reached
+                // through `unterbloecke` like at `child` above.
+                | StmtArt::Grow(_)
                 | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
                 | StmtArt::ResetArena(_)
@@ -13431,6 +13468,10 @@ fn needs_saturation(baum: &Programm) -> bool {
             // **Lane 253:** `start` roots are paths the unit never evaluates
             // -- the driver (not this template) turns them into threads.
             StmtArt::Start(_) => false,
+            // **Lane 257:** `grow` is refused by name in `anweisung`
+            // below, so the template never evaluates its amount or its
+            // `else` -- same shape as `start` until the arm lane lands.
+            StmtArt::Grow(_) => false,
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

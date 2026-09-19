@@ -1333,6 +1333,14 @@ pub enum StmtArt {
     /// Sets the used counter to zero; every index bound before is stale
     /// afterwards (`N211` in the checker).
     ResetArena(Ident),
+    /// `grow A by n else { … };` -- commit `n` further slots of arena
+    /// `tisch` below its ceiling (lane 257, wave D).
+    ///
+    /// The `else` is always owed and runs when the commit fails (OOM
+    /// below the ceiling); a request the checker sees reaching past the
+    /// ceiling is refused (`N426`), with or without the branch. The
+    /// amount `mehr` is a translation-time constant.
+    Grow(GrowStmt),
     /// `child { … }` -- the clone-child path (lane O-1, K-1).
     ///
     /// The block that runs on the handed stack after a stack-carrying
@@ -1766,6 +1774,18 @@ pub struct Baumkanten {
     pub span: Span,
 }
 
+/// `grow A by n else { … };` -- the commit request of a dynamic arena.
+///
+/// `mehr` is the constant slot count the path commits below the ceiling;
+/// `sonst` is the failure continuation and always stands (boolean
+/// discipline: both outcomes of the commit decision are written down).
+#[derive(Debug, Clone)]
+pub struct GrowStmt {
+    pub tisch: Ident,
+    pub mehr: Expr,
+    pub sonst: Block,
+}
+
 /// **`arena A capacity lo .. hi of T;` -- a monotone region («E4»).**
 ///
 /// `lo` is the reservation: allocations statically within it owe no `else`.
@@ -1778,6 +1798,12 @@ pub struct ArenaDecl {
     pub oeffentlich: bool,
     pub lo: Expr,
     pub hi: Expr,
+    /// The ceiling `max M` (lane 257, wave D): `None` is the static form,
+    /// where the ceiling coincides with `hi` by construction. `Some(m)`
+    /// reserves address for `M` slots while storage starts committed up
+    /// to `hi`; both bounds and the ceiling are translation-time
+    /// constants with `lo <= hi <= M` (`N210`).
+    pub max: Option<Expr>,
     pub element: TypExpr,
     pub span: Span,
 }

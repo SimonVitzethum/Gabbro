@@ -1094,6 +1094,15 @@ impl<'a> Rechner<'a> {
             ),
             // **«E4»:** resetting the counter is one primitive.
             StmtArt::ResetArena(_) => Kosten::Zahl(1),
+            // **Lane 257:** the commit request is one primitive plus the
+            // amount plus the failure continuation -- the `Alloc`-shaped
+            // arm (`PLAN-DYNAMISCH.md` §4 handoff): the amount expression
+            // is evaluated, the `else` counts like any branch. The
+            // per-slot commit latency is the runtime's declared cost, not
+            // a second term here.
+            StmtArt::Grow(g) => Kosten::Zahl(1).plus(self.ausdruck(&g.mehr, lokal)).plus(
+                self.block(&g.sonst, lokal),
+            ),
 
             StmtArt::Schleife(sch) => self.schleife(sch, lokal),
         }
@@ -1639,6 +1648,11 @@ impl<'a> Rechner<'a> {
                             self.schleifenzusagen(sonst, &lokal, absagen);
                         }
                     }
+                    // **Lane 257:** the commit-failure continuation may
+                    // loop too -- same walk, no new machinery.
+                    StmtArt::Grow(x) => {
+                        self.schleifenzusagen(&x.sonst, &lokal, absagen);
+                    }
                     StmtArt::Wenn(w) => {
                         for (_, r) in &w.zweige {
                             self.schleifenzusagen(r, &lokal, absagen);
@@ -1808,6 +1822,8 @@ fn enthaelt_traverse(b: &Block) -> bool {
             XForm::Vergleich { .. } => false,
         },
         StmtArt::Alloc(a) => a.sonst.as_ref().is_some_and(enthaelt_traverse),
+        // **Lane 257:** the failure continuation always stands.
+        StmtArt::Grow(g) => enthaelt_traverse(&g.sonst),
         _ => false,
     })
 }

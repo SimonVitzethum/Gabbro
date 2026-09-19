@@ -1517,6 +1517,16 @@ impl<'a> Pruefer<'a> {
             // generation moves in `arena.rs`, and nothing here has to move
             // with it. An unknown arena is `N213` there.
             StmtArt::ResetArena(_) => {}
+            // **Lane 257: `grow A by n else { … };`.** The amount is an
+            // ordinary expression (its constness is `arena.rs`'s `N426`,
+            // its calls are seen like any bound value); the failure
+            // continuation is a sub-block like any `else`. An unknown
+            // arena is `N213` there, so this arm stays silent about it.
+            StmtArt::Grow(g) => {
+                let _ = self.ausdruck(&g.mehr, lage);
+                self.rufe_im_ausdruck(&g.mehr, lage);
+                self.unterblock(&g.sonst, lage, ergebnis);
+            }
             // **Lane 253:** `start { f, g };`. No expression, no binding --
             // the roots resolve fail-closed in `nebeneinander.rs` (`W003`,
             // like the `concurrent` members), and nothing here has to move

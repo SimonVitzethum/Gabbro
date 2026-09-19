@@ -32,10 +32,13 @@
 //! actually usable on the path. The growth points of a program are then
 //! enumerable by grep: `alloc` moves `count`, `reset` restores `(0, floor)`.
 //!
-//! What stands HERE is the accounting with the ceiling tied to `hi`: no
-//! `max` syntax exists (parser gap — no lane of TODO wave D owns
-//! `lex.rs`/`parse.rs`/`ast.rs`, see the lane report), so floor and ceiling
-//! coincide by construction (`M = hi`, `committed = hi` on every path).
+//! What stands HERE is the accounting with the ceiling read off the
+//! declaration (lane 257): the `max` clause where it stands and is usable
+//! (`N210` holds `hi <= max`), else the floor (`hi`), so static arenas keep
+//! floor and ceiling coincident by construction (`M = hi`,
+//! `committed = hi` on every path). `grow` bumps the committed prefix of
+//! its path, capped by `M` (`N426` refuses the commit the checker sees
+//! reach past it); `alloc` moves `count`, `reset` restores `(0, floor)`.
 //! Joins take the maximum of counts (as before) and the minimum of
 //! committed (the sound direction: what both paths guarantee); loops keep
 //! the minimum, capped by `M` by construction, so committed needs no
@@ -55,10 +58,12 @@
 //! `beispiele/99-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
 //! count 2 == `M`, `else` present): load-bearing corpus behavior (the
 //! boundary demo, emission included) would go red. That is a tightening of
-//! the kind lane 184 was rejected for. `R-max` needs the `max` syntax to
-//! scope `M` above `hi` (lane 241/242 handoff, see the lane report); until
-//! then the over-cap shape without an `else` stays `N212` (gift 1087 pins
-//! it past `hi`), and the shape with an `else` stays accepted.
+//! the kind lane 184 was rejected for. The `max` syntax now scopes `M`
+//! above `hi` (lane 257), but wiring `R-max` is the checker-rules lane's
+//! decision, not this one's: the over-cap shape without an `else` stays
+//! `N212` (gift 1087 pins it past `hi`), and the shape with an `else`
+//! stays accepted. What the ceiling DOES refuse today is the `grow` the
+//! checker sees reaching past it (`N426`), branch or no branch.
 //!
 //! ## Counting
 //!
@@ -105,10 +110,10 @@ const UNENDLICH: u64 = u64::MAX;
 /// of which generation.
 ///
 /// Wave D adds the committed count per arena (`verpflichtet`): the storage
-/// actually usable on this path. With no `max` syntax it coincides with the
-/// floor (`hi`) everywhere — see the module head — but the joins already run
+/// actually usable on this path. On paths no `grow` touches it coincides
+/// with the floor (`hi`) — see the module head — and the joins already run
 /// the §4 directions (counts join with `max`, committed with `min`), so the
-/// `grow` arm (lane 241) only touches the bump site, never the merge.
+/// `grow` arm (lane 257) only touches the bump site, never the merge.
 #[derive(Debug, Clone, Default)]
 struct Stand {
     generation: HashMap<String, u64>,
@@ -218,10 +223,16 @@ struct Laeufer<'a> {
     stand: Stand,
     frisch: u64,
     /// The commit floor per arena (qualified name -> `hi`), built once per
-    /// pass from the declarations. With no `max` syntax the floor is also
-    /// the ceiling (`M = hi`); lane 241 splits the two when the clause
-    /// lands. Absent exactly where the declaration is unusable (`N210`).
+    /// pass from the declarations. Without a `max` clause the floor is
+    /// also the ceiling (`M = hi`); the ceiling map beside this one splits
+    /// the two where the clause stands. Absent exactly where the
+    /// declaration is unusable (`N210`).
     boden: HashMap<String, u64>,
+    /// The ceiling per arena (qualified name -> `M`), built once per pass
+    /// (lane 257): the `max` clause where it stands and is usable, else
+    /// the floor (`hi`). Absent exactly where the declaration is
+    /// unusable (`N210`) -- then no commit question is asked either.
+    decke: HashMap<String, u64>,
     /// (code, span) pairs already reported: a loop body walks twice (see
     /// `schleife`), and the second walk must not report the first walk's
     /// findings again.
@@ -243,6 +254,32 @@ fn bodenwert(sig: &crate::umgebung::ArenaSig) -> Option<u64> {
     }
 }
 
+/// The ceiling of `sig`: the reservable count. `Some(M)` exactly when
+/// the declaration resolves to usable bounds (the `N210` shape --
+/// `0 <= lo <= hi <= M`, `M >= 1`, `M` namable) with `hat_decke` saying
+/// whether a `max` clause stands: without one the ceiling is the floor
+/// (`hi`); with one it is the clause, and a clause that never resolved
+/// to a usable value is `None` (`N210` owns that shape, and no commit
+/// question is asked there either).
+fn deckenwert(sig: &crate::umgebung::ArenaSig, hat_decke: bool) -> Option<u64> {
+    let (lo, hi) = match (sig.lo, sig.hi) {
+        (Some(lo), Some(hi))
+            if 0 <= lo && lo <= hi && hi >= 1 && hi <= u32::MAX as i128 =>
+        {
+            (lo, hi)
+        }
+        _ => return None,
+    };
+    let _ = lo;
+    if !hat_decke {
+        return Some(hi as u64);
+    }
+    match sig.max {
+        Some(m) if hi <= m && m <= u32::MAX as i128 => Some(m as u64),
+        _ => None,
+    }
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     erklaerungen(baum, &u, absagen);
@@ -250,6 +287,26 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     for (q, sig) in &u.arenen {
         if let Some(f) = bodenwert(sig) {
             boden.insert(q.clone(), f);
+        }
+    }
+    // **Lane 257:** which arenas carry a `max` clause -- the ceiling map
+    // needs the clause presence, not just its value (an unresolved clause
+    // is `None` in the map like no clause, but only the first is `N210`).
+    let mut mit_decke: HashSet<String> = HashSet::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Arena(a) = &item.art else {
+            return;
+        };
+        if a.max.is_some() {
+            if let Some(q) = u.nennt_arena(modul, &a.name.text) {
+                mit_decke.insert(q);
+            }
+        }
+    });
+    let mut decke: HashMap<String, u64> = HashMap::new();
+    for (q, sig) in &u.arenen {
+        if let Some(m) = deckenwert(sig, mit_decke.contains(q)) {
+            decke.insert(q.clone(), m);
         }
     }
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
@@ -266,6 +323,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             stand: Stand::default(),
             frisch: 0,
             boden: boden.clone(),
+            decke: decke.clone(),
             gemeldet: HashSet::new(),
         };
         for p in &f.parameter {
@@ -342,6 +400,65 @@ fn erklaerungen(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut Ab
                 "the emitter writes `buf[hi]` with a `uint32_t used` \
                  beside it -- both come from this declaration",
             );
+        } else {
+            // **Lane 257: the ceiling beside the pair (`N210`).** The
+            // bounds are usable here, so the ceiling question is asked;
+            // where they are not, the bound refusal above already fell
+            // and no second verdict piles onto the declaration. A clause
+            // that is no translation-time constant leaves the ceiling
+            // uncountable; a ceiling below the hard bound reserves less
+            // address than storage starts committed; beyond `u32::MAX`
+            // the counter cannot name the slots it would commit.
+            match (&a.max, sig.max) {
+                (Some(_), None) => {
+                    melde_erklaerung(
+                        absagen,
+                        "N210",
+                        a.span,
+                        format!(
+                            "`{}` declares no constant ceiling: the `max` \
+                             clause of an `arena` is a translation-time \
+                             constant like both bounds",
+                            a.name.text
+                        ),
+                        "without a constant ceiling the checker cannot hold \
+                         a commit below it and the loader cannot reserve it",
+                    );
+                }
+                (Some(_), Some(m)) if m < hi => {
+                    melde_erklaerung(
+                        absagen,
+                        "N210",
+                        a.span,
+                        format!(
+                            "`{}` commits `{hi}` slots under a ceiling of \
+                             `{m}`: `hi <= max`, the ceiling never stands \
+                             below the committed prefix",
+                            a.name.text
+                        ),
+                        "storage starts committed up to `hi` -- a ceiling \
+                         below it is about a range that is already smaller",
+                    );
+                }
+                // (`hi >= 1` stands in this branch, so `m >= hi >= 1`
+                // here: only the upper side is still open.)
+                (Some(_), Some(m)) if m > u32::MAX as i128 => {
+                    melde_erklaerung(
+                        absagen,
+                        "N210",
+                        a.span,
+                        format!(
+                            "`{}` reserves `{m}` slots, and the reservation \
+                             holds `1 ..= u32::MAX`: no empty address range, \
+                             no counter that cannot name its slots",
+                            a.name.text
+                        ),
+                        "the loader reserves the virtual range for `max` \
+                         slots beside the `uint32_t` commit count",
+                    );
+                }
+                _ => {}
+            }
         }
     });
 }
@@ -370,11 +487,11 @@ impl<'a> Laeufer<'a> {
         }
     }
 
-    /// The ceiling of `arena` (`M` in `PLAN-DYNAMISCH.md` §4): with no `max`
-    /// syntax it is the floor (`hi`), read off the per-pass table. `None`
-    /// where the declaration is unusable.
+    /// The ceiling of `arena` (`M` in `PLAN-DYNAMISCH.md` §4): the `max`
+    /// clause where it stands and is usable, else the floor (`hi`).
+    /// `None` where the declaration is unusable.
     fn obergrenze(&self, arena: &str) -> Option<u64> {
-        self.boden.get(arena).copied()
+        self.decke.get(arena).copied()
     }
 
     /// The committed prefix on this path: the tracked value, or the floor
@@ -452,6 +569,7 @@ impl<'a> Laeufer<'a> {
         match &s.art {
             StmtArt::Alloc(a) => self.alloc(a, s.span),
             StmtArt::ResetArena(tisch) => self.reset(tisch),
+            StmtArt::Grow(g) => self.grow(g, s.span),
             StmtArt::Let(l) => {
                 self.orte_in_expr(&l.wert);
                 self.binde_lokal(&l.name.text);
@@ -656,13 +774,13 @@ impl<'a> Laeufer<'a> {
         // is owed its failure branch exactly when that number may exceed
         // the reservation.
         //
-        // Unchanged by wave D on purpose: the path's committed value
-        // (`verpflichtung`, `R-commit` in `PLAN-DYNAMISCH.md` §4) coincides
-        // with `hi` on every path while no `grow` statement exists, and
-        // `hi >= lo`, so holding the `else` against `lo` is the sharper of
-        // the two — a refusal `R-commit` would add is one `N212` already
-        // carries. Lane 241 re-points this comparison at the committed
-        // value where it exceeds `hi`.
+        // Unchanged by lane 257 on purpose: the `else` is still held
+        // against the reservation `lo`, not the committed value
+        // (`verpflichtung`, `R-commit` in `PLAN-DYNAMISCH.md` §4) -- `hi >=
+        // lo`, so holding it against `lo` is the sharper of the two, and a
+        // refusal `R-commit` would add is one `N212` already carries.
+        // Re-pointing this comparison at the committed value where it
+        // exceeds `hi` is the checker-rules lane's decision, not this one's.
         if let Some(lo) = self.reservierung(&q) {
             let n = self.stand.zaehlung(&q);
             if n >= lo as u64 && a.sonst.is_none() {
@@ -685,12 +803,13 @@ impl<'a> Laeufer<'a> {
             // **Wave D: the ceiling invariant, pinned without a verdict.**
             //
             // The committed prefix never exceeds the ceiling `M`
-            // (`obergrenze`, today `hi`). `R-max` — refusing the `alloc`
-            // that reaches `M` even with an `else` — is NOT wired here: on
-            // `beispiele/99` (`Klein capacity 2 .. 2`, third `alloc`, count
-            // 2 == `M`, `else` present) it fires, so wiring it reddens
-            // load-bearing corpus behavior. See the module head and the
-            // lane report; the `else`-less over-cap shape stays `N212`.
+            // (`obergrenze`: the `max` clause where it stands, else `hi`).
+            // `R-max` — refusing the `alloc` that reaches `M` even with an
+            // `else` — is NOT wired here: on `beispiele/99` (`Klein capacity
+            // 2 .. 2`, third `alloc`, count 2 == `M`, `else` present) it
+            // fires, so wiring it reddens load-bearing corpus behavior. See
+            // the module head and the lane report; the `else`-less over-cap
+            // shape stays `N212`.
             if let Some(m) = self.obergrenze(&q) {
                 debug_assert!(
                     self.verpflichtung(&q).map_or(true, |c| c <= m),
@@ -719,8 +838,89 @@ impl<'a> Laeufer<'a> {
         }
     }
 
-    fn reset(&mut self, tisch: &Ident) {
-        let Some(q) = self.u.nennt_arena(&self.modul, &tisch.text) else {
+    /// **`grow A by n else { … };` -- commit `n` slots below the ceiling.**
+    ///
+    /// The amount is an ordinary expression for the reads inside it, and a
+    /// translation-time constant for the commit (`N426` owns both faces of
+    /// the uncountable shape). Where the commit fits below the ceiling the
+    /// path's committed prefix grows by it; where the checker sees it
+    /// reach past the ceiling it is refused (`N426`) -- past the ceiling
+    /// there is no commit, only the stop, with or without the branch.
+    /// The failure continuation joins like `alloc`'s `else`: it runs
+    /// instead of the main path, and its state joins only when it falls
+    /// through. `grow` moves no generation and binds no index.
+    fn grow(&mut self, g: &GrowStmt, span: Span) {
+        self.orte_in_expr(&g.mehr);
+        let Some(q) = self.u.nennt_arena(&self.modul, &g.tisch.text) else {
+            // **`N213` -- `grow` names a declared arena**, like `alloc`
+            // and `reset`.
+            if !self.stand.lokal.contains(&g.tisch.text) {
+                self.melde(
+                    "N213",
+                    g.tisch.span,
+                    format!(
+                        "`{}` names no declared arena: `grow` commits slots \
+                         of an `arena` declaration",
+                        g.tisch.text
+                    ),
+                    "the ceiling the commit is held against comes from \
+                     `max` -- without the declaration there is no ceiling \
+                     to hold it against",
+                );
+            }
+            return;
+        };
+        // The amount: a constant count of `0 ..= u32::MAX`. A negative or
+        // huge amount is no count, and a non-constant one leaves the
+        // commit uncountable -- the ceiling cannot be held against a
+        // number nobody wrote down.
+        let mut menge: Option<u64> = None;
+        match self.u.konst_wert(&self.modul, &g.mehr) {
+            Some(n) if 0 <= n && n <= u32::MAX as i128 => {
+                menge = Some(n as u64);
+            }
+            _ => {
+                self.melde(
+                    "N426",
+                    g.mehr.span,
+                    format!(
+                        "`grow` out of `{}` commits no constant slot count: \
+                         the `by` amount is a translation-time constant",
+                        g.tisch.text
+                    ),
+                    "the checker holds every commit below the ceiling \
+                     before the loader reserves it -- an uncountable commit \
+                     is refused where it stands",
+                );
+            }
+        }
+        // The ceiling hold: the committed prefix plus the amount never
+        // passes `M`. The `else` runs on OOM *below* the ceiling; past it
+        // the request is refused before it runs, branch or no branch.
+        if let (Some(n), Some(m)) = (menge, self.decke.get(&q).copied()) {
+            let committed = self.verpflichtung(&q).unwrap_or(0);
+            if committed.saturating_add(n) > m {
+                self.melde(
+                    "N426",
+                    span,
+                    format!(
+                        "`grow` out of `{}` commits `{n}` slots over \
+                         `{committed}` committed: past the ceiling `{m}` -- \
+                         past the ceiling there is no commit, only the stop",
+                        g.tisch.text
+                    ),
+                    "the `else` branch runs when the commit fails below the \
+                     ceiling; a request the checker sees reaching past it \
+                     is refused before it runs",
+                );
+            } else {
+                self.stand.verpflichtet.insert(q.clone(), committed + n);
+            }
+        }
+        self.gabel(&g.sonst);
+    }
+
+    fn reset(&mut self, tisch: &Ident) {        let Some(q) = self.u.nennt_arena(&self.modul, &tisch.text) else {
             // **`N213` -- `reset` names a declared arena**, like `alloc`.
             if !self.stand.lokal.contains(&tisch.text) {
                 self.melde(
@@ -969,8 +1169,8 @@ fn entklammert<'b>(e: &'b Expr) -> &'b Expr {
 ///
 /// These tests drive the merge directions (`max` on counts, `min` on
 /// committed) and the floor discipline directly: through the real pass they
-/// would be invisible, because with no `grow` statement every committed
-/// value coincides with the floor and no verdict moves.
+/// would be invisible on static arenas, because with no `grow` every
+/// committed value coincides with the floor and no verdict moves.
 #[cfg(test)]
 mod wachstumstests {
     use super::*;
@@ -1009,7 +1209,7 @@ mod wachstumstests {
 
     #[test]
     fn seite_ueber_boden_wird_am_minimum_gekappt() {
-        // A grown side (lane 241's shape) joined with an untouched one
+        // A grown side (the `grow` bump shape) joined with an untouched one
         // falls back to the floor: the joined path guarantees only what
         // both sides guarantee.
         let b = boden(&[("m::A", 8)]);
@@ -1045,6 +1245,7 @@ mod wachstumstests {
         let sig = |lo, hi| crate::umgebung::ArenaSig {
             lo,
             hi,
+            max: None,
             element: Typ::Unbekannt,
         };
         assert_eq!(bodenwert(&sig(Some(2), Some(8))), Some(8));
@@ -1053,12 +1254,38 @@ mod wachstumstests {
         assert_eq!(bodenwert(&sig(None, Some(8))), None);
         assert_eq!(bodenwert(&sig(Some(2), None)), None);
     }
-
     /// The `R-max` shape (`PLAN-DYNAMISCH.md` §4) as a predicate, NOT wired
     /// into the pass: with `M = hi` it fires on `beispiele/99`'s third
     /// `alloc` (`Klein capacity 2 .. 2`, count 2, `else` present), so wiring
     /// it would redden load-bearing corpus behavior (the lane-184 class of
-    /// tightening). Lane 241 wires it once `max` scopes `M` above `hi`.
+    /// tightening). Wiring it -- also above `hi` now that `max` scopes `M`
+    /// there -- is the checker-rules lane's decision.
+    #[test]
+    fn decke_ohne_klausel_ist_boden_mit_klausel_ist_max() {
+        use crate::typen::Typ;
+        let sig = |lo, hi, max| crate::umgebung::ArenaSig {
+            lo,
+            hi,
+            max,
+            element: Typ::Unbekannt,
+        };
+        // Static form: the ceiling is the floor.
+        assert_eq!(deckenwert(&sig(Some(2), Some(8), None), false), Some(8));
+        // Dynamic form: the clause scopes the ceiling above `hi`.
+        assert_eq!(deckenwert(&sig(Some(2), Some(8), Some(64)), true), Some(64));
+        // A clause at the floor is the static shape spelled out.
+        assert_eq!(deckenwert(&sig(Some(2), Some(8), Some(8)), true), Some(8));
+        // Unusable in either direction: inverted bounds, a ceiling below
+        // the floor, an unresolved clause, a clause past `u32::MAX`.
+        assert_eq!(deckenwert(&sig(Some(8), Some(2), None), false), None);
+        assert_eq!(deckenwert(&sig(Some(2), Some(8), Some(7)), true), None);
+        assert_eq!(deckenwert(&sig(Some(2), Some(8), None), true), None);
+        assert_eq!(
+            deckenwert(&sig(Some(2), Some(8), Some(u32::MAX as i128 + 1)), true),
+            None
+        );
+        assert_eq!(deckenwert(&sig(None, Some(8), None), false), None);
+    }
     #[test]
     fn kappe_erreicht_feuert_auf_neunundneunzig() {
         fn kappe_erreicht(zaehlung: u64, maximum: u64) -> bool {

@@ -4179,6 +4179,52 @@ pub const PHASEN: &[Satz] = &[
                      arms and `sperrbloecke`, read-only for this lane); \
                      dokumente/PLAN-DYNAMISCH.md §§2–4",
     },
+    // --- lane 257, 2026-09-19: the commit request (wave D, syntax + minimal) ------------
+    //
+    // **One new refusal code, and it is measured, not omitted.** `N426` owns
+    // the two shapes no existing code says: a `grow` amount that is no
+    // translation-time constant (then the commit is uncountable -- the
+    // ceiling cannot be held against a number nobody wrote down), and a
+    // `grow` the checker sees reaching past the ceiling (then there is no
+    // commit, only the stop, with or without the branch -- the runtime
+    // aborts a past-ceiling request as a bypass, so the static shape is a
+    // refusal, not a branch). Minted from the returned 240 reserve
+    // (`N426`–`N430` went back unused; only `N426` is taken here).
+    Satz {
+        name: "arena.wachsen_commit",
+        kennungen: &["N426"],
+        aussage: "Every `grow A by n else { … }` commits a constant slot \
+                  count below the ceiling (`N426` refuses the uncountable \
+                  amount and the request reaching past `max`, branch or no \
+                  branch); the `else` always stands and runs on OOM below \
+                  the ceiling; the committed prefix grows by `n` on the \
+                  path, capped by `M`. The ceiling is the `max` clause where \
+                  it stands and is usable (`N210` holds `hi <= max`), else \
+                  the floor (`hi`); `grow` names a declared arena (`N213`). \
+                  Until the dynamic arm lands the emitter and the G exporter \
+                  refuse the statement by name, and the static lowering of a \
+                  `max`-carrying arena is exactly the committed-prefix \
+                  behavior (storage of `hi` beside `used`).",
+        vorbehalt: "The count is per function body (like `costs`); `R-max` \
+                    stays unwired (see `arena.wachstum_sichtbar`). A `max` \
+                    clause on tables is reserved future syntax, not parsed, \
+                    not refused, not built. `beispiele/153` carries the \
+                    static shape the dynamic form preserves; the dynamic \
+                    demo waits for the emitter arm and is NOT taken here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1088 (`-- erwartet: N426`: a `grow` \
+                      reaching past the ceiling with the branch declared); \
+                      `paesse.rs` (`arena_grow_*`: the past-ceiling poison \
+                      with its clean twin, the uncountable-amount poison, \
+                      the undeclared-arena poison at `N213`, the clean \
+                      commit with its cost twin); unit tests in `arena.rs` \
+                      (`deckenwert`: ceiling faces); `beispiele/98` and \
+                      `/99` stay clean and emitting.",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`N426`, the `Grow` \
+                     walk, `decke`); crates/gabbro-check/src/umgebung.rs \
+                     (`ArenaSig::max`); dokumente/SYNTAX.md §9.1; \
+                     PLAN-DYNAMISCH.md §4",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],

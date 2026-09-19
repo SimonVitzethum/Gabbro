@@ -1016,6 +1016,12 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 }
             }
             StmtArt::ResetArena(_) => zaehle(e, "arena reset"),
+            // **Lane 257:** the commit request is a derivation step the
+            // certificate counts, with its failure continuation.
+            StmtArt::Grow(g) => {
+                zaehle(e, "grow");
+                block(&g.sonst, e, geister);
+            }
             // **`breaking` is a booked construct since 2026-08-31.** It used to be pushed
             // straight onto `unzugeordnet` because the emitter refused it -- and the two
             // halves moved together: the lowering and its entry in `EINORDNUNG`.

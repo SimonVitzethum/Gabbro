@@ -3679,6 +3679,28 @@ impl<'a> Parser<'a> {
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::ResetArena(tisch)
             }
+            // **Lane 257 (wave D): `grow A by n else { … };`.**
+            //
+            // The head word decides, like at `reset` above: `grow = 1;`
+            // and `grow.f = x;` continue with a place continuation and
+            // stay assignments to a name of that spelling (the `kopf`
+            // guard above). The `else` is always owed -- the grammar has
+            // no branchless form, so a missing `else` is `P001` at the
+            // word `else`, not a checker question.
+            Art::Wort(Kw::Grow) => {
+                self.pos += 1;
+                let tisch = self.erwarte_ident()?;
+                self.erwarte_kw(Kw::By)?;
+                let mehr = self.expr()?;
+                self.erwarte_kw(Kw::Else)?;
+                let sonst = self.block()?;
+                self.erwarte_z(Z::Semi)?;
+                StmtArt::Grow(GrowStmt {
+                    tisch,
+                    mehr,
+                    sonst,
+                })
+            }
             // **Lane O-1: `child { … }` -- the clone-child path (K-1).**
             //
             // The head word decides, like at `reset` above: `child = 1;`
@@ -4498,6 +4520,17 @@ impl<'a> Parser<'a> {
         let lo = self.expr()?;
         self.erwarte_z(Z::Bereich)?;
         let hi = self.expr()?;
+        // **Lane 257 (wave D): the optional ceiling `max M`.** It stands
+        // between `hi` and `of`, so the static prefix `capacity lo .. hi`
+        // reads byte for byte as before; a declaration without it is the
+        // static form, whose ceiling is `hi` by construction. `max` is a
+        // contextual word, so a type or a local of that spelling keeps
+        // parsing everywhere else.
+        let max = if self.friss_kw(Kw::Max) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
         self.erwarte_kw(Kw::Of)?;
         let element = self.typeexpr()?;
         let ende = self.erwarte_z(Z::Semi)?;
@@ -4506,6 +4539,7 @@ impl<'a> Parser<'a> {
             oeffentlich,
             lo,
             hi,
+            max,
             element,
             span: anfang.bis_zu(ende),
         })
