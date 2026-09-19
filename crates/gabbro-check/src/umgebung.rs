@@ -311,17 +311,23 @@ pub struct BibliotheksZiel {
     pub name: String,
 }
 
-/// **One `arena` declaration, resolved («E4»).**
+/// **One `arena` declaration, resolved («E4»; ceiling lane 257).**
 ///
 /// `lo`/`hi` are the evaluated bounds (`None` = no translation-time
 /// constant); `element` is the resolved element type. The checker holds
 /// `Some(lo) <= Some(hi)` (`N210`); an arena whose bounds never resolve
 /// is still listed, so every later use names the declaration and not a
 /// missing entry.
+///
+/// `max` is the evaluated ceiling (`None` = the static form, whose
+/// ceiling is `hi` by construction). The checker holds
+/// `hi <= max` beside the pair (`N210`); like the bounds, a ceiling that
+/// is no constant is `None` here, and the refusal belongs to the pass.
 #[derive(Debug, Clone)]
 pub struct ArenaSig {
     pub lo: Option<i128>,
     pub hi: Option<i128>,
+    pub max: Option<i128>,
     pub element: Typ,
 }
 
@@ -552,11 +558,16 @@ impl Umgebung {
                 ItemArt::Arena(a) => {
                     let lo = self.konst_wert(pfad, &a.lo);
                     let hi = self.konst_wert(pfad, &a.hi);
+                    // **Lane 257:** the ceiling travels beside the bounds
+                    // (`None` = the static form, or no constant -- the
+                    // refusal is the pass's, not this map's).
+                    let max = a.max.as_ref().and_then(|m| self.konst_wert(pfad, m));
                     self.arenen.insert(
                         qualifiziere(pfad, &a.name.text),
                         ArenaSig {
                             lo,
                             hi,
+                            max,
                             element: Typ::Unbekannt,
                         },
                     );
@@ -1165,7 +1176,8 @@ impl Umgebung {
                     } else {
                         let lo = self.konst_wert(pfad, &a.lo);
                         let hi = self.konst_wert(pfad, &a.hi);
-                        self.arenen.insert(qn, ArenaSig { lo, hi, element });
+                        let max = a.max.as_ref().and_then(|m| self.konst_wert(pfad, m));
+                        self.arenen.insert(qn, ArenaSig { lo, hi, max, element });
                     }
                 }
                 ItemArt::Format(f) => {

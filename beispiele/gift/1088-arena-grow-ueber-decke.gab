@@ -1,0 +1,20 @@
+-- erwartet: N426
+-- Lane 257: a `grow` the checker sees reaching past the ceiling -- the
+-- second commit (`8` over `8` committed under `max 16`) stands past `M`
+-- with the `else` branch declared, and is still refused: past the ceiling
+-- there is no commit, only the stop. Nothing else is wrong with this unit:
+-- the arena is declared, both amounts are constant, the effects and the
+-- budget are clean.
+module beispiel::arena_commit_kappe {
+arena Speicher capacity 2 .. 8 max 16 of u16;
+
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by 8 else {
+        return 1;
+    };
+    grow Speicher by 1 else {
+        return 2;
+    };
+    return 0;
+}
+}

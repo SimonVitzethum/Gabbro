@@ -1087,6 +1087,12 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                     scan_block(b, acc);
                 }
             }
+            // **Lane 257:** the commit amount and the failure continuation
+            // scan like any evaluated expression and any `else`.
+            StmtArt::Grow(g) => {
+                scan_expr(&g.mehr, acc);
+                scan_block(&g.sonst, acc);
+            }
             StmtArt::Narrow(_) => {}
             _ => {}
         }
@@ -3828,6 +3834,14 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         }
         // **`let i = alloc A (v) else B;` is `Block.arenaAlloc`** (O14).
         StmtArt::Alloc(al) => tr_alloc(al, ctx, model, scope, fns, fname, out, rest, cont, endblock),
+        // **Lane 257:** `grow A by n else { … };` has no G form in this
+        // fragment -- the committed prefix is checker flow, and the
+        // `ArenaForm` the model builds is the static pair (table of `hi`
+        // slots beside the `used` counter). Refused by name, never
+        // skipped, until the dynamic form lands.
+        StmtArt::Grow(g) => Err(refuse("LG005", format!("`grow` out of arena {} in {fname} has no G form: \
+            the committed prefix below the ceiling is checker flow, and this exporter builds the static \
+            `ArenaForm` of `hi` slots", g.tisch.text))),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
         // **Lane 250:** `child` has no G form in this fragment -- the handed
         // stack and the no-return-into-caller-frame are one `D.klon` pair
@@ -4233,6 +4247,18 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                 if let Some(a) = model.arenas.iter().find(|a| &a.name == &name.text) {
                     foot_push(acc, model.tables.len() + a.glob);
                 }
+            }
+            // **Lane 257:** a `grow` touches the counter half of the
+            // arena's pair, like a `reset` -- the committed prefix has no
+            // carrier of its own in the static `ArenaForm`. (The statement
+            // itself is refused by name above; this walk only feeds the
+            // `writes` accounting.)
+            StmtArt::Grow(g) => {
+                if let Some(a) = model.arenas.iter().find(|a| a.name == g.tisch.text) {
+                    foot_push(acc, model.tables.len() + a.glob);
+                }
+                foot_expr(&g.mehr, model, params, acc);
+                foot_block(&g.sonst, model, params, acc);
             }
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {

@@ -416,6 +416,14 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
             StmtArt::ResetArena(tisch) => {
                 t.schreibt.push((tisch.text.clone(), s.span));
             }
+            // **Lane 257:** committing slots moves the committed prefix --
+            // the arena is written, and the amount is read. Needs
+            // `writes A` in the effects, like any other store to a
+            // carrier.
+            StmtArt::Grow(g) => {
+                t.schreibt.push((g.tisch.text.clone(), s.span));
+                liest_expr(&g.mehr, t);
+            }
             StmtArt::Return(Some(x)) => liest_expr(x, t),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {

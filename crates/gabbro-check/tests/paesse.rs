@@ -3987,6 +3987,93 @@ impl fn f() -> u32 effects { writes Winzig } costs <= 32 ops {
     );
 }
 
+/// **The commit below the ceiling (lane 257, `N426`).**
+///
+/// A `grow` the checker sees reaching past the ceiling falls with exactly
+/// `N426` -- with the branch declared, because past the ceiling there is no
+/// commit, only the stop. The twin commits a constant amount below the
+/// ceiling and stays clean (the `max`-carrying positive direction).
+#[test]
+fn arena_grow_ueber_decke_n426() {
+    faellt_genau(
+        "arena Speicher capacity 2 .. 8 max 16 of u16;
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by 8 else {
+        return 1;
+    };
+    grow Speicher by 1 else {
+        return 2;
+    };
+    return 0;
+}",
+        &["N426"],
+    );
+    // The same commit below the ceiling: counted, capped, clean.
+    faellt_nicht(
+        "arena Speicher capacity 2 .. 8 max 16 of u16;
+const ZUWACHS : u32 = 8;
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by ZUWACHS else {
+        return 1;
+    };
+    let a = alloc Speicher (10);
+    let b = alloc Speicher (20) else {
+        return 2;
+    };
+    let x : u32 = Speicher[a];
+    let y : u32 = Speicher[b];
+    return x + y;
+}",
+    );
+}
+
+/// **The commit amount is a translation-time constant (lane 257, `N426`).**
+///
+/// A `grow` over a parameter -- no constant the checker could hold below
+/// the ceiling -- falls with exactly `N426`. The twin over a `const` name
+/// is the countable shape and stays clean.
+#[test]
+fn arena_grow_menge_unkonstant_n426() {
+    faellt_genau(
+        "arena Speicher capacity 2 .. 8 max 64 of u16;
+impl fn f(n : u32) -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by n else {
+        return 1;
+    };
+    return 0;
+}",
+        &["N426"],
+    );
+    faellt_nicht(
+        "arena Speicher capacity 2 .. 8 max 64 of u16;
+const ZUWACHS : u32 = 8;
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by ZUWACHS else {
+        return 1;
+    };
+    return 0;
+}",
+    );
+}
+
+/// **`grow` names a declared arena (lane 257, `N213`).**
+///
+/// Like `alloc` and `reset`, a `grow` out of a name that declares no arena
+/// falls with exactly `N213` -- no table, no global, no local reading
+/// reaches this statement.
+#[test]
+fn arena_grow_unbekannt_n213() {
+    faellt_genau(
+        "impl fn f() -> u32 effects { writes Nirgendwo } costs <= 64 ops {
+    grow Nirgendwo by 8 else {
+        return 1;
+    };
+    return 0;
+}",
+        &["N213"],
+    );
+}
+
 /// **Growth points are visible where the latency promise lives (`K002`).**
 ///
 /// Three `alloc`s inside `locks L` cost against `held <= 2 ops` and fall at

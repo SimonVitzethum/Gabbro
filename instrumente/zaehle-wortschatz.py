@@ -126,7 +126,14 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # names bit groups of the same word, `mirrors` names the source of carried
 # bits -- and the reason stands at the entry in `kw.rs`. The second mark
 # does NOT move; the word is `ctx`, so the third mark does not move either.
-MARKE_WOERTER = 243
+#
+# **243 -> 244 on 2026-09-19 (lane 257, wave D).** `grow` names the commit
+# request of a dynamic arena (`dokumente/SYNTAX.md` §9.1): no existing form
+# carries it -- `alloc` stores into committed storage and `reset` restores
+# the floor, neither commits new storage below the ceiling -- and the reason
+# stands at the entry in `kw.rs`. The second mark does NOT move; the word is
+# `ctx`, so the third mark does not move either.
+MARKE_WOERTER = 244
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

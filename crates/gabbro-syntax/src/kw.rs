@@ -331,6 +331,15 @@ wortschatz! {
     // Only the statement head position gives the word meaning; followed
     // by a place continuation it stays a name.
     Reset         => "reset",         ctx;
+    // **Lane 257 (wave D): commit-on-demand for a dynamic arena.**
+    //
+    // `grow A by n else { … };` commits `n` further slots of `A` below
+    // its ceiling (`N426` holds the amount constant and fitting). The
+    // `else` is always owed: the commit decision has two outcomes, and
+    // both are written down. Only the statement head position gives the
+    // word meaning; followed by a place continuation (`grow = 1;`) it
+    // stays a name, like `reset` above.
+    Grow          => "grow",          ctx;
     // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
     //
     // Heads the total, effect-free map from a call region's AST to the

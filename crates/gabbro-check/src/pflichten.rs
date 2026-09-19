@@ -702,6 +702,9 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         | StmtArt::Observiert(_)
         // **Lane O-1:** same -- the child path binds nothing itself.
         | StmtArt::Child(_)
+        // **Lane 257:** same -- the commit moves storage, and the
+        // failure continuation is entered through `unterbloecke` below.
+        | StmtArt::Grow(_)
         // **Lane 253:** `start` binds nothing and carries no block.
         | StmtArt::Start(_)
         | StmtArt::ResetArena(_)
@@ -821,6 +824,9 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
                     schleifeninvarianten(sonst, n, funktion, aus);
                 }
             },
+            // **Lane 257:** the commit-failure continuation may loop, so
+            // it is walked like any other `else`.
+            StmtArt::Grow(x) => schleifeninvarianten(&x.sonst, n, funktion, aus),
             // **No catch-all.** A statement kind that carries a block and is not listed here
             // would hide every loop inside it, and the register would be short by a duty
             // nobody could see was missing.

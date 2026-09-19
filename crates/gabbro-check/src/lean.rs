@@ -2481,7 +2481,9 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **«E4»:** the monotone arena has no term in this channel -- the
         // generations live in `grammatik/Grammatik/Arena.lean`, not in the
         // program-logic body model, so both statements lower to no term.
-        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => Err(LeanReason::Expression),
+        // **Lane 257:** the commit request is the third such statement --
+        // the committed prefix lives in the checker's flow, not here.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::Grow(_) => Err(LeanReason::Expression),
         // **Lane 253:** a statement-level `start` has no term in this
         // channel either -- the starts live in the declaration, and the
         // statement-level join rule is handoff, not built here.

@@ -845,6 +845,9 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         // `else` -- whoever walks blocks walks it, and whoever counts
         // bindings scopes it.
         StmtArt::Alloc(x) => x.sonst.iter().collect(),
+        // **Lane 257:** the commit-failure continuation is a sub-block
+        // like any `else` -- same walk, same scope.
+        StmtArt::Grow(x) => vec![&x.sonst],
         StmtArt::Exchange(e) => match &e.form {
             XForm::Update { rumpf, .. } => vec![rumpf],
             XForm::Vergleich { .. } => Vec::new(),
@@ -878,6 +881,9 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         // **«E4»:** the stored value is evaluated like any bound value; the
         // arena name is a declaration, not an expression.
         StmtArt::Alloc(a) => vec![&a.wert],
+        // **Lane 257:** the commit amount is evaluated like any bound
+        // value; the arena name is a declaration, not an expression.
+        StmtArt::Grow(g) => vec![&g.mehr],
         StmtArt::Zuweisung(z) => vec![&z.wert],
         StmtArt::Return(e) => e.iter().collect(),
         StmtArt::Publish(p) => vec![&p.wert],
@@ -981,6 +987,8 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         StmtArt::Let(_)
         | StmtArt::Alloc(_)
         | StmtArt::ResetArena(_)
+        // **Lane 257:** `grow` carries an amount, not a predicate.
+        | StmtArt::Grow(_)
         // **Lane O-1:** `child` carries a block, not a predicate.
         | StmtArt::Child(_)
         // **Lane 253:** `start` carries roots, not a predicate.
@@ -1447,7 +1455,9 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         // **«E4»:** same shape -- the main path continues past the
         // allocation, whatever the full-arena continuation does.
         // `reset` moves a counter and nothing else.
-        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => false,
+        // **Lane 257:** same shape -- the main path continues past the
+        // commit request, whatever the failure continuation does.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::Grow(_) => false,
         // **A `traverse` and a `retry` fall through; a `forever` without an exit does
         // not.** The exit is `leave <mark>` and nothing else -- `StmtArt::Leave` always
         // carries a mark, so an unnamed `forever` can be left by nothing at all.
