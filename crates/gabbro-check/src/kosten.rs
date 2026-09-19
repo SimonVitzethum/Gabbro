@@ -1042,6 +1042,11 @@ impl<'a> Rechner<'a> {
             // shape (no return, never-ending tail) changes control, not
             // cost. The never-gate call at the tail counts like any call.
             StmtArt::Child(x) => self.block(x, lokal),
+            // **Lane 253:** the `start` marker itself is one primitive.
+            // Creation and joining are the driver's (lane 246 shape); the
+            // roots' own costs are accounted at their definitions. The real
+            // thread-cost rule is handoff, not built here.
+            StmtArt::Start(_) => Kosten::Zahl(1),
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),

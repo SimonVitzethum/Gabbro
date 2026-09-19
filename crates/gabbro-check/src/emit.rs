@@ -452,6 +452,9 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             // **Lane O-1:** `child` binds no name itself; locals of the
             // path are collected through `unterbloecke` below.
             | StmtArt::Child(_)
+            // **Lane 253:** `start` binds no name itself and carries no
+            // block for `unterbloecke` below.
+            | StmtArt::Start(_)
             | StmtArt::Alloc(_)
             | StmtArt::ResetArena(_)
             | StmtArt::Sperrt(_)
@@ -8741,6 +8744,10 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             //
             // *A lowering and its name set are one change, not two.*
             StmtArt::Bricht(x) => benutzte_namen(&x.rumpf, aus),
+            // **Lane 253:** `start` roots name functions, never locals of
+            // this set -- and `anweisung` refuses the statement by name, so
+            // descending would count names the C never reads.
+            StmtArt::Start(_) => {}
             // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
             // a name of this set.
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -10358,6 +10365,38 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
+        // **Lane 253: `start { f, g };` (P017) has no lowering in this
+        // template.** Thread creation and joining belong to the driver
+        // (lane 246 shape: one wrapper per root, join loop, idle root) --
+        // until the statement-level lowering lands, every `start` falls
+        // here, by name, never silently. Emitted beside the refusal is only
+        // the comment, so the refusal changes no `cc` verdict.
+        StmtArt::Start(st) => {
+            weigere(
+                absagen,
+                s.span,
+                &format!(
+                    "`start` has no lowering in this template -- thread creation and joining \
+                     belong to the driver (one wrapper per root, join loop); the roots {} \
+                     name no C call this unit could make",
+                    st.roots
+                        .iter()
+                        .map(|w| format!("`{}`", w.text()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            );
+            aus.push_str(&format!(
+                "{e}/* start -- HANDOFF region: starts {} (joined before the\n\
+                 {e} * starter proceeds); at run time this is the driver's half.\n\
+                 {e} */\n",
+                st.roots
+                    .iter()
+                    .map(|w| w.text())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     }
 }
 
@@ -10891,6 +10930,9 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // below reaches it through `unterbloecke` like at every
                 // other block form.
                 StmtArt::Child(_)
+                // **Lane 253:** `start` itself jumps nowhere and carries no
+                // block for the descent below.
+                | StmtArt::Start(_)
                 | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
                 | StmtArt::ResetArena(_)
@@ -13386,6 +13428,9 @@ fn needs_saturation(baum: &Programm) -> bool {
                 expr(&a.wert) || a.sonst.as_ref().is_some_and(block)
             }
             StmtArt::ResetArena(_) => false,
+            // **Lane 253:** `start` roots are paths the unit never evaluates
+            // -- the driver (not this template) turns them into threads.
+            StmtArt::Start(_) => false,
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

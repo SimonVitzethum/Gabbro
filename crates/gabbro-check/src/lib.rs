@@ -850,6 +850,9 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         | StmtArt::Ruf(_)
         // **«E4»:** `reset` carries no block and no expression.
         | StmtArt::ResetArena(_)
+        // **Lane 253:** `start` names roots, never blocks or expressions --
+        // resolution is the checker's business (`W003`), not this walk's.
+        | StmtArt::Start(_)
         | StmtArt::LibraryCall(_) => Vec::new(),
     }
 }
@@ -897,6 +900,8 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Sperrt(_)
         | StmtArt::Observiert(_)
         | StmtArt::Child(_)
+        // **Lane 253:** `start` roots are paths, not evaluated expressions.
+        | StmtArt::Start(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::ResetArena(_)
@@ -967,6 +972,8 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         | StmtArt::ResetArena(_)
         // **Lane O-1:** `child` carries a block, not a predicate.
         | StmtArt::Child(_)
+        // **Lane 253:** `start` carries roots, not a predicate.
+        | StmtArt::Start(_)
         | StmtArt::LetSonst(_)
         | StmtArt::Zuweisung(_)
         | StmtArt::Return(_)
@@ -1446,6 +1453,9 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         // **Lane E1:** a library call returns to its caller -- until lane E2
         // checks the call there is no callee whose divergence could be read.
         | StmtArt::LibraryCall(_)
+        // **Lane 253:** a `start` joins before the starter proceeds -- the
+        // main path continues past it by construction (no detached threads).
+        | StmtArt::Start(_)
         | StmtArt::Exchange(_) => false,
     }
 }

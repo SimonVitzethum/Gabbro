@@ -1517,6 +1517,11 @@ impl<'a> Pruefer<'a> {
             // generation moves in `arena.rs`, and nothing here has to move
             // with it. An unknown arena is `N213` there.
             StmtArt::ResetArena(_) => {}
+            // **Lane 253:** `start { f, g };`. No expression, no binding --
+            // the roots resolve fail-closed in `nebeneinander.rs` (`W003`,
+            // like the `concurrent` members), and nothing here has to move
+            // with them.
+            StmtArt::Start(_) => {}
             StmtArt::Zuweisung(z) => {
                 // **«E4»:** an arena slot is written by `alloc`, never by
                 // assignment -- the counter and the reservation count what

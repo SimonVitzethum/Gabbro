@@ -1342,6 +1342,16 @@ pub enum StmtArt {
     /// inline with the fall-through marked dead; every other pass walks
     /// the body like any block (`crate::unterbloecke`).
     Child(Block),
+    /// `start { f, g };` -- hosted thread start (lane 253, P017).
+    ///
+    /// Names already-declared `concurrent` roots and nothing else: no
+    /// arguments (declared starts take none), no handle (the starter is
+    /// joined before it proceeds -- no detached threads, ever). The
+    /// checker resolves every root fail-closed (`W003`, like the
+    /// `concurrent` members); the driver owns creation and joining
+    /// (lane 246 shape) and the emitter refuses the statement by name
+    /// until the lowering lands.
+    Start(StartStmt),
 }
 
 #[derive(Debug, Clone)]
@@ -2034,6 +2044,19 @@ pub struct GruppeDecl {
 pub struct ConcurrentDecl {
     /// The bodies, as paths -- dispatch roots or scheduler entry `fn`s.
     pub koerper: Vec<Pfad>,
+    pub span: Span,
+}
+
+/// `start { f, g };` -- hosted thread start (lane 253, P017).
+///
+/// The statement half of the `concurrent` declaration: which declared
+/// roots start here, joined before the starter proceeds. One path at
+/// least, same list rule as the declaration (trailing comma allowed).
+/// Paths only -- never arguments, never a handle.
+#[derive(Debug, Clone)]
+pub struct StartStmt {
+    /// The roots to start, as paths -- members of a `concurrent` set.
+    pub roots: Vec<Pfad>,
     pub span: Span,
 }
 

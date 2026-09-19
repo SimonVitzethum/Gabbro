@@ -702,6 +702,8 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         | StmtArt::Observiert(_)
         // **Lane O-1:** same -- the child path binds nothing itself.
         | StmtArt::Child(_)
+        // **Lane 253:** `start` binds nothing and carries no block.
+        | StmtArt::Start(_)
         | StmtArt::ResetArena(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
@@ -826,6 +828,8 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             | StmtArt::Zuweisung(_)
             | StmtArt::Narrow(_)
             | StmtArt::ResetArena(_)
+            // **Lane 253:** `start` carries no block for the walk above.
+            | StmtArt::Start(_)
             | StmtArt::Leave(_)
             | StmtArt::Next(_)
             | StmtArt::Publish(_)

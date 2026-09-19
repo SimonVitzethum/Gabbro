@@ -3759,6 +3759,12 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             `D.klon` pair (gate `Ax`, entry `Fn`) with the function its `child` path runs, and this exporter \
             writes `Ax := Empty` over a `Deklaration` with no `klon` field, so the entry {fname} stays \
             unmapped, never silent"))),
+        // **Lane 253:** `start` has no G form in this fragment -- the starts
+        // list (`E.starts`) comes from the `concurrent` declaration, and a
+        // statement-level start needs the join/effects rule the checker does
+        // not owe yet. Refused by name, never skipped.
+        StmtArt::Start(_) => Err(refuse("LG004", format!("`start` in {fname} has no G form: the statement names \
+            roots the `concurrent` declaration already starts, and the statement-level join rule is handoff"))),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         StmtArt::Leave(_) | StmtArt::Next(_) => Err(refuse("LG004", format!("`leave`/`next` in {fname} has no G form in this fragment"))),

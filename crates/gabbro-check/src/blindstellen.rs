@@ -290,6 +290,8 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             StmtArt::Bricht(_) => "breaking",
             // **Lane O-1:** the clone-child path.
             StmtArt::Child(_) => "child",
+            // **Lane 253:** the hosted thread-start statement.
+            StmtArt::Start(_) => "start",
             StmtArt::Return(_) => "return",
             StmtArt::Leave(_) => "leave",
             StmtArt::Next(_) => "next",
