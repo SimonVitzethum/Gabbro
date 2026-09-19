@@ -1537,3 +1537,146 @@ fn einheit_width_travels_together() {
         assert!(text.contains(teil), "unit export must contain {teil:?}:\n{text}");
     }
 }
+
+/// **Lane 254 -- an integer-typed slot index** (positive probe): a parameter
+/// whose range fits the table travels as the index (exactly fitting ranges
+/// need no coercion; a strictly narrower one goes through `weiter`). Before,
+/// only literals, `index` parameters and traverse binders were indices
+/// (LG004); a `u32 in 0 ..< 4` parameter names exactly the slots 0..3, so
+/// the index the checker justified at `M103` is the one printed. The
+/// emitted term elaborates (`./lean-probe`, 0 errors).
+#[test]
+fn accepts_int_typed_slot_index() {
+    let q = "module test::leang_idxi {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(w : u32 in 0 ..< 4) -> u32\n\
+        requires Held(L)\n\
+        effects { reads T.slots, locks L } costs <= 4 ops\n\
+        { return T.slots[w].v; }\n\
+        }\n";
+    let text = export("leang_idxi", &tree(q)).expect("an in-range integer index must export");
+    // The range fits exactly, so `fit` takes the equal-range arm (no
+    // `weiter` wrapper -- `Ty.index` is an abbrev for the same `.int`).
+    // What must travel is the slot read itself, with both checks.
+    assert!(text.contains("Expr.slot (D := gD)"), "the slot read must travel: {text}");
+    // A strictly narrower range goes through `weiter` -- and elaborates
+    // (`./lean-probe`, 0 errors, the proofs decide over the stated types).
+    let q2 = "module test::leang_idxn {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(w : u32 in 0 ..< 2) -> u32\n\
+        requires Held(L)\n\
+        effects { reads T.slots, locks L } costs <= 4 ops\n\
+        { return T.slots[w].v; }\n\
+        }\n";
+    let text2 = export("leang_idxn", &tree(q2)).expect("a narrower integer index must export");
+    assert!(text2.contains(".weiter"), "the narrower index must travel through a coercion: {text2}");
+    assert!(
+        text.contains("example : programmImFragmentG gP gFs = true := by decide"),
+        "the fragment check must travel: {text}"
+    );
+}
+
+/// **Lane 254 -- the annotated width survives a `let`** (positive probe):
+/// `let m : u16 = b & 255` pushes the computed range with the ANNOTATED
+/// width (the checker types later uses by the annotation), so `~m`
+/// complements over 16 bits -- the width both sides read. Before, the
+/// computed band carried no width and the complement refused (LG003).
+/// The emitted term elaborates (`./lean-probe`, 0 errors).
+#[test]
+fn accepts_complement_over_let_bound_band() {
+    let q = "module test::leang_hybw {\n\
+        impl fn g(b : u16) -> u16\n\
+        effects { pure } costs <= 8 ops\n\
+        { let m : u16 = b & 255; return ~m; }\n\
+        }\n";
+    let text = export("leang_hybw", &tree(q)).expect("the annotated width must carry the complement");
+    assert!(text.contains(".bxor 16"), "the complement must read the annotated width: {text}");
+}
+
+/// **Lane 254 -- widths propagate through shifts** (positive probe): an
+/// unannotated `let w = i >> 2` keeps the left storage width where the
+/// result still fits it, so a later shift on `w` names a width. Before,
+/// every computed value carried none and the later shift refused (LG003).
+/// The emitted term elaborates (`./lean-probe`, 0 errors).
+#[test]
+fn accepts_shift_through_unannotated_let() {
+    let q = "module test::leang_shrw {\n\
+        impl fn h(i : u32 in 0 ..< 4096) -> u32\n\
+        effects { pure } costs <= 8 ops\n\
+        { let w = i >> 2; return (w >> 1) & 255; }\n\
+        }\n";
+    let text = export("leang_shrw", &tree(q)).expect("the propagated width must carry the later shift");
+    assert!(text.contains(".shr 32"), "the later shift must read the propagated width: {text}");
+}
+
+/// **Lane 254 -- an over-wide integer index is still no index** (poison
+/// probe): a full-range `u32` parameter fits no `count 4` table, so the
+/// `weiter` has nothing to stand on and the refusal names the index.
+#[test]
+fn refuses_over_wide_int_index() {
+    let q = "module test::leang_idxo {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(w : u32) -> u32\n\
+        requires Held(L)\n\
+        effects { reads T.slots, locks L } costs <= 4 ops\n\
+        { return T.slots[w].v; }\n\
+        }\n";
+    let w = export("leang_idxo", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("index w") && w.message.contains("has no G form"), "{w}");
+}
+
+/// **Lane 254 -- a complement over a literal still names no width**
+/// (poison probe): `~255` carries no storage width on either side (the
+/// checker refuses it as `M137`), so there is no `bxor` width to print.
+#[test]
+fn refuses_complement_over_literal() {
+    let q = "module test::leang_cmpl {\n\
+        impl fn g() -> u32\n\
+        effects { pure } costs <= 4 ops\n\
+        { return ~255; }\n\
+        }\n";
+    let w = export("leang_cmpl", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG003", "{w}");
+    assert!(w.message.contains("complement") && w.message.contains("no width"), "{w}");
+}
+
+/// **Lane 254 -- a `bool` is still no index** (poison probe): the integer
+/// arm of `tr_index` takes integers; anything else keeps the refusal.
+#[test]
+fn refuses_bool_slot_index() {
+    let q = "module test::leang_idxb {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        lock L protects { T } rank 0 held <= 100 ops;\n\
+        impl fn f(flag : bool) -> u32\n\
+        requires Held(L)\n\
+        effects { reads T.slots, locks L } costs <= 4 ops\n\
+        { return T.slots[flag].v; }\n\
+        }\n";
+    let w = export("leang_idxb", &tree(q)).expect_err("must refuse");
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("index flag") && w.message.contains("has no G form"), "{w}");
+}
+
+/// **Lane 254 -- the bit-range remainder stays refused, pinned**: `61`
+/// needs the checker's narrowed bit intervals (`band` is `min`, `shr`
+/// narrows, `~` is exact) as MODEL types -- the exporter's belief must
+/// equal the elaborated term type, and the model computes the wide one
+/// (`Zahl.band` yields `Zahl 0 h1`). `151` needs the same for its derived
+/// indices (`lies_byte`'s `w` is `0 .. 4095` in the term). Both pins name
+/// the exact model work (`Typen.lean` `Zahl.band`/`shr`/`bor`/`bxor`
+/// result types); a lane that closes it there turns these two tests.
+#[test]
+fn bit_range_remainder_stays_refused() {
+    let w61 = export("61-invertierung.gab", &tree(&beispiele("61-invertierung.gab")))
+        .expect_err("61 needs model-side narrowed bit types");
+    assert_eq!(w61.code, "LG004", "{w61}");
+    assert!(w61.message.contains("`let a`") && w61.message.contains("exceeds its annotation"), "{w61}");
+    let w151 = export("151-word-pool-discipline.gab", &tree(&beispiele("151-word-pool-discipline.gab")))
+        .expect_err("151 needs model-side narrowed bit types");
+    assert_eq!(w151.code, "LG004", "{w151}");
+    assert!(w151.message.contains("index w in lies_byte"), "{w151}");
+}
