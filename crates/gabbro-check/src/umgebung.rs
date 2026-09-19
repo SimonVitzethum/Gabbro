@@ -1934,6 +1934,14 @@ impl Umgebung {
                     })
                     .collect(),
             },
+            // Lane 256: `string max N` reads as `Unbekannt` in the shared
+            // type system -- deliberately no `Typ` variant (matches over
+            // `Typ` are exhaustive by design, and the string rules live in
+            // `zeichenfolge.rs`, which tracks declared maxes in its own
+            // table). By the W10 fiat (`enthaelt_unbekannt` in m1.rs)
+            // exactness stays silent wherever either side is unknown, so
+            // the shared passes step aside and the string pass decides.
+            TypExpr::Zeichenkette { .. } => Typ::Unbekannt,
         }
     }
 

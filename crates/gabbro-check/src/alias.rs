@@ -139,6 +139,7 @@ fn zieltext(t: &TypExpr) -> String {
         TypExpr::FnZeiger(_) => "fn(…)".into(),
         TypExpr::Varianten(..) => "|…|".into(),
         TypExpr::Index { tabelle, .. } => format!("index into {}", tabelle.text),
+        TypExpr::Zeichenkette { max, .. } => format!("string max {max}"),
     }
 }
 

@@ -695,7 +695,8 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
             | TypExpr::Bool(_)
             | TypExpr::Never(_)
             | TypExpr::Pfad(_)
-            | TypExpr::Index { .. } => {}
+            | TypExpr::Index { .. }
+            | TypExpr::Zeichenkette { .. } => {}
         }
     }
     match &item.art {
@@ -1144,7 +1145,8 @@ fn praedikate_im_typ<'a>(art: &'a ItemArt, aus: &mut Vec<&'a Pred>) {
             | TypExpr::Never(_)
             | TypExpr::Pfad(_)
             | TypExpr::Varianten(_, _)
-            | TypExpr::Index { .. } => {}
+            | TypExpr::Index { .. }
+            | TypExpr::Zeichenkette { .. } => {}
         }
     }
     if let ItemArt::Typ(t) = art {
