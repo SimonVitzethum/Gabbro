@@ -272,3 +272,22 @@ fn o12_beispiel_124_haelt_an_jeder_freigabe() {
         assert!(text.contains(teil), "124 release rows must name {teil:?}");
     }
 }
+
+/// **Lane 255 -- `59` states the duty over the masked-lock program**: both
+/// entry dispatch roots travel as the declared starts, the checker premise
+/// decides, and the closing theorem bridges -- with no invariant owed at
+/// any release (the source declares none).
+#[test]
+fn obligations_59_states_masked_starts() {
+    let text = export_file("59-eintritt-nimmt-maskierte-sperre.gab");
+    for teil in [
+        "namespace G59_eintritt_nimmt_maskierte_sperre_oblig",
+        "maskiert := fun | .TAKT => true | .RING => false",
+        "starts := [⟨g_takt_verteiler, .nil⟩, ⟨g_ruf_verteiler, .nil⟩]",
+        "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+        "theorem gP_gabbro",
+        "No lock carries an invariant -- nothing is owed at any release.",
+    ] {
+        assert!(text.contains(teil), "59 obligations must contain {teil:?}");
+    }
+}
