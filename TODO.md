@@ -129,7 +129,8 @@ Rust, never a header per object.
 | 242 | runtime: reserve/commit, mmap backing, OOM fail-stop + emitter-arm SPEC (no `emit.rs` — owned by 234→235) | `laufzeit/` + new module, examples 153–154 | M | 239, 240, 241 |
 | 243 | free discipline (arena-reset proof or linear free-list) | new files + 240's region | M | 240 |
 | 244 | efficiency fixes: kill census overhead | measured sites only | S–M | 238 |
-| 248 | emitter arm for reserve/commit (QUEUED, starts after 235 merges) | `emit.rs` | S–M | 235, 242 |
+| 248 | emitter arm for reserve/commit — merged as gate-doc (max/grow syntax missing, arm queued) | report only | S | 235, 242 |
+| 257 | max/grow syntax (unblocks the arm) | `parse.rs`, `ast.rs` | M | — |
 
 *Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096 (only if a
 new refusal is measured — over-cap growth already refuses via 240). 248
@@ -304,10 +305,12 @@ tree refuses everywhere else.*
   after 207 — the identical 15 (104, 108, 109, 118, 119, 120, 121, 124, 130,
   15, 16, 34, 62, 69, 73). First refusals: LG001 x71, LG002 x19, LG003 x1,
   LG004 x5, LG005 x4, LG006 x2. The widening moved 19/46 from LG006 to LG005
-  with zero corpus gain, honestly reported. Next: the sieve classes one by
-  one, measured by the export count. **Width lane 254 RUNNING since
-  2026-09-19 (biggest refusal class first); concurrent lane 255 QUEUED
-  behind it (same file `lean_g.rs`, sequential).**
+  with zero corpus gain, honestly reported. **Width lane 254 merged
+  2026-09-19, same honest result: corpus since grown 117→127 files,
+  exports still the identical 15; LG001 now x74, surveyed by subclass
+  (each needs model narrowing). Next: LG002 x21, or per-subclass lanes
+  with model-side work. Concurrent lane 255 QUEUED (same file
+  `lean_g.rs`, sequential).**
 - [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
   208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
   2026-09-17). Closed by finding, not by construction: five of nine
