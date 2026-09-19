@@ -137,6 +137,14 @@ takes no new codes (lowering lane). Example
 pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
 242 alongside waves A/B (11 total on fisch).*
 
+**Wave E — bounded strings (owner): general strings are planned, max length
+known like integer ranges.** Lane 256 (RUNNING): bounded string type with
+declared `max N`, literals with known length, `concat`/`length`/index/compare
+with M101-family length discipline; Lean model as bounded char lists;
+emitter REFUSES by name until the lowering lane (staged honesty, lane-222
+precedent). L4 library text (formatting/parsing/UTF) stays library work
+(§0b), not language work.
+
 *Not lanes: sigaction (out by design, not by backlog: an async handler is a
 root that fires at an arbitrary program point, breaking the start/thread
 model — reentrancy against lock invariants, contracts and costs cannot be
@@ -297,7 +305,9 @@ tree refuses everywhere else.*
   15, 16, 34, 62, 69, 73). First refusals: LG001 x71, LG002 x19, LG003 x1,
   LG004 x5, LG005 x4, LG006 x2. The widening moved 19/46 from LG006 to LG005
   with zero corpus gain, honestly reported. Next: the sieve classes one by
-  one, measured by the export count.
+  one, measured by the export count. **Width lane 254 RUNNING since
+  2026-09-19 (biggest refusal class first); concurrent lane 255 QUEUED
+  behind it (same file `lean_g.rs`, sequential).**
 - [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
   208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
   2026-09-17). Closed by finding, not by construction: five of nine
@@ -323,6 +333,7 @@ tree refuses everywhere else.*
   refuses locks, `held` sections and multiple starts (LG001/LG004); only
   108 of the six exports. The hand models above are the bridge, not the
   widening. Measured by how many of 07, 59, 108, 109, 124 and 125 export.
+  **Lane 255 QUEUED behind lane 254 (same file, sequential).**
 - [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
   O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
   2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
