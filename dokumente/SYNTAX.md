@@ -899,14 +899,14 @@ resetstmt  = "reset" ident ";" ;                                (* «E4», §9.1
 (* A fresh generation of the named arena: the used counter goes back to zero, and every
    index bound before is stale afterwards (`N211`). `reset = 1;` stays an assignment --
    the head word decides, like at every other keyword statement. *)
-growstmt   = "grow" ident "by" constexpr "else" block ";" ;      (* lane 257, §9.1 *)
+growstmt   = "grow" ident "by" expr "else" block ";" ;      (* lane 257, §9.1 *)
 (* Commit-on-demand below the ceiling: `n` further slots of the named arena become
    readable and writable, or the `else` runs (OOM below the ceiling). The `else` always
    stands -- the grammar has no branchless form, so a missing `else` is `P001` at the
-   reader, not a checker question. The amount is a translation-time constant (`N426`
-   refuses the uncountable shape and the request reaching past the ceiling, branch or
-   no branch). `grow = 1;` stays an assignment -- the head word decides, like at
-   `reset` above. *)
+   reader, not a checker question. The amount is any expression at the reader and must
+   be a translation-time constant at the checker (`N426` refuses the uncountable shape
+   and the request reaching past the ceiling, branch or no branch). `grow = 1;` stays
+   an assignment -- the head word decides, like at `reset` above. *)
 childstmt  = "child" block ;                                    (* lane O-1, §12.1 *)
 (* The clone-child path (K-1): the block that runs on the handed stack of a `syscall`
    gate with a `stack` clause. It never returns into the caller's frame -- no `return`

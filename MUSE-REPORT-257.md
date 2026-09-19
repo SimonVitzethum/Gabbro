@@ -137,8 +137,18 @@ bindings fixed by this lane (no second design needed):
 - Guardians: `pruefe-wortschatz.py` 241/241 both readings;
   `zaehle-wortschatz.py` 244 words, marks 244/212/17 hold;
   `pruefe-saetze.py` 426 codes, 177 sentences, 0 invented;
-  `pruefe-kennungen.py` ALL PASS; `pruefe-grammatiktafel.py` RC=0;
-  `pruefe-syntax.sh` SYNTAX ALL PASS (EBNF 179/0 open).
+  `pruefe-kennungen.py` ALL PASS; `pruefe-syntax.sh` SYNTAX ALL PASS
+  (EBNF 179/0 open); **`pruefe-grammatiktafel.py` RC=1 (round-1 finding
+  F1): `! GRAMMATIKTAFEL ROT: 1 von 241 Terminalen sind UNGEDECKT`, the
+  open cell being `grow` — "der Erzeuger sagt `grow` ab, aber nur NEBEN
+  einem Prueferfehler; ob der Pruefer die Form annimmt, ist ungemessen".
+  Not a defect of this lane but disclosed: the cell needs a
+  fully-emitting + `cc`-compiling program containing `grow` (`gesenkt`)
+  or a checker-clean emitter refusal, both of which this task forbids (no
+  lowering, no corpus files); gift 1088 carries `N426` beside the emitter
+  refusal, which the table counts as unmeasured by construction. The cell
+  closes with the arm lane, whose emitting `grow` demo turns `grow` to
+  `gesenkt`. No coverage code or corpus file was added to force it.
 - Codes/gifts/examples consumed: **one code (`N426`, from the returned
   240 reserve `N426`–`N430`)**, **one gift (`1088`)**, no examples (demos
   need emission — deferred, stated, not taken).
@@ -160,6 +170,14 @@ bindings fixed by this lane (no second design needed):
 3. **Preamble vs task** (as in 240/242): the wave preamble says
    "independent reviewer, change no existing file"; the lane task orders a
    syntax + checker + probe build. I followed the specific task.
+   **Round-1 finding F2 — orchestrator sign-off requested:** the task
+   lists `emit.rs` under "You MUST NOT touch", and this commit adds five
+   `StmtArt::Grow` arms there (refusal by name + comment-only emission,
+   HANDOFF-marked beside `Alloc`/`ResetArena`/`Start`). They are
+   compilation-forced — the new `StmtArt` variant makes every exhaustive
+   match fail without them, so a revert is a red build, which is also a
+   violation — and move no `cc` verdict. Syntax-first lanes cannot
+   otherwise deliver green; please sign off the `emit.rs` exception.
 4. **Stale prose left standing.** `beispiele/153-arena-waechst.gab`'s header
    says the `max`/`grow` syntax "is not in the tree yet" — false since
    this lane. Left byte-identical on purpose (corpus diff zero); the
