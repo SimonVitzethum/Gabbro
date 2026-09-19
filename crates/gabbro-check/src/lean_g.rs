@@ -93,7 +93,9 @@
 //!   are `Block` formers.
 //! * `lock L protects { ... } rank N` -- `Lock`/`rang`/`braucht` (the `held`
 //!   budget, the pointer address spaces and the `reads` effects
-//!   have NO FORM and are ignored, each named in the printed header)
+//!   have NO FORM and are ignored, each named in the printed header).
+//!   `masks irqs` travels as `D.maskiert` (lane 255); the shared-hold
+//!   branch (`shared held <= …`) still has no G form (LG001).
 //! * `lock L ... invariant <pred>` -- the `SperrInv` family `gS` (lane 156):
 //!   `orte` is the `protects` set, `inv` the predicate over the memory
 //!   snapshot (table-slot reads with literal indices, named constants,
@@ -196,6 +198,8 @@
 //!
 //! The module wrapper; named constants (inlined); bare carrier widths;
 //! pointer address spaces; lock hold budgets; the `reads` effects; `costs`;
+//! the `deadline` date with its `arch` machine and `falsifier` probe (an
+//! environment promise, like `costs` a static annotation -- lane 255);
 //! the `by unvisited`/`by consuming` run form, the `decreases` witness and
 //! the `touches` clause of a `traverse` (static annotations, like `costs`);
 //! `by ops` on a field (a writer discipline the checker holds);
@@ -409,6 +413,10 @@ pub(crate) struct LockModel {
     pub(crate) guards: Vec<usize>,
     /// The GLOBALS this lock `protects` (`gbraucht`), beside the tables.
     pub(crate) gguards: Vec<usize>,
+    /// `masks irqs` (lane 255): `D.maskiert`, carried per lock. The mask
+    /// NAMES no G behaviour -- G has no interrupt model -- but the field is
+    /// in the specification, so the word travels instead of refusing.
+    pub(crate) maskiert: bool,
     /// `invariant <pred>` -- `None` where the lock carries none (its `inv`
     /// arm is `fun _ => true`, the empty-family shape over its carriers).
     pub(crate) invariant: Option<Pred>,
@@ -1169,11 +1177,18 @@ fn check_fn(
         return Err(refuse("LG001", format!("function {} is not `impl`", f.name)));
     }
     if d.verfeinert.is_some() || !d.maintains.is_empty()
-        || d.deadline.is_some() || d.decreases.is_some() || !d.by.is_empty()
+        || d.decreases.is_some() || !d.by.is_empty()
         || d.arch.is_some() || d.when.is_some() || d.advances.is_some() || d.retires.is_some()
     {
         return Err(refuse("LG001", format!("function {} carries a form with no G counterpart", f.name)));
     }
+    // **`deadline <= n ops arch X falsifier p` is NO FORM** (lane 255): the
+    // DATE, not the budget (`FnDecl::deadline`) -- owed to the machine `arch`
+    // names and discharged by the probe `p`, a statement about the
+    // environment and not about the program. G carries no such promise, so
+    // the clause is dropped and named in the printed header, like `costs`.
+    // (`Korpus59.lean` models `beispiele/59` exactly this way: bodies, Held
+    // sets, locks and starts travel, the four deadlines do not.)
     // `-> T or R`: the case count of the named `reason` is the `gruende`.
     let gruende = match &d.fehler {
         None => 0,
@@ -1792,10 +1807,13 @@ fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
 }
 
 /// One lock: its rank and the carriers its `protects` names (a table, a
-/// table field, or a global). Masking and the shared branch have no G form.
+/// table field, or a global). `masks irqs` travels as `D.maskiert` (lane
+/// 255 -- the field is in the specification and names no G behaviour, so
+/// the word travels instead of refusing); the shared-hold branch
+/// (`shared held <= …`) still has no G form.
 fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
-    if l.maskiert.is_some() || l.geteilte_haltezeit.is_some() {
-        return Err(refuse("LG001", format!("lock {} carries a form with no G counterpart", l.name.text)));
+    if l.geteilte_haltezeit.is_some() {
+        return Err(refuse("LG001", format!("lock {} carries a shared hold with no G counterpart", l.name.text)));
     }
     let ExprArt::Zahl(rank) = &l.rang.art else {
         return Err(refuse("LG005", format!("lock {} has no numeric rank", l.name.text)));
@@ -1827,7 +1845,7 @@ fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
             guards.push(ti);
         }
     }
-    Ok(LockModel { name: l.name.text.clone(), rank, guards, gguards, invariant: l.invariante.clone() })
+    Ok(LockModel { name: l.name.text.clone(), rank, guards, gguards, maskiert: l.maskiert.is_some(), invariant: l.invariante.clone() })
 }
 
 /// **The lock floor is a CHOICE, and the exporter used to make the worst one.**
@@ -4433,7 +4451,15 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- wrapper; named constants (inlined at every use); bare carrier\n");
     out.push_str("-- widths (a bare word travels as its full range); pointer address\n");
     out.push_str("-- spaces; lock hold budgets;\n");
-    out.push_str("-- the `reads` effects; `costs`; the `by unvisited`/`by consuming`\n");
+    out.push_str("-- the `reads` effects; `costs`;");
+    // The `deadline` ledger line stands only where a deadline was dropped
+    // (lane 255), so every export without one stays byte-identical.
+    if model.fns.iter().any(|f| f.decl.deadline.is_some()) {
+        out.push_str(" the `deadline` date with its `arch`\n");
+        out.push_str("-- machine and `falsifier` probe (an environment promise, dropped\n");
+        out.push_str("-- like `costs`);");
+    }
+    out.push_str(" the `by unvisited`/`by consuming`\n");
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");
     out.push_str("-- `traverse` (static annotations, like `costs`); `by ops` on a field\n");
     out.push_str("-- (a writer discipline the checker holds); `mut` on a `let`;\n");
@@ -4696,7 +4722,18 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             .map(|l| format!("| .{} => {}", l.name, l.rank)).collect();
         out.push_str(&format!("  rang := fun {}\n", rarms.join(" ")));
     }
-    out.push_str("  maskiert := fun _ => false\n");
+    // `masks irqs` travels per lock (lane 255): `D.maskiert` is in the
+    // specification (`Korpus59.lean` carries `kMaskiert` the same way), so
+    // the word is printed, never dropped and never refused. Where no lock
+    // is masked the old spelling stands, so every existing export stays
+    // byte-identical.
+    if model.locks.iter().any(|l| l.maskiert) {
+        let marms: Vec<String> = model.locks.iter()
+            .map(|l| format!("| .{} => {}", l.name, l.maskiert)).collect();
+        out.push_str(&format!("  maskiert := fun {}\n", marms.join(" ")));
+    } else {
+        out.push_str("  maskiert := fun _ => false\n");
+    }
     out.push_str("  Marke := Empty\n");
     out.push_str("  decMarke := inferInstance\n");
     out.push_str("  stufen := fun e => nomatch e\n");

@@ -1680,3 +1680,100 @@ fn bit_range_remainder_stays_refused() {
     assert_eq!(w151.code, "LG004", "{w151}");
     assert!(w151.message.contains("index w in lies_byte"), "{w151}");
 }
+
+// ---------------------------------------------------------------------------
+// Lane 255 -- concurrent exporter: `masks irqs`, `deadline`, and the 59/125
+// census moves.
+//
+// `D.maskiert` is in the specification (`Korpus59.lean` carries `kMaskiert`
+// the same way: TAKT masks, RING does not), so the word travels per lock
+// instead of refusing. `deadline <= n ops arch X falsifier p` is NO FORM:
+// the DATE, not the budget (`FnDecl::deadline`) -- owed to the machine,
+// discharged by the probe -- dropped and named in the printed header like
+// `costs`. `beispiele/59` needs both; `beispiele/125` stays refused with
+// its blockage proved (`Korpus125.lean`: `offen125_ret_unter_locks`).
+// ---------------------------------------------------------------------------
+
+/// **Lane 255 -- `masks irqs` travels as `D.maskiert`** (positive probe):
+/// the masked lock prints `true`, the unmasked one `false`, per lock.
+#[test]
+fn masks_irqs_travels_as_maskiert() {
+    let q = "module test::leang_masks {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 4 { slot { w : u32, } }\n\
+        lock A protects { T } rank 0 held <= 100 ops masks irqs;\n\
+        lock C protects { U } rank 1 held <= 100 ops;\n\
+        impl fn f(t : ptr<normal, rw> T)\n\
+        effects { writes t.slots, locks A } costs <= 16 ops\n\
+        {\n    locks A {\n        t.slots[0].v = 3;\n}\n}\n\
+        }\n";
+    let text = export("leang_masks", &tree(q)).expect("masked lock must export");
+    assert!(
+        text.contains("maskiert := fun | .A => true | .C => false"),
+        "maskiert travels per lock:\n{text}"
+    );
+}
+
+/// **Lane 255 -- the shared-hold branch still refuses, by name** (poison
+/// probe): `shared held <= …` computes a different quantity (`LockDecl`
+/// docs) with no G form, and the `masks` widening must not have opened a
+/// door for it. Pinned on `beispiele/10`, whose first wall it is.
+#[test]
+fn refuses_shared_hold_by_name() {
+    let w = export("10-geteilte-sperre.gab", &tree(&beispiele("10-geteilte-sperre.gab")))
+        .expect_err("shared hold has no G form");
+    assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("shared hold"), "must name the branch: {w}");
+}
+
+/// **Lane 255 -- a `deadline` drops as an environment promise** (positive
+/// probe): the function travels, its body intact, and the printed header
+/// names the drop beside `costs`.
+#[test]
+fn deadline_drops_as_environment_promise() {
+    let text = export("leang_frist", &tree(&einheit(
+        "impl fn f() -> u32 effects { pure } costs <= 1 ops\n\
+         deadline <= 8 ops arch x86_64 falsifier sonde_f\n\
+         { return 1; }\n",
+    )))
+    .expect("a deadline must drop, not refuse");
+    for teil in [
+        "def gSig_f",
+        "the `deadline` date with its `arch`",
+        "like `costs`",
+    ] {
+        assert!(text.contains(teil), "deadline export must contain {teil:?}:\n{text}");
+    }
+}
+
+/// **Lane 255 -- `beispiele/59` exports**: the masked-lock program prints
+/// the per-lock `maskiert` arms of its hand model (`Korpus59.lean`:
+/// `kMaskiert`), both entry dispatch roots as the declared starts, and
+/// both decidable checks.
+#[test]
+fn export_59_succeeds() {
+    let text = export_file("59-eintritt-nimmt-maskierte-sperre.gab");
+    for teil in [
+        "namespace G59_eintritt_nimmt_maskierte_sperre",
+        "maskiert := fun | .TAKT => true | .RING => false",
+        "starts := [⟨g_takt_verteiler, .nil⟩, ⟨g_ruf_verteiler, .nil⟩]",
+        "example : programmImFragmentG gP gFs = true := by decide",
+        "example : fussOrtGB gP gFs = true := by decide",
+    ] {
+        assert!(text.contains(teil), "59 export must contain {teil:?}");
+    }
+}
+
+/// **Lane 255 -- `beispiele/125` stays refused, pinned**: `lese_schreibe`
+/// returns `z` INSIDE `locks WACHE`, but a return needs `Λ.Perm V.ende`
+/// and the signature holds nothing (`Korpus125.lean` proves the absence:
+/// `offen125_ret_unter_locks`). Either the example moves its `return` out
+/// of the lock or G gains value-return under lock; until then the refusal
+/// is the finding.
+#[test]
+fn return_under_locks_stays_refused() {
+    let w = export("125-read-under-lock.gab", &tree(&beispiele("125-read-under-lock.gab")))
+        .expect_err("return under locks has no G term (offen125_ret_unter_locks)");
+    assert_eq!(w.code, "LG004", "{w}");
+    assert!(w.message.contains("falls off with a result"), "{w}");
+}
