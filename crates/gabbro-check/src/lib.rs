@@ -1421,6 +1421,21 @@ pub fn alle_ausdruecke(e: &Expr) -> Vec<&Expr> {
 ///
 /// *Same class as the six `tor-proben` that walked back into the `N044` shape: a finding
 /// repaired at ONE of its sites reads as a finding repaired.*
+/// **Can control pass an integer `match` without entering any arm?** (review G07,
+/// 2026-09-21)
+///
+/// Yes, whenever an arm is an integer arm (lane 222 `IntPat`): no checker pass decides
+/// that the arms cover the scrutinee's range (`CFormMatch.lean` states the coverage
+/// predicate, nothing in `crates/` runs it), and lane 227 lowers the match to a `switch`
+/// WITHOUT `default`, so a value no arm names skips the whole statement. Every flow pass
+/// that joins or ends over `match` arms must therefore count one more path: the one past
+/// all arms, with the state from before -- exactly the invisible `else` of an `if`
+/// without one. A variant `match` (`tagged`, `option`, `reason`) is closed by
+/// `D005`/`M123` and keeps its reading.
+pub fn int_match_may_miss(m: &MatchStmt) -> bool {
+    m.zweige.iter().any(|z| z.intpat.is_some())
+}
+
 pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
     let Some(letzte) = b.anweisungen.last() else {
         return false;
@@ -1440,6 +1455,12 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
             w.sonst.as_ref().is_some_and(|r| endet_immer(r, divergent))
                 && w.zweige.iter().all(|(_, r)| endet_immer(r, divergent))
         }
+        // **An integer `match` never ends a body (review G07, 2026-09-21).** No pass
+        // checks that its arms cover the scrutinee, and the emitted `switch` has no
+        // `default` (lane 227): a value no arm names falls through to the next
+        // statement. Reading it as ending let `narrow … else { match y { 0 => { return
+        // 0; } } }` install the narrowed range on a path that was never checked.
+        StmtArt::Match(m) if int_match_may_miss(m) => false,
         StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf, divergent)),
         // **Eine Klammer ist keine Weiche.** Wer im `locks`-, `observes`- oder
         // `breaking`-Rumpf auf jedem Weg endet, endet auch danach.

@@ -415,6 +415,12 @@ fn gehe(
                     zweig_geborene(&vorher, &z, endet_hier, absagen);
                     ergebnisse.push((z, endet_hier));
                 }
+                // **The path past every arm** (review G07): an integer `match` has no
+                // `default`, so a value no arm names keeps the state from before --
+                // the invisible `else` of an `if` without one (`crate::int_match_may_miss`).
+                if crate::int_match_may_miss(m) {
+                    ergebnisse.push((vorher.clone(), false));
+                }
                 abgleich(&ergebnisse, s.span, zust, absagen);
             }
             StmtArt::Schleife(_) => {
