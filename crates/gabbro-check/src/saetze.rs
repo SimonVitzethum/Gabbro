@@ -313,8 +313,10 @@ pub const NAMEN: &[Satz] = &[
                       `out { result }`, and `ausgeben` with neither) stays green. \
                       **Lane 225** adds the acceptance pins beside it: `gift/1065` \
                       (`-- erwartet: A003`, the declaration the accepted shape still owes) \
-                      and `gift/1066` (`-- erwartet: C001`, checker silent -- the accepted \
-                      shape, emitter still refusing: the handoff to lane 235).",
+                      and `gift/1066` (`-- erwartet: C001`, checker silent). Lane 235 \
+                      consumed the handoff: the accepted shape now lowers, and `1066` \
+                      pins a never-`asm` body with a NON-`result` `out`, which the \
+                      emitter refuses by name.",
         fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`); \
                      crates/gabbro-check/src/emit.rs (the `asm` arm); \
                      grammatik/Grammatik/Zielsatz/NeverAsm.lean",
@@ -334,18 +336,25 @@ pub const NAMEN: &[Satz] = &[
                     silence by omission (`S009` returns early on every non-`Block` body). \
                     What it does NOT accept is named beside it: `out { result }` stays \
                     `N321` (`namen.asm_never`), a missing `arch`/`effects`/`costs` stays \
-                    `A001`/`A002`/`A003`, and a foreign operand stays `A004`. The emitter \
-                    is one lane behind: the accepted shape ends at its older \
-                    `hat_ergebnis` arm (`C001`), the handoff lane 235 lowers -- and 235 \
-                    must not touch the `N321` shape, which stays refused on both \
-                    channels (`gift/984`/`985`).",
+                    `A001`/`A002`/`A003`, and a foreign operand stays `A004`. **The \
+                    divergence is TRUSTED, like `effects` on every foreign body**: \
+                    nothing reads the text, and `hlt` itself resumes after an \
+                    interrupt. The model reads a returning `never` axiom as a stop that \
+                    never continues (`NeverAsm.lean`), and the emitter makes the C say \
+                    the same: lane 235 lowers the body to a bare `__asm__` under \
+                    `_Noreturn void`, followed by `for (;;) { }` (review G04, \
+                    2026-09-21), so a returning text never falls off the `_Noreturn` \
+                    function. Any `out` on such a body stays refused: `out { result }` \
+                    as `N321` on both channels (`gift/984`/`985`), any other `out` by \
+                    the emitter (`C001`, `gift/1066`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "Positive side pinned inline (`never_ruempfe_werden_angenommen_225` \
                       in `crates/gabbro-check/tests/paesse.rs`: halting `asm` under \
                       `-> never` with declared clauses falls with nothing). Refusal side: \
                       `beispiele/gift/1065` (`-- erwartet: A003`) and `gift/1066` \
-                      (`-- erwartet: C001`, checker silent). N321's own probes (`984`, \
-                      `985`) stay green and unmoved.",
+                      (`-- erwartet: C001`, checker silent; since lane 235 a non-`result` \
+                      `out`). N321's own probes (`984`, `985`) stay green and unmoved. \
+                      Lowering side: `crates/gabbro-check/tests/never_lowering.rs`.",
         fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`, the `N321` arm); \
                      crates/gabbro-check/src/emit.rs (the `hat_ergebnis` arm); \
                      beispiele/gift/1065-1066",

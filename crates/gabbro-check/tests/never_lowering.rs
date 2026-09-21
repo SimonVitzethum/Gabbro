@@ -52,15 +52,23 @@ fn c_nach_pruefung(quelle: &str) -> String {
 }
 
 /// The C-level noreturn proof: the emitted unit compiles under
-/// `cc -std=c11 -Wall -Wextra -Werror -fsyntax-only`. A `_Noreturn` body
-/// that returned, or a `return` in one, would fail here -- not hope.
+/// `cc -std=c11 -Wall -Wextra -Werror -O0 -c`. A `_Noreturn` body that
+/// returned, or a `return` in one, would fail here -- not hope.
+///
+/// **Not `-fsyntax-only`** (review G04, 2026-09-21): gcc's "'noreturn'
+/// function does return" is a middle-end warning and does not run under
+/// `-fsyntax-only`, so a bare `__asm__` falling off a `_Noreturn` function
+/// passed this proof with gcc and failed `gcc -c -O0 -Werror` (measured).
 fn cc_nimmt_an(c: &str, name: &str) {
     let ziel = std::env::temp_dir().join(format!("gabbro-never-{name}.c"));
+    let objekt = std::env::temp_dir().join(format!("gabbro-never-{name}.o"));
     std::fs::write(&ziel, c).expect("emitted C is writable");
     let cc = std::process::Command::new("cc")
-        .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only"])
+        .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-O0", "-c", "-o"])
+        .arg(&objekt)
         .arg(&ziel)
         .output();
+    let _ = std::fs::remove_file(&objekt);
     match cc {
         Ok(r) => assert!(
             r.status.success(),
@@ -95,6 +103,8 @@ fn never_asm_ohne_out_wird_gesenkt() {
     assert!(c.contains("__asm__ __volatile__("), "asm stub:\n{c}");
     assert!(!c.contains("return result;"), "a never-body answers nothing:\n{c}");
     assert!(!c.contains("result;"), "no result slot:\n{c}");
+    // `hlt` resumes after an interrupt: the call must still never continue.
+    assert!(c.contains("for (;;) {"), "a returning asm text must not fall off `_Noreturn`:\n{c}");
     cc_nimmt_an(&c, "ohne-out");
 }
 

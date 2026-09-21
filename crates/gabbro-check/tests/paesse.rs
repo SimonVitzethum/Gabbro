@@ -2511,8 +2511,8 @@ fn eine_nie_antwortende_routine_die_zurueckkehrt() {
 ///
 /// * (a) a halting `asm` body with declared `arch`/`effects`/`costs` and no
 ///   `out { result }` -- the text is unchecked by construction, the divergence
-///   evidence is the `-> never` declaration itself. The emitter still refuses
-///   it (`C001`, `hat_ergebnis` arm -- the handoff lane 235 lowers).
+///   evidence is the `-> never` declaration itself. Lane 235 lowers it
+///   (`tests/never_lowering.rs`).
 /// * (b) a labelled `forever` loop that is never left, with `per_pass bounded`
 ///   and a diverging `on_exceeded` exit, and no total `costs`.
 /// * (c) the same loop without a label (no `leave` can name it).
@@ -2527,7 +2527,7 @@ fn eine_nie_antwortende_routine_die_zurueckkehrt() {
 fn never_ruempfe_werden_angenommen_225() {
     let m = |inhalt: &str| format!("module p::d {{\n{inhalt}\n}}");
     let wach = "extern fn watchdog() -> never effects { diverges } costs <= 1 ops;\n";
-    // (a) the halting `asm` under `-> never` -- checker silent, emitter `C001`.
+    // (a) the halting `asm` under `-> never` -- checker silent (lowered since lane 235).
     faellt_nicht(&m(
         "divergent fn halt() -> never\n effects { diverges }\n costs <= 1 ops\n arch x86_64\n \
          = asm {\n \"hlt\"\n clobbers { memory }\n };",
