@@ -81,16 +81,31 @@ patch shape + surviving test).
 |---|---|---|---|---|
 | 227 | switch lowering (int-match) | `emit.rs` | M | 221 |
 | 228 | match semantics (Lean) | new `CFormMatch`-family file | M | 222 |
-| 229 | subrange traverse checker: effects + early exit (S001) | `wirkungen.rs`, `absenkung.rs` | L | 222 |
+| 229 | subrange traverse checker: effects + early exit (S001) — MERGED `e2184405` as the traverse-OBJECT read rule only (E010/E011, gifts 1077/1078); window bounds and labelled exit NOT built (no AST home) | `wirkungen.rs`, `absenkung.rs` | L | 222 |
 | 231 | divergence lemmas (Lean) | new file | M | 225 design |
-| 232 | hold chunking (K002) | `kosten.rs` | M | 223 |
+| 232 | hold chunking (K002) — MERGED `f8a946cd` as advisory `N421` beside `K002` (gift 1082); no chunking mechanism, the windowed scan needs the window syntax | `kosten.rs` | M | 223 |
 | 233 | syscall/fd model (Lean) | new file, no OS constants | M | 226 |
 | 234 | traverse lowering | SUPERSEDED by 252 below (234's tree predated 222/229; pins archived as `archive/234` on origin) | — | — |
-| 252 | traverse lowering, fresh tree (salvages `archive/234` pins) | `emit.rs` | M | 222, 229 merged |
+| 252 | traverse lowering, fresh tree — MERGED `d8792871` as exit PINS only (`tests/traverse_exit.rs`, doc comment in `emit.rs`); nothing salvaged from `archive/234` (unreachable), no window lowering | `emit.rs` | M | 222, 229 merged |
 
 *Wave-B reserves: 227: N411–415 / 1072–1076; 229: N416–420 / 1077–1081 /
 151; 232: N421–425 / 1082–1086. Lean lanes (228, 231, 233) need no codes —
 witnesses instead of poison probes.*
+
+*Wave-B traverse walls still OPEN after 229/232/252 (review G09, 2026-09-21;
+the three merge messages describe the lane TASKS, not what landed -- the
+lane reports `messung/muse/MUSE-REPORT-229.md`, `-232.md`, `-252.md` are
+the accurate record):*
+
+- *window `traverse … from <start> count <len>`: parses to `P001` and
+  builds no AST node; bounds against effects/`touches`, lowering and the
+  real hold chunking all wait for a syntax lane (252 F1 gives the spec);*
+- *traverse-labelled exit: needs a label slot in the grammar (252 F2);
+  exits to an outer `retry`/`forever` label already lower and are pinned;*
+- *`retry` whose body holds a `traverse` passes the checker and falls at
+  emit with `C001` (per-pass cost not fixed) -- pre-existing (252 F3);*
+- *`E011` holds only the body's direct deeds: a call inside a `traverse`
+  body is never held against `touches` (now booked in `wirkungen.rahmen`).*
 
 **Wave C:**
 
