@@ -800,5 +800,38 @@ gap openly (`PoolSym.lean`: "the model has no notion for it").
 | | |
 |---|---|
 | **why this is not a soundness gap in the goal** | the exporter refuses `accumulates` items outright (`lean_g.rs` LG-table: generates none), so per-core programs never reach premise (a) — same standing as every checked-but-unexported program. Unguarded sharing still refuses (`N304`, gift `1097`). Memory safety holds regardless: the cells are `_Atomic`, so the worst case is lost updates (user-logic merge discipline at quiescent points, per the emitter's own comment), never a data race. |
-| **what stays open** | the locality notion itself (per-thread disjointness under migration without pinning) and, on the checker side, whether `|| core` should narrow the way 208 narrowed vacuous rules. Wave-B is tasked with exactly this: model per-core or restrict the exemption. |
+| **what stays open** | the locality notion itself (per-thread disjointness under migration without pinning) and, on the checker side, whether `|| core` should narrow the way 208 narrowed vacuous rules. No lane is tasked with it yet: wave B of `TODO.md` §-1 (lanes 227–235, 252) has no such row, although this entry and `TODO.md` §4 said so until 2026-09-21 (review G13). The choice stays: model per-core or restrict the exemption. |
 | **what would close it** | a `PoolSicher` disjunct with a disjointness proof over thread identity (or the pinning the runtime does not do today), plus the exporter covering `accumulates` so the bridge `einzelnPoolB ↔ EinzelnPool` ranges over it. |
+
+## O18 — A busy start that runs twice is admitted by the Rust checker and covered by no theorem (known since lane 245, 2026-09-17; recorded 2026-09-21, reviews G06/G13)
+
+Lane 245 narrowed `N304`: `concurrent { arbeiter, arbeiter }` passes when `arbeiter` is
+pool-safe (every carrier it writes is guarded, atomic or per-core), and `N315` refuses only an
+*idle* duplicate (`fusswache2.rs`). The goal theorem does not follow:
+
+- the Lean checker Bool still demands `einzelnB ws` (`ws.Nodup`, `Zielsatz/Akzeptiert.lean`), so
+  `gabbro_ziel` says nothing about such a program;
+- `Spec.lean`'s NOT-CLAIMED list names it ("one thread per busy start ... outside (d)");
+- `PoolSym.lean` proves a separation lemma and a lock-exclusivity bridge, not `RennfreiBis`,
+  deadlock freedom or the lock-invariant legs over a start multiset.
+
+| | |
+|---|---|
+| **why it is recorded and not refused** | Simon's threading MUST (`TODO.md` §0); the pool rule reads race-free informally (every written carrier needs its lock, H007), but that is an argument, not a theorem. O17 is the per-core half of the same gap |
+| **known side effects** | the generated driver (`bau.rs` `treiberregel`, lane 246) de-duplicates `concurrent` names, so an accepted pool starts ONE thread (review G06 F5); `lean_g.rs` `check_starts` has no refusal for a repeated start, so a pool unit may export and then meet `einzelnB = false` in Lean (G06 F3, not measured) |
+| **what would close it** | the `einzeln` → `EinzelnPool` swap in `Akzeptiert` with `RennfreiBis`, `KeinWarteZyklus` and the invariant legs proved over start multisets and a `Spec.lean` diff for (d), reviewed as such; or gating `pool_sicher` in the checker until then |
+
+## O19 — Same-core interrupt preemption is outside `Ziel`, and `Spec.lean` does not name it (recorded 2026-09-21, reviews G02/G12/G13)
+
+An `entry … vector … via idt` dispatch root travels into the model as an ordinary start
+(`lean_g.rs` `check_starts`; `Spec.lean`: "`entry`/`boot` dispatch roots"). Since lane 255 the
+exporter carries `masks irqs` as `D.maskiert`, but nothing in `Zielsatz/` or `Akzeptiert` reads
+it (its only uses there are `fun _ => false` fixtures). In the model the handler is an
+independent thread, so "no deadlock / `KeinWarteZyklus`" holds even when the handler, on the
+core it interrupted, spins on a lock that core's thread holds unmasked.
+
+| | |
+|---|---|
+| **who guards it today** | the Rust checker alone (`H102`, `kontexte.rs`); the emitter lowers no `cli`/`sti` (`beispiele/59` says so in its header) |
+| **why it matters** | `beispiele/59` exports since lane 255, and its exported deadlock freedom reads like interrupt-deadlock freedom; it is not. a model of `gift/460` (refused by `H102`) would differ from `Korpus59.lean` only in `kMaskiert`, and would get the same `Akzeptiert = true` and the same `korpus59_ziel` (review G02 F1) |
+| **what would close it** | either a NOT-CLAIMED line in the `Spec.lean` header (dispatch roots are modelled as independent starts; same-core preemption and `D.maskiert` are not read by `Ziel`; `H102` is the only guard), or a `MaskenOrdnung` leg carried into `Laufzeit`. Both are `Spec.lean` diffs for Simon |

@@ -77,9 +77,12 @@ README §6 says exactly this; keep it that way.
   | 5 | G1: einpassen did not decode sums, floats and fn pointers |
   | 6 | W1: answers at empty types, closed by component 9 `antwortenB` and Rust `N310`–`N314` |
 - **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list:
-  termination, starvation freedom, weak memory beyond DRF-SC, linking of separately compiled
-  units, probabilistic statements, and dynamic unbounded structures. Every extension of the goal
-  is reviewed as a diff of `Spec.lean`.
+  termination and waiting bounds, stack depth, the C and the hardware, weak memory beyond
+  DRF-SC, unguarded publish/await payloads, floats beyond the kernel IEEE model, starvation
+  freedom, invariants at entry, one start on several threads, and linking of separately compiled
+  units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
+  `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
+  `Spec.lean`.
 
 ## 3. Simon's standing instructions
 
@@ -107,7 +110,7 @@ README §6 says exactly this; keep it that way.
 - **Safety is never traded for features** (Simon, 2026-09-17). No lane weakens a guarantee —
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
-  proved blockage). Reviewers reject bypasses, no matter how green the build.
+  recorded blockage of 07 and 125). Reviewers reject bypasses, no matter how green the build.
 - **Floats are in scope** (IEEE model done). Probabilistic statements and dynamic unbounded data
   structures are OUT of scope for now.
 - **Tag milestones** at the push that reaches them.
@@ -268,11 +271,40 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N391** (blocks N391–425 assigned in TODO §-1; N315–N323 consumed since) |
-| Gift (poison-probe) numbers | **1052** (blocks 1052–1086 assigned in TODO §-1) |
-| Example numbers | **147** (pool 147–155 for TODO §-1, taken in order) |
-| Lane numbers | **221** workers (221–248 for TODO §-1, 230 unused; spares 209–210), **321** reviewers |
+| Diagnostic codes | **N456** (highest issued: N455; also `C185`, O-1) |
+| Gift (poison-probe) numbers | **1128** (highest file: `beispiele/gift/1127`) |
+| Example numbers | **157** (highest file: `beispiele/156`) |
+| Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
 
+*Ledger re-measured 2026-09-21 (review G13) by grepping `crates/` for issued `N` codes and
+listing `beispiele/` and `beispiele/gift/`. The row above was stale from 2026-09-17 to that
+day: it still said N391 / 1052 / 147 / 221 while N446–N455 and gifts up to 1127 were in use.
+What was reserved in TODO §-1/§0 and what was actually taken:*
+
+| Lane | Reserved N / gift / example | Taken |
+|---|---|---|
+| 221 | N391–395 / 1052–1056 / — | gifts 1052, 1053; no code |
+| 223 | N396–400 / 1057–1061 / — | gifts 1057, 1058; no code |
+| 225 | N401–405 / 1062–1066 / — | gifts 1062–1066; no code |
+| 226 | N406–410 / 1067–1071 / 149–150 | gifts 1067, 1068; examples 149, 150; no code |
+| 227 | N411–415 / 1072–1076 / — | gifts 1072–1076; no code |
+| 229 | N416–420 / 1077–1081 / 151 | gifts 1077, 1078; no code; example 151 went to lane 237 |
+| 232 | N421–425 / 1082–1086 / — | N421, gift 1082 |
+| 236, 237 | — / — / 147–148, 151–152 | examples 147, 148, 151, 152 |
+| 240 | N426–430 / 1087–1091 / — | gift 1087; **N426 and gift 1088 were taken by lane 257** from this block |
+| 242 | N431–435 / 1092–1096 / 153–154 | examples 153, 154; no code, no gift |
+| 245 | N436–440 / 1097–1101 / — | gifts 1097, 1098; no code |
+| 246 | N441–445 / 1102–1106 / — | nothing |
+| O-1 (Opus) | **not reserved** | N446–N450, `C185`, gifts 1107–1112, examples 155, 156 |
+| 249 | **not reserved** (TODO row says "—") | N451, N452, gifts 1113–1117 |
+| 256 | **not reserved** | N453–N455 (the spare of the block N451–455 that lane 249 chose itself), gifts 1118–1127 |
+
+- Unused parts of a reserved block stay with the follow-up work of the same wall (for example
+  N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
+  they are never handed to another topic. Next free is always above the highest number in use,
+  so a stale reservation can never collide with a new one.
+- A lane that takes numbers without a reservation (O-1, 249, 256 above) is booked here by the
+  merger in the same merge.
 - The test `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions between lanes.
 - **Every new refusal code comes with its sentence** in `saetze.rs` in the same commit
   (`pruefe-saetze.py`), and with a poison probe.
