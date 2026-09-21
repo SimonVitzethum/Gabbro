@@ -35,8 +35,9 @@ lanes (workers 221–248, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
 both touch the model core; PARKED 2026-09-17, no Opus capacity — wave A
 runs without them). Review loop (`bin/review-wache.sh`, max 3
 rounds, builds re-run by the reviewer) covers workers 221–248 with
-reviewers from 321; the dispatcher worker list needs the extension
-(orchestrator step). Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
+reviewers from 321; the dispatcher worker list was extended on
+2026-09-19. Lanes 249–258 were added later (waves C–E and §0); the
+number ledger is `AGENTS.md` §7. Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
 in wave B.*
 
 **Binding constraint (Simon): no language feature hard-depends on an OS.**
@@ -52,7 +53,7 @@ the tree). A lane that smuggles an OS constant into `crates/` or
 guarantee — memory safety, race freedom, contracts, costs, lock
 discipline — to make a wall go green. A wall that only yields by
 weakening is recorded as a finding (like 208's vacuity pins or 203's
-proved blockage), never bypassed. A bypass fails review, no matter how
+recorded blockage), never bypassed. A bypass fails review, no matter how
 green its build is.
 
 **Decision gate RESOLVED 2026-09-17 (Simon): LIFT.** Criterion was the
@@ -259,12 +260,22 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   one Simon named: it blocks the library and it blocked the firewall's own wiring.**
 - [ ] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
   one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
-  than the lock was**, and it needs its own lane.
+  than the lock was**, and it needs its own lane. *Status 2026-09-21: lane 245 admits a
+  pool-safe busy duplicate in the Rust checker; the goal theorem does not cover it, and the
+  generated driver starts it once (`OFFEN.md` O18, §4 below).*
 - [ ] **No thread start at all** — every shape refused (`P017`, measured 2026-09-15). §0 owns it.
+  *Status 2026-09-21: lane 246's generated driver starts the declared `concurrent` roots (one
+  thread per name); lane 253's `start { … };` parses and is refused at emit (`C001`) and export
+  (`LG004`).*
 - [ ] **No early exit from a `traverse`** (`S001`, no label) — "find the first, then continue"
-  is unwritable.
+  is unwritable. *Status 2026-09-21: a `leave`/`next` naming an enclosing `retry`/`forever`
+  label lowers and is pinned (lane 252, `tests/traverse_exit.rs`); the traverse itself still
+  carries no label.*
 - [ ] **`match` has no integer arms** and nesting is capped at 32 (`P038`), so a 256-way
-  dispatch becomes a flat chain of comparisons, measured at 1797 ops.
+  dispatch becomes a flat chain of comparisons, measured at 1797 ops. *Status 2026-09-21:
+  integer arms parse (lane 222) and lower to a `switch` without `default` (lane 227); no
+  checker pass demands exhaustiveness yet, and the flow passes read the match as closed (review
+  G07 F1, fix on its branch, unbuilt).*
 - [ ] **`accumulates` cannot be `pub`** (`P041` against `N038`).
 - [ ] **A `bool` static checks clean and never becomes C** (`C001`).
 - [ ] **`transition` and `advances` stand in `SYNTAX.md` §8 with no parser arm** — one of them
@@ -273,7 +284,9 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
 - [ ] **The emitter has no `atomic_fetch_add`**, and the measured reason is real: a checked
   `±1` cannot answer in its own type, and `+%` would wrap at a different width than C's
   fetch-add. Simon decides whether the binder-range refusal is lifted (`OPUS-BERICHT-FETCHADD.md`
-  §2.3 has the patch shape and the test that must survive it).
+  §2.3 has the patch shape and the test that must survive it). *Status 2026-09-21: decided LIFT
+  (§-1); lane 221 lowers `+%`/`-%` to `atomic_fetch_add/sub` when the declared range is the full
+  unsigned width.*
 
 # 0d. The claims, as they stand — corrected against today's measurements  ⟨Q⟩
 
@@ -439,8 +452,10 @@ serialisability + footprint soundness become mandatory). Price: ~6–10
 lanes + 2 Opus tracks + 1–2 goal-theorem review rounds, roughly 1–3
 months review-bound — and it invalidates stage-(b) work in flight.
 Gate: starts only after stage (b) is closed generically; until then
-DRF-SC is the honest contract (no races ⇒ SC covers every real
-firewall/driver case).
+DRF-SC is the honest contract for the non-atomic accesses (no races ⇒ SC
+for them). It does not cover relaxed atomics (the per-core accumulators and
+the ticket lock's draw use relaxed orderings, and A10 orders them wholesale)
+nor device or DMA memory.
 
 # 3. The goal statement — follow-ups  ⟨D⟩
 
@@ -493,11 +508,17 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   matching decidable from the `_Static_assert` pins, the linking theorem
   (§2), and what the goal says about two units. Opus-sized plus a review
   round.
-- [ ] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17).** The
-  checker accepts pools since lane 245; the model covers them only
-  additively and per-core locality is unproved. Either prove per-thread
-  disjointness or restrict the exemption (wave-B tasked with exactly
-  this). Small to medium, gated by nothing.
+- [ ] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
+  checker accepts pools since lane 245; the goal theorem does not cover
+  them at all (`Akzeptiert` still demands `ws.Nodup`, and (d) excludes a
+  busy start on several threads). `PoolSym.lean` adds definitions and a
+  separation lemma, not the `Ziel` legs, and per-core locality is
+  unproved. Either prove `RennfreiBis` and the other legs over start
+  multisets and swap `einzeln` for `EinzelnPool` (a `Spec.lean` diff), or
+  gate the exemption until then. No lane is tasked with it (wave B has no
+  such row, contrary to what this item said until 2026-09-21). Medium to
+  large, not small: review G06 F1/F4. The generated driver's one-thread
+  pool (O18) belongs to the same item.
 - [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
   full proof: a `costs`-like static budget over call depth with the
   2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays
