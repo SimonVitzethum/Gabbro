@@ -26,8 +26,11 @@
 -- written down instead of hidden: 151 proves the bound ONCE (in the checker,
 -- over `i >> 2`'s range, held by M103) and emits plain accesses at 14/24 ops;
 -- 152 proves nothing per access in the checker beyond the declaration and pays
--- a bound check per access at 2/3 ops of Gabbro cost but ~4x the emitted C.
--- Where a pool is read on every packet, that is the number that decides.
+-- a bound check per access at 2/3 ops of Gabbro cost and x3.16 the emitted C
+-- at the access site. The character count compares the slot access alone
+-- (151's shift and mask sit beside it), and the object text runs the OTHER
+-- way (202 vs 246 bytes): what the byte side really pays is a compare and a
+-- trap branch per access, not code size.
 module beispiel152 {
 
 pub const POOLBYTES : u32 = 4096;

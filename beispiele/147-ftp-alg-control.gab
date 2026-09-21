@@ -5,14 +5,21 @@
 -- Everything about this file is a BOUND, and every bound is checked:
 --
 --   * the table has `count 1024` -- no growth, no eviction: VOLL refuses;
---   * the hash is in-program (FNV-1a over the 5-tuple, `^` + `*%`, five
---     updates, constant cost) -- there is no L3 library hash yet and no
---     `extern` shortcut for it (extern is the OS border; this file has none);
+--   * the hash is in-program (an FNV-1a-style xor-multiply over the five
+--     tuple WORDS, `^` + `*%`, five updates, constant cost) -- there is no L3
+--     library hash yet and no `extern` shortcut for it (extern is the OS
+--     border; this file has none). It is WORD-wise, not the byte-wise FNV-1a
+--     of the spec: since `^` and `*%` only carry upward, `h % 1024` depends on
+--     the low 10 bits of each word alone (tuples differing only above bit 9
+--     share a bucket). Fail closed -- a collision answers VOLL/MISS, never a
+--     wrong ACCEPT -- but a fold of the high half is the known remedy;
 --   * the index arithmetic is subtraction-free (`%`, `*`, guarded `+`);
 --   * expiry is a windowed tick (`tick` sweeps 64 of 1024 slots per call,
 --     round-robin over 16 rounds) -- never a full scan under the held lock;
---   * deadlines are packet ticks, not wall clock: expiry comes LATE (up to
---     15 ticks after the age limit on an unswept window), never early --
+--   * deadlines are packet ticks, not wall clock. `alter` counts SWEEP
+--     VISITS (one per 16 ticks), so the limit 63 is about 1008 ticks: an
+--     entry lives 1007..1023 `tick()` calls. Expiry comes LATE (up to 15
+--     ticks after the age limit on an unswept window), never early --
 --     fail closed both ways;
 --   * the command buffer holds 512 bytes; a longer input is REFUSED
 --     (`ZU_LANG`), not truncated.
@@ -72,7 +79,8 @@ static mut haben : u32 in 0 .. PUFFER = 0;
 
 lock FW protects { regeln, befehl, runde, haben } rank 0 held <= 16384 ops;
 
--- FNV-1a over the five control words: five xor-multiply steps, no branch,
+-- Word-wise FNV-1a-style hash over the five control words (see the header
+-- for what that means for `% 1024`): five xor-multiply steps, no branch,
 -- no memory. Cost is constant by construction. The SHAPE (named steps, not
 -- one expression) is forced from both sides at once:
 --
