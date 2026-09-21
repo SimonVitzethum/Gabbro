@@ -809,6 +809,49 @@ fn traverse_pointer_domain_resolves_to_its_table() {
     );
 }
 
+/// **Fix lane F7 (review G03 F4) -- a parameter spelled like a table is
+/// refused (`LG005`)**, not exported over the table. Measured before the
+/// fix: `fn f(T : ptr<normal, rw> U) { traverse i over slots of T … }` is
+/// checker-clean and exported `.traverse GTab.T` over the 4-slot `T`, while
+/// the source walks the 8-slot `U` the parameter points at.
+#[test]
+fn refuses_parameter_covering_a_table() {
+    let q = "module test::leang_cover {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 8 { slot { v : u32, } }\n\
+        impl fn f(T : ptr<normal, rw> U)\n\
+        effects { writes T.slots } costs <= 256 ops\n\
+        {\n    traverse i over slots of T by unvisited\n\
+        touches writes T.slots\n\
+        {\n        T.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let w = export("leang_cover", &tree(q)).expect_err("a covering parameter must refuse");
+    assert_eq!(w.code, "LG005", "{w}");
+    assert!(w.message.contains("binds `T`"), "{w}");
+}
+
+/// **Same rule at a `let`** (a local binding covering a table) -- and the
+/// positive side: the same program with the parameter renamed exports,
+/// over the table the pointer names.
+#[test]
+fn refuses_let_covering_a_table_and_exports_the_renamed_twin() {
+    let w = refuse_of(&einheit(
+        "impl fn f() -> u32 effects { pure } costs <= 8 ops\n{\n    let T = 3;\n    return T;\n}\n",
+    ));
+    assert_eq!(w.code, "LG005", "{w}");
+    let q = "module test::leang_cover2 {\n\
+        table T count 4 { slot { v : u32, } }\n\
+        table U count 8 { slot { v : u32, } }\n\
+        impl fn f(w : ptr<normal, rw> U)\n\
+        effects { writes w.slots } costs <= 256 ops\n\
+        {\n    traverse i over slots of w by unvisited\n\
+        touches writes w.slots\n\
+        {\n        w.slots[i].v = 0;\n}\n}\n\
+        }\n";
+    let text = export("leang_cover2", &tree(q)).expect("the renamed twin must export");
+    assert!(text.contains("(.traverse GTab.U"), "the domain is U:\n{text}");
+}
+
 /// **LG006**: `retry` and `forever` have no form in this fragment (the
 /// spelling is the corpus shape of `beispiele/66`).
 #[test]

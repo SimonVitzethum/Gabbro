@@ -3426,7 +3426,8 @@ pub const WIRKUNGEN: &[Satz] = &[
         aussage: "The body writes no non-local place that no write effect covers (`E005`), \
                   reads no KNOWN world state that no `reads`/`publishes` effect covers \
                   (`E010`), and a `traverse` with `touches` touches no more than `touches` \
-                  names (`E011`).",
+                  names (`E011`) -- its direct deeds and, since fix lane F7, the effects \
+                  of every callee it calls.",
         vorbehalt: "**The two halves are asymmetric and no comment says so:** writing is \
                     strict over all non-local places, reading is checked for GLOBALS only -- \
                     parameters, constants and anything that is not \
@@ -3441,18 +3442,26 @@ pub const WIRKUNGEN: &[Satz] = &[
                     (`E011`).~~ `E011` applies only where `touches` is written, and a `traverse` \
                     over a PARAMETER is not held against it. The CARRIER walk itself stays \
                     out of `touches` -- the function effects carry it (`beispiele/09`, \
-                    `beispiele/57` pin the split). `E011` holds only the body's DIRECT \
+                    `beispiele/57` pin the split). ~~`E011` holds only the body's DIRECT \
                     deeds: a CALL inside a `traverse` body is not held against \
-                    `touches` at all -- the callee's effects reach the function-level \
-                    call check, never the loop's narrower promise (review G09, \
-                    2026-09-21). **And `retry`/`forever` carry \
+                    `touches` at all (review G09, 2026-09-21).~~ **Closed by fix lane F7 \
+                    (2026-09-22):** every call in the body and in the object contributes \
+                    its callee's transitive hull, carried across the call boundary as for \
+                    `E008`, and is held against `touches` under the same filter as a \
+                    direct deed; where the hull is a LOWER bound (a cycle, a callee \
+                    without `effects`, an indirect call without a contract) what is in it \
+                    still refutes and the rest is `E009`'s. `E011` also runs under a \
+                    DERIVED clause since F7 (it hung off the written-clause arm alone). \
+                    **And `retry`/`forever` carry \
                     their own `effects` clauses that this pass NEVER checks against the \
                     body** -- only `traverse.touches` has a reader.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `E005`, probes on `E010` and `E011`, \
-                      plus `1077` (`E011`, traverse object missing from `touches`) and \
-                      `1078` (`E010`, traverse object missing from the function effects); \
-                      silence rows in `crates/gabbro-check/tests/traverse_object.rs`.",
+                      plus `1077` (`E011`, traverse object missing from `touches`), \
+                      `1078` (`E010`, traverse object missing from the function effects), \
+                      `1169` (`E011`, a CALL in the body writing a global `touches` does \
+                      not name) and `1170` (`E011` under a derived clause); silence and \
+                      bite rows in `crates/gabbro-check/tests/traverse_object.rs`.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs; SPRACHE.md §7",
     },
     Satz {

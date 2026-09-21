@@ -1166,6 +1166,103 @@ fn abgeleitete_nach_kurz(
     aus
 }
 
+/// **A parameter or local binding spelled like a table, global or arena is refused
+/// by name (`LG005`)** -- review G03 F4, fix lane F7 (2026-09-22).
+///
+/// The surface lets a binding cover a declared name (`namen.rs`
+/// `rumpf_geltung`; `domaene.rs` and `kosten.rs` ask the local first). This
+/// exporter resolves carriers FLAT, table and global names first, at five
+/// sites (`write_table`, `slot_access`, `tr_traverse`, `foot_carrier`, the
+/// global arms) -- measured: `fn f(T : ptr<normal, rw> U) { traverse i over
+/// slots of T … }` exported `.traverse GTab.T` over the 4-slot `T` while the
+/// source walks the 8-slot `U`, checker-clean. Rather than teach five sites a
+/// scope, the export refuses the covering outright: fail-closed, and no
+/// corpus program uses it (measured over `beispiele/`, fix-lane report F7).
+fn carrier_not_covered(d: &FnDecl, model: &Model) -> Result<(), Refusal> {
+    let carrier = |n: &str| {
+        model.tables.iter().any(|t| t.name == n)
+            || model.globs.iter().any(|g| g.name == n)
+            || model.arenas.iter().any(|a| a.name == n)
+    };
+    let refuse_cover = |n: &str| {
+        refuse(
+            "LG005",
+            format!(
+                "{} binds `{n}`, the name of a declared table, global or arena -- the export resolves \
+                 carriers by name and would read the declaration, not the binding",
+                d.name.text
+            ),
+        )
+    };
+    for p in &d.parameter {
+        if carrier(&p.name.text) {
+            return Err(refuse_cover(&p.name.text));
+        }
+    }
+    fn stmt_binders(s: &Stmt, aus: &mut Vec<String>) {
+        // Exhaustive over `StmtArt`, no `_` arm: a new binding form must be
+        // named here or the build fails.
+        match &s.art {
+            StmtArt::Let(l) => aus.push(l.name.text.clone()),
+            StmtArt::LetSonst(l) => {
+                aus.push(l.name.text.clone());
+                aus.push(l.fehlername.text.clone());
+            }
+            StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
+            StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
+            StmtArt::Exchange(e) => {
+                aus.push(e.name.text.clone());
+                if let XForm::Update { binder, .. } = &e.form {
+                    aus.push(binder.text.clone());
+                }
+            }
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(t) = sch.as_ref() {
+                    aus.push(t.variable.text.clone());
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    if let Some(b) = &z.binder {
+                        aus.push(b.text.clone());
+                    }
+                }
+            }
+            StmtArt::Zuweisung(_)
+            | StmtArt::Wenn(_)
+            | StmtArt::Bricht(_)
+            | StmtArt::Narrow(_)
+            | StmtArt::Sperrt(_)
+            | StmtArt::Observiert(_)
+            | StmtArt::Leave(_)
+            | StmtArt::Next(_)
+            | StmtArt::Publish(_)
+            | StmtArt::Return(_)
+            | StmtArt::Ruf(_)
+            | StmtArt::LibraryCall(_)
+            | StmtArt::ResetArena(_)
+            | StmtArt::Grow(_)
+            | StmtArt::Child(_)
+            | StmtArt::Start(_) => {}
+        }
+        for k in crate::unterbloecke(s) {
+            for i in &k.anweisungen {
+                stmt_binders(i, aus);
+            }
+        }
+    }
+    if let FnRumpf::Block(b) = &d.rumpf {
+        let mut namen = Vec::new();
+        for s in &b.anweisungen {
+            stmt_binders(s, &mut namen);
+        }
+        if let Some(n) = namen.iter().find(|n| carrier(n)) {
+            return Err(refuse_cover(n));
+        }
+    }
+    Ok(())
+}
+
 fn check_fn(
     f: &FnModel,
     model: &Model,
@@ -1196,6 +1293,7 @@ fn check_fn(
             refuse("LG005", format!("function {} names unknown reason {}", f.name, r.text))
         })?,
     };
+    carrier_not_covered(d, model)?;
     let mut params = Vec::new();
     for p in &d.parameter {
         params.push((p.name.text.clone(), param_ty(&p.typ, model, scope, &f.name)?));
@@ -3020,8 +3118,9 @@ fn tr_cmp(op: &BinOp, l: &Expr, r: &Expr, ctx: &Ctx, model: &Model, scope: &Scop
 
 /// A lock invariant as a `Speicher gD → Bool` body (lane 156): the `inv`
 /// arm of the `SperrInv` family `gS`. Only the checker-pure fragment over
-/// TABLE slots travels -- globals have no G form at all (`Glob := Empty`),
-/// a pointer basis names no parameter at lock scope, and indices are
+/// TABLE slots travels -- a global in a lock invariant is refused here (the
+/// export carries globals since lane 198, but this arm reads slots only; the
+/// old note "`Glob := Empty`" was stale, fix lane F7), a pointer basis names no parameter at lock scope, and indices are
 /// literals (a lock invariant binds no index). Anything else is refused here
 /// with the same codes the contract channel uses (`LG003`/`LG005`).
 fn tr_sinv_pred(p: &Pred, model: &Model, scope: &Scope, lock: &str) -> Result<String, Refusal> {

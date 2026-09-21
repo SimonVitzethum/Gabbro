@@ -80,3 +80,74 @@ fn gegenstand_ohne_touches_faellt_mit_e011() {
     );
     assert_eq!(fehler(&q), vec!["E011".to_string()]);
 }
+
+// ---------------------------------------------------------------------------------------
+// Fix lane F7 (review G09 F2): the CALLS in a `traverse` body stand against `touches`.
+// The poison probes are `beispiele/gift/1169` (a call writing a global) and `/1170` (a
+// derived `effects` clause, where `E011` never ran before).
+// ---------------------------------------------------------------------------------------
+
+const KOPF_RUF: &str = "module snippet {\nconst N : u32 = 8;\ntable W count N { slot { a : u32 in 0 .. 10, } }\nstatic mut zaehler : u32 = 0;\n\
+    impl fn schreibe_zaehler() effects { writes zaehler } costs <= 4 ops { zaehler = 1; }\n\
+    impl fn lies_zaehler() -> u32 effects { reads zaehler } costs <= 4 ops { return zaehler; }\n";
+
+/// Positive probe: the callee's write named in `touches` -- silence.
+#[test]
+fn f7_ruf_mit_touches_ist_still() {
+    let q = format!(
+        "{KOPF_RUF}impl fn f() effects {{ reads W, writes zaehler }} costs <= 200 ops {{\n\
+         traverse i over slots of W by unvisited touches reads W, writes zaehler \
+         {{ schreibe_zaehler(); }}\nreturn;\n}}\n}}"
+    );
+    assert!(fehler(&q).is_empty(), "a call named in touches refused: {:?}", fehler(&q));
+}
+
+/// The bite: the callee writes a global `touches` does not name -- `E011` and nothing else.
+#[test]
+fn f7_ruf_ohne_touches_faellt_mit_e011() {
+    let q = format!(
+        "{KOPF_RUF}impl fn f() effects {{ reads W, writes zaehler }} costs <= 200 ops {{\n\
+         traverse i over slots of W by unvisited touches reads W \
+         {{ schreibe_zaehler(); }}\nreturn;\n}}\n}}"
+    );
+    assert_eq!(fehler(&q), vec!["E011".to_string()], "{:?}", fehler(&q));
+}
+
+/// A READ through a call needs `reads` (or `writes`) in `touches`, like a direct read.
+#[test]
+fn f7_lesender_ruf_braucht_reads() {
+    let ohne = format!(
+        "{KOPF_RUF}impl fn f() effects {{ reads W, reads zaehler }} costs <= 200 ops {{\n\
+         traverse i over slots of W by unvisited touches reads W \
+         {{ let x = lies_zaehler(); }}\nreturn;\n}}\n}}"
+    );
+    assert_eq!(fehler(&ohne), vec!["E011".to_string()], "{:?}", fehler(&ohne));
+    let mit = ohne.replace("touches reads W ", "touches reads W, reads zaehler ");
+    assert!(fehler(&mit).is_empty(), "a read named in touches refused: {:?}", fehler(&mit));
+}
+
+/// A call inside the traverse OBJECT is held too.
+#[test]
+fn f7_ruf_im_gegenstand_faellt_mit_e011() {
+    let q = "module snippet {\nconst N : u32 = 8;\n\
+        table W count N { slot { a : u32 in 0 .. 10, parent : u32 in 0 .. 8, } }\n\
+        static mut zaehler : u32 = 0;\n\
+        impl fn start() -> u32 in 0 .. 8 effects { writes zaehler } costs <= 4 ops { zaehler = 1; return 3; }\n\
+        impl fn f() effects { reads W, writes zaehler } costs <= 200 ops {\n\
+        traverse v of start() over ancestors of W by unvisited touches reads W \
+        { let x : u32 = 1; }\nreturn;\n}\n}";
+    assert!(fehler(q).contains(&"E011".to_string()), "{:?}", fehler(q));
+}
+
+/// A derived clause (no `effects` line): `E011` holds the direct deeds there too.
+#[test]
+fn f7_abgeleitete_wirkungen_halten_touches() {
+    let q = format!(
+        "{KOPF_RUF}impl fn f() costs <= 200 ops {{\n\
+         traverse i over slots of W by unvisited touches reads W \
+         {{ zaehler = 1; }}\nreturn;\n}}\n}}"
+    );
+    assert!(fehler(&q).contains(&"E011".to_string()), "{:?}", fehler(&q));
+    let mit = q.replace("touches reads W ", "touches reads W, writes zaehler ");
+    assert!(!fehler(&mit).contains(&"E011".to_string()), "{:?}", fehler(&mit));
+}

@@ -20,7 +20,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // ERSTE Ebene: `effects { pure }` galt fuer eine Funktion, die eine schreibende rief.
     // Damit war „nur die eingetragene Logik ist aktiv" eine halbe Aussage, und die
     // Klempnerei-Klasse *Rahmen* hing genau daran.
-    let g = crate::aufrufgraph::erhebe(baum);
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     // **Eine Konstante ist kein Weltzustand.** `const GRENZE: u32 = 1000000;` steht zur
     // Uebersetzungszeit fest; sie zu lesen ist kein Zugriff, sondern eine Zahl. Ohne diese
     // Ausnahme waere `pure` praktisch unerreichbar -- die erste Fassung von `E010` meldete
@@ -59,7 +60,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let ab = crate::ableitung::leite_ab(baum, true);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Funktion(f) => {
-            funktion(f, modul, &g, &konstanten, &weltnamen, &schreiber, &ab, absagen)
+            funktion(f, modul, &g, &u, &konstanten, &weltnamen, &schreiber, &ab, absagen)
         }
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
@@ -509,24 +510,34 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
 /// **Gedeckt wird `writes` und `reads` gegen die genannten Orte**, mit derselben `deckt`
 /// -Funktion wie `E005`/`E010`. *Konstanten und lokale Namen zaehlen nicht* -- dieselbe
 /// Ausnahme, aus demselben Grund.
+/// What the callee half of `E011` needs: the function, the call graph, the environment
+/// and the module the calls resolve from (fix lane F7).
+struct RufKontext<'a> {
+    f: &'a FnDecl,
+    g: &'a crate::aufrufgraph::Graph,
+    u: &'a crate::umgebung::Umgebung,
+    modul: &'a str,
+}
+
 fn traverse_gegen_touches(
     b: &Block,
     fname: &str,
     konstanten: &[String],
     weltnamen: &[String],
+    rk: Option<&RufKontext>,
     absagen: &mut Absagen,
 ) {
     for s in &b.anweisungen {
         if let StmtArt::Schleife(sch) = &s.art {
             if let Schleife::Traverse(t) = sch.as_ref() {
                 if let Some(w) = &t.touches {
-                    pruefe_touches(t, w, fname, konstanten, weltnamen, absagen);
+                    pruefe_touches(t, w, fname, konstanten, weltnamen, rk, absagen);
                 }
             }
         }
         let unter = crate::unterbloecke(s);
         for u in unter {
-            traverse_gegen_touches(u, fname, konstanten, weltnamen, absagen);
+            traverse_gegen_touches(u, fname, konstanten, weltnamen, rk, absagen);
         }
     }
 }
@@ -537,6 +548,7 @@ fn pruefe_touches(
     fname: &str,
     konstanten: &[String],
     weltnamen: &[String],
+    rk: Option<&RufKontext>,
     absagen: &mut Absagen,
 ) {
     let mut taten = Taten::default();
@@ -612,6 +624,57 @@ fn pruefe_touches(
             .mit_notiz(
                 "`touches` is the NARROWER, local promise beside `effects` -- whoever \
                     reads it counts on less contact than the body has",
+            )
+            .mit_fix(crate::fix::append_item(w.span.bis, entry)),
+        );
+    }
+    // **Fix lane F7 (review G09 F2): the CALLS in the body and in the object.** Until here
+    // `E011` held the direct deeds only -- `traverse i over slots of w touches reads w.slots
+    // { schreibe_global(); }` passed while the loop wrote a global. Each call site now
+    // contributes its callee's transitive hull, carried across the call boundary by the same
+    // `ersetze` the function-level check (`E008`) uses, and every place of it is held
+    // against `touches` under the same filter as a direct deed (known world state only).
+    // The hull may be a lower bound (a cycle, a callee without `effects`): what IS in it
+    // still refutes; the incompleteness is `E009`'s at the function, not repeated here.
+    let Some(rk) = rk else {
+        return;
+    };
+    let extra: Vec<&Expr> = t.gegenstand.iter().collect();
+    let (rufwirkungen, _offen) = rk.g.rufwirkungen_im_block(rk.f, &t.rumpf, &extra, rk.u, rk.modul);
+    for (gerufen, wirkung) in &rufwirkungen {
+        let (verb, ort) = trenne(wirkung);
+        let schreibend = match verb {
+            "writes" | "consumes" | "publishes" | "allocs" => true,
+            "reads" => false,
+            // `locks`/`masks`/`pure`/`diverges`: no place a `touches` line names.
+            _ => continue,
+        };
+        let ort = ort.to_string();
+        if !bekannt(&ort) || gemeldet.contains(&ort) {
+            continue;
+        }
+        let gedeckt = if schreibend {
+            schreibt.iter().any(|e| deckt(e, &ort))
+        } else {
+            liest.iter().any(|e| deckt(e, &ort))
+        };
+        if gedeckt {
+            continue;
+        }
+        gemeldet.push(ort.clone());
+        let entry = if schreibend { format!("writes {ort}") } else { format!("reads {ort}") };
+        absagen.schiebe(
+            Absage::fehler(
+                "E011",
+                w.span,
+                format!(
+                    "`{ort}` is touched by the call to `{gerufen}` inside this `traverse` in \
+                     `{fname}` (`{wirkung}`), but stands in no `touches` effect"
+                ),
+            )
+            .mit_notiz(
+                "a callee's effects are the loop's effects: `touches` promises what the \
+                    whole iteration touches, calls included",
             )
             .mit_fix(crate::fix::append_item(w.span.bis, entry)),
         );
@@ -773,7 +836,8 @@ fn rumpf_gegen_wirkungen(
 ) {
     let mut taten = Taten::default();
     sammle_taten(b, &mut taten);
-    traverse_gegen_touches(b, &f.name.text, konstanten, weltnamen, absagen);
+    // `E011` (the `touches` hold) runs from `funktion` since fix lane F7: it needs the call
+    // graph for the callee half, and it runs for a DERIVED clause too.
 
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let schreibrechte: Vec<String> = w
@@ -1014,6 +1078,7 @@ fn funktion(
     f: &FnDecl,
     modul: &str,
     g: &crate::aufrufgraph::Graph,
+    u: &crate::umgebung::Umgebung,
     konstanten: &[String],
     weltnamen: &[String],
     schreiber: &std::collections::BTreeSet<String>,
@@ -1031,8 +1096,15 @@ fn funktion(
             // and so does the `spec fn` exemption: a spec carries no runtime
             // effect, so there is no deed to derive.
             if f.klasse != Some(FnKlasse::Spec) {
-                if matches!(f.rumpf, FnRumpf::Block(_)) {
+                if let FnRumpf::Block(b) = &f.rumpf {
                     omissionspruefung(f, modul, g, ab, absagen);
+                    // **Fix lane F7: `touches` binds under a derived clause too.** The
+                    // `E011` walk hung off the written-clause arm alone, so a `traverse …
+                    // touches reads X { Y = 1; }` in a function without `effects` was never
+                    // held -- the narrower promise stood unread exactly where the wider one
+                    // was left to the compiler.
+                    let rk = RufKontext { f, g, u, modul };
+                    traverse_gegen_touches(b, &f.name.text, konstanten, weltnamen, Some(&rk), absagen);
                 } else {
                     absagen.schiebe(
                         Absage::fehler(
@@ -1068,6 +1140,8 @@ fn funktion(
             vertrag_gegen_wirkungen(f, Some(w), konstanten, weltnamen, schreiber, &[], absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
+                let rk = RufKontext { f, g, u, modul };
+                traverse_gegen_touches(b, &f.name.text, konstanten, weltnamen, Some(&rk), absagen);
                 aufrufwirkungen(f, modul, w, g, weltnamen, absagen);
             }
         }

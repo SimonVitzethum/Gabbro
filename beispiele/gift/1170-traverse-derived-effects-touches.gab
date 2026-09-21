@@ -1,0 +1,26 @@
+-- erwartet: E011
+-- **Fix lane F7 -- `touches` binds under a DERIVED `effects` clause too.**
+--
+-- `f` omits its `effects` line (lane 191: the clause is derived from the body). The
+-- `E011` walk hung off the written-clause arm alone, so a `traverse` in such a function
+-- was never held against its `touches`: the direct write to `zaehler` below passed,
+-- although `touches` names only the walked table. The narrower promise stood unread
+-- exactly where the wider one was left to the compiler.
+module gift::traverse_derived_effects_touches {
+
+const N : u32 = 8;
+table W count N { slot { a : u32 in 0 .. 10, } }
+static mut zaehler : u32 = 0;
+
+impl fn f()
+    costs <= 200 ops
+{
+    traverse i over slots of W by unvisited
+        touches reads W.slots
+    {
+        zaehler = 1;
+    }
+    return;
+}
+
+}

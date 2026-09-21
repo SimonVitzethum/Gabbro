@@ -72,7 +72,7 @@ patch shape + surviving test).
 | 224 | m1 bound shapes (`k-1` class, first shapes) | `m1.rs` | M | none (existing M101) / — / — |
 | 225 | never-bodies accept (asm/forever) | `namen.rs` (`asm_never` region) | M | N401–405 / 1062–1066 / — |
 | 226 | fd + open/read decls (L-2, OS-agnostic) — **fixed by fix lane F5 (2026-09-22, review G04 F2–F6):** 149's register map is Linux `open(path, flags, mode)` (measured on the emitted C), the NUL-terminated path is a named caller obligation (`spec fn path_nul_terminated`, counted `V`), open/read carry their own assumptions and probes (`sonde_open`, `sonde_read`), the frame length is decided (`N463`/`N464`, `requires len <= lenof(buf)`). **Open:** `OFFEN.md` O23 | `syscall.rs`, decl shape | M | N406–410 / 1067–1071 / 149–150; F5 took N463–N464, gifts 1155–1158 |
-| 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick | new `beispiele/` only | M | no new codes / — / 147–148 |
+| 236 | ALG sketch FTP (Obergrenze): 1024 control table, 512 B bounded buffer + refuse, hash match, fenster-expiry, VOLL-refuse, packet-tick — **fix lane F7 (review G05 F1):** the word-wise hash now folds `h ^ (h >> 22)` before `% 1024`, so every input bit reaches the bucket (the G05 collision pairs split; emitted C = Python model); `fnv` costs 95 → 101 | new `beispiele/` only | M | no new codes / — / 147–148 |
 | 237 | layout-factor muster: word tables + index arithmetic (`i>>2`, `(i&3)*8`), static-link budget measured | new `beispiele/` + report only, NO `m1.rs` (lane 224 owns it) | S | no new codes / — / 151–152 |
 | O-1 | clone handoff (K-1) | new syntax + new Lean files, `Spec` diff | XL | SPLIT 2026-09-18: checker + emitter TRANSFERRED (N446–N450, C185 refusal, LG004 exporter refusal; no Linux constants, verified by grep); Lean model + Spec (d2) under REVIEW (lane 372, O-1 branch; the branch is an ANCESTOR of master since merge `a4461b6b`, so `git merge` is a no-op -- take `cde18e25` by checkout/cherry-pick; review G11: under (d) `CloneAssume` is vacuous, no child thread exists in the model). Fix lane F3 (2026-09-21): the child is a thread in the checker (`N456` no child under a held context, `N457` race rule over the region and its callees, held-set walkers reset at `child`), `N450` per region (one dominating gate call), spill read set exhaustive; the lowering must enter the child BY JUMP at the region (PLAN-SYSCALL, pinned by `tests/klon_faden.rs`). Open: Teil 3 (inline-trap lowering + correspondence), `D.klon` exporter fill, `Ziel` leg, a child thread in the model. |
 
@@ -105,8 +105,12 @@ the accurate record):*
   exits to an outer `retry`/`forever` label already lower and are pinned;*
 - *`retry` whose body holds a `traverse` passes the checker and falls at
   emit with `C001` (per-pass cost not fixed) -- pre-existing (252 F3);*
-- *`E011` holds only the body's direct deeds: a call inside a `traverse`
-  body is never held against `touches` (now booked in `wirkungen.rahmen`).*
+- *~~`E011` holds only the body's direct deeds: a call inside a `traverse`
+  body is never held against `touches`.~~ **Closed by fix lane F7
+  (2026-09-22):** every call in the body and in the object is held against
+  `touches` through its callee's hull (gift 1169), and `E011` runs under a
+  derived clause too (gift 1170). Corpus: `beispiele/09` named a callee read
+  in its `touches` line (C byte-identical).*
 
 **Wave C:**
 
@@ -419,7 +423,13 @@ tree refuses everywhere else.*
   (`obligations_g.rs`, `gegenbeispiel.rs` + tests); no new refusal, the
   checker still accepts. The release rule (demand the invariant from callee
   promises at every locked-section exit) stays a proposal in
-  `MUSE-REPORT-204.md`, not built.
+  `MUSE-REPORT-204.md`, not built. **Fix lane F7 (2026-09-22, review G02
+  F3):** the `RELEASE` rows are one shared analysis (`freigabe.rs`), order-
+  aware (a write or callee write after the last promise breaks the hold),
+  walk every block (`observes`, `child`), check early exits and name cells
+  binder-aware; before, `setze(30); konto.slots[1].stand = 5;` read HOLDS.
+  Corpus rows unchanged (124: 2 HOLDS, 119: 1 UNPROVED). The rule half of
+  O12 is still open.
 - [x] **The C read correspondence for nested arrays** — lane 205, reviewed
   (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
   `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the

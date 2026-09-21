@@ -272,7 +272,7 @@ opus/…:opus/…` first.
 | Kind | Next free |
 |---|---|
 | Diagnostic codes | **N466** (highest issued: N465, fix lane F6; also `C185`, O-1) |
-| Gift (poison-probe) numbers | **1169** (highest file: `beispiele/gift/1168`, fix lane F6) |
+| Gift (poison-probe) numbers | **1171** (highest file: `beispiele/gift/1170`, fix lane F7) |
 | Example numbers | **157** (highest file: `beispiele/156`) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
 
@@ -303,6 +303,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F4 | **not reserved** (free range) | N458–N462, gifts 1148–1154; no example (`LG001` reused for repeated starts in the exporter) |
 | Fix lane F5 | **not reserved** (free range) | N463, N464, gifts 1155–1158; no example (examples 96/149/150 edited to the new buffer clause) |
 | Fix lane F6 | **not reserved** (free range) | N465, gifts 1159–1168; no example (gift 1125 turned from clean side to `N454`, renamed `1125-index-in-max-ohne-laenge`) |
+| Fix lane F7 | **not reserved** (free range) | gifts 1169, 1170; no code, no example (`E011` tightened, `LG005` reused for a binding covering a carrier in the exporter; examples 09/147/148 edited) |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

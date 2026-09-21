@@ -85,7 +85,11 @@ impl fn einsammeln(s : index into Kappenraum)
     costs    <= 16371840 ops
 {
     traverse opfer over descendants of Kappenraum.slots[s] by consuming
-        touches consumes Kappenraum.slots, writes Objekte.slots
+        -- **`reads Kappenraum.slots` stands here since fix lane F7** (2026-09-22):
+        -- `blatt_loeschen` reads the slot it clears (`.objekt`), and `E011` holds the
+        -- callee's effects against this line since then. The function line above
+        -- names the same read beside its `consumes` for the same reason.
+        touches reads Kappenraum.slots, consumes Kappenraum.slots, writes Objekte.slots
     {
         blatt_loeschen(opfer);
     }

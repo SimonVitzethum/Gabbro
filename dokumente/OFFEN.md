@@ -563,9 +563,13 @@ ask and does not answer.
 > output, never a diagnostic). The rule half was measured, not built: a promises-only refusal
 > would fall 1 of the 2 measurable files (`119`, a false positive as a refusal). **The blind
 > spot below therefore still stands in the checker**, as this entry's last two rows demand.
-> (Review 2026-09-21, G02: the `RELEASE HOLDS (syntactic)` row can also acquit a section in
+> (Review 2026-09-21, G02: the `RELEASE HOLDS (syntactic)` row could also acquit a section in
 > which a later statement or callee overwrites a promised cell; see
-> `messung/review-2026-09-21/G02.md`.)
+> `messung/review-2026-09-21/G02.md`. **Repaired by fix lane F7, 2026-09-22:** one shared,
+> order-aware analysis in `crates/gabbro-check/src/freigabe.rs` -- writes and callee writes
+> after the last promise break the hold, every block is walked, early exits are releases,
+> bound indices are never countable. The row is still syntactic and still not a proof;
+> **it is not the rule half (2) below**, which asks for a checker REFUSAL and stays open.)
 
 `setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
 and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a

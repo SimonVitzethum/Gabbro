@@ -6,13 +6,17 @@
 --
 --   * the table has `count 1024` -- no growth, no eviction: VOLL refuses;
 --   * the hash is in-program (an FNV-1a-style xor-multiply over the five
---     tuple WORDS, `^` + `*%`, five updates, constant cost) -- there is no L3
---     library hash yet and no `extern` shortcut for it (extern is the OS
---     border; this file has none). It is WORD-wise, not the byte-wise FNV-1a
---     of the spec: since `^` and `*%` only carry upward, `h % 1024` depends on
---     the low 10 bits of each word alone (tuples differing only above bit 9
---     share a bucket). Fail closed -- a collision answers VOLL/MISS, never a
---     wrong ACCEPT -- but a fold of the high half is the known remedy;
+--     tuple WORDS, `^` + `*%`, five updates, then one xor-shift fold,
+--     constant cost) -- there is no L3 library hash yet and no `extern`
+--     shortcut for it (extern is the OS border; this file has none). It is
+--     WORD-wise, not the byte-wise FNV-1a of the spec. Since `^` and `*%`
+--     only carry upward, the unfolded `h % 1024` depended on the low 10 bits
+--     of each word alone (review G05: 10.0.0.5 and 11.0.0.5 shared bucket
+--     54). The fold `h ^ (h >> 22)` brings the top ten bits -- the ones every
+--     input bit reaches -- into the bucket, so every bit of every word now
+--     moves it (measured on a Python model of this exact code, fix lane F7).
+--     Fail closed either way: a collision answers VOLL/MISS, never a wrong
+--     ACCEPT;
 --   * the index arithmetic is subtraction-free (`%`, `*`, guarded `+`);
 --   * expiry is a windowed tick (`tick` sweeps 64 of 1024 slots per call,
 --     round-robin over 16 rounds) -- never a full scan under the held lock;
@@ -109,14 +113,20 @@ impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
 }
 
 impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
-    costs <= 95 ops
+    -- 95 before the fold; the fold adds one shift and one `xor_worte` call
+    -- (fix lane F7): 101, read off the checker, not estimated.
+    costs <= 101 ops
 {
     let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
     let h1 : u32 = fnv_schritt(h0, dip, FNV_PRIM);
     let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
     let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
     let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
-    return h4;
+    -- The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
+    -- bit k of an input word reaches only bits k..31 of `h4`. Folding the
+    -- top ten bits (22..31, reached by every input bit) onto the low ten
+    -- makes every bit of every word count toward the bucket.
+    return xor_worte(h4, h4 >> 22);
 }
 
 -- Release a slot back to pristine: no stale tuple may survive (a stale

@@ -1,0 +1,36 @@
+-- erwartet: E011
+-- **Fix lane F7 (review G09 F2) -- a CALL inside a `traverse` body stands against
+-- `touches`.**
+--
+-- `schreibe_zaehler` writes the static `zaehler`. The function effects name it (the
+-- call-hull check, `E008`, is satisfied), but the traverse's own `touches` names only the
+-- table it walks. Until fix lane F7 `E011` held the body's DIRECT deeds alone, so this
+-- loop passed while every iteration wrote a global its `touches` line never mentioned --
+-- and `touches` is the narrower, local promise the costs and the lock arguments read.
+--
+-- The twin that stays silent (the write named in `touches`) is pinned in
+-- `crates/gabbro-check/tests/traverse_object.rs`.
+module gift::traverse_call_not_in_touches {
+
+const N : u32 = 8;
+table W count N { slot { a : u32 in 0 .. 10, } }
+static mut zaehler : u32 = 0;
+
+impl fn schreibe_zaehler()
+    effects { writes zaehler } costs <= 4 ops
+{
+    zaehler = 1;
+}
+
+impl fn f()
+    effects { reads W, writes zaehler } costs <= 200 ops
+{
+    traverse i over slots of W by unvisited
+        touches reads W.slots
+    {
+        schreibe_zaehler();
+    }
+    return;
+}
+
+}

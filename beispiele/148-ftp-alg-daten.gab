@@ -10,11 +10,12 @@
 --
 -- The verdict discipline, one bucket per packet, constant cost:
 --
---   * hash the control 5-tuple in-program (word-wise FNV-1a-style, the `147`
---     shape and its caveat: the bucket depends on the low 10 bits of each word
---     only; the xor is a function because the emitter reads wrapping sites
---     off declarations, and the prime travels as an argument because the
---     checker refuses a singleton next to a wrap);
+--   * hash the control 5-tuple in-program (word-wise FNV-1a-style plus the
+--     `h ^ (h >> 22)` fold, the `147` shape: the fold lets every bit of every
+--     word move the bucket -- without it the bucket depended on the low 10
+--     bits of each word only; the xor is a function because the emitter reads
+--     wrapping sites off declarations, and the prime travels as an argument
+--     because the checker refuses a singleton next to a wrap);
 --   * empty bucket or foreign tuple -> MISS (the packet goes to the rules;
 --     a miss is an answer, not a failure);
 --   * aged-out bucket -> expire it NOW (lazy expiry: exact for every bucket
@@ -87,14 +88,20 @@ impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
 }
 
 impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
-    costs <= 95 ops
+    -- 95 before the fold; the fold adds one shift and one `xor_worte` call
+    -- (fix lane F7): 101, read off the checker, not estimated.
+    costs <= 101 ops
 {
     let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
     let h1 : u32 = fnv_schritt(h0, dip, FNV_PRIM);
     let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
     let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
     let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
-    return h4;
+    -- The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
+    -- bit k of an input word reaches only bits k..31 of `h4`. Folding the
+    -- top ten bits (22..31, reached by every input bit) onto the low ten
+    -- makes every bit of every word count toward the bucket.
+    return xor_worte(h4, h4 >> 22);
 }
 
 -- Release a slot back to pristine (`beispiele/147`'s rule: a stale match

@@ -291,3 +291,154 @@ fn obligations_59_states_masked_starts() {
         assert!(text.contains(teil), "59 obligations must contain {teil:?}");
     }
 }
+
+// ---------------------------------------------------------------------------------------
+// Fix lane F7 (review G02 F3): the RELEASE rows are order-aware, walk every block and
+// name cells binder-aware. Measured before the fix: each UNPROVED case below read
+// `RELEASE HOLDS (syntactic)`.
+// ---------------------------------------------------------------------------------------
+
+/// The O12 shape with a free locked-section body, and a second callee `stoere` that
+/// writes the invariant's table and promises nothing.
+fn o12_rumpf(rumpf: &str) -> String {
+    format!(
+        "{O12_KOPF}\
+        impl fn setze(x : Stand)\n\
+        \x20   requires Held(L), konto.slots[0].stand == konto.slots[1].stand\n\
+        \x20   ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 32 ops\n\
+        {{\n\
+        \x20   konto.slots[0].stand = x;\n\
+        \x20   konto.slots[1].stand = x;\n\
+        }}\n\
+        impl fn stoere()\n\
+        \x20   requires Held(L)\n\
+        \x20   effects  {{ writes konto.slots, locks L }}\n\
+        \x20   costs    <= 32 ops\n\
+        {{\n\
+        \x20   konto.slots[1].stand = 3;\n\
+        }}\n\
+        impl fn haupt()\n\
+        \x20   effects  {{ reads konto.slots, writes konto.slots, locks L }}\n\
+        \x20   costs    <= 512 ops\n\
+        {{\n\
+        \x20   locks L {{\n\
+        {rumpf}\n\
+        \x20   }}\n\
+        }}\n\
+        concurrent {{ haupt }};\n\
+        }}\n"
+    )
+}
+
+fn o12_rumpf_export(rumpf: &str) -> String {
+    let quelle = o12_rumpf(rumpf);
+    let (baum, mut absagen) = gabbro_syntax::lies("o12r", &quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert!(
+        absagen.fehler_zahl() == 0,
+        "the O12 snippet stays checker-clean: {}",
+        absagen.zeige(&quelle)
+    );
+    export("o12r", &baum).expect("the O12 snippet must export")
+}
+
+/// **G02's example: a direct write after the promise breaks the hold.**
+#[test]
+fn f7_direkter_schreibzugriff_nach_dem_versprechen_bricht() {
+    let text = o12_rumpf_export("        setze(30);\n        konto.slots[1].stand = 5;");
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(
+        text.contains("konto.slots[1].stand is overwritten after its last promise (by the write to konto.slots"),
+        "the row must name the overwrite:\n{text}"
+    );
+}
+
+/// **A callee writing the table after the promise breaks it** (order-blind union before).
+#[test]
+fn f7_spaeterer_schreibender_ruf_bricht() {
+    let text = o12_rumpf_export("        setze(30);\n        stoere();");
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(text.contains("after its last promise (by a write of stoere)"), "{text}");
+}
+
+/// **A write under a branch after the promise breaks it too.**
+#[test]
+fn f7_bedingter_schreibzugriff_bricht() {
+    let text = o12_rumpf_export(
+        "        setze(30);\n        if konto.slots[0].stand == 3 {\n            konto.slots[1].stand = 4;\n        }",
+    );
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(text.contains("RELEASE UNPROVED"), "{text}");
+}
+
+/// **Positive probe: a write or a writing callee BEFORE the last promise is re-established
+/// by it** -- order-awareness does not turn every write into a gap.
+#[test]
+fn f7_schreiben_vor_dem_versprechen_haelt() {
+    for rumpf in [
+        "        konto.slots[1].stand = 5;\n        setze(30);",
+        "        stoere();\n        setze(30);",
+    ] {
+        let text = o12_rumpf_export(rumpf);
+        assert!(text.contains("RELEASE HOLDS (syntactic)"), "{rumpf}:\n{text}");
+        assert!(!text.contains("RELEASE UNPROVED:"), "{rumpf}:\n{text}");
+    }
+}
+
+fn freigabe_direkt(quelle: &str) -> String {
+    let (baum, _) = gabbro_syntax::lies("o12d", quelle);
+    gabbro_check::freigabe::freigabe_abschnitt(&baum, "")
+}
+
+/// **An early exit is a release too** (read on the section directly: `return` under
+/// `locks` has no G form, so no export reaches this shape -- the row must still be right).
+#[test]
+fn f7_frueher_ausgang_ist_eine_freigabe() {
+    let text = freigabe_direkt(&o12_rumpf(
+        "        konto.slots[1].stand = 4;\n        if konto.slots[0].stand == 3 {\n            return;\n        }\n        setze(30);",
+    ));
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(text.contains("early exit (`return`) with konto.slots[1].stand not promised"), "{text}");
+}
+
+/// **A `locks` inside `observes` gets its row** (skipped before F7).
+#[test]
+fn f7_sperre_in_observes_bekommt_eine_zeile() {
+    let quelle = format!(
+        "{O12_KOPF}\
+        impl fn stoere() requires Held(L) effects {{ writes konto.slots, locks L }} costs <= 32 ops\n\
+        {{\n    konto.slots[1].stand = 3;\n}}\n\
+        impl fn haupt() effects {{ writes konto.slots, locks L }} costs <= 512 ops\n\
+        {{\n    observes D {{\n        locks L {{\n            stoere();\n        }}\n    }}\n}}\n\
+        }}\n"
+    );
+    let text = freigabe_direkt(&quelle);
+    assert!(text.contains("-- * haupt locks `L`"), "the nested section needs a row:\n{text}");
+    assert!(text.contains("RELEASE UNPROVED"), "{text}");
+}
+
+/// **Binder-aware cells: a callee PARAMETER used as an index promises no fixed cell.**
+/// Before F7, `ensures konto.slots[i].stand == 0` with a parameter `i` rendered the same
+/// cell as an invariant over a constant `i`, and the row said HOLDS.
+#[test]
+fn f7_parameter_als_index_zaehlt_nicht() {
+    let quelle = "module test::o12b {\n\
+        type Stand = u32 in 0 .. 100;\n\
+        const i : u32 = 1;\n\
+        table konto count 2 { slot { stand : Stand, } }\n\
+        lock L protects { konto } rank 0 held <= 100 ops\n\
+            invariant konto.slots[i].stand == 0;\n\
+        impl fn setze(i : index into konto) requires Held(L)\n\
+            ensures konto.slots[i].stand == 0\n\
+            effects { writes konto.slots, locks L } costs <= 32 ops\n\
+        {\n    konto.slots[i].stand = 0;\n}\n\
+        impl fn haupt() effects { writes konto.slots, locks L } costs <= 512 ops\n\
+        {\n    locks L {\n        setze(0);\n    }\n}\n\
+        }\n";
+    let text = freigabe_direkt(quelle);
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(text.contains("no callee promises konto.slots[i].stand"), "{text}");
+    assert!(text.contains("setze promises {}"), "the parameter-indexed cell is not countable:\n{text}");
+}

@@ -201,8 +201,9 @@ theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by
   intro L
   cases L <;> decide
 
--- Carriers are tables or globals; the export declares no global
--- (`Glob := Empty`), so the right arm closes by cases. `simp [gCs]`
+-- Carriers are tables or globals (lane 198 exports `static mut`
+-- globals; a unit without one has `Glob := Empty`), and each arm
+-- closes by cases over its constructors. `simp [gCs]`
 -- and not `decide`: `DecidableEq (gD.Tab ⊕ gD.Glob)` does not unfold
 -- the `gD` declaration during instance search (measured on 104/108:
 -- `failed to synthesize Decidable (Sum.inl … ∈ gCs)`), while `simp`
@@ -231,6 +232,19 @@ theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
     Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=
   Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL M hr
+
+-- RELEASE OBLIGATIONS (stated, not discharged -- O12).
+--
+-- At every `locks L { ... }` exit the lock invariant of `L` must hold
+-- again, and it must follow from what the section's callees PROMISE
+-- (their `ensures`), not from what their bodies happen to do. No checker
+-- rule refuses a section whose callees cannot re-establish it, so such
+-- a section is checker-clean and still leaves `NutzerPflicht` unproved.
+-- Each row below is syntactic, one-sided and order-aware (see
+-- `crates/gabbro-check/src/freigabe.rs`): a write or a callee write after
+-- the last promise of a cell breaks it. `RELEASE HOLDS (syntactic)` is
+-- not a proof, while `RELEASE UNPROVED` names the exact gap.
+-- No lock carries an invariant -- nothing is owed at any release.
 end G108_disjoint_start_locks_oblig
 
 end Gabbro.Grammatik

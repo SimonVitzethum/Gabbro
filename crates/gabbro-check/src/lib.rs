@@ -174,6 +174,8 @@ pub mod lean;
 /// family), stated over the `lean_g` export with the closing theorem from
 /// them -- proved by the user, never here.
 pub mod obligations_g;
+// **Fix lane F7:** the O12 release rows, shared by `obligations_g` and `gegenbeispiel`.
+pub mod freigabe;
 /// **Const certificate from the source (lane 121)** -- a `const fn` body in
 /// the single-expression fragment printed to a Lean `Nat` function, so the
 /// `List.all` certificate checks values against the translated source.

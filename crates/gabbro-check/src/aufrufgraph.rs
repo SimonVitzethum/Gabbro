@@ -807,6 +807,96 @@ impl Graph {
         }
     }
 
+    /// **The call effects of ONE sub-block of `f`, per call site, carried across each call
+    /// boundary** (fix lane F7, review G09 F2, 2026-09-22) -- what `E011` holds against a
+    /// `traverse`'s `touches`.
+    ///
+    /// The same edges `erhebe_mit_roh` builds for the whole body (`sammle_kanten`, with the
+    /// same function-pointer contract reader over the parameters and the flat `let` picture),
+    /// restricted to `b` plus the expressions in `extra` (the object of a `traverse`). Each
+    /// named callee contributes its transitive hull (`huelle`), each indirect call its
+    /// pointer-type contract, both through `ersetze`. Returned per site as `(callee, effect)`,
+    /// and the second field is the reason the set is only a LOWER bound (a cycle, a callee
+    /// without `effects`, an argument that is no place, an indirect call without a
+    /// contract) -- a lower bound still refutes, it cannot confirm (same reading as `E008`).
+    pub fn rufwirkungen_im_block(
+        &self,
+        f: &FnDecl,
+        b: &Block,
+        extra: &[&Expr],
+        u: &crate::umgebung::Umgebung,
+        modul: &str,
+    ) -> (Vec<(String, String)>, Option<String>) {
+        let mut lokal: std::collections::HashMap<String, crate::typen::Typ> = f
+            .parameter
+            .iter()
+            .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
+            .collect();
+        if let FnRumpf::Block(ganz) = &f.rumpf {
+            sammle_lets(ganz, u, modul, &mut lokal);
+        }
+        let vertrag = |o: &Ort| match u.typ_von_ort(modul, o, &lokal) {
+            crate::typen::Typ::FnPtr(v) => Some(*v),
+            _ => None,
+        };
+        let mut rufe = Vec::new();
+        let mut indirect = Vec::new();
+        for e in extra {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    if !crate::ist_praedikatswort(r) {
+                        nimm_ruf(r, &mut rufe, &mut indirect, &vertrag, u, modul);
+                    }
+                }
+            }
+        }
+        sammle_kanten(b, &mut rufe, &mut indirect, &vertrag, u, modul);
+        let mut aus = Vec::new();
+        let mut offen: Option<String> = None;
+        for (pfad, args) in &rufe {
+            let Some(ziel) = self.aufloesen(u, modul, pfad) else {
+                offen.get_or_insert_with(|| format!("`{pfad}` is unknown to the graph"));
+                continue;
+            };
+            let h = self.huelle(&ziel);
+            if let Some(g) = h.unvollstaendig {
+                offen.get_or_insert(g);
+            }
+            let ziel_par: Vec<Option<String>> = self
+                .knoten
+                .get(&ziel)
+                .map(|z| z.parameter.iter().cloned().map(Some).collect())
+                .unwrap_or_default();
+            for w in h.wirkungen {
+                let (neu, unklar) = ersetze(&w, &ziel_par, args);
+                if unklar {
+                    offen.get_or_insert_with(|| {
+                        format!("an argument of the call to `{pfad}` is not a place")
+                    });
+                }
+                aus.push((pfad.clone(), neu));
+            }
+        }
+        for i in &indirect {
+            if !i.has_contract {
+                offen.get_or_insert_with(|| {
+                    format!("the callee at `{}` declares no `effects`", i.place)
+                });
+                continue;
+            }
+            for w in &i.effects {
+                let (neu, unklar) = ersetze(w, &i.parameters, &i.arguments);
+                if unklar {
+                    offen.get_or_insert_with(|| {
+                        format!("an argument of the indirect call at `{}` is not a place", i.place)
+                    });
+                }
+                aus.push((i.place.clone(), neu));
+            }
+        }
+        (aus, offen)
+    }
+
     /// Welche Sperren verlangt der Gerufene — und **geteilt oder exklusiv?**
     ///
     /// Das ist die Frage, die `H005` durch eine echte Pruefung ersetzt: ein geteilter Block

@@ -280,3 +280,20 @@ fn o12_starkes_ensures_haelt_die_freigabe() {
         "no release row may fail once both slots are promised"
     );
 }
+
+/// **Fix lane F7 (review G02 F3): the counterexample output shares the order-aware rows**
+/// (`crate::freigabe`) -- G02's example, a direct write after the promise, no longer reads
+/// HOLDS here either.
+#[test]
+fn f7_direkter_schreibzugriff_nach_dem_versprechen_bricht() {
+    let quelle = o12_einheit(
+        "konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x",
+    )
+    .replace("        setze(30);\n", "        setze(30);\n        konto.slots[1].stand = 5;\n");
+    assert!(quelle.contains("konto.slots[1].stand = 5;"), "the snippet must carry the write");
+    let baum = checked(&quelle);
+    let text = export("gegenbeispiel", &baum, None, &Suche::default()).expect("search must export");
+    assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
+    assert!(text.contains("is overwritten after its last promise"), "{text}");
+    assert!(text.contains("The per-function search"), "the subcommand's own note stays:\n{text}");
+}
