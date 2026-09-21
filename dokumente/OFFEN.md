@@ -555,6 +555,18 @@ ask and does not answer.
 *Found 2026-09-15 by the stage (b) Opus agent while writing a G model for the program
 (`messung/OPUS-BERICHT-STUFE-B.md`, `grammatik/Grammatik/Korpus124.lean`), not by a guardian.*
 
+> **STATUS 2026-09-17 (lane 204, merge `5ececd63`, `messung/muse/MUSE-REPORT-204.md`): half
+> (1) is DONE, half (2) is still OPEN.** The corpus file now promises both slots
+> (`ensures konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x`, the
+> `kP` shape). No checker rule was added: `gabbro obligations --g` and `gabbro counterexample`
+> now print a per-section `RELEASE OBLIGATIONS` row (syntactic, one-sided, a comment in the
+> output, never a diagnostic). The rule half was measured, not built: a promises-only refusal
+> would fall 1 of the 2 measurable files (`119`, a false positive as a refusal). **The blind
+> spot below therefore still stands in the checker**, as this entry's last two rows demand.
+> (Review 2026-09-21, G02: the `RELEASE HOLDS (syntactic)` row can also acquit a section in
+> which a later statement or callee overwrites a promised cell; see
+> `messung/review-2026-09-21/G02.md`.)
+
 `setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
 and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a
 postcondition that says nothing about `konto[1]`, the caller cannot conclude it. **So premise
