@@ -190,10 +190,13 @@ def parse_export(text):
     tabellen = ctors("GTab")
     sperren = ctors("GLock")
     funktionen = ctors("GFn")
+    # Globals: `inductive GGlob` stands only where a `static` exports (the
+    # declaration writes `Glob := Empty` otherwise, with no GGlob at all).
+    globale = ctors("GGlob") or []
     if ns is None or tabellen is None or sperren is None or funktionen is None:
         return None
     return {"ns": ns, "tabellen": tabellen, "sperren": sperren,
-            "funktionen": funktionen}
+            "funktionen": funktionen, "globale": globale}
 
 
 def pruefe_konstruktion(export, exp):
@@ -306,12 +309,11 @@ def sonde(ns, exp, starts):
         ls = "([" + ", ".join("%s.GLock.%s" % (q, l) for l in exp["sperren"]) + "])"
     else:
         ls = "([] : List %s.gD.Lock)" % q
-    if exp["tabellen"]:
-        cs = ("(([" + ", ".join(".inl %s.GTab.%s" % (q, t)
-                                for t in exp["tabellen"]) + "])"
-              " : List (%s.gD.Tab ⊕ %s.gD.Glob))" % (q, q))
-    else:
-        cs = "([] : List (%s.gD.Tab ⊕ %s.gD.Glob))" % (q, q)
+    # The carrier list is the export's own `gCs` (tables AND globals, lane
+    # 198). A list rebuilt here from the tables alone missed every `static`
+    # carrier, and `rennB_iff` reads `rennB` as the race property only
+    # under `hcs : forall c, c in cs` (review G03, 2026-09-21).
+    cs = "(%s.gCs)" % q
     if starts:
         ws = "([" + ", ".join("%s.g_%s" % (q, s) for s in starts) + "])"
     else:
@@ -430,7 +432,8 @@ def main():
     # facts that decide whether a component was NON-TRIVIALLY exercised.
     # `wurzeln` needs >= 1 start; `einzeln`, `renn` and the thread legs of
     # `fuss` need >= 2 starts (their Bools are vacuous over fewer);
-    # `stufen`/`sperrOrte` need >= 1 lock; `renn` needs >= 1 table.
+    # `stufen`/`sperrOrte` need >= 1 lock; `renn` needs >= 1 carrier (a
+    # table or a global).
     # `abg`/`antworten` are vacuous on every export (see KOMPONENTEN).
     deckung = []
     for datei in dateien:
@@ -485,7 +488,8 @@ def main():
                        status))
         if not is_partial:
             deckung.append((rel, len(starts), len(parsed["sperren"]),
-                            len(parsed["tabellen"]), len(parsed["funktionen"])))
+                            len(parsed["tabellen"]) + len(parsed["globale"]),
+                            len(parsed["funktionen"])))
             pin_nenner += 1
             for kurz, _, _ in KOMPONENTEN:
                 if kurz not in gefallen:
@@ -509,12 +513,12 @@ def main():
     mit_tabelle = sum(1 for (_, _, _, t, _) in deckung if t >= 1)
     print("coverage: of %d comparable programs," % n)
     print("coverage: wurzeln(>=1 start): %d | einzeln/renn/fuss-thread-legs(>=2 starts): %d | "
-          "stufen/sperrOrte(>=1 lock): %d | renn(>=1 table): %d"
+          "stufen/sperrOrte(>=1 lock): %d | renn(>=1 carrier): %d"
           % (mit_start, mit_paar, mit_sperre, mit_tabelle))
     print("coverage: abg/antworten vacuous on every export (fixpoint / no Ax-Reg sites); "
           "their refuse direction is pinned by gift probes, not here")
     for rel, s, l, t, f in deckung:
-        print("deckt: %s (starts=%d locks=%d tables=%d fns=%d)" % (rel, s, l, t, f))
+        print("deckt: %s (starts=%d locks=%d carriers=%d fns=%d)" % (rel, s, l, t, f))
     for rel, grund in skip:
         print("skip: %s (%s)" % (rel, grund))
     for rel in partial:
