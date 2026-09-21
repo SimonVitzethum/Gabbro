@@ -1,0 +1,17 @@
+-- erwartet: N412
+-- Fix lane F1 poison: two arms naming one value. `5` stands in the range arm
+-- `0 .. 9` and again on its own, so for `5` the second arm could never run.
+-- Every value belongs to exactly one arm. The emitter refuses the duplicate
+-- `case` label too (`C001`); the checker says it first.
+module gift::int_match_overlap {
+impl fn klasse(x : u32 in 0 .. 9) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match x {
+        0 .. 9 => { return 1; }
+        5 => { return 2; }
+    }
+    return 0;
+}
+}

@@ -290,6 +290,14 @@ pub const EINORDNUNG: &[Posten] = &[
                 member the tag names, and out of that alone",
     },
     Posten {
+        konstrukt: "match (integer)",
+        traegt: Traegt::Direkt,
+        grund: "a `switch` WITHOUT `default` over the scrutinee's value: one `case` per value \
+                of each arm, a range spelled out (lane 227). That no value is missing is \
+                `N411` -- the arms cover M1's range of the scrutinee -- and `cc` does NOT \
+                read it a second time: `-Wswitch` checks enumerations, not integers",
+    },
+    Posten {
         konstrukt: "rcu",
         traegt: Traegt::Fremd,
         grund: "two prototypes (`_lese_start`, `_lese_ende`) and the grace period -- the BODY \
@@ -971,7 +979,21 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 let option = m.zweige.len() == 2
                     && m.zweige.iter().any(|z| z.variante.text == "Some")
                     && m.zweige.iter().any(|z| z.variante.text == "None");
-                zaehle(e, if option { "match (option)" } else { "match (tagged)" });
+                // **An integer `match` is its own lowering** (fix lane F1): lane 227's
+                // `switch` over values, whose closedness is `N411`, not `D005`. Booked as
+                // `match (tagged)` until today, whose reason names `D005` and `-Wswitch`
+                // -- neither of which reads an integer `switch`.
+                let ganz = m.zweige.iter().any(|z| z.intpat.is_some());
+                zaehle(
+                    e,
+                    if ganz {
+                        "match (integer)"
+                    } else if option {
+                        "match (option)"
+                    } else {
+                        "match (tagged)"
+                    },
+                );
                 for z in &m.zweige {
                     block(&z.rumpf, e, geister);
                 }

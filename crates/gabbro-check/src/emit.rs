@@ -12336,8 +12336,10 @@ fn match_option(
 /// range spells the interval OUT. Past 256 values that spelling is no longer a
 /// lowering but an unfolding -- and 256 is not an arbitrary cap: the dense dispatch
 /// of TODO §-1 *is* 256-way, so exactly the canonical dense arm still fits. A wider
-/// interval belongs to interval guards (`if`), whose exhaustiveness design lane 228
-/// owns; here it refuses with `C001`, never silently unfolded.
+/// interval belongs to interval guards (`if`); here it refuses with `C001`, never
+/// silently unfolded. (With `N411`, fix lane F1, this cap also means a scrutinee
+/// wider than a few hundred values must be narrowed before it is matched: `u16` full
+/// needs 256 arms, `u32` full cannot be written.)
 const INTPAT_SPANNE: u128 = 256;
 
 /// One `case` label for one integer value, or `None` where C has no spelling.
@@ -12350,6 +12352,14 @@ fn int_fall_text(w: i128) -> Option<String> {
         let betrag = w.unsigned_abs();
         if betrag > (i64::MAX as u128) + 1 {
             return None;
+        }
+        // **`-2^63` has no literal spelling in C** (review G07 F5, fix lane F1): `-N` is
+        // unary minus applied to `N`, and `9223372036854775808` does not fit `long long`, so
+        // `cc` makes it unsigned and says so under `-Werror` (measured 2026-09-21, gcc
+        // 16.2.1: "integer constant is so large that it is unsigned"). The usual spelling
+        // is a constant expression, and a `case` label takes one.
+        if betrag == (i64::MAX as u128) + 1 {
+            return Some("(-9223372036854775807 - 1)".to_string());
         }
         Some(format!("-{betrag}"))
     } else {
@@ -12474,10 +12484,14 @@ fn intpat_werte(
 /// one `case` per value of a range arm (stacked labels sharing one body). There is
 /// no `default` and no `__builtin_unreachable`: unlike `D005`/`M123` no rule has
 /// decided the distinction is closed, so handing that decision to the C compiler
-/// would invent a fact. **A value no arm names skips the whole statement**, and NO
-/// checker pass decides coverage (lane 228's `erschoepfendB` is Lean only) -- so the
-/// flow passes read an integer `match` as an `if` without `else`
-/// (`crate::int_match_may_miss`, review G07).
+/// would invent a fact. **A value no arm names skips the whole statement** -- which
+/// is why the CHECKER refuses every integer `match` whose arms do not cover M1's
+/// range of the scrutinee (`N411`, `crate::intmatch`, fix lane F1), and why the CLI
+/// writes no C for a unit with any refusal. The `switch` below therefore meets only
+/// covered matches; the flow passes still read an integer `match` as an `if` without
+/// `else` (`crate::int_match_may_miss`, review G07) as a second line. The refusals
+/// here (duplicates, labels outside the C type, mixed arms) mirror `N412`-`N414`
+/// and stay as the emitter's own line.
 ///
 /// A `switch` evaluates its controlling expression exactly once, so unlike the
 /// `tagged` lowering above no temporary is needed for a call scrutinee: the
@@ -12559,7 +12573,7 @@ fn match_int(
     // **Two arms naming one value would be two `case` labels for it, and C rejects
     // the program (`duplicate case value`)** -- so the emitter refuses instead of
     // emitting what `cc` must refuse. Which arm SHOULD win is overlap and belongs to
-    // the checker (lane 228); two spellings of one value refuse here either way.
+    // the checker (`N412`, fix lane F1); two spellings of one value refuse here either way.
     {
         let mut gesehen = BTreeSet::new();
         for ws in &faelle {

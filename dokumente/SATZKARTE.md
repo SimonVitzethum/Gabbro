@@ -3882,5 +3882,39 @@ no `native_decide`, no new `axiom`; chain count unchanged; emission markers unch
 (all eight new files refused at CLI level); `zaehle-gifttreffer` FEHLT 5 → 6 (1112 joins
 the emitter-code class, booked in the tool's comment).
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §§1-10 history above.)
+## 40. Integer `match`: coverage denoted in Lean, refused in Rust (lane 228; fix lane F1, 2026-09-21)
+
+**File:** `grammatik/Grammatik/CFormMatch.lean` (lane 228, corrected by fix lane F1 after
+review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, called from
+`m1.rs`).
+
+| Theorem | What it says | Tied to |
+|---|---|---|
+| `trifft_mem_armKeys` | an arm matches a value iff the value is one of its `case` labels | the arm shapes of lane 222 (`IntPat`) |
+| `trifft_wahl_some`, `wahl_none_weigert` | first-match dispatch over `fallListe` finds an arm iff some arm matches | `fallListe` (one label per covered value, as lane 227 writes) |
+| `erschoepfendB_richtig` | the Bool check decides `erschoepfend m lo hi` | -- |
+| `erschoepfend_ohne_default` | covered, no default: every value in range dispatches | the rule `N411` enforces |
+| `swFaelle_lookup` | the `CS.sw` built from the case table dispatches as `wahl` | `swFaelle` = `fallListe` with arm bodies |
+| `sw_erschoepfend_trifft` | covered, value in range: EVERY run of that `CS.sw` runs the chosen arm; no `swMiss` | `Exec.swHit`/`swMiss` (`CFormen.lean`) |
+| `sw_luecke_ueberspringt` | planted defect: arms `0`, `2 .. 5` on `1` -- the `switch` skips | what `N411` refuses |
+| `match_exhaustive_zeuge` | witness: values `0`/`100` read from the reference fixture dispatch to arms 0/1; the `switch` on `100` has a run, and every run executes arm 1's body | reference fixture `ReferenzB` |
+
+**What is NOT claimed.**
+
+- The Rust checker does not run `erschoepfendB`. `N411` decides the same predicate by an
+  interval sweep over M1's range of the scrutinee; the agreement is by reading.
+- That `emit.rs` writes exactly `swFaelle arms rumpf` (stacked labels in front of one body
+  per arm, no `default`) is read off the emitter, not proved. The `pruefe-cformen.py` rows
+  `stmt:switch-int`/`stmt:case-int` stay uncovered (state iii), with the lemma OPEN.
+- The witness's `switch` scrutinee is the literal of the value the fixture read, not the
+  emitted load of `konto[0]`. The earlier conjuncts about the fixture's reached run
+  (`refB_erreicht`, `refB_schreibt`) were dropped: the fixture program has no `match`, so
+  they were decorative (G07 F3).
+- That the scrutinee's value lies in `lo .. hi` is a premise; in Rust it is M1's range,
+  exactly as sound as every M1 index check.
+
+**Axioms:** the standard ones (`sw_erschoepfend_trifft`: `propext`, `Quot.sound`; the
+witness: the standard three); `#print axioms gabbro_ziel` unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §§1-10 history above.)
 

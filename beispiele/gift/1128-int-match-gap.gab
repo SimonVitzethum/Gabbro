@@ -1,0 +1,21 @@
+-- erwartet: N411 allein
+-- Fix lane F1 poison (review G07 F1): an integer `match` that forgets a value.
+-- The arms cover `0 .. 254` of a `u8` and never name `255`. Lane 227 lowers the
+-- match to a `switch` WITHOUT `default`, so for `op == 255` the statement is
+-- skipped and control runs on with whatever the arms were meant to decide. The C
+-- is legal and `cc -Werror` accepts it (`-Wswitch` reads enumerations, not
+-- integers), so `N411` is the ONLY line: the checker demands that the arms cover
+-- M1's range of the scrutinee.
+module gift::int_match_gap {
+impl fn dispatch(op : u8) -> u32
+    effects { pure }
+    costs   <= 600 ops
+{
+    match op {
+        0 => { return 10; }
+        1 .. 127 => { return 11; }
+        128 .. 254 => { return 12; }
+    }
+    return 0;
+}
+}

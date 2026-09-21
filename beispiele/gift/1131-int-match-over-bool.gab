@@ -1,0 +1,16 @@
+-- erwartet: N414
+-- Fix lane F1 poison: integer arms over a scrutinee that is no integer. A
+-- `bool` is branched on with `if`; integer arms name values, and M1 gives a
+-- `bool` no integer range for them to cover.
+module gift::int_match_over_bool {
+impl fn klasse(b : bool) -> u32
+    effects { pure }
+    costs   <= 64 ops
+{
+    match b {
+        0 => { return 1; }
+        1 => { return 2; }
+    }
+    return 0;
+}
+}

@@ -272,7 +272,7 @@ opus/…:opus/…` first.
 | Kind | Next free |
 |---|---|
 | Diagnostic codes | **N456** (highest issued: N455; also `C185`, O-1) |
-| Gift (poison-probe) numbers | **1128** (highest file: `beispiele/gift/1127`) |
+| Gift (poison-probe) numbers | **1132** (highest file: `beispiele/gift/1131`, fix lane F1) |
 | Example numbers | **157** (highest file: `beispiele/156`) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
 
@@ -287,7 +287,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | 223 | N396–400 / 1057–1061 / — | gifts 1057, 1058; no code |
 | 225 | N401–405 / 1062–1066 / — | gifts 1062–1066; no code |
 | 226 | N406–410 / 1067–1071 / 149–150 | gifts 1067, 1068; examples 149, 150; no code |
-| 227 | N411–415 / 1072–1076 / — | gifts 1072–1076; no code |
+| 227 | N411–415 / 1072–1076 / — | gifts 1072–1076; no code. **Fix lane F1 (2026-09-21) took N411–N414** from this block for the integer-match coverage refusal (gifts 1128–1131 from the free range); N415 stays with the wall |
 | 229 | N416–420 / 1077–1081 / 151 | gifts 1077, 1078; no code; example 151 went to lane 237 |
 | 232 | N421–425 / 1082–1086 / — | N421, gift 1082 |
 | 236, 237 | — / — / 147–148, 151–152 | examples 147, 148, 151, 152 |

@@ -294,9 +294,15 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   carries no label.*
 - [ ] **`match` has no integer arms** and nesting is capped at 32 (`P038`), so a 256-way
   dispatch becomes a flat chain of comparisons, measured at 1797 ops. *Status 2026-09-21:
-  integer arms parse (lane 222) and lower to a `switch` without `default` (lane 227); no
-  checker pass demands exhaustiveness yet, and the flow passes read the match as closed (review
-  G07 F1, fix on its branch, unbuilt).*
+  integer arms parse (lane 222) and lower to a `switch` without `default` (lane 227). Fix lane
+  F1 (2026-09-21) built the coverage refusal: `N411` (a value of M1's scrutinee range no arm
+  names), `N412` (overlap / empty arm), `N413` (label outside the storage type), `N414`
+  (non-integer scrutinee, mixed arms); gifts 1128-1131. The flow passes keep reading an integer
+  match as possibly skipped (review G07) as a second line -- a precision cost only. Still open:
+  the Lean correspondence lemma for `stmt:switch-int`/`stmt:case-int` (`CFormMatch.lean` §4b
+  ties `fallListe` to a `CS.sw` built from it, not to what `emit.rs` writes), and a 256-way
+  dense dispatch over a full `u32` cannot be written (ranges cap at 256 values per arm, so the
+  scrutinee must be narrowed first).*
 - [ ] **`accumulates` cannot be `pub`** (`P041` against `N038`).
 - [ ] **A `bool` static checks clean and never becomes C** (`C001`).
 - [ ] **`transition` and `advances` stand in `SYNTAX.md` §8 with no parser arm** — one of them

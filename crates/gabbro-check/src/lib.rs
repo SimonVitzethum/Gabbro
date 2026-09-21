@@ -208,6 +208,8 @@ pub mod kostenledger;
 pub mod zeremonie;
 /// Bounded-string length discipline (lane 256): specified, not wired.
 pub mod zeichenfolge;
+/// Integer `match` coverage, `N411`-`N414` (fix lane F1; called from `m1.rs`).
+pub mod intmatch;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1395,6 +1397,27 @@ pub fn alle_ausdruecke(e: &Expr) -> Vec<&Expr> {
     aus
 }
 
+/// **Can control pass a `match` without entering any arm?** (review G07, 2026-09-21;
+/// fix lane F1)
+///
+/// Yes for an integer `match` (any arm is a lane-222 `IntPat`): lane 227 lowers it to a
+/// `switch` WITHOUT `default`, so a value no arm names skips the whole statement. And yes
+/// for the empty `match x { }`, which names nothing at all (`all()` over no arms is
+/// vacuously true, and `m2::endet` recorded that disagreement on 2026-08-31).
+///
+/// **Since fix lane F1 the checker refuses a non-exhaustive integer `match`**: `N411` in
+/// `m1.rs` (`crate::intmatch`) demands that the arms cover every value M1 knows the
+/// scrutinee can hold, so in an ACCEPTED program the path past all arms is dead. This
+/// reading is KEPT anyway (safety first): it makes every flow pass (`endet_immer` here and
+/// in `m1.rs`, the joins in `m2.rs`, `phasen.rs`, `arena.rs`) count one more path -- the
+/// one past all arms, with the state from before, the invisible `else` of an `if` without
+/// one. The price is precision only: an exhaustive integer `match` whose arms all return
+/// does not count as ending, so what follows it must still end on its own. A variant
+/// `match` (`tagged`, `option`, `reason`) is closed by `D005`/`M123` and keeps its reading.
+pub fn int_match_may_miss(m: &MatchStmt) -> bool {
+    m.zweige.is_empty() || m.zweige.iter().any(|z| z.intpat.is_some())
+}
+
 /// **Endet der Block auf jedem Weg?** — erschöpfend über `StmtArt`, ohne `_`-Zweig.
 ///
 /// Stand dreimal im Prüfer (`kosten`, `phasen`, `schleifen`), **jedes Mal unvollständig und
@@ -1421,21 +1444,6 @@ pub fn alle_ausdruecke(e: &Expr) -> Vec<&Expr> {
 ///
 /// *Same class as the six `tor-proben` that walked back into the `N044` shape: a finding
 /// repaired at ONE of its sites reads as a finding repaired.*
-/// **Can control pass an integer `match` without entering any arm?** (review G07,
-/// 2026-09-21)
-///
-/// Yes, whenever an arm is an integer arm (lane 222 `IntPat`): no checker pass decides
-/// that the arms cover the scrutinee's range (`CFormMatch.lean` states the coverage
-/// predicate, nothing in `crates/` runs it), and lane 227 lowers the match to a `switch`
-/// WITHOUT `default`, so a value no arm names skips the whole statement. Every flow pass
-/// that joins or ends over `match` arms must therefore count one more path: the one past
-/// all arms, with the state from before -- exactly the invisible `else` of an `if`
-/// without one. A variant `match` (`tagged`, `option`, `reason`) is closed by
-/// `D005`/`M123` and keeps its reading.
-pub fn int_match_may_miss(m: &MatchStmt) -> bool {
-    m.zweige.iter().any(|z| z.intpat.is_some())
-}
-
 pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
     let Some(letzte) = b.anweisungen.last() else {
         return false;
@@ -1455,11 +1463,12 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
             w.sonst.as_ref().is_some_and(|r| endet_immer(r, divergent))
                 && w.zweige.iter().all(|(_, r)| endet_immer(r, divergent))
         }
-        // **An integer `match` never ends a body (review G07, 2026-09-21).** No pass
-        // checks that its arms cover the scrutinee, and the emitted `switch` has no
-        // `default` (lane 227): a value no arm names falls through to the next
-        // statement. Reading it as ending let `narrow … else { match y { 0 => { return
-        // 0; } } }` install the narrowed range on a path that was never checked.
+        // **An integer `match` never ends a body (review G07, 2026-09-21).** The emitted
+        // `switch` has no `default` (lane 227): a value no arm names falls through to the
+        // next statement. Reading it as ending let `narrow … else { match y { 0 => {
+        // return 0; } } }` install the narrowed range on a path that was never checked.
+        // `N411` (fix lane F1) now refuses the non-exhaustive match; this reading stays
+        // as the second line (`int_match_may_miss`). The empty `match` is included.
         StmtArt::Match(m) if int_match_may_miss(m) => false,
         StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf, divergent)),
         // **Eine Klammer ist keine Weiche.** Wer im `locks`-, `observes`- oder

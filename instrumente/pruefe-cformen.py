@@ -136,12 +136,13 @@ FORMS = {
     "stmt:switch-reason":      (["gcorr_onGrund"], "R1"),
     "stmt:case":               (["gcorr_onGrund"], "R1 (an arm)"),
     "stmt:case-end":           (["arm_brk"], "`} break;`"),
-    # INTEGER `match` (lane 227 lowers it to a C `switch`). The correspondence
-    # lemma is lane 228's -- until it exists both rows are state (iii), and the
-    # KNOWN_UNCOVERED entries below name the owner, so the form is booked and
-    # never silent.
-    "stmt:switch-int":         ([], "integer `match` switch (lane 227; lemma: lane 228)"),
-    "stmt:case-int":           ([], "integer `match` arm (lane 227; lemma: lane 228)"),
+    # INTEGER `match` (lane 227 lowers it to a C `switch`). Lane 228 merged
+    # `CFormMatch.lean` WITHOUT a correspondence lemma for these rows (review G07
+    # F3, fix lane F1): its lemmas are over the scrutinee value and restate the
+    # two `Exec` constructors of `CS.sw`; nothing ties `fallListe` to an emitted
+    # `CS.sw`. Both rows stay state (iii), owner OPEN (TODO).
+    "stmt:switch-int":         ([], "integer `match` switch (lane 227; lemma: open)"),
+    "stmt:case-int":           ([], "integer `match` arm (lane 227; lemma: open)"),
     "stmt:for-counting":       (["scorr_traverse"], "S7"),
     "stmt:retry-counter":      (["scorr_retry"], "retry: `uint32_t _rN = 0;`"),
     "stmt:retry-header":       (["scorr_retry", "scorrC_retry"], "retry loop header"),
@@ -240,13 +241,15 @@ KNOWN_UNCOVERED = {
     "stmt:switch-tag": ("2026-09-13", "gcorr_onTag is proved, but ValCorr has no case for "
                         "a tagged union, so no related state has a union variable"),
     "stmt:decl-union-payload": ("2026-09-13", "the payload read of an onTag arm"),
-    # Lane 227 (2026-09-17) lowers integer `match` arms to a C `switch`. The
-    # correspondence lemma is lane 228's; until it lands both rows below are
-    # state (iii) with a named owner -- booked, never silent.
+    # Lane 227 (2026-09-17) lowers integer `match` arms to a C `switch`. Lane
+    # 228 merged without the correspondence lemma (review G07 F3); coverage is
+    # the checker's `N411` since fix lane F1 (2026-09-21). Both rows stay state
+    # (iii) with the lemma OPEN -- booked, never silent.
     "stmt:switch-int": ("2026-09-17", "integer `match` switch (lane 227 emits it; "
-                        "correspondence lemma owned by lane 228)"),
+                        "correspondence lemma open: CFormMatch.lean has value-level "
+                        "lemmas only, no tie to an emitted CS.sw)"),
     "stmt:case-int": ("2026-09-17", "integer `match` arm: `case N:` / `case N: {` "
-                      "(lane 227 emits it; correspondence lemma owned by lane 228)"),
+                      "(lane 227 emits it; correspondence lemma open, see switch-int)"),
     # The four aggregate rows. They are NOT new emitter shapes -- the emitter has written
     # them all along; they are newly VISIBLE, because until today the classifier read the
     # statement text and not the C type, and booked them under `scorr_ret`/`ergCorr_run`,
@@ -618,7 +621,10 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
     # Lane 227: an integer `match` arm. Numeric labels (`case 3: {`) and the
     # stacked bare labels of an expanded range (`case 3:`) are never a reason
     # or tagged arm -- those spell names, never values (IDENT cannot be digits).
-    if re.match(r"^case -?\d+u?: \{$", s) or re.match(r"^case -?\d+u?:$", s):
+    # `(-9223372036854775807 - 1)` is how `-2^63` is spelled (fix lane F1; the
+    # literal `-9223372036854775808` is unsigned in C and `cc -Werror` refuses it).
+    if re.match(r"^case (-?\d+u?|\(-9223372036854775807 - 1\)): \{$", s) or \
+            re.match(r"^case (-?\d+u?|\(-9223372036854775807 - 1\)):$", s):
         return "stmt:case-int"
     if re.match(r"^switch \(.*\.marke\) \{$", s):
         return "stmt:switch-tag"

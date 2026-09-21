@@ -1771,6 +1771,20 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Match(m) => {
                 let gegenstand = self.ausdruck(&m.gegenstand, lage);
+                // **`N411`-`N414` -- an integer `match` covers its scrutinee, each value
+                // once** (fix lane F1, review G07 F1). M1 is the pass that knows the
+                // scrutinee's range at this point, so the rule stands here; the logic is in
+                // `crate::intmatch`. The empty `match` over an integer is the degenerate
+                // case: it names nothing, so `N411` names the whole range.
+                let ganz = m.zweige.iter().any(|z| z.intpat.is_some())
+                    || (m.zweige.is_empty()
+                        && matches!(
+                            gegenstand.durchgreifen(),
+                            Typ::Ganzzahl(_) | Typ::Umlaufend(_)
+                        ));
+                if ganz {
+                    crate::intmatch::pruefe(m, &gegenstand, self.absagen);
+                }
                 // **`M123` -- ein `match` ueber einen GRUND nennt jede Zeile seiner
                 // Deklaration** (Stufe 7, 2026-08-21).
                 //
@@ -2330,7 +2344,8 @@ impl<'a> Pruefer<'a> {
                 w.sonst.as_ref().is_some_and(|s| self.endet_immer(s))
                     && w.zweige.iter().all(|(_, r)| self.endet_immer(r))
             }
-            // An integer `match` can pass with no arm taken: see `crate::int_match_may_miss`.
+            // An integer `match` (and the empty one) can pass with no arm taken: see
+            // `crate::int_match_may_miss` -- kept beside `N411` as the second line.
             StmtArt::Match(m) if crate::int_match_may_miss(m) => false,
             StmtArt::Match(m) => m.zweige.iter().all(|z| self.endet_immer(&z.rumpf)),
             _ => false,

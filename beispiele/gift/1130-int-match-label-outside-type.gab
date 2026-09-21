@@ -1,0 +1,18 @@
+-- erwartet: N413
+-- Fix lane F1 poison: an arm value outside the scrutinee's storage type. C
+-- converts a `case` label to the scrutinee's type, so over a `u8` the label `-1`
+-- would stand for a different value than the one written. The rest of the
+-- match covers `u8` completely, so `N413` is the only checker finding; the
+-- emitter's `C001` (review G07) stays as the second line.
+module gift::int_match_label_outside_type {
+impl fn klasse(x : u8) -> u32
+    effects { pure }
+    costs   <= 600 ops
+{
+    match x {
+        -1 => { return 9; }
+        0 .. 255 => { return 1; }
+    }
+    return 0;
+}
+}

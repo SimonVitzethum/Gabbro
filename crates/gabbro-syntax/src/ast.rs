@@ -1469,8 +1469,10 @@ pub struct MatchZweig {
     /// placeholder -- was wrong; `lean.rs` took an all-integer match
     /// for an `.onReason` and now refuses it by name). The emitter
     /// lowers an all-integer match to a `switch` WITHOUT `default`
-    /// (lane 227), and NO checker pass decides that the arms cover the
-    /// scrutinee, so every flow pass counts the path past all arms
+    /// (lane 227); the checker refuses a match whose arms do not cover
+    /// M1's range of the scrutinee (`N411`-`N414`,
+    /// `gabbro_check::intmatch`, fix lane F1), and every flow pass still
+    /// counts the path past all arms as a second line
     /// (`gabbro_check::int_match_may_miss`). Bodies of integer arms are
     /// checked like any other arm body through `rumpf`.
     pub intpat: Option<IntPat>,
@@ -1478,7 +1480,7 @@ pub struct MatchZweig {
 
 /// One integer `match` arm pattern (lane 222): an exact value or a
 /// range with literal bounds. The bounds are literals on purpose: an
-/// exhaustive integer match (lane 228) decides over constants, and a
+/// exhaustive integer match (`N411`, fix lane F1) decides over constants, and a
 /// computed bound would move that decision into user logic. Full
 /// expressions stay where they belong -- in `narrow` and in guards.
 #[derive(Debug, Clone, PartialEq, Eq)]

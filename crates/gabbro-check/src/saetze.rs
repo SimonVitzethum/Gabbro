@@ -2782,6 +2782,43 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
                      `expr_regel`, `ort_regel`, `ruf_regel`)",
     },
+    Satz {
+        name: "m1.ganzzahl_match",
+        kennungen: &["N411", "N412", "N413", "N414"],
+        aussage: "An integer `match` names every value M1 knows its scrutinee can hold, \
+                  each in exactly one arm: no value of the range is left out (`N411`), no \
+                  arm names a value an earlier arm names or no value at all (`N412`), no \
+                  arm names a value outside the scrutinee's storage type (`N413`), and \
+                  integer arms stand only over an integer scrutinee, never beside a \
+                  variant arm (`N414`). The emitted `switch` has no `default`, so in an \
+                  accepted program every run takes exactly one arm.",
+        vorbehalt: "The range is M1's range of the scrutinee expression at the `match`: \
+                    the declared type range narrowed by M1's flow facts (`narrow`, a \
+                    guarding `if`, `x & 3`). The rule is exactly as sound as that range \
+                    -- the same range M1 trusts for every unchecked table index, so it \
+                    adds no assumption, but it adds no independence either. `bool` and \
+                    opaque new types are refused (`N414`), not converted. An arm value \
+                    inside the storage type but outside the range is accepted (its label \
+                    never fires). The flow passes keep reading an integer `match` as \
+                    possibly skipped (`crate::int_match_may_miss`, review G07) beside \
+                    this rule -- a second line that costs precision only (a covered match \
+                    whose arms all return does not count as ending). The Lean predicate \
+                    `erschoepfend` in `CFormMatch.lean` is what `N411` decides, by an \
+                    interval sweep instead of `erschoepfendB`'s enumeration; that the \
+                    Rust sweep computes it is read, not proved.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/1128` (`-- erwartet: N411 allein`: `0 .. 254` over \
+                      a `u8`, and `cc -Werror` accepts the emitted `switch` -- N411 is \
+                      the only line), `1129` (`N412`, overlap), `1130` (`N413`, `-1` \
+                      over `u8`), `1131` (`N414`, `bool`); gifts 1072-1076 now fall at \
+                      the checker too, beside their `C001`. Positive and counter probes \
+                      in `tests/intmatch.rs` (declared range, full `u8`, a narrowed \
+                      scrutinee, `INT64_MIN`/`u64::MAX` labels, all compiled under \
+                      `cc -Werror`).",
+        fundstelle: "crates/gabbro-check/src/intmatch.rs (`pruefe`), called from the \
+                     `Match` arm of `m1.rs`; grammatik/Grammatik/CFormMatch.lean \
+                     (`erschoepfend`, `erschoepfendB_richtig`)",
+    },
 ];
 
 // ===================================================================================
