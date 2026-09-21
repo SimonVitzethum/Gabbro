@@ -1748,8 +1748,10 @@ fn bit_range_remainder_stays_refused() {
 // instead of refusing. `deadline <= n ops arch X falsifier p` is NO FORM:
 // the DATE, not the budget (`FnDecl::deadline`) -- owed to the machine,
 // discharged by the probe -- dropped and named in the printed header like
-// `costs`. `beispiele/59` needs both; `beispiele/125` stays refused with
-// its blockage proved (`Korpus125.lean`: `offen125_ret_unter_locks`).
+// `costs`. `beispiele/59` needs both; `beispiele/125` stays refused: the
+// exporter has no rule for a return under a lock (`Korpus125.lean`:
+// `offen125_ret_unter_locks`), although a G term through an outer local
+// exists (`kRumpfLese`, fix lane F8).
 // ---------------------------------------------------------------------------
 
 /// **Lane 255 -- `masks irqs` travels as `D.maskiert`** (positive probe):
@@ -1824,14 +1826,15 @@ fn export_59_succeeds() {
 
 /// **Lane 255 -- `beispiele/125` stays refused, pinned**: `lese_schreibe`
 /// returns `z` INSIDE `locks WACHE`, but a return needs `Λ.Perm V.ende`
-/// and the signature holds nothing (`Korpus125.lean` proves the absence:
-/// `offen125_ret_unter_locks`). Either the example moves its `return` out
-/// of the lock or G gains value-return under lock; until then the refusal
-/// is the finding.
+/// and the signature holds nothing (`Korpus125.lean`:
+/// `offen125_ret_unter_locks`, a fact about the FORM). The hand model
+/// shows a value-faithful G term exists (`kRumpfLese`: read into an outer
+/// local under the lock, return after the release, fix lane F8); the
+/// exporter has no rule producing it, so the refusal is an exporter gap.
 #[test]
 fn return_under_locks_stays_refused() {
     let w = export("125-read-under-lock.gab", &tree(&beispiele("125-read-under-lock.gab")))
-        .expect_err("return under locks has no G term (offen125_ret_unter_locks)");
+        .expect_err("return under locks has no exporter rule (offen125_ret_unter_locks)");
     assert_eq!(w.code, "LG004", "{w}");
     assert!(w.message.contains("falls off with a result"), "{w}");
 }

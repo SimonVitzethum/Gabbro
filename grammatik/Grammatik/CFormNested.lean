@@ -53,35 +53,43 @@ theorem cform_nested_read (L : CLayout) (orc : DevOrc) (fr : Nat)
     | _ => none)
   rw [haddr]
 
-/-- Concrete layout, state, locals and oracle for the witness: no block,
-    zeroed memory with everything alive, zeroed locals.
-    CAUTION (review 2026-09-21, G01): with no block, `ptrAdd` returns `none`,
-    so BOTH sides of the witness equation below evaluate to `none` (stuck).
-    The witness shows the premises are jointly satisfiable, NOT that a read
-    succeeds; a layout with a live 48-byte `u32` block at `.glob 7` is still
-    owed for a non-degenerate instance. -/
-def nzL : CLayout := fun _ => none
-def nzSt : CSt := ⟨fun _ _ => .int 0, fun _ => true, []⟩
+/-- Concrete layout, state, locals and oracle for the witness: global
+    block 7 is a live `uint32_t M[3][4]` (`natLay 12 [uint32_t]`: twelve
+    4-byte cells, 48 bytes), and every cell holds its own byte offset, so a
+    loaded value names the address it was read from.
+    (Review 2026-09-21, G01: the earlier witness used a layout with NO
+    block, so both sides of its equation were `none`; fix lane F8 replaced
+    it with this one, where the read succeeds.) -/
+def nzL : CLayout := fun b =>
+  match b with
+  | .glob 7 => some { lay := natLay 12 [.int false .w32], kind := .plain, base := 0 }
+  | _ => none
+def nzSt : CSt := ⟨fun _ o => .int (o : Int), fun _ => true, []⟩
 def nzRho : CLok := fun _ => .int 0
 def nzOrc : DevOrc := fun _ _ _ => 0
 
 /-- **Witness**: all premises of `cform_nested_read` hold jointly at
-    `M = 3, N = 4, es = 4` (`uint32_t M[3][4]`, `M[1][2]`), so the nested
-    read is the flat read of element `1 * 4 + 2 = 6` -- and the program is
-    non-degenerate: `nvBlock` writes cell 6 of the 12-cell table `nvD`
-    (`nv_lauf`: cell 6 reads 7, a memory-changing step). -/
+    `M = 3, N = 4, es = 4` (`uint32_t M[3][4]`, `M[1][2]`), and the read
+    SUCCEEDS on both sides: the emitted nested read and the flat read of
+    element `flachIndex 4 1 2 = 6` both load the cell at byte offset
+    `1 * 16 + 2 * 4 = 24` (whose content is `24`, its own offset). The
+    third conjunct is the defect probe: the transposed element `M[2][1]`
+    loads offset 36, so the value really depends on the row stride. -/
 theorem cform_nested_read_zeuge :
     ev nzL nzOrc 0 (nestedRead (.addr (.glob 7)) (.lit 1) (.lit 2) 3 4 4
         (.int false .w32)) nzSt nzRho
       = ev nzL nzOrc 0 (flatRead (.addr (.glob 7)) (.lit 6) 3 4 4
         (.int false .w32)) nzSt nzRho
-    ∧ nvZelle 6 (execBlock nvO 0 nvR nvBlock nvWelt .nil) = some 7 := by
-  constructor
-  · exact cform_nested_read nzL nzOrc 0 (p := .addr (.glob 7)) (ci := .lit 1)
-      (cj := .lit 2) (ck := .lit 6) (st := nzSt) (ρ := nzRho) (q := ⟨.glob 7, 0⟩)
-      (i := 1) (j := 2) (.int false .w32) 3 4 4
-      (by decide) rfl rfl rfl rfl (by decide) (by decide) (by decide) (by decide)
-  · exact nv_lauf.1
+    ∧ ev nzL nzOrc 0 (flatRead (.addr (.glob 7)) (.lit 6) 3 4 4
+        (.int false .w32)) nzSt nzRho = some (.int 24, nzSt)
+    ∧ ev nzL nzOrc 0 (nestedRead (.addr (.glob 7)) (.lit 2) (.lit 1) 3 4 4
+        (.int false .w32)) nzSt nzRho = some (.int 36, nzSt)
+    ∧ flachIndex (4 : Int) 1 2 = 6 := by
+  refine ⟨?_, rfl, rfl, by decide⟩
+  exact cform_nested_read nzL nzOrc 0 (p := .addr (.glob 7)) (ci := .lit 1)
+    (cj := .lit 2) (ck := .lit 6) (st := nzSt) (ρ := nzRho) (q := ⟨.glob 7, 0⟩)
+    (i := 1) (j := 2) (.int false .w32) 3 4 4
+    (by decide) rfl rfl rfl rfl (by decide) (by decide) (by decide) (by decide)
 
 #print axioms cform_nested_read
 #print axioms cform_nested_read_zeuge

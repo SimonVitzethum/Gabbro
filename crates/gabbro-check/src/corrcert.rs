@@ -723,16 +723,31 @@ mod tests {
         );
     }
 
+    /// The Lean checker file, read at compile time: the round trip below
+    /// compares the printer with the literal that Lean's `pruefeSim`
+    /// actually decides, not with a copy typed into this test.
+    const SIMPRUEF_LEAN: &str = include_str!("../../../grammatik/Grammatik/SimPruef.lean");
+
+    /// The body of `def cert124_printed : SimCert :=` in `SimPruef.lean`,
+    /// from the opening `⟨` to the matching `⟩`.
+    fn cert124_printed_aus_lean() -> &'static str {
+        let kopf = "def cert124_printed : SimCert :=";
+        let start = SIMPRUEF_LEAN
+            .find(kopf)
+            .expect("SimPruef.lean has no `def cert124_printed : SimCert :=`");
+        let rest = &SIMPRUEF_LEAN[start + kopf.len()..];
+        let auf = rest.find('⟨').expect("cert124_printed has no `⟨`");
+        let zu = rest.find('⟩').expect("cert124_printed has no `⟩`");
+        &rest[auf..zu + '⟩'.len_utf8()]
+    }
+
     #[test]
     fn sim124_lean_literal_stimmt_mit_simpruef_ueberein() {
-        // Byte-pinned against `cert124_printed` in SimPruef.lean: if this
-        // test changes, the Lean literal changes with it, or the round
-        // trip is broken and the test says so.
+        // Round trip against the FILE: `to_lean()` must be byte-identical to
+        // the body of `cert124_printed` in SimPruef.lean. Editing either side
+        // alone turns this red (review 2026-09-21, G01 finding 3).
         let cert = SimCert124::gedruckt();
-        assert_eq!(
-            cert.to_lean(),
-            "⟨[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6], [0, 0, 0, 1, 1, 0, 0],\n   [0, 0, 1, 1, 2, 2, 3, 4, 4], [0, 0, 1, 1, 0]⟩"
-        );
+        assert_eq!(cert.to_lean(), cert124_printed_aus_lean());
     }
 
     #[test]

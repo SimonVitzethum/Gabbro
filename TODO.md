@@ -83,7 +83,7 @@ patch shape + surviving test).
 | 227 | switch lowering (int-match) | `emit.rs` | M | 221 |
 | 228 | match semantics (Lean) | new `CFormMatch`-family file | M | 222 |
 | 229 | subrange traverse checker: effects + early exit (S001) — MERGED `e2184405` as the traverse-OBJECT read rule only (E010/E011, gifts 1077/1078); window bounds and labelled exit NOT built (no AST home) | `wirkungen.rs`, `absenkung.rs` | L | 222 |
-| 231 | divergence lemmas (Lean) | new file | M | 225 design |
+| 231 | divergence lemmas (Lean) — merged (`fa68bbb2`); **fix lane F8 (2026-09-22, review G10 F3):** the `KeinLogikHaltG` "bridge" was one step and vacuous; now `spin_prueft` (every `PrueftG` clause at every head of the empty `forever … invariant true` spin) with a REACHED G-machine witness `ewig_spin_zeuge` (`KeinLogikHaltG` for the whole machine), per head only; `nieZurueck_blatt_frei` renamed `bindAxiom_kein_blatt` (discrimination only). SATZKARTE §46 | new file | M | 225 design |
 | 232 | hold chunking (K002) — MERGED `f8a946cd` as advisory `N421` beside `K002` (gift 1082); no chunking mechanism, the windowed scan needs the window syntax | `kosten.rs` | M | 223 |
 | 233 | syscall/fd model (Lean) — merged; **fix lane F5 (2026-09-22, review G10 F5):** `FremdRuf.lean` §9 splits the gate contract (caller precondition `AufruferPflicht` vs hardware `AxVertragOP`) with a bridge to `HardwareAnnahmen`; `fdQ` admits fd 0; `Spec.lean` unchanged (`OFFEN.md` O23, SATZKARTE §42) | new file, no OS constants | M | 226 |
 | 234 | traverse lowering | SUPERSEDED by 252 below (234's tree predated 222/229; pins archived as `archive/234` on origin) | — | — |
@@ -398,9 +398,13 @@ tree refuses everywhere else.*
 - [x] **Hand models for the concurrent programs** — lane 203, reviewed
   (reviewer 217, r2) and merged (`2c53e282`, 2026-09-17). `Korpus07.lean`,
   `Korpus59.lean`, `Korpus109.lean`, `Korpus125.lean` after the `Korpus124`
-  template: 4 of 6 with full models (108, 124, 109, 59), 125
-  reshaped (`lese_schreibe` returns a constant; review G02 of 2026-09-21
-  found a value-faithful term via an outer local, not yet built), 07 with no
+  template: 5 of 6 with full models (108, 124, 109, 59, 125). 125 was first
+  reshaped (constant `return 0`); review G02 found a value-faithful term
+  and fix lane F8 (2026-09-22) built it: `let r = 0; locks WACHE { let v = z;
+  z = v; r = z; } return r;`, premise groups and goal theorem re-proved as
+  `korpus125_nutzer`/`korpus125_ziel`, witness returns the value read (5).
+  The exporter still refuses the source shape (LG004, no rule for a return
+  under a lock). 07 with no
   G program at all (no table, no `impl` body in the source; the blockage is
   a reading of the source, the Lean lemmas restate the empty declaration).
 - [ ] **Exporter-side concurrent coverage (the residue).** `lean-g` still
@@ -434,7 +438,11 @@ tree refuses everywhere else.*
   (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
   `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the
   emitted reads of `[[T; n]; m]` plus `cform_nested_read_zeuge`, standard
-  three axioms, planted-defect check (a swapped stride fails red). The
+  three axioms, planted-defect check (a swapped stride fails red). **Fix
+  lane F8 (2026-09-22, review G01 F1):** the witness was degenerate (no
+  block, both sides `none`); it now uses a live `uint32_t M[3][4]` block and
+  both reads load the value at byte offset 24 (the transposed `M[2][1]`
+  loads 36). SATZKARTE §44. The
   `Grammatik.lean` import was added by the merger. The reviewer verified
   that `pruefe-cformen.py` carries no nested-array row to flip (only
   `expr:array-read`).
@@ -444,8 +452,16 @@ tree refuses everywhere else.*
   (`.simcert`) and as the Lean literal `cert124_printed`, with unit tests
   (every forged table fails, both spellings pinned);
   `grammatik/Grammatik/SimPruef.lean` checks the printed certificate into
-  the `sim124` conclusion (`simpruef_liefert`, `simpruef_124_zeuge`).
-  Round trip measured on 124; program #2 is §2 stage-(b) work.
+  a simulation (`simpruef_liefert`, `simpruef_124_zeuge`). **Fix lane F8
+  (2026-09-22, review G01 F2/F3 + integration):** `pruefeSim` compares with
+  `gOfA`/`heldGA`/`gOfB`/`heldGB` themselves; the simulation's relation is
+  READ FROM the certificate (`R124c c`), and the check is what makes it
+  `R124` (`r124c_eq`); the integration's wrong `gB[7] = 3` is refused
+  (`pruefeSim_falsch`). The segments and step cases stay hand-proved for
+  `R124`, so nothing carries over to program #2 but the shape: program #2
+  needs a checker establishing `SegPasst` per step from the certificate.
+  The Rust round trip now reads `SimPruef.lean` itself (`include_str!`).
+  SATZKARTE §45.
 
 # 2. Translation validation  ⟨D⟩
 

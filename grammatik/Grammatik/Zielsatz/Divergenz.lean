@@ -17,10 +17,15 @@
     Syntax.lean §14) has an empty answer class (`antwortLeer_never`), so no
     oracle answer fits and the call never continues: `hardware (annahme a)`
     with the oracle's declared-effects world. Never `logik`, never `ok`.
-  * §3 bridge to `KeinLogikHaltG` (ZielOrtGanz.lean): a thread at a
-    true-invariant `forever` head passes the loop check G performs there,
-    and a thread at a never-axiom head passes the leaf checks (it is no
-    leaf). The leg is EXTENDED, never weakened: `Spec.lean` untouched.
+  * §3 `KeinLogikHaltG` at the spin (review G10 F3 of 2026-09-21, fix lane
+    F8): a thread whose head is any state of the spin of
+    `forever a invariant true {}` (`SpinKopf`: the `.ewig` head, the
+    unfolded empty body, the `ewigRest`) passes EVERY clause of `PrueftG`
+    (`spin_prueft`), i.e. the per-thread content of `KeinLogikHaltG`; plus
+    the one-step fact `ewig_wahr_schreitet` (the `.ewig` head at budget
+    `n + 1` takes its G step). `bindAxiom_kein_blatt` is a discrimination
+    fact only (a call head is no leaf head), nothing about never-axioms.
+    The leg's statement (`Spec.lean`) is untouched.
   * §4 witness: `divD`/`divP` (one table `konto`, one lock, a writer that
     writes then diverges in `forever`, a reader, a `-> never` axiom) with a
     reached F-machine run that changes memory and stands at the `forever`,
@@ -183,16 +188,45 @@ theorem asm_never_kein_ok {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx
   intro hcon
   cases hcon
 
-/-! ## 4. Bridge to `KeinLogikHaltG`: divergence serves the leg -/
+/-! ## 4. `KeinLogikHaltG` at the spin: per-thread checks, one step -/
 
-/-- **Bridge, `forever`**: a thread standing at a true-invariant `forever`
-    head takes its G step (`ewigWeiter`, RufMaschineG.lean) -- given the
-    lock-bookkeeping side conditions every reading rule of G carries
-    (`HeldIn` of the head holdings, the read-world spur equation). The
-    `hw` premise of that rule is `PrueftG`'s loop clause at this head, and
-    for `.wahr` it holds by computation: the diverging loop of §2 is
-    therefore no `logik` stop -- it extends the leg `keinLogikHalt`, never
-    weakens it (`Spec.lean` untouched). -/
+/-- The spin heads of `forever a invariant true {}`. -/
+def SpinKopf {D : Deklaration} (M : RufMaschineG D) (t : Faden) : Prop :=
+  ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (a : D.Annahme) (n : Nat)
+    (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a n .wahr .nil k⟩ ∨
+    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .dann .nil (.ewigRest a n .wahr .nil k)⟩ ∨
+    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .ewigRest a n .wahr .nil k⟩
+
+theorem spin_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {t : Faden} (h : SpinKopf M t) : PrueftG O passes M t := by
+  obtain ⟨l0, Γ0, Λ0, ρ0, a0, n0, k0, h | h | h⟩ := h
+  all_goals
+    refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
+      fun l Γ Λ Λx ρ tb inv body is k rest hl i hr => ?_,
+      fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩
+    all_goals (rw [h] at hr; first | (cases hr; done) | skip)
+  · cases hr
+    simp [wahr?, eval]
+
+/-- A thread at a bare `return` passes every check vacuously. -/
+theorem ret_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {e : ErgExpr D Γ Λ (vertragVon D (M.faeden t).kopf.f).erg}
+    {hΛ : Λ.Perm (vertragVon D (M.faeden t).kopf.f).ende}
+    (h : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.ret e hΛ)⟩) : PrueftG O passes M t := by
+  refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
+    fun l Γ Λ Λx ρ tb inv body is k rest hl i hr => ?_,
+    fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩ <;>
+  (rw [h] at hr; cases hr)
+
+/-- **One step, `forever`**: a thread standing at a true-invariant `forever`
+    head with budget `n + 1` and the empty body takes its G step
+    (`ewigWeiter`, RufMaschineG.lean) -- given the lock-bookkeeping side
+    conditions every reading rule of G carries (`HeldIn` of the head
+    holdings, the read-world spur equation). A progress fact about ONE
+    head shape (the empty spin, guard `true`); the check side is
+    `spin_prueft`, the reached-machine witness `ewig_spin_zeuge` (§8). -/
 theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
     {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {a : D.Annahme} {n : Nat}
@@ -208,16 +242,12 @@ theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {p
     ((M.weltVon t).lese Λ ((.wahr : Expr D Γ Λ .bool)).orte) rfl rfl [] ?_ hHeld⟩
   simp [hspur]
 
-/-- **Bridge, never-axiom heads**: a thread at a `bindAxiom` head passes
-    both leaf checks of `PrueftG` (clauses 4-5, ZielOrtGanz.lean, restated)
-    -- vacuously, since a call is no leaf (`istBlatt` holds only of `Stmt`
-    leaves, and `bindAxiom` is a `Block` constructor, so the rival head
-    equation discriminates). For a `-> never` axiom this head is
-    additionally the named stop `nieZurueck` (`kopf_nieZurueck_never`,
-    NeverAsm.lean), never `hardware` (`kein_hardware_an_never`): the
-    divergence of §3 and the leg cohere. Stated for every `bindAxiom` head
-    -- the never instance is the joint witness of §5. -/
-theorem nieZurueck_blatt_frei {D : Deklaration} {M : RufMaschineG D} {t : Faden}
+/-- **A `bindAxiom` head is no leaf head** (review G10 F3: a
+    discrimination fact, vacuous -- the two leaf clauses of `PrueftG` never
+    fire at a call head, whatever the axiom). It says nothing specific about
+    `-> never` axioms; their stop is `nieZurueck` (`kopf_nieZurueck_never`,
+    NeverAsm.lean), never `hardware` (`kein_hardware_an_never`). -/
+theorem bindAxiom_kein_blatt {D : Deklaration} {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {a : D.Ax} {τ : Ty} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ}
     {hw : ∀ t2, D.aschreibt a t2 = true →
@@ -688,6 +718,94 @@ theorem divergent_body_zeuge :
   · exact stelleOk_never_ax (D := divD) () divAx_never
   · exact asm_never_antwort_leer () divAx_never
 
+/-! ## 8. The spin on machine G: a reached `.ewig` head, `KeinLogikHaltG` there
+
+`divPS` is `divP` with `schreib` reduced to the bare spin and `lies` to
+`return 0`, so that the G run needs no write step. Thread 0 runs `schreib`,
+every other thread `lies`. Two G steps from the start (`endeEntf`,
+`dannForever` at budget `1`) put thread 0 at the `.ewig` head; there the
+WHOLE machine satisfies `KeinLogikHaltG` (thread 0 by `spin_prueft`, the
+others at their start `return`, `ret_prueft`), and thread 0 takes its
+next step (`ewig_wahr_schreitet`). The memory-changing run of this file
+is the F-machine run of §6; this section is the G-machine witness that the
+review asked for (G10 F3). -/
+
+/-- `schreib` as a bare spin: `forever () invariant true {}`, then the
+    unreachable `ret`. -/
+def divRumpfSpin : Endblock divD (vertragVon divD divSchreib) false (divD.params divSchreib)
+    (Signatur.anfang divD (divD.signatur divSchreib)) :=
+  .cons (.forever () .wahr .nil) (.ret .keine (by rfl))
+
+/-- `lies` returns the constant `0` (no read, so no lock story). -/
+def divRumpfNull : Endblock divD (vertragVon divD divLies) false (divD.params divLies)
+    (Signatur.anfang divD (divD.signatur divLies)) :=
+  .ret (.wert (.weiter (by decide) (by decide) (.lit 0))) (by rfl)
+
+/-- The spin program (see the section header). -/
+def divPS : Programm divD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | true => divRumpfSpin
+    | false => divRumpfNull
+
+/-- Thread 0 spins, every other thread returns `0`. -/
+def divInitS : Faden → Σ f : divD.Fn, Env divD (divD.params f)
+  | 0 => ⟨divSchreib, divRho7⟩
+  | _ => ⟨divLies, Env.nil⟩
+
+/-- The start machine of the spin run. -/
+def divS0 : RufMaschineG divD := RufStartG divPS divSp0 divInitS
+
+/-- Thread 0 starts at the spin body. -/
+theorem divS0_kopf : (divS0.faeden 0).kopf.rest =
+    ⟨false, divD.params divSchreib, Signatur.anfang divD (divD.signatur divSchreib), divRho7,
+      .ende (.cons (.forever () .wahr .nil) (.ret .keine (by rfl)))⟩ := rfl
+
+/-- The unreachable `ret` behind the spin. -/
+abbrev divSpinRet : Endblock divD (vertragVon divD divSchreib) false (divD.params divSchreib)
+    (Signatur.anfang divD (divD.signatur divSchreib)) := .ret .keine (by rfl)
+
+/-- After `endeEntf`: the `forever` statement unfolded to a `dann` head. -/
+def divS1 : RufMaschineG divD :=
+  ⟨divS0.speicher, rufUpdateG divS0.faeden 0
+    ⟨(divS0.faeden 0).stapel,
+     ⟨(divS0.faeden 0).kopf.f, (divS0.faeden 0).kopf.rho, (divS0.faeden 0).kopf.s0,
+      ⟨false, divD.params divSchreib, Signatur.anfang divD (divD.signatur divSchreib), divRho7,
+       .dann (.cons (.forever () .wahr .nil) .nil) (.ende divSpinRet)⟩⟩,
+     (divS0.faeden 0).spur, (divS0.faeden 0).log⟩,
+   divS0.lauf, divS0.start⟩
+
+/-- The first G step: `endeEntf` unfolds the `forever` statement. -/
+theorem divS01 : RufSchrittG divPS divO 1 divS0 0 divS1 :=
+  RufSchrittG.endeEntf divS0 0 false _ _ _ (.forever () .wahr .nil) divSpinRet divRho7 rfl divS0_kopf
+
+/-- **Witness** (rule 13) for `ewig_wahr_schreitet` and `spin_prueft`: a
+    REACHED G machine (two steps from `RufStartG`) whose thread 0 stands at
+    `.ewig () 1 .wahr .nil k`, where `KeinLogikHaltG` holds for every thread
+    and thread 0 steps on. -/
+theorem ewig_spin_zeuge :
+    ∃ M, RufErreichbarG divPS divO 1 divS0 M ∧
+      (∃ k, (M.faeden 0).kopf.rest = ⟨false, divD.params divSchreib,
+        Signatur.anfang divD (divD.signatur divSchreib), divRho7,
+        .ewig () 1 .wahr .nil k⟩) ∧
+      KeinLogikHaltG divO 1 M ∧ ∃ M', RufSchrittG divPS divO 1 M 0 M' := by
+  have s2 := RufSchrittG.dannForever (P := divPS) (O := divO) (passes := 1) divS1 0 false _ _
+    (Signatur.anfang divD (divD.signatur divSchreib)) _ () .wahr .nil .nil (.ende divSpinRet) divRho7 rfl
+  refine ⟨_, .schritt _ _ _ (.schritt _ _ _ .start divS01) s2, ⟨_, rfl⟩, ?_, ?_⟩
+  · intro t
+    by_cases ht : t = 0
+    · subst ht
+      exact spin_prueft ⟨_, _, _, _, _, _, _, Or.inl rfl⟩
+    · match t, ht with
+      | n + 1, _ => exact ret_prueft (e := .wert (.weiter (by decide) (by decide) (.lit 0))) (hΛ := by rfl) rfl
+  · refine ewig_wahr_schreitet (n := 0) rfl rfl ?_
+    intro L _
+    show L ∈ offen (startSpur (D := divD) divSchreib)
+    rw [offen_startSpur]
+    exact List.mem_singleton_self _
+
 /-! ## CUTS
 
   Proved (every premise used by its proof):
@@ -699,9 +817,15 @@ theorem divergent_body_zeuge :
   * `forever_leer_divergiert` -- the empty spin, no evidence premises.
   * `asm_never_antwort_leer`, `asm_never_kein_ok` -- the `-> never` axiom
     fits no answer and never continues.
-  * `ewig_wahr_schreitet` -- a true-`forever` head takes its G step:
-    divergence serves `KeinLogikHaltG`.
-  * `nieZurueck_blatt_frei` -- a `bindAxiom` head passes both leaf checks.
+  * `spin_prueft` -- a thread at any head of the empty true-invariant spin
+    passes every clause of `PrueftG`; `ret_prueft` the same at a bare
+    `return` head.
+  * `ewig_wahr_schreitet` -- the `.ewig` head at budget `n + 1` takes its
+    G step (one step).
+  * `ewig_spin_zeuge` -- a reached G machine at the `.ewig` head with
+    `KeinLogikHaltG` for every thread, and the step.
+  * `bindAxiom_kein_blatt` -- discrimination only: a `bindAxiom` head is no
+    leaf head (vacuous; renamed from `nieZurueck_blatt_frei`, review G10 F3).
   * `divRest_divergiert`, `divergent_body_zeuge` -- the joint witness on
     `divD`/`divP`: table written (`0 -> 100`), run reached, head at
     `forever`, axiom site admissible with empty answer class.
@@ -712,11 +836,16 @@ theorem divergent_body_zeuge :
     the witness shapes `.nil`/`.wahr`).
   * No checker acceptance (`antwortenB`, lane 225's sentences) is claimed in
     Lean: the shapes are the model's, the acceptance is the checker's.
-  * The bridge concludes per-head checks/steps, not `KeinLogikHaltG`
-    itself: the leg's statement (`Spec.lean`) is untouched by design.
-  * `divP` carries no `HeldGenau`/progress story: the run is on the F
-    machine (contracts aside, as in `ReferenzB`), the G step only as the
-    one-step bridge `ewig_wahr_schreitet`.
+  * The spin facts are PER HEAD: `spin_prueft` does not show that a thread
+    stays in `SpinKopf` along its steps (no inversion of `RufSchrittG`), and
+    only the empty body with guard `.wahr` is covered -- a `forever` with a
+    real body or a real invariant is the writer's logic (`NoExit`/`InvWahr`)
+    and meets `KeinLogikHaltG` through the general route, not through this
+    file. `KeinLogikHaltG` is shown for ONE reached machine
+    (`ewig_spin_zeuge`), not for every reachable one.
+  * `divP` carries no `HeldGenau`/progress story: its run is on the F
+    machine (contracts aside, as in `ReferenzB`); the G-machine witness is
+    the reduced program `divPS` of §8, which writes nothing.
 -/
 
 #print axioms Gabbro.Grammatik.Zielsatz.foreverLauf_noexit
@@ -727,7 +856,10 @@ theorem divergent_body_zeuge :
 #print axioms Gabbro.Grammatik.Zielsatz.asm_never_antwort_leer
 #print axioms Gabbro.Grammatik.Zielsatz.asm_never_kein_ok
 #print axioms Gabbro.Grammatik.Zielsatz.ewig_wahr_schreitet
-#print axioms Gabbro.Grammatik.Zielsatz.nieZurueck_blatt_frei
+#print axioms Gabbro.Grammatik.Zielsatz.bindAxiom_kein_blatt
+#print axioms Gabbro.Grammatik.Zielsatz.spin_prueft
+#print axioms Gabbro.Grammatik.Zielsatz.ret_prueft
+#print axioms Gabbro.Grammatik.Zielsatz.ewig_spin_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.divRest_divergiert
 #print axioms Gabbro.Grammatik.Zielsatz.divergent_body_zeuge
 

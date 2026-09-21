@@ -24,9 +24,11 @@
   What this file contains: the attempted declaration `kD`, the attempted
   program `kP` and Einheit `kE` (all vacuous), the VACUOUS premise group
   `korpus07_nutzer_leer` (honestly named -- it is NOT `korpus07_nutzer`),
-  the checker verdict on the empty program, and the PROVED blockage
-  `offen07_kein_zeuge`: rule 13 needs a table some function writes, and
-  `Q07.Tab` is empty, so no non-degenerate witness exists. Named gap
+  the checker verdict on the empty program, and the blockage: rule 13 needs
+  a table some function writes, and 07 declares none, so no non-degenerate
+  witness exists. That the SOURCE declares none is a reading of the source
+  text (above), not a theorem; `offen07_kein_zeuge` only restates the
+  modelling choice `Tab := Empty` (see the note in CUTS). Named gap
   `offen07`: G forms for entry/boot/walk (language extension), not a model
   repair.
 -/
@@ -137,10 +139,11 @@ theorem korpus07_nutzer_leer : Zielsatz.NutzerPflicht kE := by
 /-- The checker verdict on the empty program. -/
 theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] = true := by decide
 
-/-! ## The blockage, proved -/
+/-! ## The blockage, restated on the model (the source side is a reading) -/
 
-/-- Rule 13 needs a table some function writes; 07 declares no tables, so
-    the non-degeneracy clause is unsatisfiable on the faithful declaration:
+/-- Rule 13 needs a table some function writes; the model declares no
+    tables (a reading of the source: 07 declares none), so the
+    non-degeneracy clause is unsatisfiable on this declaration:
     WHICH premise fails on WHICH term -- the existential over `Q07.Tab`
     fails on every `t`, because there is none. -/
 theorem offen07_kein_zeuge : ¬ ∃ _t : kD.Tab, True :=

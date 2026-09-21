@@ -4016,5 +4016,74 @@ word), no literal surface, no strings in aggregates, and no upper limit on `max`
 **Axioms:** at most `propext` (`vergl_refl` also `Classical.choice`, `Quot.sound`); the file
 no longer imports `ReferenzB`. `#print axioms gabbro_ziel` unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §§1-10 history above.)
+## 44. Nested arrays: the emitted read `A[i][j]` is the flat read at `i * N + j` (lane 205; fix lane F8, 2026-09-22)
+
+**File:** `grammatik/Grammatik/CFormNested.lean` (on `Verschachtelt.lean`, `CFormen.lean`,
+`CSpeicher.lean`).
+
+| Theorem | What it says | Tied to |
+|---|---|---|
+| `cform_nested_read` | under pinned dimensions `M`, `N`, element size `es` and in-range indices, the emitted `ld (idx (idx p i M (N*es)) j N es)` evaluates exactly like `ld (idx p (i*N+j) (M*N) es)` -- equal `Option` results, stuck or not | the emitter's `M[i][j]` for `static mut M : [[T; N]; M]` (lane 170) |
+| `cform_nested_read_zeuge` | on a live `uint32_t M[3][4]` block (`natLay 12 [uint32_t]`) whose cells hold their own byte offsets: the nested and the flat read of `M[1][2]` agree AND both load `24`; the transposed `M[2][1]` loads `36`; `flachIndex 4 1 2 = 6` | non-degeneracy: the earlier witness used a layout with no block, so both sides were `none` (review G01 F1) |
+
+**What is NOT claimed.** The model side (`Expr.slot` over `nestIdx`) and the memory relation
+of a static C array (`corrW` for `T a[M][N]`) are not stated: this is the C address equality
+lifted through the load. `pruefe-cformen.py` has no nested-array row; the content of a mutable
+static-array read inherits the uncovered `expr:array-read`.
+
+**Axioms:** `propext`, `Classical.choice`, `Quot.sound`; `#print axioms gabbro_ziel` unchanged.
+
+## 45. The stage-(b) simulation certificate for 124: the relation read from the certificate (lane 206; fix lane F8, 2026-09-22)
+
+**File:** `grammatik/Grammatik/SimPruef.lean` (on `Schlusssatz124.lean`). **Rust:**
+`crates/gabbro-check/src/corrcert.rs` (`SimCert124`; the test
+`sim124_lean_literal_stimmt_mit_simpruef_ueberein` reads `SimPruef.lean` itself).
+
+| Theorem | What it says | Tied to |
+|---|---|---|
+| `erwartet_ist_r124` | the four literal tables the Rust printer mirrors are `gOfA`/`heldGA`/`gOfB`/`heldGB` over positions 0-12, 0-8 and residues 0-6, 0-4 | the integration finding: `gB[7]` was `3` in both languages, `R124` says `4` |
+| `pruefeSim` (def), `simpruef_tab` | the checker compares the printed tables with `R124`'s functions; a checked certificate carries the expected tables | -- |
+| `r124c_eq` | for a checked certificate, the relation `R124c c` built from its tables (`tabG`, `tabH`) IS `R124` | the only use of the check |
+| `simpruef_liefert` (def) | a checked certificate yields a `SimC` whose relation is `R124c c` (field `rel`); start and step obligations by transport along `r124c_eq` to `r124_start`, `schrittA`, `schrittB` | `sim124`, `schlusssatz_124_bei` |
+| `pruefeSim_falsch`, `r124c_falsch_anders` | the certificate with `gB[7] = 3` is refused; its relation names residue 3 where `R124` names 4 | the failure class the checker exists for |
+| `simpruef_124_zeuge` | the printed certificate checks, the runtime starts both roots, a reached C configuration moved memory (`privA[0]`: 0 -> 7), and it is related to a reachable G machine BY THE CERTIFICATE'S relation | non-degeneracy |
+
+**What is NOT claimed.** The certificate decides the relation, not the proof: the per-step G
+segments (`gBlatt`, `gNimm`, `gSetze`, `gGib`, `gPruefe`) and the case splits `schrittA`/
+`schrittB` are hand-proved for `R124`. A certificate cannot teach the checker a relation it has
+no proof for. Program #2 needs a checker that establishes `SegPasst` per C step from the
+certificate; only the shape (tables, relation-from-tables, printer) carries over. `c124` and
+`kP` are hand transcriptions; `DRFSC`/`LaufzeitC` stay named premises.
+
+**Axioms:** `propext`, `Classical.choice`, `Quot.sound` (`r124c_falsch_anders`: `propext`);
+`#print axioms gabbro_ziel` unchanged.
+
+## 46. Divergence of accepted never-bodies, and `KeinLogikHaltG` at the spin (lane 231; fix lane F8, 2026-09-22)
+
+**File:** `grammatik/Grammatik/Zielsatz/Divergenz.lean` (on `NeverAsm.lean`,
+`RufMaschineF.lean`, `ZielOrtGanz.lean`).
+
+| Theorem | What it says | Tied to |
+|---|---|---|
+| `foreverLauf_noexit` | an exit-free step and a true guard make `foreverLauf` answer `hardware (fortschritt a)` at every fuel | the named `progress` assumption (`on_exceeded`) |
+| `forever_noexit_divergiert`, `forever_noexit_kein_logik`, `forever_noexit_kein_zurueck`, `forever_leer_divergiert` | a `forever` with `NoExit` body and `InvWahr` invariant diverges as declared: never `logik`, never a return | lane 225's accepted `never-forever` shape |
+| `asm_never_antwort_leer`, `asm_never_kein_ok` | a `-> never` axiom fits no answer and never continues | the axiom's reading "the asm never returns" -- an ASSUMPTION about the C lowering (review G10 F2; the C side is G04's `for(;;)` after the asm) |
+| `spin_prueft` | a thread at ANY head of the empty spin `forever a invariant true {}` (`SpinKopf`: `.ewig`, the unfolded empty body, `ewigRest`) passes every clause of `PrueftG` | the per-thread content of `KeinLogikHaltG` (ZielOrtGanz.lean) |
+| `ret_prueft` | a thread at a bare `return` head passes every clause of `PrueftG` | the other threads of the witness |
+| `ewig_wahr_schreitet` | the `.ewig` head at budget `n + 1` with guard `true` and empty body takes its G step (`ewigWeiter`) | one step, one head shape |
+| `ewig_spin_zeuge` | a REACHED G machine (two steps from `RufStartG`) with thread 0 at `.ewig () 1 .wahr .nil k`: `KeinLogikHaltG` holds for the whole machine, and thread 0 steps on | the G-machine witness review G10 F3 asked for |
+| `bindAxiom_kein_blatt` | a `bindAxiom` head is no leaf head (vacuous discrimination; renamed from `nieZurueck_blatt_frei`) | nothing never-specific |
+| `divergent_body_zeuge` | all divergence premises jointly on `divD`/`divP`, at loop budget 3 (budget 0 was vacuous, review G10 F1), with an F-machine run writing `konto[0]` `0 -> 100` | non-degeneracy |
+
+**What is NOT claimed.** The spin facts are per head: no theorem shows that a thread stays
+in `SpinKopf` along its steps, and only the empty body with guard `.wahr` is covered; a
+`forever` with a real body or invariant meets `KeinLogikHaltG` through the general route
+(`KeineLogik`), not through this file. `KeinLogikHaltG` is shown for one reached machine, not
+for every reachable one. Nothing in Lean ties the never-axiom to its C lowering.
+`Spec.lean` is untouched.
+
+**Axioms:** `propext`, `Classical.choice`, `Quot.sound` at most; `#print axioms gabbro_ziel`
+unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §§1-10 history above.)
 
