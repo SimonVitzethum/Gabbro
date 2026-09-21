@@ -300,3 +300,23 @@ fn integer_match_does_not_end_a_narrow_arm() {
     );
 }
 
+/// **Review G07 (2026-09-21): a label outside the scrutinee's type is refused.**
+///
+/// C converts a `case` constant to the scrutinee's promoted type, so over a `u32`
+/// scrutinee `case -1:` would fire for `x == 4294967295` -- a different value than
+/// the arm names. The signed twin (`negative_exacts_lower_over_a_signed_scrutinee`)
+/// keeps `-1` over an `i32`.
+#[test]
+fn label_outside_the_scrutinee_type_is_refused() {
+    let (_, codes) = erzeugt_mit_absagen(&einheit(
+        "    match x {\n\
+         \x20       -1 => { return 1; }\n\
+         \x20       0 => { return 0; }\n\
+         \x20   }\n\
+         \x20   return 0;\n",
+    ));
+    assert!(
+        codes.contains(&"C001".to_string()),
+        "`-1` over a `u32` names no value it can hold -- fell with {codes:?}"
+    );
+}

@@ -12478,21 +12478,26 @@ fn match_int(
     // `wert_ctyp` answers from the declaration (parameter, `let` binding, callee
     // return); a scrutinee it cannot type has no `switch` to stand under, and a
     // non-integer one gives the arms nothing to meet.
-    let ganz = matches!(
-        wert_ctyp(&m.gegenstand, u).as_deref(),
-        Some(
-            "uint8_t"
-                | "uint16_t"
-                | "uint32_t"
-                | "uint64_t"
-                | "int8_t"
-                | "int16_t"
-                | "int32_t"
-                | "int64_t"
-                | "bool"
-        )
-    );
-    if !ganz {
+    // **The C type's value range, which is also the range a `case` label must lie in**
+    // (review G07, 2026-09-21). C converts every `case` constant to the PROMOTED type of
+    // the controlling expression (C11 6.8.4.2p5): over a `uint32_t` scrutinee `case -1:`
+    // becomes `case 4294967295:` and fires for `x == 4294967295`, while the arm said
+    // `-1` and the model (`CFormMatch.lean`, `cases.lookup k` over `Int`) never meets it.
+    // A label outside the scrutinee's type names no value the scrutinee can hold; it is
+    // refused, never converted.
+    let spanne: Option<(i128, i128)> = match wert_ctyp(&m.gegenstand, u).as_deref() {
+        Some("uint8_t") => Some((0, u8::MAX as i128)),
+        Some("uint16_t") => Some((0, u16::MAX as i128)),
+        Some("uint32_t") => Some((0, u32::MAX as i128)),
+        Some("uint64_t") => Some((0, u64::MAX as i128)),
+        Some("int8_t") => Some((i8::MIN as i128, i8::MAX as i128)),
+        Some("int16_t") => Some((i16::MIN as i128, i16::MAX as i128)),
+        Some("int32_t") => Some((i32::MIN as i128, i32::MAX as i128)),
+        Some("int64_t") => Some((i64::MIN as i128, i64::MAX as i128)),
+        Some("bool") => Some((0, 1)),
+        _ => None,
+    };
+    let Some((typ_min, typ_max)) = spanne else {
         weigere(
             absagen,
             s.span,
@@ -12501,7 +12506,7 @@ fn match_int(
              something to meet",
         );
         return;
-    }
+    };
     // **Expand every arm to its case values, in arm order.** A variant arm among
     // integer arms refuses here: it names a case, the others name values, and one
     // `switch` cannot meet both.
@@ -12520,6 +12525,16 @@ fn match_int(
         let Some(ws) = intpat_werte(pat, z.span, absagen) else {
             return;
         };
+        if ws.iter().any(|w| *w < typ_min || *w > typ_max) {
+            weigere(
+                absagen,
+                z.span,
+                "an integer `match` arm naming a value outside its scrutinee's type -- C \
+                 converts a `case` label to the scrutinee's type, so the label would fire \
+                 for a DIFFERENT value than the one written",
+            );
+            return;
+        }
         faelle.push(ws);
     }
     // **Two arms naming one value would be two `case` labels for it, and C rejects
