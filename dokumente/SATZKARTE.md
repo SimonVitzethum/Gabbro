@@ -3817,6 +3817,20 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 
 ## 39. The checked clone handoff: `stack`, `child`, and the (d)/(d2) premises (2026-09-18)
 
+> **Status on master (review 2026-09-21, G11): only the Rust half landed.** The merge
+> `a4461b6b` took `crates/`, the probes and these documents, and deliberately left out all
+> of `grammatik/`: on master there is NO `CloneHandoff.lean`, NO `Deklaration.klon`, NO
+> `Laufzeit.klon` and NO `CloneAssume` premise -- `GabbroZiel` is unchanged by lane O-1.
+> **THE MODEL** and **THE SPEC DIFF** below describe commits `2244babf` and `cde18e25`,
+> which are ancestors of master by history but not by content. *Because they are
+> ancestors, `git merge opus/clone-handoff` is a no-op:* bringing the Lean half in takes
+> `git checkout cde18e25 -- <files>` (or a cherry-pick of the two commits), not a merge.
+> Review finding on that half: under (d) no initial thread sits at a gate entry (`start`
+> puts every thread at the root or a declared start, `klon` separates entries from starts),
+> so `CloneHandoff` -- which reads only the START machine's heads -- holds vacuously and
+> (d2) is derivable from (d); the model contains no child thread at all
+> (`messung/review-2026-09-21/G11.md`).
+
 *Opus lane O-1 (K-1). Rust: `crates/gabbro-syntax` (`SyscallDecl.stapel`,
 `StmtArt::Child`), `crates/gabbro-check/src/clone.rs` (new, `N446`-`N450`),
 `emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,

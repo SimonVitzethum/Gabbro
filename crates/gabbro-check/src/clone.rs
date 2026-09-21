@@ -28,7 +28,7 @@
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
 //! really starts on the handed stack is the stub's business (`emit.rs`,
-//! part 3) and the runtime's assumption (d2, `KlonAnnahme`), not this
+//! part 3) and the runtime's assumption (d2, `CloneAssume`, on branch `opus/clone-handoff` only), not this
 //! pass's. What stands here is the shape the program can break: a gate
 //! handing no register, a path returning into the caller frame, a path
 //! falling past its end, a path with no gate behind it.

@@ -1639,6 +1639,9 @@ impl<'a> Rechner<'a> {
             } else {
                 match &s.art {
                     StmtArt::Sperrt(l) => self.schleifenzusagen(&l.rumpf, &lokal, absagen),
+                    // **Review 2026-09-21 (G11):** a loop on the `child`
+                    // path keeps its promise like any other (`K006`/`K007`).
+                    StmtArt::Child(x) => self.schleifenzusagen(x, &lokal, absagen),
                     StmtArt::Bricht(x) => self.schleifenzusagen(&x.rumpf, &lokal, absagen),
                     StmtArt::Narrow(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
                     StmtArt::LetSonst(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
@@ -1775,6 +1778,9 @@ impl<'a> Rechner<'a> {
                     }
                 }
                 StmtArt::Bricht(x) => self.sperrbloecke(&x.rumpf, &lokal, absagen),
+                // **Review 2026-09-21 (G11):** a `locks` block on the `child`
+                // path keeps its hold-time promise like any other (`K002`/`K004`).
+                StmtArt::Child(x) => self.sperrbloecke(x, &lokal, absagen),
                 StmtArt::Narrow(x) => self.sperrbloecke(&x.sonst, &lokal, absagen),
                 StmtArt::LetSonst(x) => self.sperrbloecke(&x.sonst, &lokal, absagen),
                 StmtArt::Schleife(sch) => match sch.as_ref() {
