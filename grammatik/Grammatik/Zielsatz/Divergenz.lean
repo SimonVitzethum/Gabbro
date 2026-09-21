@@ -652,17 +652,22 @@ theorem divInvWahr :
     accepted `asm` shape), and a reached run that changes memory and stands
     at the `forever`. The same exit evidence proves the divergence
     (`forever_noexit_divergiert` applied to the witnessed `hNo`/`hInv`);
-    the run shows it. Nothing is weakened: the table is written
+    the run shows it. The loop budget is `3`, not `0`: at budget `0`
+    `foreverLauf` answers `hardware (fortschritt a)` by its first equation
+    for EVERY loop (false guard, leavable body), so a budget-`0` conjunct
+    would not depend on `hNo`/`hInv` at all. At `3` the guard is checked
+    and the body run three times before the named exit (review G10).
+    Nothing is weakened: the table is written
     (`divB_schreibt`), the run is reached (`divB_erreicht`), the axiom
     admits its site (`StelleOk`) and fits no answer (`AntwortLeer`). -/
 theorem divergent_body_zeuge :
     ∃ (σ : World divD) (ρ : Env divD [.int 0 10]),
-    ∃ (hNo : NoExit divO 0 keinRuf
+    ∃ (hNo : NoExit divO 3 keinRuf
           (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
             [Res.held (D := divD) ()] [Res.held (D := divD) ()]))
       (hInv : InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
           [Res.held (D := divD) ()]),
-      execStmt divO 0 keinRuf
+      execStmt divO 3 keinRuf
           ((.forever () .wahr .nil : Stmt divD (vertragVon divD divSchreib) false
             [.int 0 10] [Res.held (D := divD) ()] [Res.held (D := divD) ()])) σ ρ =
           .hardware (.fortschritt ()) ∧
@@ -670,14 +675,14 @@ theorem divergent_body_zeuge :
         RufErreichbarF divP divO 0 (RufStartF divP divSp0 divInit) M ∧
         M.speicher.slots () 0 () ≠ divSp0.slots () 0 ()) ∧
       StelleOk divD (.inl ()) ∧ AntwortLeer divD (divD.aerg ()) := by
-  obtain ⟨hNo, hInv⟩ : NoExit divO 0 keinRuf
+  obtain ⟨hNo, hInv⟩ : NoExit divO 3 keinRuf
       (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
         [Res.held (D := divD) ()] [Res.held (D := divD) ()]) ∧
       InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
         [Res.held (D := divD) ()] :=
-    ⟨divNoExit divO 0 keinRuf, divInvWahr⟩
+    ⟨divNoExit divO 3 keinRuf, divInvWahr⟩
   refine ⟨divSp0.welt [], divRho7, hNo, hInv, ?_, ?_, ?_, ?_⟩
-  · exact forever_noexit_divergiert (l := false) divO 0 keinRuf () .wahr .nil _ _
+  · exact forever_noexit_divergiert (l := false) divO 3 keinRuf () .wahr .nil _ _
       hNo hInv
   · exact ⟨divM2F, divB_erreicht, divB_schreibt⟩
   · exact stelleOk_never_ax (D := divD) () divAx_never
