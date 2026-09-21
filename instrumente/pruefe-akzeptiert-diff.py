@@ -247,6 +247,12 @@ def pruefe_konstruktion(export, exp):
             out[arm.group(1)] = arm.group(2)
         return out
 
+    def nennt(liste, eintrag):
+        # A WHOLE entry, never a prefix: a plain `in` read `GLock.L` inside
+        # `GLock.L2` and `GTab.T` inside `GTab.T2`, so a missing guard hid
+        # behind a lock or table whose name extends it (review G03).
+        return re.search(re.escape(eintrag) + r"(?!\w)", liste) is not None
+
     orte = arme(export, "orte")
     braucht = arme(export, "braucht")
     gbraucht = arme(export, "gbraucht")
@@ -260,23 +266,23 @@ def pruefe_konstruktion(export, exp):
                                  traeger):
                 t, g = c.group(1), c.group(2)
                 if t is not None:
-                    if ("GLock.%s" % lock) not in braucht.get(t, ""):
+                    if not nennt(braucht.get(t, ""), "GLock.%s" % lock):
                         bruch.append("K2: `orte` names %s for lock %s, but "
                                      "`braucht` does not list it" % (t, lock))
                 else:
-                    if ("GLock.%s" % lock) not in gbraucht.get(g, ""):
+                    if not nennt(gbraucht.get(g, ""), "GLock.%s" % lock):
                         bruch.append("K2: `orte` names %s for lock %s, but "
                                      "`gbraucht` does not list it" % (g, lock))
         # K2 back: every guard a braucht arm lists owns the carrier.
         for t, eintrag in braucht.items():
             for l in re.finditer(r"GLock\.(\w+)", eintrag):
-                if (".inl GTab.%s" % t) not in orte.get(l.group(1), ""):
+                if not nennt(orte.get(l.group(1), ""), ".inl GTab.%s" % t):
                     bruch.append("K2: `braucht` names lock %s for table %s, "
                                  "but `orte` does not list it"
                                  % (l.group(1), t))
         for g, eintrag in gbraucht.items():
             for l in re.finditer(r"GLock\.(\w+)", eintrag):
-                if (".inr GGlob.%s" % g) not in orte.get(l.group(1), ""):
+                if not nennt(orte.get(l.group(1), ""), ".inr GGlob.%s" % g):
                     bruch.append("K2: `gbraucht` names lock %s for global "
                                  "%s, but `orte` does not list it"
                                  % (l.group(1), g))
