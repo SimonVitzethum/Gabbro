@@ -667,6 +667,12 @@ impl<'a> Laeufer<'a> {
                         Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
                     }
                 }
+                // **The path past every arm** (review G07): an integer `match` has no
+                // `default`, so the state from before joins -- as for an `if` without
+                // `else` above (`crate::int_match_may_miss`).
+                if let Some(n) = nach.as_mut().filter(|_| crate::int_match_may_miss(m)) {
+                    n.vereinige(&vor, &mut self.frisch, &self.boden);
+                }
                 if let Some(n) = nach {
                     self.stand = n;
                 }

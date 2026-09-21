@@ -262,3 +262,61 @@ fn integer_arms_over_a_tagged_value_are_refused() {
         "integer arms meet no variant -- fell with {codes:?}:\n{c}"
     );
 }
+
+/// **Review G07 (2026-09-21): an integer `match` does not end a `narrow` arm.**
+///
+/// No pass checks that integer arms cover the scrutinee, and the `switch` has no
+/// `default`: for `y != 0` the arm below falls through, and the narrowed `i` would
+/// index `T` unchecked. Before the repair `crate::endet_immer` read the `match` as
+/// ending (every arm returns) and `M105` stayed silent -- a checker-clean program
+/// whose C reads `T.slots[i]` for any `i`.
+#[test]
+fn integer_match_does_not_end_a_narrow_arm() {
+    let quelle = "module test::intmatch {\n\
+         table T count 4 { slot { v : u32, } }\n\
+         impl fn f(i : u32, y : u32) -> u32\n\
+         \x20   effects { reads T }\n\
+         \x20   costs   <= 64 ops\n\
+         {\n\
+         \x20   narrow i to 0 ..< 4 else {\n\
+         \x20       match y {\n\
+         \x20           0 => { return 0; }\n\
+         \x20       }\n\
+         \x20   }\n\
+         \x20   return T.slots[i].v;\n\
+         }\n\
+         }\n";
+    let (tree, mut refusals) = gabbro_syntax::lies("intmatch", quelle);
+    let _ = gabbro_check::pruefe(&tree, &mut refusals);
+    let codes: Vec<String> = refusals
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code.to_string())
+        .collect();
+    assert!(
+        codes.contains(&"M105".to_string()),
+        "a `narrow` arm ending in an integer `match` can fall through -- fell with {codes:?}"
+    );
+}
+
+/// **Review G07 (2026-09-21): a label outside the scrutinee's type is refused.**
+///
+/// C converts a `case` constant to the scrutinee's promoted type, so over a `u32`
+/// scrutinee `case -1:` would fire for `x == 4294967295` -- a different value than
+/// the arm names. The signed twin (`negative_exacts_lower_over_a_signed_scrutinee`)
+/// keeps `-1` over an `i32`.
+#[test]
+fn label_outside_the_scrutinee_type_is_refused() {
+    let (_, codes) = erzeugt_mit_absagen(&einheit(
+        "    match x {\n\
+         \x20       -1 => { return 1; }\n\
+         \x20       0 => { return 0; }\n\
+         \x20   }\n\
+         \x20   return 0;\n",
+    ));
+    assert!(
+        codes.contains(&"C001".to_string()),
+        "`-1` over a `u32` names no value it can hold -- fell with {codes:?}"
+    );
+}

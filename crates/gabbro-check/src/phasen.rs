@@ -479,6 +479,12 @@ fn fluss(
                         zweige.push((k, z.rumpf.span));
                     }
                 }
+                // **The path past every arm** (review G07): an integer `match` has no
+                // `default`, and a value no arm names changes nothing -- the same
+                // invisible second branch as an `if` without `else`.
+                if crate::int_match_may_miss(m) {
+                    zweige.push((stand.clone(), s.span));
+                }
                 if let Some(neu) = einigen(&zweige, s.span, absagen, "branches of a `match`") {
                     *stand = neu;
                 }

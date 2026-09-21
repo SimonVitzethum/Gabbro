@@ -2330,6 +2330,8 @@ impl<'a> Pruefer<'a> {
                 w.sonst.as_ref().is_some_and(|s| self.endet_immer(s))
                     && w.zweige.iter().all(|(_, r)| self.endet_immer(r))
             }
+            // An integer `match` can pass with no arm taken: see `crate::int_match_may_miss`.
+            StmtArt::Match(m) if crate::int_match_may_miss(m) => false,
             StmtArt::Match(m) => m.zweige.iter().all(|z| self.endet_immer(&z.rumpf)),
             _ => false,
         }

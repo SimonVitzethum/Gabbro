@@ -393,6 +393,18 @@ theorem match_exhaustive_zeuge :
 
 /-! ## CUTS: what is not proved.
 
+  - Review G07 (2026-09-21), read against master after both merges:
+    lane 227 IS merged. It writes one `case` per covered value (as
+    `fallListe` assumes), refuses duplicate values (so first-match
+    never decides anything), and writes NO `default:` on ANY integer
+    match. And NO Rust pass runs `erschoepfendB`: a non-exhaustive
+    integer match is checker-clean, and at run time a miss takes
+    `exec_sw_miss` (the statement is skipped). "A missing arm is a
+    refusal downstream" below is the intended rule, not the built one.
+    Nothing in this file connects `fallListe` to the `cases` of a
+    concrete `CS.sw`; `exec_sw_hit`/`exec_sw_miss` restate the two
+    `Exec` constructors.
+
   - Lane 227's `switch` lowering is UNMERGED (wave B, after lane 221):
     the expansion `armKeys`/`fallListe` (one `case` label per covered
     value, first match wins) is this lane's denotation of what 227
