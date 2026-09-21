@@ -1,0 +1,21 @@
+-- erwartet: N454
+-- **1168 -- a length fact dies with the assignment (fix lane F6).**
+--
+-- `lenof(u) > 7` holds when the branch is entered, but `u = t;` rebinds `u`
+-- to a string that may be empty. The fact dies with the assignment, and
+-- the index is refused (`N454`) -- a guard proves an index only while
+-- neither name has moved.
+
+module gift1168 {
+impl fn nimm(s: string max 8, t: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let mut u = s;
+    if lenof(u) > 7 {
+        u = t;
+        let d = u[7];
+    }
+    return 0;
+}
+}

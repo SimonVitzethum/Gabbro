@@ -897,3 +897,21 @@ The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= 
 | **`N464` holds `syscall` buffers only** | an `extern fn` taking a byte pointer and a length (`beispiele/64`'s `write`) is not held to the clause; `N463` decides the clause wherever it is written, but nothing demands it there |
 | **`lenof` of a pointer is decided only where an array decays** | along a forwarding chain it is the caller's own promise, carried by the same clause; a pointer out of a field or a computation cannot answer (refused, fail-closed) |
 | **what would close it** | an `AxPre` field in the declaration exported from each gate's `requires`, the caller obligation in `NutzerPflicht`, and the run-coincidence theorem that lets premise (c) drop to well-formed calls |
+
+## O24 — Bounded strings are checked, not represented: NUL, the upper limit on `max`, aggregates (recorded 2026-09-22, review G12, fix lane F6)
+
+Fix lane F6 made the checker agree with the Lean value model
+(`ZeichenfolgeGebunden.lean`): an index is proven against the length by a flow fact
+(`N454`), a string stands only in parameters, results and `let`s (`N465`), and the name
+table is scoped. Every string program still stops at the emitter (`C001`). What stays
+open:
+
+| | |
+|---|---|
+| **no representation** | the model is a length-carrying list with no terminator. A lowering must choose: a length word plus `max` bytes, or a NUL-terminated buffer of `max + 1` bytes (and then a NUL inside the data is either refused or truncates -- a decision, not a detail) |
+| **no upper limit on `max`** | `max` is parsed as `u128`. The pass sums saturating and so cannot accept wrongly, but a lowering must refuse a max it cannot allocate (a stack frame, a static) |
+| **no literals** | `"hi"` stays `P011`; no exact length ever arises except through `lenof` facts |
+| **no strings in aggregates or constants** | refused by `N465` (a deliberate cut, not a model): fields, table slots, `const`/`static`, arrays, variants, pointers, fn pointers, `syscall` heads |
+| **max-bound over-approximation** | `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
+| **what would close it** | the lowering lane (representation, limit, literals) with a Lean statement tying the emitted buffer to `BString` |
+

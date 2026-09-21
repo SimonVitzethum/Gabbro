@@ -1,0 +1,20 @@
+-- erwartet: N465
+-- **1163 -- a bounded string as a table slot field (fix lane F6).**
+--
+-- A table slot is a field like a struct's: a write `T[i].n = s` would pass
+-- no slot check. The declaration is refused (`N465`).
+
+module gift1163 {
+table Namen count 4 {
+    slot {
+        n : string max 8,
+    }
+}
+
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

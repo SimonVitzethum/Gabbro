@@ -1,0 +1,17 @@
+-- erwartet: N465
+-- **1162 -- a bounded string as a `static` type (fix lane F6).**
+--
+-- The same as `1161` one item kind over: a `static` holds a value no body
+-- binds, and an assignment to it would copy past every slot check. The
+-- declaration is refused (`N465`).
+
+module gift1162 {
+static mut NAME : string max 4 = 0;
+
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

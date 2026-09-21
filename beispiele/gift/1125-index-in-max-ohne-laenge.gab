@@ -1,0 +1,20 @@
+-- erwartet: N454
+-- **1125 -- a literal index below the max, with no length fact (lane 256; fix lane F6).**
+--
+-- Lane 256 accepted `s[7]` on a `string max 8` the M103 way (literal below
+-- the max), and this file was its clean side. Review G12 F4: a `string max 8`
+-- may hold zero characters, and the Lean `bindex` refuses `k >= length`
+-- (`ZeichenfolgeGebunden.lean`, `bindex_max_beweist_nichts`), so checker
+-- acceptance did not imply an in-range read. Since fix lane F6 an index must
+-- be shown below `lenof(s)` by a flow fact, and nothing here shows it: the
+-- index is refused (`N454`). The guarded form is `gift/1159`.
+
+module gift1125 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let c = s[7];
+    return lenof(s);
+}
+}

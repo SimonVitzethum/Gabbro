@@ -1,0 +1,27 @@
+-- erwartet: N455
+-- **1167 -- a name reused in a sibling block keeps no stale max (fix lane F6).**
+--
+-- The missed-refusal half of review G12 F5. `x` holds a `string max 2` in
+-- the `if` branch and a `string max 64` in the `else` branch. Lane 256's
+-- flat table saw two maxes for one name and dropped it, so the copy of the
+-- 64-character `x` into a `string max 2` slot was accepted (measured before
+-- the fix). Scoped, the `else` branch knows `x` holds up to 64, and the copy
+-- falls (`N455`).
+
+module gift1167 {
+extern fn lang() -> string max 64 effects { pure } costs <= 4 ops;
+
+impl fn nimm(a: string max 2, b: bool) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    if b {
+        let x = a;
+        return lenof(x);
+    } else {
+        let x = lang();
+        let y: string max 2 = x;
+        return lenof(y);
+    }
+}
+}

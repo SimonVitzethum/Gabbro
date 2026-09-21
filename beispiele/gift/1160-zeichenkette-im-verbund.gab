@@ -1,0 +1,19 @@
+-- erwartet: N465
+-- **1160 -- a bounded string as a struct field (fix lane F6).**
+--
+-- A `string max N` stands only as the whole type of a function parameter, a
+-- function result or a `let`: that is where the length discipline follows
+-- it. As a field, a copy into it (`p.name = s`) would pass no slot check --
+-- lane 256 left fields silent (review G12 F4). The declaration is refused
+-- (`N465`).
+
+module gift1160 {
+type Person = { name : string max 8, };
+
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

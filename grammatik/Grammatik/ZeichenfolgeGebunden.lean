@@ -11,11 +11,23 @@
   This file is the VALUE model only (lists with the length invariant).
   The surface since lane 256 round 2: `string max N` parses
   (`TypExpr::Zeichenkette`), the `zeichenfolge.rs` pass holds N453-N455
-  over parameters, `extern` returns and `let`s, and the emitter stops
-  every string program with `C001`. String literals and lowering are
-  explicitly out of scope (see CUTS).
+  (and N465 since fix lane F6) over parameters, results and `let`s, and
+  the emitter stops every string program with `C001`. String literals and
+  lowering are explicitly out of scope (see CUTS).
+
+  Fix lane F6 (review G12 F4/F6) adds the three facts the checker's rules
+  rest on, stated over this model and nothing else:
+  - `bindex_max_beweist_nichts`: a `string max 8` may be empty, so `k < max`
+    proves no index (why `gift/1125` is refused now);
+  - `bindex_geschuetzt` / `bindex_mindestlaenge`: a length fact
+    `k < blaenge s` (or `n <= blaenge s` with `k < n`) proves the read
+    (the guard forms `N454` accepts);
+  - `bconcat_max_summe` / `bkopie_max`: the checker's max-sum and
+    max-compare rules imply the exact-length operations succeed
+    (`N453` and `N455` over-approximate, never under-approximate).
+  No theorem here says the Rust pass implements these rules; that link is
+  the gifts, not a proof.
 -/
-import Grammatik.ReferenzB
 
 namespace Gabbro.Grammatik
 
@@ -115,35 +127,90 @@ def z2 : BString 8 := ⟨['!'], by decide⟩
 /-- Witness strings: the within-max concat `"hi!"` at max 8. -/
 def z3 : BString 8 := ⟨['h', 'i', '!'], by decide⟩
 
-/-- `bounded_string_zeuge`: a bounded string built (`z1`, `z2`),
-    concatenated within max (`bconcat 8 z1 z2 = some z3`, length 3),
-    and indexed (`bindex z3 0 = some 'h'`), JOINTLY with the reference
-    reached run `MB` whose step changes memory (`refB_schreibt`:
-    slot `0 -> 100`). The program side is NON-DEGENERATE: one table
-    that the leaf writes and four reached steps. -/
+/-- A copy into a slot of max `tmax`: the exact length is checked
+    against the target max; `none` is the refusal. -/
+def bkopie (tmax : Nat) {m : Nat} (s : BString m) : Option (BString tmax) :=
+  if h : s.daten.length ≤ tmax then some ⟨s.daten, h⟩ else none
+
+/-- The checker's copy rule (`N455`: source max at most target max) implies
+    the exact copy succeeds and keeps the characters. -/
+theorem bkopie_max {tmax m : Nat} (s : BString m) (h : m ≤ tmax) :
+    ∃ r : BString tmax, bkopie tmax s = some r ∧ r.daten = s.daten := by
+  have hl : s.daten.length ≤ tmax := Nat.le_trans s.len_ok h
+  exact ⟨⟨s.daten, hl⟩, by simp [bkopie, hl], rfl⟩
+
+/-- A copy into a shorter slot can fail: a full `string max 8` does not fit
+    `string max 2`. -/
+theorem bkopie_kuerzer_scheitert :
+    ∃ s : BString 8, bkopie 2 s = none :=
+  ⟨⟨['a', 'b', 'c'], by decide⟩, by decide⟩
+
+/-- The checker's concat rule (`N453`: `m1 + m2 <= tmax`) implies the exact
+    concat succeeds with the summed length. -/
+theorem bconcat_max_summe {tmax m1 m2 : Nat} (a : BString m1) (b : BString m2)
+    (h : m1 + m2 ≤ tmax) :
+    ∃ r : BString tmax, bconcat tmax a b = some r ∧
+      blaenge r = blaenge a + blaenge b := by
+  have hl : (a.daten ++ b.daten).length ≤ tmax := by
+    rw [List.length_append]
+    exact Nat.le_trans (Nat.add_le_add a.len_ok b.len_ok) h
+  refine ⟨⟨_, hl⟩, ?_, ?_⟩
+  · unfold bconcat
+    rw [dif_pos hl]
+  · simp [blaenge, List.length_append]
+
+/-- The max proves no index: a `string max 8` may be empty, and index 7
+    (below the max) is then refused. This is why the checker demands a
+    length fact, not `k < max` (review G12 F4, `gift/1125`). -/
+theorem bindex_max_beweist_nichts :
+    ∃ s : BString 8, 7 < 8 ∧ bindex s 7 = none :=
+  ⟨⟨[], by decide⟩, by decide, rfl⟩
+
+/-- A length fact proves the read: `k < blaenge s` gives a character
+    (the `i < lenof(s)` guard). -/
+theorem bindex_geschuetzt {max : Nat} (s : BString max) (k : Nat)
+    (h : k < blaenge s) : ∃ c, bindex s k = some c :=
+  ⟨s.daten[k], bindex_innen s k h⟩
+
+/-- A lower bound on the length proves every index below it (the
+    `lenof(s) > k` / `lenof(s) >= n` guards and `requires`). -/
+theorem bindex_mindestlaenge {max : Nat} (s : BString max) (n k : Nat)
+    (hn : n ≤ blaenge s) (hk : k < n) : ∃ c, bindex s k = some c :=
+  bindex_geschuetzt s k (Nat.lt_of_lt_of_le hk hn)
+
+/-- `bounded_string_zeuge`: every rule on non-empty, distinct strings.
+    `"hi" + "!"` at max 8 is `"hi!"` (length 3); the guard `2 < blaenge`
+    reads `'!'`; the same index is refused on the empty `string max 8`;
+    `"hi!"` copies into max 8 and not into max 2. No conjunct is about
+    anything but strings (the earlier reference-machine conjunct was
+    decorative, review G12 F6). -/
 theorem bounded_string_zeuge :
-    ∃ (s3 : BString 8) (c : Char) (M : RufMaschineF refD),
+    ∃ (s3 : BString 8) (leer : BString 8),
       bconcat 8 z1 z2 = some s3 ∧ blaenge s3 = 3 ∧
-      bindex s3 0 = some c ∧
-      RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
-      M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨z3, 'h', MB, rfl, rfl, rfl, refB_erreicht, refB_schreibt⟩
+      2 < blaenge s3 ∧ bindex s3 2 = some '!' ∧
+      blaenge leer = 0 ∧ bindex leer 2 = none ∧
+      (bkopie 8 s3).isSome = true ∧ bkopie 2 s3 = none ∧
+      s3.daten ≠ z1.daten :=
+  ⟨z3, ⟨[], by decide⟩, rfl, rfl, by decide, rfl, rfl, rfl, by decide, by decide,
+    by decide⟩
 
 end Gabbro.Grammatik
 
 /-! ## CUTS:
   - VALUE MODEL ONLY: `BString max` as a character list with the length
     invariant, plus `bliteral` / `bconcat` / `blaenge` / `bindex` /
-    `vergl` / `bvergleiche` with their length, refusal and comparison
-    theorems and the joint witness `bounded_string_zeuge`. The model
+    `vergl` / `bvergleiche` / `bkopie` with their length, refusal and
+    comparison theorems and the witness `bounded_string_zeuge`. The model
     covers literals (`bliteral`) AHEAD of the surface: `"hi"` stays
     `P011` because a literal needs an `ExprArt` arm and
     `m1::ausdruck_roh` is exhaustive over `ExprArt` (see gift 1127).
   - NO lowering: every string program ends at `C001` today (parameter
     type, return type, unresolvable `let`, non-array `lenof` -- all
-    measured). The index rule accepts literals below the max the M103
-    way; the lowering lane owes the exact-length side before it lowers
-    any index.
+    measured). Since fix lane F6 the index rule demands a length fact
+    (`bindex_geschuetzt`), never `k < max` alone (`bindex_max_beweist_nichts`).
+  - NO representation: NUL termination (a NUL-terminated buffer needs
+    `max + 1` bytes) and an upper limit on `max` (parsed as `u128`) are
+    the lowering lane's decisions.
   - NO library text (L4): formatting, parsing and UTF handling stay
     library work per `TODO.md` section 0b.
   - Planted-defect check: `bconcat_ablehnt` / `bliteral_ablehnt` prove
@@ -158,4 +225,10 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.vergl_refl
 #print axioms Gabbro.Grammatik.bconcat_ablehnt
 #print axioms Gabbro.Grammatik.bliteral_ablehnt
+#print axioms Gabbro.Grammatik.bkopie_max
+#print axioms Gabbro.Grammatik.bkopie_kuerzer_scheitert
+#print axioms Gabbro.Grammatik.bconcat_max_summe
+#print axioms Gabbro.Grammatik.bindex_max_beweist_nichts
+#print axioms Gabbro.Grammatik.bindex_geschuetzt
+#print axioms Gabbro.Grammatik.bindex_mindestlaenge
 #print axioms Gabbro.Grammatik.bounded_string_zeuge

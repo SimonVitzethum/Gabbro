@@ -1,0 +1,22 @@
+-- erwartet: N455
+-- **1165 -- a `let … else` source copies a string into a shorter parameter (fix lane F6).**
+--
+-- The call inside `let n = hol(s) else (e) { … }` hands a `string max 8` to a
+-- `string max 2` parameter. Lane 256 did not read `let … else` sources
+-- (review G12 F4); the copy falls (`N455`).
+
+module gift1165 {
+reason HolFehler {
+    Leer = 1 "nothing there"
+}
+
+extern fn hol(t: string max 2) -> u32 or HolFehler effects { pure } costs <= 1 ops;
+
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let n = hol(s) else (e) { return 0; }
+    return n;
+}
+}

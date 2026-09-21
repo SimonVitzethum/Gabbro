@@ -174,12 +174,20 @@ known like integer ranges.** Lane 256 MERGED 2026-09-19 (`afb286ee`):
 (`N453`–`N455`, gifts 1118–1127), Lean value model
 `ZeichenfolgeGebunden.lean`; the emitter stops every string program with
 `C001`. **Not delivered:** string literals (`"hi"` stays `P011`, needs an
-`ExprArt` arm in `m1.rs`). **Owed before any lowering (review G12,
-2026-09-21):** the index rule accepts a literal `k < max` without knowing
-the exact length (`gift/1125` checks clean), while the Lean `bindex` refuses
-`k >= length` -- the lowering lane must add exact-length tracking or a
-run-time length check first; the pass's flat per-body name table lets a
-shadowing unannotated `let` keep a stale string max. L4 library text (formatting/parsing/UTF) stays library work
+`ExprArt` arm in `m1.rs`). **Review G12 findings closed by fix lane F6
+(2026-09-22):** an index is proven against the LENGTH by a flow fact
+(`if lenof(s) > k`, `if i < lenof(s)`, `requires`, early exit), never by
+`k < max` (`gift/1125` now `N454`; Lean `bindex_max_beweist_nichts`,
+`bindex_geschuetzt`); strings stand only in parameters, results and `let`s
+(`N465`, fields/consts/statics/table slots/nested types refused, gifts
+1160-1163); contracts and `let … else` sources are walked (gifts 1164,
+1165); the name table is scoped (gifts 1166/1167). **Owed by the lowering
+lane:** the representation -- NUL termination (a NUL-terminated buffer
+needs `max + 1` bytes) or a length word -- and an upper limit on `max`
+(parsed as `u128`, no bound; the pass sums saturating and cannot accept
+wrongly, but a lowering must refuse a max it cannot allocate); literals;
+strings in aggregates and constants (refused by `N465` until a layout
+exists). See `dokumente/OFFEN.md` O24. L4 library text (formatting/parsing/UTF) stays library work
 (§0b), not language work.
 
 *Not lanes: sigaction (out by design, not by backlog: an async handler is a

@@ -3,7 +3,7 @@
 --
 -- A `string max 8` holds anywhere from zero to 8 characters, so index 8
 -- is out of range on every value it can ever hold. The index is refused
--- (`N454`); the accepted side is a literal below the max.
+-- (`N454`); the accepted side is an index a length guard proves (`1159`).
 
 module gift1119 {
 impl fn nimm(s: string max 8) -> u32

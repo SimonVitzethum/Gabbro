@@ -2740,61 +2740,111 @@ pub const M1: &[Satz] = &[
         aussage: "A bounded string carries its declared max like `u32` carries \
                   `in 0 .. N`, and lengths add: `string max A + string max B` \
                   holds up to A+B, so a slot that fits fewer refuses the sum \
-                  (`N453`); an index proves itself against the max -- a literal \
-                  at or past it is out of range on every value (`N454`). What \
-                  passes here still stops at the emitter (`C001`, no lowering \
-                  for string values), so the acceptance promises nothing it \
-                  cannot emit.",
-        vorbehalt: "Lengths are max-bounds, never exact counts: with no literal \
-                    surface no exact length ever arises, so a computed index \
-                    proves nothing and falls with the out-of-range one \
-                    (`N454` both ways) -- including an index m1 narrowed \
-                    elsewhere, which this pass cannot see. A literal below the \
-                    max is accepted the M103 way, and the lowering lane owes \
-                    the exact-length side before it lowers any index. String \
-                    sources are parameters, `extern` returns and inferred \
-                    `let`s only: `\"hi\"` stays `P011` (a literal needs an \
-                    `ExprArt` arm, and `m1::ausdruck_roh` is exhaustive over \
-                    `ExprArt`). The pass fires only on positive string \
-                    knowledge and stays silent on ignorance; shadowed names \
-                    drop out rather than decide wrongly.",
+                  (`N453`). An index is proven against the LENGTH, not the max \
+                  (`N454`): a literal at or past the max is out of range on \
+                  every value, and any other index stands only where a flow \
+                  fact shows it below `lenof(s)` -- a literal `k` under a known \
+                  `lenof(s) > k`, an unsigned name `i` under a known \
+                  `i < lenof(s)`. Facts come from an `if` condition in its \
+                  branch, from the negated condition after an `if` without \
+                  `else` whose block always ends, and from `requires`; a fact \
+                  dies when either name is assigned or rebound, and before a \
+                  loop body that assigns it. What passes here still stops at \
+                  the emitter (`C001`, no lowering for string values).",
+        vorbehalt: "The `+` rule over-approximates the exact-length concat of \
+                    the Lean model (`bconcat`): it may refuse a sum whose actual \
+                    lengths fit, never accept one that does not. No fact \
+                    reaches the right side of an `&&` inside one expression, and \
+                    a signed or unannotated index name proves nothing (a guard \
+                    and its index stand in two statements, over an unsigned \
+                    name). String sources are parameters, `extern` returns and \
+                    inferred `let`s only: `\"hi\"` stays `P011` (a literal needs \
+                    an `ExprArt` arm, and `m1::ausdruck_roh` is exhaustive over \
+                    `ExprArt`). NUL termination and an upper limit on the max \
+                    are the lowering's decisions, not made here.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift, plain `-- erwartet:` form (checker half \
                       only -- there is no C for `cc` to take, the emitter stops \
                       every string program with `C001`): `1118` (`N453`: 5+5 \
                       into 8), `1119` (`N454`: literal 8 at max 8), `1120` \
-                      (`N454`: computed index, narrowed yet unproven). The \
-                      clean sides are `1123` (declaration plus `lenof`) and \
-                      `1124` (5+3 into 8), both checker-silent with `C001` at \
-                      the emitter.",
+                      (`N454`: computed index, narrowed yet unguarded), `1125` \
+                      (`N454`: literal 7 below max 8 with no length fact -- \
+                      checker-clean before fix lane F6), `1168` (`N454`: the \
+                      guard's fact dies with an assignment). The clean sides \
+                      are `1123` (declaration plus `lenof`), `1124` (5+3 into 8) \
+                      and `1159` (all four guard forms), checker-silent with \
+                      `C001` at the emitter.",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
-                     `index_regel`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
-                     (`bconcat_ablehnt`, `bindex_aussen`)",
+                     `index_regel`, `fakten`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
+                     (`bconcat_max_summe`, `bindex_geschuetzt`, \
+                     `bindex_max_beweist_nichts`)",
     },
     Satz {
         name: "zeichenfolge.plaetze",
         kennungen: &["N455"],
-        aussage: "Strings are their own sort: a non-string value where a string \
-                  stands falls, a string where no string stands falls, and an \
-                  operation with exactly one string side is no form -- `+` of \
-                  two strings concatenates, comparisons of two strings order, \
-                  and everything else with a string in it falls (`N455`).",
-        vorbehalt: "Only positive knowledge fires: an initializer or argument \
-                    the pass cannot see as a string stays silent (m1 owns the \
-                    rest through `Unbekannt`), and a shadowed name drops out. \
-                    Call arguments at string parameters are held past the max; \
-                    arity and unknown callees stay m1's. Contracts, \
-                    `const`/`static` initializers, table slots and `LetSonst` \
-                    sources are not string-checked. Field and `->` suffixes on \
-                    a string fall here; there is no member access on strings.",
+        aussage: "Strings are their own sort: a string value flows only into a \
+                  known string slot that fits it -- an annotated `let`, an \
+                  assignment to a string name, a `return` at a string result, a \
+                  string parameter (in bodies, contracts and `let … else` \
+                  sources alike). A non-string value where a string stands \
+                  falls; a string past its slot's max falls; a string anywhere \
+                  else -- a condition, a `match` subject, an index, an operand of \
+                  anything but `+` and comparisons, an array element, a field, a \
+                  global, an atomic publish, an arena slot, a `const`/`static` \
+                  initializer, a non-string parameter -- falls (`N455`).",
+        vorbehalt: "The copy rule compares maxes (a sound over-approximation of \
+                    the Lean `bkopie`, which checks the exact length): a string \
+                    whose max exceeds the slot falls even if its actual length \
+                    would fit. An unannotated `let` fixes its max from its \
+                    initializer. The name table is scoped: a binding ends with \
+                    its block, and a shadowing `let` the pass cannot type binds \
+                    a non-string.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1121` \
                       (`N455`: `0` at a string slot), `1122` (`N455`: `s + 1` \
-                      mixed). The clean sides are `1125` (literal index below \
-                      the max) and `1126` (`==` and `<` over two strings), \
-                      both checker-silent with `C001` at the emitter.",
+                      mixed), `1164` (`N455`: a `requires` copies 8 into 2), \
+                      `1165` (`N455`: a `let … else` source copies 8 into 2), \
+                      `1167` (`N455`: a sibling block's `x` holds 64 and is copied \
+                      into 2 -- accepted before fix lane F6 by the flat table). \
+                      The clean sides are `1126` (`==` and `<` over two strings) \
+                      and `1166` (a name reused as a number in a sibling block -- \
+                      a false `N455` before fix lane F6), checker-silent with \
+                      `C001` at the emitter.",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
-                     `expr_regel`, `ort_regel`, `ruf_regel`)",
+                     `wert_ohne_kette`, `expr_regel`, `ort_regel`, `ruf_regel`, \
+                     `Zustand`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
+                     (`bkopie_max`, `bkopie_kuerzer_scheitert`)",
+    },
+    Satz {
+        name: "zeichenfolge.orte",
+        kennungen: &["N465"],
+        aussage: "A bounded string lives where its length is followed: as the \
+                  whole type of a function parameter, a function result or a \
+                  `let` annotation. Anywhere else a `string max N` is refused \
+                  (`N465`) -- a struct or table field, a `const`/`static`/atomic \
+                  type, an arena element, a type alias, an array element, a \
+                  variant payload, a pointer target, a function-pointer \
+                  parameter, a `syscall` head, a nested `let` type, an `alloc` \
+                  annotation, a `sizeof`. The walk is exhaustive over items and \
+                  type expressions (`crate::jeder_typausdruck_im_item`), so every \
+                  string VALUE comes from a name the pass binds, a resolved call \
+                  with a string result, or a `+` of two. A string handed to a \
+                  callee the pass cannot resolve (a method, a library call, a \
+                  constructor, an unknown name) falls, and so does a call to an \
+                  ambiguous name whose candidates carry a string.",
+        vorbehalt: "A deliberate cut, not a model: strings in aggregates and \
+                    constants need the lowering's value layout and literal \
+                    surface first, and are refused until then rather than \
+                    carried unchecked. No corpus program uses a string, so the \
+                    refusal costs no accepted program (measured: corpus diff 0).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1160` (a struct \
+                      field), `1161` (a `const`), `1162` (a `static`), `1163` (a \
+                      table slot field) -- all four checker-clean before fix lane \
+                      F6. The clean side is every parameter/result/`let` string \
+                      in `1123`, `1124`, `1126`, `1159`, `1166`.",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`deklarationen`, \
+                     `typ_annotation`, `ruf_regel`, `bibliothek_regel`)",
     },
     Satz {
         name: "m1.ganzzahl_match",

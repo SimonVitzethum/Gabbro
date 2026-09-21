@@ -1,0 +1,24 @@
+-- erwartet: C001
+-- **1166 -- a name reused in a sibling block is its own binding (fix lane F6).**
+--
+-- The false-positive half of review G12 F5. `x` is a string in the `if`
+-- branch and a number in the `else` branch. Lane 256 kept one flat name
+-- table per body, so `x + 1` in the `else` branch drew a false `N455`
+-- (measured before the fix). The table is scoped now: the checker stays
+-- silent, and the emitter stops the unit with `C001`.
+
+module gift1166 {
+impl fn nimm(a: string max 8, b: bool) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    if b {
+        let x = a;
+        return lenof(x);
+    } else {
+        let x = 5;
+        let n = x + 1;
+        return n;
+    }
+}
+}

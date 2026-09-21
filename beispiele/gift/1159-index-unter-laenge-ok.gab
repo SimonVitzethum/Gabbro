@@ -1,0 +1,31 @@
+-- erwartet: C001
+-- **1159 -- an index guarded by the length checks clean (fix lane F6).**
+--
+-- The positive side of the length rule for `N454`. A `string max 8` may hold
+-- zero characters, so only a length fact proves an index: the branch of
+-- `if lenof(s) > 7` reads `s[7]`, the branch of `if i < lenof(s)` reads
+-- `s[i]` for an unsigned `i`, the `requires lenof(s) > 2` at the head proves
+-- `s[2]`, and after `if lenof(s) <= 3 { return 0; }` the fall-through knows
+-- `lenof(s) > 3` and reads `s[3]`. The checker stays silent; the emitter
+-- stops the unit with `C001`, so no C is written.
+
+module gift1159 {
+impl fn nimm(s: string max 8, i: u32 in 0 .. 100) -> u32
+    requires lenof(s) > 2
+    effects { pure }
+    costs <= 64 ops
+{
+    let a = s[2];
+    if i < lenof(s) {
+        let c = s[i];
+    }
+    if lenof(s) > 7 {
+        let d = s[7];
+    }
+    if lenof(s) <= 3 {
+        return 0;
+    }
+    let e = s[3];
+    return lenof(s);
+}
+}

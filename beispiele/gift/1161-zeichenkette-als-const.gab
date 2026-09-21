@@ -1,0 +1,17 @@
+-- erwartet: N465
+-- **1161 -- a bounded string as a `const` type (fix lane F6).**
+--
+-- A constant initializer is not string-checked (there is no honest constant
+-- string without literals), so a `const` of string type would carry any
+-- value past the length discipline. The declaration is refused (`N465`).
+
+module gift1161 {
+const NAME : string max 4 = 0;
+
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

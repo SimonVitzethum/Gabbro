@@ -1,0 +1,23 @@
+-- erwartet: N455
+-- **1164 -- a contract copies a string into a shorter parameter (fix lane F6).**
+--
+-- `requires kurz(s)` hands a `string max 8` to a `string max 2` parameter.
+-- In a body this is `N455`; lane 256 did not walk contracts (review G12 F4).
+-- Contracts are walked now, and the copy falls (`N455`).
+
+module gift1164 {
+impl fn kurz(t: string max 2) -> bool
+    effects { pure }
+    costs <= 4 ops
+{
+    return lenof(t) == 0;
+}
+
+impl fn nimm(s: string max 8) -> u32
+    requires kurz(s)
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}
