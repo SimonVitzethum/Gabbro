@@ -123,7 +123,16 @@ SONDEN = W / "sonden"
 # the probe's controls, refutes it. Same rule: the quota rises because the
 # object grew. No new probe was written; the earned move is the second row
 # under an existing program.
-MARK_QUOTE = (19, 52)
+#
+# **(19, 52) -> (21, 54) on 2026-09-22 (fix lane F5, review G04 F4).** Two earned
+# diffs: the open and read gates of `beispiele/149`/`150` borrowed
+# `linux_write_contract` and its write-only probe; each now names its own
+# assumption (`linux_open_contract`, `linux_read_contract`, rows 53/54, class
+# `P4`) and arrives WITH its program (`sonden/sonde_open.c`,
+# `sonden/sonde_read.c` -- the gate's own raw call number, the mapped errnos,
+# `--kaputt` as the control that must fall). Same rule: the quota rises because
+# the object grew.
+MARK_QUOTE = (21, 54)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -498,14 +507,23 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # keeps removing the thirteen newest-by-row; the comment, not the tooth,
     # carries the wrinkle, and shrinking the tooth to twelve would hide that
     # a reused probe counts twice.
-    elf = ("sonde_abnahme", "sonde_byte_legen", "sonde_freigabe",
+    #
+    # **Grown on 2026-09-22 (fix lane F5), same rule:** 21 covered of 54. The
+    # floor needs 7 (56 >= 54) and misses at 6 (48 < 54), so fifteen covered
+    # rows must go. Newest-by-row that is rows 41-54 -- fourteen probes, the
+    # tick counting rows 39 and 52 -- and removing them leaves 6 of 54 (miss).
+    # Rows 42-54 (thirteen probes, fourteen rows) leave 7 of 54, which still
+    # meets, so no smaller newest set breaks it. `sonde_abnahme` (row 40) drops
+    # out of the tooth because the two new rows sit above it, not because the
+    # stress shrank: the set grew from thirteen to fourteen names.
+    elf = ("sonde_byte_legen", "sonde_freigabe",
             "sonde_barriere", "sonde_schreib_schranke", "sonde_speicher_schranke",
             "sonde_schreiben", "sonde_zaehle", "sonde_takt_verteiler",
             "sonde_bearbeite", "sonde_ruf_verteiler", "sonde_write",
-            "sonde_tick")
+            "sonde_tick", "sonde_open", "sonde_read")
     ohne_elf = [x for x in progs if x not in elf]
     r = lauf(p=ohne_elf)
-    proben.append(("the floor is met today and MISSED without the thirteen newest probes",
+    proben.append(("the floor is met today and MISSED without the fourteen newest probes",
                    not boden_heute and r[6]))
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
@@ -530,8 +548,13 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # stress (19 of 146 still meets the floor: 152 >= 146). 101 is the
     # smallest restore (19 of 153 < `1/8`; 100 lands exactly on it --
     # 152 < 152 is false -- and strict `<` cannot name a boundary).
+    #
+    # **The stress size is 115 since 2026-09-22 (fix lane F5), same rule.**
+    # Two more earned `P4` rows (21 covered of 54) drown the +101 stress
+    # (21 of 155 still meets: 168 >= 155). 115 is the smallest restore
+    # (21 of 169 < `1/8`; 114 lands exactly on it -- 168 < 168 is false).
     viel = dict(annahmen)
-    for i in range(101):
+    for i in range(115):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

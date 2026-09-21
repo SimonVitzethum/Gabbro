@@ -56,7 +56,7 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **19 of 52** | this file — a ratchet UP |
+| **falsifiable, probe stands as a program** | **21 of 54** | this file — a ratchet UP |
 | **falsifiable, probe MISSING** | **33 of 39** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
@@ -307,9 +307,15 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 50 | **frist_ruf_verteiler_eingehalten** | `sonde_ruf_verteiler` | `P4` | **PROGRAM** |
 | 51 | **linux_write_contract** | `sonde_write` | `P4` | **PROGRAM** |
 | 52 | **plattform_takt_stabil** | `sonde_tick` | `P4` | **PROGRAM** |
+| 53 | **linux_open_contract** | `sonde_open` | `P4` | **PROGRAM** |
+| 54 | **linux_read_contract** | `sonde_read` | `P4` | **PROGRAM** |
 
-**52 rows, 19 of them with a PROGRAM, 19 of them `P4`** — and one probe name carries two rows
-(`sonde_vtd_srtp`, rows 8 and 29), which is why 52 assumptions stand under 51 names. Row 52
+**54 rows, 21 of them with a PROGRAM, 21 of them `P4`** — and one probe name carries two rows
+(`sonde_vtd_srtp`, rows 8 and 29), which is why 54 assumptions stand under 53 names (and
+`sonde_tick` carries rows 39 and 52). Rows 53 and 54 (`beispiele/149`/`150`, fix lane F5,
+review G04 F4) split the open and read gates off `linux_write_contract`, which they had
+borrowed with its write-only probe; each arrives with its own program (`sonde_open`,
+`sonde_read`), so the quota rises because the object grew. Row 52
 (`beispiele/100`, lane E6) arrives with its probe: the platform-clock assumption is what the
 tick probe observes -- a standstill or a step back refutes it, and both are the probe's
 controls. Same rule as every earned diff before it: the assumption and its probe land

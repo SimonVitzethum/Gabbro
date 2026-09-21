@@ -2598,6 +2598,40 @@ fn never_ruempfe_werden_angenommen_225() {
     );
 }
 
+/// **Fix lane F5 (review G04 F6): `costs` on `-> never` is one promise in every shape.**
+///
+/// The bound is the work charged for the call before control leaves for good. A tail-call
+/// body sums its callee's declared costs and is CHECKED against its own bound (`K001` below
+/// the sum, clean at it); a bounded caller of a `forever` routine meets `K003`, because no
+/// finite bound exists over the loop (the refusal of a written one is gift `1062`); an
+/// opaque body must carry the number (`A003`, gift `1065`).
+#[test]
+fn never_kosten_sind_ein_satz_f5() {
+    let m = |inhalt: &str| format!("module p::d {{\n{inhalt}\n}}");
+    let wach = "extern fn watchdog() -> never effects { diverges } costs <= 7 ops;\n";
+    let fehler = |quelle: &str| -> Vec<&'static str> {
+        codes(quelle)
+            .into_iter()
+            .filter(|(_, s)| *s == Stufe::Fehler)
+            .map(|(k, _)| k)
+            .collect()
+    };
+    let schwanz = |n: u32| {
+        m(&format!(
+            "{wach}divergent fn dienst() -> never\n effects {{ diverges }}\n costs <= {n} ops\n{{\n \
+             watchdog();\n}}"
+        ))
+    };
+    assert_eq!(fehler(&schwanz(6)), vec!["K001"], "a bound below the callee's cost falls");
+    assert!(fehler(&schwanz(7)).is_empty(), "the bound at the callee's cost checks clean");
+    let rufer = m(
+        "divergent fn dienst() -> never\n effects { diverges }\n{\n \
+         forever s\n per_pass bounded 4 ops\n on_exceeded dienst\n effects { pure }\n{ }\n}\n\
+         impl fn chef() effects { diverges } costs <= 50 ops { dienst(); }",
+    );
+    assert_eq!(fehler(&rufer), vec!["K003"], "no finite bound stands over a forever routine");
+}
+
 /// **The `elems of` binder carries the bound of the array it runs over** -- §2.4's fourth
 /// domain, closed 2026-09-08.
 ///

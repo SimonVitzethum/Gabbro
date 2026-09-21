@@ -1938,6 +1938,19 @@ they point at stands in §1 beside `entrydecl`.
   host a call through it, and a caller with a cost promise meets `K003` over
   it. A promise about the kernel, like `costs` at an `extern fn` — counted,
   not re-measured.
+* **buffers: `requires x <= lenof(p)`** (fix lane F5, review G04 F3) — a
+  parameter that points at numbers is a buffer the kernel moves BYTES
+  through: it points at `u8`/`i8`, and the gate bounds it by a clause
+  `requires x <= lenof(p)` (or `<`) over one of its integer parameters
+  (`N464`). `lenof` of a pointer parameter is the number of elements the
+  caller's object holds from the pointer on. At every call, of any callee,
+  the clause is decided (`N463`): an array passed for `p` bounds the range of
+  `x`'s argument by its length where it decays; a forwarded pointer must be
+  the caller's own parameter under the caller's own clause. A kernel that
+  finds the end of its data by a terminator (a path read up to its NUL) owes
+  that as a named caller obligation in the contract — `beispiele/149`:
+  `spec fn path_nul_terminated`, required by the gate and counted `V` at
+  every call; the checker does not decide it.
 * **`stack r` + `child { … }`** — the checked clone handoff (lane O-1, K-1).
   The `stack` clause names the handed-stack register AS a stack — the one
   clause that may claim stack-ness, between `regs out` and `clobbers`, at

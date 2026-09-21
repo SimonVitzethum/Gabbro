@@ -212,6 +212,8 @@ pub mod zeremonie;
 pub mod zeichenfolge;
 /// Integer `match` coverage, `N411`-`N414` (fix lane F1; called from `m1.rs`).
 pub mod intmatch;
+// Fix lane F5 (review G04 F2/F3): `N463`/`N464` -- the transfer bound `x <= lenof(p)`.
+pub mod rahmenlaenge;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

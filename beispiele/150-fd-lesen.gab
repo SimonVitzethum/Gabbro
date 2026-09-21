@@ -10,11 +10,22 @@
 --
 -- Same user-made shape as `149` (ABI name, number, register map, errno
 -- decoding, costs and effects in-program; every constant on those lines is
--- this program's, none is the tree's), same reused per-call assumption
--- (`linux_write_contract`, probe `sonde_write` -- see `149` for why the
--- pair travels unchanged), same honesty about the stub (`C183` keeps named
--- results out of the decoding, so gates answer integers and wrappers carry
--- the carrier). The loop idiom is `beispiele/96`'s: `forever` with a
+-- this program's, none is the tree's), its OWN per-call assumption
+-- (`linux_read_contract`, probe `sonden/sonde_read.c`: a read answers at
+-- most `len` bytes and exactly the bytes that stood there, `EBADF` and
+-- `EINVAL` answer as mapped -- until review G04 the gate borrowed the write
+-- assumption, whose probe never read anything), same honesty about the stub
+-- (`C183` keeps named results out of the decoding, so gates answer integers
+-- and wrappers carry the carrier).
+--
+-- **The frame is tied to the object** (fix lane F5, review G04 F3). The
+-- kernel writes `len` bytes through `buf`, and `buf` is a pointer that
+-- arrived from an array whose length the decay forgot: until F5,
+-- `lies(fd, EIMER, 1024)` over the 64-byte `EIMER` checked clean. Now the
+-- gate says `requires len <= lenof(buf)` (`N464` demands it at a byte
+-- buffer), `lies` carries the same clause up, and `N463` decides it where
+-- `EIMER` decays: `CAP` is 64, the array holds 64
+-- (`beispiele/gift/1156` is the 1024 call, refused). The loop idiom is `beispiele/96`'s: `forever` with a
 -- `per_pass` bound, a `-> never` watchdog for the overrun, and the gate
 -- contract as `progress`. A 0-answer ends the stream, `SCHRANK` ends a
 -- longer one; an error reason comes back with the count untouched by
@@ -37,9 +48,9 @@ reason ReadError {
     exhaustive
 }
 
-assume linux_write_contract
-    "Write keeps its contract on this machine."
-    falsifier sonde_write;
+assume linux_read_contract
+    "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+    falsifier sonde_read;
 
 extern fn leser_haengt() -> never effects { diverges } costs <= 1 ops;
 
@@ -49,16 +60,17 @@ syscall gate_read(fd : Fd, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadErr
     regs out { rax }
     clobbers { rcx, r11 }
     errors { EBADF => BadFd, EINTR => Interrupted, EINVAL => Invalid }
-    requires len <= MAXLEN
+    requires len <= MAXLEN, len <= lenof(buf)
     ensures result <= len
     effects { writes buf }
     costs <= 40 ops
-    assume linux_write_contract falsifier sonde_write;
+    assume linux_read_contract falsifier sonde_read;
 
 -- One read, honest effects: the kernel writes through `buf`, so the
 -- declaration says `writes buf` (no `pure` fiction here -- contrast the
 -- write gate of `beispiele/74`, whose `r` pointer keeps the fiction).
 impl fn lies(fd : Fd, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    requires len <= MAXLEN, len <= lenof(buf)
     effects { writes buf }
 {
     let n = gate_read(fd, buf, len) else (e) { return e; }
@@ -81,7 +93,7 @@ impl fn zaehle(fd : Fd) -> u64 or ReadError
         per_pass bounded 1024 ops
         on_exceeded leser_haengt
         effects { writes EIMER }
-        progress linux_write_contract
+        progress linux_read_contract
     {
         if gesamt > SCHRANK - CAP {
             leave lesend;

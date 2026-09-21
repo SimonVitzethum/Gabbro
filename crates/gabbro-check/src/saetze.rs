@@ -367,7 +367,18 @@ pub const NAMEN: &[Satz] = &[
                   `per_pass bounded N ops` with a diverging `on_exceeded` exit, and no \
                   total `costs` is written over it. A `forever` with no diverging exit \
                   (`S006`), a total promise over it (`K003`), and a loop the body leaves \
-                  (`S009` fall-off-the-end) stay refused.",
+                  (`S009` fall-off-the-end) stay refused. **What `costs <= n` on a \
+                  `-> never` function promises is one thing in every shape** (fix lane \
+                  F5, review G04 F6): the work a call does on its thread before control \
+                  leaves for good -- the same bound a caller counts for the call. Where \
+                  Gabbro has the body it is CHECKED like any bound (a body ending in a \
+                  call to another `-> never` routine sums that callee's declared costs, \
+                  `K001` over the sum, `K003` over a callee with none); where the body is \
+                  opaque (`asm`, `extern`) it is REQUIRED and trusted, as for every \
+                  opaque body (`A003`, the extern cost rule); and over an un-leavable \
+                  `forever` no finite bound exists -- the loop IS the function's own \
+                  unbounded work -- so a written one is `K003`, and a bounded caller of \
+                  such a function meets `K003` at the call.",
         vorbehalt: "**This sentence has no diagnostic code of its own and changes no \
                     rule**: it pins the joint answer of three existing ones -- `S009` \
                     (`endet_immer` with the leave-binding read by `verlassen`: unlabelled \
@@ -384,8 +395,11 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "Positive side pinned inline (`never_ruempfe_werden_angenommen_225` \
                       in `crates/gabbro-check/tests/paesse.rs`: labelled, unlabelled and \
                       tail-call `-> never` ends fall with nothing; the emitted C of each \
-                      is `for (;;)`/`_Noreturn` and compiles under `cc -Werror`). Refusal \
-                      side: `beispiele/gift/1062` (`-- erwartet: K003`), `/1063` \
+                      is `for (;;)`/`_Noreturn` and compiles under `cc -Werror`; and \
+                      `never_kosten_sind_ein_satz_f5` pins the cost reading: a tail-call \
+                      bound below its callee's cost is `K001`, a bounded caller of a \
+                      `forever` routine is `K003`). Refusal side: \
+                      `beispiele/gift/1062` (`-- erwartet: K003`), `/1063` \
                       (`-- erwartet: S006`), `/1064` (`-- erwartet: S009`).",
         fundstelle: "crates/gabbro-check/src/schleifen.rs (`nie_rueckkehr`, \
                      `ausgang_pruefen`); crates/gabbro-check/src/kosten.rs \
@@ -4032,7 +4046,13 @@ pub const PHASEN: &[Satz] = &[
                     reason case's DECLARED value, and a declaration that numbers its \
                     reasons differently than the kernel numbers its errnos decodes \
                     against its own numbers. A ghost parameter, an `errors` map with no \
-                    channel, and an unresolvable reason stay the generic `C001`.",
+                    channel, and an unresolvable reason stay the generic `C001`. The \
+                    out-of-range and past-`-4095` legs hand `__builtin_unreachable()` to \
+                    the compiler under the gate's OWN `assume` -- the stub prints it as \
+                    `hardware (<name>)` -- so a gate that borrows another gate's assumption \
+                    borrows its unreachable too (review G04 F4: the open and read gates of \
+                    `beispiele/149`/`150` now name `linux_open_contract` and \
+                    `linux_read_contract`, each with its own probe).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
                       `C180`/`C181`/`C182`/`C183`/`C184` -- each checker-clean, each \
@@ -4040,6 +4060,43 @@ pub const PHASEN: &[Satz] = &[
                       (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
         fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
                      dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
+    },
+    Satz {
+        name: "syscall.rahmenlaenge",
+        kennungen: &["N463", "N464"],
+        aussage: "A transfer through a pointer is bounded by what the pointer reaches. A \
+                  `syscall` parameter that points at numbers is a byte buffer (`u8`/`i8` \
+                  pointee) and the gate carries `requires x <= lenof(p)` over one of its \
+                  integer parameters (`N464`). At every call, of any callee, each clause \
+                  `x <= lenof(p)` (or `<`) is DECIDED (`N463`): an array passed for `p` \
+                  -- where it decays and its length is last known -- bounds the range of \
+                  `x`'s argument by its length, with the array's elements being the \
+                  pointer's own; a pointer passed for `p` must be the caller's own \
+                  parameter `q` beside its own parameter `y` for `x`, under the caller's \
+                  own `requires y <= lenof(q)`; every other argument shape is refused.",
+        vorbehalt: "The strong reading holds only this clause form; every other `requires` \
+                    keeps `M115`'s weak reading. `lenof` of a pointer is the caller's \
+                    promise along a forwarding chain and a decided number only where an \
+                    array decays; the obligation register still lists the clause as a `V` \
+                    row (counted, the checker decided it). A named caller parameter bound \
+                    anywhere else in the body drops out (no scopes, fail-closed). Nothing \
+                    here says the length register is the one the kernel reads its count \
+                    from, nor anything about a byte INSIDE the frame: a kernel that finds \
+                    the end by a NUL is owed that by the caller as a named obligation in \
+                    the contract (`beispiele/149`: `spec fn path_nul_terminated`, counted \
+                    `V`, not decided). `N464` holds `syscall` buffers only; an `extern fn` \
+                    taking a byte pointer and a length is not yet held to the clause.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1155` (`N464`: a read buffer bounded only by a \
+                      ceiling -- `beispiele/150`'s shape before fix lane F5), `1156` \
+                      (`N463`: `lies(fd, EIMER, 1024)` over a 64-byte array, measured \
+                      clean before F5), `1157` (`N463`: a wrapper forwarding `buf`/`len` \
+                      without the clause), `1158` (`N464`: a `u32` buffer). The clean \
+                      side: beispiele/96, /149, /150 and `tests/rahmenlaenge.rs` (a \
+                      literal and a const inside the array, the forwarding chain, `<`).",
+        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs; crates/gabbro-check/src/m1.rs \
+                     (`transfer_bound_at_call`); crates/gabbro-check/src/syscall.rs \
+                     (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },
     Satz {
         name: "klon.uebergabe",

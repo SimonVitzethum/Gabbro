@@ -1,0 +1,41 @@
+-- erwartet: N463
+-- **1157 -- a wrapper forwards the buffer and forgets its bound (fix lane F5, review G04 F3).**
+--
+-- `lies` hands its own `buf` and `len` to the gate, but its contract carries no
+-- `len <= lenof(buf)`. The pointer's extent is known nowhere at this call -- the
+-- decay happened at `lies`'s callers, and without the clause nothing reaches them.
+-- `N463` refuses the forwarding; the clean twin carries the clause up
+-- (`beispiele/150`: `lies` requires what `gate_read` requires).
+
+module gift1157 {
+
+reason ReadError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_read_contract
+    "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+    falsifier sonde_read;
+
+syscall gate_read(fd : u32, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= lenof(buf)
+    ensures result <= len
+    effects { writes buf }
+    costs <= 40 ops
+    assume linux_read_contract falsifier sonde_read;
+
+impl fn lies(fd : u32, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    requires len <= 1024
+    effects { writes buf }
+{
+    let n = gate_read(fd, buf, len) else (e) { return e; }
+    return n;
+}
+
+}

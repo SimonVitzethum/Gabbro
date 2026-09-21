@@ -882,3 +882,18 @@ pool-safe) refuse. What stays open:
 | **liveness** | a root that never returns keeps its starter waiting forever; progress over statement-level starts is not decided |
 | **what would close it** | a statement-level spawn/join rule in machine G with the race component quantifying over started roots, then the driver-side lowering (one create per root, join before the next statement) |
 
+## O23 — A gate's argument preconditions are named, not modelled in the goal: the NUL path and the frame length (recorded 2026-09-22, reviews G04/G10, fix lane F5)
+
+Fix lane F5 repaired example 149's `open` gate (the register map is now Linux x86_64
+`open(path, flags, mode)`; measured on the emitted C) and gave the fd gates their own named
+assumptions and probes (`linux_open_contract`/`sonde_open`, `linux_read_contract`/`sonde_read`).
+The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= lenof(p)`
+(`N464`), and every call decides it (`N463`). What stays open:
+
+| | |
+|---|---|
+| **the NUL-terminated path is a named CALLER assumption, not a checked fact** | `beispiele/149` states it as `spec fn path_nul_terminated(path, pathlen)`, the gate `requires` it, and `gabbro obligations` counts it as a `V` obligation at every call. The checker does not decide it (no rule reads a byte's value), so a program that does not discharge it by its own logic calls `open` with a frame the kernel may read past |
+| **the goal's premise (c) quantifies over every argument** | `AxVertragO` (`AxiomVertrag.lean`) has no argument precondition. `FremdRuf.lean` §9 proves the split (`AxVertragOP` + `AufruferPflicht`) and a bridge back to `HardwareAnnahmen` for a re-dressed oracle that agrees with the machine's on every well-formed call; `Spec.lean` is unchanged, and run-level coincidence under the caller obligation is not proved. No exporter produces a gate precondition (149/150 do not export: `LG001`/`LG002`) |
+| **`N464` holds `syscall` buffers only** | an `extern fn` taking a byte pointer and a length (`beispiele/64`'s `write`) is not held to the clause; `N463` decides the clause wherever it is written, but nothing demands it there |
+| **`lenof` of a pointer is decided only where an array decays** | along a forwarding chain it is the caller's own promise, carried by the same clause; a pointer out of a field or a computation cannot answer (refused, fail-closed) |
+| **what would close it** | an `AxPre` field in the declaration exported from each gate's `requires`, the caller obligation in `NutzerPflicht`, and the run-coincidence theorem that lets premise (c) drop to well-formed calls |

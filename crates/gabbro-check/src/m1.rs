@@ -209,6 +209,8 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         // pointer.** Read once above; asked at every call and every read below.
         axiome,
         fn_gestalten,
+        caller_params: std::collections::HashSet::new(),
+        caller_bounds: Vec::new(),
     };
     p.programm(baum);
     (p.zaehlung, p.fremd, p.zeigerverf)
@@ -844,6 +846,15 @@ struct Pruefer<'a> {
     /// linked code and count. Syscalls are kernel traps, not functions,
     /// and axioms are foreign answers, not functions -- neither counts.
     fn_gestalten: Vec<FnGestalt>,
+    /// **Fix lane F5 (`N463`): the running body's own parameters, where no binder
+    /// in the body reuses the name.** A forwarded pointer keeps its extent only
+    /// through a parameter the caller's contract bounds; a nested `let` of the
+    /// same name would be another value under the same spelling, so a name bound
+    /// anywhere in the body drops out (fail-closed, no scopes).
+    caller_params: std::collections::HashSet<String>,
+    /// **Fix lane F5 (`N463`): the running body's own transfer bounds** --
+    /// `requires y <= lenof(q)` of the function whose body this pass is in.
+    caller_bounds: Vec<crate::rahmenlaenge::LengthBound>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -1036,6 +1047,15 @@ impl<'a> Pruefer<'a> {
                 if let FnRumpf::Block(b) = &f.rumpf {
                     self.modul = modul.to_string();
                     self.rufer = f.name.text.clone();
+                    let mut gebunden = std::collections::HashSet::new();
+                    crate::namen::bindungen_sammeln(b, &mut gebunden);
+                    self.caller_params = f
+                        .parameter
+                        .iter()
+                        .map(|p| p.name.text.clone())
+                        .filter(|n| !gebunden.contains(n))
+                        .collect();
+                    self.caller_bounds = crate::rahmenlaenge::bounds(&f.requires);
                     let mut lage = Lage::default();
                     for prm in &f.parameter {
                         let t = self.u.typ_von_ausdruck_decl(modul, &prm.typ);
@@ -1058,6 +1078,8 @@ impl<'a> Pruefer<'a> {
                     self.block(b, &mut lage, ergebnis.as_ref());
                     self.griffe.clear();
                     self.fehlerkanal = None;
+                    self.caller_params.clear();
+                    self.caller_bounds.clear();
                 }
             }
             // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
@@ -2234,7 +2256,7 @@ impl<'a> Pruefer<'a> {
                             argtypen.truncate(n);
                         }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
-                        let _ = self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                        let _ = self.ruf_aufgeloest(&ziel, r.span, false, &r.args, &argtypen, &sig);
                     }
                     let pfad = gabbro_syntax::ast::Pfad {
                         teile: z
@@ -2987,7 +3009,7 @@ impl<'a> Pruefer<'a> {
                             argtypen.truncate(n);
                         }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
-                        return self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                        return self.ruf_aufgeloest(&ziel, r.span, false, &r.args, &argtypen, &sig);
                     }
                 }
                 Typ::Unbekannt
@@ -3891,7 +3913,7 @@ impl<'a> Pruefer<'a> {
         // answer* -- see the register's reservation.
         let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
         let ziel = r.target_text();
-        self.ruf_aufgeloest(&ziel, r.span, uebergang, &argtypen, &sig)
+        self.ruf_aufgeloest(&ziel, r.span, uebergang, &r.argumente, &argtypen, &sig)
     }
 
     /// **Lane 194 (W1): the body-site half of the axiom-call refusal.**
@@ -3985,6 +4007,7 @@ impl<'a> Pruefer<'a> {
         ziel: &str,
         span: Span,
         uebergang: bool,
+        args: &[Expr],
         argtypen: &[(Typ, Span)],
         sig: &crate::umgebung::Signatur,
     ) -> Typ {
@@ -4021,6 +4044,7 @@ impl<'a> Pruefer<'a> {
             self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
         self.requires_pruefen(ziel, "M115", &sig, &argtypen);
+        self.transfer_bound_at_call(ziel, args, argtypen, sig);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -4378,6 +4402,149 @@ impl<'a> Pruefer<'a> {
             return None;
         }
         Some((b, span))
+    }
+
+    /// **`N463` -- a transfer bound `x <= lenof(p)` of the callee HOLDS at this call, decided**
+    /// (fix lane F5, review G04 F3; the rule in full stands in `rahmenlaenge.rs`).
+    ///
+    /// Two shapes answer for `p`, and nothing else does:
+    ///
+    /// * **an array** `[T; M]` (it decays here, and this is the last place its length is
+    ///   known): the RANGE of `x`'s argument lies inside `0 .. M` (`0 ..< M` for `<`), and
+    ///   the array's elements are the pointer's own element type -- `lenof` counts the
+    ///   callee's elements, so an array of wider elements is no answer;
+    /// * **the caller's own pointer parameter** `q`, with `x`'s argument the caller's own
+    ///   parameter `y`, and the caller's contract carrying `y <= lenof(q)` itself -- the
+    ///   bound travels up the forwarding chain until an array meets it.
+    ///
+    /// Everything else -- a computed pointer, a field, a length expression -- is refused: an
+    /// extent this site cannot read is an extent nobody checked. Unlike `M115` (refuse only
+    /// where the range EXCLUDES the clause), this is the strong reading, and it is so only
+    /// for this one clause form.
+    fn transfer_bound_at_call(
+        &mut self,
+        ziel: &str,
+        args: &[Expr],
+        argtypen: &[(Typ, Span)],
+        sig: &crate::umgebung::Signatur,
+    ) {
+        for atom in crate::rahmenlaenge::bounds(&sig.requires) {
+            let pos = |n: &str| sig.parameter.iter().position(|(pn, _)| pn == n);
+            let (Some(ix), Some(ip)) = (pos(&atom.length), pos(&atom.pointer)) else {
+                continue;
+            };
+            let (Some((tx, _)), Some((tp, sp))) = (argtypen.get(ix), argtypen.get(ip)) else {
+                continue;
+            };
+            let zeichen_op = if atom.strict { "<" } else { "<=" };
+            let klausel = format!("{} {zeichen_op} lenof({})", atom.length, atom.pointer);
+            // The callee's element type behind `p`: a pointer's pointee, an array's element.
+            let element_soll = match ohne_namen(&sig.parameter[ip].1) {
+                Typ::Zeiger(z) => Some(z.as_ref().clone()),
+                Typ::Feld { element, .. } => Some(element.as_ref().clone()),
+                _ => None,
+            };
+            if tp.ist_unbekannt() || tx.ist_unbekannt() {
+                // An untyped argument has fallen already (`M119` and kin); a second refusal
+                // over the same missing type would say nothing new.
+                continue;
+            }
+            let grund: Option<String> = match ohne_namen(tp) {
+                Typ::Feld { element, laenge } => {
+                    let gleich = element_soll
+                        .as_ref()
+                        .is_some_and(|s| s.text() == element.text());
+                    match (laenge, tx.bereich()) {
+                        _ if !gleich => Some(format!(
+                            "the array passed for `{}` holds `{}` elements, and `lenof({})` \
+                             counts `{}` -- a length in one is no bound in the other",
+                            atom.pointer,
+                            element.text(),
+                            atom.pointer,
+                            element_soll.map(|s| s.text()).unwrap_or_else(|| "?".into())
+                        )),
+                        (None, _) => Some(format!(
+                            "the array passed for `{}` has no length this pass can read",
+                            atom.pointer
+                        )),
+                        (Some(m), Some(b)) => {
+                            let m = *m as i128;
+                            let passt = if atom.strict { b.max < m } else { b.max <= m };
+                            if passt && b.min >= 0 {
+                                None
+                            } else {
+                                Some(format!(
+                                    "the array passed for `{}` holds {m}, and the argument \
+                                     for `{}` lies in {} .. {}",
+                                    atom.pointer, atom.length, b.min, b.max
+                                ))
+                            }
+                        }
+                        (Some(m), None) => Some(format!(
+                            "the array passed for `{}` holds {m}, and the argument for `{}` \
+                             has no range to hold against it",
+                            atom.pointer, atom.length
+                        )),
+                    }
+                }
+                Typ::Zeiger(_) => {
+                    let q = args.get(ip).and_then(crate::rahmenlaenge::bare_name);
+                    let y = args.get(ix).and_then(crate::rahmenlaenge::bare_name);
+                    match (q, y) {
+                        (Some(q), Some(y))
+                            if self.caller_params.contains(q)
+                                && self.caller_params.contains(y)
+                                && crate::rahmenlaenge::caller_carries(
+                                    &self.caller_bounds,
+                                    y,
+                                    q,
+                                    atom.strict,
+                                ) =>
+                        {
+                            None
+                        }
+                        (Some(q), Some(y))
+                            if self.caller_params.contains(q)
+                                && self.caller_params.contains(y) =>
+                        {
+                            Some(format!(
+                                "`{}` forwards its parameters `{q}` and `{y}`, and its own \
+                                 contract carries no `{y} {zeichen_op} lenof({q})`",
+                                self.rufer
+                            ))
+                        }
+                        _ => Some(format!(
+                            "the pointer passed for `{}` reaches an extent this site cannot \
+                             read -- only an array, or the caller's own pointer parameter \
+                             beside its own length parameter under the same clause, answers",
+                            atom.pointer
+                        )),
+                    }
+                }
+                _ => None,
+            };
+            if let Some(grund) = grund {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "N463",
+                        *sp,
+                        format!("`{ziel}` requires `{klausel}` -- {grund}"),
+                    )
+                    .mit_notiz(
+                        "`lenof` of a pointer parameter is the number of elements the \
+                         caller's object holds from the pointer on; an array keeps that \
+                         number only up to the call that decays it, so the bound is \
+                         decided HERE or nowhere",
+                    )
+                    .mit_notiz(
+                        "a foreign callee (a `syscall`, an `extern fn`) moves exactly as \
+                         many elements as the length says -- a length past the object is \
+                         a write or a read outside the declared frame, which no later \
+                         pass sees",
+                    ),
+                );
+            }
+        }
     }
 
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**

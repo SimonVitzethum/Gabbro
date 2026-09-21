@@ -75,7 +75,11 @@ syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
     regs out { rax }
     clobbers { rcx, r11 }
     errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
-    requires len <= 1024
+    -- `len <= lenof(buf)`: the kernel reads `len` bytes from `buf`, so the
+    -- length is bounded by the object the caller passes (`N464` demands the
+    -- clause at a byte buffer, `N463` decides it at the call below, where the
+    -- one-byte `WINDOW` meets a literal `1`).
+    requires len <= 1024, len <= lenof(buf)
     ensures result <= len
     effects { pure }
     costs <= 8 ops

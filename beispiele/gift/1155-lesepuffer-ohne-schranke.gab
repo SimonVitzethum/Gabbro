@@ -1,0 +1,33 @@
+-- erwartet: N464
+-- **1155 -- a read buffer with no bound on what the kernel writes (fix lane F5, review G04 F3).**
+--
+-- The shape `beispiele/150` had until review G04: the gate writes `len` bytes through
+-- `buf`, and the only clause on `len` is a fixed ceiling. Nothing ties the bytes the
+-- kernel moves to the object the caller hands in, so a 64-byte array and `len = 1024`
+-- checked clean. `N464` demands `requires len <= lenof(buf)` at the declaration; with
+-- it, `N463` decides the bound at every call (`beispiele/150` is the clean twin).
+
+module gift1155 {
+
+reason ReadError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_read_contract
+    "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+    falsifier sonde_read;
+
+syscall gate_read(fd : u32, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= 1024
+    ensures result <= len
+    effects { writes buf }
+    costs <= 40 ops
+    assume linux_read_contract falsifier sonde_read;
+
+}

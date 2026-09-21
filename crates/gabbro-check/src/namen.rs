@@ -361,7 +361,7 @@ struct PrimFakten {
 /// **The binders of a body, before the facts.** A store to a `let` local is
 /// thread-local, not program memory -- but only where the name IS bound here.
 /// Runs first so a use never meets a binder collected later in source order.
-fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
+pub(crate) fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Let(l) => {

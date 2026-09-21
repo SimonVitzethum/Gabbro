@@ -15,8 +15,10 @@
 --
 -- Nothing else speaks: the declaration carries its clause, both sides promise
 -- `pure` over `pure`, and the call is well-typed. The number itself is
--- trusted, not re-measured -- that trust is the named assumption in
--- `MUSE-REPORT-223.md`, not a second refusal.
+-- trusted, not re-measured -- that trust is the named assumption of the
+-- `kosten.summation` sentence in `saetze.rs` (review G04 F6: this comment
+-- pointed at `MUSE-REPORT-223.md`, a lane report and no register), not a
+-- second refusal.
 
 module gift::extern_kosten_zaehlen {
 

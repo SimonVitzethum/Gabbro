@@ -14,10 +14,33 @@
 -- and the effects all stand in-program. The numbers below (`number 2`,
 -- `ENOENT`/`EACCES`/`EEXIST`, the `rdi`/`rsi`/`rdx`/`r10` map) are constants
 -- of THIS program, not facts of the tree: the checker holds only the shape
--- (`N063`-`N068`, `A005`/`A006`, `N322`), and the emitter knows exactly one
--- stub template (`abi linux arch x86_64`, `C182` refusing every other pair
--- by name). A tree that knew these numbers would be an OS table, and there
--- is none.
+-- (`N063`-`N068`, `A005`/`A006`, `N322`, `N464`), and the emitter knows
+-- exactly one stub template (`abi linux arch x86_64`, `C182` refusing every
+-- other pair by name). A tree that knew these numbers would be an OS table,
+-- and there is none.
+--
+-- **But under `abi linux` the stub executes a REAL `syscall`, and number 2
+-- on x86_64 is `open(path, flags, mode)`** (review G04 F2, fix lane F5).
+-- The map below is that call's: `path` in `rdi`, `flags` in `rsi`, `mode`
+-- in `rdx`. Until F5 it read `rsi = pathlen, rdx = flags, r10 = mode`, so
+-- the length arrived as the flags and the flags as the mode -- measured on
+-- the emitted C (`/etc//passwd`, 13 bytes with its NUL: `13 & 3` is
+-- `O_WRONLY`, and the old map answered `Denied` where the fixed one opens
+-- read-only). `pathlen` still travels, in `r10`, which `open` does not
+-- read: every parameter is bound once (`N065`), and the length is what the
+-- contract holds.
+--
+-- **The kernel reads the path up to a NUL, not up to `pathlen`.** A Gabbro
+-- path carries its end beside the pointer (the `N052` lesson), so the NUL
+-- is a CALLER ASSUMPTION the checker cannot decide from a type, and it is
+-- written down by name instead of trusted in silence: `spec fn
+-- path_nul_terminated` states it (the last byte of the `pathlen` frame is
+-- `0`), the gate `requires` it, and every call site owes it as a counted
+-- `V` obligation (`gabbro obligations`: `gate_open requires #3`). With it
+-- the kernel's read stays inside `reads path`; without it the frame the
+-- gate declares is false by the caller's call, not by the machine.
+-- What the checker DOES decide is the frame's length: `pathlen <=
+-- lenof(path)` (`N464` demands it, `N463` holds it where an array decays).
 --
 -- The stub answers a bare integer (`C183` holds every named result type
 -- against the declared answer range, and a carrier has no range to check),
@@ -29,12 +52,13 @@
 -- range-honest: a descriptor fits the carrier, and the literal (not a
 -- `const`) is what carries the fact to the wrapper's `return n`.
 --
--- The per-call assumption is the reused pair of `beispiele/74`, `/90` and
--- `/96` (`linux_write_contract`, probe `sonde_write`): same name, same
--- text, same probe, so no new obligation and no new row in the probe quota
--- (`N024`, `pruefe-sondendeckung.py`). The historical name says "write";
--- what travels here is the machine-answers-its-gates contract the three
--- files share. Splitting it per gate is open, not built.
+-- The per-call assumption is this gate's OWN (`linux_open_contract`, probe
+-- `sonden/sonde_open.c`): a well-formed open answers a descriptor that fits
+-- the carrier, and a missing path, a denied one and an exclusive create
+-- over an existing one answer the mapped errnos. Until review G04 the gate
+-- borrowed `linux_write_contract`, whose probe only ever wrote into a pipe
+-- -- and the stub's out-of-range leg (`__builtin_unreachable()`) stood
+-- under that borrowed name. It now stands under this one.
 
 module beispiel::fd_offen {
 
@@ -49,17 +73,24 @@ reason OpenError {
     exhaustive
 }
 
-assume linux_write_contract
-    "Write keeps its contract on this machine."
-    falsifier sonde_write;
+assume linux_open_contract
+    "Open keeps its contract on this machine: a descriptor that fits 32 bits, the mapped errnos."
+    falsifier sonde_open;
+
+-- **The named caller assumption.** The kernel finds the end of `path` in
+-- the data; the program promises that end lies inside the frame it passes.
+-- A `spec fn` names it, so every call site owes it by name (`V`).
+spec fn path_nul_terminated(path : ptr<normal, r> u8, pathlen : u64) -> bool
+    effects { pure }
+    = pathlen >= 1 && path[pathlen - 1] == 0;
 
 syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64, mode : u64) -> u64 or OpenError
     abi linux arch x86_64 number 2
-    regs in { rdi = path, rsi = pathlen, rdx = flags, r10 = mode }
+    regs in { rdi = path, rsi = flags, rdx = mode, r10 = pathlen }
     regs out { rax }
     clobbers { rcx, r11 }
     errors { ENOENT => NotFound, EACCES => Denied, EEXIST => Exists }
-    requires pathlen <= MAXLEN
+    requires pathlen <= MAXLEN, pathlen <= lenof(path), path_nul_terminated(path, pathlen)
     -- 4294967295 is 2^32 - 1, the carrier's bound, spelled out: the range
     -- fact reaches the wrapper's `return n` only as a literal (a `const`
     -- beside it does not propagate there -- measured, not filed, `m1.rs` is
@@ -68,17 +99,17 @@ syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64, mode : u
     ensures result <= 4294967295
     effects { reads path }
     costs <= 40 ops
-    assume linux_write_contract falsifier sonde_write;
+    assume linux_open_contract falsifier sonde_open;
 
 -- The one wrap: raw answer in, carrier out. Four registers where the C
--- gate takes three: the length rides along because a Gabbro path carries
--- its end BESIDE the pointer, not in the data (the `N052` lesson --
+-- gate takes three: the length rides along in `r10` because a Gabbro path
+-- carries its end BESIDE the pointer, not in the data (the `N052` lesson --
 -- `beispiele/gift/661` falls an `extern fn open` for reading its end out of
--- the bytes). `requires` holds the length at every call site, and the
--- number names this gate's slot in the program's own dispatch, not a kernel
--- table: every constant on these lines is this program's, none is the
--- tree's.
+-- the bytes). The wrapper carries the gate's contract up unchanged: the
+-- length bound (`N463` holds the forwarding) and the NUL, which its own
+-- callers then owe by name.
 impl fn oeffnen(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> Fd or OpenError
+    requires pathlen <= MAXLEN, pathlen <= lenof(path), path_nul_terminated(path, pathlen)
     effects { reads path }
 {
     let n = gate_open(path, pathlen, flags, 0) else (e) { return e; }

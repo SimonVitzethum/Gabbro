@@ -1,0 +1,52 @@
+-- erwartet: N463
+-- **1156 -- 1024 bytes into a 64-byte bucket (fix lane F5, review G04 F3).**
+--
+-- The review's measurement, now refused: `beispiele/150`'s wrapper called with the
+-- whole ceiling over its 64-byte `EIMER`. The gate and the wrapper both say
+-- `len <= lenof(buf)`; where `EIMER` decays to the pointer its length is still known
+-- (64), the argument's range is `1024 .. 1024`, and `N463` refuses the call. Before
+-- F5 this checked clean and the kernel wrote 960 bytes past the static.
+
+module gift1156 {
+
+const MAXLEN : u64 = 1024;
+
+static mut EIMER : [u8; 64] = 0;
+
+reason ReadError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_read_contract
+    "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+    falsifier sonde_read;
+
+syscall gate_read(fd : u32, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= MAXLEN, len <= lenof(buf)
+    ensures result <= len
+    effects { writes buf }
+    costs <= 40 ops
+    assume linux_read_contract falsifier sonde_read;
+
+impl fn lies(fd : u32, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
+    requires len <= MAXLEN, len <= lenof(buf)
+    effects { writes buf }
+{
+    let n = gate_read(fd, buf, len) else (e) { return e; }
+    return n;
+}
+
+impl fn ueberlauf(fd : u32) -> u64 or ReadError
+    effects { writes EIMER }
+{
+    let n = lies(fd, EIMER, 1024) else (e) { return e; }
+    return n;
+}
+
+}

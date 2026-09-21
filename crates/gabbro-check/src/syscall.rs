@@ -17,6 +17,7 @@
 //! | `N067` | the `errors` map is total over the listed errnos and every target is a case of the `or R` channel | gift: errno mapped to an undeclared reason |
 //! | `N068` | a `kernel` pairing is refused until the pairing check lands | gift: kernel path |
 //! | `N322` | the `syscall` declares a countable `costs` promise (the lane-114 gap, closed) | gift 986: costless syscall |
+//! | `N464` | a buffer parameter (pointer at numbers) points at bytes and carries `requires x <= lenof(p)` (fix lane F5) | gift 1155: unbounded read buffer |
 //! | `A006` | the syscall names no sealed architecture -- x86_64 only | gift: arch mismatch |
 //!
 //! Three questions belong to existing rules and are NOT re-issued here: the
@@ -46,7 +47,93 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         fehlertabelle(baum, modul, s, absagen);
         bauart(s, absagen);
         kostenversprechen(baum, modul, s, absagen);
+        buffer_bound(baum, modul, s, absagen);
     });
+}
+
+/// **`N464` -- a buffer the kernel moves bytes through is a BYTE buffer with a declared
+/// bound** (fix lane F5, review G04 F2/F3).
+///
+/// A `syscall` parameter that points at numbers is a buffer: the kernel reads or writes
+/// through it as many BYTES as a length register says. Two things must stand in the
+/// declaration, or the frame the declaration promises (`reads p`/`writes p`, `GutO`) is one
+/// the kernel may exceed by the caller's say-so alone:
+///
+/// * the pointee is a byte (`u8`/`i8`) -- `lenof(p)` counts elements, the kernel counts
+///   bytes, and only for a byte are the two one number;
+/// * a clause `requires x <= lenof(p)` (or `<`) over one of the gate's integer parameters,
+///   which `N463` then decides at every call site (`rahmenlaenge.rs`).
+///
+/// A pointer at a record or a table is one object, not a buffer, and stays with the frame
+/// rules it always had. **Not claimed:** that `x` is the register the kernel reads its count
+/// from -- the register map is the user's (`N063`-`N066` hold its shape), and a gate whose
+/// kernel finds the end some other way (a NUL) owes that in its contract as well
+/// (`beispiele/149`: `path_nul_terminated`, a named caller obligation).
+fn buffer_bound(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let atome = crate::rahmenlaenge::bounds(&s.requires);
+    for p in &s.parameter {
+        let TypExpr::Zeiger(z) = &p.typ else { continue };
+        let ziel = u.typ_von_ausdruck_decl(modul, &z.ziel);
+        let mut ohne = &ziel;
+        while let crate::typen::Typ::Benannt { unter, .. } = ohne {
+            ohne = unter;
+        }
+        if !matches!(
+            ohne,
+            crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+        ) {
+            continue;
+        }
+        let byte = matches!(
+            &z.ziel,
+            TypExpr::Int(i) if matches!(i.wort, gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8)
+        );
+        let gebunden = atome.iter().any(|a| {
+            a.pointer == p.name.text
+                && s.parameter.iter().any(|q| {
+                    q.name.text == a.length
+                        && matches!(
+                            u.typ_von_ausdruck_decl(modul, &q.typ),
+                            crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+                        )
+                })
+        });
+        let detail = if !byte {
+            format!(
+                "points at `{}`, and the kernel counts BYTES -- `lenof({})` counts elements, \
+                 and only for `u8`/`i8` are the two one number",
+                ziel.text(),
+                p.name.text
+            )
+        } else if !gebunden {
+            format!(
+                "carries no `requires <length> <= lenof({})` over one of its integer \
+                 parameters -- nothing ties the bytes the kernel moves to the object the \
+                 caller passes",
+                p.name.text
+            )
+        } else {
+            continue;
+        };
+        absagen.schiebe(
+            Absage::fehler(
+                "N464",
+                p.name.span,
+                format!("`syscall {}` takes the buffer `{}` and {detail}", s.name.text, p.name.text),
+            )
+            .mit_notiz(
+                "a gate promises its frame (`reads`/`writes` of the buffer) as the named \
+                 hardware assumption; a length the caller may set past the object makes \
+                 that frame false by the caller's own call, not by the machine",
+            )
+            .mit_notiz(
+                "with the clause, `N463` decides the bound at every call: an array passed \
+                 there bounds the length argument by its own length, a forwarded pointer \
+                 carries the same clause up its caller's contract",
+            ),
+        );
+    }
 }
 
 /// **`N063`/`N064`/`N065`/`N066` -- the register map is well-formed.**

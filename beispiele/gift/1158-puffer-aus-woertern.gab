@@ -1,0 +1,32 @@
+-- erwartet: N464
+-- **1158 -- a buffer of words, and the kernel counts bytes (fix lane F5, review G04 F3).**
+--
+-- `lenof(buf)` counts the pointee's ELEMENTS; the kernel's `len` counts BYTES. Over
+-- `u32` elements a `len <= lenof(buf)` lets the kernel write four times the object.
+-- `N464` demands a byte pointee (`u8`/`i8`) at a `syscall` buffer, so the one clause
+-- means one number.
+
+module gift1158 {
+
+reason ReadError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_read_contract
+    "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+    falsifier sonde_read;
+
+syscall gate_read(fd : u32, buf : ptr<normal, w> u32, len : u64) -> u64 or ReadError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= lenof(buf)
+    ensures result <= len
+    effects { writes buf }
+    costs <= 40 ops
+    assume linux_read_contract falsifier sonde_read;
+
+}
