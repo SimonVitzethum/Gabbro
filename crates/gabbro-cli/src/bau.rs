@@ -516,7 +516,7 @@ struct TreiberPlan {
 /// | case | who refused it BEFORE this rule |
 /// |---|---|
 /// | a member naming no body | **`W003`**, by name, in Gabbro (fail-closed) |
-/// | the same body twice (`concurrent { f, f }`) | **`N304`**, by name, in Gabbro |
+/// | the same body twice (`concurrent { f, f }`) | **`N304`**/**`N315`**, by name, in Gabbro -- *but since lane 245 NOT for a busy pool-safe routine; see the union note below* |
 /// | a member taking parameters | **nobody** -- the emitted root takes them and the driver passes none |
 /// | two bodies sharing one C name | **nobody at the build** -- the checker sees modules, C sees one namespace |
 ///
@@ -550,12 +550,17 @@ fn treiberregel(
         }
         if !gesehen.insert(f.kurz.as_str()) {
             // **Union, not refusal.** A body named twice -- in one block
-            // (`concurrent { f, f }`, the checker's `N304` at CHECK time) or
-            // across two (`{a, b}` and `{a, c}`) -- is still one root and one
-            // thread, so the second naming spawns nothing new. The build
-            // scans the raw sources before the checker runs, but the union
-            // contradicts no checker verdict: it starts exactly the declared
-            // set, which is what every verdict assumes.
+            // (`concurrent { f, f }`) or across two (`{a, b}` and `{a, c}`)
+            // -- gets ONE root and ONE thread here, so the second naming
+            // spawns nothing new. **Known gap (review G06, 2026-09-21):**
+            // this was written while the checker refused every duplicate
+            // (`N304` busy, `N315` idle). Since lane 245 a busy pool-safe
+            // routine named twice is ACCEPTED, and for it this driver starts
+            // fewer threads than the declaration names; the pin compares
+            // SETS, so it cannot see the lost multiplicity. The hand driver
+            // `laufzeit/start_pool.c` is the pool path until the generator
+            // keeps multiplicity (one wrapper per name, one `pthread_create`
+            // per occurrence, a multiset pin).
             continue;
         }
         match funktionen.get(&f.kurz) {
