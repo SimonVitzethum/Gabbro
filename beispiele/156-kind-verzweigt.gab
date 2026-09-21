@@ -3,8 +3,8 @@
 -- The twin of 155 for the branched tail: `endet_immer` reads through `if`
 -- with `else` (both arms end in the never-returning `ausgang`), so `N449`
 -- stays silent beside `N448` and `N450`. Same shape gate (not the raw
--- clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints, and
--- the emitted C compiles under `cc -Werror`.
+-- clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints at the
+-- checker; the emitter refuses the `child` block (`C185`) like 155.
 
 module beispiel::kind_uebergabe_verzweigt {
 

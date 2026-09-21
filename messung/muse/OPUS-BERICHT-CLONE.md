@@ -3,6 +3,11 @@
 *Branch `opus/clone-handoff`, worktree `.claude/worktrees/opus-clone`, fisch `gabbro-opus-clone`.
 2026-09-18. All builds on fisch; nothing built on the laptop.*
 
+> **Status on master (review 2026-09-21, G11):** only the Rust half and the documents landed
+> (merge `a4461b6b`). Part 4/5 below (`CloneHandoff.lean`, the Spec diff (d)/(d2) and its
+> proof ripple) is NOT on master although its commits are ancestors of master; see
+> SATZKARTE §39 and `messung/review-2026-09-21/G11.md`.
+
 ## 0. What K-1 asked, and what this lane delivers
 
 K-1 (`BEFUNDE-bm5.md`, firewall tree): a `syscall` gate can declare the raw clone call,

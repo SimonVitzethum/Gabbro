@@ -322,7 +322,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N450`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the gates with the child entries in `D.klon` (`CloneHandoff.lean`) |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N450`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the gates with the child entries in `D.klon` (`CloneHandoff.lean` -- on branch `opus/clone-handoff` only, NOT on master; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -914,7 +914,8 @@ childstmt  = "child" block ;                                    (* lane O-1, §1
    block (every path ends in a `-> never` gate call or a never-exiting loop, `N449`) --
    behind a gate claiming a stack (`N450`). `child = 1;` stays an assignment, like at
    `reset` above. The emitter refuses the block by name (`C185`) until the inline
-   trap lands; the model side is `CloneHandoff.lean`. No new word: `child` is the
+   trap lands; the model side (`CloneHandoff.lean`) is on branch `opus/clone-handoff`,
+   not on master. No new word: `child` is the
    `tree` word (§9, `kante`). *)
 ```
 
@@ -1907,9 +1908,11 @@ they point at stands in §1 beside `entrydecl`.
   through past the block (`N449`) and runs behind a gate claiming a stack
   (`N450`). The gate's number, registers and error map stay user-made in
   the declaration; the stack switch is the stub's business and the runtime's
-  assumption (d2). The emitter refuses the block by name (`C185`) until the
+  assumption (d2 -- proposed on branch `opus/clone-handoff`, not a premise of
+  `gabbro_ziel` on master). The spill-read rule (`N451`/`N452`, lane 249) keeps
+  the path off unhanded caller slots. The emitter refuses the block by name (`C185`) until the
   inline trap lands. `beispiele/155` is the clean shape, `156` its branched
-  twin, `gift/1107`-`1112` the six refusals.
+  twin, `gift/1107`-`1113` and `1115`-`1117` the ten refusals (`1114` the silent spill pin, refused only by `C185`).
 
 **Two places where the written example fixes the production's letter** (measured
 at the build, lane S5): the §1 production line says `regbind` (`ident ":"
