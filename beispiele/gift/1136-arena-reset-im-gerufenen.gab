@@ -1,0 +1,19 @@
+-- erwartet: N211
+-- Fix lane F2 (review G08 F2): the `reset` stands in a callee. `leere()`
+-- consumes the generation of `A`, the next `alloc` hands out slot 0 again,
+-- and `A[a]` would read the value `2` through the index of the value `1`.
+-- Before the fix `N211` saw resets only within one body. Nothing else is
+-- wrong with this unit.
+module gift::arena_reset_im_gerufenen {
+arena A capacity 2 .. 2 of u16;
+impl fn leere() effects { writes A } costs <= 4 ops {
+    reset A;
+}
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let a = alloc A (1);
+    leere();
+    let b = alloc A (2);
+    let x : u32 = A[a];
+    return x;
+}
+}

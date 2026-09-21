@@ -8,7 +8,10 @@
 -- the file shows both halves of the free discipline: over the ceiling there is
 -- no branch to take except the one beside the statement (lane 240: beyond the
 -- ceiling growth refuses, gift `1087` pins the branchless shape), and after a
--- reset every index is fresh (lane 243: no live reference survives a reset).
+-- reset every index in use is fresh: `N211` refuses an index held across a
+-- reset (lane 243 in one body; since fix lane F2 also across calls, parameters
+-- and untracked carriers -- but not against a reset in a routine running
+-- concurrently, see `ArenaReset.lean` CUTS).
 --
 -- Fully clean, and it emits. Executed result: 1004 (see the report).
 module beispiel::arena_voll {

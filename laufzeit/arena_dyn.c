@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
@@ -107,12 +106,14 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)
         return true;
     }
     /* The ceiling is checkable: past `max` there is no commit, only the
-     * fail-stop. The checker's `N426` refuses the straight-line shape only:
-     * it holds the ceiling against the path's committed LOWER bound, so a
-     * `grow` in a loop, after a branch that grew, or spread over several
-     * functions can arrive here from an accepted program (review G08,
-     * 2026-09-21). Until the checker carries an upper bound, this abort is
-     * a reachable stop, not only a bypass detector. */
+     * fail-stop. Since fix lane F2 (2026-09-21) the checker's `N426` holds
+     * every `grow` against the UPPER bound of what the whole run may have
+     * committed (every path, loop pass, call and root counted; a loop
+     * without a constant bound or a recursion refused), so an accepted
+     * unit reaches this abort only outside the checked run model: a routine
+     * entered more than once per load by something the unit does not see
+     * (a separately linked caller), or a descriptor the emitter misbuilt.
+     * It stays a stop, never a partial commit. */
     neu = (uint64_t)d->committed + (uint64_t)n;
     if (neu > d->max) {
         fprintf(stderr,
@@ -121,8 +122,7 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)
         abort();
     }
     /* Round the new span to whole pages: commit is monotone, so only the
-     * not-yet-committed tail needs protection change. Anonymous pages read
-     * as zero once committed, which is the zero-fill the floor relies on. */
+     * not-yet-committed tail needs protection change. */
     seite = (size_t)seiten_groesse();
     von = (size_t)d->committed * (size_t)d->elem;
     bis = (size_t)neu * (size_t)d->elem;
@@ -130,15 +130,31 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)
     ende = ((bis + (size_t)seite - 1) / (size_t)seite) * (size_t)seite;
     basis = (char *)d->base;
     if (mprotect(basis + start, ende - start, PROT_READ | PROT_WRITE) != 0) {
-        /* OOM below the ceiling: real, reportable, and the program's to
-         * handle -- `committed` unchanged, the caller runs `else`. */
+        /* The platform refused the commit below the ceiling: `committed`
+         * unchanged, the caller runs `else`.
+         *
+         * WHEN THIS BRANCH IS TAKEN (review G08 F3, fix lane F2). On Linux
+         * with the default overcommit heuristic (`vm.overcommit_memory` 0)
+         * or with overcommit always on (1), `mprotect` to writable on a
+         * private anonymous mapping does not reserve physical memory and
+         * practically always succeeds; out of memory then shows up LATER,
+         * at the first touch of a page, as the OOM killer (SIGKILL) -- not
+         * as `false` here, and not as the program's `else`. Only under
+         * strict accounting (`vm.overcommit_memory` 2), where making the
+         * range writable is charged against the commit limit, does an
+         * exhausted limit fail this call with ENOMEM and reach the `else`.
+         * The `else` is therefore the runtime's answer to a REFUSED commit,
+         * not a guarantee that out-of-memory is always reported to the
+         * program; no test here exercises this branch. */
         return false;
     }
-    /* Freshly committed anonymous pages are zero; scrub defensively so a
-     * reused mapping (a platform that recycles) cannot leak a stale word
-     * into a slot the program reads as fresh. Cost: one pass over the new
-     * tail, priced in the declared per-slot commit cost. */
-    memset(basis + von, 0, bis - von);
+    /* No scrub, and no touch: the commit stays lazy. The bytes
+     * `[von, bis)` were never writable before this call (the region was
+     * reserved `PROT_NONE`, and commit is monotone: nothing is ever made
+     * inaccessible again), and a private anonymous mapping reads as zero
+     * until written -- so the new slots read as zero without a store. Up to
+     * 2026-09-21 a `memset` here touched every new page at once, which made
+     * every commit eager and moved an overcommit OOM kill into this call. */
     d->committed = (uint32_t)neu;
     return true;
 }

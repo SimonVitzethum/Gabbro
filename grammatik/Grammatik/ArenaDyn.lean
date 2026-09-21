@@ -1,7 +1,9 @@
 /-
   File:      Grammatik/ArenaDyn.lean
-  Subject:   Dynamic arenas: virtual reservation, committed prefix, refinement
-             (PLAN-DYNAMISCH.md section 9, lane 241).
+  Subject:   Dynamic arenas: virtual reservation, committed prefix, and the
+             past-ceiling stop over a run's commit sequence
+             (PLAN-DYNAMISCH.md section 9, lane 241; reworked by fix lane F2
+             after review G08 F4, 2026-09-21).
 
   A dynamic arena declares a static ceiling `M` (address reserved, never
   touched implicitly) and a committed prefix `c` (`hi <= c <= M`) grown
@@ -121,71 +123,125 @@ theorem growKosten_pos (n faultKosten : Nat) : 0 < growKosten n faultKosten := b
   unfold growKosten
   omega
 
-/-- Refinement: every committed slot is a static-max slot. A dynamic run
-    whose allocs stay under `c` simulates the static program with `hi := M`
-    step for step at the level that matters here (slot membership); growth
-    is then an observable no-op on the membership fact. -/
-theorem dynVerfein (A : DynArena) (i : Nat) (h : i < A.c) :
-    i < A.M ∧ A.hi ≤ A.M := by
-  refine ⟨dynCommit_innerhalb A i h, ?_⟩
-  have h1 := A.hfloor
-  have h2 := A.hceil
-  omega
+/-! ### The commit sequence of a run (fix lane F2, review G08 F1/F4)
 
-/-- The region obliges (round-1 review shape): the reached memory-moving
-    run's written slot `0` is covered by the committed prefix (`hlink` --
-    the R-commit model half for the reference write), hence every committed
-    slot is reserved and slot `0` in particular is. The conclusion is a
-    `DynArena`-level fact, not a premise: no conjunct repeats `hreach`,
-    `hmem` or `hlink`. Every premise is used (`hlink hreach hmem` feeds the
-    second conjunct). No premise quantifies over syntax. -/
-theorem region_verpflichtet (A : DynArena) (M : RufMaschineF refD)
-    (hreach : RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M)
-    (hmem : M.speicher.slots () 0 () ≠ refSp0.slots () 0 ())
-    (hlink : RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M →
-             M.speicher.slots () 0 () ≠ refSp0.slots () 0 () → 0 < A.c) :
-    (∀ i, i < A.c → i < A.M) ∧ 0 < A.M :=
-  ⟨fun i hi => dynCommit_innerhalb A i hi,
-    dynCommit_innerhalb A 0 (hlink hreach hmem)⟩
+  The runtime never gives a committed page back (`reset` leaves `committed`
+  alone), so over one load the `grow`s of the whole run form ONE sequence of
+  amounts, folded through `dynGrow`; a `none` anywhere in the fold is the
+  runtime's past-ceiling stop (`abort` in `laufzeit/arena_dyn.c`). The two
+  theorems below are the model half of the checker rule `N426` since fix
+  lane F2: the stop is avoided on EVERY run exactly when the upper bound of
+  the total commit stays within `M - c` -- and a per-path LOWER bound (the
+  reading before the fix) is not enough, as the witness shows with two
+  commits that each fit alone. -/
 
-/-- The witness arena: `max 64`, floor `8`, committed `16`. -/
-def Aw0 : DynArena := ⟨64, 8, 16, by decide, by decide, by decide⟩
+/-- Fold a run's commit sequence through `dynGrow`: `none` is the stop. -/
+def dynGrowListe (A : DynArena) : List Nat → Option DynArena
+  | [] => some A
+  | n :: ns =>
+    match dynGrow A n with
+    | none => none
+    | some B => dynGrowListe B ns
 
-/-- The grown arena: `grow by 8` commits `16 → 24`. -/
-def Aw1 : DynArena := ⟨64, 8, 24, by decide, by decide, by decide⟩
+/-- One commit inside the ceiling succeeds and moves the prefix by `n`. -/
+theorem dynGrow_some (A : DynArena) (n : Nat) (h : A.c + n ≤ A.M) :
+    ∃ B, dynGrow A n = some B ∧ B.c = A.c + n ∧ B.M = A.M := by
+  refine ⟨⟨A.M, A.hi, A.c + n, Nat.le_trans A.hfloor (Nat.le_add_right _ _), h, A.hpos⟩,
+    ?_, rfl, rfl⟩
+  unfold dynGrow
+  rw [dif_pos h]
 
-/-- The grow succeeds, computed: the "grown" half of the witness. -/
-theorem grow_gelingt : dynGrow Aw0 8 = some Aw1 := rfl
+/-- **The upper bound suffices:** a commit sequence whose total stays within
+    the room above the prefix never reaches the stop, and ends at the prefix
+    plus the total. -/
+theorem dynGrowListe_gelingt :
+    ∀ (ns : List Nat) (A : DynArena), A.c + ns.sum ≤ A.M →
+      ∃ B, dynGrowListe A ns = some B ∧ B.c = A.c + ns.sum := by
+  intro ns
+  induction ns with
+  | nil =>
+    intro A _
+    exact ⟨A, rfl, by simp⟩
+  | cons n ns ih =>
+    intro A h
+    rw [List.sum_cons] at h
+    obtain ⟨B, hB, hc, hM⟩ := dynGrow_some A n (by omega)
+    obtain ⟨C, hC, hcC⟩ := ih B (by omega)
+    refine ⟨C, ?_, ?_⟩
+    · show (match dynGrow A n with
+            | none => none
+            | some B => dynGrowListe B ns) = some C
+      rw [hB]
+      exact hC
+    · rw [List.sum_cons]
+      omega
 
-/-- Joint witness on the reference fixture: the capped table `Aw0` grown by
-    `grow_gelingt` to `Aw1` and read through the committed prefix
-    (`dynCommit_innerhalb` at every slot, `region_verpflichtet` for slot `0`
-    tied to the run), plus the reached run `MB` whose writing leaf moved
-    `konto[0]` (`0 → 100`). NON-DEGENERATE: `refD` has one table that the
-    leaf writes, and `refB_erreicht` reaches `MB` with that memory-changing
-    step (`refB_schreibt`). Nothing here is Nats-only: both arenas are
-    `DynArena` values. -/
-theorem region_verpflichtet_zeuge :
-    ∃ (A B : DynArena) (M : RufMaschineF refD),
-      dynGrow A 8 = some B ∧
-      (∀ i, i < B.c → i < B.M) ∧
-      RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
-      M.speicher.slots () 0 () ≠ refSp0.slots () 0 () ∧
-      ((∀ i, i < B.c → i < B.M) ∧ 0 < B.M) :=
-  ⟨Aw0, Aw1, MB, grow_gelingt, fun i hi => dynCommit_innerhalb Aw1 i hi,
-    refB_erreicht, refB_schreibt,
-    region_verpflichtet Aw1 MB refB_erreicht refB_schreibt (fun _ _ => by decide)⟩
+/-- **And it is necessary:** a commit sequence whose total passes the room
+    above the prefix reaches the stop, whatever its order. -/
+theorem dynGrowListe_scheitert :
+    ∀ (ns : List Nat) (A : DynArena), A.M < A.c + ns.sum →
+      dynGrowListe A ns = none := by
+  intro ns
+  induction ns with
+  | nil =>
+    intro A h
+    have := A.hceil
+    simp at h
+    omega
+  | cons n ns ih =>
+    intro A h
+    rw [List.sum_cons] at h
+    show (match dynGrow A n with
+          | none => none
+          | some B => dynGrowListe B ns) = none
+    by_cases hn : A.c + n ≤ A.M
+    · obtain ⟨B, hB, hc, hM⟩ := dynGrow_some A n hn
+      rw [hB]
+      exact ih B (by omega)
+    · rw [dynGrow_ueber_M A n (by omega)]
 
-#print axioms region_verpflichtet
-#print axioms region_verpflichtet_zeuge
+/-- The floor-`8` arena under `max 16`: the shape of `beispiele/gift/1133`
+    and `/1135`. -/
+def Az16 : DynArena := ⟨16, 8, 8, by decide, by decide, by decide⟩
+
+/-- The same floor under `max 24`: the positive twins in `paesse.rs`. -/
+def Az24 : DynArena := ⟨24, 8, 8, by decide, by decide, by decide⟩
+
+/-- Witness for `dynGrowListe_gelingt`, non-degenerate: a real two-commit
+    sequence (`8, 8`, total `16 > 0`) under `max 24` reaches `24`. -/
+theorem dynGrowListe_gelingt_zeuge :
+    ∃ (A : DynArena) (ns : List Nat) (B : DynArena),
+      0 < ns.sum ∧ A.c + ns.sum ≤ A.M ∧
+      dynGrowListe A ns = some B ∧ B.c = A.c + ns.sum :=
+  let ⟨B, hB, hc⟩ := dynGrowListe_gelingt [8, 8] Az24 (by decide)
+  ⟨Az24, [8, 8], B, by decide, by decide, hB, hc⟩
+
+/-- Witness for `dynGrowListe_scheitert`, and the reason the lower-bound
+    reading was wrong: under `max 16` EACH of the two commits fits the room
+    alone (`8 + 8 <= 16`, what a per-path check of one `grow` saw), yet the
+    run reaches the stop. -/
+theorem dynGrowListe_scheitert_zeuge :
+    ∃ (A : DynArena) (ns : List Nat),
+      (∀ n, n ∈ ns → A.c + n ≤ A.M) ∧ A.M < A.c + ns.sum ∧
+      dynGrowListe A ns = none :=
+  ⟨Az16, [8, 8], by decide, by decide, dynGrowListe_scheitert [8, 8] Az16 (by decide)⟩
+
+/-- Both directions evaluated on the fixtures (`rfl`, no lemma between). -/
+theorem dynGrowListe_zwilling :
+    (dynGrowListe Az24 [8, 8]).isSome = true ∧ dynGrowListe Az16 [8, 8] = none :=
+  ⟨rfl, rfl⟩
+
+#print axioms dynGrowListe_gelingt
+#print axioms dynGrowListe_scheitert
+#print axioms dynGrowListe_gelingt_zeuge
+#print axioms dynGrowListe_scheitert_zeuge
+#print axioms dynGrowListe_zwilling
 #print axioms dynGrow_monoton
 #print axioms dynGrow_ueber_M
 #print axioms dynGrow_isSome
 #print axioms dynGrow1_gdw_alloc
-#print axioms dynVerfein
 #print axioms planted_ueber_M
 #print axioms planted_defekt_sichtbar
-#print axioms grow_gelingt
 #print axioms growKosten_pos
 
 end Gabbro.Grammatik.ArenaDyn
@@ -201,12 +257,21 @@ end Gabbro.Grammatik.ArenaDyn
   * No cost arm is built: `growKosten` reads the per-slot commit cost as
     DATA from the named hardware assumption (Spec premise (c) latency
     entry); the `K003` wiring and the `K002`-falls probe are lane 243 work.
-  * The refinement is membership only (`dynVerfein`: committed slots are
-    reserved slots). Step-for-step simulation against the static-max
-    program and transfer of the `ArenaZucker` theorems are not proved.
-    Proved instead, as the linkage anchor: `dynGrow_isSome` (success is
-    exactly the bound) and `dynGrow1_gdw_alloc` (one-slot commit agrees
-    with `Arena.alloc` on `Kap ⟨hi, M⟩` via `arenaModell`, from the
+  * **No refinement is claimed** (review G08 F4, fix lane F2). `DynArena` is
+    a Nat record that carries `c <= M` as a field; a membership fact over it
+    (the former `dynVerfein`, "committed slots are reserved slots") restates
+    that field, and the former `region_verpflichtet` tied it to a run only
+    through a premise its witness discharged without looking at the run
+    (the lane-147 pattern). Both are REMOVED, not renamed. What stands in
+    their place is a statement about the one runtime fact this record does
+    model -- the past-ceiling stop -- over a whole commit sequence
+    (`dynGrowListe_gelingt` / `_scheitert`, with non-degenerate witnesses):
+    the model half of `N426`'s upper-bound rule. Nothing links `DynArena` to
+    the Rust checker's per-path accounting or to the C runtime by proof; the
+    link is by name (`N426`, `gabbro_arena_grow`'s ceiling test) only.
+    Proved as the linkage anchor to the static model: `dynGrow_isSome`
+    (success is exactly the bound) and `dynGrow1_gdw_alloc` (one-slot commit
+    agrees with `Arena.alloc` on `Kap ⟨hi, M⟩` via `arenaModell`, from the
     `alloc_erfolg` / `alloc_fehlschlag` pair). What is still missing for
     PLAN-DYNAMISCH section 9: `DynForm` over `ArenaForm D` (table
     `count = M` plus the committed prefix as a second `stand`-style word),

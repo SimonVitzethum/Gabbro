@@ -4074,6 +4074,292 @@ fn arena_grow_unbekannt_n213() {
     );
 }
 
+// -- Fix lane F2 (review G08 F1): the ceiling against the UPPER commit bound -------------
+
+/// **`N426` holds the ceiling against what the whole run may have committed.**
+///
+/// Four poisons the lower-bound reading accepted (`beispiele/gift/1132`-`1135`
+/// carry the same shapes): a commit after a branch that grew, in two roots, in a
+/// callee called twice, and in a `retry` whose pass bound times the amount
+/// passes the ceiling. Each positive twin keeps the same shape provably below.
+#[test]
+fn arena_grow_obere_schranke_n426() {
+    // After a branch that grew: the join takes the maximum.
+    let zweig = |max: u32| {
+        format!(
+            "arena A capacity 2 .. 8 max {max} of u16;
+impl fn f(c : bool) -> u32 effects {{ writes A }} costs <= 64 ops {{
+    if c {{
+        grow A by 8 else {{
+            return 1;
+        }};
+    }}
+    grow A by 8 else {{
+        return 2;
+    }};
+    return 0;
+}}"
+        )
+    };
+    faellt_genau(&zweig(16), &["N426"]);
+    faellt_nicht(&zweig(24));
+    // Two roots: each commit counts once per load, and both count.
+    let zwei = |max: u32| {
+        format!(
+            "arena A capacity 2 .. 8 max {max} of u16;
+impl fn f() -> u32 effects {{ writes A }} costs <= 64 ops {{
+    grow A by 8 else {{
+        return 1;
+    }};
+    return 0;
+}}
+impl fn g() -> u32 effects {{ writes A }} costs <= 64 ops {{
+    grow A by 8 else {{
+        return 1;
+    }};
+    return 0;
+}}"
+        )
+    };
+    faellt_genau(&zwei(16), &["N426", "N426"]);
+    faellt_nicht(&zwei(24));
+    // A callee called twice: its bound adds at every call site.
+    let gerufen = |max: u32| {
+        format!(
+            "arena A capacity 2 .. 8 max {max} of u16;
+impl fn g() -> u32 effects {{ writes A }} costs <= 64 ops {{
+    grow A by 8 else {{
+        return 1;
+    }};
+    return 0;
+}}
+impl fn h() -> u32 effects {{ writes A }} costs <= 256 ops {{
+    let x = g();
+    let y = g();
+    return x | y;
+}}"
+        )
+    };
+    faellt_genau(&gerufen(16), &["N426"]);
+    faellt_nicht(&gerufen(24));
+    // A bounded `retry`: the second walk stands at the entry plus the amount
+    // times the passes before the last.
+    let wiederholt = |n: u32| {
+        format!(
+            "arena A capacity 2 .. 8 max 16 of u16;
+extern fn w() -> never effects {{ diverges }};
+assume tickt \"the timer ticks\" falsifier w;
+impl fn f() -> u32 effects {{ writes A }} costs <= 256 ops {{
+    retry runde
+        bounded 2 ops
+        progress tickt
+        on_exceeded w
+        effects {{ writes A }}
+    {{
+        grow A by {n} else {{
+            return 1;
+        }};
+    }}
+    return 0;
+}}"
+        )
+    };
+    faellt_genau(&wiederholt(5), &["N426"]);
+    faellt_nicht(&wiederholt(4));
+}
+
+/// **A commit in a loop without a constant bound, in a recursion or in a
+/// hardware entry has no upper bound (`N426`).** The `forever` twin of
+/// `beispiele/gift/1132`, a self-recursive routine, and an `entry` dispatch
+/// target: each may repeat the commit past any ceiling.
+#[test]
+fn arena_grow_ohne_schranke_n426() {
+    faellt_mit(
+        "module p {
+arena A capacity 2 .. 8 max 64 of u16;
+extern fn w() -> never effects { diverges };
+assume tickt \"the timer ticks\" falsifier w;
+divergent fn f() effects { writes A, diverges } {
+    forever runde
+        per_pass bounded 8 ops
+        on_exceeded w
+        effects { writes A }
+        progress tickt
+    {
+        grow A by 1 else {
+            w();
+        };
+    }
+}
+}",
+        "N426",
+    );
+    faellt_mit(
+        "arena A capacity 2 .. 8 max 64 of u16;
+impl fn r(n : u32) -> u32 effects { writes A } costs <= 64 ops {
+    grow A by 1 else {
+        return 1;
+    };
+    if n > 0 {
+        let x = r(n - 1);
+    }
+    return 0;
+}",
+        "N426",
+    );
+    // A hardware dispatch target runs on every entry: its commit repeats
+    // without bound (`H013` falls beside it for the unshared write).
+    faellt_mit(
+        "module p {
+arena A capacity 2 .. 8 max 64 of u16;
+impl fn f() effects { writes A } costs <= 64 ops {
+    grow A by 8 else {
+        return;
+    };
+}
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch p::f;
+}
+}",
+        "N426",
+    );
+}
+
+/// **The `else` of `grow` runs from the state BEFORE the request** (PLAN §4):
+/// the commit failed, nothing was gained. A second `grow` inside it is held
+/// against the unbumped count -- `8 + 8` fits `max 16`, clean. Before fix
+/// lane F2 the `else` walked from the bumped state and fell at `N426`.
+#[test]
+fn arena_grow_else_vom_alten_stand() {
+    faellt_nicht(
+        "arena A capacity 2 .. 8 max 16 of u16;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    grow A by 8 else {
+        grow A by 8 else {
+            return 1;
+        };
+        return 2;
+    };
+    return 0;
+}",
+    );
+}
+
+// -- Fix lane F2 (review G08 F2): `N211` across calls and parameters ---------------------
+
+/// **A `reset` in a callee consumes the caller's generation (`N211`).**
+///
+/// The review's shape (`beispiele/gift/1136`), one level deeper and on one
+/// branch only: the joined path may have reset, so the older index is stale.
+/// The twin reads before the call and stays clean.
+#[test]
+fn arena_reset_im_gerufenen_n211() {
+    let quelle = |lesen_vorher: bool| {
+        let (vor, nach) = if lesen_vorher {
+            ("    let x : u32 = A[a];
+", "")
+        } else {
+            ("", "    let x : u32 = A[a];
+")
+        };
+        format!(
+            "arena A capacity 2 .. 2 of u16;
+impl fn leere() effects {{ writes A }} costs <= 4 ops {{
+    reset A;
+}}
+impl fn mitte() effects {{ writes A }} costs <= 8 ops {{
+    leere();
+}}
+impl fn f(c : bool) -> u32 effects {{ writes A }} costs <= 64 ops {{
+    let a = alloc A (1);
+{vor}    if c {{
+        mitte();
+    }}
+{nach}    return x;
+}}"
+        )
+    };
+    faellt_genau(&quelle(false), &["N211"]);
+    faellt_nicht(&quelle(true));
+}
+
+/// **An index handed in lives in the generation current at the call.**
+///
+/// A parameter typed `index into A` read after a `reset` of `A` falls
+/// (`beispiele/gift/1137`); a stale index handed to such a parameter falls at
+/// the call site. The twins read before the `reset` and hand in a live
+/// index, and stay clean.
+#[test]
+fn arena_index_ueber_den_aufrufrand_n211() {
+    faellt_genau(
+        "arena A capacity 2 .. 2 of u16;
+impl fn lies(i : index into A) -> u32 effects { reads A } costs <= 8 ops {
+    let x : u32 = A[i];
+    return x;
+}
+impl fn f() -> u32 effects { reads A, writes A } costs <= 64 ops {
+    let a = alloc A (1);
+    let j = a;
+    reset A;
+    let x = lies(j);
+    return x;
+}",
+        &["N211"],
+    );
+    faellt_nicht(
+        "arena A capacity 2 .. 2 of u16;
+impl fn lies(i : index into A) -> u32 effects { reads A } costs <= 8 ops {
+    let x : u32 = A[i];
+    return x;
+}
+impl fn f() -> u32 effects { reads A, writes A } costs <= 64 ops {
+    let a = alloc A (1);
+    let j = a;
+    let x = lies(j);
+    reset A;
+    return x;
+}",
+    );
+}
+
+/// **An index whose generation is not tracked is clean only where the arena
+/// has one generation.** A call result used as an index: refused where the
+/// program resets the arena (`beispiele/gift/1138`), clean where nothing
+/// resets it.
+#[test]
+fn arena_index_ohne_generation() {
+    let quelle = |mit_reset: bool| {
+        let leer = if mit_reset {
+            "impl fn leer() effects { writes A } costs <= 4 ops {
+    reset A;
+}
+"
+        } else {
+            ""
+        };
+        format!(
+            "arena A capacity 2 .. 2 of u16;
+impl fn gib() -> index into A effects {{ writes A }} costs <= 8 ops {{
+    let a = alloc A (1);
+    return a;
+}}
+impl fn f() -> u32 effects {{ writes A }} costs <= 64 ops {{
+    let i = gib();
+    let x : u32 = A[i];
+    return x;
+}}
+{leer}"
+        )
+    };
+    faellt_genau(&quelle(true), &["N211"]);
+    faellt_nicht(&quelle(false));
+}
+
 /// **Growth points are visible where the latency promise lives (`K002`).**
 ///
 /// Three `alloc`s inside `locks L` cost against `held <= 2 ops` and fall at

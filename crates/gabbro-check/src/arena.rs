@@ -36,13 +36,30 @@
 //! declaration (lane 257): the `max` clause where it stands and is usable
 //! (`N210` holds `hi <= max`), else the floor (`hi`), so static arenas keep
 //! floor and ceiling coincident by construction (`M = hi`,
-//! `committed = hi` on every path). `grow` bumps the committed prefix of
-//! its path, capped by `M` (`N426` refuses the commit the checker sees
-//! reach past it); `alloc` moves `count`, `reset` restores `(0, floor)`.
-//! Joins take the maximum of counts (as before) and the minimum of
-//! committed (the sound direction: what both paths guarantee); loops keep
-//! the minimum, capped by `M` by construction, so committed needs no
-//! `UNENDLICH` saturation. `reset` restores the floor: commit never shrinks.
+//! `committed = hi` on every path). `alloc` moves `count`, `reset` restores
+//! `(0, floor)` on the LOWER committed bound, which joins with the minimum
+//! (what both paths guarantee) and is what a future `R-commit` reads.
+//!
+//! **The ceiling is held against an UPPER bound (review G08 F1, fix lane
+//! F2).** The runtime never decommits, so whether a `grow` can pass `M` is
+//! a question about the whole run: `Stand::hoch` carries, per arena, the
+//! most the run can have committed when control stands here. It joins with
+//! the maximum, is left alone by `reset`, saturates after a loop whose body
+//! may commit without a constant pass bound, multiplies by the pass bound
+//! of a `retry … bounded N`, and adds a callee's per-invocation bound at
+//! every call and `start`. The per-invocation bounds (`Programmwissen::
+//! wachstum`) come from silent walks of every body, iterated to a fixpoint
+//! over the call graph (a cycle that commits saturates to `UNENDLICH`, a
+//! call through a place is `UNENDLICH` into every arena the program grows).
+//! The whole-program total is their sum over the ROOTS of the call graph
+//! (routines no other routine calls or starts, plus every cycle member),
+//! each entered once per load -- the goal theorem's run model (declared
+//! starts; separately linked units NOT CLAIMED) -- with a body a
+//! `concurrent` set names counted once per naming, and a hardware
+//! dispatch target (`entry … dispatch f`) counted without bound. Each body starts at the
+//! floor plus the total minus its own share, and `N426` refuses every
+//! `grow` whose upper bound plus amount may pass `M`. The `else` of `grow`
+//! walks from the state before the request (PLAN §4: nothing committed).
 //!
 //! Every growth point is cost-visible where the latency promises live, and
 //! that is measured, not asserted: `kosten.rs` counts `alloc` as one
@@ -83,14 +100,31 @@
 //! side only takes a fresh generation at the join: an older index MAY be
 //! stale on the joined path, and `N211` is the refusal, not a guess.
 //!
+//! **Across calls (review G08 F2, fix lane F2).** Every routine carries a
+//! may-reset set (its own `reset`s, its callees' and started roots',
+//! closed over the call graph; a call through a place may reset every
+//! arena the program resets), and a call applies it as a fresh generation.
+//! A parameter typed `index into A` is live in the entry generation, i.e.
+//! until the first `reset` of `A` on the path; an argument at such a
+//! parameter is held like a read at the call. An index that reaches a use
+//! through anything else -- a global, a field, an arena slot, a call
+//! result, a local the pass does not track -- has no generation here, and
+//! is refused wherever the program resets that arena at all (with no
+//! `reset` anywhere there is only one generation). Calls inside an
+//! expression are applied before its reads: C leaves the operand order
+//! open. NOT covered: a `reset` in a routine that runs CONCURRENTLY with
+//! the index holder (another root of a `concurrent` set, a `child` path);
+//! the generation is tracked along one thread of control.
+//!
 //! ## What is NOT here
 //!
-//! The count is per function: two functions allocating into one arena share
-//! the runtime counter, and no static count sees the other. Like `costs`
-//! (whose recursion carries an assumption instead of a computation), this
-//! pass counts what one body does. A reservation shared across functions
-//! needs the whole-program discipline, and that is future work, not a
-//! silent promise.
+//! The ALLOCATION count is per function: two functions allocating into one
+//! arena share the runtime counter, and no static count sees the other.
+//! Like `costs` (whose recursion carries an assumption instead of a
+//! computation), this pass counts what one body does. A reservation shared
+//! across functions needs the whole-program discipline, and that is future
+//! work, not a silent promise. (The COMMIT ceiling and the generations are
+//! whole-program since fix lane F2, above.)
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
@@ -110,10 +144,11 @@ const UNENDLICH: u64 = u64::MAX;
 /// of which generation.
 ///
 /// Wave D adds the committed count per arena (`verpflichtet`): the storage
-/// actually usable on this path. On paths no `grow` touches it coincides
-/// with the floor (`hi`) — see the module head — and the joins already run
-/// the §4 directions (counts join with `max`, committed with `min`), so the
-/// `grow` arm (lane 257) only touches the bump site, never the merge.
+/// guaranteed usable on this path (a LOWER bound). On paths no `grow`
+/// touches it coincides with the floor (`hi`) — see the module head — and
+/// the joins run the §4 directions (counts join with `max`, committed with
+/// `min`). Fix lane F2 adds the UPPER bound (`hoch`) the ceiling is held
+/// against, joined with `max`.
 #[derive(Debug, Clone, Default)]
 struct Stand {
     generation: HashMap<String, u64>,
@@ -131,6 +166,20 @@ struct Stand {
     /// arena uses at all, and this pass stays silent about them (M1 reads
     /// the local meaning).
     lokal: HashSet<String>,
+    /// **Review G08 F2 (fix lane F2):** a parameter typed `index into A`
+    /// (name -> arena), or a local copied from one. Its generation is the
+    /// one current at function ENTRY: every call site holds the argument
+    /// against the caller's current generation, so the index is live until
+    /// the first `reset` of `A` -- in this body or in a callee -- on the path.
+    eingang: HashMap<String, String>,
+    /// **Review G08 F1 (fix lane F2): the UPPER bound of the committed
+    /// count per arena** -- the most the whole run can have committed when
+    /// control stands here. Joins take the maximum, a loop whose body may
+    /// commit without a constant bound saturates to `UNENDLICH`, a call adds
+    /// the callee's per-invocation bound, and `reset` leaves it alone (the
+    /// runtime never decommits). `N426` holds the ceiling against THIS
+    /// value; `verpflichtet` above stays the lower bound it always was.
+    hoch: HashMap<String, u64>,
 }
 
 impl Stand {
@@ -189,12 +238,33 @@ impl Stand {
         for k in andere.verpflichtet.keys() {
             arenan.insert(k.clone());
         }
+        for k in self.hoch.keys().chain(andere.hoch.keys()) {
+            arenan.insert(k.clone());
+        }
+        // A generation moved on one side only (a callee's `reset`, fix lane
+        // F2) is a key of its own: without it the join would keep the
+        // unmoved side's generation and an index stale on the other path
+        // would read as live.
+        for k in self.generation.keys().chain(andere.generation.keys()) {
+            arenan.insert(k.clone());
+        }
         for a in arenan {
             let z = self.zaehlung(&a).max(andere.zaehlung(&a));
             self.zaehlung.insert(a.clone(), z);
             if self.generation(&a) != andere.generation(&a) {
                 *frisch = frisch.saturating_add(1);
                 self.generation.insert(a.clone(), *frisch);
+            }
+            // The upper bound joins with the maximum: either path may be
+            // the one that ran.
+            match (self.hoch.get(&a).copied(), andere.hoch.get(&a).copied()) {
+                (Some(x), Some(y)) => {
+                    self.hoch.insert(a.clone(), x.max(y));
+                }
+                (None, Some(y)) => {
+                    self.hoch.insert(a.clone(), y);
+                }
+                _ => {}
             }
             match (self.verpflichtet.get(&a).copied(), andere.verpflichtet.get(&a).copied()) {
                 (Some(x), Some(y)) => {
@@ -227,16 +297,78 @@ struct Laeufer<'a> {
     /// also the ceiling (`M = hi`); the ceiling map beside this one splits
     /// the two where the clause stands. Absent exactly where the
     /// declaration is unusable (`N210`).
-    boden: HashMap<String, u64>,
+    boden: &'a HashMap<String, u64>,
     /// The ceiling per arena (qualified name -> `M`), built once per pass
     /// (lane 257): the `max` clause where it stands and is usable, else
     /// the floor (`hi`). Absent exactly where the declaration is
     /// unusable (`N210`) -- then no commit question is asked either.
-    decke: HashMap<String, u64>,
+    decke: &'a HashMap<String, u64>,
     /// (code, span) pairs already reported: a loop body walks twice (see
     /// `schleife`), and the second walk must not report the first walk's
     /// findings again.
     gemeldet: HashSet<(String, u32, u32)>,
+    /// **Fix lane F2: what the whole program knows** -- per-function
+    /// summaries (may-reset, growth bound) and the call graph that resolves
+    /// callees. Read-only during a walk.
+    wissen: &'a Programmwissen,
+    graph: &'a crate::aufrufgraph::Graph,
+    /// A silent walk: the summary rounds walk every body to collect facts,
+    /// and report nothing (the reporting walk comes last).
+    stumm: bool,
+    /// What a silent walk collects (resets, grows, callees).
+    erhebung: Erhebung,
+    /// The largest upper bound (`Stand::hoch`) seen anywhere in the walk
+    /// per arena -- at a `grow`, at a call, after a loop. Paths that end in
+    /// a `return` inside an `else` are dropped from `stand`, never from
+    /// here, so the per-invocation bound counts them.
+    max_hoch: HashMap<String, u64>,
+}
+
+/// **The facts of one body a silent walk collects (fix lane F2).**
+#[derive(Debug, Clone, Default)]
+struct Erhebung {
+    /// Arenas this body resets itself.
+    resets: HashSet<String>,
+    /// Arenas this body grows itself.
+    grows: HashSet<String>,
+    /// Resolved callees and started roots (graph keys).
+    gerufen: HashSet<String>,
+    /// A call through a place: the callee is not statically known.
+    indirekt: bool,
+}
+
+/// **Whole-program facts (review G08 F1/F2, fix lane F2).**
+///
+/// Two questions cross the function boundary, and both are answered here
+/// from per-function summaries closed over the call graph:
+///
+/// - **May a call reset `A`?** `setzt_zurueck` per function: its own
+///   `reset`s, its callees' and started roots', and -- for a call through
+///   a place, whose callee nobody knows -- every arena the program resets
+///   anywhere. A call applies it as a fresh generation, so an index held
+///   across the call is stale (`N211`).
+/// - **How much can the run commit?** `wachstum` per function is the
+///   upper bound of what one invocation commits (its own `grow`s and its
+///   callees', summed along a path, maximal over paths, `UNENDLICH` for a
+///   commit a loop without a constant bound, a recursion or a call through
+///   a place may repeat). `gesamt` sums it over the ROOTS of the call graph
+///   (every routine no other routine calls or starts, plus every member of
+///   a cycle), each entered once per load -- the run model of the goal
+///   theorem (declared starts; separately linked units are NOT CLAIMED) --
+///   times the naming count of a `concurrent` body, and without bound for
+///   a hardware dispatch target.
+#[derive(Debug, Clone, Default)]
+struct Programmwissen {
+    setzt_zurueck: HashMap<String, HashSet<String>>,
+    /// Every arena some `reset` statement of the program names.
+    irgendwo_zurueckgesetzt: HashSet<String>,
+    /// Every arena some `grow` statement of the program names (with a
+    /// usable ceiling): the only arenas the upper bound is tracked for.
+    gewachsen: HashSet<String>,
+    wachstum: HashMap<String, HashMap<String, u64>>,
+    gesamt: HashMap<String, u64>,
+    /// Per function key: the arena each parameter indexes (`index into A`).
+    parameter_arenen: HashMap<String, Vec<Option<String>>>,
 }
 
 /// The floor of `sig`: the initially committed count. `Some(hi)` exactly
@@ -309,6 +441,204 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             decke.insert(q.clone(), m);
         }
     }
+    // No arena, no cross-function fact to hold: the call graph and the
+    // summary rounds below are the price of a program that declares one
+    // (the walk still runs, for `N213` on an undeclared name).
+    let graph = if u.arenen.is_empty() {
+        crate::aufrufgraph::Graph::default()
+    } else {
+        crate::aufrufgraph::erhebe_mit_roh(baum, &u)
+    };
+    let mut wissen = Programmwissen::default();
+    let mut funktionen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let arenen: Vec<Option<String>> = f
+            .parameter
+            .iter()
+            .map(|p| match &p.typ {
+                TypExpr::Index { tabelle, .. } => u.nennt_arena(modul, &tabelle.text),
+                _ => None,
+            })
+            .collect();
+        wissen.parameter_arenen.insert(key.clone(), arenen);
+        if matches!(f.rumpf, FnRumpf::Block(_)) {
+            funktionen.push(key);
+        }
+    });
+
+    // **Round 0 (silent): what every body does itself.**
+    let erhoben = alle_laeufe(baum, &u, &boden, &decke, &wissen, &graph, &HashMap::new(), true)
+        .into_iter()
+        .map(|(k, e, _)| (k, e))
+        .collect::<HashMap<String, Erhebung>>();
+    for e in erhoben.values() {
+        wissen.irgendwo_zurueckgesetzt.extend(e.resets.iter().cloned());
+        wissen
+            .gewachsen
+            .extend(e.grows.iter().filter(|a| decke.contains_key(*a)).cloned());
+    }
+    // May-reset, closed over the call graph (a monotone union: it ends).
+    let mut rs: HashMap<String, HashSet<String>> = erhoben
+        .iter()
+        .map(|(k, e)| {
+            let mut m = e.resets.clone();
+            if e.indirekt {
+                m.extend(wissen.irgendwo_zurueckgesetzt.iter().cloned());
+            }
+            (k.clone(), m)
+        })
+        .collect();
+    loop {
+        let mut bewegt = false;
+        for (k, e) in &erhoben {
+            let mut neu = rs.get(k).cloned().unwrap_or_default();
+            for g in &e.gerufen {
+                if let Some(x) = rs.get(g) {
+                    neu.extend(x.iter().cloned());
+                }
+            }
+            if rs.get(k).map_or(0, |m| m.len()) != neu.len() {
+                rs.insert(k.clone(), neu);
+                bewegt = true;
+            }
+        }
+        if !bewegt {
+            break;
+        }
+    }
+    wissen.setzt_zurueck = rs;
+
+    // **The growth bound, closed over the call graph.** Only when some
+    // `grow` stands: otherwise no upper bound is tracked at all.
+    if !wissen.gewachsen.is_empty() {
+        let null: HashMap<String, u64> =
+            wissen.gewachsen.iter().map(|a| (a.clone(), 0)).collect();
+        let mut wachstum: HashMap<String, HashMap<String, u64>> = HashMap::new();
+        let mut runde = 0usize;
+        loop {
+            wissen.wachstum = wachstum.clone();
+            let mut neu: HashMap<String, HashMap<String, u64>> =
+                alle_laeufe(baum, &u, &boden, &decke, &wissen, &graph, &null, true)
+                    .into_iter()
+                    .map(|(k, _, m)| (k, m))
+                    .collect();
+            if neu == wachstum {
+                break;
+            }
+            runde += 1;
+            // Past `n + 2` rounds an acyclic graph has settled: what still
+            // moves grows around a cycle, and a cycle repeats its commit
+            // without bound.
+            if runde > funktionen.len() + 2 {
+                for (k, m) in neu.iter_mut() {
+                    for (a, v) in m.iter_mut() {
+                        let alt = wachstum.get(k).and_then(|x| x.get(a)).copied().unwrap_or(0);
+                        if *v != alt {
+                            *v = UNENDLICH;
+                        }
+                    }
+                }
+            }
+            wachstum = neu;
+        }
+        // The roots: every routine no OTHER routine calls or starts, and
+        // every member of a cycle (a cycle with no caller outside it has no
+        // other entry).
+        let mut rufer: HashMap<String, HashSet<String>> = HashMap::new();
+        for (k, e) in &erhoben {
+            for g in &e.gerufen {
+                rufer.entry(g.clone()).or_default().insert(k.clone());
+            }
+        }
+        let im_zyklus = |start: &str| -> bool {
+            let mut gesehen: HashSet<String> = HashSet::new();
+            let mut offen: Vec<String> = erhoben
+                .get(start)
+                .map(|e| e.gerufen.iter().cloned().collect())
+                .unwrap_or_default();
+            while let Some(n) = offen.pop() {
+                if n == start {
+                    return true;
+                }
+                if !gesehen.insert(n.clone()) {
+                    continue;
+                }
+                if let Some(e) = erhoben.get(&n) {
+                    offen.extend(e.gerufen.iter().cloned());
+                }
+            }
+            false
+        };
+        // How often the world outside the unit's own calls enters a
+        // routine: a hardware dispatch target (`entry … dispatch f`) any
+        // number of times (every interrupt, every system call); a body a
+        // `concurrent` set names, once per naming (a pool names it twice,
+        // `OFFEN.md` O18); a root of the call graph once per load.
+        let mut einsprung: HashSet<String> = HashSet::new();
+        let mut genannt: HashMap<String, u64> = HashMap::new();
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+            ItemArt::Entry(e) => {
+                if let Some(k) = graph.aufloesen(&u, modul, &e.dispatch.text()) {
+                    einsprung.insert(k);
+                }
+            }
+            ItemArt::Concurrent(c) => {
+                for p in &c.koerper {
+                    if let Some(k) = graph.aufloesen(&u, modul, &p.text()) {
+                        *genannt.entry(k).or_insert(0) += 1;
+                    }
+                }
+            }
+            _ => {}
+        });
+        for a in &wissen.gewachsen {
+            let mut t: u64 = 0;
+            for k in &funktionen {
+                let g = wachstum.get(k).and_then(|m| m.get(a)).copied().unwrap_or(0);
+                if g == 0 {
+                    continue;
+                }
+                let wurzel = rufer.get(k).map_or(true, |r| r.iter().all(|x| x == k))
+                    || im_zyklus(k);
+                let mal: u64 = if einsprung.contains(k) {
+                    UNENDLICH
+                } else {
+                    genannt.get(k).copied().unwrap_or(0).max(u64::from(wurzel))
+                };
+                let beitrag = if mal == UNENDLICH || g == UNENDLICH {
+                    if mal == 0 { 0 } else { UNENDLICH }
+                } else {
+                    g.saturating_mul(mal)
+                };
+                t = t.saturating_add(beitrag);
+            }
+            wissen.gesamt.insert(a.clone(), t);
+        }
+        wissen.wachstum = wachstum;
+    }
+
+    // **The reporting walk**, one per body, with every summary in hand.
+    // The upper bound enters each body at the floor plus everything the
+    // REST of the run may commit: the whole-program total minus what this
+    // one invocation commits itself.
+    let mut eingaenge: HashMap<String, HashMap<String, u64>> = HashMap::new();
+    for k in &funktionen {
+        let mut m = HashMap::new();
+        for a in &wissen.gewachsen {
+            let Some(f) = boden.get(a).copied() else {
+                continue;
+            };
+            let t = wissen.gesamt.get(a).copied().unwrap_or(0);
+            let g = wissen.wachstum.get(k).and_then(|x| x.get(a)).copied().unwrap_or(0);
+            let rest = if t == UNENDLICH { UNENDLICH } else { t.saturating_sub(g) };
+            m.insert(a.clone(), f.saturating_add(rest));
+        }
+        eingaenge.insert(k.clone(), m);
+    }
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
@@ -316,21 +646,92 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let mut l = Laeufer {
-            u: &u,
-            modul: modul.to_string(),
-            absagen,
-            stand: Stand::default(),
-            frisch: 0,
-            boden: boden.clone(),
-            decke: decke.clone(),
-            gemeldet: HashSet::new(),
-        };
-        for p in &f.parameter {
-            l.stand.lokal.insert(p.name.text.clone());
-        }
-        l.block(b);
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let leer = HashMap::new();
+        let eingang = eingaenge.get(&key).unwrap_or(&leer);
+        let _ = laufe(&u, modul, f, b, absagen, &boden, &decke, &wissen, &graph, eingang, false);
     });
+}
+
+/// Walk one body. Returns what a silent walk collected and the largest
+/// upper bound it saw per arena, relative to `eingang`.
+#[allow(clippy::too_many_arguments)]
+fn laufe(
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    f: &FnDecl,
+    b: &Block,
+    absagen: &mut Absagen,
+    boden: &HashMap<String, u64>,
+    decke: &HashMap<String, u64>,
+    wissen: &Programmwissen,
+    graph: &crate::aufrufgraph::Graph,
+    eingang: &HashMap<String, u64>,
+    stumm: bool,
+) -> (Erhebung, HashMap<String, u64>) {
+    let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+    let mut l = Laeufer {
+        u,
+        modul: modul.to_string(),
+        absagen,
+        stand: Stand::default(),
+        frisch: 0,
+        boden,
+        decke,
+        gemeldet: HashSet::new(),
+        wissen,
+        graph,
+        stumm,
+        erhebung: Erhebung::default(),
+        max_hoch: eingang.clone(),
+    };
+    for p in &f.parameter {
+        l.stand.lokal.insert(p.name.text.clone());
+    }
+    if let Some(arenen) = wissen.parameter_arenen.get(&key) {
+        for (p, a) in f.parameter.iter().zip(arenen) {
+            if let Some(a) = a {
+                l.stand.eingang.insert(p.name.text.clone(), a.clone());
+            }
+        }
+    }
+    l.stand.hoch = eingang.clone();
+    l.block(b);
+    let mut zuwachs = HashMap::new();
+    for (a, e) in eingang {
+        let m = l.max_hoch.get(a).copied().unwrap_or(*e);
+        let z = if m == UNENDLICH { UNENDLICH } else { m.saturating_sub(*e) };
+        zuwachs.insert(a.clone(), z);
+    }
+    (l.erhebung, zuwachs)
+}
+
+/// One silent walk over every body: (function key, facts, growth bound).
+#[allow(clippy::too_many_arguments)]
+fn alle_laeufe(
+    baum: &Programm,
+    u: &crate::umgebung::Umgebung,
+    boden: &HashMap<String, u64>,
+    decke: &HashMap<String, u64>,
+    wissen: &Programmwissen,
+    graph: &crate::aufrufgraph::Graph,
+    eingang: &HashMap<String, u64>,
+    stumm: bool,
+) -> Vec<(String, Erhebung, HashMap<String, u64>)> {
+    let mut aus = Vec::new();
+    let mut still = Absagen::neu("<arena summary>");
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let (e, m) = laufe(u, modul, f, b, &mut still, boden, decke, wissen, graph, eingang, stumm);
+        aus.push((key, e, m));
+    });
+    aus
 }
 
 /// **The declarations against their own shape.**
@@ -469,6 +870,9 @@ fn melde_erklaerung(absagen: &mut Absagen, code: &'static str, span: Span, text:
 
 impl<'a> Laeufer<'a> {
     fn melde(&mut self, code: &'static str, span: Span, text: String, notiz: &str) {
+        if self.stumm {
+            return;
+        }
         let schluessel = (code.to_string(), span.von, span.bis);
         if self.gemeldet.insert(schluessel) {
             self.absagen
@@ -542,6 +946,108 @@ impl<'a> Laeufer<'a> {
         self.stand.lokal.insert(name.to_string());
         self.stand.gebunden.remove(name);
         self.stand.unsicher.remove(name);
+        self.stand.eingang.remove(name);
+    }
+
+    /// The upper bound of `arena` on this path; the floor where the walk
+    /// never set one (only arenas some `grow` names are tracked).
+    fn hoch(&self, arena: &str) -> u64 {
+        self.stand
+            .hoch
+            .get(arena)
+            .copied()
+            .or_else(|| self.boden.get(arena).copied())
+            .unwrap_or(0)
+    }
+
+    /// Set the upper bound of `arena` and remember it as seen.
+    fn setze_hoch(&mut self, arena: &str, h: u64) {
+        self.stand.hoch.insert(arena.to_string(), h);
+        let m = self.max_hoch.entry(arena.to_string()).or_insert(h);
+        if h > *m {
+            *m = h;
+        }
+    }
+
+    /// **A call or a start of a resolved routine, or a call through a
+    /// place (`ziel == None`) -- fix lane F2.**
+    ///
+    /// The arguments stand first: an argument at a parameter typed
+    /// `index into A` is held like a read of `A` (`N211`), because the
+    /// callee reads it as live at its entry. Then the callee's effects on
+    /// the two cross-function facts: every arena it may reset takes a fresh
+    /// generation here, and its per-invocation growth bound adds to the
+    /// upper bound. A call through a place may be any routine: it may reset
+    /// every arena the program resets, and it may commit without bound into
+    /// every arena the program grows.
+    fn ruf_anwenden(&mut self, ziel: Option<String>, argumente: &[Expr]) {
+        match &ziel {
+            Some(k) => {
+                self.erhebung.gerufen.insert(k.clone());
+                if let Some(arenen) = self.wissen.parameter_arenen.get(k).cloned() {
+                    for (a, arg) in arenen.iter().zip(argumente) {
+                        if let Some(a) = a {
+                            let kurz = a.rsplit("::").next().unwrap_or(a).to_string();
+                            self.index_gebrauch(a, &kurz, arg);
+                        }
+                    }
+                }
+            }
+            None => self.erhebung.indirekt = true,
+        }
+        let resets: Vec<String> = match &ziel {
+            Some(k) => self
+                .wissen
+                .setzt_zurueck
+                .get(k)
+                .map(|m| m.iter().cloned().collect())
+                .unwrap_or_default(),
+            None => self.wissen.irgendwo_zurueckgesetzt.iter().cloned().collect(),
+        };
+        for a in resets {
+            self.frisch = self.frisch.saturating_add(1);
+            self.stand.generation.insert(a, self.frisch);
+        }
+        let gewachsen: Vec<String> = self.wissen.gewachsen.iter().cloned().collect();
+        for a in gewachsen {
+            if !self.stand.hoch.contains_key(&a) {
+                continue;
+            }
+            let z = match &ziel {
+                Some(k) => self
+                    .wissen
+                    .wachstum
+                    .get(k)
+                    .and_then(|m| m.get(&a))
+                    .copied()
+                    .unwrap_or(0),
+                None => UNENDLICH,
+            };
+            if z > 0 {
+                let h = self.hoch(&a).saturating_add(z);
+                self.setze_hoch(&a, h);
+            }
+        }
+    }
+
+    /// Resolve a call by its written path, like the call graph does.
+    fn loese(&self, p: &Pfad) -> Option<String> {
+        let name = crate::aufrufgraph::zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
+        self.graph.aufloesen(self.u, &self.modul, &name)
+    }
+
+    fn ruf(&mut self, r: &Ruf) {
+        match &r.ziel {
+            CallTarget::Path(p) => {
+                let ziel = self.loese(p);
+                if ziel.is_some() {
+                    self.ruf_anwenden(ziel, &r.argumente);
+                }
+                // An unresolved path is a constructor, an intrinsic or a
+                // name M1 refuses: nothing of this unit runs.
+            }
+            CallTarget::Place(_) => self.ruf_anwenden(None, &r.argumente),
+        }
     }
 
     /// Walk a nested block WITH scope: a `let` inside dies with it (M1
@@ -557,12 +1063,14 @@ impl<'a> Laeufer<'a> {
         let gesichert_gebunden = self.stand.gebunden.clone();
         let gesichert_unsicher = self.stand.unsicher.clone();
         let gesichert_lokal = self.stand.lokal.clone();
+        let gesichert_eingang = self.stand.eingang.clone();
         for s in &b.anweisungen {
             self.anweisung(s);
         }
         self.stand.gebunden = gesichert_gebunden;
         self.stand.unsicher = gesichert_unsicher;
         self.stand.lokal = gesichert_lokal;
+        self.stand.eingang = gesichert_eingang;
     }
 
     fn anweisung(&mut self, s: &Stmt) {
@@ -572,7 +1080,28 @@ impl<'a> Laeufer<'a> {
             StmtArt::Grow(g) => self.grow(g, s.span),
             StmtArt::Let(l) => {
                 self.orte_in_expr(&l.wert);
+                // A copy of a tracked index keeps its tracking (fix lane F2):
+                // `let j = a;` names the same slot of the same generation.
+                let mut kopie_gebunden: Option<(String, u64)> = None;
+                let mut kopie_eingang: Option<String> = None;
+                let mut kopie_unsicher = false;
+                if let ExprArt::Ort(o) = &entklammert(&l.wert).art {
+                    if o.suffixe.is_empty() {
+                        let n = &o.basis.text;
+                        kopie_gebunden = self.stand.gebunden.get(n).cloned();
+                        kopie_eingang = self.stand.eingang.get(n).cloned();
+                        kopie_unsicher = self.stand.unsicher.contains(n);
+                    }
+                }
                 self.binde_lokal(&l.name.text);
+                let name = l.name.text.clone();
+                if let Some(e) = kopie_gebunden {
+                    self.stand.gebunden.insert(name, e);
+                } else if let Some(a) = kopie_eingang {
+                    self.stand.eingang.insert(name, a);
+                } else if kopie_unsicher {
+                    self.stand.unsicher.insert(name);
+                }
             }
             StmtArt::LetSonst(l) => {
                 match &l.quelle {
@@ -580,6 +1109,7 @@ impl<'a> Laeufer<'a> {
                         for arg in &r.argumente {
                             self.orte_in_expr(arg);
                         }
+                        self.ruf(r);
                     }
                     LetQuelle::Ort(o) => self.ort(o),
                 }
@@ -597,23 +1127,32 @@ impl<'a> Laeufer<'a> {
                 let ziel = z.ziel.basis.text.clone();
                 if self.stand.gebunden.contains_key(&ziel)
                     || self.stand.unsicher.contains(&ziel)
+                    || self.stand.eingang.contains_key(&ziel)
                 {
                     let mut kopie: Option<(String, u64)> = None;
+                    let mut kopie_eingang: Option<String> = None;
                     if z.op == ZuwOp::Setzt {
                         if let ExprArt::Ort(o) = &entklammert(&z.wert).art {
                             if o.suffixe.is_empty() {
                                 if let Some(eintrag) = self.stand.gebunden.get(&o.basis.text) {
                                     kopie = Some(eintrag.clone());
                                 }
+                                kopie_eingang = self.stand.eingang.get(&o.basis.text).cloned();
                             }
                         }
                     }
-                    match kopie {
-                        Some(e) => {
+                    self.stand.eingang.remove(&ziel);
+                    match (kopie, kopie_eingang) {
+                        (Some(e), _) => {
                             self.stand.gebunden.insert(ziel.clone(), e);
                             self.stand.unsicher.remove(&ziel);
                         }
-                        None => {
+                        (None, Some(a)) => {
+                            self.stand.gebunden.remove(&ziel);
+                            self.stand.unsicher.remove(&ziel);
+                            self.stand.eingang.insert(ziel.clone(), a);
+                        }
+                        (None, None) => {
                             self.stand.gebunden.remove(&ziel);
                             self.stand.unsicher.insert(ziel.clone());
                         }
@@ -632,7 +1171,7 @@ impl<'a> Laeufer<'a> {
                     self.block(rumpf);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, self.boden),
                     }
                 }
                 if let Some(sonst) = &w.sonst {
@@ -640,10 +1179,10 @@ impl<'a> Laeufer<'a> {
                     self.block(sonst);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, self.boden),
                     }
                 } else if let Some(n) = &mut nach {
-                    n.vereinige(&vor, &mut self.frisch, &self.boden);
+                    n.vereinige(&vor, &mut self.frisch, self.boden);
                 }
                 // Bindings are block-scoped per arm (`block` restores them),
                 // so the join holds flow only -- and `vereinige` touches
@@ -664,14 +1203,14 @@ impl<'a> Laeufer<'a> {
                     self.block(&z.rumpf);
                     match &mut nach {
                         None => nach = Some(self.stand.clone()),
-                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, &self.boden),
+                        Some(n) => n.vereinige(&self.stand, &mut self.frisch, self.boden),
                     }
                 }
                 // **The path past every arm** (review G07): an integer `match` has no
                 // `default`, so the state from before joins -- as for an `if` without
                 // `else` above (`crate::int_match_may_miss`).
                 if let Some(n) = nach.as_mut().filter(|_| crate::int_match_may_miss(m)) {
-                    n.vereinige(&vor, &mut self.frisch, &self.boden);
+                    n.vereinige(&vor, &mut self.frisch, self.boden);
                 }
                 if let Some(n) = nach {
                     self.stand = n;
@@ -715,16 +1254,29 @@ impl<'a> Laeufer<'a> {
                 for arg in &r.argumente {
                     self.orte_in_expr(arg);
                 }
+                self.ruf(r);
             }
+            // A library call runs a foreign body: it names no arena of this
+            // unit, so it resets and commits none (`N059` keeps foreign
+            // bodies out of library hulls).
             StmtArt::LibraryCall(r) => {
                 for arg in &r.args {
                     self.orte_in_expr(arg);
                 }
             }
             StmtArt::Return(Some(x)) => self.orte_in_expr(x),
-            // **Lane 253:** `start` moves no generation and binds nothing.
-            StmtArt::Start(_)
-            | StmtArt::Return(None)
+            // **Lane 253:** `start` binds nothing. **Fix lane F2:** the
+            // started roots run (and are joined) here, so their resets and
+            // commits count like a call's.
+            StmtArt::Start(st) => {
+                for p in &st.roots {
+                    let ziel = self.loese(p);
+                    if ziel.is_some() {
+                        self.ruf_anwenden(ziel, &[]);
+                    }
+                }
+            }
+            StmtArt::Return(None)
             | StmtArt::Leave(_)
             | StmtArt::Next(_) => {}
         }
@@ -741,7 +1293,7 @@ impl<'a> Laeufer<'a> {
         } else {
             let nach_sonst = self.stand.clone();
             self.stand = nach_haupt;
-            self.stand.vereinige(&nach_sonst, &mut self.frisch, &self.boden);
+            self.stand.vereinige(&nach_sonst, &mut self.frisch, self.boden);
         }
     }
 
@@ -839,7 +1391,7 @@ impl<'a> Laeufer<'a> {
             } else {
                 let nach_sonst = self.stand.clone();
                 self.stand = nach_haupt;
-                self.stand.vereinige(&nach_sonst, &mut self.frisch, &self.boden);
+                self.stand.vereinige(&nach_sonst, &mut self.frisch, self.boden);
             }
         }
     }
@@ -848,13 +1400,19 @@ impl<'a> Laeufer<'a> {
     ///
     /// The amount is an ordinary expression for the reads inside it, and a
     /// translation-time constant for the commit (`N426` owns both faces of
-    /// the uncountable shape). Where the commit fits below the ceiling the
-    /// path's committed prefix grows by it; where the checker sees it
-    /// reach past the ceiling it is refused (`N426`) -- past the ceiling
-    /// there is no commit, only the stop, with or without the branch.
-    /// The failure continuation joins like `alloc`'s `else`: it runs
-    /// instead of the main path, and its state joins only when it falls
-    /// through. `grow` moves no generation and binds no index.
+    /// the uncountable shape). **Fix lane F2 (review G08 F1):** the ceiling
+    /// is held against the path's UPPER bound -- the most the whole run can
+    /// have committed here (`Stand::hoch`: every path, every loop pass, every
+    /// call and every other root of the program counted) -- and a request
+    /// that bound may carry past `M` is refused (`N426`): past the ceiling
+    /// there is no commit, only the stop, with or without the branch. The
+    /// lower bound (`verpflichtet`) grows by `n` on the main path, capped by
+    /// `M` (`PLAN-DYNAMISCH.md` §4).
+    ///
+    /// The `else` runs when the commit FAILED: it walks from the state
+    /// before the request, with nothing committed (PLAN §4), and its state
+    /// joins only when it falls through. `grow` moves no generation and
+    /// binds no index.
     fn grow(&mut self, g: &GrowStmt, span: Span) {
         self.orte_in_expr(&g.mehr);
         let Some(q) = self.u.nennt_arena(&self.modul, &g.tisch.text) else {
@@ -874,8 +1432,10 @@ impl<'a> Laeufer<'a> {
                      to hold it against",
                 );
             }
+            self.gabel(&g.sonst);
             return;
         };
+        self.erhebung.grows.insert(q.clone());
         // The amount: a constant count of `0 ..= u32::MAX`. A negative or
         // huge amount is no count, and a non-constant one leaves the
         // commit uncountable -- the ceiling cannot be held against a
@@ -900,33 +1460,67 @@ impl<'a> Laeufer<'a> {
                 );
             }
         }
-        // The ceiling hold: the committed prefix plus the amount never
-        // passes `M`. The `else` runs on OOM *below* the ceiling; past it
-        // the request is refused before it runs, branch or no branch.
-        if let (Some(n), Some(m)) = (menge, self.decke.get(&q).copied()) {
-            let committed = self.verpflichtung(&q).unwrap_or(0);
-            if committed.saturating_add(n) > m {
-                self.melde(
-                    "N426",
-                    span,
-                    format!(
-                        "`grow` out of `{}` commits `{n}` slots over \
-                         `{committed}` committed: past the ceiling `{m}` -- \
-                         past the ceiling there is no commit, only the stop",
-                        g.tisch.text
-                    ),
-                    "the `else` branch runs when the commit fails below the \
-                     ceiling; a request the checker sees reaching past it \
-                     is refused before it runs",
-                );
-            } else {
-                self.stand.verpflichtet.insert(q.clone(), committed + n);
-            }
+        let Some(m) = self.decke.get(&q).copied() else {
+            // An unusable declaration: `N210` fell, no commit question.
+            self.gabel(&g.sonst);
+            return;
+        };
+        let vor = self.stand.clone();
+        // The lower bound: what the main path is guaranteed to have.
+        if let Some(n) = menge {
+            let c = self.verpflichtung(&q).unwrap_or(0);
+            self.stand.verpflichtet.insert(q.clone(), c.saturating_add(n).min(m));
         }
-        self.gabel(&g.sonst);
+        // The upper bound: what the run may have committed after this.
+        let h = self.hoch(&q);
+        match menge {
+            Some(n) => {
+                if h.saturating_add(n) > m {
+                    let text = if h == UNENDLICH {
+                        format!(
+                            "`grow` out of `{}` commits `{n}` slots with no bound \
+                             on what stands committed before it: a loop without a \
+                             constant bound, a recursion, a call through a place or \
+                             a hardware entry may repeat a commit, and the ceiling is `{m}` -- past \
+                             the ceiling there is no commit, only the stop",
+                            g.tisch.text
+                        )
+                    } else {
+                        format!(
+                            "`grow` out of `{}` commits `{n}` slots over up to \
+                             `{h}` committed: past the ceiling `{m}` -- past the \
+                             ceiling there is no commit, only the stop",
+                            g.tisch.text
+                        )
+                    };
+                    self.melde(
+                        "N426",
+                        span,
+                        text,
+                        "the bound counts the whole run: every path, every loop \
+                         pass, every call and every other root that commits into \
+                         this arena -- `reset` gives no commit back. The `else` \
+                         runs when the commit fails below the ceiling; a request \
+                         that may reach past it is refused before it runs",
+                    );
+                }
+                self.setze_hoch(&q, h.saturating_add(n));
+            }
+            None => self.setze_hoch(&q, UNENDLICH),
+        }
+        // The failure continuation: from the state BEFORE the request.
+        let nach_haupt = std::mem::replace(&mut self.stand, vor);
+        self.block(&g.sonst);
+        if crate::endet_immer(&g.sonst, &[]) {
+            self.stand = nach_haupt;
+        } else {
+            let nach_sonst = std::mem::replace(&mut self.stand, nach_haupt);
+            self.stand.vereinige(&nach_sonst, &mut self.frisch, self.boden);
+        }
     }
 
-    fn reset(&mut self, tisch: &Ident) {        let Some(q) = self.u.nennt_arena(&self.modul, &tisch.text) else {
+    fn reset(&mut self, tisch: &Ident) {
+        let Some(q) = self.u.nennt_arena(&self.modul, &tisch.text) else {
             // **`N213` -- `reset` names a declared arena**, like `alloc`.
             if !self.stand.lokal.contains(&tisch.text) {
                 self.melde(
@@ -943,8 +1537,10 @@ impl<'a> Laeufer<'a> {
             }
             return;
         };
+        self.erhebung.resets.insert(q.clone());
         // A reset restores the commit floor beside the fresh generation:
-        // commit never shrinks (`PLAN-DYNAMISCH.md` §3).
+        // commit never shrinks (`PLAN-DYNAMISCH.md` §3). The UPPER bound
+        // stays where it is: the runtime keeps every committed page.
         let boden = self.boden.get(&q).copied();
         self.stand.reset(&q, &mut self.frisch, boden);
     }
@@ -957,131 +1553,164 @@ impl<'a> Laeufer<'a> {
     /// (`retry … bounded N` carries its own; `traverse` and `forever` may
     /// repeat without one, so a growing body saturates); a body that resets
     /// takes a fresh generation, because the loop may have run.
+    ///
+    /// **Fix lane F2: the upper commit bound widens the same way.** The
+    /// body's commit per pass (`d`, the most one pass can add, calls
+    /// included) is measured on the first walk; the second walk -- the later
+    /// passes -- starts from the entry plus `d` times the passes before the
+    /// last (`UNENDLICH` without a constant bound), so a `grow` in the body
+    /// is held against every pass, not only the first.
     fn schleife(&mut self, sch: &Schleife) {
         let vor = self.stand.clone();
-        match sch {
+        // The body, its passes, and how the count moves after the loop.
+        let (rumpf, schranke): (&Block, Option<u64>) = match sch {
             Schleife::Traverse(t) => {
                 self.stand.lokal.insert(t.variable.text.clone());
                 self.stand.gebunden.remove(&t.variable.text);
                 self.stand.unsicher.remove(&t.variable.text);
+                self.stand.eingang.remove(&t.variable.text);
                 if let Some(g) = &t.gegenstand {
                     self.orte_in_expr(g);
                 }
-                self.block(&t.rumpf);
-                let nach_eins = self.stand.clone();
-                let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
-                self.stand = verbunden.clone();
-                self.block(&t.rumpf);
-                let mut nach = vor.clone();
+                if let Some(m) = &t.mass {
+                    self.orte_in_expr(m);
+                }
+                (&t.rumpf, None)
+            }
+            Schleife::Retry(r) => {
+                let n = self.u.konst_wert(&self.modul, &r.schranke);
+                (&r.rumpf, n.filter(|n| *n >= 0).map(|n| n.min(u64::MAX as i128) as u64))
+            }
+            Schleife::Forever(f) => (&f.rumpf, None),
+        };
+        let bis = match sch {
+            Schleife::Retry(r) => r.bis.as_ref(),
+            _ => None,
+        };
+        // First walk: one pass, with its own maximum.
+        let vor_koerper = self.stand.clone();
+        let max_vorher = std::mem::replace(&mut self.max_hoch, vor_koerper.hoch.clone());
+        self.block(rumpf);
+        self.praedikat(bis);
+        let nach_eins = self.stand.clone();
+        let koerper_max = std::mem::replace(&mut self.max_hoch, max_vorher);
+        for (a, h) in &koerper_max {
+            let m = self.max_hoch.entry(a.clone()).or_insert(*h);
+            if *h > *m {
+                *m = *h;
+            }
+        }
+        let mut zweit: HashMap<String, u64> = HashMap::new();
+        let mut danach: HashMap<String, u64> = HashMap::new();
+        for (a, e) in &vor_koerper.hoch {
+            let eins = nach_eins.hoch.get(a).copied().unwrap_or(*e);
+            let spitze = eins.max(koerper_max.get(a).copied().unwrap_or(*e));
+            let d = if *e == UNENDLICH { 0 } else { spitze.saturating_sub(*e) };
+            let (z, n) = if d == 0 {
+                (eins.max(*e), eins.max(*e))
+            } else {
+                match schranke {
+                    None => (UNENDLICH, UNENDLICH),
+                    Some(k) => (
+                        eins.max(e.saturating_add(d.saturating_mul(k.saturating_sub(1)))),
+                        eins.max(e.saturating_add(d.saturating_mul(k))),
+                    ),
+                }
+            };
+            zweit.insert(a.clone(), z);
+            danach.insert(a.clone(), n);
+        }
+        // Second walk: the later passes.
+        let mut verbunden = vor_koerper.clone();
+        verbunden.vereinige(&nach_eins, &mut self.frisch, self.boden);
+        for (a, z) in &zweit {
+            verbunden.hoch.insert(a.clone(), *z);
+            let m = self.max_hoch.entry(a.clone()).or_insert(*z);
+            if *z > *m {
+                *m = *z;
+            }
+        }
+        self.stand = verbunden;
+        self.block(rumpf);
+        self.praedikat(bis);
+        let mut nach = vor.clone();
+        for (a, z) in &nach_eins.zaehlung {
+            let delta = z.saturating_sub(vor.zaehlung(a));
+            match (sch, schranke) {
+                // `retry … bounded N`: the entry plus the delta times N.
+                (Schleife::Retry(_), Some(k)) => {
+                    let wachstum = delta.saturating_mul(k);
+                    nach.zaehlung.insert(a.clone(), vor.zaehlung(a).saturating_add(wachstum));
+                }
                 // A growing body inside an unbounded loop saturates: the
                 // loop may run any number of times.
-                for (a, z) in &nach_eins.zaehlung {
-                    let delta = z.saturating_sub(vor.zaehlung(a));
+                (Schleife::Traverse(_), _) => {
                     if delta > 0 {
                         nach.zaehlung.insert(a.clone(), UNENDLICH);
                     } else {
                         nach.zaehlung.insert(a.clone(), *z);
                     }
                 }
-                for (a, g) in &nach_eins.generation {
-                    if *g != vor.generation(a) {
-                        self.frisch = self.frisch.saturating_add(1);
-                        nach.generation.insert(a.clone(), self.frisch);
-                    }
-                }
-                // Wave D: the committed axis joins with the minimum over
-                // entry and exit — the loop analogue of `vereinige`, capped
-                // by `M` by construction, so no `UNENDLICH` saturation.
-                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
-                let gebunden = vor.gebunden.clone();
-                let unsicher = vor.unsicher.clone();
-                let lokal = vor.lokal.clone();
-                self.stand = nach;
-                self.stand.gebunden = gebunden;
-                self.stand.unsicher = unsicher;
-                self.stand.lokal = lokal;
-                let _ = &verbunden;
-            }
-            Schleife::Retry(r) => {
-                self.block(&r.rumpf);
-                let nach_eins = self.stand.clone();
-                let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
-                self.stand = verbunden;
-                self.block(&r.rumpf);
-                let schranke = self.u.konst_wert(&self.modul, &r.schranke).unwrap_or(-1);
-                let mut nach = vor.clone();
-                for (a, z) in &nach_eins.zaehlung {
-                    let delta = z.saturating_sub(vor.zaehlung(a));
-                    if schranke < 0 {
-                        if delta > 0 {
-                            nach.zaehlung.insert(a.clone(), UNENDLICH);
-                        }
-                    } else {
-                        let wachstum = delta.saturating_mul(schranke.max(0) as u64);
-                        nach.zaehlung.insert(
-                            a.clone(),
-                            vor.zaehlung(a).saturating_add(wachstum),
-                        );
-                    }
-                }
-                for (a, g) in &nach_eins.generation {
-                    if *g != vor.generation(a) {
-                        self.frisch = self.frisch.saturating_add(1);
-                        nach.generation.insert(a.clone(), self.frisch);
-                    }
-                }
-                // Wave D: the committed axis joins with the minimum over
-                // entry and exit — the loop analogue of `vereinige`, capped
-                // by `M` by construction, so no `UNENDLICH` saturation.
-                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
-                let gebunden = vor.gebunden.clone();
-                let unsicher = vor.unsicher.clone();
-                let lokal = vor.lokal.clone();
-                self.stand = nach;
-                self.stand.gebunden = gebunden;
-                self.stand.unsicher = unsicher;
-                self.stand.lokal = lokal;
-            }
-            Schleife::Forever(f) => {
-                self.block(&f.rumpf);
-                let nach_eins = self.stand.clone();
-                let mut verbunden = vor.clone();
-                verbunden.vereinige(&nach_eins, &mut self.frisch, &self.boden);
-                self.stand = verbunden;
-                self.block(&f.rumpf);
-                let mut nach = vor.clone();
-                for (a, z) in &nach_eins.zaehlung {
-                    let delta = z.saturating_sub(vor.zaehlung(a));
+                _ => {
                     if delta > 0 {
                         nach.zaehlung.insert(a.clone(), UNENDLICH);
                     }
                 }
-                for (a, g) in &nach_eins.generation {
-                    if *g != vor.generation(a) {
-                        self.frisch = self.frisch.saturating_add(1);
-                        nach.generation.insert(a.clone(), self.frisch);
-                    }
-                }
-                // Wave D: the committed axis joins with the minimum over
-                // entry and exit — the loop analogue of `vereinige`, capped
-                // by `M` by construction, so no `UNENDLICH` saturation.
-                self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
-                let gebunden = vor.gebunden.clone();
-                let unsicher = vor.unsicher.clone();
-                let lokal = vor.lokal.clone();
-                self.stand = nach;
-                self.stand.gebunden = gebunden;
-                self.stand.unsicher = unsicher;
-                self.stand.lokal = lokal;
+            }
+        }
+        for (a, g) in &nach_eins.generation {
+            if *g != vor.generation(a) {
+                self.frisch = self.frisch.saturating_add(1);
+                nach.generation.insert(a.clone(), self.frisch);
+            }
+        }
+        // Wave D: the committed LOWER bound joins with the minimum over
+        // entry and exit — the loop analogue of `vereinige`, capped by `M`
+        // by construction, so no `UNENDLICH` saturation.
+        self.verbinde_verpflichtung(&vor, &nach_eins, &mut nach);
+        // The UPPER bound after the loop (fix lane F2).
+        for (a, n) in &danach {
+            nach.hoch.insert(a.clone(), *n);
+            let m = self.max_hoch.entry(a.clone()).or_insert(*n);
+            if *n > *m {
+                *m = *n;
+            }
+        }
+        nach.gebunden = vor.gebunden.clone();
+        nach.unsicher = vor.unsicher.clone();
+        nach.lokal = vor.lokal.clone();
+        nach.eingang = vor.eingang.clone();
+        self.stand = nach;
+    }
+
+    /// The calls a loop predicate makes (`retry … until f()` evaluates
+    /// `f()` on every pass).
+    fn praedikat(&mut self, p: Option<&Pred>) {
+        if let Some(p) = p {
+            for e in crate::ausdruecke_im_praedikat(p) {
+                self.orte_in_expr(e);
             }
         }
     }
 
     /// Every `Ort` inside an expression, including the index expressions of
     /// arena reads nested in other places.
+    ///
+    /// **Fix lane F2: the calls inside the expression run first**, innermost
+    /// first. C leaves the order of operands open, so a read beside a call
+    /// that may `reset` its arena is held as if the call ran before it --
+    /// the conservative reading of an unspecified order.
     fn orte_in_expr(&mut self, e: &Expr) {
+        let rufe: Vec<&Ruf> = crate::alle_ausdruecke(e)
+            .into_iter()
+            .filter_map(|x| match &x.art {
+                ExprArt::Ruf(r) => Some(r),
+                _ => None,
+            })
+            .collect();
+        for r in rufe.into_iter().rev() {
+            self.ruf(r);
+        }
         for o in crate::alle_orte(e) {
             self.ort(o);
         }
@@ -1107,57 +1736,123 @@ impl<'a> Laeufer<'a> {
         let [OrtSuffix::Index(ix)] = o.suffixe.as_slice() else {
             return;
         };
+        let angezeigt = o.basis.text.clone();
+        self.index_gebrauch(&q, &angezeigt, ix);
+    }
+
+    /// **One use of `ix` as an index of arena `q`** -- a read `A[ix]`, or an
+    /// argument at a parameter typed `index into A` (fix lane F2).
+    ///
+    /// Four origins, four answers:
+    ///
+    /// - a local bound by `alloc` (or copied from one): live exactly in the
+    ///   generation it was bound in (`N211` otherwise);
+    /// - a name reassigned since (`unsicher`): generation unknown (`N211`);
+    /// - a parameter typed `index into A` (or a copy): live in the entry
+    ///   generation, i.e. until the first `reset` of `A` on this path, in
+    ///   this body or in a callee (`N211` after it);
+    /// - anything else -- a global, a record or table field, a slot of
+    ///   another arena, a call result, a local the pass does not track:
+    ///   the checker follows no generation through it, so where the program
+    ///   resets `A` anywhere, the use is refused (`N211`). Where nothing
+    ///   ever resets `A`, there is only one generation, and every index is
+    ///   of it.
+    fn index_gebrauch(&mut self, q: &str, angezeigt: &str, ix: &Expr) {
         let ix_ohne = entklammert(ix);
-        let ExprArt::Ort(io) = &ix_ohne.art else {
-            return;
+        let (name, span) = match &ix_ohne.art {
+            ExprArt::Ort(io) if io.suffixe.is_empty() => (Some(io.basis.text.clone()), io.span),
+            ExprArt::Ort(io) => (None, io.span),
+            ExprArt::Ruf(r) => (None, r.span),
+            // A literal, an arithmetic: not an index at all -- M1's type
+            // question (`N214`), not this pass's.
+            _ => return,
         };
-        if !io.suffixe.is_empty() {
-            return;
-        }
-        let name = &io.basis.text;
-        if self.stand.unsicher.contains(name) {
-            // **`N211` -- no use of an index whose generation is unknown.**
-            self.melde(
-                "N211",
-                io.span,
-                format!(
-                    "`{name}` may not be a live index of `{}`: reassigned \
-                     since its allocation, and no generation is tracked \
-                     through the assignment",
-                    o.basis.text
-                ),
-                "bind the index fresh from `alloc`, or read the slot before \
-                 reassigning the name",
-            );
-            return;
-        }
-        match self.stand.gebunden.get(name) {
-            Some((arena, g)) if arena == &q && *g == self.stand.generation(&q) => {}
-            Some((arena, _)) if arena == &q => {
-                // **`N211` -- no use of an index of a consumed generation.**
-                //
-                // `reset` consumed the generation this index was bound in;
-                // the slot may hold another value now, or nothing yet. The
-                // generation is a type index in the Lean model (`ArenaIdx g
-                // n` against `Marke (g+1)` does not typecheck); here it is
-                // a counter, and the refusal is its shadow.
+        if let Some(name) = &name {
+            if self.stand.unsicher.contains(name) {
+                // **`N211` -- no use of an index whose generation is unknown.**
                 self.melde(
                     "N211",
-                    io.span,
+                    span,
                     format!(
-                        "`{name}` is an index of a consumed generation of \
-                         `{}`: a `reset` stood between its `alloc` and this \
-                         read",
-                        o.basis.text
+                        "`{name}` may not be a live index of `{angezeigt}`: reassigned \
+                         since its allocation, and no generation is tracked \
+                         through the assignment"
                     ),
-                    "allocate again after the `reset` -- an index obtained \
-                     before it names another lifetime of the same slots",
+                    "bind the index fresh from `alloc`, or read the slot before \
+                     reassigning the name",
                 );
+                return;
             }
-            _ => {
-                // Another arena's index, or no tracked index at all: the
-                // TYPE question, and M1 (`N214`) asks it.
+            match self.stand.gebunden.get(name) {
+                Some((arena, g)) if arena == q && *g == self.stand.generation(q) => return,
+                Some((arena, _)) if arena == q => {
+                    // **`N211` -- no use of an index of a consumed generation.**
+                    //
+                    // `reset` consumed the generation this index was bound in
+                    // -- here, on a joined path, or inside a routine called
+                    // since (fix lane F2); the slot may hold another value
+                    // now, or nothing yet. The generation is a type index in
+                    // the Lean model (`ArenaIdx g n` against `Marke (g+1)`
+                    // does not typecheck); here it is a counter, and the
+                    // refusal is its shadow.
+                    self.melde(
+                        "N211",
+                        span,
+                        format!(
+                            "`{name}` is an index of a consumed generation of \
+                             `{angezeigt}`: a `reset` stood between its `alloc` and \
+                             this use (in this body or in a routine called since)"
+                        ),
+                        "allocate again after the `reset` -- an index obtained \
+                         before it names another lifetime of the same slots",
+                    );
+                    return;
+                }
+                // Another arena's index: the TYPE question, and M1 (`N214`)
+                // asks it.
+                Some(_) => return,
+                None => {}
             }
+            match self.stand.eingang.get(name) {
+                Some(a) if a == q => {
+                    if self.stand.generation(q) != 0 {
+                        self.melde(
+                            "N211",
+                            span,
+                            format!(
+                                "`{name}` is an index of `{angezeigt}` from the \
+                                 function's entry, and a `reset` of `{angezeigt}` \
+                                 may have stood since (in this body or in a routine \
+                                 called since)"
+                            ),
+                            "an index handed in is live in the generation current \
+                             at the call -- read it before the `reset`, or \
+                             allocate again after it",
+                        );
+                    }
+                    return;
+                }
+                Some(_) => return,
+                None => {}
+            }
+        }
+        if self.wissen.irgendwo_zurueckgesetzt.contains(q) {
+            let was = match &name {
+                Some(n) => format!("`{n}`"),
+                None => "this index".to_string(),
+            };
+            self.melde(
+                "N211",
+                span,
+                format!(
+                    "{was} is an index of `{angezeigt}` whose generation the checker \
+                     does not track (a global, a field, a slot, a call result or an \
+                     untracked local), and the program resets `{angezeigt}`"
+                ),
+                "an index that crossed a place the generation does not travel \
+                 through may name a slot of an earlier lifetime -- keep it in a \
+                 local bound by `alloc` or a parameter typed `index into A`",
+            );
         }
     }
 }
@@ -1199,6 +1894,36 @@ mod wachstumstests {
         links.vereinige(&rechts, &mut frisch, &b);
         assert_eq!(links.zaehlung.get("m::A"), Some(&5));
         assert_eq!(links.verpflichtet.get("m::A"), Some(&6));
+    }
+
+    /// Fix lane F2: the UPPER bound joins with the maximum -- either path
+    /// may be the one that ran -- while the lower bound keeps the minimum.
+    #[test]
+    fn verbindung_max_obere_schranke() {
+        let b = boden(&[("m::A", 8)]);
+        let mut links = Stand::default();
+        links.verpflichtet.insert("m::A".to_string(), 16);
+        links.hoch.insert("m::A".to_string(), 16);
+        let mut rechts = Stand::default();
+        rechts.verpflichtet.insert("m::A".to_string(), 8);
+        rechts.hoch.insert("m::A".to_string(), 8);
+        let mut frisch = 0u64;
+        links.vereinige(&rechts, &mut frisch, &b);
+        assert_eq!(links.hoch.get("m::A"), Some(&16));
+        assert_eq!(links.verpflichtet.get("m::A"), Some(&8));
+    }
+
+    /// Fix lane F2: a generation moved on one side only (a callee's
+    /// `reset`, which writes no count) still moves at the join.
+    #[test]
+    fn generation_ohne_zaehlung_bewegt_sich_an_der_verbindung() {
+        let b = boden(&[("m::A", 8)]);
+        let mut links = Stand::default();
+        let mut rechts = Stand::default();
+        rechts.generation.insert("m::A".to_string(), 3);
+        let mut frisch = 3u64;
+        links.vereinige(&rechts, &mut frisch, &b);
+        assert_ne!(links.generation("m::A"), 0);
     }
 
     #[test]

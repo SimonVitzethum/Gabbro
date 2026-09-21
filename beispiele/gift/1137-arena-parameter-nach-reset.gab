@@ -1,0 +1,15 @@
+-- erwartet: N211
+-- Fix lane F2 (review G08 F2): an index handed in as a parameter is live
+-- in the generation current at the call -- and this body resets the arena
+-- before its second read. Before the fix a parameter was no tracked index
+-- at all, and both reads passed. The first read (before the `reset`) is
+-- fine; only the second falls. Nothing else is wrong with this unit.
+module gift::arena_parameter_nach_reset {
+arena A capacity 2 .. 2 of u16;
+impl fn r(i : index into A) -> u32 effects { writes A } costs <= 64 ops {
+    let x : u32 = A[i];
+    reset A;
+    let y : u32 = A[i];
+    return x | y;
+}
+}

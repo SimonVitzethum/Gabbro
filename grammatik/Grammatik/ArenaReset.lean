@@ -9,10 +9,11 @@
   `ArenaZucker.lean` (no new syntax, no new constructor, no new checker
   rule): after a reset the counter stands at zero, strictly under the hard
   bound, so the NEXT `alloc` runs its body with index 0 -- never its `else`.
-  No live reference survives a reset because there is nothing to survive:
-  indices are scoped binders introduced by `narrow` (see CUTS), and the only
-  carried number is back at zero. The staleness refusal is the checker's
-  (`N211`); what the RUN does is this store, and that is what is proved.
+  In the SUGAR no index survives a reset, because indices are scoped
+  binders introduced by `narrow` (see CUTS); the surface language is wider
+  (parameters, globals, fields, call results carry indices), and there the
+  staleness refusal is the checker's (`N211`, whose reach is stated in CUTS).
+  What the RUN does is this store, and that is what is proved.
 -/
 import Grammatik.ArenaZucker
 
@@ -133,11 +134,26 @@ end Gabbro.Grammatik
     `reset`); `ArenaZucker.lean` section 6 books the same cut. What this
     file adds is the run half: after a reset every slot IS reusable (index
     `0` runs the body), so the wholesale never strands storage.
-  * **No stored reference can go stale in the sugar.** An `alloc` index is
-    a binder introduced by `Block.narrow`, scoped to the continuation
-    block; there is no handle that outlives a `reset` to become dangling.
-    This inexpressibility is stated, not formalised: proving it would mean
-    quantifying over all terms, which rule 13 forbids without a witness.
+  * **No stored reference can go stale in the SUGAR -- the surface is
+    wider.** An `alloc` index of the sugar is a binder introduced by
+    `Block.narrow`, scoped to the continuation block; in the sugar there is
+    no handle that outlives a `reset`. This inexpressibility is stated, not
+    formalised: proving it would mean quantifying over all terms, which
+    rule 13 forbids without a witness. The SURFACE language does carry
+    indices past a binder -- in parameters typed `index into A`, in globals,
+    record and table fields, arena slots and call results -- and there the
+    checker, not this file, holds the line (review G08 F2, fix lane F2):
+    `N211` refuses a use after a `reset` in the same body, after a call
+    whose callee may reset `A` (transitively, including `start`ed roots and
+    every call through a place), a parameter index used after such a
+    `reset`, a stale index handed to such a parameter, and -- where the
+    program resets `A` anywhere -- every index that reaches a use through a
+    global, a field, a slot, a call result or an untracked local. NOT
+    covered: a `reset` of `A` in a routine that runs CONCURRENTLY with the
+    holder of the index (another root of a `concurrent` set, a `child`
+    path); the generation is tracked along one thread of control. Memory
+    safety holds either way (a stale index stays below the committed
+    count); the gap is a logical dangling reference.
   * **Commit is untouched.** `reset` keeps the committed prefix (monotone
     commit, PLAN-DYNAMISCH.md section 3): the counter store moves `stand`
     and nothing else (`stand_schreibGlob` for the counter global only;

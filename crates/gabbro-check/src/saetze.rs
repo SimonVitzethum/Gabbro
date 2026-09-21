@@ -4215,8 +4215,16 @@ pub const PHASEN: &[Satz] = &[
         kennungen: &["N210", "N211", "N212", "N213", "N214"],
         aussage: "Every arena declares two constant bounds with `0 <= lo <= hi` \
                   (`N210`); every `alloc` past the reservation owes its `else` \
-                  (`N212`, counted per function like `costs`); no index is read \
-                  outside the generation its `alloc` bound it in (`N211`); \
+                  (`N212`, counted per function like `costs`); no index is used \
+                  outside the generation it was obtained in (`N211`: a `reset` \
+                  in the same body, or in any routine called or started since \
+                  -- transitively, a call through a place counting as every \
+                  `reset` of the program -- consumes the generation of every \
+                  index held across it; a parameter typed `index into A` is live \
+                  until the first such `reset`, and a stale index handed to one \
+                  falls at the call; an index that reaches a use through a \
+                  global, a field, a slot, a call result or an untracked local \
+                  falls wherever the program resets that arena at all); \
                   `alloc` and `reset` name a declared arena (`N213`); and a \
                   place over an arena is exactly `A[i]` with `i : index into \
                   A`, never written outside `alloc` (`N214`). The emitted array \
@@ -4228,12 +4236,22 @@ pub const PHASEN: &[Satz] = &[
                     the other -- like `costs`, whose recursion carries an \
                     assumption instead of a computation. A reservation shared \
                     across functions needs the whole-program discipline, and that \
-                    is future work, not a silent promise. `beispiele/98` and \
-                    `/99` carry the positive direction (emission included); the \
-                    five poison probes pin the five refusals.",
+                    is future work, not a silent promise. The generation is \
+                    tracked along ONE thread of control: a `reset` in a routine \
+                    running concurrently with the holder of an index (another \
+                    root of a `concurrent` set, a `child` path) is not applied \
+                    to it (review G08 F2; memory safety does not depend on it, \
+                    the residue is a logical dangling reference). Calls inside \
+                    one expression count as running before its reads (C leaves \
+                    the order open), so a read beside a resetting call falls \
+                    even where C would read first. `beispiele/98` and `/99` \
+                    carry the positive direction (emission included); the \
+                    poison probes pin the refusals.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probe `885` on `N210` (inverted bounds), \
-                      `886` on `N211` (stale index after `reset`), `887` on \
+                      `886` on `N211` (stale index after `reset`), `1136`, \
+                      `1137`, `1138` on `N211` across a call, a parameter and a \
+                      call result (fix lane F2), `887` on \
                       `N212` (missing `else` past the reservation), `888` on \
                       `N213` (undeclared arena), `889` on `N214` (foreign \
                       index); beispiele/98 checks clean and emits, /99 the \
@@ -4310,27 +4328,45 @@ pub const PHASEN: &[Satz] = &[
         name: "arena.wachsen_commit",
         kennungen: &["N426"],
         aussage: "Every `grow A by n else { … }` commits a constant slot \
-                  count below the ceiling (`N426` refuses the uncountable \
-                  amount and the request reaching past `max`, branch or no \
-                  branch); the `else` always stands and runs on OOM below \
-                  the ceiling; the committed prefix grows by `n` on the \
-                  path, capped by `M`. The ceiling is the `max` clause where \
+                  count, and the whole run's commits into `A` stay below its \
+                  ceiling: `N426` refuses the uncountable amount and every \
+                  request whose UPPER bound may pass `max`, branch or no \
+                  branch -- the bound counts every path (maximum at joins), \
+                  every loop pass (saturated without a constant pass bound, \
+                  times `N` under `retry … bounded N`), every call and \
+                  `start` (the callee's per-invocation bound, a recursion or a \
+                  call through a place without bound), and every root of the \
+                  call graph, entered once per load (a `concurrent` body once \
+                  per naming, a hardware `entry` dispatch target without \
+                  bound); `reset` gives no commit back. The `else` always stands and runs when the platform \
+                  refuses the commit below the ceiling, walked from the state \
+                  before the request; the committed lower bound grows by `n` \
+                  on the main path, capped by `M`. The ceiling is the `max` clause where \
                   it stands and is usable (`N210` holds `hi <= max`), else \
                   the floor (`hi`); `grow` names a declared arena (`N213`). \
                   Until the dynamic arm lands the emitter and the G exporter \
                   refuse the statement by name, and the static lowering of a \
                   `max`-carrying arena is exactly the committed-prefix \
                   behavior (storage of `hi` beside `used`).",
-        vorbehalt: "The count is per function body (like `costs`); `R-max` \
-                    stays unwired (see `arena.wachstum_sichtbar`). The \
-                    ceiling is held against the path's committed LOWER \
-                    bound (minimum at joins, entry value after loops, the \
-                    floor at every function entry), so `N426` sees only \
-                    the straight-line commits of one body: a `grow` inside \
-                    a loop, after a branch that grew, or in two functions \
-                    (or two calls) is NOT held below `max`, and at run time \
-                    the runtime's past-ceiling `abort` is reachable from an \
-                    accepted program (review G08, 2026-09-21). A `max` \
+        vorbehalt: "The allocation count is per function body (like \
+                    `costs`); `R-max` stays unwired (see \
+                    `arena.wachstum_sichtbar`). The run model is the goal \
+                    theorem's: every root of the call graph is entered at \
+                    most once per load (declared starts; separately linked \
+                    units NOT CLAIMED) -- a routine entered again by a caller \
+                    the unit does not see can still reach the runtime's \
+                    past-ceiling stop. The bound is conservative: a \
+                    recursion with `decreases` still counts as unbounded, and \
+                    a program with a call through a place and a `grow` into \
+                    an arena that call may write is refused. On hosted Linux \
+                    the commit is lazy and the `else` is reached only under \
+                    strict overcommit accounting; under the default heuristic \
+                    out of memory surfaces at first touch as the OOM killer, \
+                    not as the `else` (review G08 F3). Until fix lane F2 \
+                    (2026-09-21) the ceiling was held against the committed \
+                    LOWER bound, and a `grow` in a loop, after a growing \
+                    branch, in two functions or in a callee called twice was \
+                    accepted (review G08 F1). A `max` \
                     clause on tables is reserved future syntax, not parsed, \
                     not refused, not built. `beispiele/153` carries the \
                     static shape the dynamic form preserves; the dynamic \
@@ -4338,6 +4374,12 @@ pub const PHASEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1088 (`-- erwartet: N426`: a `grow` \
                       reaching past the ceiling with the branch declared); \
+                      gifts 1132-1135 (fix lane F2: `grow` in `forever`, \
+                      after a branch that grew, in two roots, in a callee \
+                      called twice), with positive twins provably below the \
+                      ceiling in `paesse.rs` (`arena_grow_obere_schranke_n426`, \
+                      `arena_grow_ohne_schranke_n426`, \
+                      `arena_grow_else_vom_alten_stand`); \
                       `paesse.rs` (`arena_grow_*`: the past-ceiling poison \
                       with its clean twin, the uncountable-amount poison, \
                       the undeclared-arena poison at `N213`, the clean \

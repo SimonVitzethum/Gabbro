@@ -1,0 +1,21 @@
+-- erwartet: N211
+-- Fix lane F2 (review G08 F2): an index that arrives as a call result. The
+-- checker follows no generation through a return value, and the program
+-- resets `A` (in `leer`), so the index may name a slot of an earlier
+-- lifetime. Where no `reset` of `A` stands anywhere, the same shape is
+-- clean (one generation only; see `paesse.rs`). Nothing else is wrong.
+module gift::arena_index_aus_rufergebnis {
+arena A capacity 2 .. 2 of u16;
+impl fn gib() -> index into A effects { writes A } costs <= 8 ops {
+    let a = alloc A (1);
+    return a;
+}
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let i = gib();
+    let x : u32 = A[i];
+    return x;
+}
+impl fn leer() effects { writes A } costs <= 4 ops {
+    reset A;
+}
+}

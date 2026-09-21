@@ -835,3 +835,18 @@ core it interrupted, spins on a lock that core's thread holds unmasked.
 | **who guards it today** | the Rust checker alone (`H102`, `kontexte.rs`); the emitter lowers no `cli`/`sti` (`beispiele/59` says so in its header) |
 | **why it matters** | `beispiele/59` exports since lane 255, and its exported deadlock freedom reads like interrupt-deadlock freedom; it is not. a model of `gift/460` (refused by `H102`) would differ from `Korpus59.lean` only in `kMaskiert`, and would get the same `Akzeptiert = true` and the same `korpus59_ziel` (review G02 F1) |
 | **what would close it** | either a NOT-CLAIMED line in the `Spec.lean` header (dispatch roots are modelled as independent starts; same-core preemption and `D.maskiert` are not read by `Ziel`; `H102` is the only guard), or a `MaskenOrdnung` leg carried into `Laufzeit`. Both are `Spec.lean` diffs for Simon |
+
+## O20 — Arena generations and the commit ceiling assume one thread of control and roots entered once (recorded 2026-09-21, review G08, fix lane F2)
+
+Fix lane F2 made both arena facts whole-program: `N211` applies a callee's (transitive)
+`reset`s at every call and `start`, holds parameter indices to the entry generation and
+refuses untracked carriers where the arena is reset anywhere; `N426` holds every `grow`
+against the upper bound of the whole run's commit. Two assumptions remain, and neither is
+checked:
+
+| | |
+|---|---|
+| **generations along one thread** | a `reset` of `A` in a routine that runs CONCURRENTLY with the holder of an index into `A` (another root of a `concurrent` set, a `child` path, an interrupt handler) is not applied to that index. Memory safety does not depend on it (the index stays below `committed`); the residue is a logical dangling reference |
+| **roots entered once per load** | the commit total sums call-graph roots once (a `concurrent` body once per naming, an `entry` dispatch target without bound). A routine entered again by code the unit does not see (a separately linked caller, NOT CLAIMED in `Spec.lean`) can still reach the runtime's past-ceiling stop (`abort`, `laufzeit/arena_dyn.c`) |
+| **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff |
+

@@ -149,6 +149,19 @@ Rust, never a header per object.
 | 248 | emitter arm for reserve/commit — merged as gate-doc (max/grow syntax missing, arm queued) | report only | S | 235, 242 |
 | 257 | max/grow syntax (unblocks the arm) | `parse.rs`, `ast.rs` | M | — |
 
+*Review G08 fix lane F2 (2026-09-21, `messung/review-2026-09-21/FIX-F2.md`):
+`N426` now holds every `grow` against the UPPER bound of the whole run's
+commit (max at joins, saturated in loops without a constant pass bound,
+callee bounds at calls, summed over call-graph roots; `entry` dispatch targets
+unbounded), and `grow`'s `else` walks from the unbumped state; `N211` crosses
+calls (may-reset summaries), parameters and untracked carriers (gifts
+1132–1138, no new code). The runtime commit is lazy (no `memset`).
+**Still owed before lane 248's emitter arm lands:** nothing on the ceiling;
+`R-commit` (alloc past the committed LOWER bound) and `R-max` stay unwired;
+the PLAN §9 Lean work (`DynForm`, the four Block-form theorems, the
+simulation) and the two `Spec.lean` (d) assumption texts are unassigned
+(review G08 F5; lane 244 did efficiency instead). Open: `OFFEN.md` O20.*
+
 *Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096 (only if a
 new refusal is measured — over-cap growth already refuses via 240). 248
 takes no new codes (lowering lane). Example

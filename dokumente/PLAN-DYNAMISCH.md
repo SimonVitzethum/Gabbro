@@ -99,6 +99,26 @@ that is an architecture answer, not a statement.
 
 ## 4. Checker obligations (lane 241 builds exactly this)
 
+> **Correction, fix lane F2 (review G08 F1, 2026-09-21).** The paragraph below holds the
+> ceiling against a single `min`-joined committed value. That is the LOWER bound — right for
+> "what is usable" (R-commit), wrong for "can this commit pass `M`", which needs the MOST any
+> run can have committed. Since fix lane F2 the checker carries both: the lower bound as
+> written below, and an UPPER bound per arena that joins with `max`, is left alone by
+> `reset` (the runtime never decommits, §3), saturates after a loop whose body may commit
+> without a constant pass bound (`forever`, `traverse`, a non-constant `retry`), multiplies
+> by the pass bound of a `retry … bounded N`, and crosses function boundaries: every
+> routine gets a per-invocation bound (its own `grow`s plus its callees' and started roots',
+> `UNENDLICH` in a recursion or through a call through a place), the whole-program total is
+> the sum over the ROOTS of the call graph (routines no other routine calls or starts, plus
+> every cycle member), each entered once per load (a `concurrent` body once per naming, an
+> `entry … dispatch` target without bound), and each body starts at the floor plus
+> the total minus its own share. `N426` refuses every `grow` whose upper bound plus amount
+> may pass `M`. The `else` of `grow` walks from the state BEFORE the request (nothing
+> committed), as written below; until fix lane F2 the checker walked it from the bumped
+> state. The run model (roots entered once per load) is the goal theorem's (declared starts;
+> separately linked units NOT CLAIMED): a routine entered again by a caller the unit does not
+> see can still reach the runtime's past-ceiling stop.
+
 Per function body, per path, the pass tracks `(count, committed)` per arena, starting
 at `(0, hi)`; `reset` sets `(0, hi)` (commit floor restored by construction, since
 commit never shrinks); `grow A by n` sets `(count, min(committed + n, M))` on the main
@@ -124,7 +144,14 @@ do not self-assign — see §10):
 - **R-grow-else (refusal): `grow` without `else`.** The runtime commit below `M` can
   fail (out of memory is real even under a reservation); the failure path is written
   down, not hoped away — same rationale as `N212`'s sentence. No exceptions for `n`
-  small: smallness is not a proof.
+  small: smallness is not a proof. **What the `else` does and does not catch** (review
+  G08 F3, fix lane F2): it runs when the platform REFUSES the commit. On hosted Linux the
+  commit (`laufzeit/arena_dyn.c`) only changes page protection and is lazy since fix
+  lane F2 (no scrub, no touch); under the default overcommit heuristic that practically
+  never fails, and out of memory surfaces later, at first touch, as the OOM killer — not
+  as the `else`. Only strict accounting (`vm.overcommit_memory = 2`) makes the refusal,
+  and so the `else`, reachable. The branch is the program's answer to a refused commit,
+  not a promise that every out-of-memory reaches the program; no test exercises it.
 - **R-grow-const (refusal): non-constant or `< 1` grow amount.** The committed count is
   checker state; an uncountable step makes it uncountable. Same constness reader as
   `N210` (share it, do not re-implement it).
@@ -133,9 +160,10 @@ do not self-assign — see §10):
   a code), `N211` (generations; `grow` does not touch generations), `N212` (reservation
   logic, now against the path's committed value where it exceeds `hi`), `N213`, `N214`.
 
-Cross-function counting stays per function, like `costs` and like today's arena count:
-a reservation shared across functions needs whole-program discipline (future work, not
-a silent promise — `arena.rs` module head already says this).
+Cross-function counting of the ALLOCATION count stays per function, like `costs` and
+like today's arena count: a reservation shared across functions needs whole-program
+discipline (future work, not a silent promise — `arena.rs` module head already says
+this). The COMMIT ceiling is whole-program since fix lane F2 (the correction above).
 
 ## 5. DECISION 1 — growth trigger: explicit `grow` with costs (picked)
 
@@ -191,9 +219,22 @@ Why:
 - **The machinery exists and is proved.** Generations are a type index in Lean
   (`Arena k g`, `ArenaIdx g n` — a stale index does not typecheck) and a counter in the
   checker (`N211`, five probes' worth of refusal sentences). Reset-only freeing reuses
-  both with zero new domains: use-after-free falls out grammatically, exactly as
-  `PLAN-ERWEITUNG.md` §3 designed it ("a node is an `index into arena`; an index into a
-  reset arena is not expressible").
+  both with zero new domains. In the Lean sugar use-after-free falls out grammatically,
+  exactly as `PLAN-ERWEITUNG.md` §3 designed it ("a node is an `index into arena`; an
+  index into a reset arena is not expressible"). **In the surface language it is a
+  checker refusal, not grammar** (review G08 F2, corrected by fix lane F2 on
+  2026-09-21): indices travel in parameters, globals, fields, slots and call results,
+  and `N211` holds them as follows — a `reset` in the same body, or in any routine
+  called or `start`ed since (transitively; a call through a place counts as resetting
+  every arena the program resets), consumes the generation of every index held across
+  it; a parameter typed `index into A` is live until the first such `reset`, and a stale
+  index handed to one is refused at the call; an index that reaches a use through a
+  global, a field, a slot, a call result or an untracked local is refused wherever the
+  program resets that arena at all. **Not covered:** a `reset` in a routine running
+  CONCURRENTLY with the index holder (another root of a `concurrent` set, a `child`
+  path) — generations are tracked along one thread of control. Memory safety does not
+  depend on it (a stale index stays below `committed`); the residue is a logical
+  dangling reference.
 - **A free list needs a per-slot liveness domain.** Returning slot `i` to a list and
   reissuing it later requires the checker to know, per slot, whether it is live — an
   abstract domain over up to `M` slots (bitset or interval set per path, joined at

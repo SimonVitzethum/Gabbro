@@ -1483,7 +1483,12 @@ impl fn nutzen() -> u32 effects { writes Log } costs <= 32 ops {
 * `A[i]` reads. A place over an arena is exactly `A[i]`, and `i` is an index of
   `A` (`N214`); the slot is never written outside `alloc`.
 * `reset A;` consumes the generation and starts a fresh one: the counter goes
-  back to zero, and an index bound before is stale afterwards (`N211`).
+  back to zero, and an index bound before is stale afterwards (`N211`) -- also
+  when the `reset` stands in a routine called or started since, for a parameter
+  typed `index into A` used after it, and for a stale index handed to such a
+  parameter. An index carried through a global, a field, a slot or a call result
+  has no tracked generation and is refused wherever the program resets that arena
+  (fix lane F2). A `reset` in a concurrently running routine is not tracked.
 * `arena A capacity lo .. hi max M of T` (lane 257) reserves address for `M`
   slots while storage starts committed up to `hi`: `0 <= lo <= hi <= M`, all
   three translation-time constants (`N210`). Without the clause the ceiling
@@ -1494,9 +1499,13 @@ impl fn nutzen() -> u32 effects { writes Log } costs <= 32 ops {
   ceiling, or runs the `else` (OOM below the ceiling). The `else` always
   stands -- boolean discipline: both outcomes of the commit decision are
   written down. The amount is a translation-time constant; `N426` refuses
-  the uncountable amount and the request the checker sees reaching past the
-  ceiling, branch or no branch. Until the dynamic arm lands, the emitter
-  and the G exporter refuse the statement by name.
+  the uncountable amount and every request whose upper bound may reach past
+  the ceiling, branch or no branch. The bound is whole-run (`reset` gives no
+  commit back): every path, every loop pass (a loop without a constant pass
+  bound makes it unbounded), every call, and every root of the call graph
+  entered once per load (an `entry` dispatch target without bound; fix lane
+  F2). Until the dynamic arm lands, the
+  emitter and the G exporter refuse the statement by name.
 
 *Lean:* the generation is a type index (`Arena k g`, `ArenaIdx g n`, `Marke g`
 with a private constructor), so a stale index does not typecheck; `alloc`

@@ -3916,5 +3916,37 @@ review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, 
 **Axioms:** the standard ones (`sw_erschoepfend_trifft`: `propext`, `Quot.sound`; the
 witness: the standard three); `#print axioms gabbro_ziel` unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §§1-10 history above.)
+## 41. Dynamic arenas: the past-ceiling stop over a run, and reset reuse (lanes 241/243; fix lane F2, 2026-09-21)
+
+**Files:** `grammatik/Grammatik/ArenaDyn.lean` (lane 241, reworked by fix lane F2 after review
+G08 F4), `grammatik/Grammatik/ArenaReset.lean` (lane 243, CUTS corrected after G08 F2).
+**Rust:** `crates/gabbro-check/src/arena.rs` (`N426` against the whole-run upper bound, `N211`
+across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena_grow`).
+
+| Theorem | What it says | Tied to |
+|---|---|---|
+| `dynGrow_isSome`, `dynGrow_ueber_M` | one commit succeeds iff the bumped prefix stays within `M` | the runtime's ceiling test, by name |
+| `dynGrow1_gdw_alloc` | a one-slot commit agrees with `Arena.alloc` on `Kap ⟨hi, M⟩` | `Arena.lean` (`alloc_erfolg`/`alloc_fehlschlag`) |
+| `dynGrowListe_gelingt` | a run's commit sequence whose total fits the room above the prefix never reaches the stop, and ends at prefix + total | the rule `N426` enforces since fix lane F2 (upper bound of the total) |
+| `dynGrowListe_scheitert` | a commit sequence whose total passes the room reaches the stop, in any order | why a per-path LOWER bound was not enough |
+| `dynGrowListe_gelingt_zeuge`, `_scheitert_zeuge`, `_zwilling` | `8, 8` under `max 24` reaches `24`; under `max 16` each commit fits alone and the run stops | the `paesse.rs` twins and gifts 1133/1135 |
+| `reset_alloc_rumpf_zeuge` et al. (`ArenaReset.lean`) | after `reset` the next `alloc` runs its body at index `0` | `ArenaZucker.lean` sugar |
+
+**What is NOT claimed.**
+
+- No refinement: `DynArena` is a Nat record carrying `c <= M` as a field. The former
+  `dynVerfein` (membership restating that field) and `region_verpflichtet` (tied to a run only
+  through a premise its witness discharged without the run) were removed, not renamed.
+- Nothing links `DynArena` to the Rust accounting or to the C by proof: the checker's per-path
+  upper bound and `dynGrowListe`'s sum agree by reading. The run model the checker assumes
+  (call-graph roots entered once per load) is not stated in `Spec.lean` (`OFFEN.md` O20).
+- The PLAN §9 work (`DynForm`, the four Block-form theorems, the simulation) and the two
+  `Spec.lean` (d) assumption texts do not exist (review G08 F5; `TODO.md` wave D note).
+- `ArenaReset.lean`'s "no handle outlives a reset" holds in the sugar only; in the surface
+  language `N211` holds it along one thread of control, not against a concurrent `reset`.
+
+**Axioms:** `propext`, `Quot.sound` (the list theorems and witnesses); `#print axioms
+gabbro_ziel` unchanged.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §§1-10 history above.)
 

@@ -1,0 +1,20 @@
+-- erwartet: N426
+-- Fix lane F2 (review G08 F1): a `grow` after an `if` whose branch grew.
+-- On the path through the branch `8 + 8` stand committed, and the second
+-- `grow A by 8` asks past `max 16`. The old join took the MINIMUM of the
+-- two paths (what both guarantee) and saw `8`; the ceiling needs the
+-- MAXIMUM (what either may have). Nothing else is wrong with this unit.
+module gift::arena_grow_nach_zweig {
+arena A capacity 2 .. 8 max 16 of u16;
+impl fn f(c : bool) -> u32 effects { writes A } costs <= 64 ops {
+    if c {
+        grow A by 8 else {
+            return 1;
+        };
+    }
+    grow A by 8 else {
+        return 2;
+    };
+    return 0;
+}
+}
