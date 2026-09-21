@@ -10,9 +10,10 @@
 --
 -- The verdict discipline, one bucket per packet, constant cost:
 --
---   * hash the control 5-tuple in-program (FNV-1a, the `147` shape: the xor
---     is a function because the emitter reads wrapping sites off
---     declarations, and the prime travels as an argument because the
+--   * hash the control 5-tuple in-program (word-wise FNV-1a-style, the `147`
+--     shape and its caveat: the bucket depends on the low 10 bits of each word
+--     only; the xor is a function because the emitter reads wrapping sites
+--     off declarations, and the prime travels as an argument because the
 --     checker refuses a singleton next to a wrap);
 --   * empty bucket or foreign tuple -> MISS (the packet goes to the rules;
 --     a miss is an answer, not a failure);
@@ -160,10 +161,11 @@ impl fn erwarte(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
 
 -- The verdict, one bucket per packet. Five gates in order: occupancy,
 -- control-tuple match, age, data-tuple match, then ACCEPT with the age
--- refreshed to zero (deadline care on the hit: the next 63 ticks are paid
--- for by this packet). The match is one flat `&&` chain: same five reads
--- in the same order, same read set, less nesting (parser depth budget;
--- TIEFE_MAX stands 4x over the corpus and the chain kept its margin).
+-- refreshed to zero (deadline care on the hit: the next 63 sweep visits,
+-- about 1008 ticks, are paid for by this packet). The match is one flat
+-- `&&` chain: same six reads in the same order, same read set, less nesting
+-- (parser depth budget; TIEFE_MAX stands 4x over the corpus and the chain
+-- kept its margin).
 impl fn urteil_innen(r : index into stroeme,
                      sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
                      dsip : u32, ddp : Port) -> Code
