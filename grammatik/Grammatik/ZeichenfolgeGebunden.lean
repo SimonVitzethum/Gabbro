@@ -10,7 +10,7 @@
 
   This file is the VALUE model only (lists with the length invariant).
   The surface since lane 256 round 2: `string max N` parses
-  (`TypExpr::Zeichenfolge`), the `zeichenfolge.rs` pass holds N453-N455
+  (`TypExpr::Zeichenkette`), the `zeichenfolge.rs` pass holds N453-N455
   over parameters, `extern` returns and `let`s, and the emitter stops
   every string program with `C001`. String literals and lowering are
   explicitly out of scope (see CUTS).
