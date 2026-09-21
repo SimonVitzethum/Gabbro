@@ -82,6 +82,13 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
         StmtArt::Narrow(n) => block(&n.sonst, marken, lg, absagen),
         StmtArt::Sperrt(l) => block(&l.rumpf, marken, lg, absagen),
         StmtArt::Observiert(o) => block(&o.rumpf, marken, lg, absagen),
+        // **Review 2026-09-21 (G11):** the `child` path is walked like any
+        // block. Without this arm every loop inside a `child { … }` escaped
+        // `S001`/exit/progress/descent, and every `let … else` in it `S002`
+        // -- the region `N449` accepts BECAUSE it ends in a `forever` had
+        // that loop's own clauses unchecked. Labels from outside stay in
+        // scope here; a jump past the region is `N448`'s (clone.rs).
+        StmtArt::Child(x) => block(x, marken, lg, absagen),
         StmtArt::LetSonst(l) => {
             // **U7.** `SYNTAX.md` §7: *„der `else`-Zweig muss divergieren oder
             // zurueckkehren"*. Faellt er durch, ist `let … else` genau der verborgene
