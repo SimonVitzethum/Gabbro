@@ -1644,3 +1644,22 @@ both spellings pinned); `grammatik/Grammatik/SimPruef.lean` checks the
 printed certificate into the `sim124` conclusion. Round trip measured on
 124 in `messung/muse/MUSE-REPORT-206.md`. Re-check with `./cargo-pruef`
 and `lake build` in `grammatik/`.
+
+**Corrections to this section (static review of 2026-09-21, `messung/review-2026-09-21/`).**
+The entries above were written from the lane reports and merge messages. Four of them say
+more than landed:
+
+- *Lane 203:* "125 reshaped-with-proved-blockage" and "07 with proved impossibility" overstate
+  it. The 125 reshape (a constant `return 0`) is not forced: a value-faithful G term exists and
+  was not built. For 07 the Lean lemma restates the empty declaration; the blockage is a reading
+  of the source, not a theorem (review G02 F2, F4).
+- *Lane 208:* "five of nine components decided by existing Rust rules with zero disagreements"
+  holds only in the Rust-accept direction over the compared programs. `frag` is decided by the
+  exporter's `LG004`, not by a checker rule. The pin K4 cannot fire on an export that elaborates
+  (review G03 F3). The probe also asked Lean about table carriers only, not globals (G03 F1,
+  fixed on the review branch, unmeasured).
+- *Lane 205:* `cform_nested_read_zeuge` evaluates both sides to `none` under its layout, so it
+  shows the premises satisfiable, not a successful nested read (review G01 F1).
+- *Lane 206:* the certificate does not feed the simulation. `simpruef_liefert` returns
+  `sim124` whatever the certificate says; the printed tables are checked against literals,
+  which review G01 ties to `R124` in an unbuilt theorem (G01 F2).
