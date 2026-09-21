@@ -850,3 +850,17 @@ checked:
 | **roots entered once per load** | the commit total sums call-graph roots once (a `concurrent` body once per naming, an `entry` dispatch target without bound). A routine entered again by code the unit does not see (a separately linked caller, NOT CLAIMED in `Spec.lean`) can still reach the runtime's past-ceiling stop (`abort`, `laufzeit/arena_dyn.c`) |
 | **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff |
 
+
+## O21 — The `child` thread exists in the checker, not in the model, and its code between gate call and region is unchecked for the child (recorded 2026-09-21, review G11, fix lane F3)
+
+Fix lane F3 made the `child` path a thread for the Rust checker: `N456` (no child under a
+held context), `N457` (every carrier the region or its callees touch that anyone writes is
+guarded, atomic or per-core), held-set walkers reset at `child`, `N450` one dominating gate
+call per region, and an exhaustive spill read set. What stays open:
+
+| | |
+|---|---|
+| **no child in the model** | `gabbro_ziel` has no child thread (the O-1 Lean half is not on master, and on its branch `CloneAssume` is vacuous, review G11 F1). `N456`/`N457` are checker rules with no Lean counterpart; they are fail-safe (a carrier written only before the gate call still counts as written, a child that is the only writer still falls) |
+| **the jump assumption** | the checker judges the REGION only; the statements between the gate call and the region are checked as parent code. Sound only if the lowering enters the child by jump at the region. Written into PLAN-SYSCALL, the `klon.uebergabe` sentence and `C185`'s message, pinned by `tests/klon_faden.rs`; lane 258 must keep it or re-check the gap |
+| **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
+| **what would close it** | a child population in machine G with a spawn rule (review G11 F1), the race component quantifying over it, and the stub correspondence lemma for the jump lowering |

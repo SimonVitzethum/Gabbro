@@ -106,3 +106,13 @@ additions to `Deklaration`:
   (numbers, registers, error maps never enter `crates/` or `grammatik/`); what is still
   missing is the lowering (inline trap, child entered by jump) and the stub correspondence
   lemma (§2 translation validation).
+  **Binding on that lowering (fix lane F3, review G11 F4):** the checker judges the `child`
+  REGION only -- the spill rule (`N451`/`N452`), the thread rules (`N456`/`N457`) and the
+  one-dominating-call rule (`N450`) all read the region, and the statements between the
+  gate call and the region (example 155's `if v == 0`) are checked as PARENT code. So the
+  lowering must enter the child by jump AT the region (the child never executes the
+  in-between statements, the parent skips the region), and each gate call has exactly one
+  region as its target (`N450` guarantees one per call). A fork-style lowering -- both
+  threads return from the call and run on -- would run unchecked code on the handed stack,
+  and must re-check that gap before it lifts `C185`. `tests/klon_faden.rs`
+  (`c185_traegt_die_sprungannahme`) pins the assumption to the refusal.

@@ -1,0 +1,53 @@
+-- erwartet: N457
+-- **1143 -- the child writes a carrier no lock guards (fix lane F3, review G11 F2).**
+--
+-- The unit declares no thread start, so the race component (`N300`/`N301`)
+-- counts it single-threaded and stays silent. But the child IS a thread: it
+-- writes `g` while the parent writes it too (`g = 3` after the region) --
+-- a C11 race on a non-atomic object. `N457` judges the child path like a
+-- twice-started routine: every written carrier it touches is guarded, atomic
+-- or per-core.
+
+module gift1143 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+static mut g : u64 = 0;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { writes g, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            g = 2;
+            ausgang(0);
+        }
+    }
+    g = 3;
+    return v;
+}
+
+}

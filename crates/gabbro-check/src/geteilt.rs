@@ -1063,6 +1063,9 @@ fn fenster_sammeln(
                 tiefer.push(l.sperre.text());
                 fenster_sammeln(&l.rumpf, puffer, klingel, &tiefer, schreibt, tuer);
             }
+            // **Fix lane F3: the child holds nothing** -- no function-level hold covers
+            // a doorbell or a buffer write on the child path.
+            StmtArt::Child(x) => fenster_sammeln(x, puffer, klingel, &[], schreibt, tuer),
             StmtArt::Zuweisung(z) => {
                 fenster_ort(&z.ziel, puffer, klingel, offen, schreibt, tuer);
             }
@@ -1076,7 +1079,7 @@ fn fenster_sammeln(
         }
         // **`locks` walked above already** -- it carries the changed state, like in
         // `schutz` and `block` in this file.
-        if !matches!(&s.art, StmtArt::Sperrt(_)) {
+        if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Child(_)) {
             for k in crate::unterbloecke(s) {
                 fenster_sammeln(k, puffer, klingel, offen, schreibt, tuer);
             }
@@ -1459,6 +1462,13 @@ fn schutz(
                 tiefer.push(o.domaene.text.clone());
                 schutz(&o.rumpf, da, &tiefer, rh, absagen);
             }
+            // **Fix lane F3 (review G11 F2): the child holds nothing.** It runs beside
+            // the parent from its first statement: no enclosing `locks`, no
+            // `effects { locks … }` line and no `requires Held` of the function covers
+            // an access on the child path -- only a `locks` block inside the child does.
+            // (`N456` in `clone.rs` refuses a child under a `locks`/`observes` block or a
+            // signature-held lock; the `effects` line is reset here.)
+            StmtArt::Child(x) => schutz(x, &[], &[], rh, absagen),
             StmtArt::Zuweisung(z) => {
                 pruefe(&z.ziel, absagen);
                 orte_in(&z.wert, &mut |o| pruefe(o, absagen));
@@ -1527,8 +1537,8 @@ fn schutz(
             _ => {}
         }
         // **Der Abstieg über `crate::unterbloecke`** — `locks` und `observes` haben ihn oben
-        // schon getan, weil beide den mitgeführten Stand ändern.
-        if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
+        // schon getan, weil beide den mitgeführten Stand ändern; `child` ebenso (F3).
+        if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_) | StmtArt::Child(_)) {
             for k in crate::unterbloecke(s) {
                 schutz(k, da, beobachtet, rh, absagen);
             }
@@ -2388,11 +2398,16 @@ fn rcu_schutz(
                 tiefer.push(l.sperre.text());
                 rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
             }
+            // **Fix lane F3: the child observes nothing and holds nothing** -- it stands
+            // in no read section of the parent's and under no lock of the function's.
+            StmtArt::Child(x) => {
+                rcu_schutz(x, &[], &[], domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
+            }
             _ => {}
         }
         // **Der Abstieg über `crate::unterbloecke`** — `observes` und `locks` bleiben oben,
         // weil beide den mitgeführten Stand ändern. Vorher fehlte der `exchange`-Rumpf.
-        if !matches!(&s.art, StmtArt::Observiert(_) | StmtArt::Sperrt(_)) {
+        if !matches!(&s.art, StmtArt::Observiert(_) | StmtArt::Sperrt(_) | StmtArt::Child(_)) {
             for k in crate::unterbloecke(s) {
                 rcu_schutz(k, beobachtet, gehalten, domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
             }

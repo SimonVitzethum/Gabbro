@@ -21,9 +21,11 @@
 //! | `N447` | stack-ness is claimed once -- a second `stack` clause falls | gift 1108 |
 //! | `N448` | the child path never leaves: no `return` inside, no `leave`/`next` past the region | gift 1109 |
 //! | `N449` | the child path never falls through: with no `return` inside, every path ends in a never-returning call or a never-exiting loop | gift 1110 |
-//! | `N450` | a `child` block runs behind a stack-carrying gate -- a handoff with no handed stack falls | gift 1111 |
-//! | `N451` | the child path reads no caller `let`-temporary it was not handed (the gate answer, every other caller `let`) | gift 1113 |
+//! | `N450` | a stack-gate call dominates the `child` block, and one call hands to one region (fix lane F3: per region, no longer unit-wide) | gifts 1111, 1139, 1140 |
+//! | `N451` | the child path reads no caller `let`-temporary it was not handed (the gate answer, every other caller `let`; the read set is the exhaustive `kindzugriff`, `grow` and lock places included since fix lane F3) | gifts 1113, 1146, 1147 |
 //! | `N452` | the child path reads no caller parameter (or loop/match binder) it was not handed | gifts 1115, 1116 |
+//! | `N456` | the child holds nothing the parent holds: no `child` inside `locks`/`observes`/`breaking` or under a signature `requires Held` (fix lane F3) | gifts 1141, 1142 |
+//! | `N457` | the child is a thread for race freedom: every carrier its path touches that anyone writes is guarded, atomic or per-core (in `fusswache2.rs`, fix lane F3) | gifts 1143, 1144, 1145 |
 //! | `C185` | the `child` block has no lowering in the stub template and is refused by name (in `emit.rs`, beside the best-effort block) | gift 1112 |
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
@@ -55,11 +57,15 @@ const REGISTER: &[&str] = &[
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let divergent = nie_kehrende(baum);
     let mut tore_mit_stapel = 0;
+    // **Fix lane F3: the stack gates by short name** -- a faulted gate still counts
+    // for `N450` (its own fault names what is broken), exactly as the unit count did.
+    let mut stapeltore: HashSet<String> = HashSet::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         if let ItemArt::Syscall(s) = &item.art {
             stapelklausel(s, absagen);
             if s.stapel.len() == 1 {
                 tore_mit_stapel += 1;
+                stapeltore.insert(s.name.text.clone());
             }
         }
     });
@@ -83,13 +89,35 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
-    // **The bodies, second:** a `child` block lives in a function body, and
-    // the gate count above is unit-wide -- a path with no gate behind it
-    // (`N450`) needs both.
+    // **The bodies, second:** a `child` block lives in a function body. The
+    // gate count above is unit-wide and gates only the spill rule; `N450` is
+    // per region since fix lane F3 (`torpfade`).
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         if let ItemArt::Funktion(f) = &item.art {
             if let FnRumpf::Block(b) = &f.rumpf {
-                kindpfade(&f.name.text, b, &divergent, tore_mit_stapel, absagen, true);
+                kindpfade(&f.name.text, b, &divergent, absagen, true);
+                // **Fix lane F3 (review G11 F4): `N450` per region.** A gate call
+                // must DOMINATE the region -- stand before it on every path --
+                // and one call hands to at most one region.
+                let mut genommen: HashSet<gabbro_syntax::span::Span> = HashSet::new();
+                torpfade(&f.name.text, b, &stapeltore, None, &mut genommen, absagen, true);
+                // **Fix lane F3 (review G11 F2): `N456`, the child holds nothing.**
+                let mut sig: Vec<String> = Vec::new();
+                for p in &f.requires {
+                    let mut h = Vec::new();
+                    crate::aufrufgraph::held_aus_pred(p, &mut h);
+                    for (n, _) in h {
+                        if !sig.contains(&n) {
+                            sig.push(n);
+                        }
+                    }
+                }
+                let start = if sig.is_empty() {
+                    None
+                } else {
+                    Some(format!("`requires Held({})` of `{}`", sig.join(", "), f.name.text))
+                };
+                kontextpfade(&f.name.text, b, start.as_deref(), absagen);
                 // **Lane 249: the spill reads (round 2: prefix-handed).**
                 // Caller scope against the handed slots, per enclosing
                 // function -- a gate call in one function hands nothing to
@@ -227,54 +255,200 @@ fn kindpfade(
     fname: &str,
     b: &Block,
     divergent: &[String],
-    tore_mit_stapel: usize,
     absagen: &mut Absagen,
     aussen: bool,
 ) {
     for s in &b.anweisungen {
         if let StmtArt::Child(region) = &s.art {
             if aussen {
-                kindregion(fname, region, divergent, tore_mit_stapel, absagen);
+                kindregion(fname, region, divergent, absagen);
             }
             // Nested regions walk for deeper nesting, but refuse nothing
             // twice: the outer region already covers them.
-            kindpfade(fname, region, divergent, tore_mit_stapel, absagen, false);
+            kindpfade(fname, region, divergent, absagen, false);
         } else {
             for k in crate::unterbloecke(s) {
-                kindpfade(fname, k, divergent, tore_mit_stapel, absagen, aussen);
+                kindpfade(fname, k, divergent, absagen, aussen);
             }
         }
     }
 }
 
-/// **`N448`/`N449`/`N450` -- one child region.**
+/// Whether this statement ITSELF calls a stack gate -- its own call, its own
+/// expressions; never its sub-blocks (a call inside a branch does not stand
+/// before a region after the branch on every path). A call this walk misses
+/// only makes `N450` stricter: the fail-safe side.
+fn ruft_stapeltor(s: &Stmt, tore: &HashSet<String>) -> bool {
+    let trifft = |r: &Ruf| {
+        r.path()
+            .and_then(|p| p.teile.last())
+            .is_some_and(|n| tore.contains(&n.text))
+    };
+    let in_expr = |e: &Expr| {
+        crate::alle_ausdruecke(e).into_iter().any(|x| match &x.art {
+            ExprArt::Ruf(r) => trifft(r),
+            _ => false,
+        })
+    };
+    match &s.art {
+        StmtArt::Ruf(r) => trifft(r) || r.argumente.iter().any(in_expr),
+        StmtArt::LetSonst(l) => match &l.quelle {
+            LetQuelle::Ruf(r) => trifft(r) || r.argumente.iter().any(in_expr),
+            LetQuelle::Ort(_) => false,
+        },
+        // The region hands nothing to itself.
+        StmtArt::Child(_) => false,
+        _ => crate::eigene_ausdruecke(s).into_iter().any(in_expr),
+    }
+}
+
+/// Whether a `child` block stands anywhere under this statement.
+fn enthaelt_kind(s: &Stmt) -> bool {
+    matches!(&s.art, StmtArt::Child(_))
+        || crate::unterbloecke(s)
+            .into_iter()
+            .any(|k| k.anweisungen.iter().any(enthaelt_kind))
+}
+
+/// **`N450` -- a stack-gate call dominates the region** (fix lane F3, review G11 F4).
 ///
-/// `N450` first: with no stack-carrying gate in the unit the handoff has
-/// no handed stack. `N448`: no `return` in the region, no `leave`/`next`
+/// `offen`: the stack-gate call (by its statement span) that stands before this point
+/// on every path. The walk is structured dominance: a statement's own call opens the
+/// gate for everything after it in the block and for its sub-blocks (the call is
+/// evaluated first); a call inside a sub-block opens nothing outside it (each
+/// sub-block walks its own copy). **One call hands to ONE region, statically**
+/// (`genommen`): under the "child entered by jump" lowering the call has one jump
+/// target, so a second region behind the same call falls -- in sequence (the parent
+/// runs past the first region: the child never falls through, `N449`) and in a
+/// sibling branch alike. Any statement with a region below it closes the call for
+/// what follows. A gate call inside a region hands nothing outside it.
+fn torpfade(
+    fname: &str,
+    b: &Block,
+    tore: &HashSet<String>,
+    vorher: Option<gabbro_syntax::span::Span>,
+    genommen: &mut HashSet<gabbro_syntax::span::Span>,
+    absagen: &mut Absagen,
+    aussen: bool,
+) {
+    let mut offen = vorher;
+    for s in &b.anweisungen {
+        if let StmtArt::Child(region) = &s.art {
+            let getragen = match offen {
+                Some(ruf) => genommen.insert(ruf),
+                None => false,
+            };
+            // **The one issuance site of this rule.**
+            if aussen && !getragen {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N450",
+                        region.span,
+                        if tore.is_empty() {
+                            format!("`{fname}` runs a `child` path with no `stack` gate in the unit")
+                        } else {
+                            format!(
+                                "`{fname}` runs a `child` path that no `stack`-gate call \
+                                 dominates -- no call stands before it on every path, or \
+                                 another region already took that call"
+                            )
+                        },
+                    )
+                    .mit_notiz(
+                        "a `child` block runs on the handed stack of a `syscall … stack r` \
+                         gate CALL -- that call must stand before the region on every path \
+                         (in the same block or an enclosing one, not in a branch beside it \
+                         and not in another function), and one call hands to one region \
+                         (a faulted gate still counts here: its own fault names what is \
+                         broken about it)",
+                    ),
+                );
+            }
+            // Nested regions are part of the outer one, as under `N448`/`N449`.
+            torpfade(fname, region, tore, None, genommen, absagen, false);
+            offen = None;
+            continue;
+        }
+        if ruft_stapeltor(s, tore) {
+            offen = Some(s.span);
+        }
+        for k in crate::unterbloecke(s) {
+            torpfade(fname, k, tore, offen, genommen, absagen, aussen);
+        }
+        if enthaelt_kind(s) {
+            offen = None;
+        }
+    }
+}
+
+/// **`N456` -- the child holds nothing the parent holds** (fix lane F3, review G11 F2).
+///
+/// The child runs BESIDE the parent from its first statement: it holds no lock the parent
+/// holds, stands in no RCU read section the parent stands in, and inherits no invariant
+/// the parent's `breaking` suspended. Every held-set walker of the checker (`H007`,
+/// `H020`, `H001`/`H006` chains, `N291`, `H009`/`H010`, `H018`, the hold-time costs)
+/// carries the enclosing `locks`/`observes`/`breaking` stack and the signature-held
+/// locks down through `crate::unterbloecke` -- into the child, where they are false. This
+/// rule makes that inherited stack EMPTY in every accepted program: a `child` inside a
+/// `locks`, `observes` or `breaking` block, or in a function that holds a lock by
+/// signature (`requires Held(L)`), falls. The function-level `effects { locks L }` line is
+/// no holding context (the body takes the lock), and the walkers that read it as held
+/// reset it at the `Child` arm themselves (`geteilt.rs`, `fusswache2.rs`).
+fn kontextpfade(fname: &str, b: &Block, kontext: Option<&str>, absagen: &mut Absagen) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Child(region) => {
+                // **The one issuance site of this rule.**
+                if let Some(k) = kontext {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N456",
+                            region.span,
+                            format!(
+                                "`{fname}` starts a `child` path inside {k} -- the child \
+                                 runs beside the parent and holds none of it"
+                            ),
+                        )
+                        .mit_notiz(
+                            "the child is its own thread from its first statement: a lock \
+                             the parent holds, an `observes` section it stands in or an \
+                             invariant its `breaking` suspends is the PARENT's -- start \
+                             the child outside them, and take what the child needs inside \
+                             the child (`child { locks L { … } … }`)",
+                        ),
+                    );
+                }
+                // The child's own context starts empty.
+                kontextpfade(fname, region, None, absagen);
+            }
+            StmtArt::Sperrt(l) => {
+                let k = format!("`locks {}`", l.sperre.text());
+                kontextpfade(fname, &l.rumpf, Some(&k), absagen);
+            }
+            StmtArt::Observiert(o) => {
+                let k = format!("`observes {}`", o.domaene.text);
+                kontextpfade(fname, &o.rumpf, Some(&k), absagen);
+            }
+            StmtArt::Bricht(x) => {
+                let namen: Vec<String> = x.invarianten.iter().map(|i| i.text.clone()).collect();
+                let k = format!("`breaking {}`", namen.join(", "));
+                kontextpfade(fname, &x.rumpf, Some(&k), absagen);
+            }
+            _ => {
+                for k in crate::unterbloecke(s) {
+                    kontextpfade(fname, k, kontext, absagen);
+                }
+            }
+        }
+    }
+}
+
+/// **`N448`/`N449` -- one child region** (`N450` is `torpfade`'s since fix lane F3).
+///
+/// `N448`: no `return` in the region, no `leave`/`next`
 /// past it. `N449`: with no `return` inside, the region never falls
 /// through -- `endet_immer` over the unit's never-returning callees.
-fn kindregion(
-    fname: &str,
-    region: &Block,
-    divergent: &[String],
-    tore_mit_stapel: usize,
-    absagen: &mut Absagen,
-) {
-    if tore_mit_stapel == 0 {
-        absagen.schiebe(
-            Absage::fehler(
-                "N450",
-                region.span,
-                format!("`{fname}` runs a `child` path with no `stack` gate in the unit"),
-            )
-            .mit_notiz(
-                "a `child` block runs on the handed stack of a `syscall … stack r` gate -- \
-                 with no gate claiming a stack in the unit no stack is ever handed, and the \
-                 path has nothing to stand on (a faulted gate still counts here: its own \
-                 fault names what is broken about it)",
-            ),
-        );
-    }
+fn kindregion(fname: &str, region: &Block, divergent: &[String], absagen: &mut Absagen) {
     let mut rueckkehr = Vec::new();
     sammel_rueckkehr(region, &mut rueckkehr);
     let marken = sammel_marken(region);
@@ -622,8 +796,8 @@ fn spill_block(
 /// caller sets reports as the temporary. Region binds are NOT counted
 /// off (round 2, option (a)): the shared read set cannot tell the
 /// pre-definition read (caller slot, dead) from the benign shadow, so
-/// both refuse -- soundness first. The read set is the shared
-/// `benutzte_namen` -- a write target counts as a mention, because a
+/// both refuse -- soundness first. The read set is `kindzugriff`
+/// (exhaustive over `StmtArt`) -- a write target counts as a mention, because a
 /// write to a dead slot is the same fault from the other side.
 fn spillregion(
     fname: &str,
@@ -632,8 +806,9 @@ fn spillregion(
     uebergeben: &HashSet<String>,
     absagen: &mut Absagen,
 ) {
-    let mut gelesen: BTreeSet<String> = BTreeSet::new();
-    crate::emit::benutzte_namen(region, &mut gelesen);
+    // **Fix lane F3 (review G11 F3): the exhaustive walk**, not the emission walker --
+    // `grow … else { … }` and lock-place indices are read here too.
+    let gelesen: BTreeSet<String> = kindzugriff(region).namen;
     // **Sorted by construction** (`BTreeSet`): the refusal order is the
     // name order, and two runs refuse in the same order.
     for n in &gelesen {
@@ -674,6 +849,306 @@ fn spillregion(
                      it, and a loop or match binder beside that, stays behind",
                 ),
             );
+        }
+    }
+}
+
+/// **What a `child` path touches -- the exhaustive walk (fix lane F3, review G11 F3).**
+///
+/// Until 2026-09-21 the spill rule read `emit::benutzte_namen`, the `(void)k;` walker.
+/// That walker answers an EMISSION question and skips on purpose what the emitter does
+/// not lower: `grow` (a caller `let` read in `grow … else { … }` escaped `N451`), the
+/// lock place of a `locks` block (a caller `let` as a lock index escaped too), `old`,
+/// `sizeof`/`lenof`. The child path asks a different question -- *which names does this
+/// path mention at run time or could* -- and the answer must over-approximate. This walk
+/// matches every `StmtArt` by name (no `_` arm), so a new statement kind is a compile
+/// error here, not a silent hole; expressions go through `crate::alle_ausdruecke`, which
+/// descends into every index, argument and element.
+///
+/// Mentioned names: every place root (reads and write targets alike, index roots
+/// included), every call target (a path's last segment, an indirect call's place), every
+/// `&f`, every arena, lock place, RCU domain and `start` root named. Ghost clauses
+/// (`invariant`, loop `touches` effects) are NOT walked: they are never executed.
+/// The calls are collected beside the names so the race rule (`fusswache2`, `N457`) can
+/// close the child's call graph; `indirekt` records an indirect call anywhere on the path.
+pub(crate) struct Kindzugriff {
+    pub namen: BTreeSet<String>,
+    pub rufe: Vec<String>,
+    pub indirekt: bool,
+}
+
+pub(crate) fn kindzugriff(b: &Block) -> Kindzugriff {
+    let mut z = Kindzugriff {
+        namen: BTreeSet::new(),
+        rufe: Vec::new(),
+        indirekt: false,
+    };
+    zugriff_block(b, &mut z);
+    z
+}
+
+fn zugriff_block(b: &Block, z: &mut Kindzugriff) {
+    for s in &b.anweisungen {
+        zugriff_stmt(s, z);
+    }
+}
+
+fn zugriff_ruf(r: &Ruf, z: &mut Kindzugriff) {
+    match &r.ziel {
+        CallTarget::Path(p) => {
+            if !crate::ist_praedikatswort(r) {
+                z.rufe.push(p.text());
+            }
+            if let Some(letztes) = p.teile.last() {
+                z.namen.insert(letztes.text.clone());
+            }
+        }
+        CallTarget::Place(o) => {
+            z.indirekt = true;
+            zugriff_ort(o, z);
+        }
+    }
+    for a in &r.argumente {
+        zugriff_expr(a, z);
+    }
+}
+
+fn zugriff_ort(o: &Ort, z: &mut Kindzugriff) {
+    z.namen.insert(o.basis.text.clone());
+    for i in crate::ausdruecke_im_ort(o) {
+        zugriff_expr(i, z);
+    }
+}
+
+fn zugriff_pred(p: &Pred, z: &mut Kindzugriff) {
+    for e in crate::ausdruecke_im_praedikat(p) {
+        zugriff_expr(e, z);
+    }
+}
+
+fn zugriff_expr(e: &Expr, z: &mut Kindzugriff) {
+    for x in crate::alle_ausdruecke(e) {
+        match &x.art {
+            ExprArt::Ort(o) | ExprArt::Alt(o) => {
+                z.namen.insert(o.basis.text.clone());
+            }
+            // The arguments arrive through `alle_ausdruecke`; the target does not.
+            ExprArt::Ruf(r) => match &r.ziel {
+                CallTarget::Path(p) => {
+                    if !crate::ist_praedikatswort(r) {
+                        z.rufe.push(p.text());
+                    }
+                    if let Some(letztes) = p.teile.last() {
+                        z.namen.insert(letztes.text.clone());
+                    }
+                }
+                CallTarget::Place(o) => {
+                    z.indirekt = true;
+                    zugriff_ort(o, z);
+                }
+            },
+            ExprArt::FnWert(p) => {
+                z.namen.insert(p.text());
+                if let Some(letztes) = p.teile.last() {
+                    z.namen.insert(letztes.text.clone());
+                }
+            }
+            ExprArt::Eingebaut(g) => {
+                if let Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) =
+                    &**g
+                {
+                    z.namen.insert(o.basis.text.clone());
+                }
+            }
+            ExprArt::Zaehle { domaene, .. } => zugriff_domaene(domaene, z),
+            // Sub-expressions arrive through `alle_ausdruecke`; these name nothing.
+            ExprArt::LibraryCall(_)
+            | ExprArt::Klammer(_)
+            | ExprArt::Unaer(_, _)
+            | ExprArt::Binaer(_, _, _)
+            | ExprArt::ArrayLit(_)
+            | ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::Grund { .. }
+            | ExprArt::Ergebnis => {}
+        }
+    }
+}
+
+fn zugriff_domaene(d: &Domaene, z: &mut Kindzugriff) {
+    match d {
+        Domaene::SlotsVon(o)
+        | Domaene::NachfahrenVon(o)
+        | Domaene::VorfahrenVon(o)
+        | Domaene::Schlange(o)
+        | Domaene::ElementeVon(o)
+        | Domaene::AbbildungenVon(o) => zugriff_ort(o, z),
+        Domaene::KetteIn { a, b, ort } => {
+            z.namen.insert(a.text.clone());
+            z.namen.insert(b.text.clone());
+            zugriff_ort(ort, z);
+        }
+        Domaene::FelderVon(p) => {
+            z.namen.insert(p.text());
+        }
+        Domaene::Threads => {}
+    }
+}
+
+fn zugriff_nutzlast(n: &Nutzlast, z: &mut Kindzugriff) {
+    match n {
+        Nutzlast::Orte(orte) => {
+            for o in orte {
+                zugriff_ort(o, z);
+            }
+        }
+        Nutzlast::Nichts(_) => {}
+    }
+}
+
+fn zugriff_stmt(s: &Stmt, z: &mut Kindzugriff) {
+    match &s.art {
+        StmtArt::Let(l) => zugriff_expr(&l.wert, z),
+        StmtArt::LetSonst(l) => {
+            match &l.quelle {
+                LetQuelle::Ruf(r) => zugriff_ruf(r, z),
+                LetQuelle::Ort(o) => zugriff_ort(o, z),
+            }
+            zugriff_block(&l.sonst, z);
+        }
+        StmtArt::Zuweisung(x) => {
+            zugriff_ort(&x.ziel, z);
+            zugriff_expr(&x.wert, z);
+        }
+        StmtArt::Wenn(w) => {
+            for (bed, rumpf) in &w.zweige {
+                zugriff_expr(bed, z);
+                zugriff_block(rumpf, z);
+            }
+            if let Some(sonst) = &w.sonst {
+                zugriff_block(sonst, z);
+            }
+        }
+        StmtArt::Match(m) => {
+            zugriff_expr(&m.gegenstand, z);
+            for zw in &m.zweige {
+                zugriff_block(&zw.rumpf, z);
+            }
+        }
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Traverse(t) => {
+                zugriff_domaene(&t.domaene, z);
+                if let Some(g) = &t.gegenstand {
+                    zugriff_expr(g, z);
+                }
+                if let Some(m) = &t.mass {
+                    zugriff_expr(m, z);
+                }
+                zugriff_block(&t.rumpf, z);
+            }
+            Schleife::Retry(r) => {
+                if let Some(bis) = &r.bis {
+                    zugriff_pred(bis, z);
+                }
+                zugriff_expr(&r.schranke, z);
+                zugriff_block(&r.rumpf, z);
+            }
+            Schleife::Forever(f) => {
+                zugriff_expr(&f.je_durchgang, z);
+                zugriff_block(&f.rumpf, z);
+            }
+        },
+        StmtArt::Bricht(x) => zugriff_block(&x.rumpf, z),
+        StmtArt::Narrow(x) => {
+            zugriff_ort(&x.ort, z);
+            if let NarrowZiel::Bereich(b) = &x.ziel {
+                zugriff_expr(&b.von, z);
+                zugriff_expr(&b.bis, z);
+            }
+            zugriff_block(&x.sonst, z);
+        }
+        // **The lock place is read** -- `locks L[i] { … }` evaluates `i` (review G11 F3).
+        StmtArt::Sperrt(x) => {
+            zugriff_ort(&x.sperre, z);
+            zugriff_block(&x.rumpf, z);
+        }
+        StmtArt::Observiert(x) => {
+            z.namen.insert(x.domaene.text.clone());
+            zugriff_block(&x.rumpf, z);
+        }
+        StmtArt::Leave(_) | StmtArt::Next(_) => {}
+        StmtArt::Publish(p) => {
+            zugriff_ort(&p.ziel, z);
+            zugriff_expr(&p.wert, z);
+            zugriff_nutzlast(&p.nutzlast, z);
+        }
+        StmtArt::AwaitLoad(a) => {
+            zugriff_ort(&a.quelle, z);
+            for o in &a.erwartet {
+                zugriff_ort(o, z);
+            }
+        }
+        StmtArt::Exchange(x) => {
+            zugriff_ort(&x.ort, z);
+            match &x.form {
+                XForm::Update { schranke, rumpf, .. } => {
+                    if let Some(e) = schranke {
+                        zugriff_expr(e, z);
+                    }
+                    zugriff_block(rumpf, z);
+                }
+                XForm::Vergleich { wert, bedingung, .. } => {
+                    zugriff_expr(wert, z);
+                    zugriff_pred(bedingung, z);
+                }
+            }
+            if let Some(n) = &x.nutzlast {
+                zugriff_nutzlast(n, z);
+            }
+            if let Some(orte) = &x.erwartet {
+                for o in orte {
+                    zugriff_ort(o, z);
+                }
+            }
+        }
+        StmtArt::Return(e) => {
+            if let Some(e) = e {
+                zugriff_expr(e, z);
+            }
+        }
+        StmtArt::Ruf(r) => zugriff_ruf(r, z),
+        StmtArt::LibraryCall(r) => {
+            for a in &r.args {
+                zugriff_expr(a, z);
+            }
+        }
+        StmtArt::Alloc(a) => {
+            z.namen.insert(a.tisch.text.clone());
+            zugriff_expr(&a.wert, z);
+            if let Some(sonst) = &a.sonst {
+                zugriff_block(sonst, z);
+            }
+        }
+        StmtArt::ResetArena(t) => {
+            z.namen.insert(t.text.clone());
+        }
+        // **`grow` is walked** -- the amount AND the failure continuation (review G11 F3:
+        // the emission walker skips the whole statement).
+        StmtArt::Grow(g) => {
+            z.namen.insert(g.tisch.text.clone());
+            zugriff_expr(&g.mehr, z);
+            zugriff_block(&g.sonst, z);
+        }
+        StmtArt::Child(x) => zugriff_block(x, z),
+        StmtArt::Start(st) => {
+            for p in &st.roots {
+                z.namen.insert(p.text());
+                if let Some(letztes) = p.teile.last() {
+                    z.namen.insert(letztes.text.clone());
+                }
+            }
         }
     }
 }

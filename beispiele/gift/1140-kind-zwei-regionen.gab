@@ -1,0 +1,65 @@
+-- erwartet: N450
+-- **1140 -- two regions behind ONE gate call, and a call in a sibling branch (fix lane F3).**
+--
+-- One stack-gate call hands one stack to one region: under the "child entered
+-- by jump" lowering the call has one target. The first region takes the call;
+-- the parent runs past it (the child never falls through, `N449`) and reaches
+-- the second region with no handoff of its own. The third region stands after
+-- an `if` whose THEN-branch calls the gate -- on the other path no call stands
+-- before it. Both fall under `N450`; the first region is legal.
+
+module gift1140 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            ausgang(0);
+        }
+    }
+    if v == 1 {
+        child {
+            ausgang(1);
+        }
+    }
+    if art == 7 {
+        let w = roher_start(art, stapel) else (e) {
+            return 998;
+        }
+    }
+    if art == 8 {
+        child {
+            ausgang(2);
+        }
+    }
+    return v;
+}
+
+}

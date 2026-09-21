@@ -1,0 +1,49 @@
+-- erwartet: N457
+-- **1145 -- the child READS a carrier the parent writes (fix lane F3).**
+--
+-- Write-read is a race too: the child reads `g` while the parent writes it
+-- after the region, and no lock orders the two. A carrier nobody writes would
+-- be read-only and stay legal; this one is written.
+
+module gift1145 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+static mut g : u64 = 0;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { reads g, writes g, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            ausgang(g);
+        }
+    }
+    g = 3;
+    return v;
+}
+
+}

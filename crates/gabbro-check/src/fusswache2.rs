@@ -504,6 +504,11 @@ fn begehe(b: &Block, gehalten: &[String], aus: &mut Begehung) {
                 innen.push(l.sperre.text());
                 begehe(&l.rumpf, &innen, aus);
             }
+            // **Fix lane F3 (review G11 F2): the child holds nothing.** It runs beside
+            // the parent from its first statement, so neither the enclosing `locks`
+            // stack nor the signature-held locks travel into it (`N456` refuses a child
+            // under either; this reset keeps the walk honest on its own).
+            StmtArt::Child(region) => begehe(region, &[], aus),
             _ => {
                 let mut orte = Vec::new();
                 stand_liest(s, &mut orte);
@@ -1011,6 +1016,18 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
+    kindfaeden(
+        baum,
+        &g,
+        &u,
+        &funktionen,
+        &pool,
+        &schreibt,
+        &fuss,
+        &schreiber,
+        &sperrkarte,
+        absagen,
+    );
     race(
         baum,
         &starts,
@@ -1424,6 +1441,160 @@ fn race(
                         );
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/// The outermost `child` regions of a body -- a nested region is part of its outer one.
+fn kindregionen<'a>(b: &'a Block, aus: &mut Vec<&'a Block>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Child(region) = &s.art {
+            aus.push(region);
+            continue;
+        }
+        for k in crate::unterbloecke(s) {
+            kindregionen(k, aus);
+        }
+    }
+}
+
+/// **`N457` -- the child path is a thread for race freedom** (fix lane F3, review G11 F2).
+///
+/// A `child` block runs beside the parent from its first statement -- and beside every
+/// declared start, and beside any other instance of itself (nothing bounds how often the
+/// gate call runs). The race component above (`race`, `N300`/`N301`) separates DECLARED
+/// starts only, and with no declared start the unit counts as single-threaded: the child
+/// was nobody's thread. This leg judges the child path the way `PoolSicher` judges a
+/// twice-started routine, from the fail-safe side:
+///
+/// * the carriers the path TOUCHES: every declared table, mutable static, `state` and
+///   arena the region names (`clone::kindzugriff`, exhaustive over `StmtArt`), plus the
+///   declared writes, the `allocs` and the footprints (contracts, body reads, callee
+///   contracts) of every function reachable from a call on the path -- the indirect-call
+///   candidate pool where the path calls through a place;
+/// * refused: a touched carrier that SOME code writes (declared or performed, the
+///   `schreiber` set -- the child itself included) and that no lock guards, that is not
+///   atomic and not per-core. A carrier nobody writes is read-only and races with nothing.
+///
+/// The guard exemption reads the guard's EXISTENCE, like `race`: that every access holds
+/// it is `H007`'s, and since this lane `H007` starts the child with an empty held set
+/// (`geteilt.rs`, `N456`). Device registers carry no carrier here, as in `race`.
+/// One refusal per carrier and region, at the region.
+#[allow(clippy::too_many_arguments)]
+fn kindfaeden(
+    baum: &Programm,
+    g: &crate::aufrufgraph::Graph,
+    u: &crate::umgebung::Umgebung,
+    funktionen: &BTreeMap<String, FnDecl>,
+    pool: &[String],
+    schreibt: &BTreeMap<String, BTreeSet<String>>,
+    fuss: &BTreeMap<String, BTreeSet<String>>,
+    schreiber: &BTreeSet<String>,
+    sperrkarte: &BTreeMap<String, Sperre>,
+    absagen: &mut Absagen,
+) {
+    let mut regionen: Vec<(&String, &FnDecl, Vec<&Block>)> = Vec::new();
+    for (k, f) in funktionen {
+        if let FnRumpf::Block(bb) = &f.rumpf {
+            let mut r = Vec::new();
+            kindregionen(bb, &mut r);
+            if !r.is_empty() {
+                regionen.push((k, f, r));
+            }
+        }
+    }
+    if regionen.is_empty() {
+        return;
+    }
+    let atomic = atomics(baum);
+    let core = per_core(baum);
+    let mut welt: BTreeSet<String> = BTreeSet::new();
+    let mut arenen: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Tabelle(t) => {
+            welt.insert(t.name.text.clone());
+        }
+        ItemArt::Statisch(s) if s.veraenderlich => {
+            welt.insert(s.name.text.clone());
+        }
+        ItemArt::State(s) => {
+            welt.insert(s.name.text.clone());
+        }
+        ItemArt::Arena(a) => {
+            welt.insert(a.name.text.clone());
+            arenen.insert(a.name.text.clone());
+        }
+        _ => {}
+    });
+    let guarded = |c: &str| -> bool { sperrkarte.values().any(|s| s.schutz.contains(c)) };
+    for (k, f, rs) in regionen {
+        for region in rs {
+            let zugriff = crate::clone::kindzugriff(region);
+            let mut beruehrt: BTreeSet<String> = zugriff
+                .namen
+                .iter()
+                .map(|n| kurz(n).to_string())
+                .filter(|n| welt.contains(n))
+                .collect();
+            // The child's call graph: every function reachable from a call on the path.
+            let mut graph: BTreeSet<String> = BTreeSet::new();
+            for pfad in &zugriff.rufe {
+                if let Some(schluessel) = g.aufloesen(u, k, pfad) {
+                    graph.extend(erreichbar(&schluessel, g, pool));
+                }
+            }
+            if zugriff.indirekt {
+                for kand in pool {
+                    graph.extend(erreichbar(kand, g, pool));
+                }
+            }
+            for fname in &graph {
+                if let Some(w) = schreibt.get(fname) {
+                    beruehrt.extend(w.iter().cloned());
+                }
+                if let Some(fs) = fuss.get(fname) {
+                    beruehrt.extend(fs.iter().filter(|c| welt.contains(*c)).cloned());
+                }
+                if let Some(Some(w)) = funktionen.get(fname).map(|x| &x.effects) {
+                    for e in &w.liste {
+                        if let WirkungArt::Belegt(i) = &e.art {
+                            if arenen.contains(&i.text) {
+                                beruehrt.insert(i.text.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            for c in &beruehrt {
+                if guarded(c) || atomic.contains(c) || core.contains(c) {
+                    continue;
+                }
+                if !schreiber.contains(c) {
+                    continue;
+                }
+                // **The one issuance site of this rule.**
+                melde(
+                    "N457",
+                    region.span,
+                    format!(
+                        "the `child` path of `{}` touches `{c}` -- a carrier that is \
+                         written and that no lock guards, and the child runs beside \
+                         the parent, beside every start and beside itself",
+                        f.name.text
+                    ),
+                    &[
+                        "the child is its own thread: every carrier its path (and every \
+                         function it calls) touches is guarded by a lock (`lock … \
+                         protects`, taken inside the child), atomic, per-core, or \
+                         written by nobody -- the pool-safe shape of a twice-started \
+                         routine",
+                        "hand the child what it needs through the stack slot, or guard \
+                         the carrier and take the lock inside the child",
+                    ],
+                    absagen,
+                );
             }
         }
     }

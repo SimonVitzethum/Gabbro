@@ -1,0 +1,56 @@
+-- erwartet: N450
+-- **1139 -- the gate call stands in ANOTHER function (fix lane F3, review G11 F4).**
+--
+-- Until fix lane F3 `N450` counted stack gates across the whole unit: one
+-- gate call anywhere (here in `vorbereiten`) let a `child` block in any
+-- function pass, though nothing hands a stack to THIS region. Now a gate
+-- call must dominate the region -- stand before it on every path of the
+-- same body -- and `starter` has none. The path itself is well-formed
+-- (no `return`, ends in `ausgang`), and it reads no caller name.
+
+module gift1139 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+
+impl fn vorbereiten(art : u64, stapel : u64) -> u64
+    effects { pure }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    return v;
+}
+
+impl fn starter(art : u64) -> u64
+    effects { diverges }
+{
+    if art == 0 {
+        child {
+            ausgang(0);
+        }
+    }
+    return 1;
+}
+
+}

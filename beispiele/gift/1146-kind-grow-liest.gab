@@ -1,0 +1,52 @@
+-- erwartet: N451
+-- **1146 -- a caller `let` read in `grow … else` on the child path (fix lane F3, review G11 F3).**
+--
+-- The spill rule read the emission walker (`benutzte_namen`), which skips
+-- `grow` whole: the gate answer `v` read in the failure continuation escaped
+-- `N451`. The exhaustive `kindzugriff` walk reads it. (`N457` falls beside it:
+-- the child commits slots of an arena the path writes, unguarded.)
+
+module gift1146 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+arena A capacity 2 .. 8 max 16 of u16;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { writes A, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            grow A by 1 else {
+                ausgang(v);
+            };
+            ausgang(0);
+        }
+    }
+    return v;
+}
+
+}

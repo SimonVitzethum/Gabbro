@@ -17,6 +17,10 @@
 -- Without this rule NOTHING falls -- the emitted C is a braced block that
 -- falls out of itself, and `cc -Werror` takes it. Same shape gate as
 -- 1107-1109 (not the raw clone, `1000` not an OS number).
+--
+-- Fix lane F3 (2026-09-21): `N450` is per region now -- a gate call must
+-- dominate the `child` block. The probe calls the gate before the region
+-- (the 155 shape) so `N450` stays silent and the probe keeps its one code.
 
 module gift1110 {
 
@@ -44,10 +48,15 @@ extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
 
 impl fn kind_start(stapel : u64) -> u64
     effects { pure }
-    costs <= 64 ops
+    costs <= 256 ops
 {
-    child {
-        let s = 0;
+    let v = roher_start(0, stapel) else (e) {
+        return 2;
+    }
+    if v == 0 {
+        child {
+            let s = 0;
+        }
     }
     return 0;
 }

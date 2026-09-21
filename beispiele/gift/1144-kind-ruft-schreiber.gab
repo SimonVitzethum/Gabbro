@@ -1,0 +1,57 @@
+-- erwartet: N457
+-- **1144 -- the child writes through a CALL (fix lane F3).**
+--
+-- The child path names no carrier itself; it calls `setze`, whose declared
+-- `writes g` lands on an unguarded carrier the parent writes as well. `N457`
+-- closes the child's call graph (the same `erreichbar` fixpoint the race
+-- component reads) and judges the callee writes with the path's own.
+
+module gift1144 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+static mut g : u64 = 0;
+
+impl fn setze(x : u64)
+    effects { writes g }
+{
+    g = x;
+}
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { writes g, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            setze(2);
+            ausgang(0);
+        }
+    }
+    setze(3);
+    return v;
+}
+
+}

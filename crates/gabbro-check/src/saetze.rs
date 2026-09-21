@@ -4051,19 +4051,30 @@ pub const PHASEN: &[Satz] = &[
                   the caller's frame -- no `return` inside, no `leave`/`next` past \
                   the region (`N448`) -- never falls through past the block (every \
                   path ends in a `-> never` gate call or a never-exiting loop, \
-                  `N449`) and runs behind a gate claiming a stack (`N450`). The \
+                  `N449`) and runs behind a call of a gate claiming a stack that \
+                  DOMINATES it -- stands before it on every path of the same body -- \
+                  with one call handing to one region (`N450`, per region since fix \
+                  lane F3; it was unit-wide). The \
                   gate's number, registers and error map stay user-made in the \
                   declaration (the bm5 shape precedent); the stack switch itself \
                   is the stub's business and the runtime's assumption. The `child` \
                   block has no lowering in the stub template and is refused by \
                   name (`C185`): after a stack-switching call the child would \
                   resume inside the gate's helper on the handed stack, and the \
-                  helper's return would pop a return address off it.",
+                  helper's return would pop a return address off it. \
+                  **The checker's reading ASSUMES the lowering enters the child by \
+                  jump:** the child starts AT the region, never on the statements \
+                  between the gate call and the region (in 155 the `if v == 0`), and \
+                  the parent skips the region. The spill rule (`N451`/`N452`) and \
+                  the race rule (`N457`) judge the region only, so under a fork-style \
+                  reading -- both threads return from the call and run on -- the \
+                  child would execute unchecked code on the handed stack. A lowering \
+                  that lifts `C185` must keep that reading or re-check the gap.",
         vorbehalt: "A shape rule, and nothing else. It says nothing about whether \
                     the number is the kernel's, whether the child really starts on \
                     the handed stack, or whether the runtime places the thread -- \
                     those are the stub's (part 3 refusing the block until the \
-                    inline trap lands) and the runtime's (d2, `KlonAnnahme`). A \
+                    inline trap lands) and the runtime's (d2, `CloneAssume`). A \
                     `leave`/`next` naming a mark defined inside the region stays \
                     on the path; marks are region-wide, so a jump from a nested \
                     `child` into an outer region's loop reads as staying. The \
@@ -4081,7 +4092,10 @@ pub const PHASEN: &[Satz] = &[
                       (`N449 allein`: a falling path), `1111` (`N450 allein`: a path \
                       with no gate) -- each falls once, and without its rule \
                       nothing falls (the emitted C is valid `cc -Werror` input in \
-                      all five); `1112` (`-- erwartet: C185`: the 155 shape, \
+                      all five); `1139` (`N450`: the gate call stands in another \
+                      function) and `1140` (`N450` twice: a second region behind \
+                      one call, and a call only in a sibling branch), both silent \
+                      before fix lane F3 made the rule per region; `1112` (`-- erwartet: C185`: the 155 shape, \
                       checker-clean, refused by exactly its code). The clean side \
                       is beispiele/155 (the handoff: gate with stack, child ending \
                       in the exit gate) and /156 (the branched tail, both arms \
@@ -4104,8 +4118,10 @@ pub const PHASEN: &[Satz] = &[
                   shared read set cannot tell the pre-definition read from \
                   the benign shadow), and every name that is no caller local \
                   at all (globals, tables, statics, callees) stays legal.",
-        vorbehalt: "A dataflow over the shared read set (`benutzte_namen`, \
-                    the `(void)k;` walker), with five named edges. (1) A \
+        vorbehalt: "A dataflow over the path's read set (`kindzugriff`, \
+                    exhaustive over `StmtArt` since fix lane F3 -- the `(void)k;` \
+                    walker it replaced skipped `grow` and lock places), with five \
+                    named edges. (1) A \
                     faulted gate hands nothing -- its own fault (`N446`/`N447`) \
                     names it, and reads behind it report on top. (2) Gate \
                     resolution is by short name, like the `endet_immer` list \
@@ -4126,9 +4142,12 @@ pub const PHASEN: &[Satz] = &[
                       reads the unhanded parameter `art`), `1116` (`-- erwartet: \
                       N452 allein`: same value, different slot -- the gate took \
                       `s2`, the child reads `stapel`), `1117` (`-- erwartet: \
-                      N452 allein`: the handoff call after the region hands \
-                      nothing) -- each falls once, and without its rule the \
-                      emitted C is valid `cc -Werror` input in all four; \
+                      N452`: the handoff call after the region hands nothing; \
+                      `N450` falls beside it since fix lane F3), `1146` (`N451`: \
+                      the gate answer read in `grow … else`), `1147` (`N451`: a \
+                      caller `let` as a lock index) -- the first three fall once, \
+                      and without their rule the emitted C is valid `cc -Werror` \
+                      input; \
                       `1114` (`-- erwartet: C185`: the worker-call shape, \
                       checker-clean -- the preceding handed read stays legal). \
                       The narrowing side is `1109`/`1110`: their incidental caller \
@@ -4136,6 +4155,49 @@ pub const PHASEN: &[Satz] = &[
                       by literals, keeping each probe on its own code.",
         fundstelle: "crates/gabbro-check/src/clone.rs (`spillregion`); \
                      dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
+        name: "klon.faden",
+        kennungen: &["N456", "N457"],
+        aussage: "The `child` path is a thread of its own from its first statement, \
+                  and the checker judges it as one. It holds nothing the parent \
+                  holds: a `child` inside a `locks`, `observes` or `breaking` block, \
+                  or in a function holding a lock by signature (`requires Held`), \
+                  falls (`N456`), and the held-set walkers (`H007`, `H009`/`H010`, \
+                  `H018`, `N291`) start the child with an empty held set, the \
+                  function's `effects { locks … }` line included. And it races with \
+                  nobody: every table, mutable static, `state` or arena the path \
+                  touches -- itself or through any function reachable from a call on \
+                  it, the indirect candidate pool included -- that some code writes \
+                  is guarded by a lock, atomic or per-core (`N457`), the pool-safe \
+                  shape of a routine that runs beside the parent, beside every \
+                  declared start and beside other instances of itself.",
+        vorbehalt: "A surface rule over the same data as the race component: the \
+                    guard exemption reads the guard's EXISTENCE (holding it at the \
+                    access is `H007`'s), write permission is declared or performed \
+                    (the `schreiber` set), device registers carry no carrier. It is \
+                    fail-safe, not precise: a carrier the parent writes only BEFORE \
+                    the gate call still counts as written, and a child that is the \
+                    only writer still falls (nothing bounds how often the gate runs). \
+                    Flow facts other than held sets that walkers carry into the child \
+                    (M1 value ranges of guarded globals, phases) are not re-audited \
+                    here. The model has no child thread yet (review G11 F1): this is \
+                    a checker rule with no Lean counterpart.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1141` (`-- erwartet: N456`: the review's \
+                      `locks L { g = 1; child { g = 2; … } }`, with `H007` beside it \
+                      since the child's held set starts empty), `1142` (`N456`: a \
+                      child under `requires Held(L)`), `1143` (`N457`: the child \
+                      writes an unguarded static the parent writes), `1144` (`N457`: \
+                      the same write through a callee), `1145` (`N457`: the child \
+                      READS a carrier the parent writes). The clean side: \
+                      `tests/klon_faden.rs` -- a child taking its own lock around a \
+                      guarded write, and a child reading a carrier nobody writes, \
+                      check clean.",
+        fundstelle: "crates/gabbro-check/src/clone.rs (`kontextpfade`, `kindzugriff`); \
+                     crates/gabbro-check/src/fusswache2.rs (`kindfaeden`, `begehe`); \
+                     crates/gabbro-check/src/geteilt.rs (the `Child` arms of `schutz`, \
+                     `rcu_schutz`, `fenster_sammeln`)",
     },
     Satz {
         name: "parser.bibliothek-nutzlast",

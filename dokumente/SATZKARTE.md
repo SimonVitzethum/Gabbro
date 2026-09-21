@@ -3831,6 +3831,21 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 > (d2) is derivable from (d); the model contains no child thread at all
 > (`messung/review-2026-09-21/G11.md`).
 
+> **Fix lane F3 (2026-09-21, review G11 F2-F5): the child is its own thread in the checker.**
+> `N456` refuses a `child` inside `locks`/`observes`/`breaking` or under `requires Held`, and
+> the held-set walkers (`H007` `schutz`, `H009`/`H010` `rcu_schutz`, `H018`
+> `fenster_sammeln`, `N291` `begehe`) restart the child with an EMPTY held set, the
+> function's `effects { locks … }` line included. `N457` (`fusswache2::kindfaeden`) judges
+> the region like a pool routine: every table, mutable static, `state` or arena it touches
+> -- itself or through its reachable callees -- that anyone writes is guarded, atomic or
+> per-core. The spill read set is the exhaustive `clone::kindzugriff` (`grow … else`, lock
+> places). `N450` is per region: a stack-gate call must dominate the region, one call per
+> region. **Assumption for the lowering (lane 258):** the checker reads the region only;
+> the statements between the gate call and the region are parent code, so the child must
+> be entered BY JUMP at the region (PLAN-SYSCALL, the `klon.uebergabe` sentence, `C185`'s
+> message, pinned by `tests/klon_faden.rs`). All of it is a Rust rule with no Lean
+> counterpart: the model still has no child thread (F1 above).
+
 *Opus lane O-1 (K-1). Rust: `crates/gabbro-syntax` (`SyscallDecl.stapel`,
 `StmtArt::Child`), `crates/gabbro-check/src/clone.rs` (new, `N446`-`N450`),
 `emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,

@@ -1,8 +1,8 @@
--- erwartet: N452 allein
+-- erwartet: N452
 -- **1117 -- the handoff after the region hands nothing (lane 249, round 2).**
 --
 -- The prefix pin of the dataflow. The gate is valid (`stack rsi` --
--- `N446`/`N447` silent, `N450` silent), the path is well-formed (no
+-- `N446`/`N447` silent), the path is well-formed (no
 -- `return`, every path ends in `ausgang` -- `N448`/`N449` silent). The
 -- child reads `y` -- and the only call handing `y`
 -- (`roher_start(art, y)`) executes AFTER the region. A call the child
@@ -11,10 +11,16 @@
 -- read falls (`N452`). A function-wide handed set would stay wrongly
 -- silent here.
 --
--- Without this rule NOTHING falls -- the emitted C is a braced block
+-- Until fix lane F3, without this rule NOTHING fell -- the emitted C is a braced block
 -- passing `y` on, and `cc -Werror` takes it. Same shape gate as
 -- 1107-1116 (not the raw clone, `1000` not an OS number; `abi linux`
 -- names the template the stub is written against, not a kernel table).
+--
+-- Fix lane F3 (2026-09-21): `N450` falls beside `N452` here. It is per
+-- region now, and a gate call AFTER the region dominates nothing -- the
+-- same "a later call hands nothing" reading, one rule earlier. `N452`
+-- still falls on its own; the probe is no longer `allein`, since `N450`
+-- is a second line in front of it.
 
 module gift1117 {
 

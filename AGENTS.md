@@ -271,8 +271,8 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N456** (highest issued: N455; also `C185`, O-1) |
-| Gift (poison-probe) numbers | **1139** (highest file: `beispiele/gift/1138`, fix lane F2) |
+| Diagnostic codes | **N458** (highest issued: N457, fix lane F3; also `C185`, O-1) |
+| Gift (poison-probe) numbers | **1148** (highest file: `beispiele/gift/1147`, fix lane F3) |
 | Example numbers | **157** (highest file: `beispiele/156`) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
 
@@ -299,6 +299,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | 249 | **not reserved** (TODO row says "—") | N451, N452, gifts 1113–1117 |
 | 256 | **not reserved** | N453–N455 (the spare of the block N451–455 that lane 249 chose itself), gifts 1118–1127 |
 | Fix lane F2 | **not reserved** (free range) | gifts 1132–1138; no code (`N426` and `N211` tightened, not minted) |
+| Fix lane F3 | **not reserved** (free range) | N456, N457, gifts 1139–1147; no example (`N450`/`N451` tightened, not minted) |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

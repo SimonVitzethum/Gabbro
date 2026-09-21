@@ -10380,6 +10380,16 @@ fn anweisung(
             // language) -- until it lands, every `child` block falls here,
             // by name, never silently. The block is still written out
             // best-effort below, so the refusal changes no `cc` verdict.
+            //
+            // **The assumption a lowering must keep (fix lane F3, review G11
+            // F4):** the checker judges the REGION only (`N451`/`N452` spill,
+            // `N456`/`N457` thread, `N450` one dominating call per region).
+            // The statements between the gate call and the region (155's
+            // `if v == 0`) are checked as PARENT code. A lowering that lets
+            // the child return from the call and run on (fork style) would
+            // execute them unchecked on the handed stack -- the child must be
+            // entered by jump at the region, the parent must skip it.
+            // `tests/klon_faden.rs` pins this sentence to the refusal.
             syscall_code(
                 absagen,
                 "C185",
@@ -10388,7 +10398,10 @@ fn anweisung(
                     "`child` has no lowering in the `syscall` stub template -- after a \
                      stack-switching call the child resumes inside the gate's helper on \
                      the handed stack, and the helper's return would pop a return address \
-                     off it. The inline trap with the child entered by jump is not built"
+                     off it. The inline trap with the child entered by jump is not built \
+                     -- and the checker ASSUMES that jump: it judges the region only, so \
+                     the statements between the gate call and the region never run on \
+                     the child's stack (SATZKARTE §39, `klon.uebergabe`)"
                 ),
             );
             aus.push_str(&format!(
