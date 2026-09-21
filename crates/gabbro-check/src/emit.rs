@@ -12455,10 +12455,12 @@ fn intpat_werte(
 /// scrutinee); until this lane the emitter refused every such match with `C001`. The
 /// lowering is a `switch` over the scrutinee expression: one `case` per exact arm,
 /// one `case` per value of a range arm (stacked labels sharing one body). There is
-/// no `default`: exhaustiveness stays the checker's (lane 228) -- a missing default
-/// is not this lane's to add -- and no `__builtin_unreachable`: unlike `D005`/`M123`
-/// no rule has decided the distinction is closed, so handing that decision to the C
-/// compiler would invent a fact.
+/// no `default` and no `__builtin_unreachable`: unlike `D005`/`M123` no rule has
+/// decided the distinction is closed, so handing that decision to the C compiler
+/// would invent a fact. **A value no arm names skips the whole statement**, and NO
+/// checker pass decides coverage (lane 228's `erschoepfendB` is Lean only) -- so the
+/// flow passes read an integer `match` as an `if` without `else`
+/// (`crate::int_match_may_miss`, review G07).
 ///
 /// A `switch` evaluates its controlling expression exactly once, so unlike the
 /// `tagged` lowering above no temporary is needed for a call scrutinee: the
