@@ -3,8 +3,10 @@
 ## What was built
 
 New file `grammatik/Grammatik/FremdRuf.lean` (+ import line in
-`grammatik/Grammatik.lean`), modelling exactly the lane-226 shape: a
-descriptor as an opaque carrier value plus user-declared gates as
+`grammatik/Grammatik.lean`), modelling a reduced form of the lane-226 shape (review G10: no `opaque`
+type, no `buf`/`len` parameters, read writes no memory; see the file's
+CUTS block): a
+descriptor as a plain carrier value (opacity not modelled) plus user-declared gates as
 oracle calls. Answers are constrained only by the declared ensures;
 dispatch labels, register bindings, costs and effects are program DATA
 (`GateData`) that the semantic theorems never consult except for the
@@ -27,7 +29,7 @@ effect/frame match.
 - Theorems: `gate_daten_gleich`, `fdO_gut` (frame + recording over
   complete domains), `fdQ_vertrag`, `fremdruf_gate_gilt` (one call:
   ensures + frame in gate-effect terms), `fremdruf_offen_lesen`
-  (open-then-read composition), `fd_opak` (read answer independent of
+  (open-then-read composition), `fd_opak` (the WITNESS oracle's read answer is independent of
   the passed descriptor), `fremdruf_falsch_abgelehnt` (wrong ensures
   demanding 6 refused), `fdPC_erreicht` + `fdPC_schreibt` (one writing
   leaf reached from `GenStart`, slot `0 -> 5`), witnesses

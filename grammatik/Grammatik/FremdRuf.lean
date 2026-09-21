@@ -8,8 +8,10 @@
 
   Modelled shape: one gate hands out a descriptor value in a narrow
   carrier range, a second gate takes such a value and answers a count.
-  The descriptor is never computed on: the second gate's oracle answer
-  is independent of the passed value (`fd_opak`). The goal theorem's
+  The WITNESS oracle `fdO` ignores the passed descriptor (`fd_opak`, a
+  fact about `fdO` only, proved by `rfl`); language-level opacity of the
+  carrier is NOT modelled here -- the descriptor is a plain `.int 0 7`
+  that expressions may compute on (review G10). The goal theorem's
   hardware premise (c) arrives as `GutO` (frame) plus `AxVertragO`
   (declared ensures); the per-gate theorem (`fremdruf_gate_gilt`) and
   the two-gate composition (`fremdruf_offen_lesen`) say exactly that,
@@ -393,8 +395,10 @@ theorem fremdruf_offen_lesen (gOpen gRead : GateData fdD)
     fremdruf_gate_gilt gRead fdRead O Q hO hQ hEffR hEffGR _ ρr w hfitR
   exact ⟨hQo, hRo, hQr, hRr⟩
 
-/-- The descriptor is opaque: the reading gate answers the current
-    slot value no matter which descriptor value it is passed. -/
+/-- The witness oracle ignores the descriptor: `fdO`'s reading gate
+    answers the current slot value no matter which descriptor value it
+    is passed. A property of this one oracle, not of every oracle and
+    not of the language (a real read gate's answer depends on the fd). -/
 theorem fd_opak (σ : World fdD) (ρ1 ρ2 : Env fdD (fdD.aparams fdRead)) :
     (fdO.wirkt fdRead σ ρ1).2 = (fdO.wirkt fdRead σ ρ2).2 := rfl
 
@@ -695,6 +699,14 @@ theorem fremdruf_gate_gilt_zeuge :
     gate calls appear as oracle answers at concrete call sites
     (`fdFitO`, `fdFitR`), not as machine steps. A run stepping
     through `bindAxiom` would need the F-machine residue shape.
+  - The fixture is narrower than lane 226's example 150 (review G10):
+    no `opaque type Fd = u32` (the descriptor is `.int 0 7`), no
+    `buf : ptr`/`len` parameters, and the witness read gate writes no
+    memory. `AxVertragO` has no argument precondition: the ensures must
+    hold for EVERY argument, so a gate whose kernel behaviour depends on
+    well-formed arguments (a NUL-terminated path for `open`) is covered
+    only by filing the ill-formed call as the hardware assumption, not
+    as the caller's logic.
   - The planted-defect check: `fremdruf_falsch_abgelehnt` proves the
     negation (an ensures demanding `6` is refused); the positive
     attempt `AxVertragO fdQfalsch fdO` fails at the `3 = 6`
