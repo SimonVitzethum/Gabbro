@@ -25,6 +25,21 @@
   `lese_schreibe` with the writeback inside and the `return z` outside --
   with premise groups proved on THAT program under honest
   `…_umgestaltet` names, never as `korpus125_nutzer`.
+
+  CORRECTION (review 2026-09-21, G02): `offen125_ret_unter_locks` proves
+  that a `ret` INSIDE the lock is untypeable, not that the source's VALUE
+  is unreachable. `Stmt.assignVar` and `locks` share the context `Γ`, so
+  `let r = 0; locks WACHE { z = z; r = z; } return r;` -- in G terms
+  `.bind kNull (.cons (.locks w _ (.cons (.assignGlob z (.glob z _) _ _)
+  (.cons (.assignVar .hier (.glob z _)) .nil))) (.ret (.wert (.var .hier)) _))`
+  -- reads `z` under the lock and returns that value after the release,
+  which is what the source's `return z` inside the lock means. That term is
+  NOT built or checked here (no build was possible during the review); the
+  constant `return 0` below is therefore a modelling choice, not a forced
+  one, and `offen125` is a gap of the exporter form, not of G. Nothing
+  guarantee-relevant hides behind the constant: every contract is `.wahr`
+  and the source declares no lock invariant, so no obligation reads the
+  returned value.
 -/
 import Grammatik.Zielsatz.Proben
 
@@ -152,7 +167,9 @@ def kRumpfSetzeNull : Endblock kD (vertragVon kD kSetzeNull) false [] [] :=
     `return 0` outside. The source returns `z` inside; that term does not
     exist (`offen125_ret_unter_locks` below), and a guarded read outside the
     lock is untypeable too (`offen125_lese_aussen`), so the reshaped return
-    is a constant. Both divergences are findings, not silent changes. -/
+    is a constant. Both divergences are findings, not silent changes. (A
+    value-faithful term via an outer local and `assignVar` exists; see the
+    CORRECTION in the header.) -/
 def kRumpfLese : Endblock kD (vertragVon kD kLese) false [] [] :=
   .cons (.locks QLock.w (fun _ h => nomatch h)
     (.cons (.assignGlob QGlob.z (.glob QGlob.z kGdarfW) rfl kGdarfW) .nil))

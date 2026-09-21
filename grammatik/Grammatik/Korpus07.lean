@@ -163,7 +163,16 @@ def offen07 : String :=
   (`offen07_kein_zeuge`). The vacuous group `korpus07_nutzer_leer` and the
   empty checker verdict are exhibited beside the blockage, not instead of a
   witness. What is NOT claimed: anything about the `.gab` source beyond the
-  LG001/LG005 refusal shapes quoted in the header.
+  LG001/LG002 refusal shapes quoted in the header.
+
+  SCOPE OF THE "PROOF" (review 2026-09-21, G02): `offen07_kein_zeuge` and
+  `offen07_kein_schreiber` are true because `kD` sets `Tab := Empty` and
+  `Fn := Empty`; they restate that modelling choice and prove nothing about
+  the source. The blockage itself is argued in the header, from the source
+  text: 07 declares no table, no global, no lock, and every function is
+  `raw`/`prim`/`divergent`/`extern` or has no body (`boot_ende` ends in
+  `;`). That argument was re-read against `beispiele/07` and holds; it is
+  a reading, not a theorem.
 -/
 #print axioms K07.korpus07_nutzer_leer
 #print axioms K07.offen07_kein_zeuge

@@ -27,6 +27,12 @@
   does NOT hold for the source as written. The model keeps `mP`'s
   `ensures konto[0] == konto[1] && konto[0] == x` (the strongest the body
   meets). Reported in PLAN §7; the source is not changed here.
+
+  UPDATE 2026-09-17 (lane 204, merge `5ececd63`, OFFEN O12 half (1)): the
+  source now carries exactly this `ensures`
+  (`konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x`),
+  so `kP`'s contracts are the source's without exception. The paragraph above
+  is kept as the record of the finding.
 -/
 import Grammatik.Zielsatz.Proben
 
@@ -259,8 +265,9 @@ def kLocksB : Stmt kD (vertragVon kD kHauptB) false [] [] [] :=
 def kRumpfB : Endblock kD (vertragVon kD kHauptB) false [] [] :=
   .cons kB0 (.cons kLocksB (.ret .keine List.Perm.nil))
 
-/-- **The program of `beispiele/124`**: the source's bodies; the source's
-    contracts except `setze`'s `ensures` (see the header). -/
+/-- **The program of `beispiele/124`**: the source's bodies and the source's
+    contracts (`setze`'s `ensures` matches the source since lane 204; see the
+    header for the history). -/
 def kP : Programm kD where
   invariante := fun i => nomatch i
   requires

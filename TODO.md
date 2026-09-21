@@ -331,8 +331,10 @@ tree refuses everywhere else.*
   (reviewer 217, r2) and merged (`2c53e282`, 2026-09-17). `Korpus07.lean`,
   `Korpus59.lean`, `Korpus109.lean`, `Korpus125.lean` after the `Korpus124`
   template: 4 of 6 with full models (108, 124, 109, 59), 125
-  reshaped-with-proved-blockage, 07 with proved impossibility of a
-  non-degenerate witness.
+  reshaped (`lese_schreibe` returns a constant; review G02 of 2026-09-21
+  found a value-faithful term via an outer local, not yet built), 07 with no
+  G program at all (no table, no `impl` body in the source; the blockage is
+  a reading of the source, the Lean lemmas restate the empty declaration).
 - [ ] **Exporter-side concurrent coverage (the residue).** `lean-g` still
   refuses locks, `held` sections and multiple starts (LG001/LG004); only
   108 of the six exports. The hand models above are the bridge, not the
