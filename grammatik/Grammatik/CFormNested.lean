@@ -53,9 +53,13 @@ theorem cform_nested_read (L : CLayout) (orc : DevOrc) (fr : Nat)
     | _ => none)
   rw [haddr]
 
-/-- Concrete layout, state, locals and oracle for the witness: no block
-    (address arithmetic is never reached -- the premises are literals),
-    zeroed memory with everything alive, zeroed locals. -/
+/-- Concrete layout, state, locals and oracle for the witness: no block,
+    zeroed memory with everything alive, zeroed locals.
+    CAUTION (review 2026-09-21, G01): with no block, `ptrAdd` returns `none`,
+    so BOTH sides of the witness equation below evaluate to `none` (stuck).
+    The witness shows the premises are jointly satisfiable, NOT that a read
+    succeeds; a layout with a live 48-byte `u32` block at `.glob 7` is still
+    owed for a non-degenerate instance. -/
 def nzL : CLayout := fun _ => none
 def nzSt : CSt := ⟨fun _ _ => .int 0, fun _ => true, []⟩
 def nzRho : CLok := fun _ => .int 0
