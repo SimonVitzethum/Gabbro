@@ -30,7 +30,7 @@ structure SimCert where
 /-- The expected tables, read off `gOfA`/`heldGA`/`gOfB`/`heldGB`. -/
 def erwartetGA : List Nat := [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6]
 def erwartetHA : List Nat := [0, 0, 0, 1, 1, 0, 0]
-def erwartetGB : List Nat := [0, 0, 1, 1, 2, 2, 3, 3, 4]
+def erwartetGB : List Nat := [0, 0, 1, 1, 2, 2, 3, 4, 4]
 def erwartetHB : List Nat := [0, 0, 1, 1, 0]
 
 /-- **The expected tables ARE the relation tables of `R124`** (review
@@ -77,7 +77,7 @@ def simpruef_liefert (c : SimCert) (w : Faden → Option Nat) (hw : Wurzeln w)
     (`SimCert124::to_lean` in `crates/gabbro-check/src/corrcert.rs`). -/
 def cert124_printed : SimCert :=
   ⟨[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6], [0, 0, 0, 1, 1, 0, 0],
-   [0, 0, 1, 1, 2, 2, 3, 3, 4], [0, 0, 1, 1, 0]⟩
+   [0, 0, 1, 1, 2, 2, 3, 4, 4], [0, 0, 1, 1, 0]⟩
 
 /-- **WITNESS** (rule 13): the checker premises instantiated JOINTLY on the
     non-degenerate two-thread program 124 -- the printed certificate checks,
