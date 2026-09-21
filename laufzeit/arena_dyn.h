@@ -59,9 +59,11 @@ void gabbro_arena_reserve(gabbro_arena_desc *d);
  * return true (the new slots read as zero); on OS failure below `max`
  * (out of memory is real even under a reservation) return false and
  * leave `committed` unchanged -- the caller runs the `else` branch.
- * A request reaching past `max` never arrives here (the checker refuses
- * it); arriving anyway it fail-stops, because a silent partial commit
- * would be the unnamed gap this split exists to close. */
+ * A request reaching past `max` fail-stops, because a silent partial
+ * commit would be the unnamed gap this split exists to close. The checker
+ * (`N426`) refuses only the straight-line shape of such a request; grows
+ * in loops, after joins or across functions are not yet held below `max`
+ * (review G08, 2026-09-21), so this stop is reachable. */
 bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n);
 
 #endif

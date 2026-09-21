@@ -4268,7 +4268,15 @@ pub const PHASEN: &[Satz] = &[
                   `max`-carrying arena is exactly the committed-prefix \
                   behavior (storage of `hi` beside `used`).",
         vorbehalt: "The count is per function body (like `costs`); `R-max` \
-                    stays unwired (see `arena.wachstum_sichtbar`). A `max` \
+                    stays unwired (see `arena.wachstum_sichtbar`). The \
+                    ceiling is held against the path's committed LOWER \
+                    bound (minimum at joins, entry value after loops, the \
+                    floor at every function entry), so `N426` sees only \
+                    the straight-line commits of one body: a `grow` inside \
+                    a loop, after a branch that grew, or in two functions \
+                    (or two calls) is NOT held below `max`, and at run time \
+                    the runtime's past-ceiling `abort` is reachable from an \
+                    accepted program (review G08, 2026-09-21). A `max` \
                     clause on tables is reserved future syntax, not parsed, \
                     not refused, not built. `beispiele/153` carries the \
                     static shape the dynamic form preserves; the dynamic \

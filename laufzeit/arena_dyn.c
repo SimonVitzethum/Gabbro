@@ -107,9 +107,12 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)
         return true;
     }
     /* The ceiling is checkable: past `max` there is no commit, only the
-     * fail-stop. Reaching it means the checker was bypassed (its R-max
-     * rule refuses this shape), so stopping loudly is the honest half of
-     * "never a runtime surprise". */
+     * fail-stop. The checker's `N426` refuses the straight-line shape only:
+     * it holds the ceiling against the path's committed LOWER bound, so a
+     * `grow` in a loop, after a branch that grew, or spread over several
+     * functions can arrive here from an accepted program (review G08,
+     * 2026-09-21). Until the checker carries an upper bound, this abort is
+     * a reachable stop, not only a bypass detector. */
     neu = (uint64_t)d->committed + (uint64_t)n;
     if (neu > d->max) {
         fprintf(stderr,
