@@ -140,11 +140,17 @@ pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
 242 alongside waves A/B (11 total on fisch).*
 
 **Wave E — bounded strings (owner): general strings are planned, max length
-known like integer ranges.** Lane 256 (RUNNING): bounded string type with
-declared `max N`, literals with known length, `concat`/`length`/index/compare
-with M101-family length discipline; Lean model as bounded char lists;
-emitter REFUSES by name until the lowering lane (staged honesty, lane-222
-precedent). L4 library text (formatting/parsing/UTF) stays library work
+known like integer ranges.** Lane 256 MERGED 2026-09-19 (`afb286ee`):
+`string max N` in `TypExpr`, `zeichenfolge.rs` length discipline
+(`N453`–`N455`, gifts 1118–1127), Lean value model
+`ZeichenfolgeGebunden.lean`; the emitter stops every string program with
+`C001`. **Not delivered:** string literals (`"hi"` stays `P011`, needs an
+`ExprArt` arm in `m1.rs`). **Owed before any lowering (review G12,
+2026-09-21):** the index rule accepts a literal `k < max` without knowing
+the exact length (`gift/1125` checks clean), while the Lean `bindex` refuses
+`k >= length` -- the lowering lane must add exact-length tracking or a
+run-time length check first; the pass's flat per-body name table lets a
+shadowing unannotated `let` keep a stale string max. L4 library text (formatting/parsing/UTF) stays library work
 (§0b), not language work.
 
 *Not lanes: sigaction (out by design, not by backlog: an async handler is a
@@ -201,7 +207,7 @@ generated driver, lock through the chain). Reviewers from 321.
 | 245 | symmetric pool: lift N304 with soundness + driver + Lean starts multiset | `fusswache2.rs`, `laufzeit/*`, starts-Lean | M–L | N436–440 / 1097–1101 / — |
 | 246 | generated per-unit driver (ROOTS from `concurrent`) + P017 findings | `bau.rs`, new gen module | M | N441–445 / 1102–1106 / — |
 | 247 | ticket lock through the chain (checks, emits, RUNS) | `laufzeit/sperre.gab` only | S | none |
-| 253 | P017 thread-start statement (from 246's findings; hosted form only) | `parse.rs`, `ast.rs` | M | no new P-codes planned |
+| 253 | P017 thread-start statement (from 246's findings; hosted form only) — MERGED 2026-09-19 (`8de4fc1a`): parses, roots resolve (`W003`), emitter/exporter refuse by name. **Open (report §5 + review G12):** membership, nullary shape, duplicate roots, effects hull (the call graph has no edge to the roots), costs (`start` costs 1), lock held across `start`, and whether a `concurrent` member named by `start` runs twice (boot + statement) | `parse.rs`, `ast.rs` | M | no new P-codes planned |
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
@@ -310,8 +316,8 @@ tree refuses everywhere else.*
   2026-09-19, same honest result: corpus since grown 117→127 files,
   exports still the identical 15; LG001 now x74, surveyed by subclass
   (each needs model narrowing). Next: LG002 x21, or per-subclass lanes
-  with model-side work. Concurrent lane 255 RUNNING since 2026-09-19
-  (254 merged, file free).**
+  with model-side work. Concurrent lane 255 merged 2026-09-19
+  (`ba9b6c07`).**
 - [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
   208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
   2026-09-17). Closed by finding, not by construction: five of nine
@@ -337,7 +343,13 @@ tree refuses everywhere else.*
   refuses locks, `held` sections and multiple starts (LG001/LG004); only
   108 of the six exports. The hand models above are the bridge, not the
   widening. Measured by how many of 07, 59, 108, 109, 124 and 125 export.
-  **Lane 255 RUNNING since 2026-09-19 (254 merged, file free).**
+  **Lane 255 merged 2026-09-19 (`ba9b6c07`): `masks irqs` travels as
+  `D.maskiert`, `deadline` drops as NO-FORM (named in the header); 59 now
+  exports (15 -> 16). Caveat (review G12): `Ziel` never reads `D.maskiert`
+  and entry dispatch roots travel as ordinary starts, so 59's exported
+  deadlock freedom does not cover same-core interrupt preemption, and the
+  emitter lowers no `cli`/`sti` -- that belongs in the `Spec.lean`
+  NOT-CLAIMED list.**
 - [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
   O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
   2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
