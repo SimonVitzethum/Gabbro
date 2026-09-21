@@ -3340,7 +3340,11 @@ pub const WIRKUNGEN: &[Satz] = &[
                     (`E011`).~~ `E011` applies only where `touches` is written, and a `traverse` \
                     over a PARAMETER is not held against it. The CARRIER walk itself stays \
                     out of `touches` -- the function effects carry it (`beispiele/09`, \
-                    `beispiele/57` pin the split). **And `retry`/`forever` carry \
+                    `beispiele/57` pin the split). `E011` holds only the body's DIRECT \
+                    deeds: a CALL inside a `traverse` body is not held against \
+                    `touches` at all -- the callee's effects reach the function-level \
+                    call check, never the loop's narrower promise (review G09, \
+                    2026-09-21). **And `retry`/`forever` carry \
                     their own `effects` clauses that this pass NEVER checks against the \
                     body** -- only `traverse.touches` has a reader.",
         stand: Satzstand::Gemessen,

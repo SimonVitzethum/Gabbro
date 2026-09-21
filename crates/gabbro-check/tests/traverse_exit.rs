@@ -165,8 +165,9 @@ fn exit_without_any_label_falls() {
 
 /// The windowed walk still has no lowering: the reader refuses it with
 /// P001 (lane 222) before any pass could read it as a whole-table walk.
-/// This row is the handoff pin for the syntax lane -- it goes green the
-/// day the window lowers instead.
+/// This row is the handoff pin for the syntax lane -- it goes RED the day
+/// the window parses (P001 lifted), and the lane that lifts it replaces
+/// this row with its own window pins.
 #[test]
 fn windowed_walk_still_has_no_lowering() {
     let q = format!(
