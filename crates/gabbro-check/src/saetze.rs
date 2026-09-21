@@ -3498,9 +3498,13 @@ pub const WIRKUNGEN: &[Satz] = &[
                   signature (`N303`, the strong form of `N240`). One routine on two \
                   threads is admitted only pool-safe -- no lock, no reasons, and \
                   every written carrier guarded, atomic, or per-core (`N304`, \
-                  `PoolSicher`; idle routines are the empty case) -- and never twice \
-                  under one name, idle or not (`N315`, `einzelnB`: `ws.Nodup`). All \
-                  six refuse as errors.",
+                  `PoolSicher`) -- and an IDLE routine is never named twice \
+                  (`N315`). **This checker is wider than the goal Bool here:** a \
+                  busy pool-safe duplicate passes both `N304` and `N315`, while \
+                  `Akzeptiert` still demands `einzelnB` (`ws.Nodup`) for every \
+                  duplicate, and race freedom over duplicated starts is not proved \
+                  (the `einzeln` swap to `EinzelnPool` is open, MUSE-REPORT-245 \
+                  section 3; review G06 of 2026-09-21). All six refuse as errors.",
         vorbehalt: "Starts are the `concurrent` members plus the `entry`/`boot` roots \
                     (the `startexklusiv.rs` pool); with fewer than two every carrier is \
                     owned and `N300`/`N301`/`N304`/`N315` stay silent, while `N302`/`N303` judge \
