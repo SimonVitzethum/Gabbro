@@ -381,8 +381,12 @@
   (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
   supplies is not in `D.Fn`). Declared `costs` are not in
   `Deklaration`: `zeit` is the syntax-computed bound. The `.gab` -> `Einheit` step is the
-  exporter's (lean_g.rs), which today fills neither `starts` nor `sp0` nor the source
-  `requires`: the programs `GabbroZiel` covers are reached by hand-written terms.
+  exporter's (lean_g.rs). Since lane 198 it fills `starts`, `sp0`, `S` and the source
+  `requires` of the unit `gE` for the fragment it exports (pinned by the test
+  `einheit_width_travels_together`); everything outside that fragment is refused by name
+  (`LG001`-`LG007`), and a program there reaches `GabbroZiel` only by a hand-written term.
+  The exporter itself is not verified: that `gE` is the source program is the job of the
+  translation-validation chain, not of this statement.
 
   FINDINGS (definitions in proof files, imported anyway): there is no definition-only layer.
   All imports are mixed files; the goal predicates live in flagship proof files
