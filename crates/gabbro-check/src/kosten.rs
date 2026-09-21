@@ -1801,30 +1801,13 @@ impl<'a> Rechner<'a> {
 /// block total through the declared `costs` edge -- N421 names the remedy only
 /// where the scan stands written in the block itself.
 fn enthaelt_traverse(b: &Block) -> bool {
-    b.anweisungen.iter().any(|s| match &s.art {
-        StmtArt::Schleife(sch) => match sch.as_ref() {
-            Schleife::Traverse(_) => true,
-            Schleife::Retry(r) => enthaelt_traverse(&r.rumpf),
-            Schleife::Forever(f) => enthaelt_traverse(&f.rumpf),
-        },
-        StmtArt::Sperrt(l) => enthaelt_traverse(&l.rumpf),
-        StmtArt::Wenn(w) => {
-            w.zweige.iter().any(|(_, r)| enthaelt_traverse(r))
-                || w.sonst.as_ref().is_some_and(enthaelt_traverse)
-        }
-        StmtArt::Match(m) => m.zweige.iter().any(|z| enthaelt_traverse(&z.rumpf)),
-        StmtArt::Bricht(x) => enthaelt_traverse(&x.rumpf),
-        StmtArt::Narrow(x) => enthaelt_traverse(&x.sonst),
-        StmtArt::LetSonst(x) => enthaelt_traverse(&x.sonst),
-        StmtArt::Observiert(o) => enthaelt_traverse(&o.rumpf),
-        StmtArt::Exchange(e) => match &e.form {
-            XForm::Update { rumpf, .. } => enthaelt_traverse(rumpf),
-            XForm::Vergleich { .. } => false,
-        },
-        StmtArt::Alloc(a) => a.sonst.as_ref().is_some_and(enthaelt_traverse),
-        // **Lane 257:** the failure continuation always stands.
-        StmtArt::Grow(g) => enthaelt_traverse(&g.sonst),
-        _ => false,
+    // **Review G09 (2026-09-21): over `crate::unterbloecke`, not a hand list.**
+    // The hand-written match ended in `_ => false` and missed `child { … }`;
+    // the shared walker is exhaustive (a new statement form with a block
+    // fails to compile there instead of vanishing here).
+    b.anweisungen.iter().any(|s| {
+        matches!(&s.art, StmtArt::Schleife(sch) if matches!(sch.as_ref(), Schleife::Traverse(_)))
+            || crate::unterbloecke(s).into_iter().any(enthaelt_traverse)
     })
 }
 
