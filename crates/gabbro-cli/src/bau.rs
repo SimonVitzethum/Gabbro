@@ -516,7 +516,7 @@ struct TreiberPlan {
 /// | case | who refused it BEFORE this rule |
 /// |---|---|
 /// | a member naming no body | **`W003`**, by name, in Gabbro (fail-closed) |
-/// | the same body twice (`concurrent { f, f }`) | **`N304`**/**`N315`**, by name, in Gabbro -- *but since lane 245 NOT for a busy pool-safe routine; see the union note below* |
+/// | the same body twice (`concurrent { f, f }`) | **`N304`**/**`N315`**, by name, in Gabbro -- *but since lane 245 NOT for a busy pool-safe routine: that one gets one thread per occurrence (fix lane F4), see below* |
 /// | a member taking parameters | **nobody** -- the emitted root takes them and the driver passes none |
 /// | two bodies sharing one C name | **nobody at the build** -- the checker sees modules, C sees one namespace |
 ///
@@ -548,50 +548,48 @@ fn treiberregel(
                 f.gab_pfand, f.datei
             ));
         }
-        if !gesehen.insert(f.kurz.as_str()) {
-            // **Union, not refusal.** A body named twice -- in one block
-            // (`concurrent { f, f }`) or across two (`{a, b}` and `{a, c}`)
-            // -- gets ONE root and ONE thread here, so the second naming
-            // spawns nothing new. **Known gap (review G06, 2026-09-21):**
-            // this was written while the checker refused every duplicate
-            // (`N304` busy, `N315` idle). Since lane 245 a busy pool-safe
-            // routine named twice is ACCEPTED, and for it this driver starts
-            // fewer threads than the declaration names; the pin compares
-            // SETS, so it cannot see the lost multiplicity. The hand driver
-            // `laufzeit/start_pool.c` is the pool path until the generator
-            // keeps multiplicity (one wrapper per name, one `pthread_create`
-            // per occurrence, a multiset pin).
-            continue;
-        }
-        match funktionen.get(&f.kurz) {
-            None => {
-                return Err(format!(
-                    "`concurrent` names `{}`, which resolves to no body in this unit -- \
-                     without the body the driver would not link (the checker refuses \
-                     this first as `W003`; the build refuses it here so a stale driver \
-                     is never generated over it)",
-                    f.gab_pfand
-                ));
-            }
-            Some(formen) if formen.len() > 1 => {
-                let orte: Vec<String> =
-                    formen.iter().map(|x| format!("{}::{} in {}", x.modul, f.kurz, x.datei)).collect();
-                return Err(format!(
-                    "`concurrent` names `{}`, and two bodies share that C name -- {} -- \
-                     C has one namespace and the driver could not say which thread runs which",
-                    f.gab_pfand,
-                    orte.join(", ")
-                ));
-            }
-            Some(formen) => {
-                let form = &formen[0];
-                if form.parameter != 0 {
+        // **One thread per OCCURRENCE, not per name** (fix lane F4, review G06
+        // F5). A body named twice -- in one block (`concurrent { f, f }`) or
+        // across two (`{a, b}` and `{a, c}`) -- is two declared starts: the
+        // checker counts it so (`fusswache2::startet`, `N304`/`N315`), the
+        // exporter pushes every occurrence (`lean_g::check_starts`), and since
+        // lane 245 a busy pool-safe routine named twice is ACCEPTED. Until this
+        // lane the union here gave it ONE thread: the runtime ran fewer starts
+        // than assumption (d) names, and the set pin could not see it. Each
+        // occurrence is now its own root entry; the generator writes one
+        // wrapper per NAME and one `pthread_create` per occurrence, and the pin
+        // compares multisets. The validity checks below run once per name.
+        if gesehen.insert(f.kurz.as_str()) {
+            match funktionen.get(&f.kurz) {
+                None => {
                     return Err(format!(
-                        "`concurrent` names `{}`, which takes {} parameter(s) -- the driver \
-                         passes none (a declared start takes none; its `Env` travels in \
-                         `E.starts`, not through `pthread_create`)",
-                        f.gab_pfand, form.parameter
+                        "`concurrent` names `{}`, which resolves to no body in this unit -- \
+                         without the body the driver would not link (the checker refuses \
+                         this first as `W003`; the build refuses it here so a stale driver \
+                         is never generated over it)",
+                        f.gab_pfand
                     ));
+                }
+                Some(formen) if formen.len() > 1 => {
+                    let orte: Vec<String> =
+                        formen.iter().map(|x| format!("{}::{} in {}", x.modul, f.kurz, x.datei)).collect();
+                    return Err(format!(
+                        "`concurrent` names `{}`, and two bodies share that C name -- {} -- \
+                         C has one namespace and the driver could not say which thread runs which",
+                        f.gab_pfand,
+                        orte.join(", ")
+                    ));
+                }
+                Some(formen) => {
+                    let form = &formen[0];
+                    if form.parameter != 0 {
+                        return Err(format!(
+                            "`concurrent` names `{}`, which takes {} parameter(s) -- the driver \
+                             passes none (a declared start takes none; its `Env` travels in \
+                             `E.starts`, not through `pthread_create`)",
+                            f.gab_pfand, form.parameter
+                        ));
+                    }
                 }
             }
         }
@@ -1088,6 +1086,14 @@ fn baue_einheit(
     if let Some(plan) = treiber_plan {
         if !plan.wurzeln.is_empty() {
             let treiber_c = treiber::erzeuge(&e.name, &plan.wurzeln, &plan.sperren, None);
+            // **The pin, held at the build itself** (fix lane F4): the rendered
+            // file must start the declared occurrences, counted -- the writer
+            // and the probe checked against each other on every build, not only
+            // in the tests.
+            let erwartet = treiber::vorkommen(plan.wurzeln.iter().map(|w| w.c_name.as_str()));
+            if let Err(err) = treiber::pin_pruefe(&erwartet, &treiber_c) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
+            }
             if let Err(err) = std::fs::write(&treiber_pfad, &treiber_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
             }
@@ -1174,15 +1180,15 @@ mod treiberregel_tests {
         m
     }
 
-    /// **Roots form a union across blocks.** A member named in two
-    /// `concurrent` sets is one thread, not two -- the second naming spawns
-    /// nothing new and refuses nothing.
+    /// **Roots count occurrences, across blocks too** (fix lane F4, review G06 F5).
+    /// A member named in two `concurrent` sets is two declared starts -- the checker
+    /// counts it so, and the driver must start what the checker judged.
     #[test]
-    fn wurzeln_sind_vereinigung_ueber_bloecke() {
+    fn wurzeln_zaehlen_vorkommen() {
         let funde = vec![fund("hauptA"), fund("hauptB"), fund("hauptA")];
-        let plan = treiberregel(&funde, &[], &nullary()).expect("union holds").expect("roots");
+        let plan = treiberregel(&funde, &[], &nullary()).expect("occurrences hold").expect("roots");
         let namen: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
-        assert_eq!(namen, vec!["hauptA", "hauptB"], "deduplicated in order");
+        assert_eq!(namen, vec!["hauptA", "hauptB", "hauptA"], "one root per occurrence, in order");
     }
 
     /// **A root with parameters is refused before any C is written.** The

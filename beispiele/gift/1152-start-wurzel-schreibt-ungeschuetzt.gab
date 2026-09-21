@@ -1,0 +1,21 @@
+-- erwartet: N462
+-- **1152 -- a started root writes an unguarded carrier (fix lane F4, review G12 F2.3).**
+--
+-- Two roots of one `start` run at the same time, and both write `h`, which no lock
+-- guards. A started root is no `concurrent` member, so the declared-pair race
+-- component (`N300`) never pairs the two; `N462` judges each root the way `N457`
+-- judges a `child` path: every carrier it touches that anybody writes is guarded,
+-- atomic or per-core.
+
+module gift1152 {
+
+static mut h : u64 = 0;
+
+impl fn schreibtA() effects { writes h } costs <= 20 ops { h = 1; }
+impl fn schreibtB() effects { writes h } costs <= 20 ops { h = 2; }
+
+impl fn chef() effects { writes h } costs <= 100 ops {
+    start { schreibtA, schreibtB };
+}
+
+}

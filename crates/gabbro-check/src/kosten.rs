@@ -1042,11 +1042,41 @@ impl<'a> Rechner<'a> {
             // shape (no return, never-ending tail) changes control, not
             // cost. The never-gate call at the tail counts like any call.
             StmtArt::Child(x) => self.block(x, lokal),
-            // **Lane 253:** the `start` marker itself is one primitive.
-            // Creation and joining are the driver's (lane 246 shape); the
-            // roots' own costs are accounted at their definitions. The real
-            // thread-cost rule is handoff, not built here.
-            StmtArt::Start(_) => Kosten::Zahl(1),
+            // **Fix lane F4 (review G12 F2.2): a `start` costs its roots.**
+            //
+            // Lane 253 billed the statement as ONE primitive, although the
+            // starter waits for every root before it proceeds (join). A
+            // `costs <= N` on the starter therefore excluded the roots' run
+            // time. The bill is now the SUM of the roots' declared costs plus
+            // two primitives per root (the create and the join), and not the
+            // maximum: nothing promises the roots a core each -- on one core
+            // the join waits for all of them one after the other, and the
+            // sum is the bound that holds on any number of cores. A root
+            // without a countable `costs` promise leaves the bill unknown
+            // (`K003` where the starter promises a bound), never free.
+            StmtArt::Start(st) => {
+                let mut summe = Kosten::Zahl(0);
+                for w in &st.roots {
+                    let pfad = w.text();
+                    let erklaert = self
+                        .u
+                        .kandidaten_aufloesbar(self.modul, &pfad)
+                        .into_iter()
+                        .find_map(|k| self.deklariert.get(&k).copied());
+                    let wurzel = match erklaert {
+                        Some(n) => Kosten::Zahl(n),
+                        None => Kosten::Unbekannt(
+                            format!(
+                                "the started root `{pfad}` declares no countable `costs`, \
+                                 and the starter waits for it"
+                            ),
+                            Some(w.teile.last().map(|i| i.span).unwrap_or(s.span)),
+                        ),
+                    };
+                    summe = summe.plus(Kosten::Zahl(2)).plus(wurzel);
+                }
+                summe
+            }
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),

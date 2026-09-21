@@ -1,0 +1,23 @@
+-- erwartet: N458
+-- **1148 -- a `start` root that takes a parameter (fix lane F4, review G12 F2.3).**
+--
+-- A started thread is passed nothing: `start { f, g };` names roots, never arguments.
+-- Lane 253 parsed the statement and resolved its names, and the checker accepted a
+-- root with a parameter -- the call the thread would make cannot happen. `N458`
+-- refuses every root that is not an `impl fn` with a body, no parameters, no result
+-- and no signature-held lock.
+
+module gift1148 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+impl fn arbeiterB() effects { writes g, locks L } costs <= 20 ops { locks L { g = 2; } }
+impl fn mit_wert(x : u64) effects { pure } costs <= 20 ops { }
+
+impl fn chef() effects { writes g, locks L } costs <= 100 ops {
+    start { arbeiterA, mit_wert };
+}
+
+}

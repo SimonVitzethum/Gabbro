@@ -7,11 +7,12 @@
 //! per root, join all, the idle root present but never spawned on hosted,
 //! and the lock primitives the emitter only declares (mutex on hosted).
 //! The generated file is a build artefact, pinned per unit: the probe
-//! compares the `concurrent { ... }` set of the sources against the
-//! `pthread_create` set of the driver, so a root added or dropped without
+//! compares the `concurrent { ... }` occurrences of the sources against the
+//! `pthread_create` sites of the driver, BY COUNT (a multiset since fix lane
+//! F4): a root added, dropped or started a different number of times without
 //! regenerating fails loudly.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// One declared start, resolved to the C name the emitter writes.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -36,7 +37,7 @@ pub struct Sperre {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-1";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-2";
 
 /// True for `[A-Za-z_][A-Za-z0-9_]*` (ASCII only: a Gabbro name that reaches
 /// C is ASCII; anything else cannot name a C function and is refused before
@@ -54,8 +55,11 @@ pub fn gueltiger_c_name(s: &str) -> bool {
 
 /// Render the hosted driver for one unit.
 ///
-/// `wurzeln` are the resolved roots in declaration order (deduplicated by
-/// the caller), `sperren` the locks to define. `nachlauf` is optional
+/// `wurzeln` are the resolved roots in declaration order, ONE ENTRY PER
+/// OCCURRENCE (fix lane F4: `concurrent { f, f }` is two starts, and the
+/// accepted pool-safe duplicate must get two threads); the generator writes
+/// one wrapper per distinct name and one `pthread_create` per entry.
+/// `sperren` the locks to define. `nachlauf` is optional
 /// unit-specific observation C after the join loop (the 124 invariant
 /// checks); the plain build passes `None`, so the artefact carries the
 /// runtime half only and a test harness supplies the check half. The file
@@ -79,8 +83,8 @@ pub fn erzeuge(
          * WHAT THIS IS. The hosted runtime driver for one concurrent unit, in the\n \
          * shape of `laufzeit/start.c`: the emitter translated each `concurrent`\n \
          * member to a plain function and emitted no caller and no `main`; this\n \
-         * file starts exactly the declared roots, one thread each, and carries\n \
-         * the idle root for bare metal. Regenerate after every change to the\n \
+         * file starts exactly the declared roots, one thread per occurrence, and\n \
+         * carries the idle root for bare metal. Regenerate after every change to the\n \
          * unit's `concurrent` sets or locks: the pin probe compares the source\n \
          * sets against the `pthread_create` sites below and fails a stale file.\n \
          *\n \
@@ -127,15 +131,22 @@ pub fn erzeuge(
     aus.push_str(" *\n * WHY ONE WRAPPER PER ROOT. `pthread_create` wants `void *(*)(void *)`\n");
     aus.push_str(" * and the emitted roots are `void (*)(void)`; the wrapper is the adapter,\n");
     aus.push_str(" * and one adapter per root keeps the root's NAME at the `pthread_create`\n");
-    aus.push_str(" * call site, which is what the pin probe reads.\n */\n");
+    aus.push_str(" * call site, which is what the pin probe reads. A root declared twice (a\n");
+    aus.push_str(" * pool) has one adapter and one `pthread_create` site per declaration.\n */\n");
+    let mut geschrieben: BTreeSet<&str> = BTreeSet::new();
     for w in wurzeln {
         let c = &w.c_name;
+        // One adapter per NAME: a routine started twice (a pool) shares it, and
+        // its two `pthread_create` sites below both name it.
+        if !geschrieben.insert(c.as_str()) {
+            continue;
+        }
         aus.push_str(&format!(
             "static void *faden_{c}(void *u)\n{{\n    (void)u; /* No argument: the declared\n\
              \x20                              * starts of this unit take none. */\n    {c}();\n    return NULL;\n}}\n\n"
         ));
     }
-    aus.push_str("/* N_WURZELN is the count the probe checks against the source's list length. */\n");
+    aus.push_str("/* N_WURZELN counts the declared starts, one per occurrence -- the probe checks it\n * against the number of members the source's `concurrent` sets name. */\n");
     aus.push_str(&format!("#define N_WURZELN {}\n", wurzeln.len()));
     aus.push_str("\n/* -- The idle root: `none` of `E.P.mitRuhe`.\n");
     aus.push_str(" *\n * WHY IT IS NEVER SPAWNED ON HOSTED. POSIX gives `main` no spare cores\n");
@@ -150,11 +161,24 @@ pub fn erzeuge(
     );
     aus.push_str("\n/* -- main: start exactly the roots, join them. ---------------------------- */\n\nint main(void)\n{\n");
     aus.push_str("    pthread_t faden[N_WURZELN];\n    int rc;\n\n");
+    // **A failed start joins what already runs** (fix lane F4, the finding review
+    // G06 F6 made at `laufzeit/start_pool.c`, which this template shared): the
+    // threads started before the failing one are joined before `main` returns,
+    // so "join covers exactly the spawned set" holds on the error path too.
     for (i, w) in wurzeln.iter().enumerate() {
         let c = &w.c_name;
+        let einsammeln = if i == 0 {
+            String::new()
+        } else {
+            format!(
+                "        for (int j = 0; j < {i}; j++) {{\n\
+                 \x20           (void)pthread_join(faden[j], NULL);\n        }}\n"
+            )
+        };
         aus.push_str(&format!(
             "    rc = pthread_create(&faden[{i}], NULL, faden_{c}, NULL);\n    if (rc != 0) {{\n\
-             \x20       fprintf(stderr, \"start: {c}: %d\\n\", rc);\n        return 2;\n    }}\n"
+             \x20       fprintf(stderr, \"start: {c}: %d\\n\", rc);\n{einsammeln}\
+             \x20       return 2;\n    }}\n"
         ));
     }
     aus.push_str(
@@ -178,21 +202,25 @@ pub fn erzeuge(
     aus
 }
 
-/// The `pthread_create` root set of a driver C file: every `faden_<root>`
-/// named at a `pthread_create` call site.
+/// The `pthread_create` roots of a driver C file, COUNTED: every
+/// `faden_<root>` named at a `pthread_create` call site, with the number of
+/// sites that name it (a pool routine started twice has two sites).
 ///
 /// Read with a plain scanner, not a C parser: the generator above is the
 /// only writer, and the hand file `laufzeit/start.c` keeps the same shape
 /// (one wrapper per root, the root's name at the call site) so the same
 /// probe reads both.
-pub fn pthread_create_menge(treiber_c: &str) -> BTreeSet<String> {
-    let mut menge = BTreeSet::new();
+pub fn pthread_create_zaehlung(treiber_c: &str) -> BTreeMap<String, usize> {
+    let mut zaehlung = BTreeMap::new();
     let mut rest = treiber_c;
-    while let Some(i) = rest.find("pthread_create") {
-        let nach = &rest[i + "pthread_create".len()..];
-        if let Some(j) = nach.find("faden_") {
+    // Only CALL SITES count (`pthread_create(` up to its `;`): with counts a
+    // mention in a comment would be a thread start that does not exist.
+    while let Some(i) = rest.find("pthread_create(") {
+        let nach = &rest[i + "pthread_create(".len()..];
+        let aufruf = &nach[..nach.find(';').unwrap_or(nach.len())];
+        if let Some(j) = aufruf.find("faden_") {
             let mut name = String::new();
-            for c in nach[j + "faden_".len()..].chars() {
+            for c in aufruf[j + "faden_".len()..].chars() {
                 if c.is_ascii_alphanumeric() || c == '_' {
                     name.push(c);
                 } else {
@@ -200,12 +228,22 @@ pub fn pthread_create_menge(treiber_c: &str) -> BTreeSet<String> {
                 }
             }
             if !name.is_empty() {
-                menge.insert(name);
+                *zaehlung.entry(name).or_insert(0) += 1;
             }
         }
         rest = nach;
     }
-    menge
+    zaehlung
+}
+
+/// The declared starts of the sources as a multiset: short C name to the
+/// number of `concurrent` occurrences naming it.
+pub fn vorkommen<'a>(namen: impl IntoIterator<Item = &'a str>) -> BTreeMap<String, usize> {
+    let mut m = BTreeMap::new();
+    for n in namen {
+        *m.entry(n.to_string()).or_insert(0) += 1;
+    }
+    m
 }
 
 /// The `#define N_WURZELN <n>` count of a driver C file, if present.
@@ -219,33 +257,37 @@ pub fn n_wurzeln(treiber_c: &str) -> Option<usize> {
     None
 }
 
-/// The pin: the source root set and the driver root set must be identical,
-/// and `N_WURZELN` must count them.
+/// The pin: the source starts and the driver starts must be the same
+/// MULTISET, and `N_WURZELN` must count them.
 ///
-/// `quelle` holds the short C names of the declared roots (last path
-/// segments of every `concurrent` set, deduplicated). Returns the root
-/// count on success; the error names both sets, so a stale driver fails
-/// loudly instead of starting the wrong threads.
-pub fn pin_pruefe(quelle: &BTreeSet<String>, treiber_c: &str) -> Result<usize, String> {
-    let treiber = pthread_create_menge(treiber_c);
+/// `quelle` maps the short C names of the declared roots to the number of
+/// `concurrent` occurrences naming them (fix lane F4: a set pin could not see
+/// a pool routine declared twice and started once). Returns the start count
+/// on success; the error names both sides with their counts, so a stale
+/// driver fails loudly instead of starting the wrong threads.
+pub fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
+    let treiber = pthread_create_zaehlung(treiber_c);
+    let zeige = |m: &BTreeMap<String, usize>| -> String {
+        m.iter()
+            .map(|(n, k)| if *k == 1 { n.clone() } else { format!("{n} x{k}") })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
     if treiber != *quelle {
-        let mut q: Vec<&String> = quelle.iter().collect();
-        let mut t: Vec<&String> = treiber.iter().collect();
-        q.sort();
-        t.sort();
         return Err(format!(
-            "the driver starts another set than the sources declare -- source: [{}], driver: [{}]. \
-             Regenerate the driver: a root added or dropped without regenerating starts the wrong threads",
-            q.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "),
-            t.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+            "the driver starts other threads than the sources declare -- source: [{}], driver: [{}]. \
+             Regenerate the driver: a root added, dropped or started a different number of times \
+             without regenerating starts the wrong threads",
+            zeige(quelle),
+            zeige(&treiber)
         ));
     }
+    let gesamt: usize = quelle.values().sum();
     match n_wurzeln(treiber_c) {
-        Some(n) if n == quelle.len() => Ok(n),
+        Some(n) if n == gesamt => Ok(n),
         Some(n) => Err(format!(
-            "N_WURZELN is {n} but the declared set holds {} root(s) -- \
-             the join loop would miss a thread or read past the array",
-            quelle.len()
+            "N_WURZELN is {n} but the sources declare {gesamt} start(s) -- \
+             the join loop would miss a thread or read past the array"
         )),
         None => Err("the driver carries no `#define N_WURZELN <n>` line".to_string()),
     }
@@ -253,8 +295,8 @@ pub fn pin_pruefe(quelle: &BTreeSet<String>, treiber_c: &str) -> Result<usize, S
 
 #[cfg(test)]
 mod treiber_tests {
-    use super::{erzeuge, gueltiger_c_name, pin_pruefe, Sperre, Wurzel};
-    use std::collections::BTreeSet;
+    use super::{erzeuge, gueltiger_c_name, pin_pruefe, vorkommen, Sperre, Wurzel};
+    use std::collections::BTreeMap;
 
     fn beispiel() -> (Vec<Wurzel>, Vec<Sperre>) {
         (
@@ -275,8 +317,8 @@ mod treiber_tests {
         )
     }
 
-    fn menge(v: &[&str]) -> BTreeSet<String> {
-        v.iter().map(|s| s.to_string()).collect()
+    fn menge(v: &[&str]) -> BTreeMap<String, usize> {
+        vorkommen(v.iter().copied())
     }
 
     /// **The generator's own output holds its own pin.** If this ever fails,
@@ -337,6 +379,28 @@ mod treiber_tests {
         let gefallen =
             pin_pruefe(&menge(&["hauptA", "hauptB"]), &c).expect_err("a wrong count must fail");
         assert!(gefallen.contains("N_WURZELN"), "the count is named:\n{gefallen}");
+    }
+
+    /// **A pool routine named twice gets two threads** (fix lane F4, review G06
+    /// F5). One adapter, two `pthread_create` sites, `N_WURZELN 2` -- and a
+    /// driver that starts it once fails the multiset pin, which the set pin
+    /// before this lane let pass.
+    #[test]
+    fn pool_doppelt_zwei_faeden() {
+        let w = Wurzel {
+            c_name: "arbeiter".to_string(),
+            gab_path: "arbeiter".to_string(),
+        };
+        let (_, sperren) = beispiel();
+        let c = erzeuge("pool", &[w.clone(), w.clone()], &sperren, None);
+        assert_eq!(c.matches("static void *faden_arbeiter(void *u)").count(), 1, "one adapter");
+        assert_eq!(c.matches("faden_arbeiter, NULL)").count(), 2, "two thread starts");
+        assert!(c.contains("#define N_WURZELN 2"));
+        assert_eq!(pin_pruefe(&menge(&["arbeiter", "arbeiter"]), &c), Ok(2));
+        let einmal = erzeuge("pool", &[w], &sperren, None);
+        let gefallen = pin_pruefe(&menge(&["arbeiter", "arbeiter"]), &einmal)
+            .expect_err("one thread for two declared starts must fail");
+        assert!(gefallen.contains("arbeiter x2"), "the count is named:\n{gefallen}");
     }
 
     /// **C names are ASCII words.** Anything else never reaches the file --

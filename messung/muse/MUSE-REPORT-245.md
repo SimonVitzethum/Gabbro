@@ -174,3 +174,24 @@ Lean defs/theorems: see §1 (full list in `PoolSym.lean` + 3 defs in
 `requires Held(L)` returning `konto[0]` (a bare read draws H007, correctly —
 first version measured it), `concurrent { arbeiter, arbeiter }`.
 Checker: 0 errors, 1 hint (E248, the callee-contract hint 124 also draws).
+
+## Erratum (fix lane F4, 2026-09-22, after review G06 F3/F6)
+
+This report is an audit record and stays as written above; two statements in it are wrong,
+and the corrections stand here.
+
+- **§1 F3, "N is a runtime choice; the checker admits the shape for any N by the same
+  argument"** -- not so. Assumption (d) `Laufzeit` is the DECLARED start list, and the checker
+  judged exactly the starts the `concurrent` sets name (two for `concurrent { arbeiter,
+  arbeiter }`). Runs at N=4 and N=8 are outside what was checked. `laufzeit/start_pool.c`
+  now says that `POOL_N` must equal the declared occurrence count; the generated driver of
+  `gabbro build` starts one thread per occurrence since fix lane F4 and needs no flag.
+- **§3.3, "`lean_g` refuses multiple starts (LG004), so pool units never enter it"** -- not
+  so when written. `lean_g::check_starts` had no such refusal; measured on 2026-09-22 a
+  guarded pool unit exported with `starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`, and
+  `concurrent { leser, leser }` exported too. Since fix lane F4 the exporter refuses a
+  repeated start by name (`LG001`), so the statement now holds -- by that refusal, not by
+  the one this report named.
+- Also fixed in `start_pool.c` (review G06 F6): a failing `pthread_create` joins the threads
+  already started before `main` returns, and `POOL_PRUEFE` is called with the lock held (the
+  demo's `pruefe` is `requires Held(L)`).

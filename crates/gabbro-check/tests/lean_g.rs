@@ -274,6 +274,21 @@ fn refuses_extern_fn() {
     assert_eq!(w.code, "LG001", "{w}");
 }
 
+/// **LG001 (fix lane F4, review G06 F3): a start declared twice is refused.**
+/// The checker accepts a pool-safe routine named twice (lane 245), but the goal's
+/// `Akzeptiert` demands distinct starts (`einzelnB`), so the export refuses by
+/// name instead of printing a unit no theorem covers. The positive twin: the
+/// same routine named once exports.
+#[test]
+fn refuses_duplicate_start() {
+    let rumpf = "impl fn w() effects { reads T.slots, locks L } costs <= 8 ops { locks L { let x = T.slots[0].v; } }\n";
+    let w = refuse_of(&einheit(&format!("{rumpf}concurrent {{ w, w }};\n")));
+    assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.to_string().contains("more than once"), "{w}");
+    let q = einheit(&format!("{rumpf}concurrent {{ w }};\n"));
+    export("lean_g", &tree(&q)).expect("one start exports");
+}
+
 /// **Lane 250: a `stack`-carrying gate names its `D.klon` pair (LG001), and
 /// a `child` block names its entry function (LG004).** Nothing is mapped --
 /// this tree's `Deklaration` has no `klon` field and the export writes

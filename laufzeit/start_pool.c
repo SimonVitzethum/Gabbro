@@ -30,7 +30,14 @@
  *     `#include` and not a second translation unit: the emitted roots are
  *     `static`).
  *   POOL_FN -- the one routine to run on every thread.
- *   POOL_N -- the thread count (at least 1).
+ *   POOL_N -- the thread count (at least 1). It MUST equal the number of
+ *     times the unit's `concurrent` sets name POOL_FN: assumption (d)
+ *     (`Laufzeit`) is the DECLARED start list, and the checker judged exactly
+ *     that many starts. N is not a runtime choice -- a run with more threads
+ *     than declared is outside what was checked (review G06 F6; the lane-245
+ *     report's "N is a runtime choice" is corrected in its erratum). The
+ *     generated driver of `gabbro build` starts one thread per declared
+ *     occurrence since fix lane F4 and needs no such flag.
  *   POOL_SPERRE -- the unit's lock: provides `POOL_SPERRE_nimm/gib`, the two
  *     symbols the emitter declares per lock. One lock is the shape every
  *     measured pool unit has; a unit with several locks extends the SPERRE
@@ -39,7 +46,10 @@
  *     after the join the driver calls it and expects POOL_ERWARTET. It is
  *     how a unit reports its own result without the driver naming a table:
  *     the value check stays in the program, the thread management here.
- *     Without it the driver only proves the pool ran to completion.
+ *     Without it the driver only proves the pool ran to completion. It is
+ *     called WITH the lock held (fix lane F4): declare it `requires Held(L)`
+ *     and let it take no lock itself -- the hosted lock is a plain mutex, and
+ *     a check function that takes it again would wait for itself.
  *
  * THE PIN. The decisive property is measurable: the driver starts EXACTLY
  * POOL_N threads on the routine the unit's `concurrent` set declares. The
@@ -184,6 +194,13 @@ int main(void)
         rc = pthread_create(&faden[i], NULL, faden_pool, NULL);
         if (rc != 0) {
             fprintf(stderr, "start: thread %d: %d\n", i, rc);
+            /* WHY JOIN HERE (fix lane F4, review G06 F6). Threads 0..i-1 are
+             * already running; returning at once would leave them behind the
+             * exit, and "the join covers exactly the spawned set" would be
+             * false on exactly the path that fails. */
+            for (int j = 0; j < i; j++) {
+                (void)pthread_join(faden[j], NULL);
+            }
             return 2;
         }
     }
@@ -204,7 +221,14 @@ int main(void)
      * that value afterwards on every schedule; a schedule-dependent value
      * belongs in the lock invariant, not in this comparison. */
     {
+        /* WHY UNDER THE LOCK (fix lane F4, review G06 F6). The unit's check
+         * function reads the guarded carrier, and the lane's demo declares it
+         * `requires Held(L)`. After the joins nobody else runs, so there is
+         * no race either way -- but the driver is a caller like any other and
+         * keeps the callee's contract instead of relying on the moment. */
+        SPERRE_NIMM();
         unsigned gesehen = POOL_PRUEFE();
+        SPERRE_GIB();
         printf("pool: %s=%u (want %u)\n", "pruefe", gesehen, (unsigned)POOL_ERWARTET);
         if (gesehen != (unsigned)POOL_ERWARTET) {
             fprintf(stderr, "pool: result %u, want %u\n", gesehen,

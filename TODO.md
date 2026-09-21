@@ -236,7 +236,7 @@ generated driver, lock through the chain). Reviewers from 321.
 | 245 | symmetric pool: lift N304 with soundness + driver + Lean starts multiset | `fusswache2.rs`, `laufzeit/*`, starts-Lean | M–L | N436–440 / 1097–1101 / — |
 | 246 | generated per-unit driver (ROOTS from `concurrent`) + P017 findings | `bau.rs`, new gen module | M | N441–445 / 1102–1106 / — |
 | 247 | ticket lock through the chain (checks, emits, RUNS) | `laufzeit/sperre.gab` only | S | none |
-| 253 | P017 thread-start statement (from 246's findings; hosted form only) — MERGED 2026-09-19 (`8de4fc1a`): parses, roots resolve (`W003`), emitter/exporter refuse by name. **Open (report §5 + review G12):** membership, nullary shape, duplicate roots, effects hull (the call graph has no edge to the roots), costs (`start` costs 1), lock held across `start`, and whether a `concurrent` member named by `start` runs twice (boot + statement) | `parse.rs`, `ast.rs` | M | no new P-codes planned |
+| 253 | P017 thread-start statement (from 246's findings; hosted form only) — MERGED 2026-09-19 (`8de4fc1a`): parses, roots resolve (`W003`), emitter/exporter refuse by name. **Checker rules since fix lane F4 (2026-09-22, review G12 F2/F3):** roots are call-graph edges (`E008`), the statement costs the sum of the roots' costs plus 2 per root, `N458` root shape, `N459` duplicate root, `N460` one owner per thread (a `concurrent` member may not be started by `start`), `N461` no held context at `start`, `N462` started roots pool-safe. **Still open:** lowering (`C001`), export (`LG004`), no model of statement-level starts | `parse.rs`, `ast.rs` | M | no new P-codes planned |
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
@@ -295,12 +295,15 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
 - [ ] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
   one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
   than the lock was**, and it needs its own lane. *Status 2026-09-21: lane 245 admits a
-  pool-safe busy duplicate in the Rust checker; the goal theorem does not cover it, and the
-  generated driver starts it once (`OFFEN.md` O18, §4 below).*
+  pool-safe busy duplicate in the Rust checker; the goal theorem does not cover it
+  (`OFFEN.md` O18, §4 below). Since fix lane F4 (2026-09-22) the generated driver starts one
+  thread per declared occurrence (multiset pin) and the exporter refuses a repeated start
+  (`LG001`) instead of exporting a unit `einzelnB` refuses.*
 - [ ] **No thread start at all** — every shape refused (`P017`, measured 2026-09-15). §0 owns it.
-  *Status 2026-09-21: lane 246's generated driver starts the declared `concurrent` roots (one
-  thread per name); lane 253's `start { … };` parses and is refused at emit (`C001`) and export
-  (`LG004`).*
+  *Status 2026-09-22: lane 246's generated driver starts the declared `concurrent` roots (one
+  thread per occurrence since fix lane F4); lane 253's `start { … };` parses, carries checker
+  rules since fix lane F4 (`N458`–`N462`, call-graph edges, costs), and is refused at emit
+  (`C001`) and export (`LG004`).*
 - [ ] **No early exit from a `traverse`** (`S001`, no label) — "find the first, then continue"
   is unwritable. *Status 2026-09-21: a `leave`/`next` naming an enclosing `retry`/`forever`
   label lowers and is pinned (lane 252, `tests/traverse_exit.rs`); the traverse itself still
@@ -565,8 +568,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   multisets and swap `einzeln` for `EinzelnPool` (a `Spec.lean` diff), or
   gate the exemption until then. No lane is tasked with it (wave B has no
   such row, contrary to what this item said until 2026-09-21). Medium to
-  large, not small: review G06 F1/F4. The generated driver's one-thread
-  pool (O18) belongs to the same item.
+  large, not small: review G06 F1/F4. (The generated driver's one-thread
+  pool was fixed in fix lane F4; the exporter now refuses repeated starts,
+  `LG001`, until this item lands -- fix lane F10.)
 - [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
   full proof: a `costs`-like static budget over call depth with the
   2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays

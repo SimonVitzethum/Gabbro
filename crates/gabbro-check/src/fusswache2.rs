@@ -1028,6 +1028,17 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         &sperrkarte,
         absagen,
     );
+    startfaeden(
+        baum,
+        &g,
+        &u,
+        &pool,
+        &schreibt,
+        &fuss,
+        &schreiber,
+        &sperrkarte,
+        absagen,
+    );
     race(
         baum,
         &starts,
@@ -1446,6 +1457,116 @@ fn race(
     }
 }
 
+
+/// **`N462` -- a started root is a thread for race freedom** (fix lane F4, review G12 F2.3).
+///
+/// A `start { f, g };` root is no `concurrent` member (`N460` refuses the overlap), so the
+/// declared-pair race component (`race`, `N300`/`N301`) never pairs it with anything. It
+/// runs beside the other roots of its statement, beside every declared start (the
+/// starter's siblings), and beside other instances of itself: nothing bounds how often a
+/// `start` runs -- in a loop, in two starters, in a routine that is itself started twice.
+/// It is judged the way `N457` judges a `child` path and `PoolSicher` a twice-started
+/// routine, from the fail-safe side: every table, mutable static, `state` or arena its
+/// reachable call graph writes, allocates in or carries in a footprint (the indirect
+/// candidate pool included) that SOME code writes must be guarded by a lock, atomic or
+/// per-core. The guard exemption reads the guard's EXISTENCE; that each access holds it is
+/// `H007`'s, per function body. One refusal per root occurrence and carrier.
+#[allow(clippy::too_many_arguments)]
+fn startfaeden(
+    baum: &Programm,
+    g: &crate::aufrufgraph::Graph,
+    u: &crate::umgebung::Umgebung,
+    pool: &[String],
+    schreibt: &BTreeMap<String, BTreeSet<String>>,
+    fuss: &BTreeMap<String, BTreeSet<String>>,
+    schreiber: &BTreeSet<String>,
+    sperrkarte: &BTreeMap<String, Sperre>,
+    absagen: &mut Absagen,
+) {
+    let wurzeln = crate::fadenstart::wurzeln(baum);
+    if wurzeln.is_empty() {
+        return;
+    }
+    let atomic = atomics(baum);
+    let core = per_core(baum);
+    let mut welt: BTreeSet<String> = BTreeSet::new();
+    let mut arenen: BTreeSet<String> = BTreeSet::new();
+    let mut belegt: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Tabelle(t) => {
+            welt.insert(t.name.text.clone());
+        }
+        ItemArt::Statisch(s) if s.veraenderlich => {
+            welt.insert(s.name.text.clone());
+        }
+        ItemArt::State(s) => {
+            welt.insert(s.name.text.clone());
+        }
+        ItemArt::Arena(a) => {
+            welt.insert(a.name.text.clone());
+            arenen.insert(a.name.text.clone());
+        }
+        ItemArt::Funktion(f) => {
+            if let Some(w) = &f.effects {
+                let k = crate::umgebung::qualifiziere(modul, &f.name.text);
+                for e in &w.liste {
+                    if let WirkungArt::Belegt(i) = &e.art {
+                        belegt.entry(k.clone()).or_default().insert(i.text.clone());
+                    }
+                }
+            }
+        }
+        _ => {}
+    });
+    let guarded = |c: &str| -> bool { sperrkarte.values().any(|s| s.schutz.contains(c)) };
+    for (modul, pfad, span) in wurzeln {
+        // Unresolvable roots are `W003`'s (nebeneinander.rs).
+        let Some(schluessel) = g.aufloesen(u, &modul, &pfad) else {
+            continue;
+        };
+        let graph = erreichbar(&schluessel, g, pool);
+        let mut beruehrt: BTreeSet<String> = BTreeSet::new();
+        for fname in &graph {
+            if let Some(w) = schreibt.get(fname) {
+                beruehrt.extend(w.iter().cloned());
+            }
+            if let Some(fs) = fuss.get(fname) {
+                beruehrt.extend(fs.iter().filter(|c| welt.contains(*c)).cloned());
+            }
+            if let Some(a) = belegt.get(fname) {
+                beruehrt.extend(a.iter().filter(|c| arenen.contains(*c)).cloned());
+            }
+        }
+        for c in &beruehrt {
+            if guarded(c) || atomic.contains(c) || core.contains(c) {
+                continue;
+            }
+            if !schreiber.contains(c) {
+                continue;
+            }
+            // **The one issuance site of this rule.**
+            melde(
+                "N462",
+                span,
+                format!(
+                    "the started root `{pfad}` touches `{c}` -- a carrier that is written \
+                     and that no lock guards, and a started root runs beside the other \
+                     roots, beside every declared start and beside itself"
+                ),
+                &[
+                    "a started root is its own thread, and no declared pair covers it: \
+                     every carrier it (and every function it calls) touches is guarded \
+                     by a lock (`lock … protects`, taken inside the root), atomic, \
+                     per-core, or written by nobody -- the pool-safe shape of a \
+                     twice-started routine",
+                    "guard the carrier and take the lock inside the root, or make the \
+                     root a `concurrent` member instead of starting it",
+                ],
+                absagen,
+            );
+        }
+    }
+}
 
 /// The outermost `child` regions of a body -- a nested region is part of its outer one.
 fn kindregionen<'a>(b: &'a Block, aus: &mut Vec<&'a Block>) {

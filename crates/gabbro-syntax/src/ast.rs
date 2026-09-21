@@ -2083,13 +2083,15 @@ pub struct ConcurrentDecl {
 
 /// `start { f, g };` -- hosted thread start (lane 253, P017).
 ///
-/// The statement half of the `concurrent` declaration: which declared
-/// roots start here, joined before the starter proceeds. One path at
-/// least, same list rule as the declaration (trailing comma allowed).
-/// Paths only -- never arguments, never a handle.
+/// Which roots start here, joined before the starter proceeds. One path at
+/// least, same list rule as the `concurrent` declaration (trailing comma
+/// allowed). Paths only -- never arguments, never a handle. **One owner per
+/// thread (fix lane F4, `N460`):** a root is NOT a `concurrent` member -- boot
+/// starts those, and a root named by both would run twice.
 #[derive(Debug, Clone)]
 pub struct StartStmt {
-    /// The roots to start, as paths -- members of a `concurrent` set.
+    /// The roots to start, as paths -- nullary `impl fn`s outside every
+    /// `concurrent` set (`N458`, `N460` in `gabbro-check/src/fadenstart.rs`).
     pub roots: Vec<Pfad>,
     pub span: Span,
 }

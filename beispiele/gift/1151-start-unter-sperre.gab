@@ -1,0 +1,25 @@
+-- erwartet: N461
+-- **1151 -- a `start` inside `locks L` (fix lane F4, review G12 F2).**
+--
+-- The starter joins its roots before it proceeds. Here it holds `L` across the join,
+-- and `arbeiterA` takes `L`: the root waits for the starter, the starter waits for
+-- the root -- a deadlock no lock order sees, because the two acquisitions stand in
+-- two threads. `N461` refuses any held context at a `start` (conservatively, not only
+-- a lock some root takes), like `N456` for a `child`.
+
+module gift1151 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+impl fn arbeiterB() effects { writes g, locks L } costs <= 20 ops { locks L { g = 2; } }
+
+impl fn chef() effects { writes g, locks L } costs <= 100 ops {
+    locks L {
+        g = 3;
+        start { arbeiterA };
+    }
+}
+
+}

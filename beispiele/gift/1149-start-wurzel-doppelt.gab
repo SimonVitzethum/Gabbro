@@ -1,0 +1,21 @@
+-- erwartet: N459
+-- **1149 -- one root twice in one `start` (fix lane F4, review G12 F2.3).**
+--
+-- The review's `start { h, h }`: two threads running one routine. The statement has
+-- no pool form -- the symmetric pool is the `concurrent` declaration's
+-- (`PoolSicher`, open item O18) -- so a root named twice falls, even where the
+-- routine would be pool-safe (as `arbeiterA` is: its one write is guarded).
+
+module gift1149 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+impl fn arbeiterB() effects { writes g, locks L } costs <= 20 ops { locks L { g = 2; } }
+
+impl fn chef() effects { writes g, locks L } costs <= 100 ops {
+    start { arbeiterA, arbeiterA };
+}
+
+}

@@ -17,7 +17,7 @@
 //!   predicate the hand `main` asserts -- the shared value itself is
 //!   schedule-dependent, 30 or 70, as lane 202 measured over 200 runs).
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -47,20 +47,21 @@ fn tmp(test: &str) -> PathBuf {
     p
 }
 
-/// The declared roots of one source file, by short C name -- through the
-/// REAL parser, not a text scan: the probe reads declarations, so it reads
-/// what the checker read.
-fn concurrent_kurz(datei: &str, quelle: &str) -> BTreeSet<String> {
+/// The declared roots of one source file, by short C name, COUNTED per
+/// occurrence (fix lane F4: `concurrent { f, f }` is two starts) -- through
+/// the REAL parser, not a text scan: the probe reads declarations, so it
+/// reads what the checker read.
+fn concurrent_kurz(datei: &str, quelle: &str) -> BTreeMap<String, usize> {
     use gabbro_syntax::ast::ItemArt;
     let (baum, _) = gabbro_syntax::lies(datei, quelle);
-    fn sammle(items: &[gabbro_syntax::ast::Item], menge: &mut BTreeSet<String>) {
+    fn sammle(items: &[gabbro_syntax::ast::Item], menge: &mut BTreeMap<String, usize>) {
         for i in items {
             match &i.art {
                 ItemArt::Modul(m) => sammle(&m.items, menge),
                 ItemArt::Concurrent(c) => {
                     for p in &c.koerper {
                         if let Some(letztes) = p.teile.last() {
-                            menge.insert(letztes.text.clone());
+                            *menge.entry(letztes.text.clone()).or_insert(0) += 1;
                         }
                     }
                 }
@@ -68,27 +69,31 @@ fn concurrent_kurz(datei: &str, quelle: &str) -> BTreeSet<String> {
             }
         }
     }
-    let mut menge = BTreeSet::new();
+    let mut menge = BTreeMap::new();
     sammle(&baum.items, &mut menge);
     menge
 }
 
-/// The `pthread_create` root set of a driver C file: every `faden_<root>`
-/// named at a `pthread_create` call site. A plain scanner is enough -- the
-/// generator is the only writer of the generated file, and the hand file
-/// keeps the same one-wrapper-per-root shape so the same probe reads both.
-fn pthread_create_menge(treiber_c: &str) -> BTreeSet<String> {
-    let mut menge = BTreeSet::new();
+/// The `pthread_create` roots of a driver C file, COUNTED: every
+/// `faden_<root>` named at a `pthread_create` call site, once per site. A
+/// plain scanner is enough -- the generator is the only writer of the
+/// generated file, and the hand file keeps the same one-wrapper-per-root
+/// shape so the same probe reads both.
+fn pthread_create_menge(treiber_c: &str) -> BTreeMap<String, usize> {
+    let mut menge = BTreeMap::new();
     let mut rest = treiber_c;
-    while let Some(i) = rest.find("pthread_create") {
-        let nach = &rest[i + "pthread_create".len()..];
-        if let Some(j) = nach.find("faden_") {
-            let name: String = nach[j + "faden_".len()..]
+    // Only CALL SITES count (`pthread_create(` up to its `;`): with counts a
+    // mention in a comment would be a thread start that does not exist.
+    while let Some(i) = rest.find("pthread_create(") {
+        let nach = &rest[i + "pthread_create(".len()..];
+        let aufruf = &nach[..nach.find(';').unwrap_or(nach.len())];
+        if let Some(j) = aufruf.find("faden_") {
+            let name: String = aufruf[j + "faden_".len()..]
                 .chars()
                 .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
                 .collect();
             if !name.is_empty() {
-                menge.insert(name);
+                *menge.entry(name).or_insert(0) += 1;
             }
         }
         rest = nach;
@@ -105,22 +110,25 @@ fn n_wurzeln(treiber_c: &str) -> Option<usize> {
     })
 }
 
-/// The pin lane 202 described: identical sets, and `N_WURZELN` counting
-/// them. The error names both sets -- a stale driver fails LOUDLY.
-fn pin_pruefe(quelle: &BTreeSet<String>, treiber_c: &str) -> Result<usize, String> {
+/// The pin lane 202 described, as a MULTISET since fix lane F4: the same
+/// roots with the same counts, and `N_WURZELN` counting the starts. The
+/// error names both sides -- a stale driver fails LOUDLY.
+fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
     let treiber = pthread_create_menge(treiber_c);
+    let zeige = |m: &BTreeMap<String, usize>| -> String {
+        m.iter().map(|(n, k)| format!("{n} x{k}")).collect::<Vec<_>>().join(", ")
+    };
     if treiber != *quelle {
-        let q: Vec<&str> = quelle.iter().map(|s| s.as_str()).collect();
-        let t: Vec<&str> = treiber.iter().map(|s| s.as_str()).collect();
         return Err(format!(
             "source: [{}], driver: [{}] -- regenerate the driver",
-            q.join(", "),
-            t.join(", ")
+            zeige(quelle),
+            zeige(&treiber)
         ));
     }
+    let gesamt: usize = quelle.values().sum();
     match n_wurzeln(treiber_c) {
-        Some(n) if n == quelle.len() => Ok(n),
-        Some(n) => Err(format!("N_WURZELN is {n} but the set holds {}", quelle.len())),
+        Some(n) if n == gesamt => Ok(n),
+        Some(n) => Err(format!("N_WURZELN is {n} but the sources declare {gesamt}")),
         None => Err("no `#define N_WURZELN <n>` line".to_string()),
     }
 }
@@ -181,9 +189,9 @@ fn pin_haelt_fuer_handtreiber_start_c() {
         .expect("start.c readable");
     let menge = concurrent_kurz("124-two-threads-private.gab", &quelle);
     assert_eq!(
-        menge.iter().collect::<Vec<_>>(),
-        [&"hauptA".to_string(), &"hauptB".to_string()],
-        "the source declares exactly its two roots"
+        menge.iter().map(|(n, k)| (n.as_str(), *k)).collect::<Vec<_>>(),
+        [("hauptA", 1), ("hauptB", 1)],
+        "the source declares exactly its two roots, once each"
     );
     assert_eq!(pin_pruefe(&menge, &treiber), Ok(2), "the hand pin holds");
 }
@@ -256,14 +264,18 @@ fn abgestandener_treiber_faellt_laut() {
     let treiber_c = std::fs::read_to_string(arbeit.join("treiber124-out/treiber124.treiber.c"))
         .expect("the generated driver is on disk");
 
-    let gefallen = pin_pruefe(&BTreeSet::from(["hauptA".to_string()]), &treiber_c)
+    let gefallen = pin_pruefe(&BTreeMap::from([("hauptA".to_string(), 1)]), &treiber_c)
         .expect_err("a dropped root fails");
     assert!(
         gefallen.contains("hauptB") && gefallen.contains("hauptA"),
         "both sets are named:\n{gefallen}"
     );
     let gefallen = pin_pruefe(
-        &BTreeSet::from(["hauptA".to_string(), "hauptB".to_string(), "hauptC".to_string()]),
+        &BTreeMap::from([
+            ("hauptA".to_string(), 1),
+            ("hauptB".to_string(), 1),
+            ("hauptC".to_string(), 1),
+        ]),
         &treiber_c,
     )
     .expect_err("an added root fails");
@@ -355,4 +367,84 @@ fn lauf_124_durch_erzeugten_treiber() {
         behauptung_haelt(stdout.trim()),
         "hand and generated runs behave alike:\n{stdout}"
     );
+}
+
+/// A pool-safe routine declared twice (lane 245): the checker accepts it, and
+/// the build must start it on TWO threads.
+const POOL_EINHEIT: &str = r#"module probe::pool {
+
+type Stand = u32 in 0 .. 100;
+
+table konto count 2 {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn arbeiter()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+concurrent { arbeiter, arbeiter };
+}
+"#;
+
+/// **A pool declared twice runs on two threads** (fix lane F4, review G06 F5).
+///
+/// Until this lane the build merged repeated `concurrent` names into ONE
+/// thread and the set pin passed over it: the runtime ran fewer starts than
+/// the checker judged. The generated driver now carries one adapter and two
+/// `pthread_create` sites, the multiset pin holds at 2, the driver compiles
+/// under `-Werror`, and the run exits 0.
+#[test]
+fn pool_zweimal_deklariert_laeuft_zweifach() {
+    let arbeit = tmp("pool");
+    let gab = arbeit.join("pool.gab");
+    std::fs::write(&gab, POOL_EINHEIT).expect("unit writable");
+    let manifest = arbeit.join("pool.bau");
+    let ausgabe = arbeit.join("pool-out");
+    std::fs::write(
+        &manifest,
+        format!(
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread\n\
+             out {}\n\
+             unit pool object\n\
+             \x20   {}\n",
+            ausgabe.display(),
+            gab.display()
+        ),
+    )
+    .expect("manifest writable");
+    let (aus, fehler, code) = gabbro(&["build", &manifest.to_string_lossy()]);
+    assert_eq!(code, 0, "the pool unit builds:\n{aus}\n{fehler}");
+    let treiber_c =
+        std::fs::read_to_string(ausgabe.join("pool.treiber.c")).expect("driver on disk");
+    let menge = concurrent_kurz("pool.gab", POOL_EINHEIT);
+    assert_eq!(menge.get("arbeiter"), Some(&2), "the source declares two starts");
+    assert_eq!(pin_pruefe(&menge, &treiber_c), Ok(2), "the multiset pin holds");
+    let einmal = BTreeMap::from([("arbeiter".to_string(), 1)]);
+    assert!(
+        pin_pruefe(&einmal, &treiber_c).is_err(),
+        "a one-thread reading of the pool fails the pin"
+    );
+    let (_, code) = cc_und_lauf(&ausgabe.join("pool.treiber.c"), &ausgabe, "pool.c", "lauf-pool");
+    assert_eq!(code, 0, "the pool runs to completion on two threads");
 }

@@ -818,8 +818,8 @@ pool-safe (every carrier it writes is guarded, atomic or per-core), and `N315` r
 | | |
 |---|---|
 | **why it is recorded and not refused** | Simon's threading MUST (`TODO.md` §0); the pool rule reads race-free informally (every written carrier needs its lock, H007), but that is an argument, not a theorem. O17 is the per-core half of the same gap |
-| **known side effects** | the generated driver (`bau.rs` `treiberregel`, lane 246) de-duplicates `concurrent` names, so an accepted pool starts ONE thread (review G06 F5); `lean_g.rs` `check_starts` has no refusal for a repeated start, so a pool unit may export and then meet `einzelnB = false` in Lean (G06 F3, not measured) |
-| **what would close it** | the `einzeln` → `EinzelnPool` swap in `Akzeptiert` with `RennfreiBis`, `KeinWarteZyklus` and the invariant legs proved over start multisets and a `Spec.lean` diff for (d), reviewed as such; or gating `pool_sicher` in the checker until then |
+| **known side effects** | **fixed in fix lane F4 (2026-09-22):** the generated driver (`bau.rs` `treiberregel`, lane 246) de-duplicated `concurrent` names, so an accepted pool started ONE thread (review G06 F5) -- it now starts one thread per occurrence and the pin compares multisets (`tests/treiber.rs` `pool_zweimal_deklariert_laeuft_zweifach`: built, compiled, run on two threads); `lean_g.rs` `check_starts` had no refusal for a repeated start, and a pool unit DID export (measured: `starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`, G06 F3) -- it now refuses by name (`LG001`), so no pool unit is exported as if the goal covered it. The Rust acceptance itself is unchanged (not gated): that is this item |
+| **what would close it** | the `einzeln` → `EinzelnPool` swap in `Akzeptiert` with `RennfreiBis`, `KeinWarteZyklus` and the invariant legs proved over start multisets and a `Spec.lean` diff for (d), reviewed as such (Simon, 2026-09-21: this route; fix lane F10). The exporter's `LG001` for repeated starts goes with it |
 
 ## O19 — Same-core interrupt preemption is outside `Ziel`, and `Spec.lean` does not name it (recorded 2026-09-21, reviews G02/G12/G13)
 
@@ -864,3 +864,21 @@ call per region, and an exhaustive spill read set. What stays open:
 | **the jump assumption** | the checker judges the REGION only; the statements between the gate call and the region are checked as parent code. Sound only if the lowering enters the child by jump at the region. Written into PLAN-SYSCALL, the `klon.uebergabe` sentence and `C185`'s message, pinned by `tests/klon_faden.rs`; lane 258 must keep it or re-check the gap |
 | **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
 | **what would close it** | a child population in machine G with a spawn rule (review G11 F1), the race component quantifying over it, and the stub correspondence lemma for the jump lowering |
+
+## O22 — The hosted `start { … };` is checked, not modelled and not lowered (recorded 2026-09-22, review G12, fix lane F4)
+
+Fix lane F4 gave the statement checker rules: the roots are call-graph edges (their effects
+meet the starter's, `E008`), the statement costs the sum of the roots' declared costs plus two
+per root, and `N458` (root shape), `N459` (duplicate root), `N460` (one owner per thread: no
+`concurrent` member, `entry` root or `boot` dispatch is started by the statement), `N461` (no
+`start` under `locks`/`observes`/`breaking`/`requires Held`) and `N462` (a started root is
+pool-safe) refuse. What stays open:
+
+| | |
+|---|---|
+| **no model** | `Akzeptiert`/`Ziel` know only `E.starts` from the declaration. A started root is in no declared pair; `N462` is the fail-safe substitute (the pool-safe shape `N457` gives a child), a checker rule with no Lean counterpart |
+| **no lowering, no export** | the emitter refuses the statement (`C001`), the exporter too (`LG004`); no `start` program reaches C or Lean |
+| **strictness** | `N461` refuses any held context (not only a lock some root takes); `N462` refuses a root that is the only writer of an unguarded carrier; the cost bill is the sum (sound on one core), not the maximum |
+| **liveness** | a root that never returns keeps its starter waiting forever; progress over statement-level starts is not decided |
+| **what would close it** | a statement-level spawn/join rule in machine G with the race component quantifying over started roots, then the driver-side lowering (one create per root, join before the next statement) |
+

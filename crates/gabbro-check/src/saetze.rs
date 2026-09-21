@@ -4200,6 +4200,51 @@ pub const PHASEN: &[Satz] = &[
                      `rcu_schutz`, `fenster_sammeln`)",
     },
     Satz {
+        name: "faden.start",
+        kennungen: &["N458", "N459", "N460", "N461", "N462"],
+        aussage: "A hosted thread start `start { f, g };` that passed names roots that \
+                  are threads and nothing else: each is an `impl fn` with a body, no \
+                  parameters, no result and no signature-held lock (`N458`), named once \
+                  per statement (`N459`), and started by the statement ALONE -- no root \
+                  is a `concurrent` member, an `entry` root or a `boot` dispatch, which \
+                  the runtime starts already (`N460`: one owner per thread, so no root \
+                  runs twice). The starter holds nothing across the join: no `start` \
+                  stands inside `locks`, `observes` or `breaking` or in a function with \
+                  `requires Held` (`N461`), so no root waits for a lock its starter \
+                  holds. Every started root is pool-safe: each table, mutable static, \
+                  `state` or arena its reachable call graph touches that some code \
+                  writes is guarded by a lock, atomic or per-core (`N462`), because a \
+                  started root runs beside the other roots, beside every declared start \
+                  and beside other instances of itself. Beside these codes the roots are \
+                  call-graph edges of the starter (their effects meet the starter's \
+                  `effects`, `E008`/`E009`), and the statement costs the sum of the \
+                  roots' declared costs plus two primitives per root (`K001`/`K003`).",
+        vorbehalt: "Checker rules with no model and no lowering: `Akzeptiert`/`Ziel` \
+                    know no statement-level start, the emitter refuses the statement \
+                    (`C001`) and the exporter too (`LG004`). `N462` is fail-safe, not \
+                    precise -- it reads the guard's existence (holding it is `H007`'s), \
+                    and a root that is the only writer of a carrier still falls. `N461` \
+                    refuses any held context, not only a lock some root takes. The cost \
+                    bill is the sum, not the maximum: nothing promises each root a core. \
+                    A root that never returns keeps its starter waiting; that is a \
+                    progress question the rules do not decide.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1148` (`N458`: a root with a parameter), `1149` \
+                      (`N459`: `start { h, h }`), `1150` (`N460`: a root that is also a \
+                      `concurrent` member), `1151` (`N461`: `start` inside `locks L` \
+                      with a root taking `L`), `1152` (`N462`: two roots writing one \
+                      unguarded static), `1153` (`E008`: a `pure` starter), `1154` \
+                      (`K001`: the roots' costs). The clean side: \
+                      `tests/fadenstart.rs` -- guarded roots, a reading root, the cost \
+                      bill at its exact sum, a root outside the declaration beside a \
+                      member, a `start` after a `locks` block.",
+        fundstelle: "crates/gabbro-check/src/fadenstart.rs (`N458`-`N461`); \
+                     crates/gabbro-check/src/fusswache2.rs (`startfaeden`, `N462`); \
+                     crates/gabbro-check/src/aufrufgraph.rs (the `Start` arms of \
+                     `sammle_rufe`, `sammle_kanten`); crates/gabbro-check/src/kosten.rs \
+                     (the `Start` arm); dokumente/SYNTAX.md",
+    },
+    Satz {
         name: "parser.bibliothek-nutzlast",
         kennungen: &["P043"],
         aussage: "A `library fn` carries its `payload <table>` clause: the grammar \

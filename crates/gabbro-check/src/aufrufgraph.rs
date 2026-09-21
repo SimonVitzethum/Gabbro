@@ -1032,6 +1032,14 @@ fn sammle_kanten(
                     nimm_ruf(r, aus, indirect, vertrag, u, modul);
                 }
             }
+            // **Fix lane F4: the `start` edge, beside the name in `sammle_rufe`.**
+            // A root takes no arguments (`N458`), so the edge carries no
+            // argument places and no parameter substitution happens across it.
+            StmtArt::Start(st) => {
+                for w in &st.roots {
+                    aus.push((w.text(), Vec::new()));
+                }
+            }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
@@ -1172,6 +1180,18 @@ fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>, u: &crate::umgebung::Umgeb
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
                     nimm(r, aus, u, modul);
+                }
+            }
+            // **Fix lane F4 (review G12 F2.1): a `start` is an edge onto every
+            // root it names.** The starter waits for the roots (join), so what
+            // they do is done on the starter's behalf: their effects belong in
+            // its hull (`E008` -- a `pure` starter may not start a root that
+            // writes), their locks in its lock set, their incompleteness in its
+            // `E009`. Until this arm the statement fell into `_ => {}` below and
+            // the roots vanished from the graph without a word.
+            StmtArt::Start(st) => {
+                for w in &st.roots {
+                    aus.insert(w.text());
                 }
             }
             _ => {}

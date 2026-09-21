@@ -101,6 +101,8 @@ pub mod konstanten;
 /// **Lane C -- declared concurrency (`concurrent { f, g };`).** Pairwise
 /// non-interference from transitive hulls, closed world over context roots.
 pub mod nebeneinander;
+/// **Fix lane F4: the hosted thread start `start { f, g };` as checker rules** (`N458`-`N461`).
+pub mod fadenstart;
 /// **Lane 137 -- start exclusivity (`StartExklusiv` as a checker rule).**
 /// The start functions of distinct thread starts (`concurrent` members,
 /// `entry`/`boot` dispatch roots) hold no signature lock in common.
@@ -509,6 +511,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("fusswache2", fusswache2::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
+        z!("fadenstart", fadenstart::pass(baum, absagen));
         z!("startexklusiv", startexklusiv::pass(baum, absagen));
         // H021 + H022, same wiring as below (timed variant).
         z!("ableitung", ableitung::pass(baum, absagen));
@@ -571,6 +574,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // und dies ist eine Regel derselben Spalte, keine neue.*
     kontexte::pass(baum, absagen);
     nebeneinander::pass(baum, absagen);
+    // **Fix lane F4, beside the pass that resolves the `start` roots (`W003`).** The
+    // statement's shape (`N458`-`N461`); its race half (`N462`) is `fusswache2`'s. No
+    // pass number of its own: a rule of the thread-start column, like the two around it.
+    fadenstart::pass(baum, absagen);
     // **Lane 137, beside the concurrency pass whose start pool it reads.**
     // No pass number of its own: like `kontexte::pass` above it is a rule of
     // the same column (thread starts), not a new one.

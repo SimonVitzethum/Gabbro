@@ -923,6 +923,32 @@ childstmt  = "child" block ;                                    (* lane O-1, §1
    `tree` word (§9, `kante`). *)
 ```
 
+**`start { f, g };` — the hosted thread start** (lane 253; checker rules since fix lane
+F4). Not in the EBNF above, deliberately: `start` is no word of the table in §1 (lane 253
+spent no keyword), and the reader decides by the head alone -- only `start` followed by `{`
+is the statement, `start = 1;` stays an assignment. The shape is the `concurrent` list
+(`"start" "{" path { "," path } [ "," ] "}" ";"`). The named roots run as threads of their
+own and are JOINED before the starter proceeds; no detached form exists. The rules:
+
+* **One owner per thread.** Boot starts every `concurrent` member, `entry` root and `boot`
+  dispatch; the statement starts its own roots; a root may not be both (`N460`). So no root
+  runs twice, and `concurrent { A, B };` beside `start { A, B };` falls.
+* **A root is a thread root:** an `impl fn` with a body, no parameters, no result, no
+  signature-held lock (`N458`), named once per statement (`N459` -- the statement has no
+  pool form; the symmetric pool is the declaration's, O18).
+* **The starter holds nothing across the join:** no `start` inside `locks`/`observes`/
+  `breaking` or under `requires Held` (`N461`). A root taking a lock its starter holds would
+  wait for the starter, which waits for the root.
+* **A started root is pool-safe:** it stands in no declared pair, so every carrier it (or
+  anything it calls) touches that anyone writes is guarded, atomic or per-core (`N462`).
+* **The roots are the starter's calls:** call-graph edges, so their effects meet the
+  starter's `effects` (`E008`), and the statement costs the sum of the roots' declared
+  costs plus two per root (create and join) -- the sum, since nothing promises each root
+  a core.
+
+The emitter refuses the statement (`C001`) and the exporter too (`LG004`): these are
+checker rules, with no model and no lowering yet.
+
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
 compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
 `else` branch is an `endblock` — it cannot fall off, so the binding after it always has a value.

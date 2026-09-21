@@ -3230,6 +3230,32 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
         let quelle = format!("dispatch `{}`", pfad.text());
         nimm(model, &last.text, &quelle, &mut aus)?;
     }
+    // **Fix lane F4 (review G06 F3): a start named twice has no G form here.**
+    //
+    // Since lane 245 the checker accepts a busy pool-safe routine named twice
+    // (`concurrent { f, f }`), and until this refusal the exporter pushed both
+    // occurrences into `starts` and printed the unit -- measured 2026-09-22 on a
+    // guarded pool (`starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`) and on
+    // `concurrent { leser, leser }`. But `Akzeptiert` demands `einzelnB`
+    // (`ws.Nodup`, `AkzeptiertSpec.einzeln`), so the exported unit stood under a
+    // goal theorem whose checker Bool refuses it: no theorem covers the pool
+    // (`RennfreiBis` over multiset starts is not proved, open item O18). The
+    // export refuses by name instead of printing a unit the reader could take
+    // for a covered one. The day the Spec swaps `einzeln` for `EinzelnPool`
+    // with the legs proved (fix lane F10), this refusal goes with it.
+    for (k, i) in aus.iter().enumerate() {
+        if aus[..k].contains(i) {
+            return Err(refuse(
+                "LG001",
+                format!(
+                    "start `{}` is declared more than once -- the goal's checker Bool \
+                     demands distinct starts (`einzelnB`: `ws.Nodup`), and the symmetric \
+                     pool has no proved G form yet (O18)",
+                    model.fns[*i].name
+                ),
+            ));
+        }
+    }
     Ok(aus)
 }
 

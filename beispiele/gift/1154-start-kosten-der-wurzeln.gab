@@ -1,0 +1,21 @@
+-- erwartet: K001
+-- **1154 -- the starter's `costs` must pay for its roots (fix lane F4, review G12 F2.2).**
+--
+-- Lane 253 billed `start` as ONE primitive although the starter waits for every root.
+-- The bill is the sum of the roots' declared costs plus two primitives per root (create
+-- and join): here 2 x (20 + 2) = 44, which the promised 30 does not cover. Under the
+-- old bill (1 op) this program passed.
+
+module gift1154 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+impl fn arbeiterB() effects { writes g, locks L } costs <= 20 ops { locks L { g = 2; } }
+
+impl fn chef() effects { writes g, locks L } costs <= 30 ops {
+    start { arbeiterA, arbeiterB };
+}
+
+}

@@ -23,6 +23,9 @@
 //! whose hull is incomplete, or that resolves to nothing, refuses (`W003`).
 //! A `start { f, g };` root that resolves to nothing refuses the same way
 //! (`W003`, lane 253) -- the statement names declared roots, never fresh paths.
+//! Everything else about the statement is `fadenstart.rs`'s (fix lane F4): a
+//! started root is no `concurrent` member (`N460`), so no pair of this pass
+//! names it, and its race freedom is `N462` (`fusswache2.rs`).
 //!
 //! ## What this pass does NOT do
 //!
@@ -239,9 +242,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     //
     // A `start { f, g };` names already-declared roots and never a fresh
     // path -- like the `concurrent` members above, an unresolvable root
-    // refuses instead of passing silently. What this walk does NOT owe
-    // yet: membership in a `concurrent` set, the nullary shape, and the
-    // join/effects accounting -- handoff to the next lane, not built here.
+    // refuses instead of passing silently. The shape, ownership, holding
+    // context and race rules are `fadenstart.rs`/`fusswache2.rs`'s since
+    // fix lane F4 (`N458`-`N462`); the effects and costs travel through the
+    // call graph and `kosten.rs`.
     {
         fn collect_starts<'a>(b: &'a Block, aus: &mut Vec<&'a StartStmt>) {
             for s in &b.anweisungen {
