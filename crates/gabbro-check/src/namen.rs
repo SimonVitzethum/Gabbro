@@ -6017,11 +6017,13 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
         // construction, so the declaration carries everything, and the
         // divergence evidence is the `-> never` itself -- callers read all
         // three spellings (`-> never`, `divergent`, `diverges`), so no extra
-        // word is demanded. The emitter is one lane behind: it still refuses
-        // this accepted shape at the older `hat_ergebnis` arm (`C001`,
-        // `beispiele/gift/1066` pins the handoff for lane 235), while the
-        // `N321` shape above ends at the `C001` arm beside it (`gift/985`) and
-        // stays refused on both channels.
+        // word is demanded. The divergence is TRUSTED like any foreign body's
+        // `effects` (`hlt` resumes after an interrupt); the emitter lowers the
+        // body under `_Noreturn` and follows it with `for (;;) { }`, so a
+        // returning text never falls off the function (lane 235, review G04).
+        // Any other `out` on such a body is refused by the emitter (`C001`,
+        // `beispiele/gift/1066`), and the `N321` shape above ends at the
+        // `C001` arm beside it (`gift/985`) and stays refused on both channels.
         if matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
             if let Some((n, _)) = a.aus.iter().find(|(n, _)| n.text == "result") {
                 absagen.schiebe(
