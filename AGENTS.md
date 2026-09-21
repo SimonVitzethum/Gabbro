@@ -299,8 +299,10 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | 249 | **not reserved** (TODO row says "—") | N451, N452, gifts 1113–1117 |
 | 256 | **not reserved** | N453–N455 (the spare of the block N451–455 that lane 249 chose itself), gifts 1118–1127 |
 
-- Unused parts of a reserved block are **not** handed out again. Next free is always above
-  the highest number in use, so a stale reservation can never collide with a new one.
+- Unused parts of a reserved block stay with the follow-up work of the same wall (for example
+  N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
+  they are never handed to another topic. Next free is always above the highest number in use,
+  so a stale reservation can never collide with a new one.
 - A lane that takes numbers without a reservation (O-1, 249, 256 above) is booked here by the
   merger in the same merge.
 - The test `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions between lanes.
