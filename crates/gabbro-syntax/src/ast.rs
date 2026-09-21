@@ -1463,16 +1463,16 @@ pub struct MatchZweig {
     /// While `Some`, `variante` is a placeholder carrying the printed
     /// pattern (never a declared case name: it holds digits or range
     /// punctuation, and a case name is an identifier) and `binder` is
-    /// always `None` (an integer arm binds nothing). Every pass that
-    /// reads `variante`/`binder` fires only on a `tagged`, `option` or
-    /// `reason` scrutinee (D005, M123, the three emitter lowerings and
-    /// both Lean printers), so on an integer scrutinee the placeholder
-    /// is never read; the emitter refuses the whole match by name
-    /// (C001 "`match` over something other than an `option index into
-    /// T`") until lane 228 lowers it, and on a `tagged`/`option`/
-    /// `reason` scrutinee the same exactness rules refuse the mixed
-    /// arm (C001 exactness, M123 invented-name). Bodies of integer arms
-    /// are checked like any other arm body through `rumpf`.
+    /// always `None` (an integer arm binds nothing). A pass that reads
+    /// `variante` must first ask `intpat` (review G07, 2026-09-21: the
+    /// original claim here -- "both Lean printers" never read the
+    /// placeholder -- was wrong; `lean.rs` took an all-integer match
+    /// for an `.onReason` and now refuses it by name). The emitter
+    /// lowers an all-integer match to a `switch` WITHOUT `default`
+    /// (lane 227), and NO checker pass decides that the arms cover the
+    /// scrutinee, so every flow pass counts the path past all arms
+    /// (`gabbro_check::int_match_may_miss`). Bodies of integer arms are
+    /// checked like any other arm body through `rumpf`.
     pub intpat: Option<IntPat>,
 }
 

@@ -2367,6 +2367,13 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
             ))
         }
         StmtArt::Match(m) => {
+            // **An integer `match` has no program-logic form (review G07).** Its arms carry
+            // the printed pattern in `variante` (`"0"`, `"2 .. 4"`), so the reason row below
+            // would take it for an `.onReason` over case names that do not exist, and the
+            // model would be stuck on every run. Refused by name instead.
+            if crate::int_match_may_miss(m) {
+                return Err(LeanReason::MatchNotOption);
+            }
             // **`match f(a) { … }` is a CALL followed by a `match`** -- the result goes into
             // a local of its own (`#m1`), and the arms read that local. A call is a
             // statement in the model, never an expression; the hoist is what a person
