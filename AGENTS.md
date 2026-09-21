@@ -77,9 +77,12 @@ README §6 says exactly this; keep it that way.
   | 5 | G1: einpassen did not decode sums, floats and fn pointers |
   | 6 | W1: answers at empty types, closed by component 9 `antwortenB` and Rust `N310`–`N314` |
 - **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list:
-  termination, starvation freedom, weak memory beyond DRF-SC, linking of separately compiled
-  units, probabilistic statements, and dynamic unbounded structures. Every extension of the goal
-  is reviewed as a diff of `Spec.lean`.
+  termination and waiting bounds, stack depth, the C and the hardware, weak memory beyond
+  DRF-SC, unguarded publish/await payloads, floats beyond the kernel IEEE model, starvation
+  freedom, invariants at entry, one start on several threads, and linking of separately compiled
+  units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
+  `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
+  `Spec.lean`.
 
 ## 3. Simon's standing instructions
 
@@ -107,7 +110,7 @@ README §6 says exactly this; keep it that way.
 - **Safety is never traded for features** (Simon, 2026-09-17). No lane weakens a guarantee —
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
-  proved blockage). Reviewers reject bypasses, no matter how green the build.
+  recorded blockage of 07 and 125). Reviewers reject bypasses, no matter how green the build.
 - **Floats are in scope** (IEEE model done). Probabilistic statements and dynamic unbounded data
   structures are OUT of scope for now.
 - **Tag milestones** at the push that reaches them.
