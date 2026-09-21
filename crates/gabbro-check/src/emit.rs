@@ -7662,6 +7662,23 @@ fn funktion(
         if hat_ergebnis {
             a2.push_str("    return result;\n");
         }
+        // **A `-> never` `asm` body must not fall off the end of its `_Noreturn` function**
+        // (review G04, 2026-09-21).
+        //
+        // The instruction text is unchecked, and the flagship shape `hlt` DOES return: the
+        // CPU resumes after the next interrupt. Falling off a `_Noreturn` function is
+        // undefined behaviour (C11 6.7.4p8), and `cc -Werror` says so at `-O0` (gcc:
+        // "'noreturn' function does return") and clang even at `-fsyntax-only`
+        // (`-Winvalid-noreturn`) -- measured 2026-09-21 on the lowering without this loop.
+        // The model reads a returning `never` axiom as a stop that never continues
+        // (`execBlock_bindAxiom_never`, NeverAsm.lean); the loop below is exactly that in
+        // C, well-defined, with no decision handed to the compiler.
+        if ist_nie {
+            a2.push_str(
+                "    /* `-> never`: the assembler text is unchecked; if it returns, the\n     \
+                 * call still never continues. */\n    for (;;) {\n    }\n",
+            );
+        }
         a2.push_str("}\n");
         return;
     }
