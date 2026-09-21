@@ -33,6 +33,19 @@ def erwartetHA : List Nat := [0, 0, 0, 1, 1, 0, 0]
 def erwartetGB : List Nat := [0, 0, 1, 1, 2, 2, 3, 3, 4]
 def erwartetHB : List Nat := [0, 0, 1, 1, 0]
 
+/-- **The expected tables ARE the relation tables of `R124`** (review
+    2026-09-21, G01): without this link `pruefeSim` compares the printed
+    certificate with four literals that nothing ties to `gOfA`/`heldGA`/
+    `gOfB`/`heldGB`, and a typo in both the Rust and the Lean literal would
+    pass. Positions `0..12` (A) and `0..8` (B), residues `0..6` and `0..4`;
+    a held-lock flag is the number of locks the residue holds. -/
+theorem erwartet_ist_r124 :
+    erwartetGA = (List.range 13).map gOfA ∧
+    erwartetHA = (List.range 7).map (fun r => (heldGA r).length) ∧
+    erwartetGB = (List.range 9).map gOfB ∧
+    erwartetHB = (List.range 5).map (fun r => (heldGB r).length) := by
+  decide
+
 /-- **The checker**: the printed tables equal the expected ones. -/
 def pruefeSim (c : SimCert) : Bool :=
   decide (c.gA = erwartetGA ∧ c.hA = erwartetHA ∧ c.gB = erwartetGB ∧ c.hB = erwartetHB)
@@ -100,4 +113,5 @@ CUTS: what this file does not do, by name.
 end Gabbro.Grammatik
 
 #print axioms Gabbro.Grammatik.simpruef_tab
+#print axioms Gabbro.Grammatik.erwartet_ist_r124
 #print axioms Gabbro.Grammatik.simpruef_124_zeuge
