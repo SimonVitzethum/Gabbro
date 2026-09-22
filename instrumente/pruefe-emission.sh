@@ -3118,11 +3118,15 @@ fi
 # **116 -> 117 on 2026-09-16 (merge review of the lock-striping lane).** One example came with
 # it (`146-sperrstreifen`), and the lane measured the delta, named it and left the counter alone
 # -- the second lane in a row to do that correctly. Re-measured here on the merged tree.
-MARKE_EMIT=125
+MARKE_EMIT=126
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
 # **123 -> 125 on 2026-09-18 (merge of lane 242).** Two emitting demos (153 arena grows, 154 arena full); measured, good-case FUND, counter left alone by the lane.
+# **125 -> 126 on 2026-09-23 (fix lane F10, pool Spec).** One emitting demo came with it
+# (`157-worker-pool`, the lock-guarded pool that Rust and the Lean Bool both accept). F10 left
+# the counter alone and its report claimed ALL PASS; fix lane F11 measured stage 9 red and named
+# the cause. Re-measured here by the merger: 126 files under `beispiele/` emit.
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
