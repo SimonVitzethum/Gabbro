@@ -3846,6 +3846,31 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 > message, pinned by `tests/klon_faden.rs`). All of it is a Rust rule with no Lean
 > counterpart: the model still has no child thread (F1 above).
 
+> **Fix lane F9 (2026-09-22, review G11 F1): the Lean half is in, as a model of its own.**
+> `CloneHandoff.lean` is on the branch (imported by `Grammatik.lean`, 282 jobs), with §1-§3
+> (`CloneAbi`, decider, witnesses) as in `2244babf`. The O-1 Spec diff of `cde18e25`
+> (`Deklaration.klon`, `Laufzeit.klon`, premise `CloneAssume`) was **NOT taken**: (d2) was
+> vacuous, and a decorative premise is worse than none. `GabbroZiel` and `gabbro_ziel` are
+> unchanged (axioms the standard three); `Spec.lean` gains one NOT CLAIMED line (a thread
+> spawned at run time). Instead the child is a THREAD:
+>
+> | name | statement |
+> |---|---|
+> | `KlonMaschine`, `KlonSchritt`, `KlonErreichbar`, `KlonStart` | a G state plus the live threads; a live thread takes a machine-G step, or a live parent spawns a dormant slot (any time: over-approximates "right after the gate call") |
+> | `klonErreichbar_G` | every clone run is a machine-G run from the start with the children placed at their entries |
+> | `klon_schlafend_unberuehrt`, `klon_lebt_bleibt` | a dormant slot is exactly its start state; liveness only grows |
+> | `klon_kind_haelt_nichts`, `klon_frei_nur_lebende` | model side of `N456`: a child entry with no signature lock holds nothing up to its spawn (whatever the parent holds) and never blocks `RufFreiG` |
+> | `ChildNoReturn`, `CloneHandoff`, `cloneHandoff_schlafend` | the handoff over threads that really start at a child entry (not vacuous any more) |
+> | `klon_ziel` | every leg of `Ziel` on every clone run, when the unit listing the child entry as a declared START is accepted and meets (b)-(d) -- the model side of `N457` ("judged like a pool routine") as a stated correspondence, not a proof that N457 implies Lean acceptance |
+> | `k124_kind`, `k124_spawn`, `k124_klon_ziel`, `k124_klon_ziel_spawn` | witness: `beispiele/124`, `hauptB` dormant on thread 1 and spawned by `hauptA`, every premise group discharged |
+> | `kw_lauf`, `kw_nicht_degeneriert`, `kw_handoff` | witness run on `gP`: the parent calls while the child sleeps, spawns it, the child unfolds, branches and WRITES (slot 0: 0 -> 2, the event in the child's trace, the parent's trace empty) |
+>
+> **Not covered** (the file's CUTS, OFFEN O21): the child's arguments and entry world at the
+> spawn (fixed at the start), repeated spawns of one gate, the handed stack (G is
+> address-free), `ChildNoReturn` on every run (a recursive entry), and a child inside
+> `GabbroZiel` itself. The paragraphs **THE MODEL** and **THE SPEC DIFF** below describe the
+> O-1 branch, not the tree.
+
 *Opus lane O-1 (K-1). Rust: `crates/gabbro-syntax` (`SyscallDecl.stapel`,
 `StmtArt::Child`), `crates/gabbro-check/src/clone.rs` (new, `N446`-`N450`),
 `emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,

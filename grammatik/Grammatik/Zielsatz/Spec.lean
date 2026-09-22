@@ -379,7 +379,11 @@
   locks are held (claimed at returns only); one thread per busy start (SMP-symmetric code
   running one start on several cores is outside (d)); linking of separately compiled units
   (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
-  supplies is not in `D.Fn`). Declared `costs` are not in
+  supplies is not in `D.Fn`); a thread SPAWNED at run time (the `child` region of a stack
+  gate, lane O-1): the thread population is fixed at the start by (d), and a spawned child
+  reaches `Ziel` only through `klon_ziel` (CloneHandoff.lean, outside this statement), i.e.
+  when the unit lists the child entry as a declared start and is accepted -- the exporter
+  refuses `child` (`LG004`) and the emitter `C185`, OFFEN O21. Declared `costs` are not in
   `Deklaration`: `zeit` is the syntax-computed bound. The `.gab` -> `Einheit` step is the
   exporter's (lean_g.rs). Since lane 198 it fills `starts`, `sp0`, `S` and the source
   `requires` of the unit `gE` for the fragment it exports (pinned by the test

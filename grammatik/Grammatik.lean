@@ -265,6 +265,7 @@ import Grammatik.Nichtinterferenz.Korpus
 import Grammatik.Nichtinterferenz.ZeugeMehrfaden
 import Grammatik.CNebenlaeufig
 import Grammatik.Korpus124
+import Grammatik.CloneHandoff
 import Grammatik.Schlusssatz124
 import Grammatik.CTicket
 import Grammatik.Schlusssatz124Ticket

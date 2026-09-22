@@ -322,7 +322,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N452`, `N456`/`N457`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the gates with the child entries in `D.klon` (`CloneHandoff.lean` -- on branch `opus/clone-handoff` only, NOT on master; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N452`, `N456`/`N457`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -918,8 +918,8 @@ childstmt  = "child" block ;                                    (* lane O-1, §1
    its path touches that anyone writes is guarded, atomic or per-core (`N457`).
    `child = 1;` stays an assignment, like at
    `reset` above. The emitter refuses the block by name (`C185`) until the inline
-   trap lands; the model side (`CloneHandoff.lean`) is on branch `opus/clone-handoff`,
-   not on master. No new word: `child` is the
+   trap lands; the model side (`CloneHandoff.lean`, fix lane F9) models the child as a
+   spawned thread, standalone beside the goal theorem (SATZKARTE §39). No new word: `child` is the
    `tree` word (§9, `kante`). *)
 ```
 

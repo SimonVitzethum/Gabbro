@@ -100,8 +100,9 @@ additions to `Deklaration`:
   address space under the caller; they are out of scope for this construct and stay foreign
   bodies until a separate design exists. **2026-09-18 (lane O-1, K-1): the thread-creation
   half of that exclusion is now a checked shape** -- `syscall … stack r` plus `child { … }`
-  (`N446`-`N452`, emitter `C185`; the model `CloneHandoff.lean` and the premises (d)/(d2)
-  of the goal are on branch `opus/clone-handoff` only -- NOT on master, see SATZKARTE §39;
+  (`N446`-`N452`, `N456`/`N457`, emitter `C185`; the model `CloneHandoff.lean` -- since fix
+  lane F9 the child as a spawned thread, standalone, NOT a premise of the goal; the O-1
+  premises (d)/(d2) were not taken because (d2) was vacuous -- see SATZKARTE §39;
   report `messung/muse/OPUS-BERICHT-CLONE.md`). The syscall to the OS stays user-made
   (numbers, registers, error maps never enter `crates/` or `grammatik/`); what is still
   missing is the lowering (inline trap, child entered by jump) and the stub correspondence
