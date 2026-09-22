@@ -516,7 +516,7 @@ struct TreiberPlan {
 /// | case | who refused it BEFORE this rule |
 /// |---|---|
 /// | a member naming no body | **`W003`**, by name, in Gabbro (fail-closed) |
-/// | the same body twice (`concurrent { f, f }`) | **`N304`**/**`N315`**, by name, in Gabbro -- *but since lane 245 NOT for a busy pool-safe routine: that one gets one thread per occurrence (fix lane F4), see below* |
+/// | the same body twice (`concurrent { f, f }`) | **`N304`**, by name, in Gabbro, when the routine is not pool-safe -- *a pool-safe routine (lane 245; idle ones too since fix lane F10 retired `N315`) is admitted and gets one thread per occurrence (fix lane F4), see below* |
 /// | a member taking parameters | **nobody** -- the emitted root takes them and the driver passes none |
 /// | two bodies sharing one C name | **nobody at the build** -- the checker sees modules, C sees one namespace |
 ///
@@ -551,7 +551,7 @@ fn treiberregel(
         // **One thread per OCCURRENCE, not per name** (fix lane F4, review G06
         // F5). A body named twice -- in one block (`concurrent { f, f }`) or
         // across two (`{a, b}` and `{a, c}`) -- is two declared starts: the
-        // checker counts it so (`fusswache2::startet`, `N304`/`N315`), the
+        // checker counts it so (`fusswache2::startet`, `N304`), the
         // exporter pushes every occurrence (`lean_g::check_starts`), and since
         // lane 245 a busy pool-safe routine named twice is ACCEPTED. Until this
         // lane the union here gave it ONE thread: the runtime ran fewer starts

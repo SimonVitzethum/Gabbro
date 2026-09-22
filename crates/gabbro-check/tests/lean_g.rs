@@ -274,19 +274,23 @@ fn refuses_extern_fn() {
     assert_eq!(w.code, "LG001", "{w}");
 }
 
-/// **LG001 (fix lane F4, review G06 F3): a start declared twice is refused.**
-/// The checker accepts a pool-safe routine named twice (lane 245), but the goal's
-/// `Akzeptiert` demands distinct starts (`einzelnB`), so the export refuses by
-/// name instead of printing a unit no theorem covers. The positive twin: the
-/// same routine named once exports.
+/// **A start declared twice exports as two occurrences (fix lane F10).** Fix lane
+/// F4 refused it (`LG001`) while the goal's `Akzeptiert` demanded distinct starts;
+/// since F10 its `einzeln` is `EinzelnPool` and `gabbro_ziel` covers pools, so the
+/// export prints both occurrences and the Lean Bool judges them. The single start
+/// still exports with one occurrence.
 #[test]
-fn refuses_duplicate_start() {
+fn exports_duplicate_start() {
     let rumpf = "impl fn w() effects { reads T.slots, locks L } costs <= 8 ops { locks L { let x = T.slots[0].v; } }\n";
-    let w = refuse_of(&einheit(&format!("{rumpf}concurrent {{ w, w }};\n")));
-    assert_eq!(w.code, "LG001", "{w}");
-    assert!(w.to_string().contains("more than once"), "{w}");
+    let text = export("lean_g", &tree(&einheit(&format!("{rumpf}concurrent {{ w, w }};\n"))))
+        .expect("a pool of two exports");
+    assert!(
+        text.contains("⟨g_w, .nil⟩, ⟨g_w, .nil⟩"),
+        "both occurrences must travel into `starts`: {text}"
+    );
     let q = einheit(&format!("{rumpf}concurrent {{ w }};\n"));
-    export("lean_g", &tree(&q)).expect("one start exports");
+    let eins = export("lean_g", &tree(&q)).expect("one start exports");
+    assert!(!eins.contains("⟨g_w, .nil⟩, ⟨g_w, .nil⟩"), "one start, one occurrence: {eins}");
 }
 
 /// **Lane 250: a `stack`-carrying gate names its `D.klon` pair (LG001), and

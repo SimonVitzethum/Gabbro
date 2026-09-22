@@ -81,7 +81,10 @@ KOMPONENTEN = [
     # floor leg belongs.
     ("sperrOrte", "sperrOrteB {S} {ls}", None),  # vacuous: one source, see above
     ("wurzeln", "wurzelnB {ws}", ["N302", "N303"]),
-    ("einzeln", "einzelnB {ws}", ["N304", "N315"]),
+    # Since fix lane F10 the component is `einzelnPoolB` (`EinzelnPool`: a
+    # routine declared twice is pool-safe), decided by `N304` alone; the idle
+    # refusal `N315` is retired (an idle routine is the empty pool).
+    ("einzeln", "einzelnPoolB {P} {fs} {cs} {ws}", ["N304"]),
     ("renn", "rennB {P} {fs} {cs} {ws}", ["N300", "N301"]),
     ("antworten", "antwortenB {P} {fs}",
      ["N310", "N311", "N312", "N313", "N314", "N316"]),
@@ -90,7 +93,8 @@ KOMPONENTEN = [
 
 # The Rust verdict: ACCEPT iff none of these fires (all are ERROR severity).
 # `N317`-`N319` are PHANTOM codes (lane 208): reserved as transfer-2
-# additions, implemented nowhere, firing on nothing. They stay in the set
+# additions, implemented nowhere, firing on nothing. `N315` is RETIRED (fix
+# lane F10) and fires on nothing either; it stays in the set for old binaries. They stay in the set
 # so the day a rule takes one, the verdict reads it with no script change;
 # until then they change no verdict.
 AKZEPTIERT_CODES = frozenset([
@@ -553,7 +557,11 @@ def main():
 
 def selbsttest(gabbro, frist):
     """Two-way speech test: 104 must agree (positive); a doubled start must
-    refuse at `einzeln` (negative) -- the error-to-component map is read."""
+    refuse at `einzeln` (negative) -- the error-to-component map is read.
+    Since fix lane F10 a doubled start is refused only when it is not
+    pool-safe: 104's functions hold `M` by signature, so the doubled start
+    still falls at `einzelnPoolB` -- and the pool example 157 must agree
+    (accepted on both sides), the positive half of the pool component."""
     datei = os.path.join(W, "beispiele/104-referenz.gab")
     rc, export, err = exportiere(gabbro, datei)
     assert rc == 0, "104 must export: %s" % err
@@ -572,6 +580,19 @@ def selbsttest(gabbro, frist):
         "doubled start must refuse at einzeln: %s / %s" % (gefallen2,
                                                            raw2[-2000:])
     print("selbsttest negativ: doubled start refuses at einzeln")
+    # Positive pool half (fix lane F10): a pool-safe routine declared twice
+    # exports and the Lean Bool accepts it -- the component is not `Nodup`.
+    datei = os.path.join(W, "beispiele/157-worker-pool.gab")
+    rc, export, err = exportiere(gabbro, datei)
+    assert rc == 0, "157 must export (the repeated start travels): %s" % err
+    parsed = parse_export(export)
+    assert parsed, "157 export parses"
+    starts, _ = startet_aus(open(datei, encoding="utf-8").read())
+    assert len(starts) == 2 and starts[0] == starts[1], "157 declares one routine twice"
+    ok3, gefallen3, raw3 = lean_lauf(sonde(parsed["ns"], parsed, starts), export, frist)
+    assert ok3, "the pool must be accepted by the Lean Bool: %s / %s" % (gefallen3,
+                                                                         raw3[-2000:])
+    print("selbsttest pool: 157 (one routine twice) accepted at einzeln")
     print("SELBSTTEST: ok (both directions)")
     return 0
 

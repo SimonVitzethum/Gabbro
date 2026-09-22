@@ -1,0 +1,52 @@
+-- 157 -- **A symmetric worker pool: one routine started twice (fix lane F10).**
+--
+-- `arbeiter` is declared twice in `concurrent`, so the runtime runs it on two
+-- threads. It is POOL-SAFE: it holds no lock by signature, declares no reason,
+-- and the only carrier its call graph may write, `konto`, is guarded by `L`
+-- (`lock L protects { konto }`), with the non-trivial invariant
+-- `konto[0] == konto[1]` that `setze` re-establishes at every release.
+--
+-- The Rust checker admits it (`N304` stays silent: pool-safe), and since fix lane
+-- F10 so does the goal theorem's checker Bool: `einzeln` is `EinzelnPool`, and
+-- `gabbro_ziel` covers two threads running one routine (`Zielsatz/PoolZeuge.lean`,
+-- `pool_ziel_zeuge`, is the same shape on probe B's program). The exporter prints
+-- both occurrences into `starts`, and `pruefe-akzeptiert-diff.py` compares the two
+-- verdicts on this file. The pool-UNSAFE twin -- a routine that writes an unguarded
+-- table, declared twice -- falls with `N304` (gifts 1097, 1098).
+module beispiel::worker_pool {
+
+const NSLOTS : u32 = 2;
+
+type Stand = u32 in 0 .. 100;
+
+table konto count NSLOTS {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn arbeiter()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+concurrent { arbeiter, arbeiter };
+
+}

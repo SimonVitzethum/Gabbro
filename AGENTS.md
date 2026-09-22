@@ -79,8 +79,9 @@ README §6 says exactly this; keep it that way.
 - **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list:
   termination and waiting bounds, stack depth, the C and the hardware, weak memory beyond
   DRF-SC, unguarded publish/await payloads, floats beyond the kernel IEEE model, starvation
-  freedom, invariants at entry, one start on several threads, and linking of separately compiled
-  units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
+  freedom, invariants at entry, a start declared ONCE running on several threads (a routine
+  declared twice -- a worker pool -- is covered since fix lane F10), and linking of separately
+  compiled units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
   `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
   `Spec.lean`.
 
@@ -273,7 +274,7 @@ opus/…:opus/…` first.
 |---|---|
 | Diagnostic codes | **N466** (highest issued: N465, fix lane F6; also `C185`, O-1) |
 | Gift (poison-probe) numbers | **1171** (highest file: `beispiele/gift/1170`, fix lane F7) |
-| Example numbers | **157** (highest file: `beispiele/156`) |
+| Example numbers | **158** (highest file: `beispiele/157`, fix lane F10) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
 
 *Ledger re-measured 2026-09-21 (review G13) by grepping `crates/` for issued `N` codes and
@@ -304,6 +305,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F5 | **not reserved** (free range) | N463, N464, gifts 1155–1158; no example (examples 96/149/150 edited to the new buffer clause) |
 | Fix lane F6 | **not reserved** (free range) | N465, gifts 1159–1168; no example (gift 1125 turned from clean side to `N454`, renamed `1125-index-in-max-ohne-laenge`) |
 | Fix lane F7 | **not reserved** (free range) | gifts 1169, 1170; no code, no example (`E011` tightened, `LG005` reused for a binding covering a carrier in the exporter; examples 09/147/148 edited) |
+| Fix lane F10 | **not reserved** (free range) | example 157; no code, no gift. **`N315` retired** (idle duplicate start, admitted since the goal covers pools) and **gift 976 removed** with it; `LG001` for repeated starts lifted in the exporter |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

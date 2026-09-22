@@ -807,7 +807,23 @@ gap openly (`PoolSym.lean`: "the model has no notion for it").
 | **what stays open** | the locality notion itself (per-thread disjointness under migration without pinning) and, on the checker side, whether `|| core` should narrow the way 208 narrowed vacuous rules. No lane is tasked with it yet: wave B of `TODO.md` §-1 (lanes 227–235, 252) has no such row, although this entry and `TODO.md` §4 said so until 2026-09-21 (review G13). The choice stays: model per-core or restrict the exemption. |
 | **what would close it** | a `PoolSicher` disjunct with a disjointness proof over thread identity (or the pinning the runtime does not do today), plus the exporter covering `accumulates` so the bridge `einzelnPoolB ↔ EinzelnPool` ranges over it. |
 
-## O18 — A busy start that runs twice is admitted by the Rust checker and covered by no theorem (known since lane 245, 2026-09-17; recorded 2026-09-21, reviews G06/G13)
+## O18 — A busy start that runs twice is admitted by the Rust checker and covered by no theorem (known since lane 245, 2026-09-17; recorded 2026-09-21, reviews G06/G13) — CLOSED 2026-09-22 by fix lane F10
+
+**Closed.** `Spec.lean` was changed as a reviewed diff (header "WHAT CHANGED ON 2026-09-22"):
+`AkzeptiertSpec.einzeln` is `EinzelnPool` (a routine declared twice, `Mehrfach`, is pool-safe),
+`Getrennt` pairs start occurrences, and `Laufzeit.einmal` lets a routine declared twice run on
+several threads. `gabbro_ziel` is re-proved with the same statement text and the standard three
+axioms; the only proof changes are `getrenntK_of`/`schreibGetrenntK_of`
+(`Zielsatz/Akzeptiert.lean`). Nothing is weakened: both premise changes are relaxations, and on
+distinct starts the Bool is the old one (`akzeptiert_nodup_gleich`, `akzeptiertSpecVor_neu`,
+`pruefer_vor_neu`, `laufzeit_vor_neu`, `Zielsatz/PoolSym.lean`). Witnesses: `pool_ziel_zeuge`
+(two instances of a lock-guarded writer, accepted, both stepped, `Ziel`) and `pool_abgelehnt`
+(an unguarded writer twice, refused by the pool component alone), `Zielsatz/PoolZeuge.lean`;
+SATZKARTE §47. Rust: `N304` decides the same condition on the exported fragment, the idle
+refusal `N315` is retired (gift 976 removed), and the exporter's `LG001` for repeated starts is
+lifted (`beispiele/157-worker-pool.gab` exports and agrees, `pruefe-akzeptiert-diff.py`). What
+stays open is O17 (per-core). The record below is kept as written.
+
 
 Lane 245 narrowed `N304`: `concurrent { arbeiter, arbeiter }` passes when `arbeiter` is
 pool-safe (every carrier it writes is guarded, atomic or per-core), and `N315` refuses only an

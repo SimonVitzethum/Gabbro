@@ -3329,32 +3329,16 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
         let quelle = format!("dispatch `{}`", pfad.text());
         nimm(model, &last.text, &quelle, &mut aus)?;
     }
-    // **Fix lane F4 (review G06 F3): a start named twice has no G form here.**
+    // **A start named twice exports as two start occurrences (fix lane F10).**
     //
-    // Since lane 245 the checker accepts a busy pool-safe routine named twice
-    // (`concurrent { f, f }`), and until this refusal the exporter pushed both
-    // occurrences into `starts` and printed the unit -- measured 2026-09-22 on a
-    // guarded pool (`starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`) and on
-    // `concurrent { leser, leser }`. But `Akzeptiert` demands `einzelnB`
-    // (`ws.Nodup`, `AkzeptiertSpec.einzeln`), so the exported unit stood under a
-    // goal theorem whose checker Bool refuses it: no theorem covers the pool
-    // (`RennfreiBis` over multiset starts is not proved, open item O18). The
-    // export refuses by name instead of printing a unit the reader could take
-    // for a covered one. The day the Spec swaps `einzeln` for `EinzelnPool`
-    // with the legs proved (fix lane F10), this refusal goes with it.
-    for (k, i) in aus.iter().enumerate() {
-        if aus[..k].contains(i) {
-            return Err(refuse(
-                "LG001",
-                format!(
-                    "start `{}` is declared more than once -- the goal's checker Bool \
-                     demands distinct starts (`einzelnB`: `ws.Nodup`), and the symmetric \
-                     pool has no proved G form yet (O18)",
-                    model.fns[*i].name
-                ),
-            ));
-        }
-    }
+    // Fix lane F4 (review G06 F3) refused a repeated start here (`LG001`), because
+    // the goal's checker Bool demanded distinct starts (then `einzelnB`, `ws.Nodup`) and
+    // no theorem covered a pool (open item O18). Since fix lane F10 the Spec's
+    // `einzeln` is `EinzelnPool` -- a routine declared twice is admitted exactly
+    // when pool-safe, the same condition `N304` decides -- and `gabbro_ziel`
+    // covers it (`pool_ziel_zeuge`, `Zielsatz/PoolZeuge.lean`). So both
+    // occurrences travel into `starts`, and the Lean Bool judges the pool itself
+    // (`pruefe-akzeptiert-diff.py` compares it on `beispiele/157`).
     Ok(aus)
 }
 

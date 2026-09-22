@@ -3610,7 +3610,7 @@ pub const WIRKUNGEN: &[Satz] = &[
     },
     Satz {
         name: "wirkungen.rennboden",
-        kennungen: &["N300", "N301", "N302", "N303", "N304", "N315"],
+        kennungen: &["N300", "N301", "N302", "N303", "N304"],
         aussage: "The race component of the goal Bool (`rennB` with `wurzelnB` beside \
                   it): a carrier one declared start's call graph may write is neither \
                   written (`N300`) nor footprint-read (`N301`) by a DIFFERENT start's \
@@ -3619,35 +3619,37 @@ pub const WIRKUNGEN: &[Satz] = &[
                   P3). Declared starts declare no reason channel (`N302`, \
                   `or R` has no caller behind a thread start) and hold no lock by \
                   signature (`N303`, the strong form of `N240`). One routine on two \
-                  threads is admitted only pool-safe -- no lock, no reasons, and \
-                  every written carrier guarded, atomic, or per-core (`N304`, \
-                  `PoolSicher`) -- and an IDLE routine is never named twice \
-                  (`N315`). **This checker is wider than the goal Bool here:** a \
-                  busy pool-safe duplicate passes both `N304` and `N315`, while \
-                  `Akzeptiert` still demands `einzelnB` (`ws.Nodup`) for every \
-                  duplicate, and race freedom over duplicated starts is not proved \
-                  (the `einzeln` swap to `EinzelnPool` is open, MUSE-REPORT-245 \
-                  section 3; review G06 of 2026-09-21). All six refuse as errors.",
+                  threads is admitted exactly when pool-safe -- no lock, no reasons, \
+                  and every written carrier guarded, atomic, or per-core (`N304`, \
+                  `EinzelnPool`, the `einzeln` component of `Akzeptiert` since fix \
+                  lane F10, 2026-09-22); an idle routine is the empty case and is \
+                  admitted (the idle refusal `N315` of lane 196 is retired). The \
+                  goal theorem covers such a pool: `gabbro_ziel` over the occurrence \
+                  form of `Getrennt` and `Laufzeit.einmal` with `Mehrfach` (witness \
+                  `pool_ziel_zeuge`). All five refuse as errors.",
         vorbehalt: "Starts are the `concurrent` members plus the `entry`/`boot` roots \
                     (the `startexklusiv.rs` pool); with fewer than two every carrier is \
-                    owned and `N300`/`N301`/`N304`/`N315` stay silent, while `N302`/`N303` judge \
+                    owned and `N300`/`N301`/`N304` stay silent, while `N302`/`N303` judge \
                     every start. Graphs, may-write and footprints are the same maps the \
                     `N290`-`N294` legs read (`reachB`, `TraegerSchreibt`, `fussOrte`); \
                     guards are `lock … protects` resolved to carriers (`Bewacht`), held \
                     or not. `rcu … protects`, `masks`/`ein_kern` and non-per-core \
                     accumulators do NOT exempt; `accumulates … per cpu` does (one name, \
                     N core cells -- no shared carrier; the model has no notion the \
-                    Bool could decide instead). Same-function pairs go to `N304` \
-                    (busy, unless pool-safe) \
-                    or `N315` (idle), never to `N300`/`N301` (`w₁ ≠ w₂`); a \
-                    pool-safe busy pair draws neither (guarded, atomic, or \
-                    per-core writes only -- it stays silent); \
-                    a pair that writes on both sides belongs to `N300` alone.",
+                    Bool could decide instead; the exporter refuses `accumulates` and \
+                    `atomic` items, so on the exported fragment `N304` and `einzelnPoolB` \
+                    decide the same condition, guarded writes only -- OFFEN O17). \
+                    Same-function pairs go to `N304` (unless pool-safe), never to \
+                    `N300`/`N301` (`w₁ ≠ w₂`); the footprint legs `N290`-`N293` pair \
+                    thread OCCURRENCES, so a pool routine's footprint carrier its own \
+                    graph writes needs a signature lock or a lock invariant (`Getrennt` \
+                    with `Mehrfach`); a pair that writes on both sides belongs to \
+                    `N300` alone.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/964 (two writers, no reader, N300), 965 \
                       (write-read, N301), 966 (a start with `or R`, N302), 967 (a start \
-                      holding a signature lock, N303), 976 (an idle routine named \
-                      twice, N315), 1097 (a pool pair sharing an unguarded carrier, \
+                      holding a signature lock, N303), 1097 (a pool pair sharing an \
+                      unguarded carrier, \
                       N304), 1098 (the transitive shape: the write hides in a callee, \
                       N304); positives as snippet tests \
                       (own tables, guarded carriers, single start, atomic, \
@@ -3660,13 +3662,19 @@ pub const WIRKUNGEN: &[Satz] = &[
                       Lane 245 narrows `N304` to pool-unsafe pairs (a pool-safe \
                       duplicate -- guarded writes only, then a pure read pair -- \
                       stays silent, pinned inline); the corpus verdict diff is empty \
-                      (no corpus file changes verdict).",
+                      (no corpus file changes verdict). Fix lane F10 retires `N315` \
+                      (gift 976, the idle twin, is admitted now and removed; pinned \
+                      inline as a positive) and adds beispiele/157 (a guarded worker \
+                      pool that exports; Rust and the Lean Bool both accept it, \
+                      `pruefe-akzeptiert-diff.py`).",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs (`renn`); \
                      grammatik/Grammatik/Zielsatz/Akzeptiert.lean (`rennB`, \
-                     `SchreibGetrennt`, `wurzelnB`, `ruheB`, `einzelnB`); \
+                     `SchreibGetrennt`, `wurzelnB`, `ruheB`, `einzelnPoolB`, \
+                     `poolSicherWB`, `schreibGetrenntK_of`); \
                      grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`, \
-                     `PoolSicher`, `EinzelnPool`); \
-                     grammatik/Grammatik/Zielsatz/PoolSym.lean (the pool legs)",
+                     `Mehrfach`, `PoolSicher`, `EinzelnPool`); \
+                     grammatik/Grammatik/Zielsatz/PoolZeuge.lean (`pool_ziel_zeuge`, \
+                     `pool_abgelehnt`)",
     },
 ];
 

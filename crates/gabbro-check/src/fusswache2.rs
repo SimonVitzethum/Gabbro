@@ -56,15 +56,19 @@
 //! * `N304` -- the same routine starting two threads without being pool-safe:
 //!   two declared starts resolve to one function whose call graph holds a
 //!   lock, declares a reason, or writes a carrier no lock guards that is
-//!   neither atomic nor per-core. `StartZulaessig.einmal` admits a
-//!   twice-started routine as `Ruhig` (no lock, no reasons, empty
-//!   footprints, no writes -- idle starts write nothing); lane 245 lifts
-//!   the admission to pool-safe routines (`PoolSicher`), whose every
-//!   written carrier is guarded, atomic, or per-core.
-//! * `N315` (lane 196) -- the same routine named twice while idle: `N304` stays
-//!   silent there, but `Akzeptiert` demands `einzelnB` (`ws.Nodup`) with no idle
-//!   exemption -- two entries are two threads, and the race component separates
-//!   DIFFERENT starts only.
+//!   neither atomic nor per-core. Decides `EinzelnPool`, the `einzeln`
+//!   component of `Akzeptiert` since fix lane F10 (2026-09-22): a routine
+//!   declared twice is admitted exactly when it is pool-safe (`PoolSicherW`:
+//!   no signature lock, no reasons, every written carrier guarded or
+//!   atomic), and the goal theorem covers it (`gabbro_ziel`, witness
+//!   `pool_ziel_zeuge`). Per-core writes are the one surface exemption the
+//!   model lacks (OFFEN O17; the exporter refuses `accumulates`).
+//! * `N315` -- RETIRED by fix lane F10. Lane 196 refused an IDLE routine named
+//!   twice because `Akzeptiert` demanded `ws.Nodup`; an idle routine is
+//!   pool-safe (it writes nothing), `EinzelnPool` admits it, and the goal theorem
+//!   covers it -- so the Rust side admits it too (the verdicts match, which is
+//!   the point). Gift 976 went with it; the idle twin is pinned inline
+//!   (`doppelter_ruhiger_start_bleibt_still`).
 //!
 //! Surface mapping, each with its Lean ground:
 //!
@@ -1133,10 +1137,9 @@ fn payloads(baum: &Programm, atomic: &BTreeSet<String>) -> BTreeSet<String> {
 /// (`N301`). A publish payload is NOT exempt (lane 196, Lean verdict P3: two starts
 /// writing one unguarded payload is a C11 race on a non-atomic object; `H013` has
 /// no payload exemption either). `N302`/`N303` decide `wurzelnB` per start (no reasons, no
-/// signature-held lock); `N304` decides the `einmal` half of `StartZulaessig` for
-/// twice-started routines (idle starts write nothing; lane 245 admits the
-/// pool-safe ones, whose every written carrier is guarded, atomic, or
-/// per-core).
+/// signature-held lock); `N304` decides `EinzelnPool` (the `einzeln` component
+/// since fix lane F10) for twice-started routines: admitted exactly when
+/// pool-safe -- every written carrier guarded, atomic, or per-core.
 ///
 /// What is reused, and what it decides in Lean:
 /// * starts -- `startet` above: `concurrent` members, `entry`/`boot` roots, the
@@ -1144,7 +1147,8 @@ fn payloads(baum: &Programm, atomic: &BTreeSet<String>) -> BTreeSet<String> {
 ///   are skipped there, not cleared (`W003`/`N018` own them); `entrust` roots are
 ///   skipped (the guest is unknown). Same-function pairs go to `N304`, not here:
 ///   `SchreibGetrennt` quantifies over `w₁ ≠ w₂`, and the proof (`schreibGetrenntK_of`)
-///   sends same-function threads through `einmal`/`Ruhig` instead.
+///   sends same-function threads through `Mehrfach`/`EinzelnPool` instead (a pool
+///   graph writes no unguarded, non-atomic carrier at all).
 /// * graphs -- the `faeden` fixpoints over resolved direct edges plus the indirect
 ///   pool: the surface of `reachB` with `AbgK` over indirect calls by signature.
 /// * may-write -- `schreibt`: DECLARED `writes`/`publishes`/`allocs` resolved to
@@ -1286,16 +1290,12 @@ fn race(
                 // unguarded writer, two threads reading one carrier do not
                 // race. The graphs coincide by construction (same root, same
                 // fixpoint); judging one judges both. The model side is
-                // `PoolSicher` (`Zielsatz/Spec.lean`) with the legs in
-                // `Zielsatz/PoolSym.lean`.
-                let idle = gehalten
-                    .get(&starts[i].funktion)
-                    .is_none_or(|h| h.is_empty())
-                    && funktionen
-                        .get(&starts[i].funktion)
-                        .is_none_or(|f| f.fehler.is_none())
-                    && graph_writes[i].is_empty()
-                    && graph_foot[i].is_empty();
+                // `EinzelnPool` (`Zielsatz/Spec.lean`), the `einzeln` component
+                // of `Akzeptiert` since fix lane F10, covered by `gabbro_ziel`
+                // (witness `pool_ziel_zeuge`, `Zielsatz/PoolZeuge.lean`). An IDLE
+                // routine is the empty case: it passes here and, since F10, is
+                // admitted (the retired `N315` refused it only because the goal
+                // Bool demanded `ws.Nodup`).
                 let pool_sicher = gehalten
                     .get(&starts[i].funktion)
                     .is_none_or(|h| h.is_empty())
@@ -1329,38 +1329,6 @@ fn race(
                             "give each thread its own routine, guard every carrier the \
                              routine writes (`lock … protects`), or leave this one \
                              lock-free, reason-free, and without an unguarded carrier",
-                        ],
-                        absagen,
-                    );
-                }
-                // **Lane 196 (`N315`): the declared starts are not distinct.**
-                // `N304` owns the busy shape above; the idle shape stayed
-                // silent -- but `Akzeptiert` demands `einzelnB` (`ws.Nodup`)
-                // with no idle exemption: the runtime runs each declared
-                // start on its own thread, and two entries behind one routine
-                // are two threads, idle or not. One refusal per routine, at
-                // the second entry (like `N304`).
-                if idle && race_filed.insert(("N315", starts[i].funktion.clone())) {
-                    let short = starts[i]
-                        .funktion
-                        .rsplit("::")
-                        .next()
-                        .unwrap_or(&starts[i].funktion);
-                    melde(
-                        "N315",
-                        starts[j].span,
-                        format!(
-                            "thread starts {} and {} run one routine `{short}` -- \
-                             the declared starts are not distinct, and `Akzeptiert` \
-                             admits no duplicate, idle or not",
-                            starts[i].quelle, starts[j].quelle
-                        ),
-                        &[
-                            "the declared starts are pairwise distinct (`einzelnB`: \
-                             `ws.Nodup` -- two threads running one routine escape \
-                             the race component, which separates DIFFERENT starts)",
-                            "name the routine once; an idle routine needs no \
-                             second entry to stay idle",
                         ],
                         absagen,
                     );

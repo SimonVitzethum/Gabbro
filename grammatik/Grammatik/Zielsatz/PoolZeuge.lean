@@ -28,6 +28,9 @@
     lane-245 witness had `fs = []` and a carrier nobody writes).
   * `einzelnPoolB_iff_zeuge` -- the decision lemma instantiated on complete member lists in
     both directions.
+  * `pool_fuss_paart_vorkommen` -- the footprint component pairs start OCCURRENCES: a
+    routine that reads and writes one unguarded carrier, declared twice, is refused there
+    (the routine-level test before F10 accepted it).
 -/
 import Grammatik.Zielsatz.Proben
 import Grammatik.Zielsatz.PoolSym
@@ -176,6 +179,19 @@ theorem pool_abgelehnt_einmal_ok : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHau
 theorem pool_abgelehnt_spec : ¬ AkzeptiertSpec mP mSI mFs [mHauptB, mHauptB] := fun h =>
   absurd (h.einzeln mHauptB (List.Sublist.refl _)) pool_abgelehnt.2.2.2
 
+/-- **The footprint component pairs OCCURRENCES** (fix lane F10, `Getrennt` with
+    `Mehrfach`). `hauptA` reads `privA` in a footprint (the callee contract of `pruefeA`)
+    and writes it. Declared twice, the second instance writes what the first reads, so
+    `privA` is not thread-local: the new footprint component refuses, the routine-level
+    test of before F10 did not see it. (The Rust footprint legs `N290`-`N293` always
+    paired thread indices; `pool_fussabdruck_paart_vorkommen` in
+    `crates/gabbro-check/tests/fusswache2.rs` is their surface probe.) -/
+theorem pool_fuss_paart_vorkommen :
+    fussWB mP mSI mFs [mHauptA, mHauptA] = false ∧
+    fussWBVor mP mSI mFs [mHauptA, mHauptA] = true ∧
+    fussWB mP mSI mFs [mHauptA, mHauptB] = true := by
+  decide
+
 /-! ## 4. The lane-245 lemmas on complete member lists (review G06 F4) -/
 
 /-- **`pool_schreibt_nicht` on a complete member list with a written carrier.** On the
@@ -224,6 +240,7 @@ theorem einzelnPoolB_iff_zeuge :
 #print axioms Gabbro.Grammatik.Zielsatz.pool_ziel_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.pool_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.pool_abgelehnt_spec
+#print axioms Gabbro.Grammatik.Zielsatz.pool_fuss_paart_vorkommen
 #print axioms Gabbro.Grammatik.Zielsatz.pool_schreibt_nicht_voll
 #print axioms Gabbro.Grammatik.Zielsatz.einzelnPoolB_iff_zeuge
 

@@ -481,10 +481,11 @@ fn doppelter_schreibender_start_faellt_n304() {
 }
 
 #[test]
-fn doppelter_ruhiger_start_faellt_n315() {
-    // Lane 196: the idle twin no longer stays silent. Two entries behind one
-    // idle routine are two threads, and `einzelnB` (`ws.Nodup`) admits no
-    // duplicate, idle or not -- `N304` stays silent here, `N315` fires.
+fn doppelter_ruhiger_start_bleibt_still() {
+    // Fix lane F10 retired `N315`: an idle routine on two entries is the empty
+    // pool -- it writes nothing, so it is pool-safe (`EinzelnPool`), the goal Bool
+    // admits it and `gabbro_ziel` covers it. Lane 196 refused it only because the
+    // goal Bool demanded `ws.Nodup`. No race or start refusal fires.
     let quelle = "module test::fusswache2 {\n\
         impl fn idle() -> u32 effects { pure } costs <= 1 ops { return 0; }\n\
         entry entry_a vector 0x80 arch x86_64 {\n    regs in { } regs out { } \
@@ -496,14 +497,55 @@ fn doppelter_ruhiger_start_faellt_n315() {
         }\n";
     let codes = fehler(quelle);
     assert!(
-        codes.iter().any(|c| c == "N315"),
-        "an idle routine on two entries must flag N315: {codes:?}"
+        !codes.iter().any(|c| c == "N300"
+            || c == "N301"
+            || c == "N302"
+            || c == "N303"
+            || c == "N304"
+            || c == "N315"),
+        "an idle routine on two entries is an admitted pool: {codes:?}"
+    );
+}
+
+#[test]
+fn pool_fussabdruck_paart_vorkommen() {
+    // Fix lane F10: the footprint legs pair thread OCCURRENCES (`Getrennt` with
+    // `Mehrfach`). A pool routine that reads a carrier in its contract and writes
+    // it -- guarded by a lock WITHOUT an invariant, read bare in the `requires` of
+    // the start itself -- is not thread-local any more: the other instance writes
+    // it. `N304` stays silent (the write is guarded); the footprint leg refuses.
+    let quelle = "module test::fusswache2 {\n\
+        table K count 2 {\n\
+            slot {\n\
+                v : u32,\n\
+            }\n\
+        }\n\
+        lock L protects { K } rank 0 held <= 100 ops;\n\
+        impl fn arbeiter()\n\
+            requires K.slots[0].v == 0\n\
+            effects { reads K.slots, writes K.slots, locks L }\n\
+            costs <= 64 ops\n\
+        {\n\
+            locks L { K.slots[0].v = 1; }\n\
+        }\n\
+        concurrent { arbeiter, arbeiter };\n\
+        }\n";
+    let codes = fehler(quelle);
+    assert!(
+        !codes.iter().any(|c| c == "N304"),
+        "guarded writes only: the pool shape itself is admitted: {codes:?}"
     );
     assert!(
-        !codes
-            .iter()
-            .any(|c| c == "N300" || c == "N301" || c == "N302" || c == "N303" || c == "N304"),
-        "only the distinctness refusal fires: {codes:?}"
+        codes.iter().any(|c| c == "N290"),
+        "the contract read of a carrier the other instance writes is no longer \
+         thread-local: {codes:?}"
+    );
+    // The single start: the same routine once is thread-local and silent there.
+    let einmal = quelle.replace("concurrent { arbeiter, arbeiter };", "concurrent { arbeiter };");
+    let codes = fehler(&einmal);
+    assert!(
+        !codes.iter().any(|c| c == "N290" || c == "N304"),
+        "one occurrence owns its carrier: {codes:?}"
     );
 }
 
@@ -537,8 +579,8 @@ fn pool_sauberer_arbeiter_bleibt_still() {
     // Lane 245 (symmetric worker pool): one routine on two threads whose
     // every written carrier is guarded. `arbeiter` writes `K` only under
     // `L`, holds nothing by signature, declares no reason -- pool-safe, so
-    // `N304` stays silent beside `N315` (not idle, hence no distinctness
-    // refusal) and `N300`/`N301` (no unguarded writer anywhere).
+    // `N304` stays silent, and so do `N300`/`N301` (no unguarded writer
+    // anywhere). Since fix lane F10 the goal Bool admits it too (`EinzelnPool`).
     let quelle = "module test::fusswache2 {\n\
         type Stand = u32 in 0 .. 100;\n\
         table K count 2 {\n\

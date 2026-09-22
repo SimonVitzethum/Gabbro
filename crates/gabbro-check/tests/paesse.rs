@@ -4676,9 +4676,10 @@ impl fn aussen(m2 : Marke, i : index into Plaetze)
 
 /// **D268(d) -- a minting root started twice mints on every start.**
 ///
-/// Lane 196: the twice-named idle root draws `N315` beside `D268` -- two
-/// entries are two threads (`einzelnB`), whatever the token reasoning says.
-/// Two rules, two reasons; the sets are pinned together.
+/// Lane 196 pinned `N315` beside `D268` here (two entries are two threads, and the
+/// goal Bool demanded `ws.Nodup`). Fix lane F10 retired `N315`: an idle root is an
+/// admitted pool (`EinzelnPool`). The minting refusal stands alone -- two entries
+/// mint twice, whatever the start rule says.
 #[test]
 fn eigner_zweimal_gestartet_d268() {
     faellt_genau(
@@ -4689,7 +4690,7 @@ fn eigner_zweimal_gestartet_d268() {
 }}
 concurrent {{ wurzel }};
 concurrent {{ wurzel }};"),
-        &["D268", "N315"],
+        &["D268"],
     );
     // Started once, the same root stays silent here.
     faellt_genau(

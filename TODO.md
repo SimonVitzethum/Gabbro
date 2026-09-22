@@ -304,13 +304,16 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   ever mean "hold all N".
 - [ ] **Cross-unit table access does not exist** (`M119`) — see §0b, first item. **This is the
   one Simon named: it blocks the library and it blocked the firewall's own wiring.**
-- [ ] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
+- [x] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
   one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
   than the lock was**, and it needs its own lane. *Status 2026-09-21: lane 245 admits a
   pool-safe busy duplicate in the Rust checker; the goal theorem does not cover it
   (`OFFEN.md` O18, §4 below). Since fix lane F4 (2026-09-22) the generated driver starts one
   thread per declared occurrence (multiset pin) and the exporter refuses a repeated start
-  (`LG001`) instead of exporting a unit `einzelnB` refuses.*
+  (`LG001`) instead of exporting a unit `einzelnB` refuses.* **Done 2026-09-22 (fix lane F10):**
+  the goal theorem covers pools (`AkzeptiertSpec.einzeln := EinzelnPool`, `gabbro_ziel`
+  re-proved, witness `pool_ziel_zeuge`, SATZKARTE §47, OFFEN O18 closed); the exporter's
+  `LG001` for repeated starts is lifted (`beispiele/157` exports and agrees); `N315` retired.
 - [ ] **No thread start at all** — every shape refused (`P017`, measured 2026-09-15). §0 owns it.
   *Status 2026-09-22: lane 246's generated driver starts the declared `concurrent` roots (one
   thread per occurrence since fix lane F4); lane 253's `start { … };` parses, carries checker
@@ -593,7 +596,7 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   matching decidable from the `_Static_assert` pins, the linking theorem
   (§2), and what the goal says about two units. Opus-sized plus a review
   round.
-- [ ] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
+- [x] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
   checker accepts pools since lane 245; the goal theorem does not cover
   them at all (`Akzeptiert` still demands `ws.Nodup`, and (d) excludes a
   busy start on several threads). `PoolSym.lean` adds definitions and a
@@ -604,7 +607,12 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   such row, contrary to what this item said until 2026-09-21). Medium to
   large, not small: review G06 F1/F4. (The generated driver's one-thread
   pool was fixed in fix lane F4; the exporter now refuses repeated starts,
-  `LG001`, until this item lands -- fix lane F10.)
+  `LG001`, until this item lands -- fix lane F10.) **Done 2026-09-22 (fix lane
+  F10, O18 closed):** `Spec.lean` diff (`einzeln := EinzelnPool`, occurrence
+  `Getrennt`, `Laufzeit.einmal` with `Mehrfach`), every leg re-proved in
+  `gabbro_ziel`, witnesses in `Zielsatz/PoolZeuge.lean`, `LG001` lifted,
+  `N315` retired. **Still open: the per-core half (O17)** -- the Rust pool
+  rule exempts `per cpu` cells, the model has no notion of them.
 - [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
   full proof: a `costs`-like static budget over call depth with the
   2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays

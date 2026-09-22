@@ -590,6 +590,9 @@ theorem laufzeit_ruhe (E : Einheit D) : Laufzeit E (speicherR E.sp0) (ruheInit D
 
 end Laufzeit
 
+#print axioms Gabbro.Grammatik.mehrfach_map_inj
+#print axioms Gabbro.Grammatik.mehrfach_of_getElem?
+#print axioms Gabbro.Grammatik.einzelnPool_mitRuhe
 #print axioms Gabbro.Grammatik.laufzeit_initRuhe
 #print axioms Gabbro.Grammatik.laufzeit_voll
 #print axioms Gabbro.Grammatik.laufzeit_nur_erklaert

@@ -4110,5 +4110,51 @@ for every reachable one. Nothing in Lean ties the never-axiom to its C lowering.
 **Axioms:** `propext`, `Classical.choice`, `Quot.sound` at most; `#print axioms gabbro_ziel`
 unchanged.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §§1-10 history above.)
+## 47. Worker pools in the goal theorem: `einzeln := EinzelnPool`, legs proved (fix lane F10, 2026-09-22)
+
+**A reviewed `Spec.lean` diff** (review G06 F1, OFFEN O18, Simon 2026-09-21: "switch the Spec
+to PoolSicher and prove the legs"). The text of `GabbroZiel` and of `Ziel` is unchanged.
+
+| Premise | Before | After |
+|---|---|---|
+| (a) `AkzeptiertSpec.einzeln` | `ws.Nodup` | `EinzelnPool P fs ws`: every routine declared twice (`Mehrfach ws w`, `[w, w] <+ ws`) is `PoolSicherW` |
+| (a) `Getrennt` (inside `fuss`) | pairs `w₁ ≠ w₂` | pairs `w₁ ≠ w₂ ∨ Mehrfach ws w₁` -- start OCCURRENCES |
+| (d) `Laufzeit.einmal` | two threads never run one declared start | ... unless the program declares it at least twice |
+| proof's `StartZulaessig.einmal` | `Ruhig` | `Ruhig ∨ Mehrfach ws` |
+
+**Files:** `Zielsatz/Spec.lean` (the diff, header "WHAT CHANGED ON 2026-09-22"),
+`Zielsatz/Akzeptiert.lean` (component, proof changes), `Zielsatz/Ruhe.lean` (mitRuhe transfer,
+runtime start), `Zielsatz/Beweis.lean` (`startZulaessig_aus`), `Zielsatz/PoolSym.lean`
+(never-weakened statements), `Zielsatz/PoolZeuge.lean` (witnesses).
+
+| Theorem | What it says |
+|---|---|
+| `mehrfach_filter`, `mehrfachB_iff`, `nicht_mehrfach_of_nodup` | "declared twice" as a sublist, as a filter count, decided; impossible on distinct starts |
+| `poolSicherWB_iff`, `einzelnPoolB_iff` | the component decides `EinzelnPool` exactly (moved from PoolSym into `Akzeptiert.lean`) |
+| `getrenntW_iff` | the footprint test decides the OCCURRENCE form of `Getrennt` |
+| `getrenntK_of`, `schreibGetrenntK_of` | the only two places distinctness entered the proof: a same-routine thread pair now comes from `Mehrfach`; footprints from the occurrence form of `Getrennt`, writes from pool safety (a pool graph writes no unguarded, non-atomic carrier) |
+| `einzelnPool_mitRuhe`, `mehrfach_map_inj`, `mehrfach_of_getElem?` | transfer to `P.mitRuhe`; two positions with one routine make it `Mehrfach` |
+| `laufzeit_initRuhe` | the runtime's exact start meets (d) with NO side condition now (the `Nodup` premise is gone) |
+| `gabbro_ziel` | unchanged statement text, re-proved; axioms `propext`, `Classical.choice`, `Quot.sound` |
+| `einzelnPool_of_nodup`, `einzelnPoolB_of_einzelnB` | the pool condition is vacuous on distinct starts |
+| `akzeptiert_nodup_gleich`, `akzeptiert_vor_neu`, `akzeptiertVor_nodup` | on a repetition-free start list the new Bool IS the old Bool (`AkzeptiertVor`); every old acceptance stays |
+| `akzeptiertSpecVor_neu`, `pruefer_vor_neu`, `laufzeit_vor_neu` | the old specification implies the new one; every old checker is a `Pruefer`; every old run is admitted -- both premise changes are relaxations |
+| `pool_ziel_zeuge` | probe B's program with `haupt` declared twice: accepted by `akzeptiert_pruefer` (`zPool_akzeptiert`; the old Bool refused it, `zPool_vor_abgelehnt`), `NutzerPflicht` holds, on the runtime's start both threads run `haupt`, both step, thread 0 takes the lock, and `gabbro_ziel` gives `Ziel` there |
+| `pool_abgelehnt`, `pool_abgelehnt_spec` | `hauptB` (writes `privB` unguarded) declared twice: every other component accepts, `einzelnPoolB` refuses; no `AkzeptiertSpec` |
+| `pool_fuss_paart_vorkommen` | `hauptA` (reads and writes `privA`) declared twice: the new footprint component refuses, the pre-F10 one accepted |
+| `pool_schreibt_nicht_voll`, `einzelnPoolB_iff_zeuge` | the lane-245 lemmas on COMPLETE member lists with a carrier the program writes (review G06 F4) |
+
+**Rust side.** `N304` decides `EinzelnPool` (on the exported fragment exactly: the exporter
+refuses `atomic` and `accumulates` items, so both sides read "every written carrier guarded");
+the footprint legs `N290`-`N293` always paired thread indices, which is the occurrence form of
+`Getrennt`. `N315` (idle duplicate) is retired -- an idle routine is the empty pool and the goal
+covers it -- and gift 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
+lifted: `beispiele/157-worker-pool.gab` exports with both occurrences and agrees
+(`pruefe-akzeptiert-diff.py`, 0 findings; its self-test runs the pool positive).
+
+**What is NOT claimed.** Per-core writes (`accumulates … per cpu`) stay unmodelled (OFFEN
+O17). A routine declared ONCE on several threads is outside (d). The run witness takes three
+steps; `Ziel` at every other reachable machine is `gabbro_ziel`'s, not the witness's.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §47 added 2026-09-22 (fix lane F10: worker pools in the goal theorem, `einzeln := EinzelnPool`); §§1-10 history above.)
 
