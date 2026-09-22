@@ -1315,7 +1315,7 @@ theorem laufzeit_w (w : Faden → Option Nat) (hw : Wurzeln w) :
       · rw [et, eu] at he; cases he
       · exact absurd (hw.2 t u 3 ht hu) htu
       · rw [et, eu] at he; cases he
-    · exact et
+    · exact Or.inl et
 
 /-- The start trace of every start function the runtime uses holds no lock. -/
 theorem start_offen (w : Faden → Option Nat) (u : Faden) :

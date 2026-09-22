@@ -425,7 +425,7 @@ theorem k124_klon_ziel (O : Orakel K124.kD)
       (RufStartG K124.kE.P.mitRuhe (speicherR K124.kE.sp0) (initRuhe K124.kE.starts)) K.m :=
   klon_ziel akzeptiert_pruefer K124.kD K124.kE ⟨K124.kFs, K124.kFs_voll⟩
     ⟨[()], K124.kLocks_voll⟩ ⟨K124.kCs, K124.kCs_voll⟩ K124.kE_akzeptiert
-    K124.kE_nutzerPflicht O hO passes _ _ (laufzeit_initRuhe K124.kE (by decide))
+    K124.kE_nutzerPflicht O hO passes _ _ (laufzeit_initRuhe K124.kE)
     k124Lebt0 K hK
 
 /-- Joint instantiation: the machine right after the spawn, on the oracle of

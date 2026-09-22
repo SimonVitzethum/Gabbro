@@ -16,8 +16,8 @@
     soon as some memory meets the lock invariants.
   * The runtime's start of Spec (`Laufzeit`, A4; 2026-09-15):
     `laufzeit_initRuhe`/`laufzeit_voll` (the runtime's exact start,
-    `initRuhe E.starts`, meets it when the declared starts are distinct,
-    which the checker demands); `laufzeit_ruhe` (the root everywhere: the
+    `initRuhe E.starts`, meets it -- since fix lane F10 with no side
+    condition: a routine on two threads is declared twice); `laufzeit_ruhe` (the root everywhere: the
     run class is never empty); `laufzeit_nur_erklaert` (a user function runs
     only if declared); `laufzeit_ohne_starts` (no declared start: the root
     on every thread).
@@ -229,6 +229,33 @@ theorem mem_wsRuhe {ws : List D.Fn} {w' : D.mitRuhe.Fn} :
   · rintro ⟨w, hw, rfl⟩
     exact List.mem_map_of_mem hw
 
+/-- "Declared twice" survives an injective renaming both ways (fix lane F10). -/
+theorem mehrfach_map_inj {α β : Type} {f : α → β} (hf : ∀ a b, f a = f b → a = b)
+    {ws : List α} {w : α} : Mehrfach (ws.map f) (f w) ↔ Mehrfach ws w := by
+  constructor
+  · intro h
+    obtain ⟨l', hl', he⟩ := List.sublist_map_iff.mp h
+    rcases l' with _ | ⟨a, _ | ⟨b, _ | ⟨c, l⟩⟩⟩ <;> simp at he
+    obtain ⟨h1, h2⟩ := he
+    rw [hf a w h1.symm, hf b w h2.symm] at hl'
+    exact hl'
+  · intro h
+    exact h.map f
+
+/-- Two different positions holding one value make it "declared twice". -/
+theorem mehrfach_of_getElem? {α : Type} : ∀ {l : List α} {i j : Nat} {x : α}, i < j →
+    l[i]? = some x → l[j]? = some x → Mehrfach l x
+  | [], _, _, _, _, hi, _ => by simp at hi
+  | _ :: _, _, 0, _, hij, _, _ => by omega
+  | a :: l, 0, j + 1, x, _, hi, hj => by
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hi
+      simp only [List.getElem?_cons_succ] at hj
+      subst hi
+      exact List.Sublist.cons_cons a (List.singleton_sublist.mpr (List.mem_of_getElem? hj))
+  | a :: l, i + 1, j + 1, x, hij, hi, hj => by
+      simp only [List.getElem?_cons_succ] at hi hj
+      exact List.Sublist.cons a (mehrfach_of_getElem? (by omega) hi hj)
+
 section Transfer
 
 variable [DecidableEq D.Fn] (P : Programm D) {S : SperrInv D} {fs ws : List D.Fn}
@@ -256,7 +283,11 @@ theorem getrennt_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P 
   obtain ⟨g, rfl, hg⟩ := reach_mitRuhe_cases P hvoll hAbg hg'
   rw [fussOrteG_mitRuhe] at hc
   rw [traegerSchreibt_mitRuhe]
-  exact h w₁ hw₁ w₂ hw₂ (fun e => hne (e ▸ rfl)) f g hf hc hg
+  have hne' : w₁ ≠ w₂ ∨ Mehrfach ws w₁ := by
+    rcases hne with hne | hne
+    · exact Or.inl (fun e => hne (e ▸ rfl))
+    · exact Or.inr ((mehrfach_map_inj (fun a b e => Option.some.inj e)).mp hne)
+  exact h w₁ hw₁ w₂ hw₂ hne' f g hf hc hg
 
 theorem schreibGetrennt_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ w, AbgK P fs (reachB P fs w)) {c : D.Tab ⊕ D.Glob}
@@ -276,6 +307,25 @@ theorem lokW_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (
   unfold lokW at h ⊢
   exact @decide_eq_true _ (Classical.propDecidable _)
     (getrennt_mitRuhe P hvoll hAbg (@of_decide_eq_true _ (Classical.propDecidable _) h))
+
+/-- **The pool condition transfers to `P.mitRuhe`** (fix lane F10): the root is
+    declared nowhere, and a user routine keeps its graph, writes and guards. -/
+theorem einzelnPool_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
+    (h : EinzelnPool P fs ws) : EinzelnPool P.mitRuhe (fsRuhe fs) (wsRuhe ws) := by
+  intro w' hm
+  cases w' with
+  | none =>
+      exfalso
+      obtain ⟨w, _, e⟩ := mem_wsRuhe.mp (hm.subset List.mem_cons_self)
+      cases e
+  | some w =>
+      have hp := h w ((mehrfach_map_inj (fun a b e => Option.some.inj e)).mp hm)
+      refine ⟨hp.1, hp.2.1, fun f' hf' c hc => ?_⟩
+      obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hAbg hf'
+      rw [traegerSchreibt_mitRuhe] at hc
+      rcases hp.2.2 f hf c hc with ⟨L, hL⟩ | hA
+      · exact Or.inl ⟨L, (bewacht_mitRuhe (D := D) c L).mpr hL⟩
+      · exact Or.inr ((atomar_mitRuhe (D := D) c).mpr hA)
 
 omit [DecidableEq D.Fn] in
 theorem kandB_mitRuhe (L : List (D.Tab ⊕ D.Glob)) :
@@ -375,7 +425,7 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
   wurzeln := fun w' hw' => by
     obtain ⟨w, hw, rfl⟩ := mem_wsRuhe.mp hw'
     exact hA.wurzeln w hw
-  einzeln := List.Pairwise.map some (fun _ _ h e => h (Option.some.inj e)) hA.einzeln
+  einzeln := einzelnPool_mitRuhe P hvoll hA.abg hA.einzeln
   renn := fun c hB hAt => schreibGetrennt_mitRuhe P hvoll hA.abg
     (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt)
   antworten
@@ -432,7 +482,7 @@ theorem startZulaessig_mitRuhe (aktiv : List (Σ w : D.Fn, Env D (D.params w)))
     revert he
     unfold initRuhe
     cases ht : aktiv[t]? with
-    | none => intro _; exact ruhig_mitRuhe P
+    | none => intro _; exact Or.inl (ruhig_mitRuhe P)
     | some a =>
         cases hu : aktiv[u]? with
         | none => intro he; cases he
@@ -462,7 +512,7 @@ def ruheInit (D : Deklaration) : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D
 theorem startZulaessig_ruhe (sp : Speicher D.mitRuhe) (hS : ∀ L, S.inv L (speicherZ sp) = true) :
     StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs) ws' sp (ruheInit D) where
   wurzel _ := Or.inr (ruhig_mitRuhe P)
-  einmal _ _ _ _ := ruhig_mitRuhe P
+  einmal _ _ _ _ := Or.inl (ruhig_mitRuhe P)
   req _ := rfl
   sperren := hS
 
@@ -474,8 +524,11 @@ section Laufzeit
 
 /-- **The runtime's exact start meets A4**: the declared starts on threads
     `0 .. k-1` with their declared arguments, the root elsewhere, from the
-    declared initial memory -- whenever the declared starts are distinct. -/
-theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup) :
+    declared initial memory. Since fix lane F10 with NO side condition: two
+    threads running one routine run two of its declared occurrences, so the
+    routine is declared twice (`Mehrfach`, the pool case of `einmal`). Before,
+    this needed distinct declared starts. -/
+theorem laufzeit_initRuhe (E : Einheit D) :
     Laufzeit E (speicherR E.sp0) (initRuhe E.starts) where
   lader := rfl
   start t := by
@@ -487,27 +540,25 @@ theorem laufzeit_initRuhe (E : Einheit D) (hnd : E.ws.Nodup) :
     revert he
     unfold initRuhe
     cases ht : E.starts[t]? with
-    | none => intro _; rfl
+    | none => intro _; exact Or.inl rfl
     | some a =>
         cases hu : E.starts[u]? with
         | none => intro he; cases he
         | some b =>
             intro he
-            exfalso
             have hab : a.1 = b.1 := Option.some.inj he
             have ht' : (E.starts.map (·.1))[t]? = some a.1 := by rw [List.getElem?_map, ht]; rfl
-            have hu' : (E.starts.map (·.1))[u]? = some b.1 := by rw [List.getElem?_map, hu]; rfl
-            rw [hab] at ht'
-            have hlt : t < (E.starts.map (·.1)).length := (List.getElem?_eq_some_iff.mp ht').1
-            have hnd' : (E.starts.map (·.1)).Nodup := hnd
-            exact htu ((List.getElem?_inj hlt hnd').mp (ht'.trans hu'.symm))
+            have hu' : (E.starts.map (·.1))[u]? = some a.1 := by
+              rw [List.getElem?_map, hu, hab]; rfl
+            refine Or.inr ⟨a.1, rfl, ?_⟩
+            rcases Nat.lt_or_gt_of_ne htu with h | h
+            · exact mehrfach_of_getElem? h ht' hu'
+            · exact mehrfach_of_getElem? h hu' ht'
 
-/-- The checker's acceptance gives distinct declared starts, so the
-    runtime's exact start is always in the class A4 describes. -/
-theorem laufzeit_voll [DecidableEq D.Fn] (E : Einheit D) {fs : List D.Fn}
-    (hA : AkzeptiertSpec E.P E.S fs E.ws) :
-    Laufzeit E (speicherR E.sp0) (initRuhe E.starts) :=
-  laufzeit_initRuhe E hA.einzeln
+/-- The runtime's exact start is always in the class A4 describes (since fix
+    lane F10 without a checker fact; the name is kept for its callers). -/
+theorem laufzeit_voll (E : Einheit D) : Laufzeit E (speicherR E.sp0) (initRuhe E.starts) :=
+  laufzeit_initRuhe E
 
 /-- **Under A4 a thread runs only what the program declares** (verdict P2):
     a user function runs on a thread only if it is a declared start. -/
@@ -535,7 +586,7 @@ theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) {sp : Speicher
 theorem laufzeit_ruhe (E : Einheit D) : Laufzeit E (speicherR E.sp0) (ruheInit D) where
   lader := rfl
   start _ := Or.inl rfl
-  einmal _ _ _ _ := rfl
+  einmal _ _ _ _ := Or.inl rfl
 
 end Laufzeit
 

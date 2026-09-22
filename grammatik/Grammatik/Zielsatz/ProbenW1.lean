@@ -90,7 +90,7 @@ theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide
 theorem w1_sonst_alles :
     (programmImFragmentG w1P [()] && abgAlleB w1P [()] && fussWB w1P w1S [()] [()] &&
       stufenB w1P [()] && sperrOrteB w1S [] && wurzelnB (D := w1D) [()] &&
-      einzelnB (D := w1D) [()] && rennB w1P [()] [] [()]) = true ∧
+      einzelnPoolB w1P [()] [] [()] && rennB w1P [()] [] [()]) = true ∧
     antwortenB w1P [()] = false := by
   constructor <;> decide
 

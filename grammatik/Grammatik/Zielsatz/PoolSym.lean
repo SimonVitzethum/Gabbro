@@ -10,9 +10,13 @@
   pool-safe routine (`PoolSicher` itself, with `PoolSicherW`/`EinzelnPool`,
   lives in `Zielsatz/Spec.lean`, beside `Ruhig`/`StartZulaessig`), the
   decidable pool checks, and the race-freedom and lock legs over
-  multiset starts. `Spec.lean`'s `einzeln`/`Laufzeit.einmal` are extended
-  by `EinzelnPool`, never weakened (old acceptances preserved, proved);
-  the field-type swap itself is specified in MUSE-REPORT-245.md.
+  multiset starts. Since fix lane F10 (2026-09-22) `Spec.lean`'s
+  `AkzeptiertSpec.einzeln` IS `EinzelnPool` and `Laufzeit.einmal` admits a
+  routine declared twice on several threads; the goal theorem covers pools
+  (`gabbro_ziel`, witnessed in PoolZeuge.lean). This file keeps the
+  separation lemmas and the "never weakened" statements of that diff
+  (`akzeptiert_nodup_gleich`, `akzeptiertSpecVor_neu`, `pruefer_vor_neu`,
+  `laufzeit_vor_neu`).
 -/
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.ReferenzB
@@ -165,66 +169,17 @@ def poolP : Programm poolD where
           (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 7)))
           (List.Perm.refl _)
 
-/-! ## The decidable pool checks -/
+/-! ## The decidable pool checks, and "never weakened" (fix lane F10)
+
+The Bools `poolSicherWB`/`einzelnPoolB` and their iff lemmas live in
+`Zielsatz/Akzeptiert.lean` since fix lane F10 (they are a component of
+`Akzeptiert` now). What stays here: the vacuity of the pool condition on
+repetition-free starts, the symmetric pair, and the statements that the
+swap `einzeln : ws.Nodup` -> `EinzelnPool` changes no old verdict. -/
 
 section PoolBool
 
 variable [DecidableEq D.Fn]
-
-/-- **Pool-safe, decided**: no signature lock, no reasons, and every
-    function the graph reaches writes only carriers of the list `cs`
-    that are guarded or atomic. Decides `PoolSicherW` given complete
-    member lists (mirrors `ruheB`/`ruheB_iff`). -/
-def poolSicherWB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
-    (w : D.Fn) : Bool :=
-  (D.haelt w).isEmpty && decide (D.gruende w = 0) && fs.all fun f =>
-    !(reachB P fs w f) ||
-      (cs.all fun c => !(TraegerSchreibt f c) ||
-        (!(waechterVon c).isEmpty || atomarB c))
-
-theorem poolSicherWB_iff {P : Programm D} {fs : List D.Fn}
-    {cs : List (D.Tab ⊕ D.Glob)}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    {w : D.Fn} : poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w := by
-  unfold poolSicherWB PoolSicherW PoolSicher
-  simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
-  constructor
-  · rintro ⟨⟨h1, h2⟩, h3⟩
-    refine ⟨h1, h2, fun f hf c hc => ?_⟩
-    have h4 := (List.all_eq_true.mp h3) f (hvoll f)
-    rw [hf] at h4
-    simp only [Bool.not_true, Bool.false_or] at h4
-    have h5 := (List.all_eq_true.mp h4) c (hcs c)
-    rw [hc] at h5
-    simp only [Bool.not_true, Bool.false_or] at h5
-    cases hl : waechterVon c with
-    | nil =>
-        have he : (([] : List D.Lock).isEmpty) = true := rfl
-        rw [hl, he] at h5
-        simp only [Bool.not_true, Bool.false_or] at h5
-        cases c with
-        | inl _ => simp [atomarB] at h5
-        | inr g => exact Or.inr ⟨g, rfl, h5⟩
-    | cons L _ => exact Or.inl ⟨L, waechterVon_mem.mp (hl.symm ▸ List.mem_cons_self)⟩
-  · rintro ⟨h1, h2, h3⟩
-    refine ⟨⟨h1, h2⟩, List.all_eq_true.mpr fun f _ => ?_⟩
-    cases hf : reachB P fs w f with
-    | false => rfl
-    | true =>
-        refine List.all_eq_true.mpr fun c _ => ?_
-        cases hc : TraegerSchreibt f c with
-        | false => rfl
-        | true =>
-            rcases h3 f hf c hc with ⟨L, hL⟩ | ⟨g, rfl, hg⟩
-            · have he : (waechterVon c).isEmpty = false := by
-                have hmem : L ∈ waechterVon c := waechterVon_mem.mpr hL
-                cases hl : waechterVon c with
-                | nil => rw [hl] at hmem; cases hmem
-                | cons _ _ => rfl
-              rw [he]
-              rfl
-            · have hag : atomarB (.inr g) = true := hg
-              simp [hag]
 
 /-- Filtering for an absent value leaves nothing. -/
 theorem pool_filter_nil {l : List D.Fn} {w : D.Fn} (h : w ∉ l) :
@@ -240,9 +195,7 @@ theorem pool_filter_nil {l : List D.Fn} {w : D.Fn} (h : w ∉ l) :
       · simp only [he]
         exact ih (fun hm => h (List.mem_cons_of_mem _ hm))
 
-/-- A routine occurring in a repetition-free list occurs at most once:
-    filtering for it leaves at most one element. (The one induction the
-    `Nodup` bridge needs; everything below assembles from it.) -/
+/-- A routine occurring in a repetition-free list occurs at most once. -/
 theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
     (w : D.Fn) : (ws.filter (fun v => decide (v = w))).length ≤ 1 := by
   induction ws with
@@ -258,44 +211,25 @@ theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
       · simp [he]
         exact ih hndl
 
-/-- **Duplicates allowed iff pool-safe, decided**: every declared start
-    occurring at least twice is pool-safe at its computed graph. Decides
-    `EinzelnPool` given complete member lists. -/
-def einzelnPoolB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
-    (ws : List D.Fn) : Bool :=
-  ws.all fun w =>
-    decide ((ws.filter (fun v => decide (v = w))).length ≤ 1) ||
-      poolSicherWB P fs cs w
+/-- **The pool condition is vacuous on distinct starts** -- the old
+    `einzeln` implies the new one. -/
+theorem einzelnPool_of_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
+    EinzelnPool P fs ws :=
+  fun w hm => absurd hm (nicht_mehrfach_of_nodup hnd w)
 
-theorem einzelnPoolB_iff {P : Programm D} {fs : List D.Fn}
-    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
-    einzelnPoolB P fs cs ws = true ↔ EinzelnPool P fs ws := by
-  unfold einzelnPoolB EinzelnPool
-  rw [List.all_eq_true]
-  constructor
-  · intro h w hw hlt
-    have h1 := h w hw
-    rw [Bool.or_eq_true] at h1
-    rcases h1 with h1 | h1
-    · have hle := of_decide_eq_true h1
-      omega
-    · exact (poolSicherWB_iff hvoll hcs).mp h1
-  · intro h w hw
-    rw [Bool.or_eq_true]
-    by_cases hc : (ws.filter (fun v => decide (v = w))).length ≤ 1
-    · exact Or.inl (decide_eq_true hc)
-    · exact Or.inr ((poolSicherWB_iff hvoll hcs).mpr (h w hw (by omega)))
-
-/-- **Never weakened**: pairwise distinct starts satisfy the new check --
-    the old `einzelnB` verdicts all stay acceptances. -/
+/-- **Never weakened, Bool side**: pairwise distinct starts satisfy the new
+    component -- every old `einzelnB` verdict stays an acceptance. -/
 theorem einzelnPoolB_of_einzelnB {P : Programm D} {fs : List D.Fn}
     {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : einzelnB ws = true) : einzelnPoolB P fs cs ws = true := by
   have hnd : ws.Nodup := of_decide_eq_true h
   refine List.all_eq_true.mpr fun w _ => ?_
-  rw [Bool.or_eq_true]
-  exact Or.inl (decide_eq_true (nodup_filter_length_le_one hnd w))
+  have hm : mehrfachB ws w = false := by
+    cases e : mehrfachB ws w
+    · rfl
+    · exact absurd (mehrfachB_iff.mp e) (nicht_mehrfach_of_nodup hnd w)
+  rw [hm]
+  rfl
 
 /-- **The symmetric pair is admitted exactly when pool-safe**: the
     extension direction the old `einzeln` refused. -/
@@ -303,28 +237,131 @@ theorem einzelnPool_paar {P : Programm D} {fs : List D.Fn} {w : D.Fn} :
     EinzelnPool P fs [w, w] ↔ PoolSicherW P fs w := by
   constructor
   · intro h
-    have hff : ([w, w].filter (fun v => decide (v = w))) = [w, w] := by
-      simp
-    have hlt : 1 < ([w, w].filter (fun v => decide (v = w))).length := by
-      rw [hff]
-      show 1 < 2
-      decide
-    exact h w List.mem_cons_self hlt
-  · intro hpool w' hw' hlt
+    exact h w (List.Sublist.refl _)
+  · intro hpool w' hm
+    have hw' : w' ∈ [w, w] := hm.subset List.mem_cons_self
     have heq : w' = w := by simpa using hw'
     subst heq
     exact hpool
 
-/-- Every program the old checker accepted satisfies the pool condition:
-    the Prop-level "never weakened" direction. -/
-theorem akzeptiertSpec_pool {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
-    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : AkzeptiertSpec P S fs ws) : EinzelnPool P fs ws :=
-  (einzelnPoolB_iff hvoll hcs).mp
-    (einzelnPoolB_of_einzelnB (decide_eq_true hA.einzeln))
+/-- The thread-locality test BEFORE fix lane F10: DIFFERENT routines only. -/
+def getrenntWVor (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
+  ws.all fun w1 => ws.all fun w2 => decide (w1 = w2) ||
+    (fs.all fun f => !(reachB P fs w1 f) || !(istIn (fussOrteG P f) c)) ||
+    (fs.all fun g => !(reachB P fs w2 g) || !(TraegerSchreibt g c))
+
+/-- The footprint component BEFORE fix lane F10. -/
+def fussWBVor (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
+  fs.all fun f =>
+    (fussOrte P f).all (fun c =>
+      sigB f c || getrenntWVor P fs ws c || (waechterVon c).any fun L => istIn (S.orte L) c) &&
+    ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || getrenntWVor P fs ws c)
+
+/-- **The checker Bool BEFORE fix lane F10** (`einzelnB`, the old `getrenntW`). -/
+def AkzeptiertVor (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
+  programmImFragmentG P fs && abgAlleB P fs && fussWBVor P S fs ws && stufenB P fs &&
+    sperrOrteB S ls && wurzelnB ws && einzelnB ws && rennB P fs cs ws && antwortenB P fs
+
+/-- On distinct starts the two thread-locality tests agree. -/
+theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
+    getrenntW P fs ws = getrenntWVor P fs ws := by
+  funext c
+  have hm : ∀ w, mehrfachB ws w = false := fun w => by
+    cases e : mehrfachB ws w
+    · rfl
+    · exact absurd (mehrfachB_iff.mp e) (nicht_mehrfach_of_nodup hnd w)
+  unfold getrenntW getrenntWVor
+  simp only [hm, Bool.not_false, Bool.and_true]
+
+/-- **(a) OF THE REVIEWED DIFF: no old verdict moves.** On every start list the old
+    checker accepted (it demanded `ws.Nodup`) the new Bool IS the old Bool; and the old
+    Bool accepts only distinct starts. So every unit accepted before is accepted now, and
+    every unit refused before with distinct starts is refused now. -/
+theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+    {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
+    Akzeptiert P S fs ls cs ws = AkzeptiertVor P S fs ls cs ws := by
+  unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
+  rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
+    (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
+
+/-- The old Bool accepts only distinct starts. -/
+theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+    {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+    (h : AkzeptiertVor P S fs ls cs ws = true) : ws.Nodup := by
+  unfold AkzeptiertVor at h
+  simp only [Bool.and_eq_true] at h
+  exact of_decide_eq_true h.1.1.2
+
+/-- **Every old acceptance stays an acceptance.** -/
+theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+    {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+    (h : AkzeptiertVor P S fs ls cs ws = true) : Akzeptiert P S fs ls cs ws = true := by
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h)]
+  exact h
+
+/-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/
+def GetrenntVor (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ f g, reachB P fs w₁ f = true → c ∈ fussOrteG P f →
+    reachB P fs w₂ g = true → TraegerSchreibt g c = false
+
+noncomputable def lokWVor (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
+  @decide (GetrenntVor P fs ws c) (Classical.propDecidable _)
+
+/-- **`AkzeptiertSpec` BEFORE fix lane F10** -- the target of every `Pruefer.korrekt`
+    until then (`einzeln : ws.Nodup`, the routine-level `Getrennt`). -/
+structure AkzeptiertSpecVor (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
+  frag : programmImFragmentG P fs = true
+  abg : ∀ w, AbgK P fs (reachB P fs w)
+  fuss : ∀ f, FussS P S (lokWVor P fs ws) f
+  stufen : StufenM P
+  sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
+  wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
+  einzeln : ws.Nodup
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
+  antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
+
+/-- **The old specification implies the new one** (Prop side of (a)): with distinct
+    starts the occurrence form of `Getrennt` is the routine form. -/
+theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
+    (h : AkzeptiertSpecVor P S fs ws) : AkzeptiertSpec P S fs ws := by
+  have hlok : lokWVor P fs ws = lokW P fs ws := by
+    funext c
+    have e : GetrenntVor P fs ws c ↔ Getrennt P fs ws c := by
+      constructor
+      · intro hg w₁ h₁ w₂ h₂ hne
+        exact hg w₁ h₁ w₂ h₂ (hne.resolve_right (nicht_mehrfach_of_nodup h.einzeln w₁))
+      · intro hg w₁ h₁ w₂ h₂ hne
+        exact hg w₁ h₁ w₂ h₂ (Or.inl hne)
+    unfold lokWVor lokW
+    exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
+  exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten⟩
 
 end PoolBool
+
+/-- **(a) OF THE REVIEWED DIFF, for the checker interface: every old checker is a
+    `Pruefer`.** A Bool sound against the old specification is sound against the new one,
+    so `GabbroZiel`'s `∀ C : Pruefer` ranges over at least every checker it ranged over
+    before. -/
+def pruefer_vor_neu
+    (akz : ∀ {D : Deklaration} [DecidableEq D.Fn],
+      Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
+    (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
+      (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+      akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
+  akzeptiert := akz
+  korrekt := fun E fs ls cs h => akzeptiertSpecVor_neu (korr E fs ls cs h)
+
+/-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
+    `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/
+theorem laufzeit_vor_neu {E : Einheit D} {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hl : sp = speicherR E.sp0)
+    (hs : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩)
+    (he : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none) :
+    Laufzeit E sp init :=
+  ⟨hl, hs, fun t u htu h => Or.inl (he t u htu h)⟩
 
 /-! ## The legs over multiset starts -/
 
@@ -426,22 +463,14 @@ theorem poolSicher_refD_unmoeglich (K : refD.Fn → Bool) (w : refD.Fn) :
   | false => exact absurd h.1 (by decide)
 
 /-! CUTS: what is not proved.
-  * The full `RennfreiBis` over a multiset start is not proved here: that
-    needs the `einzeln` field of `AkzeptiertSpec` (and `Laufzeit.einmal`)
-    swapped to `EinzelnPool` -- specified as wave-B input in
-    MUSE-REPORT-245.md, with every bridge lemma it needs proved above
-    (`einzelnPoolB_of_einzelnB`, `einzelnPoolB_iff`, `akzeptiertSpec_pool`,
-    `einzelnPool_paar`). Proved instead, over multiset starts: the
-    unguarded-write leg per writing thread (`pool_schreibt_nicht_lauf`),
-    the guarded-leg bridge (`pool_startExklusiv`), and the separation
-    premise (`pool_schreibt_nicht`), jointly witnessed, with the refusal
-    direction on `refD`.
   * Per-core writes are not covered model-side: the surface exempts
-    `accumulates … per cpu`, the model has no notion for it.
-  * No joint `_zeuge` beyond `pool_schreibt_nicht_zeuge`: `poolP`'s bodies
-    are trivial by design (the witness graph never unfolds them), and the
-    run-level lemma takes a `LaufG` run no finite fixture supplies (same
-    standing as `rennfrei_ungeschuetzt`, which has none either). -/
+    `accumulates … per cpu`, the model has no notion for it (OFFEN O17); the
+    exporter refuses such units.
+  * The goal legs over pool starts are NOT in this file any more: since fix
+    lane F10 they are `gabbro_ziel` itself (the only proof changes are
+    `getrenntK_of`/`schreibGetrenntK_of`, Zielsatz/Akzeptiert.lean), witnessed
+    on a two-worker pool in Zielsatz/PoolZeuge.lean. `pool_schreibt_nicht_lauf`
+    stays as the run-level form of the write leg. -/
 
 #print axioms Gabbro.Grammatik.pool_schreibt_nicht
 #print axioms Gabbro.Grammatik.pool_schreibt_nicht_zeuge
@@ -451,7 +480,14 @@ theorem poolSicher_refD_unmoeglich (K : refD.Fn → Bool) (w : refD.Fn) :
 #print axioms Gabbro.Grammatik.einzelnPoolB_iff
 #print axioms Gabbro.Grammatik.einzelnPoolB_of_einzelnB
 #print axioms Gabbro.Grammatik.einzelnPool_paar
-#print axioms Gabbro.Grammatik.akzeptiertSpec_pool
+#print axioms Gabbro.Grammatik.einzelnPool_of_nodup
+#print axioms Gabbro.Grammatik.getrenntW_nodup
+#print axioms Gabbro.Grammatik.akzeptiert_nodup_gleich
+#print axioms Gabbro.Grammatik.akzeptiertVor_nodup
+#print axioms Gabbro.Grammatik.akzeptiert_vor_neu
+#print axioms Gabbro.Grammatik.akzeptiertSpecVor_neu
+#print axioms Gabbro.Grammatik.pruefer_vor_neu
+#print axioms Gabbro.Grammatik.laufzeit_vor_neu
 #print axioms Gabbro.Grammatik.pool_schreibt_nicht_lauf
 #print axioms Gabbro.Grammatik.pool_startExklusiv
 #print axioms Gabbro.Grammatik.Zielsatz.PoolSicher

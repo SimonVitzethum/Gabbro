@@ -202,7 +202,7 @@ theorem p108_laufzeit :
     Zielsatz.Laufzeit G108_disjoint_start_locks_oblig.gE
       (speicherR G108_disjoint_start_locks_oblig.gE.sp0)
       (initRuhe G108_disjoint_start_locks_oblig.gE.starts) :=
-  laufzeit_initRuhe G108_disjoint_start_locks_oblig.gE (by decide)
+  laufzeit_initRuhe G108_disjoint_start_locks_oblig.gE
 
 /-- **THE CHAIN, CLOSED ON 108, CONCURRENTLY**: with the duty proved above,
     the goal holds at every reachable machine of the two-threaded run the

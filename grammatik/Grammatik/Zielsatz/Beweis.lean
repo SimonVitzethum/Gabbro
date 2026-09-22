@@ -176,8 +176,11 @@ theorem startZulaessig_aus (E : Einheit D) (fs : List D.Fn) (hN : StartPflicht E
     · rw [h]
       exact Or.inl (List.mem_map_of_mem (List.mem_map_of_mem ha))
   einmal t u htu he := by
-    rw [hL.einmal t u htu he]
-    exact ruhig_mitRuhe E.P
+    rcases hL.einmal t u htu he with h | ⟨w, hw, hm⟩
+    · rw [h]
+      exact Or.inl (ruhig_mitRuhe E.P)
+    · rw [hw]
+      exact Or.inr (hm.map some)
   req t := by
     show ReqAmEintritt E.P.mitRuhe (init t).1 (sp.welt []) (init t).2
     rcases hL.start t with h | ⟨a, ha, h⟩

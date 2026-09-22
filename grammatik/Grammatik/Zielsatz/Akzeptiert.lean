@@ -20,7 +20,7 @@
   | `stufen`       | `stufenB`              | `StufenM P`                                            | `hSt` of `keine_verklemmungG` |
   | `sperrOrte`    | `sperrOrteB`           | `∀ L c, c ∈ S.orte L → Bewacht c L`                    | first half of `hS : SperrInvOk S` |
   | `wurzeln`      | `wurzelnB`             | `∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0`           | `hLeer` / `hex`; no reasons at a start (`StartOhneGrund`) |
-  | `einzeln`      | `einzelnB`             | `ws.Nodup`                                             | the runtime's exact start is covered (`laufzeit_voll`) |
+  | `einzeln`      | `einzelnPoolB`         | `EinzelnPool P fs ws` (a start declared twice is pool-safe; since F10, before `ws.Nodup`) | same-routine thread pairs in `schreibGetrenntK_of` |
   | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
   | `antworten`    | `antwortenB`           | every answer site of every body is an axiom `-> never` or has a non-empty type (`StelleOk`) | `fortschrittG_aus` (the stop `nieZurueck` is an axiom `-> never` only) |
 
@@ -39,6 +39,15 @@
   `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
   list as an argument. The call graphs are COMPUTED from it (`reachB`),
   never supplied.
+
+  **Changes of 2026-09-22 (fix lane F10, OFFEN O18):**
+  * `einzeln` is now `einzelnPoolB` (`EinzelnPool`): a routine declared at
+    least twice is admitted when pool-safe (no signature lock, no reasons,
+    every carrier its graph may write guarded or atomic) -- the Rust `N304`
+    of lane 245. `getrenntW` pairs start OCCURRENCES (`mehrfachB`), so a
+    pool routine's footprint carrier its own graph may write is thread-local
+    no longer. On a repetition-free `ws` the Bool is unchanged
+    (`akzeptiert_nodup_gleich`, PoolSym.lean).
 
   **Changes of 2026-09-15 (round-6 verdicts, finding W1):**
   * `antworten` is NEW: no body calls an axiom or reads a register at a declared answer
@@ -103,14 +112,56 @@ section Akzeptiert
 
 variable [DecidableEq D.Fn]
 
+/-! ## 0. "Declared at least twice", decided (fix lane F10) -/
+
+/-- "Declared at least twice" is "filtering for it leaves two or more". -/
+theorem mehrfach_filter {α : Type} [DecidableEq α] {ws : List α} {w : α} :
+    Mehrfach ws w ↔ 1 < (ws.filter (fun v => decide (v = w))).length := by
+  constructor
+  · intro h
+    have h1 := (h.filter (fun v => decide (v = w))).length_le
+    have h2 : ([w, w].filter (fun v => decide (v = w))).length = 2 := by simp
+    omega
+  · induction ws with
+    | nil => intro h; simp at h
+    | cons a l ih =>
+        intro h
+        by_cases he : a = w
+        · subst he
+          simp only [List.filter_cons, decide_true, if_true, List.length_cons] at h
+          have hpos : 0 < (l.filter (fun v => decide (v = a))).length := by omega
+          obtain ⟨x, hx⟩ := List.exists_mem_of_length_pos hpos
+          have hxl := (List.mem_filter.mp hx)
+          have hxa : x = a := of_decide_eq_true hxl.2
+          subst hxa
+          exact List.Sublist.cons_cons x (List.singleton_sublist.mpr hxl.1)
+        · have h' : 1 < (l.filter (fun v => decide (v = w))).length := by
+            simpa [List.filter_cons, he] using h
+          exact List.Sublist.cons a (ih h')
+
+/-- `w` is declared at least twice in `ws`, decided. -/
+def mehrfachB (ws : List D.Fn) (w : D.Fn) : Bool :=
+  decide (1 < (ws.filter (fun v => decide (v = w))).length)
+
+theorem mehrfachB_iff {ws : List D.Fn} {w : D.Fn} : mehrfachB ws w = true ↔ Mehrfach ws w := by
+  unfold mehrfachB
+  rw [decide_eq_true_iff, mehrfach_filter]
+
+/-- On a repetition-free list nothing is declared twice. -/
+theorem nicht_mehrfach_of_nodup {α : Type} {ws : List α} (hnd : ws.Nodup) (w : α) :
+    ¬ Mehrfach ws w := fun h => by
+  have := List.Nodup.sublist h hnd
+  simp at this
+
 /-! ## 1. Thread-locality over the declared starts -/
 
 /-- **`c` is thread-local among the declared starts** (reads against
-    writes): for every two DIFFERENT declared starts, no function the first
-    reaches has `c` in its footprint while a function the second reaches may
-    write it. Decides Spec's `Getrennt`. -/
+    writes): for every two DIFFERENT declared start occurrences, no function
+    the first reaches has `c` in its footprint while a function the second
+    reaches may write it; a routine declared twice is paired with itself
+    (fix lane F10). Decides Spec's `Getrennt`. -/
 def getrenntW (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
-  ws.all fun w1 => ws.all fun w2 => decide (w1 = w2) ||
+  ws.all fun w1 => ws.all fun w2 => (decide (w1 = w2) && !(mehrfachB ws w1)) ||
     (fs.all fun f => !(reachB P fs w1 f) || !(istIn (fussOrteG P f) c)) ||
     (fs.all fun g => !(reachB P fs w2 g) || !(TraegerSchreibt g c))
 
@@ -119,9 +170,12 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
   constructor
   · intro h w1 hw1 w2 hw2 hne f g hf hc hg
     have h1 := (List.all_eq_true.mp ((List.all_eq_true.mp h) w1 hw1)) w2 hw2
-    simp only [Bool.or_eq_true, decide_eq_true_eq] at h1
+    simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at h1
     rcases h1 with (h1 | h1) | h1
-    · exact absurd h1 hne
+    · rcases hne with hne | hne
+      · exact absurd h1.1 hne
+      · rw [mehrfachB_iff.mpr hne] at h1
+        cases h1.2
     · have h2 := (List.all_eq_true.mp h1) f (hvoll f)
       rw [hf, istIn_iff.mpr hc] at h2
       simp at h2
@@ -130,8 +184,16 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
       simpa using h2
   · intro h
     refine List.all_eq_true.mpr fun w1 hw1 => List.all_eq_true.mpr fun w2 hw2 => ?_
-    by_cases hne : w1 = w2
-    · simp [hne]
+    by_cases hne : w1 = w2 ∧ mehrfachB ws w1 = false
+    · obtain ⟨rfl, hm⟩ := hne
+      simp [hm]
+    have hne' : w1 ≠ w2 ∨ Mehrfach ws w1 := by
+      by_cases he : w1 = w2
+      · refine Or.inr (mehrfachB_iff.mp ?_)
+        cases hm : mehrfachB ws w1
+        · exact absurd ⟨he, hm⟩ hne
+        · rfl
+      · exact Or.inl he
     by_cases hfr : (fs.all fun f => !(reachB P fs w1 f) || !(istIn (fussOrteG P f) c)) = true
     · simp [hfr]
     · have hex : ∃ f, reachB P fs w1 f = true ∧ c ∈ fussOrteG P f := by
@@ -146,7 +208,7 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
         List.all_eq_true.mpr fun g _ => by
           cases hg : reachB P fs w2 g
           · rfl
-          · simp [h w1 hw1 w2 hw2 hne f g hf hc hg]
+          · simp [h w1 hw1 w2 hw2 hne' f g hf hc hg]
       simp [hw]
 
 /-- The decided thread-locality IS Spec's `lokW` (given the member list). -/
@@ -306,11 +368,33 @@ def sperrOrteB (S : SperrInv D) (ls : List D.Lock) : Bool :=
 def wurzelnB (ws : List D.Fn) : Bool :=
   ws.all fun w => (D.haelt w).isEmpty && decide (D.gruende w = 0)
 
-/-- The declared starts are pairwise distinct (2026-09-15): the runtime runs
-    each declared start on its own thread, and two threads running one busy
-    start would escape the race component (it separates DIFFERENT starts). -/
+/-- The declared starts are pairwise distinct -- the `einzeln` component from
+    2026-09-15 until fix lane F10 (2026-09-22), which replaced it by
+    `einzelnPoolB`. Kept for the "never weakened" statements of PoolSym.lean
+    (`akzeptiert_nodup_gleich`). -/
 def einzelnB (ws : List D.Fn) : Bool :=
   decide ws.Nodup
+
+/-- **Pool-safe, decided**: no signature lock, no reasons, and every
+    function the graph reaches writes only carriers of the list `cs`
+    that are guarded or atomic. Decides `PoolSicherW` given complete
+    member lists (lane 245; moved here by fix lane F10). -/
+def poolSicherWB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
+    (w : D.Fn) : Bool :=
+  (D.haelt w).isEmpty && decide (D.gruende w = 0) && fs.all fun f =>
+    !(reachB P fs w f) ||
+      (cs.all fun c => !(TraegerSchreibt f c) ||
+        (!(waechterVon c).isEmpty || atomarB c))
+
+/-- **The start component since fix lane F10** (`EinzelnPool`): every
+    routine declared at least twice is pool-safe. Replaces `einzelnB`: the
+    runtime runs each declared occurrence on its own thread, and a routine
+    on two threads is admitted when no instance can write a carrier the
+    other could race on (the race leg), while the footprint leg pairs the
+    two occurrences in `getrenntW`. The Rust checker's `N304`. -/
+def einzelnPoolB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
+    (ws : List D.Fn) : Bool :=
+  ws.all fun w => !(mehrfachB ws w) || poolSicherWB P fs cs w
 
 /-- **An answer site, decided** (`StelleOk`, AntwortOrte.lean; round-6 finding W1): an axiom
     whose declared result is `never`, or a site whose declared answer type has a value over
@@ -328,7 +412,8 @@ def antwortenB (P : Programm D) (fs : List D.Fn) : Bool :=
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
-    sperrOrteB S ls && wurzelnB ws && einzelnB ws && rennB P fs cs ws && antwortenB P fs
+    sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
+    antwortenB P fs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 
@@ -421,6 +506,67 @@ theorem antwortenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
     exact List.all_eq_true.mpr fun f _ => List.all_eq_true.mpr fun x hx =>
       (stelleB_iff hvoll x).mpr (h f x hx)
 
+theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    {w : D.Fn} : poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w := by
+  unfold poolSicherWB PoolSicherW PoolSicher
+  simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
+  constructor
+  · rintro ⟨⟨h1, h2⟩, h3⟩
+    refine ⟨h1, h2, fun f hf c hc => ?_⟩
+    have h4 := (List.all_eq_true.mp h3) f (hvoll f)
+    rw [hf] at h4
+    simp only [Bool.not_true, Bool.false_or] at h4
+    have h5 := (List.all_eq_true.mp h4) c (hcs c)
+    rw [hc] at h5
+    simp only [Bool.not_true, Bool.false_or] at h5
+    cases hl : waechterVon c with
+    | nil =>
+        have he : (([] : List D.Lock).isEmpty) = true := rfl
+        rw [hl, he] at h5
+        simp only [Bool.not_true, Bool.false_or] at h5
+        cases c with
+        | inl _ => simp [atomarB] at h5
+        | inr g => exact Or.inr ⟨g, rfl, h5⟩
+    | cons L _ => exact Or.inl ⟨L, waechterVon_mem.mp (hl.symm ▸ List.mem_cons_self)⟩
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨⟨h1, h2⟩, List.all_eq_true.mpr fun f _ => ?_⟩
+    cases hf : reachB P fs w f with
+    | false => rfl
+    | true =>
+        refine List.all_eq_true.mpr fun c _ => ?_
+        cases hc : TraegerSchreibt f c with
+        | false => rfl
+        | true =>
+            rcases h3 f hf c hc with ⟨L, hL⟩ | ⟨g, rfl, hg⟩
+            · have he : (waechterVon c).isEmpty = false := by
+                have hmem : L ∈ waechterVon c := waechterVon_mem.mpr hL
+                cases hl : waechterVon c with
+                | nil => rw [hl] at hmem; cases hmem
+                | cons _ _ => rfl
+              rw [he]
+              rfl
+            · have hag : atomarB (.inr g) = true := hg
+              simp [hag]
+
+/-- **The start component decides its field** (`AkzeptiertSpec.einzeln`, fix lane F10). -/
+theorem einzelnPoolB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
+    einzelnPoolB P fs cs ws = true ↔ EinzelnPool P fs ws := by
+  unfold einzelnPoolB EinzelnPool
+  rw [List.all_eq_true]
+  constructor
+  · intro h w hm
+    have hw : w ∈ ws := hm.subset List.mem_cons_self
+    have h1 := h w hw
+    rw [Bool.or_eq_true, mehrfachB_iff.mpr hm] at h1
+    rcases h1 with h1 | h1
+    · cases h1
+    · exact (poolSicherWB_iff hvoll hcs).mp h1
+  · intro h w _
+    rw [Bool.or_eq_true]
+    cases hm : mehrfachB ws w
+    · exact Or.inl rfl
+    · exact Or.inr ((poolSicherWB_iff hvoll hcs).mpr (h w (mehrfachB_iff.mp hm)))
+
 /-- **`Akzeptiert` decides exactly `AkzeptiertSpec`** (given complete member
     lists). -/
 theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
@@ -431,12 +577,13 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   constructor
   · rintro ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
     exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
-      (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, of_decide_eq_true h7,
+      (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
       (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9⟩
   · intro h
     exact ⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
-      wurzelnB_iff.mpr h.wurzeln⟩, decide_eq_true h.einzeln⟩, (rennB_iff hvoll hcs).mpr h.renn⟩,
+      wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
+      (rennB_iff hvoll hcs).mpr h.renn⟩,
       (antwortenB_iff hvoll).mpr h.antworten⟩
 
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
@@ -508,15 +655,22 @@ theorem getrenntK_of (hZ : StartZulaessig P S fs ws sp init)
   · exact (hru.2.2 g hg).2 c
   have hwt := (hZ.wurzel t).resolve_right hrt
   have hwu := (hZ.wurzel u).resolve_right hru
-  have hne : (init t).1 ≠ (init u).1 := fun he => hrt (hZ.einmal t u htu he)
+  have hne : (init t).1 ≠ (init u).1 ∨ Mehrfach ws (init t).1 := by
+    by_cases he : (init t).1 = (init u).1
+    · exact Or.inr ((hZ.einmal t u htu he).resolve_left hrt)
+    · exact Or.inl he
   exact hc _ hwt _ hwu hne f g hf hcf hg
 
 /-- The declared-start write separation gives write separation over the
     computed graphs of every admissible start: an idle thread writes
-    nothing and reads nothing, and two busy threads run different declared
-    starts. -/
-theorem schreibGetrenntK_of (hZ : StartZulaessig P S fs ws sp init)
-    {c : D.Tab ⊕ D.Glob} (hc : SchreibGetrennt P fs ws c) :
+    nothing and reads nothing, two busy threads running different declared
+    starts are separated by `SchreibGetrennt`, and two busy threads running
+    ONE routine run a routine declared twice (`Mehrfach`), which is
+    pool-safe (`EinzelnPool`) and so writes no unguarded, non-atomic carrier
+    at all (fix lane F10). -/
+theorem schreibGetrenntK_of (hZ : StartZulaessig P S fs ws sp init) (hP : EinzelnPool P fs ws)
+    {c : D.Tab ⊕ D.Glob} (hB : ∀ L, ¬ Bewacht c L) (hAt : ¬ AtomarAusgenommen c)
+    (hc : SchreibGetrennt P fs ws c) :
     SchreibGetrenntK P (kVon P fs init) c := by
   intro t u htu g hg hgw h hh
   by_cases hrt : Ruhig P fs (init t).1
@@ -527,8 +681,12 @@ theorem schreibGetrenntK_of (hZ : StartZulaessig P S fs ws sp init)
     exact ⟨h2 c, by rw [h1]; exact List.not_mem_nil⟩
   have hwt := (hZ.wurzel t).resolve_right hrt
   have hwu := (hZ.wurzel u).resolve_right hru
-  have hne : (init t).1 ≠ (init u).1 := fun he => hrt (hZ.einmal t u htu he)
-  exact hc _ hwt _ hwu hne g hg hgw h hh
+  by_cases he : (init t).1 = (init u).1
+  · have hpool := hP _ ((hZ.einmal t u htu he).resolve_left hrt)
+    rcases hpool.2.2 g hg c hgw with ⟨L, hL⟩ | hA
+    · exact absurd hL (hB L)
+    · exact absurd hA hAt
+  · exact hc _ hwt _ hwu he g hg hgw h hh
 
 /-- No thread starts holding a lock by signature, and none starts with
     reasons. -/
@@ -555,7 +713,7 @@ theorem Akzeptiert_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S 
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => (wurzel_of hA hZ t).1
   refine ⟨hA.frag, fun t => hA.abg _, fun t => reachB_wurzel P fs _, fun f => ?_, hA.sperrOrte,
     hZ.req, hZ.sperren, startExklusiv_ohne_haelt init hLeer, hA.stufen, hLeer,
-    fun c hB hAt => schreibGetrenntK_of hZ (hA.renn c hB hAt)⟩
+    fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt)⟩
   refine fussS_mono (fun c _ hc => lokK_of (getrenntK_of hZ ?_)) (hA.fuss f)
   unfold lokW at hc
   exact @of_decide_eq_true _ (Classical.propDecidable _) hc
@@ -657,7 +815,7 @@ theorem startB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List 
     · exact (hi t ht).1.imp id (hR _)
     · rw [st.init_ab (Nat.le_of_not_lt ht)]
       exact Or.inr (hR _ h1)
-  · apply hR
+  · refine Or.inl (hR _ ?_)
     by_cases ht : t < st.aktiv.length
     · by_cases hu : u < st.aktiv.length
       · exact (hi t ht).2 u hu htu he
@@ -673,7 +831,12 @@ theorem startB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List 
 
 end Tafel
 
+#print axioms Gabbro.Grammatik.mehrfach_filter
+#print axioms Gabbro.Grammatik.mehrfachB_iff
+#print axioms Gabbro.Grammatik.nicht_mehrfach_of_nodup
 #print axioms Gabbro.Grammatik.getrenntW_iff
+#print axioms Gabbro.Grammatik.poolSicherWB_iff
+#print axioms Gabbro.Grammatik.einzelnPoolB_iff
 #print axioms Gabbro.Grammatik.schreibGetrenntW_iff
 #print axioms Gabbro.Grammatik.rennB_iff
 #print axioms Gabbro.Grammatik.antwortenB_iff

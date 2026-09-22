@@ -21,6 +21,37 @@
   Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
   carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
 
+  WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
+  DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
+  * The Rust checker admits a symmetric worker pool, `concurrent { w, w }`, when `w` is
+    pool-safe (lane 245, narrowed `N304`), while `AkzeptiertSpec.einzeln` demanded `ws.Nodup`
+    and (d) let no declared start run on two threads -- so no theorem covered those programs.
+    Simon's decision (2026-09-21): move the statement, and prove the legs.
+  * THE DIFF. New `Mehrfach ws w` (`[w, w]` is a sublist of `ws`: declared at least twice).
+    (a) `AkzeptiertSpec.einzeln : ws.Nodup` becomes `EinzelnPool P fs ws` (every routine
+    declared twice is `PoolSicherW`: no signature lock, no reasons, every carrier its graph may
+    write guarded or atomic); `Getrennt` pairs a start with a DIFFERENT OCCURRENCE (`w₁ ≠ w₂ ∨
+    Mehrfach ws w₁`), so a pool routine's footprint carrier that its own graph may write needs a
+    signature lock or a lock invariant, as for two different starts. (d) `Laufzeit.einmal` lets
+    a routine run on several threads iff it is declared at least twice (before: never).
+  * WHY NOTHING IS WEAKENED. (i) Every program the old checker accepted is accepted, with the
+    same verdict: on a repetition-free `ws` `Mehrfach` never holds, so the new `Getrennt` is the
+    old one and `EinzelnPool` holds vacuously (`akzeptiert_nodup_gleich`,
+    `akzeptiertSpecVor_neu`, Zielsatz/PoolSym.lean). (ii) Both premise changes are
+    RELAXATIONS: `AkzeptiertSpec` is the target of `Pruefer.korrekt`, so every old checker is
+    still a `Pruefer` (`pruefer_vor_neu`), and every run (d) admitted before is admitted now.
+    `GabbroZiel` therefore claims `Ziel` for strictly more programs and runs, and `Ziel` is the
+    same structure. (iii) The proof needs nothing new below `Akzeptiert_ok`: every leg is
+    proved over per-THREAD facts (`lokK`, `SchreibGetrenntK`, `StartExklusiv`), and the two
+    places where distinctness entered -- `getrenntK_of`, `schreibGetrenntK_of` -- now take a
+    same-routine pair from `Mehrfach`: the footprint pair from the occurrence form of
+    `Getrennt`, the write pair from pool safety (a pool graph writes no unguarded, non-atomic
+    carrier). Witnesses: `pool_ziel_zeuge` (a pool of two lock-guarded workers accepted by
+    `akzeptiert_pruefer`, both instances stepped, `Ziel` by `gabbro_ziel`) and `pool_abgelehnt`
+    (an unguarded writer twice is refused by the Bool), Zielsatz/PoolZeuge.lean.
+  * WHAT STAYS NAMED: per-core writes (`accumulates … per cpu`, OFFEN O17) are exempt in the
+    Rust pool rule and unmodelled; the exporter refuses such units, so they never reach (a).
+
   WHAT CHANGED ON 2026-09-15 (FOURTH ROUND), AND WHY (round-6 confirmation reviews,
   URTEIL-OPUS-2026-09-15d.md and URTEIL-MUSE-2026-09-15d.md, finding W1 -- a REVIEWED DIFF:
   `AkzeptiertSpec` gains the field `antworten`, `KopfHalt .nieZurueck` is narrowed to an
@@ -191,7 +222,9 @@
   * (d) `Laufzeit.start`/`.einmal` -- the runtime starts exactly the declared starts, each on
     its own thread with its declared arguments, and the idle root `none` (MitRuhe.lean: body
     `return`, empty signature, no lock, no reason, writes nothing) on every other thread;
-    the statement covers every assignment running some of the declared starts this way.
+    the statement covers every assignment running some of the declared starts this way, and
+    (since fix lane F10) any number of threads running a routine the program declares at
+    least twice (a worker pool; the runtime's own start runs one thread per occurrence).
     Thread creation is the runtime's (the emitted `main`/boot code), not user logic. The
     machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
     (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
@@ -352,7 +385,9 @@
   (DRF for every non-atomic carrier), `Getrennt`, `SchreibGetrennt` (write separation of
   unguarded carriers, the counterpart of `H013`; with it `rennfreiBis_of`, Akzeptiert.lean,
   proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
-  `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`.
+  `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
+  declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
+  245, a premise since F10).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -376,8 +411,9 @@
   see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
-  locks are held (claimed at returns only); one thread per busy start (SMP-symmetric code
-  running one start on several cores is outside (d)); linking of separately compiled units
+  locks are held (claimed at returns only); a busy routine declared ONCE on several threads
+  (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
+  and the checker admits that only pool-safe, `EinzelnPool`); linking of separately compiled units
   (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
   supplies is not in `D.Fn`); a thread SPAWNED at run time (the `child` region of a stack
   gate, lane O-1): the thread population is fixed at the start by (d), and a spawned child
@@ -436,6 +472,12 @@ structure Einheit (D : Deklaration) where
 /-- The declared start functions. -/
 def Einheit.ws (E : Einheit D) : List D.Fn := E.starts.map (·.1)
 
+/-- **`w` is declared at least twice** (fix lane F10, 2026-09-22): two start OCCURRENCES of one
+    routine, `concurrent { w, w }` -- a symmetric worker pool. The one notion of "twice" in
+    this file: the checker's `einzeln` (pool safety), its thread-locality `Getrennt` (two
+    occurrences are two threads) and the runtime's `Laufzeit.einmal` all read it. -/
+def Mehrfach {α : Type} (ws : List α) (w : α) : Prop := List.Sublist [w, w] ws
+
 /-! ## (a) What the checker decides -/
 
 section Pruefer
@@ -443,10 +485,14 @@ section Pruefer
 variable [DecidableEq D.Fn]
 
 /-- Carrier `c` is thread-local among the declared starts `ws`: no start reaches `c` in a
-    footprint while a DIFFERENT start can write it (`GetrenntK` over the starts). -/
+    footprint while a DIFFERENT start OCCURRENCE can write it (`GetrenntK` over the starts).
+    Since fix lane F10 (2026-09-22) a routine declared twice (`Mehrfach`) is two threads, so
+    it is paired with ITSELF too: its footprint carriers must not be written by its own graph
+    unless a signature lock or a lock invariant covers them (`FussS`). On a repetition-free
+    `ws` this is the old condition word for word (`Mehrfach` never holds there). -/
 def Getrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
-  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ f g, reachB P fs w₁ f = true → c ∈ fussOrteG P f →
-    reachB P fs w₂ g = true → TraegerSchreibt g c = false
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, reachB P fs w₁ f = true →
+    c ∈ fussOrteG P f → reachB P fs w₂ g = true → TraegerSchreibt g c = false
 
 noncomputable def lokW (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
   @decide (Getrennt P fs ws c) (Classical.propDecidable _)
@@ -457,10 +503,38 @@ def SchreibGetrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) 
   ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ g, reachB P fs w₁ g = true → TraegerSchreibt g c = true →
     ∀ h, reachB P fs w₂ h = true → TraegerSchreibt h c = false ∧ c ∉ fussOrteG P h
 
+/-- **Pool-safe**: routine `w` may run on any number of threads. It starts
+    like any admitted start (no signature-held lock, no reasons), and every
+    carrier some function of the thread graph `K` may write is guarded by a
+    lock or atomic. Reads need nothing for the RACE leg: with no unguarded
+    writer, two threads reading one carrier do not race; the footprint leg
+    (a carrier read in a footprint that the other instance may write) is
+    `Getrennt`'s, which pairs a routine declared twice with itself. (Lane
+    245: the model side of the narrowed `N304`.) -/
+def PoolSicher (D : Deklaration) (K : D.Fn → Bool) (w : D.Fn) : Prop :=
+  D.haelt w = [] ∧ D.gruende w = 0 ∧
+    ∀ f, K f = true → ∀ c, TraegerSchreibt f c = true →
+      (∃ L, Bewacht c L) ∨ AtomarAusgenommen c
+
+/-- **Pool-safe at its computed graph**: `PoolSicher` with the thread
+    graph `reachB P fs w`. -/
+def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
+  PoolSicher D (reachB P fs w) w
+
+/-- **Duplicates allowed iff pool-safe**: every routine declared at least
+    twice is pool-safe at its computed graph. `ws.Nodup` implies it
+    vacuously (`einzelnPool_of_nodup`, PoolSym.lean); the symmetric pair
+    `[w, w]` satisfies it exactly for pool-safe `w` (`einzelnPool_paar`).
+    The checker's `N304` decides it for same-routine pairs. Since fix lane
+    F10 (2026-09-22) this is the field `einzeln` of `AkzeptiertSpec`. -/
+def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
+  ∀ w, Mehrfach ws w → PoolSicherW P fs w
+
 /-- **What `Akzeptiert` must establish** (the Props of its components): fragment; closed call
     graphs; every footprint carrier signature-guarded, lock-protected or thread-local; lock
     floors; protected carriers guarded by their lock; declared starts hold no lock by
-    signature, have no reasons, and are pairwise distinct; every carrier without a guard
+    signature and have no reasons, and a start declared twice is pool-safe (`EinzelnPool`,
+    since fix lane F10 -- before: pairwise distinct, `ws.Nodup`); every carrier without a guard
     lock that is not `atomic` is write-separated among the declared starts (the counterpart
     of the checker's `H013`; publish payloads INCLUDED since 2026-09-15, verdict P3); no body
     calls an axiom or reads a register at a declared answer type without a value, except an
@@ -472,7 +546,7 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   stufen : StufenM P
   sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
   wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
-  einzeln : ws.Nodup
+  einzeln : EinzelnPool P fs ws
   renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
 
@@ -544,7 +618,8 @@ def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
     * `lader` -- the loader establishes the program's DECLARED initial memory `E.sp0`;
     * `start` -- every thread runs the idle root or ONE declared start with its DECLARED
       arguments;
-    * `einmal` -- no declared start runs on two threads.
+    * `einmal` -- a declared start runs on two threads only if the program declares it at
+      least twice (`Mehrfach`, a worker pool; fix lane F10, 2026-09-22 -- before: never).
     The runtime starts EXACTLY the declared starts, each on its own thread, the root on every
     other thread (`initRuhe E.starts`); that start meets this predicate whenever the checker
     accepts (`laufzeit_initRuhe`, Zielsatz/Proben.lean), and so does every assignment running
@@ -553,7 +628,8 @@ structure Laufzeit (E : Einheit D) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) : Prop where
   lader : sp = speicherR E.sp0
   start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩
-  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none
+  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 →
+    (init t).1 = none ∨ ∃ w, (init t).1 = some w ∧ Mehrfach E.ws w
 
 /-! ## The start the proof works with (derived from (b) and (d), not a premise) -/
 
@@ -568,39 +644,16 @@ def Ruhig (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
     fussOrteG P f = [] ∧ ∀ c, TraegerSchreibt f c = false
 
 /-- **Admissible starts** (the proof's notion; NOT a premise of `GabbroZiel` since
-    2026-09-15): every thread runs a declared start (each on ONE thread) or an idle one; the
-    start functions' `requires` and every lock invariant hold at the start memory.
+    2026-09-15): every thread runs a declared start or an idle one; a start on two threads is
+    idle or declared twice (`Mehrfach`, since fix lane F10); the start functions' `requires`
+    and every lock invariant hold at the start memory.
     `startZulaessig_aus` (Zielsatz/Beweis.lean) derives it from (b) and (d). -/
 structure StartZulaessig (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) : Prop where
   wurzel : ∀ t, (init t).1 ∈ ws ∨ Ruhig P fs (init t).1
-  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → Ruhig P fs (init t).1
+  einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → Ruhig P fs (init t).1 ∨ Mehrfach ws (init t).1
   req : StartGut P sp init
   sperren : ∀ L, S.inv L sp = true
-
-/-- **Pool-safe**: routine `w` may run on any number of threads. It starts
-    like any admitted start (no signature-held lock, no reasons), and every
-    carrier some function of the thread graph `K` may write is guarded by a
-    lock or atomic. Reads need nothing: with no unguarded writer, two
-    threads reading one carrier do not race. (Lane 245: the model side of
-    the narrowed `N304`; the legs live in `Zielsatz/PoolSym.lean`.) -/
-def PoolSicher (D : Deklaration) (K : D.Fn → Bool) (w : D.Fn) : Prop :=
-  D.haelt w = [] ∧ D.gruende w = 0 ∧
-    ∀ f, K f = true → ∀ c, TraegerSchreibt f c = true →
-      (∃ L, Bewacht c L) ∨ AtomarAusgenommen c
-
-/-- **Pool-safe at its computed graph**: `PoolSicher` with the thread
-    graph `reachB P fs w`. -/
-def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
-  PoolSicher D (reachB P fs w) w
-
-/-- **Duplicates allowed iff pool-safe**: every declared start occurring
-    at least twice is pool-safe at its computed graph. `ws.Nodup` implies
-    it vacuously; the symmetric pair `[w, w]` satisfies it exactly for
-    pool-safe `w` (both in `Zielsatz/PoolSym.lean`). The checker's `N304`
-    decides this shape for same-routine pairs. -/
-def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
-  ∀ w ∈ ws, 1 < (ws.filter (fun v => decide (v = w))).length → PoolSicherW P fs w
 
 end Start
 
