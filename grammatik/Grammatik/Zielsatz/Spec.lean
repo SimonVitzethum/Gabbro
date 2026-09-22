@@ -36,11 +36,17 @@
     to completion before that thread continues -- that is what preemption IS). New leg
     `keinKernHalt : KernHaltG P O passes M0 M` of `Ziel`: on such a run a handler NEVER stands
     at a lock a thread of its own core holds.
-  * WHY NOTHING IS WEAKENED. `Ziel` gains a conjunct and loses none, so `GabbroZiel` is
-    STRICTLY stronger; no premise of `GabbroZiel` changed, so it covers exactly the same
-    programs and runs, and every earlier theorem about them still holds. The leg needs nothing
-    from (a)-(d): it holds for EVERY program of G (`kernHaltG_gilt`, Zielsatz/Masken.lean),
-    like `speicherSicher`. What carries it is the frame invariant `MerkInvG` (FadenMerkmal),
+  * WHY NOTHING IS WEAKENED, AND HOW MUCH IT ADDS. `Ziel` gains a conjunct and loses none,
+    and no premise of `GabbroZiel` changed, so it covers exactly the same programs and runs,
+    and every earlier theorem about them still holds. It is NOT strictly stronger, though,
+    and the word was wrong here until the Spec-diff review of 2026-09-23: the leg needs
+    nothing from (a)-(d) and holds for EVERY program of G with no premise (`kernHaltG_gilt`,
+    Zielsatz/Masken.lean -- `ziel_aus` discharges `keinKernHalt` with it and nothing else),
+    so the new `Ziel` is LOGICALLY EQUIVALENT to the `Ziel` before F11. It is the same kind
+    of leg as `zeit`: what it adds is a READING of a core schedule that G itself does not
+    know, and the whole program side sits in the leg's OWN hypotheses (`KernPlan`, and the
+    masking discipline `H102`) -- which is also why it closes no gap by itself, and why O19
+    stays open. What carries the proof is the frame invariant `MerkInvG` (FadenMerkmal),
     whose `Merkmal.sperre` field says which locks a body may take.
   * WHERE THE PROGRAM SIDE SITS, and why NOT in (a): the leg's own hypotheses name the
     handler threads (`H`), their cores (`kern`), their call graphs (`Z`) and features (`A`),

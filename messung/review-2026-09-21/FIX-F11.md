@@ -52,8 +52,11 @@ KernHaltG P O passes M0 M :=
   handler is unfinished. That is what preemption IS on one core: the handler displaces the
   thread it interrupted, and that thread continues only afterwards.
 
-**Why nothing is weakened.** `Ziel` gains a conjunct and loses none, so `GabbroZiel` is
-strictly stronger; the premises are literally the same text. `KernPlan` is not an assumption
+**Why nothing is weakened.** `Ziel` gains a conjunct and loses none, and the premises are
+literally the same text. It is **not strictly stronger**, though — corrected by the Spec-diff
+review of 2026-09-23: `kernHaltG_gilt` has no hypotheses and `ziel_aus` discharges
+`keinKernHalt` with it alone, so the new `Ziel` is logically **equivalent** to the old one.
+The leg's content sits entirely in its own hypotheses, as `zeit`'s does. `KernPlan` is not an assumption
 of the theorem but of the leg's own quantifier, so no run was removed from the statement: a
 run that no core schedule admits still gets the other fourteen legs.
 
