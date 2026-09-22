@@ -307,6 +307,8 @@ import Grammatik.ArenaDyn
 import Grammatik.ArenaReset
 import Grammatik.FremdRuf
 import Grammatik.Zielsatz.PoolSym
+import Grammatik.Zielsatz.Masken
+import Grammatik.Zielsatz.MaskenZeuge
 import Grammatik.Zielsatz.PoolZeuge
 import Grammatik.CFormMatch
 import Grammatik.Zielsatz.Divergenz

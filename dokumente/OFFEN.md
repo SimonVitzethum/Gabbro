@@ -841,7 +841,7 @@ pool-safe (every carrier it writes is guarded, atomic or per-core), and `N315` r
 | **known side effects** | **fixed in fix lane F4 (2026-09-22):** the generated driver (`bau.rs` `treiberregel`, lane 246) de-duplicated `concurrent` names, so an accepted pool started ONE thread (review G06 F5) -- it now starts one thread per occurrence and the pin compares multisets (`tests/treiber.rs` `pool_zweimal_deklariert_laeuft_zweifach`: built, compiled, run on two threads); `lean_g.rs` `check_starts` had no refusal for a repeated start, and a pool unit DID export (measured: `starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`, G06 F3) -- it now refuses by name (`LG001`), so no pool unit is exported as if the goal covered it. The Rust acceptance itself is unchanged (not gated): that is this item |
 | **what would close it** | the `einzeln` → `EinzelnPool` swap in `Akzeptiert` with `RennfreiBis`, `KeinWarteZyklus` and the invariant legs proved over start multisets and a `Spec.lean` diff for (d), reviewed as such (Simon, 2026-09-21: this route; fix lane F10). The exporter's `LG001` for repeated starts goes with it |
 
-## O19 — Same-core interrupt preemption is outside `Ziel`, and `Spec.lean` does not name it (recorded 2026-09-21, reviews G02/G12/G13)
+## O19 — Handlers and cores are not in the unit: the preemption leg carries them itself (recorded 2026-09-21, reviews G02/G12/G13; NARROWED 2026-09-22, fix lane F11)
 
 An `entry … vector … via idt` dispatch root travels into the model as an ordinary start
 (`lean_g.rs` `check_starts`; `Spec.lean`: "`entry`/`boot` dispatch roots"). Since lane 255 the
@@ -855,6 +855,27 @@ core it interrupted, spins on a lock that core's thread holds unmasked.
 | **who guards it today** | the Rust checker alone (`H102`, `kontexte.rs`); the emitter lowers no `cli`/`sti` (`beispiele/59` says so in its header) |
 | **why it matters** | `beispiele/59` exports since lane 255, and its exported deadlock freedom reads like interrupt-deadlock freedom; it is not. a model of `gift/460` (refused by `H102`) would differ from `Korpus59.lean` only in `kMaskiert`, and would get the same `Akzeptiert = true` and the same `korpus59_ziel` (review G02 F1) |
 | **what would close it** | either a NOT-CLAIMED line in the `Spec.lean` header (dispatch roots are modelled as independent starts; same-core preemption and `D.maskiert` are not read by `Ziel`; `H102` is the only guard), or a `MaskenOrdnung` leg carried into `Laufzeit`. Both are `Spec.lean` diffs for Simon |
+
+**What fix lane F11 did (2026-09-22), and what is left.** Simon decided for real coverage, so
+`Ziel` gained the leg `keinKernHalt` (`KernHaltG`, Spec.lean; proved in
+`Zielsatz/Masken.lean`, witnessed in `Zielsatz/MaskenZeuge.lean`, SATZKARTE §48): on a run
+that a core schedule admits — a handler enters only where no thread of its core holds a masked
+lock, and runs to completion before that thread continues — a handler never stands at a lock a
+thread of its core holds. `D.maskiert` is read by the goal theorem since then, and the
+`gift/460` shape is refused by the discipline Bool `maskenDisziplinB`, which is `H102`.
+
+WHAT IS LEFT, and why it is a lane of its own:
+
+* `Einheit` does not say WHICH declared start is a handler (the exporter drops `via idt`) and
+  G has no cores, so `kern`, `H`, the call graphs and the masking discipline are HYPOTHESES of
+  the leg, not components of (a) or fields of (d). Closing that needs a field in `Einheit`, a
+  core in the machine, and `lean_g.rs` carrying the dispatch fact.
+* The C realises no masking: the emitter writes no `cli`/`sti`, so the translation-validation
+  chain has nothing to relate the model's `KernPlan` to. Named in `Spec.lean`'s NOT CLAIMED.
+* The leg constrains the handler's FIRST entry; re-entry of the same handler thread and
+  handler-on-handler preemption stay outside (in G a handler thread runs once).
+* Rust's `H102` skips locks the unit does not declare, and fires only on `via idt`
+  (`beispiele/57`'s IPI is silent) — both already named in `kontexte.rs`.
 
 ## O20 — Arena generations and the commit ceiling assume one thread of control and roots entered once (recorded 2026-09-21, review G08, fix lane F2)
 

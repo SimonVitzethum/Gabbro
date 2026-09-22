@@ -21,6 +21,42 @@
   Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
   carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
 
+  WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
+  REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
+  * THE GAP. An `entry … vector … via idt` dispatch root travels into the model as an ordinary
+    declared start (see (d) below), and G interleaves threads freely. So the configuration the
+    Rust `H102` refuses -- a handler takes, on the core it interrupted, a lock that core's
+    thread holds without `masks irqs` (`beispiele/gift/460`) -- is no deadlock in G: there the
+    holder simply steps on. `D.maskiert` (the exported `masks irqs`, lane 255) was read by
+    nothing here, so `beispiele/59`'s exported deadlock freedom was NOT interrupt-deadlock
+    freedom. Simon's decision (2026-09-21): real coverage, not a NOT-CLAIMED line.
+  * THE DIFF. New `KernPlan kern H ms fs n` (a core assignment, a handler set, and the two
+    hardware facts about one core: a handler takes its FIRST step only where no other thread
+    of its core holds a masked lock -- that is what `cli`/`sti` DO -- and from there it runs
+    to completion before that thread continues -- that is what preemption IS). New leg
+    `keinKernHalt : KernHaltG P O passes M0 M` of `Ziel`: on such a run a handler NEVER stands
+    at a lock a thread of its own core holds.
+  * WHY NOTHING IS WEAKENED. `Ziel` gains a conjunct and loses none, so `GabbroZiel` is
+    STRICTLY stronger; no premise of `GabbroZiel` changed, so it covers exactly the same
+    programs and runs, and every earlier theorem about them still holds. The leg needs nothing
+    from (a)-(d): it holds for EVERY program of G (`kernHaltG_gilt`, Zielsatz/Masken.lean),
+    like `speicherSicher`. What carries it is the frame invariant `MerkInvG` (FadenMerkmal),
+    whose `Merkmal.sperre` field says which locks a body may take.
+  * WHERE THE PROGRAM SIDE SITS, and why NOT in (a): the leg's own hypotheses name the
+    handler threads (`H`), their cores (`kern`), their call graphs (`Z`) and features (`A`),
+    and demand that every lock a HANDLER's features admit is declared `masks irqs` -- that is
+    `H102`, decided by `maskenDisziplinB` (Zielsatz/Masken.lean) as the Rust checker decides
+    it over the handler's call-graph hull (`kontexte.rs`). It is not a component of
+    `AkzeptiertSpec`, because `Einheit` does not say WHICH declared start is a handler: the
+    exporter drops `via idt` (the dispatch fact) and G has no cores. Closing that needs a
+    field in `Einheit` and a core in the machine -- OFFEN O19, narrowed to exactly this.
+  * WITNESSES (Zielsatz/MaskenZeuge.lean, on `Korpus59.lean`): `masken_zeuge` -- threads 0
+    (`takt_verteiler`, the handler) and 1 (`ruf_verteiler`) on ONE core; thread 1 takes `RING`
+    and the handler then steps and stands at `locks TAKT` (masked) while the interrupted
+    thread is inside its section; the leg gives that `TAKT` is not held by that thread.
+    `masken_disziplin_460` -- the `gift/460` shape (a handler root whose lock does not mask)
+    is refused by the discipline Bool, `masken_disziplin_59` accepts example 59.
+
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
   DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
   * The Rust checker admits a symmetric worker pool, `concurrent { w, w }`, when `w` is
@@ -310,6 +346,12 @@
     invariant, `state` pre-state or float range is excluded (`keinLogikHalt`, `BereichG`).
     So the safety legs cannot be made vacuous by a stop the USER's code decides; they can
     by a stop of the list above (hardware, a wait, the budget) -- each named.
+  * `keinKernHalt` (`KernHaltG`) -- NOT in (b), and not in (a) either: on a run that a core
+    schedule admits (`KernPlan`: masking works, and a handler runs to completion on the core
+    it preempted) a handler never stands at a lock a thread of its core holds. The program
+    side -- every lock a handler's call graph takes is declared `masks irqs` -- is a HYPOTHESIS
+    of the leg, because the unit does not mark its handlers (fix lane F11, OFFEN O19). It is
+    the model counterpart of the Rust `H102`, and it holds for every program of G.
   * `zeit` (`ZeitAb`) -- NOT in (b), and WEAK: a bound on a frame's OWN G-steps by the
     syntax-computed `kostenTief`, for frames with a finite call tree only (`rufTief`). It
     holds for EVERY program of G with no premise (`frame_schritte_beschraenkt`), so it says
@@ -387,7 +429,8 @@
   proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
   `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
   declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
-  245, a premise since F10).
+  245, a premise since F10); `KernPlan` and the leg `KernHaltG` (one core with interrupt
+  handlers, fix lane F11, proved in Zielsatz/Masken.lean).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -411,7 +454,11 @@
   see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
-  locks are held (claimed at returns only); a busy routine declared ONCE on several threads
+  locks are held (claimed at returns only); WHICH threads are interrupt handlers and which
+  core they share -- the `entry … via idt` dispatch fact is not in `Einheit` and G has no
+  cores, so `keinKernHalt` takes them (and the masking discipline `H102` checks) as its own
+  hypotheses instead of reading them from (a)/(d), and the emitted C realises no masking at
+  all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; a busy routine declared ONCE on several threads
   (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
   and the checker admits that only pool-safe, `EinzelnPool`); linking of separately compiled units
   (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
@@ -764,6 +811,58 @@ def KeinWarteZyklus (M : RufMaschineG D) : Prop :=
   ∀ (n : Nat) (ts : Nat → Faden) (Ls : Nat → D.Lock),
     (∀ i, i ≤ n → WartetAuf M (ts i) (ts (i + 1)) (Ls i)) → ts (n + 1) ≠ ts 0
 
+/-- **The schedule of ONE core with interrupt handlers** (fix lane F11, 2026-09-22, OFFEN
+    O19): the two hardware facts about `cli`/`sti` and about preemption, as conditions on a
+    G run. `kern t` is the core thread `t` runs on, `H g` says `g` is an interrupt handler (an
+    `entry … dispatch` root, which travels into the model as an ordinary start).
+    * ENTRY ONLY WHEN UNMASKED: a handler takes its FIRST step only where no OTHER thread of
+      its core holds a lock declared `masks irqs` (`D.maskiert`). That is what masking IS:
+      while such a lock is held, interrupts are off on that core, so the handler is not
+      entered there.
+    * RUN TO COMPLETION: from that first step until the handler is finished, no other thread
+      of its core steps. That is what preemption IS on one core: the handler displaces the
+      thread it interrupted, and that thread continues only afterwards.
+    The run-side twin of `MaskenOrdnung` (Unterbrechung.lean), which says the same over the
+    event log `Lauf`; here over the machine-G run, so that `AnSperre` can be read. -/
+def KernPlan (kern : Faden → Nat) (H : Faden → Prop) (ms : Nat → RufMaschineG D)
+    (fs : Nat → Faden) (n : Nat) : Prop :=
+  (∀ i, i < n → H (fs i) → (∀ k, k < i → fs k ≠ fs i) →
+      ∀ (f : Faden) (L : D.Lock), f ≠ fs i → kern f = kern (fs i) →
+        L ∈ offen ((ms i).faeden f).spur → D.maskiert L = false) ∧
+  (∀ (g : Faden) (i j k : Nat), H g → fs i = g → (∀ r, r < i → fs r ≠ g) →
+      i ≤ k → k < j → j ≤ n → ¬ FertigG (ms j) g → kern (fs k) = kern g → fs k = g)
+
+/-- **No same-core interrupt deadlock** (fix lane F11, 2026-09-22, OFFEN O19). On a run
+    from `M0` that a core schedule admits (`KernPlan`), a handler NEVER stands at a lock
+    that a thread of its own core holds -- the deadlock `H102` refuses in Rust
+    (`beispiele/gift/460`: a handler takes a lock the interrupted thread holds without
+    `masks irqs`).
+
+    The program side is a hypothesis of the leg, not of `GabbroZiel`: `Z t` is the call graph
+    of thread `t` and `A t` its feature set (FadenMerkmal.lean), and for a HANDLER thread
+    every lock its features admit is declared `masks irqs`. That IS `H102`
+    (`maskenDisziplinB`, Zielsatz/Masken.lean, decides it over the member list); the
+    `Einheit` does not say which roots are handlers, so the checker's Bool cannot carry it
+    (OFFEN O19). `M0` is a start machine: no thread stands at a lock there
+    (`anSperre_start_falsch`).
+
+    Nothing in the leg constrains the program otherwise: it holds for EVERY program of G
+    (`kernHaltG_gilt`), like `speicherSicher`. What it adds to `Ziel` is the reading of a
+    schedule G itself does not know -- G interleaves freely, so in G the handler and the
+    thread it interrupted are independent threads and the deadlock is none. -/
+def KernHaltG (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (H : Faden → Prop) (Z : Faden → D.Fn → Prop)
+    (A : Faden → D.Fn → Merkmal D),
+    (∀ t, H t → MerkAbg P (Z t) (A t)) →
+    (∀ t, H t → MerkInvG (Z t) (A t) (M0.faeden t)) →
+    (∀ t, H t → ∀ (f : D.Fn) (L : D.Lock), Z t f → (A t f).sperre L = true →
+      D.maskiert L = true) →
+    (∀ (t : Faden) (L : D.Lock), ¬ AnSperre M0 t L) →
+    ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+      LaufG P O passes M0 ms fs n → ms n = M → KernPlan kern H ms fs n →
+      ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
+        AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+
 /-- **Time**: a frame entered at `M`, of a function whose calls nest at most `n` deep, takes
     at most `kostenTief P passes (n + 1) g` own steps on every run while it is active. -/
 def ZeitAb (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
@@ -790,6 +889,7 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   -- progress
   keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
   keinZyklus : KeinWarteZyklus M
+  keinKernHalt : KernHaltG P O passes M0 M
   fortschritt : FortschrittG P O passes M
   -- time
   zeit : ZeitAb P O passes M

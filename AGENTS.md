@@ -63,7 +63,8 @@ README §6 says exactly this; keep it that way.
   - `RennfreiBis` (every carrier except atomics);
   - `VertragAmOrtG`, `SperrInvG`, `InvAmOrtG`, `InvAmGrundG`;
   - `StartEndeG`, `KeinStartGrundG`, `KeinLogikHaltG`;
-  - no deadlock and `KeinWarteZyklus`;
+  - no deadlock, `KeinWarteZyklus` and (since fix lane F11) `KernHaltG`: no same-core
+    interrupt deadlock, under a named core schedule;
   - `FortschrittG`, whose stop kinds are hardware, flag, budget and `nieZurueck`;
   - `ZeitAb`.
 - **Axioms:** `#print axioms gabbro_ziel` must be exactly `propext`, `Classical.choice`,
@@ -306,6 +307,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F6 | **not reserved** (free range) | N465, gifts 1159–1168; no example (gift 1125 turned from clean side to `N454`, renamed `1125-index-in-max-ohne-laenge`) |
 | Fix lane F7 | **not reserved** (free range) | gifts 1169, 1170; no code, no example (`E011` tightened, `LG005` reused for a binding covering a carrier in the exporter; examples 09/147/148 edited) |
 | Fix lane F10 | **not reserved** (free range) | example 157; no code, no gift. **`N315` retired** (idle duplicate start, admitted since the goal covers pools) and **gift 976 removed** with it; `LG001` for repeated starts lifted in the exporter |
+| Fix lane F11 | **not reserved** | nothing: no code, no gift, no example (`H102` unchanged; the work is the Lean leg `keinKernHalt`) |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

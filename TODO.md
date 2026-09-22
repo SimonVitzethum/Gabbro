@@ -420,7 +420,15 @@ tree refuses everywhere else.*
   and entry dispatch roots travel as ordinary starts, so 59's exported
   deadlock freedom does not cover same-core interrupt preemption, and the
   emitter lowers no `cli`/`sti` -- that belongs in the `Spec.lean`
-  NOT-CLAIMED list.**
+  NOT-CLAIMED list.** **Fix lane F11 (2026-09-22) answered the caveat with
+  coverage, not a line:** `Ziel` gained the leg `keinKernHalt`
+  (`KernHaltG`, `Spec.lean`; proofs `Zielsatz/Masken.lean`, witnesses
+  `Zielsatz/MaskenZeuge.lean`, SATZKARTE §48) -- under a core schedule a
+  handler never stands at a lock a thread of its core holds, and the
+  `gift/460` shape is refused by the discipline Bool that mirrors `H102`.
+  What stays open is in OFFEN O19 (narrowed): handlers and cores are
+  hypotheses of the leg, not fields of the unit, and the C still masks
+  nothing.
 - [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
   O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
   2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
