@@ -1,0 +1,39 @@
+-- erwartet: N522
+-- **1277 -- an entry target beside a member on one arena (lane 264).**
+--
+-- The interrupt handler `g` allocates while the member `f` allocates, with
+-- no lock anywhere. No declared pair covers entry against members, so
+-- `W001`/`W002` stay silent; `H013` fires beside this rule (the entry
+-- writes a shared place), and the handler's self-pair fires it a second
+-- time (beside its own second instance). Measured `["H013", "N522",
+-- "N522"]`.
+module p {
+
+arena A capacity 2 .. 8 of u16;
+
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let i = alloc A (1) else {
+        return 999;
+    };
+    return 0;
+}
+
+impl fn g() -> u32 effects { writes A } costs <= 64 ops {
+    let j = alloc A (2) else {
+        return 999;
+    };
+    return 0;
+}
+
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch p::g;
+}
+
+concurrent { f };
+
+}

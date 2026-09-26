@@ -4977,3 +4977,425 @@ impl fn sweep(t : ptr<normal, rw> T)
 }",
     );
 }
+
+// -- Lane 264 (OFFEN O20): arenas under concurrency -------------------------------------
+//
+// `N521` refuses a `reset` beside a concurrent use (the reset consumes every
+// generation program-wide); `N522` refuses counter touches (`alloc`, `grow`)
+// from two concurrently running routines without a guarding lock held at
+// every access (the emitted words are plain). Row 2 needs no new code: the
+// commit ceiling already counts every concurrent instance (pool namings,
+// repeated and looped `start` executions) -- the probes below pin the count.
+
+/// **A `reset` beside a concurrent use falls at `N521`, and nothing else.**
+///
+/// The reader holds a parameter index (no write-write overlap, so `W001`
+/// stays silent); the resetter's generation consumption is invisible along
+/// one thread, and the pair is exactly O20's first row.
+#[test]
+fn arena_reset_neben_gebrauch_n521() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+impl fn leser(i : index into A) -> u32 effects { reads A } costs <= 64 ops {
+    let x : u32 = A[i];
+    return x;
+}
+impl fn setzer() -> u32 effects { writes A } costs <= 64 ops {
+    reset A;
+    return 0;
+}
+concurrent { leser, setzer };",
+        &["N521"],
+    );
+    // Through a callee: the reset hides one call down, the closure finds it.
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+impl fn helfer() -> u32 effects { writes A } costs <= 64 ops {
+    reset A;
+    return 0;
+}
+impl fn setzer() -> u32 effects { writes A } costs <= 128 ops {
+    let x = helfer();
+    return x;
+}
+impl fn leser(i : index into A) -> u32 effects { reads A } costs <= 64 ops {
+    let x : u32 = A[i];
+    return x;
+}
+concurrent { setzer, leser };",
+        &["N521"],
+    );
+}
+
+/// **A member's `reset` beside a started root's use falls at `N521`.**
+///
+/// `N462` resolves no arena `writes` (its carriers are tables), so the
+/// sharing start root is this rule's alone; the setter resets only (no
+/// counter site of its own), so `N522` stays silent beside it.
+#[test]
+fn arena_reset_start_leser_n521() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+impl fn leser() effects { writes A, reads A } costs <= 64 ops {
+    let i = alloc A (1) else {
+        return;
+    };
+    let x : u32 = A[i];
+    if x == 0 {
+        return;
+    }
+}
+impl fn setzer() -> u32 effects { writes A } costs <= 64 ops {
+    reset A;
+    return 0;
+}
+impl fn starter() effects { writes A, reads A } costs <= 128 ops {
+    start { leser };
+}
+concurrent { setzer };",
+        &["N521"],
+    );
+}
+
+/// **A guarded `child` read beside a guarded `reset` falls at `N521`.**
+///
+/// The lock admits the pair everywhere else (`N457` still fires beside it:
+/// its guard disjunct is vacuous for arenas) -- mutual exclusion cannot
+/// revive a consumed generation.
+#[test]
+fn arena_reset_kind_bewacht_n521() {
+    faellt_genau(
+        "module gift1280 {
+reason UebergabeFehler {
+    KeinStapel = 1 \"no stack was handed\"
+    exhaustive
+}
+assume faden_start_vertrag
+    \"The starter keeps its contract on this machine.\"
+    falsifier sonde_faden_start;
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+arena A capacity 2 .. 8 of u16;
+lock L protects { A } rank 0 held <= 100 ops;
+impl fn m() -> u32 effects { writes A, locks L } costs <= 128 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        reset A;
+        let j = alloc A (2) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { writes A, locks L, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            locks L {
+                let k = alloc A (3) else {
+                    ausgang(1);
+                };
+                let y : u32 = A[k];
+                ausgang(0);
+            }
+        }
+    }
+    return v;
+}
+concurrent { m };
+}",
+        &["N457", "N521"],
+    );
+}
+
+/// **Two instances, one cursor: the pool self-pair falls at `N522`.**
+///
+/// `W001`/`W002` never pair a routine with itself, so the pool shape is
+/// this rule's alone.
+#[test]
+fn arena_zaehler_pool_n522() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let i = alloc A (1) else {
+        return 999;
+    };
+    let x : u32 = A[i];
+    return x;
+}
+concurrent { f, f };",
+        &["N522"],
+    );
+}
+
+/// **An entry target beside a member falls at `N522` (pair and self).**
+///
+/// The handler runs beside the member and beside its own second instance;
+/// `H013` fires beside both (the entry writes a shared place).
+#[test]
+fn arena_zaehler_entry_n522() {
+    faellt_genau(
+        "module p {
+arena A capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let i = alloc A (1) else {
+        return 999;
+    };
+    return 0;
+}
+impl fn g() -> u32 effects { writes A } costs <= 64 ops {
+    let j = alloc A (2) else {
+        return 999;
+    };
+    return 0;
+}
+entry entry_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch p::g;
+}
+concurrent { f };
+}",
+        &["H013", "N522", "N522"],
+    );
+}
+/// **`N522` admits the guarded shape and the disjoint one.**
+#[test]
+fn arena_zaehler_bewacht_sauber() {
+    // One lock protects the arena, both routines take it inside.
+    faellt_nicht(
+        "arena A capacity 2 .. 8 of u16;
+lock L protects { A } rank 0 held <= 100 ops;
+impl fn f() -> u32 effects { writes A, locks L } costs <= 64 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+impl fn g() -> u32 effects { writes A, locks L } costs <= 64 ops {
+    locks L {
+        let j = alloc A (2) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+concurrent { f, g };",
+    );
+    // Per-thread arenas: no sharing, no rule.
+    faellt_nicht(
+        "arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    let i = alloc A (1) else {
+        return 999;
+    };
+    return 0;
+}
+impl fn g() -> u32 effects { writes B } costs <= 64 ops {
+    let j = alloc B (2) else {
+        return 999;
+    };
+    return 0;
+}
+concurrent { f, g };",
+    );
+    // The `effects` line counts as holding, exactly where `H007` stays
+    // silent: a declared line exempts here too.
+    faellt_nicht(
+        "arena A capacity 2 .. 8 of u16;
+lock L protects { A } rank 0 held <= 100 ops;
+impl fn helfer() -> u32 effects { writes A, locks L } costs <= 128 ops {
+    locks L {
+        let i = alloc A (9) else {
+            return 999;
+        };
+        let x : u32 = A[i];
+        return x;
+    }
+}
+impl fn f() -> u32 effects { writes A, locks L } costs <= 128 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+impl fn g() -> u32 effects { writes A, locks L } costs <= 256 ops {
+    let h = helfer();
+    let j = alloc A (2) else {
+        return 999;
+    };
+    locks L {
+        let y : u32 = A[j];
+        return h | y;
+    }
+}
+concurrent { f, g };",
+    );
+}
+
+/// **A common lock nobody takes guards nothing: `N522` beside `W001`.**
+///
+/// The second routine never takes the lock, so the hulls share nothing and
+/// `W001` fires beside the holding refusal.
+#[test]
+fn arena_zaehler_ohne_halt_n522() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+lock L protects { A } rank 0 held <= 100 ops;
+impl fn f() -> u32 effects { writes A, locks L } costs <= 64 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+impl fn g() -> u32 effects { writes A } costs <= 64 ops {
+    let j = alloc A (2) else {
+        return 999;
+    };
+    return 0;
+}
+concurrent { f, g };",
+        &["N522", "W001"],
+    );
+}
+
+/// **An undeclared take guards physically but not declaratively.**
+///
+/// `N522` stays silent (the lock IS held at every access); `E006` refuses
+/// the missing declaration on both sides and `W001` the unshared pair.
+#[test]
+fn arena_zaehler_undeklariert_e006() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+lock L protects { A } rank 0 held <= 100 ops;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+impl fn g() -> u32 effects { writes A } costs <= 64 ops {
+    locks L {
+        let j = alloc A (2) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+concurrent { f, g };",
+        &["E006", "E006", "W001"],
+    );
+}
+
+/// **Row 2, pool: two instances commit twice (`N426`).**
+///
+/// The pool self-pair shares the cursor without a guard, so `N522` fires
+/// beside the ceiling refusal.
+#[test]
+fn arena_commit_pool_zweimal_n426() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 max 10 of u16;
+impl fn f() -> u32 effects { writes A } costs <= 64 ops {
+    grow A by 6 else {
+        return 1;
+    };
+    return 0;
+}
+concurrent { f, f };",
+        &["N426", "N522"],
+    );
+}
+
+/// **Row 2, repeated `start`: every execution commits (`N426`).**
+///
+/// Two statements start the root twice; the root runs beside itself, so
+/// `N522` fires beside the ceiling refusal.
+#[test]
+fn arena_commit_start_zweimal_n426() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 max 10 of u16;
+impl fn h() effects { writes A } costs <= 64 ops {
+    grow A by 6 else {
+        return;
+    };
+}
+impl fn s() effects { writes A } costs <= 256 ops {
+    start { h };
+    start { h };
+}",
+        &["N426", "N522"],
+    );
+}
+
+/// **Row 2, looped `start`: 128 passes commit 128 times (`N426` alone).**
+///
+/// One statement means one instance at a time: no `N522` beside it.
+#[test]
+fn arena_commit_start_schleife_n426() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 max 10 of u16;
+extern fn w() -> never effects { diverges };
+assume tickt \"the timer ticks\" falsifier w;
+impl fn h() effects { writes A } costs <= 64 ops {
+    grow A by 6 else {
+        return;
+    };
+}
+impl fn s() effects { writes A, diverges } costs <= 2048 ops {
+    retry runde
+        bounded 128 ops
+        progress tickt
+        on_exceeded w
+        effects { writes A }
+    {
+        start { h };
+    }
+}",
+        &["N426"],
+    );
+}
+
+/// **Row 2, single `start`: one execution commits once -- clean.**
+///
+/// The ceiling holds the run's single share; the count is exact, not doubled.
+#[test]
+fn arena_commit_start_einmal_sauber() {
+    faellt_nicht(
+        "arena A capacity 2 .. 8 max 16 of u16;
+impl fn h() effects { writes A } costs <= 64 ops {
+    grow A by 6 else {
+        return;
+    };
+}
+impl fn s() effects { writes A } costs <= 256 ops {
+    start { h };
+}",
+    );
+}
