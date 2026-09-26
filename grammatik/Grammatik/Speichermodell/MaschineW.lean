@@ -395,10 +395,12 @@ theorem beitrag_le {T : D.Tab ⊕ D.Glob → Nat} {o : Ordnung} {c : D.Tab ⊕ D
   · exact Nat.max_le.mpr ⟨hs x, heins⟩
 
 open Classical in
-/-- **One G step lifts to a W step** that keeps the SC shape. -/
+/-- **One G step lifts to a W step** that keeps the SC shape; every write sits right above the
+    message read at its carrier (`neu c = ts + 1`: the step is atomic for an RMW, `RMW.lean`). -/
 theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : RufMaschineG D}
     (hs : RufSchrittG P O passes W.g u M') :
-    ∃ W', RufSchrittW P O passes ord W u W' ∧ W'.g = M' ∧ SCForm W' := by
+    ∃ W' σ M'' wahl neu, SchrittW P O passes ord W u W' σ M'' wahl neu ∧
+      (∀ c, neu c = (wahl c).ts + 1) ∧ W'.g = M' ∧ SCForm W' := by
   obtain ⟨T, hT⟩ := hF
   let wahl : D.Tab ⊕ D.Glob → NachrichtW D := fun c => Classical.choose (hT c).1
   have hwahl : ∀ c, wahl c ∈ W.hist c ∧ (wahl c).ts = T c ∧
@@ -432,7 +434,9 @@ theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : Ru
     split
     · exact Nat.le_refl _
     · exact hvT x
-  refine ⟨W', ⟨W.g.speicher, M', wahl, neu, ?_⟩, rfl, ?_⟩
+  refine ⟨W', W.g.speicher, M', wahl, neu, ?_, fun c => by
+    show T c + 1 = (wahl c).ts + 1
+    rw [(hwahl c).2.1], rfl, ?_⟩
   · refine {
       schritt := hs'
       lies := fun c _ => ⟨⟨(hwahl c).1, by rw [(hwahl c).2.1]; exact (hT c).2.2.1 u⟩,
@@ -536,6 +540,13 @@ theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : Ru
       · rw [if_neg hw] at hm
         exact Nat.le_trans ((hT c).2.2.2.2 x m hm) (hTT' c)
 
+/-- `schrittW_aus_g` with the witnesses packed (the shape its first callers use). -/
+theorem schrittW_aus_gW {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : RufMaschineG D}
+    (hs : RufSchrittG P O passes W.g u M') :
+    ∃ W', RufSchrittW P O passes ord W u W' ∧ W'.g = M' ∧ SCForm W' := by
+  obtain ⟨W', σ, M'', wahl, neu, hstep, _, hg, hF'⟩ := schrittW_aus_g (ord := ord) hF hs
+  exact ⟨W', ⟨σ, M'', wahl, neu, hstep⟩, hg, hF'⟩
+
 /-- **Every run of G is a run of W** (for every choice of orders): W adds behaviour, it
     removes none. -/
 theorem w_aus_g {M0 M : RufMaschineG D} (hr : RufErreichbarG P O passes M0 M) :
@@ -544,8 +555,8 @@ theorem w_aus_g {M0 M : RufMaschineG D} (hr : RufErreichbarG P O passes M0 M) :
   | start => exact ⟨RufStartW M0, .start, rfl, scForm_start M0⟩
   | schritt M M' u _ hs ih =>
       obtain ⟨W, hW, rfl, hF⟩ := ih
-      obtain ⟨W', hstep, hg, hF'⟩ := schrittW_aus_g (ord := ord) hF hs
-      exact ⟨W', .schritt W W' u hW hstep, hg, hF'⟩
+      obtain ⟨W', σ, M'', wahl, neu, hstep, _, hg, hF'⟩ := schrittW_aus_g (ord := ord) hF hs
+      exact ⟨W', .schritt W W' u hW ⟨σ, M'', wahl, neu, hstep⟩, hg, hF'⟩
 
 /-- **Building a W step with ANY admissible reads** (for witnesses): given a G step on a
     presented memory that agrees with G's memory off the reads and with the chosen messages at

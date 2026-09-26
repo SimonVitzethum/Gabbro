@@ -199,7 +199,7 @@ document. `N531` is conservative: any call of a declared function inside the blo
   `Grammatik.lean` (imports).
 * `crates/gabbro-check/src/kbedingung.rs` (`N531`, `N532`), `saetze.rs` (two sentences, `D013`'s
   updated), `crates/gabbro-check/tests/breaking_region.rs`, gifts 1291, 1292.
-* `dokumente/OFFEN.md` O1, `dokumente/AUSNAHMEN.md` (scope note), `dokumente/SATZKARTE.md` §55,
+* `dokumente/OFFEN.md` O1, `dokumente/AUSNAHMEN.md` (scope note), `dokumente/SATZKARTE.md` §56 (§55 on the branch, renumbered at the merge beside Opus lane O25b),
   `AGENTS.md` (§2 leg list, §7 ledger row).
 
 ## 9. Measured

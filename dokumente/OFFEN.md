@@ -887,7 +887,13 @@ one of the 15 programs that export today, and its emitted C is
 | **what pays FIRST, measured on the same run** | the **tagged-union READ side** — `switch (m.marke)`, `m.last.F`, `T x = m.last.F;` — which is what actually holds `120`, `121` and `34`, the three exporting programs that fail (d) on something other than `expr:neg`. All three carry the aggregate rows too, so the read side is necessary and the aggregate side is not sufficient; but the read side is the binding one, and `gcorr_onTag` is already PROVED and merely uninhabitable (`ValCorr` has no case for a tagged union) |
 | **what would close it** | `CTy`/`CVal` gain an aggregate arm, the memory of `CSpeicher.lean` stores it (or `RecLay` + `CX.fld` carry it as the `nf` field stores and loads it really is — the machinery exists), `CFormen*`'s return and bind lemmas gain their arm, `korrOk` gains one arm per destination with a planted defect per arm, and the four `KNOWN_UNCOVERED` rows dated 2026-09-15 in `pruefe-cformen.py` move to state (i). **And the warrant is then a re-measured sweep, not this row** |
 
-## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25; NARROWED again 2026-09-26, Opus lane O25: the read half's memory side is proved, its contract side is O25)
+## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25; NARROWED again 2026-09-26, Opus lane O25: the read half's memory side is proved, its contract side is O25; the contract side proved standalone by Opus lane O25b over the rely, the Spec diff is O25's)
+
+**Narrowed a third time (Opus lane O25b, 2026-09-26, SATZKARTE §55).** Read as a shared atomic in
+no contract, the fold is admitted by `AkzeptiertX` (`faltung_akzeptiertX`), and
+`gabbro_ziel_atomar` gives every leg of `Ziel` for it once the user proves the bodies against
+every value the fold may read (`NutzerPflichtA`). Open as for O25 (the Spec diff) and, as
+before, the exporter (`LG001` for `accumulates`) and "each thread its own cell" (O19).
 
 **Narrowed again (Opus lane O25, 2026-09-26, SATZKARTE §52).** The fold -- a pool writing the
 atomic accumulator, another start reading it -- is refused by the goal's checker at `fuss` and
@@ -1147,7 +1153,28 @@ literals; what stays open is narrower:
 | **no Char bridge** | still open: the layout carries bytes, `BString` carries characters; `ZeichenfolgeC.lean` states the gap beside its lemmas, and no `CForm` plugs into the correspondence framework |
 | **what would close the rest** | flow facts for aggregate positions (a bigger checker), exact-length copies (a bigger analysis), a verified UTF-8 bridge plus a `CForm` hook (a bigger model) |
 
-## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved, the contract legs are open)
+## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved; NARROWED again 2026-09-26, Opus lane O25b: the rely is built and every leg of `Ziel` is proved with shared atomics, standalone -- the Spec diff is open)
+
+**Narrowed again (Opus lane O25b, 2026-09-26, SATZKARTE §55; `messung/OPUS-O25B-ATOMICS.md`).**
+The contract half is proved, standalone (`Spec.lean` unchanged):
+
+| | |
+|---|---|
+| **the rely** | `execEndHA` (Speichermodell/AtomarSem.lean): every read passes through an atomic environment that may change the read SHARED atomics and nothing else; (b) with the rely is `LogikPflichtA P S Q (GeteiltA P ws)` (`KoerperGutSA` and its twins), EQUIVALENT to `LogikPflicht` on every unit the goal covers today (`logikPflichtA_iff_akzeptiert`) and strictly stronger on units with a shared atomic (`hP_havoc_bites`) |
+| **the replay** | carried through all 70 rules (`akteurSA`) over machine GX (G with the shared atomics answered by the weak memory); every W step is a GX step (`schwach_ist_gX`) |
+| **(a) with the rely** | `AkzeptiertSpecX`: `fuss := FussSX` admitting a footprint carrier that is a shared atomic IN NO CONTRACT (`GeteiltV`), Bool `AkzeptiertX` (`fussWXB`, `vertragsFreiB`); both embeddings from `Akzeptiert`. A contract over a shared atomic is refused (`vertrag_atomar_abgelehnt`) |
+| **the goal** | `gabbro_ziel_atomar`: for every checker for the rely, `NutzerPflichtA`, `HardwareAnnahmen`, `Laufzeit`, every order assignment: at every machine W reaches, `ZielAtomar` -- every leg of `Ziel`, with `schwach`, `sperrWechsel`, `sperrSicht` over GX steps and `rennfrei`, `keinKernHalt` over GA runs; `gabbro_ziel_atomar_vor`: the premises of `gabbro_ziel` give it. Witness `n1E_ziel` (the flag, refused by `Akzeptiert`) |
+
+**Rust:** `N484` (sentence `wirkungen.vertrag_atomar`, gift 1204) refuses a contract over a
+shared atomic -- before it such a contract passed with 0 errors; with it the Rust footprint legs
+decide `fussWXB`.
+
+**What stays open (why no Spec diff):** the thread machine (`ZielF` over a GX thread machine:
+spawn, join, `spawnSicht`), the linked statement (`GabbroZielVerbund`), a differential
+measurement of `AkzeptiertX` against Rust (needs the exporter for `atomic` items, `LG001`), RMW
+atomicity as a condition of `SchrittW` (a sub-machine `RufSchrittWR` with `wr_kein_verlust`
+exists), and the payload rule for a PLAIN carrier read after an `awaits`.
+The record below is kept as written.
 
 **Narrowed (Opus lane O25, 2026-09-26, SATZKARTE §52; `messung/OPUS-O25-ATOMICS.md`).** Proved,
 standalone (no Spec diff, `GabbroZiel` still runs `Akzeptiert`):

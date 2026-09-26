@@ -84,7 +84,7 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
       ((r1M2 sp0).speicher.slots NTab.tabA 0 ()).n = 3 := by
   -- step 1: `kern` writes, lifted from G
   have s1 : RufSchrittG nP nO 0 (r1M0 sp0) 2 (r1M1 sp0) := blattM_schritt (r1M0 sp0) 2 _ _ rfl rfl rfl rfl
-  obtain ⟨W1, hs1, hg1, hF1⟩ := schrittW_aus_g (ord := ord) (scForm_start (r1M0 sp0)) s1
+  obtain ⟨W1, hs1, hg1, hF1⟩ := schrittW_aus_gW (ord := ord) (scForm_start (r1M0 sp0)) s1
   have hW1 : RufErreichbarW nP nO 0 ord (RufStartW (RufStartG nP sp0 init1)) W1 :=
     .schritt _ _ _ .start hs1
   -- what step 1 left for thread 0: its empty view, and the initial messages
@@ -215,9 +215,9 @@ theorem schwach_pool_zeuge (ord : zD.mitRuhe.Glob → Ordnung) :
       RufErreichbarG zPool.P.mitRuhe zO.mitRuhe 0 zPoolM0 W3.g ∧
       Ziel zPool.P.mitRuhe zPool.S.mitRuhe zO.mitRuhe 0 zPoolM0 W3.g := by
   obtain ⟨M1, M2, M3, hL, _, _, s1, s2, s3, hlock, _⟩ := pool_ziel_zeuge
-  obtain ⟨W1, t1, g1, F1⟩ := schrittW_aus_g (ord := ord) (scForm_start zPoolM0) s1
-  obtain ⟨W2, t2, g2, F2⟩ := schrittW_aus_g (ord := ord) F1 (by rw [g1]; exact s2)
-  obtain ⟨W3, t3, g3, F3⟩ := schrittW_aus_g (ord := ord) F2 (by rw [g2]; exact s3)
+  obtain ⟨W1, t1, g1, F1⟩ := schrittW_aus_gW (ord := ord) (scForm_start zPoolM0) s1
+  obtain ⟨W2, t2, g2, F2⟩ := schrittW_aus_gW (ord := ord) F1 (by rw [g1]; exact s2)
+  obtain ⟨W3, t3, g3, F3⟩ := schrittW_aus_gW (ord := ord) F2 (by rw [g2]; exact s3)
   have hW3 : RufErreichbarW zPool.P.mitRuhe zO.mitRuhe 0 ord (RufStartW zPoolM0) W3 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start t1) t2) t3
   have hZ := gabbro_ziel_schwach akzeptiert_pruefer zD zPool ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩

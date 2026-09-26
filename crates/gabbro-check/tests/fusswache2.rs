@@ -664,3 +664,56 @@ fn pro_kern_zwillinge_schweigen_n300() {
         "a per-core cell stays silent: {codes:?}"
     );
 }
+
+// ===== N484 -- a contract over a shared atomic (Opus lane O25b, 2026-09-26) =====
+
+/// Three starts over the atomic `FLAGGE`: `setzer` stores 1 and promises `FLAGGE == 1`,
+/// `loescher` stores 0, `leser` reads it -- the shape of gift 1204.
+const VERTRAG_ATOMAR: &str = "module test::fusswache2 {\n\
+    atomic FLAGGE : u32 acquire;\n\
+    pub static mut kopie : u32 = 0;\n\
+    impl fn setzer() ensures FLAGGE == 1 effects { writes FLAGGE } costs <= 8 ops \
+    { FLAGGE = 1 publishes nothing; }\n\
+    impl fn loescher() effects { writes FLAGGE } costs <= 8 ops \
+    { FLAGGE = 0 publishes nothing; }\n\
+    impl fn leser() effects { reads FLAGGE, writes kopie } costs <= 8 ops \
+    { let f : u32 = FLAGGE; kopie = f; }\n\
+    concurrent { setzer, loescher, leser };\n\
+    }\n";
+
+#[test]
+fn vertrag_ueber_geteiltem_atomic_faellt_mit_n484() {
+    let codes = fehler(VERTRAG_ATOMAR);
+    assert!(codes.iter().any(|c| c == "N484"), "N484 expected, fired: {codes:?}");
+}
+
+#[test]
+fn geteiltes_atomic_im_rumpf_schweigt_n484() {
+    // The same three starts, the contract dropped: the shared atomic is read in bodies only
+    // (the flag of OFFEN O25) -- the leg stays silent.
+    let codes = fehler(&VERTRAG_ATOMAR.replace("ensures FLAGGE == 1 ", ""));
+    assert!(!codes.iter().any(|c| c == "N484"), "N484 must stay silent: {codes:?}");
+}
+
+#[test]
+fn vertrag_ueber_faden_lokalem_atomic_schweigt_n484() {
+    // Only `setzer` touches `FLAGGE`; `leser` reads `kopie` alone: the atomic is thread-local,
+    // and a contract over it is an ordinary sequential claim.
+    let quelle = "module test::fusswache2 {\n\
+        atomic FLAGGE : u32 acquire;\n\
+        pub static mut kopie : u32 = 0;\n\
+        impl fn setzer() ensures FLAGGE == 1 effects { writes FLAGGE } costs <= 8 ops \
+        { FLAGGE = 1 publishes nothing; }\n\
+        impl fn leser() -> u32 effects { reads kopie } costs <= 8 ops { return kopie; }\n\
+        concurrent { setzer, leser };\n\
+        }\n";
+    let codes = fehler(quelle);
+    assert!(!codes.iter().any(|c| c == "N484"), "N484 must stay silent: {codes:?}");
+}
+
+#[test]
+fn einzelner_faden_schweigt_n484() {
+    // No `concurrent`: one driver thread owns every atomic.
+    let codes = fehler(&VERTRAG_ATOMAR.replace("concurrent { setzer, loescher, leser };\n", ""));
+    assert!(!codes.iter().any(|c| c == "N484"), "N484 must stay silent: {codes:?}");
+}

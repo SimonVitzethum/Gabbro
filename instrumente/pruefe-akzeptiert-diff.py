@@ -78,7 +78,11 @@ KOMPONENTEN = [
      ["LG004"]),  # export refuses untranslatable bodies; N293 the indirect leg
     ("abg", "abgAlleB {P} {fs}", None),  # vacuous: fixpoint, see above
     ("fuss", "fussWB {P} {S} {fs} {ws}",
-     ["N290", "N291", "N292", "N293", "N294"]),
+     ["N290", "N291", "N292", "N293", "N294", "N484"]),
+    # `N484` (Opus lane O25b, 2026-09-26): a contract over a shared atomic -- the
+    # contract condition of `fussWXB` (`AkzeptiertX`); `fussWB` refuses every such
+    # program already (the atomic is an unguarded shared footprint carrier), and the
+    # export refuses `atomic` items (`LG001`), so it changes no compared verdict.
     ("stufen", "stufenB {P} {fs}", None),  # vacuous: minimum-floor
     # construction, see above. `N294` decides a DIFFERENT property (the
     # signature-held take rule, the `H006` shape, also enforced at export
@@ -111,6 +115,8 @@ AKZEPTIERT_CODES = frozenset([
     "N315", "N316", "N317", "N318", "N319",
     # the run-time roots (Opus agent A, 2026-09-26): root shape, pool safety
     "N458", "N462",
+    # a contract over a shared atomic (Opus lane O25b, 2026-09-26)
+    "N484",
 ])
 
 # Corpus roots walked for exportable programs (the clean half of the
