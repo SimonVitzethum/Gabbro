@@ -448,3 +448,62 @@ fn pool_zweimal_deklariert_laeuft_zweifach() {
     let (_, code) = cc_und_lauf(&ausgabe.join("pool.treiber.c"), &ausgabe, "pool.c", "lauf-pool");
     assert_eq!(code, 0, "the pool runs to completion on two threads");
 }
+
+/// **The build writes the BARE-METAL twin, and it compiles freestanding**
+/// (Opus agent I, 2026-09-26). `<unit>.metall.c` starts the same multiset of
+/// roots through `gabbro_faden_start` (the interface `laufzeit/metall/kern.c`
+/// implements without an OS), names no hosted symbol, and compiles with
+/// `-ffreestanding -nostdlib` against `laufzeit/metall/metall.h`. Booting it
+/// is `instrumente/pruefe-metall.sh`'s business (QEMU), not this test's.
+#[test]
+fn bau_schreibt_metalltreiber_freistehend() {
+    let arbeit = tmp("metall");
+    let manifest = manifest_schreiben(&arbeit);
+    let (aus, fehler, code) = gabbro(&["build", &manifest.to_string_lossy()]);
+    assert_eq!(code, 0, "the unit builds:\n{aus}\n{fehler}");
+    let out = arbeit.join("treiber124-out");
+    let metall_c =
+        std::fs::read_to_string(out.join("treiber124.metall.c")).expect("bare-metal driver on disk");
+    let mut starts: Vec<&str> = metall_c
+        .match_indices("gabbro_faden_start(")
+        .map(|(i, m)| {
+            let rest = &metall_c[i + m.len()..];
+            &rest[..rest.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).unwrap_or(0)]
+        })
+        .collect();
+    starts.sort_unstable();
+    assert_eq!(starts, ["hauptA", "hauptB"], "one start per declared root:\n{metall_c}");
+    assert!(metall_c.contains("#define N_WURZELN 2"));
+    assert!(metall_c.contains("METALL_SPERRE(L)"), "the lock is the ticket lock");
+    assert!(!metall_c.contains("pthread"), "no hosted thread call");
+    let objekt = out.join("treiber124.metall.o");
+    let cc = Command::new("cc")
+        .args([
+            "-std=c11",
+            "-O2",
+            "-ffreestanding",
+            "-fno-builtin",
+            "-nostdlib",
+            "-fno-pie",
+            "-mno-red-zone",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I",
+            &wurzel().join("laufzeit/metall").to_string_lossy(),
+            "-I",
+            &out.to_string_lossy(),
+            "-DEINHEIT_INCLUDE=\"treiber124.c\"",
+            "-c",
+            "-o",
+            &objekt.to_string_lossy(),
+            &out.join("treiber124.metall.c").to_string_lossy(),
+        ])
+        .output()
+        .expect("cc runs");
+    assert!(
+        cc.status.success(),
+        "the bare-metal driver compiles freestanding under -Werror:\n{}",
+        String::from_utf8_lossy(&cc.stderr)
+    );
+}
