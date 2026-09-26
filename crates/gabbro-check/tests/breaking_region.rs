@@ -136,3 +136,55 @@ fn n532_pflegende_nach_dem_block_ist_sauber() {
 }",
     );
 }
+
+/// **Review of Opus agent G (2026-09-26): a `group` may span a `static`** (`U001` admits
+/// `table`, `static` and `state`). A block that writes only the static carrier of the group
+/// invariant it names DOES let that invariant rest; `N531` counted table writes only and
+/// refused it. The same program without the `breaking` checks clean, so the refusal was the
+/// rule's alone.
+fn codes_ganz(quelle: &str) -> Vec<String> {
+    let (baum, mut absagen) = gabbro_syntax::lies("breaking_region_gruppe", quelle);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code.to_string())
+        .collect()
+}
+
+const GRUPPE_STATIC: &str = "module t {
+const N : u32 = 4;
+table Zellen count N {
+    slot {
+        wert : u32,
+    }
+}
+static mut zaehler : u32 = 0;
+lock A protects { Zellen }  rank 1 held <= 40 ops;
+lock B protects { zaehler } rank 2 held <= 40 ops;
+group Paar over { Zellen, zaehler } {
+    invariant paar_stimmt cost O(n) runs offline :
+        forall z in slots of Zellen : Zellen.slots[z].wert <= zaehler;
+}
+impl fn hoch()
+    maintains paar_stimmt
+    effects { writes zaehler, locks B }
+    costs   <= 40 ops
+{
+    locks B {
+        RUMPF
+    }
+}
+}
+";
+
+#[test]
+fn n531_statischer_gruppentraeger_ist_sauber() {
+    let mit = GRUPPE_STATIC.replace("RUMPF", "breaking paar_stimmt {\n            zaehler = 7;\n        }");
+    let c = codes_ganz(&mit);
+    assert!(c.is_empty(), "a block writing a static group carrier must check clean, fell with {c:?}");
+    let ohne = GRUPPE_STATIC.replace("RUMPF", "zaehler = 7;");
+    let c = codes_ganz(&ohne);
+    assert!(c.is_empty(), "the same program without `breaking` must check clean, fell with {c:?}");
+}

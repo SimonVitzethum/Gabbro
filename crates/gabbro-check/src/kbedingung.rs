@@ -304,21 +304,25 @@ fn breaking_rests_here(baum: &Programm, absagen: &mut Absagen) {
             if calls_a_function(&x.rumpf, &funktionen) {
                 continue;
             }
-            // The carriers the block writes: a table by name, or through a parameter that
-            // points at one.
+            // The carriers the block writes: a carrier by name -- a table, and also a
+            // `static`/`state` a `group` spans (`U001` admits all three; review of Opus agent
+            // G, 2026-09-26: counting tables only refused a block that writes a static group
+            // carrier) -- or a table through a parameter that points at one.
             let geschrieben: BTreeSet<String> =
                 crate::wirkungen::rumpfwirkungen_mit(f, &x.rumpf, &konstanten, &weltnamen, false)
                     .into_iter()
                     .filter_map(|w| {
                         let ort = w.strip_prefix("writes ")?;
                         let wurzel = crate::wirkungen::carrier_root(ort).to_string();
-                        if tabellen.contains(&wurzel) {
-                            return Some(wurzel);
-                        }
-                        f.parameter
+                        if let Some(t) = f
+                            .parameter
                             .iter()
                             .find(|p| p.name.text == wurzel)
                             .and_then(|p| zeigt_auf_tabelle(&p.typ, &tabellen))
+                        {
+                            return Some(t);
+                        }
+                        Some(wurzel)
                     })
                     .collect();
             for i in &x.invarianten {

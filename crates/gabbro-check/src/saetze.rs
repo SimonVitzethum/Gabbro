@@ -6049,9 +6049,9 @@ pub const SPERREN: &[Satz] = &[
         name: "kbedingung.breaking-rests-here",
         kennungen: &["N531"],
         aussage: "A `breaking I { … }` block that contains no call writes at least one \
-                  carrier of `I` -- a table `I` stands over, by name or through a parameter \
-                  that points at it. A block that writes none of them cannot let `I` rest: \
-                  it is a region named for the wrong invariant, and it is refused.",
+                  carrier of `I` -- a table `I` stands over (by name or through a parameter \
+                  that points at it), or a `static`/`state` a `group` invariant spans. A block that writes \
+                  none of them cannot let `I` rest: it is a region named for the wrong invariant, and it is refused.",
         vorbehalt: "**Conservative, and it says where.** A block with a call of a declared \
                     function (direct, inside an expression) or through a pointer is \
                     accepted, because a callee's writes are not resolved here; a `walk` \
