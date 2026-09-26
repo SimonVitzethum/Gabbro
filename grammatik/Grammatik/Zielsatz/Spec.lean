@@ -45,7 +45,7 @@
     stale row turns `cargo test` RED. Measured 2026-09-26: 199 accepted, 23 CERTIFIED, 176
     UNCERTIFIED (of the 129 top-level corpus programs: 18 certified); after lane O25c (the
     exporter carries payload-free atomics, example 162 added): 204 accepted, 25 CERTIFIED, 179
-    UNCERTIFIED (of the 138 top-level corpus programs: 20 certified).
+    UNCERTIFIED (of the 139 top-level corpus programs: 20 certified).
   * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
     imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
     decides (a) for it IN LEAN (`gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE … = true
@@ -144,7 +144,15 @@
     and with no shared atomic `ZielFX` is `ZielF` (`zielF_of_X`, via `gx_leer_g`: GX over an
     empty set IS G). The same for linked units (`gabbro_ziel_verbund_sc_aus`). So every
     program, run and leg of before is covered, and the new statement adds the programs with
-    shared atomics and their weak runs.
+    shared atomics and their weak runs. ONE CAVEAT (review of lane O25c, F1): "verbatim" is
+    the TEXT. The machine W under the leg `schwach` changed with it: `SchrittW` gained `rmw`,
+    so `SchwachSC` in `GabbroZielSC` now speaks about the W steps in which an `exchange` writes
+    directly above the message it read. W without `rmw` admitted strictly more steps (the lost
+    update), so the leg of before claimed more than the text of before now claims: that no
+    step of W, even a non-atomic read-modify-write, left G on an accepted unit. What carries
+    the difference is assumption (2) of the reading (the emitter lowers `exchange` to ONE C11
+    RMW); for an `exchange` of a lock-guarded plain global the adjacency is DRF's, not C11's.
+    Every other leg of `GabbroZielSC` reads definitions this lane did not touch.
   * WHAT CARRIES THE PROOF (`zielX_aus`, `zielFX_aus`): the replay of the user's proof with
     the rely (`ziel_ort_atomar_voll`, lanes O25b: the recorded environment answers every
     shared read with the value the weak memory gave), the invariant legs over GX

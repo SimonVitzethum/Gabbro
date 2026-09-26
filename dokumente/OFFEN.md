@@ -1023,7 +1023,7 @@ one of the 15 programs that export today, and its emitted C is
 
 ## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25; NARROWED again 2026-09-26, Opus lane O25: the read half's memory side is proved, its contract side is O25; the contract side proved standalone by Opus lane O25b over the rely, the Spec diff is O25's)
 
-**Narrowed a fourth time (Opus lane O25c, 2026-09-26, SATZKARTE §57).** The rely is the goal
+**Narrowed a fourth time (Opus lane O25c, 2026-09-26, SATZKARTE §58).** The rely is the goal
 statement now: the fold (`faltung_akzeptiertX`) is covered by `gabbro_ziel` itself once the user
 proves the bodies against every value the fold may read. Open: the exporter for `accumulates`
 (`LG001`) and "each thread its own cell" (O19).
@@ -1334,7 +1334,7 @@ literals; what stays open is narrower:
 
 ## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved; NARROWED again 2026-09-26, Opus lane O25b: the rely is built and every leg of `Ziel` is proved with shared atomics, standalone; NARROWED to the plain-payload hand-off 2026-09-26, Opus lane O25c: the rely IS the goal)
 
-**Narrowed to the payload rule (Opus lane O25c, 2026-09-26, SATZKARTE §57;
+**Narrowed to the payload rule (Opus lane O25c, 2026-09-26, SATZKARTE §58;
 `messung/OPUS-O25C-ATOMICS.md`).** The ONE Spec diff is made: `GabbroZiel` quantifies a checker
 for the rely (`PrueferX`, `AkzeptiertSpecX`), (b) with the rely (`NutzerPflichtA`), and concludes
 `ZielFX` on every reachable thread machine over GX (spawn, join, `spawnSicht`, every leg of

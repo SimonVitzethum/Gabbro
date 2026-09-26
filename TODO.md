@@ -623,7 +623,7 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
   as a sub-machine (`RufSchrittWR`, `wr_kein_verlust`). Still open before the ONE Spec diff (2):
   the thread machine over GX (`ZielF`: spawn, join, `spawnSicht`), `GabbroZielVerbund` with the
   rely, and (5) for a differential measurement; then (3) into `SchrittW` and (4).
-  **Narrowed to (4) 2026-09-26 (Opus lane O25c, SATZKARTE §57, `messung/OPUS-O25C-ATOMICS.md`):**
+  **Narrowed to (4) 2026-09-26 (Opus lane O25c, SATZKARTE §58, `messung/OPUS-O25C-ATOMICS.md`):**
   (2) DONE -- `GabbroZiel` is the rely version (`PrueferX`, `NutzerPflichtA`, `ZielFX` over the
   thread machine over GX), the statement of before `GabbroZielSC` derived
   (`gabbro_ziel_sc_aus`), linked units likewise; (3) DONE -- `SchrittW.rmw`, `w_kein_verlust`,

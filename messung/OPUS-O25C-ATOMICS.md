@@ -1,7 +1,7 @@
 # Opus lane O25c — the atomic rely IS the goal theorem
 
 *2026-09-26. Worktree branch `worktree-agent-a2504cb87a2b94e0a`, merged with master at
-`1800a7a3` (Opus G `folge`, lane 267, Opus H handlers). SATZKARTE §57; OFFEN O25 (narrowed to
+`1800a7a3` (Opus G `folge`, lane 267, Opus H handlers). SATZKARTE §58 (§57 on the branch; renumbered at the review beside Opus H); OFFEN O25 (narrowed to
 the payload rule), O17; TODO §2; AGENTS §2/§7. Everything built and tested locally through the
 queued wrappers.*
 
@@ -68,7 +68,7 @@ remark on `ZielAtomar` completed.
 | 3 | plain payload after `awaits` (N485, gifts 1205–1210) | NOT DONE | see §5 |
 | 4 | the ONE Spec diff | DONE | §2 |
 | 5 | exporter for `atomic` items | DONE for the payload-free class | `lean_g.rs` `read_atomic` (payload, `observed by`, non-scalar, zero outside the range refused by name), `Stmt.publish … []` for `publishes nothing`, `atomar := …`; `obligations_g.rs` emits certificates over the new statement; `beispiele/116` and new `beispiele/162-geteilte-flagge.gab` CERTIFIED (162 refused by the old checker: `g162_alt_abgelehnt`) |
-| 6 | docs | DONE | SATZKARTE §57, OFFEN O25/O17, TODO, AGENTS §2/§7 |
+| 6 | docs | DONE | SATZKARTE §58, OFFEN O25/O17, TODO, AGENTS §2/§7 |
 
 **Witnesses (non-degenerate):** `n1E_gabbro` (`gabbro_ziel` on the flag program, refused by
 the old checker); `n1_stale_x`, `n1_gx_nicht_g` (W's stale read is a GX step over the admitted
