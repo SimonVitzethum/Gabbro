@@ -1,6 +1,8 @@
 -- Lowering lexer run, shared scaffold. Primitive: Bricht.
 -- The scaffold (module, declarations, signature, effects) is identical in all
--- seventeen units of this directory; only the body below differs.
+-- seventeen units of this directory; only the body below differs -- and, in this unit alone,
+-- `writes b.slots`: since `N531` (Opus agent G, 2026-09-26) a `breaking` block must write a
+-- carrier of the invariant it names, so the empty block of the first version was refused.
 
 module absenkung::probe {
 
@@ -63,8 +65,8 @@ fn gegenstelle_liest() -> u64
 }
 
 fn absenkung_haupt(d : Geraet, b : ptr<normal, rw> Baum, s : index into Baum, w : u64, n : u32) -> u32
-    effects { writes farbbericht, writes BEREIT, writes PEGEL, writes d.QUIT, reads d, reads BEREIT, reads PEGEL, publishes BEREIT }
+    effects { writes farbbericht, writes BEREIT, writes PEGEL, writes d.QUIT, reads d, reads BEREIT, reads PEGEL, publishes BEREIT, writes b.slots }
 {
-    breaking kette_ruht { } return n;
+    breaking kette_ruht { b.slots[s].benutzt = true; } return n;
 }
 }

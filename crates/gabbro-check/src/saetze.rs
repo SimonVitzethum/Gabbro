@@ -6058,7 +6058,10 @@ pub const SPERREN: &[Satz] = &[
         vorbehalt: "**The rule checks the NAME, not the region.** That the invariant really \
                     rests here, that the block restores it, and that a function with \
                     `requires I` is not callable inside it -- §8.3 promises all three and \
-                    NONE of them is checked; `D013` only makes sure they have a subject. \
+                    NONE of them is checked by this rule (since 2026-09-26 `N531` checks \
+                    that the name fits the block's writes and `N532` the `maintains` half \
+                    of the third; restoration stays unchecked); `D013` only makes sure \
+                    they have a subject. \
                     *A `breaking` on the wrong-but-existing invariant still passes.* \
                     **And the deeper gap stays open and is not this rule's:** no pass looks \
                     at an `invariant … runs online` at a statement boundary at all. Measured \
@@ -6075,6 +6078,52 @@ pub const SPERREN: &[Satz] = &[
                       (`breaking-darf-ins-leere-nennen`). The clean side is \
                       beispiele/53-zwei-orte.gab.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/ZWEI-ORTE.md",
+    },
+    // --- The region of `breaking`, checked where a syntax check can (2026-09-26) -------
+    Satz {
+        name: "kbedingung.breaking-rests-here",
+        kennungen: &["N531"],
+        aussage: "A `breaking I { … }` block that contains no call writes at least one \
+                  carrier of `I` -- a table `I` stands over (by name or through a parameter \
+                  that points at it), or a `static`/`state` a `group` invariant spans. A block that writes \
+                  none of them cannot let `I` rest: it is a region named for the wrong invariant, and it is refused.",
+        vorbehalt: "**Conservative, and it says where.** A block with a call of a declared \
+                    function (direct, inside an expression) or through a pointer is \
+                    accepted, because a callee's writes are not resolved here; a `walk` \
+                    invariant (no carrier) is not asked. \
+                    **What it does NOT establish:** that `I` is really false inside the \
+                    block (L34 of OFFEN O1 is an existence statement about one run, witnessed \
+                    in Lean by `tabelle_gebrochen`), or that the block restores `I` at its \
+                    end -- the goal theorem claims restoration at every RETURN of a writer \
+                    (`invRueck`, `invGrund`), and machine G unfolds `breaking` without the \
+                    name, so no leg speaks of the region. *D013 checks the name resolves; \
+                    this rule checks the name fits the writes; neither checks the state.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1291-breaking-am-falschen-traeger.gab (example 53 with \
+                      the invariant name swapped for one over another table); the clean \
+                      sides are beispiele/53-zwei-orte.gab and beispiele/55-kindkette.gab, \
+                      and crates/gabbro-check/tests/breaking_region.rs pins both directions.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`breaking_rests_here`); \
+                     messung/OPUS-G-O1.md; SPRACHE.md §8.3.1",
+    },
+    Satz {
+        name: "kbedingung.breaking-blocks-maintainers",
+        kennungen: &["N532"],
+        aussage: "Inside `breaking I { … }` no function whose `maintains` names `I` is \
+                  called directly -- SPRACHE.md §8.3's promise that the resting invariant \
+                  is not available as a premise, where it is a name the checker can read.",
+        vorbehalt: "`requires I` as a predicate word (a `spec fn` in a `requires` clause) is \
+                    not resolved, and an indirect call is not resolved either; both are the \
+                    other half of §8.3's sentence and stay open. The Lean model does not \
+                    need the rule: in machine G an invariant is owed at a writer's return \
+                    and never assumed at an entry, so the goal theorem is unaffected either \
+                    way -- the rule holds the SOURCE to the language document.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1292-breaking-ruft-pflegende.gab; the clean side (the \
+                      same call after the block) is pinned in \
+                      crates/gabbro-check/tests/breaking_region.rs.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`breaking_blocks_maintainers`); \
+                     SPRACHE.md §8.3",
     },
     // --- «B18»: die Registerklasse je Phase (2026-08-28, Bahn A) ----------------------
     Satz {

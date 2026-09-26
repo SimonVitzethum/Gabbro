@@ -1,0 +1,52 @@
+-- erwartet: N531
+-- **Opus agent G (OFFEN O1, L34) -- `breaking` on the wrong-but-existing invariant.**
+--
+-- `beispiele/53-zwei-orte.gab` with one word changed: the block writes the two places of
+-- `Endpunkt` and names `faden_frei`, an invariant of `Faden`. `D013` is satisfied -- the
+-- name resolves -- and until 2026-09-26 the file passed with zero errors: *"a `breaking`
+-- on the wrong-but-existing invariant still passes"* (SPRACHE.md §8.3.1). The block writes
+-- no carrier of `faden_frei` and calls nothing, so it cannot let it rest: `N531`.
+module gift::breaking_am_falschen_traeger {
+
+const NKERNE  : u32 = 4;
+const NFAEDEN : u32 = 64;
+
+lock EPS protects { endpunkte } rank 0 held <= 200 ops masks irqs;
+
+table Faden count NFAEDEN {
+    slot {
+        benutzt : bool,
+    }
+
+    invariant faden_frei cost O(1) runs online :
+        forall f in slots of Self : Self.slots[f].benutzt == Self.slots[f].benutzt;
+}
+
+table Endpunkt count NKERNE {
+    slot {
+        benutzt     : bool,
+        anrufer     : option index into Faden,
+        antwortende : option index into Faden,
+    }
+
+    invariant antwortpflicht_paarig cost O(1) runs online :
+        forall e in slots of Self :
+            (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
+}
+
+impl fn treffen_oeffnen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt,
+                        ruft : index into Faden, dient : index into Faden)
+    requires  Held(EPS), e.slots[kern].benutzt
+    ensures   e.slots[kern].anrufer == Some(ruft),
+              e.slots[kern].antwortende == Some(dient)
+    maintains antwortpflicht_paarig
+    effects   { writes e.slots, locks EPS }
+    costs     <= 8 ops
+{
+    breaking faden_frei {
+        e.slots[kern].anrufer     = Some(ruft);
+        e.slots[kern].antwortende = Some(dient);
+    }
+}
+
+}
