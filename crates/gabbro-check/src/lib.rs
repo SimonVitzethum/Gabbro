@@ -1256,6 +1256,9 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Lane 261:** a string literal carries no sub-expression -- bytes,
+        // not names.
+        | ExprArt::Kette(_)
         // **`&f` carries no sub-expression either** («B8»): the `&` takes a PATH, not an
         // expression, and that restriction is in the parser on purpose.
         | ExprArt::FnWert(_)
@@ -1386,6 +1389,9 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             // elements' places arrive through `alle_ausdruecke`, which
             // descends into the elements since the `unterausdruecke` arm.
             | ExprArt::ArrayLit(_)
+            // **Lane 261:** a string literal is itself no place -- bytes
+            // name nothing.
+            | ExprArt::Kette(_)
             // **«SG-24»: a count is itself no place** -- its predicate's places arrive
             // through `alle_ausdruecke`, which descends into the predicate since the
             // `unterausdruecke` arm above.

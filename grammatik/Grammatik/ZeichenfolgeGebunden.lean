@@ -12,8 +12,10 @@
   The surface since lane 256 round 2: `string max N` parses
   (`TypExpr::Zeichenkette`), the `zeichenfolge.rs` pass holds N453-N455
   (and N465 since fix lane F6) over parameters, results and `let`s, and
-  the emitter stops every string program with `C001`. String literals and
-  lowering are explicitly out of scope (see CUTS).
+  string literals parse since lane 261 (`ExprArt::Kette`, byte count as
+  length). Literals and lowering are lane 261's: `emit.rs` writes
+  `gabbro_string_N` (one length word plus N bytes, no NUL terminator) and
+  `ZeichenfolgeC.lean` states the layout's correspondence.
 
   Fix lane F6 (review G12 F4/F6) adds the three facts the checker's rules
   rest on, stated over this model and nothing else:
@@ -200,17 +202,14 @@ end Gabbro.Grammatik
   - VALUE MODEL ONLY: `BString max` as a character list with the length
     invariant, plus `bliteral` / `bconcat` / `blaenge` / `bindex` /
     `vergl` / `bvergleiche` / `bkopie` with their length, refusal and
-    comparison theorems and the witness `bounded_string_zeuge`. The model
-    covers literals (`bliteral`) AHEAD of the surface: `"hi"` stays
-    `P011` because a literal needs an `ExprArt` arm and
-    `m1::ausdruck_roh` is exhaustive over `ExprArt` (see gift 1127).
-  - NO lowering: every string program ends at `C001` today (parameter
-    type, return type, unresolvable `let`, non-array `lenof` -- all
-    measured). Since fix lane F6 the index rule demands a length fact
+    comparison theorems and the witness `bounded_string_zeuge`.
+  - The lowering since lane 261: `emit.rs` writes `gabbro_string_N` and
+    `ZeichenfolgeC.lean` states the layout's operation correspondence
+    (`clen`, `cindex`, `ckopie`, `cconcat`, `cvergleiche` over the live
+    prefix). Since fix lane F6 the index rule demands a length fact
     (`bindex_geschuetzt`), never `k < max` alone (`bindex_max_beweist_nichts`).
-  - NO representation: NUL termination (a NUL-terminated buffer needs
-    `max + 1` bytes) and an upper limit on `max` (parsed as `u128`) are
-    the lowering lane's decisions.
+  - The max bound (`N486`, `1 ..= 65535`) is the checker's and the
+    lowering's decision, not the model's: `BString max` takes any `max`.
   - NO library text (L4): formatting, parsing and UTF handling stay
     library work per `TODO.md` section 0b.
   - Planted-defect check: `bconcat_ablehnt` / `bliteral_ablehnt` prove

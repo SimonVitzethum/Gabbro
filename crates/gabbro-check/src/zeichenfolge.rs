@@ -94,6 +94,19 @@ pub fn literal_passt(max: usize, len: usize) -> bool {
     len <= max
 }
 
+/// The upper limit on `max` (lane 261): the C layout is one length word
+/// plus `max` bytes per value (`gabbro_string_N`), so a max above this
+/// the unit cannot allocate -- a single local would already exceed any
+/// sane stack frame -- and a max of zero holds no character and has no
+/// object form (`uint8_t data[0]` is no strict-C11 object).
+pub const MAX_OBERGRENZE: u128 = 65535;
+
+/// A declared max stands exactly when it allocates: neither empty nor past
+/// the bound.
+pub fn max_traegt(max: u128) -> bool {
+    1 <= max && max <= MAX_OBERGRENZE
+}
+
 /// `concat` fits exactly when the length sum fits the target max.
 /// `None` is the refusal (overflow of the sum, or past the max).
 pub fn concat_passt(ziel_max: usize, a_len: usize, b_len: usize) -> Option<usize> {
@@ -406,6 +419,18 @@ fn deklarationen(item: &Item, absagen: &mut gabbro_syntax::diag::Absagen) {
             );
         }
     }
+    // **Lane 261:** every declared max allocates, wherever it stands -- even
+    // a refused position (`N465` above) names a max the lowering would have
+    // to allocate, so the bound is held here too, beside the place rule.
+    let mut maxima: Vec<(u128, Span)> = Vec::new();
+    crate::jeder_typausdruck_im_item(item, &mut |t| {
+        if let TypExpr::Zeichenkette { max, span } = t {
+            maxima.push((*max, *span));
+        }
+    });
+    for (max, span) in maxima {
+        max_regel(max, span, absagen);
+    }
 }
 
 /// Every `string max N` inside a type expression, with the outermost one
@@ -446,6 +471,8 @@ fn ketten_im_typ(t: &TypExpr, aussen: bool, aus: &mut Vec<(Span, bool)>) {
 
 /// A `let` annotation: the outermost string is allowed, any nested one is
 /// `N465`; an `alloc` annotation (an index type) allows none.
+/// **Every max named here allocates too** (lane 261): the bound rule runs
+/// beside the place rule, on the same walk.
 fn typ_annotation(t: &TypExpr, aussen_erlaubt: bool, absagen: &mut gabbro_syntax::diag::Absagen) {
     let mut v = Vec::new();
     ketten_im_typ(t, true, &mut v);
@@ -458,6 +485,46 @@ fn typ_annotation(t: &TypExpr, aussen_erlaubt: bool, absagen: &mut gabbro_syntax
                 absagen,
             );
         }
+    }
+    let mut maxima: Vec<(u128, Span)> = Vec::new();
+    ketten_maxima(t, &mut maxima);
+    for (max, span) in maxima {
+        max_regel(max, span, absagen);
+    }
+}
+
+/// Every declared `max` inside a type expression, outermost and nested alike.
+fn ketten_maxima(t: &TypExpr, aus: &mut Vec<(u128, Span)>) {
+    match t {
+        TypExpr::Zeichenkette { max, span } => aus.push((*max, *span)),
+        TypExpr::Feld(a) => ketten_maxima(&a.element, aus),
+        TypExpr::Zeiger(p) => ketten_maxima(&p.ziel, aus),
+        TypExpr::Verbund(felder, _) => {
+            for x in felder {
+                ketten_maxima(&x.typ.typ, aus);
+            }
+        }
+        TypExpr::Varianten(v, _) => {
+            for x in v {
+                if let Some(n) = &x.nutzlast {
+                    ketten_maxima(n, aus);
+                }
+            }
+        }
+        TypExpr::FnZeiger(z) => {
+            for p in &z.parameter {
+                ketten_maxima(&p.typ, aus);
+            }
+            if let Some(e) = &z.ergebnis {
+                ketten_maxima(e, aus);
+            }
+        }
+        TypExpr::Int(_)
+        | TypExpr::Float(_)
+        | TypExpr::Bool(_)
+        | TypExpr::Never(_)
+        | TypExpr::Pfad(_)
+        | TypExpr::Index { .. } => {}
     }
 }
 
@@ -483,9 +550,13 @@ fn finde_fn(fns: &HashMap<String, RumpfSignatur>, modul: &str, p: &Pfad) -> Aufl
 /// The string max an expression provably holds, or `None` when it holds
 /// no string. `+` of two strings sums (saturating: a sum that overflows
 /// `u128` can only refuse harder downstream, never accept).
+/// **A literal holds its exact byte length as its bound** (lane 261): a
+/// literal of length `L` fits exactly the slots a `string max L` fits, so
+/// every fit check below answers for it with no further rule.
 fn synth(e: &Expr, z: &Zustand, lage: &Lage) -> Option<u128> {
     match &e.art {
         ExprArt::Klammer(x) => synth(x, z, lage),
+        ExprArt::Kette(bytes) => Some(bytes.len() as u128),
         ExprArt::Ort(o) | ExprArt::Alt(o) if o.suffixe.is_empty() => z.kette(&o.basis.text),
         ExprArt::Ergebnis => match lage.ergebnis {
             Some(Schlitz::Kette(m)) => Some(m),
@@ -1084,6 +1155,11 @@ fn expr_regel(x: &Expr, z: &Zustand, lage: &Lage, absagen: &mut gabbro_syntax::d
         | ExprArt::Falsch
         | ExprArt::FnWert(_)
         | ExprArt::Klammer(_)
+        // **Lane 261:** a string literal draws no refusal at its own node --
+        // its byte length is held against the target max at the slot
+        // (`ziel_regel`), and everywhere else it is a string value like any
+        // other (`wert_ohne_kette`, the `Binaer` arms above).
+        | ExprArt::Kette(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
         | ExprArt::Zaehle { .. } => {}
@@ -1299,6 +1375,34 @@ fn ort_ablehnung(span: Span, satz: &str, absagen: &mut gabbro_syntax::diag::Absa
     );
 }
 
+/// The max bound (lane 261, `N486`): a max of zero holds nothing and has no
+/// object form, and a max past `MAX_OBERGRENZE` (65535) the unit cannot
+/// allocate -- one length word plus `max` bytes per value.
+fn max_regel(max: u128, span: Span, absagen: &mut gabbro_syntax::diag::Absagen) {
+    if max_traegt(max) {
+        return;
+    }
+    absagen.schiebe(
+        Absage::fehler(
+            "N486",
+            span,
+            if max == 0 {
+                "a `string max 0` holds no character and has no object form".to_string()
+            } else {
+                format!(
+                    "a `string max {max}` the unit cannot allocate: one length word plus \
+                     {max} bytes per value past the bound of {MAX_OBERGRENZE}"
+                )
+            },
+        )
+        .mit_notiz(
+            "a bounded string is a length word plus its max in bytes, allocated \
+             where it stands; a larger max is a larger stack frame or static, \
+             and zero holds nothing at all",
+        ),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1312,6 +1416,21 @@ mod tests {
     #[test]
     fn literal_ueber_max_wird_verweigert() {
         assert!(!literal_passt(8, 9));
+    }
+
+    #[test]
+    fn max_schranke_traegt_1_bis_65535() {
+        assert!(max_traegt(1));
+        assert!(max_traegt(8));
+        assert!(max_traegt(MAX_OBERGRENZE));
+        assert_eq!(MAX_OBERGRENZE, 65535);
+    }
+
+    #[test]
+    fn max_schranke_verweigert_null_und_ueber() {
+        assert!(!max_traegt(0));
+        assert!(!max_traegt(65536));
+        assert!(!max_traegt(u128::MAX));
     }
 
     #[test]

@@ -1,0 +1,17 @@
+-- **1127 -- a string literal checks clean (lane 256 delivered the pin, lane 261 the literal).**
+--
+-- Lane 256 pinned `"hi"` at `P011`: a literal needs an `ExprArt` arm.
+-- Lane 261 adds `ExprArt::Kette` (the UTF-8 bytes, length is the byte
+-- count) and lowers it: the checker holds the byte count against the
+-- target max exactly, and the slot writes a compound literal at its own
+-- max. An over-long literal at a slot stays `N455` (gift 1213).
+
+module beispiel1127 {
+impl fn nimm() -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let s: string max 8 = "hi";
+    return 0;
+}
+}

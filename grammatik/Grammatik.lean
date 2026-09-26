@@ -326,3 +326,4 @@ import Grammatik.Zertifikate
 import Grammatik.Speichermodell.Atomar
 import Grammatik.Speichermodell.AtomarZeuge
 import Grammatik.Speichermodell.Zaehler
+import Grammatik.ZeichenfolgeC

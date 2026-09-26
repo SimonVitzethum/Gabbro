@@ -345,6 +345,9 @@ fn argument_term(a: &Expr, caller: &[CallerParam]) -> Result<String, Reason> {
         | ExprArt::Klammer(_)
         | ExprArt::Eingebaut(_)
         | ExprArt::Alt(_)
+        // **Lane 261:** a string literal is no stable argument either --
+        // the theory has no bytes form.
+        | ExprArt::Kette(_)
         // **«SG-24»: a count has no term in this theory** (`Main`, no cardinality
         // library) -- a `refines` head over one is refused by name, not defaulted.
         // **Lane E1:** a library call has no term here either.
@@ -468,8 +471,11 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         // in `Main`, refused by name.
         // **Lane 111:** a table literal has no term either -- the theory has
         // no array literal form.
+        // **Lane 261:** a string literal has no term either -- the theory
+        // has no bytes form.
         | ExprArt::Zaehle { .. }
         | ExprArt::ArrayLit(_)
+        | ExprArt::Kette(_)
         | ExprArt::Grund { .. } => Err(Reason::NoTerm),
     }
 }

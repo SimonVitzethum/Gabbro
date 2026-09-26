@@ -1012,17 +1012,18 @@ The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= 
 Fix lane F6 made the checker agree with the Lean value model
 (`ZeichenfolgeGebunden.lean`): an index is proven against the length by a flow fact
 (`N454`), a string stands only in parameters, results and `let`s (`N465`), and the name
-table is scoped. Every string program still stops at the emitter (`C001`). What stays
-open:
+table is scoped. Lane 261 (2026-09-26) closed the representation, the limit and the
+literals; what stays open is narrower:
 
 | | |
 |---|---|
-| **no representation** | the model is a length-carrying list with no terminator. A lowering must choose: a length word plus `max` bytes, or a NUL-terminated buffer of `max + 1` bytes (and then a NUL inside the data is either refused or truncates -- a decision, not a detail) |
-| **no upper limit on `max`** | `max` is parsed as `u128`. The pass sums saturating and so cannot accept wrongly, but a lowering must refuse a max it cannot allocate (a stack frame, a static) |
-| **no literals** | `"hi"` stays `P011`; no exact length ever arises except through `lenof` facts |
-| **no strings in aggregates or constants** | refused by `N465` (a deliberate cut, not a model): fields, table slots, `const`/`static`, arrays, variants, pointers, fn pointers, `syscall` heads |
-| **max-bound over-approximation** | `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
-| **what would close it** | the lowering lane (representation, limit, literals) with a Lean statement tying the emitted buffer to `BString` |
+| **representation: CLOSED** | `gabbro_string_N`: one `uint32_t` length word plus `max` bytes, no NUL terminator (`emit.rs` `ketten_abschnitt`); `lenof` is `.len`, the index `.data[k]`, copies plain or widening helpers, `+` a concat helper at the summed max, comparisons two generic byte helpers. `ZeichenfolgeC.lean` states the operation correspondence over the live prefix |
+| **upper limit on `max`: CLOSED** | `1 ..= 65535` (`N486`, `zeichenfolge.schranke`); zero has no object form, more no stack frame |
+| **literals: CLOSED** | `"hi"` parses (`ExprArt::Kette`, UTF-8 bytes, length is the byte count), the checker holds the count against the slot exactly, the slot writes a compound literal at its own max |
+| **no strings in aggregates or constants** | still refused by `N465` (a deliberate cut, not a model): fields, table slots, `const`/`static`, arrays, variants, pointers, fn pointers, `syscall` heads. The layout COULD carry them now; length facts still cannot reach them |
+| **max-bound over-approximation** | still open: `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
+| **no Char bridge** | still open: the layout carries bytes, `BString` carries characters; `ZeichenfolgeC.lean` states the gap beside its lemmas, and no `CForm` plugs into the correspondence framework |
+| **what would close the rest** | flow facts for aggregate positions (a bigger checker), exact-length copies (a bigger analysis), a verified UTF-8 bridge plus a `CForm` hook (a bigger model) |
 
 ## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved, the contract legs are open)
 

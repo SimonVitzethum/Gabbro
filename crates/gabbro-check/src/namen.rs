@@ -788,6 +788,9 @@ fn knoten_ausdruck(
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr
             | ExprArt::Falsch
+            // **Lane 261:** a string literal is pure like any literal --
+            // bytes name no place and run no call.
+            | ExprArt::Kette(_)
             | ExprArt::FnWert(_)
             | ExprArt::Klammer(_)
             | ExprArt::Eingebaut(_)

@@ -342,7 +342,16 @@ markorder  = "order" "{" identlist "}" ;
 (* «B37»: the stages of a linear mark, in ONE declaration. `order` stands before the `=`
    because it is not a body: an order says which steps are admissible on the value. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
-            | indexty ;
+            | indexty | stringty ;   (* lane 261 *)
+stringty   = stringkopf "max" int ;
+stringkopf = ident ;
+(* The word `string` -- contextual, NOT reserved (`parse.rs`): only `string`
+   directly followed by `max` takes this arm; anything else -- including a user
+   type named `string` -- falls through to the name arm. Lane 261: a bounded
+   string with declared maximum `max`. The length discipline holds maxes
+   against slots (`N453`-`N455` over parameters, results and `let`s, `N465`
+   everywhere else, `N486` for the bound `1 ..= 65535`); the emitter writes
+   `gabbro_string_N` -- one length word plus N bytes, no NUL terminator. *)
 (* NO general `option T` («SG-26», §18): over `index into T` it is the
    carrier's index option («SG-4»); over any other `T` the writer spells the
    two-case `tagged` sum themselves — `match` over it is exhaustive by shape,
@@ -556,8 +565,14 @@ fnvalue    = "&" path ;
 (* «B8»: the PRODUCER of a function pointer. `&` expects a `path`, not an expression: there is
    no address of an expression in Gabbro. CHANGED «SG-8»: `&T` for a declared carrier `T` is
    also the producer of a `ptr` -- the one address there is. *)
-primary    = int | "true" | "false" | place | call | paren | builtin | optionexpr
-            | oldexpr | "result" | reasonval | countexpr ;   (* CHANGED «SG-24» *)
+primary    = int | "true" | "false" | stringlit | place | call | paren | builtin | optionexpr
+            | oldexpr | "result" | reasonval | countexpr ;   (* CHANGED «SG-24», lane 261 *)
+stringlit  = string ;
+(* Lane 261: a bounded-string literal. The value is the UTF-8 bytes of the text
+   without the quotes, and the length the checker holds is the byte count
+   (`N455` refuses an over-long literal at its slot, gift 1213). Exactly ONE
+   text is one value: adjacent texts are joined only for `claim` prose («B22»);
+   here concatenation is `+`. *)
 countexpr  = "count" ident "in" domain ":" pred ;
 (* The number of entries of one table satisfying `pred` — over ONE table only
    (SUGAR «SG-24», §18: a call to the generated count function of the table,

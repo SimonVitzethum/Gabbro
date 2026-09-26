@@ -424,6 +424,8 @@ fn expr_name(e: &Expr) -> String {
         },
         ExprArt::Binaer(op, _, _) => format!("operator {}", binop_name(*op)),
         ExprArt::ArrayLit(_) => "array literal".to_string(),
+        // **Lane 261:** a string literal names itself like any literal.
+        ExprArt::Kette(_) => "string literal".to_string(),
     }
 }
 

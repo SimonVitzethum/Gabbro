@@ -137,6 +137,8 @@ fn zellen_expr(e: &Expr, gebunden: &BTreeSet<String>, acc: &mut BTreeSet<String>
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Lane 261:** a string literal reads no cell -- bytes name nothing.
+        | ExprArt::Kette(_)
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
         | ExprArt::Ergebnis => {}

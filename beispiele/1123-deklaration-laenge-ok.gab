@@ -1,0 +1,15 @@
+-- **1123 -- a bounded string declaration with `lenof` checks clean (lane 256; emitting since lane 261).**
+--
+-- The positive side of the declaration shape: `string max 8` parameters
+-- and `lenof` over them draw no checker diagnostic. Since lane 261 the
+-- parameter lowers to `gabbro_string_8` (one length word plus 8 bytes, no
+-- NUL terminator) and `lenof(s)` to `s.len`.
+
+module beispiel1123 {
+impl fn nimm(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

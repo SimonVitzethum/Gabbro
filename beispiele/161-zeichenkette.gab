@@ -1,0 +1,70 @@
+-- 161 -- bounded strings lower to C (lane 261).
+--
+-- Builds a string from a literal, copies it into a wider slot,
+-- concatenates two strings, and reads length, bytes and comparisons back.
+-- The layout is one length word plus `max` bytes per value, with no NUL
+-- terminator (`gabbro_string_N`); every copy fits by construction (`N455`
+-- refuses a copy into a shorter max) and every index is proven below the
+-- length (`N454`). Compiled and run in `pruefe-emission.sh`
+-- (`lauf "beispiel161"`).
+
+module beispiel161 {
+impl fn baue() -> string max 8
+    effects { pure }
+    costs <= 64 ops
+{
+    let s: string max 8 = "hi";
+    return s;
+}
+
+impl fn kopiere(s: string max 8) -> string max 16
+    effects { pure }
+    costs <= 64 ops
+{
+    let t: string max 16 = s;
+    return t;
+}
+
+impl fn haenge_an(a: string max 5, b: string max 3) -> string max 8
+    effects { pure }
+    costs <= 64 ops
+{
+    let c: string max 8 = a + b;
+    return c;
+}
+
+impl fn laenge(s: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+
+impl fn zeichen(s: string max 8, i: u32 in 0 .. 8) -> u8
+    requires i < lenof(s)
+    effects { pure }
+    costs <= 64 ops
+{
+    return s[i];
+}
+
+impl fn gleich(a: string max 8, b: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    if a == b {
+        return 1;
+    }
+    return 0;
+}
+
+impl fn kleiner(a: string max 8, b: string max 8) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    if a < b {
+        return 1;
+    }
+    return 0;
+}
+}
