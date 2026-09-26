@@ -179,6 +179,10 @@ pub mod lean;
 pub mod obligations_g;
 // **Fix lane F7:** the O12 release rows, shared by `obligations_g` and `gegenbeispiel`.
 pub mod freigabe;
+/// **Lane 263 -- the O12 release refusal (`N511`).** Reads the shared verdict of
+/// `freigabe::beurteile`: what does not follow at a locked-section exit falls here.
+/// Same column as `sperrinv`, no pass number of its own.
+pub mod freigabe_pruef;
 /// **Const certificate from the source (lane 121)** -- a `const fn` body in
 /// the single-expression fragment printed to a Lean `Nat` function, so the
 /// `List.all` certificate checks values against the translated source.
@@ -525,6 +529,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("sperrinv", sperrinv::pass(baum, absagen));
+        z!("freigabe_pruef", freigabe_pruef::pass(baum, absagen));
         z!("fusswache2", fusswache2::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
@@ -585,6 +590,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // **Lane 156, beside the lock pass whose `protects` set it reads.**
     // No pass number of its own (see the module head).
     sperrinv::pass(baum, absagen);
+    // **Lane 263, beside the lock pass whose invariant it discharges.**
+    // No pass number of its own (see the module head).
+    freigabe_pruef::pass(baum, absagen);
     // **Lane 175, beside the lock-invariant data it reuses.**
     // Same column (footprint premise of the flagship), not a new pass.
     fusswache2::pass(baum, absagen);

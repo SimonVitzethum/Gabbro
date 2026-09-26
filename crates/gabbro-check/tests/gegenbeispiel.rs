@@ -22,6 +22,19 @@ fn checked(quelle: &str) -> gabbro_syntax::ast::Programm {
     baum
 }
 
+/// The tree with its error codes: for snippets the release refusal owns.
+fn geprueft(quelle: &str) -> (gabbro_syntax::ast::Programm, Vec<&'static str>) {
+    let (baum, mut absagen) = gabbro_syntax::lies("gegenbeispiel", quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let codes: Vec<&'static str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    (baum, codes)
+}
+
 fn suche(quelle: &str, nur: Option<&str>) -> String {
     let baum = checked(quelle);
     export("gegenbeispiel", &baum, nur, &Suche::default()).expect("search must export")
@@ -238,20 +251,23 @@ fn o12_einheit(ensures_setze: &str) -> String {
     )
 }
 
-fn o12_suche(ensures_setze: &str) -> String {
+fn o12_suche(ensures_setze: &str) -> (String, Vec<&'static str>) {
     let quelle = o12_einheit(ensures_setze);
-    let baum = checked(&quelle);
-    export("gegenbeispiel", &baum, None, &Suche::default()).expect("search must export")
+    let (baum, codes) = geprueft(&quelle);
+    let text =
+        export("gegenbeispiel", &baum, None, &Suche::default()).expect("search must export");
+    (text, codes)
 }
 
 /// **O12, the failing half: a callee promising only `konto[0] == x` leaves
 /// the release obligation UNPROVED** -- naming the locked section (`haupt`
 /// locking `L`), the callee promise (`setze`), and the unproved release
-/// goal (`konto.slots[1].stand`). The checker still accepts the file (see
-/// `checked`), so the failure surfaces here, not as a diagnostic.
+/// goal (`konto.slots[1].stand`). Since lane 263 the checker refuses the
+/// release with `N511` beside the row (see `checked` -- the failure used to
+/// surface here only).
 #[test]
 fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
-    let text = o12_suche("konto.slots[0].stand == x");
+    let (text, codes) = o12_suche("konto.slots[0].stand == x");
     for teil in [
         "RELEASE OBLIGATIONS",
         "haupt",
@@ -262,13 +278,18 @@ fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
     ] {
         assert!(text.contains(teil), "the failing release row must contain {teil:?}");
     }
+    assert_eq!(
+        codes,
+        vec!["N511"],
+        "the weak promise is refused at the release, and only there"
+    );
 }
 
 /// **O12, the fixed half: a callee promising both slots HOLDS** -- the
 /// shape `beispiele/124` carries since the O12 corpus fix.
 #[test]
 fn o12_starkes_ensures_haelt_die_freigabe() {
-    let text = o12_suche(
+    let (text, codes) = o12_suche(
         "konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x",
     );
     assert!(
@@ -279,6 +300,7 @@ fn o12_starkes_ensures_haelt_die_freigabe() {
         !text.contains("RELEASE UNPROVED:"),
         "no release row may fail once both slots are promised"
     );
+    assert!(codes.is_empty(), "the fixed shape stays checker-clean: {codes:?}");
 }
 
 /// **Fix lane F7 (review G02 F3): the counterexample output shares the order-aware rows**
@@ -291,9 +313,10 @@ fn f7_direkter_schreibzugriff_nach_dem_versprechen_bricht() {
     )
     .replace("        setze(30);\n", "        setze(30);\n        konto.slots[1].stand = 5;\n");
     assert!(quelle.contains("konto.slots[1].stand = 5;"), "the snippet must carry the write");
-    let baum = checked(&quelle);
+    let (baum, codes) = geprueft(&quelle);
     let text = export("gegenbeispiel", &baum, None, &Suche::default()).expect("search must export");
     assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
     assert!(text.contains("is overwritten after its last promise"), "{text}");
     assert!(text.contains("The per-function search"), "the subcommand's own note stays:\n{text}");
+    assert_eq!(codes, vec!["N511"], "the broken release is refused: {codes:?}");
 }
