@@ -473,11 +473,15 @@
     (2) the C compiler and the hardware implement C11 atomics and the orders as specified;
     (3) EVERY lock primitive `<L>_nimm` is an acquire and every `<L>_gib` a release, whoever
         implements it: a driver-defined lock (`pthread_mutex_lock`/`_unlock`, `treiber.rs`);
-        an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`,
-        which checks atomicity, that the body reads an atomic, and hold time, but NOT the
-        memory orders (a relaxed spinlock passes `N323` and does not synchronise in C11;
-        follow-up: OFFEN O26, `N323` should demand acquire/acq_rel at the take and release at
-        the give); or a foreign one (`extern fn`/`asm`, trust base, `N042`);
+        an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`
+        (atomicity, the body reads an atomic, hold time) and, since 2026-09-26 (Opus lane
+        O25, OFFEN O26; a comment-only correction of this header, no definition moved), the
+        orders `N481`-`N483`: the take reads an atomic declared `acquire`/`release`/`seq`,
+        the give writes one, and a take and a give of one lock meet on such an atomic -- so
+        for own primitives this is CHECKED at the source level, the lowering of the orders
+        staying (2); or a foreign one (`extern fn`/`asm`, trust base) -- ASSUMED. Measured
+        the same day: `N042` refuses the C name of every own or foreign `<L>_nimm`/`<L>_gib`
+        beside `lock L`, so on an accepted program today every lock is driver-defined;
     (4) carriers are the locations (a table or an atomic array is ONE location of W; the DRF
         argument holds per element as well, since it only uses the lock and locality facts);
     (5) what G reads WITHOUT recording it is read over G's memory: the answers of foreign code
@@ -653,7 +657,12 @@
   writes must be thread-local or lock-guarded, `atomic` or not), so W's non-SC outcomes
   (`mp_rlx_erlaubt`, `sb_erlaubt`) occur on no accepted program and no theorem here speaks
   about them; covering them needs the user's sequential semantics to havoc such a read (a
-  rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`); that W is exactly
+  rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`; the MEMORY half is
+  proved standalone since 2026-09-26, outside this statement: with the footprint check
+  exempting atomics, every W step is a step of G whose atomic reads are answered per W and
+  whose plain carriers stay sequentially consistent, `schwach_ist_gA`,
+  Speichermodell/Atomar.lean -- the replay of the user's proof over such steps is what is
+  missing); that W is exactly
   RC11 (it over-approximates it at G's step granularity: `seq_cst` is modelled as release/acquire, so no SC-order
   fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
   `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not

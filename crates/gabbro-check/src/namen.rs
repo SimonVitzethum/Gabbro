@@ -7133,24 +7133,24 @@ mod sperrprimitiv_tests {
     fn geordneter_spinlock_besteht() {
         let codes = codes_fuer(GEORDNETER_SPINLOCK);
         for c in ["N323", "N481", "N482", "N483"] {
-            assert!(!faellt(&codes, c), "{c} muss schweigen, gefallen ist {codes:?}");
+            assert!(!faellt(&codes, c), "{c} must stay silent, fired: {codes:?}");
         }
     }
 
     #[test]
     fn entspannter_spinlock_faellt_mit_n481_und_n482() {
         let codes = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", "u32 relaxed"));
-        assert!(faellt(&codes, "N481"), "N481 erwartet, gefallen ist {codes:?}");
-        assert!(faellt(&codes, "N482"), "N482 erwartet, gefallen ist {codes:?}");
-        assert!(!faellt(&codes, "N483"), "N483 muss schweigen, gefallen ist {codes:?}");
+        assert!(faellt(&codes, "N481"), "N481 expected, fired: {codes:?}");
+        assert!(faellt(&codes, "N482"), "N482 expected, fired: {codes:?}");
+        assert!(!faellt(&codes, "N483"), "N483 must stay silent, fired: {codes:?}");
         // **no ordering word is `relaxed` too** (the emitter's table)
         let ohne = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", "u32"));
-        assert!(faellt(&ohne, "N481"), "N481 erwartet ohne Ordnungswort, gefallen ist {ohne:?}");
+        assert!(faellt(&ohne, "N481"), "N481 expected without an ordering word, fired: {ohne:?}");
         // `seq` and `release` order like `acquire`
         for w in ["u32 seq", "u32 release"] {
             let c = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", w));
             for k in ["N481", "N482", "N483"] {
-                assert!(!faellt(&c, k), "{k} muss bei `{w}` schweigen, gefallen ist {c:?}");
+                assert!(!faellt(&c, k), "{k} must stay silent at `{w}`, fired: {c:?}");
             }
         }
     }
@@ -7195,12 +7195,12 @@ mod sperrprimitiv_tests {
     fn ticket_sperre_besteht() {
         let codes = codes_fuer(TICKET_SPERRE);
         for c in ["N323", "N481", "N482", "N483"] {
-            assert!(!faellt(&codes, c), "{c} muss schweigen, gefallen ist {codes:?}");
+            assert!(!faellt(&codes, c), "{c} must stay silent, fired: {codes:?}");
         }
         // **The same lock with `NOW` relaxed orders nothing.**
         let entspannt = codes_fuer(&TICKET_SPERRE.replace("NOW : u32 acquire", "NOW : u32 relaxed"));
-        assert!(faellt(&entspannt, "N481"), "N481 erwartet, gefallen ist {entspannt:?}");
-        assert!(faellt(&entspannt, "N482"), "N482 erwartet, gefallen ist {entspannt:?}");
+        assert!(faellt(&entspannt, "N481"), "N481 expected, fired: {entspannt:?}");
+        assert!(faellt(&entspannt, "N482"), "N482 expected, fired: {entspannt:?}");
     }
 
     #[test]
@@ -7220,8 +7220,8 @@ mod sperrprimitiv_tests {
             );
         assert!(quelle.contains("ZURUECK = 1"), "the substitution must hit");
         let codes = codes_fuer(&quelle);
-        assert!(faellt(&codes, "N483"), "N483 erwartet, gefallen ist {codes:?}");
-        assert!(!faellt(&codes, "N481"), "N481 muss schweigen, gefallen ist {codes:?}");
-        assert!(!faellt(&codes, "N482"), "N482 muss schweigen, gefallen ist {codes:?}");
+        assert!(faellt(&codes, "N483"), "N483 expected, fired: {codes:?}");
+        assert!(!faellt(&codes, "N481"), "N481 must stay silent, fired: {codes:?}");
+        assert!(!faellt(&codes, "N482"), "N482 must stay silent, fired: {codes:?}");
     }
 }
