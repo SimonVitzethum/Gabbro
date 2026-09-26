@@ -23,6 +23,9 @@
   `child`, since 2026-09-26): `ZielF` -- `Ziel` on its G state plus the spawn and join legs.
   `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
   finite declarations only).
+  A SECOND statement, `GabbroZielVerbund` (end of this file, since 2026-09-26), covers a
+  program LINKED from two separately compiled units under the same hardware assumptions; its
+  conclusion is this statement's `ZielF`, on the linked unit (the linking block below).
 
   WHAT A GREEN BUILD COVERS (OPUS AGENT C, 2026-09-26; messung/OPUS-C-TRAGWEITE.md). A header
   paragraph only: NO definition of this file changed, no premise moved, `Ziel`/`ZielF` are as
@@ -64,6 +67,59 @@
     therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
     in Lean for every certified program, and the others guard properties this statement does
     not claim (the NOT CLAIMED list, and the dropped forms above).
+
+  -- BEGIN linking block (Opus agent E, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT E: LINKING SEPARATELY COMPILED UNITS), AND WHY -- a
+  REVIEWED DIFF of this file (the review: messung/OPUS-E-LINKEN.md). PURELY ADDITIVE: no
+  definition above changed, `GabbroZiel` is word for word the statement of before, and every
+  theorem about it stands. What is added is a SECOND statement, `GabbroZielVerbund`, at the end
+  of this file, with the definitions it reads.
+  * THE GAP. The statement was about ONE `Einheit`: a function another unit supplies is not in
+    its `D.Fn` with a body, and "linking of separately compiled units" stood in NOT CLAIMED.
+    The language has the bridge (`gabbro abi` writes a `.gabi`, the importer is checked
+    `--with` it: the exporter's heads, contract and effects, become `extern fn` heads), but
+    nothing said that two units, each accepted alone, make an accepted program together.
+  * THE MODEL. Two units `E₁`, `E₂` over ONE link declaration `D` (the union of their
+    declarations; `Verbindbar`: the same contracts, table invariants, lock invariants and
+    initial memory), unit 1 owning the functions where `e` holds. Each unit carries LEAF
+    placeholders for the functions it does not own (`Platzhalter`: the `extern fn` head, which
+    calls nothing the checker could follow). The LINKED unit `verbinde e E₁ E₂` takes every
+    body from its owner, both units' starts and run-time roots, and the shared rest.
+  * THE STATEMENT (`GabbroZielVerbund`): (a) each unit accepted ALONE by the checker, one link
+    declaration, and the LINK CHECK `SchnittstelleSpec`; (b) each unit's user proves the bodies
+    IT owns and its start (`NutzerTeil`); (c) the hardware meets the assumptions AND THEY ARE
+    THE SAME for both units (`E₂.Q = E₁.Q`, one oracle); (d) the runtime starts the linked
+    unit. Conclusion: `GabbroZiel`'s own -- `ZielF` on every reachable thread machine of the
+    linked program, so race freedom and lock discipline ACROSS the units, spawned threads,
+    joins and the weak-memory leg `schwach` are all claimed for the linked program.
+  * THE LINK CHECK (`SchnittstelleSpec`, decided exactly by `schnittstelleB`,
+    Zielsatz/Verbund.lean). Placeholders are leaves; no callback through an import
+    (`KeinRueckruf`: an imported function's graph stays in its owner); and the three
+    WHOLE-PROGRAM components of `AkzeptiertSpec` -- thread-locality (`fuss`), write
+    separation (`renn`), pool safety (`einzeln`) -- re-decided over the COMPOSED hulls
+    (`HuelleV`: a root's graph inside its owner, then inside the owner of every function of
+    the other unit it reaches). That is where the interface carries the footprints: a unit
+    alone sees neither the other unit's threads nor a read hidden behind an imported head
+    (the refusal witness `vm_abgelehnt` is exactly that). The per-body components (fragment,
+    closed graphs, lock floors, lock-invariant places, roots, answer sites) are each owner's
+    own verdict.
+  * WHY IT HOLDS (`gabbro_ziel_verbund`, Zielsatz/Verbund.lean): the linked unit meets every
+    premise of `GabbroZiel` -- `akzeptiertSpec_verbinde` (a body's footprint and features
+    depend on its own text and the shared contracts only; the linked call graph of a root
+    lies in its composed hull; the linked graph is closed), `nutzerPflicht_verbinde` (a body
+    triple depends on its own body and the contracts only) -- and `gabbro_ziel` applies.
+  * EMBEDDING: `verbinde_leer` -- a unit linked with a partner that owns and starts nothing is
+    the unit itself; `verbinde_akzeptiert`, `nutzerTeil_verbinde` -- the linked unit is
+    accepted by the concrete checker and carries the restricted user duty, so a chain of units
+    links by iteration.
+  * WITNESSES (Zielsatz/VerbundZeuge.lean): `vz_ziel`/`vz_lauf_zeuge` (a library exports the
+    lock-guarded table writer `wrap` with `ensures konto[0] == 100`, an app calls it from two
+    threads; each unit accepted alone, the link accepted, `ZielF` on the linked program, and a
+    run where both app threads step and one holds the lock); `vm_abgelehnt` (footprints that
+    do not compose: each unit accepted alone, the link refused, and the whole-program checker
+    refuses the linked program too); `vz_vertrag_zu_schwach` (the exported contract is weaker
+    than the importer's: no link declaration).
+  -- END linking block --
 
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT A, OFFEN O21/O22), AND WHY -- a REVIEWED DIFF of this
   file (the review itself: messung/OPUS-A-LAUFZEITFAEDEN.md):
@@ -717,9 +773,19 @@
   hypotheses instead of reading them from (a)/(d), and the emitted C realises no masking at
   all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; a busy routine declared ONCE on several threads
   (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
-  and the checker admits that only pool-safe, `EinzelnPool`); linking of separately compiled units
-  (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
-  supplies is not in `D.Fn`); for threads SPAWNED at run time (claimed since 2026-09-26, see
+  and the checker admits that only pool-safe, `EinzelnPool`); (linking hunk, 2026-09-26: the line
+  "linking of separately compiled units" is REPLACED -- what is now claimed is
+  `GabbroZielVerbund`: two units over one link declaration, each accepted alone, the link
+  check, the SAME hardware assumptions, `ZielF` on the linked program) for LINKED units:
+  units whose hardware assumptions DIFFER (the premise `E₂.Q = E₁.Q`; the Rust `N505` refuses
+  an assumption both units name with different content); a callback through an imported
+  function back into the importer (refused by `KeinRueckruf`, not covered); an importer
+  relying on a contract other than the exporter's, weaker or stronger (the link declaration
+  has ONE contract per function; a differing head is refused, `N501`-`N504`); dynamic loading
+  (the linked unit is fixed before the start); ABI-level linking of foreign C (an `extern fn`
+  no Gabbro unit supplies stays an axiom of (c)); the C-level link step itself (symbol
+  resolution, calling convention, record layout -- translation validation's, like every "G
+  is the meaning of the C"); for threads SPAWNED at run time (claimed since 2026-09-26, see
   (d) above): a root whose ARGUMENTS differ per spawn (a `child` region reading its handed
   values -- the model fixes one argument list per slot), a root `requires` that holds only at
   the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn
@@ -1260,5 +1326,167 @@ def GabbroZiel : Prop :=
         FadenErreichbar E.P.mitRuhe O.mitRuhe passes
           (FadenStart E.P.mitRuhe sp init lebt0) K →
           ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K
+
+
+/-! ## Linking separately compiled units (Opus agent E, 2026-09-26)
+
+    `GabbroZiel` is about ONE `Einheit`. A program linked from two separately compiled units is
+    stated here as a SECOND statement, `GabbroZielVerbund`, whose conclusion is `ZielF` on the
+    LINKED unit `verbinde e E₁ E₂` and whose premises are per unit, plus the link check and the
+    SAME hardware assumptions. See "WHAT CHANGED ON 2026-09-26 (OPUS AGENT E)" in the header. -/
+
+/-- The program with the contracts of `P` and the bodies `r`. -/
+def mitRumpf (P : Programm D)
+    (r : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))) :
+    Programm D :=
+  { P with rumpf := r }
+
+section Verbund
+
+variable [DecidableEq D.Fn]
+
+/-- **The linked program**: every function's body comes from its OWNER -- unit 1 owns `f` iff
+    `e f`, unit 2 the rest -- and the contracts are the link declaration's (`Verbindbar` makes
+    the two units' contracts one). -/
+def verbindeP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Programm D :=
+  mitRumpf E₁.P (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f)
+
+/-- **The linked unit** `verbinde e E₁ E₂`: the linked program, the (shared) lock invariants,
+    initial memory and axiom ensures, and BOTH units' declared starts and run-time roots. -/
+def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
+  P := verbindeP e E₁ E₂
+  S := E₁.S
+  Q := E₁.Q
+  starts := E₁.starts ++ E₂.starts
+  sp0 := E₁.sp0
+  gestartet := E₁.gestartet ++ E₂.gestartet
+
+/-- The OWNER's program of `f` (unit 1 iff `e f`). -/
+def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
+  if e f then E₁.P else E₂.P
+
+/-- **One link declaration** for both units: the two units are checked over ONE `Deklaration`
+    (the union of their declarations -- what `gabbro abi` / `--with` builds: types, carriers,
+    locks, signatures with their effects, axioms), and they agree on everything that is not a
+    body: every function's `requires`/`ensures` (so the importer relies on EXACTLY the
+    exporter's contract; the Rust `N501`-`N503` refuse a head that differs), every table
+    invariant, the lock invariants and the declared initial memory. The hardware assumptions
+    are NOT here: `GabbroZielVerbund` names their equality as a premise of its own. -/
+structure Verbindbar (E₁ E₂ : Einheit D) : Prop where
+  invariante : E₁.P.invariante = E₂.P.invariante
+  requires : E₁.P.requires = E₂.P.requires
+  ensures : E₁.P.ensures = E₂.P.ensures
+  sperren : E₁.S = E₂.S
+  speicher : E₁.sp0 = E₂.sp0
+
+/-- **A unit's placeholders are leaves**: every function the unit does not own (`eigen f =
+    false`) calls nothing in the unit's own program. That is the `extern fn` of the importer:
+    a head with the contract and the effects, and no body the checker could follow. -/
+def Platzhalter (eigen : D.Fn → Bool) (P : Programm D) : Prop :=
+  ∀ f g, eigen f = false → ruftB P f g = false
+
+/-- **The COMPOSED call graph of a root `w`**, from the two units' own graphs: `h` is reached
+    inside the owner of `w`, or `h` is reached inside the owner of a function `f` of the OTHER
+    unit that the owner of `w` reaches (an import). The linker computes it from the units'
+    summaries; no body crosses the boundary. -/
+def HuelleV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (w h : D.Fn) : Prop :=
+  (e h = e w ∧ reachB (teilP e E₁ E₂ w) fs w h = true) ∨
+  ∃ f, e f ≠ e w ∧ e h = e f ∧ reachB (teilP e E₁ E₂ w) fs w f = true ∧
+    reachB (teilP e E₁ E₂ f) fs f h = true
+
+/-- **No callback through an import**: the owner's graph of an imported function stays inside
+    its owner. -/
+def KeinRueckruf (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Prop :=
+  ∀ w f h, e f ≠ e w → reachB (teilP e E₁ E₂ w) fs w f = true →
+    reachB (teilP e E₁ E₂ f) fs f h = true → e h = e f
+
+/-- A carrier some function relies on as THREAD-LOCAL: it is in the function's footprint (or a
+    register's device carriers), no signature lock guards it there, and (for the footprint) no
+    lock invariant protects it -- the one case in which `FussS` asks for `lokW`. -/
+def LokBedarf (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∃ f, (c ∈ fussOrte (teilP e E₁ E₂ f) f ∧ sigB f c = false ∧
+      ¬ ∃ L, Bewacht c L ∧ c ∈ E₁.S.orte L) ∨
+    (c ∈ ((teilP e E₁ E₂ f).rumpf f).regs.flatMap D.rtraeger ∧ sigB f c = false)
+
+/-- `Getrennt` over the COMPOSED hulls: the footprint leg of race freedom across the link. -/
+def GetrenntV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (ws : List D.Fn)
+    (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, HuelleV fs e E₁ E₂ w₁ f →
+    c ∈ fussOrteG (teilP e E₁ E₂ f) f → HuelleV fs e E₁ E₂ w₂ g → TraegerSchreibt g c = false
+
+/-- `SchreibGetrennt` over the COMPOSED hulls: the write leg of race freedom across the link. -/
+def SchreibGetrenntV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (ws : List D.Fn)
+    (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ g, HuelleV fs e E₁ E₂ w₁ g → TraegerSchreibt g c = true →
+    ∀ h, HuelleV fs e E₁ E₂ w₂ h → TraegerSchreibt h c = false ∧ c ∉ fussOrteG (teilP e E₁ E₂ h) h
+
+/-- `PoolSicher` over the COMPOSED hull of a routine declared twice. -/
+def PoolSicherV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (w : D.Fn) : Prop :=
+  D.haelt w = [] ∧ D.gruende w = 0 ∧ ∀ f, HuelleV fs e E₁ E₂ w f → ∀ c,
+    TraegerSchreibt f c = true → (∃ L, Bewacht c L) ∨ AtomarAusgenommen c
+
+/-- **THE LINK CHECK** (decided exactly by `schnittstelleB`, Zielsatz/Verbund.lean). The
+    interface of a unit carries its call graphs and its per-function footprints and writes (the
+    effects of an exported head); the check composes them:
+    * `blatt₁`, `blatt₂` -- each unit's placeholders for the other's functions are leaves;
+    * `keinRueckruf` -- an imported function's graph stays in its owner;
+    * `lok` -- every carrier some function relies on as thread-local IS thread-local among the
+      linked unit's thread roots, over the composed hulls (footprints compose);
+    * `renn` -- every unguarded, non-atomic carrier is write-separated over the composed hulls;
+    * `einzeln` -- a routine declared twice in the linked unit is pool-safe over its composed
+      hull (a routine both units start counts twice).
+    Every per-body component of `AkzeptiertSpec` (fragment, closed graphs, lock floors, lock
+    invariant places, roots, answer sites) is each unit's own verdict; these three are the
+    whole-program components, and they are the ones the link re-decides. -/
+structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Prop where
+  blatt₁ : Platzhalter e E₁.P
+  blatt₂ : Platzhalter (fun f => !e f) E₂.P
+  keinRueckruf : KeinRueckruf fs e E₁ E₂
+  lok : ∀ c, LokBedarf e E₁ E₂ c → GetrenntV fs e E₁ E₂ (verbinde e E₁ E₂).ws c
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c →
+    SchreibGetrenntV fs e E₁ E₂ (verbinde e E₁ E₂).ws c
+  einzeln : ∀ w, Mehrfach (verbinde e E₁ E₂).ws w → PoolSicherV fs e E₁ E₂ w
+
+/-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
+    bodies it OWNS at every budget, its lock and axiom families read only their carriers, and
+    its start obligation. A placeholder owes nothing -- its owner proves the body. -/
+structure NutzerTeil (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
+  logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
+      KoerperGutS E.P passes E.Q E.S f ∧ InvGutS E.P passes E.Q E.S f ∧
+        InvGutGrund E.P passes E.Q E.S f) ∧
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q
+  start : StartPflicht E
+
+end Verbund
+
+/-- **GABBRO_ZIEL FOR LINKED UNITS** (2026-09-26, Opus agent E). Two units `E₁`, `E₂` over one
+    link declaration, unit 1 owning the functions where `e` holds:
+    (a) each unit is accepted by the checker ALONE, and the link check holds;
+    (b) each unit's user proves the logic of the bodies IT owns, and its start;
+    (c) the hardware meets the assumptions, and they are the SAME for both units
+        (`E₂.Q = E₁.Q`: one oracle answers both units' axioms);
+    (d) the runtime starts the LINKED unit.
+    Then every leg of `ZielF` holds on every reachable thread machine of the linked program --
+    race freedom and lock discipline ACROSS the units, spawned threads and the weak-memory leg
+    included, since the conclusion is `GabbroZiel`'s own. -/
+def GabbroZielVerbund : Prop :=
+  ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (e : D.Fn → Bool)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E₁ fs.1 ls.1 cs.1 = true →                    -- (a) unit 1, alone
+    C.akzeptiert E₂ fs.1 ls.1 cs.1 = true →                    -- (a) unit 2, alone
+    Verbindbar E₁ E₂ →                                          -- (a) one link declaration
+    SchnittstelleSpec fs.1 e E₁ E₂ →                            -- (a) the link check
+    NutzerTeil e E₁ →                                           -- (b) unit 1's user
+    NutzerTeil (fun f => !e f) E₂ →                             -- (b) unit 2's user
+    E₂.Q = E₁.Q →                                               -- (c) the SAME hardware assumptions
+    ∀ O : Orakel D, HardwareAnnahmen O E₁.Q →                   -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit (verbinde e E₁ E₂) sp init →                     -- (d) the runtime, linked
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbar (verbinde e E₁ E₂).P.mitRuhe O.mitRuhe passes
+          (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K →
+          ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
+            (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K
 
 end Gabbro.Grammatik.Zielsatz
