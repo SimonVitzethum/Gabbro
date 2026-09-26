@@ -251,7 +251,6 @@ fn every_item_kind_refuses_with_a_reason() {
     for (zeile, wort, grund) in [
         ("device D(basis : u64) at mmio {\n    reg R : u32 @0x00 class r\n}\n", "device D", "D.Reg"),
         ("assume a \"the device answers\" falsifier probe_a;\n", "assume a", "D.Annahme"),
-        ("atomic A : u32 release;\n", "atomic A", "atomar"),
         ("group G over { T, T } {\n    invariant nichtnull cost O(n) runs offline :\n        \
           forall k in slots of T : T.slots[k].v == 0;\n}\n", "group G", "D.Inv"),
         ("use andere::stelle::Pa;\n", "use", "unit boundary"),
@@ -263,6 +262,27 @@ fn every_item_kind_refuses_with_a_reason() {
         assert!(w.message.contains(wort), "must name the item: {w}");
         assert!(w.message.contains(grund), "must name the form it would have: {w}");
     }
+}
+
+/// **A payload-free `atomic` exports (Opus lane O25c)**: a `Glob` with `atomar = true`, its
+/// store `publishes nothing` a `Stmt.publish` with the empty payload, its bare load an
+/// `Expr.glob`. A store WITH a payload stays refused (its `publishes` effect has no G form; the
+/// publish/await hand-off,
+/// OFFEN O25).
+#[test]
+fn exports_payload_free_atomic() {
+    let rumpf = "atomic A : u32 relaxed;\n\
+        impl fn setze() effects { writes A } costs <= 4 ops { A = 7 publishes nothing; }\n\
+        impl fn lies() -> u32 effects { reads A } costs <= 4 ops { let n : u32 = A; return n; }\n\
+        concurrent { setze, lies };\n";
+    let text = export("lean_g", &tree(&einheit(rumpf))).expect("a payload-free atomic exports");
+    for teil in ["atomar := fun | .A => true", "(.publish GGlob.A", "Expr.glob (D := gD) GGlob.A"] {
+        assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
+    }
+    let mit = "static mut p : u32 = 0;\natomic A : u32 release;\n\
+        impl fn setze() effects { writes p, publishes A } costs <= 4 ops { p = 1; A = 7 publishes { p }; }\n";
+    let w = refuse_of(&einheit(mit));
+    assert!(w.code == "LG001" || w.code == "LG004", "a payload store stays refused: {w}");
 }
 
 /// **LG001**: an `extern fn` has no G form (no body to translate).

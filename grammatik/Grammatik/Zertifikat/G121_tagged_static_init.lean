@@ -72,7 +72,7 @@ abbrev gD : Deklaration where
   decGlob := inferInstance
   gtyp := fun | .ANFANG => (.sum [none, some (0, 4294967295)]) | .LEERE => (.sum [none, some (0, 4294967295)])
   nutzlast := fun _ => []
-  atomar := fun _ => false
+  atomar := fun | .ANFANG => false | .LEERE => false
   geteilt := fun t => nomatch t
   ggeteilt := fun | .ANFANG => false | .LEERE => false
   Lock := GLock

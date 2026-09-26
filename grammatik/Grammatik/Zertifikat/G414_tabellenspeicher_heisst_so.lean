@@ -77,7 +77,7 @@ abbrev gD : Deklaration where
   decGlob := inferInstance
   gtyp := fun | .Kappe_speicher => (.int 0 4294967295)
   nutzlast := fun _ => []
-  atomar := fun _ => false
+  atomar := fun | .Kappe_speicher => false
   geteilt := fun | .Kappe => false
   ggeteilt := fun | .Kappe_speicher => false
   Lock := GLock

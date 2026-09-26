@@ -1,0 +1,35 @@
+-- 162 -- **A shared atomic read with no lock, covered by the goal theorem.**
+--
+-- `melde` stores the payload-free atomic `STAND` (`publishes nothing`) on one
+-- thread, `lies` loads it on another -- no lock, no pairing, and the load may
+-- see the old value or the new one (relaxed). Until Opus lane O25c the goal
+-- theorem's footprint rule refused exactly this (a carrier one start writes
+-- and another reads had to be thread-local or lock-guarded, atomics
+-- included). Since O25c the rule admits a SHARED ATOMIC that no contract
+-- mentions (`GeteiltV`), the user's proof meets every value such a read may
+-- return (the rely, `NutzerPflichtA`), and the conclusion covers the weak
+-- runs (machine GX). The certificate
+-- `grammatik/Grammatik/Zertifikat/G162_geteilte_flagge.lean` decides the
+-- checker premise in Lean for this unit and states `GabbroZiel` on it.
+module beispiel162 {
+
+atomic STAND : u32 relaxed;
+
+impl fn melde()
+    effects { writes STAND }
+    costs   <= 4 ops
+{
+    STAND = 7 publishes nothing;
+}
+
+impl fn lies() -> u32
+    effects { reads STAND }
+    costs   <= 4 ops
+{
+    let n : u32 = STAND;
+    return n;
+}
+
+concurrent { melde, lies };
+
+}
