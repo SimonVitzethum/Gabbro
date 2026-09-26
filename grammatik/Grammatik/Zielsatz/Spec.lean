@@ -744,6 +744,62 @@
     runtime and the lowering (lane 260's raw `clone`), whose check is translation validation's.
     Over-approximated, never under-: a spawn may fire at ANY point of a live thread where the
     rule's condition holds, and any slot may be live from the start (`lebt0` is quantified).
+  -- BEGIN bare-metal runtime block (Opus agent I, 2026-09-26, OFFEN O32) --
+  * (d) ON BARE METAL -- `laufzeit/metall/` (Multiboot1 entry, long mode, SMP bring-up, per-core
+    scheduler, context switch, ticket lock) implements the thread interface of
+    `laufzeit/faden.h` WITHOUT an OS; the emitted C does not change. COMMENT ONLY: no definition,
+    no premise and no leg of this file changes; the hunk says what (d) means on that runtime.
+    WHAT THE MODEL ALREADY COVERS, with nothing added: `ZielF`'s thread machine (FadenMaschine)
+    interleaves live threads FREELY, spawns wherever the rule admits, and lets a starter wait
+    until every root finished. Any scheduler produces a subset of those interleavings -- round
+    robin, preemptive, cooperative, one core or sixteen -- so no leg depends on WHICH scheduler
+    runs; the model's thread is not bound to a core at all. What the metal runtime must satisfy
+    for (d) and the transfer to the C to describe it, NAMED here as runtime/hardware assumptions
+    of that runtime (unchecked: they are about `start.S`/`kern.c` and the machine, not about the
+    user's program):
+    - (M1) CONTEXT SWITCH: a switched-out thread resumes with exactly the state it left -- at a
+      call boundary the SysV callee-saved set plus MXCSR and the x87 control word
+      (`metall_schalte`), at a timer interrupt all fifteen general registers plus the FXSAVE
+      area (`metall_takt_eintritt`) -- on its own stack, and the switch touches no Gabbro
+      carrier. This is what makes a G step of one thread unaffected by the others' steps.
+    - (M2) LAPIC AND IPI: INIT-SIPI-SIPI starts each application processor in real mode at the
+      trampoline page (vector 0x08 = 0x8000); the LAPIC timer, periodic, interrupts a thread
+      running with IF = 1 at the end of every quantum; an EOI re-arms it; no other interrupt
+      arrives (both 8259s masked, no device routed); the ACPI MADT names the cores; the
+      port-0x80 delay is long enough for the INIT/SIPI waits.
+    - (M3) BOOT PROTOCOL: a Multiboot1 loader (SPRACHE A21) places the segments at their
+      physical addresses and ZEROES `.bss` -- on metal that is `Laufzeit.lader`'s "zeroed
+      storage of the emitted C" -- and enters in 32-bit protected mode; the low 4 GiB are then
+      identity-mapped with no protection between the unit and the runtime (foreign code's frame
+      is `GutO`'s, as everywhere).
+    - (M4) SCHEDULER FAIRNESS: one FIFO queue per core, a thread fixed to the core it was placed
+      on (round robin over the cores at its start), a preempted or yielding thread to the tail.
+      Every runnable thread therefore runs again within one round of its core's queue. NO LEG
+      USES THIS: the safety legs hold on every interleaving, `fortschritt` is a statement about
+      stuck states, and starvation freedom is NOT CLAIMED (list below). Fairness is what makes
+      the runs that END reachable on the metal: a cooperative build (`-DMETALL_KOOPERATIV`)
+      hangs a spin on a same-core thread forever (measured, `pruefe-metall.sh` gift `staffel`)
+      -- an infinite run G also admits, so nothing claimed becomes false, but nothing finishes.
+    - (M5) THE LOCK: `L_nimm`/`L_gib` are the ticket lock of CTicket.lean (SATZKARTE §32; the
+      refinement `ticketLP_sperrAbstrakt` discharges `sperre` of `LaufzeitC` for that shape).
+      The spin YIELDS its core every 64 passes: a stutter of a thread whose ticket is not
+      served (`spinnt_nur`), no step of the lock. The runtime's own locks (run queues, thread
+      table, serial line) are ticket locks too, held with interrupts off, and touch no carrier.
+    - (M6) THE JOIN: the join word is nonzero before the thread can run and is cleared with
+      release ordering only after the thread has LEFT its stack (by the core's scheduler, not by
+      the thread), and the waiter reads it with acquire -- the `join` rule (every root finished)
+      plus the synchronizes-with edge; the unit's stack is reusable when the join returns.
+    - (M7) DRF-SC ON METAL: x86-TSO plus the C11 orderings of the emitted C and of the runtime
+      -- the same named premise `DRFSC` as hosted; the metal adds no memory-model assumption.
+    NOT CLAIMED on metal, in addition to the list below: hardware other than
+    `qemu-system-x86_64 -smp 4` (TCG; that is where it was booted, 2026-09-26); more than 16
+    cores or 64 live threads (a start beyond that answers EAGAIN, and the emitted `start` traps
+    -- the model's spawn never fails, named below); the quantum's length and any waiting bound;
+    the scheduler stack (16 KiB per core) and thread stack depth (stack depth is NOT CLAIMED
+    anyway); interrupt handlers the PROGRAM declares (`via idt`): this runtime's IDT holds only
+    the CPU exceptions (report and stop) and its own timer, so `KernPlan` (the handler leg's
+    named core schedule) has no realisation here yet -- OFFEN O19/O32.
+  -- END bare-metal runtime block --
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not
     the user's logic:

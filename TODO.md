@@ -225,6 +225,15 @@ long as nobody has written it.*
   members on threads and leave every other thread in the idle root — that is exactly the shape
   A4 demands (`LaufzeitStart`). A hosted driver first (it can be run and measured), the
   bare-metal form after it.
+  **Bare-metal form: Opus agent I (2026-09-26, OFFEN O32, `messung/OPUS-I-METALL.md`).**
+  `laufzeit/metall/` runs the UNCHANGED emitted C without an OS (Multiboot1, long mode,
+  INIT-SIPI-SIPI, per-core round-robin scheduler with LAPIC-timer preemption, the CTicket
+  lock, join by yield); `gabbro build` writes `<unit>.metall.c` beside the hosted driver
+  (same multiset pin); `instrumente/pruefe-metall.sh` (stage 11 of `pruefe-emission.sh`)
+  boots 159, 124, 157 and two runtime probes on `qemu-system-x86_64 -smp 4`, three gifts
+  bite. Open (O32): real hardware; program-declared `via idt` handlers in the metal IDT
+  (O19); `-DMETALL_*` build knobs are the harness's, not `gabbro build`'s link step; the
+  Caprock integration (Caprock's own boot instead of this Multiboot stub).
 - [ ] **One concurrent program that actually RUNS**, through the emission guardian's executed
   set, with its result compared against a handwritten version — the way 37 single-threaded
   units already are.

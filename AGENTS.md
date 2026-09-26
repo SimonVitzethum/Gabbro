@@ -321,6 +321,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Opus agent F (link races) | N516–N520 / 1246–1250 / — | N516 (`namen.verbund`, a module split over two units); link probes 1246–1248 under `messung/proben/verbund/` (pairs `NNNN-…-bib.gab` + `NNNN-…-app.gab`); no example. N517–N520 and 1249, 1250 stay with the linking work |
 | Opus agent G (OFFEN O1) | N531–N535 / 1291–1300 / — | N531, N532 (`kbedingung.breaking-rests-here`, `kbedingung.breaking-blocks-maintainers`), gifts 1291, 1292; no example. N533–N535 and gifts 1293–1300 stay with the O1 work (the name of `breaking` in G, path-sensitive order) |
 | Opus agent H (OFFEN O19) | N551–N555 / 1331–1340 / — | nothing: no code, no gift, no example (`H102` unchanged; the refused shape is `gift/460`, and the Lean side is the component `maskenB` and the leg `KernHaltE`). N551–N555 and gifts 1331–1340 stay with the O19 work |
+| Opus agent I (bare metal, OFFEN O32) | N556–N560 / 1341–1350 / — | nothing: no code, no gift, no example (the work is the runtime `laufzeit/metall/`, the generated `<unit>.metall.c` and the QEMU stage `instrumente/pruefe-metall.sh`; its gifts are harness mutations, not corpus files). N556–N560 and gifts 1341–1350 stay with the O32 work |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

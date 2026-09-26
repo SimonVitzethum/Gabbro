@@ -4327,6 +4327,18 @@ fi
 grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 2; }
 echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
+# =======================================================================================
+# **Stage 11: BARE METAL -- the emitted C of `start`/`concurrent` units, unchanged, on the
+# freestanding thread runtime `laufzeit/metall/`, booted under `qemu-system-x86_64 -smp 4`**
+# (Opus agent I, 2026-09-26; Simon's rule: everything Gabbro can do must work without an OS).
+# The stage lives in its own script, which runs alone too. Without qemu it BUILDS and LINKS
+# every image and says `METALL: NOT RUN` for the boots -- never a pass line.
+echo
+LETZTE_STUFE="Stufe 11 (bare metal, instrumente/pruefe-metall.sh)"
+if ! "$W/instrumente/pruefe-metall.sh" "$ARB/metall"; then
+    echo "  Stufe 11: FINDING (bare metal)"; exit 1
+fi
+
 GANZ_DURCH=1
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_nenner uebersetzen, $n_umg umgekehrte Probe(n) =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"
