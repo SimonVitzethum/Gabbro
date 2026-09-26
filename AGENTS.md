@@ -88,8 +88,8 @@ README §6 says exactly this; keep it that way.
   Opus agent D: `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`), a start declared ONCE running on several threads (a routine
   declared twice -- a worker pool -- is covered since fix lane F10). Linking of separately
   compiled units is covered since Opus agent E by a SECOND statement, `GabbroZielVerbund`
-  (same hardware assumptions; OFFEN O28 names the rest). Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
-  `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
+  (same hardware assumptions; OFFEN O28 names the rest). Probabilistic statements and dynamic unbounded structures are out of scope (§3); since
+  the merge of Opus agent G `Spec.lean` names both in NOT CLAIMED (OFFEN O29). Every extension of the goal is reviewed as a diff of
   `Spec.lean`.
 
 ## 3. Simon's standing instructions

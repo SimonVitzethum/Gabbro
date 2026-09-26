@@ -1014,7 +1014,13 @@
   world, the END of a join wait (a root that never finishes keeps its starter waiting, a named
   `JoinWartet` stop, like a lock wait), the child's handed STACK (G is address-free), a spawn
   that FAILS (thread creation out of resources: the model's spawn always succeeds), and the
-  C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22. The
+  C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22;
+  DYNAMIC UNBOUNDED DATA STRUCTURES (lists, trees, graphs, maps whose size no declaration
+  bounds; heap allocation without a declared ceiling, recursive types) -- planned for later,
+  out of scope now, OFFEN O29;
+  PROBABILISTIC STATEMENTS (distributions, expected values, failure probabilities, randomised
+  algorithms: the statement is about EVERY run, the model has no measure over runs) -- planned
+  for later, out of scope now, OFFEN O29. The
   exporter carries `start` (roots into `gestartet`); a `child` needs a stack gate, a foreign
   body the exporter does not build (`Ax := Empty`), so no `child` program is exported. Declared
   `costs` are not in
