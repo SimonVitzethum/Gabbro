@@ -65,8 +65,9 @@ README §6 says exactly this; keep it that way.
   - (Opus agent D) `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG`: invariants beyond
     the returns -- wherever no writer runs, at every lock move, and observed by the holder alone;
   - `StartEndeG`, `KeinStartGrundG`, `KeinLogikHaltG`;
-  - no deadlock, `KeinWarteZyklus` and (since fix lane F11) `KernHaltG`: no same-core
-    interrupt deadlock, under a named core schedule;
+  - no deadlock, `KeinWarteZyklus` and (since fix lane F11; carried by (a) since Opus agent H)
+    `KernHaltE`: no same-core interrupt deadlock for the handlers the program declares
+    (`Programm.unterbricht`, `via idt`), under a named core schedule, for every core assignment;
   - `FortschrittG`, whose stop kinds are hardware, flag, budget and `nieZurueck`;
   - `ZeitAb`;
   - (Opus agent G) `FolgeG`, the leg `folge`: the order of calls in every thread's call log
@@ -328,6 +329,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Opus agent E (linking) | N501–N505 / 1241–1250 / — | N501–N505 (`namen.verbund`); probe numbers 1241–1245 as LINK probes under `messung/proben/verbund/` (a link probe is two units, each clean alone, so not a `beispiele/gift/` file); no example. Gifts 1246–1250 stay with the linking work |
 | Opus agent F (link races) | N516–N520 / 1246–1250 / — | N516 (`namen.verbund`, a module split over two units); link probes 1246–1248 under `messung/proben/verbund/` (pairs `NNNN-…-bib.gab` + `NNNN-…-app.gab`); no example. N517–N520 and 1249, 1250 stay with the linking work |
 | Opus agent G (OFFEN O1) | N531–N535 / 1291–1300 / — | N531, N532 (`kbedingung.breaking-rests-here`, `kbedingung.breaking-blocks-maintainers`), gifts 1291, 1292; no example. N533–N535 and gifts 1293–1300 stay with the O1 work (the name of `breaking` in G, path-sensitive order) |
+| Opus agent H (OFFEN O19) | N551–N555 / 1331–1340 / — | nothing: no code, no gift, no example (`H102` unchanged; the refused shape is `gift/460`, and the Lean side is the component `maskenB` and the leg `KernHaltE`). N551–N555 and gifts 1331–1340 stay with the O19 work |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

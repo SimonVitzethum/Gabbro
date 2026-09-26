@@ -21,7 +21,7 @@
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
 -- NO FORM; only the dispatch root travels, as a declared start
--- where exportable).
+-- where exportable, and `via idt` as `gP.unterbricht`).
 --
 -- table 0: Takte (count 64), stand : 0..18446744073709551615
 -- table 1: Auftraege (count 16), stand : 0..18446744073709551615
@@ -226,6 +226,11 @@ def gP : Programm gD where
     | .takt_verteiler => gBody_takt_verteiler
     | .bearbeite => gBody_bearbeite
     | .ruf_verteiler => gBody_ruf_verteiler
+  unterbricht
+    | .zaehle => false
+    | .takt_verteiler => true
+    | .bearbeite => false
+    | .ruf_verteiler => false
 
 def gFs : List gD.Fn := [g_zaehle, g_takt_verteiler, g_bearbeite, g_ruf_verteiler]
 

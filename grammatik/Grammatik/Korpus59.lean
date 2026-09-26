@@ -260,7 +260,8 @@ def kRumpfRufVert : Endblock kD (vertragVon kD kRufVert) false [] [] :=
   .cons kLocksR (.ret .keine List.Perm.nil)
 
 /-- **The program of `beispiele/59`**: the source's bodies; trivial contracts
-    (the source declares no `requires`/`ensures` on these four functions). -/
+    (the source declares no `requires`/`ensures` on these four functions); the interrupt
+    handler `takt_verteiler` (its entry is `via idt`, Opus agent H 2026-09-26). -/
 def kP : Programm kD where
   invariante := fun i => nomatch i
   requires := fun _ => .wahr
@@ -270,6 +271,11 @@ def kP : Programm kD where
     | .taktVert => kRumpfTaktVert
     | .bearbeite => kRumpfBearbeite
     | .rufVert => kRumpfRufVert
+  -- `entry zeitgeber vector 32 via idt … dispatch takt_verteiler`: the one root entered by
+  -- hardware (Opus agent H, 2026-09-26); `ruf_verteiler`'s entry is a system call (no `via`)
+  unterbricht
+    | .taktVert => true
+    | _ => false
 
 def kFs : List kD.Fn := [kZaehle, kTaktVert, kBearbeite, kRufVert]
 

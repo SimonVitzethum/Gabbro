@@ -19,7 +19,7 @@
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
 -- NO FORM; only the dispatch root travels, as a declared start
--- where exportable).
+-- where exportable, and `via idt` as `gP.unterbricht`).
 --
 -- fn invertiere (holds; writes)
 -- fn passt_in_16 (holds; writes)

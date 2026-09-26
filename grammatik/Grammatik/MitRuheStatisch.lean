@@ -615,6 +615,125 @@ end
 
 end Mono
 
+/-! ## 8b. Two feature tests at once (Opus agent H, 2026-09-26) -/
+
+/-- The feature set admitting what BOTH `A` and `B` admit. -/
+def mUnd (A B : Merkmal D) : Merkmal D :=
+  ⟨fun f => A.ruf f && B.ruf f, fun n => A.ind n && B.ind n, fun L => A.sperre L && B.sperre L⟩
+
+section Und
+
+variable {A B : Merkmal D}
+
+mutual
+
+theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ'), mS A s = true → mS B s = true → mS (mUnd A B) s = true
+  | _, _, _, _, .ite _ t e, h, h' => by
+      simp only [mS, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mB_und t h.1 h'.1, mB_und e h.2 h'.2⟩
+  | _, _, _, _, .onOption _ p a, h, h' => by
+      simp only [mS, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mB_und p h.1 h'.1, mB_und a h.2 h'.2⟩
+  | _, _, _, _, .onTag _ arms, h, h' => mArms_und arms h h'
+  | _, _, _, _, .onGrund _ arms, h, h' => mGArms_und arms h h'
+  | _, _, _, _, .call g .., h, h' => by
+      simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
+  | _, _, _, _, .callInd (n := n) .., h, h' => by
+      simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
+  | _, _, _, _, .locks L _ body, h, h' => by
+      simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨h.1, h'.1⟩, mB_und body h.2 h'.2⟩
+  | _, _, _, _, .breaking _ body, h, h' => mB_und body h h'
+  | _, _, _, _, .traverse _ _ body, h, h' => mB_und body h h'
+  | _, _, _, _, .retry _ _ body ueber, h, h' => by
+      simp only [mS, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mB_und body h.1 h'.1, mB_und ueber h.2 h'.2⟩
+  | _, _, _, _, .forever _ _ body, h, h' => mB_und body h h'
+  | _, _, _, _, .assignSlot .., _, _ => rfl
+  | _, _, _, _, .assignDurch .., _, _ => rfl
+  | _, _, _, _, .assignGlob .., _, _ => rfl
+  | _, _, _, _, .schreibBytes .., _, _ => rfl
+  | _, _, _, _, .assignVar .., _, _ => rfl
+  | _, _, _, _, .uebergang .., _, _ => rfl
+  | _, _, _, _, .axiomCall .., _, _ => rfl
+  | _, _, _, _, .regSchreib .., _, _ => rfl
+  | _, _, _, _, .transition .., _, _ => rfl
+  | _, _, _, _, .publish .., _, _ => rfl
+  | _, _, _, _, .advances .., _, _ => rfl
+  | _, _, _, _, .retires .., _, _ => rfl
+  | _, _, _, _, .ret .., _, _ => rfl
+  | _, _, _, _, .retGrund .., _, _ => rfl
+  | _, _, _, _, .leave _, _, _ => rfl
+  | _, _, _, _, .next _, _, _ => rfl
+
+theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ'), mB A b = true → mB B b = true → mB (mUnd A B) b = true
+  | _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, .cons s rest, h, h' => by
+      simp only [mB, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mS_und s h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bind _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .bindCall g _ _ _ _ rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨h.1, h'.1⟩, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨h.1, h'.1⟩, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bindCallElse g _ _ _ _ err rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .regLies _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .regLiesElse _ _ _ sonst rest, h, h' => by
+      simp only [mB, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .awaits _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .exchange _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .narrow _ _ _ sonst rest, h, h' => by
+      simp only [mB, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .pruefung _ sonst rest, h, h' => by
+      simp only [mB, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .gleit _ _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .gleitLit _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .gleitVon _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .gleitNarrow _ _ _ sonst rest, h, h' => by
+      simp only [mB, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
+
+theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e : Endblock D V l Γ Λ), mE A e = true → mE B e = true → mE (mUnd A B) e = true
+  | _, _, _, .ret .., _, _ => rfl
+  | _, _, _, .retGrund .., _, _ => rfl
+  | _, _, _, .leave _, _, _ => rfl
+  | _, _, _, .next _, _, _ => rfl
+  | _, _, _, .cons s rest, h, h' => by
+      simp only [mE, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mS_und s h.1 h'.1, mE_und rest h.2 h'.2⟩
+  | _, _, _, .bind _ rest, h, h' => mE_und rest h h'
+
+theorem mArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    mArms A arms = true → mArms B arms = true → mArms (mUnd A B) arms = true
+  | _, _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, _, .cons b rest, h, h' => by
+      simp only [mArms, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mB_und b h.1 h'.1, mArms_und rest h.2 h'.2⟩
+
+theorem mGArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n),
+    mGArms A arms = true → mGArms B arms = true → mGArms (mUnd A B) arms = true
+  | _, _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, _, .cons b rest, h, h' => by
+      simp only [mGArms, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mB_und b h.1 h'.1, mGArms_und rest h.2 h'.2⟩
+
+end
+
+end Und
+
 /-! ## 9. The program `P.mitRuhe`: bodies, footprints -/
 
 section Programm

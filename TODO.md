@@ -449,7 +449,12 @@ tree refuses everywhere else.*
   `gift/460` shape is refused by the discipline Bool that mirrors `H102`.
   What stays open is in OFFEN O19 (narrowed): handlers and cores are
   hypotheses of the leg, not fields of the unit, and the C still masks
-  nothing.
+  nothing. **Opus agent H (2026-09-26) put the handlers into the unit:**
+  `Programm.unterbricht` (exported from `via idt`), the (a) component
+  `masken` (`maskenB` = `H102`), and the leg `KernHaltE`, discharged from
+  (a) and false on the refused shape (SATZKARTE §57,
+  `messung/OPUS-H-KERNE.md`). Left in O19: no `cli`/`sti` in the C, no
+  pinning (the leg holds for every core assignment), no handler re-entry.
 - [x] **`beispiele/124`'s `setze` promises both slots** (`dokumente/OFFEN.md`
   O12) — lane 204, reviewed (reviewer 219, r2) and merged (`5ececd63`,
   2026-09-17). `ensures konto.slots[0].stand == konto.slots[1].stand &&
