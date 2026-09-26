@@ -60,6 +60,10 @@
     2 of 129 CLOSED) and `chain=none` everywhere else, where it is an assumption of the reading
     (below); of the emitted C forms, 51 have a correspondence lemma, 4 map to a named
     assumption and 27 have no semantics (`pruefe-cformen.py`, `KNOWN_UNCOVERED`).
+  * TABLE AND GROUP INVARIANTS (review of Opus agent D, 2026-09-26): the exporter writes
+    `Inv := Empty` and refuses `maintains` (`LG001`), so for every CERTIFIED program the legs
+    `invRuhe` and `invSicht` are vacuous; of the invariant legs only the lock legs
+    `sperrWechsel`/`sperrSicht` (and `sperrInv`) carry content there.
   * The Rust diagnostic codes (411 in the checker, 0 of its sentences in state PROVED) are
     therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
     in Lean for every certified program, and the others guard properties this statement does
@@ -95,7 +99,16 @@
       Claimed: at every entry -- indeed at every machine -- reached while no unfinished thread
       is inside a writer (`invRuhe`), and at every point of a thread holding one of its guards
       outside every writer (`invSicht`). A writer's callee sees what the writer's `requires`
-      to it says, which is the user's logic.
+      to it says, which is the user's logic. (Review 2026-09-26, URTEIL-SPECDIFF-OPUS-D:
+      a callee's writes are its caller's (`RufPasst.hw`), so every frame BELOW a writer --
+      up to the thread's start function -- is a writer too. A thread that ever writes a
+      carrier of `i` keeps `i` open for its whole life; `invRuhe` bites once every such
+      thread has finished, and at every point of a program in which no running thread writes
+      `i`. And with the declaration's `invarianten_gehalten` (a writer holds every guard BY
+      SIGNATURE) and lock-free starts, an invariant with a GUARDED carrier has, by argument
+      and not by a theorem, no writer reachable from an accepted start at all: it is frozen
+      at its start value, and `invSicht` then says no more than `invRuhe`. The Rust `U003`
+      counts `locks` in the body instead -- the model is stricter, see the verdict.)
     - WHILE HELD: an invariant is a predicate over SHARED memory and the holder's writes are
       shared memory at once, so the holder may break a lock invariant inside its section and
       the memory then does not satisfy it. "Other threads never observe it broken" means,
