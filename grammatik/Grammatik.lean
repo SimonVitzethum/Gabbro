@@ -350,3 +350,6 @@ import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
 import Grammatik.Zielsatz.Verbund
 import Grammatik.Zielsatz.VerbundZeuge
+import Grammatik.Speichermodell.GXMaschine
+import Grammatik.Zielsatz.ZielXDefs
+import Grammatik.Zielsatz.BeweisAtomar
