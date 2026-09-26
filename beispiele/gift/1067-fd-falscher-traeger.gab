@@ -9,17 +9,20 @@
 -- to the invented constants (`myabi`, number `100`): the refusal
 -- keys on the carrier crossing, on no OS table.
 --
--- The per-call assumption is the reused pair of `beispiele/74` (`N024`
--- neutral: same name, same text, same probe, no new obligation).
+-- The per-call assumption is the read pair of `beispiele/150` (`N024`
+-- neutral: same name, same text, same probe, no new obligation). Until lane
+-- 262 the gate borrowed `linux_write_contract`, whose probe only ever wrote
+-- into a pipe; the gate takes a descriptor and a count, so it names the read
+-- assumption (fix lane F5, review G04 F4).
 
 module gift::fd_falscher_traeger {
 
 module tor {
     opaque type Fd = u32;
 
-    assume linux_write_contract
-        "Write keeps its contract on this machine."
-        falsifier sonde_write;
+    assume linux_read_contract
+        "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
+        falsifier sonde_read;
 
     syscall gate_lesen(fd : Fd, anzahl : u64) -> u64
         abi myabi arch x86_64 number 100
@@ -29,7 +32,7 @@ module tor {
         errors {}
         effects { pure }
         costs <= 40 ops
-        assume linux_write_contract falsifier sonde_write;
+        assume linux_read_contract falsifier sonde_read;
 }
 
 module anwender {
