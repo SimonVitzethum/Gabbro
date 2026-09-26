@@ -39,8 +39,15 @@ table Kappenraum count NSLOTS {
         naechstes   : option index into Kappenraum,
     }
 
-    invariant wurzel_ohne_vorgaenger cost O(n) runs offline :
-        forall s in slots of Kappenraum : Kappenraum.slots[s].benutzt;
+    -- **Opus agent D (2026-09-26, OFFEN O11, `N496`): the predicate here was FALSE.** It
+    -- read `forall s : Kappenraum.slots[s].benutzt` -- every slot in use -- which the zeroed
+    -- table breaks at the start and `blatt_loeschen` below breaks on purpose (its own
+    -- `ensures` says `!benutzt`). Nobody owed it, so nothing noticed. Since `N496` every
+    -- writer of the table must `maintain` it, so the statement had to become one the
+    -- writers keep: a FREE slot has no parent (`blatt_loeschen` clears both together).
+    invariant frei_ohne_elter cost O(n) runs offline :
+        forall s in slots of Kappenraum :
+            !Kappenraum.slots[s].benutzt => Kappenraum.slots[s].elter == None;
 }
 
 spec fn ist_blatt(s : index into Kappenraum) -> bool
@@ -50,6 +57,7 @@ spec fn ist_blatt(s : index into Kappenraum) -> bool
 impl fn blatt_loeschen(s : index into Kappenraum)
     requires Held(KAPPEN), Kappenraum.slots[s].benutzt, ist_blatt(s)
     ensures  !Kappenraum.slots[s].benutzt
+    maintains frei_ohne_elter
     effects  { reads Kappenraum.slots, reads Objekte.slots,
                writes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 200 ops
@@ -80,6 +88,7 @@ impl fn einsammeln(s : index into Kappenraum)
     -- Rumpf ruft `blatt_loeschen`, und das liest `Objekte.slots[obj].zaehler`. Bis der
     -- Rahmen die Aufrufgrenze ueberquerte, deckte ein `reads Kappenraum.slots` jedes
     -- fremde Lesen mit -- verglichen wurde nur die ART, nicht der ORT.
+    maintains frei_ohne_elter
     effects  { reads Kappenraum.slots, reads Objekte.slots,
                consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 16371840 ops
