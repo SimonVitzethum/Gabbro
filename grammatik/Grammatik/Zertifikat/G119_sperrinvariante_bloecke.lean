@@ -218,6 +218,20 @@ theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
   Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL M hr
 
+-- THE CLOSING THEOREM ON THE THREAD MACHINE: `GabbroZiel` itself for this
+-- program -- `ZielF` on every reachable thread machine (run-time spawns
+-- and joins included), from any set of initially live threads.
+theorem gP_gabbro_f (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
+    (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)
+    (sp : Speicher gD.mitRuhe)
+    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))
+    (hL : Zielsatz.Laufzeit gE sp init) (lebt0 : Faden → Bool)
+    (K : FadenMaschine gD.mitRuhe)
+    (hK : FadenErreichbar gE.P.mitRuhe O.mitRuhe passes (FadenStart gE.P.mitRuhe sp init lebt0) K) :
+    Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) K :=
+  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
+    gCheck hN O hH passes sp init hL lebt0 K hK
+
 -- RELEASE OBLIGATIONS (stated, not discharged -- O12).
 --
 -- At every `locks L { ... }` exit the lock invariant of `L` must hold

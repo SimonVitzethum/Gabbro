@@ -659,8 +659,11 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
         return "stmt:retry-check"
     if re.match(r"^uint32_t _r\d+ = 0;$", s):
         return "stmt:retry-counter"
+    # Opus agent C (2026-09-26): the continuation line of the split CAS call may name an
+    # ELEMENT of an atomic array (`&REGEL[_ax1], &_cx1, …`, beispiele/140) -- the same
+    # `stmt:cas-loop` row, which was the one unclassified statement on master.
     if re.match(r"^if \(atomic_compare_exchange_(weak|strong)_explicit\(", s) or \
-            re.match(r"^&" + IDENT + r", &_cx\d+", s) or re.match(r"^_ci\d+\+\+;$", s) or \
+            re.match(r"^&" + IDENT + r"(\[[^\]]*\])?, &_cx\d+", s) or re.match(r"^_ci\d+\+\+;$", s) or \
             re.match(r"^if \(_ci\d+ >= ", s) or re.match(r"^_cn\d+ = .*; goto _cn\d+_fertig;$", s) or \
             re.match(r"^_cn\d+_fertig: ;$", s) or re.match(r"^" + CTYPE + r" _c[xin]\d+ = ", s):
         return "stmt:cas-loop"

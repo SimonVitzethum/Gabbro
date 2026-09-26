@@ -101,7 +101,24 @@ fn abschnitt() -> String {
     out.push_str("    (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :\n");
     out.push_str("    Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=\n");
     out.push_str("  Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
-    out.push_str("    gCheck hN O hH passes sp init hL M hr\n");
+    out.push_str("    gCheck hN O hH passes sp init hL M hr\n\n");
+    // Opus agent C (2026-09-26): the certificate carries the WHOLE conclusion of
+    // `GabbroZiel`, not only its machine-G corollary: `ZielF` on every reachable
+    // THREAD machine, from any set of initially live threads (spawns by `start`/`child`
+    // and their joins included). `gP_gabbro` above stays, as the G-run reading.
+    out.push_str("-- THE CLOSING THEOREM ON THE THREAD MACHINE: `GabbroZiel` itself for this\n");
+    out.push_str("-- program -- `ZielF` on every reachable thread machine (run-time spawns\n");
+    out.push_str("-- and joins included), from any set of initially live threads.\n");
+    out.push_str("theorem gP_gabbro_f (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)\n");
+    out.push_str("    (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)\n");
+    out.push_str("    (sp : Speicher gD.mitRuhe)\n");
+    out.push_str("    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))\n");
+    out.push_str("    (hL : Zielsatz.Laufzeit gE sp init) (lebt0 : Faden → Bool)\n");
+    out.push_str("    (K : FadenMaschine gD.mitRuhe)\n");
+    out.push_str("    (hK : FadenErreichbar gE.P.mitRuhe O.mitRuhe passes (FadenStart gE.P.mitRuhe sp init lebt0) K) :\n");
+    out.push_str("    Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) K :=\n");
+    out.push_str("  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
+    out.push_str("    gCheck hN O hH passes sp init hL lebt0 K hK\n");
     out
 }
 

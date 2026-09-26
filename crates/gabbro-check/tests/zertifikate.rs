@@ -192,7 +192,9 @@ fn jedes_angenommene_programm_ist_zertifiziert_oder_benannt() {
                 }
                 let ist = std::fs::read_to_string(&ziel).ok();
                 if ist.as_deref() != Some(text.as_str()) {
-                    if schreiben && ziel.starts_with(&zdir) {
+                    // A certificate outside `Zertifikat/` (GenOblig104/108) is rewritten
+                    // too: it carries the generator's own line-1 marker, so it IS generated.
+                    if schreiben {
                         std::fs::create_dir_all(&zdir).expect("mkdir");
                         std::fs::write(&ziel, &text).expect("write certificate");
                     } else {
@@ -204,6 +206,22 @@ fn jedes_angenommene_programm_ist_zertifiziert_oder_benannt() {
                     }
                 }
                 assert!(text.starts_with(&marker(&rel)), "generator marker moved");
+                // What makes the file a CERTIFICATE and not just an export: the checker
+                // premise decided, and the goal theorem instantiated on the thread machine.
+                for teil in [
+                    "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+                    "theorem gP_gabbro_f",
+                    "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
+                ] {
+                    if !text.contains(teil) {
+                        befunde.push(format!("{rel}: the certificate lacks {teil:?}"));
+                    }
+                }
+                for verboten in ["sorry", "native_decide", "admit"] {
+                    if text.contains(verboten) {
+                        befunde.push(format!("{rel}: the certificate contains `{verboten}`"));
+                    }
+                }
                 let m = modul(&grammatik, &ziel);
                 let kette = match ketten.get(&rel) {
                     Some(n) => format!(

@@ -50,6 +50,10 @@ fn obligations_104_states_the_user_duty() {
         "Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE",
         "Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
         "(hN : Zielsatz.NutzerPflicht gE)",
+        // Opus agent C: the whole `GabbroZiel` conclusion on the thread machine.
+        "theorem gP_gabbro_f",
+        "Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
+        "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
     ] {
         assert!(text.contains(teil), "104 obligations must contain {teil:?}");
     }
