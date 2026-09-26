@@ -336,6 +336,8 @@ import Grammatik.Speichermodell.AtomarAkteur
 import Grammatik.Speichermodell.AtomarLauf
 import Grammatik.Speichermodell.AtomarW
 import Grammatik.Speichermodell.AtomarInv
+import Grammatik.Speichermodell.AtomarRuhe
 import Grammatik.Zielsatz.AtomarPflicht
+import Grammatik.Zielsatz.AtomarRuheNutzer
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
