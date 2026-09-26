@@ -1420,3 +1420,32 @@ Caprock rewrite, full translation validation).
 | **probabilistic statements** | claims about distributions, expected values, failure probabilities or randomised algorithms (e.g. "the hash collides with probability ≤ p", "the retry succeeds with probability 1"). The goal theorem is a statement about EVERY run; no measure over runs exists in the model. |
 | **status** | planned for later; no lane is tasked; no code, gift or example number is reserved. |
 | **where it is named** | here, in AGENTS.md §2/§3 ("OUT of scope for now"), and since the merge of Opus agent G (2026-09-26) as two lines of the NOT CLAIMED list in the `Spec.lean` header, each citing O29. |
+
+---
+
+## O30 — A Gabbro compiler written in Gabbro: Gabbro → IR → machine code, without C and without CompCert (Simon, 2026-09-26)
+
+Today the chain ends in C (`emit.rs`), and a C compiler is trusted (the `Spec.lean` header names
+"the C"). The plan: a compiler **written in Gabbro** that lowers Gabbro to its own intermediate
+representation and from there to machine code, with no C in between.
+
+| | |
+|---|---|
+| **bootstrap** | the first build of that compiler goes through today's route (Gabbro → C) and is compiled with **CompCert**, so the first binary rests on a verified C compiler; from then on it compiles itself |
+| **what it removes from the trust base** | the C compiler, and the C semantics layer of translation validation (T4); the chain becomes source → model → IR → machine code |
+| **what it needs first** | full translation validation of today's chain (the IR correspondence reuses its structure), dynamic data structures (O29) for a compiler's own data, and a machine-code semantics per target (x86_64 first; aarch64 later, see memory `aarch64-spaeter`) |
+| **status** | planned, not tasked; no code, gift or example number reserved |
+
+## O31 — System calls as named variables, rebound per target by one statement (Simon, 2026-09-26)
+
+Today a syscall number and its ABI live in each gate's source (`abi linux number 2`, OFFEN O23;
+examples 149/150). The plan: a language form that **declares system calls as named variables**
+(number, argument registers, error convention), and **one statement elsewhere in the program that
+rebinds those variables for a target** (e.g. Linux x86_64, bare metal / the Caprock microkernel,
+another kernel), so the same gate code builds for every target and only the binding changes.
+
+| | |
+|---|---|
+| **requirements** | the binding is checked like every other declaration (a gate may only use a variable the active target binds; a missing or duplicate binding is a refusal with sentence + poison + positive probe); the named hardware/kernel assumption of each gate (its contract, O23's caller preconditions) follows the binding, so a different target means different named assumptions, never silently the same |
+| **relation** | freestanding everywhere (the current wave's rule), linking under equal hardware assumptions (O28: two units linked must bind the same target), the self-hosted compiler (O30: the target is its input) |
+| **status** | planned, not tasked; no numbers reserved |
