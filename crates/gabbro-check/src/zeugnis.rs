@@ -446,11 +446,23 @@ pub const EINORDNUNG: &[Posten] = &[
                 the unit owns the stacks, the emitter the calls. The SUM cost bill (F4) is \
                 the checker's, not the C's",
     },
-    // **Lane O-1:** `child` has NO entry here until its lowering lands --
-    // like `breaking` before 2026-08-31 it is booked as `UNZUGEORDNET`,
-    // and rightly: the emitter refuses it (`C185`). The `zaehle` arm below
-    // still counts it, so the certificate lists the refused block instead
-    // of silently dropping it.
+    // **Lane 260: `child` lowers inside the narrow triple, so it stands
+    // here** -- like `breaking` before 2026-08-31 it was booked as
+    // `UNZUGEORDNET`, and rightly: the emitter refused it (`C185`). At run
+    // time the region IS its statements (entered by jump at the region
+    // label, `emit.rs` `kind_tor_falle`); the gate's trap is inline `asm`
+    // beside it, in the stub's assumption class. A region outside the
+    // triple still refuses (`C185`), and the `zaehle` arm below still
+    // counts it, so the certificate lists the refused block instead of
+    // silently dropping it.
+    Posten {
+        konstrukt: "child",
+        traegt: Traegt::Direkt,
+        grund: "at run time the region IS its statements, entered by jump at \
+                the region label the gate trap targets (`emit.rs`); the \
+                statements between gate call and region run parent-side only, \
+                which is what the checker judges (SATZKARTE §39)",
+    },
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,

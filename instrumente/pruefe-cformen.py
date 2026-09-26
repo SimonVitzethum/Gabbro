@@ -210,6 +210,10 @@ FORMS = {
     "stmt:store-field":        ([], "`p->f = e;` on a struct that is not a table slot"),
     "stmt:walk":               ([], "the `descendants of` walk (`_k`, `_h`, `_w` locals)"),
     "stmt:trap-guard":         ([], "`if (!(i < N)) __builtin_trap();` (byte writer guard)"),
+    "stmt:label-kind":         ([], "the region label a gate trap jumps to (lane 260: the "
+                                "child entered by jump; no correspondence lemma -- the "
+                                "jump rests on the checker (N448-N450) and the trap "
+                                "construction, O21)"),
     # --- expressions ------------------------------------------------------------------
     "expr:slot-read":          (["ecorr_slotParam", "ecorr_slotNamed", "ecorr_durch"], "M1/E23"),
     "expr:sizeof":             (["ev_sizeofQuot", "hiSlots_ev"], "M5"),
@@ -291,6 +295,8 @@ KNOWN_UNCOVERED = {
     "stmt:store-field": ("2026-09-13", "a struct behind a pointer has no memory relation"),
     "stmt:walk": ("2026-09-13", "the walk has no Gabbro constructor (CFormenI CUTS)"),
     "stmt:trap-guard": ("2026-09-13", "the byte writers' bound check (T4 item 4)"),
+    "stmt:label-kind": ("2026-09-26", "the region label a gate trap jumps to (lane 260; "
+                        "no lemma: the jump rests on the checker and the trap, O21)"),
     "expr:byte-reader-other": ("2026-09-13", "only gabbro_le32 has a lemma"),
     "expr:call": ("2026-09-13", "calls in expressions: bank/format accessors, port reads"),
     "expr:union-payload": ("2026-09-13", "see stmt:switch-tag"),
@@ -676,6 +682,12 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
         return "stmt:return-aggregate" if retagg else "stmt:return-expr"
     if re.match(r"^goto " + IDENT + r";$", s):
         return "stmt:goto"
+    # Lane 260: the region label the gate trap jumps to (`emit.rs`
+    # `kind_tor_falle`). Its own row, not `stmt:label`: the traverse/retry
+    # lemmas behind that row cover loop exits, never a thread entered by
+    # jump -- borrowing them would claim a proof that does not exist.
+    if re.match(r"^gabbro_kind_\d+: ;$", s):
+        return "stmt:label-kind"
     if re.match(r"^" + IDENT + r": ;$", s):
         return "stmt:label"
     if re.match(r"^\*_grund = " + IDENT + r";$", s):

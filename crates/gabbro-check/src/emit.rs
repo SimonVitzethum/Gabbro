@@ -371,12 +371,14 @@ struct Namen {
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
     /// **Lane 260: the `start` sites with their root counts** -- (statement
-    /// span-lo, roots). The file-scope thread stacks are emitted from this
-    /// list beside the tables (one 64 KiB region per root); the `Start` arm
-    /// reads the same spans to name them. Walked once in `emittiere_mit` over
-    /// every function body -- a second register beside the arm would drift
-    /// (W7). The walk descends through `crate::unterbloecke`, like every
-    /// collector that must not return a subset looking like a set.
+    /// span-lo, roots) in walk order. The file-scope thread stacks are
+    /// emitted from this list beside the tables (one 64 KiB region per
+    /// root); both sides name them by WALK-ORDER counter, not by span, so
+    /// `fmt --explicit`/`--elide` (which shift spans) move no emission
+    /// (`fmt_views`). Walked once in `emittiere_mit` over every function
+    /// body -- a second register beside the arm would drift (W7). The walk
+    /// descends through `crate::unterbloecke`, like every collector that
+    /// must not return a subset looking like a set.
     start_orte: Vec<(u32, usize)>,
     /// **Lane 260: functions with a lowered body.** Only a `Block` rumpf has
     /// an address in this unit that a thread could start in; an `extern` or
@@ -384,6 +386,58 @@ struct Namen {
     /// nowhere. The `Start` arm refuses those by name instead of emitting a
     /// call into a body that does not exist.
     impl_funktionen: BTreeSet<String>,
+    /// **Lane 260: inline-trap gates, by gate-statement span-lo.** A narrow
+    /// gate+guard+region triple (`tor_scan` in `emittiere_mit`) lowers the
+    /// gate call to an inline `syscall` with the child entered by jump at
+    /// the region; the `LetSonst` arm reads this map, the `Child` arm the
+    /// reverse one below. A gate that misses the narrow shape -- or whose
+    /// declaration the silent resolver cannot mirror -- is absent here, and
+    /// its region falls at `C185` as before.
+    kind_tore: HashMap<u32, KindTor>,
+    /// **Lane 260: region statements of lowered triples, by region span-lo.**
+    /// Values are gate-statement span-los into `kind_tore`.
+    kind_regionen: HashMap<u32, u32>,
+}
+
+/// **Lane 260: a stack gate resolved for the inline trap.**
+///
+/// The SILENT twin of the checks `syscall_stumpf` issues as `C180`-`C184`:
+/// same conditions, no refusals -- anything the stub would refuse resolves
+/// to `None`, and the region falls at `C185` as before. The two must be kept
+/// in step by hand; each cites the other, and the corpus pins both sides
+/// (`beispiele/155` + `156` lower, `beispiele/gift/1112` refuses).
+#[derive(Clone)]
+struct KindTor {
+    /// Bare gate name, re-checked at the call site against the callee.
+    tor_name: String,
+    /// Walk-order number of the triple in the unit. Names the C label and
+    /// the trap locals -- a counter and NOT a span: `fmt --explicit` and
+    /// `--elide` add and remove clauses, shifting every span behind them,
+    /// and generated names must not move with the views (`fmt_views`).
+    nr: u32,
+    /// The region's `Child` statement span-lo (reverse map target).
+    region_lo: u32,
+    /// The C label the trap jumps to (`gabbro_kind_<nr>`).
+    label: String,
+    /// The folded call number, loaded as an immediate.
+    nummer: u64,
+    /// `(register, parameter index)` in declaration order; the call-site
+    /// argument at each index is pinned to its register, widened to the
+    /// full word like the stub's pins.
+    heber: Vec<(String, usize)>,
+    /// Parameter count, held against the call's argument count at the site.
+    param_zahl: usize,
+    /// Clobbers as emitted (`"rcx"`, `"r11"`, `"memory"` included).
+    zerstoert: Vec<String>,
+    /// `(errno number, REASON_CASE)` decoding arms, as the stub compares.
+    arme: Vec<(i128, String)>,
+    /// The value C type, for the `(T)raw` store.
+    wert_ctyp: String,
+    /// Declared answer bounds that survive the vacuous-check rules.
+    unter: Option<i128>,
+    ober: Option<i128>,
+    /// The named assumption behind the hardware outcome.
+    annahme: String,
 }
 
 /// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
@@ -2054,15 +2108,116 @@ pub fn emittiere_mit(
              int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort);\n\
              void gabbro_faden_warte(uint32_t *wort);\n",
         );
-        for (lo, n) in namen.start_orte.clone() {
-            for i in 0..n {
+        // **Counter, not span, in the stack names**: spans shift under
+        // `fmt --explicit`/`--elide`, walk-order counters do not (`fmt_views`).
+        // The `Start` arm finds its own counter by span below -- same walk,
+        // same list, same order.
+        for (nr, (_lo, n)) in namen.start_orte.clone().iter().enumerate() {
+            for i in 0..*n {
                 aus.push_str(&format!(
-                    "static unsigned char gabbro_stapel_{lo}_{i}[65536] \
+                    "static unsigned char gabbro_stapel_{nr}_{i}[65536] \
                      __attribute__((aligned(16)));\n\
-                     static uint32_t gabbro_wort_{lo}_{i};\n"
+                     static uint32_t gabbro_wort_{nr}_{i};\n"
                 ));
             }
         }
+    }
+    // **Lane 260: the child triples for the inline trap.**
+    //
+    // A gate call `let v = gate(args) else (e) { … }` through a stack gate,
+    // followed in the same top-level body by `if v == 0 { child { … } }`
+    // with the region as the guard's SOLE statement, lowers the gate to an
+    // inline `syscall` that jumps straight to the region in the child
+    // (`asm goto`, the written jump assumption of SATZKARTE §39). The guard
+    // and everything between gate and region stay ordinary parent code --
+    // the child never executes them, the parent skips the region -- which is
+    // exactly what the checker judges (`N450` one dominating call per
+    // region, spill and thread rules over the region alone).
+    //
+    // NARROW ON PURPOSE. The triple must stand at the top level of a
+    // function body (no nesting: a jump into a deeper scope would skip
+    // declarations), the guard body must hold nothing but the region (the
+    // label sits first in it), and the region must hold no nested `child`
+    // (one trap enters one region). One region per gate call: a second
+    // region behind the same call has no trap of its own to jump from.
+    // Anything wider keeps `C185`, by name, never silently.
+    {
+        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, String), usize)> =
+            HashMap::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            if let ItemArt::Syscall(s) = &item.art {
+                if s.stapel.is_empty() {
+                    return;
+                }
+                let modul =
+                    syscall_tabellen.module.get(&s.name.text).cloned().unwrap_or_default();
+                if let Some(aufgeloest) =
+                    tor_inline_daten(s, &modul, &syscall_tabellen, baum, &namen)
+                {
+                    tore.insert(s.name.text.clone(), (aufgeloest, s.parameter.len()));
+                }
+            }
+        });
+        let mut vergeben: BTreeSet<u32> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            let FnRumpf::Block(b) = &f.rumpf else { return };
+            for (i, tor_stmt) in b.anweisungen.iter().enumerate() {
+                let StmtArt::LetSonst(l) = &tor_stmt.art else { continue };
+                let LetQuelle::Ruf(r) = &l.quelle else { continue };
+                let Some(pfad) = r.path() else { continue };
+                let Some(kurz) = pfad.teile.last() else { continue };
+                let Some(((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, annahme), param_zahl)) =
+                    tore.get(&kurz.text)
+                else {
+                    continue;
+                };
+                if vergeben.contains(&tor_stmt.span.von) {
+                    continue;
+                }
+                for waechter in b.anweisungen.iter().skip(i + 1) {
+                    let StmtArt::Wenn(w) = &waechter.art else { continue };
+                    if w.zweige.len() != 1 {
+                        continue;
+                    }
+                    let (bed, rumpf) = &w.zweige[0];
+                    if rumpf.anweisungen.len() != 1 {
+                        continue;
+                    }
+                    let StmtArt::Child(region) = &rumpf.anweisungen[0].art else { continue };
+                    if !antwort_wache(bed, &l.name.text) {
+                        continue;
+                    }
+                    if kind_verschachtelt(region) {
+                        continue;
+                    }
+                    let lo = tor_stmt.span.von;
+                    let region_lo = rumpf.anweisungen[0].span.von;
+                    let nr = namen.kind_tore.len() as u32;
+                    namen.kind_tore.insert(
+                        lo,
+                        KindTor {
+                            tor_name: kurz.text.clone(),
+                            nr,
+                            region_lo,
+                            label: format!("gabbro_kind_{nr}"),
+                            nummer: *nummer,
+                            heber: heber.clone(),
+                            param_zahl: *param_zahl,
+                            zerstoert: zerstoert.clone(),
+                            arme: arme.clone(),
+                            wert_ctyp: wert_ctyp.clone(),
+                            unter: *unter,
+                            ober: *ober,
+                            annahme: annahme.clone(),
+                        },
+                    );
+                    namen.kind_regionen.insert(region_lo, lo);
+                    vergeben.insert(lo);
+                    break;
+                }
+            }
+        });
     }
     // **Die Marken stehen HIER und nicht an ihrem Item** -- aus demselben Grund, aus dem
     // alle Prototypen vor allen Ruempfen stehen. `beispiele/04` erklaert `linear type
@@ -8012,6 +8167,341 @@ fn syscall_code(
 /// families (GCC and Clang define it); anywhere else it falls through and
 /// `cc` complains loudly instead of the stub deciding something on its own --
 /// the same handover `match_grund` writes for `D005`.
+/// **Lane 260: resolve a stack gate for the inline trap, silently.**
+///
+/// The condition twin of `syscall_stumpf`'s `C182`/`C180`/`C181`/`C184`/`C183`
+/// checks plus the error-map and ghost rules: every shape the stub refuses
+/// resolves to `None`, and only a gate the stub would lower resolves to
+/// `Some`. NOTHING is issued here -- the declaration site still runs the
+/// stub with its own refusals, and the region falls at `C185` as before.
+/// Call with the gate's module (for folding `number` and bounds through
+/// `Umgebung::konst_wert`, like the stub).
+///
+/// Two deliberate narrowings beyond the stub: the gate must answer an
+/// integer (the trap decodes into the `let … else` value -- a result-less
+/// gate keeps the helper call) and take no ghost parameter (an erased
+/// parameter would leave its `regs in` binding carrying a value nobody put
+/// there -- the stub's generic refusal, mirrored here as a skip).
+fn tor_inline_daten(
+    s: &SyscallDecl,
+    modul: &str,
+    tabellen: &SyscallTabellen,
+    baum: &Programm,
+    u: &Namen,
+) -> Option<(u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, String)> {
+    let umg = crate::umgebung::Umgebung::sammle(baum);
+    if s.abi.text != "linux" || s.arch.text != "x86_64" {
+        return None;
+    }
+    for (reg, _param) in &s.regs_in {
+        if reg.text == "rax" {
+            return None;
+        }
+        if s.clobbers.iter().any(|c| c.text == reg.text) {
+            return None;
+        }
+    }
+    if s.regs_out.len() != 1 || s.regs_out[0].text != "rax" {
+        return None;
+    }
+    if s.clobbers.iter().any(|c| c.text == "rax") {
+        return None;
+    }
+    let nummer: u64 = match umg.konst_wert(modul, &s.nummer) {
+        Some(v) if 0 <= v && v <= u64::MAX as i128 => v as u64,
+        _ => return None,
+    };
+    for p in &s.parameter {
+        if ist_geist(&p.typ, u) {
+            return None;
+        }
+        if ctyp(&p.typ, u).is_none() {
+            return None;
+        }
+    }
+    // **The answer shape, as the stub reads it.** Only an integer answer
+    // resolves: the trap stores it into the `let … else` binding through
+    // the same `(T)raw` cast, against the same surviving bounds.
+    let (wert_ctyp, unter, ober): (String, Option<i128>, Option<i128>) = match &s.ergebnis {
+        Some(TypExpr::Int(i)) => {
+            let Some(c) = ctyp(&s.ergebnis.clone().unwrap(), u) else {
+                return None;
+            };
+            let (mut lo, mut hi): (Option<i128>, Option<i128>) = (None, None);
+            if let Some(b) = &i.bereich {
+                let (Some(von), Some(bis)) =
+                    (umg.konst_wert(modul, &b.von), umg.konst_wert(modul, &b.bis))
+                else {
+                    return None;
+                };
+                let bis = if b.exklusiv { bis - 1 } else { bis };
+                if bis < von {
+                    return None;
+                }
+                lo = Some(von);
+                hi = Some(bis);
+            } else {
+                let Some((_, bytes)) = ganzzahlwort(i.wort) else {
+                    return None;
+                };
+                let breite: u32 = bytes * 8;
+                let vorzeichen = matches!(
+                    i.wort,
+                    gabbro_syntax::kw::Kw::I8
+                        | gabbro_syntax::kw::Kw::I16
+                        | gabbro_syntax::kw::Kw::I32
+                        | gabbro_syntax::kw::Kw::I64
+                );
+                if breite < 64 {
+                    hi = Some(if vorzeichen {
+                        (1i128 << (breite - 1)) - 1
+                    } else {
+                        (1i128 << breite) - 1
+                    });
+                }
+            }
+            if hi.is_some_and(|h| h >= i64::MAX as i128) {
+                hi = None;
+            }
+            if lo.is_some_and(|l| l <= 0) {
+                lo = None;
+            }
+            if let Some(l) = lo {
+                if l > i64::MAX as i128 {
+                    return None;
+                }
+            }
+            (c, lo, hi)
+        }
+        _ => return None,
+    };
+    // **The error channel, as the stub decodes it.** Every listed errno
+    // against its reason's DECLARED number; anything the stub refuses
+    // (no channel, a twice-declared reason, an unresolvable case, a number
+    // wider than the decoding compares) resolves to `None`.
+    let mut arme: Vec<(i128, String)> = Vec::new();
+    if !s.errors.is_empty() {
+        let Some(rname) = &s.fehler else {
+            return None;
+        };
+        if tabellen.strittig.contains(&rname.text) {
+            return None;
+        }
+        let Some(faelle) = tabellen.gruende.get(&rname.text) else {
+            return None;
+        };
+        for (_, ziel) in &s.errors {
+            let Some((_, wert)) = faelle.iter().find(|(c, _)| c == &ziel.text) else {
+                return None;
+            };
+            let Ok(wert) = i128::try_from(*wert) else {
+                return None;
+            };
+            arme.push((wert, format!("{}_{}", rname.text, ziel.text)));
+        }
+    }
+    let annahme = match &s.paarung {
+        SyscallPaarung::Annahme { annahme, .. } => annahme.text.clone(),
+        SyscallPaarung::Kernel { pfad } => pfad.text(),
+    };
+    // **Register order is not parameter order**: each `regs in` entry names
+    // its parameter, and the call-site argument travels at the PARAMETER's
+    // position. An entry naming no parameter is the checker's `N065`, and on
+    // a blind tree the pin would name an undeclared identifier -- skip.
+    let mut heber: Vec<(String, usize)> = Vec::new();
+    for (reg, param) in &s.regs_in {
+        let Some(k) = s.parameter.iter().position(|p| p.name.text == param.text) else {
+            return None;
+        };
+        heber.push((reg.text.clone(), k));
+    }
+    let mut zerstoert: Vec<String> =
+        s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
+    for fest in ["\"rcx\"", "\"r11\"", "\"memory\""] {
+        if !zerstoert.iter().any(|c| c == fest) {
+            zerstoert.push(fest.to_string());
+        }
+    }
+    Some((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, annahme))
+}
+
+/// **Lane 260: `v == 0` or `0 == v`, the only guard the inline trap reads.**
+///
+/// Through one parenthesis level on each side; anything else -- another
+/// comparison, another scrutinee -- leaves the region at `C185`. The guard
+/// is parent code either way (the child enters at the region label), so
+/// narrowing it narrows only what lowers, never what the checker judges.
+fn antwort_wache(bed: &Expr, name: &str) -> bool {
+    fn entklammert(x: &Expr) -> &Expr {
+        match &x.art {
+            ExprArt::Klammer(y) => y.as_ref(),
+            _ => x,
+        }
+    }
+    fn ist_name(x: &Expr, name: &str) -> bool {
+        match &entklammert(x).art {
+            ExprArt::Ort(o) => o.basis.text == name && o.suffixe.is_empty(),
+            _ => false,
+        }
+    }
+    fn ist_null(x: &Expr) -> bool {
+        matches!(&entklammert(x).art, ExprArt::Zahl(0))
+    }
+    match &entklammert(bed).art {
+        ExprArt::Binaer(BinOp::Gleich, a, b) => {
+            (ist_name(a, name) && ist_null(b)) || (ist_null(a) && ist_name(b, name))
+        }
+        _ => false,
+    }
+}
+
+/// **Lane 260: a nested `child` inside the region keeps the triple out.**
+///
+/// The trap enters the outer region by jump; an inner region would need a
+/// trap of its own, and the checker reads nested regions as part of the
+/// outer one anyway. What stays out falls at `C185` as before.
+fn kind_verschachtelt(region: &Block) -> bool {
+    region.anweisungen.iter().any(|s| {
+        matches!(&s.art, StmtArt::Child(_))
+            || crate::unterbloecke(s).into_iter().any(kind_verschachtelt)
+    })
+}
+
+/// **Lane 260: the inline trap with its answer decoding -- the `let … else`
+/// twin of `syscall_stumpf`.**
+///
+/// The gate call `let v = gate(args) else (e) { … }` of a registered triple
+/// becomes: pins for every argument (the musl idiom, like the stub),
+/// `__asm__ goto` issuing `syscall` and jumping straight to the region label
+/// when the answer is zero (the child never executes the decoding, the
+/// guard, or anything between gate and region -- that is the written jump
+/// assumption of SATZKARTE §39, and the new pin in `tests/klon_faden.rs`
+/// states it), then the decoding the parent runs.
+///
+/// The decoding is the stub's with local targets: the sign fence at `-4095`
+/// (so `-raw` cannot overflow -- the stub's UBSan argument, unchanged), the
+/// `errors` arms against the reason's DECLARED numbers, the surviving range
+/// checks, the `(T)raw` store. Each leg closes by storing the `ok` flag
+/// instead of returning; a negative leg matching no arm is the hardware
+/// outcome, handed to the compiler in the stub's words. The two decodings
+/// must be kept in step by hand; each cites the other.
+///
+/// `args` are the call-site argument C expressions in parameter order (the
+/// `LetSonst` arm's filtered head -- ghost-free by the resolver, whose
+/// parameter indices stand in `tor.heber`). Emitted after `wert`/`grund`
+/// are declared; opens `if (!ok) {` for the `else` arm the caller lowers
+/// next. Every line is a classified C form already (`stmt:asm` for the
+/// trap, plain `if`/assignments for the rest); only the region label is a
+/// new row (`stmt:label-kind`).
+fn kind_tor_falle(
+    aus: &mut String,
+    e: &str,
+    tor: &KindTor,
+    args: &[String],
+    wert: &str,
+    grund: &str,
+) {
+    // **Counter, not span, in every generated name** (`KindTor::nr`): spans
+    // shift under `fmt --explicit`/`--elide`, counters do not (`fmt_views`).
+    let lo = tor.nr;
+    let e1 = format!("{e}    ");
+    let e2 = format!("{e}        ");
+    let e3 = format!("{e}            ");
+    // **The hardware outcome, in the stub's words** (`syscall_stumpf` above
+    // hands over the same way; the twin must read the same).
+    let hardware = |e: &str| {
+        format!(
+            "{e}/* `hardware ({annahme})` -- the kernel answered outside its contract.\n\
+             {e} * Under the named assumption this point is not reached; that decision is\n\
+             {e} * handed to the C compiler, which decides nothing of its own. */\n\
+             {e}#if defined(__GNUC__)\n\
+             {e}__builtin_unreachable();\n\
+             {e}#endif\n",
+            annahme = tor.annahme
+        )
+    };
+    aus.push_str(&format!("{e1}int64_t gabbro_roh_{lo};\n"));
+    aus.push_str(&format!("{e1}bool gabbro_ok_{lo} = true;\n"));
+    for (reg, k) in &tor.heber {
+        aus.push_str(&format!(
+            "{e1}register uint64_t _sys_{reg} __asm__(\"{reg}\") = (uint64_t)({});\n",
+            args[*k]
+        ));
+    }
+    aus.push_str(&format!(
+        "{e1}register int64_t _sys_rax __asm__(\"rax\") = (int64_t){}u;\n",
+        tor.nummer
+    ));
+    // **`asm goto` has no outputs**: the raw answer leaves through the
+    // `memory` operand below, and the `memory` clobber makes the store
+    // visible to the decoding. The numeric-free label list names the one
+    // region label of this triple.
+    let mut eingaben: Vec<String> = tor
+        .heber
+        .iter()
+        .map(|(r, _)| format!("\"r\" (_sys_{r})"))
+        .collect();
+    eingaben.push("\"r\" (_sys_rax)".to_string());
+    aus.push_str(&format!("{e1}__asm__ goto (\n"));
+    aus.push_str(&format!("{e1}    \"syscall\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"movq %%rax, %[roh]\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"jz %l[{label}]\\n\\t\"\n", label = tor.label));
+    aus.push_str(&format!(
+        "{e1}    : : [roh] \"m\" (gabbro_roh_{lo}), {}\n",
+        eingaben.join(", ")
+    ));
+    aus.push_str(&format!("{e1}    : {}\n", tor.zerstoert.join(", ")));
+    aus.push_str(&format!("{e1}    : {label});\n", label = tor.label));
+    // **The sign leg reads the pin; the value leg checks the declared
+    // range.** The `ok` flag starts true: a listed errno stores false, an
+    // unlisted one never returns, and the value leg stores true again.
+    aus.push_str(&format!("{e1}if (gabbro_roh_{lo} < 0) {{\n"));
+    aus.push_str(&format!("{e2}if (gabbro_roh_{lo} < -4095) {{\n"));
+    aus.push_str(&hardware(&e2));
+    aus.push_str(&format!("{e2}}}\n"));
+    if !tor.arme.is_empty() {
+        aus.push_str(&format!("{e2}int64_t gabbro_errno_{lo} = -gabbro_roh_{lo};\n"));
+        for (nummer, fall) in &tor.arme {
+            aus.push_str(&format!(
+                "{e2}if (gabbro_errno_{lo} == {nummer}) {{\n\
+                 {e3}{grund} = {fall};\n\
+                 {e3}gabbro_ok_{lo} = false;\n\
+                 {e2}}}\n"
+            ));
+        }
+        aus.push_str(&format!("{e2}/* An errno the `errors` map does not admit. */\n"));
+        aus.push_str(&format!("{e2}if (gabbro_ok_{lo}) {{\n"));
+        aus.push_str(&hardware(&e3));
+        aus.push_str(&format!("{e2}}}\n"));
+    } else {
+        // **A channel with no admitted errnos**, like the stub's: every
+        // negative answer past the fence is unlisted by construction.
+        aus.push_str(&format!(
+            "{e2}/* No admitted errnos: every negative answer is unlisted. */\n"
+        ));
+        aus.push_str(&hardware(&e2));
+    }
+    aus.push_str(&format!("{e1}}} else {{\n"));
+    if let Some(min) = tor.unter {
+        aus.push_str(&format!("{e2}if (gabbro_roh_{lo} < {min}) {{\n"));
+        aus.push_str(&hardware(&e2));
+        aus.push_str(&format!("{e2}}}\n"));
+    }
+    if let Some(max) = tor.ober {
+        aus.push_str(&format!("{e2}if (gabbro_roh_{lo} > {max}) {{\n"));
+        aus.push_str(&hardware(&e2));
+        aus.push_str(&format!("{e2}}}\n"));
+    }
+    aus.push_str(&format!(
+        "{e2}{wert} = ({ctyp})gabbro_roh_{lo};\n",
+        ctyp = tor.wert_ctyp
+    ));
+    aus.push_str(&format!("{e2}gabbro_ok_{lo} = true;\n"));
+    aus.push_str(&format!("{e1}}}\n"));
+    aus.push_str(&format!("{e1}if (!gabbro_ok_{lo}) {{\n"));
+}
+
 #[allow(clippy::too_many_arguments)]
 fn syscall_stumpf(
     s: &SyscallDecl,
@@ -10254,6 +10744,7 @@ fn anweisung(
                 ruf_args.push(format!("&{}", l.name.text));
             }
             ruf_args.push(format!("&{}", l.fehlername.text));
+            let mut wert_wort: Option<String> = None;
             if hat_wert {
                 // **Der Typ steht im Gerufenen, nicht am `let`** -- `let … else` traegt
                 // gar keine Typklausel. `wert_ctyp` liest ihn aus derselben Signatur ab,
@@ -10264,6 +10755,7 @@ fn anweisung(
                     return;
                 };
                 aus.push_str(&format!("{e}{t} {};\n", l.name.text));
+                wert_wort = Some(t);
             }
             // **`(void)e;` nur, wenn der Zweig `e` nicht liest** (Stufe 7, 2026-08-21).
             //
@@ -10278,11 +10770,61 @@ fn anweisung(
             } else {
                 format!(" (void){};", l.fehlername.text)
             };
+            // **Lane 260: the inline trap for a registered stack gate.**
+            //
+            // The gate call of a narrow gate+guard+region triple (`tor_scan`
+            // in `emittiere_mit`) issues the `syscall` inline and jumps
+            // straight to the region in the child, instead of calling the
+            // stub helper -- after a stack-switching call the child would
+            // resume inside that helper on the handed stack, and the
+            // helper's return would pop a return address off it. Everything
+            // around the call -- the value and reason bindings, the `else`
+            // arm -- lowers exactly as above; only the call itself becomes
+            // the trap (`kind_tor_falle`), closing with the same
+            // `if (!ok) {` the helper call closes with.
+            //
+            // NARROW ON PURPOSE. The triple's spans, the callee's bare name,
+            // the value type against the resolved one, and the argument
+            // count against the declared parameters are all re-checked here:
+            // the maps are built on the parsed tree, and a mismatch lowers
+            // through the helper call as before instead of guessing.
+            let inline_tor: Option<KindTor> = match (u.kind_tore.get(&s.span.von), &wert_wort) {
+                (Some(tor), Some(t))
+                    if tor.tor_name
+                        == r
+                            .path()
+                            .and_then(|p| p.teile.last())
+                            .map(|i| i.text.clone())
+                            .unwrap_or_default()
+                        && tor.wert_ctyp == *t
+                        && r.argumente.len() == tor.param_zahl =>
+                {
+                    Some(tor.clone())
+                }
+                _ => None,
+            };
             aus.push_str(&format!(
-                "{e}{{\n{e}    {grund} {};{stillgelegt}\n{e}    if (!{name}({})) {{\n",
+                "{e}{{\n{e}    {grund} {};{stillgelegt}\n",
                 l.fehlername.text,
-                ruf_args.join(", ")
             ));
+            match inline_tor {
+                Some(tor) => {
+                    kind_tor_falle(
+                        aus,
+                        &e,
+                        &tor,
+                        &ruf_args,
+                        &l.name.text,
+                        &l.fehlername.text,
+                    );
+                }
+                None => {
+                    aus.push_str(&format!(
+                        "{e}    if (!{name}({})) {{\n",
+                        ruf_args.join(", ")
+                    ));
+                }
+            }
             // **`e` traegt seinen `reason` in die Sicht des `else`-Zweiges** -- und nur
             // dorthin. Ohne diese Zeile weiss ein `match e { … }` darin nicht, welche
             // Fallmenge erschoepfend sein muss, und der Erzeuger weigert sich mit `C001`.
@@ -10437,38 +10979,72 @@ fn anweisung(
         // below (`C185`), and the block is written out best-effort beside
         // the refusal so the refusal changes no `cc` verdict.
         StmtArt::Child(x) => {
-            // **C185 -- the child path has no lowering in this template.**
+            // **Lane 260: the region of a registered triple is entered by
+            // jump.** The gate's inline trap (`kind_tor_falle` at the
+            // `LetSonst` site) jumps straight here in the child, so the
+            // label below is the triple's meeting point: the child starts
+            // its statements at it, on the handed stack, and the parent --
+            // which never takes the jump -- reaches the same statements
+            // through the guard that holds them. The statements between gate
+            // call and region (155's `if v == 0`) run parent-side only, which
+            // is exactly what the checker judges (SATZKARTE §39).
+            if let Some(gate_lo) = u.kind_regionen.get(&s.span.von) {
+                if let Some(tor) = u.kind_tore.get(gate_lo) {
+                    aus.push_str(&format!(
+                        "{e}/* child -- HANDOFF region on the handed stack of the\n\
+                         {e} * stack-carrying gate, entered BY JUMP at the label below\n\
+                         {e} * (`{label}`): the trap at the gate call jumps here in the\n\
+                         {e} * child, so nothing between gate and region ever runs on\n\
+                         {e} * the child's stack. Never returns into the caller frame\n\
+                         {e} * (`N448`/`N449`); at run time this is its statements.\n\
+                         {e} */\n\
+                         {e}{label}: ;\n",
+                        label = tor.label
+                    ));
+                    aus.push_str(&format!("{e}{{\n"));
+                    for k in &x.anweisungen {
+                        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                    }
+                    aus.push_str(&format!("{e}}}\n"));
+                    return;
+                }
+            }
+            // **C185 -- the child path outside the narrow triple.**
             // The stub above lowers the GATE as one C function; after a
             // stack-switching call the child resumes inside that helper on
-            // the NEW stack, and the helper's `return` would pop a return
-            // address off the handed stack. The sound lowering is an inline
-            // trap with the child entered by jump (K-1's fork (b) is the
-            // unchecked `asm` form of it; fork (a) the C driver outside the
-            // language) -- until it lands, every `child` block falls here,
-            // by name, never silently. The block is still written out
+            // the NEW stack, and the helper's return would pop a return
+            // address off the handed stack. The sound lowering is the inline
+            // trap with the child entered by jump (lane 260): it lands only
+            // for a gate call and an `if v == 0`-guarded region as the
+            // guard's sole statement at the top level of one function body.
+            // Anything wider -- no guard to skip the region in the parent,
+            // a deeper nesting, a second region behind one call -- falls
+            // here, by name, never silently. The block is still written out
             // best-effort below, so the refusal changes no `cc` verdict.
             //
-            // **The assumption a lowering must keep (fix lane F3, review G11
+            // **The assumption the lowering keeps (fix lane F3, review G11
             // F4):** the checker judges the REGION only (`N451`/`N452` spill,
             // `N456`/`N457` thread, `N450` one dominating call per region).
-            // The statements between the gate call and the region (155's
-            // `if v == 0`) are checked as PARENT code. A lowering that lets
-            // the child return from the call and run on (fork style) would
-            // execute them unchecked on the handed stack -- the child must be
-            // entered by jump at the region, the parent must skip it.
-            // `tests/klon_faden.rs` pins this sentence to the refusal.
+            // The statements between the gate call and the region are checked
+            // as PARENT code. A lowering that lets the child return from the
+            // call and run on (fork style) would execute them unchecked on
+            // the handed stack -- the child must be entered by jump at the
+            // region, the parent must skip it. `tests/klon_faden.rs` pins the
+            // lowered shape beside this refusal.
             syscall_code(
                 absagen,
                 "C185",
                 s.span,
                 &format!(
-                    "`child` has no lowering in the `syscall` stub template -- after a \
-                     stack-switching call the child resumes inside the gate's helper on \
-                     the handed stack, and the helper's return would pop a return address \
-                     off it. The inline trap with the child entered by jump is not built \
-                     -- and the checker ASSUMES that jump: it judges the region only, so \
-                     the statements between the gate call and the region never run on \
-                     the child's stack (SATZKARTE §39, `klon.uebergabe`)"
+                    "`child` outside the lowered gate+guard+region triple -- the gate is \
+                     no inline trap here (no stack gate dominating this region in the \
+                     same top-level body, or no `if v == 0` guard holding nothing but \
+                     this region), so after a stack-switching call the child would \
+                     resume inside the gate helper on the handed stack, and the \
+                     helper's return would pop a return address off it. The checker \
+                     ASSUMES the jump: it judges the region only, so the statements \
+                     between the gate call and the region never run on the child's \
+                     stack (SATZKARTE §39, `klon.uebergabe`)"
                 ),
             );
             aus.push_str(&format!(
@@ -10556,18 +11132,36 @@ fn anweisung(
                 );
                 return;
             }
-            let lo = s.span.von;
+            // **The site's counter in `start_orte`** (walk order, not span:
+            // spans shift under the fmt views, counters do not). Absent only
+            // when the prelude walk and this arm disagree -- then no stacks
+            // exist for this site, and guessing their names would start a
+            // thread on bytes nobody owns.
+            let Some(nr) = u
+                .start_orte
+                .iter()
+                .position(|(lo, _)| *lo == s.span.von)
+            else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`start` with no thread stacks in this unit -- the prelude walk \
+                     and this statement disagree, and a thread without its own stack \
+                     starts nowhere",
+                );
+                return;
+            };
             for (i, name) in wurzeln.iter().enumerate() {
                 aus.push_str(&format!(
                     "{e}/* start {name} -- a runtime thread on our own raw clone\n\
                      {e} * (`laufzeit/faden.c`); joined below before the starter proceeds. */\n\
-                     {e}if (gabbro_faden_start({name}, gabbro_stapel_{lo}_{i} + 65536u, \
-                     &gabbro_wort_{lo}_{i}) != 0) __builtin_trap();\n"
+                     {e}if (gabbro_faden_start({name}, gabbro_stapel_{nr}_{i} + 65536u, \
+                     &gabbro_wort_{nr}_{i}) != 0) __builtin_trap();\n"
                 ));
             }
             for i in 0..wurzeln.len() {
                 aus.push_str(&format!(
-                    "{e}gabbro_faden_warte(&gabbro_wort_{lo}_{i});\n"
+                    "{e}gabbro_faden_warte(&gabbro_wort_{nr}_{i});\n"
                 ));
             }
         }

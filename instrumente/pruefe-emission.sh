@@ -352,7 +352,12 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
 
     # 3. Uebersetzen, und zwar streng. Eine Warnung im erzeugten C ist ein Befund ueber den
     #    Erzeuger, nicht ueber den Anwender -- er hat die Zeile nicht geschrieben.
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" > "$ARB/$name-treiber.c"
+    # **Lane 260: `@FADEN@` names the thread runtime beside the unit.** A driver
+    # for a `start` program links `laufzeit/faden.c` (our own raw `clone`) by
+    # including it -- one translation unit, no library path, no installed
+    # artefact. Drivers without the placeholder are untouched by the second
+    # substitution; the delimiter is `|` because the path carries slashes.
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
     if ! cc -std=c11 -O0 -Wall -Wextra -Werror -I"$ARB" -o "$ARB/$name-probe" \
             "$ARB/$name-treiber.c" 2> "$ARB/ccfehler"; then
         echo "  3. cc -Werror: GESCHEITERT"; head -20 "$ARB/ccfehler"; exit 1
@@ -500,7 +505,10 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # **Die Sprechprobe in die andere Richtung.** Ein Differenztest, der nicht rot werden kann,
     # misst nichts -- dieselbe Regel, mit der jede Messung dieses Ordners anfaengt (R14).
     sed "$gift" "$c" > "$ARB/$name-gift.c"
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" > "$ARB/$name-gifttreiber.c"
+    # **The same `@FADEN@` placeholder as above** (lane 260): without it the
+    # gift driver of a `start` program would not build -- and a mutation that
+    # already fails at compile time proves nothing about the run (R14).
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-gifttreiber.c"
     cc -std=c11 -w -I"$ARB" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c"
     # **Ein verfaelschtes Erzeugnis darf NICHT ENDEN, und bis 2026-08-20 hing der Waechter
     # dann fuer immer.**
@@ -2495,6 +2503,38 @@ int main(void) {
 lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
      's/{3u, 4u}/{3u, 5u}/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 22. Threads at run time, made by our own clone (lane 260) ---------------------------
+#
+# `beispiele/159` runs `start { heber_a, heber_b };`: one raw-`clone` thread
+# per root on the unit's own 64 KiB stacks (`laufzeit/faden.c` -- no libc
+# threading on these paths), joined before the starter proceeds. Each root
+# raises the lock-guarded wrapping counter once per `takt` slot (N = 32), so
+# the joined total is deterministic on every schedule: 2N = 64. The lock the
+# roots take is a test-only spinlock in the driver (short sections); creation
+# stays raw clone -- the same split as `laufzeit/start.c`, where the hosted
+# mutex stands in for the ticket lock. The TSan-free argument stands in the
+# lane report: the join words sync through the kernel's clear+acquire load,
+# and the unit's one shared carrier is guarded (`N462`).
+#
+# The gift takes the increment away (`+ 1` to `+ 0` in the one lowered
+# counter step): the run then reports 0 instead of 64. *A mutation in the
+# join or the spawn would race and prove nothing; this one is deterministic.*
+TREIBER159='#include <stdatomic.h>
+#include <stdio.h>
+#include "@ERZEUGT@"
+#include "@FADEN@"
+static _Atomic int sperre_L = 0;
+void L_nimm(void) { while (atomic_exchange_explicit(&sperre_L, 1, memory_order_acquire)) { } }
+void L_gib(void) { atomic_store_explicit(&sperre_L, 0, memory_order_release); }
+int main(void) {
+    printf("%u\n", lauf());
+    return 0;
+}
+'
+lauf "beispiel159" "$W/beispiele/159-laufzeit-start.gab" "$TREIBER159" "64" \
+     's/stand) + (uint32_t)(1)/stand) + (uint32_t)(0)/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (1 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
