@@ -19,17 +19,18 @@ assume linux_write_contract
     "Write keeps its contract on this machine."
     falsifier sonde_write;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
 syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
-    abi linux arch x86_64 number 1
-    regs in { rdi = fd, rsi = buf, rdx = len }
-    regs out { rax }
-    clobbers { rcx, r11 }
-    errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    via sys_write
     requires len <= 1024
     ensures result <= len
     effects { pure }
-    costs <= 8 ops
-    assume linux_write_contract falsifier sonde_write;
+    costs <= 8 ops;
 
 -- Descriptor 9999 is never open in a test process (and out of range where the
 -- table is smaller) -- either way the kernel answers `EBADF`, deterministically.
@@ -45,5 +46,31 @@ impl fn schreibe_ungueltig(buf : u64, len : u64) -> u64
     }
     return n;
 }
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted, EAGAIN = 11 => WouldBlock }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

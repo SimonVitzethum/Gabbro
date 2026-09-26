@@ -34,10 +34,30 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             bekannt.push(f.name.text.clone());
         }
     });
+    let mut annahmen = crate::annahmen(baum);
+    // **O31: `progress V` over a system-call variable names the assumption the
+    // ACTIVE target binds for `V`** -- the loop's liveness follows the binding
+    // like the gate's contract does, never silently the first target's.
+    let bild = gabbro_syntax::ziel::zielbild(baum);
+    let mut vars: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::SysVar(v) = &i.art {
+            vars.push(v.name.text.clone());
+        }
+    });
+    for v in vars {
+        if let Some((_, b)) = bild.bindung(&v) {
+            if let SyscallPaarung::Annahme { annahme, .. } = &b.paarung {
+                if let Some(f) = annahmen.get(&annahme.text).copied() {
+                    annahmen.insert(v, f);
+                }
+            }
+        }
+    }
     let lg = Lage {
         div: &div,
         bekannt: &bekannt,
-        annahmen: crate::annahmen(baum),
+        annahmen,
     };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Funktion(f) => {

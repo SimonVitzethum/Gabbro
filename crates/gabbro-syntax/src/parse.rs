@@ -150,8 +150,11 @@ pub fn parse_with_max_depth(quelle: &str, absagen: &mut Absagen) -> (Programm, u
         tiefe: 0,
         max_depth: 0,
     };
-    let baum = p.programm();
+    let mut baum = p.programm();
     let peak = p.max_depth;
+    // **O31: every `via` gate takes the active target's binding** -- after the
+    // whole unit is read, since a `target` block may stand anywhere in it.
+    crate::ziel::binde(&mut baum);
     (baum, peak)
 }
 
@@ -813,7 +816,11 @@ impl<'a> Parser<'a> {
             // the emitter. *`entry syscall …` keeps parsing: the entry NAME
             // is an identifier, and `syscall` as a `ctx` word stays one
             // there.*
-            Art::Wort(Kw::Syscall) => ItemArt::Syscall(self.syscalldecl()?),
+            // **O31 (Opus agent L): `syscall NAME;` (a system-call variable), a gate,
+            // and `target …`** -- built outside `item`'s frame (`syscall_item`, the
+            // `arena_item` shape): the grown `SyscallDecl` temporary overflowed the
+            // depth guard's 2 MB thread (`die_beiden_wachen…`) while it stood here.
+            Art::Wort(Kw::Syscall | Kw::Target) => return self.syscall_item(anfang, when),
             Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
@@ -831,6 +838,27 @@ impl<'a> Parser<'a> {
                 );
                 return Err(Abbruch);
             }
+        };
+        let span = anfang.bis_zu(self.vorheriger_span());
+        Ok(Item { when, art, span })
+    }
+
+    /// **O31 (Opus agent L): `syscall` items and `target`, outside `item`'s frame.**
+    ///
+    /// `syscall NAME;` is a system-call VARIABLE -- the third token decides, like
+    /// `const fn`: no context switch. Everything else after `syscall` is a gate;
+    /// `target` is a binding block or the selection.
+    #[inline(never)]
+    fn syscall_item(&mut self, anfang: Span, when: Option<Expr>) -> Erg<Item> {
+        let art = if self.ist_kw(Kw::Target) {
+            ItemArt::Ziel(self.zieldecl()?)
+        } else if matches!(self.blick_n(2).art, Art::Zeichen(Z::Semi)) {
+            let kopf = self.erwarte_kw(Kw::Syscall)?;
+            let name = self.erwarte_ident()?;
+            self.erwarte_z(Z::Semi)?;
+            ItemArt::SysVar(SysVarDecl { name, span: kopf.bis_zu(self.vorheriger_span()) })
+        } else {
+            ItemArt::Syscall(self.syscalldecl()?)
         };
         let span = anfang.bis_zu(self.vorheriger_span());
         Ok(Item { when, art, span })
@@ -5876,33 +5904,23 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        self.erwarte_kw(Kw::Abi)?;
-        let abi = self.erwarte_ident()?;
-        self.erwarte_kw(Kw::Arch)?;
-        let arch = self.erwarte_ident()?;
-        self.erwarte_kw(Kw::Sysnumber)?;
-        let nummer = self.expr()?;
-        self.erwarte_kw(Kw::Regs)?;
-        self.erwarte_kw(Kw::In)?;
-        let regs_in = self.sysregs_in()?;
-        self.erwarte_kw(Kw::Regs)?;
-        self.erwarte_kw(Kw::Out)?;
-        let regs_out = self.sysregs_out()?;
-        // **Lane O-1: the `stack` clause.** Optional, repeatable, fixed
-        // position (E4) -- between `regs out` and `clobbers`. Zero for an
-        // ordinary gate, one for a clone gate, two or more for `N447`.
-        let mut stapel = Vec::new();
-        while self.friss_kw(Kw::Stack) {
-            stapel.push(self.erwarte_ident()?);
-        }
-        self.erwarte_kw(Kw::Clobbers)?;
-        self.erwarte_z(Z::GeschweiftAuf)?;
-        let clobbers = self.identlist_leer_erlaubt()?;
-        self.erwarte_z(Z::GeschweiftZu)?;
-        self.erwarte_kw(Kw::Errors)?;
-        self.erwarte_z(Z::GeschweiftAuf)?;
-        let errors = self.errmaps()?;
-        self.erwarte_z(Z::GeschweiftZu)?;
+        // **O31: `via V` in place of the ABI half.** The number, the register
+        // map, the error convention and the named assumption come from the
+        // active target's binding of `V` (`crate::ziel::binde` fills them
+        // after the whole unit is read); until then they are placeholders.
+        let via = if self.friss_kw(Kw::Via) { Some(self.erwarte_ident()?) } else { None };
+        let (abi, arch, b) = if let Some(v) = &via {
+            let leer = |t: &str| Ident { text: t.to_string(), span: v.span };
+            (leer(""), leer("x86_64"), crate::ziel::platzhalter(v))
+        } else {
+            self.erwarte_kw(Kw::Abi)?;
+            let abi = self.erwarte_ident()?;
+            self.erwarte_kw(Kw::Arch)?;
+            let arch = self.erwarte_ident()?;
+            let b = self.sysbind_rumpf(abi.clone())?;
+            (abi, arch, b)
+        };
+        let ZielBindung { nummer, regs_in, regs_out, stapel, clobbers, errors, errno_werte, .. } = b;
         // E4: the clauses stand in a FIXED order, as at an `fn` -- a tool that has to
         // sort cannot say "`effects` is missing here".
         let requires = if self.friss_kw(Kw::Requires) {
@@ -5930,17 +5948,13 @@ impl<'a> Parser<'a> {
         };
         // `assume … falsifier …` or `kernel <path>` -- exactly one of the two (E3:
         // nothing is implicit, and a missing counterpart is the absence of both
-        // entries, a compile error at `P001`/`P029`).
-        let paarung = if self.friss_kw(Kw::Assume) {
-            let annahme = self.erwarte_ident()?;
-            let klasse = self.annahmeklasse()?;
+        // entries, a compile error at `P001`/`P029`). A `via` gate ends here:
+        // its counterpart is the binding's.
+        let paarung = if let Some(v) = &via {
             self.erwarte_z(Z::Semi)?;
-            SyscallPaarung::Annahme { annahme, klasse }
+            crate::ziel::platzhalter(v).paarung
         } else {
-            self.erwarte_kw(Kw::Kernel)?;
-            let pfad = self.pfad()?;
-            self.erwarte_z(Z::Semi)?;
-            SyscallPaarung::Kernel { pfad }
+            self.syspaarung()?
         };
         Ok(SyscallDecl {
             name,
@@ -5960,6 +5974,100 @@ impl<'a> Parser<'a> {
             effects,
             costs,
             paarung,
+            errno_werte,
+            via,
+            ziel: None,
+            span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// `sysbind = "number" constexpr "regs" "in" … "regs" "out" … { "stack" ident }
+    /// "clobbers" … "errors" …` -- the target-dependent half of a gate, shared by
+    /// the literal gate and the `target` binding (O31). The counterpart is read
+    /// by the caller; the one returned here is a placeholder.
+    fn sysbind_rumpf(&mut self, var: Ident) -> Erg<ZielBindung> {
+        let anfang = self.span();
+        self.erwarte_kw(Kw::Sysnumber)?;
+        let nummer = self.expr()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::In)?;
+        let regs_in = self.sysregs_in()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::Out)?;
+        let regs_out = self.sysregs_out()?;
+        // **Lane O-1: the `stack` clause.** Optional, repeatable, fixed
+        // position (E4) -- between `regs out` and `clobbers`. Zero for an
+        // ordinary gate, one for a clone gate, two or more for `N447`.
+        let mut stapel = Vec::new();
+        while self.friss_kw(Kw::Stack) {
+            stapel.push(self.erwarte_ident()?);
+        }
+        self.erwarte_kw(Kw::Clobbers)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let clobbers = self.identlist_leer_erlaubt()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        self.erwarte_kw(Kw::Errors)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let (errors, errno_werte) = self.errmaps()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        let mut b = crate::ziel::platzhalter(&var);
+        b.nummer = nummer;
+        b.regs_in = regs_in;
+        b.regs_out = regs_out;
+        b.stapel = stapel;
+        b.clobbers = clobbers;
+        b.errors = errors;
+        b.errno_werte = errno_werte;
+        b.span = anfang.bis_zu(self.vorheriger_span());
+        Ok(b)
+    }
+
+    /// `syspair = ( "assume" ident ( "falsifier" ident | "unfalsifiable" string )
+    /// | "kernel" path ) ";"`
+    fn syspaarung(&mut self) -> Erg<SyscallPaarung> {
+        if self.friss_kw(Kw::Assume) {
+            let annahme = self.erwarte_ident()?;
+            let klasse = self.annahmeklasse()?;
+            self.erwarte_z(Z::Semi)?;
+            Ok(SyscallPaarung::Annahme { annahme, klasse })
+        } else {
+            self.erwarte_kw(Kw::Kernel)?;
+            let pfad = self.pfad()?;
+            self.erwarte_z(Z::Semi)?;
+            Ok(SyscallPaarung::Kernel { pfad })
+        }
+    }
+
+    /// **O31: `targetdecl = "target" ident ( ";" | "abi" ident "arch" ident "{"
+    /// { targetbind } "}" )`, `targetbind = ident "=" sysbind syspair`.**
+    fn zieldecl(&mut self) -> Erg<ZielDecl> {
+        let anfang = self.erwarte_kw(Kw::Target)?;
+        let name = self.erwarte_ident()?;
+        if self.friss_z(Z::Semi) {
+            return Ok(ZielDecl {
+                name,
+                art: ZielArt::Wahl,
+                span: anfang.bis_zu(self.vorheriger_span()),
+            });
+        }
+        self.erwarte_kw(Kw::Abi)?;
+        let abi = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Arch)?;
+        let arch = self.erwarte_ident()?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut bindungen = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let var = self.erwarte_ident()?;
+            self.erwarte_z(Z::Gleich)?;
+            let mut b = self.sysbind_rumpf(var.clone())?;
+            b.paarung = self.syspaarung()?;
+            b.span = var.span.bis_zu(self.vorheriger_span());
+            bindungen.push(b);
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(ZielDecl {
+            name,
+            art: ZielArt::Block { abi, arch, bindungen },
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }
@@ -6004,18 +6112,23 @@ impl<'a> Parser<'a> {
     }
 
     /// `errmap = ident "=>" ident` -- errno to reason case, trailing comma optional.
-    fn errmaps(&mut self) -> Erg<Vec<(Ident, Ident)>> {
+    /// `errmap = ident [ "=" constexpr ] "=>" ident` -- the number is O31's:
+    /// a target whose kernel numbers an errno differently says so here.
+    fn errmaps(&mut self) -> Erg<(Vec<(Ident, Ident)>, Vec<Option<Expr>>)> {
         let mut liste = Vec::new();
+        let mut werte = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             let errno = self.erwarte_ident()?;
+            let wert = if self.friss_z(Z::Gleich) { Some(self.expr()?) } else { None };
             self.erwarte_z(Z::Doppelpfeil)?;
             let grund = self.erwarte_ident()?;
             liste.push((errno, grund));
+            werte.push(wert);
             if !self.friss_z(Z::Komma) {
                 break;
             }
         }
-        Ok(liste)
+        Ok((liste, werte))
     }
 
     fn regsliste(&mut self) -> Erg<Vec<(Ident, Ident)>> {
@@ -6214,6 +6327,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Boot
             | Kw::Arena
             | Kw::Syscall
+            | Kw::Target
             | Kw::Pub
             | Kw::When
     )

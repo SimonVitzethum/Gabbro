@@ -54,7 +54,18 @@ fn quiet_on_closed_output() {
 
 fn main() -> std::process::ExitCode {
     quiet_on_closed_output();
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    // **OFFEN O31: `--target T` selects the active system-call target** for every
+    // command, before any source is read: the parser fills every `via` gate from
+    // target `T`'s binding (`gabbro_syntax::ziel`). The flag and the environment
+    // variable are one input, so a script can say either.
+    if let Some(i) = args.iter().position(|a| a == "--target") {
+        if i + 1 < args.len() {
+            let t = args.remove(i + 1);
+            args.remove(i);
+            std::env::set_var("GABBRO_TARGET", t);
+        }
+    }
     if args.is_empty() {
         hilfe();
         return std::process::ExitCode::from(2);

@@ -32,7 +32,7 @@ impl fn h_b(n : u32)
 }
 
 entry e_a arch x86_64 {
-    regs in { }
+    regs in { n : rdi }
     regs out { }
     preserves { }
     clobbers { }
@@ -41,7 +41,7 @@ entry e_a arch x86_64 {
 }
 
 entry e_b arch x86_64 {
-    regs in { }
+    regs in { n : rdi }
     regs out { }
     preserves { }
     clobbers { }

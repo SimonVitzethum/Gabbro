@@ -269,6 +269,20 @@ struct metall_rahmen {
     uint64_t rip, cs, rflags, rsp, ss;   /* the interrupt frame */
 };
 
+/* -- The kernel service entry (OFFEN O31, Opus agent L). ---------------------
+ *
+ * A gate bound by `target … abi metal arch x86_64` lowers to `int $0x80`: the
+ * number in rax, its parameters in the registers the binding names, the answer
+ * in rax (`-errno` in -4095..-1, else the value) and NOTHING else destroyed.
+ * The runtime installs the entry at vector 0x80 and hands the saved frame to
+ * `metall_systemruf`, which the IMAGE supplies (weak: an image without it ends
+ * the machine on the first call, status 9). The per-gate contract is the named
+ * assumption the metal binding carries (`metal_kernel_contract` in the corpus).
+ * A program with its own `entry … vector 0x80` (`beispiele/07`) takes the slot
+ * instead and serves the calls itself. */
+#define METALL_SYSTEMRUF_VEKTOR 0x80u
+void metall_systemruf(struct metall_rahmen *r) __attribute__((weak));
+
 void metall_eoi(void);
 void metall_idt_setze(uint32_t vektor, void (*stub)(void));
 void metall_ipi_fest(uint32_t kern_nr, uint32_t vektor);   /* fixed IPI to one core */
@@ -292,6 +306,41 @@ void metall_ipi_nmi(uint32_t kern_nr);                     /* NMI to one core */
             "pushq %rax\n\t"                                              \
             "movq $metall_eintritt_c_" #NAME ", %rax\n\t"                 \
             "jmp metall_eintritt_gemeinsam\n");
+
+/* -- Entries on exceptions with a CPU error code (OFFEN O32 (9), Opus agent L).
+ *
+ * Vectors 8, 10..14, 17, 21, 29 and 30 push an error code the common stub must
+ * drop before `iretq`: `METALL_EINTRITT_FC` jumps into the twin
+ * `metall_eintritt_gemeinsam_fc` (eintritt_asm.h), and its C half sees the frame
+ * WITH the code (`struct metall_rahmen_fc`: the registers at the same offsets
+ * as `struct metall_rahmen`, so the same `r->rax` binding reads). Installed with
+ * `metall_idt_setze_fc`, which takes ONLY those vectors -- the plain installer
+ * keeps refusing them, so neither stub can land on the other's vector. */
+struct metall_rahmen_fc {
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    uint64_t fehlercode;
+    uint64_t rip, cs, rflags, rsp, ss;
+};
+
+void metall_idt_setze_fc(uint32_t vektor, void (*stub)(void));
+
+#define METALL_EINTRITT_FC(NAME, ...)                                     \
+    _Atomic uint32_t metall_eintritt_zaehler_##NAME;                      \
+    void metall_eintritt_c_##NAME(struct metall_rahmen *r);               \
+    void metall_eintritt_c_##NAME(struct metall_rahmen *r)                \
+    {                                                                     \
+        struct metall_rahmen_fc *rf = (struct metall_rahmen_fc *)(void *)r; \
+        (void)r;                                                          \
+        (void)rf;                                                         \
+        __VA_ARGS__;                                                      \
+        atomic_fetch_add_explicit(&metall_eintritt_zaehler_##NAME, 1u,     \
+                                  memory_order_release);                  \
+    }                                                                     \
+    __asm__(".text\n\t.global gabbro_eintritt_" #NAME "\n"                \
+            "gabbro_eintritt_" #NAME ":\n\t"                              \
+            "pushq %rax\n\t"                                              \
+            "movq $metall_eintritt_c_" #NAME ", %rax\n\t"                 \
+            "jmp metall_eintritt_gemeinsam_fc\n");
 
 /* -- The core limit (Opus agent J). ------------------------------------------
  *

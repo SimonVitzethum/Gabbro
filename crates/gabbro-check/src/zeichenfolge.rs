@@ -377,6 +377,8 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
             | ItemArt::Boot(_)
             | ItemArt::Syscall(_)
             | ItemArt::Profil(_)
+            | ItemArt::SysVar(_)
+            | ItemArt::Ziel(_)
             | ItemArt::ProfilBedarf(_) => {
                 let z = Zustand::neu();
                 for p in crate::praedikate_im_item(item) {

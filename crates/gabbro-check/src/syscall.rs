@@ -43,12 +43,25 @@ const REGISTER: &[&str] = &[
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Syscall(s) = &item.art else { return };
-        registerkarte(s, absagen);
-        fehlertabelle(baum, modul, s, absagen);
-        bauart(s, absagen);
+        // **O31:** a `via` gate no active target binds has placeholder ABI
+        // fields -- `N562`/`N563`/`N565` (`zielbindung.rs`) say why, and the
+        // shape rules have nothing to read. Its contract half is still held.
+        if !s.ungebunden() {
+            gestalt(baum, modul, s, absagen);
+        }
         kostenversprechen(baum, modul, s, absagen);
         buffer_bound(baum, modul, s, absagen);
     });
+    // **O31 + O32 (7):** the target bindings and the entry's register binding.
+    crate::zielbindung::pass(baum, absagen);
+}
+
+/// The target-dependent shape of one gate -- register map, errno map, machine and
+/// counterpart. `zielbindung.rs` runs it over every INACTIVE target's binding too.
+pub(crate) fn gestalt(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Absagen) {
+    registerkarte(s, absagen);
+    fehlertabelle(baum, modul, s, absagen);
+    bauart(s, absagen);
 }
 
 /// **`N464` -- a buffer the kernel moves bytes through is a BYTE buffer with a declared

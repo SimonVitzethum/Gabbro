@@ -58,6 +58,7 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include "metall.h"
+#include "eintritt_asm.h"
 
 /* -- The compiler's four freestanding obligations. --------------------------
  *
@@ -282,7 +283,8 @@ extern char metall_ausnahme_0[], metall_ausnahme_1[], metall_ausnahme_2[], metal
     metall_ausnahme_20[], metall_ausnahme_21[], metall_ausnahme_22[], metall_ausnahme_23[],
     metall_ausnahme_24[], metall_ausnahme_25[], metall_ausnahme_26[], metall_ausnahme_27[],
     metall_ausnahme_28[], metall_ausnahme_29[], metall_ausnahme_30[], metall_ausnahme_31[];
-extern char metall_takt_eintritt[], metall_unecht[], metall_wecken_eintritt[];
+extern char metall_takt_eintritt[], metall_unecht[], metall_wecken_eintritt[],
+    metall_systemruf_eintritt[];
 
 static void idt_setze(int v, void *ziel)
 {
@@ -313,6 +315,7 @@ static void idt_bau(void)
     }
     idt_setze(0x40, metall_takt_eintritt);
     idt_setze(0x41, metall_wecken_eintritt);
+    idt_setze(METALL_SYSTEMRUF_VEKTOR, metall_systemruf_eintritt);   /* O31: kernel service entry */
     idt_setze(0xFF, metall_unecht);
 }
 
@@ -669,6 +672,28 @@ void metall_wecken(void)
     lapic_schreib(LAPIC_EOI, 0);
 }
 
+/* The kernel service entry's C half (OFFEN O31). The image's kernel -- Caprock,
+ * or a C body the image links -- supplies `metall_systemruf` and answers every
+ * number it serves in `r->rax` under the Linux x86_64 convention (`-errno` in
+ * -4095..-1, else the value). An image that supplies none ends the machine
+ * loudly on the first gate call: a number nobody serves is never answered with
+ * an invented errno (the stub hands an unlisted errno to the compiler as
+ * unreachable). Runs with IF = 0 (an interrupt gate), on the caller's stack. */
+__asm__(METALL_EINTRITT_GEMEINSAM_ASM);
+
+void metall_systemruf_c(struct metall_rahmen *r);
+void metall_systemruf_c(struct metall_rahmen *r)
+{
+    if (metall_systemruf) {
+        metall_systemruf(r);
+        return;
+    }
+    schreibe_roh("METALL: system call number ");
+    zahl_roh(r->rax);
+    schreibe_roh(" entered through vector 0x80, and the image supplies no kernel service\n");
+    metall_ende(9);
+}
+
 void metall_eoi(void)
 {
     lapic_schreib(LAPIC_EOI, 0);
@@ -717,6 +742,25 @@ void metall_idt_setze(uint32_t vektor, void (*stub)(void))
         schreibe_roh("METALL: entry vector ");
         zahl_roh(vektor);
         schreibe_roh(" is the runtime's own, carries a CPU error code, or is out of range -- refused\n");
+        metall_ende(5);
+    }
+    uint64_t f = ia_aus();
+    idt_setze((int)vektor, (void *)stub);
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
+    ia_her(f);
+}
+
+/* The error-code twin (OFFEN O32 (9), Opus agent L): ONLY the vectors whose
+ * exception pushes a CPU error code, with a `METALL_EINTRITT_FC` stub that
+ * drops it (`metall_eintritt_gemeinsam_fc`). Any other vector is refused here,
+ * as an error-code vector is refused by `metall_idt_setze`: a stub on the
+ * wrong kind of vector would `iretq` one word off. */
+void metall_idt_setze_fc(uint32_t vektor, void (*stub)(void))
+{
+    if (!hat_fehlercode(vektor) || stub == 0) {
+        schreibe_roh("METALL: entry vector ");
+        zahl_roh(vektor);
+        schreibe_roh(" pushes no CPU error code -- the error-code stub would iretq off by one word; refused\n");
         metall_ende(5);
     }
     uint64_t f = ia_aus();

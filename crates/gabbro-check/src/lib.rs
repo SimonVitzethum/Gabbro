@@ -80,6 +80,7 @@ pub mod abgeleitet;
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
 pub mod syscall;
+pub mod zielbindung;
 /// **Lane O-1 -- the checked clone handoff (K-1).** The `stack` clause
 /// against its shape (`N446`/`N447`) and the `child` path against
 /// no-leave (`N448`), no-fall-through (`N449`) and the gate behind it
@@ -821,6 +822,8 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
         // expression** -- keys and `assume` names, never types.
         | ItemArt::Concurrent(_)
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_) => {}
     }
 }
@@ -1177,6 +1180,8 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     }

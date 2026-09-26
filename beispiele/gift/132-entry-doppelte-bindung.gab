@@ -15,13 +15,15 @@ module gift::entry_doppelt {
 
 entry e vector 1 arch x86_64 {
     regs in  { a : rax, a : rdi, }
-    regs out { r : rax, }
+    regs out { }
     preserves { rbx }
     clobbers  { rcx }
     stack s per cpu nested never
     dispatch gift::entry_doppelt::ziel;
 }
 
-extern fn ziel() -> never effects { diverges } costs <= 1 ops;
+-- (Opus agent L, 2026-09-26: the entry's registers now match its dispatch's
+-- signature -- `N561` -- so this probe falls for its own reason alone.)
+extern fn ziel(a : u64, b : u64) -> never effects { diverges } costs <= 1 ops;
 
 }

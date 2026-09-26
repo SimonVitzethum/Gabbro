@@ -20,6 +20,7 @@ import Grammatik.Zertifikat.G130_derived_contract_pure
 import Grammatik.Zertifikat.G157_worker_pool
 import Grammatik.Zertifikat.G15_own_traegt_beide_rechte
 import Grammatik.Zertifikat.G162_geteilte_flagge
+import Grammatik.Zertifikat.G165_gp_eintritt
 import Grammatik.Zertifikat.G16_by_ops_am_feld
 import Grammatik.Zertifikat.G219_unaeres_minus
 import Grammatik.Zertifikat.G34_markierter_wert

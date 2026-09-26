@@ -84,12 +84,14 @@ spec fn path_nul_terminated(path : ptr<normal, r> u8, pathlen : u64) -> bool
     effects { pure }
     = pathlen >= 1 && path[pathlen - 1] == 0;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_gate_open;
+
 syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64, mode : u64) -> u64 or OpenError
-    abi linux arch x86_64 number 2
-    regs in { rdi = path, rsi = flags, rdx = mode, r10 = pathlen }
-    regs out { rax }
-    clobbers { rcx, r11 }
-    errors { ENOENT => NotFound, EACCES => Denied, EEXIST => Exists }
+    via sys_gate_open
     requires pathlen <= MAXLEN, pathlen <= lenof(path), path_nul_terminated(path, pathlen)
     -- 4294967295 is 2^32 - 1, the carrier's bound, spelled out: the range
     -- fact reaches the wrapper's `return n` only as a literal (a `const`
@@ -98,8 +100,7 @@ syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64, mode : u
     -- the carrier, so the one wrap is range-honest.
     ensures result <= 4294967295
     effects { reads path }
-    costs <= 40 ops
-    assume linux_open_contract falsifier sonde_open;
+    costs <= 40 ops;
 
 -- The one wrap: raw answer in, carrier out. Four registers where the C
 -- gate takes three: the length rides along in `r10` because a Gabbro path
@@ -115,5 +116,31 @@ impl fn oeffnen(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> Fd or O
     let n = gate_open(path, pathlen, flags, 0) else (e) { return e; }
     return n;
 }
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_gate_open = number 2
+        regs in { rdi = path, rsi = flags, rdx = mode, r10 = pathlen }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { ENOENT => NotFound, EACCES => Denied, EEXIST => Exists }
+        assume linux_open_contract falsifier sonde_open;
+}
+
+target metal abi metal arch x86_64 {
+    sys_gate_open = number 2
+        regs in { rdi = path, rsi = flags, rdx = mode, r10 = pathlen }
+        regs out { rax }
+        clobbers { }
+        errors { ENOENT = 2 => NotFound, EACCES = 13 => Denied, EEXIST = 17 => Exists }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

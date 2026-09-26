@@ -1,0 +1,41 @@
+-- 165 -- an entry on a CPU exception that pushes an error code (OFFEN O32 (9), Opus agent L).
+--
+-- A kernel's general-protection handler: `entry gp vector 13`. Vector 13 is one of the
+-- exceptions (8, 10..14, 17, 21, 29, 30) for which the CPU pushes an ERROR CODE between the
+-- saved state and the return address. Until Opus agent L the bare-metal runtime refused
+-- such an entry (by the build and by `metall_idt_setze`): its common stub popped no code, so
+-- `iretq` would have taken the code for the return address. The runtime now has the twin
+-- stub (`metall_eintritt_gemeinsam_fc`, `laufzeit/metall/eintritt_asm.h`) that drops the
+-- code before `iretq`; `gabbro build` and the freestanding stage bind such an entry with
+-- `METALL_EINTRITT_FC` and install it with `metall_idt_setze_fc`, which takes ONLY those
+-- vectors (and the plain installer keeps refusing them).
+--
+-- Stage 11 boots it (`metall165`): three non-canonical loads each raise #GP(0), the entry
+-- runs, and the run continues -- the harness's C half steps the faulting instruction, the
+-- one thing a Gabbro dispatch cannot do (it names no return address). The gift
+-- (`metall165-gift`) builds the PLAIN stub onto the same vector: `iretq` takes the error
+-- code for the return address, and the machine never reports.
+--
+-- What is not claimed: the error code does not reach the dispatch (an entry's `regs in`
+-- name registers, and the code is on the stack -- the C half sees it in
+-- `struct metall_rahmen_fc`); the declared `stack … ist 1` is not switched to (the entry
+-- runs on the interrupted stack, OFFEN O32 (8)).
+
+module beispiel::gp_eintritt {
+
+entry gp vector 13 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rax, rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r11, r12, r13, r14, r15 }
+    clobbers  { }
+    stack gp_stapel per cpu ist 1 nested never
+    dispatch gp_verteiler;
+}
+
+impl fn gp_verteiler()
+    effects { pure }
+{
+    return;
+}
+
+}

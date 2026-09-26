@@ -288,6 +288,12 @@ pub fn sammle_mit_quelle(baum: &Programm, quelle: &str) -> Vec<Eintrag> {
     profil_und_bedarf(baum, &mut out);
     reglokalannahmen(baum, &mut out);
     sammle_items(&baum.items, quelle, &mut out);
+    // **OFFEN O31 (Opus agent L): an assumption another target binds is not in force.**
+    // A `target` block's assumption belongs to that target (`N566`: no other target, no
+    // `progress` names it); under the ACTIVE target the program runs on its own bindings,
+    // so the manifest of this build names those and not the other kernel's.
+    let fremd = gabbro_syntax::ziel::fremde_zielannahmen(baum);
+    out.retain(|e| e.art != "assume" || !fremd.contains(&e.name));
     out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out
 }
@@ -657,6 +663,7 @@ pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_byte_legen",
     "sonde_freigabe",
     "sonde_keine_ueberbreite",
+    "sonde_metall_systemruf",
     "sonde_mxcsr_rne",
     "sonde_open",
     "sonde_rdtscp",

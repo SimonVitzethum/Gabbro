@@ -1,0 +1,110 @@
+-- 163 -- system calls as named variables, bound per target (OFFEN O31, Opus agent L).
+--
+-- Until this example a gate carried its kernel in its own text: `abi linux arch x86_64
+-- number 1`, the register map, the errno map and the named assumption, all at the gate
+-- (`beispiele/74` before the rewrite). A program that should run on another kernel -- the
+-- bare-metal image, Caprock -- had to be edited gate by gate, and nothing held the edits
+-- together.
+--
+-- Here the gate names a VARIABLE (`via sys_write`) and nothing about any kernel. `syscall
+-- sys_write;` declares the variable. Each `target` block binds it for one kernel ABI:
+-- the number, the register map, what is destroyed, the errno numbers (the error
+-- convention) and the named assumption the gate's contract rests on. `target
+-- linux_x86_64;` selects the active one; `gabbro … --target metal` (or `GABBRO_TARGET`)
+-- selects the other for one run, and the parser fills the gate from that binding.
+--
+-- What the checker holds (`zielbindung.rs`): the variable is declared and one gate's
+-- (`N562`); EVERY target binds it (`N563`) -- switching never meets an unbound gate; a
+-- binding names a declared variable once per target (`N564`); the active target is
+-- determined (`N565`); the two targets rest the gate on TWO assumptions, never silently one
+-- (`N566`); and no literal gate stands beside the targets (`N567`). The inactive binding is
+-- checked like the active one (`N063`-`N068`, `N004`/`N005`).
+--
+-- The loop below says `progress sys_write`: the variable, not an assumption. It resolves
+-- to the assumption the ACTIVE target binds -- the loop's liveness follows the kernel the
+-- gate calls. `progress linux_write_contract` here would be refused (`N566`): under
+-- `metal` the loop would still rest on Linux.
+--
+-- The metal binding lowers to `int $0x80` into the image's kernel entry
+-- (`laufzeit/metall/`: vector 0x80, `metall_systemruf`), which destroys no register -- so
+-- its `clobbers` is empty where Linux's `syscall` names `rcx`, `r11` -- and it numbers the
+-- errnos explicitly (`EBADF = 9`): the error convention is the target's, not the reason's.
+
+module beispiel::systemruf_variablen {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+extern fn schreiber_haengt() -> never effects { diverges } costs <= 1 ops;
+
+-- The variable: a system call without a kernel.
+syscall sys_write;
+
+-- The gate: its contract, its effects, its cost -- and the variable.
+syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
+    via sys_write
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    costs <= 8 ops;
+
+-- Write the frame up to `mal` times, stopping at the first empty answer. The watchdog is
+-- the falsifier of the assumption the ACTIVE target binds for `sys_write`.
+impl fn wiederholt_schreiben(fd : u64, buf : u64, len : u64, mal : u32) -> u32 or IoError
+    requires len <= 1024
+    effects { pure }
+{
+    let mut geschrieben : u32 = 0;
+    forever sendend
+        per_pass bounded 64 ops
+        on_exceeded schreiber_haengt
+        effects { pure }
+        progress sys_write
+    {
+        if geschrieben >= mal {
+            leave sendend;
+        }
+        let n = write(fd, buf, len) else (e) { return e; }
+        if n == 0 {
+            leave sendend;
+        }
+        narrow geschrieben to 0 ..< 1000 else { return geschrieben; }
+        geschrieben += 1;
+    }
+    return geschrieben;
+}
+
+-- The kernel of the hosted build.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+-- The kernel of the bare-metal image: the same call, another contract.
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
+
+}

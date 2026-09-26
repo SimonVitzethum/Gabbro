@@ -309,13 +309,18 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 52 | **plattform_takt_stabil** | `sonde_tick` | `P4` | **PROGRAM** |
 | 53 | **linux_open_contract** | `sonde_open` | `P4` | **PROGRAM** |
 | 54 | **linux_read_contract** | `sonde_read` | `P4` | **PROGRAM** |
+| 55 | **metal_kernel_contract** | `sonde_metall_systemruf` | `P4` | **PROGRAM** |
 
-**54 rows, 21 of them with a PROGRAM, 21 of them `P4`** — and one probe name carries two rows
-(`sonde_vtd_srtp`, rows 8 and 29), which is why 54 assumptions stand under 53 names (and
+**55 rows, 22 of them with a PROGRAM, 22 of them `P4`** — and one probe name carries two rows
+(`sonde_vtd_srtp`, rows 8 and 29), which is why 55 assumptions stand under 54 names (and
 `sonde_tick` carries rows 39 and 52). Rows 53 and 54 (`beispiele/149`/`150`, fix lane F5,
 review G04 F4) split the open and read gates off `linux_write_contract`, which they had
 borrowed with its write-only probe; each arrives with its own program (`sonde_open`,
-`sonde_read`), so the quota rises because the object grew. Row 52
+`sonde_read`), so the quota rises because the object grew. Row 55 (Opus agent L, OFFEN O31)
+is the assumption every `target … abi metal` binding rests on -- the image's kernel entry at
+vector 0x80 keeps the Linux x86_64 convention -- and arrives with its program
+(`sonde_metall_systemruf`: the runtime's own entry text, assembled into a userland program and
+entered through a hand-built interrupt frame; `--kaputt` must fall). Row 52
 (`beispiele/100`, lane E6) arrives with its probe: the platform-clock assumption is what the
 tick probe observes -- a standstill or a step back refutes it, and both are the probe's
 controls. Same rule as every earned diff before it: the assumption and its probe land

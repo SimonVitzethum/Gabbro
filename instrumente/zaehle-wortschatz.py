@@ -133,7 +133,14 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # the floor, neither commits new storage below the ceiling -- and the reason
 # stands at the entry in `kw.rs`. The second mark does NOT move; the word is
 # `ctx`, so the third mark does not move either.
-MARKE_WOERTER = 244
+#
+# **244 -> 245 on 2026-09-26 (Opus agent L, OFFEN O31).** `target` names the
+# statement that binds system-call variables for one kernel ABI
+# (`dokumente/SYNTAX.md` §12.3): no existing form carries it -- `abi` names
+# the ABI of ONE gate, `profile` holds modes and assumption references and
+# binds no names -- and the reason stands at the entry in `kw.rs`. The second
+# mark does NOT move; the word is `ctx`, so the third mark does not move either.
+MARKE_WOERTER = 245
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

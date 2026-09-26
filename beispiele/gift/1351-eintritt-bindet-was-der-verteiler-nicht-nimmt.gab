@@ -1,0 +1,21 @@
+-- erwartet: N561
+-- Gift 1351 -- **An entry whose registers are not its dispatch's signature.** `regs in` binds two
+-- registers, the dispatch takes one parameter: the bare-metal stub passes the `regs in`
+-- registers in order as the dispatch's arguments, and with a mismatch it could only guess
+-- which register feeds which parameter (OFFEN O32 (7); before `N561` the image linked and
+-- ended the machine when entered).
+
+module gift::eintritt_bindet_was_der_verteiler_nicht_nimmt {
+
+entry eintritt vector 33 arch x86_64 {
+    regs in  { nr : rax, a0 : rdi }
+    regs out { ret : rax }
+    preserves { }
+    clobbers  { }
+    stack kernstapel
+    dispatch verteiler;
+}
+
+extern fn verteiler(nr : u64) -> u64 effects { pure };
+
+}

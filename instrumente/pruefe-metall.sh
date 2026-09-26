@@ -38,6 +38,15 @@
 #               fired by fixed IPIs while threads take the `masks irqs` lock
 #   metall07    an entry's register binding (`regs in`/`regs out`) through `int $0x80`,
 #               and an NMI entry fired by an NMI IPI
+# Opus agent L (OFFEN O31) added the gates bound for the metal target:
+#   metall164   the program IS the kernel: its gate's `int $0x80` lands in its own entry
+#   metall163   `--target metal`: the gate enters the runtime's vector-0x80 slot and the
+#               image's C kernel (`metall_systemruf`) serves it
+#   metall165   an entry on #GP (vector 13, pushes an error code) through the twin stub
+#               `METALL_EINTRITT_FC` (OFFEN O32 (9))
+# with gifts: the entry answers `len + 1` (164), an image with no kernel (163: the first
+# gate call ends the machine, status 9, never an invented answer), and the plain stub on
+# the error-code vector (165: `iretq` takes the code for the return address).
 # with gifts: `17 -> 18` (158) and the masked lock built unmasked (59: hangs, and the
 # handler reports that it landed on a core with a claim on the lock).
 # Every image compiles with `-nostdinc` (the compiler's headers + `laufzeit/metall/include`).
@@ -516,6 +525,115 @@ int gabbro_metall_haupt(void)
 }
 C07
 
+# -- OFFEN O31 (Opus agent L): system calls bound for the bare-metal target. -----------
+#   metall164  the program IS the kernel: 164's gate executes `int $0x80` into 164's own
+#              `entry systemruf vector 0x80` (installed by the driver; the register binding
+#              is the entry's: nr=rax a0=rdi a1=rsi a2=rdx -> ret=rax, `N561`-checked)
+#   metall163  163 emitted with `--target metal`: the gate enters the RUNTIME's vector-0x80
+#              slot, and the image's C kernel (`metall_systemruf` below) serves number 1 --
+#              the text reaches the serial port through a real `int $0x80`
+#   gifts      metall163-ohne-kern: the image supplies no kernel, and the first gate call
+#              ends the machine (status 9) -- never an invented answer;
+#              metall164-gift: the entry answers `len + 1`, and the count moves
+mkdir -p "$ARB/metall164" "$ARB/metall164-gift" "$ARB/metall163" "$ARB/metall163-ohne-kern"
+einheit metall164 "$W/beispiele/164-eigener-kern.gab"
+einheit metall164-gift "$W/beispiele/164-eigener-kern.gab" 's/^    return len;$/    return len + 1u;/'
+if cmp -s "$ARB/metall164/einheit.c" "$ARB/metall164-gift/einheit.c"; then
+    echo "  metall164-gift: the mutation did not apply -- the gift would measure nothing"; exit 1
+fi
+TREIBER164='#include "metall.h"
+#include "einheit.c"
+METALL_EINTRITT(systemruf, 0, r->rax = (uint64_t)gabbro_eintritt_systemruf_verteiler(r->rax, r->rdi, r->rsi, r->rdx))
+int gabbro_metall_haupt(void)
+{
+    metall_idt_setze(gabbro_eintritt_systemruf_VEKTOR, gabbro_eintritt_systemruf);
+    uint64_t a = schreibe(1u, 3u);
+    uint64_t b = schreibe(7u, 3u);
+    metall_schreibe("164 schreibe "); metall_zahl(a);
+    metall_schreibe(" badfd "); metall_zahl(b); metall_schreibe("\n");
+    return (a == 3u && b == 900u) ? 0 : 1;
+}
+'
+printf '%s' "$TREIBER164" > "$ARB/metall164/treiber.c"
+printf '%s' "$TREIBER164" > "$ARB/metall164-gift/treiber.c"
+export GABBRO_TARGET=metal
+einheit metall163 "$W/beispiele/163-systemruf-variablen.gab"
+einheit metall163-ohne-kern "$W/beispiele/163-systemruf-variablen.gab"
+unset GABBRO_TARGET
+if ! grep -q 'int \$0x80' "$ARB/metall163/einheit.c" || grep -q '"syscall' "$ARB/metall163/einheit.c"; then
+    echo "  metall163: \`--target metal\` did not bind the gate to \`int \$0x80\`"; exit 1
+fi
+TREIBER163_HAUPT='int gabbro_metall_haupt(void)
+{
+    static const char text[] = "163 metal ok\n";
+    uint32_t w = 0u, w2 = 0u;
+    IoError g = IoError_Interrupted, g2 = IoError_Interrupted;
+    bool ok = wiederholt_schreiben(1u, (uint64_t)text, 13u, 2u, &w, &g);
+    bool ok2 = wiederholt_schreiben(7u, (uint64_t)text, 13u, 2u, &w2, &g2);
+    metall_schreibe("163 geschrieben "); metall_zahl(ok ? w : 999u);
+    metall_schreibe(" badfd "); metall_zahl(!ok2 && g2 == IoError_BadFd); metall_schreibe("\n");
+    return (ok && w == 2u && !ok2 && g2 == IoError_BadFd) ? 0 : 1;
+}
+'
+{
+    printf '#include "metall.h"\n#include "einheit.c"\n'
+    cat <<'C163'
+/* The image's kernel (metall.h `metall_systemruf`): number 1 writes the frame to the serial
+ * port for descriptor 1 and answers the count; another descriptor answers -EBADF, another
+ * number -ENOSYS. The Linux x86_64 convention, as `metal_kernel_contract` names it. */
+void metall_systemruf(struct metall_rahmen *r)
+{
+    if (r->rax != 1u) { r->rax = (uint64_t)(int64_t)-38; return; }
+    if (r->rdi != 1u) { r->rax = (uint64_t)(int64_t)-9; return; }
+    const char *p = (const char *)r->rsi;
+    char puffer[64];
+    uint64_t n = r->rdx < 63u ? r->rdx : 63u;
+    for (uint64_t i = 0; i < n; i++) puffer[i] = p[i];
+    puffer[n] = 0;
+    metall_schreibe(puffer);
+    r->rax = n;
+}
+C163
+    printf '%s' "$TREIBER163_HAUPT"
+} > "$ARB/metall163/treiber.c"
+{ printf '#include "metall.h"\n#include "einheit.c"\n'; printf '%s' "$TREIBER163_HAUPT"; } \
+    > "$ARB/metall163-ohne-kern/treiber.c"
+
+# -- OFFEN O32 (9) (Opus agent L): an entry on an exception that pushes an error code. ----
+#   metall165       165's `entry gp vector 13` through the twin stub (`METALL_EINTRITT_FC`,
+#                   installed by `metall_idt_setze_fc`): three non-canonical loads raise
+#                   #GP(0); the C half steps the 3-byte faulting load (`movq (%rax), %rax`)
+#                   -- the one thing a dispatch cannot do -- and the run goes on
+#   metall165-gift  the PLAIN stub on the same vector (installed through the fc installer so
+#                   the build does not refuse it first): `iretq` takes the error code for the
+#                   return address, and the machine never reports
+mkdir -p "$ARB/metall165" "$ARB/metall165-gift"
+einheit metall165 "$W/beispiele/165-gp-eintritt.gab"
+einheit metall165-gift "$W/beispiele/165-gp-eintritt.gab"
+TREIBER165_HAUPT='int gabbro_metall_haupt(void)
+{
+    metall_idt_setze_fc(gabbro_eintritt_gp_VEKTOR, gabbro_eintritt_gp);
+    for (int i = 0; i < 3; i++) {
+        uint64_t x = 0x8000000000000000ull;
+        __asm__ __volatile__("movq (%%rax), %%rax" : "+a"(x) :: "memory");
+    }
+    uint32_t n = atomic_load_explicit(&metall_eintritt_zaehler_gp, memory_order_acquire);
+    metall_schreibe("165 gp "); metall_zahl(n);
+    metall_schreibe(" fehlercode "); metall_zahl(gp_code); metall_schreibe("\n");
+    return (n == 3u && gp_code == 0u) ? 0 : 1;
+}
+'
+{
+    printf '#include "metall.h"\n#include "einheit.c"\nstatic volatile uint64_t gp_code = 99u;\n'
+    printf 'METALL_EINTRITT_FC(gp, gabbro_eintritt_gp_verteiler(); gp_code = rf->fehlercode; rf->rip += 3u)\n'
+    printf '%s' "$TREIBER165_HAUPT"
+} > "$ARB/metall165/treiber.c"
+{
+    printf '#include "metall.h"\n#include "einheit.c"\nstatic volatile uint64_t gp_code = 99u;\n'
+    printf 'METALL_EINTRITT(gp, 0, gabbro_eintritt_gp_verteiler(); ((struct metall_rahmen *)r)->rip += 3u)\n'
+    printf '%s' "$TREIBER165_HAUPT"
+} > "$ARB/metall165-gift/treiber.c"
+
 # -- `gabbro build` links the image ITSELF (Opus agent J). A `metal <dir>` line in the
 #    manifest makes the build compile `<unit>.metall.c` freestanding and link it with the
 #    runtime into `<unit>.metall.elf` + `<unit>.metall.boot.elf`; the boot below takes that
@@ -585,7 +703,10 @@ baue metall59 "" || exit 1
 baue metall59-gift "" || exit 1
 baue metall07 "" || exit 1
 baue grenze "" || exit 1
-echo "  built and linked: 20 freestanding images + 2 linked by gabbro build (no libc, no undefined symbol, no pthread/clone/futex)"
+for n in metall164 metall164-gift metall163 metall163-ohne-kern metall165 metall165-gift; do
+    baue "$n" "" || exit 1
+done
+echo "  built and linked: 26 freestanding images + 2 linked by gabbro build (no libc, no undefined symbol, no pthread/clone/futex)"
 
 # -- The hosted counter-probe of the SAME interface (laufzeit/faden.c, Linux x86_64 only).
 #    200000 start/join rounds of an empty root on ONE stack. Before 2026-09-26 the parent
@@ -647,6 +768,16 @@ pruefe metall07 "07 syscall 71234 erhalten 1 nmi 1"
 pruefe bau157 "METALL-VERTEILUNG 0 1 1 0"
 pruefe bau59 "METALL-VERTEILUNG 0 0 0 0"
 pruefe grenze "METALL-KERNE 2" "grenze kerne 2 zellen 6"
+pruefe metall164 "164 schreibe 3 badfd 900"
+pruefe metall163 "163 metal ok" "163 geschrieben 2 badfd 1"
+gift metall164-gift "the program's own kernel entry answers len + 1: the count moves"
+pruefe metall165 "165 gp 3 fehlercode 0"
+METALL_ZEIT=20 gift metall165-gift "the plain stub on an error-code vector: iretq takes the code for the return address"
+gift metall163-ohne-kern "no kernel in the image: the first gate call ends the machine (status 9)"
+if ! grep -q "entered through vector 0x80, and the image supplies no kernel service" "$ARB/metall163-ohne-kern/serial.log"; then
+    echo "  metall163-ohne-kern: it did not end in success, but not for the named reason"
+    BEFUND=1
+fi
 gift metall158-gift "stored value 17 -> 18: the sum moves to 119"
 METALL_ZEIT=30 gift metall59-gift "TAKT unmasked: an entry lands on a core with a claim on TAKT (ticket drawn or held) and waits behind the thread it interrupted"
 # ... and it bites for the NAMED reason, not for any hang: the handler reported where it
@@ -661,4 +792,4 @@ if [ "$BEFUND" != 0 ]; then
     echo "== METALL: FINDING (see above) =="
     exit 1
 fi
-echo "== METALL: $N_GEBOOTET booted on qemu -smp 4, every expectation held, 5 gifts bite =="
+echo "== METALL: $N_GEBOOTET booted on qemu -smp 4, every expectation held, 8 gifts bite =="
