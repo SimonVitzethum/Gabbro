@@ -1,0 +1,9 @@
+-- **Link probe 1248 (Opus agent F): one module in two units.** This unit defines
+-- `werk::eins`; the app `1248-modul-doppelt-app.gab` defines `werk::zwei` in a module of
+-- the same name. Each is clean alone; the linked program would declare `werk` twice, so it
+-- cannot be composed and its whole-program check cannot run -- the link refuses (`N516`).
+module werk {
+
+pub impl fn eins() effects { pure } costs <= 8 ops { return; }
+
+}

@@ -3525,7 +3525,12 @@ MARKE_EMIT=138
 # with LG001) emits and compiles. Re-measured by the merger.
 # **144 -> 145 on 2026-09-26 (merge of lane 260).** One more probe under `messung/` emits now
 # that `start`/`child` lower. Re-measured by the merger.
-MARKE_EMIT_M=145
+# **145 -> 146 on 2026-09-26 (merge of Opus E, linking).** One link probe under
+# `messung/proben/verbund/` emits. Re-measured by the merger.
+# **146 -> 152 on 2026-09-26 (merge of Opus F).** Six new link probes under
+# `messung/proben/verbund/` (1246-1248 and the guarded / both-threads twins) emit. The lane
+# measured no delta on its older base; re-measured here by the merger.
+MARKE_EMIT_M=152
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

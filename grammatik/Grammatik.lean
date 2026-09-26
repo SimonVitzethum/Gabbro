@@ -341,3 +341,5 @@ import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.AtomarRuheNutzer
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
+import Grammatik.Zielsatz.Verbund
+import Grammatik.Zielsatz.VerbundZeuge

@@ -592,6 +592,29 @@ ask and does not answer.
 > after the last promise break the hold, every block is walked, early exits are releases,
 > bound indices are never countable. The row is still syntactic and still not a proof;
 > **it is not the rule half (2) below**, which asks for a checker REFUSAL and stays open.)
+>
+> **STATUS 2026-09-26 (lane 263, `messung/muse/MUSE-REPORT-263.md`): half (2) is DONE --
+> the refusal is `N511` (`crates/gabbro-check/src/freigabe_pruef.rs`, sentence
+> `sperren.freigabe`).** At every locked-section exit (`release`, early `return`,
+> `leave`, `next`) the invariant must FOLLOW from the invariant at acquire (the
+> frame), the section's own direct writes (`cell == const` facts) and the callees'
+> `ensures` equalities -- never their bodies -- decided over cells and constants with
+> `ptr`-parameter-to-carrier resolution. The verdict is the shared
+> `freigabe::beurteile`, so the `RELEASE HOLDS` row and the refusal agree by
+> construction (pinned by `freigabe_zeile_und_n511_stimmen_ueberein`). 119 is silent
+> (its `k.slots[0].x = 40` through `k : ptr A` establishes `40 <= GRENZE` -- the false
+> positive lane 204 measured is closed by reading the write, not by weakening the
+> rule); 124 and 157 hold from the promise; 118 has no section. Corpus verdict diff:
+> no clean file falls; `beispiele/119`'s row moves UNPROVED to HOLDS. Poison probes
+> `beispiele/gift/1261`-`1264` (weak `setze`, overwrite after promise, early return,
+> one-cell direct write), each `N511` alone.
+>
+> Model correspondence (stated, not proved): `N511` discharges the release half of
+> `SperrWechselG` (`Zielsatz/Spec.lean`: every release leaves a memory where the
+> invariant holds), with the acquire half as the frame premise. The bridge from the
+> Rust verdict to the G term stays open: the analysis runs on surface syntax, the leg
+> on `RufMaschineG` memories -- the same standing as every other checker sentence
+> against its leg.
 
 `setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
 and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a
@@ -603,9 +626,9 @@ asks the question the model asks.
 | | |
 |---|---|
 | **what is NOT open** | the model side. `Korpus124.lean`'s `kP` carries the stronger contract (the one the hand model `mP` always had), every premise group is proved on it, and `schlusssatz_124` is about `kP`. Nothing is claimed about the `.gab` file |
-| **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. (2) **the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision |
+| **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. **DONE by lane 204 (see STATUS above).** (2) ~~**the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision~~ -- **DONE by lane 263 (`N511`, see STATUS above)** |
 | **why it must not be closed by strengthening alone** | strengthening the file makes the corpus green and leaves the blind spot in place. *The finding is about the checker; the file is only where it became visible* |
-| **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one |
+| **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one -- **built by lane 263 (`N511`), with the section's own writes and the acquire frame beside the promises; re-measured there (no clean file falls)** |
 
 ---
 
@@ -1029,6 +1052,22 @@ The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= 
 | **`lenof` of a pointer is decided only where an array decays** | along a forwarding chain it is the caller's own promise, carried by the same clause; a pointer out of a field or a computation cannot answer (refused, fail-closed) |
 | **what would close it** | an `AxPre` field in the declaration exported from each gate's `requires`, the caller obligation in `NutzerPflicht`, and the run-coincidence theorem that lets premise (c) drop to well-formed calls |
 
+> **STATUS 2026-09-26 (lane 262): narrowed on all four rows, closed on none.**
+> `N506` holds `extern fn` byte buffers with a length parameter to the same
+> `requires x <= lenof(p)` clause `N464` demands at `syscall` gates
+> (`beispiele/64` tightened, no other accepted program falls). `N507` decides
+> the NUL obligation where the program builds the buffer -- a proved
+> `buf[L-1] = 0` store, an untouched zeroed buffer, or forwarding under the
+> caller's own clause; unseen pointers keep the named `V`. Example 96's write
+> gate says `reads buf` (the `pure` fiction fixed, callers carry
+> `reads WINDOW`); gifts 1067/1068 name the read assumption. In Lean,
+> `FremdRuf.lean` §10 lifts the bridge from one call to call sequences at the
+> oracle layer (`mitVorbedingung_folge_gleich`); machine-level runs through
+> `bindAxiom`, the `AxPre` export and the fixture widening stay open (CUTS).
+> What remains of each row: the NUL for unseen pointers (still `V`-only); the
+> run coincidence above the oracle layer; `lenof` of a pointer decided only
+> where an array decays.
+
 ## O24 — Bounded strings are checked, not represented: NUL, the upper limit on `max`, aggregates (recorded 2026-09-22, review G12, fix lane F6)
 
 Fix lane F6 made the checker agree with the Lean value model
@@ -1127,4 +1166,20 @@ CLAIMED; the cargo test `zertifikate` keeps the register complete.
 | **why it is not one fix** | 114 of the 176 meet two or more refusal shapes (measured with a throwaway continue-on-refusal build); lifting `extern fn` alone gained 0 programs |
 | **model decisions it needs** | an `Endblock` form for a tail `let` of a call and for `return` under `locks` (110, 125); records, wrapping integers, named assumptions outside `forever`/`retires`, devices, atomics (Opus B), pointers into records |
 | **what would close it** | per-shape lanes, each measured by the register's CERTIFIED count |
+
+## O28 — Linking is proved in the model and checked at the source level; the Rust race residue closed by Opus agent F, the rest stays open (recorded 2026-09-26, Opus agents E and F)
+
+`GabbroZielVerbund` (`Zielsatz/Spec.lean`, proved as `gabbro_ziel_verbund`, SATZKARTE §54)
+covers a program linked from two units over ONE link declaration, each accepted alone, under
+the SAME hardware assumptions; `gabbro link` (`N501`-`N505`) checks the heads against the
+bodies. Report: `messung/OPUS-E-LINKEN.md`.
+
+| | |
+|---|---|
+| **review** | the Spec diff (a second statement, purely additive) has had no independent review round yet |
+| **Rust vs Lean, the race legs** | **CLOSED by Opus agent F (2026-09-26, `messung/OPUS-F-VERBUND-RENNEN.md`).** Review E F1 (a read behind an imported head, raced by another thread of the importer, linked green) is closed twice: an imported head's declared READS join the importer's footprint (`fusswache2.rs`; probe 1246 now falls in `gabbro check --with` with the one-file `N291` + `N301`), and `gabbro link` checks the LINKED program whole (`verbund::verbinde_alle`: the units composed, each body from its owner, every start of every unit; the race deciders of `lok`/`renn`/`einzeln` run over the linked call graphs = the composed hulls under `KeinRueckruf`). Threads on both sides are judged, not refused (probe 1247 falls with `N291` + `N301`, twin `faeden-beide-*` links). What remains is the one-unit caveat: the Rust checker is not the Lean Bool |
+| **contracts as text** | **Trees since Opus F:** `requires`/`ensures`/`effects`/signatures compared as normal-form trees (positions and redundant parentheses dropped, conjuncts order-free). Still no semantic equivalence and no refinement: an equivalent contract written as a different tree, and a weaker-but-sound import, are refused (Lean has ONE contract per function, `Verbindbar`) |
+| **units and the build** | **Since Opus F** `gabbro build` runs the link over every manifest of two or more units (a unit may be several files) and `gabbro build a.gab b.gab` runs it over one-file units (nothing compiled); a module split over two units is refused (`N516`). Open: no certificate for a linked program (the exporter exports one `Einheit`) |
+| **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |
+| **not claimed at all** | different hardware assumptions, callbacks through an import (`KeinRueckruf`), dynamic loading, ABI-level linking of foreign C |
 

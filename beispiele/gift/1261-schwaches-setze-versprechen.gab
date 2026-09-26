@@ -1,0 +1,42 @@
+-- erwartet: N511
+-- **Lane 263 (OFFEN O12) -- the old weak `setze` shape of `beispiele/124`.**
+--
+-- `setze` promises only `konto.slots[0].stand == x` and says nothing about
+-- `konto.slots[1].stand`, so the locked section calling it cannot re-establish
+-- the lock invariant `konto.slots[0].stand == konto.slots[1].stand` at release
+-- from the callee's promise. The body writes both slots, which is exactly why
+-- the finding is about the contract, not the code: the refusal names the
+-- invariant, the lock `L`, the `release` exit and the undetermined cell.
+module gift::schwaches_setze_versprechen {
+
+type Stand = u32 in 0 .. 100;
+
+table konto count 2 {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn haupt()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+}

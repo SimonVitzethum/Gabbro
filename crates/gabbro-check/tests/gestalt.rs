@@ -121,7 +121,12 @@ fn die_null_und_der_zerfall_bleiben_still() {
              effects { reads p } costs <= 8 ops;\n\
              impl fn ruft() effects { reads PUFFER } costs <= 12 ops \
              { schreib(PUFFER, 4); }\n",
-            &[],
+            // **Lane 262 (N506, OFFEN O23):** the decay itself is still silent
+            // (no `M140`), but the declaration is now held: a byte buffer with
+            // a length parameter and no `requires n <= lenof(p)` falls at the
+            // declaration, the same shape `beispiele/64` carried before its
+            // tightening.
+            &["N506"],
         ),
     ];
     for (was, zusatz, erwartet) in faelle {

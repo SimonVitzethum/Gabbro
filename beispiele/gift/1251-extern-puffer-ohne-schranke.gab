@@ -1,0 +1,19 @@
+-- erwartet: N506
+-- **1251 -- an `extern fn` byte buffer with no bound on what the callee moves (lane 262, OFFEN O23).**
+--
+-- The shape `beispiele/64` had until lane 262: `write` takes a byte pointer and a
+-- length, and the only clause on `n` is a fixed ceiling. Nothing ties the bytes the
+-- foreign code moves to the object the caller hands in, so a 64-byte array and
+-- `n = 1024` is a contract no call site is held against. `N506` demands
+-- `requires n <= lenof(p)` at the declaration -- `N464`'s twin at the other foreign
+-- shape; with it, `N463` decides the bound at every call (`beispiele/64` is the
+-- clean twin).
+
+module gift1251 {
+
+extern fn write(fd : i32, p : ptr<normal, r> u8, n : u64) -> i64
+    requires n <= 64
+    effects { reads p }
+    costs <= 16 ops;
+
+}

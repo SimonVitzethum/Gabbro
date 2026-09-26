@@ -1,0 +1,27 @@
+-- **Link probe (Opus agent E, 2026-09-26): the APP -- two threads call the library's
+-- lock-guarded table writer.** Checked against the library's interface:
+-- `gabbro check messung/proben/verbund/tabelle-app.gab --with bib.gabi`, where `bib.gabi` is
+-- what `gabbro abi messung/proben/verbund/tabelle-bib.gab` writes. `arbeiter` runs on two
+-- threads; each takes the library's lock and calls `setze` inside it.
+module app {
+
+use bib::setze;
+use bib::konto;
+use bib::L;
+
+assume takt_stabil
+    "The platform clock advances steadily."
+    falsifier sonde_takt;
+
+impl fn arbeiter()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+concurrent { arbeiter, arbeiter };
+
+}

@@ -1,0 +1,29 @@
+-- link-erwartet: N505
+-- **Link probe 1245 (Opus agent E): the app states the library's hardware assumption
+-- DIFFERENTLY.** The same app as `tabelle-app.gab`, but its `takt_stabil` names another
+-- falsifier and claims more (a bounded drift). Alone it checks clean against the library's
+-- interface; linked with `tabelle-bib.gab` the program would run under two statements of one
+-- assumption, and `gabbro link` refuses: linking is claimed under the SAME hardware
+-- assumptions (`E₂.Q = E₁.Q` in `GabbroZielVerbund`).
+module app {
+
+use bib::setze;
+use bib::konto;
+use bib::L;
+
+assume takt_stabil
+    "The platform clock advances steadily and drifts less than 50 ppm."
+    falsifier sonde_takt_drift;
+
+impl fn arbeiter()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+concurrent { arbeiter, arbeiter };
+
+}

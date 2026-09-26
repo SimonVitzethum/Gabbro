@@ -1,0 +1,10 @@
+-- link-erwartet: N516
+-- **Link probe 1248 (Opus agent F): one module in two units.** See
+-- `1248-modul-doppelt-bib.gab`. A module belongs to ONE unit (`gabbro build` refuses the
+-- same across a manifest); the link says so by name instead of checking a composition that
+-- is no program.
+module werk {
+
+pub impl fn zwei() effects { pure } costs <= 8 ops { return; }
+
+}

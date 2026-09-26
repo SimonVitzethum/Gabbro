@@ -1,0 +1,27 @@
+-- link-erwartet: N291 N301
+-- **Link probe 1247 (Opus agent F): threads in BOTH units, and they race.** The app's
+-- thread `leser` reads `konto` through the library's `lies`; the library's own thread
+-- `schreiber` writes it. Alone the app is clean -- nothing in its view writes `konto`. Until
+-- Opus F `gabbro link` refused every pair with threads on both sides (`N503`) without
+-- looking; now it judges the LINKED program (both units as one, each body from its owner,
+-- every start of both) and falls with the one-file codes: `N301` (the write-read race
+-- across the two units' starts) and `N291` (the read in `lies`, no longer thread-local).
+-- Positive twin: `faeden-beide-*.gab`.
+module app {
+
+use bib::lies;
+use bib::konto;
+
+impl fn leser()
+    effects { reads konto.slots }
+    costs   <= 64 ops
+{
+    let x = lies();
+    return;
+}
+
+impl fn still() effects { pure } costs <= 4 ops { return; }
+
+concurrent { leser, still };
+
+}

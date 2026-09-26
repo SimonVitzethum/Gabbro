@@ -603,6 +603,51 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         schreibt.insert(k.clone(), s);
     }
 
+    // **Opus F (review E, F1): the READS a body-less head declares.** An `extern fn` head
+    // (hand-written, or pasted in by `--with lib.gabi`) and an `= asm` body stand for a hull
+    // this unit cannot walk; the head's `effects` is that hull's summary, and the exporter's
+    // own check holds the body to it (`E010`). The writes above were always read from it --
+    // the reads were not, so a library `lies` reading an unguarded table, run on one thread
+    // while another thread writes the table, passed `check --with` and `gabbro link` with 0
+    // errors, while the same code in ONE file falls with `N291`/`N301`. The head's reads now
+    // join its footprint (`fuss`, hence thread-locality, `N301`, the start and child legs)
+    // and are refused at the call site under `N291` below -- the Rust twin of the Lean link
+    // check reading the OWNER's footprint through the composed hull (`lokBedarfB`/`getrenntVB`
+    // over `teilP` in `Zielsatz/Verbund.lean`; refusal witness `vm_abgelehnt`).
+    let mut kopf_liest: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (k, f) in &funktionen {
+        if matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Pred(_))
+            || matches!(f.klasse, Some(FnKlasse::Spec))
+        {
+            continue;
+        }
+        let mut param: BTreeMap<String, String> = BTreeMap::new();
+        for p in &f.parameter {
+            if let Some(t) = tabelle_im_typ(&p.typ, &b.traeger) {
+                param.insert(p.name.text.clone(), t);
+            }
+        }
+        let mut s = BTreeSet::new();
+        if let Some(w) = &f.effects {
+            for e in &w.liste {
+                if let WirkungArt::Liest(o) | WirkungArt::Verbraucht(o) = &e.art {
+                    let grund = wurzel(&o.text()).to_string();
+                    if b.geraete.contains(&grund) {
+                        continue;
+                    }
+                    if b.traeger.contains(&grund) {
+                        s.insert(grund);
+                    } else if let Some(t) = param.get(&grund) {
+                        s.insert(t.clone());
+                    }
+                }
+            }
+        }
+        if !s.is_empty() {
+            kopf_liest.insert(k.clone(), s);
+        }
+    }
+
     // Written by ANY function, declared or performed -- the `freiB` disjunct, the same
     // direction as the old writer set.
     let mut schreiber: BTreeSet<String> = BTreeSet::new();
@@ -730,6 +775,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             for (w, _) in crate::wirkungen::body_roots(f, bb, &konstanten, &weltnamen, &b.geraete) {
                 fset.insert(w);
             }
+        }
+        // A body-less head's declared reads are its body's reads (Opus F, see above).
+        if let Some(r) = kopf_liest.get(k) {
+            fset.extend(r.iter().cloned());
         }
         for (schluessel, _, _) in &gerufene {
             if let Some(orte) = vertragskarte.get(schluessel) {
@@ -957,6 +1006,34 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                             }
                         }
                     }
+                }
+            }
+        }
+        // N291 through a body-less head (Opus F, review E F1): the head's declared reads
+        // are the reads of a body this unit cannot walk, so they are judged at the CALL
+        // SITE, with the thread question the body leg asks. A carrier some lock protects is
+        // left to `H007` at the call boundary (the caller holds the lock, or the head
+        // declares `locks L` and the exporter's own `H007` holds every access of its body
+        // to it) -- that is "held at the access", the body leg's exemption, across the
+        // boundary.
+        if let Some(gerufene) = rufer_karte.get(k) {
+            for (schluessel, cname, span) in gerufene {
+                let Some(liest) = kopf_liest.get(schluessel) else { continue };
+                for c in liest {
+                    if sperrkarte.values().any(|s| s.schutz.contains(c)) {
+                        continue;
+                    }
+                    refuse(
+                        "N291",
+                        format!("body-less callee `{cname}` (its declared `effects` reads) in the body"),
+                        c,
+                        *span,
+                        Some(format!(
+                            " (`{cname}` is a head: its exporter's body reads `{c}` on this \
+                             caller's thread)"
+                        )),
+                        absagen,
+                    );
                 }
             }
         }

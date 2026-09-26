@@ -1,0 +1,46 @@
+-- erwartet: N511
+-- **Lane 263 (OFFEN O12) -- an early return inside the locked section.**
+--
+-- The section re-breaks the promised cells (`konto.slots[1].stand = 5`) and
+-- `return`s before restoring them: at that exit nothing shows
+-- `konto.slots[0].stand == konto.slots[1].stand`. An exit is a release, so
+-- the refusal names the `return` exit (the final `release` holds again after
+-- the restoring write, and stays silent).
+module gift::fruehe_rueckkehr_ohne_versprechen {
+
+type Stand = u32 in 0 .. 100;
+
+table konto count 2 {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn haupt()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+        konto.slots[1].stand = 5;
+        if konto.slots[0].stand == 30 {
+            return;
+        }
+        konto.slots[1].stand = 30;
+    }
+}
+
+}

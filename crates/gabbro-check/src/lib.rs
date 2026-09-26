@@ -68,6 +68,9 @@ pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **`gabbro link` -- two separately compiled units against ONE link declaration** (Opus
+/// agent E, `N501`-`N505`; the Lean side is `GabbroZielVerbund`).
+pub mod verbund;
 /// **Lane 191 -- the derived contract as a view** (lever 1 of
 /// `PLAN-EINFACHHEIT.md`). Owns no refusal, only the register of what the
 /// checker derives per function: `gabbro abgeleitet` reads it.
@@ -176,6 +179,10 @@ pub mod lean;
 pub mod obligations_g;
 // **Fix lane F7:** the O12 release rows, shared by `obligations_g` and `gegenbeispiel`.
 pub mod freigabe;
+/// **Lane 263 -- the O12 release refusal (`N511`).** Reads the shared verdict of
+/// `freigabe::beurteile`: what does not follow at a locked-section exit falls here.
+/// Same column as `sperrinv`, no pass number of its own.
+pub mod freigabe_pruef;
 /// **Const certificate from the source (lane 121)** -- a `const fn` body in
 /// the single-expression fragment printed to a Lean `Nat` function, so the
 /// `List.all` certificate checks values against the translated source.
@@ -216,6 +223,8 @@ pub mod zeichenfolge;
 pub mod intmatch;
 // Fix lane F5 (review G04 F2/F3): `N463`/`N464` -- the transfer bound `x <= lenof(p)`.
 pub mod rahmenlaenge;
+// Lane 262 (OFFEN O23): `N507` -- the NUL terminator where the program builds the buffer.
+pub mod nulpfad;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -499,6 +508,14 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         z!("syscall", syscall::pass(baum, absagen));
+        // **Lane 262, directly behind it.** The frame-length rule's second
+        // declaration half: `N506` holds `extern fn` byte buffers to the
+        // same `requires x <= lenof(p)` clause `N464` demands at `syscall`
+        // gates (`rahmenlaenge.rs`, OFFEN O23).
+        z!("rahmenlaenge", rahmenlaenge::pass(baum, absagen));
+        // **Lane 262, directly behind it.** The NUL-terminator discipline over
+        // the buffers the program builds itself (`nulpfad.rs`, OFFEN O23).
+        z!("nulpfad", nulpfad::pass(baum, absagen));
         z!("clone", clone::pass(baum, absagen));
         z!("arena", arena::pass(baum, absagen));
         z!("konstanten", konstanten::pass(baum, absagen));
@@ -512,6 +529,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("sperrinv", sperrinv::pass(baum, absagen));
+        z!("freigabe_pruef", freigabe_pruef::pass(baum, absagen));
         z!("fusswache2", fusswache2::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
@@ -545,6 +563,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // declaration-level like `entry`/`entrust`: its own shape is held here, and
     // every body pass below reads it through the shared maps.
     syscall::pass(baum, absagen);
+    // **Lane 262, directly behind it** (see the timed pipeline above).
+    rahmenlaenge::pass(baum, absagen);
+    // **Lane 262, directly behind it** (see the timed pipeline above).
+    nulpfad::pass(baum, absagen);
     // **Lane O-1, directly behind it.** The handoff shape reads the gate
     // (`stack`) and the bodies (`child`): after the declaration pass, beside
     // the arena one, before every body pass that walks the new block form.
@@ -568,6 +590,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // **Lane 156, beside the lock pass whose `protects` set it reads.**
     // No pass number of its own (see the module head).
     sperrinv::pass(baum, absagen);
+    // **Lane 263, beside the lock pass whose invariant it discharges.**
+    // No pass number of its own (see the module head).
+    freigabe_pruef::pass(baum, absagen);
     // **Lane 175, beside the lock-invariant data it reuses.**
     // Same column (footprint premise of the flagship), not a new pass.
     fusswache2::pass(baum, absagen);

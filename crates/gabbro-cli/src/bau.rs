@@ -643,6 +643,64 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let pruefbau = argumente.iter().any(|a| a == "--testbuild");
     let trocken = argumente.iter().any(|a| a == "--dry-run" || a == "--trocken");
     let pfade: Vec<&String> = argumente.iter().filter(|a| !a.starts_with("--")).collect();
+    // **`gabbro build a.gab b.gab …` -- source files, not a manifest** (Opus F, OFFEN O28).
+    // Without a manifest there is no compiler line and no output directory, so nothing is
+    // compiled; but a program named as several units is not one program until they LINK, and
+    // that check needs neither. It runs here, exactly as `gabbro link` runs it, and the line
+    // below says what was NOT done.
+    if pfade.len() >= 2 && pfade.iter().all(|p| p.ends_with(".gab")) {
+        let mut namen = Vec::new();
+        let mut roh = Vec::new();
+        for p in &pfade {
+            match std::fs::read_to_string(p) {
+                Ok(q) => {
+                    namen.push((*p).clone());
+                    roh.push(q);
+                }
+                Err(e) => {
+                    eprintln!("gabbro build: {p}: {e}");
+                    return std::process::ExitCode::from(2);
+                }
+            }
+        }
+        // Each file is checked against the interfaces of all the OTHERS (what `gabbro abi`
+        // writes for them), in the order named -- the manifest build's preamble, with every
+        // other file as a unit this one may rest on.
+        let schnittstellen: Vec<String> = roh
+            .iter()
+            .enumerate()
+            .map(|(i, q)| {
+                let (baum, _) = gabbro_syntax::lies(&namen[i], q);
+                gabbro_check::abi::schreibe(&baum, q)
+            })
+            .collect();
+        let texte: Vec<(String, usize)> = roh
+            .iter()
+            .enumerate()
+            .map(|(i, q)| {
+                let mut v = String::new();
+                for (j, s) in schnittstellen.iter().enumerate() {
+                    if j != i {
+                        v.push_str(s);
+                        v.push('\n');
+                    }
+                }
+                let ab = v.len();
+                (format!("{v}{q}"), ab)
+            })
+            .collect();
+        let gut = crate::verbinde_quellen("gabbro build (link)", &namen, &texte);
+        println!(
+            "gabbro build: {} source file(s), no manifest -- the link check ran; NOTHING was \
+             compiled (name the units in a `gabbro.bau` for C)",
+            namen.len()
+        );
+        return if gut {
+            std::process::ExitCode::SUCCESS
+        } else {
+            std::process::ExitCode::from(1)
+        };
+    }
     let manifestpfad = PathBuf::from(pfade.first().map(|s| s.as_str()).unwrap_or("gabbro.bau"));
     let manifest = match lies_manifest(&manifestpfad) {
         Ok(m) => m,
@@ -791,6 +849,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let mut abgesagt = 0usize;
     // **What a unit hands its dependents: its interface and its fingerprint.**
     let mut gabi_je_einheit: BTreeMap<String, String> = BTreeMap::new();
+    // The preamble each unit was checked with -- the link below re-reads every unit with it.
+    let mut vorspann_je_einheit: BTreeMap<String, String> = BTreeMap::new();
     let mut abdruck_je_einheit: BTreeMap<String, String> = BTreeMap::new();
     for name in &reihenfolge {
         let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
@@ -814,6 +874,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 _ => fehlt = Some(u.clone()),
             }
         }
+        vorspann_je_einheit.insert(name.clone(), unten.vorspann.clone());
         if let Some(u) = fehlt {
             abgesagt += 1;
             println!("REFUSED  {name}: the unit `{u}` it rests on was not built");
@@ -867,6 +928,29 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 abgesagt += 1;
                 println!("REFUSED  {name}: {grund}");
             }
+        }
+    }
+    // **The link check over the whole program (Opus F, OFFEN O28).** Every unit was checked
+    // alone above, against the interfaces below it -- and alone, a unit sees neither another
+    // unit's threads nor a read hidden behind another unit's head. So a build of two or more
+    // units is not done until the units LINK: the heads held against the bodies, and the
+    // linked program checked whole (`verbund::verbinde_alle`, `gabbro link`). Its C is
+    // already written; a refused link makes the build red and says so, and it runs again on
+    // every build, "current" units included, because it is a property of the set.
+    if abgesagt == 0 && reihenfolge.len() >= 2 {
+        let mut namen = Vec::new();
+        let mut texte = Vec::new();
+        for name in &reihenfolge {
+            let v = vorspann_je_einheit.get(name).cloned().unwrap_or_default();
+            let t = crate::klebe_einheit(&v, &quellen_je_einheit[name]);
+            namen.push(name.clone());
+            texte.push((t.ganz, t.vorspann_ende));
+        }
+        if crate::verbinde_quellen("gabbro build (link)", &namen, &texte) {
+            println!("linked   {} unit(s) -- the whole program checked", namen.len());
+        } else {
+            abgesagt += 1;
+            println!("REFUSED  link: the units do not make ONE program (see the refusals above)");
         }
     }
     deckungszeile(&manifest, gebaut, aktuell, abgesagt);

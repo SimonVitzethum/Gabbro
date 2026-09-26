@@ -1,0 +1,31 @@
+-- erwartet: N511
+-- **Lane 263 (OFFEN O12) -- a direct write establishing one cell of an equality.**
+--
+-- The section writes `konto.slots[0].stand = 5` and nothing else. That
+-- establishes `konto.slots[0].stand == 5`, but the invariant also needs
+-- `konto.slots[1].stand`, whose acquire value is gone with the write to the
+-- same carrier. The refusal names the `release` exit and both cells: one is
+-- known, the other is not determined.
+module gift::direkter_schreibzugriff_bricht_gleichheit {
+
+type Stand = u32 in 0 .. 100;
+
+table konto count 2 {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn haupt()
+    effects  { writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        konto.slots[0].stand = 5;
+    }
+}
+
+}

@@ -209,26 +209,38 @@ fn o12_einheit(ensures_setze: &str) -> String {
     )
 }
 
-fn o12_export(ensures_setze: &str) -> String {
+fn o12_baum(ensures_setze: &str) -> (String, gabbro_syntax::ast::Programm, gabbro_syntax::diag::Absagen) {
     let quelle = o12_einheit(ensures_setze);
     let (baum, mut absagen) = gabbro_syntax::lies("o12", &quelle);
     gabbro_check::pruefe(&baum, &mut absagen);
-    assert!(
-        absagen.fehler_zahl() == 0,
-        "the O12 snippet stays checker-clean: {}",
-        absagen.zeige(&quelle)
-    );
-    export("o12", &baum).expect("the O12 snippet must export")
+    (quelle, baum, absagen)
+}
+
+fn fehler_codes(absagen: &gabbro_syntax::diag::Absagen) -> Vec<&'static str> {
+    absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|a| a.code)
+        .collect()
+}
+
+fn o12_export(ensures_setze: &str) -> (String, Vec<&'static str>) {
+    let (_quelle, baum, absagen) = o12_baum(ensures_setze);
+    let text = export("o12", &baum).expect("the O12 snippet must export");
+    (text, fehler_codes(&absagen))
 }
 
 /// **O12, the failing half: a callee promising only `konto[0] == x` leaves
 /// the release obligation UNPROVED** -- naming the locked section (`haupt`
 /// locking `L`), the callee promise (`setze`), and the unproved release
-/// goal (`konto.slots[1].stand`). No new refusal: the export succeeds, so
-/// the failure is stated in the obligation channel, never diagnosed.
+/// goal (`konto.slots[1].stand`). Since lane 263 the failure is ALSO diagnosed:
+/// `N511` refuses the release the row cannot show, so the checker no longer
+/// accepts the file (see `checked` below -- the export still succeeds, and the
+/// row still states the gap beside the refusal).
 #[test]
 fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
-    let text = o12_export("konto.slots[0].stand == x");
+    let (text, codes) = o12_export("konto.slots[0].stand == x");
     for teil in [
         "RELEASE OBLIGATIONS",
         "haupt",
@@ -239,13 +251,18 @@ fn o12_schwaches_ensures_meldet_unbewiesene_freigabe() {
     ] {
         assert!(text.contains(teil), "the failing release row must contain {teil:?}");
     }
+    assert_eq!(
+        codes,
+        vec!["N511"],
+        "the weak promise is refused at the release, and only there"
+    );
 }
 
 /// **O12, the fixed half: a callee promising both slots HOLDS** -- the
 /// shape `beispiele/124` carries since the O12 corpus fix.
 #[test]
 fn o12_starkes_ensures_haelt_die_freigabe() {
-    let text = o12_export(
+    let (text, codes) = o12_export(
         "konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x",
     );
     assert!(
@@ -256,6 +273,7 @@ fn o12_starkes_ensures_haelt_die_freigabe() {
         !text.contains("RELEASE UNPROVED:"),
         "no release row may fail once both slots are promised"
     );
+    assert!(codes.is_empty(), "the fixed shape stays checker-clean: {codes:?}");
 }
 
 /// **O12 on the corpus file itself: `124` holds at every release** -- the
@@ -336,45 +354,45 @@ fn o12_rumpf(rumpf: &str) -> String {
     )
 }
 
-fn o12_rumpf_export(rumpf: &str) -> String {
+fn o12_rumpf_export(rumpf: &str) -> (String, Vec<&'static str>) {
     let quelle = o12_rumpf(rumpf);
     let (baum, mut absagen) = gabbro_syntax::lies("o12r", &quelle);
     gabbro_check::pruefe(&baum, &mut absagen);
-    assert!(
-        absagen.fehler_zahl() == 0,
-        "the O12 snippet stays checker-clean: {}",
-        absagen.zeige(&quelle)
-    );
-    export("o12r", &baum).expect("the O12 snippet must export")
+    let text = export("o12r", &baum).expect("the O12 snippet must export");
+    (text, fehler_codes(&absagen))
 }
 
 /// **G02's example: a direct write after the promise breaks the hold.**
 #[test]
 fn f7_direkter_schreibzugriff_nach_dem_versprechen_bricht() {
-    let text = o12_rumpf_export("        setze(30);\n        konto.slots[1].stand = 5;");
+    let (text, codes) =
+        o12_rumpf_export("        setze(30);\n        konto.slots[1].stand = 5;");
     assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
     assert!(
         text.contains("konto.slots[1].stand is overwritten after its last promise (by the write to konto.slots"),
         "the row must name the overwrite:\n{text}"
     );
+    assert_eq!(codes, vec!["N511"], "the broken release is refused: {codes:?}");
 }
 
 /// **A callee writing the table after the promise breaks it** (order-blind union before).
 #[test]
 fn f7_spaeterer_schreibender_ruf_bricht() {
-    let text = o12_rumpf_export("        setze(30);\n        stoere();");
+    let (text, codes) = o12_rumpf_export("        setze(30);\n        stoere();");
     assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
     assert!(text.contains("after its last promise (by a write of stoere)"), "{text}");
+    assert_eq!(codes, vec!["N511"], "the broken release is refused: {codes:?}");
 }
 
 /// **A write under a branch after the promise breaks it too.**
 #[test]
 fn f7_bedingter_schreibzugriff_bricht() {
-    let text = o12_rumpf_export(
+    let (text, codes) = o12_rumpf_export(
         "        setze(30);\n        if konto.slots[0].stand == 3 {\n            konto.slots[1].stand = 4;\n        }",
     );
     assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
     assert!(text.contains("RELEASE UNPROVED"), "{text}");
+    assert_eq!(codes, vec!["N511"], "the broken release is refused: {codes:?}");
 }
 
 /// **Positive probe: a write or a writing callee BEFORE the last promise is re-established
@@ -385,9 +403,10 @@ fn f7_schreiben_vor_dem_versprechen_haelt() {
         "        konto.slots[1].stand = 5;\n        setze(30);",
         "        stoere();\n        setze(30);",
     ] {
-        let text = o12_rumpf_export(rumpf);
+        let (text, codes) = o12_rumpf_export(rumpf);
         assert!(text.contains("RELEASE HOLDS (syntactic)"), "{rumpf}:\n{text}");
         assert!(!text.contains("RELEASE UNPROVED:"), "{rumpf}:\n{text}");
+        assert!(codes.is_empty(), "{rumpf} stays checker-clean: {codes:?}");
     }
 }
 
@@ -445,4 +464,76 @@ fn f7_parameter_als_index_zaehlt_nicht() {
     assert!(!text.contains("-- RELEASE HOLDS (syntactic)."), "{text}");
     assert!(text.contains("no callee promises konto.slots[i].stand"), "{text}");
     assert!(text.contains("setze promises {}"), "the parameter-indexed cell is not countable:\n{text}");
+}
+
+// ---------------------------------------------------------------------------------------
+// Lane 263 (OFFEN O12 half (2)): the `N511` refusal over the shared verdict.
+// ---------------------------------------------------------------------------------------
+
+fn n511_codes(quelle: &str, name: &str) -> (String, Vec<&'static str>) {
+    let (baum, mut absagen) = gabbro_syntax::lies(name, quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let text = export(name, &baum).expect("the snippet must export");
+    (text, fehler_codes(&absagen))
+}
+
+/// **119 is NOT a false positive** (lane 204 measured a promises-only rule would
+/// falsely refuse it): `k.slots[0].x = 40` through `k : ptr<normal, rw> A`
+/// establishes `A.slots[0].x == 40`, and `40 <= GRENZE` re-establishes the bound.
+#[test]
+fn n511_119_haelt_durch_direkten_schreibzugriff() {
+    let quelle = beispiele("119-sperrinvariante-bloecke.gab");
+    let (text, codes) = n511_codes(&quelle, "119");
+    assert!(codes.is_empty(), "119 stays checker-clean: {codes:?}");
+    assert!(text.contains("RELEASE HOLDS (syntactic)"), "119 must hold:\n{text}");
+    assert!(!text.contains("RELEASE UNPROVED:"), "119 must have no failing row:\n{text}");
+}
+
+/// **124 and 157 stay silent**: `setze` promises both slots, at every section.
+#[test]
+fn n511_124_und_157_schweigen() {
+    for name in ["124-two-threads-private.gab", "157-worker-pool.gab"] {
+        let quelle = beispiele(name);
+        let (text, codes) = n511_codes(&quelle, name);
+        assert!(codes.is_empty(), "{name} stays checker-clean: {codes:?}");
+        assert!(text.contains("RELEASE HOLDS (syntactic)"), "{name} must hold:\n{text}");
+        assert!(!text.contains("RELEASE UNPROVED:"), "{name} must have no failing row:\n{text}");
+    }
+}
+
+/// **The row and the refusal agree**: over every snippet below, `RELEASE HOLDS`
+/// holds exactly where `N511` is silent, and `RELEASE UNPROVED` exactly where
+/// `N511` fires. Both read `freigabe::beurteile`; this test pins the agreement
+/// against future drift.
+#[test]
+fn freigabe_zeile_und_n511_stimmen_ueberein() {
+    let faelle: &[(&str, bool)] = &[
+        // (section body, true when the release must hold)
+        ("        setze(30);", true),
+        ("        konto.slots[1].stand = 5;\n        setze(30);", true),
+        ("        stoere();\n        setze(30);", true),
+        ("        setze(30);\n        konto.slots[1].stand = 5;", false),
+        ("        setze(30);\n        stoere();", false),
+        (
+            "        setze(30);\n        if konto.slots[0].stand == 3 {\n            konto.slots[1].stand = 4;\n        }",
+            false,
+        ),
+        ("        konto.slots[0].stand = 30;\n        konto.slots[1].stand = 30;", true),
+        ("        konto.slots[0].stand = 30;", false),
+    ];
+    for (rumpf, haelt) in faelle {
+        let (text, codes) = n511_codes(&o12_rumpf(rumpf), "o12v");
+        let zeile_haelt = text.contains("-- RELEASE HOLDS (syntactic).");
+        let zeile_faellt = text.contains("RELEASE UNPROVED:");
+        assert!(
+            zeile_haelt != zeile_faellt,
+            "{rumpf}: the row must read exactly one verdict:\n{text}"
+        );
+        assert_eq!(zeile_haelt, *haelt, "{rumpf}:\n{text}");
+        assert_eq!(
+            codes,
+            if *haelt { vec![] } else { vec!["N511"] },
+            "{rumpf}: row and refusal must agree:\n{text}"
+        );
+    }
 }

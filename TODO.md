@@ -466,6 +466,16 @@ tree refuses everywhere else.*
   binder-aware; before, `setze(30); konto.slots[1].stand = 5;` read HOLDS.
   Corpus rows unchanged (124: 2 HOLDS, 119: 1 UNPROVED). The rule half of
   O12 is still open.
+- [x] **The O12 release refusal `N511`** (`dokumente/OFFEN.md` O12 half (2)) —
+  lane 263, `messung/muse/MUSE-REPORT-263.md`. At every locked-section exit
+  (`release`, early `return`, `leave`, `next`) the invariant must follow from
+  the acquire frame, the section's direct writes and the callees' `ensures`
+  equalities, decided over cells and constants with `ptr`-parameter carriers
+  (`freigabe::beurteile`, shared with the `RELEASE HOLDS` rows, agreement
+  pinned inline). 119 stays silent (direct write `40 <= GRENZE` through `k`);
+  124/157 hold from the promise; poison probes `beispiele/gift/1261`-`1264`.
+  Corpus verdict diff: no clean file falls; 119's row moves UNPROVED→HOLDS.
+  Certificates regenerated (release header text changed).
 - [x] **The C read correspondence for nested arrays** — lane 205, reviewed
   (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
   `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the
@@ -552,6 +562,8 @@ for 124 with `DRFSC` and `LaufzeitC` as named premises. Open, by plan §7.6:
 - [ ] **The linking theorem.** If each unit's certificate checks and the units' ABI interfaces
   match (decidable from the `_Static_assert` pins), the linked C refines the composition of the
   programs.
+  *(2026-09-26, Opus agent E: the MODEL half is proved -- `gabbro_ziel_verbund`; what remains
+  here is the C half: the linked C refines the linked G program, OFFEN O28.)*
 - [ ] **Inline assembly: a small ISA semantics** for exactly the stub patterns the emitter
   writes, so each stub gets a correspondence lemma instead of `AxCorr`.
 
@@ -655,13 +667,20 @@ one assumption list, and the number is booked before and after.*
 **NOT-CLAIMED items that earn a place here, ranked (Simon triage 2026-09-18).
 P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
 
-- [ ] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** The
-  statement is about ONE `Einheit`; cross-unit calls go through unchecked
-  `extern` today. Blocks the standard library (§0b first item — one item
-  seen from two sides) and the isolation product. Needs ABI-interface
-  matching decidable from the `_Static_assert` pins, the linking theorem
-  (§2), and what the goal says about two units. Opus-sized plus a review
-  round.
+- [x] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** Done in the model
+  and at the source level 2026-09-26 (Opus agent E, `messung/OPUS-E-LINKEN.md`, SATZKARTE §54):
+  `GabbroZielVerbund` (Spec.lean, second statement, purely additive) proved as
+  `gabbro_ziel_verbund` -- two units over one link declaration, each accepted alone, the link
+  check over composed hulls (`schnittstelleB`), each user's duty over the bodies it owns, the
+  SAME hardware assumptions -> `ZielF` on the linked program. Rust: `gabbro link`,
+  `N501`-`N505`. **Opus agent F (2026-09-26, `messung/OPUS-F-VERBUND-RENNEN.md`) closed
+  review E F1 and the Rust residue:** an imported head's declared reads join the importer's
+  footprint (the F1 reproduction falls in `check --with` with the one-file `N291`/`N301`);
+  `gabbro link` checks the LINKED program whole (threads on both sides judged, not refused;
+  `N516` for a module split over units); contracts compared as trees; `gabbro build` links
+  two or more units (manifest, or `gabbro build a.gab b.gab` as a link check). What stays
+  open is OFFEN O28: the review round of the Spec diff and of Opus F, no certificate for a
+  linked program, the C-level link step (the §2 item below).
 - [x] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
   checker accepts pools since lane 245; the goal theorem does not cover
   them at all (`Akzeptiert` still demands `ws.Nodup`, and (d) excludes a

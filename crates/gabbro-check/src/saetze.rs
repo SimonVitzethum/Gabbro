@@ -1042,6 +1042,61 @@ pub const NAMEN: &[Satz] = &[
                      `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/MaschineW.lean \
                      (`locksicht`, the lock view W joins at a take and a give)",
     },
+    Satz {
+        name: "namen.verbund",
+        kennungen: &["N501", "N502", "N503", "N504", "N505", "N516"],
+        aussage: "Separately compiled units that `gabbro link` (or `gabbro build` over two or \
+                  more units) accepts are checked over ONE link declaration: every `extern fn` \
+                  head one unit relies on names a `pub fn` of another unit with the same \
+                  parameters, result and error channel, and every exported declaration two \
+                  units carry is the same text (`N501`); the same `requires` and `ensures` \
+                  conjuncts, compared as TREES (`N502`); the same `effects` and a hull that \
+                  does not call back into the importer (`N503`); a `costs` bound the exporter \
+                  keeps (`N504`); every `assume`, `axiom`, `device`, `profile` and foreign \
+                  `extern fn` two units name stated identically -- the SAME hardware \
+                  assumptions (`N505`). And when no head is stale, the LINKED program -- the \
+                  units composed as one, each body from its owner, every start of every unit \
+                  -- passes the whole checker; its refusals carry their one-file codes \
+                  (`N291`/`N301` for a read behind a head that another unit's thread races), \
+                  and a module two units both fill, which leaves no program to compose, is \
+                  `N516`. With each unit accepted alone, these are the Rust side of the \
+                  premises of `GabbroZielVerbund` (`Verbindbar`, `SchnittstelleSpec` with \
+                  `lok`/`renn`/`einzeln` decided over the linked call graphs, `E₂.Q = E₁.Q`).",
+        vorbehalt: "**Trees, not meaning.** Contracts are compared as normal-form trees \
+                    (positions and redundant parentheses dropped, conjuncts order-free): a \
+                    contract rewritten into a different but equivalent tree (`x < 5` for \
+                    `5 > x`) is refused, and an importer relying on LESS than the exporter \
+                    promises is refused too (the Lean statement has ONE contract per \
+                    function). **The linked program is checked by EVERY pass**, which is \
+                    more than the three components the Lean link check re-decides: a \
+                    whole-program refusal of another pass is reported as the link's, not \
+                    filtered. A manifest unit may be several files; a module belongs to ONE \
+                    unit. The C link step (symbol resolution, calling convention, layout) is \
+                    not looked at, and no certificate is written for a linked program.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "messung/proben/verbund/ (probe numbers 1241-1248 of the gift range): \
+                      the positive pair `tabelle-bib.gab` + `tabelle-app.gab` links clean \
+                      against the interface `gabbro abi` writes; the stale interfaces \
+                      `1241-link-signatur.gabi` (`N501`), `1242-link-vertrag.gabi` (`N502`: \
+                      the head promises more than the body ensures), \
+                      `1243-link-wirkungen.gabi` (`N503`), `1244-link-kosten.gabi` (`N504`) \
+                      and the app `1245-link-annahme-app.gab` (`N505`) -- each unit alone \
+                      passes `gabbro check`, the link refuses with exactly its code; \
+                      `1246-kopf-liest` (review E F1: the importer ALONE now falls with \
+                      `N291`+`N301`, as the one-file program does), `1247-rennen-verbund` \
+                      (threads in both units race: each clean alone, the linked program \
+                      falls with `N291`+`N301`), `1248-modul-doppelt` (`N516`); the positive \
+                      twins `rennen-bewacht-*` (the read behind the head under its lock) and \
+                      `faeden-beide-*` (threads in both units, nothing shared) link clean \
+                      (`crates/gabbro-cli/tests/verbund.rs`, which also runs `gabbro build \
+                      a.gab b.gab`); snippet tests in `verbund.rs` (callback `N503`, body in \
+                      both units, unexported import, differing table `N501`, differing \
+                      foreign function `N505`, contracts as trees, the composed text).",
+        fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde_alle; \
+                     grammatik/Grammatik/Zielsatz/Spec.lean (`Verbindbar`, \
+                     `SchnittstelleSpec`, `GabbroZielVerbund`); \
+                     grammatik/Grammatik/Zielsatz/Verbund.lean (`gabbro_ziel_verbund`)",
+    },
 ];
 
 // ===================================================================================
@@ -2952,6 +3007,40 @@ pub const M1: &[Satz] = &[
                      `ketten_maxima`)",
     },
     Satz {
+        name: "gate.nulpfad",
+        kennungen: &["N507"],
+        aussage: "A NUL-terminated path the program builds carries its terminator. At \
+                  every call whose callee requires `path_nul_terminated(p, n)`, three \
+                  shapes answer (`N507` refuses the rest): a forwarded parameter pair \
+                  under the caller's own identical clause; a byte array built in the \
+                  body (`static` or `let` `[u8; M]`) with a proved terminator -- a \
+                  store `buf[L-1] = 0` dominating the call for a length that reads as \
+                  one constant `L`, or an untouched zero-initialised buffer for any \
+                  length. A caller parameter pair without the clause falls (the \
+                  obligation dropped on the floor), and so does a built-here buffer \
+                  with no proof.",
+        vorbehalt: "Decided only where the program builds the buffer. A pointer the \
+                    pass cannot see built -- a lone parameter, a field, a computed \
+                    pointer, a foreign static -- keeps its named `V` obligation and \
+                    nothing falls beside it. A length that is no single constant is \
+                    proved only by an untouched zeroed buffer. Stores under a branch, \
+                    a loop or an error continuation never prove (they may not run) but \
+                    still kill, and any call taking the buffer kills every cell. Copies \
+                    (`let ab = buf;`) track on; cross-module statics by bare name do \
+                    not track. Strings never reach a `ptr<u8>` parameter (`N465`), so \
+                    no string shape is checked. The kernel honouring the length stays \
+                    the gate's named assumption.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1253` (`N507`: a concrete buffer with no `0` \
+                      store), `1254` (`N507`: a wrapper forwarding `path`/`pathlen` \
+                      without the clause). The clean side: `beispiele/149` (the \
+                      forwarding wrapper carries the clause) and `tests/nulpfad.rs` \
+                      (the proved store, the untouched zeroed buffer, the carried \
+                      clause, the unseen pointer that keeps its `V`).",
+        fundstelle: "crates/gabbro-check/src/nulpfad.rs (`check_call`); \
+                     dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "m1.ganzzahl_match",
         kennungen: &["N411", "N412", "N413", "N414"],
         aussage: "An integer `match` names every value M1 knows its scrutinee can hold, \
@@ -3451,7 +3540,11 @@ pub const PAARUNG: &[Satz] = &[
                     a real kernel's ordering sites, and THERE nothing is measured yet; the \
                     ordering sample (`messung/ORDNUNGSSTICHPROBE.md`) is the run that decides \
                     it. **Until it has run, the need for `V009` is conjectured at one place \
-                    and refuted at the only place available** -- so it is not to be extended. \
+                    and refuted at the only place available** -- so it is not to be extended, \
+                    with ONE exception Simon decided on 2026-09-26: a `match` whose arm \
+                    ends the flow gates what follows it exactly as the `if` shape does \
+                    (review 2026-09-21, fix lane F1; gift 1271) -- the same shape, not a \
+                    new one, and only a refusal more. \
                     \n\n**This is the only rule of the pass that looks for an ABSENT clause, and \
                     it finds ONE shape of absence.** A missing pairing without a branch is \
                     invisible to it, and so is one whose payload is read by a CALLEE: only \
@@ -3692,6 +3785,10 @@ pub const WIRKUNGEN: &[Satz] = &[
                   (`N290`), body reads (`N291`), direct callee contracts at the call site \
                   (`N292`) -- is unwritten, guarded by a signature lock, protected by a \
                   lock invariant, or thread-local (no other started thread writes it). \
+                  A body-less head's declared `effects` reads are its body's reads (Opus F, \
+                  review E F1): they join its footprint and are judged at the call site \
+                  under `N291`, where a carrier some lock protects is left to `H007` at \
+                  the call boundary. \
                   An indirect call (`N293`) is admitted over the same disjunction. A lock \
                   take or a callee take ranks strictly above every lock held by signature \
                   (`N294`, the floor). All five refuse as errors: the corpus stays green \
@@ -4235,11 +4332,14 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.rahmenlaenge",
-        kennungen: &["N463", "N464"],
+        kennungen: &["N463", "N464", "N506"],
         aussage: "A transfer through a pointer is bounded by what the pointer reaches. A \
                   `syscall` parameter that points at numbers is a byte buffer (`u8`/`i8` \
                   pointee) and the gate carries `requires x <= lenof(p)` over one of its \
-                  integer parameters (`N464`). At every call, of any callee, each clause \
+                  integer parameters (`N464`); an `extern fn` parameter that points at \
+                  numbers beside a length parameter is held to the same clause \
+                  (`N506`, lane 262). At every call, \
+                  of any callee, each clause \
                   `x <= lenof(p)` (or `<`) is DECIDED (`N463`): an array passed for `p` \
                   -- where it decays and its length is last known -- bounds the range of \
                   `x`'s argument by its length, with the array's elements being the \
@@ -4256,17 +4356,21 @@ pub const PHASEN: &[Satz] = &[
                     from, nor anything about a byte INSIDE the frame: a kernel that finds \
                     the end by a NUL is owed that by the caller as a named obligation in \
                     the contract (`beispiele/149`: `spec fn path_nul_terminated`, counted \
-                    `V`, not decided). `N464` holds `syscall` buffers only; an `extern fn` \
-                    taking a byte pointer and a length is not yet held to the clause.",
+                    `V`, decided only for buffers the program builds itself: `N507`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1155` (`N464`: a read buffer bounded only by a \
                       ceiling -- `beispiele/150`'s shape before fix lane F5), `1156` \
                       (`N463`: `lies(fd, EIMER, 1024)` over a 64-byte array, measured \
                       clean before F5), `1157` (`N463`: a wrapper forwarding `buf`/`len` \
-                      without the clause), `1158` (`N464`: a `u32` buffer). The clean \
-                      side: beispiele/96, /149, /150 and `tests/rahmenlaenge.rs` (a \
-                      literal and a const inside the array, the forwarding chain, `<`).",
-        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs; crates/gabbro-check/src/m1.rs \
+                      without the clause), `1158` (`N464`: a `u32` buffer), `1251` \
+                      (`N506`: an `extern fn` byte buffer bounded only by a ceiling -- \
+                      `beispiele/64`'s shape before lane 262), `1252` (`N506`: a `u32` \
+                      buffer at an `extern fn`). The clean \
+                      side: beispiele/64, /96, /149, /150 and `tests/rahmenlaenge.rs` (a \
+                      literal and a const inside the array, the forwarding chain, `<`, \
+                      the `extern fn` twins).",
+        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs (`buffer_bound_extern` for \
+                     `N506`); crates/gabbro-check/src/m1.rs \
                      (`transfer_bound_at_call`); crates/gabbro-check/src/syscall.rs \
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },
@@ -5056,17 +5160,21 @@ pub const SPERREN: &[Satz] = &[
                   contract expression over a memory snapshot (`N276`), and every name
                   it uses is a protected carrier or a named constant (`N277`).",
         vorbehalt: "**Decided, never proved.** The checker holds the invariant's shape;
-                    its TRUTH at every release is the user's obligation, recorded per
-                    lock beside the `ensures` duties (`pflichten::Art::Sperrinvariante`)
-                    and printed by `gabbro lean-g` as the `SperrInv` family -- like
-                    `ensures`, it is counted, not discharged. **Three strictnesses stand
+                    its TRUTH at every release is discharged since lane 263
+                    (`sperren.freigabe`, `N511`: the invariant must follow from the
+                    acquire frame, the section's writes and the callees' `ensures`),
+                    and recorded per lock beside the `ensures` duties
+                    (`pflichten::Art::Sperrinvariante`) and printed by `gabbro lean-g`
+                    as the `SperrInv` family. **Three strictnesses stand
                     beside the rule.** (1) Option constructors are calls (`Some(x)` is a
                     `Ruf`), so an invariant over an option-index field is refused with
                     `N276`: there is no call-free spelling of the constructor. (2)
                     Quantifiers are refused with `N276` even over protected tables: the
                     export fragment (`lean_g.rs`) has no domain form for them. (3)
-                    `N278`/`N279` stay reserved for the writer side and the release
-                    shape; neither is refused here.",
+                    `N278` stays reserved for the writer side (a function writing a
+                    protected carrier owing the guard at its own access); the release
+                    shape foreseen as `N279` is refused as `N511` instead, from the
+                    reserved block of lane 263.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/940 (unprotected read, N275), 941 (`old`, N276),
                       942 (call, N276), 943 (unknown name, N277) -- each falls with
@@ -5074,6 +5182,41 @@ pub const SPERREN: &[Satz] = &[
                       functions, two carriers, one conserved-sum invariant) and
                       beispiele/119 (single carrier with a bound).",
         fundstelle: "crates/gabbro-check/src/sperrinv.rs",
+    },
+    Satz {
+        name: "sperren.freigabe",
+        kennungen: &["N511"],
+        aussage: "At every exit of a `locks L { … }` section (`release`, early `return`,
+                  `leave`, `next`) the lock invariant follows from the invariant at
+                  acquire, the section's own writes and what its callees PROMISE
+                  (their `ensures`), never their bodies: untouched conjuncts ride the
+                  frame, `cell == const` writes and `==` promises are decided as
+                  equalities, and a constant against a constant is computed. What
+                  cannot be shown falls here (`N511`), naming the invariant, the
+                  lock, the exit and the cells whose value is not determined.",
+        vorbehalt: "**Decided, never proved.** The reading is syntactic and one-sided:
+                    inequality promises beyond constants, arithmetic between promised
+                    cells, aliasing beyond declared carriers and `ptr` parameters,
+                    and index names (a `const` index and its literal spell different
+                    cells) are all beyond it -- a missed form stays on the obliging
+                    side and falls. Conditional calls never promise, conditional
+                    writes never establish, and their kills still count. The
+                    `RELEASE HOLDS` rows of `gabbro obligations --g` and
+                    `gabbro counterexample` state the same verdict per section
+                    (`freigabe::beurteile`): one analysis, so the row and the
+                    refusal agree by construction.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1261 (the old weak `setze` shape of 124, N511),
+                      1262 (a callee overwriting a promised cell, N511), 1263 (an
+                      early `return` before the promise, N511), 1264 (a direct
+                      write of one cell of an equality, N511) -- each falls with
+                      N511. The silent direction is beispiele/119 (the bound
+                      re-established by a direct write through a `ptr` parameter),
+                      beispiele/124 and beispiele/157 (both slots promised), and
+                      beispiele/118 (signature-held, no section). Agreement is
+                      pinned inline (`freigabe_zeile_und_n511_stimmen_ueberein`).",
+        fundstelle: "crates/gabbro-check/src/freigabe_pruef.rs (`pass`);
+                     crates/gabbro-check/src/freigabe.rs (`beurteile`)",
     },
     Satz {
         name: "ableitung.kante",
