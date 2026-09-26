@@ -979,6 +979,18 @@ checked:
 | **the emitted counters are plain words (lane 259, emitter arm)** | a dynamic arena lowers `used`/`committed` to ordinary `uint32_t` fields and `alloc`/`grow` to unsynchronised read-modify-writes -- two threads allocating (or growing) on one arena race in C, and no rule demands a lock or an atomic there. Memory safety does not depend on it (a raced check-then-use still names a slot below `committed`: the check passed on a smaller `used`, and `grow` only ever raises the ceiling side); the residue is logical -- duplicate indices, a lost cursor step, growth one thread never sees. No concurrency safety is claimed for the lowering, and none is built |
 | **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff; for the third: the same strict option (no arena shared across threads), or atomic counters with a model leg that carries them |
 
+**Closed 2026-09-26 (lane 264, `arena_faden.rs`, gifts 1272-1280, `paesse.rs`
+`arena_reset_*` / `arena_zaehler_*` / `arena_commit_*`).** The entry's strict
+options were taken, all three from the checker side, no emitter change (the
+plain words stay; `MARKE_EMIT` unmoved):
+
+| | |
+|---|---|
+| **generations across threads: `N521`** | the refusal option, not generation consumption: a `reset` of `A` in a routine that may run concurrently with a use of `A` (another `concurrent` member -- a routine named twice against itself -- an `entry`/`boot` target, a `start` root, a `child` region; each closed over calls, indirect calls as the whole pool) is refused with no lock exemption. Consumption was rejected because a lock serializes the counter but cannot revive a consumed generation -- the admitted shape would still hand the holder a stale slot. `child` regions always double with `N457` (its guard disjunct is vacuous for arenas, measured: `sperrdaten` resolves no arena `protects`); `start` roots fall here alone (`N462` resolves no arena `writes` -- its carriers are tables -- so a sharing start root beside a member was nobody's refusal). |
+| **roots entered more than once: counted, no code** | the hole does not reproduce on this tree: a `concurrent` body counts once per naming, an `entry` target without bound, and a started root once per execution of its statement (sequentially repeated, loop-multiplied, unbounded where the loop is) on top of the share the starter's bound already carries -- pinned by gifts 1279 (pool commits twice), 1280 (a looped `start` multiplies) and the `arena_commit_*` twins (repeated starts, the single execution clean). No `arena.rs` change; the sentence (`arena.wachsen_commit`) names the executions now. |
+| **the emitted counters: `N522`** | the refusal option: `alloc` against `alloc`, `alloc` against `grow`, `grow` against `grow` across two concurrently running routines (members, pool self-pairs, `entry`/`boot` targets, `start` roots; `child` regions stay `N457`'s) without one lock protecting the arena held at every counter site is refused. Held counts as `H007` counts it (`locks` block, `effects` line, signature; never `shared`); the `protects` map is read module-resolved beside `sperrdaten`, which neither rule is weakened by. Atomics were rejected: an atomic cursor still loses the check-then-act past the committed prefix, a concurrent `reset` beside it stays `N521`, and the weak-memory leg over atomics is another lane's (Opus O25b). |
+| **what stays open** | an `entry` target against plain pre-thread boot code (handlers pair with threads only); the `effects`-line exemption shared with `H007` (a declared-but-never-taken line exempts here exactly where `H007` stays silent); `H007` still owns arena READS while counter statements are this pass's; every region `N521` doubles with `N457` (above). |
+
 
 ## O21 — The `child` thread exists in the checker, not in the model, and its code between gate call and region is unchecked for the child (recorded 2026-09-21, review G11, fix lane F3)
 
@@ -1210,3 +1222,18 @@ bodies. Report: `messung/OPUS-E-LINKEN.md`.
 | **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |
 | **not claimed at all** | different hardware assumptions, callbacks through an import (`KeinRueckruf`), dynamic loading, ABI-level linking of foreign C |
 
+
+---
+
+## O29 — Dynamic unbounded data structures and probabilistic statements: planned for later, out of scope now (Simon, 2026-09-26)
+
+Two whole classes of statement are **not open work for the current waves** and **not claimed**:
+they are planned for "some day", after the current scope (the goal theorem's named gaps, the
+Caprock rewrite, full translation validation).
+
+| | |
+|---|---|
+| **dynamic unbounded data structures** | lists, trees, graphs and maps whose size is not bounded by a declaration (heap allocation without a declared ceiling, recursive types, pointer structures that grow at run time). Today's language covers bounded tables, arenas with a declared `max` (`grow`, reset-only free) and bounded strings; nothing beyond a declared bound is modelled, checked or claimed. |
+| **probabilistic statements** | claims about distributions, expected values, failure probabilities or randomised algorithms (e.g. "the hash collides with probability ≤ p", "the retry succeeds with probability 1"). The goal theorem is a statement about EVERY run; no measure over runs exists in the model. |
+| **status** | planned for later; no lane is tasked; no code, gift or example number is reserved. |
+| **where it is named** | here, and in AGENTS.md §2/§3 ("OUT of scope for now"). The `Spec.lean` header does not list them yet; when the next reviewed Spec diff touches the NOT CLAIMED list, both lines belong there. |

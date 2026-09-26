@@ -4837,9 +4837,14 @@ pub const PHASEN: &[Satz] = &[
                   times `N` under `retry … bounded N`), every call and \
                   `start` (the callee's per-invocation bound, a recursion or a \
                   call through a place without bound), and every root of the \
-                  call graph, entered once per load (a `concurrent` body once \
-                  per naming, a hardware `entry` dispatch target without \
-                  bound); `reset` gives no commit back. The `else` always stands and runs when the platform \
+                   call graph, entered once per load (a `concurrent` body once \
+                   per naming, a hardware `entry` dispatch target without \
+                   bound -- and a root started by a statement once per \
+                   execution of that statement: sequentially repeated, \
+                   loop-multiplied, unbounded where the loop is, on top of \
+                   the one share the starter's own bound already carries \
+                   per invocation -- lane 264 measured every shape, no new \
+                   code); `reset` gives no commit back. The `else` always stands and runs when the platform \
                   refuses the commit below the ceiling, walked from the state \
                   before the request; the committed lower bound grows by `n` \
                   on the main path, capped by `M`. The ceiling is the `max` clause where \
@@ -4878,9 +4883,17 @@ pub const PHASEN: &[Satz] = &[
                       gifts 1132-1135 (fix lane F2: `grow` in `forever`, \
                       after a branch that grew, in two roots, in a callee \
                       called twice), with positive twins provably below the \
-                      ceiling in `paesse.rs` (`arena_grow_obere_schranke_n426`, \
+                      ceiling in                       `paesse.rs` (`arena_grow_obere_schranke_n426`, \
                       `arena_grow_ohne_schranke_n426`, \
                       `arena_grow_else_vom_alten_stand`); \
+                      beispiele/gift/1279 (`-- erwartet: N426`: the pool \
+                      commits twice -- `N522` beside it) and `1280` (a \
+                      looped `start` multiplies the root's commit, `N426` \
+                      alone); `paesse.rs` (`arena_commit_pool_zweimal_n426`, \
+                      `arena_commit_start_zweimal_n426`, \
+                      `arena_commit_start_schleife_n426`, \
+                      `arena_commit_start_einmal_sauber`: the single \
+                      execution commits once); \
                       `paesse.rs` (`arena_grow_*`: the past-ceiling poison \
                       with its clean twin, the uncountable-amount poison, \
                       the undeclared-arena poison at `N213`, the clean \
@@ -4937,6 +4950,101 @@ pub const PHASEN: &[Satz] = &[
                       twin); `beispiele/98` and `/99` stay clean and emitting.",
         fundstelle: "crates/gabbro-check/src/arena.rs (`N466`, the `Alloc` \
                      walk, `dynamisch`); dokumente/PLAN-DYNAMISCH.md §4",
+    },
+    // --- lane 264, 2026-09-26: arenas under concurrency (OFFEN O20) ------------
+    //
+    // **Two new refusal codes, each the shape no existing code says.**
+    // `N521` holds the generation against the thread boundary: a `reset`
+    // in a routine that may run concurrently with a use of the same arena
+    // consumes every generation program-wide, and no per-thread generation
+    // analysis tracks the holder across it. `N522` holds the emitted
+    // counters against it: two concurrently running routines touching one
+    // cursor without a guarding lock race on plain words. Minted from lane
+    // 264's block (`N521`--`N525`); `N523`--`N525` go back unused. Row 2 of
+    // O20 (repeated entries against the ceiling) needs no code: the total
+    // already counts every concurrent instance, and the probes below pin
+    // the count instead of a refusal.
+    Satz {
+        name: "arena.reset_neben_gebrauch",
+        kennungen: &["N521"],
+        aussage: "No `reset` of `A` stands in a routine that may run \
+                  concurrently with a use of `A`: `N521` refuses the reset \
+                  beside an `alloc`, an `A[i]` read, a `grow` or a second \
+                  `reset` in another thread -- a `concurrent` member, an \
+                  `entry`/`boot` dispatch target, a `start` root or a \
+                  `child` region, each closed over calls (an indirect call \
+                  may be any routine). The reset consumes every generation \
+                  of `A` program-wide; no lock admits the shape, because \
+                  mutual exclusion serializes the counter but cannot revive \
+                  a consumed generation.",
+        vorbehalt: "Single-threaded programs never reach the pair loop: one \
+                    thread without a self-pair is silent by construction. \
+                    `child` regions always double with `N457` (its guard \
+                    disjunct is vacuous for arenas, so every region use \
+                    beside a program-wide write falls there too); `start` \
+                    roots fall here alone (`N462` resolves no arena \
+                    `writes`). An `entry` target is paired with itself \
+                    (beside its own second instance); a `boot` dispatch is \
+                    not (it runs once). Held counts as `H007` counts it \
+                    nowhere here: there is no exemption to count it for. \
+                    `beispiele/154` (reset beside reuse, one thread) stays \
+                    clean and emitting.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1272 (`-- erwartet: N521`: reset beside \
+                      a parameter-index read, no write-write overlap); \
+                      `1273` (the reset one call down); `1274` (a member's \
+                      reset beside a started root's use); `1275` (a guarded \
+                      `child` read beside a guarded reset -- `N457` beside \
+                      it); `paesse.rs` (`arena_reset_neben_gebrauch_n521`, \
+                      `arena_reset_start_leser_n521`, \
+                      `arena_reset_kind_bewacht_n521`).",
+        fundstelle: "crates/gabbro-check/src/arena_faden.rs (`N521`, the \
+                     thread pairs, the calls-only closure); dokumente/OFFEN.md O20",
+    },
+    Satz {
+        name: "arena.zaehler_ohne_sperre",
+        kennungen: &["N522"],
+        aussage: "No two concurrently running routines touch one arena \
+                  cursor without a guarding lock: `N522` refuses `alloc` \
+                  against `alloc`, `alloc` against `grow` and `grow` against \
+                  `grow` across `concurrent` members (a routine named twice \
+                  against itself), `entry`/`boot` targets and `start` \
+                  roots, unless one lock protecting the arena is held at \
+                  every counter site of both graphs -- in a `locks` block, \
+                  by `effects { locks … }` or by `requires Held`, counted \
+                  the way `H007` counts holding, and never `shared`. The \
+                  choice is the checker's: the plain words stay, sound \
+                  under mutual exclusion. No atomic lowering is built: an \
+                  atomic cursor would still lose the check-then-act past \
+                  the committed prefix, and a concurrent `reset` beside it \
+                  stays `N521` -- and the weak-memory leg over atomics is \
+                  another lane's.",
+        vorbehalt: "Two distinct members sharing without a lock double with \
+                    `W001` (both declare the write); self-pairs and \
+                    entry/member pairs are this rule's alone (`W001`/`W002` \
+                    never form them). `child` regions are not paired here \
+                    (`N457` judges the region's names already, guarded or \
+                    not). A declared-but-never-taken line exempts exactly \
+                    where `H007` stays silent -- the take-duty for thread \
+                    roots is `H007`'s question, not this pass's. `H007` \
+                    itself still owns arena READS (an `A[i]` place); the \
+                    holding half for counter statements is this pass's, \
+                    because no `H007` arm reads them. Atomic and per-core \
+                    arenas do not exist, so no exemption names them.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1276 (`-- erwartet: N522`: the pool \
+                      self-pair, one routine twice); `1277` (entry against \
+                      member -- `H013` and the self-pair beside it); `1278` \
+                      (a common lock nobody takes -- `W001` beside it); \
+                      `paesse.rs` (`arena_zaehler_pool_n522`, \
+                      `arena_zaehler_entry_n522`, \
+                      `arena_zaehler_ohne_halt_n522`, \
+                      `arena_zaehler_undeklariert_e006`, \
+                      `arena_zaehler_bewacht_sauber`: the guarded sharing, \
+                      the disjoint arenas, the declared line).",
+        fundstelle: "crates/gabbro-check/src/arena_faden.rs (`N522`, the \
+                     guard proof); laufzeit/arena_dyn.h (the plain words); \
+                     dokumente/OFFEN.md O20",
     },
     Satz {
         name: "bootsatz.schichten",
