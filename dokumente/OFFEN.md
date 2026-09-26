@@ -1023,6 +1023,11 @@ one of the 15 programs that export today, and its emitted C is
 
 ## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25; NARROWED again 2026-09-26, Opus lane O25: the read half's memory side is proved, its contract side is O25; the contract side proved standalone by Opus lane O25b over the rely, the Spec diff is O25's)
 
+**Narrowed a fourth time (Opus lane O25c, 2026-09-26, SATZKARTE §58).** The rely is the goal
+statement now: the fold (`faltung_akzeptiertX`) is covered by `gabbro_ziel` itself once the user
+proves the bodies against every value the fold may read. Open: the exporter for `accumulates`
+(`LG001`) and "each thread its own cell" (O19).
+
 **Narrowed a third time (Opus lane O25b, 2026-09-26, SATZKARTE §55).** Read as a shared atomic in
 no contract, the fold is admitted by `AkzeptiertX` (`faltung_akzeptiertX`), and
 `gabbro_ziel_atomar` gives every leg of `Ziel` for it once the user proves the bodies against
@@ -1327,7 +1332,25 @@ literals; what stays open is narrower:
 | **no Char bridge** | still open: the layout carries bytes, `BString` carries characters; `ZeichenfolgeC.lean` states the gap beside its lemmas, and no `CForm` plugs into the correspondence framework |
 | **what would close the rest** | flow facts for aggregate positions (a bigger checker), exact-length copies (a bigger analysis), a verified UTF-8 bridge plus a `CForm` hook (a bigger model) |
 
-## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved; NARROWED again 2026-09-26, Opus lane O25b: the rely is built and every leg of `Ziel` is proved with shared atomics, standalone -- the Spec diff is open)
+## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved; NARROWED again 2026-09-26, Opus lane O25b: the rely is built and every leg of `Ziel` is proved with shared atomics, standalone; NARROWED to the plain-payload hand-off 2026-09-26, Opus lane O25c: the rely IS the goal)
+
+**Narrowed to the payload rule (Opus lane O25c, 2026-09-26, SATZKARTE §58;
+`messung/OPUS-O25C-ATOMICS.md`).** The ONE Spec diff is made: `GabbroZiel` quantifies a checker
+for the rely (`PrueferX`, `AkzeptiertSpecX`), (b) with the rely (`NutzerPflichtA`), and concludes
+`ZielFX` on every reachable thread machine over GX (spawn, join, `spawnSicht`, every leg of
+before including `folge`); the statement of before is `GabbroZielSC`, DERIVED
+(`gabbro_ziel_sc_aus`); linked units the same (`GabbroZielVerbund`, `gabbro_ziel_verbund_sc_aus`).
+RMW atomicity is a field of `SchrittW` (`rmw`; `w_kein_verlust`, the counter `w_zaehler`). The
+exporter carries payload-free atomics; `beispiele/116` and `beispiele/162-geteilte-flagge.gab`
+are CERTIFIED (162 is refused by the checker of before). **What stays open:** (1) the payload
+rule -- a PLAIN carrier read after an `awaits` of a release-published flag (`N485`, gifts
+1205-1210 reserved and unused): it needs race freedom by happens-before (the leg `rennfrei` in a
+form "ordered by a lock OR by a release/acquire hand-off") and flow facts (the producer writes
+the payload only before its `publishes`, the consumer reads it only after its `awaits`), with
+the view transfer `hb_uebergabe` as the memory part; (2) linked units sharing an atomic across
+the link (the link check's `lok`); (3) the exporter for payloads, `awaits`, `exchange` and
+atomic arrays; (4) the program-side premise of the counter (`ZaehltHoch`) discharged for a
+concrete term.
 
 **Narrowed again (Opus lane O25b, 2026-09-26, SATZKARTE §55; `messung/OPUS-O25B-ATOMICS.md`).**
 The contract half is proved, standalone (`Spec.lean` unchanged):

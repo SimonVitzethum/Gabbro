@@ -416,6 +416,9 @@ pub(crate) struct GlobModel {
     pub(crate) name: String,
     pub(crate) ty: VTy,
     pub(crate) init: GInit,
+    /// An `atomic` declaration (Opus lane O25c): `D.atomar g = true`. Only the payload-free
+    /// class travels (`nutzlast = []`): a store `publishes nothing` and a bare load.
+    pub(crate) atomar: bool,
 }
 
 /// The `ArenaForm` of one `arena` declaration: which synthesised table holds
@@ -834,6 +837,8 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // `Glob`"). What has no single `Wert` -- an array, a pointer,
                 // a record, a float -- is refused BY NAME in `read_static`.
                 ItemArt::Statisch(s) => model.globs.push(read_static(s, scope)?),
+                // An `atomic` is a `Glob` with `atomar = true` (lane O25c, payload-free class).
+                ItemArt::Atomic(a) => model.globs.push(read_atomic(a, scope)?),
                 ItemArt::Lock(l) => sperren.push(l),
                 // A `reason` declaration is pure declaration data: its case
                 // count is the `gruende` of every `-> T or R` naming it.
@@ -929,9 +934,6 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                             and exports neither statement",
                         ItemArt::Format(_) => "a `format` is a `Tab` with `count 1` whose `where` clauses are \
                             `Block.pruefung` (Syntax.lean §9); this exporter builds no such table",
-                        ItemArt::Atomic(_) => "an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, \
-                            and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter \
-                            writes `atomar := fun _ => false` and exports none of the three",
                         ItemArt::Gruppe(_) => "a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); \
                             this exporter writes `Inv := Empty`",
                         ItemArt::Accumulates(_) => "an `accumulates` is a `Glob` plus a generated assignment \
@@ -1838,6 +1840,7 @@ fn read_arena(a: &ArenaDecl, scope: &Scope, model: &Model) -> Result<(TableModel
             name: zaehl,
             ty: VTy::Int { lo: 0, hi, bits: None },
             init: GInit::Int(0),
+            atomar: false,
         },
     ))
 }
@@ -1970,7 +1973,50 @@ fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
             ));
         }
     };
-    Ok(GlobModel { name: s.name.text.clone(), ty, init })
+    Ok(GlobModel { name: s.name.text.clone(), ty, init, atomar: false })
+}
+
+/// One `atomic` as a `Glob` with `atomar = true` (Opus lane O25c, OFFEN O25). The goal theorem
+/// covers a shared atomic read without a lock since lane O25c (`GeteiltV`, the rely); what
+/// travels here is the PAYLOAD-FREE class: no declared payload superset, no `observed by`
+/// (the other side is a device), an integer or `bool` type, and the C initial value zero
+/// (`_Atomic` storage without an initialiser), which must lie in the declared range. Every
+/// access form beyond the store `publishes nothing` and the bare load is refused by name at
+/// the statement.
+fn read_atomic(a: &AtomicDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
+    let hat_nutzlast = match &a.obermenge {
+        Some(Nutzlast::Orte(o)) => !o.is_empty(),
+        _ => false,
+    };
+    if hat_nutzlast {
+        return Err(refuse("LG001", format!(
+            "atomic {} declares a payload: a published payload is `D.nutzlast` with the publish/await \
+             hand-off, which the goal theorem does not cover (OFFEN O25, verdict P3), so this exporter \
+             carries only payload-free atomics", a.name.text)));
+    }
+    if a.beobachtet.is_some() {
+        return Err(refuse("LG001", format!(
+            "atomic {} is `observed by` an assumption: its reader is a device, which `Deklaration` \
+             does not carry", a.name.text)));
+    }
+    let Some(ty) = g_ty(&a.typ, scope) else {
+        return Err(refuse("LG002", format!(
+            "atomic {} has no `Glob` form: only an integer range or `bool` travels", a.name.text)));
+    };
+    let init = match &ty {
+        VTy::Bool => GInit::Bool(false),
+        VTy::Int { lo, hi, .. } if *lo <= 0 && 0 <= *hi => GInit::Int(0),
+        VTy::Int { lo, hi, .. } => {
+            return Err(refuse("LG003", format!(
+                "atomic {} starts at zero (no initialiser), which lies outside {lo}..{hi}",
+                a.name.text)));
+        }
+        _ => {
+            return Err(refuse("LG002", format!(
+                "atomic {} has no `Glob` form: only an integer range or `bool` travels", a.name.text)));
+        }
+    };
+    Ok(GlobModel { name: a.name.text.clone(), ty, init, atomar: true })
 }
 
 /// One lock: its rank and the carriers its `protects` names (a table, a
@@ -4073,7 +4119,45 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             let on_tag = tr_on_tag(m, tail, ctx, model, scope, fns, fname, out)?;
             Ok(format!("(.cons {on_tag} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
         }
-        StmtArt::Publish(_) => Err(refuse("LG004", format!("`publishes` in {fname} has no G form in this fragment"))),
+        // **`A = e publishes nothing;` is `Stmt.publish` with the empty payload** (lane O25c):
+        // the store of a payload-free atomic. A store WITH a payload is the publish/await
+        // hand-off, which the goal theorem does not cover (OFFEN O25) -- refused by name.
+        StmtArt::Publish(pb) => {
+            let gi = if pb.ziel.suffixe.is_empty() && ctx.lookup(&pb.ziel.basis.text).is_none() {
+                model.globs.iter().position(|g| g.name == pb.ziel.basis.text && g.atomar)
+            } else {
+                None
+            };
+            let Some(gi) = gi else {
+                return Err(refuse("LG004", format!(
+                    "`publishes` in {fname} at {} has no G form: only a store of a declared atomic travels",
+                    pb.ziel.text())));
+            };
+            if !matches!(pb.nutzlast, Nutzlast::Nichts(_)) {
+                return Err(refuse("LG004", format!(
+                    "`publishes` with a payload in {fname} has no G form: the publish/await hand-off \
+                     is not covered by the goal theorem (OFFEN O25)")));
+            }
+            if !ctx.cf.gwrites.contains(&gi) {
+                return Err(refuse("LG004", format!(
+                    "{fname} publishes {} without an `effects {{ writes {} }}` -- \
+                     the write right `Signatur.gschreibt` has nothing to stand on",
+                    pb.ziel.basis.text, pb.ziel.basis.text)));
+            }
+            if !holds_gguards(&ctx.held, model, gi) {
+                return Err(refuse("LG004", format!(
+                    "store of the atomic {} in {fname} holds no guard (no proof)", pb.ziel.basis.text)));
+            }
+            let gty = model.globs[gi].ty.clone();
+            let val = match &gty {
+                VTy::Int { lo, hi, .. } => tr_value(&pb.wert, &VTy::Int { lo: *lo, hi: *hi, bits: None }, ctx, model, scope, fname, out)?,
+                VTy::Bool => tr_bool(&pb.wert, ctx, model, scope, fname, out)?,
+                _ => return Err(refuse("LG004", format!("store of the atomic {} in {fname} has no G form", pb.ziel.basis.text))),
+            };
+            let proof = gdarf_at(ctx, model, fname, gi, out);
+            let base = format!("(.publish {} {val} [] rfl (by decide) {proof})", glob_ctor(model, gi));
+            Ok(format!("(.cons {base} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
+        }
         StmtArt::AwaitLoad(_) => Err(refuse("LG004", format!("`awaits` in {fname} has no G form in this fragment"))),
         StmtArt::Exchange(_) => Err(refuse("LG004", format!("`exchange` in {fname} has no G form in this fragment"))),
         StmtArt::LibraryCall(_) => Err(refuse("LG004", format!("library call in {fname} has no G form in this fragment"))),
@@ -4944,10 +5028,12 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         let garms: Vec<String> = model.globs.iter()
             .map(|g| format!("| .{} => {}", g.name, g.ty.term(model))).collect();
         out.push_str(&format!("  gtyp := fun {}\n", garms.join(" ")));
-        // No `atomic` item exports (LG001), so no publication payload
-        // travels and no global is ordered by the machine.
+        // Only payload-free `atomic` items export (lane O25c), so no
+        // publication payload travels; `atomar` marks them.
         out.push_str("  nutzlast := fun _ => []\n");
-        out.push_str("  atomar := fun _ => false\n");
+        let aarms: Vec<String> = model.globs.iter()
+            .map(|g| format!("| .{} => {}", g.name, g.atomar)).collect();
+        out.push_str(&format!("  atomar := fun {}\n", aarms.join(" ")));
     }
     if model.tables.is_empty() {
         out.push_str("  geteilt := fun t => nomatch t\n");

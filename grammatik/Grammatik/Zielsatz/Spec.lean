@@ -10,17 +10,23 @@
   user wrote: code with contracts `E.P`, lock invariants `E.S`, axiom ensures `E.Q`, declared
   starts with arguments `E.starts` (functions `E.ws`), declared initial memory `E.sp0`.
   Premises in four groups:
-  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of the checker (`Pruefer`: the Bool and its
-      soundness against `AkzeptiertSpec`; the concrete checker is `akzeptiert_pruefer`,
-      Zielsatz/Akzeptiert.lean, computing `Akzeptiert E.P E.S fs ls cs E.ws`);
-  (b) `NutzerPflicht E` -- the user's logic: the bodies at EVERY `forever` budget
-      (`LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at `E.sp0`, every
-      declared start's `requires` there with its declared arguments);
+  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of the checker (`PrueferX`: the Bool and its
+      soundness against `AkzeptiertSpecX`, since lane O25c; the concrete checker is
+      `akzeptiertX_pruefer`, Zielsatz/AtomarZiel.lean, computing `AkzeptiertX E.P E.S fs ls cs
+      E.ws` -- `Akzeptiert` of Zielsatz/Akzeptiert.lean with the footprint rule admitting the
+      unit's shared atomics);
+  (b) `NutzerPflichtA E` -- the user's logic: the bodies at EVERY `forever` budget and against
+      every value a read of a shared atomic may return (`LogikPflichtA`, the rely; on a unit
+      without one it is `LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at
+      `E.sp0`, every declared start's `requires` there with its declared arguments);
   (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code;
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (A4).
   Then for every budget, every set of initially live threads and every reached machine of the
   THREAD machine (FadenMaschine.lean: machine G plus threads spawned at run time by `start` and
-  `child`, since 2026-09-26): `ZielF` -- `Ziel` on its G state plus the spawn and join legs.
+  `child`, since 2026-09-26; over machine GX since lane O25c, Speichermodell/GXMaschine.lean:
+  the unit's shared atomics read as the weak memory answers): `ZielFX` -- `ZielX` on its G
+  state plus the spawn and join legs. The statement before lane O25c is `GabbroZielSC`
+  (`ZielF`/`Ziel` over G, the checker and (b) of before), a corollary (atomic-rely block).
   `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
   finite declarations only).
   A SECOND statement, `GabbroZielVerbund` (end of this file, since 2026-09-26), covers a
@@ -37,12 +43,15 @@
     `crates/gabbro-check/tests/zertifikate.rs` recomputes it from the tree and fails on any
     byte of difference, so an accepted program outside both lines, a stale certificate or a
     stale row turns `cargo test` RED. Measured 2026-09-26: 199 accepted, 23 CERTIFIED, 176
-    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified).
+    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified); after lane O25c (the
+    exporter carries payload-free atomics, example 162 added): 204 accepted, 25 CERTIFIED, 179
+    UNCERTIFIED (of the 139 top-level corpus programs: 20 certified).
   * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
     imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
-    decides (a) for it IN LEAN (`gCheck : akzeptiert_pruefer.akzeptiert gE … = true := by
-    decide`) and states this theorem on it (`gP_gabbro_f`: `ZielF` on every reachable thread
-    machine; `gP_gabbro`: `Ziel` on every G run), with (b) `NutzerPflicht gE` as the open
+    decides (a) for it IN LEAN (`gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE … = true
+    := by decide`, since lane O25c) and states this theorem on it (`gP_gabbro_f`: `ZielFX` on
+    every reachable thread machine over GX; `gP_gabbro`: `ZielX` on every GX run), with (b)
+    `NutzerPflichtA gE` as the open
     hypothesis -- the user's part -- and (c), (d) as named above. For such a program the Rust
     checker's verdict is NOT in the chain of reasoning: the Lean Bool decides, and an exported
     program the Lean Bool refused would turn the build RED.
@@ -71,6 +80,109 @@
     therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
     in Lean for every certified program, and the others guard properties this statement does
     not claim (the NOT CLAIMED list, and the dropped forms above).
+
+  -- BEGIN atomic-rely block (Opus lane O25c, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS LANES O25, O25b, O25c: UNGUARDED ATOMIC COMMUNICATION,
+  OFFEN O25 AND O17's READ HALF), AND WHY -- a REVIEWED DIFF of this file (the review:
+  messung/OPUS-O25C-ATOMICS.md; the pieces: OPUS-O25-ATOMICS.md, OPUS-O25B-ATOMICS.md). The
+  premises (a) and (b) and the conclusion MOVE; the statement of before stays, as
+  `GabbroZielSC`, and is DERIVED from the new one.
+  * THE GAP. The footprint component `fuss` demanded that every carrier a thread reads is
+    thread-local or lock-guarded, `atomic` carriers included. So a flag, a counter or a
+    per-core cell that one thread writes and another reads WITHOUT a lock -- the thing atomics
+    exist for -- was refused, and `schwach` (the weak machine adds no behaviour) was true only
+    because W's non-SC outcomes occurred on no accepted program. Covering such programs needs
+    two things: the weak memory may answer a read of a shared atomic with a stale message
+    (the statement must speak about those runs), and the user's sequential proof must hold
+    whatever that read returns (a RELY).
+  * THE DIFF, premises. (a) `C : Pruefer` becomes `C : PrueferX`, sound against
+    `AkzeptiertSpecX` -- `AkzeptiertSpec` with ONE field changed: `fuss` is `FussSX` over the
+    ADMITTED SHARED ATOMICS `GeteiltV P ws` (an `atomic` global with no guard lock that is not
+    thread-local among the starts, `GeteiltA`, and that no `requires`, `ensures` or owed
+    invariant mentions, `VertragsFrei`): such a carrier may stand in a footprint beside the
+    local and the guarded ones. A RELAXATION: every checker of before is a checker for the
+    rely (`Pruefer.alsX`, via `akzeptiertSpecX_of_spec`), with the same verdict. (b)
+    `NutzerPflicht E` becomes `NutzerPflichtA E`: `LogikPflicht` with every body run by
+    `execEndHA` against EVERY atomic environment in `HavocA (GeteiltA E.P E.ws)` -- at every
+    read of a shared atomic the body meets every value of its type (Speichermodell/AtomarSem.lean,
+    AtomarRec.lean). A STRENGTHENING exactly where another thread can interfere
+    (`hP_rely_nicht`: a body whose sequential triple holds fails it), and NO change on every
+    unit the checker of before accepts: such a unit reads no shared atomic, and the two
+    obligations are EQUIVALENT there (`logikPflichtA_iff_akzeptiert`). (c), (d): unchanged.
+  * THE DIFF, conclusion. The thread machine runs over machine GX (`FadenSchrittX`,
+    Speichermodell/GXMaschine.lean): its `lauf` step is a step of G on a PRESENTED memory that
+    agrees with G's outside the unit's admitted shared atomics `GeteiltV E.P E.ws`
+    (`RufSchrittGX`, AtomarLauf.lean) -- so every stale answer the weak memory may give at a
+    shared atomic is a run of the statement. `ZielF`/`Ziel` become `ZielFX`/`ZielX`, leg by leg:
+    - SAME statement, now at every GX-reachable machine: `speicherSicher`, `vertrag`,
+      `sperrInv`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `startEnde`,
+      `keinStartGrund`, `keinLogikHalt`, `keineVerklemmung`, `keinZyklus`, `fortschritt`,
+      `folge`, and on the thread machine `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`,
+      `keineVerklemmung`, `keinZyklus`;
+    - over MORE runs or steps (GA/GX contain G): `rennfrei` (`RennfreiBisGA`: every GA run,
+      non-atomic carriers), `sperrWechsel`/`sperrSicht` (every GX step), `keinKernHalt`
+      (`KernHaltEA`: Opus agent H's leg with the program's own handlers, over GA runs,
+      from `AkzeptiertSpecX.masken`), `zeit` (`ZeitAbX`: every GX segment), `fortschritt`/`spawnSicht` of the
+      thread machine (GX thread steps);
+    - CHANGED FORM: `schwach` (`SchwachX`): every step W takes from a machine over `M` is a
+      GX step, and the memory W presents is G's at every carrier OUTSIDE the shared atomics.
+      The form of before (`SchwachSC`: every W step is a G step) is FALSE on an accepted flag
+      program (`n1_schwachSC_falsch`); with no shared atomic the two coincide.
+  * RMW ATOMICITY IN W ITSELF. `SchrittW` gains the field `rmw`: an `exchange` of `g` (the
+    one read-modify-write form, emitted as ONE C11 RMW -- `atomic_fetch_*`, `atomic_exchange`
+    or a CAS loop) writes `g` DIRECTLY above the message it read. Without it W admitted the
+    lost update (`zaehler_verloren`), which no C11 execution shows (RC11's atomicity axiom);
+    with it no two RMWs read one message (`w_kein_verlust`, RMW.lean) and the two-thread
+    counter ends at 2 (see the witnesses). W still contains G (`w_aus_g`: the SC construction
+    writes at `ts + 1`), and W is still an over-approximation of RC11, so every claim over W
+    stays a claim about the C (assumption (2) of the reading now names the RMW lowering).
+  * WHY NOTHING IS WEAKENED (theorems, Zielsatz/BeweisAtomar.lean). `gabbro_ziel_sc_aus :
+    GabbroZiel → GabbroZielSC` -- the STATEMENT OF BEFORE, VERBATIM, is a corollary: a checker
+    of before is a `PrueferX` (`Pruefer.alsX`); on a unit it accepts, (b) of before gives (b)
+    with the rely (`nutzerPflichtA_of_akzeptiert`) and no admitted shared atomic exists
+    (`geteiltV_leer`); every thread-machine run over G is one over GX (`fadenErreichbarX_of`);
+    and with no shared atomic `ZielFX` is `ZielF` (`zielF_of_X`, via `gx_leer_g`: GX over an
+    empty set IS G). The same for linked units (`gabbro_ziel_verbund_sc_aus`). So every
+    program, run and leg of before is covered, and the new statement adds the programs with
+    shared atomics and their weak runs. ONE CAVEAT (review of lane O25c, F1): "verbatim" is
+    the TEXT. The machine W under the leg `schwach` changed with it: `SchrittW` gained `rmw`,
+    so `SchwachSC` in `GabbroZielSC` now speaks about the W steps in which an `exchange` writes
+    directly above the message it read. W without `rmw` admitted strictly more steps (the lost
+    update), so the leg of before claimed more than the text of before now claims: that no
+    step of W, even a non-atomic read-modify-write, left G on an accepted unit. What carries
+    the difference is assumption (2) of the reading (the emitter lowers `exchange` to ONE C11
+    RMW); for an `exchange` of a lock-guarded plain global the adjacency is DRF's, not C11's.
+    Every other leg of `GabbroZielSC` reads definitions this lane did not touch.
+  * WHAT CARRIES THE PROOF (`zielX_aus`, `zielFX_aus`): the replay of the user's proof with
+    the rely (`ziel_ort_atomar_voll`, lanes O25b: the recorded environment answers every
+    shared read with the value the weak memory gave), the invariant legs over GX
+    (`invarianten_atomar`), the thread-only invariants over GA (`gaInv`), the DRF theorem with
+    racing atomics (`schwach_ist_gX`), the time bound over GX segments
+    (`frame_schritte_beschraenktX`), the order leg over GX (`folgeG_erreichbarX`), and the
+    thread machine over GX (`FadenInvX`).
+  * WITNESSES (Zielsatz/AtomarAkzeptiertZeuge.lean, Zielsatz/AtomarGoalZeuge.lean,
+    Speichermodell/Zaehler*.lean): the flag program of configuration 1 (`kern` stores the
+    atomic `konfig`, `hauptA`/`hauptB` read it with no lock) is refused by the checker of
+    before, accepted by `AkzeptiertX`, carries (b) with the rely, and `gabbro_ziel` gives
+    `ZielFX` on it; W's stale read really happens on it and is a covered GX step; the rely
+    bites (`hP_rely_nicht`); a contract over the shared `konfig` is refused
+    (`vertrag_atomar_abgelehnt`, Rust `N484`); the per-core fold is accepted
+    (`faltung_akzeptiertX`, O17's read half); the counter on W itself (`w_zaehler`,
+    Speichermodell/ZaehlerW.lean): where every write of an atomic is an `exchange` adding one,
+    its history on every W run is the gap-free chain `0 … n` and the newest message holds the
+    start value plus the number of writes -- two increments end at two above the start
+    (`w_zaehler_zwei`), in every interleaving; the program-side premise (every write of the
+    global IS that `exchange`) is a hypothesis there, not yet discharged for a concrete term.
+    Certified: `beispiele/162-geteilte-flagge.gab` (a shared atomic written by one start, read by
+    another, no lock) -- refused by the checker of before (`g162_alt_abgelehnt`), its
+    certificate decides `AkzeptiertX` and states `GabbroZiel` on it.
+  * WHAT STAYS NAMED (NOT CLAIMED below): a contract, `requires`, `ensures` or invariant over a
+    shared atomic (refused: its value may change at any moment, `N484`); the publish/await
+    hand-off of a PLAIN payload read without a lock (still refused, verdict P3; OFFEN O25's
+    remaining part); linked units sharing an atomic across the link (the link check's `lok`
+    demands every lock-free footprint carrier thread-local over the composed hulls, atomics
+    included); the merge discipline of per-core cells beyond reading them (OFFEN O17).
+  -- END atomic-rely block --
 
   -- BEGIN linking block (Opus agent E, 2026-09-26) --
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT E: LINKING SEPARATELY COMPILED UNITS), AND WHY -- a
@@ -413,7 +525,9 @@
     every leg of `Ziel` by `gabbro_ziel_schwach`).
   * WHAT IT DOES NOT BUY, named below (NOT CLAIMED, OFFEN O25): the goal still covers no
     program that RELIES on an unguarded atomic read across threads -- `fuss` refuses such a
-    program -- so the non-SC outcomes of W never occur on an accepted program.
+    program -- so the non-SC outcomes of W never occur on an accepted program. (SUPERSEDED by
+    the atomic-rely block of lane O25c: such programs are covered, and `schwach` has the form
+    `SchwachX`.)
   -- END weak-memory block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
@@ -514,8 +628,9 @@
     checked by (a) but occurs in no run of G (the exporter starts every dispatch root, lane 198;
     the diff script pins both, K6). The shared-atomics statement `gabbro_ziel_atomar`
     (`ZielAtomar`, Zielsatz/AtomarAkzeptiert.lean) keeps F11's form `KernHaltGA`, which holds for
-    every program: `AkzeptiertX` has no handler component, so there the leg is still carried by
-    nothing of (a) (OFFEN O19).
+    every program. (Merge with lane O25c: the GOAL statement with the rely carries this hunk's
+    leg -- `AkzeptiertSpecX` has the field `masken`, `AkzeptiertX` the component `maskenB`, and
+    `ZielX.keinKernHalt` is `KernHaltEA`, this leg over GA runs, `kernHaltEA_aus`.)
   -- END handler block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
@@ -860,7 +975,11 @@
         step's own writes (the last two make W weaker than C11, the safe direction).
         `Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
         release/acquire; a published model, not proved here against an axiomatic C11;
-    (2) the C compiler and the hardware implement C11 atomics and the orders as specified;
+    (2) the C compiler and the hardware implement C11 atomics and the orders as specified,
+        and the emitter lowers an `exchange` to ONE C11 read-modify-write (`atomic_fetch_*`,
+        `atomic_exchange`, or a CAS loop retried until it succeeds) -- that is what
+        `SchrittW.rmw` models (lane O25c: the write sits directly above the message read,
+        RC11's atomicity of RMWs);
     (3) EVERY lock primitive `<L>_nimm` is an acquire and every `<L>_gib` a release, whoever
         implements it: a driver-defined lock (`pthread_mutex_lock`/`_unlock`, `treiber.rs`);
         an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`
@@ -1069,23 +1188,21 @@
   emitted C overflows); the C and the hardware; (weak-memory hunk, 2026-09-26: the line
   "weak memory beyond DRF-SC" is REPLACED -- what is now claimed is the leg `schwach`: W,
   the weak machine, adds no behaviour on an accepted program, for every order assignment,
-  and every leg holds on every machine W reaches) programs that RELY on an unguarded atomic
-  read across threads -- a flag, counter or per-core cell one thread writes and another reads
-  without a lock: the footprint component `fuss` refuses them (a read carrier another start
-  writes must be thread-local or lock-guarded, `atomic` or not), so W's non-SC outcomes
-  (`mp_rlx_erlaubt`, `sb_erlaubt`) occur on no accepted program and no theorem here speaks
-  about them; covering them needs the user's sequential semantics to havoc such a read (a
-  rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`; the MEMORY half is
-  proved standalone since 2026-09-26, outside this statement: with the footprint check
-  exempting atomics, every W step is a step of G whose atomic reads are answered per W and
-  whose plain carriers stay sequentially consistent, `schwach_ist_gA`,
-  Speichermodell/Atomar.lean -- the replay of the user's proof over such steps is what is
-  missing); that W is exactly
+  and every leg holds on every machine W reaches) (atomic-rely hunk, lane O25c, 2026-09-26: the
+  line "programs that RELY on an unguarded atomic read across threads" is REPLACED -- what is
+  now claimed is the statement over machine GX with the rely, see the atomic-rely block) a
+  `requires`, `ensures` or invariant OVER a shared atomic (refused: `GeteiltV` demands
+  `VertragsFrei`, Rust `N484`; the value may change at any moment, so no contract can promise
+  it); the merge discipline of per-core cells (`accumulates … per cpu`, OFFEN O17) beyond what
+  the rely gives a reader; linked units that share an atomic ACROSS the link (the link check's
+  `lok` demands every lock-free footprint carrier thread-local over the composed hulls,
+  atomics included: such a link is refused and not covered); that W is exactly
   RC11 (it over-approximates it at G's step granularity: `seq_cst` is modelled as release/acquire, so no SC-order
   fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
   `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
-  races; `schwach` covers their values); the publish/await hand-off of an unguarded payload (refused by the checker,
-  see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
+  races; `schwach` covers their values); the publish/await hand-off of an unguarded PLAIN
+  payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane
+  O25c); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; (Opus agent D,
   2026-09-26: the line "invariants at entry or while locks are held (claimed at returns only)"
@@ -1177,6 +1294,7 @@ import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
 import Grammatik.Speichermodell.MaschineW
 import Grammatik.FadenMaschine
+import Grammatik.Speichermodell.GXMaschine
 import Grammatik.Folge
 
 namespace Gabbro.Grammatik.Zielsatz
@@ -1761,12 +1879,239 @@ structure ZielF (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
       K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
         InvRuheG P M0 K'.m
 
-/-- **GABBRO_ZIEL.** Since 2026-09-26 over the THREAD MACHINE: every thread-machine run from the
-    runtime's start, with any set `lebt0` of initially live threads -- the others are slots that
-    `start` or `child` spawn at run time. Every G run is such a run (`lebt0` all live, nothing
-    spawned: `fadenErreichbar_von_G`), so the statement of before is a corollary
-    (`gabbro_ziel_g`). -/
+-- BEGIN atomic-rely definitions (Opus lane O25c, 2026-09-26) --
+/-! ## Shared atomics: the rely (Opus lanes O25, O25b, O25c; OFFEN O25, O17)
+
+    The definitions of the atomic-rely block of the header: (a) `AkzeptiertSpecX`/`PrueferX`,
+    (b) `NutzerPflichtA`, the legs `ZielX`/`ZielFX` over machine GX, and `GabbroZiel`. Moved here
+    from Zielsatz/AtomarPflicht.lean, AtomarAkzeptiert.lean, AtomarZiel.lean,
+    AtomarInvarianten.lean and AtomarMasken.lean (lane O25b) unchanged; `SchwachX`, `ZeitAbX`,
+    `ZielX`, `FortschrittFX`, `ZielFX` are new (lane O25c). -/
+
+section Atomar
+
+variable [DecidableEq D.Fn]
+
+/-- **The call closure of `w`** (enumeration-free): `w`, and every function a function of the
+    closure calls (`ruftB`). -/
+inductive Erreicht (P : Programm D) (w : D.Fn) : D.Fn → Prop
+  | wurzel : Erreicht P w w
+  | ruf {f g : D.Fn} : Erreicht P w f → ruftB P f g = true → Erreicht P w g
+
+/-- **Thread-local among the starts `ws`, over the call closure** (the twin of `Getrennt`,
+    Spec.lean, without a member list). -/
+def GetrenntR (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, Erreicht P w₁ f →
+    c ∈ fussOrteG P f → Erreicht P w₂ g → TraegerSchreibt g c = false
+
+/-- **A shared atomic of the unit**: `atomic`, unguarded, and not thread-local. -/
+def GeteiltA (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  AtomarAusgenommen c ∧ (∀ L, ¬ Bewacht c L) ∧ ¬ GetrenntR P ws c
+
+/-- **A shared atomic the checker admits**: shared (`GeteiltA`) and in no contract. -/
+def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  GeteiltA P ws c ∧ VertragsFrei P c
+
+/-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
+    admitted shared atomics `GeteiltV`. Every other field is `AkzeptiertSpec`'s. -/
+structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
+  frag : programmImFragmentG P fs = true
+  abg : ∀ w, AbgK P fs (reachB P fs w)
+  fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
+  stufen : StufenM P
+  sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
+  wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
+  einzeln : EinzelnPool P fs ws
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
+  antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
+  -- the handler discipline `H102` (Opus agent H), as in `AkzeptiertSpec`
+  masken : MaskenDisziplin P fs
+
+/-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
+    G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
+    a write, are ordered through a guard lock. -/
+def RennfreiBisGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufGA P O passes M0 ms fs n → ms n = M →
+    ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
+      ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
+      (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
+      ¬ AtomarAusgenommen c →
+      ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
+
+end Atomar
+
+/-- **A checker for the rely**: its soundness target is `AkzeptiertSpecX`. -/
+structure PrueferX where
+  akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
+    Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
+  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws
+
+/-- **The logic of the bodies with the atomic rely over `T`.** -/
+def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
+    Prop :=
+  (∀ (passes : Nat) (f : D.Fn),
+    KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f) ∧
+  SperrInvLokal S ∧ AxEnsLokal Q
+
+/-- **The user's own logic with the atomic rely**: the rely over the unit's shared atomics. -/
+structure NutzerPflichtA [DecidableEq D.Fn] (E : Einheit D) : Prop where
+  logik : LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws)
+  start : StartPflicht E
+
+/-- **Lock invariants at every lock move, over GX steps** (`SperrWechselG` with `RufSchrittGX`). -/
+def SperrWechselGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D) (L : D.Lock), RufSchrittGX P O passes Tg M u M' →
+    (L ∉ offen (M.faeden u).spur → L ∈ offen (M'.faeden u).spur →
+      S.inv L M.speicher = true ∧ S.inv L M'.speicher = true) ∧
+    (L ∈ offen (M.faeden u).spur → L ∉ offen (M'.faeden u).spur → S.inv L M'.speicher = true)
+
+/-- **A held lock's invariant is observed by its holder alone, over GX steps.** -/
+def SperrSichtGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D), RufSchrittGX P O passes Tg M u M' →
+    ∀ (L : D.Lock) (c : D.Tab ⊕ D.Glob), c ∈ S.orte L →
+      (ZugriffG M M' u c → L ∈ offen (M.faeden u).spur) ∧
+      (∀ t, t ≠ u → L ∈ offen (M.faeden t).spur → TraegerGleich M'.speicher M.speicher c)
+
+/-- **No same-core interrupt deadlock, on GA runs** (`KernHaltG` with `LaufGA`). -/
+def KernHaltGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (H : Faden → Prop) (Z : Faden → D.Fn → Prop)
+    (A : Faden → D.Fn → Merkmal D),
+    (∀ t, H t → MerkAbg P (Z t) (A t)) →
+    (∀ t, H t → MerkInvG (Z t) (A t) (M0.faeden t)) →
+    (∀ t, H t → ∀ (f : D.Fn) (L : D.Lock), Z t f → (A t f).sperre L = true →
+      D.maskiert L = true) →
+    (∀ (t : Faden) (L : D.Lock), ¬ AnSperre M0 t L) →
+    ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+      LaufGA P O passes M0 ms fs n → ms n = M → KernPlan kern H ms fs n →
+      ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
+        AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+
+/-- **No same-core interrupt deadlock, on GA runs** (`KernHaltE` of Opus agent H with `LaufGA`:
+    the handlers are the program's own, `HandlerVon`). -/
+def KernHaltEA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufGA P O passes M0 ms fs n → ms n = M → KernPlan kern (HandlerVon P M0) ms fs n →
+    ∀ (g f : Faden) (L : D.Lock), HandlerVon P M0 g → f ≠ g → kern f = kern g →
+      AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+
+/-- **The weak machine adds no behaviour outside the shared atomics `Tg`, at `M`**. For EVERY
+    assignment `ord` of memory orders, every weak state `W` over `M` reached from the weak start
+    over `M0`, and every step W takes from there (with its presented memory `σ`): it is a step
+    of GX from `M` to the successor's G-part -- machine G whose reads of `Tg` the weak memory
+    answers -- and `σ` is G's memory at every carrier outside `Tg`. With `Tg` empty this is
+    `SchwachSC` (`schwachSC_of_X`): the DRF theorem. -/
+def SchwachX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ord : D.Glob → Speichermodell.Ordnung) (W W' : RufMaschineW D) (u : Faden) (σ : Speicher D)
+    (M'' : RufMaschineG D) (wahl : D.Tab ⊕ D.Glob → NachrichtW D) (neu : D.Tab ⊕ D.Glob → Nat),
+    RufErreichbarW P O passes ord (RufStartW M0) W → W.g = M →
+    SchrittW P O passes ord W u W' σ M'' wahl neu →
+    RufSchrittGX P O passes Tg M u W'.g ∧ ∀ c, ¬ Tg c → TraegerGleich σ M.speicher c
+
+/-- **Time over GX**: `ZeitAb` for every run of GX from `M` (the weak memory answering the
+    shared atomics). -/
+def ZeitAbX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (M : RufMaschineG D) : Prop :=
+  ∀ (f : Faden) (g : D.Fn) (n : Nat) (rho : Env D (D.params g)) (s0 : World D) (k : Nat),
+    rufTief P (n + 1) g = true → Eintritt P f g rho s0 k M →
+    ∀ (M2 : RufMaschineG D) (run : SegLaufX P O passes Tg M M2), aktivVorX f k run →
+      segZaehleX run f ≤ kostenTief P passes (n + 1) g
+
+/-- **THE GOAL at a machine `M` of a GX run from `M0`, with the shared atomics `Tg`.** -/
+structure ZielX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 M : RufMaschineG D) : Prop where
+  speicherSicher : SpurInv M
+  rennfrei : RennfreiBisGA P O passes M0 M
+  schwach : SchwachX P O passes Tg M0 M
+  vertrag : VertragAmOrtG P M
+  sperrInv : SperrInvG S M
+  invRueck : InvAmOrtG P M
+  invGrund : InvAmGrundG P M
+  invRuhe : InvRuheG P M0 M
+  invSicht : InvSichtG P M0 M
+  sperrWechsel : SperrWechselGX P O passes Tg S M
+  sperrSicht : SperrSichtGX P O passes Tg S M
+  startEnde : StartEndeG P M
+  keinStartGrund : KeinStartGrundG M
+  keinLogikHalt : KeinLogikHaltG O passes M
+  keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
+  keinZyklus : KeinWarteZyklus M
+  keinKernHalt : KernHaltEA P O passes M0 M
+  fortschritt : FortschrittG P O passes M
+  zeit : ZeitAbX P O passes Tg M
+  folge : FolgeG P M
+
+/-- **Every stop is named, on the thread machine over GX.** -/
+def FortschrittFX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (K : FadenMaschine D) : Prop :=
+  ∀ t, K.lebt t = false ∨
+    (K.wartet t ≠ [] ∧ (JoinWartet K t ∨
+      ∃ K', FadenSchrittX P O passes Tg K K' ∧ K'.m = K.m ∧ K'.wartet t = [])) ∨
+    (K.wartet t = [] ∧ (FertigG K.m t ∨ WartetG K.m t ∨ HaltBenannt O passes K.m .flagge t ∨
+      HaltBenannt O passes K.m .budget t ∨ HaltBenannt O passes K.m .hardware t ∨
+      HaltBenannt O passes K.m .nieZurueck t ∨
+      ∃ M', RufSchrittG P O passes K.m t M' ∧
+        FadenSchrittX P O passes Tg K ⟨M', K.lebt, K.wartet, K.rang, K.uhr⟩))
+
+/-- **THE GOAL on a thread machine over GX.** -/
+structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) (K : FadenMaschine D) : Prop where
+  g : ZielX P S O passes Tg M0 K.m
+  schlafendUnberuehrt : ∀ t, K.lebt t = false → K.m.faeden t = M0.faeden t
+  schlafendFrei : ∀ t, K.lebt t = false → ∀ L, L ∉ offen (K.m.faeden t).spur
+  joinFrei : ∀ t, K.wartet t ≠ [] → ∀ L, L ∉ offen (K.m.faeden t).spur
+  keineVerklemmung : (∀ t, K.lebt t = true → ¬ FertigG K.m t →
+      (K.wartet t = [] ∧ WartetG K.m t) ∨ JoinWartet K t) →
+    ∀ t, K.lebt t = true → FertigG K.m t
+  keinZyklus : KeinWarteZyklusF K
+  fortschritt : FortschrittFX P O passes Tg K
+  spawnSicht : ∀ (K' : FadenMaschine D) (t : Faden), FadenSchrittX P O passes Tg K K' →
+    K.lebt t = false → K'.lebt t = true →
+      K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
+        InvRuheG P M0 K'.m
+-- END atomic-rely definitions --
+
+/-- **GABBRO_ZIEL** (since Opus lane O25c, 2026-09-26: WITH THE ATOMIC RELY). Over the THREAD
+    MACHINE OVER GX: every run from the runtime's start, with any set `lebt0` of initially live
+    threads -- the others are slots that `start` or `child` spawn at run time -- in which every
+    read of an ADMITTED SHARED ATOMIC of the unit (`GeteiltV E.P E.ws`: `atomic`, unguarded, not
+    thread-local among the starts, in no contract) may be answered by the weak memory rather
+    than by the last write. (a) is a checker for the rely (`PrueferX`: sound against
+    `AkzeptiertSpecX`, whose footprint rule admits exactly those carriers), (b) is the user's
+    logic with the rely (`NutzerPflichtA`: every body against EVERY value such a read may
+    return). Every run of before is such a run (`fadenErreichbarX_of`), every checker of before
+    is such a checker (`Pruefer.alsX`), and on every unit it accepts (b) is (b) of before and no
+    admitted shared atomic exists: the statement of before, `GabbroZielSC`, is a corollary
+    (`gabbro_ziel_sc_aus`, Zielsatz/BeweisAtomar.lean). -/
 def GabbroZiel : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflichtA E →                                          -- (b) the user, with the rely
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+          (FadenStart E.P.mitRuhe sp init lebt0) K →
+          ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+            (RufStartG E.P.mitRuhe sp init) K
+
+/-- **THE STATEMENT OF BEFORE** (verbatim `GabbroZiel` until Opus lane O25c, 2026-09-26): the
+    checker of before, (b) without the rely, `ZielF` over the thread machine over G. It is a
+    COROLLARY of `GabbroZiel` (`gabbro_ziel_sc_aus`), kept as a name because the corpus theorems
+    and the earlier embeddings are stated over it. Since 2026-09-26 over the THREAD MACHINE:
+    every thread-machine run from the runtime's start, with any set `lebt0` of initially live
+    threads -- the others are slots that `start` or `child` spawn at run time. Every G run is
+    such a run (`lebt0` all live, nothing spawned: `fadenErreichbar_von_G`), so the statement of
+    before that is a corollary too (`gabbro_ziel_g`). -/
+def GabbroZielSC : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
@@ -1918,6 +2263,16 @@ structure NutzerTeil (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
     SperrInvLokal E.S ∧ AxEnsLokal E.Q
   start : StartPflicht E
 
+/-- **The user's logic of ONE unit, with the atomic rely** (the rely over the unit's own shared
+    atomics). -/
+structure NutzerTeilA [DecidableEq D.Fn] (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
+  logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
+      KoerperGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
+        InvGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
+        InvGutGrundA E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q
+  start : StartPflicht E
+
 end Verbund
 
 /-- **GABBRO_ZIEL FOR LINKED UNITS** (2026-09-26, Opus agent E). Two units `E₁`, `E₂` over one
@@ -1927,10 +2282,40 @@ end Verbund
     (c) the hardware meets the assumptions, and they are the SAME for both units
         (`E₂.Q = E₁.Q`: one oracle answers both units' axioms);
     (d) the runtime starts the LINKED unit.
-    Then every leg of `ZielF` holds on every reachable thread machine of the linked program --
-    race freedom and lock discipline ACROSS the units, spawned threads and the weak-memory leg
-    included, since the conclusion is `GabbroZiel`'s own. -/
+    Then every leg of `ZielFX` holds on every reachable thread machine over GX of the linked
+    program -- race freedom and lock discipline ACROSS the units, spawned threads and the
+    weak-memory leg included, since the conclusion is `GabbroZiel`'s own. Since Opus lane O25c
+    (2026-09-26) WITH THE ATOMIC RELY: (a) a checker for the rely on each unit, (b) each unit's
+    logic with the rely over its own shared atomics (`NutzerTeilA`). The link check is
+    unchanged: its `lok` demands every footprint carrier a function relies on without a lock
+    thread-local over the composed hulls, atomics included, so the linked program has no
+    admitted shared atomic (named in NOT CLAIMED). The statement of before is
+    `GabbroZielVerbundSC`, a corollary (`gabbro_ziel_verbund_sc_aus`). -/
 def GabbroZielVerbund : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (e : D.Fn → Bool)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E₁ fs.1 ls.1 cs.1 = true →                    -- (a) unit 1, alone
+    C.akzeptiert E₂ fs.1 ls.1 cs.1 = true →                    -- (a) unit 2, alone
+    Verbindbar E₁ E₂ →                                          -- (a) one link declaration
+    SchnittstelleSpec fs.1 e E₁ E₂ →                            -- (a) the link check
+    NutzerTeilA e E₁ →                                          -- (b) unit 1's user, rely
+    NutzerTeilA (fun f => !e f) E₂ →                            -- (b) unit 2's user, rely
+    E₂.Q = E₁.Q →                                               -- (c) the SAME hardware assumptions
+    ∀ O : Orakel D, HardwareAnnahmen O E₁.Q →                   -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit (verbinde e E₁ E₂) sp init →                     -- (d) the runtime, linked
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbarX (verbinde e E₁ E₂).P.mitRuhe O.mitRuhe passes
+          (GeteiltV (D := D) (verbinde e E₁ E₂).P (verbinde e E₁ E₂).ws)
+          (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K →
+          ZielFX (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
+            (GeteiltV (D := D) (verbinde e E₁ E₂).P (verbinde e E₁ E₂).ws)
+            (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K
+
+/-- **THE LINKED STATEMENT OF BEFORE** (verbatim `GabbroZielVerbund` until Opus lane O25c): a
+    corollary of `GabbroZielVerbund` (`gabbro_ziel_verbund_sc_aus`). -/
+def GabbroZielVerbundSC : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (e : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E₁ fs.1 ls.1 cs.1 = true →                    -- (a) unit 1, alone

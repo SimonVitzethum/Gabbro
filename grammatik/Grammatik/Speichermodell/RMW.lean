@@ -11,25 +11,30 @@
   then read the same message and both write above it: the lost update, which C11/RC11 forbids
   for an RMW (its write is immediately after the message it read in modification order).
 
-  THE REPAIR, as a sub-machine. `RufSchrittWR` is a W step with ONE more condition: when the
-  acting thread's head is an `exchange` of `g`, the write at `g` takes the timestamp directly
-  above the message it read (`neu = ts + 1`). Timestamps are natural numbers and a write must
-  be fresh (`Frisch`), so no other write can sit in between, and no second RMW can read the same
-  message:
-  * `wr_w`             -- every WR run is a W run: every claim over W (the DRF theorems of
-                          DRF.lean and Atomar.lean, `hb_uebergabe`) holds over WR unchanged;
+  THE REPAIR (lane O25b as a sub-machine, lane O25c IN `SchrittW` ITSELF). Since lane O25c the
+  step of W carries the condition `SchrittW.rmw`: when the acting thread's head is an
+  `exchange` of `g` (`ExchangeKopf`, MaschineW.lean), the write at `g` takes the timestamp
+  directly above the message it read (`neu = ts + 1`). Timestamps are natural numbers and a
+  write must be fresh (`Frisch`), so no other write can sit in between, and no second RMW can
+  read the same message. The sub-machine `RufSchrittWR` of lane O25b is now W itself
+  (`wr_iff`); it stays as a name for the theorems stated over it.
+  * `wr_w`, `wr_iff`   -- WR and W are one machine;
   * `wr_aus_g`         -- every G run is a WR run: the SC construction of `schrittW_aus_g`
                           writes every carrier at `T + 1` over the message at `T` it reads, so
-                          WR still contains G (nothing G does is lost);
+                          W still contains G (`w_aus_g`, nothing G does is lost);
   * `exchange_liest_schreibt` -- an `exchange` step of G reads and writes its global;
-  * **`wr_kein_verlust`** -- on every WR run, two `exchange` steps of one global never read the
+  * **`w_kein_verlust`** -- on every W run, two `exchange` steps of one global never read the
                           same message (the RC11 atomicity axiom in timestamp form);
   * **`wr_rmw_kette`** -- the write of an `exchange` is the ONLY message directly above the one
                           it read, at every later point of the run.
-  WHY A SUB-MACHINE AND NOT AN EDIT OF `SchrittW`: `SchrittW` is imported by the goal statement
-  (the leg `schwach`); restricting it is a Spec diff, which O25 makes only as ONE reviewed diff
-  together with the replay (messung/OPUS-O25B-ATOMICS.md §5). The sub-machine makes the change
-  ready: every theorem of this file transfers to W the moment `SchrittW` gains the condition.
+  WHY IT IS AN ASSUMPTION ABOUT THE C AND NOT A RESTRICTION OF THE CLAIM: W models the C11
+  program the emitter writes. An `exchange` is emitted as ONE atomic read-modify-write, and
+  C11 (RC11 axiom "atomicity": `rmw ∩ (fr; mo) = ∅`) makes its write immediately follow the
+  write it read in modification order. W without the condition admitted the lost update
+  (`zaehler_verloren`), a behaviour no C11 execution has; so the condition removes only
+  behaviours the C cannot show, and every claim over W stays a claim about the C (named
+  assumption (2) of the reading in Zielsatz/Spec.lean: the lowering of the orders and of the
+  RMW form).
 -/
 import Lean
 import Grammatik.Speichermodell.Atomar
@@ -62,14 +67,6 @@ variable {D : Deklaration}
 
 /-! ## 1. The machine -/
 
-/-- **The acting thread's head is an `exchange` of `g`** (the one read-modify-write form). -/
-def ExchangeKopf (M : RufMaschineG D) (u : Faden) (g : D.Glob) : Prop :=
-  ∃ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
-    (hw : (vertragVon D (M.faeden u).kopf.f).gschreibt g = true) (hL : gdarf D g Λ)
-    (rest : Block D (vertragVon D (M.faeden u).kopf.f) l (D.gtyp g :: Γ) Λ Λ')
-    (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ') (ρ : Env D Γ),
-    (M.faeden u).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.exchange g neuE hw hL rest) k⟩
-
 /-- **One step of W with atomic read-modify-writes**: a W step whose `exchange` writes directly
     above the message it read. -/
 def RufSchrittWR (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob → Ordnung)
@@ -97,6 +94,12 @@ theorem wr_w {W0 W : RufMaschineW D} (h : RufErreichbarWR P O passes ord W0 W) :
   | schritt W W' u _ hs ih =>
       obtain ⟨σ, M'', wahl, neu, h, _⟩ := hs
       exact .schritt _ _ _ ih ⟨σ, M'', wahl, neu, h⟩
+
+/-- **WR is W** (since lane O25c the RMW condition is a field of `SchrittW`). -/
+theorem wr_iff {W W' : RufMaschineW D} {u : Faden} :
+    RufSchrittWR P O passes ord W u W' ↔ RufSchrittW P O passes ord W u W' :=
+  ⟨fun ⟨σ, M'', wahl, neu, h, _⟩ => ⟨σ, M'', wahl, neu, h⟩,
+    fun ⟨σ, M'', wahl, neu, h⟩ => ⟨σ, M'', wahl, neu, h, h.rmw⟩⟩
 
 /-- **Every G run is a WR run** (for every order assignment): the SC construction writes every
     carrier right above the message it reads. WR loses no behaviour of G. -/
@@ -183,6 +186,19 @@ theorem wr_kein_verlust {W1 W2 W3 W4 : RufMaschineW D} {u₁ u₂ : Faden} {g : 
   apply hfr
   rw [hts, ha3, he]
 
+/-- **NO LOST UPDATE, ON MACHINE W ITSELF** (lane O25c): two `exchange` steps of one global on a
+    W run read DIFFERENT messages -- the adjacency is the step's own `rmw` field. -/
+theorem w_kein_verlust {W1 W2 W3 W4 : RufMaschineW D} {u₁ u₂ : Faden} {g : D.Glob}
+    {σ1 : Speicher D} {N1 : RufMaschineG D} {wahl1 : D.Tab ⊕ D.Glob → NachrichtW D}
+    {neu1 : D.Tab ⊕ D.Glob → Nat}
+    (h1 : SchrittW P O passes ord W1 u₁ W2 σ1 N1 wahl1 neu1) (hk1 : ExchangeKopf W1.g u₁ g)
+    (h23 : RufErreichbarW P O passes ord W2 W3)
+    {σ3 : Speicher D} {N3 : RufMaschineG D} {wahl3 : D.Tab ⊕ D.Glob → NachrichtW D}
+    {neu3 : D.Tab ⊕ D.Glob → Nat}
+    (h3 : SchrittW P O passes ord W3 u₂ W4 σ3 N3 wahl3 neu3) (hk3 : ExchangeKopf W3.g u₂ g) :
+    (wahl1 (.inr g)).ts ≠ (wahl3 (.inr g)).ts :=
+  wr_kein_verlust h1 hk1 (h1.rmw g hk1) h23 h3 hk3 (h3.rmw g hk3)
+
 /-- The same over a run of WR (the middle segment is a WR run). -/
 theorem wr_kein_verlust_lauf {W0 W1 W2 W3 W4 : RufMaschineW D} {u₁ u₂ : Faden} {g : D.Glob}
     (_h01 : RufErreichbarWR P O passes ord W0 W1)
@@ -219,6 +235,8 @@ end Atomar
 #print axioms Gabbro.Grammatik.wr_aus_g
 #print axioms Gabbro.Grammatik.exchange_liest_schreibt
 #print axioms Gabbro.Grammatik.wr_kein_verlust
+#print axioms Gabbro.Grammatik.w_kein_verlust
+#print axioms Gabbro.Grammatik.wr_iff
 #print axioms Gabbro.Grammatik.wr_kein_verlust_lauf
 #print axioms Gabbro.Grammatik.wr_rmw_kette
 

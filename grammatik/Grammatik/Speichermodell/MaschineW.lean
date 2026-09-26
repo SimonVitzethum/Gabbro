@@ -120,6 +120,31 @@ def vorSicht (ord : D.Glob → Ordnung) (W : RufMaschineW D) (u : Faden) (σ : S
 
 /-! ## 2. The step -/
 
+/-- **The acting thread's head is an `exchange` of `g`** (the one read-modify-write form of the
+    language: `let x = g exchange update(v) { … }`, emitted as ONE atomic read-modify-write --
+    `atomic_fetch_*`, `atomic_exchange` or a compare-and-swap loop). Only the rule
+    `dannExchange` fires at such a head (`exchange_liest_schreibt`, RMW.lean). -/
+def ExchangeKopf (M : RufMaschineG D) (u : Faden) (g : D.Glob) : Prop :=
+  ∃ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
+    (hw : (vertragVon D (M.faeden u).kopf.f).gschreibt g = true) (hL : gdarf D g Λ)
+    (rest : Block D (vertragVon D (M.faeden u).kopf.f) l (D.gtyp g :: Γ) Λ Λ')
+    (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ') (ρ : Env D Γ),
+    (M.faeden u).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.exchange g neuE hw hL rest) k⟩
+
+/-- The global an `exchange` at the head of a rest reads and writes (`none`: no exchange). -/
+def GRest.exchangeGlob {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Option D.Glob
+  | .dann (.exchange g _ _ _ _) _ => some g
+  | _ => none
+
+/-- An `exchange` head is seen by `exchangeGlob` (so a head whose `exchangeGlob` computes to
+    `none` is no exchange head -- decided by evaluation on a concrete machine). -/
+theorem exchangeKopf_glob {M : RufMaschineG D} {u : Faden} {g : D.Glob}
+    (h : ExchangeKopf M u g) : (M.faeden u).kopf.rest.2.2.2.2.exchangeGlob = some g := by
+  obtain ⟨l, Γ, Λ, Λ', neuE, hw, hL, rest, k, ρ, hK⟩ := h
+  rw [hK]
+  rfl
+
 /-- **One step of W, with its witnesses**: the presented memory `σ`, G's step to `M''` on it,
     the message read at every carrier (`wahl`), and the timestamp of every write (`neu`). -/
 structure SchrittW (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob → Ordnung)
@@ -158,6 +183,12 @@ structure SchrittW (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob 
   lsicht : ∀ L, W'.lsicht L =
     if L ∈ gegebenVon (mitSpeicher W.g σ) M'' u then (W.lsicht L).verein (W'.sicht u)
     else W.lsicht L
+  /-- **A read-modify-write is atomic** (Opus lane O25c, 2026-09-26): an `exchange` of `g`
+      writes `g` DIRECTLY above the message it read (`ts + 1`). With `frisch` no other write sits
+      in between, so no two RMWs read one message (`w_kein_verlust`, RMW.lean) -- RC11's
+      atomicity of read-modify-writes, which the C11 `atomic_fetch_*`/`atomic_exchange`/CAS the
+      emitter writes guarantee. -/
+  rmw : ∀ g, ExchangeKopf W.g u g → neu (.inr g) = (wahl (.inr g)).ts + 1
 
 /-- **The step relation of W.** -/
 def RufSchrittW (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob → Ordnung)
@@ -477,7 +508,10 @@ theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : Ru
         show (if L ∈ gegebenVon Mσ M' u then (W.lsicht L).verein s' else W.lsicht L) =
           (if L ∈ gegebenVon Mσ M' u then
             (W.lsicht L).verein (if u = u then s' else W.sicht u) else W.lsicht L)
-        rw [if_pos (rfl : u = u)] }
+        rw [if_pos (rfl : u = u)]
+      rmw := fun g _ => by
+        show T (.inr g) + 1 = (wahl (.inr g)).ts + 1
+        rw [(hwahl (.inr g)).2.1] }
   · refine ⟨T', fun c => ⟨?_, ?_, ?_, ?_, ?_⟩⟩
     · -- the message at the bound carries G's value
       by_cases hw : schreibt c
@@ -571,7 +605,8 @@ theorem schrittW_bau {W : RufMaschineW D} {σ : Speicher D} {u : Faden} {M'' : R
     (T : D.Tab ⊕ D.Glob → Nat)
     (hT : ∀ c, (∀ m ∈ W.hist c, m.ts ≤ T c) ∧ (∀ t, W.sicht t c ≤ T c) ∧
       (∀ L, W.lsicht L c ≤ T c) ∧ (∀ x, ∀ m ∈ W.hist x, m.sicht c ≤ T c))
-    (hwahl : ∀ c, wahl c ∈ W.hist c) :
+    (hwahl : ∀ c, wahl c ∈ W.hist c)
+    (hrmw : ∀ g, ExchangeKopf W.g u g → T (.inr g) = (wahl (.inr g)).ts) :
     ∃ W', SchrittW P O passes ord W u W' σ M'' wahl (fun c => T c + 1) ∧
       (∀ c, SchreibG (mitSpeicher W.g σ) M'' u c → TraegerGleich W'.g.speicher M''.speicher c) ∧
       (∀ c, ¬ SchreibG (mitSpeicher W.g σ) M'' u c →
@@ -641,7 +676,10 @@ theorem schrittW_bau {W : RufMaschineW D} {σ : Speicher D} {u : Faden} {M'' : R
       show (if L ∈ gegebenVon Mσ M'' u then (W.lsicht L).verein s' else W.lsicht L) =
         (if L ∈ gegebenVon Mσ M'' u then
           (W.lsicht L).verein (if u = u then s' else W.sicht u) else W.lsicht L)
-      rw [if_pos (rfl : u = u)] }
+      rw [if_pos (rfl : u = u)]
+    rmw := fun g hk => by
+      show T (.inr g) + 1 = (wahl (.inr g)).ts + 1
+      rw [hrmw g hk] }
 
 end Einbettung
 

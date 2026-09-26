@@ -1,8 +1,8 @@
 /-
   File:      Grammatik/Zielsatz/AtomarAkzeptiert.lean
   Subject:   THE CHECKER SIDE OF THE ATOMIC RELY, and the theorem from (a), (b), (c), (d) to the
-             legs over machine W. Opus lane O25b, 2026-09-26. Standalone: `Spec.lean` is
-             unchanged; this is the shape a Spec diff for OFFEN O25 would take.
+             legs over machine W. Opus lane O25b, 2026-09-26. Since lane O25c the
+             definitions `GeteiltV`, `AkzeptiertSpecX`, `RennfreiBisGA` stand in `Spec.lean`.
 
   THE SHARED ATOMICS THE CHECKER ADMITS (`GeteiltV P ws c`): a shared atomic of the unit
   (`GeteiltA`: `atomic`, unguarded, not thread-local among the starts) that NO contract, requires,
@@ -43,28 +43,11 @@ section Spec
 
 variable [DecidableEq D.Fn]
 
-/-- **A shared atomic the checker admits**: shared (`GeteiltA`) and in no contract. -/
-def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
-  GeteiltA P ws c ∧ VertragsFrei P c
-
-/-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
-    admitted shared atomics `GeteiltV`. Every other field is `AkzeptiertSpec`'s. -/
-structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
-  frag : programmImFragmentG P fs = true
-  abg : ∀ w, AbgK P fs (reachB P fs w)
-  fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
-  stufen : StufenM P
-  sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
-  wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
-  einzeln : EinzelnPool P fs ws
-  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
-  antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
-
 /-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.** -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
     (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
-    h.einzeln, h.renn, h.antworten⟩
+    h.einzeln, h.renn, h.antworten, h.masken⟩
 
 variable {P : Programm D} {S : SperrInv D} {Q : AxEns D} {fs ws : List D.Fn}
 
@@ -97,18 +80,6 @@ theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertS
       exact hR ((getrenntR_iff hvoll hA.abg c).mpr
         (@of_decide_eq_true _ (Classical.propDecidable _) h2))
   · exact hB L (hA.sperrOrte L c hL)
-
-/-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
-    G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
-    a write, are ordered through a guard lock. -/
-def RennfreiBisGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
-  ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
-    LaufGA P O passes M0 ms fs n → ms n = M →
-    ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
-      ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
-      (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
-      ¬ AtomarAusgenommen c →
-      ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
 
 omit [DecidableEq D.Fn] in
 /-- Every G run is a GA run: `RennfreiBisGA` contains `RennfreiBis`. -/
@@ -262,7 +233,7 @@ def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs
+    antwortenB P fs && maskenB P fs
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -296,11 +267,11 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
     AkzeptiertSpecX P S fs ws := by
   unfold AkzeptiertX at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
-    (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9⟩
+    (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10⟩
 
 /-- The old footprint component implies the new one. -/
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
@@ -318,9 +289,8 @@ theorem akzeptiertX_of_akzeptiert (h : Akzeptiert P S fs ls cs ws = true) :
   unfold Akzeptiert at h
   unfold AkzeptiertX
   simp only [Bool.and_eq_true] at h ⊢
-  -- the handler component `maskenB` (Opus agent H) is not a component of `AkzeptiertX`
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩ := h
-  exact ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩
 
 end Bool
 

@@ -178,7 +178,12 @@ theorem p108_nutzer : Zielsatz.NutzerPflicht G108_disjoint_start_locks_oblig.gE 
   logik := p108_logik
   start := ⟨p108_start_sperren, p108_start_req⟩
 
-theorem p108_nutzer_ist_stated : G108_disjoint_start_locks_oblig.nutzerPflicht := p108_nutzer
+/-- **THE USER'S DUTY WITH THE ATOMIC RELY** (the goal's (b) since Opus lane O25c): `gD` has no
+    global, so no read of a shared atomic exists (`nutzerPflichtA_ohne_atomar`). -/
+theorem p108_nutzerA : Zielsatz.NutzerPflichtA G108_disjoint_start_locks_oblig.gE :=
+  Zielsatz.nutzerPflichtA_ohne_atomar (fun g => nomatch g) p108_nutzer
+
+theorem p108_nutzer_ist_stated : G108_disjoint_start_locks_oblig.nutzerPflicht := p108_nutzerA
 
 /-! ## 4. The chain, closed -/
 
@@ -210,16 +215,20 @@ theorem p108_laufzeit :
     both discharged here. -/
 theorem p108_ziel (passes : Nat)
     (M : RufMaschineG G108_disjoint_start_locks_oblig.gD.mitRuhe)
-    (hr : RufErreichbarG G108_disjoint_start_locks_oblig.gE.P.mitRuhe p108_O.mitRuhe passes
+    (hr : RufErreichbarGX G108_disjoint_start_locks_oblig.gE.P.mitRuhe p108_O.mitRuhe passes
+      (Zielsatz.GeteiltV (D := G108_disjoint_start_locks_oblig.gD)
+        G108_disjoint_start_locks_oblig.gE.P G108_disjoint_start_locks_oblig.gE.ws)
       (RufStartG G108_disjoint_start_locks_oblig.gE.P.mitRuhe
         (speicherR G108_disjoint_start_locks_oblig.gE.sp0)
         (initRuhe G108_disjoint_start_locks_oblig.gE.starts)) M) :
-    Zielsatz.Ziel G108_disjoint_start_locks_oblig.gE.P.mitRuhe
+    Zielsatz.ZielX G108_disjoint_start_locks_oblig.gE.P.mitRuhe
       G108_disjoint_start_locks_oblig.gE.S.mitRuhe p108_O.mitRuhe passes
+      (Zielsatz.GeteiltV (D := G108_disjoint_start_locks_oblig.gD)
+        G108_disjoint_start_locks_oblig.gE.P G108_disjoint_start_locks_oblig.gE.ws)
       (RufStartG G108_disjoint_start_locks_oblig.gE.P.mitRuhe
         (speicherR G108_disjoint_start_locks_oblig.gE.sp0)
         (initRuhe G108_disjoint_start_locks_oblig.gE.starts)) M :=
-  gP_gabbro p108_nutzer p108_O p108_hw passes _ _ p108_laufzeit M hr
+  gP_gabbro p108_nutzerA p108_O p108_hw passes _ _ p108_laufzeit M hr
 
 /-! ## 5. Witnesses (rule 13): the run is really concurrent -/
 

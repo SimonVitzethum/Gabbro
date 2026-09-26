@@ -17,20 +17,6 @@ open Gabbro.Grammatik Speichermodell
 
 variable {D : Deklaration}
 
-/-- **No same-core interrupt deadlock, on GA runs** (`KernHaltG` with `LaufGA`). -/
-def KernHaltGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
-  ∀ (kern : Faden → Nat) (H : Faden → Prop) (Z : Faden → D.Fn → Prop)
-    (A : Faden → D.Fn → Merkmal D),
-    (∀ t, H t → MerkAbg P (Z t) (A t)) →
-    (∀ t, H t → MerkInvG (Z t) (A t) (M0.faeden t)) →
-    (∀ t, H t → ∀ (f : D.Fn) (L : D.Lock), Z t f → (A t f).sperre L = true →
-      D.maskiert L = true) →
-    (∀ (t : Faden) (L : D.Lock), ¬ AnSperre M0 t L) →
-    ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
-      LaufGA P O passes M0 ms fs n → ms n = M → KernPlan kern H ms fs n →
-      ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
-        AnSperre M g L → L ∉ offen ((M.faeden f).spur)
-
 section Lauf
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}

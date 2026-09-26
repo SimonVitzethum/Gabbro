@@ -4,15 +4,16 @@
 //! member lists `gFs`/`gLs`/`gCs`, the lock-invariant family `gS`, the
 //! declared starts and initial memory as `gE : Einheit gD`, the two
 //! decidable checks). This module runs that export and appends what the
-//! goal theorem `gabbro_ziel` (`Zielsatz/Beweis.lean`) asks the USER for --
-//! stated, never discharged: `NutzerPflicht gE` (the bodies' `LogikPflicht`
-//! and the `StartPflicht`), with the closing theorem `gP_gabbro` deriving
-//! the conclusion of `GabbroZiel` for `gE` from `gabbro_ziel` -- the
-//! checker premise (`akzeptiert_pruefer` on the member lists) discharged
-//! here `by decide`, the user obligation an open hypothesis.
+//! goal theorem `gabbro_ziel` (`Zielsatz/BeweisAtomar.lean`) asks the USER
+//! for -- stated, never discharged: `NutzerPflichtA gE` (the bodies'
+//! `LogikPflichtA`, with the atomic rely since lane O25c, and the
+//! `StartPflicht`), with the closing theorems `gP_gabbro`/`gP_gabbro_f`
+//! deriving the conclusion of `GabbroZiel` for `gE` from `gabbro_ziel` --
+//! the checker premise (`akzeptiertX_pruefer` on the member lists)
+//! discharged here `by decide`, the user obligation an open hypothesis.
 //!
 //! The obligation is stated through the IMPORTED definition
-//! `NutzerPflicht`, never by copying its body: a change to what the goal
+//! `NutzerPflichtA`, never by copying its body: a change to what the goal
 //! asks cannot silently age the stated duty. The namespace is the lean-g
 //! one with `_oblig` appended, so this export and the plain `lean-g`
 //! export of the same file never declare the same names. Every form
@@ -27,7 +28,8 @@ use crate::lean_g::{export_ns, namespace_of, Refusal};
 /// concrete checker and the obligation definitions). They must precede
 /// every command, so they are inserted beside the lean-g imports rather
 /// than appended.
-const MEHR_IMPORT: &str = "import Grammatik.Zielsatz.Akzeptiert\nimport Grammatik.Zielsatz.Beweis\n";
+const MEHR_IMPORT: &str =
+    "import Grammatik.Zielsatz.Akzeptiert\nimport Grammatik.Zielsatz.Beweis\nimport Grammatik.Zielsatz.BeweisAtomar\n";
 
 /// Export the checked unit as a Lean file with the user's obligations
 /// stated, or refuse it by name exactly where `lean-g` refuses it.
@@ -59,18 +61,26 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
 }
 
 /// The appended obligation section, inside the program's namespace.
+///
+/// Since Opus lane O25c (2026-09-26) the goal theorem carries the ATOMIC RELY: its checker is
+/// `akzeptiertX_pruefer` (the Bool `AkzeptiertX`), the user's duty `NutzerPflichtA` (the bodies
+/// against every value a read of a shared atomic of the unit may return; on a unit without one
+/// it is `NutzerPflicht`), and the conclusion is `ZielX`/`ZielFX` over machine GX, whose reads
+/// of the unit's admitted shared atomics (`GeteiltV gE.P gE.ws`) the weak memory answers.
 fn abschnitt() -> String {
     let mut out = String::new();
     out.push_str("-- THE USER'S OBLIGATION (stated, not discharged).\n");
     out.push_str("--\n");
-    out.push_str("-- `NutzerPflicht gE`: the bodies' logic (`LogikPflicht` -- per function\n");
-    out.push_str("-- and at EVERY `forever` budget the body triple with caller duty and no\n");
-    out.push_str("-- `logik` outcome, owed invariants at value AND reason exits) and the\n");
-    out.push_str("-- start obligation (`StartPflicht` -- every lock invariant at `gE.sp0`,\n");
-    out.push_str("-- every declared start's `requires` there with its declared arguments).\n");
+    out.push_str("-- `NutzerPflichtA gE`: the bodies' logic WITH THE ATOMIC RELY (`LogikPflichtA`\n");
+    out.push_str("-- -- per function and at EVERY `forever` budget the body triple against\n");
+    out.push_str("-- every value a read of a shared atomic of the unit may return, with caller\n");
+    out.push_str("-- duty and no `logik` outcome, owed invariants at value AND reason exits)\n");
+    out.push_str("-- and the start obligation (`StartPflicht` -- every lock invariant at\n");
+    out.push_str("-- `gE.sp0`, every declared start's `requires` there with its declared\n");
+    out.push_str("-- arguments). On a unit without a shared atomic it is `NutzerPflicht gE`.\n");
     out.push_str("-- A `def` with no proof: the proof is the user's job. Stated through the\n");
-    out.push_str("-- IMPORTED definition `NutzerPflicht`; its body is never copied here.\n");
-    out.push_str("def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE\n\n");
+    out.push_str("-- IMPORTED definition `NutzerPflichtA`; its body is never copied here.\n");
+    out.push_str("def nutzerPflicht : Prop := Zielsatz.NutzerPflichtA gE\n\n");
     out.push_str("-- The member lists are complete (the `Aufzaehlung`s the goal theorem\n");
     out.push_str("-- quantifies over), decided here so the closing theorem below needs no\n");
     out.push_str("-- program fact beyond the user's obligation.\n");
@@ -86,38 +96,45 @@ fn abschnitt() -> String {
     out.push_str("theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by\n  intro c\n");
     out.push_str("  cases c with\n  | inl t => cases t <;> simp [gCs]\n  | inr g => cases g <;> simp [gCs]\n\n");
     out.push_str("-- The checker premise, discharged here: the concrete checker of the\n");
-    out.push_str("-- goal theorem (`akzeptiert_pruefer`) accepts this program on these\n");
-    out.push_str("-- lists. Where it does not, this `decide` fails -- loudly, not wrongly.\n");
-    out.push_str("theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide\n\n");
-    out.push_str("-- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program,\n");
-    out.push_str("-- derived from `gabbro_ziel`. The checker premise travels discharged\n");
-    out.push_str("-- (`gCheck`); the user's obligation stays open as a hypothesis -- that\n");
-    out.push_str("-- is the point. Apply it once `nutzerPflicht` is proved.\n");
-    out.push_str("theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)\n");
+    out.push_str("-- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts\n");
+    out.push_str("-- this program on these lists. Where it does not, this `decide` fails --\n");
+    out.push_str("-- loudly, not wrongly.\n");
+    out.push_str("theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide\n\n");
+    out.push_str("-- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on\n");
+    out.push_str("-- every run of machine GX with every thread live (`gabbro_ziel_gx`). The\n");
+    out.push_str("-- checker premise travels discharged (`gCheck`); the user's obligation\n");
+    out.push_str("-- stays open as a hypothesis -- that is the point. Apply it once\n");
+    out.push_str("-- `nutzerPflicht` is proved.\n");
+    out.push_str("theorem gP_gabbro (hN : Zielsatz.NutzerPflichtA gE) (O : Orakel gD)\n");
     out.push_str("    (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)\n");
     out.push_str("    (sp : Speicher gD.mitRuhe)\n");
     out.push_str("    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))\n");
     out.push_str("    (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)\n");
-    out.push_str("    (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :\n");
-    out.push_str("    Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=\n");
-    out.push_str("  Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
+    out.push_str("    (hr : RufErreichbarGX gE.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
+    out.push_str("      (RufStartG gE.P.mitRuhe sp init) M) :\n");
+    out.push_str("    Zielsatz.ZielX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
+    out.push_str("      (RufStartG gE.P.mitRuhe sp init) M :=\n");
+    out.push_str("  Zielsatz.gabbro_ziel_gx Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
     out.push_str("    gCheck hN O hH passes sp init hL M hr\n\n");
     // Opus agent C (2026-09-26): the certificate carries the WHOLE conclusion of
-    // `GabbroZiel`, not only its machine-G corollary: `ZielF` on every reachable
-    // THREAD machine, from any set of initially live threads (spawns by `start`/`child`
-    // and their joins included). `gP_gabbro` above stays, as the G-run reading.
+    // `GabbroZiel`, not only its all-live corollary: `ZielFX` on every reachable
+    // THREAD machine over GX, from any set of initially live threads (spawns by
+    // `start`/`child` and their joins included). `gP_gabbro` above stays, as the
+    // all-live reading.
     out.push_str("-- THE CLOSING THEOREM ON THE THREAD MACHINE: `GabbroZiel` itself for this\n");
-    out.push_str("-- program -- `ZielF` on every reachable thread machine (run-time spawns\n");
-    out.push_str("-- and joins included), from any set of initially live threads.\n");
-    out.push_str("theorem gP_gabbro_f (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)\n");
+    out.push_str("-- program -- `ZielFX` on every reachable thread machine over GX (run-time\n");
+    out.push_str("-- spawns and joins included), from any set of initially live threads.\n");
+    out.push_str("theorem gP_gabbro_f (hN : Zielsatz.NutzerPflichtA gE) (O : Orakel gD)\n");
     out.push_str("    (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)\n");
     out.push_str("    (sp : Speicher gD.mitRuhe)\n");
     out.push_str("    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))\n");
     out.push_str("    (hL : Zielsatz.Laufzeit gE sp init) (lebt0 : Faden → Bool)\n");
     out.push_str("    (K : FadenMaschine gD.mitRuhe)\n");
-    out.push_str("    (hK : FadenErreichbar gE.P.mitRuhe O.mitRuhe passes (FadenStart gE.P.mitRuhe sp init lebt0) K) :\n");
-    out.push_str("    Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) K :=\n");
-    out.push_str("  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
+    out.push_str("    (hK : FadenErreichbarX gE.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
+    out.push_str("      (FadenStart gE.P.mitRuhe sp init lebt0) K) :\n");
+    out.push_str("    Zielsatz.ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
+    out.push_str("      (RufStartG gE.P.mitRuhe sp init) K :=\n");
+    out.push_str("  Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
     out.push_str("    gCheck hN O hH passes sp init hL lebt0 K hK\n");
     out
 }

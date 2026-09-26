@@ -91,7 +91,7 @@ theorem gabbro_zielF_schwach (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] 
     (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes
       (FadenStart E.P.mitRuhe sp init lebt0) K) :
     SchwachSC E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K.m :=
-  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK).g.schwach
+  (gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK).g.schwach
 
 #print axioms Gabbro.Grammatik.Zielsatz.schwach_erreichbar
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_zielF_schwach
