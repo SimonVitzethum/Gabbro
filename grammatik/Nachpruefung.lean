@@ -29,6 +29,10 @@ open Gabbro.Grammatik
 
 -- The whole chain of the goal theorem, in one line of kernel output.
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+-- The statement of before (without the atomic rely, lane O25c), and its derivation.
+#check @Gabbro.Grammatik.Zielsatz.GabbroZielSC
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc_aus
 
 /-! ## 2. Non-degeneracy: the witnesses -/
 

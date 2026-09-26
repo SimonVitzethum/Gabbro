@@ -132,7 +132,7 @@ theorem vz_ziel (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mi
     ZielF (verbinde vzE vzE1 vzE2).P.mitRuhe (verbinde vzE vzE1 vzE2).S.mitRuhe zO.mitRuhe passes
       (RufStartG (verbinde vzE vzE1 vzE2).P.mitRuhe (speicherR zSp)
         (initRuhe (verbinde vzE vzE1 vzE2).starts)) K :=
-  gabbro_ziel_verbund akzeptiert_pruefer zD vzE1 vzE2 vzE ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
+  gabbro_ziel_verbund_sc akzeptiert_pruefer zD vzE1 vzE2 vzE ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
     ⟨[.inl ()], zCs_voll⟩
     (by show Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true
         exact vz_app_akzeptiert)

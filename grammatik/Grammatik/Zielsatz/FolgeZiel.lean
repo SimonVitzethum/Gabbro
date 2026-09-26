@@ -202,7 +202,7 @@ theorem gabbro_ziel_folge (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E 
     FolgeLog Φ.mitRuhe (K.m.faeden t).log ∧
     ((K.m.faeden t).stapel = [] → (K.m.faeden t).kopf.rest.2.2.2.2.anRueck = true →
       Φ.mitRuhe.ende (K.m.faeden t).kopf.f = true → Armiert Φ.mitRuhe (K.m.faeden t).log = true) :=
-  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK).g.folge Φ.mitRuhe
+  (gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK).g.folge Φ.mitRuhe
     (folgeOk_mitRuhe hΦ) t
 
 end Zielsatz

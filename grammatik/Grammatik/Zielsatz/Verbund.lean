@@ -562,13 +562,13 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
 end Verbund
 
 /-- **LINKING, PROVED.** -/
-theorem gabbro_ziel_verbund : GabbroZielVerbund := by
+theorem gabbro_ziel_verbund_sc : GabbroZielVerbundSC := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
   have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
     hV hS
   have hB : akzeptiert_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
     (akzeptiert_iff fs.2 ls.2 cs.2).mpr hA
-  exact gabbro_ziel akzeptiert_pruefer D (verbinde e E₁ E₂) fs ls cs hB
+  exact gabbro_ziel_sc akzeptiert_pruefer D (verbinde e E₁ E₂) fs ls cs hB
     (nutzerPflicht_verbinde hV hQ hN₁ hN₂) O hH passes sp init hL lebt0 K hK
 
 
@@ -984,7 +984,7 @@ theorem nutzerTeil_verbinde {E₁ E₂ : Einheit D} {e a₁ a₂ : D.Fn → Bool
 
 end Einbettung
 
-#print axioms gabbro_ziel_verbund
+#print axioms gabbro_ziel_verbund_sc
 #print axioms akzeptiertSpec_verbinde
 #print axioms nutzerPflicht_verbinde
 #print axioms schnittstelleB_iff

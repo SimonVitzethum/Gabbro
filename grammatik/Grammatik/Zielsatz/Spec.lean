@@ -1048,6 +1048,7 @@ import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
 import Grammatik.Speichermodell.MaschineW
 import Grammatik.FadenMaschine
+import Grammatik.Speichermodell.GXMaschine
 import Grammatik.Folge
 
 namespace Gabbro.Grammatik.Zielsatz
@@ -1617,12 +1618,229 @@ structure ZielF (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
       K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
         InvRuheG P M0 K'.m
 
-/-- **GABBRO_ZIEL.** Since 2026-09-26 over the THREAD MACHINE: every thread-machine run from the
-    runtime's start, with any set `lebt0` of initially live threads -- the others are slots that
-    `start` or `child` spawn at run time. Every G run is such a run (`lebt0` all live, nothing
-    spawned: `fadenErreichbar_von_G`), so the statement of before is a corollary
-    (`gabbro_ziel_g`). -/
+-- BEGIN atomic-rely definitions (Opus lane O25c, 2026-09-26) --
+/-! ## Shared atomics: the rely (Opus lanes O25, O25b, O25c; OFFEN O25, O17)
+
+    The definitions of the atomic-rely block of the header: (a) `AkzeptiertSpecX`/`PrueferX`,
+    (b) `NutzerPflichtA`, the legs `ZielX`/`ZielFX` over machine GX, and `GabbroZiel`. Moved here
+    from Zielsatz/AtomarPflicht.lean, AtomarAkzeptiert.lean, AtomarZiel.lean,
+    AtomarInvarianten.lean and AtomarMasken.lean (lane O25b) unchanged; `SchwachX`, `ZeitAbX`,
+    `ZielX`, `FortschrittFX`, `ZielFX` are new (lane O25c). -/
+
+section Atomar
+
+variable [DecidableEq D.Fn]
+
+/-- **The call closure of `w`** (enumeration-free): `w`, and every function a function of the
+    closure calls (`ruftB`). -/
+inductive Erreicht (P : Programm D) (w : D.Fn) : D.Fn → Prop
+  | wurzel : Erreicht P w w
+  | ruf {f g : D.Fn} : Erreicht P w f → ruftB P f g = true → Erreicht P w g
+
+/-- **Thread-local among the starts `ws`, over the call closure** (the twin of `Getrennt`,
+    Spec.lean, without a member list). -/
+def GetrenntR (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, Erreicht P w₁ f →
+    c ∈ fussOrteG P f → Erreicht P w₂ g → TraegerSchreibt g c = false
+
+/-- **A shared atomic of the unit**: `atomic`, unguarded, and not thread-local. -/
+def GeteiltA (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  AtomarAusgenommen c ∧ (∀ L, ¬ Bewacht c L) ∧ ¬ GetrenntR P ws c
+
+/-- **A shared atomic the checker admits**: shared (`GeteiltA`) and in no contract. -/
+def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  GeteiltA P ws c ∧ VertragsFrei P c
+
+/-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
+    admitted shared atomics `GeteiltV`. Every other field is `AkzeptiertSpec`'s. -/
+structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
+  frag : programmImFragmentG P fs = true
+  abg : ∀ w, AbgK P fs (reachB P fs w)
+  fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
+  stufen : StufenM P
+  sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
+  wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
+  einzeln : EinzelnPool P fs ws
+  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
+  antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
+
+/-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
+    G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
+    a write, are ordered through a guard lock. -/
+def RennfreiBisGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufGA P O passes M0 ms fs n → ms n = M →
+    ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
+      ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
+      (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
+      ¬ AtomarAusgenommen c →
+      ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
+
+end Atomar
+
+/-- **A checker for the rely**: its soundness target is `AkzeptiertSpecX`. -/
+structure PrueferX where
+  akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
+    Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
+  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws
+
+/-- **The logic of the bodies with the atomic rely over `T`.** -/
+def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
+    Prop :=
+  (∀ (passes : Nat) (f : D.Fn),
+    KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f) ∧
+  SperrInvLokal S ∧ AxEnsLokal Q
+
+/-- **The user's own logic with the atomic rely**: the rely over the unit's shared atomics. -/
+structure NutzerPflichtA [DecidableEq D.Fn] (E : Einheit D) : Prop where
+  logik : LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws)
+  start : StartPflicht E
+
+/-- **Lock invariants at every lock move, over GX steps** (`SperrWechselG` with `RufSchrittGX`). -/
+def SperrWechselGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D) (L : D.Lock), RufSchrittGX P O passes Tg M u M' →
+    (L ∉ offen (M.faeden u).spur → L ∈ offen (M'.faeden u).spur →
+      S.inv L M.speicher = true ∧ S.inv L M'.speicher = true) ∧
+    (L ∈ offen (M.faeden u).spur → L ∉ offen (M'.faeden u).spur → S.inv L M'.speicher = true)
+
+/-- **A held lock's invariant is observed by its holder alone, over GX steps.** -/
+def SperrSichtGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D), RufSchrittGX P O passes Tg M u M' →
+    ∀ (L : D.Lock) (c : D.Tab ⊕ D.Glob), c ∈ S.orte L →
+      (ZugriffG M M' u c → L ∈ offen (M.faeden u).spur) ∧
+      (∀ t, t ≠ u → L ∈ offen (M.faeden t).spur → TraegerGleich M'.speicher M.speicher c)
+
+/-- **No same-core interrupt deadlock, on GA runs** (`KernHaltG` with `LaufGA`). -/
+def KernHaltGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (H : Faden → Prop) (Z : Faden → D.Fn → Prop)
+    (A : Faden → D.Fn → Merkmal D),
+    (∀ t, H t → MerkAbg P (Z t) (A t)) →
+    (∀ t, H t → MerkInvG (Z t) (A t) (M0.faeden t)) →
+    (∀ t, H t → ∀ (f : D.Fn) (L : D.Lock), Z t f → (A t f).sperre L = true →
+      D.maskiert L = true) →
+    (∀ (t : Faden) (L : D.Lock), ¬ AnSperre M0 t L) →
+    ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+      LaufGA P O passes M0 ms fs n → ms n = M → KernPlan kern H ms fs n →
+      ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
+        AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+
+/-- **The weak machine adds no behaviour outside the shared atomics `Tg`, at `M`**. For EVERY
+    assignment `ord` of memory orders, every weak state `W` over `M` reached from the weak start
+    over `M0`, and every step W takes from there (with its presented memory `σ`): it is a step
+    of GX from `M` to the successor's G-part -- machine G whose reads of `Tg` the weak memory
+    answers -- and `σ` is G's memory at every carrier outside `Tg`. With `Tg` empty this is
+    `SchwachSC` (`schwachSC_of_X`): the DRF theorem. -/
+def SchwachX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ord : D.Glob → Speichermodell.Ordnung) (W W' : RufMaschineW D) (u : Faden) (σ : Speicher D)
+    (M'' : RufMaschineG D) (wahl : D.Tab ⊕ D.Glob → NachrichtW D) (neu : D.Tab ⊕ D.Glob → Nat),
+    RufErreichbarW P O passes ord (RufStartW M0) W → W.g = M →
+    SchrittW P O passes ord W u W' σ M'' wahl neu →
+    RufSchrittGX P O passes Tg M u W'.g ∧ ∀ c, ¬ Tg c → TraegerGleich σ M.speicher c
+
+/-- **Time over GX**: `ZeitAb` for every run of GX from `M` (the weak memory answering the
+    shared atomics). -/
+def ZeitAbX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (M : RufMaschineG D) : Prop :=
+  ∀ (f : Faden) (g : D.Fn) (n : Nat) (rho : Env D (D.params g)) (s0 : World D) (k : Nat),
+    rufTief P (n + 1) g = true → Eintritt P f g rho s0 k M →
+    ∀ (M2 : RufMaschineG D) (run : SegLaufX P O passes Tg M M2), aktivVorX f k run →
+      segZaehleX run f ≤ kostenTief P passes (n + 1) g
+
+/-- **THE GOAL at a machine `M` of a GX run from `M0`, with the shared atomics `Tg`.** -/
+structure ZielX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 M : RufMaschineG D) : Prop where
+  speicherSicher : SpurInv M
+  rennfrei : RennfreiBisGA P O passes M0 M
+  schwach : SchwachX P O passes Tg M0 M
+  vertrag : VertragAmOrtG P M
+  sperrInv : SperrInvG S M
+  invRueck : InvAmOrtG P M
+  invGrund : InvAmGrundG P M
+  invRuhe : InvRuheG P M0 M
+  invSicht : InvSichtG P M0 M
+  sperrWechsel : SperrWechselGX P O passes Tg S M
+  sperrSicht : SperrSichtGX P O passes Tg S M
+  startEnde : StartEndeG P M
+  keinStartGrund : KeinStartGrundG M
+  keinLogikHalt : KeinLogikHaltG O passes M
+  keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
+  keinZyklus : KeinWarteZyklus M
+  keinKernHalt : KernHaltGA P O passes M0 M
+  fortschritt : FortschrittG P O passes M
+  zeit : ZeitAbX P O passes Tg M
+  folge : FolgeG P M
+
+/-- **Every stop is named, on the thread machine over GX.** -/
+def FortschrittFX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
+    (K : FadenMaschine D) : Prop :=
+  ∀ t, K.lebt t = false ∨
+    (K.wartet t ≠ [] ∧ (JoinWartet K t ∨
+      ∃ K', FadenSchrittX P O passes Tg K K' ∧ K'.m = K.m ∧ K'.wartet t = [])) ∨
+    (K.wartet t = [] ∧ (FertigG K.m t ∨ WartetG K.m t ∨ HaltBenannt O passes K.m .flagge t ∨
+      HaltBenannt O passes K.m .budget t ∨ HaltBenannt O passes K.m .hardware t ∨
+      HaltBenannt O passes K.m .nieZurueck t ∨
+      ∃ M', RufSchrittG P O passes K.m t M' ∧
+        FadenSchrittX P O passes Tg K ⟨M', K.lebt, K.wartet, K.rang, K.uhr⟩))
+
+/-- **THE GOAL on a thread machine over GX.** -/
+structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) (K : FadenMaschine D) : Prop where
+  g : ZielX P S O passes Tg M0 K.m
+  schlafendUnberuehrt : ∀ t, K.lebt t = false → K.m.faeden t = M0.faeden t
+  schlafendFrei : ∀ t, K.lebt t = false → ∀ L, L ∉ offen (K.m.faeden t).spur
+  joinFrei : ∀ t, K.wartet t ≠ [] → ∀ L, L ∉ offen (K.m.faeden t).spur
+  keineVerklemmung : (∀ t, K.lebt t = true → ¬ FertigG K.m t →
+      (K.wartet t = [] ∧ WartetG K.m t) ∨ JoinWartet K t) →
+    ∀ t, K.lebt t = true → FertigG K.m t
+  keinZyklus : KeinWarteZyklusF K
+  fortschritt : FortschrittFX P O passes Tg K
+  spawnSicht : ∀ (K' : FadenMaschine D) (t : Faden), FadenSchrittX P O passes Tg K K' →
+    K.lebt t = false → K'.lebt t = true →
+      K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
+        InvRuheG P M0 K'.m
+-- END atomic-rely definitions --
+
+/-- **GABBRO_ZIEL** (since Opus lane O25c, 2026-09-26: WITH THE ATOMIC RELY). Over the THREAD
+    MACHINE OVER GX: every run from the runtime's start, with any set `lebt0` of initially live
+    threads -- the others are slots that `start` or `child` spawn at run time -- in which every
+    read of an ADMITTED SHARED ATOMIC of the unit (`GeteiltV E.P E.ws`: `atomic`, unguarded, not
+    thread-local among the starts, in no contract) may be answered by the weak memory rather
+    than by the last write. (a) is a checker for the rely (`PrueferX`: sound against
+    `AkzeptiertSpecX`, whose footprint rule admits exactly those carriers), (b) is the user's
+    logic with the rely (`NutzerPflichtA`: every body against EVERY value such a read may
+    return). Every run of before is such a run (`fadenErreichbarX_of`), every checker of before
+    is such a checker (`Pruefer.alsX`), and on every unit it accepts (b) is (b) of before and no
+    admitted shared atomic exists: the statement of before, `GabbroZielSC`, is a corollary
+    (`gabbro_ziel_sc_aus`, Zielsatz/BeweisAtomar.lean). -/
 def GabbroZiel : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflichtA E →                                          -- (b) the user, with the rely
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+          (FadenStart E.P.mitRuhe sp init lebt0) K →
+          ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+            (RufStartG E.P.mitRuhe sp init) K
+
+/-- **THE STATEMENT OF BEFORE** (verbatim `GabbroZiel` until Opus lane O25c, 2026-09-26): the
+    checker of before, (b) without the rely, `ZielF` over the thread machine over G. It is a
+    COROLLARY of `GabbroZiel` (`gabbro_ziel_sc_aus`), kept as a name because the corpus theorems
+    and the earlier embeddings are stated over it. Since 2026-09-26 over the THREAD MACHINE:
+    every thread-machine run from the runtime's start, with any set `lebt0` of initially live
+    threads -- the others are slots that `start` or `child` spawn at run time. Every G run is
+    such a run (`lebt0` all live, nothing spawned: `fadenErreichbar_von_G`), so the statement of
+    before that is a corollary too (`gabbro_ziel_g`). -/
+def GabbroZielSC : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
@@ -1767,6 +1985,16 @@ structure NutzerTeil (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
     SperrInvLokal E.S ∧ AxEnsLokal E.Q
   start : StartPflicht E
 
+/-- **The user's logic of ONE unit, with the atomic rely** (the rely over the unit's own shared
+    atomics). -/
+structure NutzerTeilA [DecidableEq D.Fn] (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
+  logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
+      KoerperGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
+        InvGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
+        InvGutGrundA E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q
+  start : StartPflicht E
+
 end Verbund
 
 /-- **GABBRO_ZIEL FOR LINKED UNITS** (2026-09-26, Opus agent E). Two units `E₁`, `E₂` over one
@@ -1776,10 +2004,40 @@ end Verbund
     (c) the hardware meets the assumptions, and they are the SAME for both units
         (`E₂.Q = E₁.Q`: one oracle answers both units' axioms);
     (d) the runtime starts the LINKED unit.
-    Then every leg of `ZielF` holds on every reachable thread machine of the linked program --
-    race freedom and lock discipline ACROSS the units, spawned threads and the weak-memory leg
-    included, since the conclusion is `GabbroZiel`'s own. -/
+    Then every leg of `ZielFX` holds on every reachable thread machine over GX of the linked
+    program -- race freedom and lock discipline ACROSS the units, spawned threads and the
+    weak-memory leg included, since the conclusion is `GabbroZiel`'s own. Since Opus lane O25c
+    (2026-09-26) WITH THE ATOMIC RELY: (a) a checker for the rely on each unit, (b) each unit's
+    logic with the rely over its own shared atomics (`NutzerTeilA`). The link check is
+    unchanged: its `lok` demands every footprint carrier a function relies on without a lock
+    thread-local over the composed hulls, atomics included, so the linked program has no
+    admitted shared atomic (named in NOT CLAIMED). The statement of before is
+    `GabbroZielVerbundSC`, a corollary (`gabbro_ziel_verbund_sc_aus`). -/
 def GabbroZielVerbund : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (e : D.Fn → Bool)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E₁ fs.1 ls.1 cs.1 = true →                    -- (a) unit 1, alone
+    C.akzeptiert E₂ fs.1 ls.1 cs.1 = true →                    -- (a) unit 2, alone
+    Verbindbar E₁ E₂ →                                          -- (a) one link declaration
+    SchnittstelleSpec fs.1 e E₁ E₂ →                            -- (a) the link check
+    NutzerTeilA e E₁ →                                          -- (b) unit 1's user, rely
+    NutzerTeilA (fun f => !e f) E₂ →                            -- (b) unit 2's user, rely
+    E₂.Q = E₁.Q →                                               -- (c) the SAME hardware assumptions
+    ∀ O : Orakel D, HardwareAnnahmen O E₁.Q →                   -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit (verbinde e E₁ E₂) sp init →                     -- (d) the runtime, linked
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbarX (verbinde e E₁ E₂).P.mitRuhe O.mitRuhe passes
+          (GeteiltV (D := D) (verbinde e E₁ E₂).P (verbinde e E₁ E₂).ws)
+          (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K →
+          ZielFX (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
+            (GeteiltV (D := D) (verbinde e E₁ E₂).P (verbinde e E₁ E₂).ws)
+            (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K
+
+/-- **THE LINKED STATEMENT OF BEFORE** (verbatim `GabbroZielVerbund` until Opus lane O25c): a
+    corollary of `GabbroZielVerbund` (`gabbro_ziel_verbund_sc_aus`). -/
+def GabbroZielVerbundSC : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (e : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E₁ fs.1 ls.1 cs.1 = true →                    -- (a) unit 1, alone

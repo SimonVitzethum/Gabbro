@@ -110,7 +110,9 @@ const REGISTER_KOPF: &str = "\
 #   The exporter carries the program to an `Einheit` (`gE`), and <module> -- the byte-exact
 #   output of `gabbro obligations --g <program>`, in the build -- decides the checker premise
 #   of the goal theorem on it (`gCheck`, `by decide`) and instantiates the goal theorem
-#   (`gP_gabbro`: `Ziel` on every run of machine G, the user's duty `NutzerPflicht gE` as the
+#   (`gP_gabbro_f`: `ZielFX` on every reachable thread machine over GX, `gP_gabbro`: `ZielX` on
+#   every run of machine GX -- G whose reads of the unit's admitted shared atomics the weak
+#   memory answers --, the user's duty with the atomic rely `NutzerPflichtA gE` as the
 #   hypothesis). What the export drops is named in the module's own header (\"NO FORM in G\").
 #   <chain> is `chain-instance=<name>` when a Lean instance of the generic closing theorem
 #   `schlusssatz` exists for the program (source -> model -> emitted C; `zaehle-kette.py
@@ -209,9 +211,9 @@ fn jedes_angenommene_programm_ist_zertifiziert_oder_benannt() {
                 // What makes the file a CERTIFICATE and not just an export: the checker
                 // premise decided, and the goal theorem instantiated on the thread machine.
                 for teil in [
-                    "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+                    "theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
                     "theorem gP_gabbro_f",
-                    "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
+                    "Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE",
                 ] {
                     if !text.contains(teil) {
                         befunde.push(format!("{rel}: the certificate lacks {teil:?}"));

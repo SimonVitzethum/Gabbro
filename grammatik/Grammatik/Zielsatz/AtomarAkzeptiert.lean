@@ -43,23 +43,6 @@ section Spec
 
 variable [DecidableEq D.Fn]
 
-/-- **A shared atomic the checker admits**: shared (`GeteiltA`) and in no contract. -/
-def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
-  GeteiltA P ws c ∧ VertragsFrei P c
-
-/-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
-    admitted shared atomics `GeteiltV`. Every other field is `AkzeptiertSpec`'s. -/
-structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
-  frag : programmImFragmentG P fs = true
-  abg : ∀ w, AbgK P fs (reachB P fs w)
-  fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
-  stufen : StufenM P
-  sperrOrte : ∀ L c, c ∈ S.orte L → Bewacht c L
-  wurzeln : ∀ w ∈ ws, D.haelt w = [] ∧ D.gruende w = 0
-  einzeln : EinzelnPool P fs ws
-  renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
-  antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
-
 /-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.** -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
     (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws :=
@@ -97,18 +80,6 @@ theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertS
       exact hR ((getrenntR_iff hvoll hA.abg c).mpr
         (@of_decide_eq_true _ (Classical.propDecidable _) h2))
   · exact hB L (hA.sperrOrte L c hL)
-
-/-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
-    G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
-    a write, are ordered through a guard lock. -/
-def RennfreiBisGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
-  ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
-    LaufGA P O passes M0 ms fs n → ms n = M →
-    ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
-      ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
-      (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
-      ¬ AtomarAusgenommen c →
-      ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
 
 omit [DecidableEq D.Fn] in
 /-- Every G run is a GA run: `RennfreiBisGA` contains `RennfreiBis`. -/

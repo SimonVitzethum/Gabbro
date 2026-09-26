@@ -40,20 +40,21 @@ fn obligations_104_states_the_user_duty() {
         "namespace G104_referenz_oblig",
         "import Grammatik.Zielsatz.Akzeptiert",
         "import Grammatik.Zielsatz.Beweis",
+        "import Grammatik.Zielsatz.BeweisAtomar",
         "def gE : Zielsatz.Einheit gD where",
-        "def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE",
+        "def nutzerPflicht : Prop := Zielsatz.NutzerPflichtA gE",
         "theorem gFs_voll : ∀ g : gD.Fn, g ∈ gFs := by",
         "theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by",
         "theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by",
-        "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+        "theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
         "theorem gP_gabbro",
-        "Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE",
-        "Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
-        "(hN : Zielsatz.NutzerPflicht gE)",
+        "Zielsatz.gabbro_ziel_gx Zielsatz.akzeptiertX_pruefer gD gE",
+        "ZielX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
+        "(hN : Zielsatz.NutzerPflichtA gE)",
         // Opus agent C: the whole `GabbroZiel` conclusion on the thread machine.
         "theorem gP_gabbro_f",
-        "Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
-        "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
+        "Zielsatz.ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
+        "Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE",
     ] {
         assert!(text.contains(teil), "104 obligations must contain {teil:?}");
     }
@@ -75,7 +76,7 @@ fn obligations_108_starts_travel() {
     for teil in [
         "namespace G108_disjoint_start_locks_oblig",
         "starts := [⟨g_read_a, .nil⟩, ⟨g_read_c, .nil⟩]",
-        "def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE",
+        "def nutzerPflicht : Prop := Zielsatz.NutzerPflichtA gE",
         "theorem gP_gabbro",
     ] {
         assert!(text.contains(teil), "108 obligations must contain {teil:?}");
@@ -120,11 +121,11 @@ fn obligations_single_function() {
     for teil in [
         "namespace obligg_oblig",
         "def gE : Zielsatz.Einheit gD where",
-        "def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE",
+        "def nutzerPflicht : Prop := Zielsatz.NutzerPflichtA gE",
         "theorem gFs_voll",
-        "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+        "theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
         "theorem gP_gabbro",
-        "Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE",
+        "Zielsatz.gabbro_ziel_gx Zielsatz.akzeptiertX_pruefer gD gE",
     ] {
         assert!(text.contains(teil), "single-function obligations must contain {teil:?}");
     }
@@ -306,7 +307,7 @@ fn obligations_59_states_masked_starts() {
         "namespace G59_eintritt_nimmt_maskierte_sperre_oblig",
         "maskiert := fun | .TAKT => true | .RING => false",
         "starts := [⟨g_takt_verteiler, .nil⟩, ⟨g_ruf_verteiler, .nil⟩]",
-        "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
+        "theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
         "theorem gP_gabbro",
         "No lock carries an invariant -- nothing is owed at any release.",
     ] {

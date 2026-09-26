@@ -123,14 +123,6 @@ theorem akzeptiertSpecX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptier
 
 end Transfer
 
-/-- **A checker for the rely**: its soundness target is `AkzeptiertSpecX`. -/
-structure PrueferX where
-  akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
-    Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
-  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws
-
 /-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. -/
 def akzeptiertX_pruefer : PrueferX where
   akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws

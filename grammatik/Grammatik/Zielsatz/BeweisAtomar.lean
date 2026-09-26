@@ -13,7 +13,9 @@
   * `akzeptiertSpec_verbindeX`, `gabbro_ziel_verbundX`, `verbund_aus_X` -- the same for linked
     units.
 -/
-import Grammatik.Zielsatz.ZielXDefs
+import Grammatik.Zielsatz.AtomarZiel
+import Grammatik.Speichermodell.GXMaschine
+import Grammatik.Zielsatz.Verbund
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -313,7 +315,7 @@ end Ruhe
 /-! ## 4. The statement -/
 
 /-- **GABBRO_ZIEL WITH THE ATOMIC RELY, PROVED.** -/
-theorem gabbro_zielX : GabbroZielX := by
+theorem gabbro_ziel : GabbroZiel := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
   have hA0 := C.korrekt E fs ls cs hC
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
@@ -330,6 +332,31 @@ theorem gabbro_zielX : GabbroZielX := by
     (wsRuhe E.ws) hA hN' O.mitRuhe (hardware_mitRuhe hH) passes sp init
     (startZulaessig_aus E fs.1 hN.start hL) lebt0 K (heq ▸ hK)
   exact heq ▸ h
+
+/-- **The goal on every run of machine GX** (every thread live, nothing spawned): the reading
+    of `GabbroZiel` over plain GX runs, as `gabbro_ziel_g` is the reading of the statement of
+    before over G runs. -/
+theorem gabbro_ziel_gx (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflichtA E)
+    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
+    (hL : Laufzeit E sp init) (M : RufMaschineG D.mitRuhe)
+    (hr : RufErreichbarGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+      (RufStartG E.P.mitRuhe sp init) M) :
+    ZielX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+      (RufStartG E.P.mitRuhe sp init) M :=
+  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
+    (FadenMaschine.alleLebend M) (fadenErreichbarX_von_GX hr)).g
+
+/-- **On a declaration without an `atomic` global, (b) with the rely is (b)**: no read of a
+    shared atomic exists. -/
+theorem nutzerPflichtA_ohne_atomar {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D}
+    (hat : ∀ g : D.Glob, D.atomar g = false) (h : NutzerPflicht E) : NutzerPflichtA E :=
+  ⟨logikPflichtA_of_frei (fun f c _ hc => by
+      obtain ⟨g, _, hg⟩ := hc.1
+      rw [hat g] at hg
+      cases hg) h.logik, h.start⟩
 
 /-! ## 5. The embedding: the statement of before follows -/
 
@@ -415,7 +442,7 @@ end Einbettung
     (`nutzerPflichtA_of_akzeptiert`), every thread-machine run over G is one over GX
     (`fadenErreichbarX_of`), and such a unit has no admitted shared atomic (`geteiltV_leer`), so
     `ZielFX` there is `ZielF` (`zielF_of_X`). -/
-theorem gabbroZiel_aus_X (h : GabbroZielX) : GabbroZiel := by
+theorem gabbro_ziel_sc_aus (h : GabbroZiel) : GabbroZielSC := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
   have hA0 := C.korrekt E fs ls cs hC
   have hZ := h C.alsX D E fs ls cs hC (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
@@ -525,19 +552,19 @@ theorem nutzerTeilA_of {eigen : D.Fn → Bool} {E : Einheit D} {fs : List D.Fn}
 end Verbund
 
 /-- **LINKING WITH THE ATOMIC RELY, PROVED.** -/
-theorem gabbro_ziel_verbundX : GabbroZielVerbundX := by
+theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
   have hA := akzeptiertSpec_verbindeX fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
     hV hS
   have hB : akzeptiertX_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
     akzeptiertX_of_akzeptiert ((akzeptiert_iff fs.2 ls.2 cs.2).mpr hA)
-  exact gabbro_zielX akzeptiertX_pruefer D (verbinde e E₁ E₂) fs ls cs hB
+  exact gabbro_ziel akzeptiertX_pruefer D (verbinde e E₁ E₂) fs ls cs hB
     (nutzerPflichtA_of_akzeptiert fs.2 hA
       (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂)))
     O hH passes sp init hL lebt0 K hK
 
 /-- **THE LINKED STATEMENT OF BEFORE, DERIVED.** -/
-theorem verbund_aus_X (h : GabbroZielVerbundX) : GabbroZielVerbund := by
+theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) : GabbroZielVerbundSC := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
   have hA₁ := C.korrekt E₁ fs ls cs h₁
   have hA₂ := C.korrekt E₂ fs ls cs h₂
@@ -548,9 +575,10 @@ theorem verbund_aus_X (h : GabbroZielVerbundX) : GabbroZielVerbund := by
 
 #print axioms Gabbro.Grammatik.Zielsatz.zielX_aus
 #print axioms Gabbro.Grammatik.Zielsatz.zielFX_aus
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_zielX
-#print axioms Gabbro.Grammatik.Zielsatz.gabbroZiel_aus_X
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbundX
-#print axioms Gabbro.Grammatik.Zielsatz.verbund_aus_X
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc_aus
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_gx
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund_sc_aus
 
 end Gabbro.Grammatik.Zielsatz

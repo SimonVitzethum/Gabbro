@@ -263,7 +263,7 @@ end Start
     named hardware assumptions and the runtime's start of `E` (A4, with the
     idle root): every leg of `ZielF` on every reachable THREAD machine (since
     2026-09-26: threads spawned at run time by `start`/`child` included). -/
-theorem gabbro_ziel : GabbroZiel := by
+theorem gabbro_ziel_sc : GabbroZielSC := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
   have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hC)
   exact zielF_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
@@ -282,14 +282,14 @@ theorem gabbro_ziel_g (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Ei
     (hL : Laufzeit E sp init) (M : RufMaschineG D.mitRuhe)
     (hr : RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M) :
     Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M :=
-  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
+  (gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
     (FadenMaschine.alleLebend M) (fadenErreichbar_von_G hr)).g
 
 #print axioms Gabbro.Grammatik.Zielsatz.kein_warteZyklusG
 #print axioms Gabbro.Grammatik.Zielsatz.ziel_aus
 #print axioms Gabbro.Grammatik.Zielsatz.startZulaessig_aus
 #print axioms Gabbro.Grammatik.Zielsatz.zielF_aus
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_g
 
 end Gabbro.Grammatik.Zielsatz
