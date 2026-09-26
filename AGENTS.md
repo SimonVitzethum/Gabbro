@@ -68,7 +68,9 @@ README §6 says exactly this; keep it that way.
   - no deadlock, `KeinWarteZyklus` and (since fix lane F11) `KernHaltG`: no same-core
     interrupt deadlock, under a named core schedule;
   - `FortschrittG`, whose stop kinds are hardware, flag, budget and `nieZurueck`;
-  - `ZeitAb`.
+  - `ZeitAb`;
+  - (Opus agent G) `FolgeG`, the leg `folge`: the order of calls in every thread's call log
+    (OFFEN O1's L50/L52: an entry or return DIRECTLY behind a named function's return).
 - **Axioms:** `#print axioms gabbro_ziel` must be exactly `propext`, `Classical.choice`,
   `Quot.sound`. Every merge that touches `grammatik/` keeps it so.
 - **The review rounds and what each repaired** (SATZKARTE §22–§25):
@@ -316,6 +318,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Opus agent D (invariants) | N496–N500 / 1231–1240 / — | N496, gifts 1231–1234; no example (examples 09 and 17 edited: 09's false invariant replaced, both now `maintain`); N497–N500 and gifts 1235–1240 stay with the invariant work (OFFEN O11's `ops` condition) |
 | Opus agent E (linking) | N501–N505 / 1241–1250 / — | N501–N505 (`namen.verbund`); probe numbers 1241–1245 as LINK probes under `messung/proben/verbund/` (a link probe is two units, each clean alone, so not a `beispiele/gift/` file); no example. Gifts 1246–1250 stay with the linking work |
 | Opus agent F (link races) | N516–N520 / 1246–1250 / — | N516 (`namen.verbund`, a module split over two units); link probes 1246–1248 under `messung/proben/verbund/` (pairs `NNNN-…-bib.gab` + `NNNN-…-app.gab`); no example. N517–N520 and 1249, 1250 stay with the linking work |
+| Opus agent G (OFFEN O1) | N531–N535 / 1291–1300 / — | N531, N532 (`kbedingung.breaking-rests-here`, `kbedingung.breaking-blocks-maintainers`), gifts 1291, 1292; no example. N533–N535 and gifts 1293–1300 stay with the O1 work (the name of `breaking` in G, path-sensitive order) |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

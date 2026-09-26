@@ -10,7 +10,7 @@ table stand here by name.*
 
 ---
 
-## O1 — The big step: four obligations the semantics cannot state
+## O1 — The big step: four obligations the semantics cannot state — **STATED 2026-09-26 (Opus agent G): all four are sayable over machine G; L50/L52 are claimed by the new leg `folge`, L24's content by the invariant legs, L34 is an existence statement with a witness; what stays open is named below**
 
 **`L24`, `L34`, `L50`, `L52`.** `programmlogik/Gabbro/Body.lean`'s `exec` is big-step: it maps
 a state and a statement list to an `Outcome` and produces no intermediate state. All four rows
@@ -33,6 +33,55 @@ place the tool would create value beyond convenience. The statement that site ne
 | **what would close it** | a small-step or trace semantics for `exec` |
 | **why it is not being attempted** | `AUFTRAG-GABBROV.md` §9 stop-list — `exec`'s big-step character carries the Isabelle proofs |
 | **also recorded at** | `dokumente/AUSNAHMEN.md` rows 1–4, `dokumente/HISTORIE.md` (2026-09-03) |
+
+### What changed on 2026-09-26 (Opus agent G, `messung/OPUS-G-O1.md`)
+
+**The diagnosis above is right for `Body.lean` and wrong for the goal theorem.** `GabbroZiel`
+does not stand on `exec`: its runs are those of machine G (`RufMaschineG.lean`), which is
+SMALL-STEP -- every leaf statement, every unfold, every push and pop is one step -- and whose
+threads carry an access trace (`spur`) and a CALL LOG (`log`: `eintritt`, `rueck`, `grund`,
+newest first). Every intermediate state is a reached machine, and the order of calls is a list.
+So the four rows are statable there, and the question became what can be CLAIMED.
+
+| row | statable over G as | claimed by | what stays open, and why |
+|---|---|---|---|
+| **L24** never half set | literally ("no third state exists"): false of every two-statement write -- G has the state between, and L34 names it. Its content is OBSERVATIONAL: no other thread sees the pair half set | `invSicht` (table/group invariant: a thread outside every writer holding a guard lock sees it intact), `sperrSicht` + `sperrWechsel` (lock invariant) -- legs of `Ziel` since Opus agent D | for every CERTIFIED program `Inv := Empty` (the exporter refuses `maintains`, `LG001`), so the table-invariant form reaches no certified program; `beispiele/53` (the L24/L34 site) is UNCERTIFIED (`LG001`, the option-index fields) |
+| **L34** the invariant fails between | an EXISTENCE statement about one program: a reached machine inside the region where the invariant is false | its witness shape `tabelle_gebrochen` (two writes of `privA`, broken between, open there); the name check `N531` (the region writes a carrier of the invariant it names -- the "wrong-but-existing invariant" of `GABBROV.md` §3) and `N532` (no `maintains I` call inside `breaking I`, SPRACHE.md §8.3) | G unfolds `breaking` WITHOUT its name (`dannBreaking`), so no leg speaks of "inside the region" or of restoration at the block's end; restoration is claimed at every writer's RETURN (`invRueck`, `invGrund`). `requires I` as a predicate word is not resolved by `N532` |
+| **L50** flush before reply | `FolgeLog` with `vor = {flush}`, `ruf = {reply}`: every entry of the reply DIRECTLY behind a logged normal return of the flush | the new leg `folge : FolgeG P M` of `Ziel` (Folge.lean, proved premise-free in FolgeBeweis.lean; witnesses in FolgeZeuge.lean) | an effect that is not a call of a Gabbro function (an axiom's, a register's) is not in the log -- a wrapper function puts it there; an order across a compound statement, an indirect call or a lock block is refused by the check, not claimed; which `Φ` a source program means is not in `Einheit` |
+| **L52** reply before the service ends | `FolgeLog` with `vor = {reply}`, `ende = {service}`: every return of the service -- and the end of a thread started in it -- DIRECTLY behind the reply's return | the same leg | the check is per FUNCTION, not per return site: a service with a second return path that does not reply is refused for that `Φ`, not covered -- the path-sensitive form ("only the `Stop` arm's return") is open |
+
+**Decisions, and their reasons** (the scope rule of 2026-09-26: decide open design questions,
+write each down, never trade a guarantee):
+
+1. **Target semantics = machine G, not `Body.lean`.** G is the semantics of the goal statement;
+   `Body.lean`'s big-step character carries the Isabelle proofs and stays on
+   `AUFTRAG-GABBROV.md` §9's stop-list. GabbroV's fragment over `Body.lean` still cannot state
+   the four rows, and `AUSNAHMEN.md` keeps them for that fragment.
+2. **L24 is read observationally.** Two assignments are two steps in any small-step semantics;
+   the literal reading is vacuous big-step and false small-step. The observational reading is
+   what the Caprock comment means ("stets gemeinsam gesetzt") for anyone but the writer.
+3. **L34 is a witness, not a leg.** "The invariant fails inside every `breaking`" is false in
+   general (a block may keep it); "it fails inside THIS one" is a fact about one program.
+4. **The `breaking` name is not threaded through G.** A residue marker changes the rule
+   `dannBreaking`, which every 70-rule proof of the tree cases on; the syntactic half of §8.3's
+   promises moved to the checker instead (`N531`, `N532`), and the semantic half (restoration at
+   the block's end) is named open.
+5. **L50/L52 mean "DIRECTLY behind", in the call log.** "Sometime before" is the `flush ∧ reply`
+   weakening V1 warned about (`folgeLog_nicht_schwach`, `folge50_gegen`); at the log's
+   granularity "the flush completed before the reply" is "the entry of the reply stands right
+   behind the flush's normal return".
+6. **The check is conservative** (every sub-block starts unarmed): it refuses where a finer
+   analysis might accept, and never accepts where the claim would fail. Simplicity of the
+   invariant was bought with coverage, not with soundness.
+7. **The leg quantifies over `Φ` inside and needs no premise.** No field in `Einheit`, no
+   exporter change, no certificate change; every `Φ` the Lean program passes is claimed.
+8. **`N531` accepts every block that calls anything** -- a callee's writes are not resolved in
+   that pass; it refuses only where the answer is certain.
+
+**What would close the rest:** the name of `breaking` in G's residue (a marker layer, with the
+re-proof of every rule-by-rule theorem), then the block-level restoration duty in (b); an event
+for axiom and register effects in the call log; a path-sensitive `ende` (per return site); an
+order field in `Einheit` filled by the exporter.
 
 ---
 
