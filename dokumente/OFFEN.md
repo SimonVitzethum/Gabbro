@@ -55,6 +55,34 @@ evaluable from the outside.**
 | **what would close `G1`** | nothing, deliberately — a threshold set now would be set to be met |
 | **what would close `G5`** | formalising the eight assumptions — the expensive half of V2, `AUFTRAG-GABBROV.md` §9 |
 
+**CLOSED 2026-09-26 (lane 266) — both falsifiers WITHDRAWN, not thresholded.**
+Setting a number now, with 55 of 63 on the table, would be `R2` (a rule pulled to
+fit a result). The replacements below were written 2026-09-03 (`AUFTRAG-GABBROV.md`
+§1), before the runs they judge — and this entry's decision was committed before
+this lane's new solver runs (O4/O5/O6), so no result below could have shaped it.
+
+* `G1` → `E1` + `E2`, pre-registered and numeric where a number is honest:
+  * **E1** (completeness of handling, no exception): every `obligation` line of the
+    manifest gets a verdict in the same run. Pre-registered number:
+    `|manifest obligation lines − verdict lines| = 0`. Mechanised inside
+    `gabbro gabbrov pruefe`, which refuses to complete otherwise.
+  * **E2** (decided share, by name not by percentage): every `undecided` row stands
+    by name in `dokumente/AUSNAHMEN.md`, which holds exactly **4** rows
+    (`L24`, `L34`, `L50`, `L52`); any growth without a `HISTORIE.md` entry fails
+    `pruefe-ausnahmen.py`. A percentage would let the exception list grow quietly
+    with every hard obligation; names cannot.
+* `G5` → split into the half that is built and the half that is a milestone:
+  * **V2a vacuity — BUILT** (`programmlogik/gabbrov/V2.lean`:
+    `vacuous_under_assumptions`, `detection_is_incomplete`): every sayable
+    obligation with a precondition carries a vacuity verdict, and a condemned
+    precondition has no model at all (the sound direction). Pre-registered form:
+    the check runs over the sayable preconditions, `0` condemned today means
+    `0` vacuous passes claimed — not that the assumptions are consistent.
+  * **V2b milestone — the construction that would re-open the question**: 8 of 8
+    assumptions as formal `Prop`s with an exhibited model. Until 8 of 8 stand,
+    *"the assumption set has no model"* is not asked, and no count clears or
+    trips anything in its place.
+
 ---
 
 ## O3 — ~~The manifest does not carry the obligation text~~ — **it does since 2026-09-03, and the half that stays open is a different one**
