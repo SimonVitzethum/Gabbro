@@ -3441,7 +3441,10 @@ MARKE_EMIT=127
 # (`messung/proben/probe-akzeptiert-diff-guarded.gab`,
 # `probe-akzeptiert-diff-deepchain.gab`) emit and compile -- the good case,
 # and a finding nonetheless. Re-measured by the merger: 143 of 143.
-MARKE_EMIT_M=143
+# **143 -> 144 on 2026-09-26 (merge of Opus lane O25).** Its alignment probe
+# `messung/proben/o25-flagge-atomar.gab` (an atomic flag Rust accepts and the exporter refuses
+# with LG001) emits and compiles. Re-measured by the merger.
+MARKE_EMIT_M=144
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

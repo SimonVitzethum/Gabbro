@@ -199,6 +199,12 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
     // **The atomics of this unit, by short name** -- the only state a primitive
     // may consult and change.
     let mut atomare: HashSet<String> = HashSet::new();
+    // **The ORDERED atomics** (OFFEN O26): declared `acquire`, `release` or `seq`. The emitter
+    // lowers every load of such an atomic with `memory_order_acquire` (or `seq_cst`), every
+    // store with `memory_order_release` (or `seq_cst`), every RMW with `acq_rel` (or
+    // `seq_cst`); a `relaxed` atomic or one with no ordering word is `memory_order_relaxed`
+    // on both sides (`C-SPEICHERMODELL.md` §1c).
+    let mut geordnet: HashSet<String> = HashSet::new();
     // **The pure functions of this unit, by short name** -- the only calls that
     // do not cross the atomicity leg. `effects { pure }` and nothing else.
     let mut rein: HashSet<String> = HashSet::new();
@@ -208,6 +214,9 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
         }
         ItemArt::Atomic(a) => {
             atomare.insert(a.name.text.clone());
+            if matches!(a.ordnung, Some(Ordnung::Acquire | Ordnung::Release | Ordnung::Seq)) {
+                geordnet.insert(a.name.text.clone());
+            }
         }
         ItemArt::Funktion(f) => {
             if let Some(w) = &f.effects {
@@ -223,6 +232,9 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
     if sperren.is_empty() {
         return;
     }
+    // **The bodied primitives, per lock** (OFFEN O26): name, span, take or give, the ordered
+    // atomics the body reads and writes, and whether it reads/writes any atomic at all.
+    let mut primitive: BTreeMap<String, Vec<PrimOrdnung>> = BTreeMap::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
@@ -261,6 +273,15 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
         bindungen_sammeln(b, &mut lokal);
         let mut fakten = PrimFakten::default();
         rumpf_falten(b, &atomare, &lokal, &rein, &mut fakten);
+        primitive.entry(sperre.to_string()).or_default().push(PrimOrdnung {
+            name: f.name.text.clone(),
+            span: f.name.span,
+            nimmt,
+            liest: fakten.liest,
+            schreibt: fakten.schreibt,
+            erwirbt: fakten.gelesen.iter().filter(|x| geordnet.contains(*x)).cloned().collect(),
+            gibt_frei: fakten.geschrieben.iter().filter(|x| geordnet.contains(*x)).cloned().collect(),
+        });
         if fakten.fremd.is_empty()
             && fakten.sperrt.is_empty()
             && fakten.rufe.is_empty()
@@ -341,6 +362,140 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
             );
         absagen.schiebe(absage);
     });
+    sperrprimitiv_ordnung(&primitive, absagen);
+}
+
+/// One bodied lock primitive, as far as its memory orders go (OFFEN O26).
+struct PrimOrdnung {
+    name: String,
+    span: Span,
+    /// `true` for a take (`L_nimm`, `L_nimm_geteilt`), `false` for a give.
+    nimmt: bool,
+    /// The body reads / writes some declared atomic at all (`N323`'s order and hold legs).
+    liest: bool,
+    schreibt: bool,
+    /// The ORDERED atomics (`acquire`/`release`/`seq`) the body reads: its acquires.
+    erwirbt: std::collections::BTreeSet<String>,
+    /// The ORDERED atomics the body writes: its releases.
+    gibt_frei: std::collections::BTreeSet<String>,
+}
+
+/// **`N481`-`N483` -- an own lock primitive synchronises like a mutex (OFFEN O26).**
+///
+/// The weak-memory leg of the goal theorem (`Zielsatz/Spec.lean`, assumption (3) of the
+/// reading; `Speichermodell/MaschineW.lean`) reads every lock as a C11 mutex: taking `L` is an
+/// ACQUIRE, giving it back a RELEASE, and a take synchronises with the give before it. A
+/// `pthread_mutex` does that by POSIX. An own primitive does it only if its atomics say so --
+/// a spinlock over a `relaxed` word passes `N323` (it reads and writes an atomic) and orders
+/// nothing: the critical section of the next holder may see the previous holder's writes
+/// late, or not at all (`mp_rlx_erlaubt`, `Speichermodell/Sicht.lean`).
+///
+/// Three legs, each over the ORDERED atomics of the unit (declared `acquire`, `release` or
+/// `seq`; the emitter lowers their loads acquire, their stores release, their RMWs acq_rel,
+/// `C-SPEICHERMODELL.md` §1c):
+///
+/// * **`N481`** -- a take (`L_nimm`, `L_nimm_geteilt`) that reads atomics reads NO ordered one:
+///   it cannot acquire.
+/// * **`N482`** -- a give (`L_gib`, `L_gib_geteilt`) that writes atomics writes NO ordered one:
+///   it cannot release.
+/// * **`N483`** -- a take and a give of ONE lock, both bodied and both ordered, share no
+///   ordered atomic that the give writes and the take reads: the release and the acquire are
+///   on different locations, and no synchronises-with edge exists between them.
+///
+/// A take that reads no atomic at all, or a give that writes none, is `N323`'s (its order
+/// and hold legs), not these. **What stays assumed:** a bodiless (`extern fn`) or `asm`
+/// primitive is trust base, as for `N323`; that the acquire of the take is the access that
+/// SEES the give's release (a spin on the right word) is the contract `N323` checks the
+/// shape of, not the flow. And measured on 2026-09-26: `N042` refuses the C name of every own
+/// or foreign `L_nimm`/`L_gib` beside `lock L`, so no ACCEPTED program has such a primitive
+/// today -- these codes are the order half of the contract for the day that name opens.
+fn sperrprimitiv_ordnung(primitive: &BTreeMap<String, Vec<PrimOrdnung>>, absagen: &mut Absagen) {
+    for (sperre, liste) in primitive {
+        for p in liste {
+            if p.nimmt && p.liest && p.erwirbt.is_empty() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N481",
+                        p.span,
+                        format!(
+                            "`{}` takes `lock {sperre}` without an acquire: every atomic it \
+                             reads is `relaxed`",
+                            p.name
+                        ),
+                    )
+                    .mit_notiz(
+                        "a take must synchronise with the give before it -- the next holder \
+                         has to see what the previous one wrote inside the section; a relaxed \
+                         load orders nothing (`mp_rlx_erlaubt` in \
+                         `grammatik/Grammatik/Speichermodell/Sicht.lean`)",
+                    )
+                    .mit_notiz(
+                        "declare the word the take spins or swaps on `acquire` (or `release`, \
+                         or `seq`): the emitter then loads it with `memory_order_acquire` and \
+                         swaps it with `memory_order_acq_rel`",
+                    )
+                    .mit_notiz(
+                        "the weak-memory leg of the goal theorem reads every lock as a mutex \
+                         (assumption (3) of `Zielsatz/Spec.lean`, OFFEN O26)",
+                    ),
+                );
+            }
+            if !p.nimmt && p.schreibt && p.gibt_frei.is_empty() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N482",
+                        p.span,
+                        format!(
+                            "`{}` gives back `lock {sperre}` without a release: every atomic it \
+                             writes is `relaxed`",
+                            p.name
+                        ),
+                    )
+                    .mit_notiz(
+                        "a give must publish the section's writes to the next holder; a \
+                         relaxed store carries no view (`nachricht` in \
+                         `grammatik/Grammatik/Speichermodell/Sicht.lean`: a relaxed message \
+                         knows only its own location)",
+                    )
+                    .mit_notiz(
+                        "declare the word the give stores `release` (or `acquire`, or `seq`): \
+                         the emitter then stores it with `memory_order_release`",
+                    ),
+                );
+            }
+        }
+        for g in liste.iter().filter(|p| !p.nimmt && !p.gibt_frei.is_empty()) {
+            for t in liste.iter().filter(|p| p.nimmt && !p.erwirbt.is_empty()) {
+                if g.gibt_frei.is_disjoint(&t.erwirbt) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N483",
+                            t.span,
+                            format!(
+                                "`{}` and `{}` of `lock {sperre}` do not synchronise: the take \
+                                 acquires on {} and the give releases on {}",
+                                t.name,
+                                g.name,
+                                t.erwirbt.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", "),
+                                g.gibt_frei.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", "),
+                            ),
+                        )
+                        .mit_notiz(
+                            "a release synchronises only with an acquire of the SAME location \
+                             (`schrittW_erwerb`, `hb_uebergabe` in \
+                             `grammatik/Grammatik/Speichermodell/`): a take that acquires one \
+                             word and a give that releases another leave the sections unordered",
+                        )
+                        .mit_notiz(
+                            "let the give store the word the take reads (the ticket lock's \
+                             `NOW`: the give advances it with a release, the take spins on it \
+                             with an acquire -- `laufzeit/sperre.gab`)",
+                        ),
+                    );
+                }
+            }
+        }
+    }
 }
 
 /// What one lock-primitive body owes, folded out of its statements.
@@ -356,6 +511,10 @@ struct PrimFakten {
     liest: bool,
     /// Writes a declared atomic.
     schreibt: bool,
+    /// **The atomics the body reads, by name** (OFFEN O26, `N481`/`N483`).
+    gelesen: std::collections::BTreeSet<String>,
+    /// **The atomics the body writes, by name** (OFFEN O26, `N482`/`N483`).
+    geschrieben: std::collections::BTreeSet<String>,
 }
 
 /// **The binders of a body, before the facts.** A store to a `let` local is
@@ -455,6 +614,7 @@ fn rumpf_falten(
                     // Thread-local -- the holder entry is untouched either way.
                 } else if atomare.contains(&z.ziel.basis.text) {
                     fakten.schreibt = true;
+                    fakten.geschrieben.insert(z.ziel.basis.text.clone());
                 } else {
                     fakten.fremd.push((z.ziel.text(), s.span));
                 }
@@ -517,6 +677,7 @@ fn rumpf_falten(
             StmtArt::Publish(p) => {
                 if atomare.contains(&p.ziel.basis.text) {
                     fakten.schreibt = true;
+                    fakten.geschrieben.insert(p.ziel.basis.text.clone());
                 } else {
                     fakten.fremd.push((p.ziel.text(), s.span));
                 }
@@ -536,6 +697,8 @@ fn rumpf_falten(
                 } else if atomare.contains(&e.ort.basis.text) {
                     fakten.liest = true;
                     fakten.schreibt = true;
+                    fakten.gelesen.insert(e.ort.basis.text.clone());
+                    fakten.geschrieben.insert(e.ort.basis.text.clone());
                 } else {
                     fakten.fremd.push((e.ort.text(), s.span));
                 }
@@ -653,6 +816,7 @@ fn knoten_praedikat(
 fn ort_liest(o: &Ort, atomare: &HashSet<String>, fakten: &mut PrimFakten) {
     if atomare.contains(&o.basis.text) {
         fakten.liest = true;
+        fakten.gelesen.insert(o.basis.text.clone());
     }
 }
 
@@ -6934,5 +7098,130 @@ mod sperrprimitiv_tests {
     fn atomarer_rumpf_besteht() {
         let codes = codes_fuer(ATOMARER_RUMPF);
         assert!(!faellt(&codes, "N323"), "N323 muss schweigen, gefallen ist {codes:?}");
+    }
+
+    // **OFFEN O26 (`N481`-`N483`): the memory orders of an own primitive.**
+
+    /// A test-and-set spinlock over an `acquire` word: the swap lowers acq_rel, the
+    /// release store release, take and give meet on `HALTER`.
+    const GEORDNETER_SPINLOCK: &str = "module m {\n\
+        atomic HALTER : u32 acquire;\n\
+        pub static mut konto : u32 = 0;\n\
+        pub lock TOR protects { konto } rank 0 held <= 64 ops;\n\
+        extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;\n\
+        impl fn TOR_nimm() effects { reads HALTER, writes HALTER } costs <= 64 ops {\n\
+            let alt : u32 = HALTER exchange update(v)\n\
+                bounded 16 ops\n\
+                on_exceeded zu_viel_streit\n\
+            {\n\
+                return 1;\n\
+            } publishes nothing;\n\
+        }\n\
+        impl fn TOR_gib() effects { reads HALTER, writes HALTER } costs <= 8 ops {\n\
+            if HALTER == 1 {\n\
+                HALTER = 0 publishes nothing;\n\
+            }\n\
+        }\n\
+        pub impl fn einzahlen() effects { writes konto, locks TOR } costs <= 64 ops {\n\
+            locks TOR {\n\
+                konto = 1;\n\
+            }\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn geordneter_spinlock_besteht() {
+        let codes = codes_fuer(GEORDNETER_SPINLOCK);
+        for c in ["N323", "N481", "N482", "N483"] {
+            assert!(!faellt(&codes, c), "{c} must stay silent, fired: {codes:?}");
+        }
+    }
+
+    #[test]
+    fn entspannter_spinlock_faellt_mit_n481_und_n482() {
+        let codes = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", "u32 relaxed"));
+        assert!(faellt(&codes, "N481"), "N481 expected, fired: {codes:?}");
+        assert!(faellt(&codes, "N482"), "N482 expected, fired: {codes:?}");
+        assert!(!faellt(&codes, "N483"), "N483 must stay silent, fired: {codes:?}");
+        // **no ordering word is `relaxed` too** (the emitter's table)
+        let ohne = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", "u32"));
+        assert!(faellt(&ohne, "N481"), "N481 expected without an ordering word, fired: {ohne:?}");
+        // `seq` and `release` order like `acquire`
+        for w in ["u32 seq", "u32 release"] {
+            let c = codes_fuer(&GEORDNETER_SPINLOCK.replace("u32 acquire", w));
+            for k in ["N481", "N482", "N483"] {
+                assert!(!faellt(&c, k), "{k} must stay silent at `{w}`, fired: {c:?}");
+            }
+        }
+    }
+
+    /// The runtime's ticket lock (`laufzeit/sperre.gab`) beside `lock TOR`: a relaxed
+    /// fetch-add on `NEXT` (no ordering needed to draw a number), an acquire spin on `NOW`,
+    /// a release advance of `NOW`. `N481`-`N483` must stay silent: the take acquires on
+    /// `NOW`, the give releases on `NOW`.
+    const TICKET_SPERRE: &str = "module m {\n\
+        atomic NEXT : u32 relaxed;\n\
+        atomic NOW : u32 acquire;\n\
+        pub static mut konto : u32 = 0;\n\
+        pub lock TOR protects { konto } rank 0 held <= 64 ops;\n\
+        extern fn warte_aufgegeben() -> never effects { diverges };\n\
+        impl fn folge(x : u32) -> u32 effects { pure } costs <= 2 ops {\n\
+            return x +% 1;\n\
+        }\n\
+        impl fn TOR_nimm() effects { reads NEXT, writes NEXT, reads NOW } costs <= 4294967299 ops {\n\
+            let my : u32 = NEXT exchange update(t)\n\
+                bounded 64 ops\n\
+                on_exceeded warte_aufgegeben\n\
+            { return folge(t); } publishes nothing;\n\
+            retry spin until NOW == my\n\
+                bounded 4294967295 ops\n\
+                on_exceeded warte_aufgegeben\n\
+                effects { reads NOW }\n\
+            {\n\
+            }\n\
+        }\n\
+        impl fn TOR_gib() effects { reads NOW, writes NOW } costs <= 64 ops {\n\
+            let n : u32 = NOW;\n\
+            NOW = folge(n) publishes nothing;\n\
+        }\n\
+        pub impl fn einzahlen() effects { writes konto, locks TOR } costs <= 64 ops {\n\
+            locks TOR {\n\
+                konto = 1;\n\
+            }\n\
+        }\n\
+        }\n";
+
+    #[test]
+    fn ticket_sperre_besteht() {
+        let codes = codes_fuer(TICKET_SPERRE);
+        for c in ["N323", "N481", "N482", "N483"] {
+            assert!(!faellt(&codes, c), "{c} must stay silent, fired: {codes:?}");
+        }
+        // **The same lock with `NOW` relaxed orders nothing.**
+        let entspannt = codes_fuer(&TICKET_SPERRE.replace("NOW : u32 acquire", "NOW : u32 relaxed"));
+        assert!(faellt(&entspannt, "N481"), "N481 expected, fired: {entspannt:?}");
+        assert!(faellt(&entspannt, "N482"), "N482 expected, fired: {entspannt:?}");
+    }
+
+    #[test]
+    fn zwei_worte_faellt_mit_n483() {
+        let quelle = GEORDNETER_SPINLOCK
+            .replace(
+                "atomic HALTER : u32 acquire;\n",
+                "atomic HALTER : u32 acquire;\natomic ZURUECK : u32 release;\n",
+            )
+            .replace(
+                "impl fn TOR_gib() effects { reads HALTER, writes HALTER } costs <= 8 ops {\n\
+            if HALTER == 1 {\n\
+                HALTER = 0 publishes nothing;",
+                "impl fn TOR_gib() effects { reads ZURUECK, writes ZURUECK } costs <= 8 ops {\n\
+            if ZURUECK == 0 {\n\
+                ZURUECK = 1 publishes nothing;",
+            );
+        assert!(quelle.contains("ZURUECK = 1"), "the substitution must hit");
+        let codes = codes_fuer(&quelle);
+        assert!(faellt(&codes, "N483"), "N483 expected, fired: {codes:?}");
+        assert!(!faellt(&codes, "N481"), "N481 must stay silent, fired: {codes:?}");
+        assert!(!faellt(&codes, "N482"), "N482 must stay silent, fired: {codes:?}");
     }
 }

@@ -1,0 +1,61 @@
+-- erwartet: N483
+-- 1203 -- **a take and a give that release and acquire on two different words
+-- (OFFEN O26, Opus lane O25).**
+--
+-- Both words are ordered: the take swaps on `HALTER` (`acquire`), the give
+-- stores `ZURUECK` (`release`). Each primitive alone passes `N481`/`N482` --
+-- and the pair still does not synchronise: a release synchronises only with
+-- an acquire of the SAME location (`schrittW_erwerb`, `hb_uebergabe` in
+-- `grammatik/Grammatik/Speichermodell/`). The give's release is read by no
+-- take, the take's acquire reads nothing a give released, and the critical
+-- sections stay unordered in C11.
+--
+-- `N483` refuses the pair (at the take); `N481`, `N482` stay silent. `N042`
+-- refuses the C names, as for every own primitive. The shape that passes is
+-- the ticket lock of `laufzeit/sperre.gab`: the give advances `NOW` with a
+-- release, the take spins on `NOW` with an acquire (`namen.rs` snippet test
+-- `ticket_sperre_besteht`).
+
+module gift::zwei_worte {
+
+atomic HALTER : u32 acquire;
+
+atomic ZURUECK : u32 release;
+
+pub static mut konto : u32 = 0;
+
+pub lock TOR protects { konto } rank 0 held <= 64 ops;
+
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+
+impl fn TOR_nimm()
+    effects { reads HALTER, writes HALTER }
+    costs   <= 64 ops
+{
+    let alt : u32 = HALTER exchange update(v)
+        bounded 16 ops
+        on_exceeded zu_viel_streit
+    {
+        return 1;
+    } publishes nothing;
+}
+
+impl fn TOR_gib()
+    effects { reads ZURUECK, writes ZURUECK }
+    costs   <= 8 ops
+{
+    if ZURUECK == 0 {
+        ZURUECK = 1 publishes nothing;
+    }
+}
+
+pub impl fn einzahlen()
+    effects { writes konto, locks TOR }
+    costs   <= 64 ops
+{
+    locks TOR {
+        konto = 1;
+    }
+}
+
+}

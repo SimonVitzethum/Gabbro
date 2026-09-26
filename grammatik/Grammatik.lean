@@ -323,3 +323,6 @@ import Grammatik.Speichermodell.DRF
 import Grammatik.Zielsatz.Schwach
 import Grammatik.Speichermodell.Zeuge
 import Grammatik.Zertifikate
+import Grammatik.Speichermodell.Atomar
+import Grammatik.Speichermodell.AtomarZeuge
+import Grammatik.Speichermodell.Zaehler

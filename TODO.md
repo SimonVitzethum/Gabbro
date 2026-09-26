@@ -585,14 +585,31 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
 - [ ] **A rely for unguarded atomic reads** (`OFFEN.md` O25): programs that COMMUNICATE through an
   atomic without a lock are refused by `fuss`, so W's non-SC outcomes occur on no accepted
   program. Closing it: a havoc at shared atomic reads in `execEndH`, `fuss` exempting atomics,
-  the replay carrying it. Opus-sized.
+  the replay carrying it. Opus-sized. **Narrowed 2026-09-26 (Opus lane O25, SATZKARTE §52,
+  `messung/OPUS-O25-ATOMICS.md`):** the memory half and the language-carried legs are proved
+  standalone -- with `fuss` exempting atomics (`AkzeptiertA`, embedding of `Akzeptiert`) every
+  W step is a GA step (plain carriers SC, atomics per W, `schwach_ist_gA`), and trace invariant,
+  lock exclusivity, no deadlock, no wait cycle, time and plain race freedom hold over W
+  (`w_sprache_akzeptiertA`). Still open, in this order: (1) the rely in `execEndH`/`KoerperGutS`
+  and the replay family carrying it (the contract legs); (2) then ONE reviewed `Spec.lean` diff:
+  `akzeptiert` over `AkzeptiertA`, the leg `schwach` in GA form (`SchwachSC` is false on
+  accepted flag programs, `n1_schwachSC_falsch`); (3) RMW atomicity in `SchrittW`
+  (`zaehler_verloren`: W loses a `fetch_add` update RC11 keeps); (4) a footprint rule for a
+  PLAIN payload read after an `awaits` (the view transfer `hb_uebergabe` is proved); (5) the
+  exporter for `atomic` items (`LG001`).
 - [ ] **Stage (b) keeps `DRFSC` as a premise** (`CNebenlaeufig.lean`): the C side is still
   SC-by-assumption; W is on G's side. Connecting them needs a per-access C semantics (§2 above).
 - [ ] **Per-architecture fence mappings** (x86-TSO vs ARM/POWER): not started; W is the C11 level.
-- [ ] **`N323` must demand memory orders** (`OFFEN.md` O26, Spec-diff verdict of Opus agent B,
+- [x] **`N323` must demand memory orders** (`OFFEN.md` O26, Spec-diff verdict of Opus agent B,
   F2): an own lock primitive's take must be an acquire and its give a release; today `N323`
   checks atomicity and hold time only, and `Spec.lean` names the orders as assumption (3) of the
-  reading. Rust lane: tighten `N323`, poison probe (relaxed spinlock), positive probe.
+  reading. Rust lane: tighten `N323`, poison probe (relaxed spinlock), positive probe. **Done
+  2026-09-26 (Opus lane O25):** `N481` (take without an ordered read), `N482` (give without an
+  ordered write), `N483` (take and give meeting on no ordered atomic), sentence
+  `namen.sperrprimitiv_ordnung`, gifts 1201-1203, snippet tests (an acquire spinlock and the
+  ticket lock shape pass); corpus diff: only the gifts. Measured: `N042` refuses every own or
+  foreign `L_nimm`/`L_gib` beside `lock L`, so no accepted program has one today. Foreign
+  primitives stay assumed.
 
 # 3. The goal statement — follow-ups  ⟨D⟩
 
@@ -664,6 +681,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   rule exempts `per cpu` cells, the model has no notion of them. **Narrowed
   2026-09-26 (Opus agent B):** read as relaxed atomics the pool rules agree
   (`poolSicherRust_iff`) and writes are covered; the read half is O25.
+  **Narrowed again 2026-09-26 (Opus lane O25):** the fold is accepted by
+  `AkzeptiertA` (`faltung_akzeptiertA`) and its memory side is proved
+  (`schwach_ist_gA`); the contract side is O25's rely.
 - [x] **Threads created at run time in the goal (O21, O22).** Done 2026-09-26 (Opus agent A,
   SATZKARTE §49, `messung/OPUS-A-LAUFZEITFAEDEN.md`): `GabbroZiel` runs over the thread
   machine (`start` spawns and joins, `kind` spawns a child), run-time roots are
@@ -679,7 +699,8 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   under §2; starts only after stage (b) closes generically. Lock-free
   programmers need it, and linearizability above builds on it. **Model half
   done 2026-09-26 (Opus agent B):** machine W, the DRF theorem, the leg
-  `schwach` (§2 update). Open: the rely for atomic reads (O25), stage (b).
+  `schwach` (§2 update). Open: the rely for atomic reads (O25; its memory
+  half is proved since 2026-09-26, Opus lane O25), stage (b).
 - [ ] **Termination and waiting bounds (P2 — NOT-CLAIMED #1).**
   `forever` budgets plus `Fortschritt` cover the practical shape; the
   data-sheet variant above comes first. Full termination stays per-program
