@@ -61,6 +61,10 @@ pub struct Manifest {
     pub compiler: Vec<String>,
     pub ausgabe: String,
     pub einheiten: Vec<Einheit>,
+    /// `metal <dir>` (Opus agent J): the bare-metal runtime directory
+    /// (`laufzeit/metall`). With it, every unit that owns a bare-metal driver is
+    /// also LINKED into `<unit>.metall.elf` by the build.
+    pub metall: Option<String>,
 }
 
 /// **FNV-1a, 64 bit, by hand.**
@@ -99,6 +103,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     let mut compiler: Vec<String> = Vec::new();
     let mut ausgabe = String::new();
     let mut einheiten: Vec<Einheit> = Vec::new();
+    let mut metall: Option<String> = None;
     for (nr, roh) in text.lines().enumerate() {
         let nr = nr + 1;
         let ohne_kommentar = match roh.find("--") {
@@ -139,6 +144,16 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                 }
                 ausgabe = worte[1].to_string();
             }
+            "metal" => {
+                if worte.len() != 2 {
+                    return Err(format!(
+                        "{}:{nr}: `metal` takes exactly one path (the bare-metal runtime, \
+                         `laufzeit/metall`)",
+                        pfad.display()
+                    ));
+                }
+                metall = Some(worte[1].to_string());
+            }
             "unit" => {
                 if worte.len() != 3 {
                     return Err(format!(
@@ -170,8 +185,8 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             }
             andere => {
                 return Err(format!(
-                    "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `unit`, \
-                     or an INDENTED file path",
+                    "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `metal`, \
+                     `unit`, or an INDENTED file path",
                     pfad.display()
                 ));
             }
@@ -193,7 +208,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             leer.name
         ));
     }
-    Ok(Manifest { compiler, ausgabe, einheiten })
+    Ok(Manifest { compiler, ausgabe, einheiten, metall })
 }
 
 /// **The name the linker looks for, and this is the only place in the tree that spells it.**
@@ -236,6 +251,8 @@ struct TreiberFund {
 struct TreiberSperre {
     name: String,
     geteilt: bool,
+    /// `masks irqs` -- the bare-metal driver takes it with IF = 0 (Opus agent J).
+    maskiert: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -243,6 +260,34 @@ struct FunktionsForm {
     parameter: usize,
     datei: String,
     modul: String,
+    /// `-> T` present: the C function returns a value (an entry's `regs out`).
+    liefert: bool,
+    /// A `spec fn` writes nothing into C -- no `_verteiler` can point at it.
+    spec: bool,
+}
+
+/// **An `entry` as the bare-metal driver needs it** (Opus agent J): name,
+/// constant vector, whether the LAPIC throws it, the register binding, the
+/// dispatch's short name.
+#[derive(Debug, Clone)]
+struct EintrittFund {
+    name: String,
+    vektor: Option<u128>,
+    via_idt: bool,
+    arch: String,
+    regs_in: Vec<String>,
+    regs_out: Vec<String>,
+    dispatch: String,
+    datei: String,
+}
+
+/// What the bare-metal driver needs beyond roots and locks, out of the same walk.
+#[derive(Debug, Clone, Default)]
+struct MetallFunde {
+    eintritte: Vec<EintrittFund>,
+    rcus: Vec<String>,
+    /// `accumulates A ... per cpu N`: the emitter's `A_zellen` arrays.
+    zellen: Vec<String>,
 }
 
 /// The modules a unit declares and uses, **and every declaration of the entry name** -- all
@@ -264,6 +309,7 @@ fn modulkarte(
     Vec<TreiberFund>,
     Vec<TreiberSperre>,
     BTreeMap<String, Vec<FunktionsForm>>,
+    MetallFunde,
 ) {
     let mut deklariert = BTreeSet::new();
     let mut benutzt = BTreeSet::new();
@@ -271,6 +317,7 @@ fn modulkarte(
     let mut wurzeln = Vec::new();
     let mut sperren = Vec::new();
     let mut funktionen: BTreeMap<String, Vec<FunktionsForm>> = BTreeMap::new();
+    let mut metall = MetallFunde::default();
     for (datei, quelle) in quellen {
         let (baum, _) = gabbro_syntax::lies("<scan>", quelle);
         sammle(
@@ -283,9 +330,10 @@ fn modulkarte(
             &mut wurzeln,
             &mut sperren,
             &mut funktionen,
+            &mut metall,
         );
     }
-    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen)
+    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall)
 }
 
 fn sammle(
@@ -298,6 +346,7 @@ fn sammle(
     wurzeln: &mut Vec<TreiberFund>,
     sperren: &mut Vec<TreiberSperre>,
     funktionen: &mut BTreeMap<String, Vec<FunktionsForm>>,
+    metall: &mut MetallFunde,
 ) {
     use gabbro_syntax::ast::ItemArt;
     for i in items {
@@ -319,6 +368,7 @@ fn sammle(
                     wurzeln,
                     sperren,
                     funktionen,
+                    metall,
                 );
             }
             ItemArt::Use(u) => {
@@ -347,6 +397,8 @@ fn sammle(
                     .or_default()
                     .push(FunktionsForm {
                         parameter: f.parameter.len(),
+                        liefert: f.ergebnis.is_some(),
+                        spec: matches!(f.klasse, Some(gabbro_syntax::ast::FnKlasse::Spec)),
                         datei: datei.to_string(),
                         modul: if pfad.is_empty() {
                             String::from("(top level)")
@@ -365,6 +417,8 @@ fn sammle(
                     .or_default()
                     .push(FunktionsForm {
                         parameter: f.parameter.len(),
+                        liefert: f.ergebnis.is_some(),
+                        spec: matches!(f.klasse, Some(gabbro_syntax::ast::FnKlasse::Spec)),
                         datei: datei.to_string(),
                         modul: if pfad.is_empty() {
                             String::from("(top level)")
@@ -392,7 +446,30 @@ fn sammle(
                 sperren.push(TreiberSperre {
                     name: l.name.text.clone(),
                     geteilt: l.geteilte_haltezeit.is_some(),
+                    maskiert: l.maskiert.is_some(),
                 });
+            }
+            // **What the bare-metal driver needs besides** (Opus agent J): the
+            // entries it installs in the IDT, the rcu read sides, and the per-cpu
+            // cell arrays whose smallest count bounds the cores it brings up.
+            ItemArt::Entry(x) => {
+                metall.eintritte.push(EintrittFund {
+                    name: x.name.text.clone(),
+                    vektor: x.vektor.as_ref().and_then(|v| match &v.art {
+                        gabbro_syntax::ast::ExprArt::Zahl(n) => Some(*n),
+                        _ => None,
+                    }),
+                    via_idt: x.via.as_ref().is_some_and(|v| v.text == "idt"),
+                    arch: x.arch.text.clone(),
+                    regs_in: x.regs_in.iter().map(|(_, r)| r.text.clone()).collect(),
+                    regs_out: x.regs_out.iter().map(|(_, r)| r.text.clone()).collect(),
+                    dispatch: x.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default(),
+                    datei: datei.to_string(),
+                });
+            }
+            ItemArt::Rcu(r) => metall.rcus.push(r.name.text.clone()),
+            ItemArt::Accumulates(a) if a.pro_kern.is_some() => {
+                metall.zellen.push(a.name.text.clone());
             }
             _ => {}
         }
@@ -506,6 +583,21 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
 struct TreiberPlan {
     wurzeln: Vec<treiber::Wurzel>,
     sperren: Vec<treiber::Sperre>,
+    /// Entries, rcu read sides and per-cpu cells for the bare-metal driver
+    /// (Opus agent J). A unit with entries but no roots owns a bare-metal
+    /// driver and no hosted one: the hosted side has no IDT to install into.
+    zusatz: treiber::MetallZusatz,
+}
+
+impl TreiberPlan {
+    /// The hosted driver starts threads; without roots there is nothing to start.
+    fn hat_gehostet(&self) -> bool {
+        !self.wurzeln.is_empty()
+    }
+    /// The bare-metal driver also installs entries.
+    fn hat_metall(&self) -> bool {
+        !self.wurzeln.is_empty() || !self.zusatz.eintritte.is_empty()
+    }
 }
 
 /// **The driver rule -- every declared root must be exactly one nullary body.**
@@ -534,8 +626,9 @@ fn treiberregel(
     funde: &[TreiberFund],
     sperren: &[TreiberSperre],
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+    metall: &MetallFunde,
 ) -> Result<Option<TreiberPlan>, String> {
-    if funde.is_empty() {
+    if funde.is_empty() && metall.eintritte.is_empty() {
         return Ok(None);
     }
     let mut gesehen: BTreeSet<&str> = BTreeSet::new();
@@ -606,7 +699,9 @@ fn treiberregel(
     // either declaration is defined. Contradictory `protects` sets stay the
     // checker's question, not the driver's: the driver defines symbols, it
     // decides no protection.
-    let mut sperr_namen: BTreeMap<&str, bool> = BTreeMap::new();
+    // `maskiert` is ORed the same way: a mask asked for by either declaration
+    // is kept -- the stronger lock, never the weaker.
+    let mut sperr_namen: BTreeMap<&str, (bool, bool)> = BTreeMap::new();
     for s in sperren {
         if !treiber::gueltiger_c_name(&s.name) {
             return Err(format!(
@@ -615,20 +710,106 @@ fn treiberregel(
                 s.name
             ));
         }
-        sperr_namen.entry(s.name.as_str()).and_modify(|g| *g |= s.geteilt).or_insert(s.geteilt);
+        sperr_namen
+            .entry(s.name.as_str())
+            .and_modify(|(g, m)| {
+                *g |= s.geteilt;
+                *m |= s.maskiert;
+            })
+            .or_insert((s.geteilt, s.maskiert));
     }
     let mut sperren_aus: Vec<treiber::Sperre> = sperr_namen
         .into_iter()
-        .map(|(name, geteilt)| treiber::Sperre {
+        .map(|(name, (geteilt, maskiert))| treiber::Sperre {
             name: name.to_string(),
             geteilt,
+            maskiert,
         })
         .collect();
     sperren_aus.sort_by(|a, b| a.name.cmp(&b.name));
+    let zusatz = metallregel(metall, funktionen)?;
     Ok(Some(TreiberPlan {
         wurzeln,
         sperren: sperren_aus,
+        zusatz,
     }))
+}
+
+/// **The bare-metal half of the driver rule** (Opus agent J, OFFEN O32 residue):
+/// every `entry` of the unit becomes a stub in the metal IDT, and the rule
+/// decides how the stub calls its dispatch -- or says why it cannot.
+///
+/// | case | answer |
+/// |---|---|
+/// | the vector is not a literal | REFUSED: the driver cannot name the IDT slot |
+/// | an arch other than `x86_64` | REFUSED: the metal runtime is x86_64 only |
+/// | the dispatch is not a function of this unit | the stub ends the machine if entered (the emitter wrote no `_verteiler` either) |
+/// | `regs in` count != dispatch parameters, or `regs out` != (returns ? 1 : 0) | the stub ends the machine if entered: no honest binding exists (OFFEN O32; the checker does not hold the two against each other) |
+/// | otherwise | `regs in` feed the parameters in order, the one `regs out` register receives the result |
+///
+/// Thrown (EOI) is `via idt` at a vector >= 32: a LAPIC-delivered interrupt.
+/// An NMI or a CPU exception (< 32) and an entered entry take no EOI.
+fn metallregel(
+    metall: &MetallFunde,
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+) -> Result<treiber::MetallZusatz, String> {
+    let mut eintritte = Vec::new();
+    for x in &metall.eintritte {
+        if !treiber::gueltiger_c_name(&x.name) {
+            return Err(format!("entry `{}` in {} has no C name", x.name, x.datei));
+        }
+        if x.arch != "x86_64" {
+            return Err(format!(
+                "entry `{}` in {} is `arch {}` -- the bare-metal runtime is x86_64 only",
+                x.name, x.datei, x.arch
+            ));
+        }
+        let Some(vektor) = x.vektor else {
+            return Err(format!(
+                "entry `{}` in {} has no literal vector -- the bare-metal driver cannot name \
+                 its IDT slot (the emitter writes `gabbro_eintritt_{}_VEKTOR` only for a literal)",
+                x.name, x.datei, x.name
+            ));
+        };
+        // The runtime's own vectors (timer 0x40, wake 0x41, spurious 0xFF) and the
+        // exceptions that push a CPU error code are refused by `metall_idt_setze` at
+        // boot; the build says it first, by name.
+        if matches!(vektor, 0x40 | 0x41 | 0xFF | 8 | 10..=14 | 17 | 21 | 29 | 30) || vektor > 0xFF {
+            return Err(format!(
+                "entry `{}` in {} sits on vector {vektor} -- the bare-metal runtime keeps \\
+                 0x40/0x41/0xFF for itself, and its stub pops no CPU error code (8, 10..14, \\
+                 17, 21, 29, 30)",
+                x.name, x.datei
+            ));
+        }
+        let ruf = match funktionen.get(&x.dispatch).map(|v| v.as_slice()) {
+            Some([f]) if !f.spec => {
+                let aus_soll = usize::from(f.liefert);
+                if f.parameter == x.regs_in.len() && x.regs_out.len() == aus_soll {
+                    treiber::EintrittRuf::Bindung {
+                        ein: x.regs_in.clone(),
+                        aus: x.regs_out.first().cloned(),
+                    }
+                } else {
+                    treiber::EintrittRuf::BindungFalsch
+                }
+            }
+            _ => treiber::EintrittRuf::OhneZiel,
+        };
+        eintritte.push(treiber::Eintritt {
+            name: x.name.clone(),
+            vektor,
+            geworfen: x.via_idt && vektor >= 32,
+            ruf,
+        });
+    }
+    let mut rcus = metall.rcus.clone();
+    rcus.sort();
+    rcus.dedup();
+    let mut zellen = metall.zellen.clone();
+    zellen.sort();
+    zellen.dedup();
+    Ok(treiber::MetallZusatz { eintritte, rcus, zellen })
 }
 /// What one unit's build came to. **A built and a current unit both hand on the same two
 /// things** -- its interface, so its dependents can be checked against it, and its
@@ -730,6 +911,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let mut treiber_sperren_je_einheit: BTreeMap<String, Vec<TreiberSperre>> = BTreeMap::new();
     let mut funktionen_je_einheit: BTreeMap<String, BTreeMap<String, Vec<FunktionsForm>>> =
         BTreeMap::new();
+    // **What the bare-metal driver installs besides** (Opus agent J): entries, rcu, cells.
+    let mut metall_je_einheit: BTreeMap<String, MetallFunde> = BTreeMap::new();
     for e in &manifest.einheiten {
         let mut quellen = Vec::new();
         for d in &e.dateien {
@@ -741,8 +924,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 }
             }
         }
-        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen) =
+        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall) =
             modulkarte(&quellen);
+        metall_je_einheit.insert(e.name.clone(), metall);
         eintritte_je_einheit.insert(e.name.clone(), eintritte);
         treiber_funde_je_einheit.insert(e.name.clone(), wurzeln);
         treiber_sperren_je_einheit.insert(e.name.clone(), sperren);
@@ -809,6 +993,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 &treiber_funde_je_einheit[name],
                 &treiber_sperren_je_einheit[name],
                 &funktionen_je_einheit[name],
+                &metall_je_einheit[name],
             ) {
                 Ok(None) => {}
                 Ok(Some(plan)) => {
@@ -896,6 +1081,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             &treiber_funde_je_einheit[name],
             &treiber_sperren_je_einheit[name],
             &funktionen_je_einheit[name],
+            &metall_je_einheit[name],
         ) {
             Ok(plan) => plan,
             Err(befund) => {
@@ -912,10 +1098,20 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 // The driver travels in the same line: it was written beside
                 // the `.c` above, so "built" covers it -- and a missing driver
                 // on a concurrent unit would be a lie this line must not tell.
-                if treiber_plan.as_ref().is_some_and(|p| !p.wurzeln.is_empty()) {
-                    println!("built    {name} (+ {name}.treiber.c)");
-                } else {
+                let mut beiwerk: Vec<String> = Vec::new();
+                if treiber_plan.as_ref().is_some_and(|p| p.hat_gehostet()) {
+                    beiwerk.push(format!("{name}.treiber.c"));
+                }
+                if treiber_plan.as_ref().is_some_and(|p| p.hat_metall()) {
+                    beiwerk.push(format!("{name}.metall.c"));
+                    if manifest.metall.is_some() {
+                        beiwerk.push(format!("{name}.metall.elf"));
+                    }
+                }
+                if beiwerk.is_empty() {
                     println!("built    {name}");
+                } else {
+                    println!("built    {name} (+ {})", beiwerk.join(", "));
                 }
             }
             Ergebnis::Aktuell { gabi, abdruck } => {
@@ -1097,10 +1293,26 @@ fn baue_einheit(
     // The bare-metal twin (Opus agent I): `<unit>.metall.c` beside the hosted
     // driver, from the same plan, under the same generator version.
     let metall_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.metall.c", e.name));
-    let treiber_erwartet = treiber_plan.is_some_and(|p| !p.wurzeln.is_empty());
+    let treiber_erwartet = treiber_plan.is_some_and(|p| p.hat_gehostet());
+    let metall_erwartet = treiber_plan.is_some_and(|p| p.hat_metall());
+    // **The linked bare-metal image** (Opus agent J): with a `metal <dir>` line the
+    // build links `<unit>.metall.elf` itself -- the runtime sources are part of that
+    // artefact, so their bytes go into the fingerprint (a changed `kern.c` rebuilds).
+    let bild_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.metall.elf", e.name));
+    let bild_erwartet = metall_erwartet && manifest.metall.is_some();
+    let laufzeit_bytes: Vec<Vec<u8>> = match (&manifest.metall, bild_erwartet) {
+        (Some(dir), true) => METALL_QUELLEN
+            .iter()
+            .map(|f| std::fs::read(PathBuf::from(dir).join(f)).unwrap_or_default())
+            .collect(),
+        _ => Vec::new(),
+    };
     let mut teile: Vec<&[u8]> = Vec::new();
-    if treiber_erwartet {
+    if treiber_erwartet || metall_erwartet {
         teile.push(treiber::GENERATOR_KENNUNG.as_bytes());
+    }
+    for b in &laufzeit_bytes {
+        teile.push(b.as_slice());
     }
     for (d, q) in quellen {
         teile.push(d.as_bytes());
@@ -1140,7 +1352,9 @@ fn baue_einheit(
     if let Ok(alt) = std::fs::read_to_string(&marke) {
         if alt.trim() == format!("{abdruck:016x}")
             && erzeugnis.exists()
-            && (!treiber_erwartet || (treiber_pfad.exists() && metall_pfad.exists()))
+            && (!treiber_erwartet || treiber_pfad.exists())
+            && (!metall_erwartet || metall_pfad.exists())
+            && (!bild_erwartet || bild_pfad.exists())
         {
             if let Ok(gabi) = std::fs::read_to_string(&gabi_pfad) {
                 return Ergebnis::Aktuell { gabi, abdruck: abdruck_text };
@@ -1171,24 +1385,30 @@ fn baue_einheit(
     // compiled or linked by this build -- it is the artefact the runtime half
     // is run from, beside the `.c` it includes.
     if let Some(plan) = treiber_plan {
-        if !plan.wurzeln.is_empty() {
+        let erwartet = treiber::vorkommen(plan.wurzeln.iter().map(|w| w.c_name.as_str()));
+        if plan.hat_gehostet() {
             let treiber_c = treiber::erzeuge(&e.name, &plan.wurzeln, &plan.sperren, None);
             // **The pin, held at the build itself** (fix lane F4): the rendered
             // file must start the declared occurrences, counted -- the writer
             // and the probe checked against each other on every build, not only
             // in the tests.
-            let erwartet = treiber::vorkommen(plan.wurzeln.iter().map(|w| w.c_name.as_str()));
             if let Err(err) = treiber::pin_pruefe(&erwartet, &treiber_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
             }
             if let Err(err) = std::fs::write(&treiber_pfad, &treiber_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
             }
+        }
+        if plan.hat_metall() {
             // **The bare-metal driver, pinned the same way** (Opus agent I):
             // the freestanding twin starts the same multiset of roots through
             // `gabbro_faden_start` (`laufzeit/metall/`), and the build refuses
-            // a rendering whose sites do not match the sources.
-            let metall_c = treiber::erzeuge_metall(&e.name, &plan.wurzeln, &plan.sperren, None);
+            // a rendering whose sites do not match the sources. Since Opus agent J
+            // it also installs the unit's entries, masks the `masks irqs` locks,
+            // defines the rcu read sides and bounds the cores by the per-cpu cells
+            // -- and a unit with entries but no roots owns one too.
+            let metall_c =
+                treiber::erzeuge_metall_voll(&e.name, &plan.wurzeln, &plan.sperren, &plan.zusatz, None);
             if let Err(err) = treiber::metall_pin_pruefe(&erwartet, &metall_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", metall_pfad.display()));
             }
@@ -1242,6 +1462,22 @@ fn baue_einheit(
         }
     }
 
+    // **The bare-metal image, linked by the build itself** (Opus agent J, OFFEN O32 residue).
+    // With a `metal <dir>` line the unit's `<unit>.metall.c` is compiled freestanding (no
+    // hosted header: `-nostdinc` + the compiler's own headers + `<dir>/include`), linked
+    // with the runtime (`start.S`, `kern.c`, `arena.c`) under `metall.ld` with NO C library,
+    // and handed over as `<unit>.metall.elf` (ELF64) plus `<unit>.metall.boot.elf` (the
+    // ELF32 copy a Multiboot1 loader such as `qemu -kernel` takes). An undefined symbol --
+    // a foreign body the unit calls and nothing supplies -- is the linker's refusal, and the
+    // build's.
+    if bild_erwartet {
+        if let Some(dir) = &manifest.metall {
+            if let Err(grund) = metall_bild_binden(manifest, dir, &e.name) {
+                return Ergebnis::Abgesagt(grund);
+            }
+        }
+    }
+
     // **The record is written LAST.** Written before the compiler ran, it would call a failed
     // build current on the next run.
     if let Err(err) = std::fs::write(&marke, format!("{abdruck_text}\n")) {
@@ -1250,9 +1486,98 @@ fn baue_einheit(
     Ergebnis::Gebaut { gabi, abdruck: abdruck_text }
 }
 
+/// The runtime files a bare-metal image is linked from, relative to the `metal` directory.
+/// Their bytes are part of the image's fingerprint.
+const METALL_QUELLEN: [&str; 7] = [
+    "start.S",
+    "kern.c",
+    "arena.c",
+    "metall.h",
+    "metall.ld",
+    "include/math.h",
+    "include/string.h",
+];
+
+/// The flag word of the bare-metal image -- the same as `instrumente/pruefe-metall.sh`'s:
+/// freestanding, no red zone (the timer and the entries push onto the running stack), no
+/// hosted header, `-Werror`.
+const METALL_FLAGGEN: [&str; 16] = [
+    "-std=c11",
+    "-O2",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-nostdlib",
+    "-nostdinc",
+    "-fno-pic",
+    "-fno-pie",
+    "-mno-red-zone",
+    "-mcmodel=small",
+    "-fno-stack-protector",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-tree-loop-distribute-patterns",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+];
+
+/// Compile and link `<unit>.metall.elf` (Opus agent J). Every step is a named refusal.
+fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), String> {
+    let cc = &manifest.compiler[0];
+    let aus = PathBuf::from(&manifest.ausgabe);
+    let dir = PathBuf::from(dir);
+    let lauf = |mut c: std::process::Command, was: &str| -> Result<(), String> {
+        match c.output() {
+            Ok(o) if o.status.success() => Ok(()),
+            Ok(o) => {
+                eprint!("{}", String::from_utf8_lossy(&o.stderr));
+                Err(format!("bare-metal image: {was} refused (see above)"))
+            }
+            Err(err) => Err(format!("bare-metal image: {was} did not run: {err}")),
+        }
+    };
+    // The compiler's OWN header directory: C11's freestanding headers, nothing of a libc.
+    let gccinc = match std::process::Command::new(cc).arg("-print-file-name=include").output() {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        _ => return Err(format!("bare-metal image: `{cc} -print-file-name=include` failed")),
+    };
+    let flaggen = |c: &mut std::process::Command| {
+        c.args(METALL_FLAGGEN);
+        c.arg("-isystem").arg(&gccinc);
+        c.arg("-isystem").arg(dir.join("include"));
+    };
+    let obj = |teil: &str| aus.join(format!("{name}.metall.{teil}.o"));
+    for (quelle, teil) in [("kern.c", "kern"), ("arena.c", "arena")] {
+        let mut c = std::process::Command::new(cc);
+        flaggen(&mut c);
+        c.arg("-c").arg(dir.join(quelle)).arg("-o").arg(obj(teil));
+        lauf(c, quelle)?;
+    }
+    let mut c = std::process::Command::new(cc);
+    c.arg("-fno-pie").arg("-c").arg(dir.join("start.S")).arg("-o").arg(obj("start"));
+    lauf(c, "start.S")?;
+    let mut c = std::process::Command::new(cc);
+    flaggen(&mut c);
+    c.arg("-I").arg(&dir).arg("-I").arg(&aus);
+    c.arg(format!("-DEINHEIT_INCLUDE=\"{name}.c\""));
+    c.arg("-c").arg(aus.join(format!("{name}.metall.c"))).arg("-o").arg(obj("treiber"));
+    lauf(c, &format!("{name}.metall.c"))?;
+    let bild = aus.join(format!("{name}.metall.elf"));
+    let mut c = std::process::Command::new("ld");
+    c.args(["-nostdlib", "-static", "-no-pie", "-z", "max-page-size=0x1000", "-T"]);
+    c.arg(dir.join("metall.ld")).arg("-o").arg(&bild);
+    for teil in ["start", "kern", "arena", "treiber"] {
+        c.arg(obj(teil));
+    }
+    lauf(c, "the link (`ld -nostdlib`: no C library)")?;
+    let mut c = std::process::Command::new("objcopy");
+    c.args(["-O", "elf32-i386"]).arg(&bild).arg(aus.join(format!("{name}.metall.boot.elf")));
+    lauf(c, "objcopy to ELF32 (the Multiboot1 hand-over)")?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod treiberregel_tests {
-    use super::{treiberregel, FunktionsForm, TreiberFund, TreiberSperre};
+    use super::{treiberregel, EintrittFund, FunktionsForm, MetallFunde, TreiberFund, TreiberSperre};
     use std::collections::BTreeMap;
 
     fn fund(pfad: &str) -> TreiberFund {
@@ -1272,6 +1597,8 @@ mod treiberregel_tests {
                     parameter: 0,
                     datei: "u.gab".to_string(),
                     modul: "m".to_string(),
+                    liefert: false,
+                    spec: false,
                 }],
             );
         }
@@ -1284,7 +1611,7 @@ mod treiberregel_tests {
     #[test]
     fn wurzeln_zaehlen_vorkommen() {
         let funde = vec![fund("hauptA"), fund("hauptB"), fund("hauptA")];
-        let plan = treiberregel(&funde, &[], &nullary()).expect("occurrences hold").expect("roots");
+        let plan = treiberregel(&funde, &[], &nullary(), &MetallFunde::default()).expect("occurrences hold").expect("roots");
         let namen: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
         assert_eq!(namen, vec!["hauptA", "hauptB", "hauptA"], "one root per occurrence, in order");
     }
@@ -1296,7 +1623,7 @@ mod treiberregel_tests {
     fn wurzel_mit_parametern_wird_abgewiesen() {
         let mut f = nullary();
         f.get_mut("hauptB").expect("present")[0].parameter = 1;
-        let befund = treiberregel(&[fund("hauptB")], &[], &f).expect_err("must refuse");
+        let befund = treiberregel(&[fund("hauptB")], &[], &f, &MetallFunde::default()).expect_err("must refuse");
         assert!(befund.contains("1 parameter"), "the arity is named:\n{befund}");
     }
 
@@ -1310,23 +1637,96 @@ mod treiberregel_tests {
             TreiberSperre {
                 name: "L".to_string(),
                 geteilt: false,
+                maskiert: true,
             },
             TreiberSperre {
                 name: "L".to_string(),
                 geteilt: true,
+                maskiert: false,
             },
         ];
-        let plan = treiberregel(&[fund("hauptA")], &sperren, &nullary())
+        let plan = treiberregel(&[fund("hauptA")], &sperren, &nullary(), &MetallFunde::default())
             .expect("holds")
             .expect("roots");
         assert_eq!(plan.sperren.len(), 1, "one primitive set per name");
         assert!(plan.sperren[0].geteilt, "either declaration earns the shared pair");
+        assert!(plan.sperren[0].maskiert, "either declaration earns the mask -- never the weaker lock");
+    }
+
+    fn eintritt(name: &str, vektor: Option<u128>, via_idt: bool, ein: &[&str], aus: &[&str], ziel: &str) -> EintrittFund {
+        EintrittFund {
+            name: name.to_string(),
+            vektor,
+            via_idt,
+            arch: "x86_64".to_string(),
+            regs_in: ein.iter().map(|s| s.to_string()).collect(),
+            regs_out: aus.iter().map(|s| s.to_string()).collect(),
+            dispatch: ziel.to_string(),
+            datei: "u.gab".to_string(),
+        }
+    }
+
+    /// **Entries: the binding, the EOI, and the three refusals** (Opus agent J).
+    /// A matching binding feeds the registers in order; a mismatch becomes the
+    /// loud stub, never a guessed binding; a missing target the other loud stub;
+    /// an NMI takes no EOI; a non-literal vector, a runtime vector and an
+    /// error-code exception are refused by name; an entry-only unit owns a
+    /// bare-metal driver and no hosted one.
+    #[test]
+    fn eintritte_im_metalltreiber() {
+        use super::treiber::EintrittRuf;
+        let mut f = nullary();
+        f.insert(
+            "sys".to_string(),
+            vec![FunktionsForm {
+                parameter: 2,
+                datei: "u.gab".to_string(),
+                modul: "m".to_string(),
+                liefert: true,
+                spec: false,
+            }],
+        );
+        let metall = MetallFunde {
+            eintritte: vec![
+                eintritt("syscall", Some(128), false, &["rax", "rdi"], &["rax"], "sys"),
+                eintritt("falsch", Some(129), false, &["rax"], &["rax"], "hauptA"),
+                eintritt("fremd", Some(130), false, &[], &[], "nirgends"),
+                eintritt("nmi", Some(2), true, &[], &[], "hauptA"),
+                eintritt("takt", Some(32), true, &[], &[], "hauptA"),
+            ],
+            rcus: vec![],
+            zellen: vec![],
+        };
+        let plan = treiberregel(&[], &[], &f, &metall).expect("holds").expect("entries own a driver");
+        assert!(!plan.hat_gehostet() && plan.hat_metall(), "entry-only: metal driver, no hosted one");
+        let r: Vec<(&str, bool, &EintrittRuf)> =
+            plan.zusatz.eintritte.iter().map(|e| (e.name.as_str(), e.geworfen, &e.ruf)).collect();
+        assert_eq!(
+            r[0],
+            ("syscall", false, &EintrittRuf::Bindung {
+                ein: vec!["rax".to_string(), "rdi".to_string()],
+                aus: Some("rax".to_string())
+            })
+        );
+        assert_eq!(r[1], ("falsch", false, &EintrittRuf::BindungFalsch));
+        assert_eq!(r[2], ("fremd", false, &EintrittRuf::OhneZiel));
+        assert_eq!(r[3].1, false, "an NMI is acknowledged by iretq, not by an EOI");
+        assert_eq!(r[4].1, true, "a LAPIC-thrown entry writes the EOI");
+        for (vektor, grund) in [(None, "literal"), (Some(0x40), "0x40"), (Some(14), "error code")] {
+            let m = MetallFunde {
+                eintritte: vec![eintritt("x", vektor, true, &[], &[], "hauptA")],
+                rcus: vec![],
+                zellen: vec![],
+            };
+            let befund = treiberregel(&[], &[], &f, &m).expect_err("refused");
+            assert!(befund.contains(grund), "named: {befund}");
+        }
     }
 
     /// **No roots, no driver.** A unit without a `concurrent` set owns no
     /// artefact and draws no refusal.
     #[test]
     fn ohne_wurzeln_kein_treiber() {
-        assert!(treiberregel(&[], &[], &nullary()).expect("holds").is_none());
+        assert!(treiberregel(&[], &[], &nullary(), &MetallFunde::default()).expect("holds").is_none());
     }
 }

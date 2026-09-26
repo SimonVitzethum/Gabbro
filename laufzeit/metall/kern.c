@@ -14,7 +14,10 @@
  *   serial      16550 at port 0x3F8, polled (LSR bit 5). The report channel.
  *   PIC         both 8259s masked (0xFF): no legacy interrupt ever arrives.
  *   IDT         vectors 0..31 report and stop (start.S), 0x40 the LAPIC
- *               timer, 0xFF the LAPIC spurious vector.
+ *               timer, 0x41 the wake IPI, 0xFF the LAPIC spurious vector;
+ *               every other slot is free for the PROGRAM's own entries
+ *               (`metall_idt_setze`, Opus agent J; an exception vector
+ *               without a CPU error code may be taken too, e.g. an NMI).
  *   MADT        the ACPI table names the cores (type 0 entries, enabled or
  *               online-capable). RSDP found by signature and checksum in the
  *               EBDA's first KiB and 0xE0000..0xFFFFF (ACPI 1.0 RSDT).
@@ -37,9 +40,10 @@
  *               between reads: blocking in the scheduler's sense (the core
  *               runs the rest of its queue), with no IPI and no wake list.
  *               Justification below at `gabbro_faden_warte`.
- *   idle root   a core with an empty queue spins with `pause` in its
- *               scheduler loop, interrupts off: it touches no Gabbro carrier,
- *               which is `none` of `E.P.mitRuhe`.
+ *   idle root   a core with an empty queue sleeps in `sti; hlt` in its
+ *               scheduler loop (Opus agent J; `pause` before), woken by the
+ *               timer or by the wake IPI a cross-core start sends: it touches
+ *               no Gabbro carrier, which is `none` of `E.P.mitRuhe`.
  *
  * INTERRUPT DISCIPLINE (the one rule that keeps the runtime's own locks
  * deadlock-free under preemption): every runtime-internal lock (run queues,
@@ -278,7 +282,7 @@ extern char metall_ausnahme_0[], metall_ausnahme_1[], metall_ausnahme_2[], metal
     metall_ausnahme_20[], metall_ausnahme_21[], metall_ausnahme_22[], metall_ausnahme_23[],
     metall_ausnahme_24[], metall_ausnahme_25[], metall_ausnahme_26[], metall_ausnahme_27[],
     metall_ausnahme_28[], metall_ausnahme_29[], metall_ausnahme_30[], metall_ausnahme_31[];
-extern char metall_takt_eintritt[], metall_unecht[];
+extern char metall_takt_eintritt[], metall_unecht[], metall_wecken_eintritt[];
 
 static void idt_setze(int v, void *ziel)
 {
@@ -308,6 +312,7 @@ static void idt_bau(void)
         idt_setze(i, t[i]);
     }
     idt_setze(0x40, metall_takt_eintritt);
+    idt_setze(0x41, metall_wecken_eintritt);
     idt_setze(0xFF, metall_unecht);
 }
 
@@ -334,6 +339,7 @@ static inline void lapic_schreib(uint32_t r, uint32_t v) { lapic[r / 4u] = v; }
 #define LAPIC_T_TEIL  0x3E0u
 
 #define TAKT_VEKTOR   0x40u
+#define WECK_VEKTOR   0x41u
 
 /* The quantum. The LAPIC timer counts the bus clock divided by 16; at QEMU's
  * nominal 1 GHz that is 1.6 ms per quantum. The LENGTH is not a guarantee of
@@ -372,7 +378,7 @@ static void ipi(uint32_t apic_id, uint32_t wort)
 
 /* -- Cores and threads. ----------------------------------------------------- */
 
-#define KERNE_MAX 16
+#define KERNE_MAX METALL_KERNE_MAX
 #define FAEDEN_MAX 64
 #define KERN_STAPEL 16384
 
@@ -476,10 +482,17 @@ static void abgeben(void)
     ia_her(f);
 }
 
-/* The public yield (metall.h): the Gabbro lock's spin calls it. */
+/* The public yield (metall.h): the Gabbro lock's spin calls it. A call from
+ * the scheduler's own context (an entry that landed on an idle core) has no
+ * thread to give away and returns: the spin goes on. */
 void metall_abgeben(void)
 {
-    abgeben();
+    uint64_t f = ia_aus();
+    int hat_faden = ich()->laufend != 0;
+    ia_her(f);
+    if (hat_faden) {
+        abgeben();
+    }
 }
 
 /* The timer's C half (start.S `metall_takt_eintritt`, IF = 0, all of the
@@ -524,15 +537,32 @@ static void begrabe(struct faden *t)
     atomic_store_explicit((_Atomic uint32_t *)w, 0u, memory_order_release);
 }
 
-/* The scheduler loop of one core, on the core's own stack, IF = 0 throughout.
- * An empty queue is the idle root: `pause`, touch nothing, look again. */
+/* The scheduler loop of one core, on the core's own stack, IF = 0 throughout
+ * except inside the idle wait. An empty queue is the idle root: touch nothing,
+ * sleep until an interrupt, look again.
+ *
+ * WHY `hlt` IS SAFE HERE (Opus agent J; Opus I used `pause`). `sti; hlt` is
+ * one window: `sti` takes effect after the NEXT instruction, so an interrupt
+ * that became pending before the `sti` is taken at the `hlt` and wakes it --
+ * there is no gap in which a wake-up is lost. What can make this queue
+ * non-empty while the core sleeps: a start on another core (`faden_anlegen`
+ * sends the wake IPI, vector 0x41, after the enqueue) -- nothing else, since
+ * a thread never changes core. And the timer (vector 0x40) ticks on every
+ * core anyway, so even a lost IPI would cost at most one quantum, never
+ * liveness. The idle root still touches no Gabbro carrier (`none` of
+ * `mitRuhe`); a program entry (`via idt`) that lands here runs on this
+ * scheduler stack and returns to the `hlt` loop. */
 static __attribute__((noreturn)) void kern_schleife(void)
 {
     struct kern *k = ich();
     for (;;) {
         struct faden *t = schlange_nimm(k);
         if (!t) {
+#ifdef METALL_PAUSE_LEERLAUF
             pause();
+#else
+            __asm__ __volatile__("sti; hlt; cli" ::: "memory");
+#endif
             continue;
         }
         t->zustand = LAEUFT;
@@ -597,6 +627,13 @@ static int faden_anlegen(void (*fn)(void), void *spitze, uint32_t *wort, uint32_
      * (the order the Linux runtime needs CLONE_PARENT_SETTID for). */
     atomic_store_explicit((_Atomic uint32_t *)wort, (uint32_t)(t - faeden) + 1u, memory_order_release);
     schlange_haenge(&kerne[kern_nr], t);
+    /* Wake the target core if it sleeps in its idle `hlt` (after the enqueue:
+     * the woken loop must find the thread). Harmless when it is busy -- the
+     * wake entry only acknowledges. Before the APs are up (the BSP places the
+     * driver thread on itself) there is nobody to wake. */
+    if (kern_nr != ich()->nr) {
+        ipi(kerne[kern_nr].apic_id, 0x4000u | WECK_VEKTOR);
+    }
     ia_her(f);
     return 0;
 }
@@ -622,6 +659,113 @@ void gabbro_faden_warte(uint32_t *wort)
         abgeben();
         pause();
     }
+}
+
+/* -- The program's own entries (Opus agent J; metall.h METALL_EINTRITT). -- */
+
+void metall_wecken(void);
+void metall_wecken(void)
+{
+    lapic_schreib(LAPIC_EOI, 0);
+}
+
+void metall_eoi(void)
+{
+    lapic_schreib(LAPIC_EOI, 0);
+}
+
+void metall_eintritt_ohne_ziel(void)
+{
+    schreibe_roh("METALL: an entry without a dispatch target in this unit was entered\n");
+    metall_ende(6);
+}
+
+void metall_eintritt_bindung_falsch(void)
+{
+    schreibe_roh("METALL: an entry whose regs in/out do not match its dispatch was entered\n");
+    metall_ende(8);
+}
+
+__attribute__((noreturn)) void metall_fremd_fehlt(const char *name)
+{
+    (void)ia_aus();
+    schreibe_roh("METALL: foreign body `");
+    schreibe_roh(name);
+    schreibe_roh("` was called and the image does not supply it (the program's own C does)\n");
+    metall_ende(7);
+}
+
+/* Install a program entry. The runtime's own vectors are never overwritten
+ * (the timer 0x40, the wake vector 0x41, the spurious vector 0xFF): taken by a
+ * program they would silently switch off a guarantee of the runtime, so that
+ * is a loud end of the machine instead. An EXCEPTION vector (0..31) may be
+ * taken -- a kernel's NMI or page-fault handler is a program entry like any
+ * other (`beispiele/07` declares `nmi vector 2`) -- but only one WITHOUT a
+ * CPU error code: the common stub (start.S) does not pop one, so an entry on
+ * 8, 10..14, 17, 21, 29 or 30 would `iretq` into garbage. Refused loudly,
+ * named in OFFEN O32. The IDT is one table for all cores; the store is visible
+ * to every core's next interrupt dispatch. */
+static int hat_fehlercode(uint32_t v)
+{
+    return v == 8u || (v >= 10u && v <= 14u) || v == 17u || v == 21u || v == 29u || v == 30u;
+}
+
+void metall_idt_setze(uint32_t vektor, void (*stub)(void))
+{
+    if (vektor > 0xFEu || vektor == TAKT_VEKTOR || vektor == WECK_VEKTOR || hat_fehlercode(vektor) ||
+        stub == 0) {
+        schreibe_roh("METALL: entry vector ");
+        zahl_roh(vektor);
+        schreibe_roh(" is the runtime's own, carries a CPU error code, or is out of range -- refused\n");
+        metall_ende(5);
+    }
+    uint64_t f = ia_aus();
+    idt_setze((int)vektor, (void *)stub);
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
+    ia_her(f);
+}
+
+/* The current core, for `accumulates ... per cpu N` (the emitter's foreign
+ * body `gabbro_kern`, certificate section E: "it returns a core number below
+ * the `per cpu` count, and nothing here proves that"). On bare metal the
+ * runtime KNOWS the core: the answer is `%gs`'s core index, below
+ * `metall_kerne()`. And `metall_kerne()` is below every `per cpu` count of
+ * the image BY CONSTRUCTION: a driver whose unit has per-cpu cells defines
+ * `metall_kerne_grenze` as the smallest cell count (`METALL_KERNE_GRENZE`,
+ * metall.h, computed by the C compiler from the arrays themselves), and the
+ * bring-up (`aps_starten`) starts no core at or above it. Cores the image
+ * leaves down are idle hardware, not a Gabbro fact. Without cells the weak
+ * default is `KERNE_MAX`. */
+uint32_t gabbro_kern(void);
+uint32_t gabbro_kern(void)
+{
+    return ich()->nr;
+}
+
+/* A fixed IPI to one core (by runtime core number). IF = 0 around the two
+ * ICR writes: an entry on this core that sent an IPI itself would otherwise
+ * interleave its own pair. */
+void metall_ipi_fest(uint32_t kern_nr, uint32_t vektor)
+{
+    if (kern_nr >= metall_kerne() || vektor < 32u || vektor > 0xFEu) {
+        return;
+    }
+    uint64_t f = ia_aus();
+    ipi(kerne[kern_nr].apic_id, 0x4000u | vektor);
+    ia_her(f);
+}
+
+/* An NMI to one core (delivery mode NMI, vector field ignored): what a program
+ * entry on vector 2 answers. Not masked by IF, and acknowledged by `iretq`,
+ * not by an EOI -- the stub of a vector below 32 writes none. */
+void metall_ipi_nmi(uint32_t kern_nr)
+{
+    if (kern_nr >= metall_kerne()) {
+        return;
+    }
+    uint64_t f = ia_aus();
+    ipi(kerne[kern_nr].apic_id, 0x4400u);
+    ia_her(f);
 }
 
 /* -- ACPI: which cores exist. ----------------------------------------------- */
@@ -655,6 +799,17 @@ static const uint8_t *rsdp_suche(uint64_t von, uint64_t bis)
         }
     }
     return 0;
+}
+
+/* The driver's core limit (metall.h `METALL_KERNE_GRENZE`), weak: absent, the
+ * address is 0 and the runtime's own maximum applies. At least 1 (the BSP). */
+extern const uint32_t metall_kerne_grenze __attribute__((weak));
+static uint32_t kerne_grenze(void)
+{
+    if (&metall_kerne_grenze == 0) {
+        return KERNE_MAX;
+    }
+    return metall_kerne_grenze == 0u ? 1u : metall_kerne_grenze;
 }
 
 static uint32_t apic_ids[KERNE_MAX];
@@ -730,7 +885,7 @@ static void aps_starten(void)
     for (uint32_t i = 0; i < n_apic; i++) {
         uint32_t id = apic_ids[i];
         uint32_t nr = atomic_load_explicit(&n_kerne, memory_order_relaxed);
-        if (id == selbst || nr >= KERNE_MAX) {
+        if (id == selbst || nr >= KERNE_MAX || nr >= kerne_grenze()) {
             continue;
         }
         ap_nr = nr;

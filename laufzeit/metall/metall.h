@@ -22,6 +22,10 @@
 #include <stdint.h>
 #include <stdatomic.h>
 
+/* The most cores the runtime brings up (kern.c); a driver may lower it with
+ * `METALL_KERNE_GRENZE`. */
+#define METALL_KERNE_MAX 16u
+
 /* -- The thread interface: IDENTICAL to laufzeit/faden.h. -------------------
  *
  * The emitted C of a `start` statement declares these two itself; the
@@ -92,15 +96,42 @@ void metall_abgeben(void);
 #define METALL_SPIN 64u
 #endif
 
+/* The interrupt flag of the caller, and the pair that clears and restores it
+ * (Opus agent J). A yield is only taken with IF = 1: with IF = 0 the caller is
+ * an interrupt handler (running on whatever it interrupted) or inside a
+ * `masks irqs` section, and both must never give the core away -- the first
+ * would run another thread on top of an unfinished handler, the second would
+ * deschedule a masked holder, which is exactly what `masks irqs` rules out. */
+static inline uint64_t metall_flaggen(void)
+{
+    uint64_t f;
+    __asm__ __volatile__("pushfq; popq %0" : "=r"(f) :: "memory");
+    return f;
+}
+static inline uint64_t metall_ia_aus(void)
+{
+    uint64_t f;
+    __asm__ __volatile__("pushfq; popq %0; cli" : "=r"(f) :: "memory");
+    return f;
+}
+static inline void metall_ia_her(uint64_t f)
+{
+    __asm__ __volatile__("pushq %0; popfq" :: "r"(f) : "memory", "cc");
+}
+#define METALL_IF 0x200u
+
 static inline void metall_sperre_nimm(metall_ticket *t)
 {
     uint32_t my = atomic_fetch_add_explicit(&t->naechste, 1u, memory_order_relaxed);
     uint32_t n = 0;
+    int darf_abgeben = (metall_flaggen() & METALL_IF) != 0u;
     while (atomic_load_explicit(&t->jetzt, memory_order_acquire) != my) {
         __asm__ __volatile__("pause" ::: "memory");
         if (++n == METALL_SPIN) {
             n = 0;
-            metall_abgeben();
+            if (darf_abgeben) {
+                metall_abgeben();
+            }
         }
     }
 }
@@ -122,6 +153,158 @@ static inline void metall_sperre_nimm(metall_ticket *t)
     void L##_nimm_geteilt(void) { metall_sperre_nimm(&metall_sperre_##L); } \
     void L##_gib_geteilt(void) { metall_ticket_gib(&metall_sperre_##L); }
 
+/* A `masks irqs` lock (Opus agent J, OFFEN O32 residue): the emitter writes
+ * no `cli`/`sti` for the word (`beispiele/59`: "das Wort ist eine ZUSAGE ueber
+ * die Umgebung"), so the runtime keeps the promise HERE. Taking the lock
+ * clears IF first and keeps it clear until the matching release restores the
+ * caller's flags: a thrown entry (`via idt`) can never arrive on the holder's
+ * core while it holds, and since a spin with IF = 0 never yields (above), a
+ * masked holder is never descheduled either. A handler that takes the lock
+ * therefore waits only for a holder on ANOTHER core, which runs. The unmasked
+ * spelling of the same lock inside a handler is the same-core deadlock the
+ * checker refuses as `H102` (`beispiele/gift/460`); the harness of
+ * `instrumente/pruefe-metall.sh` (image `metall59-gift`) shows it hang.
+ *
+ * A ticket lock adds one case a plain spinlock does not have: a thread that
+ * has DRAWN its ticket and waits is part of the queue, and an entry that
+ * interrupts it on its core and then takes a later ticket waits behind the
+ * very thread it sits on. So IF is cleared BEFORE the ticket is drawn, and the
+ * whole claim -- waiting and holding -- runs with IF = 0.
+ *
+ * `metall_anspruch_L[k]` is 1 while a thread on core k has a claim on L
+ * (ticket drawn, or held), 0 otherwise: the observation the harness reads in
+ * the handler ("did an entry ever land on a core with a claim on the masked
+ * lock?"). It is written only with IF = 0 on its own core. */
+#define METALL_SPERRE_MASKIERT(L)                                         \
+    static metall_ticket metall_sperre_##L;                               \
+    static uint64_t metall_flaggen_##L;                                   \
+    volatile uint8_t metall_anspruch_##L[METALL_KERNE_MAX];               \
+    void L##_nimm(void)                                                   \
+    {                                                                     \
+        uint64_t f = metall_ia_aus();                                     \
+        metall_anspruch_##L[metall_kern_nr()] = 1u;                       \
+        metall_sperre_nimm(&metall_sperre_##L);                           \
+        metall_flaggen_##L = f;                                           \
+    }                                                                     \
+    void L##_gib(void)                                                    \
+    {                                                                     \
+        uint64_t f = metall_flaggen_##L;                                  \
+        metall_ticket_gib(&metall_sperre_##L);                            \
+        metall_anspruch_##L[metall_kern_nr()] = 0u;                       \
+        metall_ia_her(f);                                                 \
+    }
+
+/* The shared pair of a masked lock: the same masked ticket (stronger than
+ * asked -- readers exclude each other -- never weaker), as `_GETEILT` above. */
+#define METALL_SPERRE_MASKIERT_GETEILT(L)                                 \
+    METALL_SPERRE_MASKIERT(L)                                             \
+    void L##_nimm_geteilt(void) { L##_nimm(); }                           \
+    void L##_gib_geteilt(void) { L##_gib(); }
+
+/* An `rcu R` read side (Opus agent J). The emitter declares
+ * `R_lese_start`/`R_lese_ende` and nothing else: WHERE a slot may be given
+ * back is checked at compile time (`H011`, `H012`), and "no reader is left
+ * inside once the pointer is withdrawn" is an assumption about the
+ * environment (`zeugnis.rs`, `rcu`: the body comes from outside). This is
+ * that outside on bare metal: a reader count per domain (acq_rel in, release
+ * out) and the grace-period wait an environment's writer calls,
+ * `metall_rcu_gnade_R` -- it returns once the count was seen at zero, and a
+ * spin with IF = 1 gives the core away between reads. Starvation under a
+ * never-empty reader population is not excluded (named in OFFEN O32). */
+#define METALL_RCU(R)                                                     \
+    _Atomic uint32_t metall_rcu_leser_##R;                                \
+    void R##_lese_start(void)                                             \
+    {                                                                     \
+        atomic_fetch_add_explicit(&metall_rcu_leser_##R, 1u,              \
+                                  memory_order_acq_rel);                  \
+    }                                                                     \
+    void R##_lese_ende(void)                                              \
+    {                                                                     \
+        atomic_fetch_sub_explicit(&metall_rcu_leser_##R, 1u,              \
+                                  memory_order_release);                  \
+    }                                                                     \
+    void metall_rcu_gnade_##R(void);                                      \
+    void metall_rcu_gnade_##R(void)                                       \
+    {                                                                     \
+        while (atomic_load_explicit(&metall_rcu_leser_##R,                \
+                                    memory_order_acquire) != 0u) {        \
+            if (metall_flaggen() & METALL_IF) {                           \
+                metall_abgeben();                                         \
+            }                                                             \
+        }                                                                 \
+    }
+
+/* An entry whose `dispatch` target is not declared in the unit has nothing to
+ * run (`erzeugernamen.rs`: the `_verteiler` reference exists only then); its
+ * stub ends the machine loudly. And a program's foreign body (`extern fn`)
+ * that the image does not supply: the freestanding stage links a trap stub
+ * that names it -- reached only if a run calls it. */
+void metall_eintritt_ohne_ziel(void);
+void metall_eintritt_bindung_falsch(void);   /* regs in/out do not match the dispatch */
+__attribute__((noreturn)) void metall_fremd_fehlt(const char *name);
+
+/* -- The program's own entries (Opus agent J, OFFEN O32 residue). ----------
+ *
+ * `METALL_EINTRITT(NAME, GEWORFEN, AUFRUF...)` defines the stub the emitted
+ * unit only declares, `void gabbro_eintritt_NAME(void)`: three instructions
+ * that jump into `metall_eintritt_gemeinsam` (start.S: every general register
+ * and the x87/SSE state saved, `iretq`), and the C half. The C half receives
+ * the saved registers as `struct metall_rahmen *r` and runs `AUFRUF` -- the
+ * call of the unit's own `gabbro_eintritt_NAME_verteiler` (the `dispatch`
+ * target) with the registers the entry's `regs in` names, its result stored
+ * into the register `regs out` names (`r->rax = ...`): what the interrupted
+ * code finds in that register after `iretq`. Every other register comes back
+ * as it was -- stronger than the declared `preserves`, never weaker. For a
+ * THROWN entry delivered by the LAPIC (`via idt` at a vector >= 32: a device
+ * interrupt or an IPI; `GEWORFEN` = 1) the C half then acknowledges the LAPIC.
+ * An entry without `via` is ENTERED (`int $vector`), and an NMI or CPU
+ * exception (vector < 32) is acknowledged by `iretq` alone: `GEWORFEN` = 0, no
+ * EOI -- a stray EOI would retire another interrupt's in-service bit.
+ * `metall_idt_setze` installs it.
+ *
+ * `metall_eintritt_zaehler_NAME` counts completed entries -- the report the
+ * harness compares, and nothing the unit can see. */
+struct metall_rahmen {
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    uint64_t rip, cs, rflags, rsp, ss;   /* the interrupt frame */
+};
+
+void metall_eoi(void);
+void metall_idt_setze(uint32_t vektor, void (*stub)(void));
+void metall_ipi_fest(uint32_t kern_nr, uint32_t vektor);   /* fixed IPI to one core */
+void metall_ipi_nmi(uint32_t kern_nr);                     /* NMI to one core */
+
+#define METALL_EINTRITT(NAME, GEWORFEN, ...)                              \
+    _Atomic uint32_t metall_eintritt_zaehler_##NAME;                      \
+    void metall_eintritt_c_##NAME(struct metall_rahmen *r);               \
+    void metall_eintritt_c_##NAME(struct metall_rahmen *r)                \
+    {                                                                     \
+        (void)r;                                                          \
+        __VA_ARGS__;                                                      \
+        atomic_fetch_add_explicit(&metall_eintritt_zaehler_##NAME, 1u,     \
+                                  memory_order_release);                  \
+        if (GEWORFEN) {                                                   \
+            metall_eoi();                                                 \
+        }                                                                 \
+    }                                                                     \
+    __asm__(".text\n\t.global gabbro_eintritt_" #NAME "\n"                \
+            "gabbro_eintritt_" #NAME ":\n\t"                              \
+            "pushq %rax\n\t"                                              \
+            "movq $metall_eintritt_c_" #NAME ", %rax\n\t"                 \
+            "jmp metall_eintritt_gemeinsam\n");
+
+/* -- The core limit (Opus agent J). ------------------------------------------
+ *
+ * `METALL_KERNE_GRENZE(n)` in a driver sets the most cores the image brings
+ * up to `n` (at most `METALL_KERNE_MAX`). A unit with `accumulates ... per cpu
+ * N` indexes its cells with `gabbro_kern()`, whose contract is "below N"; the
+ * driver passes the SMALLEST cell count, read off the arrays themselves
+ * (`sizeof a / sizeof a[0]`, a constant the compiler computes), so the
+ * contract holds by construction. `METALL_MIN` for the chain. */
+#define METALL_MIN(a, b) ((a) < (b) ? (a) : (b))
+#define METALL_ZELLEN(a) ((uint32_t)(sizeof(a) / sizeof((a)[0])))
+#define METALL_KERNE_GRENZE(n) const uint32_t metall_kerne_grenze = (n);
+
 /* -- The driver hook and the report channel. --------------------------------
  *
  * `gabbro_metall_haupt` runs as the FIRST thread on core 0 once every core is
@@ -129,6 +312,7 @@ static inline void metall_sperre_nimm(metall_ticket *t)
  * reports over the serial port. Its return value ends the machine: 0 is
  * success. The report lines are the harness's comparison object. */
 int gabbro_metall_haupt(void);
+
 
 void metall_schreibe(const char *s);
 void metall_zahl(uint64_t v);

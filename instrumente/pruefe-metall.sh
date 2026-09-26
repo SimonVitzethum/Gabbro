@@ -30,6 +30,18 @@
 # the lock macro emptied (stress: lost updates); the runtime built cooperative
 # (`-DMETALL_KOOPERATIV`: staffel hangs into the timeout).
 #
+# Opus agent J (2026-09-26) added the features beyond threads (details at the images):
+#   metall153/154/158(-else)  arenas on the bare-metal arena runtime (`arena.c`); the
+#               `else` of `grow` taken by the REAL runtime under a smaller commit budget
+#   metall161   bounded strings (memcpy/memcmp from the runtime)
+#   metall59    the program's own `via idt` handler and entered entry in the metal IDT,
+#               fired by fixed IPIs while threads take the `masks irqs` lock
+#   metall07    an entry's register binding (`regs in`/`regs out`) through `int $0x80`,
+#               and an NMI entry fired by an NMI IPI
+# with gifts: `17 -> 18` (158) and the masked lock built unmasked (59: hangs, and the
+# handler reports that it landed on a core with a claim on the lock).
+# Every image compiles with `-nostdinc` (the compiler's headers + `laufzeit/metall/include`).
+#
 # QEMU MISSING IS NOT A PASS. Without `qemu-system-x86_64` every image is still BUILT
 # and LINKED (freestanding, `nm` shows no undefined symbol), and the script says
 # `METALL: NOT RUN` for the boots -- a line no reader can mistake for a result.
@@ -63,20 +75,47 @@ command -v qemu-system-x86_64 > /dev/null && QEMU=qemu-system-x86_64
 
 # The one flag word for every C file of an image. `-mno-red-zone`: the timer interrupt
 # pushes onto the running thread's stack, and a leaf function's red zone would be under it.
-CF="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -fno-pic -fno-pie -mno-red-zone
+# `-nostdinc` + the compiler's own headers + `laufzeit/metall/include/` (Opus agent J): the
+# emitted unit includes <math.h> (and strings <string.h>), which a freestanding toolchain
+# does not have; the image must not quietly borrow the host's C-library headers.
+GCCINC="$(cc -print-file-name=include)"
+CF="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC
+    -isystem $M/include -fno-pic -fno-pie -mno-red-zone
     -mcmodel=small -fno-stack-protector -fno-asynchronous-unwind-tables
     -fno-tree-loop-distribute-patterns -Wall -Wextra -Werror"
 
-# baue NAME EXTRA_CFLAGS -- $ARB/NAME/treiber.c (+ einheit.c) -> $ARB/NAME/k32.elf
+# baue NAME EXTRA_CFLAGS [DRIVER_CFLAGS] -- $ARB/NAME/treiber.c (+ einheit.c) -> k32.elf
+#   EXTRA_CFLAGS go to the runtime AND the driver (e.g. -DMETALL_KOOPERATIV, a smaller
+#   arena budget); DRIVER_CFLAGS to the driver alone (e.g. -O0 for a unit whose `-O2`
+#   diagnostics are the emitter's business, not the runtime's).
+#   With `$ARB/NAME/fremd.ok` present, every symbol the driver leaves undefined that the
+#   runtime does not define gets a TRAP stub (the program's own foreign bodies it does not
+#   exercise: the run ends loudly if one is called). Without it, an undefined symbol is a
+#   build failure, as before.
 baue() {
-    local d="$ARB/$1" extra="$2"
+    local d="$ARB/$1" extra="$2" textra="${3:-}"
     # shellcheck disable=SC2086
     cc $CF $extra -c "$M/kern.c" -o "$d/kern.o" 2> "$d/cc.err" \
+      && cc $CF $extra -c "$M/arena.c" -o "$d/arena.o" 2>> "$d/cc.err" \
       && cc -fno-pie -c "$M/start.S" -o "$d/start.o" 2>> "$d/cc.err" \
-      && cc $CF $extra -I"$M" -I"$d" -DEINHEIT_INCLUDE='"einheit.c"' \
-            -c "$d/treiber.c" -o "$d/treiber.o" 2>> "$d/cc.err" \
+      && cc $CF $extra $textra -I"$M" -I"$d" -DEINHEIT_INCLUDE='"einheit.c"' \
+            -c "$d/treiber.c" -o "$d/treiber.o" 2>> "$d/cc.err" || {
+        echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }
+    : > "$d/fremd.S"
+    if [ -f "$d/fremd.ok" ]; then
+        nm --defined-only "$d/kern.o" "$d/arena.o" "$d/start.o" | awk 'NF == 3 {print $3}' \
+            | sort -u > "$d/rt.def"
+        nm -u "$d/treiber.o" | awk '{print $2}' | sort -u | comm -23 - "$d/rt.def" > "$d/fremd.namen"
+        while IFS= read -r s; do
+            printf '\t.text\n\t.global %s\n%s:\n\tmovq $%s_n, %%rdi\n\tjmp metall_fremd_fehlt\n\t.section .rodata\n%s_n:\n\t.asciz "%s"\n' \
+                "$s" "$s" "$s" "$s" "$s" >> "$d/fremd.S"
+        done < "$d/fremd.namen"
+    fi
+    # shellcheck disable=SC2086
+    cc -fno-pie -c "$d/fremd.S" -o "$d/fremd.o" 2>> "$d/cc.err" \
       && ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 \
-            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/treiber.o" 2>> "$d/cc.err" \
+            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/arena.o" "$d/treiber.o" "$d/fremd.o" \
+            2>> "$d/cc.err" \
       && objcopy -O elf32-i386 "$d/k.elf" "$d/k32.elf" 2>> "$d/cc.err" || {
         echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }
     # Freestanding, measured: a linked image with an undefined symbol does not exist
@@ -286,12 +325,267 @@ mkdir -p "$ARB/staffel" "$ARB/staffel-gift"
 printf '%s' "$TREIBER_STAFFEL" > "$ARB/staffel/treiber.c"
 printf '%s' "$TREIBER_STAFFEL" > "$ARB/staffel-gift/treiber.c"
 
+# =======================================================================================
+# Opus agent J (2026-09-26): the features beyond threads, on the same bare metal.
+#
+#   metall153/154/158  dynamic arenas through the BARE-METAL arena runtime
+#                      (`laufzeit/metall/arena.c`: a static reserve, commit = bookkeeping
+#                      against a budget): the static twins 153/154 and the dynamic 158,
+#                      whose `grow` commits the upper half (118) --
+#   metall158-else     -- and the SAME source with a commit budget of exactly the floor
+#                      (`-DMETALL_ARENA_ZUSAGE=8`: 4 slots x 2 bytes): the runtime REFUSES
+#                      the grow and the program's `else` answers 1. Not a stub: the real
+#                      runtime, with a smaller number.
+#   metall161          bounded strings (lane 261): `memcpy`/`memcmp` from the runtime,
+#                      <string.h> from `laufzeit/metall/include/`
+#   metall59           the program's OWN `via idt` handler (`entry zeitgeber vector 32`)
+#                      and its entered entry (`systemruf vector 0x80`), installed in the
+#                      metal IDT, fired by real fixed IPIs from core 0 while three threads
+#                      take the `masks irqs` lock `TAKT` in a loop; every handler run checks
+#                      that it did NOT land on the core that holds `TAKT` (the observable
+#                      form of the masked-lock discipline)
+#   metall59-gift      the same with `TAKT` built UNMASKED: an IPI lands inside a held
+#                      section, the handler waits for its own interrupted thread -- the
+#                      same-core deadlock `H102` refuses (`gift/460`) -- and the machine
+#                      hangs into the timeout
+#   metall07           an entry with a REGISTER BINDING (`regs in { nr : rax, a0 : rdi,
+#                      a1 : rsi, a2 : rdx, a3 : r10 } regs out { ret : rax }`), entered by
+#                      `int $0x80` with chosen registers, and an NMI entry (vector 2) fired
+#                      by an NMI IPI; the program's foreign bodies `syscall_verteiler` and
+#                      `nmi_verteiler` are the driver's own C (the program side), every
+#                      other foreign body a trap stub
+cat > "$ARB/treiber-arena.c" <<'CARENA'
+#include "metall.h"
+#include "einheit.c"
+int gabbro_metall_haupt(void)
+{
+    uint32_t v = ARENA_RUF;
+    metall_schreibe(ARENA_NAME " "); metall_zahl(v); metall_schreibe("\n");
+    return v == ARENA_SOLL ? 0 : 1;
+}
+CARENA
+arena_bild() {  # arena_bild NAME SOURCE CALL EXPECTED [SED]
+    local d="$ARB/$1"; mkdir -p "$d"
+    einheit "$1" "$2" "${5:-}"
+    { printf '#define ARENA_NAME "%s"\n#define ARENA_RUF %s\n#define ARENA_SOLL %su\n' "$1" "$3" "$4"
+      cat "$ARB/treiber-arena.c"; } > "$d/treiber.c"
+}
+arena_bild metall153 "$W/beispiele/153-arena-waechst.gab" "waechst()" 370
+arena_bild metall154 "$W/beispiele/154-arena-voll.gab" "voll()" 1004
+arena_bild metall158 "$W/beispiele/158-arena-commit.gab" \
+    "(gabbro_arena_reserve(&Vorrat_desc), fuellen())" 118
+arena_bild metall158-else "$W/beispiele/158-arena-commit.gab" \
+    "(gabbro_arena_reserve(&Vorrat_desc), fuellen())" 1
+arena_bild metall158-gift "$W/beispiele/158-arena-commit.gab" \
+    "(gabbro_arena_reserve(&Vorrat_desc), fuellen())" 118 's/(17)/(18)/'
+if cmp -s "$ARB/metall158/einheit.c" "$ARB/metall158-gift/einheit.c"; then
+    echo "  metall158-gift: the mutation did not apply -- the gift would measure nothing"; exit 1
+fi
+
+mkdir -p "$ARB/metall161"
+einheit metall161 "$W/beispiele/161-zeichenkette.gab"
+cat > "$ARB/metall161/treiber.c" <<'C161'
+#include "metall.h"
+#include "einheit.c"
+static void z(uint32_t v) { metall_zahl(v); metall_schreibe(" "); }
+int gabbro_metall_haupt(void)
+{
+    gabbro_string_8 h = baue();
+    gabbro_string_16 k = kopiere(h);
+    gabbro_string_5 a = { 2, "hi" };
+    gabbro_string_3 b = { 1, "!" };
+    gabbro_string_8 c = haenge_an(a, b);
+    metall_schreibe("161 ");
+    z(h.len); z(h.data[0]); z(h.data[1]); z(k.len); z(laenge(c));
+    z(zeichen(c, 0)); z(zeichen(c, 1)); z(zeichen(c, 2));
+    z(gleich(h, h)); z(gleich(h, c)); z(kleiner(h, c)); metall_zahl(kleiner(c, h));
+    metall_schreibe("\n");
+    return 0;
+}
+C161
+
+TREIBER59='#include "metall.h"
+#include "einheit.c"
+SPERRE_TAKT
+METALL_SPERRE(RING)
+static _Atomic uint32_t verletzt;
+/* Every run of the thrown entry first asks: does THIS core hold TAKT right now? With a
+ * masked TAKT that can never be true (IF = 0 while held); the answer is the report. */
+static void takt_beobachtet(void)
+{
+    if (metall_anspruch_TAKT[metall_kern_nr()] != 0u) {
+        if (atomic_fetch_add_explicit(&verletzt, 1u, memory_order_relaxed) == 0u) {
+            metall_schreibe("59 an entry landed on a core with a claim on TAKT\n");
+        }
+    }
+    gabbro_eintritt_zeitgeber_verteiler();
+}
+METALL_EINTRITT(zeitgeber, 1, takt_beobachtet())
+METALL_EINTRITT(systemruf, 0, gabbro_eintritt_systemruf_verteiler())
+#define RUNDEN 3000u
+#define IPIS 600u
+static void arbeiter(void)
+{
+    for (uint32_t i = 0; i < RUNDEN; i++) {
+        takt_verteiler();
+        __asm__ __volatile__("int $0x80" ::: "memory");
+    }
+}
+static unsigned char st[3][65536] __attribute__((aligned(16)));
+static uint32_t w[3];
+int gabbro_metall_haupt(void)
+{
+    uint32_t n = metall_kerne();
+    if (n < 2u) { metall_schreibe("59 braucht 2 Kerne\n"); return 1; }
+    metall_idt_setze(gabbro_eintritt_zeitgeber_VEKTOR, gabbro_eintritt_zeitgeber);
+    metall_idt_setze(gabbro_eintritt_systemruf_VEKTOR, gabbro_eintritt_systemruf);
+    for (int i = 0; i < 3; i++) {
+        if (gabbro_faden_start(arbeiter, st[i] + sizeof(st[i]), &w[i]) != 0) return 4;
+    }
+    /* One IPI at a time, and the next only once the handler has run: an IPI never meets
+     * a pending one, so the count below is exact. */
+    for (uint32_t i = 0; i < IPIS; i++) {
+        uint32_t vorher = atomic_load_explicit(&metall_eintritt_zaehler_zeitgeber, memory_order_acquire);
+        metall_ipi_fest(1u + i % (n - 1u), gabbro_eintritt_zeitgeber_VEKTOR);
+        while (atomic_load_explicit(&metall_eintritt_zaehler_zeitgeber, memory_order_acquire) == vorher) {
+            __asm__ __volatile__("pause" ::: "memory");
+        }
+    }
+    for (int i = 0; i < 3; i++) gabbro_faden_warte(&w[i]);
+    uint32_t e = atomic_load_explicit(&metall_eintritt_zaehler_zeitgeber, memory_order_acquire);
+    uint32_t r = atomic_load_explicit(&metall_eintritt_zaehler_systemruf, memory_order_acquire);
+    uint32_t v = atomic_load_explicit(&verletzt, memory_order_relaxed);
+    metall_schreibe("59 eintritte "); metall_zahl(e);
+    metall_schreibe(" systemrufe "); metall_zahl(r);
+    metall_schreibe(" takt "); metall_zahl(Takte_speicher.slots[0].stand);
+    metall_schreibe(" auftrag "); metall_zahl(Auftraege_speicher.slots[0].stand);
+    metall_schreibe(" verletzt "); metall_zahl(v); metall_schreibe("\n");
+    return (e == IPIS && r == 3u * RUNDEN && v == 0u) ? 0 : 1;
+}
+'
+mkdir -p "$ARB/metall59" "$ARB/metall59-gift"
+einheit metall59 "$W/beispiele/59-eintritt-nimmt-maskierte-sperre.gab"
+cp "$ARB/metall59/einheit.c" "$ARB/metall59-gift/einheit.c"
+printf '%s' "$TREIBER59" | sed 's/^SPERRE_TAKT$/METALL_SPERRE_MASKIERT(TAKT)/' > "$ARB/metall59/treiber.c"
+# The gift: the same ticket lock WITHOUT the mask (the spelling `gift/460` refuses), holder
+# tracked the same way so the handler can say where it landed before it hangs.
+GIFT_TAKT='static metall_ticket gift_takt; static volatile uint8_t metall_anspruch_TAKT[METALL_KERNE_MAX]; void TAKT_nimm(void) { uint64_t f = metall_ia_aus(); metall_anspruch_TAKT[metall_kern_nr()] = 1u; metall_ia_her(f); metall_sperre_nimm(\&gift_takt); } void TAKT_gib(void) { metall_ticket_gib(\&gift_takt); uint64_t f = metall_ia_aus(); metall_anspruch_TAKT[metall_kern_nr()] = 0u; metall_ia_her(f); }'
+printf '%s' "$TREIBER59" | sed "s/^SPERRE_TAKT\$/$GIFT_TAKT/" > "$ARB/metall59-gift/treiber.c"
+grep -q 'gift_takt' "$ARB/metall59-gift/treiber.c" \
+    || { echo "  metall59-gift: the mutation did not apply -- the gift would measure nothing"; exit 1; }
+
+mkdir -p "$ARB/metall07"
+einheit metall07 "$W/beispiele/07-eintritt-und-boot.gab"
+: > "$ARB/metall07/fremd.ok"
+cat > "$ARB/metall07/treiber.c" <<'C07'
+#include "metall.h"
+#include "einheit.c"
+/* The program side of two foreign bodies (`extern fn` in the source). */
+uint64_t syscall_verteiler(uint64_t nr, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3)
+{
+    return nr * 10000u + a0 * 1000u + a1 * 100u + a2 * 10u + a3;
+}
+static _Atomic uint32_t nmis;
+void nmi_verteiler(void)
+{
+    atomic_fetch_add_explicit(&nmis, 1u, memory_order_release);
+}
+METALL_EINTRITT(syscall, 0, r->rax = (uint64_t)gabbro_eintritt_syscall_verteiler(r->rax, r->rdi, r->rsi, r->rdx, r->r10))
+METALL_EINTRITT(nmi, 0, gabbro_eintritt_nmi_verteiler())
+int gabbro_metall_haupt(void)
+{
+    metall_idt_setze(gabbro_eintritt_syscall_VEKTOR, gabbro_eintritt_syscall);
+    metall_idt_setze(gabbro_eintritt_nmi_VEKTOR, gabbro_eintritt_nmi);
+    register uint64_t a3 __asm__("r10") = 4;
+    register uint64_t bx __asm__("rbx") = 0x5555u;
+    register uint64_t r11 __asm__("r11") = 0x4321u;
+    uint64_t rax = 7, rcx = 0x1234u;
+    __asm__ __volatile__("int $0x80"
+                         : "+a"(rax), "+c"(rcx), "+r"(r11), "+r"(bx)
+                         : "D"((uint64_t)1), "S"((uint64_t)2), "d"((uint64_t)3), "r"(a3)
+                         : "memory");
+    metall_ipi_nmi(1u);
+    while (atomic_load_explicit(&nmis, memory_order_acquire) == 0u) {
+        __asm__ __volatile__("pause" ::: "memory");
+    }
+    metall_schreibe("07 syscall "); metall_zahl(rax);
+    metall_schreibe(" erhalten "); metall_zahl(rcx == 0x1234u && r11 == 0x4321u && bx == 0x5555u);
+    metall_schreibe(" nmi "); metall_zahl(atomic_load_explicit(&nmis, memory_order_acquire));
+    metall_schreibe("\n");
+    return rax == 71234u ? 0 : 1;
+}
+C07
+
+# -- `gabbro build` links the image ITSELF (Opus agent J). A `metal <dir>` line in the
+#    manifest makes the build compile `<unit>.metall.c` freestanding and link it with the
+#    runtime into `<unit>.metall.elf` + `<unit>.metall.boot.elf`; the boot below takes that
+#    artefact UNCHANGED (no harness driver, no observation block): 157's pool must start,
+#    join and end with success on the declared distribution, and 59's entry-only driver must
+#    install its two entries and end with success.
+bau_bild() {  # bau_bild NAME SOURCE
+    local d="$ARB/$1" out="$ARB/$1/out"
+    mkdir -p "$d"
+    printf 'compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout %s\nmetal %s\nunit einheit object\n    %s\n' \
+        "$out" "$M" "$2" > "$d/bau"
+    if ! G build "$d/bau" > "$d/bau.log" 2>&1; then
+        echo "  $1: gabbro build FAILED"; sed 's/^/      /' "$d/bau.log" | head -10; exit 1
+    fi
+    [ -f "$out/einheit.metall.boot.elf" ] || { echo "  $1: gabbro build linked no image"; exit 1; }
+    if nm "$out/einheit.metall.elf" | grep -E ' U |pthread|clone|futex' > "$d/nm.fund"; then
+        echo "  $1: the built image is NOT FREESTANDING:"; cat "$d/nm.fund"; exit 1
+    fi
+    cp "$out/einheit.metall.boot.elf" "$d/k32.elf"
+}
+bau_bild bau157 "$W/beispiele/157-worker-pool.gab"
+bau_bild bau59 "$W/beispiele/59-eintritt-nimmt-maskierte-sperre.gab"
+
+# -- grenze: the core limit behind `gabbro_kern` (Opus agent J). A unit's `accumulates ...
+#    per cpu N` indexes N cells with `gabbro_kern()`; the driver passes the smallest cell
+#    count as `METALL_KERNE_GRENZE`, and the runtime must then bring up no more cores than
+#    that, whatever the machine has. Measured with N = 2 on `-smp 4`: two cores check in,
+#    and every thread's `gabbro_kern()` is below 2.
+mkdir -p "$ARB/grenze"
+cat > "$ARB/grenze/treiber.c" <<'CGRENZE'
+#include "metall.h"
+static _Atomic uint32_t zellen[2];
+METALL_KERNE_GRENZE(METALL_MIN(METALL_KERNE_MAX, METALL_ZELLEN(zellen)))
+uint32_t gabbro_kern(void);
+static void zaehle(void) { atomic_fetch_add_explicit(&zellen[gabbro_kern()], 1u, memory_order_relaxed); }
+static unsigned char st[6][16384] __attribute__((aligned(16)));
+static uint32_t w[6];
+int gabbro_metall_haupt(void)
+{
+    for (int i = 0; i < 6; i++) {
+        if (gabbro_faden_start(zaehle, st[i] + sizeof(st[i]), &w[i]) != 0) return 4;
+    }
+    for (int i = 0; i < 6; i++) gabbro_faden_warte(&w[i]);
+    uint32_t z = atomic_load_explicit(&zellen[0], memory_order_relaxed)
+               + atomic_load_explicit(&zellen[1], memory_order_relaxed);
+    metall_schreibe("grenze kerne "); metall_zahl(metall_kerne());
+    metall_schreibe(" zellen "); metall_zahl(z); metall_schreibe("\n");
+    return (metall_kerne() == 2u && z == 6u) ? 0 : 1;
+}
+CGRENZE
+
 # -- Build everything (this half runs without qemu). ------------------------------------
 for n in metall159 metall159-gift metall124 metall157 stress stress-gift staffel; do
     baue "$n" "" || exit 1
 done
 baue staffel-gift "-DMETALL_KOOPERATIV" || exit 1
-echo "  built and linked: 8 freestanding images (no libc, no undefined symbol, no pthread/clone/futex)"
+# 154's emitted `buf[a]` warns at `-O2 -Werror` (`-Warray-bounds` after inlining `voll`), the
+# emitter-idiom note of lane 242 that also keeps it out of the hosted runs; its driver is
+# built at stage 9's `-O0`. The runtime keeps `-O2`.
+baue metall153 "" || exit 1
+baue metall154 "" "-O0" || exit 1
+baue metall158 "" || exit 1
+baue metall158-else "-DMETALL_ARENA_ZUSAGE=8" || exit 1
+baue metall158-gift "" || exit 1
+baue metall161 "" || exit 1
+baue metall59 "" || exit 1
+baue metall59-gift "" || exit 1
+baue metall07 "" || exit 1
+baue grenze "" || exit 1
+echo "  built and linked: 20 freestanding images + 2 linked by gabbro build (no libc, no undefined symbol, no pthread/clone/futex)"
 
 # -- The hosted counter-probe of the SAME interface (laufzeit/faden.c, Linux x86_64 only).
 #    200000 start/join rounds of an empty root on ONE stack. Before 2026-09-26 the parent
@@ -343,9 +637,28 @@ pruefe staffel "staffel durch" "METALL-VERTEILUNG 1 2 1 1"
 gift metall159-gift "counter step +1 -> +0 reports 0, not 64"
 gift stress-gift "no lock: lost updates under 8 threads on 4 cores"
 METALL_ZEIT=20 gift staffel-gift "cooperative runtime: the spinner never yields its core"
+pruefe metall153 "metall153 370"
+pruefe metall154 "metall154 1004"
+pruefe metall158 "metall158 118"
+pruefe metall158-else "metall158-else 1"
+pruefe metall161 "161 2 104 105 2 3 104 105 33 1 0 1 0"
+pruefe metall59 "59 eintritte 600 systemrufe 9000 takt 1 auftrag 1 verletzt 0" "METALL-VERTEILUNG 0 1 1 1"
+pruefe metall07 "07 syscall 71234 erhalten 1 nmi 1"
+pruefe bau157 "METALL-VERTEILUNG 0 1 1 0"
+pruefe bau59 "METALL-VERTEILUNG 0 0 0 0"
+pruefe grenze "METALL-KERNE 2" "grenze kerne 2 zellen 6"
+gift metall158-gift "stored value 17 -> 18: the sum moves to 119"
+METALL_ZEIT=30 gift metall59-gift "TAKT unmasked: an entry lands on a core with a claim on TAKT (ticket drawn or held) and waits behind the thread it interrupted"
+# ... and it bites for the NAMED reason, not for any hang: the handler reported where it
+# landed before it stopped.
+if ! grep -qxF "59 an entry landed on a core with a claim on TAKT" "$ARB/metall59-gift/serial.log"; then
+    echo "  metall59-gift: it did not end in success, but the handler never reported landing on"
+    echo "  the holder's core -- the hang is not the one the gift names"
+    BEFUND=1
+fi
 
 if [ "$BEFUND" != 0 ]; then
     echo "== METALL: FINDING (see above) =="
     exit 1
 fi
-echo "== METALL: $N_GEBOOTET booted on qemu -smp 4, every expectation held, 3 gifts bite =="
+echo "== METALL: $N_GEBOOTET booted on qemu -smp 4, every expectation held, 5 gifts bite =="
