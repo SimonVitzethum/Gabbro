@@ -1,0 +1,43 @@
+-- erwartet: N484
+-- 1204 -- **a contract over a shared atomic (Opus lane O25b, 2026-09-26, OFFEN O25).**
+-- `setzer` stores 1 into the atomic `FLAGGE` and promises `FLAGGE == 1` at its return;
+-- `loescher` stores 0 into it on another thread; `leser` reads it with no lock. The promise is
+-- a claim about a value another thread may change at any moment: `loescher` can run between
+-- `setzer`'s store and its return. `AkzeptiertX` (the Lean checker with the atomic rely,
+-- `grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean`) refuses exactly this at `fussWXB`
+-- (`vertragsFreiB`, witness `vertrag_atomar_abgelehnt`); the Rust checker refuses it at `N484`
+-- (`fusswache2.rs::vertrag_atomar`). Before `N484` it passed with 0 errors: the footprint legs
+-- `N290`-`N294` never counted atomics as carriers.
+
+module gift::vertrag_atomar {
+
+atomic FLAGGE : u32 acquire;
+
+pub static mut kopie : u32 = 0;
+
+impl fn setzer()
+    ensures FLAGGE == 1
+    effects { writes FLAGGE }
+    costs   <= 8 ops
+{
+    FLAGGE = 1 publishes nothing;
+}
+
+impl fn loescher()
+    effects { writes FLAGGE }
+    costs   <= 8 ops
+{
+    FLAGGE = 0 publishes nothing;
+}
+
+impl fn leser()
+    effects { reads FLAGGE, writes kopie }
+    costs   <= 8 ops
+{
+    let f : u32 = FLAGGE;
+    kopie = f;
+}
+
+concurrent { setzer, loescher, leser };
+
+}

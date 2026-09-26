@@ -354,4 +354,15 @@ theorem n1E_ziel (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
 
 #print axioms n1E_ziel
 
+/-! ## 5. The per-core fold (OFFEN O17) -/
+
+/-- **The fold is admitted with the rely**: `zaehlA` twice writing the atomic `zaehler`, `zaehlB`
+    reading it -- refused by the goal's checker (`AtomarZeuge.faltung_abgelehnt`), accepted by
+    `AkzeptiertX` (`zaehler` is shared and in no contract). -/
+theorem faltung_akzeptiertX :
+    AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = true := by
+  decide
+
+#print axioms faltung_akzeptiertX
+
 end Gabbro.Grammatik.AtomarXZeuge

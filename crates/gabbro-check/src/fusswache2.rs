@@ -34,6 +34,13 @@
 //!   so this leg fires exactly where they stay silent; same-lock pairs are exempt there
 //!   as here (the real same-lock take is `H003`'s).
 //!
+//! One more footprint code (Opus lane O25b, 2026-09-26, OFFEN O25):
+//!
+//! * `N484` -- a `requires`/`ensures` reading a SHARED atomic (unguarded, reached by one
+//!   started thread, writable by another): the contract condition of the Lean checker with
+//!   the atomic rely (`AkzeptiertX`, `vertragsFreiB`). The legs above never counted atomics
+//!   as carriers, so before this leg such a contract passed silently (`vertrag_atomar`).
+//!
 //! Five more codes, one per leg of the race component (lane 183):
 //!
 //! * `N300` -- a WRITE-WRITE race across two DIFFERENT starts: one start's call graph
@@ -1097,6 +1104,17 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
+    vertrag_atomar(
+        baum,
+        &faeden,
+        &funktionen,
+        &fuss,
+        &sperrkarte,
+        &konstanten,
+        &weltnamen,
+        &b.geraete,
+        absagen,
+    );
     kindfaeden(
         baum,
         &g,
@@ -1131,6 +1149,140 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         &gehalten,
         absagen,
     );
+}
+
+/// **`N484` -- a contract over a SHARED atomic** (Opus lane O25b, 2026-09-26, OFFEN O25).
+///
+/// A `requires` or `ensures` clause of `f` reads an `atomic` global that no lock protects
+/// while one started thread's graph reaches it in a footprint and a DIFFERENT started
+/// thread's graph may write it (declared `writes`/`publishes`, or a store, publish or
+/// exchange in a body). The contract is then a claim about a value another thread may change
+/// at any moment; no proof against the sequential body makes it true.
+///
+/// The Lean side is the checker with the atomic rely, `AkzeptiertX`
+/// (`grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean`): its footprint component
+/// `fussWXB` admits an unguarded footprint carrier that is not thread-local only when it is
+/// an atomic in NO contract (`geteiltVB`, `vertragsFreiB`, over `GeteiltV` in the spec
+/// `AkzeptiertSpecX`); witness `vertrag_atomar_abgelehnt`. The goal theorem with shared
+/// atomics (`gabbro_ziel_atomar`) needs it: the replay keeps a contract's carriers stable,
+/// and a shared atomic is not. The other footprint legs (`N290`-`N294`) never counted
+/// atomics as carriers, so before this leg a contract over a racing atomic passed with 0
+/// errors (`messung/proben/o25b-vertrag-atomar.gab`, measured 2026-09-26).
+///
+/// Thread-locality is judged as `lokal` above, over atomics: with no declared start the
+/// single driver thread owns everything and the leg is silent.
+#[allow(clippy::too_many_arguments)]
+fn vertrag_atomar(
+    baum: &Programm,
+    faeden: &[BTreeSet<String>],
+    funktionen: &BTreeMap<String, FnDecl>,
+    fuss: &BTreeMap<String, BTreeSet<String>>,
+    sperrkarte: &BTreeMap<String, Sperre>,
+    konstanten: &[String],
+    weltnamen: &[String],
+    geraete: &BTreeSet<String>,
+    absagen: &mut Absagen,
+) {
+    let atomic = atomics(baum);
+    if atomic.is_empty() || faeden.len() < 2 {
+        return;
+    }
+    // The atomics each function may write: declared, and performed.
+    let mut schreibt_atom: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+    for (k, f) in funktionen {
+        let mut s = BTreeSet::new();
+        if let Some(w) = &f.effects {
+            for e in &w.liste {
+                if let WirkungArt::Schreibt(o) | WirkungArt::Veroeffentlicht(o) = &e.art {
+                    let r = wurzel(&o.text()).to_string();
+                    if atomic.contains(&r) {
+                        s.insert(r);
+                    }
+                }
+            }
+        }
+        if let FnRumpf::Block(bb) = &f.rumpf {
+            let mut stapel = vec![bb];
+            while let Some(cur) = stapel.pop() {
+                for st in &cur.anweisungen {
+                    let ziel = match &st.art {
+                        StmtArt::Zuweisung(z) => Some(z.ziel.text()),
+                        StmtArt::Publish(p) => Some(p.ziel.text()),
+                        StmtArt::Exchange(e) => Some(e.ort.text()),
+                        _ => None,
+                    };
+                    if let Some(z) = ziel {
+                        let r = wurzel(&z).to_string();
+                        if atomic.contains(&r) {
+                            s.insert(r);
+                        }
+                    }
+                    for kk in crate::unterbloecke(st) {
+                        stapel.push(kk);
+                    }
+                }
+            }
+        }
+        schreibt_atom.insert(k.as_str(), s);
+    }
+    // Reachers and writers per atomic over the thread graphs.
+    let mut erreicht_von: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+    let mut geschrieben_von: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+    for (t, graph) in faeden.iter().enumerate() {
+        for fname in graph {
+            if let Some(fset) = fuss.get(fname) {
+                for c in fset {
+                    if let Some(a) = atomic.get(c) {
+                        erreicht_von.entry(a.as_str()).or_default().insert(t);
+                    }
+                }
+            }
+            if let Some(s) = schreibt_atom.get(fname.as_str()) {
+                for c in s {
+                    if let Some(a) = atomic.get(c) {
+                        geschrieben_von.entry(a.as_str()).or_default().insert(t);
+                    }
+                }
+            }
+        }
+    }
+    let geteilt = |c: &str| -> bool {
+        match (erreicht_von.get(c), geschrieben_von.get(c)) {
+            (Some(r), Some(w)) => r.iter().any(|t| w.iter().any(|v| v != t)),
+            _ => false,
+        }
+    };
+    let bewacht = |c: &str| -> bool { sperrkarte.values().any(|s| s.schutz.contains(c)) };
+    for f in funktionen.values() {
+        let rufer = f.name.text.clone();
+        let mut gemeldet: BTreeSet<String> = BTreeSet::new();
+        let mut orte = crate::wirkungen::clause_roots(&f.requires, f, konstanten, weltnamen, geraete);
+        orte.extend(crate::wirkungen::clause_roots(&f.ensures, f, konstanten, weltnamen, geraete));
+        for (w, span) in orte {
+            if !atomic.contains(&w) || bewacht(&w) || !geteilt(&w) {
+                continue;
+            }
+            if !gemeldet.insert(w.clone()) {
+                continue;
+            }
+            melde(
+                "N484",
+                span,
+                format!(
+                    "the contract of `{rufer}` reads the atomic `{w}`, which one started \
+                     thread reads while another may write it, under no lock -- a contract \
+                     about a value another thread may change at any moment"
+                ),
+                &[
+                    "a shared atomic is read against every value another thread may store \
+                     (the atomic rely); it may stand in a body, never in a `requires` or \
+                     `ensures`: state the claim over a carrier a lock guards, or keep the \
+                     atomic thread-local",
+                ],
+                absagen,
+            );
+        }
+    }
 }
 
 /// The `atomic` globals of the unit -- the surface of `D.atomar` (`AtomarAusgenommen`).
