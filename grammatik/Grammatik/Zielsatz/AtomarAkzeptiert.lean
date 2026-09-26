@@ -29,6 +29,7 @@
 -/
 import Grammatik.Speichermodell.AtomarZiel
 import Grammatik.Zielsatz.AtomarInvarianten
+import Grammatik.Zielsatz.AtomarMasken
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.Akzeptiert
 
@@ -97,7 +98,26 @@ theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertS
         (@of_decide_eq_true _ (Classical.propDecidable _) h2))
   · exact hB L (hA.sperrOrte L c hL)
 
-/-- **The legs with shared atomics at a machine W**: `ZielAtomarW` and the four invariant legs
+/-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
+    G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
+    a write, are ordered through a guard lock. -/
+def RennfreiBisGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufGA P O passes M0 ms fs n → ms n = M →
+    ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → fs i ≠ fs j →
+      ZugriffG (ms i) (ms (i + 1)) (fs i) c → ZugriffG (ms j) (ms (j + 1)) (fs j) c →
+      (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
+      ¬ AtomarAusgenommen c →
+      ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
+
+omit [DecidableEq D.Fn] in
+/-- Every G run is a GA run: `RennfreiBisGA` contains `RennfreiBis`. -/
+theorem rennfreiBis_of_GA {P : Programm D} {O : Orakel D} {passes : Nat} {M0 M : RufMaschineG D}
+    (h : RennfreiBisGA P O passes M0 M) : RennfreiBis P O passes M0 M :=
+  fun ms fs n hl hn => h ms fs n ⟨hl.1, fun k hk => schrittGA_of_g (hl.2 k hk)⟩ hn
+
+/-- **The legs with shared atomics at a machine W**: `ZielAtomarW`, race freedom and the
+    same-core interrupt leg on GA runs, and the four invariant legs
     of Opus agent D -- `InvRuheG`, `InvSichtG` at W's G-part, and the lock-move legs over every
     GX step from it (so over every W step, by the leg `schwach`). -/
 structure ZielAtomar (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
@@ -107,6 +127,9 @@ structure ZielAtomar (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : 
   invSicht : InvSichtG P M0 W.g
   sperrWechsel : SperrWechselGX P O passes Tg S W.g
   sperrSicht : SperrSichtGX P O passes Tg S W.g
+  -- race freedom and the same-core interrupt leg, on GA runs (which contain W's)
+  rennfrei : RennfreiBisGA P O passes M0 W.g
+  keinKernHalt : KernHaltGA P O passes M0 W.g
 
 /-- **THE LEGS WITH SHARED ATOMICS FROM THE PREMISE GROUPS.** (a) the checker specification with
     the admitted shared atomics, (b) the user's logic against every answer a shared atomic read
@@ -153,7 +176,13 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
     invRuhe := hInv.1
     invSicht := hInv.2.1
     sperrWechsel := hInv.2.2.1
-    sperrSicht := hInv.2.2.2 }
+    sperrSicht := hInv.2.2.2
+    rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt =>
+      rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _)
+        (fun t => reachB_wurzel P fs _)
+        (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt))
+        ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt
+    keinKernHalt := kernHaltGA_gilt P O passes _ _ }
 
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/

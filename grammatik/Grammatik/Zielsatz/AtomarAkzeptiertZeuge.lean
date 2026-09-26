@@ -25,6 +25,7 @@
     `AkzeptiertA` (Speichermodell/AtomarZeuge.lean, no contract condition) accepts it.
 -/
 import Grammatik.Zielsatz.AtomarAkzeptiert
+import Grammatik.Zielsatz.AtomarZiel
 import Grammatik.Speichermodell.AtomarZeuge
 import Grammatik.Speichermodell.Zeuge
 import Grammatik.ZielOrtGanzZeuge
@@ -321,5 +322,36 @@ theorem vertrag_atomar_echt :
 #print axioms hP_havoc_bites
 #print axioms hP_logikA_nicht
 #print axioms vertrag_atomar_abgelehnt
+
+/-! ## 4. The goal with shared atomics, applied -/
+
+/-- **Configuration 1 as a unit**: `hauptA`, `hauptB`, `kern` declared, all-zero memory. -/
+def n1E : Einheit nD :=
+  ⟨nP, SchwachZeuge.nS, axWahr nD, [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩], sp0, []⟩
+
+theorem n1E_ws : n1E.ws = n1ws := rfl
+
+/-- (b) with the rely, bodies and start. -/
+theorem n1E_nutzerPflichtA : NutzerPflichtA n1E :=
+  ⟨n1_logikA _, ⟨(fun L => nomatch L), fun _ _ => rfl⟩⟩
+
+/-- **`gabbro_ziel_atomar` on configuration 1**, with the concrete checker `akzeptiertX_pruefer`
+    (which accepts it, where the goal's checker refuses it: `n1_alt_abgelehnt`), the runtime's
+    full start: every leg of `ZielAtomar` at every machine W reaches, every order assignment,
+    every budget. -/
+theorem n1E_ziel (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
+    ∀ W : RufMaschineW nD.mitRuhe,
+      RufErreichbarW n1E.P.mitRuhe nO.mitRuhe passes ord
+        (RufStartW (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts))) W →
+      ZielAtomar n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes ord
+        (GeteiltV n1E.P.mitRuhe (wsRuhe n1E.ws))
+        (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) W :=
+  gabbro_ziel_atomar akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
+    ⟨nCs, nCs_voll⟩
+    (by show AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true; exact n1_akzeptiertX)
+    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩
+    passes ord _ _ (laufzeit_voll n1E)
+
+#print axioms n1E_ziel
 
 end Gabbro.Grammatik.AtomarXZeuge

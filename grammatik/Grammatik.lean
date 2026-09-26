@@ -342,7 +342,9 @@ import Grammatik.Speichermodell.AtomarZiel
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.AtomarRuheNutzer
 import Grammatik.Zielsatz.AtomarInvarianten
+import Grammatik.Zielsatz.AtomarMasken
 import Grammatik.Zielsatz.AtomarAkzeptiert
+import Grammatik.Zielsatz.AtomarZiel
 import Grammatik.Zielsatz.AtomarAkzeptiertZeuge
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
