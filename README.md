@@ -308,8 +308,16 @@ This section exists because the alternative is that a reader has to find it out.
   checker's Bool, the user's proof, the correspondence certificate; the runtime start and the
   binary-run correspondence as hypotheses, the C compiler named), instantiated for
   `beispiele/104` and `beispiele/108` (PLAN-UEBERSETZUNGSVALIDIERUNG §6). Every other program:
-  open, stopped at the Lean parser or elaborator — chain count 2 of 111
-  (`instrumente/zaehle-kette.py`). Concurrent translation validation (stage b) is not started.
+  open, stopped at the Lean parser or elaborator — chain count 2 of 129
+  (`instrumente/zaehle-kette.py --lean`, 2026-09-26). Concurrent translation validation
+  (stage b) is not started.
+- **Most accepted programs are not judged in Lean at all.** A green Lean build covers a program
+  only through its generated certificate (the Lean checker Bool decided on the exported unit, the
+  goal theorem instantiated, the user's proof as hypothesis). Of 199 accepted programs under
+  `beispiele/`, 23 have one; the other 176 are refused by the exporter and listed by name in
+  [`grammatik/Grammatik/Zertifikat/REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt),
+  which the statement cites as not claimed. Even a certified program rests on the unverified
+  exporter and, outside the two closed chains, on the reading that the model is the C.
 - **The proof-to-code ratio has no measured value.** The floor is about 0,5 : 1 — the abstract
   specification itself — and Gabbro does not claim to prove functional correctness, so the true
   figure is strictly above it. The upper bound is unknown, and a number without a source list

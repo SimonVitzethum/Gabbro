@@ -322,3 +322,4 @@ import Grammatik.Speichermodell.MaschineW
 import Grammatik.Speichermodell.DRF
 import Grammatik.Zielsatz.Schwach
 import Grammatik.Speichermodell.Zeuge
+import Grammatik.Zertifikate

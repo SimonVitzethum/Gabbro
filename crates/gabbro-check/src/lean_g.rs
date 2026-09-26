@@ -363,6 +363,12 @@ pub(crate) struct Model {
     /// function is a declared start like a `concurrent` member.
     wurzeln: Vec<Pfad>,
     reasons: std::collections::HashMap<String, usize>,
+    /// `const fn` declarations (Opus agent C, 2026-09-26): comptime only -- the
+    /// checker folds them into the constants that call them, and the emitter
+    /// writes those constants as numbers (`#define`). They are NOT `D.Fn`s; a
+    /// run-time call of one names no exported function and is refused by name
+    /// (`LG005`). Named in the NO FORM ledger when the unit has any.
+    konst_fns: Vec<String>,
 }
 
 /// One slot field: its G type and, for integers, the storage width the
@@ -442,6 +448,31 @@ pub(crate) struct Scope {
     /// order (the order is the type: `Expr.fall` names a case by its `Fin`,
     /// and `Arms` lists one block per case in this order).
     tagged: std::collections::HashMap<String, Vec<(String, Option<(i128, i128)>)>>,
+    /// **The checker's folded value of every scalar `const`** (Opus agent C,
+    /// 2026-09-26), by short name: `Umgebung::konst_wert`, the SAME folder the
+    /// emitter writes its `#define`s from (`emit.rs`) and M1 ranges read. A
+    /// `const` whose initializer is an expression (`6 * 7`, `u64::max`, a
+    /// `const fn` call) travels as that number, like a literal one. A short
+    /// name two modules fold to DIFFERENT values is left out, so it stays
+    /// refused (`LG005`) instead of travelling as one of the two.
+    gefaltet: std::collections::HashMap<String, i128>,
+}
+
+/// Fill `Scope::gefaltet` from the checker's constant folder.
+fn falte_konstanten(scope: &mut Scope, tree: &Programm) {
+    let env = crate::umgebung::Umgebung::sammle(tree);
+    let mut werte: std::collections::HashMap<String, Option<i128>> = std::collections::HashMap::new();
+    crate::fuer_jedes_item_im_modul(tree, &mut |item, modul| {
+        if let ItemArt::Konst(k) = &item.art {
+            if let Some(v) = env.konst_wert(modul, &k.wert) {
+                let e = werte.entry(k.name.text.clone()).or_insert(Some(v));
+                if *e != Some(v) {
+                    *e = None;
+                }
+            }
+        }
+    });
+    scope.gefaltet = werte.into_iter().filter_map(|(k, v)| v.map(|v| (k, v))).collect();
 }
 
 impl Scope {
@@ -695,7 +726,9 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
         match &item.art {
             ItemArt::Modul(m) => build_scope(scope, &m.items)?,
             ItemArt::Konst(k) => {
-                let Some(v) = numeral(&k.wert, scope) else {
+                let Some(v) = numeral(&k.wert, scope)
+                    .or_else(|| scope.gefaltet.get(&k.name.text).copied())
+                else {
                     return Err(refuse("LG005", format!("const {} is not a numeral", k.name.text)));
                 };
                 scope.consts.insert(k.name.text.clone(), v);
@@ -755,8 +788,9 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new() };
+    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new(), konst_fns: vec![] };
     let mut scope = Scope::default();
+    falte_konstanten(&mut scope, tree);
     // Pass one: constants, type aliases and `tagged` types.
     build_scope(&mut scope, &tree.items)?;
     // Pass two: carriers, locks, functions, concurrency.
@@ -796,6 +830,12 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // count is the `gruende` of every `-> T or R` naming it.
                 ItemArt::Reason(r) => {
                     model.reasons.insert(r.name.text.clone(), r.faelle.len());
+                }
+                // A `const fn` computes VALUES at compile time and no code
+                // (`FnKlasse::Konst`): it travels folded into its constants
+                // (`Scope::gefaltet`), not as a `D.Fn`.
+                ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Konst) => {
+                    model.konst_fns.push(f.name.text.clone());
                 }
                 ItemArt::Funktion(f) => {
                     model.fns.push(FnModel { name: f.name.text.clone(), decl: f.clone() });
@@ -2141,6 +2181,7 @@ pub(crate) fn ensures_konjunkte(
 /// checked phase so `export` stays a straight line).
 fn rescope(tree: &Programm) -> Result<Scope, Refusal> {
     let mut scope = Scope::default();
+    falte_konstanten(&mut scope, tree);
     build_scope(&mut scope, &tree.items)?;
     Ok(scope)
 }
@@ -2717,6 +2758,13 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             }
             if let Some(r) = glob_read(o, false, ctx, model, fname, out) {
                 return r;
+            }
+            // A named `const` travels as its (folded) number, as the ledger
+            // says ("inlined at every use") and as the emitter writes it
+            // (`#define`); M1 types such a place by its value too (Opus agent
+            // C, 2026-09-26 -- before, a body naming a const was refused).
+            if let Some(&wert) = scope.consts.get(&o.basis.text) {
+                return Ok((lit_term(wert, ctx), VTy::Int { lo: wert, hi: wert, bits: None }));
             }
             // A payload-free case of a `tagged type` (`Leer`): `Expr.fall`
             // with `.keine`. Asked LAST, so a local, a parameter and a global
@@ -4641,6 +4689,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str(" the `deadline` date with its `arch`\n");
         out.push_str("-- machine and `falsifier` probe (an environment promise, dropped\n");
         out.push_str("-- like `costs`);");
+    }
+    // Opus agent C: only where a `const fn` was dropped, so every other
+    // export stays byte-identical.
+    if !model.konst_fns.is_empty() {
+        out.push_str(" the `const fn` declarations\n");
+        out.push_str("-- (comptime: folded into the constants that call them, as the\n");
+        out.push_str("-- emitter's `#define`s are; a run-time call of one is refused);");
     }
     out.push_str(" the `by unvisited`/`by consuming`\n");
     out.push_str("-- run form, the `decreases` witness and the `touches` clause of a\n");

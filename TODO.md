@@ -383,6 +383,27 @@ tree refuses everywhere else.*
   (each needs model narrowing). Next: LG002 x21, or per-subclass lanes
   with model-side work. Concurrent lane 255 merged 2026-09-19
   (`ba9b6c07`).**
+- [x] **Every accepted program certified in Lean or named** — Opus agent C,
+  2026-09-26 (`messung/OPUS-C-TRAGWEITE.md`, SATZKARTE §51). Each exported,
+  accepted program under `beispiele/` has its generated certificate in the
+  build (`Grammatik/Zertifikat/`, `gCheck` by `decide`, `gP_gabbro_f` =
+  `GabbroZiel` on it); every other accepted program stands in
+  `Zertifikat/REGISTER.txt` with its first exporter refusal, cited by
+  `Spec.lean` ("WHAT A GREEN BUILD COVERS"); the cargo test `zertifikate`
+  fails on any program outside both. Measured: 199 accepted, 23 CERTIFIED
+  (was 2 from the exporter's output), 176 UNCERTIFIED. Constants now travel
+  folded (93 certified).
+- [ ] **Shrink the register (the residue of the bullet above).** The measured
+  shape of the 176 (all refusals per program, not the first, via a throwaway
+  continue-on-refusal build of the exporter, 2026-09-26): 62 programs have ONE
+  refusal shape at item/function level, 57 two, 31 three, 26 four or more.
+  Most frequent shapes: `function X is not impl` 37 programs (7 alone —
+  `extern`/`library`/`raw`), `assume` 24, a pointer naming no table 20,
+  `device` 19, address spaces 19, `atomic` 17 (Opus B's area), non-scalar
+  `static` 15. Lifting `extern fn` alone (axioms) was measured: 0 programs
+  gained. `return` under `locks` (125) and a tail `let` of a call (110) need
+  an `Endblock` form G has no constructor for — a model decision, not an
+  exporter rule.
 - [x] **The Rust checker against the Lean checker Bool `Akzeptiert`** — lane
   208 (relaunch of 202), reviewed (reviewer 218, r2) and merged (`c8b9c1a4`,
   2026-09-17). Closed by finding, not by construction: five of nine

@@ -1038,3 +1038,19 @@ of the reading, for EVERY lock primitive:
 | **foreign primitives** | `extern fn` / `asm` (trust base, `N042`). **Assumed** |
 | **what would close it** | `N323` demands `acquire` (or `acq_rel`/`seq`) on the atomic access that takes the lock and `release` (or `acq_rel`/`seq`) on the one that gives it, with a poison probe (a relaxed spinlock refused) and a positive probe (the runtime's ticket lock, `beispiele`); foreign primitives stay a named assumption |
 | **who guards it today** | nothing mechanical; the header of `Spec.lean` names it |
+
+## O27 — 176 accepted corpus programs have no Lean judgement: the exporter refuses them (recorded 2026-09-26, Opus agent C)
+
+A green `lake build` covers a program only through its certificate
+(`grammatik/Grammatik/Zertifikat/`, SATZKARTE §50). Every accepted program the exporter refuses
+stands, by name and first refusal, in `Zertifikat/REGISTER.txt`, which `Spec.lean` cites as NOT
+CLAIMED; the cargo test `zertifikate` keeps the register complete.
+
+| | |
+|---|---|
+| **measured** | 199 accepted (129 corpus + 70 gift clean sides), 23 CERTIFIED, 176 UNCERTIFIED; of the 129 corpus programs 18 certified |
+| **by first code** | `LG001` 116, `LG002` 36, `LG004` 13, `LG005` 6, `LG003` 3, `LG006` 2 |
+| **why it is not one fix** | 114 of the 176 meet two or more refusal shapes (measured with a throwaway continue-on-refusal build); lifting `extern fn` alone gained 0 programs |
+| **model decisions it needs** | an `Endblock` form for a tail `let` of a call and for `return` under `locks` (110, 125); records, wrapping integers, named assumptions outside `forever`/`retires`, devices, atomics (Opus B), pointers into records |
+| **what would close it** | per-shape lanes, each measured by the register's CERTIFIED count |
+
