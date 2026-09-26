@@ -886,10 +886,11 @@ against the upper bound of the whole run's commit. Two assumptions remain, and n
 checked:
 
 | | |
-|---|---|
+|---|---|---|
 | **generations along one thread** | a `reset` of `A` in a routine that runs CONCURRENTLY with the holder of an index into `A` (another root of a `concurrent` set, a `child` path, an interrupt handler) is not applied to that index. Memory safety does not depend on it (the index stays below `committed`); the residue is a logical dangling reference |
 | **roots entered once per load** | the commit total sums call-graph roots once (a `concurrent` body once per naming, an `entry` dispatch target without bound). A routine entered again by code the unit does not see (a separately linked caller, NOT CLAIMED in `Spec.lean`) can still reach the runtime's past-ceiling stop (`abort`, `laufzeit/arena_dyn.c`) |
-| **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff |
+| **the emitted counters are plain words (lane 259, emitter arm)** | a dynamic arena lowers `used`/`committed` to ordinary `uint32_t` fields and `alloc`/`grow` to unsynchronised read-modify-writes -- two threads allocating (or growing) on one arena race in C, and no rule demands a lock or an atomic there. Memory safety does not depend on it (a raced check-then-use still names a slot below `committed`: the check passed on a smaller `used`, and `grow` only ever raises the ceiling side); the residue is logical -- duplicate indices, a lost cursor step, growth one thread never sees. No concurrency safety is claimed for the lowering, and none is built |
+| **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff; for the third: the same strict option (no arena shared across threads), or atomic counters with a model leg that carries them |
 
 
 ## O21 — The `child` thread exists in the checker, not in the model, and its code between gate call and region is unchecked for the child (recorded 2026-09-21, review G11, fix lane F3)

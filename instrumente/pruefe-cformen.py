@@ -185,6 +185,13 @@ FORMS = {
     "stmt:cas":                (["cas_success", "cas_failure"], "H4 (one step)"),
     "stmt:compound-other":     ([], "compound assignment on a place or `x++`"),
     "stmt:store-array":        ([], "`A[i] = e;` (static array, byte view, arena)"),
+    # Lane 259 (2026-09-26) lowers dynamic-arena stores through the reserved
+    # base (`((T *)D_desc.base)[i] = e;`) and the commit through the runtime
+    # (`if (gabbro_arena_grow(&D, n))`). Both are new shapes with no lemma:
+    # the store joins the `store-array` bucket beside its static twin, the
+    # commit call gets its own uncovered row -- booked, never silent.
+    "stmt:grow-call":         ([], "`if (gabbro_arena_grow(&D, n))` (runtime commit "
+                                "in a branch condition)"),
     "stmt:struct-init":        ([], "`T x = (T){ .f = v };` (M10 has no Gabbro form)"),
     "stmt:call-indirect":      ([], "`t->f(a);` (callInd)"),
     "stmt:bind-call-foreign":  ([], "`T x = ext();` (bindAxiom)"),
@@ -273,6 +280,9 @@ KNOWN_UNCOVERED = {
     "stmt:cas-loop": ("2026-09-13", "only the CAS step is covered (cas_success/failure)"),
     "stmt:compound-other": ("2026-09-13", "compound assignment is covered on locals only"),
     "stmt:store-array": ("2026-09-13", "schreibBytes and the byte writers, arena"),
+    "stmt:grow-call": ("2026-09-26", "the runtime commit call in a branch condition "
+                       "(lane 259 emits it; no correspondence lemma: the commit "
+                       "is a runtime effect outside the lowered shapes)"),
     "stmt:struct-init": ("2026-09-13", "structLocal_rw has no Gabbro counterpart"),
     "stmt:call-indirect": ("2026-09-13", "callInd has no lemma"),
     "stmt:bind-call-foreign": ("2026-09-13", "bindAxiom has no lemma"),
@@ -660,6 +670,13 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
         return "stmt:if-call-else"
     if re.match(r"^if \(.*\) return [^;]*;$", s):
         return "stmt:return-aggregate" if retagg else "stmt:if-return"
+    # Lane 259: the commit call in a branch condition is its own row, never
+    # the generic `stmt:if` below. Precedent: calls in conditions get their
+    # own rows (`stmt:cas-loop`, `stmt:if-call-else`) -- a branch lemma
+    # covers the jump, not the callee's effect, and the commit (bumping
+    # `committed`, changing page protection) is all effect.
+    if re.match(r"^if \(gabbro_arena_grow\(.*\)\) \{$", s):
+        return "stmt:grow-call"
     if re.match(r"^if \(.*\) (break|continue);$", s):
         return "stmt:cas-loop"
     if re.match(r"^if \(.*\) \{$", s):
@@ -740,6 +757,11 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
             return "stmt:bind-call-unit" if mc.group(1) in unit.defined else "stmt:bind-call-foreign"
         return "stmt:decl-init"
     if re.match(r"^" + IDENT + r"(\[[^\]]*\]|\.buf\[)", s) and "=" in s:
+        return "stmt:store-array"
+    # Lane 259: the dynamic-arena store through the reserved base. Same bucket
+    # as its static twin above: no lemma covers either, so no new claim --
+    # the shape joins the recorded uncovered row instead of standing beside it.
+    if re.match(r"^\(\([A-Za-z0-9_]+ \*\)" + IDENT + r"\.base\)\[[^\]]*\] =", s):
         return "stmt:store-array"
     if re.match(r"^" + IDENT + r"->" + IDENT + r"\[[^\]]*\] = ", s) and "->slots[" not in s:
         return "stmt:store-array"
