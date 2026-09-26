@@ -237,6 +237,48 @@ theorem sicht_waechst {P : Programm D} {O : Orakel D} {passes : Nat} {W W' : Ruf
     · rw [h.sichtU x hw]; exact hv
   · rw [h.sichtF t ht]; exact Nat.le_refl _
 
+/-- The view after a step is at least the view before the writes. -/
+theorem vor_le_nach {P : Programm D} {O : Orakel D} {passes : Nat} {W W' : RufMaschineW D}
+    {u : Faden} {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
+    {neu : D.Tab ⊕ D.Glob → Nat} (h : SchrittW P O passes ord W u W' σ M'' wahl neu)
+    (x : D.Tab ⊕ D.Glob) : vorSicht ord W u σ M'' wahl x ≤ W'.sicht u x := by
+  by_cases hw : SchreibG (mitSpeicher W.g σ) M'' u x
+  · rw [h.sichtS x hw]; exact Nat.le_of_lt (h.frisch x hw).1
+  · rw [h.sichtU x hw]; exact Nat.le_refl _
+
+/-- A carrier the step reads is in its read list. -/
+theorem lesenVon_mem {M M' : RufMaschineG D} {u : Faden} {c : D.Tab ⊕ D.Glob}
+    (h : LiestG M M' u c) : c ∈ lesenVon M M' u :=
+  List.mem_filterMap.mpr ⟨(c, false), h, rfl⟩
+
+/-- **Coherence of a read, on EVERY program** (by construction of W): the message a step
+    reads at `c` lies at or above the reader's view, and afterwards the reader's view has
+    reached it -- so a later read of `c` by the same thread never returns an older message
+    (CoRR), nor one older than its own write (CoWR). -/
+theorem schrittW_kohaerent {P : Programm D} {O : Orakel D} {passes : Nat} {W W' : RufMaschineW D}
+    {u : Faden} {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
+    {neu : D.Tab ⊕ D.Glob → Nat} (h : SchrittW P O passes ord W u W' σ M'' wahl neu)
+    {c : D.Tab ⊕ D.Glob} (hl : LiestG (mitSpeicher W.g σ) M'' u c) :
+    W.sicht u c ≤ (wahl c).ts ∧ (wahl c).ts ≤ W'.sicht u c := by
+  refine ⟨(h.lies c hl).1.2, ?_⟩
+  have h1 := lesesicht_mem (ord := ord) wahl _ (W.sicht u) c (lesenVon_mem hl) c
+  have h2 := beitrag_selbst (ordVon ord c) c (wahl c)
+  exact Nat.le_trans h2 (Nat.le_trans h1 (Nat.le_trans (locksicht_ge _ _ _ c) (vor_le_nach h c)))
+
+/-- **Release/acquire, on EVERY program** (by construction of W): an acquire read (a carrier of
+    order `freigabe`) of a message joins the message's view -- for a release write, the writer's
+    view at the write -- into the reader's view: every write the writer had seen, the reader
+    now sees at least as new. -/
+theorem schrittW_erwerb {P : Programm D} {O : Orakel D} {passes : Nat} {W W' : RufMaschineW D}
+    {u : Faden} {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
+    {neu : D.Tab ⊕ D.Glob → Nat} (h : SchrittW P O passes ord W u W' σ M'' wahl neu)
+    {c : D.Tab ⊕ D.Glob} (hl : LiestG (mitSpeicher W.g σ) M'' u c)
+    (ho : ordVon ord c = .freigabe) (x : D.Tab ⊕ D.Glob) : (wahl c).sicht x ≤ W'.sicht u x := by
+  have h1 := lesesicht_mem (ord := ord) wahl _ (W.sicht u) c (lesenVon_mem hl) x
+  rw [ho] at h1
+  exact Nat.le_trans (Sicht.verein_links _ _ x)
+    (Nat.le_trans h1 (Nat.le_trans (locksicht_ge _ _ _ x) (vor_le_nach h x)))
+
 theorem lsicht_waechst {P : Programm D} {O : Orakel D} {passes : Nat} {W W' : RufMaschineW D}
     {u : Faden} {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
     {neu : D.Tab ⊕ D.Glob → Nat} (h : SchrittW P O passes ord W u W' σ M'' wahl neu)

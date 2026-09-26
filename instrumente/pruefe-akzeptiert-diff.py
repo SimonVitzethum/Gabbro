@@ -395,7 +395,14 @@ def lean_lauf(sondentext, exporttext, frist):
                   if re.search(r"\.lean:\d+:\d+: error", l)]
         # A verdict needs EVIDENCE: either the wrapper's exit line, or a real
         # process exit code from `lake env lean`. Anything else is not a verdict.
-        wrapper = "== lean exit code: 0" in p.stdout
+        # **Two wrappers, two exit lines** (Opus agent B, 2026-09-26): the fisch
+        # lane wrapper prints `== lean exit code: 0`, the local one that
+        # `gabbro-muse/bin/werkzeug` writes prints `== 0 error(s) in the COMPLETE
+        # output`. With only the first known, every local run read NOT MEASURED
+        # for all 21 programs and the self-test failed at 104 -- the apparatus,
+        # not the tree. Both lines are evidence; neither is guessed.
+        wrapper = ("== lean exit code: 0" in p.stdout
+                   or "== 0 error(s) in the COMPLETE output" in p.stdout)
         direkt = (os.path.basename(ruf[0]) == "lake")
         if not fehler and not wrapper and not direkt:
             return None, [], "NICHT GEMESSEN: no verdict line\n" + p.stdout + p.stderr

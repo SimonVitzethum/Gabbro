@@ -793,7 +793,24 @@ one of the 15 programs that export today, and its emitted C is
 | **what pays FIRST, measured on the same run** | the **tagged-union READ side** — `switch (m.marke)`, `m.last.F`, `T x = m.last.F;` — which is what actually holds `120`, `121` and `34`, the three exporting programs that fail (d) on something other than `expr:neg`. All three carry the aggregate rows too, so the read side is necessary and the aggregate side is not sufficient; but the read side is the binding one, and `gcorr_onTag` is already PROVED and merely uninhabitable (`ValCorr` has no case for a tagged union) |
 | **what would close it** | `CTy`/`CVal` gain an aggregate arm, the memory of `CSpeicher.lean` stores it (or `RecLay` + `CX.fld` carry it as the `nf` field stores and loads it really is — the machinery exists), `CFormen*`'s return and bind lemmas gain their arm, `korrOk` gains one arm per destination with a planted defect per arm, and the four `KNOWN_UNCOVERED` rows dated 2026-09-15 in `pruefe-cformen.py` move to state (i). **And the warrant is then a re-measured sweep, not this row** |
 
-## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17)
+## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25)
+
+**Narrowed (Opus agent B, 2026-09-26, SATZKARTE §49).** The emitter lowers `accumulates X per cpu N`
+to `static _Atomic T X_zellen[N]` with relaxed loads and stores, so in the model a per-core
+accumulator IS a relaxed atomic global, and the weak machine W (`Speichermodell/`) says what the
+cells do: writes from any number of threads are coherent per location (`schrittW_kohaerent`).
+Under that reading the Rust pool rule with its per-core disjunct IS the Lean one
+(`poolSicherRust_iff`: "per-core" becomes "atomic" in `PoolSicher`), and a pool whose instances
+all WRITE one relaxed atomic is accepted by the checker Bool (`proKern_schreiben_akzeptiert`) and
+covered by `gabbro_ziel` including the weak-memory leg `schwach`. What stays open is the READ half,
+and it is not per-core specific: every `accumulates` update loads its own cell before it stores,
+and the fold reads every cell -- a read of a carrier other threads write. The Lean footprint
+component refuses that (`proKern_lesen_abgelehnt`), the Rust `N300`/`N301`/`N304` exempt it ("one
+cell per core -- nothing shared"). That read is OFFEN O25 (a rely for unguarded atomic reads);
+modelling "each thread its own cell" would additionally need a core per thread in G (pinning,
+O19). The exporter still refuses `accumulates` (`LG001`), so no per-core unit reaches (a) either
+way. The record below is kept as written.
+
 
 `fusswache2.rs::per_core` exempts `accumulates … per cpu` carriers
 ("one surface name denotes N distinct carriers", same rationale as
@@ -956,3 +973,18 @@ open:
 | **max-bound over-approximation** | `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
 | **what would close it** | the lowering lane (representation, limit, literals) with a Lean statement tying the emitted buffer to `BString` |
 
+## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B)
+
+Since 2026-09-26 the goal theorem is proved over the weak machine W (`Speichermodell/`,
+SATZKARTE §49): the leg `schwach` of `Ziel` says that on an accepted program W takes only G's
+steps, for every assignment of memory orders, and `gabbro_ziel_schwach` gives every leg at every
+machine W reaches. That is the DRF theorem, and it holds BECAUSE the footprint component `fuss`
+demands that every carrier a thread's graph reads is thread-local or lock-guarded -- `atomic` or
+not. So:
+
+| | |
+|---|---|
+| **what is not covered** | a program in which one start WRITES an atomic (a flag, a counter, a per-core cell) and another start READS it without a lock: message passing through `publishes`/`awaits`, a spin on a flag, a statistics counter read by a monitor thread. `fuss` refuses it (`fuss_n1_abgelehnt`); the Rust checker accepts it (the atomic is exempt from `H013`/`N300`/`N301`); the exporter refuses every `atomic` item (`LG001`). W's non-SC outcomes (`mp_rlx_erlaubt`, `sb_erlaubt`, `w_nicht_sc`) occur only on such programs, so no accepted program shows them and no theorem here speaks about them |
+| **why it is not a soundness gap** | the Lean Bool is STRICTER than the Rust checker here: a program it refuses reaches no premise (a) of `GabbroZiel`. What is missing is coverage, not correctness |
+| **what would close it** | a RELY for atomic reads in the user's sequential semantics: `execEndH` (SperreSem.lean) answers a read of a shared unguarded atomic with an ARBITRARY value of its type (a havoc at the read, as `Umwelt` does at lock moves), `fuss` exempts atomic carriers from locality, and the replay (`ziel_ort_mehrfaden_ende` and its family) carries the havoc. The user's proof then covers every value W can return -- relaxed and non-SC included -- and `schwach` is no longer needed for those carriers; coherence (`schrittW_kohaerent`) and release/acquire (`schrittW_erwerb`) are already facts of W for every program. Payload hand-off (`publishes { p }`, P3) needs more: the payload read is covered only through the acquire's view, i.e. a rely conditioned on `awaits` |
+| **who guards it today** | the Rust checker alone (atomics exempt from the race rules), the emitter's explicit orders (lane 152), and `V001`-`V005` for payload pairing |
