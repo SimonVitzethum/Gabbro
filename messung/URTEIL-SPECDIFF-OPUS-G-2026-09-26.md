@@ -181,3 +181,14 @@ all rules of G, a non-degenerate witness and a real counter-run. It is **not** a
 checker enforces on the user's program — it is a theorem the user can instantiate, and nobody
 instantiates it for a real program yet. The Spec diff now says exactly that. L24 is closed only
 through the lock legs; L50/L52 are closed at call-log granularity for any `Φ` a program passes.
+
+## 7. After the verdict: F7 repaired, second merge (2026-09-26)
+
+* **F7 fixed in `624abc87`** by repair (b): the `breaking kette_ruht` block of
+  `probe-absenkung-bricht.gab` writes `b.slots[s].benutzt`, and this unit alone adds
+  `writes b.slots` to the shared signature. No other probe changed.
+* Master `fc2de65a` (Opus lane O25b) merged in `36285f38`: G's SATZKARTE section renumbered 55 → 56.
+* Measured after that merge: `./lean-bau` exit 0, 0 error lines, 347 jobs; `./cargo-pruef` 1401
+  passed, 0 failed, 1 ignored; `./emission-pruef` exit 0, ALL PASS (42 differential units,
+  310 of 310 files compile, 2 inverse probes). The messung ratchet holds again, and no MARKE
+  counter was edited. ASan (stage 6b) did not run on this machine; it runs on fisch.
