@@ -332,6 +332,7 @@ import Grammatik.Speichermodell.AtomarSem
 import Grammatik.Speichermodell.SperreSemA
 import Grammatik.Speichermodell.AtomarRec
 import Grammatik.Speichermodell.AtomarReplay
+import Grammatik.Speichermodell.AtomarAkteur
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC

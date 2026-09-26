@@ -368,25 +368,26 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
-    (X : List (D.Tab ⊕ D.Glob))
+    (Λr : List (Res D)) (X : List (D.Tab ⊕ D.Glob))
     (hX : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       ∀ c ∈ X, c ∈ stabilS P S lok z.kopf.f Λ ∨ Tg c)
-    (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ ++ X) σ (W.lese Λ X) →
+    (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ ++ X) σ (W.lese Λr X) →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       ∃ σ' : World D, σ.spur.length ≤ σ'.spur.length ∧
         GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
-          (U : Umwelt D) (A : AUmwelt D) (σ0 : World D), GleichRS O O' → leseA A σ0 Λ X = σ →
+          (U : Umwelt D) (A : AUmwelt D) (σ0 : World D), GleichRS O O' →
+          GleichAuf (stabilS P S lok z.kopf.f Λ) σ0 W → leseA A σ0 Λr X = σ →
           (semHA S O' U A passes R r σ0 ρ).folgt (semHA S O' U A passes R r' σ' ρ')) :
     FadenSA P O passes Q S lok Tg
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' := by
   refine fadenSA_lokalQ hF hr ρ' r' spur' fun σ HX hfx hkx hg hok => ?_
-  obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ X W.speicher
-  have hgX := mischT_gleichAuf hg (hX hok) Λ Λ
+  obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λr X W.speicher
+  have hgX := mischT_gleichAuf hg (hX hok) Λr Λr
   obtain ⟨σ', hl, hg', hok', hsem⟩ := hstep _ hgX hok
-  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub, Nat.le_trans (lese_laenge σ Λ X) hl, hg', hok',
-    fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ (hrec A hPX hHA)⟩
+  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub, Nat.le_trans (lese_laenge σ Λr X) hl, hg', hok',
+    fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ hg (hrec A hPX hHA)⟩
 
 /-- Memory moved outside the head's stable carriers keeps the replay. -/
 theorem fadenSA_speicher {z : RufFadenG D} {W W' : World D}
@@ -631,8 +632,10 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
     (hrc : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       rc.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f))
     (hlogik : ∀ (O' : Orakel D) (U : Umwelt D) (A : AUmwelt D) R (σ0 κ : World D) (e : Logik D),
+      GleichAuf (stabilS P S lok z.kopf.f Λ ++ os) κ (W.lese Λ os) →
       leseA A σ0 Λ os = κ → R g κ (rhoF κ) = .logik e → semHA S O' U A passes R r σ0 ρ = .logik e)
     (hweiter : ∀ (O' : Orakel D) (U : Umwelt D) (A : AUmwelt D) R (σ0 κ : World D),
+      GleichAuf (stabilS P S lok z.kopf.f Λ ++ os) κ (W.lese Λ os) →
       leseA A σ0 Λ os = κ →
       FortSA passes S ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩ g
         (semHA S O' U A passes R r σ0 ρ) R O' U A (R g κ (rhoF κ))) :
@@ -664,7 +667,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
   have hctr := hSt hok'
   have hreqκ := pushSA_req hO hRL hQ hS hsp hK hreq hf hv hfa hra hqa hfu hiu hfx' r heq' g
     (mischT Tg os (σ.lese Λ os) W.speicher) (rhoF (mischT Tg os (σ.lese Λ os) W.speicher))
-    (fun O' U A R e hPX hHA h => hlogik O' U A R σ _ e (hrec A hPX hHA) h)
+    (fun O' U A R e hPX hHA h => hlogik O' U A R σ _ e hgκ (hrec A hPX hHA) h)
   rw [hρk] at hreqκ
   have hctrκ : GleichAuf ((P.requires g).orte ++ (P.ensures g).orte)
       (mischT Tg os (σ.lese Λ os) W.speicher) (W.lese Λ os) :=
@@ -684,7 +687,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
       hreqκ, ⟨hctrκ, hsubc, gleichAuf_stabil_iff hΛc
         (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hgκ)⟩, ?_⟩, hSt'⟩, hreq0⟩
   intro R O' U A hR hA hU hX hHA hQ
-  have hw := hweiter O' U A R σ _ (hrec A hX hHA)
+  have hw := hweiter O' U A R σ _ hgκ (hrec A hX hHA)
   rw [hρk] at hw
   exact fortSA_mono (F := ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩)
     (heq' R O' U A hR hA hU hX hHA hQ) hw
