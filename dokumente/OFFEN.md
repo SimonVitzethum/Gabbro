@@ -1167,7 +1167,7 @@ CLAIMED; the cargo test `zertifikate` keeps the register complete.
 | **model decisions it needs** | an `Endblock` form for a tail `let` of a call and for `return` under `locks` (110, 125); records, wrapping integers, named assumptions outside `forever`/`retires`, devices, atomics (Opus B), pointers into records |
 | **what would close it** | per-shape lanes, each measured by the register's CERTIFIED count |
 
-## O28 — Linking is proved in the model and checked at the source level; four pieces stay open (recorded 2026-09-26, Opus agent E)
+## O28 — Linking is proved in the model and checked at the source level; the Rust race residue closed by Opus agent F, the rest stays open (recorded 2026-09-26, Opus agents E and F)
 
 `GabbroZielVerbund` (`Zielsatz/Spec.lean`, proved as `gabbro_ziel_verbund`, SATZKARTE §54)
 covers a program linked from two units over ONE link declaration, each accepted alone, under
@@ -1177,9 +1177,9 @@ bodies. Report: `messung/OPUS-E-LINKEN.md`.
 | | |
 |---|---|
 | **review** | the Spec diff (a second statement, purely additive) has had no independent review round yet |
-| **Rust vs Lean, the race legs** | Lean decides thread-locality, write separation and pool safety over the COMPOSED hulls (`schnittstelleB`); Rust refuses a pair in which BOTH units start threads (`N503`) instead of porting that check. **That is not enough (review E, F1):** with threads in ONE unit, a read hidden behind an imported head is not in the importer's footprint, so a racing pair (the Rust twin of `vm_abgelehnt`) links with 0 refusals -- a green `gabbro link` does not establish `SchnittstelleSpec`. Fix: port `lok`/`renn` over the heads' `effects` reads, or refuse such a pair |
-| **contracts as text** | Rust compares `requires`/`ensures`/`effects` as normalised text; Lean has ONE contract per function (`Verbindbar`), so a weaker-but-sound import is refused on both sides (no refinement of contracts across the boundary) |
-| **units and the build** | a unit is one file (plus `--with` preambles); `gabbro build` does not call the link check; no certificate for a PAIR (the exporter exports one `Einheit`) |
+| **Rust vs Lean, the race legs** | **CLOSED by Opus agent F (2026-09-26, `messung/OPUS-F-VERBUND-RENNEN.md`).** Review E F1 (a read behind an imported head, raced by another thread of the importer, linked green) is closed twice: an imported head's declared READS join the importer's footprint (`fusswache2.rs`; probe 1246 now falls in `gabbro check --with` with the one-file `N291` + `N301`), and `gabbro link` checks the LINKED program whole (`verbund::verbinde_alle`: the units composed, each body from its owner, every start of every unit; the race deciders of `lok`/`renn`/`einzeln` run over the linked call graphs = the composed hulls under `KeinRueckruf`). Threads on both sides are judged, not refused (probe 1247 falls with `N291` + `N301`, twin `faeden-beide-*` links). What remains is the one-unit caveat: the Rust checker is not the Lean Bool |
+| **contracts as text** | **Trees since Opus F:** `requires`/`ensures`/`effects`/signatures compared as normal-form trees (positions and redundant parentheses dropped, conjuncts order-free). Still no semantic equivalence and no refinement: an equivalent contract written as a different tree, and a weaker-but-sound import, are refused (Lean has ONE contract per function, `Verbindbar`) |
+| **units and the build** | **Since Opus F** `gabbro build` runs the link over every manifest of two or more units (a unit may be several files) and `gabbro build a.gab b.gab` runs it over one-file units (nothing compiled); a module split over two units is refused (`N516`). Open: no certificate for a linked program (the exporter exports one `Einheit`) |
 | **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |
 | **not claimed at all** | different hardware assumptions, callbacks through an import (`KeinRueckruf`), dynamic loading, ABI-level linking of foreign C |
 

@@ -1,0 +1,35 @@
+-- allein-erwartet: N291 N301
+-- link-erwartet: N291 N301
+-- **Link probe 1246 (Opus agent F): review E, F1 -- a read behind an imported head races.**
+-- `t1` calls the library's `lies`, which reads `konto`; `t2` writes `konto` on another
+-- thread; nothing guards it. The same two modules in ONE file fall with `N291` + `N301`.
+-- Until Opus F the importer's footprint took an imported head's WRITES but not its READS,
+-- so `gabbro check --with bib.gabi` passed with 0 errors and `gabbro link` with 0
+-- refusals -- the Rust twin of the Lean refusal witness `vm_abgelehnt`
+-- (`Zielsatz/VerbundZeuge.lean`). Now the head's declared reads join the footprint: the
+-- importer ALONE falls with the one-file codes (`N291` at the call, `N301` at the start),
+-- and so the link does too. Positive twin: `rennen-bewacht-*.gab`.
+module app {
+
+use bib::lies;
+use bib::konto;
+
+impl fn t1()
+    effects { reads konto.slots }
+    costs   <= 64 ops
+{
+    let x = lies();
+    return;
+}
+
+impl fn t2()
+    effects { writes konto.slots }
+    costs   <= 64 ops
+{
+    konto.slots[0].stand = 1;
+    return;
+}
+
+concurrent { t1, t2 };
+
+}

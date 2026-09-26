@@ -1,0 +1,18 @@
+-- **Link probe, positive twin of 1247 (Opus agent F).** The app starts two threads of its
+-- own that call the library's pure `norm`; the library runs its own pool. Nothing is shared
+-- unguarded, so the linked program checks clean and the pair links.
+module app {
+
+use bib::norm;
+
+impl fn rechne()
+    effects { pure }
+    costs   <= 64 ops
+{
+    let y = norm(3);
+    return;
+}
+
+concurrent { rechne, rechne };
+
+}

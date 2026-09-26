@@ -1,0 +1,31 @@
+-- **Link probe 1247 (Opus agent F): threads in BOTH units, and they race.** The library
+-- starts `schreiber`, which writes the unguarded table `konto`, beside an idle `ruhig`; it
+-- exports `lies`, which reads `konto`. Alone the library is clean: its one writer thread
+-- races nobody (`lies` runs on no thread of its own). The app is
+-- `1247-rennen-verbund-app.gab`.
+module bib {
+
+pub type Stand = u32 in 0 .. 100;
+
+pub table konto count 2 { slot { stand : Stand, } }
+
+pub impl fn lies() -> Stand
+    effects { reads konto.slots }
+    costs   <= 16 ops
+{
+    return konto.slots[0].stand;
+}
+
+impl fn schreiber()
+    effects { writes konto.slots }
+    costs   <= 16 ops
+{
+    konto.slots[0].stand = 1;
+    return;
+}
+
+impl fn ruhig() effects { pure } costs <= 4 ops { return; }
+
+concurrent { schreiber, ruhig };
+
+}

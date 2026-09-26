@@ -1044,48 +1044,55 @@ pub const NAMEN: &[Satz] = &[
     },
     Satz {
         name: "namen.verbund",
-        kennungen: &["N501", "N502", "N503", "N504", "N505"],
-        aussage: "Two separately compiled units that `gabbro link` accepts are checked over ONE \
-                  link declaration: every `extern fn` head one unit relies on names a `pub fn` \
-                  of the other unit with the same parameters, result and error channel, and \
-                  every exported declaration both units carry is the same text (`N501`); the \
-                  same `requires` and `ensures` conjuncts (`N502`); the same `effects` -- the \
-                  footprint summary the importer's race and footprint checks read -- and a \
-                  hull that does not call back into the importer, with threads started in at \
-                  most one of the two units (`N503`); a `costs` bound the exporter keeps \
-                  (`N504`); and every `assume`, `axiom`, `device`, `profile` and foreign \
-                  `extern fn` both units name is stated identically -- the SAME hardware \
-                  assumptions (`N505`). With each unit accepted alone, these are the Rust \
-                  side of the premises of `GabbroZielVerbund` (`Verbindbar`, the heads of \
-                  `SchnittstelleSpec`, `E₂.Q = E₁.Q`).",
-        vorbehalt: "**Text, not meaning.** Contracts, effects and declarations are compared \
-                    as whitespace-normalised TEXT (conjuncts order-free): an equivalent \
-                    contract written differently is refused, and an importer relying on LESS \
-                    than the exporter promises is refused too (the Lean statement has ONE \
-                    contract per function). **Threads on both sides are refused, not \
-                    checked**: the composed-hull check (`SchnittstelleSpec.lok`/`.renn`/\
-                    `.einzeln`) is decided in Lean and not ported here. **Nor is a pair whose \
-                    threads live in one unit fully covered** (review E, F1): the importer's \
-                    own passes read the imported heads' effect WRITES, not their READS, so a \
-                    read behind an imported head that another thread of the importer races \
-                    links without a refusal (OFFEN O28). A unit is ONE \
-                    file (plus `--with` preambles in front of the second unit); `gabbro \
-                    build` does not call this check yet. The C link step (symbol \
-                    resolution, calling convention, layout) is not looked at.",
+        kennungen: &["N501", "N502", "N503", "N504", "N505", "N516"],
+        aussage: "Separately compiled units that `gabbro link` (or `gabbro build` over two or \
+                  more units) accepts are checked over ONE link declaration: every `extern fn` \
+                  head one unit relies on names a `pub fn` of another unit with the same \
+                  parameters, result and error channel, and every exported declaration two \
+                  units carry is the same text (`N501`); the same `requires` and `ensures` \
+                  conjuncts, compared as TREES (`N502`); the same `effects` and a hull that \
+                  does not call back into the importer (`N503`); a `costs` bound the exporter \
+                  keeps (`N504`); every `assume`, `axiom`, `device`, `profile` and foreign \
+                  `extern fn` two units name stated identically -- the SAME hardware \
+                  assumptions (`N505`). And when no head is stale, the LINKED program -- the \
+                  units composed as one, each body from its owner, every start of every unit \
+                  -- passes the whole checker; its refusals carry their one-file codes \
+                  (`N291`/`N301` for a read behind a head that another unit's thread races), \
+                  and a module two units both fill, which leaves no program to compose, is \
+                  `N516`. With each unit accepted alone, these are the Rust side of the \
+                  premises of `GabbroZielVerbund` (`Verbindbar`, `SchnittstelleSpec` with \
+                  `lok`/`renn`/`einzeln` decided over the linked call graphs, `E₂.Q = E₁.Q`).",
+        vorbehalt: "**Trees, not meaning.** Contracts are compared as normal-form trees \
+                    (positions and redundant parentheses dropped, conjuncts order-free): a \
+                    contract rewritten into a different but equivalent tree (`x < 5` for \
+                    `5 > x`) is refused, and an importer relying on LESS than the exporter \
+                    promises is refused too (the Lean statement has ONE contract per \
+                    function). **The linked program is checked by EVERY pass**, which is \
+                    more than the three components the Lean link check re-decides: a \
+                    whole-program refusal of another pass is reported as the link's, not \
+                    filtered. A manifest unit may be several files; a module belongs to ONE \
+                    unit. The C link step (symbol resolution, calling convention, layout) is \
+                    not looked at, and no certificate is written for a linked program.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "messung/proben/verbund/ (probe numbers 1241-1245 of the gift range): \
+        gemessen_an: "messung/proben/verbund/ (probe numbers 1241-1248 of the gift range): \
                       the positive pair `tabelle-bib.gab` + `tabelle-app.gab` links clean \
                       against the interface `gabbro abi` writes; the stale interfaces \
                       `1241-link-signatur.gabi` (`N501`), `1242-link-vertrag.gabi` (`N502`: \
                       the head promises more than the body ensures), \
                       `1243-link-wirkungen.gabi` (`N503`), `1244-link-kosten.gabi` (`N504`) \
-                      and the app `1245-link-annahme-app.gab` (`N505`: the clock assumption \
-                      worded differently) -- each unit alone passes `gabbro check`, the link \
-                      refuses with exactly its code (`crates/gabbro-cli/tests/verbund.rs`); \
-                      snippet tests in `verbund.rs` (a callback through an import and \
-                      threads on both sides `N503`, a body in both units, an unexported \
-                      import and a shared table that differs `N501`).",
-        fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde; \
+                      and the app `1245-link-annahme-app.gab` (`N505`) -- each unit alone \
+                      passes `gabbro check`, the link refuses with exactly its code; \
+                      `1246-kopf-liest` (review E F1: the importer ALONE now falls with \
+                      `N291`+`N301`, as the one-file program does), `1247-rennen-verbund` \
+                      (threads in both units race: each clean alone, the linked program \
+                      falls with `N291`+`N301`), `1248-modul-doppelt` (`N516`); the positive \
+                      twins `rennen-bewacht-*` (the read behind the head under its lock) and \
+                      `faeden-beide-*` (threads in both units, nothing shared) link clean \
+                      (`crates/gabbro-cli/tests/verbund.rs`, which also runs `gabbro build \
+                      a.gab b.gab`); snippet tests in `verbund.rs` (callback `N503`, body in \
+                      both units, unexported import, differing table `N501`, differing \
+                      foreign function `N505`, contracts as trees, the composed text).",
+        fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde_alle; \
                      grammatik/Grammatik/Zielsatz/Spec.lean (`Verbindbar`, \
                      `SchnittstelleSpec`, `GabbroZielVerbund`); \
                      grammatik/Grammatik/Zielsatz/Verbund.lean (`gabbro_ziel_verbund`)",
@@ -3778,6 +3785,10 @@ pub const WIRKUNGEN: &[Satz] = &[
                   (`N290`), body reads (`N291`), direct callee contracts at the call site \
                   (`N292`) -- is unwritten, guarded by a signature lock, protected by a \
                   lock invariant, or thread-local (no other started thread writes it). \
+                  A body-less head's declared `effects` reads are its body's reads (Opus F, \
+                  review E F1): they join its footprint and are judged at the call site \
+                  under `N291`, where a carrier some lock protects is left to `H007` at \
+                  the call boundary. \
                   An indirect call (`N293`) is admitted over the same disjunction. A lock \
                   take or a callee take ranks strictly above every lock held by signature \
                   (`N294`, the floor). All five refuse as errors: the corpus stays green \

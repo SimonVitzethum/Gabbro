@@ -4441,6 +4441,18 @@ threads on both sides), `N504` (costs), `N505` (hardware assumptions). Probes
 `messung/proben/verbund/` 1241-1245 (each unit clean alone, the link refuses with exactly its
 code), positive pair `tabelle-bib.gab` + `tabelle-app.gab`; `crates/gabbro-cli/tests/verbund.rs`.
 
+**Note (Opus agent F, 2026-09-26, review E F1, `messung/OPUS-F-VERBUND-RENNEN.md`).** No Lean
+change. The Rust side now decides the three whole-program components of `SchnittstelleSpec`
+instead of refusing around them: `verbund.rs::verbinde_alle` composes the units into the linked
+program (`verbundtext`: each body from its owner, each unit's starts -- the surface of
+`verbinde e E₁ E₂`) and runs the whole checker over it, so `lok`/`renn`/`einzeln` are decided by
+`fusswache2.rs` over the linked call graphs, which under `KeinRueckruf` are the composed hulls
+(`huelle_of_reach`). The blanket `N503` for threads on both sides is gone; `N516` refuses a
+module split over two units. Per unit, an imported head's declared READS join the importer's
+footprint (`fusswache2.rs`, `N291` at the call site, `N301` at the start) -- the Rust twin of
+`vm_abgelehnt` (probe 1246) now falls in `gabbro check --with` already, with the one-file codes.
+Contracts are compared as normal-form trees; `gabbro build` links two or more units.
+
 **NOT claimed:** different hardware assumptions; callbacks through an import; a contract other
 than the exporter's; dynamic loading; foreign C; the C link step (OFFEN O28).
 
