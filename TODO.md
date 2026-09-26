@@ -568,6 +568,10 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
 - [ ] **Stage (b) keeps `DRFSC` as a premise** (`CNebenlaeufig.lean`): the C side is still
   SC-by-assumption; W is on G's side. Connecting them needs a per-access C semantics (§2 above).
 - [ ] **Per-architecture fence mappings** (x86-TSO vs ARM/POWER): not started; W is the C11 level.
+- [ ] **`N323` must demand memory orders** (`OFFEN.md` O26, Spec-diff verdict of Opus agent B,
+  F2): an own lock primitive's take must be an acquire and its give a release; today `N323`
+  checks atomicity and hold time only, and `Spec.lean` names the orders as assumption (3) of the
+  reading. Rust lane: tighten `N323`, poison probe (relaxed spinlock), positive probe.
 
 # 3. The goal statement — follow-ups  ⟨D⟩
 

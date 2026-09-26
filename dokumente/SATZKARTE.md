@@ -4268,6 +4268,8 @@ over-approximation). Machine W is G over this memory, with the weak choice at th
 | `SchwachSC` (Spec), the leg `Ziel.schwach` | at every reached machine every step of W over it is a step of G; proved in `ziel_aus` from `schwach_ist_g` |
 | `gabbro_ziel_schwach`, `schwach_erreichbar`, `schwach_gleich_g` | every leg of `Ziel` at every machine W reaches; on an accepted program W and G reach the same G-states |
 | `w_nicht_sc`, `akzeptiert_n1_abgelehnt`, `fuss_n1_abgelehnt` | on the refused noninterference configuration 1 (`konfig` written by `kern`, read by `hauptA`, no lock) W reads the initial `konfig` after the write and stores 0 where G, on the same schedule, stores 3; the footprint component refuses it |
+| `g_schritt_0`, `schwach_nicht_trivial` | (added 2026-09-26 after the Spec-diff verdict, F3) every G step of `hauptA` at that machine stores `3` (inversion over every rule of `RufSchrittG`); hence `¬ SchwachSC` there: the leg is false of some programs, as a theorem |
+| `gabbro_zielF_schwach` | (merge with Opus agent A) the weak leg at every reachable THREAD machine, `ZielF.g.schwach`; W is taken over G's runs, spawn/join are not synchronisation points of W |
 | `schwach_pool_zeuge` | on the accepted F10 pool, three W steps (both instances unfold, thread 0 takes the lock); every leg by `gabbro_ziel_schwach` |
 | `poolSicherRust_iff`, `proKern_schreiben_akzeptiert`, `proKern_lesen_abgelehnt` | O17: with a per-core accumulator read as a relaxed atomic, the Rust `N304` pool rule IS `PoolSicher`; a pool writing one relaxed atomic is accepted (and covered by `schwach`); a start reading an atomic another start writes is refused by `fuss` |
 
@@ -4275,6 +4277,12 @@ over-approximation). Machine W is G over this memory, with the weak choice at th
 emitter lowers every atomic access through an explicit `atomic_*_explicit` call (lane 152) and
 the driver's locks are `pthread_mutex`. `pruefe-akzeptiert-diff.py`: 19 agreements, 0 findings,
 self-test both directions (the instrument now also reads the local `lean-probe`'s exit line).
+
+**Assumptions of the reading** (Spec.lean header, five, repaired after the Spec-diff verdict,
+F1/F2/F5): W over-approximates RC11 at G's step granularity; compiler and hardware implement C11
+atomics; EVERY lock primitive is acquire/release (driver `pthread_mutex`; own primitives under
+`N323`, orders NOT checked, OFFEN O26; foreign ones trusted); carriers are locations; unrecorded
+reads (`Orakel.wirkt`, `regLies`, `sichtbar`) are taken over G's memory.
 
 **What is NOT claimed.** Programs that RELY on an unguarded atomic read across threads (a flag, a
 counter, a per-core cell): `fuss` refuses them, so W's non-SC outcomes occur on no accepted

@@ -1024,3 +1024,17 @@ not. So:
 | **why it is not a soundness gap** | the Lean Bool is STRICTER than the Rust checker here: a program it refuses reaches no premise (a) of `GabbroZiel`. What is missing is coverage, not correctness |
 | **what would close it** | a RELY for atomic reads in the user's sequential semantics: `execEndH` (SperreSem.lean) answers a read of a shared unguarded atomic with an ARBITRARY value of its type (a havoc at the read, as `Umwelt` does at lock moves), `fuss` exempts atomic carriers from locality, and the replay (`ziel_ort_mehrfaden_ende` and its family) carries the havoc. The user's proof then covers every value W can return -- relaxed and non-SC included -- and `schwach` is no longer needed for those carriers; coherence (`schrittW_kohaerent`) and release/acquire (`schrittW_erwerb`) are already facts of W for every program. Payload hand-off (`publishes { p }`, P3) needs more: the payload read is covered only through the acquire's view, i.e. a rely conditioned on `awaits` |
 | **who guards it today** | the Rust checker alone (atomics exempt from the race rules), the emitter's explicit orders (lane 152), and `V001`-`V005` for payload pairing |
+
+## O26 — An own lock primitive (`N323`) is not checked for memory orders, and the weak-memory leg assumes every lock primitive is acquire/release (recorded 2026-09-26, Spec-diff verdict of Opus agent B, F2)
+
+The DRF argument of the leg `schwach` (SATZKARTE §50) transfers to the C only if every
+`<L>_nimm` is an acquire and every `<L>_gib` a release. `Spec.lean` names this as assumption (3)
+of the reading, for EVERY lock primitive:
+
+| | |
+|---|---|
+| **driver-defined locks** | `pthread_mutex_lock`/`_unlock` in the generated driver (`treiber.rs`): acquire/release by POSIX. Holds |
+| **own primitives** | a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323` (`namen.rs:147`, `LockGiltAn`). `N323` checks atomicity, that the body reads an atomic, and hold time -- NOT the memory orders. A spinlock with relaxed loads and stores passes `N323` and does not synchronise like a mutex in C11. **Assumed, not checked** |
+| **foreign primitives** | `extern fn` / `asm` (trust base, `N042`). **Assumed** |
+| **what would close it** | `N323` demands `acquire` (or `acq_rel`/`seq`) on the atomic access that takes the lock and `release` (or `acq_rel`/`seq`) on the one that gives it, with a poison probe (a relaxed spinlock refused) and a positive probe (the runtime's ticket lock, `beispiele`); foreign primitives stay a named assumption |
+| **who guards it today** | nothing mechanical; the header of `Spec.lean` names it |

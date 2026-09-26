@@ -28,9 +28,20 @@
   (`OrteInvG`, `schritt_ev`: every read event is a footprint carrier of the acting function);
   race freedom (`RennfreiBis`) is stated over the same records. A step that depended on a
   carrier without recording it would already escape the race leg of G. So "the thread sees an
-  old value exactly where it reads" is the reading G already makes, not a new assumption; the
-  answers of foreign code (`Orakel.wirkt`, `regLies`, `sichtbar`) stay the oracle's, over the
-  presented world, as in G.
+  old value exactly where it reads" is the reading G already makes for the recorded reads.
+  NOT for the unrecorded ones (corrected after the Spec-diff verdict of 2026-09-26, F1): the
+  answers of foreign code and axioms (`Orakel.wirkt`), register reads (`O.regLies`) and the
+  visibility of `awaits` (`O.sichtbar`) read memory without recording it, and at every carrier
+  a step does not record W presents G's memory -- the last executed write. So W makes these
+  reads sequentially consistent. That the foreign side, the device and the `awaits` hand-off
+  see that memory is a NAMED ASSUMPTION of the reading (assumption (5) in Zielsatz/Spec.lean),
+  the part of the old "the hardware is DRF-SC" the DRF theorem does not discharge.
+
+  GRANULARITY. A step of W is one coarse step of G: nothing interleaves inside it, every read
+  of the step is checked against the pre-step view, and a release message carries the view
+  before the step's own writes. The last two make W weaker than C11 (safe); the first is the
+  reading "G is the meaning of the C". "W over-approximates RC11" holds at G's step
+  granularity, jointly with that reading, not on its own.
 
   PROVED HERE: `w_aus_g` -- every machine G reaches is the G-part of a machine W reaches (W
   admits every SC behaviour: always write above everything and read the newest). The other

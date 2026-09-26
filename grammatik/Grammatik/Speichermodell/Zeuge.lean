@@ -9,13 +9,16 @@
     local nor guarded -- the footprint component). On it machine W does what G cannot on the
     same schedule: after `kern`'s write, `hauptA` reads the INITIAL message of `konfig` (its
     view is still empty) and writes `0`, where G -- `kern`, then `hauptA` -- writes `3`. So
-    the leg `schwach` is not true of every program: it needs the checker.
+    the leg `schwach` is not true of every program: it needs the checker. As a THEOREM:
+    `schwach_nicht_trivial` (`¬ SchwachSC` at that machine), via `g_schritt_0` -- every G
+    step of that thread there stores `3` (inversion over the rules of `RufSchrittG`).
   * `schwach_pool_zeuge` -- POSITIVE. On the pool unit of fix lane F10 (accepted by the
     concrete checker, two threads running one routine), a run of machine W with three steps
     (both instances unfold, thread 0 takes the lock) reaches a machine whose G-part G
     reaches, at which every leg of `Ziel` holds -- by `gabbro_ziel_schwach`, the goal over
     the weak machine, not by `gabbro_ziel`.
 -/
+import Lean
 import Grammatik.Nichtinterferenz.Zeuge
 import Grammatik.Zielsatz.PoolZeuge
 import Grammatik.Zielsatz.Schwach
@@ -128,6 +131,73 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
     rw [e]; rfl
   · rfl
 
+open Lean Elab Tactic Meta in
+/-- Case-analysis helper: find the hypothesis `X = rhs` whose left side is the left side of
+    `hR` (after `cases` on a step, the constructor's `hhead`, whose name is inaccessible),
+    and add `hk : rhs_of_hR = rhs`. -/
+elab "kopf_gleich " hR:term : tactic => withMainContext do
+  let hRe ← Term.elabTerm hR none
+  let some (_, lhs, _) := (← instantiateMVars (← inferType hRe)).eq? | throwError "hR no eq"
+  for d in (← getLCtx) do
+    if d.isImplementationDetail then continue
+    let ty ← instantiateMVars d.type
+    if let some (_, a, _) := ty.eq? then
+      if a == lhs then
+        let pr ← mkEqTrans (← mkEqSymm hRe) d.toExpr
+        let g ← getMainGoal
+        let g ← g.assert `hk (← inferType pr) pr
+        let (_, g) ← g.intro1P
+        replaceMainGoal [g]
+        return
+  throwError "no head hypothesis"
+
+/-- Whether a frame residue's head is a leaf at the end block. -/
+def kopfBlatt {D : Deklaration} {V : Vertrag D} :
+    (Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) → Bool
+  | ⟨_, _, _, _, .ende (.cons s _)⟩ => s.istBlatt
+  | _ => false
+
+/-- Thread 0 (`hauptA`) at `r1M1`: `tabA[0] = konfig; return` at the start of its body. -/
+theorem kopf0 : ((r1M1 sp0).faeden 0).kopf.rest =
+    ⟨false, [], [], .nil, .ende (.cons sA (.ret .keine List.Perm.nil))⟩ := rfl
+
+/-- **Determinism of G at the point `w_nicht_sc` uses**: EVERY G step of thread 0 from
+    `r1M1` (after `kern` wrote `konfig := 3`) writes `tabA[0] = 3`. Inversion over all rules
+    of `RufSchrittG`: every rule but `blatt`, `endeEntf`, `ruf`, `rufCallInd` needs a
+    different head residue; `ruf`/`rufCallInd` need a call at the head (not a leaf), and
+    `endeEntf` an unfoldable compound; `blatt` runs `execStmt` on the head statement, a
+    function of the thread's world. -/
+theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0 M') :
+    (M'.speicher.slots NTab.tabA 0 ()).n = 3 := by
+  cases h
+  all_goals (kopf_gleich kopf0)
+  all_goals (try (cases hk; done))
+  case ruf => exact Bool.noConfusion (congrArg kopfBlatt hk)
+  case rufCallInd => exact Bool.noConfusion (congrArg kopfBlatt hk)
+  case endeEntf => cases hk; cases (by assumption : GEntfaltbar sA = true)
+  case blatt =>
+    cases hk
+    rename_i σ' _ _ _ ρ' _ _ hstep _
+    have hx : execStmt nO 0 keinRuf sA ((r1M1 sp0).weltVon 0) Env.nil =
+        Ausgang.ok (blattWelt sA ((r1M1 sp0).weltVon 0) .nil) .nil := rfl
+    have he := hx.symm.trans hstep
+    cases he
+    rfl
+
+
+/-- **THE LEG `schwach` IS NOT TRUE OF EVERY PROGRAM** (review F3 of the Spec-diff verdict,
+    2026-09-26: until now argued, not proved). On the REFUSED configuration 1, at the machine
+    `r1M1` G reaches, the weak machine takes a step that is no step of G: `w_nicht_sc` stores
+    `0`, and every G step of the same thread stores `3` (`g_schritt_0`). So `SchwachSC` is a
+    contentful leg: it needs the checker. -/
+theorem schwach_nicht_trivial :
+    ¬ Zielsatz.SchwachSC nP nO 0 (RufStartG nP sp0 init1) (r1M1 sp0) := by
+  intro hS
+  obtain ⟨W1, W2, hW1, hs, hg1, _, h0, _⟩ := w_nicht_sc (fun _ => Ordnung.entspannt)
+  have h3 := g_schritt_0 (hS _ W1 W2 0 hW1 hg1 hs)
+  omega
+
+
 /-! ## 2. The goal over the weak machine on an accepted pool -/
 
 open Zielsatz
@@ -213,6 +283,8 @@ end SchwachZeuge
 #print axioms Gabbro.Grammatik.SchwachZeuge.proKern_lesen_abgelehnt
 #print axioms Gabbro.Grammatik.SchwachZeuge.akzeptiert_n1_abgelehnt
 #print axioms Gabbro.Grammatik.SchwachZeuge.w_nicht_sc
+#print axioms Gabbro.Grammatik.SchwachZeuge.g_schritt_0
+#print axioms Gabbro.Grammatik.SchwachZeuge.schwach_nicht_trivial
 #print axioms Gabbro.Grammatik.SchwachZeuge.schwach_pool_zeuge
 
 end Gabbro.Grammatik

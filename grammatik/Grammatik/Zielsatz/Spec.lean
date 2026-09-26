@@ -95,14 +95,16 @@
   * THE GAP. G is sequentially consistent, and the header read "the hardware is DRF-SC" as an
     assumption of the reading; `atomic` globals were "ordered by A10" and excluded from
     `rennfrei`. The emitted C is a C11 program with relaxed, release/acquire and seq_cst
-    atomics and `pthread_mutex` locks; nothing proved that its weak behaviours are G's.
+    atomics and `pthread_mutex` locks (or own/foreign lock primitives, see assumption (3) of
+    the reading below); nothing proved that its weak behaviours are G's.
   * THE MODEL (Speichermodell/Sicht.lean, MaschineW.lean). Machine W is machine G over a WEAK
     memory: a history of messages per carrier (plain and atomic), a view per thread and per
     lock, message views for release writes. A thread's step READS, at every carrier it reads,
     ANY message at or above its view -- not necessarily the newest -- and writes at a fresh
     timestamp above its view. This is the promise-free timestamp machine of RC11 for the
     orders the emitter writes (relaxed; release store / acquire load / acq_rel RMW; `seq_cst`
-    modelled as release/acquire -- an over-approximation, so claims over W hold for the C).
+    modelled as release/acquire -- an over-approximation, so claims over W hold for the C, at
+    G's step granularity and under the five named assumptions of the reading below).
     The weakness is real: on the instruction machine built from the same primitives the
     stale outcome of relaxed message passing and both-zero store buffering are REACHABLE
     (`mp_rlx_erlaubt`, `sb_erlaubt`), the latter not on SC (`sb_sc_verboten`); release/acquire
@@ -112,7 +114,12 @@
     weak machine takes from a weak state over `M` (reached from `RufStartW M0`) is a step of G
     from `M` to the successor's G-part. With it (`gabbro_ziel_schwach`, Zielsatz/Schwach.lean)
     every leg of `Ziel` holds at every machine W reaches: the goal is proved over the weak
-    machine, not only over G.
+    machine, not only over G. SCOPE since the merge with Opus agent A (thread machine): W is
+    taken over G's runs from the start machine; `ZielF.g.schwach` holds at every reachable
+    thread machine `K.m` (`gabbro_zielF_schwach`), but W does NOT model spawn and join
+    (`pthread_create`/`pthread_join`) as synchronisation points. Under DRF by exclusion that
+    costs nothing (a child reading what its parent wrote is refused by `fuss` unless the
+    carrier is guarded), and it is no claim that spawn/join order memory.
   * WHY IT HOLDS (the DRF theorem, Speichermodell/DRF.lean, `schwach_ist_g`): the checker's
     footprint component (`fuss`) already demands that every carrier a thread's graph READS is
     thread-local or lock-guarded -- `atomic` carriers included -- and every access to a guarded
@@ -124,7 +131,9 @@
     closed graphs) and (c) (`GutO`), and W really is weaker than G where the checker refuses:
     on the refused configuration of `w_nicht_sc` (Speichermodell/Zeuge.lean; `konfig` written
     by one start and read by another, no lock) W reads the initial value after the write and
-    stores `0` where G, on the same schedule, stores `3`. W contains G (`w_aus_g`: every run
+    stores `0` where every G step of the same thread stores `3` -- as a theorem,
+    `schwach_nicht_trivial`: `¬ SchwachSC` at that reached machine (via `g_schritt_0`,
+    inversion over the rules of G). W contains G (`w_aus_g`: every run
     of G is a run of W), so the new statement covers every machine the old one did, and more.
     Witness on an accepted program: `schwach_pool_zeuge` (three W steps on the F10 pool,
     every leg of `Ziel` by `gabbro_ziel_schwach`).
@@ -447,18 +456,38 @@
     later machine, and every leg of `Ziel` still holds. Progress is "every stop is named",
     not "every wait ends"; the waiting bound (Lebendigkeit.lean) assumes no such stop inside
     a critical section (`HardwareImAbschnitt`), and is not in `Ziel`.
-  * Not premises, but assumptions of the reading: machine G is the meaning of the C
-    (translation validation, PLAN-UEBERSETZUNGSVALIDIERUNG); the hardware is DRF-SC.
-    -- weak-memory hunk (Opus agent B, 2026-09-26): "the hardware is DRF-SC" is no longer an
-    assumption for accepted programs -- it is the leg `schwach`, proved. What replaces it:
-    the view machine W over-approximates the C11 (RC11) memory model for the orders the
-    emitter writes (`Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
-    release/acquire; a published model, not proved here against an axiomatic C11); the C
-    compiler and the hardware implement C11 atomics and the orders as specified; the lock
-    primitive `L_nimm`/`L_gib` synchronises like a mutex -- an acquire at the take, a release
-    at the give (the generated driver uses `pthread_mutex_lock`/`_unlock`, `treiber.rs`); and
-    carriers are the locations (a table or an atomic array is ONE location of W; the DRF
-    argument holds per element as well, since it only uses the lock and locality facts).
+  * Not premises, but assumptions of the reading: machine G is the meaning of the C at G's
+    step granularity (translation validation, PLAN-UEBERSETZUNGSVALIDIERUNG). Until
+    2026-09-26 a second clause read "the hardware is DRF-SC"; it is WITHDRAWN for accepted
+    programs -- sequential consistency of what a step reads is now the leg `schwach`, proved
+    (weak-memory hunk, Opus agent B; repaired after the Spec-diff verdict of 2026-09-26, F1,
+    F2, F5). What replaces it, FIVE named assumptions of the reading:
+    (1) the view machine W over-approximates the C11 (RC11) memory model for the orders the
+        emitter writes -- AT G's STEP GRANULARITY and jointly with the translation-validation
+        reading above, not on its own: W steps are G's coarse steps, so nothing interleaves
+        inside a step (that is exactly "G is the meaning of the C"), all reads of a step are
+        checked against the pre-step view, and a release message carries the view before the
+        step's own writes (the last two make W weaker than C11, the safe direction).
+        `Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
+        release/acquire; a published model, not proved here against an axiomatic C11;
+    (2) the C compiler and the hardware implement C11 atomics and the orders as specified;
+    (3) EVERY lock primitive `<L>_nimm` is an acquire and every `<L>_gib` a release, whoever
+        implements it: a driver-defined lock (`pthread_mutex_lock`/`_unlock`, `treiber.rs`);
+        an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`,
+        which checks atomicity, that the body reads an atomic, and hold time, but NOT the
+        memory orders (a relaxed spinlock passes `N323` and does not synchronise in C11;
+        follow-up: OFFEN O26, `N323` should demand acquire/acq_rel at the take and release at
+        the give); or a foreign one (`extern fn`/`asm`, trust base, `N042`);
+    (4) carriers are the locations (a table or an atomic array is ONE location of W; the DRF
+        argument holds per element as well, since it only uses the lock and locality facts);
+    (5) what G reads WITHOUT recording it is read over G's memory: the answers of foreign code
+        and axioms (`Orakel.wirkt`, `axiomAntwort`), register reads (`O.regLies`) and the
+        visibility of `awaits` (`O.sichtbar`) are taken over G's memory at every carrier the
+        step does not record (`SchrittW` presents G's memory there; RennfreiVoll.lean lists
+        these reads as unrecorded). That the foreign side, the device and the `awaits`
+        hand-off see that memory -- the last executed write, not some C11-admissible older
+        message -- is ASSUMED, not derived. This is the part of the old "hardware is DRF-SC"
+        that the leg `schwach` does not discharge.
 
   WHAT `Ziel` ADDS OVER `NutzerPflicht` (leg by leg). The user proves SEQUENTIAL per-function
   facts: each body, run alone by `execEndH` against every callee answer meeting the callee's
@@ -625,7 +654,7 @@
   (`mp_rlx_erlaubt`, `sb_erlaubt`) occur on no accepted program and no theorem here speaks
   about them; covering them needs the user's sequential semantics to havoc such a read (a
   rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`); that W is exactly
-  RC11 (it over-approximates it: `seq_cst` is modelled as release/acquire, so no SC-order
+  RC11 (it over-approximates it at G's step granularity: `seq_cst` is modelled as release/acquire, so no SC-order
   fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
   `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
   races; `schwach` covers their values); the publish/await hand-off of an unguarded payload (refused by the checker,

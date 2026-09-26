@@ -211,3 +211,18 @@ Files: `grammatik/Grammatik/Speichermodell/{Sicht,MaschineW,DRF,Zeuge}.lean`,
 `dokumente/OFFEN.md` O17 (narrowed), O25 (new), `TODO.md` §2/§3, `instrumente/pruefe-akzeptiert-diff.py`.
 Numbering note: SATZKARTE §49 collided with Opus agent A's §49 and became §50 at the merge; OFFEN O25 did not collide. Original note: SATZKARTE §49 and OFFEN O25 may collide with Opus agent A's
 additions — renumber on merge.
+
+## 9. After the Spec-diff verdict (2026-09-26, finishing pass)
+
+* F1, F2, F5: the header of `Spec.lean` now names FIVE assumptions of the reading: (1) W ⊇ RC11
+  at G's step granularity, jointly with the translation-validation reading; (2) C11 atomics
+  implemented; (3) EVERY lock primitive is acquire/release -- driver (`pthread_mutex`), own
+  (`N323`, orders not checked: OFFEN O26, TODO item), foreign (trusted); (4) carriers are
+  locations; (5) unrecorded reads (`Orakel.wirkt`, `regLies`, `sichtbar`) are taken over G's
+  memory -- assumed, not derived. The stale "the hardware is DRF-SC" clause is withdrawn in place;
+  `MaschineW.lean`'s "not a new assumption" is corrected.
+* F3: `schwach_nicht_trivial : ¬ SchwachSC … (r1M1 sp0)` is a theorem, via `g_schritt_0`
+  (every G step of thread 0 there stores 3; inversion over every rule of `RufSchrittG`).
+* Merge with master (Opus agent A, lane 259): SATZKARTE §49 → §50; `gabbro_ziel_schwach` now
+  uses `gabbro_ziel_g`; new `gabbro_zielF_schwach` (the leg on the thread machine; spawn/join
+  not modelled as synchronisation in W).
