@@ -23,6 +23,7 @@
   | `einzeln`      | `einzelnPoolB`         | `EinzelnPool P fs ws` (a start declared twice is pool-safe; since F10, before `ws.Nodup`) | same-routine thread pairs in `schreibGetrenntK_of` |
   | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
   | `antworten`    | `antwortenB`           | every answer site of every body is an axiom `-> never` or has a non-empty type (`StelleOk`) | `fortschrittG_aus` (the stop `nieZurueck` is an axiom `-> never` only) |
+  | `masken`       | `maskenB`              | `MaskenDisziplin P fs`: every function a handler's (`P.unterbricht`) call graph reaches takes only `masks irqs` locks | `kernHaltE_aus` (the leg `keinKernHalt`; Opus agent H, 2026-09-26, the Rust `H102`) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no
@@ -39,6 +40,14 @@
   `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
   list as an argument. The call graphs are COMPUTED from it (`reachB`),
   never supplied.
+
+  **Changes of 2026-09-26 (Opus agent H, OFFEN O19):**
+  * `masken` is NEW (`maskenB`): every function the program declares entered by
+    hardware (`Programm.unterbricht`, the exported `entry … via idt`) has a call
+    graph that takes only locks declared `masks irqs` -- the Rust `H102`. It is
+    the premise the leg `keinKernHalt` reads (`kernHaltE_aus`,
+    Zielsatz/Masken.lean). On a program with no handler it is `true`
+    (`maskenB_ohne`), so every unit of before keeps its verdict.
 
   **Changes of 2026-09-22 (fix lane F10, OFFEN O18):**
   * `einzeln` is now `einzelnPoolB` (`EinzelnPool`): a routine declared at
@@ -408,12 +417,25 @@ def stelleB (fs : List D.Fn) : D.Ax ⊕ D.Reg → Bool
 def antwortenB (P : Programm D) (fs : List D.Fn) : Bool :=
   fs.all fun f => (P.rumpf f).ants.all (stelleB fs)
 
+/-- **`H102` over a member list** (Opus agent H, 2026-09-26; before, fix lane F11, over the
+    feature set `maskM`): every function of the call graph of `w` takes only locks declared
+    `masks irqs`. The Rust checker decides the same over the handler's effect hull
+    (`kontexte.rs`, `H102`). -/
+def maskenDisziplinB (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Bool :=
+  fs.all fun f => !(reachB P fs w f) || mE (NurMaskiert D) (P.rumpf f)
+
+/-- **The handler component** (Opus agent H, 2026-09-26, OFFEN O19): every function the program
+    declares entered by hardware (`P.unterbricht`, `entry … via idt`) meets the discipline. On a
+    program with no handler it is `true` (`maskenB_ohne`). -/
+def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
+  fs.all fun w => !(P.unterbricht w) || maskenDisziplinB P fs w
+
 /-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs
+    antwortenB P fs && maskenB P fs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 
@@ -567,6 +589,31 @@ theorem einzelnPoolB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
     · exact Or.inl rfl
     · exact Or.inr ((poolSicherWB_iff hvoll hcs).mpr (h w (mehrfachB_iff.mp hm)))
 
+/-- **The handler component decides its field** (`AkzeptiertSpec.masken`, Opus agent H). -/
+theorem maskenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) : maskenB P fs = true ↔ MaskenDisziplin P fs := by
+  unfold maskenB maskenDisziplinB MaskenDisziplin
+  constructor
+  · intro h w hw f hf
+    have h1 := List.all_eq_true.mp h w (hvoll w)
+    rw [hw] at h1
+    simp only [Bool.not_true, Bool.false_or] at h1
+    have h2 := List.all_eq_true.mp h1 f (hvoll f)
+    rw [hf] at h2
+    simpa using h2
+  · intro h
+    refine List.all_eq_true.mpr fun w _ => ?_
+    cases hw : P.unterbricht w
+    · rfl
+    · refine List.all_eq_true.mpr fun f _ => ?_
+      cases hf : reachB P fs w f
+      · rfl
+      · simpa using h w hw f hf
+
+/-- **No handler, no condition**: on a program that declares no function entered by hardware the
+    handler component is `true` -- the Bool is the conjunction of before. -/
+theorem maskenB_ohne (h : ∀ f, P.unterbricht f = false) : maskenB P fs = true :=
+  List.all_eq_true.mpr fun w _ => by rw [h w]; rfl
+
 /-- **`Akzeptiert` decides exactly `AkzeptiertSpec`** (given complete member
     lists). -/
 theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
@@ -575,16 +622,16 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩
     exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
       (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
-      (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9⟩
+      (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10⟩
   · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
       wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
       (rennB_iff hvoll hcs).mpr h.renn⟩,
-      (antwortenB_iff hvoll).mpr h.antworten⟩
+      (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩
 
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
@@ -840,6 +887,8 @@ end Tafel
 #print axioms Gabbro.Grammatik.schreibGetrenntW_iff
 #print axioms Gabbro.Grammatik.rennB_iff
 #print axioms Gabbro.Grammatik.antwortenB_iff
+#print axioms Gabbro.Grammatik.maskenB_iff
+#print axioms Gabbro.Grammatik.maskenB_ohne
 #print axioms Gabbro.Grammatik.akzeptiert_iff
 #print axioms Gabbro.Grammatik.akzeptiert_pruefer
 #print axioms Gabbro.Grammatik.ruheB_iff

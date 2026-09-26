@@ -41,6 +41,10 @@
                                           and `bereichG_mehrfaden`: every float range
                                           check passes, since the body obligation excludes
                                           `logik bereich` -- verdict F1);
+  * `keinKernHalt` (`KernHaltE`)       -- `kernHaltE_aus` (`AkzeptiertSpec.abg` and `.masken`:
+                                          the handlers the unit declares, with the checker's
+                                          masking discipline `H102`; Opus agent H, 2026-09-26 --
+                                          before, `kernHaltG_gilt` with no premise);
   * `zeit` (`ZeitAb`)                  -- `frame_schritte_beschraenkt`, per frame: `ZeitAb`
                                           carries its own `rufTief` admission, so no
                                           program-wide premise is needed.
@@ -167,7 +171,7 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     keinLogikHalt := main.1.1.2.2.1
     keineVerklemmung := fun hWt => keine_verklemmungG hH.1 hSt sp init hLeer ls.1 ls.2 hr hWt
     keinZyklus := kein_warteZyklusG hH.1 hSt sp init hLeer hr
-    keinKernHalt := kernHaltG_gilt P O passes _ M
+    keinKernHalt := kernHaltE_aus fs.2 hA.abg hA.masken sp init M
     fortschritt := fortschrittG_aus hH.1 hSt sp init (startSpur_nodup_leer init hLeer) hr
       main.1.1.2.2.1
       (bereichG_mehrfaden P O passes Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1 hH.2.2

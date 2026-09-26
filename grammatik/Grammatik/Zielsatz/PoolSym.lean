@@ -277,10 +277,12 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
 /-- **(a) OF THE REVIEWED DIFF: no old verdict moves.** On every start list the old
     checker accepted (it demanded `ws.Nodup`) the new Bool IS the old Bool; and the old
     Bool accepts only distinct starts. So every unit accepted before is accepted now, and
-    every unit refused before with distinct starts is refused now. -/
+    every unit refused before with distinct starts is refused now. Since Opus agent H
+    (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
+    is `true` on every program with no handler (`maskenB_ohne`). -/
 theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
-    Akzeptiert P S fs ls cs ws = AkzeptiertVor P S fs ls cs ws := by
+    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
@@ -293,12 +295,14 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   simp only [Bool.and_eq_true] at h
   exact of_decide_eq_true h.1.1.2
 
-/-- **Every old acceptance stays an acceptance.** -/
+/-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
+    discipline, in particular of every program with no handler (`maskenB_ohne`). -/
 theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
-    (h : AkzeptiertVor P S fs ls cs ws = true) : Akzeptiert P S fs ls cs ws = true := by
-  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h)]
-  exact h
+    (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true) :
+    Akzeptiert P S fs ls cs ws = true := by
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM]
+  rfl
 
 /-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/
 def GetrenntVor (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
@@ -322,9 +326,11 @@ structure AkzeptiertSpecVor (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
 
 /-- **The old specification implies the new one** (Prop side of (a)): with distinct
-    starts the occurrence form of `Getrennt` is the routine form. -/
+    starts the occurrence form of `Getrennt` is the routine form. Since Opus agent H
+    (2026-09-26) the handler discipline is an extra premise (it holds on every program with
+    no handler, `maskenB_ohne`). -/
 theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (h : AkzeptiertSpecVor P S fs ws) : AkzeptiertSpec P S fs ws := by
+    (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs) : AkzeptiertSpec P S fs ws := by
   have hlok : lokWVor P fs ws = lokW P fs ws := by
     funext c
     have e : GetrenntVor P fs ws c ↔ Getrennt P fs ws c := by
@@ -336,22 +342,26 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     unfold lokWVor lokW
     exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
   exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
-    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten⟩
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM⟩
 
 end PoolBool
 
 /-- **(a) OF THE REVIEWED DIFF, for the checker interface: every old checker is a
     `Pruefer`.** A Bool sound against the old specification is sound against the new one,
     so `GabbroZiel`'s `∀ C : Pruefer` ranges over at least every checker it ranged over
-    before. -/
+    before. Since Opus agent H (2026-09-26) an old checker is conjoined with the handler
+    component `maskenB` it never judged (an old program declares no handler, where the
+    conjunct is `true`: `maskenB_ohne`). -/
 def pruefer_vor_neu
     (akz : ∀ {D : Deklaration} [DecidableEq D.Fn],
       Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
     (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := akz
-  korrekt := fun E fs ls cs h => akzeptiertSpecVor_neu (korr E fs ls cs h)
+  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs
+  korrekt := fun E fs ls cs h => by
+    rw [Bool.and_eq_true] at h
+    exact akzeptiertSpecVor_neu (korr E fs ls cs h.1) ((maskenB_iff fs.2).mp h.2)
 
 /-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
     `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/
