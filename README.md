@@ -100,7 +100,13 @@ publication, refinement. Eleven classes, and the same eleven in every kernel eve
 
 Gabbro's claim is that plumbing belongs to the **language**, not to the proof:
 
-> **Gabbro proves everything except functional correctness — on a multicore kernel with DMA.**
+> **Gabbro's goal: the user proves only their own logic and named hardware assumptions; the
+> language carries the rest — on a multicore kernel with DMA.**
+>
+> What is proved today is narrower, and it is stated in exactly one place: the header of
+> [`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean) — the
+> goal theorem over the Lean model, its named assumptions, the NOT CLAIMED list, and
+> "WHAT A GREEN BUILD COVERS". Where this README and that header disagree, the header wins.
 
 **Nine of the eleven classes are carried today.** The two that are not no longer hang on a
 missing pass: *race* hangs on exactly three of its 28 forms, and those three are the alias;
@@ -194,9 +200,13 @@ The Rust checker and emitter — around 110 000 lines — will **not** be verifi
 would have cost an estimated 700 000 lines of proof, and it would have proved them against a
 *second copy* of the model rather than against the model itself.
 
-Instead the compiler is treated as untrusted and made to show its work. **For every program it
-accepts, it emits a certificate, and Lean checks that certificate.** The closing theorem has
-this shape:
+Instead the compiler is treated as untrusted and made to show its work. **The design: for every
+program it accepts, it emits a certificate, and Lean checks that certificate.** Today that holds
+for the programs listed CERTIFIED in
+[`grammatik/Grammatik/Zertifikat/REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt);
+every other accepted program is listed there by name as not claimed, and a test fails if one is
+neither (the `Spec.lean` header, "WHAT A GREEN BUILD COVERS", is the statement of record).
+The closing theorem the design aims at has this shape:
 
 > **Lean accepts the certificate ⟹**
 > **(1)** the source text parses to a program `P`, and
@@ -228,14 +238,15 @@ the theorem, not as prose beside it.
 | **T2 — Correspondence re-checker** | *this* C program consists of exactly those correspondences | designed, not built — **the one piece that closes the chain** |
 | **T5 — Proof templates** | each recurring obligation gets a soundness theorem over the real semantics | 5 of 21 bound; the remaining 16 are still an abstract core |
 
-### Not started: the concurrent half
+### The concurrent half: model done, C chain open
 
-The model is concurrent; the emitted C is not yet — it contains no thread creation, and the
-lock primitives are external prototypes. Closing that needs the lock specification with
-happens-before as a named assumption, thread creation by the runtime as a second, DRF-SC as a
-third (which *applies* here precisely because the race pass proves data-race freedom), and then
-the correspondence between a model run and a C run with interleaving. That last item is the
-largest single open piece in the project.
+The model is concurrent, and since 2026-09-26 the emitted C is too: a runtime `start` and a
+`child` region are lowered to threads created by our own raw `clone` system call and joined by
+`futex` (no libc threading). The goal theorem covers threads created at run time, and DRF-SC is
+proved over a weak memory model instead of assumed (for the fragment and with the named
+assumptions the `Spec.lean` header lists). What is still open is the correspondence between a
+model run and a C run with interleaving — the translation-validation chain for concurrent
+programs, the largest single open piece in the project.
 
 ### Order of work
 

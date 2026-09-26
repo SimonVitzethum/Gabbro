@@ -3497,7 +3497,11 @@ pub const PAARUNG: &[Satz] = &[
                     a real kernel's ordering sites, and THERE nothing is measured yet; the \
                     ordering sample (`messung/ORDNUNGSSTICHPROBE.md`) is the run that decides \
                     it. **Until it has run, the need for `V009` is conjectured at one place \
-                    and refuted at the only place available** -- so it is not to be extended. \
+                    and refuted at the only place available** -- so it is not to be extended, \
+                    with ONE exception Simon decided on 2026-09-26: a `match` whose arm \
+                    ends the flow gates what follows it exactly as the `if` shape does \
+                    (review 2026-09-21, fix lane F1; gift 1271) -- the same shape, not a \
+                    new one, and only a refusal more. \
                     \n\n**This is the only rule of the pass that looks for an ABSENT clause, and \
                     it finds ONE shape of absence.** A missing pairing without a branch is \
                     invisible to it, and so is one whose payload is read by a CALLEE: only \
