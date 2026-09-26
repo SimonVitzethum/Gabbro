@@ -498,7 +498,7 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 > * **Model**: every writer owes the invariant at its returns (`InvGutS`/`InvGutGrund` in
 >   `LogikPflicht`), an invariant no function writes is carried by the frame
 >   (`inv_ohne_schreiber`), and the goal theorem's new leg `invRuhe` says it holds wherever no
->   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §53).
+>   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §54).
 >
 > **Still open under this heading: the `ops` condition** (last paragraph below). A `table …
 > ops` stays exempt from `N496`, carried by the generated mutations; a hand-written body
@@ -1127,4 +1127,20 @@ CLAIMED; the cargo test `zertifikate` keeps the register complete.
 | **why it is not one fix** | 114 of the 176 meet two or more refusal shapes (measured with a throwaway continue-on-refusal build); lifting `extern fn` alone gained 0 programs |
 | **model decisions it needs** | an `Endblock` form for a tail `let` of a call and for `return` under `locks` (110, 125); records, wrapping integers, named assumptions outside `forever`/`retires`, devices, atomics (Opus B), pointers into records |
 | **what would close it** | per-shape lanes, each measured by the register's CERTIFIED count |
+
+## O28 — Linking is proved in the model and checked at the source level; four pieces stay open (recorded 2026-09-26, Opus agent E)
+
+`GabbroZielVerbund` (`Zielsatz/Spec.lean`, proved as `gabbro_ziel_verbund`, SATZKARTE §54)
+covers a program linked from two units over ONE link declaration, each accepted alone, under
+the SAME hardware assumptions; `gabbro link` (`N501`-`N505`) checks the heads against the
+bodies. Report: `messung/OPUS-E-LINKEN.md`.
+
+| | |
+|---|---|
+| **review** | the Spec diff (a second statement, purely additive) has had no independent review round yet |
+| **Rust vs Lean, the race legs** | Lean decides thread-locality, write separation and pool safety over the COMPOSED hulls (`schnittstelleB`); Rust refuses a pair in which BOTH units start threads (`N503`) instead of porting that check |
+| **contracts as text** | Rust compares `requires`/`ensures`/`effects` as normalised text; Lean has ONE contract per function (`Verbindbar`), so a weaker-but-sound import is refused on both sides (no refinement of contracts across the boundary) |
+| **units and the build** | a unit is one file (plus `--with` preambles); `gabbro build` does not call the link check; no certificate for a PAIR (the exporter exports one `Einheit`) |
+| **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |
+| **not claimed at all** | different hardware assumptions, callbacks through an import (`KeinRueckruf`), dynamic loading, ABI-level linking of foreign C |
 

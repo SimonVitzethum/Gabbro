@@ -84,8 +84,9 @@ README §6 says exactly this; keep it that way.
   DRF-SC, unguarded publish/await payloads, floats beyond the kernel IEEE model, starvation
   freedom, invariants inside a running writer or a held section (claimed everywhere else since
   Opus agent D: `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`), a start declared ONCE running on several threads (a routine
-  declared twice -- a worker pool -- is covered since fix lane F10), and linking of separately
-  compiled units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
+  declared twice -- a worker pool -- is covered since fix lane F10). Linking of separately
+  compiled units is covered since Opus agent E by a SECOND statement, `GabbroZielVerbund`
+  (same hardware assumptions; OFFEN O28 names the rest). Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
   `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
   `Spec.lean`.
 
@@ -313,6 +314,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F11 | **not reserved** | nothing: no code, no gift, no example (`H102` unchanged; the work is the Lean leg `keinKernHalt`) |
 | Opus lane O25 (2026-09-26) | N481–N485 / 1201–1210 / — | N481–N483 (`namen.sperrprimitiv_ordnung`, OFFEN O26), gifts 1201–1203; no example. N484, N485 and gifts 1204–1210 stay with the O25 wall (the rely, the payload rule) |
 | Opus agent D (invariants) | N496–N500 / 1231–1240 / — | N496, gifts 1231–1234; no example (examples 09 and 17 edited: 09's false invariant replaced, both now `maintain`); N497–N500 and gifts 1235–1240 stay with the invariant work (OFFEN O11's `ops` condition) |
+| Opus agent E (linking) | N501–N505 / 1241–1250 / — | N501–N505 (`namen.verbund`); probe numbers 1241–1245 as LINK probes under `messung/proben/verbund/` (a link probe is two units, each clean alone, so not a `beispiele/gift/` file); no example. Gifts 1246–1250 stay with the linking work |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
