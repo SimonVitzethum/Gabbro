@@ -1101,10 +1101,23 @@ fn tore(
             }
             StmtArt::Match(m) => {
                 if let Some(at) = tor(&m.gegenstand, gebunden, l) {
+                    let mut gesagt = false;
                     for z in &m.zweige {
                         if melde(&at, &z.rumpf.anweisungen) {
+                            gesagt = true;
                             break;
                         }
+                    }
+                    // **And what stands AFTER the `match`, when an arm ends the flow** --
+                    // the rule `if` has above, for every kind of match (review 2026-09-21,
+                    // fix lane F1; lifted by Simon 2026-09-26). `match s { 0 => { return X; }
+                    // … } return payload;` puts the read behind the gate exactly like
+                    // `if s == 0 { return X; } return payload;`. `&[]` for the divergent
+                    // names is the safe direction: fewer ends recognised, fewer refusals.
+                    if !gesagt
+                        && m.zweige.iter().any(|z| crate::endet_immer(&z.rumpf, &[]))
+                    {
+                        melde(&at, &b.anweisungen[i + 1..]);
                     }
                 }
             }
