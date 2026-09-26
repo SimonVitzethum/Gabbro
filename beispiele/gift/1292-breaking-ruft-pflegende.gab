@@ -1,0 +1,64 @@
+-- erwartet: N532
+-- **Opus agent G (OFFEN O1, L34) -- a function that `maintains I`, called while `I` rests.**
+--
+-- SPRACHE.md §8.3: *"Inside the block the invariant is not available as a premise:
+-- functions with `requires I` or `maintains I` are not callable."* Until 2026-09-26 no pass
+-- read it. `treffen_oeffnen` sets `anrufer` and then, still inside
+-- `breaking antwortpflicht_paarig`, calls `paar_setzen`, which `maintains` the same
+-- invariant -- it is entered in the one state its own clause excludes: `N532`.
+module gift::breaking_ruft_pflegende {
+
+const NKERNE  : u32 = 4;
+const NFAEDEN : u32 = 64;
+
+lock EPS protects { endpunkte } rank 0 held <= 200 ops masks irqs;
+
+table Faden count NFAEDEN {
+    slot {
+        benutzt : bool,
+    }
+}
+
+table Endpunkt count NKERNE {
+    slot {
+        benutzt     : bool,
+        anrufer     : option index into Faden,
+        antwortende : option index into Faden,
+    }
+
+    invariant antwortpflicht_paarig cost O(1) runs online :
+        forall e in slots of Self :
+            (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
+}
+
+impl fn paar_setzen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt,
+                    ruft : index into Faden, dient : index into Faden)
+    requires  Held(EPS), e.slots[kern].benutzt
+    ensures   e.slots[kern].anrufer == Some(ruft),
+              e.slots[kern].antwortende == Some(dient)
+    maintains antwortpflicht_paarig
+    effects   { writes e.slots, locks EPS }
+    costs     <= 8 ops
+{
+    breaking antwortpflicht_paarig {
+        e.slots[kern].anrufer     = Some(ruft);
+        e.slots[kern].antwortende = Some(dient);
+    }
+}
+
+impl fn treffen_oeffnen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt,
+                        ruft : index into Faden, dient : index into Faden)
+    requires  Held(EPS), e.slots[kern].benutzt
+    ensures   e.slots[kern].anrufer == Some(ruft),
+              e.slots[kern].antwortende == Some(dient)
+    maintains antwortpflicht_paarig
+    effects   { writes e.slots, locks EPS }
+    costs     <= 24 ops
+{
+    breaking antwortpflicht_paarig {
+        e.slots[kern].anrufer = Some(ruft);
+        paar_setzen(e, kern, ruft, dient);
+    }
+}
+
+}

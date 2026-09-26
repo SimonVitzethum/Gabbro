@@ -10,7 +10,7 @@ table stand here by name.*
 
 ---
 
-## O1 — The big step: four obligations the semantics cannot state
+## O1 — The big step: four obligations the semantics cannot state — **STATED 2026-09-26 (Opus agent G): all four are sayable over machine G; L50/L52 are claimed by the new leg `folge`, L24's content by the invariant legs, L34 is an existence statement with a witness; what stays open is named below**
 
 **`L24`, `L34`, `L50`, `L52`.** `programmlogik/Gabbro/Body.lean`'s `exec` is big-step: it maps
 a state and a statement list to an `Outcome` and produces no intermediate state. All four rows
@@ -34,6 +34,55 @@ place the tool would create value beyond convenience. The statement that site ne
 | **why it is not being attempted** | `AUFTRAG-GABBROV.md` §9 stop-list — `exec`'s big-step character carries the Isabelle proofs |
 | **also recorded at** | `dokumente/AUSNAHMEN.md` rows 1–4, `dokumente/HISTORIE.md` (2026-09-03) |
 
+### What changed on 2026-09-26 (Opus agent G, `messung/OPUS-G-O1.md`)
+
+**The diagnosis above is right for `Body.lean` and wrong for the goal theorem.** `GabbroZiel`
+does not stand on `exec`: its runs are those of machine G (`RufMaschineG.lean`), which is
+SMALL-STEP -- every leaf statement, every unfold, every push and pop is one step -- and whose
+threads carry an access trace (`spur`) and a CALL LOG (`log`: `eintritt`, `rueck`, `grund`,
+newest first). Every intermediate state is a reached machine, and the order of calls is a list.
+So the four rows are statable there, and the question became what can be CLAIMED.
+
+| row | statable over G as | claimed by | what stays open, and why |
+|---|---|---|---|
+| **L24** never half set | literally ("no third state exists"): false of every two-statement write -- G has the state between, and L34 names it. Its content is OBSERVATIONAL: no other thread sees the pair half set | `invSicht` (table/group invariant: a thread outside every writer holding a guard lock sees it intact), `sperrSicht` + `sperrWechsel` (lock invariant) -- legs of `Ziel` since Opus agent D | `invSicht` is NOMINAL in the model (review of Opus agent D, F2: an accepted model program never writes a guarded table invariant), so the contentful carrier of L24 is the LOCK form -- the pair under one lock, related by that lock's invariant (`sperrSicht`, `sperrWechsel`); for every CERTIFIED program `Inv := Empty` (the exporter refuses `maintains`, `LG001`), so the table-invariant form reaches no certified program; `beispiele/53` (the L24/L34 site) is UNCERTIFIED (`LG001`, the option-index fields) |
+| **L34** the invariant fails between | an EXISTENCE statement about one program: a reached machine inside the region where the invariant is false | its witness shape `tabelle_gebrochen` (two writes of `privA`, broken between, open there); the name check `N531` (the region writes a carrier of the invariant it names -- the "wrong-but-existing invariant" of `GABBROV.md` §3) and `N532` (no `maintains I` call inside `breaking I`, SPRACHE.md §8.3) | G unfolds `breaking` WITHOUT its name (`dannBreaking`), so no leg speaks of "inside the region" or of restoration at the block's end; restoration is claimed at every writer's RETURN (`invRueck`, `invGrund`). `requires I` as a predicate word is not resolved by `N532` |
+| **L50** flush before reply | `FolgeLog` with `vor = {flush}`, `ruf = {reply}`: every entry of the reply DIRECTLY behind a logged normal return of the flush | the new leg `folge : FolgeG P M` of `Ziel` (Folge.lean, proved premise-free in FolgeBeweis.lean; witnesses in FolgeZeuge.lean) | an effect that is not a call of a Gabbro function (an axiom's, a register's) is not in the log -- a wrapper function puts it there; an order across a compound statement, an indirect call or a lock block is refused by the check, not claimed; which `Φ` a source program means is not in `Einheit` |
+| **L52** reply before the service ends | `FolgeLog` with `vor = {reply}`, `ende = {service}`: every return of the service -- and the end of a thread started in it -- DIRECTLY behind the reply's return | the same leg | the check is per FUNCTION, not per return site: a service with a second return path that does not reply is refused for that `Φ`, not covered -- the path-sensitive form ("only the `Stop` arm's return") is open |
+
+**Decisions, and their reasons** (the scope rule of 2026-09-26: decide open design questions,
+write each down, never trade a guarantee):
+
+1. **Target semantics = machine G, not `Body.lean`.** G is the semantics of the goal statement;
+   `Body.lean`'s big-step character carries the Isabelle proofs and stays on
+   `AUFTRAG-GABBROV.md` §9's stop-list. GabbroV's fragment over `Body.lean` still cannot state
+   the four rows, and `AUSNAHMEN.md` keeps them for that fragment.
+2. **L24 is read observationally.** Two assignments are two steps in any small-step semantics;
+   the literal reading is vacuous big-step and false small-step. The observational reading is
+   what the Caprock comment means ("stets gemeinsam gesetzt") for anyone but the writer.
+3. **L34 is a witness, not a leg.** "The invariant fails inside every `breaking`" is false in
+   general (a block may keep it); "it fails inside THIS one" is a fact about one program.
+4. **The `breaking` name is not threaded through G.** A residue marker changes the rule
+   `dannBreaking`, which every 70-rule proof of the tree cases on; the syntactic half of §8.3's
+   promises moved to the checker instead (`N531`, `N532`), and the semantic half (restoration at
+   the block's end) is named open.
+5. **L50/L52 mean "DIRECTLY behind", in the call log.** "Sometime before" is the `flush ∧ reply`
+   weakening V1 warned about (`folgeLog_nicht_schwach`, `folge50_gegen`); at the log's
+   granularity "the flush completed before the reply" is "the entry of the reply stands right
+   behind the flush's normal return".
+6. **The check is conservative** (every sub-block starts unarmed): it refuses where a finer
+   analysis might accept, and never accepts where the claim would fail. Simplicity of the
+   invariant was bought with coverage, not with soundness.
+7. **The leg quantifies over `Φ` inside and needs no premise.** No field in `Einheit`, no
+   exporter change, no certificate change; every `Φ` the Lean program passes is claimed.
+8. **`N531` accepts every block that calls a declared function or through a pointer** -- a
+   callee's writes are not resolved in that pass; it refuses only where the answer is certain.
+
+**What would close the rest:** the name of `breaking` in G's residue (a marker layer, with the
+re-proof of every rule-by-rule theorem), then the block-level restoration duty in (b); an event
+for axiom and register effects in the call log; a path-sensitive `ende` (per return site); an
+order field in `Einheit` filled by the exporter.
+
 ---
 
 ## O2 — `G1` and `G5` are falsifiers that cannot be evaluated
@@ -54,6 +103,34 @@ evaluable from the outside.**
 |---|---|
 | **what would close `G1`** | nothing, deliberately — a threshold set now would be set to be met |
 | **what would close `G5`** | formalising the eight assumptions — the expensive half of V2, `AUFTRAG-GABBROV.md` §9 |
+
+**CLOSED 2026-09-26 (lane 266) — both falsifiers WITHDRAWN, not thresholded.**
+Setting a number now, with 55 of 63 on the table, would be `R2` (a rule pulled to
+fit a result). The replacements below were written 2026-09-03 (`AUFTRAG-GABBROV.md`
+§1), before the runs they judge — and this entry's decision was committed before
+this lane's new solver runs (O4/O5/O6), so no result below could have shaped it.
+
+* `G1` → `E1` + `E2`, pre-registered and numeric where a number is honest:
+  * **E1** (completeness of handling, no exception): every `obligation` line of the
+    manifest gets a verdict in the same run. Pre-registered number:
+    `|manifest obligation lines − verdict lines| = 0`. Mechanised inside
+    `gabbro gabbrov pruefe`, which refuses to complete otherwise.
+  * **E2** (decided share, by name not by percentage): every `undecided` row stands
+    by name in `dokumente/AUSNAHMEN.md`, which holds exactly **4** rows
+    (`L24`, `L34`, `L50`, `L52`); any growth without a `HISTORIE.md` entry fails
+    `pruefe-ausnahmen.py`. A percentage would let the exception list grow quietly
+    with every hard obligation; names cannot.
+* `G5` → split into the half that is built and the half that is a milestone:
+  * **V2a vacuity — BUILT** (`programmlogik/gabbrov/V2.lean`:
+    `vacuous_under_assumptions`, `detection_is_incomplete`): every sayable
+    obligation with a precondition carries a vacuity verdict, and a condemned
+    precondition has no model at all (the sound direction). Pre-registered form:
+    the check runs over the sayable preconditions, `0` condemned today means
+    `0` vacuous passes claimed — not that the assumptions are consistent.
+  * **V2b milestone — the construction that would re-open the question**: 8 of 8
+    assumptions as formal `Prop`s with an exhibited model. Until 8 of 8 stand,
+    *"the assumption set has no model"* is not asked, and no count clears or
+    trips anything in its place.
 
 ---
 
@@ -140,6 +217,46 @@ can restore the invariant**, and the invariant cannot hold over any table that i
 | **why it is not being done here** | rewording an obligation decides what the fragment meant — the same shape as the `L44`/`L53` tautology finding of `messung/GABBROV-V2.md` |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
 
+**CLOSED 2026-09-26 (lane 266) — decided as BOTH: the guard AND the new home.**
+The audit (`GABBROV-AUDIT.md` §1.3) had measured that the `used` guard alone does
+not repair `L05`: `unlink` requires `used` and never clears it, so the guarded
+invariant still refutes it. The repair is therefore two halves, and the fragment
+`messung/fragmente/F01.gab` carries both since this lane:
+
+* the guard, without a new domain — `forall s in slots of c :
+  c.slots[s].used => c.slots[s] reaches WURZEL via parent`. `=>` is already a
+  `pred` production (SYNTAX.md:669), and the shape stands in
+  `wurzel_ohne_vorgaenger` and `beispiele/01-tabelle.gab`:70-71;
+* the new home — `unlink` drops `maintains cdt_wohlgeformt` (its post-state is
+  the legitimate transient: used, detached), `delete_leaf` and `revoke` keep it,
+  `release_slot` gains it (N496: it writes the carrier and now owes the duty).
+
+The two changed excerpt lines stand booked in `pruefe-emission.sh` (`F1_WEG`);
+the emitted C is byte-identical before and after, the `zeugnis` templates line
+is unchanged, and `F01.gab` still checks with 0 errors, 0 hints.
+
+Evidence (`messung/gabbrov/erzeuge-L05used.py`, bound 8, Z3 4.16.0, this lane):
+
+| file | question | answer | time |
+|---|---|---|---:|
+| `L05d` | guarded invariant + one detached UNUSED slot | sat (livable — the `L05c` defect is gone) | 0.03 s |
+| `L05e` | guarded invariant + one detached USED slot | unsat (not vacuous — the guard still bites) | 0.02 s |
+| `L05f` | `unlink` maintains the guarded invariant | sat (refuted — why it drops the claim) | 0.04 s |
+| `L05g` | `delete_leaf` maintains it on `used` + `ist_blatt` alone | sat (refuted — see below) | 0.17 s |
+| `L05h` | `release_slot` maintains it | unsat (holds — `used := false` leaves the domain) | 0.02 s |
+| `L05i` | case g + no-dangling-parent | unsat (holds — the exact missing premise) | 0.02 s |
+
+`L05g`'s model is the second half of the finding, not an encoding slip: a node
+`y` with `parent(y) = s` while `first_child(s)` is none keeps `s` a leaf by
+`ist_blatt`'s measure and still loses its chain when `s` is unlinked. The first
+version of the generator omitted `ist_blatt` and fell through an orphaned
+child; with it, the fall goes through a DANGLING parent instead. Nothing the
+checker is given excludes it — the exclusion is sibling consistency (`L02`),
+which is OFFEN O5. `delete_leaf`'s maintenance claim is therefore CONDITIONAL
+on O5's premise, and `revoke` inherits the condition compositionally (its
+traverse calls `delete_leaf` per victim; not encoded — the traverse is the
+remaining step).
+
 ---
 
 ## O5 — «B14» may be a fourth demand on the specification fragment, and it is not on the list
@@ -171,6 +288,42 @@ them.*
 | **the question for Simon** | is «B14» a fourth demand, or a fourth *kind* of demand? |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
 
+**CLOSED 2026-09-26 (lane 266) — a fourth demand, of a SECOND kind.**
+The entry's own distinction stands: the three recorded demands are what the
+LEAN side must carry (fragment expressiveness); «B14» is what the GABBRO side
+must be able to DECLARE so that a checker has the premise at all (premise
+supply). One list with two kinds, not two lists — every demand is still
+"without this, a real obligation cannot be discharged", and the kind says
+where the work lands. Recorded as **DEMAND G1** beside DEMANDs 1–3 in
+`GABBROV.md` §7.
+
+Evidence, re-measured this lane (Z3 4.16.0, each under 0.06 s):
+
+```
+messung/gabbrov/L01.smt2    sat    0.053 s   the declared premises only
+messung/gabbrov/L01b.smt2   unsat  0.038 s   with L02 added
+messung/gabbrov/L01c.smt2   sat    0.055 s   with cdt_wohlgeformt added instead
+```
+
+`L02` is the mutual sibling chain. The audit's refinement (§1.4) is kept: only
+the FORWARD direction is load-bearing for `L01`, and a third «B14» statement
+(siblings share a parent) repairs it by a shorter route — so "the premise" is
+a family, not one sentence. This lane adds a SECOND row where the family is
+load-bearing: `L05g` sat against `L05i` unsat (OFFEN O4) — `delete_leaf`'s
+maintenance claim needs no-dangling-parent, a «B14» statement no declared
+premise supplies.
+
+Narrowed at the same time, by probe (prebuilt checker, 0 errors both ways):
+`== Some(k)` comparisons DO check in `pred` today — as a table invariant
+(`Self.slots[y].p == Some(1)`) and as a quantified `requires`
+(`forall y in slots of t : t.slots[y].p == Some(s) => …`). What stays blocked
+is the core the fragment names: indexing THROUGH the option
+(`slots[s.next_sibling]`), which `L02` in full generality needs. A
+per-call `requires` can spell the no-dangling fragment where `s` is
+index-typed; it moves the burden to every call site instead of supplying it
+once, which is why the demand stands as a table-invariant demand and not as
+a calling-convention workaround.
+
 ---
 
 ## O6 — DEMAND 3 may not be buildable in the shape V1 assumes
@@ -198,6 +351,36 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 |---|---|
 | **what would close it** | an axiomatised transitive closure instead of an unrolling — different work from the other two demands |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.5 |
+
+**CLOSED 2026-09-26 (lane 266) — buildable in ANOTHER shape, not in V1's.**
+Re-measured this lane (`lauf-L05.sh`, Z3 4.16.0, wall 3m08s) the unrolling
+shape reproduces the entry exactly: bounds 16, 18, 19, 21, 24, 32, 48 answer
+`sat` in 0.04–0.34 s (17 takes 6.28 s), bounds 20, 22, 64 time out at 60 s.
+The failure is still not monotone in the bound — and re-measured
+(`ohne-schranke/lauf.sh`, wall 2m07s) it is still not a function of the bound
+at all: six of six non-default seeds answer bounds 20 and 22 in 0.16–3.33 s.
+V1's shape — unroll to the table's `count` — is therefore NOT buildable at the
+corpus bounds (`NSLOTS` 80 256 / 4 096): the file would be a ~100 MB `ite`
+nest whose solvability is seed-chaotic already at depth 20.
+
+The other shape is the audit's rank encoding, re-measured with both controls
+green at both sizes:
+
+```
+N=20       bytes=1365   answer=sat      time= 0.051 s
+N=80256    bytes=1371   answer=sat      time= 0.037 s
+CONTROL A (s = WURZEL, must be unsat):  N=20 unsat 0.021 s, N=80256 unsat 0.022 s
+CONTROL B (premise alone, must be sat): N=20 sat 0.034 s,   N=80256 sat 0.032 s
+```
+
+Decision: DEMAND 3 is tractable as a BOUND-FREE rank witness
+(`ohne-schranke/gen-rank.py`, ~1.4 KB, ~0.04 s at the corpus's own number) —
+for the REFUTATION direction, which is what all three Gate 2 findings needed
+(a model needs no certificate and no kernel). The PROOF (`unsat`) direction
+over the rank form, and the four undrawn reachability rows (`L04`, `L09`,
+`L15`, `L16`), are not measured here: a rank witnesses reachability, and the
+direction needing care is the one where reachability must be proved. That half
+stays with the demand; the wall as stated — "no bound to plan with" — is gone.
 
 ---
 
@@ -1236,4 +1419,4 @@ Caprock rewrite, full translation validation).
 | **dynamic unbounded data structures** | lists, trees, graphs and maps whose size is not bounded by a declaration (heap allocation without a declared ceiling, recursive types, pointer structures that grow at run time). Today's language covers bounded tables, arenas with a declared `max` (`grow`, reset-only free) and bounded strings; nothing beyond a declared bound is modelled, checked or claimed. |
 | **probabilistic statements** | claims about distributions, expected values, failure probabilities or randomised algorithms (e.g. "the hash collides with probability ≤ p", "the retry succeeds with probability 1"). The goal theorem is a statement about EVERY run; no measure over runs exists in the model. |
 | **status** | planned for later; no lane is tasked; no code, gift or example number is reserved. |
-| **where it is named** | here, and in AGENTS.md §2/§3 ("OUT of scope for now"). The `Spec.lean` header does not list them yet; when the next reviewed Spec diff touches the NOT CLAIMED list, both lines belong there. |
+| **where it is named** | here, in AGENTS.md §2/§3 ("OUT of scope for now"), and since the merge of Opus agent G (2026-09-26) as two lines of the NOT CLAIMED list in the `Spec.lean` header, each citing O29. |

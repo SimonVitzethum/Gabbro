@@ -353,3 +353,7 @@ import Grammatik.Zielsatz.VerbundZeuge
 import Grammatik.Speichermodell.GXMaschine
 import Grammatik.Zielsatz.ZielXDefs
 import Grammatik.Zielsatz.BeweisAtomar
+import Grammatik.Folge
+import Grammatik.FolgeBeweis
+import Grammatik.FolgeZeuge
+import Grammatik.Zielsatz.FolgeZiel

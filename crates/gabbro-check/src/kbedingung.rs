@@ -258,6 +258,216 @@ fn breaking_nennt_eine_invariante(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// **`N531` -- `breaking I { … }` over a block that touches no carrier of `I`.**
+///
+/// `D013` makes sure the name resolves; it says in its own sentence what it does not buy:
+/// *"a `breaking` on the wrong-but-existing invariant still passes"* (`SPRACHE.md` §8.3.1,
+/// `GABBROV.md` §3 -- the site OFFEN O1's `L34` is about). This rule closes the part of that
+/// gap a syntactic check can close: a block that writes NONE of the carriers of `I` -- no
+/// assignment, no `publish`, no `exchange`, no transition on a table `I` stands over, and no
+/// call that could write one -- cannot let `I` rest. It is a region named for the wrong
+/// invariant, and it is refused.
+///
+/// **Conservative on purpose** (Opus agent G, 2026-09-26): a block that contains ANY call is
+/// accepted, because a callee's writes are not resolved here; a walk invariant (no carrier)
+/// is not asked. *The rule refuses only where the answer is certain.* What it does NOT
+/// establish is that `I` is really false inside the block, or that the block restores it --
+/// the first is a statement about one run (the goal theorem's `tabelle_gebrochen` shape), the
+/// second is claimed at every writer's return (`invRueck`), not at the block's end.
+fn breaking_rests_here(baum: &Programm, absagen: &mut Absagen) {
+    let bekannt = invariantentraeger(baum);
+    let mut tabellen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            tabellen.push(t.name.text.clone());
+        }
+    });
+    let (konstanten, weltnamen) = crate::wirkungen::welt_und_konstanten(baum);
+    // The declared functions: a call counts only if it resolves to one (or is indirect) --
+    // `Some(x)` and a tag constructor parse as calls and write nothing.
+    let mut funktionen: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            funktionen.insert(f.name.text.clone());
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let mut stellen: Vec<&BrichtStmt> = Vec::new();
+        collect_breaking_sites(b, &mut stellen);
+        for x in stellen {
+            if calls_a_function(&x.rumpf, &funktionen) {
+                continue;
+            }
+            // The carriers the block writes: a carrier by name -- a table, and also a
+            // `static`/`state` a `group` spans (`U001` admits all three; review of Opus agent
+            // G, 2026-09-26: counting tables only refused a block that writes a static group
+            // carrier) -- or a table through a parameter that points at one.
+            let geschrieben: BTreeSet<String> =
+                crate::wirkungen::rumpfwirkungen_mit(f, &x.rumpf, &konstanten, &weltnamen, false)
+                    .into_iter()
+                    .filter_map(|w| {
+                        let ort = w.strip_prefix("writes ")?;
+                        let wurzel = crate::wirkungen::carrier_root(ort).to_string();
+                        if let Some(t) = f
+                            .parameter
+                            .iter()
+                            .find(|p| p.name.text == wurzel)
+                            .and_then(|p| zeigt_auf_tabelle(&p.typ, &tabellen))
+                        {
+                            return Some(t);
+                        }
+                        Some(wurzel)
+                    })
+                    .collect();
+            for i in &x.invarianten {
+                let Some(ts) = bekannt.get(&i.text) else {
+                    continue; // `D013` refuses the name
+                };
+                if ts.is_empty() || ts.iter().any(|t| geschrieben.contains(t)) {
+                    continue;
+                }
+                let namen: Vec<String> = ts.iter().map(|t| format!("`{t}`")).collect();
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N531",
+                        i.span,
+                        format!(
+                            "`breaking {}` lets an invariant over {} rest, and this block \
+                             writes none of them and calls nothing",
+                            i.text,
+                            namen.join(", ")
+                        ),
+                    )
+                    .mit_notiz(
+                        "a region in which an invariant rests is a region that writes its \
+                         carriers -- this one is named for the wrong invariant",
+                    )
+                    .mit_notiz(
+                        "SPRACHE.md §8.3.1: `D013` checks that the name resolves; a `breaking` \
+                         on the wrong-but-existing invariant passed it",
+                    ),
+                );
+            }
+        }
+    });
+}
+
+/// **`N532` -- inside `breaking I { … }`, a call of a function that `maintains I`.**
+///
+/// `SPRACHE.md` §8.3: *"Inside the block the invariant is not available as a premise:
+/// functions with `requires I` or `maintains I` are not callable."* Until 2026-09-26 no pass
+/// read it (`D013`'s sentence: "NONE of them is checked"). A function that `maintains I` owes
+/// `I` at its return and is written against a state in which `I` holds; called while `I`
+/// rests it would start from a state its own clause excludes.
+///
+/// **What it does not cover:** `requires I` as a predicate word (a `spec fn` named in a
+/// `requires` clause) is not resolved here; an indirect call is not resolved either.
+fn breaking_blocks_maintainers(baum: &Programm, absagen: &mut Absagen) {
+    let mut pflegt: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            pflegt.insert(
+                f.name.text.clone(),
+                f.maintains.iter().map(|m| m.text.clone()).collect(),
+            );
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let mut stellen: Vec<&BrichtStmt> = Vec::new();
+        collect_breaking_sites(b, &mut stellen);
+        for x in stellen {
+            let mut rufe = Vec::new();
+            crate::wirkungen::calls_with_spans(&x.rumpf, &mut rufe);
+            for (pfad, span) in rufe {
+                let kurz = pfad.rsplit("::").next().unwrap_or(&pfad).to_string();
+                let Some(ms) = pflegt.get(&kurz) else {
+                    continue;
+                };
+                for i in &x.invarianten {
+                    if !ms.iter().any(|m| m == &i.text) {
+                        continue;
+                    }
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N532",
+                            span,
+                            format!(
+                                "`{kurz}` maintains `{}` and is called inside `breaking {}`, \
+                                 where that invariant rests",
+                                i.text, i.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "SPRACHE.md §8.3: inside the block the invariant is not available \
+                             as a premise -- functions with `maintains I` are not callable",
+                        )
+                        .mit_notiz("call it after the block, once the invariant is restored"),
+                    );
+                }
+            }
+        }
+    });
+}
+
+/// The `breaking` statements of a body, nested ones included.
+fn collect_breaking_sites<'a>(b: &'a Block, aus: &mut Vec<&'a BrichtStmt>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Bricht(x) = &s.art {
+            aus.push(x);
+        }
+        for k in crate::unterbloecke(s) {
+            collect_breaking_sites(k, aus);
+        }
+    }
+}
+
+/// Does the block call a FUNCTION -- a statement call or a call inside an expression that
+/// resolves to a declared function, or any indirect call? Predicate words (`Has`/`Held`),
+/// `Some(x)` and tag constructors are no calls of a function.
+fn calls_a_function(b: &Block, funktionen: &BTreeSet<String>) -> bool {
+    let ist_ruf = |r: &Ruf| -> bool {
+        if crate::ist_praedikatswort(r) {
+            return false;
+        }
+        match r.path() {
+            None => true,
+            Some(p) => p.teile.last().is_some_and(|i| funktionen.contains(&i.text)),
+        }
+    };
+    for s in &b.anweisungen {
+        if let StmtArt::Ruf(r) = &s.art {
+            if ist_ruf(r) {
+                return true;
+            }
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    if ist_ruf(r) {
+                        return true;
+                    }
+                }
+            }
+        }
+        if crate::unterbloecke(s).into_iter().any(|k| calls_a_function(k, funktionen)) {
+            return true;
+        }
+    }
+    false
+}
+
 /// The `breaking` names of a body, **with the span of the NAME** -- `sammle` keeps only the
 /// span of the whole statement, which is what `D009` points at and the wrong place for a
 /// refusal about one word.
@@ -386,6 +596,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         });
     }
     breaking_nennt_eine_invariante(baum, absagen);
+    breaking_rests_here(baum, absagen);
+    breaking_blocks_maintainers(baum, absagen);
     for t in erhebe(baum) {
         if !t.hat_ops {
             continue;

@@ -44,6 +44,9 @@
   * `zeit` (`ZeitAb`)                  -- `frame_schritte_beschraenkt`, per frame: `ZeitAb`
                                           carries its own `rufTief` admission, so no
                                           program-wide premise is needed.
+  * `folge` (`FolgeG`)                 -- `folgeG_erreichbar` (FolgeBeweis.lean): the order
+                                          invariant, kept by every rule of G; no premise
+                                          (Opus agent G 2026-09-26, OFFEN O1).
 
   THE FORMER GAP, CLOSED (2026-09-14): the event `e0`. The replay behind
   `ziel_ort_mehrfaden_ende` and `ziel_ort_mehrfaden_invGrund` keyed every
@@ -71,6 +74,7 @@ import Grammatik.Zielsatz.Masken
 import Grammatik.Speichermodell.DRF
 import Grammatik.Zielsatz.Faeden
 import Grammatik.Zielsatz.Invarianten
+import Grammatik.FolgeBeweis
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -174,7 +178,8 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
         hN.2.2 hS fs.2 hFrag hAbg hW hFuss (fun f => (hN.1 passes f).1) hStart hSstart hex M hr)
       hA.antworten
     zeit := fun f g n _ _ _ hadm hE _ run hA' =>
-      frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
+      frame_schritte_beschraenkt P O passes f g n hadm hE run hA'
+    folge := folgeG_erreichbar sp init hr }
 
 /-- **Every leg of `ZielF` on every thread-machine run** (2026-09-26): `Ziel` on its G state
     (the bridge `fadenErreichbar_G` and `ziel_aus`), and the spawn and join legs

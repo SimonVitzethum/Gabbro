@@ -102,6 +102,17 @@
 -- hat es in 20 ms gefunden (`dokumente/OFFEN.md` O4, `messung/GABBROV-AUDIT.md` §1.3), und
 -- die naheliegende `used`-Wache repariert es nachgemessen NICHT. *Der Durchstich sagt ueber
 -- diese Zusage nichts -- er misst, was das C rechnet, nicht was die Zusage behauptet.*
+--
+-- **DECIDED 2026-09-26 (lane 266, OFFEN O4 -- and the sentence above is kept as the
+-- finding it was).** The audit's "NOT" was measured against `unlink` keeping its
+-- `maintains`: the guard alone leaves `unlink` refuted (L05f sat), because `unlink`
+-- requires `used` and never clears it. The decision is guard PLUS new home:
+-- `cdt_wohlgeformt` now reads `used => reaches` (livable: L05d sat; not vacuous:
+-- L05e unsat), `unlink` drops the claim, `release_slot` gains it (holds: L05h
+-- unsat), `delete_leaf` keeps it conditional on sibling consistency (L05g sat
+-- without, L05i unsat with the no-dangling premise -- the B14 half of OFFEN O5).
+-- The two changed excerpt lines stand booked in `pruefe-emission.sh` (`F1_WEG`).
+-- *The run still measures what the C computes, not what the promise claims.*
 -- =======================================================================================
 
 module caprock::cap::space {
@@ -254,16 +265,24 @@ spec fn ist_blatt(c : ptr<normal, r> CapSpace, s : SlotIdx) -> bool
     effects { pure }
     = c.slots[s].used && c.slots[s].first_child == None;
 
+-- OFFEN O4, decided 2026-09-26 (lane 266): the `used =>` guard. The unguarded
+-- form forbids a free slot (L05c unsat); the guarded form is livable (L05d sat)
+-- and still forbids used+detached (L05e unsat). Evidence:
+-- messung/gabbrov/erzeuge-L05used.py with L05d-L05i.smt2.
 spec fn cdt_wohlgeformt(c : ptr<normal, r> CapSpace) -> bool
     effects { pure }
-    = forall s in slots of c : c.slots[s] reaches WURZEL via parent;
+    = forall s in slots of c : c.slots[s].used => c.slots[s] reaches WURZEL via parent;
 
 impl fn unlink(c : ptr<normal, rw> CapSpace, s : SlotIdx)
     requires  Held(CAPS), c.slots[s].used
     ensures   c.slots[s].parent == None,
               c.slots[s].prev_sibling == None,
               c.slots[s].next_sibling == None
-    maintains cdt_wohlgeformt
+    -- OFFEN O4 (lane 266): no `maintains cdt_wohlgeformt` here, on purpose.
+    -- `unlink` requires `used`, clears `parent` and never clears `used`, so its
+    -- post-state is used+detached -- exactly what the invariant forbids (L05f
+    -- sat). The invariant lives at the `delete_leaf`/`revoke` boundary, where
+    -- `release_slot` has taken `s` out of the domain (L05g/L05i, L05h).
     effects   { writes c.slots, locks CAPS }
     costs     <= 40 ops
 {
@@ -289,6 +308,9 @@ impl fn unlink(c : ptr<normal, rw> CapSpace, s : SlotIdx)
 impl fn release_slot(c : ptr<normal, rw> CapSpace, s : SlotIdx)
     requires  Held(CAPS)
     ensures   !c.slots[s].used
+    -- OFFEN O4 (lane 266): `release_slot` takes `s` out of the guarded domain,
+    -- so it preserves the invariant (L05h unsat) and owes it (N496).
+    maintains cdt_wohlgeformt
     effects   { writes c.slots, locks CAPS }
     costs     <= 20 ops
 {

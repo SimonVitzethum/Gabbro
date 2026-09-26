@@ -142,6 +142,23 @@ theorem fortschrittFX_aus {K : FadenMaschine D}
 
 end Faden
 
+/-- **The order leg (Opus agent G) at every machine GX reaches**: the order invariant reads the
+    threads' own states only, which a GX step moves as its inner G step does. -/
+theorem folgeG_erreichbarX {P : Programm D} {O : Orakel D} {passes : Nat}
+    {Tg : D.Tab ⊕ D.Glob → Prop} (hTA : ∀ c, Tg c → AtomarAusgenommen c) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) {M : RufMaschineG D}
+    (hX : RufErreichbarGX P O passes Tg (RufStartG P sp init) M) : FolgeG P M := by
+  intro Φ hΦ t
+  have hI : ∀ t, FolgeInvG Φ (M.faeden t) :=
+    gaInv (I := fun M => ∀ t, FolgeInvG Φ (M.faeden t)) (fun M M' e h t => by rw [← e]; exact h t)
+      (folgeInvG_start Φ hΦ sp init) (fun M M' u h hs t => by
+        by_cases htu : t = u
+        · subst htu
+          exact folgeInvG_schritt Φ hΦ hs (h t)
+        · rw [rufSchrittG_fremd hs t htu]
+          exact h t) (gx_ga_lauf hTA hX)
+  exact ⟨(hI t).2.2, fun _ ha he => fR_anRueck Φ _ _ _ ha (hI t).1 he⟩
+
 /-! ## 2. Every leg, for any program meeting the premise groups with the rely -/
 
 section Aus
@@ -222,7 +239,8 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
         hV.2.2.1 (fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2 hS hZ.sperren hK hA.fuss t
           (hZI.1.1 t)) hA.antworten
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
-        frame_schritte_beschraenktX f g n hadm hE run hA' }
+        frame_schritte_beschraenktX f g n hadm hE run hA'
+      folge := folgeG_erreichbarX hTA sp init hX }
 
 /-- **Every leg of `ZielFX` on every thread machine over GX.** -/
 theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
@@ -348,6 +366,7 @@ theorem ziel_of_X (hT : ∀ c, ¬ Tg c) {M0 M : RufMaschineG D}
       (aktivVor_alsX f k run hA)
     rw [segZaehle_alsX] at h1
     exact h1
+  folge := h.folge
 
 /-- **With no shared atomic, `ZielFX` is `ZielF`.** -/
 theorem zielF_of_X (hT : ∀ c, ¬ Tg c) {M0 : RufMaschineG D} {K : FadenMaschine D}

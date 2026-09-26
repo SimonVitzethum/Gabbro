@@ -58,6 +58,7 @@ structure ZielX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   keinKernHalt : KernHaltGA P O passes M0 M
   fortschritt : FortschrittG P O passes M
   zeit : ZeitAbX P O passes Tg M
+  folge : FolgeG P M
 
 /-- **Every stop is named, on the thread machine over GX.** -/
 def FortschrittFX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
