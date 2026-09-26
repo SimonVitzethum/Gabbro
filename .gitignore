@@ -43,3 +43,6 @@ sys,re,collections
 programmlogik/Duty/
 programmlogik/Proofs/
 programmlogik/_pruefung/
+
+# Local assistant output (NLnet guide draft, README copy): not part of the repo (Simon, 2026-09-26)
+Claude outputs/
