@@ -300,7 +300,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | 242 | N431–435 / 1092–1096 / 153–154 | examples 153, 154; no code, no gift |
 | 245 | N436–440 / 1097–1101 / — | gifts 1097, 1098; no code |
 | 246 | N441–445 / 1102–1106 / — | nothing |
-| O-1 (Opus) | **not reserved** | N446–N450, `C185`, gifts 1107–1112, examples 155, 156 |
+| O-1 (Opus) | **not reserved** | N446–N450, `C185`, gifts 1107–1112, examples 155, 156. **Gift 1112 removed 2026-09-26** (merge of lane 260): it pinned `C185` on the shape of 155, which lane 260 now lowers, so it no longer falls; 155 carries the shape as a positive. **Gift 1114 moved to `beispiele/1114-kind-handed-read.gab`** in the same merge: its only expected line was `C185`; the legal handed read is now a positive |
 | 249 | **not reserved** (TODO row says "—") | N451, N452, gifts 1113–1117 |
 | 256 | **not reserved** | N453–N455 (the spare of the block N451–455 that lane 249 chose itself), gifts 1118–1127 |
 | Fix lane F2 | **not reserved** (free range) | gifts 1132–1138; no code (`N426` and `N211` tightened, not minted) |

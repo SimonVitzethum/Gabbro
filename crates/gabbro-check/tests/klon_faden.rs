@@ -324,22 +324,88 @@ fn zwei_regionen_je_mit_eigenem_ruf_sind_sauber() {
     );
 }
 
-// ---- The lowering assumption, pinned ------------------------------------------------
+// ---- The lowering guarantee, pinned -------------------------------------------------
 
-/// **The pin for lane 258.** `C185` refuses every `child` block and its message
-/// carries the assumption the checker's reading rests on: the child is entered by
-/// jump AT the region, and the statements between the gate call and the region never
-/// run on the child's stack. A lowering that lifts `C185` turns this test red -- and
-/// must then keep that reading, or re-check the gap the reading leaves unchecked
-/// (SATZKARTE §39).
+/// **The pin for lane 260 (replaces lane 258's `c185_traegt_die_sprungannahme`
+/// BY DESIGN: lifting `C185` for the narrow triple turns that test red).**
+/// What the lowering guarantees for the code between the gate call and the
+/// region: it runs PARENT-side only. The gate call is an inline `syscall`
+/// (`__asm__ goto`) that jumps straight to the region label when the answer
+/// is zero -- the child never executes the decoding, the `if v == 0` guard,
+/// or anything else between gate and region -- and the parent, whose answer
+/// is never zero, skips the region through the guard it already has. So the
+/// guard appears exactly once (no copy inside the region), the trap exactly
+/// once per triple, and the label exactly once: one jump, one target.
 #[test]
-fn c185_traegt_die_sprungannahme() {
-    let quelle = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../beispiele/155-kind-uebergabe.gab"
-    ))
-    .expect("example 155 is readable");
-    let (baum, mut absagen) = gabbro_syntax::lies("155", &quelle);
+fn kind_sprungsenke_traegt_die_sprungannahme() {
+    for datei in [
+        "../../beispiele/155-kind-uebergabe.gab",
+        "../../beispiele/156-kind-verzweigt.gab",
+    ] {
+        let pfad = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), datei);
+        let quelle = std::fs::read_to_string(&pfad).expect("example is readable");
+        let (baum, mut absagen) = gabbro_syntax::lies("pin", &quelle);
+        let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+        let fehler: Vec<String> = absagen
+            .absagen
+            .iter()
+            .map(|a| format!("{}: {}", a.code, a.text))
+            .collect();
+        assert!(
+            fehler.is_empty(),
+            "{datei} lowers cleanly: {fehler:?}"
+        );
+        assert!(
+            c.contains("__asm__ goto ("),
+            "{datei}: the gate is an inline trap: {c}"
+        );
+        assert!(
+            c.matches("jz %l[gabbro_kind_").count() == 1,
+            "{datei}: one jump into the child per triple"
+        );
+        assert!(
+            c.matches("gabbro_kind_0: ;").count() == 1,
+            "{datei}: one region label per triple"
+        );
+        // **The in-between code stands once, parent-side.** The `if (v == 0)`
+        // guard the source wrote is the only copy: the child enters at the
+        // label below it and never flows through it.
+        assert!(
+            c.matches("if (v == 0) {").count() == 1,
+            "{datei}: the guard between gate and region stands once, parent-side"
+        );
+        // **The answer decoding stands once, parent-side.** The child jumps
+        // before it; the parent decodes the raw answer into value and reason
+        // exactly as the stub template would.
+        assert!(
+            c.contains("gabbro_roh_0") && c.contains("gabbro_ok_0"),
+            "{datei}: the parent-side decoding stands beside the trap"
+        );
+    }
+}
+
+/// **The wide shape still refuses.** A region with no guard to skip it in
+/// the parent has no jump target the trap could enter and no path the parent
+/// could skip -- it falls at `C185`, by name, never silently. (Inline source,
+/// not a corpus file: the corpus probes for this live in `beispiele/gift`.)
+#[test]
+fn kind_ohne_wache_faellt_mit_c185() {
+    let quelle = "module t {
+        reason R { A = 1 \"a\" exhaustive }
+        assume a \"a\" falsifier s;
+        syscall g(x : u64, y : u64) -> u64 or R
+            abi linux arch x86_64 number 1000
+            regs in { rdi = x, rsi = y } regs out { rax } stack rsi
+            clobbers { rcx, r11 } errors { NSTACK => A } effects { pure }
+            costs <= 64 ops assume a falsifier s;
+        extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+        impl fn starter(x : u64, y : u64) -> u64 effects { diverges } {
+            let v = g(x, y) else (e) { return 999; }
+            child { ausgang(y); }
+            return v;
+        }
+    }";
+    let (baum, mut absagen) = gabbro_syntax::lies("pin-breit", quelle);
     let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
     let c185: Vec<String> = absagen
         .absagen
@@ -347,11 +413,5 @@ fn c185_traegt_die_sprungannahme() {
         .filter(|a| a.code == "C185")
         .map(|a| a.text.clone())
         .collect();
-    assert_eq!(c185.len(), 1, "every child block falls at C185 by name: {c185:?}");
-    assert!(
-        c185[0].contains("ASSUMES that jump")
-            && c185[0].contains("never run on the child's stack"),
-        "C185 must carry the jump assumption: {}",
-        c185[0]
-    );
+    assert_eq!(c185.len(), 1, "the unguarded region falls at C185: {c185:?}");
 }
