@@ -4281,7 +4281,7 @@ self-test both directions (the instrument now also reads the local `lean-probe`'
 **Assumptions of the reading** (Spec.lean header, five, repaired after the Spec-diff verdict,
 F1/F2/F5): W over-approximates RC11 at G's step granularity; compiler and hardware implement C11
 atomics; EVERY lock primitive is acquire/release (driver `pthread_mutex`; own primitives under
-`N323`, orders NOT checked, OFFEN O26; foreign ones trusted); carriers are locations; unrecorded
+`N323`, orders NOT checked, OFFEN O26 -- checked since §52, `N481`-`N483`; foreign ones trusted); carriers are locations; unrecorded
 reads (`Orakel.wirkt`, `regLies`, `sichtbar`) are taken over G's memory.
 
 **What is NOT claimed.** Programs that RELY on an unguarded atomic read across threads (a flag, a
@@ -4315,7 +4315,57 @@ programs are listed with their first refusal; the Spec names them as NOT CLAIMED
 register. Exporter change: scalar constants travel as the checker's folded value, `const fn`
 is comptime (93 certified).
 
-## 52. Invariants beyond the returns: four legs of `Ziel`, one of `ZielF`, and `N496` (Opus agent D, 2026-09-26)
+## 52. Racing atomics over machine W: the memory half of O25, the language-carried legs, `N481`-`N483` (Opus lane O25, 2026-09-26)
+
+*Standalone: `Zielsatz/Spec.lean`'s definitions, `Akzeptiert` and `gabbro_ziel` are unchanged
+(two comment-only header corrections, assumption (3) and the O25 pointer in NOT CLAIMED). Files
+`grammatik/Grammatik/Speichermodell/{Atomar,AtomarZeuge,Zaehler}.lean`; report
+`messung/OPUS-O25-ATOMICS.md`.*
+
+**The question.** §50's DRF theorem holds by exclusion: `fuss` refuses every unguarded read of a
+carrier another thread writes, atomics included. What does machine W do when that refusal is
+lifted for ATOMIC carriers only (flags, spins, counters, per-core folds)?
+
+| theorem | file | statement |
+|---|---|---|
+| `FussSA`, `fussSA_of_fussS`, `getrennt_of_freiA` | Atomar | `FussS` with one more disjunct for footprint carriers, "an `atomic` global"; the old property implies it; an unguarded NON-atomic footprint carrier is still thread-local |
+| `RufSchrittGA`, `RufErreichbarGA`, `schrittGA_of_g`, `ga_aus_g` | Atomar | machine GA: a step of G on a presented memory that agrees with G's at every non-atomic carrier (atomic reads answered by any value, the havoc of O25); every G run is a GA run |
+| `gaInv`, `gaInv_spur`, `gaInv_orte`, `gaInv_merk`, `gaInv_exklusiv` | Atomar | a thread-only property kept by G's steps holds on every GA run: the trace invariant, the frame read bound, the feature invariant, lock exclusivity |
+| `zugriff_haeltA`, `schritt_zugriffeA`, `lies_faktenA`, `frei_schreiberA` | Atomar | the static access facts of §50, from the thread invariants instead of G-reachability |
+| `SichtInvA`, `schritt_sichtInvA`, `sichtInvA_erreichbar` | Atomar | §50's view invariant, `frei`/`stimmt` restricted to non-atomic carriers, G's part GA-reached |
+| **`schwach_ist_gA`**, `plain_liest_neueste`, `ga_aus_w` | Atomar | **THE DRF THEOREM WITH RACING ATOMICS**: under `FussSA` every W step is a GA step whose presented memory is G's at EVERY non-atomic carrier; a plain read is the newest message; every W run's G-part is a GA run |
+| `w_spur_exklusiv`, `schwach_ist_gA_vor` | Atomar | trace invariant and lock exclusivity at every machine W reaches; under the old `FussS` the old theorem and the new one both apply |
+| `schrittW_freigabe`, `schrittW_hist`, `laufW_waechst`, **`hb_uebergabe`** | Atomar | release/acquire on EVERY program: a release write carries the writer's view; messages stay and views grow along W runs; **the hand-off**: an acquire read of the message `t` released makes `u`'s view reach `t`'s view before the release at every other carrier, and every later read of `u` there returns a message at or above it |
+| `ga_fremd`, `schrittGA_zerlegen`, `LaufGA`, `sperre_ordnetGA`, **`rennfreiGA`** | Atomar | race freedom for every NON-atomic carrier on every GA run: guarded carriers ordered through the lock, unguarded ones write-separated |
+| `fussWAB`, `fussWAB_iff`, `AkzeptiertA`, **`akzeptiertA_of_akzeptiert`** | AtomarZeuge | the Bool of `FussSA` and the checker `Akzeptiert` with it; EMBEDDING: every program `Akzeptiert` accepts, `AkzeptiertA` accepts |
+| `akzeptiertA_ok`, `schwach_ist_gA_akzeptiert` | AtomarZeuge | `AkzeptiertA` and an admissible start give the memory theorem's premises (graphs `kVon`) |
+| `gaInv_rang`, `kein_warteZyklusGA`, `keine_verklemmungGA`, `LaufW`, **`w_sprache_akzeptiertA`** | AtomarZeuge | **THE LANGUAGE-CARRIED LEGS OVER W**: on a program `AkzeptiertA` accepts, at every machine W reaches, `SpurInv`, lock exclusivity, no global deadlock, no wait cycle, `ZeitAb`, every W step a GA step; on every indexed W run race freedom for non-atomic carriers. NOT the contract legs |
+| `n1_akzeptiertA`, `n1_start`, `n1_ga`, `n1_sprache` | AtomarZeuge | the FLAG: configuration 1 of the noninterference fixture (`kern` stores `konfig`, `hauptA`/`hauptB` read it, no lock), refused by `Akzeptiert`, accepted by `AkzeptiertA`; every W step there a GA step with plain tables SC; the language-carried legs |
+| **`n1_nicht_sc_aber_ga`**, `n1_schwachSC_falsch` | AtomarZeuge | NON-DEGENERATE: W's stale read of `w_nicht_sc` happens on this accepted program and is a GA step; `SchwachSC` is false there -- a goal over `AkzeptiertA` needs the leg `schwach` in GA form |
+| `faltung_abgelehnt`, `faltung_akzeptiertA`, `faltung_echt` | AtomarZeuge | the PER-CORE FOLD (O17 read half): `zaehlA` twice writing the atomic `zaehler`, `zaehlB` reading it -- refused by `Akzeptiert` at `fuss`, accepted by `AkzeptiertA` |
+| `nutzlast_ohne_erwerb_abgelehnt`, `nutzlast_echt` | AtomarZeuge | the REFUSAL: a PLAIN table written by one start and read by another with no lock is refused by `AkzeptiertA` at its footprint component -- the exemption is for atomics only |
+| **`zaehler_zwei`**, `zaehler_lauf`, **`zaehler_verloren`** | Zaehler | a relaxed counter, two threads, one `fetch_add(1)` each: under an ATOMIC RMW (write at the read message's timestamp + 1) the newest message is 2 on every complete run; under W's `exchange` shape (write at any fresh timestamp) the lost update (newest 1, no 2) is reachable -- W cannot prove the counter |
+
+**Rust side (OFFEN O26 closed at the source level).** `namen.rs::sperrprimitiv_ordnung`,
+sentence `namen.sperrprimitiv_ordnung`: `N481` (a take reading only relaxed atomics), `N482` (a
+give writing only relaxed atomics), `N483` (a bodied take and give of one lock releasing and
+acquiring on different ordered atomics). Gifts 1201 (relaxed test-and-set spinlock), 1202, 1203;
+positive: snippet tests `geordneter_spinlock_besteht`, `ticket_sperre_besteht` (the runtime's
+ticket lock shape). Corpus diff: only the three gifts. Measured: `N042` refuses every own or
+foreign `L_nimm`/`L_gib` beside `lock L`, so on accepted programs every lock is driver-defined.
+The Rust footprint legs `N290`-`N294` never counted atomics as carriers: on this component the
+Rust checker decides `fussWAB`, not `fussWB` (`messung/proben/o25-flagge-atomar.gab`: accepted by
+Rust, refused by the exporter, `LG001`).
+
+**What is NOT claimed (OFFEN O25, narrowed).** The CONTRACT legs of `Ziel` over GA -- they come
+from the replay of the user's sequential proof (`execEndH`), which reads an atomic from its own
+world; the rely (a havoc at a shared atomic read in `execEndH`) and the replay family carrying it
+are not built. Therefore no Spec diff: `GabbroZiel` still runs `Akzeptiert`, whose `fuss` refuses
+racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to a PLAIN carrier
+(the view transfer `hb_uebergabe` is proved; a footprint rule admitting the payload read after an
+`awaits` is not).
+
+## 53. Invariants beyond the returns: four legs of `Ziel`, one of `ZielF`, and `N496` (Opus agent D, 2026-09-26)
 
 *Files: `grammatik/Grammatik/Zielsatz/Invarianten.lean` (proofs), `Zielsatz/InvariantenZeuge.lean`
 (witnesses), `Zielsatz/Spec.lean` (definitions, the invariant block of the header),
@@ -4360,5 +4410,10 @@ one reading carriers outside its `traeger`; any invariant while an unfinished th
 one of its writers. Every certified program has no table invariant (`Inv := Empty` in the
 exporter), so `invRuhe`/`invSicht` are vacuous there; the lock legs are not.
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §47 added 2026-09-22 (fix lane F10: worker pools in the goal theorem, `einzeln := EinzelnPool`); §48 added 2026-09-22 (fix lane F11: same-core interrupt preemption, the leg `keinKernHalt`); §49 added 2026-09-26 (Opus agent A: threads created at run time, the thread machine in `GabbroZiel`); §50 added 2026-09-26 (Opus agent B: the memory model beyond DRF-SC, machine W, the leg `schwach`); §51 added 2026-09-26 (Opus agent C: one certificate per exported program, the register of the rest); §52 added 2026-09-26 (Opus agent D: invariants beyond the returns, four legs of `Ziel`, `ZielF.spawnSicht`, `N496`); §§1-10 history above.)
+**Review** (`messung/URTEIL-SPECDIFF-OPUS-D-2026-09-26.md`): sound, no premise moved. A callee's
+writes are its caller's, so a thread that ever writes a carrier keeps the invariant open for its
+whole life (`invRuhe` bites after the writers finish); and a guarded table invariant has, by
+argument, no reachable writer in the model, so `invSicht` adds nothing to `invRuhe` there.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §47 added 2026-09-22 (fix lane F10: worker pools in the goal theorem, `einzeln := EinzelnPool`); §48 added 2026-09-22 (fix lane F11: same-core interrupt preemption, the leg `keinKernHalt`); §49 added 2026-09-26 (Opus agent A: threads created at run time, the thread machine in `GabbroZiel`); §50 added 2026-09-26 (Opus agent B: the memory model beyond DRF-SC, machine W, the leg `schwach`); §51 added 2026-09-26 (Opus agent C: one certificate per exported program, the register of the rest); §52 added 2026-09-26 (Opus lane O25: racing atomics over W -- the memory half, the language-carried legs, `N481`-`N483`); §53 added 2026-09-26 (Opus agent D: invariants beyond the returns, four legs of `Ziel`, `ZielF.spawnSicht`, `N496`); §§1-10 history above.)
 

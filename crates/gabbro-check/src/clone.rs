@@ -742,6 +742,8 @@ fn expr_uebergabe(x: &Expr, tore: &HashMap<String, usize>, uebergeben: &mut Hash
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Lane 261:** a string literal hands nothing -- bytes name no gate.
+        | ExprArt::Kette(_)
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
         | ExprArt::Ergebnis
@@ -962,11 +964,13 @@ fn zugriff_expr(e: &Expr, z: &mut Kindzugriff) {
             }
             ExprArt::Zaehle { domaene, .. } => zugriff_domaene(domaene, z),
             // Sub-expressions arrive through `alle_ausdruecke`; these name nothing.
+            // **Lane 261:** a string literal names nothing either.
             ExprArt::LibraryCall(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)
             | ExprArt::ArrayLit(_)
+            | ExprArt::Kette(_)
             | ExprArt::Zahl(_)
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr

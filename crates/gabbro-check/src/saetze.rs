@@ -1000,6 +1000,48 @@ pub const NAMEN: &[Satz] = &[
                      `lockVertrag_halte_gib`, `rohLP_verletzt`); laufzeit/sperre.gab (the \
                      passing shape)",
     },
+    Satz {
+        name: "namen.sperrprimitiv_ordnung",
+        kennungen: &["N481", "N482", "N483"],
+        aussage: "An own lock primitive synchronises like a mutex: a bodied take \
+                  (`L_nimm`, `L_nimm_geteilt`) that reads atomics reads at least one \
+                  ORDERED atomic -- declared `acquire`, `release` or `seq`, which the \
+                  emitter loads acquire and swaps acq_rel (`N481`); a bodied give \
+                  (`L_gib`, `L_gib_geteilt`) that writes atomics writes at least one \
+                  ordered atomic, stored release (`N482`); and every bodied take and give \
+                  of one lock that are both ordered share an ordered atomic the give writes \
+                  and the take reads, so the give's release synchronises with the next \
+                  take's acquire (`N483`). A program that passes has no own primitive \
+                  whose critical sections are unordered in C11 -- the reading every lock \
+                  is a mutex, assumption (3) of `Zielsatz/Spec.lean`, is then checked for \
+                  own primitives instead of assumed.",
+        vorbehalt: "**Order by declaration, not by flow.** The legs read the ORDERING WORD \
+                    of the atomics a body touches, as the emitter lowers them \
+                    (`C-SPEICHERMODELL.md` §1c); that the acquiring read is the one that \
+                    sees the give's release (a spin on the right word, not a stray load) \
+                    is the shape `N323` holds, not a flow fact. A take or give that touches \
+                    no atomic at all is `N323`'s (its order and hold legs). Bodiless \
+                    (`extern fn`) and `asm` primitives are trust base and stay a named \
+                    assumption. Measured 2026-09-26: `N042` refuses the C name of EVERY own \
+                    or foreign `L_nimm`/`L_gib` beside `lock L`, so no accepted program has \
+                    such a primitive today; these three legs are the order half of the \
+                    contract for the day that name opens (OFFEN O26).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1201 (`-- erwartet: N481`: a test-and-set spinlock over \
+                      a `relaxed` word -- `N481` at the take and `N482` at the give, `N323` \
+                      silent), /1202 (`N482`: an acquiring take, a give through a relaxed \
+                      second word), /1203 (`N483`: take acquires `HALTER`, give releases \
+                      `ZURUECK`); snippet tests in `namen.rs` (`geordneter_spinlock_besteht`, \
+                      `ticket_sperre_besteht` -- the runtime's ticket lock shape of \
+                      `laufzeit/sperre.gab` beside `lock TOR` passes all three -- \
+                      `entspannter_spinlock_faellt_mit_n481_und_n482`, \
+                      `zwei_worte_faellt_mit_n483`). Corpus diff: no other file under \
+                      `beispiele/` draws `N481`-`N483`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::sperrprimitiv_ordnung; \
+                     grammatik/Grammatik/Speichermodell/Atomar.lean (`hb_uebergabe`, \
+                     `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/MaschineW.lean \
+                     (`locksicht`, the lock view W joins at a take and a give)",
+    },
 ];
 
 // ===================================================================================
@@ -2749,31 +2791,33 @@ pub const M1: &[Satz] = &[
                   branch, from the negated condition after an `if` without \
                   `else` whose block always ends, and from `requires`; a fact \
                   dies when either name is assigned or rebound, and before a \
-                  loop body that assigns it. What passes here still stops at \
-                  the emitter (`C001`, no lowering for string values).",
+                  loop body that assigns it. A literal holds its exact byte \
+                  length as its bound, and every declared max allocates \
+                  (`N486`, booked beside `zeichenfolge.schranke`). What passes \
+                  here lowers since lane 261 (`gabbro_string_N`: one length \
+                  word plus `max` bytes, no NUL terminator).",
         vorbehalt: "The `+` rule over-approximates the exact-length concat of \
                     the Lean model (`bconcat`): it may refuse a sum whose actual \
                     lengths fit, never accept one that does not. No fact \
                     reaches the right side of an `&&` inside one expression, and \
                     a signed or unannotated index name proves nothing (a guard \
                     and its index stand in two statements, over an unsigned \
-                    name). String sources are parameters, `extern` returns and \
-                    inferred `let`s only: `\"hi\"` stays `P011` (a literal needs \
-                    an `ExprArt` arm, and `m1::ausdruck_roh` is exhaustive over \
-                    `ExprArt`). NUL termination and an upper limit on the max \
-                    are the lowering's decisions, not made here.",
+                    name). String sources are parameters, literals, `extern` \
+                    returns and inferred `let`s: a literal holds its byte \
+                    count, and an over-long literal at a slot falls (`N455`). \
+                    NUL termination is the lowering's decision, made there: \
+                    the layout carries no terminator.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form (checker half \
-                      only -- there is no C for `cc` to take, the emitter stops \
-                      every string program with `C001`): `1118` (`N453`: 5+5 \
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1118` \
+                      (`N453`: 5+5 \
                       into 8), `1119` (`N454`: literal 8 at max 8), `1120` \
                       (`N454`: computed index, narrowed yet unguarded), `1125` \
                       (`N454`: literal 7 below max 8 with no length fact -- \
                       checker-clean before fix lane F6), `1168` (`N454`: the \
                       guard's fact dies with an assignment). The clean sides \
-                      are `1123` (declaration plus `lenof`), `1124` (5+3 into 8) \
-                      and `1159` (all four guard forms), checker-silent with \
-                      `C001` at the emitter.",
+                      moved to beispiele/ when lane 261 taught the emitter: \
+                      `1123` (declaration plus `lenof`), `1124` (5+3 into 8) \
+                      and `1159` (all four guard forms).",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
                      `index_regel`, `fakten`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
                      (`bconcat_max_summe`, `bindex_geschuetzt`, \
@@ -2805,11 +2849,14 @@ pub const M1: &[Satz] = &[
                       mixed), `1164` (`N455`: a `requires` copies 8 into 2), \
                       `1165` (`N455`: a `let … else` source copies 8 into 2), \
                       `1167` (`N455`: a sibling block's `x` holds 64 and is copied \
-                      into 2 -- accepted before fix lane F6 by the flat table). \
-                      The clean sides are `1126` (`==` and `<` over two strings) \
-                      and `1166` (a name reused as a number in a sibling block -- \
-                      a false `N455` before fix lane F6), checker-silent with \
-                      `C001` at the emitter.",
+                      into 2 -- accepted before fix lane F6 by the flat table), \
+                      `1213` (`N455`: an over-long literal at a slot). \
+                      The clean sides moved to beispiele/ when lane 261 taught \
+                      the emitter: `1126` (`==` and `<` over two strings) and \
+                      `1127` (a literal at a fitting slot). `1166` (a name \
+                      reused as a number in a sibling block -- a false `N455` \
+                      before fix lane F6) stays a `C001` gift: its doubly-bound \
+                      names have no emitter type.",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
                      `wert_ohne_kette`, `expr_regel`, `ort_regel`, `ruf_regel`, \
                      `Zustand`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
@@ -2865,18 +2912,44 @@ pub const M1: &[Satz] = &[
                   constructor, an unknown name) falls, and so does a call to an \
                   ambiguous name whose candidates carry a string.",
         vorbehalt: "A deliberate cut, not a model: strings in aggregates and \
-                    constants need the lowering's value layout and literal \
-                    surface first, and are refused until then rather than \
-                    carried unchecked. No corpus program uses a string, so the \
-                    refusal costs no accepted program (measured: corpus diff 0).",
+                    constants are refused (`N465`) although the lowering could \
+                    lay them out -- length facts do not reach fields, slots or \
+                    globals, so no discipline would follow the value there. \
+                    Five corpus programs use strings in parameters, results \
+                    and `let`s (beispiele/1123, 1124, 1126, 1127, 1159); the \
+                    refusal costs none of them (measured: they emit).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1160` (a struct \
                       field), `1161` (a `const`), `1162` (a `static`), `1163` (a \
                       table slot field) -- all four checker-clean before fix lane \
                       F6. The clean side is every parameter/result/`let` string \
-                      in `1123`, `1124`, `1126`, `1159`, `1166`.",
+                      in beispiele/1123, 1124, 1126, 1127, 1159 and gift/1166.",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`deklarationen`, \
                      `typ_annotation`, `ruf_regel`, `bibliothek_regel`)",
+    },
+    Satz {
+        name: "zeichenfolge.schranke",
+        kennungen: &["N486"],
+        aussage: "Every declared `string max N` allocates one length word plus N \
+                  bytes where it stands, so N is bounded: `1 ..= 65535`. A max \
+                  of zero holds no character and has no object form, and a max \
+                  past 65535 the unit cannot allocate -- a single local would \
+                  already exceed any sane stack frame (`N486`). The bound is \
+                  held at every declared max, in parameters, results, `let` \
+                  annotations and refused positions alike.",
+        vorbehalt: "The number 65535 is the lowering's decision, not the model's: \
+                    the Lean `BString max` takes any `max`. What the checker \
+                    guarantees is only that an accepted max allocates -- the C \
+                    layout (`gabbro_string_N`: `uint32_t len` plus `uint8_t \
+                    data[N]`, no NUL terminator) is booked beside the emitter.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1211` (a max \
+                      past the bound), `1212` (a max of zero). The clean side \
+                      is beispiele/161 (literals, copy, concat, index, `lenof` \
+                      at small maxes, compiled and run in `pruefe-emission.sh`).",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`max_traegt`, \
+                     `max_regel`, `deklarationen`, `typ_annotation`, \
+                     `ketten_maxima`)",
     },
     Satz {
         name: "m1.ganzzahl_match",

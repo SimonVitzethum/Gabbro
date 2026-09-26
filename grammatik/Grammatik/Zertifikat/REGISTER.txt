@@ -40,9 +40,14 @@ UNCERTIFIED	beispiele/11-grammatikbefunde.gab	LG001	atomic gefuellt has no G for
 UNCERTIFIED	beispiele/110-fussgarantie.gab	LG004	`let` of a call in lies_doppelt has no G form at the top level
 UNCERTIFIED	beispiele/111-rufzulassung.gab	LG002	field senden of record Treiber has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), so an integer range, `bool` or a `tagged` sum travels and an array, a nested record, a float or a pointer field does not
 UNCERTIFIED	beispiele/112-register-traeger-bewacht.gab	LG001	device Geraet has no G form: a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`
+UNCERTIFIED	beispiele/1123-deklaration-laenge-ok.gab	LG002	parameter type in nimm has no G form
+UNCERTIFIED	beispiele/1124-verkettung-in-max-ok.gab	LG002	parameter type in nimm has no G form
+UNCERTIFIED	beispiele/1126-vergleich-ok.gab	LG002	parameter type in nimm has no G form
+UNCERTIFIED	beispiele/1127-literal-ok.gab	LG003	expression in nimm has no G form
 UNCERTIFIED	beispiele/113-register-traeger-ungeschrieben.gab	LG001	device Geraet has no G form: a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`
 UNCERTIFIED	beispiele/114-owner-with-producer.gab	LG001	type Marke has no `Ty` form, because a mark is a RESOURCE and not a value: a `linear ghost` mark is `D.Marke` with `stufen m = 1`: it is held in `Λ` as `Res.marke m 0`, consumed through `Signatur.konsumiert` and retired by `Stmt.retires`; `ghost` itself is the carrier flag `D.geist`. This exporter writes `Marke := Empty`, builds no `konsumiert`/`produziert` and exports neither `advances` nor `retires`, so a mark that travelled would travel as nothing
 UNCERTIFIED	beispiele/115-owner-read-with-producer.gab	LG001	type Marke has no `Ty` form, because a mark is a RESOURCE and not a value: a `linear ghost` mark is `D.Marke` with `stufen m = 1`: it is held in `Λ` as `Res.marke m 0`, consumed through `Signatur.konsumiert` and retired by `Stmt.retires`; `ghost` itself is the carrier flag `D.geist`. This exporter writes `Marke := Empty`, builds no `konsumiert`/`produziert` and exports neither `advances` nor `retires`, so a mark that travelled would travel as nothing
+UNCERTIFIED	beispiele/1159-index-unter-laenge-ok.gab	LG002	parameter type in nimm has no G form
 UNCERTIFIED	beispiele/116-payload-free-counter.gab	LG001	atomic ZAEHLER has no G form: an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter writes `atomar := fun _ => false` and exports none of the three
 UNCERTIFIED	beispiele/117-message-passing-flag.gab	LG001	atomic BEREIT has no G form: an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter writes `atomar := fun _ => false` and exports none of the three
 CERTIFIED	beispiele/118-sperrinvariante-erhaltung.gab	Grammatik.Zertifikat.G118_sperrinvariante_erhaltung	chain=none
@@ -81,6 +86,7 @@ UNCERTIFIED	beispiele/156-kind-verzweigt.gab	LG001	assume faden_start_vertrag ha
 CERTIFIED	beispiele/157-worker-pool.gab	Grammatik.Zertifikat.G157_worker_pool	chain=none
 UNCERTIFIED	beispiele/158-arena-commit.gab	LG005	`grow` out of arena Vorrat in fuellen has no G form: the committed prefix below the ceiling is checker flow, and this exporter builds the static `ArenaForm` of `hi` slots
 CERTIFIED	beispiele/16-by-ops-am-feld.gab	Grammatik.Zertifikat.G16_by_ops_am_feld	chain=none
+UNCERTIFIED	beispiele/161-zeichenkette.gab	LG002	result of baue has no integer-range, bool or tagged form
 UNCERTIFIED	beispiele/17-gruppe-ueber-zwei-sperren.gab	LG001	group Zustellung has no G form: a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); this exporter writes `Inv := Empty`
 UNCERTIFIED	beispiele/18-vorfahren.gab	LG001	table Topologie carries a form with no G counterpart
 UNCERTIFIED	beispiele/19-traversierung.gab	LG005	unknown name passes in aktive_zaehlen
@@ -155,10 +161,6 @@ UNCERTIFIED	beispiele/gift/1053-fetch-sub-narrow-range-stays-refused.gab	LG001	a
 UNCERTIFIED	beispiele/gift/1066-never-asm-mit-out-ohne-result.gab	LG001	function halt is not `impl`
 UNCERTIFIED	beispiele/gift/1112-kind-ohne-senke.gab	LG001	assume faden_start_vertrag has no G form: a named assumption is `D.Annahme`, which the specification consumes only at `Stmt.forever` and `Stmt.retires`; this exporter builds no `Annahme` and exports neither statement
 UNCERTIFIED	beispiele/gift/1114-kind-handed-read.gab	LG001	assume faden_start_vertrag has no G form: a named assumption is `D.Annahme`, which the specification consumes only at `Stmt.forever` and `Stmt.retires`; this exporter builds no `Annahme` and exports neither statement
-UNCERTIFIED	beispiele/gift/1123-deklaration-laenge-ok.gab	LG002	parameter type in nimm has no G form
-UNCERTIFIED	beispiele/gift/1124-verkettung-in-max-ok.gab	LG002	parameter type in nimm has no G form
-UNCERTIFIED	beispiele/gift/1126-vergleich-ok.gab	LG002	parameter type in nimm has no G form
-UNCERTIFIED	beispiele/gift/1159-index-unter-laenge-ok.gab	LG002	parameter type in nimm has no G form
 UNCERTIFIED	beispiele/gift/1166-geschwisterblock-ok.gab	LG002	parameter type in nimm has no G form
 UNCERTIFIED	beispiele/gift/166-wachhund-nennt-nichts.gab	LG006	`retry` in f has no G form in this fragment
 UNCERTIFIED	beispiele/gift/194-cas-schleife-ohne-schranke.gab	LG001	atomic ZAEHLER has no G form: an `atomic` is a `Glob` with `atomar = true` and a `nutzlast`, and its accesses are `Stmt.publish`/`Block.awaits`/`Block.exchange`; this exporter writes `atomar := fun _ => false` and exports none of the three
@@ -218,4 +220,4 @@ UNCERTIFIED	beispiele/gift/930-requires-ohne-signaturwache.gab	LG004	read of the
 UNCERTIFIED	beispiele/gift/957-producer-requires-stronger-than-slot.gab	LG002	field senden of record Treiber has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), so an integer range, `bool` or a `tagged` sum travels and an array, a nested record, a float or a pointer field does not
 UNCERTIFIED	beispiele/gift/958-slot-ensures-stronger-than-producer.gab	LG002	field bereit of record Treiber has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), so an integer range, `bool` or a `tagged` sum travels and an array, a nested record, a float or a pointer field does not
 UNCERTIFIED	beispiele/halde.gab	LG001	type Griff has no `Ty` form, because a mark is a RESOURCE and not a value: a `linear ghost` mark is `D.Marke` with `stufen m = 1`: it is held in `Λ` as `Res.marke m 0`, consumed through `Signatur.konsumiert` and retired by `Stmt.retires`; `ghost` itself is the carrier flag `D.geist`. This exporter writes `Marke := Empty`, builds no `konsumiert`/`produziert` and exports neither `advances` nor `retires`, so a mark that travelled would travel as nothing
-# TOTAL: 199 accepted, 23 CERTIFIED, 176 UNCERTIFIED
+# TOTAL: 201 accepted, 23 CERTIFIED, 178 UNCERTIFIED

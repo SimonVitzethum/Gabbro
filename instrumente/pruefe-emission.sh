@@ -557,6 +557,39 @@ lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
      's/\.benutzt = true/.benutzt = false/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 1b. The example: bounded strings -------------------------------------------------
+#
+#    Expected (lane 261, OFFEN.md O24):
+#      2        -- `baue` delivers `"hi"`: two bytes
+#      104 105  -- `h`, `i`
+#      2        -- `kopiere` into `string max 16` keeps the length
+#      3        -- `haenge_an` concatenates `"hi" + "!"`: three bytes
+#      104 105 33 -- `h`, `i`, `!`
+#      1        -- `"hi" == "hi"`
+#      0 1 0    -- `"hi" != "hi!"`, `"hi" < "hi!"` (shorter prefix), not the reverse
+TREIBER161='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    gabbro_string_8 h = baue();
+    gabbro_string_16 k = kopiere(h);
+    gabbro_string_5 a = { 2, "hi" };
+    gabbro_string_3 b = { 1, "!" };
+    gabbro_string_8 c = haenge_an(a, b);
+    printf("%u %u %u %u %u %u %u %u %u %u %u %u\n",
+           h.len,
+           (unsigned)h.data[0], (unsigned)h.data[1],
+           k.len,
+           laenge(c),
+           zeichen(c, 0), zeichen(c, 1), zeichen(c, 2),
+           gleich(h, h),
+           gleich(h, c), kleiner(h, c), kleiner(c, h));
+    return 0;
+}
+'
+lauf "beispiel161" "$W/beispiele/161-zeichenkette.gab" "$TREIBER161" "2 104 105 2 3 104 105 33 1 0 1 0" \
+     's/d\.len = a\.len + b\.len/d.len = a.len/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
 # **Die Frage, die dieser Lauf beantwortet:** `BootPhase` ist ein `linear ghost type`, der
@@ -3202,7 +3235,7 @@ fi
 # **116 -> 117 on 2026-09-16 (merge review of the lock-striping lane).** One example came with
 # it (`146-sperrstreifen`), and the lane measured the delta, named it and left the counter alone
 # -- the second lane in a row to do that correctly. Re-measured here on the merged tree.
-MARKE_EMIT=127
+MARKE_EMIT=133
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
@@ -3213,6 +3246,9 @@ MARKE_EMIT=127
 # the cause. Re-measured here by the merger: 126 files under `beispiele/` emit.
 # **126 -> 127 on 2026-09-26 (merge of lane 259, `grow` lowered).** One emitting demo came
 # with it (`158-arena-commit`); the lane measured the delta and left the counter alone.
+# **127 -> 133 on 2026-09-26 (merge of lane 261, strings lowered).** Six files now emit:
+# `161-zeichenkette` and the five positive string probes that moved from `gift/` to `beispiele/`
+# (1123, 1124, 1126, 1127, 1159) because they now lower. Re-measured by the merger.
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -3441,7 +3477,10 @@ MARKE_EMIT=127
 # (`messung/proben/probe-akzeptiert-diff-guarded.gab`,
 # `probe-akzeptiert-diff-deepchain.gab`) emit and compile -- the good case,
 # and a finding nonetheless. Re-measured by the merger: 143 of 143.
-MARKE_EMIT_M=143
+# **143 -> 144 on 2026-09-26 (merge of Opus lane O25).** Its alignment probe
+# `messung/proben/o25-flagge-atomar.gab` (an atomic flag Rust accepts and the exporter refuses
+# with LG001) emits and compiles. Re-measured by the merger.
+MARKE_EMIT_M=144
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

@@ -641,6 +641,14 @@ pub enum ExprArt {
     /// `static const` C array. Any other position never parses, which is a
     /// grammar fact rather than a refusal.
     ArrayLit(Vec<Expr>),
+    /// **`"…"` -- a bounded-string literal (lane 261).**
+    ///
+    /// The UTF-8 bytes of the quoted text, without the quotes. The length of
+    /// a literal is its byte count, and the checker holds it against the
+    /// target `max` exactly (`zeichenfolge.rs`, `literal_passt`). Adjacent
+    /// texts are NOT joined here (unlike `claim` prose, «B22»): concatenation
+    /// is `+`, and one literal is one value.
+    Kette(Vec<u8>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

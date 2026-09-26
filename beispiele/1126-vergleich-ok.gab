@@ -1,13 +1,12 @@
--- erwartet: C001
--- **1126 -- string comparison checks clean (lane 256).**
+-- **1126 -- string comparison checks clean (lane 256; emitting since lane 261).**
 --
 -- The positive side of the compare shape: `==` and `<` over two strings
 -- answer `bool` like every other comparison the checker lets through,
--- and draw no diagnostic. The emitter stops the unit with `C001`, so no
--- C is written. Mixed comparisons (exactly one string side) stay
--- `N455`.
+-- and draw no diagnostic. Since lane 261 they lower to `gabbro_streq` /
+-- `gabbro_strlt` over `(len, data)` pairs. Mixed comparisons (exactly
+-- one string side) stay `N455`.
 
-module gift1126 {
+module beispiel1126 {
 impl fn nimm(s: string max 8, t: string max 8) -> u32
     effects { pure }
     costs <= 64 ops

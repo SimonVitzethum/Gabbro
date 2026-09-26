@@ -1,0 +1,35 @@
+-- o25-flagge-atomar.gab -- **the flag shape of OFFEN O25, measured (Opus lane O25,
+-- 2026-09-26).** `setzer` stores the atomic `FLAGGE`, `leser` reads it with no
+-- lock, two declared starts. The Rust checker ACCEPTS it (0 errors: the
+-- footprint legs `N290`-`N294` do not count atomics among the carriers, the
+-- race legs `N300`/`N301` exempt them) -- that is the atomic exemption of
+-- `fussWAB`/`AkzeptiertA` (`grammatik/Grammatik/Speichermodell/AtomarZeuge.lean`),
+-- not the goal checker's `fussWB`, which refuses the shape (`n1_abgelehnt`).
+-- The exporter refuses the unit (`LG001`: no `atomic` has a G form), so the
+-- differential test `pruefe-akzeptiert-diff.py` lists it as a skip and cannot
+-- compare the two Bools here.
+
+module probe::flagge {
+
+atomic FLAGGE : u32 acquire;
+
+pub static mut kopie : u32 = 0;
+
+impl fn setzer()
+    effects { writes FLAGGE }
+    costs   <= 8 ops
+{
+    FLAGGE = 1 publishes nothing;
+}
+
+impl fn leser()
+    effects { reads FLAGGE, writes kopie }
+    costs   <= 8 ops
+{
+    let f : u32 = FLAGGE;
+    kopie = f;
+}
+
+concurrent { setzer, leser };
+
+}

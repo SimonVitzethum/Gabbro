@@ -2083,6 +2083,22 @@ impl<'a> Parser<'a> {
 
         let t = self.blick();
         match t.art {
+            // **Lane 261: a quoted text in value position is a string literal.**
+            //
+            // Until today a `"` here fell to `P011` (`"hi"` stayed a literal
+            // needs an `ExprArt` arm). The bytes are the UTF-8 bytes of the
+            // text without the quotes, and the length the checker holds is
+            // the byte count. Exactly ONE text is consumed: adjacent texts
+            // are joined only for `claim` prose («B22»), while here
+            // concatenation is `+` and a second text is a second value the
+            // operator reader will refuse.
+            Art::Text => {
+                self.pos += 1;
+                Ok(Expr {
+                    art: ExprArt::Kette(t.text(self.quelle).as_bytes().to_vec()),
+                    span: t.span,
+                })
+            }
             Art::Zahl(v) => {
                 self.pos += 1;
                 Ok(Expr {

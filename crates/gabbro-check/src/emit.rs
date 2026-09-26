@@ -390,6 +390,32 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
         matches!(t, TypExpr::Pfad(p)
             if p.teile.last().is_some_and(|n| u.verbunde.contains(&n.text)))
     };
+    // **Lane 261:** a string local is a value too (`gabbro_string_N`,
+    // passed and held by value). Annotated lets answer from the
+    // annotation; unannotated ones from the value -- a literal, a call
+    // with a string result, or a name the unit-wide parameter map holds
+    // as a string (best effort beside `verbundwert`: a disagreement
+    // drops the entry there, and here a missed entry is a `->` `cc`
+    // rejects, never a silent misread).
+    let ist_kette = |t: &TypExpr| matches!(t, TypExpr::Zeichenkette { .. });
+    fn kettenwert(e: &Expr, u: &Namen) -> bool {
+        match &e.art {
+            ExprArt::Klammer(x) => kettenwert(x, u),
+            ExprArt::Kette(_) => true,
+            ExprArt::Ruf(r) => {
+                let Some(n) = r.path().and_then(|p| p.teile.last()) else { return false };
+                u.funktionen
+                    .get(&n.text)
+                    .and_then(|s| s.rueck.as_ref())
+                    .is_some_and(|t| matches!(t, TypExpr::Zeichenkette { .. }))
+            }
+            ExprArt::Ort(o) if o.suffixe.is_empty() => u
+                .parametertyp
+                .get(&o.basis.text)
+                .is_some_and(|t| matches!(t, TypExpr::Zeichenkette { .. })),
+            _ => false,
+        }
+    }
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Let(l) => {
@@ -404,8 +430,8 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
                 // > im TODO als ableitbare Zeremonie, und der Versuch, sie wegzulassen,
                 // > deckte auf, dass sie zwei Leser hat und nur einer sie ablas.
                 let ist = match &l.typ {
-                    Some(t) => ist_verbund(t),
-                    None => verbundwert(&l.wert, u),
+                    Some(t) => ist_verbund(t) || ist_kette(t),
+                    None => verbundwert(&l.wert, u) || kettenwert(&l.wert, u),
                 };
                 if ist {
                     aus.push(l.name.text.clone())
@@ -654,6 +680,12 @@ struct Signatur {
     /// C-Signatur -- `bool f(T *_wert, R *_grund)` -- und ein Ruf ausserhalb eines
     /// `let … else` waere derselbe Name mit der falschen Stelligkeit.
     fehler: Option<String>,
+    /// **Lane 261: the declared parameter types, in order.** A string
+    /// argument widens into its parameter's max at the call site
+    /// (`kette_zu`), and the max stands in the callee's declaration --
+    /// read here, not re-derived. Ghost positions keep their entry (the
+    /// ghost filter drops them by the same index).
+    param_typen: Vec<TypExpr>,
 }
 
 /// Ein Geraet, so wie der Erzeuger es braucht.
@@ -1298,6 +1330,7 @@ pub fn emittiere_mit(
                 nie_rueck: matches!(f.ergebnis, Some(TypExpr::Never(_))),
                 fehler: f.fehler.as_ref().map(|i| i.text.clone()),
                 rueck: f.ergebnis.clone(),
+                param_typen: f.parameter.iter().map(|p| p.typ.clone()).collect(),
                 option_rueck: match &f.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -1323,6 +1356,7 @@ pub fn emittiere_mit(
                 nie_rueck: matches!(s.ergebnis, Some(TypExpr::Never(_))),
                 fehler: s.fehler.as_ref().map(|i| i.text.clone()),
                 rueck: s.ergebnis.clone(),
+                param_typen: s.parameter.iter().map(|p| p.typ.clone()).collect(),
                 option_rueck: match &s.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -1534,6 +1568,11 @@ pub fn emittiere_mit(
             if ist_verbund(&p.typ, &namen) {
                 namen.werte.insert(p.name.text.clone());
             }
+            // **Lane 261:** a string parameter is a value (`gabbro_string_N`
+            // by value), beside the record above.
+            if matches!(&p.typ, TypExpr::Zeichenkette { .. }) {
+                namen.werte.insert(p.name.text.clone());
+            }
         }
         let FnRumpf::Block(rumpf) = &f.rumpf else { return };
         let mut gefunden = Vec::new();
@@ -1603,13 +1642,23 @@ pub fn emittiere_mit(
                 // then refuses by name (`C001`) instead of writing `[]`.
                 if matches!(&a.typ, TypExpr::Feld(_)) {
                     let TypExpr::Feld(f) = &a.typ else { unreachable!() };
-                    if let (Some(c), Some(n)) =
-                        (ctyp(&f.element, &namen), feldlaenge_von(&a.typ, &namen))
-                    {
-                        typen.push((a.name.text.clone(), c));
-                        laengen.push((a.name.text.clone(), n));
-                        elemtypen.push((a.name.text.clone(), f.element.clone()));
+                    // **Lane 261:** a string is no atomic element -- the fold
+                    // is integer arithmetic, and a struct cell would carry it
+                    // past every access. Skipped here like an unresolvable
+                    // element, so the declaration arm refuses by name below.
+                    let ist_kette = matches!(&f.element, TypExpr::Zeichenkette { .. });
+                    if !ist_kette {
+                        if let (Some(c), Some(n)) =
+                            (ctyp(&f.element, &namen), feldlaenge_von(&a.typ, &namen))
+                        {
+                            typen.push((a.name.text.clone(), c));
+                            laengen.push((a.name.text.clone(), n));
+                            elemtypen.push((a.name.text.clone(), f.element.clone()));
+                        }
                     }
+                } else if matches!(&a.typ, TypExpr::Zeichenkette { .. }) {
+                    // **Lane 261:** a string is no atomic payload either --
+                    // same skip, same refusal below.
                 } else if let Some(c) = ctyp(&a.typ, &namen) {
                     typen.push((a.name.text.clone(), c));
                     elemtypen.push((a.name.text.clone(), a.typ.clone()));
@@ -1867,6 +1916,13 @@ pub fn emittiere_mit(
     if braucht_arena_dynamisch(baum) {
         aus.push_str(ARENA_DYN_PRELUDE);
     }
+    // **Lane 261: the string section lands here.** The mark is the byte
+    // offset past the prelude: prototypes and bodies below name string
+    // types and helpers, so the section precedes them. The section itself
+    // is computed at the end (`ketten_abschnitt`, a name scan over the
+    // lowered declarations and bodies), and spliced at this mark -- only
+    // appends happen after it, so the offset stays valid.
+    let ketten_marke = aus.len();
     let annahmen = crate::manifest::sammle(baum);
     namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
     // **Every `arch` word this unit carries, from every clause that can carry one.**
@@ -2437,6 +2493,20 @@ pub fn emittiere_mit(
         // heben waere ein Ausdruck fuer eine Maschinenfrage; so steht er da, wo er hingehoert:
         // im Zeugnis, Abschnitt E, mit seinem Vertrag.
         ItemArt::Accumulates(ac) => {
+            // **Lane 261:** a string is no accumulates payload -- the fold is
+            // integer arithmetic over one cell per core, and a length word
+            // plus bytes is none of that. Refused by name like an
+            // unresolvable type.
+            if matches!(&ac.typ, TypExpr::Zeichenkette { .. }) {
+                weigere(
+                    absagen,
+                    ac.name.span,
+                    "`accumulates` over a bounded string -- the fold is integer \
+                     arithmetic over one cell per core, and a string is a length \
+                     word plus bytes",
+                );
+                return;
+            }
             let Some(c) = ctyp(&ac.typ, &namen) else {
                 weigere(absagen, ac.name.span, "`accumulates` of an unresolvable type");
                 return;
@@ -2897,6 +2967,14 @@ pub fn emittiere_mit(
                 aus.push_str(DREH_C.iter().find(|(n, _)| n == d).map(|(_, c)| *c).unwrap_or(""));
             }
         }
+    }
+    // **Lane 261: the string section, spliced at its mark.** See
+    // `ketten_abschnitt` for the collection principle; the mark stands past
+    // the prelude and before every declaration, so types and helpers precede
+    // their uses.
+    {
+        let abschnitt = ketten_abschnitt(&aus, &rumpf);
+        aus.insert_str(ketten_marke, &abschnitt);
     }
     aus.push_str(&rumpf);
     aus
@@ -4019,6 +4097,8 @@ fn enthaelt_bitnicht(e: &Expr) -> bool {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Lane 261:** a string literal holds no `~`.
+        | ExprArt::Kette(_)
         | ExprArt::Ort(_)
         | ExprArt::FnWert(_)
         | ExprArt::Eingebaut(_)
@@ -4958,9 +5038,12 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         // **Lane E1** -- a library call is no address either.
         // **Lane 111** -- a table literal is no address either: it stands only
         // as a `const` initializer and never reaches a bank base.
+        // **Lane 261** -- a string literal is no address either: it is a
+        // value with no register field behind it.
         | ExprArt::Zaehle { .. }
         | ExprArt::LibraryCall(_)
         | ExprArt::ArrayLit(_)
+        | ExprArt::Kette(_)
         | ExprArt::Unaer(_, _) => {
             weigere(
                 absagen,
@@ -6095,8 +6178,11 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         // **Lane 111:** a table literal likewise -- it never stands here (the
         // parser reads `[` only as a `const` initializer), and the general
         // reader answers for it.
+        // **Lane 261:** a string literal likewise -- the general reader
+        // lowers it, or refuses it by name there.
         | ExprArt::LibraryCall(_)
         | ExprArt::ArrayLit(_)
+        | ExprArt::Kette(_)
         | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
         // **«SG-24»: a `count` has no object here.** The generated counter functions are
         // declared with the functions, after the format accessors -- a `where` clause
@@ -6332,6 +6418,288 @@ fn atom_refusal(a: &gabbro_syntax::ast::AtomicDecl, u: &Namen) -> &'static str {
     }
 }
 
+/// **Lane 261: the C name of a string max (OFFEN.md O24).**
+///
+/// One C type per distinct max. Zero clamps to one spare byte: an empty
+/// literal (`""`) has length 0 but still needs an object to widen FROM
+/// (`gabbro_widen_1_M`), and the length word governs every read, so the
+/// spare byte is never observed. A max of zero never arises from a
+/// declaration (`N486` refuses it).
+fn ktyp(max: u128) -> String {
+    format!("gabbro_string_{}", max.max(1))
+}
+
+/// **Lane 261: the C max of a string expression.**
+///
+/// The mirror of the checker's `synth` (`zeichenfolge.rs`), read off the
+/// emitter's own maps: a literal holds its byte length, a name its declared
+/// max, a call its declared result max, and a `+` the saturating sum (the
+/// checker already held the sum against the slot, `N453`). `None` where the
+/// expression holds no string.
+fn ketten_max(e: &Expr, u: &Namen) -> Option<u128> {
+    match &e.art {
+        ExprArt::Klammer(x) => ketten_max(x, u),
+        ExprArt::Kette(bytes) => Some(bytes.len() as u128),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            let t = u
+                .parametertyp
+                .get(&o.basis.text)
+                .or_else(|| u.lokaltypexpr.get(&o.basis.text))?;
+            match t {
+                TypExpr::Zeichenkette { max, .. } => Some(*max),
+                _ => None,
+            }
+        }
+        ExprArt::Binaer(BinOp::Plus, a, b) => match (ketten_max(a, u), ketten_max(b, u)) {
+            (Some(x), Some(y)) => Some(x.saturating_add(y)),
+            _ => None,
+        },
+        ExprArt::Ruf(r) => {
+            let n = r.path()?.teile.last()?.text.clone();
+            match u.funktionen.get(&n)?.rueck.as_ref()? {
+                TypExpr::Zeichenkette { max, .. } => Some(*max),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// A byte of a literal as C text: printable ASCII except `"` and `\`
+/// stands bare, everything else is an octal escape. Gabbro strings hold no
+/// quote and no newline (the lexer rule), so only the backslash and the
+/// non-ASCII bytes take the escape form -- and the escapes keep the
+/// initializer a pure byte list with no C escape semantics to misread.
+fn ketten_byte(b: u8) -> String {
+    if matches!(b, 0x20..=0x21 | 0x23..=0x5b | 0x5d..=0x7e) {
+        format!("{}", b as char)
+    } else {
+        format!("\\{:03o}", b)
+    }
+}
+
+/// A literal as a C string initializer body: `"hi"` becomes `"hi"`, a byte
+/// `0xC3` becomes `\303`. Empty stays empty (the array tail zero-fills).
+fn ketten_text(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| ketten_byte(*b)).collect()
+}
+
+/// Whether this name holds a string in the emitter's view: a parameter or a
+/// `let` local declared `string max N`. The same two maps `ketten_max`
+/// reads -- one predicate, so the index hook and the type reader agree.
+fn ist_kettenname(name: &str, u: &Namen) -> bool {
+    u.parametertyp
+        .get(name)
+        .or_else(|| u.lokaltypexpr.get(name))
+        .is_some_and(|t| matches!(t, TypExpr::Zeichenkette { .. }))
+}
+
+/// A string expression at its OWN carrier max (lane 261): a name passes
+/// bare, a call lowers to itself, a `+` to its concat helper, and a literal
+/// to a compound literal at its clamped max. The caller reads `.len` /
+/// `.data` off the result. Carriers clamp to at least one (see `ktyp`): an
+/// empty literal still needs an object, and the length word governs every
+/// read, so the spare byte is never observed.
+fn kette_wert(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
+    match &e.art {
+        ExprArt::Klammer(x) => kette_wert(x, u, absagen),
+        ExprArt::Kette(bytes) => {
+            let m = (bytes.len() as u128).max(1);
+            format!(
+                "({}){{ {}, \"{}\" }}",
+                ktyp(m),
+                bytes.len(),
+                ketten_text(bytes)
+            )
+        }
+        ExprArt::Binaer(BinOp::Plus, a, b) => {
+            let (Some(x), Some(y)) = (ketten_max(a, u), ketten_max(b, u)) else {
+                weigere(
+                    absagen,
+                    e.span,
+                    "string concatenation over a side that holds no string -- a `+` \
+                     shares two strings, and anything else is the checker's `N455`",
+                );
+                return String::new();
+            };
+            let t = x.saturating_add(y).max(1);
+            format!(
+                "gabbro_concat_{t}({}, {})",
+                kette_zu(a, t, u, absagen),
+                kette_zu(b, t, u, absagen)
+            )
+        }
+        _ => ausdruck(e, u, absagen),
+    }
+}
+
+/// A string expression widened into the slot `dst` (lane 261): `let`,
+/// assignment, argument, return and concat-operand positions. A literal
+/// writes directly at the target (its byte count is held against the slot
+/// by the checker, `N455`); a name, call or concat passes bare at equal
+/// max and takes the widening helper below it. Anything else -- a
+/// non-string value, or a string past its slot -- is refused by name (the
+/// checker already refused it; this arm is the counterfactual backstop).
+fn kette_zu(e: &Expr, dst: u128, u: &Namen, absagen: &mut Absagen) -> String {
+    if let ExprArt::Kette(bytes) = &ohne_klammern(e).art {
+        if (bytes.len() as u128) > dst {
+            weigere(
+                absagen,
+                e.span,
+                "string literal past its slot: it holds more bytes than the target max fits",
+            );
+            return String::new();
+        }
+        return format!(
+            "({}){{ {}, \"{}\" }}",
+            ktyp(dst),
+            bytes.len(),
+            ketten_text(bytes)
+        );
+    }
+    let Some(src) = ketten_max(e, u) else {
+        weigere(
+            absagen,
+            e.span,
+            "a non-string value where a string stands",
+        );
+        return String::new();
+    };
+    let src = src.max(1);
+    if src > dst {
+        weigere(
+            absagen,
+            e.span,
+            "a string past its slot: it holds more than the slot fits",
+        );
+        return String::new();
+    }
+    let wert = kette_wert(e, u, absagen);
+    if src == dst {
+        wert
+    } else {
+        format!("gabbro_widen_{src}_{dst}({wert})")
+    }
+}
+
+/// One side of a string comparison: the value, parenthesised unless it is a
+/// bare name (a call, concat or literal needs the parens around `.len`).
+fn kette_seite(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
+    let w = kette_wert(e, u, absagen);
+    match &ohne_klammern(e).art {
+        ExprArt::Ort(o) if o.suffixe.is_empty() => w,
+        _ => format!("({w})"),
+    }
+}
+
+/// **Lane 261: the string section of the prelude (OFFEN.md O24).**
+///
+/// The layout decision, written once per unit: one `typedef struct {
+/// uint32_t len; uint8_t data[N]; }` per distinct max the emitted C names,
+/// plus the helpers the emitted calls name. Collection is a NAME SCAN over
+/// the lowered declarations and bodies just before they join (the `DREH_C`
+/// principle: what is collected is the name as the lowering writes the
+/// call, so the two can never disagree). Over-collection is harmless (an
+/// unused `typedef` or `static inline` warns nowhere); under-collection is
+/// impossible, because every use site literally carries the name.
+///
+/// * `gabbro_concat_T(a, b)` -- one per concat target max T (the sum of the
+///   operand maxes, which the checker held against the slot, `N453`);
+/// * `gabbro_widen_N_M(s)` -- one per widening pair (a smaller max into a
+///   larger one, which the checker allowed, `N455`);
+/// * `gabbro_streq` / `gabbro_strlt` -- one generic pair for all maxes,
+///   over `(len, data)` pairs, so comparisons widen nothing;
+/// * `<string.h>` -- for the `memcpy`/`memcmp` inside the helpers.
+///
+/// Byte order note: `<` compares UTF-8 bytes with `memcmp`, and UTF-8
+/// preserves code point order byte-wise, so it agrees with the Lean
+/// `vergl` over characters.
+fn ketten_abschnitt(aus: &str, rumpf: &str) -> String {
+    fn sammle_zahl(text: &str, marke: &str, aus: &mut std::collections::BTreeSet<u128>) {
+        let mut rest = text;
+        while let Some(i) = rest.find(marke) {
+            rest = &rest[i + marke.len()..];
+            let n: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if let Ok(v) = n.parse::<u128>() {
+                aus.insert(v);
+            }
+        }
+    }
+    fn sammle_paar(text: &str, marke: &str, aus: &mut std::collections::BTreeSet<(u128, u128)>) {
+        let mut rest = text;
+        while let Some(i) = rest.find(marke) {
+            rest = &rest[i + marke.len()..];
+            let ziffern: Vec<String> = rest
+                .split(|c: char| !c.is_ascii_digit())
+                .take(3)
+                .map(|s| s.to_string())
+                .collect();
+            // Two numbers joined by exactly one `_`: the widen pair.
+            if ziffern.len() == 3
+                && ziffern[2].is_empty()
+                && !ziffern[0].is_empty()
+                && !ziffern[1].is_empty()
+            {
+                if let (Ok(x), Ok(y)) = (ziffern[0].parse::<u128>(), ziffern[1].parse::<u128>()) {
+                    aus.insert((x, y));
+                }
+            }
+        }
+    }
+    let alles = format!("{aus}\n{rumpf}");
+    if !alles.contains("gabbro_string_") {
+        return String::new();
+    }
+    let mut typen: std::collections::BTreeSet<u128> = std::collections::BTreeSet::new();
+    sammle_zahl(&alles, "gabbro_string_", &mut typen);
+    let mut verketten: std::collections::BTreeSet<u128> = std::collections::BTreeSet::new();
+    sammle_zahl(&alles, "gabbro_concat_", &mut verketten);
+    let mut weiten: std::collections::BTreeSet<(u128, u128)> = std::collections::BTreeSet::new();
+    sammle_paar(&alles, "gabbro_widen_", &mut weiten);
+    for (n, m) in &weiten {
+        typen.insert(*n);
+        typen.insert(*m);
+    }
+    typen.extend(verketten.iter());
+    let mut s = String::from(
+        "\n/* Bounded strings (lane 261, OFFEN.md O24): one length word plus `max` bytes per\n \
+         \x20  distinct max, no NUL terminator -- the length word governs every read. */\n\
+         #include <string.h>\n",
+    );
+    for n in &typen {
+        s.push_str(&format!(
+            "typedef struct {{ uint32_t len; uint8_t data[{n}]; }} gabbro_string_{n};\n",
+        ));
+    }
+    if alles.contains("gabbro_streq(") {
+        s.push_str(
+            "static inline bool gabbro_streq(uint32_t alen, const uint8_t *a, uint32_t blen, const uint8_t *b) \
+             { return alen == blen && memcmp(a, b, alen) == 0; }\n",
+        );
+    }
+    if alles.contains("gabbro_strlt(") {
+        s.push_str(
+            "static inline bool gabbro_strlt(uint32_t alen, const uint8_t *a, uint32_t blen, const uint8_t *b) \
+             { uint32_t n = alen < blen ? alen : blen; int c = memcmp(a, b, n); \
+             return c < 0 || (c == 0 && alen < blen); }\n",
+        );
+    }
+    for t in &verketten {
+        s.push_str(&format!(
+            "static inline gabbro_string_{t} gabbro_concat_{t}(gabbro_string_{t} a, gabbro_string_{t} b) \
+             {{ gabbro_string_{t} d; d.len = a.len + b.len; memcpy(d.data, a.data, a.len); \
+             memcpy(d.data + a.len, b.data, b.len); return d; }}\n",
+        ));
+    }
+    for (n, m) in &weiten {
+        s.push_str(&format!(
+            "static inline gabbro_string_{m} gabbro_widen_{n}_{m}(gabbro_string_{n} s) \
+             {{ gabbro_string_{m} d; d.len = s.len; memcpy(d.data, s.data, s.len); return d; }}\n",
+        ));
+    }
+    s
+}
+
 fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
     // **The rows that need no unit** stand in `ctyp_primitiv` and are read from TWO places
     // now: here, and the signature comparison behind `N046`. *A second reader is exactly the
@@ -6412,7 +6780,20 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         // **The obligation this buys is entered in the register** as `option.sentinel`: the
         // sentinel is outside the index domain, and no arithmetic reaches it.
         TypExpr::Index { .. } => Some("uint32_t".into()),
+        // **Lane 261: a bounded string lowers to its length word plus its
+        // max in bytes, with no NUL terminator** (`OFFEN.md` O24). One C
+        // type per distinct max: `gabbro_string_N` is `struct { uint32_t
+        // len; uint8_t data[N]; }`. Copies fit by construction (`N455`
+        // refuses a copy into a shorter max), so every emitted copy is a
+        // plain assignment at equal max or a widening the checker allowed.
+        TypExpr::Zeichenkette { max, .. } => Some(ktyp(*max)),
         TypExpr::Zeiger(z) => {
+            // **Lane 261:** a pointer AT a string keeps the refusal -- the
+            // checker holds strings out of every pointer target (`N465`),
+            // and a layout for one is not among the lowered shapes.
+            if matches!(&z.ziel, TypExpr::Zeichenkette { .. }) {
+                return None;
+            }
             // **A pointer to a type this unit does not declare becomes an INCOMPLETE C type.**
             // `extern fn melde_roh(text : ptr<code, r> Text)` names `Text` and nowhere declares
             // it -- the fragment is an excerpt of a larger program.
@@ -6972,16 +7353,17 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
             // im Erzeugnis steht. Sie stehen darum hier und werden dort abgewiesen, nicht
             // umgekehrt.
             //
-            // Lane 256: a `string max N` parameter likewise earns no local-view
-            // entry -- a string carries no `.`-access and no `->`, and its
-            // lowering is refused by name elsewhere. (Forced by exhaustiveness
-            // over `TypExpr`; no existing behaviour changes.)
+            // **Lane 261:** a `string max N` parameter IS a value since the
+            // lowering exists (`gabbro_string_N`, passed by value): it earns
+            // the `werte` entry, so `ort` reads `.len`/`.data` and not `->`.
+            TypExpr::Zeichenkette { .. } => {
+                lokal.werte.insert(name.clone());
+            }
             TypExpr::Int(_)
             | TypExpr::Float(_)
             | TypExpr::Bool(_)
             | TypExpr::Never(_)
             | TypExpr::Index { .. }
-            | TypExpr::Zeichenkette { .. }
             | TypExpr::FnZeiger(_)
             | TypExpr::Feld(_)
             | TypExpr::Verbund(_, _)
@@ -7149,6 +7531,43 @@ fn gebundene_namen(b: &Block, aus: &mut BTreeSet<String>) {
     }
 }
 
+/// **Lane 261: the declared type an unannotated `let` value carries.**
+///
+/// The string cases mirror the checker's binding (`zeichenfolge.rs`,
+/// `synth`): a literal binds its byte length, a name its declared max, a
+/// call its declared result max, and a `+` the sum. Anything else binds
+/// nothing here -- the caller's `None` is the honest exit, and only the
+/// call result keeps its old dedicated arm (the error channel reads the
+/// same signature).
+fn let_tyexpr(e: &Expr, lokal: &Namen) -> Option<TypExpr> {
+    match &e.art {
+        ExprArt::Klammer(x) => let_tyexpr(x, lokal),
+        ExprArt::Kette(bytes) => Some(TypExpr::Zeichenkette {
+            max: bytes.len() as u128,
+            span: e.span,
+        }),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => lokal
+            .parametertyp
+            .get(&o.basis.text)
+            .or_else(|| lokal.lokaltypexpr.get(&o.basis.text))
+            .cloned(),
+        ExprArt::Binaer(BinOp::Plus, a, b) => {
+            let (Some(x), Some(y)) = (ketten_max(a, lokal), ketten_max(b, lokal)) else {
+                return None;
+            };
+            Some(TypExpr::Zeichenkette {
+                max: x.saturating_add(y),
+                span: e.span,
+            })
+        }
+        ExprArt::Ruf(r) => r
+            .path()
+            .and_then(|p| p.teile.last())
+            .and_then(|i| lokal.ergebnistyp.get(&i.text).cloned()),
+        _ => None,
+    }
+}
+
 fn lokale_lets(b: &Block, lokal: &mut Namen) {
     let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
     // `alloc` names count into `wieoft` (a double-bound name is dropped),
@@ -7193,15 +7612,15 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
             // are declarations: the annotation on the `let` itself, or the declared result
             // of the callee. *Nothing is inferred from a value here* -- an unknown falls
             // out, and then `ort_typ` answers `None` and the emitter refuses by name.
+            //
+            // **Lane 261:** a string value infers its max the same way the
+            // checker binds it (`zeichenfolge.rs`): a literal its byte
+            // length, a name its declared max, a `+` the sum. The fixpoint
+            // above resolves chains (`let b = a` after `let a = …`) round by
+            // round, like the ghost chain beside it.
             let tx = match &l.typ {
                 Some(t) => Some(t.clone()),
-                None => match &l.wert.art {
-                    ExprArt::Ruf(r) => r
-                        .path()
-                        .and_then(|p| p.teile.last())
-                        .and_then(|i| lokal.ergebnistyp.get(&i.text).cloned()),
-                    _ => None,
-                },
+                None => let_tyexpr(&l.wert, lokal),
             };
             // **Je Karte nur, was ihr noch fehlt** -- sonst traegt der Fixpunkt denselben
             // Eintrag in jedem Durchgang nach und die Schleife endet nie. *Gemessen: sie
@@ -7895,6 +8314,12 @@ fn funktion(
         freigaben: Vec::new(),
         rueck_option: match &f.ergebnis {
             Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text.clone()),
+            _ => None,
+        },
+        // **Lane 261:** a string result widens every returned string into
+        // its max (`kette_zu` at the `Return` arm).
+        rueck_kette: match &f.ergebnis {
+            Some(TypExpr::Zeichenkette { max, .. }) => Some(*max),
             _ => None,
         },
         schleifen: Vec::new(),
@@ -8618,7 +9043,8 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
             }
         }
         // A literal names nothing.
-        ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } | ExprArt::Wahr | ExprArt::Falsch => {}
+        // **Lane 261:** a string literal names nothing either -- bytes, not names.
+        ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } | ExprArt::Wahr | ExprArt::Falsch | ExprArt::Kette(_) => {}
         // **The three forms `ausdruck` refuses -- see there.** `sizeof`/`lenof`/`aligned`,
         // `old(place)` and `result` have no lowering outside a `format` predicate; the unit
         // that contains one is refused as a whole, so no name of theirs is ever read by
@@ -8862,6 +9288,10 @@ struct Austritt {
     freigaben: Vec<String>,
     /// Die Zieltabelle des `option index into T`-Rueckgabetyps dieser Funktion.
     rueck_option: Option<String>,
+    /// **Lane 261: the declared string max of this function's result, if
+    /// it is one.** A returned string widens into it (`kette_zu`), beside
+    /// the option sentinel above.
+    rueck_kette: Option<u128>,
     /// **Je offener benannter Schleife: ihr Name und der Stand von `freigaben` bei ihrem
     /// Eintritt** (2026-08-20).
     ///
@@ -8993,7 +9423,20 @@ fn anweisung(
                 }
                 // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
                 // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
+                //
+                // **Lane 261:** a string result widens the returned string
+                // into the declared max (`kette_zu`) -- a literal writes at
+                // the max directly, a narrower string takes the helper.
                 Some(x) => {
+                    if let Some(m) = austritt.rueck_kette {
+                        let t = kette_zu(x, m, u, absagen);
+                        if austritt.fehlerkanal {
+                            aus.push_str(&format!("{e}*_wert = {t};\n{e}return true;\n"));
+                        } else {
+                            aus.push_str(&format!("{e}return {t};\n"));
+                        }
+                        return;
+                    }
                     let t = austritt
                         .rueck_option
                         .as_deref()
@@ -9365,6 +9808,34 @@ fn anweisung(
                 ));
                 return;
             }
+            // **Lane 261:** an assignment to a string name copies through
+            // `kette_zu` -- the value widened into the slot's max. A
+            // compound assignment on a string is refused by name (the
+            // checker already refused it: `s += t` passes only for a
+            // zero-max `t`, and `N486` leaves no zero max standing). A byte
+            // write through a guarded index (`s[k] = b`) takes the generic
+            // tail below, with the target from the `ort` hook.
+            if z.ziel.suffixe.is_empty() {
+                let schlitz = u
+                    .parametertyp
+                    .get(&z.ziel.basis.text)
+                    .or_else(|| u.lokaltypexpr.get(&z.ziel.basis.text));
+                if let Some(TypExpr::Zeichenkette { max, .. }) = schlitz {
+                    if !matches!(z.op, ZuwOp::Setzt) {
+                        weigere(
+                            absagen,
+                            s.span,
+                            "a compound assignment to a string -- a string shares only `+` \
+                             and comparisons, and `s += t` is `s = s + t` into `s`'s own \
+                             max, which the checker refused",
+                        );
+                        return;
+                    }
+                    let wert = kette_zu(&z.wert, *max, u, absagen);
+                    aus.push_str(&format!("{e}{} = {};\n", z.ziel.basis.text, wert));
+                    return;
+                }
+            }
             aus.push_str(&format!(
                 "{e}{} {} {};\n",
                 ort(&z.ziel, u, absagen),
@@ -9502,6 +9973,23 @@ fn anweisung(
             // ein Ort, und der Ort hat einen erklaerten Typ (`ort_typ`). *`let obj =
             // c.slots[s].objekt` ist die Form, an der ein halbes Dutzend Weigerungen hing --
             // und der Typ stand die ganze Zeit in der Tabellendeklaration.*
+            //
+            // **Lane 261:** a string slot writes through `kette_zu` -- the
+            // value widened into the declared max -- instead of the bare
+            // `ausdruck` below (which knows no target). The slot type is the
+            // annotation, or the `let`'s own entry beside it.
+            let schlitz: Option<TypExpr> = l
+                .typ
+                .clone()
+                .or_else(|| u.lokaltypexpr.get(&l.name.text).cloned());
+            if let Some(TypExpr::Zeichenkette { max, .. }) = schlitz {
+                let wert = kette_zu(&l.wert, max, u, absagen);
+                aus.push_str(&format!("{e}{} {} = {};\n", ktyp(max), l.name.text, wert));
+                if u.ungelesene_lets.contains(&l.name.text) {
+                    aus.push_str(&format!("{e}(void){};\n", l.name.text));
+                }
+                return;
+            }
             let typ = match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
                 Some(c) => Some(c),
                 None if l.typ.is_none() => wert_ctyp(&l.wert, u),
@@ -9971,6 +10459,9 @@ fn anweisung(
                     // **Lane 111** -- a table literal is no expected value either:
                     // the expected value of a compare-exchange is ONE value.
                     | ExprArt::ArrayLit(_)
+                    // **Lane 261** -- a string literal is no expected value
+                    // either: an atomic carries a scalar payload, never bytes.
+                    | ExprArt::Kette(_)
                     // **«SG-24»** -- a count is a traversal, and the expected value of a
                     // compare-exchange is ONE value, not a loop.
                     | ExprArt::Zaehle { .. }
@@ -10199,12 +10690,18 @@ fn anweisung(
                 return;
             };
             let geist = sig.geist_param.clone();
+            let typen = sig.param_typen.clone();
             let args: Vec<String> = r
                 .argumente
                 .iter()
                 .enumerate()
                 .filter(|(i, _)| !geist.get(*i).copied().unwrap_or(false))
-                .map(|(_, a)| ausdruck(a, u, absagen))
+                // **Lane 261:** a string argument widens into its
+                // parameter's max, like at an ordinary call above.
+                .map(|(i, a)| match typen.get(i) {
+                    Some(TypExpr::Zeichenkette { max, .. }) => kette_zu(a, *max, u, absagen),
+                    _ => ausdruck(a, u, absagen),
+                })
                 .collect();
             let mut ruf_args = args;
             // **A callee with `or R` and NO result type binds nothing -- and until 2026-09-03
@@ -13576,6 +14073,8 @@ fn needs_saturation(baum: &Programm) -> bool {
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr
             | ExprArt::Falsch
+            // **Lane 261:** a string literal holds no `+|`.
+            | ExprArt::Kette(_)
             | ExprArt::FnWert(_)
             | ExprArt::Ergebnis
             | ExprArt::Grund { .. } => false,
@@ -13928,7 +14427,33 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
         },
         ExprArt::Ort(o) => ort_typ(o, u)
             .and_then(|t| ctyp(&t, u))
-            .or_else(|| register_ctyp(o, u)),
+            .or_else(|| register_ctyp(o, u))
+            // **Lane 261:** an index into a string is its byte -- `uint8_t`,
+            // whatever the max. The length fact is the checker's (`N454`);
+            // the byte's type is the layout's.
+            .or_else(|| {
+                if let [OrtSuffix::Index(_)] = o.suffixe.as_slice() {
+                    ist_kettenname(&o.basis.text, u).then(|| "uint8_t".to_string())
+                } else {
+                    None
+                }
+            }),
+        // **Lane 261:** `lenof` over a string is its length word --
+        // `uint32_t`, whatever the max.
+        ExprArt::Eingebaut(b)
+            if matches!(
+                b.as_ref(),
+                Eingebaut::Lenof(TypOderOrt::Ort(o))
+                if o.suffixe.is_empty() && ist_kettenname(&o.basis.text, u)
+            ) =>
+        {
+            Some("uint32_t".to_string())
+        }
+        // **Lane 261:** a literal at its clamped carrier max -- the slot
+        // writes it at the slot's max instead, so this arm answers only
+        // the slot-free readers (an unannotated `let`, through
+        // `lokale_lets`, which holds the same max against the name).
+        ExprArt::Kette(bytes) => Some(ktyp((bytes.len() as u128).max(1))),
         ExprArt::Klammer(x) => wert_ctyp(x, u),
         ExprArt::Binaer(op, a, b) => {
             // Ein Vergleich ist `bool`, egal worueber; eine Rechnung traegt den Typ ihrer
@@ -14224,9 +14749,11 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         // value is not a ghost, and dropping it would delete real code.
         // **Lane 111:** a table literal is folded numbers, not a witness --
         // its elements name no ghost a const scope could even see.
+        // **Lane 261:** a string literal is bytes, not a witness either.
         | ExprArt::Zaehle { .. }
         | ExprArt::LibraryCall(_)
         | ExprArt::ArrayLit(_)
+        | ExprArt::Kette(_)
         | ExprArt::Binaer(_, _, _) => false,
     }
 }
@@ -14693,12 +15220,22 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         return String::new();
     }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
+    let typen = u
+        .funktionen
+        .get(&name)
+        .map(|s| s.param_typen.clone())
+        .unwrap_or_default();
     let args: Vec<String> = r
         .argumente
         .iter()
         .enumerate()
         .filter(|(i, _)| !geist.as_ref().is_some_and(|g| *g.get(*i).unwrap_or(&false)))
-        .map(|(_, a)| ausdruck(a, u, absagen))
+        // **Lane 261:** a string argument widens into its parameter's max
+        // (`kette_zu`); every other argument lowers as before.
+        .map(|(i, a)| match typen.get(i) {
+            Some(TypExpr::Zeichenkette { max, .. }) => kette_zu(a, *max, u, absagen),
+            _ => ausdruck(a, u, absagen),
+        })
         .collect();
     format!("{name}({})", args.join(", "))
 }
@@ -14914,6 +15451,16 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     }
     if let Some((_, _, w)) = crate::umgebung::grenzwort(o) {
         return if w < 0 { format!("({w})") } else { format!("{w}u") };
+    }
+    // **Lane 261:** an index into a string reads its byte -- `s[k]` is
+    // `s.data[k]`. The checker proved `k` below the length (`N454`), so no
+    // bound stands here; a guarded byte write (`s[k] = b`) takes the same
+    // path as a target. Any other suffix shape on a string falls through
+    // to the generic tail (the checker refused it, `N455`).
+    if let [OrtSuffix::Index(ix)] = o.suffixe.as_slice() {
+        if ist_kettenname(&o.basis.text, u) {
+            return format!("{}.data[{}]", o.basis.text, ausdruck(ix, u, absagen));
+        }
     }
     // **Ein blankes `None` an einer Stelle, die keine Option ist, wird ABGELEHNT.**
     //
@@ -15849,6 +16396,19 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits, schmal),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
+        // **Lane 261:** a string literal at its own carrier max -- a slot
+        // writes it at the slot's max instead (`kette_zu`), so this arm
+        // answers only the slot-free positions (a comparison side, through
+        // `kette_wert`, which shares this shape).
+        ExprArt::Kette(bytes) => {
+            let m = (bytes.len() as u128).max(1);
+            format!(
+                "({}){{ {}, \"{}\" }}",
+                ktyp(m),
+                bytes.len(),
+                ketten_text(bytes)
+            )
+        }
         ExprArt::Ort(o) => ort(o, u, absagen),
         // **`&f` lowers to `&f`** («B8», 2026-08-21).
         //
@@ -15885,6 +16445,56 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
+            // **Lane 261: strings share only `+` and comparisons.** A `+`
+            // of two strings is the concat helper at the summed max (which
+            // the checker held against the slot, `N453`); a comparison is
+            // the generic byte helper over `(len, data)` pairs, so nothing
+            // widens. Anything else -- a mixed side, or an operator outside
+            // `+` and comparisons -- is refused by name (the checker already
+            // refused it, `N455`; this arm is the counterfactual backstop).
+            // Both sides non-strings take the ordinary path below.
+            if ketten_max(a, u).is_some() || ketten_max(b, u).is_some() {
+                let (Some(_), Some(_)) = (ketten_max(a, u), ketten_max(b, u)) else {
+                    weigere(
+                        absagen,
+                        e.span,
+                        "a string and a non-string share one operation",
+                    );
+                    return String::new();
+                };
+                if *op == BinOp::Plus {
+                    return kette_wert(e, u, absagen);
+                }
+                let l = kette_seite(a, u, absagen);
+                let r = kette_seite(b, u, absagen);
+                let text = |f: &str| format!("{f}({l}.len, {l}.data, {r}.len, {r}.data)");
+                match op {
+                    BinOp::Gleich => return text("gabbro_streq"),
+                    BinOp::Ungleich => return format!("!{}", text("gabbro_streq")),
+                    BinOp::Kleiner => return text("gabbro_strlt"),
+                    BinOp::Groesser => {
+                        return format!(
+                            "gabbro_strlt({r}.len, {r}.data, {l}.len, {l}.data)"
+                        )
+                    }
+                    BinOp::KleinerGleich => {
+                        return format!(
+                            "!gabbro_strlt({r}.len, {r}.data, {l}.len, {l}.data)"
+                        )
+                    }
+                    BinOp::GroesserGleich => {
+                        return format!("!{}", text("gabbro_strlt"))
+                    }
+                    _ => {
+                        weigere(
+                            absagen,
+                            e.span,
+                            "strings share only `+` and comparisons: this operation is none",
+                        );
+                        return String::new();
+                    }
+                }
+            }
             // **PLAN-BITS section 4 (lane 88): the overflow lowerings go first.**
             // They answer from the operand DECLARATIONS, not from any `wrapping`
             // attribute, and neither takes the pointer-arithmetic or mixed-float
@@ -16152,6 +16762,12 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         // declaration.
         ExprArt::Eingebaut(b) => match &**b {
             Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                // **Lane 261:** `lenof` over a string is its length word --
+                // the checker proved every index against it (`N454`), and
+                // the word is what the layout carries.
+                if o.suffixe.is_empty() && ist_kettenname(&o.basis.text, u) {
+                    return format!("{}.len", o.basis.text);
+                }
                 match ort_typ(o, u).as_ref().and_then(|t| feldlaenge_von(t, u)) {
                     Some(n) => format!("{n}u"),
                     None => {

@@ -498,7 +498,7 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 > * **Model**: every writer owes the invariant at its returns (`InvGutS`/`InvGutGrund` in
 >   `LogikPflicht`), an invariant no function writes is carried by the frame
 >   (`inv_ohne_schreiber`), and the goal theorem's new leg `invRuhe` says it holds wherever no
->   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §52).
+>   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §53).
 >
 > **Still open under this heading: the `ops` condition** (last paragraph below). A `table …
 > ops` stays exempt from `N496`, carried by the generated mutations; a hand-written body
@@ -815,7 +815,22 @@ one of the 15 programs that export today, and its emitted C is
 | **what pays FIRST, measured on the same run** | the **tagged-union READ side** — `switch (m.marke)`, `m.last.F`, `T x = m.last.F;` — which is what actually holds `120`, `121` and `34`, the three exporting programs that fail (d) on something other than `expr:neg`. All three carry the aggregate rows too, so the read side is necessary and the aggregate side is not sufficient; but the read side is the binding one, and `gcorr_onTag` is already PROVED and merely uninhabitable (`ValCorr` has no case for a tagged union) |
 | **what would close it** | `CTy`/`CVal` gain an aggregate arm, the memory of `CSpeicher.lean` stores it (or `RecLay` + `CX.fld` carry it as the `nf` field stores and loads it really is — the machinery exists), `CFormen*`'s return and bind lemmas gain their arm, `korrOk` gains one arm per destination with a planted defect per arm, and the four `KNOWN_UNCOVERED` rows dated 2026-09-15 in `pruefe-cformen.py` move to state (i). **And the warrant is then a re-measured sweep, not this row** |
 
-## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25)
+## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25; NARROWED again 2026-09-26, Opus lane O25: the read half's memory side is proved, its contract side is O25)
+
+**Narrowed again (Opus lane O25, 2026-09-26, SATZKARTE §52).** The fold -- a pool writing the
+atomic accumulator, another start reading it -- is refused by the goal's checker at `fuss` and
+ACCEPTED by `AkzeptiertA`, the checker with the atomic exemption (`faltung_abgelehnt`,
+`faltung_akzeptiertA`, `Speichermodell/AtomarZeuge.lean`). On every program `AkzeptiertA` accepts,
+machine W reads the plain carriers sequentially consistently and answers the atomic reads per W
+(`schwach_ist_gA`), and the language-carried legs hold at every machine W reaches: trace
+invariant, lock exclusivity, no deadlock, no wait cycle, time, race freedom of plain carriers
+(`w_sprache_akzeptiertA`). What stays open is the CONTRACT side (the user's proof against every
+value the fold may read: the rely of O25) and, as before, the exporter (`LG001` for `accumulates`)
+and "each thread its own cell" (a core per thread, O19). The "lost update" of a real
+`accumulates` update (load, then store) is exactly what `zaehler_verloren`
+(`Speichermodell/Zaehler.lean`) shows W admits; the emitter's cells are relaxed atomics with
+separate load and store, so a lost update is a behaviour of the C too -- the user's merge
+discipline at quiescent points, as the emitter's comment says, not a theorem.
 
 **Narrowed (Opus agent B, 2026-09-26, SATZKARTE §50).** The emitter lowers `accumulates X per cpu N`
 to `static _Atomic T X_zellen[N]` with relaxed loads and stores, so in the model a per-core
@@ -1019,19 +1034,39 @@ The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= 
 Fix lane F6 made the checker agree with the Lean value model
 (`ZeichenfolgeGebunden.lean`): an index is proven against the length by a flow fact
 (`N454`), a string stands only in parameters, results and `let`s (`N465`), and the name
-table is scoped. Every string program still stops at the emitter (`C001`). What stays
-open:
+table is scoped. Lane 261 (2026-09-26) closed the representation, the limit and the
+literals; what stays open is narrower:
 
 | | |
 |---|---|
-| **no representation** | the model is a length-carrying list with no terminator. A lowering must choose: a length word plus `max` bytes, or a NUL-terminated buffer of `max + 1` bytes (and then a NUL inside the data is either refused or truncates -- a decision, not a detail) |
-| **no upper limit on `max`** | `max` is parsed as `u128`. The pass sums saturating and so cannot accept wrongly, but a lowering must refuse a max it cannot allocate (a stack frame, a static) |
-| **no literals** | `"hi"` stays `P011`; no exact length ever arises except through `lenof` facts |
-| **no strings in aggregates or constants** | refused by `N465` (a deliberate cut, not a model): fields, table slots, `const`/`static`, arrays, variants, pointers, fn pointers, `syscall` heads |
-| **max-bound over-approximation** | `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
-| **what would close it** | the lowering lane (representation, limit, literals) with a Lean statement tying the emitted buffer to `BString` |
+| **representation: CLOSED** | `gabbro_string_N`: one `uint32_t` length word plus `max` bytes, no NUL terminator (`emit.rs` `ketten_abschnitt`); `lenof` is `.len`, the index `.data[k]`, copies plain or widening helpers, `+` a concat helper at the summed max, comparisons two generic byte helpers. `ZeichenfolgeC.lean` states the operation correspondence over the live prefix |
+| **upper limit on `max`: CLOSED** | `1 ..= 65535` (`N486`, `zeichenfolge.schranke`); zero has no object form, more no stack frame |
+| **literals: CLOSED** | `"hi"` parses (`ExprArt::Kette`, UTF-8 bytes, length is the byte count), the checker holds the count against the slot exactly, the slot writes a compound literal at its own max |
+| **no strings in aggregates or constants** | still refused by `N465` (a deliberate cut, not a model): fields, table slots, `const`/`static`, arrays, variants, pointers, fn pointers, `syscall` heads. The layout COULD carry them now; length facts still cannot reach them |
+| **max-bound over-approximation** | still open: `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
+| **no Char bridge** | still open: the layout carries bytes, `BString` carries characters; `ZeichenfolgeC.lean` states the gap beside its lemmas, and no `CForm` plugs into the correspondence framework |
+| **what would close the rest** | flow facts for aggregate positions (a bigger checker), exact-length copies (a bigger analysis), a verified UTF-8 bridge plus a `CForm` hook (a bigger model) |
 
-## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B)
+## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B; NARROWED 2026-09-26, Opus lane O25: the memory half and the language-carried legs are proved, the contract legs are open)
+
+**Narrowed (Opus lane O25, 2026-09-26, SATZKARTE §52; `messung/OPUS-O25-ATOMICS.md`).** Proved,
+standalone (no Spec diff, `GabbroZiel` still runs `Akzeptiert`):
+
+| | |
+|---|---|
+| **the memory half** | with the footprint property exempting ATOMIC carriers only (`FussSA`, Bool `fussWAB`, checker `AkzeptiertA`; every program `Akzeptiert` accepts is accepted, `akzeptiertA_of_akzeptiert`), every W step is a step of machine GA -- G on a memory that agrees with G's at every NON-atomic carrier, the atomic reads answered per W (`schwach_ist_gA`, `ga_aus_w`). Plain carriers stay sequentially consistent; atomics are coherent (`schrittW_kohaerent`) and release/acquire hands views on (`hb_uebergabe`: after an acquire read of `t`'s release message, every read of `u` at any other carrier is at or above `t`'s view before the release) |
+| **the language-carried legs** | on a program `AkzeptiertA` accepts, at every machine W reaches: `SpurInv`, lock exclusivity, no global deadlock, no wait cycle, `ZeitAb`; race freedom for every non-atomic carrier on every W run (`w_sprache_akzeptiertA`) |
+| **witnesses** | the flag (configuration 1: refused by `Akzeptiert`, accepted by `AkzeptiertA`; W's stale read `w_nicht_sc` happens there and is a GA step, `n1_nicht_sc_aber_ga`; `SchwachSC` is false there, `n1_schwachSC_falsch`); the per-core fold (`faltung_akzeptiertA`); the refusal of a plain payload read with no synchronisation (`nutzlast_ohne_erwerb_abgelehnt`); the relaxed `fetch_add` counter is 2 on an atomic-RMW view machine (`zaehler_zwei`) |
+
+**What stays open -- and why no Spec diff was made:**
+
+| | |
+|---|---|
+| **the contract legs** | `vertrag`, `sperrInv`, `invRueck`, `invGrund`, `startEnde`, `keinStartGrund`, `keinLogikHalt`, `fortschritt` come from the replay of the user's sequential proof (`execEndH`, `KoerperGutS`) into G (`ziel_ort_mehrfaden_ende` and around, the `ZielOrt*`/`Sperre*` family, about 30 000 lines). The replay keeps the sequential world equal to the machine's on the STABLE carriers; a racing atomic is not stable, and a GA step reads a value the sequential world does not have. Needed: `execEndH` answers a read of a shared atomic with ANY value of its type (a havoc at the read, next to the one `Umwelt` makes at a lock take), `KoerperGutS` over it, and every residue lemma of the replay carrying it. Until then a `GabbroZiel` over `AkzeptiertA` would lose the contract legs, so the goal keeps `Akzeptiert` |
+| **the leg `schwach` in GA form** | on `AkzeptiertA` programs `SchwachSC` is false (`n1_schwachSC_falsch`); the Spec diff would replace it by "every W step is a GA step with plain carriers SC" (`schwach_ist_gA`), reviewed as a diff of `Spec.lean` together with the rely |
+| **RMW atomicity in W** | W's step lets an `exchange` read one message and write at any fresh timestamp, so a `fetch_add` counter can lose an update in W (`zaehler_verloren`) although RC11 forbids it; the fix is the adjacency of `ZSchritt` (write at the read message's timestamp + 1) in `SchrittW` for a step that reads and writes one atomic -- a change of the machine Spec imports (a smaller W: every claim over W stays, `w_aus_g` must be re-checked) |
+| **the payload hand-off to a PLAIN carrier** | the view transfer is proved (`hb_uebergabe`); a footprint rule admitting a plain payload read that follows an `awaits` of its atomic (and a producer that writes it only before the `publishes`) is not, so `publishes { p }` with plain `p` read across threads stays refused, as in P3 |
+| **the exporter** | refuses every `atomic` item (`LG001`), so no racing-atomic unit reaches Lean; the Rust footprint legs never counted atomics (on this component Rust decides `fussWAB`, measured on `messung/proben/o25-flagge-atomar.gab`) |
 
 Since 2026-09-26 the goal theorem is proved over the weak machine W (`Speichermodell/`,
 SATZKARTE §50): the leg `schwach` of `Ziel` says that on an accepted program W takes only G's
@@ -1047,7 +1082,24 @@ not. So:
 | **what would close it** | a RELY for atomic reads in the user's sequential semantics: `execEndH` (SperreSem.lean) answers a read of a shared unguarded atomic with an ARBITRARY value of its type (a havoc at the read, as `Umwelt` does at lock moves), `fuss` exempts atomic carriers from locality, and the replay (`ziel_ort_mehrfaden_ende` and its family) carries the havoc. The user's proof then covers every value W can return -- relaxed and non-SC included -- and `schwach` is no longer needed for those carriers; coherence (`schrittW_kohaerent`) and release/acquire (`schrittW_erwerb`) are already facts of W for every program. Payload hand-off (`publishes { p }`, P3) needs more: the payload read is covered only through the acquire's view, i.e. a rely conditioned on `awaits` |
 | **who guards it today** | the Rust checker alone (atomics exempt from the race rules), the emitter's explicit orders (lane 152), and `V001`-`V005` for payload pairing |
 
-## O26 — An own lock primitive (`N323`) is not checked for memory orders, and the weak-memory leg assumes every lock primitive is acquire/release (recorded 2026-09-26, Spec-diff verdict of Opus agent B, F2)
+## O26 — An own lock primitive (`N323`) is not checked for memory orders, and the weak-memory leg assumes every lock primitive is acquire/release (recorded 2026-09-26, Spec-diff verdict of Opus agent B, F2; CLOSED for own primitives 2026-09-26, Opus lane O25: `N481`-`N483`; foreign primitives stay assumed)
+
+**Closed for own primitives (Opus lane O25, 2026-09-26, SATZKARTE §52).**
+`namen.rs::sperrprimitiv_ordnung`, sentence `namen.sperrprimitiv_ordnung`, over the ORDERED
+atomics (declared `acquire`, `release` or `seq`, lowered acquire / release / acq_rel):
+`N481` refuses a take (`L_nimm`, `L_nimm_geteilt`) that reads atomics but no ordered one, `N482`
+a give that writes atomics but no ordered one, `N483` a bodied take and give of one lock that
+release and acquire on different ordered atomics (no synchronises-with edge). Poison probes
+`beispiele/gift/1201` (a relaxed test-and-set spinlock: `N481` and `N482`), `1202`, `1203`;
+positive: snippet tests `geordneter_spinlock_besteht` and `ticket_sperre_besteht` (the runtime's
+ticket lock shape of `laufzeit/sperre.gab` beside `lock TOR`). Corpus diff: only the three gifts.
+Measured the same day: `N042` refuses the C name of EVERY own or foreign `L_nimm`/`L_gib` beside
+`lock L`, so no accepted program has a non-driver lock primitive today; these rules are the order
+half of the contract for the day that name opens. What stays: foreign primitives (`extern fn`,
+`asm`) are assumed; that the acquiring read is the one that SEES the release (the spin on the
+right word) is `N323`'s shape, not a flow fact; the lowering of the orders is assumption (2).
+`Spec.lean`'s assumption (3) says so (a comment-only header correction). The record below is
+kept as written.
 
 The DRF argument of the leg `schwach` (SATZKARTE §50) transfers to the C only if every
 `<L>_nimm` is an acquire and every `<L>_gib` a release. `Spec.lean` names this as assumption (3)

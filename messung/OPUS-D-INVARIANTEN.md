@@ -160,4 +160,4 @@ theorems (`gP_gabbro_f`) now carry the new legs, through `gabbro_ziel`.
 * `61da807a` piece 1: `N496`, gifts 1231–1234, examples 09 and 17, positive probe, sentence.
 * `65a5b1b0` piece 2: the legs in `Spec.lean`, `Zielsatz/Invarianten.lean`,
   `Zielsatz/InvariantenZeuge.lean`, `Beweis.lean`.
-* piece 3: SATZKARTE §52, OFFEN O11, TODO, AGENTS §2/§7, this report.
+* piece 3: SATZKARTE §52 (renumbered §53 at the merge with master, O25 took §52), OFFEN O11, TODO, AGENTS §2/§7, this report.
