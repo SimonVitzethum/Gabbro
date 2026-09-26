@@ -11,6 +11,10 @@
   * `schwach_ist_gA_akzeptiert` -- on a program `AkzeptiertA` accepts, with an admissible start:
     every step of W is a step of GA, and the memory it is presented is G's at every
     non-atomic carrier.
+  * `w_sprache_akzeptiertA` -- the legs of `Ziel` that the LANGUAGE carries without the user's
+    proof hold at every machine W reaches on such a program: the trace invariant
+    (`speicherSicher`), lock exclusivity, no global deadlock, no wait cycle, the time bound.
+    The contract legs are not here (they need the replay: OFFEN O25).
   * WITNESSES, on the noninterference fixture (`NIZeuge`: the globals `konfig`, `zaehler` are
     `atomic`, the tables `tabA`, `tabB` plain):
     - `n1_akzeptiertA` / `n1_nicht_sc_aber_ga` -- the FLAG: configuration 1 (`kern` publishes
@@ -178,7 +182,163 @@ theorem schwach_ist_gA_akzeptiert {sp : Speicher D}
 
 end Bool
 
-/-! ## 2. Witnesses -/
+/-! ## 2. The language-carried legs over W with racing atomics -/
+
+section Sprache
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat}
+
+/-- The rank invariant of every thread on every GA run (it reads no memory). -/
+theorem gaInv_rang (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hND : ∀ t, (offen (startSpur (D := D) (init t).1)).Nodup) {M : RufMaschineG D}
+    (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
+    ∀ t, RangInvG (init t).1 (M.faeden t) := by
+  refine gaInv (I := fun M => ∀ t, RangInvG (init t).1 (M.faeden t))
+    (fun M M' e h t => by rw [← e]; exact h t)
+    (rangInvG_erreichbar (O := O) (passes := passes) hO hSt sp init hND .start) ?_ hr
+  intro M M' u h hs t
+  by_cases htu : t = u
+  · subst htu; exact rangInvG_schritt hO hSt hs (h t)
+  · rw [rufSchrittG_fremd hs t htu]; exact h t
+
+/-- **No wait cycle** on every GA run (the argument of `kein_warteZyklusG`, from the rank
+    invariant alone). -/
+theorem kein_warteZyklusGA (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
+    {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
+    KeinWarteZyklus M := by
+  have hI := gaInv_rang hO hSt sp init (startSpur_nodup_leer init hLeer) hr
+  intro n ts Ls hW he
+  have hlt : ∀ i, i < n → D.rang (Ls i) < D.rang (Ls (i + 1)) := fun i hi =>
+    (sperre_rang (hI (ts (i + 1))) (hW (i + 1) hi).1).2 (Ls i) (hW i (Nat.le_of_lt hi)).2
+  have hle : ∀ i, i ≤ n → D.rang (Ls 0) ≤ D.rang (Ls i) := by
+    intro i
+    induction i with
+    | zero => intro _; exact Int.le_refl _
+    | succ i ih =>
+        intro hi
+        have h1 := hlt i hi
+        have h2 := ih (Nat.le_of_succ_le hi)
+        omega
+  have h1 := (hW n (Nat.le_refl n)).2
+  rw [he] at h1
+  have hlast := (sperre_rang (hI (ts 0)) (hW 0 (Nat.zero_le n)).1).2 (Ls n) h1
+  have := hle n (Nat.le_refl n)
+  omega
+
+/-- **No global deadlock** on every GA run (the argument of `keine_verklemmungG`). -/
+theorem keine_verklemmungGA (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hLeer : ∀ t, D.haelt (init t).1 = []) (ls : List D.Lock) (hls : ∀ L : D.Lock, L ∈ ls)
+    {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M)
+    (hW : ∀ t, ¬ FertigG M t → WartetG M t) : ∀ t, FertigG M t := by
+  have hI := gaInv_rang hO hSt sp init (startSpur_nodup_leer init hLeer) hr
+  intro t0
+  refine Classical.byContradiction fun h0 => ?_
+  let W := ls.filter fun L => @decide (∃ t, ¬ FertigG M t ∧ AnSperre M t L)
+    (Classical.propDecidable _)
+  have hWmem : ∀ L, L ∈ W ↔ ∃ t, ¬ FertigG M t ∧ AnSperre M t L := by
+    intro L
+    simp only [W, List.mem_filter, hls L, true_and]
+    exact ⟨fun h => @of_decide_eq_true _ (Classical.propDecidable _) h,
+      fun h => @decide_eq_true _ (Classical.propDecidable _) h⟩
+  obtain ⟨L0, hL0⟩ := (hW t0 h0).1
+  have hne : W ≠ [] := fun he => by
+    have := (hWmem L0).mpr ⟨t0, h0, hL0⟩
+    rw [he] at this
+    exact List.not_mem_nil this
+  obtain ⟨Lm, hLm, hmax⟩ := rang_max W hne
+  obtain ⟨tm, htm, hAm⟩ := (hWmem Lm).mp hLm
+  obtain ⟨u, hu, hLu⟩ := (hW tm htm).2 Lm hAm
+  by_cases hFu : FertigG M u
+  · rw [fertig_leer (hI u) (hLeer u) hFu] at hLu
+    exact List.not_mem_nil hLu
+  · obtain ⟨Lu, hAu⟩ := (hW u hFu).1
+    have hlt := (sperre_rang (hI u) hAu).2 Lm hLu
+    have hle := hmax Lu ((hWmem Lu).mpr ⟨u, hFu, hAu⟩)
+    omega
+
+variable [DecidableEq D.Fn] {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
+  {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
+
+/-- A run of W by index: the machines `Ws k`, the actors `ts k`. -/
+def LaufW (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob → Ordnung)
+    (W0 : RufMaschineW D) (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat) : Prop :=
+  Ws 0 = W0 ∧ ∀ k, k < n → RufSchrittW P O passes ord (Ws k) (ts k) (Ws (k + 1))
+
+omit [DecidableEq D.Fn] in
+theorem laufW_erreichbar {ord : D.Glob → Ordnung} {W0 : RufMaschineW D}
+    {Ws : Nat → RufMaschineW D} {ts : Nat → Faden} {n : Nat}
+    (hl : LaufW P O passes ord W0 Ws ts n) : ∀ k, k ≤ n → RufErreichbarW P O passes ord W0 (Ws k)
+  | 0, _ => by rw [hl.1]; exact .start
+  | k + 1, hk => .schritt _ _ _ (laufW_erreichbar hl k (by omega)) (hl.2 k (by omega))
+
+/-- **THE LANGUAGE-CARRIED LEGS OVER W, RACING ATOMICS INCLUDED.** On a program `AkzeptiertA`
+    accepts, from an admissible start, for every order assignment, at every machine W reaches:
+    * the trace invariant (`SpurInv`, the leg `speicherSicher` of `Ziel`) and lock exclusivity;
+    * no global deadlock and no wait cycle (the legs `keineVerklemmung`, `keinZyklus`);
+    * the time bound (`ZeitAb`, the leg `zeit`; it holds at every machine);
+    * every step W takes from there is a step of GA whose presented memory is G's at every
+      non-atomic carrier;
+    and on every run of W (by index) RACE FREEDOM for every non-atomic carrier (the leg
+    `rennfrei`, over W's runs): two accesses by different threads, one a write, are ordered
+    through a guard lock. What is NOT here: the contract legs (`vertrag`, `sperrInv`,
+    `invRueck`, `invGrund`, `startEnde`, `keinStartGrund`, `keinLogikHalt`, `fortschritt`),
+    which come from the replay of the user's sequential proof -- OFFEN O25. -/
+theorem w_sprache_akzeptiertA {sp : Speicher D}
+    {init : Faden → Σ f : D.Fn, Env D (D.params f)} {ord : D.Glob → Ordnung}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (hAk : AkzeptiertA P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init)
+    (hO : GutO O) :
+    (∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W →
+      SpurInv W.g ∧ Exklusiv W.g ∧
+      ((∀ t, ¬ FertigG W.g t → WartetG W.g t) → ∀ t, FertigG W.g t) ∧
+      KeinWarteZyklus W.g ∧ ZeitAb P O passes W.g ∧
+      ∀ (W' : RufMaschineW D) (u : Faden), RufSchrittW P O passes ord W u W' →
+        RufSchrittGA P O passes W.g u W'.g) ∧
+    (∀ (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat),
+      LaufW P O passes ord (RufStartW (RufStartG P sp init)) Ws ts n →
+      ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → ts i ≠ ts j →
+        ZugriffG (Ws i).g (Ws (i + 1)).g (ts i) c → ZugriffG (Ws j).g (Ws (j + 1)).g (ts j) c →
+        (SchreibG (Ws i).g (Ws (i + 1)).g (ts i) c ∨ SchreibG (Ws j).g (Ws (j + 1)).g (ts j) c) →
+        ¬ AtomarAusgenommen c → ∃ L, Bewacht c L ∧ GeordnetG (fun k => (Ws k).g) ts L i j) := by
+  obtain ⟨hAbg, hWu, hF, hex⟩ := akzeptiertA_ok hvoll hAk hZ
+  have hAk' := hAk
+  unfold AkzeptiertA at hAk'
+  simp only [Bool.and_eq_true] at hAk'
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨_, _⟩, _⟩, h4⟩, _⟩, h6⟩, h7⟩, h8⟩, _⟩ := hAk'
+  have hSt := (stufenB_iff hvoll).mp h4
+  have hW := wurzelnB_iff.mp h6
+  have hPool := (einzelnPoolB_iff hvoll hcs).mp h7
+  have hRenn := (rennB_iff hvoll hcs).mp h8
+  have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => by
+    rcases hZ.wurzel t with h | h
+    · exact (hW _ h).1
+    · exact h.1
+  refine ⟨fun W hr => ?_, fun Ws ts n hl i j c hij hjn hfg hzi hzj hw hA => ?_⟩
+  · have hGA := ga_aus_w hO hvoll hAbg hWu hF hex hr
+    refine ⟨gaInv_spur hO sp init hGA, gaInv_exklusiv hO sp init hex hGA,
+      fun hWt => keine_verklemmungGA hO hSt sp init hLeer ls hls hGA hWt,
+      kein_warteZyklusGA hO hSt sp init hLeer hGA,
+      fun f g n _ _ _ hadm hE _ run hA' =>
+        frame_schritte_beschraenkt P O passes f g n hadm hE run hA',
+      fun W' u hs => ?_⟩
+    obtain ⟨σ, M'', wahl, neu, h⟩ := hs
+    exact (schwach_ist_gA (S := S) hO hvoll hAbg hWu hF hex hr h).1
+  · have hlGA : LaufGA P O passes (RufStartG P sp init) (fun k => (Ws k).g) ts n := by
+      refine ⟨by show (Ws 0).g = _; rw [hl.1]; rfl, fun k hk => ?_⟩
+      obtain ⟨σ, M'', wahl, neu, h⟩ := hl.2 k hk
+      exact (schwach_ist_gA (S := S) hO hvoll hAbg hWu hF hex
+        (laufW_erreichbar hl k (Nat.le_of_lt hk)) h).1
+    exact rennfreiGA hO hvoll sp init hex (kVon P fs init) hAbg hWu
+      (fun c hB hAt => schreibGetrenntK_of hZ hPool hB hAt (hRenn c hB hAt))
+      (fun k => (Ws k).g) ts n hlGA i j c hij hjn hfg hzi hzj hw hA
+
+end Sprache
+
+/-! ## 3. Witnesses -/
 
 namespace AtomarZeuge
 
@@ -254,6 +414,17 @@ theorem n1_ga (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat)
     (n1_start sp) nO_gut hr h
   exact ⟨h1, fun t => h2 (.inl t) (fun ⟨_, e, _⟩ => by cases e)⟩
 
+/-- **The language-carried legs on the flag program**, at every machine W reaches from
+    configuration 1 (for every order assignment and budget). -/
+theorem n1_sprache (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat)
+    {W : RufMaschineW nD}
+    (hr : RufErreichbarW nP nO passes ord (RufStartW (RufStartG nP sp init1)) W) :
+    SpurInv W.g ∧ Exklusiv W.g ∧ KeinWarteZyklus W.g ∧ ZeitAb nP nO passes W.g := by
+  obtain ⟨h1, h2, _, h4, h5, _⟩ := (w_sprache_akzeptiertA (ls := []) (cs := nCs) (ord := ord)
+    (passes := passes) nFs_voll (fun L => nomatch L) nCs_voll n1_akzeptiertA (n1_start sp)
+    nO_gut).1 W hr
+  exact ⟨h1, h2, h4, h5⟩
+
 /-- **NON-DEGENERATE: W's non-SC step really happens on this accepted program, and it is a GA
     step.** After `kern` wrote `konfig := 3`, W lets `hauptA` read the INITIAL `konfig` and
     store `0` into `tabA[0]`, where G on the same schedule stores `3` (`w_nicht_sc`): a stale
@@ -320,6 +491,8 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.fussWAB_iff
 #print axioms Gabbro.Grammatik.akzeptiertA_of_akzeptiert
 #print axioms Gabbro.Grammatik.schwach_ist_gA_akzeptiert
+#print axioms Gabbro.Grammatik.w_sprache_akzeptiertA
+#print axioms Gabbro.Grammatik.AtomarZeuge.n1_sprache
 #print axioms Gabbro.Grammatik.AtomarZeuge.n1_akzeptiertA
 #print axioms Gabbro.Grammatik.AtomarZeuge.n1_ga
 #print axioms Gabbro.Grammatik.AtomarZeuge.n1_nicht_sc_aber_ga

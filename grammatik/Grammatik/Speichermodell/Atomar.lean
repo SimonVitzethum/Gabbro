@@ -672,6 +672,181 @@ theorem hb_uebergabe {W1 W2 W3 W4 : RufMaschineW D} {t u : Faden}
 
 end Uebergabe
 
+/-! ## 5. Race freedom for plain carriers on every GA run -/
+
+section Rennen
+
+variable {P : Programm D} {O : Orakel D} {passes : Nat}
+
+/-- A GA step moves no other thread. -/
+theorem ga_fremd {M M' : RufMaschineG D} {u : Faden} (h : RufSchrittGA P O passes M u M')
+    (t : Faden) (ht : t ≠ u) : M'.faeden t = M.faeden t := by
+  obtain ⟨σ, M'', hs, _, _, _, hfa, _, _⟩ := h
+  rw [hfa]; exact rufSchrittG_fremd hs t ht
+
+/-- **A GA step, taken apart**: its G step on the presented memory, and what an access, a write
+    and the recorded events of the GA step are there. -/
+theorem schrittGA_zerlegen {M M' : RufMaschineG D} {u : Faden}
+    (h : RufSchrittGA P O passes M u M') :
+    ∃ (σ : Speicher D) (M'' : RufMaschineG D), RufSchrittG P O passes (mitSpeicher M σ) u M'' ∧
+      M'.faeden = M''.faeden ∧
+      (∀ c, ZugriffG M M' u c → ZugriffG (mitSpeicher M σ) M'' u c) ∧
+      (∀ c, SchreibG M M' u c → SchreibG (mitSpeicher M σ) M'' u c) ∧
+      ereignisse M M' u = ereignisse (mitSpeicher M σ) M'' u := by
+  obtain ⟨σ, M'', hs, _, _, hU, hfa, _, _⟩ := h
+  have hz : zugriffe M M' u = zugriffe (mitSpeicher M σ) M'' u := by
+    unfold zugriffe; rw [hfa]; rfl
+  have he : ereignisse M M' u = ereignisse (mitSpeicher M σ) M'' u := by
+    unfold ereignisse; rw [hfa]; rfl
+  have hmem : ∀ c, ¬ TraegerGleich M'.speicher M.speicher c →
+      SchreibG (mitSpeicher M σ) M'' u c := fun c hn =>
+    Classical.byContradiction fun hw => hn (hU c hw)
+  refine ⟨σ, M'', hs, hfa, fun c hc => ?_, fun c hc => ?_, he⟩
+  · rcases hc with ⟨w, hw⟩ | hm
+    · exact Or.inl ⟨w, by rw [← hz]; exact hw⟩
+    · exact zugriff_of_schreib (hmem c hm)
+  · rcases hc with hw | hm
+    · exact Or.inl (by rw [← hz]; exact hw)
+    · exact hmem c hm
+
+/-- A run of GA of `n` steps from `M0`, by index. -/
+def LaufGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 : RufMaschineG D)
+    (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat) : Prop :=
+  ms 0 = M0 ∧ ∀ k, k < n → RufSchrittGA P O passes (ms k) (fs k) (ms (k + 1))
+
+theorem laufGA_erreichbar {M0 : RufMaschineG D} {ms : Nat → RufMaschineG D} {fs : Nat → Faden}
+    {n : Nat} (hl : LaufGA P O passes M0 ms fs n) : ∀ k, k ≤ n → RufErreichbarGA P O passes M0 (ms k)
+  | 0, _ => by rw [hl.1]; exact .start
+  | k + 1, hk => .schritt _ _ _ (laufGA_erreichbar hl k (by omega)) (hl.2 k (by omega))
+
+/-- **The ordering through a lock on a GA run** (`sperre_ordnet` over GA). -/
+theorem sperre_ordnetGA (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hO : GutO O) (hex : StartExklusiv init) {ms : Nat → RufMaschineG D} {fs : Nat → Faden}
+    {n : Nat} (hl : LaufGA P O passes (RufStartG P sp init) ms fs n) (i j : Nat) (hij : i < j)
+    (hjn : j < n) (hfg : fs i ≠ fs j) (L : D.Lock)
+    (hi : L ∈ offen ((ms (i + 1)).faeden (fs i)).spur)
+    (hj : L ∈ offen ((ms j).faeden (fs j)).spur) : GeordnetG ms fs L i j := by
+  have hx : ∀ k, k ≤ n → ∀ u v : Faden, u ≠ v → L ∈ offen ((ms k).faeden u).spur →
+      L ∉ offen ((ms k).faeden v).spur :=
+    fun k hk u v huv hu => gaInv_exklusiv hO sp init hex (laufGA_erreichbar hl k hk) u v huv L hu
+  obtain ⟨r, hr1, hr2, hQr, hQr1⟩ := erster_wechsel
+    (fun k => L ∈ offen ((ms k).faeden (fs i)).spur) j (i + 1) (by omega) hi
+    (hx j (by omega) (fs j) (fs i) (Ne.symm hfg) hj)
+  have hsr := hl.2 r (by omega)
+  have hfr : fs r = fs i := by
+    apply Classical.byContradiction
+    intro hne
+    exact hQr1 (by rw [ga_fremd hsr (fs i) (Ne.symm hne)]; exact hQr)
+  rw [hfr] at hsr
+  have hgibt : Ereignis.gibt L ∈ ereignisse (ms r) (ms (r + 1)) (fs i) := by
+    obtain ⟨σ, M'', hs, hfa, _, _, he⟩ := schrittGA_zerlegen hsr
+    have hQr1' : L ∉ offen (M''.faeden (fs i)).spur := by rw [← hfa]; exact hQr1
+    rw [he]
+    rcases schritt_delta hO hs with ⟨_, _, _, _, _, hoff⟩ | ⟨⟨X, eX, _, _⟩, _⟩
+    · have hoff' : offen (M''.faeden (fs i)).spur = offen ((ms r).faeden (fs i)).spur := hoff
+      exact absurd (by rw [hoff']; exact hQr) hQr1'
+    · have eX' : (M''.faeden (fs i)).spur = X ++ ((ms r).faeden (fs i)).spur := eX
+      rw [ereignisse_eq eX]
+      exact gibt_aus_offen L X _ hQr (by rw [← eX']; exact hQr1')
+  have hn1 : L ∉ offen ((ms (r + 1)).faeden (fs j)).spur := by
+    rw [ga_fremd hsr (fs j) (Ne.symm hfg)]
+    exact hx r (by omega) (fs i) (fs j) hfg hQr
+  obtain ⟨a, ha1, ha2, hQa, hQa1⟩ := erster_wechsel
+    (fun k => L ∉ offen ((ms k).faeden (fs j)).spur) j (r + 1) (by omega) hn1
+    (fun h => h hj)
+  have hQa1' : L ∈ offen ((ms (a + 1)).faeden (fs j)).spur :=
+    Classical.byContradiction hQa1
+  have hsa := hl.2 a (by omega)
+  have hfa : fs a = fs j := by
+    apply Classical.byContradiction
+    intro hne
+    exact hQa (by rw [← ga_fremd hsa (fs j) (Ne.symm hne)]; exact hQa1')
+  rw [hfa] at hsa
+  have hnimmt : ∃ h, Ereignis.nimmt L h ∈ ereignisse (ms a) (ms (a + 1)) (fs j) := by
+    obtain ⟨σ, M'', hs, hfa', _, _, he⟩ := schrittGA_zerlegen hsa
+    have hQa1'' : L ∈ offen (M''.faeden (fs j)).spur := by rw [← hfa']; exact hQa1'
+    rw [he]
+    rcases schritt_delta hO hs with ⟨_, _, _, _, _, hoff⟩ | ⟨⟨X, eX, _, _⟩, _⟩
+    · have hoff' : offen (M''.faeden (fs j)).spur = offen ((ms a).faeden (fs j)).spur := hoff
+      exact absurd (by rw [← hoff']; exact hQa1'') hQa
+    · have eX' : (M''.faeden (fs j)).spur = X ++ ((ms a).faeden (fs j)).spur := eX
+      rw [ereignisse_eq eX]
+      exact nimmt_aus_offen L X _ hQa (by rw [← eX']; exact hQa1'')
+  have hfrei : RufFreiG (ms a) (fs j) L := by
+    intro u hu
+    rw [← ga_fremd hsa u hu]
+    exact hx (a + 1) (by omega) (fs j) u (Ne.symm hu) hQa1'
+  exact ⟨r, a, by omega, by omega, ha2, hfr, hfa, ⟨hQr, hQr1, hgibt⟩,
+    ⟨hQa, hQa1', hfrei, hnimmt⟩⟩
+
+/-- **Race freedom on every GA run from the start, for every non-atomic carrier**: two accesses
+    by different threads, one a write, are ordered through a guard lock. Guarded carriers: the
+    guard is held at both accesses (`zugriff_haeltA` on the presented steps), then
+    `sperre_ordnetGA`. Unguarded non-atomic carriers are write-separated over the call graphs
+    (`hsep`), so no such pair exists. -/
+theorem rennfreiGA {fs : List D.Fn} (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hex : StartExklusiv init) (K : Faden → D.Fn → Bool) (hAbg : ∀ t, AbgK P fs (K t))
+    (hWurzel : ∀ t, K t (init t).1 = true)
+    (hsep : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrenntK P K c)
+    (ms : Nat → RufMaschineG D) (ts : Nat → Faden) (n : Nat)
+    (hl : LaufGA P O passes (RufStartG P sp init) ms ts n)
+    (i j : Nat) (c : D.Tab ⊕ D.Glob) (hij : i < j) (hjn : j < n) (hfg : ts i ≠ ts j)
+    (hzi : ZugriffG (ms i) (ms (i + 1)) (ts i) c) (hzj : ZugriffG (ms j) (ms (j + 1)) (ts j) c)
+    (hw : SchreibG (ms i) (ms (i + 1)) (ts i) c ∨ SchreibG (ms j) (ms (j + 1)) (ts j) c)
+    (hA : ¬ AtomarAusgenommen c) : ∃ L, Bewacht c L ∧ GeordnetG ms ts L i j := by
+  -- what one step of the run tells about an access
+  have schritt : ∀ k, k < n → ∀ (Lk : D.Lock), Bewacht c Lk →
+      ZugriffG (ms k) (ms (k + 1)) (ts k) c →
+      Lk ∈ offen ((ms k).faeden (ts k)).spur ∧ Lk ∈ offen ((ms (k + 1)).faeden (ts k)).spur := by
+    intro k hk Lk hB hz
+    obtain ⟨σ, M'', hs, hfa, hZ, _, _⟩ := schrittGA_zerlegen (hl.2 k hk)
+    have hr' := laufGA_erreichbar hl (k + 1) (by omega)
+    have hSp' : SpurInv M'' := by
+      have := gaInv_spur hO sp init hr'
+      intro t; rw [← hfa]; exact this t
+    have := zugriff_haeltA hO hs hSp' hB (hZ c hz)
+    exact ⟨this.1, by rw [hfa]; exact this.2⟩
+  have graph : ∀ k, k < n →
+      (ZugriffG (ms k) (ms (k + 1)) (ts k) c → ∃ g, K (ts k) g = true ∧
+        (c ∈ fussOrteG P g ∨ TraegerSchreibt g c = true)) ∧
+      (SchreibG (ms k) (ms (k + 1)) (ts k) c → ∃ g, K (ts k) g = true ∧
+        TraegerSchreibt g c = true) := by
+    intro k hk
+    obtain ⟨σ, M'', hs, _, hZ, hS, _⟩ := schrittGA_zerlegen (hl.2 k hk)
+    have hr := laufGA_erreichbar hl k (by omega)
+    have hOrte : OrteInvG P ((mitSpeicher (ms k) σ).faeden (ts k)) := gaInv_orte sp init hr (ts k)
+    have hInv := gaInv_merk (P := P) (O := O) (passes := passes) sp init (fun t f => K t f = true)
+      (fun t _ => rufM fs (K t)) (fun t => merkAbg_rufM hvoll (hAbg t)) hWurzel hr
+    have hK : K (ts k) ((mitSpeicher (ms k) σ).faeden (ts k)).kopf.f = true :=
+      (hInv (ts k) _ List.mem_cons_self).1
+    have hb := schritt_zugriffeA hO hOrte hs c
+    exact ⟨fun hz => ⟨_, hK, hb.1 (hZ c hz)⟩, fun hz => ⟨_, hK, hb.2 (hS c hz)⟩⟩
+  by_cases hB : ∃ L, Bewacht c L
+  · obtain ⟨L, hL⟩ := hB
+    have hi := schritt i (by omega) L hL hzi
+    have hj := schritt j hjn L hL hzj
+    exact ⟨L, hL, sperre_ordnetGA sp init hO hex hl i j hij hjn hfg L hi.2 hj.1⟩
+  · have hsc := hsep c (fun L h => hB ⟨L, h⟩) hA
+    have gi := graph i (by omega)
+    have gj := graph j hjn
+    exfalso
+    rcases hw with hw | hw
+    · obtain ⟨g, hg, hgw⟩ := gi.2 hw
+      obtain ⟨h, hh, hhz⟩ := gj.1 hzj
+      obtain ⟨h1, h2⟩ := hsc _ _ hfg g hg hgw h hh
+      rcases hhz with hhz | hhz
+      · exact h2 hhz
+      · rw [h1] at hhz; cases hhz
+    · obtain ⟨g, hg, hgw⟩ := gj.2 hw
+      obtain ⟨h, hh, hhz⟩ := gi.1 hzi
+      obtain ⟨h1, h2⟩ := hsc _ _ (Ne.symm hfg) g hg hgw h hh
+      rcases hhz with hhz | hhz
+      · exact h2 hhz
+      · rw [h1] at hhz; cases hhz
+
+end Rennen
+
 #print axioms Gabbro.Grammatik.fussSA_of_fussS
 #print axioms Gabbro.Grammatik.ga_aus_g
 #print axioms Gabbro.Grammatik.gaInv_exklusiv
@@ -683,5 +858,7 @@ end Uebergabe
 #print axioms Gabbro.Grammatik.schwach_ist_gA_vor
 #print axioms Gabbro.Grammatik.schrittW_freigabe
 #print axioms Gabbro.Grammatik.hb_uebergabe
+#print axioms Gabbro.Grammatik.sperre_ordnetGA
+#print axioms Gabbro.Grammatik.rennfreiGA
 
 end Gabbro.Grammatik
