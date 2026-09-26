@@ -158,6 +158,31 @@ pub fn binde(baum: &mut Programm) {
     fuelle(&mut baum.items, &bild);
 }
 
+/// **The assumptions only an INACTIVE target binds** -- named in some `target` block's
+/// binding and in none of the active target's. The manifest of this build leaves them out:
+/// they are the other kernel's (`N566` keeps them from being named anywhere else). With no
+/// active target nothing is left out (the unit is refused anyway).
+pub fn fremde_zielannahmen(baum: &Programm) -> std::collections::BTreeSet<String> {
+    let bild = zielbild(baum);
+    let mut aus = std::collections::BTreeSet::new();
+    let Some(aktiv) = &bild.aktiv else { return aus };
+    let mut eigen = std::collections::BTreeSet::new();
+    for b in &bild.bloecke {
+        let ZielArt::Block { bindungen, .. } = &b.art else { continue };
+        for x in bindungen {
+            if let SyscallPaarung::Annahme { annahme, .. } = &x.paarung {
+                if &b.name.text == aktiv {
+                    eigen.insert(annahme.text.clone());
+                } else {
+                    aus.insert(annahme.text.clone());
+                }
+            }
+        }
+    }
+    aus.retain(|a| !eigen.contains(a));
+    aus
+}
+
 /// The same fill for ONE named target (the checker holds inactive bindings against the
 /// gate's shape with it): a copy of `s` bound by `block`'s binding `b`.
 pub fn gebunden(s: &SyscallDecl, block: &ZielDecl, b: &ZielBindung) -> SyscallDecl {

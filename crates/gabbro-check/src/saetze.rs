@@ -4437,10 +4437,10 @@ pub const PHASEN: &[Satz] = &[
                     target that is emitted, not for the others. What a target's kernel does \
                     for a number is its named assumption -- the binding's -- and the errno \
                     numbers a binding writes (`EBADF = 9 => BadFd`) are the program's word \
-                    for its kernel, not checked against any table. The manifest lists every \
-                    declared assumption, bound by the active target or not (more trust \
-                    named than used, never less). Linking two units that bind different \
-                    targets is `N568`.",
+                    for its kernel, not checked against any table. The manifest of a build \
+                    names the active target's assumptions and leaves out those only another \
+                    target binds; an `assume` no binding names stays listed. Linking two \
+                    units that bind different targets is `N568`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1352`/`1353` (`N562`: an undeclared variable, two gates \
                       on one), `1354`/`1363` (`N563`: a target that does not bind, a unit \

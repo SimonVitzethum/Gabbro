@@ -173,13 +173,16 @@ while IFS= read -r q; do
     # emitted FOR it** (`--target`, the name of its `target … abi metal` block): the gates
     # then enter the image's kernel through `int $0x80` instead of calling Linux.
     metallziel="$(sed -n 's/^[[:space:]]*target[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]\{1,\}abi[[:space:]]\{1,\}metal[[:space:]].*/\1/p' "$q" | head -1)"
+    # The population stays stage 9's: a unit whose DEFAULT build refuses (a gift) is not
+    # in it, whatever another target would do.
+    if ! G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
+        rm -rf "$e"; continue          # `C001` -- a refusal is an honest answer (stage 9)
+    fi
     if [ -n "$metallziel" ]; then
         if ! GABBRO_TARGET="$metallziel" G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
             echo "  THE METAL TARGET DOES NOT EMIT: $d (target $metallziel)"
             befund=1; rm -rf "$e"; continue
         fi
-    elif ! G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
-        rm -rf "$e"; continue          # `C001` -- a refusal is an honest answer (stage 9)
     fi
     n_emit=$((n_emit + 1))
     # A `-- erwartet: cc` probe bites a HOSTED C rule (stage 9 keeps it reversed). It is

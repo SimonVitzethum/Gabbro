@@ -244,6 +244,14 @@ long as nobody has written it.*
   (161); idle `hlt`; `gabbro build` links `<unit>.metall.elf` itself with a `metal` line.
   Still open: real hardware, Caprock integration, the entry-binding check (candidate N561),
   entry stacks/IST, error-code exception entries (O32 (7)-(12)).
+  **System calls as named variables: Opus agent L (2026-09-26, OFFEN O31,
+  `messung/OPUS-L-ZIELBINDUNG.md`).** `syscall V;` + `via V` + `target T abi A arch X { … }`
+  + `target T;`/`--target T` (SYNTAX.md §12.3, `N562`-`N568`); `abi metal` lowers to
+  `int $0x80` into the image's kernel entry; ten kernel-gate units bind Linux AND metal, and
+  stage 12 no longer lists them hosted-only (only `beispiele/36`'s own asm stays). O32:
+  `N561` (entry binding) and error-code exception entries (twin stub, #GP measured) closed;
+  (M8)-(M10) in `Spec.lean`. Still open: entry stacks/IST; a Caprock binding (needs its trap
+  template); a metal kernel serving 155's thread-start number 1000.
 - [ ] **One concurrent program that actually RUNS**, through the emission guardian's executed
   set, with its result compared against a handwritten version — the way 37 single-threaded
   units already are.

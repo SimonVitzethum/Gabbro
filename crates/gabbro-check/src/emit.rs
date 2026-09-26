@@ -7277,6 +7277,14 @@ fn attr_ende(f: &FnDecl, nur_lesend: bool, ganz_rein: bool) -> &'static str {
 /// below does not recognise keeps no attribute, as before; a body with a
 /// call anywhere never reaches here (the caller returns earlier).
 fn wirkungsattribut_abgeleitet(f: &FnDecl, b: &Block, u: &Namen) -> &'static str {
+    // **The written arm's `void` guard, missing here until Opus agent L.** A void pure
+    // leaf with its `effects` elided got `__attribute__((const))` on a function
+    // returning `void`, which GCC refuses under `-Werror=attributes` -- found by
+    // `fmt_views` over `beispiele/165` (`ELIDE moves emission`). Same answer as the
+    // written arm: no attribute on `void` or `never`.
+    if f.ergebnis.is_none() || matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
+        return "";
+    }
     let taten: Vec<String> = crate::wirkungen::rumpfwirkungen_mit_ort(
         f,
         b,

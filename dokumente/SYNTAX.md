@@ -2204,7 +2204,7 @@ target needs Caprock's own template (its trap instruction and convention) — na
 OFFEN O31, not built.
 
 **Not claimed:** variables and targets are unit-global names (a module path does not scope
-them); the manifest lists every declared assumption, active or not; the emitter's template
+them); the emitter's template
 rules run for the emitted target only.
 
 ## 13. `check` — the linear checking obligation
