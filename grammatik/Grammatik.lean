@@ -317,3 +317,4 @@ import Grammatik.Zielsatz.PoolZeuge
 import Grammatik.CFormMatch
 import Grammatik.Zielsatz.Divergenz
 import Grammatik.ZeichenfolgeGebunden
+import Grammatik.Zertifikate
