@@ -71,6 +71,15 @@ README §6 says exactly this; keep it that way.
   - `ZeitAb`;
   - (Opus agent G) `FolgeG`, the leg `folge`: the order of calls in every thread's call log
     (OFFEN O1's L50/L52: an entry or return DIRECTLY behind a named function's return).
+- **Since Opus lane O25c (2026-09-26) the goal carries the ATOMIC RELY:** (a) is a `PrueferX`
+  (sound against `AkzeptiertSpecX`: the footprint rule admits a shared atomic in no contract,
+  concrete checker `akzeptiertX_pruefer`), (b) is `NutzerPflichtA` (every body against every
+  value a shared atomic read may return), and the conclusion is `ZielFX`/`ZielX` on the thread
+  machine over GX (G whose shared-atomic reads the weak memory answers); `schwach` is
+  `SchwachX`, `rennfrei`/`keinKernHalt` are over GA runs, `sperrWechsel`/`sperrSicht`/`zeit`
+  over GX steps. The statement of before is `GabbroZielSC` (`Ziel`/`ZielF` over G), derived:
+  `gabbro_ziel_sc_aus`. Proof file: `Zielsatz/BeweisAtomar.lean` (`gabbro_ziel`);
+  `Zielsatz/Beweis.lean` proves `gabbro_ziel_sc` directly.
 - **Axioms:** `#print axioms gabbro_ziel` must be exactly `propext`, `Classical.choice`,
   `Quot.sound`. Every merge that touches `grammatik/` keeps it so.
 - **The review rounds and what each repaired** (SATZKARTE §22–§25):
@@ -314,7 +323,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F7 | **not reserved** (free range) | gifts 1169, 1170; no code, no example (`E011` tightened, `LG005` reused for a binding covering a carrier in the exporter; examples 09/147/148 edited) |
 | Fix lane F10 | **not reserved** (free range) | example 157; no code, no gift. **`N315` retired** (idle duplicate start, admitted since the goal covers pools) and **gift 976 removed** with it; `LG001` for repeated starts lifted in the exporter |
 | Fix lane F11 | **not reserved** | nothing: no code, no gift, no example (`H102` unchanged; the work is the Lean leg `keinKernHalt`) |
-| Opus lane O25 (2026-09-26) | N481–N485 / 1201–1210 / — | N481–N483 (`namen.sperrprimitiv_ordnung`, OFFEN O26), gifts 1201–1203; no example. **Opus lane O25b took N484** (`wirkungen.vertrag_atomar`, a contract over a shared atomic) **and gift 1204**; N485 and gifts 1205–1210 stay with the O25 wall (the payload rule) |
+| Opus lane O25 (2026-09-26) | N481–N485 / 1201–1210 / — | N481–N483 (`namen.sperrprimitiv_ordnung`, OFFEN O26), gifts 1201–1203; no example. **Opus lane O25b took N484** (`wirkungen.vertrag_atomar`, a contract over a shared atomic) **and gift 1204**; N485 and gifts 1205–1210 stay with the O25 wall (the payload rule). **Opus lane O25c** took nothing from the block (the payload rule stays open); it added **example 162** (`beispiele/162-geteilte-flagge.gab`, not reserved: the first certified program with a shared atomic) |
 | Opus agent D (invariants) | N496–N500 / 1231–1240 / — | N496, gifts 1231–1234; no example (examples 09 and 17 edited: 09's false invariant replaced, both now `maintain`); N497–N500 and gifts 1235–1240 stay with the invariant work (OFFEN O11's `ops` condition) |
 | Opus agent E (linking) | N501–N505 / 1241–1250 / — | N501–N505 (`namen.verbund`); probe numbers 1241–1245 as LINK probes under `messung/proben/verbund/` (a link probe is two units, each clean alone, so not a `beispiele/gift/` file); no example. Gifts 1246–1250 stay with the linking work |
 | Opus agent F (link races) | N516–N520 / 1246–1250 / — | N516 (`namen.verbund`, a module split over two units); link probes 1246–1248 under `messung/proben/verbund/` (pairs `NNNN-…-bib.gab` + `NNNN-…-app.gab`); no example. N517–N520 and 1249, 1250 stay with the linking work |

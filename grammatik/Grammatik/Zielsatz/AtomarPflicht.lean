@@ -1,8 +1,9 @@
 /-
   File:      Grammatik/Zielsatz/AtomarPflicht.lean
   Subject:   THE USER'S OBLIGATION (b) WITH THE ATOMIC RELY, and its embedding (Opus lane O25b,
-             2026-09-26, OFFEN O25). Standalone: `Spec.lean` does not import this file; what is
-             defined here is the (b) a Spec diff for O25 would name.
+             2026-09-26, OFFEN O25). Since lane O25c the DEFINITIONS (`Erreicht`, `GetrenntR`,
+             `GeteiltA`, `LogikPflichtA`, `NutzerPflichtA`) stand in `Spec.lean` -- (b) of the goal;
+             the theorems about them stay here.
 
   THE SHARED ATOMICS OF A UNIT (`GeteiltA P ws c`): an `atomic` global with no guard lock that is
   NOT thread-local among the declared starts -- some start's call graph reads it in a footprint

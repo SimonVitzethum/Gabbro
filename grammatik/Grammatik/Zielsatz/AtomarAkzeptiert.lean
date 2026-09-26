@@ -1,8 +1,8 @@
 /-
   File:      Grammatik/Zielsatz/AtomarAkzeptiert.lean
   Subject:   THE CHECKER SIDE OF THE ATOMIC RELY, and the theorem from (a), (b), (c), (d) to the
-             legs over machine W. Opus lane O25b, 2026-09-26. Standalone: `Spec.lean` is
-             unchanged; this is the shape a Spec diff for OFFEN O25 would take.
+             legs over machine W. Opus lane O25b, 2026-09-26. Since lane O25c the
+             definitions `GeteiltV`, `AkzeptiertSpecX`, `RennfreiBisGA` stand in `Spec.lean`.
 
   THE SHARED ATOMICS THE CHECKER ADMITS (`GeteiltV P ws c`): a shared atomic of the unit
   (`GeteiltA`: `atomic`, unguarded, not thread-local among the starts) that NO contract, requires,
