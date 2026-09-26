@@ -1873,3 +1873,30 @@ fn return_under_locks_stays_refused() {
     assert_eq!(w.code, "LG004", "{w}");
     assert!(w.message.contains("falls off with a result"), "{w}");
 }
+
+/// **Opus agent C (2026-09-26): a scalar `const` travels as its FOLDED number**
+/// -- the checker's folder (`Umgebung::konst_wert`), the one the emitter writes
+/// its `#define`s from -- and a `const fn` is comptime, not a `D.Fn`.
+/// `beispiele/93` (`A = 6 * 7`, `C = doppelt(21)`, `f` returns `C + D - D`)
+/// exports with the numbers 42 and 100 in the body and no `doppelt` function.
+#[test]
+fn const_expressions_travel_folded() {
+    let text = export_file("93-const-scalars.gab");
+    assert!(text.contains("(.lit 42)"), "C = doppelt(21) must travel as 42");
+    assert!(text.contains("(.lit 100)"), "D = B - 3 must travel as 100");
+    assert!(!text.contains("doppelt"), "a const fn is no G function:\n{text}");
+    assert!(text.contains("the `const fn` declarations"), "the drop is named in the ledger");
+}
+
+/// **A run-time call of a `const fn` stays refused by name**: the function is
+/// not in the export, so the call names no exported function -- never a
+/// silently dropped call.
+#[test]
+fn const_fn_called_at_run_time_stays_refused() {
+    let q = "module test::konstfn {\n\
+        const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 effects { pure } costs <= 4 ops { return n + n; }\n\
+        impl fn f(x : u32 in 0 .. 1000) -> u32 in 0 .. 2000 effects { pure } costs <= 8 ops { return doppelt(x); }\n\
+        }\n";
+    let r = refuse_of(q);
+    assert!(r.message.contains("doppelt"), "the refusal names the const fn: {r}");
+}

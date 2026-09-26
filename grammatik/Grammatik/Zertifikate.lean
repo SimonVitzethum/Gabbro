@@ -29,3 +29,4 @@ import Grammatik.Zertifikat.G700_lesen_ohne_klausel
 import Grammatik.Zertifikat.G701_rein_ohne_klausel
 import Grammatik.Zertifikat.G719_lock_taken_nowhere
 import Grammatik.Zertifikat.G73_sugar_widths
+import Grammatik.Zertifikat.G93_const_scalars
