@@ -1000,6 +1000,48 @@ pub const NAMEN: &[Satz] = &[
                      `lockVertrag_halte_gib`, `rohLP_verletzt`); laufzeit/sperre.gab (the \
                      passing shape)",
     },
+    Satz {
+        name: "namen.sperrprimitiv_ordnung",
+        kennungen: &["N481", "N482", "N483"],
+        aussage: "An own lock primitive synchronises like a mutex: a bodied take \
+                  (`L_nimm`, `L_nimm_geteilt`) that reads atomics reads at least one \
+                  ORDERED atomic -- declared `acquire`, `release` or `seq`, which the \
+                  emitter loads acquire and swaps acq_rel (`N481`); a bodied give \
+                  (`L_gib`, `L_gib_geteilt`) that writes atomics writes at least one \
+                  ordered atomic, stored release (`N482`); and every bodied take and give \
+                  of one lock that are both ordered share an ordered atomic the give writes \
+                  and the take reads, so the give's release synchronises with the next \
+                  take's acquire (`N483`). A program that passes has no own primitive \
+                  whose critical sections are unordered in C11 -- the reading every lock \
+                  is a mutex, assumption (3) of `Zielsatz/Spec.lean`, is then checked for \
+                  own primitives instead of assumed.",
+        vorbehalt: "**Order by declaration, not by flow.** The legs read the ORDERING WORD \
+                    of the atomics a body touches, as the emitter lowers them \
+                    (`C-SPEICHERMODELL.md` §1c); that the acquiring read is the one that \
+                    sees the give's release (a spin on the right word, not a stray load) \
+                    is the shape `N323` holds, not a flow fact. A take or give that touches \
+                    no atomic at all is `N323`'s (its order and hold legs). Bodiless \
+                    (`extern fn`) and `asm` primitives are trust base and stay a named \
+                    assumption. Measured 2026-09-26: `N042` refuses the C name of EVERY own \
+                    or foreign `L_nimm`/`L_gib` beside `lock L`, so no accepted program has \
+                    such a primitive today; these three legs are the order half of the \
+                    contract for the day that name opens (OFFEN O26).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1201 (`-- erwartet: N481`: a test-and-set spinlock over \
+                      a `relaxed` word -- `N481` at the take and `N482` at the give, `N323` \
+                      silent), /1202 (`N482`: an acquiring take, a give through a relaxed \
+                      second word), /1203 (`N483`: take acquires `HALTER`, give releases \
+                      `ZURUECK`); snippet tests in `namen.rs` (`geordneter_spinlock_besteht`, \
+                      `ticket_sperre_besteht` -- the runtime's ticket lock shape of \
+                      `laufzeit/sperre.gab` beside `lock TOR` passes all three -- \
+                      `entspannter_spinlock_faellt_mit_n481_und_n482`, \
+                      `zwei_worte_faellt_mit_n483`). Corpus diff: no other file under \
+                      `beispiele/` draws `N481`-`N483`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::sperrprimitiv_ordnung; \
+                     grammatik/Grammatik/Speichermodell/Atomar.lean (`hb_uebergabe`, \
+                     `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/MaschineW.lean \
+                     (`locksicht`, the lock view W joins at a take and a give)",
+    },
 ];
 
 // ===================================================================================

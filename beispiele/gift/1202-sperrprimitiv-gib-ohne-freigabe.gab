@@ -1,0 +1,57 @@
+-- erwartet: N482
+-- 1202 -- **a give without a release (OFFEN O26, Opus lane O25).**
+--
+-- The take acquires: it swaps on `HALTER`, declared `acquire`, so the emitter
+-- lowers the swap `memory_order_acq_rel`. But the give frees the lock through
+-- a SECOND word, `FREI`, declared `relaxed` -- a store that carries no view.
+-- The next holder's acquire then reads nothing the previous holder released:
+-- the critical sections are unordered in C11 although the take is fine.
+--
+-- `N482` refuses the give; `N481` stays silent (the take reads an ordered
+-- atomic) and so does `N483` (the give releases on no ordered word at all --
+-- that is `N482`'s finding, not a pairing one). `N042` refuses the C names,
+-- as for every own primitive.
+
+module gift::gib_ohne_freigabe {
+
+atomic HALTER : u32 acquire;
+
+atomic FREI : u32 relaxed;
+
+pub static mut konto : u32 = 0;
+
+pub lock TOR protects { konto } rank 0 held <= 64 ops;
+
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+
+impl fn TOR_nimm()
+    effects { reads HALTER, writes HALTER }
+    costs   <= 64 ops
+{
+    let alt : u32 = HALTER exchange update(v)
+        bounded 16 ops
+        on_exceeded zu_viel_streit
+    {
+        return 1;
+    } publishes nothing;
+}
+
+impl fn TOR_gib()
+    effects { reads FREI, writes FREI }
+    costs   <= 8 ops
+{
+    if FREI == 0 {
+        FREI = 1 publishes nothing;
+    }
+}
+
+pub impl fn einzahlen()
+    effects { writes konto, locks TOR }
+    costs   <= 64 ops
+{
+    locks TOR {
+        konto = 1;
+    }
+}
+
+}
