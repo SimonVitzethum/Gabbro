@@ -131,5 +131,5 @@ exported program changed; `zertifikate.rs` unaffected.
 
 - `free -g` before builds: 31 GB total, 11–15 GB available.
 - `./lean-bau`: exit 0, 0 error lines, 324 jobs (after the master merge).
-- `./cargo-pruef` before the merge: 1347 passed, 0 failed, 1 ignored. After merge + docs: see
-  the final run recorded in the hand-off.
+- `./cargo-pruef` before the merge: 1347 passed, 0 failed, 1 ignored; after the merge and the
+  records (commit 98de28da): **1353 passed, 0 failed, 1 ignored**.
