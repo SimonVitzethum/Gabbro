@@ -6052,9 +6052,10 @@ pub const SPERREN: &[Satz] = &[
                   carrier of `I` -- a table `I` stands over, by name or through a parameter \
                   that points at it. A block that writes none of them cannot let `I` rest: \
                   it is a region named for the wrong invariant, and it is refused.",
-        vorbehalt: "**Conservative, and it says where.** A block with ANY call (direct, \
-                    indirect, or inside an expression) is accepted, because a callee's writes \
-                    are not resolved here; a `walk` invariant (no carrier) is not asked. \
+        vorbehalt: "**Conservative, and it says where.** A block with a call of a declared \
+                    function (direct, inside an expression) or through a pointer is \
+                    accepted, because a callee's writes are not resolved here; a `walk` \
+                    invariant (no carrier) is not asked. \
                     **What it does NOT establish:** that `I` is really false inside the \
                     block (L34 of OFFEN O1 is an existence statement about one run, witnessed \
                     in Lean by `tabelle_gebrochen`), or that the block restores `I` at its \

@@ -334,3 +334,4 @@ import Grammatik.Zielsatz.VerbundZeuge
 import Grammatik.Folge
 import Grammatik.FolgeBeweis
 import Grammatik.FolgeZeuge
+import Grammatik.Zielsatz.FolgeZiel

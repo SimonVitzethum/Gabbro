@@ -4465,7 +4465,7 @@ and a per-thread CALL LOG. All four are statable there. `L24` (read observationa
 (an existence statement) are the invariant legs of §53 and their witness; `L50` and `L52` are one
 shape, "an event DIRECTLY behind a return in the call log", and `Ziel` gains the leg `folge` for
 it. Premise-free; no premise of `GabbroZiel` moved. Files `grammatik/Grammatik/{Folge,FolgeBeweis,
-FolgeZeuge}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G-O1.md`.*
+FolgeZeuge,Zielsatz/FolgeZiel}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G-O1.md`.*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -4476,6 +4476,8 @@ FolgeZeuge}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G
 | `folgeInvG_start`, `folgeInvG_erreichbar`, **`folgeG_erreichbar`** | FolgeBeweis | on every reachable machine; the leg with no premise but reachability |
 | **`folgeLog_nicht_schwach`** | FolgeBeweis | the order is strictly stronger than "both happened" |
 | `Ziel.folge` | Spec, Beweis | the leg in the goal (`ziel_aus`: `folgeG_erreichbar sp init hr`); `#print axioms gabbro_ziel` = `propext`, `Classical.choice`, `Quot.sound` |
+| `Folge.mitRuhe`, `ruS_fNach`, `ruS_fS`/`ruB_fB`/`ruEnd_fE`/`ruArms_fArms`/`ruGArms_fGArms`, **`folgeOk_mitRuhe`** | Zielsatz/FolgeZiel | an order specification over `D` lifted past the idle root; the check commutes with the body translation (structural induction over the syntax) |
+| **`gabbro_ziel_folge`** | Zielsatz/FolgeZiel | under the premises of `GabbroZiel`, for every `Φ` over the user's declaration the program passes: every thread of every reachable THREAD machine has its call log ordered by `Φ.mitRuhe`, and a finished `ende` thread ended directly behind a `vor` return |
 | `Φ50`, `Φ52`, `eP_folge50`, `eP_folge52` | FolgeZeuge | L50's and L52's shape on the fixture `eP` (`haupt` = `setze(); pruefe(); return`) |
 | **`folge50_zeuge`** | FolgeZeuge | NON-DEGENERACY: a reached machine whose newest log event is the entry of `pruefe`, directly behind the return of `setze`, whose write (`konto[0]`: 0 -> 5) is in the entry world; the leg there |
 | **`folge52_zeuge`** | FolgeZeuge | thread 0 FINISHED in `haupt`; by the leg its log ends directly behind the return of `pruefe` |

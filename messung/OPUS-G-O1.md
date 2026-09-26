@@ -99,6 +99,14 @@ FolgeG P M`.
 * **Not the conjunction**: `folgeLog_nicht_schwach` -- a log with the ordered event and a `vor`
   return both present but not adjacent is not ordered.
 
+**For the user's own functions** (`Zielsatz/FolgeZiel.lean`): the statement runs `E.P.mitRuhe`,
+the program with the idle root `none`. `Φ.mitRuhe` lifts an order specification over `D` (the
+root in no set; signature `n` of `D` is `n + 1` of `D.mitRuhe`); the check commutes with the
+body translation (`ruS_fS`, `ruB_fB`, `ruEnd_fE`, …, structural induction over the syntax,
+the twin of `ruEnd_gOk`); hence `folgeOk_mitRuhe`, and `gabbro_ziel_folge` reads the leg off
+`GabbroZiel` for every `Φ` over `D` the program passes, on every reachable THREAD machine --
+spawned threads included. Axioms: `propext`, `Classical.choice`, `Quot.sound`.
+
 ## 4. Witnesses (non-degenerate, memory-changing, multi-step)
 
 `FolgeZeuge.lean`, on the sequential fixture `eP` of `ZielOrtEinfadenZeuge.lean`
@@ -162,7 +170,8 @@ document. `N531` is conservative: any call of a declared function inside the blo
    would fail.
 7. **`Φ` is quantified inside the leg; no field in `Einheit`.** No premise change, no exporter
    change, no certificate change.
-8. **`N531` exempts every block with a call** -- refuse only where the answer is certain.
+8. **`N531` exempts every block that calls a declared function (or through a pointer)** --
+   refuse only where the answer is certain.
 
 ## 7. What stays open, per obligation (also in the Spec header and OFFEN O1)
 
@@ -186,7 +195,7 @@ document. `N531` is conservative: any call of a declared function inside the blo
 ## 8. Files
 
 * `grammatik/Grammatik/Folge.lean` (definitions), `FolgeBeweis.lean` (the leg), `FolgeZeuge.lean`
-  (witnesses), `Zielsatz/Spec.lean` (the diff above), `Zielsatz/Beweis.lean` (one line),
+  (witnesses), `Zielsatz/FolgeZiel.lean` (the leg for the user's own functions, `gabbro_ziel_folge`), `Zielsatz/Spec.lean` (the diff above), `Zielsatz/Beweis.lean` (one line),
   `Grammatik.lean` (imports).
 * `crates/gabbro-check/src/kbedingung.rs` (`N531`, `N532`), `saetze.rs` (two sentences, `D013`'s
   updated), `crates/gabbro-check/tests/breaking_region.rs`, gifts 1291, 1292.
@@ -195,5 +204,19 @@ document. `N531` is conservative: any call of a declared function inside the blo
 
 ## 9. Measured
 
-* `./lean-bau`: green, 327 jobs (after the Spec diff).
-* `./cargo-pruef`: see the final line of this section, filled in at the end of the run.
+* `./lean-bau`: green, 328 jobs (after the merge of master `43c6ae32`, lane 264, and
+  `Zielsatz/FolgeZiel.lean`).
+* `./cargo-pruef`: exit 0, **1396 passed, 0 failed**, 1 ignored (after the same merge; the run
+  before the English renames: 1384 passed, 0 failed). The first run failed twice
+  (`jedes_gift_faellt_mit_seinem_code`, `jedes_angenommene_programm_ist_zertifiziert_oder_benannt`):
+  gift 1291 did not fall because `Some(x)` parses as a call and exempted the block -- repaired
+  (only calls resolving to a declared function, or indirect calls, exempt).
+* `instrumente/pruefe-saetze.py`: exit 0 (461 codes, 195 sentences, 0 invented).
+* `instrumente/pruefe-ausnahmen.py`: exit 0.
+* `instrumente/pruefe-englisch.py`: red, and red identically on master `342f6ace` (measured in a
+  throwaway worktree: 7965 German comment lines, 37 feeders, 5 sinks); this branch adds none
+  (a first draft added one feeder -- the sentence name `…-ruht-hier` -- renamed to English).
+* `instrumente/pruefe-zahlen.py`: red with findings of other lanes' drift (German comment lines,
+  ceremony counts, probe coverage); NOT compared number by number against a baseline -- the
+  one count this branch could move (gifts on an ambiguous code) is not moved by 1291/1292,
+  which each fall with their one code.

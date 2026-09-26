@@ -75,8 +75,8 @@ write each down, never trade a guarantee):
    invariant was bought with coverage, not with soundness.
 7. **The leg quantifies over `Φ` inside and needs no premise.** No field in `Einheit`, no
    exporter change, no certificate change; every `Φ` the Lean program passes is claimed.
-8. **`N531` accepts every block that calls anything** -- a callee's writes are not resolved in
-   that pass; it refuses only where the answer is certain.
+8. **`N531` accepts every block that calls a declared function or through a pointer** -- a
+   callee's writes are not resolved in that pass; it refuses only where the answer is certain.
 
 **What would close the rest:** the name of `breaking` in G's residue (a marker layer, with the
 re-proof of every rule-by-rule theorem), then the block-level restoration duty in (b); an event

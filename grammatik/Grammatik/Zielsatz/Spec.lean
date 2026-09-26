@@ -172,6 +172,11 @@
       (`folgeG_erreichbar`, FolgeBeweis.lean), by a thread invariant every rule of G keeps
       (`folgeInvG_schritt`): no user logic, no hardware assumption. The static premise sits
       INSIDE the leg (for each `Φ` the program passes), as `InvTraeger` sits inside `invRuhe`.
+    - FOR THE USER'S OWN FUNCTIONS: the statement runs `E.P.mitRuhe`; `Φ.mitRuhe` lifts an
+      order specification over `D` (the idle root in no set), the check commutes with the
+      translation of the bodies (`folgeOk_mitRuhe`), and `gabbro_ziel_folge`
+      (Zielsatz/FolgeZiel.lean) reads the leg off `GabbroZiel` for every `Φ` over `D` the
+      program passes -- on every reachable THREAD machine, spawned threads included.
   * WHY NOTHING IS WEAKENED. The premises of `GabbroZiel` and `GabbroZielVerbund` are textually
     unchanged; `Ziel` gains a conjunct and loses none; every earlier leg is proved by the same
     term (Zielsatz/Beweis.lean), so `gabbro_ziel_g`, `gabbro_ziel_vor`, `gabbro_ziel_verbund`
