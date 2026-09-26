@@ -118,6 +118,14 @@ struct Namen {
     /// type sizes the buffer. Keyed by bare name, last wins -- the same
     /// module caveat as every other map on this struct.
     arenen: HashMap<String, (Expr, TypExpr)>,
+    /// **Lane 259 (wave D, emitter arm): the `max` ceiling per dynamic arena.**
+    /// Bare name -> the `max M` expression, exactly where the declaration
+    /// carries the clause. Presence IS the dynamic form: the declaration
+    /// arm writes the descriptor (`{A}_desc`, no `buf[M]` storage), the
+    /// statement arms read `committed`/`base` through it, and `grow`
+    /// lowers to the commit call. A static arena has no entry here and
+    /// keeps today's lowering byte for byte.
+    arenen_max: HashMap<String, Expr>,
     /// **«E4»: the arenas this unit really touches.** An arena whose name
     /// no body names gets no storage -- an unused file-scope `static`
     /// is a `-Wunused-variable` finding about the generator, not the user
@@ -1162,10 +1170,15 @@ pub fn emittiere_mit(
         // the storage (`A_arena_speicher`), the buffer, the bound. The
         // `hi` expression and the element type travel with it, so the
         // declaration arm and the statement arms read one map.
+        // **Lane 259:** the `max` ceiling travels beside them, in its own
+        // map whose presence is the dynamic form.
         ItemArt::Arena(a) => {
             namen
                 .arenen
                 .insert(a.name.text.clone(), (a.hi.clone(), a.element.clone()));
+            if let Some(max) = &a.max {
+                namen.arenen_max.insert(a.name.text.clone(), max.clone());
+            }
         }
         ItemArt::Atomic(a) => {
             // (Speichern, Laden) -- die Deklaration nennt die Speicherseite.
@@ -1846,6 +1859,13 @@ pub fn emittiere_mit(
     // census; the scan is what keeps a unit that never saturates free of them.
     if needs_saturation(baum) {
         aus.push_str(SATURATION_PRELUDE);
+    }
+    // **Lane 259:** the descriptor layout and the two runtime declarations,
+    // once per unit that declares a dynamic arena -- before the per-arena
+    // descriptors below. No `max` clause anywhere, no line here: static
+    // units keep today's bytes exactly.
+    if braucht_arena_dynamisch(baum) {
+        aus.push_str(ARENA_DYN_PRELUDE);
     }
     let annahmen = crate::manifest::sammle(baum);
     namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
@@ -3892,6 +3912,33 @@ fn arena(a: &ArenaDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     };
     let hi = zahltext(hi_expr, absagen);
     if hi.is_empty() {
+        return;
+    }
+    // **Lane 259 (wave D, emitter arm): the dynamic form, taken iff `max`
+    // stands.** No `buf[M]` storage is emitted for the reserved range --
+    // address reserved, storage not touched. The descriptor carries the
+    // ceiling and the floor as compile-time constants at every use site;
+    // `base` is set at load by `gabbro_arena_reserve` (the driver calls it
+    // before any start runs -- a refused reservation refuses the load, it
+    // never starts a program with a smaller range). Conditional on use
+    // (`arenen_global`), like the static storage below.
+    if let Some(max_expr) = u.arenen_max.get(&a.name.text) {
+        let max = zahltext(max_expr, absagen);
+        if max.is_empty() {
+            return;
+        }
+        if u.arenen_global.contains(&a.name.text) {
+            aus.push_str(&format!(
+                "\n/* {n}: dynamic arena -- `max {max}` slots reserved at load, `{hi}` \
+committed; alloc reads `committed`, `grow` calls the runtime. */\n\
+static gabbro_arena_desc {n}_desc = {{((void *)0), (uint32_t)(sizeof({c})), (uint32_t)({max}), (uint32_t)({hi}), 0u, (uint32_t)({hi})}};\n",
+                n = a.name.text
+            ));
+            aus.push_str(&format!(
+                "_Static_assert(({hi}) <= ({max}), \"commit floor within ceiling\");\n\
+_Static_assert(1 <= ({max}), \"ceiling namable\");\n"
+            ));
+        }
         return;
     }
     aus.push_str(&format!(
@@ -8780,12 +8827,15 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             // this set -- and `anweisung` refuses the statement by name, so
             // descending would count names the C never reads.
             StmtArt::Start(_) => {}
-            // **Lane 257:** `grow` is refused by name in `anweisung`
-            // below, so descending would count names the C never reads
-            // -- same shape as `start`. The arm lane adds the descent
-            // with its lowering (a lowering and its name set are one
+            // **Lane 259:** the `grow` arm landed -- the arena, the amount
+            // and the `else` all reach the C, so all three are named here,
+            // like `alloc` above (a lowering and its name set are one
             // change, not two).
-            StmtArt::Grow(_) => {}
+            StmtArt::Grow(g) => {
+                aus.insert(g.tisch.text.clone());
+                e(&g.mehr, aus);
+                benutzte_namen(&g.sonst, aus);
+            }
             // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
             // a name of this set.
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -10256,7 +10306,28 @@ fn anweisung(
             if hi.is_empty() {
                 return;
             }
-            let speicher = format!("{}_arena_speicher", a.tisch.text);
+            // **Lane 259:** the dynamic form reads the committed word where
+            // the static form reads the `hi` immediate -- one word load
+            // instead of one immediate, same branch shape (`PLAN-DYNAMISCH.md`
+            // §8) -- and stores through the reserved base, never through a
+            // static buffer. Bare `alloc` without `else` inherits the open
+            // O14 policy: unchanged, dynamic arenas do not fix it.
+            let dynamisch = u.arenen_max.contains_key(&a.tisch.text);
+            let speicher = if dynamisch {
+                format!("{}_desc", a.tisch.text)
+            } else {
+                format!("{}_arena_speicher", a.tisch.text)
+            };
+            let schranke = if dynamisch {
+                format!("{speicher}.committed")
+            } else {
+                format!("(uint32_t)({hi})")
+            };
+            let ablage = if dynamisch {
+                format!("(({c} *){speicher}.base)[{speicher}.used++]")
+            } else {
+                format!("{speicher}.buf[{speicher}.used++]")
+            };
             let wert = verenge(
                 ausdruck(&a.wert, u, absagen),
                 &a.wert,
@@ -10267,9 +10338,9 @@ fn anweisung(
                 Some(sonst) => {
                     aus.push_str(&format!("{e}uint32_t {};\n", a.name.text));
                     aus.push_str(&format!(
-                        "{e}if ({speicher}.used < (uint32_t)({hi})) {{\n\
+                        "{e}if ({speicher}.used < {schranke}) {{\n\
                          {e}    {n} = {speicher}.used;\n\
-                         {e}    {speicher}.buf[{speicher}.used++] = ({wert});\n\
+                         {e}    {ablage} = ({wert});\n\
                          {e}}} else {{\n",
                         n = a.name.text
                     ));
@@ -10281,7 +10352,7 @@ fn anweisung(
                 None => {
                     aus.push_str(&format!(
                         "{e}uint32_t {n} = {speicher}.used;\n\
-                         {e}{speicher}.buf[{speicher}.used++] = ({wert});\n",
+                         {e}{ablage} = ({wert});\n",
                         n = a.name.text
                     ));
                 }
@@ -10296,6 +10367,10 @@ fn anweisung(
         // **«E4»: `reset A;`.** The counter goes back to zero; every index
         // bound before names another lifetime of the same slots, and the
         // checker (`N211`) says so -- the C only moves the counter.
+        // **Lane 259:** on a dynamic arena the store lands on the
+        // descriptor and `committed` does not move -- commit is monotone
+        // within a run (`PLAN-DYNAMISCH.md` §3), so `reset` starts a fresh
+        // generation over the same committed prefix, for one store, as today.
         StmtArt::ResetArena(tisch) => {
             if !u.arenen.contains_key(&tisch.text) {
                 weigere(
@@ -10306,7 +10381,14 @@ fn anweisung(
                 );
                 return;
             }
-            aus.push_str(&format!("{e}{}_arena_speicher.used = 0;\n", tisch.text));
+            if u.arenen_max.contains_key(&tisch.text) {
+                aus.push_str(&format!("{e}{}_desc.used = 0;\n", tisch.text));
+                aus.push_str(&format!(
+                    "{e}/* committed stays: monotone commit, reset starts a fresh generation. */\n"
+                ));
+            } else {
+                aus.push_str(&format!("{e}{}_arena_speicher.used = 0;\n", tisch.text));
+            }
         }
         // -- und die EINE Form, die weiter abgelehnt wird, jetzt aber MIT GRUND ----------
         //
@@ -10448,29 +10530,46 @@ fn anweisung(
                     .join(", ")
             ));
         }
-        // **Lane 257: `grow A by n else { … };` has no lowering in this
-        // template.** The commit call (`gabbro_arena_grow`, `laufzeit/`)
-        // and the descriptor land with the arm lane (248's SPEC) -- until
-        // then every `grow` falls here, by name, never silently. Emitted
-        // beside the refusal is only the comment, so the refusal changes
-        // no `cc` verdict.
+        // **Lane 259: `grow A by n else { … };` LOWERS on a dynamic arena.**
+        // The commit request becomes the runtime's call in the checked-`alloc`
+        // brace shape: `if (gabbro_arena_grow(&A_desc, n)) {} else { <else> }`.
+        // The `else` runs exactly when the runtime refuses the commit below
+        // the ceiling (`committed` unchanged); past the ceiling there is no
+        // commit, only the stop, and `N426` holds every admitted `grow`
+        // below it -- so an admitted unit reaches that stop only outside the
+        // checked run model. On a STATIC arena (no `max` clause) the
+        // statement keeps its `C001` below: there is no committed prefix to
+        // grow, only `buf[hi]` beside `used`.
         StmtArt::Grow(g) => {
-            weigere(
-                absagen,
-                s.span,
-                &format!(
-                    "`grow` out of arena `{}` has no lowering in this template -- committing \
-                     slots below the ceiling is the dynamic arm (`gabbro_arena_grow`); the \
-                     commit request names no C call this unit could make",
+            if !u.arenen_max.contains_key(&g.tisch.text) {
+                weigere(
+                    absagen,
+                    s.span,
+                    &format!(
+                        "`grow` out of arena `{}` has no lowering in this template -- committing \
+                         slots below the ceiling is the dynamic arm (`gabbro_arena_grow`); the \
+                         commit request names no C call this unit could make",
+                        g.tisch.text,
+                    ),
+                );
+                aus.push_str(&format!(
+                    "{e}/* grow -- HANDOFF region: commit slots of {} below its ceiling\n\
+                     {e} * (`gabbro_arena_grow`); at run time this is the runtime's half.\n\
+                     {e} */\n",
                     g.tisch.text,
-                ),
-            );
+                ));
+                return;
+            }
+            let speicher = format!("{}_desc", g.tisch.text);
+            let menge = ausdruck(&g.mehr, u, absagen);
             aus.push_str(&format!(
-                "{e}/* grow -- HANDOFF region: commit slots of {} below its ceiling\n\
-                 {e} * (`gabbro_arena_grow`); at run time this is the runtime's half.\n\
-                 {e} */\n",
-                g.tisch.text,
+                "{e}if (gabbro_arena_grow(&{speicher}, (uint32_t)({menge}))) {{\n\
+                 {e}}} else {{\n"
             ));
+            for k in &g.sonst.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
         }
     }
 }
@@ -13381,6 +13480,59 @@ static int64_t _gabbro_sat_i(int64_t a, int64_t b, int64_t lo, int64_t hi) {\n\
     return a + b;\n\
 }\n";
 
+/// **Lane 259 (wave D, emitter arm): the runtime half of a dynamic arena,
+/// as the emitted C sees it.**
+///
+/// The descriptor is what `PLAN-DYNAMISCH.md` §6 means by "declaration data
+/// the program carries": the emitter passes a pointer to it -- never sizes,
+/// never addresses, never flags. The two functions live in
+/// `laufzeit/arena_dyn.c`; what stands here are their declarations beside
+/// the layout they work on, so the unit compiles alone (`cc -c`, stage 9).
+/// The guard lets a hand-written driver include the runtime source in the
+/// same translation unit (`#include "laufzeit/arena_dyn.c"` after the
+/// emitted file): then the header's identical layout wins and this copy
+/// steps aside -- one layout, never two.
+const ARENA_DYN_PRELUDE: &str = "\
+/* Dynamic arenas (wave D, PLAN-DYNAMISCH.md section 6): the ceiling `max M` is\n\
+ * address reserved by the loader, the committed prefix is storage the program\n\
+ * grew explicitly. `base` is set by `gabbro_arena_reserve` before any start\n\
+ * runs; `used` is the allocation cursor since the last reset; `committed` is\n\
+ * the usable prefix, initialised to `hi` and bumped only by `gabbro_arena_grow`.\n\
+ * The OOM note stays honest: below the ceiling the commit is lazy, and the\n\
+ * `else` of `grow` runs only when the PLATFORM refuses it (hosted Linux:\n\
+ * strict overcommit accounting -- under the default heuristic out of memory\n\
+ * surfaces at first touch as the OOM killer, not as `false`). Past the\n\
+ * ceiling there is no commit, only the stop (`N426` holds it statically).\n\
+ */\n\
+#ifndef GABBRO_ARENA_DYN_H\n\
+typedef struct {\n\
+    void *base;\n\
+    uint32_t elem;\n\
+    uint32_t max;\n\
+    uint32_t floor_hi;\n\
+    uint32_t used;\n\
+    uint32_t committed;\n\
+} gabbro_arena_desc;\n\
+void gabbro_arena_reserve(gabbro_arena_desc *d);\n\
+bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n);\n\
+#endif\n";
+
+/// Does this unit declare a dynamic arena (`arena … max M`)? A syntactic
+/// pre-scan over the declarations -- the descriptor prelude above is
+/// emitted on `true`, once per unit, before the per-arena descriptors.
+fn braucht_arena_dynamisch(baum: &Programm) -> bool {
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if ja {
+            return;
+        }
+        if let ItemArt::Arena(a) = &item.art {
+            ja |= a.max.is_some();
+        }
+    });
+    ja
+}
+
 /// Does this unit saturate? A syntactic pre-scan for `+|` over bodies,
 /// contracts and initialisers -- no types involved, so it answers presence
 /// only, and both helpers are emitted on `true` (the unused one silenced, like
@@ -13541,10 +13693,12 @@ fn needs_saturation(baum: &Programm) -> bool {
             // **Lane 253:** `start` roots are paths the unit never evaluates
             // -- the driver (not this template) turns them into threads.
             StmtArt::Start(_) => false,
-            // **Lane 257:** `grow` is refused by name in `anweisung`
-            // below, so the template never evaluates its amount or its
-            // `else` -- same shape as `start` until the arm lane lands.
-            StmtArt::Grow(_) => false,
+            // **Lane 259:** the `grow` amount lowers as a run-time call
+            // argument, so saturation facts inside it count like the stored
+            // value above. (Admitted amounts are translation-time constants,
+            // so this fires only beside a refusal -- but a missing helper
+            // there is still a missing helper.)
+            StmtArt::Grow(g) => expr(&g.mehr),
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }
@@ -15143,8 +15297,30 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // the arena's own (see `arena()`), and the counter beside it is written
     // by `alloc` and `reset`, never read through this path. Like the table
     // above, the membership asked is the USED set, not the declared one.
+    // **Lane 259:** through the reserved base on a dynamic arena --
+    // `((T *)A_desc.base)[i]`, the same slots `alloc` stores through.
     if u.arenen_global.contains(&o.basis.text) {
-        t = format!("{}_arena_speicher.buf", o.basis.text);
+        if u.arenen_max.contains_key(&o.basis.text) {
+            let element = u
+                .arenen
+                .get(&o.basis.text)
+                .and_then(|(_, el)| ctyp(el, u));
+            match element {
+                Some(c) => {
+                    t = format!("(({} *){}_desc.base)", c, o.basis.text);
+                }
+                None => {
+                    weigere(
+                        absagen,
+                        o.basis.span,
+                        "`A[i]` out of a dynamic arena whose element type has no lowering",
+                    );
+                    return String::new();
+                }
+            }
+        } else {
+            t = format!("{}_arena_speicher.buf", o.basis.text);
+        }
         zeiger = false;
     }
     // **And a `static` of a RECORD is a value too** (2026-08-26). `static irq : IrqMarke`
