@@ -370,6 +370,20 @@ struct Namen {
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
+    /// **Lane 260: the `start` sites with their root counts** -- (statement
+    /// span-lo, roots). The file-scope thread stacks are emitted from this
+    /// list beside the tables (one 64 KiB region per root); the `Start` arm
+    /// reads the same spans to name them. Walked once in `emittiere_mit` over
+    /// every function body -- a second register beside the arm would drift
+    /// (W7). The walk descends through `crate::unterbloecke`, like every
+    /// collector that must not return a subset looking like a set.
+    start_orte: Vec<(u32, usize)>,
+    /// **Lane 260: functions with a lowered body.** Only a `Block` rumpf has
+    /// an address in this unit that a thread could start in; an `extern` or
+    /// otherwise bodiless declaration has none, and starting one would link
+    /// nowhere. The `Start` arm refuses those by name instead of emitting a
+    /// call into a body that does not exist.
+    impl_funktionen: BTreeSet<String>,
 }
 
 /// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
@@ -1279,6 +1293,11 @@ pub fn emittiere_mit(
     // decided once the ghost names are known.
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Funktion(f) = &item.art {
+            // **Lane 260: which functions have a body in this unit.** Only
+            // those are thread roots a `start` can name -- see `Namen`.
+            if matches!(&f.rumpf, FnRumpf::Block(_)) {
+                namen.impl_funktionen.insert(f.name.text.clone());
+            }
             let sig = Signatur {
                 geist_param: f.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
                 geist_rueck: f.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
@@ -1996,6 +2015,54 @@ pub fn emittiere_mit(
              \x20* section E, with its contract: it returns a core number below the `per cpu`\n\
              \x20* count, and nothing here proves that. */\nuint32_t gabbro_kern(void);\n",
         );
+    }
+    // **Lane 260: the `start` sites, walked once for the whole unit.**
+    //
+    // Every `start { f, g };` owns one 64 KiB stack region per root, at file
+    // scope beside the tables: the threads the statement starts run on these
+    // regions, handed in as tops (`+ 65536u`, 16-aligned by the attribute --
+    // what the SysV ABI wants before a call). The walk descends through
+    // `crate::unterbloecke`, and the list it fills is the same one the
+    // `Start` arm names -- one register, not two (W7).
+    {
+        fn sammle_start(b: &Block, aus: &mut Vec<(u32, usize)>) {
+            for s in &b.anweisungen {
+                if let StmtArt::Start(st) = &s.art {
+                    aus.push((s.span.von, st.roots.len()));
+                }
+                for k in crate::unterbloecke(s) {
+                    sammle_start(k, aus);
+                }
+            }
+        }
+        crate::fuer_jedes_item(baum, &mut |item| {
+            if let ItemArt::Funktion(f) = &item.art {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    sammle_start(b, &mut namen.start_orte);
+                }
+            }
+        });
+    }
+    if !namen.start_orte.is_empty() {
+        aus.push_str(
+            "\n/* Runtime thread starts (`start { f, g };`, lane 260). The runtime owns\n\
+             \x20* creation and joining (`laufzeit/faden.c`: our own raw `clone`, no libc\n\
+             \x20* threading on these paths); the unit owns the stacks below, one 64 KiB\n\
+             \x20* region per root, and these two declarations are the contract between\n\
+             \x20* them. A misspelt name is an undefined reference, not a silent default.\n\
+             \x20* Linked with `laufzeit/faden.c`; stage 9 (`cc -c`) needs only the names. */\n\
+             int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort);\n\
+             void gabbro_faden_warte(uint32_t *wort);\n",
+        );
+        for (lo, n) in namen.start_orte.clone() {
+            for i in 0..n {
+                aus.push_str(&format!(
+                    "static unsigned char gabbro_stapel_{lo}_{i}[65536] \
+                     __attribute__((aligned(16)));\n\
+                     static uint32_t gabbro_wort_{lo}_{i};\n"
+                ));
+            }
+        }
     }
     // **Die Marken stehen HIER und nicht an ihrem Item** -- aus demselben Grund, aus dem
     // alle Prototypen vor allen Ruempfen stehen. `beispiele/04` erklaert `linear type
@@ -10416,37 +10483,93 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
-        // **Lane 253: `start { f, g };` (P017) has no lowering in this
-        // template.** Thread creation and joining belong to the driver
-        // (lane 246 shape: one wrapper per root, join loop, idle root) --
-        // until the statement-level lowering lands, every `start` falls
-        // here, by name, never silently. Emitted beside the refusal is only
-        // the comment, so the refusal changes no `cc` verdict.
+        // **Lane 260: `start { f, g };` (P017) lowers to the runtime's
+        // raw-clone threads.** One `gabbro_faden_start` per root on the
+        // file-scope stack of its own site (`gabbro_stapel_<lo>_<i>`,
+        // emitted beside the tables), then one `gabbro_faden_warte` per
+        // root: every spawn precedes every join, so the roots overlap, and
+        // the starter proceeds only after all of them have exited. The
+        // checker bills the SUM of the roots' costs (F4) -- the sum is the
+        // bound that holds on any number of cores.
+        //
+        // A spawn this statement cannot make is refused by name, never
+        // guessed: an unresolvable root, one with no body in this unit, one
+        // taking parameters or answering a result, and a root twice in one
+        // statement (the second spawn would overwrite the first join word
+        // and leave its thread unjoined -- `N459` owns that shape in the
+        // checker). What the checker owns beyond the mechanics -- one owner
+        // per thread (`N460`), no held lock across the join (`N461`), pool
+        // safety (`N462`) -- stays the checker's; the emitter runs on the
+        // parsed tree, and lowering an unchecked shape is the counterfactual
+        // the `allein` probes rely on.
+        //
+        // A refused spawn has no lowering beside it (nothing is started, so
+        // nothing honest could stand there); a made one traps LOUDLY when
+        // the kernel refuses it (`__builtin_trap` on the same line as the
+        // condition, the `trap-guard` row of the C-form census). There is no
+        // error channel in the statement, so running on with unstarted roots
+        // would be the silent wrong answer.
         StmtArt::Start(st) => {
-            weigere(
-                absagen,
-                s.span,
-                &format!(
-                    "`start` has no lowering in this template -- thread creation and joining \
-                     belong to the driver (one wrapper per root, join loop); the roots {} \
-                     name no C call this unit could make",
-                    st.roots
-                        .iter()
-                        .map(|w| format!("`{}`", w.text()))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ),
-            );
-            aus.push_str(&format!(
-                "{e}/* start -- HANDOFF region: starts {} (joined before the\n\
-                 {e} * starter proceeds); at run time this is the driver's half.\n\
-                 {e} */\n",
-                st.roots
-                    .iter()
-                    .map(|w| w.text())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let mut wurzeln: Vec<String> = Vec::new();
+            let mut gesehen: BTreeSet<String> = BTreeSet::new();
+            let mut unbrauchbar: Option<String> = None;
+            if st.roots.is_empty() {
+                unbrauchbar = Some(String::new());
+            }
+            for w in &st.roots {
+                let kurz = w
+                    .teile
+                    .last()
+                    .map(|i| i.text.clone())
+                    .unwrap_or_default();
+                let brauchbar = u.funktionen.get(&kurz).is_some_and(|sig| {
+                    u.impl_funktionen.contains(&kurz)
+                        && sig.geist_param.is_empty()
+                        && sig.rueck.is_none()
+                }) && gesehen.insert(kurz.clone());
+                if brauchbar {
+                    wurzeln.push(kurz);
+                } else {
+                    unbrauchbar = Some(kurz);
+                    break;
+                }
+            }
+            if let Some(schlecht) = unbrauchbar {
+                let welche = if schlecht.is_empty() {
+                    "no roots".to_string()
+                } else {
+                    format!("`{schlecht}`")
+                };
+                weigere(
+                    absagen,
+                    s.span,
+                    &format!(
+                        "`start` has no lowering for {welche} -- every root is a nullary \
+                         `impl fn` of this unit with no result, named once per statement; \
+                         the roots {} name no C call this unit could make",
+                        st.roots
+                            .iter()
+                            .map(|w| format!("`{}`", w.text()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                );
+                return;
+            }
+            let lo = s.span.von;
+            for (i, name) in wurzeln.iter().enumerate() {
+                aus.push_str(&format!(
+                    "{e}/* start {name} -- a runtime thread on our own raw clone\n\
+                     {e} * (`laufzeit/faden.c`); joined below before the starter proceeds. */\n\
+                     {e}if (gabbro_faden_start({name}, gabbro_stapel_{lo}_{i} + 65536u, \
+                     &gabbro_wort_{lo}_{i}) != 0) __builtin_trap();\n"
+                ));
+            }
+            for i in 0..wurzeln.len() {
+                aus.push_str(&format!(
+                    "{e}gabbro_faden_warte(&gabbro_wort_{lo}_{i});\n"
+                ));
+            }
         }
         // **Lane 257: `grow A by n else { … };` has no lowering in this
         // template.** The commit call (`gabbro_arena_grow`, `laufzeit/`)
