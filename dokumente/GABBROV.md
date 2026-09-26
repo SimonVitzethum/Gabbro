@@ -276,6 +276,17 @@ gap simply moves one level up.
 > | folds that are not `count` — *the FIRST x with P* | 2 | no |
 > | **bounded reachability — `place reaches place via field`** | **5** | **no** |
 >
+> **Decided 2026-09-26 (lane 266, OFFEN O5): a fourth demand, DEMAND G1, of a
+> second kind.** The three above are what the LEAN side must carry; DEMAND G1
+> is premise supply — what the GABBRO side must be able to DECLARE so that a
+> checker has the premise at all: resolving an `option index into` in `pred`
+> («B14», the `L02` mutual sibling chain). It is the difference between
+> *refuted* and *passed* on `L01` (`L01.smt2` sat, `L01b.smt2` unsat with `L02`,
+> `L01c.smt2` sat without it) and on `delete_leaf`'s maintenance claim
+> (`L05g` sat, `L05i` unsat with no-dangling-parent). Narrowed: `== Some(k)`
+> comparisons check in `pred` today; indexing THROUGH the option stays
+> blocked.
+>
 > **And the language already has the third.** `SYNTAX.md`:717 carries
 > `reach = place "reaches" place "via" ident`, `parse.rs`:2117 builds `PredArt::Erreicht` from
 > it, and a probe through the unchanged checker passes with 0 errors. The Lean channel refuses

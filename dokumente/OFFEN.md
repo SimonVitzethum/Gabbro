@@ -55,6 +55,34 @@ evaluable from the outside.**
 | **what would close `G1`** | nothing, deliberately — a threshold set now would be set to be met |
 | **what would close `G5`** | formalising the eight assumptions — the expensive half of V2, `AUFTRAG-GABBROV.md` §9 |
 
+**CLOSED 2026-09-26 (lane 266) — both falsifiers WITHDRAWN, not thresholded.**
+Setting a number now, with 55 of 63 on the table, would be `R2` (a rule pulled to
+fit a result). The replacements below were written 2026-09-03 (`AUFTRAG-GABBROV.md`
+§1), before the runs they judge — and this entry's decision was committed before
+this lane's new solver runs (O4/O5/O6), so no result below could have shaped it.
+
+* `G1` → `E1` + `E2`, pre-registered and numeric where a number is honest:
+  * **E1** (completeness of handling, no exception): every `obligation` line of the
+    manifest gets a verdict in the same run. Pre-registered number:
+    `|manifest obligation lines − verdict lines| = 0`. Mechanised inside
+    `gabbro gabbrov pruefe`, which refuses to complete otherwise.
+  * **E2** (decided share, by name not by percentage): every `undecided` row stands
+    by name in `dokumente/AUSNAHMEN.md`, which holds exactly **4** rows
+    (`L24`, `L34`, `L50`, `L52`); any growth without a `HISTORIE.md` entry fails
+    `pruefe-ausnahmen.py`. A percentage would let the exception list grow quietly
+    with every hard obligation; names cannot.
+* `G5` → split into the half that is built and the half that is a milestone:
+  * **V2a vacuity — BUILT** (`programmlogik/gabbrov/V2.lean`:
+    `vacuous_under_assumptions`, `detection_is_incomplete`): every sayable
+    obligation with a precondition carries a vacuity verdict, and a condemned
+    precondition has no model at all (the sound direction). Pre-registered form:
+    the check runs over the sayable preconditions, `0` condemned today means
+    `0` vacuous passes claimed — not that the assumptions are consistent.
+  * **V2b milestone — the construction that would re-open the question**: 8 of 8
+    assumptions as formal `Prop`s with an exhibited model. Until 8 of 8 stand,
+    *"the assumption set has no model"* is not asked, and no count clears or
+    trips anything in its place.
+
 ---
 
 ## O3 — ~~The manifest does not carry the obligation text~~ — **it does since 2026-09-03, and the half that stays open is a different one**
@@ -140,6 +168,46 @@ can restore the invariant**, and the invariant cannot hold over any table that i
 | **why it is not being done here** | rewording an obligation decides what the fragment meant — the same shape as the `L44`/`L53` tautology finding of `messung/GABBROV-V2.md` |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
 
+**CLOSED 2026-09-26 (lane 266) — decided as BOTH: the guard AND the new home.**
+The audit (`GABBROV-AUDIT.md` §1.3) had measured that the `used` guard alone does
+not repair `L05`: `unlink` requires `used` and never clears it, so the guarded
+invariant still refutes it. The repair is therefore two halves, and the fragment
+`messung/fragmente/F01.gab` carries both since this lane:
+
+* the guard, without a new domain — `forall s in slots of c :
+  c.slots[s].used => c.slots[s] reaches WURZEL via parent`. `=>` is already a
+  `pred` production (SYNTAX.md:669), and the shape stands in
+  `wurzel_ohne_vorgaenger` and `beispiele/01-tabelle.gab`:70-71;
+* the new home — `unlink` drops `maintains cdt_wohlgeformt` (its post-state is
+  the legitimate transient: used, detached), `delete_leaf` and `revoke` keep it,
+  `release_slot` gains it (N496: it writes the carrier and now owes the duty).
+
+The two changed excerpt lines stand booked in `pruefe-emission.sh` (`F1_WEG`);
+the emitted C is byte-identical before and after, the `zeugnis` templates line
+is unchanged, and `F01.gab` still checks with 0 errors, 0 hints.
+
+Evidence (`messung/gabbrov/erzeuge-L05used.py`, bound 8, Z3 4.16.0, this lane):
+
+| file | question | answer | time |
+|---|---|---|---:|
+| `L05d` | guarded invariant + one detached UNUSED slot | sat (livable — the `L05c` defect is gone) | 0.03 s |
+| `L05e` | guarded invariant + one detached USED slot | unsat (not vacuous — the guard still bites) | 0.02 s |
+| `L05f` | `unlink` maintains the guarded invariant | sat (refuted — why it drops the claim) | 0.04 s |
+| `L05g` | `delete_leaf` maintains it on `used` + `ist_blatt` alone | sat (refuted — see below) | 0.17 s |
+| `L05h` | `release_slot` maintains it | unsat (holds — `used := false` leaves the domain) | 0.02 s |
+| `L05i` | case g + no-dangling-parent | unsat (holds — the exact missing premise) | 0.02 s |
+
+`L05g`'s model is the second half of the finding, not an encoding slip: a node
+`y` with `parent(y) = s` while `first_child(s)` is none keeps `s` a leaf by
+`ist_blatt`'s measure and still loses its chain when `s` is unlinked. The first
+version of the generator omitted `ist_blatt` and fell through an orphaned
+child; with it, the fall goes through a DANGLING parent instead. Nothing the
+checker is given excludes it — the exclusion is sibling consistency (`L02`),
+which is OFFEN O5. `delete_leaf`'s maintenance claim is therefore CONDITIONAL
+on O5's premise, and `revoke` inherits the condition compositionally (its
+traverse calls `delete_leaf` per victim; not encoded — the traverse is the
+remaining step).
+
 ---
 
 ## O5 — «B14» may be a fourth demand on the specification fragment, and it is not on the list
@@ -171,6 +239,42 @@ them.*
 | **the question for Simon** | is «B14» a fourth demand, or a fourth *kind* of demand? |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
 
+**CLOSED 2026-09-26 (lane 266) — a fourth demand, of a SECOND kind.**
+The entry's own distinction stands: the three recorded demands are what the
+LEAN side must carry (fragment expressiveness); «B14» is what the GABBRO side
+must be able to DECLARE so that a checker has the premise at all (premise
+supply). One list with two kinds, not two lists — every demand is still
+"without this, a real obligation cannot be discharged", and the kind says
+where the work lands. Recorded as **DEMAND G1** beside DEMANDs 1–3 in
+`GABBROV.md` §7.
+
+Evidence, re-measured this lane (Z3 4.16.0, each under 0.06 s):
+
+```
+messung/gabbrov/L01.smt2    sat    0.053 s   the declared premises only
+messung/gabbrov/L01b.smt2   unsat  0.038 s   with L02 added
+messung/gabbrov/L01c.smt2   sat    0.055 s   with cdt_wohlgeformt added instead
+```
+
+`L02` is the mutual sibling chain. The audit's refinement (§1.4) is kept: only
+the FORWARD direction is load-bearing for `L01`, and a third «B14» statement
+(siblings share a parent) repairs it by a shorter route — so "the premise" is
+a family, not one sentence. This lane adds a SECOND row where the family is
+load-bearing: `L05g` sat against `L05i` unsat (OFFEN O4) — `delete_leaf`'s
+maintenance claim needs no-dangling-parent, a «B14» statement no declared
+premise supplies.
+
+Narrowed at the same time, by probe (prebuilt checker, 0 errors both ways):
+`== Some(k)` comparisons DO check in `pred` today — as a table invariant
+(`Self.slots[y].p == Some(1)`) and as a quantified `requires`
+(`forall y in slots of t : t.slots[y].p == Some(s) => …`). What stays blocked
+is the core the fragment names: indexing THROUGH the option
+(`slots[s.next_sibling]`), which `L02` in full generality needs. A
+per-call `requires` can spell the no-dangling fragment where `s` is
+index-typed; it moves the burden to every call site instead of supplying it
+once, which is why the demand stands as a table-invariant demand and not as
+a calling-convention workaround.
+
 ---
 
 ## O6 — DEMAND 3 may not be buildable in the shape V1 assumes
@@ -198,6 +302,36 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 |---|---|
 | **what would close it** | an axiomatised transitive closure instead of an unrolling — different work from the other two demands |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.5 |
+
+**CLOSED 2026-09-26 (lane 266) — buildable in ANOTHER shape, not in V1's.**
+Re-measured this lane (`lauf-L05.sh`, Z3 4.16.0, wall 3m08s) the unrolling
+shape reproduces the entry exactly: bounds 16, 18, 19, 21, 24, 32, 48 answer
+`sat` in 0.04–0.34 s (17 takes 6.28 s), bounds 20, 22, 64 time out at 60 s.
+The failure is still not monotone in the bound — and re-measured
+(`ohne-schranke/lauf.sh`, wall 2m07s) it is still not a function of the bound
+at all: six of six non-default seeds answer bounds 20 and 22 in 0.16–3.33 s.
+V1's shape — unroll to the table's `count` — is therefore NOT buildable at the
+corpus bounds (`NSLOTS` 80 256 / 4 096): the file would be a ~100 MB `ite`
+nest whose solvability is seed-chaotic already at depth 20.
+
+The other shape is the audit's rank encoding, re-measured with both controls
+green at both sizes:
+
+```
+N=20       bytes=1365   answer=sat      time= 0.051 s
+N=80256    bytes=1371   answer=sat      time= 0.037 s
+CONTROL A (s = WURZEL, must be unsat):  N=20 unsat 0.021 s, N=80256 unsat 0.022 s
+CONTROL B (premise alone, must be sat): N=20 sat 0.034 s,   N=80256 sat 0.032 s
+```
+
+Decision: DEMAND 3 is tractable as a BOUND-FREE rank witness
+(`ohne-schranke/gen-rank.py`, ~1.4 KB, ~0.04 s at the corpus's own number) —
+for the REFUTATION direction, which is what all three Gate 2 findings needed
+(a model needs no certificate and no kernel). The PROOF (`unsat`) direction
+over the rank form, and the four undrawn reachability rows (`L04`, `L09`,
+`L15`, `L16`), are not measured here: a rank witnesses reachability, and the
+direction needing care is the one where reachability must be proved. That half
+stays with the demand; the wall as stated — "no bound to plan with" — is gone.
 
 ---
 
