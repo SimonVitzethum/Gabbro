@@ -10,9 +10,9 @@ unit, the gaps closed (arenas, strings, the program's own `via idt` handlers, id
 
 | measure | result |
 |---|---|
-| emitting units that compile with NO hosted header (`-ffreestanding -fno-builtin -nostdinc`) AND LINK with NO C library (`ld -nostdlib` against `laufzeit/metall/`) | **311 of 311** (stage 9's population; 313 emit, 2 are reverse probes set aside) |
+| emitting units that compile with NO hosted header (`-ffreestanding -fno-builtin -nostdinc`) AND LINK with NO C library (`ld -nostdlib` against `laufzeit/metall/`) | **312 of 312** after the merge of master `1ee49586` (311 of 311 before it; stage 9's population, 2 reverse probes set aside) |
 | undefined symbols, classified | 13 runtime, 112 lock, 8 rcu, 10 entry, 167 foreign (the program's own `extern fn` bodies); **0 unclassified** |
-| units that need nothing but the runtime | 225 |
+| units that need nothing but the runtime | 226 (225 before the merge) |
 | units that name foreign bodies the program supplies | 81 |
 | HOSTED-ONLY, named (OFFEN O33) | **16**: 11 kernel gates (`syscall`), 5 foreign bindings to C-library names |
 | entries with no honest register binding | 2 (`beispiele/11`, `probe-emission144-typeof`; OFFEN O32 (7)) |
@@ -107,11 +107,22 @@ names its reason.
 ## 7. Checks
 
 - `free -g` at start: 31 GB total, 19 GB available; mid-run 8 GB available (other agents).
-- Stage 12 alone: exit 0, 311 of 311. Stage 11 alone: exit 0, 15 booted, 5 gifts bite.
-- `./lean-bau`, `./cargo-pruef`, `./emission-pruef`: see §8 (filled in after the merge of master).
+- Stage 12 alone (before the merge): exit 0, 311 of 311. Stage 11 alone: exit 0, 15 booted,
+  5 gifts bite.
 - **MARKE deltas: none.** No `.gab` file was added or changed; stage 12 counts the same
   population as stage 9 and books no mark of its own. `MARKE_EMIT*` untouched.
 - No checker code, no gift file, no example (N561–N565, gifts 1351–1360 unused; N561 named as
   the candidate for the entry-binding check).
 
-## 8. Final runs
+## 8. Final runs (after the merge of master at `1ee49586`, Opus O25c)
+
+- `free -g` before the runs: 31 GB total, 18 GB available.
+- `./lean-bau`: **exit 0, 0 error lines**, 354 jobs (this branch adds no Lean file; the merge
+  brought O25c's).
+- `./cargo-pruef`: **exit 0, 1407 passed, 0 failed, 1 ignored** (new:
+  `metall_treiber_mit_eintritten`, `eintritte_im_metalltreiber`,
+  `bau_bindet_metallbild_mit_eintritten`).
+- `./emission-pruef`: **exit 0, ALL PASS** -- 51 executed units, 312 of 312 compile, 2 reverse
+  probes; stage 11 `15 booted on qemu -smp 4, every expectation held, 5 gifts bite`; stage 12
+  `312 of 312 link without an OS; 16 hosted-only listed by name`.
+- MARKE deltas: none from this branch.
