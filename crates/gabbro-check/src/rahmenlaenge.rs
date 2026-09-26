@@ -21,6 +21,7 @@
 //! |---|---|---|
 //! | `N463` | at a call, every `x <= lenof(p)` clause of the callee HOLDS, decided: an array passed for `p` bounds `x`'s argument by its length (the range of the argument must lie inside), and a pointer passed for `p` must be the caller's own parameter `q` with `x`'s argument the caller's own parameter `y` and the caller carrying `y <= lenof(q)` itself | `m1.rs` (`transfer_bound_at_call`), one funnel for every call form |
 //! | `N464` | a `syscall` that takes a pointer at numbers (a buffer the kernel moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters | `syscall.rs` (`buffer_bound`) |
+//! | `N506` | an `extern fn` that takes a pointer at numbers (a buffer the foreign code moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters (lane 262, OFFEN O23) | `rahmenlaenge.rs` (`buffer_bound_extern`) |
 //!
 //! **What this reading is: strong, not `M115`'s.** `M115` refuses a precondition only where
 //! the argument's range EXCLUDES it and counts the rest as open obligations. `N463` refuses
@@ -33,9 +34,11 @@
 //! assumption); that `lenof` of a pointer is anything but the caller's promise at the
 //! forwarding step (it is decided only where an array decays); and nothing about a byte
 //! INSIDE the frame -- a NUL-terminated path is a named caller obligation in the contract
-//! (`beispiele/149`, `spec fn path_nul_terminated`), counted as `V`, not decided here.
+//! (`beispiele/149`, `spec fn path_nul_terminated`), counted as `V`, not decided here
+//! (`N507` in `nulpfad.rs` decides the shapes the program builds itself).
 
 use gabbro_syntax::ast::*;
+use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 
 /// **One transfer bound `length <= lenof(pointer)`** (`strict`: `<`), both bare parameter
@@ -132,4 +135,118 @@ pub fn caller_carries(rufer: &[LengthBound], y: &str, q: &str, strikt: bool) -> 
     rufer
         .iter()
         .any(|a| a.length == y && a.pointer == q && (a.strict || !strikt))
+}
+
+/// **`N506` -- an `extern fn` byte buffer carries `requires x <= lenof(p)`**
+/// (lane 262, OFFEN O23).
+///
+/// `N464` (`syscall.rs`, `buffer_bound`) holds `syscall` buffers only; an `extern fn`
+/// taking a byte pointer and a length (`beispiele/64`'s `write`) was not held to the
+/// clause, while `N463` (`m1.rs`, `transfer_bound_at_call`) already decides the clause at
+/// every call of ANY callee -- including an `extern fn` that writes it. The declaration
+/// half was missing, so a foreign edge could move bytes past the caller's object with a
+/// contract no call site is held against.
+///
+/// The rule is `buffer_bound`'s twin at the other foreign shape: a parameter that points
+/// at numbers (`u8`/`i8` pointee -- the callee counts bytes, `lenof` counts elements) beside
+/// an integer parameter that can serve as its length is a buffer, and the declaration
+/// carries `requires x <= lenof(p)` (or `<`) over one of its integer parameters. A lone
+/// object pointer with no length beside it (`beispiele/22`'s `melde_roh`) is one object,
+/// not a transfer, and is not held. Pointers at records, tables or other non-number types
+/// are one object, not a buffer, and stay with the frame rules they always had -- exactly
+/// the same cut `N464` makes.
+///
+/// **Not claimed:** which length the foreign code honours (that stays the callee's named
+/// assumption, like the kernel's at a gate); anything about a byte inside the frame
+/// (`N507` in `nulpfad.rs`).
+pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if f.klasse != Some(FnKlasse::Extern) {
+            return;
+        }
+        buffer_bound_extern(baum, modul, f, absagen);
+    });
+}
+
+fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    // **Only a buffer WITH a length parameter is held.** A lone object pointer
+    // (`extern fn melde_roh(text : ptr<code, r> Text)` in `beispiele/22`: one
+    // parameter, no length beside it) names one object, not a transfer: there is
+    // no length the caller could set past it, and no clause could tie one. A
+    // length-less callee that scans for a terminator instead (`puts`) is `N507`'s
+    // shape (`nulpfad.rs`), not this rule's.
+    let hat_laenge = f.parameter.iter().any(|q| {
+        matches!(
+            u.typ_von_ausdruck_decl(modul, &q.typ),
+            crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+        )
+    });
+    if !hat_laenge {
+        return;
+    }
+    let atome = bounds(&f.requires);
+    for p in &f.parameter {
+        let TypExpr::Zeiger(z) = &p.typ else { continue };
+        let ziel = u.typ_von_ausdruck_decl(modul, &z.ziel);
+        let mut ohne = &ziel;
+        while let crate::typen::Typ::Benannt { unter, .. } = ohne {
+            ohne = unter;
+        }
+        if !matches!(
+            ohne,
+            crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+        ) {
+            continue;
+        }
+        let byte = matches!(
+            &z.ziel,
+            TypExpr::Int(i) if matches!(i.wort, gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8)
+        );
+        let gebunden = atome.iter().any(|a| {
+            a.pointer == p.name.text
+                && f.parameter.iter().any(|q| {
+                    q.name.text == a.length
+                        && matches!(
+                            u.typ_von_ausdruck_decl(modul, &q.typ),
+                            crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+                        )
+                })
+        });
+        let detail = if !byte {
+            format!(
+                "points at `{}`, and the callee counts BYTES -- `lenof({})` counts elements, \
+                 and only for `u8`/`i8` are the two one number",
+                ziel.text(),
+                p.name.text
+            )
+        } else if !gebunden {
+            format!(
+                "carries no `requires <length> <= lenof({})` over one of its integer \
+                 parameters -- nothing ties the bytes the callee moves to the object the \
+                 caller passes",
+                p.name.text
+            )
+        } else {
+            continue;
+        };
+        absagen.schiebe(
+            Absage::fehler(
+                "N506",
+                p.name.span,
+                format!("`extern fn {}` takes the buffer `{}` and {detail}", f.name.text, p.name.text),
+            )
+            .mit_notiz(
+                "a foreign edge promises its frame as a named assumption; a length the \
+                 caller may set past the object makes that frame false by the caller's \
+                 own call, not by the machine",
+            )
+            .mit_notiz(
+                "with the clause, `N463` decides the bound at every call: an array passed \
+                 there bounds the length argument by its own length, a forwarded pointer \
+                 carries the same clause up its caller's contract",
+            ),
+        );
+    }
 }

@@ -4172,11 +4172,14 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.rahmenlaenge",
-        kennungen: &["N463", "N464"],
+        kennungen: &["N463", "N464", "N506"],
         aussage: "A transfer through a pointer is bounded by what the pointer reaches. A \
                   `syscall` parameter that points at numbers is a byte buffer (`u8`/`i8` \
                   pointee) and the gate carries `requires x <= lenof(p)` over one of its \
-                  integer parameters (`N464`). At every call, of any callee, each clause \
+                  integer parameters (`N464`); an `extern fn` parameter that points at \
+                  numbers beside a length parameter is held to the same clause \
+                  (`N506`, lane 262). At every call, \
+                  of any callee, each clause \
                   `x <= lenof(p)` (or `<`) is DECIDED (`N463`): an array passed for `p` \
                   -- where it decays and its length is last known -- bounds the range of \
                   `x`'s argument by its length, with the array's elements being the \
@@ -4193,17 +4196,21 @@ pub const PHASEN: &[Satz] = &[
                     from, nor anything about a byte INSIDE the frame: a kernel that finds \
                     the end by a NUL is owed that by the caller as a named obligation in \
                     the contract (`beispiele/149`: `spec fn path_nul_terminated`, counted \
-                    `V`, not decided). `N464` holds `syscall` buffers only; an `extern fn` \
-                    taking a byte pointer and a length is not yet held to the clause.",
+                    `V`, decided only for buffers the program builds itself: `N507`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1155` (`N464`: a read buffer bounded only by a \
                       ceiling -- `beispiele/150`'s shape before fix lane F5), `1156` \
                       (`N463`: `lies(fd, EIMER, 1024)` over a 64-byte array, measured \
                       clean before F5), `1157` (`N463`: a wrapper forwarding `buf`/`len` \
-                      without the clause), `1158` (`N464`: a `u32` buffer). The clean \
-                      side: beispiele/96, /149, /150 and `tests/rahmenlaenge.rs` (a \
-                      literal and a const inside the array, the forwarding chain, `<`).",
-        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs; crates/gabbro-check/src/m1.rs \
+                      without the clause), `1158` (`N464`: a `u32` buffer), `1251` \
+                      (`N506`: an `extern fn` byte buffer bounded only by a ceiling -- \
+                      `beispiele/64`'s shape before lane 262), `1252` (`N506`: a `u32` \
+                      buffer at an `extern fn`). The clean \
+                      side: beispiele/64, /96, /149, /150 and `tests/rahmenlaenge.rs` (a \
+                      literal and a const inside the array, the forwarding chain, `<`, \
+                      the `extern fn` twins).",
+        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs (`buffer_bound_extern` for \
+                     `N506`); crates/gabbro-check/src/m1.rs \
                      (`transfer_bound_at_call`); crates/gabbro-check/src/syscall.rs \
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },
