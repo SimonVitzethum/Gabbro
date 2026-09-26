@@ -126,6 +126,7 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
     (fun f => invGutSA_mono hT ((hN.1 passes f).2.1))
     (fun f => invGutGrundA_mono hT ((hN.1 passes f).2.2))
     hZ.req hZ.sperren (startExklusiv_ohne_haelt init hLeer) (fun t => (hW t).2) hLeer
+    hA.antworten
 
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/

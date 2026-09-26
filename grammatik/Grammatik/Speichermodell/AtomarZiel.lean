@@ -15,17 +15,20 @@
   * `gx_aus_w` -- every machine W reaches has a G-part that GX reaches;
   * `ZielAtomarW` -- the legs at such a machine: `SpurInv`, lock exclusivity, the seven contract
     and start legs of `Ziel`, no wait cycle, no global deadlock, and the weak-memory leg in GX
-    form (every W step from here is a GX step, and presents G's memory outside `Tg`);
+    form (every W step from here is a GX step, and presents G's memory outside `Tg`), progress
+    up to named stops (`FortschrittG`, from `fortschrittG_GA` and `fadenSA_bereich`) and the time
+    bound (`ZeitAb`);
   * `ziel_atomar_w` -- THE THEOREM: under the named premises, every machine W reaches satisfies
     `ZielAtomarW`.
 
   What is NOT here (the remaining gap to a `Spec.lean` diff, report `messung/OPUS-O25B-ATOMICS.md`):
   the premises on `Tg` (`hTA`, `hTV`, `hTS`, `hTO`, `FussSX`) are hypotheses, not a checker Bool;
-  the legs `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG`, `KernHaltG`, `FortschrittG`
-  and `ZeitAb` and the thread machine `ZielF` are not re-proved over GX.
+  the legs `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG` and `KernHaltG` and the thread
+  machine `ZielF` are not re-proved over GX.
 -/
 import Grammatik.Speichermodell.AtomarInv
 import Grammatik.Speichermodell.AtomarZeuge
+import Grammatik.Speichermodell.AtomarFortschritt
 
 namespace Gabbro.Grammatik
 
@@ -81,6 +84,9 @@ structure ZielAtomarW (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes :
   -- no deadlock
   keineVerklemmung : (∀ t, ¬ FertigG W.g t → WartetG W.g t) → ∀ t, FertigG W.g t
   keinZyklus : KeinWarteZyklus W.g
+  -- progress up to named stops, and the time bound
+  fortschritt : FortschrittG P O passes W.g
+  zeit : ZeitAb P O passes W.g
 
 /-- **THE LEGS WITH SHARED ATOMICS, OVER MACHINE W.** A program whose footprints admit the
     shared atomics `Tg` unguarded (`FussSX`: every footprint carrier thread-local, guarded, or
@@ -105,7 +111,8 @@ theorem ziel_atomar_w (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Gl
     (hI : ∀ f : D.Fn, InvGutSA P passes Q S Tg f)
     (hIG : ∀ f : D.Fn, InvGutGrundA P passes Q S Tg f) (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) (hGrund : StartOhneGrund init)
-    (hLeer : ∀ t, D.haelt (init t).1 = []) :
+    (hLeer : ∀ t, D.haelt (init t).1 = [])
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) :
     ∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W →
       ZielAtomarW P S O passes ord Tg (RufStartG P sp init) W := by
   intro W hr
@@ -127,7 +134,14 @@ theorem ziel_atomar_w (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Gl
       keinStartGrund := hV.2.2.2.2.2.2
       keinLogikHalt := hV.2.2.1
       keineVerklemmung := keine_verklemmungGA hO hSt sp init hLeer ls hls hA
-      keinZyklus := kein_warteZyklusGA hO hSt sp init hLeer hA }
+      keinZyklus := kein_warteZyklusGA hO hSt sp init hLeer hA
+      fortschritt := fortschrittG_GA hO hSt sp init (startSpur_nodup_leer init hLeer) hA hV.2.2.1
+        (fun t => fadenSA_bereich hO hRL hQ hS hsp hK hFS t
+          ((zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
+            hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex W.g hX).1.1 t))
+        hAnt
+      zeit := fun f g n _ _ _ hadm hE _ run hA' =>
+        frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
 
 #print axioms Gabbro.Grammatik.gx_aus_w
 #print axioms Gabbro.Grammatik.ziel_atomar_w

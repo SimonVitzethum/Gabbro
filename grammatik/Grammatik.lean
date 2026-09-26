@@ -337,6 +337,7 @@ import Grammatik.Speichermodell.AtomarLauf
 import Grammatik.Speichermodell.AtomarW
 import Grammatik.Speichermodell.AtomarInv
 import Grammatik.Speichermodell.AtomarRuhe
+import Grammatik.Speichermodell.AtomarFortschritt
 import Grammatik.Speichermodell.AtomarZiel
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.AtomarRuheNutzer
