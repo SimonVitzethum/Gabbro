@@ -334,6 +334,8 @@ import Grammatik.Speichermodell.AtomarRec
 import Grammatik.Speichermodell.AtomarReplay
 import Grammatik.Speichermodell.AtomarAkteur
 import Grammatik.Speichermodell.AtomarLauf
+import Grammatik.Speichermodell.AtomarW
+import Grammatik.Speichermodell.AtomarInv
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC

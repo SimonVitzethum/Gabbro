@@ -69,6 +69,24 @@ def InvGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
           execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
             EndAusgang.zurueck σ' v → InvAmRueck P f σ'
 
+/-- Owed invariants at a REASON return, against every atomic environment (the twin of
+    `InvGutGrund`, Spec.lean). -/
+def InvGutGrundA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
+    (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+    ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
+    ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
+      RespektiertRahmen P R → OhneVorbedingung R →
+      ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
+        ∀ (σ' : World D) (r : Fin (D.gruende f)),
+          execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
+            EndAusgang.grund σ' r → InvAmRueck P f σ'
+
+theorem invGutGrundA_mono {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
+    {T T' : D.Tab ⊕ D.Glob → Prop} (hT : ∀ c, T c → T' c) {f : D.Fn}
+    (h : InvGutGrundA P passes Q S T' f) : InvGutGrundA P passes Q S T f :=
+  fun O' a b c U hU A hA => h O' a b c U hU A (havocA_mono hT hA)
+
 /-- A bigger set of shared atomics is a stronger obligation. -/
 theorem koerperGutSA_mono {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
     {T T' : D.Tab ⊕ D.Glob → Prop} (hT : ∀ c, T c → T' c) {f : D.Fn}

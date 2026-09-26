@@ -28,7 +28,7 @@
     duty where there was none.
 -/
 import Grammatik.Zielsatz.Spec
-import Grammatik.Speichermodell.AtomarSem
+import Grammatik.Speichermodell.AtomarRec
 import Grammatik.MitRuheStatisch
 
 namespace Gabbro.Grammatik.Zielsatz
@@ -98,53 +98,6 @@ theorem getrenntR_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
 end Geteilt
 
 /-! ## 2. The obligation with the atomic rely -/
-
-/-- **The body triple, caller duty and no `logik` outcome, against every atomic environment**
-    over `T` (`KoerperGutS` with `execEndHA`). -/
-def KoerperGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
-    (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
-    ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
-    ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
-      RespektiertRahmen P R → OhneVorbedingung R →
-      ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
-        (∀ (σ' : World D) (v : ErgVal D (D.erg f)),
-          execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
-            EndAusgang.zurueck σ' v → EnsAmRueck P f σ σ' ρ v) ∧
-        (∀ g : D.Fn,
-          execEndHA (V := vertragVon D f) S O' U A passes (torRuf P R) (P.rumpf f) σ ρ ≠
-            EndAusgang.logik (Logik.vorbedingung g))) ∧
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
-    ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
-    ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
-      RespektiertRahmen P R → OhneLogik R →
-      ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
-        ∀ e : Logik D, execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ ≠
-          EndAusgang.logik e)
-
-/-- Owed invariants at a value return, against every atomic environment. -/
-def InvGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
-    (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
-    ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
-    ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
-      RespektiertRahmen P R → OhneVorbedingung R →
-      ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
-        ∀ (σ' : World D) (v : ErgVal D (D.erg f)),
-          execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
-            EndAusgang.zurueck σ' v → InvAmRueck P f σ'
-
-/-- Owed invariants at a reason return, against every atomic environment. -/
-def InvGutGrundA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
-    (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
-    ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
-    ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
-      RespektiertRahmen P R → OhneVorbedingung R →
-      ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
-        ∀ (σ' : World D) (r : Fin (D.gruende f)),
-          execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
-            EndAusgang.grund σ' r → InvAmRueck P f σ'
 
 /-- **The logic of the bodies with the atomic rely over `T`.** -/
 def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
