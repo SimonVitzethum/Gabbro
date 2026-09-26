@@ -350,7 +350,10 @@
     lowering creates the threads of a `start` only where the starter holds no lock (`N461`
     checks the source, the `start` rule carries it as a side condition), makes the starter wait
     until EVERY root has finished (the `join` rule), and enters a `child` region by jump with
-    an empty held set (`N456`; OFFEN O21's jump assumption). Both are statements about the
+    an empty held set (`N456`; OFFEN O21's jump assumption); and (3) every spawn SUCCEEDS: the
+    `start`/`kind` steps have no failure branch, and a unit that spawns in a loop needs
+    unboundedly many slots (`Faden` is unbounded) -- thread creation failing for want of memory,
+    stacks or thread ids is not modelled (review 2026-09-26). All three are statements about the
     runtime and the lowering (lane 260's raw `clone`), whose check is translation validation's.
     Over-approximated, never under-: a spawn may fire at ANY point of a live thread where the
     rule's condition holds, and any slot may be live from the start (`lebt0` is quantified).
@@ -565,7 +568,8 @@
   values -- the model fixes one argument list per slot), a root `requires` that holds only at
   the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn
   world, the END of a join wait (a root that never finishes keeps its starter waiting, a named
-  `JoinWartet` stop, like a lock wait), the child's handed STACK (G is address-free), and the
+  `JoinWartet` stop, like a lock wait), the child's handed STACK (G is address-free), a spawn
+  that FAILS (thread creation out of resources: the model's spawn always succeeds), and the
   C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22. The
   exporter carries `start` (roots into `gestartet`); a `child` needs a stack gate, a foreign
   body the exporter does not build (`Ax := Empty`), so no `child` program is exported. Declared

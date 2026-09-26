@@ -46,8 +46,13 @@ slots. SATZKARTE §49.*
 * `gabbro_ziel_vor : GabbroZielVor`: the OLD statement verbatim (old checker interface, old (b),
   old (d), `Ziel` on G runs) over units without run-time roots, proved from the new one.
 * The (a) side is a TIGHTENING only for units that have run-time roots (they must be pool-safe
-  and lock-free at entry) — units nobody could state before. For them it is exactly what the
-  Rust checker demands (`N458`, `N462`), see §3.
+  and lock-free at entry) — units nobody could state before. For them it is the MODEL HALF of
+  what the Rust checker demands (`N458`, `N462`), not the same rule: `N462` bounds every carrier
+  a root TOUCHES, `einzelnPoolB` only the carriers it WRITES (reads go to `Getrennt`), and
+  `N458`'s parameter/result half is the exporter's. Measured in one direction only (Rust accepts
+  ⇒ Lean accepts), on ONE `start` program (`faden-start-pool.gab`); see §3. *(Wording corrected
+  by the Spec-diff review, `messung/URTEIL-SPECDIFF-OPUS-A-2026-09-26.md`, which found
+  "exactly" larger than the measurement.)*
 
 ### New named assumptions (in the ONE list, (d))
 

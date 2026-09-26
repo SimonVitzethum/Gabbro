@@ -906,7 +906,8 @@ call per region, and an exhaustive spill read set. What stays open:
 | **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
 | **what would close it** | spawn-time arguments and entry world in the clone machine, unboundedly many children per gate, the exporter emitting `child` units with the child entry as a start (and a proof that `N457` gives Lean acceptance), and the stub correspondence lemma for the jump lowering |
 
-**Narrowed 2026-09-26 (Opus agent A, SATZKARTE §49).** The child is now IN THE GOAL:
+**Narrowed 2026-09-26 (Opus agent A, SATZKARTE §49).** The child is now IN THE GOAL at the MODEL level (a region given
+as a function root in `gestartet`; no `child` program exports yet, see the table below):
 `GabbroZiel` runs over the thread machine (FadenMaschine.lean), whose `kind` step spawns a
 dormant slot of a run-time root (`Einheit.gestartet`) while the parent goes on; every leg of
 `ZielF` holds on every such run (`gabbro_ziel`, witnesses `kw2_lauf`, `spawn_kind_ziel`), a
@@ -944,7 +945,8 @@ half of "no lowering, no export" are closed: the goal theorem runs over the thre
 `start` step spawns the roots (only where the starter holds no lock -- `N461` as the step's side
 condition) and whose `join` step lets the starter go on only once every root has finished; the
 roots are `Einheit.gestartet`, judged by the Lean Bool as pool routines (`N458`'s lock half is
-`wurzelnB`, `N462` is `einzelnPoolB`); join waits are in the deadlock and wait-cycle legs
+`wurzelnB`, `N462`'s model half is `einzelnPoolB` -- `N462` bounds touched carriers,
+`einzelnPoolB` written ones); join waits are in the deadlock and wait-cycle legs
 (`keine_verklemmungF`, `kein_warteZyklusF`) and named in progress (`JoinWartet`). The exporter
 carries the roots (`gE.gestartet`, `check_gestartet`), and `pruefe-akzeptiert-diff.py` compares
 the verdicts (`messung/proben/faden-start-pool.gab`). What stays open: the LOWERING (lane 260),
