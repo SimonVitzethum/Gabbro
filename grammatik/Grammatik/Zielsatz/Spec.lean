@@ -492,7 +492,10 @@
     `AkzeptiertSpec.abg` for the call graphs, `.masken` for the locks, the start machine for the
     rest), and `kernHaltG_gilt` is its proof engine, not its discharge.
   * WHAT MOVED, AND WHETHER ANYTHING IS WEAKENED. (a) is TIGHTER exactly on programs with a
-    handler whose graph takes an unmasked lock -- the programs the Rust `H102` refuses; on a
+    handler whose graph takes an unmasked lock -- the shape the Rust `H102` refuses (the Rust
+    rule reads the handler's effect hull and skips a lock its unit does not declare, so on a
+    lock behind a cut edge or an undeclared lock the Lean component can refuse where `H102` is
+    silent; review 2026-09-26 F1); on a
     program with no handler the component is `true` (`maskenB_ohne`), so every unit of before
     (all of them: the field did not exist) keeps its verdict word for word, and the leg holds
     with nothing from (a) (`kernHaltE_ohne_handler`). An old checker becomes a `Pruefer` when
@@ -506,6 +509,13 @@
     (now from (a)) says `TAKT` is not held there. `kernHaltE_verletzt` -- the refused shape:
     accepted by the checker WITHOUT the handler component, refused WITH it
     (`handler_abgelehnt`), and the leg fails on a real run of it.
+  * WHAT THIS HUNK DOES NOT REACH (review 2026-09-26, F2/F3). The leg speaks of THREADS whose
+    root is a declared handler: a function marked `unterbricht` that no declared start runs is
+    checked by (a) but occurs in no run of G (the exporter starts every dispatch root, lane 198;
+    the diff script pins both, K6). The shared-atomics statement `gabbro_ziel_atomar`
+    (`ZielAtomar`, Zielsatz/AtomarAkzeptiert.lean) keeps F11's form `KernHaltGA`, which holds for
+    every program: `AkzeptiertX` has no handler component, so there the leg is still carried by
+    nothing of (a) (OFFEN O19).
   -- END handler block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED

@@ -1142,6 +1142,13 @@ WHAT IS LEFT of O19:
   runs).
 * A thrown entry without `via idt` (`beispiele/57`'s IPI) is no handler, for the Rust `H102` as
   for the model.
+* The shared-atomics statement `gabbro_ziel_atomar` (`ZielAtomar`, `AkzeptiertX`) keeps F11's
+  leg `KernHaltGA`, which holds for every program: the handler component and `KernHaltE` were
+  not carried over to the GA machine (review `URTEIL-SPECDIFF-OPUS-H-2026-09-26.md`, F2).
+* The Lean component decides the discipline over the whole call graph and every declared lock;
+  the Rust `H102` over the effect hull, skipping undeclared locks. They agree where measured
+  (`pruefe-akzeptiert-diff.py`: 24 exported units and the self-test flip of 59); neither
+  inclusion is proved (F1).
 
 The record below is kept as written.
 
