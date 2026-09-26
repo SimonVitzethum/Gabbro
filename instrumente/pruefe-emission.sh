@@ -4339,6 +4339,22 @@ if ! "$W/instrumente/pruefe-metall.sh" "$ARB/metall"; then
     echo "  Stufe 11: FINDING (bare metal)"; exit 1
 fi
 
+# =======================================================================================
+# **Stage 12: FREESTANDING -- stage 9's whole population, compiled with NO hosted header
+# and LINKED into the bare-metal image with NO C library** (Opus agent J, 2026-09-26).
+# Stage 9 asks the host's compiler with the host's headers; stage 11 boots a chosen handful.
+# This one asks every emitting unit: `-ffreestanding -nostdinc` (the compiler's own headers
+# plus `laufzeit/metall/include/`), then `ld -nostdlib` against `laufzeit/metall/`, every
+# undefined symbol classified (runtime / lock / rcu / entry / the program's own foreign
+# body) and the hosted-only units NAMED: kernel gates (`syscall`), foreign bindings to
+# C-library names, and the hosted runtime files beside their bare-metal counterparts.
+# It needs no qemu; without `cc`/`ld`/`nm` it says `FREESTANDING: NOT RUN`.
+echo
+LETZTE_STUFE="Stufe 12 (freestanding link, instrumente/pruefe-freistehend.sh)"
+if ! "$W/instrumente/pruefe-freistehend.sh" "$ARB/freistehend"; then
+    echo "  Stufe 12: FINDING (freestanding)"; exit 1
+fi
+
 GANZ_DURCH=1
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_nenner uebersetzen, $n_umg umgekehrte Probe(n) =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"

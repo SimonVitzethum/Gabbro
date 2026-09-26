@@ -234,6 +234,16 @@ long as nobody has written it.*
   bite. Open (O32): real hardware; program-declared `via idt` handlers in the metal IDT
   (O19); `-DMETALL_*` build knobs are the harness's, not `gabbro build`'s link step; the
   Caprock integration (Caprock's own boot instead of this Multiboot stub).
+  **Every feature freestanding: Opus agent J (2026-09-26, OFFEN O32/O33,
+  `messung/OPUS-J-FREESTANDING.md`).** Stage 12 (`instrumente/pruefe-freistehend.sh`): all
+  311 emitting units compile `-nostdinc` and LINK `-nostdlib` against `laufzeit/metall/`,
+  every symbol classified, 16 hosted-only units named (O33). Program `via idt` handlers and
+  entered entries with their register binding run in the metal IDT (59 under real IPIs with
+  the masked-lock discipline observed, 07's `int $0x80` binding and NMI); arenas on
+  `laufzeit/metall/arena.c` (153, 154, 158 and 158's `else` by the real runtime); strings
+  (161); idle `hlt`; `gabbro build` links `<unit>.metall.elf` itself with a `metal` line.
+  Still open: real hardware, Caprock integration, the entry-binding check (candidate N561),
+  entry stacks/IST, error-code exception entries (O32 (7)-(12)).
 - [ ] **One concurrent program that actually RUNS**, through the emission guardian's executed
   set, with its result compared against a handwritten version — the way 37 single-threaded
   units already are.

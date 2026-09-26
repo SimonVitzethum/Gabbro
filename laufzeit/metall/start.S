@@ -283,6 +283,80 @@ metall_takt_eintritt:
         popq    %rax
         iretq
 
+/* THE PROGRAM'S OWN ENTRIES (Opus agent J, 2026-09-26; OFFEN O32 residue).
+ *
+ * An emitted `entry NAME ... via idt` (or an `entry` without `via`, entered
+ * by `int`) names `void gabbro_eintritt_NAME(void)` and says in its own
+ * comment: "THE STUB IS NOT A C FUNCTION ... the emitter names the primitive
+ * and does not define it". This is where it is defined on bare metal. The
+ * per-entry half is three instructions (`METALL_EINTRITT` in metall.h): save
+ * rax, load the address of the entry's C half into rax, jump here. The common
+ * half saves every OTHER general register and the full x87/SSE state, exactly
+ * as the timer entry above does -- a thrown interrupt lands anywhere, so the
+ * interrupted code's registers are all preserved, which is stronger than the
+ * entry's declared `preserves` list and never weaker -- calls the C half
+ * (which runs the unit's `dispatch` target and, for a THROWN entry, writes
+ * the LAPIC EOI), restores, `iretq`.
+ *
+ * IF on entry: 0 (interrupt gate, `idt_setze`). The C half runs with IF = 0;
+ * `nested never` holds on the core because nothing in it sets IF (the lock a
+ * `via idt` dispatch may take is a `masks irqs` lock, `METALL_SPERRE_MASKIERT`,
+ * whose spin never yields with IF = 0). The stack is the interrupted
+ * context's own (a thread's, or the core's scheduler stack when it was idle):
+ * the declared `stack NAME per cpu` is NOT switched to -- named in OFFEN O32.
+ */
+        .global metall_eintritt_gemeinsam
+metall_eintritt_gemeinsam:
+        /* rax is already on the stack (pushed by the per-entry half) and
+         * holds the C half's address. */
+        pushq   %rbx
+        pushq   %rcx
+        pushq   %rdx
+        pushq   %rsi
+        pushq   %rdi
+        pushq   %rbp
+        pushq   %r8
+        pushq   %r9
+        pushq   %r10
+        pushq   %r11
+        pushq   %r12
+        pushq   %r13
+        pushq   %r14
+        pushq   %r15
+        movq    %rsp, %rbx
+        subq    $512, %rsp
+        andq    $-16, %rsp
+        fxsave  (%rsp)
+        movq    %rbx, %rdi                 /* struct metall_rahmen * (metall.h) */
+        call    *%rax
+        fxrstor (%rsp)
+        movq    %rbx, %rsp
+        popq    %r15
+        popq    %r14
+        popq    %r13
+        popq    %r12
+        popq    %r11
+        popq    %r10
+        popq    %r9
+        popq    %r8
+        popq    %rbp
+        popq    %rdi
+        popq    %rsi
+        popq    %rdx
+        popq    %rcx
+        popq    %rbx
+        popq    %rax
+        iretq
+
+/* THE WAKE ENTRY (vector 0x41): an idle core sleeps in `hlt` (kern.c,
+ * `kern_schleife`); a start that places a thread on it sends this IPI. The C
+ * half only acknowledges -- the wake-up IS the effect. */
+        .global metall_wecken_eintritt
+metall_wecken_eintritt:
+        pushq   %rax
+        movq    $metall_wecken, %rax
+        jmp     metall_eintritt_gemeinsam
+
 /* -------------------------------------------------------------------------
  * 5. The AP trampoline. Copied byte for byte to physical 0x8000; every
  * absolute reference inside it is written `T(label)` = its offset from

@@ -507,3 +507,54 @@ fn bau_schreibt_metalltreiber_freistehend() {
         String::from_utf8_lossy(&cc.stderr)
     );
 }
+
+/// **`gabbro build` LINKS the bare-metal image itself** (Opus agent J, OFFEN O32
+/// residue). With a `metal <dir>` line the build compiles `<unit>.metall.c`
+/// freestanding (`-nostdinc`: no hosted header) and links it with the runtime
+/// under `metall.ld` with NO C library: `<unit>.metall.elf` exists and carries no
+/// undefined symbol, and `<unit>.metall.boot.elf` is its Multiboot1 hand-over.
+/// `beispiele/59` has no `concurrent` set, only entries -- it owns a bare-metal
+/// driver (its `via idt` handler installed, its `masks irqs` lock masked) and no
+/// hosted one. Booting it is `instrumente/pruefe-metall.sh`'s business.
+#[test]
+fn bau_bindet_metallbild_mit_eintritten() {
+    let arbeit = tmp("metallbild");
+    let ausgabe = arbeit.join("out59");
+    let manifest = arbeit.join("m59.bau");
+    std::fs::write(
+        &manifest,
+        format!(
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {}\nmetal {}\nunit b59 object\n    {}\n",
+            ausgabe.display(),
+            wurzel().join("laufzeit/metall").display(),
+            wurzel().join("beispiele/59-eintritt-nimmt-maskierte-sperre.gab").display()
+        ),
+    )
+    .expect("manifest writable");
+    let (aus, fehler, code) = gabbro(&["build", &manifest.to_string_lossy()]);
+    assert_eq!(code, 0, "the unit builds and links:\n{aus}\n{fehler}");
+    assert!(aus.contains("b59.metall.elf"), "the built line names the image:\n{aus}");
+    assert!(!ausgabe.join("b59.treiber.c").exists(), "no roots: no hosted driver");
+    let metall_c = std::fs::read_to_string(ausgabe.join("b59.metall.c")).expect("bare-metal driver");
+    assert!(metall_c.contains("METALL_SPERRE_MASKIERT(TAKT)"), "{metall_c}");
+    assert!(metall_c.contains("METALL_SPERRE(RING)"));
+    assert!(metall_c.contains("METALL_EINTRITT(zeitgeber, 1, gabbro_eintritt_zeitgeber_verteiler())"));
+    assert!(metall_c.contains("METALL_EINTRITT(systemruf, 0, gabbro_eintritt_systemruf_verteiler())"));
+    assert!(metall_c.contains("metall_idt_setze(gabbro_eintritt_zeitgeber_VEKTOR, gabbro_eintritt_zeitgeber);"));
+    let bild = ausgabe.join("b59.metall.elf");
+    assert!(ausgabe.join("b59.metall.boot.elf").exists(), "the Multiboot1 copy is there");
+    let nm = Command::new("nm").arg(&bild).output().expect("nm runs");
+    let symbole = String::from_utf8_lossy(&nm.stdout);
+    assert!(!symbole.lines().any(|z| z.contains(" U ")), "no undefined symbol:\n{symbole}");
+    for s in ["gabbro_eintritt_zeitgeber", "gabbro_eintritt_systemruf", "TAKT_nimm", "gabbro_faden_start"] {
+        assert!(symbole.contains(s), "`{s}` is in the image");
+    }
+    // Content, not time: a second build is current, and a deleted image rebuilds.
+    let (aus2, _, code2) = gabbro(&["build", &manifest.to_string_lossy()]);
+    assert_eq!(code2, 0);
+    assert!(aus2.contains("current  b59"), "unchanged: current\n{aus2}");
+    std::fs::remove_file(&bild).expect("image removable");
+    let (aus3, _, code3) = gabbro(&["build", &manifest.to_string_lossy()]);
+    assert_eq!(code3, 0);
+    assert!(aus3.contains("built    b59") && bild.exists(), "a missing image rebuilds\n{aus3}");
+}
