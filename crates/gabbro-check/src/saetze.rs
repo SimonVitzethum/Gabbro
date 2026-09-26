@@ -1064,9 +1064,11 @@ pub const NAMEN: &[Satz] = &[
                     than the exporter promises is refused too (the Lean statement has ONE \
                     contract per function). **Threads on both sides are refused, not \
                     checked**: the composed-hull check (`SchnittstelleSpec.lok`/`.renn`/\
-                    `.einzeln`) is decided in Lean and not ported here, so a pair whose \
-                    threads live in one unit is the whole covered case -- there the \
-                    importer's own passes read the imported heads' effects. A unit is ONE \
+                    `.einzeln`) is decided in Lean and not ported here. **Nor is a pair whose \
+                    threads live in one unit fully covered** (review E, F1): the importer's \
+                    own passes read the imported heads' effect WRITES, not their READS, so a \
+                    read behind an imported head that another thread of the importer races \
+                    links without a refusal (OFFEN O28). A unit is ONE \
                     file (plus `--with` preambles in front of the second unit); `gabbro \
                     build` does not call this check yet. The C link step (symbol \
                     resolution, calling convention, layout) is not looked at.",
