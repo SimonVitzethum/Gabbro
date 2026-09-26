@@ -70,6 +70,7 @@ import Grammatik.Fortschritt
 import Grammatik.Zielsatz.Masken
 import Grammatik.Speichermodell.DRF
 import Grammatik.Zielsatz.Faeden
+import Grammatik.Zielsatz.Invarianten
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -132,12 +133,20 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     Akzeptiert_ok fs.2 hA hZ
   have hS : SperrInvOk S := ⟨hSO, hN.2.1⟩
   have hGrund : StartOhneGrund init := fun t => (wurzel_of hA hZ t).2
-  have main := ziel_ort_mehrfaden_ende P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
+  have mainAt := fun (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) =>
+    ziel_ort_mehrfaden_ende P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
     hH.2.2 hN.2.2 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
     (fun pa f => (hN.1 pa f).2.1) hGrund passes M hr
-  have hIG := ziel_ort_mehrfaden_invGrund P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
+  have hIGAt := fun (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) =>
+    ziel_ort_mehrfaden_invGrund P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
     hH.2.2 hN.2.2 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
     (fun pa f => (hN.1 pa f).2.2) passes M hr
+  have main := mainAt M hr
+  have hIG := hIGAt M hr
+  -- the return legs at EVERY reachable machine, for the invariant legs (Opus agent D)
+  have hIR : ∀ M', RufErreichbarG P O passes (RufStartG P sp init) M' →
+      InvAmOrtG P M' ∧ InvAmGrundG P M' ∧ StartEndeG P M' ∧ KeinStartGrundG M' :=
+    fun M' hr' => ⟨(mainAt M' hr').1.2, hIGAt M' hr', (mainAt M' hr').2.1, (mainAt M' hr').2.2⟩
   exact {
     speicherSicher := spurInv_erreichbar hH.1 sp init hr
     rennfrei := rennfreiBis_of fs.2 hA hZ hH.1 passes M
@@ -149,6 +158,10 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     sperrInv := main.1.1.2.1
     invRueck := main.1.2
     invGrund := hIG
+    invRuhe := invRuheG_aus hH.1 sp init hIR hr
+    invSicht := invSichtG_aus hH.1 sp init hex hIR hr
+    sperrWechsel := sperrWechsel_aus hH.1 hS sp init hex (fun M' hr' => (mainAt M' hr').1.1.2.1) hr
+    sperrSicht := sperrSicht_aus hH.1 hS sp init hex hr
     startEnde := main.2.1
     keinStartGrund := main.2.2
     keinLogikHalt := main.1.1.2.2.1
@@ -188,7 +201,12 @@ theorem zielF_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehl
       exact List.not_mem_nil hL
     keineVerklemmung := keine_verklemmungF hH.1 hSt sp init hLeer ls.1 ls.2 hI
     keinZyklus := kein_warteZyklusF hI hG.keinZyklus
-    fortschritt := fortschrittF_aus hG.fortschritt }
+    fortschritt := fortschrittF_aus hG.fortschritt
+    spawnSicht := fun K' t hs h0 h1 => by
+      rw [faden_spawn_m hs h0 h1]
+      refine ⟨rfl, fun L hL => ?_, hG.sperrInv, hG.invRuhe⟩
+      rw [faden_schlafend_frei rfl hI t h0 (hLeer t)] at hL
+      exact List.not_mem_nil hL }
 
 end Aus
 

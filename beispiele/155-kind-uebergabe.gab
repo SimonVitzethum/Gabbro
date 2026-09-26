@@ -15,7 +15,9 @@
 -- stack switch itself -- is the stub's business and the runtime's
 -- assumption (d2, `CloneAssume` -- branch `opus/clone-handoff` only); what the program can break is checked
 -- here, and this file breaks nothing at the checker: 0 errors, 0 hints. The emitter
--- refuses the `child` block (`C185`, gift 1112) until the inline trap lands.
+-- lowers gate and region since lane 260 (the inline trap: the gate call is an
+-- inline `syscall` jumping straight to the region in the child); the wide shape
+-- still refuses (`C185`, gift 1181).
 --
 -- The real-number counterpart of this shape lives outside the tree (the
 -- firewall's `gab/systemrufe.gab` declares the raw clone with its Linux

@@ -2909,6 +2909,38 @@ pub const M1: &[Satz] = &[
                      (`bkopie_max`, `bkopie_kuerzer_scheitert`)",
     },
     Satz {
+        name: "m1.invariante_gebucht",
+        kennungen: &["N496"],
+        aussage: "Every function with a body whose effects write, publish or consume a \
+                  carrier of a `table` or `group` invariant names that invariant in \
+                  `maintains`; otherwise it is refused (`N496`). The write set is the \
+                  declared `effects` or, without one, the derived hull, so a caller that \
+                  writes the carrier through a callee owes it as well -- the model's \
+                  `schuldet` (Semantik.lean), which `LogikPflicht` holds every writer to at \
+                  its return (`InvGutS`, `InvGutGrund`). An invariant no function writes is \
+                  carried by the frame: nothing moves its carriers, so it holds wherever it \
+                  held at the start (`invRuhe`, Zielsatz/Spec.lean). A `table` with `ops` is \
+                  exempt: its generated mutations carry it (`table.ops.erhaltung`).",
+        vorbehalt: "The rule books the duty; it does not discharge it. A `maintains` line \
+                    is an `E` obligation in the manifest, which the Rust checker does not \
+                    prove -- in the model the user proves it (`InvGutS`). A hand-written \
+                    body touching a `table … ops` carrier is not asked (OFFEN O11, the \
+                    `ops` condition). Names are compared unqualified, per unit, like \
+                    `maintains` itself.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1231` (a table writer \
+                      without `maintains`), `1232` (a group carrier), `1233` (a \
+                      `consumes`), `1234` (a caller writing through its callee). Corpus \
+                      diff measured 2026-09-26 over every `.gab` under `beispiele/` and \
+                      `messung/`: four files fell, `09` and `17` (repaired: `09`'s \
+                      invariant was FALSE and is replaced, `17` now maintains its group \
+                      invariant) and the poisons `66`, `108` (other codes, kept). The \
+                      clean side: `beispiele/09`, `17`, and \
+                      `tests/invarianten_buchung.rs`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`invarianten_buchen`, \
+                     `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Invarianten.lean",
+    },
+    Satz {
         name: "zeichenfolge.orte",
         kennungen: &["N465"],
         aussage: "A bounded string lives where its length is followed: as the \
@@ -4300,24 +4332,30 @@ pub const PHASEN: &[Satz] = &[
                   lane F3; it was unit-wide). The \
                   gate's number, registers and error map stay user-made in the \
                   declaration (the bm5 shape precedent); the stack switch itself \
-                  is the stub's business and the runtime's assumption. The `child` \
-                  block has no lowering in the stub template and is refused by \
-                  name (`C185`): after a stack-switching call the child would \
-                  resume inside the gate's helper on the handed stack, and the \
-                  helper's return would pop a return address off it. \
+                  is the stub's business and the runtime's assumption. Outside \
+                  the narrow gate+guard+region triple the `child` block has no \
+                  lowering in the stub template and is refused by name (`C185`): \
+                  after a stack-switching call the child would resume inside \
+                  the gate's helper on the handed stack, and the helper's return \
+                  would pop a return address off it. Inside the triple (lane \
+                  260) the gate call is an inline trap jumping straight to the \
+                  region in the child. \
                   **The checker's reading ASSUMES the lowering enters the child by \
                   jump:** the child starts AT the region, never on the statements \
                   between the gate call and the region (in 155 the `if v == 0`), and \
                   the parent skips the region. The spill rule (`N451`/`N452`) and \
                   the race rule (`N457`) judge the region only, so under a fork-style \
                   reading -- both threads return from the call and run on -- the \
-                  child would execute unchecked code on the handed stack. A lowering \
-                  that lifts `C185` must keep that reading or re-check the gap.",
+                  child would execute unchecked code on the handed stack. Lane 260 \
+                  kept that reading: the trap enters at the region label, and the \
+                  statements between gate and region run parent-side only (pinned \
+                  in `tests/klon_faden.rs`; no new checker rule -- the gap is \
+                  vacuous by construction).",
         vorbehalt: "A shape rule, and nothing else. It says nothing about whether \
                     the number is the kernel's, whether the child really starts on \
                     the handed stack, or whether the runtime places the thread -- \
-                    those are the stub's (part 3 refusing the block until the \
-                    inline trap lands) and the runtime's (d2, `CloneAssume`). A \
+                    those are the trap's (lane 260, narrow triple only) and the \
+                    runtime's (d2, `CloneAssume`). A \
                     `leave`/`next` naming a mark defined inside the region stays \
                     on the path; marks are region-wide, so a jump from a nested \
                     `child` into an outer region's loop reads as staying. The \
@@ -4335,14 +4373,18 @@ pub const PHASEN: &[Satz] = &[
                       (`N449 allein`: a falling path), `1111` (`N450 allein`: a path \
                       with no gate) -- each falls once, and without its rule \
                       nothing falls (the emitted C is valid `cc -Werror` input in \
-                      all five); `1139` (`N450`: the gate call stands in another \
+                      all five);                       `1139` (`N450`: the gate call stands in another \
                       function) and `1140` (`N450` twice: a second region behind \
                       one call, and a call only in a sibling branch), both silent \
-                      before fix lane F3 made the rule per region; `1112` (`-- erwartet: C185`: the 155 shape, \
-                      checker-clean, refused by exactly its code). The clean side \
+                      before fix lane F3 made the rule per region; `1181` \
+                      (`-- erwartet: C185`, lane 260: the unguarded region, \
+                      checker-clean, refused by exactly its code). `1112` \
+                      measured the guarded refusal until lane 260 lowered the \
+                      triple -- the file is untouched, its verdict moved with \
+                      155's shape (re-homing is the review's). The clean side \
                       is beispiele/155 (the handoff: gate with stack, child ending \
-                      in the exit gate) and /156 (the branched tail, both arms \
-                      ending).",
+                      in the exit gate), /156 (the branched tail, both arms \
+                      ending) and /160 (the handed read, lane 260).",
         fundstelle: "crates/gabbro-check/src/clone.rs; crates/gabbro-check/src/emit.rs \
                      (the `Child` arm, `C185`); dokumente/SYNTAX.md §12.1; \
                      grammatik/Grammatik/KlonStapel.lean",
@@ -4474,8 +4516,10 @@ pub const PHASEN: &[Satz] = &[
                     `wurzelnB` is `N458`'s signature-lock half, `einzelnPoolB` is \
                     `N462` (a root stands twice in `Einheit.ws`), and `N461` is the side \
                     condition of the model's `start` step; `N459`/`N460` have no model \
-                    counterpart, which needs neither. The emitter refuses the statement \
-                    (`C001`) until its lowering lands. `N462` is fail-safe, not \
+                    counterpart, which needs neither. The emitter lowers it since \
+                    lane 260 (one raw-clone spawn per root on unit-owned stacks, \
+                    joined before the starter proceeds; unresolvable, bodiless, \
+                    non-nullary or repeated roots stay `C001`). `N462` is fail-safe, not \
                     precise -- it reads the guard's existence (holding it is `H007`'s), \
                     and a root that is the only writer of a carrier still falls. `N461` \
                     refuses any held context, not only a lock some root takes. The cost \
@@ -4491,12 +4535,15 @@ pub const PHASEN: &[Satz] = &[
                       (`K001`: the roots' costs). The clean side: \
                       `tests/fadenstart.rs` -- guarded roots, a reading root, the cost \
                       bill at its exact sum, a root outside the declaration beside a \
-                      member, a `start` after a `locks` block.",
+                      member, a `start` after a `locks` block -- and beispiele/159 \
+                      (lane 260: two roots raising a lock-guarded counter, joined \
+                      total 2N, emitted and run).",
         fundstelle: "crates/gabbro-check/src/fadenstart.rs (`N458`-`N461`); \
                      crates/gabbro-check/src/fusswache2.rs (`startfaeden`, `N462`); \
                      crates/gabbro-check/src/aufrufgraph.rs (the `Start` arms of \
                      `sammle_rufe`, `sammle_kanten`); crates/gabbro-check/src/kosten.rs \
-                     (the `Start` arm); dokumente/SYNTAX.md",
+                     (the `Start` arm); crates/gabbro-check/src/emit.rs (the `Start` \
+                     arm, lane 260) with `laufzeit/faden.c`; dokumente/SYNTAX.md",
     },
     Satz {
         name: "parser.bibliothek-nutzlast",

@@ -1,0 +1,36 @@
+-- erwartet: N496
+-- **Opus agent D (OFFEN O11) -- a group carrier written by a function that owes nothing.**
+--
+-- `beispiele/17` without its `maintains` line. The group invariant connects `Endpunkte`
+-- and `Faeden`; `einreihen` writes both and names neither the invariant nor any duty.
+module gift::gruppentraeger_ohne_maintains {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN { slot { gruende : u32, } }
+table Endpunkte count NPUNKTE { slot { wartet : u32, } }
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+group Zustellung over { Endpunkte, Faeden } {
+    invariant wartende_haben_grund cost O(n) runs offline :
+        forall e in slots of Endpunkte :
+            Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
+}
+
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden)
+    effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
+              locks PUNKTE, locks PLAN }
+    costs   <= 40 ops
+{
+    locks PUNKTE {
+      locks PLAN {
+        Endpunkte.slots[e].wartet = t;
+        Faeden.slots[t].gruende   = 1;
+      }
+    }
+}
+
+}

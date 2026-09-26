@@ -1,0 +1,49 @@
+-- erwartet: N496
+-- **Opus agent D (OFFEN O11) -- a `consumes` moves the carrier like a write.**
+--
+-- `beispiele/09`'s `einsammeln` shape: the function retires the slots below `s` by a
+-- consuming walk, and its line says `consumes Kappenraum.slots`, not `writes`. A rule that
+-- read only `writes` would let the retiring function owe nothing. `blatt_loeschen`
+-- maintains the invariant; `einsammeln` does not name it.
+module gift::verbrauch_ohne_maintains {
+
+const NSLOTS : u32 = 64;
+
+lock KAPPEN protects { Kappenraum } rank 0 held <= 400 ops;
+
+table Kappenraum count NSLOTS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        benutzt     : bool,
+        elter       : option index into Kappenraum,
+        erstes_kind : option index into Kappenraum,
+        naechstes   : option index into Kappenraum,
+    }
+    invariant frei_ohne_elter cost O(n) runs offline :
+        forall s in slots of Kappenraum :
+            !Kappenraum.slots[s].benutzt => Kappenraum.slots[s].elter == None;
+}
+
+impl fn blatt_loeschen(s : index into Kappenraum)
+    requires Held(KAPPEN)
+    maintains frei_ohne_elter
+    effects  { reads Kappenraum.slots, writes Kappenraum.slots, locks KAPPEN }
+    costs    <= 200 ops
+{
+    Kappenraum.slots[s].benutzt = false;
+    Kappenraum.slots[s].elter   = None;
+}
+
+impl fn einsammeln(s : index into Kappenraum)
+    requires Held(KAPPEN)
+    effects  { reads Kappenraum.slots, consumes Kappenraum.slots, locks KAPPEN }
+    costs    <= 16371840 ops
+{
+    traverse opfer over descendants of Kappenraum.slots[s] by consuming
+        touches reads Kappenraum.slots, consumes Kappenraum.slots
+    {
+        blatt_loeschen(opfer);
+    }
+}
+
+}

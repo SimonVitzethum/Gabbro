@@ -4365,5 +4365,55 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 (the view transfer `hb_uebergabe` is proved; a footprint rule admitting the payload read after an
 `awaits` is not).
 
-(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §47 added 2026-09-22 (fix lane F10: worker pools in the goal theorem, `einzeln := EinzelnPool`); §48 added 2026-09-22 (fix lane F11: same-core interrupt preemption, the leg `keinKernHalt`); §49 added 2026-09-26 (Opus agent A: threads created at run time, the thread machine in `GabbroZiel`); §50 added 2026-09-26 (Opus agent B: the memory model beyond DRF-SC, machine W, the leg `schwach`); §51 added 2026-09-26 (Opus agent C: one certificate per exported program, the register of the rest); §52 added 2026-09-26 (Opus lane O25: racing atomics over W -- the memory half, the language-carried legs, `N481`-`N483`); §§1-10 history above.)
+## 53. Invariants beyond the returns: four legs of `Ziel`, one of `ZielF`, and `N496` (Opus agent D, 2026-09-26)
+
+*Files: `grammatik/Grammatik/Zielsatz/Invarianten.lean` (proofs), `Zielsatz/InvariantenZeuge.lean`
+(witnesses), `Zielsatz/Spec.lean` (definitions, the invariant block of the header),
+`Zielsatz/Beweis.lean` (`ziel_aus`, `zielF_aus`); Rust `crates/gabbro-check/src/m1.rs`
+(`invarianten_buchen`), `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
+`messung/OPUS-D-INVARIANTEN.md`.*
+
+**The gap.** NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
+only)"; OFFEN O11 said a table/group invariant no function `maintains` was booked by nothing.
+
+| theorem | what it says |
+|---|---|
+| `schritt_logArt` | every step of G appends at most ONE call-log event; a return event's world carries the memory the step leaves (by cases over the 70 rules) |
+| `rufLogPasstG_eind` | a call log determines its key stack |
+| `schritt_schluessel` | a step leaves a thread's key stack unchanged, pushes one key, or pops the head with its `rueck`/`grund` event logged |
+| `fertig_retKopf` | a finished thread stands at a VALUE return (with `KeinStartGrundG`) |
+| `invRuhe_erreichbar` | on every reachable machine, an invariant that reads only its carriers (`InvTraeger`) and held at the start holds whenever no UNFINISHED thread is inside a function that owes it (`InvZu`) |
+| `invSicht_aus` | a thread outside every writer that holds a guard of the invariant sees it intact (exclusivity + `U003`) |
+| `sperrWechsel_aus` | every acquire of `L` goes from and to a memory with `S.inv L`; every release leaves one |
+| `sperrSicht_aus` | every access of a carrier `L` protects holds `L`; no other thread moves it while `L` is held |
+| `inv_ohne_schreiber` | an invariant no function writes holds at every reachable machine (the frame half of O11) |
+| `faden_spawn_m` | a thread-machine step that makes a dormant slot live leaves the G state alone |
+| `gabbro_ziel` (re-proved) | `Ziel` with the legs `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`; `ZielF` with `spawnSicht`; axioms `propext`, `Classical.choice`, `Quot.sound` |
+
+**Witnesses** (program `mP`, MehrfadenZeuge.lean): `lock_gebrochen_unsichtbar` (konto `[30, 0]`
+inside thread 0's section; no step of thread 1 accesses `konto` there, by `sperrSicht`);
+`inv_erwerb_und_eintritt` (thread 1's acquire after the section: `konto[0] == konto[1]` before
+and after, by `sperrWechsel`; thread 1's entry of `setze` after `hauptA` finished:
+`privA[0] == privA[1]`, by `invRuhe`, at the memory and at the frame's entry world);
+`tabelle_gebrochen` (`privA = [7, 0]` inside `hauptA`, the invariant OPEN there -- the leg claims
+nothing). Refusal side of O11: `beispiele/gift/1231`-`1234` (`N496`); the model side is
+`ivPschlecht_nicht_invGutS` (InvZeuge.lean): a writer that breaks an invariant fails (b).
+
+**What is claimed, precisely.** "At every entry" is false in general (a writer's callee may see
+the invariant broken); claimed is every point where no unfinished thread is inside a writer.
+"While held" can only mean observation points: the holder may break a lock invariant inside its
+section; no other thread touches the protected carriers there, every section starts from the
+invariant and every release restores it.
+
+**What is NOT claimed.** A table invariant false at the start (the legs' hypothesis, not (b));
+one reading carriers outside its `traeger`; any invariant while an unfinished thread is inside
+one of its writers. Every certified program has no table invariant (`Inv := Empty` in the
+exporter), so `invRuhe`/`invSicht` are vacuous there; the lock legs are not.
+
+**Review** (`messung/URTEIL-SPECDIFF-OPUS-D-2026-09-26.md`): sound, no premise moved. A callee's
+writes are its caller's, so a thread that ever writes a carrier keeps the invariant open for its
+whole life (`invRuhe` bites after the writers finish); and a guarded table invariant has, by
+argument, no reachable writer in the model, so `invSicht` adds nothing to `invRuhe` there.
+
+(End of file — §11 added 2026-09-13, lane 133; §12 added 2026-09-13; §13 added 2026-09-13; §14 added 2026-09-13; §15 added 2026-09-13; §16 added 2026-09-14; §17 added 2026-09-14 (floats); §18 added 2026-09-14 (budget, start reasons); §19 added 2026-09-14 (reason-return invariants, progress); §20 added 2026-09-14 (gabbro_ziel proved, e0 removed); §21 added 2026-09-15 (waiting bound); §22 added 2026-09-15 (GabbroZiel repaired: one program, owned start, payloads); §23 added 2026-09-15 (fourth round: floats as logic, no wait cycle, stops by kind); §24 added 2026-09-15 (G1: every type decoded, the non-return stop); §25 added 2026-09-15 (W1: empty answer types refused, `nieZurueck` is `never`); §26 added 2026-09-15 (stage (b): the concurrent closing theorem for 124); §27 added 2026-09-15 (the generic closing theorem `schlusssatz`, chain count 2); §28 added 2026-09-15 (`korrOk` widened to its own lemma stock, 23 arms, chain count unchanged); §29 added 2026-09-15 (A2 discharged: the emitted C text parsed in Lean); §30 added 2026-09-15 (`korrOk` gets its block structure: if, let of a call, traverse); §30 added 2026-09-15 (korrOk gets its block structure); §31 added 2026-09-15 (O13 closed: 72 GB -> 6,86 GB, the fuel claim withdrawn); §32 added 2026-09-15 (the runtime's ticket lock: the lock premise becomes a theorem, two findings); §33 added 2026-09-15 (the arena as sugar: alloc/reset get a Lean form without a new constructor); §34 added 2026-09-15 (the transfer chain closed on 104 and 108: the user's duty proved over the exported unit, and a guardian on the generated Lean); §35 added 2026-09-15 (part 4's condition halved: no hardware outcome for a certified program, the residue named, the adequacy fragment measured); §36 added 2026-09-15 (the handler congruence of execEnd, depth monotonicity of rufAt, and part 4's logik condition reduced to ONE frame fact); §37 added 2026-09-16 (a chain for a program that touches a device: `korrOk` carries the register store, the register read and the checked read, with the hardware profile as a named premise); §38 added 2026-09-15 (the frame fact holds at every world; the lock hypothesis is gone); §39 added 2026-09-18 (lane O-1: the checked clone handoff -- `stack`, `child`, (d)/(d2), `C185`); §40 added 2026-09-21 (fix lane F1: integer `match` -- CFormMatch claims corrected, `N411`-`N414`); §41 added 2026-09-21 (fix lane F2: dynamic arenas -- ArenaDyn reworked, `N426` upper bound, `N211` across calls); §42 added 2026-09-22 (fix lane F5: gate contracts split -- caller precondition vs hardware ensures, `N463`/`N464`); §43 added 2026-09-22 (fix lane F6: bounded strings -- the length-fact index rule, `N465`); §44-§46 added 2026-09-22 (fix lane F8: nested-array read witness, the 124 certificate relation, divergence and the spin); §47 added 2026-09-22 (fix lane F10: worker pools in the goal theorem, `einzeln := EinzelnPool`); §48 added 2026-09-22 (fix lane F11: same-core interrupt preemption, the leg `keinKernHalt`); §49 added 2026-09-26 (Opus agent A: threads created at run time, the thread machine in `GabbroZiel`); §50 added 2026-09-26 (Opus agent B: the memory model beyond DRF-SC, machine W, the leg `schwach`); §51 added 2026-09-26 (Opus agent C: one certificate per exported program, the register of the rest); §52 added 2026-09-26 (Opus lane O25: racing atomics over W -- the memory half, the language-carried legs, `N481`-`N483`); §53 added 2026-09-26 (Opus agent D: invariants beyond the returns, four legs of `Ziel`, `ZielF.spawnSicht`, `N496`); §§1-10 history above.)
 

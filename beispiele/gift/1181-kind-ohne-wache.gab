@@ -1,0 +1,56 @@
+-- erwartet: C185
+-- **1181 -- the `child` block with no guard to skip it (lane 260).**
+--
+-- The probe for the shape the inline trap does NOT lower: the region stands
+-- bare behind the gate call, with no `if v == 0` guard holding nothing but
+-- it, so there is nowhere the child could enter by jump and nowhere the
+-- parent would skip -- the parent would fall straight through into the
+-- region. It falls at `C185`, by name, never silently, with the block
+-- written out best-effort beside the refusal. The guarded twin of this
+-- shape lowers (`beispiele/155`, `beispiele/160`); the pin beside the
+-- lowering (`tests/klon_faden.rs`, lane 260) states what the trap
+-- guarantees for the code between gate and region.
+--
+-- Same shape gate as the O-1 gifts (not the raw clone, `1000` not an OS
+-- number). Gift number from lane 260's block (1181-1190).
+
+module gift1181 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        match e {
+            KeinStapel => { return 999; }
+        }
+    }
+    child {
+        let r = stapel;
+        ausgang(r);
+    }
+    return v;
+}
+
+}

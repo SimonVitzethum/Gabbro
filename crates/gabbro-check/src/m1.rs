@@ -198,6 +198,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         zeigerverf: Vec::new(),
         spezifikationen,
         spec_fns,
+        inv_traeger: sammle_inv_traeger(baum),
         unveraenderlich: std::collections::HashSet::new(),
         unveraenderliche_statiken: std::collections::HashMap::new(),
         schon_gemeldet: std::collections::HashSet::new(),
@@ -711,6 +712,29 @@ fn leere_boot_antwort(
 /// invariant has no body an `impl fn` could refine.
 /// *Two questions, two registers -- using one where the other is meant would be a diagnostic
 /// that reaches further than its sentence.*
+/// **Every `table`/`group` invariant of the unit with its carriers** (Opus agent D, OFFEN
+/// O11). A `table` with `ops` is left out: its invariant is carried by the generated
+/// mutations (`table.ops.erhaltung`), the one place where a duty went elsewhere. A `walk`
+/// invariant is not a carrier invariant and stays with `W`.
+fn sammle_inv_traeger(baum: &Programm) -> std::collections::BTreeMap<String, Vec<String>> {
+    let mut m = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Tabelle(t) if t.ops.is_empty() => {
+            for inv in &t.invarianten {
+                m.insert(inv.name.text.clone(), vec![t.name.text.clone()]);
+            }
+        }
+        ItemArt::Gruppe(g) => {
+            let traeger: Vec<String> = g.traeger.iter().map(|x| x.text.clone()).collect();
+            for inv in &g.invarianten {
+                m.insert(inv.name.text.clone(), traeger.clone());
+            }
+        }
+        _ => {}
+    });
+    m
+}
+
 fn sammle_spec_fns(items: &[Item], aus: &mut std::collections::HashMap<String, usize>) {
     for item in items {
         match &item.art {
@@ -765,6 +789,10 @@ struct Pruefer<'a> {
     spezifikationen: std::collections::HashMap<String, usize>,
     /// Only `spec fn`, name -> arity. See `sammle_spec_fns`.
     spec_fns: std::collections::HashMap<String, usize>,
+    /// **Opus agent D (OFFEN O11): every `table`/`group` invariant with its carriers.**
+    /// Name -> carrier names. A `table` with `ops` is left out: its generated mutations
+    /// carry the invariant under `table.ops.erhaltung`. Read by `invarianten_buchen`.
+    inv_traeger: std::collections::BTreeMap<String, Vec<String>>,
     /// **Die unveraenderlichen Bindungen des laufenden Rumpfes -- «NL.2.1», 2026-08-19.**
     ///
     /// `let x = 1; x = 2;` ging bis dahin mit **0 Fehlern** durch. `pruefe-klauseln.py`
@@ -1040,6 +1068,7 @@ impl<'a> Pruefer<'a> {
                 self.modul = modul.to_string();
                 self.ensures_pruefen(f);
                 self.maintains_pruefen(f);
+                self.invarianten_buchen(f);
                 self.verfeinert_pruefen(f);
             }
             if let ItemArt::Funktion(f) = &item.art {
@@ -7200,6 +7229,76 @@ impl<'a> Pruefer<'a> {
                     ),
                 );
             }
+        }
+    }
+
+    /// **`N496` -- a writer of an invariant's carrier must maintain it** (Opus agent D,
+    /// OFFEN O11).
+    ///
+    /// The model owes a `table`/`group` invariant at every return of EVERY function whose
+    /// effects write one of its carriers (`schuldet`, Semantik.lean; the user's `InvGutS`
+    /// in `LogikPflicht`), and the goal theorem's leg `invRuhe` (Zielsatz/Spec.lean) says the
+    /// invariant holds wherever no such function is running. Until this rule a writer that
+    /// did not name the invariant in `maintains` owed it NOWHERE here: the invariant was
+    /// booked as `W` and nobody's duty. Now every writer names it (an `E` at that function),
+    /// and an invariant that no function writes is carried by the frame: it holds wherever
+    /// it held at the start.
+    fn invarianten_buchen(&mut self, f: &FnDecl) {
+        if f.klasse == Some(FnKlasse::Spec) || !matches!(f.rumpf, FnRumpf::Block(_)) {
+            return;
+        }
+        // A `consumes` moves the carrier as a write does (it retires a slot), so it owes the
+        // invariant too; `geschrieben_or_abgeleitet` names writes and publishes only.
+        let mut geschrieben = self.geschrieben_or_abgeleitet(f);
+        match &f.effects {
+            Some(w) => {
+                for x in &w.liste {
+                    if let WirkungArt::Verbraucht(o) = &x.art {
+                        geschrieben.push(o.basis.text.clone());
+                    }
+                }
+            }
+            None => {
+                let key = crate::umgebung::qualifiziere(&self.modul, &f.name.text);
+                if let Some(a) = self.abgeleitet.je.get(&key) {
+                    for w in &a.wirkungen {
+                        let (verb, ort) = crate::wirkungen::trenne(w.as_str());
+                        if verb == "consumes" && !ort.is_empty() {
+                            geschrieben.push(
+                                ort.split(['.', '[', '-']).next().unwrap_or(ort).to_string(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        let span = f.name.span;
+        let mut offen: Vec<(String, String)> = Vec::new();
+        for (inv, traeger) in &self.inv_traeger {
+            if f.maintains.iter().any(|m| &m.text == inv) {
+                continue;
+            }
+            if let Some(t) = traeger.iter().find(|t| geschrieben.iter().any(|g| g == *t)) {
+                offen.push((inv.clone(), t.clone()));
+            }
+        }
+        for (inv, t) in offen {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "N496",
+                    span,
+                    format!(
+                        "`{}` writes `{}`, a carrier of the invariant `{}`, and does not \
+                         maintain it",
+                        f.name.text, t, inv
+                    ),
+                )
+                .mit_notiz(
+                    "every function whose effects write a carrier of a `table`/`group` \
+                     invariant owes it at its return -- name it: `maintains <invariant>`. \
+                     An invariant no writer names would be booked by nobody (OFFEN O11)",
+                ),
+            );
         }
     }
 

@@ -352,7 +352,12 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
 
     # 3. Uebersetzen, und zwar streng. Eine Warnung im erzeugten C ist ein Befund ueber den
     #    Erzeuger, nicht ueber den Anwender -- er hat die Zeile nicht geschrieben.
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" > "$ARB/$name-treiber.c"
+    # **Lane 260: `@FADEN@` names the thread runtime beside the unit.** A driver
+    # for a `start` program links `laufzeit/faden.c` (our own raw `clone`) by
+    # including it -- one translation unit, no library path, no installed
+    # artefact. Drivers without the placeholder are untouched by the second
+    # substitution; the delimiter is `|` because the path carries slashes.
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
     if ! cc -std=c11 -O0 -Wall -Wextra -Werror -I"$ARB" -o "$ARB/$name-probe" \
             "$ARB/$name-treiber.c" 2> "$ARB/ccfehler"; then
         echo "  3. cc -Werror: GESCHEITERT"; head -20 "$ARB/ccfehler"; exit 1
@@ -500,7 +505,10 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # **Die Sprechprobe in die andere Richtung.** Ein Differenztest, der nicht rot werden kann,
     # misst nichts -- dieselbe Regel, mit der jede Messung dieses Ordners anfaengt (R14).
     sed "$gift" "$c" > "$ARB/$name-gift.c"
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" > "$ARB/$name-gifttreiber.c"
+    # **The same `@FADEN@` placeholder as above** (lane 260): without it the
+    # gift driver of a `start` program would not build -- and a mutation that
+    # already fails at compile time proves nothing about the run (R14).
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-gifttreiber.c"
     cc -std=c11 -w -I"$ARB" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c"
     # **Ein verfaelschtes Erzeugnis darf NICHT ENDEN, und bis 2026-08-20 hing der Waechter
     # dann fuer immer.**
@@ -2612,6 +2620,37 @@ lauf "beispiel153" "$W/beispiele/153-arena-waechst.gab" "$TREIBER153" "370" \
 # Rewriting the source to dodge an optimizer warning would be exactly the
 # traded-safety class the owner forbids; fixing the static lowering idiom
 # itself belongs to the emitter owner (it moves every arena program's C).
+# -- 22. Threads at run time, made by our own clone (lane 260) ---------------------------
+#
+# `beispiele/159` runs `start { heber_a, heber_b };`: one raw-`clone` thread
+# per root on the unit's own 64 KiB stacks (`laufzeit/faden.c` -- no libc
+# threading on these paths), joined before the starter proceeds. Each root
+# raises the lock-guarded wrapping counter once per `takt` slot (N = 32), so
+# the joined total is deterministic on every schedule: 2N = 64. The lock the
+# roots take is a test-only spinlock in the driver (short sections); creation
+# stays raw clone -- the same split as `laufzeit/start.c`, where the hosted
+# mutex stands in for the ticket lock. The TSan-free argument stands in the
+# lane report: the join words sync through the kernel's clear+acquire load,
+# and the unit's one shared carrier is guarded (`N462`).
+#
+# The gift takes the increment away (`+ 1` to `+ 0` in the one lowered
+# counter step): the run then reports 0 instead of 64. *A mutation in the
+# join or the spawn would race and prove nothing; this one is deterministic.*
+TREIBER159='#include <stdatomic.h>
+#include <stdio.h>
+#include "@ERZEUGT@"
+#include "@FADEN@"
+static _Atomic int sperre_L = 0;
+void L_nimm(void) { while (atomic_exchange_explicit(&sperre_L, 1, memory_order_acquire)) { } }
+void L_gib(void) { atomic_store_explicit(&sperre_L, 0, memory_order_release); }
+int main(void) {
+    printf("%u\n", lauf());
+    return 0;
+}
+'
+lauf "beispiel159" "$W/beispiele/159-laufzeit-start.gab" "$TREIBER159" "64" \
+     's/stand) + (uint32_t)(1)/stand) + (uint32_t)(0)/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (1 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
@@ -3235,7 +3274,7 @@ fi
 # **116 -> 117 on 2026-09-16 (merge review of the lock-striping lane).** One example came with
 # it (`146-sperrstreifen`), and the lane measured the delta, named it and left the counter alone
 # -- the second lane in a row to do that correctly. Re-measured here on the merged tree.
-MARKE_EMIT=133
+MARKE_EMIT=138
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
@@ -3249,6 +3288,10 @@ MARKE_EMIT=133
 # **127 -> 133 on 2026-09-26 (merge of lane 261, strings lowered).** Six files now emit:
 # `161-zeichenkette` and the five positive string probes that moved from `gift/` to `beispiele/`
 # (1123, 1124, 1126, 1127, 1159) because they now lower. Re-measured by the merger.
+# **133 -> 138 on 2026-09-26 (merge of lane 260, run-time threads lowered with our own
+# raw `clone`).** Five files now emit: `159-laufzeit-start`, `160-kind-liest-stapel`, `155`/`156`
+# (C185 lifted for the jump-entered child) and `1114-kind-handed-read`, moved from `gift/` to
+# `beispiele/` as a positive because its only expected line was C185. Re-measured by the merger.
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -3480,7 +3523,9 @@ MARKE_EMIT=133
 # **143 -> 144 on 2026-09-26 (merge of Opus lane O25).** Its alignment probe
 # `messung/proben/o25-flagge-atomar.gab` (an atomic flag Rust accepts and the exporter refuses
 # with LG001) emits and compiles. Re-measured by the merger.
-MARKE_EMIT_M=144
+# **144 -> 145 on 2026-09-26 (merge of lane 260).** One more probe under `messung/` emits now
+# that `start`/`child` lower. Re-measured by the merger.
+MARKE_EMIT_M=145
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

@@ -483,6 +483,28 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 
 ## O11 — A `table`/`group` invariant that no function `maintains` is booked by NOTHING
 
+> **STATUS 2026-09-26 (Opus agent D, `messung/OPUS-D-INVARIANTEN.md`): the booking is now a
+> DUTY, in the checker and in the goal theorem.** Counting it as `W` (below, 2026-09-04) said
+> *nobody owes it*; that was the gap. Now:
+>
+> * **Rust `N496`** (`m1.rs`, `invarianten_buchen`): a function with a body whose declared
+>   effects, or derived hull, write, publish or consume a carrier of a `table`/`group`
+>   invariant must name it in `maintains` -- every writer owes it, exactly as the model's
+>   `schuldet` says. Poison probes `beispiele/gift/1231`-`1234`, positive probe
+>   `tests/invarianten_buchung.rs`. Corpus diff: `beispiele/09` (its invariant was FALSE --
+>   the zeroed table and its own writer broke it; replaced by `frei_ohne_elter`, maintained by
+>   both writers), `beispiele/17` (now maintains its group invariant), gifts 66, 108 (other
+>   codes, N496 joins).
+> * **Model**: every writer owes the invariant at its returns (`InvGutS`/`InvGutGrund` in
+>   `LogikPflicht`), an invariant no function writes is carried by the frame
+>   (`inv_ohne_schreiber`), and the goal theorem's new leg `invRuhe` says it holds wherever no
+>   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §53).
+>
+> **Still open under this heading: the `ops` condition** (last paragraph below). A `table …
+> ops` stays exempt from `N496`, carried by the generated mutations; a hand-written body
+> touching the same slots is not asked. And an `E` obligation is booked, not proved, on the
+> Rust side (the model proves it: `InvGutS`).
+
 **Found 2026-09-03 while re-deriving the manifest split, and it contradicts a sentence the
 checker's own source carries.** `Art::Walkinvariante`'s docstring weighs a refusal and drops
 it with the words *"`runs online` at a `table … ops` IS carried (by `table.ops.erhaltung`),
@@ -939,7 +961,7 @@ call per region, and an exhaustive spill read set. What stays open:
 | | |
 |---|---|
 | **the child in the model, not in the goal** | fix lane F9: `CloneHandoff.lean` has the child as a thread (a dormant slot spawned by a live parent, then stepping by machine G's rules; every clone run is a G run). `GabbroZiel` still has no child: a child reaches `Ziel` only through `klon_ziel`, when the unit lists the child entry as a declared start and is accepted. Not modelled: the child's arguments and entry world at the SPAWN (they are fixed at the start), and repeated spawns of one gate (one slot, one spawn). `N456` has its model side (`klon_kind_haelt_nichts`: a child with no signature lock holds nothing at the spawn and never blocks); `N457` has a stated correspondence only (the child judged like a start), no proof that N457 implies Lean acceptance. `N456`/`N457` stay fail-safe (a carrier written only before the gate call still counts as written, a child that is the only writer still falls) |
-| **the jump assumption** | the checker judges the REGION only; the statements between the gate call and the region are checked as parent code. Sound only if the lowering enters the child by jump at the region. Written into PLAN-SYSCALL, the `klon.uebergabe` sentence and `C185`'s message, pinned by `tests/klon_faden.rs`; lane 258 must keep it or re-check the gap |
+| **the jump assumption** | the checker judges the REGION only; the statements between the gate call and the region are checked as parent code. Sound only if the lowering enters the child by jump at the region. Written into PLAN-SYSCALL, the `klon.uebergabe` sentence and `C185`'s message, pinned by `tests/klon_faden.rs`. Lane 260 landed it for the narrow triple (gate+`if v == 0`-guard+sole region, top-level): the gate call is an inline `syscall` jumping straight to the region label in the child, the in-between code runs parent-side only, and no new checker rule was owed (the gap is vacuous by construction). The stub correspondence lemma for the jump lowering is still open (see below); the C-form census books the region label as `stmt:label-kind` (known-uncovered) |
 | **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
 | **what would close it** | spawn-time arguments and entry world in the clone machine, unboundedly many children per gate, the exporter emitting `child` units with the child entry as a start (and a proof that `N457` gives Lean acceptance), and the stub correspondence lemma for the jump lowering |
 
@@ -972,7 +994,7 @@ pool-safe) refuse. What stays open:
 | | |
 |---|---|
 | **no model** | `Akzeptiert`/`Ziel` know only `E.starts` from the declaration. A started root is in no declared pair; `N462` is the fail-safe substitute (the pool-safe shape `N457` gives a child), a checker rule with no Lean counterpart |
-| **no lowering, no export** | the emitter refuses the statement (`C001`), the exporter too (`LG004`); no `start` program reaches C or Lean |
+| **no lowering, no export** | the emitter lowers the statement since lane 260 (one raw-clone spawn per root on unit-owned stacks via `laufzeit/faden.c`, joined before the starter proceeds; `beispiele/159` emitted and run); the exporter still refuses it (`LG004`, the model lane's); no `start` program reaches Lean |
 | **strictness** | `N461` refuses any held context (not only a lock some root takes); `N462` refuses a root that is the only writer of an unguarded carrier; the cost bill is the sum (sound on one core), not the maximum |
 | **liveness** | a root that never returns keeps its starter waiting forever; progress over statement-level starts is not decided |
 | **what would close it** | a statement-level spawn/join rule in machine G with the race component quantifying over started roots, then the driver-side lowering (one create per root, join before the next statement) |

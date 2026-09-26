@@ -250,6 +250,8 @@ import Grammatik.Zielsatz.RuheNutzer
 import Grammatik.Zielsatz.Beweis
 import Grammatik.FadenMaschine
 import Grammatik.Zielsatz.Faeden
+import Grammatik.Zielsatz.Invarianten
+import Grammatik.Zielsatz.InvariantenZeuge
 import Grammatik.Zielsatz.FaedenVor
 import Grammatik.Zielsatz.FaedenZeuge
 import Grammatik.Zielsatz.Proben

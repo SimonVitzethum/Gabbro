@@ -1,13 +1,18 @@
--- 156 -- The child path through a branch: every arm ends in the exit gate.
+-- 160 -- A checked clone handoff that reads the handed stack (lane 260).
 --
--- The twin of 155 for the branched tail: `endet_immer` reads through `if`
--- with `else` (both arms end in the never-returning `ausgang`), so `N449`
--- stays silent beside `N448` and `N450`. Same shape gate (not the raw
--- clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints at the
--- checker; the emitter lowers gate and region like 155 (lane 260, inline
--- trap with the child entered by jump).
+-- The clean twin of `beispiele/gift/1181`: the same gate, but the region
+-- stands behind the `if v == 0` guard holding nothing but it, so the gate
+-- lowers to the inline trap (lane 260) and the child enters the region by
+-- jump at its label. The region reads `stapel` -- exactly what the gate
+-- call handed over (`roher_start(art, stapel)`) -- so the spill rules stay
+-- silent (`N451`/`N452`), and the path is well-formed beside it
+-- (`N448`/`N449`, `N450`, `N456`/`N457` silent). 0 errors, 0 hints at the
+-- checker; the emitter lowers gate and region, and the C compiles.
+--
+-- Same shape gate as 155/156 (not the raw clone, `1000` not an OS number;
+-- the real-number counterpart lives outside the tree).
 
-module beispiel::kind_uebergabe_verzweigt {
+module beispiel::kind_liest_stapel {
 
 reason UebergabeFehler {
     KeinStapel = 1 "no stack was handed"
@@ -41,11 +46,8 @@ impl fn starter(art : u64, stapel : u64) -> u64
     }
     if v == 0 {
         child {
-            if stapel == 0 {
-                ausgang(1);
-            } else {
-                ausgang(0);
-            }
+            let r = stapel;
+            ausgang(r);
         }
     }
     return v;
