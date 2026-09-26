@@ -145,6 +145,10 @@
       (a table/group invariant: a thread outside every writer that holds a guard lock sees it
       intact) and `sperrSicht` + `sperrWechsel` (a lock invariant: no step of a non-holder
       touches a protected carrier; every section starts from it, every release restores it).
+      (Review of Opus agent G, 2026-09-26: of these, only the LOCK form carries content --
+      `invSicht` is nominal in the model, review of Opus agent D F2, and `Inv := Empty` for
+      every certified program; L24 is claimed where the pair sits under ONE lock whose
+      invariant relates it.)
     - L34 is an EXISTENCE statement about one program (the region is not empty), not a
       guarantee; `tabelle_gebrochen` (Zielsatz/InvariantenZeuge.lean) is its shape: two writes
       of `privA`, the invariant false at a reached machine between them, and open there.
@@ -193,7 +197,11 @@
     check starts every sub-block unarmed and refuses such a `Φ`; it does not weaken); an order
     "sometime before" (not claimed); and WHICH `Φ` a source program means -- the exporter emits
     no order specification, so for a certified program the leg holds for every `Φ` the Lean
-    program passes, and naming the one the obligation means is the reader's step.
+    program passes, and naming the one the obligation means is the reader's step -- as is
+    deciding `FolgeOk` for it: no certificate states a `Φ`, and no Rust pass mirrors the check
+    (review of Opus agent G). The ENTRY of a thread's start function -- a declared start or a
+    thread created at run time -- is the oldest log event and is not ordered: a `ruf` function
+    run as a thread start escapes the leg.
   -- END order block --
 
   -- BEGIN invariant block (Opus agent D, 2026-09-26) --
@@ -976,7 +984,8 @@
   all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; (order hunk, Opus agent G, 2026-09-26: OFFEN O1's L50/L52 are claimed by
   the leg `folge`, see the order block above) an order of effects that are not calls of Gabbro
   functions (axiom and register effects are not in the call log), an order across a compound
-  statement, an indirect call or a lock block (`FolgeOk` refuses that `Φ`), an order
+  statement, an indirect call or a lock block (`FolgeOk` refuses that `Φ`), the entry of a
+  `ruf` function that runs as a thread's start function, an order
   "sometime before", and the promises of `breaking I` about its NAME -- that the region is
   where `I` rests and that the block restores `I` (G unfolds the block without the name;
   restoration is claimed at every writer's return) -- OFFEN O1; a busy routine declared ONCE on several threads
