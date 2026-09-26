@@ -2889,6 +2889,40 @@ pub const M1: &[Satz] = &[
                      `typ_annotation`, `ruf_regel`, `bibliothek_regel`)",
     },
     Satz {
+        name: "gate.nulpfad",
+        kennungen: &["N507"],
+        aussage: "A NUL-terminated path the program builds carries its terminator. At \
+                  every call whose callee requires `path_nul_terminated(p, n)`, three \
+                  shapes answer (`N507` refuses the rest): a forwarded parameter pair \
+                  under the caller's own identical clause; a byte array built in the \
+                  body (`static` or `let` `[u8; M]`) with a proved terminator -- a \
+                  store `buf[L-1] = 0` dominating the call for a length that reads as \
+                  one constant `L`, or an untouched zero-initialised buffer for any \
+                  length. A caller parameter pair without the clause falls (the \
+                  obligation dropped on the floor), and so does a built-here buffer \
+                  with no proof.",
+        vorbehalt: "Decided only where the program builds the buffer. A pointer the \
+                    pass cannot see built -- a lone parameter, a field, a computed \
+                    pointer, a foreign static -- keeps its named `V` obligation and \
+                    nothing falls beside it. A length that is no single constant is \
+                    proved only by an untouched zeroed buffer. Stores under a branch, \
+                    a loop or an error continuation never prove (they may not run) but \
+                    still kill, and any call taking the buffer kills every cell. Copies \
+                    (`let ab = buf;`) track on; cross-module statics by bare name do \
+                    not track. Strings never reach a `ptr<u8>` parameter (`N465`), so \
+                    no string shape is checked. The kernel honouring the length stays \
+                    the gate's named assumption.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1253` (`N507`: a concrete buffer with no `0` \
+                      store), `1254` (`N507`: a wrapper forwarding `path`/`pathlen` \
+                      without the clause). The clean side: `beispiele/149` (the \
+                      forwarding wrapper carries the clause) and `tests/nulpfad.rs` \
+                      (the proved store, the untouched zeroed buffer, the carried \
+                      clause, the unseen pointer that keeps its `V`).",
+        fundstelle: "crates/gabbro-check/src/nulpfad.rs (`ruf_pruefen`); \
+                     dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "m1.ganzzahl_match",
         kennungen: &["N411", "N412", "N413", "N414"],
         aussage: "An integer `match` names every value M1 knows its scrutinee can hold, \

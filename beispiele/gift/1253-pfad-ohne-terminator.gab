@@ -1,0 +1,51 @@
+-- erwartet: N507
+-- **1253 -- a path buffer with no proved terminator (lane 262, OFFEN O23).**
+--
+-- The gate is owed `path_nul_terminated(path, pathlen)`: the kernel finds the end of
+-- the path in the data, not in the length. `PFAD` is built right here -- a zeroed
+-- buffer, filled with `65`, and the byte the gate reads (index 4 at length 5) is no
+-- NUL. No store carries a proved terminator to that index, so `N507` refuses the call.
+-- The named obligation stays (`gabbro obligations` still counts the `V` row); what is
+-- new is that the built-here shape is decided, not merely counted.
+
+module gift1253 {
+
+reason OpenError {
+    NotFound = 2 "no entry under that path"
+    exhaustive
+}
+
+assume linux_open_contract
+    "Open keeps its contract on this machine."
+    falsifier sonde_open;
+
+const MAXLEN : u64 = 1024;
+
+spec fn path_nul_terminated(path : ptr<normal, r> u8, pathlen : u64) -> bool
+    effects { pure }
+    = pathlen >= 1 && path[pathlen - 1] == 0;
+
+syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> u64 or OpenError
+    abi linux arch x86_64 number 2
+    regs in { rdi = path, rsi = flags, r10 = pathlen }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { ENOENT => NotFound }
+    requires pathlen <= MAXLEN, pathlen <= lenof(path), path_nul_terminated(path, pathlen)
+    ensures result <= 4294967295
+    effects { reads path }
+    costs <= 40 ops
+    assume linux_open_contract falsifier sonde_open;
+
+static mut PFAD : [u8; 16] = 0;
+
+impl fn aufruf() -> u64 or OpenError
+    effects { reads PFAD, writes PFAD }
+    costs <= 100 ops
+{
+    PFAD[4] = 65;
+    let n = gate_open(PFAD, 5, 0) else (e) { return e; }
+    return n;
+}
+
+}
