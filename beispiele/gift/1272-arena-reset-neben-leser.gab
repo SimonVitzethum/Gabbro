@@ -1,0 +1,28 @@
+-- erwartet: N521
+-- **1272 -- a `reset` in a routine running concurrently with an index holder
+-- (lane 264, OFFEN O20 row 1).**
+--
+-- `setzer` resets `A` while `leser` (another root of the same `concurrent`
+-- set) holds a parameter index into `A`. Along one thread the reader is
+-- clean (`N211` stays silent: no reset in its body or its callees); across
+-- threads the reset consumes every generation of `A` program-wide. The
+-- reader declares no write, so `W001` stays silent too -- the refusal is
+-- this rule's alone. No lock admits the shape: mutual exclusion serializes
+-- the counter but cannot revive a consumed generation.
+module gift1272 {
+
+arena A capacity 2 .. 8 of u16;
+
+impl fn leser(i : index into A) -> u32 effects { reads A } costs <= 64 ops {
+    let x : u32 = A[i];
+    return x;
+}
+
+impl fn setzer() -> u32 effects { writes A } costs <= 64 ops {
+    reset A;
+    return 0;
+}
+
+concurrent { leser, setzer };
+
+}

@@ -1,0 +1,36 @@
+-- erwartet: N426
+-- **1280 -- a looped `start` multiplies the root's commit (lane 264, OFFEN
+-- O20 row 2).**
+--
+-- One statement starts the grower on 128 passes: `8 + 128 * 6` stands past
+-- the ceiling `max 10`, so `N426` refuses the request inside the root.
+-- One statement means one instance at a time, so no `N522` fires beside
+-- it; the singly started twin (`paesse.rs`:
+-- `arena_commit_start_einmal_sauber`) commits once and stays clean.
+-- Measured `["N426"]`.
+module gift1280 {
+
+arena A capacity 2 .. 8 max 10 of u16;
+
+extern fn w() -> never effects { diverges };
+
+assume tickt "the timer ticks" falsifier w;
+
+impl fn h() effects { writes A } costs <= 64 ops {
+    grow A by 6 else {
+        return;
+    };
+}
+
+impl fn s() effects { writes A, diverges } costs <= 2048 ops {
+    retry runde
+        bounded 128 ops
+        progress tickt
+        on_exceeded w
+        effects { writes A }
+    {
+        start { h };
+    }
+}
+
+}

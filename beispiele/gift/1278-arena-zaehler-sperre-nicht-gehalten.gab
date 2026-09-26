@@ -1,0 +1,32 @@
+-- erwartet: N522
+-- **1278 -- a common lock nobody takes guards nothing (lane 264).**
+--
+-- `f` allocates under `L`, `g` allocates bare. The hulls share nothing, so
+-- `W001` fires beside this rule; the holding half is this rule's:
+-- `protects` without taking is a declaration, not exclusion. Measured
+-- `["N522", "W001"]`.
+module gift1278 {
+
+arena A capacity 2 .. 8 of u16;
+
+lock L protects { A } rank 0 held <= 100 ops;
+
+impl fn f() -> u32 effects { writes A, locks L } costs <= 64 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+
+impl fn g() -> u32 effects { writes A } costs <= 64 ops {
+    let j = alloc A (2) else {
+        return 999;
+    };
+    return 0;
+}
+
+concurrent { f, g };
+
+}

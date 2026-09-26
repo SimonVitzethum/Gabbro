@@ -1,0 +1,72 @@
+-- erwartet: N521
+-- **1275 -- a guarded `child` read beside a guarded `reset` (lane 264).**
+--
+-- Both sides take the lock that protects `A`, so every rule that a guard
+-- can admit stays silent -- except this one: mutual exclusion cannot revive
+-- a consumed generation. `N457` still fires beside it (its guard disjunct
+-- is vacuous for arenas: `sperrdaten` resolves no arena `protects`).
+-- Measured `["N457", "N521"]`.
+module gift1275 {
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+
+arena A capacity 2 .. 8 of u16;
+
+lock L protects { A } rank 0 held <= 100 ops;
+
+impl fn m() -> u32 effects { writes A, locks L } costs <= 128 ops {
+    locks L {
+        let i = alloc A (1) else {
+            return 999;
+        };
+        reset A;
+        let j = alloc A (2) else {
+            return 999;
+        };
+        return 0;
+    }
+}
+
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { writes A, locks L, diverges }
+{
+    let v = roher_start(art, stapel) else (e) {
+        return 999;
+    }
+    if v == 0 {
+        child {
+            locks L {
+                let k = alloc A (3) else {
+                    ausgang(1);
+                };
+                let y : u32 = A[k];
+                ausgang(0);
+            }
+        }
+    }
+    return v;
+}
+
+concurrent { m };
+
+}

@@ -1,0 +1,28 @@
+-- erwartet: N521
+-- **1273 -- the concurrent `reset` hides one call down (lane 264).**
+--
+-- Like `1272`, but the reset stands in the setter's callee: the thread
+-- closure follows calls, so the generation consumption is still seen.
+-- Measured `["N521"]` -- no beside-code.
+module gift1273 {
+
+arena A capacity 2 .. 8 of u16;
+
+impl fn helfer() -> u32 effects { writes A } costs <= 64 ops {
+    reset A;
+    return 0;
+}
+
+impl fn setzer() -> u32 effects { writes A } costs <= 128 ops {
+    let x = helfer();
+    return x;
+}
+
+impl fn leser(i : index into A) -> u32 effects { reads A } costs <= 64 ops {
+    let x : u32 = A[i];
+    return x;
+}
+
+concurrent { setzer, leser };
+
+}
