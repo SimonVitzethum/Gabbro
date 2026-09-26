@@ -358,3 +358,4 @@ import Grammatik.FolgeZeuge
 import Grammatik.Zielsatz.FolgeZiel
 import Grammatik.Zielsatz.AtomarGoalZeuge
 import Grammatik.Zielsatz.AtomarZertifikatZeuge
+import Grammatik.Speichermodell.ZaehlerW

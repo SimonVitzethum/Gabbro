@@ -43,7 +43,9 @@
     `crates/gabbro-check/tests/zertifikate.rs` recomputes it from the tree and fails on any
     byte of difference, so an accepted program outside both lines, a stale certificate or a
     stale row turns `cargo test` RED. Measured 2026-09-26: 199 accepted, 23 CERTIFIED, 176
-    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified).
+    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified); after lane O25c (the
+    exporter carries payload-free atomics, example 162 added): 204 accepted, 25 CERTIFIED, 179
+    UNCERTIFIED (of the 138 top-level corpus programs: 20 certified).
   * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
     imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
     decides (a) for it IN LEAN (`gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE … = true
@@ -156,8 +158,15 @@
     `ZielFX` on it; W's stale read really happens on it and is a covered GX step; the rely
     bites (`hP_rely_nicht`); a contract over the shared `konfig` is refused
     (`vertrag_atomar_abgelehnt`, Rust `N484`); the per-core fold is accepted
-    (`faltung_akzeptiertX`, O17's read half); two threads each `exchange`-increment one
-    counter, and on every run of W that finishes both, the newest message holds 2.
+    (`faltung_akzeptiertX`, O17's read half); the counter on W itself (`w_zaehler`,
+    Speichermodell/ZaehlerW.lean): where every write of an atomic is an `exchange` adding one,
+    its history on every W run is the gap-free chain `0 … n` and the newest message holds the
+    start value plus the number of writes -- two increments end at two above the start
+    (`w_zaehler_zwei`), in every interleaving; the program-side premise (every write of the
+    global IS that `exchange`) is a hypothesis there, not yet discharged for a concrete term.
+    Certified: `beispiele/162-geteilte-flagge.gab` (a shared atomic written by one start, read by
+    another, no lock) -- refused by the checker of before (`g162_alt_abgelehnt`), its
+    certificate decides `AkzeptiertX` and states `GabbroZiel` on it.
   * WHAT STAYS NAMED (NOT CLAIMED below): a contract, `requires`, `ensures` or invariant over a
     shared atomic (refused: its value may change at any moment, `N484`); the publish/await
     hand-off of a PLAIN payload read without a lock (still refused, verdict P3; OFFEN O25's
