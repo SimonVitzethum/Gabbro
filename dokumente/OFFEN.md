@@ -1195,3 +1195,18 @@ bodies. Report: `messung/OPUS-E-LINKEN.md`.
 | **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |
 | **not claimed at all** | different hardware assumptions, callbacks through an import (`KeinRueckruf`), dynamic loading, ABI-level linking of foreign C |
 
+
+---
+
+## O29 — Dynamic unbounded data structures and probabilistic statements: planned for later, out of scope now (Simon, 2026-09-26)
+
+Two whole classes of statement are **not open work for the current waves** and **not claimed**:
+they are planned for "some day", after the current scope (the goal theorem's named gaps, the
+Caprock rewrite, full translation validation).
+
+| | |
+|---|---|
+| **dynamic unbounded data structures** | lists, trees, graphs and maps whose size is not bounded by a declaration (heap allocation without a declared ceiling, recursive types, pointer structures that grow at run time). Today's language covers bounded tables, arenas with a declared `max` (`grow`, reset-only free) and bounded strings; nothing beyond a declared bound is modelled, checked or claimed. |
+| **probabilistic statements** | claims about distributions, expected values, failure probabilities or randomised algorithms (e.g. "the hash collides with probability ≤ p", "the retry succeeds with probability 1"). The goal theorem is a statement about EVERY run; no measure over runs exists in the model. |
+| **status** | planned for later; no lane is tasked; no code, gift or example number is reserved. |
+| **where it is named** | here, and in AGENTS.md §2/§3 ("OUT of scope for now"). The `Spec.lean` header does not list them yet; when the next reviewed Spec diff touches the NOT CLAIMED list, both lines belong there. |
