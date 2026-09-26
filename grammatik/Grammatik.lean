@@ -328,5 +328,7 @@ import Grammatik.Zertifikate
 import Grammatik.Speichermodell.Atomar
 import Grammatik.Speichermodell.AtomarZeuge
 import Grammatik.Speichermodell.RMW
+import Grammatik.Speichermodell.AtomarSem
+import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
