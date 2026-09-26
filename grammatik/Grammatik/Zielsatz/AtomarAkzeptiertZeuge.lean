@@ -7,7 +7,7 @@
   * POSITIVE, the FLAG (`n1_ziel_atomar`): configuration 1 -- `kern` publishes the atomic
     `konfig`, `hauptA`/`hauptB` read it with no lock -- is refused by the goal's checker and
     accepted by `AkzeptiertX`; its user obligation WITH the rely holds (`n1_logikA`), and
-    `ziel_atomar_spec` gives every leg of `ZielAtomarW` at every machine W reaches, for every
+    `ziel_atomar_spec` gives every leg of `ZielAtomar` at every machine W reaches, for every
     order assignment, budget and start memory. Non-degenerate: `konfig` IS an admitted shared
     atomic (`n1_konfig_geteilt`), and W's stale read of it really happens on a covered run
     (`n1_stale_gedeckt`: `hauptA` stores the initial `konfig` after `kern` wrote 3, where G
@@ -67,10 +67,10 @@ theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZe
     cases f <;> exact r.elim0
 
 /-- **THE FLAG, COVERED**: at every machine W reaches from configuration 1 -- every order
-    assignment, budget, start memory -- every leg of `ZielAtomarW`. -/
+    assignment, budget, start memory -- every leg of `ZielAtomar`. -/
 theorem n1_ziel_atomar (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat) :
     ∀ W : RufMaschineW nD, RufErreichbarW nP nO passes ord (RufStartW (RufStartG nP sp init1)) W →
-      ZielAtomarW nP SchwachZeuge.nS nO passes ord (GeteiltV nP n1ws) (RufStartG nP sp init1) W :=
+      ZielAtomar nP SchwachZeuge.nS nO passes ord (GeteiltV nP n1ws) (RufStartG nP sp init1) W :=
   ziel_atomar_spec nP SchwachZeuge.nS (axWahr nD) nFs_voll (ls := []) (fun L => nomatch L) n1ws
     (akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll n1_akzeptiertX)
     (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes ord sp init1
@@ -88,14 +88,14 @@ theorem n1_konfig_geteilt : GeteiltV nP n1ws (.inr NGlob.konfig) := by
 
 /-- **Non-degenerate: W's stale read happens on a covered run.** After `kern` wrote
     `konfig := 3`, W lets `hauptA` store the INITIAL `konfig` (0) into `tabA[0]`, where G on the
-    same schedule stores 3; the machine after that step satisfies every leg of `ZielAtomarW`. -/
+    same schedule stores 3; the machine after that step satisfies every leg of `ZielAtomar`. -/
 theorem n1_stale_gedeckt (ord : nD.Glob → Ordnung) :
     ∃ W1 W2 : RufMaschineW nD,
       RufErreichbarW nP nO 0 ord (RufStartW (RufStartG nP sp0 init1)) W1 ∧
       RufSchrittW nP nO 0 ord W1 0 W2 ∧
       (W1.g.speicher.globs NGlob.konfig).n = 3 ∧ (W2.g.speicher.slots NTab.tabA 0 ()).n = 0 ∧
       ((r1M2 sp0).speicher.slots NTab.tabA 0 ()).n = 3 ∧
-      ZielAtomarW nP SchwachZeuge.nS nO 0 ord (GeteiltV nP n1ws) (RufStartG nP sp0 init1) W2 := by
+      ZielAtomar nP SchwachZeuge.nS nO 0 ord (GeteiltV nP n1ws) (RufStartG nP sp0 init1) W2 := by
   obtain ⟨W1, W2, hW1, hs, _, hk, hA, hG⟩ := SchwachZeuge.w_nicht_sc ord
   exact ⟨W1, W2, hW1, hs, hk, hA, hG, n1_ziel_atomar sp0 ord 0 W2 (.schritt _ _ _ hW1 hs)⟩
 

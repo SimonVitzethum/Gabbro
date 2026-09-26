@@ -341,6 +341,7 @@ import Grammatik.Speichermodell.AtomarFortschritt
 import Grammatik.Speichermodell.AtomarZiel
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.AtomarRuheNutzer
+import Grammatik.Zielsatz.AtomarInvarianten
 import Grammatik.Zielsatz.AtomarAkzeptiert
 import Grammatik.Zielsatz.AtomarAkzeptiertZeuge
 import Grammatik.Speichermodell.Zaehler

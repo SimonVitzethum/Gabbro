@@ -23,10 +23,12 @@
   THE THEOREMS:
   * `ziel_atomar_spec` -- from (a) `AkzeptiertSpecX`, (b) `LogikPflichtA`, (c)
     `HardwareAnnahmen`, an admissible start: every machine W reaches (weak memory, racing
-    atomics) satisfies `ZielAtomarW` (Speichermodell/AtomarZiel.lean) over `GeteiltV`.
+    atomics) satisfies `ZielAtomar` over `GeteiltV`: `ZielAtomarW` (Speichermodell/AtomarZiel.lean)
+    and the four invariant legs of Opus agent D (Zielsatz/AtomarInvarianten.lean).
   * `rennfrei_atomar_spec` -- race freedom on every run of W, for every non-atomic carrier.
 -/
 import Grammatik.Speichermodell.AtomarZiel
+import Grammatik.Zielsatz.AtomarInvarianten
 import Grammatik.Zielsatz.AtomarPflicht
 import Grammatik.Zielsatz.Akzeptiert
 
@@ -95,17 +97,28 @@ theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertS
         (@of_decide_eq_true _ (Classical.propDecidable _) h2))
   · exact hB L (hA.sperrOrte L c hL)
 
+/-- **The legs with shared atomics at a machine W**: `ZielAtomarW` and the four invariant legs
+    of Opus agent D -- `InvRuheG`, `InvSichtG` at W's G-part, and the lock-move legs over every
+    GX step from it (so over every W step, by the leg `schwach`). -/
+structure ZielAtomar (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (ord : D.Glob → Ordnung) (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D)
+    (W : RufMaschineW D) : Prop extends ZielAtomarW P S O passes ord Tg M0 W where
+  invRuhe : InvRuheG P M0 W.g
+  invSicht : InvSichtG P M0 W.g
+  sperrWechsel : SperrWechselGX P O passes Tg S W.g
+  sperrSicht : SperrSichtGX P O passes Tg S W.g
+
 /-- **THE LEGS WITH SHARED ATOMICS FROM THE PREMISE GROUPS.** (a) the checker specification with
     the admitted shared atomics, (b) the user's logic against every answer a shared atomic read
     may give, (c) the named hardware assumptions, an admissible start: every machine W reaches
-    satisfies `ZielAtomarW` over `GeteiltV`. -/
+    satisfies `ZielAtomar` over `GeteiltV`. -/
 theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
     (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (ord : D.Glob → Ordnung) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init) :
     ∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W →
-      ZielAtomarW P S O passes ord (GeteiltV P ws) (RufStartG P sp init) W := by
+      ZielAtomar P S O passes ord (GeteiltV P ws) (RufStartG P sp init) W := by
   have hW : ∀ t, D.haelt (init t).1 = [] ∧ D.gruende (init t).1 = 0 := fun t => by
     rcases hZ.wurzel t with h | h
     · exact hA.wurzeln _ h
@@ -113,20 +126,34 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => (hW t).1
   have hS : SperrInvOk S := ⟨hA.sperrOrte, hN.2.1⟩
   have hT : ∀ c, GeteiltV P ws c → GeteiltA P ws c := fun c h => h.1
-  exact ziel_atomar_w P O passes ord Q S ls (kVon P fs init) (GeteiltV P ws) (lokW P fs ws) sp
-    init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hA.stufen hvoll hls (fun t => hA.abg _)
-    (fun t => reachB_wurzel P fs _) (fun c h => h.1.1) (fun c h => h.2)
-    (fun c h f Λ => geteiltV_nicht_stabil hvoll hA h f Λ)
-    (fun c h L hL => h.1.2.1 L (hA.sperrOrte L c hL))
-    (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
-    (fun c hc => getrenntK_of hZ (by
+  have hTA : ∀ c, GeteiltV P ws c → AtomarAusgenommen c := fun c h => h.1.1
+  have hTV : ∀ c, GeteiltV P ws c → VertragsFrei P c := fun c h => h.2
+  have hTS : ∀ c, GeteiltV P ws c → ∀ f Λ, c ∉ stabilS P S (lokW P fs ws) f Λ :=
+    fun c h f Λ => geteiltV_nicht_stabil hvoll hA h f Λ
+  have hTO : ∀ c, GeteiltV P ws c → ∀ L, c ∉ S.orte L :=
+    fun c h L hL => h.1.2.1 L (hA.sperrOrte L c hL)
+  have hlokK : ∀ c, lokW P fs ws c = true → GetrenntK P (kVon P fs init) c := fun c hc =>
+    getrenntK_of hZ (by
       unfold lokW at hc
-      exact @of_decide_eq_true _ (Classical.propDecidable _) hc))
-    (fun f => koerperGutSA_mono hT ((hN.1 passes f).1))
-    (fun f => invGutSA_mono hT ((hN.1 passes f).2.1))
-    (fun f => invGutGrundA_mono hT ((hN.1 passes f).2.2))
-    hZ.req hZ.sperren (startExklusiv_ohne_haelt init hLeer) (fun t => (hW t).2) hLeer
-    hA.antworten
+      exact @of_decide_eq_true _ (Classical.propDecidable _) hc)
+  have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
+  have hI := fun f => invGutSA_mono hT ((hN.1 passes f).2.1)
+  have hIG := fun f => invGutGrundA_mono hT ((hN.1 passes f).2.2)
+  have hex := startExklusiv_ohne_haelt init hLeer
+  intro W hr
+  have hZW := ziel_atomar_w P O passes ord Q S ls (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
+    sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hA.stufen hvoll hls (fun t => hA.abg _)
+    (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
+    hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) hLeer hA.antworten W hr
+  have hInv := invarianten_atomar P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
+    sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll (fun t => hA.abg _)
+    (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
+    hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) W.g hZW.erreicht
+  exact { hZW with
+    invRuhe := hInv.1
+    invSicht := hInv.2.1
+    sperrWechsel := hInv.2.2.1
+    sperrSicht := hInv.2.2.2 }
 
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/
