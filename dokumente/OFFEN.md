@@ -1489,3 +1489,25 @@ another kernel), so the same gate code builds for every target and only the bind
 | **requirements** | the binding is checked like every other declaration (a gate may only use a variable the active target binds; a missing or duplicate binding is a refusal with sentence + poison + positive probe); the named hardware/kernel assumption of each gate (its contract, O23's caller preconditions) follows the binding, so a different target means different named assumptions, never silently the same |
 | **relation** | freestanding everywhere (the current wave's rule), linking under equal hardware assumptions (O28: two units linked must bind the same target), the self-hosted compiler (O30: the target is its input) |
 | **status** | planned, not tasked; no numbers reserved |
+
+## O32 — Threads without an OS: the bare-metal runtime runs on QEMU, not yet on hardware or inside Caprock (recorded 2026-09-26, Opus agent I)
+
+Simon's rule (2026-09-26): everything Gabbro can do must work freestanding. Until this entry,
+runtime `start` needed Linux (`laufzeit/faden.c`: raw `clone`/`futex`/`exit`) and boot
+`concurrent` starts needed pthreads (`laufzeit/start_pool.c`, the generated
+`<unit>.treiber.c`). `laufzeit/metall/` now implements the SAME interface
+(`gabbro_faden_start`, `gabbro_faden_warte`, `L_nimm`/`L_gib`) with no libc and no kernel:
+Multiboot1 entry and long mode (`start.S`), ACPI MADT, INIT-SIPI-SIPI through a trampoline at
+0x8000, per-core `struct kern` behind `IA32_GS_BASE`, one FIFO run queue per core under a ticket
+lock, LAPIC-timer preemption, the context switch in assembly, the join by yield, the CTicket lock
+for every Gabbro lock. The emitted C is byte-for-byte what the hosted runs use. `gabbro build`
+writes `<unit>.metall.c` beside `<unit>.treiber.c` (`treiber.rs` `erzeuge_metall`, the same
+multiset pin, checked at every build).
+
+| | |
+|---|---|
+| **measured** | `instrumente/pruefe-metall.sh` (stage 11 of `pruefe-emission.sh`) on `qemu-system-x86_64 -smp 4` (TCG, multi-threaded): `beispiele/159` (runtime `start`, 64), `124` and `157` (boot `concurrent`, generated driver), a lock stress (8 threads x 20000 under one ticket lock, 200 start/join rounds on one reused stack) and a same-core spin that only preemption resolves; every boot also checks the per-core end count (`METALL-VERTEILUNG`). Gifts: counter `+1 -> +0` (159), lock emptied (lost updates), cooperative build (hangs). Without qemu: built and linked, `METALL: NOT RUN` |
+| **named, not checked** | the `Spec.lean` hunk "bare-metal runtime block" (M1)-(M7): context switch, LAPIC/IPI, boot protocol, scheduler fairness, lock, join, DRF-SC on metal |
+| **finding on the hosted side** | `faden.c` lost joins: the parent stored the TID after `clone` returned, over a word the kernel had already cleared for a child that had ended. Fixed with `CLONE_PARENT_SETTID`; the hosted probe (200000 rounds) hung before, runs through after |
+| **open** | (1) real hardware (only QEMU was booted; the port-0x80 delays and the MADT walk are the untested parts); (2) interrupt handlers the program declares (`via idt`) are not installed in the metal IDT, so `KernPlan` (O19) has no realisation; (3) the Caprock integration: Caprock boots itself -- the runtime's scheduler, per-core table and lock would move under Caprock's entry instead of this Multiboot stub; (4) limits: 16 cores, 64 live threads (EAGAIN -> the emitted trap), 16 KiB scheduler stacks; (5) no `hlt`: idle cores spin with `pause` (a power question, not a correctness one); (6) `gabbro build` renders the metal driver but does not link the image -- the recipe is the harness's |
+| **numbers** | none taken (N556-N560 and gifts 1341-1350 stay with this work: no checker rule was needed) |

@@ -30,6 +30,9 @@
  *                                `exit_group`).
  *   CLONE_SYSVSEM    0x00040000  one SysV semaphore undo list (wrapper parity;
  *                                Gabbro's own locks are futexes, never SysV).
+ *   CLONE_PARENT_SETTID  0x00100000  the kernel stores the child's TID into
+ *                                the join word BEFORE the child can run
+ *                                (Opus agent I, 2026-09-26; see below).
  *   CLONE_CHILD_CLEARTID 0x00200000  the join: the kernel clears the word at
  *                                `ctid` on thread exit and wakes one futex
  *                                waiter, so the join is a wait loop, not a
@@ -43,8 +46,17 @@
  *   that would need a segment base. Setting it would promise a facility
  *   nobody reads.
  *
- *   CLONE_PARENT_SETTID is absent: the parent learns the TID as the return
- *   value and stores it into the join word itself.
+ *   CLONE_PARENT_SETTID WAS absent until 2026-09-26, and that was a lost
+ *   join: the parent stored the TID into the word itself, AFTER `clone`
+ *   returned -- and a child that ran to its end first had its word cleared
+ *   by the kernel BEFORE that store, which then wrote a dead TID back. The
+ *   join then waited on it forever. Measured by Opus agent I: 200000
+ *   start/join rounds of an empty root on one stack hung (timeout) before
+ *   round 20000; with the flag, the kernel writes the TID in `copy_process`,
+ *   before `wake_up_new_task`, so the word says "alive" before the child can
+ *   end, and the same probe runs through (`instrumente/pruefe-metall.sh`,
+ *   hosted counter-probe). The bare-metal runtime keeps the same order by
+ *   construction (`laufzeit/metall/kern.c`, `faden_anlegen`).
  *
  * THE CHILD NEVER EXECUTES A C FRAME ON THE NEW STACK. `clone` returns
  * twice -- once in the parent (the TID), once in the child (zero) -- but the
@@ -94,11 +106,13 @@
 #define GABBRO_CLONE_SIGHAND 0x00000800L
 #define GABBRO_CLONE_THREAD 0x00010000L
 #define GABBRO_CLONE_SYSVSEM 0x00040000L
+#define GABBRO_CLONE_PARENT_SETTID 0x00100000L
 #define GABBRO_CLONE_CHILD_CLEARTID 0x00200000L
 
 #define GABBRO_CLONE_FLAGS \
     (GABBRO_CLONE_VM | GABBRO_CLONE_FS | GABBRO_CLONE_FILES | GABBRO_CLONE_SIGHAND | \
-     GABBRO_CLONE_THREAD | GABBRO_CLONE_SYSVSEM | GABBRO_CLONE_CHILD_CLEARTID)
+     GABBRO_CLONE_THREAD | GABBRO_CLONE_SYSVSEM | GABBRO_CLONE_PARENT_SETTID | \
+     GABBRO_CLONE_CHILD_CLEARTID)
 
 /* -- One raw system call. ----------------------------------------------------
  *
@@ -124,7 +138,8 @@ static long roh_aufruf(long nr, long a1, long a2, long a3, long a4, long a5, lon
 int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort)
 {
     long r;
-    /* rdi = flags, rsi = handed stack, rdx = ptid (none), r10 = ctid (the
+    /* rdi = flags, rsi = handed stack, rdx = ptid (the join word: the
+     * kernel sets it to the TID before the child runs), r10 = ctid (the
      * join word the kernel clears), r8 = tls (none: no CLONE_SETTLS). The
      * pins are the musl idiom the syscall stub uses (`r10` has no
      * constraint letter); `rax` is in-out (`+a`): the number going in, the
@@ -132,7 +147,7 @@ int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort)
     register long r_rax __asm__("rax") = GABBRO_SYS_CLONE;
     register long r_rdi __asm__("rdi") = GABBRO_CLONE_FLAGS;
     register long r_rsi __asm__("rsi") = (long)spitze;
-    register long r_rdx __asm__("rdx") = 0;
+    register long r_rdx __asm__("rdx") = (long)wort;
     register long r_r10 __asm__("r10") = (long)wort;
     register long r_r8 __asm__("r8") = 0;
     if (fn == 0 || spitze == 0 || wort == 0) {
@@ -170,7 +185,9 @@ int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort)
         long e = -r;
         return e > 4095 ? 12 : (int)e; /* ENOMEM where the number is wild. */
     }
-    *wort = (uint32_t)r;
+    /* NO store into `*wort` here: the kernel wrote the TID before the child
+     * could run (CLONE_PARENT_SETTID), and the child may already have ended
+     * and had the word cleared -- a store now would resurrect a dead TID. */
     return 0;
 }
 

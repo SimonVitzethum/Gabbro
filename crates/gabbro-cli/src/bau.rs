@@ -1094,6 +1094,9 @@ fn baue_einheit(
     // that hole: bump it, and every driver-owning unit rebuilds once.
     // A unit without roots owns no driver and carries no version either.
     let treiber_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.treiber.c", e.name));
+    // The bare-metal twin (Opus agent I): `<unit>.metall.c` beside the hosted
+    // driver, from the same plan, under the same generator version.
+    let metall_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.metall.c", e.name));
     let treiber_erwartet = treiber_plan.is_some_and(|p| !p.wurzeln.is_empty());
     let mut teile: Vec<&[u8]> = Vec::new();
     if treiber_erwartet {
@@ -1137,7 +1140,7 @@ fn baue_einheit(
     if let Ok(alt) = std::fs::read_to_string(&marke) {
         if alt.trim() == format!("{abdruck:016x}")
             && erzeugnis.exists()
-            && (!treiber_erwartet || treiber_pfad.exists())
+            && (!treiber_erwartet || (treiber_pfad.exists() && metall_pfad.exists()))
         {
             if let Ok(gabi) = std::fs::read_to_string(&gabi_pfad) {
                 return Ergebnis::Aktuell { gabi, abdruck: abdruck_text };
@@ -1180,6 +1183,17 @@ fn baue_einheit(
             }
             if let Err(err) = std::fs::write(&treiber_pfad, &treiber_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", treiber_pfad.display()));
+            }
+            // **The bare-metal driver, pinned the same way** (Opus agent I):
+            // the freestanding twin starts the same multiset of roots through
+            // `gabbro_faden_start` (`laufzeit/metall/`), and the build refuses
+            // a rendering whose sites do not match the sources.
+            let metall_c = treiber::erzeuge_metall(&e.name, &plan.wurzeln, &plan.sperren, None);
+            if let Err(err) = treiber::metall_pin_pruefe(&erwartet, &metall_c) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", metall_pfad.display()));
+            }
+            if let Err(err) = std::fs::write(&metall_pfad, &metall_c) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", metall_pfad.display()));
             }
         }
     }
