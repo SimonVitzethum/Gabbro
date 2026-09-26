@@ -483,6 +483,28 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 
 ## O11 — A `table`/`group` invariant that no function `maintains` is booked by NOTHING
 
+> **STATUS 2026-09-26 (Opus agent D, `messung/OPUS-D-INVARIANTEN.md`): the booking is now a
+> DUTY, in the checker and in the goal theorem.** Counting it as `W` (below, 2026-09-04) said
+> *nobody owes it*; that was the gap. Now:
+>
+> * **Rust `N496`** (`m1.rs`, `invarianten_buchen`): a function with a body whose declared
+>   effects, or derived hull, write, publish or consume a carrier of a `table`/`group`
+>   invariant must name it in `maintains` -- every writer owes it, exactly as the model's
+>   `schuldet` says. Poison probes `beispiele/gift/1231`-`1234`, positive probe
+>   `tests/invarianten_buchung.rs`. Corpus diff: `beispiele/09` (its invariant was FALSE --
+>   the zeroed table and its own writer broke it; replaced by `frei_ohne_elter`, maintained by
+>   both writers), `beispiele/17` (now maintains its group invariant), gifts 66, 108 (other
+>   codes, N496 joins).
+> * **Model**: every writer owes the invariant at its returns (`InvGutS`/`InvGutGrund` in
+>   `LogikPflicht`), an invariant no function writes is carried by the frame
+>   (`inv_ohne_schreiber`), and the goal theorem's new leg `invRuhe` says it holds wherever no
+>   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §53).
+>
+> **Still open under this heading: the `ops` condition** (last paragraph below). A `table …
+> ops` stays exempt from `N496`, carried by the generated mutations; a hand-written body
+> touching the same slots is not asked. And an `E` obligation is booked, not proved, on the
+> Rust side (the model proves it: `InvGutS`).
+
 **Found 2026-09-03 while re-deriving the manifest split, and it contradicts a sentence the
 checker's own source carries.** `Art::Walkinvariante`'s docstring weighs a refusal and drops
 it with the words *"`runs online` at a `table … ops` IS carried (by `table.ops.erhaltung`),

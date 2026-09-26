@@ -60,10 +60,108 @@
     2 of 129 CLOSED) and `chain=none` everywhere else, where it is an assumption of the reading
     (below); of the emitted C forms, 51 have a correspondence lemma, 4 map to a named
     assumption and 27 have no semantics (`pruefe-cformen.py`, `KNOWN_UNCOVERED`).
+  * TABLE AND GROUP INVARIANTS (review of Opus agent D, 2026-09-26): the exporter writes
+    `Inv := Empty` and refuses `maintains` (`LG001`), so for every CERTIFIED program the legs
+    `invRuhe` and `invSicht` are vacuous; of the invariant legs only the lock legs
+    `sperrWechsel`/`sperrSicht` (and `sperrInv`) carry content there.
   * The Rust diagnostic codes (411 in the checker, 0 of its sentences in state PROVED) are
     therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
     in Lean for every certified program, and the others guard properties this statement does
     not claim (the NOT CLAIMED list, and the dropped forms above).
+
+  -- BEGIN invariant block (Opus agent D, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT D: INVARIANTS BEYOND THE RETURNS, OFFEN O11), AND WHY
+  -- a REVIEWED DIFF of this file (the review: messung/OPUS-D-INVARIANTEN.md). NO premise
+  moved; `Ziel` gains four legs, `ZielF` one:
+  * THE GAP. NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
+    only)". `Ziel` said that a table/group invariant holds at every logged return of a function
+    that owes it (`invRueck`, `invGrund`) and that a FREE lock has its invariant in memory
+    (`sperrInv`); nothing said what a function sees at its entry, what the acquirer of a lock
+    starts from, or what the other threads see while a lock is held.
+  * THE DIFF (definitions above `Ziel`): `InvTraeger` (the invariant reads only its declared
+    carriers), `InvZu` (no UNFINISHED thread has a frame of a function that owes it), and the
+    legs
+    - `invRuhe : InvRuheG P M0 M` -- every invariant that reads only its carriers and held in
+      the start memory holds at `M` whenever it is closed there;
+    - `invSicht : InvSichtG P M0 M` -- a thread outside every writer of an invariant that holds
+      a guard lock of one of its carriers sees it intact, whatever the others do;
+    - `sperrWechsel : SperrWechselG P O passes S M` -- every step from `M` that acquires `L`
+      goes from a memory where `S.inv L` holds to one where it holds, and every release leaves
+      one where it holds;
+    - `sperrSicht : SperrSichtG P O passes S M` -- every step from `M` that accesses a carrier
+      `L` protects holds `L`, and while a thread holds `L` no other thread's step moves it;
+    and `ZielF.spawnSicht` -- a spawn leaves the G state alone, the spawned thread holds no
+    lock, every free lock has its invariant and every closed invariant holds at that moment.
+  * WHAT IS NOW CLAIMED, precisely, and what the words "at entry" and "while held" can mean:
+    - AT ENTRY: an invariant is owed by every function whose effects write one of its
+      carriers (`schuldet`), and inside such a body it may be broken. A function CALLED from
+      inside a writer may see it broken at its entry, so "at every entry" is false in general.
+      Claimed: at every entry -- indeed at every machine -- reached while no unfinished thread
+      is inside a writer (`invRuhe`), and at every point of a thread holding one of its guards
+      outside every writer (`invSicht`). A writer's callee sees what the writer's `requires`
+      to it says, which is the user's logic. (Review 2026-09-26, URTEIL-SPECDIFF-OPUS-D:
+      a callee's writes are its caller's (`RufPasst.hw`), so every frame BELOW a writer --
+      up to the thread's start function -- is a writer too. A thread that ever writes a
+      carrier of `i` keeps `i` open for its whole life; `invRuhe` bites once every such
+      thread has finished, and at every point of a program in which no running thread writes
+      `i`. And with the declaration's `invarianten_gehalten` (a writer holds every guard BY
+      SIGNATURE) and lock-free starts, an invariant with a GUARDED carrier has, by argument
+      and not by a theorem, no writer reachable from an accepted start at all: it is frozen
+      at its start value, and `invSicht` then says no more than `invRuhe`. The Rust `U003`
+      counts `locks` in the body instead -- the model is stricter, see the verdict.)
+    - WHILE HELD: an invariant is a predicate over SHARED memory and the holder's writes are
+      shared memory at once, so the holder may break a lock invariant inside its section and
+      the memory then does not satisfy it. "Other threads never observe it broken" means,
+      exactly: no step of a thread that does not hold `L` touches a protected carrier, and no
+      step of another thread moves one while `L` is held (`sperrSicht`); every section starts
+      from the invariant and every release restores it (`sperrWechsel`). A held lock's
+      invariant is observed by its holder alone, at observation points -- that is the claim.
+    - AT THE START: a lock invariant at `E.sp0` is (b) already (`StartPflicht.sperren`), so
+      `sperrInv` holds at the start machine; a table invariant at `E.sp0` is the HYPOTHESIS of
+      `invRuhe`/`invSicht` (see below). ACROSS SPAWNS: `spawnSicht`.
+  * WHY NOTHING IS WEAKENED. The premises of `GabbroZiel` are textually unchanged (`Einheit`,
+    `AkzeptiertSpec`, `NutzerPflicht`, `HardwareAnnahmen`, `Laufzeit`). `Ziel` and `ZielF` gain
+    conjuncts and lose none; every earlier leg is proved by the same term (Zielsatz/Beweis.lean),
+    so `gabbro_ziel_g`, `gabbro_ziel_vor` and every certificate still hold, and the old `Ziel`
+    is a projection of the new. Unlike `keinKernHalt` and `zeit`, these legs are NOT
+    premise-free: `invRuhe` uses (b) through `invRueck`, `invGrund` and `StartEndeG`;
+    `sperrWechsel` uses `sperrInv` ((a) and (b)); `sperrSicht` and `invSicht` use (a)
+    (`sperrOrte`, lock-free roots: start exclusivity) and the declaration's `U003`
+    (`invarianten_gehalten`).
+  * WHY TABLE INVARIANTS AT `E.sp0` STAY A HYPOTHESIS. (b) did not demand them before, and
+    making them a (b) duty would drop from the statement every program whose declared table
+    invariant is false at its initializer -- programs the old legs covered. As a hypothesis of
+    the leg nothing is dropped; for a concrete unit it is decidable. (Measured on the corpus:
+    `beispiele/09`'s invariant WAS false at its zeroed table, and at its own writer's return --
+    repaired with `N496`, see below.)
+  * WHAT CARRIES THE PROOF (Zielsatz/Invarianten.lean): a step changes a carrier only if its
+    head function may write it (`schritt_traeger`), so outside every writer nothing moves the
+    invariant; the step that ends the last writer frame is a POP -- every step appends at most
+    one call-log event (`schritt_logArt`, over the 70 rules) and the log determines the key
+    stack (`rufLogPasstG_eind`, `schritt_schluessel`), so the popped writer's return is logged
+    and `invRueck`/`invGrund` give the invariant at the memory the step leaves -- or the thread
+    FINISHES at the writer's return (`StartEndeG`, `fertig_retKopf`). The lock legs are
+    exclusivity (`exklusivG`), the rely (`relyG`), the guard of every access (`zugriff_haelt`)
+    and `sperrInv` at the machines before and after the move.
+  * OFFEN O11 (an invariant no function `maintains` was booked by nothing) is CLOSED on both
+    sides. Model: every function that writes a carrier owes the invariant at its returns
+    (`schuldet`, `InvGutS`/`InvGutGrund` in `LogikPflicht`), and one no function writes is
+    carried by the frame (`inv_ohne_schreiber`). Rust: `N496` refuses a function whose effects
+    write, publish or consume a carrier of a `table`/`group` invariant without naming it in
+    `maintains`.
+  * WITNESSES (Zielsatz/InvariantenZeuge.lean, on the two-writer program `mP` of
+    MehrfadenZeuge.lean): the lock invariant `konto[0] == konto[1]` is BROKEN at a reached
+    machine inside thread 0's section (`konto = [30, 0]`), where no step of thread 1 can touch
+    `konto`; after the release, thread 1's acquire starts from `konto[0] == konto[1]` BY THE
+    LEG; the table invariant `privA[0] == privA[1]` is BROKEN inside `hauptA` and holds, BY THE
+    LEG, at thread 1's entry of `setze` once thread 0 is finished; and the refusal side of O11
+    is `beispiele/gift/1231`-`1234`.
+  * WHAT STAYS NAMED (NOT CLAIMED below): an invariant reading carriers outside `D.traeger`;
+    a table invariant false at the start; any invariant at a point where an unfinished thread
+    is inside one of its writers (it may be broken there, by design); and every certified
+    program has NO table invariant (the exporter writes `Inv := Empty`), so for them
+    `invRuhe`/`invSicht` are vacuous and the contentful new legs are the lock legs.
+  -- END invariant block --
 
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT A, OFFEN O21/O22), AND WHY -- a REVIEWED DIFF of this
   file (the review itself: messung/OPUS-A-LAUFZEITFAEDEN.md):
@@ -558,6 +656,16 @@
   * `sperrInv` (`SperrInvG`) -- NEW: every lock no thread holds has its invariant IN SHARED
     MEMORY at every reached machine. (b) only checks the invariant at each release of one
     body; the global cross-thread fact is the theorem's.
+  * `invRuhe` (`InvRuheG`), `invSicht` (`InvSichtG`) -- NEW (Opus agent D): (b) checks a table
+    invariant at the returns of each body only; the theorem's is that it holds in shared
+    memory wherever no unfinished thread is inside a writer of it, and at every point of a
+    thread that holds one of its guards outside every writer.
+  * `sperrWechsel` (`SperrWechselG`), `sperrSicht` (`SperrSichtG`) -- NEW (Opus agent D): (b)
+    assumes the invariant at each acquire (`HavocOk`) and checks it at each release of ONE
+    body; the theorem's is that every acquire in the interleaved machine really starts from it,
+    every release really leaves it, and no thread but the holder touches a protected carrier
+    while the lock is held. With `sperrInv` that is the lock invariant everywhere it can be
+    observed.
   * `keineVerklemmung`, `keinZyklus`, `fortschritt` -- NOT in (b): no global deadlock, and
     (since 2026-09-15, F2) no wait CYCLE among any threads, both from lock ranks; and G
     never stops silently: every thread is finished, waits for a lock, waits for a
@@ -645,6 +753,12 @@
     `AtomarAusgenommen` InterferenzAllgemein:609.
   * `VertragAmOrtG` ZielOrt:67 -- requires at every logged entry, ensures at every logged return.
   * `SperrInvG` SperreMaschine:424 -- every lock no thread holds has its invariant in memory.
+  * (invariant block) `InvTraeger`, `InvZu`, `InvRuheG`, `InvSichtG`, `SperrWechselG`,
+    `SperrSichtG` (here) -- over `InvHaelt`/`schuldet` (ZielOrtInv, Semantik), `FertigG`
+    (Verklemmung), `ZugriffG`/`TraegerGleich` (RennfreiVoll, ZielOrt) / an `InvZu` that
+    ignored a running writer would claim an invariant the writer is breaking; an `InvZu`
+    that asked finished threads too would make `invRuhe` vacuous for every invariant a start
+    function writes; a `SperrSichtG` over steps not taken from `M` would say nothing.
   * `InvAmOrtG` ZielOrtInv:66; `StartEndeG` ZielOrtStart:70 (`RetKopf` :59); `KeinStartGrundG`
     :191; `KeinLogikHaltG`/`PrueftG` ZielOrtGanz:658/622 -- no thread stuck at a loop invariant
     or transition test. `FertigG`/`WartetG`/`AnSperre` Verklemmung:746/751/652.
@@ -671,7 +785,10 @@
   `WartetF`, `KeinWarteZyklusF`, `FortschrittF`, `ZielF` and the thread machine (threads
   created at run time, Opus agent A 2026-09-26; legs proved in Zielsatz/Faeden.lean);
   `SchwachSC` and the leg `schwach` (the weak machine takes only G's steps, Opus agent B
-  2026-09-26, proved in Speichermodell/DRF.lean).
+  2026-09-26, proved in Speichermodell/DRF.lean); `InvTraeger`, `InvZu`, `InvRuheG`,
+  `InvSichtG`, `SperrWechselG`, `SperrSichtG`, the legs `invRuhe`, `invSicht`, `sperrWechsel`,
+  `sperrSicht` and `ZielF.spawnSicht` (invariants beyond the returns, Opus agent D
+  2026-09-26, proved in Zielsatz/Invarianten.lean).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -710,8 +827,16 @@
   races; `schwach` covers their values); the publish/await hand-off of an unguarded payload (refused by the checker,
   see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
-  hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
-  locks are held (claimed at returns only); WHICH threads are interrupt handlers and which
+  hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; (Opus agent D,
+  2026-09-26: the line "invariants at entry or while locks are held (claimed at returns only)"
+  is REPLACED -- what is now claimed is `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`
+  and `spawnSicht`, see the invariant block above) a table/group invariant at a point where an
+  unfinished thread is inside a function that writes one of its carriers (it may be broken
+  there by design; a writer's callee sees what the writer's `requires` to it says), one that is
+  false in the start memory (the start is the legs' hypothesis, not a (b) duty), and one whose
+  predicate reads carriers outside its declared `traeger` (`InvTraeger`); a lock invariant
+  INSIDE its holder's section (the holder may break it; claimed is that no other thread
+  observes the protected carriers there, and that every acquire and release sees it); WHICH threads are interrupt handlers and which
   core they share -- the `entry … via idt` dispatch fact is not in `Einheit` and G has no
   cores, so `keinKernHalt` takes them (and the masking discipline `H102` checks) as its own
   hypotheses instead of reading them from (a)/(d), and the emitted C realises no masking at
@@ -1165,7 +1290,70 @@ def SchwachSC (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschine
     RufSchrittW P O passes ord W u W' → RufSchrittG P O passes M u W'.g
 -- END weak-memory definition --
 
-/-- **THE GOAL at a reached machine `M` of a run from `M0`**: the four legs, nothing else. -/
+-- BEGIN invariant definitions (Opus agent D, 2026-09-26) --
+/-- **The table/group invariant `i` reads only its declared carriers**: every carrier its
+    predicate reads is one of `D.traeger i`. (`invSicht` only asks that a read carrier's GUARDS
+    be among those of the declared carriers; a predicate reading another table under the same
+    lock, or an unguarded table, reads carriers that functions NOT owing `i` may write.) -/
+def InvTraeger (P : Programm D) (i : D.Inv) : Prop :=
+  ∀ c ∈ (P.invariante i).orte, ∃ t ∈ D.traeger i, c = Sum.inl t
+
+/-- **The invariant `i` is CLOSED at `M`**: no unfinished thread has a frame -- the head or a
+    suspended caller -- of a function that owes `i` (`schuldet`: its effects write a carrier of
+    `i`). A finished thread (empty stack, head at its return) is not asked: it moves nothing
+    any more, and its start function's owed invariants hold where it stopped (`StartEndeG`). -/
+def InvZu (M : RufMaschineG D) (i : D.Inv) : Prop :=
+  ∀ t, ¬ FertigG M t → ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, schuldet F.f i = false
+
+/-- **Table and group invariants wherever no writer is running** (Opus agent D, 2026-09-26).
+    Every invariant that reads only its carriers and held in the start memory holds in the
+    shared memory of `M` whenever it is CLOSED there (`InvZu`). In particular at every function
+    ENTRY reached while no unfinished thread is inside a writer of it, and at every machine of
+    a program none of whose running functions writes it. The start memory is the leg's own
+    hypothesis: (b) does not demand table invariants at `E.sp0`, and demanding them would drop
+    programs the statement covered before. -/
+def InvRuheG (P : Programm D) (M0 M : RufMaschineG D) : Prop :=
+  ∀ i ∈ D.invs, InvTraeger P i → InvHaelt P i (M0.speicher.welt []) → InvZu M i →
+    InvHaelt P i (M.speicher.welt [])
+
+/-- **What a thread holding an invariant's guard observes** (Opus agent D, 2026-09-26): a
+    thread `t` that holds a guard lock of a carrier of `i` and has no frame inside a writer of
+    `i` sees `i` intact in shared memory -- whatever the other threads do. -/
+def InvSichtG (P : Programm D) (M0 M : RufMaschineG D) : Prop :=
+  ∀ i ∈ D.invs, InvTraeger P i → InvHaelt P i (M0.speicher.welt []) → ∀ t,
+    (∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, schuldet F.f i = false) →
+    (∃ tb ∈ D.traeger i, ∃ L, Sum.inl L ∈ D.braucht tb ∧ L ∈ offen (M.faeden t).spur) →
+    InvHaelt P i (M.speicher.welt [])
+
+/-- **Lock invariants at every lock move** (Opus agent D, 2026-09-26): every step from `M` that
+    ACQUIRES `L` starts from a memory where `L`'s invariant holds and leaves one where it holds
+    (the section begins with the invariant); every step that RELEASES `L` leaves a memory where
+    it holds. -/
+def SperrWechselG (P : Programm D) (O : Orakel D) (passes : Nat) (S : SperrInv D)
+    (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D) (L : D.Lock), RufSchrittG P O passes M u M' →
+    (L ∉ offen (M.faeden u).spur → L ∈ offen (M'.faeden u).spur →
+      S.inv L M.speicher = true ∧ S.inv L M'.speicher = true) ∧
+    (L ∈ offen (M.faeden u).spur → L ∉ offen (M'.faeden u).spur → S.inv L M'.speicher = true)
+
+/-- **A held lock's invariant is observed by its holder alone** (Opus agent D, 2026-09-26).
+    For every step from `M` and every carrier `c` protected by `L`: the step accesses `c` (a
+    recorded read or write, or a change of `c`) only if its thread holds `L`; and while a thread
+    holds `L`, no other thread's step changes `c`. So the holder may break the invariant inside
+    its section, and no other thread can observe that: every observation of `c` lies inside an
+    `L`-section of the observer, which began at an acquire where the invariant held
+    (`SperrWechselG`) and in which only the observer moved `c`. -/
+def SperrSichtG (P : Programm D) (O : Orakel D) (passes : Nat) (S : SperrInv D)
+    (M : RufMaschineG D) : Prop :=
+  ∀ (u : Faden) (M' : RufMaschineG D), RufSchrittG P O passes M u M' →
+    ∀ (L : D.Lock) (c : D.Tab ⊕ D.Glob), c ∈ S.orte L →
+      (ZugriffG M M' u c → L ∈ offen (M.faeden u).spur) ∧
+      (∀ t, t ≠ u → L ∈ offen (M.faeden t).spur → TraegerGleich M'.speicher M.speicher c)
+-- END invariant definitions --
+
+/-- **THE GOAL at a reached machine `M` of a run from `M0`**: the four legs, nothing else.
+    (Since Opus agent D, 2026-09-26, the contract leg names invariants beyond the returns:
+    `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`.) -/
 structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     (M0 M : RufMaschineG D) : Prop where
   -- memory safety (typing and in-range: intrinsic in `Programm D`)
@@ -1179,6 +1367,11 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   sperrInv : SperrInvG S M
   invRueck : InvAmOrtG P M
   invGrund : InvAmGrundG P M
+  -- invariants beyond the returns (Opus agent D, 2026-09-26)
+  invRuhe : InvRuheG P M0 M
+  invSicht : InvSichtG P M0 M
+  sperrWechsel : SperrWechselG P O passes S M
+  sperrSicht : SperrSichtG P O passes S M
   startEnde : StartEndeG P M
   keinStartGrund : KeinStartGrundG M
   keinLogikHalt : KeinLogikHaltG O passes M
@@ -1229,7 +1422,10 @@ def FortschrittF (P : Programm D) (O : Orakel D) (passes : Nat) (K : FadenMaschi
     * `keineVerklemmung` -- if every live unfinished thread waits (for a lock, or for a root),
       every live thread is finished: no global deadlock, join waits included;
     * `keinZyklus` -- no wait cycle through locks AND joins;
-    * `fortschritt` -- every stop is named (`FortschrittF`). -/
+    * `fortschritt` -- every stop is named (`FortschrittF`);
+    * `spawnSicht` (Opus agent D, 2026-09-26) -- a step that makes a dormant slot live leaves
+      the G state alone, and there the spawned thread holds no lock, every free lock has its
+      invariant and every closed table invariant holds: its entry sees the invariants. -/
 structure ZielF (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     (M0 : RufMaschineG D) (K : FadenMaschine D) : Prop where
   g : Ziel P S O passes M0 K.m
@@ -1241,6 +1437,11 @@ structure ZielF (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     ∀ t, K.lebt t = true → FertigG K.m t
   keinZyklus : KeinWarteZyklusF K
   fortschritt : FortschrittF P O passes K
+  -- a spawned thread's entry sees the invariants (Opus agent D, 2026-09-26)
+  spawnSicht : ∀ (K' : FadenMaschine D) (t : Faden), FadenSchritt P O passes K K' →
+    K.lebt t = false → K'.lebt t = true →
+      K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
+        InvRuheG P M0 K'.m
 
 /-- **GABBRO_ZIEL.** Since 2026-09-26 over the THREAD MACHINE: every thread-machine run from the
     runtime's start, with any set `lebt0` of initially live threads -- the others are slots that

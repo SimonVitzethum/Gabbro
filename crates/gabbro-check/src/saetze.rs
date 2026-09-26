@@ -2863,6 +2863,38 @@ pub const M1: &[Satz] = &[
                      (`bkopie_max`, `bkopie_kuerzer_scheitert`)",
     },
     Satz {
+        name: "m1.invariante_gebucht",
+        kennungen: &["N496"],
+        aussage: "Every function with a body whose effects write, publish or consume a \
+                  carrier of a `table` or `group` invariant names that invariant in \
+                  `maintains`; otherwise it is refused (`N496`). The write set is the \
+                  declared `effects` or, without one, the derived hull, so a caller that \
+                  writes the carrier through a callee owes it as well -- the model's \
+                  `schuldet` (Semantik.lean), which `LogikPflicht` holds every writer to at \
+                  its return (`InvGutS`, `InvGutGrund`). An invariant no function writes is \
+                  carried by the frame: nothing moves its carriers, so it holds wherever it \
+                  held at the start (`invRuhe`, Zielsatz/Spec.lean). A `table` with `ops` is \
+                  exempt: its generated mutations carry it (`table.ops.erhaltung`).",
+        vorbehalt: "The rule books the duty; it does not discharge it. A `maintains` line \
+                    is an `E` obligation in the manifest, which the Rust checker does not \
+                    prove -- in the model the user proves it (`InvGutS`). A hand-written \
+                    body touching a `table … ops` carrier is not asked (OFFEN O11, the \
+                    `ops` condition). Names are compared unqualified, per unit, like \
+                    `maintains` itself.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1231` (a table writer \
+                      without `maintains`), `1232` (a group carrier), `1233` (a \
+                      `consumes`), `1234` (a caller writing through its callee). Corpus \
+                      diff measured 2026-09-26 over every `.gab` under `beispiele/` and \
+                      `messung/`: four files fell, `09` and `17` (repaired: `09`'s \
+                      invariant was FALSE and is replaced, `17` now maintains its group \
+                      invariant) and the poisons `66`, `108` (other codes, kept). The \
+                      clean side: `beispiele/09`, `17`, and \
+                      `tests/invarianten_buchung.rs`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`invarianten_buchen`, \
+                     `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Invarianten.lean",
+    },
+    Satz {
         name: "zeichenfolge.orte",
         kennungen: &["N465"],
         aussage: "A bounded string lives where its length is followed: as the \

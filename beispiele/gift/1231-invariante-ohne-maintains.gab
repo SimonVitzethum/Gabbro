@@ -1,0 +1,24 @@
+-- erwartet: N496
+-- **Opus agent D (OFFEN O11) -- a writer of a table invariant's carrier that owes it nowhere.**
+--
+-- `leeren` writes `W` and says nothing about `klein`. Until `N496` the invariant was booked
+-- as `W` (owed by no function) and the file checked clean: the model owes `klein` at every
+-- return of every function that writes `W` (`schuldet`), the source asked nobody. The
+-- write below keeps the invariant, which is exactly why the missing line is the finding:
+-- the duty was not wrong, it was unbooked.
+module gift::invariante_ohne_maintains {
+
+table W count 8 {
+    slot { a : u32 in 0 .. 10, }
+    invariant klein cost O(n) runs offline :
+        forall s in slots of W : W.slots[s].a <= 5;
+}
+
+impl fn leeren(i : index into W)
+    effects { reads W.slots, writes W.slots }
+    costs <= 64 ops
+{
+    W.slots[i].a = 0;
+}
+
+}

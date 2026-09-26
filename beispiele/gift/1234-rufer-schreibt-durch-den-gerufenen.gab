@@ -1,0 +1,32 @@
+-- erwartet: N496
+-- **Opus agent D (OFFEN O11) -- the caller writes through its callee and owes nothing.**
+--
+-- `setzen` maintains `klein`; `aussen` writes `W` only by calling it, and its `effects`
+-- line says so. In the model a function owes an invariant when its frame writes a
+-- carrier (`schuldet`), and a callee's writes are its caller's (`RufPasst.hw`): `aussen`
+-- is inside the region where `klein` may be open until `setzen` returns, and it returns
+-- AFTER that. The duty stands at `aussen` too, and a `maintains` there books it.
+module gift::rufer_schreibt_durch_den_gerufenen {
+
+table W count 8 {
+    slot { a : u32 in 0 .. 10, }
+    invariant klein cost O(n) runs offline :
+        forall s in slots of W : W.slots[s].a <= 5;
+}
+
+impl fn setzen(i : index into W)
+    maintains klein
+    effects { reads W.slots, writes W.slots }
+    costs <= 64 ops
+{
+    W.slots[i].a = 0;
+}
+
+impl fn aussen(i : index into W)
+    effects { reads W.slots, writes W.slots }
+    costs <= 128 ops
+{
+    setzen(i);
+}
+
+}

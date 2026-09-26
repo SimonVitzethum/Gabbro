@@ -62,6 +62,8 @@ README §6 says exactly this; keep it that way.
   - `SpurInv`;
   - `RennfreiBis` (every carrier except atomics);
   - `VertragAmOrtG`, `SperrInvG`, `InvAmOrtG`, `InvAmGrundG`;
+  - (Opus agent D) `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG`: invariants beyond
+    the returns -- wherever no writer runs, at every lock move, and observed by the holder alone;
   - `StartEndeG`, `KeinStartGrundG`, `KeinLogikHaltG`;
   - no deadlock, `KeinWarteZyklus` and (since fix lane F11) `KernHaltG`: no same-core
     interrupt deadlock, under a named core schedule;
@@ -80,7 +82,8 @@ README §6 says exactly this; keep it that way.
 - **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list:
   termination and waiting bounds, stack depth, the C and the hardware, weak memory beyond
   DRF-SC, unguarded publish/await payloads, floats beyond the kernel IEEE model, starvation
-  freedom, invariants at entry, a start declared ONCE running on several threads (a routine
+  freedom, invariants inside a running writer or a held section (claimed everywhere else since
+  Opus agent D: `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`), a start declared ONCE running on several threads (a routine
   declared twice -- a worker pool -- is covered since fix lane F10), and linking of separately
   compiled units. Probabilistic statements and dynamic unbounded structures are out of scope (§3), but
   `Spec.lean` does not name them. Every extension of the goal is reviewed as a diff of
@@ -309,6 +312,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Fix lane F10 | **not reserved** (free range) | example 157; no code, no gift. **`N315` retired** (idle duplicate start, admitted since the goal covers pools) and **gift 976 removed** with it; `LG001` for repeated starts lifted in the exporter |
 | Fix lane F11 | **not reserved** | nothing: no code, no gift, no example (`H102` unchanged; the work is the Lean leg `keinKernHalt`) |
 | Opus lane O25 (2026-09-26) | N481–N485 / 1201–1210 / — | N481–N483 (`namen.sperrprimitiv_ordnung`, OFFEN O26), gifts 1201–1203; no example. N484, N485 and gifts 1204–1210 stay with the O25 wall (the rely, the payload rule) |
+| Opus agent D (invariants) | N496–N500 / 1231–1240 / — | N496, gifts 1231–1234; no example (examples 09 and 17 edited: 09's false invariant replaced, both now `maintain`); N497–N500 and gifts 1235–1240 stay with the invariant work (OFFEN O11's `ops` condition) |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

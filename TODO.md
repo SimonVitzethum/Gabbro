@@ -708,10 +708,22 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
 - [ ] **Starvation freedom (P2 — NOT-CLAIMED #7).** After the data-sheet
   waiting bounds; FIFO lock and fairness window `F` move from
   `Lebendigkeit.lean` into the ONE list first (§3).
-- [ ] **Invariants at entry (P3 — NOT-CLAIMED #8).** Covered in practice
-  by release-side enforcement; only if a program turns up that needs
-  entry-side claims with no release-side equivalent. Cheapest and lowest
-  deliberately.
+- [x] **Invariants at entry and while locks are held (P3 — NOT-CLAIMED #8)** —
+  Opus agent D, 2026-09-26 (`messung/OPUS-D-INVARIANTEN.md`, SATZKARTE §53).
+  Four new legs of `Ziel` (`invRuhe`, `invSicht`, `sperrWechsel`,
+  `sperrSicht`) and `ZielF.spawnSicht`, proved, no premise moved; the NOT
+  CLAIMED line is replaced by what is claimed. OFFEN O11 closed by `N496`
+  (every writer of an invariant carrier maintains it) and
+  `inv_ohne_schreiber`. Witnesses on `mP` (Zielsatz/InvariantenZeuge.lean).
+- [ ] **Table invariants in the exporter (residue of the bullet above).** The
+  exporter writes `Inv := Empty`, so for every certified program the legs
+  `invRuhe`/`invSicht` are vacuous; exporting `table … invariant` (and the
+  `maintains` it now requires, `LG001` today) makes them bite. The start
+  memory stays the legs' hypothesis; for an exported unit it is decidable, so
+  a certificate could discharge it by `decide`.
+- [ ] **`N496` and `table … ops` (OFFEN O11, the `ops` condition).** A
+  hand-written body writing a carrier of a table with `ops` is not asked;
+  decide whether it must `maintain` the invariant too, and measure.
 
 # 5. Simplicity without losing a guarantee  ⟨E⟩
 

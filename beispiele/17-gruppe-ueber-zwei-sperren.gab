@@ -51,6 +51,9 @@ group Zustellung over { Endpunkte, Faeden } {
 
 -- **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.
 impl fn einreihen(e : index into Endpunkte, t : index into Faeden)
+    -- Opus agent D (2026-09-26, `N496`): a writer of a group carrier owes the group's
+    -- invariant. This one keeps it: the endpoint it points at `t` gets `gruende = 1`.
+    maintains wartende_haben_grund
     effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
               locks PUNKTE, locks PLAN }
     costs   <= 40 ops
