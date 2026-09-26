@@ -328,7 +328,7 @@ end Schritte
 section Lauf
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {K : Faden → D.Fn → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {K : Faden → D.Fn → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {lok : D.Tab ⊕ D.Glob → Bool}
 
 /-- The bottom frame runs its start function on every GX run. -/
 theorem wurzelFn_GX {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
@@ -371,15 +371,15 @@ theorem keinStartGrundGX {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D 
     `ensures` and invariants at its completion, and no start frame at a reason. -/
 theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) {fs : List D.Fn} (K : Faden → D.Fn → Bool) (Tg : D.Tab ⊕ D.Glob → Prop)
-    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
     (hTA : ∀ c, Tg c → AtomarAusgenommen c) (hTV : ∀ c, Tg c → VertragsFrei P c)
-    (hTS : ∀ c, Tg c → ∀ f Λ, c ∉ stabilS P S (lokK P K) f Λ)
+    (hTS : ∀ c, Tg c → ∀ f Λ, c ∉ stabilS P S lok f Λ)
     (hTO : ∀ c, Tg c → ∀ L, c ∉ S.orte L)
-    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P (lokK P K) f)) = true)
-    (hFS : ∀ f, FussSX P S (lokK P K) Tg f)
+    (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
+    (hFS : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
     (hK : ∀ f : D.Fn, KoerperGutSA P passes Q S Tg f)
     (hI : ∀ f : D.Fn, InvGutSA P passes Q S Tg f)
     (hIG : ∀ f : D.Fn, InvGutGrundA P passes Q S Tg f) (hStart : StartGut P sp init)
@@ -387,11 +387,11 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     ∀ M : RufMaschineG D, RufErreichbarGX P O passes Tg (RufStartG P sp init) M →
       VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧ InvAmOrtG P M ∧
       Zielsatz.InvAmGrundG P M ∧ StartEndeG P M ∧ KeinStartGrundG M := by
-  have hZ := zielInvSA_erreichbarGX P O passes Q S K Tg sp init hO hRL hQ hlok hS hvoll hAbg
-    hWurzel hTA hTV hTS hTO hFragS hFS hK hStart hsp hex
+  have hZ := zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
+    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex
   intro M hr
-  have hA := ziel_ort_atomar P O passes Q S K Tg sp init hO hRL hQ hlok hS hvoll hAbg hWurzel hTA
-    hTV hTS hTO hFragS hFS hK hStart hsp hex M hr
+  have hA := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel hTA
+    hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr
   refine ⟨hA.1, hA.2.1, hA.2.2, ?_, ?_, ?_, keinStartGrundGX hGrund hr⟩
   · -- the logged value returns
     induction hr with
@@ -400,12 +400,12 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         subst h
         simp [RufStartG] at hev
     | schritt M M' u hr' hs ih =>
-        have hA' := ziel_ort_atomar P O passes Q S K Tg sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
-          hTA hTV hTS hTO hFragS hFS hK hStart hsp hex M hr'
+        have hA' := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
+          hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr'
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S (lokK P K) Tg ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev
@@ -424,12 +424,12 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         subst h
         simp [RufStartG] at hev
     | schritt M M' u hr' hs ih =>
-        have hA' := ziel_ort_atomar P O passes Q S K Tg sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
-          hTA hTV hTS hTO hFragS hFS hK hStart hsp hex M hr'
+        have hA' := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
+          hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr'
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S (lokK P K) Tg ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev

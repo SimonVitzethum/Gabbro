@@ -17,8 +17,8 @@ variable {D : Deklaration}
 /-- **An unguarded footprint carrier outside `Tg` is thread-local** (`getrennt_of_freiA` for
     `FussSX`). -/
 theorem getrennt_of_freiX {P : Programm D} {S : SperrInv D} {K : Faden → D.Fn → Bool}
-    {Tg : D.Tab ⊕ D.Glob → Prop} {f : D.Fn}
-    (hF : FussSX P S (lokK P K) Tg f) {c : D.Tab ⊕ D.Glob} (hc : c ∈ fussOrteG P f)
+    {Tg : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} {lok : D.Tab ⊕ D.Glob → Bool}
+    (hlokK : ∀ c, lok c = true → GetrenntK P K c) (hF : FussSX P S lok Tg f) {c : D.Tab ⊕ D.Glob} (hc : c ∈ fussOrteG P f)
     (hB : ∀ L, ¬ Bewacht c L) (hA : ¬ Tg c) : GetrenntK P K c := by
   have hsig : sigB f c = false := by
     cases h : sigB f c
@@ -28,12 +28,12 @@ theorem getrennt_of_freiX {P : Programm D} {S : SperrInv D} {K : Faden → D.Fn 
   rcases List.mem_append.mp hc with hc | hc
   · rcases hF.1 c hc with h | ⟨L, hL, _⟩ | h
     · rw [hsig, Bool.false_or] at h
-      exact lokK_ok h
+      exact hlokK c h
     · exact absurd hL (hB L)
     · exact absurd h hA
   · have h := hF.2 c hc
     rw [hsig, Bool.false_or] at h
-    exact lokK_ok h
+    exact hlokK c h
 
 
 section Inv
@@ -71,7 +71,7 @@ section Schritt
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {ord : D.Glob → Ordnung}
   {S : SperrInv D} {fs : List D.Fn} {sp : Speicher D}
   {init : Faden → Σ f : D.Fn, Env D (D.params f)} {K : Faden → D.Fn → Bool}
-  {Tg : D.Tab ⊕ D.Glob → Prop}
+  {Tg : D.Tab ⊕ D.Glob → Prop} {lok : D.Tab ⊕ D.Glob → Bool}
 
 /-- **A read of a NON-atomic carrier is the newest message, and it carries G's value.** -/
 theorem liest_neuesteX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ t, AbgK P fs (K t))
@@ -106,7 +106,7 @@ theorem praesentiert_gX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : �
 /-- A write of thread `u` to an unguarded NON-atomic carrier some thread `t` reads: `t` is
     `u` (over a GA-reached machine). -/
 theorem frei_schreiberX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ t, AbgK P fs (K t))
-    (hWurzel : ∀ t, K t (init t).1 = true) (hFuss : ∀ f, FussSX P S (lokK P K) Tg f)
+    (hWurzel : ∀ t, K t (init t).1 = true) (hFuss : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
     {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M)
     {σ : Speicher D} {M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes (mitSpeicher M σ) u M') {c : D.Tab ⊕ D.Glob}
@@ -120,7 +120,7 @@ theorem frei_schreiberX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : �
     (fun t _ => rufM fs (K t)) (fun t => merkAbg_rufM hvoll (hAbg t)) hWurzel hr
   have hK : K u ((mitSpeicher M σ).faeden u).kopf.f = true := (hInv u _ List.mem_cons_self).1
   have hgw := (schritt_zugriffeA hO hOrte hs c).2 hw
-  have := getrennt_of_freiX (hFuss f) hc hB hA t u htu f hf hc _ hK
+  have := getrennt_of_freiX hlokK (hFuss f) hc hB hA t u htu f hf hc _ hK
   rw [this] at hgw
   cases hgw
 
@@ -128,7 +128,7 @@ theorem frei_schreiberX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : �
     invariant.** -/
 theorem schritt_sichtInvX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
-    (hFuss : ∀ f, FussSX P S (lokK P K) Tg f) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
+    (hFuss : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
     (hex : StartExklusiv init) {W W' : RufMaschineW D}
     (hI : SichtInvX (P := P) (O := O) (passes := passes) sp init K Tg W) {u : Faden}
     {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
@@ -168,7 +168,7 @@ theorem schritt_sichtInvX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
   · -- `frei`
     intro c t hB hA ht m hm
     by_cases hw : SchreibG (mitSpeicher W.g σ) M'' u c
-    · have htu := frei_schreiberX hO hvoll hAbg hWurzel hFuss hr hs hB hA hw ht
+    · have htu := frei_schreiberX hO hvoll hAbg hWurzel hFuss hlokK hr hs hB hA hw ht
       subst htu
       rw [h.histS c hw] at hm
       rw [h.sichtS c hw]
@@ -246,7 +246,7 @@ theorem schritt_sichtInvX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
         · obtain ⟨L, hB⟩ := hB
           exact hI.halter c L hB u (haelt c L hB (zugriff_of_schreib hw)).1
         · have hB' : ∀ L, ¬ Bewacht c L := fun L h' => hB ⟨L, h'⟩
-          have htu := frei_schreiberX hO hvoll hAbg hWurzel hFuss hr hs hB' hA hw ht
+          have htu := frei_schreiberX hO hvoll hAbg hWurzel hFuss hlokK hr hs hB' hA hw ht
           subst htu
           exact hI.frei c t hB' hA ht
       rcases List.mem_cons.mp hm with rfl | hm
@@ -261,7 +261,7 @@ theorem schritt_sichtInvX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
 /-- **The invariant on every machine W reaches**, racing atomics included. -/
 theorem sichtInvX_erreichbar (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
-    (hFuss : ∀ f, FussSX P S (lokK P K) Tg f) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
+    (hFuss : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
     (hex : StartExklusiv init) {W : RufMaschineW D}
     (hr : RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W) :
     SichtInvX (P := P) (O := O) (passes := passes) sp init K Tg W := by
@@ -269,7 +269,7 @@ theorem sichtInvX_erreichbar (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
   | start => exact sichtInvX_start sp init K Tg
   | schritt W W' u _ hs ih =>
       obtain ⟨σ, M'', wahl, neu, h⟩ := hs
-      exact (schritt_sichtInvX hO hvoll hAbg hWurzel hFuss hTA hex ih h).2
+      exact (schritt_sichtInvX hO hvoll hAbg hWurzel hFuss hlokK hTA hex ih h).2
 
 /-- **THE DRF THEOREM WITH SHARED ATOMICS, one step.** On a program whose footprints satisfy
     `FussSX` (every carrier local or guarded, or a shared atomic of `Tg`), from every state W reaches:
@@ -278,15 +278,15 @@ theorem sichtInvX_erreichbar (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     thread-local atomics are sequentially consistent, whatever the shared atomics do. -/
 theorem schwach_ist_gX (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
-    (hFuss : ∀ f, FussSX P S (lokK P K) Tg f) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
+    (hFuss : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
     (hex : StartExklusiv init) {W W' : RufMaschineW D}
     (hr : RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W) {u : Faden}
     {σ : Speicher D} {M'' : RufMaschineG D} {wahl : D.Tab ⊕ D.Glob → NachrichtW D}
     {neu : D.Tab ⊕ D.Glob → Nat} (h : SchrittW P O passes ord W u W' σ M'' wahl neu) :
     RufSchrittGX P O passes Tg W.g u W'.g ∧
       ∀ c, ¬ Tg c → TraegerGleich σ W.g.speicher c := by
-  have hI := sichtInvX_erreichbar hO hvoll hAbg hWurzel hFuss hTA hex hr
-  exact ⟨(schritt_sichtInvX hO hvoll hAbg hWurzel hFuss hTA hex hI h).1,
+  have hI := sichtInvX_erreichbar hO hvoll hAbg hWurzel hFuss hlokK hTA hex hr
+  exact ⟨(schritt_sichtInvX hO hvoll hAbg hWurzel hFuss hlokK hTA hex hI h).1,
     praesentiert_gX hO hvoll hAbg hWurzel hI h⟩
 
 
