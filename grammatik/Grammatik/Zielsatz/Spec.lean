@@ -125,6 +125,72 @@
     than the importer's: no link declaration).
   -- END linking block --
 
+  -- BEGIN order block (Opus agent G, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT G: THE FOUR OBLIGATIONS OF OFFEN O1), AND WHY -- a
+  REVIEWED DIFF of this file (the review: messung/OPUS-G-O1.md). NO premise moved; `Ziel` gains
+  ONE leg, `folge`.
+  * THE GAP. OFFEN O1 booked four obligations of the Caprock corpus as unstatable because
+    `programmlogik/Gabbro/Body.lean`'s `exec` is big-step: L24 ("`caller` and `reply_owner` are
+    written in ONE step: never half set"), L34 ("the invariant does NOT hold between the two
+    assignments"), L50 ("`Flush`: the flush completed BEFORE the reply"), L52 ("`Stop`: the
+    reply still goes out BEFORE the service ends"). The diagnosis holds for Body.lean and not
+    for this statement: its runs are machine G's, which is SMALL-STEP (every leaf, unfold, push
+    and pop is one step), its threads carry an access trace (`spur`) and a CALL LOG (`log`,
+    newest first), and every intermediate machine is a reached machine. All four are STATABLE
+    here; what was missing were the predicates and, for L50/L52, the claim.
+  * L24 AND L34 -- the two sides of ONE object, both claimed since Opus agent D, now read so:
+    - L24 read literally ("no third state exists") is FALSE of every program that writes two
+      places in two statements: G has the state in between, and L34 names it. Its CONTENT is
+      observational -- no OTHER thread sees the pair half set -- and that is claimed: `invSicht`
+      (a table/group invariant: a thread outside every writer that holds a guard lock sees it
+      intact) and `sperrSicht` + `sperrWechsel` (a lock invariant: no step of a non-holder
+      touches a protected carrier; every section starts from it, every release restores it).
+    - L34 is an EXISTENCE statement about one program (the region is not empty), not a
+      guarantee; `tabelle_gebrochen` (Zielsatz/InvariantenZeuge.lean) is its shape: two writes
+      of `privA`, the invariant false at a reached machine between them, and open there.
+    - What stays NOT CLAIMED (below): the promises SPRACHE.md §8.3 hangs on the NAME in
+      `breaking I` -- the region is where `I` rests, the block restores `I` at its end. G drops
+      the name when it unfolds the block (`dannBreaking`), so no leg can speak of "inside the
+      region"; restoration is claimed at every RETURN of a writer (`invRueck`, `invGrund`).
+  * L50 AND L52 -- ONE shape, and the new leg `folge : FolgeG P M` (Folge.lean):
+    - THE STATEMENT: for every order specification `Φ` (`vor`, `ruf`, `ende`: sets of
+      functions; `ind`: signatures) the program passes -- `FolgeOk`: in every body, every call
+      of a `ruf` function (directly, or indirectly through a signature in `ind`) and every
+      return of an `ende` function stands DIRECTLY behind a call of a `vor` function, with only
+      leaves and bindings in between; a decidable scan with one bit -- every thread's call log
+      has every entry of a `ruf` function and every return of an `ende` function (except the
+      thread's start entry) DIRECTLY behind a return of a `vor` function (`FolgeLog`), and a
+      finished thread whose start function is an `ende` function ended directly behind one.
+    - L50 is `vor = {request_flush}`, `ruf = {reply4}`: every entry of the reply stands
+      directly behind a logged NORMAL return of the flush -- the flush completed; a reason
+      return (`grund`) does not arm. L52 is `vor = {reply4}`, `ende = {the service}`: the
+      service returns, or its thread ends, directly behind the reply's return.
+    - WHY "DIRECTLY": `flush ∧ reply` -- both happened -- is the weakening
+      messung/GABBROV-V1.md warned of; `folgeLog_nicht_schwach` and the run `folge50_gegen`
+      show the conjunction holding where the order fails.
+    - PREMISE-FREE: the leg holds on every reached machine of every program
+      (`folgeG_erreichbar`, FolgeBeweis.lean), by a thread invariant every rule of G keeps
+      (`folgeInvG_schritt`): no user logic, no hardware assumption. The static premise sits
+      INSIDE the leg (for each `Φ` the program passes), as `InvTraeger` sits inside `invRuhe`.
+  * WHY NOTHING IS WEAKENED. The premises of `GabbroZiel` and `GabbroZielVerbund` are textually
+    unchanged; `Ziel` gains a conjunct and loses none; every earlier leg is proved by the same
+    term (Zielsatz/Beweis.lean), so `gabbro_ziel_g`, `gabbro_ziel_vor`, `gabbro_ziel_verbund`
+    and every certificate still hold, and the old `Ziel` is a projection of the new.
+  * WITNESSES (FolgeZeuge.lean, the sequential fixture `eP`: `haupt` = `setze(); pruefe();
+    return`, `setze` writes `konto[0] := 5`): `folge50_zeuge` (a reached machine whose newest
+    log event is the entry of `pruefe`, directly behind the return of `setze`, whose write is
+    in the entry world; the leg there), `folge52_zeuge` (thread 0 finished in `haupt` directly
+    behind the return of `pruefe`, by the leg), `folge50_gegen` (the calls swapped: the check
+    refuses, and a reached run has both events in its log and not the order).
+  * WHAT STAYS NAMED (NOT CLAIMED below): an order of effects that are not calls of GABBRO
+    functions (an axiom's or a register's effect is not in the call log -- a wrapper function
+    puts it there); an order across a compound statement, an indirect call or a lock block (the
+    check starts every sub-block unarmed and refuses such a `Φ`; it does not weaken); an order
+    "sometime before" (not claimed); and WHICH `Φ` a source program means -- the exporter emits
+    no order specification, so for a certified program the leg holds for every `Φ` the Lean
+    program passes, and naming the one the obligation means is the reader's step.
+  -- END order block --
+
   -- BEGIN invariant block (Opus agent D, 2026-09-26) --
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT D: INVARIANTS BEYOND THE RETURNS, OFFEN O11), AND WHY
   -- a REVIEWED DIFF of this file (the review: messung/OPUS-D-INVARIANTEN.md). NO premise
@@ -821,6 +887,11 @@
     `BereichG` Fortschritt.lean -- the float range checks pass at every head (proof side,
     not in `Ziel`: `FortschrittG` lists no float stop, so it follows from `fortschritt`).
   * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
+  * (order block) `Folge`, `fS`/`fB`/`fE`/`fNach`, `GRest.fR`, `FolgeOk`, `Armiert`, `Pflichtig`,
+    `FolgeLog`, `FolgeG` Folge.lean -- the order leg over the call log (`RufEreignisF`,
+    RufMaschineF) / a check that let a `ruf` call through unarmed would claim an order the run
+    lacks; a `FolgeLog` that looked past the DIRECT predecessor would be the conjunction the
+    obligation forbids.
   * (weak-memory hunk) `RufMaschineW`, `RufStartW`, `SchrittW`, `RufSchrittW`, `RufErreichbarW`,
     `ordVon`, `vorSicht`, `lesenVon`/`genommenVon`/`gegebenVon` Speichermodell/MaschineW.lean;
     `Nachricht`, `Sicht`, `Ordnung`, `beitrag`, `nachricht`, `Lesbar`, `Frisch`
@@ -844,7 +915,8 @@
   2026-09-26, proved in Speichermodell/DRF.lean); `InvTraeger`, `InvZu`, `InvRuheG`,
   `InvSichtG`, `SperrWechselG`, `SperrSichtG`, the legs `invRuhe`, `invSicht`, `sperrWechsel`,
   `sperrSicht` and `ZielF.spawnSicht` (invariants beyond the returns, Opus agent D
-  2026-09-26, proved in Zielsatz/Invarianten.lean).
+  2026-09-26, proved in Zielsatz/Invarianten.lean); the leg `folge` (the order of effects in the call log,
+  Opus agent G 2026-09-26, OFFEN O1; definitions in Folge.lean, proved in FolgeBeweis.lean).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -896,7 +968,13 @@
   core they share -- the `entry … via idt` dispatch fact is not in `Einheit` and G has no
   cores, so `keinKernHalt` takes them (and the masking discipline `H102` checks) as its own
   hypotheses instead of reading them from (a)/(d), and the emitted C realises no masking at
-  all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; a busy routine declared ONCE on several threads
+  all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; (order hunk, Opus agent G, 2026-09-26: OFFEN O1's L50/L52 are claimed by
+  the leg `folge`, see the order block above) an order of effects that are not calls of Gabbro
+  functions (axiom and register effects are not in the call log), an order across a compound
+  statement, an indirect call or a lock block (`FolgeOk` refuses that `Φ`), an order
+  "sometime before", and the promises of `breaking I` about its NAME -- that the region is
+  where `I` rests and that the block restores `I` (G unfolds the block without the name;
+  restoration is claimed at every writer's return) -- OFFEN O1; a busy routine declared ONCE on several threads
   (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
   and the checker admits that only pool-safe, `EinzelnPool`); (linking hunk, 2026-09-26: the line
   "linking of separately compiled units" is REPLACED -- what is now claimed is
@@ -950,6 +1028,7 @@ import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
 import Grammatik.Speichermodell.MaschineW
 import Grammatik.FadenMaschine
+import Grammatik.Folge
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -1423,6 +1502,8 @@ def SperrSichtG (P : Programm D) (O : Orakel D) (passes : Nat) (S : SperrInv D)
 -- END invariant definitions --
 
 /-- **THE GOAL at a reached machine `M` of a run from `M0`**: the four legs, nothing else.
+    (Since Opus agent G, 2026-09-26, a fifth group: the order of effects in the call log,
+    `folge`, OFFEN O1.)
     (Since Opus agent D, 2026-09-26, the contract leg names invariants beyond the returns:
     `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`.) -/
 structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
@@ -1453,6 +1534,8 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   fortschritt : FortschrittG P O passes M
   -- time
   zeit : ZeitAb P O passes M
+  -- the order of effects (Opus agent G, 2026-09-26, OFFEN O1: L50, L52)
+  folge : FolgeG P M
 
 /-! ## Threads created at run time (2026-09-26, OFFEN O21/O22) -/
 
