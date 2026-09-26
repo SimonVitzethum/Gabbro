@@ -664,7 +664,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   check over composed hulls (`schnittstelleB`), each user's duty over the bodies it owns, the
   SAME hardware assumptions -> `ZielF` on the linked program. Rust: `gabbro link`,
   `N501`-`N505`. What stays open is OFFEN O28: the review round of the Spec diff, the
-  composed-hull race check in Rust (threads on both sides are refused today), multi-file
+  composed-hull race check in Rust (threads on both sides are refused today; review E F1: a
+  pair with threads on ONE side and a read behind an imported head links green -- a known
+  false accept of `gabbro link`), multi-file
   units and `gabbro build`, the C-level link step (the §2 item below).
 - [x] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
   checker accepts pools since lane 245; the goal theorem does not cover
@@ -713,7 +715,7 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   waiting bounds; FIFO lock and fairness window `F` move from
   `Lebendigkeit.lean` into the ONE list first (§3).
 - [x] **Invariants at entry and while locks are held (P3 — NOT-CLAIMED #8)** —
-  Opus agent D, 2026-09-26 (`messung/OPUS-D-INVARIANTEN.md`, SATZKARTE §54).
+  Opus agent D, 2026-09-26 (`messung/OPUS-D-INVARIANTEN.md`, SATZKARTE §53).
   Four new legs of `Ziel` (`invRuhe`, `invSicht`, `sperrWechsel`,
   `sperrSicht`) and `ZielF.spawnSicht`, proved, no premise moved; the NOT
   CLAIMED line is replaced by what is claimed. OFFEN O11 closed by `N496`

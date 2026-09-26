@@ -35,6 +35,12 @@
 //! * **Threads on both sides.** Refused (`N503`) rather than checked: the per-unit passes see
 //!   one side's threads each, and the composed-hull check of `SchnittstelleSpec` is not
 //!   ported to Rust.
+//! * **Reads behind an imported head (review E, F1 -- a KNOWN FALSE ACCEPT).** With threads
+//!   in ONE unit only, the importer's race check (`N291`/`N301`) sees an imported head's
+//!   WRITES but not its READS. A library `lies` that reads an unguarded table, called on one
+//!   app thread while another app thread writes the table, links with 0 refusals -- the Rust
+//!   twin of the Lean refusal witness `vm_abgelehnt`. So a green link here does NOT establish
+//!   `SchnittstelleSpec` (`lok`/`renn`); OFFEN O28.
 //! * **Multi-file units, and `gabbro build`.** A unit is one file here (plus `--with`
 //!   preambles on the importer side); the manifest build does not call this check yet.
 //! * **The C link step** -- symbol resolution, calling convention, layout: translation

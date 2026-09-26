@@ -498,7 +498,7 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 > * **Model**: every writer owes the invariant at its returns (`InvGutS`/`InvGutGrund` in
 >   `LogikPflicht`), an invariant no function writes is carried by the frame
 >   (`inv_ohne_schreiber`), and the goal theorem's new leg `invRuhe` says it holds wherever no
->   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §54).
+>   unfinished thread is inside a writer (Zielsatz/Invarianten.lean, SATZKARTE §53).
 >
 > **Still open under this heading: the `ops` condition** (last paragraph below). A `table …
 > ops` stays exempt from `N496`, carried by the generated mutations; a hand-written body
@@ -1138,7 +1138,7 @@ bodies. Report: `messung/OPUS-E-LINKEN.md`.
 | | |
 |---|---|
 | **review** | the Spec diff (a second statement, purely additive) has had no independent review round yet |
-| **Rust vs Lean, the race legs** | Lean decides thread-locality, write separation and pool safety over the COMPOSED hulls (`schnittstelleB`); Rust refuses a pair in which BOTH units start threads (`N503`) instead of porting that check |
+| **Rust vs Lean, the race legs** | Lean decides thread-locality, write separation and pool safety over the COMPOSED hulls (`schnittstelleB`); Rust refuses a pair in which BOTH units start threads (`N503`) instead of porting that check. **That is not enough (review E, F1):** with threads in ONE unit, a read hidden behind an imported head is not in the importer's footprint, so a racing pair (the Rust twin of `vm_abgelehnt`) links with 0 refusals -- a green `gabbro link` does not establish `SchnittstelleSpec`. Fix: port `lok`/`renn` over the heads' `effects` reads, or refuse such a pair |
 | **contracts as text** | Rust compares `requires`/`ensures`/`effects` as normalised text; Lean has ONE contract per function (`Verbindbar`), so a weaker-but-sound import is refused on both sides (no refinement of contracts across the boundary) |
 | **units and the build** | a unit is one file (plus `--with` preambles); `gabbro build` does not call the link check; no certificate for a PAIR (the exporter exports one `Einheit`) |
 | **the C link step** | symbol resolution, calling convention, layout -- the linked C refining the linked G program is translation validation's (TODO §2, "The linking theorem") |

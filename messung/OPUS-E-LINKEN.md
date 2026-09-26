@@ -33,7 +33,8 @@ GabbroZielVerbund :=
 ```
 
 - **Model.** Both units are `Einheit D` over ONE link declaration `D` (the union of their
-  declarations — what `gabbro abi`/`--with` builds). `e` says who owns a function. A unit's
+  declarations; `gabbro abi`/`--with` give the importer only its exported part — review E,
+  F2). `e` says who owns a function. A unit's
   program holds its own bodies and LEAF placeholders for the other unit's functions
   (`Platzhalter`: the `extern fn` head, calling nothing). `Verbindbar`: the two units agree on
   every `requires`/`ensures`, table invariant, lock invariant and the initial memory — the
@@ -123,6 +124,13 @@ exported program changed; `zertifikate.rs` unaffected.
 - No independent review round of the Spec diff yet.
 - Rust does not port the composed-hull race check: a pair with threads on BOTH sides is
   refused (`N503`), not checked. Contracts compared as normalised text.
+  **Review E (F1): refusing two-sided threads is NOT enough.** With threads in ONE unit, a
+  READ hidden behind an imported head never enters the importer's footprint (its race check
+  reads the head's writes, not its reads), so the Rust twin of `vm_abgelehnt` -- library
+  `lies` reads the unguarded `konto`, the app runs it on one thread and writes `konto` on
+  another -- links with 0 refusals, while the same program in one file falls with
+  `N291`/`N301`. A green `gabbro link` does not establish `SchnittstelleSpec`
+  (`messung/URTEIL-SPECDIFF-OPUS-E-2026-09-26.md`).
 - Units are single files (plus `--with`); `gabbro build` does not call the link check; no
   certificate for a pair.
 - The C-level link step (linked C refines linked G) — TODO §2 "The linking theorem".

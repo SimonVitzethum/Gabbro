@@ -910,7 +910,10 @@
   (the linked unit is fixed before the start); ABI-level linking of foreign C (an `extern fn`
   no Gabbro unit supplies stays an axiom of (c)); the C-level link step itself (symbol
   resolution, calling convention, record layout -- translation validation's, like every "G
-  is the meaning of the C"); for threads SPAWNED at run time (claimed since 2026-09-26, see
+  is the meaning of the C"); and the RUST side of premise (a): `gabbro link` does
+  not decide `SchnittstelleSpec` -- a READ behind an imported head is invisible to the
+  importer's own race check, so a pair whose link check fails can link green in Rust (review
+  E, F1, messung/URTEIL-SPECDIFF-OPUS-E-2026-09-26.md; OFFEN O28); for threads SPAWNED at run time (claimed since 2026-09-26, see
   (d) above): a root whose ARGUMENTS differ per spawn (a `child` region reading its handed
   values -- the model fixes one argument list per slot), a root `requires` that holds only at
   the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn
@@ -1567,8 +1570,9 @@ def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
   if e f then E₁.P else E₂.P
 
 /-- **One link declaration** for both units: the two units are checked over ONE `Deklaration`
-    (the union of their declarations -- what `gabbro abi` / `--with` builds: types, carriers,
-    locks, signatures with their effects, axioms), and they agree on everything that is not a
+    (the union of their declarations: types, carriers, locks, signatures with their effects,
+    axioms; `gabbro abi` / `--with` hand the importer only the EXPORTED part of it, and each
+    Rust unit is checked over its own view, not over the union -- review E, F2), and they agree on everything that is not a
     body: every function's `requires`/`ensures` (so the importer relies on EXACTLY the
     exporter's contract; the Rust `N501`-`N503` refuse a head that differs), every table
     invariant, the lock invariants and the declared initial memory. The hardware assumptions
