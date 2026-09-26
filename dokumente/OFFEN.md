@@ -988,3 +988,18 @@ open:
 | **max-bound over-approximation** | `+` and copies compare maxes; `bconcat_max_summe`/`bkopie_max` prove this sound, not complete -- a copy whose actual length would fit is refused |
 | **what would close it** | the lowering lane (representation, limit, literals) with a Lean statement tying the emitted buffer to `BString` |
 
+## O25 — 176 accepted corpus programs have no Lean judgement: the exporter refuses them (recorded 2026-09-26, Opus agent C)
+
+A green `lake build` covers a program only through its certificate
+(`grammatik/Grammatik/Zertifikat/`, SATZKARTE §50). Every accepted program the exporter refuses
+stands, by name and first refusal, in `Zertifikat/REGISTER.txt`, which `Spec.lean` cites as NOT
+CLAIMED; the cargo test `zertifikate` keeps the register complete.
+
+| | |
+|---|---|
+| **measured** | 199 accepted (129 corpus + 70 gift clean sides), 23 CERTIFIED, 176 UNCERTIFIED; of the 129 corpus programs 18 certified |
+| **by first code** | `LG001` 116, `LG002` 36, `LG004` 13, `LG005` 6, `LG003` 3, `LG006` 2 |
+| **why it is not one fix** | 114 of the 176 meet two or more refusal shapes (measured with a throwaway continue-on-refusal build); lifting `extern fn` alone gained 0 programs |
+| **model decisions it needs** | an `Endblock` form for a tail `let` of a call and for `return` under `locks` (110, 125); records, wrapping integers, named assumptions outside `forever`/`retires`, devices, atomics (Opus B), pointers into records |
+| **what would close it** | per-shape lanes, each measured by the register's CERTIFIED count |
+

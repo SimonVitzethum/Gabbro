@@ -67,7 +67,7 @@ new paragraph "WHAT A GREEN BUILD COVERS" cites the registry that lists all 177 
 | **R4** | The `.gab → Einheit` step (exporter, `lean_g.rs`) is unverified; it drops forms by name | every certificate carries its "NO FORM in G" ledger | **not closable here** (it is translation validation's stage (a)); made per-program visible | Spec NOT CLAIMED, "The `.gab` -> `Einheit` step" (sharpened) |
 | **R5** | "Machine G is the meaning of the emitted C" is an assumption of the reading | chain closed for **2 of 129**; generic Lean parse (sieve a) passes **2 of 129** (98 stop at elaboration, 29 at parsing) | not closable here (PLAN-UEBERSETZUNGSVALIDIERUNG); the registry prints the chain state per program | Spec, "assumptions of the reading" + registry column `chain` |
 | **R6** | Emitted C forms without semantics | 82 forms: **51 lemma** (2616 occ.), **4 named assumption** (206), **27 without semantics** (615), **1 unclassified statement** (`140-atomic-array-counter`, a CAS call split over two lines) — `pruefe-cformen.py` RED on master | the unclassified statement: **closed** (classifier row); the 27 uncovered forms: named (they are in the dated `KNOWN_UNCOVERED` list) | Spec NOT CLAIMED "the C and the hardware" (unchanged) |
-| **R7** | Hand-written Lean terms of programs, not pinned to the exporter | `Korpus07`, `Korpus125` (exporter refuses the program), `Korpus59`, `Korpus109`, `Korpus124` (exporter accepts it — a second, unpinned model) | for 59/109/124 **superseded**: the generated certificate now judges the exporter's own term; the hand terms stay as proofs of (b) on their own model. 07/125: named as hand terms in the registry | registry `HAND` column |
+| **R7** | Hand-written Lean terms of programs, not pinned to the exporter | `Korpus07`, `Korpus125` (exporter refuses the program), `Korpus59`, `Korpus109`, `Korpus124` (exporter accepts it — a second, unpinned model) | for 59/109/124 **superseded**: the generated certificate now judges the exporter's own term; the hand terms stay as proofs of (b) on their own model. 07/125: UNCERTIFIED in the register, which names the hand terms in its header | register header, Spec "WHAT A GREEN BUILD COVERS" |
 | **R8** | Guardians that are the only thing standing, and none of them in `cargo test` | `pruefe-genlean.py` (byte pin of generated files), `pruefe-exportlean.py` (elaboration of every export), `pruefe-akzeptiert-diff.py` (Rust accept ⇒ Lean accept on exports), `pruefe-cformen.py`, `zaehle-kette.py` — all run by `abnahme.py`, none by `cargo test` | the pin and the elaboration of the certificates are now in `cargo test` (byte identity) and in `lake build` (elaboration and `decide`); `pruefe-akzeptiert-diff.py`'s question is now answered by the build for every exported program | — |
 | **R9** | Declared `costs`, deadlines, `arch`, `reads` and every other "NO FORM" annotation are not in `Deklaration` | per program, in the certificate header | not closable here | Spec NOT CLAIMED (already: `costs`; sharpened: every form of the per-certificate ledger) |
 | **R10** | `NutzerPflicht` (the user's logic) is proved for few corpus programs | 104, 108 (`Pflicht104/108`), 07, 59, 109, 124, 125 (hand) | not a language gap — the user's part by the goal's own wording; the certificate states it as the open hypothesis `hN` | Spec (b) |
@@ -89,10 +89,59 @@ new paragraph "WHAT A GREEN BUILD COVERS" cites the registry that lists all 177 
   certificate, a registry row for a program that now exports, an umbrella that misses a module.
   `GABBRO_ZERTIFIKATE=schreiben cargo test --test zertifikate` rewrites them.
 
-## 4. What the Spec now says (section 5 has the diff)
+## 4. Measuring ALL refusals, not the first (why the register does not shrink in bulk)
 
-See section 5.
+The exporter stops at its first refusal, so section 1.1 counts one code per program. A
+throwaway build that continues past refusals at the item and function level (collected, then
+reverted; `.tmp/alle.py`, not committed) lists the refusal SHAPES per program — a lower bound,
+since later stages (locks, `sp0`, starts, emission) did not run on a partial model:
+
+| shapes per program | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 9 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| UNCERTIFIED programs | 62 | 57 | 31 | 16 | 4 | 4 | 2 | 1 |
+
+Most frequent shapes (programs): `function X is not impl` 37 (`extern`, `library`, `raw`,
+`const`, `spec`), `assume` 24, a pointer naming no table 20, `device` 19, address spaces 19, a
+declaration without a table 19, `atomic` 17, non-scalar `static` 15, table invariants/`ops` 14,
+`format` 11. Experiment: skipping every `extern fn` (the axiom export G supports) gained **0**
+programs — each of the six met another shape next. The two shapes with a single-program yield
+that are not exporter rules but MODEL decisions: a tail `let` of a call (110) and `return` under
+`locks` (125) need an `Endblock` constructor G does not have (`Endblock` has `bind` of an
+expression only), so a faithful export needs a change of `Syntax.lean`, not of `lean_g.rs`.
+
+What WAS cheap and faithful: constants. The exporter refused every `const` with an expression
+initializer and every body naming a const, although its own ledger promised "inlined at every
+use". It now takes the checker's folder (`Umgebung::konst_wert`, which the emitter's `#define`s
+come from) and treats `const fn` as comptime. Gain: `beispiele/93` certified; `beispiele/11`
+moved to its next shape (an atomic).
 
 ## 5. After this lane
 
-*(filled in at the end of the lane — see below)*
+| | before (base `a346748f`) | after |
+|---|---:|---:|
+| accepted programs (corpus + gift clean sides) | 199 | 199 |
+| exported | 22 | 23 |
+| Lean Bool decided on the EXPORTED unit, in `lake build` | 2 | **23** |
+| goal theorem instantiated on the exported unit | 2 (`gabbro_ziel_g`, G runs) | **23**, each with `gP_gabbro_f` = `GabbroZiel` on the thread machine, and `gP_gabbro` |
+| accepted programs neither certified nor NAMED | 177 (silent) | **0** — 176 named in `REGISTER.txt`, a cargo test fails otherwise |
+| top-level corpus: certified / 129 | 2 | 18 |
+| chain CLOSED (`zaehle-kette.py --lean`) | 2 of 129 | 2 of 129 (unchanged, named per program in the register) |
+| `pruefe-cformen.py` | RED (1 unclassified) | GREEN (0 unclassified; 51 lemma / 4 assumption / 27 uncovered forms) |
+| `pruefe-genlean.py` | 2 of 2 | 23 of 23 byte-identical |
+
+**Spec diff (AGENTS §2).** Header only: a new paragraph "WHAT A GREEN BUILD COVERS" and one
+sentence at the end of NOT CLAIMED citing the register. Premises before = after: (a)
+`C.akzeptiert E fs ls cs = true`, (b) `NutzerPflicht E`, (c) `HardwareAnnahmen O E.Q`, (d)
+`Laufzeit E sp init`, conclusion `ZielF` on every reachable thread machine — no definition in
+`Spec.lean` changed. Newly NAMED as not claimed: every UNCERTIFIED program of the register; for a
+certified program, the exporter's faithfulness and every form in its "NO FORM in G" ledger
+(`costs`, `reads`, deadlines, hold budgets, traverse annotations, `by ops`, `mut`,
+`pub`/`opaque`, `const fn`, the hardware around `entry`/`boot`); "G is the meaning of the C"
+per program where the register says `chain=none`; the Rust checker's codes as premises of
+anything.
+
+**Axioms.** `#print axioms gabbro_ziel`: `propext`, `Classical.choice`, `Quot.sound` (unchanged;
+this lane adds no theorem to the goal's proof). The certificates use `decide`, no `sorry`,
+`admit`, `axiom` or `native_decide` (checked per file by the cargo test). Witness: every
+certificate's `gCheck` is a concrete, non-degenerate accepted program (23 of them, with starts,
+locks, invariants, pools and tagged values among them).

@@ -24,6 +24,47 @@
   `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
   finite declarations only).
 
+  WHAT A GREEN BUILD COVERS (OPUS AGENT C, 2026-09-26; messung/OPUS-C-TRAGWEITE.md). A header
+  paragraph only: NO definition of this file changed, no premise moved, `Ziel`/`ZielF` are as
+  before. It says, per REAL program, what a green `lake build` of `grammatik/` establishes, so
+  that "Lean green => the language carries everything except what this header names" holds
+  by construction and not by reading:
+  * THE ONE LIST is `Grammatik/Zertifikat/REGISTER.txt`: every `.gab` under `beispiele/` (top
+    level and `gift/`) the checker accepts, each either CERTIFIED or UNCERTIFIED. The cargo test
+    `crates/gabbro-check/tests/zertifikate.rs` recomputes it from the tree and fails on any
+    byte of difference, so an accepted program outside both lines, a stale certificate or a
+    stale row turns `cargo test` RED. Measured 2026-09-26: 199 accepted, 23 CERTIFIED, 176
+    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified).
+  * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
+    imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
+    decides (a) for it IN LEAN (`gCheck : akzeptiert_pruefer.akzeptiert gE … = true := by
+    decide`) and states this theorem on it (`gP_gabbro_f`: `ZielF` on every reachable thread
+    machine; `gP_gabbro`: `Ziel` on every G run), with (b) `NutzerPflicht gE` as the open
+    hypothesis -- the user's part -- and (c), (d) as named above. For such a program the Rust
+    checker's verdict is NOT in the chain of reasoning: the Lean Bool decides, and an exported
+    program the Lean Bool refused would turn the build RED.
+  * UNCERTIFIED: the exporter refuses the program (the row names its FIRST refusal, code and
+    message, `LG001`-`LG007`). A green build says NOTHING about such a program; this statement
+    reaches it only through a hand-written term (`Korpus07`, `Korpus125`), which no guardian
+    pins to the source.
+  * A program outside `beispiele/` is covered exactly when its own `gabbro obligations --g`
+    output elaborates (the same file, the same `decide`); nothing checks that this was done.
+  * STILL TRUSTED FOR A CERTIFIED PROGRAM, and named here as NOT CLAIMED: (i) that `gE` IS the
+    source program -- the exporter (`lean_g.rs`) is unverified, and every form it drops is
+    listed in the certificate's own header under "NO FORM in G" (declared `costs`, `reads`,
+    deadlines with `arch`/`falsifier`, lock hold budgets, `traverse` annotations, `by ops`,
+    `mut`, `pub`/`opaque`, `const fn` declarations, the hardware around `entry`/`boot`): none
+    of them is claimed, whatever the Rust checker enforces about them; (ii) that machine G is
+    the meaning of the emitted C -- the register marks `chain-instance=…` where a Lean instance
+    of the generic closing theorem exists (104, 108 today, `zaehle-kette.py --lean` measures
+    2 of 129 CLOSED) and `chain=none` everywhere else, where it is an assumption of the reading
+    (below); of the emitted C forms, 51 have a correspondence lemma, 4 map to a named
+    assumption and 27 have no semantics (`pruefe-cformen.py`, `KNOWN_UNCOVERED`).
+  * The Rust diagnostic codes (411 in the checker, 0 of its sentences in state PROVED) are
+    therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
+    in Lean for every certified program, and the others guard properties this statement does
+    not claim (the NOT CLAIMED list, and the dropped forms above).
+
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT A, OFFEN O21/O22), AND WHY -- a REVIEWED DIFF of this
   file (the review itself: messung/OPUS-A-LAUFZEITFAEDEN.md):
   * THE GAP. The language creates threads at run time -- the hosted `start { f, g };` (the
@@ -580,7 +621,9 @@
   `einheit_width_travels_together`); everything outside that fragment is refused by name
   (`LG001`-`LG007`), and a program there reaches `GabbroZiel` only by a hand-written term.
   The exporter itself is not verified: that `gE` is the source program is the job of the
-  translation-validation chain, not of this statement.
+  translation-validation chain, not of this statement. Which corpus program is on which side
+  is THE ONE LIST `Grammatik/Zertifikat/REGISTER.txt` (see WHAT A GREEN BUILD COVERS above):
+  every UNCERTIFIED program there is NOT CLAIMED, by name.
 
   FINDINGS (definitions in proof files, imported anyway): there is no definition-only layer.
   All imports are mixed files; the goal predicates live in flagship proof files
