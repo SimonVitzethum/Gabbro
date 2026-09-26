@@ -798,7 +798,11 @@ one of the 15 programs that export today, and its emitted C is
 **Narrowed (Opus agent B, 2026-09-26, SATZKARTE §49).** The emitter lowers `accumulates X per cpu N`
 to `static _Atomic T X_zellen[N]` with relaxed loads and stores, so in the model a per-core
 accumulator IS a relaxed atomic global, and the weak machine W (`Speichermodell/`) says what the
-cells do: writes from any number of threads are coherent per location (`schrittW_kohaerent`).
+cells do: writes from any number of threads take distinct timestamps of one modification order
+(`Frisch`), and a read never goes back behind the reader's view (`schrittW_kohaerent`, read
+coherence; write-write coherence is not stated as a theorem). The N cells are read as ONE
+location, so "the write half is covered" means a pool that only WRITES the accumulator -- no
+real `accumulates` update, which loads its cell first (review 2026-09-26).
 Under that reading the Rust pool rule with its per-core disjunct IS the Lean one
 (`poolSicherRust_iff`: "per-core" becomes "atomic" in `PoolSicher`), and a pool whose instances
 all WRITE one relaxed atomic is accepted by the checker Bool (`proKern_schreiben_akzeptiert`) and
