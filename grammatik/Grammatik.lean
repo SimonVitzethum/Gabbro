@@ -313,3 +313,6 @@ import Grammatik.Zielsatz.PoolZeuge
 import Grammatik.CFormMatch
 import Grammatik.Zielsatz.Divergenz
 import Grammatik.ZeichenfolgeGebunden
+import Grammatik.Speichermodell.Sicht
+import Grammatik.Speichermodell.MaschineW
+import Grammatik.Speichermodell.DRF
