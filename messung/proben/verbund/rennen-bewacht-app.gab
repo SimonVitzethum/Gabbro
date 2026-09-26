@@ -1,0 +1,32 @@
+-- **Link probe, positive twin of 1246 (Opus agent F).** The same two threads as
+-- `1246-kopf-liest-app.gab`, but the table is guarded: `t2` writes it under the library's
+-- lock `L`, and `lies` reads it under `L` (its head says `locks L`). Clean alone against
+-- the library's interface, and the pair links -- the read behind the head is judged, not
+-- refused blindly.
+module app {
+
+use bib::lies;
+use bib::konto;
+use bib::L;
+
+impl fn t1()
+    effects { reads konto.slots, locks L }
+    costs   <= 128 ops
+{
+    let x = lies();
+    return;
+}
+
+impl fn t2()
+    effects { writes konto.slots, locks L }
+    costs   <= 128 ops
+{
+    locks L {
+        konto.slots[0].stand = 1;
+    }
+    return;
+}
+
+concurrent { t1, t2 };
+
+}

@@ -663,11 +663,14 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   `gabbro_ziel_verbund` -- two units over one link declaration, each accepted alone, the link
   check over composed hulls (`schnittstelleB`), each user's duty over the bodies it owns, the
   SAME hardware assumptions -> `ZielF` on the linked program. Rust: `gabbro link`,
-  `N501`-`N505`. What stays open is OFFEN O28: the review round of the Spec diff, the
-  composed-hull race check in Rust (threads on both sides are refused today; review E F1: a
-  pair with threads on ONE side and a read behind an imported head links green -- a known
-  false accept of `gabbro link`), multi-file
-  units and `gabbro build`, the C-level link step (the §2 item below).
+  `N501`-`N505`. **Opus agent F (2026-09-26, `messung/OPUS-F-VERBUND-RENNEN.md`) closed
+  review E F1 and the Rust residue:** an imported head's declared reads join the importer's
+  footprint (the F1 reproduction falls in `check --with` with the one-file `N291`/`N301`);
+  `gabbro link` checks the LINKED program whole (threads on both sides judged, not refused;
+  `N516` for a module split over units); contracts compared as trees; `gabbro build` links
+  two or more units (manifest, or `gabbro build a.gab b.gab` as a link check). What stays
+  open is OFFEN O28: the review round of the Spec diff and of Opus F, no certificate for a
+  linked program, the C-level link step (the §2 item below).
 - [x] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
   checker accepts pools since lane 245; the goal theorem does not cover
   them at all (`Akzeptiert` still demands `ws.Nodup`, and (d) excludes a

@@ -1,0 +1,32 @@
+-- **Link probe, positive twin of 1247 (Opus agent F): threads in BOTH units, no race.** The
+-- library runs a worker pool over its own lock-guarded counter and exports a pure `norm`.
+-- The app is `faeden-beide-app.gab`; the pair links -- before Opus F it fell with a blanket
+-- `N503`.
+module bib {
+
+pub type Wert = u32 in 0 .. 100;
+
+table zaehler count 1 { slot { n : Wert, } }
+
+lock Z protects { zaehler } rank 0 held <= 100 ops;
+
+pub impl fn norm(x : Wert) -> Wert
+    effects { pure }
+    costs   <= 8 ops
+{
+    return x;
+}
+
+impl fn arbeite()
+    effects { writes zaehler.slots, locks Z }
+    costs   <= 64 ops
+{
+    locks Z {
+        zaehler.slots[0].n = 1;
+    }
+    return;
+}
+
+concurrent { arbeite, arbeite };
+
+}

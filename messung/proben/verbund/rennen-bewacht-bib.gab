@@ -1,0 +1,21 @@
+-- **Link probe, positive twin of 1246 (Opus agent F): the read behind the head is GUARDED.**
+-- The library's lock `L` protects `konto`; `lies` reads it inside `locks L` and says so in
+-- its effects. The app is `rennen-bewacht-app.gab`.
+module bib {
+
+pub type Stand = u32 in 0 .. 100;
+
+pub table konto count 2 { slot { stand : Stand, } }
+
+pub lock L protects { konto } rank 0 held <= 100 ops;
+
+pub impl fn lies() -> Stand
+    effects { reads konto.slots, locks L }
+    costs   <= 32 ops
+{
+    locks L {
+        return konto.slots[0].stand;
+    }
+}
+
+}

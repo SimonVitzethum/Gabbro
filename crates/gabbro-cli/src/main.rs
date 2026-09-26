@@ -853,15 +853,18 @@ fn hilfe() {
                                      machine-applicable repairs the refusals carry
                                      (`fix: …` lines, lane 187) and re-checks, then
                                      reports like a plain run
-  gabbro link|verbinde [--with L.gabi]… <a.gab> <b.gab>
-                                    LINK two separately compiled units: each is checked
-                                    alone (`--with` goes in front of the SECOND, as its own
-                                    check had it), then every `extern fn` head one unit
-                                    relies on is held against the other unit's body --
-                                    signature and shared declarations `N501`, contract
-                                    `N502`, effects/footprints `N503`, costs `N504` -- and
-                                    the hardware assumptions both name must be the SAME
-                                    (`N505`). Lean: `GabbroZielVerbund`
+  gabbro link|verbinde [--with L.gabi]… <a.gab> <b.gab> [<c.gab>…]
+                                    LINK separately compiled units: each is checked
+                                    alone (`--with` goes in front of every unit after the
+                                    FIRST, as its own check had it), then every `extern fn`
+                                    head one unit relies on is held against the other
+                                    unit's body -- signature and shared declarations
+                                    `N501`, contract (as a tree) `N502`, effects `N503`,
+                                    costs `N504` -- the hardware assumptions all name must
+                                    be the SAME (`N505`), and the LINKED program is checked
+                                    whole: threads of every unit, reads behind every head
+                                    (the one-file codes; a module in two units `N516`).
+                                    Lean: `GabbroZielVerbund`
   gabbro abi [--unit] <file.gab>…   write the library interface: `pub` declarations,
                                     no bodies -- valid Gabbro, no second format. `--unit`
                                     writes ONE interface for a unit of several files; a
@@ -900,7 +903,10 @@ fn hilfe() {
                                     the build out of a manifest: it computes the unit graph
                                     from `module` and `use` -- never from a manifest line --
                                     and is incremental by CONTENT, not by timestamp. It
-                                    prints what it built AND what it did not look at.
+                                    prints what it built AND what it did not look at, and
+                                    two or more units must LINK (`gabbro link`). With
+                                    `<a.gab> <b.gab>…` instead of a manifest: the link
+                                    check only, nothing compiled.
                                     The reckoning: `dokumente/BAUSYSTEM.md`
   gabbro obligations|pflichten [--isabelle | --lean | --g] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
@@ -1802,22 +1808,25 @@ fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize)
     geh(&baum.items, von, bis)
 }
 
-/// **`gabbro link A.gab B.gab` -- does the pair make ONE program?** (Opus agent E.)
+/// **`gabbro link A.gab B.gab [C.gab …]` -- do the units make ONE program?** (Opus agents E,
+/// F.)
 ///
-/// Each unit is read and checked ALONE first (`--with` interfaces go in front of the SECOND
-/// unit, exactly as `gabbro check B.gab --with A.gabi` read it): a unit with errors links
-/// nothing. Then `gabbro_check::verbund::verbinde` holds every imported head against the body
-/// it stands for and the two units' hardware assumptions against each other. *The exit code
-/// is 1 for any refusal, and also for a call with the wrong number of units* -- 2 stays the
-/// unknown command's.
+/// Each unit is read and checked ALONE first (`--with` interfaces go in front of every unit
+/// after the FIRST, exactly as `gabbro check B.gab --with A.gabi` read it): a unit with errors
+/// links nothing. Then `gabbro_check::verbund::verbinde_alle` holds every imported head
+/// against the body it stands for and the units' hardware assumptions against each other,
+/// and -- when no head is stale -- checks the LINKED program whole (Opus F: the units
+/// composed as one, each body from its owner, every start of every unit). *The exit code is 1
+/// for any refusal, and also for a call with fewer than two units* -- 2 stays the unknown
+/// command's.
 fn befehl_link(argumente: &[String]) -> std::process::ExitCode {
     let (dateien, mit) = match split_with("link", argumente) {
         Ok(x) => x,
         Err(c) => return c,
     };
-    if dateien.len() != 2 {
+    if dateien.len() < 2 {
         eprintln!(
-            "gabbro link: two units, one file each (named {}) -- a link is a PAIR",
+            "gabbro link: at least two units, one file each (named {}) -- a link is a PAIR or more",
             dateien.len()
         );
         return std::process::ExitCode::from(1);
@@ -1826,66 +1835,78 @@ fn befehl_link(argumente: &[String]) -> std::process::ExitCode {
         Ok(v) => v,
         Err(c) => return c,
     };
-    let mut quellen: Vec<String> = Vec::new();
+    let mut quellen: Vec<(String, usize)> = Vec::new();
     for (i, datei) in dateien.iter().enumerate() {
         let Ok(q) = std::fs::read_to_string(datei) else {
             eprintln!("gabbro link: {datei} not readable");
             return std::process::ExitCode::from(1);
         };
-        quellen.push(if i == 1 { format!("{vorspann}{q}") } else { q });
+        quellen.push(if i >= 1 { (format!("{vorspann}{q}"), vorspann.len()) } else { (q, 0) });
     }
-    let ab = [0usize, vorspann.len()];
+    if verbinde_quellen("gabbro link", &dateien, &quellen) {
+        std::process::ExitCode::SUCCESS
+    } else {
+        std::process::ExitCode::from(1)
+    }
+}
+
+/// **The link over already read sources** -- `gabbro link`'s core, and the one `gabbro build`
+/// runs over the units of a manifest. `quellen[i]` is unit `i`'s full source (preamble
+/// included) with the byte offset where its own text begins. Prints every refusal and the
+/// summary line; returns whether the units link.
+pub(crate) fn verbinde_quellen(
+    wer: &str,
+    namen: &[String],
+    quellen: &[(String, usize)],
+) -> bool {
     let mut baeume = Vec::new();
     let mut fehler = false;
-    for (i, datei) in dateien.iter().enumerate() {
-        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quellen[i]);
+    for (i, name) in namen.iter().enumerate() {
+        let (baum, mut absagen) = gabbro_syntax::lies(name, &quellen[i].0);
         gabbro_check::pruefe(&baum, &mut absagen);
         if absagen.fehler_zahl() > 0 {
-            eprint!("{}", absagen.zeige(&quellen[i]));
-            eprintln!("gabbro link: {datei} has errors -- a unit with errors links nothing");
+            eprint!("{}", absagen.zeige(&quellen[i].0));
+            eprintln!("{wer}: {name} has errors -- a unit with errors links nothing");
             fehler = true;
         }
         baeume.push(baum);
     }
     if fehler {
-        return std::process::ExitCode::from(1);
+        return false;
     }
-    let ea = gabbro_check::verbund::Einheit {
-        name: &dateien[0],
-        baum: &baeume[0],
-        quelle: &quellen[0],
-        ab: ab[0],
+    let es: Vec<gabbro_check::verbund::Einheit> = namen
+        .iter()
+        .enumerate()
+        .map(|(i, name)| gabbro_check::verbund::Einheit {
+            name,
+            baum: &baeume[i],
+            quelle: &quellen[i].0,
+            ab: quellen[i].1,
+        })
+        .collect();
+    let mut absagen: Vec<gabbro_syntax::diag::Absagen> =
+        namen.iter().map(|n| gabbro_syntax::diag::Absagen::neu(n.clone())).collect();
+    let bericht = gabbro_check::verbund::verbinde_alle(&es, &mut absagen);
+    let n: usize = absagen.iter().map(|a| a.fehler_zahl()).sum();
+    for (i, a) in absagen.iter().enumerate() {
+        if !a.leer() {
+            eprint!("{}", a.zeige(&quellen[i].0));
+        }
+    }
+    let ganz = if bericht.verbund_geprueft {
+        format!("the linked program checked whole ({} error(s))", bericht.verbund_fehler)
+    } else {
+        "the linked program NOT checked whole (a head is stale -- fix it first)".to_string()
     };
-    let eb = gabbro_check::verbund::Einheit {
-        name: &dateien[1],
-        baum: &baeume[1],
-        quelle: &quellen[1],
-        ab: ab[1],
-    };
-    let mut abs_a = gabbro_syntax::diag::Absagen::neu(dateien[0].clone());
-    let mut abs_b = gabbro_syntax::diag::Absagen::neu(dateien[1].clone());
-    let bericht = gabbro_check::verbund::verbinde(&ea, &eb, &mut abs_a, &mut abs_b);
-    let n = abs_a.fehler_zahl() + abs_b.fehler_zahl();
-    if !abs_a.leer() {
-        eprint!("{}", abs_a.zeige(&quellen[0]));
-    }
-    if !abs_b.leer() {
-        eprint!("{}", abs_b.zeige(&quellen[1]));
-    }
     println!(
-        "gabbro link: {} + {} -- {} import(s) held against their bodies, {} shared \
-         declaration(s), {} shared hardware assumption(s); {n} refusal(s)",
-        dateien[0],
-        dateien[1],
+        "{wer}: {} -- {} import(s) held against their bodies, {} shared declaration(s), {} \
+         shared hardware assumption(s); {ganz}; {n} refusal(s)",
+        namen.join(" + "),
         bericht.importe,
         bericht.geteilte_deklarationen,
         bericht.geteilte_annahmen
     );
-    if n > 0 {
-        std::process::ExitCode::from(1)
-    } else {
-        std::process::ExitCode::SUCCESS
-    }
+    n == 0
 }
 
 fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode {

@@ -910,10 +910,12 @@
   (the linked unit is fixed before the start); ABI-level linking of foreign C (an `extern fn`
   no Gabbro unit supplies stays an axiom of (c)); the C-level link step itself (symbol
   resolution, calling convention, record layout -- translation validation's, like every "G
-  is the meaning of the C"); and the RUST side of premise (a): `gabbro link` does
-  not decide `SchnittstelleSpec` -- a READ behind an imported head is invisible to the
-  importer's own race check, so a pair whose link check fails can link green in Rust (review
-  E, F1, messung/URTEIL-SPECDIFF-OPUS-E-2026-09-26.md; OFFEN O28); for threads SPAWNED at run time (claimed since 2026-09-26, see
+  is the meaning of the C"); and the RUST side of premise (a) only as far as the Rust checker
+  is the Lean Bool at all (the caveat of one unit): since Opus agent F `gabbro link` checks the
+  LINKED program whole -- every start of both units, every footprint from its owner's body --
+  and an imported head's declared READS join the importer's own footprint, which closes the
+  false accept of review E, F1 (messung/URTEIL-SPECDIFF-OPUS-E-2026-09-26.md,
+  messung/OPUS-F-VERBUND-RENNEN.md; OFFEN O28); for threads SPAWNED at run time (claimed since 2026-09-26, see
   (d) above): a root whose ARGUMENTS differ per spawn (a `child` region reading its handed
   values -- the model fixes one argument list per slot), a root `requires` that holds only at
   the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn

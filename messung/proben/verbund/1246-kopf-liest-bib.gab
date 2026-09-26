@@ -1,0 +1,19 @@
+-- **Link probe 1246 (Opus agent F): the LIBRARY of the review-E F1 reproduction.** `lies`
+-- reads the table `konto`; no lock guards it. The library starts no thread, so alone it is
+-- clean. Its interface (`gabbro abi`) carries `lies` as a head with `effects { reads
+-- konto.slots }` -- the read the importer used to drop. The app is
+-- `1246-kopf-liest-app.gab`.
+module bib {
+
+pub type Stand = u32 in 0 .. 100;
+
+pub table konto count 2 { slot { stand : Stand, } }
+
+pub impl fn lies() -> Stand
+    effects { reads konto.slots }
+    costs   <= 16 ops
+{
+    return konto.slots[0].stand;
+}
+
+}

@@ -1,4 +1,4 @@
-//! **`gabbro link` -- two separately compiled units, and whether they make ONE program.**
+//! **`gabbro link` -- separately compiled units, and whether they make ONE program.**
 //!
 //! Opus agent E, 2026-09-26. The Lean side is `GabbroZielVerbund`
 //! (`grammatik/Grammatik/Zielsatz/Spec.lean`, proved as `gabbro_ziel_verbund` in
@@ -17,34 +17,45 @@
 //! changed its contract, or a head typed from memory, passed both units' checks and linked
 //! (`ld` resolves by NAME, and a name says nothing about a contract).
 //!
-//! ## The five refusals
+//! ## The refusals
 //!
 //! | code | the link declaration is not ONE declaration because | Lean |
 //! |---|---|---|
 //! | `N501` | a head's parameters, result or error channel differ from the body's; the head names a private function; both units define one function; a shared exported declaration (table, lock, type, …) differs | `Verbindbar`, the shared `D` |
-//! | `N502` | the head's `requires`/`ensures` differ from the exporter's -- a weaker OR a stronger contract | `Verbindbar.requires`/`.ensures` |
-//! | `N503` | the footprints do not compose: the head's `effects` differ from the exporter's; the exporter's hull calls BACK into the importer; or BOTH units start threads (the cross-unit race check over composed hulls is Lean's `SchnittstelleSpec`, not built here) | `SchnittstelleSpec` (`keinRueckruf`, `lok`, `renn`, `einzeln`) |
+//! | `N502` | the head's `requires`/`ensures` differ from the exporter's as TREES -- a weaker OR a stronger contract | `Verbindbar.requires`/`.ensures` |
+//! | `N503` | the footprints do not compose: the head's `effects` differ from the exporter's; the exporter's hull calls BACK into the importer | `SchnittstelleSpec.keinRueckruf`, the heads as `HuelleV` summaries |
 //! | `N504` | the head promises a smaller `costs` bound than the exporter declares | (costs are not in G) |
 //! | `N505` | the hardware assumptions differ: an `assume`/`axiom`, a `device`, the `profile`, or a foreign `extern fn` both units name, with different content | `E₂.Q = E₁.Q` |
+//! | `N516` | a module holds items in two units: no linked program can be composed (Opus F) | `verbinde` needs one owner per function |
+//!
+//! ## The linked program (Opus agent F, review E F1, OFFEN O28)
+//!
+//! When no head is stale, `pruefe_verbund` composes the units into ONE source -- every body
+//! from its owner, every head whose body another unit holds dropped, every shared
+//! declaration once, EVERY start of every unit kept (`verbundtext`, the surface of
+//! `verbinde e E₁ E₂`) -- and runs the whole checker over it. Its errors keep their one-file
+//! codes and land in the unit whose text they point into. That is the Rust decision of
+//! `SchnittstelleSpec.lok`/`.renn`/`.einzeln`: the race passes (`fusswache2.rs`) over the
+//! linked call graphs, which under `KeinRueckruf` are the composed hulls `HuelleV`. It
+//! replaces Opus E's blanket refusal of threads on both sides (`N503`), and it closes the
+//! false accept of review E F1 at the link. The same F1 is closed per unit too: a body-less
+//! head's declared READS now join the importer's footprint (`fusswache2.rs`), so `gabbro
+//! check --with` falls on the reproduction with the one-file `N291`/`N301` already.
 //!
 //! ## What this does NOT check, named
 //!
 //! * **Semantic** contract comparison. Two contracts are the same when their conjuncts are the
-//!   same TEXT (whitespace-normalised, order-free). An importer that relies on LESS than the
-//!   exporter promises is refused too: the Lean statement has ONE contract per function.
-//! * **Threads on both sides.** Refused (`N503`) rather than checked: the per-unit passes see
-//!   one side's threads each, and the composed-hull check of `SchnittstelleSpec` is not
-//!   ported to Rust.
-//! * **Reads behind an imported head (review E, F1 -- a KNOWN FALSE ACCEPT).** With threads
-//!   in ONE unit only, the importer's race check (`N291`/`N301`) sees an imported head's
-//!   WRITES but not its READS. A library `lies` that reads an unguarded table, called on one
-//!   app thread while another app thread writes the table, links with 0 refusals -- the Rust
-//!   twin of the Lean refusal witness `vm_abgelehnt`. So a green link here does NOT establish
-//!   `SchnittstelleSpec` (`lok`/`renn`); OFFEN O28.
-//! * **Multi-file units, and `gabbro build`.** A unit is one file here (plus `--with`
-//!   preambles on the importer side); the manifest build does not call this check yet.
+//!   same TREE (`normalform`: positions and redundant parentheses dropped, order-free). An
+//!   equivalent contract written as a different tree is refused, and an importer that relies
+//!   on LESS than the exporter promises is refused too: the Lean statement has ONE contract
+//!   per function.
+//! * **More than Lean re-decides.** The linked program passes EVERY pass, not only the three
+//!   whole-program components of the Lean link check; a refusal of another pass there is
+//!   reported, not filtered (the safe direction).
+//! * **A module split over units** (`N516`): refused, not merged.
 //! * **The C link step** -- symbol resolution, calling convention, layout: translation
-//!   validation's, like every "machine G is the meaning of the C".
+//!   validation's, like every "machine G is the meaning of the C". No certificate is written
+//!   for a linked program (the exporter exports one `Einheit`).
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
@@ -68,6 +79,10 @@ pub struct Bericht {
     pub importe: usize,
     pub geteilte_deklarationen: usize,
     pub geteilte_annahmen: usize,
+    /// Whether the linked program was composed and checked whole (`pruefe_verbund`).
+    pub verbund_geprueft: bool,
+    /// Errors the whole-program check of the linked program found.
+    pub verbund_fehler: usize,
 }
 
 fn norm(s: &str) -> String {
@@ -206,6 +221,126 @@ fn saetze(ps: &[Pred], quelle: &str) -> BTreeSet<String> {
     ps.iter().map(|p| schnitt(quelle, p.span)).collect()
 }
 
+/// **The normal form of a syntax node** (Opus F, OFFEN O28 "contracts as text"): the tree's
+/// `Debug` form with every source position dropped and every pair of redundant parentheses
+/// (`Klammer` around a predicate or an expression) taken out. Two spellings of one tree --
+/// other whitespace, other line breaks, `(a)` for `a`, `0x10` for `16` -- give one text; two
+/// different trees never do, because nothing but positions and parentheses is removed.
+pub fn normalform<T: std::fmt::Debug>(x: &T) -> String {
+    let roh = format!("{x:?}");
+    // 1. Positions: every `Span { von: N, bis: N }` becomes `_`.
+    let mut s = String::with_capacity(roh.len());
+    let mut rest = roh.as_str();
+    while let Some(i) = rest.find("Span { von: ") {
+        s.push_str(&rest[..i]);
+        let ab = &rest[i..];
+        let Some(ende) = ab.find('}') else {
+            rest = ab;
+            break;
+        };
+        s.push('_');
+        rest = &ab[ende + 1..];
+    }
+    s.push_str(rest);
+    // 2. Parentheses: `X { art: Klammer(X { art: INNER, span: _ }), span: _ }` becomes
+    //    `X { art: INNER, span: _ }` -- for predicates and for expressions.
+    loop {
+        let mut geaendert = false;
+        for knoten in ["Pred", "Expr"] {
+            let aussen = format!("{knoten} {{ art: Klammer(");
+            let schluss = ", span: _ }";
+            let mut von = 0;
+            while let Some(k) = s[von..].find(&aussen).map(|k| k + von) {
+                let auf = k + aussen.len() - 1;
+                let Some(zu) = passende_klammer(&s, auf) else { break };
+                if s[auf + 1..].starts_with(&format!("{knoten} {{ ")) && s[zu + 1..].starts_with(schluss) {
+                    let innen = s[auf + 1..zu].to_string();
+                    s = format!("{}{innen}{}", &s[..k], &s[zu + 1 + schluss.len()..]);
+                    geaendert = true;
+                    break;
+                }
+                von = k + 1;
+            }
+        }
+        if !geaendert {
+            break;
+        }
+    }
+    s
+}
+
+/// The index of the `)` that closes the `(` at the given index, skipping quoted strings.
+fn passende_klammer(s: &str, auf: usize) -> Option<usize> {
+    let b = s.as_bytes();
+    if b.get(auf) != Some(&b'(') {
+        return None;
+    }
+    let (mut tiefe, mut i, mut in_text) = (0i32, auf, false);
+    while i < b.len() {
+        let c = b[i];
+        if in_text {
+            if c == b'\\' {
+                i += 1;
+            } else if c == b'"' {
+                in_text = false;
+            }
+        } else if c == b'"' {
+            in_text = true;
+        } else if c == b'(' {
+            tiefe += 1;
+        } else if c == b')' {
+            tiefe -= 1;
+            if tiefe == 0 {
+                return Some(i);
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+/// The conjuncts of a contract, in normal form: `requires a, b` and `requires (a && b)` are
+/// one set -- a contract is the conjunction of its clauses, and order means nothing.
+fn konjunkte(ps: &[Pred]) -> BTreeSet<String> {
+    fn geh<'a>(p: &'a Pred, aus: &mut Vec<&'a Pred>) {
+        match &p.art {
+            PredArt::Klammer(x) => geh(x, aus),
+            PredArt::Und(a, b) => {
+                geh(a, aus);
+                geh(b, aus);
+            }
+            _ => aus.push(p),
+        }
+    }
+    let mut v = Vec::new();
+    for p in ps {
+        geh(p, &mut v);
+    }
+    v.into_iter().map(normalform).collect()
+}
+
+/// The effects of a head as a set of normal forms (`reads konto.slots` by its tree).
+fn wirkungsformen(f: &FnDecl) -> Option<BTreeSet<String>> {
+    f.effects
+        .as_ref()
+        .map(|w| w.liste.iter().map(|x| normalform(&x.art)).collect())
+}
+
+/// The signature in normal form: parameter names and type trees, result, error channel.
+fn signaturform(f: &FnDecl) -> String {
+    let ps: Vec<String> = f
+        .parameter
+        .iter()
+        .map(|p| format!("{}:{}", p.name.text, normalform(&p.typ)))
+        .collect();
+    format!(
+        "({})->{}|{}",
+        ps.join(","),
+        f.ergebnis.as_ref().map(normalform).unwrap_or_default(),
+        f.fehler.as_ref().map(|r| r.text.clone()).unwrap_or_default()
+    )
+}
+
 fn zeige(m: &BTreeSet<String>) -> String {
     if m.is_empty() {
         "(none)".to_string()
@@ -222,41 +357,6 @@ fn wirkungen(f: &FnDecl, quelle: &str) -> Option<BTreeSet<String>> {
 
 fn kosten(f: &FnDecl, quelle: &str) -> Option<String> {
     f.costs.as_ref().map(|c| schnitt(quelle, c.span))
-}
-
-/// Does the unit start threads -- `concurrent`, `entry`, `boot`, a hosted `start`, a `child`?
-fn faden_ort(baum: &Programm) -> Option<Span> {
-    fn im_block(b: &Block) -> Option<Span> {
-        for s in &b.anweisungen {
-            match &s.art {
-                StmtArt::Start(_) | StmtArt::Child(_) => return Some(s.span),
-                _ => {
-                    for k in crate::unterbloecke(s) {
-                        if let Some(x) = im_block(k) {
-                            return Some(x);
-                        }
-                    }
-                }
-            }
-        }
-        None
-    }
-    let mut ort = None;
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
-        if ort.is_some() {
-            return;
-        }
-        match &item.art {
-            ItemArt::Concurrent(_) | ItemArt::Entry(_) | ItemArt::Boot(_) => ort = Some(item.span),
-            ItemArt::Funktion(f) => {
-                if let FnRumpf::Block(b) = &f.rumpf {
-                    ort = im_block(b);
-                }
-            }
-            _ => {}
-        }
-    });
-    ort
 }
 
 /// **The link check.** Refusals land in the Absagen of the unit whose text they point into.
@@ -346,7 +446,7 @@ pub fn verbinde(
             continue;
         }
         let (s_ex, s_im) = (signatur(ex.decl, ex_e.quelle), signatur(im.decl, im_e.quelle));
-        if s_ex != s_im {
+        if signaturform(ex.decl) != signaturform(im.decl) {
             abs_im.schiebe(
                 Absage::fehler(
                     "N501",
@@ -363,7 +463,10 @@ pub fn verbinde(
         }
         let (rq_ex, rq_im) = (saetze(&ex.decl.requires, ex_e.quelle), saetze(&im.decl.requires, im_e.quelle));
         let (en_ex, en_im) = (saetze(&ex.decl.ensures, ex_e.quelle), saetze(&im.decl.ensures, im_e.quelle));
-        if rq_ex != rq_im || en_ex != en_im {
+        // Compared as TREES (normal form, conjunct sets), shown as text.
+        if konjunkte(&ex.decl.requires) != konjunkte(&im.decl.requires)
+            || konjunkte(&ex.decl.ensures) != konjunkte(&im.decl.ensures)
+        {
             let mut a = Absage::fehler(
                 "N502",
                 ort,
@@ -404,9 +507,10 @@ pub fn verbinde(
                  `.ensures` in `Zielsatz/Spec.lean`): regenerate the head with `gabbro abi`",
             ));
         }
-        match (wirkungen(ex.decl, ex_e.quelle), wirkungen(im.decl, im_e.quelle)) {
+        match (wirkungsformen(ex.decl), wirkungsformen(im.decl)) {
             (Some(w_ex), Some(w_im)) if w_ex == w_im => {}
-            (w_ex, w_im) => {
+            _ => {
+                let (w_ex, w_im) = (wirkungen(ex.decl, ex_e.quelle), wirkungen(im.decl, im_e.quelle));
                 abs_im.schiebe(
                     Absage::fehler(
                         "N503",
@@ -510,25 +614,6 @@ pub fn verbinde(
             }
         }
     }
-    // ---- threads on both sides ----
-    if let (Some(_), Some(ort_b)) = (faden_ort(a.baum), faden_ort(b.baum)) {
-        abs_b.schiebe(
-            Absage::fehler(
-                "N503",
-                ort_b,
-                format!(
-                    "both {} and {} start threads: their footprints are checked per unit, \
-                     and no pass here composes one unit's threads with the other's",
-                    a.name, b.name
-                ),
-            )
-            .mit_notiz(
-                "the composed-hull check is `SchnittstelleSpec` (`lok`, `renn`, `einzeln`) in \
-                 `Zielsatz/Spec.lean` -- decided in Lean, not ported to this linker; start the \
-                 threads in ONE unit",
-            ),
-        );
-    }
     // ---- shared exported declarations: ONE link declaration ----
     let (da, db) = (deklarationen(a), deklarationen(b));
     for (schl, (tb, sp_b)) in &db {
@@ -577,22 +662,301 @@ pub fn verbinde(
     bericht
 }
 
+// ======================================================================================
+// The linked program (Opus F, OFFEN O28): the units composed as ONE source, checked whole.
+// ======================================================================================
+
+/// The linked program as one source text: every unit's text in order, joined by a newline,
+/// with each item that another text already contributes blanked out (spaces, newlines kept,
+/// so every byte keeps its position). `ab[i]` is where unit `i` begins in `text`.
+pub struct Verbundtext {
+    pub text: String,
+    pub ab: Vec<usize>,
+    /// Modules that hold surviving items in two units: `(unit, span, module path)`.
+    pub konflikte: Vec<(usize, Span, String)>,
+}
+
+/// The key under which an item is ONE item of the linked declaration, and whether it is a
+/// definition (a function with a body). `None` for a module (handled by its contents).
+fn item_schluessel(item: &Item, modul: &str, quelle: &str) -> Option<(String, bool)> {
+    let text = || schnitt(quelle, item.span).trim_start_matches("pub ").to_string();
+    Some(match &item.art {
+        ItemArt::Modul(_) => return None,
+        ItemArt::Funktion(f) => (
+            format!("fn {}", schluessel(modul, &f.name.text)),
+            !matches!(f.rumpf, FnRumpf::Keiner),
+        ),
+        ItemArt::Assume(a) => (
+            format!(
+                "assume {}{}",
+                a.name.text,
+                a.arch.as_ref().map(|x| format!(" arch {}", x.text)).unwrap_or_default()
+            ),
+            false,
+        ),
+        ItemArt::Axiom(a) => (format!("axiom {}", a.name.text), false),
+        ItemArt::Profil(_) => ("profile".to_string(), false),
+        _ => match crate::bindung::ausgefuehrter_name(item) {
+            Some(n) => (
+                format!("{:?} {}", std::mem::discriminant(&item.art), schluessel(modul, &n.text)),
+                false,
+            ),
+            // A `use` twice in one module is one `use`. Every other unnamed item -- above
+            // all a `concurrent`/`entry`/`boot` start -- is its own item even when two units
+            // spell it alike: dropping one would drop threads.
+            None if matches!(item.art, ItemArt::Use(_)) => {
+                (format!("text {modul} {}", text()), false)
+            }
+            None => (format!("einzig {:p}", item as *const Item), false),
+        },
+    })
+}
+
+fn leere(text: &mut [u8], sp: Span) {
+    let (von, bis) = (sp.von as usize, (sp.bis as usize).min(text.len()));
+    for b in text.iter_mut().take(bis).skip(von) {
+        if *b != b'\n' {
+            *b = b' ';
+        }
+    }
+}
+
+/// Where the one kept copy of an item of the linked program stands.
+struct Eigner {
+    einheit: usize,
+    von: u32,
+    rumpf: bool,
+    text: String,
+}
+
+/// Walks one item list of unit `i`; returns whether every item of it was blanked.
+#[allow(clippy::too_many_arguments)]
+fn verbund_geh(
+    i: usize,
+    e: &Einheit,
+    items: &[Item],
+    pfad: &str,
+    definiert: &BTreeMap<String, Eigner>,
+    gesehen: &mut BTreeMap<String, String>,
+    module_gesehen: &mut BTreeSet<String>,
+    text: &mut [u8],
+    konflikte: &mut Vec<(usize, Span, String)>,
+) -> bool {
+    let mut alle = true;
+    for item in items {
+        if let ItemArt::Modul(m) = &item.art {
+            let innen = if pfad.is_empty() {
+                m.pfad.text()
+            } else {
+                format!("{pfad}::{}", m.pfad.text())
+            };
+            let schon = module_gesehen.contains(&innen);
+            let leer = verbund_geh(
+                i, e, &m.items, &innen, definiert, gesehen, module_gesehen, text, konflikte,
+            );
+            if leer {
+                // Nothing of it survives (a preamble's copy of another unit's module, or an
+                // empty interface): it contributes nothing, and it claims no module.
+                leere(text, item.span);
+            } else {
+                if schon {
+                    konflikte.push((i, item.span, innen.clone()));
+                }
+                module_gesehen.insert(innen);
+                alle = false;
+            }
+            continue;
+        }
+        let Some((k, _)) = item_schluessel(item, pfad, e.quelle) else { continue };
+        let text_hier = schnitt(e.quelle, item.span).trim_start_matches("pub ").to_string();
+        let behalten = match definiert.get(&k) {
+            // The owner's copy stays: a function's body, else the copy in a unit's OWN text
+            // (not in a `--with` preamble). A DIFFERENT copy of a declaration stays too, so the
+            // whole-program check names the clash instead of this composition hiding it.
+            Some(o) => {
+                (o.einheit == i && o.von == item.span.von) || (!o.rumpf && o.text != text_hier)
+            }
+            // No owner (only preamble copies, e.g. a third library's heads): the first copy
+            // stays, and a different one beside it.
+            None => gesehen.get(&k).is_none_or(|t| t != &text_hier),
+        };
+        if behalten {
+            gesehen.insert(k, text_hier);
+            alle = false;
+        } else {
+            leere(text, item.span);
+        }
+    }
+    alle
+}
+
+/// **Composes the units into the linked program** -- `verbinde e E₁ E₂` of
+/// `Zielsatz/Spec.lean` on the surface: every function body from its owner (a head whose body
+/// another unit holds is dropped), every shared declaration and hardware assumption once (the
+/// pairwise check has already held the copies equal), each unit's starts kept.
+pub fn verbundtext(es: &[Einheit]) -> Verbundtext {
+    // The owner of each item: for a function, the first unit with a BODY; for anything else
+    // (and a function no unit defines), the first copy in a unit's OWN text.
+    let mut definiert: BTreeMap<String, Eigner> = BTreeMap::new();
+    for rumpfrunde in [true, false] {
+        for (i, e) in es.iter().enumerate() {
+            for (item, modul) in alle_items(e.baum) {
+                let Some((k, rumpf)) = item_schluessel(item, &modul, e.quelle) else { continue };
+                let eigen = (item.span.von as usize) >= e.ab;
+                if (rumpfrunde && rumpf) || (!rumpfrunde && eigen) {
+                    definiert.entry(k).or_insert_with(|| Eigner {
+                        einheit: i,
+                        von: item.span.von,
+                        rumpf,
+                        text: schnitt(e.quelle, item.span).trim_start_matches("pub ").to_string(),
+                    });
+                }
+            }
+        }
+    }
+    let mut gesehen: BTreeMap<String, String> = BTreeMap::new();
+    let mut module_gesehen: BTreeSet<String> = BTreeSet::new();
+    let mut konflikte = Vec::new();
+    let mut text = String::new();
+    let mut ab = Vec::new();
+    for (i, e) in es.iter().enumerate() {
+        let mut t = e.quelle.as_bytes().to_vec();
+        verbund_geh(
+            i,
+            e,
+            &e.baum.items,
+            "",
+            &definiert,
+            &mut gesehen,
+            &mut module_gesehen,
+            &mut t,
+            &mut konflikte,
+        );
+        ab.push(text.len());
+        // Blanking replaces whole items by ASCII spaces, so the bytes stay UTF-8.
+        text.push_str(&String::from_utf8_lossy(&t));
+        text.push('\n');
+    }
+    Verbundtext { text, ab, konflikte }
+}
+
+/// **The whole-program check of the linked program** (Opus F, closing review E F1 and the
+/// two-sided residue of OFFEN O28). The composed source is read and checked by EVERY pass, as
+/// one unit; each error lands, with its own code, in the unit whose text it points into.
+///
+/// Correspondence with the Lean link check: `SchnittstelleSpec` re-decides thread-locality
+/// (`lok`), write separation (`renn`) and pool safety (`einzeln`) over the COMPOSED hulls
+/// `HuelleV`, i.e. over the call graphs of `verbinde e E₁ E₂` (with `KeinRueckruf`, `N503`
+/// here, a root's linked graph IS its composed hull -- `huelle_of_reach`). This function runs
+/// the Rust deciders of exactly those components (`N290`-`N304`, `N456`/`N457`/`N462` in
+/// `fusswache2.rs`) over that linked program -- every start of both units, every footprint
+/// read from the owner's body -- and every other whole-program pass beside them. It
+/// therefore refuses at least what `schnittstelleB` refuses (the Rust twin of `vm_abgelehnt`
+/// falls with the one-file codes `N291`/`N301`), and possibly more: a whole-program refusal
+/// of another pass is a finding about the linked program, reported, not filtered. Returns the
+/// number of errors pushed.
+pub fn pruefe_verbund(es: &[Einheit], absagen: &mut [Absagen]) -> usize {
+    let vt = verbundtext(es);
+    let mut n = 0;
+    if !vt.konflikte.is_empty() {
+        for (i, sp, m) in &vt.konflikte {
+            absagen[*i].schiebe(
+                Absage::fehler(
+                    "N516",
+                    *sp,
+                    format!(
+                        "module `{m}` holds items in two units: the linked program cannot be \
+                         composed, so its whole-program check did not run"
+                    ),
+                )
+                .mit_notiz(
+                    "a module belongs to ONE unit (`gabbro build` refuses the same); the other \
+                     unit reaches it through `use` and the heads `gabbro abi` writes",
+                ),
+            );
+            n += 1;
+        }
+        return n;
+    }
+    let (baum, mut gesamt) = gabbro_syntax::lies("<linked>", &vt.text);
+    crate::pruefe(&baum, &mut gesamt);
+    let namen = es.iter().map(|e| e.name).collect::<Vec<_>>().join(" + ");
+    for a in gesamt.absagen {
+        if a.stufe != gabbro_syntax::Stufe::Fehler {
+            continue;
+        }
+        let von = a.span.von as usize;
+        let i = vt.ab.iter().rposition(|&x| x <= von).unwrap_or(0);
+        let d = vt.ab[i] as u32;
+        let mut b = a;
+        b.span = Span::neu(b.span.von.saturating_sub(d), b.span.bis.saturating_sub(d));
+        b.fix = None;
+        b.notizen.push(format!(
+            "found on the LINKED program ({namen} composed as one unit, each body from its \
+             owner): each unit alone is clean, so this refusal is the link's -- the \
+             whole-program components the Lean link check re-decides over the composed hulls \
+             (`SchnittstelleSpec.lok`/`.renn`/`.einzeln`)"
+        ));
+        absagen[i].schiebe(b);
+        n += 1;
+    }
+    n
+}
+
+/// **The link of N units**: every pair's heads held against the bodies (`verbinde`), then --
+/// only if no head is stale, so the composition means what the units were checked against --
+/// the whole-program check of the linked program (`pruefe_verbund`). `absagen[i]` belongs to
+/// `es[i]`.
+pub fn verbinde_alle(es: &[Einheit], absagen: &mut [Absagen]) -> Bericht {
+    let mut bericht = Bericht::default();
+    for i in 0..es.len() {
+        for j in (i + 1)..es.len() {
+            let (links, rechts) = absagen.split_at_mut(j);
+            let b = verbinde(&es[i], &es[j], &mut links[i], &mut rechts[0]);
+            bericht.importe += b.importe;
+            bericht.geteilte_deklarationen += b.geteilte_deklarationen;
+            bericht.geteilte_annahmen += b.geteilte_annahmen;
+        }
+    }
+    if absagen.iter().all(|a| a.fehler_zahl() == 0) {
+        bericht.verbund_geprueft = true;
+        bericht.verbund_fehler = pruefe_verbund(es, absagen);
+    }
+    bericht
+}
+
 #[cfg(test)]
 mod tests {
     //! Snippet probes of the refusals the probe files under `messung/proben/verbund/` do not
     //! reach (those are driven by `crates/gabbro-cli/tests/verbund.rs`).
     use super::*;
 
-    /// Links two snippet units and returns every code, in unit order (A's, then B's).
+    /// The error codes of one snippet unit checked ALONE.
+    fn allein(q: &str) -> Vec<&'static str> {
+        let (baum, mut abs) = gabbro_syntax::lies("u.gab", q);
+        crate::pruefe(&baum, &mut abs);
+        abs.absagen
+            .iter()
+            .filter(|a| a.stufe == gabbro_syntax::Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Links two snippet units the way `gabbro link` does -- each must be clean ALONE (a unit
+    /// with errors links nothing), then the heads, then the linked program -- and returns
+    /// every code, in unit order (A's, then B's).
     fn links(a: &str, b: &str) -> Vec<&'static str> {
+        assert_eq!(allein(a), Vec::<&str>::new(), "unit A is clean alone:\n{a}");
+        assert_eq!(allein(b), Vec::<&str>::new(), "unit B is clean alone:\n{b}");
         let (ba, _) = gabbro_syntax::lies("a.gab", a);
         let (bb, _) = gabbro_syntax::lies("b.gab", b);
-        let ea = Einheit { name: "a.gab", baum: &ba, quelle: a, ab: 0 };
-        let eb = Einheit { name: "b.gab", baum: &bb, quelle: b, ab: 0 };
-        let mut xa = Absagen::neu("a.gab");
-        let mut xb = Absagen::neu("b.gab");
-        verbinde(&ea, &eb, &mut xa, &mut xb);
-        xa.absagen.iter().chain(xb.absagen.iter()).map(|x| x.code).collect()
+        let es = [
+            Einheit { name: "a.gab", baum: &ba, quelle: a, ab: 0 },
+            Einheit { name: "b.gab", baum: &bb, quelle: b, ab: 0 },
+        ];
+        let mut abs = [Absagen::neu("a.gab"), Absagen::neu("b.gab")];
+        verbinde_alle(&es, &mut abs);
+        abs.iter().flat_map(|x| x.absagen.iter()).map(|x| x.code).collect()
     }
 
     const BIB: &str = "module bib {
@@ -636,7 +1000,9 @@ impl fn w() effects { pure } costs <= 16 ops { bib::f(); return; }
     }
 
     #[test]
-    fn faeden_auf_beiden_seiten_fallen_mit_n503() {
+    fn faeden_auf_beiden_seiten_werden_beurteilt_nicht_pauschal_abgelehnt() {
+        // Opus F (OFFEN O28): threads in BOTH units are judged over the linked program. Two
+        // pools that share nothing link clean -- before, this pair fell with a blanket N503.
         let bib = "module bib {
 pub impl fn f() effects { pure } costs <= 8 ops { return; }
 impl fn eigen() effects { pure } costs <= 8 ops { return; }
@@ -651,9 +1017,108 @@ impl fn w() effects { pure } costs <= 16 ops { bib::f(); return; }
 concurrent { w, w };
 }
 ";
-        assert_eq!(links(bib, app), vec!["N503"]);
+        assert_eq!(links(bib, app), Vec::<&str>::new());
         // Threads in ONE unit only: silent.
         assert_eq!(links(BIB, app), Vec::<&str>::new());
+    }
+
+    /// The library's thread writes the unguarded table, the app's thread reads it through
+    /// the imported head: each unit is clean alone (one start per unit, and neither unit
+    /// sees the other's thread) -- the linked program has the write-read race.
+    const RENN_BIB: &str = "module bib {
+pub type Stand = u32 in 0 .. 100;
+pub table konto count 2 { slot { stand : Stand, } }
+pub impl fn lies() -> Stand effects { reads konto.slots } costs <= 16 ops { return konto.slots[0].stand; }
+impl fn schreiber() effects { writes konto.slots } costs <= 16 ops { konto.slots[0].stand = 1; return; }
+impl fn ruhig() effects { pure } costs <= 4 ops { return; }
+concurrent { schreiber, ruhig };
+}
+";
+    const RENN_APP: &str = "module bib {
+pub type Stand = u32 in 0 .. 100;
+pub table konto count 2 { slot { stand : Stand, } }
+pub extern fn lies() -> Stand effects { reads konto.slots } costs <= 16 ops;
+}
+module app {
+use bib::lies;
+use bib::konto;
+impl fn leser() effects { reads konto.slots } costs <= 64 ops { let x = lies(); return; }
+impl fn still() effects { pure } costs <= 4 ops { return; }
+concurrent { leser, still };
+}
+";
+
+    #[test]
+    fn ein_rennen_ueber_beide_einheiten_faellt_am_verbund() {
+        // The codes are the race pass's (`N29x`/`N30x`, the one-file codes -- exactly which
+        // is pinned by probe 1247 in `crates/gabbro-cli/tests/verbund.rs`; this file names no
+        // code it does not issue, `pruefe-kennungen.py`).
+        let codes = links(RENN_BIB, RENN_APP);
+        assert!(!codes.is_empty(), "the cross-unit write-read race falls on the linked program");
+        assert!(
+            codes.iter().all(|c| c.starts_with("N29") || c.starts_with("N30")),
+            "judged by the race pass, not blanket-refused: {codes:?}"
+        );
+    }
+
+    #[test]
+    fn der_verbundtext_behaelt_jeden_rumpf_und_jeden_start() {
+        let (ba, _) = gabbro_syntax::lies("a.gab", RENN_BIB);
+        let (bb, _) = gabbro_syntax::lies("b.gab", RENN_APP);
+        let es = [
+            Einheit { name: "a.gab", baum: &ba, quelle: RENN_BIB, ab: 0 },
+            Einheit { name: "b.gab", baum: &bb, quelle: RENN_APP, ab: 0 },
+        ];
+        let vt = verbundtext(&es);
+        assert!(vt.konflikte.is_empty());
+        assert_eq!(vt.text.matches("concurrent {").count(), 2, "both units' starts stay");
+        assert_eq!(vt.text.matches("fn lies").count(), 1, "the head is dropped, the body stays");
+        assert!(!vt.text.contains("extern fn lies"));
+        assert_eq!(vt.text.matches("table konto").count(), 1, "one declaration");
+        assert_eq!(vt.ab, vec![0, RENN_BIB.len() + 1], "byte positions are kept");
+    }
+
+    #[test]
+    fn ein_modul_in_zwei_einheiten_faellt_mit_n516() {
+        let a = "module m {
+pub impl fn f() effects { pure } costs <= 8 ops { return; }
+}
+";
+        let b = "module m {
+pub impl fn g() effects { pure } costs <= 8 ops { return; }
+}
+";
+        assert_eq!(links(a, b), vec!["N516"]);
+    }
+
+    #[test]
+    fn vertraege_werden_als_baum_verglichen() {
+        // OFFEN O28 "contracts as text": the head spells the exporter's contract with other
+        // parentheses, another conjunct split and other line breaks -- the same tree, so no
+        // N502. A different tree still falls.
+        let bib = "module bib {
+pub impl fn f(x : u32 in 0 .. 10) -> u32 in 0 .. 20 requires x < 5 && x > 0 ensures result == x + 1 effects { pure } costs <= 8 ops { return x + 1; }
+}
+";
+        let app = "module bib {
+pub extern fn f(x : u32 in 0 .. 10) -> u32 in 0 .. 20
+    requires (x > 0), (x < 5)
+    ensures result == (x + 1)
+    effects { pure } costs <= 8 ops;
+}
+";
+        assert_eq!(links(bib, app), Vec::<&str>::new());
+        let falsch = app.replace("(x + 1)", "(x + 2)");
+        assert_eq!(links(bib, &falsch), vec!["N502"]);
+        // Parentheses that change the tree are not dropped: (a + b) * c is not a + b * c.
+        assert_ne!(
+            normalform(&gabbro_syntax::lies("p.gab", "const K : u32 = (1 + 2) * 3;").0.items[0].art),
+            normalform(&gabbro_syntax::lies("p.gab", "const K : u32 = 1 + 2 * 3;").0.items[0].art)
+        );
+        assert_eq!(
+            normalform(&gabbro_syntax::lies("p.gab", "const K : u32 = (1 + 2);").0.items[0].art),
+            normalform(&gabbro_syntax::lies("p.gab", "const  K : u32 =  1 + 2 ;").0.items[0].art)
+        );
     }
 
     #[test]
