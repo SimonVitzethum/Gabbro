@@ -4727,7 +4727,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
     out.push_str("-- NO FORM; only the dispatch root travels, as a declared start\n");
-    out.push_str("-- where exportable).\n--\n");
+    out.push_str("-- where exportable, and `via idt` as `gP.unterbricht`).\n--\n");
     for (ti, t) in model.tables.iter().enumerate() {
         out.push_str(&format!("-- table {ti}: {} (count {})", t.name, t.count));
         for f in &t.fields {

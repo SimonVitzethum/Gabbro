@@ -1111,7 +1111,40 @@ pool-safe (every carrier it writes is guarded, atomic or per-core), and `N315` r
 | **known side effects** | **fixed in fix lane F4 (2026-09-22):** the generated driver (`bau.rs` `treiberregel`, lane 246) de-duplicated `concurrent` names, so an accepted pool started ONE thread (review G06 F5) -- it now starts one thread per occurrence and the pin compares multisets (`tests/treiber.rs` `pool_zweimal_deklariert_laeuft_zweifach`: built, compiled, run on two threads); `lean_g.rs` `check_starts` had no refusal for a repeated start, and a pool unit DID export (measured: `starts := [⟨g_arbeiter, .nil⟩, ⟨g_arbeiter, .nil⟩]`, G06 F3) -- it now refuses by name (`LG001`), so no pool unit is exported as if the goal covered it. The Rust acceptance itself is unchanged (not gated): that is this item |
 | **what would close it** | the `einzeln` → `EinzelnPool` swap in `Akzeptiert` with `RennfreiBis`, `KeinWarteZyklus` and the invariant legs proved over start multisets and a `Spec.lean` diff for (d), reviewed as such (Simon, 2026-09-21: this route; fix lane F10). The exporter's `LG001` for repeated starts goes with it |
 
-## O19 — Handlers and cores are not in the unit: the preemption leg carries them itself (recorded 2026-09-21, reviews G02/G12/G13; NARROWED 2026-09-22, fix lane F11)
+## O19 — Handlers and cores are not in the unit: the preemption leg carries them itself (recorded 2026-09-21, reviews G02/G12/G13; NARROWED 2026-09-22, fix lane F11; NARROWED AGAIN 2026-09-26, Opus agent H)
+
+**Narrowed again (Opus agent H, 2026-09-26, SATZKARTE §57, messung/OPUS-H-KERNE.md).** The
+handlers are in the unit and the leg is carried by (a):
+
+* `Programm.unterbricht` (Syntax.lean) says which functions are entered by hardware; the
+  exporter writes it for every `entry … via idt` root (`gP.unterbricht`, `lean_g.rs`), so
+  `beispiele/59`'s certificate now names `takt_verteiler` as its handler.
+* (a) gains the component `masken` (`maskenB`, decided exactly by `maskenB_iff`): every function
+  a handler's call graph reaches takes only `masks irqs` locks -- the Rust `H102`. The link
+  check gains the same over the composed hull.
+* The leg `keinKernHalt` is `KernHaltE` (Spec.lean): for every core assignment and every run the
+  core hardware admits (`KernPlan`, the NAMED hardware assumption inside the leg), a thread whose
+  root the program declares a handler never stands at a lock another thread of its core holds.
+  `ziel_aus` discharges it from (a) (`kernHaltE_aus`); it is FALSE on the refused shape
+  (`kernHaltE_verletzt`: a handler enters while its core's thread holds an unmasked lock and
+  then waits for it), so it is no longer a conjunct that holds for every program.
+* Measured: `pruefe-akzeptiert-diff.py` compares the component against `H102` (see the report).
+
+WHAT IS LEFT of O19:
+
+* The C realises no masking (the emitter writes no `cli`/`sti`), so `KernPlan` -- the
+  hardware schedule the leg assumes -- has nothing to be related to in translation validation.
+* The core machine is G restricted to runs `KernPlan` admits, for EVERY core assignment; which
+  core a thread runs on is not a fact of the unit (no pinning in the language or the runtime).
+  "Each thread its own cell" for per-core accumulators (O17) needs pinning and is not given by it.
+* In G a handler thread runs once: re-entry of the same handler and handler-on-handler
+  preemption stay outside (`KernPlan` lets no other thread of the core step while a handler
+  runs).
+* A thrown entry without `via idt` (`beispiele/57`'s IPI) is no handler, for the Rust `H102` as
+  for the model.
+
+The record below is kept as written.
+
 
 An `entry … vector … via idt` dispatch root travels into the model as an ordinary start
 (`lean_g.rs` `check_starts`; `Spec.lean`: "`entry`/`boot` dispatch roots"). Since lane 255 the
