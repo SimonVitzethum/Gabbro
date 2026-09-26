@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # `pruefe-akzeptiert-diff.py` -- DIFFERENTIAL TEST: the Rust checker computes
-# the whole Lean checker Bool (`Akzeptiert`, `grammatik/Grammatik/Zielsatz/
-# Akzeptiert.lean`, decided exactly by `akzeptiert_iff`).
+# the whole Lean checker Bool of the goal theorem (`AkzeptiertX` since Opus
+# lane O25c: `Akzeptiert`, `grammatik/Grammatik/Zielsatz/Akzeptiert.lean`,
+# with the footprint component `fussWXB` of `Zielsatz/AtomarAkzeptiert.lean`
+# admitting the unit's shared atomics).
 #
 # For every corpus program `gabbro lean-g` exports, the script compares:
 # * the Rust verdict -- ACCEPT iff none of the Akzeptiert-rules fires
@@ -77,7 +79,12 @@ KOMPONENTEN = [
     ("frag", "programmImFragmentG {P} {fs}",
      ["LG004"]),  # export refuses untranslatable bodies; N293 the indirect leg
     ("abg", "abgAlleB {P} {fs}", None),  # vacuous: fixpoint, see above
-    ("fuss", "fussWB {P} {S} {fs} {ws}",
+    # Since Opus lane O25c (2026-09-26) the goal's checker is `AkzeptiertX`: its
+    # footprint component is `fussWXB`, which admits a shared atomic that no
+    # contract mentions (`GeteiltV`, the rely). Comparing against the Bool of
+    # before (`fussWB`) reported every such program (162, the O25 flag probe) as
+    # a finding in the wrong register (review of O25c, F3).
+    ("fuss", "Zielsatz.fussWXB {P} {S} {fs} {ws}",
      ["N290", "N291", "N292", "N293", "N294", "N484"]),
     # `N484` (Opus lane O25b, 2026-09-26): a contract over a shared atomic -- the
     # contract condition of `fussWXB` (`AkzeptiertX`); `fussWB` refuses every such
@@ -429,7 +436,7 @@ def sonde(ns, exp, starts):
         zeilen.append("example : ({G}.%s) = true := by decide -- COMP:%s"
                       % (schablone.format(**env), kurz))
     zeilen.append(
-        "example : ({G}.Akzeptiert %s %s %s %s %s %s) = true := by decide -- COMP:gesamt"
+        "example : ({G}.Zielsatz.AkzeptiertX %s %s %s %s %s %s) = true := by decide -- COMP:gesamt"
         % (P, S, fs, ls, cs, ws))
     return ("\n".join(zeilen) + "\n").format(**env)
 
@@ -458,9 +465,16 @@ def lean_lauf(sondentext, exporttext, frist):
         imp = [l for l in exporttext.splitlines() if l.startswith("import ")]
         if not any("Zielsatz/Akzeptiert" in l for l in imp):
             imp.append("import Grammatik.Zielsatz.Akzeptiert")
+        # `AkzeptiertX`/`fussWXB`, the goal's checker since Opus lane O25c.
+        imp.append("import Grammatik.Zielsatz.AtomarAkzeptiert")
         rest = [l for l in exporttext.splitlines()
                 if not l.startswith("import ")]
         text = "\n".join(imp) + "\n" + "\n".join(rest) + "\n" + sondentext
+        # The import of `AtomarAkzeptiert` brings `Export104.lean` along, whose
+        # namespace `G104_referenz` is the one the export of 104 declares. The
+        # probe's copy therefore gets its own name (review of O25c, F3).
+        for ns in set(re.findall(r"(?m)^namespace (\w+)\s*$", exporttext)):
+            text = re.sub(r"\b%s\b" % re.escape(ns), ns + "_akzdiff", text)
         datei = os.path.join(tmp, "sonde.lean")
         with open(datei, "w") as f:
             f.write(text)
