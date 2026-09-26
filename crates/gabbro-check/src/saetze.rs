@@ -3811,6 +3811,41 @@ pub const WIRKUNGEN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/fusswache2.rs",
     },
     Satz {
+        name: "wirkungen.vertrag_atomar",
+        kennungen: &["N484"],
+        aussage: "No `requires` or `ensures` reads a SHARED atomic: an `atomic` global no \
+                  lock protects, which one started thread's graph reaches in a footprint \
+                  while a different started thread's graph may write it (`N484`). A shared \
+                  atomic may be read in a body -- the user proves the body against every \
+                  value another thread may store there (the atomic rely, `KoerperGutSA`) -- \
+                  but a contract over it is a claim about a value another thread may \
+                  change at any moment. This is the contract condition of the Lean checker \
+                  with the rely, `AkzeptiertX` (`fussWXB`, `vertragsFreiB`, over \
+                  `GeteiltV`), under which `gabbro_ziel_atomar` gives every leg of `Ziel` \
+                  with shared atomics (standalone; the goal statement still runs \
+                  `Akzeptiert`, which refuses every unguarded shared read).",
+        vorbehalt: "Threads are the starts the `N290`-`N294` legs read; with fewer than two \
+                    the leg is silent. May-write is declared `writes`/`publishes` plus \
+                    stores, publishes and exchanges in bodies. The leg reads contract \
+                    clauses only: table and group invariants read tables and lock \
+                    invariants read guarded carriers, so neither can name a shared \
+                    atomic. Conservative like the model: a contract over an atomic only \
+                    its own thread writes, read elsewhere, falls too (`GetrenntR` pairs \
+                    reader and writer threads, not values).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1204 (`-- erwartet: N484`: `setzer` ensures \
+                      `FLAGGE == 1`, `loescher` stores 0 on another thread, `leser` reads \
+                      it -- before this leg 0 errors, `messung/proben/o25b-vertrag-atomar.gab`); \
+                      snippet tests in `tests/fusswache2.rs` (a contract over a thread-local \
+                      atomic, a shared atomic read in a body only, and a single thread stay \
+                      silent). Corpus diff: no file under `beispiele/` draws `N484`.",
+        fundstelle: "crates/gabbro-check/src/fusswache2.rs::vertrag_atomar; \
+                     grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean (`vertragsFreiB`, \
+                     `fussWXB`, `AkzeptiertX`, `akzeptiertSpecX_of`); \
+                     grammatik/Grammatik/Zielsatz/AtomarAkzeptiertZeuge.lean \
+                     (`vertrag_atomar_abgelehnt`)",
+    },
+    Satz {
         name: "wirkungen.rennboden",
         kennungen: &["N300", "N301", "N302", "N303", "N304"],
         aussage: "The race component of the goal Bool (`rennB` with `wurzelnB` beside \
