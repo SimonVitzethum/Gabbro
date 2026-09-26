@@ -508,7 +508,8 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("rahmenlaenge", rahmenlaenge::pass(baum, absagen));
         // **Lane 262, directly behind it.** The NUL-terminator discipline over
         // the buffers the program builds itself (`nulpfad.rs`, OFFEN O23).
-        z!("nulpfad", nulpfad::pass(baum, absagen));        z!("clone", clone::pass(baum, absagen));
+        z!("nulpfad", nulpfad::pass(baum, absagen));
+        z!("clone", clone::pass(baum, absagen));
         z!("arena", arena::pass(baum, absagen));
         z!("konstanten", konstanten::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };

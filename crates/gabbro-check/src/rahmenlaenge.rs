@@ -177,25 +177,25 @@ fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut A
     // no length the caller could set past it, and no clause could tie one. A
     // length-less callee that scans for a terminator instead (`puts`) is `N507`'s
     // shape (`nulpfad.rs`), not this rule's.
-    let hat_laenge = f.parameter.iter().any(|q| {
+    let has_length = f.parameter.iter().any(|q| {
         matches!(
             u.typ_von_ausdruck_decl(modul, &q.typ),
             crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
         )
     });
-    if !hat_laenge {
+    if !has_length {
         return;
     }
-    let atome = bounds(&f.requires);
+    let atoms = bounds(&f.requires);
     for p in &f.parameter {
         let TypExpr::Zeiger(z) = &p.typ else { continue };
-        let ziel = u.typ_von_ausdruck_decl(modul, &z.ziel);
-        let mut ohne = &ziel;
-        while let crate::typen::Typ::Benannt { unter, .. } = ohne {
-            ohne = unter;
+        let target = u.typ_von_ausdruck_decl(modul, &z.ziel);
+        let mut unwrapped = &target;
+        while let crate::typen::Typ::Benannt { unter, .. } = unwrapped {
+            unwrapped = unter;
         }
         if !matches!(
-            ohne,
+            unwrapped,
             crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
         ) {
             continue;
@@ -204,7 +204,7 @@ fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut A
             &z.ziel,
             TypExpr::Int(i) if matches!(i.wort, gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8)
         );
-        let gebunden = atome.iter().any(|a| {
+        let is_bound = atoms.iter().any(|a| {
             a.pointer == p.name.text
                 && f.parameter.iter().any(|q| {
                     q.name.text == a.length
@@ -218,10 +218,10 @@ fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut A
             format!(
                 "points at `{}`, and the callee counts BYTES -- `lenof({})` counts elements, \
                  and only for `u8`/`i8` are the two one number",
-                ziel.text(),
+                target.text(),
                 p.name.text
             )
-        } else if !gebunden {
+        } else if !is_bound {
             format!(
                 "carries no `requires <length> <= lenof({})` over one of its integer \
                  parameters -- nothing ties the bytes the callee moves to the object the \

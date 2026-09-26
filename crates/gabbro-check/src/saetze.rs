@@ -2919,7 +2919,7 @@ pub const M1: &[Satz] = &[
                       forwarding wrapper carries the clause) and `tests/nulpfad.rs` \
                       (the proved store, the untouched zeroed buffer, the carried \
                       clause, the unseen pointer that keeps its `V`).",
-        fundstelle: "crates/gabbro-check/src/nulpfad.rs (`ruf_pruefen`); \
+        fundstelle: "crates/gabbro-check/src/nulpfad.rs (`check_call`); \
                      dokumente/SYNTAX.md §12.1",
     },
     Satz {

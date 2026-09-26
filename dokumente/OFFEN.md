@@ -1007,6 +1007,22 @@ The frame length is now DECIDED: a `syscall` byte buffer carries `requires x <= 
 | **`lenof` of a pointer is decided only where an array decays** | along a forwarding chain it is the caller's own promise, carried by the same clause; a pointer out of a field or a computation cannot answer (refused, fail-closed) |
 | **what would close it** | an `AxPre` field in the declaration exported from each gate's `requires`, the caller obligation in `NutzerPflicht`, and the run-coincidence theorem that lets premise (c) drop to well-formed calls |
 
+> **STATUS 2026-09-26 (lane 262): narrowed on all four rows, closed on none.**
+> `N506` holds `extern fn` byte buffers with a length parameter to the same
+> `requires x <= lenof(p)` clause `N464` demands at `syscall` gates
+> (`beispiele/64` tightened, no other accepted program falls). `N507` decides
+> the NUL obligation where the program builds the buffer -- a proved
+> `buf[L-1] = 0` store, an untouched zeroed buffer, or forwarding under the
+> caller's own clause; unseen pointers keep the named `V`. Example 96's write
+> gate says `reads buf` (the `pure` fiction fixed, callers carry
+> `reads WINDOW`); gifts 1067/1068 name the read assumption. In Lean,
+> `FremdRuf.lean` §10 lifts the bridge from one call to call sequences at the
+> oracle layer (`mitVorbedingung_folge_gleich`); machine-level runs through
+> `bindAxiom`, the `AxPre` export and the fixture widening stay open (CUTS).
+> What remains of each row: the NUL for unseen pointers (still `V`-only); the
+> run coincidence above the oracle layer; `lenof` of a pointer decided only
+> where an array decays.
+
 ## O24 — Bounded strings are checked, not represented: NUL, the upper limit on `max`, aggregates (recorded 2026-09-22, review G12, fix lane F6)
 
 Fix lane F6 made the checker agree with the Lean value model
