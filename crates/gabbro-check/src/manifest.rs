@@ -657,6 +657,7 @@ pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_byte_legen",
     "sonde_freigabe",
     "sonde_keine_ueberbreite",
+    "sonde_metall_systemruf",
     "sonde_mxcsr_rne",
     "sonde_open",
     "sonde_rdtscp",

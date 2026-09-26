@@ -517,6 +517,13 @@ wortschatz! {
     Sysnumber     => "number",        ctx;
     Errors        => "errors",        ctx;
     Kernel        => "kernel",        ctx;
+    // **OFFEN O31 (Opus agent L, 2026-09-26): `target` binds system-call
+    // variables for one kernel ABI.** No existing form carries it: `abi`
+    // names the ABI of ONE gate, `profile` holds hardware modes and assumption
+    // references and binds no names, `arch` is a key of both. The statement
+    // `target T abi A arch X { V = number … assume …; }` is where a program
+    // says which kernel its gates call; `target T;` picks one of several.
+    Target        => "target",        ctx;
     // **«entrust» -- ein `code`-Raum, dessen INHALT Gabbro nicht kennt.**
     //
     // Das eine Wort, das JIT, JVM und jedes Gastmodul oeffnet. Es erbt den Eintrittsvertrag

@@ -54,17 +54,18 @@ assume linux_read_contract
 
 extern fn leser_haengt() -> never effects { diverges } costs <= 1 ops;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_gate_read;
+
 syscall gate_read(fd : Fd, buf : ptr<normal, w> u8, len : u64) -> u64 or ReadError
-    abi linux arch x86_64 number 0
-    regs in { rdi = fd, rsi = buf, rdx = len }
-    regs out { rax }
-    clobbers { rcx, r11 }
-    errors { EBADF => BadFd, EINTR => Interrupted, EINVAL => Invalid }
+    via sys_gate_read
     requires len <= MAXLEN, len <= lenof(buf)
     ensures result <= len
     effects { writes buf }
-    costs <= 40 ops
-    assume linux_read_contract falsifier sonde_read;
+    costs <= 40 ops;
 
 -- One read, honest effects: the kernel writes through `buf`, so the
 -- declaration says `writes buf` (no `pure` fiction here -- contrast the
@@ -93,7 +94,7 @@ impl fn zaehle(fd : Fd) -> u64 or ReadError
         per_pass bounded 1024 ops
         on_exceeded leser_haengt
         effects { writes EIMER }
-        progress linux_read_contract
+        progress sys_gate_read
     {
         if gesamt > SCHRANK - CAP {
             leave lesend;
@@ -119,5 +120,31 @@ impl fn zaehle(fd : Fd) -> u64 or ReadError
     }
     return gesamt;
 }
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_gate_read = number 0
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted, EINVAL => Invalid }
+        assume linux_read_contract falsifier sonde_read;
+}
+
+target metal abi metal arch x86_64 {
+    sys_gate_read = number 0
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted, EINVAL = 22 => Invalid }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

@@ -71,6 +71,13 @@ pub enum EintrittRuf {
     BindungFalsch,
 }
 
+/// **The exceptions that push a CPU error code** (8, 10..14, 17, 21, 29, 30): their
+/// entries take the twin stub `METALL_EINTRITT_FC` and `metall_idt_setze_fc`
+/// (`laufzeit/metall/metall.h`, OFFEN O32 (9)).
+pub fn hat_fehlercode(v: u128) -> bool {
+    matches!(v, 8 | 10..=14 | 17 | 21 | 29 | 30)
+}
+
 /// What the bare-metal driver carries beyond roots and locks (Opus agent J).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MetallZusatz {
@@ -371,10 +378,17 @@ pub fn erzeuge_metall_voll(
                     "metall_eintritt_bindung_falsch()".to_string()
                 }
             };
-            aus.push_str(&format!(
-                "METALL_EINTRITT({n}, {}, {ruf})\n",
-                if e.geworfen { 1 } else { 0 }
-            ));
+            // **OFFEN O32 (9), Opus agent L:** an exception that pushes a CPU error
+            // code gets the twin stub that drops it (`METALL_EINTRITT_FC`); such a
+            // vector is never LAPIC-thrown, so it writes no EOI.
+            if hat_fehlercode(e.vektor) {
+                aus.push_str(&format!("METALL_EINTRITT_FC({n}, {ruf})\n"));
+            } else {
+                aus.push_str(&format!(
+                    "METALL_EINTRITT({n}, {}, {ruf})\n",
+                    if e.geworfen { 1 } else { 0 }
+                ));
+            }
         }
     }
     aus.push_str("\n/* -- ROOTS: one driver-owned stack and one join word per declared start. */\n");
@@ -390,8 +404,9 @@ pub fn erzeuge_metall_voll(
     // for a root finds its stub.
     for e in &zusatz.eintritte {
         let n = &e.name;
+        let setze = if hat_fehlercode(e.vektor) { "metall_idt_setze_fc" } else { "metall_idt_setze" };
         aus.push_str(&format!(
-            "    metall_idt_setze(gabbro_eintritt_{n}_VEKTOR, gabbro_eintritt_{n});\n"
+            "    {setze}(gabbro_eintritt_{n}_VEKTOR, gabbro_eintritt_{n});\n"
         ));
     }
     for (i, w) in wurzeln.iter().enumerate() {
@@ -780,6 +795,13 @@ mod treiber_tests {
                     geworfen: false,
                     ruf: EintrittRuf::BindungFalsch,
                 },
+                // OFFEN O32 (9): a #GP entry takes the error-code twin.
+                Eintritt {
+                    name: "gp".to_string(),
+                    vektor: 13,
+                    geworfen: false,
+                    ruf: EintrittRuf::Bindung { ein: vec![], aus: None },
+                },
             ],
             rcus: vec!["BACCT".to_string()],
             zellen: vec!["hoch".to_string(), "tief".to_string()],
@@ -792,6 +814,9 @@ mod treiber_tests {
             "METALL_EINTRITT(syscall, 0, r->rax = (uint64_t)gabbro_eintritt_syscall_verteiler(r->rax, r->rdi))"
         ));
         assert!(c.contains("METALL_EINTRITT(leise, 0, metall_eintritt_bindung_falsch())"));
+        assert!(c.contains("METALL_EINTRITT_FC(gp, gabbro_eintritt_gp_verteiler())"), "{c}");
+        assert!(c.contains("metall_idt_setze_fc(gabbro_eintritt_gp_VEKTOR, gabbro_eintritt_gp)"));
+        assert!(c.contains("    metall_idt_setze(gabbro_eintritt_leise_VEKTOR"));
         assert!(c.contains("METALL_RCU(BACCT)"));
         assert!(c.contains(
             "METALL_KERNE_GRENZE(METALL_MIN(METALL_MIN(METALL_KERNE_MAX, METALL_ZELLEN(hoch_zellen)), METALL_ZELLEN(tief_zellen)))"

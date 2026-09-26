@@ -27,6 +27,7 @@
 //! | `N504` | the head promises a smaller `costs` bound than the exporter declares | (costs are not in G) |
 //! | `N505` | the hardware assumptions differ: an `assume`/`axiom`, a `device`, the `profile`, or a foreign `extern fn` both units name, with different content | `E₂.Q = E₁.Q` |
 //! | `N516` | a module holds items in two units: no linked program can be composed (Opus F) | `verbinde` needs one owner per function |
+//! | `N568` | the units call different kernels: two `target`s (or a target and a literal gate of another ABI) -- two named-assumption sets in one program (Opus L, OFFEN O31) | `E₂.Q = E₁.Q` |
 //!
 //! ## The linked program (Opus agent F, review E F1, OFFEN O28)
 //!
@@ -197,6 +198,50 @@ fn annahmen(e: &Einheit) -> BTreeMap<String, (String, Span)> {
         );
     });
     aus
+}
+
+/// **How a unit calls its kernel** (OFFEN O31): the active target as `target T (abi A arch
+/// X)`, or -- for a unit without targets -- the ABIs its literal gates name. `None` for a
+/// unit that calls no kernel.
+fn kernel_von(e: &Einheit) -> Option<(String, Vec<(String, String)>, Span)> {
+    let bild = gabbro_syntax::ziel::zielbild(e.baum);
+    if let (Some(t), Some((abi, arch))) = (&bild.aktiv, bild.aktive_abi()) {
+        let sp = bild.bloecke.iter().find(|b| &b.name.text == t).map(|b| b.name.span)?;
+        return Some((format!("`target {t}` (abi {abi} arch {arch})"), vec![(abi, arch)], sp));
+    }
+    let mut abis: Vec<(String, String)> = Vec::new();
+    let mut sp: Option<Span> = None;
+    crate::fuer_jedes_item(e.baum, &mut |item| {
+        if let ItemArt::Syscall(s) = &item.art {
+            if s.via.is_none() {
+                let p = (s.abi.text.clone(), s.arch.text.clone());
+                if !abis.contains(&p) {
+                    abis.push(p);
+                }
+                sp.get_or_insert(s.abi.span);
+            }
+        }
+    });
+    let sp = sp?;
+    let text = abis.iter().map(|(a, x)| format!("abi {a} arch {x}")).collect::<Vec<_>>().join(", ");
+    Some((format!("literal gates ({text})"), abis, sp))
+}
+
+/// Two units that call different kernels: `(a's, b's, where in b)`.
+fn kernel_streit(a: &Einheit, b: &Einheit) -> Option<(String, String, Span)> {
+    let (ta, abis_a, _) = kernel_von(a)?;
+    let (tb, abis_b, sp) = kernel_von(b)?;
+    let gleich = abis_a.len() == 1 && abis_a == abis_b && {
+        // Two active targets must also carry the same NAME: one target, one set of bindings.
+        let na = gabbro_syntax::ziel::zielbild(a.baum).aktiv;
+        let nb = gabbro_syntax::ziel::zielbild(b.baum).aktiv;
+        na.is_none() || nb.is_none() || na == nb
+    };
+    if gleich {
+        None
+    } else {
+        Some((ta, tb, sp))
+    }
 }
 
 /// The signature of a head: parameters with names and types, the result, the error channel.
@@ -635,6 +680,25 @@ pub fn verbinde(
             );
         }
     }
+    // ---- N568 (OFFEN O31): ONE kernel for the linked program ----
+    if let Some((ka, kb, sp)) = kernel_streit(a, b) {
+        abs_b.schiebe(
+            Absage::fehler(
+                "N568",
+                sp,
+                format!(
+                    "{} calls its kernel as {kb} and {} as {ka}: the linked program would call \
+                     two kernels",
+                    b.name, a.name
+                ),
+            )
+            .mit_notiz(
+                "linking is claimed only under the SAME hardware assumptions (`GabbroZielVerbund`, \
+                 OFFEN O28) -- two targets are two kernels with two named assumptions; bind \
+                 both units for the same target (`target T;` or `--target T`)",
+            ),
+        );
+    }
     // ---- hardware assumptions: the SAME for both units ----
     let (ha, hb) = (annahmen(a), annahmen(b));
     for (schl, (tb, sp_b)) in &hb {
@@ -974,6 +1038,35 @@ impl fn w() effects { pure } costs <= 16 ops { bib::f(); return; }
     #[test]
     fn ein_passender_kopf_verbindet_ohne_absage() {
         assert_eq!(links(BIB, APP), Vec::<&str>::new());
+    }
+
+    /// A unit whose one gate calls through `via V` under a target of the given ABI.
+    fn tor_einheit(m: &str, ziel: &str, abi: &str, annahme: &str, sonde: &str) -> String {
+        let clob = if abi == "linux" { "rcx, r11" } else { "" };
+        format!(
+            "module {m} {{
+reason E{m} {{ Bad = 9 \"bad\" exhaustive }}
+assume {annahme} \"the kernel keeps it\" falsifier {sonde};
+syscall v{m};
+syscall g{m}(fd : u64) -> u64 or E{m} via v{m} effects {{ pure }} costs <= 8 ops;
+target {ziel} abi {abi} arch x86_64 {{
+    v{m} = number 1 regs in {{ rdi = fd }} regs out {{ rax }} clobbers {{ {clob} }}
+        errors {{ EBADF => Bad }} assume {annahme} falsifier {sonde};
+}}
+}}
+"
+        )
+    }
+
+    #[test]
+    fn zwei_ziele_verbinden_sich_nicht_n568() {
+        // OFFEN O31: two units bound for two kernels are two kernels in one program.
+        let a = tor_einheit("a", "linux_x86_64", "linux", "linux_c", "sonde_write");
+        let b = tor_einheit("b", "metal", "metal", "metal_c", "sonde_metall_systemruf");
+        assert_eq!(links(&a, &b), vec!["N568"]);
+        // The same target on both sides links, and the linked program binds both gates.
+        let c = tor_einheit("c", "linux_x86_64", "linux", "linux_d", "sonde_open");
+        assert_eq!(links(&a, &c), Vec::<&str>::new());
     }
 
     #[test]

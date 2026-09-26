@@ -23,16 +23,16 @@ assume faden_start_vertrag
     "The starter keeps its contract on this machine."
     falsifier sonde_faden_start;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_roher_start;
+
 syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
-    abi linux arch x86_64 number 1000
-    regs in { rdi = art, rsi = stapel }
-    regs out { rax }
-    stack rsi
-    clobbers { rcx, r11 }
-    errors { NSTACK => KeinStapel }
+    via sys_roher_start
     effects { pure }
-    costs <= 64 ops
-    assume faden_start_vertrag falsifier sonde_faden_start;
+    costs <= 64 ops;
 
 extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
 
@@ -52,5 +52,33 @@ impl fn starter(art : u64, stapel : u64) -> u64
     }
     return v;
 }
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_roher_start = number 1000
+        regs in { rdi = art, rsi = stapel }
+        regs out { rax }
+        stack rsi
+        clobbers { rcx, r11 }
+        errors { NSTACK => KeinStapel }
+        assume faden_start_vertrag falsifier sonde_faden_start;
+}
+
+target metal abi metal arch x86_64 {
+    sys_roher_start = number 1000
+        regs in { rdi = art, rsi = stapel }
+        regs out { rax }
+        stack rsi
+        clobbers { }
+        errors { NSTACK => KeinStapel }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

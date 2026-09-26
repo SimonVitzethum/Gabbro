@@ -16,6 +16,7 @@ pub mod lex;
 pub mod parse;
 pub mod print;
 pub mod span;
+pub mod ziel;
 
 pub use diag::{Absage, Absagen, Stufe};
 pub use parse::{parse, zucker_bereich, zucker_speicher};

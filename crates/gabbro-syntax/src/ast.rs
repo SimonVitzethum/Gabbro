@@ -94,6 +94,17 @@ pub enum ItemArt {
     /// `or R` channel) and either a named assumption (`assume … falsifier …`) or a
     /// kernel pairing (`kernel <path>`, refused until lane S6's stub lands).
     Syscall(SyscallDecl),
+    /// **`syscall NAME;` -- a system-call VARIABLE** (OFFEN O31, Opus agent L).
+    ///
+    /// Names a system call without its ABI: the number, the register map, the
+    /// error convention and the named assumption are bound per target by a
+    /// `target` block (`ZielDecl`). A gate refers to it with `via NAME`.
+    SysVar(SysVarDecl),
+    /// **`target T abi A arch X { … }` / `target T;`** (OFFEN O31, Opus agent L).
+    ///
+    /// A block binds system-call variables for one kernel ABI; the bare form
+    /// selects the active target when a unit carries several.
+    Ziel(ZielDecl),
     /// **`profile { … }` -- the ONE hardware profile of the program** («E6»).
     ///
     /// The one set of hardware assumptions the whole program runs under
@@ -145,6 +156,10 @@ impl ItemArt {
             ItemArt::Entrust(e) => Some(&e.name),
             ItemArt::Boot(b) => Some(&b.name),
             ItemArt::Syscall(s) => Some(&s.name),
+            ItemArt::SysVar(v) => Some(&v.name),
+            // **O31:** target names live in their own space (the binding
+            // statements), like `profile` they name nothing into the scope.
+            ItemArt::Ziel(_) => None,
             // **«E6»:** a profile block carries entries, not a name -- like
             // `use` and `concurrent` it names nothing into the scope.
             ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => None,
@@ -180,6 +195,8 @@ impl ItemArt {
             ItemArt::Entrust(_) => "entrust",
             ItemArt::Boot(_) => "boot",
             ItemArt::Syscall(_) => "syscall",
+            ItemArt::SysVar(_) => "syscall variable",
+            ItemArt::Ziel(_) => "target",
             ItemArt::Profil(_) => "profile",
             ItemArt::ProfilBedarf(_) => "requires profile",
             ItemArt::Arena(_) => "arena",
@@ -2351,6 +2368,68 @@ pub struct SyscallDecl {
     /// declared cost `fa` on top of the §1 dispatch step, never slipping
     /// through at zero (`fremd_kein_null_*`, `KostenG.lean` §13).
     pub costs: Option<Expr>,
+    pub paarung: SyscallPaarung,
+    /// **`errors { ENOENT = 2 => NotFound }` -- the explicit errno number of an
+    /// arm** (OFFEN O31), parallel to `errors`. `None`: the reason case's
+    /// declared value is the number the kernel sends (the form before O31).
+    pub errno_werte: Vec<Option<Expr>>,
+    /// **`via V` -- the gate's system-call variable** (OFFEN O31). With it the
+    /// fields from `abi` to `errors` and `paarung` are NOT written at the gate:
+    /// the parser fills them from the active target's binding of `V`
+    /// (`crate::ziel::binde`), and `ziel` names that target.
+    pub via: Option<Ident>,
+    /// The target whose binding filled this gate (`via` gates only). `None`
+    /// on a `via` gate: no active target binds the variable -- the fields
+    /// are placeholders and the checker refuses the gate (`N563`).
+    pub ziel: Option<Ident>,
+    pub span: Span,
+}
+
+impl SyscallDecl {
+    /// A `via` gate no active target binds: its ABI fields are placeholders.
+    pub fn ungebunden(&self) -> bool {
+        self.via.is_some() && self.ziel.is_none()
+    }
+}
+
+/// **`syscall NAME;` -- a system-call variable** (OFFEN O31).
+#[derive(Debug, Clone)]
+pub struct SysVarDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
+/// **`target …`** (OFFEN O31) -- a binding block or the selection.
+#[derive(Debug, Clone)]
+pub struct ZielDecl {
+    pub name: Ident,
+    pub art: ZielArt,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum ZielArt {
+    /// `target T;` -- the active target of a unit with several blocks.
+    Wahl,
+    /// `target T abi A arch X { V = …; … }`.
+    Block { abi: Ident, arch: Ident, bindungen: Vec<ZielBindung> },
+}
+
+/// **`V = number N regs in {…} regs out {…} [stack r] clobbers {…} errors {…}
+/// assume a falsifier s;`** -- one variable bound for one target.
+///
+/// Exactly the target-dependent half of a `syscall` declaration: the gate
+/// keeps its parameters, result, channel, contract, effects and costs.
+#[derive(Debug, Clone)]
+pub struct ZielBindung {
+    pub var: Ident,
+    pub nummer: Expr,
+    pub regs_in: Vec<(Ident, Ident)>,
+    pub regs_out: Vec<Ident>,
+    pub stapel: Vec<Ident>,
+    pub clobbers: Vec<Ident>,
+    pub errors: Vec<(Ident, Ident)>,
+    pub errno_werte: Vec<Option<Expr>>,
     pub paarung: SyscallPaarung,
     pub span: Span,
 }

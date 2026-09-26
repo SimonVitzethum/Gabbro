@@ -1,0 +1,47 @@
+-- erwartet: N567
+-- Gift 1360 -- **A literal gate beside a target.** `read` writes `abi linux … number 0` at the gate in a
+-- unit that binds system calls per target: the target would change every other gate and
+-- silently not this one (OFFEN O31).
+
+module gift::wortwoertliches_tor_neben_ziel {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry keeps the Linux x86_64 convention for the numbers it serves."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+
+syscall read(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 0
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+}

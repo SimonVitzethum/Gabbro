@@ -915,6 +915,39 @@
     the CPU exceptions (report and stop) and its own timer, so `KernPlan` (the handler leg's
     named core schedule) has no realisation here yet -- OFFEN O19/O32.
   -- END bare-metal runtime block --
+  -- BEGIN bare-metal entries and targets (Opus agent L, 2026-09-26, OFFEN O31/O32) --
+    COMMENT ONLY: no definition, no premise and no leg of this file changes. Since Opus agent J
+    the metal runtime installs the handlers the PROGRAM declares (`METALL_EINTRITT`, masked
+    locks, `laufzeit/metall/arena.c`), which supersedes the last sentence of the block above;
+    what that adds to (c)/(d) on metal, NAMED as runtime/hardware assumptions (unchecked, about
+    `laufzeit/metall/` and the machine, not about the user's program):
+    - (M8) THE ENTRY STUB: an entry (`entry … vector N`, entered or `via idt`) runs its
+      `dispatch` with the `regs in` registers, in order, as the arguments and stores the answer
+      into the `regs out` register; every other general register and the x87/SSE state come
+      back as they were (`metall_eintritt_gemeinsam`, `laufzeit/metall/eintritt_asm.h`); a
+      LAPIC-thrown entry is acknowledged once. The checker holds the binding against the
+      dispatch's signature (`N561`), so the stub never guesses. The same text is the kernel
+      service entry at vector 0x80 of a gate bound for `target … abi metal` (OFFEN O31); its
+      register half is falsified by `sonden/sonde_metall_systemruf.c`, which assembles THAT
+      text into a userland program. The entry runs on the interrupted stack: the declared
+      `stack NAME per cpu` / `ist` is not switched to (OFFEN O32 (8)), and an exception vector
+      that pushes a CPU error code is refused by the runtime (OFFEN O32 (9)).
+    - (M9) THE MASKED LOCK: a `masks irqs` lock clears IF BEFORE its ticket is drawn and
+      restores the holder's flags at release; a spin with IF = 0 never yields its core. So no
+      `via idt` handler lands on a core with a claim on the lock -- the realisation of the
+      handler leg's named core schedule (`KernPlan`, OFFEN O19) for masked locks. An UNMASKED
+      lock taken inside a masked section spins with IF = 0 without yielding (OFFEN O32 (10)).
+    - (M10) THE ARENA BUDGET: a dynamic arena's reserve is a static region carved at load
+      (refusal = load refusal), and `grow` commits against a fixed budget; an exhausted budget
+      answers the program's `else` -- the same answer the hosted `mmap` refusal gives, so the
+      arena leg is unchanged; what the budget IS, is the image's configuration.
+    TARGETS (OFFEN O31): a gate written `via V` is filled by the parser from the ACTIVE
+    target's binding before any check, so premise (c) names the assumption THAT binding
+    carries (`linux_write_contract` under `linux_x86_64`, `metal_kernel_contract` under
+    `metal` in the corpus); the checker refuses one assumption under two targets (`N566`),
+    and the link statement (`GabbroZielVerbund`, same `Q`) is held by `N568`: two linked
+    units call ONE kernel.
+  -- END bare-metal entries and targets --
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not
     the user's logic:

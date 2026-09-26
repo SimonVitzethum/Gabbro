@@ -1044,7 +1044,7 @@ pub const NAMEN: &[Satz] = &[
     },
     Satz {
         name: "namen.verbund",
-        kennungen: &["N501", "N502", "N503", "N504", "N505", "N516"],
+        kennungen: &["N501", "N502", "N503", "N504", "N505", "N516", "N568"],
         aussage: "Separately compiled units that `gabbro link` (or `gabbro build` over two or \
                   more units) accepts are checked over ONE link declaration: every `extern fn` \
                   head one unit relies on names a `pub fn` of another unit with the same \
@@ -1054,7 +1054,9 @@ pub const NAMEN: &[Satz] = &[
                   does not call back into the importer (`N503`); a `costs` bound the exporter \
                   keeps (`N504`); every `assume`, `axiom`, `device`, `profile` and foreign \
                   `extern fn` two units name stated identically -- the SAME hardware \
-                  assumptions (`N505`). And when no head is stale, the LINKED program -- the \
+                  assumptions (`N505`); and both units call ONE kernel -- the same active \
+                  `target`, or literal gates of the same ABI (`N568`, OFFEN O31). And when no \
+                  head is stale, the LINKED program -- the \
                   units composed as one, each body from its owner, every start of every unit \
                   -- passes the whole checker; its refusals carry their one-file codes \
                   (`N291`/`N301` for a read behind a head that another unit's thread races), \
@@ -1091,7 +1093,8 @@ pub const NAMEN: &[Satz] = &[
                       (`crates/gabbro-cli/tests/verbund.rs`, which also runs `gabbro build \
                       a.gab b.gab`); snippet tests in `verbund.rs` (callback `N503`, body in \
                       both units, unexported import, differing table `N501`, differing \
-                      foreign function `N505`, contracts as trees, the composed text).",
+                      foreign function `N505`, contracts as trees, the composed text, \
+                      two targets `N568` beside one target linking clean).",
         fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde_alle; \
                      grammatik/Grammatik/Zielsatz/Spec.lean (`Verbindbar`, \
                      `SchnittstelleSpec`, `GabbroZielVerbund`); \
@@ -4339,7 +4342,9 @@ pub const PHASEN: &[Satz] = &[
                   outcome. Five shape rules guard the five places a plausible wrong stub \
                   would stand: no in-register the stub cannot keep (`C180` -- `rax` or a \
                   clobbered register), the answer in `rax` and not scratch (`C181`), the \
-                  Linux x86_64 ABI and no other (`C182`), an integer answer with a \
+                  Linux x86_64 `syscall` ABI or the bare-metal `int $0x80` ABI (`abi \
+                  metal`, O31: nothing but memory destroyed) and no other (`C182`), an \
+                  integer answer with a \
                   checkable range (`C183`), and a number -- and every result bound -- \
                   that folds at translation time (`C184`).",
         vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
@@ -4347,9 +4352,10 @@ pub const PHASEN: &[Satz] = &[
                     assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
                     to the C compiler where no value can be delivered. The errno NAME is \
                     never held against a kernel table: the number compared is the \
+                    binding's explicit number (`EBADF = 9 => BadFd`, O31) or else the \
                     reason case's DECLARED value, and a declaration that numbers its \
                     reasons differently than the kernel numbers its errnos decodes \
-                    against its own numbers. A ghost parameter, an `errors` map with no \
+                    against its own numbers (`S14` did, until Opus agent L). A ghost parameter, an `errors` map with no \
                     channel, and an unresolvable reason stay the generic `C001`. The \
                     out-of-range and past-`-4095` legs hand `__builtin_unreachable()` to \
                     the compiler under the gate's OWN `assume` -- the stub prints it as \
@@ -4408,6 +4414,67 @@ pub const PHASEN: &[Satz] = &[
                      `N506`); crates/gabbro-check/src/m1.rs \
                      (`transfer_bound_at_call`); crates/gabbro-check/src/syscall.rs \
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
+        name: "syscall.zielbindung",
+        kennungen: &["N562", "N563", "N564", "N565", "N566", "N567"],
+        aussage: "A gate written `via V` calls the kernel the ACTIVE target binds `V` to, and \
+                  nothing else. `V` is a declared `syscall V;` and one gate's alone (`N562`); \
+                  EVERY `target` block binds every variable a gate uses, so switching the \
+                  target never meets an unbound gate (`N563`, also when the unit binds no \
+                  target at all); a binding names a declared variable, once per target \
+                  (`N564`); the active target is determined -- one `target T;` selection or \
+                  one block name, a selection or `GABBRO_TARGET`/`--target` naming a block, \
+                  one name meaning one ABI (`N565`); two targets never bind one variable \
+                  under ONE named assumption, and no `progress` clause names an assumption a \
+                  target binds (`N566`: `progress V` names the variable and follows the \
+                  binding); and a unit with targets writes no literal gate (`N567`). Every \
+                  binding of an INACTIVE target is filled into a copy of its gate and held \
+                  to the same shape rules (`N063`-`N068`, `A006`) and the named-assumption \
+                  rule (`N004`/`N005`) as the active one.",
+        vorbehalt: "The variables and targets are unit-global names: a module path does not \
+                    scope them. The emitter's template rules (`C180`-`C184`) run for the \
+                    target that is emitted, not for the others. What a target's kernel does \
+                    for a number is its named assumption -- the binding's -- and the errno \
+                    numbers a binding writes (`EBADF = 9 => BadFd`) are the program's word \
+                    for its kernel, not checked against any table. The manifest lists every \
+                    declared assumption, bound by the active target or not (more trust \
+                    named than used, never less). Linking two units that bind different \
+                    targets is `N568`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1352`/`1353` (`N562`: an undeclared variable, two gates \
+                      on one), `1354`/`1363` (`N563`: a target that does not bind, a unit \
+                      with no target), `1355`/`1356` (`N564`: a misspelt variable, a \
+                      binding twice), `1357`/`1358` (`N565`: two targets and no selection, a \
+                      selection of nothing), `1359`/`1361` (`N566`: one assumption under two \
+                      targets, `progress` over a target's assumption), `1360` (`N567`), \
+                      `1362` (`N063` from an INACTIVE target). The clean side: \
+                      beispiele/163, and the eleven rewritten gate units (74, 90, 96, 149, \
+                      150, 155, 156, 160, 1114, S14) under both targets.",
+        fundstelle: "crates/gabbro-check/src/zielbindung.rs; crates/gabbro-syntax/src/ziel.rs \
+                     (the fill); dokumente/SYNTAX.md §12.3",
+    },
+    Satz {
+        name: "eintritt.bindung",
+        kennungen: &["N561"],
+        aussage: "An `entry` whose `dispatch` is a function of this unit binds exactly that \
+                  function's signature: one `regs in` register per parameter, in order, and \
+                  at most one `regs out` register, and only for a function that answers a value (an \
+                  answer with no out register is dropped -- the entry changes no register), never an `or R` \
+                  channel (`N561`). The bare-metal stub (`METALL_EINTRITT`) passes the \
+                  registers as the arguments and stores the answer into the out register, \
+                  so an accepted entry has a stub that guesses nothing.",
+        vorbehalt: "Counts, not widths: every register is a 64-bit word, and a narrower \
+                    parameter takes its low bits. A dispatch that resolves to no function of \
+                    the unit (a foreign path) is not held (`N006` owns the name). Nothing \
+                    here says the handler is correct, or that its stack is the declared \
+                    one (the metal stub runs on the interrupted stack, OFFEN O32 (8)).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1351 (two registers into a one-parameter dispatch). The \
+                      clean side: beispiele/07, /59, and beispiele/11 and \
+                      `probe-emission144-typeof` since their dispatch heads were fixed \
+                      (Opus agent L; both bound registers to a nullary `extern fn`).",
+        fundstelle: "crates/gabbro-check/src/zielbindung.rs (`eintritte`)",
     },
     Satz {
         name: "klon.uebergabe",

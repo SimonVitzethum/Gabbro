@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **179** measured (`pruefe-syntax.sh` EBNF branch: 179 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **187** measured (`pruefe-syntax.sh` EBNF branch: 187 defined, 0 open, 0 unreachable from `program`; 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **241 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 241 EBNF terminals against 241 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10) |
+| vocabulary words | 221 | **242 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 242 EBNF terminals against 242 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 244 words
+## Vocabulary — closed, 245 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -102,7 +102,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              embeds scale walk levels node down leaf mappings
              entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
-  Fremdkoerper syscall abi number errors kernel
+  Fremdkoerper syscall abi number errors kernel target
   Domaenen   slots of chain descendants ancestors queue elems fields threads
              reaches via tree parent child sibling observed occupied
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
@@ -126,9 +126,9 @@ production and a name, and each is decided by the grammar and not by a list:
 2. **`old` and `result`** — words inside a contract clause, names everywhere else;
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-**Seventeen of the 244 are still not names** (recounted 2026-09-19, lane 257:
-`instrumente/zaehle-wortschatz.py` reads 244 words, 17 reserved, 227 contextual;
-`instrumente/pruefe-wortschatz.py` reads 241 EBNF terminals against 241 table words --
+**Seventeen of the 245 are still not names** (recounted 2026-09-26, Opus agent L:
+`instrumente/zaehle-wortschatz.py` reads 245 words, 17 reserved, 228 contextual;
+`instrumente/pruefe-wortschatz.py` reads 242 EBNF terminals against 242 table words --
 the three over are `r` `w` `x`, single letters both sides drop by construction).
 Every one of the seventeen has **zero** declarator sites in 585 foreign files, and every
 one names below the position that forces it -- a use-site occurrence always parses as
@@ -163,11 +163,11 @@ ordinary local (`uint32_t <word> = 1; return <word>;` through
 row above: the twelve place-refusals, the five expression heads, the seven C names).
 
 Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`
-`errors` `kernel`, `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1),
+`errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1),
 `profile` `rounding` `fp_contract`
 `memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
-`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 244 as a parameter
-and as a local, requiring clean exactly for the 227. No word freed since stands
+`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 245 as a parameter
+and as a local, requiring clean exactly for the 228. No word freed since stands
 unread: freeing one of the seventeen buys zero foreign sites and breaks either a read
 or the C, so the residue is irreducible by measurement, not by taste.
 
@@ -206,7 +206,7 @@ optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `f
 (in `heldpred`) and `TESTBUILD` (in `buildgate`) are terminals of the grammar but not words of
 the vocabulary — identifiers in a fixed position, counted and named by the guardian.
 
-**The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
+**The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors`, `kernel` and `target` are
 words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
 side carries them through `syscalldecl`, and a `syscall` item has been checked
 since lane S5 (`N063`-`N068`, `A005`/`A006`; emission refused as `C001` until the
@@ -233,7 +233,7 @@ item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | arena | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
-             | bootdecl | syscalldecl | translatordecl | profiledecl | requiresprofile ) ;
+             | bootdecl | syscalldecl | targetdecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
@@ -269,24 +269,39 @@ entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
    the lane-S6 stub lands;
    the grammar below is the surface the checker, the emitter ruling and the corpus
    example (§12.1) are written against. *)
-syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
-              "abi" ident "arch" ident "number" constexpr
+syscalldecl = "syscall" ident
+              ( ";"                                               (* O31: a variable *)
+              | "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+                ( "abi" ident "arch" ident sysbind syscontract syspair
+                | "via" ident syscontract ";" ) ) ;              (* O31 *)
+sysbind     = "number" constexpr
               "regs" "in"  "{" [ regbind { "," regbind } [ "," ] ] "}"
               "regs" "out" "{" [ regbind { "," regbind } [ "," ] ] "}"
               { "stack" ident }
               "clobbers" "{" [ identlist ] "}"
-              "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
-              [ "requires" predlist ]
+              "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}" ;
+syscontract = [ "requires" predlist ]
               [ "ensures"  predlist ]
               "effects" "{" efflist "}"
-              [ "costs" "<=" expr "ops" ]
-              ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
-              | "kernel" path ";" ) ;
+              [ "costs" "<=" expr "ops" ] ;
+syspair     = "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
+            | "kernel" path ";" ;
+targetdecl  = "target" ident
+              ( ";"                                               (* the selection *)
+              | "abi" ident "arch" ident "{" { targetbind } "}" ) ;
+targetbind  = ident "=" sysbind syspair ;
+(* CHANGED Opus agent L (OFFEN O31, §12.3): a system call as a NAMED VARIABLE. `syscall V;`
+   declares it; a gate written `via V` carries its contract, effects and costs and NO
+   kernel; each `target T abi A arch X { V = sysbind syspair }` binds the variable for one
+   kernel ABI, and `target T;` selects the active one (or `--target T`). The literal form
+   (`abi … sysbind … syspair` at the gate) stays for units without targets (`N567`). *)
 (* CHANGED lane O-1 (K-1): `{ "stack" ident }` between `regs out` and `clobbers` names
    the handed-stack register AS a stack -- the one clause that may claim stack-ness, at
    most once (`N447`). It names a register bound in `regs in`, kept and answered (`N446`).
    No new word: `stack` is the `entryextra` word (§1). *)
-errmap     = ident "=>" ident ;
+errmap     = ident [ "=" constexpr ] "=>" ident ;
+(* CHANGED Opus agent L: `EBADF = 9 => BadFd` -- the errno number the kernel of THIS
+   binding sends; without it, the reason case's declared value (the form before O31). *)
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" )
              [ "per" "cpu" constexpr ] ";" ;
@@ -323,6 +338,7 @@ world before the first body and has no run-time meaning of its own.
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
 | `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N452`, `N456`/`N457`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
+| `targetdecl`, `syscall V;`, `via V` (§12.3, Opus agent L) | **a gate's kernel is a binding, not its text**: the parser fills every `via` gate from the active target's binding before any pass runs, and the checker holds every binding (`N562`-`N567`, inactive targets included) | none of its own — the filled gate is the `syscalldecl` row above; the target's named assumption is the gate's `D.Ax` assumption |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -2107,6 +2123,89 @@ keyed mode assumptions the profile induces its own model
 (`modusVonProfil`). All in `grammatik/Grammatik/Profil.lean`, witnessed.
 
 ---
+
+### 12.3 `target` — system calls as named variables, bound per kernel (Opus agent L, OFFEN O31)
+
+**Simon's request (2026-09-26), built.** A gate used to carry its kernel in its own text:
+`abi linux arch x86_64 number 1`, the register map, the errno map, the named assumption.
+Since this section, a gate can name a **variable** instead, and ONE statement elsewhere
+binds it for a kernel:
+
+```gabbro
+syscall sys_write;                                   -- the variable
+
+syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
+    via sys_write                                    -- no number, no registers here
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    costs <= 8 ops;
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {                 -- the bare-metal image's kernel entry
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;                                 -- the active one
+…
+```
+
+**What a binding carries** — exactly the target-dependent half of a gate: the number, the
+register map (`regs in`/`regs out`/`stack`), what the kernel destroys (`clobbers`), the
+error convention (`errors`, with an explicit errno number where the kernel numbers it
+differently from the reason case), and the named assumption with its falsifier. **What the
+gate keeps** — its parameters, answer, `or R` channel, `requires`/`ensures`, `effects`,
+`costs`: the contract the program relies on, the same for every kernel.
+
+**The active target** is `--target T` (or `GABBRO_TARGET=T`) when given, else the one
+`target T;` selection, else the one block name. The parser fills every `via` gate from
+the active binding (`crates/gabbro-syntax/src/ziel.rs`) before any pass runs, so every
+pass, the emitter and the exporter read an ordinary gate. `progress V` over a variable
+names the assumption the active target binds for it.
+
+**The checks** (`crates/gabbro-check/src/zielbindung.rs`):
+
+* `N562` — `via V` names a declared `syscall V;`, and no second gate uses `V`;
+* `N563` — EVERY target binds every variable a gate uses (switching never meets an
+  unbound gate); a `via` gate in a unit with no target falls here too;
+* `N564` — a binding names a declared variable, once per target;
+* `N565` — the active target is determined: one selection or one block name; a selection
+  (or `--target`) names a block; one name is one ABI;
+* `N566` — a different target is a different named assumption: two targets never bind one
+  variable under ONE assumption, and no `progress` clause names an assumption a target
+  binds (it would keep resting on it under the other target);
+* `N567` — a unit with targets writes no literal gate;
+* every binding of an INACTIVE target is filled into a copy of its gate and held to
+  `N063`-`N068`, `A006` and `N004`/`N005` like the active one;
+* `N568` — `gabbro link`: two units call ONE kernel (the same active target, or literal
+  gates of the same ABI) — linking is claimed only under the same hardware assumptions
+  (OFFEN O28).
+
+**The emitter** has two stub templates (`C182` refuses every other pair): `abi linux arch
+x86_64` executes `syscall` (destroys `rcx`, `r11`), `abi metal arch x86_64` executes
+`int $0x80` into the image's kernel entry (`laufzeit/metall/`: the runtime's vector-0x80
+slot hands the saved frame to the image's kernel service
+`metall_systemruf`; or the program's own `entry … vector 0x80` takes the slot), which
+destroys nothing but `rax` and memory. Both answer `-errno` in `-4095..-1`. A Caprock
+target needs Caprock's own template (its trap instruction and convention) — named in
+OFFEN O31, not built.
+
+**Not claimed:** variables and targets are unit-global names (a module path does not scope
+them); the manifest lists every declared assumption, active or not; the emitter's template
+rules run for the emitted target only.
 
 ## 13. `check` — the linear checking obligation
 

@@ -1,0 +1,37 @@
+-- erwartet: N562
+-- Gift 1352 -- **A gate through a variable nobody declared.** `via sys_write` with no `syscall sys_write;`:
+-- the binding below binds the name, but a variable is declared once and bound per target --
+-- an undeclared name has no binding anyone could check (OFFEN O31).
+
+module gift::tor_ueber_unerklaerte_variable {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry keeps the Linux x86_64 convention for the numbers it serves."
+    falsifier sonde_metall_systemruf;
+
+syscall write(fd : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target linux_x86_64;
+
+}

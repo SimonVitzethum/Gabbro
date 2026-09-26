@@ -99,6 +99,8 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         | ItemArt::Use(_)
         | ItemArt::Concurrent(_)
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_) => None,
         // The constructs without `pub` -- the grammar gives them none, so nothing of them
         // crosses the boundary either. **Written out and not swept up**, so that a `pub` on
@@ -296,6 +298,8 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
         | ItemArt::Gruppe(_)
         | ItemArt::Accumulates(_)
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)

@@ -1,0 +1,48 @@
+-- erwartet: N063
+-- Gift 1362 -- **An inactive target's binding is checked like the active one.** `target metal` binds
+-- `rdi` twice; `linux_x86_64` is active, and the metal binding still falls: every binding
+-- is held to the gate's shape, not only the one the build happens to use (OFFEN O31).
+
+module gift::inaktives_ziel_doppelregister {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry keeps the Linux x86_64 convention for the numbers it serves."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
+syscall write(fd : u64, n : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = n }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rdi = n }
+        regs out { rax }
+        clobbers {  }
+        errors { EBADF => BadFd }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
+
+}

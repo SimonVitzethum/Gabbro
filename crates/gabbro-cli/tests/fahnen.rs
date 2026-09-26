@@ -168,6 +168,12 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    // **OFFEN O31 (Opus agent L):** the active system-call target, for every command.
+    Fahne {
+        erstname: "--target",
+        zweitname: "",
+        lebendig: &["emit", "--target", "metal", "beispiele/163-systemruf-variablen.gab"],
+    },
     Fahne {
         erstname: "--isabelle",
         zweitname: "",

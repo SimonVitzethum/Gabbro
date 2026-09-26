@@ -12,8 +12,8 @@ impl fn verteiler()
 }
 
 entry syscall vector 0x80 arch x86_64 {
-    regs in  { nr : rax, }
-    regs out { ret : rax, }
+    regs in  { }
+    regs out { }
     preserves { rbx, rbp, r12, r13, r14, r15 }
     clobbers  { rcx, r11 }
     stack kernstapel per cpu nested never

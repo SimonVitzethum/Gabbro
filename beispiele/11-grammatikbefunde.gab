@@ -35,6 +35,10 @@ entry leiser_eintritt vector 32 arch x86_64 {
     dispatch behandler;
 }
 
-extern fn behandler() effects { pure };
+-- **Changed 2026-09-26 (Opus agent L, OFFEN O32 (7), `N561`):** the dispatch took no
+-- parameter and answered nothing while the entry binds two register(s) in and `rax` out,
+-- so no stub could bind them without guessing. The head now takes one `u64` per
+-- `regs in` register, in order, and answers the `regs out` value.
+extern fn behandler(nr : u64, a0 : u64) -> u64 effects { pure };
 
 }

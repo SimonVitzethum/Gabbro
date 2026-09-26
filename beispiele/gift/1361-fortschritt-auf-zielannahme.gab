@@ -1,0 +1,68 @@
+-- erwartet: N566
+-- Gift 1361 -- **A `progress` clause over a target's assumption.** The loop names
+-- `linux_write_contract`, which `target linux_x86_64` binds `sys_write` under: under
+-- `target metal` the loop would still rest on the Linux kernel. `progress sys_write` names
+-- the variable and follows the binding (OFFEN O31).
+
+module gift::fortschritt_auf_zielannahme {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry keeps the Linux x86_64 convention for the numbers it serves."
+    falsifier sonde_metall_systemruf;
+
+extern fn haengt() -> never effects { diverges } costs <= 1 ops;
+
+syscall sys_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+
+impl fn schreibe_immer(fd : u64) -> u64 or IoError
+    effects { pure }
+{
+    forever schreibend
+        per_pass bounded 64 ops
+        on_exceeded haengt
+        effects { pure }
+        progress linux_write_contract
+    {
+        let n = write(fd) else (e) { return e; }
+        if n == 0 {
+            leave schreibend;
+        }
+    }
+    return 0;
+}
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers {  }
+        errors { EBADF => BadFd }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
+
+}

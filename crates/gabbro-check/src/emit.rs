@@ -446,6 +446,8 @@ struct KindTor {
     ober: Option<i128>,
     /// The named assumption behind the hardware outcome.
     annahme: String,
+    /// The trap instruction of the gate's ABI (`syscall_befehl`, O31).
+    befehl: String,
 }
 
 /// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
@@ -990,6 +992,8 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
         // **«E6»: a profile block carries modes and references, never a
         // float type.** Keys and `assume` names, like the assumptions above.
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     });
@@ -1385,6 +1389,8 @@ pub fn emittiere_mit(
         // lowering looks up.** Keyed entries and `assume` references travel
         // into the manifest (`manifest::profil_und_bedarf`), never into C.
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     });
@@ -1868,6 +1874,8 @@ pub fn emittiere_mit(
             // **«E6»: a profile block names no table.** Modes and references
             // are manifest entries, not carriers.
             | ItemArt::Profil(_)
+            | ItemArt::SysVar(_)
+            | ItemArt::Ziel(_)
             | ItemArt::ProfilBedarf(_)
             | ItemArt::Concurrent(_) => {}
         });
@@ -2218,7 +2226,7 @@ pub fn emittiere_mit(
     // region behind the same call has no trap of its own to jump from.
     // Anything wider keeps `C185`, by name, never silently.
     {
-        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, String), usize)> =
+        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String)), usize)> =
             HashMap::new();
         crate::fuer_jedes_item(baum, &mut |item| {
             if let ItemArt::Syscall(s) = &item.art {
@@ -2285,7 +2293,8 @@ pub fn emittiere_mit(
                             wert_ctyp: wert_ctyp.clone(),
                             unter: *unter,
                             ober: *ober,
-                            annahme: annahme.clone(),
+                            annahme: annahme.0.clone(),
+                            befehl: annahme.1.clone(),
                         },
                     );
                     namen.kind_regionen.insert(region_lo, lo);
@@ -2424,6 +2433,8 @@ pub fn emittiere_mit(
         // **«E6»: a profile block hoists no constant.** Values are mode
         // names, not numbers.
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         // **«E4»:** an arena hoists no constant either. Its bounds may name
         // `const`s, but they are read where they are spelled (`zahltext`
@@ -3099,7 +3110,7 @@ pub fn emittiere_mit(
         // nothing at all. Their entries already stand in the emitted
         // header through `manifest::sammle` -- a second emission here
         // would print every mode twice.
-        ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => {}
+        ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) | ItemArt::SysVar(_) | ItemArt::Ziel(_) => {}
     });
     // **Lane E5: one `static const` table per accepted library call.**
     //
@@ -3303,6 +3314,8 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         // **«E6»: a profile block earns no correspondence row.** It lowers
         // to no C -- its entries are manifest lines, not forms.
         | ItemArt::Profil(_)
+        | ItemArt::SysVar(_)
+        | ItemArt::Ziel(_)
         | ItemArt::ProfilBedarf(_)
         | ItemArt::Syscall(_) => None,
     }
@@ -8660,11 +8673,14 @@ fn tor_inline_daten(
     tabellen: &SyscallTabellen,
     baum: &Programm,
     u: &Namen,
-) -> Option<(u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, String)> {
+) -> Option<(u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String))> {
     let umg = crate::umgebung::Umgebung::sammle(baum);
-    if s.abi.text != "linux" || s.arch.text != "x86_64" {
+    if s.ungebunden() {
         return None;
     }
+    let Some((befehl, fest_zerstoert)) = syscall_befehl(&s.abi.text, &s.arch.text) else {
+        return None;
+    };
     for (reg, _param) in &s.regs_in {
         if reg.text == "rax" {
             return None;
@@ -8762,12 +8778,20 @@ fn tor_inline_daten(
         let Some(faelle) = tabellen.gruende.get(&rname.text) else {
             return None;
         };
-        for (_, ziel) in &s.errors {
+        for (k, (_, ziel)) in s.errors.iter().enumerate() {
             let Some((_, wert)) = faelle.iter().find(|(c, _)| c == &ziel.text) else {
                 return None;
             };
             let Ok(wert) = i128::try_from(*wert) else {
                 return None;
+            };
+            // **O31: an explicit errno number is the target's**, not the case's.
+            let wert = match s.errno_werte.get(k).and_then(|w| w.as_ref()) {
+                Some(w) => match umg.konst_wert(modul, w) {
+                    Some(v) if (1..=4095).contains(&v) => v,
+                    _ => return None,
+                },
+                None => wert,
             };
             arme.push((wert, format!("{}_{}", rname.text, ziel.text)));
         }
@@ -8789,12 +8813,12 @@ fn tor_inline_daten(
     }
     let mut zerstoert: Vec<String> =
         s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
-    for fest in ["\"rcx\"", "\"r11\"", "\"memory\""] {
+    for fest in fest_zerstoert {
         if !zerstoert.iter().any(|c| c == fest) {
             zerstoert.push(fest.to_string());
         }
     }
-    Some((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, annahme))
+    Some((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, (annahme, befehl.to_string())))
 }
 
 /// **Lane 260: `v == 0` or `0 == v`, the only guard the inline trap reads.**
@@ -8915,7 +8939,7 @@ fn kind_tor_falle(
         .collect();
     eingaben.push("\"r\" (_sys_rax)".to_string());
     aus.push_str(&format!("{e1}__asm__ goto (\n"));
-    aus.push_str(&format!("{e1}    \"syscall\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"{}\\n\\t\"\n", tor.befehl));
     aus.push_str(&format!("{e1}    \"movq %%rax, %[roh]\\n\\t\"\n"));
     aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
     aus.push_str(&format!("{e1}    \"jz %l[{label}]\\n\\t\"\n", label = tor.label));
@@ -8975,6 +8999,24 @@ fn kind_tor_falle(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// **The trap instruction and the fixed clobbers of a stub ABI** (O31).
+///
+/// `abi linux arch x86_64`: the `syscall` instruction -- the CPU destroys `rcx`
+/// (return address) and `r11` (flags). `abi metal arch x86_64`: `int $0x80`
+/// into the image's own kernel entry (`laufzeit/metall/`: the runtime's
+/// vector-0x80 stub, or the program's own `entry … vector 0x80`), which saves
+/// and restores every general register but the answer in `rax` -- so nothing
+/// but memory is destroyed. Both answer `-errno` in `-4095..-1`, the rest a
+/// value (the metal kernel entry keeps Linux's convention by construction).
+/// Any other pair: no template (`C182`).
+fn syscall_befehl(abi: &str, arch: &str) -> Option<(&'static str, &'static [&'static str])> {
+    match (abi, arch) {
+        ("linux", "x86_64") => Some(("syscall", &["\"rcx\"", "\"r11\"", "\"memory\""])),
+        ("metal", "x86_64") => Some(("int $0x80", &["\"memory\""])),
+        _ => None,
+    }
+}
+
 fn syscall_stumpf(
     s: &SyscallDecl,
     aus: &mut String,
@@ -8985,26 +9027,41 @@ fn syscall_stumpf(
     absagen: &mut Absagen,
 ) {
     let n = &s.name.text;
+    // **O31: a `via` gate no active target binds has no ABI to lower.** The
+    // checker refuses it (`N562`/`N563`/`N565`); the emitter runs on the parsed
+    // tree and says so itself instead of lowering placeholders.
+    if s.ungebunden() {
+        weigere(
+            absagen,
+            s.via.as_ref().map(|v| v.span).unwrap_or(s.name.span),
+            &format!(
+                "`syscall {n}` calls through `via {}`, and no active target binds it -- no \
+                 number, no register map, no named assumption to lower",
+                s.via.as_ref().map(|v| v.text.as_str()).unwrap_or("")
+            ),
+        );
+        return;
+    }
     // **C182 -- the pair after `abi`/`arch` is the template's own ABI.**
     // The checker holds `arch` against the declared arches (`A005`) and
     // refuses a sealed one (`A006`), but the emitter runs on the PARSED tree
     // and never consults the passes -- a blind tree must not receive a Linux
     // stub for another machine's declaration.
-    if s.abi.text != "linux" || s.arch.text != "x86_64" {
+    let Some((befehl, fest_zerstoert)) = syscall_befehl(&s.abi.text, &s.arch.text) else {
         syscall_code(
             absagen,
             "C182",
             s.name.span,
             &format!(
-                "`syscall {n}` declares `abi {}` `arch {}`, and the stub template is the \
-                 Linux x86_64 `syscall` ABI -- the number in `rax`, the answer in `rax`, \
-                 `rcx` and `r11` destroyed. A stub for another machine would carry another \
-                 instruction and is not this template",
+                "`syscall {n}` declares `abi {}` `arch {}`, and the stub templates are the \
+                 Linux x86_64 `syscall` ABI and the bare-metal `int $0x80` ABI (`abi metal`) \
+                 -- the number in `rax`, the answer in `rax`. A stub for another kernel would \
+                 carry another instruction and is not these templates",
                 s.abi.text, s.arch.text
             ),
         );
         return;
-    }
+    };
     // **C180 -- no in-register the stub cannot keep.** `rax` carries the call
     // number before the kernel reads anything, so a parameter bound there
     // would never arrive; a register named under `clobbers` is scratch by
@@ -9290,7 +9347,7 @@ fn syscall_stumpf(
             );
             return;
         };
-        for (_, ziel) in &s.errors {
+        for (k, (_, ziel)) in s.errors.iter().enumerate() {
             let Some((_, wert)) = faelle.iter().find(|(c, _)| c == &ziel.text) else {
                 weigere(
                     absagen,
@@ -9314,6 +9371,28 @@ fn syscall_stumpf(
                     ),
                 );
                 return;
+            };
+            // **O31: an explicit errno number (`ENOENT = 2 => NotFound`) is what
+            // the TARGET's kernel sends**; without one, the case's declared value.
+            let wert = match s.errno_werte.get(k).and_then(|w| w.as_ref()) {
+                Some(w) => match umg.konst_wert(&modul, w) {
+                    Some(v) if (1..=4095).contains(&v) => v,
+                    _ => {
+                        syscall_code(
+                            absagen,
+                            "C184",
+                            w.span,
+                            &format!(
+                                "`syscall {n}` numbers errno `{}` with an expression the \
+                                 decoding cannot fold into 1..4095 -- the kernel's error \
+                                 range under this ABI",
+                                s.errors[k].0.text
+                            ),
+                        );
+                        return;
+                    }
+                },
+                None => wert,
             };
             arme.push((wert, format!("{}_{}", rname.text, ziel.text)));
         }
@@ -9414,12 +9493,12 @@ fn syscall_stumpf(
         .map(|(r, _)| format!("\"r\" (_sys_{})", r.text))
         .collect();
     let mut zerstoert: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
-    for fest in ["\"rcx\"", "\"r11\"", "\"memory\""] {
+    for fest in fest_zerstoert {
         if !zerstoert.iter().any(|c| c == fest) {
             zerstoert.push(fest.to_string());
         }
     }
-    b2.push_str("    __asm__ __volatile__(\n        \"syscall\\n\"\n");
+    b2.push_str(&format!("    __asm__ __volatile__(\n        \"{befehl}\\n\"\n"));
     b2.push_str("        : \"+a\" (_sys_rax)\n");
     if eingaben.is_empty() {
         b2.push_str("        : /* no argument registers */\n");

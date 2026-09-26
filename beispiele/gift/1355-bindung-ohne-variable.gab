@@ -1,0 +1,42 @@
+-- erwartet: N564
+-- Gift 1355 -- **A binding of an undeclared variable.** `sys_wirte` is misspelt: the binding binds
+-- nothing, and the variable it meant stays unbound (OFFEN O31).
+
+module gift::bindung_ohne_variable {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+assume metal_kernel_contract
+    "The image's kernel entry keeps the Linux x86_64 convention for the numbers it serves."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+    sys_wirte = number 1
+        regs in { rdi = fd }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+}

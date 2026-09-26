@@ -2891,6 +2891,9 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
     // shape where it resolves; the manifest books where it does not).
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Syscall(s) = &item.art else { return };
+        if s.ungebunden() {
+            return;
+        }
         let SyscallPaarung::Annahme { annahme, .. } = &s.paarung else { return };
         match annahmen.get(&annahme.text) {
             None => absagen.schiebe(

@@ -54,7 +54,7 @@ entry syscall_b vector 0x81 arch x86_64 {
     dispatch gift::ungeteilt_transitiv::seite;
 }
 entry syscall_c vector 0x82 arch x86_64 {
-    regs in  { }
+    regs in  { j : rdi }
     regs out { }
     preserves { rbx }
     clobbers  { rcx }

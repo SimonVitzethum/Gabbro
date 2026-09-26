@@ -65,17 +65,18 @@ reason IoError {
 
 extern fn sonde_write() -> bool effects { pure } costs <= 1 ops;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
 syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
     -> u64 in 0 .. MAXLEN or IoError
-    abi linux arch x86_64 number 1
-    regs in  { rdi = fd, rsi = buf, rdx = len }
-    regs out { rax }
-    clobbers { rcx, r11 }
-    errors   { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    via sys_write
     ensures  result <= len
     effects  { reads buf }
-    costs <= 8 ops
-    assume   linux_write_contract falsifier sonde_write;
+    costs <= 8 ops;
 
 -- The stack switch of F5, the one thing no structured language expresses.
 -- `prim fn` carries the CONTRACT and no register clause, and the emitter
@@ -86,5 +87,35 @@ prim fn wechseln(von : ptr<normal, rw> Bytes, nach : ptr<normal, r> Bytes) -> ne
 assume linux_write_contract
     "The kernel's write(2) writes at most `len` bytes of `buf` to `fd` and answers the count, or one of the three errnos mapped above."
     falsifier sonde_write;
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in  { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        -- **A finding of the rewrite (Opus agent L):** `IoError` numbers its cases 1, 2,
+        -- 3, and without an explicit number the decoding compares the kernel's errno with
+        -- the CASE's value -- so `EBADF` (9 on Linux) was decoded as `BadFd` only when the
+        -- kernel answered 1 (`EPERM`). The error convention is the target's, and says so.
+        errors   { EBADF = 9 => BadFd, EINTR = 4 => Interrupted, EAGAIN = 11 => WouldBlock }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in  { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted, EAGAIN = 11 => WouldBlock }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

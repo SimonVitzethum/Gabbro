@@ -266,6 +266,20 @@ pub const EINORDNUNG: &[Posten] = &[
                 the number, the errno table, the kept contract -- the kernel's, under the \
                 named assumption this row carries beside the stub",
     },
+    Posten {
+        konstrukt: "syscall variable",
+        traegt: Traegt::Geloescht,
+        grund: "a system-call variable (SYNTAX.md 12.3, OFFEN O31): a name the `target` \
+                binding fills into its gate before any pass -- the filled gate is the \
+                `syscall` row, the variable itself lowers to nothing",
+    },
+    Posten {
+        konstrukt: "target",
+        traegt: Traegt::Geloescht,
+        grund: "a target binding or selection (SYNTAX.md 12.3, OFFEN O31): the active \
+                binding is IN the gate's `syscall` row (abi, number, counterpart); the \
+                others lower to nothing and are checked, not emitted",
+    },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
         konstrukt: "let",
@@ -900,10 +914,16 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                     format!("paired with kernel `{}`", pfad.text())
                 }
             };
+            // **O31:** a gate bound by a target says which binding it carries -- the
+            // certificate of another target names another assumption.
+            let ziel = match (&s.via, &s.ziel) {
+                (Some(v), Some(t)) => format!(" (`via {}`, bound by `target {}`)", v.text, t.text),
+                _ => String::new(),
+            };
             e.fremde.push((
                 s.name.text.clone(),
                 format!(
-                    "SYSCALL under abi `{}` on `{}`, number {} -- {}; the errno \
+                    "SYSCALL under abi `{}` on `{}`{ziel}, number {} -- {}; the errno \
                      decoding is generated over the `or {}` channel",
                     s.abi.text,
                     s.arch.text,
@@ -913,6 +933,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                 ),
             ));
         }
+        ItemArt::SysVar(_) => zaehle(&mut e, "syscall variable"),
+        ItemArt::Ziel(_) => zaehle(&mut e, "target"),
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
         // stillschweigend mitnimmt — es faellt als `UNZUGEORDNET` auf.
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
@@ -997,6 +1019,10 @@ fn art_name(a: &ItemArt) -> &'static str {
         // every other -- the entries themselves are manifest lines.
         ItemArt::Profil(_) => "profile",
         ItemArt::ProfilBedarf(_) => "requires profile",
+        // **O31:** a variable and a target binding lower to no C of their own --
+        // the bound gate carries the number and the assumption.
+        ItemArt::SysVar(_) => "syscall variable",
+        ItemArt::Ziel(_) => "target",
         // **Lane S6, additive:** a `syscall` lowers to its stub, so the
         // certificate books the kind beside the generated body -- the
         // counterpart line above carries what the stub assumes.

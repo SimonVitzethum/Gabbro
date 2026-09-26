@@ -69,12 +69,14 @@ assume linux_write_contract
 
 extern fn writer_hangs() -> never effects { diverges } costs <= 1 ops;
 
+assume metal_kernel_contract
+    "The image's kernel entry (vector 0x80, laufzeit/metall/) answers every number it serves under the Linux x86_64 convention -- the answer in rax, -errno in -4095..-1, no other register destroyed -- and keeps each gate's contract for it."
+    falsifier sonde_metall_systemruf;
+
+syscall sys_write;
+
 syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
-    abi linux arch x86_64 number 1
-    regs in { rdi = fd, rsi = buf, rdx = len }
-    regs out { rax }
-    clobbers { rcx, r11 }
-    errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    via sys_write
     -- `len <= lenof(buf)`: the kernel reads `len` bytes from `buf`, so the
     -- length is bounded by the object the caller passes (`N464` demands the
     -- clause at a byte buffer, `N463` decides it at the call below, where the
@@ -85,8 +87,7 @@ syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
     -- gate says `reads buf` -- `pure` was a fiction (fix lane F5 left it
     -- standing). The callers carry `reads WINDOW` for the staging byte.
     effects { reads buf }
-    costs <= 8 ops
-    assume linux_write_contract falsifier sonde_write;
+    costs <= 8 ops;
 
 -- PUSH one byte. Full means flush first: the flushed count (`CAP`) is the
 -- answer on that path, 0 when the byte only grew the count.
@@ -128,7 +129,7 @@ impl fn flush(fd : u64) -> u64 or IoError
         per_pass bounded 1024 ops
         on_exceeded writer_hangs
         effects { reads COUNT, reads Buffer.slots, reads WINDOW, writes WINDOW }
-        progress linux_write_contract
+        progress sys_write
     {
         if sent == COUNT {
             leave sending;
@@ -182,5 +183,31 @@ impl fn writer_demo(fd : u64) -> u64
     }
     return n;
 }
+
+-- **The targets (OFFEN O31).** The gate above names
+-- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+-- carried until Opus agent L, unchanged; `metal` is the same number and register map
+-- through `int $0x80` into the image's kernel entry, which destroys no register, under
+-- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+-- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+target linux_x86_64 abi linux arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+        assume linux_write_contract falsifier sonde_write;
+}
+
+target metal abi metal arch x86_64 {
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { }
+        errors { EBADF = 9 => BadFd, EINTR = 4 => Interrupted, EAGAIN = 11 => WouldBlock }
+        assume metal_kernel_contract falsifier sonde_metall_systemruf;
+}
+
+target linux_x86_64;
 
 }

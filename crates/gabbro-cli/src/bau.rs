@@ -397,7 +397,7 @@ fn sammle(
                     .or_default()
                     .push(FunktionsForm {
                         parameter: f.parameter.len(),
-                        liefert: f.ergebnis.is_some(),
+                        liefert: f.ergebnis.is_some() && !matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
                         spec: matches!(f.klasse, Some(gabbro_syntax::ast::FnKlasse::Spec)),
                         datei: datei.to_string(),
                         modul: if pfad.is_empty() {
@@ -417,7 +417,7 @@ fn sammle(
                     .or_default()
                     .push(FunktionsForm {
                         parameter: f.parameter.len(),
-                        liefert: f.ergebnis.is_some(),
+                        liefert: f.ergebnis.is_some() && !matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
                         spec: matches!(f.klasse, Some(gabbro_syntax::ast::FnKlasse::Spec)),
                         datei: datei.to_string(),
                         modul: if pfad.is_empty() {
@@ -771,21 +771,25 @@ fn metallregel(
                 x.name, x.datei, x.name
             ));
         };
-        // The runtime's own vectors (timer 0x40, wake 0x41, spurious 0xFF) and the
-        // exceptions that push a CPU error code are refused by `metall_idt_setze` at
-        // boot; the build says it first, by name.
-        if matches!(vektor, 0x40 | 0x41 | 0xFF | 8 | 10..=14 | 17 | 21 | 29 | 30) || vektor > 0xFF {
+        // The runtime's own vectors (timer 0x40, wake 0x41, spurious 0xFF) are refused
+        // by `metall_idt_setze` at boot; the build says it first, by name. The
+        // exceptions that push a CPU error code (8, 10..14, 17, 21, 29, 30) take the
+        // twin stub that drops it since Opus agent L (OFFEN O32 (9)).
+        if matches!(vektor, 0x40 | 0x41 | 0xFF) || vektor > 0xFF {
             return Err(format!(
-                "entry `{}` in {} sits on vector {vektor} -- the bare-metal runtime keeps \\
-                 0x40/0x41/0xFF for itself, and its stub pops no CPU error code (8, 10..14, \\
-                 17, 21, 29, 30)",
+                "entry `{}` in {} sits on vector {vektor} -- the bare-metal runtime keeps \
+                 0x40/0x41/0xFF for itself, and a vector is below 0x100",
                 x.name, x.datei
             ));
         }
         let ruf = match funktionen.get(&x.dispatch).map(|v| v.as_slice()) {
             Some([f]) if !f.spec => {
                 let aus_soll = usize::from(f.liefert);
-                if f.parameter == x.regs_in.len() && x.regs_out.len() == aus_soll {
+                // An answer with no out register is dropped (`N561`, Opus agent L): the stub
+                // guesses nothing, and the entry changes no register.
+                if f.parameter == x.regs_in.len()
+                    && (x.regs_out.len() == aus_soll || x.regs_out.is_empty())
+                {
                     treiber::EintrittRuf::Bindung {
                         ein: x.regs_in.clone(),
                         aus: x.regs_out.first().cloned(),
@@ -1712,7 +1716,7 @@ mod treiberregel_tests {
         assert_eq!(r[2], ("fremd", false, &EintrittRuf::OhneZiel));
         assert_eq!(r[3].1, false, "an NMI is acknowledged by iretq, not by an EOI");
         assert_eq!(r[4].1, true, "a LAPIC-thrown entry writes the EOI");
-        for (vektor, grund) in [(None, "literal"), (Some(0x40), "0x40"), (Some(14), "error code")] {
+        for (vektor, grund) in [(None, "literal"), (Some(0x40), "0x40"), (Some(0x100), "below 0x100")] {
             let m = MetallFunde {
                 eintritte: vec![eintritt("x", vektor, true, &[], &[], "hauptA")],
                 rcus: vec![],

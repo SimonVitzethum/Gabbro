@@ -305,48 +305,11 @@ metall_takt_eintritt:
  * context's own (a thread's, or the core's scheduler stack when it was idle):
  * the declared `stack NAME per cpu` is NOT switched to -- named in OFFEN O32.
  */
-        .global metall_eintritt_gemeinsam
-metall_eintritt_gemeinsam:
-        /* rax is already on the stack (pushed by the per-entry half) and
-         * holds the C half's address. */
-        pushq   %rbx
-        pushq   %rcx
-        pushq   %rdx
-        pushq   %rsi
-        pushq   %rdi
-        pushq   %rbp
-        pushq   %r8
-        pushq   %r9
-        pushq   %r10
-        pushq   %r11
-        pushq   %r12
-        pushq   %r13
-        pushq   %r14
-        pushq   %r15
-        movq    %rsp, %rbx
-        subq    $512, %rsp
-        andq    $-16, %rsp
-        fxsave  (%rsp)
-        movq    %rbx, %rdi                 /* struct metall_rahmen * (metall.h) */
-        call    *%rax
-        fxrstor (%rsp)
-        movq    %rbx, %rsp
-        popq    %r15
-        popq    %r14
-        popq    %r13
-        popq    %r12
-        popq    %r11
-        popq    %r10
-        popq    %r9
-        popq    %r8
-        popq    %rbp
-        popq    %rdi
-        popq    %rsi
-        popq    %rdx
-        popq    %rcx
-        popq    %rbx
-        popq    %rax
-        iretq
+        /* `metall_eintritt_gemeinsam` itself -- and the vector-0x80 kernel
+         * service half beside it -- stand in `eintritt_asm.h` since Opus agent
+         * L (OFFEN O31): ONE text, assembled into the image by kern.c and into
+         * the userland falsifier `sonden/sonde_metall_systemruf.c`, so the probe
+         * runs the very instructions the image runs. */
 
 /* THE WAKE ENTRY (vector 0x41): an idle core sleeps in `hlt` (kern.c,
  * `kern_schleife`); a start that places a thread on it sends this IPI. The C

@@ -132,7 +132,13 @@ SONDEN = W / "sonden"
 # `sonden/sonde_read.c` -- the gate's own raw call number, the mapped errnos,
 # `--kaputt` as the control that must fall). Same rule: the quota rises because
 # the object grew.
-MARK_QUOTE = (21, 54)
+# **(21, 54) -> (22, 55) on 2026-09-26 (Opus agent L, OFFEN O31).** One earned
+# diff: every `target … abi metal` binding rests on `metal_kernel_contract` (row 55,
+# class `P4`), and it arrives WITH its program (`sonden/sonde_metall_systemruf.c`:
+# the runtime's own vector-0x80 entry text, `laufzeit/metall/eintritt_asm.h`,
+# assembled into a userland program and entered through a hand-built interrupt
+# frame; `--kaputt` must fall). Same rule: the quota rises because the object grew.
+MARK_QUOTE = (22, 55)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -516,14 +522,19 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # meets, so no smaller newest set breaks it. `sonde_abnahme` (row 40) drops
     # out of the tooth because the two new rows sit above it, not because the
     # stress shrank: the set grew from thirteen to fourteen names.
+    #
+    # **Grown on 2026-09-26 (Opus agent L, OFFEN O31), same rule:** 22 covered of 55.
+    # The floor needs 7 (56 >= 55) and misses at 6 (48 < 55), so sixteen covered rows
+    # must go: rows 41-55 -- fifteen probes, the tick counting rows 39 and 52 -- leave
+    # 6 of 55 (miss); without row 41's probe the fourteen newest leave 7 (meets).
     elf = ("sonde_byte_legen", "sonde_freigabe",
             "sonde_barriere", "sonde_schreib_schranke", "sonde_speicher_schranke",
             "sonde_schreiben", "sonde_zaehle", "sonde_takt_verteiler",
             "sonde_bearbeite", "sonde_ruf_verteiler", "sonde_write",
-            "sonde_tick", "sonde_open", "sonde_read")
+            "sonde_tick", "sonde_open", "sonde_read", "sonde_metall_systemruf")
     ohne_elf = [x for x in progs if x not in elf]
     r = lauf(p=ohne_elf)
-    proben.append(("the floor is met today and MISSED without the fourteen newest probes",
+    proben.append(("the floor is met today and MISSED without the fifteen newest probes",
                    not boden_heute and r[6]))
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
@@ -553,8 +564,12 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # Two more earned `P4` rows (21 covered of 54) drown the +101 stress
     # (21 of 155 still meets: 168 >= 155). 115 is the smallest restore
     # (21 of 169 < `1/8`; 114 lands exactly on it -- 168 < 168 is false).
+    #
+    # **The stress size is 122 since 2026-09-26 (Opus agent L), same rule.** One more
+    # earned `P4` row (22 covered of 55): 122 is the smallest restore (22 of 177 <
+    # `1/8`; 121 lands exactly on it -- 176 < 176 is false).
     viel = dict(annahmen)
-    for i in range(115):
+    for i in range(122):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

@@ -48,6 +48,14 @@
 # And the hosted RUNTIME files are named with their bare-metal counterpart (the table at the
 # end). OFFEN O32 carries the list.
 #
+# BOUND FOR THE METAL TARGET (OFFEN O31, Opus agent L). A unit whose gates call through
+# system-call variables and that carries a `target T abi metal …` block is emitted with
+# `--target T`: its gates execute `int $0x80` into the image's kernel entry (vector 0x80 of
+# the runtime, served by the image's `metall_systemruf`, or by the unit's OWN `entry …
+# vector 0x80`). Such a unit is listed with the numbers it calls, and it is NOT hosted-only:
+# the other side of its gates is inside the image. Stage 11 boots both shapes
+# (`metall163`, `metall164`).
+#
 # QEMU is not needed here: this stage links; `pruefe-metall.sh` boots. Missing `cc`/`ld`/`nm`
 # prints `FREESTANDING: NOT RUN` -- never a pass line.
 #
@@ -152,7 +160,7 @@ fi
 n_emit=0; n_umg=0; n_ok=0; befund=0
 n_kl_rt=0; n_kl_sperre=0; n_kl_rcu=0; n_kl_eintritt=0; n_kl_fremd=0
 n_fremd_einheiten=0; n_rein=0
-gate_liste=""; libc_liste=""; umg_bericht=""; bindung_liste=""
+gate_liste=""; libc_liste=""; umg_bericht=""; bindung_liste=""; metall_liste=""
 : > "$ARB/einheiten.txt"
 
 while IFS= read -r q; do
@@ -161,7 +169,16 @@ while IFS= read -r q; do
     k="$(printf '%s' "$d" | tr '/' '_')"
     e="$ARB/u/$k"
     mkdir -p "$e"
-    if ! G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
+    # **OFFEN O31 (Opus agent L): a unit that binds its gates for the bare-metal target is
+    # emitted FOR it** (`--target`, the name of its `target … abi metal` block): the gates
+    # then enter the image's kernel through `int $0x80` instead of calling Linux.
+    metallziel="$(sed -n 's/^[[:space:]]*target[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]\{1,\}abi[[:space:]]\{1,\}metal[[:space:]].*/\1/p' "$q" | head -1)"
+    if [ -n "$metallziel" ]; then
+        if ! GABBRO_TARGET="$metallziel" G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
+            echo "  THE METAL TARGET DOES NOT EMIT: $d (target $metallziel)"
+            befund=1; rm -rf "$e"; continue
+        fi
+    elif ! G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
         rm -rf "$e"; continue          # `C001` -- a refusal is an honest answer (stage 9)
     fi
     n_emit=$((n_emit + 1))
@@ -227,6 +244,7 @@ while IFS= read -r q; do
     # stub and its IDT slot here.
     eintritte="$(sed -n 's#^/\* entry \([A-Za-z_][A-Za-z0-9_]*\) -- arch x86_64.*#\1#p' "$e/einheit.c" | tr '\n' ' ')"
     for p in $eintritte; do n_kl_eintritt=$((n_kl_eintritt + 1)); done
+    fc_liste=""
     if sed -n 's#^/\* entry [A-Za-z0-9_]* -- arch \([a-z0-9_]*\).*#\1#p' "$e/einheit.c" | grep -qv '^x86_64$'; then
         echo "  ENTRY FOR ANOTHER ARCH in $d -- the metal runtime is x86_64 only"
         befund=1; continue
@@ -274,7 +292,7 @@ while IFS= read -r q; do
                 s_ret="${sig%%|*}"; s_par="${sig#*|}"
                 if [ "$s_par" = "void" ]; then s_n=0; else s_n=$(( $(printf '%s' "$s_par" | tr -cd ',' | wc -c) + 1 )); fi
                 if [ "$s_ret" = "void" ]; then s_aus=0; else s_aus=1; fi
-                if [ "$s_n" = "$n_ein" ] && [ "$s_aus" = "$n_aus" ]; then
+                if [ "$s_n" = "$n_ein" ] && { [ "$s_aus" = "$n_aus" ] || [ "$n_aus" = 0 ]; }; then   # an answer with no out register is dropped (N561)
                     ruf="gabbro_eintritt_${p}_verteiler($ein)"
                     if [ "$n_aus" = 1 ]; then ruf="r->$aus = (uint64_t)$ruf"; fi
                 else
@@ -298,12 +316,20 @@ while IFS= read -r q; do
             if printf '%s\n' "$block" | head -1 | grep -q ', via idt' && [ -n "$vek" ] && [ "$vek" -ge 32 ]; then
                 geworfen=1
             fi
-            printf 'METALL_EINTRITT(%s, %s, %s)\n' "$p" "$geworfen" "$ruf"
+            # OFFEN O32 (9): an exception that pushes a CPU error code takes the twin stub.
+            case " 8 10 11 12 13 14 17 21 29 30 " in
+            *" $vek "*) printf 'METALL_EINTRITT_FC(%s, %s)\n' "$p" "$ruf"; fc_liste="$fc_liste $p" ;;
+            *) printf 'METALL_EINTRITT(%s, %s, %s)\n' "$p" "$geworfen" "$ruf" ;;
+            esac
         done
         printf 'int gabbro_metall_haupt(void)\n{\n'
         for p in $eintritte; do
             if grep -q "gabbro_eintritt_${p}_VEKTOR" "$e/einheit.c"; then
-                printf '    metall_idt_setze(gabbro_eintritt_%s_VEKTOR, gabbro_eintritt_%s);\n' "$p" "$p"
+                case " $fc_liste " in
+                *" $p "*) setze=metall_idt_setze_fc ;;
+                *) setze=metall_idt_setze ;;
+                esac
+                printf '    %s(gabbro_eintritt_%s_VEKTOR, gabbro_eintritt_%s);\n' "$setze" "$p" "$p"
             fi
         done
         printf '    return 0;\n}\n'
@@ -327,6 +353,19 @@ while IFS= read -r q; do
 
     # 4. Hosted-only, named.
     klasse="clean"
+    # O31: gates bound for the metal target enter the image's kernel (`int $0x80`, the
+    # runtime's vector-0x80 slot). With the unit's OWN `entry … vector 0x80` the program is
+    # that kernel; without it the image's kernel -- Caprock, or a C `metall_systemruf` --
+    # serves the numbers. Neither is hosted: nothing outside the image stands behind them.
+    if [ -n "$metallziel" ] && grep -q '"int \$0x80' "$e/einheit.c"; then
+        nummern="$(grep -o 'number [0-9]* in rax' "$e/einheit.c" | awk '{print $2}' | sort -un | paste -sd, -)"
+        if grep -q 'gabbro_eintritt_[A-Za-z0-9_]*_VEKTOR 128u' "$e/einheit.c"; then
+            metall_liste="$metall_liste\n    $d -- target $metallziel, numbers {$nummern}, served by the program's own entry at 0x80"
+        else
+            metall_liste="$metall_liste\n    $d -- target $metallziel, numbers {$nummern}, served by the image's kernel (metall_systemruf)"
+        fi
+        klasse="metal-gate"
+    fi
     if grep -qE '"syscall(\\n|\\t|")' "$e/einheit.c"; then
         if grep -qE '^[[:space:]]*abi[[:space:]]+linux' "$q"; then
             gate_liste="$gate_liste\n    $d -- syscall item, abi linux"
@@ -344,7 +383,7 @@ while IFS= read -r q; do
         klasse="hosted-libc"
     fi
     [ -n "$fremde" ] && n_fremd_einheiten=$((n_fremd_einheiten + 1))
-    if [ "$klasse" = "clean" ] && [ -z "$fremde" ]; then n_rein=$((n_rein + 1)); fi
+    if { [ "$klasse" = "clean" ] || [ "$klasse" = "metal-gate" ]; } && [ -z "$fremde" ]; then n_rein=$((n_rein + 1)); fi
     printf '%s %s locks=[%s] rcu=[%s] entries=[%s] foreign=[%s]\n' "$klasse" "$d" \
         "${sperren# }" "${rcus# }" "${eintritte# }" "${fremde# }" >> "$ARB/einheiten.txt"
 done < <([ -z "$LISTE" ] || printf '%s\n' "$LISTE")
@@ -360,6 +399,10 @@ if [ -n "$umg_bericht" ]; then
     echo "  reverse probes, measured freestanding:"
     printf '%b\n' "$umg_bericht" | sed '/^$/d'
 fi
+n_metall=$(printf '%b' "$metall_liste" | grep -c . || true)
+echo "  BOUND FOR THE BARE-METAL TARGET (OFFEN O31), $n_metall unit(s): emitted with --target, the"
+echo "  gates enter the image's kernel through int \$0x80 -- NOT hosted-only:"
+printf '%b\n' "$metall_liste" | sed '/^$/d'
 echo "  HOSTED-ONLY (a) -- KERNEL GATE, $n_gate unit(s): links freestanding; running needs a kernel"
 echo "  on the other side of \`syscall\` (OFFEN O31/O32):"
 printf '%b\n' "$gate_liste" | sed '/^$/d'
@@ -369,8 +412,8 @@ printf '%b\n' "$libc_liste" | sed '/^$/d'
 n_bindung=$(printf '%b' "$bindung_liste" | grep -c . || true)
 echo "  ENTRY BINDING MISMATCH, $n_bindung entr(y/ies): the declared \`regs in\`/\`regs out\` are not the"
 echo "  dispatch's parameters/result, so no stub can bind them honestly; the image links, and the"
-echo "  stub ends the machine if the entry is ever taken (the checker does not hold the two"
-echo "  against each other -- OFFEN O32, candidate code N561):"
+echo "  stub ends the machine if the entry is ever taken (since Opus agent L the checker refuses"
+echo "  the shape at check time, N561 -- a unit listed here was emitted without the checker):"
 printf '%b\n' "$bindung_liste" | sed '/^$/d'
 echo "  HOSTED-ONLY runtime files, each with its bare-metal counterpart:"
 echo "    laufzeit/faden.c       raw Linux clone/futex      -> laufzeit/metall/kern.c (gabbro_faden_*)"
@@ -383,4 +426,4 @@ if [ "$befund" != 0 ] || [ "$n_ok" != "$n_nenner" ]; then
     echo "== FREESTANDING: FINDING (see above) =="
     exit 1
 fi
-echo "== FREESTANDING: $n_ok of $n_nenner link without an OS; $((n_gate + n_libc)) hosted-only listed by name =="
+echo "== FREESTANDING: $n_ok of $n_nenner link without an OS; $n_metall bound for the metal target; $((n_gate + n_libc)) hosted-only listed by name =="
