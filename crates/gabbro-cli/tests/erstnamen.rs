@@ -47,6 +47,7 @@ const PAARE: &[(&str, &str)] = &[
     ("templates", "schablonen"),
     ("passes", "paesse"),
     ("counterexample", "gegenbeispiel"),
+    ("link", "verbinde"),
 ];
 
 const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";

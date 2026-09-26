@@ -1042,6 +1042,52 @@ pub const NAMEN: &[Satz] = &[
                      `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/MaschineW.lean \
                      (`locksicht`, the lock view W joins at a take and a give)",
     },
+    Satz {
+        name: "namen.verbund",
+        kennungen: &["N501", "N502", "N503", "N504", "N505"],
+        aussage: "Two separately compiled units that `gabbro link` accepts are checked over ONE \
+                  link declaration: every `extern fn` head one unit relies on names a `pub fn` \
+                  of the other unit with the same parameters, result and error channel, and \
+                  every exported declaration both units carry is the same text (`N501`); the \
+                  same `requires` and `ensures` conjuncts (`N502`); the same `effects` -- the \
+                  footprint summary the importer's race and footprint checks read -- and a \
+                  hull that does not call back into the importer, with threads started in at \
+                  most one of the two units (`N503`); a `costs` bound the exporter keeps \
+                  (`N504`); and every `assume`, `axiom`, `device`, `profile` and foreign \
+                  `extern fn` both units name is stated identically -- the SAME hardware \
+                  assumptions (`N505`). With each unit accepted alone, these are the Rust \
+                  side of the premises of `GabbroZielVerbund` (`Verbindbar`, the heads of \
+                  `SchnittstelleSpec`, `E₂.Q = E₁.Q`).",
+        vorbehalt: "**Text, not meaning.** Contracts, effects and declarations are compared \
+                    as whitespace-normalised TEXT (conjuncts order-free): an equivalent \
+                    contract written differently is refused, and an importer relying on LESS \
+                    than the exporter promises is refused too (the Lean statement has ONE \
+                    contract per function). **Threads on both sides are refused, not \
+                    checked**: the composed-hull check (`SchnittstelleSpec.lok`/`.renn`/\
+                    `.einzeln`) is decided in Lean and not ported here, so a pair whose \
+                    threads live in one unit is the whole covered case -- there the \
+                    importer's own passes read the imported heads' effects. A unit is ONE \
+                    file (plus `--with` preambles in front of the second unit); `gabbro \
+                    build` does not call this check yet. The C link step (symbol \
+                    resolution, calling convention, layout) is not looked at.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "messung/proben/verbund/ (probe numbers 1241-1245 of the gift range): \
+                      the positive pair `tabelle-bib.gab` + `tabelle-app.gab` links clean \
+                      against the interface `gabbro abi` writes; the stale interfaces \
+                      `1241-link-signatur.gabi` (`N501`), `1242-link-vertrag.gabi` (`N502`: \
+                      the head promises more than the body ensures), \
+                      `1243-link-wirkungen.gabi` (`N503`), `1244-link-kosten.gabi` (`N504`) \
+                      and the app `1245-link-annahme-app.gab` (`N505`: the clock assumption \
+                      worded differently) -- each unit alone passes `gabbro check`, the link \
+                      refuses with exactly its code (`crates/gabbro-cli/tests/verbund.rs`); \
+                      snippet tests in `verbund.rs` (a callback through an import and \
+                      threads on both sides `N503`, a body in both units, an unexported \
+                      import and a shared table that differs `N501`).",
+        fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde; \
+                     grammatik/Grammatik/Zielsatz/Spec.lean (`Verbindbar`, \
+                     `SchnittstelleSpec`, `GabbroZielVerbund`); \
+                     grammatik/Grammatik/Zielsatz/Verbund.lean (`gabbro_ziel_verbund`)",
+    },
 ];
 
 // ===================================================================================
