@@ -21,8 +21,10 @@ master, nothing pushed.*
 | `N531` | **SOUND in direction, one false refusal** (static/state group carriers) — **fixed in `2bf4bbf7`** (F1) |
 | `N532` | **SOUND** — sentence, gift 1292, positive twin |
 | Corpus | **unchanged except one unreported extra line**: gift 249 now also shows `N531` (F5) |
+| Emission check | **RED after the merge**: the `breaking` lowering probe no longer emits (F7, open) |
 
-**Verdict: SOUND (with `2bf4bbf7` and `9c54b97f`). Safe to merge.** No Lean soundness gap found.
+**Verdict: SOUND (with `2bf4bbf7` and `9c54b97f`).** No Lean soundness gap found. **Safe to merge
+once F7 is decided** -- the emission ratchet is red because of this branch's `N531`.
 
 ## 1. Build and axiom evidence (measured, before the merge)
 
@@ -130,6 +132,24 @@ Over all of `beispiele/*.gab` and `beispiele/gift/*.gab` (branch binary, after F
 expected `D009`: its `breaking belegt_zaehlt` block only reads). The extra line is correct — the
 block writes nothing — and no clean example changes. The report's "corpus unchanged" should be
 read as "no clean file changes; gift 249 gains a second refusal".
+
+### F7 — MEDIUM, OPEN: `N531` takes the `breaking` lowering probe out of the emission check
+
+`./emission-pruef` after the merge: **exit 1, cut at stage 9** — "RATSCHE GEBROCHEN: 151 emitting
+files in messung/*/, booked are 152" (`MARKE_EMIT_M=152`, not edited). The file that left is
+`messung/proben/absenkung/probe-absenkung-bricht.gab` (unchanged from master), the lowering probe
+for the `Bricht` primitive, whose body is `breaking kette_ruht { } return n;` — an EMPTY block,
+which `N531` now refuses, correctly. Scanning every `.gab` under `messung/` with the branch
+binary, it is the only file `N531`/`N532` touch. The agent did not run the emission check.
+Everything behind stage 9 (stage 10, the library chain) was NOT measured.
+
+Not repaired here, because every repair is a decision about a measurement file:
+(a) a body that calls a declared function (`breaking kette_ruht { gegenstelle_schreibt(1); }`)
+emits (measured: exit 0) and keeps the shared scaffold, but only by using `N531`'s call exemption
+for a callee that writes no `Baum` carrier -- a bypass of the rule's intent, rejected here;
+(b) a body that writes a `Baum` carrier is the honest probe, but needs `writes b.slots` in the
+signature the seventeen probes share; (c) lower the ratchet to 151 with a dated reason. (b) is
+recommended.
 
 ### F6 — NOTE: "directly behind" is per thread and at call-log granularity
 
