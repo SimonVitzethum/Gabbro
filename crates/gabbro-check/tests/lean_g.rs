@@ -293,6 +293,37 @@ fn exports_duplicate_start() {
     assert!(!eins.contains("⟨g_w, .nil⟩, ⟨g_w, .nil⟩"), "one start, one occurrence: {eins}");
 }
 
+/// **A hosted `start` exports its roots as run-time roots (Opus agent A, 2026-09-26,
+/// OFFEN O22).** Lane 253 refused the statement (`LG004`). Since the goal theorem runs
+/// over the thread machine, the roots travel as `gE.gestartet` (each once, with the
+/// empty argument list), the statement leaves no G term in the starter's body, and the
+/// starter's lifted `locks L` effect (`E008`) is no refusal. A unit without `start`
+/// prints no `gestartet` line (byte for byte as before), and a root with parameters is
+/// refused by name.
+#[test]
+fn exports_start_roots_as_gestartet() {
+    let wurzeln = "impl fn a() effects { reads T.slots, locks L } costs <= 8 ops { locks L { let x = T.slots[0].v; } }\n\
+        impl fn b() effects { reads T.slots, locks L } costs <= 8 ops { locks L { let y = T.slots[1].v; } }\n";
+    let chef = "impl fn chef() effects { reads T.slots, locks L } costs <= 64 ops { start { a, b }; start { a }; }\n";
+    let text = export("lean_g", &tree(&einheit(&format!("{wurzeln}{chef}concurrent {{ chef }};\n"))))
+        .expect("a `start` exports");
+    assert!(text.contains("  gestartet := [⟨g_a, .nil⟩, ⟨g_b, .nil⟩]\n"),
+        "each root once, in body order: {text}");
+    assert!(text.contains("-- run-time root 0: a"), "{text}");
+    assert!(!text.contains("start {"), "the statement leaves no term: {text}");
+    // no `start`, no line
+    let ohne = export("lean_g", &tree(&einheit(&format!("{wurzeln}concurrent {{ a }};\n"))))
+        .expect("plain unit exports");
+    assert!(!ohne.contains("gestartet"), "no run-time root, no field: {ohne}");
+    // a root with parameters has no argument form
+    let w = refuse_of(&einheit(
+        "impl fn p(x : u32) effects { pure } costs <= 1 ops { return; }\n\
+         impl fn q() effects { pure } costs <= 8 ops { start { p }; }\n",
+    ));
+    assert_eq!(w.code, "LG001", "{w}");
+    assert!(w.message.contains("`start` root `p`"), "{w}");
+}
+
 /// **Lane 250: a `stack`-carrying gate names its `D.klon` pair (LG001), and
 /// a `child` block names its entry function (LG004).** Nothing is mapped --
 /// this tree's `Deklaration` has no `klon` field and the export writes

@@ -1,0 +1,62 @@
+-- faden-start-pool -- **A hosted `start` of two pool-safe roots, exported into the
+-- goal theorem (Opus agent A, 2026-09-26, OFFEN O22).**
+--
+-- `chef` (the one declared start) starts `arbeiterA` and `arbeiterB` at run time and
+-- waits for both (the join). Each root holds no lock by signature and writes `konto`
+-- only inside `locks L` -- pool-safe, so `N462` stays silent -- and `chef` holds nothing
+-- at the statement (`N461`). The exporter carries both roots as `gE.gestartet`; the
+-- goal theorem's checker Bool judges each of them as a pool routine (it stands twice
+-- in `Einheit.ws`), and `pruefe-akzeptiert-diff.py` compares the two verdicts here.
+module probe::faden_start_pool {
+
+const NSLOTS : u32 = 2;
+
+type Stand = u32 in 0 .. 100;
+
+table konto count NSLOTS {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn setze(x : Stand)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    konto.slots[0].stand = x;
+    konto.slots[1].stand = x;
+}
+
+impl fn arbeiterA()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(30);
+    }
+}
+
+impl fn arbeiterB()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 512 ops
+{
+    locks L {
+        setze(70);
+    }
+}
+
+impl fn chef()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 2048 ops
+{
+    start { arbeiterA, arbeiterB };
+}
+
+concurrent { chef };
+
+}

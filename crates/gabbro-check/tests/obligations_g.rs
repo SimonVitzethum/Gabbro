@@ -47,7 +47,7 @@ fn obligations_104_states_the_user_duty() {
         "theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by",
         "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
         "theorem gP_gabbro",
-        "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
+        "Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE",
         "Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes",
         "(hN : Zielsatz.NutzerPflicht gE)",
     ] {
@@ -120,7 +120,7 @@ fn obligations_single_function() {
         "theorem gFs_voll",
         "theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide",
         "theorem gP_gabbro",
-        "Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE",
+        "Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE",
     ] {
         assert!(text.contains(teil), "single-function obligations must contain {teil:?}");
     }
