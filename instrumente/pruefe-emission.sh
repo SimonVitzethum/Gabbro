@@ -1356,12 +1356,17 @@ if ! grep -q "spec fn cdt_wohlgeformt" "$ARB/f1.gab"; then
     exit 1
 fi
 # Die benannten Streichungen, eine je Zeile -- jede mit ihrem Grund im Kopf von F01.gab.
+# 2026-09-26 (lane 266, OFFEN O4): the unguarded `cdt_wohlgeformt` body and `unlink`'s
+# `maintains` left for the guarded form and the new home (the reason stands in the
+# file's head and in OFFEN.md O4; the solver evidence in messung/gabbrov/L05d-L05i).
 cat > "$ARB/f1-gestrichen" <<'F1_WEG'
     costs     <= 16452480 ops
         delete_leaf(c, o, a, rf, victim);
 extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
 extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
 extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
+    = forall s in slots of c : c.slots[s] reaches WURZEL via parent;
+    maintains cdt_wohlgeformt
 F1_WEG
 buchung_pruefen "F01" "$ARB/f1.gab" "$W/messung/fragmente/F01.gab" "$ARB/f1-gestrichen" \
                 "^const NOBJECTS : u32 = 4096;"
