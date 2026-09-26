@@ -138,6 +138,21 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "`buf[hi]` beside a `uint32_t used`; `hi` is the reason the \
                 array is fixed, `reset` stores zero into the counter",
     },
+    // **Lane 259 (wave D, emitter arm):** the reserved range plus its
+    // committed prefix -- no `buf[M]` storage is emitted for the ceiling
+    // (address reserved, storage not touched). The descriptor carries the
+    // ceiling and the floor as constants; `base` is set at load by
+    // `gabbro_arena_reserve`, `committed` starts at `hi` and moves only
+    // through `gabbro_arena_grow`. Booked apart from `arena` above: a
+    // certificate that vouches for both with one line vouches for neither.
+    Posten {
+        konstrukt: "dynamic arena",
+        traegt: Traegt::Direkt,
+        grund: "a `gabbro_arena_desc` (`base`, `committed` starting at `hi`, \
+                constants `max`/`hi`) beside two `_Static_assert` pins; \
+                `alloc` reads `committed` and stores through `base`, \
+                `reset` stores zero into `used` and leaves `committed`",
+    },
     Posten {
         konstrukt: "format",
         traegt: Traegt::Schablone("format.roundtrip"),
@@ -345,6 +360,17 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Direkt,
         grund: "`used = 0` -- the generation moves in the checker alone, and \
                 every older index is stale by the rule, not by a runtime check",
+    },
+    // **Lane 259 (wave D, emitter arm):** the commit request -- a call on
+    // the runtime in the checked-`alloc` brace shape, with the written
+    // failure continuation beside it.
+    Posten {
+        konstrukt: "grow",
+        traegt: Traegt::Direkt,
+        grund: "`if (gabbro_arena_grow(&D_desc, n)) {} else { … }` -- the \
+                `else` runs exactly when the runtime refuses the commit \
+                below the ceiling (`committed` unchanged); past the ceiling \
+                there is no commit, only the stop (`N426` holds it statically)",
     },
     // **The nine traversal domains, one entry each** *(2026-08-31)*.
     //
@@ -675,7 +701,16 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         ItemArt::Tabelle(_) => zaehle(&mut e, "table"),
         // **«E4»:** the buffer type beside its counter -- booked like the
         // table, because the emitter lowers it.
-        ItemArt::Arena(_) => zaehle(&mut e, "arena"),
+        // **Lane 259:** the dynamic form is booked apart (`dynamic arena`
+        // above): no static storage is emitted for the ceiling, and one
+        // line for both would vouch for neither.
+        ItemArt::Arena(a) => {
+            if a.max.is_some() {
+                zaehle(&mut e, "dynamic arena");
+            } else {
+                zaehle(&mut e, "arena");
+            }
+        }
         ItemArt::Format(_) => zaehle(&mut e, "format"),
         ItemArt::Device(d) => {
             zaehle(&mut e, "device");

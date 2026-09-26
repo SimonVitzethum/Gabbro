@@ -1,0 +1,62 @@
+-- 158 -- **Growth below a ceiling, committed at run time.**
+--
+-- A dynamic arena declares a ceiling `max M` (address reserved at load) and
+-- a committed prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`).
+-- `Vorrat` reserves `8` slots and starts `4` committed (`capacity 2 .. 4
+-- max 8`); one `grow ... by 4` commits the rest, so the eight allocations
+-- below name slots the runtime made usable -- every one past the old `hi`
+-- reads back what was stored. The second phase (`reset`, then allocate
+-- again) is the phase discipline the monotone commit relies on: `reset`
+-- starts a fresh generation and leaves the committed prefix alone.
+--
+-- Fully clean, and it emits: a `gabbro_arena_desc` beside two
+-- `_Static_assert` pins (no `buf[8]` storage -- address reserved, storage
+-- not touched), `alloc` against the committed word, `grow` as the runtime's
+-- call. The slots are 16-bit (the reads widen to 32 bits on load, the `99`
+-- shape), so the eight-way sum fits `u32` by construction. The driver
+-- (`instrumente/pruefe-emission.sh`, `beispiel158`) reserves at load and
+-- runs the main path; the `else` path runs under a refusing stub
+-- (`beispiel158-else`). Executed results: 118 on the main path, 1 on the
+-- refusal path (see the report).
+module beispiel::arena_commit {
+arena Vorrat capacity 2 .. 4 max 8 of u16;
+
+impl fn fuellen() -> u32 effects { writes Vorrat } costs <= 96 ops {
+    grow Vorrat by 4 else {
+        return 1;
+    };
+    let a = alloc Vorrat (10);
+    let b = alloc Vorrat (11);
+    let c = alloc Vorrat (12) else {
+        return 2;
+    };
+    let d = alloc Vorrat (13) else {
+        return 3;
+    };
+    let e = alloc Vorrat (14) else {
+        return 4;
+    };
+    let f = alloc Vorrat (15) else {
+        return 5;
+    };
+    let g = alloc Vorrat (16) else {
+        return 6;
+    };
+    let h = alloc Vorrat (17) else {
+        return 7;
+    };
+    let x1 : u32 = Vorrat[a];
+    let x2 : u32 = Vorrat[b];
+    let x3 : u32 = Vorrat[c];
+    let x4 : u32 = Vorrat[d];
+    let x5 : u32 = Vorrat[e];
+    let x6 : u32 = Vorrat[f];
+    let x7 : u32 = Vorrat[g];
+    let x8 : u32 = Vorrat[h];
+    let sum = x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8;
+    reset Vorrat;
+    let k = alloc Vorrat (x1);
+    let r : u32 = Vorrat[k];
+    return r + sum;
+}
+}

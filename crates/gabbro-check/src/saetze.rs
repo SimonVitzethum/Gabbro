@@ -4622,6 +4622,52 @@ pub const PHASEN: &[Satz] = &[
                      (`ArenaSig::max`); dokumente/SYNTAX.md §9.1; \
                      PLAN-DYNAMISCH.md §4",
     },
+    // --- lane 259, 2026-09-26: the commit cover (wave D, emitter arm) ------------
+    //
+    // **One new refusal code, and it is the shape `N212` cannot say.** `N212`
+    // holds the `else` against the reservation `lo`: past it the arena MAY
+    // be full, and the branch beside the statement answers that. `N466`
+    // holds the slot against the COMMITTED prefix: past it the program
+    // touches storage the runtime never made usable, and no branch beside
+    // the statement answers that -- the missing `grow` stands BEFORE the
+    // `alloc`, not beside it. Scoped to arenas with a usable `max` clause:
+    // on a static arena commit coincides with `hi` on every path and the
+    // `N212` shapes stay what they were (the lane-184 class). Minted from
+    // lane 259's block (`N466`–`N470`); only `N466` is taken here.
+    Satz {
+        name: "arena.alloc_unter_commit",
+        kennungen: &["N466"],
+        aussage: "Every `alloc` out of a dynamic arena names a slot below the \
+                  path's committed prefix: `N466` refuses the allocation whose \
+                  static count since the last reset may stand at or past what \
+                  the path has committed, with or without the `else` beside \
+                  it -- the `else` runs when the arena is full, and here the \
+                  slot was never committed. The committed prefix starts at \
+                  the floor (`hi`), grows by `n` at a dominating `grow` \
+                  (capped by `M`), restores the floor at `reset`, and joins \
+                  with the minimum (what both paths guarantee).",
+        vorbehalt: "The allocation count is per function body (like `costs`); \
+                    the COMMIT ceiling is whole-program since fix lane F2. \
+                    `R-max` needs no second code on top: the committed prefix \
+                    never exceeds the ceiling, so a count that may reach `M` \
+                    is already past the committed prefix on every path and \
+                    falls here first. Static arenas keep `M = hi` with `N212` \
+                    against `lo` (`beispiele/99` stays clean and emitting). A \
+                    loop that allocates past the commit without a dominating \
+                    `grow` falls, including the first pass: the loop may run \
+                    zero times, so the joined path guarantees only the floor.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1171 (`-- erwartet: N466`: an `alloc` \
+                      with its `else` past the committed prefix and no `grow` \
+                      covering it); beispiele/gift/1172 (`-- erwartet: N466`: \
+                      the past-`M` shape -- a count that may reach the ceiling \
+                      falls here first, the `R-max` half); `paesse.rs` \
+                      (`arena_alloc_braucht_commit_n466`: the poison with its \
+                      `else`, the past-`M` poison, and the grow-covered clean \
+                      twin); `beispiele/98` and `/99` stay clean and emitting.",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`N466`, the `Alloc` \
+                     walk, `dynamisch`); dokumente/PLAN-DYNAMISCH.md §4",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],

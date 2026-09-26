@@ -1,0 +1,53 @@
+-- erwartet: N466
+-- Lane 259 (the `R-max` half, subsumed): a count that may reach the ceiling
+-- falls at `N466` first. `Speicher` commits `4` slots (`hi`) under a ceiling
+-- of `8`; one `grow` commits the remaining `4`, so all eight slots are
+-- usable and the eight allocations stand. The ninth names slot `8` -- past
+-- `max`, and past the committed prefix on every path (the prefix never
+-- exceeds the ceiling), so it is refused with its `else` beside it. Past
+-- the ceiling there is no commit, only the stop; a second `grow` would fall
+-- at `N426` before this `alloc` is even reached. Nothing else is wrong with
+-- this unit: the `grow` is constant and below the ceiling, every reservation
+-- `else` stands, the effects and the budget are clean.
+module gift1172 {
+arena Speicher capacity 2 .. 4 max 8 of u16;
+
+impl fn f() -> u32 effects { writes Speicher } costs <= 128 ops {
+    grow Speicher by 4 else {
+        return 1;
+    };
+    let a0 = alloc Speicher (10);
+    let a1 = alloc Speicher (11);
+    let a2 = alloc Speicher (12) else {
+        return 101;
+    };
+    let a3 = alloc Speicher (13) else {
+        return 102;
+    };
+    let a4 = alloc Speicher (14) else {
+        return 103;
+    };
+    let a5 = alloc Speicher (15) else {
+        return 104;
+    };
+    let a6 = alloc Speicher (16) else {
+        return 105;
+    };
+    let a7 = alloc Speicher (17) else {
+        return 106;
+    };
+    let b = alloc Speicher (18) else {
+        return 2;
+    };
+    let x : u32 = Speicher[a0];
+    let y : u32 = Speicher[a1];
+    let z : u32 = Speicher[a2];
+    let w : u32 = Speicher[a3];
+    let v : u32 = Speicher[a4];
+    let q : u32 = Speicher[a5];
+    let t : u32 = Speicher[a6];
+    let s : u32 = Speicher[a7];
+    let r : u32 = Speicher[b];
+    return x + y + z + w + v + q + t + s + r;
+}
+}

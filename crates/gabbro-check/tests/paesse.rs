@@ -4284,6 +4284,97 @@ impl fn f() -> u32 effects { writes A } costs <= 64 ops {
     );
 }
 
+// -- Lane 259: `R-commit` -- an `alloc` past the committed prefix (`N466`) ---------------
+
+/// **An `alloc` that names a slot nobody committed falls at `N466`.**
+///
+/// The committed prefix starts at the floor (`hi`): without a dominating
+/// `grow` the fifth allocation out of a `2 .. 4` arena names slot `4`,
+/// which no path committed -- refused WITH the `else` beside it, because
+/// the `else` runs when the arena is full and here the slot was never
+/// committed. The twin grows first and stays clean; the past-`M` twin
+/// (a ninth slot under `max 8`, fully committed) falls here too -- the
+/// `R-max` half needs no second code, the prefix never exceeds the ceiling.
+#[test]
+fn arena_alloc_braucht_commit_n466() {
+    faellt_genau(
+        "arena Speicher capacity 2 .. 4 max 16 of u16;
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    let a = alloc Speicher (10);
+    let b = alloc Speicher (11);
+    let c = alloc Speicher (12) else {
+        return 100;
+    };
+    let d = alloc Speicher (13) else {
+        return 101;
+    };
+    let e = alloc Speicher (14) else {
+        return 102;
+    };
+    return 0;
+}",
+        &["N466"],
+    );
+    // Past the ceiling: fully committed, still refused -- no path may name
+    // a slot at or beyond `M`.
+    faellt_genau(
+        "arena Speicher capacity 2 .. 4 max 8 of u16;
+impl fn f() -> u32 effects { writes Speicher } costs <= 128 ops {
+    grow Speicher by 4 else {
+        return 1;
+    };
+    let a0 = alloc Speicher (10);
+    let a1 = alloc Speicher (11);
+    let a2 = alloc Speicher (12) else {
+        return 101;
+    };
+    let a3 = alloc Speicher (13) else {
+        return 102;
+    };
+    let a4 = alloc Speicher (14) else {
+        return 103;
+    };
+    let a5 = alloc Speicher (15) else {
+        return 104;
+    };
+    let a6 = alloc Speicher (16) else {
+        return 105;
+    };
+    let a7 = alloc Speicher (17) else {
+        return 106;
+    };
+    let b = alloc Speicher (18) else {
+        return 2;
+    };
+    return 0;
+}",
+        &["N466"],
+    );
+    // The grow-covered shape: the same allocations under a dominating
+    // `grow`, with their reservation `else`s, stay clean.
+    faellt_nicht(
+        "arena Speicher capacity 2 .. 4 max 16 of u16;
+impl fn f() -> u32 effects { writes Speicher } costs <= 64 ops {
+    grow Speicher by 4 else {
+        return 1;
+    };
+    let a = alloc Speicher (10);
+    let b = alloc Speicher (11);
+    let c = alloc Speicher (12) else {
+        return 100;
+    };
+    let d = alloc Speicher (13) else {
+        return 101;
+    };
+    let x : u32 = Speicher[a];
+    let y : u32 = Speicher[b];
+    let z : u32 = Speicher[c];
+    let w : u32 = Speicher[d];
+    return x + y + z + w;
+}",
+    );
+}
+
 // -- Fix lane F2 (review G08 F2): `N211` across calls and parameters ---------------------
 
 /// **A `reset` in a callee consumes the caller's generation (`N211`).**
