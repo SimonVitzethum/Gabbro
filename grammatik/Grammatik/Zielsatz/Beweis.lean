@@ -21,6 +21,9 @@
   PER LEG (`ziel_aus`):
   * `speicherSicher` (`SpurInv`)       -- `spurInv_erreichbar` (`GutO`);
   * `rennfrei` (`RennfreiBis`)         -- `rennfreiBis_of` (AkzeptiertSpec + StartZulaessig + `GutO`);
+  * `schwach` (`SchwachSC`)           -- `schwach_ist_g` (Speichermodell/DRF.lean: `fuss`, closed
+                                          graphs, exclusive start, `GutO`; weak-memory hunk,
+                                          Opus agent B 2026-09-26);
   * `vertrag`, `sperrInv`, `keinLogikHalt`, `invRueck`, `startEnde`, `keinStartGrund`
                                        -- `ziel_ort_mehrfaden_ende` with the computed call
                                           graphs `kVon` (`Akzeptiert_ok`), `SperrInvOk` =
@@ -65,6 +68,7 @@ import Grammatik.ZielOrtStart
 import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.Zielsatz.Masken
+import Grammatik.Speichermodell.DRF
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -136,6 +140,10 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
   exact {
     speicherSicher := spurInv_erreichbar hH.1 sp init hr
     rennfrei := rennfreiBis_of fs.2 hA hZ hH.1 passes M
+    schwach := fun _ W W' u hrW hWg hs => by
+      have h := schwach_ist_g hH.1 fs.2 hAbg hW hFuss hex hrW hs
+      rw [hWg] at h
+      exact h
     vertrag := main.1.1.1
     sperrInv := main.1.1.2.1
     invRueck := main.1.2

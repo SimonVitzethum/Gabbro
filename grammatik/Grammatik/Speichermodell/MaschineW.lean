@@ -494,8 +494,94 @@ theorem w_aus_g {M0 M : RufMaschineG D} (hr : RufErreichbarG P O passes M0 M) :
       obtain ⟨W', hstep, hg, hF'⟩ := schrittW_aus_g (ord := ord) hF hs
       exact ⟨W', .schritt W W' u hW hstep, hg, hF'⟩
 
+/-- **Building a W step with ANY admissible reads** (for witnesses): given a G step on a
+    presented memory that agrees with G's memory off the reads and with the chosen messages at
+    the reads, and a bound `T` on every timestamp and view, W takes the step, writing at
+    `T + 1`. -/
+theorem schrittW_bau {W : RufMaschineW D} {σ : Speicher D} {u : Faden} {M'' : RufMaschineG D}
+    (hs : RufSchrittG P O passes (mitSpeicher W.g σ) u M'')
+    (wahl : D.Tab ⊕ D.Glob → NachrichtW D)
+    (hl : ∀ c, LiestG (mitSpeicher W.g σ) M'' u c →
+      Lesbar W.hist (W.sicht u) c (wahl c) ∧ TraegerGleich σ (wahl c).wert c)
+    (hu : ∀ c, ¬ LiestG (mitSpeicher W.g σ) M'' u c → TraegerGleich σ W.g.speicher c)
+    (T : D.Tab ⊕ D.Glob → Nat)
+    (hT : ∀ c, (∀ m ∈ W.hist c, m.ts ≤ T c) ∧ (∀ t, W.sicht t c ≤ T c) ∧
+      (∀ L, W.lsicht L c ≤ T c) ∧ (∀ x, ∀ m ∈ W.hist x, m.sicht c ≤ T c))
+    (hwahl : ∀ c, wahl c ∈ W.hist c) :
+    ∃ W', SchrittW P O passes ord W u W' σ M'' wahl (fun c => T c + 1) ∧
+      (∀ c, SchreibG (mitSpeicher W.g σ) M'' u c → TraegerGleich W'.g.speicher M''.speicher c) ∧
+      (∀ c, ¬ SchreibG (mitSpeicher W.g σ) M'' u c →
+        TraegerGleich W'.g.speicher W.g.speicher c) := by
+  classical
+  let Mσ := mitSpeicher W.g σ
+  let v := vorSicht ord W u σ M'' wahl
+  have hvT : ∀ x, v x ≤ T x := by
+    apply locksicht_le _ T _ _ _ (fun L _ x => (hT x).2.2.1 L)
+    apply lesesicht_le wahl T _ _ (fun x => (hT x).2.1 u)
+    intro c _ x
+    exact beitrag_le ((hT c).1 _ (hwahl c)) (fun y => (hT y).2.2.2 c (wahl c) (hwahl c)) x
+  let schreibt : D.Tab ⊕ D.Glob → Prop := fun c => SchreibG Mσ M'' u c
+  let sp' : Speicher D :=
+    ⟨fun t => if schreibt (.inl t) then M''.speicher.slots t else W.g.speicher.slots t,
+     fun g => if schreibt (.inr g) then M''.speicher.globs g else W.g.speicher.globs g⟩
+  have hsp1 : ∀ c, schreibt c → TraegerGleich sp' M''.speicher c := by
+    intro c hc
+    cases c with
+    | inl t => show (if schreibt (.inl t) then _ else _) = _; rw [if_pos hc]
+    | inr g => show (if schreibt (.inr g) then _ else _) = _; rw [if_pos hc]
+  have hsp2 : ∀ c, ¬ schreibt c → TraegerGleich sp' W.g.speicher c := by
+    intro c hc
+    cases c with
+    | inl t => show (if schreibt (.inl t) then _ else _) = _; rw [if_neg hc]
+    | inr g => show (if schreibt (.inr g) then _ else _) = _; rw [if_neg hc]
+  let s' : SichtW D := fun c => if schreibt c then T c + 1 else v c
+  let W' : RufMaschineW D :=
+    ⟨{ M'' with speicher := sp' },
+     fun c => if schreibt c then nachricht (ordVon ord c) v c (T c + 1) sp' :: W.hist c
+       else W.hist c,
+     fun t => if t = u then s' else W.sicht t,
+     fun L => if L ∈ gegebenVon Mσ M'' u then (W.lsicht L).verein s' else W.lsicht L⟩
+  refine ⟨W', ?_, hsp1, hsp2⟩
+  exact {
+    schritt := hs
+    lies := hl
+    ungelesen := hu
+    frisch := fun c _ => ⟨Nat.lt_succ_of_le (hvT c), fun m hm he => by
+      have := (hT c).1 m hm
+      omega⟩
+    speicherS := hsp1
+    speicherU := hsp2
+    faeden := rfl
+    lauf := rfl
+    start := rfl
+    histS := fun c hw => by
+      show (if schreibt c then _ else _) = _
+      rw [if_pos hw]
+    histU := fun c hw => by
+      show (if schreibt c then _ else _) = _
+      rw [if_neg hw]
+    sichtS := fun c hw => by
+      show (if u = u then s' else W.sicht u) c = T c + 1
+      rw [if_pos rfl]
+      show (if schreibt c then T c + 1 else v c) = T c + 1
+      rw [if_pos hw]
+    sichtU := fun c hw => by
+      show (if u = u then s' else W.sicht u) c = v c
+      rw [if_pos rfl]
+      show (if schreibt c then T c + 1 else v c) = v c
+      rw [if_neg hw]
+    sichtF := fun t ht => by
+      show (if t = u then s' else W.sicht t) = W.sicht t
+      rw [if_neg ht]
+    lsicht := fun L => by
+      show (if L ∈ gegebenVon Mσ M'' u then (W.lsicht L).verein s' else W.lsicht L) =
+        (if L ∈ gegebenVon Mσ M'' u then
+          (W.lsicht L).verein (if u = u then s' else W.sicht u) else W.lsicht L)
+      rw [if_pos (rfl : u = u)] }
+
 end Einbettung
 
+#print axioms Gabbro.Grammatik.schrittW_bau
 #print axioms Gabbro.Grammatik.schrittW_g
 #print axioms Gabbro.Grammatik.w_aus_g
 

@@ -21,6 +21,50 @@
   Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
   carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
 
+  -- BEGIN weak-memory block (Opus agent B, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT B: THE MEMORY MODEL BEYOND DRF-SC), AND WHY -- a
+  REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
+  * THE GAP. G is sequentially consistent, and the header read "the hardware is DRF-SC" as an
+    assumption of the reading; `atomic` globals were "ordered by A10" and excluded from
+    `rennfrei`. The emitted C is a C11 program with relaxed, release/acquire and seq_cst
+    atomics and `pthread_mutex` locks; nothing proved that its weak behaviours are G's.
+  * THE MODEL (Speichermodell/Sicht.lean, MaschineW.lean). Machine W is machine G over a WEAK
+    memory: a history of messages per carrier (plain and atomic), a view per thread and per
+    lock, message views for release writes. A thread's step READS, at every carrier it reads,
+    ANY message at or above its view -- not necessarily the newest -- and writes at a fresh
+    timestamp above its view. This is the promise-free timestamp machine of RC11 for the
+    orders the emitter writes (relaxed; release store / acquire load / acq_rel RMW; `seq_cst`
+    modelled as release/acquire -- an over-approximation, so claims over W hold for the C).
+    The weakness is real: on the instruction machine built from the same primitives the
+    stale outcome of relaxed message passing and both-zero store buffering are REACHABLE
+    (`mp_rlx_erlaubt`, `sb_erlaubt`), the latter not on SC (`sb_sc_verboten`); release/acquire
+    forbids the MP outcome (`mp_ra_verboten`); coherence holds (`corr_verboten`).
+  * THE DIFF. New `SchwachSC P O passes M0 M` and the leg `schwach` of `Ziel`: at every
+    reached machine `M`, for EVERY assignment of memory orders to the atomics, every step the
+    weak machine takes from a weak state over `M` (reached from `RufStartW M0`) is a step of G
+    from `M` to the successor's G-part. With it (`gabbro_ziel_schwach`, Zielsatz/Schwach.lean)
+    every leg of `Ziel` holds at every machine W reaches: the goal is proved over the weak
+    machine, not only over G.
+  * WHY IT HOLDS (the DRF theorem, Speichermodell/DRF.lean, `schwach_ist_g`): the checker's
+    footprint component (`fuss`) already demands that every carrier a thread's graph READS is
+    thread-local or lock-guarded -- `atomic` carriers included -- and every access to a guarded
+    carrier holds its lock. So a thread's view reaches the newest message of every carrier it
+    reads (its own writes, or the lock's view joined at the take), `Lesbar` admits only that
+    message, and it carries G's value (`liest_neueste`, `praesentiert_g`).
+  * WHY NOTHING IS WEAKENED. `Ziel` gains a conjunct and loses none; no premise of `GabbroZiel`
+    changed. Unlike `keinKernHalt` and `zeit` the leg is NOT premise-free: it uses (a) (`fuss`,
+    closed graphs) and (c) (`GutO`), and W really is weaker than G where the checker refuses:
+    on the refused configuration of `w_nicht_sc` (Speichermodell/Zeuge.lean; `konfig` written
+    by one start and read by another, no lock) W reads the initial value after the write and
+    stores `0` where G, on the same schedule, stores `3`. W contains G (`w_aus_g`: every run
+    of G is a run of W), so the new statement covers every machine the old one did, and more.
+    Witness on an accepted program: `schwach_pool_zeuge` (three W steps on the F10 pool,
+    every leg of `Ziel` by `gabbro_ziel_schwach`).
+  * WHAT IT DOES NOT BUY, named below (NOT CLAIMED, OFFEN O25): the goal still covers no
+    program that RELIES on an unguarded atomic read across threads -- `fuss` refuses such a
+    program -- so the non-SC outcomes of W never occur on an accepted program.
+  -- END weak-memory block --
+
   WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
   REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
   * THE GAP. An `entry … vector … via idt` dispatch root travels into the model as an ordinary
@@ -319,6 +363,16 @@
     a critical section (`HardwareImAbschnitt`), and is not in `Ziel`.
   * Not premises, but assumptions of the reading: machine G is the meaning of the C
     (translation validation, PLAN-UEBERSETZUNGSVALIDIERUNG); the hardware is DRF-SC.
+    -- weak-memory hunk (Opus agent B, 2026-09-26): "the hardware is DRF-SC" is no longer an
+    assumption for accepted programs -- it is the leg `schwach`, proved. What replaces it:
+    the view machine W over-approximates the C11 (RC11) memory model for the orders the
+    emitter writes (`Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
+    release/acquire; a published model, not proved here against an axiomatic C11); the C
+    compiler and the hardware implement C11 atomics and the orders as specified; the lock
+    primitive `L_nimm`/`L_gib` synchronises like a mutex -- an acquire at the take, a release
+    at the give (the generated driver uses `pthread_mutex_lock`/`_unlock`, `treiber.rs`); and
+    carriers are the locations (a table or an atomic array is ONE location of W; the DRF
+    argument holds per element as well, since it only uses the lock and locality facts).
 
   WHAT `Ziel` ADDS OVER `NutzerPflicht` (leg by leg). The user proves SEQUENTIAL per-function
   facts: each body, run alone by `execEndH` against every callee answer meeting the callee's
@@ -358,6 +412,10 @@
     side -- every lock a handler's call graph takes is declared `masks irqs` -- is a HYPOTHESIS
     of the leg, because the unit does not mark its handlers (fix lane F11, OFFEN O19). It is
     the model counterpart of the Rust `H102`, and it holds for every program of G.
+  * `schwach` (`SchwachSC`, weak-memory hunk, Opus agent B 2026-09-26) -- NOT in (b): the weak
+    machine W takes only G's steps on the program, for every order assignment; hence every
+    leg holds on every machine W reaches (`gabbro_ziel_schwach`). From (a) (`fuss`: every
+    read carrier is thread-local or lock-guarded, atomics included) and (c) (`GutO`).
   * `zeit` (`ZeitAb`) -- NOT in (b), and WEAK: a bound on a frame's OWN G-steps by the
     syntax-computed `kostenTief`, for frames with a finite call tree only (`rufTief`). It
     holds for EVERY program of G with no premise (`frame_schritte_beschraenkt`), so it says
@@ -426,6 +484,12 @@
     `BereichG` Fortschritt.lean -- the float range checks pass at every head (proof side,
     not in `Ziel`: `FortschrittG` lists no float stop, so it follows from `fortschritt`).
   * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
+  * (weak-memory hunk) `RufMaschineW`, `RufStartW`, `SchrittW`, `RufSchrittW`, `RufErreichbarW`,
+    `ordVon`, `vorSicht`, `lesenVon`/`genommenVon`/`gegebenVon` Speichermodell/MaschineW.lean;
+    `Nachricht`, `Sicht`, `Ordnung`, `beitrag`, `nachricht`, `Lesbar`, `Frisch`
+    Speichermodell/Sicht.lean -- the weak machine / a rule W lacks against RC11 (a behaviour
+    the C has and W not) would make `schwach` claim SC where the C is weaker; the direction
+    that matters is "W admits at least every C11 behaviour", which the header names.
   NEW here: `Einheit`, `LogikPflicht`, `StartPflicht`, `Laufzeit` (2026-09-15); `HaltArt`,
   `KopfHalt`, `RestHalt`, `WartetAuf`, `KeinWarteZyklus` (2026-09-15, verdicts F2/F3);
   `InvGutGrund`, `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the named
@@ -436,7 +500,9 @@
   `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
   declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
   245, a premise since F10); `KernPlan` and the leg `KernHaltG` (one core with interrupt
-  handlers, fix lane F11, proved in Zielsatz/Masken.lean).
+  handlers, fix lane F11, proved in Zielsatz/Masken.lean); `SchwachSC` and the leg `schwach`
+  (the weak machine takes only G's steps, Opus agent B 2026-09-26, proved in
+  Speichermodell/DRF.lean).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -454,9 +520,20 @@
   NOT CLAIMED (PLAN §6): termination and a waiting bound under fairness (`zeit` bounds only
   frames with a finite call tree, `rufTief`); stack depth (G's stacks are unbounded and
   recursion is admitted, so a non-returning recursive function meets any `ensures` while the
-  emitted C overflows); the C and the hardware; weak memory beyond DRF-SC (G is sequentially
-  consistent; `atomic` globals are ordered by A10, not by locks, and are excluded from
-  `rennfrei`); the publish/await hand-off of an unguarded payload (refused by the checker,
+  emitted C overflows); the C and the hardware; (weak-memory hunk, 2026-09-26: the line
+  "weak memory beyond DRF-SC" is REPLACED -- what is now claimed is the leg `schwach`: W,
+  the weak machine, adds no behaviour on an accepted program, for every order assignment,
+  and every leg holds on every machine W reaches) programs that RELY on an unguarded atomic
+  read across threads -- a flag, counter or per-core cell one thread writes and another reads
+  without a lock: the footprint component `fuss` refuses them (a read carrier another start
+  writes must be thread-local or lock-guarded, `atomic` or not), so W's non-SC outcomes
+  (`mp_rlx_erlaubt`, `sb_erlaubt`) occur on no accepted program and no theorem here speaks
+  about them; covering them needs the user's sequential semantics to havoc such a read (a
+  rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`); that W is exactly
+  RC11 (it over-approximates it: `seq_cst` is modelled as release/acquire, so no SC-order
+  fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
+  `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
+  races; `schwach` covers their values); the publish/await hand-off of an unguarded payload (refused by the checker,
   see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; invariants at entry or while
@@ -493,6 +570,7 @@ import Grammatik.RennfreiVoll
 import Grammatik.KostenG
 import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
+import Grammatik.Speichermodell.MaschineW
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -877,6 +955,21 @@ def ZeitAb (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) :
     ∀ (M2 : RufMaschineG D) (run : SegLauf P O passes M M2), aktivVor f k run →
       segZaehle run f ≤ kostenTief P passes (n + 1) g
 
+-- BEGIN weak-memory definition (Opus agent B, 2026-09-26) --
+/-- **The weak machine adds no behaviour at `M`** (Opus agent B, 2026-09-26). For EVERY
+    assignment `ord` of memory orders to the atomics, every weak state `W` over `M` (`W.g = M`)
+    that machine W reaches from the weak start over `M0` (`RufStartW`: every carrier one
+    message, every view empty), and every step W takes from there: it is a step of G from `M`
+    to the successor's G-part. Machine W (Speichermodell/MaschineW.lean) lets a thread read
+    ANY message of a carrier at or above its view -- relaxed, release/acquire and lock views --
+    so this is the DRF theorem for the program: on it the weak memory reads only the newest
+    write. -/
+def SchwachSC (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (ord : D.Glob → Speichermodell.Ordnung) (W W' : RufMaschineW D) (u : Faden),
+    RufErreichbarW P O passes ord (RufStartW M0) W → W.g = M →
+    RufSchrittW P O passes ord W u W' → RufSchrittG P O passes M u W'.g
+-- END weak-memory definition --
+
 /-- **THE GOAL at a reached machine `M` of a run from `M0`**: the four legs, nothing else. -/
 structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     (M0 M : RufMaschineG D) : Prop where
@@ -884,6 +977,8 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   speicherSicher : SpurInv M
   -- data-race freedom
   rennfrei : RennfreiBis P O passes M0 M
+  -- the weak memory adds no behaviour (DRF theorem; weak-memory hunk, Opus agent B 2026-09-26)
+  schwach : SchwachSC P O passes M0 M
   -- contracts where claimed
   vertrag : VertragAmOrtG P M
   sperrInv : SperrInvG S M
