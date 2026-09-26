@@ -237,9 +237,15 @@ theorem oblig_nutzer : Zielsatz.NutzerPflicht G104_referenz_oblig.gE where
   logik := oblig_logik
   start := ⟨oblig_start_sperren, oblig_start_req⟩
 
+/-- **THE USER'S DUTY WITH THE ATOMIC RELY** (the goal's (b) since Opus lane O25c): `gD` has no
+    global, so no read of a shared atomic exists and the duty of before is it
+    (`nutzerPflichtA_ohne_atomar`). -/
+theorem oblig_nutzerA : Zielsatz.NutzerPflichtA G104_referenz_oblig.gE :=
+  Zielsatz.nutzerPflichtA_ohne_atomar (fun g => nomatch g) oblig_nutzer
+
 /-- The stated `def` and the proved theorem are the same proposition -- the
     tool's word and the user's proof, held against each other. -/
-theorem oblig_nutzer_ist_stated : G104_referenz_oblig.nutzerPflicht := oblig_nutzer
+theorem oblig_nutzer_ist_stated : G104_referenz_oblig.nutzerPflicht := oblig_nutzerA
 
 /-! ## 4. The chain, closed -/
 
@@ -271,14 +277,18 @@ theorem oblig_laufzeit :
     own theorem; `oblig_nutzer`, `oblig_hw` and `oblig_laufzeit` are its
     three premises, all three discharged here. -/
 theorem oblig_ziel (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD.mitRuhe)
-    (hr : RufErreichbarG G104_referenz_oblig.gE.P.mitRuhe oO.mitRuhe passes
+    (hr : RufErreichbarGX G104_referenz_oblig.gE.P.mitRuhe oO.mitRuhe passes
+      (Zielsatz.GeteiltV (D := G104_referenz_oblig.gD) G104_referenz_oblig.gE.P
+        G104_referenz_oblig.gE.ws)
       (RufStartG G104_referenz_oblig.gE.P.mitRuhe (speicherR G104_referenz_oblig.gE.sp0)
         (initRuhe G104_referenz_oblig.gE.starts)) M) :
-    Zielsatz.Ziel G104_referenz_oblig.gE.P.mitRuhe G104_referenz_oblig.gE.S.mitRuhe
+    Zielsatz.ZielX G104_referenz_oblig.gE.P.mitRuhe G104_referenz_oblig.gE.S.mitRuhe
       oO.mitRuhe passes
+      (Zielsatz.GeteiltV (D := G104_referenz_oblig.gD) G104_referenz_oblig.gE.P
+        G104_referenz_oblig.gE.ws)
       (RufStartG G104_referenz_oblig.gE.P.mitRuhe (speicherR G104_referenz_oblig.gE.sp0)
         (initRuhe G104_referenz_oblig.gE.starts)) M :=
-  gP_gabbro oblig_nutzer oO oblig_hw passes _ _ oblig_laufzeit M hr
+  gP_gabbro oblig_nutzerA oO oblig_hw passes _ _ oblig_laufzeit M hr
 
 /-! ## 5. Witnesses (rule 13) -/
 

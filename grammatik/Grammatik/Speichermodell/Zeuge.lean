@@ -115,8 +115,16 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
         cases g with
         | konfig => exact absurd stale_liest hc
         | zaehler => rfl
+  -- thread 0 stands at the start of `hauptA`: no `exchange` head, so no RMW condition
+  have hkein : ∀ g, ¬ ExchangeKopf W1.g 0 g := fun g hk => by
+    have h := exchangeKopf_glob hk
+    rw [hg1] at h
+    have h0 : ((r1M1 sp0).faeden 0).kopf.rest.2.2.2.2.exchangeGlob = none := rfl
+    rw [h0] at h
+    cases h
   obtain ⟨W2, h2, hS2, _⟩ := schrittW_bau (ord := ord) hs2 (fun _ => m0) hl hu T
     (fun c => ⟨(hT c).2.1, (hT c).2.2.1, (hT c).2.2.2.1, (hT c).2.2.2.2⟩) hm0
+    (fun g hk => absurd hk (hkein g))
   have hwA : SchreibG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0
       (.inl NTab.tabA) := by
     rw [hg1]

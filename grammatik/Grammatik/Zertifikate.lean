@@ -10,6 +10,7 @@
 import Grammatik.GenOblig104
 import Grammatik.GenOblig108
 import Grammatik.Zertifikat.G109_lockfree_entry_roots
+import Grammatik.Zertifikat.G116_payload_free_counter
 import Grammatik.Zertifikat.G118_sperrinvariante_erhaltung
 import Grammatik.Zertifikat.G119_sperrinvariante_bloecke
 import Grammatik.Zertifikat.G120_tagged_construction
@@ -18,6 +19,7 @@ import Grammatik.Zertifikat.G124_two_threads_private
 import Grammatik.Zertifikat.G130_derived_contract_pure
 import Grammatik.Zertifikat.G157_worker_pool
 import Grammatik.Zertifikat.G15_own_traegt_beide_rechte
+import Grammatik.Zertifikat.G162_geteilte_flagge
 import Grammatik.Zertifikat.G16_by_ops_am_feld
 import Grammatik.Zertifikat.G219_unaeres_minus
 import Grammatik.Zertifikat.G34_markierter_wert

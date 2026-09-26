@@ -29,22 +29,6 @@ open Gabbro.Grammatik Speichermodell
 
 variable {D : Deklaration}
 
-/-- **Lock invariants at every lock move, over GX steps** (`SperrWechselG` with `RufSchrittGX`). -/
-def SperrWechselGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
-    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
-  ∀ (u : Faden) (M' : RufMaschineG D) (L : D.Lock), RufSchrittGX P O passes Tg M u M' →
-    (L ∉ offen (M.faeden u).spur → L ∈ offen (M'.faeden u).spur →
-      S.inv L M.speicher = true ∧ S.inv L M'.speicher = true) ∧
-    (L ∈ offen (M.faeden u).spur → L ∉ offen (M'.faeden u).spur → S.inv L M'.speicher = true)
-
-/-- **A held lock's invariant is observed by its holder alone, over GX steps.** -/
-def SperrSichtGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
-    (S : SperrInv D) (M : RufMaschineG D) : Prop :=
-  ∀ (u : Faden) (M' : RufMaschineG D), RufSchrittGX P O passes Tg M u M' →
-    ∀ (L : D.Lock) (c : D.Tab ⊕ D.Glob), c ∈ S.orte L →
-      (ZugriffG M M' u c → L ∈ offen (M.faeden u).spur) ∧
-      (∀ t, t ≠ u → L ∈ offen (M.faeden t).spur → TraegerGleich M'.speicher M.speicher c)
-
 section GX
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Tab ⊕ D.Glob → Prop}

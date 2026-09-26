@@ -642,6 +642,13 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
   as a sub-machine (`RufSchrittWR`, `wr_kein_verlust`). Still open before the ONE Spec diff (2):
   the thread machine over GX (`ZielF`: spawn, join, `spawnSicht`), `GabbroZielVerbund` with the
   rely, and (5) for a differential measurement; then (3) into `SchrittW` and (4).
+  **Narrowed to (4) 2026-09-26 (Opus lane O25c, SATZKARTE §58, `messung/OPUS-O25C-ATOMICS.md`):**
+  (2) DONE -- `GabbroZiel` is the rely version (`PrueferX`, `NutzerPflichtA`, `ZielFX` over the
+  thread machine over GX), the statement of before `GabbroZielSC` derived
+  (`gabbro_ziel_sc_aus`), linked units likewise; (3) DONE -- `SchrittW.rmw`, `w_kein_verlust`,
+  `w_zaehler`; (5) PARTLY -- payload-free atomics export, 116 and 162 certified. Still open:
+  (4) the plain-payload rule (`N485`, gifts 1205-1210 reserved), the exporter for payloads,
+  `awaits`, `exchange` and atomic arrays, and a concrete term discharging `ZaehltHoch`.
 - [ ] **Stage (b) keeps `DRFSC` as a premise** (`CNebenlaeufig.lean`): the C side is still
   SC-by-assumption; W is on G's side. Connecting them needs a per-access C semantics (§2 above).
 - [ ] **Per-architecture fence mappings** (x86-TSO vs ARM/POWER): not started; W is the C11 level.
@@ -738,6 +745,7 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   (`schwach_ist_gA`); the contract side is O25's rely. **And again (Opus lane
   O25b):** the fold is accepted by `AkzeptiertX` (`faltung_akzeptiertX`), and
   `gabbro_ziel_atomar` covers it under the rely (standalone; the Spec diff is O25's).
+  **And again (Opus lane O25c):** the rely is the goal statement; `gabbro_ziel` covers the fold.
 - [x] **Threads created at run time in the goal (O21, O22).** Done 2026-09-26 (Opus agent A,
   SATZKARTE §49, `messung/OPUS-A-LAUFZEITFAEDEN.md`): `GabbroZiel` runs over the thread
   machine (`start` spawns and joins, `kind` spawns a child), run-time roots are

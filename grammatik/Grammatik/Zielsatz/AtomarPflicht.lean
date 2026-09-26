@@ -1,8 +1,9 @@
 /-
   File:      Grammatik/Zielsatz/AtomarPflicht.lean
   Subject:   THE USER'S OBLIGATION (b) WITH THE ATOMIC RELY, and its embedding (Opus lane O25b,
-             2026-09-26, OFFEN O25). Standalone: `Spec.lean` does not import this file; what is
-             defined here is the (b) a Spec diff for O25 would name.
+             2026-09-26, OFFEN O25). Since lane O25c the DEFINITIONS (`Erreicht`, `GetrenntR`,
+             `GeteiltA`, `LogikPflichtA`, `NutzerPflichtA`) stand in `Spec.lean` -- (b) of the goal;
+             the theorems about them stay here.
 
   THE SHARED ATOMICS OF A UNIT (`GeteiltA P ws c`): an `atomic` global with no guard lock that is
   NOT thread-local among the declared starts -- some start's call graph reads it in a footprint
@@ -43,22 +44,6 @@ section Geteilt
 
 variable [DecidableEq D.Fn]
 
-/-- **The call closure of `w`** (enumeration-free): `w`, and every function a function of the
-    closure calls (`ruftB`). -/
-inductive Erreicht (P : Programm D) (w : D.Fn) : D.Fn → Prop
-  | wurzel : Erreicht P w w
-  | ruf {f g : D.Fn} : Erreicht P w f → ruftB P f g = true → Erreicht P w g
-
-/-- **Thread-local among the starts `ws`, over the call closure** (the twin of `Getrennt`,
-    Spec.lean, without a member list). -/
-def GetrenntR (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
-  ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, Erreicht P w₁ f →
-    c ∈ fussOrteG P f → Erreicht P w₂ g → TraegerSchreibt g c = false
-
-/-- **A shared atomic of the unit**: `atomic`, unguarded, and not thread-local. -/
-def GeteiltA (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
-  AtomarAusgenommen c ∧ (∀ L, ¬ Bewacht c L) ∧ ¬ GetrenntR P ws c
-
 /-- The computed graph contains the closure. -/
 theorem reachB_of_erreicht {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     {w : D.Fn} (hA : AbgK P fs (reachB P fs w)) {f : D.Fn} (h : Erreicht P w f) :
@@ -98,18 +83,6 @@ theorem getrenntR_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
 end Geteilt
 
 /-! ## 2. The obligation with the atomic rely -/
-
-/-- **The logic of the bodies with the atomic rely over `T`.** -/
-def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
-    Prop :=
-  (∀ (passes : Nat) (f : D.Fn),
-    KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f) ∧
-  SperrInvLokal S ∧ AxEnsLokal Q
-
-/-- **The user's own logic with the atomic rely**: the rely over the unit's shared atomics. -/
-structure NutzerPflichtA [DecidableEq D.Fn] (E : Einheit D) : Prop where
-  logik : LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws)
-  start : StartPflicht E
 
 /-! ## 3. The embedding -/
 

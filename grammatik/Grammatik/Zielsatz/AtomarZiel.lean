@@ -120,16 +120,14 @@ theorem akzeptiertSpecX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptier
     | none, _, hx => absurd hx List.not_mem_nil
     | some f, x, hx => (stelleOk_mitRuhe (D := D) x).mpr
         (hA.antworten f x (by rw [← rumpf_mitRuhe_ants P f]; exact hx))
+  masken
+    | none, hw, _, _ => Bool.noConfusion hw
+    | some w, hw, f', hf' => by
+        obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
+        rw [rumpf_mitRuhe_mE]
+        exact hA.masken w hw f hf
 
 end Transfer
-
-/-- **A checker for the rely**: its soundness target is `AkzeptiertSpecX`. -/
-structure PrueferX where
-  akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
-    Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
-  korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws
 
 /-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. -/
 def akzeptiertX_pruefer : PrueferX where

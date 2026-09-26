@@ -29,6 +29,7 @@ import Grammatik.ZielOrtGeraetSem
 import Grammatik.SperreSem
 import Grammatik.Zielsatz.Akzeptiert
 import Grammatik.Zielsatz.Beweis
+import Grammatik.Zielsatz.BeweisAtomar
 import Grammatik.Zielsatz.Spec
 
 namespace Gabbro.Grammatik
@@ -214,14 +215,16 @@ def gE : Zielsatz.Einheit gD where
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --
--- `NutzerPflicht gE`: the bodies' logic (`LogikPflicht` -- per function
--- and at EVERY `forever` budget the body triple with caller duty and no
--- `logik` outcome, owed invariants at value AND reason exits) and the
--- start obligation (`StartPflicht` -- every lock invariant at `gE.sp0`,
--- every declared start's `requires` there with its declared arguments).
+-- `NutzerPflichtA gE`: the bodies' logic WITH THE ATOMIC RELY (`LogikPflichtA`
+-- -- per function and at EVERY `forever` budget the body triple against
+-- every value a read of a shared atomic of the unit may return, with caller
+-- duty and no `logik` outcome, owed invariants at value AND reason exits)
+-- and the start obligation (`StartPflicht` -- every lock invariant at
+-- `gE.sp0`, every declared start's `requires` there with its declared
+-- arguments). On a unit without a shared atomic it is `NutzerPflicht gE`.
 -- A `def` with no proof: the proof is the user's job. Stated through the
--- IMPORTED definition `NutzerPflicht`; its body is never copied here.
-def nutzerPflicht : Prop := Zielsatz.NutzerPflicht gE
+-- IMPORTED definition `NutzerPflichtA`; its body is never copied here.
+def nutzerPflicht : Prop := Zielsatz.NutzerPflichtA gE
 
 -- The member lists are complete (the `Aufzaehlung`s the goal theorem
 -- quantifies over), decided here so the closing theorem below needs no
@@ -248,36 +251,42 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
   | inr g => cases g <;> simp [gCs]
 
 -- The checker premise, discharged here: the concrete checker of the
--- goal theorem (`akzeptiert_pruefer`) accepts this program on these
--- lists. Where it does not, this `decide` fails -- loudly, not wrongly.
-theorem gCheck : akzeptiert_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
+-- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
+-- this program on these lists. Where it does not, this `decide` fails --
+-- loudly, not wrongly.
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
 
--- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program,
--- derived from `gabbro_ziel`. The checker premise travels discharged
--- (`gCheck`); the user's obligation stays open as a hypothesis -- that
--- is the point. Apply it once `nutzerPflicht` is proved.
-theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
+-- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
+-- every run of machine GX with every thread live (`gabbro_ziel_gx`). The
+-- checker premise travels discharged (`gCheck`); the user's obligation
+-- stays open as a hypothesis -- that is the point. Apply it once
+-- `nutzerPflicht` is proved.
+theorem gP_gabbro (hN : Zielsatz.NutzerPflichtA gE) (O : Orakel gD)
     (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)
     (sp : Speicher gD.mitRuhe)
     (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))
     (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)
-    (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :
-    Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
+    (hr : RufErreichbarGX gE.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)
+      (RufStartG gE.P.mitRuhe sp init) M) :
+    Zielsatz.ZielX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)
+      (RufStartG gE.P.mitRuhe sp init) M :=
+  Zielsatz.gabbro_ziel_gx Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL M hr
 
 -- THE CLOSING THEOREM ON THE THREAD MACHINE: `GabbroZiel` itself for this
--- program -- `ZielF` on every reachable thread machine (run-time spawns
--- and joins included), from any set of initially live threads.
-theorem gP_gabbro_f (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
+-- program -- `ZielFX` on every reachable thread machine over GX (run-time
+-- spawns and joins included), from any set of initially live threads.
+theorem gP_gabbro_f (hN : Zielsatz.NutzerPflichtA gE) (O : Orakel gD)
     (hH : Zielsatz.HardwareAnnahmen O gE.Q) (passes : Nat)
     (sp : Speicher gD.mitRuhe)
     (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))
     (hL : Zielsatz.Laufzeit gE sp init) (lebt0 : Faden → Bool)
     (K : FadenMaschine gD.mitRuhe)
-    (hK : FadenErreichbar gE.P.mitRuhe O.mitRuhe passes (FadenStart gE.P.mitRuhe sp init lebt0) K) :
-    Zielsatz.ZielF gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) K :=
-  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
+    (hK : FadenErreichbarX gE.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)
+      (FadenStart gE.P.mitRuhe sp init lebt0) K) :
+    Zielsatz.ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)
+      (RufStartG gE.P.mitRuhe sp init) K :=
+  Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL lebt0 K hK
 
 -- RELEASE OBLIGATIONS (stated, not discharged -- O12).

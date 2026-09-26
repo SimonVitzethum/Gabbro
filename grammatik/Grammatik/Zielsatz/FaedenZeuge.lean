@@ -463,7 +463,7 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     have h := hF.2
     rw [rufSchrittG_fremd s4 2 (by decide), hZ3.1] at h
     exact Bool.false_ne_true h
-  · exact gabbro_ziel akzeptiert_pruefer zD zStart ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
+  · exact gabbro_ziel_sc akzeptiert_pruefer zD zStart ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩ zStart_akzeptiert zStart_nutzerPflicht zO
       ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ zStart_laufzeit zsLebt0 K4 hr
 
@@ -571,7 +571,7 @@ theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     show () ∈ () :: offen (M3.weltVon 0).spur
     exact List.mem_cons_self
   exact ⟨K2, K3, K4, hr, rfl, rfl, rfl, s2, s3, s4, hL0, h3sp,
-    gabbro_ziel akzeptiert_pruefer zD zKind ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
+    gabbro_ziel_sc akzeptiert_pruefer zD zKind ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩ zKind_akzeptiert zKind_nutzerPflicht zO
       ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ zKind_laufzeit zkLebt0 K4 hr⟩
 
@@ -699,7 +699,7 @@ theorem klon_ziel_faden (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
     ∃ F : FadenMaschine D.mitRuhe, F.m = K.m ∧
       ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) F := by
   obtain ⟨F, hF, hm, -, -⟩ := klon_als_faden hK
-  exact ⟨F, hm, gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL lebt0 F hF⟩
+  exact ⟨F, hm, gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL lebt0 F hF⟩
 
 #print axioms Gabbro.Grammatik.Zielsatz.klon_als_faden
 #print axioms Gabbro.Grammatik.Zielsatz.klon_ziel_faden
