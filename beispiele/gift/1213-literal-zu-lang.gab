@@ -1,0 +1,17 @@
+-- erwartet: N455
+-- **1213 -- an over-long literal at a slot is refused (lane 261).**
+--
+-- A literal holds its exact byte length as its bound: `"hi!"` is three
+-- bytes, and the `string max 2` slot fits two, so the copy falls
+-- (`N455`, a string past its slot -- not `N453`, which is the `+` rule).
+-- The fitting literal is the clean side (beispiele/1127).
+
+module gift1213 {
+impl fn nimm() -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    let s: string max 2 = "hi!";
+    return 0;
+}
+}

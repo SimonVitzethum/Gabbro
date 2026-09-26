@@ -1,0 +1,16 @@
+-- erwartet: N486
+-- **1212 -- a max of zero is refused (lane 261).**
+--
+-- A `string max 0` holds no character and has no object form
+-- (`uint8_t data[0]` is no strict-C11 object), so the bound rule refuses
+-- it beside the over-large max (`zeichenfolge.schranke`). The place is
+-- fine (a whole parameter type), only the max falls.
+
+module gift1212 {
+impl fn nimm(s: string max 0) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

@@ -1,0 +1,16 @@
+-- erwartet: N486
+-- **1211 -- a max past the bound is refused (lane 261).**
+--
+-- Every declared `string max N` allocates one length word plus N bytes
+-- where it stands, so N is bounded (`zeichenfolge.schranke`): 70000 bytes
+-- for one parameter the unit cannot allocate. The place is fine (a whole
+-- parameter type), only the max falls.
+
+module gift1211 {
+impl fn nimm(s: string max 70000) -> u32
+    effects { pure }
+    costs <= 64 ops
+{
+    return lenof(s);
+}
+}

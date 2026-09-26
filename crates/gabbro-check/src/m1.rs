@@ -3145,6 +3145,12 @@ impl<'a> Pruefer<'a> {
             // fact (W7). `Unbekannt` is compatible with everything, so the
             // `passt` at the `const` stays silent by construction.
             ExprArt::ArrayLit(_) => Typ::Unbekannt,
+            // **Lane 261:** a string literal is not typed here either. The
+            // length discipline lives in `zeichenfolge.rs` (which reads
+            // `string max N` as `Unbekannt` too, `umgebung.rs`); a second
+            // typing here would be the second register over the same fact
+            // (W7). `Unbekannt` is compatible with everything.
+            ExprArt::Kette(_) => Typ::Unbekannt,
         }
     }
 

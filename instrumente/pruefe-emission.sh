@@ -557,6 +557,39 @@ lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
      's/\.benutzt = true/.benutzt = false/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 1b. The example: bounded strings -------------------------------------------------
+#
+#    Expected (lane 261, OFFEN.md O24):
+#      2        -- `baue` delivers `"hi"`: two bytes
+#      104 105  -- `h`, `i`
+#      2        -- `kopiere` into `string max 16` keeps the length
+#      3        -- `haenge_an` concatenates `"hi" + "!"`: three bytes
+#      104 105 33 -- `h`, `i`, `!`
+#      1        -- `"hi" == "hi"`
+#      0 1 0    -- `"hi" != "hi!"`, `"hi" < "hi!"` (shorter prefix), not the reverse
+TREIBER161='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    gabbro_string_8 h = baue();
+    gabbro_string_16 k = kopiere(h);
+    gabbro_string_5 a = { 2, "hi" };
+    gabbro_string_3 b = { 1, "!" };
+    gabbro_string_8 c = haenge_an(a, b);
+    printf("%u %u %u %u %u %u %u %u %u %u %u %u\n",
+           h.len,
+           (unsigned)h.data[0], (unsigned)h.data[1],
+           k.len,
+           laenge(c),
+           zeichen(c, 0), zeichen(c, 1), zeichen(c, 2),
+           gleich(h, h),
+           gleich(h, c), kleiner(h, c), kleiner(c, h));
+    return 0;
+}
+'
+lauf "beispiel161" "$W/beispiele/161-zeichenkette.gab" "$TREIBER161" "2 104 105 2 3 104 105 33 1 0 1 0" \
+     's/d\.len = a\.len + b\.len/d.len = a.len/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
 # **Die Frage, die dieser Lauf beantwortet:** `BootPhase` ist ein `linear ghost type`, der

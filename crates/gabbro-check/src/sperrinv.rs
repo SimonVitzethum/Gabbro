@@ -122,6 +122,9 @@ fn ausdruck(g: &mut Gang<'_>, e: &Expr) {
         ExprArt::Zahl(_)
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
+        // **Lane 261:** a string literal is pure like any literal -- bytes,
+        // no call, no place.
+        | ExprArt::Kette(_)
         | ExprArt::Falsch => {}
         ExprArt::Ort(o) => ort_merken(g, o),
         ExprArt::Klammer(x) => ausdruck(g, x),

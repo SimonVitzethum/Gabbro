@@ -1246,6 +1246,9 @@ impl<'a> Rechner<'a> {
             // die `Some`/`None` hier brauchten, und sie steht aus demselben Grund
             // ausgeschrieben.*
             | ExprArt::Grund { .. }
+            // **Lane 261:** a string literal costs nothing at this site -- its
+            // bytes are a compile-time constant like any literal's.
+            | ExprArt::Kette(_)
             | ExprArt::Ergebnis => {
                 Kosten::Zahl(0)
             }

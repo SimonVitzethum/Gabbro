@@ -1378,7 +1378,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
         ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
         // **Lane 111:** a table literal has no term in this channel either --
         // the model has no array literal form.
-        ExprArt::ArrayLit(_) => Err(LeanReason::OtherValue),
+        // **Lane 261:** a string literal has none either -- the model has
+        // no bytes form.
+        ExprArt::ArrayLit(_) | ExprArt::Kette(_) => Err(LeanReason::OtherValue),
     }
 }
 
@@ -2019,8 +2021,11 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
         // **Lane E1:** a library call yields a value of no known shape.
         // **Lane 111:** a table literal yields one the channel cannot name
         // either -- the shape vocabulary has no array form.
+        // **Lane 261:** a string literal yields bytes the channel cannot
+        // name either.
         | ExprArt::LibraryCall(_)
         | ExprArt::ArrayLit(_)
+        | ExprArt::Kette(_)
         | ExprArt::Grund { .. } => None,
     }
 }

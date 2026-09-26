@@ -149,6 +149,8 @@ fn expr_name(e: &Expr) -> String {
         ExprArt::Unaer(op, _) => format!("unary {op:?}"),
         ExprArt::Binaer(op, _, _) => format!("binary {op:?}"),
         ExprArt::ArrayLit(_) => "array literal".to_string(),
+        // **Lane 261:** a string literal names itself like any literal.
+        ExprArt::Kette(_) => "string literal".to_string(),
     }
 }
 

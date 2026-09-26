@@ -1037,6 +1037,9 @@ fn d027_orte_aus_expr(e: &Expr, verweise: &HashSet<String>, aus: &mut Vec<Ort>) 
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Lane 261:** a string literal reads no place -- it is a value,
+        // like a number, with no names inside.
+        | ExprArt::Kette(_)
         | ExprArt::FnWert(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
