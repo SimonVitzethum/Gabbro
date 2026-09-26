@@ -82,7 +82,7 @@ theorem vz_app_akzeptiert :
 
 theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] = true := by decide
 
-theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl⟩
+theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- **The link check accepts.** -/
 theorem vz_schnittstelle : schnittstelleB zFs [.inl ()] vzE vzE1 vzE2 = true := by decide
@@ -214,7 +214,7 @@ theorem vm_abgelehnt :
     lokBedarfB mFs vmE mE vmE2 (.inl MTab.privB) = true ∧
     getrenntVB mFs vmE mE vmE2 (verbinde vmE mE vmE2).ws (.inl MTab.privB) = false ∧
     Akzeptiert (verbinde vmE mE vmE2).P mSI mFs [()] mCs (verbinde vmE mE vmE2).ws = false :=
-  ⟨mP_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
+  ⟨mP_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
     by decide⟩
 
 /-- The refusal at the specification: no `SchnittstelleSpec` for this pair. -/

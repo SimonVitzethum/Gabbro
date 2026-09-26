@@ -457,6 +457,66 @@
     thread is inside its section; the leg gives that `TAKT` is not held by that thread.
     `masken_disziplin_460` -- the `gift/460` shape (a handler root whose lock does not mask)
     is refused by the discipline Bool, `masken_disziplin_59` accepts example 59.
+    [Superseded 2026-09-26 by the handler block below: the leg is now `KernHaltE`, and
+    `KernHaltG` lives in Zielsatz/Masken.lean as the general form it is proved through.]
+
+  -- BEGIN handler block (Opus agent H, 2026-09-26, OFFEN O19) --
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT H, OFFEN O19), AND WHY -- a REVIEWED DIFF of this file
+  and of `Programm` (Syntax.lean); (a) gains ONE component, the leg `keinKernHalt` changes type:
+  * THE GAP. After F11 the leg was unconditional (`kernHaltG_gilt`), so the conjunct added no
+    logical content (URTEIL-SPECDIFF-2026-09-23, F1): WHICH threads are handlers, their call
+    graphs and the masking discipline `H102` were hypotheses of the leg, chosen by whoever
+    applies it, not facts of the unit.
+  * THE DIFF, in four places.
+    - `Programm.unterbricht : D.Fn → Bool` (Syntax.lean, default `fun _ => false`): the
+      function is entered by hardware, the exported `entry … via idt dispatch f`. It sits in the
+      program because `Ziel` reads the program and nothing else of the unit; `Programm.mitRuhe`
+      carries it (the idle root is no handler); `Verbindbar` demands one dispatch fact for both
+      units of a link, like one contract.
+    - (a): `AkzeptiertSpec.masken : MaskenDisziplin P fs` -- every function the call graph of a
+      handler root reaches takes only locks declared `masks irqs` (`NurMaskiert`). Decided by the
+      component `maskenB` of `Akzeptiert` (`maskenB_iff`); it is the Rust `H102`. The link check
+      `SchnittstelleSpec` gains the same over the composed hull (`masken`).
+    - `HandlerVon P M0 t`: thread `t`'s root at the start machine is a handler of `P`.
+    - The leg `keinKernHalt : KernHaltE P O passes M0 M`: for EVERY core assignment and every run
+      from `M0` the core hardware admits (`KernPlan kern (HandlerVon P M0)`), a handler never
+      stands at a lock another thread of its core holds. `KernPlan` is the only premise inside
+      the leg: the NAMED HARDWARE ASSUMPTION of this leg (what `cli`/`sti` and preemption do on
+      one core), listed with (c)/(d) below. The core machine is G restricted to such runs: every
+      core-scheduled run IS a G run, so every other leg holds on it a fortiori.
+  * WHY IT IS CONTENTFUL NOW. `KernHaltE` is FALSE for a program the discipline refuses:
+    `kernHaltE_verletzt` (Zielsatz/MaskenZeuge.lean) runs a handler that enters while the
+    thread of its core holds an UNMASKED lock (the entry is admitted: the lock masks nothing)
+    and then stands at that lock -- the deadlock of `gift/460`. So the leg is no theorem about
+    every program; `ziel_aus` discharges it from (a) (`kernHaltE_aus`, Zielsatz/Masken.lean:
+    `AkzeptiertSpec.abg` for the call graphs, `.masken` for the locks, the start machine for the
+    rest), and `kernHaltG_gilt` is its proof engine, not its discharge.
+  * WHAT MOVED, AND WHETHER ANYTHING IS WEAKENED. (a) is TIGHTER exactly on programs with a
+    handler whose graph takes an unmasked lock -- the shape the Rust `H102` refuses (the Rust
+    rule reads the handler's effect hull and skips a lock its unit does not declare, so on a
+    lock behind a cut edge or an undeclared lock the Lean component can refuse where `H102` is
+    silent; review 2026-09-26 F1); on a
+    program with no handler the component is `true` (`maskenB_ohne`), so every unit of before
+    (all of them: the field did not exist) keeps its verdict word for word, and the leg holds
+    with nothing from (a) (`kernHaltE_ohne_handler`). An old checker becomes a `Pruefer` when
+    conjoined with the component it never judged (`pruefer_vor_neu`, PoolSym.lean). (b), (c),
+    (d) and every other leg are unchanged. The leg itself is not weaker than F11's: that one was
+    equivalent to `True`; this one quantifies over every core assignment and every admitted run
+    with the handler set fixed by the unit.
+  * WITNESSES (Zielsatz/MaskenZeuge.lean): `masken_zeuge` -- `beispiele/59` with its `via idt`
+    root `takt_verteiler` as the program's handler, one core, the handler preempting thread 1
+    inside its `RING` section and standing at `locks TAKT` (masked): the leg of `korpus59_ziel`
+    (now from (a)) says `TAKT` is not held there. `kernHaltE_verletzt` -- the refused shape:
+    accepted by the checker WITHOUT the handler component, refused WITH it
+    (`handler_abgelehnt`), and the leg fails on a real run of it.
+  * WHAT THIS HUNK DOES NOT REACH (review 2026-09-26, F2/F3). The leg speaks of THREADS whose
+    root is a declared handler: a function marked `unterbricht` that no declared start runs is
+    checked by (a) but occurs in no run of G (the exporter starts every dispatch root, lane 198;
+    the diff script pins both, K6). The shared-atomics statement `gabbro_ziel_atomar`
+    (`ZielAtomar`, Zielsatz/AtomarAkzeptiert.lean) keeps F11's form `KernHaltGA`, which holds for
+    every program: `AkzeptiertX` has no handler component, so there the leg is still carried by
+    nothing of (a) (OFFEN O19).
+  -- END handler block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
   DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
@@ -809,12 +869,13 @@
     invariant, `state` pre-state or float range is excluded (`keinLogikHalt`, `BereichG`).
     So the safety legs cannot be made vacuous by a stop the USER's code decides; they can
     by a stop of the list above (hardware, a wait, the budget) -- each named.
-  * `keinKernHalt` (`KernHaltG`) -- NOT in (b), and not in (a) either: on a run that a core
-    schedule admits (`KernPlan`: masking works, and a handler runs to completion on the core
-    it preempted) a handler never stands at a lock a thread of its core holds. The program
-    side -- every lock a handler's call graph takes is declared `masks irqs` -- is a HYPOTHESIS
-    of the leg, because the unit does not mark its handlers (fix lane F11, OFFEN O19). It is
-    the model counterpart of the Rust `H102`, and it holds for every program of G.
+  * `keinKernHalt` (`KernHaltE`, since Opus agent H 2026-09-26) -- NOT in (b): for every core
+    assignment and every run the core hardware admits (`KernPlan`: masking works, and a handler
+    runs to completion on the core it preempted), a thread whose root the PROGRAM declares a
+    handler (`P.unterbricht`, `entry … via idt`) never stands at a lock another thread of its
+    core holds. From (a): the masking discipline is `AkzeptiertSpec.masken` (the Rust `H102`).
+    It FAILS on programs the discipline refuses (`kernHaltE_verletzt`), so it is carried by
+    (a), unlike F11's form (`KernHaltG`, which held for every program).
   * `schwach` (`SchwachSC`, weak-memory hunk, Opus agent B 2026-09-26) -- NOT in (b): the weak
     machine W takes only G's steps on the program, for every order assignment; hence every
     leg holds on every machine W reaches (`gabbro_ziel_schwach`). From (a) (`fuss`: every
@@ -920,8 +981,10 @@
   proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
   `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
   declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
-  245, a premise since F10); `KernPlan` and the leg `KernHaltG` (one core with interrupt
-  handlers, fix lane F11, proved in Zielsatz/Masken.lean); `Einheit.gestartet`, `JoinWartet`,
+  245, a premise since F10); `KernPlan` (one core with interrupt handlers, fix lane F11);
+  `Programm.unterbricht` (Syntax.lean), `NurMaskiert`, `MaskenDisziplin`,
+  `AkzeptiertSpec.masken`, `HandlerVon` and the leg `KernHaltE` (Opus agent H 2026-09-26,
+  replacing F11's `KernHaltG`; proved in Zielsatz/Masken.lean); `Einheit.gestartet`, `JoinWartet`,
   `WartetF`, `KeinWarteZyklusF`, `FortschrittF`, `ZielF` and the thread machine (threads
   created at run time, Opus agent A 2026-09-26; legs proved in Zielsatz/Faeden.lean);
   `SchwachSC` and the leg `schwach` (the weak machine takes only G's steps, Opus agent B
@@ -977,11 +1040,21 @@
   false in the start memory (the start is the legs' hypothesis, not a (b) duty), and one whose
   predicate reads carriers outside its declared `traeger` (`InvTraeger`); a lock invariant
   INSIDE its holder's section (the holder may break it; claimed is that no other thread
-  observes the protected carriers there, and that every acquire and release sees it); WHICH threads are interrupt handlers and which
-  core they share -- the `entry … via idt` dispatch fact is not in `Einheit` and G has no
-  cores, so `keinKernHalt` takes them (and the masking discipline `H102` checks) as its own
-  hypotheses instead of reading them from (a)/(d), and the emitted C realises no masking at
-  all (no `cli`/`sti`; `beispiele/59` says so in its header) -- OFFEN O19; (order hunk, Opus agent G, 2026-09-26: OFFEN O1's L50/L52 are claimed by
+  observes the protected carriers there, and that every acquire and release sees it);
+  (handler hunk, Opus agent H 2026-09-26: the line "WHICH threads are interrupt handlers and
+  which core they share … taken as the leg's own hypotheses" is REPLACED -- the handlers are the
+  unit's (`Programm.unterbricht`), the discipline is (a)'s, and the leg holds for every core
+  assignment) for interrupt handlers: that the hardware schedules as `KernPlan` says -- a
+  handler is entered only where no other thread of its core holds a `masks irqs` lock, and
+  runs to completion before that thread continues (a NAMED HARDWARE ASSUMPTION inside the leg,
+  not a premise of (c): it constrains runs, (c) constrains answers); the emitted C realises no
+  masking at all (no `cli`/`sti`; `beispiele/59` says so in its header), so translation
+  validation has nothing to relate `KernPlan` to; re-entry of a handler thread and
+  handler-on-handler preemption (`KernPlan` lets no other thread of the core step while a
+  handler runs, and in G a handler thread runs once); a thrown entry that writes no `via idt`
+  (an IPI such as `beispiele/57`'s: `unterbricht` is false for it, as for the Rust `H102`); a
+  lock the unit does not declare (the Rust `H102` skips it; in the model every lock is
+  declared) -- OFFEN O19; (order hunk, Opus agent G, 2026-09-26: OFFEN O1's L50/L52 are claimed by
   the leg `folge`, see the order block above) an order of effects that are not calls of Gabbro
   functions (axiom and register effects are not in the call log), an order across a compound
   statement, an indirect call or a lock block (`FolgeOk` refuses that `Φ`), the entry of a
@@ -1151,6 +1224,19 @@ def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
 def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
   ∀ w, Mehrfach ws w → PoolSicherW P fs w
 
+-- BEGIN handler discipline (Opus agent H, 2026-09-26, OFFEN O19) --
+/-- The feature set "every call, every signature, and ONLY locks declared `masks irqs`": a body
+    admitted by it takes no lock that leaves interrupts on. -/
+def NurMaskiert (D : Deklaration) : Merkmal D :=
+  ⟨fun _ => true, fun _ => true, fun L => D.maskiert L⟩
+
+/-- **The masking discipline of an interrupt handler** (the Rust `H102`, `kontexte.rs`): every
+    function of the call graph of a root `w` the program declares entered by hardware
+    (`P.unterbricht w`, `entry … via idt`) takes only locks declared `masks irqs`. -/
+def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop :=
+  ∀ w, P.unterbricht w = true → ∀ f, reachB P fs w f = true → mE (NurMaskiert D) (P.rumpf f) = true
+-- END handler discipline --
+
 /-- **What `Akzeptiert` must establish** (the Props of its components): fragment; closed call
     graphs; every footprint carrier signature-guarded, lock-protected or thread-local; lock
     floors; protected carriers guarded by their lock; declared starts hold no lock by
@@ -1159,7 +1245,9 @@ def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
     lock that is not `atomic` is write-separated among the declared starts (the counterpart
     of the checker's `H013`; publish payloads INCLUDED since 2026-09-15, verdict P3); no body
     calls an axiom or reads a register at a declared answer type without a value, except an
-    axiom whose result is `never` (`antworten`, since 2026-09-15, W1). -/
+    axiom whose result is `never` (`antworten`, since 2026-09-15, W1); every function an
+    interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
+    since 2026-09-26, Opus agent H: the Rust `H102`). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -1170,6 +1258,8 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   einzeln : EinzelnPool P fs ws
   renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
+  -- the handler discipline `H102` (Opus agent H, 2026-09-26, OFFEN O19)
+  masken : MaskenDisziplin P fs
 
 end Pruefer
 
@@ -1387,8 +1477,9 @@ def KeinWarteZyklus (M : RufMaschineG D) : Prop :=
 
 /-- **The schedule of ONE core with interrupt handlers** (fix lane F11, 2026-09-22, OFFEN
     O19): the two hardware facts about `cli`/`sti` and about preemption, as conditions on a
-    G run. `kern t` is the core thread `t` runs on, `H g` says `g` is an interrupt handler (an
-    `entry … dispatch` root, which travels into the model as an ordinary start).
+    G run. `kern t` is the core thread `t` runs on, `H g` says `g` is an interrupt handler (in
+    the leg of `Ziel`: `HandlerVon`, the roots the program declares `via idt`, since Opus agent
+    H 2026-09-26).
     * ENTRY ONLY WHEN UNMASKED: a handler takes its FIRST step only where no OTHER thread of
       its core holds a lock declared `masks irqs` (`D.maskiert`). That is what masking IS:
       while such a lock is held, interrupts are off on that core, so the handler is not
@@ -1406,36 +1497,33 @@ def KernPlan (kern : Faden → Nat) (H : Faden → Prop) (ms : Nat → RufMaschi
   (∀ (g : Faden) (i j k : Nat), H g → fs i = g → (∀ r, r < i → fs r ≠ g) →
       i ≤ k → k < j → j ≤ n → ¬ FertigG (ms j) g → kern (fs k) = kern g → fs k = g)
 
-/-- **No same-core interrupt deadlock** (fix lane F11, 2026-09-22, OFFEN O19). On a run
-    from `M0` that a core schedule admits (`KernPlan`), a handler NEVER stands at a lock
-    that a thread of its own core holds -- the deadlock `H102` refuses in Rust
-    (`beispiele/gift/460`: a handler takes a lock the interrupted thread holds without
-    `masks irqs`).
+-- BEGIN handler leg (Opus agent H, 2026-09-26, OFFEN O19) --
+/-- **Thread `t` is an interrupt handler of the program** (Opus agent H, 2026-09-26): its root --
+    the function it started with at `M0` -- is one the program declares entered by hardware
+    (`P.unterbricht`, the exported `entry … via idt`). Read off the unit, not chosen by the
+    prover; the runtime's idle root is never one (`Programm.mitRuhe`). -/
+def HandlerVon (P : Programm D) (M0 : RufMaschineG D) (t : Faden) : Prop :=
+  P.unterbricht (M0.faeden t).kopf.f = true
 
-    The program side is a hypothesis of the leg, not of `GabbroZiel`: `Z t` is the call graph
-    of thread `t` and `A t` its feature set (FadenMerkmal.lean), and for a HANDLER thread
-    every lock its features admit is declared `masks irqs`. That IS `H102`
-    (`maskenDisziplinB`, Zielsatz/Masken.lean, decides it over the member list); the
-    `Einheit` does not say which roots are handlers, so the checker's Bool cannot carry it
-    (OFFEN O19). `M0` is a start machine: no thread stands at a lock there
-    (`anSperre_start_falsch`).
+/-- **No same-core interrupt deadlock** (fix lane F11, 2026-09-22; CONTENTFUL since Opus agent H,
+    2026-09-26, OFFEN O19). For EVERY core assignment `kern` and every run from `M0` to `M` that
+    the core hardware admits (`KernPlan`: masking and preemption as named hardware facts), a
+    thread whose root the program declares an interrupt handler (`HandlerVon`) NEVER stands at a
+    lock that another thread of its own core holds -- the deadlock `H102` refuses in Rust.
 
-    Nothing in the leg constrains the program otherwise: it holds for EVERY program of G
-    (`kernHaltG_gilt`), like `speicherSicher`. What it adds to `Ziel` is the reading of a
-    schedule G itself does not know -- G interleaves freely, so in G the handler and the
-    thread it interrupted are independent threads and the deadlock is none. -/
-def KernHaltG (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
-  ∀ (kern : Faden → Nat) (H : Faden → Prop) (Z : Faden → D.Fn → Prop)
-    (A : Faden → D.Fn → Merkmal D),
-    (∀ t, H t → MerkAbg P (Z t) (A t)) →
-    (∀ t, H t → MerkInvG (Z t) (A t) (M0.faeden t)) →
-    (∀ t, H t → ∀ (f : D.Fn) (L : D.Lock), Z t f → (A t f).sperre L = true →
-      D.maskiert L = true) →
-    (∀ (t : Faden) (L : D.Lock), ¬ AnSperre M0 t L) →
-    ∀ (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
-      LaufG P O passes M0 ms fs n → ms n = M → KernPlan kern H ms fs n →
-      ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
-        AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+    Unlike the leg of F11 (`KernHaltG`, now in Zielsatz/Masken.lean), nothing of the program side
+    is a hypothesis here: WHICH threads are handlers comes from the unit (`P.unterbricht`), and
+    the masking discipline from (a) (`AkzeptiertSpec.masken`). The leg is FALSE for programs the
+    discipline refuses (`kernHaltE_verletzt`, Zielsatz/MaskenZeuge.lean: a handler entering at an
+    unmasked lock its core's thread holds), so it is not a theorem about every program: it is
+    carried by (a). The one premise left inside is the hardware schedule `KernPlan`, named in the
+    header. -/
+def KernHaltE (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufG P O passes M0 ms fs n → ms n = M → KernPlan kern (HandlerVon P M0) ms fs n →
+    ∀ (g f : Faden) (L : D.Lock), HandlerVon P M0 g → f ≠ g → kern f = kern g →
+      AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+-- END handler leg --
 
 /-- **Time**: a frame entered at `M`, of a function whose calls nest at most `n` deep, takes
     at most `kostenTief P passes (n + 1) g` own steps on every run while it is active. -/
@@ -1550,7 +1638,7 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   -- progress
   keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
   keinZyklus : KeinWarteZyklus M
-  keinKernHalt : KernHaltG P O passes M0 M
+  keinKernHalt : KernHaltE P O passes M0 M
   fortschritt : FortschrittG P O passes M
   -- time
   zeit : ZeitAb P O passes M
@@ -1688,6 +1776,8 @@ structure Verbindbar (E₁ E₂ : Einheit D) : Prop where
   ensures : E₁.P.ensures = E₂.P.ensures
   sperren : E₁.S = E₂.S
   speicher : E₁.sp0 = E₂.sp0
+  -- the dispatch facts agree, like the contracts (Opus agent H, 2026-09-26)
+  unterbricht : E₁.P.unterbricht = E₂.P.unterbricht
 
 /-- **A unit's placeholders are leaves**: every function the unit does not own (`eigen f =
     false`) calls nothing in the unit's own program. That is the `extern fn` of the importer:
@@ -1744,9 +1834,11 @@ def PoolSicherV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (w 
       linked unit's thread roots, over the composed hulls (footprints compose);
     * `renn` -- every unguarded, non-atomic carrier is write-separated over the composed hulls;
     * `einzeln` -- a routine declared twice in the linked unit is pool-safe over its composed
-      hull (a routine both units start counts twice).
+      hull (a routine both units start counts twice);
+    * `masken` (Opus agent H, 2026-09-26) -- every function the composed hull of an interrupt
+      handler reaches takes only locks declared `masks irqs` (`H102` across the link).
     Every per-body component of `AkzeptiertSpec` (fragment, closed graphs, lock floors, lock
-    invariant places, roots, answer sites) is each unit's own verdict; these three are the
+    invariant places, roots, answer sites) is each unit's own verdict; these four are the
     whole-program components, and they are the ones the link re-decides. -/
 structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Prop where
   blatt₁ : Platzhalter e E₁.P
@@ -1756,6 +1848,9 @@ structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Ei
   renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c →
     SchreibGetrenntV fs e E₁ E₂ (verbinde e E₁ E₂).ws c
   einzeln : ∀ w, Mehrfach (verbinde e E₁ E₂).ws w → PoolSicherV fs e E₁ E₂ w
+  -- an interrupt handler's COMPOSED hull takes only masked locks (Opus agent H, 2026-09-26)
+  masken : ∀ w, E₁.P.unterbricht w = true → ∀ h, HuelleV fs e E₁ E₂ w h →
+    mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h) = true
 
 /-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
     bodies it OWNS at every budget, its lock and axiom families read only their carriers, and

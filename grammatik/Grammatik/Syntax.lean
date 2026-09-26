@@ -619,5 +619,11 @@ structure Programm where
   requires : ∀ f : D.Fn, Expr D (D.params f) (Signatur.anfang D (D.signatur f)) .bool
   ensures : ∀ f : D.Fn, Expr D (ErgCtx (D.params f) (D.erg f)) (vertragVon D f).ende .bool
   rumpf : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))
+  /-- `entry … via idt dispatch f` (Opus agent H, 2026-09-26, OFFEN O19): `f` is entered by
+      HARDWARE -- an interrupt handler, the `Kontext::unterbricht` of the Rust checker
+      (`kontexte.rs`, `H102`). A thread whose root is such a function preempts the thread
+      running on its core (`KernPlan`, `Zielsatz/Spec.lean`). Default: no handler, so every
+      program written before this field is the program of before. -/
+  unterbricht : D.Fn → Bool := fun _ => false
 
 end Gabbro.Grammatik

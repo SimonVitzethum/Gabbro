@@ -1,26 +1,32 @@
 /-
   File:      Grammatik/Zielsatz/MaskenZeuge.lean
-  Subject:   The witnesses of fix lane F11 (2026-09-22, OFFEN O19): the leg `keinKernHalt`
-             of `Ziel` on `beispiele/59`, and the refusal of the `gift/460` shape.
+  Subject:   The witnesses of the leg `keinKernHalt` of `Ziel` (fix lane F11, 2026-09-22; made
+             contentful by Opus agent H, 2026-09-26, OFFEN O19): `beispiele/59`, and the
+             refused `gift/460` shape on which the leg FAILS.
 
   The fixture is `Korpus59.lean`, the G program of
-  `beispiele/59-eintritt-nimmt-maskierte-sperre.gab`: the entry dispatch root
-  `takt_verteiler` takes `TAKT`, which is declared `masks irqs` (`kMaskiert .takt = true`),
-  and the second root `ruf_verteiler` takes `RING`, which is not.
+  `beispiele/59-eintritt-nimmt-maskierte-sperre.gab`: the `via idt` dispatch root
+  `takt_verteiler` (the program's one handler, `kP.unterbricht`) takes `TAKT`, which is declared
+  `masks irqs` (`kMaskiert .takt = true`), and the system-call root `ruf_verteiler` takes `RING`,
+  which is not.
 
   * `masken_zeuge` -- ONE CORE, a real preemption. On the runtime's start (thread 0 runs
     `takt_verteiler`, thread 1 `ruf_verteiler`), both bound to core 0: thread 1 unfolds its
-    body, thread 1 TAKES `RING`, and then the handler (thread 0) steps -- it stands at
-    `locks TAKT` while the thread it interrupted holds `RING`. Every hypothesis of the leg
-    holds there (the call graph and its feature set, the masking discipline, the core
-    schedule), and `korpus59_ziel`'s `keinKernHalt` gives: the lock the handler stands at is
-    NOT held by the thread of its core. That is the deadlock `H102` refuses, excluded in the
-    model.
-  * `masken_disziplin_59` / `masken_disziplin_460` -- THE REFUSAL. The discipline Bool is
-    `true` for the graph of `takt_verteiler` (its lock masks interrupts) and `false` for the
-    graph of `ruf_verteiler` (`RING` does not). The second is the shape of
-    `beispiele/gift/460-eintritt-nimmt-unmaskierte-sperre.gab`, which the Rust `H102`
-    refuses: a handler taking a lock without `masks irqs`.
+    body, TAKES `RING`, and then the handler (thread 0) steps -- it stands at `locks TAKT`
+    while the thread it interrupted holds `RING`. The core schedule holds (`KernPlan` with the
+    handler set the PROGRAM declares), and `korpus59_ziel`'s `keinKernHalt` -- discharged from
+    (a) since Opus agent H -- gives: the lock the handler stands at is NOT held by the thread
+    of its core. Nothing of the leg is supplied here but the run and its schedule.
+  * `masken_disziplin_59` / `masken_disziplin_460` / `masken_59` -- the discipline Bool on the
+    two roots, and the handler component of `Akzeptiert` on example 59.
+  * `kernHaltE_verletzt` -- THE LEG IS CONTENTFUL. `kPv` is example 59 with the handler's body
+    replaced by `locks RING { }`: a handler that takes a lock WITHOUT `masks irqs`, which an
+    ordinary thread takes too (the shape of `beispiele/gift/460`, refused by the Rust `H102`).
+    The checker Bool accepts the same bodies with no handler declared (`kPv_ohne_handler`), the
+    handler component refuses the program (`handler_abgelehnt`), and on a run of the runtime's
+    start that the core hardware admits -- thread 1 takes `RING`, the handler enters (admitted:
+    `RING` masks nothing) and stands at `locks RING` -- `KernHaltE` is FALSE. So the leg is no
+    theorem about every program: what carries it is (a).
 -/
 import Grammatik.Korpus59
 
@@ -37,15 +43,12 @@ open Gabbro.Grammatik.Zielsatz
 theorem masken_disziplin_59 : maskenDisziplinB kP kFs kTaktVert = true := by decide
 
 /-- **The `gift/460` shape is refused**: `ruf_verteiler` takes `RING`, which is not declared
-    `masks irqs`; as a handler root its graph fails the discipline. The one-word difference
-    of gift 460 from example 59 (`kMaskiert`), now read by the model. -/
+    `masks irqs`; as a handler root its graph would fail the discipline. -/
 theorem masken_disziplin_460 : maskenDisziplinB kP kFs kRufVert = false := by decide
 
-/-- Both roots pass the checker: the refusal above is the HANDLER discipline, not the
-    checker's Bool (the unit does not say which root is a handler -- OFFEN O19). -/
-theorem masken_disziplin_nicht_pruefer :
-    Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = true :=
-  kP_akzeptiert
+/-- **The handler component accepts example 59**: its one handler `takt_verteiler` meets the
+    discipline (Opus agent H; before, the unit did not say which root is a handler). -/
+theorem masken_59 : maskenB kP kFs = true := by decide
 
 /-! ## 2. The run: a handler stands at its masked lock while its core's thread holds one -/
 
@@ -74,39 +77,18 @@ abbrev kRetRR :=
   ruEnd (V := vertragVon kD kRufVert) (l := false) (Γ := []) (Λ := [])
     (Endblock.ret (D := kD) .keine List.Perm.nil)
 
-/-! ## 3. The handler's call graph and its feature set -/
+/-! ## 3. The handler set the program declares -/
 
-/-- The handler thread's call graph: `takt_verteiler` and the `zaehle` it calls. -/
-def kZTb : kD.mitRuhe.Fn → Bool := fun g => decide (g = some kTaktVert ∨ g = some kZaehle)
+/-- Thread 0 (`takt_verteiler`) is a handler of the program. -/
+theorem kM0_handler0 : HandlerVon kP.mitRuhe kM0 0 := rfl
 
-def kZT : kD.mitRuhe.Fn → Prop := fun f => kZTb f = true
-
-/-- Its feature set: exactly those callees, no indirect call, and the locks are the ones
-    that mask interrupts -- the model side of `H102`. -/
-def kAT : kD.mitRuhe.Fn → Merkmal kD.mitRuhe := fun _ =>
-  ⟨kZTb, fun _ => false, fun L => kD.mitRuhe.maskiert L⟩
-
-theorem kAT_abg : MerkAbg kP.mitRuhe kZT kAT := by
-  intro f hf
-  refine ⟨?_, fun g hg => ?_⟩
-  · rcases of_decide_eq_true hf with rfl | rfl <;> decide
-  · rcases hg with h | h
-    · exact h
-    · exact Bool.noConfusion h
-
-theorem kAT_maskiert (f : kD.mitRuhe.Fn) (L : kD.mitRuhe.Lock) (_ : kZT f)
-    (h : (kAT f).sperre L = true) : kD.mitRuhe.maskiert L = true := h
-
-theorem kAT_start : MerkInvG kZT kAT (kM0.faeden 0) := by
-  intro F hF
-  rcases List.mem_cons.mp hF with h | h
-  · subst h
-    refine ⟨?_, ?_⟩
-    · show kZTb (kM0.faeden 0).kopf.f = true
-      decide
-    · show mE (kAT (some kTaktVert)) (kP.mitRuhe.rumpf (some kTaktVert)) = true
-      decide
-  · exact absurd h List.not_mem_nil
+/-- ... and no other thread is: thread 1 runs the system-call root, every other thread the
+    idle root. -/
+theorem kM0_handler (t : Faden) (h : HandlerVon kP.mitRuhe kM0 t) : t = 0 := by
+  match t, h with
+  | 0, _ => rfl
+  | 1, h => exact Bool.noConfusion h
+  | _ + 2, h => exact Bool.noConfusion h
 
 /-! ## 4. The witness -/
 
@@ -115,8 +97,8 @@ theorem kAT_start : MerkInvG kZT kAT (kM0.faeden 0) := by
     stands at `locks TAKT`, the lock declared `masks irqs`. The schedule is a real
     preemption: the handler entered while the thread of its core was inside its critical
     section, and it is the only thread of that core that steps from then on. The leg
-    `keinKernHalt` of `Ziel` -- from `gabbro_ziel` through `korpus59_ziel` -- says the lock
-    the handler stands at is not one the interrupted thread holds. -/
+    `keinKernHalt` of `Ziel` -- from `gabbro_ziel` through `korpus59_ziel`, discharged from (a)
+    -- says the lock the handler stands at is not one the interrupted thread holds. -/
 theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
     Zielsatz.Laufzeit kE (speicherR kSp) (initRuhe kE.starts) ∧
     RufSchrittG kP.mitRuhe kO.mitRuhe 0 kM0 1 M1 ∧
@@ -194,12 +176,14 @@ theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
       intro f h0 h1
       rw [rufSchrittG_fremd s2 f h1, rufSchrittG_fremd s1 f h1]
       exact kM0_offen f
-    have hplan : Zielsatz.KernPlan (fun _ => 0) (fun t => t = 0) ms fs 3 := by
+    have hplan : Zielsatz.KernPlan (fun _ => 0) (HandlerVon kP.mitRuhe kM0) ms fs 3 := by
       constructor
       · intro i hi hH _ f L hne _ hL
         have hi2 : i = 2 := by
           by_cases h0 : i < 2
-          · exact absurd hH (by simp only [fs]; rw [if_pos h0]; exact fun h => by cases h)
+          · have e1 : fs i = 1 := by simp only [fs]; rw [if_pos h0]
+            rw [e1] at hH
+            exact absurd (kM0_handler 1 hH) (by decide)
           · omega
         subst hi2
         have hms : ms 2 = M2 := rfl
@@ -214,7 +198,8 @@ theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
         · rw [hoffen2 f hf0 hf1] at hL
           exact absurd hL List.not_mem_nil
       · intro g i j k hg hfi _ hik hkj hj3 _ _
-        subst hg
+        have hg0 := kM0_handler g hg
+        subst hg0
         have hi2 : i = 2 := by
           by_cases h0 : i < 2
           · exact absurd hfi (by simp only [fs]; rw [if_pos h0]; exact fun h => by cases h)
@@ -223,16 +208,170 @@ theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
         have hk2 : k = 2 := by omega
         subst hk2
         rfl
-    exact hZiel.keinKernHalt (fun _ => 0) (fun t => t = 0) (fun _ => kZT) (fun _ => kAT)
-      (fun t _ => kAT_abg) (fun t ht => by subst ht; exact kAT_start)
-      (fun t _ f L hz h => h) (fun t L => anSperre_start_falsch _ _ _ t L)
-      ms fs 3 hlauf rfl hplan 0 1 KLock.takt rfl (by decide) rfl hAn
+    exact hZiel.keinKernHalt (fun _ => 0) ms fs 3 hlauf rfl hplan 0 1 KLock.takt kM0_handler0
+      (by decide) rfl hAn
+
+/-! ## 5. The refused shape: the leg FAILS on it -/
+
+/-- The handler's body of the variant: `locks RING { }` -- a lock that does NOT mask. -/
+def kLocksTRing : Stmt kD (vertragVon kD kTaktVert) false [] [] [] :=
+  .locks KLock.ring (fun _ h => nomatch h) .nil
+
+def kRumpfTaktRing : Endblock kD (vertragVon kD kTaktVert) false [] [] :=
+  .cons kLocksTRing (.ret .keine List.Perm.nil)
+
+/-- **The `gift/460` shape**: example 59 whose handler `takt_verteiler` takes `RING` -- which
+    `ruf_verteiler`, an ordinary thread, takes too, and which does not mask interrupts. -/
+def kPv : Programm kD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | .zaehle => kRumpfZaehle
+    | .taktVert => kRumpfTaktRing
+    | .bearbeite => kRumpfBearbeite
+    | .rufVert => kRumpfRufVert
+  unterbricht
+    | .taktVert => true
+    | _ => false
+
+/-- The same bodies with no handler declared. -/
+def kPv0 : Programm kD := { kPv with unterbricht := fun _ => false }
+
+/-- **Without a declared handler the checker accepts these bodies**: every component but the
+    handler one is the same Bool on `kPv0` and `kPv`, and all of them pass. -/
+theorem kPv_ohne_handler :
+    Akzeptiert kPv0 kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = true := by decide
+
+/-- **The handler component refuses it**: the handler's graph takes `RING`. -/
+theorem handler_abgelehnt :
+    maskenB kPv kFs = false ∧
+      Akzeptiert kPv kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = false := by
+  decide
+
+/-- The variant as a unit, and its runtime start. -/
+def kEv : Zielsatz.Einheit kD :=
+  ⟨kPv, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp, []⟩
+
+abbrev kMv0 : RufMaschineG kD.mitRuhe :=
+  RufStartG kPv.mitRuhe (speicherR kSp) (initRuhe kEv.starts)
+
+theorem kMv0_offen (g : Faden) : offen (kMv0.faeden g).spur = [] := by
+  match g with
+  | 0 => rfl
+  | 1 => rfl
+  | _ + 2 => rfl
+
+theorem kMv0_handler (t : Faden) (h : HandlerVon kPv.mitRuhe kMv0 t) : t = 0 := by
+  match t, h with
+  | 0, _ => rfl
+  | 1, h => exact Bool.noConfusion h
+  | _ + 2, h => exact Bool.noConfusion h
+
+abbrev kLocksTRv := ruS (V := vertragVon kD kTaktVert) (l := false) kLocksTRing
+
+/-- **THE LEG FAILS ON THE REFUSED SHAPE.** On the runtime's start of `kEv` (thread 0 the
+    handler, thread 1 `ruf_verteiler`), one core: thread 1 unfolds its body and takes `RING`;
+    the handler enters -- admitted by the core hardware, `RING` masks nothing -- and stands at
+    `locks RING`, which the interrupted thread holds. That is the same-core deadlock, and
+    `KernHaltE` is false at the machine reached. -/
+theorem kernHaltE_verletzt : ∃ M3 : RufMaschineG kD.mitRuhe,
+    Zielsatz.Laufzeit kEv (speicherR kSp) (initRuhe kEv.starts) ∧
+    RufErreichbarG kPv.mitRuhe kO.mitRuhe 0 kMv0 M3 ∧
+    ¬ KernHaltE kPv.mitRuhe kO.mitRuhe 0 kMv0 M3 := by
+  obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := kPv.mitRuhe) (O := kO.mitRuhe) (passes := 0)
+    (M := kMv0) (f := 1) rfl kLocksRR kRetRR .nil rfl rfl
+  have hfrei1 : RufFreiG M1 1 KLock.ring := by
+    intro g hg
+    rw [rufSchrittG_fremd s1 g hg, kMv0_offen]
+    exact List.not_mem_nil
+  obtain ⟨M2, s2, hZ2⟩ := w_locks (P := kPv.mitRuhe) (O := kO.mitRuhe) (passes := 0)
+    (M := M1) (f := 1) hZ1.1 KLock.ring (fun _ h => absurd h List.not_mem_nil)
+    (ruB (.cons kRufB .nil)) .nil (.ende kRetRR) .nil rfl
+    (fun L => by
+      show Res.held L ∈ ([] : List (Res kD.mitRuhe)) ↔ L ∈ offen (kMv0.faeden 1).spur
+      rw [kMv0_offen]
+      simp) hfrei1
+  obtain ⟨M3, s3, hZ3⟩ := w_endeEntf (P := kPv.mitRuhe) (O := kO.mitRuhe) (passes := 0)
+    (M := M2) (f := 0)
+    ((rufSchrittG_fremd s2 0 (by decide)).trans (rufSchrittG_fremd s1 0 (by decide)))
+    kLocksTRv kRetTR .nil rfl rfl
+  refine ⟨M3, laufzeit_initRuhe kEv,
+    .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3, fun hK => ?_⟩
+  have hRing : KLock.ring ∈ offen (M3.faeden 1).spur := by
+    rw [rufSchrittG_fremd s3 1 (by decide), hZ2.1]
+    show KLock.ring ∈ offen (Ereignis.nimmt KLock.ring _ :: (M1.weltVon 1).spur)
+    exact List.mem_cons_self
+  have hAn : AnSperre M3 0 KLock.ring := by
+    unfold AnSperre
+    rw [hZ3.1]
+    exact ⟨false, [], [], [], .nil, _, _, .nil, .ende kRetTR, rfl⟩
+  let ms : Nat → RufMaschineG kD.mitRuhe :=
+    fun k => if k = 0 then kMv0 else if k = 1 then M1 else if k = 2 then M2 else M3
+  let fs : Nat → Faden := fun k => if k < 2 then 1 else 0
+  have hlauf : LaufG kPv.mitRuhe kO.mitRuhe 0 kMv0 ms fs 3 := by
+    refine ⟨rfl, fun k hk => ?_⟩
+    match k, hk with
+    | 0, _ => exact s1
+    | 1, _ => exact s2
+    | 2, _ => exact s3
+  have hoffen1 : ∀ L, L ∈ offen (M2.faeden 1).spur → L = KLock.ring := by
+    intro L hL
+    rw [hZ2.1] at hL
+    have e1 : offen (M1.weltVon 1).spur = [] := by
+      show offen (M1.faeden 1).spur = []
+      rw [hZ1.1]
+      show offen (kMv0.weltVon 1).spur = []
+      exact kMv0_offen 1
+    have hL' : L ∈ KLock.ring :: offen (M1.weltVon 1).spur := hL
+    rw [e1] at hL'
+    exact List.mem_singleton.mp hL'
+  have hoffen2 : ∀ f, f ≠ 0 → f ≠ 1 → offen (M2.faeden f).spur = [] := by
+    intro f h0 h1
+    rw [rufSchrittG_fremd s2 f h1, rufSchrittG_fremd s1 f h1]
+    exact kMv0_offen f
+  have hplan : Zielsatz.KernPlan (fun _ => 0) (HandlerVon kPv.mitRuhe kMv0) ms fs 3 := by
+    constructor
+    · intro i hi hH _ f L hne _ hL
+      have hi2 : i = 2 := by
+        by_cases h0 : i < 2
+        · have e1 : fs i = 1 := by simp only [fs]; rw [if_pos h0]
+          rw [e1] at hH
+          exact absurd (kMv0_handler 1 hH) (by decide)
+        · omega
+      subst hi2
+      have hms : ms 2 = M2 := rfl
+      rw [hms] at hL
+      have hf0 : f ≠ 0 := by
+        intro h
+        exact hne (by rw [h]; rfl)
+      by_cases hf1 : f = 1
+      · subst hf1
+        rw [hoffen1 L hL]
+        rfl
+      · rw [hoffen2 f hf0 hf1] at hL
+        exact absurd hL List.not_mem_nil
+    · intro g i j k hg hfi _ hik hkj hj3 _ _
+      have hg0 := kMv0_handler g hg
+      subst hg0
+      have hi2 : i = 2 := by
+        by_cases h0 : i < 2
+        · exact absurd hfi (by simp only [fs]; rw [if_pos h0]; exact fun h => by cases h)
+        · omega
+      subst hi2
+      have hk2 : k = 2 := by omega
+      subst hk2
+      rfl
+  exact hK (fun _ => 0) ms fs 3 hlauf rfl hplan 0 1 KLock.ring rfl (by decide) rfl hAn hRing
 
 #print axioms K59.masken_disziplin_59
 #print axioms K59.masken_disziplin_460
-#print axioms K59.kAT_abg
-#print axioms K59.kAT_start
+#print axioms K59.masken_59
+#print axioms K59.kM0_handler
 #print axioms K59.masken_zeuge
+#print axioms K59.kPv_ohne_handler
+#print axioms K59.handler_abgelehnt
+#print axioms K59.kernHaltE_verletzt
 
 end K59
 

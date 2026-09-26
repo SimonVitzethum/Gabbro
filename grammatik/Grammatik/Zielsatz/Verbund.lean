@@ -314,7 +314,7 @@ omit [DecidableEq D.Fn] in
     with the second one's bodies. -/
 theorem p2_eq (hV : Verbindbar E₁ E₂) : E₂.P = mitRumpf E₁.P E₂.P.rumpf := by
   unfold mitRumpf
-  rw [hV.invariante, hV.requires, hV.ensures]
+  rw [hV.invariante, hV.requires, hV.ensures, hV.unterbricht]
 
 omit [DecidableEq D.Fn] in
 theorem verbindeP_rumpf (f : D.Fn) :
@@ -460,7 +460,7 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
@@ -520,6 +520,11 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
       exact hA₂.antworten f x hx
     · rw [hf] at hx
       exact hA₁.antworten f x hx
+  · -- masken: the link check over the composed hull (Opus agent H, 2026-09-26)
+    intro w hw h hh
+    show mE (NurMaskiert D) ((verbindeP e E₁ E₂).rumpf h) = true
+    rw [verbindeP_rumpf]
+    exact hS.masken w hw h (hH w h hh)
 
 /-- **The user's duty of the linked unit is the two units' duties.** -/
 theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q)
@@ -640,7 +645,9 @@ def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn →
     (cs.all fun c => !(lokBedarfB fs e E₁ E₂ c) || getrenntVB fs e E₁ E₂ (verbinde e E₁ E₂).ws c) &&
     (cs.all fun c => ausgenommenB c || schreibGetrenntVB fs e E₁ E₂ (verbinde e E₁ E₂).ws c) &&
     ((verbinde e E₁ E₂).ws.all fun w =>
-      !(mehrfachB (verbinde e E₁ E₂).ws w) || poolSicherVB fs cs e E₁ E₂ w)
+      !(mehrfachB (verbinde e E₁ E₂).ws w) || poolSicherVB fs cs e E₁ E₂ w) &&
+    (fs.all fun w => !(E₁.P.unterbricht w) || fs.all fun h =>
+      !(huelleB fs e E₁ E₂ w h) || mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h))
 
 variable {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {e : D.Fn → Bool} {E₁ E₂ : Einheit D}
 
@@ -868,9 +875,10 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
   unfold schnittstelleB
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩
+  · rintro ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩
     refine ⟨(platzhalterB_iff hvoll).mp h1, (platzhalterB_iff hvoll).mp h2,
-      (keinRueckrufB_iff hvoll).mp h3, fun c hc => ?_, fun c hB hA => ?_, fun w hw => ?_⟩
+      (keinRueckrufB_iff hvoll).mp h3, fun c hc => ?_, fun c hB hA => ?_, fun w hw => ?_,
+      fun w hw h hh => ?_⟩
     · have h := List.all_eq_true.mp h4 c (hcs c)
       rw [(lokBedarfB_iff hvoll).mpr hc, Bool.not_true, Bool.false_or] at h
       exact (getrenntVB_iff hvoll).mp h
@@ -881,9 +889,14 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
       have h := List.all_eq_true.mp h6 w hw'
       rw [mehrfachB_iff.mpr hw, Bool.not_true, Bool.false_or] at h
       exact (poolSicherVB_iff hvoll hcs).mp h
+    · have h1 := List.all_eq_true.mp h7 w (hvoll w)
+      rw [hw, Bool.not_true, Bool.false_or] at h1
+      have h2 := List.all_eq_true.mp h1 h (hvoll h)
+      rw [(huelleB_iff hvoll).mpr hh, Bool.not_true, Bool.false_or] at h2
+      exact h2
   · intro h
-    refine ⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
-      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩
+    refine ⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
+      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
     · refine List.all_eq_true.mpr fun c _ => ?_
       cases hc : lokBedarfB fs e E₁ E₂ c
       · rfl
@@ -900,6 +913,14 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
       · rfl
       · rw [Bool.not_true, Bool.false_or]
         exact (poolSicherVB_iff hvoll hcs).mpr (h.einzeln w (mehrfachB_iff.mp hm))
+    · refine List.all_eq_true.mpr fun w _ => ?_
+      cases hw : E₁.P.unterbricht w
+      · rfl
+      · refine List.all_eq_true.mpr fun k _ => ?_
+        cases hk : huelleB fs e E₁ E₂ w k
+        · rfl
+        · rw [Bool.not_true, Bool.false_or]
+          exact h.masken w hw k ((huelleB_iff hvoll).mp hk)
 
 end Bool
 

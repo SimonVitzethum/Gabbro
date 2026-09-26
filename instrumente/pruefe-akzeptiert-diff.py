@@ -100,6 +100,12 @@ KOMPONENTEN = [
     ("antworten", "antwortenB {P} {fs}",
      ["N310", "N311", "N312", "N313", "N314", "N316"]),
     # vacuous on the export (no Ax/Reg sites); refuse direction by gifts
+    # The handler component (Opus agent H, 2026-09-26, OFFEN O19): every function
+    # the program declares entered by hardware (`gP.unterbricht`, the exported
+    # `entry … via idt`) has a call graph taking only `masks irqs` locks -- the
+    # Rust `H102`. Vacuous on an export with no thrown entry (the field keeps its
+    # default); construction pin K6 holds the exported handler set to the source.
+    ("masken", "maskenB {P} {fs}", ["H102"]),
 ]
 
 # The Rust verdict: ACCEPT iff none of these fires (all are ERROR severity).
@@ -117,6 +123,8 @@ AKZEPTIERT_CODES = frozenset([
     "N458", "N462",
     # a contract over a shared atomic (Opus lane O25b, 2026-09-26)
     "N484",
+    # a handler taking a lock that does not mask interrupts (Opus agent H, 2026-09-26)
+    "H102",
 ])
 
 # Corpus roots walked for exportable programs (the clean half of the
@@ -176,12 +184,29 @@ def wurzeln_aus(quelle):
     return wurzeln
 
 
+def dispatch_aus(quelle, nur_idt=False):
+    """The `entry`/`boot` dispatch roots (short names), in item order -- the
+    order `check_starts` appends them after the `concurrent` members. With
+    `nur_idt`, only the roots of an `entry … via idt` (the handlers the export
+    carries as `gP.unterbricht`, Opus agent H)."""
+    text = kommentarlos(quelle)
+    out = []
+    for m in re.finditer(r"(?ms)^\s*(entry|boot)\b(.*?)\bdispatch\s+([\w:]+)\s*;", text):
+        if nur_idt and not (m.group(1) == "entry" and
+                            re.search(r"\bvia\s+idt\b", m.group(2))):
+            continue
+        out.append(m.group(3).split("::")[-1])
+    return out
+
+
 def startet_aus(quelle):
     """`Einheit.ws` from the source: the `concurrent` members (short names),
-    then every run-time root twice.
+    then the `entry`/`boot` dispatch roots, then every run-time root twice.
 
-    Returns (starts, partial): partial is True where the file uses `entry`
-    or `boot` roots, which the export cannot carry.
+    Returns (starts, partial). Since lane 198 the export carries the dispatch
+    roots as declared starts (`check_starts`), so no file is partial any more
+    (Opus agent H, 2026-09-26: the old PARTIAL mark dated from before that and
+    excluded every file with an `entry`); the flag stays for the callers.
     """
     text = kommentarlos(quelle)
     starts = []
@@ -192,9 +217,8 @@ def startet_aus(quelle):
                 continue
             starts.append(teil.split("::")[-1])
     wurzeln = wurzeln_aus(quelle)
-    starts = starts + wurzeln + wurzeln
-    partial = bool(re.search(r"(?m)^\s*(entry|boot)\b", text))
-    return starts, partial
+    starts = starts + dispatch_aus(quelle) + wurzeln + wurzeln
+    return starts, False
 
 
 def exportiere(gabbro, datei):
@@ -244,6 +268,15 @@ def export_gestartet(export):
     if not m:
         return []
     return re.findall(r"⟨g_(\w+), \.nil⟩", m.group(1))
+
+
+def export_unterbricht(export):
+    """The handlers the export carries (`unterbricht` arms that are `true`),
+    or [] where the field is absent (its default: no handler)."""
+    m = re.search(r"(?m)^  unterbricht\n((?:    \| \.\w+ => (?:true|false)\n)+)", export)
+    if not m:
+        return []
+    return re.findall(r"\| \.(\w+) => true", m.group(1))
 
 
 def pruefe_konstruktion(export, exp, quelle=None):
@@ -359,6 +392,14 @@ def pruefe_konstruktion(export, exp, quelle=None):
         if quell != exp_w:
             bruch.append("K5: source `start` roots %s but export `gestartet` %s"
                          % (quell, exp_w))
+        # K6 (Opus agent H, 2026-09-26): the handlers the export declares are
+        # exactly the `entry … via idt` dispatch roots of the source -- the set
+        # the `masken` component and `H102` judge.
+        quell_h = sorted(set(dispatch_aus(quelle, nur_idt=True)))
+        exp_h = sorted(set(export_unterbricht(export)))
+        if quell_h != exp_h:
+            bruch.append("K6: source `via idt` roots %s but export `unterbricht` %s"
+                         % (quell_h, exp_h))
     return bruch
 
 
@@ -676,6 +717,30 @@ def selbsttest(gabbro, frist):
         "a root holding a lock at entry must refuse at wurzeln: %s / %s" % (
             gefallen5, raw5[-2000:])
     print("selbsttest start negativ: a root needing a lock refuses at wurzeln")
+    # The handler component (Opus agent H, 2026-09-26): example 59's `via idt`
+    # root takes `TAKT`, declared `masks irqs` -- accepted at `masken`, and the
+    # handler set travels (K6). The SAME export with `TAKT`'s mask removed is
+    # `beispiele/gift/460` word for word (the Rust checker refuses it with `H102`
+    # and the exporter never sees it): the Lean Bool must refuse it at `masken`.
+    datei = os.path.join(W, "beispiele/59-eintritt-nimmt-maskierte-sperre.gab")
+    rc, export, err = exportiere(gabbro, datei)
+    assert rc == 0, "59 must export: %s" % err
+    parsed = parse_export(export)
+    assert parsed, "59 export parses"
+    quelle = open(datei, encoding="utf-8").read()
+    assert export_unterbricht(export) == ["takt_verteiler"], \
+        "the handler travels: %s" % export_unterbricht(export)
+    assert not pruefe_konstruktion(export, parsed, quelle), "K1-K6 hold on 59"
+    starts, _ = startet_aus(quelle)
+    ok6, gefallen6, raw6 = lean_lauf(sonde(parsed["ns"], parsed, starts), export, frist)
+    assert ok6, "59 must be accepted: %s / %s" % (gefallen6, raw6[-2000:])
+    print("selbsttest masken: 59 (a handler taking a masked lock) accepted")
+    ohne = re.sub(r"(maskiert := fun .*\| \.TAKT => )true", r"\1false", export)
+    assert ohne != export, "the one-word diff of gift 460 applies to the export"
+    ok7, gefallen7, raw7 = lean_lauf(sonde(parsed["ns"], parsed, starts), ohne, frist)
+    assert not ok7 and gefallen7 == ["gesamt", "masken"], \
+        "the gift-460 shape must refuse at masken alone: %s / %s" % (gefallen7, raw7[-2000:])
+    print("selbsttest masken negativ: 59 without `masks irqs` (gift 460) refuses at masken alone")
     print("SELBSTTEST: ok (both directions)")
     return 0
 

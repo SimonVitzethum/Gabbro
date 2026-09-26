@@ -19,7 +19,7 @@
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
 -- NO FORM; only the dispatch root travels, as a declared start
--- where exportable).
+-- where exportable, and `via idt` as `gP.unterbricht`).
 --
 -- table 0: Region (count 8), belegt : bool
 -- fn uebernehmen (holds; writes Region)

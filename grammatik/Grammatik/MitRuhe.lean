@@ -633,6 +633,10 @@ def Programm.mitRuhe (P : Programm D) : Programm D.mitRuhe where
   rumpf
     | none => .ret .keine List.Perm.nil
     | some f => Endblock.umΛ (anfang_map (D.signatur f)) (ruEnd (P.rumpf f))
+  -- the idle root is no handler; a user function keeps its dispatch fact (Opus agent H)
+  unterbricht
+    | none => false
+    | some f => P.unterbricht f
 
 /-- The member list of `D.mitRuhe`'s functions: the root, then `fs`. -/
 def fsRuhe (fs : List D.Fn) : List D.mitRuhe.Fn := none :: fs.map some

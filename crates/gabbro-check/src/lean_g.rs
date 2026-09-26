@@ -362,6 +362,15 @@ pub(crate) struct Model {
     /// (vectors, registers, steps) has no G form, but the dispatched
     /// function is a declared start like a `concurrent` member.
     wurzeln: Vec<Pfad>,
+    /// **The dispatch roots entered by HARDWARE** (Opus agent H, 2026-09-26,
+    /// OFFEN O19): every `entry … via idt … dispatch f` -- the checker's own
+    /// answer to "what makes an entry an interrupt context"
+    /// (`Kontext::unterbricht`, `kontexte.rs`). They travel as
+    /// `gP.unterbricht` (`Programm.unterbricht`, `Syntax.lean`), which the goal
+    /// theorem reads: its checker Bool demands the masking discipline `H102`
+    /// of each (`maskenB`), and its leg `keinKernHalt` says no such handler
+    /// ever waits for a lock its core's thread holds.
+    unterbricht: Vec<Pfad>,
     reasons: std::collections::HashMap<String, usize>,
     /// `const fn` declarations (Opus agent C, 2026-09-26): comptime only -- the
     /// checker folds them into the constants that call them, and the emitter
@@ -788,7 +797,7 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], reasons: std::collections::HashMap::new(), konst_fns: vec![] };
+    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], unterbricht: vec![], reasons: std::collections::HashMap::new(), konst_fns: vec![] };
     let mut scope = Scope::default();
     falte_konstanten(&mut scope, tree);
     // Pass one: constants, type aliases and `tagged` types.
@@ -869,7 +878,15 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // G form and travel nowhere, but the dispatched function is
                 // a declared start. What names no exported function is
                 // refused where the starts resolve, by name.
-                ItemArt::Entry(e) => model.wurzeln.push(e.dispatch.clone()),
+                ItemArt::Entry(e) => {
+                    // `via idt` is the one word that makes an entry THROWN
+                    // (`Kontext::unterbricht`); a system call carries a vector
+                    // too, but is called (Opus agent H, OFFEN O19).
+                    if e.via.as_ref().is_some_and(|v| v.text == "idt") {
+                        model.unterbricht.push(e.dispatch.clone());
+                    }
+                    model.wurzeln.push(e.dispatch.clone())
+                }
                 ItemArt::Boot(b) => model.wurzeln.push(b.dispatch.clone()),
                 // **Lane 250: a `stack`-carrying gate names its `D.klon` pair.**
                 // The handoff is one model pair (gate `Ax`, entry `Fn`) per
@@ -4710,7 +4727,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
     out.push_str("-- NO FORM; only the dispatch root travels, as a declared start\n");
-    out.push_str("-- where exportable).\n--\n");
+    out.push_str("-- where exportable, and `via idt` as `gP.unterbricht`).\n--\n");
     for (ti, t) in model.tables.iter().enumerate() {
         out.push_str(&format!("-- table {ti}: {} (count {})", t.name, t.count));
         for f in &t.fields {
@@ -5186,6 +5203,21 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("  rumpf\n");
     for f in fns {
         out.push_str(&format!("    | .{} => gBody_{}\n", lean_fn(&f.name), lean_fn(&f.name)));
+    }
+    // The interrupt handlers (Opus agent H, 2026-09-26, OFFEN O19): the
+    // dispatch targets of `entry … via idt`, resolved by their last segment
+    // as `check_starts` resolves them (which refuses an unknown or ambiguous
+    // name first). One arm per function, no wildcard (a wildcard would be
+    // redundant when every function is a handler). Where no entry is thrown
+    // the field keeps its default (`fun _ => false`) and nothing is printed,
+    // so every such export stays byte-identical.
+    let handler: Vec<&str> = model.unterbricht.iter()
+        .filter_map(|p| p.teile.last().map(|t| t.text.as_str())).collect();
+    if fns.iter().any(|f| handler.contains(&f.name.as_str())) {
+        out.push_str("  unterbricht\n");
+        for f in fns {
+            out.push_str(&format!("    | .{} => {}\n", lean_fn(&f.name), handler.contains(&f.name.as_str())));
+        }
     }
     out.push_str(&format!("\ndef gFs : List gD.Fn := [{}]\n\n",
         fns.iter().map(|f| format!("g_{}", lean_fn(&f.name))).collect::<Vec<_>>().join(", ")));
