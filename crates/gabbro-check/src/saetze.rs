@@ -5041,17 +5041,21 @@ pub const SPERREN: &[Satz] = &[
                   contract expression over a memory snapshot (`N276`), and every name
                   it uses is a protected carrier or a named constant (`N277`).",
         vorbehalt: "**Decided, never proved.** The checker holds the invariant's shape;
-                    its TRUTH at every release is the user's obligation, recorded per
-                    lock beside the `ensures` duties (`pflichten::Art::Sperrinvariante`)
-                    and printed by `gabbro lean-g` as the `SperrInv` family -- like
-                    `ensures`, it is counted, not discharged. **Three strictnesses stand
+                    its TRUTH at every release is discharged since lane 263
+                    (`sperren.freigabe`, `N511`: the invariant must follow from the
+                    acquire frame, the section's writes and the callees' `ensures`),
+                    and recorded per lock beside the `ensures` duties
+                    (`pflichten::Art::Sperrinvariante`) and printed by `gabbro lean-g`
+                    as the `SperrInv` family. **Three strictnesses stand
                     beside the rule.** (1) Option constructors are calls (`Some(x)` is a
                     `Ruf`), so an invariant over an option-index field is refused with
                     `N276`: there is no call-free spelling of the constructor. (2)
                     Quantifiers are refused with `N276` even over protected tables: the
                     export fragment (`lean_g.rs`) has no domain form for them. (3)
-                    `N278`/`N279` stay reserved for the writer side and the release
-                    shape; neither is refused here.",
+                    `N278` stays reserved for the writer side (a function writing a
+                    protected carrier owing the guard at its own access); the release
+                    shape foreseen as `N279` is refused as `N511` instead, from the
+                    reserved block of lane 263.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/940 (unprotected read, N275), 941 (`old`, N276),
                       942 (call, N276), 943 (unknown name, N277) -- each falls with
@@ -5059,6 +5063,41 @@ pub const SPERREN: &[Satz] = &[
                       functions, two carriers, one conserved-sum invariant) and
                       beispiele/119 (single carrier with a bound).",
         fundstelle: "crates/gabbro-check/src/sperrinv.rs",
+    },
+    Satz {
+        name: "sperren.freigabe",
+        kennungen: &["N511"],
+        aussage: "At every exit of a `locks L { … }` section (`release`, early `return`,
+                  `leave`, `next`) the lock invariant follows from the invariant at
+                  acquire, the section's own writes and what its callees PROMISE
+                  (their `ensures`), never their bodies: untouched conjuncts ride the
+                  frame, `cell == const` writes and `==` promises are decided as
+                  equalities, and a constant against a constant is computed. What
+                  cannot be shown falls here (`N511`), naming the invariant, the
+                  lock, the exit and the cells whose value is not determined.",
+        vorbehalt: "**Decided, never proved.** The reading is syntactic and one-sided:
+                    inequality promises beyond constants, arithmetic between promised
+                    cells, aliasing beyond declared carriers and `ptr` parameters,
+                    and index names (a `const` index and its literal spell different
+                    cells) are all beyond it -- a missed form stays on the obliging
+                    side and falls. Conditional calls never promise, conditional
+                    writes never establish, and their kills still count. The
+                    `RELEASE HOLDS` rows of `gabbro obligations --g` and
+                    `gabbro counterexample` state the same verdict per section
+                    (`freigabe::beurteile`): one analysis, so the row and the
+                    refusal agree by construction.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1261 (the old weak `setze` shape of 124, N511),
+                      1262 (a callee overwriting a promised cell, N511), 1263 (an
+                      early `return` before the promise, N511), 1264 (a direct
+                      write of one cell of an equality, N511) -- each falls with
+                      N511. The silent direction is beispiele/119 (the bound
+                      re-established by a direct write through a `ptr` parameter),
+                      beispiele/124 and beispiele/157 (both slots promised), and
+                      beispiele/118 (signature-held, no section). Agreement is
+                      pinned inline (`freigabe_zeile_und_n511_stimmen_ueberein`).",
+        fundstelle: "crates/gabbro-check/src/freigabe_pruef.rs (`pass`);
+                     crates/gabbro-check/src/freigabe.rs (`beurteile`)",
     },
     Satz {
         name: "ableitung.kante",

@@ -592,6 +592,29 @@ ask and does not answer.
 > after the last promise break the hold, every block is walked, early exits are releases,
 > bound indices are never countable. The row is still syntactic and still not a proof;
 > **it is not the rule half (2) below**, which asks for a checker REFUSAL and stays open.)
+>
+> **STATUS 2026-09-26 (lane 263, `messung/muse/MUSE-REPORT-263.md`): half (2) is DONE --
+> the refusal is `N511` (`crates/gabbro-check/src/freigabe_pruef.rs`, sentence
+> `sperren.freigabe`).** At every locked-section exit (`release`, early `return`,
+> `leave`, `next`) the invariant must FOLLOW from the invariant at acquire (the
+> frame), the section's own direct writes (`cell == const` facts) and the callees'
+> `ensures` equalities -- never their bodies -- decided over cells and constants with
+> `ptr`-parameter-to-carrier resolution. The verdict is the shared
+> `freigabe::beurteile`, so the `RELEASE HOLDS` row and the refusal agree by
+> construction (pinned by `freigabe_zeile_und_n511_stimmen_ueberein`). 119 is silent
+> (its `k.slots[0].x = 40` through `k : ptr A` establishes `40 <= GRENZE` -- the false
+> positive lane 204 measured is closed by reading the write, not by weakening the
+> rule); 124 and 157 hold from the promise; 118 has no section. Corpus verdict diff:
+> no clean file falls; `beispiele/119`'s row moves UNPROVED to HOLDS. Poison probes
+> `beispiele/gift/1261`-`1264` (weak `setze`, overwrite after promise, early return,
+> one-cell direct write), each `N511` alone.
+>
+> Model correspondence (stated, not proved): `N511` discharges the release half of
+> `SperrWechselG` (`Zielsatz/Spec.lean`: every release leaves a memory where the
+> invariant holds), with the acquire half as the frame premise. The bridge from the
+> Rust verdict to the G term stays open: the analysis runs on surface syntax, the leg
+> on `RufMaschineG` memories -- the same standing as every other checker sentence
+> against its leg.
 
 `setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
 and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a
@@ -603,9 +626,9 @@ asks the question the model asks.
 | | |
 |---|---|
 | **what is NOT open** | the model side. `Korpus124.lean`'s `kP` carries the stronger contract (the one the hand model `mP` always had), every premise group is proved on it, and `schlusssatz_124` is about `kP`. Nothing is claimed about the `.gab` file |
-| **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. (2) **the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision |
+| **what IS open, and it is two things** | (1) the corpus file: either `setze`'s `ensures` is strengthened to speak about both slots, or the program is rewritten so the locked section does not need it. That is a corpus change with a re-measurement of tests and emission attached, and it was deliberately NOT made inside the proof lane. **DONE by lane 204 (see STATUS above).** (2) ~~**the more interesting half: no checker rule refuses this.** A locked section whose callees cannot re-establish the lock invariant is exactly the shape `N275`–`N277` were built for; that they pass here is a measured blind spot, not a design decision~~ -- **DONE by lane 263 (`N511`, see STATUS above)** |
 | **why it must not be closed by strengthening alone** | strengthening the file makes the corpus green and leaves the blind spot in place. *The finding is about the checker; the file is only where it became visible* |
-| **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one |
+| **what would close it** | the rule half: at a `release` (and at every exit of a locked section), demand that the lock invariant follow from what the section's callees PROMISE, not from what their bodies happen to do. Then re-measure: how many corpus files fall, and is each fall a real one -- **built by lane 263 (`N511`), with the section's own writes and the acquire frame beside the promises; re-measured there (no clean file falls)** |
 
 ---
 

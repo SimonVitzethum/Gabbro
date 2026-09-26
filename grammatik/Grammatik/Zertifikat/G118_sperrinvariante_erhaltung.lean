@@ -265,13 +265,14 @@ theorem gP_gabbro_f (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
 --
 -- At every `locks L { ... }` exit the lock invariant of `L` must hold
 -- again, and it must follow from what the section's callees PROMISE
--- (their `ensures`), not from what their bodies happen to do. No checker
--- rule refuses a section whose callees cannot re-establish it, so such
--- a section is checker-clean and still leaves `NutzerPflicht` unproved.
+-- (their `ensures`), not from what their bodies happen to do. What does
+-- not follow is refused with `N511` (`freigabe_pruef.rs`); the rows below
+-- state the same verdict per section (`beurteile`).
 -- Each row below is syntactic, one-sided and order-aware (see
--- `crates/gabbro-check/src/freigabe.rs`): a write or a callee write after
--- the last promise of a cell breaks it. `RELEASE HOLDS (syntactic)` is
--- not a proof, while `RELEASE UNPROVED` names the exact gap.
+-- `crates/gabbro-check/src/freigabe.rs`): the invariant must follow from
+-- the acquire frame, the section's own writes and what the section's
+-- callees PROMISE (their `ensures`), never their bodies. `RELEASE HOLDS
+-- (syntactic)` is not a proof, while `RELEASE UNPROVED` names the exact gap.
 -- No `locks` section in any body -- nothing is owed at any release.
 end G118_sperrinvariante_erhaltung_oblig
 

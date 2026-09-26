@@ -466,6 +466,16 @@ tree refuses everywhere else.*
   binder-aware; before, `setze(30); konto.slots[1].stand = 5;` read HOLDS.
   Corpus rows unchanged (124: 2 HOLDS, 119: 1 UNPROVED). The rule half of
   O12 is still open.
+- [x] **The O12 release refusal `N511`** (`dokumente/OFFEN.md` O12 half (2)) —
+  lane 263, `messung/muse/MUSE-REPORT-263.md`. At every locked-section exit
+  (`release`, early `return`, `leave`, `next`) the invariant must follow from
+  the acquire frame, the section's direct writes and the callees' `ensures`
+  equalities, decided over cells and constants with `ptr`-parameter carriers
+  (`freigabe::beurteile`, shared with the `RELEASE HOLDS` rows, agreement
+  pinned inline). 119 stays silent (direct write `40 <= GRENZE` through `k`);
+  124/157 hold from the promise; poison probes `beispiele/gift/1261`-`1264`.
+  Corpus verdict diff: no clean file falls; 119's row moves UNPROVED→HOLDS.
+  Certificates regenerated (release header text changed).
 - [x] **The C read correspondence for nested arrays** — lane 205, reviewed
   (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
   `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the
