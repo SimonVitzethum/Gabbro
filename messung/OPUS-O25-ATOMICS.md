@@ -1,6 +1,6 @@
 # Opus lane O25 — unguarded atomic communication over machine W (2026-09-26)
 
-*Branch `worktree-agent-addcada38733de2a3` on master `9ed1b5d7` (the weak memory model of Opus
+*Branch `worktree-agent-ab93b5d56e6f34435` on master `9ed1b5d7` (the weak memory model of Opus
 agent B). Task: OFFEN O25 (a rely for unguarded atomic reads), O17's read half, O26 (memory
 orders of own lock primitives). Everything measured on this machine through the queued wrappers
 (`./lean-bau`, `./lean-probe`, `./cargo-pruef`, and `cargo build` through the cargo slot).*
