@@ -475,13 +475,13 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/59` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `takt_verteiler` and `ruf_verteiler` (the two
     entry dispatch roots, no parameters), initial memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp, []⟩
 
 theorem korpus59_nutzer : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
       invGutGrund_ohneGrund (by cases f <;> rfl)⟩, fun _ _ _ _ => rfl, axEnsLokal_wahr⟩,
     ⟨fun _ => rfl, fun a ha => by
-      simp only [kE, List.mem_cons, List.not_mem_nil, or_false] at ha
+      simp only [kE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 /-- No axiom, no register, no global: the oracle is empty. -/
@@ -510,7 +510,7 @@ theorem korpus59_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (p
     (hL : Zielsatz.Laufzeit kE sp init) (M : RufMaschineG kD.mitRuhe)
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[KLock.takt, KLock.ring], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
+  Zielsatz.gabbro_ziel_g akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[KLock.takt, KLock.ring], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
     kE_akzeptiert korpus59_nutzer O hO passes sp init hL M hM
 
 /-- The index-`0` environment for the witness run. -/

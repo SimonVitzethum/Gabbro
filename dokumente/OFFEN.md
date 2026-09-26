@@ -907,6 +907,23 @@ call per region, and an exhaustive spill read set. What stays open:
 | **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
 | **what would close it** | spawn-time arguments and entry world in the clone machine, unboundedly many children per gate, the exporter emitting `child` units with the child entry as a start (and a proof that `N457` gives Lean acceptance), and the stub correspondence lemma for the jump lowering |
 
+**Narrowed 2026-09-26 (Opus agent A, SATZKARTE §49).** The child is now IN THE GOAL at the MODEL level (a region given
+as a function root in `gestartet`; no `child` program exports yet, see the table below):
+`GabbroZiel` runs over the thread machine (FadenMaschine.lean), whose `kind` step spawns a
+dormant slot of a run-time root (`Einheit.gestartet`) while the parent goes on; every leg of
+`ZielF` holds on every such run (`gabbro_ziel`, witnesses `kw2_lauf`, `spawn_kind_ziel`), a
+spawned thread enters holding nothing (`schlafendFrei`), and F9's clone machine is a special
+case (`klon_als_faden`). Unboundedly many children per gate are covered: a root in `gestartet`
+stands twice in `ws`, is judged as a pool routine, and may run on any number of slots. The model
+half of `N456`/`N457` is now a Lean Bool fact (`wurzelnB`, `einzelnPoolB` over the doubled root;
+`akzeptiertSpec_gestartet`, refusal `kind_unter_sperre_abgelehnt`). What stays open:
+
+| | |
+|---|---|
+| **spawn-time arguments and entry world** | a slot's arguments are the unit's, fixed at the start machine, and its frame's ghost entry world is the start world (named assumption (d) in Spec.lean). A region reading its handed values (the stack argument, the gate answer) has per-spawn arguments -- not covered |
+| **no export** | a `child` needs a stack gate, a foreign body the exporter does not build (`Ax := Empty`); no `child` program reaches Lean, so `N457` => Lean acceptance is stated, not measured |
+| **the jump assumption** | unchanged (above): the lowering must enter the child by jump at the region with an empty held set; lane 260's `clone` lowering and translation validation own it |
+
 ## O22 — The hosted `start { … };` is checked, not modelled and not lowered (recorded 2026-09-22, review G12, fix lane F4)
 
 Fix lane F4 gave the statement checker rules: the roots are call-graph edges (their effects
@@ -923,6 +940,20 @@ pool-safe) refuse. What stays open:
 | **strictness** | `N461` refuses any held context (not only a lock some root takes); `N462` refuses a root that is the only writer of an unguarded carrier; the cost bill is the sum (sound on one core), not the maximum |
 | **liveness** | a root that never returns keeps its starter waiting forever; progress over statement-level starts is not decided |
 | **what would close it** | a statement-level spawn/join rule in machine G with the race component quantifying over started roots, then the driver-side lowering (one create per root, join before the next statement) |
+
+**Model closed 2026-09-26 (Opus agent A, SATZKARTE §49).** The rows "no model" and the export
+half of "no lowering, no export" are closed: the goal theorem runs over the thread machine, whose
+`start` step spawns the roots (only where the starter holds no lock -- `N461` as the step's side
+condition) and whose `join` step lets the starter go on only once every root has finished; the
+roots are `Einheit.gestartet`, judged by the Lean Bool as pool routines (`N458`'s lock half is
+`wurzelnB`, `N462`'s model half is `einzelnPoolB` -- `N462` bounds touched carriers,
+`einzelnPoolB` written ones); join waits are in the deadlock and wait-cycle legs
+(`keine_verklemmungF`, `kein_warteZyklusF`) and named in progress (`JoinWartet`). The exporter
+carries the roots (`gE.gestartet`, `check_gestartet`), and `pruefe-akzeptiert-diff.py` compares
+the verdicts (`messung/proben/faden-start-pool.gab`). What stays open: the LOWERING (lane 260),
+the strictness row above, and liveness (a root that never finishes keeps its starter waiting: a
+named stop, not a claim). A root's `requires` is the user's duty at the declared initial memory,
+not at the spawn world (named assumption (d)).
 
 ## O23 — A gate's argument preconditions are named, not modelled in the goal: the NUL path and the frame length (recorded 2026-09-22, reviews G04/G10, fix lane F5)
 

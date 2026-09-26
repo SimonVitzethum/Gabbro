@@ -248,6 +248,10 @@ import Grammatik.Zielsatz.Spec
 import Grammatik.Zielsatz.SpecProben
 import Grammatik.Zielsatz.RuheNutzer
 import Grammatik.Zielsatz.Beweis
+import Grammatik.FadenMaschine
+import Grammatik.Zielsatz.Faeden
+import Grammatik.Zielsatz.FaedenVor
+import Grammatik.Zielsatz.FaedenZeuge
 import Grammatik.Zielsatz.Proben
 import Grammatik.EinpassenVoll
 import Grammatik.Zielsatz.ProbenG1

@@ -324,14 +324,14 @@ def kSp5 : Speicher kD :=
 /-- **`beispiele/125` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `lese_schreibe` and `setze_null` (the
     `concurrent` members), initial memory `z = 0` as declared. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩], kSp⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩], kSp, []⟩
 
 /-- **The user's premise group on `beispiele/125`.** -/
 theorem korpus125_nutzer : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
       invGutGrund_ohneGrund (by cases f <;> rfl)⟩, fun _ _ _ _ => rfl, axEnsLokal_wahr⟩,
     ⟨fun _ => rfl, fun a ha => by
-      simp only [kE, List.mem_cons, List.not_mem_nil, or_false] at ha
+      simp only [kE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 /-- No axiom, no register: the oracle sees no global (the global is a
@@ -361,7 +361,7 @@ theorem korpus125_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q)
     (hL : Zielsatz.Laufzeit kE sp init) (M : RufMaschineG kD.mitRuhe)
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[QLock.w], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
+  Zielsatz.gabbro_ziel_g akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[QLock.w], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
     kE_akzeptiert korpus125_nutzer O hO passes sp init hL M hM
 
 /-- **Witness** (rule 13): the premise group jointly with two

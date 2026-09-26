@@ -489,7 +489,7 @@ theorem schlusssatz {src : String} (K : Kette src)
     ⟨htief, hnur⟩,
     ⟨fun passes => rufAt_mitRuhe K.E.P O passes,
       einfaden_ziel K.E K.fs hA K.nutzer O hH sp init hA4,
-      fun passes sp' init' hL M hr => gabbro_ziel akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
+      fun passes sp' init' hL M hr => gabbro_ziel_g akzeptiert_pruefer (declOf K.u) K.E K.fs K.ls K.cs
         K.akzeptiert K.nutzer O hH passes sp' init' hL M hr⟩, ?_⟩
   intro passes f k hk σ st ρG vs ρ0 hw hb hr hnf st' rv hbin
   exact (hlauf passes (tief f) f k hk σ st ρG vs ρ0 hw hb hr hnf).2 st' rv (hA1 f st vs st' rv hbin)

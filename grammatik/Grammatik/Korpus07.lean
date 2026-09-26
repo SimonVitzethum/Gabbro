@@ -121,7 +121,7 @@ def kSp : Speicher kD :=
   ⟨kSlotsLeer, fun e => nomatch e⟩
 
 /-- The attempted Einheit: empty program, empty starts. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [], kSp⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [], kSp, []⟩
 
 /-- The VACUOUS premise group on the empty program -- honestly named, never
     `korpus07_nutzer`. -/

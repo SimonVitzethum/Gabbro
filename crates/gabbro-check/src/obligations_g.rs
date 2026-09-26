@@ -100,7 +100,7 @@ fn abschnitt() -> String {
     out.push_str("    (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)\n");
     out.push_str("    (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :\n");
     out.push_str("    Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=\n");
-    out.push_str("  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
+    out.push_str("  Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
     out.push_str("    gCheck hN O hH passes sp init hL M hr\n");
     out
 }

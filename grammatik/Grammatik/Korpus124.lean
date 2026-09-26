@@ -579,13 +579,13 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/124` as ONE declaration**: code `kP`, lock invariant `kSI`,
     no axiom, declared starts `hauptA` and `hauptB` (no parameters), initial
     memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩], kSp⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩], kSp, []⟩
 
 theorem kE_nutzerPflicht : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
       invGutGrund_ohneGrund (by cases f <;> rfl)⟩, kSI_ok.2, axEnsLokal_wahr⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
-      simp only [kE, List.mem_cons, List.not_mem_nil, or_false] at ha
+      simp only [kE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 /-- No axiom, no register, no global: the oracle is empty. -/
@@ -614,7 +614,7 @@ theorem k124_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (passe
     (hL : Zielsatz.Laufzeit kE sp init) (M : RufMaschineG kD.mitRuhe)
     (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[()], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
+  Zielsatz.gabbro_ziel_g akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[()], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
     kE_akzeptiert kE_nutzerPflicht O hO passes sp init hL M hM
 
 end K124

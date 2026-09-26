@@ -39,10 +39,13 @@
 //!
 //! ## What this pass does NOT do
 //!
-//! * No lowering: `C001` stays the emitter's answer and `LG004` the exporter's. Nothing
-//!   here makes a `start` program reach C or Lean.
-//! * No model: `Akzeptiert`/`Ziel` know no statement-level start (the starts are
-//!   `E.starts`, the declaration's). The rules are checker rules with no Lean half.
+//! * No lowering: `C001` stays the emitter's answer. Nothing here makes a `start`
+//!   program reach C.
+//! * The model is elsewhere (Opus agent A, 2026-09-26, OFFEN O22): the exporter carries
+//!   the roots as `gE.gestartet` (`lean_g::check_gestartet`), the goal theorem runs over
+//!   the thread machine (`FadenMaschine.lean`: `start` spawns, `join` ends the wait), and
+//!   the Lean checker Bool judges each root as a pool routine -- `N458`'s lock half is
+//!   `wurzelnB`, `N462` is `einzelnPoolB`, `N461` the side condition of the `start` step.
 //! * No liveness: a root that never returns keeps its starter waiting forever. That is
 //!   a progress question (`FortschrittG` has no statement-level start either), not a
 //!   safety one.

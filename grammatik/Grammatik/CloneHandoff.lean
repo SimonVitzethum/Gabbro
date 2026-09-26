@@ -360,7 +360,7 @@ theorem klon_ziel (C : Zielsatz.Pruefer) (D : Deklaration) [DecidableEq D.Fn]
       (KlonStart E.P.mitRuhe sp init lebt0) K) :
     Zielsatz.Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes
       (RufStartG E.P.mitRuhe sp init) K.m :=
-  Zielsatz.gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL K.m
+  Zielsatz.gabbro_ziel_g C D E fs ls cs hC hN O hH passes sp init hL K.m
     (klonErreichbar_G hK)
 
 #print axioms Gabbro.Grammatik.klonErreichbar_G
@@ -679,7 +679,13 @@ theorem kw_handoff : CloneHandoff rufDF [rufIncF] kwM0 kwM4 := by
 #print axioms Gabbro.Grammatik.kw_handoff
 
 /- CUTS: what is not proved or not modelled (SATZKARTE §39, OFFEN O21).
-   - `GabbroZiel` has no child: its thread population is fixed at the start
+   UPDATE 2026-09-26 (Opus agent A): `GabbroZiel` now runs over the THREAD machine
+   (FadenMaschine.lean), of which this clone machine is a special case (`klon_als_faden`,
+   Zielsatz/FaedenZeuge.lean): a clone spawn is a `kind` step, and the run-time root is listed
+   in `Einheit.gestartet` (judged as a pool routine) instead of as a declared start. The first
+   cut below is therefore history; the argument/entry-world cut and the stack cut stand, and
+   the one-spawn-per-slot cut is gone (the unit may place any number of slots at a root).
+   - (history) `GabbroZiel` has no child: its thread population is fixed at the start
      (`Laufzeit.start`: root or a declared start). A spawned child reaches
      `Ziel` only through `klon_ziel`, i.e. when the unit lists the child
      entry as a DECLARED START and that unit is accepted. The exporter

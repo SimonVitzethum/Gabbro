@@ -4305,8 +4305,13 @@ pub const PHASEN: &[Satz] = &[
                     only writer still falls (nothing bounds how often the gate runs). \
                     Flow facts other than held sets that walkers carry into the child \
                     (M1 value ranges of guarded globals, phases) are not re-audited \
-                    here. The model has no child thread yet (review G11 F1): this is \
-                    a checker rule with no Lean counterpart.",
+                    here. Since 2026-09-26 the model has the child as a thread (the goal \
+                    theorem's thread machine, its `kind` step): a lifted region is a \
+                    run-time root that the Lean checker Bool judges as a pool routine \
+                    (`wurzelnB` is `N456`'s held half, `einzelnPoolB` `N457`'s). No \
+                    `child` program exports yet -- its stack gate is a foreign body the \
+                    exporter does not build -- so that correspondence is stated, not \
+                    measured.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1141` (`-- erwartet: N456`: the review's \
                       `locks L { g = 1; child { g = 2; … } }`, with `H007` beside it \
@@ -4343,9 +4348,15 @@ pub const PHASEN: &[Satz] = &[
                   call-graph edges of the starter (their effects meet the starter's \
                   `effects`, `E008`/`E009`), and the statement costs the sum of the \
                   roots' declared costs plus two primitives per root (`K001`/`K003`).",
-        vorbehalt: "Checker rules with no model and no lowering: `Akzeptiert`/`Ziel` \
-                    know no statement-level start, the emitter refuses the statement \
-                    (`C001`) and the exporter too (`LG004`). `N462` is fail-safe, not \
+        vorbehalt: "Since 2026-09-26 the goal theorem has them: it runs over the thread \
+                    machine (a `start` step spawns the roots and the starter waits until \
+                    each has finished), the exporter carries the roots as `gE.gestartet`, \
+                    and the Lean checker Bool judges each root as a pool routine -- \
+                    `wurzelnB` is `N458`'s signature-lock half, `einzelnPoolB` is \
+                    `N462` (a root stands twice in `Einheit.ws`), and `N461` is the side \
+                    condition of the model's `start` step; `N459`/`N460` have no model \
+                    counterpart, which needs neither. The emitter refuses the statement \
+                    (`C001`) until its lowering lands. `N462` is fail-safe, not \
                     precise -- it reads the guard's existence (holding it is `H007`'s), \
                     and a root that is the only writer of a carrier still falls. `N461` \
                     refuses any held context, not only a lock some root takes. The cost \

@@ -621,6 +621,13 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   `gabbro_ziel`, witnesses in `Zielsatz/PoolZeuge.lean`, `LG001` lifted,
   `N315` retired. **Still open: the per-core half (O17)** -- the Rust pool
   rule exempts `per cpu` cells, the model has no notion of them.
+- [x] **Threads created at run time in the goal (O21, O22).** Done 2026-09-26 (Opus agent A,
+  SATZKARTE §49, `messung/OPUS-A-LAUFZEITFAEDEN.md`): `GabbroZiel` runs over the thread
+  machine (`start` spawns and joins, `kind` spawns a child), run-time roots are
+  `Einheit.gestartet` judged as pool routines, every leg of `ZielF` proved, the old statement a
+  corollary (`gabbro_ziel_vor`); the exporter carries `start` roots. **Still open:** per-spawn
+  arguments (a `child` reading its handed values), a root `requires` at the spawn world, the
+  `child` export (its stack gate is a foreign body), and the lowering (lane 260).
 - [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
   full proof: a `costs`-like static budget over call depth with the
   2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays

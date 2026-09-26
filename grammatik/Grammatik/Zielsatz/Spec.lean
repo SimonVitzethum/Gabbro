@@ -18,8 +18,76 @@
       declared start's `requires` there with its declared arguments);
   (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code;
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (A4).
-  Then for every budget and every reached machine: `Ziel`. `fs`/`ls`/`cs` (functions, locks,
-  carriers) are `Aufzaehlung`s (complete by their type: finite declarations only).
+  Then for every budget, every set of initially live threads and every reached machine of the
+  THREAD machine (FadenMaschine.lean: machine G plus threads spawned at run time by `start` and
+  `child`, since 2026-09-26): `ZielF` -- `Ziel` on its G state plus the spawn and join legs.
+  `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
+  finite declarations only).
+
+  WHAT CHANGED ON 2026-09-26 (OPUS AGENT A, OFFEN O21/O22), AND WHY -- a REVIEWED DIFF of this
+  file (the review itself: messung/OPUS-A-LAUFZEITFAEDEN.md):
+  * THE GAP. The language creates threads at run time -- the hosted `start { f, g };` (the
+    starter waits for its roots: a join; Rust `N458`-`N462`) and the `child { … }` region of a
+    stack gate (its own thread on the handed stack, entered holding nothing; Rust `N446`-`N452`,
+    `N456`, `N457`) -- and this statement fixed the thread population at the start: (d) let a
+    thread run only the idle root or a declared start, and `Ziel` spoke about G runs only. A
+    child reached the goal only through `klon_ziel` (CloneHandoff.lean, outside the
+    statement), a `start` not at all (NOT CLAIMED until this diff).
+  * THE DIFF. (i) `Einheit` gains `gestartet` (default `[]`): the run-time roots with their
+    arguments. (ii) `Einheit.ws` lists every run-time root TWICE: a root may run on any number
+    of threads, so the checker judges it as a pool routine -- `AkzeptiertSpec` is textually
+    unchanged, and its `wurzeln` (no signature lock, no reasons) and `einzeln` (pool-safe)
+    components now decide the model half of `N458`/`N462` (for a lifted `child` region: of
+    `N456`/`N457`), `Getrennt`/`SchreibGetrennt` pair a root with every start and with itself
+    (`akzeptiertSpec_gestartet`, Zielsatz/FaedenVor.lean). (iii) (b) `StartPflicht.req` and
+    (d) `Laufzeit.start` range over `E.starts ++ E.gestartet`: the runtime may place a thread
+    slot at a run-time root, and its `requires` is the user's duty at `E.sp0`, as for a
+    declared start. (iv) THE CONCLUSION moves from machine G to the THREAD MACHINE
+    (`FadenMaschine`, `FadenSchritt`, `FadenErreichbar`, `FadenStart`; FadenMaschine.lean):
+    a G machine plus the live set. A slot that is not live is DORMANT and untouched until a
+    live thread spawns it -- by `start` (only while the starter holds no lock, the model side
+    of `N461`; the starter then takes no step until every root is finished, and the `join`
+    step ends the wait) or by `kind` (the parent goes on). No G rule changed or was added. The
+    conclusion is `ZielF` on every reachable thread machine, from any set `lebt0` of initially
+    live threads: `Ziel` on its G state (every spawned thread IS a G thread there), and the
+    legs `schlafendUnberuehrt`, `schlafendFrei` (a spawned thread enters holding nothing),
+    `joinFrei` (a waiting starter holds nothing), `keineVerklemmung` and `keinZyklus` WITH
+    join waits (`KeinWarteZyklusF`: no cycle through locks and joins), and `fortschritt`
+    (`FortschrittF`: every stop named, the join wait `JoinWartet` among them).
+  * WHY NOTHING IS WEAKENED (theorems, Zielsatz/FaedenVor.lean and Beweis.lean):
+    `fadenErreichbar_von_G` -- every G run is a thread-machine run with every thread live and
+    nothing spawned, so `Ziel` on every G run (`gabbro_ziel_g`, the statement of before, which
+    every caller of `gabbro_ziel` now uses) is a corollary; `ws_ohne_gestartet`,
+    `startPflicht_vor_iff`, `laufzeit_vor_iff` -- on a unit with `gestartet = []` (every unit
+    of before) the checker's `ws`, (b) and (d) are word for word the old ones;
+    `pruefer_aus_vor`, `pruefer_aus_vor_gleich` -- every checker of the old interface is a
+    checker of the new one with the same verdict on every unit of before; and
+    `gabbro_ziel_vor : GabbroZielVor` -- the OLD STATEMENT, VERBATIM over the units of
+    before, is proved from the new one. The new statement adds units with run-time roots and
+    runs with spawns and joins, and the legs above; it drops nothing.
+  * WHAT CARRIES THE PROOF: the bridge `fadenErreichbar_G` (a spawn and a join do not move the
+    G state), so `ziel_aus` applies unchanged; the thread-machine invariant `FadenInv` (a
+    dormant slot is its start thread, a joining starter holds no lock and is live, an awaited
+    root is live and ranks above its starter, ranks are bounded by the spawn clock); the join
+    legs from lock ranks plus the ghost spawn rank (Zielsatz/Faeden.lean).
+  * NEW NAMED ASSUMPTIONS (in THE ONE LIST below, (d)): a run-time root's slot is placed in the
+    start machine, so its ARGUMENTS are the unit's (a `start` root takes none, `N458`; the
+    exporter carries no root with parameters) and its frame's ghost ENTRY WORLD (`s0`, the
+    logged entry) is the start world -- its body reads the memory of the moment it steps, as a
+    late-scheduled declared start does; and the spawn SITES are the checked ones: the lowering
+    spawns a `start` root only where the starter holds nothing (`N461`) and waits for all its
+    roots, and enters a `child` by jump at the region with an empty held set (`N456`, the
+    jump assumption of OFFEN O21) -- translation validation's to check, as every "G is the
+    meaning of the C".
+  * WITNESSES (Zielsatz/FaedenZeuge.lean): `sj_lauf` (a `start` spawns two threads, both write
+    and finish, the join fires only then, the starter calls and writes), `kw2_lauf` (a `child`
+    runs concurrently with its parent: parent call, child write, parent write),
+    `spawn_start_ziel`/`spawn_kind_ziel` (every leg of `ZielF` on spawn runs of ACCEPTED units,
+    through `gabbro_ziel`), refusals `start_nicht_poolsicher_abgelehnt` (a non-pool-safe root,
+    at the pool component), `kind_unter_sperre_abgelehnt` (a region lifted from inside `locks`
+    needs the lock at entry, refused at the root component), `start_unter_sperre_kein_schritt`
+    (no start under a held lock), and `klon_als_faden` (fix lane F9's clone machine is a
+    special case of the thread machine).
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
   REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
@@ -271,6 +339,24 @@
     machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
     (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
     (MitRuheSemantik.lean).
+  * (d) since 2026-09-26, THREADS CREATED AT RUN TIME -- `Laufzeit.start` also places thread
+    slots at the run-time roots `E.gestartet`; a slot the run does not start live is DORMANT in
+    the thread machine until a `start` or `child` step spawns it. Assumed, and not a software
+    obligation under that name: (1) the slot's ARGUMENTS are the unit's (for a `start` root
+    `.nil`, `N458`) and its frame's ghost entry world (`s0` and the logged entry, read by
+    `old`-parts of the root's `ensures` and by `VertragAmOrtG`'s `requires` leg) is the START
+    world, not the spawn world -- the body itself reads shared memory at each step, so what it
+    DOES is the spawned thread's behaviour; (2) the spawn SITES are the checked ones: the
+    lowering creates the threads of a `start` only where the starter holds no lock (`N461`
+    checks the source, the `start` rule carries it as a side condition), makes the starter wait
+    until EVERY root has finished (the `join` rule), and enters a `child` region by jump with
+    an empty held set (`N456`; OFFEN O21's jump assumption); and (3) every spawn SUCCEEDS: the
+    `start`/`kind` steps have no failure branch, and a unit that spawns in a loop needs
+    unboundedly many slots (`Faden` is unbounded) -- thread creation failing for want of memory,
+    stacks or thread ids is not modelled (review 2026-09-26). All three are statements about the
+    runtime and the lowering (lane 260's raw `clone`), whose check is translation validation's.
+    Over-approximated, never under-: a spawn may fire at ANY point of a live thread where the
+    rule's condition holds, and any slot may be live from the start (`lebt0` is quantified).
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not
     the user's logic:
@@ -392,6 +478,13 @@
     numbers and function-pointer types shifted by one, every body translated constructor by
     constructor, memory and arguments carried over / a translation that changed a body would
     make every leg speak about another program.
+  The thread machine (since 2026-09-26):
+  * `FadenMaschine`/`FadenSchritt`/`FadenErreichbar`/`FadenStart` FadenMaschine.lean -- a G
+    machine plus live set, join lists and ghost rank/clock; steps `lauf` (a G step of a live,
+    non-joining thread), `start` (spawn a list of dormant slots and wait, only holding no lock),
+    `kind` (spawn one slot, go on), `join` (end the wait once every root is finished) / a spawn
+    that moved the G state, or a join that fired early, would make the legs speak about
+    another run; `fadenErreichbar_G` and `fadenErreichbar_von_G` are the two bridges.
   Premise definitions:
   * `Einheit`, `Einheit.ws` (here) -- the program as one declaration / a field the exporter
     does not fill from the source would make the statement about another program.
@@ -436,7 +529,9 @@
   `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
   declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
   245, a premise since F10); `KernPlan` and the leg `KernHaltG` (one core with interrupt
-  handlers, fix lane F11, proved in Zielsatz/Masken.lean).
+  handlers, fix lane F11, proved in Zielsatz/Masken.lean); `Einheit.gestartet`, `JoinWartet`,
+  `WartetF`, `KeinWarteZyklusF`, `FortschrittF`, `ZielF` and the thread machine (threads
+  created at run time, 2026-09-26; legs proved in Zielsatz/Faeden.lean).
 
   REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
   2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
@@ -468,11 +563,17 @@
   (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
   and the checker admits that only pool-safe, `EinzelnPool`); linking of separately compiled units
   (PLAN-ZIELSATZ §10: the statement is about ONE `Einheit`, and a function another unit
-  supplies is not in `D.Fn`); a thread SPAWNED at run time (the `child` region of a stack
-  gate, lane O-1): the thread population is fixed at the start by (d), and a spawned child
-  reaches `Ziel` only through `klon_ziel` (CloneHandoff.lean, outside this statement), i.e.
-  when the unit lists the child entry as a declared start and is accepted -- the exporter
-  refuses `child` (`LG004`) and the emitter `C185`, OFFEN O21. Declared `costs` are not in
+  supplies is not in `D.Fn`); for threads SPAWNED at run time (claimed since 2026-09-26, see
+  (d) above): a root whose ARGUMENTS differ per spawn (a `child` region reading its handed
+  values -- the model fixes one argument list per slot), a root `requires` that holds only at
+  the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn
+  world, the END of a join wait (a root that never finishes keeps its starter waiting, a named
+  `JoinWartet` stop, like a lock wait), the child's handed STACK (G is address-free), a spawn
+  that FAILS (thread creation out of resources: the model's spawn always succeeds), and the
+  C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22. The
+  exporter carries `start` (roots into `gestartet`); a `child` needs a stack gate, a foreign
+  body the exporter does not build (`Ax := Empty`), so no `child` program is exported. Declared
+  `costs` are not in
   `Deklaration`: `zeit` is the syntax-computed bound. The `.gab` -> `Einheit` step is the
   exporter's (lean_g.rs). Since lane 198 it fills `starts`, `sp0`, `S` and the source
   `requires` of the unit `gE` for the fragment it exports (pinned by the test
@@ -493,6 +594,7 @@ import Grammatik.RennfreiVoll
 import Grammatik.KostenG
 import Grammatik.MitRuhe
 import Grammatik.AntwortOrte
+import Grammatik.FadenMaschine
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -512,7 +614,14 @@ def Aufzaehlung (α : Type) : Type := {l : List α // ∀ a, a ∈ l}
     * `Q` -- the axioms' declared `ensures` (the content of the hardware assumption);
     * `starts` -- the declared thread starts with their arguments (`concurrent { … }`,
       `entry`/`boot` dispatch roots);
-    * `sp0` -- the declared initial memory (every table and global initializer).
+    * `sp0` -- the declared initial memory (every table and global initializer);
+    * `gestartet` (NEW 2026-09-26, Opus agent A, OFFEN O21/O22) -- the roots of threads the
+      program creates AT RUN TIME: every root of a hosted `start { f, g };` and every
+      `child { … }` region (lifted to a function), with its arguments (`N458`: a root takes
+      none, so the exporter writes `.nil`). A root here runs on any number of threads (a `start`
+      in a loop, in two starters, in a pool routine), so the checker judges it as a POOL
+      routine: it enters `ws` TWICE (`Einheit.ws`). Default `[]`: a unit that creates no thread
+      at run time is the unit of before.
     The exporter's output is exactly one such value; a different `starts` (say `[]`) is a
     DIFFERENT program, whose run the statement then describes (`laufzeit_nur_erklaert`). -/
 structure Einheit (D : Deklaration) where
@@ -521,9 +630,14 @@ structure Einheit (D : Deklaration) where
   Q : AxEns D
   starts : List (Σ w : D.Fn, Env D (D.params w))
   sp0 : Speicher D
+  gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
 
-/-- The declared start functions. -/
-def Einheit.ws (E : Einheit D) : List D.Fn := E.starts.map (·.1)
+/-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
+    (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
+    demands it pool-safe (the model side of `N462`/`N457`), `Getrennt` pairs it with itself and
+    `Laufzeit.einmal` lets it run on any number of threads. For `gestartet = []` this is the list
+    of before (`ws_ohne_gestartet`). -/
+def Einheit.ws (E : Einheit D) : List D.Fn := (E.starts ++ E.gestartet ++ E.gestartet).map (·.1)
 
 /-- **`w` is declared at least twice** (fix lane F10, 2026-09-22): two start OCCURRENCES of one
     routine, `concurrent { w, w }` -- a symmetric worker pool. The one notion of "twice" in
@@ -651,7 +765,7 @@ def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
     (`probeA_falsch_inv_nicht`, Zielsatz/Proben.lean). -/
 structure StartPflicht (E : Einheit D) : Prop where
   sperren : ∀ L, E.S.inv L E.sp0 = true
-  req : ∀ a ∈ E.starts, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
+  req : ∀ a ∈ E.starts ++ E.gestartet, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
 
 /-- **The user's own logic**: the bodies' logic and the start obligation, both over the
     program `E` -- nothing the prover picks. -/
@@ -680,7 +794,7 @@ def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
 structure Laufzeit (E : Einheit D) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) : Prop where
   lader : sp = speicherR E.sp0
-  start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩
+  start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts ++ E.gestartet, init t = ⟨some a.1, envR a.2⟩
   einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 →
     (init t).1 = none ∨ ∃ w, (init t).1 = some w ∧ Mehrfach E.ws w
 
@@ -900,7 +1014,63 @@ structure Ziel (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   -- time
   zeit : ZeitAb P O passes M
 
-/-- **GABBRO_ZIEL.** -/
+/-! ## Threads created at run time (2026-09-26, OFFEN O21/O22) -/
+
+/-- Starter `t` waits for a root that has not finished (a JOIN wait). -/
+def JoinWartet (K : FadenMaschine D) (t : Faden) : Prop :=
+  ∃ u ∈ K.wartet t, ¬ FertigG K.m u
+
+/-- **Thread `t` waits for thread `u`** on a thread machine: `t` joins nothing and stands at a
+    lock `u` holds (`WartetAuf`), or `t` joins the unfinished root `u`. -/
+def WartetF (K : FadenMaschine D) (t u : Faden) : Prop :=
+  (K.wartet t = [] ∧ ∃ L, WartetAuf K.m t u L) ∨ (u ∈ K.wartet t ∧ ¬ FertigG K.m u)
+
+/-- **No wait cycle, join waits included**: no threads `t₀ … tₙ₊₁ = t₀` each waiting for the
+    next, by a lock or by a join -- whatever the other threads do. -/
+def KeinWarteZyklusF (K : FadenMaschine D) : Prop :=
+  ∀ (n : Nat) (ts : Nat → Faden), (∀ i, i ≤ n → WartetF K (ts i) (ts (i + 1))) → ts (n + 1) ≠ ts 0
+
+/-- **Every stop is named, on the thread machine**: each thread is dormant (not spawned yet), or
+    it is a starter that waits for an unfinished root or can end its join, or it joins nothing and
+    is finished, waits for a lock, stands at a named stop, or takes a G step the thread machine
+    admits. -/
+def FortschrittF (P : Programm D) (O : Orakel D) (passes : Nat) (K : FadenMaschine D) : Prop :=
+  ∀ t, K.lebt t = false ∨
+    (K.wartet t ≠ [] ∧ (JoinWartet K t ∨
+      ∃ K', FadenSchritt P O passes K K' ∧ K'.m = K.m ∧ K'.wartet t = [])) ∨
+    (K.wartet t = [] ∧ (FertigG K.m t ∨ WartetG K.m t ∨ HaltBenannt O passes K.m .flagge t ∨
+      HaltBenannt O passes K.m .budget t ∨ HaltBenannt O passes K.m .hardware t ∨
+      HaltBenannt O passes K.m .nieZurueck t ∨
+      ∃ M', RufSchrittG P O passes K.m t M' ∧
+        FadenSchritt P O passes K ⟨M', K.lebt, K.wartet, K.rang, K.uhr⟩))
+
+/-- **THE GOAL on a thread machine `K` reached from the start machine `M0`** (since 2026-09-26):
+    every leg of `Ziel` on its G state -- which contains every spawned thread, as a G thread --
+    and the legs the thread machine adds:
+    * `schlafendUnberuehrt`, `schlafendFrei` -- a not-yet-spawned thread is its start thread,
+      and holds no lock: a spawned thread ENTERS HOLDING NOTHING (the model side of `N456`);
+    * `joinFrei` -- a starter that waits for its roots holds no lock (the side of `N461`);
+    * `keineVerklemmung` -- if every live unfinished thread waits (for a lock, or for a root),
+      every live thread is finished: no global deadlock, join waits included;
+    * `keinZyklus` -- no wait cycle through locks AND joins;
+    * `fortschritt` -- every stop is named (`FortschrittF`). -/
+structure ZielF (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
+    (M0 : RufMaschineG D) (K : FadenMaschine D) : Prop where
+  g : Ziel P S O passes M0 K.m
+  schlafendUnberuehrt : ∀ t, K.lebt t = false → K.m.faeden t = M0.faeden t
+  schlafendFrei : ∀ t, K.lebt t = false → ∀ L, L ∉ offen (K.m.faeden t).spur
+  joinFrei : ∀ t, K.wartet t ≠ [] → ∀ L, L ∉ offen (K.m.faeden t).spur
+  keineVerklemmung : (∀ t, K.lebt t = true → ¬ FertigG K.m t →
+      (K.wartet t = [] ∧ WartetG K.m t) ∨ JoinWartet K t) →
+    ∀ t, K.lebt t = true → FertigG K.m t
+  keinZyklus : KeinWarteZyklusF K
+  fortschritt : FortschrittF P O passes K
+
+/-- **GABBRO_ZIEL.** Since 2026-09-26 over the THREAD MACHINE: every thread-machine run from the
+    runtime's start, with any set `lebt0` of initially live threads -- the others are slots that
+    `start` or `child` spawn at run time. Every G run is such a run (`lebt0` all live, nothing
+    spawned: `fadenErreichbar_von_G`), so the statement of before is a corollary
+    (`gabbro_ziel_g`). -/
 def GabbroZiel : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
@@ -910,8 +1080,9 @@ def GabbroZiel : Prop :=
     ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init →                                      -- (d) the runtime, A4
-      ∀ M : RufMaschineG D.mitRuhe,
-        RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M →
-          Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M
+      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
+        FadenErreichbar E.P.mitRuhe O.mitRuhe passes
+          (FadenStart E.P.mitRuhe sp init lebt0) K →
+          ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K
 
 end Gabbro.Grammatik.Zielsatz
