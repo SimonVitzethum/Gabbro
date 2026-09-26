@@ -10,17 +10,23 @@
   user wrote: code with contracts `E.P`, lock invariants `E.S`, axiom ensures `E.Q`, declared
   starts with arguments `E.starts` (functions `E.ws`), declared initial memory `E.sp0`.
   Premises in four groups:
-  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of the checker (`Pruefer`: the Bool and its
-      soundness against `AkzeptiertSpec`; the concrete checker is `akzeptiert_pruefer`,
-      Zielsatz/Akzeptiert.lean, computing `Akzeptiert E.P E.S fs ls cs E.ws`);
-  (b) `NutzerPflicht E` -- the user's logic: the bodies at EVERY `forever` budget
-      (`LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at `E.sp0`, every
-      declared start's `requires` there with its declared arguments);
+  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of the checker (`PrueferX`: the Bool and its
+      soundness against `AkzeptiertSpecX`, since lane O25c; the concrete checker is
+      `akzeptiertX_pruefer`, Zielsatz/AtomarZiel.lean, computing `AkzeptiertX E.P E.S fs ls cs
+      E.ws` -- `Akzeptiert` of Zielsatz/Akzeptiert.lean with the footprint rule admitting the
+      unit's shared atomics);
+  (b) `NutzerPflichtA E` -- the user's logic: the bodies at EVERY `forever` budget and against
+      every value a read of a shared atomic may return (`LogikPflichtA`, the rely; on a unit
+      without one it is `LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at
+      `E.sp0`, every declared start's `requires` there with its declared arguments);
   (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code;
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (A4).
   Then for every budget, every set of initially live threads and every reached machine of the
   THREAD machine (FadenMaschine.lean: machine G plus threads spawned at run time by `start` and
-  `child`, since 2026-09-26): `ZielF` -- `Ziel` on its G state plus the spawn and join legs.
+  `child`, since 2026-09-26; over machine GX since lane O25c, Speichermodell/GXMaschine.lean:
+  the unit's shared atomics read as the weak memory answers): `ZielFX` -- `ZielX` on its G
+  state plus the spawn and join legs. The statement before lane O25c is `GabbroZielSC`
+  (`ZielF`/`Ziel` over G, the checker and (b) of before), a corollary (atomic-rely block).
   `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
   finite declarations only).
   A SECOND statement, `GabbroZielVerbund` (end of this file, since 2026-09-26), covers a
@@ -40,9 +46,10 @@
     UNCERTIFIED (of the 129 top-level corpus programs: 18 certified).
   * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
     imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
-    decides (a) for it IN LEAN (`gCheck : akzeptiert_pruefer.akzeptiert gE … = true := by
-    decide`) and states this theorem on it (`gP_gabbro_f`: `ZielF` on every reachable thread
-    machine; `gP_gabbro`: `Ziel` on every G run), with (b) `NutzerPflicht gE` as the open
+    decides (a) for it IN LEAN (`gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE … = true
+    := by decide`, since lane O25c) and states this theorem on it (`gP_gabbro_f`: `ZielFX` on
+    every reachable thread machine over GX; `gP_gabbro`: `ZielX` on every GX run), with (b)
+    `NutzerPflichtA gE` as the open
     hypothesis -- the user's part -- and (c), (d) as named above. For such a program the Rust
     checker's verdict is NOT in the chain of reasoning: the Lean Bool decides, and an exported
     program the Lean Bool refused would turn the build RED.
@@ -71,6 +78,93 @@
     therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
     in Lean for every certified program, and the others guard properties this statement does
     not claim (the NOT CLAIMED list, and the dropped forms above).
+
+  -- BEGIN atomic-rely block (Opus lane O25c, 2026-09-26) --
+  WHAT CHANGED ON 2026-09-26 (OPUS LANES O25, O25b, O25c: UNGUARDED ATOMIC COMMUNICATION,
+  OFFEN O25 AND O17's READ HALF), AND WHY -- a REVIEWED DIFF of this file (the review:
+  messung/OPUS-O25C-ATOMICS.md; the pieces: OPUS-O25-ATOMICS.md, OPUS-O25B-ATOMICS.md). The
+  premises (a) and (b) and the conclusion MOVE; the statement of before stays, as
+  `GabbroZielSC`, and is DERIVED from the new one.
+  * THE GAP. The footprint component `fuss` demanded that every carrier a thread reads is
+    thread-local or lock-guarded, `atomic` carriers included. So a flag, a counter or a
+    per-core cell that one thread writes and another reads WITHOUT a lock -- the thing atomics
+    exist for -- was refused, and `schwach` (the weak machine adds no behaviour) was true only
+    because W's non-SC outcomes occurred on no accepted program. Covering such programs needs
+    two things: the weak memory may answer a read of a shared atomic with a stale message
+    (the statement must speak about those runs), and the user's sequential proof must hold
+    whatever that read returns (a RELY).
+  * THE DIFF, premises. (a) `C : Pruefer` becomes `C : PrueferX`, sound against
+    `AkzeptiertSpecX` -- `AkzeptiertSpec` with ONE field changed: `fuss` is `FussSX` over the
+    ADMITTED SHARED ATOMICS `GeteiltV P ws` (an `atomic` global with no guard lock that is not
+    thread-local among the starts, `GeteiltA`, and that no `requires`, `ensures` or owed
+    invariant mentions, `VertragsFrei`): such a carrier may stand in a footprint beside the
+    local and the guarded ones. A RELAXATION: every checker of before is a checker for the
+    rely (`Pruefer.alsX`, via `akzeptiertSpecX_of_spec`), with the same verdict. (b)
+    `NutzerPflicht E` becomes `NutzerPflichtA E`: `LogikPflicht` with every body run by
+    `execEndHA` against EVERY atomic environment in `HavocA (GeteiltA E.P E.ws)` -- at every
+    read of a shared atomic the body meets every value of its type (Speichermodell/AtomarSem.lean,
+    AtomarRec.lean). A STRENGTHENING exactly where another thread can interfere
+    (`hP_rely_nicht`: a body whose sequential triple holds fails it), and NO change on every
+    unit the checker of before accepts: such a unit reads no shared atomic, and the two
+    obligations are EQUIVALENT there (`logikPflichtA_iff_akzeptiert`). (c), (d): unchanged.
+  * THE DIFF, conclusion. The thread machine runs over machine GX (`FadenSchrittX`,
+    Speichermodell/GXMaschine.lean): its `lauf` step is a step of G on a PRESENTED memory that
+    agrees with G's outside the unit's admitted shared atomics `GeteiltV E.P E.ws`
+    (`RufSchrittGX`, AtomarLauf.lean) -- so every stale answer the weak memory may give at a
+    shared atomic is a run of the statement. `ZielF`/`Ziel` become `ZielFX`/`ZielX`, leg by leg:
+    - SAME statement, now at every GX-reachable machine: `speicherSicher`, `vertrag`,
+      `sperrInv`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `startEnde`,
+      `keinStartGrund`, `keinLogikHalt`, `keineVerklemmung`, `keinZyklus`, `fortschritt`,
+      `folge`, and on the thread machine `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`,
+      `keineVerklemmung`, `keinZyklus`;
+    - over MORE runs or steps (GA/GX contain G): `rennfrei` (`RennfreiBisGA`: every GA run,
+      non-atomic carriers), `sperrWechsel`/`sperrSicht` (every GX step), `keinKernHalt`
+      (`KernHaltGA`), `zeit` (`ZeitAbX`: every GX segment), `fortschritt`/`spawnSicht` of the
+      thread machine (GX thread steps);
+    - CHANGED FORM: `schwach` (`SchwachX`): every step W takes from a machine over `M` is a
+      GX step, and the memory W presents is G's at every carrier OUTSIDE the shared atomics.
+      The form of before (`SchwachSC`: every W step is a G step) is FALSE on an accepted flag
+      program (`n1_schwachSC_falsch`); with no shared atomic the two coincide.
+  * RMW ATOMICITY IN W ITSELF. `SchrittW` gains the field `rmw`: an `exchange` of `g` (the
+    one read-modify-write form, emitted as ONE C11 RMW -- `atomic_fetch_*`, `atomic_exchange`
+    or a CAS loop) writes `g` DIRECTLY above the message it read. Without it W admitted the
+    lost update (`zaehler_verloren`), which no C11 execution shows (RC11's atomicity axiom);
+    with it no two RMWs read one message (`w_kein_verlust`, RMW.lean) and the two-thread
+    counter ends at 2 (see the witnesses). W still contains G (`w_aus_g`: the SC construction
+    writes at `ts + 1`), and W is still an over-approximation of RC11, so every claim over W
+    stays a claim about the C (assumption (2) of the reading now names the RMW lowering).
+  * WHY NOTHING IS WEAKENED (theorems, Zielsatz/BeweisAtomar.lean). `gabbro_ziel_sc_aus :
+    GabbroZiel → GabbroZielSC` -- the STATEMENT OF BEFORE, VERBATIM, is a corollary: a checker
+    of before is a `PrueferX` (`Pruefer.alsX`); on a unit it accepts, (b) of before gives (b)
+    with the rely (`nutzerPflichtA_of_akzeptiert`) and no admitted shared atomic exists
+    (`geteiltV_leer`); every thread-machine run over G is one over GX (`fadenErreichbarX_of`);
+    and with no shared atomic `ZielFX` is `ZielF` (`zielF_of_X`, via `gx_leer_g`: GX over an
+    empty set IS G). The same for linked units (`gabbro_ziel_verbund_sc_aus`). So every
+    program, run and leg of before is covered, and the new statement adds the programs with
+    shared atomics and their weak runs.
+  * WHAT CARRIES THE PROOF (`zielX_aus`, `zielFX_aus`): the replay of the user's proof with
+    the rely (`ziel_ort_atomar_voll`, lanes O25b: the recorded environment answers every
+    shared read with the value the weak memory gave), the invariant legs over GX
+    (`invarianten_atomar`), the thread-only invariants over GA (`gaInv`), the DRF theorem with
+    racing atomics (`schwach_ist_gX`), the time bound over GX segments
+    (`frame_schritte_beschraenktX`), the order leg over GX (`folgeG_erreichbarX`), and the
+    thread machine over GX (`FadenInvX`).
+  * WITNESSES (Zielsatz/AtomarAkzeptiertZeuge.lean, Zielsatz/AtomarGoalZeuge.lean,
+    Speichermodell/Zaehler*.lean): the flag program of configuration 1 (`kern` stores the
+    atomic `konfig`, `hauptA`/`hauptB` read it with no lock) is refused by the checker of
+    before, accepted by `AkzeptiertX`, carries (b) with the rely, and `gabbro_ziel` gives
+    `ZielFX` on it; W's stale read really happens on it and is a covered GX step; the rely
+    bites (`hP_rely_nicht`); a contract over the shared `konfig` is refused
+    (`vertrag_atomar_abgelehnt`, Rust `N484`); the per-core fold is accepted
+    (`faltung_akzeptiertX`, O17's read half); two threads each `exchange`-increment one
+    counter, and on every run of W that finishes both, the newest message holds 2.
+  * WHAT STAYS NAMED (NOT CLAIMED below): a contract, `requires`, `ensures` or invariant over a
+    shared atomic (refused: its value may change at any moment, `N484`); the publish/await
+    hand-off of a PLAIN payload read without a lock (still refused, verdict P3; OFFEN O25's
+    remaining part); linked units sharing an atomic across the link (the link check's `lok`
+    demands every lock-free footprint carrier thread-local over the composed hulls, atomics
+    included); the merge discipline of per-core cells beyond reading them (OFFEN O17).
+  -- END atomic-rely block --
 
   -- BEGIN linking block (Opus agent E, 2026-09-26) --
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT E: LINKING SEPARATELY COMPILED UNITS), AND WHY -- a
@@ -413,7 +507,9 @@
     every leg of `Ziel` by `gabbro_ziel_schwach`).
   * WHAT IT DOES NOT BUY, named below (NOT CLAIMED, OFFEN O25): the goal still covers no
     program that RELIES on an unguarded atomic read across threads -- `fuss` refuses such a
-    program -- so the non-SC outcomes of W never occur on an accepted program.
+    program -- so the non-SC outcomes of W never occur on an accepted program. (SUPERSEDED by
+    the atomic-rely block of lane O25c: such programs are covered, and `schwach` has the form
+    `SchwachX`.)
   -- END weak-memory block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
@@ -744,7 +840,11 @@
         step's own writes (the last two make W weaker than C11, the safe direction).
         `Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
         release/acquire; a published model, not proved here against an axiomatic C11;
-    (2) the C compiler and the hardware implement C11 atomics and the orders as specified;
+    (2) the C compiler and the hardware implement C11 atomics and the orders as specified,
+        and the emitter lowers an `exchange` to ONE C11 read-modify-write (`atomic_fetch_*`,
+        `atomic_exchange`, or a CAS loop retried until it succeeds) -- that is what
+        `SchrittW.rmw` models (lane O25c: the write sits directly above the message read,
+        RC11's atomicity of RMWs);
     (3) EVERY lock primitive `<L>_nimm` is an acquire and every `<L>_gib` a release, whoever
         implements it: a driver-defined lock (`pthread_mutex_lock`/`_unlock`, `treiber.rs`);
         an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`
@@ -950,23 +1050,21 @@
   emitted C overflows); the C and the hardware; (weak-memory hunk, 2026-09-26: the line
   "weak memory beyond DRF-SC" is REPLACED -- what is now claimed is the leg `schwach`: W,
   the weak machine, adds no behaviour on an accepted program, for every order assignment,
-  and every leg holds on every machine W reaches) programs that RELY on an unguarded atomic
-  read across threads -- a flag, counter or per-core cell one thread writes and another reads
-  without a lock: the footprint component `fuss` refuses them (a read carrier another start
-  writes must be thread-local or lock-guarded, `atomic` or not), so W's non-SC outcomes
-  (`mp_rlx_erlaubt`, `sb_erlaubt`) occur on no accepted program and no theorem here speaks
-  about them; covering them needs the user's sequential semantics to havoc such a read (a
-  rely), OFFEN O25 (the exporter refuses `atomic` items anyway, `LG001`; the MEMORY half is
-  proved standalone since 2026-09-26, outside this statement: with the footprint check
-  exempting atomics, every W step is a step of G whose atomic reads are answered per W and
-  whose plain carriers stay sequentially consistent, `schwach_ist_gA`,
-  Speichermodell/Atomar.lean -- the replay of the user's proof over such steps is what is
-  missing); that W is exactly
+  and every leg holds on every machine W reaches) (atomic-rely hunk, lane O25c, 2026-09-26: the
+  line "programs that RELY on an unguarded atomic read across threads" is REPLACED -- what is
+  now claimed is the statement over machine GX with the rely, see the atomic-rely block) a
+  `requires`, `ensures` or invariant OVER a shared atomic (refused: `GeteiltV` demands
+  `VertragsFrei`, Rust `N484`; the value may change at any moment, so no contract can promise
+  it); the merge discipline of per-core cells (`accumulates … per cpu`, OFFEN O17) beyond what
+  the rely gives a reader; linked units that share an atomic ACROSS the link (the link check's
+  `lok` demands every lock-free footprint carrier thread-local over the composed hulls,
+  atomics included: such a link is refused and not covered); that W is exactly
   RC11 (it over-approximates it at G's step granularity: `seq_cst` is modelled as release/acquire, so no SC-order
   fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
   `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
-  races; `schwach` covers their values); the publish/await hand-off of an unguarded payload (refused by the checker,
-  see P3); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
+  races; `schwach` covers their values); the publish/await hand-off of an unguarded PLAIN
+  payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane
+  O25c); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; (Opus agent D,
   2026-09-26: the line "invariants at entry or while locks are held (claimed at returns only)"
