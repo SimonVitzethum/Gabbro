@@ -120,6 +120,12 @@ theorem akzeptiertSpecX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptier
     | none, _, hx => absurd hx List.not_mem_nil
     | some f, x, hx => (stelleOk_mitRuhe (D := D) x).mpr
         (hA.antworten f x (by rw [← rumpf_mitRuhe_ants P f]; exact hx))
+  masken
+    | none, hw, _, _ => Bool.noConfusion hw
+    | some w, hw, f', hf' => by
+        obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
+        rw [rumpf_mitRuhe_mE]
+        exact hA.masken w hw f hf
 
 end Transfer
 

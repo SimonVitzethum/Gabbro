@@ -161,6 +161,31 @@ theorem folgeG_erreichbarX {P : Programm D} {O : Orakel D} {passes : Nat}
           exact h t) (gx_ga_lauf hTA hX)
   exact ⟨(hI t).2.2, fun _ ha he => fR_anRueck Φ _ _ _ ha (hI t).1 he⟩
 
+/-- **The same-core leg with the program's own handlers, on GA runs** (`kernHaltE_aus` of Opus
+    agent H over GA: the argument reads the threads' own states only). -/
+theorem kernHaltEA_aus [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {passes : Nat}
+    {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
+    (hMask : MaskenDisziplin P fs) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D) :
+    KernHaltEA P O passes (RufStartG P sp init) M := by
+  intro kern ms fs' n hl hMn hKP g f L hHg hfg hkern hA
+  have hH : ∀ t, HandlerVon P (RufStartG P sp init) t → P.unterbricht (init t).1 = true :=
+    fun t ht => by unfold HandlerVon at ht; rw [rufStartG_kopf_f] at ht; exact ht
+  exact kernHaltGA_gilt P O passes (RufStartG P sp init) M kern (HandlerVon P (RufStartG P sp init))
+    (fun t => fun f => reachB P fs (init t).1 f = true)
+    (fun t => fun _ => maskM fs (reachB P fs (init t).1))
+    (fun t ht => merkAbg_maskM hvoll (hAbg _) (hMask _ (hH t ht)))
+    (fun t ht => merkInvG_start sp init t
+      (merkAbg_maskM hvoll (hAbg _) (hMask _ (hH t ht))) (reachB_wurzel P fs _))
+    (fun t _ f' L' _ h => maskM_sperre f' L' h)
+    (fun t L' => anSperre_start_falsch P sp init t L')
+    ms fs' n hl hMn hKP g f L hHg hfg hkern hA
+
+/-- Every G run is a GA run: `KernHaltEA` contains `KernHaltE`. -/
+theorem kernHaltE_of_EA {P : Programm D} {O : Orakel D} {passes : Nat} {M0 M : RufMaschineG D}
+    (h : KernHaltEA P O passes M0 M) : KernHaltE P O passes M0 M :=
+  fun kern ms fs n hl hn hKP => h kern ms fs n ⟨hl.1, fun k hk => schrittGA_of_g (hl.2 k hk)⟩ hn hKP
+
 /-! ## 2. Every leg, for any program meeting the premise groups with the rely -/
 
 section Aus
@@ -236,7 +261,7 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
       keinLogikHalt := hV.2.2.1
       keineVerklemmung := keine_verklemmungGA hH.1 hA.stufen sp init hLeer ls hls hGA
       keinZyklus := kein_warteZyklusGA hH.1 hA.stufen sp init hLeer hGA
-      keinKernHalt := kernHaltGA_gilt P O passes _ _
+      keinKernHalt := kernHaltEA_aus hvoll hA.abg hA.masken sp init M
       fortschritt := fortschrittG_GA hH.1 hA.stufen sp init (startSpur_nodup_leer init hLeer) hGA
         hV.2.2.1 (fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2 hS hZ.sperren hK hA.fuss t
           (hZI.1.1 t)) hA.antworten
@@ -386,7 +411,7 @@ theorem ziel_of_X (hT : ∀ c, ¬ Tg c) {M0 M : RufMaschineG D}
   keinLogikHalt := h.keinLogikHalt
   keineVerklemmung := h.keineVerklemmung
   keinZyklus := h.keinZyklus
-  keinKernHalt := kernHaltG_of_GA h.keinKernHalt
+  keinKernHalt := kernHaltE_of_EA h.keinKernHalt
   fortschritt := h.fortschritt
   zeit := fun f g n rho s0 k hadm hE M2 run hA => by
     have h1 := h.zeit f g n rho s0 k hadm hE M2 (SegLauf.alsX (Tg := Tg) run)
@@ -479,7 +504,7 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
       (kandB (verbindeP e E₁ E₂) fs (fussOrteG (verbindeP e E₁ E₂) f)) (fun _ => true) = true
@@ -532,6 +557,10 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
       exact hA₂.antworten f x hx
     · rw [hf] at hx
       exact hA₁.antworten f x hx
+  · intro w hw h hh
+    show Grammatik.mE (NurMaskiert D) ((verbindeP e E₁ E₂).rumpf h) = true
+    rw [verbindeP_rumpf]
+    exact hS.masken w hw h (hH w h hh)
 
 /-- The rely duty of a unit implies its duty of before. -/
 theorem nutzerTeil_of_A {eigen : D.Fn → Bool} {E : Einheit D} (h : NutzerTeilA eigen E) :

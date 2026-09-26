@@ -121,7 +121,8 @@
       `keineVerklemmung`, `keinZyklus`;
     - over MORE runs or steps (GA/GX contain G): `rennfrei` (`RennfreiBisGA`: every GA run,
       non-atomic carriers), `sperrWechsel`/`sperrSicht` (every GX step), `keinKernHalt`
-      (`KernHaltGA`), `zeit` (`ZeitAbX`: every GX segment), `fortschritt`/`spawnSicht` of the
+      (`KernHaltEA`: Opus agent H's leg with the program's own handlers, over GA runs,
+      from `AkzeptiertSpecX.masken`), `zeit` (`ZeitAbX`: every GX segment), `fortschritt`/`spawnSicht` of the
       thread machine (GX thread steps);
     - CHANGED FORM: `schwach` (`SchwachX`): every step W takes from a machine over `M` is a
       GX step, and the memory W presents is G's at every carrier OUTSIDE the shared atomics.
@@ -619,8 +620,9 @@
     checked by (a) but occurs in no run of G (the exporter starts every dispatch root, lane 198;
     the diff script pins both, K6). The shared-atomics statement `gabbro_ziel_atomar`
     (`ZielAtomar`, Zielsatz/AtomarAkzeptiert.lean) keeps F11's form `KernHaltGA`, which holds for
-    every program: `AkzeptiertX` has no handler component, so there the leg is still carried by
-    nothing of (a) (OFFEN O19).
+    every program. (Merge with lane O25c: the GOAL statement with the rely carries this hunk's
+    leg -- `AkzeptiertSpecX` has the field `masken`, `AkzeptiertX` the component `maskenB`, and
+    `ZielX.keinKernHalt` is `KernHaltEA`, this leg over GA runs, `kernHaltEA_aus`.)
   -- END handler block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
@@ -1858,6 +1860,8 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) 
   einzeln : EinzelnPool P fs ws
   renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
+  -- the handler discipline `H102` (Opus agent H), as in `AkzeptiertSpec`
+  masken : MaskenDisziplin P fs
 
 /-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
     G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
@@ -1923,6 +1927,14 @@ def KernHaltGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschin
       ∀ (g f : Faden) (L : D.Lock), H g → f ≠ g → kern f = kern g →
         AnSperre M g L → L ∉ offen ((M.faeden f).spur)
 
+/-- **No same-core interrupt deadlock, on GA runs** (`KernHaltE` of Opus agent H with `LaufGA`:
+    the handlers are the program's own, `HandlerVon`). -/
+def KernHaltEA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschineG D) : Prop :=
+  ∀ (kern : Faden → Nat) (ms : Nat → RufMaschineG D) (fs : Nat → Faden) (n : Nat),
+    LaufGA P O passes M0 ms fs n → ms n = M → KernPlan kern (HandlerVon P M0) ms fs n →
+    ∀ (g f : Faden) (L : D.Lock), HandlerVon P M0 g → f ≠ g → kern f = kern g →
+      AnSperre M g L → L ∉ offen ((M.faeden f).spur)
+
 /-- **The weak machine adds no behaviour outside the shared atomics `Tg`, at `M`**. For EVERY
     assignment `ord` of memory orders, every weak state `W` over `M` reached from the weak start
     over `M0`, and every step W takes from there (with its presented memory `σ`): it is a step
@@ -1965,7 +1977,7 @@ structure ZielX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   keinLogikHalt : KeinLogikHaltG O passes M
   keineVerklemmung : (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t
   keinZyklus : KeinWarteZyklus M
-  keinKernHalt : KernHaltGA P O passes M0 M
+  keinKernHalt : KernHaltEA P O passes M0 M
   fortschritt : FortschrittG P O passes M
   zeit : ZeitAbX P O passes Tg M
   folge : FolgeG P M
