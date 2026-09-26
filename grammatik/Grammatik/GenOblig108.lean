@@ -230,7 +230,7 @@ theorem gP_gabbro (hN : Zielsatz.NutzerPflicht gE) (O : Orakel gD)
     (hL : Zielsatz.Laufzeit gE sp init) (M : RufMaschineG gD.mitRuhe)
     (hr : RufErreichbarG gE.P.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M) :
     Zielsatz.Ziel gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (RufStartG gE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
+  Zielsatz.gabbro_ziel_g akzeptiert_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL M hr
 
 -- RELEASE OBLIGATIONS (stated, not discharged -- O12).

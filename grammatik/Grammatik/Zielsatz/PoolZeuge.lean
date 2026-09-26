@@ -42,7 +42,7 @@ open Gabbro.Grammatik
 /-! ## 1. The pool unit -/
 
 /-- **Probe B's program with `haupt` declared twice**: `concurrent { haupt, haupt }`. -/
-def zPool : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp⟩
+def zPool : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, []⟩
 
 /-- `haupt` is declared twice. -/
 theorem zPool_mehrfach : Mehrfach zPool.ws zHaupt := List.Sublist.refl _
@@ -70,7 +70,7 @@ theorem zPool_nutzerPflicht : NutzerPflicht zPool :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
     ⟨fun _ => rfl, fun a ha => by
-      simp only [zPool, List.mem_cons, List.not_mem_nil, or_false] at ha
+      simp only [zPool, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 /-! ## 2. The run: both instances step -/
@@ -145,7 +145,7 @@ theorem pool_ziel_zeuge : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
   · rw [hZ3.1]
     show () ∈ () :: offen (M2.weltVon 0).spur
     exact List.mem_cons_self
-  · exact gabbro_ziel akzeptiert_pruefer zD zPool ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
+  · exact gabbro_ziel_g akzeptiert_pruefer zD zPool ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩
       (by show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true
           exact zPool_akzeptiert)

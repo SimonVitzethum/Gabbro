@@ -361,7 +361,8 @@ theorem laufzeit_vor_neu {E : Einheit D} {sp : Speicher D.mitRuhe}
     (hs : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩)
     (he : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none) :
     Laufzeit E sp init :=
-  ⟨hl, hs, fun t u htu h => Or.inl (he t u htu h)⟩
+  ⟨hl, fun t => (hs t).imp id fun ⟨a, ha, h⟩ => ⟨a, List.mem_append_left _ ha, h⟩,
+    fun t u htu h => Or.inl (he t u htu h)⟩
 
 /-! ## The legs over multiset starts -/
 
