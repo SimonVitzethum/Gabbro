@@ -552,6 +552,8 @@ for 124 with `DRFSC` and `LaufzeitC` as named premises. Open, by plan §7.6:
 - [ ] **The linking theorem.** If each unit's certificate checks and the units' ABI interfaces
   match (decidable from the `_Static_assert` pins), the linked C refines the composition of the
   programs.
+  *(2026-09-26, Opus agent E: the MODEL half is proved -- `gabbro_ziel_verbund`; what remains
+  here is the C half: the linked C refines the linked G program, OFFEN O28.)*
 - [ ] **Inline assembly: a small ISA semantics** for exactly the stub patterns the emitter
   writes, so each stub gets a correspondence lemma instead of `AxCorr`.
 
@@ -655,13 +657,17 @@ one assumption list, and the number is booked before and after.*
 **NOT-CLAIMED items that earn a place here, ranked (Simon triage 2026-09-18).
 P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
 
-- [ ] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** The
-  statement is about ONE `Einheit`; cross-unit calls go through unchecked
-  `extern` today. Blocks the standard library (§0b first item — one item
-  seen from two sides) and the isolation product. Needs ABI-interface
-  matching decidable from the `_Static_assert` pins, the linking theorem
-  (§2), and what the goal says about two units. Opus-sized plus a review
-  round.
+- [x] **Linking separately compiled units (P0 — NOT-CLAIMED #10).** Done in the model
+  and at the source level 2026-09-26 (Opus agent E, `messung/OPUS-E-LINKEN.md`, SATZKARTE §54):
+  `GabbroZielVerbund` (Spec.lean, second statement, purely additive) proved as
+  `gabbro_ziel_verbund` -- two units over one link declaration, each accepted alone, the link
+  check over composed hulls (`schnittstelleB`), each user's duty over the bodies it owns, the
+  SAME hardware assumptions -> `ZielF` on the linked program. Rust: `gabbro link`,
+  `N501`-`N505`. What stays open is OFFEN O28: the review round of the Spec diff, the
+  composed-hull race check in Rust (threads on both sides are refused today; review E F1: a
+  pair with threads on ONE side and a read behind an imported head links green -- a known
+  false accept of `gabbro link`), multi-file
+  units and `gabbro build`, the C-level link step (the §2 item below).
 - [x] **Symmetric starts in the model (P0 — NOT-CLAIMED #9, O17, O18).** The
   checker accepts pools since lane 245; the goal theorem does not cover
   them at all (`Akzeptiert` still demands `ws.Nodup`, and (d) excludes a

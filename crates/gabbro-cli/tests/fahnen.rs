@@ -296,6 +296,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["abi"],
     &["new"],
     &["check", "pruefe"],
+    &["link", "verbinde"],
     &["build", "bau"],
     &["emit"],
     &["fragments", "fragmente"],

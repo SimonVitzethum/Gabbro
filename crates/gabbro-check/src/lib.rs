@@ -68,6 +68,9 @@ pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **`gabbro link` -- two separately compiled units against ONE link declaration** (Opus
+/// agent E, `N501`-`N505`; the Lean side is `GabbroZielVerbund`).
+pub mod verbund;
 /// **Lane 191 -- the derived contract as a view** (lever 1 of
 /// `PLAN-EINFACHHEIT.md`). Owns no refusal, only the register of what the
 /// checker derives per function: `gabbro abgeleitet` reads it.

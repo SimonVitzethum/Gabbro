@@ -1,0 +1,23 @@
+-- @gabi 1
+-- link-erwartet: N501
+-- **Link probe 1241 (Opus agent E): a STALE interface -- the parameter range changed.**
+-- What `gabbro abi` wrote for `tabelle-bib.gab` before `setze` took a `Stand`: the app checks
+-- clean against it (`setze(30)` fits `0 .. 50`), the link refuses -- the head's signature is not
+-- the body's. Kept by hand ON PURPOSE: a probe of a stale `.gabi` is a stale `.gabi`.
+
+module bib {
+pub const NSLOTS : u32 = 2;
+pub type Stand = u32 in 0 .. 100;
+pub table konto count NSLOTS {
+    slot {
+        stand : Stand,
+    }
+}
+pub lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+pub extern fn setze(x : u32 in 0 .. 50)
+    requires Held(L), konto.slots[0].stand == konto.slots[1].stand
+    ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops;
+}

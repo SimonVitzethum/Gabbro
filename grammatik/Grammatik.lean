@@ -329,3 +329,5 @@ import Grammatik.Speichermodell.Atomar
 import Grammatik.Speichermodell.AtomarZeuge
 import Grammatik.Speichermodell.Zaehler
 import Grammatik.ZeichenfolgeC
+import Grammatik.Zielsatz.Verbund
+import Grammatik.Zielsatz.VerbundZeuge
