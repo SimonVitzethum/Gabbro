@@ -2657,6 +2657,379 @@ lauf "beispiel159" "$W/beispiele/159-laufzeit-start.gab" "$TREIBER159" "64" \
      's/stand) + (uint32_t)(1)/stand) + (uint32_t)(0)/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (1 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 27. Driver capabilities, EXECUTED (lane 267, OFFEN O10) ---------------------------
+#
+# `FUENFTE-MARKE.md` books 24 of 30 virtio-net capabilities as "measured
+# writable": checker accepts, emitter lowers, `cc` compiles. That answers "is
+# the shape admissible", not "does the admissible shape carry what the
+# original carried" (O10). These eight runs execute the §2 probes against
+# hand-built fake devices and compare hand-computed outputs -- each with the
+# gift mutation that proves the expectation is load-bearing (R14).
+#
+# What stays unexecuted, and why (honest residue, lane 267):
+# - poll-used's empty completion (`stand == von`): unreachable single-threaded
+#   -- the bounded wait diverges first; it needs a concurrent wrap of the u16.
+# - merkmale's low-half mask: the static fake has no selector, so the last
+#   write wins; the mask's presence is M101's (the checker refused the silent
+#   truncation), not this run's.
+# - beide_warteschlangen end-to-end: needs per-queue device state; the
+#   DIFFERENT-offsets claim runs at the helper directly (fields 15-16).
+# - ruecksetzen's spin path: nothing single-threaded clears the cell mid-wait.
+# - rows #8/#11/#12/#13/#21/#22 (in virtio-net.gab), #24 (a refusal probe),
+#   #27 (composition): no executable probe; reclassified in MUSE-REPORT-267.
+TREIBER_O10_POLL='#include <stdio.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+_Noreturn void geraet_antwortet_nicht(void) { printf("HAENGT\n"); exit(1); }
+int main(void) {
+    UsedRing u;
+    for (unsigned i = 0; i < 8; i++) { u.slots[i].kopf = 0; u.slots[i].laenge = 0; }
+    u.slots[3].kopf = 7;
+    u.slots[3].laenge = 100;
+    USED_IDX = 5;
+    Abschluss a = poll_used(&u, 3, 4);
+    printf("%u %u\n", a.kopf, a.laenge);
+    return 0;
+}
+'
+#    Erwartet: 7 100 -- the used entry at slot 3 as id and length, separately.
+#    The gift reads `.laenge` into `.kopf`: the two fields are distinct claims.
+lauf "sonde-poll-used" "$W/messung/proben/probe-transport-poll-used.gab" "$TREIBER_O10_POLL" "7 100" \
+     's/.kopf = u->slots\[i\].kopf/.kopf = u->slots[i].laenge/' \
+     "2 assumptions (0 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 3 templates (0 of them UNPROVED), 7 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_KICK='#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static volatile uint8_t mmio[128];
+    memset((void *)mmio, 0, sizeof mmio);
+    uintptr_t base = (uintptr_t)mmio;
+    kick(base, 4, 8, 0x1234);
+    kick(base, 5, 8, 7);
+    printf("%u %u %u %u %u\n",
+           mmio[32], mmio[33], mmio[40], mmio[41], mmio[0]);
+    return 0;
+}
+'
+#    Erwartet: 52 18 7 0 0 -- queue 0x1234 at base+32 (LE), queue 7 at base+40,
+#    the window base itself untouched. The gift writes at +2, both cells move.
+lauf "sonde-kick" "$W/messung/proben/probe-transport-kick-berechneter-versatz.gab" "$TREIBER_O10_KICK" "52 18 7 0 0" \
+     's/f.basis + 0/f.basis + 2/' \
+     "1 assumptions (1 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_MERKMALE='#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "@ERZEUGT@"
+static uint32_t rd32(volatile uint8_t *p) {
+    uint32_t v;
+    memcpy(&v, (const void *)p, 4);
+    return v;
+}
+int main(void) {
+    static volatile uint8_t mmio[32];
+    memset((void *)mmio, 0, sizeof mmio);
+    uint32_t w = 32;
+    memcpy((void *)(mmio + 4), &w, 4);
+    Gemein g = { .basis = mmio };
+    uint64_t hat = angeboten(&g);
+    bool ok = aushandeln(&g, (uint64_t)4294967296u + 32u);
+    printf("%llu %u %d\n", (unsigned long long)hat, rd32(mmio + 12), (int)ok);
+    return 0;
+}
+'
+#    Erwartet: 137438953504 1 1 -- F_MAC up twice (32 | 32<<32), the high half
+#    of VERSION_1|MAC written last, MERKMALE_OK read back. The gift shifts by
+#    16 instead of 32.
+lauf "sonde-merkmale" "$W/messung/proben/probe-transport-merkmale-aushandeln.gab" "$TREIBER_O10_MERKMALE" "137438953504 1 1" \
+     's/(hoch << 32)/(hoch << 16)/' \
+     "5 assumptions (5 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_WARTESCHLANGE='#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "@ERZEUGT@"
+static unsigned genommen;
+void EINRICHTUNG_nimm(void) { genommen++; }
+void EINRICHTUNG_gib(void) { }
+static uint16_t rd16(volatile uint8_t *p) {
+    uint16_t v;
+    memcpy(&v, (const void *)p, 2);
+    return v;
+}
+static uint64_t rd64(volatile uint8_t *p) {
+    uint64_t v;
+    memcpy(&v, (const void *)p, 8);
+    return v;
+}
+static void wr16(volatile uint8_t *p, uint16_t v) { memcpy((void *)p, &v, 2); }
+int main(void) {
+    static volatile uint8_t mmio[64];
+    memset((void *)mmio, 0, sizeof mmio);
+    Gemein g = { .basis = mmio };
+    AvailKopf a;
+    UsedKopf u;
+    Warteschlange w1 = { 0, 0, 0 }, w2 = { 0, 0, 0 };
+    Aufsatzfehler e;
+    wr16(mmio + 24, 8);
+    wr16(mmio + 30, 3);
+    memset(&a, 0xFF, sizeof a);
+    memset(&u, 0xFF, sizeof u);
+    bool ok1 = warteschlange_aufsetzen(&g, &a, &u, 0, 0x5000, 0x10000, 16, &w1, &e);
+    unsigned zeroed = (a.merkmale == 0 && a.kopf == 0 && u.merkmale == 0 && u.kopf == 0);
+    uint64_t desk = rd64(mmio + 32), treiber = rd64(mmio + 40), geraet = rd64(mmio + 48);
+    uint16_t qgroesse = rd16(mmio + 24), qan = rd16(mmio + 28);
+    wr16(mmio + 24, 4);
+    wr16(mmio + 30, 7);
+    bool ok2 = warteschlange_aufsetzen(&g, &a, &u, 1, 0x5000, 0x10000, 16, &w2, &e);
+    wr16(mmio + 24, 0);
+    bool ok3 = warteschlange_aufsetzen(&g, &a, &u, 2, 0x5000, 0x10000, 16, &w2, &e);
+    int grund3 = (int)e;
+    Warteschlange d1 = { 0, 8, 3 }, d2 = { 0, 8, 7 }, d3 = { 0, 8, 3 };
+    printf("%d %u %u %llu %llu %llu %u %u %u %d %u %u %d %d %d %d %u\n",
+           (int)ok1, w1.groesse, w1.weckversatz, (unsigned long long)desk,
+           (unsigned long long)treiber, (unsigned long long)geraet,
+           qgroesse, qan, zeroed,
+           (int)ok2, w2.groesse, w2.weckversatz,
+           (int)ok3, grund3,
+           (int)weckversaetze_verschieden(d1, d2),
+           (int)weckversaetze_verschieden(d1, d3), genommen);
+    return 0;
+}
+'
+#    Erwartet: wish 16 clamps to the offered 8, both ring halves zeroed, the
+#    three device addresses, enable; then clamp to 4; then GibtEsNicht; then
+#    the helper on distinct/equal offsets; the guard taken thrice.
+lauf "sonde-warteschlange" "$W/messung/proben/probe-transport-warteschlange-aufsetzen.gab" "$TREIBER_O10_WARTESCHLANGE" "1 8 3 65536 65792 66048 8 1 1 1 4 7 0 1 1 0 3" \
+     's/dev_basis + 256/dev_basis + 512/' \
+     "7 assumptions (7 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (1 of them UNPROVED), 10 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_RUECKSETZEN='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "@ERZEUGT@"
+_Noreturn void ruecksetzung_haengt(void) { printf("HAENGT\n"); exit(1); }
+int main(void) {
+    static volatile uint8_t mmio[24];
+    memset((void *)mmio, 0, sizeof mmio);
+    mmio[20] = 0x84;
+    Gemein g = { .basis = mmio };
+    ruecksetzen(&g);
+    printf("%u\n", mmio[20]);
+    return 0;
+}
+'
+#    Erwartet: 3 -- the 0-write clears the stray bits, ACK|DRIVER are set.
+#    The gift sets bit 7 instead of ANERKANNT.
+lauf "sonde-ruecksetzen" "$W/messung/proben/probe-transport-ruecksetzen.gab" "$TREIBER_O10_RUECKSETZEN" "3" \
+     's/(uint8_t)(1) << 0u/(uint8_t)(1) << 7u/' \
+     "2 assumptions (1 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 3 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_ECAM='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "@ERZEUGT@"
+_Noreturn void kapliste_laeuft_im_kreis(void) { printf("KREIS\n"); exit(1); }
+static void w8(volatile uint8_t *p, uint8_t v) { memcpy((void *)p, &v, 1); }
+static void w32(volatile uint8_t *p, uint32_t v) { memcpy((void *)p, &v, 4); }
+int main(void) {
+    static volatile uint8_t cfg[512];
+    memset((void *)cfg, 0, sizeof cfg);
+    uint64_t base = (uint64_t)(uintptr_t)cfg;
+    w8(cfg + 0x34, 0x40);
+    w8(cfg + 0x40, 9); w8(cfg + 0x41, 0x50); w8(cfg + 0x43, 1); w8(cfg + 0x44, 0);
+    w32(cfg + 0x48, 0x100);
+    w32(cfg + 0x40 + 16, 2);
+    w8(cfg + 0x50, 9); w8(cfg + 0x51, 0x00); w8(cfg + 0x53, 2); w8(cfg + 0x54, 1);
+    w32(cfg + 0x58, 0x200); w32(cfg + 0x50 + 16, 4);
+    w32(cfg + 0x10, 0x10000000u);
+    w32(cfg + 0x14, 0x20000004u);
+    w32(cfg + 0x18, 0x00000001u);
+    w32(cfg + 0x1c, 0x00000001u);
+    Transport t = { 0, 0, 0, 0 };
+    Ecamfehler grund = 0;
+    bool ok = ecam_absuchen(base, &t, &grund);
+    uint64_t b0 = bar_adresse(base, 0);
+    uint64_t b1 = bar_adresse(base, 1);
+    uint64_t b3 = bar_adresse(base, 3);
+    static volatile uint8_t leer[64];
+    memset((void *)leer, 0, sizeof leer);
+    Transport t2 = { 0, 0, 0, 0 };
+    Ecamfehler g2 = 0;
+    bool ok2 = ecam_absuchen((uint64_t)(uintptr_t)leer, &t2, &g2);
+    printf("%llu %llu %u %llu %d %llu %llu %llu %d %d\n",
+           (unsigned long long)t.gemein, (unsigned long long)t.weckbasis,
+           t.weckfaktor, (unsigned long long)t.geraetekonfig, (int)ok,
+           (unsigned long long)b0, (unsigned long long)b1,
+           (unsigned long long)b3, (int)ok2, (int)g2);
+    return 0;
+}
+'
+#    Erwartet: common_cfg at 0x10000000+0x100, notify at 0x1_20000000+0x200
+#    with factor 4, no device config; mem32/64-bit/I-O BARs read directly;
+#    the empty list answers KeinGemein. The gift drops the offset addition.
+lauf "sonde-ecam" "$W/messung/proben/probe-ecam-faehigkeitenlauf.gab" "$TREIBER_O10_ECAM" "268435712 4831838720 4 0 1 268435456 4831838208 0 0 1" \
+     's/adresse = barbasis + versatz/adresse = barbasis/' \
+     "9 assumptions (8 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 3 templates (0 of them UNPROVED), 8 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_REGION='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "@ERZEUGT@"
+_Noreturn void zu_lang(void) { printf("ZULANG\n"); exit(1); }
+static uint64_t desk_adresse;
+static uint32_t desk_laenge;
+void deskriptor_stellen(uint64_t adresse, uint32_t laenge) {
+    desk_adresse = adresse;
+    desk_laenge = laenge;
+}
+int main(void) {
+    Bereich b = { 0x1000, 0x2000, 8192, 0 };
+    Puffer p = { 0, 0, 0 };
+    Schnittfehler e = 0;
+    bool ok1 = schneiden(&b, 0, 2048, &p, &e);
+    Puffer p1 = p;
+    uint64_t s1 = b.schnitt;
+    bool ok2 = schneiden(&b, 1024, 100, &p, &e);
+    int g2 = (int)e;
+    bool ok3 = schneiden(&b, 2048, 7000, &p, &e);
+    int g3 = (int)e;
+    bool ok4 = schneiden(&b, 2048, 1024, &p, &e);
+    int p4stimmt = (p.cpu == 0x1000 + 2048 && p.dev == 0x2000 + 2048 && p.laenge == 1024);
+    static volatile Bytes t;
+    for (unsigned i = 0; i < 2048; i++) t.slots[i].b = 0xFF;
+    nullen_ganz(&t);
+    unsigned summe = 0;
+    for (unsigned i = 0; i < 2048; i++) summe += t.slots[i].b;
+    for (unsigned i = 0; i < 2048; i++) t.slots[i].b = (uint8_t)(i & 0xFF);
+    nullen(&t, 100);
+    unsigned rest = 0;
+    for (unsigned i = 0; i < 100; i++) rest += t.slots[i].b;
+    unsigned unangetastet = t.slots[100].b;
+    Zweiachser z = { 0x3000, 0x4000, 512 };
+    geraetesicht_umhaengen(&z, 0x5000);
+    richtig_armieren(&z);
+    printf("%d %llu %llu %u %llu %d %d %d %d %d %d %u %u %u %llu %u\n",
+           (int)ok1, (unsigned long long)p1.cpu, (unsigned long long)p1.dev,
+           p1.laenge, (unsigned long long)s1,
+           (int)ok2, g2, (int)ok3, g3, (int)ok4, p4stimmt,
+           summe, rest, unangetastet,
+           (unsigned long long)desk_adresse, desk_laenge);
+    return 0;
+}
+'
+#    Erwartet: the first cut and its two views, the two refusals as different
+#    findings, the second cut; both zeroings (slot 100 untouched); arming
+#    hands the MOVED device view to the descriptor. The gift never advances
+#    the cut, so the overlap refusal stops firing.
+lauf "sonde-region" "$W/messung/proben/probe-region-schnitt-und-nullen.gab" "$TREIBER_O10_REGION" "1 4096 8192 2048 2048 0 2 0 1 1 1 0 0 100 20480 512" \
+     's/b->schnitt = ende/b->schnitt = 0/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 4 templates (0 of them UNPROVED), 9 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_NETZ='#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static uint8_t rahmen[64];
+    memset(rahmen, 0, sizeof rahmen);
+    EthArp r = { rahmen, sizeof rahmen };
+    arp_anfrage_stellen(&r, 0x11223344u, 0x5566u, 0x0A000001u, 0x0A000002u);
+    static uint8_t antwort[64];
+    memset(antwort, 0, sizeof antwort);
+    EthArp a = { antwort, sizeof antwort };
+    EthArp_setz_opcode(&a, 2);
+    EthArp_setz_absender_ip(&a, 0x0A000002u);
+    bool ja = antwort_pruefen(&a, 60, 0x0A000002u);
+    bool falscher_opcode = antwort_pruefen(&r, 60, 0x0A000002u);
+    bool zu_kurz = antwort_pruefen(&a, 10, 0x0A000002u);
+    bool falsche_ip = antwort_pruefen(&a, 60, 0x0A000003u);
+    static volatile uint8_t konfig[8];
+    uint32_t mhi = 0xAABBCCDDu;
+    uint16_t mlo = 0xEEFFu;
+    memcpy((void *)konfig, &mhi, 4);
+    memcpy((void *)(konfig + 4), &mlo, 2);
+    GeraeteKonfig k = { .basis = konfig };
+    Netzergebnis mit = mac_lesen(&k, true);
+    Netzergebnis ohne = mac_lesen(&k, false);
+    printf("%u %u %u %u %u %u %u %u %u %u %d %d %d %d %d %u %u %d %u %u\n",
+           EthArp_ziel_mac_hi(&r), EthArp_ziel_mac_lo(&r),
+           EthArp_quell_mac_hi(&r), EthArp_quell_mac_lo(&r),
+           EthArp_ethertyp(&r), EthArp_opcode(&r),
+           EthArp_absender_ip(&r), EthArp_ziel_ip(&r),
+           EthArp_ziel2_mac_hi(&r), EthArp_ziel2_mac_lo(&r),
+           (int)ja, (int)falscher_opcode, (int)zu_kurz, (int)falsche_ip,
+           (int)mit.merkmale_ok, mit.mac_hi, mit.mac_lo,
+           (int)ohne.merkmale_ok, ohne.mac_hi, ohne.mac_lo);
+    return 0;
+}
+'
+#    Erwartet: broadcast destination, our MAC twice, ethertyp/opcode/addresses,
+#    the target hardware address zero (THAT IS THE QUESTION); the reply judged
+#    on length, opcode and sender; the MAC present and absent as a field. The
+#    gift writes opcode 2 at the request.
+lauf "sonde-netz" "$W/messung/proben/probe-netz-rahmen-und-ergebnis.gab" "$TREIBER_O10_NETZ" "4294967295 65535 287454020 21862 2054 1 167772161 167772162 0 0 1 0 0 0 1 2864434397 61183 0 0 0" \
+     's/EthArp_setz_opcode(r, 1)/EthArp_setz_opcode(r, 2)/' \
+     "2 assumptions (2 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER_O10_BESITZ='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+static uint8_t zelle;
+static int eigner;
+static char folge[16];
+static unsigned n;
+static void merke(char c) { folge[n++] = c; }
+FahrerPuffer schreibe(FahrerPuffer b, uint8_t v) {
+    if (eigner != 0) { printf("SCHREIBT-IM-GERAET\n"); exit(1); }
+    zelle = v;
+    merke('"'"'s'"'"');
+    return b;
+}
+GeraetPuffer arm(FahrerPuffer b) {
+    (void)b;
+    if (eigner != 0) { printf("DOPPEL-ARM\n"); exit(1); }
+    eigner = 1;
+    merke('"'"'a'"'"');
+    return (GeraetPuffer){ 0 };
+}
+FahrerPuffer hole(GeraetPuffer b, uint64_t q) {
+    (void)b; (void)q;
+    if (eigner != 1) { printf("HOLT-OHNE-ARM\n"); exit(1); }
+    eigner = 0;
+    merke('"'"'h'"'"');
+    return (FahrerPuffer){ 0 };
+}
+FahrerPuffer hole_unbelegt(GeraetPuffer b) {
+    (void)b;
+    if (eigner != 1) { printf("HOLT-OHNE-ARM\n"); exit(1); }
+    eigner = 0;
+    merke('"'"'u'"'"');
+    return (FahrerPuffer){ 0 };
+}
+void fertig(FahrerPuffer b) {
+    (void)b;
+    if (eigner != 0) { printf("FERTIG-IM-GERAET\n"); exit(1); }
+    merke('"'"'f'"'"');
+}
+int main(void) {
+    runde((FahrerPuffer){ 0 }, 41);
+    runde_unbelegt((FahrerPuffer){ 0 });
+    folge[n] = 0;
+    printf("%s %u\n", folge, zelle);
+    return 0;
+}
+'
+#    Erwartet: sahsfauf 9 -- fill, hand over, take back against the receipt,
+#    fill again, then the unproven way back; the last write (9) stands. The
+#    run proves the lowered code calls the five operations in the proved order
+#    with the proved values; the EXCLUSION is the checker'"'"'s (gifts
+#    671/672/673 pin the refusals) with a run-time tripwire beside it. The
+#    gift writes 10 last.
+lauf "sonde-besitz" "$W/messung/proben/probe-besitz-zwei-typen.gab" "$TREIBER_O10_BESITZ" "sahsfauf 9" \
+     's/schreibe(b3, 9)/schreibe(b3, 10)/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 11 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -3535,7 +3908,10 @@ MARKE_EMIT=138
 # **146 -> 152 on 2026-09-26 (merge of Opus F).** Six new link probes under
 # `messung/proben/verbund/` (1246-1248 and the guarded / both-threads twins) emit. The lane
 # measured no delta on its older base; re-measured here by the merger.
-MARKE_EMIT_M=152
+# **152 -> 153 on 2026-09-26 (merge of lane 267, O10).** The queue capability probe was red
+# (`H018`, a rule newer than the probe) and now holds `lock EINRICHTUNG` over both halves, so it
+# emits. Re-measured by the merger.
+MARKE_EMIT_M=153
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

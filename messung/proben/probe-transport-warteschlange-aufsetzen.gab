@@ -59,6 +59,14 @@ reason Aufsatzfehler {
     exhaustive
 }
 
+-- H018 (since 2026-09-10) refuses the unguarded handoff: a DMA-buffer write
+-- plus the MMIO doorbell in one body need ONE guard across both. Queue setup
+-- establishes a DMA window and rings the card, so it holds EINRICHTUNG across
+-- both halves (added 2026-09-26, lane 267; the capability is unchanged).
+lock EINRICHTUNG protects { einricht_zaehler } rank 1 held <= 1000 ops;
+
+static mut einricht_zaehler : u32 = 0;
+
 impl fn warteschlange_aufsetzen(g : ptr<mmio, rw> Gemein,
                                 a : ptr<dma, rw> AvailKopf,
                                 u : ptr<dma, rw> UsedKopf,
@@ -69,9 +77,10 @@ impl fn warteschlange_aufsetzen(g : ptr<mmio, rw> Gemein,
     effects { writes g.Q_WAHL, reads g.Q_GROESSE, writes g.Q_GROESSE,
               writes g.Q_DESK, writes g.Q_TREIBER, writes g.Q_GERAET,
               reads g.Q_WECKVERSATZ, writes g.Q_AN,
-              writes a, writes u }
+              writes a, writes u, locks EINRICHTUNG }
     costs   <= 256 ops
 {
+    locks EINRICHTUNG {
     g.Q_WAHL = nummer;
     let qmax = g.Q_GROESSE;
     if qmax == 0 {
@@ -97,6 +106,7 @@ impl fn warteschlange_aufsetzen(g : ptr<mmio, rw> Gemein,
     let versatz = g.Q_WECKVERSATZ;
     g.Q_AN = 1;
     return Warteschlange(cpu_basis: cpu_basis, groesse: groesse, weckversatz: versatz);
+    }
 }
 
 -- The caller side: the `else` branch must diverge or return, so "the queue does not exist"
@@ -109,7 +119,7 @@ impl fn beide_warteschlangen(g : ptr<mmio, rw> Gemein,
     effects { writes g.Q_WAHL, reads g.Q_GROESSE, writes g.Q_GROESSE,
               writes g.Q_DESK, writes g.Q_TREIBER, writes g.Q_GERAET,
               reads g.Q_WECKVERSATZ, writes g.Q_AN,
-              writes a, writes u }
+              writes a, writes u, locks EINRICHTUNG }
     costs   <= 1024 ops
 {
     let rx = warteschlange_aufsetzen(g, a, u, 0, cpu_basis, dev_basis, QGROESSE) else (e) {
