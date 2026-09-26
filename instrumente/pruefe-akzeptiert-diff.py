@@ -21,7 +21,12 @@
 #   hidden. The comparison therefore measures ONE direction: Rust accepts
 #   ==> Lean accepts. The other direction (Rust refuses ==> Lean refuses)
 #   is pinned by the gift probes of each code, not by this script.
-# * Starts (`gWs`) are the `concurrent` members of the unit. `entry`/`boot`
+# * Starts (`gWs`) are `Einheit.ws` rebuilt from the SOURCE: the `concurrent`
+#   members, then every root of a `start { … };` statement TWICE (Opus agent A,
+#   2026-09-26: a run-time root is judged as a pool routine, `Einheit.ws` in
+#   `Zielsatz/Spec.lean`; the exporter carries the roots as `gE.gestartet`,
+#   and construction pin K5 holds the two lists against each other).
+# * `entry`/`boot`
 #   roots count as starts on the Rust side (`startexklusiv.rs`); a file
 #   using them is marked PARTIAL and excluded from the agreement count --
 #   the export drops them ("not a G notion"), so the Lean side cannot see
@@ -80,11 +85,13 @@ KOMPONENTEN = [
     # by `tr_locks`/`LG004`) and is listed only under `fuss`, where its
     # floor leg belongs.
     ("sperrOrte", "sperrOrteB {S} {ls}", None),  # vacuous: one source, see above
-    ("wurzeln", "wurzelnB {ws}", ["N302", "N303"]),
+    ("wurzeln", "wurzelnB {ws}", ["N302", "N303", "N458"]),
     # Since fix lane F10 the component is `einzelnPoolB` (`EinzelnPool`: a
     # routine declared twice is pool-safe), decided by `N304` alone; the idle
     # refusal `N315` is retired (an idle routine is the empty pool).
-    ("einzeln", "einzelnPoolB {P} {fs} {cs} {ws}", ["N304"]),
+    # A run-time root stands twice in `ws`, so its pool safety is this component too:
+    # `N462` decides it for a `start` root (Opus agent A, 2026-09-26).
+    ("einzeln", "einzelnPoolB {P} {fs} {cs} {ws}", ["N304", "N462"]),
     ("renn", "rennB {P} {fs} {cs} {ws}", ["N300", "N301"]),
     ("antworten", "antwortenB {P} {fs}",
      ["N310", "N311", "N312", "N313", "N314", "N316"]),
@@ -102,6 +109,8 @@ AKZEPTIERT_CODES = frozenset([
     "N300", "N301", "N302", "N303", "N304",
     "N310", "N311", "N312", "N313", "N314",
     "N315", "N316", "N317", "N318", "N319",
+    # the run-time roots (Opus agent A, 2026-09-26): root shape, pool safety
+    "N458", "N462",
 ])
 
 # Corpus roots walked for exportable programs (the clean half of the
@@ -145,8 +154,25 @@ def kommentarlos(quelle):
         l.split("--")[0] if "--" in l else l for l in quelle.splitlines())
 
 
+def wurzeln_aus(quelle):
+    """The run-time roots from the source: every root of a `start { … };`
+    statement (short names), each once, in text order -- the order the
+    exporter's `check_gestartet` walks."""
+    text = kommentarlos(quelle)
+    wurzeln = []
+    for m in re.finditer(r"(?<![\w.])start\s*\{([^}]*)\}\s*;", text):
+        for teil in m.group(1).split(","):
+            teil = teil.strip()
+            if teil:
+                name = teil.split("::")[-1]
+                if name not in wurzeln:
+                    wurzeln.append(name)
+    return wurzeln
+
+
 def startet_aus(quelle):
-    """Declared starts from the source: `concurrent` members (short names).
+    """`Einheit.ws` from the source: the `concurrent` members (short names),
+    then every run-time root twice.
 
     Returns (starts, partial): partial is True where the file uses `entry`
     or `boot` roots, which the export cannot carry.
@@ -159,6 +185,8 @@ def startet_aus(quelle):
             if not teil:
                 continue
             starts.append(teil.split("::")[-1])
+    wurzeln = wurzeln_aus(quelle)
+    starts = starts + wurzeln + wurzeln
     partial = bool(re.search(r"(?m)^\s*(entry|boot)\b", text))
     return starts, partial
 
@@ -203,7 +231,16 @@ def parse_export(text):
             "funktionen": funktionen, "globale": globale}
 
 
-def pruefe_konstruktion(export, exp):
+def export_gestartet(export):
+    """The run-time roots the export carries (`gestartet := [⟨g_x, .nil⟩, …]`),
+    or [] where the line is absent (the field's default)."""
+    m = re.search(r"(?m)^  gestartet := \[(.*)\]$", export)
+    if not m:
+        return []
+    return re.findall(r"⟨g_(\w+), \.nil⟩", m.group(1))
+
+
+def pruefe_konstruktion(export, exp, quelle=None):
     """Pin the exporter CONSTRUCTION the four vacuous components rest on.
 
     Each `Akzeptiert` component without a Rust rule holds on every export
@@ -306,6 +343,16 @@ def pruefe_konstruktion(export, exp):
         if ref not in mitglieder:
             bruch.append("K4: `GFn.%s` named but not a declared member -- "
                          "a call leaves the member list" % ref)
+    # K5 (Opus agent A, 2026-09-26): the run-time roots the export carries are
+    # exactly the `start` roots of the source, in order -- the `ws` this script
+    # rebuilds from the source doubles them, so a drift would compare a
+    # different `ws` than the goal theorem's `gE.ws`.
+    if quelle is not None:
+        quell = wurzeln_aus(quelle)
+        exp_w = export_gestartet(export)
+        if quell != exp_w:
+            bruch.append("K5: source `start` roots %s but export `gestartet` %s"
+                         % (quell, exp_w))
     return bruch
 
 
@@ -395,14 +442,12 @@ def lean_lauf(sondentext, exporttext, frist):
                   if re.search(r"\.lean:\d+:\d+: error", l)]
         # A verdict needs EVIDENCE: either the wrapper's exit line, or a real
         # process exit code from `lake env lean`. Anything else is not a verdict.
-        # **Two wrappers, two exit lines** (Opus agent B, 2026-09-26): the fisch
-        # lane wrapper prints `== lean exit code: 0`, the local one that
-        # `gabbro-muse/bin/werkzeug` writes prints `== 0 error(s) in the COMPLETE
-        # output`. With only the first known, every local run read NOT MEASURED
-        # for all 21 programs and the self-test failed at 104 -- the apparatus,
-        # not the tree. Both lines are evidence; neither is guessed.
-        wrapper = ("== lean exit code: 0" in p.stdout
-                   or "== 0 error(s) in the COMPLETE output" in p.stdout)
+        # Two wrapper dialects: the lane clones' (`== lean exit code: 0`) and the
+        # local queued one of 2026-09-26 (`== 0 error(s) in the COMPLETE output`,
+        # which counts EVERY error line of the run, not only the first 40).
+        wrapper = ("== lean exit code: 0" in p.stdout or
+                   re.search(r"(?m)^== 0 error\(s\) in the COMPLETE output", p.stdout)
+                   is not None)
         direkt = (os.path.basename(ruf[0]) == "lake")
         if not fehler and not wrapper and not direkt:
             return None, [], "NICHT GEMESSEN: no verdict line\n" + p.stdout + p.stderr
@@ -478,7 +523,7 @@ def main():
         # an agreement. A violation is infrastructure-red (exit 2), not a
         # finding: it says the MEASURE no longer measures, not that the
         # checker disagrees.
-        for bruch in pruefe_konstruktion(export, parsed):
+        for bruch in pruefe_konstruktion(export, parsed, quelle):
             konstruktion.append((rel, bruch))
         fehler, _ = pruefe_codes(gabbro, datei)
         rust_ok = not (fehler & AKZEPTIERT_CODES)
@@ -600,6 +645,31 @@ def selbsttest(gabbro, frist):
     assert ok3, "the pool must be accepted by the Lean Bool: %s / %s" % (gefallen3,
                                                                          raw3[-2000:])
     print("selbsttest pool: 157 (one routine twice) accepted at einzeln")
+    # Run-time roots (Opus agent A, 2026-09-26): a `start` of two pool-safe roots
+    # exports its roots as `gestartet`, the source-rebuilt `ws` doubles them, and
+    # the Lean Bool accepts; the same export with a root that needs a lock at entry
+    # (`setze`, `requires Held(L)` -- the shape of a `child` lifted from inside
+    # `locks`) doubled as a run-time root refuses at `wurzeln`.
+    datei = os.path.join(W, "messung/proben/faden-start-pool.gab")
+    rc, export, err = exportiere(gabbro, datei)
+    assert rc == 0, "faden-start-pool must export (the start travels): %s" % err
+    parsed = parse_export(export)
+    assert parsed, "faden-start-pool export parses"
+    quelle = open(datei, encoding="utf-8").read()
+    assert export_gestartet(export) == ["arbeiterA", "arbeiterB"], \
+        "the roots travel as gestartet: %s" % export_gestartet(export)
+    assert not pruefe_konstruktion(export, parsed, quelle), "K1-K5 hold"
+    starts, _ = startet_aus(quelle)
+    assert starts == ["chef", "arbeiterA", "arbeiterB", "arbeiterA", "arbeiterB"], starts
+    ok4, gefallen4, raw4 = lean_lauf(sonde(parsed["ns"], parsed, starts), export, frist)
+    assert ok4, "the run-time roots must be accepted: %s / %s" % (gefallen4, raw4[-2000:])
+    print("selbsttest start: faden-start-pool (two run-time roots) accepted")
+    ok5, gefallen5, raw5 = lean_lauf(
+        sonde(parsed["ns"], parsed, ["chef", "setze", "setze"]), export, frist)
+    assert not ok5 and "wurzeln" in gefallen5, \
+        "a root holding a lock at entry must refuse at wurzeln: %s / %s" % (
+            gefallen5, raw5[-2000:])
+    print("selbsttest start negativ: a root needing a lock refuses at wurzeln")
     print("SELBSTTEST: ok (both directions)")
     return 0
 

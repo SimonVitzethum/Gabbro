@@ -207,7 +207,7 @@ cell" would in addition need a core per thread in G (pinning; O19). The exporter
 | `pruefe-todo.py`, `pruefe-englisch.py` | red with findings unrelated to this branch (EBNF counts, German checker messages in `crates/`, which this branch does not touch) |
 
 Files: `grammatik/Grammatik/Speichermodell/{Sicht,MaschineW,DRF,Zeuge}.lean`,
-`grammatik/Grammatik/Zielsatz/{Spec,Beweis,Schwach}.lean`, `dokumente/SATZKARTE.md` §49,
+`grammatik/Grammatik/Zielsatz/{Spec,Beweis,Schwach}.lean`, `dokumente/SATZKARTE.md` §50,
 `dokumente/OFFEN.md` O17 (narrowed), O25 (new), `TODO.md` §2/§3, `instrumente/pruefe-akzeptiert-diff.py`.
-Numbering note for the merger: SATZKARTE §49 and OFFEN O25 may collide with Opus agent A's
+Numbering note: SATZKARTE §49 collided with Opus agent A's §49 and became §50 at the merge; OFFEN O25 did not collide. Original note: SATZKARTE §49 and OFFEN O25 may collide with Opus agent A's
 additions — renumber on merge.

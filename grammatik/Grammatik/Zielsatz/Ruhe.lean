@@ -535,7 +535,7 @@ theorem laufzeit_initRuhe (E : Einheit D) :
     unfold initRuhe
     rcases h : E.starts[t]? with _ | ⟨w, ρ⟩
     · exact Or.inl rfl
-    · exact Or.inr ⟨⟨w, ρ⟩, List.mem_of_getElem? h, rfl⟩
+    · exact Or.inr ⟨⟨w, ρ⟩, List.mem_append_left _ (List.mem_of_getElem? h), rfl⟩
   einmal t u htu he := by
     revert he
     unfold initRuhe
@@ -551,9 +551,13 @@ theorem laufzeit_initRuhe (E : Einheit D) :
             have hu' : (E.starts.map (·.1))[u]? = some a.1 := by
               rw [List.getElem?_map, hu, hab]; rfl
             refine Or.inr ⟨a.1, rfl, ?_⟩
+            have hsub : List.Sublist (E.starts.map (·.1)) E.ws := by
+              unfold Einheit.ws
+              rw [List.append_assoc, List.map_append]
+              exact List.sublist_append_left _ _
             rcases Nat.lt_or_gt_of_ne htu with h | h
-            · exact mehrfach_of_getElem? h ht' hu'
-            · exact mehrfach_of_getElem? h hu' ht'
+            · exact (mehrfach_of_getElem? h ht' hu').trans hsub
+            · exact (mehrfach_of_getElem? h hu' ht').trans hsub
 
 /-- The runtime's exact start is always in the class A4 describes (since fix
     lane F10 without a checker fact; the name is kept for its callers). -/
@@ -570,15 +574,16 @@ theorem laufzeit_nur_erklaert {E : Einheit D} {sp : Speicher D.mitRuhe}
     cases hf
   · rw [h] at hf
     cases hf
-    exact List.mem_map_of_mem ha
+    exact List.mem_map_of_mem (List.mem_append_left _ ha)
 
 /-- A program that declares no start runs the root on every thread. -/
-theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) {sp : Speicher D.mitRuhe}
+theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) (h1 : E.gestartet = [])
+    {sp : Speicher D.mitRuhe}
     {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
     (hL : Laufzeit E sp init) (t : Faden) : (init t).1 = none := by
   rcases hL.start t with h | ⟨a, ha, _⟩
   · rw [h]
-  · rw [h0] at ha
+  · rw [h0, h1] at ha
     exact absurd ha List.not_mem_nil
 
 /-- The runtime's root on every thread from the declared memory is always a

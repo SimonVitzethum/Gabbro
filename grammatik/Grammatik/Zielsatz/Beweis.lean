@@ -69,6 +69,7 @@ import Grammatik.ZielOrtInvGrund
 import Grammatik.Fortschritt
 import Grammatik.Zielsatz.Masken
 import Grammatik.Speichermodell.DRF
+import Grammatik.Zielsatz.Faeden
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -162,6 +163,33 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     zeit := fun f g n _ _ _ hadm hE _ run hA' =>
       frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
 
+/-- **Every leg of `ZielF` on every thread-machine run** (2026-09-26): `Ziel` on its G state
+    (the bridge `fadenErreichbar_G` and `ziel_aus`), and the spawn and join legs
+    (Zielsatz/Faeden.lean) from the same premise groups. -/
+theorem zielF_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlung D.Fn)
+    (ls : Aufzaehlung D.Lock) (ws : List D.Fn)
+    (hA : AkzeptiertSpec P S fs.1 ws) (hN : LogikPflicht P S Q) (O : Orakel D)
+    (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs.1 ws sp init)
+    (lebt0 : Faden → Bool) (K : FadenMaschine D)
+    (hK : FadenErreichbar P O passes (FadenStart P sp init lebt0) K) :
+    ZielF P S O passes (RufStartG P sp init) K := by
+  obtain ⟨-, -, -, -, -, -, -, -, hSt, hLeer, -⟩ := Akzeptiert_ok fs.2 hA hZ
+  have hI := fadenInv_erreichbar hK
+  have hG := ziel_aus P S Q fs ls ws hA hN O hH passes sp init hZ K.m hI.lauf
+  exact {
+    g := hG
+    schlafendUnberuehrt := hI.schlaeft
+    schlafendFrei := fun t ht L hL => by
+      rw [faden_schlafend_frei rfl hI t ht (hLeer t)] at hL
+      exact List.not_mem_nil hL
+    joinFrei := fun t ht L hL => by
+      rw [hI.joinFrei t ht] at hL
+      exact List.not_mem_nil hL
+    keineVerklemmung := keine_verklemmungF hH.1 hSt sp init hLeer ls.1 ls.2 hI
+    keinZyklus := kein_warteZyklusF hI hG.keinZyklus
+    fortschritt := fortschrittF_aus hG.fortschritt }
+
 end Aus
 
 /-! ## 2. The start, from (b) and (d) -/
@@ -184,7 +212,7 @@ theorem startZulaessig_aus (E : Einheit D) (fs : List D.Fn) (hN : StartPflicht E
     · rw [h]
       exact Or.inr (ruhig_mitRuhe E.P)
     · rw [h]
-      exact Or.inl (List.mem_map_of_mem (List.mem_map_of_mem ha))
+      exact Or.inl (List.mem_map_of_mem (List.mem_map_of_mem (List.mem_append_left _ ha)))
   einmal t u htu he := by
     rcases hL.einmal t u htu he with h | ⟨w, hw, hm⟩
     · rw [h]
@@ -210,17 +238,35 @@ end Start
 /-- **GABBRO_ZIEL, PROVED.** For every checker `C`, every declaration and
     program `E` accepted by it, the user's logic (bodies AND start), the
     named hardware assumptions and the runtime's start of `E` (A4, with the
-    idle root): every leg of `Ziel` on every reachable machine. -/
+    idle root): every leg of `ZielF` on every reachable THREAD machine (since
+    2026-09-26: threads spawned at run time by `start`/`child` included). -/
 theorem gabbro_ziel : GabbroZiel := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL M hr
+  intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
   have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hC)
-  exact ziel_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
+  exact zielF_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
     (wsRuhe E.ws) hA (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp
-    init (startZulaessig_aus E fs.1 hN.start hL) M hr
+    init (startZulaessig_aus E fs.1 hN.start hL) lebt0 K hK
+
+/-- **The statement of before, as a corollary** (the embedding direction of the 2026-09-26
+    diff): every machine-G run is a thread-machine run in which every thread is live and
+    nothing is spawned (`fadenErreichbar_von_G`), so `Ziel` holds on every reachable machine
+    of G, exactly as `gabbro_ziel` said until then. -/
+theorem gabbro_ziel_g (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
+    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
+    (hL : Laufzeit E sp init) (M : RufMaschineG D.mitRuhe)
+    (hr : RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M) :
+    Ziel E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) M :=
+  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
+    (FadenMaschine.alleLebend M) (fadenErreichbar_von_G hr)).g
 
 #print axioms Gabbro.Grammatik.Zielsatz.kein_warteZyklusG
 #print axioms Gabbro.Grammatik.Zielsatz.ziel_aus
 #print axioms Gabbro.Grammatik.Zielsatz.startZulaessig_aus
+#print axioms Gabbro.Grammatik.Zielsatz.zielF_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_g
 
 end Gabbro.Grammatik.Zielsatz

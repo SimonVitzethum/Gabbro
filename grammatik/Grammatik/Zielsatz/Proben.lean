@@ -81,7 +81,7 @@ theorem havocOk_bewohnt {D : Deklaration} {E : Einheit D} (h : NutzerPflicht E) 
 theorem start_req_widerlegt {D : Deklaration} (E : Einheit D)
     (a : Σ w : D.Fn, Env D (D.params w)) (ha : a ∈ E.starts)
     (hf : ¬ ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2) : ¬ NutzerPflicht E :=
-  fun h => hf (h.start.req a ha)
+  fun h => hf (h.start.req a (List.mem_append_left _ ha))
 
 /-- The float literal of probe F1 is outside its range, by computation. -/
 theorem f1_lit_ausser : gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := rfl
@@ -189,15 +189,17 @@ theorem akP3_ohne_starts :
     Akzeptiert akP3 akS akFs [()] akCs [] = true ∧
     ∀ (sp : Speicher akD.mitRuhe)
       (init : Faden → Σ f : akD.mitRuhe.Fn, Env akD.mitRuhe (akD.mitRuhe.params f)),
-      Laufzeit ⟨akP3, akS, axWahr akD, [], akSp⟩ sp init → ∀ t, (init t).1 = none :=
-  ⟨by decide, fun _ _ hL t => laufzeit_ohne_starts rfl hL t⟩
+      Laufzeit ⟨akP3, akS, axWahr akD, [], akSp, []⟩ sp init → ∀ t, (init t).1 = none :=
+  ⟨by decide, fun _ _ hL t => laufzeit_ohne_starts rfl rfl hL t⟩
 
 /-! ## 4. The two-thread program -/
 
 /-- Every declared start runs on some thread of the runtime's exact start. -/
-theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) :
+theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []) :
     ∀ w ∈ E.ws, ∃ t : Faden, (initRuhe E.starts t).1 = some w := by
   intro w hw
+  unfold Einheit.ws at hw
+  rw [h1, List.append_nil, List.append_nil] at hw
   obtain ⟨⟨w', ρ⟩, ha, rfl⟩ := List.mem_map.mp hw
   obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp ha
   refine ⟨i, ?_⟩
@@ -208,13 +210,13 @@ theorem mE_nutzerPflicht : NutzerPflicht mE :=
   ⟨⟨fun passes f => ⟨mP_koerper_alle passes f, mP_inv_alle passes f,
       invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
-      simp only [mE, List.mem_cons, List.not_mem_nil, or_false] at ha
+      simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 theorem zweiFaeden_erfuellbar_gilt : zweiFaeden_erfuellbar :=
   ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll mP_akzeptiert,
     mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO⟩,
-    speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE⟩
+    speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE rfl⟩
 
 /-- **The runtime's start of `mE` moves memory**: one step of thread 0 (`hauptA`'s first
     statement `privA[0] = 7`) changes the shared memory. -/
@@ -257,9 +259,9 @@ theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt] = true :=
 
 /-- The start obligation of a `zD` program declaring `haupt` from `zSp` under `zS`. -/
 theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHaupt, .nil⟩])
-    (hreq : ReqAmEintritt E.P zHaupt (E.sp0.welt []) .nil) : StartPflicht E :=
+    (hg : E.gestartet = []) (hreq : ReqAmEintritt E.P zHaupt (E.sp0.welt []) .nil) : StartPflicht E :=
   ⟨fun L => by rw [hS]; rfl, fun a ha => by
-    rw [hst] at ha
+    rw [hst, hg, List.append_nil] at ha
     obtain rfl := List.mem_singleton.mp ha
     exact hreq⟩
 
@@ -268,16 +270,16 @@ theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHa
 theorem probeB_erfuellbar_haupt : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEB rfl rfl rfl⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB,
-    initRuhe_laeuft zEB⟩
+    initRuhe_laeuft zEB rfl⟩
 
 theorem probeC_erfuellbar_haupt : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPC_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEC rfl rfl rfl⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC,
-    initRuhe_laeuft zEC⟩
+    initRuhe_laeuft zEC rfl⟩
 
 theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, probeB_erfuellbar_haupt⟩
 
@@ -307,7 +309,7 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
     rw [hZ1.2] at e
     revert e
     decide
-  · exact gabbro_ziel akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
+  · exact gabbro_ziel_g akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
       (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert)
       mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ hL M1

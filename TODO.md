@@ -553,7 +553,7 @@ for them). It does not cover relaxed atomics (the per-core accumulators and
 the ticket lock's draw use relaxed orderings, and A10 orders them wholesale)
 nor device or DMA memory.
 
-**Update 2026-09-26 (Opus agent B, SATZKARTE §49, `messung/OPUS-B-SPEICHERMODELL.md`).** The
+**Update 2026-09-26 (Opus agent B, SATZKARTE §50, `messung/OPUS-B-SPEICHERMODELL.md`).** The
 model half is done differently and cheaper than priced above: G is NOT rebuilt. Machine W
 (`grammatik/Grammatik/Speichermodell/`) is G over a view-based weak memory (the promise-free
 timestamp machine of RC11 for the emitted orders; `seq_cst` as release/acquire), and the DRF
@@ -639,6 +639,13 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   rule exempts `per cpu` cells, the model has no notion of them. **Narrowed
   2026-09-26 (Opus agent B):** read as relaxed atomics the pool rules agree
   (`poolSicherRust_iff`) and writes are covered; the read half is O25.
+- [x] **Threads created at run time in the goal (O21, O22).** Done 2026-09-26 (Opus agent A,
+  SATZKARTE §49, `messung/OPUS-A-LAUFZEITFAEDEN.md`): `GabbroZiel` runs over the thread
+  machine (`start` spawns and joins, `kind` spawns a child), run-time roots are
+  `Einheit.gestartet` judged as pool routines, every leg of `ZielF` proved, the old statement a
+  corollary (`gabbro_ziel_vor`); the exporter carries `start` roots. **Still open:** per-spawn
+  arguments (a `child` reading its handed values), a root `requires` at the spawn world, the
+  `child` export (its stack gate is a foreign body), and the lowering (lane 260).
 - [ ] **Stack budget as a measured bound (P1 — NOT-CLAIMED #2).** No
   full proof: a `costs`-like static budget over call depth with the
   2MiB-thread test as evidence (the `TIEFE_MAX` doctrine). Overflow stays

@@ -795,7 +795,7 @@ one of the 15 programs that export today, and its emitted C is
 
 ## O17 — Per-core writes are admitted by the checker and unmodeled in Lean (known since lane 245, 2026-09-17; NARROWED 2026-09-26, Opus agent B: the write half is covered, the read half is O25)
 
-**Narrowed (Opus agent B, 2026-09-26, SATZKARTE §49).** The emitter lowers `accumulates X per cpu N`
+**Narrowed (Opus agent B, 2026-09-26, SATZKARTE §50).** The emitter lowers `accumulates X per cpu N`
 to `static _Atomic T X_zellen[N]` with relaxed loads and stores, so in the model a per-core
 accumulator IS a relaxed atomic global, and the weak machine W (`Speichermodell/`) says what the
 cells do: writes from any number of threads take distinct timestamps of one modification order
@@ -907,10 +907,11 @@ against the upper bound of the whole run's commit. Two assumptions remain, and n
 checked:
 
 | | |
-|---|---|
+|---|---|---|
 | **generations along one thread** | a `reset` of `A` in a routine that runs CONCURRENTLY with the holder of an index into `A` (another root of a `concurrent` set, a `child` path, an interrupt handler) is not applied to that index. Memory safety does not depend on it (the index stays below `committed`); the residue is a logical dangling reference |
 | **roots entered once per load** | the commit total sums call-graph roots once (a `concurrent` body once per naming, an `entry` dispatch target without bound). A routine entered again by code the unit does not see (a separately linked caller, NOT CLAIMED in `Spec.lean`) can still reach the runtime's past-ceiling stop (`abort`, `laufzeit/arena_dyn.c`) |
-| **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff |
+| **the emitted counters are plain words (lane 259, emitter arm)** | a dynamic arena lowers `used`/`committed` to ordinary `uint32_t` fields and `alloc`/`grow` to unsynchronised read-modify-writes -- two threads allocating (or growing) on one arena race in C, and no rule demands a lock or an atomic there. Memory safety does not depend on it (a raced check-then-use still names a slot below `committed`: the check passed on a smaller `used`, and `grow` only ever raises the ceiling side); the residue is logical -- duplicate indices, a lost cursor step, growth one thread never sees. No concurrency safety is claimed for the lowering, and none is built |
+| **what would close it** | for the first: a `reset` in any routine that may run concurrently with a reader of `A` consumes every generation of `A` program-wide (cheap, strict), or arenas refused as shared carriers across threads; for the second: a Spec-level statement of the run model (declared starts, each once) naming the ceiling, reviewed as a `Spec.lean` diff; for the third: the same strict option (no arena shared across threads), or atomic counters with a model leg that carries them |
 
 
 ## O21 — The `child` thread exists in the checker, not in the model, and its code between gate call and region is unchecked for the child (recorded 2026-09-21, review G11, fix lane F3)
@@ -926,6 +927,23 @@ call per region, and an exhaustive spill read set. What stays open:
 | **the jump assumption** | the checker judges the REGION only; the statements between the gate call and the region are checked as parent code. Sound only if the lowering enters the child by jump at the region. Written into PLAN-SYSCALL, the `klon.uebergabe` sentence and `C185`'s message, pinned by `tests/klon_faden.rs`; lane 258 must keep it or re-check the gap |
 | **other flow facts** | held sets are reset or empty at a `child` (`N456`); other facts walkers carry down through `crate::unterbloecke` (M1 value ranges of guarded globals, phases, pairing state) were not re-audited for the child. Arena counters are moot: `N457` refuses a child touching an unguarded arena anyone writes, which also closes the `child` half of O20's first row |
 | **what would close it** | spawn-time arguments and entry world in the clone machine, unboundedly many children per gate, the exporter emitting `child` units with the child entry as a start (and a proof that `N457` gives Lean acceptance), and the stub correspondence lemma for the jump lowering |
+
+**Narrowed 2026-09-26 (Opus agent A, SATZKARTE §49).** The child is now IN THE GOAL at the MODEL level (a region given
+as a function root in `gestartet`; no `child` program exports yet, see the table below):
+`GabbroZiel` runs over the thread machine (FadenMaschine.lean), whose `kind` step spawns a
+dormant slot of a run-time root (`Einheit.gestartet`) while the parent goes on; every leg of
+`ZielF` holds on every such run (`gabbro_ziel`, witnesses `kw2_lauf`, `spawn_kind_ziel`), a
+spawned thread enters holding nothing (`schlafendFrei`), and F9's clone machine is a special
+case (`klon_als_faden`). Unboundedly many children per gate are covered: a root in `gestartet`
+stands twice in `ws`, is judged as a pool routine, and may run on any number of slots. The model
+half of `N456`/`N457` is now a Lean Bool fact (`wurzelnB`, `einzelnPoolB` over the doubled root;
+`akzeptiertSpec_gestartet`, refusal `kind_unter_sperre_abgelehnt`). What stays open:
+
+| | |
+|---|---|
+| **spawn-time arguments and entry world** | a slot's arguments are the unit's, fixed at the start machine, and its frame's ghost entry world is the start world (named assumption (d) in Spec.lean). A region reading its handed values (the stack argument, the gate answer) has per-spawn arguments -- not covered |
+| **no export** | a `child` needs a stack gate, a foreign body the exporter does not build (`Ax := Empty`); no `child` program reaches Lean, so `N457` => Lean acceptance is stated, not measured |
+| **the jump assumption** | unchanged (above): the lowering must enter the child by jump at the region with an empty held set; lane 260's `clone` lowering and translation validation own it |
 
 ## O22 — The hosted `start { … };` is checked, not modelled and not lowered (recorded 2026-09-22, review G12, fix lane F4)
 
@@ -943,6 +961,20 @@ pool-safe) refuse. What stays open:
 | **strictness** | `N461` refuses any held context (not only a lock some root takes); `N462` refuses a root that is the only writer of an unguarded carrier; the cost bill is the sum (sound on one core), not the maximum |
 | **liveness** | a root that never returns keeps its starter waiting forever; progress over statement-level starts is not decided |
 | **what would close it** | a statement-level spawn/join rule in machine G with the race component quantifying over started roots, then the driver-side lowering (one create per root, join before the next statement) |
+
+**Model closed 2026-09-26 (Opus agent A, SATZKARTE §49).** The rows "no model" and the export
+half of "no lowering, no export" are closed: the goal theorem runs over the thread machine, whose
+`start` step spawns the roots (only where the starter holds no lock -- `N461` as the step's side
+condition) and whose `join` step lets the starter go on only once every root has finished; the
+roots are `Einheit.gestartet`, judged by the Lean Bool as pool routines (`N458`'s lock half is
+`wurzelnB`, `N462`'s model half is `einzelnPoolB` -- `N462` bounds touched carriers,
+`einzelnPoolB` written ones); join waits are in the deadlock and wait-cycle legs
+(`keine_verklemmungF`, `kein_warteZyklusF`) and named in progress (`JoinWartet`). The exporter
+carries the roots (`gE.gestartet`, `check_gestartet`), and `pruefe-akzeptiert-diff.py` compares
+the verdicts (`messung/proben/faden-start-pool.gab`). What stays open: the LOWERING (lane 260),
+the strictness row above, and liveness (a root that never finishes keeps its starter waiting: a
+named stop, not a claim). A root's `requires` is the user's duty at the declared initial memory,
+not at the spawn world (named assumption (d)).
 
 ## O23 — A gate's argument preconditions are named, not modelled in the goal: the NUL path and the frame length (recorded 2026-09-22, reviews G04/G10, fix lane F5)
 
@@ -980,7 +1012,7 @@ open:
 ## O25 — Programs that RELY on an unguarded atomic read across threads are refused by the Lean checker, and the goal says nothing about W's non-SC outcomes (recorded 2026-09-26, Opus agent B)
 
 Since 2026-09-26 the goal theorem is proved over the weak machine W (`Speichermodell/`,
-SATZKARTE §49): the leg `schwach` of `Ziel` says that on an accepted program W takes only G's
+SATZKARTE §50): the leg `schwach` of `Ziel` says that on an accepted program W takes only G's
 steps, for every assignment of memory orders, and `gabbro_ziel_schwach` gives every leg at every
 machine W reaches. That is the DRF theorem, and it holds BECAUSE the footprint component `fuss`
 demands that every carrier a thread's graph reads is thread-local or lock-guarded -- `atomic` or

@@ -192,7 +192,11 @@
 //! and the declared starts `gE.starts` (the `concurrent` members, then the
 //! `entry`/`boot` dispatch roots; every start is parameterless, its
 //! argument list `.nil`), as `def gE : Einheit gD` (no axiom exists, so
-//! `Q` is `fun _ _ _ => true`).
+//! `Q` is `fun _ _ _ => true`). Since 2026-09-26 (Opus agent A, OFFEN O22)
+//! also the run-time roots `gE.gestartet`: every root of a `start { … };`
+//! statement, parameterless, printed only where one exists
+//! (`check_gestartet`); the statement itself leaves no G term -- its spawn and
+//! join are steps of the goal theorem's thread machine.
 //!
 //! ## NO FORM in G (accepted and dropped, each named in the header)
 //!
@@ -990,6 +994,9 @@ impl ParamTy {
 struct Scan {
     taken: Vec<String>,
     calls: Vec<String>,
+    /// The body holds a `start { … };` (Opus agent A, 2026-09-26): its roots run on
+    /// other threads, so what they take is no lock of this body.
+    startet: bool,
 }
 
 fn scan_expr(e: &Expr, acc: &mut Scan) {
@@ -1102,6 +1109,7 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                 scan_block(&g.sonst, acc);
             }
             StmtArt::Narrow(_) => {}
+            StmtArt::Start(_) => acc.startet = true,
             _ => {}
         }
     }
@@ -1418,8 +1426,12 @@ fn check_fn(
     // beyond it travels through the `locks` statement taking it (119), and
     // an effect below it (108: readers holding by signature without
     // redeeming an effect) is that statement's absence.
+    // A STARTER's `locks L` (the checker's `E008` lifts the roots' effects to it) is taken
+    // on the roots' threads, never in this body: G carries no locks effect in a
+    // signature (the floor `boden` is computed from what the body takes), so the effect
+    // travels nowhere, and the roots' own bodies take the lock (Opus agent A, 2026-09-26).
     for l in &effect_locks {
-        if !held.contains(l) && !taken.contains(l) {
+        if !held.contains(l) && !taken.contains(l) && !scan.startet {
             return Err(refuse(
                 "LG001",
                 format!("function {}: `locks {}` is neither held by signature nor taken in the body",
@@ -2040,7 +2052,8 @@ pub fn export_ns(source_name: &str, tree: &Programm, namespace: &str) -> Result<
     check_locks(&model, &scope)?;
     check_sp0(&model)?;
     let startet = check_starts(&model)?;
-    Ok(emit(source_name, namespace, &model, &checked, &scope, &mut out, &startet)?)
+    let gestartet = check_gestartet(&model)?;
+    Ok(emit(source_name, namespace, &model, &checked, &scope, &mut out, &startet, &gestartet)?)
 }
 
 /// The function names of the export, in declaration order (the `g_<fn>`
@@ -2081,6 +2094,7 @@ pub(crate) fn analysiere(source_name: &str, tree: &Programm) -> Result<Analyse, 
     check_locks(&model, &scope)?;
     check_sp0(&model)?;
     check_starts(&model)?;
+    check_gestartet(&model)?;
     Ok(Analyse { model, fns: checked, scope })
 }
 
@@ -3342,6 +3356,63 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
     Ok(aus)
 }
 
+/// **The run-time roots (Opus agent A, 2026-09-26, OFFEN O22): every root of a hosted
+/// `start { f, g };`**, in body order, each once. They travel as `gE.gestartet`, the field
+/// the goal theorem reads as threads created AT RUN TIME (`Einheit.gestartet`,
+/// `Zielsatz/Spec.lean`): the Lean checker Bool judges each root as a pool routine (it
+/// stands twice in `Einheit.ws`, so `einzelnPoolB` decides pool safety -- the model half of
+/// `N462` -- and `wurzelnB` the signature-lock half of `N458`), and the thread machine
+/// spawns and joins them. A root with parameters has no argument form (`N458` refuses it in
+/// the checker; here it is refused by name, as a declared start with parameters is), and a
+/// root that names nothing exported is refused as in `check_starts`. The statement itself
+/// leaves no G term (`tr_rest`): the spawn and the join are thread-machine steps, not G
+/// statements.
+fn check_gestartet(model: &Model) -> Result<Vec<usize>, Refusal> {
+    fn walk(s: &Stmt, aus: &mut Vec<Pfad>) {
+        if let StmtArt::Start(st) = &s.art {
+            aus.extend(st.roots.iter().cloned());
+        }
+        for k in crate::unterbloecke(s) {
+            for i in &k.anweisungen {
+                walk(i, aus);
+            }
+        }
+    }
+    let mut pfade = Vec::new();
+    for f in &model.fns {
+        if let FnRumpf::Block(b) = &f.decl.rumpf {
+            for s in &b.anweisungen {
+                walk(s, &mut pfade);
+            }
+        }
+    }
+    let mut aus: Vec<usize> = Vec::new();
+    for pfad in &pfade {
+        let Some(last) = pfad.teile.last() else {
+            return Err(refuse("LG005", "empty `start` root has no G form".to_string()));
+        };
+        let treffer: Vec<usize> = model.fns.iter().enumerate()
+            .filter(|(_, f)| f.name == last.text).map(|(i, _)| i).collect();
+        let Some((&i, rest)) = treffer.split_first() else {
+            return Err(refuse("LG005", format!("`start` names unknown function {}", last.text)));
+        };
+        if !rest.is_empty() {
+            return Err(refuse("LG005", format!("`start` names ambiguous function {}", last.text)));
+        }
+        if !model.fns[i].decl.parameter.is_empty() {
+            return Err(refuse(
+                "LG001",
+                format!("`start` root `{}` takes parameters, which have no run-time-root argument form",
+                    last.text),
+            ));
+        }
+        if !aus.contains(&i) {
+            aus.push(i);
+        }
+    }
+    Ok(aus)
+}
+
 /// The declared initial memory (lane 198): every SLOT starts at zero
 /// (`false` for `bool`) -- no surface form names a slot initialiser -- as
 /// the loader establishes it (`Laufzeit.lader` of the goal theorem). An
@@ -3981,12 +4052,14 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             `D.klon` pair (gate `Ax`, entry `Fn`) with the function its `child` path runs, and this exporter \
             writes `Ax := Empty` over a `Deklaration` with no `klon` field, so the entry {fname} stays \
             unmapped, never silent"))),
-        // **Lane 253:** `start` has no G form in this fragment -- the starts
-        // list (`E.starts`) comes from the `concurrent` declaration, and a
-        // statement-level start needs the join/effects rule the checker does
-        // not owe yet. Refused by name, never skipped.
-        StmtArt::Start(_) => Err(refuse("LG004", format!("`start` in {fname} has no G form: the statement names \
-            roots the `concurrent` declaration already starts, and the statement-level join rule is handoff"))),
+        // **`start { f, g };` leaves no G term (Opus agent A, 2026-09-26, OFFEN O22).** Its
+        // roots travel as `gE.gestartet` (`check_gestartet`), and the spawn and the join are
+        // steps of the THREAD machine (`FadenSchritt.start`/`.join`, FadenMaschine.lean), which
+        // may fire at any point of the starter where it holds no lock -- the statement's own
+        // point among them (`N461` makes it lock-free). So the G body carries nothing here and
+        // goes on with the rest. Not a silent skip: the roots are exported, and the goal
+        // theorem covers the threads they become.
+        StmtArt::Start(_) => tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         StmtArt::Leave(_) | StmtArt::Next(_) => Err(refuse("LG004", format!("`leave`/`next` in {fname} has no G form in this fragment"))),
@@ -4549,7 +4622,8 @@ pub fn namespace_of(source_name: &str) -> String {
 }
 
 /// The printed Lean file.
-fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &Scope, collected: &mut Out, startet: &[usize]) -> Result<String, Refusal> {
+#[allow(clippy::too_many_arguments)]
+fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &Scope, collected: &mut Out, startet: &[usize], gestartet: &[usize]) -> Result<String, Refusal> {
     let nt = model.tables.len();
     let mut out = String::new();
     // Header: generated marker, source, and the NO-FORM ledger.
@@ -4641,6 +4715,9 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     }
     for (n, i) in startet.iter().enumerate() {
         out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
+    }
+    for (n, i) in gestartet.iter().enumerate() {
+        out.push_str(&format!("-- run-time root {n}: {}\n", fns[*i].name));
     }
     out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n");
     if !model.arenas.is_empty() {
@@ -5227,7 +5304,17 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("  S := gS\n");
     out.push_str("  Q := fun _ _ _ => true\n");
     out.push_str(&format!("  starts := [{}]\n", startet_terme.join(", ")));
-    out.push_str("  sp0 := gSp0\n\n");
+    out.push_str("  sp0 := gSp0\n");
+    // The run-time roots (a `start { … };` anywhere in a body), each with the empty argument
+    // list (`N458`: a root takes none). Printed only where one exists, so a unit without
+    // them exports byte for byte as before (`gestartet` defaults to `[]`).
+    if !gestartet.is_empty() {
+        let terme: Vec<String> = gestartet.iter()
+            .map(|i| format!("⟨g_{}, .nil⟩", lean_fn(&fns[*i].name)))
+            .collect();
+        out.push_str(&format!("  gestartet := [{}]\n", terme.join(", ")));
+    }
+    out.push('\n');
     out.push_str(&format!("end {ns}\n\nend Gabbro.Grammatik\n"));
     Ok(out)
 }

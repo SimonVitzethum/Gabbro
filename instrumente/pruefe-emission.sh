@@ -2496,6 +2496,90 @@ lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
      's/{3u, 4u}/{3u, 5u}/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 3 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- Lane 259: dynamic arenas commit at run time --------------------------------------
+#
+# **What these four runs measure.** `153`/`154` are the static twins the dynamic
+# form must preserve byte for byte (`capacity 2 .. 8` with `M = hi = 8`,
+# `capacity 2 .. 2`): they run to pin the preservation, not the feature.
+# `158` is the dynamic program (`capacity 2 .. 4 max 8`): one `grow` commits
+# the upper half below the ceiling, eight allocations fill past the old `hi`
+# and read back, `reset` turns the phase over. Two drivers run the same
+# source: the hosted runtime (`arena_dyn.c`, reserve at load, commit on
+# `grow`) takes the main path (`118`), a refusing stub (every commit refused
+# below the ceiling -- the shape strict overcommit accounting gives) takes
+# the `else` path (`1`). The `else` is the program's answer to a REFUSED
+# commit, and the stub is what makes that answer executable: under the
+# default heuristic the hosted commit practically never refuses (the OOM
+# killer fires at first touch instead -- the honest note in the prelude and
+# in `OFFEN.md` O20), and a past-`max` request is the fail-stop, never the
+# branch (`N426` holds admitted grows below it).
+#
+# The runtime sources are copied beside the drivers: the treiber compiles as
+# ONE translation unit (`#include "arena_dyn.c"` after the emitted file, so
+# the header's layout wins over the emitted declarations' guard), and stage 9
+# keeps compiling every emitted unit ALONE (`cc -c`, no runtime beside it).
+cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$ARB/"
+TREIBER158='#include <stdio.h>
+#include "arena_dyn.c"
+#include "@ERZEUGT@"
+int main(void) {
+    gabbro_arena_reserve(&Vorrat_desc);
+    printf("%u\n", fuellen());
+    return 0;
+}
+'
+#    Erwartet:
+#     118 -- eight slots (10..17) sum to 108, `reset`, one re-alloc reads 10 back
+# **The gift swaps the last stored value** (`17` -> `18`): the sum moves to 119.
+lauf "beispiel158" "$W/beispiele/158-arena-commit.gab" "$TREIBER158" "118" \
+     's/(17)/(18)/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER158X='#include <stdio.h>
+#include "@ERZEUGT@"
+bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n) {
+    (void)d; (void)n;
+    return false;
+}
+void gabbro_arena_reserve(gabbro_arena_desc *d) {
+    d->base = (void *)0;
+    d->used = 0;
+    d->committed = d->floor_hi;
+}
+int main(void) {
+    gabbro_arena_reserve(&Vorrat_desc);
+    printf("%u\n", fuellen());
+    return 0;
+}
+'
+#    Erwartet:
+#       1 -- the refused commit takes the `else` beside the `grow`; no slot is
+#            ever named, so the stub's null base is never touched
+# **The gift swaps the refusal answer** (`return 1;` -> `return 9;`): it moves to 9.
+lauf "beispiel158-else" "$W/beispiele/158-arena-commit.gab" "$TREIBER158X" "1" \
+     's/return 1;/return 9;/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER153='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", waechst());
+    return 0;
+}
+'
+#    Erwartet: 370 -- eight slots (10..80) sum to 360, `reset`, one re-alloc reads 10 back
+# **The gift swaps the last stored value** (`80` -> `81`): the sum moves to 371.
+lauf "beispiel153" "$W/beispiele/153-arena-waechst.gab" "$TREIBER153" "370" \
+     's/(80)/(81)/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+# -- `154` runs NO durchgestochen entry, and the reason is measured, not omitted:
+# its emitted `buf[a]` warns at `-O2 -Werror` (`-Warray-bounds`, inlined `voll`),
+# and `99`'s merged emission warns IDENTICALLY -- a pre-existing
+# emitter-idiom-vs-optimizer note (lane 242, §6.2), not a lane-259 defect. It
+# emits and compiles (stage 9, `-O0 -c`, both compilers), and the refusal path
+# it pins is already executed by `beispiel158-else` on the dynamic form.
+# Rewriting the source to dodge an optimizer warning would be exactly the
+# traded-safety class the owner forbids; fixing the static lowering idiom
+# itself belongs to the emitter owner (it moves every arena program's C).
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -3118,7 +3202,7 @@ fi
 # **116 -> 117 on 2026-09-16 (merge review of the lock-striping lane).** One example came with
 # it (`146-sperrstreifen`), and the lane measured the delta, named it and left the counter alone
 # -- the second lane in a row to do that correctly. Re-measured here on the merged tree.
-MARKE_EMIT=126
+MARKE_EMIT=127
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
@@ -3127,6 +3211,8 @@ MARKE_EMIT=126
 # (`157-worker-pool`, the lock-guarded pool that Rust and the Lean Bool both accept). F10 left
 # the counter alone and its report claimed ALL PASS; fix lane F11 measured stage 9 red and named
 # the cause. Re-measured here by the merger: 126 files under `beispiele/` emit.
+# **126 -> 127 on 2026-09-26 (merge of lane 259, `grow` lowered).** One emitting demo came
+# with it (`158-arena-commit`); the lane measured the delta and left the counter alone.
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

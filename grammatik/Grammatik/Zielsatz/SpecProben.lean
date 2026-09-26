@@ -75,7 +75,7 @@ def sFalsch : SperrInv zD := ⟨fun _ => [], fun _ _ => false⟩
     met every premise group and every start was inadmissible, so the statement was empty. -/
 def probeA_falsch_inv : Prop :=
   ∀ (Q : AxEns zD) (starts : List (Σ w : zD.Fn, Env zD (zD.params w))) (sp0 : Speicher zD),
-    ¬ NutzerPflicht ⟨paP, sFalsch, Q, starts, sp0⟩
+    ¬ NutzerPflicht ⟨paP, sFalsch, Q, starts, sp0, []⟩
 
 /-- Verdict F1's crash (URTEIL-OPUS-2026-09-15b): `if true { let x = 2.0 in 0 .. 1; }` -- a
     float literal outside its declared range. The kernel IEEE model decides it, for every
@@ -134,13 +134,13 @@ theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
 
 /-- The two-thread program as ONE declaration: code `mP`, family `mSI`, trivial axiom
     ensures, declared starts `hauptA`, `hauptB` (no parameters), initial memory `mSp`. -/
-def mE : Einheit mD := ⟨mP, mSI, axWahr mD, [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩], mSp⟩
+def mE : Einheit mD := ⟨mP, mSI, axWahr mD, [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩], mSp, []⟩
 
 /-- Probe B as ONE declaration: declared start `haupt`, initial memory `zSp`. -/
-def zEB : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp⟩
+def zEB : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, []⟩
 
 /-- Probe C as ONE declaration. -/
-def zEC : Einheit zD := ⟨zPC, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp⟩
+def zEC : Einheit zD := ⟨zPC, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, []⟩
 
 /-- **The two-thread program satisfies every premise group.** -/
 def zweiFaeden_erfuellbar : Prop := ∃ fs : Aufzaehlung mD.Fn, Erfuellbar mE fs

@@ -442,15 +442,29 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
         // **«E4»:** the buffer struct is always emitted (`{A}_arena`), so it
         // enters the pool; the storage (`{A}_arena_speicher`) is conditional
         // on use and stays out, exactly like `{T}_speicher` above.
+        // **Lane 259:** a dynamic arena emits no buffer struct -- its C name
+        // is the descriptor (`{A}_desc`), conditional on use like the static
+        // storage. The pool entry follows the emitted name, not the
+        // declaration: a collision on `{A}_desc` must fall the same way.
         ItemArt::Arena(a) => {
             let n = &a.name.text;
-            schiebe(
-                &mut v,
-                format!("{n}_arena"),
-                a.name.span,
-                "{Arena}_arena",
-                "the buffer struct".into(),
-            );
+            if a.max.is_some() {
+                schiebe(
+                    &mut v,
+                    format!("{n}_desc"),
+                    a.name.span,
+                    "{Arena}_desc",
+                    "the dynamic-arena descriptor".into(),
+                );
+            } else {
+                schiebe(
+                    &mut v,
+                    format!("{n}_arena"),
+                    a.name.span,
+                    "{Arena}_arena",
+                    "the buffer struct".into(),
+                );
+            }
         }
         ItemArt::Funktion(f) => {
             eigen(&mut v, f.name.text.clone(), f.name.span, "{fn}", "the function".into());

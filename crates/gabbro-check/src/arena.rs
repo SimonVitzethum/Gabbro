@@ -38,7 +38,9 @@
 //! floor and ceiling coincident by construction (`M = hi`,
 //! `committed = hi` on every path). `alloc` moves `count`, `reset` restores
 //! `(0, floor)` on the LOWER committed bound, which joins with the minimum
-//! (what both paths guarantee) and is what a future `R-commit` reads.
+//! (what both paths guarantee) and is what `R-commit` (`N466`, lane 259)
+//! reads: on a dynamic arena an `alloc` whose static count may stand at or
+//! past the path's committed prefix is refused, branch or no branch.
 //!
 //! **The ceiling is held against an UPPER bound (review G08 F1, fix lane
 //! F2).** The runtime never decommits, so whether a `grow` can pass `M` is
@@ -70,17 +72,21 @@
 //! Lane 232 owns `kosten.rs`; this file only reads its contract.
 //!
 //! What is NOT built, and why (finding, measured): `PLAN-DYNAMISCH.md` §4
-//! `R-max` — refuse the `alloc` whose static count may reach `M` even with
-//! an `else` beside it. Wired with `M = hi` it fires on
+//! `R-max` as its own code — refuse the `alloc` whose static count may reach
+//! `M` even with an `else` beside it. Wired with `M = hi` it fires on
 //! `beispiele/99-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
 //! count 2 == `M`, `else` present): load-bearing corpus behavior (the
 //! boundary demo, emission included) would go red. That is a tightening of
-//! the kind lane 184 was rejected for. The `max` syntax now scopes `M`
-//! above `hi` (lane 257), but wiring `R-max` is the checker-rules lane's
-//! decision, not this one's: the over-cap shape without an `else` stays
-//! `N212` (gift 1087 pins it past `hi`), and the shape with an `else`
-//! stays accepted. What the ceiling DOES refuse today is the `grow` the
-//! checker sees reaching past it (`N426`), branch or no branch.
+//! the kind lane 184 was rejected for. Lane 259 wires the rule's dynamic
+//! half instead (`N466`): the committed prefix never exceeds `M`, so on an
+//! arena with a usable `max` clause a count that may reach `M` is already
+//! past the committed prefix on every path and falls there first (gift
+//! `1172` pins the past-`M` shape). A second code for `R-max` would be a
+//! refusal that can never fire beside `N466` — decoration, not coverage.
+//! The over-cap shape without an `else` stays `N212` (gift 1087 pins it past
+//! `hi`), and the static shape with an `else` stays accepted. What the
+//! ceiling DOES refuse today is the `grow` the checker sees reaching past
+//! it (`N426`), branch or no branch.
 //!
 //! ## Counting
 //!
@@ -303,6 +309,13 @@ struct Laeufer<'a> {
     /// the floor (`hi`). Absent exactly where the declaration is
     /// unusable (`N210`) -- then no commit question is asked either.
     decke: &'a HashMap<String, u64>,
+    /// **Lane 259: the dynamic arenas of this unit** -- qualified names with
+    /// a `max` clause that resolved to a usable ceiling (the clause present
+    /// AND in `decke`). `R-commit` (`N466`) is wired exactly here: on a
+    /// static arena the committed prefix coincides with `hi` on every path
+    /// and `N212` already holds every shape, so re-pointing it would only
+    /// re-name refusals the corpus pins (the lane-184 class).
+    dynamisch: &'a HashSet<String>,
     /// (code, span) pairs already reported: a loop body walks twice (see
     /// `schleife`), and the second walk must not report the first walk's
     /// findings again.
@@ -441,6 +454,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             decke.insert(q.clone(), m);
         }
     }
+    // **Lane 259:** the dynamic arenas -- a `max` clause standing AND usable.
+    // A clause `N210` refused (no constant, below `hi`, past `u32::MAX) is
+    // present in `mit_decke` but absent from `decke`: the declaration refusal
+    // stands, and no commit question piles onto it.
+    let dynamisch: HashSet<String> = mit_decke
+        .iter()
+        .filter(|q| decke.contains_key(*q))
+        .cloned()
+        .collect();
     // No arena, no cross-function fact to hold: the call graph and the
     // summary rounds below are the price of a program that declares one
     // (the walk still runs, for `N213` on an undeclared name).
@@ -471,7 +493,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
 
     // **Round 0 (silent): what every body does itself.**
-    let erhoben = alle_laeufe(baum, &u, &boden, &decke, &wissen, &graph, &HashMap::new(), true)
+    let erhoben = alle_laeufe(baum, &u, &boden, &decke, &dynamisch, &wissen, &graph, &HashMap::new(), true)
         .into_iter()
         .map(|(k, e, _)| (k, e))
         .collect::<HashMap<String, Erhebung>>();
@@ -522,7 +544,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         loop {
             wissen.wachstum = wachstum.clone();
             let mut neu: HashMap<String, HashMap<String, u64>> =
-                alle_laeufe(baum, &u, &boden, &decke, &wissen, &graph, &null, true)
+                alle_laeufe(baum, &u, &boden, &decke, &dynamisch, &wissen, &graph, &null, true)
                     .into_iter()
                     .map(|(k, _, m)| (k, m))
                     .collect();
@@ -649,7 +671,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let key = crate::umgebung::qualifiziere(modul, &f.name.text);
         let leer = HashMap::new();
         let eingang = eingaenge.get(&key).unwrap_or(&leer);
-        let _ = laufe(&u, modul, f, b, absagen, &boden, &decke, &wissen, &graph, eingang, false);
+        let _ = laufe(
+            &u, modul, f, b, absagen, &boden, &decke, &dynamisch, &wissen, &graph, eingang, false,
+        );
     });
 }
 
@@ -664,6 +688,7 @@ fn laufe(
     absagen: &mut Absagen,
     boden: &HashMap<String, u64>,
     decke: &HashMap<String, u64>,
+    dynamisch: &HashSet<String>,
     wissen: &Programmwissen,
     graph: &crate::aufrufgraph::Graph,
     eingang: &HashMap<String, u64>,
@@ -678,6 +703,7 @@ fn laufe(
         frisch: 0,
         boden,
         decke,
+        dynamisch,
         gemeldet: HashSet::new(),
         wissen,
         graph,
@@ -713,6 +739,7 @@ fn alle_laeufe(
     u: &crate::umgebung::Umgebung,
     boden: &HashMap<String, u64>,
     decke: &HashMap<String, u64>,
+    dynamisch: &HashSet<String>,
     wissen: &Programmwissen,
     graph: &crate::aufrufgraph::Graph,
     eingang: &HashMap<String, u64>,
@@ -728,7 +755,9 @@ fn alle_laeufe(
             return;
         };
         let key = crate::umgebung::qualifiziere(modul, &f.name.text);
-        let (e, m) = laufe(u, modul, f, b, &mut still, boden, decke, wissen, graph, eingang, stumm);
+        let (e, m) = laufe(
+            u, modul, f, b, &mut still, boden, decke, dynamisch, wissen, graph, eingang, stumm,
+        );
         aus.push((key, e, m));
     });
     aus
@@ -1332,13 +1361,13 @@ impl<'a> Laeufer<'a> {
         // is owed its failure branch exactly when that number may exceed
         // the reservation.
         //
-        // Unchanged by lane 257 on purpose: the `else` is still held
-        // against the reservation `lo`, not the committed value
-        // (`verpflichtung`, `R-commit` in `PLAN-DYNAMISCH.md` §4) -- `hi >=
-        // lo`, so holding it against `lo` is the sharper of the two, and a
-        // refusal `R-commit` would add is one `N212` already carries.
-        // Re-pointing this comparison at the committed value where it
-        // exceeds `hi` is the checker-rules lane's decision, not this one's.
+        // Unchanged by lanes 257 and 259 on purpose: the `else` is still
+        // held against the reservation `lo`, not the committed value --
+        // `hi >= lo`, so holding it against `lo` is the sharper of the two
+        // for the branchless shape. The committed prefix has its own rule
+        // below (`N466`, lane 259): it refuses with OR without the `else`,
+        // so re-pointing THIS comparison would only move refusals between
+        // codes, never add one.
         if let Some(lo) = self.reservierung(&q) {
             let n = self.stand.zaehlung(&q);
             if n >= lo as u64 && a.sonst.is_none() {
@@ -1358,22 +1387,71 @@ impl<'a> Laeufer<'a> {
                      path is written down, not hoped away",
                 );
             }
-            // **Wave D: the ceiling invariant, pinned without a verdict.**
+            // **Wave D: the ceiling invariant, pinned beside a verdict.**
             //
             // The committed prefix never exceeds the ceiling `M`
             // (`obergrenze`: the `max` clause where it stands, else `hi`).
             // `R-max` — refusing the `alloc` that reaches `M` even with an
-            // `else` — is NOT wired here: on `beispiele/99` (`Klein capacity
-            // 2 .. 2`, third `alloc`, count 2 == `M`, `else` present) it
-            // fires, so wiring it reddens load-bearing corpus behavior. See
-            // the module head and the lane report; the `else`-less over-cap
-            // shape stays `N212`.
+            // `else` — needs no second code on dynamic arenas: the committed
+            // prefix never exceeds `M`, so such an `alloc` is already past
+            // the committed prefix on every path and falls at `N466` below
+            // first. On STATIC arenas (`M = hi`) it stays unwired: on
+            // `beispiele/99` (`Klein capacity 2 .. 2`, third `alloc`, count
+            // 2 == `M`, `else` present) it fires, so wiring it reddens
+            // load-bearing corpus behavior. See the module head and the lane
+            // report; the `else`-less over-cap shape stays `N212`.
             if let Some(m) = self.obergrenze(&q) {
                 debug_assert!(
                     self.verpflichtung(&q).map_or(true, |c| c <= m),
                     "committed prefix exceeds the ceiling on `{}`",
                     a.tisch.text
                 );
+            }
+        }
+        // **Lane 259: `R-commit` -- an `alloc` that names a slot nobody
+        // committed (`N466`).**
+        //
+        // On a dynamic arena the usable prefix on this path is the committed
+        // LOWER bound (`verpflichtung`: the floor where no `grow` stood,
+        // the `min`-joined growth otherwise). Allocation number `n + 1`
+        // names slot `n`; when `n` may stand at or past the committed
+        // prefix, the main path touches storage the runtime never made
+        // usable -- refused with or without the `else` beside it. The
+        // `else` runs when the arena is FULL, and here the slot was never
+        // committed: the missing `grow` stands BEFORE the `alloc`, not
+        // beside it, and the positive shape (a dominating `grow`, then the
+        // same `alloc`s) stays clean.
+        //
+        // Scoped to dynamic arenas (a usable `max` clause): on a static
+        // arena the committed prefix coincides with `hi` on every path and
+        // `N212` above already holds every shape -- re-pointing it would
+        // only re-name refusals the corpus pins (the lane-184 class).
+        // `R-max` needs no second code on top: the committed prefix never
+        // exceeds the ceiling (`obergrenze` above), so a count that may
+        // reach `M` is already past the committed prefix on every path and
+        // falls here first.
+        if self.dynamisch.contains(&q) {
+            if let Some(c) = self.verpflichtung(&q) {
+                let n = self.stand.zaehlung(&q);
+                if n >= c {
+                    self.melde(
+                        "N466",
+                        span,
+                        format!(
+                            "`alloc` out of `{}` is allocation number {} since \
+                             the last reset, past the committed prefix `{c}` -- \
+                             only `{c}` slots are committed on this path, and no \
+                             `grow` covers the rest",
+                            a.tisch.text,
+                            n + 1
+                        ),
+                        "the `else` beside this `alloc` runs when the arena is \
+                         full; here the slot was never committed, so the failure \
+                         path beside the statement is about nothing -- a `grow` \
+                         before the `alloc` commits the missing slots, and its \
+                         own `else` runs when the platform refuses",
+                    );
+                }
             }
         }
         let g = self.stand.generation(&q);
@@ -1986,11 +2064,13 @@ mod wachstumstests {
         assert_eq!(bodenwert(&sig(Some(2), None)), None);
     }
     /// The `R-max` shape (`PLAN-DYNAMISCH.md` §4) as a predicate, NOT wired
-    /// into the pass: with `M = hi` it fires on `beispiele/99`'s third
-    /// `alloc` (`Klein capacity 2 .. 2`, count 2, `else` present), so wiring
-    /// it would redden load-bearing corpus behavior (the lane-184 class of
-    /// tightening). Wiring it -- also above `hi` now that `max` scopes `M`
-    /// there -- is the checker-rules lane's decision.
+    /// into the pass as its own code: with `M = hi` it fires on
+    /// `beispiele/99`'s third `alloc` (`Klein capacity 2 .. 2`, count 2,
+    /// `else` present), so wiring it would redden load-bearing corpus
+    /// behavior (the lane-184 class of tightening). Lane 259 wires the
+    /// dynamic half through `N466` instead (a count that may reach `M` is
+    /// already past the committed prefix, which never exceeds `M`); this
+    /// predicate stays the pinned shape the decision was measured against.
     #[test]
     fn decke_ohne_klausel_ist_boden_mit_klausel_ist_max() {
         use crate::typen::Typ;

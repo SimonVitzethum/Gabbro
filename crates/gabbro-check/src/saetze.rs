@@ -4305,8 +4305,13 @@ pub const PHASEN: &[Satz] = &[
                     only writer still falls (nothing bounds how often the gate runs). \
                     Flow facts other than held sets that walkers carry into the child \
                     (M1 value ranges of guarded globals, phases) are not re-audited \
-                    here. The model has no child thread yet (review G11 F1): this is \
-                    a checker rule with no Lean counterpart.",
+                    here. Since 2026-09-26 the model has the child as a thread (the goal \
+                    theorem's thread machine, its `kind` step): a lifted region is a \
+                    run-time root that the Lean checker Bool judges as a pool routine \
+                    (`wurzelnB` is `N456`'s held half, `einzelnPoolB` `N457`'s). No \
+                    `child` program exports yet -- its stack gate is a foreign body the \
+                    exporter does not build -- so that correspondence is stated, not \
+                    measured.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1141` (`-- erwartet: N456`: the review's \
                       `locks L { g = 1; child { g = 2; … } }`, with `H007` beside it \
@@ -4343,9 +4348,15 @@ pub const PHASEN: &[Satz] = &[
                   call-graph edges of the starter (their effects meet the starter's \
                   `effects`, `E008`/`E009`), and the statement costs the sum of the \
                   roots' declared costs plus two primitives per root (`K001`/`K003`).",
-        vorbehalt: "Checker rules with no model and no lowering: `Akzeptiert`/`Ziel` \
-                    know no statement-level start, the emitter refuses the statement \
-                    (`C001`) and the exporter too (`LG004`). `N462` is fail-safe, not \
+        vorbehalt: "Since 2026-09-26 the goal theorem has them: it runs over the thread \
+                    machine (a `start` step spawns the roots and the starter waits until \
+                    each has finished), the exporter carries the roots as `gE.gestartet`, \
+                    and the Lean checker Bool judges each root as a pool routine -- \
+                    `wurzelnB` is `N458`'s signature-lock half, `einzelnPoolB` is \
+                    `N462` (a root stands twice in `Einheit.ws`), and `N461` is the side \
+                    condition of the model's `start` step; `N459`/`N460` have no model \
+                    counterpart, which needs neither. The emitter refuses the statement \
+                    (`C001`) until its lowering lands. `N462` is fail-safe, not \
                     precise -- it reads the guard's existence (holding it is `H007`'s), \
                     and a root that is the only writer of a carrier still falls. `N461` \
                     refuses any held context, not only a lock some root takes. The cost \
@@ -4621,6 +4632,52 @@ pub const PHASEN: &[Satz] = &[
                      walk, `decke`); crates/gabbro-check/src/umgebung.rs \
                      (`ArenaSig::max`); dokumente/SYNTAX.md §9.1; \
                      PLAN-DYNAMISCH.md §4",
+    },
+    // --- lane 259, 2026-09-26: the commit cover (wave D, emitter arm) ------------
+    //
+    // **One new refusal code, and it is the shape `N212` cannot say.** `N212`
+    // holds the `else` against the reservation `lo`: past it the arena MAY
+    // be full, and the branch beside the statement answers that. `N466`
+    // holds the slot against the COMMITTED prefix: past it the program
+    // touches storage the runtime never made usable, and no branch beside
+    // the statement answers that -- the missing `grow` stands BEFORE the
+    // `alloc`, not beside it. Scoped to arenas with a usable `max` clause:
+    // on a static arena commit coincides with `hi` on every path and the
+    // `N212` shapes stay what they were (the lane-184 class). Minted from
+    // lane 259's block (`N466`–`N470`); only `N466` is taken here.
+    Satz {
+        name: "arena.alloc_unter_commit",
+        kennungen: &["N466"],
+        aussage: "Every `alloc` out of a dynamic arena names a slot below the \
+                  path's committed prefix: `N466` refuses the allocation whose \
+                  static count since the last reset may stand at or past what \
+                  the path has committed, with or without the `else` beside \
+                  it -- the `else` runs when the arena is full, and here the \
+                  slot was never committed. The committed prefix starts at \
+                  the floor (`hi`), grows by `n` at a dominating `grow` \
+                  (capped by `M`), restores the floor at `reset`, and joins \
+                  with the minimum (what both paths guarantee).",
+        vorbehalt: "The allocation count is per function body (like `costs`); \
+                    the COMMIT ceiling is whole-program since fix lane F2. \
+                    `R-max` needs no second code on top: the committed prefix \
+                    never exceeds the ceiling, so a count that may reach `M` \
+                    is already past the committed prefix on every path and \
+                    falls here first. Static arenas keep `M = hi` with `N212` \
+                    against `lo` (`beispiele/99` stays clean and emitting). A \
+                    loop that allocates past the commit without a dominating \
+                    `grow` falls, including the first pass: the loop may run \
+                    zero times, so the joined path guarantees only the floor.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1171 (`-- erwartet: N466`: an `alloc` \
+                      with its `else` past the committed prefix and no `grow` \
+                      covering it); beispiele/gift/1172 (`-- erwartet: N466`: \
+                      the past-`M` shape -- a count that may reach the ceiling \
+                      falls here first, the `R-max` half); `paesse.rs` \
+                      (`arena_alloc_braucht_commit_n466`: the poison with its \
+                      `else`, the past-`M` poison, and the grow-covered clean \
+                      twin); `beispiele/98` and `/99` stay clean and emitting.",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`N466`, the `Alloc` \
+                     walk, `dynamisch`); dokumente/PLAN-DYNAMISCH.md §4",
     },
     Satz {
         name: "bootsatz.schichten",
