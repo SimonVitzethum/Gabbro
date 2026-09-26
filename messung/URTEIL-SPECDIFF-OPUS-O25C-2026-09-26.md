@@ -168,14 +168,23 @@ After the fix: `compared=27`, `findings=0`, and `--selbsttest` is green in both 
 
 ## 7. Part 2 (merge preparation)
 
-Master is still `1800a7a3`, which the branch contains, so there is no merge and no conflict.
-The certificates were not regenerated: this review changes no Lean definition and no exporter
-code.
+Master moved during the review to `c81488d4` (Opus I: the bare-metal thread runtime). It was
+merged in as `6b26ca8d`. The merge was clean and automatic: AGENTS, TODO, OFFEN and the `Spec.lean`
+header, where Opus I's block is comment only. Master brought no exporter and no Lean-definition
+change, so the certificates were not regenerated. The register test inside `cargo test` stays
+green.
 
 One collision remained from the in-branch merge of Opus H. SATZKARTE had two `## 57.`, and
 O25c's stood AFTER the end-of-file note. O25c's section is now **§58**, placed before the note,
 and the note records it. The references in TODO, OFFEN and the report now say §58.
 
-The emission check is cut at the MARKE count (139 measured against 138 booked). Per standing
-instruction this is reported, not edited; the merger re-measures the counter. With that, the
-branch is ready for `opus-merge.sh`.
+**After the merge:**
+
+| Measurement | Result |
+|---|---|
+| `./lean-bau` | exit 0, 0 error lines, 354 jobs |
+| `./cargo-pruef` | exit 0; 1404 passed, 0 failed, 1 ignored |
+| `./emission-pruef` | exit 1 at stage 9, the MARKE count only: `312 von 312` translate, `FUND: 139 statt 138 emittierende Dateien in beispiele/` (example 162). Reported, not edited; the merger re-measures the counter. Stage 10 and later NOT measured behind the cut |
+
+With that, the branch is ready for `opus-merge.sh`. Nothing was merged into master, and nothing
+was pushed.
