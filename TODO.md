@@ -553,6 +553,26 @@ for them). It does not cover relaxed atomics (the per-core accumulators and
 the ticket lock's draw use relaxed orderings, and A10 orders them wholesale)
 nor device or DMA memory.
 
+**Update 2026-09-26 (Opus agent B, SATZKARTE §50, `messung/OPUS-B-SPEICHERMODELL.md`).** The
+model half is done differently and cheaper than priced above: G is NOT rebuilt. Machine W
+(`grammatik/Grammatik/Speichermodell/`) is G over a view-based weak memory (the promise-free
+timestamp machine of RC11 for the emitted orders; `seq_cst` as release/acquire), and the DRF
+theorem (`schwach_ist_g`) proves that on an accepted program W takes only G's steps, for every
+order assignment -- so `Ziel` gained the leg `schwach` (a reviewed `Spec.lean` diff, no premise
+moved) and `gabbro_ziel_schwach` gives every leg at every machine W reaches. Litmus facts (MP,
+SB, CoRR) are Lean theorems. What is still open from the list above:
+- [ ] **A rely for unguarded atomic reads** (`OFFEN.md` O25): programs that COMMUNICATE through an
+  atomic without a lock are refused by `fuss`, so W's non-SC outcomes occur on no accepted
+  program. Closing it: a havoc at shared atomic reads in `execEndH`, `fuss` exempting atomics,
+  the replay carrying it. Opus-sized.
+- [ ] **Stage (b) keeps `DRFSC` as a premise** (`CNebenlaeufig.lean`): the C side is still
+  SC-by-assumption; W is on G's side. Connecting them needs a per-access C semantics (§2 above).
+- [ ] **Per-architecture fence mappings** (x86-TSO vs ARM/POWER): not started; W is the C11 level.
+- [ ] **`N323` must demand memory orders** (`OFFEN.md` O26, Spec-diff verdict of Opus agent B,
+  F2): an own lock primitive's take must be an acquire and its give a release; today `N323`
+  checks atomicity and hold time only, and `Spec.lean` names the orders as assumption (3) of the
+  reading. Rust lane: tighten `N323`, poison probe (relaxed spinlock), positive probe.
+
 # 3. The goal statement — follow-ups  ⟨D⟩
 
 - [ ] **The liveness assumptions go into the ONE list in `Spec.lean`'s header**: `LaufzeitAnnahme`
@@ -620,7 +640,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   `Getrennt`, `Laufzeit.einmal` with `Mehrfach`), every leg re-proved in
   `gabbro_ziel`, witnesses in `Zielsatz/PoolZeuge.lean`, `LG001` lifted,
   `N315` retired. **Still open: the per-core half (O17)** -- the Rust pool
-  rule exempts `per cpu` cells, the model has no notion of them.
+  rule exempts `per cpu` cells, the model has no notion of them. **Narrowed
+  2026-09-26 (Opus agent B):** read as relaxed atomics the pool rules agree
+  (`poolSicherRust_iff`) and writes are covered; the read half is O25.
 - [x] **Threads created at run time in the goal (O21, O22).** Done 2026-09-26 (Opus agent A,
   SATZKARTE §49, `messung/OPUS-A-LAUFZEITFAEDEN.md`): `GabbroZiel` runs over the thread
   machine (`start` spawns and joins, `kind` spawns a child), run-time roots are
@@ -634,7 +656,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
   impossible by construction of the bound. Small to medium.
 - [ ] **Weak memory beyond DRF-SC (P1 — NOT-CLAIMED #4, gated).** Priced
   under §2; starts only after stage (b) closes generically. Lock-free
-  programmers need it, and linearizability above builds on it.
+  programmers need it, and linearizability above builds on it. **Model half
+  done 2026-09-26 (Opus agent B):** machine W, the DRF theorem, the leg
+  `schwach` (§2 update). Open: the rely for atomic reads (O25), stage (b).
 - [ ] **Termination and waiting bounds (P2 — NOT-CLAIMED #1).**
   `forever` budgets plus `Fortschritt` cover the practical shape; the
   data-sheet variant above comes first. Full termination stays per-program
