@@ -3000,6 +3000,40 @@ pub const M1: &[Satz] = &[
                      `ketten_maxima`)",
     },
     Satz {
+        name: "gate.nulpfad",
+        kennungen: &["N507"],
+        aussage: "A NUL-terminated path the program builds carries its terminator. At \
+                  every call whose callee requires `path_nul_terminated(p, n)`, three \
+                  shapes answer (`N507` refuses the rest): a forwarded parameter pair \
+                  under the caller's own identical clause; a byte array built in the \
+                  body (`static` or `let` `[u8; M]`) with a proved terminator -- a \
+                  store `buf[L-1] = 0` dominating the call for a length that reads as \
+                  one constant `L`, or an untouched zero-initialised buffer for any \
+                  length. A caller parameter pair without the clause falls (the \
+                  obligation dropped on the floor), and so does a built-here buffer \
+                  with no proof.",
+        vorbehalt: "Decided only where the program builds the buffer. A pointer the \
+                    pass cannot see built -- a lone parameter, a field, a computed \
+                    pointer, a foreign static -- keeps its named `V` obligation and \
+                    nothing falls beside it. A length that is no single constant is \
+                    proved only by an untouched zeroed buffer. Stores under a branch, \
+                    a loop or an error continuation never prove (they may not run) but \
+                    still kill, and any call taking the buffer kills every cell. Copies \
+                    (`let ab = buf;`) track on; cross-module statics by bare name do \
+                    not track. Strings never reach a `ptr<u8>` parameter (`N465`), so \
+                    no string shape is checked. The kernel honouring the length stays \
+                    the gate's named assumption.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1253` (`N507`: a concrete buffer with no `0` \
+                      store), `1254` (`N507`: a wrapper forwarding `path`/`pathlen` \
+                      without the clause). The clean side: `beispiele/149` (the \
+                      forwarding wrapper carries the clause) and `tests/nulpfad.rs` \
+                      (the proved store, the untouched zeroed buffer, the carried \
+                      clause, the unseen pointer that keeps its `V`).",
+        fundstelle: "crates/gabbro-check/src/nulpfad.rs (`check_call`); \
+                     dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "m1.ganzzahl_match",
         kennungen: &["N411", "N412", "N413", "N414"],
         aussage: "An integer `match` names every value M1 knows its scrutinee can hold, \
@@ -4287,11 +4321,14 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.rahmenlaenge",
-        kennungen: &["N463", "N464"],
+        kennungen: &["N463", "N464", "N506"],
         aussage: "A transfer through a pointer is bounded by what the pointer reaches. A \
                   `syscall` parameter that points at numbers is a byte buffer (`u8`/`i8` \
                   pointee) and the gate carries `requires x <= lenof(p)` over one of its \
-                  integer parameters (`N464`). At every call, of any callee, each clause \
+                  integer parameters (`N464`); an `extern fn` parameter that points at \
+                  numbers beside a length parameter is held to the same clause \
+                  (`N506`, lane 262). At every call, \
+                  of any callee, each clause \
                   `x <= lenof(p)` (or `<`) is DECIDED (`N463`): an array passed for `p` \
                   -- where it decays and its length is last known -- bounds the range of \
                   `x`'s argument by its length, with the array's elements being the \
@@ -4308,17 +4345,21 @@ pub const PHASEN: &[Satz] = &[
                     from, nor anything about a byte INSIDE the frame: a kernel that finds \
                     the end by a NUL is owed that by the caller as a named obligation in \
                     the contract (`beispiele/149`: `spec fn path_nul_terminated`, counted \
-                    `V`, not decided). `N464` holds `syscall` buffers only; an `extern fn` \
-                    taking a byte pointer and a length is not yet held to the clause.",
+                    `V`, decided only for buffers the program builds itself: `N507`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1155` (`N464`: a read buffer bounded only by a \
                       ceiling -- `beispiele/150`'s shape before fix lane F5), `1156` \
                       (`N463`: `lies(fd, EIMER, 1024)` over a 64-byte array, measured \
                       clean before F5), `1157` (`N463`: a wrapper forwarding `buf`/`len` \
-                      without the clause), `1158` (`N464`: a `u32` buffer). The clean \
-                      side: beispiele/96, /149, /150 and `tests/rahmenlaenge.rs` (a \
-                      literal and a const inside the array, the forwarding chain, `<`).",
-        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs; crates/gabbro-check/src/m1.rs \
+                      without the clause), `1158` (`N464`: a `u32` buffer), `1251` \
+                      (`N506`: an `extern fn` byte buffer bounded only by a ceiling -- \
+                      `beispiele/64`'s shape before lane 262), `1252` (`N506`: a `u32` \
+                      buffer at an `extern fn`). The clean \
+                      side: beispiele/64, /96, /149, /150 and `tests/rahmenlaenge.rs` (a \
+                      literal and a const inside the array, the forwarding chain, `<`, \
+                      the `extern fn` twins).",
+        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs (`buffer_bound_extern` for \
+                     `N506`); crates/gabbro-check/src/m1.rs \
                      (`transfer_bound_at_call`); crates/gabbro-check/src/syscall.rs \
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },

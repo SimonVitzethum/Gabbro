@@ -1,0 +1,48 @@
+-- erwartet: N507
+-- **1254 -- a wrapper that forwards the path and drops the NUL obligation (lane 262, OFFEN O23).**
+--
+-- `oeffnen` forwards its parameters `path`/`pathlen` into the gate but does not carry
+-- `path_nul_terminated(path, pathlen)` itself: the NUL the gate is owed travels with
+-- the clause, or it travels with nobody. `N507` refuses the forwarding call (the twin
+-- of `N463`'s `beispiele/gift/1157`). With the clause, the wrapper is `beispiele/149`'s
+-- `oeffnen` and checks clean.
+
+module gift1254 {
+
+reason OpenError {
+    NotFound = 2 "no entry under that path"
+    exhaustive
+}
+
+assume linux_open_contract
+    "Open keeps its contract on this machine."
+    falsifier sonde_open;
+
+const MAXLEN : u64 = 1024;
+
+spec fn path_nul_terminated(path : ptr<normal, r> u8, pathlen : u64) -> bool
+    effects { pure }
+    = pathlen >= 1 && path[pathlen - 1] == 0;
+
+syscall gate_open(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> u64 or OpenError
+    abi linux arch x86_64 number 2
+    regs in { rdi = path, rsi = flags, r10 = pathlen }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { ENOENT => NotFound }
+    requires pathlen <= MAXLEN, pathlen <= lenof(path), path_nul_terminated(path, pathlen)
+    ensures result <= 4294967295
+    effects { reads path }
+    costs <= 40 ops
+    assume linux_open_contract falsifier sonde_open;
+
+impl fn oeffnen(path : ptr<normal, r> u8, pathlen : u64, flags : u64) -> u64 or OpenError
+    requires pathlen <= MAXLEN, pathlen <= lenof(path)
+    effects { reads path }
+    costs <= 100 ops
+{
+    let n = gate_open(path, pathlen, flags) else (e) { return e; }
+    return n;
+}
+
+}

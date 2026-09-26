@@ -81,7 +81,10 @@ syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
     -- one-byte `WINDOW` meets a literal `1`).
     requires len <= 1024, len <= lenof(buf)
     ensures result <= len
-    effects { pure }
+    -- Lane 262 (OFFEN O23): the kernel READS `len` bytes from `buf`, so the
+    -- gate says `reads buf` -- `pure` was a fiction (fix lane F5 left it
+    -- standing). The callers carry `reads WINDOW` for the staging byte.
+    effects { reads buf }
     costs <= 8 ops
     assume linux_write_contract falsifier sonde_write;
 
@@ -90,7 +93,7 @@ syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
 impl fn push(fd : u64, byte : u8) -> u64 or IoError
     ensures result == 0 || result == CAP
     effects { reads COUNT, writes COUNT,
-              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+              reads Buffer.slots, writes Buffer.slots, reads WINDOW, writes WINDOW }
 {
     if COUNT == CAP {
         let out = flush(fd) else (e) { return e; }
@@ -118,13 +121,13 @@ impl fn push(fd : u64, byte : u8) -> u64 or IoError
 -- count, or the first error reason comes back and `COUNT` stays untouched.
 impl fn flush(fd : u64) -> u64 or IoError
     ensures COUNT == 0
-    effects { reads COUNT, writes COUNT, reads Buffer.slots, writes WINDOW }
+    effects { reads COUNT, writes COUNT, reads Buffer.slots, reads WINDOW, writes WINDOW }
 {
     let mut sent : u32 = 0;
     forever sending
         per_pass bounded 1024 ops
         on_exceeded writer_hangs
-        effects { reads COUNT, reads Buffer.slots, writes WINDOW }
+        effects { reads COUNT, reads Buffer.slots, reads WINDOW, writes WINDOW }
         progress linux_write_contract
     {
         if sent == COUNT {
@@ -145,7 +148,7 @@ impl fn flush(fd : u64) -> u64 or IoError
 -- fifth push flushes midway, so the full-buffer path runs, not only the end).
 impl fn fill(fd : u64) -> u64 or IoError
     effects { reads COUNT, writes COUNT,
-              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+              reads Buffer.slots, writes Buffer.slots, reads WINDOW, writes WINDOW }
 {
     let r1 = push(fd, 104) else (e) { return e; }
     let r2 = push(fd, 101) else (e) { return e; }
@@ -161,7 +164,7 @@ impl fn fill(fd : u64) -> u64 or IoError
 -- a flush error 711-713 -- the 777 convention of `beispiele/90`.
 impl fn writer_demo(fd : u64) -> u64
     effects { reads COUNT, writes COUNT,
-              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+              reads Buffer.slots, writes Buffer.slots, reads WINDOW, writes WINDOW }
 {
     let f = fill(fd) else (e) {
         match e {

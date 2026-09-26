@@ -209,3 +209,81 @@ fn n463_feld_aus_breiteren_elementen() {
     // bytes' worth of `lenof(buf)` elements of another type.
     faellt(&[&gate("len <= lenof(buf)", "u8"), &rufer("gate_read(fd, WORTE, 4)")], "N463");
 }
+
+// ---- N506: the declaration at an `extern fn` (lane 262, OFFEN O23) --------------------
+
+fn fremd(requires: &str, pointee: &str) -> String {
+    format!(
+        "extern fn write(fd : i32, p : ptr<normal, r> {pointee}, n : u64) -> i64
+    requires {requires}
+    effects {{ reads p }}
+    costs <= 16 ops;"
+    )
+}
+
+#[test]
+fn n506_extern_puffer_ohne_klausel() {
+    faellt(&[&fremd("n <= 64", "u8")], "N506");
+}
+
+#[test]
+fn n506_extern_puffer_mit_klausel_ist_sauber() {
+    sauber(&[&fremd("n <= 64, n <= lenof(p)", "u8")]);
+}
+
+#[test]
+fn n506_extern_wortpuffer() {
+    faellt(&[&fremd("n <= lenof(p)", "u32")], "N506");
+}
+
+#[test]
+fn n506_extern_klausel_ueber_den_falschen_zeiger_zaehlt_nicht() {
+    // `lenof(fd)` names no buffer: `p` is still unbounded.
+    faellt(&[&fremd("n <= lenof(fd)", "u8")], "N506");
+}
+
+#[test]
+fn n506_extern_ohne_laengenparameter_bleibt_still() {
+    // One object, not a transfer: no integer parameter beside the pointer, so
+    // no length the caller could set past it and no clause that could tie one
+    // (`beispiele/22`'s `melde_roh` shape).
+    sauber(&[
+        "extern fn melde(text : ptr<code, r> u8) -> u32 effects { reads text } costs <= 8 ops;",
+    ]);
+}
+
+#[test]
+fn n506_extern_ruf_ueber_dem_feld_faellt_n463() {
+    // The call-site half already held for every callee: the clause an `extern fn`
+    // writes is decided where its array decays, by `N463`, not `N506`.
+    faellt(
+        &[
+            &fremd("n <= lenof(p)", "u8"),
+            "static mut PUFFER : [u8; 64] = 0;
+pub fn main() -> i32 in 0 .. 1
+    effects { reads PUFFER, writes ausgabe }
+    costs <= 200 ops
+{
+    write(1, PUFFER, 1024);
+    return 0;
+}",
+        ],
+        "N463",
+    );
+}
+
+#[test]
+fn n506_extern_ruf_im_feld_ist_sauber() {
+    sauber(&[
+        &fremd("n <= lenof(p)", "u8"),
+        "pub static mut PUFFER : [u8; 64] = 0;
+pub static mut LAENGE : u32 in 0 .. 64 = 0;
+pub fn main() -> i32 in 0 .. 1
+    effects { reads PUFFER, writes PUFFER, reads LAENGE, writes LAENGE, writes ausgabe }
+    costs <= 200 ops
+{
+    write(1, PUFFER, LAENGE);
+    return 0;
+}",
+    ]);
+}

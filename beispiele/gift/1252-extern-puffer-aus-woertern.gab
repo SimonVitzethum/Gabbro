@@ -1,0 +1,16 @@
+-- erwartet: N506
+-- **1252 -- a word buffer at an `extern fn` (lane 262, OFFEN O23).**
+--
+-- `lenof(p)` counts elements and the callee counts bytes: only for `u8`/`i8`
+-- are the two one number. A `u32` buffer with the clause is still unbounded in
+-- the unit the callee moves, so `N506` refuses the declaration itself --
+-- `beispiele/gift/1158`'s twin at the `extern fn` shape.
+
+module gift1252 {
+
+extern fn write(fd : i32, p : ptr<normal, r> u32, n : u64) -> i64
+    requires n <= lenof(p)
+    effects { reads p }
+    costs <= 16 ops;
+
+}

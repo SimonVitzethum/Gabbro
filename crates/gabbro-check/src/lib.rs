@@ -219,6 +219,8 @@ pub mod zeichenfolge;
 pub mod intmatch;
 // Fix lane F5 (review G04 F2/F3): `N463`/`N464` -- the transfer bound `x <= lenof(p)`.
 pub mod rahmenlaenge;
+// Lane 262 (OFFEN O23): `N507` -- the NUL terminator where the program builds the buffer.
+pub mod nulpfad;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -502,6 +504,14 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         z!("syscall", syscall::pass(baum, absagen));
+        // **Lane 262, directly behind it.** The frame-length rule's second
+        // declaration half: `N506` holds `extern fn` byte buffers to the
+        // same `requires x <= lenof(p)` clause `N464` demands at `syscall`
+        // gates (`rahmenlaenge.rs`, OFFEN O23).
+        z!("rahmenlaenge", rahmenlaenge::pass(baum, absagen));
+        // **Lane 262, directly behind it.** The NUL-terminator discipline over
+        // the buffers the program builds itself (`nulpfad.rs`, OFFEN O23).
+        z!("nulpfad", nulpfad::pass(baum, absagen));
         z!("clone", clone::pass(baum, absagen));
         z!("arena", arena::pass(baum, absagen));
         z!("konstanten", konstanten::pass(baum, absagen));
@@ -548,6 +558,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // declaration-level like `entry`/`entrust`: its own shape is held here, and
     // every body pass below reads it through the shared maps.
     syscall::pass(baum, absagen);
+    // **Lane 262, directly behind it** (see the timed pipeline above).
+    rahmenlaenge::pass(baum, absagen);
+    // **Lane 262, directly behind it** (see the timed pipeline above).
+    nulpfad::pass(baum, absagen);
     // **Lane O-1, directly behind it.** The handoff shape reads the gate
     // (`stack`) and the bodies (`child`): after the declaration pass, beside
     // the arena one, before every body pass that walks the new block form.
