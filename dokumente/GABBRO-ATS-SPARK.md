@@ -9,7 +9,7 @@ what, and what happens when the proof fails.*
 *Read the Gabbro column as the architecture, not as the state of the build.
 What is proved today is the goal theorem over the Lean model, with a witness
 and non-degeneracy; "Gabbro is verified" is NOT a sentence this project may
-say (`AGENTS.md` §1, README §6). Where the build stands, it is said below.
+say (`AGENTS.md` §1, README §5). Where the build stands, it is said below.
 (Corrected 2026-09-21, review G13: the first version stated the architecture
 in the present tense.)*
 
@@ -68,9 +68,9 @@ This is the sharpest difference, and it is deliberate on Gabbro's side:
 Gabbro's economic argument: every construct the language carries becomes
 *one* generator obligation, proved a single time over the semantics,
 instead of an obligation per program that uses it. The state of that
-argument: 21 templates, of which README §5 counts 10 machine-checked, and
+argument: 21 templates, of which README §4 counts 10 machine-checked, and
 only 5 are bound to the real semantics; the other 16 are still an abstract
-core (README §4, `TODO.md` §0d). The per-program remainder is the
+core (README §3, `TODO.md` §0d). The per-program remainder is the
 user's own logic, counted by `gabbro obligations` rather than discharged
 by the tool.
 
@@ -152,6 +152,6 @@ read.
   multicore plus DMA, time as a first-class bound, refusals instead of
   timeouts, and a per-program certificate a second tool checks (the
   target; three programs today) — with
-  the price stated up front (README §6, `OFFEN.md`, and §8 above):
+  the price stated up front (README §5, `OFFEN.md`, and §8 above):
   the chain is built program by program, and what is not yet carried is
   refused by name rather than promised.

@@ -121,7 +121,7 @@ The division of labour it makes visible:
 > exactly what that is.
 
 *State on 2026-09-15:* the goal is stated as one Lean theorem and proved over the model
-(`gabbro_ziel`, README §6, with its limits): the checker in the statement is the Lean checker,
+(`gabbro_ziel`, README §5, with its limits): the checker in the statement is the Lean checker,
 the bridge to the Rust checker and the binary (translation validation T1–T5) is open, and the
 third review found a named gap in the statement that is being repaired. "Proves everything
 except logic" is the design; for the implementation it is not yet a theorem.

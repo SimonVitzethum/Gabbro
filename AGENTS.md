@@ -1,17 +1,18 @@
 # AGENTS.md — how work on Gabbro is run
 
 *Written 2026-09-15 by the Claude session that ran the project from the laptop until the move to
-the server, as the hand-over of everything it knew that is not in the code. `CLAUDE.md` stays the
-Simon's work instructions (German); this file is the operating manual beside it. Where the two
-disagree, `CLAUDE.md` wins.*
+the server; since 2026-09-27 all work runs locally again and no second machine is used.
+`CLAUDE.md` stays the Simon's work instructions (German); this file is the operating manual
+beside it. Execution is local-only (Simon, 2026-09-27); where older notes elsewhere still name
+a remote build machine, this file wins for execution.*
 
 **Who reads this:**
 
-- **The orchestrating Claude session** on `ubuntu@simon.jocraft.cc` (tmux `Claude-Gabbro`,
-  tree `/home/ubuntu/Gabbro`). It reads everything below.
-- **A Muse contributor lane** (opencode on `fisch`), if it sees this file. The HARD RULES in its
-  lane prompt bind it, and §5–§8 are not its business. In particular it never runs `ssh`,
-  `rsync`, `git push` or `cargo`/`lake` directly; it uses `./cargo-pruef`, `./emission-pruef`,
+- **The orchestrating Claude session** in this checkout (tree `/home/simon/Dokumente/Gabbro`).
+  It reads everything below.
+- **A Muse contributor lane** (opencode, local clone), if it sees this file. The HARD RULES in its
+  lane prompt bind it, and §5–§8 are not its business. In particular it never runs
+  `git push` or network operations directly; it uses `./cargo-pruef`, `./emission-pruef`,
   `./lean-bau` and `./lean-probe`.
 - **An Opus subagent** in a worktree. Its task prompt is authoritative, and §4, §9 and §10 apply
   to it.
@@ -45,7 +46,7 @@ disagree, `CLAUDE.md` wins.*
 **What may be said:** "The goal theorem is proved over the model, with a witness and
 non-degeneracy." **What may NOT be said:** "Gabbro is verified." The checker inside the statement
 is the Lean Bool `Akzeptiert`, not the Rust checker, and the bridge to the C is only partly built.
-README §6 says exactly this; keep it that way.
+README §5 says exactly this; keep it that way.
 
 ## 2. The goal theorem — what a newcomer must know
 
@@ -106,22 +107,21 @@ README §6 says exactly this; keep it that way.
 
 - **Push master without asking**, after checked merges. First grep the outgoing diff for keys.
   Never push red. Never force-push. No new branches on GitHub: lane branches stay
-  fisch-local (`muse/NNN` never leaves the clone), Opus branches stay in their
+  local (`muse/NNN` never leaves this machine), Opus branches stay in their
   worktree until their review lands — the only remote branch besides master is
   the one under active review.
-- **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`, fisch
-  `~/gabbro-muse/aNNN`, and the `gabbro-opus-*` directories.
+- **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`,
+  the lane clones, and the `gabbro-opus-*` directories.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
-  Muse lanes: as many as useful. Use the free model slots too (3 slots, falling back to
-  opencode-go on a rate limit). The Go budget can run out, which is fine.
+  Muse lanes: as many as useful.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED
   changes only, so `git add` first.
 - **Language:** documents, comments, commit messages, diagnostics and `TODO.md` are in English.
   The conversation with Simon is in German. Muster (guardian patterns) become bilingual
   BEFORE a document changes language.
-- **Work in real folders, not `/tmp`.** `/tmp` is RAM on the laptop. Scratch files go to
+- **Work in real folders, not `/tmp`.** `/tmp` is RAM on this machine. Scratch files go to
   `.claude/muse-arbeit/kratz/`.
-- **Every Lean build and every `cargo` run goes to fisch.** No exceptions for "just a small one".
+- **Every Lean build and every `cargo` run happens locally.** No exceptions for "just a small one".
 - **Simplicity is a goal, but no guarantee is given up for it** (PLAN-EINFACHHEIT.md). The measure
   is: ceremony count down AND pass register constant. Never derive `ensures`, and never turn a
   refusal into a warning.
@@ -134,43 +134,34 @@ README §6 says exactly this; keep it that way.
 - **Tag milestones** at the push that reaches them.
 - **Security:**
   - Never write API keys or passwords into the repo, memory or logs. The opencode keys live only
-    in fisch `~/gabbro-muse/cfg/key-go` and `key-zen`.
-  - When the permission classifier blocks something (e.g. searching the server for credentials),
+    in the lane config outside the repo, never in the tree.
+  - When the permission classifier blocks something (e.g. searching the machine for credentials),
     do not work around it; ask Simon.
   - A local password Simon once gave was for WireGuard only; it is recorded nowhere.
 
 ## 4. Machines
 
-| machine | role | notes |
-|---|---|---|
-| `ubuntu@simon.jocraft.cc` (host `GaussBerechnungen`) | **orchestrator since 2026-09-15** | 15 GB RAM, ~9 GB free (Minecraft holds 4 GB: tmux `mc`, `-Xms4G -Xmx4G`). 39 GB disk free. Passwordless `sudo`. Runs WireGuard `wg-quick@wg1`, the link to fisch's network. GitLab is stopped but still enabled — ask Simon before disabling it. No Isabelle. Claude is installed natively in `~/.local/bin` (self-updating); the old npm copy in `/usr/local` can go once no session uses it. |
-| `ki-pc-fisch-101` (host `fisch`) | **all compute** | 110 GB RAM, 16 cores. Rust in `~/.cargo/bin`, Lean via `~/.elan/bin/lake` (Lean 4.33.1), Isabelle in `~/Isabelle2025-2`. Reached from ubuntu directly: `ssh ki-pc-fisch-101`, key `~/.ssh/id_ed25519_fisch`. |
-| Simon's laptop | former orchestrator | 31 GB RAM with little free. Reaches fisch via `ProxyJump jocraft` (`Host ki-pc`). Local wg1 is down. |
+All work happens on this machine, in this checkout. There is no second machine, no build
+server, no `ssh` step: Lean builds, `cargo` runs, Isabelle runs and QEMU stages all run here.
 
 - **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key
   `~/.ssh/id_ed25519_github`; the host key was checked against GitHub's published ed25519
   fingerprint. Fetch goes over https.
-- **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis` on the
-  laptop. Never commit into it.
+- **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`.
+  Never commit into it.
 
-## 5. Muse lanes (opencode on fisch) — the workhorse
+## 5. Muse lanes (opencode, local) — the workhorse
 
-**Layout on fisch, `~/gabbro-muse/`:**
+**Layout, all local:**
 
-- `bin/` holds the tools:
-  - `neu-agent3 NN` clones the lane from `stage/gabbro3.bundle`, copies the warm Lean cache
-    `stage/lake3`, and writes the queued wrappers `lean-bau`, `lean-probe`, `cargo-pruef` and
-    `emission-pruef`.
-  - `lauf-agent3 NN SECONDS` runs the lane, with up to 3 auto-continuations.
-  - `hinweis-agent NN MSGFILE [SECONDS]` sends reviewer feedback into the lane's session.
-  - `modell-wahl` picks the free slot or Go.
-  - `lane-datei NN TASKFILE` composes a lane file.
-- `lanes/NN.md` holds the lane prompts; `logs/NN.log` the logs; `aNNN/` the clones, one per
-  lane, on branch `muse/NNN`, with no remote.
-- `merge-bau/` is the warm build directory for merges. `stage/` holds the bundle and the Lean
-  cache.
-- `cfg/` holds `opencode.json` (permissions: no push, ssh, rsync, cargo, lake or network) and
-  the keys.
+- Each lane works in its own clone beside this checkout, one per lane, on branch `muse/NNN`,
+  with no remote.
+- The wrappers in the repo root — `./cargo-pruef`, `./emission-pruef`, `./lean-bau`,
+  `./lean-probe` — are the only build entry points a lane uses (permissions: no push and no
+  network for lanes).
+- Lane prompts live in `lanes/NN.md` (compose with the HARD-RULES preamble), logs in
+  `logs/NN.log`; keep a copy of every lane file in `.claude/muse-arbeit/lanes5/` and
+  `.claude/muse-sicherung/`.
 
 **Writing a lane:**
 
@@ -192,17 +183,12 @@ README §6 says exactly this; keep it that way.
 - **One lane, one topic.** Two lanes that both edit the same central Rust file will conflict at
   merge.
 
-**Launching** (the bundle must contain the master you want; `pruef-push.sh` refreshes it):
+**Launching:** start the lane in its clone, in the background, with a time budget; the lane
+file carries the task and the HARD RULES. Keep the master the lane was branched from fresh —
+a lane branched from a stale master measures against a tree that no longer exists.
 
-```bash
-ssh ki-pc-fisch-101 'cd ~/gabbro-muse && bin/neu-agent3 NN >/dev/null; (setsid nohup bin/lauf-agent3 NN 10800 >/dev/null 2>&1 < /dev/null &)'
-```
-
-Use `setsid` plus a subshell; a plain `nohup … &` inside `ssh` kept the ssh call hanging.
-
-**Watching:** run a persistent Monitor that polls `logs/NN.log` for `=== ENDE` and counts
-`git -C aNN rev-list --count master..HEAD`. **Its lane range must cover the new numbers**: the old
-monitors covered 100–159 and 160–199, and lane 200 onward needs a new range.
+**Watching:** poll `logs/NN.log` for `=== ENDE` and count
+`git -C <lane-clone> rev-list --count master..HEAD`.
 
 **Reviewing a finished lane.** Read `MUSE-REPORT-NN.md` and `git diff --stat master..HEAD` in the
 clone, then check:
@@ -227,13 +213,13 @@ clone, then check:
 
 **Merging a lane:** `bash .claude/muse-arbeit/muse-merge.sh NN msgfile`. In order, it:
 
-1. fetches `muse/NN` from the fisch clone;
+1. fetches `muse/NN` from the lane clone;
 2. merges with `--no-commit`;
 3. auto-resolves only `Grammatik.lean` import conflicts, and takes master's side of the ledger
    files;
 4. moves the report to `messung/muse/`;
-5. builds `grammatik/` on fisch `merge-bau`;
-6. commits, deletes the branch and deletes the fisch clone.
+5. builds `grammatik/` locally before committing;
+6. commits, deletes the branch and deletes the lane clone.
 
 The message file ends with the attribution lines. Other conflicts abort; resolve them by hand,
 then `git add` + `./commit.sh`.
@@ -249,11 +235,9 @@ opus/…:opus/…` first.
 
 **After merges:**
 
-1. `bash .claude/muse-arbeit/lake3-von-fisch.sh` refreshes the lanes' warm Lean cache from
-   `merge-bau`.
-2. `EMISSION=./instrumente/pruefe-emission.sh bash .claude/muse-arbeit/pruef-push.sh` bundles
-   master, runs `cargo test --no-fail-fast` and the emission check on fisch, and pushes only if
-   `ct=0 em=0 failed=0`, origin is not ahead, and the key grep is empty. If origin moved,
+1. Refresh the lanes' warm Lean cache from the merge build.
+2. Bundle master, run `cargo test --no-fail-fast` and the emission check, and push only if
+   tests, emission and key grep are clean and origin is not ahead. If origin moved,
    `git pull` (merge) first and run it again.
    - Do NOT run it with `EMISSION=true`.
    - Emission counters (`MARKE_EMIT`, `MARKE_EMIT_G`, `MARKE_EMIT_M` in
@@ -263,21 +247,22 @@ opus/…:opus/…` first.
 ## 6. Opus agents (Claude subagents, max 2)
 
 - Spawn them with `isolation: worktree` and `run_in_background: true`.
-- **Their Lean and cargo builds go to their own fisch directory**, e.g. `gabbro-opus-tv` or
-  `gabbro-opus-nb`. The prompt says so explicitly:
-  - sync with `rsync -rlpgoD --delete --exclude .lake/ --exclude target/ …`;
-  - seed the cache with `cp -a ~/gabbro-muse/stage/lake3 …/grammatik/.lake`;
+- **Their Lean and cargo builds run in their own local directory**, e.g. a worktree beside this
+  checkout. The prompt says so explicitly:
+  - keep `grammatik/.lake` warm (copy it from a tree that has one) so `lake build` does not
+    start cold;
   - **and `programmlogik/.lake` is the one that bites `cargo test`.** `gabbro prove` builds
     `programmlogik/`, which needs **mathlib**; with no cache there, `lake` goes off to clone
     mathlib4 and the run hangs with zero CPU. *Measured 2026-09-15: two Opus trees stalled 13
     and 19 minutes on exactly this, and both times it was the apparatus and not the tree.*
-    There is no staged cache for it yet — until there is, either copy `programmlogik/.lake`
+    Until there is a staged cache, either copy `programmlogik/.lake`
     from a tree that has one, or keep `cargo test` off the lane and say so in the report;
   - a stale `programmlogik/.lake` is worse than none: an `incompatible header` makes
     `pruefe-lean-programm.sh` announce *"the exported program is not valid Lean"*, which is a
     sentence about the olean and not about the program (met in the acceptance run of
     2026-09-15);
-  - build with `ssh … lake build`.
+  - build with `lake build` in the agent's own directory, never in this checkout while
+    something else builds there.
 - **The prompt names:** the standards (no `sorry`, `native_decide` or new `axiom`; standard
   axioms; witnesses), the plan and SATZKARTE updates expected, "commit on your branch, do not
   merge", and the report they finish with.
@@ -292,7 +277,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N466** (highest issued: N465, fix lane F6; also `C185`, O-1) |
 | Gift (poison-probe) numbers | **1171** (highest file: `beispiele/gift/1170`, fix lane F7) |
 | Example numbers | **158** (highest file: `beispiele/157`, fix lane F10) |
-| Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter on fisch is authoritative) |
+| Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
 
 *Ledger re-measured 2026-09-21 (review G13) by grepping `crates/` for issued `N` codes and
 listing `beispiele/` and `beispiele/gift/`. The row above was stale from 2026-09-17 to that
@@ -374,8 +359,8 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 **Running lanes:**
 
-- **A lane cloned from a stale bundle** works against a master that no longer exists. Refresh the
-  bundle (`pruef-push.sh`) before launching.
+- **A lane cloned from a stale base** works against a master that no longer exists. Refresh the
+  base before launching.
 - **Oversized opencode context gives a provider error.** Restart a fresh session with a STATE
   note rather than `--continue`.
 - **`--continue` after a failed first run** has no task. Lane 195 invented its own; the
@@ -396,8 +381,8 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 **Machines:**
 
-- **Low memory on the orchestrator kills jobs silently.** A push job died that way once.
-  Everything heavy goes to fisch.
+- **Low memory kills jobs silently.** A push job died that way once.
+  Watch RAM before heavy builds; one build at a time in one checkout.
 - **The combined merge+push was blocked by the classifier once.** Split it into two steps.
 
 ## 10. Talking to Simon
