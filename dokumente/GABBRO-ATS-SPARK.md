@@ -87,10 +87,11 @@ of lemmas can be shared.
   axiom, and the C side assumes DRF-SC and is closed for one concurrent
   program (124). Locks carry invariants and floors, the pairing
   (`publishes`/`awaits`) is load-bearing, and thread start is runtime
-  (assumption A4) moving into the language. **Not covered by the goal
-  theorem:** one start running on several threads (the Rust checker admits
-  pool-safe duplicates since lane 245, beyond the theorem; `OFFEN.md` O17,
-  O18), same-core interrupt preemption (`OFFEN.md` O19), and DMA, which is
+  (assumption A4) moving into the language. Pools are covered by the goal
+  theorem since fix lane F10 (2026-09-22, OFFEN O18 closed). **Not covered
+  by the goal theorem:** per-core writes admitted by the checker
+  (`OFFEN.md` O17, narrowed to the O25 payload rule), same-core interrupt
+  preemption (`OFFEN.md` O19), and DMA, which is
   a checked address space in the language but has no leg in `Zielsatz/`.
 - **SPARK does Ravenscar**: a restricted deterministic tasking profile
   (fixed tasks, protected objects with ceiling locking, no dynamic

@@ -45,10 +45,10 @@ nachrechnen muss.** Sie ist die Zusammenfassung dessen, was heute siebenmal getr
 
 ### 1.1 Rechnen und Übertragen
 
-* **Alles, was rechnet, läuft per SSH auf `ki-pc-fisch-101`** (`CLAUDE.md`). `cargo build`,
+* **Alles, was rechnet, läuft lokal** (`AGENTS.md` §4, seit 2026-09-27). `cargo build`,
   `cargo test`, `pruefe-emission.sh`, `pruefe-luecken.py`, `isabelle build`.
-* **Jede Bahn hat ihr EIGENES Serververzeichnis.** Bahn A: `gabbro-A`. Bahn B: `gabbro-B`.
-  Schritt 0: `gabbro-0`. **Niemals `gabbro-baum` oder das Verzeichnis der anderen Bahn** — am
+* **Jede Bahn hat ihr EIGENES lokales Verzeichnis** (eigener Klon bzw. Worktree neben dem
+  Checkout). **Niemals der Checkout der anderen Bahn** — am
   2026-08-21 hat eine Kollision zwei grüne Testsammlungen rot gemeldet, und das war kein
   Befund.
 * **`rsync -rlpgoD --delete`, NICHT `-a`.** Der Grund steht in `CLAUDE.md` und ist kein
@@ -56,9 +56,9 @@ nachrechnen muss.** Sie ist die Zusammenfassung dessen, was heute siebenmal getr
   Zeitstempel — die Folge ist ein Bau aus einer Mischung, der plausibel aussieht.
 * **Der Arbeitsbaum steht vor Laufbeginn auf `master`** (`--ff-only`). Ein Zweig, der drei
   Commits zurückliegt, misst gegen einen Stand, den es nicht mehr gibt.
-* **Isabelle**: `rsync -a beweise/ ki-pc-fisch-101:gabbro-<bahn>-beweise/` und dort bauen.
-  **Kein AFP.** Lokal nicht — der lokale Wachhund macht aus einem Speicherabbruch etwas, das
-  wie ein gescheiterter Beweis aussieht.
+* **Isabelle**: lokal mit `~/Isabelle2025-2` bauen.
+  **Kein AFP.** Schwerer Lauf zur Zeit nur einer — daneben ein `free -g`, sonst misst man
+  eine Mischung (siehe `AGENTS.md` §9).
 
 ### 1.2 Vor dem ersten Bau: zwei Fragen, immer
 
@@ -337,9 +337,9 @@ machen.*
 ## B1 — Das kompositionale Ruf-Tor *(der größte Posten dieser Bahn)*
 
 ```
-$ ssh ki-pc-fisch-101 'cd gabbro-B && for f in beispiele/*.gab messung/*/*.gab; do
+$ for f in beispiele/*.gab messung/*/*.gab; do
     ./target/debug/gabbro lean "$f" 2>/dev/null; done \
-  | grep -oE "^-- REFUSED  [^ ]+  \([a-z-]+\)" | grep -oE "\([a-z-]+\)" | sort | uniq -c | sort -rn'
+  | grep -oE "^-- REFUSED  [^ ]+  \([a-z-]+\)" | grep -oE "\([a-z-]+\)" | sort | uniq -c | sort -rn
 ```
 
 Heute: **17 `call-not-compositional`**, gewachsen von 11, weil die neuen `ops`-Rufe

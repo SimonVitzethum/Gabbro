@@ -799,7 +799,8 @@ ask and does not answer.
 > on `RufMaschineG` memories -- the same standing as every other checker sentence
 > against its leg.
 
-`setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
+*The finding as written on 2026-09-15, before lanes 204 and 263 closed both halves
+(STATUS above):* `setze`'s contract promises only `konto[0] == x`. `hauptA`'s locked section writes both slots
 and then has to re-establish the lock invariant `konto[0] == konto[1]` at `release`; with a
 postcondition that says nothing about `konto[1]`, the caller cannot conclude it. **So premise
 (b) of the goal theorem (`NutzerPflicht`, the user's own obligation) does NOT hold for the

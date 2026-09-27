@@ -1663,3 +1663,30 @@ more than landed:
 - *Lane 206:* the certificate does not feed the simulation. `simpruef_liefert` returns
   `sim124` whatever the certificate says; the printed tables are checked against literals,
   which review G01 ties to `R124` in an unbuilt theorem (G01 F2).
+
+---
+
+## The runtime runs: hosted driver, bare-metal threads, freestanding link *(2026-09-26)*
+
+**Opus agent I (OFFEN O32, `messung/OPUS-I-METALL.md`).** `laufzeit/metall/` runs the
+UNCHANGED emitted C without an OS (Multiboot1, long mode, INIT-SIPI-SIPI, per-core
+round-robin scheduler with LAPIC-timer preemption, the CTicket lock, join by yield);
+`gabbro build` writes `<unit>.metall.c` beside the hosted driver; stage 11
+(`instrumente/pruefe-metall.sh`) boots 159, 124, 157 and two runtime probes on
+`qemu-system-x86_64 -smp 4`, three gifts bite.
+
+**Opus agent J (OFFEN O32/O33, `messung/OPUS-J-FREESTANDING.md`).** Stage 12
+(`instrumente/pruefe-freistehend.sh`): all 311 emitting units compile `-nostdinc` and link
+`-nostdlib` against `laufzeit/metall/`; program `via idt` handlers and entered entries run
+in the metal IDT; arenas on `laufzeit/metall/arena.c`; `gabbro build` links
+`<unit>.metall.elf` itself.
+
+**Opus agent L (OFFEN O31, `messung/OPUS-L-ZIELBINDUNG.md`).** `syscall V;` + `via V` +
+`target T abi A arch X { … }` + `target T;`/`--target T` (SYNTAX.md §12.3, `N562`–`N568`);
+`abi metal` lowers to `int $0x80`; ten kernel-gate units bind Linux AND metal; `N561`
+(entry binding) and error-code exception entries closed.
+
+What stays open is in `TODO.md` §0 (real hardware, Caprock integration and boot, entry
+stacks/IST, Caprock trap-template binding, a metal kernel serving thread-start numbers).
+
+`laufzeit/metall/` · `instrumente/pruefe-metall.sh` · `instrumente/pruefe-freistehend.sh`

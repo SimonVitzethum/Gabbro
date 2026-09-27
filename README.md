@@ -1,5 +1,18 @@
 # Gabbro
 
+> **Already proven in Lean, not just proposed.** Gabbro is an actively developed systems
+> programming language with a Rust implementation and a machine-checked Lean 4 formalisation
+> of its core language model and safety properties: the goal theorem
+> (`gabbro_ziel : GabbroZiel`) is proved over the model, with a witness on a real two-thread
+> program. What that covers — and what it does not — is stated in §5.
+
+> **The long-term usability goal is to make formally verified systems programming
+> approximately as accessible as writing ordinary low-level software in languages such as
+> Zig.** Users should not need a proof assistant for routine safety properties; the language
+> design and the verifier discharge those, leaving programmers with application logic,
+> explicit contracts, and named hardware assumptions. Verification does not become invisible —
+> its practical cost comes down to something close to conventional systems programming.
+
 **A systems language that carries the proof plumbing, so that verifying an operating system
 costs a fraction of what it costs today.** One output: C11 plus inline assembly. The compiler
 is safe Rust (`forbid(unsafe_code)`) with zero external dependencies.

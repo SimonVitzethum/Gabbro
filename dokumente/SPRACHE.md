@@ -3,7 +3,7 @@
 **Four mechanisms, two declaration rules, one library layer — and the constructs that make
 kernels, drivers and programs fully expressible.**
 
-The **notation** is in [`SYNTAX.md`](SYNTAX.md) (130 EBNF rules, closed, reachable, vocabulary
+The **notation** is in [`SYNTAX.md`](SYNTAX.md) (187 EBNF rules, closed, reachable, vocabulary
 covers every terminal). The **proof architecture** in [`BEWEIS.md`](BEWEIS.md), the path in
 [`PLAN.md`](PLAN.md).
 

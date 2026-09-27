@@ -6,7 +6,7 @@ Base: `ebeb27e4` on branch `n02-waechterstufe0`, worktree `.claude/worktrees/n02
 Measured: 2026-09-12. Local only, `free -g` beside the run (31 GB total, 6 available).
 All prose in this file is English. Quoted lines below are VERBATIM copies of the
 current document text (quoting is not rephrasing); they are shown only so the
-proposed edit is exact. Same proposal format as `messung/ZAHLEN-ABGLEICH.md`.
+proposed edit is exact.
 
 ## 1. Guardian results
 
@@ -518,8 +518,7 @@ These stand next to a proposed figure, are bound by no pattern, and stay out:
   the four touched files are byte-identical to base (todo 111, zahlen 75,
   klauseln 54, englisch 20); the tree total stands at 1085 for the reasons in
   section 6.
-- Side effects of THIS file, measured and accepted (same class as section 6 of
-  `ZAHLEN-ABGLEICH.md`): `pruefe-widerruf.py` counts `messung/*.md`, so its
+- Side effects of THIS file, measured and accepted: `pruefe-widerruf.py` counts `messung/*.md`, so its
   file figure moves 325 → 326 between the runs above and the applier's run —
   P13 already says to book 326. The reach census (`KENNZAHL` bold cells outside
   the five watched documents) gains exactly 6 cells from the quoted table rows

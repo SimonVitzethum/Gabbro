@@ -1,8 +1,10 @@
 # The user side of system calls — a construct, not a foreign body
 
-*Written 2026-09-12. Design proposal; nothing here is built. Decision by Simon:
-the user side of system calls gets explicit syntax, because it makes formally verified
-standard libraries markedly cheaper.*
+*Written 2026-09-12. Design proposal; status 2026-09-27: the construct is built
+(`syscall V;` + `via V` + `target T …`, SYNTAX.md §12.3, `N561`–`N568`, Opus agent L,
+`messung/OPUS-L-ZIELBINDUNG.md`). Decision by Simon: the user side of system calls gets
+explicit syntax, because it makes formally verified standard libraries markedly cheaper.
+What is still open stands in `TODO.md` §0 and OFFEN O31.*
 
 ## 0. Why `extern fn` is not enough
 
@@ -86,7 +88,7 @@ additions to `Deklaration`:
 | S2 | Lean: `SysAbi`, the errno sum as answer type, decoding totality theorem | -- |
 | S3 | Lean: port the ghost-carrier flag from the reference branch; theorem that the emitted program never reads a ghost | -- |
 | S4 | Lean: the pairing theorem of §2 | S2 |
-| S5 | parser and checker: keyword, `abi`/`regs`/`errors` checks, the `kernel` pairing check (needs `cargo` on the build server, queued) | S1 |
+| S5 | parser and checker: keyword, `abi`/`regs`/`errors` checks, the `kernel` pairing check | S1 |
 | S6 | emitter: the stub template (inline `syscall`, register binding, clobbers) plus its ruling in the `CForm` table (`Erhaltung.lean`) | S5 |
 | S7 | corpus: rename in `beispiele/07`; a new example -- a buffered writer over `write` whose flush is proved against the syscall contract; poison probes for a missing errno, a wrong register map, an arch mismatch | S5, S6 |
 

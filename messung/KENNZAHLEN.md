@@ -8,16 +8,16 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## Paesse, ueber denen die Saetze stehen
 
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~118~~ ~~122~~ ~~144~~ ~~146~~ ~~149~~ ~~150~~ 157 Sätze über 12 von 12 Pässen (52 am 2026-08-21, 96 und 98 im Lauf davor, 100 davor), keiner bewiesen** *(gemessen 2026-09-14 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 157 over 12 passes -- 149 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`, 330 Codes beansprucht, ~~358~~ ~~369~~ ~~371~~ 381 vergeben (2026-09-14); die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~157~~ 198 Sätze über 12 von 12 Pässen (davor ~~118~~ ~~122~~ ~~144~~ ~~146~~ ~~149~~ ~~150~~; 52 am 2026-08-21, 96 und 98 im Lauf davor, 100 davor), keiner bewiesen** *(gemessen 2026-09-27 mit `./target/debug/gabbro paesse`: `SENTENCES: 198 over 12 passes -- 190 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`, 419 Codes beansprucht, ~~358~~ ~~369~~ ~~371~~ ~~381~~ 419 vergeben (2026-09-14: 157/149/381); die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
 
 ## direkte Blicke auf die Karten der `Umgebung`
 
-      ~~46~~ *(struck before 2026-09-15)* **47 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
+      ~~46~~ ~~47~~ *(struck 2026-09-27)* **96 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
 
 ## Blicke ohne Modulkandidaten -- jeder ein moegliches `M103`-Loch
 
-      ~~46~~ *(struck before 2026-09-15)* **47 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
-      Kandidatenschleife und ~~41~~ *(struck before 2026-09-15)* **42 davon unqualifiziert**.
+      ~~46~~ ~~47~~ *(struck 2026-09-27)* **96 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
+      Kandidatenschleife und ~~41~~ ~~42~~ *(struck 2026-09-27)* **86 davon unqualifiziert**.
 
 ## `metis`/`blast`/`smt` -- Suchen, die einmal liefen
 
@@ -25,11 +25,11 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## gebuchte Widerrufe / Dateien, die der Widerrufwaechter liest
 
-      heute **13 Widerrufe** über 299 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 688 Dateien *(2026-09-27; 2026-09-14: 299)*, und keiner davon ist eine Teilmengenbeziehung.
 
 ## besetzte Zellen der Tafel -- die Zahl, die „gedeckt" heissen soll / Zellen, die NUR im Giftkorpus vorkommen
 
-      ~~169~~ ~~170~~ ~~25~~ ~~171~~ **172 besetzte Zellen** stehen daneben, **24 nur im Gift** (~~25~~ am 2026-09-16, Opus-Bahn Sperrstreifen: `beispiele/146-sperrstreifen.gab` deckt eine Zelle, die vorher nur eine Giftprobe trug — die einzige Zahl dieser Tafel, die die Bahn bewegt hat und die vorher STIMMTE; die 172 daneben war schon vorher veraltet, der Lauf sagt 175; 2026-09-14, lane 170: `traverse in traverse` turns covered -- `beispiele/122` nests two `elems of` loops; 2026-09-13, lane 152: `atomic × written` and `tagged × return (body)` turn poison-only, `atomic × read` turns covered) — und `gabbro blindstellen`
+      ~~169~~ ~~170~~ ~~25~~ ~~171~~ ~~172~~ **175 besetzte Zellen** stehen daneben, **24 nur im Gift** (~~25~~ am 2026-09-16, Opus-Bahn Sperrstreifen: `beispiele/146-sperrstreifen.gab` deckt eine Zelle, die vorher nur eine Giftprobe trug — die einzige Zahl dieser Tafel, die die Bahn bewegt hat und die vorher STIMMTE; die 172 daneben war schon vorher veraltet, der Lauf sagt 175; 2026-09-14, lane 170: `traverse in traverse` turns covered -- `beispiele/122` nests two `elems of` loops; 2026-09-13, lane 152: `atomic × written` and `tagged × return (body)` turn poison-only, `atomic × read` turns covered) — und `gabbro blindstellen`
 
 ## Absagen ohne erkennbaren Grund
 
@@ -47,11 +47,11 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## klebende Nahtstellen
 
-      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ ~~3538~~ ~~3629~~ ~~3631~~ ~~3630~~ ~~3697~~ ~~3729~~ ~~3733~~ **~~4634~~ 4677 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**. *4634 → 4677 am 2026-09-14:* dreiundvierzig Bahnen der Fusswache2 (N290-N294, Satz, acht Pruefungen) — **dreiundvierzig mehr, 0 kleben**. *3733 → 4634 am 2026-09-13:* Wellenstand seither plus neunundzwanzig Bahnen der Fusswache (E245-E249, Satz, neun Pruefungen) — **neunhunderteins mehr, 0 kleben**. *3729 → 3733 am 2026-09-11:* dreißig Bahnen (H019/H020-Regeln mit Proben, Lean-Sätze, Messnotizen) bringen ihre Fortsetzungen mit — **vier mehr, 0 kleben**.  *3631 → 3630 am 2026-09-10:* die `Match`-Arm-Entschachtelung in `zaehlstellen_block` nimmt eine Fortsetzung wieder heraus — **eine weniger, 0 kleben**. *3629 → 3631 am 2026-09-10:* zwei Bahnen (`gabbrov`-Gerüst, P002-Hinweise) bringen ihre Fortsetzungen mit — **zwei Fortsetzungen mehr, 0 kleben**. *3538 → 3629 am 2026-09-09:* die vierte Syntaxfassung (`deadline`, `count`, `owner`, vier neue Absagecodes, fünf neue Sätze, sieben Gift- und Beispielprogramme) bringt ihre Bahnen mit — **einundneunzig Fortsetzungen mehr, 0 kleben**. *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ ~~3538~~ ~~3629~~ ~~3631~~ ~~3630~~ ~~3697~~ ~~3729~~ ~~3733~~ **~~4634~~ ~~4677~~ 7365 Zeilenfortsetzungen** in den Quellen, **3 kleben**, **0 geplatzt**. *4677 → 7365 am 2026-09-27 (Opus I/J/L, Lanes 260–266); 0 → 3 kleben (vorbestehend in `saetze.rs`, `treiber.rs` — Code, kein Doku-Befund).* dreiundvierzig Bahnen der Fusswache2 (N290-N294, Satz, acht Pruefungen) — **dreiundvierzig mehr** (Stand 2026-09-14, damals 0 kleben). *3733 → 4634 am 2026-09-13:* Wellenstand seither plus neunundzwanzig Bahnen der Fusswache (E245-E249, Satz, neun Pruefungen) — **neunhunderteins mehr, 0 kleben**. *3729 → 3733 am 2026-09-11:* dreißig Bahnen (H019/H020-Regeln mit Proben, Lean-Sätze, Messnotizen) bringen ihre Fortsetzungen mit — **vier mehr, 0 kleben**.  *3631 → 3630 am 2026-09-10:* die `Match`-Arm-Entschachtelung in `zaehlstellen_block` nimmt eine Fortsetzung wieder heraus — **eine weniger, 0 kleben**. *3629 → 3631 am 2026-09-10:* zwei Bahnen (`gabbrov`-Gerüst, P002-Hinweise) bringen ihre Fortsetzungen mit — **zwei Fortsetzungen mehr, 0 kleben**. *3538 → 3629 am 2026-09-09:* die vierte Syntaxfassung (`deadline`, `count`, `owner`, vier neue Absagecodes, fünf neue Sätze, sieben Gift- und Beispielprogramme) bringt ihre Bahnen mit — **einundneunzig Fortsetzungen mehr, 0 kleben**. *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 
 ## Zeilenfortsetzungen -- die Flaeche der Klebeprobe
 
-      Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **7365 Zeilenfortsetzungen** in den Quellen *(2026-09-27; 2026-08-31: 3183)*, **3 kleben** *(vorbestehend in `saetze.rs`, `treiber.rs` — Code, kein Doku-Befund)*, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 
 ## Zeilen der eigenen Isabelle-Theorien
 
@@ -71,7 +71,7 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## Zellen der Tafel insgesamt
 
-Konstrukt — und **die Fehler sitzen an den Kombinationen**: ~~79~~ *(struck before 2026-09-15)* 78 blinde Zellen von 285. Jedes echte
+Konstrukt — und **die Fehler sitzen an den Kombinationen**: ~~79~~ ~~78~~ *(struck 2026-09-27)* 73 blinde Zellen von 285. Jedes echte
 
 ## Zahn 3 -- Praemissen bewiesener Schablonen ohne Pass
 
@@ -95,11 +95,11 @@ Marke 6 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
 
 ## Giftproben auf einer mehrdeutigen Kennung
 
-      ~~68~~ ~~70~~ ~~71~~ ~~73~~ 84 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 440
+      ~~68~~ ~~70~~ ~~71~~ ~~73~~ 84 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 470
 
 ## Absagekennungen
 
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 160 Sätze über 393 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 198 Sätze über 419 Codes, 55 Codes noch ohne (Stand 2026-08-31) — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
 
 ## `@version`-Textstellen -- die Menge, auf die sich Entscheidung 12 beruft
 
@@ -132,8 +132,8 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 160 S
 
 ## EBNF-Regeln / EBNF-Terminale
 
-      170 EBNF-Regeln und 233 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      187 EBNF-Regeln und 242 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
 
 ## EBNF-Regeln (heute-Klammer) / EBNF-Terminale (heute-Klammer)
 
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 170 / 233) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 187 / 242) | taken out along with the entry |

@@ -287,11 +287,12 @@ become `transition … : A -> B;`; signed divisions get `narrow`; `owner` appear
 `static` region is owned today by convention. *No file changes meaning; a file that must is
 a finding.*
 
-**G4 — The guardian for `grammatik/`.** `instrumente/pruefe-grammatik.sh`: `lake build`,
-`grep -c sorry` = 0, no `sorryAx` in `#print axioms`, the constructor count of `Ausgang` = 7,
-of `Logik` = 6, of `Hardware` = 4 (ratchets: they may not rise without a row in `SYNTAX.md`
-§16.1), the theorem list of `Satz.lean` present. Cheap, and without it every regression is
-invisible.
+**G4 — The guardian for `grammatik/`.** Planned as `instrumente/pruefe-grammatik.sh`
+(`lake build`, `grep -c sorry` = 0, no `sorryAx` in `#print axioms`, the constructor count of
+`Ausgang` = 7, of `Logik` = 6, of `Hardware` = 4 (ratchets: they may not rise without a row
+in `SYNTAX.md` §16.1), the theorem list of `Satz.lean` present) — the script was never built;
+`./lean-bau` is the build entry and `pruefe-grammatiktafel.py` covers the table. Cheap, and
+without it every regression is invisible.
 
 **G5 — Bytes** — done (evening): `leseBytes`/`schreibBytes`, `exec_gut` extended.
 

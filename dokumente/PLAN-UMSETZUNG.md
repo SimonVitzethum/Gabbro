@@ -30,6 +30,10 @@ else.*
 
 ## 1. The derivation — `gabbro-ableitung`
 
+*Status 2026-09-27: the derivation datum exists (`crates/gabbro-check/src/ableitung.rs`,
+`gabbro abgeleitet` prints derivations); the per-program Lean re-check (`pruefe-ableitung.sh`,
+derive-print-`lake env lean` over every `.gab`) is still open, and so is the plan below.*
+
 ### 1.1 Shape
 
 A new crate `crates/gabbro-ableitung` with one entry point:
@@ -205,7 +209,7 @@ and the outcomes and final worlds are compared. A difference is an emitter bug o
 
 | guardian | reads | red when |
 |---|---|---|
-| `pruefe-grammatik.sh` | `grammatik/`: `lake build`, `grep sorry`, `#print axioms` | a `sorry`, a `sorryAx`, a new axiom |
+| `pruefe-grammatiktafel.py` + `lake build` over `grammatik/` (a `pruefe-grammatik.sh` was planned here and never built; `./lean-bau` is the build entry) | `grammatik/`: `lake build`, `grep sorry`, `#print axioms` | a `sorry`, a `sorryAx`, a new axiom |
 | the constructor ratchet | `Ausgang` = 7, `Logik` = 6, `Hardware` = 6, `Ereignis` = 4 | a count rises without a row in `SYNTAX.md` §16.1 |
 | `pruefe-deckung.py` (extended) | every pass rule → a constructor hypothesis, a declaration fact, or "outside" | a rule maps to nothing |
 | `pruefe-ableitung.sh` | every `.gab` in `beispiele/`: derive, print, `lake env lean` | Lean rejects a print (§1.3) |
@@ -218,7 +222,8 @@ and the outcomes and final worlds are compared. A difference is an emitter bug o
 ## 4. The steps, in order, and what each is measured by
 
 **U1 — the guardians of `SYNTAX.md` and `grammatik/`.** `pruefe-syntax.sh`,
-`zaehle-wortschatz.py` (222), `pruefe-grammatiktafel.py`, `pruefe-grammatik.sh` (new, cheap).
+`zaehle-wortschatz.py` (222), `pruefe-grammatiktafel.py`, plus `lake build` over `grammatik/`
+(`pruefe-grammatik.sh` was planned here and never built; `./lean-bau` is the build entry).
 *Measured by:* all green; the hand counts in `SYNTAX.md` "State" replaced by the guardians'.
 
 **U2 — `gabbro-ableitung`, expressions and Λ.** `Expr` and the Λ computation; the Lean

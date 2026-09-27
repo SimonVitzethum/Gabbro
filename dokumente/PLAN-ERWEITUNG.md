@@ -218,6 +218,12 @@ decide whether this road is open later.
 
 ## 6. Scope for the next wave: the structure only (Simon decisions, 2026-09-12)
 
+*Status 2026-09-27: the grammar half of E1 (`libcall`/`libregion`, SYNTAX §7), E3
+(`translatordecl`, SYNTAX §7.2), E4 (`arena`/`allocstmt`/`resetstmt`, SYNTAX §9.1) and E6
+(`profiledecl`/`requiresprofile`/`profileentry`, SYNTAX §12.2) is in the grammar (SYNTAX.md
+State table). The checker/emitter halves per item, and E2/E5/E7, are still open as stated
+below.*
+
 **Only the structure that makes run-time library calls with checked regions possible is built
 -- no GPU backend, no concrete translator, no second emitter.** Each lane gets a fixed
 deliverable; "done" means the mechanism exists, is checked, and has one minimal example plus

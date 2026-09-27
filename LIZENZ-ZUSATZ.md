@@ -48,7 +48,7 @@ it is a property of a chain of arguments, and that chain is checkable only if th
 find it. Whoever says *"verified"* is using the word to move risk to someone else — the buyer,
 the auditor, the operator who now trusts the thing. The notice is what makes that word
 checkable: it says which checker was used, so the reader can look up what it does and does not
-claim (`README.md` §6 states exactly that, and it is shorter than most marketing pages).
+claim (`README.md` §5 states exactly that, and it is shorter than most marketing pages).
 
 *Whoever claims nothing has nothing to make checkable, and is asked for nothing.*
 

@@ -470,7 +470,7 @@ pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
 
 ## 9 — Words you cannot use as names
 
-Gabbro's vocabulary is a **closed table of 221 words**, and the first thing a newcomer types
+Gabbro's vocabulary is a **closed table of 245 words**, and the first thing a newcomer types
 is in it:
 
 ```
@@ -513,7 +513,7 @@ section 4.* The measured table of 558 names — C keywords, the standard library
 | the grammar, as a grammar | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) |
 | what the checker checks, and what it does not | `gabbro passes --je-satz` |
 | what a build looked at and what it skipped | [`dokumente/BAUSYSTEM.md`](dokumente/BAUSYSTEM.md) |
-| 63 worked programs | `beispiele/` — and `beispiele/gift/` is 368 programs that must FAIL |
+| 142 worked programs | `beispiele/` — and `beispiele/gift/` is 827 programs that must FAIL |
 | what a translation rests on | `gabbro certificate <file.gab>` |
 | what a human still owes | `gabbro obligations <file.gab>` |
 

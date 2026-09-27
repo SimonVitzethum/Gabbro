@@ -18,8 +18,8 @@ Simon's end sequence, the work now is:
 
 1. transfer into the checker and the emitter (§1);
 2. translation validation (§2), whose one headline metric is the **chain count**, from
-   `instrumente/zaehle-kette.py`. It stood at 1 of 101 on 2026-09-14 and at 2 of 111 after
-   stage (a) (programs 104 and 108).
+   `instrumente/zaehle-kette.py`. It stood at 1 of 101 on 2026-09-14, at 2 of 111 after
+   stage (a) (programs 104 and 108), and at 2 of 129 on 2026-09-26.
 
 Each item names its owner (lane or agent) where one is running.
 
@@ -30,15 +30,16 @@ Each item names its owner (lane or agent) where one is running.
 *14 walls from the firewall-in-Gabbro tree (`Verdict/messung/BEFUNDE-bm*.md`,
 measured against Gabbro master `71c5eaea`); 3 cost nothing — N042/N323 and
 atomic arrays are built, sigaction stays out by design (threshold counters
-are free). The remaining 11 are cut into 26 lanes in 3 waves below: 24 Muse
+are free). The remaining 11 were cut into 26 lanes in 3 waves below: 24 Muse
 lanes (workers 221–248, 230 unused) + 2 Opus lanes (O-1, C-2, sequential —
-both touch the model core; PARKED 2026-09-17, no Opus capacity — wave A
-runs without them). Review loop (`bin/review-wache.sh`, max 3
-rounds, builds re-run by the reviewer) covers workers 221–248 with
+both touch the model core). Waves A–E ran 2026-09-17 to 2026-09-26; lanes
+249–258 were added later (waves C–E and §0). O-1 landed via fix lanes F3/F9,
+C-2 via the syscall lanes. Review loop (`bin/review-wache.sh`, max 3
+rounds, builds re-run by the reviewer) covered workers 221–248 with
 reviewers from 321; the dispatcher worker list was extended on
-2026-09-19. Lanes 249–258 were added later (waves C–E and §0); the
-number ledger is `AGENTS.md` §7. Max parallel: 8 at start (221–226 + 236–237; O-1 parked), up to 8
-in wave B.*
+2026-09-19. The
+number ledger is `AGENTS.md` §7. What is still open from these waves stands
+in the wave sections below; the rest is history.*
 
 **Binding constraint (Simon): no language feature hard-depends on an OS.**
 Syscalls are always user-made — declared in-program (`extern`/`syscall`
@@ -62,7 +63,7 @@ for language plumbing, and plumbing belongs to the language, not to the
 proof. Lane 221 launched on that basis (`OPUS-BERICHT-FETCHADD.md` §2.3
 patch shape + surviving test).
 
-**Wave A (parallel now):**
+**Wave A (ran 2026-09-17 to 2026-09-26):**
 
 | lane | wall | files owned (exclusive) | size | reserves N / gift / ex |
 |---|---|---|---|---|
@@ -121,7 +122,7 @@ the accurate record):*
 | 250 | `D.klon` exporter fill (O-1 remainder) | `lean_g.rs` | M | — |
 | 251 | inline-trap lowering, FIRST attempt (FINAL-ROT after 5 rounds — core deliverable never landed; salvageable parts feed 258) | `emit.rs` | M | superseded by 258 |
 | 258 | Teil-3 trap lowering, second attempt (GRANT: zeugnis `child` booking + marker rebook; D.klon present via 250) | `emit.rs` + `CFormTrap` + tests | M | 249, 250 merged; salvages 251 (CFormTrap skeleton, gifts, harness) |
-| C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | PARKED (Opus, after O-1) |
+| C-2 | address-of + timespec (L-1/bm8-F3) | model core, `Spec` diff | XL | landed via the syscall lanes (Opus L, N562–N567) |
 
 *Launched 2026-09-18 as lanes 242 (+248, emitter arm queued post-235):
 **mmap-backed tables** (Obergrenze #2). `table … storage mmap`: same
@@ -169,8 +170,8 @@ simulation) and the two `Spec.lean` (d) assumption texts are unassigned
 *Reserves: 240: N426–430 / 1087–1091; 242: N431–435 / 1092–1096 (only if a
 new refusal is measured — over-cap growth already refuses via 240). 248
 takes no new codes (lowering lane). Example
-pool extended 147–160 (153–154 for the dynamic demo). Max parallel now:
-242 alongside waves A/B (11 total on fisch).*
+pool extended 147–160 (153–154 for the dynamic demo). Wave D ran with lane
+242 alongside waves A/B.*
 
 **Wave E — bounded strings (owner): general strings are planned, max length
 known like integer ranges.** Lane 256 MERGED 2026-09-19 (`afb286ee`):
@@ -225,32 +226,19 @@ long as nobody has written it.*
   members on threads and leave every other thread in the idle root — that is exactly the shape
   A4 demands (`LaufzeitStart`). A hosted driver first (it can be run and measured), the
   bare-metal form after it.
-  **Bare-metal form: Opus agent I (2026-09-26, OFFEN O32, `messung/OPUS-I-METALL.md`).**
-  `laufzeit/metall/` runs the UNCHANGED emitted C without an OS (Multiboot1, long mode,
-  INIT-SIPI-SIPI, per-core round-robin scheduler with LAPIC-timer preemption, the CTicket
-  lock, join by yield); `gabbro build` writes `<unit>.metall.c` beside the hosted driver
-  (same multiset pin); `instrumente/pruefe-metall.sh` (stage 11 of `pruefe-emission.sh`)
-  boots 159, 124, 157 and two runtime probes on `qemu-system-x86_64 -smp 4`, three gifts
-  bite. Open (O32): real hardware; program-declared `via idt` handlers in the metal IDT
-  (O19); `-DMETALL_*` build knobs are the harness's, not `gabbro build`'s link step; the
-  Caprock integration (Caprock's own boot instead of this Multiboot stub).
-  **Every feature freestanding: Opus agent J (2026-09-26, OFFEN O32/O33,
-  `messung/OPUS-J-FREESTANDING.md`).** Stage 12 (`instrumente/pruefe-freistehend.sh`): all
-  311 emitting units compile `-nostdinc` and LINK `-nostdlib` against `laufzeit/metall/`,
-  every symbol classified, 16 hosted-only units named (O33). Program `via idt` handlers and
-  entered entries with their register binding run in the metal IDT (59 under real IPIs with
-  the masked-lock discipline observed, 07's `int $0x80` binding and NMI); arenas on
-  `laufzeit/metall/arena.c` (153, 154, 158 and 158's `else` by the real runtime); strings
-  (161); idle `hlt`; `gabbro build` links `<unit>.metall.elf` itself with a `metal` line.
-  Still open: real hardware, Caprock integration, the entry-binding check (candidate N561),
-  entry stacks/IST, error-code exception entries (O32 (7)-(12)).
-  **System calls as named variables: Opus agent L (2026-09-26, OFFEN O31,
-  `messung/OPUS-L-ZIELBINDUNG.md`).** `syscall V;` + `via V` + `target T abi A arch X { … }`
-  + `target T;`/`--target T` (SYNTAX.md §12.3, `N562`-`N568`); `abi metal` lowers to
-  `int $0x80` into the image's kernel entry; ten kernel-gate units bind Linux AND metal, and
-  stage 12 no longer lists them hosted-only (only `beispiele/36`'s own asm stays). O32:
-  `N561` (entry binding) and error-code exception entries (twin stub, #GP measured) closed;
-  (M8)-(M10) in `Spec.lean`. Still open: entry stacks/IST; a Caprock binding (needs its trap
+- [x] **Bare-metal thread runtime** — Opus agent I (2026-09-26, OFFEN O32,
+  `messung/OPUS-I-METALL.md`; DONE.md entry 2026-09-26). `laufzeit/metall/` boots 159, 124,
+  157 on QEMU; stage 11 green.
+- [x] **Every feature freestanding** — Opus agent J (2026-09-26, OFFEN O32/O33,
+  `messung/OPUS-J-FREESTANDING.md`; DONE.md entry 2026-09-26). Stage 12: 311 units link
+  `-nostdlib`; handlers, arenas, strings run in metal.
+- [x] **System calls as named variables** — Opus agent L (2026-09-26, OFFEN O31,
+  `messung/OPUS-L-ZIELBINDUNG.md`; DONE.md entry 2026-09-26). `N561`–`N568`, Linux AND
+  metal bindings.
+- [ ] **Runtime residue (O32/O33/O31/O19).** Real hardware; program-declared `via idt`
+  handlers in the metal IDT; `-DMETALL_*` knobs as `gabbro build` link steps; Caprock
+  integration (Caprock's own boot instead of the Multiboot stub); entry stacks/IST;
+  error-code exception entries left from (7)–(12); a Caprock binding (needs its trap
   template); a metal kernel serving 155's thread-start number 1000.
 - [ ] **One concurrent program that actually RUNS**, through the emission guardian's executed
   set, with its result compared against a handwritten version — the way 37 single-threaded
@@ -319,7 +307,7 @@ plan is `dokumente/PLAN-STDLIB.md`; what stands here is the work.*
 
 *All measured 2026-09-16 while writing a Linux firewall entirely in Gabbro (7494 lines, eight
 modules, netlink socket open and the worker parked in `recvfrom`). Twenty-three named findings
-in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the language.*
+in `/home/ubuntu/brandmauer/messung/` (August server tree); these are the ones that belong to the language.*
 
 - [x] **No atomic array** — 256 counters cost 5136 lines and 1797 ops per increment. Built
   2026-09-16; measured payoff 287 lines and 11 ops. *And the wall was hiding three silences: the
@@ -331,16 +319,10 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   ever mean "hold all N".
 - [ ] **Cross-unit table access does not exist** (`M119`) — see §0b, first item. **This is the
   one Simon named: it blocks the library and it blocked the firewall's own wiring.**
-- [x] **No symmetric worker pool**: `concurrent { f, f }` is refused (`N304`), so N workers on
-  one routine must be spelled as N distinct roots. **For a firewall that is a bigger ceiling
-  than the lock was**, and it needs its own lane. *Status 2026-09-21: lane 245 admits a
-  pool-safe busy duplicate in the Rust checker; the goal theorem does not cover it
-  (`OFFEN.md` O18, §4 below). Since fix lane F4 (2026-09-22) the generated driver starts one
-  thread per declared occurrence (multiset pin) and the exporter refuses a repeated start
-  (`LG001`) instead of exporting a unit `einzelnB` refuses.* **Done 2026-09-22 (fix lane F10):**
-  the goal theorem covers pools (`AkzeptiertSpec.einzeln := EinzelnPool`, `gabbro_ziel`
-  re-proved, witness `pool_ziel_zeuge`, SATZKARTE §47, OFFEN O18 closed); the exporter's
-  `LG001` for repeated starts is lifted (`beispiele/157` exports and agrees); `N315` retired.
+- [x] **No symmetric worker pool** — closed 2026-09-22 (fix lane F10): the goal theorem
+  covers pools (`AkzeptiertSpec.einzeln := EinzelnPool`, `gabbro_ziel` re-proved, witness
+  `pool_ziel_zeuge`, SATZKARTE §47, OFFEN O18 closed); the exporter's `LG001` for repeated
+  starts is lifted (`beispiele/157` exports and agrees); `N315` retired.
 - [ ] **No thread start at all** — every shape refused (`P017`, measured 2026-09-15). §0 owns it.
   *Status 2026-09-22: lane 246's generated driver starts the declared `concurrent` roots (one
   thread per occurrence since fix lane F4); lane 253's `start { … };` parses, carries checker
@@ -363,7 +345,7 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
   scrutinee must be narrowed first).*
 - [ ] **`accumulates` cannot be `pub`** (`P041` against `N038`).
 - [ ] **A `bool` static checks clean and never becomes C** (`C001`).
-- [ ] **`transition` and `advances` stand in `SYNTAX.md` §8 with no parser arm** — one of them
+- [ ] **`transition` and `advances` stand in `SYNTAX.md` §7 and parse** — one of them
   with a Lean constructor and a theorem. Two of sixteen statement head words, and **nothing in
   the tree measures this class**.
 - [ ] **The emitter has no `atomic_fetch_add`**, and the measured reason is real: a checked
@@ -379,16 +361,16 @@ in `/home/ubuntu/brandmauer/messung/`; these are the ones that belong to the lan
 stale, the measured number stands beside it: a status list nobody re-measures is the thing this
 tree refuses everywhere else.*
 
-| the claim | as measured 2026-09-16 |
+| the claim | as measured (2026-09-16; re-measured 2026-09-27) |
 |---|---|
-| chain count 2 of 111 | **2 of 113** (`zaehle-kette.py --lean`); sieves (a) 2, (b) 15, (c) 15, (d) 55, (e) 2 |
+| chain count 2 of 111 | **2 of 129** (`zaehle-kette.py --lean`, 2026-09-26); sieves (a) 2, (b) 15, (c) 15, (d) 55, (e) 2 (2026-09-16; sieve denominators move with the corpus) |
 | T2, the re-checker: designed, not built | **built** — `korrOk` (`KorrespondenzAllg.lean`), 23 expression arms plus the block structure (`if`, `let` of a call, `traverse`), sound with a planted defect per arm |
-| 16 of 21 templates are an abstract core | unchanged, and still the honest state of T5 |
+| 11 of 21 templates are an abstract core | unchanged since 2026-09-16 (then counted 16; `gabbro schablonen` now reads 21 entries, 10 machine-checked), and still the honest state of T5 |
 | the concurrent half not begun | **begun and closed for ONE program**: `schlusssatz_124`, every SC run of the emitted C simulated in G, race freedom PROVED from the model's rather than assumed; the generic concurrent case is untouched |
-| no pass proved individually | unchanged. 163 sentences, 155 measured, 0 proved — and that is the gap between "the checker is measured" and "the checker is proved" |
+| no pass proved individually | unchanged. 198 sentences, 190 measured, 0 proved — and that is the gap between "the checker is measured" and "the checker is proved" |
 | Caprock: fragments only | unchanged. Six areas written out, 10 of 10 units error-free, nothing compiled into a kernel |
-| the runtime | assumption A4, and the two-thread program still does not run: no `main`, the lock primitives declared and undefined, no thread start (§0) |
-| the standard library | empty shelf; §0b is the plan since today |
+| the runtime | assumption A4; hosted driver plus bare-metal runtime since 2026-09-26 (agents I/J/L) — §0 owns what is left |
+| the standard library | empty shelf; §0b is the plan since 2026-09-16 |
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
@@ -541,10 +523,11 @@ tree refuses everywhere else.*
 
 **Stage (a) — single-threaded, generic** (`Schlusssatz.lean`, `KorrespondenzAllg.lean`; plan §6).
 
-- [ ] **Sieve (a), the elaborator** — lane 199 (running). 89 of 111 programs stop there: 69 have
-  an item without a G form, 12 a unit without a table, 7 use `bool`, 1 uses `requires`.
-- [ ] **Sieve (a), the Lean parser** — lane 200 (running). 20 programs stop there, 10 of them at
-  `reserved head forall`.
+- [ ] **Sieve (a), the elaborator** — lane 199 measured 2026-09-17: 89 of 111 programs
+  stopped there (69 an item without a G form, 12 a unit without a table, 7 `bool`, 1
+  `requires`). Re-measure against today's corpus (129 programs).
+- [ ] **Sieve (a), the Lean parser** — lane 200 measured 2026-09-17: 20 programs stopped
+  there, 10 of them at `reserved head forall`. Re-measure against today's corpus.
 - [ ] **`korrOk` arms** for `if`, `traverse`, compound assignment, globals, `let` of a call, and
   arithmetic. Each is one arm over an existing lemma. Measure each by the chain count it moves.
 - [ ] **Discharge the "no model error" condition** of part 4 from the model judgement, instead
@@ -682,7 +665,7 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
 - [ ] **The final double verdict over the whole chain.** One Muse lane and one Opus agent,
   independent, once stage (a) covers the corpus: "is the goal reached for the product, not only
   the model?"
-- [ ] **Keep README §6 true** after every merge that moves the chain count or a stage.
+- [ ] **Keep README §5 true** after every merge that moves the chain count or a stage.
 
 # 4. Extensions and named gaps  ⟨D⟩
 
@@ -800,8 +783,9 @@ P0 ships product value, P3 is recorded honesty. Rule §8 applies to each.**
 *Measure (PLAN-EINFACHHEIT §0): `gabbro zeremonie` goes down AND the pass register stays
 constant.*
 
-- [ ] **Lever 3: `gabbro fmt --explicit` / `--elide`** — lane 197 (running). Pure views: same
-  diagnostics, same register, byte-identical C, round-trip idempotent.
+- [ ] **Lever 3: `gabbro fmt --explicit` / `--elide`** — lane 197 ran 2026-09-17; check what
+  landed and what is still open. Pure views: same diagnostics, same register, byte-identical
+  C, round-trip idempotent.
 - [ ] **Lever 2: defaults with a named escape.** Design the rule set first (rank order, phase,
   `pure` on spec functions), with one register sentence per rule, then build.
 - [ ] **Lever 6: tactics** (`gabbro_simp`, `gabbro_wf`, normalisation) and better handed-over
@@ -817,7 +801,7 @@ and contextual keywords (lane 188, the residue is irreducible).
     reports list them as pre-existing.
   - `zaehle-gifttreffer.py` exits 1 with a stable finding set.
 
-  Re-measure each on fisch with `./instrumente/abnahme.py --voll`, and rebook or repair them, one
+  Re-measure each locally with `./instrumente/abnahme.py --voll`, and rebook or repair them, one
   guardian at a time.
 - [ ] **`messung/KENNZAHLEN.md` is German where the old TODO was.** Give each pattern in
   `pruefe-zahlen.py` / `pruefe-todo.py` its English alternative, then translate the ledger

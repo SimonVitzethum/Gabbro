@@ -37,6 +37,10 @@ gives it the ring buffer and the checksum, not the socket.*
 
 ## 1. The blocker, and it comes first: composition across units
 
+*Status 2026-09-27: the model half is proved (`GabbroZielVerbund`, Opus agent E, OFFEN O28);
+the C half (linked C refines the linked program) and the checker-side crossing are still
+open — the questions below stand.*
+
 **Measured 2026-09-16, in the firewall:** a module that wants to read another module's table is
 refused — `[M119] Kopf is declared nowhere` — and the honest workaround is an `extern fn` mirror
 with a C-identical prototype **plus a named assumption per crossing**. `use` parses and reaches

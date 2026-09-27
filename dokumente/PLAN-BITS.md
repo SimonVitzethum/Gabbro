@@ -1,6 +1,8 @@
 # Bits, widths, shifts, intrinsics, floats -- decisions before the build
 
-*Written 2026-09-12 after a review by Simon. Design decisions; nothing is built.
+*Written 2026-09-12 after a review by Simon. Design decisions; status 2026-09-27: the
+`+%`/`-%` lowering is built (lane 221), and the float model plus its C correspondence is
+built (lane 166, `GLEITKOMMA.md` §7–§8). The undecided remainder stays below.*
 Companion to `dokumente/PLAN-SYSCALL.md`.*
 
 ## 0. The rule for every new error class

@@ -1,6 +1,7 @@
 # Der Verifikationspfad als eigenständiges Werkzeug
 
-*Geschrieben am 2026-08-28. **Ausgeplant, nicht gebaut** — kein Schritt hieraus ist ausgeführt.*
+*Geschrieben am 2026-08-28. **Ausgeplant, teilgebaut** — Schritt V2 (`gabbro gabbrov pruefe`)
+ist seit 2026-09-10 gebaut (`GABBROV.md`); der Rest hieraus ist nicht ausgeführt.*
 
 > **Der Gegenstand in einem Satz:** ein Werkzeug, das ein **beliebiges** Gabbro-Programm und eine
 > **von Hand geschriebene Lean-4-Spezifikation** nimmt und entscheidet, ob die Logik des

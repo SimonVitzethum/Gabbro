@@ -1,41 +1,32 @@
 # Gabbro — Arbeitsanweisungen
 
 **Betriebshandbuch: [`AGENTS.md`](AGENTS.md)** — Stand, Ziel, Abläufe (Bahnen, Merge, Push),
-Maschinen, Nummernkreise und die teuren Fallen, festgehalten beim Umzug auf den Server am
-2026-09-15. Die Arbeitsliste ist `TODO.md`. Das Handbuch wird hier mitgeladen:
+Nummernkreise und die teuren Fallen. Die Arbeitsliste ist `TODO.md`. Das Handbuch wird hier mitgeladen:
 
 @AGENTS.md
 
-## Der Arbeitsrechner ist seit dem 2026-09-15 der Server, nicht der Laptop
+## Alles läuft lokal auf diesem Rechner (seit 2026-09-27)
 
-**Die Sitzung läuft auf `ubuntu@simon.jocraft.cc`** (Hostname `GaussBerechnungen`), Baum
-`/home/ubuntu/Gabbro`, in der tmux-Sitzung `Claude-Gabbro`. *Gemessen am 2026-09-15:*
-`free -g` meldet **15 GB gesamt, 9 GB verfügbar** (4 GB davon hält der Minecraft-Server),
-`df -h /` **39 GB frei**.
+**Die Server-Zwischenzeit ist vorbei.** Vom 2026-09-15 bis zum 2026-09-27 lief die Sitzung auf
+einem Server und alles Rechnende über SSH auf einer zweiten Maschine. Seit dem 2026-09-27
+läuft alles wieder lokal in diesem Checkout: jeder Lean-Bau, jeder `cargo`-Lauf, jeder
+Isabelle-Lauf (`~/Isabelle2025-2`) und jede Abnahme. `git push` geht über
+`~/.ssh/id_ed25519_github`. Wo weiter unten noch Server-Rezepte stehen, sind sie datierte
+Historie — die Regel ist lokal.
 
-**Damit gilt die Regel darunter STRENGER als vorher, nicht schwächer:** neun Gigabyte sind
-kein Rechner für einen Beweislauf, und **Isabelle liegt auf diesem Rechner gar nicht**. Jeder
-Lean-Bau, jeder `cargo`-Lauf und jeder Isabelle-Lauf geht über SSH auf `ki-pc-fisch-101` —
-von hier aus **direkt erreichbar** (eigener Schlüssel `~/.ssh/id_ed25519_fisch`), ohne
-Sprunghost. `git push` geht über `~/.ssh/id_ed25519_github`.
+*Wer `./instrumente/abnahme.py --voll` fährt, braucht beide Bäume (`crates/` und `beweise/`);
+ohne Isabelle misst `pruefe-beweise.sh`* **`OHNE NACHWEIS`, kein Befund**.
 
-*Wer `./instrumente/abnahme.py --voll` hier fährt, misst `pruefe-beweise.sh` ohne Isabelle* —
-und das ist **`OHNE NACHWEIS`, kein Befund**. Die volle Abnahme gehört auf `fisch`, mit beiden
-Übertragungen (`crates`-Baum und `beweise/`), wie im nächsten Abschnitt.
+## Rechenlast läuft lokal — mit Blick auf den Speicher
 
-## Rechenlast gehört auf `ki-pc-fisch-101`
-
-**Alles, was rechnet, läuft über SSH auf `ki-pc-fisch-101`** — dort stehen **128 GB RAM**
-(gemessen 2026-08-19: `free -g` meldet 110 GB gesamt, 108 GB frei, **16 Kerne**; Hostname
-`fisch`).
-Das gilt zuerst für **Isabelle/HOL** (`./instrumente/pruefe-beweise.sh`, `isabelle build`), und ebenso für
-jede andere Last, die den Arbeitsrechner an seine Grenze bringt: Mutationsläufe über den
-ganzen Prüfer, Fuzzing, ein Lauf über den zweiten Korpus.
+**Alles, was rechnet, läuft in diesem Checkout** — Isabelle (`./instrumente/pruefe-beweise.sh`,
+`isabelle build`), Mutationsläufe über den ganzen Prüfer, Fuzzing, Läufe über den zweiten
+Korpus. Es gibt keine zweite Maschine mehr: **ein schwerer Lauf zur Zeit, `free -g` daneben**.
+*Vor einem Lauf gehört ein `free -g` daneben — dann ist es eine Messung und keine Hoffnung.*
 
 ```bash
-# Die Beweise, gemessen 2026-08-19: zwoelf Theorien, 8 s Wanduhr, 23 s CPU (Faktor 2,8).
-rsync -a beweise/ ki-pc-fisch-101:gabbro/beweise/
-ssh ki-pc-fisch-101 'cd gabbro/beweise && ~/Isabelle2025-2/bin/isabelle build -D . -o threads=12'
+# Die Beweise, lokal (fünfzehn Theorien seit September):
+cd beweise && ~/Isabelle2025-2/bin/isabelle build -D . -o threads=12
 ```
 
 **Warum es hier steht und nicht im Kopf:** der lokale Beweislauf trägt einen 3-GB-Wachhund,
@@ -52,17 +43,15 @@ Abbruch aus Speichermangel ist kein Befund.*
 >
 > **Die Regel bleibt trotzdem stehen.** Sie ist eine Aussage über den Speicher, nicht über die
 > Gewohnheit, und wer sie fallen lässt, weil sie einmal nicht griff, hat die nächste
-> Speichergrenze nicht gemessen, sondern vergessen. *Vor einem lokalen Lauf gehört ein
-> `free -g` daneben — dann ist es eine Messung und keine Hoffnung.* Auf den
-Server gehören deshalb auch **`cargo build` und `cargo test`**, `./instrumente/pruefe-emission.sh` (ruft
-`cargo run` je Einheit) und `./instrumente/pruefe-luecken.py` (baut dreizehnmal neu).
+> Speichergrenze nicht gemessen, sondern vergessen. *Vor einem schweren Lauf gehört ein
+> `free -g` daneben — dann ist es eine Messung und keine Hoffnung.* Zu den schweren Läufen
+> gehören **`cargo build` und `cargo test`**, `./instrumente/pruefe-emission.sh` (ruft
+> `cargo run` je Einheit) und `./instrumente/pruefe-luecken.py` (baut dreizehnmal neu):
+> einer zur Zeit, nie zwei ineinander.
 
-```bash
-# **`-rlpgoD` und NICHT `-a`** -- siehe darunter, das ist kein Schoenheitsfehler.
-rsync -rlpgoD --delete --exclude 'target/' --exclude '__pycache__/' --exclude '.claude/worktrees/' \
-      ./ ki-pc-fisch-101:gabbro-baum/
-ssh ki-pc-fisch-101 'cd gabbro-baum && export PATH=$HOME/.cargo/bin:$PATH && cargo test'
-```
+> **`-rlpgoD` und NICHT `-a`, sobald ein Baum kopiert wird, den `cargo` baut** -- siehe
+> darunter, das ist kein Schoenheitsfehler. Ohne das `t` bekommt jede kopierte Datei die
+> aktuelle Zeit, und `cargo` baut aus einer Mischung.
 
 > **`rsync -a` erhaelt Zeitstempel, und `cargo` entscheidet Aktualitaet nach Zeitstempel.**
 > Eine uebertragene Quelle behaelt damit ihre alte `mtime` -- ist die aelter als das
@@ -100,8 +89,7 @@ zwei Register über einer Sache, und nur eines davon liest `pruefe-zahlen.py`.
 sauber sein; die Probe schreibt in Quellen, und zwei Läufe auf denselben Dateien
 zerstören einander.*
 
-Seit dem 2026-08-19 liegt auch eine **Rust-Kette auf `ki-pc-fisch-101`**
-(`~/.cargo/bin`, rustup, ohne `sudo` installiert — der Rechner hatte vorher kein `cargo`).
+Die Rust-Kette (`cargo`, rustup) liegt lokal in `~/.cargo/bin`.
 
 **Nach `abnahme.py --voll` ist die naechste `abnahme.py` ROT, und das ist kein Befund.**
 Der Mutationslauf schreibt in jede Pruefer-Quelle und stellt sie byteweise zurueck — *aber
@@ -110,15 +98,10 @@ mit einer neuen `mtime`*. Damit ist jede Quelle juenger als das gebaute Binaerpr
 ab. **Der Waechter hat recht** — er kann nicht wissen, dass der Inhalt derselbe ist —, aber
 die Ursache ist die Messapparatur und nicht der Baum.
 
-*Gemessen am 2026-08-31:* ein Lauf rot direkt nach `--voll`, fuenf Laeufe gruen danach, und
-`touch crates/gabbro-check/src/saetze.rs` stellt den roten Zustand auf Knopfdruck her
-(`exit=2`). **Die Heilung ist ein Bau, kein `touch` auf das Binaerprogramm** — den
+*Gemessen am 2026-08-31:* ein Lauf rot direkt nach `--voll`, fuenf Laeufe gruen danach.
+**Die Heilung ist ein Bau, kein `touch` auf das Binaerprogramm** — den
 Zeitstempel zu faelschen macht genau die Mischung unsichtbar, gegen die der Riegel steht:
-
-```bash
-ssh ki-pc-fisch-101 'cd gabbro-k && export PATH=$HOME/.cargo/bin:$PATH && cargo build'
-rsync -a ki-pc-fisch-101:gabbro-k/target/debug/gabbro target/debug/gabbro
-```
+`cargo build` im selben Checkout, dann weiter.
 
 Dieselbe Klasse wie `rsync -a` gegen `cargo`, nur andersherum: dort log der Zeitstempel,
 hier sagt er die Wahrheit ueber etwas, das keine Rolle spielt. *Ein Werkzeug, das die Zeit
@@ -126,8 +109,8 @@ misst statt den Inhalt, irrt in beide Richtungen.*
 
 ## Wenn ein Agent nebenher rechnet
 
-**Jeder Agent bekommt sein EIGENES Serververzeichnis** (`gabbro-a`, `gabbro-b`, …), nie
-`gabbro-baum`. *Am 2026-08-21 lief ein `rsync` in ein Verzeichnis, in dem gerade ein
+**Jeder Agent bekommt sein EIGENES Verzeichnis** (eigener Worktree neben dem Checkout, nie
+dieser Checkout). *Am 2026-08-21 lief ein `rsync` in ein Verzeichnis, in dem gerade ein
 Mutationslauf arbeitete, und zwei grüne Testsammlungen wurden rot* — **kein Befund, eine
 Kollision.** Ein Mutationslauf schreibt in Quellen und stellt sie hinterher byteweise zurück;
 wer ihm dazwischen eine Datei unterschiebt, misst eine Mischung. Dieselbe Klasse wie `W16`,
@@ -138,17 +121,11 @@ Commits zurückliegt, misst gegen einen Stand, den es nicht mehr gibt — am 202
 dreimal Zahlen erzeugt, die beim Zusammenführen einzeln nachgerechnet werden mussten. *Der
 `--ff-only`-Vorlauf ist kein Commit und kostet nichts; ihn zu vergessen kostet den Merge.*
 
-**In EIN Agentenverzeichnis gehören BEIDE Übertragungen, und zwar in dieser Reihenfolge:**
+**In EIN Agentenverzeichnis gehören BEIDE Bäume, und zwar in dieser Reihenfolge:**
+der `crates`-Baum zuerst, dann `beweise/` daneben.
 
-```bash
-rsync -rlpgoD --delete --exclude 'target/' … ./ ki-pc-fisch-101:gabbro-p/   # fuer `cargo`
-rsync -a                                  beweise/ ki-pc-fisch-101:gabbro-p/beweise/
-```
-
-Oben stehen die zwei Übertragungen mit **verschiedenen Zielverzeichnissen** (`gabbro` und
-`gabbro-baum`), und darum kollidieren sie dort nicht. *Ein Agent hat nur eines* — und wer nur
-die erste fährt, bekommt `pruefe-beweise.sh` **`OHNE NACHWEIS`** über fünfzehn tadellose
-Theorien. **Am 2026-08-31 hat das eine volle Abnahme rot gemeldet, mit `[1]` und ohne einen
+*Ein Agent hat nur ein Verzeichnis* — und wer nur den ersten Baum hineinstellt, bekommt
+`pruefe-beweise.sh` **`OHNE NACHWEIS`** über fünfzehn tadellose Theorien. **Am 2026-08-31 hat das eine volle Abnahme rot gemeldet, mit `[1]` und ohne einen
 Befund darin.** Der Wächter nennt die Ursache und die Heilung in seiner eigenen Absage — *aber
 er nennt sie erst, nachdem der Lauf zwölf Minuten gebraucht hat.*
 
@@ -240,7 +217,7 @@ Commit-Historie wird NICHT umgeschrieben -- sie ist ein Protokoll, kein Dokument
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).
-* **Caprock liegt schreibgeschützt** in `../caprock-messbasis` (Zweig `arch/x86_64`) —
+* **Caprock liegt schreibgeschützt** in `../caprock-messbasis` —
   **nie hineincommitten.** Korrekturvorschläge stehen im Protokoll, nicht im fremden Baum.
 * **`aarch64` bleibt versiegelt** („blockiert — Abstammung"), kein dritter Anlauf.
 * **Der Isabelle-Teil ist nach Lean übertragen, und die `.thy`-Menge ist damit eingefroren.**
@@ -249,11 +226,7 @@ Commit-Historie wird NICHT umgeschrieben -- sie ist ein Protokoll, kein Dokument
   Lean-Bau prüft sie also bei jedem Lauf mit (Bahnen 168 und 169, `messung/muse/MUSE-REPORT-168.md`
   und `-169.md`, mit Treue-Tabelle je Satz). **Ein neuer Beweis gehört nach Lean, nicht nach
   `beweise/`.** Der Ordner bleibt stehen als Protokoll und als Gegenprobe; `pruefe-beweise.sh`
-  fährt ihn weiter — *auf `fisch`, denn nur dort liegt Isabelle.*
-* Isabelle2025-2 liegt auf dem Laptop unter `/home/simon/Isabelle2025-2` **und seit dem 2026-08-19
-  auch unter `~/Isabelle2025-2` auf `ki-pc-fisch-101`**; **auf `ubuntu` nicht**; **kein AFP**.
+  fährt ihn weiter — lokal, mit `~/Isabelle2025-2`.
+* Isabelle2025-2 liegt lokal unter `~/Isabelle2025-2`; **kein AFP**.
   *Ohne `sudo` installiert* — Isabelle bringt sein eigenes JDK mit, `java` gibt es auf dem
   Rechner gar nicht. **Ein Passwort war dafür nicht nötig und wurde nicht benutzt.**
-  Übertragen mit `rsync -a --delete ~/Isabelle2025-2/ ki-pc-fisch-101:Isabelle2025-2/` —
-  ein *abgebrochener* Lauf lässt eine Installation zurück, die startet und beim ersten Bauen
-  an einer fehlenden Quelldatei stirbt. **Erst nach `rsync fertig` ist sie eine.**

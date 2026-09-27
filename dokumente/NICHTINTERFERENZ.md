@@ -263,7 +263,8 @@ that is harmless, under any other scheduler it is a second channel.
 
 ## 9. Measurement: what the plain rule refuses in the corpus
 
-The corpus (`beispiele/*.gab`, 107 programs) has no tenants; it cannot answer the question for
+The corpus (`beispiele/*.gab`, 142 clean programs on 2026-09-27; 107 when this was
+written) has no tenants; it cannot answer the question for
 real tenant code. What it can answer: the programs with more than one root, split naturally --
 each root its own domain, each carrier labelled with the root that owns it, a carrier touched by
 both roots labelled every way there is.

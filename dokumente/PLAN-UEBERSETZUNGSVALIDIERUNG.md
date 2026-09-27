@@ -35,6 +35,11 @@ against a second copy of the model rather than against the Lean model.
 | T5 | The remaining ghost-template library (about 16 of 20) | 2,000–3,000 | lane 127 |
 | **Σ** | | **≈ 21,000–52,000 (mid ≈ 35,000)** | |
 
+*Status 2026-09-27, against the estimates above: T2 is built as `korrOk`
+(`KorrespondenzAllg.lean`, 23 expression arms plus block structure — the re-checker half of
+the T2 row); T5 reads 10 of 21 machine-checked (`gabbro schablonen`). The Lean-line
+estimates stand as priced; what moved is built-status, recorded per item in `TODO.md` §0d.*
+
 ## 2. The binding constraint: the memory model (from lane 128)
 
 Lane 128's memory `(table, index, field) → Int` carries exactly the five easy forms. Around
@@ -63,12 +68,13 @@ Expr/Stmt/Block/Endblock constructors, term identity on the Lean side, T3 lexer/
 items, source-to-G on 104.*
 
 **The one metric: chain count.** How many of the corpus programs (`beispiele/*.gab`, 101 emitting
-on 2026-09-13) pass the WHOLE chain: Lean parse of the source → elaboration to `P` → model
+on 2026-09-13, 129 tracked on 2026-09-26) pass the WHOLE chain: Lean parse of the source → elaboration to `P` → model
 certificate accepted → correspondence certificate of the emitted C accepted. It replaces the
 per-pillar numbers as the headline; the per-pillar numbers stay as diagnostics. **On 2026-09-13
 it is 0** (T2 does not exist yet). **On 2026-09-14 it is 1**: `beispiele/104`, theorem
-`schlusssatz_104` (§6.4). **On 2026-09-15 it is 2 of 111**: `beispiele/104` and `beispiele/108`,
-each a Lean-checked instance of the GENERIC closing theorem `schlusssatz` (§6). A guardian prints
+`schlusssatz_104` (§6.4). **On 2026-09-15 it is 2 of 111** (`beispiele/104` and `beispiele/108`,
+each a Lean-checked instance of the GENERIC closing theorem `schlusssatz` (§6); **2 of 129 on
+2026-09-26**, same two programs, grown corpus). A guardian prints
 it; since 2026-09-15 it counts a chain as closed only for a program with a Lean-checked instance
 of the generic theorem (`instrumente/zaehle-kette.py`).
 
@@ -263,7 +269,11 @@ exporter's map (no `MODEL DATUM`), one line per function; named-table loads and 
 (`T_speicher.slots[i].f`, C block = the table's position) are rows now (they were refusals).
 The two older sections (104-cut `Cert104`, `GRow` bodies with `refD`'s map) are unchanged.
 
-### 6.3 The count: 2 of 111, and where the other 109 stop
+### 6.3 The count: 2 of 129 (2 of 111 on 2026-09-15), and where the rest stop
+
+*The census below is the 2026-09-15 measurement (111 tracked programs); the count stands at
+2 of 129 on 2026-09-26 — same two closed programs, grown corpus. Re-measure the sieve
+columns with `instrumente/zaehle-kette.py --lean` before spending on them.*
 
 | Program | Chain | Witness |
 |---|---|---|
