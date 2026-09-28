@@ -1,0 +1,52 @@
+-- erwartet: M101
+-- **A byte read through a POINTER had no type, so M1 had nothing to hold it against.**
+--
+-- Measured on the release binary of `f55b4713`, the commit before this one:
+--
+-- ```text
+-- impl fn f(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> u8 in 0 .. 3
+--     requires v + 1 <= lenof(buf) effects { reads buf }
+-- { return buf[v]; }              -- 0 errors, 0 hints
+-- ```
+--
+-- The same shape also passed with the return type `bool`, and with `u32 in 0 .. 1`: **three
+-- irreconcilable types for one expression, in one file, with no refusal** -- and the run said
+-- so in its own coverage line (*"M1 saw 2 expressions, 1 of them without a type"*) while
+-- nothing fell. That is the class `Typ::FnPtr`'s own note in `typen.rs` records, one suffix
+-- further over.
+--
+-- WHY IT COULD LOOK CLOSED, AND THAT IS THE PART WORTH READING
+-- ------------------------------------------------------------
+-- `umgebung.rs::typ_von_ort` did have an arm for the index suffix -- but it matched on
+-- `aktuell.durchgreifen()`, and `durchgreifen` FOLLOWS a pointer to its pointee. So a
+-- `ptr<normal, r> u8` arrived at the arm already as `Ganzzahl`, matched no `Typ::Feld`, and
+-- took the catch-all `_ => Typ::Unbekannt`. *The reader sees a rule about indexing; what runs
+-- is a rule about arrays.* The repair matches on `aktuell` itself, before the dereference.
+--
+-- AND WHY NO CORPUS FILE FOUND IT (measured, not guessed)
+-- -------------------------------------------------------
+-- After the repair, `0 of 146` files in `beispiele/` change their coverage number by a single
+-- expression: **not one example indexes a pointer.** Over the whole tree it is 7 files and 12
+-- expressions (`beispiele/gift/764`, `765`, `784`-`786`, `messung/k3-fragmente/K01`, `K04`).
+-- *A pointer element read is not a construct -- it is what one does when one writes a program*,
+-- and this corpus is written per construct. The program that needed it is a network stack
+-- (`~/gabbro-netz`, phase 2): a frame arrives in a buffer and every header field is bytes out
+-- of it.
+--
+-- The counter-probe on the WRITE side is `gift/1368`, and it is the sharper of the two: there
+-- the silence was a truncating store. The positive side is `beispiele/168`.
+
+module gift {
+
+-- **`u8 in 0 .. 3` is the whole poison.** A byte holds 0 .. 255, the declaration promises
+-- 0 .. 3, and nothing in the body narrows it -- so `M101` is owed, and until 2026-09-28 it was
+-- not paid.
+pub impl fn zwei_bits(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> u8 in 0 .. 3
+    requires v + 1 <= lenof(buf)
+    effects  { reads buf }
+    costs    <= 6 ops
+{
+    return buf[v];
+}
+
+}
