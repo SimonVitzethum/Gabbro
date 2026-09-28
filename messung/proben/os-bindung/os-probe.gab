@@ -1,0 +1,166 @@
+-- **A hosted Gabbro program that touches every OS call the hosted runtime
+-- makes** (server lane, TODO section 0e K8).
+--
+-- WHY THIS PROBE EXISTS. `AUFTRAG-1.md` K8 (Simon, 2026-09-28: *"an die Hardware
+-- ist OK, OS nicht, das muss selbst gemacht werden"*) says no OS call may be
+-- hard-wired in ANY runtime. K7 did that for the module runtime and the number
+-- that says so is a LINK-level one: the undefined symbols of the built artefact
+-- that the RUNTIME's own objects reference (`instrumente/pruefe-kernelmodul.sh`,
+-- stage `symbole_pruefe`). The hosted half needs the same measurement, and a
+-- measurement needs a binary -- so this unit is built, linked and RUN by
+-- `instrumente/pruefe-os-bindung.sh`.
+--
+-- WHAT IT HAS TO CONTAIN, and each line is here for one runtime file:
+--
+--   * a `concurrent` set    -> the generated driver `<unit>.treiber.c`
+--                              (`pthread_create`, `pthread_join`, `main`)
+--   * a `lock`              -> the driver's lock primitives
+--                              (`pthread_mutex_lock`/`_unlock`)
+--   * an `arena` with a `max` ceiling far above its committed floor, grown at
+--     run time -> `laufzeit/arena_dyn.c` (`mmap`, `mprotect`, `sysconf`)
+--   * one declared foreign function -> the PROGRAM's own C beside it
+--     (`melde.c`), which is what the per-object criterion has to tell apart
+--     from the runtime's calls. `printf` is in THAT file, declared here, and it
+--     must never be counted as the runtime's.
+--
+-- WHY THE ARENA IS ONE THREAD'S. `eins` grows it and allocates out of it; `zwei`
+-- never names it. A shared arena across threads is exactly what OFFEN O20 keeps
+-- out of the statement (`AUFTRAG-1.md` H5), so a probe that shared one would be
+-- measuring something the language does not claim.
+--
+-- WHAT THE RUN ANSWERS, and why each number is a statement rather than an
+-- observation. Both roots walk the same `takt` table under the one lock:
+--
+--   * `summe` is `2 * SCHRITTE` -- every pass of either root added one while
+--     holding the lock, so a lost update is a different number and not a
+--     schedule;
+--   * `belegt` is `SCHRITTE` -- every `alloc` of the growing root found room,
+--     because the two commits below put 2056 slots under it;
+--   * `voll` is 0 -- refuse-on-full was not reached here, and that is reported
+--     as measured and not assumed: on hosted Linux the commit practically
+--     always succeeds (OFFEN O20, the `else` no test reaches).
+--
+-- It is an `object` unit and not a `program` one for one reason: the hosted
+-- driver brings its own `main` (it is the half of the program the runtime owns,
+-- `Zielsatz/Spec.lean` assumption (d)), so a unit that also declared `main`
+-- would have two.
+module probe::os_bindung {
+
+assume os_probe_melde_vertrag
+    "The probe's own `gabbro_probe_melde` body writes its two words to standard output and returns; it keeps the x86_64 SysV convention and never fails."
+    falsifier sonde_os_probe_melde;
+
+-- The one call into the operating system this PROGRAM makes, declared here and
+-- nowhere else. Its body is `messung/proben/os-bindung/melde.c`, which is where
+-- `printf` stands -- and the measurement must not read it as the runtime's.
+extern fn gabbro_probe_melde(schluessel : u32, wert : u64) effects { pure } costs <= 512 ops;
+
+const SCHRITTE : u32 = 32;
+
+type Wert = u64 in 0 .. 1000000;
+
+-- The bounded heap: 8 slots committed, a ceiling of 65536. The whole run grows
+-- it twice by 1024, so `N426`'s upper bound is 8 + 2048, far below the ceiling.
+arena Puffer capacity 4 .. 8 max 65536 of Wert;
+
+table takt count SCHRITTE {
+    slot {
+        an : bool,
+    }
+}
+
+table stand count 1 {
+    slot {
+        summe : u64 wrapping,
+        belegt : u32 wrapping,
+        voll : u32 wrapping,
+    }
+}
+
+lock L protects { stand } rank 0 held <= 2048 ops;
+
+-- One counted pass, shared by both roots: the lock is what makes the sum a
+-- statement.
+impl fn zaehle()
+    effects { reads stand.slots, writes stand.slots, locks L }
+    costs   <= 256 ops
+{
+    locks L {
+        stand.slots[0].summe = stand.slots[0].summe + 1;
+    }
+}
+
+-- **What the run says, reported by BOTH roots at their own end.**
+--
+-- Why both, and why that makes `summe` deterministic without a barrier: each
+-- root reports only after its own last pass, and one of the two reports LAST in
+-- time. That last report therefore stands after every increment either root
+-- made -- its own because they precede it, the other's because they precede the
+-- other's report, which precedes this one. So `k=4 v=64` is a line the run MUST
+-- carry, whatever the schedule; the other `k=4` line may read anything between
+-- 32 and 64 and is not checked.
+impl fn melde_stand()
+    effects { reads stand.slots, locks L }
+    costs   <= 2048 ops
+{
+    locks L {
+        gabbro_probe_melde(2, stand.slots[0].belegt);
+        gabbro_probe_melde(3, stand.slots[0].voll);
+        gabbro_probe_melde(4, stand.slots[0].summe);
+    }
+}
+
+-- The root that owns the arena: it commits below the ceiling, then hands out one
+-- slot per pass and reports refuse-on-full where it happens.
+impl fn eins()
+    effects { reads takt, reads takt.slots, reads stand.slots, writes stand.slots,
+              writes Puffer, locks L }
+    costs   <= 65536 ops
+{
+    grow Puffer by 1024 else {
+        gabbro_probe_melde(7, 1);
+        return;
+    };
+    grow Puffer by 1024 else {
+        gabbro_probe_melde(7, 2);
+        return;
+    };
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, reads stand.slots,
+                writes stand.slots, writes Puffer, locks L
+    {
+        if takt.slots[i].an == false {
+            zaehle();
+            locks L {
+                let a = alloc Puffer (1) else {
+                    stand.slots[0].voll = stand.slots[0].voll + 1;
+                    return;
+                };
+                stand.slots[0].belegt = stand.slots[0].belegt + 1;
+            }
+        }
+    }
+    melde_stand();
+}
+
+-- The root that only counts: it never names the arena, which is what keeps the
+-- heap one thread's (OFFEN O20).
+impl fn zwei()
+    effects { reads takt, reads takt.slots, reads stand.slots, writes stand.slots,
+              locks L }
+    costs   <= 16384 ops
+{
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, reads stand.slots,
+                writes stand.slots, locks L
+    {
+        if takt.slots[i].an == false {
+            zaehle();
+        }
+    }
+    melde_stand();
+}
+
+concurrent { eins, zwei };
+
+}

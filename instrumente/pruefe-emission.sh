@@ -4006,7 +4006,14 @@ MARKE_EMIT=143
 # (`instrumente/pruefe-kernelmodul.sh` probe `atomar`). It emits and compiles at the first
 # attempt -- the round tables of `takt`'s finding are per root here, and each root marks its
 # own. Re-measured in the same run: `322 von 322`.
-MARKE_EMIT_M=159
+# **159 -> 160 on 2026-09-28 (server lane, TODO 0e K8).** One new probe under
+# `messung/proben/os-bindung/`: `os-probe.gab`, the hosted unit that touches every OS call the
+# hosted runtime makes -- a `concurrent` set for the generated driver, a `lock` for its
+# primitives, an `arena` with a ceiling for `laufzeit/arena_dyn.c`, and ONE declared foreign
+# function whose body (`melde.c`) holds the program's own `printf`, which is the reference the
+# per-object criterion of `instrumente/pruefe-os-bindung.sh` must NOT count as the runtime's.
+# Re-measured in the same run: `324 von 324`.
+MARKE_EMIT_M=160
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

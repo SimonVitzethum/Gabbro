@@ -46,3 +46,10 @@ programmlogik/_pruefung/
 
 # Local assistant output (NLnet guide draft, README copy): not part of the repo (Simon, 2026-09-26)
 Claude outputs/
+
+# **Das Arbeitsverzeichnis der QEMU-Instrumente** (2026-09-28, Serverbahn).
+# `pruefe-metall.sh` legt seine Bilder unter `.tmp/metall/` ab (`ARB="${1:-$W/.tmp/metall}"`),
+# und ein `git add -A` nach einem Lauf stellte **268 Dateien** zum Commit bereit -- ELF-Bilder,
+# `qemu.out`, emittiertes C. Dieselbe Klasse wie `target-*/` darueber: ein Baumverzeichnis,
+# das kein Baumname ist.
+.tmp/

@@ -583,6 +583,20 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   (`pthread_*`, `mmap`, `mprotect`, the raw `clone`/`futex` through `syscall`, `exit`,
   `abort`, `printf` — about fourteen names, measured in §12.4 of the report) — bare metal
   keeps its hardware access, which is instructions and not API.
+  **K8's MEASUREMENT stands since 2026-09-28** (server lane, sessions 7 and 10,
+  `messung/SERVER-0E-REPORT.md` §14): `instrumente/pruefe-os-bindung.sh` is K7's criterion for
+  the hosted side — `nm -u` over a BUILT probe intersected with the runtime objects', so the
+  program's own `printf` does not count — and it reads **12** (`MARKE_OSSYM`, the list in
+  §14.1) plus **3** raw `syscall` sites in `laufzeit/faden.c` that leave no symbol at all
+  (`MARKE_ROHRUF`), both as ratchets to be pulled to 0, and **0 OS names in the 7 files of
+  `laufzeit/metall/` beside 65 machine accesses** — the half K8 asks for explicitly. 5 of 5
+  poison probes caught. **And the probe found a defect nobody was looking for:** neither
+  GENERATED driver read `GABBRO_ARENEN`, so a hosted or bare-metal unit with a dynamic arena
+  ran with `base == NULL` — every `grow` and every `alloc` took its `else`, the heap was dead,
+  and fail-closed means it was silent (`treiber.rs::arenen_reservieren`, `GENERATOR_KENNUNG`
+  → `treiber-gen-5`, gift 5 keeps it found). Still open, and it is the rest of K8: the
+  interface `laufzeit/bindung.h`, the library `bibliothek/linux/`, the refusal in `bau.rs`
+  beside `bindungsregel`, and the CORPUS — the part K7 never had.
   **The measurement stands** (server lane, session 5, `messung/SERVER-0E-REPORT.md` §12): the
   stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh` intersects `nm -u` on the `.ko`
   with `nm -u` over the RUNTIME objects only, so a symbol the program's own C pulls does not

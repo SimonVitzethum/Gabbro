@@ -1634,3 +1634,168 @@ binding file that LEAVES the emission is a finding too. `MARKE_EMIT`, `MARKE_EMI
   macros that place a pointer and two strings in sections; they are what makes the artefact a
   module rather than something it does, and they leave no undefined symbol (measured: the stage
   reads 0 with them in place).
+
+---
+
+## 14. Session 7/10 (2026-09-28) — K8, first slice: the hosted measurement, and the dead heap it found
+
+*Session 7 hit the usage limit mid-work and left this slice uncommitted on disk; session 10
+finished it, measured it and banked it. Both are counted as one below, because the tree cannot
+tell them apart and the numbers are one set.*
+
+**What K8 says** (`AUFTRAG-1.md`, Simon 2026-09-28): *"an die Hardware ist OK, OS nicht, das
+muss selbst gemacht werden"* — no OS call hard-wired in ANY runtime, hardware access on bare
+metal allowed. Acceptance point **4d**. K7 is the template and it worked, so the order is the
+same: **the measurement first, as a ratchet at today's number**; then the interface and the
+library; then the refusal; then the corpus. This section is the first of those four.
+
+### 14.1 The instrument: `instrumente/pruefe-os-bindung.sh`
+
+The criterion is K7's, per OBJECT and not per binary, because a hosted binary names `printf`,
+`mmap` and `pthread_create` in one undefined-symbol list and two of those three are the
+runtime's while the first is the program's:
+
+| | |
+|---|---|
+| `nm -u <binary>` | every libc/OS name the built probe still needs |
+| `nm -u` over the RUNTIME objects only (`<unit>.treiber.c`, `laufzeit/arena_dyn.c`, `laufzeit/faden.c`) | what the runtime references |
+| the intersection, minus the toolchain's names | **what the HOSTED RUNTIME pulls out of the operating system** |
+
+**The probe is one program, because one can ask the whole question**
+(`messung/proben/os-bindung/os-probe.gab`): a `concurrent` set brings the generated driver, a
+`lock` its primitives, an `arena capacity 4 .. 8 max 65536` the mmap runtime, and one declared
+`extern fn` brings the PROGRAM's own libc call — `printf`, standing in
+`messung/proben/os-bindung/melde.c`, which is the reference the criterion has to NOT count.
+
+**Three stages, because one measurement would have been three different silences:**
+
+```
+$ instrumente/pruefe-os-bindung.sh
+   HARNESS: built (158 lines of emitted C, 147 of driver)
+   HARNESS: ran (6 reported line(s))
+   HARNESS: OS symbols ok (12 hard-wired by the hosted runtime, mark 12 -- K8 brings this to 0)
+   HARNESS: read 20 binary symbol(s) against 17 runtime reference(s)
+   HARNESS: raw syscalls ok (3 site(s) of the `syscall` instruction, mark 3 -- K8 brings this to 0 too)
+   HARNESS: bare metal ok (no OS call in 7 file(s) of the machine layer; 65 machine access(es)
+            -- port I/O, hlt, cli/sti, MSRs, the ticket lock's locked instructions -- and those are allowed)
+```
+
+1. **The symbols** — `MARKE_OSSYM=12`, and the list is the run's own
+   (`fest.txt` under `--keep`): `abort`, `exit`, `fprintf`, `fwrite`, `mmap`, `mprotect`,
+   `pause`, `pthread_create`, `pthread_join`, `pthread_mutex_lock`, `pthread_mutex_unlock`,
+   `sysconf`. §12.4 estimated "about fourteen" by reading the sources; the measured number over
+   a built binary is twelve, and the difference is of method and not of worklist: `printf`,
+   `read` and `write` stand in runtime files this probe does not link (`start.c`,
+   `start_pool.c`, which do not compile alone because they `#include` the emitted unit through
+   a macro).
+
+   **`pause` is on the list, and on the hosted side it is libc's `pause(2)` and not the
+   instruction** — the idle root of the generated driver (`treiber.rs`) and of `start.c` blocks
+   in it, deliberately, because an empty loop has no side effect and the compiler may remove
+   it. The bare-metal stage below reads the same token as HARDWARE, which is right there and
+   wrong here; that is why the two stages do not share one name list.
+
+   **And the criterion earns its keep in the same run:** `printf` and `fflush` stand in the
+   binary's undefined list and are NOT counted, because the only object that references them is
+   `melde.c` — the program's own C, for the foreign function `os-probe.gab` declared with its
+   ABI, effects, costs and named assumption. Nothing about the NAME tells it apart from
+   `fprintf` three lines above; the object holding the reference does.
+2. **The raw system calls `nm` cannot see** — `MARKE_ROHRUF=3`. `laufzeit/faden.c` issues
+   `clone`, `futex` and the child's `exit` as the `syscall` INSTRUCTION in inline assembly
+   (lane 260: threads are made by our own code, not by libc), so it leaves **no undefined
+   symbol at all** — measured: `nm -u faden.o` is empty. *Without this stage the instrument
+   would report a hosted runtime that had merely hidden its Linux dependency in asm.*
+3. **Bare metal, which is the half K8 asks for explicitly**: zero OS names in 7 files of
+   `laufzeit/metall/`, and **65 machine accesses** beside it — so the green says something
+   instead of merely not saying no. Three families are deliberately NOT read as OS, and each
+   absence was a false alarm of the first run: `memcpy`/`memset`/`strlen` (a freestanding C
+   owes these to the compiler, and `metall/include/string.h` defines them), `pause` (the
+   INSTRUCTION in the ticket lock's backoff, not libc's `pause(2)`), and anything in a COMMENT
+   — the lesson `pruefe-osfrei.py` wrote down after `mmap` fired inside a German compound.
+
+**Both marks are RATCHETS and the text says which**: a run that needs more is refused, and a
+run that needs FEWER is a finding too — the good case, the mark belongs pulled down. *A stage
+that demanded 0 before the work landed would be red on every run until it did, and a red that
+says nothing new every time it is read is a red nobody reads.*
+
+### 14.2 What the probe found: both generated drivers ran with a DEAD heap
+
+The emitted C ends with `#define GABBRO_ARENEN &A_desc, …` and calls it in its own comment
+*"the ONE list a driver needs to reserve (`gabbro_arena_reserve`) before any of the unit's code
+runs"*. **Neither generated driver read it.** Only `laufzeit/kmodul/kmodul.c` did; the harness
+drivers of `pruefe-metall.sh`, `miss-arena-decke.sh` and `pruefe-emission.sh` each wrote the
+call by hand. So a hosted or bare-metal unit with a dynamic arena, built by `gabbro build` and
+run from its own driver, started with `base == NULL`: every `grow` and every `alloc` took its
+`else`, the heap was **dead**, and nothing said so.
+
+*It is silent because it is fail-closed, and that is the whole reason three hand-written
+registers over one call could all be right while the generated one was missing* (`W7`).
+
+The repair is in `crates/gabbro-cli/src/treiber.rs` (`arenen_reservieren`, `GENERATOR_KENNUNG`
+`treiber-gen-4` → `-5`), in BOTH drivers, before the first start, `#ifdef`-guarded on the
+unit's own list so a unit without an arena is untouched. No error check, unlike the module
+flavour, and on purpose: the hosted and bare-metal reservations fail-stop inside themselves —
+at load there is no program running that could take an `else` — while a kernel module cannot
+stop the machine, so `kmodul.c` reads the outcome and refuses the load.
+
+Its test is `beide_treiber_reservieren_die_arenen_vor_dem_ersten_start` (four claims: the block
+stands in both drivers, BEFORE the first start, guarded, and the list is spelt nowhere else in
+the driver's CODE). **Its first run was red**, and for the reason the tree already had written
+down: the block's own header comment names `GABBRO_ARENEN` to say where the list comes from,
+and prose naming a token is not a use of it. Comment lines are dropped before that count now.
+
+### 14.3 The poison probes — 5 of 5 caught
+
+```
+$ instrumente/pruefe-os-bindung.sh --gift all
+GIFT 1: caught (1 finding(s))   the RUNTIME gains one OS call (`getpid()` in the driver): 13 > 12
+GIFT 2: caught (1 finding(s))   the RUNTIME gains one RAW syscall in `faden.c`: 4 > 3
+GIFT 3: caught (1 finding(s))   the BARE-METAL runtime gains `printf` in `kern.c`
+GIFT 4: caught (1 finding(s))   the expected read-back moves 32 -> 33: is the output read at all?
+GIFT 5: caught (2 finding(s))   the driver loses its ARENA RESERVATION: `k=2 v=0`, `k=4 v=32`
+gifts: 5 of 5 caught
+```
+
+No two are caught by the same stage, and none of them touches the tree: every mutation is on a
+copy in the work directory. **Gift 5 is the defect of §14.2, kept found.**
+
+*One trap this lane has already paid for was met again and in its own place:* gift 4 moves the
+EXPECTATION, and the first full run reported gift 5 as *"did not report `k=2 v=33`"* — caught,
+and for the wrong reason, because `ERWARTET` carried the previous gift's answer. `einmal` resets
+every per-run variable first now. **A selector that only ever SETS carries the last probe's
+answer**, third file in this lane to meet it (`probe_waehle`, `MARKE_KSYM`, and this).
+
+### 14.4 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1428 passed, 0 failed** (+1: the driver test; `~/claude-lane/logs/test-s10b.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 324 von 324** (`~/claude-lane/logs/emission-s10c.log`) |
+| `./instrumente/pruefe-metall.sh` | rc 0, **18 booted on qemu -smp 4, 8 gifts bite** — the metal driver now carries the reservation and the arena probes still hold their numbers |
+| `./instrumente/pruefe-kernelmodul.sh` | rc 0, GREEN on all three probes (the module runtime was not touched) |
+| `./instrumente/pruefe-os-bindung.sh` | rc 0 clean, **5 of 5** gifts |
+| `pruefe-waechter.py` | rc 1 — **identical to the base after digit normalisation**, the new instrument listed `ok`, and the ratchet of open partial measurements back at the base's **34** |
+| `pruefe-englisch.py`, `-zahlen.py`, `-vergabe.py`, `-kennungen.py` | rc 1, each **byte-identical to the base** (measured in a throwaway worktree at `e139b7a3`, removed after) |
+| `pruefe-todo.py`, `-saetze.py` | rc 0 |
+| `abnahme.py --voll` | cannot run here: no Isabelle on this machine (`REGELN.md`) |
+
+**Counters re-measured and dated.** `MARKE_EMIT_M` 159 → **160** (the new probe under
+`messung/proben/`; re-measured `324 von 324` in the same run). `MARK_AUSSEN` 23 → **24**
+(`sonde_os_probe_melde`, the probe's own named assumption — the ONE call into the OS the
+PROGRAM makes, and the whole point is that the instrument must not count it as the runtime's).
+README guardian count 51 → **52**. `MARKE_EMIT` and `MARKE_EMIT_G` unchanged.
+
+**And the new instrument carries the cut notice** (`abschnitt.sh`): its red exits lie behind
+printed output and carry more behind them, and without the notice each would read as a finding
+over the whole measurement instead of a cut through it. Verified by running it with `nm`
+removed from `PATH`: `ABGESCHNITTEN in: Kopf: Werkzeuge, Probe, Binaerprogramm`. Without it the
+guardian's ratchet stood at 35 against the base's 34 — measured, not assumed.
+
+### 14.5 What this slice does NOT do
+
+It measures; it binds nothing. The twelve names and the three raw sites are still the runtime's.
+What is left of K8 is §12.5's shape applied to the hosted side: `laufzeit/bindung.h` beside
+`laufzeit/kmodul/bindung.h`, `bibliothek/linux/*.gab` + `.c` as the binding, the refusal in
+`bau.rs` beside `bindungsregel` (about `Art::Programm`), and **the corpus** — every example that
+runs hosted needs its binding line, with the diagnostic diff held at zero apart from the new
+refusal. That last part is what makes K8 bigger than K7, which had no corpus at all.

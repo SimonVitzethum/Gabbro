@@ -96,7 +96,51 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-4";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-5";
+
+/// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
+/// 2026-09-28, TODO section 0e K8).
+///
+/// THE DEFECT THIS CLOSES, found by K8's probe and not by a reader. The emitted C ends with
+/// `#define GABBRO_ARENEN &A_desc, &B_desc` and says in its own comment that it is *"the ONE
+/// list a driver needs to reserve (`gabbro_arena_reserve`) before any of the unit's code
+/// runs"*. **Neither generated driver read it.** Only `laufzeit/kmodul/kmodul.c` did, and the
+/// harness drivers -- `instrumente/pruefe-metall.sh`, `miss-arena-decke.sh`,
+/// `pruefe-emission.sh` -- each wrote the call by hand. So a hosted or bare-metal unit with a
+/// dynamic arena, built by `gabbro build` and run from its own driver, started with `base ==
+/// NULL`: every `grow` and every `alloc` took its `else`, the heap was DEAD, and nothing said
+/// so. *Fail-closed and therefore silent -- which is why three hand-written registers over one
+/// call could all be right while the generated one was missing* (`W7`).
+///
+/// The block is `#ifdef`-guarded because the emitter defines `GABBRO_ARENEN` exactly when it
+/// emitted descriptors, which is the same reading `kmodul.c` already stood on: the unit's own
+/// list decides whether the unit has arenas at all, and no `-D` on a command line can drift
+/// from it.
+///
+/// No error check, and that differs from the module flavour on purpose: the hosted
+/// (`laufzeit/arena_dyn.c`) and bare-metal (`laufzeit/metall/arena.c`) reservations FAIL-STOP
+/// inside themselves -- there is no program running yet that could take an `else`. A kernel
+/// module cannot stop the machine, so `kmodul.c` reads the outcome and refuses the load.
+fn arenen_reservieren(aus: &mut String) {
+    aus.push_str(
+        "\n    /* -- The unit's dynamic arenas, reserved before the first root runs.\n     *\n\
+         \x20    * The list is the emitted unit's own (`GABBRO_ARENEN`, written by the\n\
+         \x20    * emitter, which is the only place that knows which descriptors it\n\
+         \x20    * emitted), so it cannot drift from the program. A unit without an\n\
+         \x20    * arena has no such define and this block disappears. The reservation\n\
+         \x20    * fail-stops on refusal inside the runtime: at load there is no\n\
+         \x20    * program running that could take an `else`. */\n\
+         #ifdef GABBRO_ARENEN\n\
+         \x20   {\n\
+         \x20       gabbro_arena_desc *const arenen[] = { GABBRO_ARENEN };\n\
+         \x20       unsigned a;\n\
+         \x20       for (a = 0; a < (unsigned)(sizeof arenen / sizeof arenen[0]); a++) {\n\
+         \x20           gabbro_arena_reserve(arenen[a]);\n\
+         \x20       }\n\
+         \x20   }\n\
+         #endif\n",
+    );
+}
 
 /// True for `[A-Za-z_][A-Za-z0-9_]*` (ASCII only: a Gabbro name that reaches
 /// C is ASCII; anything else cannot name a C function and is refused before
@@ -219,7 +263,9 @@ pub fn erzeuge(
          \x20   }\n    return NULL;\n}\n",
     );
     aus.push_str("\n/* -- main: start exactly the roots, join them. ---------------------------- */\n\nint main(void)\n{\n");
-    aus.push_str("    pthread_t faden[N_WURZELN];\n    int rc;\n\n");
+    aus.push_str("    pthread_t faden[N_WURZELN];\n    int rc;\n");
+    arenen_reservieren(&mut aus);
+    aus.push('\n');
     // **A failed start joins what already runs** (fix lane F4, the finding review
     // G06 F6 made at `laufzeit/start_pool.c`, which this template shared): the
     // threads started before the failing one are joined before `main` returns,
@@ -400,6 +446,7 @@ pub fn erzeuge_metall_voll(
     aus.push_str("\n/* N_WURZELN counts the declared starts, one per occurrence -- the probe checks it\n * against the number of members the source's `concurrent` sets name. */\n");
     aus.push_str(&format!("#define N_WURZELN {}\n", wurzeln.len()));
     aus.push_str("\n/* -- The driver thread: start exactly the roots, join them. -------------- */\n\nint gabbro_metall_haupt(void)\n{\n");
+    arenen_reservieren(&mut aus);
     // The entries are in the IDT before any root runs: a handler that arrives
     // for a root finds its stub.
     for e in &zusatz.eintritte {
@@ -713,6 +760,71 @@ mod treiber_tests {
         let a = erzeuge("beispiel124", &wurzeln, &sperren, None);
         let b = erzeuge("beispiel124", &wurzeln, &sperren, None);
         assert_eq!(a, b, "two runs are two identical artefacts");
+    }
+
+    /// **BOTH generated drivers reserve the unit's arenas, and the hosted one did not**
+    /// (server lane, 2026-09-28, TODO section 0e K8).
+    ///
+    /// The emitted C writes `#define GABBRO_ARENEN &A_desc` and calls it *"the ONE list a
+    /// driver needs to reserve before any of the unit's code runs"*. Until this test only
+    /// `laufzeit/kmodul/kmodul.c` read it; the two generated drivers did not, so a unit with a
+    /// dynamic arena ran with a NULL base and every `grow` took its `else` -- a dead heap and
+    /// no word about it. What is checked here is the shape that closes it:
+    ///
+    /// * the reservation stands in BOTH drivers, and BEFORE the first start (a root that
+    ///   allocated before the reservation would be the same defect one line later);
+    /// * it is `#ifdef`-guarded, so a unit without an arena is untouched and no driver
+    ///   references `gabbro_arena_reserve` for nothing;
+    /// * the list comes from the emitted unit and is spelt nowhere else in the driver's CODE,
+    ///   which is the whole reason it cannot drift (`W7`). Comment lines are dropped before
+    ///   that count: the block's own header names the macro to say where the list comes from,
+    ///   and prose naming a token is not a use of it -- the lesson `pruefe-osfrei.py` wrote
+    ///   down, met here as a red on the first run.
+    #[test]
+    fn beide_treiber_reservieren_die_arenen_vor_dem_ersten_start() {
+        let (wurzeln, sperren) = beispiel();
+        for (welcher, c) in [
+            ("hosted", erzeuge("beispiel124", &wurzeln, &sperren, None)),
+            ("bare metal", erzeuge_metall("beispiel124", &wurzeln, &sperren, None)),
+        ] {
+            assert!(
+                c.contains("#ifdef GABBRO_ARENEN"),
+                "the {welcher} driver guards the block on the unit's own list:\n{c}"
+            );
+            assert!(
+                c.contains("gabbro_arena_reserve(arenen[a]);"),
+                "the {welcher} driver reserves every arena of the list:\n{c}"
+            );
+            let reserve = c.find("gabbro_arena_reserve").expect("the call stands");
+            let erster_start = c
+                .rfind("int main(void)")
+                .or_else(|| c.rfind("int gabbro_metall_haupt(void)"))
+                .map(|i| {
+                    let nach = &c[i..];
+                    i + nach
+                        .find("pthread_create(")
+                        .or_else(|| nach.find("gabbro_faden_start("))
+                        .expect("the driver starts something")
+                })
+                .expect("the driver has an entry function");
+            assert!(
+                reserve < erster_start,
+                "the {welcher} driver reserves BEFORE it starts a root"
+            );
+            let im_code = c
+                .lines()
+                .filter(|z| {
+                    let t = z.trim_start();
+                    !(t.starts_with('*') || t.starts_with("/*") || t.starts_with("//"))
+                })
+                .filter(|z| z.contains("GABBRO_ARENEN"))
+                .count();
+            assert_eq!(
+                im_code, 2,
+                "the {welcher} driver names the list twice in code -- the guard and the \
+                 initialiser -- and carries no copy of it:\n{c}"
+            );
+        }
     }
 
     /// **The bare-metal driver holds its own pin, for a pool too** (Opus
