@@ -530,9 +530,15 @@ def readme_muster():
     n_isar = sum(f.read_text().count("\n") for f in (WURZEL / "beweise").glob("*.thy"))
     fuer += [
         (r"The (\d+) theories in", str(n_thy), "Theorien (Fliesstext)"),
-        (r"across all (\d+) theories", str(n_thy), "Theorien (Klammer)"),
-        (r"\((\d[\d\s]*) across all \d+ theories\)",
-         str(n_isar), "Isar-Zeilen"),
+        # **Two patterns stood here for one thing, and both had hit nothing since
+        # 2026-09-27** (found 2026-09-28, server lane -- and this guardian reported it
+        # itself: *"the pattern for theories (bracket) hits nothing any more"*). The document
+        # review (`6dbd581f`) reworded `(3 512 across all 15 theories)` into
+        # `hold 3 512 lines of Isar`: **the figures stayed right and the guardians went
+        # blind.** *Exactly the order CLAUDE.md forbids -- the document moved before the
+        # pattern.* The theory count is guarded by the line above; what stands here now is
+        # ONE pattern for the Isar lines, on the wording the README carries today.
+        (r"hold (\d[\d\s]*) lines of Isar", str(n_isar), "Isar-Zeilen"),
     ]
     _MUSTER = fuer
     return fuer

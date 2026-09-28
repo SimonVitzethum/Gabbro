@@ -15,7 +15,7 @@ QEMU in TCG (no KVM). One heavy job at a time.
 | acceptance point (AUFTRAG-1) | state | where |
 |---|---|---|
 | 1. two units (`bib` + `app`) link, check whole and build | **met** -- and it already stood in the tree; the `gabbro link` half was closed here | section 1 |
-| 2. one concurrent driver RUNS against a handwritten C version | **open** | section 5 |
+| 2. one concurrent driver RUNS against a handwritten C version | **met** -- and it FOUND something: the emitted C read a guarded carrier with the lock released | section 7 |
 | 3. a Gabbro kernel module with a bounded heap loads in QEMU, allocates, hits refuse-on-full, reports it, unloads clean | **met** | section 3 |
 | 4. H4 numbers (ceiling costs nothing) | **met** | section 2 |
 | 5. `cargo test` zero failures, emission green, `grammatik` green, axioms standard | **partly** -- see section 4 | section 4 |
@@ -291,9 +291,9 @@ warm-up (`~/claude-lane/logs/aufwaermen.log`) ended `rc=1` on `error: unknown sh
 
 ## 5. What is open, and why
 
-* **Acceptance point 2** -- a concurrent driver RUNNING through the executed set against a
-  handwritten C version. Not built. The executed set (`pruefe-emission.sh`) has concurrent
-  runs; what is missing is the handwritten-C twin beside one of them.
+* **Acceptance point 2** -- *closed in session 2, see section 7*, and it found the
+  release-before-the-read defect in the `locks` lowering. This entry stays as the record of
+  what was open on 2026-09-28 session 1.
 * **K2/K3** -- `start` lowering (`C001`) and export (`LG004`); `entry`/`boot` vector,
   registers, steps in the kernel-module flavour; handler pinning/re-entry and `cli`/`sti` in
   the C (OFFEN O19). Untouched. The kernel module built here has no `start` and no `entry`:
@@ -336,3 +336,181 @@ codes) and this lane is booked there with what it added instead.
 
 **Not tagged.** A milestone tag belongs at the push that COMPLETES a phase, and acceptance
 points 2 and 6 are open. The hand-over is `~/claude-lane/STAND.md`.
+
+---
+
+## 7. Acceptance point 2 -- one concurrent driver, RUN against a handwritten C version
+
+*Added 2026-09-28, session 2 of the server lane. **This is the section with a finding in
+it.***
+
+### 7.1 What was built, and why it is a differential test and not a demonstration
+
+| file | what |
+|---|---|
+| `messung/proben/nebenlaeufig/sperre-rueckgabe.gab` | the probe: a read under its lock, RETURNED, while a second thread writes the same carrier under the same lock. 10 items, 0 errors, 3 hints (the `E247` hint class `beispiele/125` carries) |
+| `messung/proben/nebenlaeufig/sperre-rueckgabe-hand.c` | the same program **written by hand in C from the source** -- not from the emitted file. Its header says how it was written, because that is the whole of its value |
+| `messung/proben/nebenlaeufig/treiber.c` | ONE driver, compiled over either side: the unit's lock as a test-only spinlock, plus two counters -- acquisitions (compared) and contended acquisitions (the overlap witness) |
+| `instrumente/pruefe-nebenlaeufig-zwilling.sh` | the instrument: 2 sides x 2 optimisation levels x 5 repetitions, with four poison probes |
+
+The probe's answer is a statement, not a number somebody chose: `lies_unter_sperre` writes
+`7` into `z` and returns `z`, both inside one `locks L` block, so under the language's own
+reading the answer is `7` on every schedule. `leser` does that 64 times and sums the answers
+under the same lock, so the sum `448` says **every one of the 64 reads saw its own write**;
+`nullt` writes `0` into the same carrier under the same lock 64 times, so every one of those
+reads has a writer racing it. 193 is the acquisition count (64 x 2 + 64 + 1), and it is in the
+compared line so the lock DISCIPLINE is compared and not only the answer.
+
+**Why the overlap witness is part of the verdict.** Two threads that never contend have run
+sequentially, and a sequential run of a concurrent program measures nothing about concurrency
+-- the same empty population as a guardian with no input (W17). Zero contention over every
+repetition is a RED here, not a pass.
+
+### 7.2 The finding: `return` inside `locks` read the carrier with the lock RELEASED
+
+The first run of the instrument, against the tree as it stood:
+
+```
+LINE emit -O0 1: 273 193 | overlap 128     <- the EMITTED C
+LINE emit -O0 2: 427 193 | overlap 109
+LINE emit -O0 4: 406 193 | overlap 108
+LINE emit -O2 2: 413 193 | overlap 112
+LINE emit -O2 5: 420 193 | overlap 116
+LINE hand -O0 1..5: 448 193                <- the HANDWRITTEN twin, every run
+LINE hand -O2 1..5: 448 193
+RED: emit at -O0, run 1 answered '273 193', the source says '448 193'
+```
+
+The lowering was
+
+```c
+static uint32_t lies_unter_sperre(void) {
+    L_nimm();
+    {
+        z = 7;
+        L_gib();          /* <- the release */
+        return z;         /* <- and THEN the read */
+    }
+    L_gib();
+}
+```
+
+`emit.rs`'s own comment said it: *"Erst freigeben, dann zurueckkehren"*. The first half of
+that decision is right and is booked (`MESSUNGEN.md` section 3): an emitter that writes the
+release only at the end of the block leaves the lock held on every `return` inside it. **The
+second half was wrong**, and it had never been questioned because the corpus shape that
+carried it is `return true;` -- a literal, which has no carrier to lose.
+
+**What it costs where it bites.** `beispiele/125-read-under-lock.gab` is the flagship of
+"guarded at the access": two threads, both touching `z` only inside `locks WACHE`, and the
+checker calls that race-free (`N291` silent, `concurrent { lese_schreibe, setze_null }`
+declared). Its emitted C read `z` outside the section. *The guarantee did not survive the
+lowering, and nothing in the tree was red.* And `beispiele/31-rcu.gab` is the same shape one
+step worse: `BACCT_lese_ende()` stood in front of the read of the protected slot -- a read
+side that leaves the RCU read section and reads afterwards is what RCU exists to prevent.
+
+### 7.3 The repair, and what it costs the corpus
+
+`emit.rs`, the `Return` arm: the value is produced BEFORE the releases.
+
+* a VALUE return holds it in a local of the function's own C result type, in a block of its
+  own (`{ uint32_t _rueck = z; L_gib(); return _rueck; }`), so two returns in one emitted
+  block cannot redeclare the name;
+* `*_wert` and `*_grund` need no local -- the store moves in front of the releases;
+* a LITERAL return (`return true;`) keeps the old text byte for byte: nothing to lose, and
+  that is the shape `messung/fragmente/F08.gab` and the two `rechenwerk` tests pin;
+* `return;` / `return true;` without an expression are untouched.
+
+**Measured, by emitting every tracked `.gab` before and after and comparing byte for byte:**
+**12 of 317** emitting files change, and every diff is inside a `locks` block --
+`beispiele/10`, `13`, `31`, `42`, `48`, `71`, `125`, `147`, `148`, `159`,
+`messung/proben/probe-transport-warteschlange-aufsetzen.gab`,
+`messung/proben/verbund/rennen-bewacht-bib.gab`.
+
+**A regression on the way, and it was found by that same diff and by no test.** The first
+version moved the `*_grund` store in front of the releases in one of the two reason arms and
+dropped the releases entirely in the other: `warteschlange_aufsetzen`'s `GibtEsNicht` path
+left the lock HELD. *A repair that loses a release is worse than the defect it repairs.* The
+new cargo test `der_wert_wird_unter_der_sperre_gelesen` pins all three channels, and it was
+speech-probed in both directions: with the release dropped again it fails with
+*"the RELEASE stands between reason and answer -- it got lost here once"*, and it is green
+with the repair in place.
+
+### 7.4 What makes the green run a measurement
+
+`--gift all`, four harness mutations, each caught by a DIFFERENT check:
+
+```
+GIFT 1: caught (8 findings)   emitted side back to "release, then read"  -> the answer
+GIFT 2: caught (10 findings)  the twin sums 2*v                          -> the answer
+GIFT 3: caught (2 findings)   the twin runs its roots sequentially       -> ONLY the overlap witness
+GIFT 4: caught (10 findings)  the emitted post-join read loses its lock  -> ONLY the acquisition count
+gifts: 4 of 4 caught
+```
+
+Gift 3 answers `448 193` like the green run -- it is caught because it never contends. Gift 4
+answers `448` too -- it is caught because it acquires 192 times instead of 193. *Two of the
+four are invisible to the answer, which is why the answer is not the whole verdict.*
+
+**Two findings about the harness itself, both paid for once:**
+
+1. The instrument's first run took `target/release/gabbro` because it existed -- an hour older
+   than the emitter change under test -- and reported the OLD lowering's numbers against the
+   new tree. It now takes the NEWER of the two binaries and ABORTS (`NOT RUN`, exit 2) when
+   any `crates/**.rs` is younger than it, the same answer `pruefe-cformen.py` and
+   `pruefe-saetze.py` already give. *The same class as `rsync -a` against `cargo`: a tool
+   measuring a binary nobody built for it.*
+2. Gift 3's mutation was a `sed` and the call it had to change spans two lines, so it changed
+   nothing and the run stayed green: **`GIFT 3: NOT CAUGHT`** -- a mutation that does not
+   apply looks exactly like a pass. It is a `perl -0777` now, and it also silences the two
+   now-unused stacks, because a gift caught by `cc -Werror` says nothing about the run.
+
+### 7.5 Where it runs
+
+Both: alone (`instrumente/pruefe-nebenlaeufig-zwilling.sh`, green in 2 s) and **inside the
+executed set** as stage 22b of `instrumente/pruefe-emission.sh`, which is where the acceptance
+point asked for it. The whole emission run after the change:
+
+```
+== Stufe 22b: das erzeugte C gegen eine HANDGESCHRIEBENE C-Fassung (nebenlaeufig) ==
+      OVERLAP emit -O0: 5 of 5 runs contended        (and the same for emit -O2, hand -O0, hand -O2)
+   GREEN: emitted and handwritten agree on 20 of 20 runs
+== EMISSION: ALL PASS -- 51 durchgestochen, 319 von 319 uebersetzen, 2 umgekehrte Probe(n) ==
+```
+
+### 7.6 The walls after the change
+
+| wall | number | command |
+|---|---|---|
+| `cargo test --no-fail-fast` | rc 0, **1409 passed, 0 failed** (the new emitter test replaces nothing; 1409 before) | `cargo test --no-fail-fast` |
+| `pruefe-emission.sh` | rc 0, **ALL PASS -- 51 durchgestochen, 319 von 319 uebersetzen**, all 12 stages | `instrumente/pruefe-emission.sh` |
+| the twin instrument | GREEN, 20 of 20 runs; `--gift all` **4 of 4 caught** | `instrumente/pruefe-nebenlaeufig-zwilling.sh` |
+| `pruefe-cformen.py` | GREEN: 0 new uncovered forms, 0 unclassified statements -- the new shape is a local declaration and a return of it, both already classified | `instrumente/pruefe-cformen.py` |
+| `pruefe-ctext.py` | GRUEN, 2 of 2 pins byte-identical (neither pinned program holds a lock) | `instrumente/pruefe-ctext.py` |
+| `pruefe-kernelmodul.sh` | GREEN, unchanged by the emitter move | `instrumente/pruefe-kernelmodul.sh` |
+| `pruefe-saetze.py` | green: 470 identifiers, 198 sentences, 0 invented | `instrumente/pruefe-saetze.py` |
+| `pruefe-waechter.py` | the new instrument passes all five requirements (deadline, speech test, red on abort, locale, work quantity) and adds **0** to the truncation ratchet (33 before, 33 after) | `instrumente/pruefe-waechter.py` |
+| `MARKE_EMIT_M` | 156 -> **157**, dated and reasoned in `pruefe-emission.sh` (the new probe emits) | -- |
+
+### 7.7 Two guardian findings that were NOT this lane's, and are now repaired or booked
+
+**Repaired here, because a blind guardian is worse than a red one.** `pruefe-todo.py` was
+**rc 2** at `4b8b5a7f` and at `bfb395ee`: *"the pattern for theories (bracket) hits nothing
+any more"*. The document review (`6dbd581f`) reworded `(3 512 across all 15 theories)` into
+`hold 3 512 lines of Isar` -- **the figures stayed right and two guardian patterns went
+blind**, which is exactly the order CLAUDE.md forbids. One pattern now reads the wording the
+README carries; and with the guardian measuring again it immediately reported three stale
+figures, all three now pulled: `messung/KENNZAHLEN.md` 89 -> 78 metrics with a command and
+179 -> 152 unguarded bold numbers, `README.md` 48 -> 50 guardians. `pruefe-todo.py` is
+**ALL PASS**.
+
+**Booked, not repaired: `pruefe-englisch.py` is rc 1, and it was rc 1 before this lane.**
+Measured in a throwaway worktree at `bfb395ee` and at `4b8b5a7f`: **7965** German comment
+lines in the checker against a booked 7949, **37** German feeders against 26, **5** German
+messages at a sink against 2 -- three broken ratchets inherited from earlier merges, none of
+them this lane's. This session's work LOWERS the first to **7964** and leaves the instruments'
+half exactly at its booked 1086. *The last session's report claimed `-englisch.py` rc 0; that
+claim does not hold and is corrected here.* Pulling the three ratchets straight is a
+translation job across the checker's diagnostics and belongs to the language lane, not to
+section 0e -- and the guardian TRUNCATES at that point, so what stands behind it was not
+measured either way.

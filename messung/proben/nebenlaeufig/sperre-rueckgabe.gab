@@ -1,0 +1,106 @@
+-- A read under its lock, RETURNED, while a second thread writes the same
+-- carrier (server lane, TODO section 0e, acceptance point 2).
+--
+-- WHY THIS PROBE EXISTS. `beispiele/125-read-under-lock.gab` is the flagship of
+-- "guarded at the access": two threads share `z`, both touch it only inside
+-- `locks WACHE`, and the checker calls that race-free. This probe asks the same
+-- question of the EMITTED C, and it asks it so that a RUN can answer:
+--
+--   * `lies_unter_sperre` writes `7` into `z` and RETURNS `z`, both inside the
+--     one `locks L` block. Under the language's own reading nothing else can
+--     touch `z` in between, so the answer is `7` -- deterministically, on every
+--     schedule, because the lock is held across both.
+--   * `leser` does that K times and sums the answers under the same lock, so
+--     the sum is `K * 7` and the sum says that EVERY one of the K reads saw its
+--     own write.
+--   * `nullt` runs as a thread of its own and writes `0` into `z` under the same
+--     lock, K times -- so every one of the K reads has a writer racing it.
+--
+-- The answer `K * 7` is therefore a statement about the lowering of `return`
+-- inside `locks`: if the release is emitted BEFORE the return expression is
+-- evaluated, the read falls outside the lock, `nullt` gets in, and the sum
+-- collapses. Any answer but `K * 7` is an unguarded read of a guarded carrier
+-- -- exactly what the checker promises does not exist.
+--
+-- `instrumente/pruefe-nebenlaeufig-zwilling.sh` runs this against a HANDWRITTEN
+-- C version of the same program (`sperre-rueckgabe-hand.c`) and holds the two
+-- answers against each other.
+module probe::sperre_rueckgabe {
+
+const K : u32 = 64;
+
+static mut z : u32 = 0;
+
+table sicht count 1 {
+    slot {
+        wert : u32 wrapping,
+    }
+}
+
+table takt count K {
+    slot {
+        an : bool,
+    }
+}
+
+lock L protects { z, sicht } rank 0 held <= 64 ops;
+
+impl fn lies_unter_sperre() -> u32
+    effects { reads z, writes z, locks L }
+    costs   <= 64 ops
+{
+    locks L {
+        z = 7;
+        -- The read this whole probe is about: it stands INSIDE the block, so it
+        -- reads what this thread wrote and nothing else.
+        return z;
+    }
+}
+
+impl fn leser()
+    effects { reads z, writes z, reads sicht.slots, writes sicht.slots,
+              reads takt, reads takt.slots, locks L }
+    costs   <= 32768 ops
+{
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, reads z, writes z,
+                reads sicht.slots, writes sicht.slots, locks L
+    {
+        if takt.slots[i].an == false {
+            let v = lies_unter_sperre();
+            locks L {
+                sicht.slots[0].wert = sicht.slots[0].wert + v;
+            }
+        }
+    }
+}
+
+impl fn nullt()
+    effects { writes z, reads takt, reads takt.slots, locks L }
+    costs   <= 8192 ops
+{
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, writes z, locks L
+    {
+        if takt.slots[i].an == false {
+            locks L {
+                z = 0;
+            }
+        }
+    }
+}
+
+impl fn lauf() -> u32
+    effects { reads z, writes z, reads sicht.slots, writes sicht.slots,
+              reads takt, reads takt.slots, locks L }
+    costs   <= 65536 ops
+{
+    start { leser, nullt };
+    -- Post-join read: no thread is alive here, so this one cannot race whatever
+    -- the lowering does with it (the same note as `beispiele/159`).
+    locks L {
+        return sicht.slots[0].wert;
+    }
+}
+
+}

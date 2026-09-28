@@ -120,15 +120,15 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 198 S
 
 ## Kennzahlen mit Befehl
 
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ ~~83~~ ~~85~~ ~~91~~ **89 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ ~~83~~ ~~85~~ ~~91~~ ~~89~~ **78 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 
 ## Kennzahlen mit Befehl (Prosa)
 
-      **`pruefe-zahlen.py` führt heute 89 Kennzahlen mit Befehl** und zählt daneben
+      **`pruefe-zahlen.py` führt heute 78 Kennzahlen mit Befehl** und zählt daneben
 
 ## unbewachte fettgedruckte Zahlen
 
-      **179 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **152 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
 
 ## EBNF-Regeln / EBNF-Terminale
 

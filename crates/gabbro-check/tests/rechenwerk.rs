@@ -9616,3 +9616,89 @@ impl fn clz(x : u32) -> u32 effects { pure } costs <= 9 ops { return x; }
     );
     assert_eq!(codes, vec!["N058"], "a `fn clz` must fall with `N058` alone: {codes:?}");
 }
+
+/// **The lock is still held when the returned value is READ** (server lane, 2026-09-28).
+///
+/// `der_erzeuger_gibt_die_sperre_auf_jedem_pfad` pins the first half of the
+/// `locks`-return decision: a release on every return path out of the block.
+/// **The second half had no test, and it was wrong**: the releases stood BEFORE
+/// the returned expression, so `locks L { z = 7; return z; }` read `z` with the
+/// lock already given up. Measured with a run against a handwritten C twin
+/// (`instrumente/pruefe-nebenlaeufig-zwilling.sh`): the emitted C answered 0
+/// where the twin answered 448, in a program the checker accepts as race-free
+/// (`beispiele/125-read-under-lock.gab`'s own shape).
+///
+/// Three shapes, because the repair has three channels and a lost release in any
+/// of them is worse than the defect it repairs -- **and one of the three DID get
+/// lost while this was built**, found by diffing the emitted C of the corpus and
+/// not by any test that existed:
+///
+///   1. a VALUE return holds the value in a local before the releases;
+///   2. a REASON return (`-> T or R`) stores `*_grund` before them -- and still
+///      releases;
+///   3. a LITERAL return keeps the old text byte for byte: nothing to lose.
+#[test]
+fn der_wert_wird_unter_der_sperre_gelesen() {
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "the probe does not parse:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // 1. **The value.** The read stands BEFORE the release, and the release stands.
+    let (c, f) = c_von(
+        "module t { static mut z : u32 = 0;
+lock L protects { z } rank 0 held <= 64 ops;
+impl fn lies() -> u32 effects { reads z, writes z, locks L } costs <= 64 ops
+{ locks L { z = 7; return z; } } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let lesen = c.find("_rueck = z;").expect("the value travels in a local:\n{c}");
+    let gib = c[lesen..].find("L_gib();").expect("and the lock is released");
+    let rueck = c[lesen..].find("return _rueck;").expect("the local comes back");
+    assert!(gib < rueck, "the release stands BETWEEN the read and the return:\n{c}");
+    assert!(
+        !c.contains("L_gib();\n            uint32_t _rueck"),
+        "and NOT in front of it -- that was the finding:\n{c}"
+    );
+
+    // 2. **The reason.** `*_grund` is written, THEN released, then answered -- and the
+    // release must not get lost on the way.
+    let (c, f) = c_von(
+        "module t { static mut z : u32 = 0;
+reason Fehler { Leer = 1 \"nothing there\" exhaustive }
+lock L protects { z } rank 0 held <= 64 ops;
+impl fn hol() -> u32 or Fehler effects { reads z, locks L } costs <= 64 ops
+{ locks L { if z == 0 { return Fehler::Leer; } return z; } } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let grund = c.find("*_grund = Fehler_Leer;").expect("the reason is written");
+    let falsch = c.find("return false;").expect("and the failure reported");
+    assert!(
+        c[grund..falsch].contains("L_gib();"),
+        "the RELEASE stands between reason and answer -- it got lost here once:\n{c}"
+    );
+    // And this function's value goes through `*_wert`, in front of the release.
+    let wert = c.find("*_wert = z;").expect("the value goes through the channel");
+    let wahr = c[wert..].find("return true;").expect("and the success behind it");
+    assert!(
+        c[wert..wert + wahr].contains("L_gib();"),
+        "the release stands between the store of the value and the answer:\n{c}"
+    );
+
+    // 3. **The literal.** No read, so no local -- and the old shape.
+    let (c, f) = c_von(
+        "module t { static mut z : u32 = 0;
+lock L protects { z } rank 0 held <= 64 ops;
+impl fn ja() -> bool effects { reads z, locks L } costs <= 64 ops
+{ locks L { if z == 0 { return true; } } return false; } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(!c.contains("_rueck"), "a literal needs no local:\n{c}");
+    let wahr = c.find("return true;").expect("the branch");
+    assert!(
+        c[..wahr].rfind("L_gib();").is_some_and(|g| c[g..wahr].trim().len() < 20),
+        "and the release stands directly in front of it, as before:\n{c}"
+    );
+}

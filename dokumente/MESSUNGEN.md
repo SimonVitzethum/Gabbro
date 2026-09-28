@@ -5791,6 +5791,21 @@ compiles.**
 The two middle numbers of `1 **1 1** 0 0 **1 1** 1` are the measurement: taken once, released
 once — **on each of the two return paths separately.**
 
+> **Half of this decision was wrong, and a run said so on 2026-09-28** (server lane,
+> `messung/SERVER-0E-REPORT.md` §7). *On every return path* is right and stands. **Before
+> every return** was not: the releases were written in front of the returned EXPRESSION, so
+> `locks L { z = 7; return z; }` read `z` with the lock already given up. `toeten` above never
+> showed it because both its returns are literals — `return true;`/`return false;` have no
+> carrier to lose, and that is the shape the whole corpus carried.
+>
+> Measured against a handwritten C twin of the same concurrent program: the emitted C answered
+> **0** where the twin answered **448**, 64 guarded reads all clobbered by the second thread.
+> `beispiele/125-read-under-lock.gab` — the flagship of *guarded at the access* — had an
+> unguarded read of a guarded carrier in its emitted C, and `beispiele/31-rcu.gab` read the
+> protected slot AFTER leaving the RCU read section. The emitter now produces the value
+> first (`emit.rs`, the `Return` arm); a literal return keeps the old text byte for byte, so
+> the `1 **1 1** 0 0 **1 1** 1` above is unchanged.
+
 ## The finding that came from the C compiler, not from us
 
 `toeten(l, t, k)` never reads `k`. **`cc -Wextra` says so, and no pass of this compiler does.**

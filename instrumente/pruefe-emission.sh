@@ -2089,8 +2089,15 @@ int main(void) {
 #                0 -- und er wurde nie ZWEIMAL verlassen (der Tiefstand bleibt bei null)
 #                0 -- die Schreibersperre ist gegeben
 #                1 -- `reclaims frei` steht als `Some(i)` im Kopf der Freiliste
+# **The gift's indentation moved by four characters on 2026-09-28** (server lane).
+# The return path inside the read section now holds its value in a local BEFORE the section
+# is left (`emit.rs`, the `Return` arm): `BACCT_lese_ende()` used to stand in front of the
+# read of `Konten_speicher.slots[i].zaehler` -- a read side that leaves the read section and
+# reads AFTERWARDS is exactly what RCU stands against. So the line sits one block deeper and
+# the gift with eight spaces hit nothing: **`8. Sprechprobe: UEBERSEHEN`**, and this guardian
+# said so itself. *A gift that does not apply is not a gift.*
 lauf "beispiel31" "$W/beispiele/31-rcu.gab" "$TREIBER31" "55 0 0 0 1" \
-     's/^        BACCT_lese_ende();$//' \
+     's/^            BACCT_lese_ende();$//' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 16. «C4»: der Tausch, und die ORDNUNG ist die Falle --------------------------------
@@ -2656,6 +2663,29 @@ int main(void) {
 lauf "beispiel159" "$W/beispiele/159-laufzeit-start.gab" "$TREIBER159" "64" \
      's/stand) + (uint32_t)(1)/stand) + (uint32_t)(0)/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 3 templates (1 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 22b. A concurrent program against a HANDWRITTEN C twin (server lane) --------------
+#
+# Every run above compares the emitted C against an expectation somebody worked out on
+# paper. **This one compares it against a second implementation**: the same program,
+# written by hand in C from the source, driven by the same driver, run at both
+# optimisation levels, with the overlap of the two threads measured beside the answer.
+# It lives in its own instrument because it needs four binaries and repetitions, and it
+# is CALLED from here because the executed set is where it belongs -- a differential test
+# that runs somewhere else is one nobody runs.
+#
+# *What it found the first time it ran (2026-09-28): the emitted C answered 0 where the
+# twin answered 448, because `return z;` inside `locks L { … }` released the lock BEFORE
+# reading `z`.* The emitter holds the value first now (`emit.rs`, the `Return` arm), and
+# the instrument's gift 1 puts the old order back and must go red.
+LETZTE_STUFE="Stufe 22b (das erzeugte C gegen eine handgeschriebene C-Fassung)"
+echo "== Stufe 22b: das erzeugte C gegen eine HANDGESCHRIEBENE C-Fassung (nebenlaeufig) =="
+if ! "$W/instrumente/pruefe-nebenlaeufig-zwilling.sh" > "$ARB/zwilling.log" 2>&1; then
+    echo "== EMISSION: der nebenlaeufige Zwilling FAELLT =="
+    sed 's/^/   /' "$ARB/zwilling.log"
+    exit 1
+fi
+grep -E '^GREEN|^   OVERLAP' "$ARB/zwilling.log" | sed 's/^/   /'
 
 # -- 27. Driver capabilities, EXECUTED (lane 267, OFFEN O10) ---------------------------
 #
@@ -3920,7 +3950,12 @@ MARKE_EMIT=142
 # twins -- the same program at a 10 MiB and at a 32 GiB ceiling, whose emitted C must agree),
 # and `kmodul/halde-treiber.gab` (the unit that becomes a Linux kernel module). Re-measured:
 # `318 von 318 emittierenden Dateien uebersetzen` in the run of 2026-09-28, 315 before.
-MARKE_EMIT_M=156
+# **156 -> 157 on 2026-09-28 (server lane, acceptance point 2).** One new probe under
+# `messung/proben/nebenlaeufig/`: `sperre-rueckgabe.gab`, the concurrent program whose
+# emitted C is run against a HANDWRITTEN C twin beside it
+# (`instrumente/pruefe-nebenlaeufig-zwilling.sh`). It emits and compiles -- the good case,
+# and a finding nonetheless. Re-measured in the same run: `319 von 319`.
+MARKE_EMIT_M=157
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

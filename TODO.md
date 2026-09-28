@@ -424,7 +424,19 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   nothing — OFFEN O19).
   First acceptance, measured: two units (`bib` + `app`) link, check whole and build
   (`gabbro link`, `gabbro build a.gab b.gab`) — **done**; one concurrent driver RUNS through
-  the executed set against a handwritten C version — **open**.
+  the executed set against a handwritten C version — **done 2026-09-28** (server lane,
+  `messung/SERVER-0E-REPORT.md` §7): `messung/proben/nebenlaeufig/sperre-rueckgabe.gab`
+  against a handwritten C twin written from the source, one driver over both,
+  2 sides × 2 optimisation levels × 5 repetitions, contention measured beside the answer
+  (`instrumente/pruefe-nebenlaeufig-zwilling.sh`, stage 22b of `pruefe-emission.sh`; 4 of 4
+  poison probes caught). **It found a defect the whole tree was green over:** a `return
+  <expr>` inside `locks` released the lock BEFORE evaluating the expression, so
+  `beispiele/125-read-under-lock.gab` — the flagship of "guarded at the access" — read a
+  guarded carrier unguarded, and `beispiele/31-rcu.gab` read the protected slot after leaving
+  the RCU read section. The emitted C answered 0 where the twin answered 448. Repaired in
+  `emit.rs` (the value is produced before the releases; literals keep the old text), 12 of 317
+  emitting files change, new test `der_wert_wird_unter_der_sperre_gelesen` over all three
+  return channels.
 - [ ] **The Linux kernel module target.** *Built and booted 2026-09-28 (server lane), but not
   yet by `gabbro build`.* Stands: `laufzeit/kmodul/` (the driver `kmodul.c` — NOT generated,
   everything unit-specific arrives as a `-D` macro; the bounded-heap `arena.c`; five header

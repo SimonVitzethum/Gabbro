@@ -8565,6 +8565,19 @@ fn funktion(
             Some(TypExpr::Zeichenkette { max, .. }) => Some(*max),
             _ => None,
         },
+        // **The type the value travels in, for the ONE place that needs it**: a
+        // `return <expr>` under an open `locks` block (see the `Return` arm).
+        // The three cases that return nothing answer `None` here, and they are
+        // the same three `prototyp_kern` reads as `void`/`_Noreturn void`: a
+        // ghost result is erased, `never` never answers, and no result is no
+        // result. A type `ctyp` cannot lower never reaches this point --
+        // `prototyp_kern` refused the function one step earlier.
+        rueck_ctyp: match &f.ergebnis {
+            Some(t) if ist_geist(t, u) => None,
+            Some(TypExpr::Never(_)) => None,
+            Some(t) => ctyp(t, u),
+            None => None,
+        },
         schleifen: Vec::new(),
         fehlerkanal: f.fehler.is_some(),
         stille_awaits,
@@ -9936,6 +9949,14 @@ struct Austritt {
     /// it is one.** A returned string widens into it (`kette_zu`), beside
     /// the option sentinel above.
     rueck_kette: Option<u128>,
+    /// **The C type of this function's returned VALUE** (server lane, 2026-09-28).
+    ///
+    /// It exists for exactly one reason: a `return <expr>` that stands inside
+    /// open `locks` blocks holds the value in a local of this type BEFORE the
+    /// releases, so the expression is evaluated while the lock is still held.
+    /// `None` for `void`, a ghost result and `-> never` -- none of them returns
+    /// a value, so none of them needs the local (see the `Return` arm).
+    rueck_ctyp: Option<String>,
     /// **Je offener benannter Schleife: ihr Name und der Stand von `freigaben` bei ihrem
     /// Eintritt** (2026-08-20).
     ///
@@ -9978,9 +9999,65 @@ fn anweisung(
     let e = einzug(tiefe);
     match &s.art {
         StmtArt::Return(w) => {
-            // **Erst freigeben, dann zurueckkehren** -- und zwar fuer JEDEN offenen Block.
-            for freigabe in austritt.freigaben.iter().rev() {
-                aus.push_str(&format!("{e}{freigabe};\n"));
+            // **A release on EVERY return path -- but AFTER the value** (server lane,
+            // 2026-09-28).
+            //
+            // The first half is the old decision and it stands (`MESSUNGEN.md` section 3):
+            // an emitter that writes the release only at the end of the `locks` block leaves
+            // the lock held on every `return` inside it, and the C compiles.
+            //
+            // **The second half was wrong, and a run said so.** The releases were written
+            // BEFORE the returned expression, so
+            //
+            // ```gabbro
+            // locks L { z = 7; return z; }        -- beispiele/125's own shape
+            // ```
+            //
+            // lowered to
+            //
+            // ```c
+            // L_nimm(); { z = 7; L_gib(); return z; }
+            // ```
+            //
+            // -- and that `z` is read with the lock RELEASED. For a program the checker
+            // accepts as race-free (`beispiele/125-read-under-lock.gab` is the flagship of
+            // "guarded at the access": two threads, both touching `z` only inside
+            // `locks WACHE`) the emitted C has an unguarded read of a guarded carrier.
+            // *The guarantee did not survive the lowering, and nothing was red.*
+            //
+            // **Measured, not reasoned** (`instrumente/pruefe-nebenlaeufig-zwilling.sh`):
+            // `messung/proben/nebenlaeufig/sperre-rueckgabe.gab` sums 64 such reads while a
+            // second thread writes `0` into the same carrier under the same lock. Against
+            // the handwritten C twin the emitted C answered **0 where the twin answered
+            // 448** -- every single read had been clobbered. With the value held first, both
+            // answer 448.
+            //
+            // The shape, and why each channel gets what it gets:
+            //
+            // * a VALUE return holds it in a local of the function's own C result type
+            //   (`austritt.rueck_ctyp`), in a block of its own so two returns in one
+            //   emitted block cannot redeclare the name;
+            // * `*_wert` / `*_grund` need no local -- the store itself moves in front of the
+            //   releases, which is the same statement one step shorter;
+            // * `return;` and `return true;` carry no expression, so for them nothing moved
+            //   and the emitted C is byte-identical to before.
+            //
+            // *Where no lock is held the text is byte-identical either way, and the corpus
+            // measurement says so: 12 of 317 emitting files change, and every diff is inside
+            // a `locks` block* (measured 2026-09-28 by emitting every tracked `.gab` before
+            // and after and comparing byte for byte).
+            let frei = |innen: &str| -> String {
+                austritt
+                    .freigaben
+                    .iter()
+                    .rev()
+                    .map(|f| format!("{e}{innen}{f};\n"))
+                    .collect()
+            };
+            // The value channels write their store first; everything else releases first.
+            let wert_kanal = matches!(w, Some(x) if !geist_wert(x, u));
+            if !wert_kanal {
+                aus.push_str(&frei(""));
             }
             match w {
                 // **Ein `return` eines GEISTES gibt nichts zurueck** (2026-08-20).
@@ -10018,10 +10095,11 @@ fn anweisung(
                         );
                         return;
                     }
-                    aus.push_str(&format!(
-                        "{e}*_grund = {};\n{e}return false;\n",
-                        ausdruck(x, u, absagen)
-                    ));
+                    // The store, then the releases, then the answer -- the same
+                    // order as the value channel below, and for the same reason.
+                    aus.push_str(&format!("{e}*_grund = {};\n", ausdruck(x, u, absagen)));
+                    aus.push_str(&frei(""));
+                    aus.push_str(&format!("{e}return false;\n"));
                 }
                 // **`return e;` -- the reason BINDING, and it went out the wrong channel**
                 // (2026-08-30).
@@ -10060,10 +10138,9 @@ fn anweisung(
                         );
                         return;
                     }
-                    aus.push_str(&format!(
-                        "{e}*_grund = {};\n{e}return false;\n",
-                        ausdruck(x, u, absagen)
-                    ));
+                    aus.push_str(&format!("{e}*_grund = {};\n", ausdruck(x, u, absagen)));
+                    aus.push_str(&frei(""));
+                    aus.push_str(&format!("{e}return false;\n"));
                 }
                 // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
                 // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
@@ -10072,20 +10149,15 @@ fn anweisung(
                 // into the declared max (`kette_zu`) -- a literal writes at
                 // the max directly, a narrower string takes the helper.
                 Some(x) => {
-                    if let Some(m) = austritt.rueck_kette {
-                        let t = kette_zu(x, m, u, absagen);
-                        if austritt.fehlerkanal {
-                            aus.push_str(&format!("{e}*_wert = {t};\n{e}return true;\n"));
-                        } else {
-                            aus.push_str(&format!("{e}return {t};\n"));
-                        }
-                        return;
-                    }
-                    let t = austritt
-                        .rueck_option
-                        .as_deref()
-                        .and_then(|tab| option_wert(x, tab, u, absagen))
-                        .unwrap_or_else(|| ausdruck(x, u, absagen));
+                    let t = if let Some(m) = austritt.rueck_kette {
+                        kette_zu(x, m, u, absagen)
+                    } else {
+                        austritt
+                            .rueck_option
+                            .as_deref()
+                            .and_then(|tab| option_wert(x, tab, u, absagen))
+                            .unwrap_or_else(|| ausdruck(x, u, absagen))
+                    };
                     // **`-> T or R`: der Rueckgabewert ist der ERFOLG, das Ergebnis geht
                     // durch `*_wert`** (2026-08-20, Stufe 4).
                     //
@@ -10104,8 +10176,40 @@ fn anweisung(
                     // `impl fn`. *Der ganze Korpus fuehrt `or R` ausschliesslich an `extern
                     // fn`, also an Ruempfen, die dieser Erzeuger nie sieht.*
                     if austritt.fehlerkanal {
-                        aus.push_str(&format!("{e}*_wert = {t};\n{e}return true;\n"));
+                        // The store moves in front of the releases; no local is
+                        // needed, `*_wert` IS the place the value goes.
+                        aus.push_str(&format!("{e}*_wert = {t};\n"));
+                        aus.push_str(&frei(""));
+                        aus.push_str(&format!("{e}return true;\n"));
+                    } else if austritt.freigaben.is_empty() {
+                        // No lock is held: nothing can stand between the value and
+                        // the return, and the text is the one that always stood here.
+                        aus.push_str(&format!("{e}return {t};\n"));
+                    } else if nur_literal(x) {
+                        // **The value READS NOTHING, so the old order is the right
+                        // one**, releases and all: a literal has no carrier to lose.
+                        //
+                        // *`return true;` out of a `locks` block is the corpus's most
+                        // frequent shape* (`messung/fragmente/F08.gab`, the `toeten`
+                        // of MESSUNGEN.md section 3). Exempting it keeps those files
+                        // byte-identical and keeps the emitted C free of a local that
+                        // would only restate a constant.
+                        aus.push_str(&frei(""));
+                        aus.push_str(&format!("{e}return {t};\n"));
+                    } else if let Some(ct) = &austritt.rueck_ctyp {
+                        // **The value is read while the lock is still held.** Its own
+                        // block, so two `return`s in one emitted block each get their
+                        // own `_rueck` instead of redeclaring the name.
+                        aus.push_str(&format!("{e}{{\n{e}    {ct} _rueck = {t};\n"));
+                        aus.push_str(&frei("    "));
+                        aus.push_str(&format!("{e}    return _rueck;\n{e}}}\n"));
                     } else {
+                        // A returned value whose C type this generator does not
+                        // know cannot be held in a local -- and it cannot get here
+                        // either: `prototyp_kern` refuses such a function before a
+                        // body is written. The old order stays as the honest floor
+                        // rather than a silent `_rueck` of a guessed type.
+                        aus.push_str(&frei(""));
                         aus.push_str(&format!("{e}return {t};\n"));
                     }
                 }
@@ -15490,6 +15594,27 @@ fn rumpf_gibt_wert(b: &Block) -> bool {
         }
         crate::unterbloecke(s).into_iter().any(rumpf_gibt_wert)
     })
+}
+
+/// **Reads NOTHING: a literal, and only a literal** (server lane, 2026-09-28).
+///
+/// The one question the `Return` arm asks of a returned expression: can the
+/// value change between the point it is written and the releases of the open
+/// `locks` blocks? For a number, a float, `true` and `false` the answer is no by
+/// construction -- there is no carrier in them -- so they keep the old text and
+/// the corpus keeps its bytes.
+///
+/// **Everything else answers yes, including a bare name.** A `place` may be a
+/// `const`, a parameter, a local or a table field, and the lowering does not
+/// tell them apart here; a `const` wrapped in a local costs a line of C and
+/// nothing else, while a table field NOT wrapped costs the guarantee. *The
+/// coarse side of this question is the safe one.*
+fn nur_literal(e: &Expr) -> bool {
+    match &e.art {
+        ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } | ExprArt::Wahr | ExprArt::Falsch => true,
+        ExprArt::Klammer(k) => nur_literal(k),
+        _ => false,
+    }
 }
 
 fn geist_wert(e: &Expr, u: &Namen) -> bool {
