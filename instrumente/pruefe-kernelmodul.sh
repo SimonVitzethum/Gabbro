@@ -103,6 +103,8 @@ probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ER
     # ever sets is a selector that carries the last probe's answer.*
     unset TICKS_MIN GESEHEN_MIN ABBILDUNG
     QUELLE=""; FREMD=""; MODUL=""; INIT=""; EXIT=""; PARAM=""; ERWARTET=""; FRIST=600
+    # What the RUNTIME still takes from the kernel, per probe (K7's worklist).
+    MARKE_KSYM=0
     # One vCPU unless the probe needs two; TCG is slow and a second core costs
     # boot time that only the concurrent probe has a use for.
     SMP=1
@@ -121,6 +123,8 @@ probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ER
 gabbro-halde: k=2 v=33
 gabbro-halde: k=3 v=3
 gabbro-halde: k=9 v=0"
+            # param_ops_uint, _printk, vfree, vzalloc
+            MARKE_KSYM=4
             ;;
         takt)
             QUELLE="$W/messung/proben/kmodul/sperre-takt.gab"
@@ -140,6 +144,8 @@ gabbro-takt: k=9 v=0"
             # A run whose timer never fired reports a clean `landed` and has
             # measured nothing (`W1`): the verdict below demands this many ticks.
             TICKS_MIN=5
+            # halde's four + pcpu_hot, _raw_spin_lock_irqsave, _raw_spin_unlock_irqrestore
+            MARKE_KSYM=7
             ;;
         atomar)
             QUELLE="$W/messung/proben/kmodul/atomar-faeden.gab"
@@ -171,6 +177,9 @@ gabbro-atomar: k=9 v=0"
             # And the mapping itself is checked where the module was BUILT: the
             # rows are expanded and held against the primitives they require.
             ABBILDUNG=1
+            # halde's four + complete, __init_swait_queue_head,
+            # kthread_create_on_node, wait_for_completion, wake_up_process
+            MARKE_KSYM=9
             ;;
         *) echo "pruefe-kernelmodul.sh: no such probe '$1'" >&2; exit 2 ;;
     esac
@@ -267,6 +276,69 @@ EOF
     fi
 }
 
+# -- which kernel functions does the RUNTIME call? (server lane, TODO 0e K7) ---
+#
+# SIMON'S RULE, and the one place the module target does not yet keep it: *"API
+# calls are always user-made"* -- a Gabbro kernel module reaches the kernel only
+# through items the PROGRAM declares. It holds for everything the program wrote:
+# `messung/proben/kmodul/atomar.c` calls `pr_info` and `panic` because
+# `atomar-faeden.gab` declared those two foreign functions with their ABI, their
+# effects, their costs and the assumption their bodies keep. **It does NOT hold
+# for the runtime beside it:** `laufzeit/kmodul/kmodul.c` calls `kthread_run`
+# and `wait_for_completion`, `arena.c` calls `vzalloc` and `vfree`, `sperre.h`
+# expands to `raw_spin_lock_irqsave`, and none of those names came from a
+# program. `AUFTRAG-1.md` K7 (Simon, 2026-09-28) says they are to, through a
+# library unit the program `use`s.
+#
+# THIS STAGE IS THE MEASUREMENT THAT MAKES THAT A NUMBER, and it is the number
+# K7 has to bring to zero. Per probe:
+#
+#   * `nm -u <unit>.ko` -- every kernel symbol the whole module still needs;
+#   * `nm -u` over the RUNTIME objects only (`gabbro_kmodul.o`, which is where
+#     the emitted unit is #included too, and `gabbro_arena.o`);
+#   * the INTERSECTION is what the runtime pulls out of the kernel. A symbol the
+#     program's own C pulls (`panic` from `aufgegeben`) is not in it, because
+#     that reference lives in `gabbro_fremd*.o`.
+#
+# Minus the toolchain's own names (`__fentry__`, the return thunk, UBSan's
+# handlers, the stack guard): those are not API calls and no program could
+# declare them.
+#
+# **A RATCHET AND NOT A WALL.** The count today is what the runtime hard-wires,
+# and a run that demanded 0 would be red on every probe until K7 lands -- a red
+# that says nothing new every time it is read. So the mark below is the measured
+# number and the stage refuses only a run that NEEDS MORE than it. A run that
+# needs fewer is a finding as well (the good case: the mark is stale and belongs
+# pulled down), in the shape `pruefe-emission.sh` uses for its emission counters.
+#
+# Measured 2026-09-28 (server lane, session 5), and this IS the K7 worklist:
+#   halde   4  param_ops_uint, _printk, vfree, vzalloc
+#   takt    7  + pcpu_hot, _raw_spin_lock_irqsave, _raw_spin_unlock_irqrestore
+#   atomar  9  + complete, __init_swait_queue_head, kthread_create_on_node,
+#                wait_for_completion, wake_up_process (and no lock)
+# Twelve distinct names over the three, and every one of them is a line of K7.
+KSYM_TOOLKETTE='^(__fentry__|__x86_return_thunk|__stack_chk_|__ubsan_handle_|__sanitizer_)'
+
+symbole_pruefe() {   # $1 = module build dir, $2 = module name, $3 = the mark
+    local kdir="$1" modul="$2" marke="$3" arb="$1/ksym" n
+    mkdir -p "$arb"
+    nm -u "$kdir/$modul.ko" 2>/dev/null | awk '{print $2}' | sort -u > "$arb/ko.txt"
+    nm -u "$kdir/gabbro_kmodul.o" "$kdir/gabbro_arena.o" 2>/dev/null \
+        | awk '/^ +U/{print $2}' | sort -u > "$arb/rt.txt"
+    comm -12 "$arb/ko.txt" "$arb/rt.txt" | grep -Ev "$KSYM_TOOLKETTE" > "$arb/fest.txt"
+    n="$(wc -l < "$arb/fest.txt" | tr -d ' ')"
+    if [ "$n" -gt "$marke" ]; then
+        echo "HARNESS: kernel symbols FAILED -- the runtime hard-wires $n kernel function(s), the mark is $marke"
+        sed 's/^/    hard-wired: /' "$arb/fest.txt" | head -20
+        return 0
+    fi
+    if [ "$n" -lt "$marke" ]; then
+        echo "HARNESS: kernel symbols FAILED -- the runtime hard-wires $n, below the mark of $marke: the mark belongs pulled down (the good case, and a finding nonetheless)"
+        return 0
+    fi
+    echo "HARNESS: kernel symbols ok ($n hard-wired by the runtime, mark $marke -- K7 brings this to 0)"
+}
+
 KERNVERSION="$(uname -r)"
 KBUILD="/lib/modules/$KERNVERSION/build"
 VMLINUZ="${GABBRO_VMLINUZ:-$HOME/claude-lane/vm/vmlinuz}"
@@ -353,7 +425,16 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     emitted C in the build directory.
 #  10 the expected counter moves (512 -> 513): does the run read the kernel log?
 #     (The `halde` twin is gift 1, the `takt` twin gift 7.)
-gifte() { echo "1 2 3 4 5 6 7 8 9 10"; }
+#
+# And the poison probe of the K7 measurement:
+#
+#  11 the RUNTIME gains one kernel call it did not have (`msleep` in
+#     `gabbro_kmodul.c`, in the build directory, re-made with the `Kbuild` the
+#     build wrote). The hard-wired count then stands at 5 against a mark of 4 and
+#     the run must be RED. *Without this gift the kernel-symbol stage would only
+#     say that nothing happened to be noticed* -- and it is the stage whose number
+#     K7 has to bring to zero, so it is the one that must be known to bite.
+gifte() { echo "1 2 3 4 5 6 7 8 9 10 11"; }
 
 # Which probe a gift belongs to -- a gift is a mutation OF a run, and a run is
 # of one probe.
@@ -362,6 +443,7 @@ gift_probe() {
         1|2|3|4)  echo halde ;;
         5|6|7)    echo takt ;;
         8|9|10)   echo atomar ;;
+        11)       echo halde ;;
         *) echo "pruefe-kernelmodul.sh: no such gift '$1'" >&2; exit 2 ;;
     esac
 }
@@ -482,6 +564,35 @@ EOF
         cp "$kdir/$MODUL.ko" "$arb/bau/$MODUL.ko"
     fi
 
+    if [ "$gift" = 11 ]; then
+        # **One kernel call MORE in the runtime**, and nowhere else: the mutation is
+        # on the runtime copy inside the build directory, re-made with the `Kbuild`
+        # the build wrote, so it carries no second copy of the recipe.
+        local kdir="$arb/bau/$MODUL.kmod"
+        grep -q '#include <linux/printk.h>' "$kdir/gabbro_kmodul.c" || {
+            echo "HARNESS: gift 11 does not apply -- no printk include in gabbro_kmodul.c"
+            return 0
+        }
+        sed -i 's|#include <linux/printk.h>|#include <linux/printk.h>\n#include <linux/delay.h>|' "$kdir/gabbro_kmodul.c"
+        sed -i 's|    (void)GABBRO_KMOD_EXIT();|    msleep(0);\n    (void)GABBRO_KMOD_EXIT();|' "$kdir/gabbro_kmodul.c"
+        grep -q 'msleep(0);' "$kdir/gabbro_kmodul.c" || {
+            echo "HARNESS: gift 11 does not apply -- the exit function is not where it looks"
+            return 0
+        }
+        rm -f "$kdir/$MODUL.ko" "$kdir"/*.o
+        if ! make -C "$KBUILD" "M=$(cd "$kdir" && pwd)" modules > "$arb/make.log" 2>&1; then
+            echo "HARNESS: the mutated module did not build"
+            tail -20 "$arb/make.log" >&2
+            return 0
+        fi
+        cp "$kdir/$MODUL.ko" "$arb/bau/$MODUL.ko"
+    fi
+
+    # **What the RUNTIME still takes from the kernel** (K7). Every probe, because
+    # every probe links a different part of the runtime in -- and it is the count
+    # that has to reach 0, not any one probe's.
+    symbole_pruefe "$arb/bau/$MODUL.kmod" "$MODUL" "$MARKE_KSYM"
+
     # **The two STATIC checks over what was built**, for the probe that asks for
     # them. They run after every mutation above, on the build directory itself --
     # so what they measure is the artefact the kernel loaded and not the tree.
@@ -584,6 +695,14 @@ EOF
             fehler=$((fehler+1))
         fi
     fi
+
+    # **What the runtime hard-wires** (K7): a ratchet, not a wall -- see
+    # `symbole_pruefe`. It is checked for every probe.
+    grep -q "HARNESS: kernel symbols ok" "$aus" || {
+        echo "RED: the runtime's kernel calls moved:"
+        grep -A4 "HARNESS: kernel symbols FAILED" "$aus" | head -5 | sed 's/^/     /'
+        fehler=$((fehler+1))
+    }
 
     # **The two static checks over the built artefact** (K6): the mapping's rows
     # and every access going through them. Their answers travel in the run's own

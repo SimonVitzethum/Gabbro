@@ -1284,3 +1284,131 @@ instrument's ten mutations are harness mutations. README guardian count **50 →
   `Einheit`, and handler pinning/re-entry stay outside `KernPlan` (OFFEN O19).
 - No `N` code, no gift number and no example number was taken: a lifted refusal keeps no
   `Satz`, and what replaced it is a header, a probe and two instruments.
+
+---
+
+## 12. Session 5, second half — K7's measurement: what the runtimes hard-wire
+
+*`AUFTRAG-1.md` **K7** arrived during this session (Simon, 2026-09-28): every Linux kernel
+function the module target uses is to be DECLARED BY THE USER'S PROGRAM, through a library
+unit it `use`s, with a refusal for an unbound primitive — acceptance point **4c**. The
+deliverable itself is NOT built. What is built is the half K7 names as its measurement, and
+what that measurement says is below: it is the worklist, as a number that has to reach zero.*
+
+### 12.1 The criterion, and why this one
+
+Simon's rule is *"API calls are always user-made"*, and the module target keeps it for
+everything the PROGRAM wrote: `messung/proben/kmodul/atomar.c` calls `pr_info` and `panic`
+because `atomar-faeden.gab` declared those two foreign functions with their ABI, effects,
+costs and the assumption their bodies keep. **It does not keep it for the runtime beside it.**
+
+A useful criterion has to tell those two apart, and `nm -u` on the `.ko` alone cannot: it
+lists both. So the stage asks it per object:
+
+| | |
+|---|---|
+| `nm -u <unit>.ko` | every kernel symbol the whole module still needs |
+| `nm -u gabbro_kmodul.o gabbro_arena.o` | what the RUNTIME objects reference (the emitted unit is `#include`d into the first, so the program's `extern fn`s are in there too — and they resolve against `gabbro_fremd*.o`, so they never reach the `.ko`'s list) |
+| the intersection, minus the toolchain's own names | **what the runtime pulls out of the kernel** |
+
+The toolchain's names (`__fentry__`, `__x86_return_thunk`, UBSan's handlers, the stack guard)
+are excluded by name: they are not API calls and no program could declare them.
+
+### 12.2 The measurement — this is the K7 worklist
+
+```
+$ instrumente/pruefe-kernelmodul.sh
+   HARNESS: kernel symbols ok (4 hard-wired by the runtime, mark 4 -- K7 brings this to 0)
+   HARNESS: kernel symbols ok (7 hard-wired by the runtime, mark 7 -- K7 brings this to 0)
+   HARNESS: kernel symbols ok (9 hard-wired by the runtime, mark 9 -- K7 brings this to 0)
+```
+
+| probe | count | the names |
+|---|---|---|
+| `halde` | 4 | `param_ops_uint`, `_printk`, `vfree`, `vzalloc` |
+| `takt` | 7 | + `pcpu_hot`, `_raw_spin_lock_irqsave`, `_raw_spin_unlock_irqrestore` |
+| `atomar` | 9 | + `complete`, `__init_swait_queue_head`, `kthread_create_on_node`, `wait_for_completion`, `wake_up_process` |
+
+**Twelve distinct names over the three probes**, and each is one line of K7: the arena's
+reservation (`vzalloc`/`vfree`), its module parameter (`param_ops_uint`), the driver's own
+reporting (`_printk`), the lock primitives of `sperre.h` (`_raw_spin_lock_irqsave` and its
+release, plus `pcpu_hot` from `smp_processor_id`), and the kthread glue of K6's root starter
+(`kthread_create_on_node`, `wake_up_process`, `complete`, `wait_for_completion`,
+`__init_swait_queue_head`).
+
+**Note what is NOT in the list, because it is the point of the criterion:** `panic`, which
+this module also needs, is pulled by `gabbro_fremd0.o` — the program's own C, for its own
+declared `aufgegeben`. That one is already K7-shaped.
+
+**And note what the K6 atomic mapping contributes: nothing.** `READ_ONCE`,
+`smp_load_acquire`, `try_cmpxchg` and `smp_mb` are macros and inline assembly; they leave no
+undefined symbol. So the "bind the atomics" half of K7 cannot be measured this way at all —
+it is a source-level question about where the ROWS come from, not a link-level one.
+
+### 12.3 A ratchet, not a wall — and its poison probe
+
+A stage that demanded 0 would be red on every probe until K7 lands, and a red that says
+nothing new every time it is read is a red nobody reads. So the mark is the measured number
+and the stage refuses a run that needs MORE — and a run that needs FEWER is a finding too
+(the good case: the mark is stale and belongs pulled down), in the shape
+`pruefe-emission.sh` uses for its emission counters.
+
+That makes the stage's own poison probe load-bearing, and it is gift 11: one kernel call
+added to the runtime copy in the build directory (`msleep` in `gabbro_kmodul.c`), re-made with
+the `Kbuild` the build wrote.
+
+```
+GIFT 11: caught (1 finding(s))
+    RED: the runtime's kernel calls moved:
+         HARNESS: kernel symbols FAILED -- the runtime hard-wires 5 kernel function(s), the mark is 4
+             hard-wired: msleep
+$ instrumente/pruefe-kernelmodul.sh --gift all
+   gifts: 11 of 11 caught                                             2 min 14 s
+```
+
+### 12.4 The other two runtimes, as K7 asks — a finding, not a task
+
+> *"The hosted (`pthread`, `mmap`) and bare-metal runtimes are NOT changed in this phase:
+> measure which OS calls they hard-wire and record the list as a finding in the report."*
+
+**Hosted** (`laufzeit/arena_dyn.c`, `faden.c`, `start.c`, `start_pool.c`). Measured two ways,
+because `start.c` and `start_pool.c` do not compile alone (they `#include` the emitted unit
+through a macro), so `nm -u` reaches only two of the four:
+
+```
+$ cc -c -std=c11 -I laufzeit laufzeit/arena_dyn.c laufzeit/faden.c && nm -u *.o
+   abort exit fprintf fwrite mmap mprotect stderr sysconf
+```
+
+and over all four by name: `pthread_create` (9), `pthread_join` (3),
+`pthread_mutex_lock`/`_unlock` (4 each), the raw `clone` (8) and `futex` (4) through
+`syscall` (11), `mmap`/`mprotect`, `sysconf`, `fprintf` (19), `printf`, `read`, `write`,
+`exit` (13), `abort` (7). **Roughly a dozen libc and two raw Linux system calls, none of them
+declared by any program.**
+
+**Bare metal** (`laufzeit/metall/`): no OS at all, so nothing to bind — what it hard-wires is
+the MACHINE, and that is a different class: `outb` (12), `hlt` (9), `sti` (7), `cli` (5),
+`inb` (3), `wrmsr` (3), `lidt`, and the `lock`-prefixed instructions of the ticket lock (25).
+Those are instructions, not API calls; the entry vectors and the syscall gate a program
+declares already travel through `target … abi metal` (Opus agent L, OFFEN O31).
+
+*So K7's reach is: the module runtime first (12 names, the list above), the hosted runtime
+second (about fourteen), the bare-metal one not at all.*
+
+### 12.5 What K7 still needs, and why K6 was built to fit it
+
+Not built, and named so the next session starts from a shape and not from a blank page:
+
+1. **The binding.** A library unit (`bibliothek/linux-kmod/*.gab`) that declares the
+   primitives as ordinary Gabbro items with ABI, effects, costs and named assumptions, plus
+   its own C — so the references move out of `gabbro_kmodul.o`/`gabbro_arena.o` and into an
+   object the program supplied. The stage above turns green by that move alone, which is why
+   its criterion is per object and not per `.ko`.
+2. **The refusal.** A module unit that uses a lock, an arena or an atomic without binding the
+   primitive it needs is refused at check time, with its sentence and a poison probe. That is
+   a new `N` code and the first thing in this phase that would take one.
+3. **The atomics.** They leave no symbol, so §12.2 cannot see them. The rows are one table in
+   one file (`laufzeit/kmodul/include/stdatomic.h`), and K6 was built that way on purpose:
+   when the names become the program's binding, the table moves and **(M11)'s substance does
+   not change** — the assumption is then that the BOUND primitives are at least as strong
+   (`messung/SERVER-0E-SPEC-DIFF.md` §10).
