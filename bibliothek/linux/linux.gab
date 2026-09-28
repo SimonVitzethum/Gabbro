@@ -20,24 +20,33 @@
 -- own objects, so the program's own calls do not count -- and its mark is the
 -- worklist. This file binds the whole of the BOUNDED HEAP
 -- (`laufzeit/arena_dyn.c`): the reservation, the commit, the page size, and the
--- two halves of a fail-stop. What is not bound yet is the generated driver's
--- threads and locks and the raw `clone`/`futex` of `laufzeit/faden.c`; the
--- instrument's two marks say exactly how much that is.
+-- two halves of a fail-stop; and, since the second slice, the whole of the
+-- GENERATED DRIVER (`<unit>.treiber.c`): its threads, its locks, and the words
+-- of its two error paths. **The symbol mark is 0 with these eleven bound** --
+-- the hosted runtime names no operating-system function of its own any more.
+-- What is left is the raw `clone`/`futex` of `laufzeit/faden.c`, which leaves
+-- no symbol at all and is counted as SITES by the instrument's second stage
+-- (`MARKE_ROHRUF`).
 --
 -- WHAT A PROGRAM DOES WITH IT. Two lines in the manifest of a unit that
--- declares an `arena`:
+-- declares an `arena`, a `lock` or a `concurrent` set:
 --
 --     unit driver program
 --       my-program.gab
 --       bibliothek/linux/linux.gab   -- these declarations
 --       bibliothek/linux/linux.c     -- their bodies
 --
--- and `gabbro build` REFUSES a hosted unit with an `arena` that names neither,
--- with the missing declaration and the file that supplies it
--- (`crates/gabbro-cli/src/bau.rs`, `bindungsregel_gehostet`). *Never a silent
--- default* -- and never a link error either, which is what the refusal buys: the
--- linker's word would be `gabbro_os_reserve undefined`, about a name the
--- program never wrote.
+-- and `gabbro build` REFUSES a hosted unit that names neither, with the missing
+-- declaration and the file that supplies it (`crates/gabbro-cli/src/bau.rs`,
+-- `bindungsregel_gehostet`). *Never a silent default* -- and never a link error
+-- either, which is what the refusal buys: the linker's word would be
+-- `gabbro_os_reserve undefined`, about a name the program never wrote.
+--
+-- **The demand grows with the use, per thing the unit has**: an `arena` asks for
+-- the three storage calls, a `lock` for the three lock calls, a `concurrent` set
+-- for the two thread calls, and any of the three for the report channel. A unit
+-- with none of them is refused nothing, because the runtime beside it calls
+-- nothing.
 --
 -- **WHY THERE IS NO `use` LINE**, the same answer as the module binding's:
 -- nothing in a program CALLS these items, the runtime does. A `use` would name
@@ -69,6 +78,18 @@ module linux::hosted {
 assume os_bindung_abi
     "Every body in `bibliothek/linux/linux.c` keeps the x86_64 SysV convention of its declaration here, answers 0 exactly where the declaration says a refusal is 0, and `gabbro_os_ende` never returns."
     falsifier sonde_os_bindung;
+
+-- **What the thread and lock bodies keep, and it is the whole of what the goal
+-- theorem asks of the environment under assumption (d).** A POSIX mutex is a
+-- mutual-exclusion lock and `pthread_join` returns after the root's last step;
+-- the Lean statement's `Laufzeit` says exactly that about the declared starts
+-- and the lock moves, and nothing here re-proves it. It is named apart from the
+-- ABI because a binding could keep every calling convention and still hand back
+-- a RECURSIVE mutex or a `pthread_create` that ran the body on the calling
+-- thread -- both of which type-check, link, and break race freedom in silence.
+assume os_bindung_faden
+    "`gabbro_os_sperre_nimm`/`_gib` are mutual exclusion over the blob they are given -- at most one thread holds it and a release is visible to the next holder; `gabbro_os_faden_start` runs its root ONCE on a thread of its own and answers non-zero if it did not start; `gabbro_os_faden_warte` returns only after that root's last step."
+    falsifier sonde_os_faden;
 
 -- **The reservation reads as zero, and that is its own assumption** -- because
 -- the bounded heap does NOT scrub. `laufzeit/arena_dyn.c` commits lazily and
@@ -114,5 +135,39 @@ extern fn gabbro_os_commit(basis : u64, versatz : u64, bytes : u64) -> u32
 
 extern fn gabbro_os_seitengroesse() -> u64
     effects { pure } costs <= 4096 ops;
+
+-- -- the generated driver's locks ---------------------------------------------
+--
+-- One blob per `lock`, owned by `<unit>.treiber.c` and passed as a number. The
+-- driver takes and releases; the binding decides with WHAT, and fail-stops
+-- itself if the primitive refuses -- there is no `else` at a lock the driver
+-- must hold, and the words are on this side anyway.
+--
+-- **The `costs` is the primitive's own work and NOT the wait.** `held <= N ops`
+-- is the Gabbro clause that bounds a critical section, and waiting bounds are
+-- NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list). A
+-- number here that pretended to cover contention would be the one kind of cost
+-- clause this language refuses to write.
+extern fn gabbro_os_sperre_init(s : u64)
+    effects { pure } costs <= 4096 ops;
+
+extern fn gabbro_os_sperre_nimm(s : u64)
+    effects { pure } costs <= 4096 ops;
+
+extern fn gabbro_os_sperre_gib(s : u64)
+    effects { pure } costs <= 4096 ops;
+
+-- -- the generated driver's threads -------------------------------------------
+--
+-- `start` takes the blob and the address of the root and answers 0 or an error;
+-- `warte` joins it. The body owns the whole lifecycle, which is why a FAILED
+-- start must leave a blob the driver may still wait on: the driver's error path
+-- joins everything it started before the failure, and a blob that never
+-- completed would hang the program instead of ending it with status 2.
+extern fn gabbro_os_faden_start(f : u64, koerper : u64) -> u32
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_os_faden_warte(f : u64) -> u32
+    effects { pure } costs <= 100000 ops;
 
 }

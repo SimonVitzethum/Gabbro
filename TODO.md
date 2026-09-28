@@ -594,9 +594,23 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   GENERATED driver read `GABBRO_ARENEN`, so a hosted or bare-metal unit with a dynamic arena
   ran with `base == NULL` — every `grow` and every `alloc` took its `else`, the heap was dead,
   and fail-closed means it was silent (`treiber.rs::arenen_reservieren`, `GENERATOR_KENNUNG`
-  → `treiber-gen-5`, gift 5 keeps it found). Still open, and it is the rest of K8: the
-  interface `laufzeit/bindung.h`, the library `bibliothek/linux/`, the refusal in `bau.rs`
-  beside `bindungsregel`, and the CORPUS — the part K7 never had.
+  → `treiber-gen-5`, gift 5 keeps it found).
+  **K8's HOSTED RUNTIME is bound since 2026-09-28** (server lane, sessions 10 and 11,
+  `messung/SERVER-0E-REPORT.md` §15 and §16), in two slices and both measured over a BUILT
+  binary: `laufzeit/bindung.h` is the interface (eleven declarations, no definition),
+  `bibliothek/linux/{linux.gab,linux.c}` is the binding a hosted program takes off the shelf,
+  and `bau.rs::bindungsregel_gehostet` refuses a unit that binds none — sharing ONE shape
+  check with the module rule (`bindung_pruefe`, `W7`). Slice 2 moved the bounded heap's six
+  (`mmap`, `mprotect`, `sysconf`, `fprintf`, `exit`, `abort`, all of `arena_dyn.c`) and
+  lifted the build's refusal to compile a non-module unit's own `.c` bodies; slice 3 moved the
+  GENERATED DRIVER's seven (`pthread_create`, `pthread_join`, the two mutex calls, `pause`,
+  `fprintf`, `abort`) and with them the root adapters and the never-spawned idle root.
+  **`MARKE_OSSYM` 12 → 7 → 0**, `7 of 7` poison probes, `MARK_AUSSEN` → 27,
+  `GENERATOR_KENNUNG` → `treiber-gen-6`. **The corpus needed nothing** — the rule fires over a
+  MANIFEST and the corpus is checked and emitted, not built (`pruefe-akzeptiert-diff.py` rc 0,
+  ten pins true on 29 of 29). Still open, and it is one slice: the raw `clone`/`futex` of
+  `laufzeit/faden.c` (`MARKE_ROHRUF` = 3 sites, no symbol for `nm` to see) and the hand
+  drivers `start.c`/`start_pool.c`, which no built program links any more.
   **The measurement stands** (server lane, session 5, `messung/SERVER-0E-REPORT.md` §12): the
   stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh` intersects `nm -u` on the `.ko`
   with `nm -u` over the RUNTIME objects only, so a symbol the program's own C pulls does not

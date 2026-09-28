@@ -422,8 +422,11 @@ echo "  HOSTED-ONLY runtime files, each with its bare-metal counterpart:"
 echo "    laufzeit/faden.c       raw Linux clone/futex      -> laufzeit/metall/kern.c (gabbro_faden_*)"
 echo "    laufzeit/start.c       pthreads + printf (boot)   -> <unit>.metall.c (gabbro build)"
 echo "    laufzeit/start_pool.c  pthreads (pool boot)       -> <unit>.metall.c (gabbro build)"
-echo "    laufzeit/arena_dyn.c   mmap/mprotect              -> laufzeit/metall/arena.c"
-echo "    <unit>.treiber.c       pthreads (generated)       -> <unit>.metall.c (generated)"
+echo "    laufzeit/arena_dyn.c   the program's binding      -> laufzeit/metall/arena.c"
+echo "    <unit>.treiber.c       the program's binding      -> <unit>.metall.c (generated)"
+echo "  The last two name NO OS function since TODO section 0e K8: they call the names of"
+echo "  laufzeit/bindung.h, which the PROGRAM defines (bibliothek/linux/). What is hosted"
+echo "  about them is the binding beside them, not a call inside them."
 
 if [ "$befund" != 0 ] || [ "$n_ok" != "$n_nenner" ]; then
     echo "== FREESTANDING: FINDING (see above) =="

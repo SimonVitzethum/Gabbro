@@ -220,29 +220,35 @@ def korpus():
 
 
 def binaer():
-    for k in ("target/release/gabbro", "target/debug/gabbro"):
-        p = os.path.join(W, k)
-        if os.path.exists(p):
-            return p
-    return None
+    """**Which binary, and is it younger than the sources it claims to be?** ONE register,
+    ONE file: `instrumente/binaer.sh` (server lane, TODO section 0e K8).
+
+    This function used to be a second copy of that question, and it answered it worse in
+    two ways at once -- it preferred `target/release` even when `target/debug` was newer,
+    and it counted `crates/*/tests/*.rs` among the sources, which is precisely the defect
+    session 10 repaired in the shared file. *Measured on 2026-09-28: a run of
+    `pruefe-emission.sh` was cut at stage 22c with "the binary is OLDER than 2 source
+    file(s)" over two TEST files that no binary is built from.* The shell register answers
+    for both, so there is nothing left to drift.
+
+    Returns the path, or prints the reason and exits -- the reason is the shell's own
+    sentence, not a paraphrase of it.
+    """
+    skript = os.path.join(W, "instrumente", "binaer.sh")
+    r = subprocess.run(
+        ["sh", "-c", '. "$1"; gabbro_binaer "$2"', "sh", skript, W],
+        capture_output=True, text=True, timeout=FRIST,
+    )
+    antwort = r.stdout.strip()
+    if r.returncode != 0:
+        print("ATOMAR-ZUGRIFFE: NOT RUN -- %s" % (antwort or "binaer.sh gave no answer"))
+        sys.exit(2)
+    return antwort
 
 
 def emittiere(ziel):
     """Every corpus unit the emitter accepts, as a file in `ziel`."""
     g = binaer()
-    if not g:
-        print("ATOMAR-ZUGRIFFE: NOT RUN -- no built gabbro binary (cargo build)")
-        sys.exit(2)
-    juenger = subprocess.run(
-        ["find", os.path.join(W, "crates"), "-name", "*.rs", "-newer", g],
-        capture_output=True, text=True, timeout=FRIST,
-    ).stdout.split()
-    if juenger:
-        print(
-            "ATOMAR-ZUGRIFFE: NOT RUN -- %s is OLDER than %d source file(s) under crates/ "
-            "-- build first" % (g, len(juenger))
-        )
-        sys.exit(2)
     dateien = []
     for q in korpus():
         r = subprocess.run(

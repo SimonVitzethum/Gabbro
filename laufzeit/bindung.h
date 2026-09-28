@@ -18,6 +18,14 @@
  *     `bibliothek/linux/linux.c`;
  *   * the STORAGE is the runtime's, the OPERATIONS are the program's.
  *
+ * THE GENERATED DRIVER IS THE RUNTIME, and that is why its seven names are in
+ * here rather than in the program's half. `<unit>.treiber.c` is written by
+ * `gabbro build` out of the unit's `concurrent` sets and `lock`s -- nobody
+ * types it, a stale one is refused by the pin probe, and the measurement counts
+ * its object among the runtime's (`instrumente/pruefe-os-bindung.sh`, the
+ * per-object criterion). *A file the build writes is not user code because a
+ * user could read it.*
+ *
  * WHAT IS BOUND HERE TODAY, AND WHAT IS NOT -- and the difference is measured,
  * not asserted. `instrumente/pruefe-os-bindung.sh` reads what the hosted runtime
  * still pulls out of the operating system (`nm -u` over a built binary,
@@ -26,11 +34,17 @@
  *   bound since this file exists   `mmap`, `mprotect`, `sysconf`, and the
  *                                  `fprintf`/`exit`/`abort` of the bounded
  *                                  heap's fail-stops -- all of `arena_dyn.c`
- *   still the runtime's            the generated driver's `pthread_*` and
- *                                  `pause`, `start.c`/`start_pool.c`, and the
- *                                  raw `clone`/`futex` of `faden.c` (which
- *                                  leave no symbol at all -- the instrument's
- *                                  second stage counts those sites instead)
+ *   bound since the second slice   the GENERATED DRIVER's whole set:
+ *                                  `pthread_create`, `pthread_join`,
+ *                                  `pthread_mutex_lock`/`_unlock`, and the
+ *                                  `fprintf`/`abort` of its error paths
+ *                                  (`crates/gabbro-cli/src/treiber.rs`)
+ *   still the runtime's            `start.c`/`start_pool.c`, which no built
+ *                                  program links (the driver replaced them),
+ *                                  and the raw `clone`/`futex` of `faden.c`
+ *                                  (which leave no symbol at all -- the
+ *                                  instrument's second stage counts those
+ *                                  sites instead)
  *
  * *The mark goes down when a line moves out of the runtime, and the instrument
  * refuses a run that needs MORE -- so this file cannot grow a hidden OS call
@@ -81,6 +95,8 @@
 #define GABBRO_OS_M_BODEN      4u /* (floor_hi, 0)    the committed floor would not commit */
 #define GABBRO_OS_M_UEBER_MAX  5u /* (wanted, max)    a `grow` past the declared ceiling */
 #define GABBRO_OS_M_SEITE      6u /* (0, 0)           the page size is not answerable */
+#define GABBRO_OS_M_START      7u /* (index, error)   a declared start did not start */
+#define GABBRO_OS_M_WARTE      8u /* (index, error)   a started root was not joined */
 
 /* The status a fail-stop leaves behind. The reservation's is the one
  * `arena_dyn.h` already names and the corpus already reads; the second is for
@@ -102,5 +118,57 @@ void gabbro_os_ende(uint32_t code);
 uint64_t gabbro_os_reserve(uint64_t bytes);
 uint32_t gabbro_os_commit(uint64_t basis, uint64_t versatz, uint64_t bytes);
 uint64_t gabbro_os_seitengroesse(void);
+
+/* -- the locks --------------------------------------------------------------
+ *
+ * One blob per `lock`, owned by the generated driver, initialised once before
+ * any root runs, and passed as a number to every operation. A
+ * `pthread_mutex_t` is the C library's TYPE and its size is the library's
+ * business, so it cannot stand in this file: what stands here is a blob of
+ * words wide enough for one, and the program's body asserts that its own struct
+ * fits (`_Static_assert`, in `bibliothek/linux/linux.c`, against the library it
+ * is being built against). *A blob too small is a loud build error and never a
+ * silent overrun* -- the same arrangement `laufzeit/kmodul/bindung.h` has for a
+ * `raw_spinlock_t`.
+ *
+ * WHY THERE IS NO SEPARATE `geteilt` PAIR, and why that is not a gap. A shared
+ * (`geteilt`) lock is the same object taken the same way today: the emitter
+ * declares `L_nimm_geteilt`/`L_gib_geteilt` and the driver defines them over
+ * this one pair. A binding that told the two apart would be describing a
+ * reader/writer primitive the emitter does not yet ask for, and a row nobody
+ * calls is ceremony (`W7`). The module binding makes the same choice for the
+ * same reason; the MASKED pair is separate there because `masks irqs` is a
+ * promise about the environment, and hosted POSIX has no interrupts to mask.
+ *
+ * AN ACQUIRE THAT FAILS DOES NOT RETURN A CODE, and that is deliberate: the
+ * driver has no `else` to take at a lock it must hold, so the fail-stop belongs
+ * on the side that has words. `bibliothek/linux/linux.c` reports and ends.
+ */
+#define GABBRO_OS_SPERRE_WORTE 16
+
+void gabbro_os_sperre_init(uint64_t s);
+void gabbro_os_sperre_nimm(uint64_t s);
+void gabbro_os_sperre_gib(uint64_t s);
+
+/* -- the declared starts as threads -----------------------------------------
+ *
+ * `start` takes the blob and the ADDRESS OF THE ROOT (`void f(void)`, the shape
+ * the emitter writes for every `concurrent` member, cast to a number) and
+ * answers 0 or an error; `warte` joins it and answers the same way. The
+ * program's body owns the whole thread lifecycle, so the runtime needs no "I am
+ * done" call.
+ *
+ * THE ROOT'S NAME STANDS AT THE CALL SITE, unwrapped, and that is what the pin
+ * probe reads (`treiber.rs::faden_start_zaehlung`): a root added, dropped or
+ * started a different number of times without regenerating the driver is a
+ * refused build and not a wrong thread set. Before this file the driver wrapped
+ * every root in a `void *(*)(void *)` adapter, because that is what
+ * `pthread_create` wants; the adapter is the BINDING's now, where the POSIX
+ * signature is, and the driver's own text lost an indirection with it.
+ */
+#define GABBRO_OS_FADEN_WORTE 16
+
+uint32_t gabbro_os_faden_start(uint64_t f, uint64_t koerper);
+uint32_t gabbro_os_faden_warte(uint64_t f);
 
 #endif

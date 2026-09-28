@@ -2,17 +2,21 @@
 //! per concurrent unit (lane 246).
 //!
 //! The emitter translates each `concurrent` member to a plain function and
-//! emits no caller and no `main`; this generator writes the missing half in
-//! the exact shape of `laufzeit/start.c`: one wrapper per root, one thread
-//! per root, join all, the idle root present but never spawned on hosted,
-//! and the lock primitives the emitter only declares (mutex on hosted).
-//! The generated file is a build artefact, pinned per unit: the probe
-//! compares the `concurrent { ... }` occurrences of the sources against the
-//! `pthread_create` sites of the driver, BY COUNT (a multiset since fix lane
-//! F4): a root added, dropped or started a different number of times without
-//! regenerating fails loudly.
+//! emits no caller and no `main`; this generator writes the missing half: one
+//! thread per declared start, join all, and the lock primitives the emitter
+//! only declares. The generated file is a build artefact, pinned per unit: the
+//! probe compares the `concurrent { ... }` occurrences of the sources against
+//! the `gabbro_os_faden_start` sites of the driver, BY COUNT (a multiset since
+//! fix lane F4): a root added, dropped or started a different number of times
+//! without regenerating fails loudly.
+//!
+//! **Since TODO section 0e K8 the driver names no operating-system function.**
+//! Threads, locks and the words of a failure go through `laufzeit/bindung.h`,
+//! which the PROGRAM defines -- see [`erzeuge`] for what left the template with
+//! them. The bare-metal twin [`erzeuge_metall`] never named one: underneath it
+//! there is no operating system, and the machine is allowed.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 /// One declared start, resolved to the C name the emitter writes.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -96,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-5";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-6";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -158,10 +162,43 @@ pub fn gueltiger_c_name(s: &str) -> bool {
 
 /// Render the hosted driver for one unit.
 ///
+/// **EVERY OPERATING-SYSTEM CALL IN THE ARTEFACT IS THE PROGRAM'S** (server lane,
+/// 2026-09-28, TODO section 0e K8, second slice). Until this template changed, the driver
+/// was the last place in the hosted runtime that named the operating system by itself:
+/// `pthread_create`, `pthread_join`, `pthread_mutex_lock`, `pthread_mutex_unlock`, `pause`,
+/// `fprintf` and `abort` -- seven names, measured over a built binary
+/// (`instrumente/pruefe-os-bindung.sh`, `MARKE_OSSYM`), and every one of them written here.
+/// They are calls through `laufzeit/bindung.h` now, which declares them and defines none;
+/// `bibliothek/linux/linux.{gab,c}` is the binding a program takes off the shelf, and
+/// `bau.rs::bindungsregel_gehostet` refuses a unit that binds none of them.
+///
+/// **A generated file is the runtime, not user code**, which is why the seven were the
+/// runtime's to give up: nobody types this file, a stale one is refused by [`pin_pruefe`],
+/// and the measurement counts its object among the runtime's.
+///
+/// Three things left the template with them, and each one is a simplification the binding
+/// paid for rather than a loss:
+///
+/// * **the adapters.** `pthread_create` wants `void *(*)(void *)` and an emitted root is
+///   `void (*)(void)`, so every root used to get a `faden_<root>` wrapper. The POSIX
+///   signature is in `bibliothek/linux/linux.c` now, so the root's own name stands at the
+///   call site -- exactly the shape the BARE-METAL driver already had
+///   (`gabbro_faden_start({root}, …)`), and one shape for both drivers is one pin to read;
+/// * **the idle root.** `ruhe()` spun on `pause()`, was `__attribute__((unused))` and was
+///   never spawned on hosted -- the template said so itself. Keeping it would have demanded
+///   a binding row of every concurrent unit for a call nothing makes; bare metal parks its
+///   spare cores inside its own runtime and never read this function
+///   (`erzeuge_metall_voll` emits none);
+/// * **the words.** The error paths printed and aborted. Printing is an OS call, so the
+///   runtime has no words of its own: a failure travels as a code and two numbers
+///   (`GABBRO_OS_M_START`, `GABBRO_OS_M_WARTE`) and the program's binding says the
+///   sentence. A lock that cannot be taken fail-stops inside the binding, because the
+///   driver has no `else` to take at a lock it must hold.
+///
 /// `wurzeln` are the resolved roots in declaration order, ONE ENTRY PER
 /// OCCURRENCE (fix lane F4: `concurrent { f, f }` is two starts, and the
 /// accepted pool-safe duplicate must get two threads); the generator writes
-/// one wrapper per distinct name and one `pthread_create` per entry.
+/// one `gabbro_os_faden_start` per entry.
 /// `sperren` the locks to define. `nachlauf` is optional
 /// unit-specific observation C after the join loop (the 124 invariant
 /// checks); the plain build passes `None`, so the artefact carries the
@@ -183,87 +220,86 @@ pub fn erzeuge(
     ));
     aus.push_str(
         " *\n \
-         * WHAT THIS IS. The hosted runtime driver for one concurrent unit, in the\n \
-         * shape of `laufzeit/start.c`: the emitter translated each `concurrent`\n \
-         * member to a plain function and emitted no caller and no `main`; this\n \
-         * file starts exactly the declared roots, one thread per occurrence, and\n \
-         * carries the idle root for bare metal. Regenerate after every change to the\n \
-         * unit's `concurrent` sets or locks: the pin probe compares the source\n \
-         * sets against the `pthread_create` sites below and fails a stale file.\n \
+         * WHAT THIS IS. The hosted runtime driver for one concurrent unit: the\n \
+         * emitter translated each `concurrent` member to a plain function and\n \
+         * emitted no caller and no `main`; this file starts exactly the declared\n \
+         * roots, one thread per occurrence, and joins them. Regenerate after every\n \
+         * change to the unit's `concurrent` sets or locks: the pin probe compares\n \
+         * the source sets against the `gabbro_os_faden_start` sites below and fails\n \
+         * a stale file.\n \
+         *\n \
+         * EVERY OPERATING-SYSTEM CALL IN HERE IS THE PROGRAM'S (TODO section 0e K8).\n \
+         * This file names no POSIX function: threads, locks and the words of a\n \
+         * failure go through `laufzeit/bindung.h`, which declares them and defines\n \
+         * none, and the program supplies the bodies --\n \
+         * `bibliothek/linux/linux.gab` plus its `.c` is the binding it may take off\n \
+         * the shelf. A unit that binds none is refused before this file is written.\n \
          *\n \
          * BUILD (from the tree root; `<ausgabe>` is the manifest's `out` dir):\n \
          *\n \
-         *   cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I <ausgabe> \\\n \
-         *      -DEINHEIT_INCLUDE='\"<einheit>.c\"' -o <ausgabe>/<einheit>.treiber \\\n \
-         *      <ausgabe>/<einheit>.treiber.c\n \
+         *   cc -std=c11 -O0 -Wall -Wextra -Werror -I laufzeit -I <ausgabe> \\\n \
+         *      -DEINHEIT_INCLUDE='\"<einheit>.c\"' -c \\\n \
+         *      -o <ausgabe>/<einheit>.treiber.o <ausgabe>/<einheit>.treiber.c\n \
+         *\n \
+         * and link it against `laufzeit/arena_dyn.c`, `laufzeit/faden.c` and the\n \
+         * program's own C bodies (its binding among them).\n \
          */\n",
     );
-    aus.push_str("\n#include <pthread.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <unistd.h>\n");
+    aus.push_str("\n/* -- The names this driver calls and does not define ------------------- */\n\n");
+    aus.push_str("#include \"bindung.h\"\n");
     aus.push_str("\n/* -- The emitted unit -------------------------------------------------- */\n\n");
     aus.push_str("#include EINHEIT_INCLUDE\n");
     aus.push_str("\n/* -- Lock primitives: the emitter declares them, the runtime defines them.\n");
-    aus.push_str(" *\n * WHY HERE. A lock is a runtime object (mutex on hosted POSIX, the ticket\n");
+    aus.push_str(" *\n * WHY HERE. A lock is a runtime object (a mutex on hosted POSIX, the ticket\n");
     aus.push_str(" * lock of NICHTINTERFERENZ.md section 10 on bare metal), never program\n");
     aus.push_str(" * text. The name on each side is the contract between them, checked by\n");
-    aus.push_str(" * `cc`: a misspelt name is an undefined reference, not a silent default.\n */\n");
+    aus.push_str(" * `cc`: a misspelt name is an undefined reference, not a silent default.\n");
+    aus.push_str(" *\n * THE STORAGE IS HERE AND THE OPERATIONS ARE THE PROGRAM'S. A\n");
+    aus.push_str(" * `pthread_mutex_t` is the C library's type, so the blob below is words and\n");
+    aus.push_str(" * the binding asserts that its own struct fits (`GABBRO_OS_SPERRE_WORTE`).\n");
+    aus.push_str(" * It is initialised in `main`, before any root runs -- a static initialiser\n");
+    aus.push_str(" * would have to name the library's macro, which is the thing that moved.\n */\n");
     let mut sortiert: Vec<&Sperre> = sperren.iter().collect();
     sortiert.sort_by(|a, b| a.name.cmp(&b.name));
-    for s in sortiert {
+    for s in &sortiert {
         let n = &s.name;
         aus.push_str(&format!(
-            "static pthread_mutex_t sperre_{n} = PTHREAD_MUTEX_INITIALIZER;\n\n\
-             void {n}_nimm(void)\n{{\n    int rc = pthread_mutex_lock(&sperre_{n});\n\
-             \x20   if (rc != 0) {{\n        fprintf(stderr, \"{n}_nimm: pthread_mutex_lock: %d\\n\", rc);\n\
-             \x20       abort();\n    }}\n}}\n\n\
-             void {n}_gib(void)\n{{\n    int rc = pthread_mutex_unlock(&sperre_{n});\n\
-             \x20   if (rc != 0) {{\n        fprintf(stderr, \"{n}_gib: pthread_mutex_unlock: %d\\n\", rc);\n\
-             \x20       abort();\n    }}\n}}\n\n"
+            "static uint64_t sperre_{n}[GABBRO_OS_SPERRE_WORTE];\n\n\
+             void {n}_nimm(void)\n{{\n    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n\
+             void {n}_gib(void)\n{{\n    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n"
         ));
         if s.geteilt {
+            // **The shared pair is the same object taken the same way**, which is what
+            // the emitter asks for today: `L_nimm_geteilt` is a second NAME and not a
+            // second primitive. A binding row that told them apart would describe a
+            // reader/writer lock nothing calls (`laufzeit/bindung.h` says why).
             aus.push_str(&format!(
-                "void {n}_nimm_geteilt(void)\n{{\n    int rc = pthread_mutex_lock(&sperre_{n});\n\
-                 \x20   if (rc != 0) {{\n        fprintf(stderr, \"{n}_nimm_geteilt: pthread_mutex_lock: %d\\n\", rc);\n\
-                 \x20       abort();\n    }}\n}}\n\n\
-                 void {n}_gib_geteilt(void)\n{{\n    int rc = pthread_mutex_unlock(&sperre_{n});\n\
-                 \x20   if (rc != 0) {{\n        fprintf(stderr, \"{n}_gib_geteilt: pthread_mutex_unlock: %d\\n\", rc);\n\
-                 \x20       abort();\n    }}\n}}\n\n"
+                "void {n}_nimm_geteilt(void)\n{{\n    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n\
+                 void {n}_gib_geteilt(void)\n{{\n    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n"
             ));
         }
     }
     aus.push_str("/* -- ROOTS: the declared starts of this unit.\n");
-    aus.push_str(" *\n * WHY ONE WRAPPER PER ROOT. `pthread_create` wants `void *(*)(void *)`\n");
-    aus.push_str(" * and the emitted roots are `void (*)(void)`; the wrapper is the adapter,\n");
-    aus.push_str(" * and one adapter per root keeps the root's NAME at the `pthread_create`\n");
-    aus.push_str(" * call site, which is what the pin probe reads. A root declared twice (a\n");
-    aus.push_str(" * pool) has one adapter and one `pthread_create` site per declaration.\n */\n");
-    let mut geschrieben: BTreeSet<&str> = BTreeSet::new();
-    for w in wurzeln {
-        let c = &w.c_name;
-        // One adapter per NAME: a routine started twice (a pool) shares it, and
-        // its two `pthread_create` sites below both name it.
-        if !geschrieben.insert(c.as_str()) {
-            continue;
-        }
-        aus.push_str(&format!(
-            "static void *faden_{c}(void *u)\n{{\n    (void)u; /* No argument: the declared\n\
-             \x20                              * starts of this unit take none. */\n    {c}();\n    return NULL;\n}}\n\n"
-        ));
-    }
+    aus.push_str(" *\n * ONE BLOB PER OCCURRENCE, and the ROOT'S OWN NAME at the call site: the\n");
+    aus.push_str(" * binding takes `void (*)(void)`, which is the shape the emitter writes, so\n");
+    aus.push_str(" * no adapter stands between them and the pin probe reads the root directly.\n");
+    aus.push_str(" * A root declared twice (a pool) gets two blobs and two start sites.\n */\n");
     aus.push_str("/* N_WURZELN counts the declared starts, one per occurrence -- the probe checks it\n * against the number of members the source's `concurrent` sets name. */\n");
     aus.push_str(&format!("#define N_WURZELN {}\n", wurzeln.len()));
-    aus.push_str("\n/* -- The idle root: `none` of `E.P.mitRuhe`.\n");
-    aus.push_str(" *\n * WHY IT IS NEVER SPAWNED ON HOSTED. POSIX gives `main` no spare cores\n");
-    aus.push_str(" * to park: `main` spawns exactly the declared roots and joins them. The\n");
-    aus.push_str(" * function stands here so the shape exists in the artefact -- bare metal\n");
-    aus.push_str(" * spawns one per extra core -- and `__attribute__((unused))` says that.\n");
-    aus.push_str(" * Spinning here touches no Gabbro carrier, so it is invisible to the goal.\n */\n");
-    aus.push_str(
-        "static void *ruhe(void *u) __attribute__((unused));\n\
-         static void *ruhe(void *u)\n{\n    (void)u;\n    for (;;) {\n        pause();\n\
-         \x20   }\n    return NULL;\n}\n",
-    );
+    aus.push_str("static uint64_t faden[N_WURZELN][GABBRO_OS_FADEN_WORTE];\n");
     aus.push_str("\n/* -- main: start exactly the roots, join them. ---------------------------- */\n\nint main(void)\n{\n");
-    aus.push_str("    pthread_t faden[N_WURZELN];\n    int rc;\n");
+    if !wurzeln.is_empty() {
+        aus.push_str("    uint32_t rc;\n");
+    }
+    if !sortiert.is_empty() {
+        aus.push_str("\n    /* -- The unit's locks, initialised before the first root runs. */\n");
+        for s in &sortiert {
+            aus.push_str(&format!(
+                "    gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_{});\n",
+                s.name
+            ));
+        }
+    }
     arenen_reservieren(&mut aus);
     aus.push('\n');
     // **A failed start joins what already runs** (fix lane F4, the finding review
@@ -277,18 +313,20 @@ pub fn erzeuge(
         } else {
             format!(
                 "        for (int j = 0; j < {i}; j++) {{\n\
-                 \x20           (void)pthread_join(faden[j], NULL);\n        }}\n"
+                 \x20           (void)gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[j]);\n        }}\n"
             )
         };
         aus.push_str(&format!(
-            "    rc = pthread_create(&faden[{i}], NULL, faden_{c}, NULL);\n    if (rc != 0) {{\n\
-             \x20       fprintf(stderr, \"start: {c}: %d\\n\", rc);\n{einsammeln}\
+            "    rc = gabbro_os_faden_start((uint64_t)(uintptr_t)faden[{i}], (uint64_t)(uintptr_t){c});\n\
+             \x20   if (rc != 0) {{\n\
+             \x20       gabbro_os_melden(GABBRO_OS_M_START, {i}, rc);\n{einsammeln}\
              \x20       return 2;\n    }}\n"
         ));
     }
     aus.push_str(
-        "    for (int i = 0; i < N_WURZELN; i++) {\n        rc = pthread_join(faden[i], NULL);\n\
-         \x20       if (rc != 0) {\n            fprintf(stderr, \"join: thread %d: %d\\n\", i, rc);\n\
+        "    for (int i = 0; i < N_WURZELN; i++) {\n\
+         \x20       rc = gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[i]);\n\
+         \x20       if (rc != 0) {\n            gabbro_os_melden(GABBRO_OS_M_WARTE, (uint64_t)i, rc);\n\
          \x20           return 2;\n        }\n    }\n",
     );
     if let Some(code) = nachlauf {
@@ -533,38 +571,78 @@ pub fn metall_pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> R
     }
 }
 
-/// The `pthread_create` roots of a driver C file, COUNTED: every
-/// `faden_<root>` named at a `pthread_create` call site, with the number of
-/// sites that name it (a pool routine started twice has two sites).
+/// The roots of a hosted driver C file, COUNTED: the root named at every
+/// `gabbro_os_faden_start` call site, with the number of sites that name it (a
+/// pool routine started twice has two sites).
 ///
-/// Read with a plain scanner, not a C parser: the generator above is the
-/// only writer, and the hand file `laufzeit/start.c` keeps the same shape
-/// (one wrapper per root, the root's name at the call site) so the same
-/// probe reads both.
-pub fn pthread_create_zaehlung(treiber_c: &str) -> BTreeMap<String, usize> {
+/// **The LAST identifier of the argument text is the root**, and that is exact
+/// rather than lucky: the call the generator writes is
+/// `gabbro_os_faden_start((uint64_t)(uintptr_t)faden[i], (uint64_t)(uintptr_t)<root>)`,
+/// so the only names after the second comma are the cast's own -- and they
+/// stand BEFORE the root, never after it. The argument text ends at the paren
+/// that closes the call, which is COUNTED and not searched for: the casts carry
+/// parentheses of their own.
+///
+/// Read with a plain scanner and not a C parser, for the reason it always was:
+/// [`erzeuge`] is the only writer of the files this reads.
+///
+/// *Until K8's second slice this scanner read `pthread_create(` and the
+/// `faden_<root>` adapter beside it. The adapter went with the POSIX signature
+/// into `bibliothek/linux/linux.c`, so the root's own name stands at the call
+/// site now -- the shape the BARE-METAL driver already had
+/// ([`metall_start_zaehlung`]).*
+pub fn faden_start_zaehlung(treiber_c: &str) -> BTreeMap<String, usize> {
     let mut zaehlung = BTreeMap::new();
     let mut rest = treiber_c;
-    // Only CALL SITES count (`pthread_create(` up to its `;`): with counts a
-    // mention in a comment would be a thread start that does not exist.
-    while let Some(i) = rest.find("pthread_create(") {
-        let nach = &rest[i + "pthread_create(".len()..];
-        let aufruf = &nach[..nach.find(';').unwrap_or(nach.len())];
-        if let Some(j) = aufruf.find("faden_") {
-            let mut name = String::new();
-            for c in aufruf[j + "faden_".len()..].chars() {
-                if c.is_ascii_alphanumeric() || c == '_' {
-                    name.push(c);
-                } else {
-                    break;
+    while let Some(i) = rest.find("gabbro_os_faden_start(") {
+        let nach = &rest[i + "gabbro_os_faden_start(".len()..];
+        let mut tiefe = 1usize;
+        let mut ende = nach.len();
+        for (j, c) in nach.char_indices() {
+            match c {
+                '(' => tiefe += 1,
+                ')' => {
+                    tiefe -= 1;
+                    if tiefe == 0 {
+                        ende = j;
+                        break;
+                    }
                 }
+                _ => {}
             }
-            if !name.is_empty() {
-                *zaehlung.entry(name).or_insert(0) += 1;
-            }
+        }
+        if let Some(name) = letzter_bezeichner(&nach[..ende]) {
+            *zaehlung.entry(name).or_insert(0) += 1;
         }
         rest = nach;
     }
     zaehlung
+}
+
+/// The last C identifier in a piece of text (`[A-Za-z_][A-Za-z0-9_]*`), if
+/// there is one. A run that starts with a digit is a number and not a name.
+fn letzter_bezeichner(text: &str) -> Option<String> {
+    let mut gefunden: Option<String> = None;
+    let mut lauf = String::new();
+    let schliesse = |lauf: &mut String, gefunden: &mut Option<String>| {
+        if lauf
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        {
+            *gefunden = Some(lauf.clone());
+        }
+        lauf.clear();
+    };
+    for c in text.chars() {
+        if c.is_ascii_alphanumeric() || c == '_' {
+            lauf.push(c);
+        } else {
+            schliesse(&mut lauf, &mut gefunden);
+        }
+    }
+    schliesse(&mut lauf, &mut gefunden);
+    gefunden
 }
 
 /// The declared starts of the sources as a multiset: short C name to the
@@ -597,7 +675,7 @@ pub fn n_wurzeln(treiber_c: &str) -> Option<usize> {
 /// on success; the error names both sides with their counts, so a stale
 /// driver fails loudly instead of starting the wrong threads.
 pub fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
-    let treiber = pthread_create_zaehlung(treiber_c);
+    let treiber = faden_start_zaehlung(treiber_c);
     let zeige = |m: &BTreeMap<String, usize>| -> String {
         m.iter()
             .map(|(n, k)| if *k == 1 { n.clone() } else { format!("{n} x{k}") })
@@ -671,6 +749,77 @@ mod treiber_tests {
         assert!(c.contains("/* NACHLAUF:"));
     }
 
+    /// **The hosted driver names no operating-system function** (server lane, 2026-09-28,
+    /// TODO section 0e K8, second slice).
+    ///
+    /// The generated driver was the last place in the hosted runtime that called the OS by
+    /// itself -- seven names, measured over a built binary by
+    /// `instrumente/pruefe-os-bindung.sh`. That instrument is the wall; this test is the
+    /// door before it, because it fails in a second and without a compiler, and because it
+    /// reads the TEMPLATE rather than one probe's output: a name reintroduced for a shape no
+    /// probe happens to have would pass the wall and fail here.
+    ///
+    /// Header names count as much as call sites: `#include <pthread.h>` is how the previous
+    /// six arrived, and a driver that includes it has the whole library in reach again.
+    #[test]
+    fn der_treiber_nennt_keine_os_funktion() {
+        let (wurzeln, sperren) = beispiel();
+        let geteilt = vec![Sperre { name: "M".to_string(), geteilt: true, maskiert: true }];
+        for (welcher, c) in [
+            ("plain", erzeuge("beispiel124", &wurzeln, &sperren, None)),
+            ("shared", erzeuge("beispiel124", &wurzeln, &geteilt, None)),
+            ("with a NACHLAUF", erzeuge("beispiel124", &wurzeln, &sperren, Some("    (void)0;"))),
+        ] {
+            // The COMMENT half of the file is allowed to name what moved away -- it says
+            // where the calls went, which is the point. Only code is read.
+            let code: String = c
+                .lines()
+                .filter(|z| {
+                    let t = z.trim_start();
+                    !(t.starts_with('*') || t.starts_with("/*") || t.starts_with("//"))
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            for name in [
+                "pthread_", "fprintf", "printf", "abort", "exit(", "pause(", "malloc",
+                "<pthread.h>", "<stdio.h>", "<stdlib.h>", "<unistd.h>",
+            ] {
+                assert!(
+                    !code.contains(name),
+                    "the {welcher} driver must not name `{name}`:\n{code}"
+                );
+            }
+            // And the positive half: a green over a file that called nothing would say
+            // nothing. The bound names ARE there.
+            for name in [
+                "gabbro_os_sperre_init", "gabbro_os_sperre_nimm", "gabbro_os_sperre_gib",
+                "gabbro_os_faden_start", "gabbro_os_faden_warte", "gabbro_os_melden",
+            ] {
+                assert!(code.contains(name), "the {welcher} driver calls `{name}`");
+            }
+        }
+    }
+
+    /// **Every lock is initialised before the first root starts.** The blob is words until
+    /// somebody makes it a mutex, and a root that took an uninitialised one would be a race
+    /// the whole lock discipline rests on not having.
+    #[test]
+    fn jede_sperre_ist_vor_dem_ersten_start_gesetzt() {
+        let (wurzeln, _) = beispiel();
+        let sperren = vec![
+            Sperre { name: "A".to_string(), geteilt: false, maskiert: false },
+            Sperre { name: "B".to_string(), geteilt: true, maskiert: false },
+        ];
+        let c = erzeuge("zwei", &wurzeln, &sperren, None);
+        let erster_start = c.find("gabbro_os_faden_start(").expect("the driver starts a root");
+        for n in ["A", "B"] {
+            let init = c
+                .find(&format!("gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_{n})"))
+                .unwrap_or_else(|| panic!("lock {n} is initialised:\n{c}"));
+            assert!(init < erster_start, "lock {n} is initialised before the first start");
+        }
+    }
+
     /// **A shared lock earns its shared pair, beside the exclusive one.**
     #[test]
     fn geteilte_sperre_bekommt_geteiltes_paar() {
@@ -718,7 +867,7 @@ mod treiber_tests {
     }
 
     /// **A pool routine named twice gets two threads** (fix lane F4, review G06
-    /// F5). One adapter, two `pthread_create` sites, `N_WURZELN 2` -- and a
+    /// F5). Two `gabbro_os_faden_start` sites, two blobs, `N_WURZELN 2` -- and a
     /// driver that starts it once fails the multiset pin, which the set pin
     /// before this lane let pass.
     #[test]
@@ -729,8 +878,11 @@ mod treiber_tests {
         };
         let (_, sperren) = beispiel();
         let c = erzeuge("pool", &[w.clone(), w.clone()], &sperren, None);
-        assert_eq!(c.matches("static void *faden_arbeiter(void *u)").count(), 1, "one adapter");
-        assert_eq!(c.matches("faden_arbeiter, NULL)").count(), 2, "two thread starts");
+        assert_eq!(
+            c.matches("(uint64_t)(uintptr_t)arbeiter)").count(),
+            2,
+            "two thread starts name the root itself:\n{c}"
+        );
         assert!(c.contains("#define N_WURZELN 2"));
         assert_eq!(pin_pruefe(&menge(&["arbeiter", "arbeiter"]), &c), Ok(2));
         let einmal = erzeuge("pool", &[w], &sperren, None);
@@ -802,7 +954,7 @@ mod treiber_tests {
                 .map(|i| {
                     let nach = &c[i..];
                     i + nach
-                        .find("pthread_create(")
+                        .find("gabbro_os_faden_start(")
                         .or_else(|| nach.find("gabbro_faden_start("))
                         .expect("the driver starts something")
                 })

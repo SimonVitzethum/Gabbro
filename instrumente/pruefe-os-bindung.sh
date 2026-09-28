@@ -135,16 +135,24 @@ k=3 v=0
 k=4 v=64"
 ERWARTET="$ERWARTET_BASIS"
 
-# **What the hosted runtime still takes from the OS.** Twelve when this stage was
-# written on 2026-09-28, and **seven the same day**: the bounded heap's five
-# (`mmap`, `mprotect`, `sysconf`, `exit`, `fwrite`) left with
-# `laufzeit/arena_dyn.c`, which calls the program's binding now
-# (`laufzeit/bindung.h`, `bibliothek/linux/`). The seven that remain are the
-# GENERATED DRIVER's, every one of them -- `pthread_create`, `pthread_join`,
-# `pthread_mutex_lock`, `pthread_mutex_unlock`, `pause` (libc's, in the idle
-# root), `fprintf` and `abort`. That is the next slice of K8, and the mark is
-# what will refuse to let it be forgotten. K8 brings this to 0.
-MARKE_OSSYM=7
+# **What the hosted runtime still takes from the OS: NOTHING.** Twelve when this
+# stage was written on 2026-09-28, seven the same day, and **0 the day after**:
+#
+#   12 -> 7   the bounded heap's five (`mmap`, `mprotect`, `sysconf`, `exit`,
+#             `fwrite`) left with `laufzeit/arena_dyn.c`, which calls the
+#             program's binding now (`laufzeit/bindung.h`, `bibliothek/linux/`);
+#    7 -> 0   the GENERATED DRIVER's seven (`pthread_create`, `pthread_join`,
+#             `pthread_mutex_lock`, `pthread_mutex_unlock`, `pause` in the idle
+#             root, `fprintf` and `abort`) left with the template
+#             (`crates/gabbro-cli/src/treiber.rs`).
+#
+# **A ratchet at 0 is a wall**, and the stage stays written as a ratchet on
+# purpose: a run that needs MORE is refused with the names it needed, and the
+# reading of the number does not change when it reaches its floor. What it does
+# NOT yet say is that the hosted runtime makes no system call at all -- the raw
+# `clone`/`futex` of `laufzeit/faden.c` leave no symbol, and `MARKE_ROHRUF`
+# below is where they are counted.
+MARKE_OSSYM=0
 
 # **How many raw system-call sites the hosted runtime issues.** Three call sites
 # in `laufzeit/faden.c` (`clone` and the child's `exit` in `gabbro_faden_start`,
@@ -238,7 +246,12 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     about a name the program never wrote. The gift checks for the REFUSAL's
 #     own sentence, because a build that failed for any other reason would turn
 #     the run red through the wrong door.
-gifte() { echo "1 2 3 4 5 6"; }
+#   7 the BINDING is declared with the WRONG ARITY (`gabbro_os_faden_start`
+#     loses a parameter): C has no mangling, so a name of the right spelling and
+#     the wrong shape LINKS and then reads a register nobody set. That is the
+#     half of the rule a missing declaration never reaches
+#     (`bau.rs::bindung_pruefe`), and it is checked by its own sentence too.
+gifte() { echo "1 2 3 4 5 6 7"; }
 
 # -- stage 1: build, link, run -------------------------------------------------
 #
@@ -267,9 +280,32 @@ bauen() {   # $1 = work dir, $2 = gift
         #
         # Gift 6 drops that line, and NOTHING else: the bodies still stand in the link, so
         # what the build refuses is the missing DECLARATION and not a missing file.
-        [ "$gift" = 6 ] || echo "  $BINDUNG_GAB"
+        if [ "$gift" = 7 ]; then
+            echo "  $arb/linux-gift.gab"
+        elif [ "$gift" != 6 ]; then
+            echo "  $BINDUNG_GAB"
+        fi
     } > "$arb/manifest"
+    if [ "$gift" = 7 ]; then
+        # The tree is never written to: the mutation is on a COPY, and its result
+        # is checked rather than its intent.
+        sed 's|^extern fn gabbro_os_faden_start(f : u64, koerper : u64) -> u32$|extern fn gabbro_os_faden_start(f : u64) -> u32|' \
+            "$BINDUNG_GAB" > "$arb/linux-gift.gab"
+        if ! grep -q '^extern fn gabbro_os_faden_start(f : u64) -> u32$' "$arb/linux-gift.gab"; then
+            echo "HARNESS: gift 7 does not apply -- the declaration was not narrowed"
+            return 0
+        fi
+    fi
     if ! timeout "$FRIST" "$GABBRO" build "$arb/manifest" > "$arb/bau.log" 2>&1; then
+        if [ "$gift" = 7 ]; then
+            if grep -q 'is bound with 1 parameter(s) and the runtime calls it with 2' "$arb/bau.log"; then
+                echo "HARNESS: gift 7 -- the build refused the wrong arity by name"
+            else
+                echo "HARNESS: gift 7 does not measure -- the build failed for another reason"
+                head -5 "$arb/bau.log" >&2
+            fi
+            return 0
+        fi
         if [ "$gift" = 6 ]; then
             # **The refusal by its own sentence.** A build that failed for another
             # reason would turn this run red through the wrong door, and a gift caught
@@ -290,16 +326,25 @@ bauen() {   # $1 = work dir, $2 = gift
         echo "HARNESS: gift 6 does not measure -- the build ACCEPTED a unit with an \`arena\` and no binding"
         return 0
     fi
+    if [ "$gift" = 7 ]; then
+        echo "HARNESS: gift 7 does not measure -- the build ACCEPTED a binding of the wrong arity"
+        return 0
+    fi
     if [ "$gift" = 1 ]; then
-        # One OS call more in the RUNTIME's own file. `<unistd.h>` is already
-        # included by the driver, so this compiles -- which is the point: a call
-        # that compiles and links is exactly the kind that arrives unnoticed.
-        if ! grep -q 'pthread_t faden\[N_WURZELN\];' "$bau/$EINHEIT.treiber.c"; then
-            echo "HARNESS: gift 1 does not apply -- no thread array in the driver"
+        # One OS call more in the RUNTIME's own file. The driver includes no
+        # system header any more (K8's second slice), so the gift brings its own
+        # declaration -- which is the point: a call that compiles and links is
+        # exactly the kind that arrives unnoticed, and a missing `#include` is
+        # not what stops one.
+        if ! grep -q '^int main(void)$' "$bau/$EINHEIT.treiber.c"; then
+            echo "HARNESS: gift 1 does not apply -- no \`main\` in the driver"
             return 0
         fi
-        sed -i 's|    int rc;|    int rc;\n    (void)getpid();|' "$bau/$EINHEIT.treiber.c"
-        grep -q 'getpid' "$bau/$EINHEIT.treiber.c" || {
+        sed -i 's|^int main(void)$|extern int getpid(void);\n\nint main(void)|' \
+            "$bau/$EINHEIT.treiber.c"
+        sed -i 's|^    uint32_t rc;$|    uint32_t rc;\n    (void)getpid();|' \
+            "$bau/$EINHEIT.treiber.c"
+        grep -q '(void)getpid();' "$bau/$EINHEIT.treiber.c" || {
             echo "HARNESS: gift 1 does not apply -- the call was not inserted"
             return 0
         }
@@ -330,7 +375,9 @@ bauen() {   # $1 = work dir, $2 = gift
     fi
     local cflags="-std=c11 -O0 -Wall -Wextra -Werror"
     # The driver, with the emitted unit `#include`d into it.
-    if ! timeout "$FRIST" cc $cflags -pthread -I "$bau" \
+    # `-I "$arb/laufzeit"` is what the driver needs since K8's second slice: it
+    # `#include`s `bindung.h`, the interface it calls and does not define.
+    if ! timeout "$FRIST" cc $cflags -I "$arb/laufzeit" -I "$bau" \
             -DEINHEIT_INCLUDE="\"$EINHEIT.c\"" \
             -c -o "$bau/treiber.o" "$bau/$EINHEIT.treiber.c" 2> "$arb/cc1.log"; then
         echo "HARNESS: the driver did not compile"
@@ -360,7 +407,7 @@ bauen() {   # $1 = work dir, $2 = gift
     # the whole reason the measurement can tell its `mmap` from a runtime one. It reads
     # the runtime's interface (`-I "$arb/laufzeit"`) because that header is what holds
     # its six definitions against the declarations the runtime calls.
-    if ! timeout "$FRIST" cc $cflags -I "$arb/laufzeit" \
+    if ! timeout "$FRIST" cc $cflags -pthread -I "$arb/laufzeit" \
             -c -o "$bau/bindung.o" "$BINDUNG_C" 2> "$arb/cc4.log"; then
         echo "HARNESS: the program's binding did not compile"
         head -20 "$arb/cc4.log" >&2
@@ -403,7 +450,7 @@ symbole_pruefe() {   # $1 = work dir
         echo "HARNESS: OS symbols FAILED -- the hosted runtime hard-wires $n, below the mark of $MARKE_OSSYM: the mark belongs pulled down (the good case, and a finding nonetheless)"
         return 0
     fi
-    echo "HARNESS: OS symbols ok ($n hard-wired by the hosted runtime, mark $MARKE_OSSYM -- K8 brings this to 0)"
+    echo "HARNESS: OS symbols ok ($n hard-wired by the hosted runtime, mark $MARKE_OSSYM)"
     # The work quantity beside the verdict (`pruefe-waechter.py`, requirement 4):
     # a green over an empty set is a green over nothing.
     echo "HARNESS: read $(grep -c '' "$arb/bin.txt") binary symbol(s) against $(grep -c '' "$arb/rt.txt") runtime reference(s)"
@@ -424,7 +471,7 @@ rohruf_pruefe() {   # $1 = work dir
         echo "HARNESS: raw syscalls FAILED -- the hosted runtime issues $n, below the mark of $MARKE_ROHRUF: the mark belongs pulled down (the good case, and a finding nonetheless)"
         return 0
     fi
-    echo "HARNESS: raw syscalls ok ($n site(s) of the \`syscall\` instruction, mark $MARKE_ROHRUF -- K8 brings this to 0 too)"
+    echo "HARNESS: raw syscalls ok ($n site(s) of the \`syscall\` instruction, mark $MARKE_ROHRUF -- K8's remaining mark)"
 }
 
 # -- stage 4: bare metal is OS-FREE, and the machine is allowed ----------------
@@ -572,10 +619,11 @@ if [ -z "$GIFT" ]; then
     n="$(echo "$ergebnis" | sed -n 's/^FEHLER=//p')"
     echo
     if [ "$n" = 0 ]; then
-        echo "GREEN: the hosted runtime's OS calls are COUNTED at $MARKE_OSSYM and its raw"
-        echo "       system calls at $MARKE_ROHRUF -- both marks, both to reach 0 with K8;"
-        echo "       the bare-metal runtime names no OS call at all; and the probe ran,"
-        echo "       with its arena reserved, its lock held and its sum exact."
+        echo "GREEN: the hosted runtime names $MARKE_OSSYM operating-system function(s) of"
+        echo "       its own; its raw system calls are COUNTED at $MARKE_ROHRUF, which is the"
+        echo "       mark K8 has left to pull down; the bare-metal runtime names no OS"
+        echo "       call at all; and the probe ran, with its arena reserved, its lock"
+        echo "       held and its sum exact."
         abschnitt_fertig
         exit 0
     fi

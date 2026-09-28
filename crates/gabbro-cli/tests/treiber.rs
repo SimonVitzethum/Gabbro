@@ -2,14 +2,19 @@
 //! hosted driver beside the emitted C.**
 //!
 //! The emitter translates each `concurrent` member to a plain function and
-//! emits no caller and no `main`; the build writes `<unit>.treiber.c` in the
-//! exact shape of `laufzeit/start.c` (one wrapper per root, one thread per
-//! root, join all, idle root present, lock primitives as mutex). What is
+//! emits no caller and no `main`; the build writes `<unit>.treiber.c`: one
+//! thread per declared start, join all, and the lock primitives. What is
 //! held here:
 //!
 //! * the hand driver `laufzeit/start.c` still holds its pin (the probe lane
 //!   202 described -- source set against `pthread_create` set);
 //! * the GENERATED driver holds the same pin, over the same sources;
+//!
+//! **Since TODO section 0e K8 the generated driver names no POSIX function**,
+//! so its pin is read off `gabbro_os_faden_start` and every unit here carries
+//! the binding `bibliothek/linux/` in its manifest. The hand file has NOT
+//! moved -- no built program links it, and its own scanner is the one below
+//! that still reads `pthread_create`.
 //! * a stale driver (a root added or dropped without regenerating) fails the
 //!   pin loudly, naming both sets;
 //! * `beispiele/124` runs through the GENERATED driver with the identical
@@ -101,6 +106,51 @@ fn pthread_create_menge(treiber_c: &str) -> BTreeMap<String, usize> {
     menge
 }
 
+/// The roots of a GENERATED driver, COUNTED: the last identifier of every
+/// `gabbro_os_faden_start` argument list, which is the root itself -- the cast
+/// that carries it (`(uint64_t)(uintptr_t)`) puts its own names before it and
+/// never after. The argument text ends at the paren that CLOSES the call,
+/// counted rather than searched for, because the casts bring parentheses.
+fn faden_start_menge(treiber_c: &str) -> BTreeMap<String, usize> {
+    let mut menge = BTreeMap::new();
+    let mut rest = treiber_c;
+    while let Some(i) = rest.find("gabbro_os_faden_start(") {
+        let nach = &rest[i + "gabbro_os_faden_start(".len()..];
+        let mut tiefe = 1usize;
+        let mut ende = nach.len();
+        for (j, c) in nach.char_indices() {
+            match c {
+                '(' => tiefe += 1,
+                ')' => {
+                    tiefe -= 1;
+                    if tiefe == 0 {
+                        ende = j;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut letzter = String::new();
+        let mut lauf = String::new();
+        for c in nach[..ende].chars().chain(std::iter::once(' ')) {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                lauf.push(c);
+            } else {
+                if lauf.chars().next().is_some_and(|d| d.is_ascii_alphabetic() || d == '_') {
+                    letzter = lauf.clone();
+                }
+                lauf.clear();
+            }
+        }
+        if !letzter.is_empty() {
+            *menge.entry(letzter).or_insert(0) += 1;
+        }
+        rest = nach;
+    }
+    menge
+}
+
 fn n_wurzeln(treiber_c: &str) -> Option<usize> {
     treiber_c.lines().find_map(|zeile| {
         zeile
@@ -114,7 +164,21 @@ fn n_wurzeln(treiber_c: &str) -> Option<usize> {
 /// roots with the same counts, and `N_WURZELN` counting the starts. The
 /// error names both sides -- a stale driver fails LOUDLY.
 fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
-    let treiber = pthread_create_menge(treiber_c);
+    pin_pruefe_mit(faden_start_menge(treiber_c), quelle, treiber_c)
+}
+
+/// The same pin over the HAND driver `laufzeit/start.c`, which still writes
+/// `pthread_create` -- no built program links it, so K8's second slice left it
+/// where it was and the report says so.
+fn pin_pruefe_hand(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
+    pin_pruefe_mit(pthread_create_menge(treiber_c), quelle, treiber_c)
+}
+
+fn pin_pruefe_mit(
+    treiber: BTreeMap<String, usize>,
+    quelle: &BTreeMap<String, usize>,
+    treiber_c: &str,
+) -> Result<usize, String> {
     let zeige = |m: &BTreeMap<String, usize>| -> String {
         m.iter().map(|(n, k)| format!("{n} x{k}")).collect::<Vec<_>>().join(", ")
     };
@@ -193,7 +257,18 @@ fn pin_haelt_fuer_handtreiber_start_c() {
         [("hauptA", 1), ("hauptB", 1)],
         "the source declares exactly its two roots, once each"
     );
-    assert_eq!(pin_pruefe(&menge, &treiber), Ok(2), "the hand pin holds");
+    assert_eq!(pin_pruefe_hand(&menge, &treiber), Ok(2), "the hand pin holds");
+}
+
+/// **The two manifest lines every hosted unit carries since K8's second slice**, and the
+/// `-I` its bodies need: the driver calls `gabbro_os_faden_start` and friends, the program
+/// defines them, and `bibliothek/linux/` is the pair a program takes off the shelf.
+fn bindungszeilen() -> String {
+    format!(
+        "\x20   {}\n\x20   {}\n",
+        wurzel().join("bibliothek/linux/linux.gab").display(),
+        wurzel().join("bibliothek/linux/linux.c").display(),
+    )
 }
 
 fn manifest_schreiben(arbeit: &std::path::Path) -> PathBuf {
@@ -203,12 +278,14 @@ fn manifest_schreiben(arbeit: &std::path::Path) -> PathBuf {
     std::fs::write(
         &manifest,
         format!(
-            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread\n\
-             out {}\n\
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I {inc}\n\
+             out {aus}\n\
              unit treiber124 object\n\
-             \x20   {}\n",
-            ausgabe.display(),
-            gab.display()
+             \x20   {gab}\n{bindung}",
+            inc = wurzel().join("laufzeit").display(),
+            aus = ausgabe.display(),
+            gab = gab.display(),
+            bindung = bindungszeilen(),
         ),
     )
     .expect("manifest writable");
@@ -287,6 +364,10 @@ fn cc_und_lauf(treiber_c_pfad: &std::path::Path, einheits_dir: &std::path::Path,
     // No shell runs here, so the `-D` value carries its C double quotes and
     // no shell single quotes (the documented build line quotes for the
     // shell; `Command` does not need it).
+    // **The binding is linked beside the driver** (K8's second slice): the driver calls
+    // `gabbro_os_faden_start`, `gabbro_os_sperre_nimm` and `gabbro_os_melden` and defines
+    // none of them. It is linked into the HAND run too, where nothing calls it -- an unused
+    // object costs a link and keeps one recipe instead of two (`W7`).
     let cc = Command::new("cc")
         .args([
             "-std=c11",
@@ -297,10 +378,13 @@ fn cc_und_lauf(treiber_c_pfad: &std::path::Path, einheits_dir: &std::path::Path,
             "-pthread",
             "-I",
             &einheits_dir.to_string_lossy(),
+            "-I",
+            &wurzel().join("laufzeit").to_string_lossy(),
             &format!("-DEINHEIT_INCLUDE=\"{einheit_c}\""),
             "-o",
             &binary.to_string_lossy(),
             &treiber_c_pfad.to_string_lossy(),
+            &wurzel().join("bibliothek/linux/linux.c").to_string_lossy(),
         ])
         .output()
         .expect("cc runs");
@@ -344,7 +428,13 @@ fn lauf_124_durch_erzeugten_treiber() {
     let ohne = mit_beobachtung.replace(&format!("{marke}\n{BEOBACHTUNG_124}"), marke);
     assert_eq!(ohne, erzeugt, "the two artefacts differ by the observation only");
     let lauf_c = arbeit.join("lauf-gen.c");
-    std::fs::write(&lauf_c, &mit_beobachtung).expect("run driver writable");
+    // **The observation brings its own `<stdio.h>`**, and that it has to is the point: since
+    // K8's second slice the runtime half includes no system header at all, so a test half
+    // that prints has to ask for one. The line stands OUTSIDE the round-trip check above --
+    // what that check holds is that the two ARTEFACTS differ by the observation block, and a
+    // header the harness prepends is the harness's and not the driver's.
+    std::fs::write(&lauf_c, format!("#include <stdio.h>\n{mit_beobachtung}"))
+        .expect("run driver writable");
 
     for _ in 0..5 {
         let (stdout, code) = cc_und_lauf(&lauf_c, &out, "treiber124.c", "lauf-gen");
@@ -424,12 +514,14 @@ fn pool_zweimal_deklariert_laeuft_zweifach() {
     std::fs::write(
         &manifest,
         format!(
-            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread\n\
-             out {}\n\
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I {inc}\n\
+             out {aus}\n\
              unit pool object\n\
-             \x20   {}\n",
-            ausgabe.display(),
-            gab.display()
+             \x20   {gab}\n{bindung}",
+            inc = wurzel().join("laufzeit").display(),
+            aus = ausgabe.display(),
+            gab = gab.display(),
+            bindung = bindungszeilen(),
         ),
     )
     .expect("manifest writable");

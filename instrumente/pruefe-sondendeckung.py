@@ -196,13 +196,22 @@ MARK_WAISEN = 1
 # apart from the first on purpose: the bounded heap does not scrub, so a binding that recycled
 # a freed region would break exactly that and nothing else visible.
 #
+# **26 -> 27 on 2026-09-28** (server lane, K8's second slice): `sonde_os_faden`, the third
+# named assumption of `bibliothek/linux/linux.gab` -- that the lock pair is MUTUAL EXCLUSION
+# and that a started root runs once, on a thread of its own, with the wait returning after
+# its last step. It stands apart from the ABI assumption for the same reason `sonde_os_null`
+# does: a binding could keep every calling convention and still hand back a RECURSIVE mutex,
+# or run the body on the calling thread -- both link, both type-check, and both break race
+# freedom in silence. It is what assumption (d) of `Zielsatz/Spec.lean` asks of the
+# environment, named on the side that supplies it.
+#
 # *There is a reason a stale mark could stand that long, and it is a finding of its own:*
 # **this guardian aborts in its own speech test**, and has for at least three sessions, at
 # THREE further teeth (`an assumption with no row is named`, `one assumption more WITH a
 # probe does not`, and the closing line). So it measures nothing, and a mark nobody reads
 # drifts. The three are NOT repaired here -- they are older than K7 and belong to a lane of
 # their own -- but they are named in the report.
-MARK_AUSSEN = 26
+MARK_AUSSEN = 27
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

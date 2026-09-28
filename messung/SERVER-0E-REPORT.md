@@ -1942,3 +1942,176 @@ what the translation-validation chain reads.
    probe, so they are outside the mark today; the driver slice is where they join it.
 4. **The corpus**, which is what makes K8 bigger than K7: every hosted example that gains a
    binding line, with the diagnostic diff held at zero apart from the new refusal.
+
+## 16. Session 11 (2026-09-28) — K8, third slice: the generated driver's seven names, and `MARKE_OSSYM` reaches 0
+
+*Written by the server lane on `ubuntu@simon.jocraft.cc`. The slice §15.7 (1) named, done in
+the order it named, with the numbers beside every claim.*
+
+### 16.1 What moved
+
+The generated driver `<unit>.treiber.c` was the last place in the hosted runtime that called
+the operating system by itself. Seven names, and they were not a guess — §14's instrument had
+run a built binary and printed them: `pthread_create`, `pthread_join`, `pthread_mutex_lock`,
+`pthread_mutex_unlock`, `pause`, `fprintf`, `abort`.
+
+**A generated file is the runtime, not user code**, and that is the whole reason they were the
+runtime's to give up: nobody types this file, `gabbro build` renders it out of the unit's
+`concurrent` sets and `lock`s, a stale one is refused by the pin probe, and the measurement
+counts its object among the runtime's. *A file is not user code because a user could read it.*
+
+| | before | after |
+|---|---|---|
+| a lock | `static pthread_mutex_t sperre_L = PTHREAD_MUTEX_INITIALIZER;` and `pthread_mutex_lock` inside `L_nimm` | `static uint64_t sperre_L[GABBRO_OS_SPERRE_WORTE];` and `gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_L)` |
+| a declared start | an adapter `faden_<root>` plus `pthread_create(&faden[i], NULL, faden_<root>, NULL)` | `gabbro_os_faden_start((uint64_t)(uintptr_t)faden[i], (uint64_t)(uintptr_t)<root>)` |
+| a join | `pthread_join(faden[i], NULL)` | `gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[i])` |
+| a failure | `fprintf(stderr, …)` and `abort()` | `gabbro_os_melden(GABBRO_OS_M_START, i, rc)` — a code and two numbers, the words the program's |
+| the idle root | `static void *ruhe(void *) __attribute__((unused))` spinning on `pause()` | **gone** |
+
+`laufzeit/bindung.h` grew five declarations and two report codes; `bibliothek/linux/linux.gab`
+grew five `extern fn` items and one named assumption; `bibliothek/linux/linux.c` grew their
+bodies. Nothing else in the runtime changed.
+
+### 16.2 Three things left the template, and each one is a simplification the binding paid for
+
+1. **The adapters.** They existed because `pthread_create` wants `void *(*)(void *)` and an
+   emitted root is `void (*)(void)`. With the POSIX name gone from the driver, the adapter
+   belongs where the POSIX signature is — `bibliothek/linux/linux.c` carries one, for every
+   root, because the root travels in the blob. **The driver's text lost an indirection and the
+   root's own name now stands at the call site**, which is exactly the shape the BARE-METAL
+   driver already had (`gabbro_faden_start({root}, …)`). *One shape for both drivers is one pin
+   to read.*
+2. **The idle root.** `ruhe()` was `__attribute__((unused))` and the template said in its own
+   comment that hosted never spawns it. Keeping it would have demanded a binding row of every
+   concurrent unit for a call nothing makes — the mistake §15.2 wrote down one row up. Bare
+   metal parks its spare cores inside its own runtime and never read this function
+   (`erzeuge_metall_voll` emits none), so nothing lost a shape it had.
+3. **The words.** Printing is an OS call, so the runtime has none. A failed start or join
+   travels as `GABBRO_OS_M_START` / `GABBRO_OS_M_WARTE` and two numbers. A lock operation that
+   fails does **not** answer a code: the driver has no `else` at a lock it must hold, so the
+   fail-stop is the binding's, on the side that has words.
+
+**And one row is deliberately not there: a `geteilt` pair.** The emitter asks for a second
+NAME (`L_nimm_geteilt`), not a second primitive, and the driver defines it over the same pair.
+A binding row that told them apart would describe a reader/writer lock nothing calls. The
+module binding makes the same choice; the MASKED pair is separate there because `masks irqs` is
+a promise about the environment, and hosted POSIX has no interrupts to mask.
+
+### 16.3 The refusal, and the shape it got wrong on its first run
+
+`bau.rs::bindungsregel_gehostet` gained the rows — and the first version hung the lock row off
+the **lock**, which is wrong:
+
+| the unit | what is demanded | why |
+|---|---|---|
+| a `lock`, no `concurrent` set | **nothing** | no driver is written (`TreiberPlan::hat_gehostet`); the emitter DECLARES `L_nimm` and whoever links the unit defines it |
+| a `concurrent` set | the thread pair and the report channel | `main` starts and joins, and reports what it could not |
+| both | the lock trio beside them | the same driver defines `L_nimm` over the blob |
+
+*Measured: `programmlogik/beispiel`, an `object` with one `lock` and no declared start, was
+refused for a call nothing makes, and three build tests fell with it.* **A rule that refuses a
+program for a call nothing makes is the same defect as one that admits a call nobody bound,
+one direction over** — and the only cure is that the demand follows the FILE that is written.
+
+The rows are held against `laufzeit/bindung.h` by name, arity and result, through the one
+`bindung_pruefe` both targets share. **No `N` code, and the reason is session 6's:** a `Satz`
+says what is true of a program the CHECKER passed, and this rule is about a MANIFEST.
+
+### 16.4 The measurement: 0
+
+```
+$ ./instrumente/pruefe-os-bindung.sh
+   HARNESS: built (181 lines of emitted C, 122 of driver)
+   HARNESS: ran (6 reported line(s))
+   HARNESS: OS symbols ok (0 hard-wired by the hosted runtime, mark 0)
+   HARNESS: read 19 binary symbol(s) against 14 runtime reference(s)
+   HARNESS: raw syscalls ok (3 site(s) of the `syscall` instruction, mark 3 — K8's remaining mark)
+   HARNESS: bare metal ok (no OS call in 7 file(s) of the machine layer; 65 machine access(es) …)
+```
+
+`MARKE_OSSYM` **7 → 0** in one slice: 12 → 7 was the bounded heap (§15), 7 → 0 is this one.
+**The stage stays written as a ratchet** although its floor is reached: a run that needs MORE
+is refused with the names it needed, and the reading of the number does not change when it hits
+0. What a green does **not** say is that the hosted runtime makes no system call at all —
+`MARKE_ROHRUF` is 3 and that is the next slice.
+
+### 16.5 The poison probes — 7 of 7, and a seventh was added here
+
+Gift 1 had to be rewritten, and why is the finding: it inserted `(void)getpid();` after the
+driver's `int rc;` and relied on the driver's own `#include <unistd.h>`. **Both anchors are
+gone**, so the gift brings its own `extern int getpid(void);` — which is the point it was
+always making: *a call that compiles and links is exactly the kind that arrives unnoticed, and
+a missing `#include` is not what stops one.* Verified through the right door: the symbol stage
+reports `hard-wired: getpid`, not the compiler.
+
+**Gift 7 is new**, and it covers the half of the rule a missing declaration never reaches: a
+binding declared with the right name and the WRONG ARITY. C has no mangling, so such a
+declaration links and then reads a register nobody set. The gift narrows
+`gabbro_os_faden_start` to one parameter *on a copy* and demands the refusal's own sentence —
+a build that failed for another reason would turn the run red through the wrong door.
+
+### 16.6 The harnesses, which is why the slice was big
+
+| | what it needed |
+|---|---|
+| `crates/gabbro-cli/tests/treiber.rs` | its manifests carry the binding; its pin scanner reads `gabbro_os_faden_start` (the HAND file `laufzeit/start.c` keeps the old one — no built program links it); `cc_und_lauf` links `bibliothek/linux/linux.c`; and the 124 observation brings its own `<stdio.h>`, **because the runtime half now includes no system header at all** |
+| `instrumente/pruefe-metall.sh` | `boot_einheit`'s manifest names no `metal` directory — the linking is the harness's — so `gabbro build` writes the HOSTED driver too and the rule rightly refuses it unbound. Two manifest lines and one `-I`; the bare-metal image links none of it |
+| `instrumente/pruefe-os-bindung.sh` | `-I laufzeit` on the driver's compile (it `#include`s `bindung.h` now), `-pthread` on the binding's |
+| `instrumente/pruefe-freistehend.sh` | its hosted/bare-metal table said *"`<unit>.treiber.c` pthreads (generated)"*, which stopped being true |
+| `instrumente/pruefe-emission.sh`, `-nebenlaeufig-zwilling.sh`, `miss-arena-decke.sh` | **nothing**: they write their own drivers by hand and never call `gabbro build` |
+
+*The corpus needed nothing either, and that is worth writing down because §15.7 (4) expected
+it to be the big half:* the binding rule fires at `gabbro build`, over a MANIFEST, and the
+corpus is checked with `gabbro pruefe` and emitted with `gabbro emit`. `pruefe-akzeptiert-diff.py`
+is rc 0 with **all ten pins true on 29 of 29 comparable programs** — no diagnostic moved.
+
+### 16.7 A guardian repaired on the way — `pruefe-atomar-zugriffe.py`
+
+Session 10 repaired `instrumente/binaer.sh` (§15.5) and the same defect was sitting in a
+SECOND copy: `pruefe-atomar-zugriffe.py` had its own `binaer()`, which preferred
+`target/release` even when `target/debug` was newer and counted `crates/*/tests/*.rs` among the
+sources. *Measured here: two `pruefe-emission.sh` runs cut at stage 22c with "the binary is
+OLDER than 2 source file(s)" over two TEST files no binary is built from.*
+
+It calls `instrumente/binaer.sh` now, through `sh -c`, and prints the shell's own sentence
+rather than a paraphrase. **Two registers over one fact drift**, and the second one drifted
+within one session of the first being fixed. Four other Python instruments pick a binary path
+without a staleness check at all (`fuzze-grenzen.py`, `fuzze-erzeuger.py`,
+`miss-zeremoniedifferenz.py`, `zaehle-absagen.py`); they produce no false `NOT RUN`, so they
+are recorded here and not changed.
+
+### 16.8 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1433 passed, 0 failed** (+3: the driver's OS-freedom, the lock init order, the hosted binding rows; `~/claude-lane/logs/test-s11a.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 325 von 325** (`emission-s11c.log`) |
+| `./instrumente/pruefe-os-bindung.sh` | rc 0, **`MARKE_OSSYM` 0**, **7 of 7** gifts |
+| `./instrumente/pruefe-metall.sh` | rc 0, 18 booted on qemu -smp 4, every expectation held, 8 gifts bite |
+| `./instrumente/pruefe-kernelmodul.sh` | rc 0, GREEN on `halde`, `takt` and `atomar` |
+| `./instrumente/miss-arena-decke.sh` | GREEN — 10 MiB vs 32 GiB: 3512 vs 3524 bytes of C, **17272 bytes of binary either way** |
+| `./instrumente/pruefe-atomar-zugriffe.py` | GREEN, 137 accesses, `--selbsttest` 6 of 6 |
+| `./instrumente/pruefe-akzeptiert-diff.py` | rc 0, ten pins true on 29 of 29 |
+| `cd grammatik && lake build` | rc 0, **356 jobs**, standard axioms throughout |
+| `lake env lean Nachpruefung.lean` | rc 0 — `gabbro_ziel` on `propext, Classical.choice, Quot.sound` |
+| `pruefe-waechter.py`, `-englisch.py`, `-zahlen.py`, `-vergabe.py`, `-kennungen.py`, `-osfrei.py`, `-sondendeckung.py` | **identical to the base** after digit and path normalisation (throwaway worktree at `eb178223`, removed afterwards) |
+| `pruefe-todo.py`, `-saetze.py`, `-widerruf.py`, `-cformen.py` | rc 0 |
+| `abnahme.py --voll` | cannot run here: no Isabelle (`REGELN.md`) |
+
+Counters: `MARK_AUSSEN` 26 → **27** (`sonde_os_faden`), `GENERATOR_KENNUNG` `treiber-gen-5` →
+**`treiber-gen-6`** (the template moved, so every unit's fingerprint must). `MARKE_EMIT`, `-G`,
+`-M`, `-BIB` and the README guardian count are **unchanged**: no emitted byte moved, no new
+instrument exists, and the binary size at both arena ceilings is the same number as before.
+
+### 16.9 What K8 still needs — and it is one slice, not four
+
+1. **`laufzeit/faden.c`**: `clone`, `futex` and the child's `exit` as the `syscall`
+   INSTRUCTION. Three sites, `MARKE_ROHRUF`, and no symbol for `nm` to see — which is why the
+   binding for it is a different question from the six above: a raw system call has a number
+   and registers, not a name, so the shape is Opus L's `syscall` binding and not an
+   `extern fn`.
+2. **`start.c` / `start_pool.c`**: `printf`, `read`, `write`, `pause`. **No built program links
+   them** — the generated driver replaced them everywhere `gabbro build` runs, and this slice
+   is what made that true. They are the hand shapes the tests and `pruefe-emission.sh`'s
+   own drivers still read.
+3. ~~the corpus~~ — **it needed nothing** (§16.6), and that is measured and not assumed.

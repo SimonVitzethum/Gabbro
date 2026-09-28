@@ -843,14 +843,31 @@ fn modulregel(
 /// | what the unit uses | what the hosted runtime will call | where |
 /// |---|---|---|
 /// | an `arena` | `gabbro_os_reserve`, `gabbro_os_commit`, `gabbro_os_seitengroesse` | `arena_dyn.c`, at load and at every `grow` |
-/// | an `arena` | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of the same file |
+/// | a `concurrent` root | `gabbro_os_faden_start`, `_warte` | the generated driver's `main` |
+/// | a `concurrent` root AND a `lock` | `gabbro_os_sperre_init`, `_nimm`, `_gib` | the same driver, at start and at every acquire |
+/// | any of those | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of both files |
 ///
-/// **Why the report channel is under the arena row and not on its own line.** It belongs to
-/// everything the runtime does, and today the arena is the only part of the hosted runtime
-/// that has moved -- so demanding it of a unit WITHOUT an arena would refuse a program for a
-/// call nothing makes. *The demand grows with the measurement* (`MARKE_OSSYM` in
-/// `instrumente/pruefe-os-bindung.sh`), which is the only order in which a refusal and a
-/// number can stay the same statement.
+/// **Why the lock row hangs off the ROOTS and not off the lock**, and it is the one shape
+/// this rule got wrong on its first run: a unit with a `lock` and no declared start owns NO
+/// hosted driver (`TreiberPlan::hat_gehostet`), so nothing in its build calls a lock
+/// primitive at all -- the emitter DECLARES `L_nimm`/`L_gib` and whoever links the unit
+/// supplies them. *Measured: `programmlogik/beispiel`, an `object` with one `lock` and no
+/// `concurrent` set, was refused for a call nothing makes.* The demand follows the file that
+/// is written, which is the driver.
+///
+/// **Why the report channel has no line of its own.** It belongs to everything the runtime
+/// does, and a unit with neither an arena nor a driver has a runtime beside it that calls
+/// nothing -- so demanding it there would be the same mistake one row up. *The demand grows
+/// with the measurement* (`MARKE_OSSYM` in `instrumente/pruefe-os-bindung.sh`), which is the
+/// only order in which a refusal and a number can stay the same statement. Until the driver
+/// moved it stood under the `arena` row alone, because the arena was the only part of the
+/// hosted runtime that had.
+///
+/// **A `geteilt` lock asks for nothing extra, and a `masks irqs` one neither.** The driver
+/// defines `L_nimm_geteilt` over the same pair (the emitter asks for a second NAME, not a
+/// second primitive), and hosted POSIX has no interrupts to mask -- the word is the
+/// bare-metal driver's business (`treiber.rs::Sperre::maskiert`). The module rule has a
+/// masked pair because a kernel module can keep that promise and must.
 ///
 /// **Bare metal is exempt, and that is K8's own sentence.** A unit built for a `metal` target
 /// gets `laufzeit/metall/arena.c`, whose reservation is a slice of one static region and
@@ -865,20 +882,71 @@ fn bindungsregel_gehostet(
     metall_ziel: bool,
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
     arenen: &[String],
+    sperren: &[TreiberSperre],
+    wurzeln: &[TreiberFund],
 ) -> Option<String> {
-    if e.art == Art::Modul || metall_ziel || arenen.is_empty() {
+    if e.art == Art::Modul || metall_ziel {
         return None;
     }
-    let weil = "this unit declares an `arena`, whose storage the runtime asks the program for";
-    let stopp = "this unit declares an `arena`, and the runtime fail-stops a refused \
-                 reservation in words the program owns";
-    let gefordert = vec![
+    // **Does this unit own a hosted driver?** Exactly the question `TreiberPlan::hat_gehostet`
+    // answers, and the same answer: a driver starts threads, so a unit without a declared
+    // start has none written for it and nothing of it is linked.
+    let treiber = !wurzeln.is_empty();
+    if arenen.is_empty() && !treiber {
+        return None;
+    }
+    // **The report channel, once, for whichever of the two brought us here.** Both files
+    // that fail-stop say so through it, so the sentence names what the unit actually has
+    // rather than a part of the runtime it may not link.
+    let stopp = match (!arenen.is_empty(), treiber) {
+        (true, true) => "this unit declares an `arena` and runs under the generated driver, \
+                         and both fail-stop in words the program owns",
+        (true, false) => "this unit declares an `arena`, and the runtime fail-stops a refused \
+                          reservation in words the program owns",
+        _ => "this unit runs under the generated driver, which reports a start or a join it \
+              could not make in words the program owns",
+    };
+    let mut gefordert = vec![
         BindungsZeile { name: "gabbro_os_melden", parameter: 3, liefert: false, weil: stopp },
         BindungsZeile { name: "gabbro_os_ende", parameter: 1, liefert: false, weil: stopp },
-        BindungsZeile { name: "gabbro_os_reserve", parameter: 1, liefert: true, weil },
-        BindungsZeile { name: "gabbro_os_commit", parameter: 3, liefert: true, weil },
-        BindungsZeile { name: "gabbro_os_seitengroesse", parameter: 0, liefert: true, weil },
     ];
+    if !arenen.is_empty() {
+        let weil = "this unit declares an `arena`, whose storage the runtime asks the program for";
+        for (name, parameter, liefert) in [
+            ("gabbro_os_reserve", 1, true),
+            ("gabbro_os_commit", 3, true),
+            ("gabbro_os_seitengroesse", 0, true),
+        ] {
+            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
+        }
+    }
+    if treiber && !sperren.is_empty() {
+        let weil = "this unit declares a `lock` and a `concurrent` set, so its generated \
+                    driver defines the primitive the emitter only declares";
+        for name in [
+            "gabbro_os_sperre_init",
+            "gabbro_os_sperre_nimm",
+            "gabbro_os_sperre_gib",
+        ] {
+            gefordert.push(BindungsZeile { name, parameter: 1, liefert: false, weil });
+        }
+    }
+    if treiber {
+        let weil = "this unit declares a `concurrent` set, which the generated driver runs as \
+                    threads";
+        gefordert.push(BindungsZeile {
+            name: "gabbro_os_faden_start",
+            parameter: 2,
+            liefert: true,
+            weil,
+        });
+        gefordert.push(BindungsZeile {
+            name: "gabbro_os_faden_warte",
+            parameter: 1,
+            liefert: true,
+            weil,
+        });
+    }
     bindung_pruefe(&gefordert, funktionen, &GEHOSTET_ZIEL)
 }
 
@@ -1667,6 +1735,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 manifest.metall.is_some(),
                 &funktionen_je_einheit[name],
                 &arenen_je_einheit[name],
+                &treiber_sperren_je_einheit[name],
+                &treiber_funde_je_einheit[name],
             ) {
                 befunde += 1;
                 println!("  REFUSED  {name} (hosted): {befund}");
@@ -1813,6 +1883,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             manifest.metall.is_some(),
             &funktionen_je_einheit[name],
             &arenen_je_einheit[name],
+            &treiber_sperren_je_einheit[name],
+            &treiber_funde_je_einheit[name],
         ) {
             abgesagt += 1;
             println!("REFUSED  {name} (hosted): {befund}");

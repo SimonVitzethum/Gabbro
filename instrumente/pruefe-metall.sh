@@ -222,8 +222,14 @@ concurrent_wurzeln() {  # the members of the source's `concurrent { ... }` sets,
 boot_einheit() {  # boot_einheit NAME SOURCE OBSERVATION_FILE
     local d="$ARB/$1" out="$ARB/$1/out"
     mkdir -p "$d"
-    printf 'compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread\nout %s\nunit einheit object\n    %s\n' \
-        "$out" "$2" > "$d/bau"
+    # **The binding is in the manifest although only the METAL driver is used here** (server
+    # lane, TODO section 0e K8). This manifest names no `metal` directory -- the linking is
+    # this harness's, not the build's -- so `gabbro build` writes the HOSTED driver too, and
+    # a hosted driver that called unbound names is exactly what the rule refuses
+    # (`bau.rs::bindungsregel_gehostet`). The two lines cost one unused object and keep the
+    # refusal honest; the bare-metal image below links none of it.
+    printf 'compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I %s\nout %s\nunit einheit object\n    %s\n    %s\n    %s\n' \
+        "$W/laufzeit" "$out" "$2" "$W/bibliothek/linux/linux.gab" "$W/bibliothek/linux/linux.c" > "$d/bau"
     if ! G build "$d/bau" > "$d/bau.log" 2>&1; then
         echo "  $1: gabbro build FAILED"; sed 's/^/      /' "$d/bau.log" | head -10; exit 1
     fi

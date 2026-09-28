@@ -916,6 +916,99 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
     );
 }
 
+/// **What a hosted unit must bind follows the file that is WRITTEN, not the word it wrote**
+/// (server lane, 2026-09-28, TODO section 0e K8, second slice).
+///
+/// The driver was the last part of the hosted runtime that called the operating system by
+/// itself: `pthread_create`, `pthread_join`, the two mutex calls, `pause`, `fprintf` and
+/// `abort`. They are the program's now, so a unit whose driver will be written has to bind
+/// them -- and the demand has to hang off the DRIVER, which is the shape this rule got wrong
+/// on its first run:
+///
+/// | the unit | what is demanded | why |
+/// |---|---|---|
+/// | a `lock`, no `concurrent` set | **nothing** | no driver is written (`TreiberPlan::hat_gehostet`); the emitter DECLARES `L_nimm` and whoever links the unit defines it |
+/// | a `concurrent` set | the thread pair and the report channel | `main` starts and joins, and reports what it could not |
+/// | both | the lock trio beside them | the same driver defines `L_nimm` over the blob |
+///
+/// *Measured on the first run: `programmlogik/beispiel`, an `object` with one `lock` and no
+/// declared start, was refused for a call nothing makes -- and three build tests fell with
+/// it. A rule that refuses a program for a call nothing makes is the same defect as one that
+/// admits a call nobody bound, one direction over.*
+#[test]
+fn eine_gehostete_einheit_ohne_bindung_faellt_je_nach_dem_was_sie_benutzt() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
+    let bindung_gab = wurzel.join("bibliothek").join("linux").join("linux.gab");
+    let bindung_c = wurzel.join("bibliothek").join("linux").join("linux.c");
+    let laufzeit = wurzel.join("laufzeit");
+
+    // A lock alone, and no declared start: this unit owns no driver.
+    let nur_sperre = "module probe::fall {
+pub table T count 2 { slot { n : u64 wrapping, } }
+pub lock L protects { T } rank 0 held <= 64 ops;
+pub impl fn zaehle() effects { reads T.slots, writes T.slots, locks L } costs <= 128 ops {
+    locks L { T.slots[0].n = T.slots[0].n + 1; }
+}
+}
+";
+    // The same unit with a declared start: the driver appears, and with it the demand.
+    let mit_wurzeln = format!("{}\n", nur_sperre.trim_end().trim_end_matches('}'))
+        + "impl fn haupt() effects { reads T.slots, writes T.slots, locks L } costs <= 256 ops {\n\
+           \x20   zaehle();\n}\n\nconcurrent { haupt };\n\n}\n";
+
+    let baue = |marke: &str, quelle: &str, mit_bindung: bool| {
+        let d = kratz(marke);
+        std::fs::write(d.join("u.gab"), quelle).expect("unit");
+        let mut dateien = format!("  {}\n", d.join("u.gab").display());
+        if mit_bindung {
+            dateien.push_str(&format!("  {}\n", bindung_gab.display()));
+            dateien.push_str(&format!("  {}\n", bindung_c.display()));
+        }
+        let manifest = format!(
+            "compiler cc -std=c11 -I {inc}\nout {aus}\nunit gabbro_probe object\n{dateien}",
+            inc = laufzeit.display(),
+            aus = d.join("bau").display(),
+        );
+        let mpfad = d.join("manifest");
+        std::fs::write(&mpfad, manifest).expect("manifest");
+        let (aus, fehler, code) = lauf(&["build", mpfad.to_str().expect("utf8")]);
+        (d, aus, fehler, code)
+    };
+
+    // 1. A lock without a declared start asks for nothing.
+    let (_, aus, fehler, code) = baue("sperre_ohne_wurzel", nur_sperre, false);
+    assert_eq!(code, 0, "a lock without a driver demands no binding:\n{aus}\n{fehler}");
+
+    // 2. The same unit with a declared start is refused, and by the lock row too -- which is
+    //    the row the first version hung off the wrong thing.
+    let (_, aus, _, code) = baue("wurzel_ohne_bindung", &mit_wurzeln, false);
+    assert_ne!(code, 0, "a declared start without a binding is refused:\n{aus}");
+    assert!(aus.contains("binds no `gabbro_os_"), "by name:\n{aus}");
+    assert!(aus.contains("bibliothek/linux"), "with the file that supplies it:\n{aus}");
+
+    // 3. And it builds with the binding beside it -- a rule that only ever refused would be
+    //    met by a library nobody can use.
+    let (d, aus, fehler, code) = baue("wurzel_mit_bindung", &mit_wurzeln, true);
+    assert_eq!(code, 0, "the same unit with the binding builds:\n{aus}\n{fehler}");
+    let treiber = std::fs::read_to_string(d.join("bau").join("gabbro_probe.treiber.c"))
+        .expect("the driver was written");
+    for name in ["gabbro_os_faden_start", "gabbro_os_sperre_init", "gabbro_os_melden"] {
+        assert!(treiber.contains(name), "the driver calls `{name}`:\n{treiber}");
+    }
+    // Comment lines are dropped first: the driver's own prose names `pthread_mutex_t` to say
+    // whose type the blob has room for, and *prose naming a token is not a use of it* -- the
+    // lesson `pruefe-osfrei.py` wrote down, met here as a red on the first run.
+    let code_nur: String = treiber
+        .lines()
+        .filter(|z| {
+            let t = z.trim_start();
+            !(t.starts_with('*') || t.starts_with("/*") || t.starts_with("//"))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(!code_nur.contains("pthread_"), "and no POSIX name of its own:\n{code_nur}");
+}
+
 /// **A binding of the right name and the WRONG SHAPE is refused too** (server lane,
 /// 2026-09-28, TODO section 0e K8).
 ///
