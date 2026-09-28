@@ -1449,7 +1449,7 @@ costexpr   = "O" "(" expr ")" ;
 
 format     = [ "pub" ] "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
-reason     = "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
+reason     = [ "pub" ] "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
 state      = "state" ident "{" { transition } "}" ;
 ```
 
@@ -1479,7 +1479,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `by ops` | the field is in the `writes` of the generated operations and of no other function | `D.sigNr … .schreibt` |
 | `walk W levels n { node : [Pte; 512], down : f when p, leaf : q }` | `n` tables of `count 512`, one per level; `mappings of` is a `traverse` per level, nested `n` deep, filtered by `p`/`q` — SUGAR («SG-16») | `D.Tab` per level; `Stmt.traverse` nested; `Expr.forallSlots` nested |
 | `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.leseBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.pruefung c sonst rest` («SG-16») |
-| `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`) | `Ty.grund n` |
+| `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`). **`pub` since 2026-09-28** — see below | `Ty.grund n` |
 | `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair | `D.erlaubt t f von nach`; `Stmt.uebergang` («SG-19») |
 
 ```gabbro
@@ -1492,6 +1492,25 @@ format Elf64 endian little {
 
 `offset_into Self` binds the offset to the buffer length; the `where` clause is the **only**
 additional statement and is a `pruefung` at the read.
+
+**`pub reason` — the thirteenth item kind that carries the word, since 2026-09-28.** A `reason`
+stands in a SIGNATURE (`-> T or R`, §6), and a signature is what travels into a `.gabi`. So
+`N038` — the closed export hull — demanded a `pub` at `R`, and the grammar had none to give:
+writing it was `P041`, leaving it off was `N038`. **The consequence was not narrow: no function
+with an error channel could be called from another module at all**, in any spelling. That was
+never decided; it is what the gap between a rule added on 2026-08-25 and a production that did
+not grow with it produced. It was measured against a Linux network stack whose every OS call
+answers `u64 or NetzFehler` (`~/gabbro-netz/docs/WAENDE-M1.md`, wall 1), where it forced frame
+I/O, ARP, IPv4, TCP and a firewall into one module.
+
+The word does at a `reason` exactly what it does at a `type`: it puts the declaration in the
+export set. `gabbro abi` writes the `reason` block out verbatim, so an importer sees the grounds
+it has to name in its `else` — nothing is hidden and nothing is implicit (D2). And the rule
+became STRONGER in the same change: a `reason` can now be private, so `N025` holds a `use` on a
+private one, which it could not before — before, a `reason` was unconditionally visible because
+it could not be otherwise. Corpus: `beispiele/167` (the crossing), `beispiele/gift/1365` (the
+private one reached from outside, `N025`), `beispiele/gift/1366` (the exported head naming a
+private one, `N038`).
 
 ### 9.1 Arenas — a heap that is never unbounded («E4»)
 

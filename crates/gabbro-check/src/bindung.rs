@@ -90,6 +90,16 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         ItemArt::Lock(l) => l.oeffentlich.then_some(&l.name),
         ItemArt::Format(f) => f.oeffentlich.then_some(&f.name),
         ItemArt::Device(d) => d.oeffentlich.then_some(&d.name),
+        // **A `reason` is not a carrier but it stands in a HEAD** (2026-09-28, server lane).
+        //
+        // `pub fn f(…) -> T or R` puts `R` into the exported signature, so `N038` asked for a
+        // `pub` at `R` -- and until this line the grammar had none to give. The consequence was
+        // not a narrow one: **no function with an error channel could cross a module
+        // boundary**, which is the shape every OS binding of a network stack has
+        // (`~/gabbro-netz/docs/WAENDE-M1.md`, wall 1). The enum travels verbatim into the
+        // `.gabi` (`abi.rs` cuts the source text), so the importer sees the grounds it must
+        // name in an `else` -- nothing of it is hidden and nothing of it is implicit.
+        ItemArt::Reason(r) => r.oeffentlich.then_some(&r.name),
         // **A `module` and a `use` bind no symbol.** The module is a namespace the C does
         // not know; a `use` declares nothing, it fetches. **Lane C: a `concurrent` set
         // binds none either** -- it names bodies, and the set itself has no name.
@@ -106,8 +116,7 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         // crosses the boundary either. **Written out and not swept up**, so that a `pub` on
         // one of them shows up here instead of vanishing quietly. A `syscall` joins
         // this group: `syscalldecl` carries no `[ "pub" ]`, and `P041` refuses one.
-        ItemArt::Reason(_)
-        | ItemArt::State(_)
+        ItemArt::State(_)
         | ItemArt::Assume(_)
         | ItemArt::Axiom(_)
         | ItemArt::Check(_)

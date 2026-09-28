@@ -5752,6 +5752,11 @@ fn sichtbarkeit(baum: &Programm, absagen: &mut Absagen) {
             ItemArt::Lock(x) => (&x.name, x.oeffentlich),
             ItemArt::Format(x) => (&x.name, x.oeffentlich),
             ItemArt::Device(x) => (&x.name, x.oeffentlich),
+            // **Der Grund, seit dem 2026-09-28.** Bis dahin trug ein `reason` kein `pub`,
+            // also KONNTE er nicht privat sein, und ein `use a::Fehl;` von draussen war
+            // unbedenklich -- aus demselben Grund, aus dem die vier Traeger bis zum
+            // 2026-08-25 hier fehlten. *Jetzt kann er es, und die Karte haelt ihn.*
+            ItemArt::Reason(x) => (&x.name, x.oeffentlich),
             _ => return,
         };
         offen.insert(crate::umgebung::qualifiziere(modul, &name.text), oeff);

@@ -1,19 +1,53 @@
 -- erwartet: P041
--- Der Parser fraß `pub` vor JEDEM Item und liess es bei dreizehn Arten stillschweigend
--- fallen. Die EBNF fuehrt `[ "pub" ]` an genau sieben. **Ein Sichtbarkeitswort, das
--- angenommen und weggeworfen wird, ist schlimmer als eines, das abgelehnt wird**: der
--- Leser sieht eine Zusage, die niemand haelt.
+-- The parser ate a `pub` in front of EVERY item and silently dropped it at thirteen kinds.
+-- The EBNF carries `[ "pub" ]` at exactly seven. **A visibility word that is accepted and
+-- thrown away is worse than one that is rejected**: the reader sees a promise nobody keeps.
 --
--- **Seit dem 2026-08-25 sind es elf**, und diese Probe stand vorher auf `pub lock` --
--- einem der vier Traeger, die das Wort dazubekommen haben. *Eine Giftprobe, die durch
--- eine Grammatikerweiterung legal wird, misst ab dem Tag nichts mehr*, und sie faellt
--- nicht auf: sie wird gruen, weil das Programm richtig ist.
+-- **Since 2026-08-25 it is eleven**, and this probe stood on `pub lock` before that -- one of
+-- the four carriers that got the word. *A poison probe that becomes legal through a grammar
+-- extension measures nothing from that day on*, and it does not stand out: it goes green
+-- because the program is right.
 --
--- Sie steht jetzt auf `reason`, das kein `pub` traegt und keins bekommen soll: eine
--- benannte Zahlenmenge senkt zu einem `enum` ab, und ein `enum` bindet kein Symbol.
+-- THIS FILE HAS MOVED TWICE, AND THE SECOND MOVE PROVED THE FIRST
+-- --------------------------------------------------------------
+-- It then stood on `reason`, with the argument that `reason` carries no `pub` and should get
+-- none: *"a named set of numbers lowers to an `enum`, and an `enum` binds no symbol."* **On
+-- 2026-09-28 `reason` got the word** (server lane, phase 2), and the argument was not narrowly
+-- wrong but wrong at its root: `pub` at an item does not mean "binds a C symbol" here, it means
+-- "stands in the EXPORT SET". A `type` binds none either and has carried the word since the
+-- first day. What forced it at `reason` was `N038`: an `or R` stands in the SIGNATURE, the
+-- signature travels into the `.gabi`, and `R` was the one thing an exported signature could
+-- name and not explain -- so **no function with an error channel could leave its module**
+-- (`~/gabbro-netz/docs/WAENDE-M1.md`, wall 1; the positive side is `beispiele/167`).
+--
+-- **The third home is therefore chosen differently: an item with NO NAME.** `concurrent { … }`
+-- names bodies and has no name of its own (`ItemArt::name()` answers `None`, and `bindung.rs`
+-- says why beside it: *"a `concurrent` set binds no symbol -- it names bodies, and the set
+-- itself has no name"*). **What has no name can stand in no interface**, however the grammar
+-- grows: an export is a name an importer writes. The two earlier homes of this probe were
+-- judgements about what DESERVES `pub`; this one is a judgement about what it can attach to at
+-- all.
 module gift {
-pub reason Grund {
-    Keiner = 1 "kein Grund"
-    exhaustive
+
+static mut ZAHL_A : u32 in 0 .. 1024 = 0;
+static mut ZAHL_B : u32 in 0 .. 1024 = 0;
+
+impl fn lauf_a()
+    effects { writes ZAHL_A }
+    costs   <= 10 ops
+{
+    ZAHL_A = 1;
 }
+
+impl fn lauf_b()
+    effects { writes ZAHL_B }
+    costs   <= 10 ops
+{
+    ZAHL_B = 1;
+}
+
+-- **And here it falls.** The set has no name, so a `pub` at it can designate nothing -- and the
+-- parser says so instead of swallowing the word.
+pub concurrent { lauf_a, lauf_b };
+
 }

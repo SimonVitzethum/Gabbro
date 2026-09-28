@@ -1,0 +1,45 @@
+-- erwartet: N025
+-- **A `reason` can be private since 2026-09-28 -- so a `use` on a private one is a boundary
+-- crossing now, and `N025` reaches it.**
+--
+-- Measured before the change: **0 errors.** Not because the rule had a hole, but because a
+-- `reason` carried no `pub` at all (`P041` refused the word), so it *could not be* private and
+-- `namen.rs::sichtbarkeit` did not hold it in its map. Every `use` on one was therefore
+-- unobjectionable -- the same shape `table`, `device`, `format` and `lock` had until
+-- 2026-08-25, and the same repair: the word at the declaration, the declaration in the map.
+--
+-- **Why this file is the probe that carries the claim.** The change that made `pub reason`
+-- possible is a WIDENING, and a widening pays for itself in refusals it opens, not only in
+-- programs it admits. `beispiele/167` is the program; this is the refusal. Without this file
+-- nothing would notice if the `ItemArt::Reason` arm fell out of `sichtbarkeit`'s map again:
+-- `167` would stay green, `gift/1366` would stay red, and a private `reason` would quietly be
+-- readable from everywhere.
+--
+-- *The remedy the refusal names is one word:* `pub reason Fehl`, and then it is
+-- `beispiele/167`.
+
+module gift::heim {
+
+-- **No `pub`: this channel stays inside.** Its grounds are this module's business -- the
+-- numbers are a wire format nobody outside should be able to name.
+reason Fehl {
+    Eins = 1 "the first ground, and it is nobody else's"
+    exhaustive
+}
+
+}
+
+module gift::draussen {
+
+-- **And here it falls.** `gift::draussen` is not inside `gift::heim`, so the boundary is a
+-- real one and `Fehl` is not `pub`.
+use gift::heim::Fehl;
+
+impl fn immer_fehl() -> u32 or Fehl
+    effects { pure }
+    costs   <= 10 ops
+{
+    return Fehl::Eins;
+}
+
+}

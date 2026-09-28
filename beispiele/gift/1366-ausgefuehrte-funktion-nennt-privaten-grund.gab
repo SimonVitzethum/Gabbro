@@ -1,0 +1,51 @@
+-- erwartet: N038
+-- **The export hull is closed over the ERROR CHANNEL too -- and this is the direction that
+-- had no answering `pub` until 2026-09-28.**
+--
+-- `gift/273` pins the same rule over a private `table`. This file pins it over a private
+-- `reason`, and the pair is not a duplicate: until the day `reason` got the word, THIS refusal
+-- was unanswerable. A `pub fn … -> T or R` could not be written at all -- writing `pub` at `R`
+-- was `P041`, leaving it off was this `N038`, and so no function with an error channel could
+-- cross a module boundary (`~/gabbro-netz/docs/WAENDE-M1.md`, wall 1).
+--
+-- **So the file has two jobs, and the second is the reason it exists.** It shows that closing
+-- the hole did not remove the rule: the word now EXISTS, and leaving it off still falls, at the
+-- same place and with the same text. A widening that took the refusal with it would have been
+-- a weakening, and `beispiele/167` alone could not tell the difference -- it is green either
+-- way.
+--
+-- *What the refusal points at is the `or Fehl` in the head, not the body.* The grounds are
+-- produced inside `hole`, which is nobody's business; what travels is the channel's NAME, and
+-- an importer that must cover it in an `else` has to be able to spell it.
+--
+-- The remedy is one word at the declaration, and then it is `beispiele/167`.
+
+module gift::huelle {
+
+-- **No `pub`: this channel stays home.** That is a legitimate declaration -- see
+-- `gift/1365`, where a `use` on it falls, and `beispiele/167`, where the word is there.
+reason Fehl {
+    Leer  = 1 "nothing to fetch"
+    Weg   = 2 "the slot is gone"
+    exhaustive
+}
+
+pub const GRENZE : u32 = 8;
+
+-- **And here it falls.** `hole` goes out and its head names `Fehl`, which stays in -- the
+-- `.gabi` would promise a channel whose grounds the importer cannot name, and an interface
+-- that names something and does not explain it is none.
+pub impl fn hole(i : u32) -> u32 or Fehl
+    effects { pure }
+    costs   <= 20 ops
+{
+    if i == 0 {
+        return Fehl::Leer;
+    }
+    if i >= GRENZE {
+        return Fehl::Weg;
+    }
+    return i;
+}
+
+}
