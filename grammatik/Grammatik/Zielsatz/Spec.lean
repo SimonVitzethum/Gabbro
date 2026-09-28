@@ -831,6 +831,35 @@
   * (d) `Laufzeit.lader` -- the loader establishes the program's declared initial memory
     `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
     that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
+  * (d) `Laufzeit.reserve` -- THE RESERVATION OF A DYNAMIC ARENA (server lane, 2026-09-28;
+    the wording is PLAN-DYNAMISCH section 9's, inserted here unchanged): the loader reserves
+    the virtual range for every dynamic arena's ceiling `M` BEFORE any start runs; a failed
+    reservation refuses the LOAD, it never starts a program with a smaller range. **No new
+    premise and no new field**: an arena is, in this statement, a table of `M` slots in the
+    declared initial memory (the sugar of ArenaZucker.lean, the dynamic form in ArenaDyn.lean
+    section `Form`), so a load that cannot provide that range establishes no `E.sp0` at all
+    and `Laufzeit.lader` is FALSE of it -- the theorem then says nothing about that run, which
+    is the honest answer and not a weaker one. The text stands here because `lader` reads as a
+    fact about initialised data, while for a `max`-carrying unit it is also a fact about
+    ADDRESS SPACE: hosted, `mmap(PROT_NONE)` over `M` with lazy `mprotect`
+    (`laufzeit/arena_dyn.c`); on metal, the carved region of (M10); in a Linux kernel module,
+    one `vzalloc` region per arena with a budget over it (`laufzeit/kmodul/arena.c`). What is
+    NOT claimed: that the reservation succeeds -- refuse-on-load is a refusal, not a leg.
+  * (d) `Laufzeit.commit` -- THE COMMIT SERVICE (server lane, 2026-09-28; wording from
+    PLAN-DYNAMISCH section 9): every `grow` the checker admits either COMMITS its slots before
+    the next statement runs or takes its `else` branch; a commit that reports success names
+    readable and writable storage; commit latency is bounded by the runtime's DECLARED
+    per-slot cost (`ArenaDyn.growKosten` reads that number as DATA from (c)'s latency entry --
+    it is read, never justified). In the model there is no third outcome, and that is proved
+    rather than assumed: the form is `Block.narrow` of `committed + n` into `0 .. M` with one
+    store (`dynGrow_commit`, with the frame -- the used counter and every slot stay put), and
+    past the ceiling there is no branch at all (`dynGrowListe_scheitert`). So the assumption
+    is about the C RUNTIME alone: a commit that fails BELOW the ceiling must reach the
+    program's `else` or fail-stop, and must never report success over storage that faults on
+    first touch. It belongs to the class the NOT CLAIMED line "the C and the hardware" already
+    covers, and is named here because a dynamic arena is the one form whose storage arrives
+    AFTER the load. **Also comment only:** no definition of this file changes, `Laufzeit` has
+    the three fields it had, and every proof of the tree is untouched.
   * (d) `Laufzeit.start`/`.einmal` -- the runtime starts exactly the declared starts, each on
     its own thread with its declared arguments, and the idle root `none` (MitRuhe.lean: body
     `return`, empty signature, no lock, no reason, writes nothing) on every other thread;
@@ -1296,7 +1325,13 @@
   C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22;
   DYNAMIC UNBOUNDED DATA STRUCTURES (lists, trees, graphs, maps whose size no declaration
   bounds; heap allocation without a declared ceiling, recursive types) -- planned for later,
-  out of scope now, OFFEN O29;
+  out of scope now, OFFEN O29. NOT this case (server lane, 2026-09-28): an
+  `arena A capacity lo .. hi max M of T`, whose ceiling `M` bounds it. Its form is sugar over
+  the existing `Block` (ArenaDyn.lean section `Form`: `DynForm`, `Block.dynGrowB`,
+  `Block.dynAlloc`), so this statement covers a program written in it with no new case -- but
+  the EXPORTER does not produce that shape: `grow` is refused (`LG005`) and the exported
+  `ArenaForm` spans `hi`, not `M`. So no dynamic-arena program is CERTIFIED today, and for an
+  uncertified program a green build says nothing (see WHAT A GREEN BUILD COVERS);
   PROBABILISTIC STATEMENTS (distributions, expected values, failure probabilities, randomised
   algorithms: the statement is about EVERY run, the model has no measure over runs) -- planned
   for later, out of scope now, OFFEN O29. The

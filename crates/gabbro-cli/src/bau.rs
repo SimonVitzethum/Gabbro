@@ -358,6 +358,17 @@ struct EintrittFund {
 }
 
 /// What the bare-metal driver needs beyond roots and locks, out of the same walk.
+/// **An `atomic` declaration, as the module rule needs it** (server lane, 2026-09-28,
+/// TODO section 0e): the name, the module it stands in and the file it stands in. Nothing
+/// else -- the rule that reads it refuses the unit outright, so it needs a place to point at
+/// and not a type.
+#[derive(Debug, Clone)]
+struct AtomarFund {
+    name: String,
+    modul: String,
+    datei: String,
+}
+
 #[derive(Debug, Clone, Default)]
 struct MetallFunde {
     eintritte: Vec<EintrittFund>,
@@ -386,6 +397,7 @@ fn modulkarte(
     Vec<TreiberSperre>,
     BTreeMap<String, Vec<FunktionsForm>>,
     MetallFunde,
+    Vec<AtomarFund>,
 ) {
     let mut deklariert = BTreeSet::new();
     let mut benutzt = BTreeSet::new();
@@ -394,6 +406,7 @@ fn modulkarte(
     let mut sperren = Vec::new();
     let mut funktionen: BTreeMap<String, Vec<FunktionsForm>> = BTreeMap::new();
     let mut metall = MetallFunde::default();
+    let mut atomare: Vec<AtomarFund> = Vec::new();
     for (datei, quelle) in quellen {
         let (baum, _) = gabbro_syntax::lies("<scan>", quelle);
         sammle(
@@ -407,9 +420,10 @@ fn modulkarte(
             &mut sperren,
             &mut funktionen,
             &mut metall,
+            &mut atomare,
         );
     }
-    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall)
+    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare)
 }
 
 fn sammle(
@@ -423,6 +437,7 @@ fn sammle(
     sperren: &mut Vec<TreiberSperre>,
     funktionen: &mut BTreeMap<String, Vec<FunktionsForm>>,
     metall: &mut MetallFunde,
+    atomare: &mut Vec<AtomarFund>,
 ) {
     use gabbro_syntax::ast::ItemArt;
     for i in items {
@@ -445,7 +460,22 @@ fn sammle(
                     sperren,
                     funktionen,
                     metall,
+                    atomare,
                 );
+            }
+            // **Every `atomic` the unit declares**, for the module rule below: a Gabbro
+            // `atomic` has no kernel-module lowering, and the refusal has to name the
+            // declaration rather than let the kernel build trip over a macro.
+            ItemArt::Atomic(a) => {
+                atomare.push(AtomarFund {
+                    name: a.name.text.clone(),
+                    modul: if pfad.is_empty() {
+                        String::from("(top level)")
+                    } else {
+                        pfad.to_string()
+                    },
+                    datei: datei.to_string(),
+                });
             }
             ItemArt::Use(u) => {
                 // `use a::b::C;` names the MODULE `a::b` -- the last part is the item.
@@ -678,9 +708,35 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
 ///
 /// *The third is the one that matters most:* the load verdict is how a Gabbro module refuses
 /// to be loaded (`laufzeit/kmodul/kmodul.c`), and a `void` init would make every load succeed.
-fn modulregel(e: &Einheit, funktionen: &BTreeMap<String, Vec<FunktionsForm>>) -> Option<String> {
+///
+/// **And one refusal that is not about the two calls at all** (server lane, session 3): a
+/// unit that declares an `atomic` is no kernel module today. That verdict existed before --
+/// `laufzeit/kmodul/include/stdatomic.h` makes `_Atomic` an unknown identifier -- but it
+/// arrived as a C error in a `make` log over a generated prelude line. Here it arrives
+/// before any C is written, and it names the declaration.
+fn modulregel(
+    e: &Einheit,
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+    atomare: &[AtomarFund],
+) -> Option<String> {
     if e.art != Art::Modul {
         return None;
+    }
+    // **A Gabbro `atomic` has no kernel-module lowering, and this is where that is said.**
+    // Before this rule the answer came from `laufzeit/kmodul/include/stdatomic.h`, which
+    // `#define`s `_Atomic` to an unknown identifier: a real refusal, in the right place --
+    // but it arrives as a C error inside a `make` log, pointing at a generated prelude line,
+    // long after the build decided the unit was fine. The header stays (it is the last line
+    // of defence, and it carries the same reason); this rule reaches the same verdict before
+    // a byte of C is written, and names the DECLARATION instead of the macro.
+    if let Some(a) = atomare.first() {
+        return Some(format!(
+            "this `module` declares the atomic `{}` ({} in {}) -- a Gabbro `atomic` has no              kernel-module lowering
+                      = C11 `_Atomic` is not the kernel's memory model (`READ_ONCE`/             `WRITE_ONCE`, `atomic_t`, `smp_*` barriers), and the goal theorem's atomic rely              (`SchwachX`) is proved about the FIRST one
+                      = lifting it needs a lowering onto the kernel's own primitives AND              the argument that the kernel's model refines the one `SchwachX` assumes;              neither is built
+                      = without this rule the refusal is              `laufzeit/kmodul/include/stdatomic.h`'s, in a `make` log",
+            a.name, a.modul, a.datei
+        ));
     }
     for (rolle, name) in [("init", &e.modul_init), ("exit", &e.modul_exit)] {
         let Some(formen) = funktionen.get(name.as_str()) else {
@@ -1039,6 +1095,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         BTreeMap::new();
     // **What the bare-metal driver installs besides** (Opus agent J): entries, rcu, cells.
     let mut metall_je_einheit: BTreeMap<String, MetallFunde> = BTreeMap::new();
+    let mut atomare_je_einheit: BTreeMap<String, Vec<AtomarFund>> = BTreeMap::new();
     // **A unit's own C bodies** (server lane, TODO section 0e K4): the `.c` files a
     // `module` unit names beside its `.gab` sources. They are the bodies of the `extern fn`
     // items the PROGRAM declares -- the whole of its kernel API, written by whoever wrote
@@ -1087,8 +1144,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             return std::process::ExitCode::from(1);
         }
         fremde_je_einheit.insert(e.name.clone(), fremde);
-        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall) =
+        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare) =
             modulkarte(&quellen);
+        atomare_je_einheit.insert(e.name.clone(), atomare);
         metall_je_einheit.insert(e.name.clone(), metall);
         eintritte_je_einheit.insert(e.name.clone(), eintritte);
         treiber_funde_je_einheit.insert(e.name.clone(), wurzeln);
@@ -1152,7 +1210,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             // the two calls a kernel module is entered by are read out of the sources this
             // manifest names, so a plan whose init the kernel could not call says so before
             // a `Kbuild` is written -- and before a kernel build tree is even needed.
-            if let Some(befund) = modulregel(e, &funktionen_je_einheit[name]) {
+            if let Some(befund) =
+                modulregel(e, &funktionen_je_einheit[name], &atomare_je_einheit[name])
+            {
                 befunde += 1;
                 println!("  REFUSED  {name} (module): {befund}");
             }
@@ -1264,7 +1324,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         // **The module rule, beside the entry rule and the driver rule** (server lane).
         // It runs BEFORE any C is written, for the same reason as the other two: a module
         // whose init the kernel cannot call builds cleanly and fails at `insmod`.
-        if let Some(befund) = modulregel(e, &funktionen_je_einheit[name]) {
+        if let Some(befund) =
+            modulregel(e, &funktionen_je_einheit[name], &atomare_je_einheit[name])
+        {
             abgesagt += 1;
             println!("REFUSED  {name} (module): {befund}");
             continue;

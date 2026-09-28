@@ -370,6 +370,47 @@ fn ein_c_rumpf_ausserhalb_eines_moduls_faellt() {
     );
 }
 
+/// **A `module` unit may not declare an `atomic`** -- and the refusal arrives before a byte
+/// of C is written, not as a C error in a `make` log.
+///
+/// The verdict itself is older than this rule: `laufzeit/kmodul/include/stdatomic.h` makes
+/// `_Atomic` an unknown identifier, so such a module never built. What that answer could not
+/// do is name the DECLARATION, or arrive on a machine with no kernel headers. Both hold here
+/// (`--dry-run`), and the reason travels with it: C11 `_Atomic` is not the kernel's memory
+/// model, and `SchwachX` -- the goal theorem's atomic rely -- is proved about the first one.
+#[test]
+fn ein_modul_mit_atomic_faellt() {
+    let mit_atomic = "atomic STAND : u32 relaxed;
+module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf(
+        "mit_atomic",
+        "unit gabbro_probe module laden entladen",
+        mit_atomic,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_ne!(code, 0, "a module with an `atomic` is refused");
+    assert!(aus.contains("declares the atomic `STAND`"), "by name:\n{aus}");
+    assert!(aus.contains("SchwachX"), "with the reason that is not built:\n{aus}");
+    assert!(
+        aus.contains("stdatomic.h"),
+        "and with the place the refusal came from before:\n{aus}"
+    );
+
+    // **The positive twin: the same unit without the `atomic` builds its plan.** Without it
+    // the test above would also pass on a rule that refused every module.
+    let (aus, fehler, code) = kmod_lauf(
+        "ohne_atomic",
+        "unit gabbro_probe module laden entladen",
+        KMOD_EINHEIT,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_eq!(code, 0, "the same unit without the atomic is fine:\n{aus}\n{fehler}");
+}
+
 /// **A `module` unit may not declare the hosted entry.** `module_init` calls the function the
 /// manifest names; a `pub fn haupt()` in a kernel module is a name the loader never calls and
 /// the kernel never links.

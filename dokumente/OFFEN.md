@@ -1588,3 +1588,22 @@ cannot, on every run:
 
 The list is printed by the stage and not maintained here by hand: a new kernel gate or hosted
 binding joins it on the next run.
+
+---
+
+## O34 — A Gabbro `atomic` has no kernel-module lowering, and the build refuses it (recorded 2026-09-28, server lane)
+
+A Gabbro `atomic` lowers to a C11 `_Atomic` carrier with C11 orderings. Inside a Linux kernel
+object that is **a second memory model beside the kernel's own** (`READ_ONCE`/`WRITE_ONCE`,
+`atomic_t`, the `smp_*` barriers) — and the goal theorem's atomic rely is proved about the
+first one: `SchwachX` (the leg `schwach`) is a statement about W, the weak machine that
+over-approximates RC11 at G's step granularity. Nothing in the tree relates the kernel's model
+to it.
+
+| | |
+|---|---|
+| **what happens today** | `gabbro build` refuses a `module` unit that declares an `atomic`, **before a byte of C is written**, naming the declaration and the reason (`crates/gabbro-cli/src/bau.rs`, `modulregel`; the CLI test `ein_modul_mit_atomic_faellt` holds both directions). Behind it, `laufzeit/kmodul/include/stdatomic.h` makes `_Atomic` an unknown identifier, so a hand-written `Kbuild` reaches the same verdict from the kernel build |
+| **why a refusal and not a lowering** | *Safety is never traded for features.* A lowering onto `atomic_t` that nobody has related to `SchwachX` would make the wall green and the claim false: the program would carry a memory-model assumption the statement does not make |
+| **what lifting it needs** | (1) a kernel-module lowering of `atomic` onto the kernel's own primitives, per ordering; (2) the argument that the kernel's model **refines** the one `SchwachX` assumes — i.e. that every execution the kernel's primitives admit is one W admits. Neither is built, and (2) is the hard half: it is a statement about the Linux memory model (LKMM), not about Gabbro |
+| **what it costs today** | a kernel module communicates through its declared foreign calls and through locks; the bounded heap, `concurrent` roots and locks are unaffected. Measured: `messung/proben/kmodul/halde-treiber.gab` loads, allocates and refuses on full in QEMU without one |
+| **status** | recorded, not tasked; no code, gift or example number reserved. The refusal is the answer until (1) and (2) exist |

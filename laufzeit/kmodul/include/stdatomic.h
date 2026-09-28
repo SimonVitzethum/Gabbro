@@ -17,6 +17,13 @@
  * of `atomic` onto the kernel's own primitives, and the argument that the
  * kernel's model refines the one `SchwachX` assumes. Neither is built.
  * Tracked in the report of the server lane (`messung/SERVER-0E-REPORT.md`).
+ *
+ * SINCE 2026-09-28 THIS FILE IS THE SECOND ANSWER, NOT THE FIRST. `gabbro
+ * build` refuses a `module` unit that declares an `atomic` before it writes a
+ * byte of C (`bau.rs`, `modulregel`), naming the DECLARATION and carrying the
+ * same reason. This header stays where it is: it is what answers a `make` a
+ * hand-written `Kbuild` starts, and a rule that only the build system knows
+ * is a rule the kernel build can walk around.
  */
 #ifndef GABBRO_KMOD_STDATOMIC_H
 #define GABBRO_KMOD_STDATOMIC_H

@@ -381,7 +381,7 @@ constraint). A heap is allowed but never unbounded: every region has a declared 
 plus 40 GiB ceiling (reserved `M`, refuse-on-full) — the 40 GiB number itself is irrelevant, what
 counts is statically linkable, bucket-bounded, refuse-on-full.*
 
-- [ ] **Bounded heap `arena A capacity lo .. hi max M of T` (the 10 MiB + 40 GiB shape).**
+- [x] **Bounded heap `arena A capacity lo .. hi max M of T` (the 10 MiB + 40 GiB shape).**
   Stands: checker rules `N210` (0≤lo≤hi≤M), `N212` (static reservation), `N426` (every `grow`
   against the UPPER bound, fix lane F2), `N211` (generations); static Lean sugar
   (`ArenaZucker.lean`, covered by `gabbro_ziel` with no re-proof); static lowering sound where
@@ -400,11 +400,31 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   module, reserve = one `vzalloc` region per arena, commit = a budget over it — `vmalloc`-class
   calls are all the kernel EXPORTS, so the ceiling reads there as it does on metal
   (`Spec.lean` (M10)), and refuse-on-full is deterministic rather than practically unreachable.
-  Open: Lean `ArenaDyn.lean` (`DynForm`, the four Block-form theorems, the simulation — the
-  file's own tail comment names the blockers), the two `Spec.lean` (d) assumption texts
-  (`Laufzeit.reserve`, `Laufzeit.commit`; reviewed diff).
-  Restriction (OFFEN O20): no `reset` concurrent with a reader of `A`, no arena shared across
-  threads without the strict option — or a `Spec.lean` diff naming the run model and ceiling.
+  **The Lean half LANDED 2026-09-28** (server lane, session 3, `messung/SERVER-0E-REPORT.md`
+  §9): `grammatik/Grammatik/ArenaDyn.lean` section `Form` carries `DynForm` (the table spans
+  the ceiling, the committed prefix is a second `stand`-style word `komSt`), the four
+  PLAN-DYNAMISCH §9 theorems in `Block` form — `dynGrow_commit` with its frame (the used
+  counter and every slot stay put), `dynCommit_monoton`, `dynAlloc_unter_commit`,
+  `dynAlloc_ueber_commit` — and the simulation `dynAlloc_simuliert`, each with a
+  non-degenerate witness on a fixture whose committed prefix stands at 2 of 4: *an arena with
+  room to the ceiling whose allocation is refused*, the one state the static form cannot name.
+  The 40–80 lines of narrow-on-committed plumbing the file's tail comment estimated were NOT
+  needed: the guard is `Block.pruefung` on `used < committed` with `Block.arenaAlloc` taken
+  from `ArenaZucker.lean` unchanged underneath (`cd grammatik && lake build` 355 jobs,
+  `#print axioms gabbro_ziel` standard).
+  **And the two `Spec.lean` (d) assumption texts** (`Laufzeit.reserve`, `Laufzeit.commit`)
+  stand in THE ONE LIST as a **comment-only** diff — 36 insertions, 1 deletion, no definition,
+  no premise, no field. The review is `messung/SERVER-0E-SPEC-DIFF.md`: a new field of
+  `Laufzeit` would be a new premise and therefore a weaker theorem, `Laufzeit.lader` already
+  carries the reservation (an arena IS a table of `M` slots in `E.sp0`), and the commit text's
+  first clause is now PROVED (`dynGrow_commit`) rather than assumed.
+  Restriction (OFFEN O20) KEPT, and the Lean section says so in its cuts: no `reset`
+  concurrent with a reader of `A`, no arena shared across threads without the strict option;
+  no `Spec.lean` diff naming a weaker run model was made.
+  Open, named in three places so it cannot be read past (`Spec.lean` NOT CLAIMED, the
+  `ArenaDyn.lean` cuts, the diff review §5): **the exporter does not produce the dynamic
+  shape** — `lean_g.rs` refuses `grow` (`LG005`) and builds the static `ArenaForm` over `hi`,
+  not over `M`, so no dynamic-arena program is CERTIFIED. Exporter work, not model work.
 - [ ] **General kernel modules/drivers with manual API.** Stands: syscall bindings as named
   in-program variables (Opus agent L, `N561`–`N568`, Linux AND metal, no OS constants in the
   tree); bare-metal base (agents I/J/L — QEMU boot, stage 11/12, 311 units `-nostdlib`).
@@ -437,7 +457,7 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   `emit.rs` (the value is produced before the releases; literals keep the old text), 12 of 317
   emitting files change, new test `der_wert_wird_unter_der_sperre_gelesen` over all three
   return channels.
-- [ ] **The Linux kernel module target.** *Built and booted 2026-09-28 (server lane), but not
+- [x] **The Linux kernel module target.** *Built and booted 2026-09-28 (server lane), but not
   yet by `gabbro build`.* Stands: `laufzeit/kmodul/` (the driver `kmodul.c` — NOT generated,
   everything unit-specific arrives as a `-D` macro; the bounded-heap `arena.c`; five header
   shims over the kernel's own types, because the kernel builds `-nostdinc` and every emitted
@@ -459,9 +479,16 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   unit does not declare, one with a parameter, one that answers nothing -- the load verdict --,
   one name for both calls, a module with `pub fn main`, a module without `kmod`, `kmod` without
   a module). 6 new CLI tests, `--dry-run`, so they need no kernel headers.
-  Open: a Gabbro `atomic` in a kernel
-  module (refused at compile time in `laufzeit/kmodul/include/stdatomic.h`, with the reason:
-  C11 `_Atomic` is not the kernel's memory model, and `SchwachX` is proved about the first).
+  **The `atomic` refusal moved to the build 2026-09-28** (server lane, session 3): a `module`
+  unit that declares an `atomic` is refused by `gabbro build` **before a byte of C is
+  written**, naming the declaration and carrying the reason — C11 `_Atomic` is not the
+  kernel's memory model, and `SchwachX` is proved about the first one
+  (`crates/gabbro-cli/src/bau.rs`, `modulregel`; CLI test `ein_modul_mit_atomic_faellt` with
+  its positive twin). `laufzeit/kmodul/include/stdatomic.h` stays as the second answer, for a
+  hand-written `Kbuild`. **Lifting it is not this lane's call and is recorded as OFFEN O34:**
+  it needs a lowering onto the kernel's own primitives AND the argument that the kernel's
+  model refines the one `SchwachX` assumes — a statement about LKMM, not about Gabbro. A
+  lowering without (2) would make the wall green and the claim false.
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 

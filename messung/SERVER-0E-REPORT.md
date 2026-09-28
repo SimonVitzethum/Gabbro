@@ -643,3 +643,164 @@ GREEN: the ceiling costs nothing        (`--gift` still caught)
 | `pruefe-cformen.py`, `pruefe-ctext.py`, `pruefe-todo.py`, `pruefe-saetze.py` | rc 0 each | -- |
 | `pruefe-waechter.py` | rc 1, and **one pre-existing hole fewer**: `pruefe-kernelmodul.sh` no longer lacks its speech-probe word. The five remaining `FEHLT` rows and the truncation ratchet (33) are unchanged and none of them this lane's | `instrumente/pruefe-waechter.py` |
 | `grammatik` Lean build / `#print axioms gabbro_ziel` | 355 jobs no error / `[propext, Classical.choice, Quot.sound]` | `cd grammatik && lake build`, `lake env lean Nachpruefung.lean` |
+
+---
+
+## 9. Session 3 (2026-09-28) — H3: the Lean form of the dynamic arena, the `Spec.lean` texts, and the `atomic` refusal
+
+*Everything below is measured on `ubuntu@simon.jocraft.cc`, in `~/Gabbro`. Isabelle is not
+installed here, so `abnahme.py --voll` cannot run; that is said again at the end.*
+
+### 9.1 What was open, and what closed
+
+Session 2 left the TODO §0e box 1 residue as **H3** — the Lean `ArenaDyn` form and the two
+`Spec.lean` (d) assumption texts — and box 3's residue as *a Gabbro `atomic` in a kernel
+module*. Both are closed here. **K2/K3 (box 2) is not**, and §9.7 says what it is.
+
+### 9.2 `ArenaDyn.lean` section `Form` — the section-9 residue
+
+`grammatik/Grammatik/ArenaDyn.lean` carried the model of a dynamic arena as **arithmetic on a
+`Nat` record**: what a commit sequence does, said about numbers. What PLAN-DYNAMISCH §9 asked
+for and the file's own tail comment listed as missing was the same discipline **as a form over
+the existing `Block`** — so that `theorem gabbro_ziel` covers a dynamic-arena program with no
+new constructor, no new machine arm and no re-proof, exactly as `ArenaZucker.lean` does for the
+static one.
+
+Built:
+
+| | what it is |
+|---|---|
+| `DynForm D` | an `ArenaForm D` whose table spans the CEILING (`count tab = M`), plus a second global — the committed prefix — over the same range, read through the `stand`-style accessor `komSt`. The field `hzwei : komm ≠ zaehl` is what every frame lemma rests on |
+| `Block.dynGrowB` | `grow A by n else B;` — `Block.narrow` of `committed + n` into `0 .. M` with the store. It fits and the word takes it, or `B` runs; past the ceiling there is no other branch |
+| `Block.dynAlloc` | `let i = alloc A (v) else B;` on a dynamic arena — `Block.pruefung` on `used < committed` (no binder, an `else` that does not fall through) with **`Block.arenaAlloc` taken from `ArenaZucker.lean` UNCHANGED** underneath |
+| `dynGrow_commit` | the commit bumps the word by `n` — **and the frame**: the used counter stands where it stood, `slots` is `slots` |
+| `dynCommit_monoton` | no admitted `grow` lowers the committed word |
+| `dynAlloc_unter_commit` | below the committed prefix the `else` is not taken; the body is `arenaRumpf`, the index the old used counter. The model half of R-commit |
+| `dynAlloc_ueber_commit` | at or above it the `else` IS taken — **with room to the ceiling**. The whole difference between a reservation and storage |
+| `dynAlloc_simuliert` | the simulation: under the committed prefix the dynamic form IS the static-max form, run on a world that differs only in the trace — and the difference is measured (`globs` equal, `slots` equal) |
+
+**The estimated blocker did not exist.** The file's tail comment put the alloc pair at
+*"40–80 lines of dependent plumbing each"* for a narrow-on-committed sugar. There is no such
+narrow: `committed` is a runtime word and `Block.narrow` takes static bounds, so the guard is a
+`pruefung` and the static narrow underneath is the one that already stood. The pair is 20 lines
+of statement and 10 of proof, and it **reuses** `arenaAlloc_unter_schranke` /
+`arenaAlloc_an_schranke` instead of restating them.
+
+**The witnesses are not decorative** (memory `zeugenpflicht`). `DynZeuge.DD` is a declaration
+with one four-slot table and **two** globals; `Halde` is the arena over it; `halb` has the used
+counter at 0 and the committed prefix at **2 of 4**, and `gespannt` has both at 2. So
+`zeuge_alloc_ueber` is *an arena with two free slots whose allocation is refused* — the one
+state the static form cannot name — and `zeuge_grow` moves the prefix 2 → 4 while the used
+counter and every slot stay put.
+
+```
+$ cd grammatik && ~/.elan/bin/lake build
+Build completed successfully (355 jobs).
+$ cd grammatik && ~/.elan/bin/lake env lean Nachpruefung.lean | grep gabbro_ziel
+'Gabbro.Grammatik.Zielsatz.gabbro_ziel' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+Every new theorem prints its axioms in the file (`#print axioms`, 15 new lines): all
+`[propext, Classical.choice, Quot.sound]` or fewer. No `sorry`, no `axiom`, no
+`native_decide`.
+
+### 9.3 The `Spec.lean` diff — two texts, no premise
+
+Measured: **36 insertions, 1 deletion, all inside the header comment.**
+
+```
+$ git diff --stat -- grammatik/Grammatik/Zielsatz/Spec.lean
+ grammatik/Grammatik/Zielsatz/Spec.lean | 37 +++++++++++++++++++++++++++++++++-
+```
+
+Session 2's hand-over read `Laufzeit.reserve` and `Laufzeit.commit` as new **fields**, and
+measured the cost: five construction sites plus every generated certificate. **This session did
+not do that, and the reason is the deliverable.** A field of `Laufzeit` is a premise of
+`GabbroZiel`, and a premise added is a theorem weakened. For `reserve` the premise is already
+there: an arena IS a table of `M` slots in `E.sp0`, so a load that cannot provide the range
+establishes no `E.sp0` and `Laufzeit.lader` is false of it. For `commit` the first clause is now
+**proved** — `dynGrow_commit` says the form has exactly two outcomes — and assuming what the
+model proves would put the claim in the premise, where a later weakening of the theorem would
+not show.
+
+What is left is a statement about the C runtime, which is where the two texts now stand, with
+what each runtime does (`mmap(PROT_NONE)` hosted, the carved region on metal, one `vzalloc`
+region per arena in a kernel module) and with the explicit NOT CLAIMED: *that the reservation
+succeeds*. Full review, including the checklist a reviewer should attack:
+**`messung/SERVER-0E-SPEC-DIFF.md`**.
+
+### 9.4 The gap the diff made visible
+
+Writing the NOT CLAIMED clarification forced a measurement:
+
+```
+$ grep -n "StmtArt::Grow" crates/gabbro-check/src/lean_g.rs
+4189:        StmtArt::Grow(g) => Err(refuse("LG005", …))
+```
+
+**The exporter refuses `grow` (`LG005`)** and builds the static `ArenaForm` over `hi`, not over
+the ceiling. So the new forms are covered by `gabbro_ziel` — they are ordinary `Block` terms —
+but **no dynamic-arena program is CERTIFIED**, and for an uncertified program a green build
+says nothing. Named in three places so it cannot be read past: the `Spec.lean` NOT CLAIMED
+line, the `ArenaDyn.lean` cuts, and §5 of the diff review. Not closed here; it is exporter work.
+
+### 9.5 A Gabbro `atomic` in a kernel module — the refusal moved to the build
+
+Before: `laufzeit/kmodul/include/stdatomic.h` `#define`s `_Atomic` to an unknown identifier. A
+real refusal in the right place — but it arrives as **a C error inside a `make` log**, over a
+generated prelude line, after the build has decided the unit is fine.
+
+Now `gabbro build` refuses it before a byte of C is written, naming the declaration:
+
+```
+REFUSED  gabbro_probe (module): this `module` declares the atomic `STAND` ((top level) in …/u.gab)
+         -- a Gabbro `atomic` has no kernel-module lowering
+         = C11 `_Atomic` is not the kernel's memory model (`READ_ONCE`/`WRITE_ONCE`, `atomic_t`,
+           `smp_*` barriers), and the goal theorem's atomic rely (`SchwachX`) is proved about the FIRST one
+         = lifting it needs a lowering onto the kernel's own primitives AND the argument that the
+           kernel's model refines the one `SchwachX` assumes; neither is built
+         = without this rule the refusal is `laufzeit/kmodul/include/stdatomic.h`'s, in a `make` log
+```
+
+`crates/gabbro-cli/src/bau.rs`: `AtomarFund`, one more arm in `sammle` (the SAME parse — no
+second reading of the text, W7), and the new head of `modulregel`. The header stays as the
+second answer, for a hand-written `Kbuild`; a rule only the build system knows is a rule the
+kernel build can walk around. One CLI test with **its positive twin**
+(`ein_modul_mit_atomic_faellt`): without the twin the test would also pass on a rule that
+refused every module. A manifest-level refusal has no `Satz`, so no `N` code is minted — the
+reading `treiberregel` and the module rule already stand on.
+
+*Why a refusal and not a lowering:* safety is never traded for features. A lowering onto
+`atomic_t` that nobody has related to `SchwachX` makes the wall green and the claim false.
+What lifting it needs is written down: **OFFEN O34**.
+
+### 9.6 The walls at the end of session 3
+
+| wall | number | command |
+|---|---|---|
+| `cargo test --no-fail-fast` | rc 0, **1416 passed, 0 failed** (1415 + the new CLI test) | `cargo test --release --no-fail-fast` (`~/claude-lane/logs/test-s3.log`) |
+| `pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 319 von 319 uebersetzen, 2 umgekehrte Proben** | `instrumente/pruefe-emission.sh` (`~/claude-lane/logs/emission-s3.log`) |
+| kernel module in QEMU | GREEN: loaded, allocated, refused on full (`k=3 v=3`), reported, unloaded clean | `instrumente/pruefe-kernelmodul.sh` |
+| H4, the ceiling | GREEN, `.bss` 24/24, `.data` 64/64, answer 33/33 | `instrumente/miss-arena-decke.sh` |
+| `grammatik` Lean build | 355 jobs, no error | `cd grammatik && lake build` |
+| `#print axioms gabbro_ziel` | `[propext, Classical.choice, Quot.sound]` | `lake env lean Nachpruefung.lean` |
+| `pruefe-todo.py`, `-saetze.py`, `-cformen.py`, `-ctext.py` | rc 0 each | — |
+| `pruefe-zahlen.py` | rc 1, **35 findings — 36 at `d03f5d5b`**. Measured in a throwaway worktree at the base: the same 36, and the one that differed was the widerruf file count (689 → 690, my new document). `KENNZAHLEN.md` re-measured to 690; the other 35 are document-figure drift from the translation work and none is this lane's | `instrumente/pruefe-zahlen.py` |
+| `pruefe-englisch.py` | rc 1, **unchanged**: 7964 German comment lines (booked 7949), 37 German feeders (26), 5 German messages at a sink (2) — the same three numbers session 2 measured. Everything this session wrote is English | `instrumente/pruefe-englisch.py` |
+| `pruefe-waechter.py` | rc 1, the same five `FEHLT` rows and truncation ratchet (33), all pre-existing | — |
+| `pruefe-kennungen.py` | rc 1, `N004`/`N005` assigned in both `namen.rs` and `zielbindung.rs` — pre-existing (Opus lane L), no code minted here | — |
+| `pruefe-syntax.sh` | rc 1, 17 build warnings, all in files this session did not touch (`gabbro-check`, `bau.rs:1847` `KMOD_QUELLEN` from session 2) | — |
+| `pruefe-manifest.py` | rc 1, the long-standing obligations gate (43 of 63), untouched | — |
+| `abnahme.py --voll` | **cannot run here**: no Isabelle on this machine | — |
+
+### 9.7 What is still open in §0e, and it is one box
+
+**Box 2, K2/K3.** In order: `start` lowering (`C001`) and export (`LG004`, no model of
+statement-level starts); then the `entry`/`boot` vector, registers and steps (today only the
+dispatch root travels); then handler pinning/re-entry and `cli`/`sti` in the C (OFFEN O19 — the
+model leg `KernHaltE` stands, the C masks nothing). The kernel module built here has neither a
+`start` nor an `entry`: its init and exit are ordinary functions, which is what a Linux module
+is entered by — so K4/K5 did not need K2/K3, and that is why the two boxes could close first.
+
+**Not a residue, a recorded refusal:** a Gabbro `atomic` in a kernel module (OFFEN O34), and
+the exporter's `LG005` (§9.4).
