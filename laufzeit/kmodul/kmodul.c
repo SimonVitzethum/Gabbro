@@ -14,10 +14,14 @@
  *   GABBRO_EINHEIT_INCLUDE   the emitted `<unit>.c`, as a string for #include
  *   GABBRO_KMOD_INIT         the unit's function that `module_init` calls
  *   GABBRO_KMOD_EXIT         the unit's function that `module_exit` calls
- *   GABBRO_KMOD_ARENA        defined when the unit declares a dynamic arena
- *   GABBRO_KMOD_ARENA_DESCS  a comma list of the unit's arena descriptors,
- *                            e.g. `&Knoten_desc` -- the ONE place a unit's
- *                            arenas are named to the runtime
+ *
+ * **The arenas are NOT among them, since 2026-09-28.** The emitted unit carries
+ * its own list -- `#define GABBRO_ARENEN &Knoten_desc`, written by the emitter,
+ * which is the only place that knows which descriptors it emitted. Until that
+ * day this file took the list from a `-D` on the command line, so an arena
+ * added to the program and forgotten on the command line was an UNRESERVED
+ * arena: a null base at the first `alloc`. *Two registers over one fact, and
+ * the one nobody reads is the one that drifts* (`W7`).
  *
  * **What the program calls, the program declares.** Nothing in this file
  * stands between a Gabbro `extern fn` and the kernel: a unit that calls a
@@ -55,15 +59,17 @@
 
 #include GABBRO_EINHEIT_INCLUDE
 
-#ifdef GABBRO_KMOD_ARENA
+/* The unit's own list decides whether this module has arenas at all: the
+ * emitter writes `GABBRO_ARENEN` exactly when it emitted descriptors. */
+#ifdef GABBRO_ARENEN
 #include "kmodul.h"
-static gabbro_arena_desc *gabbro_kmod_arenen[] = { GABBRO_KMOD_ARENA_DESCS };
+static gabbro_arena_desc *gabbro_kmod_arenen[] = { GABBRO_ARENEN };
 #endif
 
 static int __init gabbro_kmod_init(void)
 {
     uint32_t antwort;
-#ifdef GABBRO_KMOD_ARENA
+#ifdef GABBRO_ARENEN
     unsigned int i;
     int fehler;
 
@@ -84,12 +90,12 @@ static int __init gabbro_kmod_init(void)
     if (antwort != 0) {
         pr_err("gabbro: load refused -- the unit answered %u\n",
                (unsigned int)antwort);
-#ifdef GABBRO_KMOD_ARENA
+#ifdef GABBRO_ARENEN
         gabbro_arena_alles_freigeben();
 #endif
         return -EINVAL;
     }
-#ifdef GABBRO_KMOD_ARENA
+#ifdef GABBRO_ARENEN
     /* **And again AFTER the unit ran.** A `grow` past the declared ceiling is
      * a fail-stop, not a branch -- `N426` admits no such `grow`, so one can
      * only arrive if the checker was bypassed. It sets the load error and
@@ -113,7 +119,7 @@ static int __init gabbro_kmod_init(void)
 static void __exit gabbro_kmod_exit(void)
 {
     (void)GABBRO_KMOD_EXIT();
-#ifdef GABBRO_KMOD_ARENA
+#ifdef GABBRO_ARENEN
     gabbro_arena_alles_freigeben();
 #endif
 }

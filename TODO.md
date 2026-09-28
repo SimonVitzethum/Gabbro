@@ -448,8 +448,18 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   allocates and reads back (`k=2 v=33`), hits refuse-on-full deliberately at the third `grow`
   below the ceiling (`k=3 v=3`), reports it, unloads with no oops/BUG/WARNING; 4 of 4 harness
   mutations caught (`--gift all`). In QEMU only — nothing is loaded into this host's kernel.
-  Open: the manifest word (`kmod <kernel build dir>`, beside `metal <dir>`) so `gabbro build`
-  writes the `Kbuild` the instrument writes in shell today; a Gabbro `atomic` in a kernel
+  **The manifest word LANDED 2026-09-28** (server lane, `messung/SERVER-0E-REPORT.md` §8):
+  `kmod <runtime dir> <kernel build dir>` plus a third art `unit <name> module <init> <exit>`,
+  so `gabbro build` writes the `Kbuild`, copies the runtime beside the emitted C and calls
+  `make -C <kernel build dir> M=<dir> modules` -- the instrument builds through it now and the
+  shell knows two paths and two names, nothing else. Beside it: `.c` paths in a module unit's
+  file list are the unit's own foreign bodies (that is how a kernel call enters the artefact),
+  the emitter writes `#define GABBRO_ARENEN` so no driver carries its own arena list (4 of 317
+  emitting files gain the line), and seven refusals stand before any C is written (an init the
+  unit does not declare, one with a parameter, one that answers nothing -- the load verdict --,
+  one name for both calls, a module with `pub fn main`, a module without `kmod`, `kmod` without
+  a module). 6 new CLI tests, `--dry-run`, so they need no kernel headers.
+  Open: a Gabbro `atomic` in a kernel
   module (refused at compile time in `laufzeit/kmodul/include/stdatomic.h`, with the reason:
   C11 `_Atomic` is not the kernel's memory model, and `SchwachX` is proved about the first).
 

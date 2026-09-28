@@ -69,6 +69,7 @@ Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum -- und `zaehle-b3.p
 heute darueber bis in eine `ZeroDivisionError`.
 """
 import importlib.util
+import os
 import pathlib
 import re
 import subprocess
@@ -680,6 +681,15 @@ def waechter(wurzel=None):
 # named -- and it turns RED as soon as a tool outside carries a violation without a reason.
 # *A hole with a name is no tick, and no cross either.*
 AUSSERHALB_GEBUCHT = {
+    # **Booked 2026-09-28 (server lane), the second sourced shell library.** `binaer.sh`
+    # answers one question for three instruments -- WHICH `gabbro` binary, and is it younger
+    # than the sources it claims to measure -- and it has no `main` of its own. Its speech
+    # probe is the one below (`sprechprobe_binaer()`), in both directions, on a subject the
+    # run brings along: a binary older than a source must be refused, a newer one must pass.
+    "binaer.sh":
+        "eine EINGEBUNDENE Schalenbibliothek, kein Waechter -- sie hat kein eigenes `main`, "
+        "und ihre Sprechprobe wird in DIESER Datei gefahren (`sprechprobe_binaer()`), "
+        "in beide Richtungen, bei jedem Lauf",
     "abschnitt.sh":
         "eine EINGEBUNDENE Schalenbibliothek, kein Waechter -- sie hat kein eigenes `main`, "
         "und ihre Sprechprobe wird in DIESER Datei gefahren (`sprechprobe_schale()`), "
@@ -1268,6 +1278,50 @@ SCHALE_GANZ = "\n".join([
 ])
 
 
+def sprechprobe_binaer():
+    """`[(what, ok)]` -- **the binary-choice library, in both directions.**
+
+    `binaer.sh` answers one question for three instruments: which `gabbro` binary, and is it
+    younger than the sources it claims to measure. The trap it stands against bit three
+    instruments on 2026-09-28 -- each of them measured a binary nobody had built for it, and
+    two of them were RED over a tree that was fine.
+
+    So it is driven here, on a subject this run brings along: a throwaway tree with a fake
+    binary and a fake source. Newer binary -> the path; older binary -> a refusal with a
+    return code of 2. *A library nobody drives is indistinguishable from one that does not
+    exist* -- the same reason `abschnitt.sh` is driven above.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        ort = pathlib.Path(d)
+        (ort / "target" / "debug").mkdir(parents=True)
+        (ort / "crates").mkdir()
+        binaer = ort / "target" / "debug" / "gabbro"
+        binaer.write_text("#!/bin/sh\n")
+        binaer.chmod(0o755)
+        quelle = ort / "crates" / "a.rs"
+
+        def lauf():
+            r = subprocess.run(
+                ["bash", "-c", f'. "{W}/instrumente/binaer.sh"; gabbro_binaer "{ort}"'],
+                capture_output=True, text=True, timeout=FRIST)
+            return r.returncode, r.stdout.strip()
+
+        # (a) the source is OLDER than the binary: the path comes back.
+        quelle.write_text("// alt\n")
+        os.utime(quelle, (1, 1))
+        rc_gut, aus_gut = lauf()
+        # (b) the source is YOUNGER: a refusal, and it names the count.
+        os.utime(quelle, None)
+        rc_alt, aus_alt = lauf()
+    return [
+        ("ein Binaerprogramm juenger als die Quellen kommt zurueck",
+         rc_gut == 0 and aus_gut.endswith("target/debug/gabbro")),
+        ("ein AELTERES wird abgewiesen, mit Grund und Ruecklaufwert 2",
+         rc_alt == 2 and "OLDER than 1 source file" in aus_alt),
+    ]
+
+
 def sprechprobe_schale():
     """`[(what, ok)]` -- the shell notice must fire on a cut and stay quiet on a full run."""
     ort = str(W / "instrumente")
@@ -1427,6 +1481,9 @@ def main():
     for was, sch_ok in sprechprobe_schale():
         print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sch_ok
+    for was, bin_ok in sprechprobe_binaer():
+        print(f"  Binaerwahl:     {'ok' if bin_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and bin_ok
     # **R14 for the ONE row in `GEGENSTAND` that reads a number** (2026-09-02). Until today
     # the figure stood there fixed while the catalogue had grown by eleven. *A reader with no
     # probe cannot be told apart from a hardcoded constant.*

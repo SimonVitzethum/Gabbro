@@ -101,25 +101,10 @@ command -v cc > /dev/null 2>&1 || nicht_gelaufen "no cc on this machine"
 [ -f "$FADEN" ]   || nicht_gelaufen "no thread runtime at $FADEN"
 [ "$(uname -m)" = x86_64 ] || nicht_gelaufen "the thread runtime is x86_64 (raw clone)"
 
-# **The NEWER of the two binaries, and it must not be older than `crates/`.**
-#
-# This cost the first run of this instrument (2026-09-28): it took
-# `target/release/gabbro` because it existed, that binary was an hour older than
-# the emitter change under test, and the run reported the OLD lowering's numbers
-# against the new tree. *The apparatus was measuring a binary nobody had built
-# for it* -- the same class as `rsync -a` against `cargo` (CLAUDE.md), and the
-# same answer `pruefe-cformen.py` and `pruefe-saetze.py` already give: a binary
-# older than a source is an ABORT and not a finding.
-GABBRO=""
-for k in "$W/target/release/gabbro" "$W/target/debug/gabbro"; do
-    [ -x "$k" ] || continue
-    if [ -z "$GABBRO" ] || [ "$k" -nt "$GABBRO" ]; then GABBRO="$k"; fi
-done
-[ -n "$GABBRO" ] || nicht_gelaufen "no built gabbro binary (cargo build)"
-juenger="$(find "$W/crates" -name '*.rs' -newer "$GABBRO" 2>/dev/null | wc -l)"
-if [ "$juenger" != 0 ]; then
-    nicht_gelaufen "$GABBRO is OLDER than $juenger source file(s) under crates/ -- build first"
-fi
+# **Which binary, and is it newer than the sources?** One register, one file:
+# `instrumente/binaer.sh` -- the trap it stands against bit this instrument first.
+. "$(dirname "$0")/binaer.sh"
+GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 
 # -- the mutations (`--gift`) --------------------------------------------------
 #

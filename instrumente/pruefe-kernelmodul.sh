@@ -21,8 +21,9 @@
 #   3. boot QEMU, `insmod` with a PROVISION smaller than the program's declared
 #      ceiling, `rmmod`, and hold the kernel log against the expected lines.
 #
-# WHAT MAKES A GREEN RUN A MEASUREMENT: `--gift N` mutates the harness and the
-# run must turn RED. The mutations are listed in `gifte()` below; `--gift all`
+# WHAT MAKES A GREEN RUN A MEASUREMENT -- the Sprechprobe (speech test) of this
+# instrument:
+# `--gift N` mutates the harness and the run must turn RED. The mutations are listed in `gifte()` below; `--gift all`
 # runs every one of them and reports how many were caught.
 #
 # Missing `qemu-system-x86_64`, `busybox`, `cpio`, the kernel headers or the VM
@@ -58,7 +59,10 @@ FREMD="$W/messung/proben/kmodul/melde.c"
 MODUL=gabbro_halde
 INIT=laden
 EXIT=entladen
-ARENEN='&Knoten_desc'
+# **The arenas are NOT named here.** The emitted unit carries its own list
+# (`#define GABBRO_ARENEN &Knoten_desc`, emitter, 2026-09-28) -- a harness that
+# repeated it would be the second register over one fact, and the one nobody
+# reads is the one that drifts (`W7`).
 VORRAT_KIB=24
 # The kernel lines the run must show, in this order. `k=2 v=33` is the read-back
 # (11 + 22 through the arena), `k=3 v=3` is the THIRD grow refusing.
@@ -83,9 +87,10 @@ done
 [ -r "$VMLINUZ" ] || nicht_gelaufen "no VM kernel at $VMLINUZ (set GABBRO_VMLINUZ)"
 [ -f "$QUELLE" ]  || nicht_gelaufen "no probe source at $QUELLE"
 
-GABBRO="$W/target/release/gabbro"
-[ -x "$GABBRO" ] || GABBRO="$W/target/debug/gabbro"
-[ -x "$GABBRO" ] || nicht_gelaufen "no built gabbro binary (cargo build --release)"
+# **Which binary, and is it newer than the sources?** One register, one file:
+# `instrumente/binaer.sh` -- and this instrument is one of the three the trap bit.
+. "$(dirname "$0")/binaer.sh"
+GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 
 # -- the mutations (`--gift`) --------------------------------------------------
 #
@@ -118,42 +123,44 @@ lauf_einmal() {   # $1 = gift number or "", echoes the QEMU output; returns buil
     local vorrat="$VORRAT_KIB"
     local rmmod_zeile="/bin/busybox rmmod $MODUL && echo \"HARNESS: rmmod ok\" || echo \"HARNESS: rmmod FAILED\""
 
-    mkdir -p "$arb/bau/inc"
-    "$GABBRO" emit "$QUELLE" > "$arb/bau/einheit.c" 2>"$arb/emit.err" || {
-        echo "HARNESS: emit FAILED"
-        cat "$arb/emit.err" >&2
-        return 0
-    }
-    if [ "$gift" = 4 ]; then
-        # A ceiling of 4 slots: every `grow` is past it, so the runtime
-        # fail-stops and `module_init` returns an error.
-        sed -i 's/(uint32_t)(4096)/(uint32_t)(4)/' "$arb/bau/einheit.c"
-        sed -i 's/_Static_assert((4) <= (4096)/_Static_assert((4) <= (4)/' "$arb/bau/einheit.c"
-    fi
-
-    cp "$W/laufzeit/kmodul/kmodul.c" "$arb/bau/gabbro_kmodul.c"
-    cp "$W/laufzeit/kmodul/arena.c"  "$arb/bau/gabbro_arena.c"
-    cp "$W/laufzeit/kmodul/kmodul.h" "$arb/bau/kmodul.h"
-    cp "$W/laufzeit/arena_dyn.h"     "$arb/bau/arena_dyn.h"
-    cp "$W/laufzeit/kmodul/include/"* "$arb/bau/inc/"
-    cp "$FREMD" "$arb/bau/gabbro_fremd.c"
-    # The runtime sits beside the header in the build directory, not one level
-    # up: the copy is flat, so the include is too.
-    sed -i 's#"\.\./arena_dyn\.h"#"arena_dyn.h"#' "$arb/bau/gabbro_arena.c"
-
-    cat > "$arb/bau/Kbuild" <<EOF
-obj-m := $MODUL.o
-$MODUL-y := gabbro_kmodul.o gabbro_arena.o gabbro_fremd.o
-ccflags-y := -I\$(src) -I\$(src)/inc \\
-  -DGABBRO_EINHEIT_INCLUDE='"einheit.c"' \\
-  -DGABBRO_KMOD_INIT=$INIT -DGABBRO_KMOD_EXIT=$EXIT \\
-  -DGABBRO_KMOD_ARENA -DGABBRO_KMOD_ARENA_DESCS='$ARENEN' \\
-  -Wno-unused-function
+    # **The module is built by `gabbro build`, not by this harness** (server lane,
+    # 2026-09-28). Until today the Kbuild, the runtime copies and the `-D`s stood HERE, in
+    # shell, and `gabbro build` could not make a kernel module at all -- two registers over
+    # one artefact, and the one in the shell is the one a user never gets (`W7`). The
+    # manifest below is the whole of what this harness now knows about building: two paths
+    # and the two calls the kernel makes.
+    mkdir -p "$arb"
+    cat > "$arb/manifest" <<EOF
+-- written by instrumente/pruefe-kernelmodul.sh
+compiler cc -std=c11 -Wall -Wextra -Werror
+out $arb/bau
+kmod $W/laufzeit/kmodul $KBUILD
+unit $MODUL module $INIT $EXIT
+  $QUELLE
+  $FREMD
 EOF
-    if ! make -C "$KBUILD" "M=$arb/bau" modules > "$arb/make.log" 2>&1; then
-        echo "HARNESS: module build FAILED"
-        tail -20 "$arb/make.log" >&2
+    if ! "$GABBRO" build "$arb/manifest" > "$arb/bau.log" 2>&1; then
+        echo "HARNESS: gabbro build FAILED"
+        tail -25 "$arb/bau.log" >&2
         return 0
+    fi
+    if [ "$gift" = 4 ]; then
+        # **A ceiling of 4 slots: every `grow` is past it**, so the runtime fail-stops and
+        # `module_init` must refuse the load. The mutation is on the EMITTED C inside the
+        # build directory `gabbro build` left behind, and the module is re-made with the
+        # `Kbuild` the build wrote -- so this gift carries no second copy of the recipe
+        # either. (Mutating the SOURCE would be refused by `N426` one door earlier, and
+        # then the fail-stop never runs.)
+        local kdir="$arb/bau/$MODUL.kmod"
+        sed -i 's/(uint32_t)(4096)/(uint32_t)(4)/' "$kdir/einheit.c"
+        sed -i 's/_Static_assert((4) <= (4096)/_Static_assert((4) <= (4)/' "$kdir/einheit.c"
+        rm -f "$kdir/$MODUL.ko" "$kdir"/*.o
+        if ! make -C "$KBUILD" "M=$(cd "$kdir" && pwd)" modules > "$arb/make.log" 2>&1; then
+            echo "HARNESS: the mutated module did not build"
+            tail -20 "$arb/make.log" >&2
+            return 0
+        fi
+        cp "$kdir/$MODUL.ko" "$arb/bau/$MODUL.ko"
     fi
 
     [ "$gift" = 2 ] && vorrat=64

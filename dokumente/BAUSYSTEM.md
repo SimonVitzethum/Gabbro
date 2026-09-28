@@ -102,6 +102,34 @@ unit lager program
 | `out …` | wohin die Erzeugnisse gehen — keine Sprachfrage |
 | `unit <name> <art>` | **welche Dateien eine Einheit bilden** — der eigentliche Linkschritt |
 | eingerückte Pfade | die Dateien der Einheit — 473 Gegenbeispiele gegen jede Konvention |
+| `metal <dir>` | the bare-metal runtime (`laufzeit/metall`). With it the build links `<unit>.metall.elf` itself (Opus agent J) |
+| `kmod <runtime dir> <kernel build dir>` | the module runtime (`laufzeit/kmodul`) and the kernel's own build tree (`/lib/modules/<release>/build`). **Both are named, neither is guessed**: a path baked in here would be a fact about one machine, a kernel version a fact about one kernel (server lane, 2026-09-28) |
+
+**The third art: `unit <name> module <init> <exit>`** (server lane, 2026-09-28, TODO §0e K4).
+The unit becomes a loadable Linux kernel module: `gabbro build` writes the `Kbuild`, copies the
+runtime and the emitted C beside it, and calls `make -C <kernel build dir> M=<dir> modules`. The
+artefact is `<unit>.ko`.
+
+* **Why the two calls stand in the MANIFEST and not in the source.** A Linux module is entered
+  by a call, not by a vector, so `entry … vector V` — the interrupt form — is the wrong word for
+  it, and *what the product IS has no representative in the source* (§1 above). The same `.gab`
+  becomes an object, a program or a module depending on this line alone.
+* **The init function's answer is the load verdict**: 0 loads, anything else refuses the load
+  and nothing of the unit stays resident. So the build refuses an init that answers nothing —
+  a `void` one would make every load succeed — one that takes an argument, one the unit does
+  not declare, and the same name for both calls. A `module` unit declaring the hosted entry
+  (`pub fn main`) is refused too: the loader never calls it.
+* **A unit's own C bodies**: a `.c` path in a module unit's file list is a foreign body — the
+  body of an `extern fn` the program declared. That is how a kernel call enters the artefact:
+  *what the program calls, the program declares*, and nothing about Linux enters this tree
+  (`TODO.md` §-1). Outside a module unit a `.c` file is refused, because a hosted program with
+  a foreign body is a gap of its own and naming it would be a promise the build does not keep.
+* **The arenas are NOT in the manifest.** The emitted unit carries `#define GABBRO_ARENEN` —
+  the emitter knows which descriptors it wrote — and the runtime reserves exactly that list.
+  A manifest that repeated it would be the second register over one fact (`W7`), and the one
+  nobody reads is the one that drifts.
+* Measured where it can only be measured: `instrumente/pruefe-kernelmodul.sh` builds the probe
+  through `gabbro build` and loads it **in QEMU**, never into the host's kernel.
 
 **Kein Format zum zweiten Mal:** das ist bewusst *kein* Gabbro-Quelltext. `gabbro abi`
 schreibt `.gabi` als gültigen Gabbro-Text, weil eine Schnittstelle **eine Einheit beschreibt**

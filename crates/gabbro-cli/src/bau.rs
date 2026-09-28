@@ -35,6 +35,18 @@ mod treiber;
 pub enum Art {
     Objekt,
     Programm,
+    /// `module <init> <exit>` (server lane, TODO section 0e K4): the unit becomes a
+    /// LOADABLE LINUX KERNEL MODULE, built by `make -C <kernel build dir>` out of the
+    /// emitted C, the module runtime (`laufzeit/kmodul/`) and the unit's own foreign C
+    /// bodies. The two names are the unit's functions that `module_init` and
+    /// `module_exit` call.
+    ///
+    /// **Why the MANIFEST names them and not the source.** A Linux module is entered by
+    /// a call, not by a vector, so `entry … vector V` -- the interrupt form -- is the
+    /// wrong word for it, and what the product IS has no representative in the source
+    /// (`BAUSYSTEM.md` section 1). The unit stays a unit: the same `.gab` becomes an
+    /// object, a program or a module depending on this line alone.
+    Modul,
 }
 
 impl Art {
@@ -42,6 +54,7 @@ impl Art {
         match s {
             "object" | "objekt" => Some(Art::Objekt),
             "program" | "programm" => Some(Art::Programm),
+            "module" | "modul" => Some(Art::Modul),
             _ => None,
         }
     }
@@ -52,6 +65,10 @@ pub struct Einheit {
     pub name: String,
     pub art: Art,
     pub dateien: Vec<String>,
+    /// For `Art::Modul`: the unit's load and unload functions, as the manifest named
+    /// them. Empty for every other art.
+    pub modul_init: String,
+    pub modul_exit: String,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +82,12 @@ pub struct Manifest {
     /// (`laufzeit/metall`). With it, every unit that owns a bare-metal driver is
     /// also LINKED into `<unit>.metall.elf` by the build.
     pub metall: Option<String>,
+    /// `kmod <runtime dir> <kernel build dir>` (server lane, TODO section 0e K4):
+    /// the module runtime (`laufzeit/kmodul`) and the kernel's own build tree
+    /// (`/lib/modules/<release>/build`). **Both are named, neither is guessed** --
+    /// a path baked into this tree would be a fact about one machine, and a kernel
+    /// version baked in would be a fact about one kernel.
+    pub kmod: Option<(String, String)>,
 }
 
 /// **FNV-1a, 64 bit, by hand.**
@@ -104,6 +127,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     let mut ausgabe = String::new();
     let mut einheiten: Vec<Einheit> = Vec::new();
     let mut metall: Option<String> = None;
+    let mut kmod: Option<(String, String)> = None;
     for (nr, roh) in text.lines().enumerate() {
         let nr = nr + 1;
         let ohne_kommentar = match roh.find("--") {
@@ -144,6 +168,17 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                 }
                 ausgabe = worte[1].to_string();
             }
+            "kmod" => {
+                if worte.len() != 3 {
+                    return Err(format!(
+                        "{}:{nr}: `kmod` takes exactly two paths (the module runtime, \
+                         `laufzeit/kmodul`, and the kernel build tree, \
+                         `/lib/modules/<release>/build`)",
+                        pfad.display()
+                    ));
+                }
+                kmod = Some((worte[1].to_string(), worte[2].to_string()));
+            }
             "metal" => {
                 if worte.len() != 2 {
                     return Err(format!(
@@ -155,19 +190,41 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                 metall = Some(worte[1].to_string());
             }
             "unit" => {
-                if worte.len() != 3 {
+                if worte.len() < 3 {
                     return Err(format!(
-                        "{}:{nr}: `unit <name> <object|program>` -- {} word(s) found",
+                        "{}:{nr}: `unit <name> <object|program|module <init> <exit>>` -- {} \
+                         word(s) found",
                         pfad.display(),
                         worte.len()
                     ));
                 }
                 let Some(art) = Art::lies(worte[2]) else {
                     return Err(format!(
-                        "{}:{nr}: `{}` is neither `object` nor `program`",
+                        "{}:{nr}: `{}` is none of `object`, `program`, `module`",
                         pfad.display(),
                         worte[2]
                     ));
+                };
+                // **A module carries its two entry points on the same line.** Not in an
+                // indented line: those are the unit's FILES, and one syntax per thing.
+                let (init, exit) = match (art, worte.len()) {
+                    (Art::Modul, 5) => (worte[3].to_string(), worte[4].to_string()),
+                    (Art::Modul, n) => {
+                        return Err(format!(
+                            "{}:{nr}: `unit <name> module <init> <exit>` -- {n} word(s) \
+                             found. A Linux module is entered by a call, so the two calls \
+                             are named here",
+                            pfad.display()
+                        ))
+                    }
+                    (_, 3) => (String::new(), String::new()),
+                    (_, n) => {
+                        return Err(format!(
+                            "{}:{nr}: `unit <name> {}` takes no further word, {n} found",
+                            pfad.display(),
+                            worte[2]
+                        ))
+                    }
                 };
                 if einheiten.iter().any(|e| e.name == worte[1]) {
                     return Err(format!(
@@ -181,12 +238,14 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                     name: worte[1].to_string(),
                     art,
                     dateien: Vec::new(),
+                    modul_init: init,
+                    modul_exit: exit,
                 });
             }
             andere => {
                 return Err(format!(
                     "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `metal`, \
-                     `unit`, or an INDENTED file path",
+                     `kmod`, `unit`, or an INDENTED file path",
                     pfad.display()
                 ));
             }
@@ -208,7 +267,24 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             leer.name
         ));
     }
-    Ok(Manifest { compiler, ausgabe, einheiten, metall })
+    // **A `module` unit without a `kmod` line, and a `kmod` line without a module unit.**
+    // Both halves, because both are a claim nobody keeps: the first asks for an artefact the
+    // build cannot make, the second names two paths nothing reads.
+    if einheiten.iter().any(|e| e.art == Art::Modul) && kmod.is_none() {
+        return Err(format!(
+            "{}: a `module` unit stands here and no `kmod <runtime dir> <kernel build dir>` \
+             line -- the build has neither the module runtime nor a kernel to build against",
+            pfad.display()
+        ));
+    }
+    if kmod.is_some() && !einheiten.iter().any(|e| e.art == Art::Modul) {
+        return Err(format!(
+            "{}: a `kmod` line stands here and no `unit … module <init> <exit>` -- two paths \
+             nothing reads",
+            pfad.display()
+        ));
+    }
+    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod })
 }
 
 /// **The name the linker looks for, and this is the only place in the tree that spells it.**
@@ -559,6 +635,18 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
                 eintritte.iter().map(ort).collect::<Vec<_>>().join(", ")
             )),
         },
+        // **A module has no hosted entry either, and for a sharper reason than a library.**
+        // `module_init` calls the function the manifest names; a `pub fn haupt()` in a
+        // kernel module is a name the loader never calls and the kernel never links --
+        // dead weight that looks like an entry point.
+        Art::Modul => eintritte.first().map(|e| {
+            format!(
+                "this `module` declares {} -- a kernel module is entered by the calls the \
+                 manifest names (`unit … module <init> <exit>`), never by the hosted entry\n\
+                 \x20        = remove it, or declare this unit `program`",
+                ort(e)
+            )
+        }),
         // A library that defines the entry collides with the program that links it -- and it
         // collides at the LINKER, over two units, which is exactly the seam nothing else in
         // this build sees.
@@ -572,6 +660,61 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
             )
         }),
     }
+}
+
+/// **The module rule: the two calls the kernel makes must be callable** (server lane,
+/// 2026-09-28, TODO section 0e K4).
+///
+/// `module_init` calls `GABBRO_KMOD_INIT()` and reads its answer as the load verdict;
+/// `module_exit` calls `GABBRO_KMOD_EXIT()`. Both are ORDINARY functions of the unit, named
+/// by the manifest -- so three things have to hold, and each one fails at a different, worse
+/// place if it is not checked here:
+///
+/// | | without this rule |
+/// |---|---|
+/// | the name exists in the unit | the kernel build says *implicit declaration of function* |
+/// | it takes no argument | the module passes nothing and the function reads a register nobody set |
+/// | it answers a value | `module_init` has no verdict, and a refused load looks like a good one |
+///
+/// *The third is the one that matters most:* the load verdict is how a Gabbro module refuses
+/// to be loaded (`laufzeit/kmodul/kmodul.c`), and a `void` init would make every load succeed.
+fn modulregel(e: &Einheit, funktionen: &BTreeMap<String, Vec<FunktionsForm>>) -> Option<String> {
+    if e.art != Art::Modul {
+        return None;
+    }
+    for (rolle, name) in [("init", &e.modul_init), ("exit", &e.modul_exit)] {
+        let Some(formen) = funktionen.get(name.as_str()) else {
+            return Some(format!(
+                "the manifest names `{name}` as this module's {rolle} function, and the unit \
+                 declares no `{name}`\n\
+                 \x20        = without this rule the refusal is the kernel build's, in a \
+                 `make` log"
+            ));
+        };
+        for f in formen {
+            if f.parameter != 0 {
+                return Some(format!(
+                    "`{name}` ({rolle}) takes {} parameter(s) -- `module_{rolle}` passes none",
+                    f.parameter
+                ));
+            }
+            if !f.liefert {
+                return Some(format!(
+                    "`{name}` ({rolle}) answers nothing -- a module's {rolle} function \
+                     carries the load verdict (0 loads, anything else refuses the load), and \
+                     a `void` one would make every load succeed"
+                ));
+            }
+        }
+    }
+    if e.modul_init == e.modul_exit {
+        return Some(format!(
+            "`{}` is named as BOTH the init and the exit function -- loading and unloading \
+             are not the same call",
+            e.modul_init
+        ));
+    }
+    None
 }
 
 /// **What the driver step carries per unit: the resolved roots and locks.**
@@ -896,9 +1039,37 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         BTreeMap::new();
     // **What the bare-metal driver installs besides** (Opus agent J): entries, rcu, cells.
     let mut metall_je_einheit: BTreeMap<String, MetallFunde> = BTreeMap::new();
+    // **A unit's own C bodies** (server lane, TODO section 0e K4): the `.c` files a
+    // `module` unit names beside its `.gab` sources. They are the bodies of the `extern fn`
+    // items the PROGRAM declares -- the whole of its kernel API, written by whoever wrote
+    // the declaration (`TODO.md` section -1). They are not Gabbro and are never parsed as
+    // Gabbro; they are compiled into the module beside the emitted C.
+    let mut fremde_je_einheit: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for e in &manifest.einheiten {
         let mut quellen = Vec::new();
+        let mut fremde: Vec<String> = Vec::new();
         for d in &e.dateien {
+            if d.ends_with(".c") {
+                // **Only a module carries one today, and the refusal says so rather than
+                // compiling it into nothing.** A hosted `program` with a foreign body is a
+                // build-system gap of its own (the emission harness writes those drivers by
+                // hand); naming it here would be a promise this build does not keep.
+                if e.art != Art::Modul {
+                    eprintln!(
+                        "gabbro build: unit `{}` names the C file `{d}` and is not a \
+                         `module` -- a foreign C body is carried into a kernel module \
+                         today and nowhere else",
+                        e.name
+                    );
+                    return std::process::ExitCode::from(1);
+                }
+                if !Path::new(d).is_file() {
+                    eprintln!("gabbro build: {d}: no such file");
+                    return std::process::ExitCode::from(2);
+                }
+                fremde.push(d.clone());
+                continue;
+            }
             match std::fs::read_to_string(d) {
                 Ok(q) => quellen.push((d.clone(), q)),
                 Err(err) => {
@@ -907,6 +1078,15 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 }
             }
         }
+        if quellen.is_empty() {
+            eprintln!(
+                "gabbro build: unit `{}` names no `.gab` file -- a unit of C alone is not a \
+                 Gabbro unit",
+                e.name
+            );
+            return std::process::ExitCode::from(1);
+        }
+        fremde_je_einheit.insert(e.name.clone(), fremde);
         let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall) =
             modulkarte(&quellen);
         metall_je_einheit.insert(e.name.clone(), metall);
@@ -967,6 +1147,14 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
+            }
+            // **And the module rule, for the third time the same reason** (server lane):
+            // the two calls a kernel module is entered by are read out of the sources this
+            // manifest names, so a plan whose init the kernel could not call says so before
+            // a `Kbuild` is written -- and before a kernel build tree is even needed.
+            if let Some(befund) = modulregel(e, &funktionen_je_einheit[name]) {
+                befunde += 1;
+                println!("  REFUSED  {name} (module): {befund}");
             }
             // **The dry run carries the driver rule too, for the same reason.**
             // The roots are read out of the sources this manifest names, so a
@@ -1073,7 +1261,24 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 continue;
             }
         };
-        match baue_einheit(&manifest, e, quellen, &unten, bau, pruefbau, treiber_plan.as_ref()) {
+        // **The module rule, beside the entry rule and the driver rule** (server lane).
+        // It runs BEFORE any C is written, for the same reason as the other two: a module
+        // whose init the kernel cannot call builds cleanly and fails at `insmod`.
+        if let Some(befund) = modulregel(e, &funktionen_je_einheit[name]) {
+            abgesagt += 1;
+            println!("REFUSED  {name} (module): {befund}");
+            continue;
+        }
+        match baue_einheit(
+            &manifest,
+            e,
+            quellen,
+            &fremde_je_einheit[name],
+            &unten,
+            bau,
+            pruefbau,
+            treiber_plan.as_ref(),
+        ) {
             Ergebnis::Gebaut { gabi, abdruck } => {
                 gebaut += 1;
                 gabi_je_einheit.insert(name.clone(), gabi);
@@ -1253,6 +1458,7 @@ fn baue_einheit(
     manifest: &Manifest,
     e: &Einheit,
     quellen: &[(String, String)],
+    fremde: &[String],
     unten: &Unterbau,
     bau: gabbro_check::gatter::Bau,
     pruefbau: bool,
@@ -1323,6 +1529,8 @@ fn baue_einheit(
     let erzeugnis = match e.art {
         Art::Objekt => objekt.clone(),
         Art::Programm => PathBuf::from(&manifest.ausgabe).join(&e.name),
+        // The artefact of a module unit is the `.ko` the kernel's own build writes.
+        Art::Modul => PathBuf::from(&manifest.ausgabe).join(format!("{}.ko", e.name)),
     };
     let marke = PathBuf::from(&manifest.ausgabe).join(format!("{}.abdruck", e.name));
 
@@ -1461,6 +1669,20 @@ fn baue_einheit(
         }
     }
 
+    // **The kernel module, built by the KERNEL's own build system** (server lane,
+    // TODO section 0e K4). Not by `cc` here: a module is compiled with the flags of the
+    // kernel it is loaded into, and those flags belong to that kernel's `Kbuild`, not to this
+    // tree. So the build writes the `Kbuild` and calls `make -C <kernel build dir>` --
+    // exactly what `instrumente/pruefe-kernelmodul.sh` did in shell until today, and now in
+    // ONE place (`W7`).
+    if e.art == Art::Modul {
+        if let Some((laufzeit, kernbau)) = &manifest.kmod {
+            if let Err(grund) = kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde) {
+                return Ergebnis::Abgesagt(grund);
+            }
+        }
+    }
+
     // **The record is written LAST.** Written before the compiler ran, it would call a failed
     // build current on the next run.
     if let Err(err) = std::fs::write(&marke, format!("{abdruck_text}\n")) {
@@ -1555,6 +1777,123 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let mut c = std::process::Command::new("objcopy");
     c.args(["-O", "elf32-i386"]).arg(&bild).arg(aus.join(format!("{name}.metall.boot.elf")));
     lauf(c, "objcopy to ELF32 (the Multiboot1 hand-over)")?;
+    Ok(())
+}
+
+/// The module runtime's files, relative to the `kmod` runtime directory. Their bytes are
+/// part of the module's fingerprint -- a changed `kmodul.c` rebuilds the `.ko`.
+const KMOD_QUELLEN: [&str; 4] = ["kmodul.c", "arena.c", "kmodul.h", "include/stdint.h"];
+
+/// **Build `<unit>.ko` with the kernel's own build system** (server lane, TODO section 0e K4).
+///
+/// The recipe, and every step is a named refusal:
+///
+///  1. a build directory of its own under `out/` (`<unit>.kmod/`), because `make M=<dir>`
+///     writes a dozen files beside the sources and none of them belong next to the emitted C;
+///  2. the runtime, the emitted unit and the unit's own C bodies copied in FLAT -- the
+///     includes are then flat too, which is why `arena.c`'s one `../arena_dyn.h` is rewritten;
+///  3. a `Kbuild` naming the objects and the three `-D`s the runtime reads (the arenas are
+///     NOT among them: the emitted unit carries `GABBRO_ARENEN` itself);
+///  4. `make -C <kernel build dir> M=<dir> modules`;
+///  5. the `.ko` moved beside the other artefacts as `<unit>.ko`.
+///
+/// **Nothing about Linux is decided here.** The module's name is the unit's, its init and exit
+/// are the functions the manifest named, its kernel calls are the `extern fn` items the program
+/// declared, and their bodies are the `.c` files the manifest named. A different kernel gets a
+/// different `kmod` line and not a different Gabbro.
+fn kmod_modul_binden(
+    manifest: &Manifest,
+    laufzeit: &str,
+    kernbau: &str,
+    e: &Einheit,
+    fremde: &[String],
+) -> Result<(), String> {
+    let aus = PathBuf::from(&manifest.ausgabe);
+    let bau = aus.join(format!("{}.kmod", e.name));
+    let laufzeit = PathBuf::from(laufzeit);
+    let kernbau = PathBuf::from(kernbau);
+    if !kernbau.is_dir() {
+        return Err(format!(
+            "kernel module: `{}` is no directory -- the `kmod` line names the kernel build \
+             tree (on a Debian-like system `/lib/modules/$(uname -r)/build`, from the \
+             `linux-headers` package)",
+            kernbau.display()
+        ));
+    }
+    if !laufzeit.join("kmodul.c").is_file() {
+        return Err(format!(
+            "kernel module: `{}` holds no `kmodul.c` -- the `kmod` line names the module \
+             runtime (`laufzeit/kmodul`)",
+            laufzeit.display()
+        ));
+    }
+    std::fs::create_dir_all(bau.join("inc"))
+        .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
+    let kopiere = |von: PathBuf, nach: PathBuf| -> Result<(), String> {
+        std::fs::copy(&von, &nach)
+            .map(|_| ())
+            .map_err(|err| format!("kernel module: {} -> {}: {err}", von.display(), nach.display()))
+    };
+    kopiere(laufzeit.join("kmodul.c"), bau.join("gabbro_kmodul.c"))?;
+    kopiere(laufzeit.join("kmodul.h"), bau.join("kmodul.h"))?;
+    kopiere(laufzeit.join("../arena_dyn.h"), bau.join("arena_dyn.h"))?;
+    // The runtime's arena half sits beside a header one level up in the tree and FLAT here.
+    let arena = std::fs::read_to_string(laufzeit.join("arena.c"))
+        .map_err(|err| format!("kernel module: {}/arena.c: {err}", laufzeit.display()))?;
+    std::fs::write(bau.join("gabbro_arena.c"), arena.replace("\"../arena_dyn.h\"", "\"arena_dyn.h\""))
+        .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
+    let inc = laufzeit.join("include");
+    let eintraege = std::fs::read_dir(&inc)
+        .map_err(|err| format!("kernel module: {}: {err}", inc.display()))?;
+    for x in eintraege {
+        let x = x.map_err(|err| format!("kernel module: {}: {err}", inc.display()))?;
+        let ziel = bau.join("inc").join(x.file_name());
+        kopiere(x.path(), ziel)?;
+    }
+    kopiere(aus.join(format!("{}.c", e.name)), bau.join("einheit.c"))?;
+    let mut objekte = vec!["gabbro_kmodul.o".to_string(), "gabbro_arena.o".to_string()];
+    for (i, f) in fremde.iter().enumerate() {
+        kopiere(PathBuf::from(f), bau.join(format!("gabbro_fremd{i}.c")))?;
+        objekte.push(format!("gabbro_fremd{i}.o"));
+    }
+    let kbuild = format!(
+        "obj-m := {name}.o\n\
+         {name}-y := {objekte}\n\
+         ccflags-y := -I$(src) -I$(src)/inc \\\n\
+         \x20 -DGABBRO_EINHEIT_INCLUDE='\"einheit.c\"' \\\n\
+         \x20 -DGABBRO_KMOD_INIT={init} -DGABBRO_KMOD_EXIT={exit} \\\n\
+         \x20 -Wno-unused-function\n",
+        name = e.name,
+        objekte = objekte.join(" "),
+        init = e.modul_init,
+        exit = e.modul_exit,
+    );
+    std::fs::write(bau.join("Kbuild"), kbuild)
+        .map_err(|err| format!("kernel module: {}/Kbuild: {err}", bau.display()))?;
+    let bau_abs = std::fs::canonicalize(&bau)
+        .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
+    let mut c = std::process::Command::new("make");
+    c.arg("-C").arg(&kernbau).arg(format!("M={}", bau_abs.display())).arg("modules");
+    match c.output() {
+        Ok(o) if o.status.success() => {}
+        Ok(o) => {
+            eprint!("{}", String::from_utf8_lossy(&o.stderr));
+            return Err(format!(
+                "kernel module: `make -C {} M={} modules` refused (see above)",
+                kernbau.display(),
+                bau_abs.display()
+            ));
+        }
+        Err(err) => return Err(format!("kernel module: `make` did not run: {err}")),
+    }
+    let ko = bau.join(format!("{}.ko", e.name));
+    if !ko.is_file() {
+        return Err(format!(
+            "kernel module: `make` succeeded and wrote no {} -- nothing to load",
+            ko.display()
+        ));
+    }
+    kopiere(ko, aus.join(format!("{}.ko", e.name)))?;
     Ok(())
 }
 

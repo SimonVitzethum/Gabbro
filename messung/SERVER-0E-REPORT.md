@@ -514,3 +514,132 @@ claim does not hold and is corrected here.* Pulling the three ratchets straight 
 translation job across the checker's diagnostics and belongs to the language lane, not to
 section 0e -- and the guardian TRUNCATES at that point, so what stands behind it was not
 measured either way.
+
+---
+
+## 8. K4 -- `gabbro build` makes the kernel module
+
+*Added 2026-09-28, session 2. The residue STAND.md named: until now the module was built by
+`instrumente/pruefe-kernelmodul.sh` in shell, and `gabbro build` could not make one at all --
+two registers over one artefact, and the one in the shell is the one a user never gets (`W7`).*
+
+### 8.1 The manifest, and what is NOT in it
+
+```
+compiler cc -std=c11 -Wall -Wextra -Werror
+out bau
+kmod /home/ubuntu/Gabbro/laufzeit/kmodul /lib/modules/6.8.0-139-generic/build
+unit gabbro_halde module laden entladen
+  messung/proben/kmodul/halde-treiber.gab
+  messung/proben/kmodul/melde.c
+```
+
+Four decisions, each with its reason:
+
+| | |
+|---|---|
+| `kmod <runtime dir> <kernel build dir>` | **both named, neither guessed.** A path baked into the tree would be a fact about one machine, a kernel version a fact about one kernel |
+| `unit <name> module <init> <exit>` | a third art beside `object` and `program`. A Linux module is entered by a CALL, not by a vector, so `entry … vector V` is the wrong word for it, and *what the product IS has no representative in the source* (`BAUSYSTEM.md` §1). The same `.gab` becomes an object, a program or a module by this line alone |
+| a `.c` path in a module unit's file list | the body of an `extern fn` the PROGRAM declared -- that is how a kernel call enters the artefact, and why no table of Linux functions enters this tree. Outside a module unit a `.c` file is REFUSED: a hosted program with a foreign body is a gap of its own, and naming it would be a promise the build does not keep |
+| the arenas are **not** in the manifest | the emitted unit carries `#define GABBRO_ARENEN &Knoten_desc` -- written by the emitter, the only thing that knows which descriptors it emitted. See §8.2 |
+
+Measured:
+
+```
+$ gabbro build manifest
+built    gabbro_halde
+built 1 unit(s), 0 up to date, 0 refused -- 2 file(s) named by this manifest
+$ file bau/gabbro_halde.ko
+ELF 64-bit LSB relocatable, x86-64 … BuildID[sha1]=62f9db55… not stripped
+$ modinfo bau/gabbro_halde.ko
+description:    a Gabbro unit as a Linux kernel module
+license:        Dual MIT/GPL
+```
+
+### 8.2 `GABBRO_ARENEN` -- the unit says which arenas it has
+
+Until today every driver learned the arena list from somewhere else: the emission harness
+writes `gabbro_arena_reserve(&Vorrat_desc);` by hand, and `pruefe-kernelmodul.sh` passed
+`-DGABBRO_KMOD_ARENA_DESCS='&Knoten_desc'` on the command line. **An arena added to the
+program and forgotten in the driver is an unreserved arena -- a null base at the first
+`alloc`.** The emitter now writes the list it just emitted, under the same condition as the
+descriptors (`max` stands AND the arena is used), in declaration order. Corpus reach,
+measured: **4 of 317** emitting files gain the line (`beispiele/158-arena-commit.gab`, the two
+`arena-h4` twins, the kernel-module probe); `laufzeit/kmodul/kmodul.c` reads it instead of its
+`-D`, and the harness no longer names an arena at all.
+
+### 8.3 The refusals, and where each would otherwise have surfaced
+
+The module rule runs BEFORE any C is written, beside the entry rule and the driver rule --
+and in `--dry-run` too, so it needs no kernel and no compiler:
+
+| refused | otherwise |
+|---|---|
+| an init/exit the unit does not declare | *implicit declaration of function*, in a `make` log |
+| one that takes an argument | the module passes nothing and the function reads a register nobody set |
+| one that answers nothing | **`module_init` has no verdict, and a refused load looks like a good one** |
+| the same name for both | loading and unloading are not one call |
+| a `module` unit declaring `pub fn main` | a name the loader never calls and the kernel never links |
+| a `module` unit without a `kmod` line, and a `kmod` line without a module unit | a claim nobody keeps, in both directions |
+| a `.c` file in a non-module unit | silently compiled into nothing |
+
+Held by `crates/gabbro-cli/tests/bausystem.rs` (6 new tests, `--dry-run` so they need no kernel
+headers): `cargo test --no-fail-fast` **1415 passed, 0 failed** (1409 before).
+
+### 8.4 The instrument now builds through the build
+
+`instrumente/pruefe-kernelmodul.sh` writes a manifest and calls `gabbro build`; the Kbuild, the
+runtime copies and the `-D`s are gone from the shell. It still owns what only it can own: the
+QEMU boot, the expected kernel lines, and the four mutations. **4 of 4 caught, unchanged**, and
+the green run is the same as before:
+
+```
+HARNESS: insmod ok / rmmod ok
+gabbro-halde: k=1 v=0    k=2 v=33    k=3 v=3    k=9 v=0
+GREEN: loaded, allocated, refused on full, reported, unloaded clean.
+```
+
+Gift 4 (the one that found the `module_init` defect in session 1) keeps working and keeps its
+meaning: it mutates the EMITTED C inside the build directory `gabbro build` left behind and
+re-makes with the `Kbuild` the build wrote -- so it carries no second copy of the recipe
+either. *Mutating the source instead would be refused by `N426` one door earlier, and then the
+fail-stop never runs.*
+
+### 8.5 A third instance of one trap, and the register it got
+
+`miss-arena-decke.sh` was the third instrument in one day to measure a STALE binary -- and its
+verdict was the worst kind: **GREEN over the wrong bytes.** It had taken
+`target/release/gabbro` because it existed, from before the emitter change under test.
+
+`instrumente/binaer.sh` is now the one register: take the NEWER of the two profiles, and if any
+`crates/**.rs` is younger than it, refuse with a reason and return 2 -- *a binary older than a
+source is an ABORT, not a finding.* All three instruments source it.
+`pruefe-waechter.py` books it as a sourced library (like `abschnitt.sh`) and DRIVES its speech
+probe in both directions on a throwaway tree: a newer binary comes back, an older one is
+refused with `OLDER than 1 source file`.
+
+H4 re-measured with a release binary built from this tree (the numbers moved because the
+emitted C gained the arena list, not because the ceiling costs anything):
+
+```
+                        max 1310720 (10 MiB)   max 4294967295 (32 GiB)
+translate (ms, best of 5)                5                         5
+emitted C (bytes)                     3512                      3524
+emitted C (lines)                       76                        76
+binary (bytes)                       16488                     16488
+binary .bss (bytes)                     24                        24
+GREEN: the ceiling costs nothing        (`--gift` still caught)
+```
+
+### 8.6 The walls after K4
+
+| wall | number | command |
+|---|---|---|
+| `cargo test --no-fail-fast` | rc 0, **1415 passed, 0 failed** | `cargo test --no-fail-fast` |
+| `pruefe-emission.sh` | rc 0, **ALL PASS -- 51 durchgestochen, 319 von 319 uebersetzen**, all 12 stages | `instrumente/pruefe-emission.sh` |
+| kernel module in QEMU | GREEN, `--gift all` 4 of 4 caught, built by `gabbro build` | `instrumente/pruefe-kernelmodul.sh` |
+| the concurrent twin | GREEN, 20 of 20 | `instrumente/pruefe-nebenlaeufig-zwilling.sh` |
+| H4 | GREEN, `--gift` caught | `instrumente/miss-arena-decke.sh` |
+| `pruefe-cformen.py`, `pruefe-ctext.py`, `pruefe-todo.py`, `pruefe-saetze.py` | rc 0 each | -- |
+| `pruefe-waechter.py` | rc 1, and **one pre-existing hole fewer**: `pruefe-kernelmodul.sh` no longer lacks its speech-probe word. The five remaining `FEHLT` rows and the truncation ratchet (33) are unchanged and none of them this lane's | `instrumente/pruefe-waechter.py` |
+| `grammatik` Lean build / `#print axioms gabbro_ziel` | 355 jobs no error / `[propext, Classical.choice, Quot.sound]` | `cd grammatik && lake build`, `lake env lean Nachpruefung.lean` |

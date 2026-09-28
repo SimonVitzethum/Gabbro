@@ -3210,6 +3210,39 @@ pub fn emittiere_mit(
         aus.insert_str(ketten_marke, &abschnitt);
     }
     aus.push_str(&rumpf);
+    // **The unit's own list of dynamic arena descriptors** (server lane, 2026-09-28,
+    // TODO section 0e K4).
+    //
+    // A driver has to reserve every dynamic arena BEFORE any of the unit's code runs --
+    // hosted, on bare metal and inside a kernel module alike. Until today every driver
+    // learned the list from somewhere else: the emission harness writes
+    // `gabbro_arena_reserve(&Vorrat_desc);` by hand, and
+    // `instrumente/pruefe-kernelmodul.sh` passed `-DGABBRO_KMOD_ARENA_DESCS='&Knoten_desc'`
+    // on the command line. **Two registers over one fact, and the one nobody reads is the
+    // one that drifts** (W7): an arena added to the program and forgotten in the driver is
+    // an unreserved arena, which is a null base at the first `alloc`.
+    //
+    // So the unit says it itself, and it says exactly what it emitted: the same condition
+    // as the descriptors above (`max` stands AND the arena is used), in declaration order.
+    // A unit without a dynamic arena gets no line and keeps today's bytes.
+    let mut arenen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Arena(a) = &item.art {
+            if a.max.is_some() && namen.arenen_global.contains(&a.name.text) {
+                arenen.push(format!("&{}_desc", a.name.text));
+            }
+        }
+    });
+    if !arenen.is_empty() {
+        aus.push_str(&format!(
+            "\n/* The dynamic arenas of this unit, in declaration order: the ONE list a driver\n\
+ * needs to reserve (`gabbro_arena_reserve`) before any of the unit's code runs. It is\n\
+ * written here because this file knows which descriptors it emitted -- a driver that\n\
+ * carries its own copy carries one that can go stale. */\n\
+#define GABBRO_ARENEN {}\n",
+            arenen.join(", ")
+        ));
+    }
     aus
 }
 

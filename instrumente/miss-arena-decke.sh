@@ -39,12 +39,13 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-GABBRO="$W/target/release/gabbro"
-if [ ! -x "$GABBRO" ]; then
-    GABBRO="$W/target/debug/gabbro"
-fi
-if [ ! -x "$GABBRO" ]; then
-    echo "ABORT: no built gabbro binary -- run 'cargo build --release' first." >&2
+# **Which binary, and is it newer than the sources?** One register, one file
+# (`instrumente/binaer.sh`). This instrument was the third one the trap bit on
+# 2026-09-28: it measured the emitted C of an emitter that no longer existed and
+# printed GREEN over the wrong bytes.
+. "$(dirname "$0")/binaer.sh"
+if ! GABBRO="$(gabbro_binaer "$W")"; then
+    echo "ABORT: $GABBRO" >&2
     echo "       (an instrument that measures nothing must say so, not print zeroes)" >&2
     exit 2
 fi

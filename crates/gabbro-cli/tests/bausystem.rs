@@ -237,3 +237,156 @@ fn gabbro_bau_abdruck(teile: &[&[u8]]) -> u64 {
     }
     h
 }
+
+// --- `kmod` and `unit … module <init> <exit>` (server lane, TODO 0e K4) -----------------
+//
+// The manifest's third art: a unit that becomes a LOADABLE LINUX KERNEL MODULE. What is
+// held here is the part that needs no kernel -- the parsing and the four refusals. The
+// artefact itself is measured where it can only be measured, in QEMU
+// (`instrumente/pruefe-kernelmodul.sh`), because a `.ko` that is not loaded is a file.
+
+fn kratz(marke: &str) -> std::path::PathBuf {
+    let d = std::env::temp_dir().join(format!("gabbro-kmod-{}-{marke}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).expect("scratch directory");
+    d
+}
+
+/// Writes a manifest and a tiny unit into a scratch directory and runs `--dry-run` over it.
+/// `--dry-run` is the point: it walks the graph and applies every rule, and it calls neither
+/// `cc` nor `make`, so a machine without kernel headers measures the same thing.
+fn kmod_lauf(marke: &str, unitzeile: &str, quelle: &str, kmodzeile: &str) -> (String, String, i32) {
+    let d = kratz(marke);
+    std::fs::write(d.join("u.gab"), quelle).expect("unit");
+    std::fs::write(d.join("melde.c"), "void gabbro_kmod_melde(void) { }\n").expect("body");
+    let manifest = format!(
+        "compiler cc -std=c11\nout {aus}\n{kmodzeile}{unitzeile}\n  {q}\n  {c}\n",
+        aus = d.join("bau").display(),
+        q = d.join("u.gab").display(),
+        c = d.join("melde.c").display(),
+    );
+    let mpfad = d.join("manifest");
+    std::fs::write(&mpfad, manifest).expect("manifest");
+    lauf(&["build", "--dry-run", mpfad.to_str().expect("utf8")])
+}
+
+const KMOD_EINHEIT: &str = "module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+
+/// **The good case: the manifest parses, the graph walks, the rules hold.**
+#[test]
+fn ein_modul_im_manifest_wird_gelesen() {
+    let (aus, fehler, code) = kmod_lauf(
+        "gut",
+        "unit gabbro_probe module laden entladen",
+        KMOD_EINHEIT,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_eq!(code, 0, "the manifest is read:\n{aus}\n{fehler}");
+    assert!(aus.contains("gabbro_probe"), "the unit is named:\n{aus}");
+}
+
+/// **A `module` unit without a `kmod` line, and the other way round.** Both are a claim
+/// nobody keeps: the first asks for an artefact the build cannot make, the second names two
+/// paths nothing reads.
+#[test]
+fn modul_ohne_kmod_und_kmod_ohne_modul() {
+    let (_, fehler, code) = kmod_lauf(
+        "ohnekmod",
+        "unit gabbro_probe module laden entladen",
+        KMOD_EINHEIT,
+        "",
+    );
+    assert_ne!(code, 0, "a module without a `kmod` line is refused");
+    assert!(fehler.contains("no `kmod"), "with its reason:\n{fehler}");
+    let (_, fehler, code) = kmod_lauf(
+        "ohnemodul",
+        "unit gabbro_probe object",
+        KMOD_EINHEIT,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_ne!(code, 0, "a `kmod` line without a module unit is refused");
+    assert!(fehler.contains("nothing reads"), "with its reason:\n{fehler}");
+}
+
+/// **The three ways the two calls can be uncallable**, each with its own reason: a name the
+/// unit does not declare, one that takes an argument, and one that answers nothing -- the
+/// last is the load verdict, and a `void` init would make every load succeed.
+#[test]
+fn die_beiden_rufe_des_moduls_muessen_rufbar_sein() {
+    let kmod = "kmod laufzeit/kmodul /lib/modules/x/build\n";
+    let (aus, _, code) = kmod_lauf(
+        "kein_init",
+        "unit gabbro_probe module gibtsnicht entladen",
+        KMOD_EINHEIT,
+        kmod,
+    );
+    assert_ne!(code, 0, "an init the unit does not declare is refused");
+    assert!(aus.contains("declares no `gibtsnicht`"), "by name:\n{aus}");
+
+    let mit_parameter = "module treiber::probe {
+impl fn laden(n : u32) -> u32 effects { pure } costs <= 8 ops { return n; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf(
+        "mit_parameter",
+        "unit gabbro_probe module laden entladen",
+        mit_parameter,
+        kmod,
+    );
+    assert_ne!(code, 0, "an init with a parameter is refused");
+    assert!(aus.contains("parameter(s)"), "with the arity named:\n{aus}");
+
+    let ohne_wert = "module treiber::probe {
+impl fn laden() effects { pure } costs <= 8 ops { }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) =
+        kmod_lauf("ohne_wert", "unit gabbro_probe module laden entladen", ohne_wert, kmod);
+    assert_ne!(code, 0, "an init that answers nothing is refused");
+    assert!(aus.contains("load verdict"), "and the reason is the verdict:\n{aus}");
+
+    let (aus, _, code) =
+        kmod_lauf("gleich", "unit gabbro_probe module laden laden", KMOD_EINHEIT, kmod);
+    assert_ne!(code, 0, "one function as both init and exit is refused");
+    assert!(aus.contains("BOTH"), "loading and unloading are not one call:\n{aus}");
+}
+
+/// **A foreign C body belongs to a module today and nowhere else**, and the refusal says so
+/// instead of compiling it into nothing. (A hosted `program` with a foreign body is a
+/// build-system gap of its own -- the emission harness writes those drivers by hand.)
+#[test]
+fn ein_c_rumpf_ausserhalb_eines_moduls_faellt() {
+    let (_, fehler, code) = kmod_lauf("crumpf", "unit gabbro_probe object", KMOD_EINHEIT, "");
+    assert_ne!(code, 0, "a `.c` file in an `object` unit is refused");
+    assert!(
+        fehler.contains("foreign C body") && fehler.contains("kernel module"),
+        "with its reason:\n{fehler}"
+    );
+}
+
+/// **A `module` unit may not declare the hosted entry.** `module_init` calls the function the
+/// manifest names; a `pub fn haupt()` in a kernel module is a name the loader never calls and
+/// the kernel never links.
+#[test]
+fn ein_modul_mit_hosted_eintritt_faellt() {
+    let mit_haupt = "module treiber::probe {
+pub impl fn main() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf(
+        "mit_haupt",
+        "unit gabbro_probe module laden entladen",
+        mit_haupt,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_ne!(code, 0, "a module with the hosted entry is refused");
+    assert!(aus.contains("entered by the calls the manifest names"), "with its reason:\n{aus}");
+}
