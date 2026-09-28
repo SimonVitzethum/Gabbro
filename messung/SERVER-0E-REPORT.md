@@ -795,12 +795,35 @@ What lifting it needs is written down: **OFFEN O34**.
 
 ### 9.7 What is still open in §0e, and it is one box
 
-**Box 2, K2/K3.** In order: `start` lowering (`C001`) and export (`LG004`, no model of
-statement-level starts); then the `entry`/`boot` vector, registers and steps (today only the
-dispatch root travels); then handler pinning/re-entry and `cli`/`sti` in the C (OFFEN O19 — the
-model leg `KernHaltE` stands, the C masks nothing). The kernel module built here has neither a
-`start` nor an `entry`: its init and exit are ordinary functions, which is what a Linux module
-is entered by — so K4/K5 did not need K2/K3, and that is why the two boxes could close first.
+**Box 2 — and K2 turned out to be stale, like box 1's row was on 2026-09-28.** Measured
+here, with the commands:
+
+| half | what the row said | what is there |
+|---|---|---|
+| `start` LOWERING (`C001`) | open | **stands.** `./target/release/gabbro emit beispiele/159-laufzeit-start.gab` → **0 `C001`**; the C calls `gabbro_faden_start` per root with its own stack and join word (`gabbro_stapel_0_0 + 65536u`, `&gabbro_wort_0_0`) and `__builtin_trap()`s on the same line when the kernel refuses (lane 260). The emitter refuses only shapes the checker already owns (`N459`–`N462`) |
+| `start` EXPORT (`LG004`) | *"no model of statement-level starts"* | **there is a model.** The `StmtArt::Start` arm of `lean_g.rs` is `tr_rest` — it refuses nothing — and the roots travel as `gE.gestartet` (`check_gestartet`): spawn and join are steps of the THREAD machine (Opus agent A, `FadenSchritt.start`/`.join`). What the model does NOT fix is the statement's own point among the lock-free spawn points; it over-approximates, and that is OFFEN O22, recorded |
+
+**What is actually missing is a PROGRAM, not a form.** The corpus has exactly one
+statement-level `start` (`beispiele/159-laufzeit-start.gab`), and the exporter refuses it for
+reasons that have nothing to do with `start`:
+
+```
+$ ./target/release/gabbro lean-g beispiele/159-laufzeit-start.gab
+gabbro lean-g: [LG002] field stand is wrapping
+# with `wrapping` replaced by a bounded field and the increment guarded (scratch copy):
+gabbro lean-g: [LG004] function lauf falls off with a result
+```
+
+— the second is its tail being a `locks` block whose `return` stands inside. So no `start`
+program is CERTIFIED yet, and closing that is **exporter-fragment work**, not `start` work.
+
+**K3 is the box.** The `entry`/`boot` vector, registers and steps (today only the dispatch
+root travels); then handler pinning/re-entry and `cli`/`sti` in the C — OFFEN O19, where the
+model leg `KernHaltE` stands and the C masks nothing.
+
+The kernel module built here has neither a `start` nor an `entry`: its init and exit are
+ordinary functions, which is what a Linux module is entered by — so K4/K5 did not need
+K2/K3, and that is why the other two boxes could close first.
 
 **Not a residue, a recorded refusal:** a Gabbro `atomic` in a kernel module (OFFEN O34), and
 the exporter's `LG005` (§9.4).

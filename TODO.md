@@ -437,11 +437,24 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   step, not the check — and two units that share a module derive nothing from each other,
   because that is `N516` and the refusal has to reach the link (measured: probe `1248`
   reported `N001` twice before that rule).
-  Open, in order: `start`
-  lowering (`C001`) and export (`LG004`, no model of statement-level starts), then
-  `entry`/`boot` vector/registers/steps (today only the dispatch root travels), then handler
-  pinning/re-entry and `cli`/`sti` in the C (model leg `KernHaltE` stands, the C still masks
-  nothing — OFFEN O19).
+  **K2 was re-measured 2026-09-28 (server lane, session 3) and the row above it was stale:
+  both halves stand.** The emitter LOWERS a statement-level `start`
+  (`gabbro emit beispiele/159-laufzeit-start.gab` → **0 `C001`**; the C calls
+  `gabbro_faden_start` per root with its own stack and join word and traps loudly when the
+  kernel refuses, lane 260), and it refuses only the shapes the checker already owns
+  (`N459`–`N462`). The exporter does NOT refuse the statement either: the `StmtArt::Start`
+  arm is `tr_rest`, and the roots travel as `gE.gestartet` (`check_gestartet`), i.e. as
+  spawn and join steps of the THREAD machine (Opus agent A; the statement's own point among
+  the lock-free ones is over-approximated — OFFEN O22).
+  What is missing is **not a model and not a lowering: it is a program that survives the
+  exporter's OTHER fragment limits.** Measured on the corpus's one `start` program: 159 is
+  refused by `LG002` (a `wrapping` field, nothing to do with `start`), and with that repaired
+  by `LG004` *function lauf falls off with a result* (its tail is a `locks` block whose
+  `return` is inside). So no `start` program is CERTIFIED yet, and that is exporter-fragment
+  work.
+  Open, and this is the box: `entry`/`boot` vector/registers/steps (today only the dispatch
+  root travels), then handler pinning/re-entry and `cli`/`sti` in the C (model leg
+  `KernHaltE` stands, the C still masks nothing — OFFEN O19).
   First acceptance, measured: two units (`bib` + `app`) link, check whole and build
   (`gabbro link`, `gabbro build a.gab b.gab`) — **done**; one concurrent driver RUNS through
   the executed set against a handwritten C version — **done 2026-09-28** (server lane,
