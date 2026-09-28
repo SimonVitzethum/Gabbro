@@ -372,6 +372,38 @@ tree refuses everywhere else.*
 | the runtime | assumption A4; hosted driver plus bare-metal runtime since 2026-09-26 (agents I/J/L) — §0 owns what is left |
 | the standard library | empty shelf; §0b is the plan since 2026-09-16 |
 
+# 0e. General kernel modules/drivers + bounded heap (10 MiB fixed + 40 GiB ceiling)  ⟨A⟩
+
+*Simon, 2026-09-27: API calls are always user-made (`extern`/`syscall` items carrying ABI
+numbers, registers, costs in-program, never baked into the tree as OS tables — the §-1 binding
+constraint). A heap is allowed but never unbounded: every region has a declared ceiling
+(PLAN-ERWEITUNG rule, `SYNTAX.md` §9.1). The example shape is 10 MiB fixed (committed `lo`/`hi`)
+plus 40 GiB ceiling (reserved `M`, refuse-on-full) — the 40 GiB number itself is irrelevant, what
+counts is statically linkable, bucket-bounded, refuse-on-full.*
+
+- [ ] **Bounded heap `arena A capacity lo .. hi max M of T` (the 10 MiB + 40 GiB shape).**
+  Stands: checker rules `N210` (0≤lo≤hi≤M), `N212` (static reservation), `N426` (every `grow`
+  against the UPPER bound, fix lane F2), `N211` (generations); static Lean sugar
+  (`ArenaZucker.lean`, covered by `gabbro_ziel` with no re-proof); static lowering sound where
+  no `grow` stands. Open: emitter arm (lane 248 queued — wire `R-commit` past the committed
+  LOWER bound and `R-max`), runtime reserve/commit via mmap with lazy commit (no `memset`) and
+  OOM fail-stop (`laufzeit/`), Lean `ArenaDyn.lean` (`DynForm`, the four Block-form theorems,
+  the simulation), the two `Spec.lean` (d) fault-latency assumption texts (reviewed diff).
+  Restriction (OFFEN O20): no `reset` concurrent with a reader of `A`, no arena shared across
+  threads without the strict option — or a `Spec.lean` diff naming the run model and ceiling.
+- [ ] **General kernel modules/drivers with manual API.** Stands: syscall bindings as named
+  in-program variables (Opus agent L, `N561`–`N568`, Linux AND metal, no OS constants in the
+  tree); bare-metal base (agents I/J/L — QEMU boot, stage 11/12, 311 units `-nostdlib`).
+  Open, in order: composition across units first (`M119` — `use` reaches nothing; the honest
+  workaround is an `extern` mirror plus a named assumption per crossing; §0b first item and
+  the linking-theorem C half, OFFEN O28, are the same item from two sides), then `start`
+  lowering (`C001`) and export (`LG004`, no model of statement-level starts), then
+  `entry`/`boot` vector/registers/steps (today only the dispatch root travels), then handler
+  pinning/re-entry and `cli`/`sti` in the C (model leg `KernHaltE` stands, the C still masks
+  nothing — OFFEN O19). First acceptance: two units (`bib` + `app`) link, check whole and
+  build (`gabbro link`, `gabbro build a.gab b.gab`), one concurrent driver RUNS through the
+  executed set against a handwritten C version.
+
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
 - [x] **The exporter produces a full `Einheit`** — lanes 198 (fields) and 207

@@ -99,8 +99,9 @@ README §5 says exactly this; keep it that way.
   Opus agent D: `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`), a start declared ONCE running on several threads (a routine
   declared twice -- a worker pool -- is covered since fix lane F10). Linking of separately
   compiled units is covered since Opus agent E by a SECOND statement, `GabbroZielVerbund`
-  (same hardware assumptions; OFFEN O28 names the rest). Probabilistic statements and dynamic unbounded structures are out of scope (§3); since
-  the merge of Opus agent G `Spec.lean` names both in NOT CLAIMED (OFFEN O29). Every extension of the goal is reviewed as a diff of
+  (same hardware assumptions; OFFEN O28 names the rest). Probabilistic statements are out of scope, and dynamic data structures are not yet in the
+  statement (§3); since the merge of Opus agent G `Spec.lean` names both in NOT CLAIMED
+  (OFFEN O29). Every extension of the goal is reviewed as a diff of
   `Spec.lean`.
 
 ## 3. Simon's standing instructions
@@ -129,8 +130,10 @@ README §5 says exactly this; keep it that way.
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
   recorded blockage of 07 and 125). Reviewers reject bypasses, no matter how green the build.
-- **Floats are in scope** (IEEE model done). Probabilistic statements and dynamic unbounded data
-  structures are OUT of scope for now.
+- **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
+  **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
+  static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
+  A heap without a ceiling stays refused.
 - **Tag milestones** at the push that reaches them.
 - **Security:**
   - Never write API keys or passwords into the repo, memory or logs. The opencode keys live only
@@ -143,6 +146,13 @@ README §5 says exactly this; keep it that way.
 
 All work happens on this machine, in this checkout. There is no second machine, no build
 server, no `ssh` step: Lean builds, `cargo` runs, Isabelle runs and QEMU stages all run here.
+
+**Exception since 2026-09-28 (Simon): one autonomous Claude lane on `ubuntu@simon.jocraft.cc`.**
+At most ONE agent runs there at a time, in its own clone `~/Gabbro` (and, for the network
+stack, `~/gabbro-netz/`). It builds and tests in its own tree, merges into master only with
+`cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
+task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
+Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
 
 - **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key
   `~/.ssh/id_ed25519_github`; the host key was checked against GitHub's published ed25519
