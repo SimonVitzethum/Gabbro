@@ -1395,6 +1395,16 @@ declares already travel through `target … abi metal` (Opus agent L, OFFEN O31)
 *So K7's reach is: the module runtime first (12 names, the list above), the hosted runtime
 second (about fourteen), the bare-metal one not at all.*
 
+**And that second line stopped being a finding while this section was being written.** Simon
+added **K8** (`AUFTRAG-1.md`, acceptance point **4d**) with the rule in one sentence -- *"an
+die Hardware ist OK, OS nicht, das muss selbst gemacht werden"*: no OS call hard-wired in ANY
+runtime, hardware access on bare metal allowed and to be confirmed. So the fourteen names above
+are K8's worklist and not a note, one library unit per OS (`bibliothek/linux/*.gab`) binds
+them, and every hosted example in the corpus gains its binding line with the diagnostic diff
+held at zero apart from the new refusal. Order: K6 (done), K7, then K8 -- and K8 is larger than
+both and is to be split over sessions with master green between them. Phase 2's user-space
+network stack needs the same library (TAP, sockets, timers), so it is worth building once.
+
 ### 12.5 What K7 still needs, and why K6 was built to fit it
 
 Not built, and named so the next session starts from a shape and not from a blank page:
@@ -1407,7 +1417,9 @@ Not built, and named so the next session starts from a shape and not from a blan
 2. **The refusal.** A module unit that uses a lock, an arena or an atomic without binding the
    primitive it needs is refused at check time, with its sentence and a poison probe. That is
    a new `N` code and the first thing in this phase that would take one.
-3. **The atomics.** They leave no symbol, so §12.2 cannot see them. The rows are one table in
+3. **K8 extends all of it to the hosted runtime**, with the same mechanism and the corpus
+   attached to it (§12.4).
+4. **The atomics.** They leave no symbol, so §12.2 cannot see them. The rows are one table in
    one file (`laufzeit/kmodul/include/stdatomic.h`), and K6 was built that way on purpose:
    when the names become the program's binding, the table moves and **(M11)'s substance does
    not change** — the assumption is then that the BOUND primitives are at least as strong
