@@ -3747,7 +3747,14 @@ fi
 # `beispiele/gift/1364` -- an `entry … via irq` (the host kernel's interrupt path, no vector)
 # taking a `masks irqs` lock, which the rule must be SILENT over. The poison twin does not
 # emit, so `MARKE_EMIT_G` is untouched. Re-measured in the same run: `321 von 321`.
-MARKE_EMIT=143
+# **143 -> 144 on 2026-09-28 (server lane, phase 2, wall 1).** One emitting example came with
+# `pub reason`: `167-reason-crosses-the-module-boundary.gab`, a `pub fn … -> u32 or R` called
+# from a SECOND module, which the grammar refused until that day (`P041` at the `pub`, `N038`
+# without it -- a triangle no spelling escaped). Its two poison twins
+# (`gift/1365` private `reason` reached by a `use` -> `N025`, `gift/1366` exported head naming
+# a private one -> `N038`) are refused by the CHECKER and write no C, so `MARKE_EMIT_G` is
+# untouched.
+MARKE_EMIT=144
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.

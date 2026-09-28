@@ -215,15 +215,18 @@ pub const NAMEN: &[Satz] = &[
         kennungen: &["N025"],
         aussage: "No reference across a module boundary reaches an item that is not `pub`.",
         vorbehalt: "**This is the weakest of the large rules, and it is weak in three \
-                    directions.** (1) Only 9 of 11 `pub`-carrying declaration kinds are \
+                    directions.** (1) Only 10 of 13 `pub`-carrying declaration kinds are \
                     collected -- `Modul` and `use` are MISSING, so module privacy itself is \
                     not enforced. *It was 5 of 7 until 2026-08-25, when `table`, `device`, \
-                    `format` and `lock` got the word and this map got them.* \
+                    `format` and `lock` got the word and this map got them, and 9 of 11 \
+                    until 2026-09-28, when `reason` got it and the map got that too.* \
                     (2) An unknown target counts as VISIBLE (`unwrap_or(true)`). (3) Only \
                     `use` lines and qualified CALLS are checked -- qualified type, constant \
                     and `static` references are silent.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes on `N025`. None of the three holes above has a \
+        gemessen_an: "beispiele/gift: probes on `N025`, among them 1365 for the `reason` row \
+                      (a `use` on a private one, which was silent until 2026-09-28 because a \
+                      `reason` could not BE private). None of the three holes above has a \
                       probe -- they were found by READING, and that is the point of writing \
                       the sentence down.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md §14",
@@ -896,7 +899,10 @@ pub const NAMEN: &[Satz] = &[
                     name a `pub opaque type` whose body the importer cannot use -- that is \
                     `D004`'s business and not this one's.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/273 (a `pub fn` over a private `table`), and the \
+        gemessen_an: "beispiele/gift/273 (a `pub fn` over a private `table`) and \
+                      beispiele/gift/1366 (a `pub fn` over a private `reason` -- the ERROR \
+                      CHANNEL direction, which had no answering `pub` until 2026-09-28 and \
+                      therefore refused every exported function with an `or R`), and the \
                       counter-direction in `rechenwerk.rs` \
                       `eine_schnittstelle_erklaert_jeden_namen_den_sie_nennt`: the closed \
                       hull passes and its `.gabi` checks itself.",
@@ -4257,15 +4263,23 @@ pub const PHASEN: &[Satz] = &[
         name: "parser.pub-nur-wo-die-grammatik-es-fuehrt",
         kennungen: &["P041"],
         aussage: "A `pub` stands only at the item kinds whose grammar line carries \
-                  `[ \"pub\" ]` -- eleven of them. Where it does not belong it is REFUSED, \
+                  `[ \"pub\" ]` -- thirteen of them. Where it does not belong it is REFUSED, \
                   not silently dropped, and a program that passed carries no visibility \
                   word the grammar never granted.",
         vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
                     whether the visibility is the RIGHT one, nothing about what is actually \
-                    reachable from another module, and nothing about the eleven kinds that \
-                    do carry it -- there a `pub` is accepted unread.",
+                    reachable from another module, and nothing about the thirteen kinds that \
+                    do carry it -- there a `pub` is accepted unread. **The list GREW twice \
+                    for the same reason** (the four carriers 2026-08-25, `reason` \
+                    2026-09-28): what stood here was not a decision about visibility but a \
+                    missing production, and each time it made a whole shape of program \
+                    unwritable -- an explicit export set for a carrier, then a function with \
+                    an error channel outside its own module.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probe 45 on `P041`.",
+        gemessen_an: "beispiele/gift: probe 45 on `P041`. The `reason` row of the list is \
+                      pinned from the other side, by the positive beispiele/167 -- a `pub \
+                      reason` crossing a module boundary, which `P041` refused until \
+                      2026-09-28.",
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
     },
     Satz {

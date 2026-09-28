@@ -683,6 +683,15 @@ impl<'a> Parser<'a> {
         // `gabbro-check/src/bindung.rs`.
         // **Since «E4» (2026-09-12) TWELVE: `arena` is a carrier too** -- it emits
         // storage like a table, so it carries the word like one.
+        //
+        // **Since 2026-09-28 THIRTEEN: `reason`** (server lane, phase 2). It is not a
+        // carrier; it is what a SIGNATURE names. `-> T or R` puts `R` in the exported head,
+        // so `N038` refused every exported function with an error channel -- and there was no
+        // spelling that answered it, because `pub reason R` was refused HERE. *A function with
+        // an error channel could not leave its module, and that is not a decision anybody
+        // wrote down; it was the gap between two rules.* Measured at
+        // `~/gabbro-netz/docs/WAENDE-M1.md` (wall 1) against a stack whose every OS call
+        // answers `u64 or NetzFehler`.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -713,6 +722,7 @@ impl<'a> Parser<'a> {
                         | Kw::Device
                         | Kw::Format
                         | Kw::Lock
+                        | Kw::Reason
                 )
             )
         {
@@ -735,9 +745,9 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                        "`[ \"pub\" ]` stands at twelve item kinds: module use const static \
-                      type fn atomic table arena device format lock -- the parser accepted it \
-                      everywhere and threw it away",
+                        "`[ \"pub\" ]` stands at thirteen item kinds: module use const static \
+                      type fn atomic table arena device format lock reason -- the parser \
+                      accepted it everywhere and threw it away",
                     ),
             );
         }
@@ -785,7 +795,7 @@ impl<'a> Parser<'a> {
             // fire). The helper frame is entered once per arena and freed
             // on return; it never nests with itself.
             Art::Wort(Kw::Arena) => return self.arena_item(oeffentlich, anfang, when),
-            Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
+            Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason(oeffentlich)?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
             Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
             Art::Wort(Kw::Assume) => ItemArt::Assume(self.assume()?),
@@ -4865,7 +4875,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn reason(&mut self) -> Erg<Reason> {
+    fn reason(&mut self, oeffentlich: bool) -> Erg<Reason> {
         let anfang = self.erwarte_kw(Kw::Reason)?;
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::GeschweiftAuf)?;
@@ -4891,6 +4901,7 @@ impl<'a> Parser<'a> {
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Reason {
             name,
+            oeffentlich,
             faelle,
             erschoepfend,
             span: anfang.bis_zu(ende),

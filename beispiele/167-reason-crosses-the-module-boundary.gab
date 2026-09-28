@@ -1,0 +1,102 @@
+-- **A function with an error channel leaves its module -- and until 2026-09-28 none could.**
+--
+-- This is the positive half of a triple. `beispiele/gift/1365` and `.../1366` are the two
+-- refusals that still stand around it; this file is the shape the language now writes, and
+-- until this day the parser refused it with `P041`: *"`pub` is not in the grammar here:
+-- `reason` carries no `[ "pub" ]`"*.
+--
+-- WHAT THE HOLE WAS, MEASURED BEFORE IT WAS CLOSED
+-- ------------------------------------------------
+-- Three refusals closed a triangle, and no spelling escaped it:
+--
+--   1. `use a::f;` for a private `impl fn f`            -> `N025`
+--   2. so write `pub impl fn f(…) -> u32 or Fehl`       -> `N038` (`Fehl` is not exported)
+--   3. so write `pub reason Fehl { … }`                 -> `P041` (no `pub` at `reason`)
+--
+-- So **`or R` and a module boundary were mutually exclusive**: an error channel stands in the
+-- SIGNATURE, the signature is what travels into the `.gabi`, and `reason` was the one thing a
+-- signature could name that had no word to say "I travel too". Nobody decided that; it was the
+-- gap between a closed export hull (`N038`, 2026-08-25) and a grammar line that had not grown
+-- with it.
+--
+-- It was measured where it hurt: a Linux network stack (`~/gabbro-netz`, phase 2) whose every
+-- OS call answers `u64 or NetzFehler`. Its whole first program therefore had to live in ONE
+-- module -- frame I/O, ARP, IPv4, TCP and the firewall in one file -- and that is recorded as
+-- wall 1 in `~/gabbro-netz/docs/WAENDE-M1.md`.
+--
+-- WHAT THIS FILE PINS
+-- -------------------
+-- * `pub reason` parses (the `P041` list is thirteen kinds now, not twelve);
+-- * a `pub fn` may NAME it -- the export hull is closed WITH the reason in it, so `N038` is
+--   silent here, while `gift/1366` shows it still falls without the word;
+-- * the importer may name the GROUNDS: `probe` matches `Leer` and `Zuviel` in its `else`
+--   branch and re-raises one of them. The interface explains what it mentions, which is the
+--   whole claim of `N038` -- `gabbro abi` writes the `reason` line out verbatim, so the
+--   importer of a `.gabi` sees exactly the grounds it has to cover.
+--
+-- *Nothing was weakened for this.* The visibility rule got STRONGER in the same change: a
+-- `reason` can be private now, so `N025` reaches a `use` on one (`gift/1365`), which it could
+-- not before -- a `reason` was unconditionally visible because it could not be otherwise.
+
+module fenster {
+
+-- **The error channel, and it is exported on purpose.** Two grounds, `exhaustive`: a caller
+-- that matches both has covered the channel, and the coverage is held by the checker.
+pub reason Fensterfehler {
+    Leer   = 1 "the window is empty -- there is nothing to measure"
+    Zuviel = 2 "the window runs past what the receiver announced"
+    exhaustive
+}
+
+pub const ANGEBOTEN : u32 = 4096;
+
+-- **The function the other module calls.** `pub`, and it names `Fensterfehler` in its head --
+-- the one shape that had no answering `pub` until this day. Everything else about it is
+-- ordinary: `pure`, a cost bound, and two named ways to fail.
+pub impl fn nutzbar(kopf : u32, schwanz : u32) -> u32 or Fensterfehler
+    effects { pure }
+    costs   <= 40 ops
+{
+    if kopf == schwanz {
+        return Fensterfehler::Leer;
+    }
+    if kopf < schwanz {
+        return Fensterfehler::Zuviel;
+    }
+    let offen : u32 = kopf - schwanz;
+    if offen > ANGEBOTEN {
+        return Fensterfehler::Zuviel;
+    }
+    return offen;
+}
+
+}
+
+module sender {
+
+-- Both halves of the interface are fetched by name: the function AND its channel. The second
+-- line is what `N025` now guards -- `gift/1365` is that same line over a private `reason`.
+use fenster::nutzbar;
+use fenster::Fensterfehler;
+
+-- **The caller swallows one ground and re-raises the other.** That is the point of exporting
+-- the `reason` rather than flattening the channel into a sentinel value: the names survive the
+-- boundary, so the decision is written in words and not in a magic number.
+pub impl fn darf_senden(kopf : u32, schwanz : u32) -> u32 or Fensterfehler
+    effects { pure }
+    costs   <= 80 ops
+{
+    let offen = nutzbar(kopf, schwanz) else (e) {
+        match e {
+            -- An empty window is not an error for this caller: nothing may go out, and 0 says
+            -- exactly that.
+            Leer   => { return 0; }
+            -- A window past what the peer announced is the CALLER's mistake, and it travels on
+            -- unchanged -- the ground keeps its name across the boundary.
+            Zuviel => { return Fensterfehler::Zuviel; }
+        }
+    }
+    return offen;
+}
+
+}

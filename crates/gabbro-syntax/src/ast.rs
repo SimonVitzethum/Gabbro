@@ -1912,6 +1912,13 @@ pub enum Endian {
 #[derive(Debug, Clone)]
 pub struct Reason {
     pub name: Ident,
+    /// **Since 2026-09-28 (server lane, phase 2): `reason` carries `pub` like a carrier.**
+    ///
+    /// An error channel stands in a SIGNATURE (`-> T or R`), so a `pub fn` naming a `reason`
+    /// exports it -- and without the word here `N038` refused that signature and no spelling
+    /// could answer it: a function with an error channel could not leave its module at all.
+    /// Read by [`gabbro_check::bindung::ausgefuehrter_name`] and by `namen.rs::sichtbarkeit`.
+    pub oeffentlich: bool,
     pub faelle: Vec<ReasonFall>,
     pub erschoepfend: bool,
     pub span: Span,
