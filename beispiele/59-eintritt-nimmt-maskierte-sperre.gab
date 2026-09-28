@@ -12,9 +12,15 @@
 -- > *Dieselbe Bauart wie `probe-schlupfloch` gegen `probe-ohne-masks` bei `H101`: zwei
 -- > Dateien, ein Wort, zwei Antworten.*
 --
--- Und was diese Datei NICHT belegt: dass `masks irqs` irgendwo abgesenkt wird. Der
--- Erzeuger schreibt heute kein `cli`/`sti` daraus; das Wort ist eine ZUSAGE ueber die
--- Umgebung und steht seit dem 2026-08-31 unter einem Leser, nicht unter einer Absenkung.
+-- Und was diese Datei NICHT belegt: dass `masks irqs` HIER abgesenkt wird. Der Erzeuger
+-- schreibt kein `cli`/`sti`; das Wort ist eine ZUSAGE ueber die Umgebung, und die LAUFZEIT
+-- haelt sie, je Geschmacksrichtung: `METALL_SPERRE_MASKIERT` auf blankem Metall (IF geloescht,
+-- bevor die Fahrkarte gezogen wird -- Opus-Bahn J, 2026-09-26) und `raw_spin_lock_irqsave` im
+-- Linux-Kernmodul (`laufzeit/kmodul/sperre.h`, Serverbahn 2026-09-28). Gemessen steht das in
+-- QEMU: `instrumente/pruefe-metall.sh` (Abbild `metall59`) und
+-- `instrumente/pruefe-kernelmodul.sh` (Probe `takt`).
+-- *Bis zum 2026-09-28 stand hier, der Erzeuger senke es NIRGENDS ab -- eine Zeile, die zwei
+-- Jahre nach ihrer Wahrheit noch dastand.*
 
 module beispiel {
 module takt {

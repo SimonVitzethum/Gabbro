@@ -1,0 +1,71 @@
+-- **The counter-probe to `beispiele/gift/1364` -- one word, and it is the right
+-- one.**
+--
+-- Byte for byte the same program as the poison probe beside it, with ONE
+-- change: `TAKT` carries `masks irqs`. Taking the lock therefore masks the
+-- interrupts, the entry cannot arrive between the `locks TAKT {` and its end,
+-- and the deadlock path is shut.
+--
+-- **Why this stands as an example and not as a second poison probe.** A refusal
+-- that always falls is not a rule but a ban. `H102` has to be SILENT exactly
+-- where the language speaks the remedy -- and that is a statement about the
+-- checker which only a CLEAN file can carry. The same construction as
+-- `beispiele/59` against `beispiele/gift/460`, one `via` word further out.
+--
+-- **What is new here, and it is the whole reason the pair exists** (server lane,
+-- 2026-09-28, TODO section 0e K3). The entry says `via irq`, not `via idt`, and
+-- it names no vector: this is a unit entered from a HOST kernel's interrupt
+-- path -- the shape a Gabbro `module` has when the kernel hands it a timer or a
+-- device line. Until this day `Kontext::unterbricht` compared the path against
+-- the literal `"idt"`, so `H102` looked at this shape and said nothing; the
+-- trigger is now that a `via` word stands there at all. `gift/1364` is the file
+-- that used to pass.
+--
+-- **And the promise is kept in the C, for this target too.** `masks irqs` is a
+-- statement about the environment, and the runtime flavour realises it: bare
+-- metal clears IF from before the ticket is drawn (`METALL_SPERRE_MASKIERT`), a
+-- Linux kernel module takes `raw_spin_lock_irqsave`
+-- (`laufzeit/kmodul/sperre.h`). The running measurement is
+-- `instrumente/pruefe-kernelmodul.sh` probe `takt`: a hardirq timer against a
+-- masked lock held across a long section, 0 arrivals on a holding core, and the
+-- unmasked mutation does not finish.
+
+module beispiel {
+
+table Takte count 64 {
+    slot { stand : u64, }
+}
+
+-- **The one word.** It is missing in `beispiele/gift/1364`, and `H102` falls there.
+lock TAKT protects { Takte } rank 0 held <= 40 ops masks irqs;
+
+impl fn zaehle(i : index into Takte)
+    requires Held(TAKT)
+    effects  { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs    <= 8 ops
+{
+    Takte.slots[i].stand = 1;
+}
+
+impl fn takt_verteiler()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 40 ops
+{
+    locks TAKT {
+        zaehle(0);
+    }
+}
+
+-- **`via irq` -- the host kernel's interrupt path.** No vector: which line the
+-- kernel hands the module is not the program's choice, and a number here would
+-- be a claim it cannot keep.
+entry zeitgeber via irq arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch beispiel::takt_verteiler;
+}
+
+}

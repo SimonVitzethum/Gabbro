@@ -827,3 +827,196 @@ K2/K3, and that is why the other two boxes could close first.
 
 **Not a residue, a recorded refusal:** a Gabbro `atomic` in a kernel module (OFFEN O34), and
 the exporter's `LG005` (§9.4).
+
+---
+
+## 10. Session 4 (2026-09-28) — K3's C half: `masks irqs` is realised in a kernel module, and `H102` reaches it
+
+**The headline, in one line.** A `module` unit with ONE `lock` did not link at all before this
+session; now it does, a `masks irqs` lock becomes `raw_spin_lock_irqsave`, and the promise is
+measured in QEMU against a real hardirq contender. Beside it the checker's trigger for "an
+entry the hardware throws" stopped being the literal word `idt`.
+
+### 10.1 What was measured FIRST, because the row said something else
+
+The TODO row read *"the C still masks nothing — OFFEN O19"*. **For bare metal that was stale**
+(the fourth stale row of §0e in one week): Opus agent J closed it, and `crates/gabbro-cli/src/treiber.rs`
+picks `METALL_SPERRE_MASKIERT` for a `masks irqs` lock, which clears IF from before the ticket
+is drawn (`laufzeit/metall/metall.h`). What was NOT stale is the third target — the one K4 built:
+
+```
+$ cat > sperre.gab   # a module unit with one `lock TAKT … masks irqs`
+$ ./target/release/gabbro pruefe sperre.gab
+sperre.gab: 7 items, 0 errors, 0 hints
+$ ./target/release/gabbro build manifest
+ERROR: modpost: "TAKT_gib"  [gabbro_sp.ko] undefined!
+ERROR: modpost: "TAKT_nimm" [gabbro_sp.ko] undefined!
+```
+
+**The checker passed it without a word and the kernel's own linker refused it.** The emitter
+declares `L_nimm`/`L_gib` and defines neither (the primitive is trust base, not product); the
+hosted and the bare-metal drivers are GENERATED and define them from the build's lock list, and
+`laufzeit/kmodul/kmodul.c` — which is deliberately not generated — had no way to learn them.
+
+### 10.2 What was built
+
+| | |
+|---|---|
+| `laufzeit/kmodul/sperre.h` | the primitives, four kinds. PLAIN is `raw_spin_lock`, **MASKED is `raw_spin_lock_irqsave`**, the two SHARED kinds take the same exclusive lock (stronger than asked, never weaker — the choice `METALL_SPERRE_GETEILT` already makes). `raw_spinlock_t` and not `spinlock_t`, because on `PREEMPT_RT` the latter sleeps and a declared `held <= N ops` would mean nothing |
+| `sperren.h`, written by `gabbro build` | one `#define GABBRO_SPERREN(F)` with an `F(name, kind)` per lock, out of `TreiberPlan::sperren` — **the same register the other two drivers read**, one `ItemArt::Lock` walk in `bau.rs::sammle` (`W7`) |
+| `gabbro_halter_L` | the observation, not the primitive: the core holding the lock, or −1. The kernel-module twin of metal's `metall_anspruch_L[core]` |
+| `messung/proben/kmodul/sperre-takt.gab` + `takt.c` | the probe: the lock held across a 4096-slot traversal, 64 rounds, while the program's OWN C runs a 50 µs hardirq `hrtimer` whose body takes the same lock |
+
+**The lock list does NOT go into the emitted C, and that was measured the hard way.** It stood
+there first (`#define GABBRO_SPERREN(F)`, beside `GABBRO_ARENEN`), and the translation-validation
+chain refused it:
+
+```
+$ cd grammatik && lake build
+error: Grammatik/CText104.lean:116:0: Not a definitional equality: the left-hand side
+  parseC ctext104   is not definitionally equal to   some (kFuns zert104)
+```
+
+The Lean `CParser` reads preprocessor lines with a CLOSED grammar (`#include <x.h>` and an
+integer `#define`, `CParse.lean::direktiveC`), so a function-like macro makes `parseC` answer
+`none` and `a2_104 := rfl` stops being a proof. **Widening the parser to skip a directive it
+cannot evaluate would have been the wrong repair** — a macro the parser ignores may rename
+anything below it, and that is a soundness hole in the chain, not a formatting question. The
+list moved to the build instead, where its register already was. *Cost of the detour: the
+emitted C of the whole corpus is byte-unchanged, `MARKE_EMIT` did not move for it, and the
+`CText104` pin stands as it did.*
+
+### 10.3 The measurement in QEMU
+
+```
+$ ./instrumente/pruefe-kernelmodul.sh
+-- probe takt: gabbro_takt
+   [    3.204554] gabbro-takt: k=1 v=0
+   [    3.206511] gabbro-takt: ticks=26 landed=0
+   [    3.218482] gabbro-takt: k=9 v=0
+GREEN: halde -- loaded, allocated, refused on full, reported, unloaded clean.
+GREEN: takt  -- a masks-irqs lock held across a long section, a hardirq timer
+                taking the same lock, and 0 arrivals on a holding core.
+```
+
+`ticks` is the half that makes `landed` mean anything: **26 hardirq arrivals** during the run
+(25–32 across runs), **0 of them on a core that was holding the lock**. A run in which the timer
+never fired would report a clean `landed` and have measured nothing, so the verdict demands
+`ticks >= 5` — and gift 6 is exactly that case.
+
+Disassembly of the built module, so the claim is about the artefact and not about the source:
+
+```
+$ objdump -dr gabbro_takt.ko --disassemble=TAKT_nimm | grep R_X86_64
+    21: R_X86_64_PLT32   _raw_spin_lock_irqsave-0x4
+$ objdump -dr gabbro_takt.ko --disassemble=TAKT_gib | grep R_X86_64
+    82: R_X86_64_PLT32   _raw_spin_unlock_irqrestore-0x4
+```
+
+**Poison: 7 of 7 caught** (`--gift all`, 1 min 39 s). The three new ones:
+
+| gift | mutation | why the run turns red |
+|---|---|---|
+| 5 | `sperren.h`: `F(TAKT, MASKED)` → `F(TAKT, PLAIN)`, module re-made with the `Kbuild` the build wrote | the timer body lands inside a critical section on the core that holds it and waits for that core. **The run does not finish** — the same answer `pruefe-metall.sh`'s `metall59-gift` gives. This is the poison probe of the masking ITSELF |
+| 6 | the program's own C: timer period 50 µs → 50 s | `ticks=0`, and a clean `landed` over zero opportunities is not a measurement |
+| 7 | the expectation `landed=0` → `landed=1` | does the run read the kernel log, or only the exit codes? |
+
+*Gift 5 caught the instrument once, in the right direction:* when the lock list moved out of the
+emitted C, the mutation stopped applying and the gift read **NOT CAUGHT**. A gift that does not
+apply looks exactly like a pass, so it now checks that its target is there before mutating it.
+
+### 10.4 The checker half: the trigger was the word `idt`, and now it is a `via` word
+
+`Kontext::unterbricht` — the one answer to *"can this entry preempt?"* — was
+`e.via.text == "idt"`. Two shapes walked past it, and both read as a pass:
+
+* **a misspelt path.** `via ipt` is not `idt`, so `H102` said nothing at all about a declaration
+  that plainly means "hardware throws this". *A measuring instrument that goes quiet on a typo
+  is the `W16` class.*
+* **a host kernel's interrupt path.** A Gabbro unit built as a Linux module is entered from a
+  timer or a device line, which owns no vector the program could name — so `via idt vector N` is
+  the wrong word and `via irq` is the right one, and the rule did not look at it.
+
+Widened in the three places that must agree: `kontexte.rs` (`H102`), `lean_g.rs`
+(`gP.unterbricht`, so the model's handler set stays the Rust one exactly) and the source-reading
+pattern of `instrumente/pruefe-akzeptiert-diff.py` (K6) — **the pattern in the same commit as
+the rule**, because a pattern that lags behind its rule is a green run that measures nothing.
+`bau.rs`'s `via_idt` stays the literal word: it decides an IDT slot, and `via irq` is not one.
+
+**Measured, and it is strictly stronger.** The corpus carries NINE `via` words at an `entry` and
+every one is `idt` (`grep -rhno 'via [a-z_]*' --include=*.gab .`), so no corpus file moves:
+
+```
+$ ./target/release/gabbro pruefe beispiele/gift/1364-eintritt-via-anderem-pfad.gab
+error: [H102] … `zeitgeber` is thrown by hardware and takes `TAKT`, which does not declare `masks irqs`
+   (0 errors before the widening — the file used to pass)
+$ ./target/release/gabbro pruefe beispiele/166-eintritt-irq-maskiert.gab
+beispiele/166-eintritt-irq-maskiert.gab: 6 items, 0 errors, 0 hints
+```
+
+The example is the half that keeps it a rule and not a ban: `H102` must be SILENT where the
+language speaks the remedy. 166 also EXPORTS, so the model carries it
+(`grammatik/Grammatik/Zertifikat/G166_eintritt_irq_maskiert.lean`, `unterbricht | .takt_verteiler => true`;
+27 CERTIFIED of 208 accepted, was 26 of 207), and `pruefe-akzeptiert-diff.py --selbsttest` is green
+in both directions (`masken` accepts 59, refuses the `gift/460` shape at `masken` alone).
+
+### 10.5 Two defects found on the way, both in this lane's own earlier work
+
+1. **`KMOD_QUELLEN` was declared and read by nobody.** `cargo build` had been saying
+   `constant KMOD_QUELLEN is never used` since K4 wrote it; the effect was that a changed
+   `kmodul.c` left a stale `.ko` standing as up to date. It is in the fingerprint now, with
+   `sperre.h` added — which made the hole load-bearing: a module whose LOCKS changed would not
+   have been rebuilt.
+2. **`metallregel` refused a module unit's entry for the bare-metal driver's reason.** An
+   `entry … via irq` with no vector was refused with *"the bare-metal driver cannot name its IDT
+   slot"* — an artefact a `module` unit never gets. *A refusal whose reason names an artefact
+   nobody asked for is a refusal in the wrong place.* The metal half of the driver rule is now
+   gated on the unit's art; the checker still holds the declaration (`H102`), and the twin in
+   `bausystem.rs` shows the same unit as an `object` still refused, so the rule was gated and
+   not deleted.
+
+Also repaired: a unit with LOCKS and no roots had no `TreiberPlan` at all, so its lock list came
+out empty and the module did not link. It gets a plan now; it still owns no driver
+(`hat_gehostet`/`hat_metall` both false), and the dry run says so instead of naming a
+`.treiber.c` the build does not write.
+
+### 10.6 What K3 still owes, named so it cannot be read past
+
+* **A Linux hardirq callback is not an `entry` the module BUILD can carry.** The probe's
+  contender is the program's own C calling a `pub fn`, and the entry declaration that WOULD give
+  `H102` its door is not in the probe: a `module` unit may now declare one (10.5), but nothing in
+  the build can check that the program's C actually hands that stub to the kernel — the module
+  target has no twin of the metal `N561` (`eintritt.bindung`). So for the probe as it stands the
+  masking is REALISED and not CHECKED; with the entry declared it is both, and the binding is the
+  assumption. **OFFEN O19, the module row.**
+* **The model half of K3 is untouched:** the vector, the registers and the steps still have no
+  form in `Einheit` (only the dispatch root travels), and handler pinning and re-entry stay
+  outside `KernPlan` (in G a handler thread runs once). That is Lean and exporter work.
+* `beispiele/57`'s `halt_ipi vector 0xF0` writes no `via` at all and stays silent — the gap in
+  the LANGUAGE that `saetze.rs` names under `H102`, unchanged by this session.
+
+### 10.7 The walls at the end of the session
+
+| wall | result |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1420 passed, 0 failed** (`~/claude-lane/logs/test-s4.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 321 von 321 uebersetzen, 2 umgekehrte Proben** |
+| `cd grammatik && lake build` | 356 jobs, no error; `#print axioms gabbro_ziel` = `propext, Classical.choice, Quot.sound` |
+| `./instrumente/pruefe-kernelmodul.sh` | GREEN on both probes; `--gift all` **7 of 7 caught** |
+| `./instrumente/pruefe-akzeptiert-diff.py` | all ten pins hold on 29/29 comparable programs; `--selbsttest` ok both directions |
+| `pruefe-todo.py`, `-saetze.py`, `-cformen.py`, `-ctext.py`, `-widerruf.py` | rc 0 |
+| `pruefe-zahlen.py` | rc 1, **35 findings — exactly the base's 35**, measured in a throwaway worktree at `ab260581` and diffed line by line. The one that moved (widerruf file count 690 → 691) is re-measured in `KENNZAHLEN.md` |
+| `pruefe-englisch.py`, `-kennungen.py`, `-syntax.sh`, `-manifest.py`, `-waechter.py`, `-vergabe.py`, `-klauseln.py`, `-sondendeckung.py` | rc unchanged against the same base, output identical but for file and line counts. `pruefe-syntax.sh` is **17 → 15** build warnings (the dead `KMOD_QUELLEN` went) |
+| `abnahme.py --voll` | **cannot run here**: no Isabelle on this machine |
+
+**Emission counters re-measured and dated:** `MARKE_EMIT` 142 → 143 (`beispiele/166`),
+`MARKE_EMIT_M` 157 → 158 (`messung/proben/kmodul/sperre-takt.gab`). `MARKE_EMIT_G` untouched:
+the poison twin does not emit.
+
+*And one finding came from the clang half of stage 9, which is what it is for:* the probe's round
+counter `Runden` was only a traversal DOMAIN, so its storage was never touched and `clang`
+refused the emitted `static Runden Runden_speicher` as `-Wunneeded-internal-declaration` while
+`cc` took it. The probe marks each round now.
+
+**Ledger:** gift **1364**, example **166**. No new `N` code — `H102` keeps its name and its
+sentence; what changed is its trigger, and the sentence says so with the measurement beside it.

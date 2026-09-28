@@ -95,11 +95,36 @@ pub fn erhebe(baum: &Programm) -> Vec<Kontext> {
                     e.verschachtelt,
                     Some(Verschachtelt::Maskiert)
                 ),
-                // **Was einen Eintritt zum Interruptkontext macht**, syntaktisch: er kommt
-                // über die IDT. *Ein Syscall auch — aber der wird gerufen, nicht geworfen,
-                // und er preemptiert niemanden.* `via` ist die einzige Stelle, an der die
-                // Sprache den Unterschied heute ausspricht.
-                unterbricht: e.via.as_ref().is_some_and(|v| v.text == "idt"),
+                // **What makes an entry an interrupt context, syntactically: it carries a
+                // `via` word.** `via` is the one place the language says the difference --
+                // a system call carries a vector too, but it is CALLED, not thrown, and it
+                // preempts nobody, so it writes no `via`.
+                //
+                // **Widened 2026-09-28 (server lane, TODO section 0e K3) from
+                // `v.text == "idt"` to "a `via` stands here", and the widening is strictly
+                // stronger.** Two reasons, and the second is the one that made it urgent:
+                //
+                //  1. A MISSPELT path disarmed the rule in silence. `via ipt` is not `idt`,
+                //     so `unterbricht` was false, so `H102` said nothing at all about a
+                //     declaration that plainly means "hardware throws this". *A measuring
+                //     instrument that goes quiet on a typo is the `W16` class.*
+                //  2. `idt` is the x86 bare-metal path and it is not the only one. A Gabbro
+                //     unit built as a Linux kernel module is entered from the HOST kernel's
+                //     interrupt path, which owns no vector the program could name; `via irq`
+                //     says that, and before this line `H102` did not guard it
+                //     (`messung/proben/kmodul/sperre-takt.gab`, OFFEN O19).
+                //
+                // Measured: the corpus carries NINE `via` words at an `entry`, all of them
+                // `idt`, so the widening moves no corpus file
+                // (`grep -rhno 'via [a-z_]*' --include=*.gab .`). Its witnesses are
+                // `beispiele/gift/1364` (an `entry … via irq` on an unmasked lock: silent
+                // before, `H102` after) and `beispiele/166` (the same with `masks irqs`:
+                // silent, so the rule is a rule and not a ban).
+                //
+                // What it does NOT close is the entry that writes NO `via` at all
+                // (`beispiele/57`'s `halt_ipi vector 0xF0` is thrown and silent here) --
+                // that gap is in the language, and `saetze.rs` names it under `H102`.
+                unterbricht: e.via.is_some(),
                 span: e.name.span,
             });
         }

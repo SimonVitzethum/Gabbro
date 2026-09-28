@@ -5544,19 +5544,27 @@ pub const SPERREN: &[Satz] = &[
     Satz {
         name: "kontexte.handlersperre",
         kennungen: &["H102"],
-        aussage: "An entry that hardware THROWS (`via idt`) takes no lock that fails to \
-                  declare `masks irqs`: the path it interrupted may be holding that lock, \
-                  and the handler would wait for a holder that only resumes once the \
-                  handler returns.",
-        vorbehalt: "**The trigger is `via idt`, and that leaves a gap this rule does not \
-                    close.** `beispiele/57`'s `halt_ipi vector 0xF0` is thrown too, but it \
-                    writes no `via`, so `Kontext::unterbricht` is false and `H102` stays \
-                    silent over it. *That is a gap in the LANGUAGE -- `via` is the only \
-                    place Gabbro says the difference -- and it is named here rather than \
-                    papered over with a second answer to `what is an interrupt context` \
-                    (a fourth register over the same set is W7).* And the remedy this rule \
-                    demands is a PROMISE, not a lowering: the emitter writes no `cli`/`sti` \
-                    out of `masks irqs`.",
+        aussage: "An entry that hardware THROWS (one carrying a `via` path) takes no lock \
+                  that fails to declare `masks irqs`: the path it interrupted may be holding \
+                  that lock, and the handler would wait for a holder that only resumes once \
+                  the handler returns.",
+        vorbehalt: "**The trigger is a `via` word -- ANY of them, since 2026-09-28 -- and \
+                    that still leaves a gap this rule does not close.** `beispiele/57`'s \
+                    `halt_ipi vector 0xF0` is thrown too, but it writes no `via` at all, so \
+                    `Kontext::unterbricht` is false and `H102` stays silent over it. *That is \
+                    a gap in the LANGUAGE -- `via` is the only place Gabbro says the \
+                    difference -- and it is named here rather than papered over with a second \
+                    answer to `what is an interrupt context` (a fourth register over the same \
+                    set is W7).* Until that day the trigger was the word `idt` itself, which \
+                    was narrower in two ways that both read as a pass: a MISSPELT path \
+                    (`via ipt`) disarmed the rule in silence, and a unit entered from a host \
+                    kernel's interrupt path -- a Gabbro `module`, whose callback owns no \
+                    vector the program could name -- had no spelling the rule would look at. \
+                    **And the remedy this rule demands is a PROMISE.** The emitted C realises \
+                    it in the runtime flavour, not at the `locks` block: bare metal clears IF \
+                    around the ticket (`METALL_SPERRE_MASKIERT`, Opus agent J), a Linux module \
+                    takes `raw_spin_lock_irqsave` (`laufzeit/kmodul/sperre.h`, server lane), \
+                    and the hosted flavour has no handlers to mask against.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured before the build: 39 lock declarations in the clean corpus, \
                       7 of them `masks irqs`; exactly ONE corpus file carries an `entry` \
@@ -5570,7 +5578,16 @@ pub const SPERREN: &[Satz] = &[
                       `beispiele/gift/461`), and the second is the sharper: without the \
                       prefix `locks shared TAKT` resolves to no lock and the rule falls \
                       silent through the SAME `continue` that lets an unknown lock pass. \
-                      *A branch that stays quiet for two reasons and means only one.*",
+                      *A branch that stays quiet for two reasons and means only one.* \
+                      **Re-measured 2026-09-28 for the widening to any `via` word:** the \
+                      corpus carries NINE `via` words at an `entry` and every one of them is \
+                      `idt`, so no corpus file moves; the witnesses of the widened half are \
+                      `beispiele/gift/1364` (`entry … via irq` on an unmasked lock -- 0 \
+                      errors before, `[H102]` after) and `beispiele/166` (the same file with \
+                      `masks irqs`, clean), and the run that shows what the promise is worth \
+                      is `instrumente/pruefe-kernelmodul.sh` probe `takt`: 28 hardirq \
+                      arrivals, 0 of them on a core holding the masked lock, and the \
+                      unmasked mutation (gift 5) does not finish.",
         fundstelle: "crates/gabbro-check/src/kontexte.rs; «B39»",
     },
     Satz {

@@ -431,3 +431,66 @@ impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
     assert_ne!(code, 0, "a module with the hosted entry is refused");
     assert!(aus.contains("entered by the calls the manifest names"), "with its reason:\n{aus}");
 }
+
+/// **A `module` unit MAY declare a hardware entry without a vector, and before 2026-09-28 it
+/// could not** (server lane, TODO section 0e K3).
+///
+/// A Gabbro unit built as a Linux kernel module is entered from the host kernel's interrupt
+/// path -- a timer, a device line -- and that path owns no vector the program could name. The
+/// entry therefore says `via irq` and no `vector`, which the bare-metal half of the driver
+/// rule refused: *"has no literal vector -- the bare-metal driver cannot name its IDT slot"*.
+/// **A refusal whose reason names an artefact nobody asked for is a refusal in the wrong
+/// place** -- a module's artefact is a `.ko`, with no IDT and no metal driver. What still
+/// holds the declaration is the checker (`H102` over the dispatch's call graph); what binds
+/// the stub to the kernel is the program's own C, and no build rule can see that (OFFEN O19).
+///
+/// The positive twin is below it: the SAME unit as a `program` is still refused, so the metal
+/// rule was gated and not deleted.
+#[test]
+fn ein_modul_mit_eintritt_ohne_vektor_baut() {
+    let mit_eintritt = "module treiber::probe {
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 40 ops masks irqs;
+impl fn schlag() effects { writes g, locks L } costs <= 8 ops { locks L { g = 1; } }
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+entry uhr via irq arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack uhr_stapel per cpu nested never
+    dispatch treiber::probe::schlag;
+}
+}
+";
+    let (aus, fehler, code) = kmod_lauf(
+        "eintritt_ohne_vektor",
+        "unit gabbro_probe module laden entladen",
+        mit_eintritt,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_eq!(code, 0, "a module's vectorless entry is no longer refused:\n{aus}\n{fehler}");
+    assert!(
+        !aus.contains("literal vector"),
+        "and not for the bare-metal driver's reason either:\n{aus}"
+    );
+
+    // **The twin that keeps the metal rule alive.** The same unit as an `object` still meets
+    // `metallregel`, because an object unit CAN own a bare-metal driver. Its manifest is
+    // written here rather than through `kmod_lauf`, which always names a `.c` body -- and a
+    // foreign C body outside a module is refused one rule earlier, which would have made this
+    // twin pass for the wrong reason (measured: it did).
+    let d = kratz("eintritt_objekt");
+    std::fs::write(d.join("u.gab"), mit_eintritt).expect("unit");
+    let manifest = format!(
+        "compiler cc -std=c11\nout {aus}\nunit gabbro_probe object\n  {q}\n",
+        aus = d.join("bau").display(),
+        q = d.join("u.gab").display(),
+    );
+    let mpfad = d.join("manifest");
+    std::fs::write(&mpfad, manifest).expect("manifest");
+    let (aus, _, code) = lauf(&["build", "--dry-run", mpfad.to_str().expect("utf8")]);
+    assert_ne!(code, 0, "an object unit's vectorless entry is still refused:\n{aus}");
+    assert!(aus.contains("literal vector"), "for the bare-metal driver's reason:\n{aus}");
+}

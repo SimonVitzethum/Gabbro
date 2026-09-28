@@ -452,9 +452,35 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   by `LG004` *function lauf falls off with a result* (its tail is a `locks` block whose
   `return` is inside). So no `start` program is CERTIFIED yet, and that is exporter-fragment
   work.
-  Open, and this is the box: `entry`/`boot` vector/registers/steps (today only the dispatch
-  root travels), then handler pinning/re-entry and `cli`/`sti` in the C (model leg
-  `KernHaltE` stands, the C still masks nothing — OFFEN O19).
+  **K3's C half LANDED 2026-09-28** (server lane, session 4,
+  `messung/SERVER-0E-REPORT.md` §10), and the row above it was stale for the FOURTH time in
+  this section: the C masks. On bare metal since Opus agent J (`METALL_SPERRE_MASKIERT`, IF
+  cleared from before the ticket is drawn); in a Linux kernel module since this session
+  (`laufzeit/kmodul/sperre.h`: `masks irqs` → `raw_spin_lock_irqsave`, PLAIN →
+  `raw_spin_lock`), where before it a `module` unit with ONE `lock` **did not link at all**
+  (`ERROR: modpost: "TAKT_nimm" … undefined!`) over a unit the checker had passed. The lock
+  list comes from `gabbro build` (`sperren.h`, out of `TreiberPlan::sperren` — the same
+  register the hosted and the bare-metal driver read) and NOT from the emitted C: it stood
+  there first, and the translation-validation pin said no (`parseC` reads a closed directive
+  grammar, so `a2_104 := rfl` broke; widening the parser to skip an unevaluated `#define`
+  would let a macro rename anything below it). Measured in QEMU
+  (`instrumente/pruefe-kernelmodul.sh` probe `takt`, 7 of 7 harness mutations caught -- they
+  are `--gift` runs, not `beispiele/gift/` files): a masked
+  lock held across a 4096-slot traversal, 64 rounds, while the program's own C runs a 50 µs
+  hardirq timer taking the same lock — **`ticks=26 landed=0`**, and the unmasked mutation does
+  not finish.
+  **And `H102`'s trigger stopped being one word:** an entry is thrown if it carries a `via`
+  path, any of them — before, a misspelt path and a host kernel's interrupt path (`via irq`, no
+  vector the program could name) both turned the rule off in silence. Widened in the three
+  places that must agree (`kontexte.rs`, `lean_g.rs`, and the K6 source pattern of
+  `pruefe-akzeptiert-diff.py`) in one commit; 0 corpus diff (nine `via` words at an `entry`,
+  all `idt`); witnesses `beispiele/gift/1364` and `beispiele/166` (which also exports —
+  27 CERTIFIED of 208 accepted).
+  Open, and this is the box: **the MODEL half** — `entry`/`boot` vector/registers/steps have no
+  form in `Einheit` (only the dispatch root travels), and handler pinning/re-entry stay outside
+  `KernPlan` (in G a handler thread runs once). Plus, for the module target only, the twin of
+  the metal `N561`: nothing in the build checks that the program's own C hands the declared
+  stub to the kernel (OFFEN O19).
   First acceptance, measured: two units (`bib` + `app`) link, check whole and build
   (`gabbro link`, `gabbro build a.gab b.gab`) — **done**; one concurrent driver RUNS through
   the executed set against a handwritten C version — **done 2026-09-28** (server lane,

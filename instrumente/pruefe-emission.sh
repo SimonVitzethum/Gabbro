@@ -3682,7 +3682,12 @@ fi
 # **116 -> 117 on 2026-09-16 (merge review of the lock-striping lane).** One example came with
 # it (`146-sperrstreifen`), and the lane measured the delta, named it and left the counter alone
 # -- the second lane in a row to do that correctly. Re-measured here on the merged tree.
-MARKE_EMIT=142
+# **142 -> 143 on 2026-09-28 (server lane, TODO 0e K3).** One emitting example came with the
+# widened `H102` trigger: `166-eintritt-irq-maskiert.gab`, the counter-probe to
+# `beispiele/gift/1364` -- an `entry … via irq` (the host kernel's interrupt path, no vector)
+# taking a `masks irqs` lock, which the rule must be SILENT over. The poison twin does not
+# emit, so `MARKE_EMIT_G` is untouched. Re-measured in the same run: `321 von 321`.
+MARKE_EMIT=143
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
@@ -3955,7 +3960,15 @@ MARKE_EMIT=142
 # emitted C is run against a HANDWRITTEN C twin beside it
 # (`instrumente/pruefe-nebenlaeufig-zwilling.sh`). It emits and compiles -- the good case,
 # and a finding nonetheless. Re-measured in the same run: `319 von 319`.
-MARKE_EMIT_M=157
+# **157 -> 158 on 2026-09-28 (server lane, TODO 0e K3).** One new probe under
+# `messung/proben/kmodul/`: `sperre-takt.gab`, the unit whose `masks irqs` lock is held across
+# a long section while a hardirq timer takes the same lock
+# (`instrumente/pruefe-kernelmodul.sh` probe `takt`). **Its first emission was red under
+# `clang` and green under `cc`** -- the round counter `Runden` was only a traversal DOMAIN, so
+# its storage was never touched and `clang` refused the emitted `static Runden Runden_speicher`
+# as `-Wunneeded-internal-declaration`. The probe now marks each round, which is what the
+# clang half of stage 9 is for. Re-measured in the same run: `321 von 321`.
+MARKE_EMIT_M=158
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

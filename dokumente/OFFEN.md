@@ -1136,10 +1136,40 @@ handlers are in the unit and the leg is carried by (a):
   then waits for it), so it is no longer a conjunct that holds for every program.
 * Measured: `pruefe-akzeptiert-diff.py` compares the component against `H102` (see the report).
 
+**Narrowed again (server lane, 2026-09-28, TODO section 0e K3, `messung/SERVER-0E-REPORT.md` section 10).**
+The C realises the masking on every target that has interrupts, and the rule's trigger is no
+longer one word:
+
+* **Bare metal:** `METALL_SPERRE_MASKIERT` clears IF from before the ticket is drawn to the
+  release (Opus agent J; the line "the emitter writes no `cli`/`sti`" below was stale from
+  2026-09-26 on).
+* **Linux kernel module:** `laufzeit/kmodul/sperre.h` -- a MASKED lock is
+  `raw_spin_lock_irqsave`, a PLAIN one `raw_spin_lock`. Before it a `module` unit with ONE
+  `lock` did not link at all (`ERROR: modpost: "TAKT_nimm" ... undefined!`), over a unit the
+  checker had passed. Measured in QEMU (`instrumente/pruefe-kernelmodul.sh` probe `takt`): a
+  masked lock held across a 4096-slot traversal while the program's own C runs a 50 us hardirq
+  timer that takes the same lock -- **26 arrivals, 0 of them on a core that was holding**; the
+  unmasked mutation (gift 5) does not finish, as the bare-metal one does not.
+* **The trigger of `H102` is a `via` word, any of them**, not the literal `idt`
+  (`Kontext::unterbricht`, `lean_g.rs`'s `gP.unterbricht`, and the K6 source pattern of
+  `pruefe-akzeptiert-diff.py`, all in one commit). A misspelt path used to disarm the rule in
+  silence, and a host kernel's interrupt path -- which owns no vector the program could name --
+  had no spelling the rule would look at. Witnesses `beispiele/gift/1364` (0 errors before,
+  `H102` after) and `beispiele/166` (the same with `masks irqs`, clean, and CERTIFIED). The
+  corpus carries nine `via` words at an `entry` and all nine are `idt`, so nothing moved.
+* A `module` unit may now DECLARE a vectorless hardware entry: `metallregel` refused one with
+  *"the bare-metal driver cannot name its IDT slot"*, an artefact a module never gets, and the
+  metal half of the driver rule is gated on the unit's art since that day.
+
 WHAT IS LEFT of O19:
 
-* The C realises no masking (the emitter writes no `cli`/`sti`), so `KernPlan` -- the
-  hardware schedule the leg assumes -- has nothing to be related to in translation validation.
+* **The module target has no twin of the metal `N561` (`eintritt.bindung`):** nothing in the
+  build checks that the program's own C hands the declared stub to the kernel (a Linux callback
+  is registered by a call, not installed in a table the build can read). The binding is a named
+  assumption there, not a check.
+* `KernPlan` -- the hardware schedule the leg assumes -- is still not RELATED to the C in
+  translation validation; what stands is that the C keeps the promise, measured, not that the
+  chain proves it does.
 * The core machine is G restricted to runs `KernPlan` admits, for EVERY core assignment; which
   core a thread runs on is not a fact of the unit (no pinning in the language or the runtime).
   "Each thread its own cell" for per-core accumulators (O17) needs pinning and is not given by it.
@@ -1168,7 +1198,7 @@ core it interrupted, spins on a lock that core's thread holds unmasked.
 
 | | |
 |---|---|
-| **who guards it today** | the Rust checker alone (`H102`, `kontexte.rs`); the emitter lowers no `cli`/`sti` (`beispiele/59` says so in its header) |
+| **who guards it today** | the Rust checker alone (`H102`, `kontexte.rs`); the emitter lowers no `cli`/`sti` (`beispiele/59` says so in its header) -- **the second half is stale since Opus agent J for metal and since the server lane 2026-09-28 for the kernel module: the RUNTIME flavour keeps the promise, not the `locks` block** |
 | **why it matters** | `beispiele/59` exports since lane 255, and its exported deadlock freedom reads like interrupt-deadlock freedom; it is not. a model of `gift/460` (refused by `H102`) would differ from `Korpus59.lean` only in `kMaskiert`, and would get the same `Akzeptiert = true` and the same `korpus59_ziel` (review G02 F1) |
 | **what would close it** | either a NOT-CLAIMED line in the `Spec.lean` header (dispatch roots are modelled as independent starts; same-core preemption and `D.maskiert` are not read by `Ziel`; `H102` is the only guard), or a `MaskenOrdnung` leg carried into `Laufzeit`. Both are `Spec.lean` diffs for Simon |
 

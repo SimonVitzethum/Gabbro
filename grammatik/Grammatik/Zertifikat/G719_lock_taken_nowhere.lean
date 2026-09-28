@@ -19,7 +19,8 @@
 -- `gE.starts`; every start is parameterless, its argument list
 -- `.nil`); `entry`/`boot` (the vector, the registers, the steps:
 -- NO FORM; only the dispatch root travels, as a declared start
--- where exportable, and `via idt` as `gP.unterbricht`).
+-- where exportable, and a thrown `entry` -- one carrying a `via` path -- as
+-- `gP.unterbricht`).
 --
 -- table 0: T (count 8), x : 0..4294967295
 -- lock 0: L (rank 0) guards T

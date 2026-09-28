@@ -1,0 +1,117 @@
+-- **`masks irqs` in a Linux kernel module -- the C realises the masking**
+-- (server lane, TODO section 0e K3; OFFEN O19's C half for the module target).
+--
+-- WHAT THIS PROBE ANSWERS. `lock … masks irqs` is a promise about the
+-- environment: while the lock is held, no interrupt handler runs on this core.
+-- Until 2026-09-28 the emitted C kept that promise on bare metal only
+-- (`METALL_SPERRE_MASKIERT`, Opus agent J), and a `module` unit with ONE lock
+-- did not link at all -- `ERROR: modpost: "TAKT_nimm" … undefined!`. Now
+-- `laufzeit/kmodul/sperre.h` defines the primitives, and a MASKED lock becomes
+-- `raw_spin_lock_irqsave`.
+--
+-- HOW IT IS MEASURED, and why it is a measurement and not an absence of bad
+-- news. The program runs 64 rounds, each of which holds `TAKT` across a full
+-- traversal of a 4096-slot table -- a critical section long enough that a timer
+-- firing every 50 us would land inside it many times over. Beside it the
+-- program's OWN C arms a kernel timer in HARDIRQ mode whose body calls `tick`
+-- below, which takes the same lock. The timer body reads the runtime's
+-- `gabbro_halter_TAKT` (the core that holds the lock, or -1) BEFORE it takes
+-- the lock, and counts how often it landed on a core that was holding.
+--
+--   masked   ticks > 0 and landed = 0 -- interrupts arrive, never inside
+--   plain    the handler lands inside and then waits for the core it
+--            interrupted: the same-core deadlock `H102` refuses
+--            (`beispiele/gift/460`), and the harness's poison run hangs
+--
+-- `ticks > 0` is the half that makes the other half mean anything: a run in
+-- which the timer never fired would report `landed=0` and have measured
+-- nothing. The harness checks both.
+--
+-- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
+-- unit names three foreign functions with their shape, effects, cost and the
+-- assumption their bodies keep; the bodies are the program's own C
+-- (`messung/proben/kmodul/takt.c`), which is where `hrtimer` and `pr_info`
+-- stand. Nothing about Linux is in this file.
+--
+-- **What this probe does NOT claim.** A Linux timer callback is not an
+-- `entry … vector V via idt`: the kernel calls it, no vector is the program's,
+-- and `H102` -- which reads exactly that word -- stays silent here. So the
+-- masking is REALISED for the module target and it is not yet CHECKED for it
+-- (OFFEN O19, the module row).
+module treiber::takt {
+
+assume kmod_takt_vertrag
+    "The module's own `gabbro_kmod_takt_*` bodies keep the x86_64 SysV convention and return: `_melde` writes its two words to the kernel log, `_an` arms a hardirq timer whose body calls `tick`, `_aus` cancels it and reports the two counters."
+    falsifier sonde_kmod_takt;
+
+-- The kernel API, declared here and nowhere else.
+extern fn gabbro_kmod_takt_melde(schluessel : u32, wert : u64) effects { pure } costs <= 64 ops;
+extern fn gabbro_kmod_takt_an() effects { pure } costs <= 512 ops;
+extern fn gabbro_kmod_takt_aus() effects { pure } costs <= 512 ops;
+
+pub table Takte count 4096 {
+    slot { stand : u64, }
+}
+
+table Runden count 64 {
+    slot { getan : u64, }
+}
+
+-- **The one word this probe is about.** Without `masks irqs` the same file is
+-- the deadlock: `tick` below enters on the core that holds `TAKT`.
+pub lock TAKT protects { Takte } rank 0 held <= 20000 ops masks irqs;
+
+-- **The short critical section, entered by the hardware side.** `pub`, because
+-- the program's own C calls it and that C is a translation unit of its own --
+-- the emitted unit is `#include`d by the driver, so a `static` body would not
+-- be nameable from there.
+pub fn tick()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 64 ops
+{
+    locks TAKT {
+        Takte.slots[0].stand = 1;
+    }
+}
+
+-- **The long critical section, entered by the thread side.** One pass over the
+-- whole table under the lock: the window a timer would land in.
+fn runde()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 20000 ops
+{
+    locks TAKT {
+        traverse i over slots of Takte by unvisited {
+            Takte.slots[i].stand = 1;
+        }
+    }
+}
+
+-- Load: arm the timer, run the rounds, cancel the timer and report.
+impl fn laden() -> u32
+    effects { reads Takte, reads Takte.slots, writes Takte.slots,
+              reads Runden, reads Runden.slots, writes Runden.slots, locks TAKT }
+    costs   <= 2000000 ops
+{
+    gabbro_kmod_takt_melde(1, 0);
+    gabbro_kmod_takt_an();
+    traverse r over slots of Runden by unvisited {
+        -- The round is marked, and that is not decoration: a table used only as
+        -- a traversal DOMAIN has storage nothing touches, and `clang` refuses
+        -- the emitted `static Runden Runden_speicher` as
+        -- `-Wunneeded-internal-declaration` (measured by `pruefe-emission.sh`
+        -- stage 9's clang half, 2026-09-28).
+        Runden.slots[r].getan = 1;
+        runde();
+    }
+    gabbro_kmod_takt_aus();
+    return 0;
+}
+
+-- Unload: one line. The timer is already cancelled; the table is static.
+impl fn entladen() -> u32 effects { pure } costs <= 64 ops {
+    gabbro_kmod_takt_melde(9, 0);
+    return 0;
+}
+
+}

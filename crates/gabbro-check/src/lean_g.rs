@@ -363,7 +363,8 @@ pub(crate) struct Model {
     /// function is a declared start like a `concurrent` member.
     wurzeln: Vec<Pfad>,
     /// **The dispatch roots entered by HARDWARE** (Opus agent H, 2026-09-26,
-    /// OFFEN O19): every `entry … via idt … dispatch f` -- the checker's own
+    /// OFFEN O19): every thrown `entry … dispatch f` (one carrying a `via`
+    /// path) -- the checker's own
     /// answer to "what makes an entry an interrupt context"
     /// (`Kontext::unterbricht`, `kontexte.rs`). They travel as
     /// `gP.unterbricht` (`Programm.unterbricht`, `Syntax.lean`), which the goal
@@ -884,10 +885,16 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                 // a declared start. What names no exported function is
                 // refused where the starts resolve, by name.
                 ItemArt::Entry(e) => {
-                    // `via idt` is the one word that makes an entry THROWN
+                    // A `via` word is what makes an entry THROWN
                     // (`Kontext::unterbricht`); a system call carries a vector
-                    // too, but is called (Opus agent H, OFFEN O19).
-                    if e.via.as_ref().is_some_and(|v| v.text == "idt") {
+                    // too, but is called (Opus agent H, OFFEN O19). **Widened
+                    // with `kontexte.rs` on 2026-09-28** from `== "idt"` to "a
+                    // `via` stands here", so the model's handler set stays the
+                    // Rust one exactly (`pruefe-akzeptiert-diff.py` holds the
+                    // component `maskenB` against `H102`; two registers over
+                    // one set would drift). Strictly stronger: more dispatch
+                    // roots become handlers, and `maskenB` then has to hold.
+                    if e.via.is_some() {
                         model.unterbricht.push(e.dispatch.clone());
                     }
                     model.wurzeln.push(e.dispatch.clone())
@@ -4811,7 +4818,8 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- `gE.starts`; every start is parameterless, its argument list\n");
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
     out.push_str("-- NO FORM; only the dispatch root travels, as a declared start\n");
-    out.push_str("-- where exportable, and `via idt` as `gP.unterbricht`).\n--\n");
+    out.push_str("-- where exportable, and a thrown `entry` -- one carrying a `via` path -- as\n");
+    out.push_str("-- `gP.unterbricht`).\n--\n");
     for (ti, t) in model.tables.iter().enumerate() {
         out.push_str(&format!("-- table {ti}: {} (count {})", t.name, t.count));
         for f in &t.fields {
@@ -5291,7 +5299,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str(&format!("    | .{} => gBody_{}\n", lean_fn(&f.name), lean_fn(&f.name)));
     }
     // The interrupt handlers (Opus agent H, 2026-09-26, OFFEN O19): the
-    // dispatch targets of `entry … via idt`, resolved by their last segment
+    // dispatch targets of a thrown `entry` (a `via` path stands), resolved by their last segment
     // as `check_starts` resolves them (which refuses an unknown or ambiguous
     // name first). One arm per function, no wildcard (a wildcard would be
     // redundant when every function is a handler). Where no entry is thrown

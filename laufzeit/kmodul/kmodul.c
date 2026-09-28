@@ -66,6 +66,28 @@
 static gabbro_arena_desc *gabbro_kmod_arenen[] = { GABBRO_ARENEN };
 #endif
 
+/* **The LOCKS, and the list comes from the BUILD and not from the emitted C.**
+ * `gabbro build` writes `sperren.h` beside this file: one `#define
+ * GABBRO_SPERREN(F)` with an `F(name, kind)` per `lock`, out of the same walk
+ * the hosted and the bare-metal driver read their locks from -- one register,
+ * three flavours (`W7`). It is a generated file and always present; a unit
+ * without a lock gets a comment instead of the macro, which is why the
+ * expansion below stands under `#ifdef`.
+ *
+ * (It is not in the emitted unit, where `GABBRO_ARENEN` stands, because that C
+ * is pinned byte for byte in the translation-validation chain and the Lean
+ * `CParser` reads only `#include <x.h>` and integer `#define`s. See
+ * `bau.rs::kmod_modul_binden` for the measurement.)
+ *
+ * `masks irqs` becomes `raw_spin_lock_irqsave` here -- see `sperre.h` for why
+ * that is the kernel's word for the promise, and what a PLAIN lock
+ * deliberately is not (server lane, 2026-09-28, TODO section 0e K3). */
+#include "sperren.h"
+#ifdef GABBRO_SPERREN
+#include "sperre.h"
+GABBRO_SPERREN(GABBRO_KMOD_SPERRE)
+#endif
+
 static int __init gabbro_kmod_init(void)
 {
     uint32_t antwort;

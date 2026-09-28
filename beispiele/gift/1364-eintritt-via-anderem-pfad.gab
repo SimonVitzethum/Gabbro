@@ -1,0 +1,69 @@
+-- erwartet: H102
+-- **The same deadlock as `gift/460`, one word further away -- and until
+-- 2026-09-28 that one word bought silence.**
+--
+-- `gift/460` is refused because its entry says `via idt` and takes a lock that
+-- does not declare `masks irqs`. This file is that file with `idt` replaced by
+-- `irq`, and nothing else: the hardware still throws the entry, the interrupted
+-- path may still be holding `TAKT`, and the handler would still wait for a
+-- holder that only resumes once the handler returns. **Measured before the
+-- widening: 0 errors.** `Kontext::unterbricht` compared the path against the
+-- literal `"idt"`, so any other spelling -- a real second path, or a typo --
+-- turned `H102` off without a word.
+--
+-- *A measuring instrument that goes quiet on a typo is the `W16` class*, and
+-- this file is the witness that it does not any more: the trigger is now that a
+-- `via` word stands there at all.
+--
+-- WHY `irq` AND NOT A MISSPELLING. Both would fall now, but only one of them is
+-- a shape somebody writes on purpose. A Gabbro unit built as a Linux kernel
+-- module is entered from the HOST kernel's interrupt path: a timer, a device
+-- line, a softirq -- none of which owns a vector the program could name, so
+-- `via idt vector N` is the wrong word for it and `via irq` is the right one
+-- (`messung/proben/kmodul/sperre-takt.gab` is the running probe). The refusal
+-- has to reach that spelling, or the module target has no guard at all.
+--
+-- The remedy is the counter-probe `beispiele/166-eintritt-irq-maskiert.gab`:
+-- the same file with `masks irqs`, clean -- so this is a rule and not a ban on
+-- the word.
+
+module gift {
+
+table Takte count 64 {
+    slot { stand : u64, }
+}
+
+-- **The lock without `masks irqs`** -- the whole difference to the example.
+lock TAKT protects { Takte } rank 0 held <= 40 ops;
+
+impl fn zaehle(i : index into Takte)
+    requires Held(TAKT)
+    effects  { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs    <= 8 ops
+{
+    Takte.slots[i].stand = 1;
+}
+
+impl fn takt_verteiler()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 40 ops
+{
+    locks TAKT {
+        zaehle(0);
+    }
+}
+
+-- **`via irq` -- the host kernel's interrupt path, not the x86 IDT.** No
+-- vector: the program does not choose which line the kernel hands it, and a
+-- number here would be a claim it cannot keep. `nested never` covers the vector
+-- re-entering itself, not the holder that was just interrupted.
+entry zeitgeber via irq arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch gift::takt_verteiler;
+}
+
+}

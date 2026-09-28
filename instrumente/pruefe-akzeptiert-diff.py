@@ -109,7 +109,8 @@ KOMPONENTEN = [
     # vacuous on the export (no Ax/Reg sites); refuse direction by gifts
     # The handler component (Opus agent H, 2026-09-26, OFFEN O19): every function
     # the program declares entered by hardware (`gP.unterbricht`, the exported
-    # `entry … via idt`) has a call graph taking only `masks irqs` locks -- the
+    # thrown `entry`, one carrying a `via` path) has a call graph taking only
+    # `masks irqs` locks -- the
     # Rust `H102`. Vacuous on an export with no thrown entry (the field keeps its
     # default); construction pin K6 holds the exported handler set to the source.
     ("masken", "maskenB {P} {fs}", ["H102"]),
@@ -191,16 +192,23 @@ def wurzeln_aus(quelle):
     return wurzeln
 
 
-def dispatch_aus(quelle, nur_idt=False):
+def dispatch_aus(quelle, nur_geworfen=False):
     """The `entry`/`boot` dispatch roots (short names), in item order -- the
     order `check_starts` appends them after the `concurrent` members. With
-    `nur_idt`, only the roots of an `entry … via idt` (the handlers the export
-    carries as `gP.unterbricht`, Opus agent H)."""
+    `nur_geworfen`, only the roots of a THROWN `entry` -- one carrying a `via`
+    path (the handlers the export carries as `gP.unterbricht`, Opus agent H).
+
+    **The `via` word is any of them since 2026-09-28** (server lane, TODO 0e K3):
+    `Kontext::unterbricht` compared it against the literal `idt`, so a misspelt
+    path and a host kernel's interrupt path (`via irq`, a Gabbro `module`) both
+    turned `H102` off in silence. This pattern is one of the SEVEN that read
+    source text, so it moves in the same commit as the rule -- a pattern that
+    lags behind its rule is a green run that measures nothing."""
     text = kommentarlos(quelle)
     out = []
     for m in re.finditer(r"(?ms)^\s*(entry|boot)\b(.*?)\bdispatch\s+([\w:]+)\s*;", text):
-        if nur_idt and not (m.group(1) == "entry" and
-                            re.search(r"\bvia\s+idt\b", m.group(2))):
+        if nur_geworfen and not (m.group(1) == "entry" and
+                                 re.search(r"\bvia\s+\w+", m.group(2))):
             continue
         out.append(m.group(3).split("::")[-1])
     return out
@@ -400,12 +408,12 @@ def pruefe_konstruktion(export, exp, quelle=None):
             bruch.append("K5: source `start` roots %s but export `gestartet` %s"
                          % (quell, exp_w))
         # K6 (Opus agent H, 2026-09-26): the handlers the export declares are
-        # exactly the `entry … via idt` dispatch roots of the source -- the set
-        # the `masken` component and `H102` judge.
-        quell_h = sorted(set(dispatch_aus(quelle, nur_idt=True)))
+        # exactly the THROWN `entry` dispatch roots of the source -- any `via`
+        # path since 2026-09-28 -- the set the `masken` component and `H102` judge.
+        quell_h = sorted(set(dispatch_aus(quelle, nur_geworfen=True)))
         exp_h = sorted(set(export_unterbricht(export)))
         if quell_h != exp_h:
-            bruch.append("K6: source `via idt` roots %s but export `unterbricht` %s"
+            bruch.append("K6: source thrown-`entry` roots %s but export `unterbricht` %s"
                          % (quell_h, exp_h))
     return bruch
 

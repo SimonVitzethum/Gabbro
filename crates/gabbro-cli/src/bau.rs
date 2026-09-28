@@ -821,13 +821,38 @@ impl TreiberPlan {
 /// Unlike the entry rule there is NO visibility check: the driver includes
 /// the emitted C (`#include EINHEIT_INCLUDE`, like `laufzeit/start.c`), so a
 /// `static` root is nameable -- inclusion, not linkage.
+///
+/// **`art` decides whether the BARE-METAL half of the rule speaks** (server lane,
+/// 2026-09-28, TODO section 0e K3). A `module` unit's artefact is a `.ko`: it has
+/// no IDT, no boot stub and no metal driver, so [`metallregel`]'s refusals -- all
+/// of which say *"the bare-metal driver cannot …"* -- are about an artefact this
+/// unit never gets. *Measured that day:* a module unit declaring
+/// `entry takt_uhr via irq` (a Linux hardirq callback, which owns no vector the
+/// program could name) was REFUSED for having no literal IDT slot. **A refusal
+/// whose reason names an artefact nobody asked for is a refusal in the wrong
+/// place.** What still holds the declaration for a module unit is the checker
+/// (`H102` over the dispatch's call graph, and the entry's own `N` codes); what
+/// binds the stub to the kernel is the program's own C, and nothing in the build
+/// can check that binding -- the module target has no twin of the metal `N561`
+/// (OFFEN O19).
 fn treiberregel(
     funde: &[TreiberFund],
     sperren: &[TreiberSperre],
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
     metall: &MetallFunde,
+    art: Art,
 ) -> Result<Option<TreiberPlan>, String> {
-    if funde.is_empty() && metall.eintritte.is_empty() {
+    let metall_gewollt = art != Art::Modul;
+    // **A unit with LOCKS and no roots gets a plan too** (server lane, 2026-09-28, TODO
+    // section 0e K3). It owns no driver -- `hat_gehostet`/`hat_metall` are both false and
+    // nothing is written -- but a kernel module needs its lock list whether or not it starts
+    // a thread, and the list is this function's. *Measured that day: the list came out empty
+    // over a unit with one `masks irqs` lock, because the plan itself was `None`, and the
+    // module did not link.*
+    if funde.is_empty()
+        && sperren.is_empty()
+        && (!metall_gewollt || metall.eintritte.is_empty())
+    {
         return Ok(None);
     }
     let mut gesehen: BTreeSet<&str> = BTreeSet::new();
@@ -926,7 +951,11 @@ fn treiberregel(
         })
         .collect();
     sperren_aus.sort_by(|a, b| a.name.cmp(&b.name));
-    let zusatz = metallregel(metall, funktionen)?;
+    let zusatz = if metall_gewollt {
+        metallregel(metall, funktionen)?
+    } else {
+        treiber::MetallZusatz::default()
+    };
     Ok(Some(TreiberPlan {
         wurzeln,
         sperren: sperren_aus,
@@ -1225,6 +1254,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 &treiber_sperren_je_einheit[name],
                 &funktionen_je_einheit[name],
                 &metall_je_einheit[name],
+                e.art,
             ) {
                 Ok(None) => {}
                 Ok(Some(plan)) => {
@@ -1232,8 +1262,17 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                         plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
                     let sperren: Vec<&str> =
                         plan.sperren.iter().map(|s| s.name.as_str()).collect();
+                    // A plan without roots writes no driver -- a line that named one anyway
+                    // would promise a file the build does not make.
+                    let ziel = if plan.hat_gehostet() {
+                        format!("-> {name}.treiber.c")
+                    } else if plan.hat_metall() {
+                        format!("-> {name}.metall.c")
+                    } else {
+                        "(no driver: nothing to start)".to_string()
+                    };
                     println!(
-                        "  driver   {name}: roots [{}] locks [{}] -> {name}.treiber.c",
+                        "  driver   {name}: roots [{}] locks [{}] {ziel}",
                         wurzeln.join(", "),
                         sperren.join(", ")
                     );
@@ -1313,6 +1352,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             &treiber_sperren_je_einheit[name],
             &funktionen_je_einheit[name],
             &metall_je_einheit[name],
+            e.art,
         ) {
             Ok(plan) => plan,
             Err(befund) => {
@@ -1551,13 +1591,26 @@ fn baue_einheit(
     // artefact, so their bytes go into the fingerprint (a changed `kern.c` rebuilds).
     let bild_pfad = PathBuf::from(&manifest.ausgabe).join(format!("{}.metall.elf", e.name));
     let bild_erwartet = metall_erwartet && manifest.metall.is_some();
-    let laufzeit_bytes: Vec<Vec<u8>> = match (&manifest.metall, bild_erwartet) {
+    let mut laufzeit_bytes: Vec<Vec<u8>> = match (&manifest.metall, bild_erwartet) {
         (Some(dir), true) => METALL_QUELLEN
             .iter()
             .map(|f| std::fs::read(PathBuf::from(dir).join(f)).unwrap_or_default())
             .collect(),
         _ => Vec::new(),
     };
+    // **The same for the module runtime, and until 2026-09-28 it did nothing.**
+    // `KMOD_QUELLEN` was written beside the metal list and read by nobody -- `cargo build`
+    // said so (`constant KMOD_QUELLEN is never used`) and the effect was that a changed
+    // `kmodul.c` left a stale `.ko` standing as up to date. The list gained `sperre.h`
+    // with the lock primitives (K3), which made the hole load-bearing: a module whose
+    // locks changed would not have been rebuilt.
+    if e.art == Art::Modul {
+        if let Some((dir, _)) = &manifest.kmod {
+            for f in KMOD_QUELLEN {
+                laufzeit_bytes.push(std::fs::read(PathBuf::from(dir).join(f)).unwrap_or_default());
+            }
+        }
+    }
     let mut teile: Vec<&[u8]> = Vec::new();
     if treiber_erwartet || metall_erwartet {
         teile.push(treiber::GENERATOR_KENNUNG.as_bytes());
@@ -1739,7 +1792,11 @@ fn baue_einheit(
     // ONE place (`W7`).
     if e.art == Art::Modul {
         if let Some((laufzeit, kernbau)) = &manifest.kmod {
-            if let Err(grund) = kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde) {
+            let sperren: &[treiber::Sperre] =
+                treiber_plan.map_or(&[], |p| p.sperren.as_slice());
+            if let Err(grund) =
+                kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde, sperren)
+            {
                 return Ergebnis::Abgesagt(grund);
             }
         }
@@ -1844,7 +1901,52 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
 
 /// The module runtime's files, relative to the `kmod` runtime directory. Their bytes are
 /// part of the module's fingerprint -- a changed `kmodul.c` rebuilds the `.ko`.
-const KMOD_QUELLEN: [&str; 4] = ["kmodul.c", "arena.c", "kmodul.h", "include/stdint.h"];
+///
+/// **`sperre.h` joined the list on 2026-09-28** (the lock primitives, TODO section 0e K3), and
+/// on the same day the list was READ for the first time: `cargo build` had been saying
+/// `constant KMOD_QUELLEN is never used` since it was written, so a changed `kmodul.c` left a
+/// stale `.ko` standing as up to date.
+const KMOD_QUELLEN: [&str; 5] =
+    ["kmodul.c", "arena.c", "kmodul.h", "sperre.h", "include/stdint.h"];
+
+/// **The generated `sperren.h`: one `F(name, kind)` per `lock`, in name order.**
+///
+/// The list `laufzeit/kmodul/kmodul.c` expands to define the primitives the emitter only
+/// declares. The four kinds are the four `METALL_SPERRE*` macros the bare-metal driver picks
+/// between, out of the same [`treiber::Sperre`] list -- one register, three flavours.
+///
+/// Sorted by name and not by declaration order: the header is a build artefact compared for
+/// staleness, and two orders over one list would rebuild the module for nothing. A driver
+/// defines each primitive once, so the order is not a fact about the program.
+fn sperrenliste(sperren: &[treiber::Sperre]) -> String {
+    let mut aus = String::new();
+    aus.push_str(
+        "/* GENERATED by `gabbro build` -- the locks of this unit (server lane, TODO 0e K3).\n\
+ * Do not edit. `laufzeit/kmodul/kmodul.c` expands it through `sperre.h`; the kind is the\n\
+ * program's word, not the driver's: MASKED is `masks irqs`, which every runtime flavour\n\
+ * keeps in its own way (here `raw_spin_lock_irqsave`). */\n",
+    );
+    if sperren.is_empty() {
+        aus.push_str("/* This unit declares no `lock`, so no primitive is needed. */\n");
+        return aus;
+    }
+    let mut sortiert: Vec<&treiber::Sperre> = sperren.iter().collect();
+    sortiert.sort_by(|a, b| a.name.cmp(&b.name));
+    let eintraege: Vec<String> = sortiert
+        .iter()
+        .map(|l| {
+            let art = match (l.maskiert, l.geteilt) {
+                (true, true) => "MASKED_SHARED",
+                (true, false) => "MASKED",
+                (false, true) => "SHARED",
+                (false, false) => "PLAIN",
+            };
+            format!("F({}, {art})", l.name)
+        })
+        .collect();
+    aus.push_str(&format!("#define GABBRO_SPERREN(F) {}\n", eintraege.join(" ")));
+    aus
+}
 
 /// **Build `<unit>.ko` with the kernel's own build system** (server lane, TODO section 0e K4).
 ///
@@ -1869,6 +1971,7 @@ fn kmod_modul_binden(
     kernbau: &str,
     e: &Einheit,
     fremde: &[String],
+    sperren: &[treiber::Sperre],
 ) -> Result<(), String> {
     let aus = PathBuf::from(&manifest.ausgabe);
     let bau = aus.join(format!("{}.kmod", e.name));
@@ -1898,6 +2001,11 @@ fn kmod_modul_binden(
     };
     kopiere(laufzeit.join("kmodul.c"), bau.join("gabbro_kmodul.c"))?;
     kopiere(laufzeit.join("kmodul.h"), bau.join("kmodul.h"))?;
+    // The lock primitives (server lane, TODO section 0e K3). Copied
+    // unconditionally like `kmodul.h`: `kmodul.c` includes it only where the
+    // unit wrote `GABBRO_SPERREN`, and a build that decided per unit which
+    // headers to copy would be a second register over the same `#ifdef`.
+    kopiere(laufzeit.join("sperre.h"), bau.join("sperre.h"))?;
     kopiere(laufzeit.join("../arena_dyn.h"), bau.join("arena_dyn.h"))?;
     // The runtime's arena half sits beside a header one level up in the tree and FLAT here.
     let arena = std::fs::read_to_string(laufzeit.join("arena.c"))
@@ -1913,6 +2021,33 @@ fn kmod_modul_binden(
         kopiere(x.path(), ziel)?;
     }
     kopiere(aus.join(format!("{}.c", e.name)), bau.join("einheit.c"))?;
+    // **The unit's LOCKS, as the one line the module runtime expands** (server lane,
+    // 2026-09-28, TODO section 0e K3).
+    //
+    // The emitter DECLARES `L_nimm`/`L_gib` per `lock` and defines neither: the primitive is
+    // trust base, not product (`emit.rs`, `ItemArt::Lock`). Every driver flavour therefore
+    // supplies them, and two of the three are GENERATED from exactly the list below -- the
+    // hosted driver and the bare-metal one, both out of `treiber.rs` and both out of
+    // `TreiberPlan::sperren`. `laufzeit/kmodul/kmodul.c` is NOT generated, so it needs the
+    // list as text, and **this is the SAME register, not a second one** (`W7`): the three
+    // facts (name, shared pair, `masks irqs`) come from the one `ItemArt::Lock` walk in
+    // `sammle`. *Measured 2026-09-28: without this file a `module` unit with one `lock` did
+    // not link at all --* `ERROR: modpost: "TAKT_nimm" ... undefined!`, over a unit the
+    // checker had passed without a word.
+    //
+    // WHY NOT IN THE EMITTED C, where the arena list stands (`GABBRO_ARENEN`). Because the
+    // emitted C is PINNED, byte for byte, in the translation-validation chain
+    // (`grammatik/Grammatik/CText104.lean`), and the Lean `CParser` reads preprocessor lines
+    // with a CLOSED grammar: `#include <x.h>` and an integer `#define`, nothing else. A
+    // function-like `#define GABBRO_SPERREN(F) …` makes `parseC` answer `none`, and
+    // `a2_104 : parseC ctext104 = some (kFuns zert104)` stops being `rfl`. *Measured the same
+    // day, in that order: the list went into the emitter first, and the chain's own pin said
+    // no.* Widening the parser to skip a directive it cannot evaluate would be the wrong
+    // repair -- a macro the parser ignores may rename anything below it -- so the list stays
+    // out of the artefact the chain reads. The arena list is a different case only by luck:
+    // no chain-pinned unit declares an arena.
+    std::fs::write(bau.join("sperren.h"), sperrenliste(sperren))
+        .map_err(|err| format!("kernel module: {}/sperren.h: {err}", bau.display()))?;
     let mut objekte = vec!["gabbro_kmodul.o".to_string(), "gabbro_arena.o".to_string()];
     for (i, f) in fremde.iter().enumerate() {
         kopiere(PathBuf::from(f), bau.join(format!("gabbro_fremd{i}.c")))?;
@@ -1959,9 +2094,61 @@ fn kmod_modul_binden(
     Ok(())
 }
 
+/// **The generated lock list of a kernel module** (server lane, TODO section 0e K3).
+///
+/// The whole of what a module driver reads to define the primitives the emitter declares, so
+/// every kind has a probe: a dropped entry is an undefined reference at `modpost` and a wrong
+/// kind is a `masks irqs` promise the C does not keep. The end-to-end run is
+/// `instrumente/pruefe-kernelmodul.sh` probe `takt`.
+#[cfg(test)]
+mod sperrenliste_tests {
+    use super::sperrenliste;
+    use super::treiber::Sperre;
+
+    fn s(name: &str, geteilt: bool, maskiert: bool) -> Sperre {
+        Sperre { name: name.to_string(), geteilt, maskiert }
+    }
+
+    #[test]
+    fn die_vier_arten_stehen_je_mit_ihrem_wort() {
+        let aus = sperrenliste(&[
+            s("A", false, false),
+            s("B", true, false),
+            s("C", false, true),
+            s("D", true, true),
+        ]);
+        assert!(aus.contains("F(A, PLAIN)"), "{aus}");
+        assert!(aus.contains("F(B, SHARED)"), "{aus}");
+        assert!(aus.contains("F(C, MASKED)"), "{aus}");
+        assert!(aus.contains("F(D, MASKED_SHARED)"), "{aus}");
+    }
+
+    /// One `#define`, one line: a `\\`-continuation would have to survive every tool that
+    /// copies this header, and it buys nothing.
+    #[test]
+    fn die_liste_ist_eine_zeile_und_nach_namen_sortiert() {
+        let aus = sperrenliste(&[s("ZWEI", false, true), s("EINS", false, false)]);
+        let zeile = aus
+            .lines()
+            .find(|z| z.starts_with("#define GABBRO_SPERREN"))
+            .expect("one define line");
+        assert_eq!(zeile, "#define GABBRO_SPERREN(F) F(EINS, PLAIN) F(ZWEI, MASKED)", "{aus}");
+        assert!(!aus.contains('\\'), "no continuation:\n{aus}");
+    }
+
+    /// **A unit without a lock defines NOTHING**, and that is load-bearing: `kmodul.c` decides
+    /// on `#ifdef GABBRO_SPERREN` whether to pull in the kernel's spinlock headers at all.
+    #[test]
+    fn ohne_sperre_kein_define() {
+        let aus = sperrenliste(&[]);
+        assert!(!aus.contains("#define"), "a lockless unit got a macro:\n{aus}");
+        assert!(aus.contains("no `lock`"), "and says why:\n{aus}");
+    }
+}
+
 #[cfg(test)]
 mod treiberregel_tests {
-    use super::{treiberregel, EintrittFund, FunktionsForm, MetallFunde, TreiberFund, TreiberSperre};
+    use super::{treiberregel, Art, EintrittFund, FunktionsForm, MetallFunde, TreiberFund, TreiberSperre};
     use std::collections::BTreeMap;
 
     fn fund(pfad: &str) -> TreiberFund {
@@ -1995,7 +2182,7 @@ mod treiberregel_tests {
     #[test]
     fn wurzeln_zaehlen_vorkommen() {
         let funde = vec![fund("hauptA"), fund("hauptB"), fund("hauptA")];
-        let plan = treiberregel(&funde, &[], &nullary(), &MetallFunde::default()).expect("occurrences hold").expect("roots");
+        let plan = treiberregel(&funde, &[], &nullary(), &MetallFunde::default(), Art::Programm).expect("occurrences hold").expect("roots");
         let namen: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
         assert_eq!(namen, vec!["hauptA", "hauptB", "hauptA"], "one root per occurrence, in order");
     }
@@ -2007,7 +2194,7 @@ mod treiberregel_tests {
     fn wurzel_mit_parametern_wird_abgewiesen() {
         let mut f = nullary();
         f.get_mut("hauptB").expect("present")[0].parameter = 1;
-        let befund = treiberregel(&[fund("hauptB")], &[], &f, &MetallFunde::default()).expect_err("must refuse");
+        let befund = treiberregel(&[fund("hauptB")], &[], &f, &MetallFunde::default(), Art::Programm).expect_err("must refuse");
         assert!(befund.contains("1 parameter"), "the arity is named:\n{befund}");
     }
 
@@ -2029,7 +2216,7 @@ mod treiberregel_tests {
                 maskiert: false,
             },
         ];
-        let plan = treiberregel(&[fund("hauptA")], &sperren, &nullary(), &MetallFunde::default())
+        let plan = treiberregel(&[fund("hauptA")], &sperren, &nullary(), &MetallFunde::default(), Art::Programm)
             .expect("holds")
             .expect("roots");
         assert_eq!(plan.sperren.len(), 1, "one primitive set per name");
@@ -2081,7 +2268,7 @@ mod treiberregel_tests {
             rcus: vec![],
             zellen: vec![],
         };
-        let plan = treiberregel(&[], &[], &f, &metall).expect("holds").expect("entries own a driver");
+        let plan = treiberregel(&[], &[], &f, &metall, Art::Programm).expect("holds").expect("entries own a driver");
         assert!(!plan.hat_gehostet() && plan.hat_metall(), "entry-only: metal driver, no hosted one");
         let r: Vec<(&str, bool, &EintrittRuf)> =
             plan.zusatz.eintritte.iter().map(|e| (e.name.as_str(), e.geworfen, &e.ruf)).collect();
@@ -2102,7 +2289,7 @@ mod treiberregel_tests {
                 rcus: vec![],
                 zellen: vec![],
             };
-            let befund = treiberregel(&[], &[], &f, &m).expect_err("refused");
+            let befund = treiberregel(&[], &[], &f, &m, Art::Programm).expect_err("refused");
             assert!(befund.contains(grund), "named: {befund}");
         }
     }
@@ -2111,6 +2298,6 @@ mod treiberregel_tests {
     /// artefact and draws no refusal.
     #[test]
     fn ohne_wurzeln_kein_treiber() {
-        assert!(treiberregel(&[], &[], &nullary(), &MetallFunde::default()).expect("holds").is_none());
+        assert!(treiberregel(&[], &[], &nullary(), &MetallFunde::default(), Art::Programm).expect("holds").is_none());
     }
 }

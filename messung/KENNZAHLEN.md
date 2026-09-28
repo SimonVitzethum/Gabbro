@@ -25,7 +25,7 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## gebuchte Widerrufe / Dateien, die der Widerrufwaechter liest
 
-      heute **13 Widerrufe** über 690 Dateien *(2026-09-28, Serverbahn; 2026-09-27: 688, 2026-09-14: 299)*, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 691 Dateien *(2026-09-28, Serverbahn, K3; 2026-09-28 früher: 690, 2026-09-27: 688, 2026-09-14: 299)*, und keiner davon ist eine Teilmengenbeziehung.
 
 ## besetzte Zellen der Tafel -- die Zahl, die „gedeckt" heissen soll / Zellen, die NUR im Giftkorpus vorkommen
 
