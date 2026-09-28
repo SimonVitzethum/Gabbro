@@ -1890,9 +1890,21 @@ pub const M1: &[Satz] = &[
                     no rule at all. `T.slots[2^127]` on a `count 8` table passed with `0 \
                     errors` while its neighbour `T.slots[2^127 - 1]` fell at `M103`. *A pass \
                     that steps aside where the type is missing needs a rule that the type is \
-                    never missing.*",
+                    never missing.* **And the same class was open at an INDEX ON A POINTER \
+                    until 2026-09-28** (server lane, phase 2): `typ_von_ort` matched the index \
+                    suffix on `durchgreifen()`, which follows a pointer to its pointee, so \
+                    `p[i]` on a `ptr<…> u8` matched no `Typ::Feld` and answered `Unbekannt`. \
+                    Measured on the binary before the repair: `buf[0] = wert;` with `wert : \
+                    u64 in 0 .. 65535` into a `ptr<normal, w> u8` passed with **0 errors** -- a \
+                    truncating store, which the sentence above says cannot reach the emitter. \
+                    *No corpus file found it: after the repair not one of the 146 files in \
+                    `beispiele/` changes its coverage by a single expression, because none of \
+                    them indexes a pointer. The form is not a construct; it is what one does \
+                    when one writes a program, and the program was a network stack.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 15 probes on `M104`, 12 on `M101`, 8 on `M103`, 3 on \
+        gemessen_an: "beispiele/gift: 15 probes on `M104`, 14 on `M101` (`1367` the read and \
+                      `1368` the truncating store through a pointer, with `beispiele/168` as \
+                      their positive side), 8 on `M103`, 3 on \
                       `M102`, single probes on 9 further codes, one on `M139` \
                       (`gift/601`). **`M106`, `M107`, `M110` and `M114` have NO probe.**",
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",

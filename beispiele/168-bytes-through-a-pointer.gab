@@ -1,0 +1,89 @@
+-- **Network byte order out of a buffer the program owns -- and every step of it inside M1.**
+--
+-- This is the positive side of `beispiele/gift/1367` and `.../1368`. It is also the shape a
+-- protocol header actually has: a frame arrives in a byte buffer, and every field is a run of
+-- bytes inside it, most significant first (RFC 1700's "network order"). The four functions here
+-- are the whole vocabulary a header reader needs.
+--
+-- WHAT WAS MISSING UNTIL 2026-09-28, AND WHAT IT COST
+-- ---------------------------------------------------
+-- `p[i]` on a POINTER had no type: `umgebung.rs::typ_von_ort` matched the index suffix on
+-- `aktuell.durchgreifen()`, and `durchgreifen` follows a pointer to its pointee, so a
+-- `ptr<normal, r> u8` reached the array arm already AS a `Ganzzahl`, matched nothing, and fell
+-- out as `Typ::Unbekannt`. **`Unbekannt` is compatible with everything**, so M1 stepped aside
+-- at exactly the read a network stack does most often -- see the two poison probes for the
+-- measurements, including a 16-bit value stored into a byte with 0 errors.
+--
+-- **And the silence had a second price, which is why this file is short.** Before the repair
+-- the same four functions did NOT check clean: `u64(buf[v])` answered the FULL `u64` range
+-- (`umwandlung_ruf` keeps the source range only when the source HAS one), so `u64(buf[v]) *
+-- 256` left the width at `M104`, and the way through was a dead `narrow h to 0 .. 255 else {
+-- … }` per byte -- four of them in `u32_gross`, each with an `else` no run can enter, each
+-- needing an error channel to return into. *A missing type does not only fail to refuse; it
+-- also makes the honest program unwritable.* With `buf[v] : u8` the widening conversion carries
+-- 0 .. 255 through, the products and the sum stay inside `u64`, and the declared `ensures`
+-- follows without a single check being emitted.
+--
+-- WHAT THIS FILE PINS
+-- -------------------
+-- * a byte read through a pointer is a `u8`, so `M101` holds what is done with it;
+-- * a byte WRITTEN through a pointer is held against 0 .. 255 (`setze_u16_gross` divides and
+--   takes the remainder, and both operands' ranges are proved rather than asserted);
+-- * the bound is the CALLER's and it is written down: `requires v + n <= lenof(buf)` -- a
+--   pointer carries no `count`, so `N463`/`N464` hold the length where the call is made;
+-- * 100 % M1 coverage over the file, which is the measurement the repair is about.
+--
+-- The offsets are `u64 in 0 .. 65535` and not bare `u64` on purpose: a field offset inside a
+-- frame is bounded by the frame, `v + 1` has to stay inside its own width (`M104`), and the
+-- honest place for that bound is the declaration.
+
+module netz::bytes {
+
+-- **One byte, and its type is the point.** It exists so that the pair of probes has a
+-- one-expression form to stand against; every reader below could inline it.
+pub impl fn u8_von(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> u64
+    requires v + 1 <= lenof(buf)
+    ensures  result <= 255
+    effects  { reads buf }
+    costs    <= 6 ops
+{
+    return u64(buf[v]);
+}
+
+-- **A 16-bit field in network order.** `* 256 + …` and not `<< 8 | …`: the two are the same
+-- number, and multiplication is the form whose range M1 computes without a bit rule.
+pub impl fn u16_gross(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> u64
+    requires v + 2 <= lenof(buf)
+    ensures  result <= 65535
+    effects  { reads buf }
+    costs    <= 12 ops
+{
+    return u64(buf[v]) * 256 + u64(buf[v + 1]);
+}
+
+-- A 32-bit field -- an IPv4 address, a TCP sequence number, a timestamp.
+pub impl fn u32_gross(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> u64
+    requires v + 4 <= lenof(buf)
+    ensures  result <= 4294967295
+    effects  { reads buf }
+    costs    <= 24 ops
+{
+    return u64(buf[v]) * 16777216 + u64(buf[v + 1]) * 65536
+         + u64(buf[v + 2]) * 256  + u64(buf[v + 3]);
+}
+
+-- **The write side, and this is where `gift/1368` falls.** The value arrives bounded, so both
+-- stores are provably bytes: `wert / 256` is at most 255 because `wert` is at most 65535, and
+-- `wert % 256` is at most 255 because that is what a remainder by 256 is. Neither line needs a
+-- run-time check, and neither is taken on trust.
+pub impl fn setze_u16_gross(buf : ptr<normal, w> u8, v : u64 in 0 .. 65535,
+                            wert : u64 in 0 .. 65535)
+    requires v + 2 <= lenof(buf)
+    effects  { writes buf }
+    costs    <= 16 ops
+{
+    buf[v]     = wert / 256;
+    buf[v + 1] = wert % 256;
+}
+
+}

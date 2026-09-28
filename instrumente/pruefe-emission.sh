@@ -3754,7 +3754,13 @@ fi
 # (`gift/1365` private `reason` reached by a `use` -> `N025`, `gift/1366` exported head naming
 # a private one -> `N038`) are refused by the CHECKER and write no C, so `MARKE_EMIT_G` is
 # untouched.
-MARKE_EMIT=144
+# **144 -> 145 on 2026-09-28 (server lane, phase 2, the pointer-index blind spot).** One more
+# emitting example: `168-bytes-through-a-pointer.gab`, the four byte readers/writers a protocol
+# header needs, which check clean (and at 100 % M1 coverage) only since `p[i]` on a pointer has
+# a type. Its two poison twins (`gift/1367` a byte read outside its declared range, `gift/1368`
+# a 16-bit value stored into a byte -- both `M101`, both 0 errors before) are refused by the
+# CHECKER and write no C, so `MARKE_EMIT_G` is untouched.
+MARKE_EMIT=145
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.

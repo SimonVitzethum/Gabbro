@@ -1,0 +1,38 @@
+-- erwartet: M101
+-- **A sixteen-bit value stored into a BYTE through a pointer -- accepted, and the C truncated
+-- it.**
+--
+-- This is the write half of `gift/1367`, and it is the half that costs something. Measured on
+-- the release binary of `f55b4713`, the commit before this one:
+--
+-- ```text
+-- impl fn kaputt(buf : ptr<normal, w> u8, wert : u64 in 0 .. 65535)
+--     requires 1 <= lenof(buf) effects { writes buf }
+-- { buf[0] = wert; }              -- 0 errors, 0 hints
+-- ```
+--
+-- `m1.bereich`'s own sentence says *"no overflow, no truncating width change … reaches the
+-- emitter without a run-time check being emitted for it."* **This was a truncating width
+-- change, and it reached the emitter with nothing at all**: the assignment target had no type,
+-- because `typ_von_ort` answered `Unbekannt` for an index on a pointer (the reason is in
+-- `gift/1367`'s header), and `Unbekannt` is compatible with everything. The generated C is
+-- `buf[0] = wert;` over a `uint8_t *`, which C converts silently -- `wert = 0x0102` stores
+-- `0x02` and nobody says a word.
+--
+-- *A checker that computes an interval for every value has to have a value to compute it for.*
+-- The refusal names the remedy it always names: `narrow wert to 0 .. 255 else { … }`, or a
+-- declaration that carries the range -- and then the truncation is written, not suffered.
+-- `beispiele/168` is the form a network stack actually wants: the two bytes of a big-endian
+-- 16-bit field, each of them provably a byte.
+
+module gift {
+
+pub impl fn kaputt(buf : ptr<normal, w> u8, wert : u64 in 0 .. 65535)
+    requires 1 <= lenof(buf)
+    effects  { writes buf }
+    costs    <= 8 ops
+{
+    buf[0] = wert;
+}
+
+}

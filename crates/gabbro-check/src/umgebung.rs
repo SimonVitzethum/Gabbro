@@ -2150,9 +2150,36 @@ impl Umgebung {
         for suffix in &ort.suffixe {
             aktuell = match suffix {
                 OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => self.feld_von(von, &aktuell, &f.text),
-                OrtSuffix::Index(_) => match aktuell.durchgreifen() {
-                    Typ::Feld { element, .. } => (**element).clone(),
-                    _ => Typ::Unbekannt,
+                // **`p[i]` on a POINTER answers the pointee, since 2026-09-28** (server lane,
+                // phase 2). Until then only `Typ::Feld` had an answer here and a pointer read
+                // fell out as `Unbekannt` -- and `Unbekannt` is compatible with everything, so
+                // M1's own sentence (*"every operation stays inside the range of its result
+                // type"*) did not reach the one read a network stack does most. Measured
+                // before the line stood here, with a release binary:
+                //
+                // ```gabbro
+                // impl fn f(buf : ptr<normal, r> u8, v : u64 in 0 .. 65535) -> bool
+                //     requires v + 1 <= lenof(buf) effects { reads buf }
+                // { return buf[v]; }                 -- 0 errors, 0 hints
+                // ```
+                //
+                // A byte returned as a `bool`, and as a `u8 in 0 .. 0`, and as a `u32 in
+                // 0 .. 1`: three irreconcilable types for one expression, and the run said so
+                // in its own coverage line (`1 of them without a type`) without anything
+                // falling. *The same class as `Typ::FnPtr`'s note above, one suffix over.*
+                //
+                // **The match is on `aktuell` and NOT on `durchgreifen()`**, which is exactly
+                // why the hole could look closed: `durchgreifen` follows a pointer to its
+                // pointee, so a `ptr<…> u8` arrives at the arm below already AS `Ganzzahl`,
+                // matches no `Feld`, and takes the catch-all. The bound of the index is not
+                // this line's business and never was: a pointer carries no `count`, and
+                // `N463`/`N464` hold the length at the call site.
+                OrtSuffix::Index(_) => match &aktuell {
+                    Typ::Zeiger(ziel) => (**ziel).clone(),
+                    _ => match aktuell.durchgreifen() {
+                        Typ::Feld { element, .. } => (**element).clone(),
+                        _ => Typ::Unbekannt,
+                    },
                 },
             };
             if aktuell.ist_unbekannt() {
