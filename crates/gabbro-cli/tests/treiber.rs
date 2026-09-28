@@ -7,14 +7,15 @@
 //! held here:
 //!
 //! * the hand driver `laufzeit/start.c` still holds its pin (the probe lane
-//!   202 described -- source set against `pthread_create` set);
+//!   202 described -- source set against declared-start set);
 //! * the GENERATED driver holds the same pin, over the same sources;
 //!
-//! **Since TODO section 0e K8 the generated driver names no POSIX function**,
-//! so its pin is read off `gabbro_os_faden_start` and every unit here carries
-//! the binding `bibliothek/linux/` in its manifest. The hand file has NOT
-//! moved -- no built program links it, and its own scanner is the one below
-//! that still reads `pthread_create`.
+//! **Since TODO section 0e K8 neither driver names a POSIX function**: both
+//! call `gabbro_os_faden_start` with the root's own name, so ONE scanner reads
+//! both, and every unit here carries the binding `bibliothek/linux/` in its
+//! manifest. The hand file also gave up its observation block -- what a run
+//! PRINTS is this test's business, and `BEOBACHTUNG_124` is appended to both
+//! artefacts at the same `NACHLAUF` marker.
 //! * a stale driver (a root added or dropped without regenerating) fails the
 //!   pin loudly, naming both sets;
 //! * `beispiele/124` runs through the GENERATED driver with the identical
@@ -79,33 +80,6 @@ fn concurrent_kurz(datei: &str, quelle: &str) -> BTreeMap<String, usize> {
     menge
 }
 
-/// The `pthread_create` roots of a driver C file, COUNTED: every
-/// `faden_<root>` named at a `pthread_create` call site, once per site. A
-/// plain scanner is enough -- the generator is the only writer of the
-/// generated file, and the hand file keeps the same one-wrapper-per-root
-/// shape so the same probe reads both.
-fn pthread_create_menge(treiber_c: &str) -> BTreeMap<String, usize> {
-    let mut menge = BTreeMap::new();
-    let mut rest = treiber_c;
-    // Only CALL SITES count (`pthread_create(` up to its `;`): with counts a
-    // mention in a comment would be a thread start that does not exist.
-    while let Some(i) = rest.find("pthread_create(") {
-        let nach = &rest[i + "pthread_create(".len()..];
-        let aufruf = &nach[..nach.find(';').unwrap_or(nach.len())];
-        if let Some(j) = aufruf.find("faden_") {
-            let name: String = aufruf[j + "faden_".len()..]
-                .chars()
-                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
-                .collect();
-            if !name.is_empty() {
-                *menge.entry(name).or_insert(0) += 1;
-            }
-        }
-        rest = nach;
-    }
-    menge
-}
-
 /// The roots of a GENERATED driver, COUNTED: the last identifier of every
 /// `gabbro_os_faden_start` argument list, which is the root itself -- the cast
 /// that carries it (`(uint64_t)(uintptr_t)`) puts its own names before it and
@@ -163,22 +137,14 @@ fn n_wurzeln(treiber_c: &str) -> Option<usize> {
 /// The pin lane 202 described, as a MULTISET since fix lane F4: the same
 /// roots with the same counts, and `N_WURZELN` counting the starts. The
 /// error names both sides -- a stale driver fails LOUDLY.
+/// **ONE scanner for both drivers since TODO section 0e K8.** The hand file
+/// `laufzeit/start.c` wrote `pthread_create` with a `faden_<root>` adapter and
+/// the generated one wrote the same; both call `gabbro_os_faden_start` with the
+/// root's own name now, so the probe that reads them is one function again --
+/// which is what makes "the hand file keeps the same shape" a fact rather than
+/// a hope.
 fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
-    pin_pruefe_mit(faden_start_menge(treiber_c), quelle, treiber_c)
-}
-
-/// The same pin over the HAND driver `laufzeit/start.c`, which still writes
-/// `pthread_create` -- no built program links it, so K8's second slice left it
-/// where it was and the report says so.
-fn pin_pruefe_hand(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<usize, String> {
-    pin_pruefe_mit(pthread_create_menge(treiber_c), quelle, treiber_c)
-}
-
-fn pin_pruefe_mit(
-    treiber: BTreeMap<String, usize>,
-    quelle: &BTreeMap<String, usize>,
-    treiber_c: &str,
-) -> Result<usize, String> {
+    let treiber = faden_start_menge(treiber_c);
     let zeige = |m: &BTreeMap<String, usize>| -> String {
         m.iter().map(|(n, k)| format!("{n} x{k}")).collect::<Vec<_>>().join(", ")
     };
@@ -257,7 +223,7 @@ fn pin_haelt_fuer_handtreiber_start_c() {
         [("hauptA", 1), ("hauptB", 1)],
         "the source declares exactly its two roots, once each"
     );
-    assert_eq!(pin_pruefe_hand(&menge, &treiber), Ok(2), "the hand pin holds");
+    assert_eq!(pin_pruefe(&menge, &treiber), Ok(2), "the hand pin holds");
 }
 
 /// **The two manifest lines every hosted unit carries since K8's second slice**, and the
@@ -445,13 +411,25 @@ fn lauf_124_durch_erzeugten_treiber() {
         );
     }
 
-    // The hand file over the SAME emitted C answers the same shape.
-    let (stdout, code) = cc_und_lauf(
-        &wurzel().join("laufzeit/start.c"),
-        &out,
-        "treiber124.c",
-        "lauf-hand",
-    );
+    // **The hand file over the SAME emitted C answers the same shape** -- and
+    // since K8 it carries the IDENTICAL observation text, appended at its own
+    // `NACHLAUF` marker. Before that the block stood inside `laufzeit/start.c`;
+    // what a run prints is the test's business and printing is an
+    // operating-system call, so it moved here and the two artefacts now differ
+    // in the runtime half alone.
+    let hand = std::fs::read_to_string(wurzel().join("laufzeit/start.c"))
+        .expect("the hand driver is on disk");
+    assert_eq!(hand.matches(marke).count(), 1, "the hand driver carries the marker once");
+    let hand_c = arbeit.join("lauf-hand.c");
+    std::fs::write(
+        &hand_c,
+        format!(
+            "#include <stdio.h>\n{}",
+            hand.replace(marke, &format!("{marke}\n{BEOBACHTUNG_124}"))
+        ),
+    )
+    .expect("hand driver writable");
+    let (stdout, code) = cc_und_lauf(&hand_c, &out, "treiber124.c", "lauf-hand");
     assert_eq!(code, 0, "the hand run exits 0");
     assert!(
         behauptung_haelt(stdout.trim()),

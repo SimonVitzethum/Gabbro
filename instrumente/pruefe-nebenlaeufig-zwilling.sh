@@ -174,8 +174,14 @@ baue() {   # $1 = arb, $2 = seite (emit|hand), $3 = opt, $4 = gift
         fi
     fi
     sed -e "s|@ERZEUGT@|$seite.c|" -e "s|@FADEN@|$FADEN|" "$TREIBER" > "$arb/$seite-treiber.c"
+    # **The binding is a SECOND translation unit** (TODO section 0e K8):
+    # `laufzeit/faden.c` calls `gabbro_os_klon` now, and
+    # `bibliothek/linux/linux.c` sets `_POSIX_C_SOURCE` before any header --
+    # which only works at the top of a unit of its own. *Measured: pasted into
+    # this one it is a redefinition and `-Werror` ends the run.*
     if ! cc -std=c11 "-$opt" -Wall -Wextra -Werror "-DGABBRO_BREMSE=${BREMSE}u" \
-            -I"$arb" -o "$arb/$seite-$opt" "$arb/$seite-treiber.c" 2> "$arb/cc.err"; then
+            -I"$arb" -I"$W/laufzeit" -pthread -o "$arb/$seite-$opt" \
+            "$arb/$seite-treiber.c" "$W/bibliothek/linux/linux.c" 2> "$arb/cc.err"; then
         echo "RED: $seite at -$opt did not compile"
         head -12 "$arb/cc.err" | sed 's/^/    /'
         return 1

@@ -2115,3 +2115,151 @@ instrument exists, and the binary size at both arena ceilings is the same number
    is what made that true. They are the hand shapes the tests and `pruefe-emission.sh`'s
    own drivers still read.
 3. ~~the corpus~~ — **it needed nothing** (§16.6), and that is measured and not assumed.
+
+## 17. Session 11, second slice (2026-09-28) — K8's last three files, and the blind spot that hid two of them
+
+*The same session as §16, after `MARKE_OSSYM` reached 0. This is the slice §16.9 named — and it
+found a third thing on the way that neither §16.9 nor §15.7 had.*
+
+### 17.1 `laufzeit/faden.c`: the system call that leaves no symbol
+
+`faden.c` is the thread half of a run-time `start { f };` — not a declared `concurrent` member,
+which the driver starts once before the program runs, but a STATEMENT a running Gabbro function
+executes, on a stack the emitter laid out as a static region of the unit. It issued the kernel
+call itself, in inline assembly: `clone` (56), the child's `exit` (60), `futex` (202).
+
+**Three `syscall` instructions, and `nm -u faden.o` was empty.** That is the whole reason
+§14 built a second stage: a runtime could have hidden its entire Linux dependency in assembly
+and passed a symbol wall untouched. `MARKE_ROHRUF` counted the SITES instead.
+
+They are `gabbro_os_klon` and `gabbro_os_wort_warte` now, and the split is the arena's:
+
+| stays in `laufzeit/faden.c` | moved to `bibliothek/linux/linux.c` |
+|---|---|
+| what a join word MEANS (zero, nonzero while the root runs, zero again) | the clone flag set, one by one, with the reckoning for each |
+| the validity checks — no null root, stack or word; a 16-byte-aligned stack top, because the SysV ABI wants it before the `call` the thread makes | the register convention, the pinned `r10`, the two clobbers the instruction itself makes |
+| **the join as a LOOP**: an acquire re-read until the word is zero, with a wait in between that is allowed to return at any time | why the child must execute no C frame on the new stack, and the `ud2` behind the thread's `exit` |
+
+**The binding's promises are named, and their ORDER is the whole of it** (`os_bindung_klon` in
+`linux.gab`): the id is stored BEFORE the thread can run and cleared after it ended, never the
+other way round; the clear happens-before what a waiter reads; the root is called with the given
+stack top and ends the THREAD. *The middle clause is the one that was once false* — until
+2026-09-26 the parent stored the id after `clone` returned, a thread that finished first had it
+cleared before the store, and the join waited forever on a dead one (200000 rounds hung before
+round 20000). The runtime's loop is nothing but a reading of these three.
+
+`MARKE_ROHRUF` **3 → 0**.
+
+### 17.2 The blind spot: `start.c` and `start_pool.c`, which nothing links
+
+`symbole_pruefe` reads what a BUILT binary references. That is the honest question and it has a
+structural limit: **it can only see the files the binary links.** The probe links `arena_dyn.c`,
+`faden.c` and the generated driver. It does not link `laufzeit/start.c` or
+`laufzeit/start_pool.c` — the hand drivers the generated one replaced — and no program does.
+
+*A file nothing links is measured by nothing*, and that is exactly how an operating-system call
+survives a green wall. So this slice added a stage that reads the SOURCE of every file in
+`laufzeit/`, with the SAME scanner and the same name list the bare-metal stage uses (one
+function, two trees: a second copy would measure the copy, `W7`). Its first run:
+
+```
+HARNESS: hosted sources FAILED -- 31 OS call(s) stand in laufzeit/ itself
+    OS in start.c:140:        pause();
+    OS in start.c:158:    rc = pthread_create(&faden[0], NULL, faden_hauptA, NULL);
+    ...
+```
+
+**Thirty-one**, in two files that had been "the hosted runtime" in every table in the tree and
+were linked by nothing. Both are bound now, exactly as the generated driver is — and both lost
+the same two things with it: the never-spawned idle root `ruhe` (it spun on `pause()`), and the
+per-root `pthread_create` adapter (the POSIX signature is the binding's, so the root's own name
+stands at the start site).
+
+**`laufzeit/start.c` lost a third thing, and it is the one worth reading twice.** Its `main`
+ended with the 124 observation — a `printf` of the five carrier values and three assertions over
+them. That block is the TEST's: it names the carriers of one example, and printing is an
+operating-system call. It is `BEOBACHTUNG_124` in `crates/gabbro-cli/tests/treiber.rs` now,
+appended at a `NACHLAUF` marker — the same marker, with the same text, that the generated
+driver's copy gets. **So the hand run and the generated run now share their observation
+character for character, and what differs between the two artefacts is only the thing the
+comparison is about.** The pin probe became one function for both drivers at the same time.
+
+### 17.3 What this slice did NOT do, and why the build gained no new row
+
+`bau.rs::bindungsregel_gehostet` has **no row for `gabbro_os_klon`**, and that is a decision:
+its trigger would be a run-time `start` EXPRESSION, which `modulkarte`'s walk over ITEMS does
+not see. Inventing a text scan for it would be a second register over what the checker already
+knows (`fusswache2::startet`), which is the drift this folder writes its rules against. `gabbro
+build` also links neither `faden.c` nor `arena_dyn.c` — the harnesses do — so the demand would
+be about something the build does not do. **The measurement is the wall here, and the refusal
+the arena and the driver have is not claimed for this one.**
+
+### 17.4 The poison probes — 8 of 8, and gift 2 had to be rewritten
+
+Gift 2 planted a SECOND `syscall` beside the three that were there. There are none now, so it
+plants the FIRST — the same mutation, breaking a mark of 0 instead of 3. Verified through the
+right door: *"raw syscalls FAILED -- the hosted runtime issues 1, the mark is 0"*, with the line.
+
+**Gift 8 is new** and it is the source stage's: one `getpid()` in a runtime file, read at source
+level. It is the blind spot's own probe — a call in a file no binary links, which every other
+stage of this instrument is unable to see.
+
+### 17.5 A `-pthread` that cost one emission run, and what it taught
+
+Adding `-pthread` to the emission harness's compile lines turned `beispiel158` red:
+
+```
+/tmp/.../linux.c:37: error: "_POSIX_C_SOURCE" redefined [-Werror]
+/usr/include/features.h:321: note: this is the location of the previous definition
+```
+
+`-pthread` expands to `-D_REENTRANT`; under it glibc's `features.h` sets `_POSIX_C_SOURCE` to
+`199506L`, and `bibliothek/linux/linux.c` — which the 158 driver `#include`s as ONE translation
+unit — then redefines it to `200809L`. Without the flag the two values agree and C allows the
+identical redefinition. The flag is not needed on this machine's glibc (2.39: `pthread_create`
+lives in `libc.so.6`) and is gone from those five lines, with the reason beside them.
+
+*The same cause had already bitten once this slice, the other way round:* pasting `linux.c` into
+a driver that had included `<stdio.h>` first. **A file that sets a feature-test macro is a
+translation unit of its own**, and the three harnesses that link it now do exactly that
+(`pruefe-nebenlaeufig-zwilling.sh`, `pruefe-metall.sh`'s hosted counter-probe, and the driver
+tests); the 158 driver keeps its single-unit include because there the macro values agree.
+
+### 17.6 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1433 passed, 0 failed** (`~/claude-lane/logs/test-s11b.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 325 von 325** (`emission-s11e.log`) |
+| `./instrumente/pruefe-os-bindung.sh` | rc 0 — **`MARKE_OSSYM` 0, `MARKE_ROHRUF` 0**, no OS call in the 7 files of `laufzeit/`, none in the 7 of `laufzeit/metall/` beside 65 machine accesses; **8 of 8** gifts |
+| `./instrumente/pruefe-metall.sh` | rc 0, 18 booted, 8 gifts bite, **hosted join 200000 start/join rounds** through the bound `clone` |
+| `./instrumente/pruefe-kernelmodul.sh` | rc 0, GREEN on `halde`, `takt`, `atomar` |
+| `./instrumente/miss-arena-decke.sh` | GREEN — 17272 bytes of binary at both ceilings |
+| `./instrumente/pruefe-akzeptiert-diff.py` | rc 0 |
+| `cd grammatik && lake build` | rc 0, 356 jobs, standard axioms |
+| `pruefe-waechter/-zahlen/-vergabe/-kennungen/-englisch/-osfrei/-sondendeckung` | **identical to the base** after digit and path normalisation (throwaway worktree at `3707e5e3`, removed afterwards) |
+| `pruefe-todo/-saetze/-widerruf/-cformen` | rc 0 |
+| `abnahme.py --voll` | cannot run here: no Isabelle (`REGELN.md`) |
+
+Counters: `MARKE_ROHRUF` 3 → **0**, `MARK_AUSSEN` 27 → **28** (`sonde_os_klon`). `MARKE_OSSYM`
+stays 0. `MARKE_EMIT`, `-G`, `-M`, `-BIB`, `GENERATOR_KENNUNG` and the README guardian count
+are unchanged — no emitted byte moved and no new instrument exists (the stage is a fourth one
+inside `pruefe-os-bindung.sh`).
+
+### 17.7 K8 is closed, and this is what it means
+
+**No operating-system call is hard-wired in any Gabbro runtime.** Measured three ways over one
+probe, each covering what the others cannot:
+
+1. **by symbol**, over a BUILT binary: 0 names the hosted runtime's objects pull out of the OS;
+2. **by site**, over the sources: 0 raw `syscall` instructions, which no `nm` can see;
+3. **by source name**, over all of `laufzeit/`: 0, including the two files no binary links.
+
+And the sentence's other half, which K8 asks to be confirmed and not merely not-denied: the
+bare-metal runtime names **no OS call in 7 files** and makes **65 machine accesses** — port I/O,
+`hlt`, `cli`/`sti`, MSRs, the ticket lock's locked instructions. *An instruction is not an API*,
+and that is the line Simon drew.
+
+What is NOT claimed: that a program cannot reach the OS. It can, and that is the point — it
+declares what it reaches, with an ABI, a cost and a named assumption, and `bibliothek/linux/`
+is the set it may take off the shelf.

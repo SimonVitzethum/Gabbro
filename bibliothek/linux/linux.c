@@ -312,3 +312,188 @@ uint32_t gabbro_os_faden_warte(uint64_t f)
     }
     return (uint32_t)pthread_join(faden(f)->faden, NULL);
 }
+
+/* -- the RUN-TIME `start`: the raw kernel thread ---------------------------- */
+/*
+ * **THIS IS THE ONLY PLACE A `syscall` INSTRUCTION STANDS IN A HOSTED GABBRO
+ * BUILD**, and it is a file of the PROGRAM. It used to stand in
+ * `laufzeit/faden.c`, where `instrumente/pruefe-os-bindung.sh` counted it as
+ * three SITES (`MARKE_ROHRUF`) -- because a raw system call leaves no undefined
+ * symbol, so the symbol stage is blind to it and a runtime could have hidden its
+ * whole Linux dependency in assembly.
+ *
+ * SIMON'S RULE, AS CODE, unchanged by the move: threads at run time are made by
+ * OUR OWN code issuing the kernel system call -- not by libc
+ * (`pthread_create`, the glibc `clone()` wrapper, `fork`). The `pthread_create`
+ * above is the DRIVER's thread, started once before the program runs; this is
+ * the `start { f };` statement of a running Gabbro function, and it keeps the
+ * raw call it always had. *Both are the program's now, and they differ in the
+ * primitive because they differ in the question.*
+ *
+ * REGISTERS, ONE BY ONE. The `syscall` instruction itself destroys `rcx` (it
+ * holds the return address) and `r11` (it holds the flags) -- both stand in
+ * every clobber list below, the same two the syscall stub destroys (`emit.rs`,
+ * `syscall_stumpf`). The kernel calling convention takes the number in `rax`,
+ * arguments in `rdi rsi rdx r10 r8 r9`, the answer in `rax`. `r10` has no
+ * constraint letter, so it travels in a pinned register variable (the musl idiom
+ * the stub already uses).
+ *
+ * FLAGS, ONE BY ONE. The clone set is
+ *
+ *   CLONE_VM         0x00000100  one address space: the threads share the
+ *                                tables, which is what makes them threads.
+ *   CLONE_FS         0x00000200  one filesystem view (like the glibc wrapper).
+ *   CLONE_FILES      0x00000400  one file table (like the glibc wrapper).
+ *   CLONE_SIGHAND    0x00000800  one signal-handler table (like the wrapper).
+ *   CLONE_THREAD     0x00010000  one thread group: signals address the group,
+ *                                and `exit` below ends THIS thread, not the
+ *                                process (that is why it must not be
+ *                                `exit_group`).
+ *   CLONE_SYSVSEM    0x00040000  one SysV semaphore undo list (wrapper parity;
+ *                                Gabbro's own locks are futexes, never SysV).
+ *   CLONE_PARENT_SETTID  0x00100000  the kernel stores the child's TID into
+ *                                the join word BEFORE the child can run -- the
+ *                                FIRST of the three promises `laufzeit/bindung.h`
+ *                                names, and the runtime's loop rests on it.
+ *   CLONE_CHILD_CLEARTID 0x00200000  the join: the kernel clears the word at
+ *                                `ctid` on thread exit and wakes one futex
+ *                                waiter, so the join is a wait loop and not a
+ *                                guess about scheduling. It is also the SECOND
+ *                                promise -- the clear happens-before what the
+ *                                waiter reads.
+ *
+ * What is NOT set, and why:
+ *
+ *   CLONE_SETTLS is absent: no TLS is used anywhere on these paths. The threads
+ *   run nullary roots over shared tables plus their own stack; they touch no
+ *   `errno` (raw answers stay in locals), no thread-local, nothing that would
+ *   need a segment base. Setting it would promise a facility nobody reads.
+ *
+ *   CLONE_PARENT_SETTID WAS absent until 2026-09-26, and that was a lost join:
+ *   the parent stored the TID into the word itself, AFTER `clone` returned --
+ *   and a child that ran to its end first had its word cleared by the kernel
+ *   BEFORE that store, which then wrote a dead TID back. The join then waited on
+ *   it forever. Measured by Opus agent I: 200000 start/join rounds of an empty
+ *   root on one stack hung (timeout) before round 20000; with the flag, the
+ *   kernel writes the TID in `copy_process`, before `wake_up_new_task`, so the
+ *   word says "alive" before the child can end, and the same probe runs through
+ *   (`instrumente/pruefe-metall.sh`, hosted counter-probe). The bare-metal
+ *   runtime keeps the same order by construction (`laufzeit/metall/kern.c`,
+ *   `faden_anlegen`).
+ *
+ * THE CHILD NEVER EXECUTES A C FRAME ON THE NEW STACK. `clone` returns twice --
+ * once in the parent (the TID), once in the child (zero) -- but the kernel puts
+ * the handed stack under the child AT the return: the very next C instruction
+ * (`pop %rbp; ret` of a helper call) would pop words off the NEW stack and
+ * return into whatever they hold (a zeroed static stack holds zero -- measured
+ * 2026-09-26 as a jump to NULL). So the `syscall` is issued from inline asm that
+ * branches BEFORE any C stack operation: the child moves the handed top into
+ * `rsp` (already there -- the move states the ownership), CALLS the root on it,
+ * and when the root returns exits the THREAD with `SYS_exit` (60), never
+ * `exit_group` (231). A `call` pushes its return address onto the NEW stack, so
+ * that push is the first word the new stack carries and the whole root runs
+ * where the unit said it would. `ud2` stands behind the exit the way the stub's
+ * hardware outcome stands behind its decoding: under the kernel contract that
+ * point is not reached, and the instruction says so loudly instead of falling
+ * through.
+ *
+ * NO `errno`. Raw answers stay negative in locals and come back positive;
+ * nothing here names the thread-local error cell, which is exactly the TLS the
+ * flags above declined -- and it is why this file's `<stdio.h>` and `<stdlib.h>`
+ * above are the REPORT channel's business and not this one's.
+ *
+ * MACHINE. x86_64 Linux only, like the syscall stub. Every number below is the
+ * kernel's, read from the architecture's ABI and never from a libc header.
+ */
+
+#define GABBRO_SYS_CLONE 56L
+#define GABBRO_SYS_FUTEX 202L
+#define GABBRO_FUTEX_WAIT 0L
+
+#define GABBRO_CLONE_VM 0x00000100L
+#define GABBRO_CLONE_FS 0x00000200L
+#define GABBRO_CLONE_FILES 0x00000400L
+#define GABBRO_CLONE_SIGHAND 0x00000800L
+#define GABBRO_CLONE_THREAD 0x00010000L
+#define GABBRO_CLONE_SYSVSEM 0x00040000L
+#define GABBRO_CLONE_PARENT_SETTID 0x00100000L
+#define GABBRO_CLONE_CHILD_CLEARTID 0x00200000L
+
+#define GABBRO_CLONE_FLAGS \
+    (GABBRO_CLONE_VM | GABBRO_CLONE_FS | GABBRO_CLONE_FILES | GABBRO_CLONE_SIGHAND | \
+     GABBRO_CLONE_THREAD | GABBRO_CLONE_SYSVSEM | GABBRO_CLONE_PARENT_SETTID | \
+     GABBRO_CLONE_CHILD_CLEARTID)
+
+/* One raw system call.
+ *
+ * WHY SIX ARGUMENTS ALWAYS. The sites here pass at most four; spelling all six
+ * keeps ONE helper with one clobber list instead of four shapes that drift
+ * apart (the same reason the stub template is one template).
+ */
+static long roh_aufruf(long nr, long a1, long a2, long a3, long a4, long a5, long a6)
+{
+    register long r10 __asm__("r10") = a4;
+    register long r8 __asm__("r8") = a5;
+    register long r9 __asm__("r9") = a6;
+    register long rax __asm__("rax") = nr;
+    __asm__ __volatile__(
+        "syscall"
+        : "+a"(rax)
+        : "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8), "r"(r9)
+        : "memory", "rcx", "r11", "cc");
+    return rax;
+}
+
+uint32_t gabbro_os_klon(uint64_t koerper, uint64_t spitze, uint64_t wort)
+{
+    long r;
+    /* rdi = flags, rsi = handed stack, rdx = ptid (the join word: the kernel
+     * sets it to the TID before the child runs), r10 = ctid (the join word the
+     * kernel clears), r8 = tls (none: no CLONE_SETTLS). The pins are the musl
+     * idiom the syscall stub uses (`r10` has no constraint letter); `rax` is
+     * in-out (`+a`): the number going in, the raw answer coming out. */
+    register long r_rax __asm__("rax") = GABBRO_SYS_CLONE;
+    register long r_rdi __asm__("rdi") = GABBRO_CLONE_FLAGS;
+    register long r_rsi __asm__("rsi") = (long)(uintptr_t)spitze;
+    register long r_rdx __asm__("rdx") = (long)(uintptr_t)wort;
+    register long r_r10 __asm__("r10") = (long)(uintptr_t)wort;
+    register long r_r8 __asm__("r8") = 0;
+    /* The runtime checked the three for null and the stack top for alignment
+     * before it asked (`laufzeit/faden.c`); this is the binding's own floor, so
+     * that a body called from anywhere else still refuses rather than clones
+     * onto address zero. */
+    if (koerper == 0 || spitze == 0 || wort == 0) {
+        return 22; /* EINVAL */
+    }
+    __asm__ __volatile__(
+        "syscall\n\t"
+        "testq %%rax, %%rax\n\t"
+        "jnz 1f\n\t"
+        "movq %[spitze], %%rsp\n\t"
+        "call *%[fn]\n\t"
+        "movl $60, %%eax\n\t"
+        "xorl %%edi, %%edi\n\t"
+        "syscall\n\t"
+        "ud2\n\t"
+        "1:\n\t"
+        : "+a"(r_rax)
+        : "r"(r_rdi), "r"(r_rsi), "r"(r_rdx), "r"(r_r10), "r"(r_r8),
+          [spitze] "r"((long)(uintptr_t)spitze), [fn] "r"((long)(uintptr_t)koerper)
+        : "memory", "rcx", "r11", "cc");
+    r = r_rax;
+    if (r < 0) {
+        long e = -r;
+        return e > 4095 ? 12u : (uint32_t)e; /* ENOMEM where the number is wild. */
+    }
+    return 0;
+}
+
+void gabbro_os_wort_warte(uint64_t wort, uint32_t erwartet)
+{
+    /* FUTEX_WAIT blocks only while the word still holds the seen value: a clear
+     * racing the caller's load fails with EAGAIN, a spurious wake simply
+     * returns. Both are legal answers here -- the runtime's loop re-reads and
+     * never trusts this call (`laufzeit/faden.c`). */
+    (void)roh_aufruf(GABBRO_SYS_FUTEX, (long)(uintptr_t)wort, GABBRO_FUTEX_WAIT,
+                     (long)erwartet, 0, 0, 0);
+}

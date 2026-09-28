@@ -59,10 +59,18 @@
  * recipe (see the lane report for the one-liner and its output).
  */
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+/* **Every operating-system call in this file is the PROGRAM's** (2026-09-28,
+ * TODO section 0e K8): threads, the lock and the words of a failure go through
+ * `laufzeit/bindung.h`, which declares them and defines none, and
+ * `bibliothek/linux/linux.c` is the binding a program takes off the shelf. The
+ * hand driver `start.c` and the GENERATED driver
+ * (`crates/gabbro-cli/src/treiber.rs`) made the same move on the same day.
+ *
+ * This file is compiled by nothing in the tree today -- which is exactly why the
+ * measurement that found its seven OS names is the SOURCE-level stage of
+ * `instrumente/pruefe-os-bindung.sh` and not the symbol one. *A file nothing
+ * links is measured by nothing.* */
+#include "bindung.h"
 
 /* -- The switches the recipe owes. ---------------------------------------- */
 
@@ -106,44 +114,32 @@
 #define SPERRE_NIMM VERKLEBE(POOL_SPERRE, _nimm)
 #define SPERRE_GIB VERKLEBE(POOL_SPERRE, _gib)
 
-static pthread_mutex_t sperre_einzig = PTHREAD_MUTEX_INITIALIZER;
+/* The storage is this driver's, the operations are the program's: the blob is
+ * words and `bibliothek/linux/linux.c` lays its own mutex into it with a
+ * `_Static_assert` that it fits. A refused acquire fail-stops there, because a
+ * driver has no `else` at a lock it must hold. */
+static uint64_t sperre_einzig[GABBRO_OS_SPERRE_WORTE];
 
 void SPERRE_NIMM(void)
 {
-    int rc = pthread_mutex_lock(&sperre_einzig);
-    if (rc != 0) {
-        fprintf(stderr, "pool: nimm: pthread_mutex_lock: %d\n", rc);
-        abort();
-    }
+    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_einzig);
 }
 
 void SPERRE_GIB(void)
 {
-    int rc = pthread_mutex_unlock(&sperre_einzig);
-    if (rc != 0) {
-        fprintf(stderr, "pool: gib: pthread_mutex_unlock: %d\n", rc);
-        abort();
-    }
+    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_einzig);
 }
 
-/* -- The pool: one wrapper, N threads on one routine.
+/* -- The pool: N threads on one routine.
  *
- * WHY ONE WRAPPER AND NOT ONE PER ROOT. `pthread_create` wants
- * `void *(*)(void *)` and the emitted root is `void (*)(void)`; the wrapper
- * is the adapter. `start.c` keeps one adapter per root so the root's NAME
- * stays at the `pthread_create` call site for its probe to read. Here all N
- * threads run ONE routine, so one adapter serves all of them, and the NAME
- * travels in `-DPOOL_FN=` instead.
+ * WHY NO WRAPPER AT ALL ANY MORE. `pthread_create` wants `void *(*)(void *)`
+ * and the emitted root is `void (*)(void)`, so an adapter used to stand here.
+ * The POSIX signature is the binding's since K8 and its adapter with it, so the
+ * root travels to the start site as its own name -- here through `-DPOOL_FN=`,
+ * since all N threads run the one routine. A declared start takes no argument
+ * (`E.starts` carries each root's `Env`, here empty), and no slot pretends
+ * otherwise.
  */
-static void *faden_pool(void *u)
-{
-    (void)u; /* WHY: the thread gets no argument -- the declared starts of
-              * a pool unit take none (`E.starts` carries each root's `Env`,
-              * here empty). An argument slot that is always NULL would
-              * suggest parameter passing that does not exist. */
-    POOL_FN();
-    return NULL;
-}
 
 /* -- The idle root: `none` of `E.P.mitRuhe`.
  *
@@ -156,29 +152,12 @@ static void *faden_pool(void *u)
  * global), so it is invisible to every leg of `Ziel`.
  *
  * WHY IT IS NEVER SPAWNED ON HOSTED. POSIX gives `main` no spare cores to
- * park: `main` spawns exactly the declared pool and joins it. The function
- * stands here so the shape exists in the artefact -- bare metal spawns one
- * per extra core -- and `__attribute__((unused))` says exactly that.
+ * park: `main` spawns exactly the declared pool and joins it. **So it is GONE
+ * since K8** -- it spun on `pause()`, which is an operating-system call, and
+ * keeping it would have meant binding a primitive nothing on this side ever
+ * calls. Bare metal parks its spare cores inside its own runtime
+ * (`laufzeit/metall/kern.c`) and never read this function.
  */
-static void *ruhe(void *u) __attribute__((unused));
-static void *ruhe(void *u)
-{
-    (void)u;
-    for (;;) {
-        /* WHY `pause()` AND NOT AN EMPTY LOOP. An empty loop has no side
-         * effect, so C11 lets the compiler assume it terminates -- and then
-         * the function CAN return, which `-Werror=return-type` rightly
-         * rejects. `pause()` blocks in the kernel until a signal that never
-         * comes; it reads and writes no Gabbro carrier, so the promise
-         * "does nothing and touches nothing" still holds. The bare-metal
-         * spelling of this line is `wfi`. */
-        pause();
-    }
-    /* Unreachable: the loop above never ends. It stands here because `cc`
-     * cannot know that `pause()` never returns, and `-Werror=return-type`
-     * is right to ask. */
-    return NULL;
-}
 
 /* -- main: start the pool, join it, ask the unit what happened. ----------- */
 
@@ -187,27 +166,30 @@ int main(void)
     /* WHY AN ARRAY AND NOT N VARIABLES. The join loop must cover exactly
      * the spawned set; an array sized by POOL_N makes "spawned but never
      * joined" a size mismatch instead of a forgotten line. */
-    pthread_t faden[POOL_N];
-    int rc;
+    static uint64_t faden[POOL_N][GABBRO_OS_FADEN_WORTE];
+    uint32_t rc;
+
+    gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_einzig);
 
     for (int i = 0; i < POOL_N; i++) {
-        rc = pthread_create(&faden[i], NULL, faden_pool, NULL);
+        rc = gabbro_os_faden_start((uint64_t)(uintptr_t)faden[i],
+                                   (uint64_t)(uintptr_t)POOL_FN);
         if (rc != 0) {
-            fprintf(stderr, "start: thread %d: %d\n", i, rc);
+            gabbro_os_melden(GABBRO_OS_M_START, (uint64_t)i, rc);
             /* WHY JOIN HERE (fix lane F4, review G06 F6). Threads 0..i-1 are
              * already running; returning at once would leave them behind the
              * exit, and "the join covers exactly the spawned set" would be
              * false on exactly the path that fails. */
             for (int j = 0; j < i; j++) {
-                (void)pthread_join(faden[j], NULL);
+                (void)gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[j]);
             }
             return 2;
         }
     }
     for (int i = 0; i < POOL_N; i++) {
-        rc = pthread_join(faden[i], NULL);
+        rc = gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[i]);
         if (rc != 0) {
-            fprintf(stderr, "join: thread %d: %d\n", i, rc);
+            gabbro_os_melden(GABBRO_OS_M_WARTE, (uint64_t)i, rc);
             return 2;
         }
     }
@@ -229,10 +211,13 @@ int main(void)
         SPERRE_NIMM();
         unsigned gesehen = POOL_PRUEFE();
         SPERRE_GIB();
-        printf("pool: %s=%u (want %u)\n", "pruefe", gesehen, (unsigned)POOL_ERWARTET);
+        /* **The comparison stays, the WORDS go** (K8): printing is an
+         * operating-system call and a driver has none of its own. The code and
+         * its two numbers say the same thing, and the program's binding is
+         * where the sentence lives. */
+        gabbro_os_melden(GABBRO_OS_M_WARTE, (uint64_t)gesehen,
+                         (uint64_t)(unsigned)POOL_ERWARTET);
         if (gesehen != (unsigned)POOL_ERWARTET) {
-            fprintf(stderr, "pool: result %u, want %u\n", gesehen,
-                (unsigned)POOL_ERWARTET);
             return 1;
         }
     }

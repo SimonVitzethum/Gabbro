@@ -608,9 +608,20 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   **`MARKE_OSSYM` 12 → 7 → 0**, `7 of 7` poison probes, `MARK_AUSSEN` → 27,
   `GENERATOR_KENNUNG` → `treiber-gen-6`. **The corpus needed nothing** — the rule fires over a
   MANIFEST and the corpus is checked and emitted, not built (`pruefe-akzeptiert-diff.py` rc 0,
-  ten pins true on 29 of 29). Still open, and it is one slice: the raw `clone`/`futex` of
-  `laufzeit/faden.c` (`MARKE_ROHRUF` = 3 sites, no symbol for `nm` to see) and the hand
-  drivers `start.c`/`start_pool.c`, which no built program links any more.
+  ten pins true on 29 of 29). Slice 4 closed the rest
+  (`messung/SERVER-0E-REPORT.md` §17): the raw `clone`/`futex`/`exit` of `laufzeit/faden.c`
+  became `gabbro_os_klon`/`gabbro_os_wort_warte` (the runtime keeps what a join word MEANS,
+  the alignment a stack top needs, and the acquire loop that never trusts a wake;
+  **`MARKE_ROHRUF` 3 → 0**), and a THIRD stage was added that reads the SOURCE of every file
+  in `laufzeit/` — because `nm` can only see what a binary LINKS, and the hand drivers
+  `start.c`/`start_pool.c` are linked by nothing. Its first run found **31 OS calls** in those
+  two, all bound now.
+  **K8 is CLOSED, and it is measured three ways over one probe**: 0 by symbol over a built
+  binary, 0 raw `syscall` sites (which no `nm` sees), 0 OS names in the 7 files of `laufzeit/`
+  — and the other half of Simon's sentence confirmed rather than merely not-denied: the
+  bare-metal runtime names 0 OS calls in 7 files beside **65 machine accesses**. 8 of 8 poison
+  probes. What is NOT claimed is that a program cannot reach the OS: it declares what it
+  reaches, with an ABI, a cost and a named assumption.
   **The measurement stands** (server lane, session 5, `messung/SERVER-0E-REPORT.md` §12): the
   stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh` intersects `nm -u` on the `.ko`
   with `nm -u` over the RUNTIME objects only, so a symbol the program's own C pulls does not

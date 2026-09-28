@@ -171,4 +171,43 @@ void gabbro_os_sperre_gib(uint64_t s);
 uint32_t gabbro_os_faden_start(uint64_t f, uint64_t koerper);
 uint32_t gabbro_os_faden_warte(uint64_t f);
 
+/* -- the RUN-TIME `start`, which is a different thread and a different primitive
+ *
+ * WHY THIS IS NOT THE PAIR ABOVE. A declared `concurrent` member is started once,
+ * by the driver, before the program runs; a `start { f };` STATEMENT is executed
+ * by a running Gabbro function, as often as control reaches it, on a stack the
+ * EMITTER laid out as a static region of the unit (`emit.rs`, 64 KiB per root).
+ * So the storage is the program's own text and not a blob of this interface, and
+ * the join is a WORD the unit owns -- which is why these two take a stack top and
+ * a word where the pair above takes a blob.
+ *
+ * `laufzeit/faden.c` is the file that used to make that thread itself, with the
+ * `syscall` instruction in inline assembly: `clone` (56), the child's `exit`
+ * (60), and `futex` (202) for the wait. **Those leave no undefined symbol at
+ * all**, which is why the measurement counts SITES for them
+ * (`instrumente/pruefe-os-bindung.sh`, `MARKE_ROHRUF`) -- a runtime that had
+ * merely hidden its Linux dependency in asm would pass a symbol stage. They are
+ * the program's now, and the runtime keeps what is its own: what a join word
+ * MEANS, that the stack top must be 16-aligned before the root is called, and
+ * the acquire re-read that makes a wait a join.
+ *
+ * WHAT `gabbro_os_klon` PROMISES, because the runtime's loop rests on all three:
+ *
+ *   * it stores a NONZERO value into the 32-bit word at `wort` BEFORE the new
+ *     thread can run, and it clears the word to 0 when the thread has ended --
+ *     never the other way round. *A binding that stored the id after starting
+ *     the thread would resurrect a dead one, and the join would wait forever*
+ *     (measured 2026-09-26 on Linux, before `CLONE_PARENT_SETTID` was set:
+ *     200000 rounds hung before round 20000);
+ *   * the clear happens-before what a waiter reads, so everything the thread
+ *     wrote is visible when the wait returns;
+ *   * the root is called with `spitze` as its stack top, and when the root
+ *     returns the THREAD ends and not the process.
+ *
+ * `gabbro_os_wort_warte` may return at any time -- the runtime re-reads and
+ * never trusts a wake.
+ */
+uint32_t gabbro_os_klon(uint64_t koerper, uint64_t spitze, uint64_t wort);
+void gabbro_os_wort_warte(uint64_t wort, uint32_t erwartet);
+
 #endif

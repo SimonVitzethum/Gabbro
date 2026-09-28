@@ -91,6 +91,18 @@ assume os_bindung_faden
     "`gabbro_os_sperre_nimm`/`_gib` are mutual exclusion over the blob they are given -- at most one thread holds it and a release is visible to the next holder; `gabbro_os_faden_start` runs its root ONCE on a thread of its own and answers non-zero if it did not start; `gabbro_os_faden_warte` returns only after that root's last step."
     falsifier sonde_os_faden;
 
+-- **The three promises the run-time `start` rests on, and their ORDER is the
+-- whole of it.** `laufzeit/faden.c` is a LOOP over a join word and nothing else;
+-- every step it takes is a reading of this assumption. It is named apart from
+-- the pair above because the primitive is a different one -- a raw `clone` and
+-- not a `pthread_create` -- and because the middle clause is what was once
+-- false: until 2026-09-26 the id was stored AFTER the thread started, a thread
+-- that ended first had it cleared before the store, and the join waited forever
+-- on a dead one (200000 rounds hung before round 20000).
+assume os_bindung_klon
+    "`gabbro_os_klon` stores a NONZERO value into the word at `wort` before its new thread can run and clears that word to 0 once the thread has ended, never the other way round; the clear happens-before what a waiter reads; and the root is called with `spitze` as its stack top, ending the THREAD and not the process when it returns."
+    falsifier sonde_os_klon;
+
 -- **The reservation reads as zero, and that is its own assumption** -- because
 -- the bounded heap does NOT scrub. `laufzeit/arena_dyn.c` commits lazily and
 -- stores nothing into a newly committed slot; a program reads a fresh slot and
@@ -168,6 +180,27 @@ extern fn gabbro_os_faden_start(f : u64, koerper : u64) -> u32
     effects { pure } costs <= 100000 ops;
 
 extern fn gabbro_os_faden_warte(f : u64) -> u32
+    effects { pure } costs <= 100000 ops;
+
+-- -- the run-time `start`, which is a different thread ------------------------
+--
+-- A declared `concurrent` member is started once by the driver, before the
+-- program runs; a `start { f };` STATEMENT is executed by a running Gabbro
+-- function, on a stack the EMITTER laid out as a static region of the unit. So
+-- these two take a stack top and a join word where the pair above takes a blob
+-- the runtime owns (`laufzeit/bindung.h` says why).
+--
+-- **This is where the raw system call lives**, and it is the last one: `clone`
+-- (56) on the handed stack, the thread's own `exit` (60) when the root returns,
+-- and `futex` (202) for the wait. They leave no undefined symbol at all, which
+-- is why `instrumente/pruefe-os-bindung.sh` counts SITES for them
+-- (`MARKE_ROHRUF`) and not names -- a runtime that had hidden its Linux
+-- dependency in assembly would pass a symbol stage untouched. The mark is 0 in
+-- `laufzeit/` since these two bodies exist.
+extern fn gabbro_os_klon(koerper : u64, spitze : u64, wort : u64) -> u32
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_os_wort_warte(wort : u64, erwartet : u32)
     effects { pure } costs <= 100000 ops;
 
 }

@@ -1,4 +1,5 @@
-/* laufzeit/start.c -- the hosted runtime driver for one concurrent unit.
+/* laufzeit/start.c -- the HAND-WRITTEN hosted driver for one concurrent unit,
+ * kept as the second implementation the generated one is read against.
  *
  * WHAT THIS IS. The emitter translates each `concurrent` member to a plain
  * `static void f(void)` and emits NO caller and NO `main` -- measured
@@ -17,9 +18,28 @@
  * BUILD (from the tree root; the emitted file is a build artefact, not source):
  *
  *   target/debug/gabbro emit beispiele/124-two-threads-private.gab > .tmp/einheit124.c
- *   cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I .tmp \
- *      -DEINHEIT_INCLUDE='"einheit124.c"' -o .tmp/start124 laufzeit/start.c
- *   .tmp/start124            # exit 0, prints the observed values
+ *   cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I .tmp -I laufzeit \
+ *      -DEINHEIT_INCLUDE='"einheit124.c"' -o .tmp/start124 laufzeit/start.c \
+ *      bibliothek/linux/linux.c
+ *   .tmp/start124            # exit 0
+ *
+ * TWO THINGS MOVED OUT OF THIS FILE, both on 2026-09-28 (TODO section 0e K8).
+ *
+ * (1) **Every operating-system call.** Threads, the lock and the words of a
+ * failure go through `laufzeit/bindung.h`, which the PROGRAM defines -- the same
+ * move `crates/gabbro-cli/src/treiber.rs` made for the GENERATED driver, and for
+ * the same reason: no OS call is hard-wired in any runtime. This file is linked
+ * by no program at all today (the generated driver replaced it everywhere
+ * `gabbro build` runs), which is precisely why the measurement that found it is
+ * the SOURCE-level stage of `instrumente/pruefe-os-bindung.sh` and not the
+ * symbol one -- *a file nothing links is measured by nothing.*
+ *
+ * (2) **The observation.** What the run PRINTS is the test's business, not the
+ * runtime's, and it used to stand at the end of `main` here. It is appended at
+ * the `NACHLAUF` marker now, exactly as the generated driver's is
+ * (`crates/gabbro-cli/tests/treiber.rs`, `BEOBACHTUNG_124`) -- so the hand run
+ * and the generated run now share the observation text character for character,
+ * and what differs between them is only what this file is about.
  *
  * WHY `-DEINHEIT_INCLUDE`. The driver is one file for every unit; only the
  * included artefact and the ROOTS section below change per unit. A `#include`
@@ -28,10 +48,9 @@
  * would widen the unit's interface for the driver's sake.
  */
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+/* -- The names this driver calls and does not define -------------------- */
+
+#include "bindung.h"
 
 /* -- The emitted unit -------------------------------------------------- */
 
@@ -48,26 +67,21 @@
  *
  * WHY A MUTEX AND NOT A SPINLOCK. The critical sections are whole Gabbro
  * bodies (`setze`), not single instructions; spinning under contention would
- * burn the core the lock holder needs. Blocking is the honest hosted shape.
+ * burn the core the lock holder needs. Blocking is the honest hosted shape --
+ * and WHICH blocking object it is is the binding's business since K8: the blob
+ * below is words, and `bibliothek/linux/linux.c` lays a `pthread_mutex_t` into
+ * it and asserts that it fits.
  */
-static pthread_mutex_t sperre_L = PTHREAD_MUTEX_INITIALIZER;
+static uint64_t sperre_L[GABBRO_OS_SPERRE_WORTE];
 
 void L_nimm(void)
 {
-    int rc = pthread_mutex_lock(&sperre_L);
-    if (rc != 0) {
-        fprintf(stderr, "L_nimm: pthread_mutex_lock: %d\n", rc);
-        abort();
-    }
+    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_L);
 }
 
 void L_gib(void)
 {
-    int rc = pthread_mutex_unlock(&sperre_L);
-    if (rc != 0) {
-        fprintf(stderr, "L_gib: pthread_mutex_unlock: %d\n", rc);
-        abort();
-    }
+    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_L);
 }
 
 /* -- ROOTS: the declared starts of `beispiele/124-two-threads-private.gab`.
@@ -83,27 +97,13 @@ void L_gib(void)
  * without a new thread here -- or a thread here for a root the source dropped
  * -- fails that comparison. Reviewing this section means diffing two words.
  *
- * WHY ONE WRAPPER PER ROOT. `pthread_create` wants `void *(*)(void *)` and
- * the emitted roots are `void (*)(void)`; the wrapper is the adapter, and one
- * adapter per root keeps the root's NAME at the `pthread_create` call site,
- * which is what the probe reads.
+ * WHY NO WRAPPER PER ROOT ANY MORE. `pthread_create` wants `void *(*)(void *)`
+ * and the emitted roots are `void (*)(void)`, so one adapter per root used to
+ * stand here. The POSIX signature is the binding's since K8, and its adapter
+ * with it -- so the root's own NAME stands at the start site, unwrapped, which
+ * is what the probe reads. The GENERATED driver made the same move on the same
+ * day, and the two files still read against each other line for line.
  */
-static void *faden_hauptA(void *u)
-{
-    (void)u; /* WHY: the thread gets no argument -- the declared starts of
-              * this unit take none (`E.starts` carries each root's `Env`,
-              * here empty). An argument slot that is always NULL would
-              * suggest parameter passing that does not exist. */
-    hauptA();
-    return NULL;
-}
-
-static void *faden_hauptB(void *u)
-{
-    (void)u;
-    hauptB();
-    return NULL;
-}
 
 /* N_WURZELN is the count the probe checks against the source's list length:
  * adding a thread without bumping it breaks the join loop below loudly
@@ -121,91 +121,57 @@ static void *faden_hauptB(void *u)
  * global), so it is invisible to every leg of `Ziel`.
  *
  * WHY IT IS NEVER SPAWNED ON HOSTED. POSIX gives `main` no spare cores to
- * park: `main` spawns exactly the declared roots and joins them. The function
- * stands here so the shape exists in the artefact -- bare metal spawns one
- * per extra core -- and `__attribute__((unused))` says exactly that.
+ * park: `main` spawns exactly the declared roots and joins them. **So it is
+ * GONE since K8** -- it spun on `pause()`, which is an operating-system call,
+ * and keeping it would have meant binding a primitive nothing on this side ever
+ * calls. Bare metal parks its spare cores inside its own runtime
+ * (`laufzeit/metall/kern.c`) and never read this function; the generated driver
+ * dropped its copy on the same day.
  */
-static void *ruhe(void *u) __attribute__((unused));
-static void *ruhe(void *u)
-{
-    (void)u;
-    for (;;) {
-        /* WHY `pause()` AND NOT AN EMPTY LOOP. An empty loop has no side
-         * effect, so C11 lets the compiler assume it terminates -- and then
-         * the function CAN return, which `-Werror=return-type` rightly
-         * rejects. `pause()` blocks in the kernel until a signal that never
-         * comes; it reads and writes no Gabbro carrier, so the promise
-         * "does nothing and touches nothing" still holds. The bare-metal
-         * spelling of this line is `wfi`. */
-        pause();
-    }
-    /* Unreachable: the loop above never ends. It stands here because `cc`
-     * cannot know that `pause()` never returns, and `-Werror=return-type`
-     * is right to ask. */
-    return NULL;
-}
 
-/* -- main: start exactly the roots, join them, report what the run did. ---- */
+/* -- main: start exactly the roots and join them. -------------------------- */
 
 int main(void)
 {
     /* WHY AN ARRAY AND NOT TWO VARIABLES. The join loop must cover exactly
      * the spawned set; an array sized by N_WURZELN makes "spawned but never
      * joined" a size mismatch instead of a forgotten line. */
-    pthread_t faden[N_WURZELN];
-    int rc;
+    static uint64_t faden[N_WURZELN][GABBRO_OS_FADEN_WORTE];
+    uint32_t rc;
 
-    rc = pthread_create(&faden[0], NULL, faden_hauptA, NULL);
+    gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_L);
+
+    rc = gabbro_os_faden_start((uint64_t)(uintptr_t)faden[0], (uint64_t)(uintptr_t)hauptA);
     if (rc != 0) {
-        fprintf(stderr, "start: hauptA: %d\n", rc);
+        gabbro_os_melden(GABBRO_OS_M_START, 0, rc);
         return 2;
     }
-    rc = pthread_create(&faden[1], NULL, faden_hauptB, NULL);
+    rc = gabbro_os_faden_start((uint64_t)(uintptr_t)faden[1], (uint64_t)(uintptr_t)hauptB);
     if (rc != 0) {
-        fprintf(stderr, "start: hauptB: %d\n", rc);
+        gabbro_os_melden(GABBRO_OS_M_START, 1, rc);
+        (void)gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[0]);
         return 2;
     }
     for (int i = 0; i < N_WURZELN; i++) {
-        rc = pthread_join(faden[i], NULL);
+        rc = gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[i]);
         if (rc != 0) {
-            fprintf(stderr, "join: thread %d: %d\n", i, rc);
+            gabbro_os_melden(GABBRO_OS_M_WARTE, (uint64_t)i, rc);
             return 2;
         }
     }
 
-    /* WHAT IS CHECKED, AND WHY EACH LINE IS SHAPED THIS WAY.
-     *
-     * konto[0] == konto[1] is the LOCK INVARIANT (source line 38). Its VALUE
-     * is schedule-dependent -- whichever of `setze(30)` / `setze(70)` runs
-     * last wins, both under the lock -- so the check asserts the invariant,
-     * not a value. A check for one fixed value would fail on every schedule
-     * that orders the threads the other way; the invariant is what the
-     * language carries.
-     *
-     * privA / privB are written by exactly one thread each with no lock.
-     * Their values are deterministic (7, 7 and 5): any deviation is a lost
-     * write, i.e. a real defect, not a schedule.
-     */
-    unsigned konto0 = konto_speicher.slots[0].stand;
-    unsigned konto1 = konto_speicher.slots[1].stand;
-    unsigned pa0 = privA_speicher.slots[0].stand;
-    unsigned pa1 = privA_speicher.slots[1].stand;
-    unsigned pb0 = privB_speicher.slots[0].stand;
-
-    printf("konto=%u konto=%u privA=%u privA=%u privB=%u\n",
-        konto0, konto1, pa0, pa1, pb0);
-
-    if (konto0 != konto1) {
-        fprintf(stderr, "INVARIANT BROKEN: konto[0]=%u konto[1]=%u\n", konto0, konto1);
-        return 1;
-    }
-    if (pa0 != 7 || pa1 != 7) {
-        fprintf(stderr, "LOST WRITE: privA=%u,%u, want 7,7\n", pa0, pa1);
-        return 1;
-    }
-    if (pb0 != 5) {
-        fprintf(stderr, "LOST WRITE: privB=%u, want 5\n", pb0);
-        return 1;
-    }
+    /* WHAT USED TO STAND HERE, and where it went. The run printed
+     * `konto=%u konto=%u privA=%u privA=%u privB=%u` and then asserted the lock
+     * invariant (`konto[0] == konto[1]`, whose VALUE is schedule-dependent and
+     * whose EQUALITY is not) and the two private slots (7, 7 and 5, which are
+     * deterministic: a deviation is a lost write and not a schedule). That text
+     * is the TEST's, it names carriers of one example, and printing is an
+     * operating-system call -- all three say the same thing about where it
+     * belongs. It is `BEOBACHTUNG_124` in `crates/gabbro-cli/tests/treiber.rs`
+     * now, appended at the marker below at run time and to the generated driver
+     * at its own, so both artefacts carry the identical observation -- and the
+     * marker is spelt to the letter as the generator writes it, because the
+     * test looks for one string and not for two. */
+    /* NACHLAUF: unit-specific observation goes here in test runs. */
     return 0;
 }

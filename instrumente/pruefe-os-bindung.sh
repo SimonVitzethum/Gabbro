@@ -154,12 +154,22 @@ ERWARTET="$ERWARTET_BASIS"
 # below is where they are counted.
 MARKE_OSSYM=0
 
-# **How many raw system-call sites the hosted runtime issues.** Three call sites
-# in `laufzeit/faden.c` (`clone` and the child's `exit` in `gabbro_faden_start`,
-# `futex` in `gabbro_faden_warte` through `roh_aufruf`), and the numbers they
-# pass. Counted as SITES of the `syscall` instruction, because that is the thing
-# that reaches the kernel; the helper is one site even though two callers use it.
-MARKE_ROHRUF=3
+# **How many raw system-call sites the hosted runtime issues: NONE.** Three when
+# this stage was written -- `clone` and the child's `exit` in
+# `gabbro_faden_start`, `futex` in `gabbro_faden_warte` through `roh_aufruf`, all
+# in `laufzeit/faden.c`. They moved to `bibliothek/linux/linux.c` with the whole
+# of their reckoning (`gabbro_os_klon`, `gabbro_os_wort_warte`), and what the
+# runtime kept is what is its own: what a join word MEANS, the alignment a stack
+# top must have, and the acquire loop that never trusts a wake.
+#
+# **WHY THIS STAGE EXISTS AT ALL, and why it is not redundant beside the symbol
+# one.** A raw system call leaves NO undefined symbol: `nm -u faden.o` was empty
+# while the file issued three. So a runtime could have hidden its whole Linux
+# dependency in inline assembly and passed `symbole_pruefe` untouched. This stage
+# counts SITES of the `syscall` instruction in the hosted runtime's sources,
+# because the instruction is the thing that reaches the kernel; the helper is one
+# site even though two callers use it.
+MARKE_ROHRUF=0
 
 # The deadline for every step that executes something (`pruefe-waechter.py`,
 # requirement 1). A hang is a finding here, not a state.
@@ -187,7 +197,7 @@ OSSYM_TOOLKETTE='^(__fentry__|__x86_return_thunk|__stack_chk_|__ubsan_handle_|__
 #     `pruefe-osfrei.py` wrote down after `mmap` fired inside a German compound
 #     -- and `laufzeit/metall/arena.c` explains in its header what it does
 #     INSTEAD of `mmap`. Comment lines are dropped before the scan.
-METALL_OS_NAMEN='(pthread_[a-z_]+|mmap|munmap|mprotect|sbrk|brk|malloc|calloc|realloc|printf|fprintf|sprintf|snprintf|puts|putchar|fputs|fwrite|fflush|exit|_exit|abort|sysconf|getpid|gettimeofday|clock_gettime|nanosleep|usleep|sleep|read|write|open|close|ioctl|socket|bind|listen|accept|send|recv|sendto|recvfrom|select|poll|epoll_[a-z]+|signal|sigaction|kill|fork|execve|waitpid|dlopen|dlsym)'
+METALL_OS_NAMEN='(pthread_[a-z_]+|mmap|munmap|mprotect|sbrk|brk|malloc|calloc|realloc|printf|fprintf|sprintf|snprintf|puts|putchar|fputs|fwrite|fflush|exit|_exit|abort|sysconf|getpid|gettimeofday|clock_gettime|nanosleep|usleep|sleep|read|write|open|close|ioctl|socket|bind|listen|accept|send|recv|sendto|recvfrom|select|poll|epoll_[a-z]+|signal|sigaction|kill|fork|execve|waitpid|dlopen|dlsym|getpid)'
 
 # **The machine, on bare metal, and it is ALLOWED** (K8's own sentence). These
 # are instructions and MSR/port accesses, not API calls: counted so that
@@ -227,8 +237,8 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #
 #   1 the RUNTIME gains one OS call (`getpid()` in the generated driver's copy):
 #     does the symbol stage see a call that arrived, or only the ones it knows?
-#   2 the RUNTIME gains one RAW system call (a second `syscall` instruction in
-#     the copy of `faden.c`): the stage `nm` is blind to, by construction.
+#   2 the RUNTIME gains one RAW system call (a `syscall` instruction in the copy
+#     of `faden.c`): the stage `nm` is blind to, by construction.
 #   3 the BARE-METAL runtime gains an OS call (`printf` in the copy of
 #     `kern.c`): K8 allows the machine and not the OS, and this is the half that
 #     says the difference is measured and not assumed.
@@ -251,7 +261,7 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     the wrong shape LINKS and then reads a register nobody set. That is the
 #     half of the rule a missing declaration never reaches
 #     (`bau.rs::bindung_pruefe`), and it is checked by its own sentence too.
-gifte() { echo "1 2 3 4 5 6 7"; }
+gifte() { echo "1 2 3 4 5 6 7 8"; }
 
 # -- stage 1: build, link, run -------------------------------------------------
 #
@@ -360,18 +370,22 @@ bauen() {   # $1 = work dir, $2 = gift
             "$bau/$EINHEIT.treiber.c"
     fi
     if [ "$gift" = 2 ]; then
-        # A second `syscall` instruction in the copy of the thread runtime: one
-        # more OS call the symbol stage cannot see.
-        if ! grep -q '"syscall"' "$arb/laufzeit/faden.c"; then
-            echo "HARNESS: gift 2 does not apply -- no \`syscall\` instruction in faden.c"
+        # A raw `syscall` instruction in the copy of the thread runtime: an OS
+        # call the symbol stage CANNOT SEE, which is the whole reason the third
+        # stage counts sites. Until K8's third slice `faden.c` issued three of
+        # its own and this gift added a fourth; the file issues none now, so the
+        # gift plants the first -- the mutation is the same and the mark it
+        # breaks is 0 instead of 3.
+        if ! grep -q '^void gabbro_faden_warte(uint32_t \*wort)$' "$arb/laufzeit/faden.c"; then
+            echo "HARNESS: gift 2 does not apply -- no \`gabbro_faden_warte\` in faden.c"
             return 0
         fi
         sed -i 's|^void gabbro_faden_warte(uint32_t \*wort)$|static long gabbro_gift_ruf(void)\n{\n    long r;\n    __asm__ __volatile__("syscall" : "=a"(r) : "a"(39L) : "rcx", "r11", "memory");\n    return r;\n}\n\nvoid gabbro_faden_warte(uint32_t *wort)|' \
             "$arb/laufzeit/faden.c"
-        grep -c '"syscall"' "$arb/laufzeit/faden.c" | grep -qv '^1$' || {
-            echo "HARNESS: gift 2 does not apply -- the second site was not inserted"
+        if [ "$(grep -c '"syscall"' "$arb/laufzeit/faden.c")" = 0 ]; then
+            echo "HARNESS: gift 2 does not apply -- the site was not inserted"
             return 0
-        }
+        fi
     fi
     local cflags="-std=c11 -O0 -Wall -Wextra -Werror"
     # The driver, with the emitted unit `#include`d into it.
@@ -471,7 +485,7 @@ rohruf_pruefe() {   # $1 = work dir
         echo "HARNESS: raw syscalls FAILED -- the hosted runtime issues $n, below the mark of $MARKE_ROHRUF: the mark belongs pulled down (the good case, and a finding nonetheless)"
         return 0
     fi
-    echo "HARNESS: raw syscalls ok ($n site(s) of the \`syscall\` instruction, mark $MARKE_ROHRUF -- K8's remaining mark)"
+    echo "HARNESS: raw syscalls ok ($n site(s) of the \`syscall\` instruction in the hosted runtime's sources, mark $MARKE_ROHRUF)"
 }
 
 # -- stage 4: bare metal is OS-FREE, and the machine is allowed ----------------
@@ -492,6 +506,47 @@ metall_os_funde() {   # $1 = directory; prints `file:line:name` per finding
         "(^|[^A-Za-z_])$METALL_OS_NAMEN[[:space:]]*\(" "$1" 2>/dev/null \
         | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*|#[[:space:]])' \
         | sed "s|^$1/||"
+}
+
+# -- stage 3b: the hosted runtime's SOURCES name no OS function --------------
+#
+# WHAT THIS ADDS TO THE TWO STAGES ABOVE, and it is not a third copy of them.
+# `symbole_pruefe` reads what a BUILT binary still references, which is the
+# honest question -- but it can only see the files that binary LINKS. The probe
+# links `arena_dyn.c`, `faden.c` and the generated driver; it does not link
+# `start.c` or `start_pool.c`, the hand drivers that predate the generated one,
+# and no program does any more. *A file nothing links is measured by nothing*,
+# and that is exactly how an OS call survives a green wall.
+#
+# So this stage reads the SOURCE of every file in `laufzeit/` itself, with the
+# same scanner and the same name list the bare-metal stage uses -- one function,
+# two trees, because a second copy of the check would measure the copy (`W7`).
+# `laufzeit/metall/` and `laufzeit/kmodul/` are NOT in it: each has a stage of
+# its own (this file's fourth, and `pruefe-kernelmodul.sh`'s `symbole_pruefe`),
+# and a name counted twice reads like two findings.
+#
+# `pause` is in the excluded list for the bare-metal stage, where it is an
+# instruction; here it is libc's, so this stage puts it back.
+gehostet_pruefe() {   # $1 = work dir
+    local arb="$1" dir="$1/gehostet" n dateien
+    mkdir -p "$dir"
+    for f in "$W"/laufzeit/*.c "$W"/laufzeit/*.h; do
+        [ -f "$f" ] && cp "$f" "$dir/"
+    done
+    n="$( { metall_os_funde "$dir"; grep -rn --include='*.c' --include='*.h' -E \
+            "(^|[^A-Za-z_])pause[[:space:]]*\(" "$dir" 2>/dev/null \
+            | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*|#[[:space:]])' \
+            | sed "s|^$dir/||"; } | sort -u | grep -c '' | tr -d ' ')"
+    dateien="$(find "$dir" -type f \( -name '*.c' -o -name '*.h' \) | grep -c '' | tr -d ' ')"
+    if [ "$n" != 0 ]; then
+        echo "HARNESS: hosted sources FAILED -- $n OS call(s) stand in laufzeit/ itself"
+        { metall_os_funde "$dir"; grep -rn --include='*.c' --include='*.h' -E \
+            "(^|[^A-Za-z_])pause[[:space:]]*\(" "$dir" 2>/dev/null \
+            | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*|#[[:space:]])' \
+            | sed "s|^$dir/||"; } | sort -u | sed 's/^/    OS in /' | head -10
+        return 0
+    fi
+    echo "HARNESS: hosted sources ok (no OS call in $dateien file(s) of laufzeit/ -- including the ones no binary links)"
 }
 
 metall_pruefe() {   # $1 = work dir
@@ -580,6 +635,33 @@ einmal() {   # $1 = work dir, $2 = gift  -- every stage runs, none aborts the ne
     bauen "$arb" "$gift"
     symbole_pruefe "$arb"
     rohruf_pruefe "$arb"
+    if [ "$gift" = 8 ]; then
+        # The HOSTED source stage, over a copy the gift wrote: one libc call in a
+        # runtime file nothing links -- the blind spot the stage exists for.
+        mkdir -p "$arb/gehostet"
+        for f in "$W"/laufzeit/*.c "$W"/laufzeit/*.h; do
+            [ -f "$f" ] && cp "$f" "$arb/gehostet/"
+        done
+        if ! grep -q '^void gabbro_faden_warte(uint32_t \*wort)$' "$arb/gehostet/faden.c"; then
+            echo "HARNESS: gift 8 does not apply -- no \`gabbro_faden_warte\` in faden.c"
+        else
+            sed -i 's|^void gabbro_faden_warte(uint32_t \*wort)$|static void gabbro_gift_os(void) { (void)getpid(); }\n\nvoid gabbro_faden_warte(uint32_t *wort)|' \
+                "$arb/gehostet/faden.c"
+            if ! grep -q 'getpid()' "$arb/gehostet/faden.c"; then
+                echo "HARNESS: gift 8 does not apply -- the call was not inserted"
+            else
+                local ng
+                ng="$(metall_os_funde "$arb/gehostet" | grep -c '' | tr -d ' ')"
+                if [ "$ng" != 0 ]; then
+                    echo "HARNESS: hosted sources FAILED -- $ng OS call(s) stand in laufzeit/ itself"
+                else
+                    echo "HARNESS: hosted sources ok (nothing found -- and the gift was supposed to plant something)"
+                fi
+            fi
+        fi
+    else
+        gehostet_pruefe "$arb"
+    fi
     if [ "$gift" = 3 ]; then
         mkdir -p "$arb/metall"
         cp -r "$W/laufzeit/metall/." "$arb/metall/"
@@ -619,11 +701,11 @@ if [ -z "$GIFT" ]; then
     n="$(echo "$ergebnis" | sed -n 's/^FEHLER=//p')"
     echo
     if [ "$n" = 0 ]; then
-        echo "GREEN: the hosted runtime names $MARKE_OSSYM operating-system function(s) of"
-        echo "       its own; its raw system calls are COUNTED at $MARKE_ROHRUF, which is the"
-        echo "       mark K8 has left to pull down; the bare-metal runtime names no OS"
-        echo "       call at all; and the probe ran, with its arena reserved, its lock"
-        echo "       held and its sum exact."
+        echo "GREEN: the hosted runtime names $MARKE_OSSYM operating-system function(s) of its"
+        echo "       own and issues $MARKE_ROHRUF raw system call(s) -- every one of both is the"
+        echo "       PROGRAM's now (\`bibliothek/linux/\`); the bare-metal runtime names no"
+        echo "       OS call at all; and the probe ran, with its arena reserved, its"
+        echo "       lock held and its sum exact."
         abschnitt_fertig
         exit 0
     fi

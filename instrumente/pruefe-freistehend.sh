@@ -418,15 +418,16 @@ echo "  dispatch's parameters/result, so no stub can bind them honestly; the ima
 echo "  stub ends the machine if the entry is ever taken (since Opus agent L the checker refuses"
 echo "  the shape at check time, N561 -- a unit listed here was emitted without the checker):"
 printf '%b\n' "$bindung_liste" | sed '/^$/d'
-echo "  HOSTED-ONLY runtime files, each with its bare-metal counterpart:"
-echo "    laufzeit/faden.c       raw Linux clone/futex      -> laufzeit/metall/kern.c (gabbro_faden_*)"
-echo "    laufzeit/start.c       pthreads + printf (boot)   -> <unit>.metall.c (gabbro build)"
-echo "    laufzeit/start_pool.c  pthreads (pool boot)       -> <unit>.metall.c (gabbro build)"
+echo "  HOSTED runtime files, each with its bare-metal counterpart:"
+echo "    laufzeit/faden.c       the program's binding      -> laufzeit/metall/kern.c (gabbro_faden_*)"
+echo "    laufzeit/start.c       the program's binding      -> <unit>.metall.c (gabbro build)"
+echo "    laufzeit/start_pool.c  the program's binding      -> <unit>.metall.c (gabbro build)"
 echo "    laufzeit/arena_dyn.c   the program's binding      -> laufzeit/metall/arena.c"
 echo "    <unit>.treiber.c       the program's binding      -> <unit>.metall.c (generated)"
-echo "  The last two name NO OS function since TODO section 0e K8: they call the names of"
-echo "  laufzeit/bindung.h, which the PROGRAM defines (bibliothek/linux/). What is hosted"
-echo "  about them is the binding beside them, not a call inside them."
+echo "  NONE of them names an OS function since TODO section 0e K8, and none issues a raw"
+echo "  system call: they call the names of laufzeit/bindung.h, which the PROGRAM defines"
+echo "  (bibliothek/linux/). What is hosted about them is the binding beside them, not a"
+echo "  call inside them -- measured three ways by instrumente/pruefe-os-bindung.sh."
 
 if [ "$befund" != 0 ] || [ "$n_ok" != "$n_nenner" ]; then
     echo "== FREESTANDING: FINDING (see above) =="

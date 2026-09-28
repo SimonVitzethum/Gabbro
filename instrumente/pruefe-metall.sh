@@ -740,7 +740,13 @@ int main(void)
 }
 WETT
     sed -i "s|@FADEN@|$W/laufzeit/faden.c|" "$ARB/wettlauf/w.c"
-    cc -std=c11 -O2 -Wall -Wextra -Werror -o "$ARB/wettlauf/w" "$ARB/wettlauf/w.c"
+    # **The binding is a SECOND translation unit and not an `#include`** (TODO
+    # section 0e K8): `laufzeit/faden.c` calls `gabbro_os_klon` now, and
+    # `bibliothek/linux/linux.c` sets `_POSIX_C_SOURCE` -- which only works
+    # before any header, i.e. at the top of a unit of its own. *Measured: pasted
+    # into this one it is a redefinition and `-Werror` ends the probe.*
+    cc -std=c11 -O2 -Wall -Wextra -Werror -I"$W/laufzeit" -pthread \
+        -o "$ARB/wettlauf/w" "$ARB/wettlauf/w.c" "$W/bibliothek/linux/linux.c"
     if [ "$(timeout 60 "$ARB/wettlauf/w" || true)" = "durch" ]; then
         echo "  hosted join (faden.c): ok (200000 start/join rounds on one stack)"
     else

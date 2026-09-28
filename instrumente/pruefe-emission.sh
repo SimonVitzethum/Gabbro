@@ -353,13 +353,32 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # 3. Uebersetzen, und zwar streng. Eine Warnung im erzeugten C ist ein Befund ueber den
     #    Erzeuger, nicht ueber den Anwender -- er hat die Zeile nicht geschrieben.
     # **Lane 260: `@FADEN@` names the thread runtime beside the unit.** A driver
-    # for a `start` program links `laufzeit/faden.c` (our own raw `clone`) by
-    # including it -- one translation unit, no library path, no installed
-    # artefact. Drivers without the placeholder are untouched by the second
-    # substitution; the delimiter is `|` because the path carries slashes.
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
-    if ! cc -std=c11 -O0 -Wall -Wextra -Werror -I"$ARB" -o "$ARB/$name-probe" \
-            "$ARB/$name-treiber.c" 2> "$ARB/ccfehler"; then
+    # for a `start` program links `laufzeit/faden.c` by including it -- one
+    # translation unit, no library path, no installed artefact. Drivers without
+    # the placeholder are untouched by the second substitution; the delimiter is
+    # `|` because the path carries slashes.
+    #
+    # **`@FADEN@` brings a SECOND source file with it since TODO section 0e K8**:
+    # `faden.c` no longer issues the `clone` itself -- it calls `gabbro_os_klon`
+    # and `gabbro_os_wort_warte`, which the PROGRAM defines
+    # (`bibliothek/linux/linux.c`). That file is a translation unit of its OWN and
+    # never an `#include`: it sets `_POSIX_C_SOURCE` before any header, which only
+    # works at the top of a unit. *Measured: pasted into a driver it is a
+    # redefinition and `-Werror` ends the run.* A driver without the placeholder
+    # gets neither, so 49 of the 50 links are byte-for-byte the ones they were.
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" \
+        | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
+    local bindung=""
+    case "$treiber" in *"@FADEN@"*) bindung="$W/bibliothek/linux/linux.c" ;; esac
+    # **NO `-pthread` on these lines, and the reason is measured.** It expands to
+    # `-D_REENTRANT`, under which glibc's `features.h` sets `_POSIX_C_SOURCE` to
+    # `199506L` -- and `bibliothek/linux/linux.c`, which the 158 driver
+    # `#include`s as one translation unit, then REDEFINES it to `200809L`.
+    # `-Werror` ends the run there. Without the flag the two values agree and the
+    # redefinition is identical, which C allows. The threads link either way on
+    # this machine's glibc (2.39: `pthread_create` lives in `libc.so.6`).
+    if ! cc -std=c11 -O0 -Wall -Wextra -Werror -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-probe" \
+            "$ARB/$name-treiber.c" $bindung 2> "$ARB/ccfehler"; then
         echo "  3. cc -Werror: GESCHEITERT"; head -20 "$ARB/ccfehler"; exit 1
     fi
     echo "  3. cc -Werror: ok (keine Warnung)"
@@ -385,8 +404,8 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     #
     #    *Und es ist die EINZIGE Probe, die ein falsches `restrict` findet* -- eine falsche
     #    Alias-Zusicherung erzeugt Code, der bei `-O0` stimmt und bei `-O2` nicht.
-    if ! cc -std=c11 -O2 -Wall -Wextra -Werror -I"$ARB" -o "$ARB/$name-probe-o2" \
-            "$ARB/$name-treiber.c" 2> "$ARB/ccfehler2"; then
+    if ! cc -std=c11 -O2 -Wall -Wextra -Werror -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-probe-o2" \
+            "$ARB/$name-treiber.c" $bindung 2> "$ARB/ccfehler2"; then
         echo "  5. -O2:        GESCHEITERT beim Uebersetzen"; head -20 "$ARB/ccfehler2"; exit 1
     fi
     local ist_o2; ist_o2="$("$ARB/$name-probe-o2")"
@@ -411,7 +430,7 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     #    Lauf bricht vor `main` ab. *Eine Probe, die nicht laeuft, ist keine bestandene* --
     #    sie steht als offener Punkt im TODO und nicht als Haken hier.
     if ! cc -std=c11 -O1 -fsanitize=undefined -fno-sanitize-recover=all \
-            -I"$ARB" -o "$ARB/$name-probe-ub" "$ARB/$name-treiber.c" 2> "$ARB/ccfehler3"; then
+            -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-probe-ub" "$ARB/$name-treiber.c" $bindung 2> "$ARB/ccfehler3"; then
         echo "  6. UBSan:      GESCHEITERT beim Uebersetzen"; head -20 "$ARB/ccfehler3"; exit 1
     fi
     local ist_ub; ist_ub="$("$ARB/$name-probe-ub" 2> "$ARB/ubfehler")" || {
@@ -449,7 +468,7 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
         # Grundgesamtheit, die wie ein Urteil aussieht (`W17`).
         echo "$name" >> "$ARB/asan-ungefahren"
     elif ! cc -std=c11 -O1 -fsanitize=address,undefined -fno-sanitize-recover=all \
-            -I"$ARB" -o "$ARB/$name-probe-as" "$ARB/$name-treiber.c" 2> "$ARB/ccfehler4"; then
+            -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-probe-as" "$ARB/$name-treiber.c" $bindung 2> "$ARB/ccfehler4"; then
         echo "  6b. ASan:      GESCHEITERT beim Uebersetzen"; head -20 "$ARB/ccfehler4"; exit 1
     else
         local ist_as
@@ -508,8 +527,9 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # **The same `@FADEN@` placeholder as above** (lane 260): without it the
     # gift driver of a `start` program would not build -- and a mutation that
     # already fails at compile time proves nothing about the run (R14).
-    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-gifttreiber.c"
-    cc -std=c11 -w -I"$ARB" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c"
+    printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" \
+        | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-gifttreiber.c"
+    cc -std=c11 -w -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c" $bindung
     # **Ein verfaelschtes Erzeugnis darf NICHT ENDEN, und bis 2026-08-20 hing der Waechter
     # dann fuer immer.**
     #

@@ -205,13 +205,18 @@ MARK_WAISEN = 1
 # freedom in silence. It is what assumption (d) of `Zielsatz/Spec.lean` asks of the
 # environment, named on the side that supplies it.
 #
+# **27 -> 28 on 2026-09-28** (server lane, K8's third slice): `sonde_os_klon`, the fourth --
+# the three promises a raw `clone` makes about the join word, and their ORDER. It is apart from
+# `sonde_os_faden` because the primitive is apart: `pthread_create` for the driver's threads, a
+# raw system call for the run-time `start`. The middle clause is the one that was once false.
+#
 # *There is a reason a stale mark could stand that long, and it is a finding of its own:*
 # **this guardian aborts in its own speech test**, and has for at least three sessions, at
 # THREE further teeth (`an assumption with no row is named`, `one assumption more WITH a
 # probe does not`, and the closing line). So it measures nothing, and a mark nobody reads
 # drifts. The three are NOT repaired here -- they are older than K7 and belong to a lane of
 # their own -- but they are named in the report.
-MARK_AUSSEN = 27
+MARK_AUSSEN = 28
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a
