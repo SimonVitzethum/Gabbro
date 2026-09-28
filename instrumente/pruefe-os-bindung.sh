@@ -106,6 +106,15 @@ done
 # `rohruf_pruefe`).
 QUELLE="$W/messung/proben/os-bindung/os-probe.gab"
 FREMD="$W/messung/proben/os-bindung/melde.c"
+# **The binding, since K8's first slice** (2026-09-28): the probe declares an
+# `arena`, and a hosted unit with an `arena` that binds no memory primitive is
+# REFUSED by `gabbro build` before a byte of C (`bau.rs::bindungsregel_gehostet`).
+# These two files are what the probe takes off the shelf -- ordinary user code in
+# its manifest, like `melde.c` beside them -- and their object is the PROGRAM's,
+# which is why `mmap`, `mprotect` and `sysconf` left the intersection below by
+# the same move that made the runtime call them through declared names.
+BINDUNG_GAB="$W/bibliothek/linux/linux.gab"
+BINDUNG_C="$W/bibliothek/linux/linux.c"
 EINHEIT="osprobe"
 
 # **What the run must print**, and every line is a statement about the tree and
@@ -126,9 +135,16 @@ k=3 v=0
 k=4 v=64"
 ERWARTET="$ERWARTET_BASIS"
 
-# **What the hosted runtime still takes from the OS.** Twelve on 2026-09-28,
-# measured by the stage below and listed in the report; K8 brings this to 0.
-MARKE_OSSYM=12
+# **What the hosted runtime still takes from the OS.** Twelve when this stage was
+# written on 2026-09-28, and **seven the same day**: the bounded heap's five
+# (`mmap`, `mprotect`, `sysconf`, `exit`, `fwrite`) left with
+# `laufzeit/arena_dyn.c`, which calls the program's binding now
+# (`laufzeit/bindung.h`, `bibliothek/linux/`). The seven that remain are the
+# GENERATED DRIVER's, every one of them -- `pthread_create`, `pthread_join`,
+# `pthread_mutex_lock`, `pthread_mutex_unlock`, `pause` (libc's, in the idle
+# root), `fprintf` and `abort`. That is the next slice of K8, and the mark is
+# what will refuse to let it be forgotten. K8 brings this to 0.
+MARKE_OSSYM=7
 
 # **How many raw system-call sites the hosted runtime issues.** Three call sites
 # in `laufzeit/faden.c` (`clone` and the child's `exit` in `gabbro_faden_start`,
@@ -186,6 +202,8 @@ for werkzeug in cc nm; do
 done
 [ -f "$QUELLE" ] || nicht_gelaufen "no probe source at $QUELLE"
 [ -f "$FREMD" ]  || nicht_gelaufen "no probe C body at $FREMD"
+[ -f "$BINDUNG_GAB" ] || nicht_gelaufen "no binding declarations at $BINDUNG_GAB"
+[ -f "$BINDUNG_C" ]   || nicht_gelaufen "no binding bodies at $BINDUNG_C"
 
 # **Which binary, and is it younger than the sources it claims to be?** One
 # register, one file (`instrumente/binaer.sh`).
@@ -212,7 +230,15 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     without it `base` is NULL, every `grow` takes its `else`, and the heap is
 #     DEAD -- silently, because refuse-on-full is a legal answer. *This is the
 #     defect the probe found; the gift is what keeps it found.*
-gifte() { echo "1 2 3 4 5"; }
+#   6 the BINDING leaves the manifest: the probe declares an `arena`, so
+#     `gabbro build` must refuse it by name before a byte of C
+#     (`bau.rs::bindungsregel_gehostet`). This is the half no `nm` could give --
+#     a unit with no binding has no binary to measure, and what it would get
+#     instead is the linker's "undefined reference to `gabbro_os_melden`",
+#     about a name the program never wrote. The gift checks for the REFUSAL's
+#     own sentence, because a build that failed for any other reason would turn
+#     the run red through the wrong door.
+gifte() { echo "1 2 3 4 5 6"; }
 
 # -- stage 1: build, link, run -------------------------------------------------
 #
@@ -226,7 +252,7 @@ bauen() {   # $1 = work dir, $2 = gift
     mkdir -p "$bau" "$arb/laufzeit"
     # The runtime sources are COPIED, because gifts 2 and 3 mutate them and the
     # tree is never written to by an instrument.
-    cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" \
+    cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
        "$W/laufzeit/faden.c" "$W/laufzeit/faden.h" "$arb/laufzeit/"
     {
         echo "-- written by instrumente/pruefe-os-bindung.sh"
@@ -234,10 +260,34 @@ bauen() {   # $1 = work dir, $2 = gift
         echo "out $bau"
         echo "unit $EINHEIT object"
         echo "  $QUELLE"
+        # **The DECLARATIONS are the unit's, the bodies are compiled by this harness**
+        # -- which is what a driver written by hand does, and what every harness in
+        # `instrumente/` does with the runtime beside it. The binding rule asks about the
+        # declaration, so this is the whole of what the manifest needs.
+        #
+        # Gift 6 drops that line, and NOTHING else: the bodies still stand in the link, so
+        # what the build refuses is the missing DECLARATION and not a missing file.
+        [ "$gift" = 6 ] || echo "  $BINDUNG_GAB"
     } > "$arb/manifest"
     if ! timeout "$FRIST" "$GABBRO" build "$arb/manifest" > "$arb/bau.log" 2>&1; then
+        if [ "$gift" = 6 ]; then
+            # **The refusal by its own sentence.** A build that failed for another
+            # reason would turn this run red through the wrong door, and a gift caught
+            # for the wrong reason is the trap this lane has paid for three times.
+            if grep -q "binds no \`gabbro_os_" "$arb/bau.log"; then
+                echo "HARNESS: gift 6 -- the build refused the unbound arena by name"
+            else
+                echo "HARNESS: gift 6 does not measure -- the build failed for another reason"
+                head -5 "$arb/bau.log" >&2
+            fi
+            return 0
+        fi
         echo "HARNESS: gabbro build FAILED"
         tail -20 "$arb/bau.log" >&2
+        return 0
+    fi
+    if [ "$gift" = 6 ]; then
+        echo "HARNESS: gift 6 does not measure -- the build ACCEPTED a unit with an \`arena\` and no binding"
         return 0
     fi
     if [ "$gift" = 1 ]; then
@@ -306,9 +356,19 @@ bauen() {   # $1 = work dir, $2 = gift
         head -20 "$arb/cc3.log" >&2
         return 0
     fi
+    # **The binding is the program's too, and compiled as its own object** -- which is
+    # the whole reason the measurement can tell its `mmap` from a runtime one. It reads
+    # the runtime's interface (`-I "$arb/laufzeit"`) because that header is what holds
+    # its six definitions against the declarations the runtime calls.
+    if ! timeout "$FRIST" cc $cflags -I "$arb/laufzeit" \
+            -c -o "$bau/bindung.o" "$BINDUNG_C" 2> "$arb/cc4.log"; then
+        echo "HARNESS: the program's binding did not compile"
+        head -20 "$arb/cc4.log" >&2
+        return 0
+    fi
     if ! timeout "$FRIST" cc -pthread -o "$bau/probe" \
             "$bau/treiber.o" "$bau/arena_dyn.o" "$bau/faden.o" "$bau/fremd.o" \
-            2> "$arb/ld.log"; then
+            "$bau/bindung.o" 2> "$arb/ld.log"; then
         echo "HARNESS: the linker refused the probe"
         head -20 "$arb/ld.log" >&2
         return 0

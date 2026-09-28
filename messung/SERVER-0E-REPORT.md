@@ -1799,3 +1799,146 @@ What is left of K8 is §12.5's shape applied to the hosted side: `laufzeit/bindu
 `bau.rs` beside `bindungsregel` (about `Art::Programm`), and **the corpus** — every example that
 runs hosted needs its binding line, with the diagnostic diff held at zero apart from the new
 refusal. That last part is what makes K8 bigger than K7, which had no corpus at all.
+
+---
+
+## 15. Session 10, second slice (2026-09-28) — K8: the bounded heap's OS calls become the program's
+
+*The measurement of §14 said twelve. This slice moves the first runtime file, and the same
+instrument says **seven**.*
+
+### 15.1 What moved, and what deliberately did not
+
+`laufzeit/arena_dyn.c` asked `mmap` for the reservation, `mprotect` for every commit and
+`sysconf` for the page size, and printed its fail-stops with `fprintf` before `exit`/`abort`.
+All six are declarations now — `laufzeit/bindung.h`, the hosted twin of
+`laufzeit/kmodul/bindung.h`, built to K7's three rules and in K7's order:
+
+* the INTERFACE is fixed and the IMPLEMENTATION is the program's;
+* an address travels as a `u64`, because Gabbro has no pointer type;
+* the storage is the runtime's, the operations are the program's.
+
+**Not one line of the arithmetic changed, and that is the point.** The ceiling, the page
+rounding, the monotone commit and refuse-on-full are the runtime's reasoning; the mapping
+primitive is the program's choice. The binding answers the page SIZE and never decides where a
+page begins.
+
+`bibliothek/linux/{linux.gab,linux.c}` is the binding a hosted program takes off the shelf —
+ordinary user code in its manifest, the sixth `.gab` root file of `bibliothek/`'s second unit.
+Its two named assumptions are `os_bindung_abi` (the SysV convention, the 0-is-refusal rows, and
+that `gabbro_os_ende` never returns) and **`os_bindung_null`**, which is named apart on purpose:
+*the bounded heap does not scrub*, so a binding that handed back recycled storage would break
+exactly that and nothing else visible.
+
+**`gabbro_os_ende` does not return, and the declaration cannot say so** — it is the program's
+ordinary `extern fn`, and the emitted prototype meets the runtime's declaration in one
+translation unit. So every call site carries the fail-closed line behind it (`return false`, or
+a return with `base` still null), and a binding whose body returned leaves the caller in the
+`else` it wrote rather than in a program that ran on past a stop. *The weaker declaration costs
+one line per site and buys the check that the Gabbro declaration is load-bearing.*
+
+### 15.2 The refusal, which is again the half no measurement gives
+
+`bau.rs::bindungsregel_gehostet`: a hosted unit that declares an `arena` and binds no memory
+primitive is refused before a byte of C, by name, with the file that supplies it and with the
+message it would otherwise have got (*"undefined reference to `gabbro_os_melden`"*, about a
+name the program never wrote).
+
+**The two rules share one function.** `bindung_pruefe` asks the three questions — is the name
+declared, with this arity, with this result — and a `BindungsZiel` carries the four words that
+differ (runtime, header, library, whose error it replaces). *A target whose arity question was
+written twice would answer it twice, and one of the two would age* (`W7`).
+
+Bare metal is exempt and K8 says so itself: a `metal` unit gets `laufzeit/metall/arena.c`, whose
+reservation is a slice of one static region and whose commit is a budget — no operating system
+underneath, nothing to bind.
+
+The report channel is demanded under the `arena` row and not on its own line, although it
+belongs to everything the runtime does: today the arena is the only hosted part that has moved,
+and demanding it of a unit without an arena would refuse a program for a call nothing makes.
+***The demand grows with the measurement*** — the only order in which a refusal and a number
+stay one statement.
+
+### 15.3 A promise this build did not keep, and now does
+
+`gabbro build` refused a `.c` file in any unit that was not a `module`, and the refusal was
+honest about itself: *"a hosted `program` with a foreign body is a build-system gap of its own
+— naming it here would be a promise this build does not keep."* **K8 is where the promise had
+to be kept**: the bodies that define the binding ARE an ordinary `.c` file of the unit, and a
+binding the build refused to compile would have been a library nobody could use.
+
+So a non-module unit's `.c` files are compiled with the manifest's own compiler line into
+`<unit>.fremd<N>.o`, and a `program` links them. The object names carry the file's INDEX and
+not its stem, because two files of different directories may share a stem and an object
+silently overwritten would link and then answer the wrong body. **No `-I` is invented**: a body
+that includes the runtime's interface says so with an `-I` on the manifest's compiler line,
+like any other library header — *a flag that works from the tree root and nowhere else is worse
+than none.*
+
+### 15.4 The numbers
+
+```
+$ instrumente/pruefe-os-bindung.sh
+   HARNESS: OS symbols ok (7 hard-wired by the hosted runtime, mark 7 -- K8 brings this to 0)
+   HARNESS: raw syscalls ok (3 site(s) of the `syscall` instruction, mark 3)
+   HARNESS: bare metal ok (no OS call in 7 file(s) of the machine layer; 65 machine access(es))
+$ instrumente/pruefe-os-bindung.sh --gift all
+gifts: 6 of 6 caught
+```
+
+**12 → 7.** The five that left are the bounded heap's: `mmap`, `mprotect`, `sysconf`, `exit`,
+`fwrite`. **The seven that remain are the GENERATED DRIVER's, every one of them** —
+`pthread_create`, `pthread_join`, `pthread_mutex_lock`, `pthread_mutex_unlock`, `pause` (libc's,
+in the idle root), `fprintf` and `abort`. That is the next slice, and the mark is what refuses
+to let it be forgotten. `MARKE_ROHRUF` is untouched at 3: `faden.c` did not move.
+
+**Gift 6 is the refusal's own poison probe**: the binding's declarations leave the manifest and
+nothing else — the bodies stay in the link, so what the build refuses is the missing
+DECLARATION and not a missing file. It is checked by the refusal's own sentence (`binds no
+\`gabbro_os_`), because *a build that failed for another reason would turn the run red through
+the wrong door* — the trap this lane has paid for three times, and the reason the phrase `does
+not measure` exists beside `does not apply`.
+
+### 15.5 A guardian repaired on the way — `instrumente/binaer.sh`
+
+Session 6 recorded it and did not fix it: the staleness scan read every `*.rs` under `crates/`,
+so after any edit to `crates/*/tests/*.rs` every instrument answered `NOT RUN` — and
+`cargo build --release` did **not** heal it, because it does not recompile the binary for a
+change to a separate test target. It cost two emission runs in session 6 and one more here.
+
+`tests/`, `benches/` and `examples/` are cargo's own separate targets and are pruned by path
+now; everything else under `crates/` stays in, including a `build.rs` at a crate root, which IS
+an input. Measured in both directions: a newer test file leaves the answer a path, a newer
+`src/` file still refuses with the count. *A guardian that cannot be satisfied by doing the
+right thing is one whose word gets worked around.*
+
+### 15.6 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1430 passed, 0 failed** (+2: the two binding tests; `~/claude-lane/logs/test-s10d.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 325 von 325** (`emission-s10g.log`) |
+| `./instrumente/pruefe-metall.sh` | rc 0, 18 booted on qemu -smp 4, 8 gifts bite |
+| `./instrumente/pruefe-kernelmodul.sh` | rc 0, GREEN on all three probes |
+| `./instrumente/miss-arena-decke.sh` | GREEN — the ceiling still costs nothing (10 MiB vs 32 GiB: 3512 vs 3524 bytes of C, **16696 bytes of binary either way**) |
+| `./instrumente/pruefe-os-bindung.sh` | rc 0, **6 of 6** gifts |
+| `pruefe-waechter.py`, `-englisch.py`, `-zahlen.py`, `-vergabe.py`, `-kennungen.py` | identical to the base after digit normalisation |
+| `pruefe-todo.py`, `-saetze.py`, `-widerruf.py`, `-cformen.py` | rc 0 |
+| `abnahme.py --voll` | cannot run here: no Isabelle (`REGELN.md`) |
+
+Counters: `MARKE_EMIT_BIB` 1 → **2** (`bibliothek/linux/linux.gab` emits; re-measured
+`325 von 325`), `MARK_AUSSEN` 24 → **26** (the binding's two named assumptions).
+`MARKE_EMIT`, `-G`, `-M` unchanged — **no emitted byte of any existing unit moved**, which is
+what the translation-validation chain reads.
+
+### 15.7 What K8 still needs
+
+1. **The generated driver** (`treiber.rs`): seven names, and the same three rules — a blob of
+   words for a `pthread_t` and a mutex, the operations the program's. This is the slice that
+   takes `MARKE_OSSYM` to 0 and it touches every harness that links a generated driver.
+2. **`laufzeit/faden.c`**: `clone`, `futex` and the child's `exit` as the `syscall`
+   INSTRUCTION, which leave no symbol — `MARKE_ROHRUF`, 3 sites.
+3. **`start.c` / `start_pool.c`**: `printf`, `read`, `write`, `pause` — not linked by this
+   probe, so they are outside the mark today; the driver slice is where they join it.
+4. **The corpus**, which is what makes K8 bigger than K7: every hosted example that gains a
+   binding line, with the diagnostic diff held at zero apart from the new refusal.

@@ -2571,9 +2571,17 @@ lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
 # ONE translation unit (`#include "arena_dyn.c"` after the emitted file, so
 # the header's layout wins over the emitted declarations' guard), and stage 9
 # keeps compiling every emitted unit ALONE (`cc -c`, no runtime beside it).
-cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$ARB/"
+# **And the PROGRAM's binding beside them** (server lane, 2026-09-28, TODO 0e K8):
+# `arena_dyn.c` calls no operating-system function of its own any more -- the six it does
+# call are declarations of `laufzeit/bindung.h` that the program defines, and
+# `bibliothek/linux/linux.c` is the usual POSIX set. A driver that took the runtime and
+# not the binding would not link, which is the refusal `bau.rs::bindungsregel_gehostet`
+# turns into a sentence at build time.
+cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
+   "$W/bibliothek/linux/linux.c" "$ARB/"
 TREIBER158='#include <stdio.h>
 #include "arena_dyn.c"
+#include "linux.c"
 #include "@ERZEUGT@"
 int main(void) {
     gabbro_arena_reserve(&Vorrat_desc);
@@ -4035,7 +4043,12 @@ MARKE_EMIT_L=1      # `laufzeit/` -- sperre.gab; `start.c` ist C und keine `.gab
 # it are not Gabbro and do not count here. *The file emits a C with not one body in it --
 # twelve prototypes -- and that is exactly what belongs measured: a binding that stops
 # translating is a module that stops building.*
-MARKE_EMIT_BIB=1    # `bibliothek/` -- linux-kmod.gab; the `.c` and `.h` are not Gabbro
+# **1 -> 2 on 2026-09-28** (server lane, TODO 0e K8): `bibliothek/linux/linux.gab`, the
+# hosted twin -- the six POSIX primitives `laufzeit/arena_dyn.c` calls now that it calls none
+# of its own (`laufzeit/bindung.h` is the interface; `mmap`, `mprotect`, `sysconf`, `fprintf`
+# and `_exit` stand in `linux.c` and nowhere else). Re-measured in the same run:
+# `325 von 325`.
+MARKE_EMIT_BIB=2    # `bibliothek/` -- linux-kmod.gab + linux.gab; the `.c` and `.h` are not Gabbro
 # **0 -> 1 on 2026-09-01, and this one is not bookkeeping.** `halde.gab` -- the only file
 # in the tree at the target scale -- did NOT emit until tonight: it fell at an `L104` false
 # alarm, `g is consumed a second time`, because `m2` ran a `narrow … else` arm as

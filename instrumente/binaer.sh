@@ -19,9 +19,21 @@
 # build was a mixture, here the measurement is of something that is gone.*
 #
 # THE ANSWER, in one place because it was written three times: take the NEWER of
-# the two profiles, and if any `crates/**.rs` is younger than it, say so and
-# return 2. A binary older than a source is an ABORT, not a finding: nothing was
-# measured, and a run that measured nothing is not a run that passed (`W1`).
+# the two profiles, and if any SOURCE of that binary is younger than it, say so
+# and return 2. A binary older than a source is an ABORT, not a finding: nothing
+# was measured, and a run that measured nothing is not a run that passed (`W1`).
+#
+# **AND A TEST FILE IS NOT A SOURCE OF THE BINARY** (server lane, 2026-09-28,
+# the finding of session 6 repaired in session 10). The scan read every `*.rs`
+# under `crates/`, so after any edit to `crates/*/tests/*.rs` every instrument
+# answered `NOT RUN` -- and `cargo build --release` did NOT heal it, because it
+# does not recompile the binary for a change to a separate test target. *A
+# guardian that cannot be satisfied by doing the right thing is one whose word
+# gets worked around*: it cost two full emission runs in session 6 and one more
+# here, and the only healing was a `touch` on a source that had not changed.
+# `tests/`, `benches/` and `examples/` are cargo's own separate targets and are
+# excluded by path; everything else under `crates/` stays in, including a
+# `build.rs` at a crate root, which IS an input.
 #
 # USAGE (two lines, and the caller keeps its own wording):
 #
@@ -41,7 +53,9 @@ gabbro_binaer() {
         return 2
     fi
     local juenger
-    juenger="$(find "$w/crates" -name '*.rs' -newer "$neu" 2>/dev/null | wc -l)"
+    juenger="$(find "$w/crates" \
+        \( -path '*/tests/*' -o -path '*/benches/*' -o -path '*/examples/*' \) -prune -o \
+        -name '*.rs' -newer "$neu" -print 2>/dev/null | wc -l)"
     if [ "$juenger" != 0 ]; then
         echo "$neu is OLDER than $juenger source file(s) under crates/ -- build first"
         return 2

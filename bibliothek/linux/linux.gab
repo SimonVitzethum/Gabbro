@@ -1,0 +1,118 @@
+-- **`bibliothek/linux` -- the POSIX primitives a HOSTED Gabbro program binds,
+-- as ordinary user code** (server lane, TODO section 0e K8, 2026-09-28).
+--
+-- WHAT THIS IS. Simon's binding constraint (2026-09-27) is *"API calls are
+-- always user-made"*, and on 2026-09-28 he drew it for the runtimes too: *"an
+-- die Hardware ist OK, OS nicht, das muss selbst gemacht werden"*. So a Gabbro
+-- program reaches an operating system only through items IT declares -- with
+-- their ABI, their effects, their costs and the assumption their bodies keep --
+-- and that now holds for the runtime beside it as well.
+--
+-- `bibliothek/linux-kmod` is the same file for the Linux KERNEL MODULE target,
+-- and it was written first (K7). This one is its hosted twin, deliberately in
+-- the same order and with the same three rules, so that the two can be read
+-- against each other. **A different operating system gets a different pair of
+-- files here, not a different Gabbro.**
+--
+-- WHAT IT COVERS TODAY, and the boundary is measured rather than asserted.
+-- `instrumente/pruefe-os-bindung.sh` reads what the hosted runtime still pulls
+-- out of the OS -- `nm -u` over a built binary, intersected with the runtime's
+-- own objects, so the program's own calls do not count -- and its mark is the
+-- worklist. This file binds the whole of the BOUNDED HEAP
+-- (`laufzeit/arena_dyn.c`): the reservation, the commit, the page size, and the
+-- two halves of a fail-stop. What is not bound yet is the generated driver's
+-- threads and locks and the raw `clone`/`futex` of `laufzeit/faden.c`; the
+-- instrument's two marks say exactly how much that is.
+--
+-- WHAT A PROGRAM DOES WITH IT. Two lines in the manifest of a unit that
+-- declares an `arena`:
+--
+--     unit driver program
+--       my-program.gab
+--       bibliothek/linux/linux.gab   -- these declarations
+--       bibliothek/linux/linux.c     -- their bodies
+--
+-- and `gabbro build` REFUSES a hosted unit with an `arena` that names neither,
+-- with the missing declaration and the file that supplies it
+-- (`crates/gabbro-cli/src/bau.rs`, `bindungsregel_gehostet`). *Never a silent
+-- default* -- and never a link error either, which is what the refusal buys: the
+-- linker's word would be `gabbro_os_reserve undefined`, about a name the
+-- program never wrote.
+--
+-- **WHY THERE IS NO `use` LINE**, the same answer as the module binding's:
+-- nothing in a program CALLS these items, the runtime does. A `use` would name
+-- an item the program never mentions again -- ceremony documenting a dependency
+-- the manifest already carries. What makes the declarations load-bearing is the
+-- pair of checks around them: `gabbro build` refuses a unit that lacks them, and
+-- the C compiler holds each one against `laufzeit/bindung.h` inside the
+-- runtime's own translation unit, so a wrong type is a build error.
+--
+-- WHY EVERY ADDRESS IS A `u64`. Gabbro has no pointer type -- the same reason a
+-- system-call binding passes registers (Opus agent L, OFFEN O31). The
+-- reservation's base crosses as a number and the two sides cast: the runtime
+-- with `(uint64_t)(uintptr_t)`, the bodies in `linux.c` back again. Both halves
+-- stand beside each other so that neither can drift.
+--
+-- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
+-- primitive's OWN work once it runs. **Waiting is not in it, and neither is the
+-- kernel's**: a `mmap` of 32 GiB of `PROT_NONE` walks page tables the program
+-- cannot count, and waiting bounds are NOT CLAIMED anyway
+-- (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list). The numbers
+-- below are therefore the same kind of statement as the module binding's -- a
+-- declared bound on the call itself, which is what a `costs` clause is about.
+module linux::hosted {
+
+-- **The ABI and the behaviour of all six bodies, as one named assumption.** One
+-- and not six, because it is one fact about one file: `bibliothek/linux/linux.c`
+-- is compiled into the program's own build, with the program's own flags,
+-- against the C library of the machine it is built for.
+assume os_bindung_abi
+    "Every body in `bibliothek/linux/linux.c` keeps the x86_64 SysV convention of its declaration here, answers 0 exactly where the declaration says a refusal is 0, and `gabbro_os_ende` never returns."
+    falsifier sonde_os_bindung;
+
+-- **The reservation reads as zero, and that is its own assumption** -- because
+-- the bounded heap does NOT scrub. `laufzeit/arena_dyn.c` commits lazily and
+-- stores nothing into a newly committed slot; a program reads a fresh slot and
+-- expects zero. That holds for a private anonymous mapping and would not hold
+-- for a binding that handed back recycled storage, which is why it is named
+-- apart from the ABI: *a binding that reused a freed region would leave a
+-- program reading another run's bytes, with every other line of this file
+-- unchanged.*
+assume os_bindung_null
+    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them."
+    falsifier sonde_os_null;
+
+-- -- the report channel and the stop -----------------------------------------
+--
+-- The runtime has no words of its own, because printing is an OS call. A
+-- fail-stop travels as a CODE and two numbers (`laufzeit/bindung.h` lists the
+-- six codes) and this binding's body carries one sentence per code.
+--
+-- `gabbro_os_ende` NEVER RETURNS, and Gabbro has no way to say so -- so the
+-- runtime writes every call site as if it might and keeps a fail-closed line
+-- behind it. The assumption above is where the promise lives instead.
+extern fn gabbro_os_melden(code : u32, a : u64, b : u64)
+    effects { pure } costs <= 4096 ops;
+
+extern fn gabbro_os_ende(code : u32)
+    effects { pure } costs <= 4096 ops;
+
+-- -- the bounded heap's storage ----------------------------------------------
+--
+-- `reserve` answers the base of `bytes` of reserved-but-not-committed address
+-- space or 0; `commit` makes a page-aligned range of it readable and writable
+-- and answers 0 on success; `seitengroesse` is the granularity the runtime
+-- rounds to. A bounded heap needs no more than these three from an operating
+-- system: the ceiling, the committed prefix and refuse-on-full are the
+-- runtime's arithmetic (`laufzeit/arena_dyn.c`), and the binding never decides
+-- where a page begins.
+extern fn gabbro_os_reserve(bytes : u64) -> u64
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_os_commit(basis : u64, versatz : u64, bytes : u64) -> u32
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_os_seitengroesse() -> u64
+    effects { pure } costs <= 4096 ops;
+
+}

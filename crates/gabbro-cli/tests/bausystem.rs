@@ -412,16 +412,37 @@ impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
     assert!(aus.contains("BOTH"), "loading and unloading are not one call:\n{aus}");
 }
 
-/// **A foreign C body belongs to a module today and nowhere else**, and the refusal says so
-/// instead of compiling it into nothing. (A hosted `program` with a foreign body is a
-/// build-system gap of its own -- the emission harness writes those drivers by hand.)
+/// **A foreign C body belonged to a module and nowhere else, and since K8 it does not**
+/// (server lane, 2026-09-28, TODO section 0e K8; the test held the other way until then).
+///
+/// The refusal it replaces was honest about itself: *"a hosted `program` with a foreign body
+/// is a build-system gap of its own -- naming it here would be a promise this build does not
+/// keep."* K8 is where the promise had to be kept. The hosted runtime's operating-system
+/// calls are declarations the PROGRAM defines (`laufzeit/bindung.h`), the bodies that define
+/// them are an ordinary `.c` file of the unit (`bibliothek/linux/linux.c`), and a binding the
+/// build refused to compile would have been a library nobody could use.
+///
+/// What is checked is the whole of what changed: the unit BUILDS, and its body became an
+/// object beside the unit's own. *A build that accepted the file and compiled nothing would
+/// pass the first half and link nothing* -- which is the shape the old refusal named.
 #[test]
-fn ein_c_rumpf_ausserhalb_eines_moduls_faellt() {
-    let (_, fehler, code) = kmod_lauf("crumpf", "unit gabbro_probe object", KMOD_EINHEIT, "");
-    assert_ne!(code, 0, "a `.c` file in an `object` unit is refused");
+fn ein_c_rumpf_ausserhalb_eines_moduls_wird_uebersetzt() {
+    let d = kratz("crumpf");
+    std::fs::write(d.join("u.gab"), KMOD_EINHEIT).expect("unit");
+    std::fs::write(d.join("melde.c"), "void gabbro_kmod_melde(void) { }\n").expect("body");
+    let manifest = format!(
+        "compiler cc -std=c11\nout {aus}\nunit gabbro_probe object\n  {q}\n  {c}\n",
+        aus = d.join("bau").display(),
+        q = d.join("u.gab").display(),
+        c = d.join("melde.c").display(),
+    );
+    let mpfad = d.join("manifest");
+    std::fs::write(&mpfad, manifest).expect("manifest");
+    let (aus, fehler, code) = lauf(&["build", mpfad.to_str().expect("utf8")]);
+    assert_eq!(code, 0, "an `object` unit may carry its own C body:\n{aus}\n{fehler}");
     assert!(
-        fehler.contains("foreign C body") && fehler.contains("kernel module"),
-        "with its reason:\n{fehler}"
+        d.join("bau").join("gabbro_probe.fremd0.o").is_file(),
+        "and the build compiled it, beside the unit's own object:\n{aus}"
     );
 }
 
@@ -820,4 +841,120 @@ entry uhr via irq arch x86_64 {
     let (aus, _, code) = lauf(&["build", "--dry-run", mpfad.to_str().expect("utf8")]);
     assert_ne!(code, 0, "an object unit's vectorless entry is still refused:\n{aus}");
     assert!(aus.contains("literal vector"), "for the bare-metal driver's reason:\n{aus}");
+}
+
+/// **A HOSTED unit with an `arena` that binds no memory primitive is refused** (server lane,
+/// 2026-09-28, TODO section 0e K8) -- the module rule's twin, and deliberately the same shape.
+///
+/// SIMON DREW THE LINE FOR THE RUNTIMES on 2026-09-28: *"an die Hardware ist OK, OS nicht, das
+/// muss selbst gemacht werden."* `laufzeit/arena_dyn.c` was the first hosted file to move: it
+/// asked `mmap` for the reservation, `mprotect` for every commit and `sysconf` for the page
+/// size, and printed its fail-stops itself. Those six names are declarations now
+/// (`laufzeit/bindung.h`) and the PROGRAM defines them --
+/// `bibliothek/linux/linux.gab` plus its `.c` is the binding it may take off the shelf.
+///
+/// **Why a test and not only the instrument.** `instrumente/pruefe-os-bindung.sh` measures
+/// what a BUILT binary still pulls out of the OS; a unit whose binding is missing has no
+/// binary. What it would get instead is *"undefined reference to `gabbro_os_melden`"* -- a
+/// linker error about a name the user never wrote.
+///
+/// Both directions stand in one test, so neither can pass by refusing everything: the unit
+/// WITH the declarations builds, and the one without is refused by name.
+#[test]
+fn eine_gehostete_einheit_mit_arena_ohne_bindung_faellt() {
+    let mit_arena = "module probe::halde {
+type Wert = u64 in 0 .. 1000;
+arena Puffer capacity 2 .. 4 max 4096 of Wert;
+impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
+    grow Puffer by 8 else { return 1; };
+    let a = alloc Puffer (1) else { return 2; };
+    return 0;
+}
+}
+";
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    let bindung_gab = wurzel.join("bibliothek").join("linux").join("linux.gab");
+    let bindung_c = wurzel.join("bibliothek").join("linux").join("linux.c");
+    let laufzeit = wurzel.join("laufzeit");
+    assert!(bindung_gab.is_file(), "the binding this rule points at exists");
+
+    let baue = |marke: &str, mit_bindung: bool| {
+        let d = kratz(marke);
+        std::fs::write(d.join("u.gab"), mit_arena).expect("unit");
+        let mut dateien = format!("  {}\n", d.join("u.gab").display());
+        if mit_bindung {
+            dateien.push_str(&format!("  {}\n", bindung_gab.display()));
+            dateien.push_str(&format!("  {}\n", bindung_c.display()));
+        }
+        let manifest = format!(
+            "compiler cc -std=c11 -I {inc}\nout {aus}\nunit gabbro_probe object\n{dateien}",
+            inc = laufzeit.display(),
+            aus = d.join("bau").display(),
+        );
+        let mpfad = d.join("manifest");
+        std::fs::write(&mpfad, manifest).expect("manifest");
+        let (aus, fehler, code) = lauf(&["build", mpfad.to_str().expect("utf8")]);
+        (d, aus, fehler, code)
+    };
+
+    let (_, aus, _, code) = baue("arena_ohne_bindung", false);
+    assert_ne!(code, 0, "an `arena` without a binding is refused:\n{aus}");
+    assert!(aus.contains("binds no `gabbro_os_melden`"), "by name:\n{aus}");
+    assert!(aus.contains("bibliothek/linux"), "with the file that supplies it:\n{aus}");
+    assert!(aus.contains("`arena`"), "and with what makes the unit need it:\n{aus}");
+
+    // **The positive twin, and it compiles the bodies too.** A rule that only ever refused
+    // would be met by a library nobody can build: the `.c` of the binding is an ordinary file
+    // of the unit since K8, and the build turns it into an object beside the unit's own.
+    let (d, aus, fehler, code) = baue("arena_mit_bindung", true);
+    assert_eq!(code, 0, "the same unit with the binding builds:\n{aus}\n{fehler}");
+    assert!(
+        d.join("bau").join("gabbro_probe.fremd0.o").is_file(),
+        "and the binding's bodies are an object of this build:\n{aus}"
+    );
+}
+
+/// **A binding of the right name and the WRONG SHAPE is refused too** (server lane,
+/// 2026-09-28, TODO section 0e K8).
+///
+/// C has no mangling, so a declaration with the right name and the wrong arity links and then
+/// reads a register nobody set. The module rule asks the same three questions
+/// (`bau.rs::bindung_pruefe`, which both rules share -- a second copy of this check would be
+/// the drift it exists against).
+#[test]
+fn eine_bindung_mit_falscher_stelligkeit_faellt() {
+    let d = kratz("arena_falsche_stelligkeit");
+    // `gabbro_os_reserve` takes ONE parameter and answers one. Here it takes two.
+    let quelle = "module probe::halde {
+type Wert = u64 in 0 .. 1000;
+arena Puffer capacity 2 .. 4 max 4096 of Wert;
+extern fn gabbro_os_melden(code : u32, a : u64, b : u64) effects { pure } costs <= 512 ops;
+extern fn gabbro_os_ende(code : u32) effects { pure } costs <= 512 ops;
+extern fn gabbro_os_reserve(bytes : u64, mehr : u64) -> u64 effects { pure } costs <= 512 ops;
+extern fn gabbro_os_commit(basis : u64, versatz : u64, bytes : u64) -> u32 effects { pure } costs <= 512 ops;
+extern fn gabbro_os_seitengroesse() -> u64 effects { pure } costs <= 512 ops;
+impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
+    grow Puffer by 8 else { return 1; };
+    let a = alloc Puffer (1) else { return 2; };
+    return 0;
+}
+}
+";
+    std::fs::write(d.join("u.gab"), quelle).expect("unit");
+    let manifest = format!(
+        "compiler cc -std=c11\nout {aus}\nunit gabbro_probe object\n  {q}\n",
+        aus = d.join("bau").display(),
+        q = d.join("u.gab").display(),
+    );
+    let mpfad = d.join("manifest");
+    std::fs::write(&mpfad, manifest).expect("manifest");
+    let (aus, _, code) = lauf(&["build", mpfad.to_str().expect("utf8")]);
+    assert_ne!(code, 0, "a binding of the wrong arity is refused:\n{aus}");
+    assert!(
+        aus.contains("gabbro_os_reserve") && aus.contains("parameter"),
+        "by name and by shape:\n{aus}"
+    );
+    assert!(aus.contains("laufzeit/bindung.h"), "against the header it is held to:\n{aus}");
 }

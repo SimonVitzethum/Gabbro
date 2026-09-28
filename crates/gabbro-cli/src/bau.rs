@@ -830,6 +830,58 @@ fn modulregel(
     bindungsregel(e, funktionen, atomare, arenen, sperren, wurzeln)
 }
 
+/// **What a HOSTED unit must bind, per thing it uses** (server lane, 2026-09-28, TODO
+/// section 0e K8).
+///
+/// The module rule's twin, and deliberately the same shape. Simon drew the line for the
+/// runtimes on 2026-09-28: *"an die Hardware ist OK, OS nicht, das muss selbst gemacht
+/// werden"* -- no operating-system call hard-wired in ANY runtime, hardware access on bare
+/// metal allowed. `laufzeit/arena_dyn.c` was the first file to move
+/// (`laufzeit/bindung.h` declares what it calls and defines nothing), so this is the first
+/// thing a hosted unit has to bind.
+///
+/// | what the unit uses | what the hosted runtime will call | where |
+/// |---|---|---|
+/// | an `arena` | `gabbro_os_reserve`, `gabbro_os_commit`, `gabbro_os_seitengroesse` | `arena_dyn.c`, at load and at every `grow` |
+/// | an `arena` | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of the same file |
+///
+/// **Why the report channel is under the arena row and not on its own line.** It belongs to
+/// everything the runtime does, and today the arena is the only part of the hosted runtime
+/// that has moved -- so demanding it of a unit WITHOUT an arena would refuse a program for a
+/// call nothing makes. *The demand grows with the measurement* (`MARKE_OSSYM` in
+/// `instrumente/pruefe-os-bindung.sh`), which is the only order in which a refusal and a
+/// number can stay the same statement.
+///
+/// **Bare metal is exempt, and that is K8's own sentence.** A unit built for a `metal` target
+/// gets `laufzeit/metall/arena.c`, whose reservation is a slice of one static region and
+/// whose commit is a budget -- no operating system underneath, nothing to bind, and the
+/// machine access it does have (port I/O, `hlt`, MSRs) is allowed.
+///
+/// A unit may of course write its own bodies instead of the library's -- the check is that
+/// the DECLARATION stands, with its arity and its result, not that a particular file was
+/// named.
+fn bindungsregel_gehostet(
+    e: &Einheit,
+    metall_ziel: bool,
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+    arenen: &[String],
+) -> Option<String> {
+    if e.art == Art::Modul || metall_ziel || arenen.is_empty() {
+        return None;
+    }
+    let weil = "this unit declares an `arena`, whose storage the runtime asks the program for";
+    let stopp = "this unit declares an `arena`, and the runtime fail-stops a refused \
+                 reservation in words the program owns";
+    let gefordert = vec![
+        BindungsZeile { name: "gabbro_os_melden", parameter: 3, liefert: false, weil: stopp },
+        BindungsZeile { name: "gabbro_os_ende", parameter: 1, liefert: false, weil: stopp },
+        BindungsZeile { name: "gabbro_os_reserve", parameter: 1, liefert: true, weil },
+        BindungsZeile { name: "gabbro_os_commit", parameter: 3, liefert: true, weil },
+        BindungsZeile { name: "gabbro_os_seitengroesse", parameter: 0, liefert: true, weil },
+    ];
+    bindung_pruefe(&gefordert, funktionen, &GEHOSTET_ZIEL)
+}
+
 /// **One row of the binding: a name the module runtime calls, and what makes it call it**
 /// (server lane, 2026-09-28, TODO section 0e K7).
 ///
@@ -882,6 +934,104 @@ struct BindungsZeile {
 ///
 /// A unit may of course write its own bodies instead of the library's -- the check is that the
 /// DECLARATION stands, with its arity and its result, not that a particular file was named.
+/// **Where a binding rule points when it refuses** (server lane, 2026-09-28, TODO section 0e
+/// K7 and K8).
+///
+/// Two targets carry the same rule today -- a Linux kernel module (K7) and a hosted program
+/// (K8) -- and they differ in four words: which runtime calls the name, which header holds
+/// the declaration, which library supplies the usual bodies, and whose error the user would
+/// have got instead. **The rule itself is one function**, because a second copy of the shape
+/// check is exactly the drift this folder writes its rules against (`W7`): a target whose
+/// arity question was written twice would answer it twice, and one of the two would age.
+struct BindungsZiel {
+    /// How the refusal names the unit. A module is a `module` by its manifest word; the
+    /// hosted rule holds for an `object` as much as for a `program` -- what it is about is
+    /// the RUNTIME the unit will be linked against -- so it says "hosted unit" and not a
+    /// manifest word it might contradict.
+    art: &'static str,
+    /// The runtime that calls these names, in the words of the refusal.
+    laufzeit: &'static str,
+    /// The header the declaration is held against.
+    kopf: &'static str,
+    /// The two manifest lines a program may take off the shelf instead of writing its own.
+    bibliothek: &'static str,
+    /// Whose message the user would have got without this rule -- and it is always about the
+    /// RUNTIME's name, never about the program's omission.
+    sonst: &'static str,
+}
+
+const MODUL_ZIEL: BindungsZiel = BindungsZiel {
+    art: "`module`",
+    laufzeit: "the module runtime",
+    kopf: "laufzeit/kmodul/bindung.h",
+    bibliothek: "`bibliothek/linux-kmod/linux-kmod.gab` and `bibliothek/linux-kmod/linux-kmod.c`",
+    sonst: "`modpost`'s -- \"{} undefined\", in a `make` log",
+};
+
+const GEHOSTET_ZIEL: BindungsZiel = BindungsZiel {
+    art: "hosted unit",
+    laufzeit: "the hosted runtime",
+    kopf: "laufzeit/bindung.h",
+    bibliothek: "`bibliothek/linux/linux.gab` and `bibliothek/linux/linux.c`",
+    sonst: "the linker's -- \"undefined reference to `{}`\"",
+};
+
+/// **Is every row of the binding declared, with its arity and its result?** (server lane,
+/// 2026-09-28.)
+///
+/// **The SHAPE, not only the name.** C has no mangling, so a declaration of the right name and
+/// the wrong arity links and then reads a register nobody set. The same three questions the
+/// module's init/exit rule asks, for the same reason.
+fn bindung_pruefe(
+    gefordert: &[BindungsZeile],
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+    ziel: &BindungsZiel,
+) -> Option<String> {
+    for z in gefordert {
+        let Some(formen) = funktionen.get(z.name) else {
+            return Some(format!(
+                "this {} binds no `{}` -- {}\n\
+                 \x20        = {} calls it (`{}`) and defines it nowhere: every operating-system \
+                 call a Gabbro program makes is the PROGRAM's\n\
+                 \x20        = the usual one is two lines in the manifest: {}\n\
+                 \x20        = without this rule the refusal is {}, about a name the program \
+                 never wrote",
+                ziel.art,
+                z.name,
+                z.weil,
+                ziel.laufzeit,
+                ziel.kopf,
+                ziel.bibliothek,
+                ziel.sonst.replace("{}", z.name)
+            ));
+        };
+        for f in formen {
+            if f.parameter != z.parameter {
+                return Some(format!(
+                    "`{}` is bound with {} parameter(s) and the runtime calls it with {} \
+                     ({} in {})\n\
+                     \x20        = the declaration is held against `{}`; C has no mangling, so \
+                     a wrong arity links and then reads a register nobody set",
+                    z.name, f.parameter, z.parameter, f.modul, f.datei, ziel.kopf
+                ));
+            }
+            if f.liefert != z.liefert {
+                return Some(format!(
+                    "`{}` is bound {} a result and the runtime {} one ({} in {})\n\
+                     \x20        = see `{}` for the line it is held against",
+                    z.name,
+                    if f.liefert { "with" } else { "without" },
+                    if z.liefert { "reads" } else { "reads none of" },
+                    f.modul,
+                    f.datei,
+                    ziel.kopf
+                ));
+            }
+        }
+    }
+    None
+}
+
 fn bindungsregel(
     e: &Einheit,
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
@@ -949,47 +1099,8 @@ fn bindungsregel(
             weil,
         });
     }
-    for z in &gefordert {
-        let Some(formen) = funktionen.get(z.name) else {
-            return Some(format!(
-                "this `module` binds no `{}` -- {}\n\
-                 \x20        = the module runtime calls it \
-                 (`laufzeit/kmodul/bindung.h`) and defines it nowhere: every kernel call of a \
-                 Gabbro module is the PROGRAM's\n\
-                 \x20        = the usual Linux one is two lines in the manifest: \
-                 `bibliothek/linux-kmod/linux-kmod.gab` and `bibliothek/linux-kmod/linux-kmod.c`\n\
-                 \x20        = without this rule the refusal is `modpost`'s -- \
-                 \"{} undefined\", in a `make` log, about a name the program never wrote",
-                z.name, z.weil, z.name
-            ));
-        };
-        // **The SHAPE, not only the name.** C has no mangling, so a declaration of the right
-        // name and the wrong arity links and then reads a register nobody set. The same three
-        // questions the init/exit rule above asks, for the same reason.
-        for f in formen {
-            if f.parameter != z.parameter {
-                return Some(format!(
-                    "`{}` is bound with {} parameter(s) and the runtime calls it with {} \
-                     ({} in {})\n\
-                     \x20        = the declaration is held against \
-                     `laufzeit/kmodul/bindung.h`; C has no mangling, so a wrong arity links \
-                     and then reads a register nobody set",
-                    z.name, f.parameter, z.parameter, f.modul, f.datei
-                ));
-            }
-            if f.liefert != z.liefert {
-                return Some(format!(
-                    "`{}` is bound {} a result and the runtime {} one ({} in {})\n\
-                     \x20        = see `laufzeit/kmodul/bindung.h` for the line it is held \
-                     against",
-                    z.name,
-                    if f.liefert { "with" } else { "without" },
-                    if z.liefert { "reads" } else { "reads none of" },
-                    f.modul,
-                    f.datei
-                ));
-            }
-        }
+    if let Some(befund) = bindung_pruefe(&gefordert, funktionen, &MODUL_ZIEL) {
+        return Some(befund);
     }
     // **The memory model of an `atomic`, which is a FILE and not a function.** See the table
     // in this function's own documentation for why it is checked here and not by the symbol
@@ -1399,19 +1510,22 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         let mut koepfe: Vec<String> = Vec::new();
         for d in &e.dateien {
             if d.ends_with(".c") {
-                // **Only a module carries one today, and the refusal says so rather than
-                // compiling it into nothing.** A hosted `program` with a foreign body is a
-                // build-system gap of its own (the emission harness writes those drivers by
-                // hand); naming it here would be a promise this build does not keep.
-                if e.art != Art::Modul {
-                    eprintln!(
-                        "gabbro build: unit `{}` names the C file `{d}` and is not a \
-                         `module` -- a foreign C body is carried into a kernel module \
-                         today and nowhere else",
-                        e.name
-                    );
-                    return std::process::ExitCode::from(1);
-                }
+                // **Until K8 only a `module` carried one**, and the refusal here said so
+                // rather than compiling it into nothing: *"a hosted `program` with a foreign
+                // body is a build-system gap of its own -- naming it here would be a promise
+                // this build does not keep."*
+                //
+                // K8 is where the promise had to be kept (server lane, 2026-09-28). The
+                // hosted runtime's operating-system calls became declarations the PROGRAM
+                // defines (`laufzeit/bindung.h`), and the bodies that define them are an
+                // ordinary `.c` file of the unit -- `bibliothek/linux/linux.c` for a program
+                // that takes the usual POSIX ones off the shelf. A binding the build refused
+                // to compile would have been a library nobody could use.
+                //
+                // So a non-module unit's `.c` files are compiled beside its own object with
+                // the manifest's compiler line, and a `program` links them
+                // (`baue_einheit`). *What is still refused is a `.h`* -- that is the module
+                // include mechanism, and it has no hosted meaning.
                 if !Path::new(d).is_file() {
                     eprintln!("gabbro build: {d}: no such file");
                     return std::process::ExitCode::from(2);
@@ -1545,6 +1659,18 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 befunde += 1;
                 println!("  REFUSED  {name} (module): {befund}");
             }
+            // **And its hosted twin** (server lane, TODO section 0e K8): a unit with an
+            // `arena` that binds no memory primitive would emit cleanly and die at the
+            // linker, over `gabbro_os_reserve` -- the runtime's name, not the program's.
+            if let Some(befund) = bindungsregel_gehostet(
+                e,
+                manifest.metall.is_some(),
+                &funktionen_je_einheit[name],
+                &arenen_je_einheit[name],
+            ) {
+                befunde += 1;
+                println!("  REFUSED  {name} (hosted): {befund}");
+            }
             // **The dry run carries the driver rule too, for the same reason.**
             // The roots are read out of the sources this manifest names, so a
             // plan whose threads could not start says so before anything is
@@ -1676,6 +1802,20 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         ) {
             abgesagt += 1;
             println!("REFUSED  {name} (module): {befund}");
+            continue;
+        }
+        // **And its hosted twin, before any C is written** (server lane, TODO section 0e
+        // K8). Same reason as the three rules above it: without this, a unit with an
+        // `arena` and no binding compiles cleanly and fails at the linker, over a name the
+        // program never wrote.
+        if let Some(befund) = bindungsregel_gehostet(
+            e,
+            manifest.metall.is_some(),
+            &funktionen_je_einheit[name],
+            &arenen_je_einheit[name],
+        ) {
+            abgesagt += 1;
+            println!("REFUSED  {name} (hosted): {befund}");
             continue;
         }
         match baue_einheit(
@@ -2061,6 +2201,48 @@ fn baue_einheit(
         ));
     }
 
+    // **The unit's OWN C bodies, for a unit that is not a module** (server lane,
+    // 2026-09-28, TODO section 0e K8). A module's go to the kernel's build with the kernel's
+    // flags (`kmod_modul_binden`); a hosted unit's are compiled right here, with the
+    // manifest's own compiler line -- the same line the emitted C is compiled with, because
+    // they are the same program.
+    //
+    // *Why the object names carry an index and not the file's stem:* two files of different
+    // directories may share a stem, and an object silently overwritten by another would link
+    // and then answer the wrong body. The index is the unit's file order, which is the
+    // manifest's own.
+    //
+    // **The compiler line is the manifest's, with nothing added** -- and a body that
+    // includes the runtime's interface (`laufzeit/bindung.h`, which is what holds a
+    // binding's definitions against the declarations the runtime calls) says so with an
+    // `-I` on that line, like any other library header. *An `-I` invented here would be a
+    // path relative to whatever directory the build was started in* -- a flag that works
+    // from the tree root and nowhere else is worse than none.
+    let mut fremd_objekte: Vec<PathBuf> = Vec::new();
+    if e.art != Art::Modul {
+        for (i, f) in fremde.iter().enumerate() {
+            let ziel = PathBuf::from(&manifest.ausgabe).join(format!("{}.fremd{i}.o", e.name));
+            let mut ruf = std::process::Command::new(&manifest.compiler[0]);
+            ruf.args(&manifest.compiler[1..]);
+            ruf.arg("-c").arg("-o").arg(&ziel).arg(f);
+            let aus = match ruf.output() {
+                Ok(a) => a,
+                Err(err) => {
+                    return Ergebnis::Abgesagt(format!(
+                        "{} did not run: {err}",
+                        manifest.compiler[0]
+                    ))
+                }
+            };
+            if !aus.status.success() {
+                eprint!("{}", String::from_utf8_lossy(&aus.stderr));
+                return Ergebnis::Abgesagt(format!("{} refused the unit's own C body `{f}`",
+                    manifest.compiler[0]));
+            }
+            fremd_objekte.push(ziel);
+        }
+    }
+
     // **The link -- the only step that sees more than one unit at a time.**
     //
     // *`unit … program` had never run before 2026-09-01:* the branch existed, the example was
@@ -2070,6 +2252,9 @@ fn baue_einheit(
         let mut binde = std::process::Command::new(&manifest.compiler[0]);
         binde.args(&manifest.compiler[1..]);
         binde.arg("-o").arg(&erzeugnis).arg(&objekt);
+        for o in &fremd_objekte {
+            binde.arg(o);
+        }
         for u in &unten.namen {
             binde.arg(PathBuf::from(&manifest.ausgabe).join(format!("{u}.o")));
         }

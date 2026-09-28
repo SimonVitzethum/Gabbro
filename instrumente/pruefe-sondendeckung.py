@@ -190,13 +190,19 @@ MARK_WAISEN = 1
 # call into the operating system the PROGRAM makes, and the whole point of the probe is that
 # `instrumente/pruefe-os-bindung.sh` must not count it as the RUNTIME's.
 #
+# **24 -> 26 on 2026-09-28** (server lane, K8's first slice): `sonde_os_bindung` and
+# `sonde_os_null`, the two named assumptions of `bibliothek/linux/linux.gab` -- the ABI of the
+# six hosted bodies, and that the storage they hand back READS AS ZERO. The second is named
+# apart from the first on purpose: the bounded heap does not scrub, so a binding that recycled
+# a freed region would break exactly that and nothing else visible.
+#
 # *There is a reason a stale mark could stand that long, and it is a finding of its own:*
 # **this guardian aborts in its own speech test**, and has for at least three sessions, at
 # THREE further teeth (`an assumption with no row is named`, `one assumption more WITH a
 # probe does not`, and the closing line). So it measures nothing, and a mark nobody reads
 # drifts. The three are NOT repaired here -- they are older than K7 and belong to a lane of
 # their own -- but they are named in the report.
-MARK_AUSSEN = 24
+MARK_AUSSEN = 26
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

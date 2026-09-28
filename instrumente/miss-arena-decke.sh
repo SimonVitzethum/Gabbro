@@ -67,6 +67,7 @@ treiber() {
     cat <<EOF
 #include <stdio.h>
 #include "arena_dyn.c"
+#include "linux.c"
 #include "$1"
 $2
 int main(void) {
@@ -77,7 +78,15 @@ int main(void) {
 EOF
 }
 
-cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$ARB/" || exit 2
+# **The runtime and the PROGRAM's binding beside it** (server lane, 2026-09-28, K8).
+# Since `laufzeit/arena_dyn.c` calls no operating-system function of its own, the six
+# names it does call are declarations (`laufzeit/bindung.h`) that the program defines --
+# `bibliothek/linux/linux.c` is the usual POSIX set, and this harness takes it off the
+# shelf exactly as a program would. *The measured claim of this instrument does not move
+# for it:* what is timed and sized is the EMITTED C and the binary, and the binding is the
+# same file in both twins.
+cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
+   "$W/bibliothek/linux/linux.c" "$ARB/" || exit 2
 
 # -- one twin: emit, time, compile, measure -----------------------------------
 mess() {   # $1 = tag, $2 = source, $3 = extra driver text
