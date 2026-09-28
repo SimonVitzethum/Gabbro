@@ -988,9 +988,12 @@
     `cmpxchg` family). So what (2) assumes on that target is this, and it is named rather
     than implied:
     - (M11) THE KERNEL PRIMITIVES ARE AT LEAST AS STRONG: every row of
-      `laufzeit/kmodul/include/stdatomic.h` -- the ONE place the emitter's nine C11 call forms
+      `bibliothek/linux-kmod/stdatomic.h` -- the ONE place the emitter's nine C11 call forms
       become kernel primitives -- provides at least the ordering the C11 operation it replaces
-      provides. Per ordering, and named so that a weak-memory port can be CHECKED against it
+      provides. (*The table stood in `laufzeit/kmodul/include/stdatomic.h` until 2026-09-28,
+      when K7 moved it into the program's own files: the assumption is about the ROWS and not
+      about the file they stand in, and the rows did not change. The runtime's
+      `<stdatomic.h>` is a refusal now, so a module that binds no table does not compile.*) Per ordering, and named so that a weak-memory port can be CHECKED against it
       rather than trusted: a relaxed load/store is `READ_ONCE`/`WRITE_ONCE` (single-copy
       atomicity for an aligned scalar of 1, 2, 4 or 8 bytes; no ordering either way, which is
       what relaxed asks); an acquire load is `smp_load_acquire` and a release store

@@ -1143,8 +1143,13 @@ longer one word:
 * **Bare metal:** `METALL_SPERRE_MASKIERT` clears IF from before the ticket is drawn to the
   release (Opus agent J; the line "the emitter writes no `cli`/`sti`" below was stale from
   2026-09-26 on).
-* **Linux kernel module:** `laufzeit/kmodul/sperre.h` -- a MASKED lock is
-  `raw_spin_lock_irqsave`, a PLAIN one `raw_spin_lock`. Before it a `module` unit with ONE
+* **Linux kernel module:** `laufzeit/kmodul/sperre.h` -- a MASKED lock takes the binding's
+  MASKED pair, which in `bibliothek/linux-kmod` is `raw_spin_lock_irqsave`, and a PLAIN one
+  the plain pair (`raw_spin_lock`). *Since K7 (2026-09-28) the primitive is the PROGRAM's:*
+  the runtime calls `gabbro_kern_sperre_nimm_maskiert` (`laufzeit/kmodul/bindung.h`), the
+  masked pair is a separate pair of NAMES so that a program can bind a different primitive
+  for it, and the promise is written down as the named assumption `kern_bindung_maskiert`.
+  Before any of it a `module` unit with ONE
   `lock` did not link at all (`ERROR: modpost: "TAKT_nimm" ... undefined!`), over a unit the
   checker had passed. Measured in QEMU (`instrumente/pruefe-kernelmodul.sh` probe `takt`): a
   masked lock held across a 4096-slot traversal while the program's own C runs a 50 us hardirq
@@ -1645,7 +1650,7 @@ to it.
 
 ---
 
-## O35 — The module runtime calls twelve kernel functions no program declared (recorded 2026-09-28, server lane)
+## O35 — The module runtime calls twelve kernel functions no program declared (recorded 2026-09-28, server lane; CLOSED the same day)
 
 Simon's binding constraint is *"API calls are always user-made"*: a Gabbro kernel module
 reaches the kernel only through items the PROGRAM declares, with ABI, effects, costs and a
@@ -1655,10 +1660,13 @@ the runtime beside it**, and until 2026-09-28 nothing measured that.
 
 | | |
 |---|---|
-| **what happens today** | `laufzeit/kmodul/kmodul.c` calls the kthread and completion API, `arena.c` calls `vzalloc`/`vfree` and takes a module parameter, `sperre.h` expands to `raw_spin_lock_irqsave`, and every one of those names is the runtime's choice and not a program's |
+| **what happened until 2026-09-28** | `laufzeit/kmodul/kmodul.c` called the kthread and completion API, `arena.c` called `vzalloc`/`vfree` and took a module parameter, `sperre.h` expanded to `raw_spin_lock_irqsave`, and every one of those names was the runtime's choice and not a program's |
 | **how big it is, measured** | the stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh`: `nm -u` on the `.ko` intersected with `nm -u` on the RUNTIME objects only, minus the toolchain's own names. `halde` 4 (`param_ops_uint`, `_printk`, `vfree`, `vzalloc`), `takt` 7 (+ `pcpu_hot`, `_raw_spin_lock_irqsave`, `_raw_spin_unlock_irqrestore`), `atomar` 9 (+ `complete`, `__init_swait_queue_head`, `kthread_create_on_node`, `wait_for_completion`, `wake_up_process`) — **twelve distinct names**. `messung/SERVER-0E-REPORT.md` §12 |
 | **what the stage is today** | a RATCHET and not a wall: the count may not grow, and it may not silently shrink either. A stage that demanded 0 would be red on every probe until this is closed, and a red that says nothing new is a red nobody reads. Its poison probe is gift 11 (one kernel call added to the runtime copy) |
 | **what the atomics add to it** | nothing, and that is a fact about the measurement: `READ_ONCE`, `smp_load_acquire`, `try_cmpxchg` and `smp_mb` are macros and inline assembly and leave NO undefined symbol. Where the K6 rows come from is a source-level question, not a link-level one — `laufzeit/kmodul/include/stdatomic.h` is one table in one file, and moving it changes nothing in (M11) of `Zielsatz/Spec.lean` |
-| **what closing it needs** | (1) a library unit (`bibliothek/linux-kmod/*.gab`) that declares the primitives as ordinary Gabbro items and supplies their C, so the references move out of `gabbro_kmodul.o`/`gabbro_arena.o` into an object the PROGRAM supplied — the stage turns green by that move alone; (2) a check-time refusal for a module unit that uses a lock, an arena or an atomic without binding the primitive it needs, with its sentence and a poison probe. (2) takes the first `N` code of this phase |
+| **what closing it needed** | (1) a library unit (`bibliothek/linux-kmod/*.gab`) that declares the primitives as ordinary Gabbro items and supplies their C, so the references move out of `gabbro_kmodul.o`/`gabbro_arena.o` into an object the PROGRAM supplied — the stage turns green by that move alone; (2) a refusal for a module unit that uses a lock, an arena or an atomic without binding the primitive it needs, with its sentence and a poison probe |
+| **what landed, 2026-09-28** (server lane, session 6) | Both. (1) `laufzeit/kmodul/bindung.h` is the interface — **twelve declarations and no definition** — and `bibliothek/linux-kmod/{linux-kmod.gab,linux-kmod.c}` is the binding a program takes off the shelf, listed in its manifest like any other file of the unit. The measurement is **0 on every probe** (`halde`, `takt`, `atomar`), and the stage is a WALL now and no longer a ratchet. (2) `bau.rs::bindungsregel`, per thing the unit uses: the report channel always, the reservation primitives for an `arena`, the init and the core number for any `lock`, the PLAIN pair and the MASKED pair separately, the thread pair for a `concurrent` set — and the SHAPE as well as the name, since C has no mangling. Poison probes: harness gift 12 (the binding dropped from the manifest) and three CLI tests, each with its positive twin |
+| **what the `N` code question turned out to be** | **no code, and the reason is `eintrittsregel`'s and not a new one:** a `Satz` says what is true of a program the CHECKER passed, and this rule is about a MANIFEST, which no pass ever sees. The target is what makes a lock need a kernel primitive, and the target lives in the manifest. *The plan of session 5 reserved `N569` for it; nothing was taken* |
+| **the memory model, which is the row no symbol can see** | the atomic mapping moved too — `bibliothek/linux-kmod/stdatomic.h` is the program's table now, `laufzeit/kmodul/include/stdatomic.h` is a refusal again (`_Atomic` pastes to an undeclared name), and a `module` unit with an `atomic` that names no `stdatomic.h` is refused before any C. The mechanism is a new file kind in the manifest: a `.h` in a module unit's file list is copied into the module's include directory AFTER the runtime's shims, and therefore in place of one. **(M11) of `Zielsatz/Spec.lean` did not change in substance** — it is about the rows, and the rows did not move a character (`messung/SERVER-0E-SPEC-DIFF.md` Part III) |
 | **the other runtimes** | hosted (`laufzeit/start*.c`, `faden.c`, `arena_dyn.c`): about fourteen libc names plus the raw `clone` and `futex` through `syscall`. **That is `AUFTRAG-1.md` K8 since 2026-09-28** (Simon: *"an die Hardware ist OK, OS nicht, das muss selbst gemacht werden"*), acceptance point 4d, after K7 and split over sessions. Bare metal (`laufzeit/metall/`): no OS at all; what it hard-wires is the MACHINE (`outb`, `hlt`, `cli`/`sti`, `wrmsr`, `lidt`), which is instructions and not API — K8 allows exactly that and asks for it to be confirmed |
-| **status** | TASKED: `~/claude-lane/AUFTRAG-1.md` **K7**, acceptance point 4c (Simon, 2026-09-28). The measurement stands; the binding and the refusal do not |
+| **status** | **CLOSED for the module target 2026-09-28** (server lane, session 6, acceptance point 4c): 0 hard-wired kernel functions on all three probes, both poison probes caught, `cargo test` and `pruefe-emission.sh` green. Open for the hosted one, which is K8 (the row above) |

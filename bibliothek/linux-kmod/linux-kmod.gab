@@ -1,0 +1,164 @@
+-- **`bibliothek/linux-kmod` -- the Linux kernel primitives a Gabbro module
+-- binds, as ordinary user code** (server lane, TODO section 0e K7, 2026-09-28).
+--
+-- WHAT THIS IS, AND WHAT IT IS DELIBERATELY NOT. Simon's binding constraint
+-- (2026-09-27) is *"API calls are always user-made"*: a Gabbro program reaches
+-- an operating system only through items IT declares, with their ABI, their
+-- effects, their costs and the assumption their bodies keep. Nothing about
+-- Linux is baked into the checker, the emitter or the runtime.
+--
+-- Until 2026-09-28 the module RUNTIME was the one exception, and it was
+-- measured rather than argued away (`dokumente/OFFEN.md` O35): `kmodul.c`
+-- called `kthread_run`, `wait_for_completion`, `complete` and `pr_err`,
+-- `arena.c` called `vzalloc`, `vfree` and `module_param`, and `sperre.h`
+-- expanded to `raw_spin_lock`, `raw_spin_lock_irqsave` and `smp_processor_id`
+-- -- twelve kernel names no program had ever declared. **This file is where
+-- those twelve now stand**, and it is a FILE OF A PROGRAM: a manifest names it
+-- beside the program's own sources, the checker reads it like any other unit,
+-- and the C bodies next door (`linux-kmod.c`) are compiled into the module as
+-- the program's own foreign bodies. *It is a library in the sense a header file
+-- is one -- something you copy into your build and may edit -- and not in the
+-- sense a compiler built-in is one.*
+--
+-- **A different kernel gets a different file, not a different Gabbro.** That is
+-- the whole point of the arrangement, and it is why the twelve names below are
+-- the RUNTIME's interface (`laufzeit/kmodul/bindung.h`) and the kernel's own
+-- names appear only in `linux-kmod.c`. A port to a BSD, to a different Linux
+-- version whose exported surface differs, or to a kernel that has no
+-- `vmalloc`, is a new pair of files here and nothing else.
+--
+-- WHAT A PROGRAM DOES WITH IT. Three lines in the manifest of a `module` unit:
+--
+--     unit driver module laden entladen
+--       my-driver.gab
+--       my-driver.c                          -- the program's own kernel calls
+--       bibliothek/linux-kmod/linux-kmod.gab -- these declarations
+--       bibliothek/linux-kmod/linux-kmod.c   -- their bodies
+--       bibliothek/linux-kmod/stdatomic.h    -- only if it declares an `atomic`
+--
+-- and `gabbro build` REFUSES a `module` unit that uses a lock, an arena, an
+-- atomic or a concurrent root without them, naming the missing declaration and
+-- the file that supplies it (`crates/gabbro-cli/src/bau.rs`, `modulregel`).
+-- *Never a silent default* -- which is the half of K7 that a measurement alone
+-- could not have given: a runtime that quietly kept calling `vzalloc` would
+-- have read as bound.
+--
+-- **WHY THERE IS NO `use` LINE.** Nothing in a program CALLS these items; the
+-- runtime does. A `use linux::kmod::gabbro_kern_reserve;` in the driver would
+-- name an item the driver never mentions again -- ceremony that documents a
+-- dependency the manifest already carries, and the kind of decoration this
+-- folder rejects work for. What makes the declarations load-bearing instead is
+-- the pair of checks around them: `gabbro build` refuses a module that lacks
+-- them, and the C compiler holds each one against `bindung.h` inside the
+-- runtime's own translation unit (the emitted prototypes and the runtime's
+-- declarations meet in `gabbro_kmodul.c`, so a wrong type is a build error and
+-- not a wrong call).
+--
+-- WHY EVERY ADDRESS IS A `u64`. Gabbro has no pointer type -- the same reason a
+-- system-call binding passes registers (Opus agent L, OFFEN O31). A
+-- reservation's base, a lock's storage and a root's body therefore cross as
+-- numbers, and the two sides cast: the runtime with `(uint64_t)(uintptr_t)`,
+-- the bodies in `linux-kmod.c` back again. Both halves stand beside each other
+-- so that neither can drift.
+--
+-- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
+-- primitive's OWN work -- the instructions between entry and return once it
+-- runs. **Waiting is not in it**, and that is not a hole in these numbers but
+-- the language's standing position: waiting bounds are NOT CLAIMED
+-- (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list), and a `lock`
+-- declares the time it is HELD (`held <= N ops`) rather than the time it is
+-- waited for. A binding whose acquire spun for a millisecond would break no
+-- number below and no theorem above it; it would break the `held` clause of
+-- whoever held it, and that is where the checker looks.
+module linux::kmod {
+
+-- **The ABI and the behaviour of all twelve bodies, as one named assumption.**
+-- One and not twelve, because it is one fact about one file: `linux-kmod.c` is
+-- compiled by the kernel's own build, with the kernel's own flags, against the
+-- kernel whose headers are in the manifest's `kmod` line.
+assume kern_bindung_abi
+    "Every body in `bibliothek/linux-kmod/linux-kmod.c` keeps the x86_64 SysV convention of its declaration here, answers 0 exactly where the declaration says a refusal is 0, and neither sleeps nor faults in a context the module runtime calls it from."
+    falsifier sonde_kern_bindung;
+
+-- **The masking promise, named apart -- because a leg of the goal theorem rests
+-- on it.** `masks irqs` at a `lock` declaration is a statement about the
+-- environment: while the lock is held, no interrupt handler runs on this core.
+-- `KernHaltE` (no same-core interrupt deadlock, `Zielsatz/Spec.lean`) is proved
+-- over a model in which that holds, and the C side of it is exactly the pair of
+-- bodies below. *So a binding whose `maskiert` pair did not mask would leave a
+-- proved theorem standing over a program it is not about* -- which is why this
+-- is its own assumption with its own name, and why the QEMU probe `takt`
+-- measures it (`instrumente/pruefe-kernelmodul.sh`: a hardirq timer taking the
+-- same lock, `landed=0` over a counted number of opportunities).
+assume kern_bindung_maskiert
+    "`gabbro_kern_sperre_nimm_maskiert` leaves no interrupt enabled on the calling core that could take the same lock, until the matching `gabbro_kern_sperre_gib_maskiert` restored what it masked."
+    falsifier sonde_kern_maskiert;
+
+-- -- the report channel ------------------------------------------------------
+--
+-- The runtime has no words of its own inside a kernel module, because printing
+-- is a kernel call. A refusal travels as a CODE and two numbers
+-- (`laufzeit/kmodul/bindung.h` lists the ten codes) and this binding's body
+-- carries one sentence per code.
+extern fn gabbro_kern_melden(code : u32, a : u64, b : u64)
+    effects { pure } costs <= 512 ops;
+
+-- -- the arena's storage -----------------------------------------------------
+--
+-- `reserve` answers the base of `bytes` ZEROED bytes or 0; `freigeben` gives one
+-- back; `vorrat` is the module's provision in bytes. A bounded heap needs no
+-- more than these three from a kernel: the ceiling, the committed prefix and
+-- refuse-on-full are the runtime's arithmetic (`laufzeit/kmodul/arena.c`).
+extern fn gabbro_kern_reserve(bytes : u64) -> u64
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_kern_freigeben(basis : u64)
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_kern_vorrat() -> u64
+    effects { pure } costs <= 32 ops;
+
+-- -- the locks ---------------------------------------------------------------
+--
+-- The runtime owns the STORAGE (a blob of words per `lock`, sized by
+-- `GABBRO_KERN_SPERRE_WORTE` in `bindung.h`) and these are the OPERATIONS over
+-- it. The masked pair is a separate pair of NAMES and not a flag, so that a
+-- program can bind a different primitive for the promise `masks irqs` makes --
+-- and so that `kern_bindung_maskiert` above has something to be about.
+extern fn gabbro_kern_sperre_init(s : u64)
+    effects { pure } costs <= 512 ops;
+
+extern fn gabbro_kern_sperre_nimm(s : u64)
+    effects { pure } costs <= 512 ops;
+
+extern fn gabbro_kern_sperre_gib(s : u64)
+    effects { pure } costs <= 512 ops;
+
+extern fn gabbro_kern_sperre_nimm_maskiert(s : u64)
+    effects { pure } costs <= 512 ops;
+
+extern fn gabbro_kern_sperre_gib_maskiert(s : u64)
+    effects { pure } costs <= 512 ops;
+
+-- Which core is running. The runtime records it as the lock's HOLDER, so that a
+-- probe's own interrupt body can report whether it ever landed on a core that
+-- was holding -- a green run that is a measurement and not an absence of bad
+-- news.
+extern fn gabbro_kern_kernnummer() -> u32
+    effects { pure } costs <= 64 ops;
+
+-- -- the roots as kernel threads --------------------------------------------
+--
+-- One thread per member of the unit's `concurrent` set. `start` takes the
+-- runtime's blob and the ADDRESS OF THE ROOT'S WRAPPER and answers 0 or a
+-- positive errno; `warte` returns once that wrapper has returned. A start that
+-- FAILS must leave the blob in a state `warte` returns from at once -- the load
+-- refusal in `kmodul.c` waits for every root it tried to start, and a blob that
+-- never completed would hang `insmod` instead of refusing it.
+extern fn gabbro_kern_faden_start(f : u64, koerper : u64) -> u32
+    effects { pure } costs <= 100000 ops;
+
+extern fn gabbro_kern_faden_warte(f : u64)
+    effects { pure } costs <= 100000 ops;
+
+}

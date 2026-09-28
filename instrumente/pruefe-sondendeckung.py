@@ -174,7 +174,23 @@ MARK_WAISEN = 1
 # **No 14th from `beispiele/71` (2026-09-10):** its `deadline` names `sonde_tick`, but the
 # name attributes to `frist_zaehle_werte_eingehalten` (`klauseln_in`, deadline branch),
 # so it stands INSIDE the assumption set, not outside it.
-MARK_AUSSEN = 13
+#
+# **13 -> 23 on 2026-09-28** (server lane, session 6), and the number is measured and not
+# estimated -- the names are listed in `messung/SERVER-0E-REPORT.md` section 13.7. **Eight of
+# the ten were already there before this session**: `sonde_kmod_melde`, `sonde_kmod_takt` and
+# `sonde_kmod_atomar` from `messung/proben/kmodul/` (sessions 4 and 5) plus five more from
+# `messung/proben/`; the mark had not been pulled up since 2026-09-04. Two are new:
+# `sonde_kern_bindung` and `sonde_kern_maskiert`, the two named assumptions of
+# `bibliothek/linux-kmod/linux-kmod.gab` (TODO 0e K7 -- the ABI of the twelve bodies, and
+# that the MASKED lock really masks; `KernHaltE` hangs on the second).
+#
+# *There is a reason a stale mark could stand that long, and it is a finding of its own:*
+# **this guardian aborts in its own speech test**, and has for at least three sessions, at
+# THREE further teeth (`an assumption with no row is named`, `one assumption more WITH a
+# probe does not`, and the closing line). So it measures nothing, and a mark nobody reads
+# drifts. The three are NOT repaired here -- they are older than K7 and belong to a lane of
+# their own -- but they are named in the report.
+MARK_AUSSEN = 23
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

@@ -265,3 +265,65 @@ that says what the premise MEANS on that machine does.
 4. `instrumente/pruefe-atomar-zugriffe.py` is green over the corpus and its `--selbsttest`
    catches four mutations while staying silent on the two false positives a grep produced.
 5. `#print axioms gabbro_ziel` is still `[propext, Classical.choice, Quot.sound]`.
+
+---
+
+# Part III — the table moved into the program, and (M11) did not change (K7, session 6)
+
+*Written 2026-09-28 by the server lane, session 6, beside the work it reviews.*
+
+## 12. What moved
+
+Part II §10 predicted this in the sentence *"when that lands, (M11)'s text is unchanged in
+substance and one sentence of it moves"*. It landed the same day. What happened, exactly:
+
+| | |
+|---|---|
+| the table | `laufzeit/kmodul/include/stdatomic.h` → `bibliothek/linux-kmod/stdatomic.h`. **`git mv`, then a rewritten file header and one paragraph; not one macro line changed.** *`git diff -M` does NOT report it as a rename, and that is worth saying rather than claiming otherwise: a new file took the old path, so git sees two files.* The check that does hold it is a direct one — everything from `#ifndef GABBRO_KMOD_STDATOMIC_H` down, **160 lines, byte-identical** (measured: `git show HEAD:laufzeit/kmodul/include/stdatomic.h \| sed -n '/^#ifndef GABBRO_KMOD_STDATOMIC_H/,$p'` against the same range of the new file, `diff` silent) |
+| what stands in the runtime now | a REFUSAL: `#define _Atomic GABBRO_KMOD_ATOMIC_NICHT_GEBUNDEN_…`. A unit with no `atomic` needs nothing behind the name and compiles; a unit with one, and no bound table, does not |
+| how the program's file reaches the build | a `.h` in a `module` unit's manifest file list is copied into the module's include directory **after** the runtime's shims, and therefore in place of one (`bau.rs::kmod_modul_binden`) |
+| the door before that | `bau.rs::bindungsregel` refuses a `module` unit that declares an `atomic` and names no `stdatomic.h`, before a byte of C — with the file to add in its own sentence |
+| `Spec.lean` | **one comment line and a parenthesis**: the path in (M11), plus a note that the assumption is about the rows and not about the file. `git diff --stat -- grammatik/` is **5 insertions, 2 deletions, one file**, all inside the doc comment |
+
+## 13. Why this is not a weakening, and what would have made it one
+
+1. **The rows are the same rows.** The claim (M11) makes is per (call form, ordering): the
+   kernel primitive provides at least the order the C11 operation it replaces provides. That
+   claim is about a table, and the table is byte-identical below its header comment. *A
+   reviewer can check this with `git show HEAD -- bibliothek/linux-kmod/stdatomic.h` against
+   the old path: the rename is detected and the macro block has no diff.*
+2. **The measurement that constrains the rows did not move either.** The expansion check of
+   `instrumente/pruefe-kernelmodul.sh` reads `inc/stdatomic.h` **in the build directory** —
+   the copy the `.ko` was built from — and that path is unchanged, because the program's file
+   lands there under that name. So the 13 rows are still expanded and held against the
+   primitive each must select, and **gift 8 still bites** (measured: caught, and by the
+   mapping stage alone).
+3. **What would have made it a weakening**, and was deliberately not done: dropping the
+   runtime's `<stdatomic.h>` to an EMPTY file. Then a unit with an `atomic` and no bound table
+   would have compiled, every access would have been a plain unordered one, and the module
+   would have loaded and answered plausible numbers. The refusal is what makes the move safe,
+   and it is the reason the runtime's file is a `#define` to an undeclared name rather than a
+   deletion.
+4. **The assumption is no longer about a file this tree ships.** That is the honest reading of
+   what the move BUYS: (M11) now speaks about the table the PROGRAM bound. A program that
+   binds a different one — a different kernel, a different architecture's needs — carries its
+   own (M11), and the sentence in `Spec.lean` is the shape of the obligation rather than a
+   claim about one file. *Nothing in the goal theorem depended on which file it was; §10 of
+   Part II said so before the move, which is why this paragraph is a confirmation and not a
+   repair.*
+
+## 14. What a reviewer should check (Part III)
+
+1. `git diff --stat -- grammatik/Grammatik/Zielsatz/Spec.lean` is 5 insertions and 2
+   deletions, comment only, inside the (M11) block.
+2. The macro block of `bibliothek/linux-kmod/stdatomic.h` and of the old
+   `laufzeit/kmodul/include/stdatomic.h` are the same 160 lines (`diff` over the range from
+   `#ifndef GABBRO_KMOD_STDATOMIC_H` down). **Not `git diff -M`** -- a new file took the old
+   path, so git reports two files and no rename.
+3. `instrumente/pruefe-kernelmodul.sh --gift 8` is still caught by the mapping stage.
+4. The runtime's `laufzeit/kmodul/include/stdatomic.h` refuses `_Atomic` and defines nothing
+   else, and `crates/gabbro-cli/tests/bausystem.rs::ein_modul_mit_atomic_ohne_speichermodell_faellt`
+   holds the door in front of it, with its positive twin in the test beside it.
+5. `#print axioms gabbro_ziel` is still `[propext, Classical.choice, Quot.sound]` (measured,
+   session 6, `~/claude-lane/logs/lake-s6.log`: 356 jobs, and 12 `#print axioms` lines all
+   standard).

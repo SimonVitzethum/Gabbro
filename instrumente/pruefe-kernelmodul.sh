@@ -103,7 +103,17 @@ probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ER
     # ever sets is a selector that carries the last probe's answer.*
     unset TICKS_MIN GESEHEN_MIN ABBILDUNG
     QUELLE=""; FREMD=""; MODUL=""; INIT=""; EXIT=""; PARAM=""; ERWARTET=""; FRIST=600
-    # What the RUNTIME still takes from the kernel, per probe (K7's worklist).
+    # **The BINDING, as manifest file lines** (K7, session 6). Every kernel function the
+    # module runtime calls is declared by the program and defined in the program's own C
+    # (`laufzeit/kmodul/bindung.h` is the interface); `bibliothek/linux-kmod` is the binding
+    # a program takes off the shelf, and these are the lines that name it. A probe that
+    # declares an `atomic` names the memory model too -- the runtime's `<stdatomic.h>`
+    # refuses `_Atomic` and the program's table replaces it.
+    BINDUNG="$W/bibliothek/linux-kmod/linux-kmod.gab
+$W/bibliothek/linux-kmod/linux-kmod.c"
+    # What the RUNTIME still takes from the kernel, per probe. **0 since K7 landed**
+    # (session 6), and it is a wall now and no longer a ratchet: the twelve names of the
+    # worklist are the program's, so a single one back in the runtime is a finding.
     MARKE_KSYM=0
     # One vCPU unless the probe needs two; TCG is slow and a second core costs
     # boot time that only the concurrent probe has a use for.
@@ -123,8 +133,6 @@ probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ER
 gabbro-halde: k=2 v=33
 gabbro-halde: k=3 v=3
 gabbro-halde: k=9 v=0"
-            # param_ops_uint, _printk, vfree, vzalloc
-            MARKE_KSYM=4
             ;;
         takt)
             QUELLE="$W/messung/proben/kmodul/sperre-takt.gab"
@@ -144,8 +152,6 @@ gabbro-takt: k=9 v=0"
             # A run whose timer never fired reports a clean `landed` and has
             # measured nothing (`W1`): the verdict below demands this many ticks.
             TICKS_MIN=5
-            # halde's four + pcpu_hot, _raw_spin_lock_irqsave, _raw_spin_unlock_irqrestore
-            MARKE_KSYM=7
             ;;
         atomar)
             QUELLE="$W/messung/proben/kmodul/atomar-faeden.gab"
@@ -177,9 +183,12 @@ gabbro-atomar: k=9 v=0"
             # And the mapping itself is checked where the module was BUILT: the
             # rows are expanded and held against the primitives they require.
             ABBILDUNG=1
-            # halde's four + complete, __init_swait_queue_head,
-            # kthread_create_on_node, wait_for_completion, wake_up_process
-            MARKE_KSYM=9
+            # The memory model of an `atomic` is the PROGRAM's too (K7): the runtime's
+            # `<stdatomic.h>` refuses `_Atomic`, and this table maps the emitter's nine
+            # call forms onto the kernel's primitives. It lands in `inc/stdatomic.h` of
+            # the build directory, which is what the mapping stage below reads.
+            BINDUNG="$BINDUNG
+$W/bibliothek/linux-kmod/stdatomic.h"
             ;;
         *) echo "pruefe-kernelmodul.sh: no such probe '$1'" >&2; exit 2 ;;
     esac
@@ -278,20 +287,19 @@ EOF
 
 # -- which kernel functions does the RUNTIME call? (server lane, TODO 0e K7) ---
 #
-# SIMON'S RULE, and the one place the module target does not yet keep it: *"API
-# calls are always user-made"* -- a Gabbro kernel module reaches the kernel only
-# through items the PROGRAM declares. It holds for everything the program wrote:
-# `messung/proben/kmodul/atomar.c` calls `pr_info` and `panic` because
-# `atomar-faeden.gab` declared those two foreign functions with their ABI, their
-# effects, their costs and the assumption their bodies keep. **It does NOT hold
-# for the runtime beside it:** `laufzeit/kmodul/kmodul.c` calls `kthread_run`
-# and `wait_for_completion`, `arena.c` calls `vzalloc` and `vfree`, `sperre.h`
-# expands to `raw_spin_lock_irqsave`, and none of those names came from a
-# program. `AUFTRAG-1.md` K7 (Simon, 2026-09-28) says they are to, through a
-# library unit the program `use`s.
+# SIMON'S RULE: *"API calls are always user-made"* -- a Gabbro kernel module
+# reaches the kernel only through items the PROGRAM declares. It held for
+# everything the program wrote: `messung/proben/kmodul/atomar.c` calls `pr_info`
+# and `panic` because `atomar-faeden.gab` declared those two foreign functions
+# with their ABI, their effects, their costs and the assumption their bodies
+# keep. **Until 2026-09-28 it did NOT hold for the runtime beside it:**
+# `laufzeit/kmodul/kmodul.c` called `kthread_run` and `wait_for_completion`,
+# `arena.c` called `vzalloc` and `vfree`, `sperre.h` expanded to
+# `raw_spin_lock_irqsave`, and none of those names came from a program.
+# `AUFTRAG-1.md` K7 (Simon, 2026-09-28) said they were to.
 #
-# THIS STAGE IS THE MEASUREMENT THAT MAKES THAT A NUMBER, and it is the number
-# K7 has to bring to zero. Per probe:
+# THIS STAGE IS THE MEASUREMENT THAT MADE THAT A NUMBER, and the number is 0
+# since K7 landed. Per probe:
 #
 #   * `nm -u <unit>.ko` -- every kernel symbol the whole module still needs;
 #   * `nm -u` over the RUNTIME objects only (`gabbro_kmodul.o`, which is where
@@ -304,19 +312,28 @@ EOF
 # handlers, the stack guard): those are not API calls and no program could
 # declare them.
 #
-# **A RATCHET AND NOT A WALL.** The count today is what the runtime hard-wires,
-# and a run that demanded 0 would be red on every probe until K7 lands -- a red
-# that says nothing new every time it is read. So the mark below is the measured
-# number and the stage refuses only a run that NEEDS MORE than it. A run that
-# needs fewer is a finding as well (the good case: the mark is stale and belongs
-# pulled down), in the shape `pruefe-emission.sh` uses for its emission counters.
+# **A WALL SINCE K7 LANDED, and a ratchet before it.** Session 5 measured the
+# number and could not demand 0: the runtime hard-wired twelve names, and a stage
+# that was red on every probe until the work landed is a red nobody reads. So the
+# mark was the measured number and the stage refused only a run that needed MORE.
 #
-# Measured 2026-09-28 (server lane, session 5), and this IS the K7 worklist:
 #   halde   4  param_ops_uint, _printk, vfree, vzalloc
 #   takt    7  + pcpu_hot, _raw_spin_lock_irqsave, _raw_spin_unlock_irqrestore
 #   atomar  9  + complete, __init_swait_queue_head, kthread_create_on_node,
 #                wait_for_completion, wake_up_process (and no lock)
-# Twelve distinct names over the three, and every one of them is a line of K7.
+#
+# **Session 6 brought all twelve into the program** (`laufzeit/kmodul/bindung.h`
+# declares what the runtime calls, `bibliothek/linux-kmod/` defines it), and the
+# mark is 0 on every probe. The `.ko` still IMPORTS those twelve -- it must, the
+# program calls them -- but the reference lives in the object the PROGRAM
+# supplied, which is exactly what the per-object criterion below was built to
+# tell apart. *The stage measures the fix and not a proxy for it, which is why it
+# could be written before the fix existed.*
+#
+# The direction that stays a finding is the other one: a run that needs FEWER
+# than the mark is reported too (the good case, the mark is stale and belongs
+# pulled down), in the shape `pruefe-emission.sh` uses for its emission counters.
+# At a mark of 0 only one direction is left, and that makes this a wall.
 KSYM_TOOLKETTE='^(__fentry__|__x86_return_thunk|__stack_chk_|__ubsan_handle_|__sanitizer_)'
 
 symbole_pruefe() {   # $1 = module build dir, $2 = module name, $3 = the mark
@@ -336,7 +353,7 @@ symbole_pruefe() {   # $1 = module build dir, $2 = module name, $3 = the mark
         echo "HARNESS: kernel symbols FAILED -- the runtime hard-wires $n, below the mark of $marke: the mark belongs pulled down (the good case, and a finding nonetheless)"
         return 0
     fi
-    echo "HARNESS: kernel symbols ok ($n hard-wired by the runtime, mark $marke -- K7 brings this to 0)"
+    echo "HARNESS: kernel symbols ok ($n hard-wired by the runtime, mark $marke)"
 }
 
 KERNVERSION="$(uname -r)"
@@ -426,15 +443,24 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #  10 the expected counter moves (512 -> 513): does the run read the kernel log?
 #     (The `halde` twin is gift 1, the `takt` twin gift 7.)
 #
-# And the poison probe of the K7 measurement:
+# And the two poison probes of K7, one per half:
 #
 #  11 the RUNTIME gains one kernel call it did not have (`msleep` in
 #     `gabbro_kmodul.c`, in the build directory, re-made with the `Kbuild` the
-#     build wrote). The hard-wired count then stands at 5 against a mark of 4 and
+#     build wrote). The hard-wired count then stands at 1 against a mark of 0 and
 #     the run must be RED. *Without this gift the kernel-symbol stage would only
-#     say that nothing happened to be noticed* -- and it is the stage whose number
-#     K7 has to bring to zero, so it is the one that must be known to bite.
-gifte() { echo "1 2 3 4 5 6 7 8 9 10 11"; }
+#     say that nothing happened to be noticed* -- and it is the stage that says
+#     the runtime calls no kernel function, so it is the one that must be known
+#     to bite.
+#  12 the PROGRAM loses its binding: the two `bibliothek/linux-kmod` lines are
+#     dropped from the manifest and nothing else changes. `gabbro build` must
+#     refuse the unit before a byte of C is written, with the binding rule's own
+#     sentence (`bau.rs::bindungsregel`), and the harness checks for THAT
+#     sentence -- a build that refused for another reason, or one that accepted
+#     and then died at `modpost` over a name the program never wrote, is reported
+#     as measuring nothing. *This is the half gift 11 cannot reach: a unit whose
+#     binding is missing has no `.ko` for the symbol stage to read.*
+gifte() { echo "1 2 3 4 5 6 7 8 9 10 11 12"; }
 
 # Which probe a gift belongs to -- a gift is a mutation OF a run, and a run is
 # of one probe.
@@ -443,7 +469,7 @@ gift_probe() {
         1|2|3|4)  echo halde ;;
         5|6|7)    echo takt ;;
         8|9|10)   echo atomar ;;
-        11)       echo halde ;;
+        11|12)    echo halde ;;
         *) echo "pruefe-kernelmodul.sh: no such gift '$1'" >&2; exit 2 ;;
     esac
 }
@@ -461,19 +487,38 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
     # manifest below is the whole of what this harness now knows about building: two paths
     # and the two calls the kernel makes.
     mkdir -p "$arb"
-    cat > "$arb/manifest" <<EOF
--- written by instrumente/pruefe-kernelmodul.sh
-compiler cc -std=c11 -Wall -Wextra -Werror
-out $arb/bau
-kmod $W/laufzeit/kmodul $KBUILD
-unit $MODUL module $INIT $EXIT
-  $QUELLE
-  $FREMD
-EOF
+    # **Gift 12 takes the BINDING away**, and nothing else: the unit still declares its
+    # arena, its lock or its roots, and the module runtime still calls the twelve names of
+    # `laufzeit/kmodul/bindung.h`. `gabbro build` must refuse it BEFORE a byte of C is
+    # written -- which is the half of K7 no measurement over a built `.ko` could give,
+    # because a unit whose binding is missing has no `.ko` to measure.
+    local bindung="$BINDUNG"
+    [ "$gift" = 12 ] && bindung=""
+    {
+        echo "-- written by instrumente/pruefe-kernelmodul.sh"
+        echo "compiler cc -std=c11 -Wall -Wextra -Werror"
+        echo "out $arb/bau"
+        echo "kmod $W/laufzeit/kmodul $KBUILD"
+        echo "unit $MODUL module $INIT $EXIT"
+        echo "  $QUELLE"
+        echo "  $FREMD"
+        printf '%s\n' "$bindung" | while IFS= read -r f; do
+            [ -n "$f" ] && echo "  $f"
+        done
+    } > "$arb/manifest"
     if ! "$GABBRO" build "$arb/manifest" > "$arb/bau.log" 2>&1; then
         echo "HARNESS: gabbro build FAILED"
+        if [ "$gift" = 12 ] && ! grep -q 'binds no `gabbro_kern_' "$arb/bau.log"; then
+            # *A gift that turned the run red for the wrong reason has measured nothing*
+            # -- the same reading `DOES NOT APPLY` already has for a mutation that found
+            # nothing to change (session 5, gift 8).
+            echo "HARNESS: gift 12 does not measure -- the build refused, and not with the binding rule"
+        fi
         tail -25 "$arb/bau.log" >&2
         return 0
+    fi
+    if [ "$gift" = 12 ]; then
+        echo "HARNESS: gift 12 does not measure -- the build ACCEPTED a module with no binding, so the red below is some other door's"
     fi
     if [ "$gift" = 4 ]; then
         # **A ceiling of 4 slots: every `grow` is past it**, so the runtime fail-stops and
@@ -569,11 +614,16 @@ EOF
         # on the runtime copy inside the build directory, re-made with the `Kbuild`
         # the build wrote, so it carries no second copy of the recipe.
         local kdir="$arb/bau/$MODUL.kmod"
-        grep -q '#include <linux/printk.h>' "$kdir/gabbro_kmodul.c" || {
-            echo "HARNESS: gift 11 does not apply -- no printk include in gabbro_kmodul.c"
+        # *The anchor moved once already:* until K7 this looked for
+        # `#include <linux/printk.h>`, which the runtime dropped when its
+        # reporting became the program's -- and the gift then read DOES NOT
+        # APPLY, which is the shape session 4 and 5 both paid for. The anchor is
+        # now the include the runtime cannot lose: `-EINVAL` is its load verdict.
+        grep -q '#include <linux/errno.h>' "$kdir/gabbro_kmodul.c" || {
+            echo "HARNESS: gift 11 does not apply -- no errno include in gabbro_kmodul.c"
             return 0
         }
-        sed -i 's|#include <linux/printk.h>|#include <linux/printk.h>\n#include <linux/delay.h>|' "$kdir/gabbro_kmodul.c"
+        sed -i 's|#include <linux/errno.h>|#include <linux/errno.h>\n#include <linux/delay.h>|' "$kdir/gabbro_kmodul.c"
         sed -i 's|    (void)GABBRO_KMOD_EXIT();|    msleep(0);\n    (void)GABBRO_KMOD_EXIT();|' "$kdir/gabbro_kmodul.c"
         grep -q 'msleep(0);' "$kdir/gabbro_kmodul.c" || {
             echo "HARNESS: gift 11 does not apply -- the exit function is not where it looks"
@@ -790,9 +840,9 @@ for g in $LISTE; do
     # first time it ran: 11 findings, and not one of them about the mapping.*
     # The twin trap is already recorded (a gift that does not apply looks like a
     # pass, gift 5, session 4); this is the same fact from the other side.
-    if grep -q "does not apply" "$arb/aus.txt"; then
-        echo "GIFT $g: DOES NOT APPLY -- the mutation found nothing to change, so nothing was measured"
-        grep "does not apply" "$arb/aus.txt" | head -1 | sed 's/^/    /'
+    if grep -qE "does not apply|does not measure" "$arb/aus.txt"; then
+        echo "GIFT $g: DOES NOT APPLY -- the mutation measured nothing, so its red says nothing"
+        grep -E "does not apply|does not measure" "$arb/aus.txt" | head -1 | sed 's/^/    /'
     elif [ "$n" = 0 ]; then
         echo "GIFT $g: NOT CAUGHT -- the harness stayed green under the mutation"
     else

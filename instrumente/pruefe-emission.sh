@@ -3370,7 +3370,8 @@ n_clang_ok=0; n_umg_nur_cc=0; umg_nur_cc=""
 # `set -e` reads an `a && b` whose `a` fails as a failed command, so this is an `if`.
 HAT_CLANG=0
 if command -v clang > /dev/null; then HAT_CLANG=1; fi
-n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_l=0; n_emit_x=0; rest_x=""
+n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_l=0; n_emit_i=0
+n_emit_x=0; rest_x=""
 # **Der `find` bildet die Reichweite der Tafel NACH, und zwar ueber Namen statt ueber Pfade.**
 # `-name` sieht nur den letzten Bestandteil; ein Muster auf den ganzen Pfad haette denselben
 # Fehler gemacht wie der erste Auszaehler der Tafel, deren Wurzel selbst
@@ -3432,6 +3433,14 @@ while IFS= read -r q; do
     # beim Namen. Die Heilung ist deshalb keine hochgesetzte Marke, sondern eine
     # RATSCHE: eine gebuchte Wurzel merkt auch, wenn eine Datei die Emission VERLAESST.
     laufzeit/*)       n_emit_l=$((n_emit_l + 1)) ;;
+    # **`bibliothek/` -- the SEVENTH booked root, since 2026-09-28** (server lane, TODO 0e
+    # K7). It arrived with `bibliothek/linux-kmod/linux-kmod.gab`: the twelve Linux kernel
+    # primitives a Gabbro kernel module binds, as ordinary user code. **The catch-all below
+    # named it** -- `NEUE WURZEL EMITTIERT: 1 ... bibliothek/linux-kmod/linux-kmod.gab`,
+    # return code 1, stage 22c never run -- and the healing is a RATCHET again and not a
+    # raised number: a binding file that LEAVES the emission is a finding too. *Exactly the
+    # same course of events `laufzeit/` took on 2026-09-15.*
+    bibliothek/*)     n_emit_i=$((n_emit_i + 1)) ;;
     *)                n_emit_x=$((n_emit_x + 1)); rest_x="$rest_x $d" ;;
     esac
     umgekehrt=0
@@ -3493,7 +3502,7 @@ echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte A
 echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
 echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
 echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_l laufzeit/,"
-echo "   $n_emit_x sonst -- SIEBEN Marken)"
+echo "   $n_emit_i bibliothek/, $n_emit_x sonst -- ACHT Marken)"
 
 # **Mark: reverse probes that bite under `cc` ALONE.** They are DEBT, not an achievement --
 # pulled onto the measured stand, and the number may only fall.
@@ -4012,6 +4021,14 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # *Eine Wurzel als Marke zu buchen ist mehr als eine hochgesetzte Zahl: sie bekommt eine
 # Ratsche, und eine Datei, die die Emission verlaesst, ist dann auch ein Befund.*
 MARKE_EMIT_L=1      # `laufzeit/` -- sperre.gab; `start.c` ist C und keine `.gab`
+# **And a fifth, on 2026-09-28: `bibliothek/`** (server lane, TODO 0e K7). Booked at 1 --
+# `bibliothek/linux-kmod/linux-kmod.gab`, the twelve kernel primitives a Gabbro kernel module
+# binds (`laufzeit/kmodul/bindung.h` is the interface, which belongs to the runtime; the
+# kernel's own names stand in `linux-kmod.c` and nowhere else). The `.c` and the `.h` beside
+# it are not Gabbro and do not count here. *The file emits a C with not one body in it --
+# twelve prototypes -- and that is exactly what belongs measured: a binding that stops
+# translating is a module that stops building.*
+MARKE_EMIT_BIB=1    # `bibliothek/` -- linux-kmod.gab; the `.c` and `.h` are not Gabbro
 # **0 -> 1 on 2026-09-01, and this one is not bookkeeping.** `halde.gab` -- the only file
 # in the tree at the target scale -- did NOT emit until tonight: it fell at an `L104` false
 # alarm, `g is consumed a second time`, because `m2` ran a `narrow … else` arm as
@@ -4180,9 +4197,10 @@ ratsche "$n_emit_m" "$MARKE_EMIT_M" "messung/*/"
 ratsche "$n_emit_n" "$MARKE_EMIT_N" "messungen/"
 ratsche "$n_emit_p" "$MARKE_EMIT_P" "programmlogik/"
 ratsche "$n_emit_l" "$MARKE_EMIT_L" "laufzeit/"
+ratsche "$n_emit_i" "$MARKE_EMIT_BIB" "bibliothek/"
 decke   "$n_emit_g" "$MARKE_EMIT_G" "beispiele/gift/"
 if [ "$n_emit_x" -ne "$MARKE_EMIT_X" ]; then
-    echo "  NEUE WURZEL EMITTIERT: $n_emit_x Dateien ausserhalb der sechs gebuchten Wurzeln"
+    echo "  NEUE WURZEL EMITTIERT: $n_emit_x Dateien ausserhalb der sieben gebuchten Wurzeln"
     echo "                         emittieren, gebucht sind $MARKE_EMIT_X. Das ist die Stelle,"
     echo "                         an der die Reichweite frueher lautlos zurueckblieb:$rest_x"
     schlecht=1

@@ -252,18 +252,73 @@ fn kratz(marke: &str) -> std::path::PathBuf {
     d
 }
 
+/// **The twelve primitives the module runtime calls, as a program declares them** (server
+/// lane, 2026-09-28, TODO section 0e K7).
+///
+/// Held against `laufzeit/kmodul/bindung.h` by `bau.rs::bindungsregel`, which every test
+/// below goes through: a `module` unit that binds none of these is refused, so this snippet
+/// is what makes the OTHER refusals measurable. The real thing a program would name is
+/// `bibliothek/linux-kmod/linux-kmod.gab` -- this is the same declarations, inline, because
+/// these tests write their unit into a scratch directory.
+const KMOD_BINDUNG: &str = "
+module bindung::kern {
+extern fn gabbro_kern_melden(code : u32, a : u64, b : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_reserve(bytes : u64) -> u64 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_freigeben(basis : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_vorrat() -> u64 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_init(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_nimm(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_gib(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_nimm_maskiert(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_gib_maskiert(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_kernnummer() -> u32 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_faden_start(f : u64, koerper : u64) -> u32 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_faden_warte(f : u64) effects { pure } costs <= 8 ops;
+}
+";
+
 /// Writes a manifest and a tiny unit into a scratch directory and runs `--dry-run` over it.
 /// `--dry-run` is the point: it walks the graph and applies every rule, and it calls neither
 /// `cc` nor `make`, so a machine without kernel headers measures the same thing.
+///
+/// **The binding travels with the unit** (K7): every `module` must bind the primitives its
+/// runtime calls, so a helper that left them out would measure that rule and nothing else.
+/// [`kmod_lauf_roh`] is the door for the two tests that want exactly that.
 fn kmod_lauf(marke: &str, unitzeile: &str, quelle: &str, kmodzeile: &str) -> (String, String, i32) {
+    kmod_lauf_roh(marke, unitzeile, quelle, kmodzeile, true, false)
+}
+
+/// `bindung`: append the twelve declarations. `kopf`: name a `stdatomic.h` among the unit's
+/// files -- the memory model of an `atomic`, which a program supplies the same way
+/// (`bibliothek/linux-kmod/stdatomic.h`).
+fn kmod_lauf_roh(
+    marke: &str,
+    unitzeile: &str,
+    quelle: &str,
+    kmodzeile: &str,
+    bindung: bool,
+    kopf: bool,
+) -> (String, String, i32) {
     let d = kratz(marke);
-    std::fs::write(d.join("u.gab"), quelle).expect("unit");
+    let mut text = quelle.to_string();
+    if bindung {
+        text.push_str(KMOD_BINDUNG);
+    }
+    std::fs::write(d.join("u.gab"), text).expect("unit");
     std::fs::write(d.join("melde.c"), "void gabbro_kmod_melde(void) { }\n").expect("body");
+    let mut dateien = format!("  {}\n", d.join("u.gab").display());
+    // The header stands BEFORE the `.c` body, so that the test which asks about a header in
+    // a non-module unit measures the header rule and not the one beside it (both refuse,
+    // and the first one reached is the one that speaks).
+    if kopf {
+        std::fs::write(d.join("stdatomic.h"), "/* the program's memory model */\n")
+            .expect("header");
+        dateien.push_str(&format!("  {}\n", d.join("stdatomic.h").display()));
+    }
+    dateien.push_str(&format!("  {}\n", d.join("melde.c").display()));
     let manifest = format!(
-        "compiler cc -std=c11\nout {aus}\n{kmodzeile}{unitzeile}\n  {q}\n  {c}\n",
+        "compiler cc -std=c11\nout {aus}\n{kmodzeile}{unitzeile}\n{dateien}",
         aus = d.join("bau").display(),
-        q = d.join("u.gab").display(),
-        c = d.join("melde.c").display(),
     );
     let mpfad = d.join("manifest");
     std::fs::write(&mpfad, manifest).expect("manifest");
@@ -393,11 +448,16 @@ impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
 impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
 }
 ";
-    let (aus, fehler, code) = kmod_lauf(
+    // **And it names a `stdatomic.h`**, because the memory model of an `atomic` is the
+    // program's too since K7 -- see `ein_modul_mit_atomic_ohne_speichermodell_faellt` for
+    // the other direction of that.
+    let (aus, fehler, code) = kmod_lauf_roh(
         "mit_atomic",
         "unit gabbro_probe module laden entladen",
         mit_atomic,
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
+        true,
+        true,
     );
     assert_eq!(code, 0, "a module with an integer `atomic` builds its plan:\n{aus}\n{fehler}");
 
@@ -407,11 +467,13 @@ impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
 impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
 }
 ";
-    let (aus, _, code) = kmod_lauf(
+    let (aus, _, code) = kmod_lauf_roh(
         "mit_gleitkomma",
         "unit gabbro_probe module laden entladen",
         mit_gleitkomma,
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
+        true,
+        true,
     );
     assert_ne!(code, 0, "a module with a floating-point `atomic` is refused");
     assert!(aus.contains("floating-point atomic `PEGEL`"), "by name:\n{aus}");
@@ -429,11 +491,13 @@ impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
 impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
 }
 ";
-    let (aus, _, code) = kmod_lauf(
+    let (aus, _, code) = kmod_lauf_roh(
         "mit_gleitkommafeld",
         "unit gabbro_probe module laden entladen",
         feld,
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
+        true,
+        true,
     );
     assert_ne!(code, 0, "an array of floats is a float atomic too");
     assert!(aus.contains("floating-point atomic `PEGEL`"), "by name:\n{aus}");
@@ -447,6 +511,192 @@ impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
     );
     assert_eq!(code, 0, "the same unit without the atomic is fine:\n{aus}\n{fehler}");
+}
+
+/// **A `module` that binds no kernel primitive is refused, per thing it uses** (server lane,
+/// 2026-09-28, TODO section 0e K7).
+///
+/// SIMON'S RULE is *"API calls are always user-made"*, and until this rule the module RUNTIME
+/// was the exception: `laufzeit/kmodul/` called twelve kernel functions no program had
+/// declared (`dokumente/OFFEN.md` O35). They are declarations now
+/// (`laufzeit/kmodul/bindung.h`) and the program defines them.
+///
+/// **Why a test and not only the QEMU harness.** The harness measures a `.ko`; a unit whose
+/// binding is missing has no `.ko`. What it would get instead is `modpost`'s *"gabbro_kern_…
+/// undefined"* -- a linker error, in a `make` log, about a name the user never wrote.
+///
+/// Each direction is asserted with its POSITIVE twin in the same test, so none of it can pass
+/// by refusing everything.
+#[test]
+fn ein_modul_ohne_bindung_faellt_je_nach_dem_was_es_benutzt() {
+    let kmod = "kmod laufzeit/kmodul /lib/modules/x/build\n";
+
+    // 1. The report channel: every module needs it, because every load refusal is words the
+    //    program owns (printing is a kernel call).
+    let (aus, _, code) = kmod_lauf_roh(
+        "ohne_bindung",
+        "unit gabbro_probe module laden entladen",
+        KMOD_EINHEIT,
+        kmod,
+        false,
+        false,
+    );
+    assert_ne!(code, 0, "a module that binds nothing is refused");
+    assert!(aus.contains("binds no `gabbro_kern_melden`"), "by name:\n{aus}");
+    assert!(aus.contains("bibliothek/linux-kmod"), "with the file that supplies it:\n{aus}");
+
+    // 2. An `arena` needs the reservation primitives -- and the same unit without the arena
+    //    does not, which is what makes this a rule about what the unit USES.
+    let mit_arena = "type Wert = u64 in 0 .. 1000;
+arena Knoten capacity 2 .. 4 max 64 of Wert;
+module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let nur_melden = "
+module bindung::kern {
+extern fn gabbro_kern_melden(code : u32, a : u64, b : u64) effects { pure } costs <= 8 ops;
+}
+";
+    let (aus, _, code) = kmod_lauf_roh(
+        "arena_ohne_reserve",
+        "unit gabbro_probe module laden entladen",
+        &format!("{mit_arena}{nur_melden}"),
+        kmod,
+        false,
+        false,
+    );
+    assert_ne!(code, 0, "an arena without the reservation primitives is refused");
+    assert!(aus.contains("binds no `gabbro_kern_reserve`"), "by name:\n{aus}");
+    assert!(aus.contains("declares an `arena`"), "and by the reason it needs it:\n{aus}");
+
+    let (aus, fehler, code) = kmod_lauf_roh(
+        "arena_mit_reserve",
+        "unit gabbro_probe module laden entladen",
+        mit_arena,
+        kmod,
+        true,
+        false,
+    );
+    assert_eq!(code, 0, "the same arena WITH the binding builds its plan:\n{aus}\n{fehler}");
+
+    let (aus, fehler, code) = kmod_lauf_roh(
+        "ohne_arena_nur_melden",
+        "unit gabbro_probe module laden entladen",
+        &format!("{KMOD_EINHEIT}{nur_melden}"),
+        kmod,
+        false,
+        false,
+    );
+    assert_eq!(
+        code, 0,
+        "a module with no arena needs no reservation primitive:\n{aus}\n{fehler}"
+    );
+
+    // 3. A `masks irqs` lock needs the MASKED pair, and it is a separate pair of names on
+    //    purpose: the masking is the binding's promise (`kern_bindung_maskiert`), and the
+    //    goal theorem's `KernHaltE` rests on it.
+    let mit_sperre = "module treiber::probe {
+static mut Takte : u64 = 0;
+pub lock TAKT protects { Takte } rank 0 held <= 64 ops masks irqs;
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let ohne_maske = "
+module bindung::kern {
+extern fn gabbro_kern_melden(code : u32, a : u64, b : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_init(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_kernnummer() -> u32 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_nimm(s : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_sperre_gib(s : u64) effects { pure } costs <= 8 ops;
+}
+";
+    let (aus, _, code) = kmod_lauf_roh(
+        "maske_ohne_paar",
+        "unit gabbro_probe module laden entladen",
+        &format!("{mit_sperre}{ohne_maske}"),
+        kmod,
+        false,
+        false,
+    );
+    assert_ne!(code, 0, "a masked lock bound with the PLAIN pair alone is refused");
+    assert!(
+        aus.contains("binds no `gabbro_kern_sperre_nimm_maskiert`"),
+        "by name -- the plain pair is not the masked one:\n{aus}"
+    );
+
+    // 4. The SHAPE, not only the name: C has no mangling, so a wrong arity links and then
+    //    reads a register nobody set.
+    let falsche_stelligkeit = "module treiber::probe {
+extern fn gabbro_kern_melden(code : u32) effects { pure } costs <= 8 ops;
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf_roh(
+        "falsche_stelligkeit",
+        "unit gabbro_probe module laden entladen",
+        falsche_stelligkeit,
+        kmod,
+        false,
+        false,
+    );
+    assert_ne!(code, 0, "a binding of the right name and the wrong arity is refused");
+    assert!(aus.contains("1 parameter(s) and the runtime calls it with 3"), "with both:\n{aus}");
+}
+
+/// **A `module` that declares an `atomic` and binds no memory model is refused** (server
+/// lane, 2026-09-28, TODO section 0e K7).
+///
+/// The memory model is macros -- `READ_ONCE`, `smp_load_acquire`, `try_cmpxchg` -- and leaves
+/// no symbol, so the `nm -u` stage of `instrumente/pruefe-kernelmodul.sh` cannot see it at
+/// all. It is bound the other way: the runtime's `<stdatomic.h>` refuses `_Atomic` outright
+/// and the program names the table (`bibliothek/linux-kmod/stdatomic.h`), which the build
+/// copies over the runtime's stub. **This rule is the door before that one** -- without it
+/// the refusal is the kernel build's, over an undefined `_Atomic` in a `make` log.
+///
+/// The positive twin stands in `ein_modul_mit_atomic_wird_gesenkt_und_ein_gleitkomma_atomic_faellt`,
+/// which names the header and builds its plan.
+#[test]
+fn ein_modul_mit_atomic_ohne_speichermodell_faellt() {
+    let mit_atomic = "atomic STAND : u32 relaxed;
+module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf_roh(
+        "atomic_ohne_kopf",
+        "unit gabbro_probe module laden entladen",
+        mit_atomic,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+        true,
+        false,
+    );
+    assert_ne!(code, 0, "an atomic with no memory model named is refused");
+    assert!(aus.contains("names no `stdatomic.h`"), "by the file that is missing:\n{aus}");
+    assert!(aus.contains("atomic `STAND`"), "and by the declaration:\n{aus}");
+}
+
+/// **A program-supplied header belongs to a module and nowhere else**, the same reading the
+/// `.c` branch beside it has (server lane, TODO section 0e K7).
+#[test]
+fn ein_kopf_ausserhalb_eines_moduls_faellt() {
+    let (_, fehler, code) = kmod_lauf_roh(
+        "kopf_im_objekt",
+        "unit gabbro_probe object",
+        KMOD_EINHEIT,
+        "",
+        false,
+        true,
+    );
+    assert_ne!(code, 0, "a `.h` file in an `object` unit is refused");
+    assert!(
+        fehler.contains("program-supplied header") && fehler.contains("kernel module"),
+        "with its reason:\n{fehler}"
+    );
 }
 
 /// **A `module` unit's `concurrent` roots become KTHREADS, not pthreads** (server lane,

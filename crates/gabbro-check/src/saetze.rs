@@ -5563,8 +5563,12 @@ pub const SPERREN: &[Satz] = &[
                     **And the remedy this rule demands is a PROMISE.** The emitted C realises \
                     it in the runtime flavour, not at the `locks` block: bare metal clears IF \
                     around the ticket (`METALL_SPERRE_MASKIERT`, Opus agent J), a Linux module \
-                    takes `raw_spin_lock_irqsave` (`laufzeit/kmodul/sperre.h`, server lane), \
-                    and the hosted flavour has no handlers to mask against.",
+                    takes the MASKED pair its program bound, which is \
+                    `raw_spin_lock_irqsave` in `bibliothek/linux-kmod` \
+                    (`laufzeit/kmodul/sperre.h` over `bindung.h`; since K7 the primitive is \
+                    the program's and the named assumption `kern_bindung_maskiert` is where \
+                    the promise is written down), and the hosted flavour has no handlers to \
+                    mask against.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured before the build: 39 lock declarations in the clean corpus, \
                       7 of them `masks irqs`; exactly ONE corpus file carries an `entry` \

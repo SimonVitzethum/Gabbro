@@ -404,6 +404,7 @@ fn modulkarte(
     BTreeMap<String, Vec<FunktionsForm>>,
     MetallFunde,
     Vec<AtomarFund>,
+    Vec<String>,
 ) {
     let mut deklariert = BTreeSet::new();
     let mut benutzt = BTreeSet::new();
@@ -413,6 +414,7 @@ fn modulkarte(
     let mut funktionen: BTreeMap<String, Vec<FunktionsForm>> = BTreeMap::new();
     let mut metall = MetallFunde::default();
     let mut atomare: Vec<AtomarFund> = Vec::new();
+    let mut arenen: Vec<String> = Vec::new();
     for (datei, quelle) in quellen {
         let (baum, _) = gabbro_syntax::lies("<scan>", quelle);
         sammle(
@@ -427,9 +429,10 @@ fn modulkarte(
             &mut funktionen,
             &mut metall,
             &mut atomare,
+            &mut arenen,
         );
     }
-    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare)
+    (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare, arenen)
 }
 
 fn sammle(
@@ -444,6 +447,7 @@ fn sammle(
     funktionen: &mut BTreeMap<String, Vec<FunktionsForm>>,
     metall: &mut MetallFunde,
     atomare: &mut Vec<AtomarFund>,
+    arenen: &mut Vec<String>,
 ) {
     use gabbro_syntax::ast::ItemArt;
     for i in items {
@@ -467,6 +471,7 @@ fn sammle(
                     funktionen,
                     metall,
                     atomare,
+                    arenen,
                 );
             }
             // **Every `atomic` the unit declares**, for the module rule below. Since K6 that
@@ -592,6 +597,18 @@ fn sammle(
             ItemArt::Accumulates(a) if a.pro_kern.is_some() => {
                 metall.zellen.push(a.name.text.clone());
             }
+            // **Every `arena` the unit declares** (server lane, 2026-09-28, TODO section 0e
+            // K7): the binding rule below asks whether this unit needs the reservation
+            // primitives at all, and an arena is the whole of what makes it need them. The
+            // NAME is kept and not just a count, because that is what a refusal has to say.
+            //
+            // *It is not a second register over `GABBRO_ARENEN`*, which the EMITTER writes
+            // out of the descriptors it emitted: this walk answers a question about the
+            // manifest (does this unit bind what its runtime will call?) and is asked before
+            // any C is written. The two would disagree only if the emitter dropped a
+            // declared arena, and then the module reserves nothing for it -- a defect of the
+            // emitter, which this rule is not the place to catch.
+            ItemArt::Arena(a) => arenen.push(a.name.text.clone()),
             _ => {}
         }
     }
@@ -729,12 +746,23 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
 /// Session 3 refused every `atomic` here, because the lowering did not exist and a lowering
 /// nobody had related to the goal theorem's atomic rely would have made the wall green and
 /// the claim false. Session 5 built the lowering (K6,
-/// `laufzeit/kmodul/include/stdatomic.h`, named assumption (M11) in `Zielsatz/Spec.lean`),
+/// `bibliothek/linux-kmod/stdatomic.h`, named assumption (M11) in `Zielsatz/Spec.lean`),
 /// so what is left of the refusal is the one shape no barrier repairs.
+///
+/// **AND THE BINDING RULE** (server lane, session 6, TODO section 0e K7): a `module` unit
+/// that uses a lock, an arena, a concurrent root or an `atomic` and BINDS NO PRIMITIVE for it
+/// is refused here -- see [`bindungsregel`] below, which is where that half stands.
+///
+/// > **Why none of this carries an `N` code**, and the reason is [`eintrittsregel`]'s and not
+/// > a new one: a `Satz` says what is true of a program the CHECKER passed, and every rule in
+/// > this file is about a MANIFEST, which no pass ever sees. The refusals speak in sentences.
 fn modulregel(
     e: &Einheit,
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
     atomare: &[AtomarFund],
+    arenen: &[String],
+    sperren: &[TreiberSperre],
+    wurzeln: &[TreiberFund],
 ) -> Option<String> {
     if e.art != Art::Modul {
         return None;
@@ -798,6 +826,191 @@ fn modulregel(
              are not the same call",
             e.modul_init
         ));
+    }
+    bindungsregel(e, funktionen, atomare, arenen, sperren, wurzeln)
+}
+
+/// **One row of the binding: a name the module runtime calls, and what makes it call it**
+/// (server lane, 2026-09-28, TODO section 0e K7).
+///
+/// The table below is held against `laufzeit/kmodul/bindung.h` by the comment in each row and
+/// by the C compiler at every module build -- a name here that the runtime does not call
+/// would be ceremony, and a call the runtime makes without a row here would be a kernel
+/// function nobody declared, which is the whole thing K7 closes.
+struct BindungsZeile {
+    name: &'static str,
+    parameter: usize,
+    liefert: bool,
+    /// What makes the unit need it, in the words of the refusal.
+    weil: &'static str,
+}
+
+/// **What a `module` unit must bind, per thing it uses** (server lane, 2026-09-28, TODO
+/// section 0e K7).
+///
+/// SIMON'S RULE: *"API calls are always user-made"* -- and until this rule existed the module
+/// RUNTIME was the exception. `laufzeit/kmodul/` called twelve kernel functions no program had
+/// declared (`dokumente/OFFEN.md` O35, measured by the stage `symbole_pruefe` of
+/// `instrumente/pruefe-kernelmodul.sh`). They are declarations now
+/// (`laufzeit/kmodul/bindung.h`) and the PROGRAM defines them --
+/// `bibliothek/linux-kmod/linux-kmod.gab` plus its `.c` is the binding a program may take off
+/// the shelf.
+///
+/// **A MEASUREMENT ALONE WOULD NOT HAVE CLOSED IT, and this rule is the other half.** The
+/// symbol stage can say "the runtime pulls no kernel name" over a `.ko` that was BUILT; what
+/// it cannot say is anything about the unit whose binding is missing, because that unit does
+/// not link at all -- `modpost` says *"gabbro_kern_reserve undefined"*, in a `make` log, about
+/// the runtime's name rather than about the program's omission. *A refusal that arrives as a
+/// linker error over a name the user never wrote is a refusal the user cannot act on.*
+///
+/// | what the unit uses | what the runtime will call | where |
+/// |---|---|---|
+/// | anything (it is a module) | `gabbro_kern_melden` | every load refusal: printing is a kernel call |
+/// | an `arena` | `gabbro_kern_reserve`, `_freigeben`, `_vorrat` | `arena.c` |
+/// | any `lock` | `gabbro_kern_sperre_init`, `gabbro_kern_kernnummer` | `sperre.h`, at load and at every acquire |
+/// | a PLAIN `lock` | `gabbro_kern_sperre_nimm`, `_gib` | `sperre.h` |
+/// | a `masks irqs` `lock` | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` | `sperre.h` |
+/// | a `concurrent` root | `gabbro_kern_faden_start`, `_warte` | `kmodul.c` |
+/// | an `atomic` | a `stdatomic.h` among the unit's files | the emitted prelude's `#include` |
+///
+/// **The last row is not a function and is here anyway**, because it is the same question one
+/// step lower: the memory model of an `atomic` is macros (`READ_ONCE`, `smp_load_acquire`,
+/// `try_cmpxchg`) and leaves no symbol, so the symbol stage cannot see it at all. The table
+/// itself is the program's (`bibliothek/linux-kmod/stdatomic.h`); the runtime's own
+/// `<stdatomic.h>` refuses `_Atomic` outright, so an unbound module fails to compile rather
+/// than compiling into unordered accesses. *This rule is the door before that one.*
+///
+/// A unit may of course write its own bodies instead of the library's -- the check is that the
+/// DECLARATION stands, with its arity and its result, not that a particular file was named.
+fn bindungsregel(
+    e: &Einheit,
+    funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
+    atomare: &[AtomarFund],
+    arenen: &[String],
+    sperren: &[TreiberSperre],
+    wurzeln: &[TreiberFund],
+) -> Option<String> {
+    const MELDEN: BindungsZeile = BindungsZeile {
+        name: "gabbro_kern_melden",
+        parameter: 3,
+        liefert: false,
+        weil: "this is a `module`, and the runtime refuses a load in words the program owns",
+    };
+    let mut gefordert: Vec<BindungsZeile> = vec![MELDEN];
+    if !arenen.is_empty() {
+        let weil = "this unit declares an `arena`, whose storage the runtime asks the \
+                    program for";
+        for (name, parameter, liefert) in [
+            ("gabbro_kern_reserve", 1, true),
+            ("gabbro_kern_freigeben", 1, false),
+            ("gabbro_kern_vorrat", 0, true),
+        ] {
+            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
+        }
+    }
+    if !sperren.is_empty() {
+        let weil = "this unit declares a `lock`, whose primitive the emitter only declares";
+        for (name, parameter, liefert) in [
+            ("gabbro_kern_sperre_init", 1, false),
+            ("gabbro_kern_kernnummer", 0, true),
+        ] {
+            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
+        }
+        if sperren.iter().any(|s| !s.maskiert) {
+            let weil = "this unit declares a `lock` without `masks irqs`";
+            for name in ["gabbro_kern_sperre_nimm", "gabbro_kern_sperre_gib"] {
+                gefordert.push(BindungsZeile { name, parameter: 1, liefert: false, weil });
+            }
+        }
+        if sperren.iter().any(|s| s.maskiert) {
+            let weil = "this unit declares a `masks irqs` `lock`, and the masking is the \
+                        binding's (`kern_bindung_maskiert`)";
+            for name in [
+                "gabbro_kern_sperre_nimm_maskiert",
+                "gabbro_kern_sperre_gib_maskiert",
+            ] {
+                gefordert.push(BindungsZeile { name, parameter: 1, liefert: false, weil });
+            }
+        }
+    }
+    if !wurzeln.is_empty() {
+        let weil = "this unit declares a `concurrent` set, which the module runtime runs as \
+                    kernel threads";
+        gefordert.push(BindungsZeile {
+            name: "gabbro_kern_faden_start",
+            parameter: 2,
+            liefert: true,
+            weil,
+        });
+        gefordert.push(BindungsZeile {
+            name: "gabbro_kern_faden_warte",
+            parameter: 1,
+            liefert: false,
+            weil,
+        });
+    }
+    for z in &gefordert {
+        let Some(formen) = funktionen.get(z.name) else {
+            return Some(format!(
+                "this `module` binds no `{}` -- {}\n\
+                 \x20        = the module runtime calls it \
+                 (`laufzeit/kmodul/bindung.h`) and defines it nowhere: every kernel call of a \
+                 Gabbro module is the PROGRAM's\n\
+                 \x20        = the usual Linux one is two lines in the manifest: \
+                 `bibliothek/linux-kmod/linux-kmod.gab` and `bibliothek/linux-kmod/linux-kmod.c`\n\
+                 \x20        = without this rule the refusal is `modpost`'s -- \
+                 \"{} undefined\", in a `make` log, about a name the program never wrote",
+                z.name, z.weil, z.name
+            ));
+        };
+        // **The SHAPE, not only the name.** C has no mangling, so a declaration of the right
+        // name and the wrong arity links and then reads a register nobody set. The same three
+        // questions the init/exit rule above asks, for the same reason.
+        for f in formen {
+            if f.parameter != z.parameter {
+                return Some(format!(
+                    "`{}` is bound with {} parameter(s) and the runtime calls it with {} \
+                     ({} in {})\n\
+                     \x20        = the declaration is held against \
+                     `laufzeit/kmodul/bindung.h`; C has no mangling, so a wrong arity links \
+                     and then reads a register nobody set",
+                    z.name, f.parameter, z.parameter, f.modul, f.datei
+                ));
+            }
+            if f.liefert != z.liefert {
+                return Some(format!(
+                    "`{}` is bound {} a result and the runtime {} one ({} in {})\n\
+                     \x20        = see `laufzeit/kmodul/bindung.h` for the line it is held \
+                     against",
+                    z.name,
+                    if f.liefert { "with" } else { "without" },
+                    if z.liefert { "reads" } else { "reads none of" },
+                    f.modul,
+                    f.datei
+                ));
+            }
+        }
+    }
+    // **The memory model of an `atomic`, which is a FILE and not a function.** See the table
+    // in this function's own documentation for why it is checked here and not by the symbol
+    // stage: macros leave no symbol.
+    if let Some(a) = atomare.first() {
+        if !e.dateien.iter().any(|d| {
+            Path::new(d).file_name().is_some_and(|f| f == "stdatomic.h")
+        }) {
+            return Some(format!(
+                "this `module` declares the atomic `{}` ({} in {}) and names no \
+                 `stdatomic.h` -- the memory model of an `atomic` is the program's\n\
+                 \x20        = the kernel has a memory model of its own and is built \
+                 `-nostdinc`; `bibliothek/linux-kmod/stdatomic.h` maps the emitter's nine C11 \
+                 call forms onto it (named assumption (M11) of `Zielsatz/Spec.lean`), and a \
+                 different kernel gets a different table\n\
+                 \x20        = add that file to this unit, or write your own\n\
+                 \x20        = without this rule the refusal is the kernel build's, over an \
+                 undefined `_Atomic` (`laufzeit/kmodul/include/stdatomic.h`)",
+                a.name, a.modul, a.datei
+            ));
+        }
     }
     None
 }
@@ -1168,15 +1381,22 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     // **What the bare-metal driver installs besides** (Opus agent J): entries, rcu, cells.
     let mut metall_je_einheit: BTreeMap<String, MetallFunde> = BTreeMap::new();
     let mut atomare_je_einheit: BTreeMap<String, Vec<AtomarFund>> = BTreeMap::new();
+    // **Every `arena` a unit declares** (server lane, TODO section 0e K7): the binding rule
+    // asks whether the unit needs the reservation primitives of `laufzeit/kmodul/bindung.h`.
+    let mut arenen_je_einheit: BTreeMap<String, Vec<String>> = BTreeMap::new();
     // **A unit's own C bodies** (server lane, TODO section 0e K4): the `.c` files a
     // `module` unit names beside its `.gab` sources. They are the bodies of the `extern fn`
     // items the PROGRAM declares -- the whole of its kernel API, written by whoever wrote
     // the declaration (`TODO.md` section -1). They are not Gabbro and are never parsed as
     // Gabbro; they are compiled into the module beside the emitted C.
     let mut fremde_je_einheit: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    // **A module unit's own HEADERS** (server lane, TODO section 0e K7): the `.h` files it
+    // names, copied into the module's include directory in place of the runtime's shims.
+    let mut koepfe_je_einheit: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for e in &manifest.einheiten {
         let mut quellen = Vec::new();
         let mut fremde: Vec<String> = Vec::new();
+        let mut koepfe: Vec<String> = Vec::new();
         for d in &e.dateien {
             if d.ends_with(".c") {
                 // **Only a module carries one today, and the refusal says so rather than
@@ -1199,6 +1419,34 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 fremde.push(d.clone());
                 continue;
             }
+            // **A `.h` file of a module unit is a header the PROGRAM supplies** (server
+            // lane, 2026-09-28, TODO section 0e K7). It is copied into the module's include
+            // directory AFTER the runtime's own shims and therefore in place of one of the
+            // same name -- which is the mechanism by which a program binds the memory model
+            // of an `atomic`: `laufzeit/kmodul/include/stdatomic.h` refuses `_Atomic`, and
+            // `bibliothek/linux-kmod/stdatomic.h` is the table that replaces it.
+            //
+            // *Why a file line and not a new manifest word.* The file list is already the
+            // place a unit says which files are its own, and the `.c` branch above is the
+            // same idea one file type over. A `kmodinclude <dir>` line would be a second
+            // syntax for "this file belongs to this unit" (`W7`).
+            if d.ends_with(".h") {
+                if e.art != Art::Modul {
+                    eprintln!(
+                        "gabbro build: unit `{}` names the header `{d}` and is not a \
+                         `module` -- a program-supplied header is carried into a kernel \
+                         module today and nowhere else",
+                        e.name
+                    );
+                    return std::process::ExitCode::from(1);
+                }
+                if !Path::new(d).is_file() {
+                    eprintln!("gabbro build: {d}: no such file");
+                    return std::process::ExitCode::from(2);
+                }
+                koepfe.push(d.clone());
+                continue;
+            }
             match std::fs::read_to_string(d) {
                 Ok(q) => quellen.push((d.clone(), q)),
                 Err(err) => {
@@ -1216,9 +1464,11 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             return std::process::ExitCode::from(1);
         }
         fremde_je_einheit.insert(e.name.clone(), fremde);
-        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare) =
-            modulkarte(&quellen);
+        koepfe_je_einheit.insert(e.name.clone(), koepfe);
+        let (deklariert, benutzt, eintritte, wurzeln, sperren, funktionen, metall, atomare,
+             arenen) = modulkarte(&quellen);
         atomare_je_einheit.insert(e.name.clone(), atomare);
+        arenen_je_einheit.insert(e.name.clone(), arenen);
         metall_je_einheit.insert(e.name.clone(), metall);
         eintritte_je_einheit.insert(e.name.clone(), eintritte);
         treiber_funde_je_einheit.insert(e.name.clone(), wurzeln);
@@ -1283,7 +1533,14 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             // manifest names, so a plan whose init the kernel could not call says so before
             // a `Kbuild` is written -- and before a kernel build tree is even needed.
             if let Some(befund) =
-                modulregel(e, &funktionen_je_einheit[name], &atomare_je_einheit[name])
+                modulregel(
+                    e,
+                    &funktionen_je_einheit[name],
+                    &atomare_je_einheit[name],
+                    &arenen_je_einheit[name],
+                    &treiber_sperren_je_einheit[name],
+                    &treiber_funde_je_einheit[name],
+                )
             {
                 befunde += 1;
                 println!("  REFUSED  {name} (module): {befund}");
@@ -1409,9 +1666,14 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         // **The module rule, beside the entry rule and the driver rule** (server lane).
         // It runs BEFORE any C is written, for the same reason as the other two: a module
         // whose init the kernel cannot call builds cleanly and fails at `insmod`.
-        if let Some(befund) =
-            modulregel(e, &funktionen_je_einheit[name], &atomare_je_einheit[name])
-        {
+        if let Some(befund) = modulregel(
+            e,
+            &funktionen_je_einheit[name],
+            &atomare_je_einheit[name],
+            &arenen_je_einheit[name],
+            &treiber_sperren_je_einheit[name],
+            &treiber_funde_je_einheit[name],
+        ) {
             abgesagt += 1;
             println!("REFUSED  {name} (module): {befund}");
             continue;
@@ -1421,6 +1683,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             e,
             quellen,
             &fremde_je_einheit[name],
+            &koepfe_je_einheit[name],
             &unten,
             bau,
             pruefbau,
@@ -1606,6 +1869,7 @@ fn baue_einheit(
     e: &Einheit,
     quellen: &[(String, String)],
     fremde: &[String],
+    koepfe: &[String],
     unten: &Unterbau,
     bau: gabbro_check::gatter::Bau,
     pruefbau: bool,
@@ -1656,9 +1920,22 @@ fn baue_einheit(
             }
         }
     }
+    // **And the unit's OWN foreign files** (server lane, session 6, TODO section 0e K7).
+    // Until K7 neither the `.c` bodies nor -- there were none -- the headers entered the
+    // fingerprint, so a program that changed its own kernel call kept a stale `.ko`
+    // standing as up to date. *It never bit, because the harness builds in a fresh
+    // directory every time;* with the binding library it would, since the twelve bodies a
+    // module rests on are now exactly such files.
+    let mut eigen_bytes: Vec<Vec<u8>> = Vec::new();
+    for f in fremde.iter().chain(koepfe.iter()) {
+        eigen_bytes.push(std::fs::read(f).unwrap_or_default());
+    }
     let mut teile: Vec<&[u8]> = Vec::new();
     if treiber_erwartet || metall_erwartet {
         teile.push(treiber::GENERATOR_KENNUNG.as_bytes());
+    }
+    for b in &eigen_bytes {
+        teile.push(b.as_slice());
     }
     for b in &laufzeit_bytes {
         teile.push(b.as_slice());
@@ -1842,7 +2119,9 @@ fn baue_einheit(
             let wurzeln: &[treiber::Wurzel] =
                 treiber_plan.map_or(&[], |p| p.wurzeln.as_slice());
             if let Err(grund) =
-                kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde, sperren, wurzeln)
+                kmod_modul_binden(
+                    manifest, laufzeit, kernbau, e, fremde, koepfe, sperren, wurzeln,
+                )
             {
                 return Ergebnis::Abgesagt(grund);
             }
@@ -1956,9 +2235,20 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
 ///
 /// **`include/stdatomic.h` joined it the same week** (K6): it stopped being a refusal and
 /// became the ATOMIC LOWERING, so a changed ordering row has to rebuild the module the same
-/// way a changed lock primitive does.
-const KMOD_QUELLEN: [&str; 6] =
-    ["kmodul.c", "arena.c", "kmodul.h", "sperre.h", "include/stdint.h", "include/stdatomic.h"];
+/// way a changed lock primitive does. **It is a refusal again since K7** and the ordering
+/// rows are the PROGRAM's (`bibliothek/linux-kmod/stdatomic.h`) -- so they travel in the
+/// unit's own file bytes now, beside its `.c` bodies, and the entry here covers only the
+/// door. `bindung.h` joined in the same step: it is the interface the runtime calls through,
+/// and a changed declaration is a changed module.
+const KMOD_QUELLEN: [&str; 7] = [
+    "kmodul.c",
+    "arena.c",
+    "kmodul.h",
+    "sperre.h",
+    "bindung.h",
+    "include/stdint.h",
+    "include/stdatomic.h",
+];
 
 /// **The generated `sperren.h`: one `F(name, kind)` per `lock`, in name order.**
 ///
@@ -2054,6 +2344,7 @@ fn kmod_modul_binden(
     kernbau: &str,
     e: &Einheit,
     fremde: &[String],
+    koepfe: &[String],
     sperren: &[treiber::Sperre],
     wurzeln: &[treiber::Wurzel],
 ) -> Result<(), String> {
@@ -2090,6 +2381,13 @@ fn kmod_modul_binden(
     // unit wrote `GABBRO_SPERREN`, and a build that decided per unit which
     // headers to copy would be a second register over the same `#ifdef`.
     kopiere(laufzeit.join("sperre.h"), bau.join("sperre.h"))?;
+    // **The interface between the runtime and the program's binding** (server lane,
+    // 2026-09-28, TODO section 0e K7). Twelve declarations and no definition: the runtime
+    // calls them, the PROGRAM defines them, and the kernel's own names stand in the
+    // program's C alone. It is copied beside `kmodul.c` AND is what the program's own body
+    // includes -- so the two halves of every one of the twelve meet in one directory, and
+    // the C compiler holds them against each other.
+    kopiere(laufzeit.join("bindung.h"), bau.join("bindung.h"))?;
     kopiere(laufzeit.join("../arena_dyn.h"), bau.join("arena_dyn.h"))?;
     // The runtime's arena half sits beside a header one level up in the tree and FLAT here.
     let arena = std::fs::read_to_string(laufzeit.join("arena.c"))
@@ -2103,6 +2401,24 @@ fn kmod_modul_binden(
         let x = x.map_err(|err| format!("kernel module: {}: {err}", inc.display()))?;
         let ziel = bau.join("inc").join(x.file_name());
         kopiere(x.path(), ziel)?;
+    }
+    // **And the unit's OWN headers, after the runtime's and therefore in place of them**
+    // (server lane, 2026-09-28, TODO section 0e K7). This is the whole mechanism by which a
+    // program binds something that is not a function: `laufzeit/kmodul/include/stdatomic.h`
+    // refuses `_Atomic` outright, and a unit that declares an `atomic` names
+    // `bibliothek/linux-kmod/stdatomic.h` -- the table that maps the emitter's nine C11 call
+    // forms onto the kernel's memory model -- which lands here and is what the module is
+    // built from.
+    //
+    // *The overwrite is the point and not an accident*, so the order is fixed and stated:
+    // the runtime's shims are the floor, the program's files are the answer. A `module` unit
+    // with an `atomic` and no `stdatomic.h` is refused one door earlier
+    // (`bindungsregel`), so the floor is never silently the answer.
+    for k in koepfe {
+        let name = Path::new(k)
+            .file_name()
+            .ok_or_else(|| format!("kernel module: `{k}` names no file"))?;
+        kopiere(PathBuf::from(k), bau.join("inc").join(name))?;
     }
     kopiere(aus.join(format!("{}.c", e.name)), bau.join("einheit.c"))?;
     // **The unit's LOCKS, as the one line the module runtime expands** (server lane,

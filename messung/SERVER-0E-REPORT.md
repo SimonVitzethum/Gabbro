@@ -1424,3 +1424,213 @@ Not built, and named so the next session starts from a shape and not from a blan
    when the names become the program's binding, the table moves and **(M11)'s substance does
    not change** — the assumption is then that the BOUND primitives are at least as strong
    (`messung/SERVER-0E-SPEC-DIFF.md` §10).
+
+---
+
+## 13. Session 6 (2026-09-28) — K7: the twelve kernel names become the program's (acceptance point 4c)
+
+**The question.** Simon's binding constraint is *"API calls are always user-made"* (2026-09-27).
+Session 5 measured the one place the module target did not keep it and wrote the number down
+(§12, OFFEN O35): **twelve kernel functions the RUNTIME called and no program had declared.**
+This session moved all twelve into the program and put a refusal in front of the move, so that
+a module which binds none is stopped before a byte of C.
+
+### 13.1 What the interface is, and why the direction is that way
+
+`laufzeit/kmodul/bindung.h` — **twelve declarations and no definition.** The runtime calls
+them; the program defines them. The kernel's own names appear in the program's C and nowhere
+else in the tree.
+
+| what the runtime needs | the bound name | what it replaced |
+|---|---|---|
+| say why a load refused | `gabbro_kern_melden(code, a, b)` | `pr_err` → `_printk` |
+| an arena's storage | `gabbro_kern_reserve`, `_freigeben`, `_vorrat` | `vzalloc`, `vfree`, `module_param` → `param_ops_uint` |
+| a lock | `gabbro_kern_sperre_init`, `_nimm`, `_gib` | `raw_spin_lock_init`, `raw_spin_lock`, `raw_spin_unlock` |
+| a `masks irqs` lock | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` | `raw_spin_lock_irqsave`, `raw_spin_unlock_irqrestore` |
+| which core holds it | `gabbro_kern_kernnummer` | `smp_processor_id` → `pcpu_hot` |
+| a root as a kernel thread | `gabbro_kern_faden_start`, `_warte` | `kthread_run`, `complete`, `wait_for_completion`, `init_completion` |
+
+**The INTERFACE is the runtime's and the IMPLEMENTATION is the program's**, and not the other
+way round: a runtime that read the program's choice of name would need the program's header,
+which is a second register over one fact (`W7`). It is the arrangement the lock primitives
+already had in the other direction — `emit.rs` declares `L_nimm`/`L_gib` per `lock` and defines
+neither, every driver flavour supplies them. What K7 added is that the kernel's side of the
+runtime is the same kind of hole.
+
+**Three things make the Gabbro declaration load-bearing rather than decorative**, which was the
+design question of the session:
+
+1. `bau.rs::bindungsregel` refuses a `module` unit that does not declare it (13.3);
+2. the C compiler holds it against `bindung.h` **inside the runtime's own translation unit** —
+   `gabbro_kmodul.c` includes both the emitted unit (whose prototypes come from the Gabbro
+   `extern fn`) and the interface, so a program whose declaration disagrees is a build error;
+3. the program's own `.c` includes `bindung.h` too, so its definitions are held against the
+   same line.
+
+**An address travels as a `u64`.** Gabbro has no pointer type (the reason a system-call binding
+passes registers, Opus agent L), so a reservation's base, a lock's storage and a root's body
+cross as numbers and both sides cast. **The storage stays the runtime's and the operations are
+the program's:** a `raw_spinlock_t` and a `struct completion` are kernel TYPES whose size
+depends on the kernel's configuration, so the runtime hands over `GABBRO_KERN_*_WORTE` words of
+`unsigned long` and the program's C lays its own struct into it, with a `_Static_assert` that it
+fits *against the kernel it is being built for*. A blob too small is a loud build error, never a
+silent overrun.
+
+### 13.2 The measurement: 0, and it is a wall now
+
+`instrumente/pruefe-kernelmodul.sh`, stage `symbole_pruefe`, unchanged in method (`nm -u` on the
+`.ko` intersected with `nm -u` over the RUNTIME objects only, minus the toolchain's names):
+
+| probe | session 5 | session 6 |
+|---|---|---|
+| `halde` | 4 | **0** |
+| `takt` | 7 | **0** |
+| `atomar` | 9 | **0** |
+
+The `.ko` still imports all twelve — the program calls them — but the reference now lives in the
+object the PROGRAM supplied. *That is exactly the distinction the per-object criterion was built
+for, which is why the stage could be written before the fix existed and measures the fix rather
+than a proxy for it.* The mark is `MARKE_KSYM=0` on every probe, so only one direction is left:
+the stage is a WALL and no longer a ratchet.
+
+```
+./instrumente/pruefe-kernelmodul.sh          # 22.7 s, three probes
+   HARNESS: kernel symbols ok (0 hard-wired by the runtime, mark 0)   [x3]
+   gabbro-halde:  k=1 v=0, k=2 v=33, k=3 v=3, k=9 v=0
+   gabbro-takt:   k=1 v=0, ticks=41 landed=0, k=9 v=0
+   gabbro-atomar: k=1 v=0, k=2 v=512, k=3 v=256, k=4 v=0, k=5 v=3, k=9 v=0
+   GREEN: halde / takt / atomar
+```
+
+Every number is the one session 5 measured, with the runtime rewired underneath: the counter is
+exactly 512, the flag was seen 256 times, the payload was never stale, the two bits are 3, the
+hardirq timer fired 41 times and landed on a holding core 0 times.
+
+### 13.3 The refusal, and why a measurement alone would not have closed K7
+
+**A `.ko` can only be measured if it was built.** A unit whose binding is missing has no `.ko`:
+what it gets instead is `modpost`'s *"gabbro_kern_reserve undefined"* — a linker error, in a
+`make` log, about the RUNTIME's name rather than about the program's omission. *A refusal that
+arrives as a linker error over a name the user never wrote is a refusal the user cannot act on.*
+
+`bau.rs::bindungsregel` therefore refuses, per thing the unit uses, before any C:
+
+| the unit uses | it must bind |
+|---|---|
+| anything (it is a `module`) | `gabbro_kern_melden` |
+| an `arena` | `gabbro_kern_reserve`, `_freigeben`, `_vorrat` |
+| any `lock` | `gabbro_kern_sperre_init`, `gabbro_kern_kernnummer` |
+| a PLAIN `lock` | `gabbro_kern_sperre_nimm`, `_gib` |
+| a `masks irqs` `lock` | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` |
+| a `concurrent` root | `gabbro_kern_faden_start`, `_warte` |
+| an `atomic` | a `stdatomic.h` among the unit's files |
+
+and by SHAPE as well as by name — arity and whether it answers — because C has no mangling, so a
+declaration of the right name and the wrong arity links and then reads a register nobody set.
+*That is the same third question the init/exit rule already asks, for the same reason.*
+
+**No `N` code, no gift number, no example**, and the reason is `eintrittsregel`'s and not a new
+one: a `Satz` says what is true of a program the CHECKER passed, and this rule is about a
+MANIFEST, which no pass ever sees. The target is what makes a `lock` need a kernel primitive,
+and the target lives in the manifest, not in the source. *The plan of session 5 had reserved
+`N569` for it; nothing was taken, and the next free numbers are unchanged.*
+
+### 13.4 The memory model: the row `nm -u` cannot see
+
+`READ_ONCE`, `smp_load_acquire`, `try_cmpxchg` and `smp_mb` are macros and inline assembly and
+leave **no undefined symbol**, so the stage above is blind to them by construction (O35 said so
+when it was written). Session 5's header argued from that fact that the table was not an API
+call — *and that argument was half right:* the lock primitives it compared itself to were on
+K7's worklist the very same day. So the table moved instead:
+
+* `bibliothek/linux-kmod/stdatomic.h` is the program's table (**160 macro lines, byte-identical**
+  to the old file; only the header comment changed);
+* `laufzeit/kmodul/include/stdatomic.h` is a REFUSAL again — `_Atomic` pastes to an undeclared
+  name. **Not an empty file**, and that is the whole safety of the move: an empty one would let
+  a unit with an `atomic` compile with plain unordered accesses, load, and answer plausible
+  numbers;
+* the mechanism is a new file kind in the manifest — **a `.h` in a `module` unit's file list** is
+  copied into the module's include directory AFTER the runtime's shims and therefore in place of
+  one. A file line and not a new manifest word, because the file list is already where a unit
+  says which files are its own (`W7`);
+* `gabbro build` refuses a `module` unit that declares an `atomic` and names no `stdatomic.h`,
+  with the file to add in its own sentence.
+
+**The mapping stage and gift 8 did not have to change**: they read `inc/stdatomic.h` *in the
+build directory*, which is where the program's file lands. **(M11) of `Zielsatz/Spec.lean` did
+not change in substance** — 5 insertions, 2 deletions, comment only, the path and a parenthesis
+(`messung/SERVER-0E-SPEC-DIFF.md` Part III has the review, and Part II §10 predicted exactly this
+sentence).
+
+### 13.5 The poison probes
+
+| | what it does | caught by |
+|---|---|---|
+| gift **11** (repaired) | the RUNTIME gains one kernel call (`msleep` in `gabbro_kmodul.c`, re-made from the `Kbuild` the build wrote) | `symbole_pruefe`: *"the runtime hard-wires 1 kernel function(s), the mark is 0 — hard-wired: msleep"* |
+| gift **12** (new) | the PROGRAM loses its binding: the two `bibliothek/linux-kmod` lines are dropped from the manifest, nothing else | `gabbro build`, with the binding rule's own sentence demanded by the harness |
+| 3 CLI tests | the report channel, the arena trio, the MASKED pair against the plain one, a wrong arity, an `atomic` with no table, a `.h` outside a module | each with its POSITIVE twin in the same test |
+
+**Gift 11 had to be repaired, and that is the trap of this instrument for the third time.** Its
+anchor was `#include <linux/printk.h>` in `gabbro_kmodul.c` — an include the runtime LOST when
+its reporting became the program's. The first full run after the rewiring read
+`GIFT 11: DOES NOT APPLY`, which is exactly the shape sessions 4 and 5 each paid for once. The
+anchor is now `#include <linux/errno.h>`: `-EINVAL` is the runtime's load verdict, so it is an
+include the runtime cannot lose. *A mutation anchored on something the fix removes stops
+measuring on the day the fix lands — and reads like a pass if nobody looks.*
+
+```
+./instrumente/pruefe-kernelmodul.sh --gift all     # 2 min 12 s
+gifts: 12 of 12 caught
+```
+
+### 13.6 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1427 passed, 0 failed** (+3; `~/claude-lane/logs/test-s6.log`) |
+| `./instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 323 von 323** (+1 file: the binding; `~/claude-lane/logs/emission-s6.log`) |
+| `cd grammatik && lake build` | rc 0, 356 jobs (`~/claude-lane/logs/lake-s6.log`) |
+| `lake env lean Nachpruefung.lean` | 12 `#print axioms` lines, every one `[propext, Classical.choice, Quot.sound]`, `gabbro_ziel` among them |
+| `instrumente/pruefe-kernelmodul.sh` | GREEN on all three probes, 12 of 12 gifts |
+| `pruefe-todo.py` | 3 findings — **exactly the base's 3**, same three (measured in a `git stash` of this diff) |
+| `abnahme.py --voll` | cannot run here: no Isabelle on this machine (`REGELN.md`) |
+
+**One counter moved, and it is a ROOT and not a number:** `bibliothek/` is the seventh booked
+emission root (`MARKE_EMIT_BIB=1`). The catch-all named it the way it named `laufzeit/` on
+2026-09-15 — *"NEUE WURZEL EMITTIERT: 1 … bibliothek/linux-kmod/linux-kmod.gab, gebucht sind 0"*,
+return code 1, stage 22c never run — and the healing is a RATCHET and not a raised number: a
+binding file that LEAVES the emission is a finding too. `MARKE_EMIT`, `MARKE_EMIT_G` and
+`MARKE_EMIT_M` did not move: no emitted byte of any existing unit changed.
+
+### 13.7 Two findings that are not K7's
+
+1. **`instrumente/pruefe-sondendeckung.py` aborts in its own speech test, and has for at least
+   three sessions.** Four teeth read NO at the base of this session. One of them was the stale
+   `MARK_AUSSEN`: booked at 13 since 2026-09-04, measured at **21** before this session's work
+   and **23** after it (the two new ones are `sonde_kern_bindung` and `sonde_kern_maskiert`, the
+   binding's named assumptions). It is booked at 23 now, with the names and the date. **The
+   other three teeth are older than K7 and are NOT repaired here** — they belong to a lane of
+   their own, and the guardian measures nothing until they are. *A mark nobody reads is a mark
+   that drifts; a guardian that aborts is why nobody read it* (the session-4 trap, from the
+   other side).
+2. **`instrumente/binaer.sh` calls a binary stale when a TEST file is newer.** Its check is
+   `find crates -name '*.rs' -newer <binary>`, and a test file is not an input to the binary —
+   so after any `cargo test` edit every instrument reports `NOT RUN` until a rebuild that
+   `cargo build --release` alone does not perform (it does not recompile the binary for a test
+   change). It cost two emission runs here. The healing used was the correct one — a real build
+   (`touch crates/gabbro-cli/src/main.rs && cargo build --release`), never a `touch` on the
+   binary — but the guard is wider than its own reason, and narrowing it to `crates/*/src/`
+   is a one-line change for whoever next has the budget.
+
+### 13.8 What K7 does NOT close
+
+* **The hosted runtime** is untouched: about fourteen libc names plus the raw `clone` and `futex`
+  through `syscall` (§12.4). That is K8 and acceptance point 4d.
+* **Bare metal** calls no OS and never did; what it hard-wires is the MACHINE, which K8 allows.
+* **The binding library defines all twelve bodies whether the program uses them or not**, so a
+  module with no lock still links the lock primitives in. Dead code in the `.ko`, no kernel call
+  at run time, and a program that minds can write a smaller binding — it is user code.
+* **`module_init`/`module_exit`/`MODULE_LICENSE` stay in the runtime.** They are declarative
+  macros that place a pointer and two strings in sections; they are what makes the artefact a
+  module rather than something it does, and they leave no undefined symbol (measured: the stage
+  reads 0 with them in place).

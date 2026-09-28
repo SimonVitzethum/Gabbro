@@ -1,5 +1,5 @@
 /* laufzeit/kmodul/kmodul.c -- a Gabbro unit AS A LINUX KERNEL MODULE
- * (server lane, TODO section 0e K4).
+ * (server lane, TODO section 0e K4; rewired onto the program's binding by K7).
  *
  * This is the third driver flavour of one shape. `laufzeit/start.c` runs a
  * unit's declared roots as POSIX threads; `laufzeit/metall/` runs them on bare
@@ -23,12 +23,24 @@
  * arena: a null base at the first `alloc`. *Two registers over one fact, and
  * the one nobody reads is the one that drifts* (`W7`).
  *
- * **What the program calls, the program declares.** Nothing in this file
- * stands between a Gabbro `extern fn` and the kernel: a unit that calls a
- * kernel function names it itself, with its ABI, its effects, its costs and
- * the assumption it rests on, and the module ships the body. There is no table
- * of Linux kernel functions here and none anywhere else in the tree (the
- * binding constraint, `TODO.md` section -1).
+ * **WHAT THE PROGRAM CALLS, THE PROGRAM DECLARES -- AND SINCE K7 THAT HOLDS
+ * FOR THIS FILE TOO.** Nothing here stands between a Gabbro `extern fn` and the
+ * kernel: a unit that calls a kernel function names it itself, with its ABI, its
+ * effects, its costs and the assumption it rests on, and the module ships the
+ * body. Until 2026-09-28 the RUNTIME was the exception -- this file called
+ * `kthread_run`, `wait_for_completion`, `complete` and `pr_err`, five of the
+ * twelve kernel names nothing in any program had declared
+ * (`dokumente/OFFEN.md` O35). They are gone: every kernel-facing call below is
+ * one of the twelve declarations of `bindung.h`, which the PROGRAM defines
+ * (`bibliothek/linux-kmod/` is the binding a program may take off the shelf).
+ * There is no table of Linux kernel functions here and none anywhere else in
+ * the tree (the binding constraint, `TODO.md` section -1).
+ *
+ * `module_init`, `module_exit` and `MODULE_LICENSE` stay, and they are not
+ * calls: they place a pointer and two strings in sections of the object. They
+ * are what makes the artefact a MODULE rather than what a module does, and they
+ * leave no undefined symbol -- measured by the stage `symbole_pruefe` of
+ * `instrumente/pruefe-kernelmodul.sh`, which reads 0 with this file in place.
  *
  * The init/exit pair are ORDINARY Gabbro functions of the unit. A Linux module
  * is entered by a call, not by a vector, so `entry … vector V` (which is the
@@ -41,11 +53,22 @@
  * resident. A reservation that refused (`gabbro_arena_ladefehler`) refuses the
  * load the same way -- the hosted contract, kept: never a program started with
  * a smaller range.
+ *
+ * **A REFUSAL TRAVELS AS A CODE, not as a sentence**, and that is the one thing
+ * K7 cost in readability: printing is a kernel call, so the words belong to the
+ * program's binding and this file hands it `GABBRO_KERN_M_*` plus two numbers
+ * (`bindung.h` lists them, `bibliothek/linux-kmod/linux-kmod.c` carries one
+ * sentence per code). *A runtime that kept its own wording would have kept
+ * `_printk` with it.*
  */
 
+/* `module.h` for `module_init`/`module_exit`/`MODULE_LICENSE` and `ARRAY_SIZE`,
+ * `errno.h` for `-EINVAL`. Declarations, macros and constants; no kernel
+ * function is called from this file (`bindung.h`). */
 #include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/printk.h>
+#include <linux/errno.h>
+
+#include "bindung.h"
 
 #ifndef GABBRO_EINHEIT_INCLUDE
 #error "GABBRO_EINHEIT_INCLUDE must name the emitted unit (the build sets it)"
@@ -79,9 +102,9 @@ static gabbro_arena_desc *gabbro_kmod_arenen[] = { GABBRO_ARENEN };
  * `CParser` reads only `#include <x.h>` and integer `#define`s. See
  * `bau.rs::kmod_modul_binden` for the measurement.)
  *
- * `masks irqs` becomes `raw_spin_lock_irqsave` here -- see `sperre.h` for why
- * that is the kernel's word for the promise, and what a PLAIN lock
- * deliberately is not (server lane, 2026-09-28, TODO section 0e K3). */
+ * `masks irqs` becomes the binding's MASKED pair here -- see `sperre.h` for why
+ * that is the kernel's word for the promise, and what a PLAIN lock deliberately
+ * is not (server lane, 2026-09-28, TODO section 0e K3/K7). */
 #include "sperren.h"
 #ifdef GABBRO_SPERREN
 #include "sperre.h"
@@ -95,12 +118,12 @@ GABBRO_SPERREN(GABBRO_KMOD_SPERRE)
  * read theirs from. A unit with no `concurrent` set gets a comment instead of
  * the macro, which is why everything below stands under `#ifdef`.
  *
- * ONE KTHREAD PER ROOT, and the lifecycle is the module's:
+ * ONE KERNEL THREAD PER ROOT, and the lifecycle is the module's:
  *
- *   load    reserve the arenas, call the unit's init; if it answers 0, start
- *           one kthread per root. A root therefore sees a unit whose init has
- *           already run -- the same order the hosted driver gives it, where
- *           `main` starts the threads.
+ *   load    reserve the arenas, initialise the locks, call the unit's init; if
+ *           it answers 0, start one thread per root. A root therefore sees a
+ *           unit whose init has already run -- the same order the hosted driver
+ *           gives it, where `main` starts the threads.
  *   unload  WAIT for every root to return, then call the unit's exit. So the
  *           exit function sees the concurrent work finished, which is what
  *           makes it the place a probe reports its counters from.
@@ -111,51 +134,48 @@ GABBRO_SPERREN(GABBRO_KMOD_SPERRE)
  * beside a live thread, and every invariant the program has about its own
  * shutdown would be void.
  *
- * `struct completion` AND NOT `kthread_stop`. A root is a Gabbro function that
- * returns when it is done; it never asks whether it should stop, so
- * `kthread_stop` -- which sets a flag and waits for the thread to notice --
- * would be the wrong instrument, and on a thread that has already returned it
- * needs a reference nobody here holds. A completion is exactly the thing: the
- * thread signals once, at the end, and the waiter is woken.
- *
- * A kthread that fails to START completes at once and sets the load error, so
- * the wait below cannot hang on a thread that never ran, and the load is
- * refused with the reason in the log. */
+ * **The thread and the waiting are the PROGRAM's** (K7): `gabbro_kern_faden_start`
+ * takes the root wrapper's address and a blob of storage, and
+ * `gabbro_kern_faden_warte` waits on the same blob. Which kernel mechanism that
+ * is -- `kthread_run` and a `struct completion` in `bibliothek/linux-kmod` --
+ * is the binding's choice, and the requirement on it stands in `bindung.h`:
+ * a start that FAILS must leave the blob in a state `warte` returns from at
+ * once, so that the load refusal below cannot hang on a thread that never ran.
+ * (A `kthread_stop` would be the wrong instrument for the waiting, whichever
+ * side wrote it: a Gabbro root returns when it is done and never asks whether
+ * it should stop.) */
 #include "wurzeln.h"
 #ifdef GABBRO_WURZELN
-#include <linux/kthread.h>
-#include <linux/completion.h>
-#include <linux/err.h>
 
 static int gabbro_kmod_fadenfehler;
 
 #define GABBRO_KMOD_FADEN(W)                                                  \
-    static struct completion gabbro_fertig_##W;                               \
+    static unsigned long gabbro_faden_lager_##W[GABBRO_KERN_FADEN_WORTE];     \
     static int gabbro_faden_##W(void *unbenutzt)                              \
     {                                                                         \
         (void)unbenutzt;                                                      \
         W();                                                                  \
-        complete(&gabbro_fertig_##W);                                         \
         return 0;                                                             \
     }
 GABBRO_WURZELN(GABBRO_KMOD_FADEN)
 
+#define GABBRO_KMOD_FADEN_ADR(W) ((uint64_t)(uintptr_t)gabbro_faden_lager_##W)
+
 #define GABBRO_KMOD_FADEN_START(W)                                            \
     do {                                                                      \
-        struct task_struct *t;                                                \
-        init_completion(&gabbro_fertig_##W);                                  \
-        t = kthread_run(gabbro_faden_##W, NULL, "gabbro/" #W);                \
-        if (IS_ERR(t)) {                                                      \
-            pr_err("gabbro: root " #W " did not start (%ld)\n", PTR_ERR(t));   \
-            gabbro_kmod_fadenfehler = (int)PTR_ERR(t);                        \
-            complete(&gabbro_fertig_##W);                                     \
+        uint32_t fehler = gabbro_kern_faden_start(                            \
+            GABBRO_KMOD_FADEN_ADR(W),                                         \
+            (uint64_t)(uintptr_t)&gabbro_faden_##W);                          \
+        if (fehler != 0) {                                                    \
+            gabbro_kern_melden(GABBRO_KERN_M_LADEN_FADEN, fehler, 0);          \
+            gabbro_kmod_fadenfehler = -(int)fehler;                           \
         }                                                                     \
     } while (0);
 
 /* Both list macros carry their own `;`, so an expansion of two roots is two
  * statements and the invocation needs no separator -- the same shape
  * `GABBRO_SPERREN` has next door. */
-#define GABBRO_KMOD_FADEN_WARTE(W) wait_for_completion(&gabbro_fertig_##W);
+#define GABBRO_KMOD_FADEN_WARTE(W) gabbro_kern_faden_warte(GABBRO_KMOD_FADEN_ADR(W));
 #endif
 
 static int __init gabbro_kmod_init(void)
@@ -172,16 +192,22 @@ static int __init gabbro_kmod_init(void)
     }
     fehler = gabbro_arena_ladefehler();
     if (fehler != 0) {
-        pr_err("gabbro: load refused -- a reservation failed (%d)\n", fehler);
+        gabbro_kern_melden(GABBRO_KERN_M_LADEN_ARENA, (uint64_t)(unsigned int)(-fehler), 0);
         gabbro_arena_alles_freigeben();
         return fehler;
     }
 #endif
+#ifdef GABBRO_SPERREN
+    /* **Every lock is ready before the unit's init runs**, because the init is
+     * where a program arms the hardware that takes one (the `takt` probe's
+     * hardirq timer). The storage is this file's, the initialisation is the
+     * binding's (`sperre.h`). */
+    GABBRO_SPERREN(GABBRO_KMOD_SPERRE_INIT)
+#endif
 
     antwort = GABBRO_KMOD_INIT();
     if (antwort != 0) {
-        pr_err("gabbro: load refused -- the unit answered %u\n",
-               (unsigned int)antwort);
+        gabbro_kern_melden(GABBRO_KERN_M_LADEN_ANTWORT, antwort, 0);
 #ifdef GABBRO_ARENEN
         gabbro_arena_alles_freigeben();
 #endif
@@ -199,8 +225,7 @@ static int __init gabbro_kmod_init(void)
      * reach the loader is not a fail-stop. */
     fehler = gabbro_arena_ladefehler();
     if (fehler != 0) {
-        pr_err("gabbro: load refused -- a fail-stop fired during init (%d)\n",
-               fehler);
+        gabbro_kern_melden(GABBRO_KERN_M_LADEN_STOPP, (uint64_t)(unsigned int)(-fehler), 0);
         gabbro_arena_alles_freigeben();
         return fehler;
     }
@@ -213,8 +238,6 @@ static int __init gabbro_kmod_init(void)
          * the ones that did and for nothing else. The unit's exit is NOT
          * called: the load never succeeded. */
         GABBRO_WURZELN(GABBRO_KMOD_FADEN_WARTE)
-        pr_err("gabbro: load refused -- a declared root did not start (%d)\n",
-               gabbro_kmod_fadenfehler);
 #ifdef GABBRO_ARENEN
         gabbro_arena_alles_freigeben();
 #endif

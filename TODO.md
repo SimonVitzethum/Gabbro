@@ -551,13 +551,38 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   same walk the other two driver flavours read, and `kmodul.c` starts one `kthread` per root
   after the load function answers 0 and joins them all before the unload function runs. Before
   it, a `module` with a `concurrent` set had a HOSTED pthread driver written beside its `.ko`.
-  Open (Simon, 2026-09-28, `AUFTRAG-1.md` **K7** and **K8**): the kernel primitives here are
-  the module runtime's, not the program's. Every kernel call of the module target — the lock
-  primitives of `sperre.h`, the arena's `vzalloc`, the kthread glue and these atomic rows — is
-  to be BOUND BY THE PROGRAM through a library unit it `use`s, with a refusal for an unbound
-  one (K7); and the same rule reaches the HOSTED runtime (K8: `pthread_*`, `mmap`, `mprotect`,
-  the raw `clone`/`futex` through `syscall`, `exit`, `abort`, `printf` — bare metal keeps its
-  hardware access, which is instructions and not API).
+  **K7 LANDED 2026-09-28** (server lane, session 6, `messung/SERVER-0E-REPORT.md` §13;
+  OFFEN **O35** closed for this target): *every kernel call of the module target is the
+  program's now.* Session 5 had measured the twelve the RUNTIME chose — `vzalloc`, `vfree`,
+  `param_ops_uint`, `_printk`, `_raw_spin_lock_irqsave`, `_raw_spin_unlock_irqrestore`,
+  `pcpu_hot`, `kthread_create_on_node`, `wake_up_process`, `complete`, `wait_for_completion`,
+  `__init_swait_queue_head` — and the stage `symbole_pruefe` reads **0 on all three probes**
+  now (`halde`, `takt`, `atomar`), a WALL where it was a ratchet. `laufzeit/kmodul/bindung.h`
+  is the interface (twelve declarations, no definition; the runtime owns the lock's and the
+  thread's STORAGE as a blob of words, the program owns the operations, and the program's own
+  `_Static_assert` holds its struct against that blob for the kernel it is built for);
+  `bibliothek/linux-kmod/{linux-kmod.gab,linux-kmod.c}` is the binding a program takes off the
+  shelf, ordinary user code in its manifest. **A `module` that binds nothing is refused before
+  a byte of C**, per thing it uses and by SHAPE as well as by name (`bau.rs::bindungsregel`:
+  the report channel always, the reservation trio for an `arena`, init + core number for any
+  `lock`, the PLAIN and the MASKED pair separately, the thread pair for a `concurrent` set) --
+  *the half no measurement over a `.ko` could give, because a unit with no binding has no
+  `.ko`; what it would get is `modpost`'s "gabbro_kern_reserve undefined", about a name the
+  user never wrote.* The atomic table moved too: `bibliothek/linux-kmod/stdatomic.h` is the
+  program's, the runtime's `<stdatomic.h>` refuses `_Atomic` again, and a `.h` in a module
+  unit's file list is copied into the module's include directory in place of the runtime's
+  shim. **(M11) of `Zielsatz/Spec.lean` did not change in substance** — 5 insertions and 2
+  deletions, comment only, and the 160 macro lines are byte-identical
+  (`messung/SERVER-0E-SPEC-DIFF.md` Part III). **No `N` code, no gift, no example**: the rule
+  is about a MANIFEST, which no pass ever sees, so it has no `Satz` — the reading
+  `eintrittsregel` wrote down. Poison probes: harness gift **12** (the binding dropped from
+  the manifest; the refusal's own sentence is demanded) and 3 CLI tests with their positive
+  twins. **12 of 12 gifts caught**, `cargo test --no-fail-fast` 1427 passed 0 failed,
+  `pruefe-emission.sh` ALL PASS 51 / 323 of 323.
+  Open (Simon, 2026-09-28, `AUFTRAG-1.md` **K8**): the same rule for the HOSTED runtime
+  (`pthread_*`, `mmap`, `mprotect`, the raw `clone`/`futex` through `syscall`, `exit`,
+  `abort`, `printf` — about fourteen names, measured in §12.4 of the report) — bare metal
+  keeps its hardware access, which is instructions and not API.
   **The measurement stands** (server lane, session 5, `messung/SERVER-0E-REPORT.md` §12): the
   stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh` intersects `nm -u` on the `.ko`
   with `nm -u` over the RUNTIME objects only, so a symbol the program's own C pulls does not
