@@ -88,6 +88,76 @@ static gabbro_arena_desc *gabbro_kmod_arenen[] = { GABBRO_ARENEN };
 GABBRO_SPERREN(GABBRO_KMOD_SPERRE)
 #endif
 
+/* **The ROOTS, and the list comes from the build the same way the locks do**
+ * (server lane, 2026-09-28, TODO section 0e K6). `gabbro build` writes
+ * `wurzeln.h` beside this file: one `F(name)` per member of the unit's
+ * `concurrent` set, out of the same walk the hosted and the bare-metal driver
+ * read theirs from. A unit with no `concurrent` set gets a comment instead of
+ * the macro, which is why everything below stands under `#ifdef`.
+ *
+ * ONE KTHREAD PER ROOT, and the lifecycle is the module's:
+ *
+ *   load    reserve the arenas, call the unit's init; if it answers 0, start
+ *           one kthread per root. A root therefore sees a unit whose init has
+ *           already run -- the same order the hosted driver gives it, where
+ *           `main` starts the threads.
+ *   unload  WAIT for every root to return, then call the unit's exit. So the
+ *           exit function sees the concurrent work finished, which is what
+ *           makes it the place a probe reports its counters from.
+ *
+ * *A root that never returns hangs `rmmod`.* That is the same contract the
+ * hosted driver's join has (`laufzeit/start.c`), and it is named here rather
+ * than worked around: a driver that gave up waiting would run the unit's exit
+ * beside a live thread, and every invariant the program has about its own
+ * shutdown would be void.
+ *
+ * `struct completion` AND NOT `kthread_stop`. A root is a Gabbro function that
+ * returns when it is done; it never asks whether it should stop, so
+ * `kthread_stop` -- which sets a flag and waits for the thread to notice --
+ * would be the wrong instrument, and on a thread that has already returned it
+ * needs a reference nobody here holds. A completion is exactly the thing: the
+ * thread signals once, at the end, and the waiter is woken.
+ *
+ * A kthread that fails to START completes at once and sets the load error, so
+ * the wait below cannot hang on a thread that never ran, and the load is
+ * refused with the reason in the log. */
+#include "wurzeln.h"
+#ifdef GABBRO_WURZELN
+#include <linux/kthread.h>
+#include <linux/completion.h>
+#include <linux/err.h>
+
+static int gabbro_kmod_fadenfehler;
+
+#define GABBRO_KMOD_FADEN(W)                                                  \
+    static struct completion gabbro_fertig_##W;                               \
+    static int gabbro_faden_##W(void *unbenutzt)                              \
+    {                                                                         \
+        (void)unbenutzt;                                                      \
+        W();                                                                  \
+        complete(&gabbro_fertig_##W);                                         \
+        return 0;                                                             \
+    }
+GABBRO_WURZELN(GABBRO_KMOD_FADEN)
+
+#define GABBRO_KMOD_FADEN_START(W)                                            \
+    do {                                                                      \
+        struct task_struct *t;                                                \
+        init_completion(&gabbro_fertig_##W);                                  \
+        t = kthread_run(gabbro_faden_##W, NULL, "gabbro/" #W);                \
+        if (IS_ERR(t)) {                                                      \
+            pr_err("gabbro: root " #W " did not start (%ld)\n", PTR_ERR(t));   \
+            gabbro_kmod_fadenfehler = (int)PTR_ERR(t);                        \
+            complete(&gabbro_fertig_##W);                                     \
+        }                                                                     \
+    } while (0);
+
+/* Both list macros carry their own `;`, so an expansion of two roots is two
+ * statements and the invocation needs no separator -- the same shape
+ * `GABBRO_SPERREN` has next door. */
+#define GABBRO_KMOD_FADEN_WARTE(W) wait_for_completion(&gabbro_fertig_##W);
+#endif
+
 static int __init gabbro_kmod_init(void)
 {
     uint32_t antwort;
@@ -135,11 +205,32 @@ static int __init gabbro_kmod_init(void)
         return fehler;
     }
 #endif
+#ifdef GABBRO_WURZELN
+    /* The unit's init has answered 0, so the roots may run. */
+    GABBRO_WURZELN(GABBRO_KMOD_FADEN_START)
+    if (gabbro_kmod_fadenfehler != 0) {
+        /* A root that never started has already completed, so this waits for
+         * the ones that did and for nothing else. The unit's exit is NOT
+         * called: the load never succeeded. */
+        GABBRO_WURZELN(GABBRO_KMOD_FADEN_WARTE)
+        pr_err("gabbro: load refused -- a declared root did not start (%d)\n",
+               gabbro_kmod_fadenfehler);
+#ifdef GABBRO_ARENEN
+        gabbro_arena_alles_freigeben();
+#endif
+        return gabbro_kmod_fadenfehler;
+    }
+#endif
     return 0;
 }
 
 static void __exit gabbro_kmod_exit(void)
 {
+#ifdef GABBRO_WURZELN
+    /* Every root has to have RETURNED before the unit's exit runs -- see the
+     * lifecycle note above. */
+    GABBRO_WURZELN(GABBRO_KMOD_FADEN_WARTE)
+#endif
     (void)GABBRO_KMOD_EXIT();
 #ifdef GABBRO_ARENEN
     gabbro_arena_alles_freigeben();

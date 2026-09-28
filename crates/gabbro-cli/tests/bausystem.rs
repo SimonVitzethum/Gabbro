@@ -370,38 +370,76 @@ fn ein_c_rumpf_ausserhalb_eines_moduls_faellt() {
     );
 }
 
-/// **A `module` unit may not declare an `atomic`** -- and the refusal arrives before a byte
-/// of C is written, not as a C error in a `make` log.
+/// **A `module` unit may declare an integer `atomic` and may NOT declare a floating-point
+/// one** -- and both answers arrive before a byte of C is written (server lane, TODO section
+/// 0e K6; the test held the other way until 2026-09-28).
 ///
-/// The verdict itself is older than this rule: `laufzeit/kmodul/include/stdatomic.h` makes
-/// `_Atomic` an unknown identifier, so such a module never built. What that answer could not
-/// do is name the DECLARATION, or arrive on a machine with no kernel headers. Both hold here
-/// (`--dry-run`), and the reason travels with it: C11 `_Atomic` is not the kernel's memory
-/// model, and `SchwachX` -- the goal theorem's atomic rely -- is proved about the first one.
+/// Session 3 refused EVERY `atomic` in a module: the lowering did not exist, and one nobody
+/// had related to the goal theorem's atomic rely would have made the wall green and the claim
+/// false. Session 5 built it (`laufzeit/kmodul/include/stdatomic.h`: the emitter's nine call
+/// forms onto `READ_ONCE`/`WRITE_ONCE`, `smp_load_acquire`/`smp_store_release` and the
+/// `try_cmpxchg` family, each row at least as strong as the C11 operation it replaces, under
+/// the named assumption (M11) of `Zielsatz/Spec.lean`). What is left is the float, which no
+/// barrier repairs -- the FPU is not usable in kernel context without `kernel_fpu_begin`.
+///
+/// **The `u32` half is the one that would rot silently.** A rule that kept refusing every
+/// atomic would leave this file green while the lowering beside it went unused, so the
+/// positive direction is asserted first.
 #[test]
-fn ein_modul_mit_atomic_faellt() {
+fn ein_modul_mit_atomic_wird_gesenkt_und_ein_gleitkomma_atomic_faellt() {
     let mit_atomic = "atomic STAND : u32 relaxed;
 module treiber::probe {
 impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
 impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
 }
 ";
-    let (aus, _, code) = kmod_lauf(
+    let (aus, fehler, code) = kmod_lauf(
         "mit_atomic",
         "unit gabbro_probe module laden entladen",
         mit_atomic,
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
     );
-    assert_ne!(code, 0, "a module with an `atomic` is refused");
-    assert!(aus.contains("declares the atomic `STAND`"), "by name:\n{aus}");
-    assert!(aus.contains("SchwachX"), "with the reason that is not built:\n{aus}");
+    assert_eq!(code, 0, "a module with an integer `atomic` builds its plan:\n{aus}\n{fehler}");
+
+    let mit_gleitkomma = "atomic PEGEL : f64 relaxed;
+module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf(
+        "mit_gleitkomma",
+        "unit gabbro_probe module laden entladen",
+        mit_gleitkomma,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_ne!(code, 0, "a module with a floating-point `atomic` is refused");
+    assert!(aus.contains("floating-point atomic `PEGEL`"), "by name:\n{aus}");
+    assert!(aus.contains("kernel_fpu_begin"), "with its reason:\n{aus}");
     assert!(
-        aus.contains("stdatomic.h"),
-        "and with the place the refusal came from before:\n{aus}"
+        aus.contains("ARE lowered"),
+        "and saying that this is the remainder and not the rule:\n{aus}"
     );
 
-    // **The positive twin: the same unit without the `atomic` builds its plan.** Without it
-    // the test above would also pass on a rule that refused every module.
+    // **The array twin:** `_Atomic` qualifies the ELEMENT type, so an array of floats is a
+    // float atomic and the walk has to look through the array (`bau.rs::sammle`).
+    let feld = "atomic PEGEL : [f32; 4] relaxed;
+module treiber::probe {
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, _, code) = kmod_lauf(
+        "mit_gleitkommafeld",
+        "unit gabbro_probe module laden entladen",
+        feld,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_ne!(code, 0, "an array of floats is a float atomic too");
+    assert!(aus.contains("floating-point atomic `PEGEL`"), "by name:\n{aus}");
+
+    // **And the same unit with no atomic at all still builds its plan**, so none of the above
+    // is measuring a rule that refuses every module.
     let (aus, fehler, code) = kmod_lauf(
         "ohne_atomic",
         "unit gabbro_probe module laden entladen",
@@ -409,6 +447,45 @@ impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
         "kmod laufzeit/kmodul /lib/modules/x/build\n",
     );
     assert_eq!(code, 0, "the same unit without the atomic is fine:\n{aus}\n{fehler}");
+}
+
+/// **A `module` unit's `concurrent` roots become KTHREADS, not pthreads** (server lane,
+/// 2026-09-28, TODO section 0e K6).
+///
+/// A root is a root in all three worlds and only the starter differs: a pthread in
+/// `laufzeit/start.c`, a core on bare metal, a `kthread` in `laufzeit/kmodul/kmodul.c`. Before
+/// this, `TreiberPlan` did not know the unit's art, so a `module` with a `concurrent` set had
+/// a hosted pthread driver written beside its `.ko` -- **a file for a world the module is not
+/// in**, and one that would have compiled against `pthread.h` in a kernel build if anything
+/// had ever picked it up.
+///
+/// The list travels as `wurzeln.h`, out of the same walk the other two flavours read (`W7`),
+/// which is why the dry run names that file and not a driver.
+#[test]
+fn die_wurzeln_eines_moduls_werden_kthreads_und_kein_hosted_treiber() {
+    let mit_wurzeln = "module treiber::probe {
+fn eins() effects { pure } costs <= 8 ops { return; }
+fn zwei() effects { pure } costs <= 8 ops { return; }
+concurrent { eins, zwei };
+impl fn laden() -> u32 effects { pure } costs <= 8 ops { return 0; }
+impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
+}
+";
+    let (aus, fehler, code) = kmod_lauf(
+        "modul_wurzeln",
+        "unit gabbro_probe module laden entladen",
+        mit_wurzeln,
+        "kmod laufzeit/kmodul /lib/modules/x/build\n",
+    );
+    assert_eq!(code, 0, "a module with concurrent roots builds its plan:\n{aus}\n{fehler}");
+    assert!(aus.contains("roots [eins, zwei]"), "the roots are seen:\n{aus}");
+    assert!(aus.contains("wurzeln.h (one kthread per root)"), "as kthreads:\n{aus}");
+    assert!(!aus.contains(".treiber.c"), "and no hosted driver is promised:\n{aus}");
+    assert!(!aus.contains(".metall.c"), "and no bare-metal one either:\n{aus}");
+
+    // The twin -- the same two roots in a `program` unit still get the hosted driver -- is
+    // `bau.rs::treiberregel_tests::die_art_entscheidet_welcher_treiber`, where the art can be
+    // varied without a second manifest.
 }
 
 /// **A `module` unit may not declare the hosted entry.** `module_init` calls the function the

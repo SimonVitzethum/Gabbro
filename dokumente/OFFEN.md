@@ -1621,7 +1621,10 @@ binding joins it on the next run.
 
 ---
 
-## O34 — A Gabbro `atomic` has no kernel-module lowering, and the build refuses it (recorded 2026-09-28, server lane)
+## O34 — A Gabbro `atomic` had no kernel-module lowering (recorded 2026-09-28, server lane; LIFTED the same day)
+
+*Kept as the record of what the lifting had to supply, because the refusal below is the
+specification the lowering was measured against. The residue is in the two rows at the end.*
 
 A Gabbro `atomic` lowers to a C11 `_Atomic` carrier with C11 orderings. Inside a Linux kernel
 object that is **a second memory model beside the kernel's own** (`READ_ONCE`/`WRITE_ONCE`,
@@ -1636,4 +1639,6 @@ to it.
 | **why a refusal and not a lowering** | *Safety is never traded for features.* A lowering onto `atomic_t` that nobody has related to `SchwachX` would make the wall green and the claim false: the program would carry a memory-model assumption the statement does not make |
 | **what lifting it needs** | (1) a kernel-module lowering of `atomic` onto the kernel's own primitives, per ordering; (2) the argument that the kernel's model **refines** the one `SchwachX` assumes — i.e. that every execution the kernel's primitives admit is one W admits. Neither is built, and (2) is the hard half: it is a statement about the Linux memory model (LKMM), not about Gabbro |
 | **what it costs today** | a kernel module communicates through its declared foreign calls and through locks; the bounded heap, `concurrent` roots and locks are unaffected. Measured: `messung/proben/kmodul/halde-treiber.gab` loads, allocates and refuses on full in QEMU without one |
-| **status** | recorded, not tasked; no code, gift or example number reserved. The refusal is the answer until (1) and (2) exist |
+| **status** | **LIFTED 2026-09-28** (server lane, session 5, TODO 0e K6). Simon tasked it the same day and fixed the shape of (2): a NAMED ASSUMPTION, not a Lean proof of LKMM refinement. (1) is `laufzeit/kmodul/include/stdatomic.h` -- the emitter's nine call forms and one qualifier, a CLOSED surface, onto `READ_ONCE`/`WRITE_ONCE`, `smp_load_acquire`/`smp_store_release`, `smp_store_mb` and the `try_cmpxchg` family, one row per ordering, each at least as strong as what it replaces (the failure path of a compare-exchange carries its own `smp_mb()`: LKMM gives a failed `cmpxchg` no ordering in ANY variant). (2) is **(M11)** of `Zielsatz/Spec.lean`, reviewed in `messung/SERVER-0E-SPEC-DIFF.md` Part II. Measured: QEMU probe `atomar` with two declared roots as kthreads, 10 of 10 harness mutations caught; `instrumente/pruefe-atomar-zugriffe.py` green over 276 emitted files; the 13 rows expanded against their primitive. No `N` code, no gift, no example number: the lifted refusal keeps no `Satz`, and what replaced it is a header and two instruments |
+| **what is STILL refused** | a floating-point `atomic` (`bau.rs::modulregel`, and a `_Generic` in the header: kernel code may not use the FPU without `kernel_fpu_begin`/`_end`, which nothing declares); an unlisted (form, ordering) pair (an undefined name at the kernel build); a read-modify-write on an atomic whose width the target's native `try_cmpxchg` does not cover (`_Static_assert`). And, not about atomics at all but visible from here: a module unit with FLOATS anywhere is unexamined -- the rule above is about the atomic lowering, and the FPU question is wider than it |
+| **what follows it** | `AUFTRAG-1.md` **K7** (Simon, 2026-09-28): these primitives are the module runtime's, and every kernel call of the module target is to be BOUND BY THE PROGRAM. When that lands, (M11)'s substance is unchanged and one sentence of it moves -- the rows become the program's binding, and the assumption is that the BOUND primitives are at least as strong |

@@ -1020,3 +1020,267 @@ refused the emitted `static Runden Runden_speicher` as `-Wunneeded-internal-decl
 
 **Ledger:** gift **1364**, example **166**. No new `N` code — `H102` keeps its name and its
 sentence; what changed is its trigger, and the sentence says so with the measurement beside it.
+
+---
+
+## 11. Session 5 (2026-09-28) — K6: a Gabbro `atomic` becomes the kernel's own memory model
+
+*Acceptance point **4b**. Everything below was run on `ubuntu@simon.jocraft.cc`; every number
+has its command beside it. Isabelle is not installed here, so `abnahme.py --voll` was not run
+and is not claimed.*
+
+### 11.1 What the session was handed, and what it is
+
+Session 3 had REFUSED an `atomic` in a `module` unit before a byte of C was written, and
+recorded what lifting it needs as OFFEN **O34**: *(1) a lowering onto the kernel's own
+primitives; (2) the argument that the kernel's model refines the one `SchwachX` assumes.*
+Simon tasked the lift the same day (`AUFTRAG-1.md` K6) and fixed the shape of (2): **a named
+assumption, not a Lean proof of LKMM refinement**, architecture-neutral, naming what it relies
+on per ordering.
+
+So the refusal is now a table. The whole of the emitter's surface, measured before anything was
+written (`gabbro emit` over `git ls-files beispiele messung/proben`):
+
+| | |
+|---|---|
+| call forms the emitter can write | **nine** — two access arms, five `holform` rows, two compare-exchange arms |
+| orderings per form | load `{relaxed, acquire, seq_cst}`, store `{relaxed, release, seq_cst}`, fetch `{relaxed, acq_rel, seq_cst}`, compare-exchange three PAIRS |
+| in the corpus's emitted C | 61 loads, 45 stores, 9 weak CAS, 6 strong CAS, 2 `fetch_or`, 1 `fetch_and`, 1 `fetch_xor`; 71 atomic objects of types `bool`, `uint32_t`, `uint64_t` |
+
+**A closed surface is what a header can cover completely**, and that decided where the mapping
+goes.
+
+### 11.2 The lowering, and why it is a header and not the emitter
+
+`laufzeit/kmodul/include/stdatomic.h` — until this session a REFUSAL (`_Atomic` `#define`d to
+an unknown identifier), now the mapping. Two reasons for the header, and the first is a hard
+constraint of this tree:
+
+1. **The emitted C is pinned byte for byte** in the translation-validation chain
+   (`grammatik/Grammatik/CText104.lean`, `a2_104 := rfl`). An emitter that wrote
+   `smp_load_acquire` for one target and `atomic_load_explicit` for another would fork the
+   artefact the chain reads. *Measured: `0` bytes of emitted C change anywhere in this
+   session.*
+2. The surface is closed, so a form or ordering NOT in the table pastes to an undefined name
+   and the kernel build stops. Silence is not among the answers.
+
+The rows, each at least as strong as the C11 operation it replaces, and argued from the
+kernel's portable API and not from x86-TSO (aarch64 and RISC-V come later):
+
+| C11 | kernel | what it relies on |
+|---|---|---|
+| load relaxed | `READ_ONCE` | single-copy atomicity for an aligned 1/2/4/8-byte scalar |
+| load acquire | `smp_load_acquire` | the kernel's acquire load, on every architecture |
+| load seq_cst | `smp_mb` + acquire + `smp_mb` | the leading/trailing-fence mapping of an SC load |
+| store relaxed | `WRITE_ONCE` | as above, write side |
+| store release | `smp_store_release` | the kernel's release store |
+| store seq_cst | `smp_mb` + `smp_store_mb` | the leading/trailing-fence mapping of an SC store |
+| fetch_\* relaxed | `try_cmpxchg_relaxed` loop | a successful cmpxchg is ONE read-modify-write |
+| fetch_\* acq_rel | `try_cmpxchg` loop | the unsuffixed form is fully ordered — stronger, never weaker |
+| fetch_\* seq_cst | `smp_mb` + loop + `smp_mb` | as above, with the SC fences |
+| CAS (relaxed, relaxed) | `try_cmpxchg_relaxed` | same shape and same answer as C11's |
+| CAS (release, acquire) | `try_cmpxchg_release`, **`smp_mb` on FAILURE** | see below |
+| CAS (seq_cst, seq_cst) | `smp_mb` + `try_cmpxchg` + `smp_mb` | the fences carry both paths |
+
+**The failure path of a compare-exchange is the one place the obvious mapping would be
+WEAKER**, and it is the finding of this session's design half. C11 gives a compare-exchange two
+orderings and the emitter writes `(release, acquire)`; in the Linux model a failed `cmpxchg`
+implies **no ordering at all — not even in the unsuffixed, fully ordered form**
+(`Documentation/atomic_t.txt`). Dropping that `smp_mb()` would have been sound on success and
+unordered on failure, and *no wall in this tree would have shown it, because x86 hides it.*
+
+`_Atomic` becomes `volatile`. That is not the atomicity — it is the damage limit: it buys
+strictly less than `_Atomic` and strictly more than nothing, and it is not a reason to skip the
+access check below. What the header still REFUSES, each with its own sentence: a
+floating-point `atomic` (a `_Generic` whose controlling expression costs no load), a
+read-modify-write of a width the target's native `try_cmpxchg` does not cover
+(`_Static_assert`), and any unlisted (form, ordering) pair. All three measured against a
+scratch module (`~/claude-lane/kratz/s5/atomtest`, `make -C /lib/modules/$(uname -r)/build`):
+
+```
+bad1 (_Atomic double)            error: static assertion failed: "a Gabbro `atomic` of floating-point type has no kernel-module lowering: …"
+bad2 (fetch_add on a u16)        error: static assertion failed: "a read-modify-write on this `atomic` needs a cmpxchg of its width …"
+bad3 (memory_order_consume)      error: implicit declaration of function 'GABBRO_KMOD_LADEN_memory_order_consume'
+```
+
+### 11.3 The build refusal, narrowed and not dropped
+
+`crates/gabbro-cli/src/bau.rs`, `modulregel`: the blanket refusal of every `atomic` became the
+refusal of the FLOATING-POINT one, with the reason no barrier repairs (kernel code may not use
+the FPU without `kernel_fpu_begin`/`_end`, which nothing declares). `AtomarFund` carries the
+one bit the rule now needs, and an array of floats is a float atomic (`_Atomic` qualifies the
+ELEMENT type). The CLI test holds all four directions —
+`ein_modul_mit_atomic_wird_gesenkt_und_ein_gleitkomma_atomic_faellt`:
+
+```
+$ cargo test --release --test bausystem
+   16 passed; 0 failed
+```
+
+**The `u32` half is asserted FIRST**, deliberately: a rule that kept refusing every atomic
+would leave the test green while the lowering beside it went unused.
+
+### 11.4 A module's `concurrent` roots become kernel threads (K2's module half)
+
+The probe for 4b needs two threads, and the honest way to have them is for the PROGRAM to
+declare them. Before this session that did not work: `TreiberPlan` did not know the unit's art,
+so `hat_gehostet()` was true for a `module` with a `concurrent` set and **a hosted pthread
+driver was written beside its `.ko`** — a file for a world the module is not in.
+
+- `TreiberPlan` carries the art; `hat_gehostet`/`hat_metall` answer false for a module and
+  `hat_kmod_faeden` answers for it. Unit test `die_art_entscheidet_welcher_treiber`: the three
+  predicates are exclusive, and the ROOT LIST is the same list either way — one walk.
+- `gabbro build` writes `wurzeln.h` (`#define GABBRO_WURZELN(F) F(a) F(b)`, name order, one
+  line) out of the same walk `sperren.h` comes from. Unit tests `wurzelliste_tests`.
+- `laufzeit/kmodul/kmodul.c` expands it into one `kthread` per root: **started after the unit's
+  load function answers 0, joined before its unload function runs.** A `struct completion` per
+  root and not `kthread_stop` — a Gabbro root returns when it is done and never asks whether it
+  should stop. A root that fails to start completes at once and refuses the load.
+- *A root that never returns hangs `rmmod`.* Named in the file, not worked around: it is the
+  same contract the hosted driver's join has, and a driver that gave up waiting would run the
+  unit's exit beside a live thread.
+- `include/stdatomic.h` joined `KMOD_QUELLEN` (5 → 6 files): it stopped being a refusal and
+  became load-bearing, so a changed ordering row must rebuild the module.
+
+### 11.5 Acceptance point 4b, measured
+
+`messung/proben/kmodul/atomar-faeden.gab` + `atomar.c`, probe `atomar` of
+`instrumente/pruefe-kernelmodul.sh`, QEMU with **`-smp 2`** (with one vCPU a lost update would
+need a preemption to show at all):
+
+```
+$ instrumente/pruefe-kernelmodul.sh
+   HARNESS: mapping ok (13 rows expanded and held against their primitive)
+   HARNESS: atomic accesses ok
+   HARNESS: insmod ok / rmmod ok
+   gabbro-atomar: k=1 v=0        load
+   gabbro-atomar: k=2 v=512      the counter: 256 rounds x 2 roots, EXACT
+   gabbro-atomar: k=3 v=256      the flag seen set
+   gabbro-atomar: k=4 v=0        the payload never stale
+   gabbro-atomar: k=5 v=3        two bits ORed through atomic_fetch_or
+   gabbro-atomar: k=9 v=0        unload
+   GREEN (three probes)                                        22.9 s
+```
+
+Each number is a different row of the mapping: the counter is the bounded CAS loop
+(`try_cmpxchg_relaxed`), the flag is `smp_store_release`/`smp_load_acquire`, the bits are one
+`atomic_fetch_or_explicit` on an ORDERED atomic (so `acq_rel`, the unsuffixed `try_cmpxchg`).
+`k=3` is checked as a MINIMUM and not as a value — it depends on scheduling, and a run in which
+the flag was never seen reports a clean `k=4 v=0` about a branch it never entered.
+
+**The probe's shape was decided by a refusal, and the refusal was right.** The obvious payload
+(`beispiele/117`: ordinary storage published on the flag) is `N291`/`N301` the moment the two
+bodies are a declared `concurrent` set — an unguarded write-read race, and
+`Zielsatz/Spec.lean` lists unguarded publish/await payloads under NOT CLAIMED. So the payload
+is a second ATOMIC, which the footprint rule admits (`GeteiltV`). The pairing stays written
+either way: without it `V009` refuses a flag that gates a branch behind which a payload is
+read.
+
+```
+$ instrumente/pruefe-kernelmodul.sh --gift all
+   gifts: 10 of 10 caught                                      2 min 4 s
+```
+
+### 11.6 What a green run does NOT say — and the two static checks that answer it
+
+**On x86 no run can falsify a missing barrier.** Acquire and release are free there, so a
+mapping that dropped `smp_load_acquire` and `smp_store_release` would boot, run and answer
+every expected number. A poison probe that cannot fail is not a poison probe (`W1`). So the
+mapping is measured where it CAN fail:
+
+1. **`instrumente/pruefe-atomar-zugriffe.py`** — every access to an atomic goes through one of
+   the nine call forms, TOKEN level and not line level, over the whole corpus. It is stage 22c
+   of `pruefe-emission.sh` now.
+
+   ```
+   $ instrumente/pruefe-atomar-zugriffe.py
+      files checked   276 (39 of them declare an atomic)
+      atomic objects  75
+      accesses        137
+      GREEN: no plain access to an atomic in the emitted C.        4.8 s
+   $ instrumente/pruefe-atomar-zugriffe.py --selbsttest
+      gifts: 6 of 6 as expected
+   ```
+
+   Session 4 had measured why this cannot be a grep: a line-based one reports **61** plain
+   accesses over this corpus and every one is noise — a continuation line of a multi-line
+   compare-exchange, or a `#define` whose name merely contains an atomic's. Two of the six
+   self-test probes are exactly those two false positives, and they must stay SILENT.
+
+2. **The mapping expansion** — each of the 13 rows preprocessed with the kernel's headers
+   stubbed out (so `READ_ONCE` and `smp_load_acquire` stay as tokens) and held against the
+   primitive it must select. It reads the header **in the build directory**, i.e. the copy the
+   `.ko` was built from. Gift 8 is a deliberately too-weak mapping (acquire → `READ_ONCE`,
+   release → `WRITE_ONCE`):
+
+   ```
+   GIFT 8: caught (1 finding(s))
+       RED: the atomic mapping did not hold:
+            HARNESS: mapping FAILED -- load acquire does not select smp_load_acquire
+            HARNESS: mapping FAILED -- store release does not select smp_store_release
+   ```
+
+   **It was caught for the WRONG reason the first time**, and that is a finding about the
+   harness: the mutation's pattern also matched the seq_cst row, the "did it apply?" guard
+   answered no, the run returned before QEMU, and every expected line was then missing — which
+   reads as a fat catch of 11 findings and measures nothing. *A gift that does not apply looks
+   exactly like a pass (session 4, gift 5); this is the same fact from the other side, and it
+   looks exactly like a catch.* The instrument reports `DOES NOT APPLY` as its own outcome now,
+   counted as NOT caught, and the two rows are matched whole and by fixed string.
+
+Gift 9 is the third: a plain access put back into the emitted C, caught by (1) — `_Atomic` is
+`volatile` here, so it compiles without a word.
+
+### 11.7 The named assumption (M11)
+
+`grammatik/Grammatik/Zielsatz/Spec.lean`, a block of its own between `-- BEGIN Linux kernel
+module` and `-- END`:
+
+```
+$ git diff --stat -- grammatik/Grammatik/Zielsatz/Spec.lean
+ 1 file changed, 47 insertions(+)
+```
+
+**Comment only**, 0 deletions, and it is a REFINEMENT of the existing assumption (2) of the
+memory-model reading (*"the C compiler and the hardware implement C11 atomics and the orders as
+specified"*) — which has no referent inside a kernel object, since the kernel is built
+`-nostdinc` and has a model of its own. The review is `messung/SERVER-0E-SPEC-DIFF.md` Part II
+(§§7–11), including what a reviewer should check and the one drift risk (the table stands in
+two texts; what keeps them honest is that the expansion check reads the HEADER).
+
+```
+$ cd grammatik && ~/.elan/bin/lake build                 356 jobs, 2 min 20 s
+$ cd grammatik && ~/.elan/bin/lake env lean Nachpruefung.lean | grep gabbro_ziel
+'Gabbro.Grammatik.Zielsatz.gabbro_ziel' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+### 11.8 The walls
+
+| | |
+|---|---|
+| `cargo test --release --no-fail-fast` | rc 0, **1424 passed 0 failed** (`~/claude-lane/logs/test-s5.log`); 1420 before, +4 (2 `wurzelliste`, 1 `die_art_entscheidet_welcher_treiber`, 1 CLI `die_wurzeln_…`) |
+| `instrumente/pruefe-emission.sh` | rc 0, **ALL PASS — 51 durchgestochen, 322 von 322** (`~/claude-lane/logs/emission-s5.log`) |
+| `grammatik` | `lake build` 356 jobs; `#print axioms gabbro_ziel` standard |
+| `pruefe-kernelmodul.sh` | 3 probes GREEN; `--gift all` 10 of 10 |
+| `pruefe-atomar-zugriffe.py` | GREEN over 276 files; `--selbsttest` 6 of 6 |
+| `pruefe-todo.py` / `-saetze.py` / `-cformen.py` / `-ctext.py` / `-widerruf.py` | rc 0 |
+| `abnahme.py --voll` | **NOT RUN** — no Isabelle on this machine |
+
+Emission counter: `MARKE_EMIT_M` **158 → 159**, dated with its reason (the new probe);
+`MARKE_EMIT` and `MARKE_EMIT_G` untouched — no example and no poison file was added, the
+instrument's ten mutations are harness mutations. README guardian count **50 → 51**
+(`pruefe-atomar-zugriffe.py`).
+
+### 11.9 What this session did NOT do
+
+- **K7** (`AUFTRAG-1.md`, added by Simon during this session): every kernel call of the module
+  target — the lock primitives of `sperre.h`, the arena's `vzalloc`, the kthread glue and the
+  K6 atomic rows — is to be BOUND BY THE PROGRAM, through a library unit it `use`s, with a
+  refusal for an unbound primitive and an instrument over every undefined symbol of the built
+  `.ko` (acceptance point 4c). **Untouched.** K6 was built so that the move is a substitution
+  and not a rewrite: the rows are one table in one file, and (M11)'s substance does not change
+  when they become the program's binding (`SERVER-0E-SPEC-DIFF.md` §10).
+- **K3's model half** — the `entry`/`boot` vector, registers and steps still have no form in
+  `Einheit`, and handler pinning/re-entry stay outside `KernPlan` (OFFEN O19).
+- No `N` code, no gift number and no example number was taken: a lifted refusal keeps no
+  `Satz`, and what replaced it is a header, a probe and two instruments.

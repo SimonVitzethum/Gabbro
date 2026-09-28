@@ -48,10 +48,12 @@ done
 
 # -- the two probes, and what each expects, in one place ----------------------
 #
-# TWO PROBES, because the module target answers two questions and one program
-# cannot ask both. `halde` is the bounded heap (acceptance point 3); `takt` is
-# `masks irqs` (K3). They share everything below this block -- one build recipe,
-# one initramfs shape, one verdict function.
+# THREE PROBES, because the module target answers three questions and one
+# program cannot ask them all. `halde` is the bounded heap (acceptance point 3);
+# `takt` is `masks irqs` (K3); `atomar` is a Gabbro `atomic` lowered onto the
+# kernel's own memory model (K6, acceptance point 4b). They share everything
+# below this block -- one build recipe, one initramfs shape, one verdict
+# function.
 #
 # `halde` -- `messung/proben/kmodul/halde-treiber.gab` declares `arena Knoten
 # capacity 2 .. 4 max 4096 of Wert` (8-byte slots) and grows it three times by
@@ -68,20 +70,42 @@ done
 # interrupt ever arrived on a core that was holding it; `ticks` says the timer
 # fired at all, WITHOUT WHICH `landed=0` measures nothing. Both are checked.
 #
-# **The arenas and the locks are NOT named here.** The emitted unit carries its
-# own arena list (`#define GABBRO_ARENEN`, emitter) and `gabbro build` writes the
-# lock list beside it (`sperren.h`, out of the same walk the hosted and the
-# bare-metal driver read) -- a harness that repeated either would be a second
-# register over one fact, and the one nobody reads is the one that drifts (`W7`).
-PROBEN="halde takt"
+# `atomar` -- `messung/proben/kmodul/atomar-faeden.gab` declares TWO CONCURRENT
+# ROOTS and four atomics. `gabbro build` writes the roots into `wurzeln.h` and
+# the module runtime starts one `kthread` per root, joining both before the
+# unload function reports. The four numbers the run must show are exact and each
+# one is a different row of the mapping: a saturating counter bumped 256 times
+# by each root (the bounded CAS loop -> `try_cmpxchg_relaxed`, answer 512), how
+# often the release/acquire flag was seen set (`smp_store_release` /
+# `smp_load_acquire`; > 0, or the run measured nothing), how often it was seen
+# set over a payload that was still 0 (must be 0), and a bit word each root ORs
+# its own bit into (one `atomic_fetch_or_explicit` -> the fully ordered
+# `try_cmpxchg`, answer 3).
+#
+# **A green run of this probe does not measure the BARRIERS**, and the file says
+# so: on x86 acquire and release are free, so no run here could tell a correct
+# mapping from one that dropped them. That is what the mapping stage below is
+# for -- it expands every (form, ordering) pair and holds it against the
+# primitive the row requires, and gift 8 is a deliberately too-weak mapping.
+#
+# **The arenas, the locks and the roots are NOT named here.** The emitted unit
+# carries its own arena list (`#define GABBRO_ARENEN`, emitter) and `gabbro build`
+# writes the lock list and the root list beside it (`sperren.h`, `wurzeln.h`, out
+# of the same walk the hosted and the bare-metal driver read) -- a harness that
+# repeated any of them would be a second register over one fact, and the one
+# nobody reads is the one that drifts (`W7`).
+PROBEN="halde takt atomar"
 
 probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ERWARTET FRIST
     # **Every per-probe variable is cleared first.** Without this line `TICKS_MIN`
     # survived from one probe into the next and `halde` -- which has no timer --
     # was RED for a tick count it never claimed to have. *A selector that only
     # ever sets is a selector that carries the last probe's answer.*
-    unset TICKS_MIN
+    unset TICKS_MIN GESEHEN_MIN ABBILDUNG
     QUELLE=""; FREMD=""; MODUL=""; INIT=""; EXIT=""; PARAM=""; ERWARTET=""; FRIST=600
+    # One vCPU unless the probe needs two; TCG is slow and a second core costs
+    # boot time that only the concurrent probe has a use for.
+    SMP=1
     case "$1" in
         halde)
             QUELLE="$W/messung/proben/kmodul/halde-treiber.gab"
@@ -117,8 +141,130 @@ gabbro-takt: k=9 v=0"
             # measured nothing (`W1`): the verdict below demands this many ticks.
             TICKS_MIN=5
             ;;
+        atomar)
+            QUELLE="$W/messung/proben/kmodul/atomar-faeden.gab"
+            FREMD="$W/messung/proben/kmodul/atomar.c"
+            MODUL=gabbro_atomar
+            INIT=laden
+            EXIT=entladen
+            PARAM=""
+            # Two vCPUs, so the two declared roots really run at the same time.
+            # With one, a lost update in the CAS loop would need a preemption to
+            # show at all -- the answer would be 512 either way and the run would
+            # measure the counter's arithmetic, not its atomicity.
+            SMP=2
+            FRIST=120
+            # The four numbers, exact, in the order the unload function writes
+            # them. `k=2 v=512` is the counter (256 rounds x 2 roots), `k=4 v=0`
+            # the payload check, `k=5 v=3` the two bits.
+            ERWARTET="gabbro-atomar: k=1 v=0
+gabbro-atomar: k=2 v=512
+gabbro-atomar: k=4 v=0
+gabbro-atomar: k=5 v=3
+gabbro-atomar: k=9 v=0"
+            # `k=3` is NOT in the list above, because it is not a constant: how
+            # often the consumer saw the flag set depends on the scheduling. A
+            # run in which it was never seen reports a clean `k=4 v=0` and has
+            # measured NOTHING about the flag (`W1`), so the verdict demands a
+            # minimum instead of a value -- the same shape `takt` gives `ticks`.
+            GESEHEN_MIN=1
+            # And the mapping itself is checked where the module was BUILT: the
+            # rows are expanded and held against the primitives they require.
+            ABBILDUNG=1
+            ;;
         *) echo "pruefe-kernelmodul.sh: no such probe '$1'" >&2; exit 2 ;;
     esac
+}
+
+# -- the mapping, measured by EXPANDING it (server lane, TODO section 0e K6) ---
+#
+# THE PROBLEM THIS SOLVES. `atomic` in a kernel module is lowered by
+# `laufzeit/kmodul/include/stdatomic.h`: one row per (call form, ordering), each
+# row at least as strong as the C11 operation it replaces. A row that was
+# quietly too weak -- acquire as `READ_ONCE`, release as `WRITE_ONCE` -- would
+# compile, load, run and answer every expected number, BECAUSE THIS IS x86:
+# acquire and release are free there, and the barriers the mapping owes a
+# weak-memory architecture leave no trace in a green run on this machine.
+# *A measurement that cannot fail is not a measurement* (`W1`).
+#
+# So the mapping is measured where it can fail: in the PREPROCESSOR. Each row is
+# expanded on its own line and held against the primitive it must use. The
+# expansion is of the header IN THE BUILD DIRECTORY -- the copy the `.ko` was
+# actually built from -- so this is not a reading of the tree but of the
+# artefact, and gift 8 (a deliberately too-weak mapping) is caught here.
+#
+# The kernel's own headers are STUBBED OUT, empty, and that is what makes the
+# check readable: `READ_ONCE` and `smp_load_acquire` then stay as tokens instead
+# of expanding into inline assembly. What is measured is which primitive the row
+# selects, which is exactly the claim the named assumption (M11) rests on.
+#
+# The table below is a SPECIFICATION and the header is its implementation, so
+# the two are not a second register over one fact: this is the shape of a poison
+# probe, not of a duplicated list.
+abbildung_pruefe() {   # $1 = the module build dir (its `inc/` holds stdatomic.h)
+    local kdir="$1" arb="$1/abbildung" befunde=0 zeile marke muss text
+    rm -rf "$arb"; mkdir -p "$arb/stubs/linux"
+    : > "$arb/stubs/linux/compiler.h"
+    : > "$arb/stubs/linux/atomic.h"
+    : > "$arb/stubs/linux/types.h"
+    cat > "$arb/rows.c" <<'EOF'
+#include <stdatomic.h>
+_Atomic unsigned int A;
+void f(void) {
+Z01 atomic_load_explicit(&A, memory_order_relaxed);
+Z02 atomic_load_explicit(&A, memory_order_acquire);
+Z03 atomic_load_explicit(&A, memory_order_seq_cst);
+Z04 atomic_store_explicit(&A, 1u, memory_order_relaxed);
+Z05 atomic_store_explicit(&A, 1u, memory_order_release);
+Z06 atomic_store_explicit(&A, 1u, memory_order_seq_cst);
+Z07 atomic_fetch_add_explicit(&A, 1u, memory_order_relaxed);
+Z08 atomic_fetch_add_explicit(&A, 1u, memory_order_acq_rel);
+Z09 atomic_fetch_add_explicit(&A, 1u, memory_order_seq_cst);
+Z10 atomic_fetch_or_explicit(&A, 1u, memory_order_relaxed);
+Z11 atomic_compare_exchange_weak_explicit(&A, &A, 1u, memory_order_relaxed, memory_order_relaxed);
+Z12 atomic_compare_exchange_strong_explicit(&A, &A, 1u, memory_order_release, memory_order_acquire);
+Z13 atomic_compare_exchange_weak_explicit(&A, &A, 1u, memory_order_seq_cst, memory_order_seq_cst);
+}
+EOF
+    if ! cc -E -P -nostdinc -I "$arb/stubs" -I "$kdir/inc" "$arb/rows.c" \
+            > "$arb/rows.i" 2> "$arb/rows.err"; then
+        echo "HARNESS: mapping FAILED -- the header did not preprocess"
+        sed 's/^/    /' "$arb/rows.err" | head -5
+        return 0
+    fi
+    # marker | what the row MUST select | the row in words
+    while IFS='|' read -r marke muss was; do
+        [ -z "$marke" ] && continue
+        # One source line expands to one output line -- a macro expansion never
+        # introduces a newline -- so a row is exactly the line its marker opens.
+        text="$(grep -m1 "^$marke" "$arb/rows.i")"
+        if [ -z "$text" ]; then
+            echo "HARNESS: mapping FAILED -- the row $was ($marke) did not survive preprocessing"
+            befunde=$((befunde+1))
+            continue
+        fi
+        if ! printf '%s' "$text" | grep -qE "$muss"; then
+            echo "HARNESS: mapping FAILED -- $was does not select $muss"
+            befunde=$((befunde+1))
+        fi
+    done <<'EOF'
+Z01|READ_ONCE|load relaxed
+Z02|smp_load_acquire|load acquire
+Z03|smp_mb.*smp_load_acquire.*smp_mb|load seq_cst
+Z04|WRITE_ONCE|store relaxed
+Z05|smp_store_release|store release
+Z06|smp_mb.*smp_store_mb|store seq_cst
+Z07|try_cmpxchg_relaxed|fetch_add relaxed
+Z08|try_cmpxchg[^_]|fetch_add acq_rel (the unsuffixed, fully ordered form)
+Z09|smp_mb.*try_cmpxchg[^_].*smp_mb|fetch_add seq_cst
+Z10|try_cmpxchg_relaxed|fetch_or relaxed
+Z11|try_cmpxchg_relaxed|compare-exchange (relaxed, relaxed)
+Z12|try_cmpxchg_release.*smp_mb|compare-exchange (release, acquire) with its failure fence
+Z13|smp_mb.*try_cmpxchg[^_].*smp_mb|compare-exchange (seq_cst, seq_cst)
+EOF
+    if [ "$befunde" = 0 ]; then
+        echo "HARNESS: mapping ok (13 rows expanded and held against their primitive)"
+    fi
 }
 
 KERNVERSION="$(uname -r)"
@@ -187,14 +333,35 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     opportunities is not a measurement (`W1`).
 #   7 the expected `landed=0` moves to `landed=1`: does the run read the kernel
 #     log, or only the exit codes? (The `halde` twin of this is gift 1.)
-gifte() { echo "1 2 3 4 5 6 7"; }
+#
+# The `atomar` probe's three (K6, and 8 is the one that is about the LOWERING
+# and not about the harness):
+#
+#   8 the ATOMIC MAPPING is made deliberately too weak in the copy the module
+#     was built from (`inc/stdatomic.h`): acquire becomes `READ_ONCE` and
+#     release becomes `WRITE_ONCE`. **On x86 the run would still answer every
+#     expected number** -- acquire and release are free there -- so a harness
+#     that only booted the module would call this green, and the barriers a
+#     weak-memory architecture is owed would be gone in silence. It is caught by
+#     the mapping stage, which expands the rows and holds each against the
+#     primitive it must select. *This gift is the reason that stage exists.*
+#   9 a PLAIN ACCESS replaces one of the calls in the emitted C
+#     (`atomic_load_explicit(&NUTZLAST, …)` becomes `NUTZLAST`). On a C11
+#     `_Atomic` object that would still be an atomic operation; in the module
+#     target `_Atomic` is `volatile`, so it is an unordered access that compiles
+#     without a word. Caught by `instrumente/pruefe-atomar-zugriffe.py` over the
+#     emitted C in the build directory.
+#  10 the expected counter moves (512 -> 513): does the run read the kernel log?
+#     (The `halde` twin is gift 1, the `takt` twin gift 7.)
+gifte() { echo "1 2 3 4 5 6 7 8 9 10"; }
 
 # Which probe a gift belongs to -- a gift is a mutation OF a run, and a run is
 # of one probe.
 gift_probe() {
     case "$1" in
-        1|2|3|4) echo halde ;;
-        5|6|7)   echo takt ;;
+        1|2|3|4)  echo halde ;;
+        5|6|7)    echo takt ;;
+        8|9|10)   echo atomar ;;
         *) echo "pruefe-kernelmodul.sh: no such gift '$1'" >&2; exit 2 ;;
     esac
 }
@@ -273,6 +440,61 @@ EOF
         fi
         cp "$kdir/$MODUL.ko" "$arb/bau/$MODUL.ko"
     fi
+    if [ "$gift" = 8 ] || [ "$gift" = 9 ]; then
+        # **The two `atomar` mutations that need a re-make**, both on what the build
+        # left behind, so neither carries a second copy of the recipe:
+        #   8 the mapping is made too weak in the copy the module is built from;
+        #   9 a plain access replaces one of the nine calls in the emitted C.
+        local kdir="$arb/bau/$MODUL.kmod"
+        if [ "$gift" = 8 ]; then
+            # **The two rows are matched WHOLE and by fixed string**, and both
+            # before and after. A looser pattern (`smp_load_acquire(P)`) also
+            # stands in the seq_cst row, so the "did it apply?" question would
+            # have answered NO over a mutation that had applied perfectly --
+            # and a gift that does not apply is reported as such below, never
+            # as a catch.
+            local zeile_a='    ({ GABBRO_KMOD_ATOMAR_TYP(P); smp_load_acquire(P); })'
+            local zeile_r='    ({ GABBRO_KMOD_ATOMAR_TYP(P); smp_store_release(P, (V)); })'
+            local h="$kdir/inc/stdatomic.h"
+            grep -Fq "$zeile_a" "$h" && grep -Fq "$zeile_r" "$h" || {
+                echo "HARNESS: gift 8 does not apply -- the acquire/release rows are not where it looks"
+                return 0
+            }
+            sed -i 's/({ GABBRO_KMOD_ATOMAR_TYP(P); smp_load_acquire(P); })/({ GABBRO_KMOD_ATOMAR_TYP(P); READ_ONCE(*(P)); })/' "$h"
+            sed -i 's/({ GABBRO_KMOD_ATOMAR_TYP(P); smp_store_release(P, (V)); })/({ GABBRO_KMOD_ATOMAR_TYP(P); WRITE_ONCE(*(P), (V)); })/' "$h"
+            if grep -Fq "$zeile_a" "$h" || grep -Fq "$zeile_r" "$h"; then
+                echo "HARNESS: gift 8 does not apply -- a row did not change"
+                return 0
+            fi
+        else
+            grep -q 'atomic_load_explicit(&NUTZLAST, memory_order_relaxed)' "$kdir/einheit.c" || {
+                echo "HARNESS: gift 9 does not apply -- no relaxed load of NUTZLAST in einheit.c"
+                return 0
+            }
+            sed -i 's/atomic_load_explicit(&NUTZLAST, memory_order_relaxed)/NUTZLAST/' "$kdir/einheit.c"
+        fi
+        rm -f "$kdir/$MODUL.ko" "$kdir"/*.o
+        if ! make -C "$KBUILD" "M=$(cd "$kdir" && pwd)" modules > "$arb/make.log" 2>&1; then
+            echo "HARNESS: the mutated module did not build"
+            tail -20 "$arb/make.log" >&2
+            return 0
+        fi
+        cp "$kdir/$MODUL.ko" "$arb/bau/$MODUL.ko"
+    fi
+
+    # **The two STATIC checks over what was built**, for the probe that asks for
+    # them. They run after every mutation above, on the build directory itself --
+    # so what they measure is the artefact the kernel loaded and not the tree.
+    if [ -n "${ABBILDUNG:-}" ]; then
+        abbildung_pruefe "$arb/bau/$MODUL.kmod"
+        if "$W/instrumente/pruefe-atomar-zugriffe.py" "$arb/bau/$MODUL.kmod/einheit.c" \
+                > "$arb/zugriffe.log" 2>&1; then
+            echo "HARNESS: atomic accesses ok"
+        else
+            echo "HARNESS: atomic accesses FAILED"
+            grep -A2 '^RED' "$arb/zugriffe.log" | head -3
+        fi
+    fi
 
     [ "$gift" = 2 ] && PARAM="vorrat_kib=64"
     [ "$gift" = 3 ] && rmmod_zeile="echo \"HARNESS: rmmod ok\""
@@ -298,7 +520,7 @@ EOF
 
     timeout "$FRIST" qemu-system-x86_64 -kernel "$VMLINUZ" -initrd "$arb/initrd.gz" \
         -append "console=ttyS0 quiet panic=1" -nographic -m 512 -no-reboot \
-        2>&1 | tr -d '\r'
+        -smp "$SMP" 2>&1 | tr -d '\r'
 }
 
 # -- the verdict over one run --------------------------------------------------
@@ -306,8 +528,9 @@ beurteile() {   # $1 = output file, $2 = gift number or "", $3 = probe
     local aus="$1" gift="$2" fehler=0
     probe_waehle "$3"
     local erwartet="$ERWARTET"
-    [ "$gift" = 1 ] && erwartet="$(echo "$erwartet" | sed 's/v=33/v=34/')"
-    [ "$gift" = 7 ] && erwartet="$(echo "$erwartet" | sed 's/landed=0/landed=1/')"
+    [ "$gift" = 1 ]  && erwartet="$(echo "$erwartet" | sed 's/v=33/v=34/')"
+    [ "$gift" = 7 ]  && erwartet="$(echo "$erwartet" | sed 's/landed=0/landed=1/')"
+    [ "$gift" = 10 ] && erwartet="$(echo "$erwartet" | sed 's/k=2 v=512/k=2 v=513/')"
 
     grep -q "HARNESS: end" "$aus" || { echo "RED: the harness never reached its end (boot or QEMU)"; fehler=$((fehler+1)); }
     grep -q "HARNESS: insmod ok" "$aus" || { echo "RED: insmod did not succeed"; fehler=$((fehler+1)); }
@@ -347,6 +570,38 @@ EOF
         fi
     fi
 
+    # **Did the consumer ever see the flag set?** The same question `ticks` asks
+    # for `takt`: a run in which it never did reports a clean `k=4 v=0` about a
+    # branch it never entered, and that is not a measurement (`W1`).
+    if [ -n "${GESEHEN_MIN:-}" ]; then
+        local gesehen
+        gesehen="$(sed -n 's/.*gabbro-atomar: k=3 v=\([0-9]*\).*/\1/p' "$aus" | head -1)"
+        if [ -z "$gesehen" ]; then
+            echo 'RED: no k=3 line in the kernel log -- the run reported no flag observations'
+            fehler=$((fehler+1))
+        elif [ "$gesehen" -lt "$GESEHEN_MIN" ]; then
+            echo "RED: the consumer saw the flag set $gesehen time(s), fewer than $GESEHEN_MIN -- a clean payload check over that many observations is not a measurement"
+            fehler=$((fehler+1))
+        fi
+    fi
+
+    # **The two static checks over the built artefact** (K6): the mapping's rows
+    # and every access going through them. Their answers travel in the run's own
+    # output as `HARNESS:` lines, so this reads them the same way it reads
+    # `insmod ok`.
+    if [ -n "${ABBILDUNG:-}" ]; then
+        grep -q "HARNESS: mapping ok" "$aus" || {
+            echo "RED: the atomic mapping did not hold:"
+            grep "HARNESS: mapping FAILED" "$aus" | head -4 | sed 's/^/     /'
+            fehler=$((fehler+1))
+        }
+        grep -q "HARNESS: atomic accesses ok" "$aus" || {
+            echo "RED: an access to an atomic stands beside the mapping:"
+            grep -A3 "HARNESS: atomic accesses FAILED" "$aus" | head -4 | sed 's/^/     /'
+            fehler=$((fehler+1))
+        }
+    fi
+
     # No oops, no warning, no BUG -- the module left the kernel as it found it.
     if grep -qE "Oops|BUG:|WARNING:|general protection|kernel NULL pointer" "$aus"; then
         echo "RED: the kernel complained:"
@@ -380,9 +635,13 @@ if [ -z "$GIFT" ]; then
     done
     echo
     if [ "$gesamt_fehler" = 0 ]; then
-        echo "GREEN: halde -- loaded, allocated, refused on full, reported, unloaded clean."
-        echo "GREEN: takt  -- a masks-irqs lock held across a long section, a hardirq timer"
-        echo "               taking the same lock, and 0 arrivals on a holding core."
+        echo "GREEN: halde  -- loaded, allocated, refused on full, reported, unloaded clean."
+        echo "GREEN: takt   -- a masks-irqs lock held across a long section, a hardirq timer"
+        echo "                 taking the same lock, and 0 arrivals on a holding core."
+        echo "GREEN: atomar -- two DECLARED roots as kthreads, a counter that answers 512"
+        echo "                 exactly, a release/acquire flag seen set, a payload never"
+        echo "                 stale, two bits ORed to 3; and the mapping's 13 rows expanded"
+        echo "                 and held against their kernel primitive."
         exit 0
     fi
     echo "RED: $gesamt_fehler finding(s)."
@@ -405,11 +664,23 @@ for g in $LISTE; do
     lauf_einmal "$g" "$arb" "$p" > "$arb/aus.txt"
     ergebnis="$(beurteile "$arb/aus.txt" "$g" "$p")"
     n="$(echo "$ergebnis" | sed -n 's/^FEHLER=//p')"
-    if [ "$n" = 0 ]; then
+    # **A gift that did not APPLY is not a gift that was caught** (server lane,
+    # 2026-09-28). A mutation whose target has moved leaves the run with no QEMU
+    # boot at all, and every line of the expectation is then missing -- which
+    # reads as a fat catch and measures nothing. *Gift 8 did exactly this the
+    # first time it ran: 11 findings, and not one of them about the mapping.*
+    # The twin trap is already recorded (a gift that does not apply looks like a
+    # pass, gift 5, session 4); this is the same fact from the other side.
+    if grep -q "does not apply" "$arb/aus.txt"; then
+        echo "GIFT $g: DOES NOT APPLY -- the mutation found nothing to change, so nothing was measured"
+        grep "does not apply" "$arb/aus.txt" | head -1 | sed 's/^/    /'
+    elif [ "$n" = 0 ]; then
         echo "GIFT $g: NOT CAUGHT -- the harness stayed green under the mutation"
     else
         echo "GIFT $g: caught ($n finding(s))"
-        echo "$ergebnis" | grep '^RED' | head -3 | sed 's/^/    /'
+        # The indented lines belong to the `RED` above them -- a verdict that
+        # printed only the headline would hide WHICH row of the mapping moved.
+        echo "$ergebnis" | grep -E '^RED|^     ' | head -5 | sed 's/^/    /'
         gefangen=$((gefangen+1))
     fi
 done

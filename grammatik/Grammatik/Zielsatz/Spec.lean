@@ -977,6 +977,53 @@
     and the link statement (`GabbroZielVerbund`, same `Q`) is held by `N568`: two linked
     units call ONE kernel.
   -- END bare-metal entries and targets --
+  -- BEGIN Linux kernel module: the atomic lowering (server lane, 2026-09-28, TODO 0e K6) --
+    COMMENT ONLY: no definition, no premise and no leg of this file changes. It names ONE
+    assumption of a THIRD runtime, the loadable Linux kernel module (`laufzeit/kmodul/`), and
+    it is a REFINEMENT OF (2) of the five memory-model assumptions above -- not a new leg and
+    not a weakening of one. (2) reads "the C compiler and the hardware implement C11 atomics
+    and the orders as specified". Inside a kernel object there is no C11 implementation to
+    lean on: the kernel is built `-nostdinc`, `<stdatomic.h>` is not the toolchain's, and the
+    kernel has a memory model of its own (LKMM: `READ_ONCE`/`WRITE_ONCE`, `smp_*`, the
+    `cmpxchg` family). So what (2) assumes on that target is this, and it is named rather
+    than implied:
+    - (M11) THE KERNEL PRIMITIVES ARE AT LEAST AS STRONG: every row of
+      `laufzeit/kmodul/include/stdatomic.h` -- the ONE place the emitter's nine C11 call forms
+      become kernel primitives -- provides at least the ordering the C11 operation it replaces
+      provides. Per ordering, and named so that a weak-memory port can be CHECKED against it
+      rather than trusted: a relaxed load/store is `READ_ONCE`/`WRITE_ONCE` (single-copy
+      atomicity for an aligned scalar of 1, 2, 4 or 8 bytes; no ordering either way, which is
+      what relaxed asks); an acquire load is `smp_load_acquire` and a release store
+      `smp_store_release` (the kernel's own acquire/release, on every architecture); an SC
+      load or store is that with a full `smp_mb()` on both sides (the leading/trailing-fence
+      mapping); a read-modify-write is a `try_cmpxchg` loop with the matching suffix, and
+      `acq_rel`/`seq_cst` take the UNSUFFIXED, fully ordered form, which is stronger than
+      asked and never weaker. **The one place the obvious mapping would be WEAKER is the
+      failure path of a compare-exchange**: C11 gives it an ordering of its own (the emitter
+      writes `acquire`), and in LKMM a failed `cmpxchg` implies no ordering at all, not even
+      in the fully ordered form -- so that path carries its own `smp_mb()`.
+      WHAT IS ASSUMED AND WHAT IS MEASURED. Assumed: that the kernel's primitives mean what
+      `Documentation/atomic_t.txt` and `memory-barriers.txt` say, i.e. that LKMM refines the
+      orders W over-approximates. That is a statement about Linux, not about Gabbro, and no
+      Lean proof of it is claimed (Simon, 2026-09-28: a named assumption, not an LKMM
+      refinement proof). Measured, and both of these are what keep the assumption from being
+      a wish: (i) every access to an atomic in the emitted C goes through one of the nine
+      call forms, over the whole corpus, at token level
+      (`instrumente/pruefe-atomar-zugriffe.py`) -- because `_Atomic` becomes `volatile` here,
+      so a plain access would be UNORDERED where C11 makes it seq_cst; (ii) each row of the
+      mapping is expanded by the preprocessor and held against the primitive it must select
+      (`instrumente/pruefe-kernelmodul.sh`, and its gift 8 is a deliberately too-weak
+      mapping). Neither is an argument about LKMM; together they are the argument that the
+      assumption is about the rows that are actually built.
+      NOT CLAIMED on this runtime, in addition to the list below: a floating-point `atomic`
+      (refused, `bau.rs::modulregel` and a `_Generic` in the header: kernel code may not use
+      the FPU without `kernel_fpu_begin`); a read-modify-write on an atomic whose width the
+      target's native `try_cmpxchg` does not cover (refused by a `_Static_assert`); per-CPU
+      cells as the kernel's per-cpu accessors (`accumulates … per cpu N` lowers to an ordinary
+      array with relaxed accesses -- correct, not per-cpu-optimised); and that any run on
+      x86 could FALSIFY a missing barrier (it cannot -- x86 gives acquire and release away,
+      which is why (ii) above is static and not a run).
+  -- END Linux kernel module --
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not
     the user's logic:

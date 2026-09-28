@@ -518,16 +518,44 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   unit does not declare, one with a parameter, one that answers nothing -- the load verdict --,
   one name for both calls, a module with `pub fn main`, a module without `kmod`, `kmod` without
   a module). 6 new CLI tests, `--dry-run`, so they need no kernel headers.
-  **The `atomic` refusal moved to the build 2026-09-28** (server lane, session 3): a `module`
-  unit that declares an `atomic` is refused by `gabbro build` **before a byte of C is
-  written**, naming the declaration and carrying the reason — C11 `_Atomic` is not the
-  kernel's memory model, and `SchwachX` is proved about the first one
-  (`crates/gabbro-cli/src/bau.rs`, `modulregel`; CLI test `ein_modul_mit_atomic_faellt` with
-  its positive twin). `laufzeit/kmodul/include/stdatomic.h` stays as the second answer, for a
-  hand-written `Kbuild`. **Lifting it is not this lane's call and is recorded as OFFEN O34:**
-  it needs a lowering onto the kernel's own primitives AND the argument that the kernel's
-  model refines the one `SchwachX` assumes — a statement about LKMM, not about Gabbro. A
-  lowering without (2) would make the wall green and the claim false.
+  **The `atomic` refusal was lifted 2026-09-28** (server lane, session 5, K6; Simon tasked it
+  the same day, and session 3's refusal is its specification — OFFEN O34).
+  `laufzeit/kmodul/include/stdatomic.h` is the LOWERING now, not a refusal: the emitter's nine
+  C11 call forms and one qualifier — a CLOSED surface — onto `READ_ONCE`/`WRITE_ONCE`,
+  `smp_load_acquire`/`smp_store_release`, `smp_store_mb` and the `try_cmpxchg` family, one row
+  per ordering, each at least as strong as what it replaces. In the header and not in the
+  emitter, because the emitted C is pinned byte for byte in the translation-validation chain;
+  measured, `0` emitted bytes change anywhere. *The one row where the obvious mapping would be
+  WEAKER is named and repaired: a failed `cmpxchg` implies no ordering in LKMM, not even in the
+  fully ordered form, while C11 gives the exchange a failure ordering — so that path carries
+  its own `smp_mb()`.* What stays refused: a floating-point `atomic` (`bau.rs::modulregel` and a
+  `_Generic` in the header — the FPU is not usable in kernel context without
+  `kernel_fpu_begin`), an unlisted (form, ordering) pair (an undefined name at the kernel
+  build), and an RMW of a width the target's native `try_cmpxchg` does not cover
+  (`_Static_assert`). The memory-model argument is a NAMED ASSUMPTION and not a proof —
+  **(M11)** in `Zielsatz/Spec.lean`, a comment-only diff of 47 insertions and 0 deletions,
+  reviewed in `messung/SERVER-0E-SPEC-DIFF.md` Part II. **Measured in QEMU**
+  (`instrumente/pruefe-kernelmodul.sh` probe `atomar`, `messung/proben/kmodul/atomar-faeden.gab`):
+  two DECLARED `concurrent` roots as kernel threads, a saturating counter bumped 256 times by
+  each (`k=2 v=512`, exact — a lost update is a number below it), a release/acquire flag seen
+  set 256 times over a payload never stale (`k=3 v=256`, `k=4 v=0`), two bits ORed through
+  `atomic_fetch_or` (`k=5 v=3`); **10 of 10 harness mutations caught** (they are `--gift` runs,
+  not `beispiele/gift/` files). And two STATIC checks, because a run on x86 cannot falsify a
+  missing barrier: every access to an atomic goes through a call form, token level over the
+  whole corpus (`instrumente/pruefe-atomar-zugriffe.py`, 276 files, 75 objects, 137 accesses,
+  0 findings; stage 22c of `pruefe-emission.sh`), and each of the 13 mapping rows expanded by
+  the preprocessor against the primitive it must select — **gift 8 is a deliberately too-weak
+  mapping and is caught by that and by nothing else.**
+  **And a module's `concurrent` roots became kernel threads in the same step** (K2's module
+  half): `TreiberPlan` now knows the unit's art, `gabbro build` writes `wurzeln.h` out of the
+  same walk the other two driver flavours read, and `kmodul.c` starts one `kthread` per root
+  after the load function answers 0 and joins them all before the unload function runs. Before
+  it, a `module` with a `concurrent` set had a HOSTED pthread driver written beside its `.ko`.
+  Open (Simon, 2026-09-28, `AUFTRAG-1.md` **K7**): the kernel primitives here are the module
+  runtime's, not the program's. Every kernel call of the module target — the lock primitives of
+  `sperre.h`, the arena's `vzalloc`, the kthread glue and these atomic rows — is to be BOUND BY
+  THE PROGRAM through a library unit it `use`s, with a refusal for an unbound one and an
+  instrument over every undefined symbol of the built `.ko`.
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 

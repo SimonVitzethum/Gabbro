@@ -152,3 +152,116 @@ model work.
 5. The witnesses are not degenerate: `DynZeuge.gespannt` is an arena with **room to the
    ceiling whose allocation is refused** (`zeuge_alloc_ueber`, `zeuge_raum_unter_der_decke`),
    which is the one state the static form cannot name.
+
+---
+
+# Part II — the `Spec.lean` diff of the kernel-module atomic lowering (M11)
+
+*Server lane, 2026-09-28, session 5. TODO §0e K6, `AUFTRAG-1.md` K6 bullet 3. Same rule as
+Part I: the review is written by the lane that made the diff, and every claim names the
+command or the file that answers it.*
+
+**The diff is COMMENT ONLY, again.** 47 insertions, 0 deletions, all of them inside the
+file's opening doc comment, in a block of their own between `-- BEGIN Linux kernel module` and
+`-- END Linux kernel module`. Measured:
+
+```
+$ git diff --stat -- grammatik/Grammatik/Zielsatz/Spec.lean
+ grammatik/Grammatik/Zielsatz/Spec.lean | 47 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+$ cd grammatik && ~/.elan/bin/lake build
+$ cd grammatik && ~/.elan/bin/lake env lean Nachpruefung.lean | grep gabbro_ziel
+```
+
+## 7. What was asked
+
+> *"The memory-model argument is a NAMED ASSUMPTION, not a Lean proof of LKMM refinement:
+> 'each kernel primitive implements at least the C11/RC11 order it replaces', added to the
+> `Spec.lean` header as a reviewed diff beside the existing C-side assumptions."* —
+> `AUFTRAG-1.md` K6
+
+And: *keep it architecture-neutral; the argument must name what it relies on per order, so
+that a weak-memory architecture can be checked against it later.*
+
+So the shape was given. The question this review has to answer is the one the shape does not
+decide: **where does such an assumption BELONG, and does putting it there weaken anything?**
+
+## 8. It is a refinement of (2), not a new assumption
+
+The header already carries five named assumptions of the memory-model reading (the block that
+begins *"What replaces it, FIVE named assumptions of the reading"*). The second of them reads:
+
+> (2) the C compiler and the hardware implement C11 atomics and the orders as specified …
+
+On a hosted or bare-metal build that sentence has a referent: the toolchain's `<stdatomic.h>`
+and the CPU. **Inside a Linux kernel object it has none.** The kernel is built `-nostdinc`, so
+`<stdatomic.h>` is whatever the include path supplies (here `laufzeit/kmodul/include/`), and
+the kernel does not use C11 atomics at all — it has a memory model of its own.
+
+That leaves exactly two honest options:
+
+| | |
+|---|---|
+| refuse the target for units with atomics | what session 3 did, and recorded as OFFEN O34 |
+| name what (2) means there | what this diff does |
+
+There is no third option in which the goal theorem says the same thing on that target for
+free. **(M11) is therefore not an addition to what is claimed — it is the part of (2) that
+had no content on this runtime and would otherwise have been silently assumed.** That is the
+same move (M1)–(M10) make for the bare-metal runtime: the legs do not change, the sentence
+that says what the premise MEANS on that machine does.
+
+## 9. Why nothing is weakened — the checklist
+
+1. **No definition, no premise, no leg.** `git diff` shows 47 `+` lines and no `-` line; every
+   one of them is inside the doc comment. `Laufzeit`, `Hardware`, `SchwachX`, `ZielX` are
+   untouched, and so is every proof.
+2. **The direction of every row is the strong one.** Each mapping row provides at least what
+   it replaces; where the kernel has no exactly-matching suffix (`acq_rel`), the row takes the
+   FULLY ORDERED form. A reviewer can check this row by row against
+   `laufzeit/kmodul/include/stdatomic.h`, whose table is the same table.
+3. **The one place the obvious mapping would be weaker is named, not glossed.** C11 gives a
+   compare-exchange a failure ordering; LKMM gives a failed `cmpxchg` none, in every variant.
+   The row therefore carries `smp_mb()` on the failure path. *Had this been missed, a
+   `(release, acquire)` exchange would have been sound on success and unordered on failure —
+   which no wall in this tree would have shown, because x86 hides it.*
+4. **No refusal became a warning.** Two refusals stay and one was NARROWED with its reason:
+   a floating-point `atomic` in a module is still refused before a byte of C
+   (`bau.rs::modulregel`), an unlisted (form, ordering) pair is an undefined name at the
+   kernel build, and a read-modify-write of an unsupported width is a `_Static_assert`.
+5. **Nothing was claimed that a run could not have falsified — because the runs cannot.**
+   This is the uncomfortable half and it is written into the block: on x86 acquire and release
+   are free, so a green QEMU run says nothing about the barriers. The two things that DO
+   constrain the mapping are static, and both are named in the block: the token-level
+   corpus check that every access goes through a call form, and the preprocessor expansion of
+   each row against the primitive it must select. The instrument's gift 8 is exactly the
+   too-weak mapping, and it is caught by the second of those and by nothing else.
+
+## 10. What this diff does NOT do, and what should follow it
+
+- **It proves nothing about LKMM.** Simon asked for an assumption and this is one. A proof
+  that LKMM refines the orders `SchwachX` over-approximates is a statement about Linux; if it
+  is ever wanted, it is its own project and its own model.
+- **It does not make the kernel primitives user-declared.** They are macros of the target's
+  memory model, in the runtime header, and the file argues why (the emitted C is pinned byte
+  for byte in the translation-validation chain, so a per-target emitter would fork the
+  artefact the chain reads). **Simon's K7 (added 2026-09-28) asks for the names to come from
+  the program**, through a library unit the program `use`s. When that lands, (M11)'s text is
+  unchanged in substance and one sentence of it moves: the rows are then the program's
+  binding, and the assumption is that the BOUND primitives are at least as strong. The
+  assumption does not get weaker or stronger by moving — which is the reason it is worth
+  writing it down now, in the form the checker and the instruments already measure.
+
+## 11. What a reviewer should check
+
+1. `git diff -- grammatik/Grammatik/Zielsatz/Spec.lean` touches only comment lines, and the
+   new block sits between its BEGIN/END markers.
+2. The rows in the block and the rows in `laufzeit/kmodul/include/stdatomic.h` are the same
+   rows. (They are two texts over one fact, and that is a drift risk — the thing that keeps
+   them honest is the expansion check, which reads the HEADER and not the block.)
+3. `instrumente/pruefe-kernelmodul.sh --gift 8` is caught by the mapping stage and not by a
+   boot failure. *It was caught by a boot failure the first time, because the mutation did not
+   apply; the instrument now reports `DOES NOT APPLY` instead of counting it.*
+4. `instrumente/pruefe-atomar-zugriffe.py` is green over the corpus and its `--selbsttest`
+   catches four mutations while staying silent on the two false positives a grep produced.
+5. `#print axioms gabbro_ziel` is still `[propext, Classical.choice, Quot.sound]`.

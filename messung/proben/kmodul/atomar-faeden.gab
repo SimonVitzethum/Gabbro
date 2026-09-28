@@ -1,0 +1,216 @@
+-- **`atomic` in a Linux kernel module, over two declared kernel threads**
+-- (server lane, TODO section 0e K6; acceptance point 4b of
+-- `~/claude-lane/AUFTRAG-1.md`).
+--
+-- WHAT THIS PROBE ANSWERS. Until 2026-09-28 a `module` unit that declared an
+-- `atomic` was refused before a byte of C was written: a Gabbro `atomic` lowers
+-- to a C11 `_Atomic`, the kernel has its own memory model, and a lowering
+-- nobody had related to the goal theorem's atomic rely would have made the wall
+-- green and the claim false (OFFEN O34). The lowering exists now
+-- (`laufzeit/kmodul/include/stdatomic.h`: nine C11 call forms onto
+-- `READ_ONCE`/`WRITE_ONCE`, `smp_load_acquire`/`smp_store_release` and the
+-- `try_cmpxchg` family, each row at least as strong as what it replaces) under
+-- the NAMED ASSUMPTION (M11) of `grammatik/Grammatik/Zielsatz/Spec.lean`. This
+-- unit is what that lowering is measured on.
+--
+-- **The concurrency is DECLARED and not smuggled in through the C.** The
+-- `concurrent { erzeuger, verbraucher }` set below is the program saying that
+-- these two bodies run at the same time -- so the checker's race freedom, the
+-- pairing rules (V001-V004) and the footprint rule all apply to it, and
+-- `gabbro build` starts exactly these two roots as kernel threads
+-- (`wurzeln.h` -> one `kthread` each, joined before the unload function runs).
+-- *The `takt` probe next door does it the other way, and says so: its second
+-- thread is an interrupt the program's own C arms, which the checker cannot
+-- see.*
+--
+-- WHAT IS MEASURED, and why each number makes the next one mean something:
+--
+--   ZAEHLER  a saturating counter, bumped once per round by BOTH roots. The
+--            body is not a primitive (it tests a bound), so it lowers to the
+--            BOUNDED CAS LOOP -- `atomic_compare_exchange_weak_explicit` with
+--            the (relaxed, relaxed) pair. 256 rounds each, so the exact answer
+--            is 512, and a lost update is a number below it. *This is the row
+--            of the mapping that would silently drop increments if the loop's
+--            compare-exchange were not one read-modify-write.*
+--   BEREIT   a release/acquire flag, with a second atomic as its payload:
+--            `erzeuger` writes `NUTZLAST` and then sets `BEREIT`,
+--            `verbraucher` reads `BEREIT` and then `NUTZLAST`. Two counters
+--            travel out: `gesehen`, how often the flag was seen set at all --
+--            WITHOUT WHICH the other measures nothing -- and `schlecht`, how
+--            often it was seen set while `NUTZLAST` still held 0.
+--            `schlecht` must be 0. This is the row of the mapping that uses
+--            `smp_store_release` and `smp_load_acquire`.
+--   TOR      one `t | BIT` per root, which is the OTHER RMW shape: a primitive
+--            body, so ONE `atomic_fetch_or_explicit` and no loop, on an ORDERED
+--            atomic -- so the emitted order is the join `acq_rel`, the row the
+--            mapping answers with the unsuffixed (fully ordered)
+--            `try_cmpxchg`. Each root sets its own bit, so the answer is 3 and
+--            a lost bit is 1 or 2.
+--
+-- **What a green run does NOT say.** It does not say the kernel's primitives
+-- order the accesses the way C11 asked -- x86 gives acquire and release away
+-- for free, so no run on this machine could tell a correct mapping from one
+-- that dropped the barriers. That is why the mapping is measured a second way,
+-- statically, by expanding every (form, ordering) pair and holding it against
+-- the required primitive (`instrumente/pruefe-kernelmodul.sh`, the mapping
+-- stage and its poison probe), and why the relation between the two memory
+-- models is a NAMED ASSUMPTION and not a claim.
+--
+-- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
+-- unit names one foreign function with its shape, effects, cost and the
+-- assumption its body keeps; the body is the program's own C
+-- (`messung/proben/kmodul/atomar.c`), which is where `pr_info` stands. Nothing
+-- about Linux is in this file -- not even the kthreads, which the module
+-- runtime starts from the unit's own `concurrent` set.
+module treiber::atomar {
+
+assume kmod_atomar_vertrag
+    "The module's own `gabbro_kmod_atomar_melde` body writes its two words to the kernel log and returns; it keeps the x86_64 SysV convention and never fails."
+    falsifier sonde_kmod_atomar;
+
+-- The kernel API, declared here and nowhere else.
+extern fn gabbro_kmod_atomar_melde(schluessel : u32, wert : u64) effects { pure } costs <= 64 ops;
+
+-- The bounded CAS loop's exit. It is never taken by a two-thread run over 256
+-- rounds, and it stays declared because the clause that names it stays written:
+-- a construct that dropped its own clauses where the generator finds a shortcut
+-- would make the shortcut a language rule.
+extern fn aufgegeben() -> never effects { diverges };
+
+-- **The flag and its payload, and BOTH are atomics.** The obvious shape here is
+-- `beispiele/117`'s -- ordinary storage published on the flag
+-- (`publishes { bericht }` / `awaits { bericht }`) -- and it is refused the
+-- moment the two bodies are a declared `concurrent` set: `N291`/`N301`, an
+-- unguarded write-read race. *That refusal is right and it is the goal
+-- theorem's own boundary:* `Zielsatz/Spec.lean` lists unguarded publish/await
+-- payloads under NOT CLAIMED, so a probe that used the shape would be claiming
+-- what the statement does not. A SHARED ATOMIC in no contract is the shape the
+-- footprint rule does admit (`GeteiltV`, Opus lane O25c), so the payload is one
+-- too. The PAIRING stays written either way -- `publishes { NUTZLAST }` at the
+-- store, `awaits { NUTZLAST }` at the load -- and it has to: without it `V009`
+-- refuses a flag that carries no payload and gates a branch behind which one is
+-- read.
+atomic NUTZLAST : u64 relaxed;
+
+atomic BEREIT : bool release;
+
+-- The saturating counter: the CAS-loop row of the mapping.
+atomic ZAEHLER : u64 in 0 .. 1000 relaxed;
+
+-- The bit word: the one-instruction row, on an ORDERED atomic.
+atomic TOR : u64 acquire;
+
+const BIT_E : u64 = 1;
+const BIT_V : u64 = 2;
+
+-- What the consumer saw. Written by `verbraucher` alone and read by `entladen`
+-- after every root has returned (the module runtime joins before it calls the
+-- unload function), so no two threads ever touch them at once.
+-- Both carry a range, because `x = x + 1` at 64 bits has no wider type to
+-- bind into (`M104`): the guard below narrows the operand, and the range is
+-- what the narrowing is against.
+static mut gesehen  : u64 in 0 .. 1000 = 0;
+static mut schlecht : u64 in 0 .. 1000 = 0;
+
+-- **One round table per root.** A table used only as a traversal domain has
+-- storage nothing touches, which `clang` refuses in the emitted C
+-- (`-Wunneeded-internal-declaration`), so each root marks its own rounds -- and
+-- ONE shared table would be the data race this whole probe is about.
+table RundenE count 256 { slot { getan : u64, } }
+table RundenV count 256 { slot { getan : u64, } }
+
+-- **The producing root.** Publishes the payload, bumps the counter, and at the
+-- end sets its bit in `TOR`.
+fn erzeuger()
+    effects { reads RundenE, reads RundenE.slots, writes RundenE.slots,
+              writes NUTZLAST, writes BEREIT,
+              reads ZAEHLER, writes ZAEHLER, reads TOR, writes TOR }
+    costs   <= 100000 ops
+{
+    traverse r over slots of RundenE by unvisited {
+        RundenE.slots[r].getan = 1;
+        NUTZLAST = 7 publishes nothing;
+        BEREIT = true publishes { NUTZLAST };
+        let alt : u64 in 0 .. 1000 = ZAEHLER exchange update(v)
+            bounded 8 ops
+            on_exceeded aufgegeben
+        {
+            if v < 1000 {
+                return v + 1;
+            }
+            return v;
+        } publishes nothing;
+    }
+    let t : u64 = TOR exchange update(w)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return w | BIT_E; } publishes nothing;
+}
+
+-- **The consuming root.** Awaits the flag, checks the payload, bumps the same
+-- counter, and sets the other bit.
+fn verbraucher()
+    effects { reads RundenV, reads RundenV.slots, writes RundenV.slots,
+              reads BEREIT, reads NUTZLAST,
+              reads gesehen, writes gesehen, reads schlecht, writes schlecht,
+              reads ZAEHLER, writes ZAEHLER, reads TOR, writes TOR }
+    costs   <= 100000 ops
+{
+    traverse r over slots of RundenV by unvisited {
+        RundenV.slots[r].getan = 1;
+        let fertig = BEREIT awaits { NUTZLAST };
+        if fertig {
+            if gesehen < 1000 {
+                gesehen = gesehen + 1;
+            }
+            let b : u64 = NUTZLAST;
+            if b == 0 {
+                if schlecht < 1000 {
+                    schlecht = schlecht + 1;
+                }
+            }
+        }
+        let alt : u64 in 0 .. 1000 = ZAEHLER exchange update(v)
+            bounded 8 ops
+            on_exceeded aufgegeben
+        {
+            if v < 1000 {
+                return v + 1;
+            }
+            return v;
+        } publishes nothing;
+    }
+    let t : u64 = TOR exchange update(w)
+        bounded 8 ops
+        on_exceeded aufgegeben
+    { return w | BIT_V; } publishes nothing;
+}
+
+concurrent { erzeuger, verbraucher };
+
+-- Load: say so, and answer 0 -- the roots are started by the module runtime
+-- AFTER this returns, which is the same order `main` gives the hosted driver.
+impl fn laden() -> u32 effects { pure } costs <= 64 ops {
+    gabbro_kmod_atomar_melde(1, 0);
+    return 0;
+}
+
+-- Unload: every root has returned by now, so this is where the numbers are
+-- read. Four keys, and the harness holds all four against the source.
+impl fn entladen() -> u32
+    effects { reads ZAEHLER, reads TOR, reads gesehen, reads schlecht }
+    costs   <= 1024 ops
+{
+    let z : u64 in 0 .. 1000 = ZAEHLER;
+    gabbro_kmod_atomar_melde(2, z);
+    let g : u64 = gesehen;
+    gabbro_kmod_atomar_melde(3, g);
+    let s : u64 = schlecht;
+    gabbro_kmod_atomar_melde(4, s);
+    let t : u64 = TOR;
+    gabbro_kmod_atomar_melde(5, t);
+    gabbro_kmod_atomar_melde(9, 0);
+    return 0;
+}
+
+}

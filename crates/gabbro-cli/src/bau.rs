@@ -359,14 +359,20 @@ struct EintrittFund {
 
 /// What the bare-metal driver needs beyond roots and locks, out of the same walk.
 /// **An `atomic` declaration, as the module rule needs it** (server lane, 2026-09-28,
-/// TODO section 0e): the name, the module it stands in and the file it stands in. Nothing
-/// else -- the rule that reads it refuses the unit outright, so it needs a place to point at
-/// and not a type.
+/// TODO section 0e): the name, the module it stands in, the file it stands in -- **and
+/// whether its element type is a float** (K6).
+///
+/// The type entered this record on the day the blanket refusal went. While EVERY atomic was
+/// refused, a place to point at was the whole of what the rule needed; now that all but one
+/// shape is lowered (`laufzeit/kmodul/include/stdatomic.h`), the rule has to tell the shapes
+/// apart, and the one it still refuses is the floating-point one.
 #[derive(Debug, Clone)]
 struct AtomarFund {
     name: String,
     modul: String,
     datei: String,
+    /// `f32`/`f64`, directly or as the element type of an array of them.
+    gleitkomma: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -463,10 +469,15 @@ fn sammle(
                     atomare,
                 );
             }
-            // **Every `atomic` the unit declares**, for the module rule below: a Gabbro
-            // `atomic` has no kernel-module lowering, and the refusal has to name the
-            // declaration rather than let the kernel build trip over a macro.
+            // **Every `atomic` the unit declares**, for the module rule below. Since K6 that
+            // rule refuses only the FLOATING-POINT ones, so the walk carries the element type
+            // as the one bit the rule asks of it -- an array of floats is a float atomic, and
+            // there is no deeper nesting to look through (`_Atomic` qualifies the element
+            // type, `emit.rs::atom_c_deklarator`).
             ItemArt::Atomic(a) => {
+                let gleit = |t: &gabbro_syntax::ast::TypExpr| {
+                    matches!(t, gabbro_syntax::ast::TypExpr::Float(_))
+                };
                 atomare.push(AtomarFund {
                     name: a.name.text.clone(),
                     modul: if pfad.is_empty() {
@@ -475,6 +486,10 @@ fn sammle(
                         pfad.to_string()
                     },
                     datei: datei.to_string(),
+                    gleitkomma: match &a.typ {
+                        gabbro_syntax::ast::TypExpr::Feld(f) => gleit(&f.element),
+                        t => gleit(t),
+                    },
                 });
             }
             ItemArt::Use(u) => {
@@ -709,11 +724,13 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
 /// *The third is the one that matters most:* the load verdict is how a Gabbro module refuses
 /// to be loaded (`laufzeit/kmodul/kmodul.c`), and a `void` init would make every load succeed.
 ///
-/// **And one refusal that is not about the two calls at all** (server lane, session 3): a
-/// unit that declares an `atomic` is no kernel module today. That verdict existed before --
-/// `laufzeit/kmodul/include/stdatomic.h` makes `_Atomic` an unknown identifier -- but it
-/// arrived as a C error in a `make` log over a generated prelude line. Here it arrives
-/// before any C is written, and it names the declaration.
+/// **And one refusal that is not about the two calls at all** (server lane, session 3, and
+/// NARROWED in session 5): a unit that declares a FLOATING-POINT `atomic` is no kernel module.
+/// Session 3 refused every `atomic` here, because the lowering did not exist and a lowering
+/// nobody had related to the goal theorem's atomic rely would have made the wall green and
+/// the claim false. Session 5 built the lowering (K6,
+/// `laufzeit/kmodul/include/stdatomic.h`, named assumption (M11) in `Zielsatz/Spec.lean`),
+/// so what is left of the refusal is the one shape no barrier repairs.
 fn modulregel(
     e: &Einheit,
     funktionen: &BTreeMap<String, Vec<FunktionsForm>>,
@@ -722,19 +739,31 @@ fn modulregel(
     if e.art != Art::Modul {
         return None;
     }
-    // **A Gabbro `atomic` has no kernel-module lowering, and this is where that is said.**
-    // Before this rule the answer came from `laufzeit/kmodul/include/stdatomic.h`, which
-    // `#define`s `_Atomic` to an unknown identifier: a real refusal, in the right place --
-    // but it arrives as a C error inside a `make` log, pointing at a generated prelude line,
-    // long after the build decided the unit was fine. The header stays (it is the last line
-    // of defence, and it carries the same reason); this rule reaches the same verdict before
-    // a byte of C is written, and names the DECLARATION instead of the macro.
-    if let Some(a) = atomare.first() {
+    // **A FLOATING-POINT `atomic` has no kernel-module lowering, and this is where that is
+    // said.** The other shapes do since K6: `laufzeit/kmodul/include/stdatomic.h` maps the
+    // emitter's nine call forms onto `READ_ONCE`/`WRITE_ONCE`, `smp_load_acquire`/
+    // `smp_store_release` and the `try_cmpxchg` family, each row at least as strong as the
+    // C11 operation it replaces, and the relation between the two models is the named
+    // assumption (M11) of `Zielsatz/Spec.lean`.
+    //
+    // A float is the one shape no barrier repairs: kernel code may not touch the FPU without
+    // `kernel_fpu_begin`/`_end`, and nothing declares them -- a lowering that quietly used
+    // SSE registers would corrupt whatever userspace task happened to be scheduled. The
+    // header asserts the same thing (`GABBRO_KMOD_ATOMAR_TYP`, a `_Generic` that costs no
+    // load), because that is what answers a hand-written `Kbuild`; here it arrives before a
+    // byte of C is written and names the DECLARATION instead of a macro.
+    if let Some(a) = atomare.iter().find(|a| a.gleitkomma) {
         return Some(format!(
-            "this `module` declares the atomic `{}` ({} in {}) -- a Gabbro `atomic` has no              kernel-module lowering
-                      = C11 `_Atomic` is not the kernel's memory model (`READ_ONCE`/             `WRITE_ONCE`, `atomic_t`, `smp_*` barriers), and the goal theorem's atomic rely              (`SchwachX`) is proved about the FIRST one
-                      = lifting it needs a lowering onto the kernel's own primitives AND              the argument that the kernel's model refines the one `SchwachX` assumes;              neither is built
-                      = without this rule the refusal is              `laufzeit/kmodul/include/stdatomic.h`'s, in a `make` log",
+            "this `module` declares the floating-point atomic `{}` ({} in {}) -- a \
+             floating-point `atomic` has no kernel-module lowering\n\
+             \x20        = kernel code may not use the FPU without `kernel_fpu_begin`/`_end`, \
+             which nothing declares, and a lowering that used SSE registers would corrupt the \
+             userspace task that happens to be scheduled\n\
+             \x20        = the integer and `bool` shapes ARE lowered since 2026-09-28 \
+             (`laufzeit/kmodul/include/stdatomic.h`, named assumption (M11) of \
+             `Zielsatz/Spec.lean`); this is the remainder, not the rule\n\
+             \x20        = without this rule the refusal is \
+             `laufzeit/kmodul/include/stdatomic.h`'s, in a `make` log",
             a.name, a.modul, a.datei
         ));
     }
@@ -780,6 +809,13 @@ fn modulregel(
 /// nothing to start, so it owns no driver either.
 #[derive(Debug, Clone)]
 struct TreiberPlan {
+    /// **The art decides WHICH driver the roots become** (server lane, 2026-09-28, TODO
+    /// section 0e K6). A root is a root in all three worlds; what differs is who starts it
+    /// -- a pthread in `laufzeit/start.c`, a core on bare metal, a `kthread` in
+    /// `laufzeit/kmodul/kmodul.c`. Without this field a `module` unit with a `concurrent`
+    /// set had a hosted pthread driver written beside its `.ko`: a file for a world it is
+    /// not in.
+    art: Art,
     wurzeln: Vec<treiber::Wurzel>,
     sperren: Vec<treiber::Sperre>,
     /// Entries, rcu read sides and per-cpu cells for the bare-metal driver
@@ -791,11 +827,17 @@ struct TreiberPlan {
 impl TreiberPlan {
     /// The hosted driver starts threads; without roots there is nothing to start.
     fn hat_gehostet(&self) -> bool {
-        !self.wurzeln.is_empty()
+        self.art != Art::Modul && !self.wurzeln.is_empty()
     }
     /// The bare-metal driver also installs entries.
     fn hat_metall(&self) -> bool {
-        !self.wurzeln.is_empty() || !self.zusatz.eintritte.is_empty()
+        self.art != Art::Modul && (!self.wurzeln.is_empty() || !self.zusatz.eintritte.is_empty())
+    }
+    /// **The module's roots become kernel threads**, and the list travels as a generated
+    /// `wurzeln.h` beside `sperren.h` -- the driver `kmodul.c` is not generated, so what is
+    /// unit-specific reaches it as a macro list out of THIS walk and no second one (`W7`).
+    fn hat_kmod_faeden(&self) -> bool {
+        self.art == Art::Modul && !self.wurzeln.is_empty()
     }
 }
 
@@ -957,6 +999,7 @@ fn treiberregel(
         treiber::MetallZusatz::default()
     };
     Ok(Some(TreiberPlan {
+        art,
         wurzeln,
         sperren: sperren_aus,
         zusatz,
@@ -1268,6 +1311,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                         format!("-> {name}.treiber.c")
                     } else if plan.hat_metall() {
                         format!("-> {name}.metall.c")
+                    } else if plan.hat_kmod_faeden() {
+                        "-> wurzeln.h (one kthread per root)".to_string()
                     } else {
                         "(no driver: nothing to start)".to_string()
                     };
@@ -1794,8 +1839,10 @@ fn baue_einheit(
         if let Some((laufzeit, kernbau)) = &manifest.kmod {
             let sperren: &[treiber::Sperre] =
                 treiber_plan.map_or(&[], |p| p.sperren.as_slice());
+            let wurzeln: &[treiber::Wurzel] =
+                treiber_plan.map_or(&[], |p| p.wurzeln.as_slice());
             if let Err(grund) =
-                kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde, sperren)
+                kmod_modul_binden(manifest, laufzeit, kernbau, e, fremde, sperren, wurzeln)
             {
                 return Ergebnis::Abgesagt(grund);
             }
@@ -1906,8 +1953,12 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
 /// on the same day the list was READ for the first time: `cargo build` had been saying
 /// `constant KMOD_QUELLEN is never used` since it was written, so a changed `kmodul.c` left a
 /// stale `.ko` standing as up to date.
-const KMOD_QUELLEN: [&str; 5] =
-    ["kmodul.c", "arena.c", "kmodul.h", "sperre.h", "include/stdint.h"];
+///
+/// **`include/stdatomic.h` joined it the same week** (K6): it stopped being a refusal and
+/// became the ATOMIC LOWERING, so a changed ordering row has to rebuild the module the same
+/// way a changed lock primitive does.
+const KMOD_QUELLEN: [&str; 6] =
+    ["kmodul.c", "arena.c", "kmodul.h", "sperre.h", "include/stdint.h", "include/stdatomic.h"];
 
 /// **The generated `sperren.h`: one `F(name, kind)` per `lock`, in name order.**
 ///
@@ -1948,6 +1999,38 @@ fn sperrenliste(sperren: &[treiber::Sperre]) -> String {
     aus
 }
 
+/// **The generated `wurzeln.h`: one `F(name)` per root of the `concurrent` set**
+/// (server lane, 2026-09-28, TODO section 0e K6).
+///
+/// The module's twin of [`sperrenliste`], and it exists for the same reason: `kmodul.c` is
+/// not generated, so what is unit-specific reaches it as a macro list out of the ONE walk the
+/// other two driver flavours read (`W7`). The hosted driver starts these roots as pthreads
+/// and the bare-metal one as cores; here they become `kthread`s, started after the unit's
+/// load function answers 0 and joined before its unload function runs.
+///
+/// Sorted by name, and for the same reason the lock list is: the header is a build artefact
+/// compared for staleness, and the start order of a `concurrent` set is not a fact about the
+/// program (the roots are concurrent -- that is what the word says).
+fn wurzelliste(wurzeln: &[treiber::Wurzel]) -> String {
+    let mut aus = String::new();
+    aus.push_str(
+        "/* GENERATED by `gabbro build` -- the concurrent roots of this unit (server lane,\n\
+ * TODO 0e K6). Do not edit. `laufzeit/kmodul/kmodul.c` expands it into one kthread per\n\
+ * root: started when the load function has answered 0, joined before the unload function\n\
+ * runs. A root that never returns therefore hangs `rmmod` -- the same contract the hosted\n\
+ * driver's join has. */\n",
+    );
+    if wurzeln.is_empty() {
+        aus.push_str("/* This unit declares no `concurrent` root, so no thread is started. */\n");
+        return aus;
+    }
+    let mut namen: Vec<&str> = wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+    namen.sort_unstable();
+    let eintraege: Vec<String> = namen.iter().map(|n| format!("F({n})")).collect();
+    aus.push_str(&format!("#define GABBRO_WURZELN(F) {}\n", eintraege.join(" ")));
+    aus
+}
+
 /// **Build `<unit>.ko` with the kernel's own build system** (server lane, TODO section 0e K4).
 ///
 /// The recipe, and every step is a named refusal:
@@ -1972,6 +2055,7 @@ fn kmod_modul_binden(
     e: &Einheit,
     fremde: &[String],
     sperren: &[treiber::Sperre],
+    wurzeln: &[treiber::Wurzel],
 ) -> Result<(), String> {
     let aus = PathBuf::from(&manifest.ausgabe);
     let bau = aus.join(format!("{}.kmod", e.name));
@@ -2048,6 +2132,12 @@ fn kmod_modul_binden(
     // no chain-pinned unit declares an arena.
     std::fs::write(bau.join("sperren.h"), sperrenliste(sperren))
         .map_err(|err| format!("kernel module: {}/sperren.h: {err}", bau.display()))?;
+    // **And the unit's ROOTS, the same way** (server lane, TODO section 0e K6): one
+    // `F(name)` per member of the `concurrent` set, out of the same walk, expanded by
+    // `kmodul.c` into one `kthread` each. Before this the roots of a `module` unit had a
+    // hosted pthread driver written for them -- a file for a world the `.ko` is not in.
+    std::fs::write(bau.join("wurzeln.h"), wurzelliste(wurzeln))
+        .map_err(|err| format!("kernel module: {}/wurzeln.h: {err}", bau.display()))?;
     let mut objekte = vec!["gabbro_kmodul.o".to_string(), "gabbro_arena.o".to_string()];
     for (i, f) in fremde.iter().enumerate() {
         kopiere(PathBuf::from(f), bau.join(format!("gabbro_fremd{i}.c")))?;
@@ -2147,6 +2237,40 @@ mod sperrenliste_tests {
 }
 
 #[cfg(test)]
+mod wurzelliste_tests {
+    use super::treiber::Wurzel;
+    use super::wurzelliste;
+
+    fn w(name: &str) -> Wurzel {
+        Wurzel { c_name: name.to_string(), gab_path: name.to_string() }
+    }
+
+    /// One line, name order, no continuation -- the same shape the lock list has, and for the
+    /// same reason: the header is compared for staleness, so two orders over one list would
+    /// rebuild the module for nothing.
+    #[test]
+    fn die_liste_ist_eine_zeile_und_nach_namen_sortiert() {
+        let aus = wurzelliste(&[w("zweiter"), w("erster")]);
+        let zeile = aus
+            .lines()
+            .find(|z| z.starts_with("#define GABBRO_WURZELN"))
+            .expect("one define line");
+        assert_eq!(zeile, "#define GABBRO_WURZELN(F) F(erster) F(zweiter)", "{aus}");
+        assert!(!aus.contains('\\'), "no continuation:\n{aus}");
+    }
+
+    /// **A unit without a `concurrent` set defines NOTHING**, and that is load-bearing:
+    /// `kmodul.c` decides on `#ifdef GABBRO_WURZELN` whether to pull in `linux/kthread.h`
+    /// and whether its unload waits for anything at all.
+    #[test]
+    fn ohne_wurzel_kein_define() {
+        let aus = wurzelliste(&[]);
+        assert!(!aus.contains("#define"), "a rootless unit got a macro:\n{aus}");
+        assert!(aus.contains("no `concurrent` root"), "and says why:\n{aus}");
+    }
+}
+
+#[cfg(test)]
 mod treiberregel_tests {
     use super::{treiberregel, Art, EintrittFund, FunktionsForm, MetallFunde, TreiberFund, TreiberSperre};
     use std::collections::BTreeMap;
@@ -2174,6 +2298,32 @@ mod treiberregel_tests {
             );
         }
         m
+    }
+
+    /// **The art decides WHICH driver the same roots become** (server lane, 2026-09-28,
+    /// TODO section 0e K6).
+    ///
+    /// One root list, three worlds: a `program` starts them as pthreads (and, since Opus
+    /// agent I, as cores on bare metal), a `module` as `kthread`s out of the generated
+    /// `wurzeln.h`. Before this the plan did not know the art, so a module with a
+    /// `concurrent` set had a hosted pthread driver written beside its `.ko` -- a file for a
+    /// world it is not in. *The three predicates are exclusive here, and that is the claim:*
+    /// exactly one of them answers for any unit.
+    #[test]
+    fn die_art_entscheidet_welcher_treiber() {
+        let funde = vec![fund("hauptA"), fund("hauptB")];
+        let p = treiberregel(&funde, &[], &nullary(), &MetallFunde::default(), Art::Programm)
+            .expect("holds")
+            .expect("roots");
+        assert!(p.hat_gehostet() && p.hat_metall() && !p.hat_kmod_faeden(), "a program");
+        let m = treiberregel(&funde, &[], &nullary(), &MetallFunde::default(), Art::Modul)
+            .expect("holds")
+            .expect("roots");
+        assert!(!m.hat_gehostet() && !m.hat_metall() && m.hat_kmod_faeden(), "a module");
+        // And the roots themselves are the SAME list -- only the starter differs.
+        let a: Vec<&str> = p.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+        let b: Vec<&str> = m.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+        assert_eq!(a, b, "one walk, one list");
     }
 
     /// **Roots count occurrences, across blocks too** (fix lane F4, review G06 F5).

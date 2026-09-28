@@ -2687,6 +2687,29 @@ if ! "$W/instrumente/pruefe-nebenlaeufig-zwilling.sh" > "$ARB/zwilling.log" 2>&1
 fi
 grep -E '^GREEN|^   OVERLAP' "$ARB/zwilling.log" | sed 's/^/   /'
 
+# -- 22c. Every access to an atomic through a C11 atomic operation (server lane, K6) ----
+#
+# A PREMISE OF THE KERNEL-MODULE TARGET, measured over the whole corpus. On a C11
+# `_Atomic` object even a plain access is an atomic operation (implicitly seq_cst), so
+# the emitter's claim -- "every access is one of the nine calls" -- never had to be
+# checked. The module target takes that net away:
+# `laufzeit/kmodul/include/stdatomic.h` maps the nine calls onto the kernel's own
+# primitives and `_Atomic` to `volatile`, and from there a plain access would compile
+# silently into an UNORDERED one.
+#
+# It is called from here for the same reason 22b is: a differential measurement that
+# runs somewhere else is one nobody runs. The check is token level and not line level,
+# and its own poison probes (`--selbsttest`) include the two false positives a grep
+# produced over this corpus.
+LETZTE_STUFE="Stufe 22c (jeder Zugriff auf ein Atomic durch eine C11-Atomoperation)"
+echo "== Stufe 22c: jeder Zugriff auf ein Atomic durch eine C11-Atomoperation =="
+if ! "$W/instrumente/pruefe-atomar-zugriffe.py" > "$ARB/atomar.log" 2>&1; then
+    echo "== EMISSION: ein Zugriff auf ein Atomic steht NEBEN der Abbildung =="
+    sed 's/^/   /' "$ARB/atomar.log"
+    exit 1
+fi
+grep -E '^GREEN|accesses|atomic objects|files checked' "$ARB/atomar.log" | sed 's/^/   /'
+
 # -- 27. Driver capabilities, EXECUTED (lane 267, OFFEN O10) ---------------------------
 #
 # `FUENFTE-MARKE.md` books 24 of 30 virtio-net capabilities as "measured
@@ -3968,7 +3991,13 @@ MARKE_EMIT=143
 # its storage was never touched and `clang` refused the emitted `static Runden Runden_speicher`
 # as `-Wunneeded-internal-declaration`. The probe now marks each round, which is what the
 # clang half of stage 9 is for. Re-measured in the same run: `321 von 321`.
-MARKE_EMIT_M=158
+# **158 -> 159 on 2026-09-28 (server lane, TODO 0e K6).** One new probe under
+# `messung/proben/kmodul/`: `atomar-faeden.gab`, the unit whose four atomics are lowered onto
+# the kernel's own memory model and whose TWO DECLARED `concurrent` roots become `kthread`s
+# (`instrumente/pruefe-kernelmodul.sh` probe `atomar`). It emits and compiles at the first
+# attempt -- the round tables of `takt`'s finding are per root here, and each root marks its
+# own. Re-measured in the same run: `322 von 322`.
+MARKE_EMIT_M=159
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
