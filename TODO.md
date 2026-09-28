@@ -551,11 +551,19 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   same walk the other two driver flavours read, and `kmodul.c` starts one `kthread` per root
   after the load function answers 0 and joins them all before the unload function runs. Before
   it, a `module` with a `concurrent` set had a HOSTED pthread driver written beside its `.ko`.
-  Open (Simon, 2026-09-28, `AUFTRAG-1.md` **K7**): the kernel primitives here are the module
-  runtime's, not the program's. Every kernel call of the module target — the lock primitives of
-  `sperre.h`, the arena's `vzalloc`, the kthread glue and these atomic rows — is to be BOUND BY
-  THE PROGRAM through a library unit it `use`s, with a refusal for an unbound one and an
-  instrument over every undefined symbol of the built `.ko`.
+  Open (Simon, 2026-09-28, `AUFTRAG-1.md` **K7** and **K8**): the kernel primitives here are
+  the module runtime's, not the program's. Every kernel call of the module target — the lock
+  primitives of `sperre.h`, the arena's `vzalloc`, the kthread glue and these atomic rows — is
+  to be BOUND BY THE PROGRAM through a library unit it `use`s, with a refusal for an unbound
+  one (K7); and the same rule reaches the HOSTED runtime (K8: `pthread_*`, `mmap`, `mprotect`,
+  the raw `clone`/`futex` through `syscall`, `exit`, `abort`, `printf` — bare metal keeps its
+  hardware access, which is instructions and not API).
+  **The measurement stands** (server lane, session 5, `messung/SERVER-0E-REPORT.md` §12): the
+  stage `symbole_pruefe` of `instrumente/pruefe-kernelmodul.sh` intersects `nm -u` on the `.ko`
+  with `nm -u` over the RUNTIME objects only, so a symbol the program's own C pulls does not
+  count — **halde 4, takt 7, atomar 9, twelve distinct names**, as a ratchet whose poison probe
+  is one kernel call added to the runtime. The atomic rows contribute none of them: macros and
+  inline assembly leave no symbol. Recorded as OFFEN **O35**.
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
