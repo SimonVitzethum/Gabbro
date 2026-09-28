@@ -850,30 +850,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         }
         // Each file is checked against the interfaces of all the OTHERS (what `gabbro abi`
         // writes for them), in the order named -- the manifest build's preamble, with every
-        // other file as a unit this one may rest on.
-        let schnittstellen: Vec<String> = roh
-            .iter()
-            .enumerate()
-            .map(|(i, q)| {
-                let (baum, _) = gabbro_syntax::lies(&namen[i], q);
-                gabbro_check::abi::schreibe(&baum, q)
-            })
-            .collect();
-        let texte: Vec<(String, usize)> = roh
-            .iter()
-            .enumerate()
-            .map(|(i, q)| {
-                let mut v = String::new();
-                for (j, s) in schnittstellen.iter().enumerate() {
-                    if j != i {
-                        v.push_str(s);
-                        v.push('\n');
-                    }
-                }
-                let ab = v.len();
-                (format!("{v}{q}"), ab)
-            })
-            .collect();
+        // other file as a unit this one may rest on. `gabbro link` without `--with` runs the
+        // SAME derivation, out of the same function.
+        let texte = crate::vorspaenne_aus_einheiten(&namen, &roh);
         let gut = crate::verbinde_quellen("gabbro build (link)", &namen, &texte);
         println!(
             "gabbro build: {} source file(s), no manifest -- the link check ran; NOTHING was \

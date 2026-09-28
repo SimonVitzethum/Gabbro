@@ -1,0 +1,31 @@
+-- **H4 twin B -- the LARGEST expressible ceiling.** `max 4294967295` slots
+-- of `u64` = 32 GiB. (40 GiB is not expressible: the slot counters are
+-- `uint32_t`, so `M <= u32::MAX` -- `PLAN-DYNAMISCH.md` section 2. 32 GiB is
+-- the ceiling at the type system's own maximum, which is the stronger twin.)
+--
+-- The twin of `ceiling-10mib.gab`: the two files differ in the `max` number
+-- and in this comment, in nothing else (`diff` them). They are the
+-- measurement of `AUFTRAG-1` H4: compile time, emitted C size and binary
+-- size must NOT grow with the ceiling -- no static array of `M` slots, no
+-- `memset` of the reservation, no per-element unrolling. The instrument is
+-- `instrumente/miss-arena-decke.sh`.
+module probe::decke_gross {
+type Zahl = u64 in 0 .. 1000;
+
+arena Puffer capacity 2 .. 4 max 4294967295 of Zahl;
+
+impl fn fuellen() -> u64 effects { writes Puffer } costs <= 96 ops {
+    grow Puffer by 4 else {
+        return 1;
+    };
+    let a = alloc Puffer (10);
+    let b = alloc Puffer (11);
+    let c = alloc Puffer (12) else {
+        return 2;
+    };
+    let x1 : u64 = Puffer[a];
+    let x2 : u64 = Puffer[b];
+    let x3 : u64 = Puffer[c];
+    return x1 + x2 + x3;
+}
+}

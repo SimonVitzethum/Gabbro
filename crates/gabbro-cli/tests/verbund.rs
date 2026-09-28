@@ -279,6 +279,60 @@ fn der_bau_aus_quelldateien_verbindet() {
     assert!(aus.contains("NOTHING was compiled"), "{aus}");
 }
 
+/// **`gabbro link a.gab b.gab` WITHOUT `--with` derives the interfaces** (server lane,
+/// TODO section 0e K1). Before, the pair linked only when somebody handed it the library's
+/// `.gabi`: `use bib::setze;` reached nothing, and the app fell alone with `H016`/`H021`/
+/// `K003`. Now the preamble comes from the units on the command line, out of the same
+/// function `gabbro build a.gab b.gab` uses.
+///
+/// Three things are measured here, and the third is the one that matters:
+///
+/// 1. the derived link is GREEN and holds the import against its body;
+/// 2. it says exactly what the `--with` link says -- one derivation, one answer;
+/// 3. a STALE hand-written head still falls at `N502`. The derivation removes the manual
+///    step, not the check: give the link a head that is not the body's, and it still refuses.
+#[test]
+fn der_link_ohne_with_leitet_die_schnittstellen_ab() {
+    let (aus, fehler, code) =
+        lauf(&["link", &format!("{D}/tabelle-bib.gab"), &format!("{D}/tabelle-app.gab")]);
+    assert_eq!(code, 0, "the pair links without --with:\n{aus}\n{fehler}");
+    assert!(
+        aus.contains("1 import(s) held against their bodies")
+            && aus.contains("the linked program checked whole (0 error(s))")
+            && aus.contains("0 refusal(s)"),
+        "the derived link really held the import:\n{aus}"
+    );
+
+    // Same answer as the hand-handed interface -- there is ONE derivation.
+    let gabi = schnittstelle("abgeleitet");
+    let (aus_mit, _, code_mit) = lauf(&[
+        "link",
+        "--with",
+        &gabi,
+        &format!("{D}/tabelle-bib.gab"),
+        &format!("{D}/tabelle-app.gab"),
+    ]);
+    assert_eq!((aus_mit, code_mit), (aus, code));
+
+    // **The poison probe.** A head that is not the body's still falls, `--with` or not: what
+    // the derivation removed is the typing, not the holding.
+    let veraltet = {
+        let roh = std::fs::read_to_string(&gabi).expect("read the interface");
+        let p = wurzel().join("target/verbund-proben/abgeleitet-veraltet.gabi");
+        std::fs::write(&p, roh.replace("stand == x", "stand == 0")).expect("write");
+        p.to_string_lossy().into_owned()
+    };
+    let (aus, fehler, code) = lauf(&[
+        "link",
+        "--with",
+        &veraltet,
+        &format!("{D}/tabelle-bib.gab"),
+        &format!("{D}/tabelle-app.gab"),
+    ]);
+    assert_eq!(code, 1, "a stale head is refused:\n{aus}\n{fehler}");
+    assert_eq!(codes(&fehler), vec!["N502".to_string()]);
+}
+
 #[test]
 fn ein_link_ist_ein_paar() {
     let (_, fehler, code) = lauf(&["link", &format!("{D}/tabelle-bib.gab")]);

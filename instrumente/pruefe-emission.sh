@@ -3915,7 +3915,12 @@ MARKE_EMIT=142
 # **152 -> 153 on 2026-09-26 (merge of lane 267, O10).** The queue capability probe was red
 # (`H018`, a rule newer than the probe) and now holds `lock EINRICHTUNG` over both halves, so it
 # emits. Re-measured by the merger.
-MARKE_EMIT_M=153
+# **153 -> 156 on 2026-09-28 (server lane, TODO 0e).** Three new probes under `messung/proben/`,
+# all three emitting: `arena-h4/ceiling-10mib.gab` and `arena-h4/ceiling-32gib.gab` (the H4
+# twins -- the same program at a 10 MiB and at a 32 GiB ceiling, whose emitted C must agree),
+# and `kmodul/halde-treiber.gab` (the unit that becomes a Linux kernel module). Re-measured:
+# `318 von 318 emittierenden Dateien uebersetzen` in the run of 2026-09-28, 315 before.
+MARKE_EMIT_M=156
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

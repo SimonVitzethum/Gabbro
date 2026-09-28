@@ -284,10 +284,16 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N466** (highest issued: N465, fix lane F6; also `C185`, O-1) |
-| Gift (poison-probe) numbers | **1171** (highest file: `beispiele/gift/1170`, fix lane F7) |
-| Example numbers | **158** (highest file: `beispiele/157`, fix lane F10) |
+| Diagnostic codes | **N569** (highest issued: N568, Opus lane L) |
+| Gift (poison-probe) numbers | **1364** (highest file: `beispiele/gift/1363`, Opus lane L) |
+| Example numbers | **166** (highest file: `beispiele/165`, Opus lane L) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
+
+*Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
+crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more
+than last time: it read N466 / 1171 / 158 while N466 itself was already taken (lane 259's
+`R-commit`) and Opus lanes had reached N568, gift 1363 and example 165. Three registers over
+one thing, and the one nobody reads is the one that drifts.*
 
 *Ledger re-measured 2026-09-21 (review G13) by grepping `crates/` for issued `N` codes and
 listing `beispiele/` and `beispiele/gift/`. The row above was stale from 2026-09-17 to that
@@ -328,6 +334,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | Opus agent I (bare metal, OFFEN O32) | N556–N560 / 1341–1350 / — | nothing: no code, no gift, no example (the work is the runtime `laufzeit/metall/`, the generated `<unit>.metall.c` and the QEMU stage `instrumente/pruefe-metall.sh`; its gifts are harness mutations, not corpus files). N556–N560 and gifts 1341–1350 stay with the O32 work |
 | Opus agent J (freestanding, OFFEN O32/O33) | N561–N565 / 1351–1360 / — | nothing: no code, no gift, no example (the work is stage 12 `instrumente/pruefe-freistehend.sh`, the metal entries/arena/core limit in `laufzeit/metall/`, `gabbro build`'s `metal` link, and new QEMU images whose gifts are harness mutations). N561 is the named candidate for the entry-binding check (O32 (7)); N561–N565 and gifts 1351–1360 stay with this work |
 | Opus agent L (OFFEN O31 + O32 residue) | N561–N570 / 1351–1370 / 163–165 | N561 (`eintritt.bindung`), N562–N567 (`syscall.zielbindung`), N568 (`namen.verbund`, link: one kernel); gifts 1351–1363; examples 163 (system-call variables, two targets), 164 (metal only, the program's own kernel entry), 165 (an entry on #GP through the error-code twin stub). N569, N570 and gifts 1364–1370 stay with the O31 work. Also: one new word `target` (`MARKE_WOERTER` 244 → 245), probe program `sonden/sonde_metall_systemruf.c` (`MARK_QUOTE` (21, 54) → (22, 55)) |
+| Server lane, phase 1 (TODO §0e) | **not reserved** | **nothing**: no code, no gift, no example. What it added instead: the instruments `instrumente/miss-arena-decke.sh` (H4, the ceiling against the cost) and `instrumente/pruefe-kernelmodul.sh` (a Gabbro unit as a Linux kernel module, QEMU only); the runtime `laufzeit/kmodul/` (`kmodul.c`, `arena.c`, `kmodul.h`, `include/`); the probes `messung/proben/arena-h4/ceiling-{10mib,32gib}.gab` and `messung/proben/kmodul/{halde-treiber.gab,melde.c}`; one CLI test (`der_link_ohne_with_leitet_die_schnittstellen_ab`). The poison probes of both instruments are HARNESS mutations (`--gift`), not `beispiele/gift/` files, so they take no gift number |
 
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);

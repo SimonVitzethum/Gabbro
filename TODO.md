@@ -385,24 +385,61 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   Stands: checker rules `N210` (0≤lo≤hi≤M), `N212` (static reservation), `N426` (every `grow`
   against the UPPER bound, fix lane F2), `N211` (generations); static Lean sugar
   (`ArenaZucker.lean`, covered by `gabbro_ziel` with no re-proof); static lowering sound where
-  no `grow` stands. Open: emitter arm (lane 248 queued — wire `R-commit` past the committed
-  LOWER bound and `R-max`), runtime reserve/commit via mmap with lazy commit (no `memset`) and
-  OOM fail-stop (`laufzeit/`), Lean `ArenaDyn.lean` (`DynForm`, the four Block-form theorems,
-  the simulation), the two `Spec.lean` (d) fault-latency assumption texts (reviewed diff).
+  no `grow` stands. **The row above was stale on 2026-09-28 and is re-measured here:** the
+  emitter arm LANDED (lane 259, `R-commit` = `N466`, `beispiele/158-arena-commit.gab` emits and
+  runs), and so did the hosted runtime (lane 242, `laufzeit/arena_dyn.c`: `mmap(PROT_NONE)` +
+  `mprotect`, lazy since fix lane F2, no `memset`, OOM fail-stop at load).
+  **Measured by the server lane 2026-09-28** (`messung/SERVER-0E-REPORT.md` §2): *the ceiling
+  costs nothing* — the same program at `max 1310720` (10 MiB) and at `max 4294967295` (32 GiB,
+  the largest `M` the `uint32_t` counters admit; 40 GiB is not expressible in any element type)
+  translates in 4 ms against 5 ms, emits 3168 against 3180 bytes of C over 70 lines each, and
+  links to 16488 bytes with `.bss` and `.data` equal to the byte
+  (`instrumente/miss-arena-decke.sh`, twins in `messung/proben/arena-h4/`, poison probe
+  `--gift` catches a linked static array of the ceiling).
+  **And a third runtime flavour stands** (server lane, `laufzeit/kmodul/`): the Linux kernel
+  module, reserve = one `vzalloc` region per arena, commit = a budget over it — `vmalloc`-class
+  calls are all the kernel EXPORTS, so the ceiling reads there as it does on metal
+  (`Spec.lean` (M10)), and refuse-on-full is deterministic rather than practically unreachable.
+  Open: Lean `ArenaDyn.lean` (`DynForm`, the four Block-form theorems, the simulation — the
+  file's own tail comment names the blockers), the two `Spec.lean` (d) assumption texts
+  (`Laufzeit.reserve`, `Laufzeit.commit`; reviewed diff).
   Restriction (OFFEN O20): no `reset` concurrent with a reader of `A`, no arena shared across
   threads without the strict option — or a `Spec.lean` diff naming the run model and ceiling.
 - [ ] **General kernel modules/drivers with manual API.** Stands: syscall bindings as named
   in-program variables (Opus agent L, `N561`–`N568`, Linux AND metal, no OS constants in the
   tree); bare-metal base (agents I/J/L — QEMU boot, stage 11/12, 311 units `-nostdlib`).
-  Open, in order: composition across units first (`M119` — `use` reaches nothing; the honest
-  workaround is an `extern` mirror plus a named assumption per crossing; §0b first item and
-  the linking-theorem C half, OFFEN O28, are the same item from two sides), then `start`
+  **Composition across units is DONE** (server lane 2026-09-28,
+  `messung/SERVER-0E-REPORT.md` §1): `gabbro build a.gab b.gab` and a two-unit manifest already
+  derived each unit's interface from the units named and linked+built them (Opus agent F);
+  `gabbro link a.gab b.gab` now does the same, out of the SAME function
+  (`vorspaenne_aus_einheiten`), so `use bib::setze;` reaches the body without a hand-written
+  mirror. A STALE hand-written head still falls at `N502` — the derivation removes the manual
+  step, not the check — and two units that share a module derive nothing from each other,
+  because that is `N516` and the refusal has to reach the link (measured: probe `1248`
+  reported `N001` twice before that rule).
+  Open, in order: `start`
   lowering (`C001`) and export (`LG004`, no model of statement-level starts), then
   `entry`/`boot` vector/registers/steps (today only the dispatch root travels), then handler
   pinning/re-entry and `cli`/`sti` in the C (model leg `KernHaltE` stands, the C still masks
-  nothing — OFFEN O19). First acceptance: two units (`bib` + `app`) link, check whole and
-  build (`gabbro link`, `gabbro build a.gab b.gab`), one concurrent driver RUNS through the
-  executed set against a handwritten C version.
+  nothing — OFFEN O19).
+  First acceptance, measured: two units (`bib` + `app`) link, check whole and build
+  (`gabbro link`, `gabbro build a.gab b.gab`) — **done**; one concurrent driver RUNS through
+  the executed set against a handwritten C version — **open**.
+- [ ] **The Linux kernel module target.** *Built and booted 2026-09-28 (server lane), but not
+  yet by `gabbro build`.* Stands: `laufzeit/kmodul/` (the driver `kmodul.c` — NOT generated,
+  everything unit-specific arrives as a `-D` macro; the bounded-heap `arena.c`; five header
+  shims over the kernel's own types, because the kernel builds `-nostdinc` and every emitted
+  prelude asks for them), the probe `messung/proben/kmodul/halde-treiber.gab` (ONE foreign
+  function, declared by the program, body in the program's own C — no table of Linux kernel
+  functions in the tree), and `instrumente/pruefe-kernelmodul.sh`: build against the host's
+  6.8.0-139 headers, boot QEMU, `insmod`, read `dmesg`, `rmmod`. **Measured:** loads,
+  allocates and reads back (`k=2 v=33`), hits refuse-on-full deliberately at the third `grow`
+  below the ceiling (`k=3 v=3`), reports it, unloads with no oops/BUG/WARNING; 4 of 4 harness
+  mutations caught (`--gift all`). In QEMU only — nothing is loaded into this host's kernel.
+  Open: the manifest word (`kmod <kernel build dir>`, beside `metal <dir>`) so `gabbro build`
+  writes the `Kbuild` the instrument writes in shell today; a Gabbro `atomic` in a kernel
+  module (refused at compile time in `laufzeit/kmodul/include/stdatomic.h`, with the reason:
+  C11 `_Atomic` is not the kernel's memory model, and `SchwachX` is proved about the first).
 
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 

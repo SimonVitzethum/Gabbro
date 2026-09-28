@@ -867,7 +867,12 @@ fn hilfe() {
   gabbro link|verbinde [--with L.gabi]… <a.gab> <b.gab> [<c.gab>…]
                                     LINK separately compiled units: each is checked
                                     alone (`--with` goes in front of every unit after the
-                                    FIRST, as its own check had it), then every `extern fn`
+                                    FIRST, as its own check had it; WITHOUT `--with` each
+                                    unit reads the `abi` heads of all the others, DERIVED
+                                    from their bodies -- so `use bib::f;` reaches the body
+                                    without a hand-written mirror. Two units sharing a
+                                    module derive nothing from each other: that is
+                                    `N516`), then every `extern fn`
                                     head one unit relies on is held against the other
                                     unit's body -- signature and shared declarations
                                     `N501`, contract (as a tree) `N502`, effects `N503`,
@@ -1822,9 +1827,20 @@ fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize)
 /// **`gabbro link A.gab B.gab [C.gab …]` -- do the units make ONE program?** (Opus agents E,
 /// F.)
 ///
-/// Each unit is read and checked ALONE first (`--with` interfaces go in front of every unit
-/// after the FIRST, exactly as `gabbro check B.gab --with A.gabi` read it): a unit with errors
-/// links nothing. Then `gabbro_check::verbund::verbinde_alle` holds every imported head
+/// Each unit is read and checked ALONE first: a unit with errors links nothing. What it reads
+/// of the OTHERS is its preamble, and there are two ways to get one. With `--with L.gabi` the
+/// named interfaces go in front of every unit after the FIRST, exactly as `gabbro check B.gab
+/// --with A.gabi` read it. WITHOUT `--with` the preambles are DERIVED from the units on the
+/// command line (`vorspaenne_aus_einheiten`, the same derivation `gabbro build a.gab b.gab`
+/// runs): every unit reads the `gabbro abi` heads of all the others, so a `use bib::setze;`
+/// reaches the body it names instead of needing a hand-written mirror beside it.
+///
+/// *The derivation is not a weakening.* A derived head is written FROM the body, so
+/// `N501`-`N505` can only agree with it; what those codes are for is the head somebody typed
+/// or generated EARLIER, and that is the `--with` path, unchanged. What the derivation removes
+/// is the manual step, not the check.
+///
+/// Then `gabbro_check::verbund::verbinde_alle` holds every imported head
 /// against the body it stands for and the units' hardware assumptions against each other,
 /// and -- when no head is stale -- checks the LINKED program whole (Opus F: the units
 /// composed as one, each body from its owner, every start of every unit). *The exit code is 1
@@ -1846,19 +1862,95 @@ fn befehl_link(argumente: &[String]) -> std::process::ExitCode {
         Ok(v) => v,
         Err(c) => return c,
     };
-    let mut quellen: Vec<(String, usize)> = Vec::new();
-    for (i, datei) in dateien.iter().enumerate() {
+    let mut roh: Vec<String> = Vec::new();
+    for datei in dateien.iter() {
         let Ok(q) = std::fs::read_to_string(datei) else {
             eprintln!("gabbro link: {datei} not readable");
             return std::process::ExitCode::from(1);
         };
-        quellen.push(if i >= 1 { (format!("{vorspann}{q}"), vorspann.len()) } else { (q, 0) });
+        roh.push(q);
     }
+    let quellen: Vec<(String, usize)> = if mit.is_empty() {
+        vorspaenne_aus_einheiten(&dateien, &roh)
+    } else {
+        roh.into_iter()
+            .enumerate()
+            .map(|(i, q)| {
+                if i >= 1 {
+                    (format!("{vorspann}{q}"), vorspann.len())
+                } else {
+                    (q, 0)
+                }
+            })
+            .collect()
+    };
     if verbinde_quellen("gabbro link", &dateien, &quellen) {
         std::process::ExitCode::SUCCESS
     } else {
         std::process::ExitCode::from(1)
     }
+}
+
+/// **Every unit reads the OTHERS' interfaces, derived from their bodies.**
+///
+/// `namen[i]`/`roh[i]` are unit `i`'s file name and its own text. The answer is what
+/// `verbinde_quellen` wants: per unit, the full source with a preamble in front and the byte
+/// offset where the unit's OWN text begins. The preamble is the `gabbro abi` heads of every
+/// OTHER unit, in the order named -- which is what a person would otherwise write by hand,
+/// or generate with `gabbro abi` and pass through `--with`.
+///
+/// **This is the ONE derivation** (`W7`: a second register over the same thing is the defect,
+/// not the copy): `gabbro link a.gab b.gab` and `gabbro build a.gab b.gab` both call here.
+/// A unit that does not parse yields an empty interface rather than a panic; its own check
+/// then reports the parse errors, which is where they belong.
+///
+/// **Two units that share a MODULE get no derived interface from each other**, and that is
+/// not a convenience -- it is `N516`. A module split over two units is a link refusal, and
+/// the refusal must reach the link to be said. Prepend the one unit's `module werk { … }`
+/// heads to the other, and `werk` is declared twice in one text: the unit falls alone with
+/// `N001` and the link never runs. *Measured on probe `1248-modul-doppelt`, which reported
+/// `N001` twice instead of `N516` the first time this derivation ran over it.* An interface
+/// is what a unit reads of ANOTHER module; where there is no other module, there is nothing
+/// to derive and the link has the answer.
+pub(crate) fn vorspaenne_aus_einheiten(namen: &[String], roh: &[String]) -> Vec<(String, usize)> {
+    let baeume: Vec<gabbro_syntax::ast::Programm> = roh
+        .iter()
+        .enumerate()
+        .map(|(i, q)| gabbro_syntax::lies(&namen[i], q).0)
+        .collect();
+    let module: Vec<std::collections::BTreeSet<String>> = baeume
+        .iter()
+        .map(|baum| {
+            baum.items
+                .iter()
+                .filter_map(|it| match &it.art {
+                    gabbro_syntax::ast::ItemArt::Modul(m) => {
+                        Some(m.pfad.teile.iter().map(|t| t.text.clone()).collect::<Vec<_>>().join("::"))
+                    }
+                    _ => None,
+                })
+                .collect()
+        })
+        .collect();
+    let schnittstellen: Vec<String> = baeume
+        .iter()
+        .enumerate()
+        .map(|(i, baum)| gabbro_check::abi::schreibe(baum, &roh[i]))
+        .collect();
+    roh.iter()
+        .enumerate()
+        .map(|(i, q)| {
+            let mut v = String::new();
+            for (j, s) in schnittstellen.iter().enumerate() {
+                if j != i && module[i].is_disjoint(&module[j]) {
+                    v.push_str(s);
+                    v.push('\n');
+                }
+            }
+            let ab = v.len();
+            (format!("{v}{q}"), ab)
+        })
+        .collect()
 }
 
 /// **The link over already read sources** -- `gabbro link`'s core, and the one `gabbro build`

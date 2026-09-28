@@ -1,0 +1,72 @@
+-- **A Linux kernel module with a bounded heap** (server lane, TODO section 0e K4/K5).
+--
+-- What this probe is for: acceptance point 3 of `~/claude-lane/AUFTRAG-1.md` --
+-- a Gabbro kernel module with a bounded heap (`max` far above `lo`) loads in
+-- QEMU, allocates, hits refuse-on-full deliberately, reports it, unloads
+-- cleanly. The instrument is `instrumente/pruefe-kernelmodul.sh`.
+--
+-- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
+-- unit names ONE foreign function, `gabbro_kmod_melde`, with its shape, its
+-- effects, its cost and the assumption its body has to keep. Nothing about
+-- Linux is in this file and nothing about Linux is in the tree because of it:
+-- the body is the module's own C (`messung/proben/kmodul/melde.c`), which is
+-- where `pr_info` stands. A different kernel gets a different body and not a
+-- different Gabbro.
+--
+-- **The heap.** `Knoten` reserves for 4096 slots (`max`) and starts with 4
+-- committed (`capacity 2 .. 4`). `laden` grows it three times by 1024 -- the
+-- whole-run upper bound is 4 + 3072 = 3076 slots, below the ceiling, so `N426`
+-- admits every one. The module's PROVISION is smaller than that (the harness
+-- gives 2048 slots' worth): the third `grow` is refused BELOW the ceiling, the
+-- `else` beside it runs, and the module reports the refusal instead of taking
+-- memory it was not given. That is refuse-on-full, deliberately reached -- the
+-- branch the hosted runtime practically never takes (OFFEN O20).
+module treiber::halde {
+
+assume kmod_melde_vertrag
+    "The module's own `gabbro_kmod_melde` body writes its two words to the kernel log and returns; it keeps the x86_64 SysV convention and never fails."
+    falsifier sonde_kmod_melde;
+
+-- The kernel API, declared here and nowhere else.
+extern fn gabbro_kmod_melde(schluessel : u32, wert : u64) effects { pure } costs <= 64 ops;
+
+type Wert = u64 in 0 .. 1000;
+
+arena Knoten capacity 2 .. 4 max 4096 of Wert;
+
+-- Load: grow three times, allocate, read back, report. The `else` of the
+-- third `grow` is the refuse-on-full path and reports key 3.
+impl fn laden() -> u32 effects { writes Knoten } costs <= 4096 ops {
+    gabbro_kmod_melde(1, 0);
+    grow Knoten by 1024 else {
+        gabbro_kmod_melde(3, 1);
+        return 0;
+    };
+    grow Knoten by 1024 else {
+        gabbro_kmod_melde(3, 2);
+        return 0;
+    };
+    let a = alloc Knoten (11);
+    let b = alloc Knoten (22) else {
+        gabbro_kmod_melde(4, 0);
+        return 0;
+    };
+    let x : u64 = Knoten[a];
+    let y : u64 = Knoten[b];
+    gabbro_kmod_melde(2, x + y);
+    grow Knoten by 1024 else {
+        gabbro_kmod_melde(3, 3);
+        return 0;
+    };
+    gabbro_kmod_melde(5, 0);
+    return 0;
+}
+
+-- Unload: one line, and nothing to give back -- the arena's storage is the
+-- runtime's, released with the module.
+impl fn entladen() -> u32 effects { pure } costs <= 64 ops {
+    gabbro_kmod_melde(9, 0);
+    return 0;
+}
+
+}
