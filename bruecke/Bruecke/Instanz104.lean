@@ -2,7 +2,9 @@ import Bruecke.Pflichten
 import Grammatik.Kette104
 import Duty.Duty104Referenz
 
-/-! S1+S2 instance: `beispiele/104-referenz.gab`.
+/-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
+
+    S1+S2 instance: `beispiele/104-referenz.gab`.
     The parse is anchored at the source text by `Kette104.uebersetzt4`
     (`uebersetzeAllg src104real = .ok ⟨uExp104, …⟩`); every printed definition of
     `Duty104Referenz.lean` is checked against the Lean computation from `uExp104`. -/

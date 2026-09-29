@@ -2,7 +2,9 @@ import Bruecke.Pflichten
 import Grammatik.Kette108
 import Duty.Duty108DisjointStartLocks
 
-/-! S1+S2 instance: `beispiele/108-disjoint-start-locks.gab` (see `Instanz104.lean`). -/
+/-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
+
+    S1+S2 instance: `beispiele/108-disjoint-start-locks.gab` (see `Instanz104.lean`). -/
 
 namespace Gabbro.Bruecke.I108
 
