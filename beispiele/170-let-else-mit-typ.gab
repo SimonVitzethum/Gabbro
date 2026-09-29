@@ -1,0 +1,39 @@
+-- **`let … else` with an annotation: the name has the range the annotation says, and the callee's `ensures` is what
+-- proves it** (wall 5, honoured 2026-09-30).
+--
+-- Before, a fallible call's result bound a plain `u64` and every use needed a `narrow`:
+--
+-- ```text
+-- let g = hoeren(FENSTER, will) else (e) { … }
+-- narrow g to 0 .. 2048 else { … }
+-- ```
+--
+-- The annotation makes the binding carry the range. It is checked against the callee's answer (`gift/1369`, `gift/1370`), so
+-- it is a claim the callee has to back, not a cast.
+
+module beispiel {
+
+reason F { Weg = 1 "weg" exhaustive }
+
+impl fn lesen(w : u64 in 0 .. 100) -> u64 or F
+    ensures result <= 2048
+    effects { pure }
+    costs   <= 8 ops
+{
+    if w == 0 {
+        return F::Weg;
+    }
+    return w * 20;
+}
+
+-- The annotation widens nothing and narrows nothing the callee did not prove.
+impl fn nutzt() -> u64
+    effects { pure }
+    costs   <= 60 ops
+{
+    let g : u64 in 0 .. 2048 = lesen(7) else (e) { return 0; }
+    let h : u64 in 0 .. 4096 = lesen(3) else (e) { return 0; }
+    return g + h;
+}
+
+}

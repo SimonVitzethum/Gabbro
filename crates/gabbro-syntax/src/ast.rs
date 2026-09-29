@@ -1404,6 +1404,13 @@ pub struct LetStmt {
 #[derive(Debug, Clone)]
 pub struct LetSonst {
     pub name: Ident,
+    /// **The annotation on the binding -- honoured since wall 5 (`~/gabbro-netz` `docs/WAENDE-M1.md`).** *A type on
+    /// `let x : T = f() else (e) { … }` was read by the parser and thrown away*: `g` answered a `u64`, the binding said
+    /// `bool`, and the checker said nothing -- the shape `P041` exists for. It is a field now, and the checker holds the
+    /// callee's answer against it like a plain `let x : T = f();`: a range that the callee's `ensures` does not prove is
+    /// `M101`, and the name is BOUND at the annotated type -- which is what makes `let g : u64 in 0 .. 2048 =
+    /// hoeren(…) else (e) { … }` a binding with a range and not a `u64` waiting for a `narrow`.
+    pub typ: Option<TypExpr>,
     /// **«B14b» geschlossen 2026-08-17: die Quelle darf auch ein `place` sein.**
     ///
     /// Der Befund lautete: *„`let … else` verlangt RECHTS einen `call`. Ein `option`-wertiges

@@ -1,0 +1,39 @@
+-- erwartet: M101
+-- **An annotation on `let … else` that the callee's answer does not fit -- accepted and thrown away until 2026-09-30.**
+--
+-- `ast::LetSonst` carried a `quelle`, a `fehlername` and a `sonst` and NO `typ`: the parser read the annotation and
+-- dropped it. Measured on `0b66b6d8`:
+--
+-- ```text
+-- let m : u64 in 0 .. 100 = kanal(1) else (e) { return 0; }     -- 0 errors, 0 hints, for a callee that answers 0 .. 2048
+-- ```
+--
+-- `~/gabbro-netz`, `docs/WAENDE-M1.md` wall 5, and Simon's decision (2026-09-29): **honour it**. The callee's answer is held
+-- against the annotation exactly as `let x : u64 in 0 .. 100 = kanal(1);` holds a plain call's -- a range the `ensures` does
+-- not prove is `M101`, a type of another kind is `M135` (`gift/1370`), and a range it DOES prove is the range the name has
+-- (`beispiele/170`).
+
+module gift {
+
+reason F { Weg = 1 "weg" exhaustive }
+
+impl fn kanal(w : u64 in 0 .. 100) -> u64 or F
+    ensures result <= 2048
+    effects { pure }
+    costs   <= 8 ops
+{
+    if w == 0 {
+        return F::Weg;
+    }
+    return 9;
+}
+
+impl fn kaputt() -> u64
+    effects { pure }
+    costs   <= 60 ops
+{
+    let m : u64 in 0 .. 100 = kanal(1) else (e) { return 0; }
+    return m;
+}
+
+}
