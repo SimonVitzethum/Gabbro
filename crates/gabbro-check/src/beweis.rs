@@ -85,7 +85,7 @@ impl Befund {
                 self.statements.len(),
                 self.geschuldet.join(", "),
                 self.beweisdatei.display()
-            ),
+            ) + &if self.meldung.is_empty() { String::new() } else { format!("\n{}", indent(&self.meldung)) },
             Stand::Rot => format!("   RED    {}\n{}", self.einheit, indent(&self.meldung)),
             Stand::Aufbau => format!("   SETUP  {} -- {}", self.einheit, self.meldung),
         }
@@ -298,48 +298,167 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     geschuldet.sort();
     geschuldet.dedup();
     befund.geschlossen = statements.iter().filter(|s| !geschuldet.contains(s)).cloned().collect();
-    if geschuldet.is_empty() {
-        return Ok(befund);
-    }
-    if !beweisdatei.is_file() {
-        befund.geschuldet = geschuldet;
-        befund.stand = Stand::Geschuldet;
-        return Ok(befund);
-    }
     // the person's half
-    let beweise = std::fs::read_to_string(&beweisdatei).map_err(|e| e.to_string())?;
     let lp = format!("{}:{}", lib_s, out_dir.to_string_lossy());
-    let (ausgabe, erfolg) = lean_lauf(&lean, &lp, &beweisdatei, None, modell)?;
+    let beweise_olean = out_dir.join("Proofs").join(format!("{name}.olean"));
+    let _ = std::fs::remove_file(&beweise_olean);
+    let hat_beweise = beweisdatei.is_file();
+    if hat_beweise {
+        std::fs::create_dir_all(out_dir.join("Proofs")).map_err(|e| e.to_string())?;
+        let (ausgabe, erfolg) = lean_lauf(&lean, &lp, &beweisdatei, Some(&beweise_olean), modell)?;
+        if let Some(m) = ohne_ort(&ausgabe, erfolg) {
+            befund.stand = Stand::Aufbau;
+            befund.meldung = m;
+            return Ok(befund);
+        }
+        let fehler = fehlerzeilen(&ausgabe);
+        if !fehler.is_empty() {
+            befund.stand = Stand::Rot;
+            befund.meldung = format!("the PROOFS do not compile ({}):\n{}", beweisdatei.display(), fehler.join("\n"));
+            return Ok(befund);
+        }
+        if !beweise_olean.is_file() {
+            befund.stand = Stand::Aufbau;
+            befund.meldung = format!("`lean` reported success and wrote no `{}` -- nothing was measured", beweise_olean.display());
+            return Ok(befund);
+        }
+    }
+    // **The gate.** What is checked is not a line of text in the person's file but a GATE FILE
+    // written here: one theorem per statement, whose TYPE is the generated statement, spelled
+    // out in full, and whose proof is the generator's theorem or the person's `<th>_done` --
+    // then `#print axioms` of each. A proof of another statement fails to elaborate; a `sorry`,
+    // an `axiom` of the person's, `native_decide` (`Lean.ofReduceBool`) or any classical escape
+    // shows up as an axiom outside the three standard ones. Nothing here reads a warning.
+    let standard = ["propext", "Classical.choice", "Quot.sound"];
+    let mut tor = String::new();
+    tor.push_str(&format!("import Duty.{name}\n"));
+    if hat_beweise {
+        tor.push_str(&format!("import Proofs.{name}\n"));
+    }
+    tor.push_str("set_option autoImplicit false\n");
+    let mut zeilen_von: Vec<(usize, usize)> = Vec::new(); // (Lean line, index of the statement)
+    let mut zeile = tor.lines().count();
+    for (k, st) in statements.iter().enumerate() {
+        let th = st.trim_end_matches("_statement");
+        let beweis = if geschuldet.contains(st) {
+            if hat_beweise { format!("{th}_done") } else { "sorry".to_string() }
+        } else {
+            format!("GabbroDuty.{name}.{th}")
+        };
+        tor.push_str(&format!("theorem gate_{k} : GabbroDuty.{name}.{st} := {beweis}\n"));
+        tor.push_str(&format!("#print axioms gate_{k}\n"));
+        zeilen_von.push((zeile + 1, k));
+        zeilen_von.push((zeile + 2, k));
+        zeile += 2;
+    }
+    if text.contains("theorem unit_closed ") {
+        tor.push_str(&format!("#print axioms GabbroDuty.{name}.unit_closed\n"));
+    }
+    let tor_datei = out_dir.join(format!("Gate{name}.lean"));
+    std::fs::write(&tor_datei, &tor).map_err(|e| e.to_string())?;
+    let (ausgabe, erfolg) = lean_lauf(&lean, &lp, &tor_datei, None, modell)?;
     if let Some(m) = ohne_ort(&ausgabe, erfolg) {
         befund.stand = Stand::Aufbau;
         befund.meldung = m;
         return Ok(befund);
     }
-    let fehler = fehlerzeilen(&ausgabe);
-    if !fehler.is_empty() {
-        befund.stand = Stand::Rot;
-        befund.meldung = format!("the PROOFS do not compile ({}):\n{}", beweisdatei.display(), fehler.join("\n"));
-        return Ok(befund);
-    }
-    let mit_sorry: Vec<String> = sorry_zeilen(&ausgabe)
-        .into_iter()
-        .filter_map(|z| theorem_bei(&beweise, z))
-        .collect();
-    for st in geschuldet {
-        // a theorem whose type is the statement, and none of the `sorry`-ed ones
-        let bewiesen = beweise.lines().any(|l| {
-            l.starts_with("theorem ")
-                && l.contains(&format!(": {st}"))
-                && !mit_sorry.iter().any(|t| l.starts_with(&format!("theorem {t} ")) || l.starts_with(&format!("theorem {t}:")))
-        });
-        if bewiesen {
-            befund.bewiesen.push(st);
-        } else {
-            befund.geschuldet.push(st);
+    // the statements whose gate theorem did not elaborate (no proof, or a proof of another statement)
+    let mut ohne_beweis: Vec<usize> = Vec::new();
+    let mut sonst_fehler: Vec<String> = Vec::new();
+    for l in fehlerzeilen(&ausgabe) {
+        let zl: Option<usize> = l.split(':').nth(1).and_then(|n| n.parse().ok());
+        match zl.and_then(|z| zeilen_von.iter().find(|(lz, _)| *lz == z)) {
+            Some((_, k)) => {
+                if !ohne_beweis.contains(k) {
+                    ohne_beweis.push(*k);
+                }
+            }
+            None => sonst_fehler.push(l),
         }
+    }
+    // The axioms each `#print axioms gate_k` reported. **Fail-closed:** a theorem that elaborated
+    // and has no report line means the run did not say what it depends on -- nothing measured.
+    let mut schlecht_axiom: Vec<(usize, String)> = Vec::new();
+    for (k, _) in statements.iter().enumerate() {
+        if ohne_beweis.contains(&k) {
+            continue;
+        }
+        let marke = format!("'gate_{k}'");
+        let Some(i) = ausgabe.find(&marke) else {
+            befund.stand = Stand::Aufbau;
+            befund.meldung = format!("`lean` reported no axioms for `gate_{k}` -- nothing was measured");
+            return Ok(befund);
+        };
+        let rest = &ausgabe[i + marke.len()..];
+        let ende = rest.find("\n'").unwrap_or(rest.len());
+        let stueck = &rest[..ende];
+        if stueck.contains("does not depend on any axioms") {
+            continue;
+        }
+        let Some(o) = stueck.find('[') else {
+            befund.stand = Stand::Aufbau;
+            befund.meldung = format!("the axiom report of `gate_{k}` is not in a form this gate reads -- nothing was measured");
+            return Ok(befund);
+        };
+        let Some(c) = stueck.find(']') else {
+            befund.stand = Stand::Aufbau;
+            befund.meldung = format!("the axiom report of `gate_{k}` is not in a form this gate reads -- nothing was measured");
+            return Ok(befund);
+        };
+        let fremd: Vec<&str> = stueck[o + 1..c]
+            .split(',')
+            .map(|a| a.trim())
+            .filter(|a| !a.is_empty() && !standard.contains(a))
+            .collect();
+        if !fremd.is_empty() {
+            schlecht_axiom.push((k, fremd.join(", ")));
+        }
+    }
+    if let Some(i) = ausgabe.find("unit_closed' depends on axioms") {
+        let stueck = &ausgabe[i..];
+        if let (Some(o), Some(c)) = (stueck.find('['), stueck.find(']')) {
+            let fremd: Vec<&str> = stueck[o + 1..c]
+                .split(',')
+                .map(|a| a.trim())
+                .filter(|a| !a.is_empty() && !standard.contains(a))
+                .collect();
+            if !fremd.is_empty() {
+                sonst_fehler.push(format!("`unit_closed` depends on axioms outside the standard three: {}", fremd.join(", ")));
+            }
+        }
+    }
+    // a GENERATED statement that fails the gate is the tree's fault; an owed one only stays owed
+    let mut rot: Vec<String> = sonst_fehler;
+    let mut grund_geschuldet: Vec<String> = Vec::new();
+    for (k, st) in statements.iter().enumerate() {
+        let owed = geschuldet.contains(st);
+        let kaputt = ohne_beweis.contains(&k) || schlecht_axiom.iter().any(|(j, _)| *j == k);
+        if owed {
+            if kaputt || !hat_beweise {
+                befund.geschuldet.push(st.clone());
+                if !hat_beweise {
+                } else if let Some((_, a)) = schlecht_axiom.iter().find(|(j, _)| *j == k) {
+                    grund_geschuldet.push(format!("`{st}`: the proof depends on {a}"));
+                } else if ohne_beweis.contains(&k) && hat_beweise {
+                    grund_geschuldet.push(format!("`{st}`: no theorem `{}_done` of exactly this statement", st.trim_end_matches("_statement")));
+                }
+            } else {
+                befund.bewiesen.push(st.clone());
+            }
+        } else if kaputt {
+            let grund = schlecht_axiom.iter().find(|(j, _)| *j == k).map(|(_, a)| a.clone()).unwrap_or_else(|| "did not elaborate".into());
+            rot.push(format!("the generated theorem of `{st}` fails the gate: {grund}"));
+        }
+    }
+    befund.geschlossen = statements.iter().filter(|s| !geschuldet.contains(s)).cloned().collect();
+    if !rot.is_empty() {
+        befund.stand = Stand::Rot;
+        befund.meldung = rot.join("\n");
+        return Ok(befund);
     }
     if !befund.geschuldet.is_empty() {
         befund.stand = Stand::Geschuldet;
+        befund.meldung = grund_geschuldet.join("\n");
     }
     Ok(befund)
 }

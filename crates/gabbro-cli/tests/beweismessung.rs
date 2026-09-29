@@ -87,16 +87,65 @@ fn a_lean_that_writes_no_receipt_is_setup_not_green() {
     assert!(text.contains("wrote no"), "{text}");
 }
 
+/// A stand-in `lean`: writes the receipt it was asked for and, for the gate file (the last
+/// argument), answers every `#print axioms gate_N` with `report` (`%s` = the theorem's name).
+fn lean_mit_bericht(skripte: &Path, bericht: &str) -> PathBuf {
+    skript(
+        skripte,
+        "lean",
+        &format!(
+            "while [ $# -gt 1 ]; do if [ \"$1\" = -o ]; then shift; : > \"$1\"; fi; shift; done\n\
+             grep '^#print axioms gate_' \"$1\" | sed \"s/#print axioms \\(gate_[0-9]*\\)/'\\1' {bericht}/\"\nexit 0"
+        ),
+    )
+}
+
 #[test]
-fn a_lean_that_writes_its_receipt_is_green() {
-    let (modell, skripte) = aufbau("mit-quittung");
+fn a_lean_that_writes_its_receipt_and_reports_no_axioms_is_setup_not_green() {
+    // the fail-closed half of the gate: a run that does not say what the theorems depend on
+    // has measured nothing
+    let (modell, skripte) = aufbau("ohne-bericht");
     let lake = skript(&skripte, "lake", "exit 0");
-    // `lean -o <olean> <file>`: write the receipt where it was asked for.
     let lean = skript(
         &skripte,
         "lean",
         "while [ $# -gt 0 ]; do if [ \"$1\" = -o ]; then shift; : > \"$1\"; fi; shift; done\nexit 0",
     );
+    let (code, text) = lauf(&modell, &lean, &lake);
+    assert!(!text.contains("GREEN"), "{text}");
+    assert_eq!(code, 3, "{text}");
+    assert!(text.contains("reported no axioms"), "{text}");
+}
+
+#[test]
+fn a_lean_that_reports_sorryax_under_a_generated_theorem_is_red() {
+    let (modell, skripte) = aufbau("sorryax");
+    let lake = skript(&skripte, "lake", "exit 0");
+    let lean = lean_mit_bericht(&skripte, "depends on axioms: [propext, sorryAx]");
+    let (code, text) = lauf(&modell, &lean, &lake);
+    assert!(!text.contains("GREEN"), "{text}");
+    assert_eq!(code, 1, "{text}");
+    assert!(text.contains("sorryAx"), "{text}");
+}
+
+#[test]
+fn a_lean_that_reports_a_foreign_axiom_is_red_and_the_standard_three_are_green() {
+    let (modell, skripte) = aufbau("fremdes-axiom");
+    let lake = skript(&skripte, "lake", "exit 0");
+    let lean = lean_mit_bericht(&skripte, "depends on axioms: [propext, Lean.ofReduceBool]");
+    let (code, text) = lauf(&modell, &lean, &lake);
+    assert_eq!(code, 1, "{text}");
+    assert!(text.contains("Lean.ofReduceBool"), "{text}");
+    let lean = lean_mit_bericht(&skripte, "depends on axioms: [propext, Classical.choice, Quot.sound]");
+    let (code, text) = lauf(&modell, &lean, &lake);
+    assert_eq!(code, 0, "the standard three are the positive control:\n{text}");
+}
+
+#[test]
+fn a_lean_that_writes_its_receipt_is_green() {
+    let (modell, skripte) = aufbau("mit-quittung");
+    let lake = skript(&skripte, "lake", "exit 0");
+    let lean = lean_mit_bericht(&skripte, "does not depend on any axioms");
     let (code, text) = lauf(&modell, &lean, &lake);
     assert_eq!(code, 0, "the positive control must be GREEN:\n{text}");
     assert!(text.contains("GREEN"), "{text}");
