@@ -9702,3 +9702,91 @@ impl fn ja() -> bool effects { reads z, locks L } costs <= 64 ops
         "and the release stands directly in front of it, as before:\n{c}"
     );
 }
+
+/// **Die Menge der vorzeichenlosen Namen ist nach BASISNAME gebaut, und darin stand Unsinn.**
+///
+/// Gemessen am 2026-09-29 im Netzwerkstack (`~/gabbro-netz`, `docs/WAENDE-M1.md` Wand 6): die
+/// Menge fasst die ganze Uebersetzungseinheit und faellt konservativ nach lautstark, was
+/// richtig ist -- solange nur ZAHLEN darin stehen. Es standen aber auch Zeiger und untypisierte
+/// Bindungen darin, und **drei korrekte Programme wurden deshalb abgelehnt**, jedes mal an einer
+/// Zeile, die nichts dafuer konnte:
+///
+///   * `netz::bytes::gleich(a : ptr<normal, r> u8, …, b : ptr<normal, r> u8, …)` schlug `a` und
+///     `b` aus der Menge -- ein Zeiger hat kein Vorzeichen. Danach schrieb `narrow a` in einer
+///     Funktion, die `gleich` nie gesehen hat, `a >= 0`, und `-Werror=type-limits` lehnte ab.
+///     **`c` und `d` vier Zeilen weiter kamen richtig heraus** -- genau diese Asymmetrie ist der
+///     Befund;
+///   * `let hoch = u32_klein(TIMESPEC, 4);` -- ein `let` OHNE erklaerten Typ -- machte
+///     `narrow hoch` drei Module weiter unbaubar;
+///   * dasselbe fuer `let m = f() else (e) { … }`, was Wand 4 derselben Datei ist: `LetSonst`
+///     hat gar kein `typ`-Feld, also kannte der Sammler dort nie einen Typ.
+///
+/// Was hier NICHT wandert: ein nachweislich vorzeichenbehafteter Name behaelt seine untere
+/// Pruefung. *Die Menge wird groesser, nie kleiner an einer Stelle, an der etwas bewiesen war.*
+#[test]
+fn vorzeichenlose_namen_werden_nicht_von_zeigern_und_untypisierten_bindungen_vergiftet() {
+    fn c_von(q: &str) -> String {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt nicht:\n{}", a.zeige(q));
+        c
+    }
+
+    // **1. Ein ZEIGER desselben Namens vergiftet nichts mehr.**
+    let zeiger = "module t {
+impl fn gleich(a : ptr<normal, r> u8, b : ptr<normal, r> u8) -> bool
+    requires 1 <= lenof(a), 1 <= lenof(b)
+    effects { reads a, reads b } costs <= 20 ops
+{ return a[0] == b[0]; }
+impl fn gibt() -> u64 ensures result <= 65535 effects { pure } costs <= 4 ops { return 7; }
+impl fn f() -> u64 effects { pure } costs <= 60 ops
+{ let a : u64 = gibt(); narrow a to 0 .. 65535 else { return 0; }
+  let b : u64 = gibt(); narrow b to 0 .. 65535 else { return 0; } return a + b; } }";
+    let c = c_von(zeiger);
+    assert!(!c.contains("a >= 0"), "ein Zeiger namens `a` sagt nichts ueber die Zahl `a`:\n{c}");
+    assert!(!c.contains("b >= 0"), "dasselbe fuer `b`:\n{c}");
+    assert!(c.contains("if (!(a <= 65535))"), "die obere Pruefung bleibt:\n{c}");
+
+    // **2. Ein `let` OHNE erklaerten Typ liest den Ergebnistyp des Gerufenen** -- und vergiftet
+    // den Namen damit nicht mehr fuer jede andere Funktion der Einheit.
+    let untypisiert = "module t {
+impl fn gibt() -> u64 ensures result <= 65535 effects { pure } costs <= 4 ops { return 7; }
+impl fn woanders() -> u64 effects { pure } costs <= 20 ops { let hoch = gibt(); return hoch; }
+impl fn f() -> u64 effects { pure } costs <= 60 ops
+{ let hoch : u64 = gibt(); narrow hoch to 0 .. 65535 else { return 0; } return hoch; } }";
+    let c2 = c_von(untypisiert);
+    assert!(!c2.contains("hoch >= 0"), "ein untypisiertes `let` vergiftet den Namen nicht:\n{c2}");
+
+    // **3. Wand 4 selbst: `let … else` hat kein `typ`-Feld, wohl aber einen Ergebnistyp.**
+    let letsonst = "module t {
+reason F { Weg = 1 \"weg\" exhaustive }
+impl fn kanal(w : u64 in 0 .. 65535) -> u64 or F
+    ensures result <= 65535 effects { pure } costs <= 8 ops
+{ if w == 0 { return F::Weg; } return 9; }
+impl fn f() -> u64 effects { pure } costs <= 80 ops
+{ let m = kanal(1) else (e) { return 0; } narrow m to 0 .. 65535 else { return 0; } return m; } }";
+    let c3 = c_von(letsonst);
+    assert!(
+        !c3.contains("m >= 0"),
+        "der Ergebnistyp von `kanal` ist `u64`, also faellt die untere Pruefung:\n{c3}"
+    );
+    assert!(c3.contains("if (!(m <= 65535))"), "die obere Pruefung bleibt:\n{c3}");
+
+    // **4. Und die Zusage, die NICHT wandert.** Ein nachweislich vorzeichenbehafteter Wert
+    // behaelt `>= 0` -- dort ist es keine Redensart, sondern die halbe Pruefung. Beide Wege
+    // werden gemessen: der erklaerte Typ und der ueber den Ergebnistyp gelesene.
+    let signiert = "module t {
+type S = i32 in -100 .. 100;
+impl fn holt() -> S effects { pure } costs <= 4 ops { return 5; }
+impl fn f(x : S) -> u32 effects { pure } costs <= 8 ops
+{ narrow x to 0 .. 50 else { return 0; } return 1; }
+impl fn g() -> u32 effects { pure } costs <= 20 ops
+{ let y = holt(); narrow y to 0 .. 50 else { return 0; } return 2; } }";
+    let c4 = c_von(signiert);
+    assert!(c4.contains("x >= 0"), "ein erklaert vorzeichenbehafteter Wert behaelt sie:\n{c4}");
+    assert!(
+        c4.contains("y >= 0"),
+        "und einer, dessen Vorzeichen ueber den Ergebnistyp gelesen wird, auch:\n{c4}"
+    );
+}

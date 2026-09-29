@@ -1476,12 +1476,37 @@ pub fn emittiere_mit(
     // **Welche Namen sind nachweislich vorzeichenlos?** Konservativ ueber alle Funktionen:
     // wer irgendwo vorzeichenbehaftet erklaert ist, faellt heraus. *Unwissen faellt nach
     // lautstark -- dann bleibt die untere Pruefung stehen und `-Wextra` meldet sich.*
+    //
+    // **Der Satz oben bleibt; sein GELTUNGSBEREICH war zu gross (lane netz3, 2026-09-29).**
+    // Die Menge ist ueber die ganze Uebersetzungseinheit und nach BASISNAME gebaut, und das
+    // ist richtig, solange nur Zahlen darin stehen. Gemessen wurde, dass auch anderes darin
+    // stand, und dass es DREI KORREKTE PROGRAMME abgelehnt hat (`~/gabbro-netz`,
+    // `docs/WAENDE-M1.md` Wand 6):
+    //
+    //   * `netz::bytes::gleich(a : ptr<normal, r> u8, …, b : ptr<normal, r> u8, …)` schlaegt
+    //     `a` und `b` aus der Menge -- ein Zeiger hat kein Vorzeichen, also antwortet
+    //     `vorzeichen` mit `None`, also fiel der Name nach `mit`. Danach schrieb `narrow a`
+    //     in einer Funktion, die `gleich` nie gesehen hat, `a >= 0`, und `cc
+    //     -Werror=type-limits` lehnte es ab -- waehrend `c` und `d` vier Zeilen weiter
+    //     richtig herauskamen. **Die Erklaerung eines ZEIGERS sagt nichts ueber das
+    //     Vorzeichen einer ZAHL desselben Namens**: sie beweist nichts und darf nichts
+    //     vergiften. Solche Erklaerungen werden jetzt uebersprungen.
+    //   * `let hoch = u32_klein(TIMESPEC, 4);` -- ein `let` OHNE erklaerten Typ -- machte
+    //     `narrow hoch` drei Module weiter unbaubar. Das ist Wand 4 von derselben Stelle aus
+    //     gesehen: der Sammler kannte nur den erklaerten Typ. `let_tyexpr` beantwortet genau
+    //     diese Frage schon fuer die Lokaltypen daneben, also fragt er sie hier auch -- und
+    //     `StmtArt::LetSonst`, das gar kein `typ`-Feld hat, geht denselben Weg ueber den
+    //     ERGEBNISTYP des Gerufenen.
+    //
+    // *Beide Aenderungen machen die Menge GROESSER und nie kleiner an einer Stelle, an der
+    // etwas bewiesen war:* ein nachweislich vorzeichenbehafteter Name faellt weiter heraus,
+    // und Unwissen faellt weiter nach lautstark.
     let mut ohne: BTreeSet<String> = BTreeSet::new();
     let mut mit: BTreeSet<String> = BTreeSet::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else { return };
-        let mut erklaert: Vec<(&str, Option<&TypExpr>)> =
-            f.parameter.iter().map(|p| (p.name.text.as_str(), Some(&p.typ))).collect();
+        let mut erklaert: Vec<(&str, Option<TypExpr>)> =
+            f.parameter.iter().map(|p| (p.name.text.as_str(), Some(p.typ.clone()))).collect();
         if let FnRumpf::Block(b) = &f.rumpf {
             // **The collector descends -- a `let` inside `traverse`/`match`/`if` counts.**
             // Measured 2026-09-03 on the IPC fastpath: `let w : u32` in a `traverse` body
@@ -1489,20 +1514,48 @@ pub fn emittiere_mit(
             // `-Werror=type-limits` rejects. Outside any loop the same line came out right
             // (`w < 1024`). *A collector that sees only the top level returns a SUBSET and
             // looks like a set* -- the same build as `sammle_lets` beside it.
-            fn sammle<'a>(b: &'a Block, aus: &mut Vec<(&'a str, Option<&'a TypExpr>)>) {
+            fn sammle<'a>(b: &'a Block, aus: &mut Vec<(&'a str, Option<TypExpr>)>, u: &Namen) {
                 for s in &b.anweisungen {
-                    if let StmtArt::Let(l) = &s.art {
-                        aus.push((l.name.text.as_str(), l.typ.as_ref()));
+                    match &s.art {
+                        StmtArt::Let(l) => {
+                            // Der erklaerte Typ, und wo keiner steht: der Typ, den der
+                            // Initialisierer ANSAGT. Dieselbe Frage, dieselbe Antwort wie
+                            // bei `lokale_lets` -- ein zweiter Weg zur selben Auskunft waere
+                            // ein zweites Register («W7»).
+                            let t = l.typ.clone().or_else(|| let_tyexpr(&l.wert, u));
+                            aus.push((l.name.text.as_str(), t));
+                        }
+                        // **`let … else` hat kein `typ`-Feld** (Wand 5 von `~/gabbro-netz`
+                        // sagt, dass eine Anmerkung dort angenommen und weggeworfen wird).
+                        // Was es hat, ist einen Ruf, und der Ruf hat einen erklaerten
+                        // Ergebnistyp -- die Quelle, aus der ein `let f = eichfeld();`
+                        // lernen kann, was `f` ist, ohne dass jemand raet.
+                        StmtArt::LetSonst(l) => {
+                            let t = l.als_ruf().and_then(|r| {
+                                r.path()
+                                    .and_then(|p| p.teile.last())
+                                    .and_then(|i| u.ergebnistyp.get(&i.text).cloned())
+                            });
+                            aus.push((l.name.text.as_str(), t));
+                        }
+                        _ => {}
                     }
                     for k in crate::unterbloecke(s) {
-                        sammle(k, aus);
+                        sammle(k, aus, u);
                     }
                 }
             }
-            sammle(b, &mut erklaert);
+            sammle(b, &mut erklaert, &namen);
         }
         for (name, ty) in erklaert {
-            match ty.and_then(|x| vorzeichen(x, &namen)) {
+            // **Ein Zeiger beweist nichts und vergiftet nichts.** Er ist keine Zahl, also
+            // ist er keine Aussage ueber das Vorzeichen einer -- und weil die Menge nach
+            // Basisnamen geht, war er vorher eine Aussage ueber jede Zahl desselben Namens
+            // in der ganzen Einheit.
+            if matches!(ty, Some(TypExpr::Zeiger(_)) | Some(TypExpr::FnZeiger(_))) {
+                continue;
+            }
+            match ty.as_ref().and_then(|x| vorzeichen(x, &namen)) {
                 Some(true) => ohne.insert(name.to_string()),
                 _ => mit.insert(name.to_string()),
             };
