@@ -17,5 +17,11 @@ name = "Gabbro"
 srcDir = "../programmlogik"
 roots = ["Gabbro.Body"]
 
+# The generated duty files of the units the bridge covers -- compiled in place, proofs included.
+[[lean_lib]]
+name = "Duty"
+srcDir = "../programmlogik"
+roots = ["Duty.Duty104Referenz", "Duty.Duty108DisjointStartLocks"]
+
 [[lean_lib]]
 name = "Bruecke"
