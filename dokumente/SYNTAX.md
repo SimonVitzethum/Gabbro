@@ -898,7 +898,7 @@ xform      = "update" "(" ident ")"
 (* «C4b»: the same two clauses as at `retry` -- a bounded CAS loop, and the writer says the
    bound and the exit. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
-           | "let" ident "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
+           | "let" ident [ ":" typeexpr ] "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
            | "let" [ "mut" ] ident [ ":" typeexpr ] "=" libcall ";" ;   (* lane E1: binding position *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)

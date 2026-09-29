@@ -1,0 +1,43 @@
+-- **A `narrow` is lowered by ITS OWN function's declarations of the name** (wall 9, closed 2026-09-30).
+--
+-- The emitter drops the lower comparison of `narrow x to 0 .. N` when it knows `x` is unsigned, because `x >= 0` on an
+-- unsigned word is always true and `cc -Wall -Wextra -Werror` says so (`-Wtype-limits`) -- the flags the corpus compiles
+-- under. It knew it from a set built over the whole COMPILATION UNIT and keyed by BASE NAME: one declaration of `zeit` that
+-- it could not type, or that is signed, in ANY function took the name out of the set for EVERY function -- and then
+-- `narrow zeit to 0 .. N` in a function that declares it `u64` wrote `zeit >= 0`, and `cc` refused correct code. Measured in
+-- the network stack of phase 2 (`~/gabbro-netz`, `docs/WAENDE-M1.md` wall 9), where it appeared after edits in files the
+-- function does not call.
+--
+-- The two functions below are that shape: `vorzeichen` binds a SIGNED `zeit` and keeps its lower check (it is half the
+-- check there); `zaehler` binds an unsigned one and needs none. Built with `cc -Werror`, `zaehler` used to fail.
+
+module beispiel {
+
+type S = i32 in -100 .. 100;
+
+impl fn vorzeichen(zeit : S) -> u32
+    effects { pure }
+    costs   <= 8 ops
+{
+    narrow zeit to 0 .. 50 else { return 0; }
+    return 1;
+}
+
+impl fn gibt() -> u64
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 4 ops
+{
+    return 7;
+}
+
+impl fn zaehler() -> u64
+    effects { pure }
+    costs   <= 60 ops
+{
+    let zeit : u64 = gibt();
+    narrow zeit to 0 .. 65535 else { return 0; }
+    return zeit;
+}
+
+}

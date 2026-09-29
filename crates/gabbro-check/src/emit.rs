@@ -378,6 +378,9 @@ struct Namen {
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
+    /// **The names the function being lowered binds, provably unsigned in every binding here** (wall 9) --
+    /// `vorzeichenlose_namen_hier`. Filled by `eigene_sicht`; empty at unit level.
+    vorzeichenlos_hier: BTreeSet<String>,
     /// **Lane 260: the `start` sites with their root counts** -- (statement
     /// span-lo, roots) in walk order. The file-scope thread stacks are
     /// emitted from this list beside the tables (one 64 KiB region per
@@ -1505,61 +1508,8 @@ pub fn emittiere_mit(
     let mut mit: BTreeSet<String> = BTreeSet::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else { return };
-        let mut erklaert: Vec<(&str, Option<TypExpr>)> =
-            f.parameter.iter().map(|p| (p.name.text.as_str(), Some(p.typ.clone()))).collect();
-        if let FnRumpf::Block(b) = &f.rumpf {
-            // **The collector descends -- a `let` inside `traverse`/`match`/`if` counts.**
-            // Measured 2026-09-03 on the IPC fastpath: `let w : u32` in a `traverse` body
-            // fell out of the map, and `narrow w` then wrote `>= 0` over a `u32`, which
-            // `-Werror=type-limits` rejects. Outside any loop the same line came out right
-            // (`w < 1024`). *A collector that sees only the top level returns a SUBSET and
-            // looks like a set* -- the same build as `sammle_lets` beside it.
-            fn sammle<'a>(b: &'a Block, aus: &mut Vec<(&'a str, Option<TypExpr>)>, u: &Namen) {
-                for s in &b.anweisungen {
-                    match &s.art {
-                        StmtArt::Let(l) => {
-                            // Der erklaerte Typ, und wo keiner steht: der Typ, den der
-                            // Initialisierer ANSAGT. Dieselbe Frage, dieselbe Antwort wie
-                            // bei `lokale_lets` -- ein zweiter Weg zur selben Auskunft waere
-                            // ein zweites Register («W7»).
-                            let t = l.typ.clone().or_else(|| let_tyexpr(&l.wert, u));
-                            aus.push((l.name.text.as_str(), t));
-                        }
-                        // **`let … else` hat kein `typ`-Feld** (Wand 5 von `~/gabbro-netz`
-                        // sagt, dass eine Anmerkung dort angenommen und weggeworfen wird).
-                        // Was es hat, ist einen Ruf, und der Ruf hat einen erklaerten
-                        // Ergebnistyp -- die Quelle, aus der ein `let f = eichfeld();`
-                        // lernen kann, was `f` ist, ohne dass jemand raet.
-                        StmtArt::LetSonst(l) => {
-                            let t = l.als_ruf().and_then(|r| {
-                                r.path()
-                                    .and_then(|p| p.teile.last())
-                                    .and_then(|i| u.ergebnistyp.get(&i.text).cloned())
-                            });
-                            aus.push((l.name.text.as_str(), t));
-                        }
-                        _ => {}
-                    }
-                    for k in crate::unterbloecke(s) {
-                        sammle(k, aus, u);
-                    }
-                }
-            }
-            sammle(b, &mut erklaert, &namen);
-        }
-        for (name, ty) in erklaert {
-            // **Ein Zeiger beweist nichts und vergiftet nichts.** Er ist keine Zahl, also
-            // ist er keine Aussage ueber das Vorzeichen einer -- und weil die Menge nach
-            // Basisnamen geht, war er vorher eine Aussage ueber jede Zahl desselben Namens
-            // in der ganzen Einheit.
-            if matches!(ty, Some(TypExpr::Zeiger(_)) | Some(TypExpr::FnZeiger(_))) {
-                continue;
-            }
-            match ty.as_ref().and_then(|x| vorzeichen(x, &namen)) {
-                Some(true) => ohne.insert(name.to_string()),
-                _ => mit.insert(name.to_string()),
-            };
-        }
+        let erklaert = bindungen_der_funktion(f, &namen);
+        vorzeichen_einordnen(erklaert, &namen, &mut ohne, &mut mit);
     });
     namen.vorzeichenlos = ohne.difference(&mit).cloned().collect();
 
@@ -6135,6 +6085,85 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     aus.push_str("    return true;\n}\n");
 }
 
+/// **Every name a function binds, and the declaration's type where one is known** -- its parameters, its `let`s and its
+/// `let … else`s, at every depth (the collector descends: a `let` inside `traverse`/`match`/`if` counts; measured
+/// 2026-09-03 on the IPC fastpath, *a collector that sees only the top level returns a SUBSET and looks like a set*).
+///
+/// A `let` without an annotation asks the initialiser's announced type (`let_tyexpr`, the one register the local types
+/// already use -- a second way to the same answer would be W7), and a `let … else` asks its annotation FIRST (wall 5:
+/// the binding's declared type is honoured) and the callee's declared result type second.
+fn bindungen_der_funktion<'a>(f: &'a FnDecl, namen: &Namen) -> Vec<(&'a str, Option<TypExpr>)> {
+    let mut erklaert: Vec<(&str, Option<TypExpr>)> =
+        f.parameter.iter().map(|p| (p.name.text.as_str(), Some(p.typ.clone()))).collect();
+    if let FnRumpf::Block(b) = &f.rumpf {
+        fn sammle<'a>(b: &'a Block, aus: &mut Vec<(&'a str, Option<TypExpr>)>, u: &Namen) {
+            for s in &b.anweisungen {
+                match &s.art {
+                    StmtArt::Let(l) => {
+                        let t = l.typ.clone().or_else(|| let_tyexpr(&l.wert, u));
+                        aus.push((l.name.text.as_str(), t));
+                    }
+                    StmtArt::LetSonst(l) => {
+                        let t = l.typ.clone().or_else(|| {
+                            l.als_ruf().and_then(|r| {
+                                r.path()
+                                    .and_then(|p| p.teile.last())
+                                    .and_then(|i| u.ergebnistyp.get(&i.text).cloned())
+                            })
+                        });
+                        aus.push((l.name.text.as_str(), t));
+                    }
+                    _ => {}
+                }
+                for k in crate::unterbloecke(s) {
+                    sammle(k, aus, u);
+                }
+            }
+        }
+        sammle(b, &mut erklaert, namen);
+    }
+    erklaert
+}
+
+/// **Sort the declarations by what they prove about the sign**: a name declared provably unsigned goes into `ohne`,
+/// every other declaration (signed, or unknown) into `mit`. A pointer proves nothing and poisons nothing -- it is not a
+/// number, so it says nothing about the sign of a number of the same name.
+fn vorzeichen_einordnen(
+    erklaert: Vec<(&str, Option<TypExpr>)>,
+    namen: &Namen,
+    ohne: &mut BTreeSet<String>,
+    mit: &mut BTreeSet<String>,
+) {
+    for (name, ty) in erklaert {
+        if matches!(ty, Some(TypExpr::Zeiger(_)) | Some(TypExpr::FnZeiger(_))) {
+            continue;
+        }
+        match ty.as_ref().and_then(|x| vorzeichen(x, namen)) {
+            Some(true) => ohne.insert(name.to_string()),
+            _ => mit.insert(name.to_string()),
+        };
+    }
+}
+
+/// **The names THIS function binds that are provably unsigned in every one of their bindings here** -- the answer the
+/// `narrow` lowering asks BEFORE it falls back on the unit-wide set (wall 9, `~/gabbro-netz` `docs/WAENDE-M1.md`).
+///
+/// The unit-wide set is built by BASE NAME over every function, and one declaration of `zeit` that the emitter cannot
+/// type -- in another function, another module, a device program's own `let zeit = …` -- takes the name out of it for
+/// every function of the unit. Then `narrow zeit to 0 .. N` writes `zeit >= 0` over a `u64` two functions away from the
+/// declaration that spoiled it, and `cc -Werror=type-limits` refuses correct code. *Measured, and it depended on things
+/// that have nothing to do with the line*: it appeared after edits in files the function does not call.
+///
+/// The question `narrow` asks is about ITS variable, and the variable's declarations are in its own function. Names are
+/// still collected across the whole body with no scopes, so a name bound twice with two types is not decided (`mit`
+/// wins) -- **unknown still falls loud**, and a provably signed declaration keeps its lower check. The set can only be
+/// larger than the unit-wide one where the unit-wide one was spoiled by ANOTHER function.
+fn vorzeichenlose_namen_hier(f: &FnDecl, namen: &Namen) -> BTreeSet<String> {
+    let (mut ohne, mut mit) = (BTreeSet::new(), BTreeSet::new());
+    vorzeichen_einordnen(bindungen_der_funktion(f, namen), namen, &mut ohne, &mut mit);
+    ohne.difference(&mit).cloned().collect()
+}
+
 /// Der Leser fuer eine Breite und eine Bytereihenfolge. **Er wird MITERZEUGT**, nicht
 /// vorausgesetzt: ein Erzeugnis, das eine Bibliothek braucht, ist kein Erzeugnis.
 /// `Some(true)` = nachweislich vorzeichenlos, `Some(false)` = nachweislich mit Vorzeichen,
@@ -7570,6 +7599,7 @@ fn zeigerziel(t: &TypExpr) -> Option<String> {
 /// ihm laengst tut.
 fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     let mut lokal = u.clone();
+    lokal.vorzeichenlos_hier = vorzeichenlose_namen_hier(f, u);
     // **Which of this body's `let`s nobody reads back** -- the same walker the
     // `(void)k;` of an unread parameter uses, so the two answers cannot drift.
     lokal.ungelesene_lets.clear();
@@ -10720,6 +10750,7 @@ fn anweisung(
             // Warnung ueber eine Zeile, die der Anwender nicht geschrieben hat. *Der Weg
             // bleibt derselbe: Unwissen faellt nach lautstark, die Pruefung bleibt stehen.*
             let vorzeichenlos = vorzeichenlos.contains(&n.ort.basis.text)
+                || (n.ort.suffixe.is_empty() && u.vorzeichenlos_hier.contains(&n.ort.basis.text))
                 || ort_typ(&n.ort, u).is_some_and(|t| vorzeichen(&t, u) == Some(true));
             let bedingung = if untere_ist_null && vorzeichenlos {
                 format!("{o} {oben} {bis}")

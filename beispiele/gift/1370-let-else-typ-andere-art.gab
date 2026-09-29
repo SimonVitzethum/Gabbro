@@ -1,0 +1,31 @@
+-- erwartet: M135
+-- **An annotation on `let … else` of another KIND than the callee's answer** -- `bool` over a number.
+--
+-- The twin of `gift/1369` and the example wall 5's own entry in `docs/WAENDE-M1.md` gives: `g` answers a `u64`, the binding
+-- says `bool`, and the checker used to say nothing -- *a promise nobody keeps*, which is the class `P041` was written for.
+-- It says `M135` now (a `bool` says HELD or FALLEN, and a number says how many).
+
+module gift {
+
+reason F { Weg = 1 "weg" exhaustive }
+
+impl fn kanal(w : u64 in 0 .. 100) -> u64 or F
+    ensures result <= 2048
+    effects { pure }
+    costs   <= 8 ops
+{
+    if w == 0 {
+        return F::Weg;
+    }
+    return 9;
+}
+
+impl fn kaputt() -> u64
+    effects { pure }
+    costs   <= 60 ops
+{
+    let m : bool = kanal(1) else (e) { return 0; }
+    return 1;
+}
+
+}

@@ -3918,7 +3918,7 @@ impl<'a> Parser<'a> {
                             wert.span,
                             "`let … else` carries a call or a place, no other expression",
                         )
-                        .mit_notiz("`letstmt = \"let\" ident \"=\" ( call | place ) \"else\" \"(\" ident \")\" block`"),
+                        .mit_notiz("`letstmt = \"let\" ident [ \":\" type ] \"=\" ( call | place ) \"else\" \"(\" ident \")\" block`"),
                     );
                     return Err(Abbruch);
                 }
@@ -3930,6 +3930,7 @@ impl<'a> Parser<'a> {
             let sonst = self.block()?;
             return Ok(StmtArt::LetSonst(LetSonst {
                 name,
+                typ,
                 quelle,
                 fehlername,
                 sonst,

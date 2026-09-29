@@ -1437,7 +1437,32 @@ impl<'a> Pruefer<'a> {
                     }
                 };
                 lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
-                lage.lokal.insert(l.name.text.clone(), t);
+                // **The annotation is HONOURED (wall 5, `~/gabbro-netz` `docs/WAENDE-M1.md`).** It was read by the parser and
+                // thrown away: `let m : bool = g(x) else (e) { … }` over a `g` that answers a `u64` said nothing at all,
+                // and `let g : u64 in 0 .. 2048 = f() else (e) { … }` bound a name whose range nobody kept. Now the
+                // callee's answer is held against the annotation like a plain `let x : T = f();` -- `M101`, at the
+                // binding's own source -- and the name is bound AT the annotation: a range the `ensures` does not prove
+                // is refused, and a range it proves is the range the name has from here on.
+                let ziel = l.typ.as_ref().map(|z| self.u.typ_von_ausdruck_decl(&self.modul, z));
+                if let Some(z) = &ziel {
+                    let stelle = match &l.quelle {
+                        LetQuelle::Ruf(r) => r.span,
+                        LetQuelle::Ort(o) => o.span,
+                    };
+                    self.passt(&t, z, stelle, "binding");
+                    // The value's own range, where it is narrower than the annotation -- the same fact a plain `let` books.
+                    if let (Some(w), Some(zb)) = (t.bereich(), z.bereich()) {
+                        if w.min > zb.min || w.max < zb.max {
+                            lage.fakten.push(Fakt::Bereich {
+                                schluessel: l.name.text.clone(),
+                                indizes: Vec::new(),
+                                min: w.min,
+                                max: w.max,
+                            });
+                        }
+                    }
+                }
+                lage.lokal.insert(l.name.text.clone(), ziel.unwrap_or(t));
                 let pfade = l.als_ruf().map(rufnamen_im_ruf).unwrap_or_default();
                 self.rufe_toeten_fakten(&pfade, lage);
                 // **V4 -- like `let`** (spec §1): a fallible call's return taint is

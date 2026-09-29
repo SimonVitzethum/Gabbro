@@ -9790,3 +9790,85 @@ impl fn g() -> u32 effects { pure } costs <= 20 ops
         "und einer, dessen Vorzeichen ueber den Ergebnistyp gelesen wird, auch:\n{c4}"
     );
 }
+
+/// **Wall 9 (`~/gabbro-netz`, `docs/WAENDE-M1.md`): a `narrow` is lowered by its own function's declarations of the name.**
+///
+/// The unit-wide set of provably unsigned names is keyed by BASE NAME, and one declaration of `zeit` that is signed -- or that
+/// the emitter cannot type -- in ANY function took the name out of it for EVERY function. Then `narrow zeit to 0 .. N` in a
+/// function that declares `zeit` as `u64` wrote `zeit >= 0`, and `cc -Werror=type-limits` refused correct code. Measured in the
+/// phase-2 network stack, where it depended on edits in files the function does not call.
+///
+/// The function's OWN bindings decide first (`vorzeichenlose_namen_hier`): unsigned in every binding here means the lower check
+/// goes, in any unit; a signed binding keeps it -- it is half of the check there -- and a name bound twice with two types is
+/// not decided (unknown falls loud, as before).
+#[test]
+fn die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit() {
+    fn c_von(q: &str) -> String {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt nicht:\n{}", a.zeige(q));
+        c
+    }
+    // 1. A signed `zeit` in another function no longer spoils the unsigned one here -- and keeps its own check.
+    let q = "module t {
+type S = i32 in -100 .. 100;
+impl fn vorzeichen(zeit : S) -> u32 effects { pure } costs <= 8 ops
+{ narrow zeit to 0 .. 50 else { return 0; } return 1; }
+impl fn gibt() -> u64 ensures result <= 65535 effects { pure } costs <= 4 ops { return 7; }
+impl fn zaehler() -> u64 effects { pure } costs <= 60 ops
+{ let zeit : u64 = gibt(); narrow zeit to 0 .. 65535 else { return 0; } return zeit; } }";
+    let c = c_von(q);
+    assert!(c.contains("if (!(zeit >= 0 && zeit <= 50))"), "the signed binding keeps its lower check:\n{c}");
+    assert!(c.contains("if (!(zeit <= 65535))"), "the unsigned binding in ITS function loses it:\n{c}");
+    assert!(!c.contains("zeit >= 0 && zeit <= 65535"), "and it is not written there:\n{c}");
+
+    // 2. A name bound TWICE in one function with two types is not decided: unknown falls loud.
+    let zweimal = "module t {
+type S = i32 in -100 .. 100;
+impl fn holt() -> S effects { pure } costs <= 4 ops { return 5; }
+impl fn f(x : u64 in 0 .. 9) -> u32 effects { pure } costs <= 40 ops
+{ let y : u64 = 7; narrow y to 0 .. 50 else { return 0; }
+  let z = holt(); narrow z to 0 .. 50 else { return 1; }
+  return 2; } }";
+    let c2 = c_von(zweimal);
+    assert!(c2.contains("z >= 0"), "a value read through a SIGNED result type keeps the check:\n{c2}");
+}
+
+/// **Wall 5: the annotation on `let … else` is honoured.** `ast::LetSonst` used to carry no `typ`: the parser read
+/// `let m : T = f() else (e) { … }` and threw the `T` away, so a callee that answers a `u64` bound to a `bool` said nothing.
+/// Now the callee's answer is held against the annotation like a plain `let`'s -- `M135` across kinds, `M101` for a range the
+/// `ensures` does not prove -- and the name is bound at the annotated type (its range).
+#[test]
+fn die_anmerkung_am_let_else_wird_gehalten() {
+    fn codes(q: &str) -> Vec<String> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.absagen
+            .iter()
+            .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+            .map(|x| x.code.to_string())
+            .collect()
+    }
+    let kopf = "module t {
+reason F { Weg = 1 \"weg\" exhaustive }
+impl fn kanal(w : u64 in 0 .. 100) -> u64 or F ensures result <= 2048 effects { pure } costs <= 8 ops
+{ if w == 0 { return F::Weg; } return 9; }
+";
+    // A `bool` over a number: another kind.
+    let q1 = format!("{kopf}impl fn f() -> u64 effects {{ pure }} costs <= 60 ops
+{{ let m : bool = kanal(1) else (e) {{ return 0; }} return 1; }} }}");
+    assert_eq!(codes(&q1), vec!["M135"], "a bool is not a number");
+    // A range the `ensures` does not prove.
+    let q2 = format!("{kopf}impl fn f() -> u64 effects {{ pure }} costs <= 60 ops
+{{ let m : u64 in 0 .. 100 = kanal(1) else (e) {{ return 0; }} return m; }} }}");
+    assert_eq!(codes(&q2), vec!["M101"], "0 .. 2048 does not fit 0 .. 100");
+    // A range it DOES prove, and the name has it: `m + 1` fits a `u64` and `m` fits a `u32 in 0 .. 2048`.
+    let q3 = format!("{kopf}impl fn f() -> u32 effects {{ pure }} costs <= 60 ops
+{{ let m : u64 in 0 .. 2048 = kanal(1) else (e) {{ return 0; }} let n : u32 in 0 .. 2048 = m; return n; }} }}");
+    assert_eq!(codes(&q3), Vec::<String>::new(), "the annotation is a range the name has from here on");
+    // No annotation: as before.
+    let q4 = format!("{kopf}impl fn f() -> u64 effects {{ pure }} costs <= 60 ops
+{{ let m = kanal(1) else (e) {{ return 0; }} return m; }} }}");
+    assert_eq!(codes(&q4), Vec::<String>::new(), "an unannotated let … else binds the callee's answer, as before");
+}
