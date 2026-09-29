@@ -152,8 +152,10 @@ server, no `ssh` step: Lean builds, `cargo` runs, Isabelle runs and QEMU stages 
 
 **Exception since 2026-09-28 (Simon): autonomous Claude lanes on `ubuntu@simon.jocraft.cc`.**
 Since 2026-09-29 TWO lanes run there, each with one agent and its own clone: the network-stack
-lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`) and the GabbroV lane (`~/gabbro-v`, runner
-`lauf-v.sh`, owner of `programmlogik/` and `beweis.rs`), both on Claude Sonnet 5.5. It builds and tests in its own tree, merges into master only with
+lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`, Claude Sonnet 5.5) and, after the GabbroV
+lane finished (`FERTIG-V`), the GabbroV-bridge lane (`~/gabbro-v`, runner `lauf-b.sh`, owner of
+`programmlogik/`, `lean.rs` and `beweis.rs`; task `dokumente/AUFTRAG-GABBROV-VERIFIKATION.md`) on
+Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5. It builds and tests in its own tree, merges into master only with
 `cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
 task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
 Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
