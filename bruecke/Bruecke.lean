@@ -1,6 +1,14 @@
-import Grammatik
-import Gabbro.Body
 import Bruecke.Zusammen
+import Bruecke.Pflichten
+import Bruecke.Kodierung
+import Bruecke.Ausdruck
+import Bruecke.Anweisung
+import Bruecke.Nachbedingung
+import Bruecke.Lauf
+import Bruecke.Realisierung
+import Bruecke.Simulation
+import Bruecke.Pruefung
 import Bruecke.Instanz104
 import Bruecke.Instanz108
+import Bruecke.GiftZyklus
 import Bruecke.Start

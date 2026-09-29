@@ -1,4 +1,5 @@
 import Bruecke.Pflichten
+import Bruecke.Pruefung
 import Grammatik.Kette108
 import Bruecke.Start
 import Duty.Duty108DisjointStartLocks
@@ -11,6 +12,7 @@ namespace Gabbro.Bruecke.I108
 
 open Gabbro.Body Gabbro.Grammatik.Parser.Uebersetze
 open GabbroDuty.Duty108DisjointStartLocks
+open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 
 def u := Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108
 
@@ -44,5 +46,39 @@ example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statemen
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette108.E8 :=
   startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette108.low8)
+
+/-! BRIDGE-CLOSED beispiele/108-disjoint-start-locks.gab nutzer_bruecke
+
+    S3 instance: the simulation theorem applied to the parser's program of 108 (see
+    `Instanz104.lean`); the duties are GabbroV's `read_a_meets` and `read_c_meets`. -/
+
+theorem wf_eq : wellFormed = fun s => Gabbro.Body.WF (shapeOfU u) s.world := by
+  funext s; unfold wellFormed; rw [shape_eq]
+
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+
+/-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
+theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+    meetsU u (wfU u) (fnAt u c) body := by
+  intro c
+  rw [wfU_eq]
+  match c with
+  | ⟨0, _⟩ => exact ⟨read_a_body, rfl, read_a_meets⟩
+  | ⟨1, _⟩ => exact ⟨read_c_body, rfl, read_c_meets⟩
+
+theorem stimmig : Stimmig u := stimmig_of (by decide)
+
+theorem rang : Rang u (rangAuto u) := rang_of (by decide)
+
+/-- **THE CLOSED BRIDGE OF 108**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
+theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette108.E8 :=
+  bruecke_nutzer Gabbro.Grammatik.Kette108.low8 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Kette108.E8 rfl rfl rfl
+
+/-- The closed chain of 108 with its premise (b) taken from the bridge. -/
+def kette_108_bruecke : Gabbro.Grammatik.Kette Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
+  { Gabbro.Grammatik.Kette108.kette_108 with nutzer := nutzer_bruecke }
+
+#print axioms nutzer_bruecke
 
 end Gabbro.Bruecke.I108

@@ -1,4 +1,5 @@
 import Bruecke.Pflichten
+import Bruecke.Pruefung
 import Grammatik.Kette104
 import Grammatik.Kette104Satz
 import Bruecke.Start
@@ -15,6 +16,7 @@ namespace Gabbro.Bruecke.I104
 
 open Gabbro.Body Gabbro.Grammatik.Parser.Uebersetze
 open GabbroDuty.Duty104Referenz
+open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 
 def u := uExp104
 
@@ -56,5 +58,53 @@ example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statem
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette104.E4 :=
   startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette104.low4)
+
+/-! BRIDGE-CLOSED beispiele/104-referenz.gab nutzer_bruecke
+
+    S3 instance: the simulation theorem (`Bruecke/Simulation.lean`, `bruecke_nutzer`) applied to the
+    parser's program of 104. Its premises, each checked here: the lowering (`Kette104.low4`), the
+    name conditions and the rank of the call graph (decided), and the DUTIES -- GabbroV's own
+    proofs `einzahlen_meets` and `lies_meets` from `Duty104Referenz.lean`, the statements the
+    per-unit `rfl` checks above tie to the Lean computation. The conclusion is premise (b) of the
+    goal theorem for the chain's unit `E4`. -/
+
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+
+/-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
+theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+    meetsU u (wfU u) (fnAt u c) body := by
+  intro c
+  rw [wfU_eq]
+  match c with
+  | ⟨0, _⟩ => exact ⟨einzahlen_body, rfl, einzahlen_meets⟩
+  | ⟨1, _⟩ => exact ⟨lies_body, rfl, lies_meets⟩
+
+theorem stimmig : Stimmig u := stimmig_of (by decide)
+
+theorem rang : Rang u (rangAuto u) := rang_of (by decide)
+
+/-- **THE CLOSED BRIDGE OF 104**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
+theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette104.E4 :=
+  bruecke_nutzer Gabbro.Grammatik.Kette104.low4 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Kette104.E4 rfl rfl rfl
+
+/-- The closed chain of 104 with its premise (b) taken from the bridge instead of the hand proof
+    `nutzer4`: source text, checker, GabbroV's duties, the correspondence to the C. -/
+def kette_104_bruecke : Gabbro.Grammatik.Kette Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
+  { Gabbro.Grammatik.Kette104.kette_104 with nutzer := nutzer_bruecke }
+
+/-- **WITNESS of the simulation theorem** (`bruecke_nutzer`): its premises hold jointly on a real
+    program with a call -- the parser's lowering of 104, the name conditions, a rank, and every
+    duty proved by GabbroV. -/
+theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u))
+    (fs : List (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).Fn),
+    Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg u = .ok (P, fs) ∧ Stimmig u ∧ Rang u (rangAuto u) ∧
+    (∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧ meetsU u (wfU u) (fnAt u c) body) ∧
+    ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).saetze :=
+  ⟨u, _, _, Gabbro.Grammatik.Kette104.low4, stimmig, rang, meets_alle,
+    ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .wert (.param "i")], by decide⟩⟩
+
+#print axioms nutzer_bruecke
+#print axioms bruecke_zeuge
 
 end Gabbro.Bruecke.I104

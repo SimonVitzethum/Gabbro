@@ -18,9 +18,11 @@ Two levels, both counted over `beispiele/*.gab`, and NEITHER counts unless Lean 
       computation of `Bruecke/Pflichten.lean`).
   CLOSED BRIDGE (S3). The instance also carries
       BRIDGE-CLOSED <program.gab> <theorem>
-  and the theorem is applied in the same module, and that module builds with
-  `#print axioms` of the theorem standard (`propext`, `Classical.choice`, `Quot.sound`). A closed
-  bridge says: every duty GREEN implies the goal theorem's premise (b) for this program.
+  and the theorem is applied in the same module, and that module builds, and its build output
+  carries the `#print axioms` line of the theorem with exactly the standard three (`propext`,
+  `Classical.choice`, `Quot.sound`; a missing line is not measured, `sorryAx` is not closed). A
+  closed bridge says: every duty GREEN implies the goal theorem's premise (b) for this program.
+  Its planted defects: `./instrumente/mutiere-bruecke.py --s3`.
 
 A COUNTER, not a guard: exit 0 once it measured, 2 (ABBRUCH) when it measured nothing (no binary,
 a binary older than the sources, a failing speech test). `--nicht-lean` skips the build (a present
@@ -98,6 +100,9 @@ def pruefe(instanz_text, programm, modul, binary, texte, lean):
 
 
 def geschlossen(instanz_text, programm, modul, satz, lean):
+    """A closed bridge: the theorem is APPLIED after its marker, the module builds, and the build
+    prints `#print axioms` of that theorem as exactly the standard three (a `sorry` would show as
+    `sorryAx`; a missing print is a missing measurement, not a pass)."""
     if not lean:
         return False, "Lean not re-run"
     if not re.search(r"\b" + re.escape(satz) + r"\b", instanz_text.split("BRIDGE-CLOSED", 1)[-1].split("\n", 1)[-1]):
@@ -105,7 +110,12 @@ def geschlossen(instanz_text, programm, modul, satz, lean):
     ok, out = lake(modul)
     if not ok:
         return False, "`lake build %s` is red" % modul
-    return True, "closed by `%s`" % satz
+    zeile = re.search(r"'([\w.]*\.)?" + re.escape(satz) + r"' depends on axioms: (\[[^\]]*\])", out)
+    if not zeile:
+        return False, "no `#print axioms %s` in the build output (not measured)" % satz
+    if zeile.group(2) != STANDARD:
+        return False, "`%s` depends on %s, not the standard three" % (satz, zeile.group(2))
+    return True, "closed by `%s` (axioms standard)" % satz
 
 
 def selbsttest():

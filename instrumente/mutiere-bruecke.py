@@ -49,6 +49,21 @@ MUTATIONS = [
 ]
 
 
+I104 = BR / 'Bruecke/Instanz104.lean'
+LAUF = BR / 'Bruecke/Lauf.lean'
+
+# S3: defects the CLOSED-bridge count must not pass (`zaehle-bruecke.py`'s `geschlossen`):
+# (name, file, old, new) -- applied one at a time, the file restored byte for byte after each.
+MUTATIONS_S3 = [
+    ('duty-proof-replaced-by-sorry', D104, None, None),   # every proof of the duty file -> sorry
+    ('instance-duty-sorried', I104, 'exact ⟨lies_body, rfl, lies_meets⟩', 'exact ⟨lies_body, rfl, sorry⟩'),
+    ('axioms-print-removed', I104, '#print axioms nutzer_bruecke\n', ''),
+    ('closed-marker-names-an-unapplied-theorem', I104,
+     'BRIDGE-CLOSED beispiele/104-referenz.gab nutzer_bruecke', 'BRIDGE-CLOSED beispiele/104-referenz.gab nutzer_bruecke_x'),
+    ('ghost-counter-not-bumped', LAUF, '(.int (gz w W + 1))', '(.int (gz w W))'),
+]
+
+
 def sha(p):
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
@@ -95,10 +110,63 @@ def failed_in(text, module):
     return m.group(1) if m else None
 
 
+def s3(nur):
+    """Each S3 defect must make the CLOSED count of 104 fall (the counter's own `geschlossen`)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('zb', ROOT / 'instrumente' / 'zaehle-bruecke.py')
+    src = (ROOT / 'instrumente' / 'zaehle-bruecke.py').read_text(encoding='utf-8')
+    zb = {'__file__': str(ROOT / 'instrumente' / 'zaehle-bruecke.py'), '__name__': 'zb'}
+    exec(compile(src.replace('\nsys.exit(main())', '\n'), 'zaehle-bruecke.py', 'exec'), zb)
+    ziel = 'beispiele/104-referenz.gab'
+    files = {D104, I104, LAUF}
+    orig = {p: p.read_bytes() for p in files}
+    shas = {p: sha(p) for p in files}
+    caught, survived = [], []
+    try:
+        ok, detail = zb['geschlossen'](I104.read_text(encoding='utf-8'), ziel, 'Bruecke.Instanz104',
+                                       'nutzer_bruecke', True)
+        print('baseline closed bridge of 104: %s (%s)' % ('CLOSED' if ok else 'open', detail))
+        if not ok:
+            sys.exit('ABBRUCH: the baseline bridge is not closed -- the mutations would measure nothing')
+        for name, p, old, new in MUTATIONS_S3:
+            if nur and nur != name:
+                continue
+            text = orig[p].decode()
+            if old is None:
+                p.write_text(strip_proofs(text))
+            else:
+                if old not in text:
+                    sys.exit('ABBRUCH: the anchor of %s is not in %s' % (name, p.name))
+                p.write_text(text.replace(old, new, 1))
+            inst = I104.read_text(encoding='utf-8')
+            satz = re.search(r'BRIDGE-CLOSED\s+\S+\s+(\w+)', inst).group(1)
+            ok, detail = zb['geschlossen'](inst, ziel, 'Bruecke.Instanz104', satz, True)
+            p.write_bytes(orig[p])
+            if ok:
+                survived.append(name)
+                print('SURVIVED  %s' % name)
+            else:
+                caught.append(name)
+                print('caught    %s   (%s)' % (name, detail))
+    finally:
+        for p in files:
+            p.write_bytes(orig[p])
+        for p in files:
+            if sha(p) != shas[p]:
+                sys.exit('ABBRUCH: %s was NOT restored byte for byte' % p)
+        build('Bruecke.Instanz104')
+    print('\n%d of %d planted S3 defects caught by the closed-bridge count; %d survived'
+          % (len(caught), len(caught) + len(survived), len(survived)))
+    sys.exit(0 if not survived else 1)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--nur')
+    ap.add_argument('--s3', action='store_true', help='the closed-bridge (S3) defects instead')
     a = ap.parse_args()
+    if a.s3:
+        s3(a.nur)
     orig = {p: p.read_bytes() for p in (D104, D108)}
     shas = {p: sha(p) for p in orig}
     survived, caught, other = [], [], []
