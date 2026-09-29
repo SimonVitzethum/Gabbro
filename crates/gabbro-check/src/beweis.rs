@@ -470,7 +470,10 @@ pub fn vorlage(baum: &Programm, datei: &str) -> String {
     let name = crate::lean::module_name(datei);
     let mut s = String::new();
     s.push_str(&format!("import Duty.{name}\n"));
-    s.push_str("set_option autoImplicit false\n");
+    // The pipeline's own budget (`PLAN.md` §3.3): the generated file carries it, and a proof file
+    // that starts from the default 200 000 dies in `gabbro_pipeline` on the first call chain of any
+    // size -- a message about the apparatus, not the unit (GabbroV lane, 2026-09-29).
+    s.push_str("set_option autoImplicit false\nset_option maxHeartbeats 11300000\n");
     s.push_str(&format!("open Gabbro.Body GabbroDuty.{name}\n\n"));
     s.push_str("/-  Written from `gabbro beweise --vorlage`. Every statement below is the unit's own\n");
     s.push_str("    logic; the hypotheses a proof needs stand in the statement. `gabbro_auto?` shows\n");

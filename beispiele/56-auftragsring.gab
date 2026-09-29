@@ -86,6 +86,11 @@ impl fn einreihen(r : ptr<normal, rw> Ring, p : PlatzNr, i : AuftragNr)
     requires Held(RING),
              r.plaetze[p] == LEER,
              i != LEER,
+             -- **`i` ist neu im Ring** (GabbroV lane, 2026-09-29): without it the promise below is
+             -- false as written -- `i` may already sit at another place, and the write then
+             -- makes two places carry one order. The duty said so; the specification is fixed,
+             -- not the obligation.
+             forall j in queue r : r.plaetze[j] != i,
              -- **Der Satz, um den es geht.** Zwei Ebenen, mehr laesst die Sprache nicht zu
              -- und mehr braucht er nicht: verschiedene Plaetze tragen verschiedene
              -- Auftraege, ausser sie sind leer.
