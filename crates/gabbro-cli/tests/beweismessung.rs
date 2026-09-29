@@ -150,3 +150,35 @@ fn a_lean_that_writes_its_receipt_is_green() {
     assert_eq!(code, 0, "the positive control must be GREEN:\n{text}");
     assert!(text.contains("GREEN"), "{text}");
 }
+
+/// **The template spells out both passes of `gabbro_auto2`, at the block's own column, and
+/// carries the heartbeat budget** (GabbroV lane, 2026-09-29). Found by running the template of
+/// `beispiele/55-kindkette` through Lean: its pipeline is the continuation `    <;> gabbro_pipeline`
+/// of a split, and the lines after it were written at that continuation's column (4) -- Lean
+/// answered `unexpected identifier; expected command` at the first of them. `124` has no split
+/// and is the plain case.
+#[test]
+fn the_template_carries_both_passes_at_the_blocks_column_and_the_budget() {
+    for datei in ["beispiele/55-kindkette.gab", "beispiele/124-two-threads-private.gab"] {
+        let out = Command::new(gabbro())
+            .current_dir(WURZEL)
+            .args(["prove", "--template", datei])
+            .output()
+            .expect("gabbro runs");
+        let text = String::from_utf8_lossy(&out.stdout).to_string();
+        assert!(text.contains("set_option maxHeartbeats 11300000"), "{datei}: no heartbeat budget:\n{text}");
+        assert!(!text.contains("gabbro_auto2"), "{datei}: the macro must be spelled out:\n{text}");
+        let zeilen: Vec<&str> = text.lines().collect();
+        let mut gesehen = 0;
+        for (i, z) in zeilen.iter().enumerate() {
+            if z.trim_start().starts_with("all_goals (try (gabbro_pipeline") {
+                gesehen += 1;
+                assert!(z.starts_with("  all_goals") && !z.starts_with("   "), "{datei}: the second pass is not at column 2: {z:?}");
+                assert!(zeilen[i - 1].contains("gabbro_pipeline"), "{datei}: the second pass does not follow the first");
+                let nach = zeilen[i + 2];
+                assert_eq!(nach, "  all_goals sorry", "{datei}: the owed goal is not at column 2");
+            }
+        }
+        assert!(gesehen >= 1, "{datei}: no second pass in the template:\n{text}");
+    }
+}

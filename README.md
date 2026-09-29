@@ -214,7 +214,7 @@ fresh date were last fully measured on the date beside them.
 | **Proof templates** | **21, of which 10 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
 | **Corpus** | 143 clean examples, 828 poison files *(file counts 2026-09-28; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed against a handwritten version *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 54, *(count 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh` and `pruefe-sperre-beweis.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
+| **Guardians** | 55, *(count 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh` and `pruefe-vorlagen.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
 | **Mutation** | **386 of 413 anchors hold**, and a run catches 375 of 376 valid mutations *(measured 2026-09-14)* | `./instrumente/mutiere-pruefer.py` |
 | **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindstellen` |
 | **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — split derivable / redundant / load-bearing | `gabbro zeremonie` |

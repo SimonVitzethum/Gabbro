@@ -499,7 +499,9 @@ pub fn vorlage(baum: &Programm, datei: &str) -> String {
             if l.contains("gabbro_auto2 ") {
                 // `gabbro_auto2 [first] [second] using t`: the pipeline, and once more on what
                 // it left -- spelled out, so the person sees the goals AFTER both passes
-                let indent = &l[..l.len() - l.trim_start().len()];
+                // the lines after the pipeline stand at the block's own column (2), also when the
+                // pipeline itself is the continuation `    <;> …` of a split
+                let indent = "  ";
                 let at = l.find("gabbro_auto2 ").unwrap_or(0);
                 let (before, tail) = l.split_at(at);
                 let (a, rest) = tail.trim_start_matches("gabbro_auto2 ").split_once("] [").unwrap_or((tail, ""));
