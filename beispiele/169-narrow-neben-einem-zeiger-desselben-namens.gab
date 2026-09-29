@@ -1,0 +1,159 @@
+-- **A `narrow` beside a POINTER of the same name -- and beside a binding with no type at all.**
+--
+-- Three functions, one buffer comparison, and until 2026-09-29 this file could not be built. Not
+-- because anything in it is wrong: because of the NAMES it uses.
+--
+-- WHAT THE EMITTER DOES, AND WHY IT IS RIGHT
+-- -----------------------------------------
+-- `x >= 0` on an unsigned word is always true, and `cc -Wall -Wextra -Werror` says so
+-- (`-Wtype-limits`) -- those are the flags the corpus itself compiles under
+-- (`beispiele/63-druckt.bau`). So a `narrow x to 0 .. N` drops its lower comparison **when the
+-- emitter knows `x` is unsigned**, and emits it when it does not: *Unwissen faellt nach
+-- lautstark*, the guardian goes red rather than a check disappearing quietly. That policy is not
+-- what this file is about; it stands unchanged.
+--
+-- WHAT WAS WRONG, AND IT WAS THE SCOPE
+-- -----------------------------------
+-- The set of provably-unsigned names was built over the whole COMPILATION UNIT and keyed by
+-- BASE NAME (`emit.rs`, third collector). Two kinds of declaration landed in it that are not
+-- statements about the sign of a number:
+--
+--   1. a **pointer**. `vergleiche(a : ptr<normal, r> u8, b : ptr<normal, r> u8)` below has two,
+--      and a pointer has no sign -- so `a` and `b` fell out of the set **for every function in
+--      the unit**, including `summiere`, which has never heard of `vergleiche`. `narrow a` there
+--      wrote `a >= 0` and `cc` refused the file. *Measured in the network stack of phase 2
+--      (`~/gabbro-netz`, `docs/WAENDE-M1.md` wall 6), where the giveaway was that `c` and `d`
+--      four lines below came out right.*
+--   2. a **`let` with no declared type**. `spiegel` below has one, and that single line made
+--      `narrow hoch` unbuildable in `zwischenwert` -- in the stack it was three modules and one
+--      layer away from the line that was refused.
+--
+-- So a file could be made unbuildable by a file it had never seen, with an error message pointing
+-- at the innocent line. **A name was a unit-wide resource and nothing said so at its
+-- declaration.** The repair: a pointer declaration neither proves nor poisons, and an untyped
+-- binding is read through the callee's declared result type -- which `let_tyexpr` already answers
+-- for the local types beside it, so no second register (`W7`).
+--
+-- WHAT THIS FILE PINS
+-- -------------------
+-- * `narrow a` and `narrow b` over unsigned locals, in a unit where `a` and `b` are also POINTER
+--   parameters -- the case that was refused;
+-- * `narrow hoch` over an unsigned local, in a unit where `hoch` is also an UNTYPED binding;
+-- * `narrow m` over a `let … else` binding, which has no `typ` field at all and gets its answer
+--   from the declared result type of the function it unpacks;
+-- * and beside them, in `abstand`, a **signed** value whose lower comparison MUST still stand:
+--   there `>= 0` is not a figure of speech but half the check. *The set grew; it did not move.*
+module beispiel::narrow_neben_zeiger {
+
+-- **The two pointers whose names used to poison the unit.** An ordinary byte comparison, and the
+-- bound is the caller's and written down: a pointer carries no `count`, so `N463`/`N464` hold the
+-- length where the call is made.
+pub impl fn vergleiche(a : ptr<normal, r> u8, b : ptr<normal, r> u8, n : u64 in 0 .. 64) -> bool
+    requires n <= lenof(a), n <= lenof(b)
+    effects  { reads a, reads b }
+    costs    <= 2200 ops
+{
+    let mut i : u64 in 0 .. 64 = 0;
+    retry vergleichend until i >= n
+        bounded 2000 ops
+        on_exceeded vergleich_haengt
+        effects { reads a, reads b }
+    {
+        if a[i] != b[i] {
+            return false;
+        }
+        if i >= 63 {
+            return true;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+pub impl fn wort() -> u64
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 4 ops
+{
+    return 7;
+}
+
+-- **`a` and `b` here are NUMBERS**, and the pointers above say nothing about them.
+pub impl fn summiere() -> u64
+    ensures result <= 131070
+    effects { pure }
+    costs   <= 80 ops
+{
+    let a : u64 = wort();
+    narrow a to 0 .. 65535 else { return 0; }
+    let b : u64 = wort();
+    narrow b to 0 .. 65535 else { return 0; }
+    return a + b;
+}
+
+-- **The untyped binding.** Perfectly ordinary, and one layer of the network stack's clock decoding
+-- is exactly this line.
+pub impl fn spiegel() -> u64
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 20 ops
+{
+    let hoch = wort();
+    return hoch;
+}
+
+pub impl fn zwischenwert() -> u64
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 40 ops
+{
+    let hoch : u64 = wort();
+    narrow hoch to 0 .. 65535 else { return 0; }
+    return hoch;
+}
+
+pub reason Fehlt {
+    Leer = 1 "there is nothing to unpack"
+    exhaustive
+}
+
+pub impl fn kanal(w : u64 in 0 .. 65535) -> u64 or Fehlt
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 8 ops
+{
+    if w == 0 {
+        return Fehlt::Leer;
+    }
+    return w;
+}
+
+-- **A `let … else` binding, narrowed.** `ast::LetSonst` carries no `typ` field, so the only place
+-- its type can come from is the declared result of `kanal` -- which is where it now comes from.
+pub impl fn ausgepackt() -> u64
+    ensures result <= 65535
+    effects { pure }
+    costs   <= 60 ops
+{
+    let m = kanal(9) else (e) { return 0; }
+    narrow m to 0 .. 65535 else { return 0; }
+    return m;
+}
+
+-- **The half that does NOT move.** `Versatz` is signed, so `narrow v to 0 .. 100` really has two
+-- halves, and the emitter still writes both. A file that pinned only the dropped comparisons would
+-- pass just as well if the drop had become unconditional.
+pub type Versatz = i32 in -100 .. 100;
+
+pub impl fn abstand(v : Versatz) -> u64
+    ensures result <= 100
+    effects { pure }
+    costs   <= 12 ops
+{
+    narrow v to 0 .. 100 else { return 0; }
+    return u64(v);
+}
+
+extern fn vergleich_haengt() -> never effects { diverges } costs <= 1 ops;
+
+}

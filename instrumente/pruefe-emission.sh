@@ -3760,7 +3760,18 @@ fi
 # a type. Its two poison twins (`gift/1367` a byte read outside its declared range, `gift/1368`
 # a 16-bit value stored into a byte -- both `M101`, both 0 errors before) are refused by the
 # CHECKER and write no C, so `MARKE_EMIT_G` is untouched.
-MARKE_EMIT=145
+# **145 -> 146 on 2026-09-29 (server lane, phase 2, wall 6).** One more emitting example:
+# `169-narrow-neben-einem-zeiger-desselben-namens.gab`, three `narrow`s over unsigned locals in a
+# unit where the same BASE NAMES are also a pointer parameter and an untyped binding -- which `cc
+# -Werror=type-limits` refused until the unsigned-name set stopped counting pointers and started
+# reading an untyped binding's type off the callee's declared result. Its fourth function is the
+# half that does NOT move: a signed value whose `>= 0` still stands. **It has no poison twin, and
+# that is a decision:** this repair adds no refusal -- what changed is WHICH comparison is emitted --
+# so the negative case is pinned where an emission fact belongs, in
+# `crates/gabbro-check/tests/rechenwerk.rs`
+# (`vorzeichenlose_namen_werden_nicht_von_zeigern_und_untypisierten_bindungen_vergiftet`, assertion
+# 4). `MARKE_EMIT_G` is therefore untouched.
+MARKE_EMIT=146
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
