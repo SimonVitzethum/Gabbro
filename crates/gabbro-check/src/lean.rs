@@ -2051,7 +2051,22 @@ fn shape_of_call(r: &Ruf, c: &Ctx) -> Option<Shape> {
 /// the declared shape -- or, where the signature has an error channel (`-> T or R`), that
 /// or a reason. A routine WITHOUT a result promises nothing about `r`. The clause is what
 /// lets a caller's proof read the answer at all: `let x = f(a)` binds `x` to it.
-fn result_clause(sh: Option<Shape>, range: Option<(i128, i128)>, fehler: bool, answers: bool, r: &str) -> Option<String> {
+///
+/// **The reason is one of the DECLARED grounds** (`grounds`, empty where the declaration is not in
+/// this unit): a caller's `else (e) { match e { … } }` has one arm per ground and is stuck on any
+/// other name, so a promise of "some reason" left the caller's duty `False` -- the model's `.reason e`
+/// ranged over every string (`beispiele/167`, GabbroV lane 2026-09-29).
+fn result_clause(sh: Option<Shape>, range: Option<(i128, i128)>, fehler: Option<&[String]>, answers: bool, r: &str) -> Option<String> {
+    let reason = |r: &str| -> String {
+        match fehler {
+            Some(g) if !g.is_empty() => format!(
+                "∃ e, {r} = some (.reason e) ∧ ({})",
+                g.iter().map(|n| format!("e = {}", quoted(n))).collect::<Vec<_>>().join(" ∨ ")
+            ),
+            _ => format!("∃ e, {r} = some (.reason e)"),
+        }
+    };
+    let fehler = fehler.is_some();
     let range = range.or(sh.and_then(Shape::range));
     let value = match sh {
         Some(Shape::Int) | Some(Shape::IntIn(..)) => match range {
@@ -2071,13 +2086,13 @@ fn result_clause(sh: Option<Shape>, range: Option<(i128, i128)>, fehler: bool, a
         // no answer -- and with an error channel, no answer OR a reason
         None => {
             if fehler {
-                return Some(format!("({r} = none ∨ ∃ e, {r} = some (.reason e))"));
+                return Some(format!("({r} = none ∨ {})", reason(r)));
             }
             return None;
         }
     };
     Some(if fehler {
-        format!("({value} ∨ ∃ e, {r} = some (.reason e))")
+        format!("({value} ∨ {})", reason(r))
     } else {
         value
     })
@@ -2830,8 +2845,8 @@ pub struct ForeignInfo {
     pub name: String,
     pub params: Vec<(String, Option<Shape>)>,
     pub result: Option<Shape>,
-    /// `-> T or R`: the answer may be a reason.
-    pub fehler: bool,
+    /// `-> T or R`: the answer may be a reason -- the declared grounds of `R` (empty if unknown).
+    pub fehler: Option<Vec<String>>,
     /// The declared range of an integer answer.
     pub result_range: Option<(i128, i128)>,
     /// `-> never`: the routine does not return.
@@ -2880,6 +2895,8 @@ pub struct Unit {
     result_shape: HashMap<String, Option<Shape>>,
     /// The declared range of an integer answer.
     result_range: HashMap<String, Option<(i128, i128)>>,
+    /// Every declared `reason` and its grounds, in declaration order.
+    reasons: BTreeMap<String, Vec<String>>,
     /// The precondition expression of every routine of the unit -- shapes, `requires` and
     /// the invariants it maintains -- or the reason a clause has no term.
     pre_of: HashMap<String, Result<String, LeanReason>>,
@@ -3383,6 +3400,7 @@ impl Unit {
             routines: BTreeMap::new(),
             result_shape: HashMap::new(),
             result_range: HashMap::new(),
+            reasons: reason_cases(baum),
             pre_of: HashMap::new(),
             pre_parts: HashMap::new(),
             foreign: BTreeMap::new(),
@@ -3477,7 +3495,7 @@ impl Unit {
                         params,
                         result,
                         result_range: f.ergebnis.as_ref().and_then(|t| result_range_of(t, &unit.u, module)),
-                        fehler: f.fehler.is_some(),
+                        fehler: f.fehler.as_ref().map(|i| unit.reasons.get(&i.text).cloned().unwrap_or_default()),
                         never: matches!(f.ergebnis, Some(TypExpr::Never(_))),
                         has_result: f.ergebnis.is_some() && !matches!(f.ergebnis, Some(TypExpr::Never(_))),
                         pre: None,
@@ -3529,7 +3547,7 @@ impl Unit {
                     let olds_before = c.olds.len();
                     c.uses_result = false;
                     if let Ok(t) = pred_term(q, &mut c) {
-                        post.push(clause_prop(t.as_str(), &c.olds[olds_before..], c.uses_result, "t", "t'", "r"));
+                        post.push(clause_prop(t.as_str(), &c.olds[olds_before..], c.uses_result, "t", "t'", "r", decl.fehler.is_some()));
                     }
                 }
             }
@@ -3636,7 +3654,14 @@ fn op_pre(k: &crate::opsruf::Kopf, info: &TableInfo, table: &str) -> Option<Stri
 /// **One clause of a postcondition, as a `Prop` over the entry state, the exit state and
 /// the result.** The locals are the ENTRY's -- a parameter the body rebinds still names its
 /// argument in the contract -- with `old#i` and `result` bound on top.
-fn clause_prop(term: &str, olds: &[String], uses_result: bool, s: &str, s2: &str, r: &str) -> String {
+///
+/// **`reason_kanal`: the routine declares `-> T or R`.** An `ensures` speaks about the VALUE the
+/// routine returns -- `KoerperGutS` (the goal theorem's premise (b)) holds it at `EndAusgang.zurueck`
+/// only, and a reason exit is a different exit. So for such a routine the clause is owed of every
+/// answer that is not a reason: `(∀ e, v ≠ .reason e) → …`. Without this, `result <= 65535` at
+/// `return Fehlt::Leer;` evaluated `.reason _ <= 65535`, which is not `true`, and the duty was
+/// `False` by construction (`beispiele/169`, GabbroV lane 2026-09-29).
+fn clause_prop(term: &str, olds: &[String], uses_result: bool, s: &str, s2: &str, r: &str, reason_kanal: bool) -> String {
     let mut out = String::new();
     let mut binding = format!("{s}.local'");
     for (i, o) in olds.iter().enumerate() {
@@ -3646,6 +3671,13 @@ fn clause_prop(term: &str, olds: &[String], uses_result: bool, s: &str, s2: &str
     if uses_result {
         out.push_str(&format!("∃ v, {r} = some v ∧ "));
         binding = format!("(bindLocal {binding} \"result\" v)");
+        if reason_kanal {
+            out.push_str("((∀ e, v ≠ .reason e) → ");
+            out.push_str(&format!(
+                "eval {{ world := {s2}.world, local' := {binding} }} {term} = some (.bool true))"
+            ));
+            return format!("({out})");
+        }
     }
     out.push_str(&format!(
         "eval {{ world := {s2}.world, local' := {binding} }} {term} = some (.bool true)"
@@ -3771,7 +3803,7 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
             let t = pred_term(q, &mut c);
             post.push((
                 format!("ensures #{}", i + 1),
-                t.map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r")),
+                t.map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r", r.decl.fehler.is_some())),
             ));
         }
         if let Some(g) = &r.decl.verfeinert {
@@ -3781,7 +3813,7 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
                     c.olds.clear();
                     c.uses_result = false;
                     pred_term(&p, &mut c)
-                        .map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r"))
+                        .map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r", r.decl.fehler.is_some()))
                 }
                 Err(e) => Err(e),
             };
@@ -4736,7 +4768,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                 // and the promise says so -- `False`. The model's `ρ f` still answers a
                 // state; the contract makes every statement after the call vacuous.
                 let mut ps = if f.never { vec!["False".to_string()] } else { vec!["wellFormed t'".to_string()] };
-                if let Some(cl) = result_clause(f.result, f.result_range, f.fehler, f.has_result, "r") {
+                if let Some(cl) = result_clause(f.result, f.result_range, f.fehler.as_deref(), f.has_result, "r") {
                     ps.push(cl);
                 }
                 ps.extend(f.post.iter().cloned());
@@ -4831,7 +4863,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             if let Some(cl) = result_clause(
                 unit.result_shape.get(&g.name).copied().flatten(),
                 unit.result_range.get(&g.name).copied().flatten(),
-                r.decl.fehler.is_some(),
+                r.decl.fehler.as_ref().map(|i| unit.reasons.get(&i.text).map(|g| g.as_slice()).unwrap_or(&[])),
                 r.decl.ergebnis.is_some() && !matches!(r.decl.ergebnis, Some(TypExpr::Never(_))),
                 "r",
             ) {
@@ -5599,7 +5631,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             c.olds.clear();
             c.uses_result = false;
             match pred_term(q, &mut c) {
-                Ok(t) => post.push(clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r")),
+                Ok(t) => post.push(clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r", f.fehler.is_some())),
                 Err(r) => post_dropped.push(format!("ensures #{} ({})", i + 1, r.tag())),
             }
         }
@@ -6967,7 +6999,7 @@ pub fn witness(baum: &Programm, datei: &str) -> String {
         // A foreign `or R` names its cases through the declaration (`foreign_fehler`);
         // without the declaration the channel is unstatable here -- `[]`, and a `let …
         // else` over it goes red at `decide`, by name.
-        let gruende = if info.fehler {
+        let gruende = if info.fehler.is_some() {
             gruende_of(ffehlers.get(f.as_str()).map(String::as_str))
         } else {
             Vec::new()
