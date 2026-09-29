@@ -74,3 +74,17 @@ their duty statements checked ...; 0 of 146 have a CLOSED bridge`. An instance c
 pinned source is the file byte for byte, the printer's duty file is byte-identical to the committed
 one, and `lake build` of the instance is green; a closed bridge needs a `BRIDGE-CLOSED` marker
 (none yet -- S3).
+
+## S4, the start half (2026-09-29, measured)
+
+`bruecke/Bruecke/Start.lean`: `lowerAllg_requires` (the parser's lowering writes `requires := .wahr`
+for every function it accepts -- `progOfFn`) and `startPflicht_wahr` (`S` with every lock invariant
+true at `sp0` and `requires = .wahr` give `StartPflicht E`). Instantiated on the chains' units:
+`Instanz104.start : StartPflicht Kette104.E4`, `Instanz108.start : StartPflicht Kette108.E8`
+(`cd bruecke && lake build`, 366 jobs green). What this is NOT: a duty at an initial memory. It
+is the statement that for a unit the parser elaborates, `StartPflicht` is decided by the shape of
+the lowering (no user-written `requires`, no lock invariant), which is why the duty files' assumed
+`Initially` needs no separate duty for those units. A unit that writes a `requires` on a start or a
+lock invariant needs a generated duty at the initial memory; no such unit is inside the parser's
+fragment yet, so that duty has no population and is NOT built. The atomic rely
+(`NutzerPflichtA`) is not started: it needs S3's semantics first.

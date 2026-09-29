@@ -1,5 +1,7 @@
 import Bruecke.Pflichten
 import Grammatik.Kette104
+import Grammatik.Kette104Satz
+import Bruecke.Start
 import Duty.Duty104Referenz
 
 /-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
@@ -50,5 +52,9 @@ example : preProp wellFormed lies = lies_requires := rfl
 
 example : meetsU u wellFormed ein ((zuBody u ein).getD []) = einzahlen_meets_statement := rfl
 example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statement := rfl
+
+/-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
+theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette104.E4 :=
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette104.low4)
 
 end Gabbro.Bruecke.I104

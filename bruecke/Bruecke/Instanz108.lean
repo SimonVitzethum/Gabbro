@@ -1,5 +1,6 @@
 import Bruecke.Pflichten
 import Grammatik.Kette108
+import Bruecke.Start
 import Duty.Duty108DisjointStartLocks
 
 /-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
@@ -39,5 +40,9 @@ example : preProp wellFormed ra = read_a_requires := rfl
 example : preProp wellFormed rc = read_c_requires := rfl
 example : meetsU u wellFormed ra ((zuBody u ra).getD []) = read_a_meets_statement := rfl
 example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statement := rfl
+
+/-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
+theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette108.E8 :=
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette108.low8)
 
 end Gabbro.Bruecke.I108
