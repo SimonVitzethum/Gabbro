@@ -945,6 +945,19 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
 
 # 4. Extensions and named gaps  ⟨D⟩
 
+- [ ] **Opt-in unbounded heap region (planned, not required; Simon, 2026-09-29).** The default
+  stays a region with a declared ceiling (§0e: fixed commit + ceiling, refuse-on-full). Beside it,
+  an EXPLICITLY declared region with no ceiling -- spoken out like `divergent fn` -- in which
+  every allocation may fail and the program must handle the failure; exhaustion becomes a named
+  hardware assumption instead of a static number. With it the language is Turing-complete in
+  the model (an unbounded tape plus `forever`); without it every program is finite-state, like
+  any program on real hardware. What such a program gives up, and must be refused where it is
+  promised: the static whole-program memory bound (a program that declares one may not use an
+  unbounded region). Needs a reviewed `Spec.lean` diff (the allocation-failure assumption), the
+  model of an unbounded heap, checker rules with poison probes, and a runtime without a
+  reservation ceiling. Memory safety, race freedom, contracts and termination checking are
+  unaffected.
+
 *Rules for every extension: PLAN-ZIELSATZ §8. The criterion is counted per obligation, there is
 one assumption list, and the number is booked before and after.*
 
