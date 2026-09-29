@@ -2806,11 +2806,26 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // shape (no return, never-ending tail) is the checker's business
         // (`N448`/`N449`), and the term carries the sequence unchanged.
         StmtArt::Child(x) => block_term(x, c),
-        StmtArt::Sperrt(l) => Ok(LeanCarried::StmtCriticalSection.term(format!(
-            "(.locked {} {})",
-            quoted(&l.sperre.basis.text),
-            block_term(&l.rumpf, c)?
-        ))),
+        StmtArt::Sperrt(l) => {
+            let lock = &l.sperre.basis.text;
+            let body = block_term(&l.rumpf, c)?;
+            let Some(inv) = c.unit.lock_invs.get(lock).cloned().filter(|_| c.allow_calls) else {
+                return Ok(LeanCarried::StmtCriticalSection.term(format!("(.locked {} {})", quoted(lock), body)));
+            };
+            // **A lock with an invariant** (see `Unit::lock_invs`). The section keeps its
+            // `.locked` datum, and the two pseudo-calls stand around it in one sequence.
+            let (acq, rel) = (format!("lock_acquire_{lock}"), format!("lock_release_{lock}"));
+            c.callees.insert(acq.clone());
+            c.callees.insert(rel.clone());
+            Ok(LeanCarried::StmtCriticalSection.term(format!(
+                "(.locked {} [(.call {} [] [] (.lit (.bool true))), (.locked {} {}), (.call {} [] [] {inv})])",
+                quoted(lock),
+                quoted(&acq),
+                quoted(lock),
+                body,
+                quoted(&rel)
+            )))
+        }
     }
 }
 
@@ -2904,6 +2919,13 @@ pub struct Unit {
     /// `requires`, how many kept invariants -- in that order.
     pre_parts: HashMap<String, (usize, usize, usize)>,
     foreign: BTreeMap<String, ForeignInfo>,
+    /// **The locks that carry an `invariant`** (GabbroV lane, 2026-09-29): lock name -> the
+    /// invariant as an `Expr` term. `locks L { … }` on such a lock is not transparent: it is
+    /// the pseudo-callee `lock_acquire_L` (the environment hands over the protected carriers
+    /// with the invariant holding -- every other holder re-established it at its release),
+    /// the body, and `lock_release_L` (whose precondition IS the invariant, so a body that
+    /// leaves it broken is stuck: the duty of the release).
+    lock_invs: BTreeMap<String, String>,
     ops: BTreeMap<String, OpInfo>,
     transitions: BTreeMap<String, TransitionInfo>,
     devices: BTreeSet<String>,
@@ -3170,6 +3192,7 @@ impl Unit {
         let mut devices = BTreeSet::new();
         let mut table_decls: Vec<(String, Tabelle)> = Vec::new();
         let mut group_decls: Vec<(String, GruppeDecl)> = Vec::new();
+        let mut lock_decls: Vec<(String, LockDecl)> = Vec::new();
         let mut specs = HashMap::new();
         let mut variants: HashMap<String, Option<bool>> = HashMap::new();
         let mut variant_sum: HashMap<String, Shape> = HashMap::new();
@@ -3215,6 +3238,7 @@ impl Unit {
                 table_decls.push((module.to_string(), tb.clone()));
             }
             ItemArt::Gruppe(g) => group_decls.push((module.to_string(), g.clone())),
+            ItemArt::Lock(l) if l.invariante.is_some() => lock_decls.push((module.to_string(), l.clone())),
             ItemArt::Format(fo) => {
                 let fields = fo
                     .felder
@@ -3404,6 +3428,7 @@ impl Unit {
             pre_of: HashMap::new(),
             pre_parts: HashMap::new(),
             foreign: BTreeMap::new(),
+            lock_invs: BTreeMap::new(),
             ops: BTreeMap::new(),
             transitions: BTreeMap::new(),
             devices,
@@ -3438,6 +3463,42 @@ impl Unit {
                     under_ops: false,
                 });
             }
+        }
+        // The locks with an invariant: the two pseudo-callees of a critical section.
+        for (module, l) in &lock_decls {
+            let Some(pred) = &l.invariante else { continue };
+            let mut c = ctx_for_invariant(&unit, None, module);
+            c.allow_calls = false;
+            let Ok(term) = pred_term(pred, &mut c).map(Carried::into_term) else { continue };
+            let carriers: Vec<String> = l.schuetzt.iter().map(|o| o.basis.text.clone()).collect();
+            let name = l.name.text.clone();
+            let (acq, rel) = (format!("lock_acquire_{name}"), format!("lock_release_{name}"));
+            if unit.routines.contains_key(&acq) || unit.routines.contains_key(&rel) {
+                continue;
+            }
+            let base = ForeignInfo {
+                name: String::new(),
+                params: Vec::new(),
+                result: None,
+                fehler: None,
+                result_range: None,
+                never: false,
+                has_result: false,
+                pre: Some("(.lit (.bool true))".to_string()),
+                post: Vec::new(),
+                writes: Vec::new(),
+            };
+            unit.foreign.insert(
+                acq.clone(),
+                ForeignInfo {
+                    name: acq,
+                    post: vec![clause_prop(&term, &[], false, "t", "t'", "r", false)],
+                    writes: carriers,
+                    ..base.clone()
+                },
+            );
+            unit.foreign.insert(rel.clone(), ForeignInfo { name: rel, pre: Some(term.clone()), ..base });
+            unit.lock_invs.insert(name, term);
         }
         // The routines, with parameters and results shaped from their declarations.
         for (module, f) in &fn_decls {

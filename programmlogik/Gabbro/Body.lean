@@ -2355,7 +2355,19 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
     if (← getGoals).isEmpty then return
     let g ← getMainGoal
     let calls ← g.withContext do
-      GabbroMeta.collectCalls (← instantiateMVars (← g.getType))
+      let ty ← instantiateMVars (← g.getType)
+      let mut cs ← GabbroMeta.collectCalls ty
+      -- **A dead branch keeps its calls in its case hypotheses** (GabbroV lane, 2026-09-29).
+      -- `gabbro_cases` splits on a condition that reads a call's answer -- the invariant a
+      -- lock acquire hands over, a callee's promise -- and the branch where the condition
+      -- fails has the goal `False`: no call is left in it to instantiate, and the very
+      -- contract that refutes the condition never gets applied. The calls of the `hcase`
+      -- hypotheses are collected there, and only there.
+      if ty.consumeMData.isConstOf ``False then
+        for d in ← getLCtx do
+          if !d.isImplementationDetail && d.userName.eraseMacroScopes == `hcase then
+            cs := cs ++ (← GabbroMeta.collectCalls (← instantiateMVars d.type))
+      pure cs
     -- **innermost first**: a call whose state is another call's answer needs that one's
     -- instance in the context of its own precondition -- and a hole opened earlier does
     -- not see a hypothesis added later

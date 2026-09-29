@@ -1,0 +1,47 @@
+-- probe-sperre-bricht-invariante -- what a lock with an invariant hands over: the invariant, and
+-- nothing more (GabbroV lane, 2026-09-29).
+--
+-- `locks L { … }` on a lock with an `invariant` is, in the duty channel, an ACQUIRE (the
+-- protected carriers arrive with the invariant holding) and a RELEASE (a call whose
+-- precondition is the invariant). `verlaesst_sich` reads a value under the lock and promises it
+-- is 5 -- the invariant `konto[0] == konto[1]` does not say so, so the unit must NOT be GREEN
+-- (before this probe the section was transparent and the promise was judged against whatever
+-- state the routine was called in). `ehrlich` is the positive twin, both slots written under the
+-- lock; it closes by itself. A body that BREAKS the invariant at the release is refused by the
+-- checker already (`N511`), so it is no probe for the Lean channel.
+module probe::sperre_bricht_invariante {
+
+type Stand = u32 in 0 .. 100;
+
+table konto count 2 {
+    slot {
+        stand : Stand,
+    }
+}
+
+lock L protects { konto } rank 0 held <= 100 ops
+    invariant konto.slots[0].stand == konto.slots[1].stand;
+
+impl fn ehrlich()
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    locks L {
+        konto.slots[0].stand = 5;
+        konto.slots[1].stand = 5;
+    }
+}
+
+impl fn verlaesst_sich() -> u32
+    ensures result == 5
+    effects  { reads konto.slots, writes konto.slots, locks L }
+    costs    <= 64 ops
+{
+    locks L {
+        return konto.slots[0].stand;
+    }
+}
+
+concurrent { ehrlich, verlaesst_sich };
+
+}
