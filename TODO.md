@@ -635,7 +635,8 @@ Lane `gabbrov` (2026-09-29; `messung/GABBROV-SERVER-REPORT.md`). State: `gabbro 
 corpus is 192 GREEN / 13 OWED (12 real) / 0 RED; 188 units need no proof, 4 carry one (0.42 proof
 lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the order it blocks:
 
-- [ ] **V5 — the bridge to premise (b).** The duty files (`programmlogik/`, `exec`) and
+- [ ] **V5 — the bridge to premise (b): closed for the parser's fragment** (2 of 146; report `messung/GABBROV-BRUECKE-REPORT.md`). Open: units the Lean parser does not elaborate; the shared-atomic rely. Original wording:
+  **the bridge to premise (b).** The duty files (`programmlogik/`, `exec`) and
   `NutzerPflicht` (`grammatik/`, `execEndH`) are two models with two exporters and no relation.
   Needs translation validation of the fragment the duties cover; and the rows the duties do not
   cover: shared-atomic rely, `StartPflicht` (the initial memory is an assumption `Initially`).

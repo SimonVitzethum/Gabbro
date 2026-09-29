@@ -247,6 +247,11 @@ This section exists because the alternative is that a reader has to find it out.
   single-threaded; `beispiele/104` and `beispiele/108`). Every other program is open — chain
   count 2 of 129 (`instrumente/zaehle-kette.py --lean`, 2026-09-26). Concurrent translation
   validation (stage b) is closed for one program (`schlusssatz_124`) and open in general.
+- **GabbroV's proofs reach the goal theorem for two programs.** For a unit the Lean parser
+  elaborates (`beispiele/104`, `108`; 2 of 146, `instrumente/zaehle-bruecke.py`), premise (b)
+  (`NutzerPflichtA`) is *derived* in Lean from GabbroV's duty files (`bruecke/`,
+  `messung/GABBROV-BRUECKE-REPORT.md`), so chain and bridge are both closed end to end. For every
+  other program (b) is still an assumption; units with a shared atomic are not bridged.
 - **Most accepted programs are not judged in Lean at all.** Of 199 accepted programs under
   `beispiele/`, 23 have a generated certificate; the other 176 are refused by the exporter and
   listed by name in

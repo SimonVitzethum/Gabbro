@@ -3,6 +3,7 @@ import Bruecke.Pruefung
 import Grammatik.Kette104
 import Grammatik.Kette104Satz
 import Bruecke.Start
+import Bruecke.Atomar
 import Duty.Duty104Referenz
 
 /-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
@@ -103,6 +104,20 @@ theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.G
     ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).saetze :=
   ⟨u, _, _, Gabbro.Grammatik.Kette104.low4, stimmig, rang, meets_alle,
     ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .wert (.param "i")], by decide⟩⟩
+
+/-! BRIDGE-ATOMIC beispiele/104-referenz.gab nutzerA_bruecke -/
+
+/-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
+theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Kette104.E4 :=
+  bruecke_nutzerA Gabbro.Grammatik.Kette104.low4 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Kette104.E4 rfl rfl rfl
+
+#print axioms nutzerA_bruecke
+
+
+/-! BRIDGE-CHAIN beispiele/104-referenz.gab kette_104_bruecke -/
+
+#print axioms kette_104_bruecke
 
 #print axioms nutzer_bruecke
 #print axioms bruecke_zeuge

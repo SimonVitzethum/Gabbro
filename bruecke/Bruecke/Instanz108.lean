@@ -2,6 +2,7 @@ import Bruecke.Pflichten
 import Bruecke.Pruefung
 import Grammatik.Kette108
 import Bruecke.Start
+import Bruecke.Atomar
 import Duty.Duty108DisjointStartLocks
 
 /-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
@@ -78,6 +79,20 @@ theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammati
 /-- The closed chain of 108 with its premise (b) taken from the bridge. -/
 def kette_108_bruecke : Gabbro.Grammatik.Kette Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
   { Gabbro.Grammatik.Kette108.kette_108 with nutzer := nutzer_bruecke }
+
+/-! BRIDGE-ATOMIC beispiele/108-disjoint-start-locks.gab nutzerA_bruecke -/
+
+/-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
+theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Kette108.E8 :=
+  bruecke_nutzerA Gabbro.Grammatik.Kette108.low8 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Kette108.E8 rfl rfl rfl
+
+#print axioms nutzerA_bruecke
+
+
+/-! BRIDGE-CHAIN beispiele/108-disjoint-start-locks.gab kette_108_bruecke -/
+
+#print axioms kette_108_bruecke
 
 #print axioms nutzer_bruecke
 

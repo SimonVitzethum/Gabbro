@@ -19,6 +19,12 @@
       every value a read of a shared atomic may return (`LogikPflichtA`, the rely; on a unit
       without one it is `LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at
       `E.sp0`, every declared start's `requires` there with its declared arguments);
+      BRIDGE TO GabbroV (comment only, 2026-09-29; `bruecke/`, `messung/GABBROV-BRUECKE-REPORT.md`):
+      for a unit the Lean parser elaborates (`lowerAllg`), (b) is DERIVED from GabbroV's duty
+      files (`bruecke_nutzer`, `bruecke_nutzerA`), given per-unit decided name and rank
+      conditions. It covers the parser's fragment only (corpus: 104 and 108); every other unit
+      still carries (b) as an assumption. No unit inside it has a shared atomic, so the rely
+      of `LogikPflichtA` is empty there; a unit WITH one is not bridged.
   (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code;
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (A4).
   Then for every budget, every set of initially live threads and every reached machine of the

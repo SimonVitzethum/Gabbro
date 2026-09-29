@@ -1,6 +1,6 @@
 # GabbroV bridge -- report (running; `dokumente/AUFTRAG-GABBROV-VERIFIKATION.md`)
 
-**Where it stands (2026-09-29, after S3):** the simulation theorem is PROVED generically for the
+**Where it stands (2026-09-29, after S4-S6):** the simulation theorem is PROVED generically for the
 Lean parser's whole fragment, and **2 of 146 corpus programs (104, 108) have a CLOSED bridge**:
 premise (b) of the goal theorem (`NutzerPflicht`) follows in Lean from GabbroV's own duty proofs
 (`./instrumente/zaehle-bruecke.py`). Both are exactly the programs the Lean parser accepts; the
@@ -210,3 +210,38 @@ of 146 (S0). That is the critical path for the bridge count.
 (`NutzerPflichtA`, S4); the ghost path of F1 is proved generically but has no corpus instance.
 Isabelle is not installed on this machine; `abnahme.py --voll` was NOT run. Nothing under
 `crates/` changed.
+
+## S4 (rest) -- the atomic rely (2026-09-29, measured)
+
+`bruecke/Bruecke/Atomar.lean`: **`bruecke_nutzerA`** -- `NutzerPflichtA E` for every unit inside
+`bruecke_nutzer`. Proof: the parser's declaration has `Glob := Empty` (`declOf_kein_atomar`), so
+no shared atomic exists and the rely is empty; `Zielsatz.nutzerPflichtA_ohne_atomar` turns
+`NutzerPflicht` into `NutzerPflichtA`. Instances `I104.nutzerA_bruecke`, `I108.nutzerA_bruecke`
+(`cd bruecke && LEAN_NUM_THREADS=4 lake build`, 195 jobs green, all three on the standard axioms).
+
+**The gap, precisely.** A unit WITH a shared atomic is outside the bridge: the parser has no
+`UStmt` for publish/await/exchange, and the duty exporter refuses `Exchange`/`AwaitLoad`. Its duty
+would have to quantify over EVERY value a read of a shared atomic may return (`HavocA`: the body
+is run by `execEndHA`, each atomic read answered arbitrarily), i.e. a `Body` reading for a read
+whose result is a free variable constrained only by the atomic's declared type, and a simulation
+lemma for it. That is not built; there is no population for it.
+
+## S5 + S6 -- the counter and the end-to-end count (2026-09-29, measured)
+
+`./instrumente/zaehle-bruecke.py` (a `zaehle-*`, so `abnahme.py` runs it) now prints three lines:
+`BRIDGE COUNT` 2 of 146 statements checked, 2 of 146 CLOSED (S3); `ATOMIC RELY` 2 of 2 (S4);
+**`END TO END` 2 of 146** -- 104 and 108 have a closed chain AND a closed bridge (S6). The end to
+end count reads the marker `BRIDGE-CHAIN <program> <def>`: `kette_104_bruecke`,
+`kette_108_bruecke` are `Kette src` values (source text -> parser -> checker Bool -> goal theorem
+-> correspondence to the C, every field a theorem) whose premise (b) is `nutzer_bruecke`; the
+counter requires them to be applied in a module that builds with the standard axioms printed.
+
+**What the bridge covers, exactly.** The parser's fragment (`UStmt` 3 of 3, ...): programs of
+writes and calls with `ensures` over `== < <=`, no locks, no atomics, no loops. Inside it and
+with the per-unit name and rank conditions decided, GabbroV's duties imply `NutzerPflichtA`.
+Outside it (144 of 146 corpus programs) premise (b) stays an assumption. The critical path to a
+larger count is the Lean parser, shared with translation validation.
+
+**Not claimed.** Nothing beyond the fragment; `Spec.lean` changed by a comment only. Isabelle is
+not installed here; `abnahme.py --voll` was NOT run. `pruefe-waechter.py` was red before this
+work and is unchanged by it (identical output with the change stashed).

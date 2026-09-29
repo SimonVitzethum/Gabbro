@@ -23,6 +23,14 @@ Two levels, both counted over `beispiele/*.gab`, and NEITHER counts unless Lean 
   `Classical.choice`, `Quot.sound`; a missing line is not measured, `sorryAx` is not closed). A
   closed bridge says: every duty GREEN implies the goal theorem's premise (b) for this program.
   Its planted defects: `./instrumente/mutiere-bruecke.py --s3`.
+  ATOMIC RELY (S4). `BRIDGE-ATOMIC <program.gab> <theorem>`: the theorem is `NutzerPflichtA` of the
+  unit (the parser's units have no shared atomic), measured exactly like a closed bridge.
+  END TO END (S6). `BRIDGE-CHAIN <program.gab> <def>`: the def is the closed chain (`Kette src`:
+  source text, checker Bool, goal theorem, correspondence to the C -- every field a theorem) with
+  its premise (b) taken from the closed bridge; it counts under the same build + axioms rule, and
+  only for a program whose bridge is CLOSED. `Kette` has no field that is not proved, so a built
+  def is a closed chain AND a closed bridge for the program.
+  Its planted defects: `./instrumente/mutiere-bruecke.py --s3`.
 
 A COUNTER, not a guard: exit 0 once it measured, 2 (ABBRUCH) when it measured nothing (no binary,
 a binary older than the sources, a failing speech test). `--nicht-lean` skips the build (a present
@@ -41,6 +49,8 @@ _S.loader.exec_module(ZK)
 BR = W / "bruecke"
 MARKE_I = re.compile(r"BRIDGE-INSTANCE\s+(\S+\.gab)\s+([\w.]+)")
 MARKE_C = re.compile(r"BRIDGE-CLOSED\s+(\S+\.gab)\s+(\w+)")
+MARKE_A = re.compile(r"BRIDGE-ATOMIC\s+(\S+\.gab)\s+(\w+)")
+MARKE_K = re.compile(r"BRIDGE-CHAIN\s+(\S+\.gab)\s+(\w+)")
 QUELLE = re.compile(r"uebersetzeAllg\s+(?:[\w.]*\.)?(\w+)\s*=")
 STANDARD = "[propext, Classical.choice, Quot.sound]"
 LEAN_FRIST = 1800
@@ -118,6 +128,13 @@ def geschlossen(instanz_text, programm, modul, satz, lean):
     return True, "closed by `%s` (axioms standard)" % satz
 
 
+def eingeloest(t, marke, programm, satz, modul, lean):
+    """`geschlossen` for the marker text `marke` (BRIDGE-ATOMIC / BRIDGE-CHAIN): the theorem or def
+    is APPLIED after its marker; the rest is the same build + axioms rule."""
+    return geschlossen(t.replace("BRIDGE-CLOSED", "BRIDGE-X").replace(marke, "BRIDGE-CLOSED"),
+                       programm, modul, satz, lean)
+
+
 def selbsttest():
     """The readers refuse what they should: a marker without an anchor, and a stale pin."""
     ok = MARKE_I.search("-- BRIDGE-INSTANCE beispiele/x.gab Bruecke.X") is not None
@@ -150,7 +167,7 @@ def main():
         print("ABBRUCH: empty population")
         return 2
     texte = ZK.lean_texte()
-    inst, schluss = {}, {}
+    inst, schluss, atom, kette = {}, {}, {}, {}
     for p in sorted((BR / "Bruecke").glob("Instanz*.lean")):
         t = p.read_text(encoding="utf-8")
         modul = "Bruecke." + p.stem
@@ -158,8 +175,12 @@ def main():
             inst[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t)
         for m in MARKE_C.finditer(t):
             schluss[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
+        for m in MARKE_A.finditer(t):
+            atom[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
+        for m in MARKE_K.finditer(t):
+            kette[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
     lean = not a.nicht_lean
-    n_stmt = n_zu = 0
+    n_stmt = n_zu = n_at = n_ke = 0
     for p in programme:
         eintrag = inst.get(p.name)
         if not eintrag:
@@ -175,12 +196,25 @@ def main():
             ok2, d2 = geschlossen(c[2], c[0], c[1], c[3], lean)
             print("        bridge: %s: %s" % ("CLOSED" if ok2 else "open", d2))
             n_zu += ok2
+            for reg, marke, tag in ((atom, "BRIDGE-ATOMIC", "atomic rely"), (kette, "BRIDGE-CHAIN", "end to end")):
+                e = reg.get(p.name)
+                if not (e and ok2):
+                    print("        %s: open" % tag)
+                    continue
+                ok3, d3 = eingeloest(e[2], marke, e[0], e[3], e[1], lean)
+                print("        %s: %s: %s" % (tag, "CLOSED" if ok3 else "open", d3))
+                if tag == "atomic rely":
+                    n_at += ok3
+                else:
+                    n_ke += ok3
         else:
             print("        bridge: open (no BRIDGE-CLOSED marker: the simulation theorem is not instantiated)")
     n = len(programme)
     print("== BRIDGE COUNT: %d of %d programs have their duty statements checked against the Lean "
           "computation (S1+S2); %d of %d have a CLOSED bridge (S3) (unmeasured counts as not passed) =="
           % (n_stmt, n, n_zu, n))
+    print("== ATOMIC RELY: %d of %d closed bridges carry NutzerPflichtA (S4) ==" % (n_at, n_zu))
+    print("== END TO END: %d of %d programs have a closed chain AND a closed bridge (S6) ==" % (n_ke, n))
     return 0
 
 

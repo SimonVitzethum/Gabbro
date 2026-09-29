@@ -12,3 +12,4 @@ import Bruecke.Instanz104
 import Bruecke.Instanz108
 import Bruecke.GiftZyklus
 import Bruecke.Start
+import Bruecke.Atomar
