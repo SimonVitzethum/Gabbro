@@ -147,9 +147,10 @@ README §5 says exactly this; keep it that way.
 All work happens on this machine, in this checkout. There is no second machine, no build
 server, no `ssh` step: Lean builds, `cargo` runs, Isabelle runs and QEMU stages all run here.
 
-**Exception since 2026-09-28 (Simon): one autonomous Claude lane on `ubuntu@simon.jocraft.cc`.**
-At most ONE agent runs there at a time, in its own clone `~/Gabbro` (and, for the network
-stack, `~/gabbro-netz/`). It builds and tests in its own tree, merges into master only with
+**Exception since 2026-09-28 (Simon): autonomous Claude lanes on `ubuntu@simon.jocraft.cc`.**
+Since 2026-09-29 TWO lanes run there, each with one agent and its own clone: the network-stack
+lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`) and the GabbroV lane (`~/gabbro-v`, runner
+`lauf-v.sh`, owner of `programmlogik/` and `beweis.rs`), both on Claude Sonnet 5.5. It builds and tests in its own tree, merges into master only with
 `cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
 task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
 Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
