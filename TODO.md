@@ -639,8 +639,11 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
   `NutzerPflicht` (`grammatik/`, `execEndH`) are two models with two exporters and no relation.
   Needs translation validation of the fragment the duties cover; and the rows the duties do not
   cover: shared-atomic rely, `StartPflicht` (the initial memory is an assumption `Initially`).
-- [ ] **`by unvisited` covers the domain** (`beispiele/57`): a visited-set or a coverage premise
-  for a traversal without `leave`; a language-surface decision.
+- [ ] **A traversal's index is a member of its domain, in the state of the pass** (`beispiele/57`,
+  `09`, `01`, `messung/caprock/kapraum`): `RunsLoopN` bounds the range and the count, not the
+  membership, nor that a `by unvisited` traversal without `leave` covers the domain. A premise in
+  the `RunsLoop*` family (`Body.lean`) and the exporter; a language-surface decision for the
+  visited-set.
 - [ ] **Does `tree { parent … child … sibling … }` imply parent consistency?** (`beispiele/09`,
   `messung/caprock/kapraum`: `blatt_loeschen(opfer)` needs `benutzt(opfer)` for every descendant.)
 - [ ] **Disjunctive callee posts multiply the pipeline's splits** (`beispiele/126`, 94 goals).
