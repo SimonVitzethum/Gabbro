@@ -945,6 +945,9 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
 
 # 4. Extensions and named gaps  ⟨D⟩
 
+*Rules for every extension: PLAN-ZIELSATZ §8. The criterion is counted per obligation, there is
+one assumption list, and the number is booked before and after.*
+
 - [ ] **Opt-in unbounded heap region (planned, not required; Simon, 2026-09-29).** The default
   stays a region with a declared ceiling (§0e: fixed commit + ceiling, refuse-on-full). Beside it,
   an EXPLICITLY declared region with no ceiling -- spoken out like `divergent fn` -- in which
@@ -957,9 +960,6 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
   model of an unbounded heap, checker rules with poison probes, and a runtime without a
   reservation ceiling. Memory safety, race freedom, contracts and termination checking are
   unaffected.
-
-*Rules for every extension: PLAN-ZIELSATZ §8. The criterion is counted per obligation, there is
-one assumption list, and the number is booked before and after.*
 
 - [ ] **Linearizability** of lock-free structures. SPSC ring first, then the Treiber stack and the
   sequence counter, then RCU. External and helping linearization points are a separate, later
