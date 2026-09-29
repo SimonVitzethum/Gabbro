@@ -496,6 +496,20 @@ pub fn vorlage(baum: &Programm, datei: &str) -> String {
             if l.trim().is_empty() {
                 break;
             }
+            if l.contains("gabbro_auto2 ") {
+                // `gabbro_auto2 [first] [second] using t`: the pipeline, and once more on what
+                // it left -- spelled out, so the person sees the goals AFTER both passes
+                let indent = &l[..l.len() - l.trim_start().len()];
+                let at = l.find("gabbro_auto2 ").unwrap_or(0);
+                let (before, tail) = l.split_at(at);
+                let (a, rest) = tail.trim_start_matches("gabbro_auto2 ").split_once("] [").unwrap_or((tail, ""));
+                let (b, _) = rest.split_once("] using").unwrap_or((rest, ""));
+                s.push_str(&format!("{before}gabbro_pipeline {}] using shapeOf\n", a.trim_end()));
+                s.push_str(&format!("{indent}all_goals (try (gabbro_pipeline [{b}] using shapeOf))\n"));
+                s.push_str(&format!("{indent}-- what is left here is the unit's own logic (`gabbro_auto?` shows it)\n"));
+                s.push_str(&format!("{indent}all_goals sorry\n"));
+                break;
+            }
             if l.contains("gabbro_auto ") {
                 let indent = &l[..l.len() - l.trim_start().len()];
                 s.push_str(&l.replace("gabbro_auto ", "gabbro_pipeline "));

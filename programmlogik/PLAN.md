@@ -1411,3 +1411,27 @@ that passes.*
 * **§13's own numbers were not re-booked.** §13.2 reads 45 constructors and 86 expanded
   forms; that is the record of run 26 and stays what it was. §11's rule: *neither number is
   the tree's.*
+
+---
+
+## 16. Run of the GabbroV lane (2026-09-29) — the lock invariant, the second pass, the gates
+
+Full account and commands: `messung/GABBROV-SERVER-REPORT.md`. What changed in the plan above:
+
+- **§5.2 gains a closed item: the lock invariant.** `locks L { … }` on a lock with an `invariant`
+  is `.call lock_acquire_L` (an assumed contract, in `Assumed`), the body, `.call lock_release_L`
+  (precondition = the invariant). `gabbro_calls` also collects the calls of the `hcase` hypotheses
+  in a `False` goal. Corpus: 188 GREEN / 16 OWED → 192 / 12 (`157`, `124` via the lock; `56` via a
+  fixed specification; the tagged probe via a proof). Probes: `instrumente/pruefe-sperre-beweis.sh`.
+- **§3.3: the generated closer is `gabbro_auto2`** — the pipeline, and once more on what it left
+  (the second list omits `hall`/`hpass`, which `simp_all` clears). It closes the five-call chain of
+  `147` `fnv`; the 64-call chain of `tick_runde` stays open (extra passes and a round cap of 100
+  instead of 12 were measured to change nothing).
+- **`--template` writes `set_option maxHeartbeats 11300000`** (§3.3's budget).
+- **New gaps, each with its unit** (all in §5.1's spirit — they need a decision, not a tactic):
+  the visited-set of a `by unvisited` traversal (`57`: `RunsLoopN` bounds the passes and does not
+  say they cover the domain); whether `tree { … }` implies parent consistency (`09`); disjunctive
+  callee posts multiply the pipeline's splits (`126`: 94 goals, five minutes a compile).
+- **§1's table is unchanged**; the connection to premise (b) of the goal theorem is written in the
+  report §4 — the duty files and `NutzerPflicht` are over two different models, and nothing relates
+  them yet.

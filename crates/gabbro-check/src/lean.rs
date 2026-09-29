@@ -4374,6 +4374,16 @@ pub fn module_name(datei: &str) -> String {
     s
 }
 
+/// **The lemma list of the second pass of `gabbro_auto2`**: the first list without the names
+/// `simp_all` clears in the first pass -- `hall` (the precondition) and `hpass` (a loop's
+/// counter start). An unknown identifier fails a whole pass.
+fn second_pass_set(set: &str) -> String {
+    set.split(", ")
+        .filter(|x| *x != "hall" && *x != "hpass")
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// **The dependency order of the unit's theorems**: loops before their routine, callees
 /// before callers. Returns the order, the CYCLES (a mutual recursion whose every member
 /// declares a `decreases` and calls the cycle only outside its loops -- wired by one
@@ -5107,7 +5117,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             if l.passes.is_some() {
                 set.push_str(", hpass");
             }
-            let tactic = format!("gabbro_auto [{set}] using shapeOf");
+            let tactic = format!("gabbro_auto2 [{set}] [{}] using shapeOf", second_pass_set(&set));
             if splits.is_empty() {
                 s.push_str(&format!("  {tactic}\n\n"));
             } else {
@@ -5207,7 +5217,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         for e in &eqs {
             set.push_str(&format!(", {e}"));
         }
-        let tactic = format!("gabbro_auto [{set}] using shapeOf");
+        let tactic = format!("gabbro_auto2 [{set}] [{}] using shapeOf", second_pass_set(&set));
         if splits.is_empty() {
             s.push_str(&format!("  {tactic}\n\n"));
         } else {

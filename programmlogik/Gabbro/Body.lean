@@ -3118,6 +3118,18 @@ macro "gabbro_auto" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
   `(tactic| (gabbro_pipeline [$ts,*] using $t; all_goals sorry))
 
 open Lean.Parser.Tactic in
+/-- **`gabbro_auto2` -- the pipeline, and once more on what it left** (GabbroV lane,
+    2026-09-29). A call chain of five (`beispiele/147` `fnv`) is deeper than one round of
+    `gabbro_calls` instantiates; the second pass closes it (measured: `fnv` 51 s -> closed with
+    the same tactic run twice). The second list is the first WITHOUT the names `simp_all` clears
+    (`hall`, `hpass`) -- an unknown identifier fails a whole pass. A pass over no goals costs
+    nothing, so a unit the first pass closes pays nothing. -/
+macro "gabbro_auto2" "[" ts:simpLemma,* "]" "[" us:simpLemma,* "]" "using" t:ident : tactic =>
+  `(tactic| (gabbro_pipeline [$ts,*] using $t;
+             all_goals (try (gabbro_pipeline [$us,*] using $t));
+             all_goals sorry))
+
+open Lean.Parser.Tactic in
 /-- `gabbro_auto?` -- the same, and it PRINTS what is left before the `sorry`. For a
     person who wants to see their own logic before writing it. -/
 macro "gabbro_auto?" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>

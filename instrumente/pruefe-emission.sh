@@ -4065,7 +4065,11 @@ MARKE_EMIT=146
 # function whose body (`melde.c`) holds the program's own `printf`, which is the reference the
 # per-object criterion of `instrumente/pruefe-os-bindung.sh` must NOT count as the runtime's.
 # Re-measured in the same run: `324 von 324`.
-MARKE_EMIT_M=160
+# **160 -> 161 on 2026-09-29 (GabbroV lane).** One new probe: `messung/proben/probe-sperre-bricht-invariante.gab`,
+# a lock with an `invariant` and a routine that promises more than the invariant gives -- the
+# poison probe of the lock acquire/release in the duty channel (`instrumente/pruefe-sperre-beweis.sh`).
+# Re-measured in the same run: `329 von 329`.
+MARKE_EMIT_M=161
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

@@ -629,6 +629,25 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   is one kernel call added to the runtime. The atomic rows contribute none of them: macros and
   inline assembly leave no symbol. Recorded as OFFEN **O35**.
 
+# 0f. GabbroV — the user's logic proofs, end to end  ⟨A⟩
+
+Lane `gabbrov` (2026-09-29; `messung/GABBROV-SERVER-REPORT.md`). State: `gabbro prove` over the
+corpus is 192 GREEN / 13 OWED (12 real) / 0 RED; 188 units need no proof, 4 carry one (0.42 proof
+lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the order it blocks:
+
+- [ ] **V5 — the bridge to premise (b).** The duty files (`programmlogik/`, `exec`) and
+  `NutzerPflicht` (`grammatik/`, `execEndH`) are two models with two exporters and no relation.
+  Needs translation validation of the fragment the duties cover; and the rows the duties do not
+  cover: shared-atomic rely, `StartPflicht` (the initial memory is an assumption `Initially`).
+- [ ] **`by unvisited` covers the domain** (`beispiele/57`): a visited-set or a coverage premise
+  for a traversal without `leave`; a language-surface decision.
+- [ ] **Does `tree { parent … child … sibling … }` imply parent consistency?** (`beispiele/09`,
+  `messung/caprock/kapraum`: `blatt_loeschen(opfer)` needs `benutzt(opfer)` for every descendant.)
+- [ ] **Disjunctive callee posts multiply the pipeline's splits** (`beispiele/126`, 94 goals).
+- [ ] **A chain of 64 calls** (`beispiele/147`/`148` `tick_runde`) is not instantiated by twelve
+  rounds of `gabbro_calls`, nor by three passes.
+- [ ] The person's linked-structure arguments: `01`, `55`, `F01`, `kapraum` (PLAN.md §5.1).
+
 # 1. Transfer into the checker and the emitter  ⟨A⟩
 
 - [x] **The exporter produces a full `Einheit`** — lanes 198 (fields) and 207

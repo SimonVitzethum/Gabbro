@@ -1,7 +1,9 @@
 #!/bin/bash
 # The gates of `gabbro prove`, each with its poison probe (GabbroV lane, 2026-09-29).
 #
-# One unit (`beispiele/121-tagged-static-init.gab`, one duty `lies_meets_statement`), one
+# One unit (`messung/proben/probe-tagged-wird-gebaut.gab`, one duty `baut_bar_meets_statement`,
+# which the generator does NOT close -- the first testbed, 121, was closed by the generator on
+# 2026-09-29 and no longer owed a proof), one
 # proof that is GREEN, and one poison per gate. Every poison must be caught -- not GREEN, and
 # with the exit code the verdict owes. Counts, never stops at the first failure.
 #
@@ -26,8 +28,8 @@ for e in programmlogik/* programmlogik/.lake; do
   case "$(basename "$e")" in Duty|Proofs|_pruefung) continue;; esac
   ln -s "$PWD/$e" "$W/modell/$(basename "$e")"
 done
-U=beispiele/121-tagged-static-init.gab
-N=Duty121TaggedStaticInit
+U=messung/proben/probe-tagged-wird-gebaut.gab
+N=DutyProbeTaggedWirdGebaut
 gut=messung/proben/beweis-tor/gut.lean
 rot=0
 probe() { # name, expected exit, expected word, [env]
@@ -44,19 +46,19 @@ setze() { mkdir -p "$W/modell/Proofs"; cat > "$W/modell/Proofs/$N.lean"; }
 kopf() { printf 'import Duty.%s\nset_option autoImplicit false\nopen Gabbro.Body GabbroDuty.%s\n\n' "$N" "$N"; }
 
 setze < "$gut";                                              probe gut 0 GREEN X=1
-sed 's/^  (obtain.*/  all_goals sorry/; /^  · exact/d' "$gut" | setze;  probe sorry 1 sorryAx X=1
+sed '/^  all_goals/d; $a\  all_goals sorry' "$gut" | setze;  probe sorry 1 sorryAx X=1
 rm -f "$W/modell/Proofs/$N.lean";                            probe fehlt 1 OWED X=1
-{ kopf; echo 'theorem lies_meets_done : True := trivial'; } | setze;   probe andere 1 'no theorem' X=1
-{ kopf; echo 'axiom cheat : lies_meets_statement'; echo 'theorem lies_meets_done : lies_meets_statement := cheat'; } | setze
+{ kopf; echo 'theorem baut_bar_meets_done : True := trivial'; } | setze;   probe andere 1 'no theorem' X=1
+{ kopf; echo 'axiom cheat : baut_bar_meets_statement'; echo 'theorem baut_bar_meets_done : baut_bar_meets_statement := cheat'; } | setze
 probe axiom 1 cheat X=1
-sed 's/^  unfold lies_meets_statement/  have _h : (2:Nat) + 2 = 4 := by native_decide\n  unfold lies_meets_statement/' "$gut" | setze
+sed 's/^  unfold baut_bar_meets_statement/  have _h : (2:Nat) + 2 = 4 := by native_decide\n  unfold baut_bar_meets_statement/' "$gut" | setze
 probe native 1 native_decide X=1
-sed 's/lies_meets_done/lies_meets_bewiesen/' "$gut" | setze; probe name 1 'no theorem' X=1
+sed 's/baut_bar_meets_done/baut_bar_meets_bewiesen/' "$gut" | setze; probe name 1 'no theorem' X=1
 setze < "$gut";                                              probe toolchain 3 SETUP LEANBIN=/bin/false
 # the emitter's gate goes through the same measurement: C only for the GREEN proof
 setze < "$gut"
 "$G" emit --proved --model "$W/modell" "$U" 2>/dev/null | grep -q 'int main\|#include' && echo "  ok   emit-gut  (C written)" || { echo "  FAIL emit-gut: no C"; rot=$((rot+1)); }
-sed 's/^  (obtain.*/  all_goals sorry/; /^  · exact/d' "$gut" | setze
+sed '/^  all_goals/d; $a\  all_goals sorry' "$gut" | setze
 if "$G" emit --proved --model "$W/modell" "$U" 2>/dev/null | grep -q '#include'; then echo "  FAIL emit-sorry: C was written"; rot=$((rot+1)); else echo "  ok   emit-sorry  (no C)"; fi
 echo "poison probes not caught: $rot"
 [ "$rot" = 0 ]
