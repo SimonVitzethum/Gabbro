@@ -1,0 +1,13 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "grammatik",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../grammatik",
+   "configFile": "lakefile.toml"}],
+ "name": "bruecke",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

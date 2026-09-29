@@ -1,0 +1,21 @@
+name = "bruecke"
+version = "0.1.0"
+defaultTargets = ["Bruecke"]
+
+# The bridge between the goal theorem (`grammatik/`, machine G) and GabbroV (`programmlogik/`,
+# `Gabbro.Body`). MATHLIB-FREE on purpose, on `grammatik`'s toolchain: `Gabbro/Body.lean` and the
+# generated `Duty/`+`Proofs/` files import nothing but `Gabbro.Body` (measured 2026-09-29), so
+# the same SOURCE files are compiled here under v4.33.1 as under `programmlogik`'s mathlib
+# pin (v4.33.0). Nothing is copied: `srcDir` points at the original files.
+
+[[require]]
+name = "grammatik"
+path = "../grammatik"
+
+[[lean_lib]]
+name = "Gabbro"
+srcDir = "../programmlogik"
+roots = ["Gabbro.Body"]
+
+[[lean_lib]]
+name = "Bruecke"
