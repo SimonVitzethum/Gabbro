@@ -3771,7 +3771,14 @@ fi
 # `crates/gabbro-check/tests/rechenwerk.rs`
 # (`vorzeichenlose_namen_werden_nicht_von_zeigern_und_untypisierten_bindungen_vergiftet`, assertion
 # 4). `MARKE_EMIT_G` is therefore untouched.
-MARKE_EMIT=146
+# **146 -> 148 on 2026-09-30 (server lane, phase 2, walls 5 and 9).** Two more emitting examples:
+# `170-let-else-mit-typ.gab` (a `let … else` whose annotation is honoured: the callee's `ensures` proves the range the name
+# has) and `171-narrow-nach-eigener-deklaration.gab` (the `narrow` of an unsigned local next to a SIGNED parameter of the same
+# name in another function -- `cc -Werror=type-limits` refused it while the unsigned-name set was keyed by base name over the
+# whole unit). Their poison twins (`gift/1369` `M101`, `gift/1370` `M135`) are refused by the CHECKER and write no C, so
+# `MARKE_EMIT_G` is untouched; wall 9 adds no refusal (what changed is WHICH comparison is emitted), and its negative half is
+# pinned in `crates/gabbro-check/tests/rechenwerk.rs` (`die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit`).
+MARKE_EMIT=148
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
