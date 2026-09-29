@@ -133,7 +133,10 @@ README §5 says exactly this; keep it that way.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
-  A heap without a ceiling stays refused.
+  A heap without a ceiling stays refused BY DEFAULT. **Planned, not required** (Simon,
+  2026-09-29): an explicitly declared region WITHOUT a ceiling, as an opt-in beside the default
+  (every allocation may fail and must be handled; the static whole-program memory bound is lost
+  for such a program, which is what makes the language Turing-complete in the model). TODO §4.
 - **Tag milestones** at the push that reaches them.
 - **Security:**
   - Never write API keys or passwords into the repo, memory or logs. The opencode keys live only
