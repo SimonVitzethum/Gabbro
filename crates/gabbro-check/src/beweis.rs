@@ -202,21 +202,47 @@ fn statements_von(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn lean_lauf(lean: &Path, lean_path: &str, datei: &Path, olean: Option<&Path>) -> Result<String, String> {
+/// One Lean run: its whole output, and whether it EXITED successfully.
+///
+/// **It runs in the model folder**, because `~/.elan/bin/lean` is elan's proxy and picks the
+/// toolchain from the `lean-toolchain` file of the directory it starts in. Started from
+/// wherever `gabbro prove` was called, the proxy found no toolchain, printed
+/// `error: no default toolchain configured` -- a line without `file:line:col:` -- and exited 1;
+/// the parser below saw no error and no `sorry`, and the unit came out GREEN without a single
+/// line of Lean having been checked (server lane, 2026-09-29, on `firewall/regeln.gab` of
+/// `~/gabbro-netz`: GREEN in 3 s, where a real run takes 6 min and leaves nine duties owed).
+/// The exit status is therefore part of the answer, not a detail.
+fn lean_lauf(lean: &Path, lean_path: &str, datei: &Path, olean: Option<&Path>, ort: &Path) -> Result<(String, bool), String> {
     let mut cmd = Command::new(lean);
     cmd.env("LEAN_PATH", lean_path);
+    cmd.current_dir(ort);
     if let Some(o) = olean {
         cmd.arg("-o").arg(o);
     }
     cmd.arg(datei);
     let out = cmd.output().map_err(|e| format!("`lean` could not run: {e}"))?;
-    Ok(String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr))
+    Ok((String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr), out.status.success()))
+}
+
+/// **A Lean run that failed without saying where** -- a non-zero exit and no error line with a
+/// position. That is the SETUP failing (a toolchain, a path, a crash), and nothing about the
+/// tree was measured: it may neither be GREEN nor be blamed on the tree.
+fn ohne_ort(ausgabe: &str, erfolg: bool) -> Option<String> {
+    if erfolg || !fehlerzeilen(ausgabe).is_empty() {
+        return None;
+    }
+    let kopf: Vec<&str> = ausgabe.lines().filter(|l| !l.trim().is_empty()).take(4).collect();
+    Some(format!("`lean` exited unsuccessfully and named no position -- nothing was measured:\n{}", kopf.join("\n")))
 }
 
 /// **The measurement of one unit.** `Err` only where the SETUP is wrong (no Lean, no
 /// model); everything about the tree comes back as a `Befund`.
 pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, String> {
     let lean = lean_binaer().ok_or("no `lean` (set $LEANBIN, or install elan)")?;
+    // Absolute, because Lean runs INSIDE the model folder (`lean_lauf`) and every path handed
+    // to it must mean the same thing there.
+    let modell_abs = modell.canonicalize().map_err(|e| format!("the model folder {}: {e}", modell.display()))?;
+    let modell: &Path = &modell_abs;
     modell_bauen(modell)?;
     let text = crate::lean::module(baum, datei);
     let name = crate::lean::module_name(datei);
@@ -244,11 +270,24 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     };
     // the generated half -- red here is the generator's fault, not the person's
     let olean = out_dir.join("Duty").join(format!("{name}.olean"));
-    let ausgabe = lean_lauf(&lean, &lib_s, &duty, Some(&olean))?;
+    // The `.olean` is the run's RECEIPT: removed first, it can only exist afterwards if this run
+    // compiled the module. A run that exits cleanly and leaves none checked nothing.
+    let _ = std::fs::remove_file(&olean);
+    let (ausgabe, erfolg) = lean_lauf(&lean, &lib_s, &duty, Some(&olean), modell)?;
+    if let Some(m) = ohne_ort(&ausgabe, erfolg) {
+        befund.stand = Stand::Aufbau;
+        befund.meldung = m;
+        return Ok(befund);
+    }
     let fehler = fehlerzeilen(&ausgabe);
     if !fehler.is_empty() {
         befund.stand = Stand::Rot;
         befund.meldung = format!("the GENERATED half does not compile ({}):\n{}", duty.display(), fehler.join("\n"));
+        return Ok(befund);
+    }
+    if !olean.is_file() {
+        befund.stand = Stand::Aufbau;
+        befund.meldung = format!("`lean` reported success and wrote no `{}` -- nothing was measured", olean.display());
         return Ok(befund);
     }
     let mut geschuldet: Vec<String> = sorry_zeilen(&ausgabe)
@@ -270,7 +309,12 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     // the person's half
     let beweise = std::fs::read_to_string(&beweisdatei).map_err(|e| e.to_string())?;
     let lp = format!("{}:{}", lib_s, out_dir.to_string_lossy());
-    let ausgabe = lean_lauf(&lean, &lp, &beweisdatei, None)?;
+    let (ausgabe, erfolg) = lean_lauf(&lean, &lp, &beweisdatei, None, modell)?;
+    if let Some(m) = ohne_ort(&ausgabe, erfolg) {
+        befund.stand = Stand::Aufbau;
+        befund.meldung = m;
+        return Ok(befund);
+    }
     let fehler = fehlerzeilen(&ausgabe);
     if !fehler.is_empty() {
         befund.stand = Stand::Rot;
