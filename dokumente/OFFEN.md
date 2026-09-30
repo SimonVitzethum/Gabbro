@@ -1670,3 +1670,20 @@ the runtime beside it**, and until 2026-09-28 nothing measured that.
 | **the memory model, which is the row no symbol can see** | the atomic mapping moved too — `bibliothek/linux-kmod/stdatomic.h` is the program's table now, `laufzeit/kmodul/include/stdatomic.h` is a refusal again (`_Atomic` pastes to an undeclared name), and a `module` unit with an `atomic` that names no `stdatomic.h` is refused before any C. The mechanism is a new file kind in the manifest: a `.h` in a module unit's file list is copied into the module's include directory AFTER the runtime's shims, and therefore in place of one. **(M11) of `Zielsatz/Spec.lean` did not change in substance** — it is about the rows, and the rows did not move a character (`messung/SERVER-0E-SPEC-DIFF.md` Part III) |
 | **the other runtimes** | hosted (`laufzeit/start*.c`, `faden.c`, `arena_dyn.c`): about fourteen libc names plus the raw `clone` and `futex` through `syscall`. **That is `AUFTRAG-1.md` K8 since 2026-09-28** (Simon: *"an die Hardware ist OK, OS nicht, das muss selbst gemacht werden"*), acceptance point 4d, after K7 and split over sessions. Bare metal (`laufzeit/metall/`): no OS at all; what it hard-wires is the MACHINE (`outb`, `hlt`, `cli`/`sti`, `wrmsr`, `lidt`), which is instructions and not API — K8 allows exactly that and asks for it to be confirmed |
 | **status** | **CLOSED for the module target 2026-09-28** (server lane, session 6, acceptance point 4c): 0 hard-wired kernel functions on all three probes, both poison probes caught, `cargo test` and `pruefe-emission.sh` green. Open for the hosted one, which is K8 (the row above) |
+
+## O36 — An index through a pointer was held against nothing (recorded 2026-09-30, C-free lane; CLOSED in the checker the same day, `N571`)
+
+**Measured with the release binary of `55a18e2d`:** `impl fn setze(buf : ptr<normal, w> u8, i : u64)
+{ buf[i] = 1; }` checked with **0 errors** and lowered to a plain `buf[i] = 1;` -- an out-of-bounds
+store the checker admitted. Even `requires 1 <= lenof(buf)` beside `buf[5]` passed. `M103` holds an
+ARRAY index against its declaration; a pointer carries no length, and `N463`/`N464` (fix lane F5)
+held the extent only at the CALL, and only in the bare form `x <= lenof(p)`. The comment at the
+pointer arm of `umgebung.rs::typ_von_ort` said so in as many words: *"the bound of the index is not
+this line's business … `N463`/`N464` hold the length at the call site."* Nothing held the INDEX.
+
+| | |
+|---|---|
+| **closed by** | `N571` (`m1.rs::zeigerindex_pruefen`): every `p[e]` must satisfy `e + 1 <= C` for a clause `C <= lenof(p)` of the function's own `requires`, over a pointer and names the body never reassigns, by a sound linear reading (sums, named constants, `x < y` facts, `let` definitions, one comparison of sums, ranges). And `N463` widened (`extent_at_call`): every non-bare clause form is decided at every call by the same reading -- before, `1 <= lenof(p)` bound no caller |
+| **found beside it** | a parameter named in an `N463` forwarding clause could be REASSIGNED in the body (`writes n` admits `n = 3;`), and the clause still counted; forwarding now needs parameters the body never assigns (`feste_params`) |
+| **what stays open** | the reading is incomplete by design (fail-closed): a path join, a subtraction, a product of names, an `ensures` not relative to the extent are refused and must be restated (`let ende = v + c; narrow ende to 0 .. N else { … }`). A local or global pointer has no extent at all (every index through it is refused). In Lean nothing moves: a byte pointer has no G form (`LG002`), so the goal theorem never covered these programs -- this was a hole in the CHECKER's claim, not in the model's |
+| **cost, measured** | corpus: 5 gifts repaired (`764`, `784`-`786` gained the clause they lacked, `765` lost its `p[1]` twin), `169` needed the `retry … until` fact. The network stack (`~/gabbro-netz` `dda8a84`): 156 distinct sites at the first reading, **74** at the final one; the list and the idioms are in `~/claude-lane/C-FREI-FUER-NETZ.md` |

@@ -56,6 +56,109 @@ impl Zaehlung {
     }
 }
 
+/// **A linear form `n1 + n2 + … + k`** over names (`N571`/`N463`, C-free lane,
+/// 2026-09-30): the left side of an extent clause, an index, an argument.
+#[derive(Debug, Clone)]
+struct Linear {
+    namen: Vec<String>,
+    k: i128,
+}
+
+/// An extent clause of the current function: `form <= lenof(zeiger)`.
+#[derive(Debug, Clone)]
+struct Klausel {
+    zeiger: String,
+    form: Linear,
+}
+
+/// What a site knows about names: least and greatest values, and the facts `a < b`.
+#[derive(Debug, Clone, Default)]
+struct Umfeld {
+    min: HashMap<String, i128>,
+    max: HashMap<String, i128>,
+    kleiner: Vec<(String, String)>,
+    /// Standing `let` definitions `name = namen + k` (for `verdichtet`).
+    definitionen: Vec<(String, Linear)>,
+    /// Standing comparison facts `a <= b` over sums.
+    ungleichungen: Vec<(Linear, Linear)>,
+}
+
+/// **Does `l + slack <= c` hold on every value the site admits?** Names common to both
+/// sides cancel; a remaining name `x` of `l` with a fact `x < y` pairs with a remaining `y`
+/// of `c` (so `x <= y - 1`); what is left of `l` counts at its greatest value, what is left
+/// of `c` at its least. A name with no range answers nothing (fail-closed).
+fn passt(l: &Linear, slack: i128, c: &Linear, u: &Umfeld) -> bool {
+    let mut formen = vec![l.clone()];
+    if let Some(v) = verdichtet(l, u) {
+        formen.push(v);
+    }
+    formen.iter().any(|l| {
+        passt_roh(l, slack, c, u)
+            // One chained step through a standing fact `a <= b`: with `l = a + r_l` and
+            // `c = b + r_c`, `r_l + slack <= r_c` suffices.
+            || u.ungleichungen.iter().any(|(a, b)| {
+                match (abziehen(l, a), abziehen(c, b)) {
+                    (Some(rl), Some(rc)) => passt_roh(&rl, slack, &rc, u),
+                    _ => false,
+                }
+            })
+    })
+}
+
+/// `x - y` as a linear form, where every name of `y` occurs in `x` (else `None`).
+fn abziehen(x: &Linear, y: &Linear) -> Option<Linear> {
+    let mut namen = x.namen.clone();
+    for n in &y.namen {
+        let j = namen.iter().position(|m| m == n)?;
+        namen.remove(j);
+    }
+    Some(Linear { namen, k: x.k.checked_sub(y.k)? })
+}
+
+/// **A sum that a standing definition names, as that name** (`let neu = n + g; narrow neu
+/// to 0 .. 65536` bounds `n + g`): `namen + k` becomes `x + (k - k_x)` when a definition
+/// `x = namen + k_x` stands with the same names.
+fn verdichtet(l: &Linear, u: &Umfeld) -> Option<Linear> {
+    let mut ln = l.namen.clone();
+    ln.sort();
+    u.definitionen.iter().find_map(|(x, f)| {
+        let mut fn_ = f.namen.clone();
+        fn_.sort();
+        (fn_ == ln).then(|| Linear { namen: vec![x.clone()], k: l.k - f.k })
+    })
+}
+
+fn passt_roh(l: &Linear, slack: i128, c: &Linear, u: &Umfeld) -> bool {
+    let mut ln = l.namen.clone();
+    let mut cn = c.namen.clone();
+    ln.retain(|x| match cn.iter().position(|y| y == x) {
+        Some(j) => {
+            cn.remove(j);
+            false
+        }
+        None => true,
+    });
+    let mut paare: i128 = 0;
+    let mut rest_l = Vec::new();
+    for x in ln {
+        match cn.iter().position(|y| u.kleiner.iter().any(|(a, b)| *a == x && b == y)) {
+            Some(j) => {
+                cn.remove(j);
+                paare += 1;
+            }
+            None => rest_l.push(x),
+        }
+    }
+    let links = rest_l.iter().try_fold(l.k.saturating_add(slack), |acc, x| {
+        u.max.get(x).map(|m| acc.saturating_add(*m))
+    });
+    let rechts = cn.iter().try_fold(c.k, |acc, y| u.min.get(y).map(|m| acc.saturating_add(*m)));
+    match (links, rechts) {
+        (Some(li), Some(re)) => li - paare <= re,
+        _ => false,
+    }
+}
+
 /// Ein Zweigfakt. Er lebt bis zum naechsten Schreiben auf eine beteiligte Stelle.
 #[derive(Debug, Clone)]
 enum Fakt {
@@ -101,6 +204,23 @@ enum Fakt {
         op: BinOp,
         rechts: String,
         indizes: Vec<String>,
+    },
+    /// **`name` holds the value of the linear form `namen + k`** (`let stelle = K + i;`),
+    /// for the extent checks (`N571`/`N463`, C-free lane, 2026-09-30). It dies like every
+    /// fact when `name` or any of `namen` is written or rebound.
+    Definition {
+        name: String,
+        namen: Vec<String>,
+        k: i128,
+    },
+    /// **`l_namen + l_k <= r_namen + r_k`**, from a comparison of sums (`if i + 1 >=
+    /// kopflen { return … }` leaves `i + 2 <= kopflen`), for the extent checks. Dies like
+    /// every fact when any of its names is written or rebound.
+    Linear {
+        l_namen: Vec<String>,
+        l_k: i128,
+        r_namen: Vec<String>,
+        r_k: i128,
     },
 }
 
@@ -212,6 +332,11 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         fn_gestalten,
         caller_params: std::collections::HashSet::new(),
         caller_bounds: Vec::new(),
+        ausdehnungen: Vec::new(),
+        feste_params: std::collections::HashSet::new(),
+        aktuell_args: Vec::new(),
+        ruf_umfeld: Umfeld::default(),
+        obergrenzen: Vec::new(),
     };
     p.programm(baum);
     (p.zaehlung, p.fremd, p.zeigerverf)
@@ -883,6 +1008,18 @@ struct Pruefer<'a> {
     /// **Fix lane F5 (`N463`): the running body's own transfer bounds** --
     /// `requires y <= lenof(q)` of the function whose body this pass is in.
     caller_bounds: Vec<crate::rahmenlaenge::LengthBound>,
+    /// **`N571`:** the extent facts `name + k <= lenof(p)` of the current function's
+    /// `requires`, and the parameters its body never assigns -- only those are still the
+    /// value the entry clause spoke about.
+    ausdehnungen: Vec<Klausel>,
+    feste_params: std::collections::HashSet<String>,
+    /// Each argument of the current call as a linear form, and what the call site knows
+    /// about the names involved -- set just before `ruf_aufgeloest` (`N463`, widened).
+    aktuell_args: Vec<Option<Linear>>,
+    ruf_umfeld: Umfeld,
+    /// The current function's upper bounds over sums (`off + n <= 16384`) as pairs
+    /// `(left, right)` of linear forms over parameters it never reassigns.
+    obergrenzen: Vec<(Linear, Linear)>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -1085,6 +1222,39 @@ impl<'a> Pruefer<'a> {
                         .filter(|n| !gebunden.contains(n))
                         .collect();
                     self.caller_bounds = crate::rahmenlaenge::bounds(&f.requires);
+                    let params: Vec<&str> = f.parameter.iter().map(|p| p.name.text.as_str()).collect();
+                    let mut zugewiesen = std::collections::HashSet::new();
+                    crate::rahmenlaenge::zugewiesene_namen(b, &mut zugewiesen);
+                    self.feste_params = self
+                        .caller_params
+                        .iter()
+                        .filter(|n| !zugewiesen.contains(*n))
+                        .cloned()
+                        .collect();
+                    // Only a clause over parameters the body never reassigns speaks about
+                    // the values the body sees (`N571`).
+                    self.ausdehnungen = self
+                        .klauseln(&f.requires, &params, &[modul])
+                        .into_iter()
+                        .filter_map(|(a, form)| {
+                            let form = form?;
+                            let fest = |n: &String| self.feste_params.contains(n);
+                            (fest(&a.zeiger) && form.namen.iter().all(fest))
+                                .then(|| Klausel { zeiger: a.zeiger, form })
+                        })
+                        .collect();
+                    self.obergrenzen = crate::rahmenlaenge::obergrenzen(&f.requires)
+                        .into_iter()
+                        .filter_map(|((ln, lk), (rn, rk))| {
+                            let fest: Vec<&str> = self.feste_params.iter().map(|x| x.as_str()).collect();
+                            let (ln, lk2) = self.falten(&ln, &params, &[modul])?;
+                            let (rn, rk2) = self.falten(&rn, &params, &[modul])?;
+                            let alle_fest = ln.iter().chain(rn.iter()).all(|n| fest.contains(&n.as_str()));
+                            alle_fest.then(|| {
+                                (Linear { namen: ln, k: lk + lk2 }, Linear { namen: rn, k: rk + rk2 })
+                            })
+                        })
+                        .collect();
                     let mut lage = Lage::default();
                     for prm in &f.parameter {
                         let t = self.u.typ_von_ausdruck_decl(modul, &prm.typ);
@@ -1109,6 +1279,9 @@ impl<'a> Pruefer<'a> {
                     self.fehlerkanal = None;
                     self.caller_params.clear();
                     self.caller_bounds.clear();
+                    self.ausdehnungen.clear();
+                    self.obergrenzen.clear();
+                    self.feste_params.clear();
                 }
             }
             // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
@@ -1346,6 +1519,20 @@ impl<'a> Pruefer<'a> {
                 // stirbt, sonst erbt die Verdeckung die Verengung ihres Vorgaengers.
                 lage.fakten
                     .retain(|f| !nennt_namen(f, &l.name.text));
+                // The binding's value as a linear form (`N571`): recorded AFTER the old facts
+                // about the name died, and never where the form names the name itself (the
+                // right side's `x` is the OLD `x`).
+                // EXACT only: a range bound is no equality (`linear_von`'s fallback would
+                // record `x == max`).
+                if let Some(form) = self.linear_exakt(&l.wert, lage) {
+                    if !form.namen.is_empty() && !form.namen.contains(&l.name.text) {
+                        lage.fakten.push(Fakt::Definition {
+                            name: l.name.text.clone(),
+                            namen: form.namen,
+                            k: form.k,
+                        });
+                    }
+                }
                 // **V4 -- the map grows at a `let` with a carrier-read RHS** (spec
                 // §1): a direct carrier read, a call's reads-hull, or the taint a
                 // moved local already carries. Anything else rebinds the name fresh.
@@ -2172,6 +2359,14 @@ impl<'a> Pruefer<'a> {
                     }
                     Schleife::Retry(r) => {
                         let _ = self.ausdruck_opt(r.schranke.clone(), lage);
+                        // **The `until` is tested BEFORE every pass** (`retryLaufC`,
+                        // CFormenW.lean: `bis` first, then the step), so its NEGATION holds
+                        // at the entry of the body -- the one fact a loop does carry in
+                        // (C-free lane, 2026-09-30, for `N571`: `retry … until i >= n` with
+                        // `a[i]` inside). A write in the body kills it like any fact.
+                        if let Some(Pred { art: PredArt::Vergleich(e), .. }) = &r.bis {
+                            self.fakten_aus(e, true, &mut innen);
+                        }
                         &r.rumpf
                     }
                     Schleife::Forever(f) => {
@@ -2310,6 +2505,7 @@ impl<'a> Pruefer<'a> {
                             argtypen.truncate(n);
                         }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        self.klausel_minima(lage, &r.args);
                         let _ = self.ruf_aufgeloest(&ziel, r.span, false, &r.args, &argtypen, &sig);
                     }
                     let pfad = gabbro_syntax::ast::Pfad {
@@ -3061,6 +3257,7 @@ impl<'a> Pruefer<'a> {
                             argtypen.truncate(n);
                         }
                         let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        self.klausel_minima(lage, &r.args);
                         return self.ruf_aufgeloest(&ziel, r.span, false, &r.args, &argtypen, &sig);
                     }
                 }
@@ -3971,6 +4168,7 @@ impl<'a> Pruefer<'a> {
         // answer* -- see the register's reservation.
         let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
         let ziel = r.target_text();
+        self.klausel_minima(lage, &r.argumente);
         self.ruf_aufgeloest(&ziel, r.span, uebergang, &r.argumente, &argtypen, &sig)
     }
 
@@ -4103,6 +4301,7 @@ impl<'a> Pruefer<'a> {
         }
         self.requires_pruefen(ziel, "M115", &sig, &argtypen);
         self.transfer_bound_at_call(ziel, args, argtypen, sig);
+        self.extent_at_call(ziel, args, argtypen, sig);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -4479,6 +4678,320 @@ impl<'a> Pruefer<'a> {
     /// extent this site cannot read is an extent nobody checked. Unlike `M115` (refuse only
     /// where the range EXCLUDES the clause), this is the strong reading, and it is so only
     /// for this one clause form.
+    /// **A named constant in an extent clause is its VALUE** (`TCP_V_KOPF + 60 <= lenof(r)`):
+    /// a name that is no parameter of the declaration and folds to a constant from one of
+    /// `module` (the declaring module first) moves into `k`. A name that is neither stays a
+    /// name, and no parameter answers for it -- fail-closed.
+    /// Record what the extent checks need at the current call (`N463`, widened): each
+    /// argument as a linear form (named constants folded; a name in scope is never folded,
+    /// it may shadow one), the least and greatest value of every name involved, and the
+    /// facts `a < b` standing here.
+    fn klausel_minima(&mut self, lage: &Lage, args: &[Expr]) {
+        self.aktuell_args = args.iter().map(|a| self.linear_von(a, lage)).collect();
+        let mut namen: Vec<String> = self
+            .ausdehnungen
+            .iter()
+            .flat_map(|a| a.form.namen.clone())
+            .collect();
+        namen.extend(self.aktuell_args.iter().flatten().flat_map(|l| l.namen.clone()));
+        for (l, r) in &self.obergrenzen {
+            namen.extend(l.namen.clone());
+            namen.extend(r.namen.clone());
+        }
+        self.ruf_umfeld = self.umfeld(&namen, lage);
+    }
+
+    /// A value expression as a linear form: a `+`-sum of names and numerals whose named
+    /// constants fold into `k` (names in scope are never folded). Anything else that has a
+    /// range is its range's maximum -- an UPPER bound, which is all a clause of the form
+    /// `… <= lenof(p)` asks of the left side.
+    fn linear_von(&mut self, e: &Expr, lage: &Lage) -> Option<Linear> {
+        if let Some(l) = self.linear_exakt(e, lage) {
+            return Some(l);
+        }
+        self.roh_still(e, lage).bereich().map(|b| Linear { namen: Vec::new(), k: b.max })
+    }
+
+    /// A value expression as an EXACT linear form (no range fallback): the side of a
+    /// comparison fact must be the value itself, not a bound on it.
+    fn linear_exakt(&mut self, e: &Expr, lage: &Lage) -> Option<Linear> {
+        let lokal: Vec<String> = lage.lokal.keys().cloned().collect();
+        let lokal: Vec<&str> = lokal.iter().map(|k| k.as_str()).collect();
+        let modul = self.modul.clone();
+        if let Some((namen, d0)) = crate::rahmenlaenge::summanden(e) {
+            if let Some((namen, k)) = self.falten(&namen, &lokal, &[modul.as_str()]) {
+                // A name bound by a standing `Fakt::Definition` is its form (one level at a
+                // time, bounded: a definition never names itself).
+                let mut form = Linear { namen, k: d0.checked_add(k)? };
+                for _ in 0..8 {
+                    let mut neu = Linear { namen: Vec::new(), k: form.k };
+                    let mut ersetzt = false;
+                    for n in &form.namen {
+                        let def = lage.fakten.iter().find_map(|f| match f {
+                            Fakt::Definition { name, namen, k } if name == n => Some((namen.clone(), *k)),
+                            _ => None,
+                        });
+                        match def {
+                            Some((ns, dk)) => {
+                                neu.namen.extend(ns);
+                                neu.k = neu.k.checked_add(dk)?;
+                                ersetzt = true;
+                            }
+                            None => neu.namen.push(n.clone()),
+                        }
+                    }
+                    form = neu;
+                    if !ersetzt {
+                        break;
+                    }
+                }
+                return Some(form);
+            }
+        }
+        None
+    }
+
+    /// The least and greatest value of each name, and the `a < b` facts, at `lage`.
+    fn umfeld(&mut self, namen: &[String], lage: &Lage) -> Umfeld {
+        let mut u = Umfeld::default();
+        for n in namen {
+            if u.min.contains_key(n) {
+                continue;
+            }
+            let e = Expr {
+                art: ExprArt::Ort(Ort {
+                    basis: Ident { text: n.clone(), span: Span::neu(0, 0) },
+                    suffixe: Vec::new(),
+                    span: Span::neu(0, 0),
+                }),
+                span: Span::neu(0, 0),
+            };
+            if let Some(b) = self.roh_still(&e, lage).bereich() {
+                u.min.insert(n.clone(), b.min);
+                u.max.insert(n.clone(), b.max);
+            }
+        }
+        u.definitionen = lage
+            .fakten
+            .iter()
+            .filter_map(|f| match f {
+                Fakt::Definition { name, namen, k } => {
+                    Some((name.clone(), Linear { namen: namen.clone(), k: *k }))
+                }
+                _ => None,
+            })
+            .collect();
+        u.ungleichungen = lage
+            .fakten
+            .iter()
+            .filter_map(|f| match f {
+                Fakt::Linear { l_namen, l_k, r_namen, r_k } => Some((
+                    Linear { namen: l_namen.clone(), k: *l_k },
+                    Linear { namen: r_namen.clone(), k: *r_k },
+                )),
+                _ => None,
+            })
+            .collect();
+        let def_namen: Vec<String> = u.definitionen.iter().map(|(n, _)| n.clone()).collect();
+        for n in def_namen {
+            if u.min.contains_key(&n) {
+                continue;
+            }
+            let e = Expr {
+                art: ExprArt::Ort(Ort {
+                    basis: Ident { text: n.clone(), span: Span::neu(0, 0) },
+                    suffixe: Vec::new(),
+                    span: Span::neu(0, 0),
+                }),
+                span: Span::neu(0, 0),
+            };
+            if let Some(b) = self.roh_still(&e, lage).bereich() {
+                u.min.insert(n.clone(), b.min);
+                u.max.insert(n, b.max);
+            }
+        }
+        u.kleiner = lage
+            .fakten
+            .iter()
+            .filter_map(|f| match f {
+                Fakt::Beziehung { links, op: BinOp::Kleiner, rechts, .. } => {
+                    Some((links.clone(), rechts.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        u
+    }
+
+    /// **The named constants of a `+`-sum fold into a number** (`TCP_V_KOPF + 60`): every
+    /// name that is not in `geschuetzt` (parameters, locals -- they may shadow a constant)
+    /// and folds from one of `module` moves into `k`; the rest stay names.
+    fn falten(
+        &self,
+        namen: &[String],
+        geschuetzt: &[&str],
+        module: &[&str],
+    ) -> Option<(Vec<String>, i128)> {
+        let mut rest = Vec::new();
+        let mut k: i128 = 0;
+        for n in namen {
+            let konst = if geschuetzt.contains(&n.as_str()) {
+                None
+            } else {
+                module.iter().find_map(|m| self.u.konst_wert_von_namen(m, n))
+            };
+            match konst {
+                Some(v) => k = k.checked_add(v)?,
+                None => rest.push(n.clone()),
+            }
+        }
+        Some((rest, k))
+    }
+
+    /// The extent clauses of a contract as linear forms over its PARAMETERS: named
+    /// constants folded from `module`, and a clause that still names something that is no
+    /// parameter speaks about nothing this reading can hold (`None` in its slot).
+    fn klauseln(
+        &self,
+        preds: &[Pred],
+        params: &[&str],
+        module: &[&str],
+    ) -> Vec<(crate::rahmenlaenge::Ausdehnung, Option<Linear>)> {
+        crate::rahmenlaenge::ausdehnungen(preds)
+            .into_iter()
+            .map(|a| {
+                let form = self.falten(&a.namen, params, module).and_then(|(namen, k)| {
+                    if namen.iter().all(|n| params.contains(&n.as_str())) {
+                        Some(Linear { namen, k: a.k.checked_add(k)? })
+                    } else {
+                        None
+                    }
+                });
+                (a, form)
+            })
+            .collect()
+    }
+
+    /// **`N463`, widened (C-free lane, 2026-09-30): every `lenof` clause that is not the
+    /// bare `x <= lenof(p)` form is decided at the call too** -- a constant, an offset, a
+    /// sum (`dst + n <= lenof(buf)`), with named constants folded. Until `N571` nothing read
+    /// such a clause; once `N571` accepts an index on the strength of one, a clause no call
+    /// is held to would be a promise nobody keeps. The callee's clause is substituted by the
+    /// arguments (each a linear form, or its range's maximum) and must fit: an array passed
+    /// for `p` holds the substituted maximum; the caller's own pointer (never reassigned)
+    /// carries a clause that covers it (`passt`). A clause this site cannot read at all --
+    /// a name that folds to nothing here -- is refused, never skipped.
+    fn extent_at_call(
+        &mut self,
+        ziel: &str,
+        args: &[Expr],
+        argtypen: &[(Typ, Span)],
+        sig: &crate::umgebung::Signatur,
+    ) {
+        let params: Vec<&str> = sig.parameter.iter().map(|(n, _)| n.as_str()).collect();
+        // The callee's clause names ITS module's constants: fold there first.
+        let ziel_modul = self
+            .u
+            .funktion_modul(&self.modul, ziel)
+            .or_else(|| ziel.rsplit_once("::").map(|(m, _)| m.to_string()));
+        let mut module: Vec<&str> = Vec::new();
+        if let Some(m) = &ziel_modul {
+            module.push(m.as_str());
+        }
+        module.push(self.modul.as_str());
+        for (a, form) in self.klauseln(&sig.requires, &params, &module) {
+            if a.nackt && form.as_ref().is_some_and(|f| f.namen.len() == 1 && f.k <= 1) {
+                // The bare form stays `transfer_bound_at_call`'s (fix lane F5).
+                continue;
+            }
+            let pos = |n: &str| sig.parameter.iter().position(|(pn, _)| pn == n);
+            let Some(ip) = pos(&a.zeiger) else { continue };
+            let Some((tp, sp)) = argtypen.get(ip) else { continue };
+            if tp.ist_unbekannt() {
+                continue;
+            }
+            let klausel = format!("{} <= lenof({})", a.namen.iter().cloned().chain(std::iter::once(a.k.to_string())).collect::<Vec<_>>().join(" + "), a.zeiger);
+            // The callee's clause in the CALLER's terms.
+            let bedarf: Option<Linear> = form.and_then(|f| {
+                let mut l = Linear { namen: Vec::new(), k: f.k };
+                for n in &f.namen {
+                    let ix = pos(n)?;
+                    let arg = self.aktuell_args.get(ix).cloned().flatten()?;
+                    l.namen.extend(arg.namen);
+                    l.k = l.k.checked_add(arg.k)?;
+                }
+                Some(l)
+            });
+            let grund: Option<String> = match (bedarf, ohne_namen(tp)) {
+                (None, _) => Some(
+                    "the clause names what this site cannot read (a name that is no \
+                     parameter and folds to no constant here, or an argument with no range)"
+                        .to_string(),
+                ),
+                (Some(b), Typ::Feld { laenge: Some(m), .. }) => {
+                    let m_lin = Linear { namen: Vec::new(), k: *m as i128 };
+                    let hoechst = if passt(&b, 0, &m_lin, &self.ruf_umfeld)
+                        || self.obergrenzen.iter().any(|(l, r)| {
+                            passt(&b, 0, l, &self.ruf_umfeld) && passt(r, 0, &m_lin, &self.ruf_umfeld)
+                        }) {
+                        Some(0)
+                    } else {
+                        b.namen.iter().try_fold(b.k, |acc, n| {
+                            self.ruf_umfeld.max.get(n).and_then(|x| acc.checked_add(*x))
+                        })
+                    };
+                    match hoechst {
+                        Some(h) if h <= *m as i128 => None,
+                        Some(h) => Some(format!(
+                            "the array passed for `{}` holds {m}, and the clause needs {h}",
+                            a.zeiger
+                        )),
+                        None => Some(format!(
+                            "the clause's left side has no range to hold against the array \
+                             passed for `{}`",
+                            a.zeiger
+                        )),
+                    }
+                }
+                (Some(b), Typ::Zeiger(_)) => {
+                    let q = args.get(ip).and_then(crate::rahmenlaenge::bare_name);
+                    let gedeckt = q.is_some_and(|q| {
+                        self.feste_params.contains(q)
+                            && self.ausdehnungen.iter().any(|c| {
+                                c.zeiger == q
+                                    && (passt(&b, 0, &c.form, &self.ruf_umfeld)
+                                        || self.obergrenzen.iter().any(|(l, r)| {
+                                            passt(&b, 0, l, &self.ruf_umfeld)
+                                                && passt(r, 0, &c.form, &self.ruf_umfeld)
+                                        }))
+                            })
+                    });
+                    if gedeckt {
+                        None
+                    } else {
+                        Some(format!(
+                            "the pointer passed for `{}` reaches an extent this site cannot \
+                             show -- only an array, or the caller's own pointer parameter under \
+                             a clause of its own that covers this one, answers",
+                            a.zeiger
+                        ))
+                    }
+                }
+                _ => Some(format!("the argument for `{}` is neither an array nor a pointer", a.zeiger)),
+            };
+            if let Some(grund) = grund {
+                self.absagen.schiebe(
+                    Absage::fehler("N463", *sp, format!("`{ziel}` requires `{klausel}` -- {grund}"))
+                        .mit_notiz(
+                            "`lenof` of a pointer parameter is the number of elements the \
+                             caller's object holds from the pointer on; `N571` trusts this \
+                             clause inside the callee, so it is decided HERE",
+                        ),
+                );
+            }
+        }
+    }
+
     fn transfer_bound_at_call(
         &mut self,
         ziel: &str,
@@ -4550,8 +5063,8 @@ impl<'a> Pruefer<'a> {
                     let y = args.get(ix).and_then(crate::rahmenlaenge::bare_name);
                     match (q, y) {
                         (Some(q), Some(y))
-                            if self.caller_params.contains(q)
-                                && self.caller_params.contains(y)
+                            if self.feste_params.contains(q)
+                                && self.feste_params.contains(y)
                                 && crate::rahmenlaenge::caller_carries(
                                     &self.caller_bounds,
                                     y,
@@ -4562,8 +5075,8 @@ impl<'a> Pruefer<'a> {
                             None
                         }
                         (Some(q), Some(y))
-                            if self.caller_params.contains(q)
-                                && self.caller_params.contains(y) =>
+                            if self.feste_params.contains(q)
+                                && self.feste_params.contains(y) =>
                         {
                             Some(format!(
                                 "`{}` forwards its parameters `{q}` and `{y}`, and its own \
@@ -4935,6 +5448,35 @@ impl<'a> Pruefer<'a> {
                 }
                 let op = if negiert { negiere(*op) } else { *op };
                 self.vergleichsfakt(op, a, b, lage);
+                // **The comparison of two SUMS as a linear fact** (`N571`/`N463`, C-free lane,
+                // 2026-09-30) -- integers only, both sides exact.
+                let ganz = |s: &mut Self, x: &Expr, lage: &Lage| {
+                    matches!(s.roh_still(x, lage).durchgreifen(), Typ::Ganzzahl { .. })
+                };
+                if ganz(self, a, lage) && ganz(self, b, lage) {
+                    if let (Some(la), Some(lb)) = (self.linear_exakt(a, lage), self.linear_exakt(b, lage)) {
+                        let mut paare: Vec<(Linear, Linear)> = Vec::new();
+                        match op {
+                            BinOp::Kleiner => paare.push((Linear { k: la.k + 1, ..la.clone() }, lb.clone())),
+                            BinOp::KleinerGleich => paare.push((la.clone(), lb.clone())),
+                            BinOp::Groesser => paare.push((Linear { k: lb.k + 1, ..lb.clone() }, la.clone())),
+                            BinOp::GroesserGleich => paare.push((lb.clone(), la.clone())),
+                            BinOp::Gleich => {
+                                paare.push((la.clone(), lb.clone()));
+                                paare.push((lb.clone(), la.clone()));
+                            }
+                            _ => {}
+                        }
+                        for (l, r) in paare {
+                            lage.fakten.push(Fakt::Linear {
+                                l_namen: l.namen,
+                                l_k: l.k,
+                                r_namen: r.namen,
+                                r_k: r.k,
+                            });
+                        }
+                    }
+                }
             }
             _ => {}
         }
@@ -4973,6 +5515,24 @@ impl<'a> Pruefer<'a> {
     /// > sub-expression of the second walk too, so `M1 saw N expressions, k of them without a
     /// > type` counted a stretch of the file twice -- *a coverage figure inflated by the
     /// > checker's own second look.* Both are restored here, and for the same reason.
+    /// **A second look that files nothing** (`N571`/`N463`, C-free lane): the extent checks
+    /// type an argument or an index the walk has already typed, so every refusal reachable
+    /// from here is a duplicate, and so is the tally -- both restored, as `nan_moeglich`
+    /// does.
+    fn roh_still(&mut self, e: &Expr, lage: &Lage) -> Typ {
+        let (gefuehrt, gezaehlt) = (self.absagen.absagen.len(), self.zaehlung);
+        let (fremd, zeigerverf) = (self.fremd.len(), self.zeigerverf.len());
+        let gemeldet = self.schon_gemeldet.clone();
+        let t = self.ausdruck_roh(e, lage);
+        self.absagen.absagen.truncate(gefuehrt);
+        self.zaehlung = gezaehlt;
+        self.fremd.truncate(fremd);
+        self.zeigerverf.truncate(zeigerverf);
+        // A span first seen HERE must not count as reported: its real report is still due.
+        self.schon_gemeldet = gemeldet;
+        t
+    }
+
     fn nan_moeglich(&mut self, e: &Expr, lage: &Lage) -> bool {
         let (gefuehrt, gezaehlt) = (self.absagen.absagen.len(), self.zaehlung);
         let t = self.ausdruck(e, lage);
@@ -5362,6 +5922,12 @@ impl<'a> Pruefer<'a> {
                     && !beruehrt(rechts, &k)
                     && !indizes.iter().any(|i| *i == k)
             }
+            Fakt::Definition { name, namen, .. } => {
+                !beruehrt(name, &k) && !namen.iter().any(|x| beruehrt(x, &k))
+            }
+            Fakt::Linear { l_namen, r_namen, .. } => {
+                !l_namen.iter().chain(r_namen.iter()).any(|x| beruehrt(x, &k))
+            }
         });
         // Ein Schreiben durch einen Zeiger kann alles Nichtlokale treffen -- ohne M3 gibt es
         // keine Aliasaussage, also faellt hier alles Nichtlokale mit.
@@ -5401,6 +5967,12 @@ impl<'a> Pruefer<'a> {
                 Fakt::Beziehung { links, rechts, .. } => {
                     (self.ist_lokal(links) || self.getrenntes_feld(links, &k, lage_kopie))
                         && (self.ist_lokal(rechts) || self.getrenntes_feld(rechts, &k, lage_kopie))
+                }
+                Fakt::Definition { name, namen, .. } => {
+                    self.ist_lokal(name) && namen.iter().all(|x| self.ist_lokal(x))
+                }
+                Fakt::Linear { l_namen, r_namen, .. } => {
+                    l_namen.iter().chain(r_namen.iter()).all(|x| self.ist_lokal(x))
                 }
             });
         }
@@ -5477,6 +6049,10 @@ impl<'a> Pruefer<'a> {
                 | Fakt::FIntervall { schluessel, .. }
                 | Fakt::Bereich { schluessel, .. } => vec![schluessel],
                 Fakt::Beziehung { links, rechts, .. } => vec![links, rechts],
+                Fakt::Definition { name, namen, .. } => {
+                    std::iter::once(name).chain(namen.iter()).collect()
+                }
+                Fakt::Linear { l_namen, r_namen, .. } => l_namen.iter().chain(r_namen.iter()).collect(),
             };
             schluessel
                 .iter()
@@ -5556,6 +6132,12 @@ impl<'a> Pruefer<'a> {
             | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
             Fakt::Beziehung { links, rechts, .. } => {
                 self.ist_lokal(links) && self.ist_lokal(rechts)
+            }
+            Fakt::Definition { name, namen, .. } => {
+                self.ist_lokal(name) && namen.iter().all(|x| self.ist_lokal(x))
+            }
+            Fakt::Linear { l_namen, r_namen, .. } => {
+                l_namen.iter().chain(r_namen.iter()).all(|x| self.ist_lokal(x))
             }
         });
     }
@@ -7742,6 +8324,67 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **`N571` -- an index through a pointer lies inside what the pointer reaches**
+    /// (C-free lane, 2026-09-30).
+    ///
+    /// `M103` holds an index against an ARRAY's declared length; a pointer carries no
+    /// length, and until this rule nothing held `p[i]` against anything: `buf[i] = 1` over a
+    /// `ptr<normal, w> u8` with an unbounded `i` checked clean and lowered to a plain
+    /// `buf[i] = 1;` -- an out-of-bounds store with 0 errors (measured). `N463`/`N464` hold
+    /// the extent at the CALL (`… <= lenof(p)` is true of what the caller passes); this rule
+    /// is the other half, at the ACCESS: the index `e` must satisfy `e + 1 <= C` for a clause
+    /// `C <= lenof(p)` of the function's own `requires`, over a pointer and names the body
+    /// never reassigns (`passt`: names common to both sides cancel, a name `x` under a fact
+    /// `x < y` pairs with the clause's `y`, the rest is bounded by its range). The index must
+    /// also be shown non-negative. Anything else is refused: the answer is not "assume in
+    /// range", it is "say the range".
+    fn zeigerindex_pruefen(&mut self, p: &str, idx: &Expr, lage: &Lage) {
+        let nicht_negativ = self.roh_still(idx, lage).bereich().is_some_and(|b| b.min >= 0);
+        let form = self.linear_von(idx, lage);
+        let mut belegt = false;
+        if nicht_negativ && self.feste_params.contains(p) {
+            if let Some(i) = &form {
+                let klauseln: Vec<Linear> = self
+                    .ausdehnungen
+                    .iter()
+                    .filter(|c| c.zeiger == p)
+                    .map(|c| c.form.clone())
+                    .collect();
+                let mut namen: Vec<String> = i.namen.clone();
+                for c in &klauseln {
+                    namen.extend(c.namen.clone());
+                }
+                let u = self.umfeld(&namen, lage);
+                belegt = klauseln.iter().any(|c| passt(i, 1, c, &u));
+            }
+        }
+        if belegt {
+            return;
+        }
+        let warum = if !self.feste_params.contains(p) {
+            format!("`{p}` is not a parameter the body leaves alone, so no entry clause speaks about it")
+        } else if !self.ausdehnungen.iter().any(|a| a.zeiger == p) {
+            format!("the function's `requires` names no extent of `{p}` (`n <= lenof({p})`)")
+        } else if !nicht_negativ {
+            "the index is not shown to be non-negative".to_string()
+        } else {
+            format!("the index is not shown below any extent the `requires` names for `{p}`")
+        };
+        self.absagen.schiebe(
+            Absage::fehler("N571", idx.span, format!("the index through the pointer `{p}` is not shown inside what `{p}` reaches -- {warum}"))
+                .mit_notiz(
+                    "a pointer carries no length: `M103` holds an ARRAY index against its \
+                     declaration, and a pointer's extent is what its function's `requires` \
+                     says (`n <= lenof(p)`, which `N463` decides at every call)",
+                )
+                .mit_notiz(
+                    "state the extent (`requires v + 1 <= lenof(p)`, `requires nach + n <= \
+                     lenof(p)` with the index `nach + i` under `i < n`), or pass an array -- \
+                     unchecked indexing is refused, never assumed in range (M4)",
+                ),
+        );
+    }
+
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **«E4»:** an arena place is owned by `arena_ort` below -- shape,
         // index belonging, and nothing else. A local shadowing the arena
@@ -7847,6 +8490,11 @@ impl<'a> Pruefer<'a> {
                         ),
                     );
                 }
+            }
+        }
+        if let (Some(OrtSuffix::Index(idx)), Typ::Zeiger(ziel)) = (o.suffixe.first(), &traeger) {
+            if !matches!(ziel.durchgreifen(), Typ::Feld { laenge: Some(_), .. }) {
+                self.zeigerindex_pruefen(&o.basis.text, idx, lage);
             }
         }
         for suffix in &o.suffixe {
@@ -8377,6 +9025,8 @@ fn nennt_namen(f: &Fakt, name: &str) -> bool {
         | Fakt::FIntervall { schluessel, .. }
         | Fakt::Bereich { schluessel, .. } => trifft(schluessel),
         Fakt::Beziehung { links, rechts, .. } => trifft(links) || trifft(rechts),
+        Fakt::Definition { name: n, namen, .. } => trifft(n) || namen.iter().any(|x| trifft(x)),
+        Fakt::Linear { l_namen, r_namen, .. } => l_namen.iter().chain(r_namen.iter()).any(|x| trifft(x)),
     }
 }
 

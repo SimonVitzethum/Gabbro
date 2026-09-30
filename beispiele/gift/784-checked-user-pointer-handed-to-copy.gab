@@ -12,6 +12,7 @@
 module gift766 {
 
 impl fn nutze(p : ptr<user, r> u8) -> u8
+    requires 1 <= lenof(p)
     effects { reads p }
     costs <= 8 ops
 {
@@ -19,6 +20,7 @@ impl fn nutze(p : ptr<user, r> u8) -> u8
 }
 
 impl fn pruefe(p : ptr<user, r> u8) -> u8
+    requires 1 <= lenof(p)
     effects { reads p }
     costs <= 24 ops
 {

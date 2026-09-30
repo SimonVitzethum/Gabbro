@@ -4398,6 +4398,44 @@ pub const PHASEN: &[Satz] = &[
                      dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
     },
     Satz {
+        name: "zeiger.index_in_der_ausdehnung",
+        kennungen: &["N571"],
+        aussage: "An index through a pointer lies inside what the pointer reaches. A pointer \
+                  carries no length, so its extent is what its function's `requires` says \
+                  about `lenof(p)` -- a `+`-sum of parameters, named constants and numerals \
+                  (`4 <= lenof(p)`, `v + 2 <= lenof(p)`, `nach + n <= lenof(p)`), over a \
+                  pointer and names the body never reassigns -- and every `p[e]` is held \
+                  against it: `e + 1 <= C` must follow from linear forms alone -- names on \
+                  both sides cancel, a name `x` under a fact `x < y` stands for `y - 1`, a \
+                  `let` binding stands for its sum while its names are unwritten, one standing \
+                  comparison of sums (`if i + 1 >= n { return … }`) may be chained in, and \
+                  every other name counts at the bound of its range. The `until` of a `retry` \
+                  is tested before every pass, so its negation holds at the top of the body. \
+                  Every other index is refused. The clause itself is decided at every call \
+                  (`N463`, widened the same day to every non-bare form, by the same reading, \
+                  with the contract's own upper bounds such as `off + n <= 16384` as cover).",
+        vorbehalt: "The acceptance is a sound, incomplete reading: an index the extent does \
+                    bound, but only through a path join, a subtraction, a product of names or \
+                    an `ensures` that says nothing relative to the extent, is refused \
+                    (fail-closed; name the end of the transfer and `narrow` it, and the \
+                    binding carries it). An index through a pointer TO A FIXED-LENGTH ARRAY \
+                    is `M103`'s, not this rule's. A pointer the body reassigns, and a local \
+                    or global pointer, has no entry clause, so every index through it is \
+                    refused.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1380` (`buf[i] = 1` with no extent -- measured CLEAN \
+                      and lowered to a plain C store before 2026-09-30), `1381` (`buf[5]` \
+                      under `1 <= lenof(buf)`), `1382` (`N463`: a constant clause over a \
+                      one-byte array -- no caller was held to it before). The clean side: \
+                      beispiele/180 (all five accepted shapes), /168, /169 (whose `retry` \
+                      loop needed the `until` fact). Corpus effect measured: 7 files met the \
+                      rule, the four gifts among them repaired with the clause they lacked \
+                      (`764`, `784`-`786`), `765` lost its `p[1]` twin (it reassigns `p`).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`zeigerindex_pruefen`, `extent_at_call`); \
+                     crates/gabbro-check/src/rahmenlaenge.rs (`ausdehnungen`, \
+                     `zugewiesene_namen`)",
+    },
+    Satz {
         name: "syscall.rahmenlaenge",
         kennungen: &["N463", "N464", "N506"],
         aussage: "A transfer through a pointer is bounded by what the pointer reaches. A \
@@ -4412,7 +4450,10 @@ pub const PHASEN: &[Satz] = &[
                   `x`'s argument by its length, with the array's elements being the \
                   pointer's own; a pointer passed for `p` must be the caller's own \
                   parameter `q` beside its own parameter `y` for `x`, under the caller's \
-                  own `requires y <= lenof(q)`; every other argument shape is refused.",
+                  own `requires y <= lenof(q)`; every other argument shape is refused. \
+                  Since 2026-09-30 (C-free lane) the constant and offset forms (`k <= \
+                  lenof(p)`, `v + k <= lenof(p)`) are decided the same way, and a forwarded \
+                  name must be one the caller's body never reassigns.",
         vorbehalt: "The strong reading holds only this clause form; every other `requires` \
                     keeps `M115`'s weak reading. `lenof` of a pointer is the caller's \
                     promise along a forwarding chain and a decided number only where an \

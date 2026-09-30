@@ -1,0 +1,88 @@
+-- 180 -- **Every index through a pointer lies inside what the pointer reaches (`N571`).**
+--
+-- A pointer carries no length. Its extent is what its function's `requires` says --
+-- `n <= lenof(p)`, a constant, or `v + k` -- and `N463` decides that clause at every call
+-- (an array passed where it decays, or the caller's own pointer under a covering clause).
+-- Inside the body the index is held against it; the five shapes below are the ones that
+-- pass. The poison twins are `gift/1380` (no extent), `gift/1381` (an index behind a
+-- constant extent) and `gift/1382` (a constant extent no caller could keep).
+--
+-- Until 2026-09-30 none of this was held: `buf[i] = 1` over a byte pointer with an
+-- unbounded `i` checked clean and lowered to a plain C store.
+module beispiel::zeigerindex_in_der_ausdehnung {
+
+extern fn haengt() -> never effects { diverges } costs <= 1 ops;
+
+-- (1) a constant extent, an index whose range ends below it
+pub impl fn kopf(p : ptr<normal, r> u8) -> u8
+    requires 4 <= lenof(p)
+    effects { reads p }
+    costs <= 8 ops
+{
+    return p[3];
+}
+
+-- (2) `v + k`, and the index `v + d` with `d < k`
+pub impl fn paar(p : ptr<normal, r> u8, v : u64 in 0 .. 60) -> u64
+    requires v + 2 <= lenof(p)
+    effects { reads p }
+    costs <= 12 ops
+{
+    return u64(p[v]) * 256 + u64(p[v + 1]);
+}
+
+-- (3) `n <= lenof(p)`, and the index under `n` by an `if`
+pub impl fn bei(p : ptr<normal, r> u8, n : u64 in 0 .. 64, i : u64 in 0 .. 63) -> u8
+    requires n <= lenof(p)
+    effects { reads p }
+    costs <= 12 ops
+{
+    if i < n {
+        return p[i];
+    }
+    return 0;
+}
+
+-- (4) a `retry … until i >= n`: the `until` is tested before every pass, so `i < n`
+--     holds at the top of the body (the first zero byte, or `n`)
+pub impl fn erste_null(p : ptr<normal, r> u8, n : u64 in 0 .. 64) -> u64
+    requires n <= lenof(p)
+    effects { reads p }
+    costs <= 2200 ops
+{
+    let mut i : u64 in 0 .. 64 = 0;
+    retry suchend until i >= n
+        bounded 2000 ops
+        on_exceeded haengt
+        effects { reads p }
+    {
+        if p[i] == 0 {
+            return i;
+        }
+        if i >= 63 {
+            return n;
+        }
+        i += 1;
+    }
+    return n;
+}
+
+-- (5) forwarding: the caller's own pointer under a covering clause, and an array
+pub static mut PUFFER : [u8; 8] = 0;
+
+pub impl fn weiter(q : ptr<normal, r> u8) -> u8
+    requires 6 <= lenof(q)
+    effects { reads q }
+    costs <= 20 ops
+{
+    return kopf(q);
+}
+
+pub impl fn vom_feld() -> u8
+    effects { reads PUFFER }
+    costs <= 20 ops
+{
+    return kopf(PUFFER);
+}
+
+}

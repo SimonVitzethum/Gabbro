@@ -735,6 +735,16 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **The module a called function is DECLARED in** (`N463`, C-free lane, 2026-09-30):
+    /// the qualified key `suche` resolves `pfad` to, without its last segment. A callee's
+    /// contract names its own module's constants, and they fold there.
+    pub fn funktion_modul(&self, von: &str, pfad: &str) -> Option<String> {
+        self.kandidaten(von, pfad)
+            .into_iter()
+            .find(|k| self.funktionen.contains_key(k))
+            .map(|k| k.rsplit_once("::").map(|(m, _)| m.to_string()).unwrap_or_default())
+    }
+
     /// **The countable cost promise of a `syscall` -- the ONE predicate behind
     /// `N322`, `cost_bound` and the cost maps.**
     ///

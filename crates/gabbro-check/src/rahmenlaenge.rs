@@ -250,3 +250,172 @@ fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut A
         );
     }
 }
+
+/// **One EXTENT fact of a pointer parameter: `name + k <= lenof(pointer)`** (`N571`, C-free
+/// lane, 2026-09-30). `name` is `None` for a constant bound (`4 <= lenof(buf)`); the strict
+/// form is normalised (`x < lenof(p)` is `x + 1 <= lenof(p)`). Read from `requires` through
+/// conjunctions only, exactly like [`bounds`].
+#[derive(Debug, Clone)]
+pub struct Ausdehnung {
+    pub name: Option<String>,
+    pub k: i128,
+    pub zeiger: String,
+    /// The left side was a BARE name (`x <= lenof(p)`, `x < lenof(p)`) -- the form
+    /// [`bounds`] reads and `N463` has decided since fix lane F5. The other forms (a
+    /// constant, `v + k`) are decided by the widened call-site check.
+    pub nackt: bool,
+    /// Every NAME of the left side as written (a `+`-sum of names and numerals). The reader
+    /// in `m1.rs` folds named constants into `k`; a clause left with more than one name
+    /// speaks about no single parameter and is dropped (fail-closed).
+    pub namen: Vec<String>,
+}
+
+/// **A `+`-sum of bare names and numerals** (`v`, `v + 4`, `TCP_V_KOPF + kopflen`): its
+/// names and the sum of its numerals. Anything else is no sum this reading follows.
+pub fn summanden(e: &Expr) -> Option<(Vec<String>, i128)> {
+    match &e.art {
+        ExprArt::Klammer(i) => summanden(i),
+        ExprArt::Zahl(n) => Some((Vec::new(), i128::try_from(*n).ok()?)),
+        ExprArt::Binaer(BinOp::Plus, a, b) => {
+            let (mut na, ka) = summanden(a)?;
+            let (nb, kb) = summanden(b)?;
+            na.extend(nb);
+            Some((na, ka.checked_add(kb)?))
+        }
+        // `c * x` with a small literal `c`: `c` copies of `x` (`base + 4 * t`).
+        ExprArt::Binaer(BinOp::Mal, a, b) => {
+            let (c, x) = match (&a.art, &b.art) {
+                (ExprArt::Zahl(c), _) => (*c, b),
+                (_, ExprArt::Zahl(c)) => (*c, a),
+                _ => return None,
+            };
+            if c > 64 {
+                return None;
+            }
+            let (namen, k) = summanden(x)?;
+            let mut aus = Vec::new();
+            for _ in 0..c {
+                aus.extend(namen.iter().cloned());
+            }
+            Some((aus, k.checked_mul(i128::try_from(c).ok()?)?))
+        }
+        _ => bare_name(e).map(|n| (vec![n.to_string()], 0)),
+    }
+}
+
+fn ausdehnung_expr(e: &Expr, aus: &mut Vec<Ausdehnung>) {
+    match &e.art {
+        ExprArt::Klammer(i) => ausdehnung_expr(i, aus),
+        ExprArt::Binaer(BinOp::Und, a, c) => {
+            ausdehnung_expr(a, aus);
+            ausdehnung_expr(c, aus);
+        }
+        ExprArt::Binaer(op, a, c) => {
+            let (links, p, strikt) = match op {
+                BinOp::KleinerGleich => (summanden(a), lenof_name(c), false),
+                BinOp::Kleiner => (summanden(a), lenof_name(c), true),
+                BinOp::GroesserGleich => (summanden(c), lenof_name(a), false),
+                BinOp::Groesser => (summanden(c), lenof_name(a), true),
+                _ => return,
+            };
+            let nackt = match op {
+                BinOp::KleinerGleich | BinOp::Kleiner => bare_name(a).is_some(),
+                _ => bare_name(c).is_some(),
+            };
+            if let (Some((namen, k)), Some(p)) = (links, p) {
+                aus.push(Ausdehnung {
+                    name: None,
+                    k: if strikt { k + 1 } else { k },
+                    zeiger: p.to_string(),
+                    nackt,
+                    namen,
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
+fn ausdehnung_pred(p: &Pred, aus: &mut Vec<Ausdehnung>) {
+    match &p.art {
+        PredArt::Vergleich(e) => ausdehnung_expr(e, aus),
+        PredArt::Klammer(i) => ausdehnung_pred(i, aus),
+        PredArt::Und(a, b) => {
+            ausdehnung_pred(a, aus);
+            ausdehnung_pred(b, aus);
+        }
+        _ => {}
+    }
+}
+
+/// **Every extent fact a contract states** (`N571`).
+pub fn ausdehnungen(preds: &[Pred]) -> Vec<Ausdehnung> {
+    let mut aus = Vec::new();
+    for p in preds {
+        ausdehnung_pred(p, &mut aus);
+    }
+    aus
+}
+
+/// Every bare name a body ASSIGNS (`x = …;`, `x += …;`), through every nested block. A
+/// parameter in this set is not the value its entry clause spoke about (`N571`).
+pub fn zugewiesene_namen(b: &Block, aus: &mut std::collections::HashSet<String>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Zuweisung(z) = &s.art {
+            if z.ziel.suffixe.is_empty() {
+                aus.insert(z.ziel.basis.text.clone());
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            zugewiesene_namen(k, aus);
+        }
+    }
+}
+
+/// **Every upper bound a contract states over a sum: `namen + k <= K`** (`N463`/`N571`,
+/// C-free lane, 2026-09-30) -- `off + n <= 16384` beside a 16384-element array. Read through
+/// conjunctions only; the right side is a `+`-sum too, whose names the reader folds.
+pub fn obergrenzen(preds: &[Pred]) -> Vec<((Vec<String>, i128), (Vec<String>, i128))> {
+    fn expr(e: &Expr, aus: &mut Vec<((Vec<String>, i128), (Vec<String>, i128))>) {
+        match &e.art {
+            ExprArt::Klammer(i) => expr(i, aus),
+            ExprArt::Binaer(BinOp::Und, a, c) => {
+                expr(a, aus);
+                expr(c, aus);
+            }
+            ExprArt::Binaer(op, a, c) => {
+                let (l, r, strikt) = match op {
+                    BinOp::KleinerGleich => (a, c, false),
+                    BinOp::Kleiner => (a, c, true),
+                    BinOp::GroesserGleich => (c, a, false),
+                    BinOp::Groesser => (c, a, true),
+                    _ => return,
+                };
+                if lenof_name(r).is_some() {
+                    return;
+                }
+                if let (Some((ln, lk)), Some((rn, rk))) = (summanden(l), summanden(r)) {
+                    let lk = if strikt { lk + 1 } else { lk };
+                    aus.push(((ln, lk), (rn, rk)));
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut aus = Vec::new();
+    for p in preds {
+        let mut stapel = vec![p];
+        while let Some(p) = stapel.pop() {
+            match &p.art {
+                PredArt::Vergleich(e) => expr(e, &mut aus),
+                PredArt::Klammer(i) => stapel.push(i),
+                PredArt::Und(a, b) => {
+                    stapel.push(a);
+                    stapel.push(b);
+                }
+                _ => {}
+            }
+        }
+    }
+    aus
+}

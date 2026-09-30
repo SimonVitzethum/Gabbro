@@ -1,0 +1,19 @@
+-- erwartet: N571
+-- **An index through a pointer with no extent anywhere.**
+--
+-- `buf` is a byte pointer; nothing in `setze`'s contract says how many bytes the caller's
+-- object holds from it on. Until 2026-09-30 this checked CLEAN and lowered to a plain
+-- `buf[i] = 1;` -- an out-of-bounds store with 0 errors (measured by the C-free lane with
+-- the release binary of `55a18e2d`). `M103` holds an ARRAY index against its declaration;
+-- a pointer carries no length, and `N463`/`N464` held the extent only at the CALL. The
+-- positive twin is `beispiele/180`.
+module gift::zeigerindex_ohne_ausdehnung {
+
+impl fn setze(buf : ptr<normal, w> u8, i : u64)
+    effects { writes buf }
+    costs <= 10 ops
+{
+    buf[i] = 1;
+}
+
+}
