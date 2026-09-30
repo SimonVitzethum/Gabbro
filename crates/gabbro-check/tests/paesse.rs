@@ -589,7 +589,9 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // page arithmetic, entered and proved in one commit (`SchablonenArena.lean` §2).
     // **17 -> 19 on 2026-09-30 (C-free lane, hosted threads):** `tor.trampolin` and
     // `faden.laufzeit`, entered and proved in one commit (`SchablonenFaden.lean`).
-    assert_eq!(bewiesen(), 19);
+    // **19 -> 20 on 2026-09-30 (C-free lane, OFFEN O38):** `tor.kind`, the lowered `child`
+    // triple with its region outlined, entered and proved in one commit.
+    assert_eq!(bewiesen(), 20);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

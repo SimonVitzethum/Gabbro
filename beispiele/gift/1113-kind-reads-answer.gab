@@ -1,4 +1,6 @@
--- erwartet: N451 allein
+-- erwartet: N451
+-- (Not `allein` since 2026-09-30, C-free lane, OFFEN O38: the region is a function of its own
+-- now, so the C compiler refuses the read of a caller value too -- a second wall, as it should be.)
 -- **1113 -- the `child` path reads the gate answer (lane 249).**
 --
 -- The gate is valid on purpose (`stack rsi`: bound, kept, answered --

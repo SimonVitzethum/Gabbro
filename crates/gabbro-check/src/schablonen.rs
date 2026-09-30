@@ -165,6 +165,7 @@ pub const RATSCHE: &[&str] = &[
     "region.leeren",
     "tor.trampolin",
     "faden.laufzeit",
+    "tor.kind",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -434,6 +435,34 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`FADEN_LAUFZEIT`, `erzeuge`); instrumente/pruefe-os-bindung.sh",
+    },
+    // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
+    // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.
+    Schablone {
+        name: "tor.kind",
+        haengt_an: &[],
+        konstrukt: "let v = g(…) else … ; if v == 0 { child { … } } (g claims a stack: the \
+                    inline trap and the outlined region `gabbro_kind_<nr>`)",
+        pflicht: "The trap is the gate's instruction; in the parent (`rax != 0`) the raw \
+                  answer, decoded as the stub decodes it; in the child `movq %stack, %rdi`, \
+                  `andq $-16, %rsp`, `call gabbro_kind_<nr>`, `ud2`. The region is a function \
+                  of its own taking the handed value, so none of its statements addresses the \
+                  parent's frame (OFFEN O38: until 2026-09-30 the child jumped to a label inside \
+                  the parent's function and read the handed value through the parent's frame). \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` \
+                  §3): the child calls the region with exactly the handed value, SysV-aligned \
+                  and strictly below the handed top, and never runs `ud2` when the region does \
+                  not return (`kind_region`; boundary `kind_region_rueckkehr`; witness).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the stack register is bound in `regs in`, neither destroyed nor the answer, and claimed once", durch: Some("`N446`/`N447` (`clone.rs::stapelklausel`)"), braeuchte: None },
+            Voraussetzung { was: "the region reads no caller value but the handed one", durch: Some("`N451`/`N452` (`clone.rs::spillregion`)"), braeuchte: None },
+            Voraussetzung { was: "the region neither returns nor falls off its end", durch: Some("`N448`/`N449` (`clone.rs::kindregion`)"), braeuchte: None },
+            Voraussetzung { was: "the call dominates exactly this region, and every stack-gate call has one", durch: Some("`N450` and `N572` (`clone.rs::torpfade`, `stapelrufe`)"), braeuchte: None },
+            Voraussetzung { was: "the kernel starts the child on the handed top with `rax == 0` and the caller's other registers", durch: Some("the gate's declared contract (`stack r`, `clobbers`, its assumption), user logic, premise (c)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §3; crates/gabbro-check/src/emit.rs \
+                     (`kind_tor_falle`, `kind_funktionen`); crates/gabbro-check/tests/klon_faden.rs",
     },
     Schablone {
         name: "restrict.alleinzugriff",

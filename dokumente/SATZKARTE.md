@@ -4813,3 +4813,20 @@ left unwritable. Found on the way: `N572` (every stack-gate call hands to a `chi
 the clone trap's store order (OFFEN O38). Measured: `pruefe-os-bindung.sh` GREEN (the os-probe's
 two roots, arena and lock, no pthread), 8 gifts caught; `pruefe-emission.sh` ALL PASS including
 the 200000-round join race and the concurrent twin (20 of 20); hosted C0 687 -> 28 lines.
+
+## 67. The `child` triple's region outlined: `tor.kind` (C-free lane, 2026-09-30, OFFEN O38)
+
+Lane 260 lowered `let v = g(…) else …; if v == 0 { child { … } }` to an `asm goto` that jumped, in
+the child, to a label inside the parent's function: the region's C then read the handed value
+through the parent's frame. Now the region is `gabbro_kind_<nr>(T handed)`, and the trap's child path
+moves the handed value out of the stack register, aligns the handed stack and CALLS it.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `kindNachSyscall`, `kindRuf` | SchablonenFaden §3 | the child's registers after the gate, and the one call it makes |
+| **`kind_region`** | SchablonenFaden §3 | the region is called with exactly the handed value, SysV-aligned strictly below the handed top, and `ud2` never runs for a region that does not return |
+| `kind_region_rueckkehr`, `kind_region_zeuge` | SchablonenFaden §3 | a returning region would run into the trap's `ud2`; WITNESS |
+
+Measured on hosted Linux with a real `clone` (`kratz/c/s10/kind`): a triple whose region reads the
+handed top and ends the process with 42 exits 42 at `-O0` and `-O2`. `tests/klon_faden.rs` pins the
+new shape (no `asm goto`, no label, one call, one region function).

@@ -451,6 +451,14 @@ struct KindTor {
     annahme: String,
     /// The trap instruction of the gate's ABI (`syscall_befehl`, O31).
     befehl: String,
+    /// **The handed stack, for the outlined region** (C-free lane, 2026-09-30, OFFEN O38): the
+    /// register the gate names as `stack r` -- in the child it still holds the value the call
+    /// handed, which is the child's own stack top -- and the name and C type the region's
+    /// function takes it under (the bare argument at the stack parameter, the only caller value
+    /// `N451`/`N452` let the region read).
+    stapel_reg: String,
+    uebergabe_name: String,
+    uebergabe_ctyp: String,
 }
 
 /// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
@@ -2243,7 +2251,7 @@ pub fn emittiere_mit(
     // region behind the same call has no trap of its own to jump from.
     // Anything wider keeps `C185`, by name, never silently.
     {
-        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String)), usize)> =
+        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String)), usize, (String, usize, String))> =
             HashMap::new();
         crate::fuer_jedes_item(baum, &mut |item| {
             if let ItemArt::Syscall(s) = &item.art {
@@ -2255,7 +2263,18 @@ pub fn emittiere_mit(
                 if let Some(aufgeloest) =
                     tor_inline_daten(s, &modul, &syscall_tabellen, baum, &namen)
                 {
-                    tore.insert(s.name.text.clone(), (aufgeloest, s.parameter.len()));
+                    // The stack register, its parameter and that parameter's C type (O38).
+                    let reg = s.stapel[0].text.clone();
+                    let Some(idx) = s
+                        .regs_in
+                        .iter()
+                        .find(|(r, _)| r.text == reg)
+                        .and_then(|(_, p)| s.parameter.iter().position(|q| q.name.text == p.text))
+                    else {
+                        return;
+                    };
+                    let Some(ct) = ctyp(&s.parameter[idx].typ, &namen) else { return };
+                    tore.insert(s.name.text.clone(), (aufgeloest, s.parameter.len(), (reg, idx, ct)));
                 }
             }
         });
@@ -2268,11 +2287,17 @@ pub fn emittiere_mit(
                 let LetQuelle::Ruf(r) = &l.quelle else { continue };
                 let Some(pfad) = r.path() else { continue };
                 let Some(kurz) = pfad.teile.last() else { continue };
-                let Some(((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, annahme), param_zahl)) =
+                let Some(((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, annahme), param_zahl, (stapel_reg, stapel_idx, stapel_ctyp))) =
                     tore.get(&kurz.text)
                 else {
                     continue;
                 };
+                let uebergabe_name = r
+                    .argumente
+                    .get(*stapel_idx)
+                    .and_then(crate::rahmenlaenge::bare_name)
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| "gabbro_uebergabe".to_string());
                 if vergeben.contains(&tor_stmt.span.von) {
                     continue;
                 }
@@ -2312,6 +2337,9 @@ pub fn emittiere_mit(
                             ober: *ober,
                             annahme: annahme.0.clone(),
                             befehl: annahme.1.clone(),
+                            stapel_reg: stapel_reg.clone(),
+                            uebergabe_name: uebergabe_name.clone(),
+                            uebergabe_ctyp: stapel_ctyp.clone(),
                         },
                     );
                     namen.kind_regionen.insert(region_lo, lo);
@@ -8752,6 +8780,47 @@ fn funktion(
         aus.push_str("    return true;\n");
     }
     aus.push_str("}\n");
+    kind_funktionen(b, aus, u, absagen, &rahmen);
+}
+
+/// **The outlined `child` regions of one body** (C-free lane, 2026-09-30, OFFEN O38; template
+/// `tor.kind`). For every lowered gate+guard+region triple of the body, one function
+/// `static _Noreturn void gabbro_kind_<nr>(T <handed>)` holding the region's statements: the
+/// trap calls it in the child on the handed stack with the handed value as its argument, so no
+/// statement of the region ever addresses the parent's frame. `N451`/`N452` let the region read
+/// no caller value but the handed one, `N448`/`N449` let it neither return nor fall off its end
+/// (the trailing handover to the C compiler states the second).
+fn kind_funktionen(b: &Block, aus: &mut String, u: &Namen, absagen: &mut Absagen, rahmen: &Austritt) {
+    for tor_stmt in &b.anweisungen {
+        let Some(tor) = u.kind_tore.get(&tor_stmt.span.von) else { continue };
+        let region = b.anweisungen.iter().find_map(|w| {
+            let StmtArt::Wenn(wenn) = &w.art else { return None };
+            let (_, rumpf) = wenn.zweige.first()?;
+            let st = rumpf.anweisungen.first()?;
+            match &st.art {
+                StmtArt::Child(r) if st.span.von == tor.region_lo => Some(r),
+                _ => None,
+            }
+        });
+        let Some(region) = region else { continue };
+        let (nr, ct, name) = (tor.nr, &tor.uebergabe_ctyp, &tor.uebergabe_name);
+        // **The parent's result type, and no `_Noreturn`**: a region that `return`s is `N448`'s
+        // to refuse, and the `-- erwartet: N448 allein` probe (gift 1109) holds that nothing
+        // ELSE refuses it -- so its `return <value>;` must still compile here. An accepted
+        // region never returns (`N449`), and the trap's `ud2` stands behind the call anyway.
+        let rueck = rahmen.rueck_ctyp.clone().unwrap_or_else(|| "void".to_string());
+        aus.push_str(&format!(
+            "\n/* The child region of triple {nr}, outlined (template `tor.kind`, OFFEN O38): it runs on\n\
+             \x20* the handed stack with the handed value as its argument, and never returns. */\n\
+             static {rueck} gabbro_kind_{nr}({ct} {name}) __attribute__((used));\n\
+             static {rueck} gabbro_kind_{nr}({ct} {name}) {{\n\
+             \x20   (void){name};\n"
+        ));
+        for st in &region.anweisungen {
+            anweisung(st, aus, u, absagen, 1, rahmen);
+        }
+        aus.push_str("#if defined(__GNUC__)\n    __builtin_unreachable();\n#endif\n}\n");
+    }
 }
 
 /// **A syscall refusal with its own code (`C180`-`C184`).**
@@ -9084,32 +9153,35 @@ fn kind_tor_falle(
         "{e1}register int64_t _sys_rax __asm__(\"rax\") = (int64_t){}u;\n",
         tor.nummer
     ));
-    // **`asm goto` has no outputs**: the raw answer leaves through the
-    // `memory` operand below, and the `memory` clobber makes the store
-    // visible to the decoding. The numeric-free label list names the one
-    // region label of this triple.
+    // **The child never runs C of the parent's frame** (C-free lane, 2026-09-30, OFFEN O38;
+    // template `tor.kind`). Until then the trap was an `asm goto` that jumped, in the child, to a
+    // label INSIDE this function -- the region's C then addressed the parent's locals through
+    // the parent's frame (`rbp`) or through the new `rsp`, whatever the compiler chose. Now the
+    // region is a function of its own (`gabbro_kind_<nr>`, written after this one), and the
+    // child path of the trap never returns into C here: it aligns the handed stack, passes the
+    // handed value -- still in the stack register, which the kernel preserves -- as the one
+    // argument, and calls it; the region ends in a `-> never` call (`N449`), so `ud2` is not
+    // reached. The parent falls through and stores the answer.
     let mut eingaben: Vec<String> = tor
         .heber
         .iter()
         .map(|(r, _)| format!("\"r\" (_sys_{r})"))
         .collect();
-    eingaben.push("\"r\" (_sys_rax)".to_string());
-    aus.push_str(&format!("{e1}__asm__ goto (\n"));
+    let _ = &tor.label;
+    aus.push_str(&format!("{e1}__asm__ __volatile__(\n"));
     aus.push_str(&format!("{e1}    \"{}\\n\\t\"\n", tor.befehl));
-    // **The store comes AFTER the branch** (C-free lane, 2026-09-30, OFFEN O38): the child
-    // shares the address space and runs on the handed stack, so a store before `jz` was the
-    // CHILD writing 0 into the parent's slot (a race the parent could lose -- reading 0 and
-    // entering the region itself) or, rsp-relative, past the top of its own stack. Only the
-    // parent, which falls through, writes the answer.
     aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
-    aus.push_str(&format!("{e1}    \"jz %l[{label}]\\n\\t\"\n", label = tor.label));
-    aus.push_str(&format!("{e1}    \"movq %%rax, %[roh]\\n\\t\"\n"));
-    aus.push_str(&format!(
-        "{e1}    : : [roh] \"m\" (gabbro_roh_{lo}), {}\n",
-        eingaben.join(", ")
-    ));
-    aus.push_str(&format!("{e1}    : {}\n", tor.zerstoert.join(", ")));
-    aus.push_str(&format!("{e1}    : {label});\n", label = tor.label));
+    aus.push_str(&format!("{e1}    \"jnz 1f\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"movq %%{}, %%rdi\\n\\t\"\n", tor.stapel_reg));
+    aus.push_str(&format!("{e1}    \"andq $-16, %%rsp\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"call gabbro_kind_{lo}\\n\\t\"\n"));
+    aus.push_str(&format!("{e1}    \"ud2\\n\"\n"));
+    aus.push_str(&format!("{e1}    \"1:\\n\\t\"\n"));
+    eingaben.retain(|x| !x.contains("_sys_rax"));
+    aus.push_str(&format!("{e1}    : \"+a\" (_sys_rax)\n"));
+    aus.push_str(&format!("{e1}    : {}\n", eingaben.join(", ")));
+    aus.push_str(&format!("{e1}    : {});\n", tor.zerstoert.join(", ")));
+    aus.push_str(&format!("{e1}gabbro_roh_{lo} = _sys_rax;\n"));
     // **The sign leg reads the pin; the value leg checks the declared
     // range.** The `ok` flag starts true: a listed errno stores false, an
     // unlisted one never returns, and the value leg stores true again.
@@ -12077,22 +12149,22 @@ fn anweisung(
             // is exactly what the checker judges (SATZKARTE §39).
             if let Some(gate_lo) = u.kind_regionen.get(&s.span.von) {
                 if let Some(tor) = u.kind_tore.get(gate_lo) {
+                    // **Since 2026-09-30 (OFFEN O38) the region is not here**: it is the
+                    // function `gabbro_kind_<nr>` the trap calls in the child, on the handed
+                    // stack (written after this function, `kind_funktionen`). The parent only
+                    // reaches this point if the kernel answered 0 in the parent -- outside the
+                    // gate's contract, handed to the C compiler like every such outcome.
                     aus.push_str(&format!(
-                        "{e}/* child -- HANDOFF region on the handed stack of the\n\
-                         {e} * stack-carrying gate, entered BY JUMP at the label below\n\
-                         {e} * (`{label}`): the trap at the gate call jumps here in the\n\
-                         {e} * child, so nothing between gate and region ever runs on\n\
-                         {e} * the child's stack. Never returns into the caller frame\n\
-                         {e} * (`N448`/`N449`); at run time this is its statements.\n\
-                         {e} */\n\
-                         {e}{label}: ;\n",
-                        label = tor.label
+                        "{e}/* child -- HANDOFF region outlined as `gabbro_kind_{nr}` (template\n\
+                         {e} * `tor.kind`): the trap calls it in the child on the handed stack.\n\
+                         {e} * The parent never gets 0 from the gate: `hardware ({annahme})`. */\n\
+                         {e}#if defined(__GNUC__)\n\
+                         {e}__builtin_unreachable();\n\
+                         {e}#endif\n",
+                        nr = tor.nr,
+                        annahme = tor.annahme
                     ));
-                    aus.push_str(&format!("{e}{{\n"));
-                    for k in &x.anweisungen {
-                        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
-                    }
-                    aus.push_str(&format!("{e}}}\n"));
+                    let _ = x;
                     return;
                 }
             }
@@ -15301,16 +15373,19 @@ static void gabbro_region_leeren(void *p, uint64_t bytes) __attribute__((unused)
 #pragma GCC diagnostic push\n\
 #pragma GCC diagnostic ignored \"-Waddress\"\n\
 static void gabbro_region_leeren(void *p, uint64_t bytes) {\n\
-    unsigned char *b = (unsigned char *)p;\n\
-    uint64_t k, seite, a, von, bis;\n\
+    uint8_t * b = (uint8_t *)p;\n\
+    uint64_t k = 0u;\n\
+    uint64_t seite = 0u;\n\
+    uint64_t a = 0u;\n\
+    uint64_t von = 0u;\n\
+    uint64_t bis = 0u;\n\
     if (bytes == 0u) {\n\
         return;\n\
     }\n\
     if (gabbro_os_seitengroesse != 0 && gabbro_os_seiten_zurueck != 0) {\n\
         seite = gabbro_os_seitengroesse();\n\
         a = (uint64_t)(uintptr_t)p;\n\
-        if (seite != 0u && seite <= 4294967296u && bytes <= UINT64_MAX - seite\n\
-                && a <= UINT64_MAX - seite - bytes) {\n\
+        if (seite != 0u && seite <= 4294967296u && bytes <= UINT64_MAX - seite && a <= UINT64_MAX - seite - bytes) {\n\
             /* `leeren_teilung`: [0, von) and [bis, bytes) are the edges, [von, bis) whole pages. */\n\
             von = (a + seite - 1u) / seite * seite - a;\n\
             bis = (a + bytes) / seite * seite - a;\n\

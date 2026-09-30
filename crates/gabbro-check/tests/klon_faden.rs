@@ -330,12 +330,13 @@ fn zwei_regionen_je_mit_eigenem_ruf_sind_sauber() {
 /// BY DESIGN: lifting `C185` for the narrow triple turns that test red).**
 /// What the lowering guarantees for the code between the gate call and the
 /// region: it runs PARENT-side only. The gate call is an inline `syscall`
-/// (`__asm__ goto`) that jumps straight to the region label when the answer
-/// is zero -- the child never executes the decoding, the `if v == 0` guard,
-/// or anything else between gate and region -- and the parent, whose answer
-/// is never zero, skips the region through the guard it already has. So the
-/// guard appears exactly once (no copy inside the region), the trap exactly
-/// once per triple, and the label exactly once: one jump, one target.
+/// that, when the answer is zero, calls the region's own function on the handed
+/// stack (since 2026-09-30; before, an `__asm__ goto` jumped to a label inside
+/// the parent's function) -- the child never executes the decoding, the
+/// `if v == 0` guard, or anything else between gate and region -- and the
+/// parent, whose answer is never zero, skips the region through the guard it
+/// already has. So the guard appears exactly once, the trap exactly once per
+/// triple, and the region function exactly once.
 #[test]
 fn kind_sprungsenke_traegt_die_sprungannahme() {
     for datei in [
@@ -355,17 +356,22 @@ fn kind_sprungsenke_traegt_die_sprungannahme() {
             fehler.is_empty(),
             "{datei} lowers cleanly: {fehler:?}"
         );
+        // **Since 2026-09-30 (C-free lane, OFFEN O38) the child is entered by CALL, not by
+        // jump**: the region is the function `gabbro_kind_0`, which the trap calls in the child
+        // on the handed stack -- no statement of the region runs in the parent's frame. What
+        // this test pinned before (one jump, one label) is now one call, one function, and no
+        // label: the child still never runs the code between gate and region.
         assert!(
-            c.contains("__asm__ goto ("),
-            "{datei}: the gate is an inline trap: {c}"
+            !c.contains("__asm__ goto (") && !c.contains("gabbro_kind_0: ;"),
+            "{datei}: no jump into the parent's frame any more: {c}"
         );
         assert!(
-            c.matches("jz %l[gabbro_kind_").count() == 1,
-            "{datei}: one jump into the child per triple"
+            c.matches("\"call gabbro_kind_0\\n\\t\"").count() == 1,
+            "{datei}: one call into the child's region per triple: {c}"
         );
         assert!(
-            c.matches("gabbro_kind_0: ;").count() == 1,
-            "{datei}: one region label per triple"
+            c.matches(" gabbro_kind_0(uint64_t ").count() == 2,
+            "{datei}: the region is one function of its own (prototype and definition): {c}"
         );
         // **The in-between code stands once, parent-side.** The `if (v == 0)`
         // guard the source wrote is the only copy: the child enters at the

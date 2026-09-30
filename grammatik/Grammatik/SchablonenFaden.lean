@@ -193,6 +193,57 @@ theorem faden_zeuge :
   ⟨by decide, faden_warte_korrekt 4242 3 7 6 (by decide) (by decide) (by decide), by decide,
     (trampolin_kind ⟨9, 0, 0x401000, 0x402000⟩ 0x7f0000800000 (by decide) false rfl).1⟩
 
+/-! ## 3. `tor.kind` -- the lowered `child` triple, its region outlined (OFFEN O38)
+
+  The trap of a gate+guard+region triple (`emit.rs`, `kind_tor_falle`): the gate's instruction;
+  in the parent the raw answer; in the child `movq %stack, %rdi`, `andq $-16, %rsp`,
+  `call gabbro_kind_<nr>`, `ud2`. The region is the function `gabbro_kind_<nr>(handed)` -- no
+  statement of it runs in the parent's frame. -/
+
+/-- The child's registers after the gate: `rsp` is the handed top, the stack register still
+    holds the handed value (it is bound in `regs in` and neither destroyed nor the answer --
+    `N446`), so both are the same number `v`. -/
+structure KindRegs where
+  rsp : Nat
+  stapelReg : Nat
+
+def kindNachSyscall (v : Nat) : KindRegs := { rsp := v, stapelReg := v }
+
+/-- The one call the child makes: the region function with its argument and `rsp` at entry,
+    and whether `ud2` runs (only if the region returned). -/
+structure KindRuf where
+  argument : Nat
+  rspEintritt : Nat
+  ud2 : Bool
+
+def kindRuf (r : KindRegs) (regionKehrtZurueck : Bool) : KindRuf :=
+  { argument := r.stapelReg, rspEintritt := r.rsp - r.rsp % 16 - 8, ud2 := regionKehrtZurueck }
+
+/-- **Soundness of `tor.kind`.** For a handed top of at least 16 bytes and a region that does
+    not return (`N448`/`N449`): the child calls the region with exactly the handed value as its
+    argument (the one caller value `N451`/`N452` let it read), enters it SysV-aligned strictly
+    below the handed top -- on the child's own stack, not the parent's frame -- and never runs
+    `ud2`. -/
+theorem kind_region (v : Nat) (hv : 16 ≤ v) (regionKehrtZurueck : Bool)
+    (hnie : regionKehrtZurueck = false) :
+    (kindRuf (kindNachSyscall v) regionKehrtZurueck).argument = v ∧
+    ((kindRuf (kindNachSyscall v) regionKehrtZurueck).rspEintritt + 8) % 16 = 0 ∧
+    (kindRuf (kindNachSyscall v) regionKehrtZurueck).rspEintritt < v ∧
+    (kindRuf (kindNachSyscall v) regionKehrtZurueck).ud2 = false := by
+  refine ⟨rfl, ?_, ?_, hnie⟩ <;> simp only [kindRuf, kindNachSyscall] <;> omega
+
+/-- The premise is not decoration: a region that returned would run into `ud2` -- the trap's
+    own stop, never a return into the parent's frame. -/
+theorem kind_region_rueckkehr (v : Nat) : (kindRuf (kindNachSyscall v) true).ud2 = true := rfl
+
+/-- **Witness**: a 64 KiB stack whose top is `0x7f0000010000`. -/
+theorem kind_region_zeuge :
+    (kindRuf (kindNachSyscall 0x7f0000010000) false).argument = 0x7f0000010000 ∧
+    ((kindRuf (kindNachSyscall 0x7f0000010000) false).rspEintritt + 8) % 16 = 0 ∧
+    (kindRuf (kindNachSyscall 0x7f0000010000) false).rspEintritt < 0x7f0000010000 ∧
+    (kindRuf (kindNachSyscall 0x7f0000010000) false).ud2 = false :=
+  kind_region 0x7f0000010000 (by decide) false rfl
+
 end FadenLaufzeit
 
 end Gabbro.Grammatik
@@ -200,3 +251,5 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.FadenLaufzeit.trampolin_kind
 #print axioms Gabbro.Grammatik.FadenLaufzeit.faden_warte_korrekt
 #print axioms Gabbro.Grammatik.FadenLaufzeit.faden_zeuge
+#print axioms Gabbro.Grammatik.FadenLaufzeit.kind_region
+#print axioms Gabbro.Grammatik.FadenLaufzeit.kind_region_zeuge

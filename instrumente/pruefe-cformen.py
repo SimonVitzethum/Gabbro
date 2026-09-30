@@ -747,6 +747,12 @@ def classify_stmt(s, unit, channel, prev=None, body=None):
     m = re.match(r"^(?:const\s+)?" + IDENT + r" \* " + IDENT + r" = .*;$", s)
     if m:
         return "stmt:decl-ptr"
+    # C-free lane, 2026-09-30: the cell a region gate's answer is bound into
+    # (`uint8_t * seite;`, then `&seite` as the stub's `_wert`) -- a pointer local
+    # with no initialiser. The same uncovered row as the initialised one: no memory
+    # relation, no lemma, no new claim.
+    if re.match(r"^(?:const\s+)?" + IDENT + r" \* " + IDENT + r";$", s):
+        return "stmt:decl-ptr"
     m = re.match(r"^(" + CTYPE + r"|" + IDENT + r") (" + IDENT + r")( = (.*))?;$", s)
     if m:
         init = m.group(4)

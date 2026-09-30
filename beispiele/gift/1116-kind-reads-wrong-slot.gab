@@ -1,4 +1,6 @@
--- erwartet: N452 allein
+-- erwartet: N452
+-- (Not `allein` since 2026-09-30, C-free lane, OFFEN O38: the region is a function of its own
+-- now, so the C compiler refuses the read of a caller value too -- a second wall, as it should be.)
 -- **1116 -- same value, different slot: handedness is by slot (lane 249).**
 --
 -- The precision pin of the dataflow. The gate is valid (`stack rsi` --

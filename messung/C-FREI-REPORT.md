@@ -31,10 +31,11 @@ OWN `extern fn` -- the documented point of those two examples; their libc-free t
 | the arena runtime | `4c40b2f7` | `laufzeit/arena_dyn.c` gone; storage and report calls in Gabbro | `arena.dyn` |
 | locks, page return | `273432da` | the ticket lock in the driver; `madvise`/`sched_yield` as gates; `start.c`, `start_pool.c` gone | `sperre.ticket`, `region.leeren` |
 | a safety hole | `8fd71d0c` | `N572` (a stack-gate call with no `child` region checked clean); the clone trap's store (OFFEN O38) | -- |
+| the `child` region outlined | (this merge) | OFFEN O38 closed: the region is a function the trap calls on the handed stack | `tor.kind` |
 | threads | `f2295654`, `dec755b3` | `linux.c`, `bindung.h`, `faden.c`, `faden.h` gone; the hosted binding is Gabbro only | `tor.trampolin`, `faden.laufzeit` |
-| the probe's report | (this merge) | `melde.c` gone: the os-probe prints through the binding's Gabbro writers | -- |
+| the probe's report | `76e15c34` | `melde.c` gone: the os-probe prints through the binding's Gabbro writers | -- |
 
-Template register (`gabbro schablonen`): 30 entries, 19 machine-checked; `--tor` still names the 6
+Template register (`gabbro schablonen`): 31 entries, 20 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
 ## Open, by name
@@ -45,5 +46,5 @@ hanging premises it named before this lane (none of this lane's).
 * **Hosted**: a `nolibc` driver (`main` returns into the C runtime's start code).
 * **C2** (kernel module), **C3** (bare metal): not started.
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing
-  releases a region. **O38**: the `child` region's C runs in the parent's frame.
+  releases a region.
 * No Isabelle on the server: `abnahme.py --voll` has not been run by this lane.

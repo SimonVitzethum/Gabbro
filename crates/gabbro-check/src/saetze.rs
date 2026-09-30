@@ -4602,10 +4602,13 @@ pub const PHASEN: &[Satz] = &[
                   the race rule (`N457`) judge the region only, so under a fork-style \
                   reading -- both threads return from the call and run on -- the \
                   child would execute unchecked code on the handed stack. Lane 260 \
-                  kept that reading: the trap enters at the region label, and the \
+                  kept that reading: the trap entered at the region label, and the \
                   statements between gate and region run parent-side only (pinned \
                   in `tests/klon_faden.rs`; no new checker rule -- the gap is \
-                  vacuous by construction).",
+                  vacuous by construction). Since 2026-09-30 (C-free lane, OFFEN O38) \
+                  the region is a function of its own that the trap CALLS in the child \
+                  with the handed value (template `tor.kind`), so no statement of it runs \
+                  in the parent's frame.",
         vorbehalt: "A shape rule, and nothing else. It says nothing about whether \
                     the number is the kernel's, whether the child really starts on \
                     the handed stack, or whether the runtime places the thread -- \
