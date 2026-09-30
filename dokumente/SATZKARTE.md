@@ -4715,3 +4715,27 @@ channel for the reason (`aerg : Option Ty`); the exporter refused every unit wit
 now stop at their next wall, LG003 (a gate `requires`). **Not claimed:** an `else` that returns or
 matches the reason itself (`return e;`, `match e { … }`) -- an end block has no case split over a
 reason yet -- and a fallible gate whose answer is not an integer range; both refused by name.
+
+## 63. A gate that hands over a REGION: the template `tor.region` (C-free lane, 2026-09-30)
+
+**The decision.** Simon, 2026-09-30: memory from outside comes as a region, never from a number;
+no int->ptr conversion enters the language; in Lean ONE generic form, "a foreign routine hands over
+a new region". A `syscall` answering `ptr<normal, …> u8 or R` was accepted by the checker and
+refused by the emitter (`C183`); it lowers now, and the extent its contract names is held.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `regionStumpf` | SchablonenOhneLibc §4 | the emitted stub (`emit.rs`, `Antwort::Region`) statement by statement: the `-4095` fence, the errno comparisons in table order, the zero test, the address |
+| **`tor_region`** | SchablonenOhneLibc §4 | THE TEMPLATE: for every word an `int64_t` holds and every errno table, the stub IS `dekodiere` (Syscall.lean) over the range `1 .. 2^63 - 1` -- the decoding `tor_fehlbar` proves against G's reason channel |
+| `tor_region_adresse`, `tor_region_fehler_kein_zeiger` | SchablonenOhneLibc §4 | the address handed over is the kernel's word and never zero; no error word becomes an address |
+| `Region`, `RegionVertrag` | SchablonenOhneLibc §4 | the generic form: the answer reaches at least `n` bytes and shares none with a region live at the call -- the gate's `ensures n <= lenof(result)` plus its assumption's sentence, user logic, no operating system |
+| **`region_zugriff`** (+ `_grenze`) | SchablonenOhneLibc §4 | what `N571` makes of the contract: an index with `i + 1 <= n` lies inside the new region and inside no other live one; the boundary witness shows the premise is not decoration |
+| `tor_region_zeuge` | SchablonenOhneLibc §4 | WITNESS: `mmap`'s table, a word of each kind, a 4096-byte region beside a live one |
+
+**The checker side** (no new `N` code): the extent clause of a body-less callee's `ensures … <=
+lenof(result)` is booked on the name a `let … else` binds the answer to (`m1.rs`,
+`ergebnis_ausdehnung`), if that name is bound once and never assigned and the arguments name only
+constants and parameters the body leaves alone; `N571` and `N463` (the bare form too) read it like a
+`requires` clause. Gifts `1383`-`1387`, example `183` (built `nolibc`, runs, imports nothing).
+**Not claimed** (OFFEN O37): machine G has no byte pointers, so 183 stays `UNCERTIFIED` (first `LG003`, the gate's `ensures`; behind it `LG002`);
+nothing releases a region; a Gabbro body cannot pass an extent on.

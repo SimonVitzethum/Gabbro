@@ -1979,6 +1979,16 @@ they point at stands in §1 beside `entrydecl`.
   every target is a case of the declared channel (`N067`). The decoding is
   generated; an errno outside the table is `hardware (annahme a)` — the kernel
   answered outside its contract.
+* **a REGION answer** (C-free lane, 2026-09-30; Simon's decision 1: memory from
+  outside comes as a region, never from a number) — `-> ptr<normal, …> u8 or R`:
+  the stub hands the kernel's word over as the address after the sign leg, and
+  the word zero is `hardware` (the proved template `tor.region`; without the
+  `or R` channel the emitter refuses, `C186`). The contract names the extent —
+  `ensures n <= lenof(result)`, over the gate's parameters — and a `let … else`
+  that binds the answer to a name bound once and never assigned carries it:
+  every index through the name is held against it (`N571`), and so is every
+  length it is passed with (`N463`). No expression turns a number into a
+  pointer (`M140`). Machine G has no byte pointers (`LG002`, OFFEN O37).
 * **`assume … falsifier …` or `kernel <path>`** — with `kernel`, the call is
   paired with a Gabbro kernel's dispatch `entry` for the same `number` and no
   assumption is named (refused as `N068` until the pairing check lands); with

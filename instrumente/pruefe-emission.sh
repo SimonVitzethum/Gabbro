@@ -3818,7 +3818,11 @@ fi
 # unit body ending in a `-> never` gate -- certified with `Endblock.bindAxiom`) emits like 174.
 # 154 -> 155 on 2026-09-30 (C-free lane, second Lean slice): example 182 (`fallible-gate`, a `-> T or R` gate with its
 # errno table, certified with `Endblock.bindAxiomElse`) emits its stub like 74 and 90.
-MARKE_EMIT=155
+# 155 -> 156 on 2026-09-30 (C-free lane, the region gate): example 183 (`region-vom-tor`, a `mmap` gate answering a
+# byte REGION through the proved stub `tor.region`, written through and handed to `write`) emits. Its poison twins
+# `gift/1384`-`1387` are refused by the CHECKER; `gift/1383` (`C186`, a region without its channel) is refused by the
+# EMITTER and writes no C, so `MARKE_EMIT_G` is untouched.
+MARKE_EMIT=156
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.
