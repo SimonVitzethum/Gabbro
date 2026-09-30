@@ -1,10 +1,10 @@
 # Parser lane -- report (running; `~/claude-lane/AUFTRAG-P.md`, tree `~/gabbro-v`, branch `lane/parser`)
 
-**Where it stands (2026-09-30, session 2):** sieve (a) **5 of 148** (was 2 of 146; 104, 108, 130, 69, 73);
+**Where it stands (2026-09-30, session 2):** sieve (a) **9 of 148** (was 2 of 146; 104, 108, 130, 69, 73, 16, 15, 62, 93);
 **chain count 5, closed bridge 5, end to end 5** (was 2, 2, 2). The trust path of the GabbroV bridge is a
 GENERIC theorem over every source text (P6); the program-specific `Cert104` printer is gone from `crates/`.
 P5, the four numbers: `LEAN_NUM_THREADS=3 python3 instrumente/zaehle-kette.py --lean --allow-stale` ->
-`sieve totals (a) 5 ... (e) 5`, `CHAIN COUNT 5 of 148`; `python3 instrumente/zaehle-bruecke.py --binary
+`sieve totals (a) 9 ... (e) 5`, `CHAIN COUNT 5 of 148`; `python3 instrumente/zaehle-bruecke.py --binary
 target/debug/gabbro --allow-stale` -> `BRIDGE COUNT 2 (legacy instances)`, `GENERIC BRIDGE 3` (5 closed in
 all), `END TO END 5 of 148 (3 through the generic ketteAllg)`.
 
@@ -126,10 +126,37 @@ By total programs the kinds rank: `static` 42, `proto` 20, `atomic` 19, `assume`
   pastes it) and the bridge cannot state their duties: arithmetic, conversions and bit operations have no
   bridge form (`NEEDS OPUS` in `STAND-P.md`).
 
+* **Wall 3 -- `bool`** (c5eea064): `bool` slot fields (`UTab.bools`, placeholder range, indices unchanged), `bool`
+  results (`UFn.ergBool`, `UFn.ergTy`), truth values in the body through the predicate forms (`uBool`), bool
+  place reads `UEns.slotB/tabB`, bool writes `UStmt.assignB/assignTabB`, `URet.bool`; `by ops` travels
+  (a writer discipline the CHECKER holds). Lowering: `typAt` bool-aware, `FieldHit.hint`, `BoolHit`,
+  `lowBoolDurch/lowBoolTab`, two bool writes, `lowEnd` of a truth value. The bridge REFUSES a unit with a bool
+  field or result by name (`keinBoolB`); `post_iff`, `wf_of_wrel`, `fieldHit_of`, `lowEnd_sim` carry the new
+  hypotheses. Sieve (a) 5 -> 6 (16).
+* **Wall 4 -- `own` pointers, `~p`** (5f44dd0d): `own` is a read-write pointer; `~p` is `p ^ (2^w - 1)` over the
+  parameter's DECLARED storage width (`pbreiten`), refused for anything else -- a first version took the
+  width from the range and gave `15 - x` for `u8 in 0 .. 15`, where the C computes `255 - x`; the probe
+  `bnot_schmal` and its planted defect pin it. Sieve (a) 6 -> 8 (15, 62).
+* **Wall 5 -- compile-time constants** (489021df): `const N : T = e;` over literals, earlier constants, `+ - * / % &
+  | ^ << >>`, limit words and `const fn` calls, exact integers with EVERY intermediate value checked against the
+  declared type; unknown constants make their uses errors. The evaluator is structural in a fuel: the first
+  version (a `where` helper) was well-founded and every kernel probe ran away past 4 GB. Sieve (a) 8 -> 9 (93).
+* **Legacy removed?** No -- `Parser/Uebersetze.lean` still holds the hand lowering of 104 (`lowerProg`, keyed to
+  the names `Konto`/`einzahlen`/`lies`) because `Schlusssatz104.lean` (the first, by-hand theorem) is built on it.
+  It is a per-program WITNESS off the trust path (the generic pipeline never calls it); removing it means
+  rewriting `Schlusssatz104`'s parse-fidelity conjunct. Recorded, not done.
+* **What stops the next programs** (census `grammatik/.lake/zaehle-kette/Census.lean`: programs whose syntax
+  is mostly supported, first missing constructs): `let` (`SAnw.lass`, 35 programs use it; the Lean parser DROPS
+  the type annotation, which `~local` needs), `if` (28), `locks` statements (17), `narrow` (17), lock
+  `invariant` (parse), `extern fn` (`protoT`, 20 programs, G has no foreign-function item), `static`/`atomic`
+  (`declOf.Glob` is empty), `entry`, `format`, `device`.
+
 ## Lessons (measured)
 
 * Plain `decide` on the whole pipeline: 9.5 GB for ONE probe (killed session 1); `decide +kernel`:
   1 GB / 2 s. A FALSE `decide +kernel` on a wrong expected string can also run away -- `#eval` first.
+* A WELL-FOUNDED definition is opaque to `decide +kernel` (fast `decide failed`, or a runaway in a whole pipeline):
+  elaborator functions must be structural (fuel), never `where`-mutual with a helper.
 * A failing `rfl` on a WRONG stage output (planted defect) runs for minutes; the mutation instrument
   cuts each mutated copy after the theorem it targets.
 * `ulimit -v` breaks Lean (thread creation fails); watch RSS and kill by PID.

@@ -813,13 +813,14 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
 **Stage (a) — single-threaded, generic** (`Schlusssatz.lean`, `KorrespondenzAllg.lean`; plan §6).
 
 - [ ] **Sieve (a), the elaborator and the Lean parser** -- re-measured 2026-09-30 (parser lane,
-  `messung/PARSER-LANE-REPORT.md`, `python3 instrumente/zaehle-kette.py --lean`): **passes 5 of 148**
-  (104, 108, 130, 69, 73); the others stop at `elab` 103 (81 an item kind without a G form -- `static`
+  `messung/PARSER-LANE-REPORT.md`, `python3 instrumente/zaehle-kette.py --lean`): **passes 9 of 148**
+  (104, 108, 130, 69, 73, 16, 15, 62, 93); the others stop at `elab` 99 (81 an item kind without a G form -- `static`
   42 programs, `proto` 20, `atomic` 19, `assume` 11, `device` 10 --, 10 `Typ unbekannt: bool`, ...) and
   `parse` 40 (`wanted (` 11, `reserved head forall` 10, `wanted ;` 5 -- lock invariants --, ...).
-  Walls done: 1 (units without tables, `+ - *`, built-in widths, omitted `effects`) and 2 (conversions
-  `T(e)`, `T::max`, named consts, `& | ^`). **Next:** a type universe in `UProg` (`bool`, `tagged`,
-  `option index`), then lock invariants (119, 124, 157), `requires`, `if`/`let`/`locks` statements.
+  Walls done: 1 (units without tables, `+ - *`, built-in widths, omitted `effects`), 2 (conversions
+  `T(e)`, `T::max`, named consts, `& | ^`), 3 (`bool`), 4 (`own`, `~p` over declared widths) and 5
+  (compile-time constants). **Next:** `let` (the parser drops the annotation: keep it), `if`, `locks`,
+  `requires`, lock invariants (119, 124, 157), `static`/`atomic`.
 - [x] **Chains and bridges for the sieve-(a) units (P4)**: chain count 2 -> **5**, closed bridge 2 -> **5**,
   end to end 2 -> **5** (`beispiele/130`, `69`, `73` through the generic `ketteAllg` and
   `nutzer_aus_quelle`, `bruecke/Bruecke/Quelle.lean`). The chain of a unit WITH tables still needs a
