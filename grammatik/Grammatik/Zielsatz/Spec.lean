@@ -658,6 +658,16 @@
     place it can stand. Without the two arms the statement would be FALSE for such a program
     (a thread standing there could neither step nor be named), so the goal theorem forces
     them.
+  * THE REASON CHANNEL (same day, second slice). A fallible gate (`-> T or R`) is an axiom with
+    `D.agruende a > 0` (a new `Deklaration` field, default `0`, so every declaration of before
+    is unchanged); `Block.bindAxiomElse` / `Endblock.bindAxiomElse` bind its value or run the
+    `else` block with its reason (`bindCallElse`'s shape). The machine's raw answer carries the
+    pair packed like a `tagged` value (`sonstPasst`, the convention of `summePasst`). THE DIFF:
+    one `KopfHalt` arm and one `RestHalt` arm, the stop `hardware` where the raw answer decodes
+    to neither (an unlisted errno or an out-of-range value -- the stub's
+    `__builtin_unreachable()` under the named assumption). The answer class always holds the
+    reasons, so no `nieZurueck` case arises and `antwortenB` needs no new clause. Again no stop
+    kind, premise or conclusion moves.
   -- END end-block gate block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
@@ -1754,6 +1764,9 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r σ) = none ∧
       ¬ AntwortLeer D (some (D.rtyp r))
   | .nieZurueck, .bindAxiom a .. => D.aerg a = some .never
+  | .hardware, .bindAxiomElse a args .. =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .flagge, .awaits g .. => O.sichtbar g σ = false
   | _, _ => False
 
@@ -1769,6 +1782,9 @@ def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
       ¬ AntwortLeer D (D.aerg a)
   | .nieZurueck, .ende (.bindAxiom a ..) => D.aerg a = some .never
+  | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiomElse a args ..) =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | k, .dann b _ => KopfHalt O passes σ ρ k b
   | _, _ => False
 
