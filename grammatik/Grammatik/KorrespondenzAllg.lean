@@ -252,7 +252,14 @@ def exOk {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (c : CX) : Bool :=
   | .var x, c => match c with
     | .var k => decide (k = K.loc x)
     | _ => false
-  | .weiter _ _ e, c => exOk e c
+  -- A range widening has no C text of its own (`exOk e c`), or the emitter wrote it out as the
+  -- explicit conversion `(T)(e)` (`u64(a)`, the implicit one made explicit): then `T` must hold the
+  -- operand's range, so the cast keeps the number (`ecorr_cast`). The recursion is on the Gabbro
+  -- operand `e`, a subterm, so the check stays structural.
+  | .weiter (lo := lo) (hi := hi) _ _ e, c =>
+      exOk e c || (match c with
+        | .cast t c' => decide (t.holds lo hi) && exOk e c'
+        | _ => false)
   | .slot t f i _, c => match c with
     | .ld (.slotA b ci n ss off) τc => slotOk EL K b n ss off τc t f && exOk i ci
     | _ => false
@@ -1364,7 +1371,15 @@ theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e
     ExprCorr X K c e
   | _, .lit _, _, h => exOk_lit X K h
   | _, .var _, _, h => exOk_var X K h
-  | _, .weiter h1 h2 e, c, h => ecorr_weiter X K h1 h2 (exOk_sound e c h)
+  | _, .weiter (lo := lo) (hi := hi) h1 h2 e, c, h => by
+      simp only [exOk, Bool.or_eq_true] at h
+      rcases h with h | h
+      · exact ecorr_weiter X K h1 h2 (exOk_sound e c h)
+      · cases c with
+        | cast t c' =>
+            simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+            exact ecorr_weiter X K h1 h2 (ecorr_cast X K t (exOk_sound e c' h.2) h.1)
+        | _ => exact absurd h (by simp)
   | _, .slot _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
   | _, .durch _ _ _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
   | _, .ptrOf _ _ _ _, _, h => ecorr_ptrOf X K (ptrOk_sound X K h)

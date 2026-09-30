@@ -102,7 +102,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                       have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                       have hx : valOf ((declOf u).typ ⟨num, hlt⟩ fh.idx) (eval σl e2 σl ρ) =
                           valOf (.int fh.weit.1 fh.weit.2) (eval σl e σl ρ) :=
-                        valOf_eval_heq (typAt_of u ⟨num, hlt⟩ fh.idx fh.weit fh.hit) e2 e he2 σl σl ρ
+                        valOf_eval_heq (fh.hint) e2 e he2 σl σl ρ
                       refine ⟨_, (tabAt u ⟨num, hlt⟩).name, (eval σl i σl ρ).n, fname,
                         valOf _ (eval σl e2 σl ρ), rfl, ?_, ?_, ?_⟩
                       · intro ρB
@@ -164,7 +164,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
                 have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                 have hx : valOf ((declOf u).typ t fh.idx) (eval σl e2 σl ρ) =
                     valOf (.int fh.weit.1 fh.weit.2) (eval σl e σl ρ) :=
-                  valOf_eval_heq (typAt_of u t fh.idx fh.weit fh.hit) e2 e he2 σl σl ρ
+                  valOf_eval_heq (fh.hint) e2 e he2 σl σl ρ
                 refine ⟨_, b, (eval σl i σl ρ).n, fname, valOf _ (eval σl e2 σl ρ), rfl, ?_, ?_, ?_⟩
                 · intro ρB
                   simp only [Gabbro.Body.step]

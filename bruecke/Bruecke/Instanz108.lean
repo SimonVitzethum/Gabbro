@@ -3,6 +3,7 @@ import Bruecke.Pruefung
 import Grammatik.Kette108
 import Bruecke.Start
 import Bruecke.Atomar
+import Bruecke.Quelle
 import Duty.Duty108DisjointStartLocks
 
 /-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
@@ -70,6 +71,14 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = s
 theorem stimmig : Stimmig u := stimmig_of (by decide)
 
 theorem rang : Rang u (rangAuto u) := rang_of (by decide)
+
+/-! GENERIC-WITNESS beispiele/108-disjoint-start-locks.gab pflichten_108
+
+    P6: the computed statement `Pflichten src108` (`Quelle.lean`), witnessed by the front end's own
+    output and GabbroV's duty proofs. -/
+
+theorem pflichten_108 : Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
+  ⟨u, uOf_eq Gabbro.Grammatik.Kette108.uebersetzt8, by decide, by decide, by decide, meets_alle⟩
 
 /-- **THE CLOSED BRIDGE OF 108**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
 theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette108.E8 :=

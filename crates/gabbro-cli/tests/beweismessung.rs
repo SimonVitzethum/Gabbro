@@ -182,3 +182,60 @@ fn the_template_carries_both_passes_at_the_blocks_column_and_the_budget() {
         assert!(gesehen >= 1, "{datei}: no second pass in the template:\n{text}");
     }
 }
+
+/// **`--template --source` hands Lean the file's bytes and prints what Lean wrote.**
+///
+/// `lake` is replaced by a script that answers `build` with success and answers `env lean
+/// <driver>` by printing the driver. The driver must carry the source as ONE Lean literal whose
+/// escapes decode to the file's bytes (quotes, a backslash, a tab, an umlaut), and the unit's name.
+/// Nothing of the statement is written by this program: the assertion is that the driver is all
+/// it sends.
+#[test]
+fn the_source_template_sends_the_files_bytes_to_lean_and_prints_its_answer() {
+    let (modell, skripte) = aufbau("quelle-vorlage");
+    let bruecke = modell.parent().unwrap().join("bruecke");
+    std::fs::create_dir_all(&bruecke).unwrap();
+    std::fs::write(bruecke.join("lakefile.toml"), "# stand-in\n").unwrap();
+    let lake = skript(
+        &skripte,
+        "lake",
+        "if [ \"$1\" = build ]; then exit 0; fi\nfor a in \"$@\"; do last=\"$a\"; done\ncat \"$last\"",
+    );
+    let echt = std::fs::read_to_string(Path::new(WURZEL).join(DATEI)).unwrap();
+    let quelle = format!("-- \"q\" \\ back\tTab \u{fc}\n{echt}");
+    let datei = modell.parent().unwrap().join("probe.gab");
+    std::fs::write(&datei, &quelle).unwrap();
+    let out = Command::new(gabbro())
+        .current_dir(WURZEL)
+        .env("LAKE", &lake)
+        .args(["prove", "--template", "--source", "--bridge"])
+        .arg(&bruecke)
+        .arg(&datei)
+        .output()
+        .expect("gabbro runs");
+    let text = String::from_utf8_lossy(&out.stdout).to_string();
+    assert_eq!(out.status.code(), Some(0), "{text}{}", String::from_utf8_lossy(&out.stderr));
+    assert!(text.starts_with("import Bruecke.Vorlage\n#eval IO.println (Gabbro.Bruecke.vorlage \""), "{text}");
+    assert!(text.contains("-- \\\"q\\\" \\\\ back\\tTab \u{fc}\\n"), "the escapes do not decode to the file's first line:\n{text}");
+    // a decoded literal is the file: undo the escapes and compare byte for byte
+    let lit = text.split_once(" \"").and_then(|(_, r)| r.split_once("\" \"")).map(|(_, r)| r).unwrap();
+    let lit = lit.strip_suffix("\")\n").unwrap();
+    let zurueck = lit.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"").replace("\\\\", "\\");
+    assert_eq!(zurueck, quelle, "the pinned literal is not the file");
+}
+
+/// A bridge folder that cannot be found is SETUP (exit 3), never an empty template.
+#[test]
+fn the_source_template_without_a_bridge_is_setup_not_an_empty_file() {
+    let (modell, _) = aufbau("quelle-ohne-bruecke");
+    let datei = modell.parent().unwrap().join("probe.gab");
+    std::fs::copy(Path::new(WURZEL).join(DATEI), &datei).unwrap();
+    let out = Command::new(gabbro())
+        .current_dir(WURZEL)
+        .args(["prove", "--template", "--source", "--bridge", "/nonexistent-bridge"])
+        .arg(&datei)
+        .output()
+        .expect("gabbro runs");
+    assert_eq!(out.status.code(), Some(3));
+    assert!(out.stdout.is_empty(), "nothing may be printed as a template");
+}

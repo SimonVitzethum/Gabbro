@@ -225,11 +225,11 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     rw [hs]
     have hW := wrel_enc uZ σ (fun _ => .int 0)
     refine (post_iff gesenktZ gI (stimmigZ.art gI) stimmigZ.tab (stimmigZ.frei gI) (stimmigZ.olds gI)
-      (stimmigZ.post gI) σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
+      (stimmigZ.post gI) (stimmigZ.boolErg gI) stimmigZ.boolTab σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
       (eintritt_lrel gI σ ρ) hW).mp ?_
     have hv := platz hW 0
     rw [h7] at hv
-    have hwf := wf_of_wrel uZ hW
+    have hwf := wf_of_wrel uZ stimmigZ.boolTab hW
     simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
@@ -291,7 +291,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
         let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
         have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
         have hpost := (post_iff gesenktZ fI (stimmigZ.art fI) stimmigZ.tab (stimmigZ.frei fI)
-          (stimmigZ.olds fI) (stimmigZ.post fI) σ7 σ'' .nil v'' _ s1 hW0
+          (stimmigZ.olds fI) (stimmigZ.post fI) (stimmigZ.boolErg fI) stimmigZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
           (eintritt_lrel fI σ7 .nil) hW1).mpr hens
         have h1 := platz hW1 1
         have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl

@@ -39,6 +39,8 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
     (∃ cname ps es pre gf, bst = .call cname ps es pre ∧ fnSuch u cname = some gf ∧
       ∀ w ∈ gf.schreibt, w ∈ (fnAt u c).schreibt) := by
   cases st with
+  | assignB _ _ _ _ => simp [stmtBody] at hb
+  | assignTabB _ _ _ _ => simp [stmtBody] at hb
   | assign b fname ix v =>
     simp only [lowStmt, lowAssignDurch] at h
     split at h
@@ -202,6 +204,8 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
             exact hcn
         · have hcall : ∃ args, UStmt.call cname args ∈ st :: ss := by
             cases st with
+            | assignB _ _ _ _ => simp [stmtBody] at hx
+            | assignTabB _ _ _ _ => simp [stmtBody] at hx
             | call cn args =>
               simp only [stmtBody] at hx
               split at hx
@@ -289,6 +293,8 @@ theorem mem_calleesOf {f : UFn} {g : String} (h : g ∈ calleesOf f) :
     exact ⟨args, hst⟩
   | assign a b c d => simp at hg
   | assignTab a b c d => simp at hg
+  | assignB a b c d => simp at hg
+  | assignTabB a b c d => simp at hg
 
 theorem stmtsBody_mem {f : UFn} : ∀ {ss : List UStmt} {bs : List Gabbro.Body.Stmt},
     stmtsBody u f ss = some bs → ∀ st ∈ ss, ∃ x, stmtBody u f st = some x
@@ -370,6 +376,7 @@ theorem realisiert (S : Stimmig u)
               intro x hx
               cases hr : (fnAt u c).rueck with
               | keine => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
+              | bool _ => rw [hr] at heB; simp [endBody] at heB
               | wert v =>
                 rw [hr] at heB
                 simp only [endBody] at heB

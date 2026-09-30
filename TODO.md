@@ -812,11 +812,23 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
 
 **Stage (a) — single-threaded, generic** (`Schlusssatz.lean`, `KorrespondenzAllg.lean`; plan §6).
 
-- [ ] **Sieve (a), the elaborator** — lane 199 measured 2026-09-17: 89 of 111 programs
-  stopped there (69 an item without a G form, 12 a unit without a table, 7 `bool`, 1
-  `requires`). Re-measure against today's corpus (129 programs).
-- [ ] **Sieve (a), the Lean parser** — lane 200 measured 2026-09-17: 20 programs stopped
-  there, 10 of them at `reserved head forall`. Re-measure against today's corpus.
+- [ ] **Sieve (a), the elaborator and the Lean parser** -- re-measured 2026-09-30 (parser lane,
+  `messung/PARSER-LANE-REPORT.md`, `python3 instrumente/zaehle-kette.py --lean`): **passes 9 of 148**
+  (104, 108, 130, 69, 73, 16, 15, 62, 93); the others stop at `elab` 99 (81 an item kind without a G form -- `static`
+  42 programs, `proto` 20, `atomic` 19, `assume` 11, `device` 10 --, 10 `Typ unbekannt: bool`, ...) and
+  `parse` 40 (`wanted (` 11, `reserved head forall` 10, `wanted ;` 5 -- lock invariants --, ...).
+  Walls done: 1 (units without tables, `+ - *`, built-in widths, omitted `effects`), 2 (conversions
+  `T(e)`, `T::max`, named consts, `& | ^`), 3 (`bool`), 4 (`own`, `~p` over declared widths) and 5
+  (compile-time constants). **Next:** `let` (the parser drops the annotation: keep it), `if`, `locks`,
+  `requires`, lock invariants (119, 124, 157), `static`/`atomic`.
+- [x] **Chains and bridges for the sieve-(a) units (P4)**: chain count 2 -> **5**, closed bridge 2 -> **5**,
+  end to end 2 -> **5** (`beispiele/130`, `69`, `73` through the generic `ketteAllg` and
+  `nutzer_aus_quelle`, `bruecke/Bruecke/Quelle.lean`). The chain of a unit WITH tables still needs a
+  per-program `EmitLay`: derive it generically from `UTab` (open).
+- [ ] **P6, the generic C-chain side**: `Kette` for units with tables from the source alone (`EmitLay`, the
+  certificate from `corr-lean` as data), and the fragment premises of `nutzer_aus_quelle` (lock
+  invariants, axiom ensures, declared starts, atomics, `requires`, arithmetic inside `ensures`), each
+  removed construct by construct.
 - [ ] **`korrOk` arms** for `if`, `traverse`, compound assignment, globals, `let` of a call, and
   arithmetic. Each is one arm over an existing lemma. Measure each by the chain count it moves.
 - [ ] **Discharge the "no model error" condition** of part 4 from the model judgement, instead

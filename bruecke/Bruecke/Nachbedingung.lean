@@ -111,15 +111,20 @@ theorem eval_heq2 {D : Deklaration} {Γ₁ Γ₂ : Ctx} {Λ₁ Λ₂ : List (Res
     eval σ₀ e₁ σ ρ₁ = eval σ₀ e₂ σ ρ₂ := by
   subst hΓ; subst hΛ; cases he; cases hρ; rfl
 
-theorem isSome_erg (f : Fin u.fns.length) :
+/-- Without a `bool` result the result type is the recorded range. -/
+theorem ergTy_of {f : UFn} (h : f.ergBool = false) :
+    f.ergTy = f.ergebnis.map fun r => Ty.int r.1 r.2 := by
+  unfold UFn.ergTy; rw [h]; rfl
+
+theorem isSome_erg (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = false) :
     ((declOf u).erg f).isSome = (fnAt u f).ergebnis.isSome := by
-  rw [erg_eq]; simp
+  rw [erg_eq, ergTy_of hb]; simp
 
 /-- The answer clause of the promise holds for every typed answer. -/
-theorem resultClause_wahr (f : Fin u.fns.length) :
+theorem resultClause_wahr (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = false) :
     ∀ v : ErgVal (declOf u) ((declOf u).erg f),
       ∀ q ∈ (resultClause (fnAt u f) (ergValOf ((declOf u).erg f) v)).toList, q := by
-  have he := erg_eq u f
+  have he := (erg_eq u f).trans (ergTy_of hb)
   revert he
   generalize (declOf u).erg f = e
   intro he v q hq
@@ -159,6 +164,7 @@ def wfU (u : UProg) (s : Gabbro.Body.State) : Prop := Gabbro.Body.WF (shapeOfU u
 theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.length)
     (hA : ArtStimmt (fnAt u f)) (hT : TabEindeutig u) (hN : NamenFrei (fnAt u f))
     (hO : OldsKurz u (fnAt u f)) (hD : PostDef u (fnAt u f))
+    (hBE : (fnAt u f).ergBool = false) (hBT : ∀ t : Fin u.tabellen.length, (tabAt u t).bools = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
     (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WRel u σ' s'.world) :
@@ -172,13 +178,13 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
   have hE : HEq E₀ E := cast_heq _ _
   have hL : LRel (fnAt u f) (if (fnAt u f).ergebnis.isSome then 1 else 0) E₀ s.local' := by
     intro p j hj
-    rw [nthVal_heq (ensCtx_eq u f) E₀ E hE, ← isSome_erg, nthVal_ergEnv]
+    rw [nthVal_heq (ensCtx_eq u f) E₀ E hE, ← isSome_erg f hBE, nthVal_ergEnv]
     exact (hL₀ p j hj).trans (by rw [Nat.zero_add])
   have her : (fnAt u f).ergebnis.isSome = true →
       ergValOf ((declOf u).erg f) v = some (nthVal E₀ 0) := by
     intro h
     rw [nthVal_heq (ensCtx_eq u f) E₀ E hE]
-    exact ergValOf_nth _ v ρ (by rw [isSome_erg]; exact h)
+    exact ergValOf_nth _ v ρ (by rw [isSome_erg f hBE]; exact h)
   have hcl := ensList_iff hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).sichert cs e0
     hO hcs he0
   have hev : eval σ₀ (P.ensures f) σ' E = eval σ₀ e0 σ' E₀ :=
@@ -187,12 +193,12 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
   rw [show ergEnv ((declOf u).erg f) v ρ = E from rfl, hev, ← hcl]
   simp only [postU, hcs, Option.getD_some]
   rw [chain_iff]
-  have hrc := resultClause_wahr f v
+  have hrc := resultClause_wahr f hBE v
   constructor
   · intro ⟨_, hall⟩ q hq
     exact hall q (List.mem_append_right _ hq)
   · intro hall
-    refine ⟨wf_of_wrel u hW, fun q hq => ?_⟩
+    refine ⟨wf_of_wrel u hBT hW, fun q hq => ?_⟩
     rcases List.mem_append.mp hq with hq | hq
     · exact hrc q hq
     · exact hall q hq
@@ -203,6 +209,7 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
 def endBody (u : UProg) (fn : UFn) : URet → Option (List Gabbro.Body.Stmt)
   | .keine => some []
   | .wert v => (sideExpr u fn v).map (fun e => [.ret (some e)])
+  | .bool _ => none
 
 theorem zuBody_eq (fn : UFn) : zuBody u fn =
     match stmtsBody u fn fn.saetze with
@@ -215,6 +222,7 @@ theorem zuBody_eq (fn : UFn) : zuBody u fn =
     cases fn.rueck with
     | keine => simp [endBody]
     | wert v => simp only [endBody, Option.map_map]; rfl
+    | bool _ => simp [endBody]
 
 theorem ergValOf_heq {D : Deklaration} {e₁ e₂ : Option Ty} (h : e₁ = e₂) (x₁ : ErgVal D e₁)
     (x₂ : ErgVal D e₂) (hx : HEq x₁ x₂) : ergValOf e₁ x₁ = ergValOf e₂ x₂ := by
@@ -247,6 +255,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
       ∀ ρB : Gabbro.Body.Env, Gabbro.Body.finalState (Gabbro.Body.exec ρB eB s) = some s ∧
         Gabbro.Body.finalValue (Gabbro.Body.exec ρB eB s) = ergValOf (verOf u c).erg v := by
   cases r with
+  | bool _ => simp [endBody] at hb
   | keine =>
     simp only [endBody, Option.some.injEq] at hb
     subst hb
@@ -259,7 +268,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
       refine ⟨_, _, rfl, rfl, fun ρB => ⟨rfl, ?_⟩⟩
       have he : (verOf u c).erg = none := by
         show (vertragVon (declOf u) c).erg = none
-        rw [vErg_eq u c, hE]; rfl
+        rw [vErg_eq u c, hE]
       rw [ergValOf_none _ he]
       rfl
     · intro h; cases h
@@ -274,8 +283,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
       revert h
       simp only [lowEnd]
       split
-      · intro h; cases h
-      · rename_i w hE
+      · rename_i lo hi hE
         split
         · intro h; cases h
         · rename_i ve hve
@@ -283,16 +291,18 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
           cases h
           refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
           obtain ⟨sw, sl⟩ := s
-          have herg : (verOf u c).erg = some (.int w.1 w.2) := by
+          have herg : (verOf u c).erg = some (.int lo hi) := by
             show (vertragVon (declOf u) c).erg = _
-            rw [vErg_eq u c, hE]; rfl
+            rw [vErg_eq u c, hE]
           generalize hσl : σ.lese _ _ = σl
           have hWl : WRel u σl sw := by rw [← hσl]; exact wrel_slots u rfl hW
           have hv := lowWertAt_sim hve hs hA hT σl σl ρ sw sl hWl hL
           rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.wert (D := declOf u) ve) σl ρ)
-            (evalErg_heq herg _ _ (mpr3id_heq _ _ _ _) _ _ _)]
+            (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
           simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
             Gabbro.Body.finalValue]
           trivial
+      · intro h; cases h
+      · intro h; cases h
 
 end Gabbro.Bruecke

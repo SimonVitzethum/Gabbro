@@ -95,10 +95,9 @@ theorem sigGruende_zero (u : UProg) (i : Fin u.fns.length) :
   rw [sigAt_get u i]
   rfl
 
-/-- The contract result is the recorded range. -/
+/-- The contract result is the recorded type (`bool`, a range, or none). -/
 theorem vErg_eq (u : UProg) (c : Fin u.fns.length) :
-    (vertragVon (declOf u) c).erg =
-      (fnAt u c).ergebnis.map fun r => .int r.1 r.2 := by
+    (vertragVon (declOf u) c).erg = (fnAt u c).ergTy := by
   show (sigAt u c.val).erg = _
   rw [sigAt_get u c]
   rfl
@@ -176,7 +175,7 @@ def assignDurchStmt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     Stmt (declOf u) V false Γ Λ Λ := by
   have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
     show Expr (declOf u) Γ Λ (typAt u t fh.idx)
-    rw [typAt_of u t fh.idx fh.weit fh.hit]
+    rw [fh.hint]
     exact e
   exact Stmt.assignDurch (D := declOf u) p t ht fh.idx i e2 hw hL
 
@@ -192,9 +191,42 @@ def assignSlotStmt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     Stmt (declOf u) V false Γ Λ Λ := by
   have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
     show Expr (declOf u) Γ Λ (typAt u t fh.idx)
-    rw [typAt_of u t fh.idx fh.weit fh.hit]
+    rw [fh.hint]
     exact e
   exact Stmt.assignSlot (D := declOf u) t fh.idx i e2 hw hL
+
+/-- A `durch` write into a BOOL field. -/
+def assignDurchStmtB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (bh : BoolHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
+    (ht : (declOf u).tabNr t.val = some t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ .bool)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V false Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t bh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t bh.idx)
+    rw [bh.hbool]
+    exact e
+  exact Stmt.assignDurch (D := declOf u) p t ht bh.idx i e2 hw hL
+
+/-- A `slot` write into a BOOL field. -/
+def assignSlotStmtB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (bh : BoolHit u t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ .bool)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V false Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t bh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t bh.idx)
+    rw [bh.hbool]
+    exact e
+  exact Stmt.assignSlot (D := declOf u) t bh.idx i e2 hw hL
 
 /-- A slot write through a pointer parameter. -/
 def lowAssignDurch (u : UProg) (caller : Fin u.fns.length)
@@ -268,6 +300,81 @@ def lowAssignTab (u : UProg) (caller : Fin u.fns.length)
                 exact hw
               .ok (assignSlotStmt u (ctxOf u caller)
                 (resOf u caller) (verOf u caller) t fh i e hwV hL)
+            else .error "write without right"
+          else .error "access without held guard"
+
+/-- A truth value written through a pointer parameter into a bool field. -/
+def lowAssignDurchB (u : UProg) (caller : Fin u.fns.length)
+    (b fname : String) (ix : UIdx) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) false
+      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
+  match paramPos (fnAt u caller).params b with
+  | .error e => .error e
+  | .ok j =>
+    match (fnAt u caller).parten[j]? with
+    | some (.ptr num true) =>
+      if h : num < u.tabellen.length then
+        match fieldHitB u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok bh =>
+          match lowVar (ctxOf u caller) j (.ptr num true) with
+          | .error e => .error e
+          | .ok pv =>
+            match lowIdx u (ctxOf u caller) (resOf u caller)
+                (fnAt u caller) 0 ⟨num, h⟩ ix with
+            | .error e => .error e
+            | .ok i =>
+              match lowEns u (ctxOf u caller) (resOf u caller)
+                  (fnAt u caller) none v with
+              | .error e => .error e
+              | .ok e =>
+                if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                    Res.von (declOf u) wdd ∈ resOf u caller then
+                  if hw : writesAt u (fnAt u caller)
+                      ⟨num, h⟩ = true then
+                    have hwV : (verOf u caller).schreibt
+                        ⟨num, h⟩ = true := by
+                      show (vertragVon (declOf u) caller).schreibt
+                        ⟨num, h⟩ = true
+                      rw [vSchreibt_eq u caller ⟨num, h⟩]
+                      exact hw
+                    .ok (assignDurchStmtB u (ctxOf u caller)
+                      (resOf u caller) (verOf u caller) ⟨num, h⟩
+                      bh (Expr.var pv) (tabNr_some u num h) i e
+                      hwV hL)
+                  else .error "write without right"
+                else .error "access without held guard"
+      else .error "pointer table unknown"
+    | _ => .error "place without G form"
+
+/-- A truth value written at a table into a bool field. -/
+def lowAssignTabB (u : UProg) (caller : Fin u.fns.length)
+    (b fname : String) (ix : UIdx) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) false
+      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
+  match tabIdx u.tabellen b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHitB u t fname with
+    | .error e => .error e
+    | .ok bh =>
+      match lowIdx u (ctxOf u caller) (resOf u caller)
+          (fnAt u caller) 0 t ix with
+      | .error e => .error e
+      | .ok i =>
+        match lowEns u (ctxOf u caller) (resOf u caller)
+            (fnAt u caller) none v with
+        | .error e => .error e
+        | .ok e =>
+          if hL : ∀ wdd ∈ (declOf u).braucht t,
+              Res.von (declOf u) wdd ∈ resOf u caller then
+            if hw : writesAt u (fnAt u caller) t = true then
+              have hwV : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hw
+              .ok (assignSlotStmtB u (ctxOf u caller)
+                (resOf u caller) (verOf u caller) t bh i e hwV hL)
             else .error "write without right"
           else .error "access without held guard"
 
@@ -523,6 +630,8 @@ def lowStmt (u : UProg) (caller : Fin u.fns.length) : UStmt →
       (ctxOf u caller) (resOf u caller) (resOf u caller))
   | .assign b f ix v => lowAssignDurch u caller b f ix v
   | .assignTab b f ix v => lowAssignTab u caller b f ix v
+  | .assignB b f ix v => lowAssignDurchB u caller b f ix v
+  | .assignTabB b f ix v => lowAssignTabB u caller b f ix v
   | .call c args => lowCall u caller c args
 
 /-! ## Generic lowering: bodies and program assembly -/
@@ -540,12 +649,11 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
     Except String (Endblock (declOf u) (verOf u caller) false
       (ctxOf u caller) (resOf u caller))
   | .keine =>
-    match hE : (fnAt u caller).ergebnis with
+    match hE : (fnAt u caller).ergTy with
     | none =>
       have hV : (verOf u caller).erg = none := by
         show (vertragVon (declOf u) caller).erg = none
         rw [vErg_eq u caller, hE]
-        rfl
       have eK : ErgExpr (declOf u) (ctxOf u caller)
           (resOf u caller) (verOf u caller).erg := by
         rw [hV]
@@ -553,11 +661,10 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
       .ok (Endblock.ret eK (endPerm_ok u caller))
     | some _ => .error "return without value with result"
   | .wert s =>
-    match hE : (fnAt u caller).ergebnis with
-    | none => .error "return with value without result"
-    | some w =>
+    match hE : (fnAt u caller).ergTy with
+    | some (.int lo hi) =>
       match lowWertAt u (ctxOf u caller) (resOf u caller)
-          (fnAt u caller) w.1 w.2 s with
+          (fnAt u caller) lo hi s with
       | .error e => .error e
       | .ok v =>
         have eW : ErgExpr (declOf u) (ctxOf u caller)
@@ -566,9 +673,26 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
           show ErgExpr (declOf u) (ctxOf u caller)
-            (resOf u caller) (Option.some (.int w.1 w.2))
+            (resOf u caller) (Option.some (.int lo hi))
           exact ErgExpr.wert v
         .ok (Endblock.ret eW (endPerm_ok u caller))
+    | some _ => .error "number returned for a non-number result"
+    | none => .error "return with value without result"
+  | .bool b =>
+    match hE : (fnAt u caller).ergTy with
+    | some .bool =>
+      match lowEns u (ctxOf u caller) (resOf u caller) (fnAt u caller) none b with
+      | .error e => .error e
+      | .ok v =>
+        have eW : ErgExpr (declOf u) (ctxOf u caller)
+            (resOf u caller) (verOf u caller).erg := by
+          rw [show (verOf u caller).erg =
+            (vertragVon (declOf u) caller).erg from rfl,
+            vErg_eq u caller, hE]
+          exact ErgExpr.wert v
+        .ok (Endblock.ret eW (endPerm_ok u caller))
+    | some _ => .error "truth value returned for a non-bool result"
+    | none => .error "return with value without result"
 
 /-- The body: straight-line writes and direct calls, then the
     trailing return. -/

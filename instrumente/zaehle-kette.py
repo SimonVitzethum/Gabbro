@@ -45,6 +45,12 @@ Without `--lean` a present instance reads "Lean not re-run" and counts as NOT cl
 an unchecked instance is not a check. `Schlusssatz104.lean` (the by-hand theorem of one
 program) no longer closes a chain on its own.
 
+GENERIC CHAIN INSTANCES (P6, 2026-09-30): `bruecke/Bruecke/Instanz*.lean` may carry
+`CHAIN-GENERIC <program.gab> <def>`, a chain assembled by the generic `ketteAllg` (`Quelle.lean`) for a
+unit with no tables. It counts like any other closed chain when its `-- SRC-BEGIN quelle` block IS the
+program's file byte for byte, the certificate literal it pastes IS the printer's, the module builds in
+`bruecke/` and the build prints `#print axioms <def>` as the standard three -- and columns (a), (d) pass.
+
 EXIT CODES -- a counter, not a guard: 0 once it measured (even when the chain count is
 0 -- zero closed chains is the measurement, not a defect of the tree), 2 (ABBRUCH) when
 it measured nothing: no binary, a stale binary without `--allow-stale`, an empty
@@ -280,6 +286,57 @@ def pruefe_instanz(texte, kette, programm_text, gedruckt):
     module = sorted({modul(datei)} | {modul(p) for p in anwender})
     return True, f"instance `{kette}` in {datei.name}, applied in " + \
         ", ".join(p.name for p in anwender), module
+
+
+MARKE_GEN = re.compile(r"CHAIN-GENERIC\s+(\S+\.gab)\s+(\w+)")
+STANDARD = "[propext, Classical.choice, Quot.sound]"
+
+
+def generische_instanzen():
+    """The generic chain instances of `bruecke/Bruecke/`: program file name -> (path, def name, text)."""
+    gefunden = {}
+    for p in sorted((W / "bruecke" / "Bruecke").glob("Instanz*.lean")):
+        try:
+            t = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for m in MARKE_GEN.finditer(t):
+            gefunden[pathlib.Path(m.group(1)).name] = (p, m.group(2), t)
+    return gefunden
+
+
+def pruefe_generisch(eintrag, programm_text, gedruckt):
+    """Verify one generic instance by text: (ok, detail, module)."""
+    p, name, t = eintrag
+    quelle = block_text(t, "quelle")
+    if quelle is None:
+        return False, "no readable `-- SRC-BEGIN quelle` block", None
+    if quelle != programm_text:
+        return False, "the pinned source differs from the file (stale paste)", None
+    mz = re.search(r"def\s+(zert\w*)\s*:\s*KCert\s+[^\n]*:=\s*(\[.*?\])\s*\n\s*\n", t, re.S)
+    if not mz:
+        return False, "no `def zert… : KCert … := […]` literal", None
+    if gedruckt is None or normiere(mz.group(2)) != gedruckt:
+        return False, "certificate `%s` is not the printer's literal" % mz.group(1), None
+    if not re.search(r"def\s+" + re.escape(name) + r"\s*:\s*Kette\s+quelle\b", t):
+        return False, "no `def %s : Kette quelle`" % name, None
+    return True, "generic instance `%s` in %s" % (name, p.name), "Bruecke." + p.stem
+
+
+def bruecke_bau(module, name):
+    """`lake build` of a bridge module: green, and the build prints `#print axioms <name>` as the
+    standard three (a missing print is a missing measurement)."""
+    try:
+        r = subprocess.run(["lake", "build", module], capture_output=True, text=True,
+                           cwd=W / "bruecke", timeout=LEAN_FRIST,
+                           env={**umgebung(), "LEAN_NUM_THREADS": "4"})
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if r.returncode != 0:
+        return False
+    z = re.search(r"'([\w.]*\.)?" + re.escape(name) + r"' depends on axioms: (\[[^\]]*\])",
+                  r.stdout + r.stderr)
+    return bool(z) and z.group(2) == STANDARD
 
 
 def modul(pfad):
@@ -545,6 +602,8 @@ def main():
 
     zeilen = []
     geschlossen_kandidaten = {}
+    gen = generische_instanzen()
+    gen_bau = {}
     for f in dateien:
         # (a) Lean parse: the generic pipeline, evaluated.
         if stufen is None:
@@ -630,6 +689,18 @@ def main():
                 e = ("FAIL", f"instance: {detail}")
             else:
                 geschlossen_kandidaten[f.name] = (detail, module)
+        elif f.name in gen:
+            try:
+                programm_text = f.read_text(encoding="utf-8")
+            except OSError:
+                programm_text = None
+            ok_i, detail, module = pruefe_generisch(gen[f.name], programm_text, gedruckt)
+            if not ok_i:
+                e = ("FAIL", f"generic instance: {detail}")
+            else:
+                geschlossen_kandidaten[f.name] = (detail, [])
+                gen_bau[f.name] = (module, gen[f.name][1])
+                e = ("pass", "KCert printed (generic instance pastes it)")
         zeilen.append((f.name, a, b, c, d, e))
 
     gebaut = {}
@@ -638,6 +709,8 @@ def main():
         gruen = lake_bau(alle_module)
         for name in geschlossen_kandidaten:
             gebaut[name] = gruen
+        for name, (bm, bd) in gen_bau.items():
+            gebaut[name] = bruecke_bau(bm, bd)
 
     print(f"zaehle-kette: {len(zeilen)} programs in beispiele/*.gab, binary {binary}")
     print("  sieve: (a) Lean parse [uebersetzeAllg]  (b) lean-g [diag]  (c) certificate [diag]  "

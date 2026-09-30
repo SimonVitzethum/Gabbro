@@ -243,14 +243,19 @@ This section exists because the alternative is that a reader has to find it out.
     the binary is translation validation (T1–T5), and it is open.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
-- **The chain is closed for two programs, by ONE generic theorem** (`schlusssatz`,
-  single-threaded; `beispiele/104` and `beispiele/108`). Every other program is open — chain
-  count 2 of 129 (`instrumente/zaehle-kette.py --lean`, 2026-09-26). Concurrent translation
+- **The chain is closed for five programs, by ONE generic theorem** (`schlusssatz`,
+  single-threaded; `beispiele/104` and `108` by hand, `130`, `69` and `73` through the generic
+  `ketteAllg` over table-free units, `bruecke/Bruecke/Quelle.lean`). Every other program is open —
+  chain count 5 of 148 (`instrumente/zaehle-kette.py --lean`, 2026-09-30). Concurrent translation
   validation (stage b) is closed for one program (`schlusssatz_124`) and open in general.
-- **GabbroV's proofs reach the goal theorem for two programs.** For a unit the Lean parser
-  elaborates (`beispiele/104`, `108`; 2 of 146, `instrumente/zaehle-bruecke.py`), premise (b)
-  (`NutzerPflichtA`) is *derived* in Lean from GabbroV's duty files (`bruecke/`,
-  `messung/GABBROV-BRUECKE-REPORT.md`), so chain and bridge are both closed end to end. For every
+- **GabbroV's proofs reach the goal theorem for five programs, and for every source the Lean
+  front end accepts the statement is COMPUTED, not printed.** For a unit the Lean parser
+  elaborates (`beispiele/104`, `108`, `130`, `69`, `73`; 5 of 148, `instrumente/zaehle-bruecke.py`),
+  premise (b) is *derived* in Lean from GabbroV's duties (`bruecke/`,
+  `messung/GABBROV-BRUECKE-REPORT.md`, `messung/PARSER-LANE-REPORT.md`), so chain and bridge are
+  both closed end to end (5 of 148). The general statement is `nutzer_aus_quelle`
+  (`bruecke/Bruecke/Quelle.lean`, axioms standard): `Pflichten src` is computed in Lean from the
+  source text and `gabbro prove --template --source` writes a person's file from it. For every
   other program (b) is still an assumption; units with a shared atomic are not bridged.
 - **Most accepted programs are not judged in Lean at all.** Of 199 accepted programs under
   `beispiele/`, 23 have a generated certificate; the other 176 are refused by the exporter and
