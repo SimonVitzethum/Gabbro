@@ -98,7 +98,6 @@ command -v cc > /dev/null 2>&1 || nicht_gelaufen "no cc on this machine"
 [ -f "$QUELLE" ]  || nicht_gelaufen "no probe source at $QUELLE"
 [ -f "$HAND" ]    || nicht_gelaufen "no handwritten twin at $HAND"
 [ -f "$TREIBER" ] || nicht_gelaufen "no driver at $TREIBER"
-[ -f "$FADEN" ]   || nicht_gelaufen "no thread runtime at $FADEN"
 [ "$(uname -m)" = x86_64 ] || nicht_gelaufen "the thread runtime is x86_64 (raw clone)"
 
 # **Which binary, and is it newer than the sources?** One register, one file:
@@ -109,6 +108,7 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 # 2026-09-30): `laufzeit/faden.c` and `bibliothek/linux/linux.c` are gone.
 "$GABBRO" runtime threads > "$ARB/faden_laufzeit.c" || nicht_gelaufen "gabbro runtime threads failed"
 "$GABBRO" emit "$W/bibliothek/linux/linux.gab" > "$ARB/linux_bind.c" || nicht_gelaufen "the binding does not emit"
+[ -s "$FADEN" ]   || nicht_gelaufen "no thread runtime at $FADEN"
 
 # -- the mutations (`--gift`) --------------------------------------------------
 #
@@ -244,7 +244,7 @@ if [ -z "$GIFT" ]; then
     stufe "the emitted C of a concurrent program against a HANDWRITTEN C twin"
     echo "   source        $QUELLE"
     echo "   twin          $HAND"
-    echo "   driver        $TREIBER (delay $BREMSE, thread runtime laufzeit/faden.c)"
+    echo "   driver        $TREIBER (delay $BREMSE, thread runtime faden.laufzeit, generated)"
     echo "   the source's answer: $ERWARTET (sum of 64 guarded reads, lock acquisitions)"
     ergebnis="$(beurteile "$ARB" "")"
     printf '%s\n' "$ergebnis" | grep -E '^(LINE|OVERLAP)' | sed 's/^/   /'

@@ -4788,3 +4788,28 @@ gate) as a region:
 Measured: `pruefe-seiten-zurueck.sh` GREEN (RSS 2504 -> 1608 KiB bound, stays unbound, poison
 caught -- the numbers of the C binding it replaces); `pruefe-os-bindung.sh` GREEN with the ticket
 lock, gifts 1-8 caught. Hosted C0 818 -> 687 lines.
+
+## 66. Hosted threads without pthread: `tor.trampolin` and `faden.laufzeit` (C-free lane, 2026-09-30)
+
+**The gap.** Hosted threads were `pthread_create`/`pthread_join` in `bibliothek/linux/linux.c` (the
+driver's roots) and a raw `clone` in the same C file behind `laufzeit/faden.c` (the run-time
+`start`). Now every gate that claims a stack gets a C-only TRAMPOLINE from the emitter (the
+gate's `syscall`; in the child the root, then the end, on the handed stack), and the generated
+thread runtime starts every root through the program's stack gate `gabbro_os_klon_tor`
+(`linux.gab`), with the root and the program's `-> never` thread end handed as C designators in
+two callee-saved registers the gate neither binds nor destroys (`C187` otherwise).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `nachSyscall`, `kindPfad` | SchablonenFaden §1 | the kernel's hand-over and the trampoline's child path |
+| **`trampolin_kind`** | SchablonenFaden §1 | the child calls root then end, each with `rsp + 8` 16-aligned inside the 24 bytes below the handed top; `ud2` only if the end returns |
+| `trampolin_ohne_bewahrung`, `trampolin_eltern` | SchablonenFaden §1 | without preserved registers the child jumps to 0; the parent gets the kernel's word |
+| `wort`, `vertragsSpur` | SchablonenFaden §2 | the join word under the gate's contract (id before the child runs, 0 after its end) |
+| **`faden_warte_korrekt`** | SchablonenFaden §2 | the wait returns only after the thread's end, for every child length and every look |
+| `faden_warte_ohne_eltern`, `faden_zeuge` | SchablonenFaden §2 | the order is load-bearing; WITNESS |
+
+The driver's stacks are regions of the binding (`gabbro_os_reserve`/`_commit`) with the lowest page
+left unwritable. Found on the way: `N572` (every stack-gate call hands to a `child` region) and
+the clone trap's store order (OFFEN O38). Measured: `pruefe-os-bindung.sh` GREEN (the os-probe's
+two roots, arena and lock, no pthread), 8 gifts caught; `pruefe-emission.sh` ALL PASS including
+the 200000-round join race and the concurrent twin (20 of 20); hosted C0 687 -> 28 lines.

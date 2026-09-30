@@ -495,7 +495,8 @@ pub const EINORDNUNG: &[Posten] = &[
     Posten {
         konstrukt: "start",
         traegt: Traegt::Fremd,
-        grund: "one raw-clone spawn per root plus one join each, all in `laufzeit/faden.c`; \
+        grund: "one raw-clone spawn per root plus one join each, all in the generated thread \
+                runtime (template `faden.laufzeit`, through the program's stack gate); \
                 the unit owns the stacks, the emitter the calls. The SUM cost bill (F4) is \
                 the checker's, not the C's",
     },

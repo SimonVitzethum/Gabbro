@@ -431,12 +431,12 @@ echo "  stub ends the machine if the entry is ever taken (since Opus agent L the
 echo "  the shape at check time, N561 -- a unit listed here was emitted without the checker):"
 printf '%b\n' "$bindung_liste" | sed '/^$/d'
 echo "  HOSTED runtime files, each with its bare-metal counterpart:"
-echo "    laufzeit/faden.c       the program's binding      -> laufzeit/metall/kern.c (gabbro_faden_*)"
+echo "    faden.laufzeit (driver) the thread runtime        -> laufzeit/metall/kern.c (gabbro_faden_*)"
 echo "    <unit>.treiber.c arena runtime (template arena.dyn) -> laufzeit/metall/arena.c"
 echo "    <unit>.treiber.c       the program's binding      -> <unit>.metall.c (generated)"
 echo "  NONE of them names an OS function since TODO section 0e K8, and none issues a raw"
-echo "  system call: they call the names of laufzeit/bindung.h, which the PROGRAM defines"
-echo "  (bibliothek/linux/). What is hosted about them is the binding beside them, not a"
+echo "  system call: they call names the PROGRAM defines in Gabbro (bibliothek/linux/linux.gab,"
+echo "  since 2026-09-30 with no C beside it). What is hosted about them is the binding, not a"
 echo "  call inside them -- measured three ways by instrumente/pruefe-os-bindung.sh."
 
 if [ "$befund" != 0 ] || [ "$n_ok" != "$n_nenner" ]; then

@@ -2200,11 +2200,12 @@ pub fn emittiere_mit(
     if !namen.start_orte.is_empty() {
         aus.push_str(
             "\n/* Runtime thread starts (`start { f, g };`, lane 260). The runtime owns\n\
-             \x20* creation and joining (`laufzeit/faden.c`: our own raw `clone`, no libc\n\
+             \x20* creation and joining (hosted: the generated thread runtime, template\n\
+             \x20* `faden.laufzeit`, through the program's stack gate -- no libc
              \x20* threading on these paths); the unit owns the stacks below, one 64 KiB\n\
              \x20* region per root, and these two declarations are the contract between\n\
              \x20* them. A misspelt name is an undefined reference, not a silent default.\n\
-             \x20* Linked with `laufzeit/faden.c`; stage 9 (`cc -c`) needs only the names. */\n\
+             \x20* The runtime stands in the driver; stage 9 (`cc -c`) needs only the names. */\n\
              int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort);\n\
              void gabbro_faden_warte(uint32_t *wort);\n",
         );
@@ -12240,7 +12241,7 @@ fn anweisung(
             for (i, name) in wurzeln.iter().enumerate() {
                 aus.push_str(&format!(
                     "{e}/* start {name} -- a runtime thread on our own raw clone\n\
-                     {e} * (`laufzeit/faden.c`); joined below before the starter proceeds. */\n\
+                     {e} * (template `faden.laufzeit`); joined below before the starter proceeds. */\n\
                      {e}if (gabbro_faden_start({name}, gabbro_stapel_{nr}_{i} + 65536u, \
                      &gabbro_wort_{nr}_{i}) != 0) __builtin_trap();\n"
                 ));

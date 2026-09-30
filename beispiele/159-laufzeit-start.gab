@@ -2,8 +2,9 @@
 --
 -- `start { heber_a, heber_b };` runs both roots as threads of their own and
 -- joins them before the starter proceeds. The threads are made by OUR OWN
--- code issuing the kernel system call (`laufzeit/faden.c`: x86_64 `clone`,
--- no libc threading on these paths), on stacks the unit owns (the emitter
+-- code issuing the kernel system call (the generated thread runtime,
+-- template `faden.laufzeit`, through the program's stack gate -- no libc
+-- threading on these paths), on stacks the unit owns (the emitter
 -- writes one 64 KiB static region per root beside the tables). Each root
 -- raises the shared counter `zaehler` once per `takt` slot under the lock
 -- `L`, so the joined total is deterministic: 2 * N, on every schedule. The

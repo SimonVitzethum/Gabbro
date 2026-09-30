@@ -286,8 +286,14 @@ generated driver, lock through the chain). Reviewers from 321.
     (template `sperre.ticket`), its yield a Gabbro gate; the hand drivers `laufzeit/start.c`,
     `start_pool.c` deleted. The page return in Gabbro (template `region.leeren`, the helper
     computes the pages, `madvise` is a gate). Hosted C0 818 -> 687 lines (`zaehle-c.py`).
-  - [ ] Threads without pthread (the `child`/`stack` lowering as a proved template, `C185`);
-    then `bindung.h`, `faden.c`, `linux.c` go; the os-probe's own `melde.c`.
+  - [x] Threads without pthread: the C-only trampoline of the program's stack gate (template
+    `tor.trampolin`) and the generated thread runtime (`faden.laufzeit`), both proved as
+    abstract cores (`SchablonenFaden.lean`); `bibliothek/linux/linux.c`, `laufzeit/bindung.h`,
+    `faden.c`, `faden.h` deleted -- the hosted binding is Gabbro only. On the way: `N572` (a
+    stack-gate call with no `child` region checked clean), the clone trap's store (OFFEN O38).
+    Hosted C0 687 -> 28 lines, 1 file (`zaehle-c.py`): the os-probe's own `melde.c`.
+  - [ ] The os-probe's own `melde.c` (the program's foreign body the instrument tells apart
+    from the runtime's); a hosted `nolibc` driver (the driver's `main` still returns into libc).
   - [ ] The kernel-module target (C2) and bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics

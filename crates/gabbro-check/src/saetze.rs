@@ -4798,7 +4798,7 @@ pub const PHASEN: &[Satz] = &[
                      crates/gabbro-check/src/aufrufgraph.rs (the `Start` arms of \
                      `sammle_rufe`, `sammle_kanten`); crates/gabbro-check/src/kosten.rs \
                      (the `Start` arm); crates/gabbro-check/src/emit.rs (the `Start` \
-                     arm, lane 260) with `laufzeit/faden.c`; dokumente/SYNTAX.md",
+                     arm, lane 260) with the thread runtime `faden.laufzeit` (C-free lane); dokumente/SYNTAX.md",
     },
     Satz {
         name: "parser.bibliothek-nutzlast",
