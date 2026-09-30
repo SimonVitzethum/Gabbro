@@ -88,6 +88,12 @@ pub struct Manifest {
     /// a path baked into this tree would be a fact about one machine, and a kernel
     /// version baked in would be a fact about one kernel.
     pub kmod: Option<(String, String)>,
+    /// `nolibc` (C-free lane, C1): the `program` units of this manifest are Linux x86_64
+    /// processes WITHOUT a C library -- linked `-nostdlib -static`, entered by a generated
+    /// `_start` that calls `main` and ends the process with its answer. Every operating-system
+    /// call the program makes is then its own `syscall` item, and a name it leaves to libc is
+    /// the linker's refusal.
+    pub ohne_libc: bool,
 }
 
 /// **FNV-1a, 64 bit, by hand.**
@@ -128,6 +134,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     let mut einheiten: Vec<Einheit> = Vec::new();
     let mut metall: Option<String> = None;
     let mut kmod: Option<(String, String)> = None;
+    let mut ohne_libc = false;
     for (nr, roh) in text.lines().enumerate() {
         let nr = nr + 1;
         let ohne_kommentar = match roh.find("--") {
@@ -178,6 +185,12 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                     ));
                 }
                 kmod = Some((worte[1].to_string(), worte[2].to_string()));
+            }
+            "nolibc" => {
+                if worte.len() != 1 {
+                    return Err(format!("{}:{nr}: `nolibc` takes no argument", pfad.display()));
+                }
+                ohne_libc = true;
             }
             "metal" => {
                 if worte.len() != 2 {
@@ -245,7 +258,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             andere => {
                 return Err(format!(
                     "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `metal`, \
-                     `kmod`, `unit`, or an INDENTED file path",
+                     `kmod`, `nolibc`, `unit`, or an INDENTED file path",
                     pfad.display()
                 ));
             }
@@ -284,7 +297,27 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             pfad.display()
         ));
     }
-    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod })
+    // **`nolibc` is a statement about hosted programs**, and the flag that makes it true of
+    // the emitted C is the manifest's own: without `-ffreestanding` the compiler may turn a
+    // loop into `memset` or a `printf` into `puts`, and the linker's word would be a name
+    // the program never wrote.
+    if ohne_libc {
+        if kmod.is_some() || metall.is_some() {
+            return Err(format!(
+                "{}: `nolibc` stands beside a `kmod` or `metal` line -- those products have no \
+                 C library either way, and one manifest is one kind of product",
+                pfad.display()
+            ));
+        }
+        if !compiler.iter().any(|w| w == "-ffreestanding") {
+            return Err(format!(
+                "{}: `nolibc` needs `-ffreestanding` on the `compiler` line -- without it the \
+                 compiler may call `memset`/`memcpy`/`puts` on its own",
+                pfad.display()
+            ));
+        }
+    }
+    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod, ohne_libc })
 }
 
 /// **The name the linker looks for, and this is the only place in the tree that spells it.**
@@ -2360,6 +2393,33 @@ fn baue_einheit(
         for o in &fremd_objekte {
             binde.arg(o);
         }
+        // **`nolibc`: a process without a C library** (C-free lane, C1). The entry is a
+        // generated `_start`, compiled with the manifest's own compiler line, and the link
+        // takes no startup file, no library and nothing dynamic.
+        if manifest.ohne_libc {
+            let start_c = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.c", e.name));
+            let start_o = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.o", e.name));
+            if let Err(err) = std::fs::write(&start_c, prozess_start(EINTRITT)) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", start_c.display()));
+            }
+            let mut ruf = std::process::Command::new(&manifest.compiler[0]);
+            ruf.args(&manifest.compiler[1..]);
+            ruf.arg("-c").arg("-o").arg(&start_o).arg(&start_c);
+            match ruf.output() {
+                Ok(a) if a.status.success() => {}
+                Ok(a) => {
+                    eprint!("{}", String::from_utf8_lossy(&a.stderr));
+                    return Ergebnis::Abgesagt(format!(
+                        "{} refused the generated process entry",
+                        manifest.compiler[0]
+                    ));
+                }
+                Err(err) => {
+                    return Ergebnis::Abgesagt(format!("{} did not run: {err}", manifest.compiler[0]))
+                }
+            }
+            binde.arg(&start_o).arg("-nostdlib").arg("-static").arg("-Wl,-e,_start");
+        }
         for u in &unten.namen {
             binde.arg(PathBuf::from(&manifest.ausgabe).join(format!("{u}.o")));
         }
@@ -2491,6 +2551,34 @@ fn handgeschrieben(
         }
     }
     aus
+}
+
+/// **The process entry of a `nolibc` program, written by the build** (C-free lane, C1).
+///
+/// The kernel starts a Linux x86_64 process with `rsp` 16-aligned and pointing at `argc`, and
+/// no return address under it. A C function expects `rsp + 8` to be 16-aligned at entry, so
+/// the stub aligns, calls the program's `main` -- which the entry rule
+/// (`eintrittsregel`) already holds to be one public nullary function -- and hands its answer
+/// to `exit_group`. This is the only place the process protocol is spelled, and it is
+/// generated: a program that wants a different exit code calls its own `exit_group` gate
+/// first, and one that must never return declares `main` as `-> never`.
+fn prozess_start(eintritt: &str) -> String {
+    format!(
+        "/* Generated by the Gabbro build (`nolibc`) -- the process entry. Do not edit. */\n\
+         extern int {eintritt}(void);\n\
+         \n\
+         __attribute__((naked, noreturn)) void _start(void)\n\
+         {{\n\
+         \x20   __asm__ volatile (\n\
+         \x20       \"xor %ebp, %ebp\\n\"\n\
+         \x20       \"and $-16, %rsp\\n\"\n\
+         \x20       \"call {eintritt}\\n\"\n\
+         \x20       \"mov %eax, %edi\\n\"\n\
+         \x20       \"mov $231, %eax\\n\"\n\
+         \x20       \"syscall\\n\"\n\
+         \x20       \"ud2\\n\");\n\
+         }}\n"
+    )
 }
 
 /// The flag word of the bare-metal image -- the same as `instrumente/pruefe-metall.sh`'s:
