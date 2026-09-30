@@ -130,6 +130,36 @@ README §5 says exactly this; keep it that way.
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
   recorded blockage of 07 and 125). Reviewers reject bypasses, no matter how green the build.
+- **Guarantees come from generic theorems only** (Simon, 2026-09-30): nothing in the compiler,
+  checker or printers exists for particular programs, and GabbroV is to be proved right for EVERY
+  program (theorems over every source text), with its statements computed in Lean from the
+  source rather than trusted from a Rust print. Per-program Lean files are witnesses only, off
+  the trust path. Known violation to remove: `corrlean.rs`'s `Cert104` section (rows only for
+  functions named `einzahlen`/`lies`).
+- **No handwritten C in a finished Gabbro binary, as far as possible** (Simon, 2026-09-30).
+  Runtimes (`laufzeit/`), binding libraries (`bibliothek/`) and program support code are
+  written in Gabbro; OS access goes through Gabbro `syscall` items (raw system calls, no libc
+  wrapper), hardware access through Gabbro's register/port forms. Handwritten C or assembly
+  stays only where Gabbro cannot express the thing (e.g. a process or thread entry before any
+  stack exists), each such piece with its written reason, booked as a wall, and counted. The C
+  that the emitter WRITES from Gabbro is not meant by this rule. Measured 2026-09-30: ~5,100
+  lines of handwritten C/asm/headers in `laufzeit/` + `bibliothek/`, plus 117 in the network
+  stack. New handwritten C needs a reason why Gabbro cannot do it.
+  **Zero C keeps every guarantee** (Simon, 2026-09-30): code moved from C into Gabbro is checked
+  like user code, with no relaxed mode; system and kernel calls are user logic (`syscall`/`extern`
+  items in Gabbro source, contracts declared there, not assumptions), nothing knows an operating system; new emitter
+  templates are allowed only machine-checked in the template register (`gabbro schablonen
+  --tor`), each premise bound to the pass that establishes it.
+- **Everything new is modelled in Lean before it is merged** (Simon, 2026-09-30): every new
+  construct, runtime primitive, template or binding form gets its machine-G semantics and checker
+  side with `gabbro_ziel` still proved (a reviewed `Spec.lean` diff if the statement moves), the
+  Lean front end and exporter, GabbroV's `Body` model with the bridge simulation, and a C
+  correspondence lemma or proved template for every new emitted form. Without its Lean part a
+  feature stays unmerged (`NEEDS LEAN`).
+- **The operating system is user logic, never an assumption, and nothing is OS-specific**
+  (Simon, 2026-09-30): a system or kernel call is a generic call whose contract the program or
+  its binding library declares in Gabbro; the Lean model, the compiler, the checker and the
+  templates know no operating system. Only hardware behaviour is a named assumption.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
@@ -155,7 +185,12 @@ Since 2026-09-29 TWO lanes run there, each with one agent and its own clone: the
 lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`, Claude Sonnet 5.5) and, after the GabbroV
 lane finished (`FERTIG-V`), the GabbroV-bridge lane (`~/gabbro-v`, runner `lauf-b.sh`, owner of
 `programmlogik/`, `lean.rs` and `beweis.rs`; task `dokumente/AUFTRAG-GABBROV-VERIFIKATION.md`) on
-Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5. It builds and tests in its own tree, merges into master only with
+Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5.
+Since 2026-09-30 the GabbroV-bridge lane is done (`FERTIG-B`) and a PARSER lane works in
+`~/gabbro-v` (`lauf-p.sh`, sieve (a), generic proofs only). A third lane, the C-free lane, also runs on the
+server since 2026-09-30 (`~/gabbro-c`, runner `lauf-c.sh`, Sonnet 5.5; goal: no handwritten C and
+no libc in the network stack's binaries, then in every Gabbro binary), owner of `laufzeit/`,
+`bibliothek/linux/` and `bibliothek/linux-kmod/`. It builds and tests in its own tree, merges into master only with
 `cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
 task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
 Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
