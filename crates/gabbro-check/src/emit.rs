@@ -567,6 +567,8 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             // **Lane 257:** `grow` binds no name; the amount is a count,
             // never a record.
             | StmtArt::Grow(_)
+            // **M-ALLTAG C:** `reset A at i;` binds no name.
+            | StmtArt::ResetSlot(_)
             | StmtArt::Sperrt(_)
             | StmtArt::Observiert(_)
             | StmtArt::Leave(_)
@@ -686,13 +688,24 @@ fn verbundmarken(e: &Expr, verbund: &str, u: &Namen, absagen: &mut Absagen) -> O
 /// > is what has a witness, and the refusal says exactly which character it stopped at, so
 /// > widening it later is a one-line change with a reason attached.
 fn abschnitt_attribut(st: &StatischDecl, absagen: &mut Absagen) -> String {
-    let Some(t) = &st.section else { return String::new() };
+    // **`aligned N` (M-ALLTAG C).** The checker holds `N` to a constant power of two (`N570`); an
+    // `N` this file cannot read is refused here rather than dropped.
+    let mut ausricht = String::new();
+    if let Some(a) = &st.ausrichtung {
+        match a.art {
+            ExprArt::Zahl(n) => ausricht = format!(" __attribute__((aligned({n})))"),
+            _ => weigere(absagen, a.span, "`aligned` with a value that is not a literal number"),
+        }
+    }
+    let Some(t) = &st.section else { return ausricht };
     let schlecht = t
         .text
         .chars()
         .find(|c| !(c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '$')));
     match schlecht {
-        None if !t.text.is_empty() => format!(" __attribute__((section(\"{}\")))", t.text),
+        None if !t.text.is_empty() => {
+            format!("{ausricht} __attribute__((section(\"{}\")))", t.text)
+        }
         _ => {
             weigere(
                 absagen,
@@ -3211,6 +3224,11 @@ pub fn emittiere_mit(
     {
         let abschnitt = ketten_abschnitt(&aus, &rumpf);
         aus.insert_str(ketten_marke, &abschnitt);
+    }
+    // **M-ALLTAG C: the range give-back helper, on demand.** A unit that never
+    // writes `reset X at i count n;` keeps its bytes exactly.
+    if rumpf.contains("gabbro_region_leeren(") {
+        aus.insert_str(ketten_marke, REGION_LEEREN);
     }
     aus.push_str(&rumpf);
     // **The unit's own list of dynamic arena descriptors** (server lane, 2026-09-28,
@@ -9999,6 +10017,12 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             StmtArt::ResetArena(tisch) => {
                 aus.insert(tisch.text.clone());
             }
+            // **M-ALLTAG C:** `reset A at i;` names its arena and reads its index.
+            StmtArt::ResetSlot(r) => {
+                aus.insert(r.tisch.text.clone());
+                e(&r.index, aus);
+                e(&r.menge, aus);
+            }
             // **The value, and the INDICES of the target.** The base of a `publishes`
             // target is an ATOMIC global -- the lowering looks it up in `u.atomics` and
             // refuses anything else -- so the base is neither a parameter (no parameter is
@@ -12093,6 +12117,44 @@ fn anweisung(
         // checked run model. On a STATIC arena (no `max` clause) the
         // statement keeps its `C001` below: there is no committed prefix to
         // grow, only `buf[hi]` beside `used`.
+        // **M-ALLTAG C: `reset X at i count n;`.** The range goes to zero and
+        // whole pages of it go back through the helper `gabbro_region_leeren`
+        // (spliced once per unit that calls it, see `REGION_LEEREN`). The range
+        // is held against the array's length at run time as well as by the
+        // checker (`M103`): the same trap a store past the end takes.
+        StmtArt::ResetSlot(r) => {
+            let traeger = Ort {
+                basis: r.tisch.clone(),
+                suffixe: Vec::new(),
+                span: r.tisch.span,
+            };
+            let laenge = ort_typ(&traeger, u).and_then(|t| match &t {
+                TypExpr::Feld(_) => feldlaenge_von(&t, u).and_then(|l| u64::try_from(l).ok()),
+                _ => None,
+            });
+            let Some(laenge) = laenge else {
+                weigere(
+                    absagen,
+                    s.span,
+                    &format!(
+                        "`reset {} at .. count ..` names no static array of known length -- \
+                         there is no range to give back",
+                        r.tisch.text,
+                    ),
+                );
+                return;
+            };
+            let index = ausdruck(&r.index, u, absagen);
+            let menge = ausdruck(&r.menge, u, absagen);
+            let name = &r.tisch.text;
+            aus.push_str(&format!(
+                "{e}{{\n{e}    uint64_t _gabbro_i = (uint64_t)({index});\n\
+                 {e}    uint64_t _gabbro_n = (uint64_t)({menge});\n\
+                 {e}    if (!(_gabbro_n <= {laenge}u && _gabbro_i <= {laenge}u - _gabbro_n)) __builtin_trap();\n\
+                 {e}    gabbro_region_leeren((void *)&{name}[_gabbro_i], _gabbro_n * (uint64_t)sizeof({name}[0]));\n\
+                 {e}}}\n"
+            ));
+        }
         StmtArt::Grow(g) => {
             if !u.arenen_max.contains_key(&g.tisch.text) {
                 weigere(
@@ -12664,6 +12726,7 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // `next` inside its `else` names an outer loop, reached
                 // through `unterbloecke` like at `child` above.
                 | StmtArt::Grow(_)
+                | StmtArt::ResetSlot(_)
                 | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
                 | StmtArt::ResetArena(_)
@@ -15068,7 +15131,39 @@ typedef struct {\n\
 } gabbro_arena_desc;\n\
 void gabbro_arena_reserve(gabbro_arena_desc *d);\n\
 bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n);\n\
+void gabbro_arena_release(gabbro_arena_desc *d, uint32_t i);\n\
 #endif\n";
+
+/// **The helper behind `reset X at i count n;`** (M-ALLTAG C).
+///
+/// The zero is the guarantee and the byte loop is what carries it; the page
+/// return is an optimisation that only the PROGRAM's binding can make
+/// (`gabbro_os_leeren`, declared WEAK so a unit that binds nothing still gets
+/// its zeroes -- from the loop, without the page return). *A binding that
+/// answers 0 has promised the range reads as zero afterwards* (assumption
+/// `os_bindung_null` in `bibliothek/linux/linux.gab`); any other answer falls
+/// back to the loop.
+const REGION_LEEREN: &str = "\
+/* Range give-back (`reset X at i count n;`): the bytes read as zero afterwards; whole\n\
+ * pages go back to the system when the program binds `gabbro_os_leeren`. */\n\
+extern uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes) __attribute__((weak));\n\
+static void gabbro_region_leeren(void *p, uint64_t bytes) __attribute__((unused));\n\
+#pragma GCC diagnostic push\n\
+#pragma GCC diagnostic ignored \"-Waddress\"\n\
+static void gabbro_region_leeren(void *p, uint64_t bytes) {\n\
+    unsigned char *b = (unsigned char *)p;\n\
+    uint64_t k;\n\
+    if (bytes == 0u) {\n\
+        return;\n\
+    }\n\
+    if (gabbro_os_leeren != 0 && gabbro_os_leeren((uint64_t)(uintptr_t)p, bytes) == 0u) {\n\
+        return;\n\
+    }\n\
+    for (k = 0u; k < bytes; k++) {\n\
+        b[k] = 0u;\n\
+    }\n\
+}\n\
+#pragma GCC diagnostic pop\n";
 
 /// Does this unit declare a dynamic arena (`arena … max M`)? A syntactic
 /// pre-scan over the declarations -- the descriptor prelude above is
@@ -15254,6 +15349,7 @@ fn needs_saturation(baum: &Programm) -> bool {
             // so this fires only beside a refusal -- but a missing helper
             // there is still a missing helper.)
             StmtArt::Grow(g) => expr(&g.mehr),
+            StmtArt::ResetSlot(r) => expr(&r.index) || expr(&r.menge),
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

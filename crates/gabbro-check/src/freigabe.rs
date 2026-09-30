@@ -1022,6 +1022,11 @@ impl Lauf<'_> {
                 Toetet::Tabellen(BTreeSet::from([a.text.clone()])),
                 format!("the reset of {}", a.text),
             )),
+            // A range of a static array goes to zero: every fact about it dies.
+            StmtArt::ResetSlot(r) => Some((
+                Toetet::Alles,
+                format!("the range reset in {}", r.tisch.text),
+            )),
             StmtArt::Grow(g) => Some((
                 Toetet::Tabellen(BTreeSet::from([g.tisch.text.clone()])),
                 format!("the growth of {}", g.tisch.text),

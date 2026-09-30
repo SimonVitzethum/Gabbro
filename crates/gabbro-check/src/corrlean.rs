@@ -76,6 +76,7 @@ fn stmt_name(art: &StmtArt) -> &'static str {
         StmtArt::LibraryCall(_) => "library call",
         StmtArt::Alloc(_) => "alloc",
         StmtArt::ResetArena(_) => "reset",
+        StmtArt::ResetSlot(_) => "reset at",
         // **Lane 257:** the commit request, named for refusals.
         StmtArt::Grow(_) => "grow",
         // **Lane O-1:** the clone-child path, named for refusals.

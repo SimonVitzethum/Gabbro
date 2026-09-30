@@ -417,6 +417,12 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
             StmtArt::ResetArena(tisch) => {
                 t.schreibt.push((tisch.text.clone(), s.span));
             }
+            // **M-ALLTAG C:** zeroing a slot is a store to the arena.
+            StmtArt::ResetSlot(r) => {
+                t.schreibt.push((r.tisch.text.clone(), s.span));
+                liest_expr(&r.index, t);
+                liest_expr(&r.menge, t);
+            }
             // **Lane 257:** committing slots moves the committed prefix --
             // the arena is written, and the amount is read. Needs
             // `writes A` in the effects, like any other store to a

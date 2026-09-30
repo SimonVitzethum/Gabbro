@@ -230,6 +230,13 @@ while IFS= read -r q; do
                 continue
             fi ;;
         esac
+        # **M-ALLTAG C: `gabbro_os_leeren` is the page return of `reset X at i count n;`** -- the emitted
+        # helper declares it WEAK and, unbound, zeroes by hand. A weak undefined reference links (`ld`
+        # resolves it to zero), so there is nothing for the target to supply: counted with the runtime's
+        # own names, and only when the unit really has the helper.
+        if [ "$s" = "gabbro_os_leeren" ] && grep -q "gabbro_region_leeren" "$e/einheit.c"; then
+            n_kl_rt=$((n_kl_rt + 1)); continue
+        fi
         if grep -qE "^[[:space:]]*(pub[[:space:]]+)?extern[[:space:]]+fn[[:space:]]+$s[[:space:]]*\(" "$q"; then
             n_kl_fremd=$((n_kl_fremd + 1))
             fremde="$fremde $s"

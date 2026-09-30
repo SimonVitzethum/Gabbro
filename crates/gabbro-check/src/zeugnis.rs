@@ -375,6 +375,18 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "`used = 0` -- the generation moves in the checker alone, and \
                 every older index is stale by the rule, not by a runtime check",
     },
+    // **M-ALLTAG C:** `reset X at i count n;` -- a checked range and the
+    // emitted helper behind it. The zero is the guarantee; the page return
+    // is the program's own binding (`gabbro_os_leeren`, weak).
+    Posten {
+        konstrukt: "range reset",
+        traegt: Traegt::Direkt,
+        grund: "`gabbro_region_leeren(&X[i], n * sizeof X[0])` behind a trap on \
+                `n <= len && i <= len - n` -- the bytes read as zero whatever \
+                the binding does (the helper's loop is the fallback), and the \
+                pages go back to the system only where the program binds \
+                `gabbro_os_leeren`",
+    },
     // **Lane 259 (wave D, emitter arm):** the commit request -- a call on
     // the runtime in the checked-`alloc` brace shape, with the written
     // failure continuation beside it.
@@ -1123,6 +1135,7 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 }
             }
             StmtArt::ResetArena(_) => zaehle(e, "arena reset"),
+            StmtArt::ResetSlot(_) => zaehle(e, "range reset"),
             // **Lane 257:** the commit request is a derivation step the
             // certificate counts, with its failure continuation.
             StmtArt::Grow(g) => {

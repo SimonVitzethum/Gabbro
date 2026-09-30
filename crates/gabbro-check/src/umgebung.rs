@@ -214,6 +214,13 @@ pub struct Umgebung {
     /// atomic -- module-aware through `nennt_atomic`, the same candidate
     /// order every other qualified card uses.
     pub atomare: HashSet<String>,
+    /// **The `static mut` arrays a range can be given back from** (`reset X at i
+    /// count n;`, M-ALLTAG C): zero-initialised, in no named `section`. Such an array
+    /// lives in the anonymous zero pages of the program, where "the operating
+    /// system takes the pages back" and "the bytes read as zero" are the same
+    /// statement; an array with a non-zero initialiser sits in file-backed memory,
+    /// where taking a page back would bring the initialiser BACK.
+    pub leerbar: HashSet<String>,
     pub funktionen: HashMap<String, Signatur>,
     /// **Die Namen, deren Signatur ein KONSTRUKTOR ist, kein Aufruf** («B7»).
     /// Wert ist die Felderliste in Deklarationsreihenfolge -- `fs` aus
@@ -1090,6 +1097,12 @@ impl Umgebung {
                 }
                 ItemArt::Statisch(s) => {
                     let t = self.typ_von_ausdruck_decl(pfad, &s.typ);
+                    if s.veraenderlich
+                        && s.section.is_none()
+                        && matches!(&s.wert.art, ExprArt::Zahl(0))
+                    {
+                        self.leerbar.insert(q(&s.name.text));
+                    }
                     self.globale.insert(q(&s.name.text), t);
                 }
                 ItemArt::Atomic(a) => {

@@ -106,6 +106,7 @@ UNCERTIFIED	beispiele/171-narrow-nach-eigener-deklaration.gab	LG004	`narrow` in 
 UNCERTIFIED	beispiele/172-prozess-ohne-libc.gab	LG002	static PUFFER has no `Glob` form: a `Glob` carries ONE value, so only an integer range, `bool` or a `tagged` type travels -- an array, a pointer, a record or a float static has none
 UNCERTIFIED	beispiele/173-abbruch-ohne-libc.gab	LG001	function haengt is not `impl`
 CERTIFIED	beispiele/174-tor-im-modell.gab	Grammatik.Zertifikat.G174_tor_im_modell	chain=none
+UNCERTIFIED	beispiele/175-puffer-gibt-seiten-zurueck.gab	LG001	static RING carries `aligned`, which is a PLACEMENT and has no `Glob` form
 UNCERTIFIED	beispiele/18-vorfahren.gab	LG001	table Topologie carries a form with no G counterpart
 UNCERTIFIED	beispiele/180-zeigerindex-in-der-ausdehnung.gab	LG002	static PUFFER has no `Glob` form: a `Glob` carries ONE value, so only an integer range, `bool` or a `tagged` type travels -- an array, a pointer, a record or a float static has none
 CERTIFIED	beispiele/181-gate-at-top-level.gab	Grammatik.Zertifikat.G181_gate_at_top_level	chain=none
@@ -239,4 +240,4 @@ UNCERTIFIED	beispiele/gift/930-requires-ohne-signaturwache.gab	LG004	read of the
 UNCERTIFIED	beispiele/gift/957-producer-requires-stronger-than-slot.gab	LG002	field senden of record Treiber has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), so an integer range, `bool` or a `tagged` sum travels and an array, a nested record, a float or a pointer field does not
 UNCERTIFIED	beispiele/gift/958-slot-ensures-stronger-than-producer.gab	LG002	field bereit of record Treiber has no `Ty`: a slot field is ONE `Ty` (`D.typ t f`), so an integer range, `bool` or a `tagged` sum travels and an array, a nested record, a float or a pointer field does not
 UNCERTIFIED	beispiele/halde.gab	LG001	type Griff has no `Ty` form, because a mark is a RESOURCE and not a value: a `linear ghost` mark is `D.Marke` with `stufen m = 1`: it is held in `Λ` as `Res.marke m 0`, consumed through `Signatur.konsumiert` and retired by `Stmt.retires`; `ghost` itself is the carrier flag `D.geist`. This exporter writes `Marke := Empty`, builds no `konsumiert`/`produziert` and exports neither `advances` nor `retires`, so a mark that travelled would travel as nothing
-# TOTAL: 218 accepted, 29 CERTIFIED, 189 UNCERTIFIED
+# TOTAL: 219 accepted, 29 CERTIFIED, 190 UNCERTIFIED

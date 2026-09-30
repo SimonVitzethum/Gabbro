@@ -232,6 +232,11 @@ pub struct StatischDecl {
     pub name: Ident,
     pub typ: TypExpr,
     pub wert: Expr,
+    /// `aligned N` (server lane, M-ALLTAG C): the object starts at an address that is a
+    /// multiple of `N` -- a translation-time power of two (`N570`). A buffer whose pages are
+    /// given back (`reset X at i count n;`) needs it: a ring that shares its first and last
+    /// page with a neighbour can never free them.
+    pub ausrichtung: Option<Expr>,
     pub section: Option<Textliteral>,
 }
 
@@ -1364,6 +1369,17 @@ pub enum StmtArt {
     /// Sets the used counter to zero; every index bound before is stale
     /// afterwards (`N211` in the checker).
     ResetArena(Ident),
+    /// `reset X at i count n;` -- give `n` elements of the static array `X`
+    /// starting at element `i` back (server lane, M-ALLTAG C, 2026-09-30).
+    ///
+    /// Afterwards those elements read as zero, exactly as if `n` stores of
+    /// zero had run; where the range spans whole operating-system pages the
+    /// pages go back to the system as well (through the program's own
+    /// binding, `gabbro_os_leeren`), so a buffer that was busy and is idle
+    /// stops being resident. The range is held against the array's length
+    /// like every index (`M103`); `X` must be a `static` array (`N569`) and
+    /// the statement is a store to it (`writes X`).
+    ResetSlot(ResetSlotStmt),
     /// `grow A by n else { … };` -- commit `n` further slots of arena
     /// `tisch` below its ceiling (lane 257, wave D).
     ///
@@ -1824,6 +1840,14 @@ pub struct GrowStmt {
     pub tisch: Ident,
     pub mehr: Expr,
     pub sonst: Block,
+}
+
+/// `reset X at i count n;` -- see `StmtArt::ResetSlot`.
+#[derive(Debug, Clone)]
+pub struct ResetSlotStmt {
+    pub tisch: Ident,
+    pub index: Expr,
+    pub menge: Expr,
 }
 
 /// **`arena A capacity lo .. hi of T;` -- a monotone region («E4»).**

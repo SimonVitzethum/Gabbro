@@ -1200,6 +1200,30 @@ impl<'a> Pruefer<'a> {
                 let mut lage = Lage::default();
                 let quelle = self.ausdruck(&st.wert, &mut lage);
                 self.passt(&quelle, &ziel, st.wert.span, "static value");
+                // **`aligned N` (M-ALLTAG C): a translation-time power of two.** C's `aligned`
+                // attribute takes nothing else, and an alignment nobody can read is an alignment
+                // the buffer's page arithmetic cannot rest on.
+                if let Some(a) = &st.ausrichtung {
+                    let n = self.u.konst_wert(modul, a);
+                    let gut = matches!(n, Some(n) if n >= 1 && n <= 65536 && (n & (n - 1)) == 0);
+                    if !gut {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "N570",
+                                a.span,
+                                format!(
+                                    "`aligned` on `{}` is no power of two between 1 and 65536 \
+                                     that the translation can read",
+                                    st.name.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "the alignment becomes C's `aligned(N)` attribute, which takes \
+                                 a constant power of two and nothing else",
+                            ),
+                        );
+                    }
+                }
             }
             if let ItemArt::Funktion(f) = &item.art {
                 self.modul = modul.to_string();
@@ -1780,6 +1804,15 @@ impl<'a> Pruefer<'a> {
             // generation moves in `arena.rs`, and nothing here has to move
             // with it. An unknown arena is `N213` there.
             StmtArt::ResetArena(_) => {}
+            // **M-ALLTAG C: `reset A at i;`.** The index is an ordinary
+            // expression; an unknown arena is `N213` in `arena.rs`.
+            StmtArt::ResetSlot(r) => {
+                let it = self.ausdruck(&r.index, lage);
+                self.rufe_im_ausdruck(&r.index, lage);
+                let mt = self.ausdruck(&r.menge, lage);
+                self.rufe_im_ausdruck(&r.menge, lage);
+                self.reset_platz(r, &it, &mt, lage);
+            }
             // **Lane 257: `grow A by n else { … };`.** The amount is an
             // ordinary expression (its constness is `arena.rs`'s `N426`,
             // its calls are seen like any bound value); the failure
@@ -4243,6 +4276,86 @@ impl<'a> Pruefer<'a> {
             }
             if aktuell.ist_unbekannt() {
                 return;
+            }
+        }
+    }
+
+    /// **`reset X at i count n;` -- what the statement is held against.**
+    ///
+    /// `X` must be a `static` array of known length (`N569`: a local, a table, an arena
+    /// or a number has no range of bytes to give back), and the range `i .. i + n` must lie
+    /// inside it -- the same index rule as a store (`M103`), applied to the END of the
+    /// range: the sum of the two intervals' upper ends stays at or below the length.
+    fn reset_platz(&mut self, r: &ResetSlotStmt, it: &Typ, mt: &Typ, lage: &Lage) {
+        let traeger = if lage.lokal.contains_key(&r.tisch.text) {
+            Typ::Unbekannt
+        } else {
+            self.u
+                .suche_global(&self.modul, &r.tisch.text)
+                .cloned()
+                .unwrap_or(Typ::Unbekannt)
+        };
+        let leerbar = self
+            .u
+            .kandidaten_aufloesbar(&self.modul, &r.tisch.text)
+            .iter()
+            .any(|k| self.u.leerbar.contains(k));
+        let Typ::Feld { laenge: Some(n), .. } = traeger.durchgreifen() else {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "N569",
+                    r.tisch.span,
+                    format!(
+                        "`{}` is no `static` array of known length: `reset … at … count …` \
+                         gives back a range of one",
+                        r.tisch.text
+                    ),
+                )
+                .mit_notiz(
+                    "a local, a table, an arena or a scalar has no run of bytes the \
+                     operating system could take back; `reset A;` is the arena's own reset",
+                ),
+            );
+            return;
+        };
+        if !leerbar {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "N569",
+                    r.tisch.span,
+                    format!(
+                        "`{}` is a `static` array, but not a zero-initialised `static mut` in \
+                         no named `section`: taking its pages back would not make it read \
+                         as zero",
+                        r.tisch.text
+                    ),
+                )
+                .mit_notiz(
+                    "an array with a non-zero initialiser (or in a section) sits in \
+                     file-backed memory, where a returned page comes back with the \
+                     initialiser -- declare it `static mut X : [T; N] = 0;`",
+                ),
+            );
+            return;
+        }
+        let n = *n as i128;
+        if let (Some(bi), Some(bm)) = (it.bereich(), mt.bereich()) {
+            if bi.min < 0 || bm.min < 0 || bi.max + bm.max > n {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M103",
+                        r.index.span,
+                        format!(
+                            "the range starts at `{}` and holds `{}` elements, the array has {n}",
+                            bi.text(),
+                            bm.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "M4: no unchecked indexing -- the END of the range is held against \
+                         the declared length like a single index is",
+                    ),
+                );
             }
         }
     }

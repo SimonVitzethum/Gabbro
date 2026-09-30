@@ -351,6 +351,12 @@ fn gehe(
             }
             // **«E4»:** `reset` moves no value and binds no name.
             StmtArt::ResetArena(_) => {}
+            // **M-ALLTAG C:** the index may move a linear value like any
+            // bound value; the slot reset binds no name.
+            StmtArt::ResetSlot(r) => {
+                ausdruck(&r.index, s.span, v, zust, absagen);
+                ausdruck(&r.menge, s.span, v, zust, absagen);
+            }
             // **Lane 257:** the commit amount may move a linear value, so
             // it walks like any bound value; the failure continuation is
             // a branch like any other. The commit binds no name.

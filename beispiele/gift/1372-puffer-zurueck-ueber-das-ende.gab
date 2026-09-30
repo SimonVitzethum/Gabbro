@@ -1,0 +1,12 @@
+-- erwartet: M103
+-- M-ALLTAG C: the range `4096 .. 4096 + 4097` reaches one element past the
+-- 8192-element array. The END of the range is held against the length the way
+-- a single index is (positive twin: `beispiele/175`, which ends exactly at 8192).
+module beispiel::puffer_ueber_das_ende {
+static mut RING : [u8; 8192] = 0;
+
+impl fn f() -> u32 effects { writes RING } costs <= 5000 ops {
+    reset RING at 4096 count 4097;
+    return 0;
+}
+}

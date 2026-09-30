@@ -43,6 +43,14 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
+/* The page return of `gabbro_os_leeren`. `madvise` is glibc's, declared under a feature
+ * macro a driver that includes <stdio.h> before this file has already ruled out; the
+ * binding names what it calls itself rather than depend on the includer's order. */
+extern int madvise(void *addr, size_t length, int advice);
+#ifndef MADV_DONTNEED
+#define MADV_DONTNEED 4 /* the Linux value */
+#endif
+
 /* The interface, so that every definition below is held against the
  * declaration the runtime calls -- and, through the emitted unit's prototypes,
  * against what the program declared in Gabbro. */
@@ -154,6 +162,35 @@ uint32_t gabbro_os_commit(uint64_t basis, uint64_t versatz, uint64_t bytes)
          * wrote beside its `grow`; see `arena_dyn.c` for when this branch is
          * reachable at all (strict overcommit accounting, and there alone). */
         return 1;
+    }
+    return 0;
+}
+
+uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes)
+{
+    long s = sysconf(_SC_PAGESIZE);
+    uint64_t seite, ganz_von, ganz_bis;
+    unsigned char *p = (unsigned char *)(uintptr_t)addr;
+
+    if (addr == 0 || s <= 0) {
+        return 1;
+    }
+    seite = (uint64_t)s;
+    ganz_von = (addr + seite - 1) / seite * seite;
+    ganz_bis = (addr + bytes) / seite * seite;
+    if (ganz_von >= ganz_bis) {
+        /* No whole page inside: nothing to give back, only zeroes to write. */
+        memset(p, 0, (size_t)bytes);
+        return 0;
+    }
+    /* The ragged ends are cleared by hand; MADV_DONTNEED drops the whole pages
+     * between them, and the next touch of an anonymous private page reads zero. */
+    memset(p, 0, (size_t)(ganz_von - addr));
+    memset((void *)(uintptr_t)ganz_bis, 0, (size_t)(addr + bytes - ganz_bis));
+    if (madvise((void *)(uintptr_t)ganz_von, (size_t)(ganz_bis - ganz_von),
+                MADV_DONTNEED) != 0) {
+        /* The pages stay; clear them by hand so the promise still holds. */
+        memset((void *)(uintptr_t)ganz_von, 0, (size_t)(ganz_bis - ganz_von));
     }
     return 0;
 }

@@ -708,6 +708,7 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         // **Lane 253:** `start` binds nothing and carries no block.
         | StmtArt::Start(_)
         | StmtArt::ResetArena(_)
+        | StmtArt::ResetSlot(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::Return(_)
@@ -834,6 +835,7 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             | StmtArt::Zuweisung(_)
             | StmtArt::Narrow(_)
             | StmtArt::ResetArena(_)
+            | StmtArt::ResetSlot(_)
             // **Lane 253:** `start` carries no block for the walk above.
             | StmtArt::Start(_)
             | StmtArt::Leave(_)
