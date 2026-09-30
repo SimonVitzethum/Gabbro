@@ -1489,7 +1489,7 @@ enum Ergebnis {
 
 pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let pruefbau = argumente.iter().any(|a| a == "--testbuild");
-    let trocken = argumente.iter().any(|a| a == "--dry-run" || a == "--trocken");
+    let trocken = argumente.iter().any(|a| a == "--dry-run" || a == "--trocken" || a == "--c-liste");
     let pfade: Vec<&String> = argumente.iter().filter(|a| !a.starts_with("--")).collect();
     // **`gabbro build a.gab b.gab …` -- source files, not a manifest** (Opus F, OFFEN O28).
     // Without a manifest there is no compiler line and no output directory, so nothing is
@@ -1778,6 +1778,39 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 Err(befund) => {
                     befunde += 1;
                     println!("  REFUSED  {name} (driver): {befund}");
+                }
+            }
+        }
+        // **The handwritten C this plan puts into its products** (C-free lane, C0), one line
+        // per file -- `c-file <unit> <origin> <lines> <path>`. It is read here, out of the
+        // same lists the build compiles from (`fremde`, `koepfe`, `METALL_QUELLEN`,
+        // `KMOD_QUELLEN`, the driver plan), so `instrumente/zaehle-c.py` counts what the
+        // build uses and no second guess of it (`W7`).
+        if argumente.iter().any(|a| a == "--c-liste") {
+            for name in &reihenfolge {
+                let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
+                let plan = match treiberregel(
+                    &treiber_funde_je_einheit[name],
+                    &treiber_sperren_je_einheit[name],
+                    &funktionen_je_einheit[name],
+                    &metall_je_einheit[name],
+                    e.art,
+                ) {
+                    Ok(p) => p,
+                    Err(_) => None,
+                };
+                for (herkunft, pfad) in handgeschrieben(
+                    &manifest,
+                    e,
+                    &fremde_je_einheit[name],
+                    &koepfe_je_einheit[name],
+                    plan.as_ref(),
+                    &arenen_je_einheit[name],
+                ) {
+                    let zeilen = std::fs::read(&pfad)
+                        .map(|b| b.iter().filter(|&&c| c == b'\n').count())
+                        .unwrap_or(0);
+                    println!("c-file {name} {herkunft} {zeilen} {}", pfad.display());
                 }
             }
         }
@@ -2404,6 +2437,61 @@ const METALL_QUELLEN: [&str; 7] = [
     "include/math.h",
     "include/string.h",
 ];
+
+/// **Every handwritten file a unit's products contain** as `(origin, path)` (C-free lane,
+/// C0): the unit's own foreign `.c`/`.h`, the module runtime a `kmod` line names, the
+/// bare-metal runtime a `metal` line names when the unit owns a bare-metal driver, and the
+/// hosted runtime the generated driver's header tells the user to link (`arena_dyn.c` for an
+/// `arena`, `faden.c` for a `concurrent` set, `bindung.h` for either). `.ld` linker scripts
+/// are not C and are left out; the emitted C and the generated drivers are Gabbro's own
+/// output and are not listed.
+fn handgeschrieben(
+    manifest: &Manifest,
+    e: &Einheit,
+    fremde: &[String],
+    koepfe: &[String],
+    plan: Option<&TreiberPlan>,
+    arenen: &[String],
+) -> Vec<(&'static str, PathBuf)> {
+    let mut aus: Vec<(&'static str, PathBuf)> = Vec::new();
+    for f in fremde.iter().chain(koepfe.iter()) {
+        aus.push(("unit", PathBuf::from(f)));
+    }
+    if e.art == Art::Modul {
+        if let Some((dir, _)) = &manifest.kmod {
+            for f in KMOD_QUELLEN {
+                aus.push(("kmod-runtime", PathBuf::from(dir).join(f)));
+            }
+            // `kmod_modul_binden` copies the shared arena header beside them.
+            aus.push(("kmod-runtime", PathBuf::from(dir).join("../arena_dyn.h")));
+        }
+    }
+    if plan.is_some_and(|p| p.hat_metall()) {
+        if let Some(dir) = &manifest.metall {
+            for f in METALL_QUELLEN.iter().filter(|f| !f.ends_with(".ld")) {
+                aus.push(("metal-runtime", PathBuf::from(dir).join(f)));
+            }
+        }
+    }
+    // A `metal` line makes the unit's product the bare-metal image, which links none of the
+    // hosted runtime.
+    if e.art != Art::Modul && manifest.metall.is_none() {
+        let laufzeit = PathBuf::from("laufzeit");
+        let mut dazu: Vec<&str> = Vec::new();
+        if plan.is_some_and(|p| p.hat_gehostet()) {
+            dazu.extend(["faden.c", "faden.h", "bindung.h"]);
+        }
+        if !arenen.is_empty() {
+            dazu.extend(["arena_dyn.c", "arena_dyn.h", "bindung.h"]);
+        }
+        dazu.sort();
+        dazu.dedup();
+        for f in dazu {
+            aus.push(("hosted-runtime", laufzeit.join(f)));
+        }
+    }
+    aus
+}
 
 /// The flag word of the bare-metal image -- the same as `instrumente/pruefe-metall.sh`'s:
 /// freestanding, no red zone (the timer and the entries push onto the running stack), no
