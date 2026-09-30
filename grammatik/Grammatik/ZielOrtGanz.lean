@@ -290,6 +290,7 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
   | .bindCallElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .regLies _ _ rest => rest.logikFrei
   | .regLiesElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ rest => rest.logikFrei
@@ -310,6 +311,7 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .cons s rest => s.logikFrei && rest.logikFrei
   | .bind _ rest => rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
 
 end
 
@@ -493,6 +495,14 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       split at he
       · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
       · cases he
+  | .bindAxiomElse a args he' hr hw hg hd hgd err rest, h, σ, ρ, e, he => by
+      simp only [Block.logikFrei, Bool.and_eq_true] at h
+      simp only [execBlock] at he
+      split at he
+      · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he))
+      · cases he
   | .regLies r hk rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei] at h
       simp only [execBlock] at he
@@ -577,6 +587,13 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
       simp only [execEnd, axiomAntwort] at he
       split at he
       · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+      · cases he
+  | .bindAxiomElse a args he' hr hw hg hd hgd err rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _ (EndAusgang.schrumpf_logik he)
       · cases he
 
 end

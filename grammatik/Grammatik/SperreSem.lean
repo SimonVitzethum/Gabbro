@@ -310,6 +310,12 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | (_, Option.none) => .hardware (.annahme a)
   | .regLies r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
@@ -384,6 +390,12 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execEndH rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execEndH rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
 
 def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -483,6 +495,8 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .regLies r hk rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .regLiesElse r hk zusage sonst rest, σ, ρ => by
@@ -517,6 +531,8 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer err] <;> rfl
 
 theorem Arms.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -572,6 +588,7 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
   | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .regLies _ _ rest => rest.ohneLocks
   | .regLiesElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .awaits _ _ _ _ rest => rest.ohneLocks
@@ -587,6 +604,7 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .cons s rest => s.ohneLocks && rest.ohneLocks
   | .bind _ rest => rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | _ => true
 
 def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -689,6 +707,9 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .regLies r hk rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
@@ -740,6 +761,9 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
 
 theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -1093,6 +1117,13 @@ theorem Endblock.execBlockH_alsBlock :
       split
       · rw [Endblock.execBlockH_alsBlock rest]
         cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · cases execEndH S O U passes R err _ _ <;> rfl
       · rfl
 
 /-- Past `abbruch`, an end outcome continues as without it. -/

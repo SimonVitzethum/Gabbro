@@ -63,6 +63,7 @@ def Block.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindCall _ _ _ _ _ rest => rest.rOk K
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.rOk K
   | .bindCallElse _ _ _ _ _ err rest => err.rOk K && rest.rOk K
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.rOk K && rest.rOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
   | .regLies _ _ rest => rest.rOk K
   | .regLiesElse _ _ _ sonst rest => sonst.rOk K && rest.rOk K
@@ -84,6 +85,7 @@ def Endblock.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .cons s rest => s.rOk K && rest.rOk K
   | .bind _ rest => rest.rOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.rOk K && rest.rOk K
 
 def Arms.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
