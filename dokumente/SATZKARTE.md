@@ -4662,3 +4662,31 @@ starts, no atomics, `requires` lowered to `true`, the `ensures` forms `== < <=` 
 zero initial memory, no arithmetic in the bridge (refused by name: `sideExpr` is `none`). Each is a
 construct the Lean front end REFUSES by name; the plan to lift each is `STAND-P.md` /
 `messung/PARSER-LANE-REPORT.md`.
+
+## 61. A foreign call at the top level of a body: `Endblock.bindAxiom` (C-free lane, 2026-09-30)
+
+**The gap.** A body is an `Endblock`, and `Endblock` had no binder for a foreign call: an axiom's
+answer could be bound only inside a nested `Block` (`Block.bindAxiom`). Every `syscall` gate of the
+corpus and of the network stack is called at the top level of a body, so all of them stood outside
+the model (the exporter's LG004 "`Endblock` has no such constructor").
+
+| Lean name | File | What it says |
+|---|---|---|
+| `Endblock.bindAxiom` | Syntax | the premises of `Block.bindAxiom` (answer type, the four frame proofs), an END-BLOCK rest |
+| `execEnd` (arm) | Semantik | the block form's meaning: the oracle answers, `einpassenErg` decides, the rest runs or the head stops at `.hardware (.annahme a)` |
+| `RufSchrittG.endeBindAxiom` | RufMaschineG | the machine rule: `dannBindAxiom` with the rest in `ende` position |
+| `Zielsatz.RestHalt` (two arms) | Zielsatz/Spec | the SAME stops `KopfHalt` names at `Block.bindAxiom` -- `hardware`, `nieZurueck` -- at `.ende (.bindAxiom ..)`; reviewed diff in the header block "end-block gate". No stop kind, premise or conclusion moves |
+| `fort_ende` (arm) | Fortschritt | progress: such a head steps (`endeBindAxiom`), or stands at a named stop -- `nieZurueck` only for an axiom `-> never` (`antwortenB`, via `Endblock.ants`), `hardware` otherwise |
+| arms in ~40 files | RahmenTreu, Satz, SperreSem, AtomarSem, ZielOrt*, KostenG, Nichtinterferenz/*, MitRuhe*, ... | every property of an end block carried through the new constructor, each a mirror of its `Block.bindAxiom` arm |
+| `beispiele/181` | Zertifikat/G181_gate_at_top_level | WITNESS: a certified program whose value gate binds at the top level and whose unit body ENDS in a `-> never` gate (behind it the body's own implicit return, dead in G as in the C) |
+
+**Four catch-all definitions were wrong for the new constructor and now name it** (a `| _ => true`
+that would have skipped the rest): `Endblock.ueberBoden` (Satz), `Endblock.ohneLocks` (SperreSem),
+`Endblock.ohneEwig` (Durchgaenge), `Endblock.ohneOrakel` (RufAdaequatG). Found by a scan of every
+definition over `Endblock` with a wildcard arm, not by the compiler -- *a catch-all compiles.*
+Two step functions answered `none` for it and had to learn it (`Nichtinterferenz/Schritt.lean`'s
+`kEnde`, for the theorem that every machine rule computes `kSchrittK`).
+
+**What is NOT claimed:** a `-> never` call that ENDS an `else` which must not fall off, and a
+fallible gate (`or R`) anywhere -- both still refused by name (LG004, LG007). The bridge to GabbroV
+(`bruecke/`) builds unchanged; the new form is outside its fragment, as every gate is.
