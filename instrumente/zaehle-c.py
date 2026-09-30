@@ -29,6 +29,7 @@ Exit 0: the run measured. It does NOT say the numbers are zero -- that is what t
 acceptance points of the lane ask for, read off the report.
 """
 import os
+import shutil
 import re
 import subprocess
 import sys
@@ -61,9 +62,9 @@ SZENARIEN = {
         ("puffer", CC + "unit puffer program\n  {W}/beispiele/64-writes-a-whole-buffer.gab\n", "puffer"),
         ("prozess172", NOLIBC + "unit prozess program\n  {W}/beispiele/172-prozess-ohne-libc.gab\n", "prozess"),
         ("abbruch173", NOLIBC + "unit abbruch program\n  {W}/beispiele/173-abbruch-ohne-libc.gab\n", "abbruch"),
-        ("osprobe", CC.replace("-Werror", "-Werror -I {W}/laufzeit") +
-         "unit osprobe object\n  {W}/messung/proben/os-bindung/os-probe.gab\n" + BINDUNG_LINUX +
-         "  {W}/messung/proben/os-bindung/melde.c\n", "osprobe"),
+        ("osprobe", CC +
+         "unit osprobe object\n  {W}/messung/proben/os-bindung/os-probe.gab\n" + BINDUNG_LINUX,
+         "osprobe"),
     ],
     "kmod": [
         ("halde", CC + "kmod {W}/laufzeit/kmodul " + KBUILD + "\nunit gabbro_halde module laden entladen\n"
@@ -156,6 +157,12 @@ def laufzeit_objekte(einheit, out, dateien):
 
 def baue(ziel, szen):
     pfad, out = manifest_schreiben(ziel, szen)
+    # **A build directory from an earlier run is not this run's product** (C-free lane,
+    # 2026-09-30): the import stage reads every `.o` in `out`, and an object left behind by a
+    # runtime file that no longer exists (`faden.c.o`) was measured as if it were linked -- a
+    # mixture, the `rsync -a` class of CLAUDE.md. The directory starts empty.
+    shutil.rmtree(out, ignore_errors=True)
+    os.makedirs(out, exist_ok=True)
     r = subprocess.run([GABBRO, "build", pfad], capture_output=True, text=True, cwd=W)
     return r.returncode == 0, out, (r.stdout + r.stderr)
 

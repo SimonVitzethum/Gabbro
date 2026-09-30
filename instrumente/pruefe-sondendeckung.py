@@ -229,7 +229,9 @@ MARK_WAISEN = 1
 # `sonde_os_faden`, `sonde_os_klon` left with the C bodies they named (`linux.c` is gone);
 # `sonde_os_clone`, `sonde_os_exit`, `sonde_os_futex` came with the three gates that replace
 # them. Measured with the guardian's own `sammle`/`sondennamen`: 34.
-MARK_AUSSEN = 34
+# **34 -> 33 on 2026-09-30** (C-free lane): `sonde_os_probe_melde` left with the probe's own C
+# (`messung/proben/os-bindung/melde.c`); the report is Gabbro over the binding's writers.
+MARK_AUSSEN = 33
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

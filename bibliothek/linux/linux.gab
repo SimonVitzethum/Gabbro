@@ -178,35 +178,54 @@ pub const LINUX_Z7 : [u8; 1] = [55];
 pub const LINUX_Z8 : [u8; 1] = [56];
 pub const LINUX_Z9 : [u8; 1] = [57];
 
-fn linux_os_ziffer(d : u64 in 0 .. 9)
+fn linux_os_ziffer(fd : u64, d : u64 in 0 .. 9)
     effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
     costs <= 200 ops
 {
     if d == 0 {
-        let n = linux_os_write(2, LINUX_Z0, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z0, 1) else (e) { return; }
     } else if d == 1 {
-        let n = linux_os_write(2, LINUX_Z1, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z1, 1) else (e) { return; }
     } else if d == 2 {
-        let n = linux_os_write(2, LINUX_Z2, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z2, 1) else (e) { return; }
     } else if d == 3 {
-        let n = linux_os_write(2, LINUX_Z3, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z3, 1) else (e) { return; }
     } else if d == 4 {
-        let n = linux_os_write(2, LINUX_Z4, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z4, 1) else (e) { return; }
     } else if d == 5 {
-        let n = linux_os_write(2, LINUX_Z5, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z5, 1) else (e) { return; }
     } else if d == 6 {
-        let n = linux_os_write(2, LINUX_Z6, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z6, 1) else (e) { return; }
     } else if d == 7 {
-        let n = linux_os_write(2, LINUX_Z7, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z7, 1) else (e) { return; }
     } else if d == 8 {
-        let n = linux_os_write(2, LINUX_Z8, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z8, 1) else (e) { return; }
     } else if d == 9 {
-        let n = linux_os_write(2, LINUX_Z9, 1) else (e) { return; }
+        let n = linux_os_write(fd, LINUX_Z9, 1) else (e) { return; }
     }
 }
 
--- The decimal digits of `v`, most significant first, no leading zeros.
+-- The decimal digits of `v` to the error channel (the runtime's reports).
 fn linux_os_zahl(v : u64)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 8016 ops
+{
+    gabbro_os_schreibe_zahl(2, v);
+}
+
+-- **A program's own output, over the same gate** (C-free lane, 2026-09-30): the decimal
+-- digits of `v`, most significant first, no leading zeros, to the descriptor `fd`; and a
+-- run of bytes. What a program without a C library prints with -- the os-probe's report,
+-- which was `printf` in a C file of its own.
+pub fn gabbro_os_schreibe(fd : u64, text : ptr<normal, r> u8, n : u64)
+    requires n <= lenof(text)
+    effects { reads text }
+    costs <= 80 ops
+{
+    let r = linux_os_write(fd, text, n) else (e) { return; }
+}
+
+pub fn gabbro_os_schreibe_zahl(fd : u64, v : u64)
     effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
     costs <= 8000 ops
 {
@@ -220,7 +239,7 @@ fn linux_os_zahl(v : u64)
         narrow stelle to 1 .. 10000000000000000000 else { return; }
         let d = (v / stelle) % 10;
         if d != 0 || begonnen || stelle == 1 {
-            linux_os_ziffer(d);
+            linux_os_ziffer(fd, d);
             begonnen = true;
         }
         stelle = stelle / 10;

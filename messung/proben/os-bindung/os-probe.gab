@@ -18,10 +18,11 @@
 --                              (`pthread_mutex_lock`/`_unlock`)
 --   * an `arena` with a `max` ceiling far above its committed floor, grown at
 --     run time -> `laufzeit/arena_dyn.c` (`mmap`, `mprotect`, `sysconf`)
---   * one declared foreign function -> the PROGRAM's own C beside it
---     (`melde.c`), which is what the per-object criterion has to tell apart
---     from the runtime's calls. `printf` is in THAT file, declared here, and it
---     must never be counted as the runtime's.
+--   * a report of its own -> until 2026-09-30 `printf` in a C file of the
+--     probe (`melde.c`), which the per-object criterion had to tell apart from
+--     the runtime's calls; since the C-free lane it is Gabbro over the
+--     binding's writers, and the probe links no C and no C library call of its
+--     own (`gabbro_probe_melde` below).
 --
 -- WHY THE ARENA IS ONE THREAD'S. `eins` grows it and allocates out of it; `zwei`
 -- never names it. A shared arena across threads is exactly what OFFEN O20 keeps
@@ -46,14 +47,37 @@
 -- would have two.
 module probe::os_bindung {
 
-assume os_probe_melde_vertrag
-    "The probe's own `gabbro_probe_melde` body writes its two words to standard output and returns; it keeps the x86_64 SysV convention and never fails."
-    falsifier sonde_os_probe_melde;
+-- The probe's report, in GABBRO since 2026-09-30 (C-free lane): `k=<key> v=<value>` and a
+-- newline to standard output, through the binding's writers. Until then it was `printf` in a
+-- C file of the probe's own (`melde.c`), which the instrument had to tell apart from the
+-- runtime's calls; the program has no C at all now, and neither has the runtime.
+use linux::hosted::LINUX_Z0;
+use linux::hosted::LINUX_Z1;
+use linux::hosted::LINUX_Z2;
+use linux::hosted::LINUX_Z3;
+use linux::hosted::LINUX_Z4;
+use linux::hosted::LINUX_Z5;
+use linux::hosted::LINUX_Z6;
+use linux::hosted::LINUX_Z7;
+use linux::hosted::LINUX_Z8;
+use linux::hosted::LINUX_Z9;
 
--- The one call into the operating system this PROGRAM makes, declared here and
--- nowhere else. Its body is `messung/proben/os-bindung/melde.c`, which is where
--- `printf` stands -- and the measurement must not read it as the runtime's.
-extern fn gabbro_probe_melde(schluessel : u32, wert : u64) effects { pure } costs <= 512 ops;
+const T_K : [u8; 2] = [107, 61];
+const T_V : [u8; 3] = [32, 118, 61];
+const T_NL : [u8; 1] = [10];
+
+fn gabbro_probe_melde(schluessel : u32, wert : u64)
+    effects { reads T_K, reads T_V, reads T_NL,
+              reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4,
+              reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 17000 ops
+{
+    linux::hosted::gabbro_os_schreibe(1, T_K, 2);
+    linux::hosted::gabbro_os_schreibe_zahl(1, schluessel);
+    linux::hosted::gabbro_os_schreibe(1, T_V, 3);
+    linux::hosted::gabbro_os_schreibe_zahl(1, wert);
+    linux::hosted::gabbro_os_schreibe(1, T_NL, 1);
+}
 
 const SCHRITTE : u32 = 32;
 
@@ -77,7 +101,7 @@ table stand count 1 {
     }
 }
 
-lock L protects { stand } rank 0 held <= 2048 ops;
+lock L protects { stand } rank 0 held <= 65536 ops;
 
 -- One counted pass, shared by both roots: the lock is what makes the sum a
 -- statement.
@@ -101,7 +125,7 @@ impl fn zaehle()
 -- 32 and 64 and is not checked.
 impl fn melde_stand()
     effects { reads stand.slots, locks L }
-    costs   <= 2048 ops
+    costs   <= 65536 ops
 {
     locks L {
         gabbro_probe_melde(2, stand.slots[0].belegt);
@@ -115,7 +139,7 @@ impl fn melde_stand()
 impl fn eins()
     effects { reads takt, reads takt.slots, reads stand.slots, writes stand.slots,
               writes Puffer, locks L }
-    costs   <= 65536 ops
+    costs   <= 262144 ops
 {
     grow Puffer by 1024 else {
         gabbro_probe_melde(7, 1);
@@ -148,7 +172,7 @@ impl fn eins()
 impl fn zwei()
     effects { reads takt, reads takt.slots, reads stand.slots, writes stand.slots,
               locks L }
-    costs   <= 16384 ops
+    costs   <= 262144 ops
 {
     traverse i over slots of takt by unvisited
         touches reads takt, reads takt.slots, reads stand.slots,

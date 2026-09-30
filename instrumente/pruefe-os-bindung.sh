@@ -106,7 +106,6 @@ done
 # (`linux.gab`, emitted into the unit). The runtime whose OS calls this
 # instrument measures is therefore the DRIVER's own half.
 QUELLE="$W/messung/proben/os-bindung/os-probe.gab"
-FREMD="$W/messung/proben/os-bindung/melde.c"
 # **The binding, since K8's first slice** (2026-09-28): the probe declares an
 # `arena`, and a hosted unit with an `arena` that binds no memory primitive is
 # REFUSED by `gabbro build` before a byte of C (`bau.rs::bindungsregel_gehostet`).
@@ -219,7 +218,6 @@ for werkzeug in cc nm; do
     command -v "$werkzeug" >/dev/null 2>&1 || nicht_gelaufen "no $werkzeug on this machine"
 done
 [ -f "$QUELLE" ] || nicht_gelaufen "no probe source at $QUELLE"
-[ -f "$FREMD" ]  || nicht_gelaufen "no probe C body at $FREMD"
 [ -f "$BINDUNG_GAB" ] || nicht_gelaufen "no binding declarations at $BINDUNG_GAB"
 
 # **Which binary, and is it younger than the sources it claims to be?** One
@@ -396,15 +394,10 @@ bauen() {   # $1 = work dir, $2 = gift
         head -20 "$arb/cc1.log" >&2
         return 0
     fi
-    # The PROGRAM's own C body, compiled on its own -- which is what makes its
-    # `printf` the program's and not the runtime's in the measurement.
-    if ! timeout "$FRIST" cc $cflags -c -o "$bau/fremd.o" "$FREMD" 2> "$arb/cc3.log"; then
-        echo "HARNESS: the program's own C did not compile"
-        head -20 "$arb/cc3.log" >&2
-        return 0
-    fi
+    # Since 2026-09-30 the probe has no C of its own (its report is Gabbro over the
+    # binding's writers): the driver object IS the program.
     if ! timeout "$FRIST" cc -o "$bau/probe" \
-            "$bau/treiber.o" "$bau/fremd.o" 2> "$arb/ld.log"; then
+            "$bau/treiber.o" 2> "$arb/ld.log"; then
         echo "HARNESS: the linker refused the probe"
         head -20 "$arb/ld.log" >&2
         return 0
@@ -667,7 +660,7 @@ if [ -z "$GIFT" ]; then
     stufe_still "der saubere Lauf (bauen, Symbole, Rohrufe, Metall)"
     echo "== What the hosted runtime takes from the operating system =="
     echo "   probe       $QUELLE"
-    echo "   own C       $FREMD"
+    echo "   own C       none (the report is Gabbro since 2026-09-30)"
     echo "   runtime     the generated $EINHEIT.treiber.c (arena, lock and thread runtimes)"
     mkdir -p "$ARB/lauf"
     einmal "$ARB/lauf" "" > "$ARB/lauf/aus.txt"

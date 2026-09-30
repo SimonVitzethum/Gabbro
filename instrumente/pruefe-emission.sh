@@ -4153,7 +4153,13 @@ MARKE_EMIT=156
 # a lock with an `invariant` and a routine that promises more than the invariant gives -- the
 # poison probe of the lock acquire/release in the duty channel (`instrumente/pruefe-sperre-beweis.sh`).
 # Re-measured in the same run: `329 von 329`.
-MARKE_EMIT_M=162
+# **162 -> 161 on 2026-09-30 (C-free lane), and the file did not leave the emission, it left
+# being ALONE:** `messung/proben/os-bindung/os-probe.gab` reports through the binding's Gabbro
+# writers now (`linux::hosted::gabbro_os_schreibe`, `_schreibe_zahl`) instead of `printf` in a C
+# file of its own, so it emits only as the two-file unit it always was built as -- with
+# `bibliothek/linux/linux.gab` beside it -- and that unit is built, linked and RUN by
+# `instrumente/pruefe-os-bindung.sh` (GREEN, 8 harness gifts). Stage 9 emits one file at a time.
+MARKE_EMIT_M=161
 # **161 -> 162 on 2026-09-30 (server lane, M-ALLTAG C).** One new probe program: `messung/proben/seiten-zurueck/ring.gab`
 # (a 1 MiB static buffer and the one statement that gives it back), the subject of `instrumente/pruefe-seiten-zurueck.sh`.
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).

@@ -292,8 +292,12 @@ generated driver, lock through the chain). Reviewers from 321.
     `faden.c`, `faden.h` deleted -- the hosted binding is Gabbro only. On the way: `N572` (a
     stack-gate call with no `child` region checked clean), the clone trap's store (OFFEN O38).
     Hosted C0 687 -> 28 lines, 1 file (`zaehle-c.py`): the os-probe's own `melde.c`.
-  - [ ] The os-probe's own `melde.c` (the program's foreign body the instrument tells apart
-    from the runtime's); a hosted `nolibc` driver (the driver's `main` still returns into libc).
+  - [x] The os-probe's own `melde.c`: its report is Gabbro over the binding's writers
+    (`gabbro_os_schreibe`, `_schreibe_zahl`). **Hosted C0: 0 lines, 0 files**; hosted imports
+    (`zaehle-c.py --baue`): 0 for 172, 173 and the os-probe; `putchar`/`write` for examples
+    63/64, which bind the C library by their own `extern fn` (their libc-free twins are 172/173).
+  - [ ] A hosted `nolibc` DRIVER (its `main` returns into the C runtime's start code:
+    `__libc_start_main`, the toolchain's names only).
   - [ ] The kernel-module target (C2) and bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
